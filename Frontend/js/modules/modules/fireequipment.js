@@ -73,23 +73,10 @@ FireEquipment = {
     },
 
     async load() {
-        // Add language change listener
-        if (!this._languageChangeListenerAdded) {
-            document.addEventListener('language-changed', () => {
-                this.load();
-            });
-            this._languageChangeListenerAdded = true;
-        }
-
         try {
-            const section = document.getElementById('fire-equipment-section');
-            if (!section) {
-                if (typeof Utils !== 'undefined' && Utils.safeError) {
-                    Utils.safeError('قسم fire-equipment-section غير موجود!');
-                } else {
-                    console.error('قسم fire-equipment-section غير موجود!');
-                }
-                return;
+        const section = document.getElementById('fire-equipment-section');
+        if (!section) {
+            if (typeof Utils !== 'undefined' && Utils.safeError) {
                 Utils.safeError('قسم fire-equipment-section غير موجود!');
             } else {
                 console.error('قسم fire-equipment-section غير موجود!');
@@ -97,323 +84,305 @@ FireEquipment = {
             return;
         }
 
-            // ✅ عرض الواجهة الكاملة فوراً بدون انتظار renderTabContent لتجنب timeout
-        // الواجهة تظهر فوراً مع placeholders، ثم يتم تحميل المحتوى بشكل lazy عند الحاجة
-        // هذا يمنع timeout في load function
-        const loadingPlaceholder = '<div class="fire-tab-loading"><div style="width: 300px; margin: 0 auto 16px;"><div style="width: 100%; height: 6px; background: rgba(59, 130, 246, 0.2); border-radius: 3px; overflow: hidden;"><div style="height: 100%; background: linear-gradient(90deg, #3b82f6, #2563eb, #3b82f6); background-size: 200% 100%; border-radius: 3px; animation: loadingProgress 1.5s ease-in-out infinite;"></div></div></div><p>جاري التحميل...</p></div>';
-        
-        // ✅ عرض الواجهة الأساسية فوراً بدون انتظار
-        section.innerHTML = `
-            <div class="section-header">
-                <div class="flex items-center justify-between flex-wrap gap-3">
-                    <div>
-                        <h1 class="section-title">
-                            <i class="fas fa-fire-extinguisher ml-3"></i>
-                            سجل وفحص معدات الحريق
-                        </h1>
-                        <p class="section-subtitle">
-                            إدارة قاعدة بيانات كاملة لكل معدات الإطفاء مع تتبع الفحوصات وQR Code لكل جهاز
-                        </p>
-                    </div>
-                    <div class="flex items-center gap-2 flex-wrap">
-                        ${this.canAdd() ? `
-                        <button id="add-fire-asset-btn" class="btn-secondary">
-                            <i class="fas fa-plus ml-2"></i>
-                            إضافة جهاز جديد
-                        </button>
-                        ` : ''}
-                        <button id="scan-qr-inspection-btn" class="btn-primary">
-                            <i class="fas fa-qrcode ml-2"></i>
-                            مسح QR Code للفحص الشهري
-                        </button>
-                        <button id="refresh-fire-equipment-btn" class="btn-secondary">
-                            <i class="fas fa-sync-alt ml-2"></i>
-                            تحديث
-                        </button>
-                    </div>
-                </div>
-            </div>
-            <style>
-                .fire-tabs-container {
-                    margin-bottom: 1.5rem;
-                }
-                .fire-tabs-header {
-                    display: flex;
-                    gap: 0.5rem;
-                    border-bottom: 2px solid #e5e7eb;
-                    padding-bottom: 0;
-                }
-                .fire-tab-btn {
-                    padding: 0.75rem 1.5rem;
-                    background: none;
-                    border: none;
-                    border-bottom: 3px solid transparent;
-                    color: #6b7280;
-                    font-size: 0.9375rem;
-                    font-weight: 500;
-                    cursor: pointer;
-                    transition: all 0.3s ease;
-                    display: flex;
-                    align-items: center;
-                    gap: 0.5rem;
-                    position: relative;
-                    margin-bottom: -2px;
-                }
-                .fire-tab-btn:hover {
-                    color: #3b82f6;
-                    background-color: rgba(59, 130, 246, 0.05);
-                }
-                .fire-tab-btn.active {
-                    color: #3b82f6;
-                    border-bottom-color: #3b82f6;
-                    font-weight: 600;
-                }
-                .fire-tab-btn i {
-                    font-size: 14px;
-                }
-                .fire-tab-content {
-                    display: none;
-                }
-                .fire-tab-content.active {
-                    display: block;
-                }
-                .fire-tab-loading {
-                    display: flex;
-                    flex-direction: column;
-                    align-items: center;
-                    justify-content: center;
-                    padding: 3rem;
-                    min-height: 200px;
-                }
-                .fire-tab-loading i {
-                    font-size: 2rem;
-                    color: #3b82f6;
-                    margin-bottom: 1rem;
-                }
-                @media (max-width: 768px) {
-                    .fire-tabs-header {
-                        flex-wrap: wrap;
-                        gap: 0.25rem;
-                    }
-                    .fire-tab-btn {
-                        padding: 0.625rem 1rem;
-                        font-size: 0.875rem;
-                    }
-                }
-            </style>
-            <div class="fire-tabs-container mt-6">
-                <div class="fire-tabs-header">
-                    ${this.hasTabAccess('database') ? `
-                    <button class="fire-tab-btn active" data-tab="database" onclick="FireEquipment.switchTab('database')">
-                        <i class="fas fa-database ml-2"></i>
-                        قاعدة بيانات معدات الحريق
-                    </button>
-                    ` : ''}
-                    ${this.hasTabAccess('register') ? `
-                    <button class="fire-tab-btn" data-tab="register" onclick="FireEquipment.switchTab('register')">
-                        <i class="fas fa-clipboard-list ml-2"></i>
-                        سجل معدات الاطفاء والانذار
-                    </button>
-                    ` : ''}
-                    ${this.hasTabAccess('inspections') ? `
-                    <button class="fire-tab-btn" data-tab="inspections" onclick="FireEquipment.switchTab('inspections')">
-                        <i class="fas fa-clipboard-check ml-2"></i>
-                        الفحوصات الشهرية
-                    </button>
-                    ` : ''}
-                    ${this.hasTabAccess('analytics') ? `
-                    <button class="fire-tab-btn" data-tab="analytics" onclick="FireEquipment.switchTab('analytics')">
-                        <i class="fas fa-chart-line ml-2"></i>
-                        تحليل البيانات
-                    </button>
-                    ` : ''}
-                    ${this.hasTabAccess('approval-requests') ? `
-                    <button class="fire-tab-btn" data-tab="approval-requests" onclick="FireEquipment.switchTab('approval-requests')">
-                        <i class="fas fa-check-circle ml-2"></i>
-                        طلبات الموافقة
-                    </button>
-                    ` : ''}
-                </div>
-            </div>
-            <div id="fire-tab-content">
-                <div id="fire-tab-database" class="fire-tab-content active">
-                    ${loadingPlaceholder}
-                </div>
-                <div id="fire-tab-register" class="fire-tab-content" style="display: none;">
-                    ${loadingPlaceholder}
-                </div>
-                <div id="fire-tab-inspections" class="fire-tab-content" style="display: none;">
-                    ${loadingPlaceholder}
-                </div>
-                ${this.isAdmin() ? `
-                <div id="fire-tab-analytics" class="fire-tab-content" style="display: none;">
-                    ${loadingPlaceholder}
-                </div>
-                <div id="fire-tab-approval-requests" class="fire-tab-content" style="display: none;">
-                    ${loadingPlaceholder}
-                </div>
-                ` : ''}
-            </div>
-        `;
+            const loadingPlaceholder = '<div class="fire-tab-loading"><div style="width: 300px; margin: 0 auto 16px;"><div style="width: 100%; height: 6px; background: rgba(59, 130, 246, 0.2); border-radius: 3px; overflow: hidden;"><div style="height: 100%; background: linear-gradient(90deg, #3b82f6, #2563eb, #3b82f6); background-size: 200% 100%; border-radius: 3px; animation: loadingProgress 1.5s ease-in-out infinite;"></div></div></div><p>جاري التحميل...</p></div>';
 
-        // ✅ تهيئة الأحداث فوراً بعد عرض الواجهة
-        try {
-            this.setupEventListeners();
-        } catch (error) {
-            Utils.safeWarn('⚠️ خطأ في setupEventListeners:', error);
-        }
-
-        // ✅ تحميل محتوى التبويبات بشكل async بعد عرض الواجهة (لتجنب timeout)
-        // استخدام setTimeout لإعطاء المتصفح فرصة لعرض الواجهة أولاً
-        setTimeout(async () => {
-            try {
-                // التأكد من وجود البيانات الأساسية (مع timeout)
-                const checkAppState = () => {
-                    return new Promise((resolve) => {
-                        if (AppState && AppState.appData) {
-                            resolve();
-                            return;
-                        }
-                        
-                        let attempts = 0;
-                        const maxAttempts = 50; // 5 ثوان
-                        const checkInterval = setInterval(() => {
-                            attempts++;
-                            if (AppState && AppState.appData) {
-                                clearInterval(checkInterval);
-                                resolve();
-                            } else if (attempts >= maxAttempts) {
-                                clearInterval(checkInterval);
-                                if (!AppState) AppState = {};
-                                if (!AppState.appData) AppState.appData = {};
-                                resolve();
-                            }
-                        }, 100);
-                    });
-                };
-                
-                await checkAppState();
-
-                // تهيئة البيانات
-                let migrated = false;
-                try {
-                    migrated = this.ensureData();
-                } catch (error) {
-                    Utils.safeWarn('⚠️ خطأ في ensureData:', error);
-                }
-
-                // حفظ البيانات إذا تمت الهجرة
-                if (migrated) {
-                    try {
-                        // استخدام setTimeout لتجنب blocking
-                        setTimeout(async () => {
-                            try {
-                                await this.persistAll();
-                            } catch (error) {
-                                Utils.safeWarn('⚠️ خطأ في persistAll:', error);
-                            }
-                        }, 0);
-                    } catch (error) {
-                        Utils.safeWarn('⚠️ خطأ في persistAll:', error);
-                    }
-                }
-
-                // ✅ تحميل محتوى التبويب الحالي (database) فوراً
-                const databaseTab = document.getElementById('fire-tab-database');
-                if (databaseTab) {
-                    const renderWithTimeout = async (renderFn) => {
-                        const timeoutWrapper = (promise, timeout, msg) => {
-                            const timeoutPromise = new Promise((_, reject) => {
-                                setTimeout(() => reject(new Error(msg || 'Timeout')), timeout);
-                            });
-                            return Promise.race([promise, timeoutPromise]);
-                        };
-                        if (typeof Utils !== 'undefined' && Utils.promiseWithTimeout) {
-                            return await Utils.promiseWithTimeout(renderFn(), 10000, 'Timeout: renderTabContent');
-                        }
-                        return await timeoutWrapper(renderFn(), 10000, 'Timeout: renderTabContent');
-                    };
-                    const fallbackDatabaseHtml = `
-                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                            <div class="content-card"><div class="text-center"><p class="text-sm text-gray-500">إجمالي الأجهزة</p><p class="text-2xl font-bold" id="fire-summary-total">0</p></div></div>
-                            <div class="content-card"><div class="text-center"><p class="text-sm text-gray-500">أجهزة فعّالة</p><p class="text-2xl font-bold text-green-600" id="fire-summary-active">0</p></div></div>
-                            <div class="content-card"><div class="text-center"><p class="text-sm text-gray-500">بحاجة إلى متابعة</p><p class="text-2xl font-bold text-yellow-600" id="fire-summary-maintenance">0</p></div></div>
-                        </div>
-                        <div class="content-card mt-6"><div class="card-body"><div id="fire-assets-table" class="overflow-x-auto"><div class="empty-state"><p class="text-gray-500">لا توجد معدات مسجلة أو جاري التحميل.</p></div></div></div>
-                    `;
-                    try {
-                        const databaseContent = await renderWithTimeout(() => this.renderTabContent('database'));
-                        databaseTab.innerHTML = (databaseContent && databaseContent.trim()) ? databaseContent : fallbackDatabaseHtml;
-                    } catch (error) {
-                        Utils.safeWarn('⚠️ خطأ في تحميل محتوى قاعدة البيانات:', error);
-                        databaseTab.innerHTML = fallbackDatabaseHtml;
-                    }
-                    try {
-                        this.renderAssets();
-                    } catch (renderError) {
-                        Utils.safeWarn('⚠️ خطأ في renderAssets:', renderError);
-                    }
-                }
-
-                // ✅ تحميل باقي التبويبات في الخلفية (lazy loading)
-                // سيتم تحميلها عند النقر عليها في switchTab
-                
-                // ✅ تحميل البيانات من Backend في الخلفية إذا لم تكن هناك بيانات محلية
-                const hasLocalData = (this.getAssets() && this.getAssets().length > 0) || 
-                                     (this.getInspections() && this.getInspections().length > 0);
-                
-                if (!hasLocalData && typeof GoogleIntegration !== 'undefined' && GoogleIntegration.sendRequest) {
-                    // تحميل البيانات في الخلفية بدون blocking
-                    this.loadFireEquipmentDataAsync().then(() => {
-                        // تحديث الواجهة بعد تحميل البيانات
-                        if (this.state.currentTab === 'database') {
-                            try {
-                                this.renderAssets();
-                            } catch (error) {
-                                Utils.safeWarn('⚠️ خطأ في تحديث renderAssets:', error);
-                            }
-                        }
-                    }).catch(error => {
-                        Utils.safeWarn('⚠️ تعذر تحميل بيانات معدات الحريق:', error);
-                        // الاستمرار بالبيانات المحلية المتاحة (حتى لو كانت فارغة)
-                    });
-                }
-            } catch (error) {
-                Utils.safeError('❌ خطأ في تحميل محتوى التبويبات:', error);
-            }
-        }, 0); // استخدام setTimeout(0) لإعطاء المتصفح فرصة لعرض الواجهة أولاً
-        } catch (error) {
-            Utils.safeError('❌ خطأ في تحميل مديول معدات الحريق:', error);
-
-            // عرض واجهة بسيطة حتى في حالة الخطأ
             section.innerHTML = `
                 <div class="section-header">
-                    <div class="flex items-center justify-between">
+                    <div class="flex items-center justify-between flex-wrap gap-3">
                         <div>
                             <h1 class="section-title">
                                 <i class="fas fa-fire-extinguisher ml-3"></i>
                                 سجل وفحص معدات الحريق
                             </h1>
-                            <p class="section-subtitle">إدارة قاعدة بيانات كاملة لكل معدات الإطفاء</p>
+                            <p class="section-subtitle">
+                                إدارة قاعدة بيانات كاملة لكل معدات الإطفاء مع تتبع الفحوصات وQR Code لكل جهاز
+                            </p>
+                        </div>
+                        <div class="flex items-center gap-2 flex-wrap">
+                            ${this.canAdd() ? `
+                            <button id="add-fire-asset-btn" class="btn-secondary">
+                                <i class="fas fa-plus ml-2"></i>
+                                إضافة جهاز جديد
+                            </button>
+                            ` : ''}
+                            <button id="scan-qr-inspection-btn" class="btn-primary">
+                                <i class="fas fa-qrcode ml-2"></i>
+                                مسح QR Code للفحص الشهري
+                            </button>
+                            <button id="refresh-fire-equipment-btn" class="btn-secondary">
+                                <i class="fas fa-sync-alt ml-2"></i>
+                                تحديث
+                            </button>
                         </div>
                     </div>
                 </div>
-                <div class="mt-6">
-                    <div class="content-card">
-                        <div class="card-body">
-                            <div class="empty-state">
-                                <i class="fas fa-exclamation-triangle text-yellow-500 text-4xl mb-4"></i>
-                                <p class="text-gray-500 mb-2">حدث خطأ أثناء تحميل البيانات</p>
-                                <p class="text-sm text-gray-400 mb-4">${error && error.message ? Utils.escapeHTML(error.message) : 'خطأ غير معروف'}</p>
-                                <button onclick="FireEquipment.load()" class="btn-primary">
-                                    <i class="fas fa-redo ml-2"></i>
-                                    إعادة المحاولة
-                                </button>
+                <style>
+                    .fire-tabs-container {
+                        margin-bottom: 1.5rem;
+                    }
+                    .fire-tabs-header {
+                        display: flex;
+                        gap: 0.5rem;
+                        border-bottom: 2px solid #e5e7eb;
+                        padding-bottom: 0;
+                    }
+                    .fire-tab-btn {
+                        padding: 0.75rem 1.5rem;
+                        background: none;
+                        border: none;
+                        border-bottom: 3px solid transparent;
+                        color: #6b7280;
+                        font-size: 0.9375rem;
+                        font-weight: 500;
+                        cursor: pointer;
+                        transition: all 0.3s ease;
+                        display: flex;
+                        align-items: center;
+                        gap: 0.5rem;
+                        position: relative;
+                        margin-bottom: -2px;
+                    }
+                    .fire-tab-btn:hover {
+                        color: #3b82f6;
+                        background-color: rgba(59, 130, 246, 0.05);
+                    }
+                    .fire-tab-btn.active {
+                        color: #3b82f6;
+                        border-bottom-color: #3b82f6;
+                        font-weight: 600;
+                    }
+                    .fire-tab-btn i {
+                        font-size: 14px;
+                    }
+                    .fire-tab-content {
+                        display: none;
+                    }
+                    .fire-tab-content.active {
+                        display: block;
+                    }
+                    .fire-tab-loading {
+                        display: flex;
+                        flex-direction: column;
+                        align-items: center;
+                        justify-content: center;
+                        padding: 3rem;
+                        min-height: 200px;
+                    }
+                    .fire-tab-loading i {
+                        font-size: 2rem;
+                        color: #3b82f6;
+                        margin-bottom: 1rem;
+                    }
+                    @media (max-width: 768px) {
+                        .fire-tabs-header {
+                            flex-wrap: wrap;
+                            gap: 0.25rem;
+                        }
+                        .fire-tab-btn {
+                            padding: 0.625rem 1rem;
+                            font-size: 0.875rem;
+                        }
+                    }
+                </style>
+                <div class="fire-tabs-container mt-6">
+                    <div class="fire-tabs-header">
+                        ${this.hasTabAccess('database') ? `
+                        <button class="fire-tab-btn active" data-tab="database" onclick="FireEquipment.switchTab('database')">
+                            <i class="fas fa-database ml-2"></i>
+                            قاعدة بيانات معدات الحريق
+                        </button>
+                        ` : ''}
+                        ${this.hasTabAccess('register') ? `
+                        <button class="fire-tab-btn" data-tab="register" onclick="FireEquipment.switchTab('register')">
+                            <i class="fas fa-clipboard-list ml-2"></i>
+                            سجل معدات الاطفاء والانذار
+                        </button>
+                        ` : ''}
+                        ${this.hasTabAccess('inspections') ? `
+                        <button class="fire-tab-btn" data-tab="inspections" onclick="FireEquipment.switchTab('inspections')">
+                            <i class="fas fa-clipboard-check ml-2"></i>
+                            الفحوصات الشهرية
+                        </button>
+                        ` : ''}
+                        ${this.hasTabAccess('analytics') ? `
+                        <button class="fire-tab-btn" data-tab="analytics" onclick="FireEquipment.switchTab('analytics')">
+                            <i class="fas fa-chart-line ml-2"></i>
+                            تحليل البيانات
+                        </button>
+                        ` : ''}
+                        ${this.hasTabAccess('approval-requests') ? `
+                        <button class="fire-tab-btn" data-tab="approval-requests" onclick="FireEquipment.switchTab('approval-requests')">
+                            <i class="fas fa-check-circle ml-2"></i>
+                            طلبات الموافقة
+                        </button>
+                        ` : ''}
+                    </div>
+                </div>
+                <div id="fire-tab-content">
+                    <div id="fire-tab-database" class="fire-tab-content active">
+                        ${loadingPlaceholder}
+                    </div>
+                    <div id="fire-tab-register" class="fire-tab-content" style="display: none;">
+                        ${loadingPlaceholder}
+                    </div>
+                    <div id="fire-tab-inspections" class="fire-tab-content" style="display: none;">
+                        ${loadingPlaceholder}
+                    </div>
+                    ${this.isAdmin() ? `
+                    <div id="fire-tab-analytics" class="fire-tab-content" style="display: none;">
+                        ${loadingPlaceholder}
+                    </div>
+                    <div id="fire-tab-approval-requests" class="fire-tab-content" style="display: none;">
+                        ${loadingPlaceholder}
+                    </div>
+                    ` : ''}
+                </div>
+            `;
+
+            try {
+                this.setupEventListeners();
+            } catch (error) {
+                Utils.safeWarn('⚠️ خطأ في setupEventListeners:', error);
+            }
+
+            setTimeout(async () => {
+                try {
+                    const checkAppState = () => {
+                        return new Promise((resolve) => {
+                            if (typeof AppState !== 'undefined' && AppState && AppState.appData) {
+                                resolve();
+                                return;
+                            }
+
+                            let attempts = 0;
+                            const maxAttempts = 50;
+                            const checkInterval = setInterval(() => {
+                                attempts++;
+                                if (typeof AppState !== 'undefined' && AppState && AppState.appData) {
+                                    clearInterval(checkInterval);
+                                    resolve();
+                                } else if (attempts >= maxAttempts) {
+                                    clearInterval(checkInterval);
+                                    if (typeof AppState === 'undefined' || !AppState) AppState = {};
+                                    if (!AppState.appData) AppState.appData = {};
+                                    resolve();
+                                }
+                            }, 100);
+                        });
+                    };
+
+                    await checkAppState();
+
+                    let migrated = false;
+                    try {
+                        migrated = this.ensureData();
+                    } catch (error) {
+                        Utils.safeWarn('⚠️ خطأ في ensureData:', error);
+                    }
+
+                    if (migrated) {
+                        try {
+                            setTimeout(async () => {
+                                try {
+                                    await this.persistAll();
+                                } catch (error) {
+                                    Utils.safeWarn('⚠️ خطأ في persistAll:', error);
+                                }
+                            }, 0);
+                        } catch (error) {
+                            Utils.safeWarn('⚠️ خطأ في persistAll:', error);
+                        }
+                    }
+
+                    const databaseTab = document.getElementById('fire-tab-database');
+                    if (databaseTab) {
+                        const renderWithTimeout = async (renderFn) => {
+                            const timeoutWrapper = (promise, timeout, msg) => {
+                                const timeoutPromise = new Promise((_, reject) => {
+                                    setTimeout(() => reject(new Error(msg || 'Timeout')), timeout);
+                                });
+                                return Promise.race([promise, timeoutPromise]);
+                            };
+                            if (typeof Utils !== 'undefined' && Utils.promiseWithTimeout) {
+                                return await Utils.promiseWithTimeout(renderFn(), 10000, 'Timeout: renderTabContent');
+                            }
+                            return await timeoutWrapper(renderFn(), 10000, 'Timeout: renderTabContent');
+                        };
+                        const fallbackDatabaseHtml = `
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <div class="content-card"><div class="text-center"><p class="text-sm text-gray-500">إجمالي الأجهزة</p><p class="text-2xl font-bold" id="fire-summary-total">0</p></div></div>
+                                <div class="content-card"><div class="text-center"><p class="text-sm text-gray-500">أجهزة فعّالة</p><p class="text-2xl font-bold text-green-600" id="fire-summary-active">0</p></div></div>
+                                <div class="content-card"><div class="text-center"><p class="text-sm text-gray-500">بحاجة إلى متابعة</p><p class="text-2xl font-bold text-yellow-600" id="fire-summary-maintenance">0</p></div></div>
+                            </div>
+                            <div class="content-card mt-6"><div class="card-body"><div id="fire-assets-table" class="overflow-x-auto"><div class="empty-state"><p class="text-gray-500">لا توجد معدات مسجلة أو جاري التحميل.</p></div></div></div>
+                        `;
+                        try {
+                            const databaseContent = await renderWithTimeout(() => this.renderTabContent('database'));
+                            databaseTab.innerHTML = (databaseContent && databaseContent.trim()) ? databaseContent : fallbackDatabaseHtml;
+                        } catch (error) {
+                            Utils.safeWarn('⚠️ خطأ في تحميل محتوى قاعدة البيانات:', error);
+                            databaseTab.innerHTML = fallbackDatabaseHtml;
+                        }
+                        try {
+                            this.renderAssets();
+                        } catch (renderError) {
+                            Utils.safeWarn('⚠️ خطأ في renderAssets:', renderError);
+                        }
+                    }
+
+                    const hasLocalData = (this.getAssets() && this.getAssets().length > 0) ||
+                                         (this.getInspections() && this.getInspections().length > 0);
+
+                    if (!hasLocalData && typeof GoogleIntegration !== 'undefined' && GoogleIntegration.sendRequest) {
+                        this.loadFireEquipmentDataAsync().then(() => {
+                            if (this.state.currentTab === 'database') {
+                                try {
+                                    this.renderAssets();
+                                } catch (error) {
+                                    Utils.safeWarn('⚠️ خطأ في تحديث renderAssets:', error);
+                                }
+                            }
+                        }).catch(error => {
+                            Utils.safeWarn('⚠️ تعذر تحميل بيانات معدات الحريق:', error);
+                        });
+                    }
+                } catch (error) {
+                    Utils.safeError('❌ خطأ في تحميل محتوى التبويبات:', error);
+                }
+            }, 0);
+        } catch (error) {
+            Utils.safeError('❌ خطأ في تحميل مديول معدات الحريق:', error);
+
+            if (section) {
+                section.innerHTML = `
+                    <div class="section-header">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <h1 class="section-title">
+                                    <i class="fas fa-fire-extinguisher ml-3"></i>
+                                    سجل وفحص معدات الحريق
+                                </h1>
+                                <p class="section-subtitle">إدارة قاعدة بيانات كاملة لكل معدات الإطفاء</p>
                             </div>
                         </div>
                     </div>
-                </div>
-            `;
+                    <div class="mt-6">
+                        <div class="content-card">
+                            <div class="card-body">
+                                <div class="empty-state">
+                                    <i class="fas fa-exclamation-triangle text-yellow-500 text-4xl mb-4"></i>
+                                    <p class="text-gray-500 mb-2">حدث خطأ أثناء تحميل البيانات</p>
+                                    <p class="text-sm text-gray-400 mb-4">${error && error.message ? Utils.escapeHTML(error.message) : 'خطأ غير معروف'}</p>
+                                    <button onclick="FireEquipment.load()" class="btn-primary">
+                                        <i class="fas fa-redo ml-2"></i>
+                                        إعادة المحاولة
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
 
             if (typeof Notification !== 'undefined' && Notification.error) {
                 Notification.error('حدث خطأ أثناء تحميل معدات الحريق. يُرجى المحاولة مرة أخرى.', { duration: 3000 });
@@ -4895,7 +4864,8 @@ FireEquipment = {
      * التحقق من أن المستخدم الحالي هو مدير النظام
      */
     isAdmin() {
-        const currentUser = AppState.currentUser;
+        const currentUser = (typeof AppState !== 'undefined' && AppState) ? AppState.currentUser : null;
+
         return currentUser && (
             currentUser.role === 'admin' ||
             currentUser.role === 'مدير النظام' ||
@@ -4908,7 +4878,8 @@ FireEquipment = {
      * التحقق من صلاحية الوصول لتبويب معين
      */
     hasTabAccess(tabName) {
-        const user = AppState.currentUser;
+        const user = (typeof AppState !== 'undefined' && AppState) ? AppState.currentUser : null;
+
         // عند عدم توفر المستخدم بعد (تحميل متأخر)، إظهار التبويب الأساسي لتجنب واجهة فارغة
         if (!user) return tabName === 'database';
 
@@ -4928,7 +4899,8 @@ FireEquipment = {
      * التحقق من صلاحية المستخدم للإضافة
      */
     canAdd() {
-        const user = AppState.currentUser;
+        const user = (typeof AppState !== 'undefined' && AppState) ? AppState.currentUser : null;
+
         if (!user) return false;
 
         // المدير لديه صلاحيات كاملة
@@ -4943,7 +4915,8 @@ FireEquipment = {
      * التحقق من صلاحية المستخدم للتعديل
      */
     canEdit() {
-        const user = AppState.currentUser;
+        const user = (typeof AppState !== 'undefined' && AppState) ? AppState.currentUser : null;
+
         if (!user) return false;
 
         // المدير لديه صلاحيات كاملة
@@ -4958,7 +4931,8 @@ FireEquipment = {
      * التحقق من صلاحية المستخدم للحذف
      */
     canDelete() {
-        const user = AppState.currentUser;
+        const user = (typeof AppState !== 'undefined' && AppState) ? AppState.currentUser : null;
+
         if (!user) return false;
 
         // المدير لديه صلاحيات كاملة
