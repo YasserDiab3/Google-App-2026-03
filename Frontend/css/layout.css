@@ -23,6 +23,35 @@
     /* will-change: transform; */
 }
 
+.sidebar.collapsed {
+    width: 84px;
+    min-width: 84px;
+}
+
+.sidebar.collapsed .navigation {
+    align-items: center;
+}
+
+.sidebar-collapse-toggle {
+    margin: 0.5rem 1rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    border: none;
+    background: rgba(255, 255, 255, 0.12);
+    color: white;
+    cursor: pointer;
+    transition: background 0.3s ease;
+}
+
+.sidebar-collapse-toggle:hover,
+.sidebar-collapse-toggle:focus-visible {
+    background: rgba(255, 255, 255, 0.24);
+}
+
 /* User Profile */
 .user-profile {
     padding: 2rem 1.5rem;
