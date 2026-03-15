@@ -3414,6 +3414,54 @@ window.UI = {
         this.updateCompanyLogoHeaderPosition(shouldOpen);
     },
 
+    toggleSidebarCollapse(forceState = null) {
+        const sidebar = document.querySelector('.sidebar');
+        if (!sidebar) return;
+
+        const shouldCollapse = forceState !== null ? forceState : !sidebar.classList.contains('collapsed');
+        sidebar.classList.toggle('collapsed', shouldCollapse);
+
+        const collapseToggle = document.getElementById('sidebar-collapse-toggle');
+        if (collapseToggle) {
+            collapseToggle.setAttribute('aria-pressed', shouldCollapse ? 'true' : 'false');
+            const icon = collapseToggle.querySelector('i');
+            if (icon) {
+                icon.className = shouldCollapse ? 'fas fa-chevron-right' : 'fas fa-chevron-left';
+            }
+        }
+
+        try {
+            localStorage.setItem('sidebarCollapsed', shouldCollapse ? 'true' : 'false');
+        } catch (error) {
+            if (Utils?.safeWarn) {
+                Utils.safeWarn('⚠️ فشل حفظ حالة طي القائمة الجانبية:', error);
+            }
+        }
+    },
+
+    restoreSidebarCollapseState() {
+        const sidebar = document.querySelector('.sidebar');
+        if (!sidebar) return;
+
+        let stored = null;
+        try {
+            stored = localStorage.getItem('sidebarCollapsed');
+        } catch (error) {
+            stored = null;
+        }
+        const shouldCollapse = stored === 'true';
+        sidebar.classList.toggle('collapsed', shouldCollapse);
+
+        const collapseToggle = document.getElementById('sidebar-collapse-toggle');
+        if (collapseToggle) {
+            collapseToggle.setAttribute('aria-pressed', shouldCollapse ? 'true' : 'false');
+            const icon = collapseToggle.querySelector('i');
+            if (icon) {
+                icon.className = shouldCollapse ? 'fas fa-chevron-right' : 'fas fa-chevron-left';
+            }
+        }
+    },
+
     /**
      * تحديث موقع الهيدر بناءً على حالة القائمة الجانبية
      */
@@ -3441,6 +3489,7 @@ window.UI = {
     bindSidebarEvents() {
         const toggleBtn = document.getElementById('sidebar-toggle');
         const overlay = document.getElementById('sidebar-overlay');
+        const collapseToggle = document.getElementById('sidebar-collapse-toggle');
 
         if (toggleBtn && !toggleBtn.dataset.bound) {
             toggleBtn.addEventListener('click', (e) => {
@@ -3460,6 +3509,17 @@ window.UI = {
             overlay.dataset.bound = 'true';
             overlay.setAttribute('aria-hidden', 'true');
         }
+
+        if (collapseToggle && !collapseToggle.dataset.bound) {
+            collapseToggle.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                this.toggleSidebarCollapse();
+            });
+            collapseToggle.dataset.bound = 'true';
+        }
+
+        this.restoreSidebarCollapseState();
 
         // ربط أحداث النقر على شعار الشركة واسم الشركة في الهيدر
         this.bindCompanyHeaderClickEvents();
