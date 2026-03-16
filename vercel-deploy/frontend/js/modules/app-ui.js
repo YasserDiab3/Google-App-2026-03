@@ -5156,6 +5156,7 @@ window.UI = {
                 case 'legal-documents':
                     if (typeof LegalDocuments !== 'undefined' && LegalDocuments.load) {
                         LegalDocuments.load();
+                    } else {
                         if (!silent) {
                             Utils.safeError('❌ موديول LegalDocuments غير متوفر - الموديول لم يُحمّل بشكل صحيح');
                         }
@@ -5164,6 +5165,7 @@ window.UI = {
                 case 'sustainability':
                     if (typeof Sustainability !== 'undefined' && Sustainability.load) {
                         Sustainability.load();
+                    } else {
                         if (!silent) {
                             Utils.safeError('❌ موديول Sustainability غير متوفر - الموديول لم يُحمّل بشكل صحيح');
                         }
@@ -5181,6 +5183,7 @@ window.UI = {
                         } catch (error) {
                             Utils.safeError('خطأ في استدعاء AIAssistant.load:', error);
                         }
+                    } else {
                         if (!silent) {
                             Utils.safeError('❌ موديول AIAssistant غير متوفر - الموديول لم يُحمّل بشكل صحيح');
                         }
@@ -5189,6 +5192,7 @@ window.UI = {
                 case 'safety-performance-kpis':
                     if (typeof SafetyPerformanceKPIs !== 'undefined' && SafetyPerformanceKPIs.load) {
                         SafetyPerformanceKPIs.load();
+                    } else {
                         if (!silent) {
                             Utils.safeError('❌ موديول SafetyPerformanceKPIs غير متوفر - الموديول لم يُحمّل بشكل صحيح');
                         }
@@ -5197,6 +5201,7 @@ window.UI = {
                 case 'settings':
                     if (typeof Settings !== 'undefined' && Settings.load) {
                         Settings.load();
+                    } else {
                         if (!silent) {
                             Utils.safeError('❌ موديول Settings غير متوفر - الموديول لم يُحمّل بشكل صحيح');
                         }
@@ -5205,6 +5210,7 @@ window.UI = {
                 case 'safety-budget':
                     if (typeof SafetyBudget !== 'undefined' && SafetyBudget.load) {
                         SafetyBudget.load();
+                    } else {
                         if (!silent) {
                             Utils.safeError('❌ موديول SafetyBudget غير متوفر - الموديول لم يُحمّل بشكل صحيح');
                         }
@@ -5222,6 +5228,7 @@ window.UI = {
                         } catch (error) {
                             Utils.safeError('خطأ في استدعاء ActionTrackingRegister.load:', error);
                         }
+                    } else {
                         if (!silent) {
                             Utils.safeError('❌ موديول ActionTrackingRegister غير متوفر - الموديول لم يُحمّل بشكل صحيح');
                         }
@@ -5240,6 +5247,7 @@ window.UI = {
                         } catch (error) {
                             Utils.safeError('خطأ في استدعاء SafetyHealthManagement.load:', error);
                         }
+                    } else {
                         if (!silent) {
                             Utils.safeError('❌ موديول SafetyHealthManagement غير متوفر - الموديول لم يُحمّل بشكل صحيح');
                         }
@@ -5249,6 +5257,7 @@ window.UI = {
                     Utils.safeLog('تحميل مديول اختبار التطبيق في قسم apptester-section');
                     if (typeof AppTester !== 'undefined' && AppTester.load) {
                         AppTester.load();
+                    } else {
                         if (!silent) {
                             Utils.safeError('❌ موديول AppTester غير متوفر - الموديول لم يُحمّل بشكل صحيح');
                         }
@@ -5267,6 +5276,7 @@ window.UI = {
                         } catch (error) {
                             Utils.safeError('خطأ في استدعاء Reports.load:', error);
                         }
+                    } else {
                         if (!silent) {
                             Utils.safeError('❌ موديول Reports غير متوفر - الموديول لم يُحمّل بشكل صحيح');
                         }
@@ -5285,6 +5295,7 @@ window.UI = {
                         } catch (error) {
                             Utils.safeError('خطأ في استدعاء HSE.load:', error);
                         }
+                    } else {
                         if (!silent) {
                             Utils.safeError('❌ موديول HSE غير متوفر - الموديول لم يُحمّل بشكل صحيح');
                         }
@@ -5342,6 +5353,7 @@ window.UI = {
                         } catch (error) {
                             Utils.safeError('خطأ في استدعاء IssueTracking.load:', error);
                         }
+                    } else {
                         if (!silent) {
                             Utils.safeError('❌ موديول IssueTracking غير متوفر - الموديول لم يُحمّل بشكل صحيح');
                         }
@@ -5360,6 +5372,7 @@ window.UI = {
                         } catch (error) {
                             Utils.safeError('خطأ في استدعاء ChangeManagement.load:', error);
                         }
+                    } else {
                         if (!silent) {
                             Utils.safeError('❌ موديول ChangeManagement غير متوفر - الموديول لم يُحمّل بشكل صحيح');
                         }

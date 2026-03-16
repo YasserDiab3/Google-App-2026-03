@@ -12775,10 +12775,12 @@
                     } catch (e) {}
                 }
 
-                console.log(
-                    "%c✅ Chrome-Specific Error Suppressor Active (Final Layer)",
-                    "color: #4285f4; font-weight: bold; font-size: 14px;",
-                );
+                if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || window.location.search.includes('dev=true')) {
+                    console.log(
+                        "%c✅ Chrome-Specific Error Suppressor Active (Final Layer)",
+                        "color: #4285f4; font-weight: bold; font-size: 14px;",
+                    );
+                }
             })();
         </script>
     </body>
