@@ -2671,6 +2671,21 @@ window.UI = {
             }, 1000);
         }
         this.updateUserProfile();
+        if (typeof FireEquipment === 'undefined' && !document.querySelector('script[src*="fireequipment.js"]')) {
+            try {
+                const base = (() => {
+                    const b = document.querySelector('base');
+                    if (b && b.href) return b.href.replace(/\/$/, '') + '/';
+                    const p = window.location.pathname || '';
+                    const i = p.lastIndexOf('/');
+                    return window.location.origin + (i >= 0 ? p.slice(0, i + 1) : '/');
+                })();
+                const s = document.createElement('script');
+                s.src = base + 'js/modules/modules/fireequipment.js';
+                s.async = true;
+                document.body.appendChild(s);
+            } catch (e) { if (AppState.debugMode) Utils.safeWarn('تحميل مسبق لمعدات الحريق:', e); }
+        }
         this.setupNavigationListeners();
         this.bindSidebarEvents();
         this.initSyncButton();
@@ -4874,8 +4889,24 @@ window.UI = {
                         }
                         if (attempts >= maxAttempts) {
                             clearInterval(retryInterval);
+                            const getScriptBase = () => {
+                                const base = document.querySelector('base');
+                                if (base && base.href) {
+                                    const u = base.href.replace(/\/$/, '');
+                                    return u + (u.indexOf('?') >= 0 ? '' : '/');
+                                }
+                                const path = window.location.pathname || '';
+                                const lastSlash = path.lastIndexOf('/');
+                                const dir = lastSlash >= 0 ? path.slice(0, lastSlash + 1) : '/';
+                                return window.location.origin + dir;
+                            };
+                            const scriptUrl = getScriptBase() + 'js/modules/modules/fireequipment.js';
+                            if (document.querySelector('script[src*="fireequipment.js"]')) {
+                                tryLoadFireEquipment() || showFireEquipmentError('الموديول لم يُحمّل بشكل صحيح. يرجى تحديث الصفحة.', true);
+                                break;
+                            }
                             const script = document.createElement('script');
-                            script.src = 'js/modules/modules/fireequipment.js';
+                            script.src = scriptUrl;
                             script.async = false;
                             script.onload = () => {
                                 if (tryLoadFireEquipment()) return;

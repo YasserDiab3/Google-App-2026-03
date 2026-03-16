@@ -9318,42 +9318,49 @@
                 function initLoginLanguage() {
                     var lang = getLoginLang();
                     applyLoginLanguage(lang);
-                    var btn = document.getElementById("login-language-toggle-btn");
-                    var dd = document.getElementById("login-language-dropdown");
-                    if (btn && !btn.dataset.loginLangBound) {
-                        btn.dataset.loginLangBound = "true";
-                        btn.addEventListener("click", function (e) {
+                    if (window._loginLangDelegationBound) return;
+                    window._loginLangDelegationBound = true;
+                    document.addEventListener("click", function (e) {
+                        var btn = document.getElementById("login-language-toggle-btn");
+                        var dd = document.getElementById("login-language-dropdown");
+                        if (!btn || !dd) return;
+                        if (btn.contains(e.target)) {
                             e.preventDefault();
                             e.stopPropagation();
-                            if (isLoginLanguageDropdownOpen()) {
-                                closeLoginLanguageDropdown();
+                            if (dd.classList.contains("hidden")) {
+                                dd.classList.remove("hidden");
+                                dd.classList.add("show");
+                                dd.style.display = "block";
+                                btn.setAttribute("aria-expanded", "true");
                             } else {
-                                openLoginLanguageDropdown();
+                                dd.classList.add("hidden");
+                                dd.classList.remove("show");
+                                dd.style.display = "";
+                                btn.setAttribute("aria-expanded", "false");
                             }
-                        });
-                    }
-                    if (dd) {
-                        var options = dd.querySelectorAll("button[data-lang]");
-                        options.forEach(function (opt) {
-                            opt.addEventListener("click", function (e) {
-                                e.preventDefault();
-                                var chosen = this.getAttribute("data-lang");
-                                if (chosen) {
-                                    try {
-                                        localStorage.setItem("language", chosen);
-                                    } catch (err) {}
-                                    if (typeof window.AppState !== "undefined")
-                                        window.AppState.currentLanguage = chosen;
-                                    applyLoginLanguage(chosen);
-                                    closeLoginLanguageDropdown();
-                                }
-                            });
-                        });
-                    }
-                    document.addEventListener("click", function (e) {
-                        if (!dd || !btn) return;
+                            return;
+                        }
+                        var opt = e.target.closest && e.target.closest("#login-language-dropdown button[data-lang]");
+                        if (opt) {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            var chosen = opt.getAttribute("data-lang");
+                            if (chosen) {
+                                try { localStorage.setItem("language", chosen); } catch (err) {}
+                                if (typeof window.AppState !== "undefined") window.AppState.currentLanguage = chosen;
+                                applyLoginLanguage(chosen);
+                                dd.classList.add("hidden");
+                                dd.classList.remove("show");
+                                dd.style.display = "";
+                                btn.setAttribute("aria-expanded", "false");
+                            }
+                            return;
+                        }
                         if (!dd.contains(e.target) && !btn.contains(e.target)) {
-                            closeLoginLanguageDropdown();
+                            dd.classList.add("hidden");
+                            dd.classList.remove("show");
+                            dd.style.display = "";
+                            btn.setAttribute("aria-expanded", "false");
                         }
                     });
                 }
