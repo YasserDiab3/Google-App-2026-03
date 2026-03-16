@@ -2700,6 +2700,23 @@ const Clinic = {
         }
     },
 
+    /** القائمة الافتراضية لأنواع الزيارة (قابلة للتعديل من مدير النظام عبر إعدادات العيادة) */
+    static get DEFAULT_VISIT_TYPES() {
+        return ['طوارئ', 'اصابة عمل', 'مرض', 'فحص دوري', 'متابعة', 'فحص ماقبل التعيين', 'تحليل مخدارت'];
+    },
+
+    /**
+     * الحصول على قائمة أنواع الزيارة (من إعدادات المدير أو الافتراضية)
+     * @returns {string[]}
+     */
+    getVisitTypeOptions() {
+        const custom = AppState.appData?.clinicVisitTypes;
+        if (Array.isArray(custom) && custom.length > 0) {
+            return custom.map((v) => (typeof v === 'string' ? v.trim() : String(v))).filter(Boolean);
+        }
+        return Clinic.DEFAULT_VISIT_TYPES.slice();
+    },
+
     /**
      * عد زيارات شخص معين (موظف أو مقاول) في الشهر الذي تنتمي إليه زيارة معينة
      * @param {Object} visitData - بيانات زيارة تحتوي على personType و visitDate ومعرفات الشخص
@@ -2754,6 +2771,108 @@ const Clinic = {
             Utils.safeWarn('getMonthlyVisitCountForPerson:', e);
             return 0;
         }
+    },
+
+    /**
+     * عرض نافذة إدارة أنواع الزيارة (مدير النظام فقط) - القائمة قابلة للتعديل
+     */
+    showVisitTypesSettingsModal() {
+        if (!this.isCurrentUserAdmin()) {
+            Notification?.error?.('هذا القسم متاح لمدير النظام فقط');
+            return;
+        }
+        const currentList = this.getVisitTypeOptions();
+        const modal = document.createElement('div');
+        modal.className = 'modal-overlay';
+        const listToEditableItems = (arr) => arr.map((text, idx) => ({
+            id: 'vt-' + Date.now() + '-' + idx,
+            text: String(text).trim()
+        }));
+        let items = listToEditableItems(currentList);
+
+        const renderList = () => {
+            const container = document.getElementById('clinic-visit-types-list');
+            if (!container) return;
+            container.innerHTML = items.map((it, idx) => `
+                <div class="flex items-center gap-2 mb-2" data-id="${it.id}">
+                    <input type="text" class="form-input flex-1" value="${Utils.escapeHTML(it.text)}" data-id="${it.id}" placeholder="نوع الزيارة">
+                    <button type="button" class="btn-icon btn-icon-danger btn-xs remove-visit-type" data-id="${it.id}" title="حذف">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            `).join('');
+            container.querySelectorAll('input').forEach(input => {
+                input.addEventListener('change', () => {
+                    const id = input.getAttribute('data-id');
+                    const it = items.find(i => i.id === id);
+                    if (it) it.text = input.value.trim();
+                });
+            });
+            container.querySelectorAll('.remove-visit-type').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const id = btn.getAttribute('data-id');
+                    items = items.filter(i => i.id !== id);
+                    renderList();
+                });
+            });
+        };
+
+        modal.innerHTML = `
+            <div class="modal-content" style="max-width: 500px; border-radius: 15px;">
+                <div class="modal-header" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
+                    <h2 class="modal-title"><i class="fas fa-list-ul ml-2"></i> إدارة أنواع الزيارة</h2>
+                    <button class="modal-close" style="color: white;" onclick="this.closest('.modal-overlay').remove()">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="modal-body" style="padding: 20px;">
+                    <p class="text-gray-600 text-sm mb-4">تظهر هذه البنود في قائمة "نوع الزيارة" عند تسجيل زيارة جديدة. يمكنك الإضافة أو الحذف أو التعديل.</p>
+                    <div id="clinic-visit-types-list"></div>
+                    <button type="button" id="clinic-visit-types-add-row" class="btn-secondary mt-2">
+                        <i class="fas fa-plus ml-2"></i> إضافة بند
+                    </button>
+                    <div class="flex gap-2 justify-end mt-4 pt-4 border-t">
+                        <button type="button" class="btn-secondary modal-close-btn">إلغاء</button>
+                        <button type="button" id="clinic-visit-types-reset" class="btn-secondary">استعادة الافتراضي</button>
+                        <button type="button" id="clinic-visit-types-save" class="btn-primary">حفظ</button>
+                    </div>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+
+        renderList();
+
+        modal.querySelector('#clinic-visit-types-add-row').addEventListener('click', () => {
+            items.push({ id: 'vt-' + Date.now() + '-' + items.length, text: '' });
+            renderList();
+        });
+        modal.querySelector('#clinic-visit-types-reset').addEventListener('click', () => {
+            items = listToEditableItems(Clinic.DEFAULT_VISIT_TYPES);
+            renderList();
+        });
+        modal.querySelector('#clinic-visit-types-save').addEventListener('click', () => {
+            modal.querySelectorAll('#clinic-visit-types-list input').forEach(input => {
+                const id = input.getAttribute('data-id');
+                const it = items.find(i => i.id === id);
+                if (it) it.text = input.value.trim();
+            });
+            const list = items.map(i => i.text).filter(Boolean);
+            if (list.length === 0) {
+                Notification?.warning?.('أضف بنداً واحداً على الأقل أو استعد الافتراضي');
+                return;
+            }
+            if (!AppState.appData) AppState.appData = {};
+            AppState.appData.clinicVisitTypes = list;
+            if (typeof DataManager !== 'undefined' && DataManager.save) {
+                DataManager.save();
+            }
+            Notification?.success?.('تم حفظ قائمة أنواع الزيارة');
+            modal.remove();
+        });
+        modal.querySelectorAll('.modal-close, .modal-close-btn').forEach(btn => {
+            btn.addEventListener('click', () => modal.remove());
+        });
     },
 
     /**
@@ -8339,6 +8458,14 @@ const Clinic = {
                         <!-- قسم التشخيص والعلاج -->
                         <div class="grid grid-cols-1 gap-4" style="background: linear-gradient(135deg, #a1c4fd 0%, #c2e9fb 100%); padding: 20px; border-radius: 10px; margin-bottom: 15px;">
                             <div class="col-span-2">
+                                <label for="visit-type" class="block text-sm font-semibold mb-2" style="color: #4facfe; display: flex; align-items: center; gap: 5px;"><i class="fas fa-tag"></i> نوع الزيارة *</label>
+                                <select id="visit-type" required class="form-input" style="border: 2px solid #4facfe; border-radius: 8px;">
+                                    <option value="">-- اختر نوع الزيارة --</option>
+                                    ${(isEdit && !visitData?.visitType ? ['غير محدد'] : []).map(opt => `<option value="${Utils.escapeHTML(opt)}" selected>${Utils.escapeHTML(opt)}</option>`).join('')}
+                                    ${this.getVisitTypeOptions().map(opt => `<option value="${Utils.escapeHTML(opt)}" ${(visitData?.visitType || '') === opt ? 'selected' : ''}>${Utils.escapeHTML(opt)}</option>`).join('')}
+                                </select>
+                            </div>
+                            <div class="col-span-2">
                                 <label for="visit-reason" class="block text-sm font-semibold mb-2" style="color: #4facfe; display: flex; align-items: center; gap: 5px;"><i class="fas fa-question-circle"></i> سبب الزيارة *</label>
                                 <input type="text" id="visit-reason" required class="form-input" style="border: 2px solid #4facfe; border-radius: 8px;"
                                     value="${visitData?.reason || ''}" placeholder="سبب الزيارة">
@@ -8803,6 +8930,7 @@ const Clinic = {
                 workArea: workAreaValue || null,
                 visitDate: visitDateISO,
                 exitDate: exitDateISO,
+                visitType: document.getElementById('visit-type')?.value?.trim() || null,
                 reason: document.getElementById('visit-reason').value.trim(),
                 diagnosis: document.getElementById('visit-diagnosis').value.trim(),
                 treatment: document.getElementById('visit-treatment').value.trim(),
@@ -11115,6 +11243,12 @@ const Clinic = {
                         <p class="section-subtitle">إدارة سجل التردد، الأدوية، الإجازات المرضية، والإصابات</p>
                     </div>
                     <div class="flex gap-2">
+                        ${isAdmin ? `
+                        <button id="clinic-visit-types-settings-btn" class="btn-secondary" title="إدارة أنواع الزيارة (مدير النظام فقط)">
+                            <i class="fas fa-list-ul ml-2"></i>
+                            أنواع الزيارة
+                        </button>
+                        ` : ''}
                         <button id="clinic-refresh-btn" class="btn-secondary" title="تحديث البيانات">
                             <i class="fas fa-sync-alt ml-2"></i>
                             تحديث
@@ -11244,6 +11378,12 @@ const Clinic = {
         const registerVisitBtn = document.getElementById('clinic-register-visit-btn');
         if (registerVisitBtn) {
             registerVisitBtn.addEventListener('click', () => this.showVisitForm());
+        }
+
+        // ربط زر إدارة أنواع الزيارة (مدير النظام فقط)
+        const visitTypesSettingsBtn = document.getElementById('clinic-visit-types-settings-btn');
+        if (visitTypesSettingsBtn) {
+            visitTypesSettingsBtn.addEventListener('click', () => this.showVisitTypesSettingsModal());
         }
 
         // إضافة أيقونات التنقل مباشرة بعد renderUI
@@ -12307,6 +12447,17 @@ const Clinic = {
                             
                             <div class="grid grid-cols-1 gap-4">
                                 <div>
+                                    <label for="enhanced-visit-type" class="block text-sm font-semibold text-gray-700 mb-2" style="display: flex; align-items: center; gap: 5px;">
+                                        <i class="fas fa-tag text-blue-600"></i>
+                                        نوع الزيارة *
+                                    </label>
+                                    <select id="enhanced-visit-type" required class="form-input" style="border: 2px solid #4facfe; border-radius: 10px; padding: 12px;">
+                                        <option value="">-- اختر نوع الزيارة --</option>
+                                        ${(isEdit && !visitData?.visitType ? ['غير محدد'] : []).map(opt => `<option value="${Utils.escapeHTML(opt)}" selected>${Utils.escapeHTML(opt)}</option>`).join('')}
+                                        ${this.getVisitTypeOptions().map(opt => `<option value="${Utils.escapeHTML(opt)}" ${(visitData?.visitType || '') === opt ? 'selected' : ''}>${Utils.escapeHTML(opt)}</option>`).join('')}
+                                    </select>
+                                </div>
+                                <div>
                                     <label for="enhanced-visit-reason" class="block text-sm font-semibold text-gray-700 mb-2" style="display: flex; align-items: center; gap: 5px;">
                                         <i class="fas fa-question-circle text-blue-600"></i>
                                         سبب الزيارة *
@@ -12564,6 +12715,7 @@ const Clinic = {
             const employeeLocation = document.getElementById('enhanced-visit-employee-location').value.trim();
             const visitDate = document.getElementById('enhanced-visit-date').value;
             const exitDate = document.getElementById('enhanced-visit-exit-date').value || null;
+            const visitType = document.getElementById('enhanced-visit-type')?.value?.trim() || null;
             const reason = document.getElementById('enhanced-visit-reason').value.trim();
             const diagnosis = document.getElementById('enhanced-visit-diagnosis').value.trim();
             const treatment = document.getElementById('enhanced-visit-treatment').value.trim();
@@ -12719,6 +12871,7 @@ const Clinic = {
                 workArea: employeeLocation,
                 visitDate: visitDateISO,
                 exitDate: exitDateISO,
+                visitType,
                 reason,
                 diagnosis,
                 treatment,
