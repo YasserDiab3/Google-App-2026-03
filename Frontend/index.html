@@ -9321,100 +9321,73 @@
                     var lang = getLoginLang();
                     applyLoginLanguage(lang);
                     var btn = document.getElementById("login-language-toggle-btn");
-                    var dd = document.getElementById("login-language-dropdown");
-                    if (btn && dd) {
-                        window._loginLangDirectBound = true;
-                        function openDropdown() {
-                            dd.classList.remove("hidden");
-                            dd.classList.add("show");
-                            dd.style.setProperty("display", "block", "important");
-                            dd.style.setProperty("visibility", "visible", "important");
-                            dd.style.setProperty("z-index", "99999", "important");
-                            btn.setAttribute("aria-expanded", "true");
+                    if (!btn) return;
+                    window._loginLangDirectBound = true;
+                    var overlayId = "login-lang-dropdown-portal";
+                    function closePortal() {
+                        var el = document.getElementById(overlayId);
+                        if (el && el.parentNode) el.parentNode.removeChild(el);
+                        btn.setAttribute("aria-expanded", "false");
+                    }
+                    function openDropdown() {
+                        closePortal();
+                        var rect = btn.getBoundingClientRect();
+                        var isRTL = document.documentElement.dir === "rtl";
+                        var portal = document.createElement("div");
+                        portal.id = overlayId;
+                        portal.setAttribute("role", "menu");
+                        portal.setAttribute("aria-label", "قائمة اختيار اللغة");
+                        portal.style.cssText =
+                            "position:fixed;z-index:999999;min-width:" + Math.max(rect.width, 120) + "px;max-width:280px;" +
+                            "background:#fff;border:1px solid #e5e7eb;border-radius:8px;box-shadow:0 10px 25px rgba(0,0,0,0.15);" +
+                            "margin-top:4px;padding:4px 0;font-family:inherit;font-size:14px;";
+                        if (isRTL) {
+                            portal.style.right = (window.innerWidth - rect.right) + "px";
+                            portal.style.left = "auto";
+                        } else {
+                            portal.style.left = rect.left + "px";
+                            portal.style.right = "auto";
                         }
-                        function closeDropdown() {
-                            dd.classList.add("hidden");
-                            dd.classList.remove("show");
-                            dd.style.removeProperty("display");
-                            dd.style.removeProperty("visibility");
-                            dd.style.removeProperty("z-index");
-                            btn.setAttribute("aria-expanded", "false");
-                        }
-                        btn.addEventListener("click", function (e) {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            if (dd.classList.contains("hidden")) openDropdown();
-                            else closeDropdown();
-                        });
-                        dd.querySelectorAll("button[data-lang]").forEach(function (opt) {
-                            opt.addEventListener("click", function (e) {
+                        portal.style.top = (rect.bottom + 4) + "px";
+                        var opts = [
+                            { lang: "ar", label: "العربية" },
+                            { lang: "en", label: "English" }
+                        ];
+                        opts.forEach(function (o) {
+                            var b = document.createElement("button");
+                            b.type = "button";
+                            b.setAttribute("data-lang", o.lang);
+                            b.textContent = o.label;
+                            b.style.cssText = "display:block;width:100%;text-align:left;padding:10px 14px;border:none;background:transparent;cursor:pointer;color:#374151;";
+                            b.addEventListener("mouseenter", function () { b.style.backgroundColor = "#f3f4f6"; });
+                            b.addEventListener("mouseleave", function () { b.style.backgroundColor = "transparent"; });
+                            b.addEventListener("click", function (e) {
                                 e.preventDefault();
                                 e.stopPropagation();
-                                var chosen = this.getAttribute("data-lang");
-                                if (chosen) {
-                                    try { localStorage.setItem("language", chosen); } catch (err) {}
-                                    if (typeof window.AppState !== "undefined") window.AppState.currentLanguage = chosen;
-                                    applyLoginLanguage(chosen);
-                                    closeDropdown();
-                                }
+                                try { localStorage.setItem("language", o.lang); } catch (err) {}
+                                if (typeof window.AppState !== "undefined") window.AppState.currentLanguage = o.lang;
+                                applyLoginLanguage(o.lang);
+                                var t = document.getElementById("current-lang-text");
+                                if (t) t.textContent = o.label;
+                                closePortal();
                             });
+                            portal.appendChild(b);
                         });
-                        document.addEventListener("click", function (e) {
-                            if (!btn.contains(e.target) && !dd.contains(e.target)) closeDropdown();
-                        });
+                        document.body.appendChild(portal);
+                        btn.setAttribute("aria-expanded", "true");
+                        var onOut = function (e) {
+                            if (portal.contains(e.target) || btn.contains(e.target)) return;
+                            document.removeEventListener("click", onOut);
+                            closePortal();
+                        };
+                        setTimeout(function () { document.addEventListener("click", onOut); }, 0);
                     }
-                    if (window._loginLangDelegationBound) return;
-                    window._loginLangDelegationBound = true;
-                    document.addEventListener("click", function (e) {
-                        var btn2 = document.getElementById("login-language-toggle-btn");
-                        var dd2 = document.getElementById("login-language-dropdown");
-                        if (!btn2 || !dd2) return;
-                        if (btn2.contains(e.target)) {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            if (dd2.classList.contains("hidden")) {
-                                dd2.classList.remove("hidden");
-                                dd2.classList.add("show");
-                                dd2.style.setProperty("display", "block", "important");
-                                dd2.style.setProperty("visibility", "visible", "important");
-                                dd2.style.setProperty("z-index", "99999", "important");
-                                btn2.setAttribute("aria-expanded", "true");
-                            } else {
-                                dd2.classList.add("hidden");
-                                dd2.classList.remove("show");
-                                dd2.style.removeProperty("display");
-                                dd2.style.removeProperty("visibility");
-                                dd2.style.removeProperty("z-index");
-                                btn2.setAttribute("aria-expanded", "false");
-                            }
-                            return;
-                        }
-                        var opt = e.target.closest && e.target.closest("#login-language-dropdown button[data-lang]");
-                        if (opt) {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            var chosen = opt.getAttribute("data-lang");
-                            if (chosen) {
-                                try { localStorage.setItem("language", chosen); } catch (err) {}
-                                if (typeof window.AppState !== "undefined") window.AppState.currentLanguage = chosen;
-                                applyLoginLanguage(chosen);
-                                dd2.classList.add("hidden");
-                                dd2.classList.remove("show");
-                                dd2.style.removeProperty("display");
-                                dd2.style.removeProperty("visibility");
-                                dd2.style.removeProperty("z-index");
-                                btn2.setAttribute("aria-expanded", "false");
-                            }
-                            return;
-                        }
-                        if (!dd2.contains(e.target) && !btn2.contains(e.target)) {
-                            dd2.classList.add("hidden");
-                            dd2.classList.remove("show");
-                            dd2.style.removeProperty("display");
-                            dd2.style.removeProperty("visibility");
-                            dd2.style.removeProperty("z-index");
-                            btn2.setAttribute("aria-expanded", "false");
-                        }
+                    btn.addEventListener("click", function (e) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        var open = document.getElementById(overlayId);
+                        if (open) closePortal();
+                        else openDropdown();
                     });
                 }
                 if (document.readyState === "loading") {
