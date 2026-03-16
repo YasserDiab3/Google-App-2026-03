@@ -766,7 +766,8 @@ window.Auth = {
             passwordChanged: fullUserData?.passwordChanged ?? false,
             forcePasswordChange: fullUserData?.forcePasswordChange === true,
             isBootstrap: isBootstrap,
-            loginTime: loginTime
+            loginTime: loginTime,
+            photo: fullUserData?.photo || user?.photo || '' // ✅ إظهار صورة المستخدم بعد الدخول مباشرة
         };
 
         console.log('✅ [AUTH] AppState.currentUser.name النهائي:', AppState.currentUser.name);
@@ -966,7 +967,8 @@ window.Auth = {
             permissions: AppState.currentUser.permissions,
             id: AppState.currentUser.id,
             loginTime: AppState.currentUser.loginTime,
-            sessionId: currentSessionId // حفظ معرف الجلسة في الجلسة
+            sessionId: currentSessionId, // حفظ معرف الجلسة في الجلسة
+            photo: AppState.currentUser.photo || '' // ✅ حفظ الصورة لاستعادتها عند فتح الصفحة
             // تم إزالة passwordHash لأسباب أمنية
         };
 
@@ -1471,7 +1473,8 @@ window.Auth = {
                             department: AppState.currentUser.department,
                             permissions: AppState.currentUser.permissions,
                             id: AppState.currentUser.id,
-                            loginTime: AppState.currentUser.loginTime
+                            loginTime: AppState.currentUser.loginTime,
+                            photo: AppState.currentUser.photo || ''
                         };
                         sessionStorage.setItem('hse_current_session', JSON.stringify(safeUserData));
                         Utils.safeLog('✅ تم استعادة الجلسة من sessionStorage - المستخدم مسجل دخول');
@@ -1631,7 +1634,8 @@ window.Auth = {
                             department: AppState.currentUser.department,
                             permissions: AppState.currentUser.permissions,
                             id: AppState.currentUser.id,
-                            loginTime: AppState.currentUser.loginTime
+                            loginTime: AppState.currentUser.loginTime,
+                            photo: AppState.currentUser.photo || ''
                         };
                         sessionStorage.setItem('hse_current_session', JSON.stringify(safeUserData));
                         Utils.safeLog('✅ تم استعادة الجلسة من localStorage - المستخدم مسجل دخول');
@@ -1750,7 +1754,8 @@ window.Auth = {
                 department: AppState.currentUser.department,
                 permissions: permissionsToSave, // استخدام الصلاحيات المدققة
                 id: AppState.currentUser.id,
-                loginTime: AppState.currentUser.loginTime
+                loginTime: AppState.currentUser.loginTime,
+                photo: AppState.currentUser.photo || '' // ✅ حفظ الصورة لاستعادتها عند فتح الصفحة
             };
 
             // تحديث sessionStorage

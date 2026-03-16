@@ -2758,6 +2758,8 @@ window.UI = {
 
         // عرض صورة المستخدم ي الشريط الجانبي
         this.updateUserProfilePhoto();
+        // ✅ إعادة تحديث صورة المستخدم بعد تأخير قصير لضمان ظهورها بعد الدخول مباشرة (عند جاهزية الـ DOM)
+        setTimeout(() => { this.updateUserProfilePhoto(); }, 500);
 
         // إظهار أزرار الهيدر (Theme Toggle & Notifications)
         this.showHeaderActions();
@@ -4321,10 +4323,13 @@ window.UI = {
         const profilePhoto = document.getElementById('user-profile-photo');
         const profileIcon = document.getElementById('user-profile-icon');
 
-        if (user && user.photo && profilePhoto && profileIcon) {
-            const photoUrl = user.photo;
+        // ✅ استخدام صورة من appData.users أو من currentUser (بعد الدخول مباشرة)
+        const photoUrl = (user && user.photo) || (AppState.currentUser && AppState.currentUser.photo) || '';
+        const userEmailForCache = (user && user.email) || (AppState.currentUser && AppState.currentUser.email) || '';
+
+        if (photoUrl && profilePhoto && profileIcon) {
             const isDriveUrl = photoUrl.includes('drive.google.com');
-            const cacheKey = `photo_failed_${user.email}`;
+            const cacheKey = `photo_failed_${userEmailForCache}`;
             const failedRecently = sessionStorage.getItem(cacheKey);
 
             const showIcon = () => {
@@ -4932,6 +4937,7 @@ window.UI = {
                         } catch (error) {
                             Utils.safeError('خطأ في استدعاء PeriodicInspections.load:', error);
                         }
+                    } else {
                         if (!silent) {
                             Utils.safeError('❌ موديول PeriodicInspections غير متوفر - الموديول لم يُحمّل بشكل صحيح');
                         }
@@ -4940,6 +4946,7 @@ window.UI = {
                 case 'ppe':
                     if (typeof PPE !== 'undefined' && PPE.load) {
                         PPE.load();
+                    } else {
                         if (!silent) {
                             Utils.safeError('❌ موديول PPE غير متوفر - الموديول لم يُحمّل بشكل صحيح');
                         }
@@ -4995,6 +5002,7 @@ window.UI = {
                                 `;
                             }
                         }
+                    } else {
                         if (!silent) {
                             Utils.safeError('❌ موديول Violations غير متوفر - الموديول لم يُحمّل بشكل صحيح');
                         }
@@ -5067,6 +5075,7 @@ window.UI = {
                         } catch (error) {
                             Utils.safeError('خطأ في استدعاء BehaviorMonitoring.load:', error);
                         }
+                    } else {
                         if (!silent) {
                             Utils.safeError('❌ موديول BehaviorMonitoring غير متوفر - الموديول لم يُحمّل بشكل صحيح');
                         }
@@ -5075,6 +5084,7 @@ window.UI = {
                 case 'chemical-safety':
                     if (typeof ChemicalSafety !== 'undefined' && ChemicalSafety.load) {
                         ChemicalSafety.load();
+                    } else {
                         if (!silent) {
                             Utils.safeError('❌ موديول ChemicalSafety غير متوفر - الموديول لم يُحمّل بشكل صحيح');
                         }
@@ -5092,6 +5102,7 @@ window.UI = {
                         } catch (error) {
                             Utils.safeError('خطأ في استدعاء DailyObservations.load:', error);
                         }
+                    } else {
                         if (!silent) {
                             Utils.safeError('❌ موديول DailyObservations غير متوفر - الموديول لم يُحمّل بشكل صحيح');
                         }
@@ -5100,6 +5111,7 @@ window.UI = {
                 case 'iso':
                     if (typeof ISO !== 'undefined' && ISO.load) {
                         ISO.load();
+                    } else {
                         if (!silent) {
                             Utils.safeError('❌ موديول ISO غير متوفر - الموديول لم يُحمّل بشكل صحيح');
                         }
@@ -5108,6 +5120,7 @@ window.UI = {
                 case 'emergency':
                     if (typeof Emergency !== 'undefined' && Emergency.load) {
                         Emergency.load();
+                    } else {
                         if (!silent) {
                             Utils.safeError('❌ موديول Emergency غير متوفر - الموديول لم يُحمّل بشكل صحيح');
                         }
@@ -5125,6 +5138,7 @@ window.UI = {
                         } catch (error) {
                             Utils.safeError('خطأ في استدعاء RiskAssessment.load:', error);
                         }
+                    } else {
                         if (!silent) {
                             Utils.safeError('❌ موديول RiskAssessment غير متوفر - الموديول لم يُحمّل بشكل صحيح');
                         }
@@ -5133,6 +5147,7 @@ window.UI = {
                 case 'sop-jha':
                     if (typeof SOPJHA !== 'undefined' && SOPJHA.load) {
                         SOPJHA.load();
+                    } else {
                         if (!silent) {
                             Utils.safeError('❌ موديول SOPJHA غير متوفر - الموديول لم يُحمّل بشكل صحيح');
                         }
