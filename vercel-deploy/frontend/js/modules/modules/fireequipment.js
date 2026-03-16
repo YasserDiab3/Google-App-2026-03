@@ -644,7 +644,8 @@ FireEquipment = {
         try {
             const [equipmentResult, inspectionsResult, approvalRequestsResult] = await Promise.allSettled([
                 GoogleIntegration.sendRequest({
-                    action: 'getAllFireEquipment',
+                    // ✅ الأصول تُحفظ في FireEquipmentAssets (وليس FireEquipment القديم)
+                    action: 'getAllFireEquipmentAssets',
                     data: {}
                 }).catch(error => {
                     const errorMsg = error.message || error.toString() || '';
@@ -652,7 +653,7 @@ FireEquipment = {
                         Utils.safeWarn('⚠️ انتهت مهلة الاتصال بالخادم');
                         return { success: false, data: [] };
                     }
-                    Utils.safeWarn('⚠️ تعذر تحميل بيانات معدات الحريق:', error);
+                    Utils.safeWarn('⚠️ تعذر تحميل بيانات أصول معدات الحريق:', error);
                     return { success: false, data: [] };
                 }),
                 GoogleIntegration.sendRequest({
@@ -715,7 +716,7 @@ FireEquipment = {
                 // تحويل الخريطة إلى مصفوفة
                 AppState.appData.fireEquipmentAssets = Array.from(existingMap.values());
                 assetsUpdated = true;
-                Utils.safeLog(`✅ تم تحميل ودمج ${equipmentResult.value.data.length} معدّة من Google Sheets (إجمالي: ${AppState.appData.fireEquipmentAssets.length})`);
+                Utils.safeLog(`✅ تم تحميل ودمج ${equipmentResult.value.data.length} جهاز من Google Sheets (إجمالي: ${AppState.appData.fireEquipmentAssets.length})`);
             }
 
             // معالجة نتائج بيانات الفحوصات

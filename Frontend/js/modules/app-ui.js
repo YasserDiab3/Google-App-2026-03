@@ -3421,12 +3421,46 @@ window.UI = {
         const shouldCollapse = forceState !== null ? forceState : !sidebar.classList.contains('collapsed');
         sidebar.classList.toggle('collapsed', shouldCollapse);
 
-        const collapseIcon = document.querySelector('#sidebar-collapse-toggle i');
-        if (collapseIcon) {
-            collapseIcon.className = shouldCollapse ? 'fas fa-chevron-right' : 'fas fa-chevron-left';
+        const collapseToggle = document.getElementById('sidebar-collapse-toggle');
+        if (collapseToggle) {
+            collapseToggle.setAttribute('aria-pressed', shouldCollapse ? 'true' : 'false');
+            const icon = collapseToggle.querySelector('i');
+            if (icon) {
+                icon.className = shouldCollapse ? 'fas fa-chevron-right' : 'fas fa-chevron-left';
+            }
         }
 
-        localStorage.setItem('sidebarCollapsed', shouldCollapse ? 'true' : 'false');
+        try {
+            localStorage.setItem('sidebarCollapsed', shouldCollapse ? 'true' : 'false');
+        } catch (error) {
+            if (Utils?.safeWarn) {
+                Utils.safeWarn('⚠️ فشل حفظ حالة طي القائمة الجانبية:', error);
+            }
+        }
+    },
+
+    restoreSidebarCollapseState() {
+        const sidebar = document.querySelector('.sidebar');
+        if (!sidebar) return;
+
+        let stored = null;
+        try {
+            stored = localStorage.getItem('sidebarCollapsed');
+        } catch (error) {
+            stored = null;
+        }
+
+        const shouldCollapse = stored === 'true';
+        sidebar.classList.toggle('collapsed', shouldCollapse);
+
+        const collapseToggle = document.getElementById('sidebar-collapse-toggle');
+        if (collapseToggle) {
+            collapseToggle.setAttribute('aria-pressed', shouldCollapse ? 'true' : 'false');
+            const icon = collapseToggle.querySelector('i');
+            if (icon) {
+                icon.className = shouldCollapse ? 'fas fa-chevron-right' : 'fas fa-chevron-left';
+            }
+        }
     },
 
     /**
