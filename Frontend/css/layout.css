@@ -92,6 +92,16 @@
     justify-content: center;
 }
 
+/* ضمان قابلية النقر على زر اللغة وزر الإشعارات في القائمة الجانبية */
+.sidebar .language-switcher,
+.sidebar #sidebar-notifications-container,
+.sidebar .language-toggle-btn,
+.sidebar #notifications-btn {
+    pointer-events: auto !important;
+    position: relative;
+    z-index: 10;
+}
+
 .sidebar-collapse-toggle {
     margin: 0.5rem 1rem;
     display: inline-flex;

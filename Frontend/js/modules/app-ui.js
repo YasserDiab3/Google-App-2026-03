@@ -2749,6 +2749,14 @@ window.UI = {
 
         // تهيئة أزرار القائمة الجانبية (الوضع الليلي، الإشعارات، اللغة)
         this.initSidebarButtons();
+        // إعادة تهيئة بعد تأخير قصير لضمان عمل الأزرار بعد رسم الـ DOM (زر اللغة، جرس الإشعارات)
+        setTimeout(() => {
+            try {
+                this.initSidebarButtons();
+            } catch (e) {
+                if (typeof Utils !== 'undefined' && Utils.safeWarn) Utils.safeWarn('إعادة تهيئة أزرار الشريط الجانبي:', e);
+            }
+        }, 400);
 
         // تهيئة مساعد المستخدم الذكي
         if (typeof UserAIAssistant !== 'undefined' && UserAIAssistant.init) {
@@ -7868,6 +7876,26 @@ window.UI = {
     },
 
     /**
+     * تموضع قائمة اللغة بجانب الزر (fixed لتجنب القص داخل sidebar)
+     */
+    _positionLanguageDropdown(langDropdown, langToggle) {
+        if (!langDropdown || !langToggle) return;
+        const rect = langToggle.getBoundingClientRect();
+        const margin = 8;
+        const vh = document.documentElement.clientHeight || window.innerHeight;
+        const isRTL = (document.documentElement.getAttribute('dir') || '').toLowerCase() === 'rtl';
+        langDropdown.style.position = 'fixed';
+        langDropdown.style.zIndex = '10002';
+        langDropdown.style.left = isRTL ? 'auto' : (rect.left + 'px');
+        langDropdown.style.right = isRTL ? (window.innerWidth - rect.right + 'px') : 'auto';
+        langDropdown.style.top = (rect.bottom + margin) + 'px';
+        const ddHeight = langDropdown.offsetHeight || 120;
+        if (rect.bottom + margin + ddHeight > vh - margin) {
+            langDropdown.style.top = (rect.top - ddHeight - margin) + 'px';
+        }
+    },
+
+    /**
      * تهيئة زر اللغة
      */
     initLanguageToggle() {
@@ -7886,24 +7914,23 @@ window.UI = {
         const savedLang = localStorage.getItem('language') || AppState.currentLanguage || 'ar';
         this.setLanguage(savedLang, true); // true = تهيئة أولية (لا نعرض إشعار)
 
-        // إنشاء القائمة المنسدلة للغات إذا لم تكن موجودة
+        // إنشاء القائمة المنسدلة للغات إذا لم تكن موجودة — تُضاف إلى body لتجنب القص داخل sidebar
         let langDropdown = document.getElementById('main-language-dropdown');
         if (!langDropdown) {
             langDropdown = document.createElement('div');
             langDropdown.id = 'main-language-dropdown';
-            langDropdown.className = 'language-dropdown absolute bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-50 mt-1 hidden';
+            langDropdown.className = 'language-dropdown bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg mt-1 hidden';
             langDropdown.style.minWidth = '140px';
+            langDropdown.setAttribute('role', 'menu');
             langDropdown.innerHTML = `
-                <button class="block w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300" data-lang="ar">
+                <button type="button" class="block w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300" data-lang="ar">
                     <span class="ml-2">🇸🇦</span> العربية
                 </button>
-                <button class="block w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300" data-lang="en">
+                <button type="button" class="block w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300" data-lang="en">
                     <span class="ml-2">🇬🇧</span> English
                 </button>
             `;
-            // إضافة القائمة بعد زر اللغة
-            langToggle.parentElement.style.position = 'relative';
-            langToggle.parentElement.appendChild(langDropdown);
+            document.body.appendChild(langDropdown);
         }
 
         // ربط الزر لفتح/إغلاق القائمة
@@ -7913,6 +7940,7 @@ window.UI = {
             
             const isHidden = langDropdown.classList.contains('hidden');
             if (isHidden) {
+                this._positionLanguageDropdown(langDropdown, langToggle);
                 langDropdown.classList.remove('hidden');
                 langDropdown.classList.add('show');
                 langToggle.classList.add('active');
