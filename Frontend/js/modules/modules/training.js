@@ -8086,105 +8086,70 @@ const Training = {
             }
             
             const participants = this.getParticipantsArray(training);
-            const hasCompany = participants.some(p => p.company || p.contractorCompany);
-            const hasType = participants.some(p => p.type === 'contractor' || p.personType === 'contractor');
             const count = this.getParticipantsCount(training);
-            let participantsList = '';
-            if (participants.length > 0) {
-                participantsList = `
-                    <div class="section-title">كشف المتدربين / قائمة المشاركين</div>
-                    <table class="report-table">
+            const isInternal = (training.trainingType || 'داخلي') !== 'خارجي';
+            const internalCheck = isInternal ? '√' : ' ';
+            const externalCheck = isInternal ? ' ' : '√';
+            const trainingDate = training.startDate ? Utils.formatDate(training.startDate) : (training.date ? Utils.formatDate(training.date) : '');
+            const topicText = Utils.escapeHTML(training.name || training.subject || '');
+            const trainerName = Utils.escapeHTML(training.trainer || '');
+            const startTime = this.cleanTime(training.startTime) || '';
+            const endTime = this.cleanTime(training.endTime) || '';
+            const scientificSubject = (training.topics && Array.isArray(training.topics) ? training.topics.join('، ') : '') || '';
+            const locationFull = [locationName, factoryName].filter(Boolean).map(Utils.escapeHTML).join(' — ') || Utils.escapeHTML(training.location || '');
+
+            const maxRows = Math.max(participants.length, 20);
+            const rowsHtml = Array.from({ length: maxRows }, (_, idx) => {
+                const p = participants[idx];
+                const name = p ? Utils.escapeHTML(p.name || p.contractorName || '') : '';
+                const job = p ? Utils.escapeHTML(p.position || p.jobTitle || '') : '';
+                return `
+                    <tr>
+                        <td style="border:1px solid #333; padding:8px; text-align:center; width:40px;">${idx + 1}</td>
+                        <td style="border:1px solid #333; padding:8px; text-align:right;">${name}</td>
+                        <td style="border:1px solid #333; padding:8px; text-align:right;">${job}</td>
+                        <td style="border:1px solid #333; padding:8px; min-width:80px;">&nbsp;</td>
+                    </tr>`;
+            }).join('');
+
+            const content = `
+                <div class="report-body" style="font-family: 'Cairo', 'Segoe UI', Tahoma, sans-serif; direction: rtl; text-align: right;">
+                    <h2 style="margin: 0 0 20px 0; font-size: 20px; font-weight: 700; color: #1f2937;">
+                        كشف حضور تدريب داخلي ( ${internalCheck} ) / خارجي ( ${externalCheck} )
+                    </h2>
+                    <table style="width:100%; border-collapse: collapse; margin-bottom: 16px; font-size: 15px;">
+                        <tr><td style="padding: 4px 12px 4px 0; width: 160px;">التاريخ :</td><td style="padding: 4px 0;">${Utils.escapeHTML(trainingDate)}</td></tr>
+                        <tr><td style="padding: 4px 12px 4px 0;">المكان :</td><td style="padding: 4px 0;">${locationFull}</td></tr>
+                        <tr><td style="padding: 4px 12px 4px 0;">موضوع المحاضرة :</td><td style="padding: 4px 0;">${topicText}</td></tr>
+                        <tr><td style="padding: 4px 12px 4px 0;">اسم المحاضر :</td><td style="padding: 4px 0;">${trainerName}</td></tr>
+                        <tr><td style="padding: 4px 12px 4px 0;">المادة العلمية :</td><td style="padding: 4px 0;">${Utils.escapeHTML(scientificSubject)}</td></tr>
+                        <tr><td style="padding: 4px 12px 4px 0;">من ساعة :</td><td style="padding: 4px 0;">${Utils.escapeHTML(startTime)}</td></tr>
+                        <tr><td style="padding: 4px 12px 4px 0;">الي ساعة :</td><td style="padding: 4px 0;">${Utils.escapeHTML(endTime)}</td></tr>
+                    </table>
+                    <p style="margin: 16px 0 8px 0; font-size: 16px; font-weight: 600;">الحاضرون :-</p>
+                    <table class="report-table" style="width:100%; border-collapse: collapse; margin-bottom: 24px; font-size: 14px;">
                         <thead>
-                            <tr>
-                                <th>#</th>
-                                <th>الاسم</th>
-                                <th>الكود</th>
-                                <th>الوظيفة</th>
-                                <th>القسم</th>
-                                ${hasCompany ? '<th>الشركة</th>' : ''}
-                                ${hasType ? '<th>النوع</th>' : ''}
+                            <tr style="background: #1e3a8a; color: #fff;">
+                                <th style="border:1px solid #333; padding:10px; text-align:center; width:50px;">م</th>
+                                <th style="border:1px solid #333; padding:10px; text-align:right;">الإسم</th>
+                                <th style="border:1px solid #333; padding:10px; text-align:right;">الوظيفة</th>
+                                <th style="border:1px solid #333; padding:10px; text-align:center; min-width:100px;">التوقيع</th>
                             </tr>
                         </thead>
                         <tbody>
-                            ${participants.map((p, idx) => `
-                                <tr>
-                                    <td>${idx + 1}</td>
-                                    <td>${Utils.escapeHTML(p.name || p.contractorName || '')}</td>
-                                    <td>${Utils.escapeHTML(p.code || p.employeeNumber || p.employeeCode || '-')}</td>
-                                    <td>${Utils.escapeHTML(p.position || '-')}</td>
-                                    <td>${Utils.escapeHTML(p.department || '-')}</td>
-                                    ${hasCompany ? `<td>${Utils.escapeHTML(p.company || p.contractorCompany || '-')}</td>` : ''}
-                                    ${hasType ? `<td>${(p.type === 'contractor' || p.personType === 'contractor') ? 'مقاول' : 'موظف'}</td>` : ''}
-                                </tr>
-                            `).join('')}
+                            ${rowsHtml}
                         </tbody>
                     </table>
-                `;
-            } else if (count > 0) {
-                participantsList = `<div class="section-title">كشف المتدربين</div><p style="padding:12px; color:#6B7280;">عدد المسجلين: ${count} — قائمة الأسماء غير متوفرة في هذه النسخة.</p>`;
-            }
-
-            const content = `
-                <div class="summary-grid">
-                    <div class="summary-card">
-                        <span class="summary-label">المدرب</span>
-                        <span class="summary-value">${Utils.escapeHTML(training.trainer || '-')}</span>
-                    </div>
-                    <div class="summary-card">
-                        <span class="summary-label">تاريخ البدء</span>
-                        <span class="summary-value">${training.startDate ? Utils.formatDate(training.startDate) : '-'}</span>
-                    </div>
-                    <div class="summary-card">
-                        <span class="summary-label">نوع التدريب</span>
-                        <span class="summary-value">${Utils.escapeHTML(training.trainingType || 'داخلي')}</span>
-                    </div>
-                    <div class="summary-card">
-                        <span class="summary-label">عدد المشاركين</span>
-                        <span class="summary-value">${this.getParticipantsCount(training)}</span>
-                    </div>
-                    <div class="summary-card">
-                        <span class="summary-label">الحالة</span>
-                        <span class="summary-value">${Utils.escapeHTML(training.status || '-')}</span>
-                    </div>
-                    ${factoryName ? `
-                    <div class="summary-card">
-                        <span class="summary-label">المصنع</span>
-                        <span class="summary-value">${Utils.escapeHTML(factoryName)}</span>
-                    </div>
-                    ` : ''}
-                    ${locationName ? `
-                    <div class="summary-card">
-                        <span class="summary-label">المكان</span>
-                        <span class="summary-value">${Utils.escapeHTML(locationName)}</span>
-                    </div>
-                    ` : ''}
-                    ${training.startTime ? `
-                    <div class="summary-card">
-                        <span class="summary-label">وقت البدء</span>
-                        <span class="summary-value">${Utils.escapeHTML(training.startTime)}</span>
-                    </div>
-                    ` : ''}
-                    ${training.endTime ? `
-                    <div class="summary-card">
-                        <span class="summary-label">وقت الانتهاء</span>
-                        <span class="summary-value">${Utils.escapeHTML(training.endTime)}</span>
-                    </div>
-                    ` : ''}
-                    ${training.hours ? `
-                    <div class="summary-card">
-                        <span class="summary-label">ساعات التدريب</span>
-                        <span class="summary-value">${Utils.escapeHTML(training.hours)} ساعة</span>
-                    </div>
-                    ` : ''}
+                    <p style="margin: 20px 0 0 0; font-size: 15px;">توقيع المحاضر : _________________________ ${trainerName}</p>
                 </div>
-                ${participantsList}
             `;
 
-            const formCode = training.isoCode || `TRAINING-${training.id?.substring(0, 8) || 'UNKNOWN'}`;
+            const formCode = training.isoCode || `TRN-ATT-${training.id?.substring(0, 8) || 'UNKNOWN'}`;
+            const docTitle = `كشف حضور تدريب - ${Utils.escapeHTML(training.name || '')}`;
             const htmlContent = typeof FormHeader !== 'undefined' && FormHeader.generatePDFHTML
                 ? FormHeader.generatePDFHTML(
                     formCode,
-                    `برنامج تدريبي - ${Utils.escapeHTML(training.name || '')}`,
+                    docTitle,
                     content,
                     false,
                     true,
