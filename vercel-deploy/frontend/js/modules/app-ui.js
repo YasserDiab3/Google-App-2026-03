@@ -3421,6 +3421,11 @@ window.UI = {
         const shouldCollapse = forceState !== null ? forceState : !sidebar.classList.contains('collapsed');
         sidebar.classList.toggle('collapsed', shouldCollapse);
 
+        const newWidth = shouldCollapse ? '84px' : '280px';
+        try {
+            document.documentElement.style.setProperty('--sidebar-width', newWidth);
+        } catch (e) { /* ignore */ }
+
         const collapseToggle = document.getElementById('sidebar-collapse-toggle');
         if (collapseToggle) {
             collapseToggle.setAttribute('aria-pressed', shouldCollapse ? 'true' : 'false');
@@ -3451,6 +3456,11 @@ window.UI = {
         }
         const shouldCollapse = stored === 'true';
         sidebar.classList.toggle('collapsed', shouldCollapse);
+
+        const newWidth = shouldCollapse ? '84px' : '280px';
+        try {
+            document.documentElement.style.setProperty('--sidebar-width', newWidth);
+        } catch (e) { /* ignore */ }
 
         const collapseToggle = document.getElementById('sidebar-collapse-toggle');
         if (collapseToggle) {

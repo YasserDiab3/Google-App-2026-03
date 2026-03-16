@@ -37,7 +37,7 @@ const RealtimeSyncManager = {
             'nearmiss',             // الحوادث الوشيكة (يجب أن يكون nearmiss وليس nearMiss)
             'ptw',                  // تصاريح العمل
             'training',             // التدريب
-            'fireEquipment',        // معدات الحريق
+            // fireEquipment يُحمّل داخل الموديول عبر getAllFireEquipmentAssets (شيت FireEquipmentAssets)
             'ppe',                  // معدات الوقاية
             'ppeStock',             // ✅ إضافة: مخزون مهمات الوقاية
             'violations',           // المخالفات
