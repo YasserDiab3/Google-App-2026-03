@@ -9333,11 +9333,13 @@
                                 dd.classList.remove("hidden");
                                 dd.classList.add("show");
                                 dd.style.display = "block";
+                                dd.style.visibility = "visible";
                                 btn.setAttribute("aria-expanded", "true");
                             } else {
                                 dd.classList.add("hidden");
                                 dd.classList.remove("show");
                                 dd.style.display = "";
+                                dd.style.visibility = "";
                                 btn.setAttribute("aria-expanded", "false");
                             }
                             return;

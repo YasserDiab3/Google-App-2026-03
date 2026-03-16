@@ -561,65 +561,63 @@ Yasser.diab@icapp.com.eg`;
             return true;
         }
         
-        // تبديل القائمة المنسدلة
+        // إظهار/إخفاء القائمة المنسدلة بشكل صريح لضمان عملها
+        function showDropdown() {
+            langDropdown.classList.remove('hidden');
+            langDropdown.classList.add('show');
+            langDropdown.style.display = 'block';
+            langDropdown.style.visibility = 'visible';
+            langToggleBtn.setAttribute('aria-expanded', 'true');
+        }
+        function hideDropdown() {
+            langDropdown.classList.add('hidden');
+            langDropdown.classList.remove('show');
+            langDropdown.style.display = '';
+            langDropdown.style.visibility = '';
+            langToggleBtn.setAttribute('aria-expanded', 'false');
+        }
+
+        // تبديل القائمة المنسدلة عند النقر على الزر
         langToggleBtn.addEventListener('click', function(e) {
             e.preventDefault();
             e.stopPropagation();
-            
             const isHidden = langDropdown.classList.contains('hidden');
             if (isHidden) {
-                langDropdown.classList.remove('hidden');
-                langDropdown.classList.add('show');
+                showDropdown();
             } else {
-                langDropdown.classList.add('hidden');
-                langDropdown.classList.remove('show');
+                hideDropdown();
             }
         });
-        
+
         // معالجة اختيار اللغة
         const langButtons = langDropdown.querySelectorAll('[data-lang]');
         langButtons.forEach(btn => {
             btn.addEventListener('click', function(e) {
                 e.preventDefault();
                 e.stopPropagation();
-                
-                // Get current language from localStorage each time (not from closure)
-                const savedLang = localStorage.getItem('language') || 'ar';
                 const selectedLang = this.getAttribute('data-lang');
-                
-                if (selectedLang !== savedLang) {
-                    // تغيير اللغة
-                    localStorage.setItem('language', selectedLang);
-                    
-                    // تحديث اتجاه الصفحة
-                    const isRTL = selectedLang === 'ar';
-                    document.documentElement.dir = isRTL ? 'rtl' : 'ltr';
-                    document.documentElement.lang = selectedLang;
-                    
-                    if (document.body) {
-                        document.body.dir = isRTL ? 'rtl' : 'ltr';
-                    }
-                    
-                    // تحديث النص
-                    currentLangText.textContent = selectedLang === 'ar' ? 'العربية' : 'English';
-                    
-                    // تحديث نصوص تسجيل الدخول
-                    updateLoginTexts(selectedLang);
-                    
-                    // إغلاق القائمة
-                    langDropdown.classList.add('hidden');
-                    langDropdown.classList.remove('show');
-                    
-                    log('✅ تم تغيير اللغة إلى:', selectedLang);
-                }
+                if (!selectedLang) return;
+
+                // حفظ اللغة وتحديث الواجهة دائماً (حتى عند اختيار نفس اللغة)
+                localStorage.setItem('language', selectedLang);
+                if (typeof window.AppState !== 'undefined') window.AppState.currentLanguage = selectedLang;
+
+                const isRTL = selectedLang === 'ar';
+                document.documentElement.dir = isRTL ? 'rtl' : 'ltr';
+                document.documentElement.lang = selectedLang === 'ar' ? 'ar' : 'en';
+                if (document.body) document.body.dir = isRTL ? 'rtl' : 'ltr';
+
+                currentLangText.textContent = selectedLang === 'ar' ? 'العربية' : 'English';
+                updateLoginTexts(selectedLang);
+                hideDropdown();
+                log('✅ تم تغيير اللغة إلى:', selectedLang);
             });
         });
-        
+
         // إغلاق القائمة عند النقر خارجها
         document.addEventListener('click', function(e) {
             if (!langToggleBtn.contains(e.target) && !langDropdown.contains(e.target)) {
-                langDropdown.classList.add('hidden');
-                langDropdown.classList.remove('show');
+                hideDropdown();
             }
         });
         
