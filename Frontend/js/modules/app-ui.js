@@ -4941,7 +4941,10 @@ window.UI = {
                         }
                     } else {
                         if (!silent) {
-                            Utils.safeError('❌ موديول PeriodicInspections غير متوفر - الموديول لم يُحمّل بشكل صحيح');
+                            const reason = (typeof AppState !== 'undefined' && AppState.runningWithoutBackend)
+                                ? 'غالباً بسبب عدم الاتصال بالخادم (503). جرّب تحديث الصفحة أو التحقق من النشر.'
+                                : 'الموديول لم يُحمّل بشكل صحيح. جرّب تحديث الصفحة.';
+                            Utils.safeError('❌ موديول PeriodicInspections غير متوفر - ' + reason);
                         }
                     }
                     break;
@@ -4950,7 +4953,10 @@ window.UI = {
                         PPE.load();
                     } else {
                         if (!silent) {
-                            Utils.safeError('❌ موديول PPE غير متوفر - الموديول لم يُحمّل بشكل صحيح');
+                            const reason = (typeof AppState !== 'undefined' && AppState.runningWithoutBackend)
+                                ? 'غالباً بسبب عدم الاتصال بالخادم (503). جرّب تحديث الصفحة أو التحقق من النشر.'
+                                : 'الموديول لم يُحمّل بشكل صحيح. جرّب تحديث الصفحة.';
+                            Utils.safeError('❌ موديول PPE غير متوفر - ' + reason);
                         }
                     }
                     break;
@@ -5006,7 +5012,10 @@ window.UI = {
                         }
                     } else {
                         if (!silent) {
-                            Utils.safeError('❌ موديول Violations غير متوفر - الموديول لم يُحمّل بشكل صحيح');
+                            const reason = (typeof AppState !== 'undefined' && AppState.runningWithoutBackend)
+                                ? 'غالباً بسبب عدم الاتصال بالخادم (503). جرّب تحديث الصفحة أو التحقق من النشر.'
+                                : 'الموديول لم يُحمّل بشكل صحيح. جرّب تحديث الصفحة.';
+                            Utils.safeError('❌ موديول Violations غير متوفر - ' + reason);
                         }
                     }
                     break;

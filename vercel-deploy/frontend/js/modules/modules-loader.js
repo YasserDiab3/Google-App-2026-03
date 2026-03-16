@@ -49,21 +49,29 @@ const MODULES_TO_LOAD = [
     'apptester'
 ];
 
+/** عدد إعادة المحاولات عند 503 أو فشل التحميل */
+const MODULE_LOAD_MAX_RETRIES = 2;
+/** التأخير قبل إعادة المحاولة (ms) */
+const MODULE_LOAD_RETRY_DELAY = 1800;
+
 /**
- * تحميل موديول واحد
+ * تحميل موديول واحد (مع إعادة محاولة عند 503)
+ * @param {string} moduleName - اسم الموديول
+ * @param {number} retryCount - عدد المحاولات السابقة (داخلي)
  */
-function loadModule(moduleName) {
+function loadModule(moduleName, retryCount) {
+    if (retryCount === undefined) retryCount = 0;
     return new Promise((resolve) => {
         const basePath = 'js/modules/modules/';
         const log = (typeof Utils !== 'undefined' && Utils.safeLog) ? Utils.safeLog : console.log;
         const logError = (typeof Utils !== 'undefined' && Utils.safeError) ? Utils.safeError : console.error;
+        const warn = (typeof Utils !== 'undefined' && Utils.safeWarn) ? Utils.safeWarn : console.warn;
 
         // ✅ إضافة timeout عام لمنع Promise غير المحلولة (10 ثوان - مناسب للشبكات البطيئة)
         let isResolved = false;
         const timeoutId = setTimeout(() => {
             if (!isResolved) {
                 isResolved = true;
-                const warn = (typeof Utils !== 'undefined' && Utils.safeWarn) ? Utils.safeWarn : console.warn;
                 warn(`⚠️ Timeout: تحميل ${moduleName} استغرق أكثر من 10 ثوان - الاستمرار...`);
                 resolve(); // الاستمرار حتى لو انتهى الوقت
             }
@@ -85,8 +93,10 @@ function loadModule(moduleName) {
         // ✅ إضافة timestamp لتتبع وقت التحميل
         const startTime = Date.now();
         
-        // 🔍 DEBUG: Log the exact URL being loaded
-        console.log(`🔍 Loading module: ${moduleName} from URL: ${script.src}`);
+        // 🔍 DEBUG: Log the exact URL being loaded (تقليل الضجيج بعد المحاولة الأولى)
+        if (retryCount === 0) {
+            console.log(`🔍 Loading module: ${moduleName} from URL: ${script.src}`);
+        }
         
         script.onload = () => {
             const loadTime = Date.now() - startTime;
@@ -211,6 +221,48 @@ function loadModule(moduleName) {
                     }
                 }, 100);
                 return;
+            } else if (moduleName === 'ppe') {
+                // التحقق من تحميل موديول PPE
+                let checkCount = 0;
+                const maxChecks = 20;
+                const checkInterval = setInterval(() => {
+                    checkCount++;
+                    if (typeof window.PPE !== 'undefined' && typeof window.PPE.load === 'function') {
+                        log(`✅ PPE متاح على window.PPE مع دالة load`);
+                        clearInterval(checkInterval);
+                        safeResolve();
+                    } else if (checkCount >= maxChecks) {
+                        if (typeof window.PPE !== 'undefined') {
+                            logError(`⚠️ PPE متاح لكن دالة load غير موجودة أو ليست function`);
+                        } else {
+                            logError(`⚠️ PPE غير متاح على window بعد ${maxChecks} محاولة`);
+                        }
+                        clearInterval(checkInterval);
+                        safeResolve();
+                    }
+                }, 100);
+                return;
+            } else if (moduleName === 'periodicinspections') {
+                // التحقق من تحميل موديول الفحوصات الدورية
+                let checkCount = 0;
+                const maxChecks = 20;
+                const checkInterval = setInterval(() => {
+                    checkCount++;
+                    if (typeof window.PeriodicInspections !== 'undefined' && typeof window.PeriodicInspections.load === 'function') {
+                        log(`✅ PeriodicInspections متاح على window.PeriodicInspections مع دالة load`);
+                        clearInterval(checkInterval);
+                        safeResolve();
+                    } else if (checkCount >= maxChecks) {
+                        if (typeof window.PeriodicInspections !== 'undefined') {
+                            logError(`⚠️ PeriodicInspections متاح لكن دالة load غير موجودة أو ليست function`);
+                        } else {
+                            logError(`⚠️ PeriodicInspections غير متاح على window بعد ${maxChecks} محاولة`);
+                        }
+                        clearInterval(checkInterval);
+                        safeResolve();
+                    }
+                }, 100);
+                return;
             }
 
             // ✅ للمواديل الأخرى: انتظار قصير ثم resolve
@@ -221,28 +273,54 @@ function loadModule(moduleName) {
         };
         script.onerror = (error) => {
             const loadTime = Date.now() - startTime;
-            logError(`❌ فشل تحميل الموديول: ${moduleName} بعد ${loadTime}ms`);
+            logError(`❌ فشل تحميل الموديول: ${moduleName} بعد ${loadTime}ms${retryCount > 0 ? ` (محاولة ${retryCount + 1}/${MODULE_LOAD_MAX_RETRIES + 1})` : ''}`);
             logError(`   المسار: ${script.src}`);
             logError(`   نوع الخطأ:`, error?.type || 'unknown');
             
-            // 🔍 DEBUG: Try to fetch the file directly to see the actual HTTP error
-            fetch(script.src, { method: 'HEAD' })
+            // التحقق من حالة HTTP (503 = إعادة محاولة تلقائية)
+            fetch(script.src, { method: 'HEAD', cache: 'no-store' })
                 .then(response => {
-                    console.log(`🔍 HTTP Status for ${moduleName}:`, response.status, response.statusText);
-                    if (response.status === 503) {
-                        console.error(`🚨 503 Service Unavailable - Vercel cannot serve ${moduleName}.js`);
-                        console.error(`   URL: ${script.src}`);
-                        console.error(`   Possible causes: File not found, deployment issue, or server overload`);
+                    if (typeof console !== 'undefined' && console.log) {
+                        console.log(`🔍 HTTP Status for ${moduleName}:`, response.status, response.statusText);
                     }
+                    const is503 = response.status === 503;
+                    const canRetry = retryCount < MODULE_LOAD_MAX_RETRIES;
+                    if (is503 && canRetry) {
+                        if (!isResolved) {
+                            warn(`🔄 إعادة محاولة تحميل ${moduleName} بعد ${MODULE_LOAD_RETRY_DELAY / 1000} ثانية (503)`);
+                            clearTimeout(timeoutId);
+                            isResolved = true;
+                            setTimeout(() => {
+                                loadModule(moduleName, retryCount + 1).then(resolve);
+                            }, MODULE_LOAD_RETRY_DELAY);
+                        }
+                        return;
+                    }
+                    if (response.status === 503 && !canRetry) {
+                        logError(`🚨 503 Service Unavailable - تعذر تحميل ${moduleName}.js بعد ${MODULE_LOAD_MAX_RETRIES + 1} محاولات`);
+                    }
+                    if (error && error.message) {
+                        logError(`   الخطأ: ${error.message}`);
+                    }
+                    safeResolve();
                 })
-                .catch(fetchError => {
-                    console.error(`🔍 Fetch error for ${moduleName}:`, fetchError.message);
+                .catch(() => {
+                    // عند فشل fetch (شبكة/CORS): إعادة محاولة مرة واحدة إن أمكن
+                    const canRetry = retryCount < MODULE_LOAD_MAX_RETRIES;
+                    if (canRetry && !isResolved) {
+                        warn(`🔄 إعادة محاولة تحميل ${moduleName} بعد ${MODULE_LOAD_RETRY_DELAY / 1000} ثانية (فشل الاتصال)`);
+                        clearTimeout(timeoutId);
+                        isResolved = true;
+                        setTimeout(() => {
+                            loadModule(moduleName, retryCount + 1).then(resolve);
+                        }, MODULE_LOAD_RETRY_DELAY);
+                        return;
+                    }
+                    if (error && error.message) {
+                        logError(`   الخطأ: ${error.message}`);
+                    }
+                    safeResolve();
                 });
-            
-            if (error && error.message) {
-                logError(`   الخطأ: ${error.message}`);
-            }
-            safeResolve(); // عدم رفض Promise للسماح بتحميل باقي الموديولات
         };
         document.head.appendChild(script);
     });
