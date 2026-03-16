@@ -32,6 +32,66 @@
     align-items: center;
 }
 
+/* تحسين شكل القائمة الجانبية عند الطي: إظهار الأيقونات فقط بشكل منسق */
+.sidebar.collapsed .user-profile {
+    padding: 0.75rem 0.5rem;
+    text-align: center;
+}
+
+.sidebar.collapsed .user-info {
+    display: none !important;
+}
+
+.sidebar.collapsed .user-avatar {
+    width: 48px;
+    height: 48px;
+    margin: 0 auto;
+    font-size: 1.25rem;
+}
+
+.sidebar.collapsed .nav-item {
+    justify-content: center;
+    padding: 0.75rem 0.5rem;
+    min-height: 44px;
+}
+
+.sidebar.collapsed .nav-item span {
+    display: none !important;
+}
+
+.sidebar.collapsed .nav-item i {
+    margin-left: 0;
+    margin-right: 0;
+}
+
+.sidebar.collapsed .logout-btn span {
+    display: none !important;
+}
+
+.sidebar.collapsed .logout-btn {
+    justify-content: center;
+    padding: 0.75rem 0.5rem;
+}
+
+.sidebar.collapsed .logout-btn i {
+    margin-left: 0;
+    margin-right: 0;
+}
+
+.sidebar.collapsed .language-switcher .language-toggle-btn > span:first-of-type {
+    display: none !important;
+}
+
+.sidebar.collapsed .language-switcher {
+    justify-content: center;
+    padding: 0.5rem;
+}
+
+.sidebar.collapsed .language-switcher .language-toggle-btn {
+    padding: 0.5rem;
+    justify-content: center;
+}
+
 .sidebar-collapse-toggle {
     margin: 0.5rem 1rem;
     display: inline-flex;
