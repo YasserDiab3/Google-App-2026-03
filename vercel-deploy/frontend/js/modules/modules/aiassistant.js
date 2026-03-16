@@ -49,7 +49,9 @@ Object.assign(window.AIAssistant, {
                     const trainings = AppState.appData.training || [];
                     const completed = trainings.filter(t => t.status === 'مكتمل').length;
                     const upcoming = trainings.filter(t => t.status === 'مخطط').length;
-                    const totalParticipants = trainings.reduce((sum, t) => sum + (t.participants?.length || t.participantsCount || 0), 0);
+                    const totalParticipants = typeof Training !== 'undefined' && Training.getParticipantsCount
+                        ? trainings.reduce((sum, t) => sum + Training.getParticipantsCount(t), 0)
+                        : trainings.reduce((sum, t) => sum + (t.participants?.length || t.participantsCount || 0), 0);
 
                     analysis = `تم تحليل ${trainings.length} برنامج تدريبي.`;
                     analysis += `\n- البرامج المكتملة: ${completed}`;

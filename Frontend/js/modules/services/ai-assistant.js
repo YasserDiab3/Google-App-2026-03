@@ -1356,9 +1356,8 @@ const AIAssistant = {
                     if (lastTraining.status) {
                         responseText += `الحالة: ${lastTraining.status}\n`;
                     }
-                    if (lastTraining.participantsCount) {
-                        responseText += `عدد المشاركين: ${lastTraining.participantsCount}\n`;
-                    }
+                    const lastCount = typeof Training !== 'undefined' && Training.getParticipantsCount ? Training.getParticipantsCount(lastTraining) : (lastTraining.participantsCount || 0);
+                    if (lastCount) responseText += `عدد المشاركين: ${lastCount}\n`;
                     
                     return {
                         success: true,
@@ -1388,9 +1387,8 @@ const AIAssistant = {
                     if (training.status) {
                         responseText += `   الحالة: ${training.status}\n`;
                     }
-                    if (training.participantsCount) {
-                        responseText += `   عدد المشاركين: ${training.participantsCount}\n`;
-                    }
+                    const partCount = typeof Training !== 'undefined' && Training.getParticipantsCount ? Training.getParticipantsCount(training) : (training.participantsCount || 0);
+                    if (partCount) responseText += `   عدد المشاركين: ${partCount}\n`;
                     responseText += `\n`;
                 });
                 

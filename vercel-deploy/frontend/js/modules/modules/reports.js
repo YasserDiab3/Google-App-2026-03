@@ -651,10 +651,12 @@ const Reports = {
         }
 
         const countFromParticipants = allParticipants.length;
-        const countFromTraining = training.reduce((acc, t) => {
-            const n = Number(t.participantsCount) || 0;
-            return acc + (Number.isFinite(n) ? n : 0);
-        }, 0);
+        const countFromTraining = typeof Training !== 'undefined' && Training.getParticipantsCount
+            ? training.reduce((acc, t) => acc + Training.getParticipantsCount(t), 0)
+            : training.reduce((acc, t) => {
+                const n = Number(t.participantsCount) || 0;
+                return acc + (Number.isFinite(n) ? n : 0);
+            }, 0);
         const uniqueTrainees = uniqueEmployeeCodes.size > 0
             ? uniqueEmployeeCodes.size
             : (countFromParticipants > 0 ? countFromParticipants : countFromTraining);
@@ -905,7 +907,7 @@ const Reports = {
                             <td>${Utils.escapeHTML(tr.name || '')}</td>
                             <td>${tr.startDate ? Utils.formatDate(tr.startDate) : ''}</td>
                             <td>${Utils.escapeHTML(tr.trainer || '')}</td>
-                            <td>${tr.participants?.length || tr.participantsCount || 0}</td>
+                            <td>${typeof Training !== 'undefined' && Training.getParticipantsCount ? Training.getParticipantsCount(tr) : (tr.participants?.length || tr.participantsCount || 0)}</td>
                             <td>${Utils.escapeHTML(tr.status || '')}</td>
                         </tr>
                     `).join('')}
@@ -963,10 +965,12 @@ const Reports = {
 
         // عدد المتدربين: أولوية لسجلات الحضور ثم للمشاركين الفريدين ثم لمجموع participantsCount (كأرقام دائماً)
         const countFromParticipants = allParticipants.length;
-        const countFromTraining = training.reduce((acc, t) => {
-            const n = Number(t.participantsCount) || 0;
-            return acc + (Number.isFinite(n) ? n : 0);
-        }, 0);
+        const countFromTraining = typeof Training !== 'undefined' && Training.getParticipantsCount
+            ? training.reduce((acc, t) => acc + Training.getParticipantsCount(t), 0)
+            : training.reduce((acc, t) => {
+                const n = Number(t.participantsCount) || 0;
+                return acc + (Number.isFinite(n) ? n : 0);
+            }, 0);
         const uniqueTrainees = uniqueEmployeeCodes.size > 0
             ? uniqueEmployeeCodes.size
             : (countFromParticipants > 0 ? countFromParticipants : countFromTraining);

@@ -835,7 +835,9 @@ const UserAIAssistant = {
         const trainings = AppState.appData?.training || [];
         const completed = trainings.filter(t => t.status === 'مكتمل' || t.status === 'completed').length;
         const upcoming = trainings.filter(t => t.status === 'مخطط' || t.status === 'planned').length;
-        const totalParticipants = trainings.reduce((sum, t) => sum + (t.participants?.length || t.participantsCount || 0), 0);
+        const totalParticipants = typeof Training !== 'undefined' && Training.getParticipantsCount
+            ? trainings.reduce((sum, t) => sum + Training.getParticipantsCount(t), 0)
+            : trainings.reduce((sum, t) => sum + (t.participants?.length || t.participantsCount || 0), 0);
 
         let text = `🎓 معلومات عن التدريب:\n\n`;
         text += `• إجمالي البرامج التدريبية: ${trainings.length}\n`;

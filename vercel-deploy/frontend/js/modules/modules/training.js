@@ -27,6 +27,16 @@ const Training = {
     },
 
     /**
+     * عدد المشاركين من سجل تدريب — منطق موحد: نفضّل participantsCount الرقمي، وإلا طول مصفوفة participants.
+     */
+    getParticipantsCount(record) {
+        if (!record || typeof record !== 'object') return 0;
+        const n = Number(record.participantsCount);
+        if (Number.isFinite(n)) return n;
+        return Array.isArray(record.participants) ? record.participants.length : 0;
+    },
+
+    /**
      * إصلاح البيانات الموجودة: إضافة أوقات افتراضية للسجلات التي لا تحتوي على أوقات
      */
     fixExistingContractorTrainingTimes() {
@@ -592,10 +602,8 @@ const Training = {
         let completedCount = 0;
 
         trainings.forEach(training => {
-            const participantsCount = Array.isArray(training.participants)
-                ? training.participants.length
-                : Number(training.participantsCount || training.participants || 0);
-            totalParticipants += Number.isFinite(participantsCount) ? participantsCount : 0;
+            const participantsCount = this.getParticipantsCount(training);
+            totalParticipants += participantsCount;
 
             if (training.status === 'مكتمل') {
                 completedCount += 1;
@@ -621,8 +629,7 @@ const Training = {
         const now = new Date();
         let totalParticipants = 0, upcomingCount = 0, completedCount = 0;
         list.forEach(training => {
-            const participantsCount = Array.isArray(training.participants) ? training.participants.length : Number(training.participantsCount || training.participants || 0);
-            totalParticipants += Number.isFinite(participantsCount) ? participantsCount : 0;
+            totalParticipants += this.getParticipantsCount(training);
             if (training.status === 'مكتمل') completedCount += 1;
             const startDate = training.startDate ? new Date(training.startDate) : null;
             if (training.status === 'مخطط' || (startDate && startDate >= now)) upcomingCount += 1;
@@ -1413,7 +1420,7 @@ const Training = {
                 const location = normalizeText(t?.location || '—');
                 const trainingType = normalizeText(t?.trainingType || 'داخلي');
                 const participants = Array.isArray(t.participants) ? t.participants : [];
-                const trainees = t?.participantsCount ?? participants.length;
+                const trainees = this.getParticipantsCount(t);
                 const hours = parseFloat(t?.hours || t?.totalHours || 0) || 0;
                 const date = (t?.startDate || t?.date) ? new Date(t.startDate || t.date) : null;
 
@@ -2720,9 +2727,7 @@ const Training = {
                     <tbody>
                         ${items.map(item => {
             const statusText = item.status || '';
-            const participantsCount = Array.isArray(item.participants)
-                ? item.participants.length
-                : Number(item.participantsCount || item.participants || 0);
+            const participantsCount = this.getParticipantsCount(item);
             const isInProgress = /تنفي/.test(statusText);
             const badgeClass = statusText === 'مكتمل'
                 ? 'success'
@@ -6381,7 +6386,7 @@ const Training = {
                     <td>${Utils.escapeHTML(item.name || '')}</td>
                     <td>${Utils.escapeHTML(item.trainer || '')}</td>
                     <td>${item.startDate ? Utils.formatDate(item.startDate) : '-'}</td>
-                    <td>${item.participants?.length || item.participantsCount || 0}</td>
+                    <td>${this.getParticipantsCount(item)}</td>
                     <td>
                         <span class="badge badge-${item.status === 'مكتمل' ? 'success' : item.status === 'قيد التنيذ' ? 'info' : item.status === 'ملغي' ? 'danger' : 'warning'}">
                             ${item.status || '-'}
@@ -6429,7 +6434,7 @@ const Training = {
                     'اسم البرنامج': training.name || '',
                     'المدرب': training.trainer || '',
                     'تاريخ البدء': training.startDate ? Utils.formatDate(training.startDate) : '',
-                    'عدد المشاركين': training.participants?.length || training.participantsCount || 0,
+                    'عدد المشاركين': this.getParticipantsCount(training),
                     'قائمة المشاركين': participants,
                     'الحالة': training.status || '',
                     'تاريخ الإنشاء': training.createdAt ? Utils.formatDate(training.createdAt) : ''
@@ -6626,7 +6631,7 @@ const Training = {
             const filteredTrainings = this.filterTrainingsForReport(trainings, filters);
 
             const totalPrograms = filteredTrainings.length;
-            const totalParticipants = filteredTrainings.reduce((acc, training) => acc + (training.participantsCount || (training.participants?.length || 0)), 0);
+            const totalParticipants = filteredTrainings.reduce((acc, training) => acc + this.getParticipantsCount(training), 0);
             const uniqueParticipants = new Set();
             filteredTrainings.forEach(training => {
                 const participants = Array.isArray(training.participants) ? training.participants : [];
@@ -6802,7 +6807,7 @@ const Training = {
     },
 
     renderTrainingReportRow(training, index) {
-        const participantsCount = training.participantsCount || (training.participants?.length || 0);
+        const participantsCount = this.getParticipantsCount(training);
         const statusText = training.status === 'قيد التنيذ' ? 'قيد التنفيذ' : (training.status || '-');
         return `
             <tr style="${index % 2 === 0 ? 'background: #F9FAFB;' : ''}">
@@ -6936,7 +6941,7 @@ const Training = {
                         </div>
                         <div class="p-3 bg-gray-50 rounded-lg">
                             <label class="text-sm font-semibold text-gray-600 block mb-1">عدد المشاركين:</label>
-                            <p class="text-gray-800">${training.participants?.length || training.participantsCount || 0}</p>
+                            <p class="text-gray-800">${this.getParticipantsCount(training)}</p>
                         </div>
                         <div class="p-3 bg-gray-50 rounded-lg">
                             <label class="text-sm font-semibold text-gray-600 block mb-1">ساعات التدريب:</label>
@@ -8094,7 +8099,7 @@ const Training = {
                     </div>
                     <div class="summary-card">
                         <span class="summary-label">عدد المشاركين</span>
-                        <span class="summary-value">${Array.isArray(training.participants) ? training.participants.length : (training.participantsCount || 0)}</span>
+                        <span class="summary-value">${this.getParticipantsCount(training)}</span>
                     </div>
                     <div class="summary-card">
                         <span class="summary-label">الحالة</span>
@@ -8239,7 +8244,7 @@ const Training = {
                 'المدرب': training.trainer || '',
                 'تاريخ البدء': training.startDate ? Utils.formatDate(training.startDate) : '',
                 'نوع التدريب': training.trainingType || 'داخلي',
-                'عدد المشاركين': Array.isArray(training.participants) ? training.participants.length : (training.participantsCount || 0),
+                'عدد المشاركين': this.getParticipantsCount(training),
                 'الحالة': training.status || '',
                 'المصنع': factoryName || '',
                 'المكان': locationName || '',

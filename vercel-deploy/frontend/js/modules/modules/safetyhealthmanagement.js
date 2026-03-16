@@ -4007,7 +4007,7 @@ const SafetyHealthManagement = {
                         ...(report.activities.trainings || []).map(training => [
                             training.startDate ? Utils.formatDate(training.startDate) : '—',
                             training.topic || '—',
-                            training.participants ? (Array.isArray(training.participants) ? training.participants.length : '—') : '—'
+                            (typeof Training !== 'undefined' && Training.getParticipantsCount ? Training.getParticipantsCount(training) : 0) || '—'
                         ])
                     ];
 
