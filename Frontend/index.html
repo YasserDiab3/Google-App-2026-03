@@ -9320,27 +9320,72 @@
                 function initLoginLanguage() {
                     var lang = getLoginLang();
                     applyLoginLanguage(lang);
+                    var btn = document.getElementById("login-language-toggle-btn");
+                    var dd = document.getElementById("login-language-dropdown");
+                    if (btn && dd) {
+                        window._loginLangDirectBound = true;
+                        function openDropdown() {
+                            dd.classList.remove("hidden");
+                            dd.classList.add("show");
+                            dd.style.setProperty("display", "block", "important");
+                            dd.style.setProperty("visibility", "visible", "important");
+                            dd.style.setProperty("z-index", "99999", "important");
+                            btn.setAttribute("aria-expanded", "true");
+                        }
+                        function closeDropdown() {
+                            dd.classList.add("hidden");
+                            dd.classList.remove("show");
+                            dd.style.removeProperty("display");
+                            dd.style.removeProperty("visibility");
+                            dd.style.removeProperty("z-index");
+                            btn.setAttribute("aria-expanded", "false");
+                        }
+                        btn.addEventListener("click", function (e) {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            if (dd.classList.contains("hidden")) openDropdown();
+                            else closeDropdown();
+                        });
+                        dd.querySelectorAll("button[data-lang]").forEach(function (opt) {
+                            opt.addEventListener("click", function (e) {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                var chosen = this.getAttribute("data-lang");
+                                if (chosen) {
+                                    try { localStorage.setItem("language", chosen); } catch (err) {}
+                                    if (typeof window.AppState !== "undefined") window.AppState.currentLanguage = chosen;
+                                    applyLoginLanguage(chosen);
+                                    closeDropdown();
+                                }
+                            });
+                        });
+                        document.addEventListener("click", function (e) {
+                            if (!btn.contains(e.target) && !dd.contains(e.target)) closeDropdown();
+                        });
+                    }
                     if (window._loginLangDelegationBound) return;
                     window._loginLangDelegationBound = true;
                     document.addEventListener("click", function (e) {
-                        var btn = document.getElementById("login-language-toggle-btn");
-                        var dd = document.getElementById("login-language-dropdown");
-                        if (!btn || !dd) return;
-                        if (btn.contains(e.target)) {
+                        var btn2 = document.getElementById("login-language-toggle-btn");
+                        var dd2 = document.getElementById("login-language-dropdown");
+                        if (!btn2 || !dd2) return;
+                        if (btn2.contains(e.target)) {
                             e.preventDefault();
                             e.stopPropagation();
-                            if (dd.classList.contains("hidden")) {
-                                dd.classList.remove("hidden");
-                                dd.classList.add("show");
-                                dd.style.display = "block";
-                                dd.style.visibility = "visible";
-                                btn.setAttribute("aria-expanded", "true");
+                            if (dd2.classList.contains("hidden")) {
+                                dd2.classList.remove("hidden");
+                                dd2.classList.add("show");
+                                dd2.style.setProperty("display", "block", "important");
+                                dd2.style.setProperty("visibility", "visible", "important");
+                                dd2.style.setProperty("z-index", "99999", "important");
+                                btn2.setAttribute("aria-expanded", "true");
                             } else {
-                                dd.classList.add("hidden");
-                                dd.classList.remove("show");
-                                dd.style.display = "";
-                                dd.style.visibility = "";
-                                btn.setAttribute("aria-expanded", "false");
+                                dd2.classList.add("hidden");
+                                dd2.classList.remove("show");
+                                dd2.style.removeProperty("display");
+                                dd2.style.removeProperty("visibility");
+                                dd2.style.removeProperty("z-index");
+                                btn2.setAttribute("aria-expanded", "false");
                             }
                             return;
                         }
@@ -9353,18 +9398,22 @@
                                 try { localStorage.setItem("language", chosen); } catch (err) {}
                                 if (typeof window.AppState !== "undefined") window.AppState.currentLanguage = chosen;
                                 applyLoginLanguage(chosen);
-                                dd.classList.add("hidden");
-                                dd.classList.remove("show");
-                                dd.style.display = "";
-                                btn.setAttribute("aria-expanded", "false");
+                                dd2.classList.add("hidden");
+                                dd2.classList.remove("show");
+                                dd2.style.removeProperty("display");
+                                dd2.style.removeProperty("visibility");
+                                dd2.style.removeProperty("z-index");
+                                btn2.setAttribute("aria-expanded", "false");
                             }
                             return;
                         }
-                        if (!dd.contains(e.target) && !btn.contains(e.target)) {
-                            dd.classList.add("hidden");
-                            dd.classList.remove("show");
-                            dd.style.display = "";
-                            btn.setAttribute("aria-expanded", "false");
+                        if (!dd2.contains(e.target) && !btn2.contains(e.target)) {
+                            dd2.classList.add("hidden");
+                            dd2.classList.remove("show");
+                            dd2.style.removeProperty("display");
+                            dd2.style.removeProperty("visibility");
+                            dd2.style.removeProperty("z-index");
+                            btn2.setAttribute("aria-expanded", "false");
                         }
                     });
                 }

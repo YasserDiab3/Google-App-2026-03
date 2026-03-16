@@ -540,11 +540,13 @@ Yasser.diab@icapp.com.eg`;
         return true;
     }
 
-    // تهيئة زر اللغة في شاشة تسجيل الدخول
+    // تهيئة زر اللغة في شاشة تسجيل الدخول (يتخطى إذا ربَط السكربت المضمن في index.html)
     function setupLanguageToggle() {
+        if (window._loginLangDirectBound) {
+            return true;
+        }
         const langToggleBtn = document.getElementById('login-language-toggle-btn');
         const langDropdown = document.getElementById('login-language-dropdown');
-        // Use querySelector to get the specific element within the login form
         const currentLangText = langToggleBtn ? langToggleBtn.querySelector('#current-lang-text, span[id*="lang-text"]') : null;
         
         if (!langToggleBtn || !langDropdown || !currentLangText) {
@@ -552,28 +554,27 @@ Yasser.diab@icapp.com.eg`;
             return false;
         }
         
-        // تحميل اللغة الحالية
         const currentLang = localStorage.getItem('language') || 'ar';
         currentLangText.textContent = currentLang === 'ar' ? 'العربية' : 'English';
         
-        // منع تكرار الربط
         if (langToggleBtn.dataset.handlerBound === 'true') {
             return true;
         }
         
-        // إظهار/إخفاء القائمة المنسدلة بشكل صريح لضمان عملها
         function showDropdown() {
             langDropdown.classList.remove('hidden');
             langDropdown.classList.add('show');
-            langDropdown.style.display = 'block';
-            langDropdown.style.visibility = 'visible';
+            langDropdown.style.setProperty('display', 'block', 'important');
+            langDropdown.style.setProperty('visibility', 'visible', 'important');
+            langDropdown.style.setProperty('z-index', '99999', 'important');
             langToggleBtn.setAttribute('aria-expanded', 'true');
         }
         function hideDropdown() {
             langDropdown.classList.add('hidden');
             langDropdown.classList.remove('show');
-            langDropdown.style.display = '';
-            langDropdown.style.visibility = '';
+            langDropdown.style.removeProperty('display');
+            langDropdown.style.removeProperty('visibility');
+            langDropdown.style.removeProperty('z-index');
             langToggleBtn.setAttribute('aria-expanded', 'false');
         }
 
