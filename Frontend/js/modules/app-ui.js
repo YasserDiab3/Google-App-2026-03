@@ -4811,79 +4811,86 @@ window.UI = {
                         Utils.safeError('❌ موديول Clinic غير متوفر - الموديول لم يُحمّل بشكل صحيح');
                     }
                     break;
-                case 'fire-equipment':
-                    if (typeof FireEquipment !== 'undefined' && FireEquipment.load) {
-                        try {
-                            const loadResult = FireEquipment.load();
-                            // إذا كانت Promise، نتعامل معها
-                            if (loadResult && typeof loadResult.then === 'function') {
-                                loadResult.catch(error => {
-                                    Utils.safeError('خطأ في تحميل موديول معدات الحريق:', error);
-                                    const section = document.getElementById('fire-equipment-section');
-                                    if (section) {
-                                        section.innerHTML = `
-                                            <div class="content-card">
-                                                <div class="card-body">
-                                                    <div class="empty-state">
-                                                        <i class="fas fa-exclamation-triangle text-4xl text-red-400 mb-3"></i>
-                                                        <h3 class="text-lg font-semibold text-gray-800 mb-2">فشل تحميل مديول معدات الحريق</h3>
-                                                        <p class="text-gray-500 mb-4">${error?.message || 'خطأ غير معروف'}</p>
-                                                        <button onclick="FireEquipment.load()" class="btn-primary">
-                                                            <i class="fas fa-redo ml-2"></i>
-                                                            إعادة المحاولة
-                                                        </button>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        `;
-                                    }
-                                });
-                            }
-                        } catch (error) {
-                            Utils.safeError('خطأ في استدعاء FireEquipment.load:', error);
-                            const section = document.getElementById('fire-equipment-section');
-                            if (section) {
-                                section.innerHTML = `
-                                    <div class="content-card">
-                                        <div class="card-body">
-                                            <div class="empty-state">
-                                                <i class="fas fa-exclamation-triangle text-4xl text-red-400 mb-3"></i>
-                                                <h3 class="text-lg font-semibold text-gray-800 mb-2">فشل تحميل مديول معدات الحريق</h3>
-                                                <p class="text-gray-500 mb-4">يرجى تحديث الصفحة</p>
-                                                <button onclick="location.reload()" class="btn-primary">
-                                                    <i class="fas fa-redo ml-2"></i>
-                                                    تحديث الصفحة
-                                                </button>
-                                            </div>
-                                        </div>
+                case 'fire-equipment': {
+                    const section = document.getElementById('fire-equipment-section');
+                    const showFireEquipmentError = (msg, showReload) => {
+                        if (!section) return;
+                        section.innerHTML = `
+                            <div class="content-card">
+                                <div class="card-body">
+                                    <div class="empty-state">
+                                        <i class="fas fa-exclamation-triangle text-4xl text-red-400 mb-3"></i>
+                                        <h3 class="text-lg font-semibold text-gray-800 mb-2">فشل تحميل مديول معدات الحريق</h3>
+                                        <p class="text-gray-500 mb-4">${msg || 'الموديول لم يُحمّل بشكل صحيح. يرجى تحديث الصفحة.'}</p>
+                                        ${showReload
+                                            ? '<button onclick="location.reload()" class="btn-primary"><i class="fas fa-redo ml-2"></i>تحديث الصفحة</button>'
+                                            : '<button onclick="FireEquipment.load()" class="btn-primary"><i class="fas fa-redo ml-2"></i>إعادة المحاولة</button>'}
                                     </div>
-                                `;
+                                </div>
+                            </div>
+                        `;
+                    };
+                    const tryLoadFireEquipment = () => {
+                        if (typeof FireEquipment !== 'undefined' && FireEquipment.load) {
+                            try {
+                                const loadResult = FireEquipment.load();
+                                if (loadResult && typeof loadResult.then === 'function') {
+                                    loadResult.catch(error => {
+                                        Utils.safeError('خطأ في تحميل موديول معدات الحريق:', error);
+                                        showFireEquipmentError(error?.message || 'خطأ غير معروف', false);
+                                    });
+                                }
+                                return true;
+                            } catch (error) {
+                                Utils.safeError('خطأ في استدعاء FireEquipment.load:', error);
+                                showFireEquipmentError('يرجى تحديث الصفحة', true);
+                                return true;
                             }
                         }
-                    } else {
-                        if (!silent) {
-                            Utils.safeError('❌ موديول FireEquipment غير متوفر - الموديول لم يُحمّل بشكل صحيح');
-                        }
-                        const section = document.getElementById('fire-equipment-section');
-                        if (section) {
-                            section.innerHTML = `
-                                <div class="content-card">
-                                    <div class="card-body">
-                                        <div class="empty-state">
-                                            <i class="fas fa-exclamation-triangle text-4xl text-red-400 mb-3"></i>
-                                            <h3 class="text-lg font-semibold text-gray-800 mb-2">فشل تحميل مديول معدات الحريق</h3>
-                                            <p class="text-gray-500 mb-4">الموديول لم يُحمّل بشكل صحيح. يرجى تحديث الصفحة.</p>
-                                            <button onclick="location.reload()" class="btn-primary">
-                                                <i class="fas fa-redo ml-2"></i>
-                                                تحديث الصفحة
-                                            </button>
+                        return false;
+                    };
+                    if (tryLoadFireEquipment()) break;
+                    if (section) {
+                        section.innerHTML = `
+                            <div class="content-card">
+                                <div class="card-body">
+                                    <div class="empty-state">
+                                        <div class="flex flex-col items-center gap-3">
+                                            <div style="width: 40px; height: 40px; border: 3px solid rgba(59, 130, 246, 0.3); border-top-color: #3b82f6; border-radius: 50%; animation: spin 0.8s linear infinite;"></div>
+                                            <p class="text-gray-500">جاري تحميل مديول معدات الحريق...</p>
                                         </div>
                                     </div>
                                 </div>
-                            `;
-                        }
+                            </div>
+                        `;
                     }
+                    let attempts = 0;
+                    const maxAttempts = 8;
+                    const retryInterval = setInterval(() => {
+                        attempts++;
+                        if (tryLoadFireEquipment()) {
+                            clearInterval(retryInterval);
+                            return;
+                        }
+                        if (attempts >= maxAttempts) {
+                            clearInterval(retryInterval);
+                            const script = document.createElement('script');
+                            script.src = 'js/modules/modules/fireequipment.js';
+                            script.async = false;
+                            script.onload = () => {
+                                if (tryLoadFireEquipment()) return;
+                                if (!silent) Utils.safeError('❌ موديول FireEquipment لم يُحمّل بعد تحميل السكربت');
+                                showFireEquipmentError('الموديول لم يُحمّل بشكل صحيح. يرجى تحديث الصفحة.', true);
+                            };
+                            script.onerror = () => {
+                                if (!silent) Utils.safeError('❌ فشل تحميل سكربت معدات الحريق');
+                                showFireEquipmentError('تعذر تحميل الموديول. يرجى التحقق من الاتصال وتحديث الصفحة.', true);
+                            };
+                            document.body.appendChild(script);
+                        }
+                    }, 350);
                     break;
+                }
                 case 'periodic-inspections':
                     if (typeof PeriodicInspections !== 'undefined' && PeriodicInspections.load) {
                         try {
