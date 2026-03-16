@@ -84,6 +84,15 @@ FireEquipment = {
             return;
         }
 
+        // التأكد من وجود AppState و appData لمنع الشاشة البيضاء
+        if (typeof AppState === 'undefined') {
+            section.innerHTML = '<div class="content-card"><div class="card-body"><p class="text-red-600">لم يتم تهيئة التطبيق بشكل صحيح. يرجى تحديث الصفحة.</p></div></div>';
+            return;
+        }
+        if (!AppState.appData) {
+            AppState.appData = {};
+        }
+
             const loadingPlaceholder = '<div class="fire-tab-loading"><div style="width: 300px; margin: 0 auto 16px;"><div style="width: 100%; height: 6px; background: rgba(59, 130, 246, 0.2); border-radius: 3px; overflow: hidden;"><div style="height: 100%; background: linear-gradient(90deg, #3b82f6, #2563eb, #3b82f6); background-size: 200% 100%; border-radius: 3px; animation: loadingProgress 1.5s ease-in-out infinite;"></div></div></div><p>جاري التحميل...</p></div>';
 
             section.innerHTML = `

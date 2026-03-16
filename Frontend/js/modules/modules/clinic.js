@@ -1922,21 +1922,13 @@ const Clinic = {
      * التأكد من وجود البيانات
      */
     ensureDataStructure() {
-        if (!AppState.appData.clinicMedications) {
-            AppState.appData.clinicMedications = [];
-        }
-        if (!AppState.appData.injuries) {
-            AppState.appData.injuries = [];
-        }
-        if (!AppState.appData.sickLeave) {
-            AppState.appData.sickLeave = [];
-        }
-        if (!AppState.appData.clinicVisits) {
-            AppState.appData.clinicVisits = [];
-        }
-        if (!AppState.appData.clinicSupplyRequests) {
-            AppState.appData.clinicSupplyRequests = [];
-        }
+        if (typeof AppState === 'undefined' || !AppState.appData) return;
+        const ad = AppState.appData;
+        if (!ad.clinicMedications) ad.clinicMedications = [];
+        if (!ad.injuries) ad.injuries = [];
+        if (!ad.sickLeave) ad.sickLeave = [];
+        if (!ad.clinicVisits) ad.clinicVisits = [];
+        if (!ad.clinicSupplyRequests) ad.clinicSupplyRequests = [];
     },
 
 
@@ -2701,9 +2693,7 @@ const Clinic = {
     },
 
     /** القائمة الافتراضية لأنواع الزيارة (قابلة للتعديل من مدير النظام عبر إعدادات العيادة) */
-    static get DEFAULT_VISIT_TYPES() {
-        return ['طوارئ', 'اصابة عمل', 'مرض', 'فحص دوري', 'متابعة', 'فحص ماقبل التعيين', 'تحليل مخدارت'];
-    },
+    DEFAULT_VISIT_TYPES: ['طوارئ', 'اصابة عمل', 'مرض', 'فحص دوري', 'متابعة', 'فحص ماقبل التعيين', 'تحليل مخدارت'],
 
     /**
      * الحصول على قائمة أنواع الزيارة (من إعدادات المدير أو الافتراضية)
@@ -2714,7 +2704,7 @@ const Clinic = {
         if (Array.isArray(custom) && custom.length > 0) {
             return custom.map((v) => (typeof v === 'string' ? v.trim() : String(v))).filter(Boolean);
         }
-        return Clinic.DEFAULT_VISIT_TYPES.slice();
+        return (this.DEFAULT_VISIT_TYPES || []).slice();
     },
 
     /**
@@ -2848,7 +2838,7 @@ const Clinic = {
             renderList();
         });
         modal.querySelector('#clinic-visit-types-reset').addEventListener('click', () => {
-            items = listToEditableItems(Clinic.DEFAULT_VISIT_TYPES);
+            items = listToEditableItems(this.DEFAULT_VISIT_TYPES || []);
             renderList();
         });
         modal.querySelector('#clinic-visit-types-save').addEventListener('click', () => {
@@ -7023,7 +7013,9 @@ const Clinic = {
     },
 
     ensureData() {
-        const data = AppState.appData || {};
+        if (typeof AppState === 'undefined') return;
+        AppState.appData = AppState.appData || {};
+        const data = AppState.appData;
 
         if (!Array.isArray(data.clinicVisits)) data.clinicVisits = [];
         if (!Array.isArray(data.clinicInventory)) data.clinicInventory = [];
@@ -10683,6 +10675,27 @@ const Clinic = {
             Utils.safeLog('🔄 تحميل مديول العيادة...');
         }
 
+        // التأكد من وجود قسم DOM قبل أي عملية
+        const section = document.getElementById('clinic-section');
+        if (!section) {
+            if (typeof Utils !== 'undefined' && Utils.safeError) {
+                Utils.safeError('❌ قسم clinic-section غير موجود في الصفحة');
+            }
+            return;
+        }
+
+        // التأكد من وجود AppState و appData لمنع الشاشة البيضاء
+        if (typeof AppState === 'undefined') {
+            if (typeof Utils !== 'undefined' && Utils.safeError) {
+                Utils.safeError('❌ AppState غير معرّف - يرجى تحديث الصفحة');
+            }
+            section.innerHTML = '<div class="content-card"><div class="card-body"><p class="text-red-600">لم يتم تهيئة التطبيق بشكل صحيح. يرجى تحديث الصفحة.</p></div></div>';
+            return;
+        }
+        if (!AppState.appData) {
+            AppState.appData = {};
+        }
+
         // حقن أنماط CSS لشريط التمرير
         this.injectTableScrollbarStyles();
 
@@ -10763,7 +10776,7 @@ const Clinic = {
                     if (this.state && this.state.activeTab === 'visits') {
                         setTimeout(() => this.renderVisitsTab(false), 100);
                     }
-                    if (typeof Utils !== 'undefined' && Utils.safeLog) {
+                    if (typeof Utils !== 'undefined' && Utils.safeLog && AppState.appData) {
                         const visitsCount = (AppState.appData.clinicVisits || []).length;
                         const medsCount = (AppState.appData.clinicMedications || AppState.appData.medications || []).length;
                         Utils.safeLog(`✅ تم تحميل مديول العيادة بنجاح: ${visitsCount} زيارة، ${medsCount} دواء`);
@@ -10804,10 +10817,12 @@ const Clinic = {
      * التحقق من وجود بيانات محلية صالحة
      */
     hasValidLocalData() {
-        const medications = AppState.appData.medications || AppState.appData.clinicMedications || [];
-        const sickLeave = AppState.appData.sickLeave || [];
-        const injuries = AppState.appData.injuries || [];
-        const visits = AppState.appData.clinicVisits || [];
+        const ad = AppState.appData;
+        if (!ad) return false;
+        const medications = ad.medications || ad.clinicMedications || [];
+        const sickLeave = ad.sickLeave || [];
+        const injuries = ad.injuries || [];
+        const visits = ad.clinicVisits || [];
 
         // نعتبر البيانات صالحة إذا كان هناك على الأقل نوع واحد من البيانات
         return medications.length > 0 || sickLeave.length > 0 || injuries.length > 0 || visits.length > 0;
@@ -11222,14 +11237,20 @@ const Clinic = {
     renderUI() {
         const section = document.getElementById('clinic-section');
         if (!section) {
-            Utils.safeError('❌ قسم clinic-section غير موجود!');
+            if (typeof Utils !== 'undefined' && Utils.safeError) Utils.safeError('❌ قسم clinic-section غير موجود!');
+            return;
+        }
+
+        const ad = AppState.appData;
+        if (!ad) {
+            section.innerHTML = '<div class="content-card"><div class="card-body"><p class="text-gray-600">جاري تحميل البيانات...</p></div></div>';
             return;
         }
 
         const medicationsCount = this.getMedications().length;
         const sickLeavesCount = this.getSickLeaves().length;
         const injuriesCount = this.getInjuries().length;
-        const visitsCount = (AppState.appData.clinicVisits || []).length;
+        const visitsCount = (ad.clinicVisits || []).length;
         const isAdmin = this.isCurrentUserAdmin();
 
         section.innerHTML = `

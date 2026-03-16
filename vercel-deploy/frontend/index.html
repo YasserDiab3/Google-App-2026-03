@@ -256,6 +256,8 @@
                     return url;
                 };
                 // معالجة فشل تحميل صور thumbnail (503 من Google) — استبدال ب placeholder + تطبيع w1000→w400
+                // ملاحظة: 503 (Service Unavailable) يظهر في Console عند فشل طلب الصورة من خوادم Google (حصة/إتاحة مؤقتة).
+                // التطبيق يعالج ذلك تلقائياً عبر onerror ويستبدل الصورة بـ "فشل تحميل الصورة" — رسالة Console تبقى لكن الواجهة تعمل.
                 (function () {
                     var placeholderSvg =
                         "data:image/svg+xml," +

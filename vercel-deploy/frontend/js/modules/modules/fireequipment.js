@@ -90,12 +90,16 @@ FireEquipment = {
                     console.error('قسم fire-equipment-section غير موجود!');
                 }
                 return;
-                Utils.safeError('قسم fire-equipment-section غير موجود!');
-            } else {
-                console.error('قسم fire-equipment-section غير موجود!');
             }
-            return;
-        }
+
+            // التأكد من وجود AppState و appData لمنع الشاشة البيضاء
+            if (typeof AppState === 'undefined') {
+                section.innerHTML = '<div class="content-card"><div class="card-body"><p class="text-red-600">لم يتم تهيئة التطبيق بشكل صحيح. يرجى تحديث الصفحة.</p></div></div>';
+                return;
+            }
+            if (!AppState.appData) {
+                AppState.appData = {};
+            }
 
             // ✅ عرض الواجهة الكاملة فوراً بدون انتظار renderTabContent لتجنب timeout
         // الواجهة تظهر فوراً مع placeholders، ثم يتم تحميل المحتوى بشكل lazy عند الحاجة
