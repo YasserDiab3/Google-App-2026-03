@@ -37,6 +37,24 @@ const Training = {
     },
 
     /**
+     * إرجاع مصفوفة المشاركين من سجل تدريب — مع دعم تحليل JSON إذا كان الحقل نصاً (من الورقة).
+     */
+    getParticipantsArray(record) {
+        if (!record || typeof record !== 'object') return [];
+        const p = record.participants;
+        if (Array.isArray(p)) return p;
+        if (typeof p === 'string' && p.trim()) {
+            try {
+                const parsed = JSON.parse(p);
+                return Array.isArray(parsed) ? parsed : [];
+            } catch (e) {
+                return [];
+            }
+        }
+        return [];
+    },
+
+    /**
      * إصلاح البيانات الموجودة: إضافة أوقات افتراضية للسجلات التي لا تحتوي على أوقات
      */
     fixExistingContractorTrainingTimes() {
@@ -6426,9 +6444,8 @@ const Training = {
 
             // Prepare data for Excel
             const excelData = trainings.map(training => {
-                const participants = Array.isArray(training.participants)
-                    ? training.participants.map(p => `${p.name || ''} (${p.code || p.employeeNumber || ''})`).join('; ')
-                    : '';
+                const participantsArr = this.getParticipantsArray(training);
+                const participants = participantsArr.map(p => `${p.name || p.contractorName || ''} (${p.code || p.employeeNumber || p.employeeCode || ''})`).filter(Boolean).join('; ') || '';
 
                 return {
                     'اسم البرنامج': training.name || '',
@@ -6809,6 +6826,10 @@ const Training = {
     renderTrainingReportRow(training, index) {
         const participantsCount = this.getParticipantsCount(training);
         const statusText = training.status === 'قيد التنيذ' ? 'قيد التنفيذ' : (training.status || '-');
+        let locationDisplay = training.locationName || training.location || '—';
+        if (!training.locationName && training.location && training.factory) {
+            locationDisplay = this.getPlaceName(training.location, training.factory) || training.location || '—';
+        }
         return `
             <tr style="${index % 2 === 0 ? 'background: #F9FAFB;' : ''}">
                 <td style="padding: 8px 10px; border: 1px solid #E5E7EB; text-align: center;">${index}</td>
@@ -6816,7 +6837,7 @@ const Training = {
                 <td style="padding: 8px 10px; border: 1px solid #E5E7EB;">${training.startDate ? Utils.formatDate(training.startDate) : (training.date ? Utils.formatDate(training.date) : '—')}</td>
                 <td style="padding: 8px 10px; border: 1px solid #E5E7EB;">${Utils.escapeHTML(training.trainer || '—')}</td>
                 <td style="padding: 8px 10px; border: 1px solid #E5E7EB;">${Utils.escapeHTML(training.trainingType || 'داخلي')}</td>
-                <td style="padding: 8px 10px; border: 1px solid #E5E7EB;">${Utils.escapeHTML(training.location || '—')}</td>
+                <td style="padding: 8px 10px; border: 1px solid #E5E7EB;">${Utils.escapeHTML(locationDisplay)}</td>
                 <td style="padding: 8px 10px; border: 1px solid #E5E7EB; text-align: center;">${participantsCount}</td>
                 <td style="padding: 8px 10px; border: 1px solid #E5E7EB;">${Utils.escapeHTML(statusText)}</td>
             </tr>
@@ -6824,8 +6845,21 @@ const Training = {
     },
 
     renderTrainingReportParticipantsBlock(training) {
-        const participants = Array.isArray(training.participants) ? training.participants : [];
-        if (!participants.length) return '';
+        const participants = this.getParticipantsArray(training);
+        const programName = training.name || training.subject || '—';
+        const count = this.getParticipantsCount(training);
+
+        if (participants.length === 0) {
+            if (count > 0) {
+                return `
+                    <div style="page-break-inside: avoid; margin-bottom: 24px;">
+                        <h3 style="font-size: 18px; margin-bottom: 8px; color:#1E3A8A;">كشف المتدربين — ${Utils.escapeHTML(programName)}</h3>
+                        <p style="padding: 12px; color: #6B7280; margin: 0;">عدد المسجلين: ${count} — قائمة الأسماء غير متوفرة في هذه النسخة.</p>
+                    </div>
+                `;
+            }
+            return '';
+        }
 
         const participantsList = participants.map(participant => {
             const participantType = participant.type === 'contractor' || participant.personType === 'contractor'
@@ -6833,11 +6867,13 @@ const Training = {
                 : '<span style="color:#1D4ED8;">موظف</span>';
             const companyLabel = participant.company || participant.contractorCompany || '';
             const topicTags = (participant.topics || []).map(topic => `<span style="display:inline-block; background:#DBEAFE; color:#1D4ED8; padding:2px 8px; border-radius:12px; font-size:11px; margin-left:4px;">${Utils.escapeHTML(topic)}</span>`).join('');
+            const name = participant.name || participant.contractorName || '—';
+            const code = participant.code || participant.employeeNumber || participant.employeeCode || '';
 
             return `
                 <li style="margin-bottom: 6px; padding-bottom: 6px; border-bottom: 1px solid #E5E7EB;">
-                    <strong>${Utils.escapeHTML(participant.name || '—')}</strong>
-                    <span style="color:#6B7280;">${participant.code ? ' • ' + Utils.escapeHTML(participant.code) : ''}</span>
+                    <strong>${Utils.escapeHTML(name)}</strong>
+                    <span style="color:#6B7280;">${code ? ' • ' + Utils.escapeHTML(code) : ''}</span>
                     <span style="margin-right: 8px;">${participantType}</span>
                     ${companyLabel ? `<span style="margin-right: 8px; color:#0F766E;">${Utils.escapeHTML(companyLabel)}</span>` : ''}
                     ${participant.position ? `<span style="margin-right: 8px; color:#2563EB;">${Utils.escapeHTML(participant.position)}</span>` : ''}
@@ -6848,7 +6884,7 @@ const Training = {
 
         return `
             <div style="page-break-inside: avoid; margin-bottom: 24px;">
-                <h3 style="font-size: 18px; margin-bottom: 8px; color:#1E3A8A;">المشاركون في: ${Utils.escapeHTML(training.name || training.subject || '—')}</h3>
+                <h3 style="font-size: 18px; margin-bottom: 8px; color:#1E3A8A;">كشف المتدربين — ${Utils.escapeHTML(programName)}</h3>
                 <ul style="list-style: none; padding: 0; margin: 0;">
                     ${participantsList}
                 </ul>
@@ -8049,11 +8085,14 @@ const Training = {
                 factoryName = site ? site.name : training.factory;
             }
             
-            const hasCompany = Array.isArray(training.participants) && training.participants.some(p => p.company || p.contractorCompany);
-            const hasType = Array.isArray(training.participants) && training.participants.some(p => p.type === 'contractor' || p.personType === 'contractor');
-            const participantsList = Array.isArray(training.participants) && training.participants.length > 0
-                ? `
-                    <div class="section-title">قائمة المشاركين</div>
+            const participants = this.getParticipantsArray(training);
+            const hasCompany = participants.some(p => p.company || p.contractorCompany);
+            const hasType = participants.some(p => p.type === 'contractor' || p.personType === 'contractor');
+            const count = this.getParticipantsCount(training);
+            let participantsList = '';
+            if (participants.length > 0) {
+                participantsList = `
+                    <div class="section-title">كشف المتدربين / قائمة المشاركين</div>
                     <table class="report-table">
                         <thead>
                             <tr>
@@ -8067,7 +8106,7 @@ const Training = {
                             </tr>
                         </thead>
                         <tbody>
-                            ${training.participants.map((p, idx) => `
+                            ${participants.map((p, idx) => `
                                 <tr>
                                     <td>${idx + 1}</td>
                                     <td>${Utils.escapeHTML(p.name || p.contractorName || '')}</td>
@@ -8080,8 +8119,10 @@ const Training = {
                             `).join('')}
                         </tbody>
                     </table>
-                `
-                : '';
+                `;
+            } else if (count > 0) {
+                participantsList = `<div class="section-title">كشف المتدربين</div><p style="padding:12px; color:#6B7280;">عدد المسجلين: ${count} — قائمة الأسماء غير متوفرة في هذه النسخة.</p>`;
+            }
 
             const content = `
                 <div class="summary-grid">
@@ -8219,8 +8260,7 @@ const Training = {
                 factoryName = site ? site.name : training.factory;
             }
             
-            const participants = Array.isArray(training.participants)
-                ? training.participants.map(p => {
+            const participants = this.getParticipantsArray(training).map(p => {
                     const participantData = {
                         'اسم المشارك': p.name || p.contractorName || '',
                         'الكود': p.code || p.employeeNumber || p.employeeCode || '',
@@ -8236,8 +8276,7 @@ const Training = {
                         participantData['النوع'] = 'موظف';
                     }
                     return participantData;
-                })
-                : [];
+                });
 
             const excelData = [{
                 'اسم البرنامج': training.name || '',
