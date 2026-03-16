@@ -102,6 +102,32 @@
     z-index: 10;
 }
 
+/* عند طي القائمة: إظهار زر الجرس ثم زر متصل تحته، وعدم إخفاء الحاوية فوق زر اللغة */
+.sidebar.collapsed .sidebar-actions-row,
+.sidebar.collapsed [style*="z-index: 1002"] {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    gap: 0.5rem !important;
+    margin: 0.5rem 0 !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+}
+
+.sidebar.collapsed #sync-btn {
+    display: inline-flex !important;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    padding: 0;
+    border-radius: 50%;
+}
+
+.sidebar.collapsed #sync-btn .sync-label-text {
+    display: none;
+}
+
 .sidebar-collapse-toggle {
     margin: 0.5rem 1rem;
     display: inline-flex;

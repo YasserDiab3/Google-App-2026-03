@@ -6212,16 +6212,12 @@ window.UI = {
                     }
 
                     // إنشاء handler جديد مع استخدام self بدلاً من this
-                    // ✅ إصلاح: إزالة debounce للاستجابة الفورية
+                    // ✅ إصلاح: منع إغلاق القائمة عند النقر على الزر (لا stopImmediatePropagation) حتى يعمل فتح القائمة بشكل موثوق
                     const clickHandler = (e) => {
                         try {
-                            Utils.safeLog('🔔 تم النقر على زر الإشعارات:', btn.id);
-                            
-                            // منع انتشار الحدث بشكل كامل
                             if (e) {
                                 e.preventDefault();
                                 e.stopPropagation();
-                                e.stopImmediatePropagation();
                             }
                             
                             // ✅ إصلاح: تنفيذ فوري بدون debounce
@@ -6301,22 +6297,11 @@ window.UI = {
                     Utils.safeLog('  - DOM موجود:', document.body.contains(btn));
                     Utils.safeLog('  - Handler مرتبط:', !!btn._notificationClickHandler);
                     
-                    // اختبار خاص للزر الجانبي (sidebar)
                     if (btn.id === 'notifications-btn') {
-                        Utils.safeLog('🔔 تأكيد: تم ربط زر الإشعارات في القائمة الجانبية (notifications-btn)');
-                        // إضافة listener إضافي للتأكد من استقبال الأحداث
-                        btn.addEventListener('click', function(e) {
-                            Utils.safeLog('🔔 حدث click تم استقباله على notifications-btn (sidebar)');
-                        }, { capture: false, once: false });
+                        Utils.safeLog('🔔 تم ربط زر الإشعارات في القائمة الجانبية (notifications-btn)');
                     }
-                    
-                    // اختبار خاص للزر الجانبي (mobile topbar)
                     if (btn.id === 'mobile-notifications-btn') {
-                        Utils.safeLog('🔔 تأكيد: تم ربط زر الإشعارات الجانبي (mobile-notifications-btn)');
-                        // إضافة listener إضافي للتأكد من استقبال الأحداث
-                        btn.addEventListener('click', function(e) {
-                            Utils.safeLog('🔔 حدث click تم استقباله على mobile-notifications-btn');
-                        }, { capture: false, once: false });
+                        Utils.safeLog('🔔 تم ربط زر الإشعارات الجانبي (mobile-notifications-btn)');
                     }
                 } catch (error) {
                     Utils.safeError('⚠️ خطأ في ربط زر الإشعارات:', btn.id, error);
@@ -6357,21 +6342,11 @@ window.UI = {
         
         self._notificationsClickHandler = (e) => {
             try {
-                // إذا كان النقر على أحد أزرار الإشعارات: فتح/إغلاق القائمة (تفويض حدث - يعمل حتى لو لم يُربط الزر مباشرة)
+                // إذا كان النقر على أحد أزرار الإشعارات: لا نغلق القائمة هنا — نترك الزر نفسه يفتح/يغلق عبر الـ handler المباشر (لتجنب عدم استجابة النقر في القائمة الجانبية)
                 if (e && e.target) {
                     const notifBtn = e.target.closest('#notifications-btn, #mobile-notifications-btn, #header-notifications-btn');
                     if (notifBtn) {
-                        const dropdownId = notifBtn.id === 'notifications-btn' ? 'notifications-dropdown' :
-                            notifBtn.id === 'mobile-notifications-btn' ? 'mobile-notifications-dropdown' : 'header-notifications-dropdown';
-                        const listId = dropdownId.replace('-dropdown', '-list');
-                        const emptyId = dropdownId.replace('-dropdown', '-empty');
-                        const closeBtnId = 'close-' + dropdownId;
-                        const uiObj = self || window.UI;
-                        if (uiObj && typeof uiObj.toggleNotificationsDropdown === 'function') {
-                            uiObj.toggleNotificationsDropdown(dropdownId, listId, emptyId, closeBtnId, notifBtn);
-                        }
-                        e.stopPropagation();
-                        return;
+                        return; // عدم منع الانتشار؛ الـ handler المربوط على الزر سيتولى فتح/إغلاق القائمة
                     }
                 }
 

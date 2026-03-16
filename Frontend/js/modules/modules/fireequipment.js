@@ -330,21 +330,47 @@ FireEquipment = {
                         }
                     }
 
-                    const hasLocalData = (this.getAssets() && this.getAssets().length > 0) ||
-                                         (this.getInspections() && this.getInspections().length > 0);
-
-                    if (!hasLocalData && typeof GoogleIntegration !== 'undefined' && GoogleIntegration.sendRequest) {
-                        this.loadFireEquipmentDataAsync().then(() => {
-                            if (this.state.currentTab === 'database') {
-                                try {
-                                    this.renderAssets();
-                                } catch (error) {
-                                    Utils.safeWarn('⚠️ خطأ في تحديث renderAssets:', error);
+                    // تحميل بيانات معدات الحريق من الخادم دائماً عند فتح الموديول (لضمان عرض أحدث البيانات حتى لو كانت محلياً فارغة أو قديمة)
+                    if (typeof GoogleIntegration !== 'undefined' && GoogleIntegration.sendRequest) {
+                        this.loadFireEquipmentDataAsync()
+                            .then(() => {
+                                if (this.state.currentTab === 'database') {
+                                    try {
+                                        this.renderAssets();
+                                    } catch (error) {
+                                        Utils.safeWarn('⚠️ خطأ في تحديث renderAssets:', error);
+                                    }
                                 }
+                                if (this.state.currentTab === 'register') {
+                                    try {
+                                        if (typeof this.refreshRegisterTable === 'function') {
+                                            this.refreshRegisterTable();
+                                        } else if (typeof this.refreshCurrentTab === 'function') {
+                                            this.refreshCurrentTab();
+                                        }
+                                    } catch (err) {
+                                        Utils.safeWarn('⚠️ خطأ في تحديث تبويب السجل:', err);
+                                    }
+                                }
+                            })
+                            .catch(error => {
+                                Utils.safeWarn('⚠️ تعذر تحميل بيانات معدات الحريق:', error);
+                                if (this.state.currentTab === 'database') {
+                                    try {
+                                        this.renderAssets();
+                                    } catch (e) {
+                                        Utils.safeWarn('⚠️ خطأ في renderAssets بعد فشل التحميل:', e);
+                                    }
+                                }
+                            });
+                    } else {
+                        if (this.state.currentTab === 'database') {
+                            try {
+                                this.renderAssets();
+                            } catch (error) {
+                                Utils.safeWarn('⚠️ خطأ في renderAssets:', error);
                             }
-                        }).catch(error => {
-                            Utils.safeWarn('⚠️ تعذر تحميل بيانات معدات الحريق:', error);
-                        });
+                        }
                     }
                 } catch (error) {
                     Utils.safeError('❌ خطأ في تحميل محتوى التبويبات:', error);
