@@ -4817,13 +4817,68 @@ window.UI = {
                             if (loadResult && typeof loadResult.then === 'function') {
                                 loadResult.catch(error => {
                                     Utils.safeError('خطأ في تحميل موديول معدات الحريق:', error);
+                                    const section = document.getElementById('fire-equipment-section');
+                                    if (section) {
+                                        section.innerHTML = `
+                                            <div class="content-card">
+                                                <div class="card-body">
+                                                    <div class="empty-state">
+                                                        <i class="fas fa-exclamation-triangle text-4xl text-red-400 mb-3"></i>
+                                                        <h3 class="text-lg font-semibold text-gray-800 mb-2">فشل تحميل مديول معدات الحريق</h3>
+                                                        <p class="text-gray-500 mb-4">${error?.message || 'خطأ غير معروف'}</p>
+                                                        <button onclick="FireEquipment.load()" class="btn-primary">
+                                                            <i class="fas fa-redo ml-2"></i>
+                                                            إعادة المحاولة
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        `;
+                                    }
                                 });
                             }
                         } catch (error) {
                             Utils.safeError('خطأ في استدعاء FireEquipment.load:', error);
+                            const section = document.getElementById('fire-equipment-section');
+                            if (section) {
+                                section.innerHTML = `
+                                    <div class="content-card">
+                                        <div class="card-body">
+                                            <div class="empty-state">
+                                                <i class="fas fa-exclamation-triangle text-4xl text-red-400 mb-3"></i>
+                                                <h3 class="text-lg font-semibold text-gray-800 mb-2">فشل تحميل مديول معدات الحريق</h3>
+                                                <p class="text-gray-500 mb-4">يرجى تحديث الصفحة</p>
+                                                <button onclick="location.reload()" class="btn-primary">
+                                                    <i class="fas fa-redo ml-2"></i>
+                                                    تحديث الصفحة
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                `;
+                            }
                         }
+                    } else {
                         if (!silent) {
                             Utils.safeError('❌ موديول FireEquipment غير متوفر - الموديول لم يُحمّل بشكل صحيح');
+                        }
+                        const section = document.getElementById('fire-equipment-section');
+                        if (section) {
+                            section.innerHTML = `
+                                <div class="content-card">
+                                    <div class="card-body">
+                                        <div class="empty-state">
+                                            <i class="fas fa-exclamation-triangle text-4xl text-red-400 mb-3"></i>
+                                            <h3 class="text-lg font-semibold text-gray-800 mb-2">فشل تحميل مديول معدات الحريق</h3>
+                                            <p class="text-gray-500 mb-4">الموديول لم يُحمّل بشكل صحيح. يرجى تحديث الصفحة.</p>
+                                            <button onclick="location.reload()" class="btn-primary">
+                                                <i class="fas fa-redo ml-2"></i>
+                                                تحديث الصفحة
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            `;
                         }
                     }
                     break;
