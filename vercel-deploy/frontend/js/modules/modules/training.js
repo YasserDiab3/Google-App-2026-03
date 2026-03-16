@@ -8102,10 +8102,12 @@ const Training = {
             const rowsHtml = Array.from({ length: maxRows }, (_, idx) => {
                 const p = participants[idx];
                 const name = p ? Utils.escapeHTML(p.name || p.contractorName || '') : '';
+                const code = p ? Utils.escapeHTML(p.code || p.employeeNumber || p.employeeCode || '') : '';
                 const job = p ? Utils.escapeHTML(p.position || p.jobTitle || '') : '';
                 return `
                     <tr>
                         <td style="border:1px solid #333; padding:8px; text-align:center; width:40px;">${idx + 1}</td>
+                        <td style="border:1px solid #333; padding:8px; text-align:center; width:90px;">${code}</td>
                         <td style="border:1px solid #333; padding:8px; text-align:right;">${name}</td>
                         <td style="border:1px solid #333; padding:8px; text-align:right;">${job}</td>
                         <td style="border:1px solid #333; padding:8px; min-width:80px;">&nbsp;</td>
@@ -8131,6 +8133,7 @@ const Training = {
                         <thead>
                             <tr style="background: #1e3a8a; color: #fff;">
                                 <th style="border:1px solid #333; padding:10px; text-align:center; width:50px;">م</th>
+                                <th style="border:1px solid #333; padding:10px; text-align:center; width:90px;">الكود الوظيفي</th>
                                 <th style="border:1px solid #333; padding:10px; text-align:right;">الإسم</th>
                                 <th style="border:1px solid #333; padding:10px; text-align:right;">الوظيفة</th>
                                 <th style="border:1px solid #333; padding:10px; text-align:center; min-width:100px;">التوقيع</th>
