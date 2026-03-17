@@ -45,7 +45,7 @@
         { "key": "X-XSS-Protection", "value": "1; mode=block" },
         { "key": "X-Content-Type-Options", "value": "nosniff" },
         { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" },
-        { "key": "Content-Security-Policy", "value": "frame-ancestors 'self' https://*.vercel.app" },
+        { "key": "Content-Security-Policy", "value": "frame-ancestors 'self' https://*.vercel.app https://vercel.live https://*.vercel.live; frame-src 'self' https://vercel.live https://*.vercel.live https://*.vercel.app" },
         { "key": "Access-Control-Allow-Origin", "value": "*" },
         { "key": "Access-Control-Allow-Methods", "value": "GET, POST, OPTIONS" },
         { "key": "Access-Control-Allow-Headers", "value": "Content-Type, Authorization, X-CSRF-Token" }
