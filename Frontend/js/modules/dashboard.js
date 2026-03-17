@@ -836,6 +836,7 @@ const Dashboard = {
         const sheetToKey = {
             'Violations': 'violations',
             'Training': 'training',
+            'TrainingAttendance': 'trainingAttendance',
             'ClinicVisits': 'clinicVisits',
             'PPE': 'ppe',
             'BehaviorMonitoring': 'behaviorMonitoring',
@@ -847,7 +848,6 @@ const Dashboard = {
             const current = ad[key];
             if (!Array.isArray(current) || current.length === 0) toLoad.push({ sheetName, key });
         }
-        if (toLoad.length === 0) return;
         if (typeof Loading !== 'undefined' && Loading.show) Loading.show();
         try {
             for (const { sheetName, key } of toLoad) {
@@ -860,6 +860,32 @@ const Dashboard = {
                     }
                 } catch (err) {
                     if (Utils.safeWarn) Utils.safeWarn(`⚠️ تقرير الموظف: فشل تحميل ${sheetName}:`, err?.message || err);
+                }
+            }
+            if ((!ad.training || ad.training.length === 0) && typeof GoogleIntegration !== 'undefined' && (GoogleIntegration.sendToAppsScript || GoogleIntegration.sendRequest)) {
+                try {
+                    const send = GoogleIntegration.sendToAppsScript || ((opts) => GoogleIntegration.sendRequest && GoogleIntegration.sendRequest({ action: opts.action || opts.method, data: opts.data || {} }));
+                    const trainingRes = await (GoogleIntegration.sendToAppsScript ? GoogleIntegration.sendToAppsScript('getAllTrainings', {}) : Promise.resolve(GoogleIntegration.sendRequest({ action: 'getAllTrainings', data: {} })));
+                    const trainingData = (trainingRes && (trainingRes.data || trainingRes.value)) && (Array.isArray(trainingRes.data) ? trainingRes.data : Array.isArray(trainingRes.value) ? trainingRes.value : Array.isArray((trainingRes.value || {}).data) ? (trainingRes.value || {}).data : null);
+                    if (Array.isArray(trainingData) && trainingData.length > 0) {
+                        AppState.appData.training = trainingData;
+                        if (Utils.safeLog) Utils.safeLog('✅ تقرير الموظف: تم تحميل التدريب عبر getAllTrainings');
+                    }
+                } catch (e) {
+                    if (Utils.safeWarn) Utils.safeWarn('⚠️ تقرير الموظف: فشل getAllTrainings:', e?.message || e);
+                }
+            }
+            if ((!ad.trainingAttendance || ad.trainingAttendance.length === 0) && typeof GoogleIntegration !== 'undefined' && GoogleIntegration.sendRequest) {
+                try {
+                    const attRes = await GoogleIntegration.sendRequest({ action: 'getAllTrainingAttendance', data: {} });
+                    const attData = (attRes && attRes.value && Array.isArray(attRes.value.data) && attRes.value.data) ? attRes.value.data
+                        : (attRes && Array.isArray(attRes.data) ? attRes.data : (Array.isArray(attRes && attRes.value) ? attRes.value : null));
+                    if (Array.isArray(attData)) {
+                        AppState.appData.trainingAttendance = attData;
+                        if (Utils.safeLog) Utils.safeLog('✅ تقرير الموظف: تم تحميل سجل الحضور عبر getAllTrainingAttendance');
+                    }
+                } catch (e) {
+                    if (Utils.safeWarn) Utils.safeWarn('⚠️ تقرير الموظف: فشل getAllTrainingAttendance:', e?.message || e);
                 }
             }
             if (sheetToKey.PPE && (!ad.ppe || ad.ppe.length === 0) && typeof GoogleIntegration !== 'undefined' && GoogleIntegration.sendToAppsScript) {
@@ -1007,22 +1033,43 @@ const Dashboard = {
         });
 
         const trainingList = getReportArray('training').concat(getReportArray('trainingRecords'));
-        const training = trainingList.filter(t => {
+        const trainingAttendanceList = getReportArray('trainingAttendance');
+        const trainingFromAttendance = trainingAttendanceList.filter(att => matchesEmployeeIdentifier(att));
+        const sessionHasEmployee = (t) => {
             if (!t || typeof t !== 'object') return false;
             const recAsRecord = { ...t, code: t.code || t.participantCode, employeeCode: t.employeeCode || t.participantCode, employeeNumber: t.employeeNumber || t.participantCode };
-            if (t.employeeCode != null && t.employeeCode !== '' || t.employeeNumber != null && t.employeeNumber !== '' || t.employeeId != null && t.employeeId !== '' || t.participantCode != null && t.participantCode !== '') {
+            if ((t.employeeCode != null && t.employeeCode !== '') || (t.employeeNumber != null && t.employeeNumber !== '') || (t.employeeId != null && t.employeeId !== '') || (t.participantCode != null && t.participantCode !== '')) {
                 if (matchesEmployeeIdentifier(recAsRecord)) return true;
             }
-            const participants = t.participants;
+            let participants = t.participants;
+            if (typeof participants === 'string') {
+                try {
+                    const parsed = JSON.parse(participants);
+                    participants = Array.isArray(parsed) ? parsed : (parsed && Array.isArray(parsed.participants) ? parsed.participants : []);
+                } catch (_) {
+                    participants = [];
+                }
+            }
             if (participants && Array.isArray(participants)) {
                 return participants.some(p => {
-                    if (!p) return false;
+                    if (!p || typeof p !== 'object') return false;
                     if (p.personType === 'contractor' || p.type === 'contractor' || p.contractorName) return false;
                     return matchesEmployeeIdentifier(p);
                 });
             }
             return false;
-        });
+        };
+        const trainingFromSessions = trainingList.filter(sessionHasEmployee);
+        const training = [
+            ...trainingFromSessions,
+            ...trainingFromAttendance.map(att => ({
+                id: att.id,
+                name: att.topic || att.trainingType || 'تدريب',
+                trainer: att.trainer || '',
+                startDate: att.date || att.attendanceDate || att.createdAt,
+                status: 'مكتمل'
+            }))
+        ];
 
         const ppe = getReportArray('ppe').filter(p => matchesEmployeeIdentifier(p));
 
