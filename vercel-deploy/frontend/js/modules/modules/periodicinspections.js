@@ -261,36 +261,7 @@ const PeriodicInspections = {
             return;
         }
 
-        // Skeleton فوري قبل أي render قد يكون بطيئاً (مهم للاختبار وتجربة المستخدم)
-        section.innerHTML = `
-            <div class="section-header">
-                <div class="flex items-center justify-between">
-                    <div>
-                        <h1 class="section-title">
-                            <i class="fas fa-clipboard-check ml-3"></i>
-                            الفحوصات الدورية
-                        </h1>
-                        <p class="section-subtitle">جاري التحميل...</p>
-                    </div>
-                </div>
-            </div>
-            <div class="mt-6">
-                <div class="content-card">
-                    <div class="card-body">
-                        <div class="empty-state">
-                            <div style="width: 300px; margin: 0 auto 16px;">
-                                <div style="width: 100%; height: 6px; background: rgba(59, 130, 246, 0.2); border-radius: 3px; overflow: hidden;">
-                                    <div style="height: 100%; background: linear-gradient(90deg, #3b82f6, #2563eb, #3b82f6); background-size: 200% 100%; border-radius: 3px; animation: loadingProgress 1.5s ease-in-out infinite;"></div>
-                                </div>
-                            </div>
-                            <p class="text-gray-500">جاري تجهيز الواجهة...</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        `;
-
-        // التأكد من وجود البيانات الأساسية
+        // التأكد من وجود البيانات الأساسية أولاً (لا فقدان بيانات عند التحديث — البيانات من DataManager/localStorage)
         try {
             if (!AppState || !AppState.appData) {
                 if (typeof Utils !== 'undefined' && Utils.safeWarn) {
@@ -325,14 +296,48 @@ const PeriodicInspections = {
             if (!AppState.appData) AppState.appData = {};
         }
 
-        // التأكد من وجود البيانات
         if (!AppState.appData.periodicInspections) {
             AppState.appData.periodicInspections = [];
         }
+        if (!AppState.appData.dailySafetyCheckList) {
+            AppState.appData.dailySafetyCheckList = [];
+        }
 
-        // عرض الواجهة أولاً لتحسين تجربة المستخدم
+        const hasCachedData = (AppState.appData.periodicInspections && AppState.appData.periodicInspections.length > 0) ||
+            (AppState.appData.dailySafetyCheckList && AppState.appData.dailySafetyCheckList.length > 0);
+
+        if (!hasCachedData) {
+            section.innerHTML = `
+            <div class="section-header">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h1 class="section-title">
+                            <i class="fas fa-clipboard-check ml-3"></i>
+                            الفحوصات الدورية
+                        </h1>
+                        <p class="section-subtitle">جاري التحميل...</p>
+                    </div>
+                </div>
+            </div>
+            <div class="mt-6">
+                <div class="content-card">
+                    <div class="card-body">
+                        <div class="empty-state">
+                            <div style="width: 300px; margin: 0 auto 16px;">
+                                <div style="width: 100%; height: 6px; background: rgba(59, 130, 246, 0.2); border-radius: 3px; overflow: hidden;">
+                                    <div style="height: 100%; background: linear-gradient(90deg, #3b82f6, #2563eb, #3b82f6); background-size: 200% 100%; border-radius: 3px; animation: loadingProgress 1.5s ease-in-out infinite;"></div>
+                                </div>
+                            </div>
+                            <p class="text-gray-500">جاري تجهيز الواجهة...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        }
+
+        // تحميل محتوى التبويب الحالي مباشرة من AppState (بدون تأخير — قائمة الفحوصات / سجل الفحوصات الدورية / Daily Safety Check List)
         try {
-            // تحميل محتوى الواجهة بشكل آمن مع timeout
             let content = '';
             try {
                 const contentPromise = this.renderContent();
@@ -347,7 +352,6 @@ const PeriodicInspections = {
                 } else {
                     console.warn('⚠️ خطأ في تحميل محتوى الواجهة:', error);
                 }
-                // عرض محتوى افتراضي مع إمكانية إعادة المحاولة
                 content = `
                     <div class="content-card">
                         <div class="card-body">
@@ -409,47 +413,13 @@ const PeriodicInspections = {
                 ${content}
             </div>
         `;
-            // تهيئة الأحداث بعد عرض الواجهة
             try {
                 this.setupEventListeners();
             } catch (error) {
                 Utils.safeWarn('⚠️ خطأ في setupEventListeners:', error);
             }
-            
-            // عرض المحتوى فوراً بعد عرض الواجهة (حتى لو كانت البيانات فارغة)
-            // هذا يضمن عدم بقاء الواجهة فارغة بعد التحميل
-            try {
-                const currentTab = this.state?.currentTab || 'inspections-list';
-                if (this.state.currentView !== 'form' && this.state.currentView !== 'edit') {
-                    // استخدام setTimeout بسيط لضمان أن DOM جاهز
-                    setTimeout(async () => {
-                        try {
-                            let renderContent;
-                            if (currentTab === 'daily-safety-checklist') {
-                                renderContent = await this.renderDailySafetyCheckListContent();
-                            } else if (currentTab === 'inspection-records') {
-                                renderContent = await this.renderInspectionRecords();
-                            } else {
-                                renderContent = await this.renderList();
-                            }
-                            
-                            if (renderContent) {
-                                const contentContainer = document.getElementById('periodic-inspections-content-area');
-                                if (contentContainer) {
-                                    contentContainer.innerHTML = renderContent;
-                                    this.setupEventListeners();
-                                }
-                            }
-                        } catch (error) {
-                            Utils.safeWarn('⚠️ خطأ في العرض الأولي:', error);
-                        }
-                    }, 0);
-                }
-            } catch (error) {
-                Utils.safeWarn('⚠️ خطأ في العرض الأولي:', error);
-            }
-            
-            // تحميل البيانات بشكل غير متزامن بعد عرض الواجهة
+
+            // تحديث البيانات من الخادم في الخلفية دون مسح العرض الحالي (البيانات المحلية معروضة فوراً)
             this.loadInspectionDataAsync().then(() => {
                 // تحديث الواجهة بعد تحميل البيانات لضمان عرض البيانات المحدثة
                 // إعادة تحميل المحتوى بناءً على التبويب الحالي
@@ -491,40 +461,8 @@ const PeriodicInspections = {
                 }
             }).catch(error => {
                 Utils.safeWarn('⚠️ تعذر تحميل بيانات الفحوصات الدورية:', error);
-                // حتى في حالة الخطأ، تأكد من أن الواجهة معروضة
                 if (this.state.currentView !== 'form' && this.state.currentView !== 'edit') {
-                    const currentTab = this.state?.currentTab || 'inspections-list';
-                    if (currentTab === 'daily-safety-checklist') {
-                        this.renderDailySafetyCheckListContent().then(content => {
-                            if (content) {
-                                const contentContainer = document.getElementById('periodic-inspections-content-area');
-                                if (contentContainer) {
-                                    contentContainer.innerHTML = content;
-                                    this.setupEventListeners();
-                                }
-                            }
-                        }).catch(() => {});
-                    } else if (currentTab === 'inspection-records') {
-                        this.renderInspectionRecords().then(content => {
-                            if (content) {
-                                const contentContainer = document.getElementById('periodic-inspections-content-area');
-                                if (contentContainer) {
-                                    contentContainer.innerHTML = content;
-                                    this.setupEventListeners();
-                                }
-                            }
-                        }).catch(() => {});
-                    } else {
-                        this.renderList().then(content => {
-                            if (content) {
-                                const contentContainer = document.getElementById('periodic-inspections-content-area');
-                                if (contentContainer) {
-                                    contentContainer.innerHTML = content;
-                                    this.setupEventListeners();
-                                }
-                            }
-                        }).catch(() => {});
-                    }
+                    this.refreshCurrentTabContent().catch(() => {});
                 }
             });
         } catch (error) {
@@ -629,39 +567,28 @@ const PeriodicInspections = {
                 AppState.appData.dailySafetyCheckList = [];
             }
             
-            // تحديث الواجهة دائماً بعد التحميل (حتى لو لم يتم تحديث البيانات)
-            // هذا يضمن عدم بقاء الواجهة فارغة
+            // تحديث محتوى التبويب الحالي فقط بعد جلب البيانات (بدون مسح البيانات المحلية عند فشل الشبكة)
             if (this.state.currentView !== 'form' && this.state.currentView !== 'edit') {
-                const contentDiv = document.getElementById('periodic-inspections-content-area');
-                if (contentDiv) {
-                    try {
-                        // ✅ تحميل المحتوى بشكل آمن مع معالجة الأخطاء
-                        const updatedContent = await this.renderContent().catch(error => {
-                            Utils.safeWarn('⚠️ خطأ في تحديث الواجهة بعد تحميل البيانات:', error);
-                            // في حالة الخطأ، عرض رسالة خطأ بدلاً من ترك الواجهة فارغة
-                            return `
-                                <div class="content-card">
-                                    <div class="card-body">
-                                        <div class="empty-state">
-                                            <i class="fas fa-exclamation-triangle text-yellow-500 text-4xl mb-4"></i>
-                                            <p class="text-gray-500 mb-4">حدث خطأ في تحديث الواجهة</p>
-                                            <button onclick="PeriodicInspections.load()" class="btn-primary">
-                                                <i class="fas fa-redo ml-2"></i>
-                                                إعادة المحاولة
-                                            </button>
-                                        </div>
+                try {
+                    await this.refreshCurrentTabContent();
+                } catch (error) {
+                    Utils.safeWarn('⚠️ خطأ في تحديث الواجهة بعد تحميل البيانات:', error);
+                    const contentDiv = document.getElementById('periodic-inspections-content-area');
+                    if (contentDiv) {
+                        contentDiv.innerHTML = `
+                            <div class="content-card">
+                                <div class="card-body">
+                                    <div class="empty-state">
+                                        <i class="fas fa-exclamation-triangle text-yellow-500 text-4xl mb-4"></i>
+                                        <p class="text-gray-500 mb-4">حدث خطأ في تحديث الواجهة</p>
+                                        <button onclick="PeriodicInspections.load()" class="btn-primary">
+                                            <i class="fas fa-redo ml-2"></i>
+                                            إعادة المحاولة
+                                        </button>
                                     </div>
                                 </div>
-                            `;
-                        });
-                        
-                        if (updatedContent) {
-                            contentDiv.innerHTML = updatedContent;
-                            // إعادة تهيئة الأحداث بعد تحديث المحتوى
-                            this.setupEventListeners();
-                        }
-                    } catch (error) {
-                        Utils.safeWarn('⚠️ خطأ في تحديث الواجهة بعد تحميل البيانات:', error);
+                            </div>`;
+                        this.setupEventListeners();
                     }
                 }
             }
@@ -1494,7 +1421,7 @@ const PeriodicInspections = {
             this.state.filters.dateRange.start = document.getElementById('filter-date-start').value;
             this.state.filters.dateRange.end = document.getElementById('filter-date-end').value;
             modal.remove();
-            this.load();
+            this.refreshCurrentTabContent();
         });
 
         modal.addEventListener('click', (e) => {
@@ -1512,7 +1439,7 @@ const PeriodicInspections = {
             },
             inspector: ''
         };
-        this.load();
+        this.refreshCurrentTabContent();
     },
 
     async renderForm() {
@@ -1768,30 +1695,36 @@ const PeriodicInspections = {
                                 placeholder="ملاحظات إضافية أو توصيات">${Utils.escapeHTML(inspection?.notes || '')}</textarea>
                         </div>
                         
-                        <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">الإجراءات التصحيحية المطلوبة</label>
+                        <div class="rounded-xl p-4 border" style="background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%); border-color: #fca5a5;">
+                            <label class="block text-sm font-semibold mb-2" style="color: #991b1b;">الإجراءات التصحيحية المطلوبة</label>
                             <textarea id="inspection-corrective-actions" class="form-input" rows="3"
-                                placeholder="في حالة وجود عدم مطابقة، اذكر الإجراءات التصحيحية المطلوبة">${Utils.escapeHTML(inspection?.correctiveActions || '')}</textarea>
-                        </div>
-
-                        <div class="flex items-center justify-between gap-4 pt-4 border-t">
-                            <div class="flex items-center gap-2">
-                                <button type="button" class="btn-secondary" onclick="PeriodicInspections.printInspection()" title="طباعة الفحص">
+                                placeholder="في حالة وجود عدم مطابقة، اذكر الإجراءات التصحيحية المطلوبة" style="border-color: #fca5a5;">${Utils.escapeHTML(inspection?.correctiveActions || '')}</textarea>
+                            <div class="flex flex-wrap justify-center gap-3 mt-3">
+                                <button type="button" class="px-4 py-2 rounded-xl font-semibold transition-all text-white" style="background: linear-gradient(135deg, #1e3a5f 0%, #0f172a 100%);" onclick="PeriodicInspections.printInspection()" title="طباعة الفحص">
                                     <i class="fas fa-print ml-2"></i>
                                     طباعة
                                 </button>
-                                <button type="button" class="btn-secondary" onclick="PeriodicInspections.exportInspection()" title="تصدير الفحص">
+                                <button type="button" class="px-4 py-2 rounded-xl font-semibold transition-all text-white" style="background: linear-gradient(135deg, #b45309 0%, #92400e 100%);" onclick="PeriodicInspections.exportInspection()" title="تصدير الفحص">
                                     <i class="fas fa-file-export ml-2"></i>
                                     تصدير
                                 </button>
                             </div>
-                            <div class="flex items-center gap-2">
-                                <button type="button" class="btn-secondary" onclick="PeriodicInspections.cancelForm()">إلغاء</button>
-                                <button type="submit" class="btn-primary">
-                                    <i class="fas fa-save ml-2"></i>
-                                    ${inspection ? 'حفظ التعديلات' : 'حفظ الفحص'}
-                                </button>
-                            </div>
+                        </div>
+
+                        <div class="flex flex-wrap justify-center items-center gap-3 pt-6 border-t" style="border-color: #e7e5e4;">
+                            <button type="button" class="px-4 py-2.5 rounded-xl font-semibold transition-all border" style="background: #fafaf9; border-color: #d6d3d1; color: #57534e;" onclick="PeriodicInspections.cancelForm()">إلغاء</button>
+                            <button type="button" class="px-4 py-2.5 rounded-xl font-semibold transition-all text-white" style="background: linear-gradient(135deg, #1e3a5f 0%, #0f172a 100%);" onclick="PeriodicInspections.printInspection()" title="طباعة الفحص">
+                                <i class="fas fa-print ml-2"></i>
+                                طباعة
+                            </button>
+                            <button type="button" class="px-4 py-2.5 rounded-xl font-semibold transition-all text-white" style="background: linear-gradient(135deg, #b45309 0%, #92400e 100%);" onclick="PeriodicInspections.exportInspection()" title="تصدير الفحص">
+                                <i class="fas fa-file-export ml-2"></i>
+                                تصدير
+                            </button>
+                            <button type="submit" class="px-4 py-2.5 rounded-xl font-semibold transition-all text-white" style="background: linear-gradient(135deg, #1e40af 0%, #1d4ed8 100%);">
+                                <i class="fas fa-save ml-2"></i>
+                                ${inspection ? 'حفظ التعديلات' : 'حفظ الفحص'}
+                            </button>
                         </div>
                     </form>
                 </div>
@@ -1828,14 +1761,16 @@ const PeriodicInspections = {
 
         modal.innerHTML = `
             <div class="modal-content" style="max-width: 1200px; max-height: 95vh; overflow-y: auto;">
-                <div class="modal-header bg-white border-b-2 border-gray-200" style="position: relative; z-index: 10;">
-                    <h2 class="modal-title" style="color: #1e293b !important; font-weight: 700;">
-                        <i class="fas fa-${inspection ? 'edit' : 'plus-circle'} ml-2 text-blue-600"></i>
-                        ${inspection ? 'تعديل فحص دوري' : 'إضافة فحص دوري جديد'}
-                    </h2>
-                    <button class="modal-close text-gray-600 hover:bg-gray-100 rounded-lg p-2 transition-colors" onclick="PeriodicInspections.cancelForm()" style="color: #4b5563 !important;">
-                        <i class="fas fa-times"></i>
-                    </button>
+                <div class="modal-header border-b-2" style="position: relative; z-index: 10; background: linear-gradient(135deg, #1e3a5f 0%, #0f172a 100%); border-color: #1e293b;">
+                    <div class="flex items-center justify-center py-2" style="position: relative;">
+                        <button class="modal-close rounded-lg p-2 transition-colors" style="position: absolute; right: 0; top: 50%; transform: translateY(-50%); color: #fef3c7; background: rgba(254,243,199,0.15);" onmouseover="this.style.background='rgba(254,243,199,0.25)'" onmouseout="this.style.background='rgba(254,243,199,0.15)'" onclick="PeriodicInspections.cancelForm()">
+                            <i class="fas fa-times"></i>
+                        </button>
+                        <h2 class="modal-title text-center mb-0" style="color: #fef3c7 !important; font-weight: 700;">
+                            <i class="fas fa-${inspection ? 'edit' : 'plus-circle'} ml-2" style="color: #fcd34d;"></i>
+                            ${inspection ? 'تعديل فحص دوري' : 'إضافة فحص دوري جديد'}
+                        </h2>
+                    </div>
                 </div>
                 <div class="modal-body" style="padding: 0;">
                     ${formHtml}
@@ -2356,42 +2291,41 @@ const PeriodicInspections = {
         const modal = document.createElement('div');
         modal.className = 'modal-overlay';
         modal.innerHTML = `
-            <div class="modal-content" style="max-width: 1000px; max-height: 90vh; overflow-y: auto;">
-                <div class="modal-header bg-gradient-to-r from-blue-600 to-indigo-600 text-white">
-                    <div class="flex items-center justify-between">
-                        <div>
-                            <h2 class="modal-title text-white mb-1">
-                                <i class="fas fa-clipboard-check ml-2"></i>
-                                تفاصيل الفحص الدوري
-                            </h2>
-                            <p class="text-blue-100 text-sm">رقم الفحص: ${Utils.escapeHTML(inspection.inspectionNumber || inspection.id || '')}</p>
-                        </div>
-                        <button class="modal-close text-white hover:bg-white/20 rounded-lg p-2 transition-colors" onclick="this.closest('.modal-overlay').remove()">
+            <div class="modal-content periodic-inspection-details-modal" style="max-width: 1000px; max-height: 90vh; overflow-y: auto;">
+                <div class="modal-header" style="background: linear-gradient(135deg, #1e3a5f 0%, #0f172a 100%); color: #fef3c7; position: relative;">
+                    <div class="flex items-center justify-center py-2" style="position: relative;">
+                        <button class="modal-close rounded-lg p-2 transition-colors" style="position: absolute; right: 0; top: 50%; transform: translateY(-50%); color: #fef3c7; background: rgba(254,243,199,0.15);" onmouseover="this.style.background='rgba(254,243,199,0.25)'" onmouseout="this.style.background='rgba(254,243,199,0.15)'" onclick="this.closest('.modal-overlay').remove()">
                             <i class="fas fa-times text-xl"></i>
                         </button>
+                        <div class="text-center">
+                            <h2 class="modal-title mb-0" style="color: #fef3c7 !important; font-weight: 700; font-size: 1.35rem;">
+                                <i class="fas fa-clipboard-check ml-2" style="color: #fcd34d;"></i>
+                                تفاصيل الفحص الدوري
+                            </h2>
+                            <p class="text-sm mt-1" style="color: rgba(254,243,199,0.85);">رقم الفحص: ${Utils.escapeHTML(inspection.inspectionNumber || inspection.id || '')}</p>
+                        </div>
                     </div>
                 </div>
-                <div class="modal-body">
-                    <!-- معلومات أساسية -->
+                <div class="modal-body" style="background: linear-gradient(180deg, #fafaf9 0%, #f5f5f4 100%);">
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-                        <div class="bg-gradient-to-br from-blue-50 to-blue-100 border border-blue-200 rounded-lg p-4">
+                        <div class="rounded-xl p-4 border" style="background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%); border-color: #fcd34d;">
                             <div class="flex items-center gap-3 mb-2">
-                                <div class="bg-blue-500 rounded-lg p-2">
+                                <div class="rounded-lg p-2" style="background: linear-gradient(135deg, #d97706 0%, #b45309 100%);">
                                     <i class="fas fa-tag text-white"></i>
                                 </div>
                                 <div>
-                                    <label class="text-xs font-semibold text-blue-700 uppercase">نوع الفحص</label>
-                                    <p class="text-base font-bold text-gray-800 mt-1">${Utils.escapeHTML(inspection.category || '-')}</p>
+                                    <label class="text-xs font-semibold uppercase" style="color: #92400e;">نوع الفحص</label>
+                                    <p class="text-base font-bold mt-1" style="color: #1c1917;">${Utils.escapeHTML(inspection.category || '-')}</p>
                                 </div>
                             </div>
                         </div>
-                        <div class="bg-gradient-to-br from-green-50 to-green-100 border border-green-200 rounded-lg p-4">
+                        <div class="rounded-xl p-4 border" style="background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%); border-color: #6ee7b7;">
                             <div class="flex items-center gap-3 mb-2">
-                                <div class="bg-green-500 rounded-lg p-2">
+                                <div class="rounded-lg p-2" style="background: linear-gradient(135deg, #059669 0%, #047857 100%);">
                                     <i class="fas fa-flag-checkered text-white"></i>
                                 </div>
                                 <div>
-                                    <label class="text-xs font-semibold text-green-700 uppercase">النتيجة</label>
+                                    <label class="text-xs font-semibold uppercase" style="color: #065f46;">النتيجة</label>
                                     <div class="mt-1">
                                         <span class="badge ${resultBadgeClass} inline-flex items-center gap-2 px-3 py-1.5 text-base">
                                             <i class="${resultIcon}"></i>
@@ -2401,48 +2335,48 @@ const PeriodicInspections = {
                                 </div>
                             </div>
                         </div>
-                        <div class="bg-gradient-to-br from-purple-50 to-purple-100 border border-purple-200 rounded-lg p-4">
+                        <div class="rounded-xl p-4 border" style="background: linear-gradient(135deg, #f5f3ff 0%, #ede9fe 100%); border-color: #c4b5fd;">
                             <div class="flex items-center gap-3 mb-2">
-                                <div class="bg-purple-500 rounded-lg p-2">
+                                <div class="rounded-lg p-2" style="background: linear-gradient(135deg, #6d28d9 0%, #5b21b6 100%);">
                                     <i class="fas fa-map-marker-alt text-white"></i>
                                 </div>
                                 <div>
-                                    <label class="text-xs font-semibold text-purple-700 uppercase">الموقع/المعدة</label>
-                                    <p class="text-base font-bold text-gray-800 mt-1">${Utils.escapeHTML(inspection.location || inspection.equipment || '-')}</p>
+                                    <label class="text-xs font-semibold uppercase" style="color: #5b21b6;">الموقع/المعدة</label>
+                                    <p class="text-base font-bold mt-1" style="color: #1c1917;">${Utils.escapeHTML(inspection.location || inspection.equipment || '-')}</p>
                                 </div>
                             </div>
                         </div>
-                        <div class="bg-gradient-to-br from-orange-50 to-orange-100 border border-orange-200 rounded-lg p-4">
+                        <div class="rounded-xl p-4 border" style="background: linear-gradient(135deg, #fff7ed 0%, #ffedd5 100%); border-color: #fdba74;">
                             <div class="flex items-center gap-3 mb-2">
-                                <div class="bg-orange-500 rounded-lg p-2">
+                                <div class="rounded-lg p-2" style="background: linear-gradient(135deg, #ea580c 0%, #c2410c 100%);">
                                     <i class="fas fa-user-check text-white"></i>
                                 </div>
                                 <div>
-                                    <label class="text-xs font-semibold text-orange-700 uppercase">المفتش</label>
-                                    <p class="text-base font-bold text-gray-800 mt-1">${Utils.escapeHTML(inspection.inspector || '-')}</p>
+                                    <label class="text-xs font-semibold uppercase" style="color: #9a3412;">المفتش</label>
+                                    <p class="text-base font-bold mt-1" style="color: #1c1917;">${Utils.escapeHTML(inspection.inspector || '-')}</p>
                                 </div>
                             </div>
                         </div>
-                        <div class="bg-gradient-to-br from-indigo-50 to-indigo-100 border border-indigo-200 rounded-lg p-4">
+                        <div class="rounded-xl p-4 border" style="background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%); border-color: #93c5fd;">
                             <div class="flex items-center gap-3 mb-2">
-                                <div class="bg-indigo-500 rounded-lg p-2">
+                                <div class="rounded-lg p-2" style="background: linear-gradient(135deg, #1e40af 0%, #1e3a8a 100%);">
                                     <i class="fas fa-calendar-alt text-white"></i>
                                 </div>
                                 <div>
-                                    <label class="text-xs font-semibold text-indigo-700 uppercase">تاريخ الفحص</label>
-                                    <p class="text-base font-bold text-gray-800 mt-1">${inspection.inspectionDate ? Utils.formatDate(inspection.inspectionDate) : '-'}</p>
+                                    <label class="text-xs font-semibold uppercase" style="color: #1e40af;">تاريخ الفحص</label>
+                                    <p class="text-base font-bold mt-1" style="color: #1c1917;">${inspection.inspectionDate ? Utils.formatDate(inspection.inspectionDate) : '-'}</p>
                                 </div>
                             </div>
                         </div>
                         ${inspection.assetCode ? `
-                            <div class="bg-gradient-to-br from-gray-50 to-gray-100 border border-gray-200 rounded-lg p-4">
+                            <div class="rounded-xl p-4 border" style="background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%); border-color: #cbd5e1;">
                                 <div class="flex items-center gap-3 mb-2">
-                                    <div class="bg-gray-500 rounded-lg p-2">
+                                    <div class="rounded-lg p-2" style="background: linear-gradient(135deg, #475569 0%, #334155 100%);">
                                         <i class="fas fa-barcode text-white"></i>
                                     </div>
                                     <div>
-                                        <label class="text-xs font-semibold text-gray-700 uppercase">رقم/كود المعدة</label>
-                                        <p class="text-base font-bold text-gray-800 mt-1">${Utils.escapeHTML(inspection.assetCode)}</p>
+                                        <label class="text-xs font-semibold uppercase" style="color: #475569;">رقم/كود المعدة</label>
+                                        <p class="text-base font-bold mt-1" style="color: #1c1917;">${Utils.escapeHTML(inspection.assetCode)}</p>
                                     </div>
                                 </div>
                             </div>
@@ -2451,14 +2385,14 @@ const PeriodicInspections = {
                     ${checklistHtml}
                     ${inspection.notes ? `
                         <div class="border-t pt-6">
-                            <div class="bg-gradient-to-r from-gray-50 to-gray-100 border border-gray-200 rounded-lg p-4">
+                            <div class="rounded-xl p-4 border" style="background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%); border-color: #e2e8f0;">
                                 <div class="flex items-start gap-3">
-                                    <div class="bg-gray-500 rounded-lg p-2">
+                                    <div class="rounded-lg p-2" style="background: linear-gradient(135deg, #64748b 0%, #475569 100%);">
                                         <i class="fas fa-sticky-note text-white"></i>
                                     </div>
                                     <div class="flex-1">
-                                        <h4 class="text-base font-bold text-gray-800 mb-2">ملاحظات عامة</h4>
-                                        <p class="text-sm text-gray-700 leading-relaxed">${Utils.escapeHTML(inspection.notes)}</p>
+                                        <h4 class="text-base font-bold mb-2" style="color: #1e293b;">ملاحظات عامة</h4>
+                                        <p class="text-sm leading-relaxed" style="color: #475569;">${Utils.escapeHTML(inspection.notes)}</p>
                                     </div>
                                 </div>
                             </div>
@@ -2466,29 +2400,39 @@ const PeriodicInspections = {
                     ` : ''}
                     ${inspection.correctiveActions ? `
                         <div class="border-t pt-6">
-                            <div class="bg-gradient-to-r from-red-50 to-orange-50 border border-red-200 rounded-lg p-4">
+                            <div class="rounded-xl p-4 border" style="background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%); border-color: #fca5a5;">
                                 <div class="flex items-start gap-3">
-                                    <div class="bg-red-500 rounded-lg p-2">
+                                    <div class="rounded-lg p-2" style="background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);">
                                         <i class="fas fa-tools text-white"></i>
                                     </div>
                                     <div class="flex-1">
-                                        <h4 class="text-base font-bold text-gray-800 mb-2">الإجراءات التصحيحية المطلوبة</h4>
-                                        <p class="text-sm text-gray-700 leading-relaxed">${Utils.escapeHTML(inspection.correctiveActions)}</p>
+                                        <h4 class="text-base font-bold mb-2" style="color: #1e293b;">الإجراءات التصحيحية المطلوبة</h4>
+                                        <p class="text-sm leading-relaxed" style="color: #475569;">${Utils.escapeHTML(inspection.correctiveActions)}</p>
                                     </div>
                                 </div>
                             </div>
                         </div>
                     ` : ''}
                 </div>
-                <div class="modal-footer bg-gray-50">
-                    <button class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">
-                        <i class="fas fa-times ml-2"></i>
-                        إغلاق
-                    </button>
-                    <button class="btn-primary" onclick="PeriodicInspections.editInspection('${id}'); this.closest('.modal-overlay').remove();">
-                        <i class="fas fa-edit ml-2"></i>
-                        تعديل الفحص
-                    </button>
+                <div class="modal-footer" style="background: linear-gradient(180deg, #f5f5f4 0%, #e7e5e4 100%); border-top: 1px solid #d6d3d1;">
+                    <div class="flex flex-wrap justify-center items-center gap-3 w-full">
+                        <button type="button" class="px-4 py-2.5 rounded-xl font-semibold transition-all border" style="background: #fafaf9; border-color: #d6d3d1; color: #57534e;" onclick="this.closest('.modal-overlay').remove()">
+                            <i class="fas fa-times ml-2"></i>
+                            إغلاق
+                        </button>
+                        <button type="button" class="px-4 py-2.5 rounded-xl font-semibold transition-all text-white" style="background: linear-gradient(135deg, #1e3a5f 0%, #0f172a 100%); border: 1px solid #1e293b;" onclick="PeriodicInspections.printInspectionById('${id}');">
+                            <i class="fas fa-print ml-2"></i>
+                            طباعة
+                        </button>
+                        <button type="button" class="px-4 py-2.5 rounded-xl font-semibold transition-all text-white" style="background: linear-gradient(135deg, #b45309 0%, #92400e 100%); border: 1px solid #78350f;" onclick="PeriodicInspections.exportInspectionById('${id}');">
+                            <i class="fas fa-file-export ml-2"></i>
+                            تصدير
+                        </button>
+                        <button type="button" class="px-4 py-2.5 rounded-xl font-semibold transition-all text-white" style="background: linear-gradient(135deg, #1e40af 0%, #1d4ed8 100%); border: 1px solid #1e40af;" onclick="PeriodicInspections.editInspection('${id}'); this.closest('.modal-overlay').remove();">
+                            <i class="fas fa-edit ml-2"></i>
+                            تعديل الفحص
+                        </button>
+                    </div>
                 </div>
             </div>
         `;
@@ -2496,6 +2440,131 @@ const PeriodicInspections = {
         modal.addEventListener('click', (e) => {
             if (e.target === modal) modal.remove();
         });
+    },
+
+    printInspectionById(id) {
+        const inspection = (AppState.appData.periodicInspections || []).find(i => i.id === id);
+        if (!inspection) {
+            Notification.warning('الفحص المطلوب غير موجود');
+            return;
+        }
+        this._printOrExportInspection(inspection, 'print');
+    },
+
+    exportInspectionById(id) {
+        const inspection = (AppState.appData.periodicInspections || []).find(i => i.id === id);
+        if (!inspection) {
+            Notification.warning('الفحص المطلوب غير موجود');
+            return;
+        }
+        this._printOrExportInspection(inspection, 'export');
+    },
+
+    _printOrExportInspection(inspection, mode) {
+        const category = inspection.category || '';
+        const inspectionDate = inspection.inspectionDate || '';
+        const location = inspection.location || inspection.equipment || '';
+        const inspector = inspection.inspector || '';
+        const result = inspection.result || '';
+        const assetCode = inspection.assetCode || '';
+        const factoryName = inspection.factoryName || '';
+        const subLocationName = inspection.subLocationName || '';
+        const notes = inspection.notes || '';
+        const correctiveActions = inspection.correctiveActions || '';
+        let checklistResults = inspection.checklistResults;
+        if (checklistResults && typeof checklistResults === 'string') {
+            try { checklistResults = JSON.parse(checklistResults); } catch (e) { checklistResults = []; }
+        }
+        if (!Array.isArray(checklistResults)) checklistResults = [];
+        const checklistItems = checklistResults.map((r, index) => ({
+            number: index + 1,
+            label: r.label || '',
+            checked: !!r.checked,
+            status: r.status || '',
+            note: r.note || '',
+            required: !!r.required
+        }));
+        const checklistRows = checklistItems.map(item => `
+            <tr>
+                <td style="text-align: center; padding: 8px; border: 1px solid #ddd;">${item.number}</td>
+                <td style="padding: 8px; border: 1px solid #ddd;">${Utils.escapeHTML(item.label)} ${item.required ? '<span style="color: red;">*</span>' : ''}</td>
+                <td style="text-align: center; padding: 8px; border: 1px solid #ddd;">${item.checked ? '✓' : '✗'}</td>
+                <td style="text-align: center; padding: 8px; border: 1px solid #ddd; ${item.status === 'مطابق' ? 'color: green; font-weight: bold;' : item.status === 'غير مطابق' ? 'color: red; font-weight: bold;' : item.status === 'أخرى' ? 'color: orange; font-weight: bold;' : ''}">${Utils.escapeHTML(item.status) || '-'}</td>
+                <td style="padding: 8px; border: 1px solid #ddd;">${Utils.escapeHTML(item.note) || '-'}</td>
+            </tr>
+        `).join('');
+        const content = `
+            <style>
+                .info-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; margin-bottom: 20px; }
+                .info-item { padding: 10px; background: #fffbeb; border-right: 3px solid #d97706; border-radius: 5px; }
+                .info-label { font-weight: bold; color: #92400e; font-size: 12px; margin-bottom: 5px; }
+                .info-value { color: #1e293b; font-size: 14px; }
+                table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+                th { background: linear-gradient(135deg, #1e3a5f, #0f172a); color: #fef3c7; padding: 12px; text-align: right; font-weight: bold; }
+                td { padding: 10px; border: 1px solid #ddd; }
+                .notes-section { margin-top: 20px; padding: 15px; background: #fafaf9; border-radius: 8px; border: 1px solid #e7e5e4; }
+                .notes-title { font-weight: bold; color: #1e3a5f; margin-bottom: 10px; }
+            </style>
+            <div class="info-grid">
+                <div class="info-item"><div class="info-label">نوع الفحص</div><div class="info-value">${Utils.escapeHTML(category)}</div></div>
+                <div class="info-item"><div class="info-label">تاريخ الفحص</div><div class="info-value">${inspectionDate || '-'}</div></div>
+                <div class="info-item"><div class="info-label">الموقع/المعدة</div><div class="info-value">${Utils.escapeHTML(location)}</div></div>
+                <div class="info-item"><div class="info-label">المفتش</div><div class="info-value">${Utils.escapeHTML(inspector)}</div></div>
+                <div class="info-item"><div class="info-label">النتيجة</div><div class="info-value">${Utils.escapeHTML(result)}</div></div>
+                ${factoryName ? `<div class="info-item"><div class="info-label">المصنع</div><div class="info-value">${Utils.escapeHTML(factoryName)}</div></div>` : ''}
+                ${subLocationName ? `<div class="info-item"><div class="info-label">الموقع الفرعي</div><div class="info-value">${Utils.escapeHTML(subLocationName)}</div></div>` : ''}
+                ${assetCode ? `<div class="info-item"><div class="info-label">رقم المعدة/الكود</div><div class="info-value">${Utils.escapeHTML(assetCode)}</div></div>` : ''}
+            </div>
+            ${checklistRows ? `<table><thead><tr><th style="width: 50px;">#</th><th>عنصر الفحص</th><th style="width: 80px;">تم الفحص</th><th style="width: 120px;">حالة المطابقة</th><th>ملاحظات</th></tr></thead><tbody>${checklistRows}</tbody></table>` : ''}
+            ${notes || correctiveActions ? `<div class="notes-section">${notes ? `<div class="notes-title">ملاحظات عامة:</div><p style="margin: 0 0 15px 0; line-height: 1.6;">${Utils.escapeHTML(notes)}</p>` : ''}${correctiveActions ? `<div class="notes-title">الإجراءات التصحيحية المطلوبة:</div><p style="margin: 0; line-height: 1.6;">${Utils.escapeHTML(correctiveActions)}</p>` : ''}</div>` : ''}
+        `;
+        const formCode = `PINSP-${(inspectionDate || new Date().toISOString().slice(0, 10)).replace(/-/g, '')}-${Date.now().toString().slice(-6)}`;
+        const formTitle = `تقرير فحص دوري - ${Utils.escapeHTML(category)}`;
+        if (mode === 'export') {
+            const excelContent = `
+                <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
+                <head><meta charset="UTF-8"><style>body { direction: rtl; font-family: Arial, Tahoma; } table { border-collapse: collapse; width: 100%; } th { background: #1e3a5f; color: #fef3c7; padding: 10px; font-weight: bold; } td { border: 1px solid #ddd; padding: 8px; }</style></head>
+                <body>
+                <h2>تقرير فحص دوري</h2>
+                <table>
+                    <tr><th>نوع الفحص</th><td>${Utils.escapeHTML(category)}</td></tr>
+                    <tr><th>تاريخ الفحص</th><td>${inspectionDate || '-'}</td></tr>
+                    <tr><th>الموقع/المعدة</th><td>${Utils.escapeHTML(location)}</td></tr>
+                    <tr><th>المفتش</th><td>${Utils.escapeHTML(inspector)}</td></tr>
+                    <tr><th>النتيجة</th><td>${Utils.escapeHTML(result)}</td></tr>
+                    ${factoryName ? `<tr><th>المصنع</th><td>${Utils.escapeHTML(factoryName)}</td></tr>` : ''}
+                    ${subLocationName ? `<tr><th>الموقع الفرعي</th><td>${Utils.escapeHTML(subLocationName)}</td></tr>` : ''}
+                    ${assetCode ? `<tr><th>رقم المعدة/الكود</th><td>${Utils.escapeHTML(assetCode)}</td></tr>` : ''}
+                </table>
+                ${checklistItems.length > 0 ? `<h3 style="margin-top: 20px;">قائمة الفحص</h3><table border="1"><tr><th>#</th><th>عنصر الفحص</th><th>تم الفحص</th><th>حالة المطابقة</th><th>ملاحظات</th></tr>${checklistItems.map(item => `<tr><td>${item.number}</td><td>${Utils.escapeHTML(item.label)} ${item.required ? '*' : ''}</td><td>${item.checked ? '✓' : '✗'}</td><td>${Utils.escapeHTML(item.status) || '-'}</td><td>${Utils.escapeHTML(item.note) || '-'}</td></tr>`).join('')}</table>` : ''}
+                ${notes ? `<h3 style="margin-top: 20px;">ملاحظات عامة</h3><p>${Utils.escapeHTML(notes)}</p>` : ''}
+                ${correctiveActions ? `<h3 style="margin-top: 20px;">الإجراءات التصحيحية</h3><p>${Utils.escapeHTML(correctiveActions)}</p>` : ''}
+                </body></html>`;
+            const blob = new Blob(['\ufeff', excelContent], { type: 'application/vnd.ms-excel;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `فحص_دوري_${category}_${inspectionDate || new Date().toISOString().slice(0, 10)}.xls`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+            Notification.success('تم تصدير الفحص بنجاح');
+            return;
+        }
+        const htmlContent = typeof FormHeader !== 'undefined' && FormHeader.generatePDFHTML
+            ? FormHeader.generatePDFHTML(formCode, formTitle, content, false, true, { version: '1.0' }, new Date().toISOString(), new Date().toISOString())
+            : `<!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="UTF-8"><title>${formTitle}</title><style>@media print{@page{margin:1cm}body{margin:0;padding:0}}body{font-family:Arial,Tahoma,sans-serif;direction:rtl;padding:20px;color:#333}</style></head><body><h1 style="text-align:center;color:#1e3a5f;margin-bottom:20px;">${formTitle}</h1>${content}</body></html>`;
+        const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const printWindow = window.open(url, '_blank');
+        if (printWindow) {
+            printWindow.onload = () => {
+                setTimeout(() => { printWindow.print(); setTimeout(() => URL.revokeObjectURL(url), 500); }, 300);
+            };
+        } else {
+            Notification.error('يرجى السماح للنوافذ المنبثقة لعرض التقرير');
+        }
     },
 
     async editInspection(id) {
@@ -3615,6 +3684,30 @@ const PeriodicInspections = {
         }
     },
 
+    /**
+     * تحديث محتوى التبويب الحالي فقط (بدون إعادة تحميل كامل الموديول) — يضمن عدم فقدان البيانات وعدم تأخير العرض
+     */
+    async refreshCurrentTabContent() {
+        const contentContainer = document.getElementById('periodic-inspections-content-area');
+        if (!contentContainer || this.state.currentView === 'form' || this.state.currentView === 'edit') return;
+        try {
+            let html = '';
+            if (this.state.currentTab === 'daily-safety-checklist') {
+                html = await this.renderDailySafetyCheckListContent();
+            } else if (this.state.currentTab === 'inspection-records') {
+                html = await this.renderInspectionRecords();
+            } else {
+                html = await this.renderList();
+            }
+            if (html) {
+                contentContainer.innerHTML = html;
+                this.setupEventListeners();
+            }
+        } catch (e) {
+            Utils.safeWarn('⚠️ خطأ في refreshCurrentTabContent:', e);
+        }
+    },
+
     setupTabsNavigation() {
         setTimeout(() => {
             const tabButtons = document.querySelectorAll('#periodic-inspections-section .tab-btn[data-tab]');
@@ -3624,16 +3717,12 @@ const PeriodicInspections = {
                 button.addEventListener('click', () => {
                     const targetTab = button.getAttribute('data-tab');
 
-                    // إزالة active من جميع الأزرار
                     tabButtons.forEach(btn => btn.classList.remove('active'));
                     tabContents.forEach(content => content.classList.remove('active'));
-
-                    // إضافة active للزر المحدد
                     button.classList.add('active');
-                    
-                    // تحديث الحالة وإعادة التحميل
+
                     this.state.currentTab = targetTab;
-                    this.load();
+                    this.refreshCurrentTabContent();
                 });
             });
         }, 100);
