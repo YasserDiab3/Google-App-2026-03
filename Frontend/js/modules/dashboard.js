@@ -761,10 +761,10 @@ const Dashboard = {
         const searchInput = document.getElementById('employee-code-search');
 
         if (searchBtn) {
-            searchBtn.addEventListener('click', () => {
+            searchBtn.addEventListener('click', async () => {
                 const code = searchInput?.value.trim();
                 if (code) {
-                    this.generateEmployeeReport(code);
+                    await this.generateEmployeeReport(code);
                 } else {
                     Notification.warning('يرجى إدخال الكود الوظيفي');
                 }
@@ -772,11 +772,11 @@ const Dashboard = {
         }
 
         if (searchInput) {
-            searchInput.addEventListener('keypress', (e) => {
+            searchInput.addEventListener('keypress', async (e) => {
                 if (e.key === 'Enter') {
                     const code = searchInput.value.trim();
                     if (code) {
-                        this.generateEmployeeReport(code);
+                        await this.generateEmployeeReport(code);
                     }
                 }
             });
@@ -828,12 +828,64 @@ const Dashboard = {
     },
 
     /**
+     * ضمان تحميل بيانات التقرير الشامل من الموديولات (إن لم تكن محمّلة) لظهور الأعداد في الكروت بدقة
+     */
+    async ensureEmployeeReportData() {
+        if (!AppState.appData) AppState.appData = {};
+        const ad = AppState.appData;
+        const sheetToKey = {
+            'Violations': 'violations',
+            'Training': 'training',
+            'ClinicVisits': 'clinicVisits',
+            'PPE': 'ppe',
+            'BehaviorMonitoring': 'behaviorMonitoring',
+            'Incidents': 'incidents',
+            'SickLeave': 'sickLeave'
+        };
+        const toLoad = [];
+        for (const [sheetName, key] of Object.entries(sheetToKey)) {
+            const current = ad[key];
+            if (!Array.isArray(current) || current.length === 0) toLoad.push({ sheetName, key });
+        }
+        if (toLoad.length === 0) return;
+        if (typeof Loading !== 'undefined' && Loading.show) Loading.show();
+        try {
+            for (const { sheetName, key } of toLoad) {
+                try {
+                    if (typeof GoogleIntegration === 'undefined' || !GoogleIntegration.readFromSheets) continue;
+                    const data = await GoogleIntegration.readFromSheets(sheetName);
+                    if (Array.isArray(data)) {
+                        AppState.appData[key] = data;
+                        if (Utils.safeLog) Utils.safeLog(`✅ تقرير الموظف: تم تحميل ${sheetName} (${data.length} سجل)`);
+                    }
+                } catch (err) {
+                    if (Utils.safeWarn) Utils.safeWarn(`⚠️ تقرير الموظف: فشل تحميل ${sheetName}:`, err?.message || err);
+                }
+            }
+            if (sheetToKey.PPE && (!ad.ppe || ad.ppe.length === 0) && typeof GoogleIntegration !== 'undefined' && GoogleIntegration.sendToAppsScript) {
+                try {
+                    const ppeResult = await GoogleIntegration.sendToAppsScript('getAllPPE', {});
+                    if (ppeResult && ppeResult.success && Array.isArray(ppeResult.data)) {
+                        AppState.appData.ppe = ppeResult.data;
+                        if (Utils.safeLog) Utils.safeLog('✅ تقرير الموظف: تم تحميل PPE عبر getAllPPE');
+                    }
+                } catch (e) {
+                    if (Utils.safeWarn) Utils.safeWarn('⚠️ تقرير الموظف: فشل getAllPPE:', e?.message || e);
+                }
+            }
+        } finally {
+            if (typeof Loading !== 'undefined' && Loading.hide) Loading.hide();
+        }
+    },
+
+    /**
      * توليد تقرير شامل للموظف
      */
-    generateEmployeeReport(employeeCode) {
+    async generateEmployeeReport(employeeCode) {
+        if (!AppState.appData) AppState.appData = {};
         const data = AppState.appData;
+        const employees = Array.isArray(data.employees) ? data.employees : (Array.isArray(data.Employees) ? data.Employees : []);
         let employee = null;
-        const employees = Array.isArray(data.employees) ? data.employees : [];
         const searchCodeNorm = String(employeeCode || '').trim();
 
         const codeMatches = (emp, code) => {
@@ -910,7 +962,8 @@ const Dashboard = {
                 record.code,
                 record.sapId,
                 record.cardId,
-                record.nationalId
+                record.nationalId,
+                record.participantCode
             ];
             return recordIdentifiers.some(recordId => {
                 if (recordId == null || recordId === '') return false;
@@ -933,18 +986,27 @@ const Dashboard = {
             return !isNaN(n) && isFinite(n) && employeeIdentifiers.has(String(n));
         };
 
+        // ضمان تحميل بيانات الموديولات قبل الفلترة لظهور الأعداد في الكروت بدقة
+        await this.ensureEmployeeReportData();
+        const dataForReport = AppState.appData || {};
+
+        const getReportArray = (key, altKey) => {
+            const arr = dataForReport[key] || dataForReport[altKey] || [];
+            return Array.isArray(arr) ? arr : [];
+        };
+
         // عرض السجلات المرتبطة بالموظف بالكود/المعرف فقط (بدون مطابقة بالاسم لتجنب بيانات خاطئة)
-        const violations = (data.violations || []).filter(v => {
+        const violations = getReportArray('violations').filter(v => {
             if (v.personType === 'contractor' || v.contractorName) return false;
             return matchesEmployeeIdentifier(v);
         });
 
-        const sickLeave = (data.sickLeave || []).filter(s => {
+        const sickLeave = getReportArray('sickLeave').filter(s => {
             if (s.personType === 'contractor' || s.contractorName) return false;
             return matchesEmployeeIdentifier(s);
         });
 
-        const trainingList = Array.isArray(data.training) ? data.training : [];
+        const trainingList = getReportArray('training').concat(getReportArray('trainingRecords'));
         const training = trainingList.filter(t => {
             if (!t || typeof t !== 'object') return false;
             const recAsRecord = { ...t, code: t.code || t.participantCode, employeeCode: t.employeeCode || t.participantCode, employeeNumber: t.employeeNumber || t.participantCode };
@@ -962,19 +1024,22 @@ const Dashboard = {
             return false;
         });
 
-        const ppe = (data.ppe || []).filter(p => matchesEmployeeIdentifier(p));
+        const ppe = getReportArray('ppe').filter(p => matchesEmployeeIdentifier(p));
 
-        const behaviorMonitoring = (data.behaviorMonitoring || []).filter(b => matchesEmployeeIdentifier(b));
+        const behaviorMonitoring = getReportArray('behaviorMonitoring').filter(b => matchesEmployeeIdentifier(b));
 
-        const clinicVisits = (data.clinicVisits || []).filter(c => {
+        const clinicVisits = getReportArray('clinicVisits', 'Clinic').filter(c => {
             if (c.personType === 'contractor' || c.contractorName) return false;
             return matchesEmployeeIdentifier(c);
         });
 
-        const incidents = (data.incidents || []).filter(i => {
+        const incidents = getReportArray('incidents').filter(i => {
             if (i.personType === 'contractor' || i.contractorName) return false;
             if (matchesEmployeeIdentifier(i)) return true;
             if (i.affectedCode && singleCodeMatchesEmployee(i.affectedCode)) return true;
+            if (i.entries && Array.isArray(i.entries)) {
+                if (i.entries.some(e => matchesEmployeeIdentifier(e) || singleCodeMatchesEmployee(e?.affectedCode || e?.employeeCode))) return true;
+            }
             return false;
         });
 
