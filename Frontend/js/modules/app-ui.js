@@ -4941,24 +4941,98 @@ window.UI = {
                             Utils.safeError('خطأ في استدعاء PeriodicInspections.load:', error);
                         }
                     } else {
-                        if (!silent) {
-                            const reason = (typeof AppState !== 'undefined' && AppState.runningWithoutBackend)
-                                ? 'غالباً بسبب عدم الاتصال بالخادم (503). جرّب تحديث الصفحة أو التحقق من النشر.'
-                                : 'الموديول لم يُحمّل بشكل صحيح. جرّب تحديث الصفحة.';
-                            Utils.safeError('❌ موديول PeriodicInspections غير متوفر - ' + reason);
-                        }
+                        // حاول تحميل السكربت ديناميكياً بدل إظهار خطأ مباشر
+                        let attempts = 0;
+                        const maxAttempts = 8;
+                        const tryLoad = () => {
+                            if (typeof PeriodicInspections !== 'undefined' && PeriodicInspections.load) {
+                                try { PeriodicInspections.load(); } catch (e) {}
+                                return true;
+                            }
+                            return false;
+                        };
+                        if (tryLoad()) break;
+                        const retry = setInterval(() => {
+                            attempts++;
+                            if (tryLoad() || attempts >= maxAttempts) {
+                                clearInterval(retry);
+                                if (!tryLoad()) {
+                                    const getScriptBase = () => {
+                                        const base = document.querySelector('base');
+                                        if (base && base.href) {
+                                            const u = base.href.replace(/\/$/, '');
+                                            return u + (u.indexOf('?') >= 0 ? '' : '/');
+                                        }
+                                        const path = window.location.pathname || '';
+                                        const lastSlash = path.lastIndexOf('/');
+                                        const dir = lastSlash >= 0 ? path.slice(0, lastSlash + 1) : '/';
+                                        return window.location.origin + dir;
+                                    };
+                                    const scriptUrl = getScriptBase() + 'js/modules/modules/periodicinspections.js';
+                                    if (!document.querySelector('script[src*="periodicinspections.js"]')) {
+                                        const script = document.createElement('script');
+                                        script.src = scriptUrl;
+                                        script.async = false;
+                                        script.onload = () => { tryLoad(); };
+                                        script.onerror = () => {
+                                            if (!silent) Utils.safeError('❌ فشل تحميل موديول PeriodicInspections');
+                                        };
+                                        document.body.appendChild(script);
+                                    } else if (!silent) {
+                                        Utils.safeError('❌ موديول PeriodicInspections غير متوفر - الموديول لم يُحمّل بشكل صحيح');
+                                    }
+                                }
+                            }
+                        }, 350);
                     }
                     break;
                 case 'ppe':
                     if (typeof PPE !== 'undefined' && PPE.load) {
                         PPE.load();
                     } else {
-                        if (!silent) {
-                            const reason = (typeof AppState !== 'undefined' && AppState.runningWithoutBackend)
-                                ? 'غالباً بسبب عدم الاتصال بالخادم (503). جرّب تحديث الصفحة أو التحقق من النشر.'
-                                : 'الموديول لم يُحمّل بشكل صحيح. جرّب تحديث الصفحة.';
-                            Utils.safeError('❌ موديول PPE غير متوفر - ' + reason);
-                        }
+                        // حاول تحميل السكربت ديناميكياً بدل إظهار خطأ مباشر
+                        let attempts = 0;
+                        const maxAttempts = 8;
+                        const tryLoad = () => {
+                            if (typeof PPE !== 'undefined' && PPE.load) {
+                                try { PPE.load(); } catch (e) {}
+                                return true;
+                            }
+                            return false;
+                        };
+                        if (tryLoad()) break;
+                        const retry = setInterval(() => {
+                            attempts++;
+                            if (tryLoad() || attempts >= maxAttempts) {
+                                clearInterval(retry);
+                                if (!tryLoad()) {
+                                    const getScriptBase = () => {
+                                        const base = document.querySelector('base');
+                                        if (base && base.href) {
+                                            const u = base.href.replace(/\/$/, '');
+                                            return u + (u.indexOf('?') >= 0 ? '' : '/');
+                                        }
+                                        const path = window.location.pathname || '';
+                                        const lastSlash = path.lastIndexOf('/');
+                                        const dir = lastSlash >= 0 ? path.slice(0, lastSlash + 1) : '/';
+                                        return window.location.origin + dir;
+                                    };
+                                    const scriptUrl = getScriptBase() + 'js/modules/modules/ppe.js';
+                                    if (!document.querySelector('script[src*="ppe.js"]')) {
+                                        const script = document.createElement('script');
+                                        script.src = scriptUrl;
+                                        script.async = false;
+                                        script.onload = () => { tryLoad(); };
+                                        script.onerror = () => {
+                                            if (!silent) Utils.safeError('❌ فشل تحميل موديول PPE');
+                                        };
+                                        document.body.appendChild(script);
+                                    } else if (!silent) {
+                                        Utils.safeError('❌ موديول PPE غير متوفر - الموديول لم يُحمّل بشكل صحيح');
+                                    }
+                                }
+                            }
+                        }, 350);
                     }
                     break;
                 case 'violations':
@@ -5012,12 +5086,49 @@ window.UI = {
                             }
                         }
                     } else {
-                        if (!silent) {
-                            const reason = (typeof AppState !== 'undefined' && AppState.runningWithoutBackend)
-                                ? 'غالباً بسبب عدم الاتصال بالخادم (503). جرّب تحديث الصفحة أو التحقق من النشر.'
-                                : 'الموديول لم يُحمّل بشكل صحيح. جرّب تحديث الصفحة.';
-                            Utils.safeError('❌ موديول Violations غير متوفر - ' + reason);
-                        }
+                        // حاول تحميل السكربت ديناميكياً بدل إظهار خطأ مباشر
+                        let attempts = 0;
+                        const maxAttempts = 8;
+                        const tryLoad = () => {
+                            if (typeof Violations !== 'undefined' && Violations.load) {
+                                try { Violations.load(); } catch (e) {}
+                                return true;
+                            }
+                            return false;
+                        };
+                        if (tryLoad()) break;
+                        const retry = setInterval(() => {
+                            attempts++;
+                            if (tryLoad() || attempts >= maxAttempts) {
+                                clearInterval(retry);
+                                if (!tryLoad()) {
+                                    const getScriptBase = () => {
+                                        const base = document.querySelector('base');
+                                        if (base && base.href) {
+                                            const u = base.href.replace(/\/$/, '');
+                                            return u + (u.indexOf('?') >= 0 ? '' : '/');
+                                        }
+                                        const path = window.location.pathname || '';
+                                        const lastSlash = path.lastIndexOf('/');
+                                        const dir = lastSlash >= 0 ? path.slice(0, lastSlash + 1) : '/';
+                                        return window.location.origin + dir;
+                                    };
+                                    const scriptUrl = getScriptBase() + 'js/modules/modules/violations.js';
+                                    if (!document.querySelector('script[src*="violations.js"]')) {
+                                        const script = document.createElement('script');
+                                        script.src = scriptUrl;
+                                        script.async = false;
+                                        script.onload = () => { tryLoad(); };
+                                        script.onerror = () => {
+                                            if (!silent) Utils.safeError('❌ فشل تحميل موديول Violations');
+                                        };
+                                        document.body.appendChild(script);
+                                    } else if (!silent) {
+                                        Utils.safeError('❌ موديول Violations غير متوفر - الموديول لم يُحمّل بشكل صحيح');
+                                    }
+                                }
+                            }
+                        }, 350);
                     }
                     break;
                 case 'contractors':

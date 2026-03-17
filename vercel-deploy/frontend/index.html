@@ -1069,12 +1069,15 @@
                     // ignore
                 }
 
-                if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || window.location.search.includes('dev=true')) {
-                    console.log(
-                        "%c✅ ULTRA-AGGRESSIVE Error Suppressor Active (3 Layers)",
-                        "color: green; font-weight: bold; font-size: 14px;",
-                    );
-                }
+                try {
+                    if (!window.__ultraSuppressorLogged) {
+                        window.__ultraSuppressorLogged = true;
+                        console.log(
+                            "%c✅ ULTRA-AGGRESSIVE Error Suppressor Active (3 Layers)",
+                            "color: green; font-weight: bold; font-size: 14px;",
+                        );
+                    }
+                } catch (e) { /* ignore */ }
             })();
         </script>
 
@@ -9633,20 +9636,6 @@
                 >
                     <i class="fas fa-chevron-left" aria-hidden="true"></i>
                 </button>
-
-                <!-- Theme Toggle -->
-                <button
-                    id="theme-toggle"
-                    class="theme-toggle"
-                    aria-label="تبديل الوضع الليلي"
-                    title="تبديل الوضع الليلي"
-                >
-                    <i class="fas fa-moon" id="theme-icon"></i>
-                    <span id="theme-text" style="display: none"
-                        >الوضع الليلي</span
-                    >
-                </button>
-
                 <!-- Notifications and Sync Buttons Container (زر الجرس + زر متصل) -->
                 <div
                     class="sidebar-actions-row"
@@ -9888,7 +9877,6 @@
                         class="nav-item"
                         data-section="violations"
                         role="menuitem"
-                        title="المخالفات"
                     >
                         <i
                             class="fas fa-exclamation-circle"
@@ -10056,6 +10044,7 @@
                         class="nav-item"
                         data-section="change-management"
                         role="menuitem"
+                        title="إدارة التغيرات"
                     >
                         <i class="fas fa-exchange-alt" aria-hidden="true"></i>
                         <span data-i18n="nav.changeManagement"

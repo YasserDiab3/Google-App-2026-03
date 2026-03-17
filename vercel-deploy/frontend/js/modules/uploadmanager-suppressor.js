@@ -92,6 +92,25 @@
         
         return false;
     };
+
+    // ✅ ضوضاء غير حرجة في الإنتاج (شبكة/خدمات خارجية)
+    const isNonCriticalNoise = function(text) {
+        if (!text) return false;
+        const t = String(text).toLowerCase();
+        // Vercel Live feedback (قد يرجع 503 مؤقتاً)
+        if (t.includes('vercel.live/_next-live/feedback/feedback.js') && (t.includes('503') || t.includes('service unavailable') || t.includes('err_aborted'))) {
+            return true;
+        }
+        // Google Drive thumbnails (قد يرجع 503 مؤقتاً)
+        if (t.includes('drive.google.com/thumbnail') && (t.includes('503') || t.includes('service unavailable'))) {
+            return true;
+        }
+        // رسالة عدم الاتصال بالخادم (تظهر كتحذير متكرر)
+        if (t.includes('التطبيق يعمل بدون نشر') || t.includes('no server connection') || t.includes('running without backend')) {
+            return true;
+        }
+        return false;
+    };
     
     // ✅ قمع window.onerror - الأولوية القصوى
     const originalOnError = window.onerror;
@@ -145,6 +164,10 @@
     if (typeof console !== 'undefined' && console.error) {
         const originalError = console.error;
         console.error = function(...args) {
+            try {
+                const noiseText = args.map(a => (a && a.stack) ? (a.message + ' ' + a.stack) : String(a || '')).join(' ');
+                if (isNonCriticalNoise(noiseText)) return;
+            } catch (e) { /* ignore */ }
             for (var i = 0; i < args.length; i++) {
                 var arg = args[i];
                 var firstStr = (arg && typeof arg === 'object')
@@ -193,7 +216,7 @@
         console.warn = function(...args) {
             try {
                 const allText = args.map(arg => String(arg || '')).join(' ');
-                if (isUploadManagerError(allText)) {
+                if (isUploadManagerError(allText) || isNonCriticalNoise(allText)) {
                     return;
                 }
             } catch (e) {
