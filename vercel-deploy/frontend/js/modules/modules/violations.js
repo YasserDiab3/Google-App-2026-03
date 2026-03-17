@@ -2215,6 +2215,16 @@ const Violations = {
         }
     },
 
+    refreshSiteDropdowns() {
+        try {
+            var sites = this.getSiteOptions();
+            var esc = (typeof Utils !== 'undefined' && Utils.escapeHTML) ? Utils.escapeHTML : function(s) { return String(s == null ? '' : s); };
+            var opts = '<option value="">اختر المصنع</option>' + (sites || []).map(function(s) { return '<option value="' + esc(s.id) + '">' + esc(s.name) + '</option>'; }).join('');
+            var el = document.getElementById('blacklist-factory');
+            if (el && el.tagName === 'SELECT') { var v = el.value; el.innerHTML = opts; if (v) el.value = v; }
+        } catch (e) { if (typeof Utils !== 'undefined' && Utils.safeWarn) Utils.safeWarn('⚠️ Violations.refreshSiteDropdowns:', e); }
+    },
+
     getPlaceOptions(siteId) {
         try {
             if (!siteId) return [];

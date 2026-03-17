@@ -1914,6 +1914,19 @@ const Clinic = {
         }
     },
 
+    /** إعادة تعبئة قوائم المصنع عند اكتمال تحميل إعدادات النماذج (استدعاء تلقائي من حدث formSettingsUpdated) */
+    refreshSiteDropdowns() {
+        try {
+            const sites = this.getSiteOptions();
+            const esc = (typeof Utils !== 'undefined' && Utils.escapeHTML) ? Utils.escapeHTML : (s) => String(s == null ? '' : s);
+            const opts = (empty) => '<option value="">' + (empty || 'اختر المصنع') + '</option>' + (sites || []).map(s => '<option value="' + esc(s.id) + '">' + esc(s.name) + '</option>').join('');
+            ['visits-filter-factory', 'visit-factory', 'visit-contractor-factory', 'enhanced-visit-factory'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el && el.tagName === 'SELECT') { const v = el.value; el.innerHTML = opts('اختر المصنع'); if (v) el.value = v; }
+            });
+        } catch (e) { if (typeof Utils !== 'undefined' && Utils.safeWarn) Utils.safeWarn('⚠️ Clinic.refreshSiteDropdowns:', e); }
+    },
+
     getExpiringMedications() {
         return this.getMedications().filter((item) => item.status === 'قريب الانتهاء' || item.status === 'منتهي');
     },
@@ -13207,12 +13220,16 @@ if (typeof window !== 'undefined' && typeof Clinic !== 'undefined') { window.Cli
     try {
         if (typeof window !== 'undefined' && typeof Clinic !== 'undefined') {
             window.Clinic = Clinic;
-            
+
+            window.addEventListener('formSettingsUpdated', function () {
+                try { if (typeof Clinic !== 'undefined' && Clinic.refreshSiteDropdowns) Clinic.refreshSiteDropdowns(); } catch (e) {}
+            });
+
             // ✅ التأكد من أن دالة load موجودة
             if (typeof Clinic.load !== 'function') {
                 console.warn('⚠️ Clinic module loaded but load function is missing');
             }
-            
+
             // إشعار عند تحميل الموديول بنجاح
             if (typeof AppState !== 'undefined' && AppState.debugMode && typeof Utils !== 'undefined' && Utils.safeLog) {
                 Utils.safeLog('✅ Clinic module loaded and available on window.Clinic');

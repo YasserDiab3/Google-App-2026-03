@@ -294,6 +294,32 @@ const PTW = {
         }
     },
 
+    /** إعادة تعبئة قوائم الموقع/المكان الفرعي عند اكتمال تحميل إعدادات النماذج (استدعاء تلقائي من حدث formSettingsUpdated) */
+    refreshSiteDropdowns() {
+        try {
+            const sites = this.getSiteOptions();
+            const esc = (typeof Utils !== 'undefined' && Utils.escapeHTML) ? Utils.escapeHTML : (s) => String(s == null ? '' : s);
+            const opts = (empty) => '<option value="">' + (empty || 'اختر الموقع') + '</option>' + (sites || []).map(s => '<option value="' + esc(s.id) + '">' + esc(s.name) + '</option>').join('');
+            const locationIds = ['manual-permit-location', 'ptw-filter-location', 'ptw-location', 'analysis-location'];
+            locationIds.forEach(id => {
+                const el = document.getElementById(id);
+                if (el && el.tagName === 'SELECT') { const v = el.value; el.innerHTML = opts('اختر الموقع'); if (v) el.value = v; }
+            });
+            const subIds = ['manual-permit-sublocation', 'ptw-filter-sublocation', 'ptw-sublocation'];
+            subIds.forEach(id => {
+                const el = document.getElementById(id);
+                if (el && el.tagName === 'SELECT') {
+                    const locId = (document.getElementById('ptw-location') || document.getElementById('manual-permit-location') || {}).value;
+                    const places = this.getPlaceOptions(locId);
+                    const ph = 'اختر المكان الفرعي';
+                    const v = el.value;
+                    el.innerHTML = '<option value="">' + ph + '</option>' + (places || []).map(p => '<option value="' + esc(p.id) + '">' + esc(p.name) + '</option>').join('');
+                    if (v) el.value = v;
+                }
+            });
+        } catch (e) { if (typeof Utils !== 'undefined' && Utils.safeWarn) Utils.safeWarn('⚠️ PTW.refreshSiteDropdowns:', e); }
+    },
+
     /**
      * الحصول على قائمة الإدارات (الجهة الطالبة للتصريح) من نفس مصدر "المسؤول عن التنفيذ" في مديول الملاحظات اليومية
      * @returns {string[]} مصفوفة أسماء الإدارات
@@ -13646,7 +13672,11 @@ const PTW = {
     try {
         if (typeof window !== 'undefined' && typeof PTW !== 'undefined') {
             window.PTW = PTW;
-            
+
+            window.addEventListener('formSettingsUpdated', function () {
+                try { if (typeof PTW !== 'undefined' && PTW.refreshSiteDropdowns) PTW.refreshSiteDropdowns(); } catch (e) {}
+            });
+
             // إشعار عند تحميل الموديول بنجاح
             if (typeof AppState !== 'undefined' && AppState.debugMode && typeof Utils !== 'undefined' && Utils.safeLog) {
                 Utils.safeLog('✅ PTW module loaded and available on window.PTW');

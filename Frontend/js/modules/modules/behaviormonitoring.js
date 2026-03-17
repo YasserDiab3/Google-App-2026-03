@@ -118,6 +118,20 @@ const BehaviorMonitoring = {
         }
     },
 
+    refreshSiteDropdowns() {
+        try {
+            var sites = this.getSiteOptions();
+            if (!sites || !sites.length) return;
+            var esc = (typeof Utils !== 'undefined' && Utils.escapeHTML) ? Utils.escapeHTML : function(s) { return String(s == null ? '' : s); };
+            document.querySelectorAll('select[id$="-factory"]').forEach(function(el) {
+                if (el.tagName !== 'SELECT') return;
+                var v = el.value;
+                el.innerHTML = '<option value="">اختر المصنع</option>' + sites.map(function(s) { return '<option value="' + esc(s.id) + '">' + esc(s.name) + '</option>'; }).join('');
+                if (v) el.value = v;
+            });
+        } catch (e) { if (typeof Utils !== 'undefined' && Utils.safeWarn) Utils.safeWarn('⚠️ BehaviorMonitoring.refreshSiteDropdowns:', e); }
+    },
+
     resolveSiteName(siteIdOrName) {
         const v = (siteIdOrName || '').toString();
         if (!v) return '';

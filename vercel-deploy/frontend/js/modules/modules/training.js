@@ -3930,6 +3930,24 @@ const Training = {
         }
     },
 
+    /** إعادة تعبئة قوائم المصنع/الموقع عند اكتمال تحميل إعدادات النماذج (استدعاء تلقائي من حدث formSettingsUpdated) */
+    refreshSiteDropdowns() {
+        try {
+            const sites = this.getSiteOptions();
+            const escape = (typeof Utils !== 'undefined' && Utils.escapeHTML) ? Utils.escapeHTML : (s) => String(s == null ? '' : s);
+            const optionsHtml = (emptyLabel) => '<option value="">' + (emptyLabel || 'اختر المصنع') + '</option>' + (sites || []).map(s => '<option value="' + escape(s.id) + '">' + escape(s.name) + '</option>').join('');
+            const ids = ['training-factory', 'attendance-registry-filter-factory', 'attendance-analytics-factory'];
+            ids.forEach(id => {
+                const el = document.getElementById(id);
+                if (el && el.tagName === 'SELECT') {
+                    const current = el.value;
+                    el.innerHTML = optionsHtml(id === 'attendance-analytics-factory' ? '' : id === 'attendance-registry-filter-factory' ? 'جميع المصانع' : 'اختر المصنع');
+                    if (current) el.value = current;
+                }
+            });
+        } catch (e) { if (typeof Utils !== 'undefined' && Utils.safeWarn) Utils.safeWarn('⚠️ Training.refreshSiteDropdowns:', e); }
+    },
+
     // الحصول على قائمة الأماكن الفرعية لموقع محدد
     getPlaceOptions(siteId) {
         try {
@@ -11558,6 +11576,13 @@ const Training = {
         if (typeof window !== 'undefined' && typeof Training !== 'undefined') {
             window.Training = Training;
             
+            // إعادة تحميل قوائم المصنع/الموقع تلقائياً عند اكتمال تحميل إعدادات النماذج
+            if (typeof window !== 'undefined') {
+                window.addEventListener('formSettingsUpdated', function () {
+                    try { if (typeof Training !== 'undefined' && Training.refreshSiteDropdowns) Training.refreshSiteDropdowns(); } catch (e) {}
+                });
+            }
+
             // إشعار عند تحميل الموديول بنجاح
             if (typeof AppState !== 'undefined' && AppState.debugMode && typeof Utils !== 'undefined' && Utils.safeLog) {
                 Utils.safeLog('✅ Training module loaded and available on window.Training');

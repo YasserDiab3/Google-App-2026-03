@@ -580,7 +580,41 @@ const Permissions = {
             safetyTeam: this.getInitialSafetyTeam()
         };
 
+        // ✅ إطلاق حدث لتحديث الموديولات تلقائياً عند اكتمال تحميل المواقع
+        try {
+            if (typeof window !== 'undefined' && window.dispatchEvent) {
+                window.dispatchEvent(new CustomEvent('formSettingsUpdated', {
+                    detail: { sites: clonedSites, observationSites: AppState.appData.observationSites }
+                }));
+                if (clonedSites.length > 0 && (typeof Utils === 'undefined' || !Utils.safeLog)) { /* no-op */ }
+                else if (clonedSites.length > 0 && typeof Utils !== 'undefined' && Utils.safeLog) {
+                    Utils.safeLog('✅ تم إطلاق حدث formSettingsUpdated لتحديث قوائم المصنع/الموقع في الموديولات');
+                }
+            }
+        } catch (e) { /* ignore */ }
+
         return this.formSettingsState;
+    },
+
+    /**
+     * استدعاء دالة عند جاهزية إعدادات النماذج (المواقع). إذا كانت جاهزة تُستدعى فوراً، وإلا بعد حدث formSettingsUpdated.
+     */
+    onFormSettingsReady(callback) {
+        if (typeof callback !== 'function') return;
+        try {
+            if (this.formSettingsState && Array.isArray(this.formSettingsState.sites) && this.formSettingsState.sites.length > 0) {
+                callback(this.formSettingsState);
+                return;
+            }
+            const handler = (e) => {
+                try { window.removeEventListener('formSettingsUpdated', handler); } catch (err) {}
+                try {
+                    const state = (e && e.detail && e.detail.sites) ? { sites: e.detail.sites } : this.formSettingsState;
+                    callback(state || { sites: [] });
+                } catch (err) { Utils.safeWarn('⚠️ onFormSettingsReady callback error:', err); }
+            };
+            window.addEventListener('formSettingsUpdated', handler);
+        } catch (err) { Utils.safeWarn('⚠️ onFormSettingsReady error:', err); }
     },
 
     getInitialFormDepartments() {
@@ -6180,6 +6214,23 @@ if (typeof window !== 'undefined') {
     window.PPEMatrix = PPEMatrix;
     window.Permissions = Permissions;
     window.AppState = AppState;
+
+    // استدعاء تلقائي لتحديث قوائم المصنع/الموقع في جميع الموديولات عند اكتمال تحميل إعدادات النماذج
+    (function () {
+        function refreshAllSiteDropdowns() {
+            var names = ['Training', 'Clinic', 'PTW', 'Incidents', 'Violations', 'FireEquipment', 'PeriodicInspections', 'BehaviorMonitoring'];
+            for (var i = 0; i < names.length; i++) {
+                try {
+                    var M = window[names[i]];
+                    if (M && typeof M.refreshSiteDropdowns === 'function') M.refreshSiteDropdowns();
+                } catch (e) {}
+            }
+        }
+        if (typeof window.addEventListener === 'function') {
+            window.addEventListener('formSettingsUpdated', refreshAllSiteDropdowns);
+        }
+    })();
+
     if (typeof window !== 'undefined' && window.location && window.location.protocol === 'file:') {
         AppState.runningWithoutBackend = true;
     }

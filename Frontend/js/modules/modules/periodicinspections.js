@@ -1049,6 +1049,16 @@ const PeriodicInspections = {
         }
     },
 
+    refreshSiteDropdowns() {
+        try {
+            var sites = this.getSiteOptions();
+            var esc = (typeof Utils !== 'undefined' && Utils.escapeHTML) ? Utils.escapeHTML : function(s) { return String(s == null ? '' : s); };
+            var opts = '<option value="">-- اختر المصنع --</option>' + (sites || []).map(function(s) { return '<option value="' + esc(s.id) + '">' + esc(s.name) + '</option>'; }).join('');
+            var el = document.getElementById('inspection-factory');
+            if (el && el.tagName === 'SELECT') { var v = el.value; el.innerHTML = opts; if (v) el.value = v; }
+        } catch (e) { if (typeof Utils !== 'undefined' && Utils.safeWarn) Utils.safeWarn('⚠️ PeriodicInspections.refreshSiteDropdowns:', e); }
+    },
+
     // الحصول على قائمة الأماكن الفرعية لموقع محدد
     getPlaceOptions(siteId) {
         try {
