@@ -723,24 +723,26 @@ async function handleLogin(form, submitBtn) {
         }
         return;
     }
+
+    // ✅ استجابة فورية للضغط: تعطيل الزر وإظهار التحميل قبل أي انتظار/منطق ثقيل
+    const originalBtnText = submitBtn.innerHTML;
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin ml-2"></i> جاري تسجيل الدخول...';
+    try {
+        await new Promise(r => requestAnimationFrame(() => r()));
+    } catch (e) { /* ignore */ }
     
     // التحقق من الوحدات (مع انتظار قصير لتفادي بطء تحميل defer/503 المؤقت)
     let deps = checkDependencies();
     if (deps && deps.ok === false) {
         const start = Date.now();
         const maxWaitMs = 2500;
-
-        const originalBtnText = submitBtn.innerHTML;
-        submitBtn.disabled = true;
         submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin ml-2"></i> جاري تجهيز النظام...';
 
         while (deps.ok === false && Date.now() - start < maxWaitMs) {
             await new Promise(r => setTimeout(r, 100));
             deps = checkDependencies();
         }
-
-        submitBtn.disabled = false;
-        submitBtn.innerHTML = originalBtnText;
 
         if (deps.ok === false) {
             const missingStr = Array.isArray(deps.missing) ? deps.missing.join(', ') : '';
@@ -751,14 +753,14 @@ async function handleLogin(form, submitBtn) {
             } else {
                 alert(errorMsg);
             }
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = originalBtnText;
             return;
         }
+
+        // رجوع رسالة الزر لتسجيل الدخول بعد اكتمال تجهيز الاعتماديات
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin ml-2"></i> جاري تسجيل الدخول...';
     }
-    
-    // تعطيل الزر
-    const originalBtnText = submitBtn.innerHTML;
-    submitBtn.disabled = true;
-    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin ml-2"></i> جاري تسجيل الدخول...';
     
     try {
         log('🔐 استدعاء Auth.login...');
@@ -1267,11 +1269,6 @@ Yasser.diab@icapp.com.eg`;
                     }
                     window.AppState.appData.systemStatistics.totalLogins = totalLogins;
                     
-                    // حفظ التحديث
-                    if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
-                        window.DataManager.save();
-                    }
-                    
                     return totalLogins;
                 }
             }
@@ -1329,30 +1326,31 @@ Yasser.diab@icapp.com.eg`;
         }
     }
     
+    function runWhenIdle(fn) {
+        try {
+            if (typeof window.requestIdleCallback === 'function') {
+                window.requestIdleCallback(() => fn(), { timeout: 1200 });
+                return;
+            }
+        } catch (e) { /* ignore */ }
+        setTimeout(fn, 0);
+    }
+
     // تحديث العدد عند تحميل DOM
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', function() {
-            setTimeout(function() {
-                updateLoginCountDisplay();
+            runWhenIdle(function () {
                 setupPrivacyPolicyLink();
-                
-                // تحديث العدد بشكل دوري
-                let attempts = 0;
-                const maxAttempts = 25;
-                const checkInterval = setInterval(function() {
-                    attempts++;
-                    updateLoginCountDisplay();
-                    if (attempts >= maxAttempts) {
-                        clearInterval(checkInterval);
-                    }
-                }, 100);
-            }, 250);
+                updateLoginCountDisplay();
+                setTimeout(updateLoginCountDisplay, 1500);
+            });
         });
     } else {
-        setTimeout(function() {
-            updateLoginCountDisplay();
+        runWhenIdle(function () {
             setupPrivacyPolicyLink();
-        }, 250);
+            updateLoginCountDisplay();
+            setTimeout(updateLoginCountDisplay, 1500);
+        });
     }
     
     // تحديث العدد عند تحميل الصفحة بالكامل
