@@ -339,6 +339,10 @@ const Permissions = {
     },
 
     async initFormSettingsState() {
+        // ✅ ضمان وجود AppState.appData لتفادي أخطاء عند التعيين لاحقاً
+        if (typeof AppState === 'undefined') return this.getFormSettingsState();
+        if (!AppState.appData) AppState.appData = {};
+
         // محاولة تحميل إعدادات الشركة من Google Sheets أولاً
         if (AppState.googleConfig?.appsScript?.enabled && typeof GoogleIntegration !== 'undefined') {
             try {
@@ -454,8 +458,8 @@ const Permissions = {
                         // ✅ إصلاح: عرض رسالة للمستخدم حتى في وضع الإنتاج
                         Utils.safeLog(`✅ تم تحميل ${normalizedSites.length} موقع من قاعدة البيانات`);
                     } else {
-                        // ✅ إصلاح: إذا لم تكن هناك مواقع، نستخدم مصفوفة فارغة بدلاً من undefined
-                        if (!AppState.appData.observationSites) {
+                        // ✅ عدم مسح المواقع المحلية (من DataManager.load) عند رجوع الـ API بلا مواقع
+                        if (!Array.isArray(AppState.appData.observationSites)) {
                             AppState.appData.observationSites = [];
                         }
                     }
@@ -484,23 +488,19 @@ const Permissions = {
 
                     Utils.safeLog('✅ تم تحميل إعدادات النماذج من Google Sheets بنجاح');
                 } else {
-                    // ✅ إصلاح: إذا فشل التحميل، نستخدم البيانات المحلية
                     Utils.safeWarn('⚠️ لم يتم تحميل إعدادات النماذج من Google Sheets - استخدام البيانات المحلية');
-                    // ✅ إصلاح: التأكد من وجود مصفوفة فارغة على الأقل
-                    if (!AppState.appData.observationSites) {
+                    if (!Array.isArray(AppState.appData.observationSites)) {
                         AppState.appData.observationSites = [];
                     }
                 }
             } catch (error) {
                 Utils.safeWarn('⚠️ فشل تحميل إعدادات النماذج من Google Sheets، سيتم استخدام البيانات المحلية:', error);
-                // ✅ إصلاح: التأكد من وجود مصفوفة فارغة على الأقل
-                if (!AppState.appData.observationSites) {
+                if (!Array.isArray(AppState.appData.observationSites)) {
                     AppState.appData.observationSites = [];
                 }
             }
         } else {
-            // ✅ إصلاح: إذا لم يكن Google Sheets مفعّل، نستخدم البيانات المحلية
-            if (!AppState.appData.observationSites) {
+            if (!Array.isArray(AppState.appData.observationSites)) {
                 AppState.appData.observationSites = [];
             }
         }
@@ -580,15 +580,21 @@ const Permissions = {
             safetyTeam: this.getInitialSafetyTeam()
         };
 
-        // ✅ إطلاق حدث لتحديث الموديولات تلقائياً عند اكتمال تحميل المواقع
+        // ✅ إطلاق حدث وتحديث القوائم فوراً لأي عناصر موجودة في الـ DOM
         try {
             if (typeof window !== 'undefined' && window.dispatchEvent) {
                 window.dispatchEvent(new CustomEvent('formSettingsUpdated', {
                     detail: { sites: clonedSites, observationSites: AppState.appData.observationSites }
                 }));
-                if (clonedSites.length > 0 && (typeof Utils === 'undefined' || !Utils.safeLog)) { /* no-op */ }
-                else if (clonedSites.length > 0 && typeof Utils !== 'undefined' && Utils.safeLog) {
-                    Utils.safeLog('✅ تم إطلاق حدث formSettingsUpdated لتحديث قوائم المصنع/الموقع في الموديولات');
+                var names = ['Training', 'Clinic', 'PTW', 'Incidents', 'Violations', 'FireEquipment', 'PeriodicInspections', 'BehaviorMonitoring'];
+                for (var i = 0; i < names.length; i++) {
+                    try {
+                        var M = window[names[i]];
+                        if (M && typeof M.refreshSiteDropdowns === 'function') M.refreshSiteDropdowns();
+                    } catch (e2) { /* ignore */ }
+                }
+                if (clonedSites.length > 0 && typeof Utils !== 'undefined' && Utils.safeLog) {
+                    Utils.safeLog('✅ تم إطلاق حدث formSettingsUpdated وتحديث قوائم المصنع/الموقع');
                 }
             }
         } catch (e) { /* ignore */ }

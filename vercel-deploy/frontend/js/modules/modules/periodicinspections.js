@@ -1800,6 +1800,9 @@ const PeriodicInspections = {
     },
 
     async showFormModal(inspectionId = null) {
+        if (typeof Permissions !== 'undefined' && Permissions.ensureFormSettingsState) {
+            try { await Permissions.ensureFormSettingsState(); } catch (e) { /* ignore */ }
+        }
         // إزالة أي modal موجود مسبقاً
         const existingModal = document.querySelector('.modal-overlay');
         if (existingModal) {

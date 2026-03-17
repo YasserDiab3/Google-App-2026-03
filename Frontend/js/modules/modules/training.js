@@ -7061,6 +7061,9 @@ const Training = {
 
     async showForm(data = null) {
         this.ensureData();
+        if (typeof Permissions !== 'undefined' && Permissions.ensureFormSettingsState) {
+            try { await Permissions.ensureFormSettingsState(); } catch (e) { /* ignore */ }
+        }
         this.currentEditId = data?.id || null;
         const content = document.getElementById('training-content');
         if (!content) {

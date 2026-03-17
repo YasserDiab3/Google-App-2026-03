@@ -8348,6 +8348,9 @@ const Clinic = {
 
     async showVisitForm(visitData = null) {
         this.ensureData();
+        if (typeof Permissions !== 'undefined' && Permissions.ensureFormSettingsState) {
+            try { await Permissions.ensureFormSettingsState(); } catch (e) { /* ignore */ }
+        }
         const isEdit = !!visitData;
         const content = document.getElementById('clinic-section');
         if (!content) return;

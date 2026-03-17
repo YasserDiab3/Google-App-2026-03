@@ -1167,6 +1167,9 @@ const BehaviorMonitoring = {
     },
 
     async showForm(data = null) {
+        if (typeof Permissions !== 'undefined' && Permissions.ensureFormSettingsState) {
+            try { await Permissions.ensureFormSettingsState(); } catch (e) { /* ignore */ }
+        }
         const modal = document.createElement('div');
         modal.className = 'modal-overlay';
         const uid = `bhm-modal-${Date.now()}`;

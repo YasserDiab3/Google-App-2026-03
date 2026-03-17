@@ -5378,6 +5378,9 @@ const Incidents = {
     },
 
     async showForm(incidentData = null) {
+        if (typeof Permissions !== 'undefined' && Permissions.ensureFormSettingsState) {
+            try { await Permissions.ensureFormSettingsState(); } catch (e) { /* ignore */ }
+        }
         this.currentEditId = incidentData?.id || null;
         const attachments = Array.isArray(incidentData?.attachments) ? incidentData.attachments : [];
         this.currentAttachments = attachments

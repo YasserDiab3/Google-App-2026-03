@@ -9525,6 +9525,9 @@ const PTW = {
     currentEditId: null,
 
     async showForm(data = null) {
+        if (typeof Permissions !== 'undefined' && Permissions.ensureFormSettingsState) {
+            try { await Permissions.ensureFormSettingsState(); } catch (e) { /* ignore */ }
+        }
         this.currentEditId = data?.id || null;
 
         // التأكد من التبديل إلى تبويب التصاريح أولاً
