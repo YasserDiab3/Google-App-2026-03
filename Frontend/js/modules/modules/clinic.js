@@ -8346,17 +8346,48 @@ const Clinic = {
         });
     },
 
-    async showVisitForm(visitData = null) {
-        this.ensureData();
-        if (typeof Permissions !== 'undefined' && Permissions.ensureFormSettingsState) {
-            try { await Permissions.ensureFormSettingsState(); } catch (e) { /* ignore */ }
-        }
+    async showVisitForm(visitData = null, registerVisitBtn = null) {
         const isEdit = !!visitData;
         const content = document.getElementById('clinic-section');
-        if (!content) return;
+        if (!content) {
+            if (registerVisitBtn) registerVisitBtn.disabled = false;
+            return;
+        }
 
         const modal = document.createElement('div');
         modal.className = 'modal-overlay';
+        // عرض فوري: نافذة تحميل أولاً لاستجابة سريعة دون تأخير
+        modal.innerHTML = `
+            <div class="modal-content" style="max-width: 400px; border-radius: 15px; overflow: hidden; text-align: center; padding: 40px;">
+                <div style="margin-bottom: 20px;"><i class="fas fa-spinner fa-spin" style="font-size: 48px; color: #667eea;"></i></div>
+                <p style="color: #4b5563; font-size: 16px;">جاري تحميل النموذج...</p>
+            </div>
+        `;
+        document.body.appendChild(modal);
+
+        const reEnableButton = () => {
+            if (registerVisitBtn) registerVisitBtn.disabled = false;
+        };
+        const observer = new MutationObserver(() => {
+            if (!document.body.contains(modal)) {
+                reEnableButton();
+                observer.disconnect();
+            }
+        });
+        observer.observe(document.body, { childList: true, subtree: true });
+
+        try {
+            this.ensureData();
+            if (typeof Permissions !== 'undefined' && Permissions.ensureFormSettingsState) {
+                try { await Permissions.ensureFormSettingsState(); } catch (e) { /* ignore */ }
+            }
+        } catch (e) {
+            if (modal.parentNode) modal.remove();
+            reEnableButton();
+            Utils.safeError('خطأ في تحضير نموذج الزيارة:', e);
+            return;
+        }
+
         modal.innerHTML = `
             <div class="modal-content" style="max-width: 800px; border-radius: 15px; overflow: hidden;">
                 <div class="modal-header modal-header-centered" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px;">
@@ -8566,7 +8597,7 @@ const Clinic = {
                 </div>
             </div>
         `;
-        document.body.appendChild(modal);
+        // (النافذة مضافة مسبقاً عند عرض "جاري تحميل النموذج" لاستجابة فورية)
 
         // تحميل سجل الزيارات السابقة إذا كان موظف
         setTimeout(() => {
@@ -11411,10 +11442,14 @@ const Clinic = {
             refreshBtn.addEventListener('click', () => this.refresh());
         }
 
-        // ربط زر تسجيل زيارة
+        // ربط زر تسجيل زيارة (استجابة فورية + منع تكرار النقر)
         const registerVisitBtn = document.getElementById('clinic-register-visit-btn');
         if (registerVisitBtn) {
-            registerVisitBtn.addEventListener('click', () => this.showVisitForm());
+            registerVisitBtn.addEventListener('click', () => {
+                if (registerVisitBtn.disabled) return;
+                registerVisitBtn.disabled = true;
+                this.showVisitForm(null, registerVisitBtn);
+            });
         }
 
         // ربط زر إدارة أنواع الزيارة (مدير النظام فقط)
