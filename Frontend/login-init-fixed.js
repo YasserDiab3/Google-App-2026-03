@@ -792,9 +792,25 @@ async function handleLogin(form, submitBtn) {
             // showMainApp يحمّل الإعدادات (الشاشة تبقى كما هي) ثم يخفي الدخول ويعرض السياسة مباشرة أو لوحة التحكم
             if (typeof window.UI !== 'undefined' && window.UI.showMainApp) {
                 try {
-                    await window.UI.showMainApp();
+                    // حماية من التعليق: لو showMainApp تأخرت لا نترك المستخدم على شاشة الدخول بلا نهاية
+                    const warnAfterMs = 1200;
+                    const hardTimeoutMs = 15000;
+                    const warnTimer = setTimeout(function () {
+                        try {
+                            if (submitBtn && !submitBtn.disabled) return;
+                            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin ml-2"></i> جاري تحميل الواجهة...';
+                        } catch (e) { /* ignore */ }
+                    }, warnAfterMs);
+
+                    await Promise.race([
+                        window.UI.showMainApp(),
+                        new Promise((_, reject) => setTimeout(() => reject(new Error('showMainApp timeout')), hardTimeoutMs))
+                    ]);
+                    clearTimeout(warnTimer);
                 } catch (err) {
                     log('⚠️ خطأ في showMainApp:', err);
+                    // fallback: إظهار التطبيق حتى لو UI.showMainApp فشل/تأخر
+                    try { if (typeof window.App !== 'undefined' && window.App.load) window.App.load(); } catch (e) { /* ignore */ }
                     const loginScreen = document.getElementById('login-screen');
                     if (loginScreen) { loginScreen.style.display = 'none'; loginScreen.classList.remove('active', 'show'); }
                     document.body.classList.add('app-active');
@@ -951,10 +967,9 @@ function checkDependencies() {
             const res = window.checkDependencies ? window.checkDependencies() : null;
             if (res && typeof res.ok === 'boolean') return res.ok;
         } catch (e) { /* ignore */ }
-        return typeof window.Auth !== 'undefined' && 
-               typeof window.DataManager !== 'undefined' && 
-               typeof window.UI !== 'undefined' && 
-               typeof window.Notification !== 'undefined';
+        // fallback minimal: UI/Notification ليست شرطاً لتسجيل الدخول نفسه
+        return typeof window.Auth !== 'undefined' &&
+               typeof window.DataManager !== 'undefined';
     }
     
     function setupLoginForm() {
@@ -1106,6 +1121,11 @@ Yasser.diab@icapp.com.eg`;
             e.stopPropagation();
             e.stopImmediatePropagation();
             e.returnValue = false;
+
+            // توحيد منطق Enter/submit مع نفس handleLogin (تجنب منطق مكرر قد يعلّق الانتقال)
+            const btn = newForm.querySelector('#login-submit-btn') || newForm.querySelector('button[type="submit"]') || e.target;
+            await handleLogin(newForm, btn);
+            return false;
             
             log('📝 محاولة تسجيل الدخول...');
             
