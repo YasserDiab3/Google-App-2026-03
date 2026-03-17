@@ -894,6 +894,43 @@ if (typeof window !== 'undefined') {
     window.handleLogin = handleLogin;
 }
 
+// ربط احتياطي لزر تسجيل الدخول (delegation) لتفادي أي تعارض/استبدال للـ form
+(function bindLoginFallbackHandlers() {
+    try {
+        if (typeof window === 'undefined' || typeof document === 'undefined') return;
+        if (window.__loginFallbackBound === true) return;
+        window.__loginFallbackBound = true;
+
+        const run = async (btn) => {
+            const form = document.getElementById('login-form');
+            if (!form || typeof window.handleLogin !== 'function') return;
+            await window.handleLogin(form, btn);
+        };
+
+        document.addEventListener('click', function (e) {
+            const btn = e && e.target ? e.target.closest('#login-submit-btn') : null;
+            if (!btn) return;
+            e.preventDefault();
+            e.stopPropagation();
+            e.stopImmediatePropagation();
+            run(btn);
+        }, true);
+
+        document.addEventListener('submit', function (e) {
+            const form = e && e.target ? e.target.closest('#login-form') : null;
+            if (!form) return;
+            const btn = form.querySelector('#login-submit-btn') || form.querySelector('button[type="submit"]');
+            e.preventDefault();
+            e.stopPropagation();
+            e.stopImmediatePropagation();
+            run(btn || form);
+        }, true);
+    } catch (err) {
+        // لا نُظهر خطأ للمستخدم هنا لتجنب تعطيل الصفحة
+        try { console.warn('Login fallback bind error', err); } catch (e) { /* ignore */ }
+    }
+})();
+
 // Global checkDependencies for handleLogin
 function checkDependencies() {
     const missing = [];
