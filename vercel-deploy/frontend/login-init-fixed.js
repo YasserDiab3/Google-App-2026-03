@@ -1,13 +1,5 @@
 console.log('🟢 login-init-fixed.js loaded successfully!');
 
-// IMMEDIATE TEST: Add global click listener right away
-document.addEventListener('click', function(e) {
-    if (e.target.tagName === 'BUTTON' || e.target.closest('button')) {
-        const btn = e.target.tagName === 'BUTTON' ? e.target : e.target.closest('button');
-        console.log('🖱️ GLOBAL BUTTON CLICK:', btn.id || 'no-id', btn.textContent?.trim()?.substring(0, 30));
-    }
-}, true);
-
 // ===== تهيئة مباشرة لشاشة تسجيل الدخول - نسخة محسنة ومحلولة =====
 
 // عزل هذا الملف بالكامل لتجنب تلويث الـ global scope (خصوصاً اسم log)
@@ -32,33 +24,6 @@ document.addEventListener('click', function(e) {
 
     log('🚀 تحميل login-init-fixed.js...');
 
-    // Global click listener for debugging
-    document.addEventListener('click', function(e) {
-        // Debug ALL clicks to see what's being clicked
-        if (e.target.tagName === 'BUTTON' || e.target.closest('button')) {
-            const btn = e.target.tagName === 'BUTTON' ? e.target : e.target.closest('button');
-            console.log('🖱️ Button clicked:', btn.id || 'no-id', btn.textContent?.trim()?.substring(0, 30));
-        }
-        
-        if (e.target.id === 'login-submit-btn' || e.target.closest('#login-submit-btn')) {
-            console.log('🔥🔥🔥 Login button clicked globally!', e.target);
-            e.preventDefault();
-            e.stopPropagation();
-            e.stopImmediatePropagation();
-            
-            // Try to find the form and handle login
-            const form = document.getElementById('login-form');
-            if (form) {
-                console.log('📝 Form found, attempting login...');
-                // Call handleLogin if it exists (exposed to window)
-                if (typeof window.handleLogin === 'function') {
-                    window.handleLogin(form, e.target);
-                } else {
-                    console.error('❌ window.handleLogin is not defined yet!');
-                }
-            }
-        }
-    }, true);
 
     // ===== مزامنة المستخدمين قبل تسجيل الدخول (إعداد المزامنة) =====
     const LoginSyncSetup = (function () {
@@ -719,6 +684,10 @@ Yasser.diab@icapp.com.eg`;
 })();
 
 async function handleLogin(form, submitBtn) {
+    // التأكد من أن submitBtn هو عنصر <button> الفعلي وليس عنصراً داخله (مثل <i>)
+    if (submitBtn && submitBtn.tagName !== 'BUTTON') {
+        submitBtn = submitBtn.closest('button') || submitBtn;
+    }
     log('📝 محاولة تسجيل الدخول...');
     
     const usernameInput = document.getElementById('username');
@@ -778,14 +747,6 @@ async function handleLogin(form, submitBtn) {
             } else {
                 alert(errorMsg);
             }
-            return;
-        }
-    } else if (!deps) {
-        // توافق مع النسخة القديمة من checkDependencies التي تُرجع boolean
-        if (!checkDependencies()) {
-            const errorMsg = 'نظام المصادقة غير جاهز. يرجى تحديث الصفحة.';
-            console.error('❌', errorMsg);
-            alert(errorMsg);
             return;
         }
     }
