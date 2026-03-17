@@ -966,10 +966,9 @@ function checkDependencies() {
             const res = window.checkDependencies ? window.checkDependencies() : null;
             if (res && typeof res.ok === 'boolean') return res.ok;
         } catch (e) { /* ignore */ }
-        return typeof window.Auth !== 'undefined' && 
-               typeof window.DataManager !== 'undefined' && 
-               typeof window.UI !== 'undefined' && 
-               typeof window.Notification !== 'undefined';
+        // fallback minimal: UI/Notification ليست شرطاً لتسجيل الدخول نفسه
+        return typeof window.Auth !== 'undefined' &&
+               typeof window.DataManager !== 'undefined';
     }
     
     function setupLoginForm() {
