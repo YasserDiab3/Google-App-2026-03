@@ -170,7 +170,7 @@ window.Auth = {
         } else if (canSyncUsers) {
             Utils.safeLog('🔄 لا توجد بيانات محلية - مزامنة Users من Google Sheets قبل تسجيل الدخول...');
             try {
-                const timeoutMs = 15000; // ✅ زيادة المهلة إلى 15 ثانية
+                const timeoutMs = 8000; // تقليل مهلة مزامنة المستخدمين لتسريع الدخول
                 const timeoutPromise = new Promise(resolve => setTimeout(() => resolve(false), timeoutMs));
                 const syncOk = await Promise.race([GoogleIntegration.syncUsers(true), timeoutPromise]);
                 if (syncOk) {
@@ -1012,7 +1012,7 @@ window.Auth = {
                 } catch (monitorError) {
                     Utils.safeWarn('⚠️ فشل بدء نظام مراقبة الاتصال:', monitorError);
                 }
-            }, 1000);
+            }, 500);
         }
 
         // ✅ إصلاح: تحميل البيانات الأساسية أولاً بشكل مباشر ومتسلسل بدون تأخير
@@ -1049,7 +1049,7 @@ window.Auth = {
                         try {
                             // محاولة التحميل مع timeout لتجنب الانتظار الطويل
                             const timeoutPromise = new Promise((_, reject) => 
-                                setTimeout(() => reject(new Error('انتهت مهلة التحميل')), 10000)
+                                setTimeout(() => reject(new Error('انتهت مهلة التحميل')), 6000)
                             );
                             
                             const dataPromise = GoogleIntegration.readFromSheets(sheetName);
@@ -1451,7 +1451,7 @@ window.Auth = {
                                     } else {
                                         // لم يتم العثور بعد - إعادة المحاولة بعد قليل
                                         if (retryCount < maxRetries) {
-                                            const delay = Math.min(1000 * retryCount, 3000); // زيادة التأخير تدريجياً (1s, 2s, 3s)
+                                            const delay = Math.min(500 * retryCount, 1500); // تقليل التأخير التدريجي
                                             setTimeout(checkAndUpdateSession, delay);
                                         } else {
                                             AppState._sessionUpdateScheduled = false;
@@ -1461,7 +1461,7 @@ window.Auth = {
                                 };
                                 
                                 // محاولة فورية أولاً
-                                setTimeout(checkAndUpdateSession, 500);
+                                setTimeout(checkAndUpdateSession, 250);
                             }
                         }
                         
@@ -1612,7 +1612,7 @@ window.Auth = {
                                     } else {
                                         // لم يتم العثور بعد - إعادة المحاولة بعد قليل
                                         if (retryCount < maxRetries) {
-                                            const delay = Math.min(1000 * retryCount, 3000); // زيادة التأخير تدريجياً (1s, 2s, 3s)
+                                            const delay = Math.min(500 * retryCount, 1500); // تقليل التأخير التدريجي
                                             setTimeout(checkAndUpdateSession, delay);
                                         } else {
                                             AppState._sessionUpdateScheduled = false;
@@ -1622,7 +1622,7 @@ window.Auth = {
                                 };
                                 
                                 // محاولة فورية أولاً
-                                setTimeout(checkAndUpdateSession, 500);
+                                setTimeout(checkAndUpdateSession, 250);
                             }
                         }
                         

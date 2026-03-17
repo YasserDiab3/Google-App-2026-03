@@ -52,7 +52,7 @@ const MODULES_TO_LOAD = [
 /** عدد إعادة المحاولات عند 503 أو فشل التحميل */
 const MODULE_LOAD_MAX_RETRIES = 2;
 /** التأخير قبل إعادة المحاولة (ms) */
-const MODULE_LOAD_RETRY_DELAY = 1800;
+const MODULE_LOAD_RETRY_DELAY = 1000;
 
 /**
  * تحميل موديول واحد (مع إعادة محاولة عند 503)
@@ -67,15 +67,15 @@ function loadModule(moduleName, retryCount) {
         const logError = (typeof Utils !== 'undefined' && Utils.safeError) ? Utils.safeError : console.error;
         const warn = (typeof Utils !== 'undefined' && Utils.safeWarn) ? Utils.safeWarn : console.warn;
 
-        // ✅ إضافة timeout عام لمنع Promise غير المحلولة (10 ثوان - مناسب للشبكات البطيئة)
+        // ✅ إضافة timeout عام لمنع Promise غير المحلولة (6 ثوان - يوازن بين السرعة والاستقرار)
         let isResolved = false;
         const timeoutId = setTimeout(() => {
             if (!isResolved) {
                 isResolved = true;
-                warn(`⚠️ Timeout: تحميل ${moduleName} استغرق أكثر من 10 ثوان - الاستمرار...`);
+                warn(`⚠️ Timeout: تحميل ${moduleName} استغرق أكثر من 6 ثوان - الاستمرار...`);
                 resolve(); // الاستمرار حتى لو انتهى الوقت
             }
-        }, 10000); // 10 ثوان (تقليل تحذيرات Timeout على الشبكات البطيئة)
+        }, 6000); // 6 ثوان لتقليل التأخير في الإنتاج
 
         const safeResolve = () => {
             if (!isResolved) {
@@ -110,7 +110,7 @@ function loadModule(moduleName, retryCount) {
             if (moduleName === 'fireequipment') {
                 // التحقق من تحميل موديول FireEquipment
                 let checkCount = 0;
-                const maxChecks = 20; // زيادة عدد المحاولات
+                const maxChecks = 10; // تقليل زمن الانتظار
                 const checkInterval = setInterval(() => {
                     checkCount++;
                     // ✅ التحقق الآمن من وجود الموديول ودالة load
@@ -133,7 +133,7 @@ function loadModule(moduleName, retryCount) {
             } else if (moduleName === 'violations') {
                 // التحقق من تحميل موديول Violations
                 let checkCount = 0;
-                const maxChecks = 20; // زيادة عدد المحاولات
+                const maxChecks = 10; // تقليل زمن الانتظار
                 const checkInterval = setInterval(() => {
                     checkCount++;
                     // ✅ التحقق الآمن من وجود الموديول ودالة load
@@ -179,7 +179,7 @@ function loadModule(moduleName, retryCount) {
             } else if (moduleName === 'contractors') {
                 // التحقق من تحميل موديول المقاولين
                 let checkCount = 0;
-                const maxChecks = 30; // زيادة عدد المحاولات
+                const maxChecks = 15; // تقليل زمن الانتظار
                 const checkInterval = setInterval(() => {
                     checkCount++;
                     // ✅ التحقق الآمن من وجود الموديول ودالة load
@@ -202,7 +202,7 @@ function loadModule(moduleName, retryCount) {
             } else if (moduleName === 'clinic') {
                 // ✅ التحقق من تحميل موديول العيادة (Clinic)
                 let checkCount = 0;
-                const maxChecks = 50; // 50 × 100ms = 5 ثوان
+                const maxChecks = 25; // 25 × 100ms = 2.5 ثوان
                 const checkInterval = setInterval(() => {
                     checkCount++;
                     if (typeof window.Clinic !== 'undefined' && 
@@ -224,7 +224,7 @@ function loadModule(moduleName, retryCount) {
             } else if (moduleName === 'ppe') {
                 // التحقق من تحميل موديول PPE
                 let checkCount = 0;
-                const maxChecks = 20;
+                const maxChecks = 10;
                 const checkInterval = setInterval(() => {
                     checkCount++;
                     if (typeof window.PPE !== 'undefined' && typeof window.PPE.load === 'function') {
@@ -245,7 +245,7 @@ function loadModule(moduleName, retryCount) {
             } else if (moduleName === 'periodicinspections') {
                 // التحقق من تحميل موديول الفحوصات الدورية
                 let checkCount = 0;
-                const maxChecks = 20;
+                const maxChecks = 10;
                 const checkInterval = setInterval(() => {
                     checkCount++;
                     if (typeof window.PeriodicInspections !== 'undefined' && typeof window.PeriodicInspections.load === 'function') {
@@ -338,7 +338,7 @@ async function loadAllModules() {
         let utilsReady = typeof Utils !== 'undefined';
         let appStateReady = typeof AppState !== 'undefined';
         let waitCount = 0;
-        const maxWait = 50; // 5 ثوان
+        const maxWait = 30; // 3 ثوان
 
         while ((!utilsReady || !appStateReady) && waitCount < maxWait) {
             await new Promise(resolve => setTimeout(resolve, 100));
@@ -358,7 +358,7 @@ async function loadAllModules() {
             log('📦 بدء تحميل موديول المقاولين...');
             await loadModule('contractors');
             // انتظار أطول للتأكد من تحميله بالكامل وتصديره
-            await new Promise(resolve => setTimeout(resolve, 500));
+            await new Promise(resolve => setTimeout(resolve, 250));
             
             // التحقق النهائي من تحميل الموديول
             if (typeof window.Contractors !== 'undefined') {
@@ -377,7 +377,7 @@ async function loadAllModules() {
             try {
                 await loadModule(moduleName);
                 // انتظار قصير بين المواديل لضمان الاستقرار
-                await new Promise(resolve => setTimeout(resolve, 50));
+                await new Promise(resolve => setTimeout(resolve, 25));
             } catch (error) {
                 logError(`❌ خطأ في تحميل ${moduleName}:`, error);
                 // الاستمرار حتى لو فشل تحميل موديول واحد
@@ -385,7 +385,7 @@ async function loadAllModules() {
         }
 
         // انتظار قصير للتأكد من تصدير جميع الموديولات إلى window
-        await new Promise(resolve => setTimeout(resolve, 200));
+        await new Promise(resolve => setTimeout(resolve, 100));
 
         log('✅ تم تحميل جميع الموديولات بنجاح');
     } catch (error) {
@@ -403,8 +403,8 @@ console.log('🔥 Document readyState:', document.readyState);
     
     // Wait a tiny bit for Utils to be available
     let waitCount = 0;
-    while (typeof Utils === 'undefined' && waitCount < 50) {
-        await new Promise(resolve => setTimeout(resolve, 100));
+    while (typeof Utils === 'undefined' && waitCount < 30) {
+        await new Promise(resolve => setTimeout(resolve, 50));
         waitCount++;
     }
     

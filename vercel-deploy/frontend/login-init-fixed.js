@@ -728,14 +728,14 @@ async function handleLogin(form, submitBtn) {
     let deps = checkDependencies();
     if (deps && deps.ok === false) {
         const start = Date.now();
-        const maxWaitMs = 5000;
+        const maxWaitMs = 2500;
 
         const originalBtnText = submitBtn.innerHTML;
         submitBtn.disabled = true;
         submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin ml-2"></i> جاري تجهيز النظام...';
 
         while (deps.ok === false && Date.now() - start < maxWaitMs) {
-            await new Promise(r => setTimeout(r, 200));
+            await new Promise(r => setTimeout(r, 100));
             deps = checkDependencies();
         }
 
@@ -792,8 +792,8 @@ async function handleLogin(form, submitBtn) {
             if (typeof window.UI !== 'undefined' && window.UI.showMainApp) {
                 try {
                     // حماية من التعليق: لو showMainApp تأخرت لا نترك المستخدم على شاشة الدخول بلا نهاية
-                    const warnAfterMs = 1200;
-                    const hardTimeoutMs = 15000;
+                    const warnAfterMs = 700;
+                    const hardTimeoutMs = 8000;
                     const warnTimer = setTimeout(function () {
                         try {
                             if (submitBtn && !submitBtn.disabled) return;
@@ -1082,225 +1082,6 @@ Yasser.diab@icapp.com.eg`;
         // ⚠️ مهم: إعادة تفعيل زر تبديل اللغة بعد استبدال النموذج
         setupLanguageToggle();
         
-        // إضافة مستمع إضافي في مرحلة ال capture لضمان منع الإرسال
-        newForm.addEventListener('submit', function(e) {
-            console.log('🔥 Submit event captured in capture phase!');
-            e.preventDefault();
-            e.stopPropagation();
-            e.stopImmediatePropagation();
-            e.returnValue = false;
-            return false;
-        }, true);
-        
-        // إضافة مستمع مباشر على زر الإرسال
-        const submitBtn = newForm.querySelector('#login-submit-btn');
-        console.log('🔍 Looking for submit button:', submitBtn);
-        
-        if (submitBtn) {
-            console.log('✅ Submit button found, attaching click listener');
-            submitBtn.addEventListener('click', async function(e) {
-                console.log('🔥 Submit button clicked!');
-                e.preventDefault();
-                e.stopPropagation();
-                e.stopImmediatePropagation();
-                e.returnValue = false;
-                
-                // تنفيذ عملية تسجيل الدخول
-                await handleLogin(newForm, submitBtn);
-                
-                return false;
-            }, true);
-        } else {
-            console.error('❌ Submit button not found! Available buttons:', newForm.querySelectorAll('button'));
-        }
-        
-        newForm.addEventListener('submit', async function(e) {
-            console.log('🔥 Submit event captured!');
-            e.preventDefault();
-            e.stopPropagation();
-            e.stopImmediatePropagation();
-            e.returnValue = false;
-
-            // توحيد منطق Enter/submit مع نفس handleLogin (تجنب منطق مكرر قد يعلّق الانتقال)
-            const btn = newForm.querySelector('#login-submit-btn') || newForm.querySelector('button[type="submit"]') || e.target;
-            await handleLogin(newForm, btn);
-            return false;
-            
-            log('📝 محاولة تسجيل الدخول...');
-            
-            const usernameInput = document.getElementById('username');
-            const passwordInput = document.getElementById('password');
-            const rememberCheckbox = document.getElementById('remember-me');
-            const submitBtn = newForm.querySelector('button[type="submit"]');
-            
-            if (!usernameInput || !passwordInput) {
-                const errorMsg = 'خطأ في تحميل نموذج تسجيل الدخول';
-                console.error('❌', errorMsg);
-                if (typeof window.Notification !== 'undefined') {
-                    window.Notification.error(errorMsg);
-                } else {
-                    alert(errorMsg);
-                }
-                return;
-            }
-            
-            const email = usernameInput.value.trim();
-            const password = passwordInput.value;
-            const remember = rememberCheckbox ? rememberCheckbox.checked : false;
-            
-            if (!email || !password) {
-                const errorMsg = 'يرجى إدخال البريد الإلكتروني وكلمة المرور';
-                console.warn('⚠️', errorMsg);
-                if (typeof window.Notification !== 'undefined') {
-                    window.Notification.warning(errorMsg);
-                } else {
-                    alert(errorMsg);
-                }
-                return;
-            }
-            
-            // التحقق من الوحدات
-            if (!checkDependencies()) {
-                const errorMsg = 'نظام المصادقة غير جاهز. يرجى تحديث الصفحة.';
-                console.error('❌', errorMsg);
-                alert(errorMsg);
-                return;
-            }
-            
-            // تعطيل الزر
-            const originalBtnText = submitBtn.innerHTML;
-            submitBtn.disabled = true;
-            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin ml-2"></i> جاري تسجيل الدخول...';
-            
-            try {
-                log('🔐 استدعاء Auth.login...');
-                
-                const result = await window.Auth.login(email, password, remember);
-                log('📥 نتيجة تسجيل الدخول:', result);
-                
-                // فحص النتيجة
-                let success = false;
-                let requiresPasswordChange = false;
-                let isFirstLogin = false;
-                
-                if (result === true) {
-                    success = true;
-                } else if (result && typeof result === 'object') {
-                    success = result.success === true;
-                    requiresPasswordChange = result.requiresPasswordChange === true;
-                    isFirstLogin = result.isFirstLogin === true;
-                }
-                
-                if (success) {
-                    log('✅ تسجيل دخول ناجح!');
-                    
-                    // عدم إخفاء شاشة الدخول هنا — showMainApp يخفيها بعد تحميل الإعدادات ثم يعرض السياسة مباشرة (بدون شاشة تحضيرية)
-                    // معالجة تغيير كلمة المرور إذا لزم الأمر
-                    if (requiresPasswordChange || isFirstLogin) {
-                        log('🔐 يتطلب تغيير كلمة المرور');
-                    }
-                    
-                    // showMainApp يحمّل الإعدادات (الشاشة تبقى كما هي) ثم يخفي الدخول ويعرض السياسة مباشرة أو لوحة التحكم
-                    if (typeof window.UI !== 'undefined' && window.UI.showMainApp) {
-                        try {
-                            await window.UI.showMainApp();
-                        } catch (err) {
-                            log('⚠️ خطأ في showMainApp:', err);
-                            const loginScreen = document.getElementById('login-screen');
-                            if (loginScreen) { loginScreen.style.display = 'none'; loginScreen.classList.remove('active', 'show'); }
-                            document.body.classList.add('app-active');
-                            const mainApp = document.getElementById('main-app');
-                            if (mainApp) mainApp.style.display = 'flex';
-                        }
-                    } else if (typeof window.App !== 'undefined' && window.App.load) {
-                        window.App.load();
-                        const mainApp = document.getElementById('main-app');
-                        if (mainApp) mainApp.style.display = 'flex';
-                    }
-                } else {
-                    // تحسين رسالة الخطأ
-                    let errorMsg = 'البريد الإلكتروني أو كلمة المرور غير صحيحة';
-                    
-                    if (result && typeof result === 'object') {
-                        if (result.message) {
-                            errorMsg = result.message;
-                        } else if (result.error) {
-                            errorMsg = result.error;
-                        }
-                    } else if (typeof result === 'string') {
-                        errorMsg = result;
-                    }
-                    
-                    // التحقق من أخطاء الاتصال بـ Google Services
-                    const errorStr = JSON.stringify(result || '').toLowerCase();
-                    if (errorStr.includes('cert_authority_invalid') || 
-                        errorStr.includes('certificate') ||
-                        errorStr.includes('err_cert') ||
-                        errorStr.includes('ssl') ||
-                        errorStr.includes('tls')) {
-                        errorMsg = 'خطأ في الاتصال بخدمات Google. قد تكون هناك مشكلة في شهادة الأمان. يرجى التحقق من إعدادات الإنترنت والمتصفح.';
-                    } else if (errorStr.includes('networkerror') || 
-                               errorStr.includes('failed to fetch') ||
-                               errorStr.includes('timeout') ||
-                               errorStr.includes('network')) {
-                        errorMsg = 'فشل الاتصال بالخادم. يرجى التحقق من الاتصال بالإنترنت وإعادة المحاولة.';
-                    } else if (errorStr.includes('google') && 
-                               (errorStr.includes('غير متاح') || 
-                                errorStr.includes('not available') ||
-                                errorStr.includes('خطأ') ||
-                                errorStr.includes('error'))) {
-                        errorMsg = 'خدمات Google غير متاحة حالياً. يرجى المحاولة لاحقاً أو التحقق من إعدادات Google Sheets.';
-                    }
-                    
-                    // تسجيل قصير للمستخدم
-                    var _shortMsg = (result && result.message && typeof result.message === 'string') ? result.message.split('\n')[0] : errorMsg;
-                    console.error('❌ فشل تسجيل الدخول:', _shortMsg);
-                    
-                    if (typeof window.Notification !== 'undefined') {
-                        window.Notification.error(errorMsg);
-                    } else {
-                        alert(errorMsg);
-                    }
-                    
-                    submitBtn.disabled = false;
-                    submitBtn.innerHTML = originalBtnText;
-                }
-            } catch (error) {
-                console.error('❌ خطأ في تسجيل الدخول:', error);
-                let errorMsg = 'حدث خطأ: ' + (error.message || error);
-                
-                // التحقق من أخطاء الاتصال
-                const errorStr = String(error.message || error || '').toLowerCase();
-                if (errorStr.includes('cert_authority_invalid') || 
-                    errorStr.includes('certificate') ||
-                    errorStr.includes('err_cert') ||
-                    errorStr.includes('ssl') ||
-                    errorStr.includes('tls')) {
-                    errorMsg = 'خطأ في الاتصال بخدمات Google. قد تكون هناك مشكلة في شهادة الأمان. يرجى التحقق من إعدادات الإنترنت والمتصفح.';
-                } else if (errorStr.includes('networkerror') || 
-                           errorStr.includes('failed to fetch') ||
-                           errorStr.includes('timeout') ||
-                           errorStr.includes('network')) {
-                    errorMsg = 'فشل الاتصال بالخادم. يرجى التحقق من الاتصال بالإنترنت وإعادة المحاولة.';
-                } else if (errorStr.includes('google') && 
-                           (errorStr.includes('غير متاح') || 
-                            errorStr.includes('not available') ||
-                            errorStr.includes('خطأ') ||
-                            errorStr.includes('error'))) {
-                    errorMsg = 'خدمات Google غير متاحة حالياً. يرجى المحاولة لاحقاً أو التحقق من إعدادات Google Sheets.';
-                }
-                
-                if (typeof window.Notification !== 'undefined') {
-                    window.Notification.error(errorMsg);
-                } else {
-                    alert(errorMsg);
-                }
-                
-                submitBtn.disabled = false;
-                submitBtn.innerHTML = originalBtnText;
-            }
-        }, true);
-        
         log('✅ تم تفعيل نموذج تسجيل الدخول');
         return true;
     }
@@ -1317,7 +1098,7 @@ Yasser.diab@icapp.com.eg`;
         
         log('⏳ انتظار تحميل الوحدات المطلوبة...');
         let attempts = 0;
-        const maxAttempts = 200; // 20 ثانية كحد أقصى
+        const maxAttempts = 100; // 10 ثوان كحد أقصى
         
         const checkInterval = setInterval(function() {
             attempts++;
@@ -1415,7 +1196,7 @@ Yasser.diab@icapp.com.eg`;
         document.addEventListener('DOMContentLoaded', function() {
             // انتظار تحميل UI و AppState
             let attempts = 0;
-            const maxAttempts = 50; // 5 ثوانٍ
+            const maxAttempts = 25; // 2.5 ثانية
             const checkInterval = setInterval(function() {
                 attempts++;
                 if (updateLoginLogo() || attempts >= maxAttempts) {
@@ -1427,7 +1208,7 @@ Yasser.diab@icapp.com.eg`;
         // DOM محمل بالفعل - محاولة مباشرة
         setTimeout(function() {
             let attempts = 0;
-            const maxAttempts = 50;
+            const maxAttempts = 25;
             const checkInterval = setInterval(function() {
                 attempts++;
                 if (updateLoginLogo() || attempts >= maxAttempts) {
@@ -1439,20 +1220,20 @@ Yasser.diab@icapp.com.eg`;
     
     // تحديث الشعار عند تحميل الصفحة بالكامل
     window.addEventListener('load', function() {
-        setTimeout(updateLoginLogo, 1000);
+        setTimeout(updateLoginLogo, 500);
     });
     
     // الاستماع لتحديثات الشعار
     window.addEventListener('storage', function(e) {
         if (e.key === 'hse_company_logo' || e.key === 'company_logo') {
-            setTimeout(updateLoginLogo, 100);
+            setTimeout(updateLoginLogo, 50);
         }
     });
     
     // الاستماع للأحداث المخصصة لتحديث الشعار
     window.addEventListener('companyLogoUpdated', function(e) {
         if (e.detail && e.detail.logoUrl) {
-            setTimeout(updateLoginLogo, 100);
+            setTimeout(updateLoginLogo, 50);
         }
     });
 })();
@@ -1557,38 +1338,38 @@ Yasser.diab@icapp.com.eg`;
                 
                 // تحديث العدد بشكل دوري
                 let attempts = 0;
-                const maxAttempts = 50;
+                const maxAttempts = 25;
                 const checkInterval = setInterval(function() {
                     attempts++;
                     updateLoginCountDisplay();
                     if (attempts >= maxAttempts) {
                         clearInterval(checkInterval);
                     }
-                }, 200);
-            }, 500);
+                }, 100);
+            }, 250);
         });
     } else {
         setTimeout(function() {
             updateLoginCountDisplay();
             setupPrivacyPolicyLink();
-        }, 500);
+        }, 250);
     }
     
     // تحديث العدد عند تحميل الصفحة بالكامل
     window.addEventListener('load', function() {
-        setTimeout(updateLoginCountDisplay, 1000);
+        setTimeout(updateLoginCountDisplay, 500);
     });
     
     // تحديث العدد عند تغيير البيانات
     window.addEventListener('storage', function(e) {
         if (e.key === 'hse_app_data' || e.key === 'hse_current_session') {
-            setTimeout(updateLoginCountDisplay, 100);
+            setTimeout(updateLoginCountDisplay, 50);
         }
     });
     
     // تحديث العدد عند تسجيل الدخول
     document.addEventListener('loginSuccess', function() {
-        setTimeout(updateLoginCountDisplay, 500);
+        setTimeout(updateLoginCountDisplay, 250);
     });
 })();
 

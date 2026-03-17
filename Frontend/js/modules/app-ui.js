@@ -2224,7 +2224,8 @@ window.UI = {
         }
         const shouldShowPolicy = postLoginItems.length > 0 && shouldShowPolicyByTime;
 
-        if (mainApp) mainApp.style.display = shouldShowPolicy ? 'none' : 'flex';
+        // إظهار التطبيق فوراً، ثم عرض السياسة كطبقة فوقه حتى لا يبدو الدخول "معلّقاً"
+        if (mainApp) mainApp.style.display = 'flex';
 
         if (shouldShowPolicy) {
             document.documentElement.classList.add('hse-post-login-overlay-active');
@@ -4908,7 +4909,7 @@ window.UI = {
                             const scriptUrl = getScriptBase() + 'js/modules/modules/fireequipment.js';
                             if (document.querySelector('script[src*="fireequipment.js"]')) {
                                 tryLoadFireEquipment() || showFireEquipmentError('الموديول لم يُحمّل بشكل صحيح. يرجى تحديث الصفحة.', true);
-                                break;
+                                return;
                             }
                             const script = document.createElement('script');
                             script.src = scriptUrl;
