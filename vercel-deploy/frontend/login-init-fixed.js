@@ -934,8 +934,7 @@ function checkDependencies() {
     const missing = [];
     if (typeof window.Auth === 'undefined') missing.push('Auth');
     if (typeof window.DataManager === 'undefined') missing.push('DataManager');
-    if (typeof window.UI === 'undefined') missing.push('UI');
-    if (typeof window.Notification === 'undefined') missing.push('Notification');
+    // ملاحظة: UI و Notification ليستا شرطاً لتسجيل الدخول نفسه (يمكن عرض رسالة عبر alert والانتقال لـ App.load كبديل)
     return { ok: missing.length === 0, missing };
 }
 
