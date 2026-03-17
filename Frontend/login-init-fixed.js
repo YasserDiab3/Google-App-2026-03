@@ -1,5 +1,9 @@
 console.log('🟢 login-init-fixed.js loaded successfully!');
 
+// دالة log في النطاق العام — تُغطَّى داخل الـ IIFE بنسخة أكثر تفصيلاً
+// ضرورية لـ handleLogin والدوال الخارج عن الـ IIFE
+var log = function() { try { console.log.apply(console, arguments); } catch(e) {} };
+
 // ===== تهيئة مباشرة لشاشة تسجيل الدخول - نسخة محسنة ومحلولة =====
 
 // عزل هذا الملف بالكامل لتجنب تلويث الـ global scope (خصوصاً اسم log)
