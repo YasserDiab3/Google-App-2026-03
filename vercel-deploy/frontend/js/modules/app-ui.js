@@ -4271,6 +4271,41 @@ window.UI = {
         const nameEl = document.getElementById('userDisplayName');
         const emailEl = document.getElementById('adminEmail');
         const mobileUserName = document.getElementById('mobile-user-name');
+        const factoryEl = document.getElementById('userFactoryDisplay');
+        const subLocationEl = document.getElementById('userSubLocationDisplay');
+
+        const resolveFactoryName = (user) => {
+            try {
+                if (!user) return '';
+                const direct = (user.factoryName || user.plantName || user.siteName || '').toString().trim();
+                if (direct) return direct;
+                const factoryId = (user.factoryId || user.factory || user.plant || user.siteId || user.site || '').toString().trim();
+                if (!factoryId) return '';
+                const sites = Array.isArray(AppState.appData?.observationSites) ? AppState.appData.observationSites : [];
+                const site = sites.find(s => String(s?.id || '').trim() === factoryId);
+                return (site?.name || '').toString().trim();
+            } catch (e) {
+                return '';
+            }
+        };
+
+        const resolveSubLocationName = (user) => {
+            try {
+                if (!user) return '';
+                const direct = (user.subLocationName || user.placeName || user.subSiteName || '').toString().trim();
+                if (direct) return direct;
+                const factoryId = (user.factoryId || user.factory || user.plant || user.siteId || user.site || '').toString().trim();
+                const placeId = (user.subLocationId || user.subLocation || user.placeId || user.place || user.subSite || user.subsite || '').toString().trim();
+                if (!factoryId || !placeId) return '';
+                const sites = Array.isArray(AppState.appData?.observationSites) ? AppState.appData.observationSites : [];
+                const site = sites.find(s => String(s?.id || '').trim() === factoryId);
+                const places = Array.isArray(site?.places) ? site.places : [];
+                const place = places.find(p => String(p?.id || '').trim() === placeId);
+                return (place?.name || '').toString().trim();
+            } catch (e) {
+                return '';
+            }
+        };
 
         if (AppState.currentUser) {
             if (nameEl) nameEl.textContent = AppState.currentUser.name;
@@ -4279,11 +4314,24 @@ window.UI = {
                 mobileUserName.textContent = AppState.currentUser.email || '';
                 mobileUserName.style.display = AppState.currentUser.email ? 'block' : 'none';
             }
+
+            if (factoryEl) {
+                const factoryName = resolveFactoryName(AppState.currentUser);
+                factoryEl.textContent = factoryName ? `المصنع: ${factoryName}` : '';
+                factoryEl.style.display = factoryName ? 'block' : 'none';
+            }
+            if (subLocationEl) {
+                const subName = resolveSubLocationName(AppState.currentUser);
+                subLocationEl.textContent = subName ? `الموقع الفرعي: ${subName}` : '';
+                subLocationEl.style.display = subName ? 'block' : 'none';
+            }
         } else {
             if (nameEl) nameEl.textContent = 'المستخدم';
             if (emailEl) emailEl.textContent = 'user@example.com';
             if (mobileUserName) mobileUserName.textContent = '';
             if (mobileUserName) mobileUserName.style.display = 'none';
+            if (factoryEl) { factoryEl.textContent = ''; factoryEl.style.display = 'none'; }
+            if (subLocationEl) { subLocationEl.textContent = ''; subLocationEl.style.display = 'none'; }
         }
         // تحديث صورة المستخدم
         this.updateUserProfilePhoto();

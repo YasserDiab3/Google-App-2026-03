@@ -466,9 +466,18 @@ window.Auth = {
                 passwordHash: foundUser.passwordHash || '',
                 role: foundUser.role || 'user',
                 department: foundUser.department || '',
+                // ✅ حقول المصنع/الموقع الفرعي (اختيارية) لدعم الظهور بعد التحميل
+                factory: foundUser.factory || foundUser.factoryId || foundUser.plant || foundUser.siteId || foundUser.site || foundUser.location || '',
+                factoryId: foundUser.factoryId || foundUser.factory || foundUser.plantId || foundUser.siteId || '',
+                factoryName: foundUser.factoryName || foundUser.plantName || foundUser.siteName || foundUser.locationName || '',
+                subLocation: foundUser.subLocation || foundUser.subLocationId || foundUser.subSite || foundUser.subsite || foundUser.placeId || foundUser.place || foundUser.branch || '',
+                subLocationId: foundUser.subLocationId || foundUser.placeId || foundUser.subLocation || '',
+                subLocationName: foundUser.subLocationName || foundUser.placeName || foundUser.subSiteName || foundUser.subsiteName || '',
+                branch: foundUser.branch || foundUser.branchName || '',
                 permissions: foundUser.permissions || {},
                 id: foundUser.id,
-                email: foundUser.email
+                email: foundUser.email,
+                photo: foundUser.photo || ''
             };
 
             console.log('✅ [AUTH] user.name النهائي:', user.name);
@@ -1471,6 +1480,13 @@ window.Auth = {
                             name: AppState.currentUser.name,
                             role: AppState.currentUser.role,
                             department: AppState.currentUser.department,
+                            factory: AppState.currentUser.factory || AppState.currentUser.factoryId || '',
+                            factoryId: AppState.currentUser.factoryId || AppState.currentUser.factory || '',
+                            factoryName: AppState.currentUser.factoryName || '',
+                            subLocation: AppState.currentUser.subLocation || AppState.currentUser.subLocationId || '',
+                            subLocationId: AppState.currentUser.subLocationId || AppState.currentUser.subLocation || '',
+                            subLocationName: AppState.currentUser.subLocationName || '',
+                            branch: AppState.currentUser.branch || '',
                             permissions: AppState.currentUser.permissions,
                             id: AppState.currentUser.id,
                             loginTime: AppState.currentUser.loginTime,
@@ -1730,6 +1746,14 @@ window.Auth = {
                 name: updatedName, // ✅ استخدام updatedName بدلاً من dbUser.name مباشرة
                 role: dbUser.role || AppState.currentUser.role,
                 department: dbUser.department || AppState.currentUser.department,
+                // ✅ الحفاظ/تحديث حقول المصنع/الموقع الفرعي من قاعدة البيانات إن وُجدت
+                factory: dbUser.factory || dbUser.factoryId || dbUser.plant || dbUser.siteId || dbUser.site || dbUser.location || AppState.currentUser.factory || '',
+                factoryId: dbUser.factoryId || dbUser.factory || dbUser.plantId || dbUser.siteId || AppState.currentUser.factoryId || '',
+                factoryName: dbUser.factoryName || dbUser.plantName || dbUser.siteName || dbUser.locationName || AppState.currentUser.factoryName || '',
+                subLocation: dbUser.subLocation || dbUser.subLocationId || dbUser.subSite || dbUser.subsite || dbUser.placeId || dbUser.place || dbUser.branch || AppState.currentUser.subLocation || '',
+                subLocationId: dbUser.subLocationId || dbUser.placeId || dbUser.subLocation || AppState.currentUser.subLocationId || '',
+                subLocationName: dbUser.subLocationName || dbUser.placeName || dbUser.subSiteName || dbUser.subsiteName || AppState.currentUser.subLocationName || '',
+                branch: dbUser.branch || dbUser.branchName || AppState.currentUser.branch || '',
                 permissions: finalPermissions, // استخدام الصلاحيات المطبعة والمدققة
                 active: dbUser.active !== undefined ? dbUser.active : AppState.currentUser.active,
                 photo: dbUser.photo || AppState.currentUser.photo,
@@ -1752,6 +1776,13 @@ window.Auth = {
                 name: AppState.currentUser.name,
                 role: AppState.currentUser.role,
                 department: AppState.currentUser.department,
+                factory: AppState.currentUser.factory || AppState.currentUser.factoryId || '',
+                factoryId: AppState.currentUser.factoryId || AppState.currentUser.factory || '',
+                factoryName: AppState.currentUser.factoryName || '',
+                subLocation: AppState.currentUser.subLocation || AppState.currentUser.subLocationId || '',
+                subLocationId: AppState.currentUser.subLocationId || AppState.currentUser.subLocation || '',
+                subLocationName: AppState.currentUser.subLocationName || '',
+                branch: AppState.currentUser.branch || '',
                 permissions: permissionsToSave, // استخدام الصلاحيات المدققة
                 id: AppState.currentUser.id,
                 loginTime: AppState.currentUser.loginTime,
