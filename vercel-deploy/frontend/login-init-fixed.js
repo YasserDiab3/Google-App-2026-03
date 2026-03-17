@@ -751,12 +751,43 @@ async function handleLogin(form, submitBtn) {
         return;
     }
     
-    // التحقق من الوحدات
-    if (!checkDependencies()) {
-        const errorMsg = 'نظام المصادقة غير جاهز. يرجى تحديث الصفحة.';
-        console.error('❌', errorMsg);
-        alert(errorMsg);
-        return;
+    // التحقق من الوحدات (مع انتظار قصير لتفادي بطء تحميل defer/503 المؤقت)
+    let deps = checkDependencies();
+    if (deps && deps.ok === false) {
+        const start = Date.now();
+        const maxWaitMs = 5000;
+
+        const originalBtnText = submitBtn.innerHTML;
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin ml-2"></i> جاري تجهيز النظام...';
+
+        while (deps.ok === false && Date.now() - start < maxWaitMs) {
+            await new Promise(r => setTimeout(r, 200));
+            deps = checkDependencies();
+        }
+
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = originalBtnText;
+
+        if (deps.ok === false) {
+            const missingStr = Array.isArray(deps.missing) ? deps.missing.join(', ') : '';
+            const errorMsg = 'نظام المصادقة غير جاهز. يرجى تحديث الصفحة.' + (missingStr ? `\n\nالوحدات غير المحمّلة: ${missingStr}` : '');
+            console.error('❌', errorMsg);
+            if (typeof window.Notification !== 'undefined' && typeof window.Notification.error === 'function') {
+                window.Notification.error(errorMsg);
+            } else {
+                alert(errorMsg);
+            }
+            return;
+        }
+    } else if (!deps) {
+        // توافق مع النسخة القديمة من checkDependencies التي تُرجع boolean
+        if (!checkDependencies()) {
+            const errorMsg = 'نظام المصادقة غير جاهز. يرجى تحديث الصفحة.';
+            console.error('❌', errorMsg);
+            alert(errorMsg);
+            return;
+        }
     }
     
     // تعطيل الزر
@@ -900,10 +931,12 @@ if (typeof window !== 'undefined') {
 
 // Global checkDependencies for handleLogin
 function checkDependencies() {
-    return typeof window.Auth !== 'undefined' && 
-           typeof window.DataManager !== 'undefined' && 
-           typeof window.UI !== 'undefined' && 
-           typeof window.Notification !== 'undefined';
+    const missing = [];
+    if (typeof window.Auth === 'undefined') missing.push('Auth');
+    if (typeof window.DataManager === 'undefined') missing.push('DataManager');
+    if (typeof window.UI === 'undefined') missing.push('UI');
+    if (typeof window.Notification === 'undefined') missing.push('Notification');
+    return { ok: missing.length === 0, missing };
 }
 
 // ===== تهيئة نموذج تسجيل الدخول =====
@@ -911,6 +944,11 @@ function checkDependencies() {
     'use strict';
     
     function checkDependencies() {
+        // استخدم نفس checkDependencies العالمي (يعيد {ok, missing})
+        try {
+            const res = window.checkDependencies ? window.checkDependencies() : null;
+            if (res && typeof res.ok === 'boolean') return res.ok;
+        } catch (e) { /* ignore */ }
         return typeof window.Auth !== 'undefined' && 
                typeof window.DataManager !== 'undefined' && 
                typeof window.UI !== 'undefined' && 
