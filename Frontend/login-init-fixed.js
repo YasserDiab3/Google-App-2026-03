@@ -530,7 +530,6 @@ Yasser.diab@icapp.com.eg`;
             return true;
         }
         
-        // إظهار/إخفاء القائمة المنسدلة بشكل صريح لضمان عملها
         function showDropdown() {
             langDropdown.classList.remove('hidden');
             langDropdown.classList.add('show');
