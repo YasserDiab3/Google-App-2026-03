@@ -6936,10 +6936,12 @@ const Training = {
         const trainingType = training.trainingType || 'داخلي';
         const trainingTypeLabel = trainingType === 'خارجي' ? 'خارجي' : 'داخلي';
 
-        // تنسيق الأوقات
-        const startTime = training.startTime ? (this.cleanTime(training.startTime) || '-') : '-';
-        const endTime = training.endTime ? (this.cleanTime(training.endTime) || '-') : '-';
-        const hours = training.hours || '-';
+        // تنسيق الأوقات — تطابق كامل مع البيانات المعزولة
+        const startTimeRaw = training.startTime != null && String(training.startTime).trim() !== '';
+        const endTimeRaw = training.endTime != null && String(training.endTime).trim() !== '';
+        const startTime = startTimeRaw ? (this.cleanTime(training.startTime) || String(training.startTime).trim()) : '-';
+        const endTime = endTimeRaw ? (this.cleanTime(training.endTime) || String(training.endTime).trim()) : '-';
+        const hours = training.hours != null && String(training.hours).trim() !== '' ? training.hours : '-';
 
         // الحالة
         const status = training.status || '';
@@ -6961,44 +6963,44 @@ const Training = {
                 </div>
                 <div class="modal-body" style="padding: 1.5rem;">
                     <div class="grid grid-cols-2 gap-4 mb-4">
-                        <div class="p-3 bg-gray-50 rounded-lg">
-                            <label class="text-sm font-semibold text-gray-600 block mb-1">المدرب:</label>
+                        <div class="p-3 rounded-lg" style="background: #EFF6FF; border-right: 4px solid #3B82F6;">
+                            <label class="text-sm font-semibold block mb-1" style="color: #1D4ED8;">المدرب:</label>
                             <p class="text-gray-800">${Utils.escapeHTML(training.trainer || '-')}</p>
                         </div>
-                        <div class="p-3 bg-gray-50 rounded-lg">
-                            <label class="text-sm font-semibold text-gray-600 block mb-1">نوع التدريب:</label>
+                        <div class="p-3 rounded-lg" style="background: #EFF6FF; border-right: 4px solid #3B82F6;">
+                            <label class="text-sm font-semibold block mb-1" style="color: #1D4ED8;">نوع التدريب:</label>
                             <span class="badge badge-${trainingType === 'خارجي' ? 'warning' : 'info'}">${Utils.escapeHTML(trainingTypeLabel)}</span>
                         </div>
-                        <div class="p-3 bg-gray-50 rounded-lg">
-                            <label class="text-sm font-semibold text-gray-600 block mb-1">تاريخ البدء:</label>
+                        <div class="p-3 rounded-lg" style="background: #ECFDF5; border-right: 4px solid #10B981;">
+                            <label class="text-sm font-semibold block mb-1" style="color: #047857;">تاريخ البدء:</label>
                             <p class="text-gray-800">${training.startDate ? Utils.formatDate(training.startDate) : '-'}</p>
                         </div>
-                        <div class="p-3 bg-gray-50 rounded-lg">
-                            <label class="text-sm font-semibold text-gray-600 block mb-1">الحالة:</label>
+                        <div class="p-3 rounded-lg" style="background: #ECFDF5; border-right: 4px solid #10B981;">
+                            <label class="text-sm font-semibold block mb-1" style="color: #047857;">الحالة:</label>
                             <span class="badge badge-${statusBadge}">${Utils.escapeHTML(statusDisplay || '-')}</span>
                         </div>
-                        <div class="p-3 bg-gray-50 rounded-lg">
-                            <label class="text-sm font-semibold text-gray-600 block mb-1">المصنع:</label>
+                        <div class="p-3 rounded-lg" style="background: #FFFBEB; border-right: 4px solid #F59E0B;">
+                            <label class="text-sm font-semibold block mb-1" style="color: #B45309;">المصنع:</label>
                             <p class="text-gray-800">${Utils.escapeHTML(factoryName || '-')}</p>
                         </div>
-                        <div class="p-3 bg-gray-50 rounded-lg">
-                            <label class="text-sm font-semibold text-gray-600 block mb-1">مكان التدريب:</label>
+                        <div class="p-3 rounded-lg" style="background: #FFFBEB; border-right: 4px solid #F59E0B;">
+                            <label class="text-sm font-semibold block mb-1" style="color: #B45309;">مكان التدريب:</label>
                             <p class="text-gray-800"><i class="fas fa-map-marker-alt ml-1 text-gray-400"></i> ${Utils.escapeHTML(locationName || '-')}</p>
                         </div>
-                        <div class="p-3 bg-gray-50 rounded-lg">
-                            <label class="text-sm font-semibold text-gray-600 block mb-1">وقت البدء:</label>
-                            <p class="text-gray-800">${Utils.escapeHTML(startTime)}</p>
+                        <div class="p-3 rounded-lg" style="background: #F5F3FF; border-right: 4px solid #8B5CF6;">
+                            <label class="text-sm font-semibold block mb-1" style="color: #6D28D9;">وقت البدء:</label>
+                            <p class="text-gray-800 font-medium">${Utils.escapeHTML(startTime)}</p>
                         </div>
-                        <div class="p-3 bg-gray-50 rounded-lg">
-                            <label class="text-sm font-semibold text-gray-600 block mb-1">وقت الانتهاء:</label>
-                            <p class="text-gray-800">${Utils.escapeHTML(endTime)}</p>
+                        <div class="p-3 rounded-lg" style="background: #F5F3FF; border-right: 4px solid #8B5CF6;">
+                            <label class="text-sm font-semibold block mb-1" style="color: #6D28D9;">وقت الانتهاء:</label>
+                            <p class="text-gray-800 font-medium">${Utils.escapeHTML(endTime)}</p>
                         </div>
-                        <div class="p-3 bg-gray-50 rounded-lg">
-                            <label class="text-sm font-semibold text-gray-600 block mb-1">عدد المشاركين:</label>
+                        <div class="p-3 rounded-lg" style="background: #FFF1F2; border-right: 4px solid #E11D48;">
+                            <label class="text-sm font-semibold block mb-1" style="color: #BE123C;">عدد المشاركين:</label>
                             <p class="text-gray-800">${this.getParticipantsCount(training)}</p>
                         </div>
-                        <div class="p-3 bg-gray-50 rounded-lg">
-                            <label class="text-sm font-semibold text-gray-600 block mb-1">ساعات التدريب:</label>
+                        <div class="p-3 rounded-lg" style="background: #FFF1F2; border-right: 4px solid #E11D48;">
+                            <label class="text-sm font-semibold block mb-1" style="color: #BE123C;">ساعات التدريب:</label>
                             <p class="text-gray-800">${Utils.escapeHTML(hours)} ${hours !== '-' ? 'ساعة' : ''}</p>
                         </div>
                     </div>
@@ -7046,6 +7048,10 @@ const Training = {
                 </div>
                 <div class="modal-footer">
                     <button class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">إغلاق</button>
+                    <button type="button" class="btn-secondary" onclick="Training.printTraining('${training.id}'); this.closest('.modal-overlay').remove();" style="display: inline-flex; align-items: center; gap: 6px;">
+                        <i class="fas fa-print"></i>
+                        الطباعة
+                    </button>
                     <button class="btn-primary" onclick="Training.editTraining('${training.id}'); this.closest('.modal-overlay').remove();">
                         <i class="fas fa-edit ml-2"></i>
                         تعديل
@@ -8122,16 +8128,32 @@ const Training = {
             const maxRows = Math.max(participants.length, 20);
             const rowsHtml = Array.from({ length: maxRows }, (_, idx) => {
                 const p = participants[idx];
-                const name = p ? Utils.escapeHTML(p.name || p.contractorName || '') : '';
-                const code = p ? Utils.escapeHTML(p.code || p.employeeNumber || p.employeeCode || '') : '';
-                const job = p ? Utils.escapeHTML(p.position || p.jobTitle || '') : '';
+                if (!p) {
+                    return `
+                    <tr>
+                        <td style="border:1px solid #333; padding:8px; text-align:center; width:40px;">${idx + 1}</td>
+                        <td style="border:1px solid #333; padding:8px; text-align:center; width:90px;"></td>
+                        <td style="border:1px solid #333; padding:8px; text-align:right;"></td>
+                        <td style="border:1px solid #333; padding:8px; text-align:right;"></td>
+                        <td style="border:1px solid #333; padding:8px; min-width:80px;">&nbsp;</td>
+                    </tr>`;
+                }
+                const isContractor = p.type === 'contractor' || p.personType === 'contractor';
+                const nameDisplay = p.name || p.contractorName || '';
+                const codeDisplay = p.code || p.employeeNumber || p.employeeCode || '';
+                const jobDisplay = isContractor ? (p.company || p.contractorCompany || '') : (p.position || p.jobTitle || '');
+                const signatureDisplay = nameDisplay;
+                const name = Utils.escapeHTML(nameDisplay);
+                const code = Utils.escapeHTML(codeDisplay);
+                const job = Utils.escapeHTML(jobDisplay);
+                const signature = Utils.escapeHTML(signatureDisplay);
                 return `
                     <tr>
                         <td style="border:1px solid #333; padding:8px; text-align:center; width:40px;">${idx + 1}</td>
                         <td style="border:1px solid #333; padding:8px; text-align:center; width:90px;">${code}</td>
                         <td style="border:1px solid #333; padding:8px; text-align:right;">${name}</td>
                         <td style="border:1px solid #333; padding:8px; text-align:right;">${job}</td>
-                        <td style="border:1px solid #333; padding:8px; min-width:80px;">&nbsp;</td>
+                        <td style="border:1px solid #333; padding:8px; min-width:80px;">${signature}</td>
                     </tr>`;
             }).join('');
 
