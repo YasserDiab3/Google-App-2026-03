@@ -8089,7 +8089,7 @@ const Training = {
 
     async printTraining(id) {
         this.ensureData();
-        const training = AppState.appData.training.find(t => t.id === id);
+        let training = AppState.appData.training.find(t => t.id === id);
         if (!training) {
             Notification.error('البرنامج غير موجود');
             return;
@@ -8097,7 +8097,15 @@ const Training = {
 
         try {
             Loading.show();
-            
+            if (typeof GoogleIntegration !== 'undefined' && typeof GoogleIntegration.sendRequest === 'function') {
+                try {
+                    const res = await GoogleIntegration.sendRequest({ action: 'getTraining', data: { trainingId: id } });
+                    if (res && res.success && res.data) training = res.data;
+                } catch (e) {
+                    Utils.safeWarn('جلب تفاصيل البرنامج للطباعة:', e);
+                }
+            }
+
             // الحصول على اسم المكان
             let locationName = training.locationName || '';
             if (!locationName && training.location) {
@@ -8242,7 +8250,7 @@ const Training = {
 
     async exportTraining(id) {
         this.ensureData();
-        const training = AppState.appData.training.find(t => t.id === id);
+        let training = AppState.appData.training.find(t => t.id === id);
         if (!training) {
             Notification.error('البرنامج غير موجود');
             return;
@@ -8250,6 +8258,14 @@ const Training = {
 
         try {
             Loading.show();
+            if (typeof GoogleIntegration !== 'undefined' && typeof GoogleIntegration.sendRequest === 'function') {
+                try {
+                    const res = await GoogleIntegration.sendRequest({ action: 'getTraining', data: { trainingId: id } });
+                    if (res && res.success && res.data) training = res.data;
+                } catch (e) {
+                    Utils.safeWarn('جلب تفاصيل البرنامج للتصدير:', e);
+                }
+            }
 
             if (typeof XLSX === 'undefined') {
                 Loading.hide();
