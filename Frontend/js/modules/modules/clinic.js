@@ -8346,7 +8346,7 @@ const Clinic = {
         });
     },
 
-    async showVisitForm(visitData = null, registerVisitBtn = null) {
+    showVisitForm(visitData = null, registerVisitBtn = null) {
         const isEdit = !!visitData;
         const content = document.getElementById('clinic-section');
         if (!content) {
@@ -8354,18 +8354,16 @@ const Clinic = {
             return;
         }
 
-        const reEnableButton = () => {
-            if (registerVisitBtn) registerVisitBtn.disabled = false;
-        };
         try {
             this.ensureData();
-            if (typeof Permissions !== 'undefined' && Permissions.ensureFormSettingsState) {
-                try { await Permissions.ensureFormSettingsState(); } catch (e) { /* ignore */ }
-            }
         } catch (e) {
-            reEnableButton();
+            if (registerVisitBtn) registerVisitBtn.disabled = false;
             Utils.safeError('خطأ في تحضير نموذج الزيارة:', e);
             return;
+        }
+        // تشغيل الصلاحيات في الخلفية دون انتظار لفتح النموذج فوراً
+        if (typeof Permissions !== 'undefined' && Permissions.ensureFormSettingsState) {
+            Permissions.ensureFormSettingsState().catch(() => {});
         }
 
         const modal = document.createElement('div');
