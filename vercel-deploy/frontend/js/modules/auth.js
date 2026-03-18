@@ -1962,7 +1962,8 @@ window.Auth = {
             // خريطة أوراق Google Sheets إلى مفاتيح AppState
             const sheetToKeyMap = {
                 'Incidents': 'incidents',
-                'NearMiss': 'nearMiss',
+                // key in AppState is `nearmiss` (not `nearMiss`)
+                'NearMiss': 'nearmiss',
                 'PTW': 'ptw',
                 'PTWRegistry': 'ptwRegistry',
                 'Training': 'training',
@@ -2110,6 +2111,17 @@ window.Auth = {
             }
 
             Utils.safeLog('✅ اكتمل تحميل بيانات جميع الموديولات المسموح بها');
+
+            // تحديث الواجهة مباشرة بعد اكتمال تحميل بيانات الموديولات
+            try {
+                if (typeof window !== 'undefined' &&
+                    window.UI &&
+                    typeof window.UI.refreshCurrentSection === 'function') {
+                    window.UI.refreshCurrentSection(true); // silent = true
+                }
+            } catch (uiError) {
+                Utils.safeWarn('⚠️ فشل تحديث الواجهة بعد تحميل الموديولات:', uiError);
+            }
         } catch (error) {
             Utils.safeError('❌ خطأ في تحميل بيانات الموديولات:', error);
         }

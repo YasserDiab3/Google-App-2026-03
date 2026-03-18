@@ -2931,7 +2931,8 @@ window.UI = {
                     AppState.googleConfig?.appsScript?.enabled && 
                     AppState.googleConfig?.appsScript?.scriptUrl &&
                     typeof GoogleIntegration !== 'undefined' &&
-                    typeof GoogleIntegration.syncData === 'function') {
+                    typeof GoogleIntegration.syncData === 'function' &&
+                    !AppState.isPageRefresh) {
                     
                     // تحميل البيانات في الخلفية (silent = true) بشكل تلقائي
                     GoogleIntegration.syncData({

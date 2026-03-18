@@ -2758,11 +2758,19 @@ const GoogleIntegration = {
                             if (key) {
                                 // ✅ التأكد من أن البيانات هي array
                                 if (Array.isArray(data)) {
-                                    AppState.appData[key] = data;
-                                    if (data.length > 0) {
+                                    const oldData = Array.isArray(AppState.appData[key]) ? AppState.appData[key] : [];
+                                    // ✅ حماية: لا نُبدّل البيانات المحلية بمصفوفة فارغة (عند نجاح القراءة لكن بدون محتوى)
+                                    const shouldKeepOld = data.length === 0 && oldData.length > 0;
+                                    const effectiveData = shouldKeepOld ? oldData : data;
+
+                                    if (!shouldKeepOld) {
+                                        AppState.appData[key] = data;
+                                    }
+
+                                    if (effectiveData.length > 0) {
                                         syncedCount++;
                                         if (shouldLog) {
-                                            Utils.safeLog(`✅ تم تحميل ${sheetName}: ${data.length} سجل`);
+                                            Utils.safeLog(`✅ تم تحميل ${sheetName}: ${effectiveData.length} سجل`);
                                         }
                                     } else if (shouldLog) {
                                         Utils.safeLog(`✅ ${sheetName} فارغة (تم التحميل بنجاح)`);
@@ -2922,11 +2930,19 @@ const GoogleIntegration = {
 
                 // ✅ تحسين: التأكد من أن البيانات هي array قبل التحديث
                 if (Array.isArray(data)) {
-                    AppState.appData[key] = data;
-                    if (data.length > 0) {
+                    const oldData = Array.isArray(AppState.appData[key]) ? AppState.appData[key] : [];
+                    // ✅ حماية: لا نُبدّل البيانات المحلية بمصفوفة فارغة
+                    const shouldKeepOld = data.length === 0 && oldData.length > 0;
+                    const effectiveData = shouldKeepOld ? oldData : data;
+
+                    if (!shouldKeepOld) {
+                        AppState.appData[key] = data;
+                    }
+
+                    if (effectiveData.length > 0) {
                         syncedCount++;
                         if (shouldLog) {
-                            Utils.safeLog(`✅ تم تحديث بيانات الورقة ${sheetName} بنجاح: ${data.length} سجل`);
+                            Utils.safeLog(`✅ تم تحديث بيانات الورقة ${sheetName} بنجاح: ${effectiveData.length} سجل`);
                         }
                     } else if (shouldLog) {
                         Utils.safeLog(`✅ الورقة ${sheetName} فارغة في Google Sheets (تم الاحتفاظ بالبيانات المحلية)`);

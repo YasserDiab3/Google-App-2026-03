@@ -212,11 +212,19 @@
                 }
                 
                 if (Array.isArray(data)) {
-                    AppState.appData[key] = data;
-                    if (data.length > 0) {
+                    const oldData = Array.isArray(AppState.appData[key]) ? AppState.appData[key] : [];
+                    // ✅ حماية: لا نُبدّل البيانات المحلية بمصفوفة فارغة
+                    const shouldKeepOld = data.length === 0 && oldData.length > 0;
+                    const effectiveData = shouldKeepOld ? oldData : data;
+
+                    if (!shouldKeepOld) {
+                        AppState.appData[key] = data;
+                    }
+
+                    if (effectiveData.length > 0) {
                         syncedInBatch++;
                         if (shouldLog) {
-                            Utils.safeLog(`✅ تم تحميل ${data.length} سجل من ${sheetName}`);
+                            Utils.safeLog(`✅ تم تحميل ${effectiveData.length} سجل من ${sheetName}`);
                         }
                     } else if (shouldLog) {
                         Utils.safeLog(`✅ ${sheetName} فارغة (تم التخطي بشكل آمن)`);
