@@ -5695,6 +5695,56 @@ const EmployeeHelper = {
         return Array.isArray(employees) ? employees : [];
     },
 
+    _lookupSeq: 0,
+    _employeesLoadPromise: null,
+
+    /**
+     * تحميل بيانات الموظفين عند الحاجة (lazy load).
+     * هذا مهم لأن بعض نماذج `clinic.js` تعتمد على EmployeeHelper بدون استدعاء تحميل الموظفين.
+     */
+    async ensureEmployeesLoaded({ includeInactive = true } = {}) {
+        try {
+            const employees = this.getEmployees();
+            if (Array.isArray(employees) && employees.length > 0) return true;
+
+            // إذا كان هناك تحميل جارٍ، انتظر نفس الـ Promise.
+            if (this._employeesLoadPromise) {
+                await this._employeesLoadPromise;
+                const after = this.getEmployees();
+                return Array.isArray(after) && after.length > 0;
+            }
+
+            // تشغيل بدون Backend (file://) أو عدم وجود GoogleIntegration/Config.
+            if (AppState?.runningWithoutBackend) return false;
+            if (typeof GoogleIntegration === 'undefined' || typeof GoogleIntegration.sendRequest !== 'function') return false;
+            if (!AppState?.googleConfig?.appsScript?.enabled || !AppState?.googleConfig?.appsScript?.scriptUrl) return false;
+
+            this._employeesLoadPromise = (async () => {
+                const result = await GoogleIntegration.sendRequest({
+                    action: 'getAllEmployees',
+                    data: { filters: { includeInactive } }
+                });
+
+                if (result && result.success && Array.isArray(result.data)) {
+                    AppState.appData = AppState.appData || {};
+                    AppState.appData.employees = result.data;
+                    if (typeof window.DataManager !== 'undefined' && typeof window.DataManager.save === 'function') {
+                        window.DataManager.save();
+                    }
+                    return true;
+                }
+
+                return false;
+            })();
+
+            return await this._employeesLoadPromise;
+        } catch (e) {
+            return false;
+        } finally {
+            this._employeesLoadPromise = null;
+        }
+    },
+
     normalize(value) {
         if (value === undefined || value === null) return '';
         return String(value).trim();
@@ -5796,7 +5846,7 @@ const EmployeeHelper = {
         if (!codeInput) return;
 
         const nameInput = nameInputId ? document.getElementById(nameInputId) : null;
-        const performLookup = () => {
+        const performLookup = async () => {
             const term = this.normalize(codeInput.value);
             if (!term) {
                 if (nameInput) nameInput.value = '';
@@ -5804,29 +5854,41 @@ const EmployeeHelper = {
                 return;
             }
 
+            const lookupSeq = ++this._lookupSeq;
+            // تأكد من وجود بيانات الموظفين قبل البحث.
+            await this.ensureEmployeesLoaded({ includeInactive: true });
+
+            // إذا حدثت محاولة بحث أحدث أثناء انتظار التحميل، تجاهل هذه المحاولة.
+            if (lookupSeq !== this._lookupSeq) return;
+
             const employee = this.findByTerm(term);
             if (employee) {
                 const primaryCode = this.getPrimaryCode(employee);
-                if (primaryCode) {
-                    codeInput.value = primaryCode;
-                }
-                if (nameInput) {
-                    nameInput.value = employee.name || '';
-                }
+                if (primaryCode) codeInput.value = primaryCode;
+                if (nameInput) nameInput.value = employee.name || '';
                 onSelect?.(employee);
-            } else {
-                onSelect?.(null);
-                if (typeof Notification !== 'undefined' && term.length >= 4) {
-                    Notification.warning('لم يتم العثور على موظف بهذا الكود أو الاسم');
-                }
+                return;
+            }
+
+            onSelect?.(null);
+            if (typeof Notification !== 'undefined' && term.length >= 4) {
+                Notification.warning('لم يتم العثور على موظف بهذا الكود أو الاسم');
             }
         };
 
         const handleKeyDown = (event) => {
             if (event.key === 'Enter') {
                 event.preventDefault();
-                performLookup();
+                performLookup().catch(() => {});
             }
+        };
+
+        let inputTimeout = null;
+        const handleInput = () => {
+            if (inputTimeout) clearTimeout(inputTimeout);
+            inputTimeout = setTimeout(() => {
+                performLookup().catch(() => {});
+            }, 300);
         };
 
         if (codeInput._employeeHelperLookup) {
@@ -5836,13 +5898,18 @@ const EmployeeHelper = {
         if (codeInput._employeeHelperKeyDown) {
             codeInput.removeEventListener('keydown', codeInput._employeeHelperKeyDown);
         }
+        if (codeInput._employeeHelperInput) {
+            codeInput.removeEventListener('input', codeInput._employeeHelperInput);
+        }
 
         codeInput._employeeHelperLookup = performLookup;
         codeInput._employeeHelperKeyDown = handleKeyDown;
+        codeInput._employeeHelperInput = handleInput;
 
-        codeInput.addEventListener('change', performLookup);
-        codeInput.addEventListener('blur', performLookup);
+        codeInput.addEventListener('change', () => performLookup().catch(() => {}));
+        codeInput.addEventListener('blur', () => performLookup().catch(() => {}));
         codeInput.addEventListener('keydown', handleKeyDown);
+        codeInput.addEventListener('input', handleInput);
     },
 
     setupAutocomplete(nameInputId, onSelect = null) {
@@ -5857,24 +5924,36 @@ const EmployeeHelper = {
             document.body.appendChild(dataList);
         }
 
-        const optionsHTML = this.getEmployees().map(emp => {
-            const display = Utils.escapeHTML(this.formatEmployeeDisplay(emp));
-            const value = Utils.escapeHTML(emp?.name || '');
-            return `<option value="${value}" data-code="${Utils.escapeHTML(this.getPrimaryCode(emp))}">${display}</option>`;
-        }).join('');
-        dataList.innerHTML = optionsHTML;
+        const rebuildOptions = () => {
+            const optionsHTML = this.getEmployees().map(emp => {
+                const display = Utils.escapeHTML(this.formatEmployeeDisplay(emp));
+                const value = Utils.escapeHTML(emp?.name || '');
+                return `<option value="${value}" data-code="${Utils.escapeHTML(this.getPrimaryCode(emp))}">${display}</option>`;
+            }).join('');
+            dataList.innerHTML = optionsHTML;
+        };
+
+        rebuildOptions();
+
+        // Lazy load: أعد بناء الداتا لست إذا كانت employees غير محمّلة.
+        this.ensureEmployeesLoaded({ includeInactive: true }).then(() => rebuildOptions()).catch(() => {});
+
         input.setAttribute('list', listId);
 
-        const handleSelection = () => {
+        const handleSelection = async () => {
             const term = this.normalize(input.value);
             if (!term) {
                 onSelect?.(null);
                 return;
             }
-            const employee = this.findByTerm(term);
-            if (employee) {
-                onSelect?.(employee);
-            } else {
+            try {
+                let employee = this.findByTerm(term);
+                if (!employee && term.length >= 4) {
+                    await this.ensureEmployeesLoaded({ includeInactive: true });
+                    employee = this.findByTerm(term);
+                }
+                onSelect?.(employee || null);
+            } catch (e) {
                 onSelect?.(null);
             }
         };
@@ -5885,8 +5964,8 @@ const EmployeeHelper = {
         }
 
         input._employeeHelperAutocomplete = handleSelection;
-        input.addEventListener('change', handleSelection);
-        input.addEventListener('blur', handleSelection);
+        input.addEventListener('change', () => handleSelection().catch(() => {}));
+        input.addEventListener('blur', () => handleSelection().catch(() => {}));
     }
 };
 
