@@ -4809,6 +4809,9 @@ const PTW = {
                         <button class="btn-primary btn-sm" onclick="PTW.printPermit('${entry.permitId || entry.id}')">
                             <i class="fas fa-print ml-1"></i> طباعة
                         </button>
+                        <button class="btn-success btn-sm" onclick="PTW.exportPDF('${entry.permitId || entry.id}')">
+                            <i class="fas fa-file-pdf ml-1"></i> تصدير PDF
+                        </button>
                         ${isAdmin ? `
                             <button class="btn-warning btn-sm" onclick="this.closest('.modal-overlay').remove(); PTW.openManualPermitForm('${entry.id}')">
                                 <i class="fas fa-edit ml-1"></i> تعديل
@@ -5524,10 +5527,107 @@ const PTW = {
     },
 
     /**
+     * تحويل سجل التصريح اليدوي (PTWRegistry) إلى شكل generatePrintContent — يحتوي كل الحقول المسجّلة يدوياً
+     */
+    formDataFromRegistryEntry(entry) {
+        if (!entry) return null;
+        const parseBool = (v) => v === true || v === 'true' || v === 1 || v === '1';
+        const closureStatusFromStatus = (s) => {
+            if (!s) return '';
+            if (s === 'اكتمل العمل بشكل آمن') return 'completed';
+            if (s === 'إغلاق جبري') return 'forced';
+            if (s === 'لم يكتمل العمل') return 'notCompleted';
+            return '';
+        };
+
+        let approvals = [];
+        if (Array.isArray(entry.manualApprovals) && entry.manualApprovals.length) {
+            approvals = entry.manualApprovals.map((a) => ({
+                role: a.role || '',
+                approver: a.name || a.approver || '',
+                status: 'approved',
+                date: a.date || '',
+                comments: [a.notes, a.signature ? `توقيع: ${a.signature}` : ''].filter(Boolean).join(' — ')
+            }));
+        }
+
+        const closureApproval = {
+            name1: '', name2: '', name3: '', name4: '',
+            signature1: '', signature2: '', signature3: '', signature4: ''
+        };
+        if (Array.isArray(entry.manualClosureApprovals) && entry.manualClosureApprovals.length) {
+            const m = entry.manualClosureApprovals;
+            if (m[0]) { closureApproval.name4 = m[0].name || ''; closureApproval.signature4 = m[0].signature || ''; }
+            if (m[1]) { closureApproval.name3 = m[1].name || ''; closureApproval.signature3 = m[1].signature || ''; }
+            if (m[2]) { closureApproval.name2 = m[2].name || ''; closureApproval.signature2 = m[2].signature || ''; }
+            if (m[3]) { closureApproval.name1 = m[3].name || ''; closureApproval.signature1 = m[3].signature || ''; }
+        }
+
+        const requiredPPE = Array.isArray(entry.requiredPPE) && entry.requiredPPE.length
+            ? entry.requiredPPE
+            : (entry.ppeNotes ? String(entry.ppeNotes).split(/[،,]/).map((s) => s.trim()).filter(Boolean) : []);
+
+        const hasRisk = entry.riskLikelihood || entry.riskConsequence || entry.riskLevel || entry.riskScore;
+        const riskAssessment = hasRisk ? {
+            likelihood: entry.riskLikelihood || '',
+            consequence: entry.riskConsequence || '',
+            riskLevel: entry.riskLevel || entry.riskScore || ''
+        } : {};
+
+        return {
+            id: entry.permitId || entry.id,
+            location: entry.location || '',
+            sublocation: entry.sublocation || '',
+            workDescription: entry.workDescription || '',
+            startDate: entry.timeFrom || entry.openDate || '',
+            endDate: entry.timeTo || '',
+            requestingParty: entry.requestingParty || '',
+            authorizedParty: entry.authorizedParty || '',
+            equipment: entry.equipment || '',
+            tools: entry.tools || entry.toolsList || '',
+            teamMembers: Array.isArray(entry.teamMembers) ? entry.teamMembers : [],
+            hotWorkDetails: Array.isArray(entry.hotWorkDetails) ? entry.hotWorkDetails : [],
+            hotWorkOther: entry.hotWorkOther || '',
+            confinedSpaceDetails: Array.isArray(entry.confinedSpaceDetails) ? entry.confinedSpaceDetails : [],
+            confinedSpaceOther: entry.confinedSpaceOther || '',
+            heightWorkDetails: Array.isArray(entry.heightWorkDetails) ? entry.heightWorkDetails : [],
+            heightWorkOther: entry.heightWorkOther || '',
+            electricalWorkType: entry.electricalWorkType || '',
+            coldWorkType: entry.coldWorkType || '',
+            otherWorkType: entry.otherWorkType || '',
+            excavationLength: entry.excavationLength || '',
+            excavationWidth: entry.excavationWidth || '',
+            excavationDepth: entry.excavationDepth || '',
+            soilType: entry.soilType || '',
+            preStartChecklist: parseBool(entry.preStartChecklist),
+            lotoApplied: parseBool(entry.lotoApplied),
+            governmentPermits: parseBool(entry.governmentPermits),
+            riskAssessmentAttached: parseBool(entry.riskAssessmentAttached),
+            gasTesting: parseBool(entry.gasTesting),
+            mocRequest: parseBool(entry.mocRequest),
+            requiredPPE,
+            riskAssessment,
+            riskNotes: entry.riskNotes || '',
+            approvals,
+            closureStatus: entry.closureStatus || closureStatusFromStatus(entry.status),
+            closureTime: entry.closureDate || entry.closureTime || '',
+            closureReason: entry.closureReason || '',
+            closureApproval,
+            permitDisclaimer: entry.permitDisclaimer || '',
+            createdAt: entry.createdAt || new Date().toISOString(),
+            updatedAt: entry.updatedAt || new Date().toISOString()
+        };
+    },
+
+    /**
      * تجهيز بيانات التصريح لطباعة/تصدير PDF — مطابقة لحقول النموذج المحفوظ
      */
     getPermitFormDataForPrint(item) {
         if (!item) return null;
+        if (Array.isArray(this.registryData)) {
+            const reg = this.registryData.find((r) => r.permitId === item.id && r.isManualEntry === true);
+            if (reg) return this.formDataFromRegistryEntry(reg);
+        }
         return {
             id: item.id,
             location: item.siteName || item.location || '',
@@ -5594,13 +5694,28 @@ const PTW = {
      * طباعة التصريح
      */
     printPermit(permitId) {
-        const item = AppState.appData.ptw.find(i => i.id === permitId);
+        const reg = Array.isArray(this.registryData)
+            ? this.registryData.find((r) => r.permitId === permitId || r.id === permitId)
+            : null;
+        const effectiveId = reg?.permitId || permitId;
+        let item = AppState.appData.ptw.find((i) => i.id === effectiveId);
+        if (!item && reg && reg.isManualEntry) {
+            item = {
+                id: effectiveId,
+                isManualEntry: true,
+                createdAt: reg.createdAt,
+                updatedAt: reg.updatedAt,
+                startDate: reg.timeFrom,
+                endDate: reg.timeTo,
+                version: '1.0'
+            };
+        }
         if (!item) {
             Notification.error('لم يتم العثور على التصريح');
             return;
         }
 
-        const registryEntry = this.registryData.find(r => r.permitId === permitId);
+        const registryEntry = reg || this.registryData.find((r) => r.permitId === item.id);
         const formCode = item.isoCode || `PTW-${item.id?.substring(0, 8) || 'UNKNOWN'}`;
 
         const formData = this.getPermitFormDataForPrint(item);
@@ -10873,7 +10988,22 @@ const PTW = {
     },
 
     async exportPDF(id) {
-        const item = AppState.appData.ptw.find(i => i.id === id);
+        const reg = Array.isArray(this.registryData)
+            ? this.registryData.find((r) => r.permitId === id || r.id === id)
+            : null;
+        const effectiveId = reg?.permitId || id;
+        let item = AppState.appData.ptw.find((i) => i.id === effectiveId);
+        if (!item && reg && reg.isManualEntry) {
+            item = {
+                id: effectiveId,
+                isManualEntry: true,
+                createdAt: reg.createdAt,
+                updatedAt: reg.updatedAt,
+                startDate: reg.timeFrom,
+                endDate: reg.timeTo,
+                version: '1.0'
+            };
+        }
         if (!item) {
             Notification.error('التصريح غير موجود');
             return;
@@ -10882,7 +11012,7 @@ const PTW = {
         try {
             Loading.show();
 
-            const registryEntry = this.registryData.find(r => r.permitId === id);
+            const registryEntry = reg || this.registryData.find((r) => r.permitId === item.id);
             const formCode = item.isoCode || `PTW-${item.id?.substring(0, 8) || 'UNKNOWN'}`;
             const formData = this.getPermitFormDataForPrint(item);
             const content = this.generatePrintContent(formData);
