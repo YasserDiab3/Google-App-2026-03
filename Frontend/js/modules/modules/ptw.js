@@ -646,7 +646,8 @@ const PTW = {
                 id: Utils.generateId('REG'),
                 sequentialNumber: sequentialNumber,
                 permitId: permit.id,
-                openDate: permit.createdAt || permit.startDate || new Date().toISOString(),
+                // مواءمة تاريخ السجل مع تاريخ/وقت بدء العمل (نفس منطق عرض التصريح وليس تاريخ الإنشاء فقط)
+                openDate: permit.startDate || permit.createdAt || new Date().toISOString(),
                 permitType: permitType, // string دائماً
                 permitTypeDisplay: permitTypeDisplay,
                 requestingParty: String(permit.requestingParty || 'غير محدد').trim(),
@@ -787,6 +788,9 @@ const PTW = {
         entry.sublocation = permit.sublocationName || permit.sublocation ? String(permit.sublocationName || permit.sublocation).trim() : (entry.sublocation ? String(entry.sublocation).trim() : null);
         entry.timeFrom = permit.startDate || entry.timeFrom;
         entry.timeTo = permit.endDate || entry.timeTo;
+        if (permit.startDate) {
+            entry.openDate = permit.startDate;
+        }
         entry.totalTime = String(this.calculateTotalTime(permit.startDate, permit.endDate) || entry.totalTime || '').trim();
         entry.authorizedParty = String(permit.authorizedParty || entry.authorizedParty || 'غير محدد').trim();
         entry.workDescription = String(permit.workDescription || entry.workDescription || 'غير محدد').trim();
@@ -1824,15 +1828,28 @@ const PTW = {
                 statusIcon = 'fa-clock';
             }
 
-            const formatDateTime = (dateStr) => {
+            /** تاريخ العمل: نفس مصدر تفاصيل التصريح (startDate المخزن في timeFrom) */
+            const workStartSource = entry.timeFrom || entry.openDate;
+            const registryDateStr = workStartSource && Utils.formatDate
+                ? Utils.formatDate(workStartSource)
+                : 'غير محدد';
+            const registryDateDisplay = !workStartSource || registryDateStr === '-' ? 'غير محدد' : registryDateStr;
+
+            /** وقت فقط — نفس أسلوب طباعة التصريح (من الساعة / إلى الساعة) */
+            const formatRegistryTime = (dateStr) => {
                 if (!dateStr || dateStr === 'غير محدد') return 'غير محدد';
                 try {
                     const date = new Date(dateStr);
-                    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')} ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
-                } catch { return 'غير محدد'; }
+                    if (isNaN(date.getTime())) return 'غير محدد';
+                    return date.toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit', hour12: false });
+                } catch {
+                    return 'غير محدد';
+                }
             };
 
-            const timeToDisplay = entry.closureDate ? formatDateTime(entry.closureDate) : formatDateTime(entry.timeTo);
+            // «الوقت إلى» = نهاية مدة العمل المجدولة (endDate) كما في نموذج التصريح؛ وقت الإغلاق يُحسب في إجمالي الوقت فقط
+            const timeFromDisplay = formatRegistryTime(workStartSource);
+            const timeToDisplay = formatRegistryTime(entry.timeTo);
 
             // عرض أنواع التصريح (يمكن أن تكون مصفوفة أو نص)
             const permitTypeDisplay = this.getPermitTypeDisplay(entry);
@@ -1841,12 +1858,12 @@ const PTW = {
             tableHTML += `
                 <tr data-registry-id="${entry.id}">
                     <td class="font-bold text-blue-600">${entry.sequentialNumber}</td>
-                    <td>${formatDateTime(entry.openDate).split(' ')[0]}</td>
+                    <td>${Utils.escapeHTML(registryDateDisplay)}</td>
                     <td title="${Utils.escapeHTML(permitTypeDisplay)}">${Utils.escapeHTML(permitTypeShort)}</td>
                     <td>${Utils.escapeHTML(entry.requestingParty)}</td>
                     <td>${Utils.escapeHTML(entry.location)}</td>
-                    <td>${formatDateTime(entry.timeFrom)}</td>
-                    <td>${timeToDisplay}</td>
+                    <td>${Utils.escapeHTML(timeFromDisplay)}</td>
+                    <td>${Utils.escapeHTML(timeToDisplay)}</td>
                     <td class="font-semibold">${Utils.escapeHTML(entry.totalTime)}</td>
                     <td>${Utils.escapeHTML(entry.authorizedParty)}</td>
                     <td class="max-w-xs truncate" title="${Utils.escapeHTML(entry.workDescription)}">${Utils.escapeHTML(entry.workDescription).substring(0, 30)}...</td>
@@ -5728,13 +5745,16 @@ const PTW = {
 
             if (searchTerm && !rowText.includes(searchTerm)) show = false;
             if (statusFilter && entry.status !== statusFilter) show = false;
+            const filterDateSource = entry.timeFrom || entry.openDate;
             if (dateFromFilter) {
-                const entryDate = new Date(entry.openDate).toISOString().split('T')[0];
-                if (entryDate < dateFromFilter) show = false;
+                const d = filterDateSource ? new Date(filterDateSource) : null;
+                const entryDate = d && !isNaN(d.getTime()) ? d.toISOString().split('T')[0] : '';
+                if (!entryDate || entryDate < dateFromFilter) show = false;
             }
             if (dateToFilter) {
-                const entryDate = new Date(entry.openDate).toISOString().split('T')[0];
-                if (entryDate > dateToFilter) show = false;
+                const d = filterDateSource ? new Date(filterDateSource) : null;
+                const entryDate = d && !isNaN(d.getTime()) ? d.toISOString().split('T')[0] : '';
+                if (!entryDate || entryDate > dateToFilter) show = false;
             }
 
             row.style.display = show ? '' : 'none';
