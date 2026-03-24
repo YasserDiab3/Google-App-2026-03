@@ -5277,8 +5277,10 @@ const PTW = {
                         padding: 8px;
                         font-size: 11px;
                     }
+                    /* السماح باستمرار الأقسام الطويلة على صفحات A4 متعددة دون قص المحتوى */
                     .print-section {
-                        page-break-inside: avoid;
+                        page-break-inside: auto;
+                        break-inside: auto;
                         margin: 8px 0;
                     }
                     .print-section-title {
@@ -5522,20 +5524,11 @@ const PTW = {
     },
 
     /**
-     * طباعة التصريح
+     * تجهيز بيانات التصريح لطباعة/تصدير PDF — مطابقة لحقول النموذج المحفوظ
      */
-    printPermit(permitId) {
-        const item = AppState.appData.ptw.find(i => i.id === permitId);
-        if (!item) {
-            Notification.error('لم يتم العثور على التصريح');
-            return;
-        }
-
-        const registryEntry = this.registryData.find(r => r.permitId === permitId);
-        const formCode = item.isoCode || `PTW-${item.id?.substring(0, 8) || 'UNKNOWN'}`;
-        
-        // استخدام نفس دالة generatePrintContent ولكن ببيانات التصريح المحفوظ
-        const formData = {
+    getPermitFormDataForPrint(item) {
+        if (!item) return null;
+        return {
             id: item.id,
             location: item.siteName || item.location || '',
             sublocation: item.sublocationName || item.sublocation || '',
@@ -5571,7 +5564,9 @@ const PTW = {
             riskNotes: item.riskNotes || '',
             approvals: Array.isArray(item.approvals) ? item.approvals.map(a => ({
                 role: a.role || '',
-                approver: a.approver || '',
+                approver: typeof a.approver === 'object' && a.approver
+                    ? (a.approver.name || a.approver.email || a.approver.id || '')
+                    : (a.approver || ''),
                 status: a.status || 'pending',
                 date: a.date || '',
                 comments: a.comments || ''
@@ -5589,10 +5584,26 @@ const PTW = {
                 signature3: '',
                 signature4: ''
             },
+            permitDisclaimer: item.permitDisclaimer || '',
             createdAt: item.createdAt || new Date().toISOString(),
             updatedAt: item.updatedAt || new Date().toISOString()
         };
+    },
 
+    /**
+     * طباعة التصريح
+     */
+    printPermit(permitId) {
+        const item = AppState.appData.ptw.find(i => i.id === permitId);
+        if (!item) {
+            Notification.error('لم يتم العثور على التصريح');
+            return;
+        }
+
+        const registryEntry = this.registryData.find(r => r.permitId === permitId);
+        const formCode = item.isoCode || `PTW-${item.id?.substring(0, 8) || 'UNKNOWN'}`;
+
+        const formData = this.getPermitFormDataForPrint(item);
         const content = this.generatePrintContent(formData);
 
         // إزالة QR code من الطباعة (includeQrInFooter = false)
@@ -10821,279 +10832,6 @@ const PTW = {
         }
     },
 
-    // تصدير التصريح إلى PDF
-    async exportPDF(id) {
-        try {
-            const permit = AppState.appData.ptw.find(p => p.id === id);
-            if (!permit) {
-                Notification.error('التصريح غير موجود');
-                return;
-            }
-
-            Loading.show();
-
-            // إنشاء نافذة جديدة للطباعة
-            const printWindow = window.open('', '_blank');
-            if (!printWindow) {
-                Notification.error('تم حظر النافذة المنبثقة. يرجى السماح بالنوافذ المنبثقة.');
-                Loading.hide();
-                return;
-            }
-
-            // الحصول على معلومات الموقع والمكان الفرعي
-            const siteName = permit.siteName || this.getSiteOptions().find(s => s.id === permit.location || s.id === permit.siteId)?.name || permit.location || 'غير محدد';
-            const sublocationName = permit.sublocationName || this.getPlaceOptions(permit.location || permit.siteId || '').find(p => p.id === permit.sublocation)?.name || permit.sublocation || 'غير محدد';
-
-            // تنسيق التواريخ
-            const formatDate = (date) => {
-                if (!date) return 'غير محدد';
-                try {
-                    return new Date(date).toLocaleString('ar-SA', {
-                        year: 'numeric',
-                        month: 'long',
-                        day: 'numeric',
-                        hour: '2-digit',
-                        minute: '2-digit'
-                    });
-                } catch {
-                    return date;
-                }
-            };
-
-            // بناء محتوى PDF
-            const htmlContent = `
-<!DOCTYPE html>
-<html dir="rtl" lang="ar">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>تصريح عمل - ${permit.id}</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <style>
-        @media print {
-            @page { margin: 1cm; size: A4; }
-            body { margin: 0; }
-            .no-print { display: none !important; }
-        }
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body {
-            font-family: 'Cairo', 'Segoe UI', Tahoma, Arial, sans-serif;
-            line-height: 1.6;
-            color: #333;
-            background: #fff;
-            padding: 20px;
-        }
-        .header {
-            text-align: center;
-            border-bottom: 3px solid #003865;
-            padding-bottom: 15px;
-            margin-bottom: 20px;
-        }
-        .header h1 {
-            color: #003865;
-            font-size: 28px;
-            margin-bottom: 5px;
-        }
-        .header .permit-id {
-            font-size: 16px;
-            color: #666;
-            font-weight: bold;
-        }
-        .section {
-            margin-bottom: 20px;
-            border: 2px solid #e0e0e0;
-            border-radius: 8px;
-            padding: 15px;
-            page-break-inside: avoid;
-        }
-        .section-title {
-            font-size: 18px;
-            font-weight: bold;
-            color: #003865;
-            margin-bottom: 15px;
-            padding-bottom: 8px;
-            border-bottom: 2px solid #003865;
-        }
-        .field-group {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 15px;
-            margin-bottom: 15px;
-        }
-        .field {
-            padding: 10px;
-            background: #f9f9f9;
-            border-radius: 5px;
-        }
-        .field-label {
-            font-weight: bold;
-            color: #555;
-            font-size: 13px;
-            margin-bottom: 5px;
-        }
-        .field-value {
-            color: #000;
-            font-size: 14px;
-        }
-        .approval-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 10px;
-        }
-        .approval-table th,
-        .approval-table td {
-            border: 1px solid #ddd;
-            padding: 10px;
-            text-align: right;
-        }
-        .approval-table th {
-            background: #003865;
-            color: white;
-            font-weight: bold;
-        }
-        .status-badge {
-            display: inline-block;
-            padding: 5px 15px;
-            border-radius: 20px;
-            font-weight: bold;
-            font-size: 14px;
-        }
-        .status-approved { background: #10b981; color: white; }
-        .status-pending { background: #f59e0b; color: white; }
-        .status-rejected { background: #ef4444; color: white; }
-        .footer {
-            margin-top: 30px;
-            text-align: center;
-            font-size: 12px;
-            color: #666;
-            border-top: 2px solid #e0e0e0;
-            padding-top: 15px;
-        }
-        .print-btn {
-            position: fixed;
-            top: 20px;
-            left: 20px;
-            padding: 12px 24px;
-            background: #003865;
-            color: white;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 16px;
-            font-weight: bold;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
-        }
-        .print-btn:hover {
-            background: #004C8C;
-        }
-    </style>
-</head>
-<body>
-    <button class="print-btn no-print" onclick="window.print()">
-        <i class="fas fa-print"></i> طباعة
-    </button>
-
-    <div class="header">
-        <h1>تصريح عمل - Permit to Work</h1>
-        <div class="permit-id">رقم التصريح: ${permit.id}</div>
-        <div class="status-badge status-${permit.status === 'موافق عليه' ? 'approved' : permit.status === 'مرفوض' ? 'rejected' : 'pending'}">
-            ${permit.status || 'قيد المراجعة'}
-        </div>
-    </div>
-
-    <div class="section">
-        <div class="section-title">القسم الأول: بيانات التصريح الأساسية</div>
-        <div class="field-group">
-            <div class="field">
-                <div class="field-label">نوع العمل</div>
-                <div class="field-value">${permit.workType || 'غير محدد'}</div>
-            </div>
-            <div class="field">
-                <div class="field-label">الموقع / القسم</div>
-                <div class="field-value">${siteName}</div>
-            </div>
-            <div class="field">
-                <div class="field-label">المكان الفرعي</div>
-                <div class="field-value">${sublocationName}</div>
-            </div>
-            <div class="field">
-                <div class="field-label">تاريخ البدء</div>
-                <div class="field-value">${formatDate(permit.startDate)}</div>
-            </div>
-            <div class="field">
-                <div class="field-label">تاريخ الانتهاء</div>
-                <div class="field-value">${formatDate(permit.endDate)}</div>
-            </div>
-            <div class="field">
-                <div class="field-label">الجهة المصرح لها</div>
-                <div class="field-value">${permit.authorizedParty || 'غير محدد'}</div>
-            </div>
-        </div>
-        <div class="field">
-            <div class="field-label">وصف العمل</div>
-            <div class="field-value">${permit.workDescription || 'غير محدد'}</div>
-        </div>
-    </div>
-
-    ${permit.teamMembers && permit.teamMembers.length > 0 ? `
-    <div class="section">
-        <div class="section-title">القسم الثاني: القائمين بالعمل</div>
-        <div class="field-value">
-            ${permit.teamMembers.map((member, idx) => `${idx + 1}. ${member.name || 'غير محدد'}`).join('<br>')}
-        </div>
-    </div>
-    ` : ''}
-
-    ${permit.approvals && permit.approvals.length > 0 ? `
-    <div class="section">
-        <div class="section-title">دائرة الاعتمادات</div>
-        <table class="approval-table">
-            <thead>
-                <tr>
-                    <th>الدور</th>
-                    <th>المسؤول</th>
-                    <th>الحالة</th>
-                    <th>التاريخ</th>
-                </tr>
-            </thead>
-            <tbody>
-                ${permit.approvals.map(approval => `
-                    <tr>
-                        <td>${approval.role || 'غير محدد'}</td>
-                        <td>${approval.approver || 'لم يتم التعيين'}</td>
-                        <td>
-                            <span class="status-badge status-${approval.status === 'approved' ? 'approved' : approval.status === 'rejected' ? 'rejected' : 'pending'}">
-                                ${approval.status === 'approved' ? 'موافق' : approval.status === 'rejected' ? 'مرفوض' : 'قيد الانتظار'}
-                            </span>
-                        </td>
-                        <td>${approval.date ? formatDate(approval.date) : 'غير محدد'}</td>
-                    </tr>
-                `).join('')}
-            </tbody>
-        </table>
-    </div>
-    ` : ''}
-
-    <div class="footer">
-        <p>تم إنشاء هذا التقرير بتاريخ: ${new Date().toLocaleString('ar-SA')}</p>
-        <p>نظام إدارة السلامة المهنية - أمريكانا HSE</p>
-    </div>
-</body>
-</html>
-            `;
-
-            printWindow.document.write(htmlContent);
-            printWindow.document.close();
-
-            Loading.hide();
-            Notification.success('تم فتح نافذة الطباعة');
-
-        } catch (error) {
-            Utils.safeError('خطأ في تصدير PDF:', error);
-            Notification.error('حدث خطأ أثناء تصدير التصريح');
-            Loading.hide();
-        }
-    },
 
     async deletePTW(id) {
         if (!confirm('هل أنت متأكد من حذف هذا التصريح؟')) return;
@@ -11144,327 +10882,31 @@ const PTW = {
         try {
             Loading.show();
 
-            const formCode = item.isoCode || item.id?.substring(0, 12) || 'PTW-UNKNOWN';
-            const escape = (value) => Utils.escapeHTML(value || '');
-            const formatDate = (value) => value ? Utils.formatDate(value) : '-';
-            const formatTime = (value) => {
-                if (!value) return '-';
-                try {
-                    return new Date(value).toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit', hour12: false });
-                } catch (error) {
-                    return '-';
-                }
-            };
-            const placeholderLine = '<span class="placeholder-line"></span>';
-            const workType = item.workType || '';
-            const requiredPPE = Array.isArray(item.requiredPPE) ? item.requiredPPE : [];
-            const approvals = Array.isArray(item.approvals) ? item.approvals : [];
-            const permitUrl = `${window.location.origin}/ptw/${item.id}`;
-            const hotWorkDetails = Array.isArray(item.hotWorkDetails) ? item.hotWorkDetails : [];
-            const confinedSpaceDetails = Array.isArray(item.confinedSpaceDetails) ? item.confinedSpaceDetails : [];
-            const heightWorkDetails = Array.isArray(item.heightWorkDetails) ? item.heightWorkDetails : [];
-            const hotWorkOther = item.hotWorkOther || '';
-            const confinedSpaceOther = item.confinedSpaceOther || '';
-            const heightWorkOther = item.heightWorkOther || '';
+            const registryEntry = this.registryData.find(r => r.permitId === id);
+            const formCode = item.isoCode || `PTW-${item.id?.substring(0, 8) || 'UNKNOWN'}`;
+            const formData = this.getPermitFormDataForPrint(item);
+            const content = this.generatePrintContent(formData);
 
-            const isTrue = (value) => value === true || value === 'true' || value === 1 || value === '1';
-
-            const renderCheckItem = (label, selected = false, extra = '') => `
-                <div class="check-item ${selected ? 'is-checked' : ''}">
-                    <span class="check-symbol">${selected ? '✔' : ''}</span>
-                    <span>${label}</span>
-                    ${extra ? `<span class="check-extra">${extra}</span>` : ''}
-                            </div>
-            `;
-
-            const ppeIncludes = (keywords = []) => requiredPPE.some(p => keywords.some(k => (p || '').includes(k)));
-            const findApproval = (keywords = []) => approvals.find(a => keywords.some(k => (a.role || '').includes(k)));
-            const renderApprovalRow = (title, keywords = []) => {
-                const approval = findApproval(keywords);
-                return `
-                    <tr>
-                        <th>${title}</th>
-                        <td>${approval ? escape(approval.approver) : placeholderLine}</td>
-                        <td class="empty-cell">${approval && approval.signature ? escape(approval.signature) : ''}</td>
-                        <td>${approval && approval.date ? formatDate(approval.date) : placeholderLine}</td>
-                    </tr>
-                `;
-            };
-
-            const workerRows = Array.isArray(item.teamMembers) && item.teamMembers.length > 0
-                ? item.teamMembers.map(member => `
-                    <tr>
-                        <td>${escape(member.name || '')}</td>
-                        <td class="empty-cell">${member.signature ? escape(member.signature) : ''}</td>
-                    </tr>
-                `).join('')
-                : Array.from({ length: 6 }).map(() => `
-                    <tr>
-                        <td>${placeholderLine}</td>
-                        <td class="empty-cell"></td>
-                    </tr>
-                `).join('');
-
-            const closureStatus = item.closureStatus || (item.status === 'مغلق' ? 'completed' : '');
-
-            const content = `
-                <div class="permit-intro">
-                    تم إصدار هذا التصريح فقط للعمل الذي تم وصفه أدناه ولا يجوز تحت أي ظرف استخدامه لأي عمل آخر لم يتم وصفه. يجب الالتزام بمدة صلاحية التصريح للعمل المذكور وفي الموقع المحدد فقط.
-                </div>
-                <div class="permit-note">
-                    يعمل هذا التصريح وفق اشتراطات OSHA لضمان التحكم في المخاطر أثناء تنفيذ الأعمال غير الروتينية أو الأعمال ذات المخاطر العالية. يتحمل صاحب التصريح والجهات المعتمدة المسئولية الكاملة عن تطبيق إجراءات السلامة قبل وأثناء وبعد تنفيذ العمل.
-                </div>
-
-               <div class="permit-section">
-                    <h3 class="section-title">القسم الأول : بيانات التصريح الأساسية</h3>
-                    <table class="report-table permit-table">
-                        <tbody>
-                            <tr>
-                                <th>التاريخ</th>
-                                <td>${formatDate(item.startDate || item.createdAt)}</td>
-                                <th>الموقع / القسم</th>
-                                <td>${escape(item.siteName || item.location || '-')}</td>
-                            </tr>
-                            <tr>
-                                <th>المكان الفرعي</th>
-                                <td>${escape(item.sublocationName || item.sublocation || '-')}</td>
-                                <th>من الساعة</th>
-                                <td>${formatTime(item.startDate)}</td>
-                            </tr>
-                            <tr>
-                                <th>إلى الساعة</th>
-                                <td>${formatTime(item.endDate)}</td>
-                                <th>الجهة المصرح لها</th>
-                                <td>${escape(item.authorizedParty || '') || placeholderLine}</td>
-                            </tr>
-                            <tr>
-                                <th>الجهة الطالبة للتصريح</th>
-                                <td>${escape(item.requestingParty || '') || placeholderLine}</td>
-                                <th></th>
-                                <td></td>
-                            </tr>
-                            <tr>
-                                <th>وصف طبيعة العمل</th>
-                                <td colspan="3">${escape(item.workDescription || '') || placeholderLine}</td>
-                            </tr>
-                            <tr>
-                                <th>المعدة / المكينة / العملية</th>
-                                <td colspan="3">${escape(item.equipment || item.asset || '') || placeholderLine}</td>
-                            </tr>
-                            <tr>
-                                <th>الأدوات أو العدد (بعد فحصها وقبولها)</th>
-                                <td colspan="3">${escape(item.tools || item.toolsList || '') || placeholderLine}</td>
-                            </tr>
-                        </tbody>
-                        </table>
-
-                    <div class="permit-section">
-                        <h3 class="section-title">أسماء القائمين بالعمل</h3>
-                        <table class="report-table signature-table">
-                            <thead>
-                                <tr>
-                                    <th>الاسم</th>
-                                    <th>التوقيع</th>
-                            </tr>
-                            </thead>
-                            <tbody>
-                                ${workerRows}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-
-                <div class="permit-section">
-                    <h3 class="section-title">القسم الثاني : تحديد نوع / طبيعة الأعمال والعناصر التفصيلية لتنفيذ العملية</h3>
-                    <div class="checklist-grid">
-                        <div class="checklist-group">
-                            <h4>أعمال ساخنة</h4>
-                            ${renderCheckItem('لحام', hotWorkDetails.includes('لحام'))}
-                            ${renderCheckItem('قطع', hotWorkDetails.includes('قطع'))}
-                            ${renderCheckItem('شرر / حرارة', hotWorkDetails.includes('شرر / حرارة'))}
-                            ${renderCheckItem('أخرى', !!hotWorkOther, hotWorkOther ? escape(hotWorkOther) : placeholderLine)}
-                        </div>
-                        <div class="checklist-group">
-                            <h4>أماكن مغلقة</h4>
-                            ${renderCheckItem('خزانات', confinedSpaceDetails.includes('خزانات'))}
-                            ${renderCheckItem('أنابيب', confinedSpaceDetails.includes('أنابيب'))}
-                            ${renderCheckItem('تنكات', confinedSpaceDetails.includes('تنكات'))}
-                            ${renderCheckItem('أخرى', !!confinedSpaceOther, confinedSpaceOther ? escape(confinedSpaceOther) : placeholderLine)}
-                        </div>
-                        <div class="checklist-group">
-                            <h4>عمل على ارتفاع</h4>
-                            ${renderCheckItem('سقالات', heightWorkDetails.includes('سقالات'))}
-                            ${renderCheckItem('سطح', heightWorkDetails.includes('سطح'))}
-                            ${renderCheckItem('سلة رافع', heightWorkDetails.includes('سلة رافع'))}
-                            ${renderCheckItem('أخرى', !!heightWorkOther, heightWorkOther ? escape(heightWorkOther) : placeholderLine)}
-                        </div>
-                    </div>
-                    <table class="report-table permit-table" style="margin-top: 18px;">
-                        <tbody>
-                            <tr>
-                                <th>أعمال حفر</th>
-                                <td colspan="3">
-                                    طول: ${escape(item.excavationLength || '') || placeholderLine} 
-                                    &nbsp;&nbsp; عرض: ${escape(item.excavationWidth || '') || placeholderLine}
-                                    &nbsp;&nbsp; عمق: ${escape(item.excavationDepth || '') || placeholderLine}
-                                    &nbsp;&nbsp; نوع التربة: ${escape(item.soilType || '') || placeholderLine}
-                                </td>
-                                </tr>
-                        </tbody>
-                        </table>
-                    <div class="checklist-grid">
-                        <div class="checklist-group">
-                            <h4>أعمال كهرباء</h4>
-                            ${renderCheckItem('نوع العمل', !!item.electricalWorkType, `${escape(item.electricalWorkType || '') || placeholderLine}`)}
-                        </div>
-                        <div class="checklist-group">
-                            <h4>أعمال على البارد</h4>
-                            ${renderCheckItem('نوع العمل', !!item.coldWorkType, `${escape(item.coldWorkType || '') || placeholderLine}`)}
-                        </div>
-                        <div class="checklist-group">
-                            <h4>أعمال أخرى</h4>
-                            ${renderCheckItem('نوع العمل', !!item.otherWorkType, `${escape(item.otherWorkType || '') || placeholderLine}`)}
-                        </div>
-                    </div>
-                </div>
-
-                <div class="permit-section">
-                    <h3 class="section-title">القسم الثالث : المتطلبات والمرفقات (إلزامية عند التحديد)</h3>
-                    <div class="checklist-grid">
-                        ${renderCheckItem('قائمة التحقق بقرار بدء العمل', isTrue(item.preStartChecklist))}
-                        ${renderCheckItem('تطبيق نظام العزل LOTO', isTrue(item.lotoApplied))}
-                        ${renderCheckItem('تصاريح جهات حكومية', isTrue(item.governmentPermits))}
-                        ${renderCheckItem('تحليل المخاطر ووسائل التحكم', isTrue(item.riskAssessmentAttached))}
-                        ${renderCheckItem('قياس الغازات', isTrue(item.gasTesting))}
-                        ${renderCheckItem('طلب تغيير فني MOC', isTrue(item.mocRequest))}
-                    </div>
-                </div>
-
-                <div class="permit-section">
-                    <h3 class="section-title">القسم الرابع : تحديد مهمات الوقاية / وسائل الوقاية الأخرى</h3>
-                    <div class="checklist-grid">
-                        ${renderCheckItem('حذاء سلامة', ppeIncludes(['حذاء', 'حذاء سلامة', 'أحذية']))}
-                        ${renderCheckItem('جوانتي سلامة', ppeIncludes(['جوانتي', 'قفازات']))}
-                        ${renderCheckItem('جوانتي أحماض', ppeIncludes(['أحماض']))}
-                        ${renderCheckItem('جوانتي كهربي', ppeIncludes(['كهرب']))}
-                        ${renderCheckItem('كمامة', ppeIncludes(['كمامة', 'قناع']))}
-                        ${renderCheckItem('سدادة أذن', ppeIncludes(['سدادات', 'أذن']))}
-                        ${renderCheckItem('كاتم أذن', ppeIncludes(['كاتم']))}
-                        ${renderCheckItem('بدلة كيميائية', ppeIncludes(['بدلة', 'كيمي']))}
-                        ${renderCheckItem('كشاف إنارة', ppeIncludes(['كشاف']))}
-                        ${renderCheckItem('واقي رأس', ppeIncludes(['خوذة', 'رأس']))}
-                        ${renderCheckItem('نظارة واقية', ppeIncludes(['نظارة', 'نظارات']))}
-                        ${renderCheckItem('وجه لحام', ppeIncludes(['لحام', 'درع']))}
-                        ${renderCheckItem('أذرع واقية', ppeIncludes(['أذرع']))}
-                        ${renderCheckItem('حزام أمان', ppeIncludes(['حزام', 'أمان']))}
-                        ${renderCheckItem('حبل سلامة', ppeIncludes(['حبل']))}
-                        ${renderCheckItem('جهاز تنفس', ppeIncludes(['تنفس', 'SCBA']))}
-                        ${renderCheckItem('سترة عاكسة', ppeIncludes(['عاكسة']))}
-                        ${renderCheckItem('شريط عاكس', ppeIncludes(['شريط']))}
-                        ${renderCheckItem('حواجز', ppeIncludes(['حاجز']))}
-                        ${renderCheckItem('أقماع مرور', ppeIncludes(['أقماع']))}
-                        ${renderCheckItem('وسائل اتصال', ppeIncludes(['لاسلكي', 'اتصال']))}
-                        ${renderCheckItem('بطانية حريق', ppeIncludes(['بطانية']))}
-                        ${renderCheckItem('أخرى', ppeIncludes(['أخرى']), placeholderLine)}
-                    </div>
-                </div>
-
-                <div class="permit-section">
-                    <h3 class="section-title">القسم الخامس : اعتماد التصريح (يشترط جميع التوقيعات لبدء العمل)</h3>
-                    <table class="report-table signature-table">
-                        <thead>
-                            <tr>
-                                <th style="width: 25%;">الوظيفة</th>
-                                <th style="width: 35%;">الاسم</th>
-                                <th style="width: 20%;">التوقيع</th>
-                                <th style="width: 20%;">التاريخ</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            ${renderApprovalRow('مسئول الجهة الطالبة', ['مسئول الجهة الطالبة', 'مسؤول الجهة الطالبة', 'المشرف المباشر'])}
-                            ${renderApprovalRow('مدير منطقة الأعمال', ['مدير منطقة', 'منطقة الأعمال'])}
-                            ${renderApprovalRow('مدير / مهندس الصيانة', ['الصيانة', 'مهندس الصيانة'])}
-                            ${renderApprovalRow('مسئول السلامة والصحة المهنية', ['السلامة', 'الصحة المهنية'])}
-                        </tbody>
-                        </table>
-                </div>
-
-                <div class="permit-section">
-                    <h3 class="section-title">القسم السادس : إغلاق التصريح</h3>
-                    <div class="status-grid">
-                        <div class="status-item ${closureStatus === 'completed' ? 'is-checked' : ''}">
-                            <span class="check-symbol">${closureStatus === 'completed' ? '✔' : ''}</span>
-                            <span>اكتمل العمل بشكل آمن</span>
-                            </div>
-                        <div class="status-item ${closureStatus === 'notCompleted' ? 'is-checked' : ''}">
-                            <span class="check-symbol">${closureStatus === 'notCompleted' ? '✔' : ''}</span>
-                            <span>لم يكتمل العمل</span>
-                        </div>
-                        <div class="status-item ${closureStatus === 'forced' ? 'is-checked' : ''}">
-                            <span class="check-symbol">${closureStatus === 'forced' ? '✔' : ''}</span>
-                            <span>إغلاق جبري</span>
-                    </div>
-                    </div>
-                    <table class="report-table permit-table">
-                        <tbody>
-                            <tr>
-                                <th>الساعة</th>
-                                <td>${formatTime(item.closureTime || item.endDate)}</td>
-                                <th>السبب</th>
-                                <td>${escape(item.closureReason || '') || placeholderLine}</td>
-                            </tr>
-                        </tbody>
-                    </table>
-                    <div class="permit-section">
-                        <h3 class="section-title">القسم السادس : اعتماد إغلاق التصريح (يشترط جميع التوقيعات)</h3>
-                        <table class="report-table signature-table">
-                            <thead>
-                                <tr>
-                                    <th style="width: 25%;">الوظيفة</th>
-                                    <th style="width: 35%;">الاسم</th>
-                                    <th style="width: 20%;">التوقيع</th>
-                                    <th style="width: 20%;">التاريخ</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                ${renderApprovalRow('مسئول الجهة الطالبة', ['مسئول الجهة الطالبة', 'مسؤول الجهة الطالبة'])}
-                                ${renderApprovalRow('مدير منطقة الأعمال', ['مدير منطقة', 'منطقة الأعمال'])}
-                                ${renderApprovalRow('مدير / مهندس الصيانة', ['الصيانة', 'مهندس الصيانة'])}
-                                ${renderApprovalRow('مسئول السلامة والصحة المهنية', ['السلامة', 'الصحة المهنية'])}
-                            </tbody>
-                        </table>
-                    </div>
-                    <div class="notes-block">
-                        تم متابعة العمل حتى النهاية وتم فحص موقع العمل والمناطق المجاورة والتأكد من خلوها من الأخطار المحتملة بعد الانتهاء من العمل.
-                    </div>
-                </div>
-            `;
-
-            const htmlContent = FormHeader.generatePDFHTML(
-                formCode,
-                'تصريح عمل',
-                content,
-                false,
-                true,
-                {
-                    version: item.version || '1.0',
-                    releaseDate: item.startDate || item.createdAt,
-                    revisionDate: item.updatedAt || item.endDate || item.startDate,
-                    qrData: {
-                        type: 'PTW',
-                        id: item.id,
-                        code: formCode,
-                        url: permitUrl
-                    }
-                },
-                item.createdAt || item.startDate,
-                item.updatedAt || item.endDate || item.createdAt
-            );
+            const htmlContent = typeof FormHeader !== 'undefined' && typeof FormHeader.generatePDFHTML === 'function'
+                ? FormHeader.generatePDFHTML(
+                    formCode,
+                    `تصريح عمل #${registryEntry?.sequentialNumber || item.id?.substring(0, 8)}`,
+                    content,
+                    false,
+                    false,
+                    {
+                        version: item.version || '1.0',
+                        releaseDate: item.startDate || item.createdAt,
+                        revisionDate: item.updatedAt || item.endDate || item.startDate,
+                        'رقم التصريح': registryEntry?.sequentialNumber || item.id?.substring(0, 8)
+                    },
+                    item.createdAt || item.startDate,
+                    item.updatedAt || item.endDate || item.createdAt
+                )
+                : `<html><body>${content}</body></html>`;
 
             const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
             const url = URL.createObjectURL(blob);
-
-            // تح ي ناذة جديدة للطباعة/الحظ كـ PDF
             const printWindow = window.open(url, '_blank');
             if (printWindow) {
                 printWindow.onload = () => {
@@ -11473,18 +10915,18 @@ const PTW = {
                         setTimeout(() => {
                             URL.revokeObjectURL(url);
                             Loading.hide();
-                            Notification.success('تم تح التصريح للطباعة/الحظ كـ PDF');
+                            Notification.success('تم فتح التصريح للطباعة أو الحفظ كملف PDF');
                         }, 1000);
                     }, 500);
                 };
             } else {
                 Loading.hide();
-                Notification.error('يرجى السماح للنافذة المنبثقة لعرض التصريح');
+                Notification.error('يرجى السماح للنوافذ المنبثقة لعرض التصريح');
             }
         } catch (error) {
             Loading.hide();
-            Utils.safeError('خطأ ي تصدير PDF:', error);
-            Notification.error('فشل تصدير PDF: ' + error.message);
+            Utils.safeError('خطأ في تصدير PDF:', error);
+            Notification.error('فشل تصدير PDF: ' + (error.message || ''));
         }
     },
 
