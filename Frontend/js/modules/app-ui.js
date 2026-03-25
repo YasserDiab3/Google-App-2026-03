@@ -2659,8 +2659,29 @@ window.UI = {
         }
     },
 
+    /**
+     * إزالة قفل واجهة ما بعد الدخول (overflow/position على body + إخفاء #main-app).
+     * يُستدعى تلقائياً عند متابعة التهيئة؛ يمكن استدعاؤه يدوياً من الكونسول إن علقت الواجهة.
+     */
+    clearPostLoginOverlayLock() {
+        try {
+            document.documentElement.classList.remove('hse-post-login-overlay-active');
+            document.body.classList.remove('hse-post-login-overlay-active');
+            const pol = document.getElementById('hse-post-login-overlay');
+            if (pol && pol.parentNode) pol.remove();
+            const mainApp = document.getElementById('main-app');
+            if (mainApp) {
+                mainApp.style.visibility = '';
+                mainApp.style.pointerEvents = '';
+            }
+        } catch (e) { /* ignore */ }
+    },
+
     /** متابعة تهيئة التطبيق الرئيسي (بعد شاشة السياسات أو مباشرة بعد الدخول) */
     _continueMainAppSetup() {
+        // ضمان عدم بقاء قفل شاشة السياسات (يخفي القائمة والهيدر ويمنع التمرير)
+        this.clearPostLoginOverlayLock();
+
         // تفعيل نظام عدم النشاط (فقط إذا لم تكن إعادة تحميل)
         if (typeof InactivityManager !== 'undefined' && !AppState.isPageRefresh) {
             InactivityManager.init();

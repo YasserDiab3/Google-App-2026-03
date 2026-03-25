@@ -2659,8 +2659,29 @@ window.UI = {
         }
     },
 
+    /**
+     * إزالة قفل واجهة ما بعد الدخول (overflow/position على body + إخفاء #main-app).
+     * يُستدعى تلقائياً عند متابعة التهيئة؛ يمكن استدعاؤه يدوياً من الكونسول إن علقت الواجهة.
+     */
+    clearPostLoginOverlayLock() {
+        try {
+            document.documentElement.classList.remove('hse-post-login-overlay-active');
+            document.body.classList.remove('hse-post-login-overlay-active');
+            const pol = document.getElementById('hse-post-login-overlay');
+            if (pol && pol.parentNode) pol.remove();
+            const mainApp = document.getElementById('main-app');
+            if (mainApp) {
+                mainApp.style.visibility = '';
+                mainApp.style.pointerEvents = '';
+            }
+        } catch (e) { /* ignore */ }
+    },
+
     /** متابعة تهيئة التطبيق الرئيسي (بعد شاشة السياسات أو مباشرة بعد الدخول) */
     _continueMainAppSetup() {
+        // ضمان عدم بقاء قفل شاشة السياسات (يخفي القائمة والهيدر ويمنع التمرير)
+        this.clearPostLoginOverlayLock();
+
         // تفعيل نظام عدم النشاط (فقط إذا لم تكن إعادة تحميل)
         if (typeof InactivityManager !== 'undefined' && !AppState.isPageRefresh) {
             InactivityManager.init();
@@ -2728,15 +2749,37 @@ window.UI = {
             this.updateUserConnectionStatus();
         }, 500);
 
-        // Consolidate calls to setupLogoutButton and Permissions.updateNavigation.
-        // These functions should ideally be called once when the DOM is ready or when elements are guaranteed to exist.
-        // If elements are dynamically loaded, consider using MutationObserver or a more robust retry mechanism.
-        this.setupLogoutButton();
-        Permissions.updateNavigation();
-        // Additional calls with setTimeout are likely attempts to compensate for race conditions.
-        // These should be removed and the underlying DOM readiness issue addressed.
-        // For example, if Permissions.updateNavigation depends on dynamically loaded content, it should be called after that content is loaded.
+        // إعداد زر تسجيل الخروج بعد عرض التطبيق (مع محاولات متعددة)
+        let logoutSetupAttempts = 0;
+        const setupLogoutWithRetry = () => {
+            logoutSetupAttempts++;
+            this.setupLogoutButton();
+            // إعادة المحاولة مرة أخرى بعد 500ms للتأكد
+            if (logoutSetupAttempts < 3) {
+                setTimeout(setupLogoutWithRetry, 500);
+            }
+        };
+        setTimeout(setupLogoutWithRetry, 100);
 
+        // تحديث القائمة حسب الصلاحيات (مع محاولات متعددة للتأكد من تحميل البيانات)
+        Permissions.updateNavigation();
+        
+        // ✅ إصلاح: إعادة تحديث القائمة بعد تحميل البيانات للتأكد من الصلاحيات الصحيحة
+        setTimeout(() => {
+            if (typeof Permissions !== 'undefined' && typeof Permissions.updateNavigation === 'function') {
+                Permissions.updateNavigation();
+            }
+        }, 1000);
+        
+        // محاولة إضافية بعد تحميل البيانات بالكامل
+        setTimeout(() => {
+            if (typeof Permissions !== 'undefined' && typeof Permissions.updateNavigation === 'function') {
+                Permissions.updateNavigation();
+            }
+        }, 2000);
+
+        // عرض صورة المستخدم ي الشريط الجانبي
+        this.updateUserProfilePhoto();
         // ✅ إعادة تحديث صورة المستخدم بعد تأخير قصير لضمان ظهورها بعد الدخول مباشرة (عند جاهزية الـ DOM)
         setTimeout(() => { this.updateUserProfilePhoto(); }, 500);
 
@@ -2744,7 +2787,7 @@ window.UI = {
         this.showHeaderActions();
 
         // تهيئة أزرار القائمة الجانبية (الوضع الليلي، الإشعارات، اللغة)
-
+        this.initSidebarButtons();
         // إعادة تهيئة بعد تأخير قصير لضمان عمل الأزرار بعد رسم الـ DOM (زر اللغة، جرس الإشعارات)
         setTimeout(() => {
             try {
@@ -2862,10 +2905,14 @@ window.UI = {
                 if (sidebar) {
                     // إذا كان القسم المطلوب هو Dashboard، نفتح القائمة الجانبية
                     if (sectionToShow === 'dashboard') {
-                        this.toggleSidebar(true);
+                        if (!sidebar.classList.contains('open')) {
+                            this.toggleSidebar(true);
+                        }
                     } else {
                         // إذا كان القسم ليس Dashboard، نتأكد من إغلاق القائمة
-                        this.toggleSidebar(false);
+                        if (sidebar.classList.contains('open')) {
+                            this.toggleSidebar(false);
+                        }
                     }
                 }
             }, 100);
@@ -2944,7 +2991,12 @@ window.UI = {
             }
         })();
 
-
+        // تحديث الإشعارات عند تحميل التطبيق
+        if (this.updateNotificationsBadge) {
+            setTimeout(() => {
+                this.updateNotificationsBadge();
+            }, 1500);
+        }
     },
 
     /**
@@ -3077,21 +3129,10 @@ window.UI = {
         }
 
         // ربط حدث النقر على مجموعة النصوص (لجعل المنطقة بأكملها قابلة للنقر)
-        // Use event delegation on the parent `companyTextGroup` to avoid redundant listeners on children.
-        // If `companyTextGroup` is the primary clickable area, its children don't need separate listeners.
         if (companyTextGroup && !companyTextGroup.dataset.clickBound) {
             companyTextGroup.style.cursor = 'pointer';
             companyTextGroup.addEventListener('click', handleHeaderClick);
             companyTextGroup.dataset.clickBound = 'true';
-        }
-        // Remove redundant listeners from children if parent handles the click.
-        if (companyNameText && companyNameText.dataset.clickBound) {
-            companyNameText.removeEventListener('click', handleHeaderClick);
-            delete companyNameText.dataset.clickBound;
-        }
-        if (companySecondaryText && companySecondaryText.dataset.clickBound) {
-            companySecondaryText.removeEventListener('click', handleHeaderClick);
-            delete companySecondaryText.dataset.clickBound;
         }
 
         // ربط حدث النقر على الهيدر ككل (المنطقة اليسرى فقط)
@@ -3131,11 +3172,13 @@ window.UI = {
                     // إعداد معالج الأخطاء قبل تعيين src
                     let hasError = false;
                     logoImg.onerror = () => {
-                        hasError = true;
-                        // إخفاء الصورة المكسورة
-                        logoImg.style.display = 'none';
-                        // Google Drive URLs لا تدعم CORS - هذا أمر طبيعي
-                        // الشعار لن يظهر إذا كان من Google Drive
+                        if (!hasError) {
+                            hasError = true;
+                            // إخفاء الصورة المكسورة
+                            logoImg.style.display = 'none';
+                            // Google Drive URLs لا تدعم CORS - هذا أمر طبيعي
+                            // الشعار لن يظهر إذا كان من Google Drive
+                        }
                     };
                     logoImg.onload = () => {
                         hasError = false;
@@ -3318,9 +3361,9 @@ window.UI = {
                     Utils.safeWarn('⚠️ فشل تحميل شعار الشركة من:', logoUrl);
                     loginLogoImg.style.display = 'none';
                     defaultLogoIcon.style.display = 'inline-block';
+                    // إزالة src التالف لمنع محاولات متكررة
+                    loginLogoImg.src = '';
                 }
-                // إزالة src التالف لمنع محاولات متكررة
-                loginLogoImg.src = '';
             };
 
             loginLogoImg.onload = () => {
@@ -4673,9 +4716,6 @@ window.UI = {
             setTimeout(() => {
                 this.loadSectionData(sectionName, isRefresh);
 
-                // Instead of multiple setTimeouts, use a MutationObserver or ensure the module's load function
-                // signals when its DOM is fully rendered and ready for navigation icons.
-                // For now, consolidate to a single, slightly delayed call, but a more robust solution is needed.
                 const addIconsAfterLoad = () => {
                     const section = document.getElementById(sectionId);
                     if (section) {
@@ -4685,7 +4725,12 @@ window.UI = {
                         this.addNavigationIcons(section, sectionName);
                     }
                 };
-                setTimeout(addIconsAfterLoad, 500); // A single, reasonable delay
+                setTimeout(addIconsAfterLoad, 300);
+                setTimeout(addIconsAfterLoad, 600);
+                setTimeout(addIconsAfterLoad, 1000);
+                setTimeout(addIconsAfterLoad, 1500);
+                setTimeout(addIconsAfterLoad, 2000);
+                setTimeout(addIconsAfterLoad, 3000);
             }, 50);
         }
     },
@@ -5957,12 +6002,21 @@ window.UI = {
             if (AppState.debugMode) Utils.safeLog('✅ استدعاء addNavigationIconsAfterRender للقسم:', sectionName);
 
             // محاولات متعددة لضمان الإضافة
-            // Instead of multiple setTimeouts, use a MutationObserver or ensure the module's load function
-            // signals when its DOM is fully rendered and ready for navigation icons.
-            // For now, consolidate to a single, slightly delayed call, but a more robust solution is needed.
             setTimeout(() => {
                 this.addNavigationIcons(section, sectionName);
-            }, 100); // A single, reasonable delay
+            }, 0);
+
+            setTimeout(() => {
+                this.addNavigationIcons(section, sectionName);
+            }, 100);
+
+            setTimeout(() => {
+                this.addNavigationIcons(section, sectionName);
+            }, 300);
+
+            setTimeout(() => {
+                this.addNavigationIcons(section, sectionName);
+            }, 600);
         } else {
             Utils.safeError('❌ addNavigationIconsAfterRender: دالة addNavigationIcons غير موجودة');
         }
@@ -6245,9 +6299,10 @@ window.UI = {
         // فتح القائمة الجانبية عند العودة للصفحة السابقة على الشاشات الكبيرة
         if (window.innerWidth > 1024) {
             const sidebar = document.querySelector('.sidebar');
-            // Only open sidebar if it's not already open and not explicitly collapsed by user.
-            if (sidebar && !sidebar.classList.contains('open') && localStorage.getItem('sidebarCollapsed') !== 'true') {
-                this.toggleSidebar(true);
+            if (sidebar && !sidebar.classList.contains('open')) {
+                setTimeout(() => {
+                    this.toggleSidebar(true);
+                }, 100);
             }
         }
 
@@ -6289,7 +6344,7 @@ window.UI = {
 
         // تحميل الوضع المحفوظ
         const savedTheme = localStorage.getItem('theme') || 'light';
-        this.setTheme(savedTheme); // setTheme does not use an isInitialLoad parameter
+        this.setTheme(savedTheme);
 
         // ربط جميع الأزرار
         themeToggles.forEach(btn => {
@@ -6478,14 +6533,11 @@ window.UI = {
                                     
                                     // استخدام self أو window.UI
                                     const uiObj = self || window.UI;
-                            // If `toggleNotificationsDropdown` fails, directly calling `showNotificationsDropdown` might bypass intended logic.
-                            // The primary error should be addressed in `toggleNotificationsDropdown` itself.
-                            // If this is a necessary fallback, ensure it's handled correctly.
-                            if (uiObj && typeof uiObj.showNotificationsDropdown === 'function') {
-                                await uiObj.showNotificationsDropdown(dropdownId, listId, emptyId, btn).catch(err => {
-                                    Utils.safeWarn('⚠️ خطأ في عرض الإشعارات:', err);
-                                });
-                            }
+                                    if (uiObj && typeof uiObj.showNotificationsDropdown === 'function') {
+                                        uiObj.showNotificationsDropdown(dropdownId, listId, emptyId, btn).catch(err => {
+                                            Utils.safeWarn('⚠️ خطأ في عرض الإشعارات:', err);
+                                        });
+                                    }
                                 }
                             } catch (fallbackError) {
                                 Utils.safeError('⚠️ فشل فتح الإشعارات:', fallbackError);
@@ -6673,12 +6725,10 @@ window.UI = {
                         if (btn._notificationClickHandler) {
                             btn.removeEventListener('click', btn._notificationClickHandler, false);
                             // تنظيف debounce timer إن وجد (تم إزالته في الإصلاح الجديد)
-                            // `_notificationClickDebounceTimer` is not defined or used elsewhere in this context.
-                            // Remove this block if it's dead code.
-                            // if (btn._notificationClickDebounceTimer) {
-                            //     clearTimeout(btn._notificationClickDebounceTimer);
-                            //     btn._notificationClickDebounceTimer = null;
-                            // }
+                            if (btn._notificationClickDebounceTimer) {
+                                clearTimeout(btn._notificationClickDebounceTimer);
+                                btn._notificationClickDebounceTimer = null;
+                            }
                             delete btn._notificationClickHandler;
                             btn.dataset.notificationsBound = 'false';
                         }
@@ -6818,7 +6868,7 @@ window.UI = {
             try {
                 const dropdown = document.getElementById(dropdownId);
                 if (dropdown && typeof this.showNotificationsDropdown === 'function') {
-                    await this.showNotificationsDropdown(dropdownId, listId, emptyId, button).catch(err => {
+                    this.showNotificationsDropdown(dropdownId, listId, emptyId, button).catch(err => {
                         Utils.safeWarn('⚠️ خطأ في عرض الإشعارات (fallback):', err);
                     });
                 }
@@ -8994,8 +9044,10 @@ window.UI = {
 
             const appShell = document.querySelector('.app-shell');
             if (appShell) {
-                appShell.classList.add('rtl-layout');
-                appShell.classList.remove('ltr-layout');
+                appShell.style.marginRight = 'var(--sidebar-width, 280px)';
+                appShell.style.marginLeft = '0';
+                appShell.style.width = 'calc(100% - var(--sidebar-width, 280px))';
+                appShell.style.transition = 'margin-right 0.3s ease, width 0.3s ease';
             }
         }
 
