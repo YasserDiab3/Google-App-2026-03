@@ -368,6 +368,7 @@ window.Auth = {
                 role: foundUser.role || 'user',
                 department: foundUser.department || '',
                 // ✅ حقول المصنع/الموقع الفرعي (اختيارية) لدعم الظهور بعد التحميل
+                // نلتقط أكبر قدر من المسميات المحتملة من Sheet Users بدون فرض سكيمة واحدة
                 factory: foundUser.factory || foundUser.factoryId || foundUser.plant || foundUser.siteId || foundUser.site || foundUser.location || '',
                 factoryId: foundUser.factoryId || foundUser.factory || foundUser.plantId || foundUser.siteId || '',
                 factoryName: foundUser.factoryName || foundUser.plantName || foundUser.siteName || foundUser.locationName || '',
@@ -748,10 +749,14 @@ window.Auth = {
             finalName: userName
         });
         
+        const resolvedRole = (typeof Utils !== 'undefined' && typeof Utils.canonicalizeUserRole === 'function')
+            ? Utils.canonicalizeUserRole(user.role || 'user')
+            : (user.role || 'user');
+
         AppState.currentUser = {
             email,
             name: userName, // ✅ استخدام userName بدلاً من user.name مباشرة
-            role: user.role || 'user',
+            role: resolvedRole,
             department: user.department || '',
             permissions: userPermissions,
             id: fullUserData?.id || user.id,
@@ -2095,8 +2100,9 @@ window.Auth = {
             }
 
             Utils.safeLog('✅ اكتمل تحميل بيانات جميع الموديولات المسموح بها');
-
+            
             // تحديث الواجهة مباشرة بعد اكتمال تحميل بيانات الموديولات
+            // لضمان ظهور البيانات في الموديولات بدون انتظار الضغط اليدوي على زر التحميل.
             try {
                 if (typeof window !== 'undefined' &&
                     window.UI &&

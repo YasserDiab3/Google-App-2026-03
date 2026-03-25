@@ -2556,6 +2556,10 @@ const Permissions = {
             return;
         }
 
+        if (typeof Utils !== 'undefined' && typeof Utils.canonicalizeUserRole === 'function') {
+            AppState.currentUser.role = Utils.canonicalizeUserRole(AppState.currentUser.role);
+        }
+
         const navItems = document.querySelectorAll('.nav-item');
         if (navItems.length === 0) {
             // إذا لم تكن عناصر القائمة موجودة بعد، نعيد المحاولة بعد قليل
@@ -2579,9 +2583,17 @@ const Permissions = {
             }
         });
 
+        // إذا بقي كل شيء مخفياً رغم أن المستخدم مدير — أعد الإظهار (جلسة قديمة أو role غير مطبّع)
+        let visibleCount = Array.from(navItems).filter(item => item.style.display !== 'none').length;
+        if (visibleCount === 0 && this.isAdminRole(AppState.currentUser.role)) {
+            navItems.forEach(item => {
+                if (item.getAttribute('data-section')) item.style.display = '';
+            });
+            visibleCount = Array.from(navItems).filter(item => item.style.display !== 'none').length;
+        }
+
         // ✅ إصلاح: تسجيل للمساعدة في التشخيص
         if (AppState.debugMode) {
-            const visibleCount = Array.from(navItems).filter(item => item.style.display !== 'none').length;
             Utils.safeLog(`✅ تم تحديث القائمة: ${visibleCount} عنصر مرئي من ${navItems.length} عنصر`);
         }
     },
@@ -2814,6 +2826,17 @@ const AppState = {
 
 // ===== Utility Functions =====
 const Utils = {
+    /**
+     * تطبيع حقل الدور للجلسة (admin صريح لكل أشكال المدير المعروفة في الجدول)
+     */
+    canonicalizeUserRole(role) {
+        const r = role == null || role === '' ? 'user' : String(role).trim();
+        if (typeof Permissions !== 'undefined' && typeof Permissions.isAdminRole === 'function' && Permissions.isAdminRole(r)) {
+            return 'admin';
+        }
+        return r || 'user';
+    },
+
     /**
      * التحقق من بيئة الإنتاج
      */

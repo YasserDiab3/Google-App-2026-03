@@ -749,10 +749,14 @@ window.Auth = {
             finalName: userName
         });
         
+        const resolvedRole = (typeof Utils !== 'undefined' && typeof Utils.canonicalizeUserRole === 'function')
+            ? Utils.canonicalizeUserRole(user.role || 'user')
+            : (user.role || 'user');
+
         AppState.currentUser = {
             email,
             name: userName, // ✅ استخدام userName بدلاً من user.name مباشرة
-            role: user.role || 'user',
+            role: resolvedRole,
             department: user.department || '',
             permissions: userPermissions,
             id: fullUserData?.id || user.id,

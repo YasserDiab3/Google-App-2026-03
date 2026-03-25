@@ -2231,19 +2231,31 @@ window.UI = {
             document.documentElement.classList.add('hse-post-login-overlay-active');
             document.body.classList.add('hse-post-login-overlay-active');
             if (AppState.debugMode) Utils.safeLog('عرض شاشة السياسة بعد الدخول، عدد العناصر:', postLoginItems.length);
-            this._showPostLoginOverlay(postLoginItems, () => {
-                const el = document.getElementById('hse-post-login-overlay');
-                if (el && el.parentNode) el.remove();
+            try {
+                this._showPostLoginOverlay(postLoginItems, () => {
+                    const el = document.getElementById('hse-post-login-overlay');
+                    if (el && el.parentNode) el.remove();
+                    document.documentElement.classList.remove('hse-post-login-overlay-active');
+                    document.body.classList.remove('hse-post-login-overlay-active');
+                    this._markCurrentUserPostLoginPolicySeen();
+                    if (mainApp) mainApp.style.display = 'flex';
+                    try {
+                        this._continueMainAppSetup();
+                    } catch (setupErr) {
+                        if (AppState.debugMode) Utils.safeWarn('⚠️ خطأ في تهيئة التطبيق بعد السياسة:', setupErr);
+                    }
+                });
+            } catch (policyErr) {
+                Utils.safeWarn('⚠️ فشل عرض شاشة السياسة بعد الدخول — متابعة التطبيق بدونها:', policyErr);
                 document.documentElement.classList.remove('hse-post-login-overlay-active');
                 document.body.classList.remove('hse-post-login-overlay-active');
-                this._markCurrentUserPostLoginPolicySeen();
-                if (mainApp) mainApp.style.display = 'flex';
+                if (typeof this.clearPostLoginOverlayLock === 'function') this.clearPostLoginOverlayLock();
                 try {
                     this._continueMainAppSetup();
                 } catch (setupErr) {
-                    if (AppState.debugMode) Utils.safeWarn('⚠️ خطأ في تهيئة التطبيق بعد السياسة:', setupErr);
+                    if (AppState.debugMode) Utils.safeWarn('⚠️ خطأ في تهيئة التطبيق بعد فشل السياسة:', setupErr);
                 }
-            });
+            }
             return;
         }
 

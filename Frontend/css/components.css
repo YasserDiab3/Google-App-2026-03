@@ -899,14 +899,14 @@
 }
 
 /* شاشة سياسات/تعليمات ما بعد تسجيل الدخول - نافذة كاملة، بدون شاشة بيضاء أبداً */
+/* ملاحظة: تجنّب position:fixed على body — إن بقيت الفئة عالقة يصبح التمرير والتنقل مستحيلين */
 html.hse-post-login-overlay-active,
 body.hse-post-login-overlay-active,
 body.app-active.hse-post-login-overlay-active {
     overflow: hidden !important;
-    position: fixed !important;
     width: 100% !important;
-    height: 100% !important;
-    height: 100dvh !important;
+    min-height: 100vh !important;
+    min-height: 100dvh !important;
     background: #0f172a !important;
 }
 
