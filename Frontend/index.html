@@ -24,6 +24,28 @@
                 } catch (e) {}
             })();
         </script>
+        <!-- إزالة قفل الواجهة يدوياً من Console: اكتب HSE_clearUiLock() (بحروف كما هي) -->
+        <script>
+            (function () {
+                try {
+                    if (typeof window.HSE_clearUiLock === "function") return;
+                    window.HSE_clearUiLock = function () {
+                        try {
+                            document.documentElement.classList.remove("hse-post-login-overlay-active");
+                            document.body.classList.remove("hse-post-login-overlay-active");
+                            var pol = document.getElementById("hse-post-login-overlay");
+                            if (pol && pol.parentNode) pol.remove();
+                            var main = document.getElementById("main-app");
+                            if (main) {
+                                main.style.visibility = "";
+                                main.style.pointerEvents = "";
+                            }
+                            if (typeof Loading !== "undefined" && Loading.hide) Loading.hide();
+                        } catch (e) {}
+                    };
+                } catch (e) {}
+            })();
+        </script>
         <script>
             (function () {
                 try {
