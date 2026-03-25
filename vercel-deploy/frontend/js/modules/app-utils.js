@@ -2666,6 +2666,8 @@ const AppState = {
     /** نص اختياري لرسالة التحديث (ملخص التغييرات). إن تُركت فارغة يُستخدم النص الافتراضي. */
     updateMessage: '',
     debugMode: false,
+    /** عند true: الخلفية الأساسية Supabase (hse-api)؛ منطق الواجهة لا يشترط تفعيل Google Sheets في الإعدادات */
+    useSupabaseBackend: false,
     currentUser: null,
     currentSection: 'dashboard',
     currentLanguage: 'ar',
@@ -2824,6 +2826,16 @@ const AppState = {
     legalAutoNotify: false // تفعيل التنبيهات التلقائية للتحديثات القانونية
 };
 
+(function applySupabaseBackendFlag() {
+    try {
+        if (typeof window !== 'undefined' && window.__HSE_USE_SUPABASE__ === true) {
+            AppState.useSupabaseBackend = true;
+        } else if (typeof window !== 'undefined' && /safety-icapp\.com$/i.test(String(window.location.hostname || ''))) {
+            AppState.useSupabaseBackend = true;
+        }
+    } catch (e) { /* ignore */ }
+})();
+
 // ===== Utility Functions =====
 const Utils = {
     /**
@@ -2835,6 +2847,23 @@ const Utils = {
             return 'admin';
         }
         return r || 'user';
+    },
+
+    /** هل الخلفية الحالية مضبوطة على Supabase */
+    isSupabaseBackend() {
+        return !!(typeof AppState !== 'undefined' && AppState.useSupabaseBackend === true);
+    },
+
+    /**
+     * هل يوجد مسار سحابي للمزامنة (Supabase أو Apps Script مفعّل مع رابط سكربت)
+     * مع Supabase يجب ضبط scriptUrl كنقطة RPC (مثل hse-api) وإلا لا تُعتبر المزامنة جاهزة.
+     */
+    hasCloudBackendSync() {
+        const gc = typeof AppState !== 'undefined' ? AppState.googleConfig : null;
+        const url = gc && gc.appsScript ? String(gc.appsScript.scriptUrl || '').trim() : '';
+        if (!url) return false;
+        if (this.isSupabaseBackend()) return true;
+        return !!(gc.appsScript.enabled);
     },
 
     /**

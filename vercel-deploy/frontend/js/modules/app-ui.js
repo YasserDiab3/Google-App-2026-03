@@ -732,7 +732,10 @@ window.UI = {
         }
         DataManager.save();
         try {
-            await GoogleIntegration.autoSave('EmergencyAlerts', AppState.appData.emergencyAlerts);
+            if (typeof Utils !== 'undefined' && typeof Utils.hasCloudBackendSync === 'function' && Utils.hasCloudBackendSync() &&
+                typeof GoogleIntegration !== 'undefined' && typeof GoogleIntegration.autoSave === 'function') {
+                await GoogleIntegration.autoSave('EmergencyAlerts', AppState.appData.emergencyAlerts);
+            }
         } catch (error) {
             Utils.safeWarn('⚠ فشل حفظ بيانات الطوارئ تلقائياً:', error);
         }
@@ -916,7 +919,10 @@ window.UI = {
                 AppState.appData.emergencyPlans.push(formData);
             }
             DataManager.save();
-            await GoogleIntegration.autoSave('EmergencyPlans', AppState.appData.emergencyPlans);
+            if (typeof Utils !== 'undefined' && typeof Utils.hasCloudBackendSync === 'function' && Utils.hasCloudBackendSync() &&
+                typeof GoogleIntegration !== 'undefined' && typeof GoogleIntegration.autoSave === 'function') {
+                await GoogleIntegration.autoSave('EmergencyPlans', AppState.appData.emergencyPlans);
+            }
             Loading.hide();
             modal.remove();
             Notification.success(editId ? 'تم تحديث الخطة بنجاح' : 'تم إضافة الخطة بنجاح');
@@ -1342,7 +1348,10 @@ window.UI = {
         }
         DataManager.save();
         try {
-            await GoogleIntegration.autoSave('EmergencyAlerts', AppState.appData.emergencyAlerts);
+            if (typeof Utils !== 'undefined' && typeof Utils.hasCloudBackendSync === 'function' && Utils.hasCloudBackendSync() &&
+                typeof GoogleIntegration !== 'undefined' && typeof GoogleIntegration.autoSave === 'function') {
+                await GoogleIntegration.autoSave('EmergencyAlerts', AppState.appData.emergencyAlerts);
+            }
         } catch (error) {
             Utils.safeWarn('⚠ فشل حفظ بيانات الطوارئ تلقائياً:', error);
         }
@@ -1526,7 +1535,10 @@ window.UI = {
                 AppState.appData.emergencyPlans.push(formData);
             }
             DataManager.save();
-            await GoogleIntegration.autoSave('EmergencyPlans', AppState.appData.emergencyPlans);
+            if (typeof Utils !== 'undefined' && typeof Utils.hasCloudBackendSync === 'function' && Utils.hasCloudBackendSync() &&
+                typeof GoogleIntegration !== 'undefined' && typeof GoogleIntegration.autoSave === 'function') {
+                await GoogleIntegration.autoSave('EmergencyPlans', AppState.appData.emergencyPlans);
+            }
             Loading.hide();
             modal.remove();
             Notification.success(editId ? 'تم تحديث الخطة بنجاح' : 'تم إضافة الخطة بنجاح');
@@ -2381,6 +2393,7 @@ window.UI = {
             if (idx !== -1 && users[idx]) users[idx].postLoginPolicySeenAt = seenAt;
         }
         const userId = user.id || user.email;
+        /** RPC موحّد (قد يتجه إلى Supabase عبر hse-api حسب إعدادات النشر) */
         if (userId && typeof GoogleIntegration !== 'undefined' && GoogleIntegration.sendToAppsScript) {
             GoogleIntegration.sendToAppsScript('updateUser', { userId: userId, updateData: { postLoginPolicySeenAt: seenAt } }).catch(() => {});
         }
@@ -2783,6 +2796,7 @@ window.UI = {
                 AppState.currentUser &&
                 !AppState.isPageRefresh &&
                 !AppState._autoSyncStarted &&
+                typeof Utils !== 'undefined' && typeof Utils.hasCloudBackendSync === 'function' && Utils.hasCloudBackendSync() &&
                 typeof GoogleIntegration !== 'undefined' &&
                 typeof GoogleIntegration.syncData === 'function' &&
                 typeof this.handleSyncClick === 'function') {
@@ -2888,16 +2902,17 @@ window.UI = {
         // تم نقل المزامنة إلى Auth.login لتجنب المزامنات المكررة
         // المزامنة تحدث مرة واحدة فقط بعد تسجيل الدخول في Auth.login
         // هذا يحسن الأداء ويقلل وقت تسجيل الدخول
-        if (!AppState.googleConfig?.appsScript?.enabled) {
-            Utils.safeLog('ℹ Google Sheets غير مفعّل، سيتم استخدام البيانات المحلية فقط');
-            // إذا لم يكن Google Sheets معّل، نتحقق من وجود بيانات محلية
-            // لا نعرض الإشعار عند إعادة التحميل
+        if (typeof Utils !== 'undefined' && typeof Utils.hasCloudBackendSync === 'function' && !Utils.hasCloudBackendSync()) {
+            Utils.safeLog('ℹ الخلفية السحابية غير مفعّلة — العمل على البيانات المحلية فقط');
             if (!AppState.isPageRefresh) {
                 const hasLocalData = Object.keys(AppState.appData).some(key =>
                     Array.isArray(AppState.appData[key]) && AppState.appData[key].length > 0
                 );
                 if (!hasLocalData) {
-                    Notification.info('لا توجد بيانات محلية. يرجى تفعيل Google Sheets لتحميل البيانات من السحابة.');
+                    const msg = Utils.isSupabaseBackend && Utils.isSupabaseBackend()
+                        ? 'لا توجد بيانات محلية. تحقق من اتصال الخادم وإعدادات Supabase.'
+                        : 'لا توجد بيانات محلية. فعّل الاتصال بالخادم من الإعدادات أو Supabase.';
+                    Notification.info(msg);
                 }
             }
         }
@@ -3010,10 +3025,9 @@ window.UI = {
                     }
                 }
 
-                // ✅ إضافة: تحميل البيانات تلقائياً من Google Sheets بعد تسجيل الدخول
-                if (AppState.currentUser && 
-                    AppState.googleConfig?.appsScript?.enabled && 
-                    AppState.googleConfig?.appsScript?.scriptUrl &&
+                // ✅ تحميل تلقائي من الخلفية السحابية بعد تسجيل الدخول (Supabase أو مسار المزامنة الموحّد)
+                if (AppState.currentUser &&
+                    typeof Utils !== 'undefined' && typeof Utils.hasCloudBackendSync === 'function' && Utils.hasCloudBackendSync() &&
                     typeof GoogleIntegration !== 'undefined' &&
                     typeof GoogleIntegration.syncData === 'function' &&
                     !AppState.isPageRefresh) {
@@ -7878,21 +7892,19 @@ window.UI = {
         try {
             syncBtn.classList.add('syncing');
             
-            // التحقق من وجود GoogleIntegration
             if (typeof GoogleIntegration === 'undefined') {
-                throw new Error('GoogleIntegration غير متاح');
+                throw new Error('طبقة المزامنة غير متاحة');
             }
 
             if (typeof Notification !== 'undefined') {
                 Notification.info('جاري تحميل البيانات من قاعدة البيانات');
             }
 
-            // مزامنة جميع البيانات (قراءة من Google Sheets)
-            // استخدام syncData لمزامنة جميع البيانات
             let syncResult = false;
-            
-            // التحقق من أن Google Sheets مفعّل قبل المحاولة
-            const isGoogleSheetsEnabled = AppState.googleConfig?.appsScript?.enabled && AppState.googleConfig?.appsScript?.scriptUrl;
+
+            const cloudSyncConfigured = typeof Utils !== 'undefined' && typeof Utils.hasCloudBackendSync === 'function'
+                ? Utils.hasCloudBackendSync()
+                : !!(AppState.googleConfig?.appsScript?.enabled && AppState.googleConfig?.appsScript?.scriptUrl);
             
             if (typeof GoogleIntegration.syncData === 'function') {
                 // ✅ تحميل تدريجي: تحميل البيانات غير المكتملة فقط
@@ -7920,7 +7932,7 @@ window.UI = {
                     }
                 } catch (e) { /* ignore */ }
             } else {
-                // محاولة قراءة مباشرة من Google Sheets (كبديل أخير)
+                // محاولة قراءة مباشرة من ورقة البيانات عبر التكامل (كبديل أخير)
                 if (typeof GoogleIntegration.readFromSheets === 'function') {
                     const usersData = await GoogleIntegration.readFromSheets('Users');
                     if (usersData && Array.isArray(usersData)) {
@@ -7935,10 +7947,7 @@ window.UI = {
                 }
             }
             
-            // التحقق من نتيجة المزامنة
-            // إذا كان Google Sheets مفعّل لكن المزامنة فشلت، نرمي خطأ
-            // إذا كان Google Sheets غير مفعّل، syncData يظهر إشعار ولا نرمي خطأ
-            if (!syncResult && isGoogleSheetsEnabled) {
+            if (!syncResult && cloudSyncConfigured) {
                 throw new Error('فشلت المزامنة مع قاعدة البيانات');
             }
 
@@ -7987,9 +7996,9 @@ window.UI = {
             const status = ConnectionMonitor.getStatus();
             isConnected = status.isConnected === true;
         } else {
-            // إذا لم يكن ConnectionMonitor متاحاً، نتحقق من إعدادات Google
-            isConnected = !!(AppState.googleConfig?.appsScript?.enabled && 
-                           AppState.googleConfig?.appsScript?.scriptUrl);
+            isConnected = typeof Utils !== 'undefined' && typeof Utils.hasCloudBackendSync === 'function'
+                ? Utils.hasCloudBackendSync()
+                : !!(AppState.googleConfig?.appsScript?.enabled && AppState.googleConfig?.appsScript?.scriptUrl);
         }
 
         // تحديث فئة الزر
@@ -8060,19 +8069,14 @@ window.UI = {
         // إيقاف المزامنة السابقة إن وجدت
         this.stopBackgroundSync();
 
-        // التحقق من وجود مستخدم مسجل دخول و Google Sheets مفعّل
-        if (!AppState.currentUser || 
-            !AppState.googleConfig?.appsScript?.enabled || 
-            !AppState.googleConfig?.appsScript?.scriptUrl) {
+        if (!AppState.currentUser ||
+            (typeof Utils !== 'undefined' && typeof Utils.hasCloudBackendSync === 'function' && !Utils.hasCloudBackendSync())) {
             return;
         }
 
-        // بدء المزامنة التلقائية الدورية
         this._backgroundSyncInterval = setInterval(() => {
-            // التحقق من وجود مستخدم مسجل دخول
-            if (!AppState.currentUser || 
-                !AppState.googleConfig?.appsScript?.enabled || 
-                !AppState.googleConfig?.appsScript?.scriptUrl) {
+            if (!AppState.currentUser ||
+                (typeof Utils !== 'undefined' && typeof Utils.hasCloudBackendSync === 'function' && !Utils.hasCloudBackendSync())) {
                 this.stopBackgroundSync();
                 return;
             }

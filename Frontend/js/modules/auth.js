@@ -84,7 +84,7 @@ window.Auth = {
             if (AppState?.currentUser?.isBootstrap === true) {
                 try {
                     if (typeof Notification !== 'undefined' && Notification.success) {
-                        Notification.success('✅ تم تعطيل حساب مدير النظام الافتراضي بعد نجاح المزامنة. يرجى تسجيل الدخول بحسابك من Google Sheets.');
+                        Notification.success('✅ تم تعطيل حساب مدير النظام الافتراضي بعد نجاح المزامنة. يرجى تسجيل الدخول بحسابك من قاعدة البيانات.');
                     }
                 } catch (e) { /* ignore */ }
 
@@ -158,10 +158,7 @@ window.Auth = {
         // استخدام البيانات المحلية أولاً لتسريع تسجيل الدخول
         // ⚠️ مهم: في أول تشغيل (users=0) يجب أن ننتظر مزامنة Users قبل محاولة التحقق من الحساب
         let localUsersCount = Array.isArray(AppState.appData.users) ? AppState.appData.users.length : 0;
-        const canSyncUsers = !!(AppState.googleConfig &&
-            AppState.googleConfig.appsScript &&
-            AppState.googleConfig.appsScript.enabled &&
-            AppState.googleConfig.appsScript.scriptUrl &&
+        const canSyncUsers = !!(typeof Utils !== 'undefined' && typeof Utils.hasCloudBackendSync === 'function' && Utils.hasCloudBackendSync() &&
             typeof GoogleIntegration !== 'undefined' &&
             typeof GoogleIntegration.syncUsers === 'function');
 
@@ -217,7 +214,7 @@ window.Auth = {
             // تحديث العداد بعد محاولة المزامنة
             localUsersCount = Array.isArray(AppState.appData.users) ? AppState.appData.users.length : 0;
         } else {
-            Utils.safeLog(`📊 Google Sheets غير مفعّل/غير جاهز - استخدام ${localUsersCount} مستخدم محلي`);
+            Utils.safeLog(`📊 الخادم الخلفي غير جاهز للمزامنة - استخدام ${localUsersCount} مستخدم محلي`);
             // ✅ إصلاح: محاولة تحميل البيانات المحلية إذا كانت متاحة
             if (localUsersCount === 0 && typeof window.DataManager !== 'undefined' && window.DataManager.load) {
                 try {
@@ -559,8 +556,7 @@ window.Auth = {
         
         // التحقق من نتيجة المطابقة
         if (!passwordMatch) {
-            // محاولة أخيرة: مزامنة قسرية للتحقق من التحديثات
-            if (AppState.googleConfig.appsScript.enabled) {
+            if (typeof Utils !== 'undefined' && typeof Utils.hasCloudBackendSync === 'function' && Utils.hasCloudBackendSync()) {
                 Utils.safeLog('🔄 كلمة المرور غير صحيحة - محاولة مزامنة قسرية...');
                 try {
                     const wrongPwSyncMs = 4000;
@@ -874,9 +870,8 @@ window.Auth = {
                 window.DataManager.save();
             }
             
-            // مزامنة lastLogin مع Google Sheets في الخلفية
-            if (typeof GoogleIntegration !== 'undefined' && GoogleIntegration.sendToAppsScript && 
-                AppState.googleConfig?.appsScript?.enabled) {
+            if (typeof GoogleIntegration !== 'undefined' && GoogleIntegration.sendToAppsScript &&
+                typeof Utils !== 'undefined' && typeof Utils.hasCloudBackendSync === 'function' && Utils.hasCloudBackendSync()) {
                 const userId = usersList[userIndex].id;
                 const updateData = {
                     lastLogin: loginTime,
@@ -885,18 +880,17 @@ window.Auth = {
                     loginHistory: usersList[userIndex].loginHistory
                 };
                 
-                // تحديث في Google Sheets بشكل غير متزامن (لا ننتظر حتى لا نبطئ تسجيل الدخول)
                 GoogleIntegration.sendToAppsScript('updateUser', {
                     userId: userId,
                     updateData: updateData
                 }).then(updateResult => {
                     if (updateResult && updateResult.success) {
-                        Utils.safeLog('✅ تم مزامنة lastLogin و activeSessionId مع Google Sheets بنجاح');
+                        Utils.safeLog('✅ تم مزامنة lastLogin و activeSessionId مع الخادم بنجاح');
                     } else {
-                        Utils.safeWarn('⚠️ فشل مزامنة lastLogin مع Google Sheets:', updateResult?.message);
+                        Utils.safeWarn('⚠️ فشل مزامنة lastLogin مع الخادم:', updateResult?.message);
                     }
                 }).catch(updateError => {
-                    Utils.safeWarn('⚠️ خطأ في مزامنة lastLogin مع Google Sheets:', updateError);
+                    Utils.safeWarn('⚠️ خطأ في مزامنة lastLogin مع الخادم:', updateError);
                     // لا نوقف تسجيل الدخول حتى لو فشلت المزامنة
                 });
             }
@@ -1032,8 +1026,7 @@ window.Auth = {
                 }
 
                 // ✅ الخطوة 2: تحميل البيانات الأساسية بشكل متسلسل (مهم جداً)
-                // البيانات الأساسية: Users, Employees, Contractors, ApprovedContractors
-                if (AppState.googleConfig && AppState.googleConfig.appsScript && AppState.googleConfig.appsScript.enabled && typeof GoogleIntegration !== 'undefined') {
+                if (typeof Utils !== 'undefined' && typeof Utils.hasCloudBackendSync === 'function' && Utils.hasCloudBackendSync() && typeof GoogleIntegration !== 'undefined') {
                     const prioritySheets = ['Users', 'Employees', 'Contractors', 'ApprovedContractors'];
                     const sheetMapping = {
                         'Users': 'users',
@@ -1164,8 +1157,7 @@ window.Auth = {
                         Utils.safeWarn('⚠️ فشل تحميل بيانات الموديولات:', err);
                     });
                 } else {
-                    // إذا لم يكن Google Sheets مفعّل، نستخدم البيانات المحلية فقط
-                    Utils.safeLog('ℹ️ Google Sheets غير مفعّل - استخدام البيانات المحلية فقط');
+                    Utils.safeLog('ℹ️ الخادم الخلفي غير مُهيأ للمزامنة - استخدام البيانات المحلية فقط');
                 }
             } catch (err) {
                 Utils.safeError('❌ خطأ عام في تحميل البيانات:', err);
@@ -1250,9 +1242,8 @@ window.Auth = {
                     window.DataManager.save();
                 }
                 
-                // مزامنة lastLogout مع Google Sheets في الخلفية
-                if (typeof GoogleIntegration !== 'undefined' && GoogleIntegration.sendToAppsScript && 
-                    AppState.googleConfig?.appsScript?.enabled) {
+                if (typeof GoogleIntegration !== 'undefined' && GoogleIntegration.sendToAppsScript &&
+                    typeof Utils !== 'undefined' && typeof Utils.hasCloudBackendSync === 'function' && Utils.hasCloudBackendSync()) {
                     const userId = users[userIndex].id;
                     const updateData = {
                         lastLogout: users[userIndex].lastLogout,
@@ -1260,18 +1251,17 @@ window.Auth = {
                         activeSessionId: null // مسح معرف الجلسة في Google Sheets
                     };
                     
-                    // تحديث في Google Sheets بشكل غير متزامن (لا ننتظر حتى لا نبطئ تسجيل الخروج)
                     GoogleIntegration.sendToAppsScript('updateUser', {
                         userId: userId,
                         updateData: updateData
                     }).then(updateResult => {
                         if (updateResult && updateResult.success) {
-                            Utils.safeLog('✅ تم مزامنة lastLogout و activeSessionId مع Google Sheets بنجاح');
+                            Utils.safeLog('✅ تم مزامنة lastLogout و activeSessionId مع الخادم بنجاح');
                         } else {
-                            Utils.safeWarn('⚠️ فشل مزامنة lastLogout مع Google Sheets:', updateResult?.message);
+                            Utils.safeWarn('⚠️ فشل مزامنة lastLogout مع الخادم:', updateResult?.message);
                         }
                     }).catch(updateError => {
-                        Utils.safeWarn('⚠️ خطأ في مزامنة lastLogout مع Google Sheets:', updateError);
+                        Utils.safeWarn('⚠️ خطأ في مزامنة lastLogout مع الخادم:', updateError);
                         // لا نوقف تسجيل الخروج حتى لو فشلت المزامنة
                     });
                 }

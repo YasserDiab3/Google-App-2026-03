@@ -33,6 +33,23 @@ const GoogleIntegration = {
         }
     },
 
+    /**
+     * هل الخلفية جاهزة لاستدعاء RPC (نفس scriptUrl؛ مع Supabase يُسمح بالاتصال إذا وُجد الرابط حتى لو عُطّل «تفعيل Apps Script» في الإعدادات)
+     */
+    _isBackendRpcConfigured() {
+        try {
+            const sc = AppState && AppState.googleConfig && AppState.googleConfig.appsScript;
+            const url = sc && String(sc.scriptUrl || '').trim();
+            if (!url) return false;
+            if (typeof Utils !== 'undefined' && typeof Utils.isSupabaseBackend === 'function' && Utils.isSupabaseBackend()) {
+                return true;
+            }
+            return !!(sc && sc.enabled);
+        } catch (e) {
+            return false;
+        }
+    },
+
     prepareSheetPayload(sheetName, data) {
         if (sheetName !== 'Users') {
             return data;
@@ -86,7 +103,7 @@ const GoogleIntegration = {
      * التحقق من المزامنة في التقدم باستخدام Google Sheets
      */
     async autoSave(sheetName, data) {
-        if (!AppState.googleConfig.appsScript.enabled || !AppState.googleConfig.appsScript.scriptUrl) {
+        if (!this._isBackendRpcConfigured()) {
             // لا يوجد Google Apps Script - يتم تخزينه في التقدم
             if (typeof DataManager !== 'undefined' && DataManager.addToPendingSync) {
                 DataManager.addToPendingSync(sheetName, data);
@@ -142,7 +159,7 @@ const GoogleIntegration = {
      * @returns {Promise<object>} - النتيجة
      */
     async immediateSyncWithRetry(action, data, maxRetries = 3) {
-        if (!AppState.googleConfig.appsScript.enabled || !AppState.googleConfig.appsScript.scriptUrl) {
+        if (!this._isBackendRpcConfigured()) {
             return {
                 success: false,
                 message: 'Google Apps Script غير مفعل',
@@ -569,8 +586,8 @@ const GoogleIntegration = {
      * التحقق من هل هو executeRequest
      */
     async _executeRequest(action, data, retryCount = 0) {
-        if (!AppState.googleConfig.appsScript.enabled || !AppState.googleConfig.appsScript.scriptUrl) {
-            return Promise.reject(new Error('Google Apps Script غير مفعل'));
+        if (!this._isBackendRpcConfigured()) {
+            return Promise.reject(new Error('الخادم الخلفي غير مُهيأ أو غير مفعّل'));
         }
 
         const scriptUrl = AppState.googleConfig.appsScript.scriptUrl.trim();
@@ -966,8 +983,8 @@ const GoogleIntegration = {
 
             // تسجيل الخطأ فقط إذا لم يكن خطأ متوقع أو عندما يكون Google Apps Script مفعّل
             const errorMsg = error.message || 'خطأ غير معروف';
-            const isGoogleAppsScriptEnabled = AppState.googleConfig?.appsScript?.enabled && AppState.googleConfig?.appsScript?.scriptUrl;
-            
+            const isBackendRpcConfigured = this._isBackendRpcConfigured();
+
             // تجاهل أخطاء getPublicIP بصمت (هذه عملية غير حرجة)
             const isGetPublicIPError = action === 'getPublicIP' || 
                 errorMsg.includes('getting public IP') || 
@@ -978,11 +995,10 @@ const GoogleIntegration = {
                 errorMsg.includes('معرف Google Sheets غير محدد') ||
                 errorMsg.includes('Google Sheets غير مفعّل') ||
                 errorMsg.includes('Google Apps Script') ||
-                (!isGoogleAppsScriptEnabled && (errorMsg.includes('Failed to fetch') || errorMsg.includes('NetworkError')));
+                errorMsg.includes('الخادم الخلفي غير مُهيأ') ||
+                (!isBackendRpcConfigured && (errorMsg.includes('Failed to fetch') || errorMsg.includes('NetworkError')));
 
-            // لا نسجل الأخطاء إذا كانت Google Sheets غير مفعّلة أو إذا كان الخطأ متوقعاً
-            // تجاهل أخطاء getPublicIP تماماً - لا نريد إظهارها حتى لو كانت Google Sheets مفعّلة
-            if (!isExpectedError && isGoogleAppsScriptEnabled && !isGetPublicIPError) {
+            if (!isExpectedError && isBackendRpcConfigured && !isGetPublicIPError) {
                 // Extract meaningful error message instead of logging raw object
                 const displayError = error?.message || error?.toString() || JSON.stringify(error) || 'خطأ غير معروف';
                 
@@ -1136,18 +1152,13 @@ const GoogleIntegration = {
             }
         }
 
-        // Check if Google Apps Script is enabled
-        if (!AppState.googleConfig?.appsScript?.enabled || !AppState.googleConfig?.appsScript?.scriptUrl) {
-            // Try to get data from local storage as fallback
+        if (!this._isBackendRpcConfigured()) {
             const localData = this.getLocalData(action, data);
             if (localData !== null) {
                 Utils.safeLog(`✅ تم استخدام البيانات المحلية من التخزين المؤقت للعملية: ${action}`);
                 return localData;
             }
-
-            // If no local data and Google Apps Script is not enabled, throw error
-            const errorMessage = 'Google Apps Script غير مفعّل. يرجى تفعيله في الإعدادات.';
-            throw new Error(errorMessage);
+            throw new Error('الخادم الخلفي غير مُهيأ. يرجى ضبط رابط الاتصال في الإعدادات.');
         }
 
         try {
@@ -1274,9 +1285,7 @@ const GoogleIntegration = {
      * قراءة البيانات من Google Sheets باستخدام Apps Script
      */
     async readFromSheets(sheetName, timeout = 30000) {
-        // التحقق من تفعيل Google Apps Script قبل إجراء الطلب
-        if (!AppState.googleConfig?.appsScript?.enabled || !AppState.googleConfig?.appsScript?.scriptUrl) {
-            // إذا لم يكن Google Apps Script مفعّل، نعيد مصفوفة فارغة بدون إظهار أخطاء
+        if (!this._isBackendRpcConfigured()) {
             return [];
         }
 
@@ -1310,14 +1319,13 @@ const GoogleIntegration = {
 
             return [];
         } catch (error) {
-            // قمع الأخطاء المتوقعة (عندما يكون Google Apps Script غير مفعّل أو الورقة غير موجودة)
             const errorMsg = error.message || 'خطأ غير معروف';
-            const isGoogleAppsScriptEnabled = AppState.googleConfig?.appsScript?.enabled && AppState.googleConfig?.appsScript?.scriptUrl;
+            const isBackendRpcConfigured = this._isBackendRpcConfigured();
 
-            // قائمة الأخطاء المتوقعة التي لا يجب عرضها للمستخدم
-            const isExpectedError = !isGoogleAppsScriptEnabled ||
+            const isExpectedError = !isBackendRpcConfigured ||
                 errorMsg.includes('معرف Google Sheets غير محدد') ||
                 errorMsg.includes('Google Sheets غير مفعّل') ||
+                errorMsg.includes('الخادم الخلفي غير مُهيأ') ||
                 errorMsg.includes('انتهت مهلة قراءة البيانات') ||
                 errorMsg.includes('timeout') ||
                 errorMsg.includes('Timeout') ||
@@ -1548,9 +1556,9 @@ const GoogleIntegration = {
      * حفظ البيانات في Google Sheets (Google Sheets)
      */
     async saveToSheets(sheetName, data) {
-        if (!AppState.googleConfig.appsScript.enabled) {
-            Utils.safeWarn('Google Apps Script غير مفعّل');
-            return { success: false, message: 'Google Apps Script غير مفعّل' };
+        if (!this._isBackendRpcConfigured()) {
+            Utils.safeWarn('الخادم الخلفي غير مفعّل');
+            return { success: false, message: 'الخادم الخلفي غير مفعّل' };
         }
 
         try {
@@ -1570,9 +1578,9 @@ const GoogleIntegration = {
      * إضافة البيانات الجديدة إلى Google Sheets (بدون استبدال)
      */
     async appendToSheets(sheetName, data) {
-        if (!AppState.googleConfig.appsScript.enabled || !AppState.googleConfig.appsScript.scriptUrl) {
-            Utils.safeWarn('Google Apps Script غير مفعّل');
-            return { success: false, message: 'Google Apps Script غير مفعّل' };
+        if (!this._isBackendRpcConfigured()) {
+            Utils.safeWarn('الخادم الخلفي غير مفعّل');
+            return { success: false, message: 'الخادم الخلفي غير مفعّل' };
         }
 
         try {
@@ -1603,7 +1611,7 @@ const GoogleIntegration = {
     },
 
     async syncUsers(force = false) {
-        if (!AppState.googleConfig.appsScript.enabled || !AppState.googleConfig.appsScript.scriptUrl) {
+        if (!this._isBackendRpcConfigured()) {
             return false;
         }
 
@@ -2202,8 +2210,8 @@ const GoogleIntegration = {
      * ?????? ???????? ???????????????? ???? Google Sheets (?????????????? ????????)
      */
     async saveAllToSheets() {
-        if (!AppState.googleConfig.appsScript.enabled || !AppState.googleConfig.appsScript.scriptUrl) {
-            return { success: false, message: 'Google Apps Script ?????? ??????????' };
+        if (!this._isBackendRpcConfigured()) {
+            return { success: false, message: 'الخادم الخلفي غير مفعّل' };
         }
 
         try {
@@ -2320,8 +2328,8 @@ const GoogleIntegration = {
      * ?????????? ???????? ?????????????? ???????????????? ???????????????? ?? Google Sheets
      */
     async initializeSheets() {
-        if (!AppState.googleConfig.appsScript.enabled || !AppState.googleConfig.appsScript.scriptUrl) {
-            return Promise.reject(new Error('Google Apps Script ?????? ????????'));
+        if (!this._isBackendRpcConfigured()) {
+            return Promise.reject(new Error('الخادم الخلفي غير مفعّل'));
         }
 
         try {
@@ -2407,10 +2415,10 @@ const GoogleIntegration = {
             incremental = false // ✅ جديد: تحميل تدريجي
         } = options;
 
-        if (!AppState.googleConfig.appsScript.enabled || !AppState.googleConfig.appsScript.scriptUrl) {
+        if (!this._isBackendRpcConfigured()) {
             if (!silent) {
-                Utils.safeLog('Google Sheets غير مفعّل - سيتم استخدام البيانات المحلية فقط');
-                Notification.warning('Google Sheets غير مفعّل. سيتم استخدام البيانات المحلية فقط.');
+                Utils.safeLog('الخادم الخلفي غير مُهيأ - سيتم استخدام البيانات المحلية فقط');
+                Notification.warning('الخادم الخلفي غير مُهيأ. سيتم استخدام البيانات المحلية فقط.');
             }
             return false;
         }
@@ -3097,18 +3105,18 @@ const GoogleIntegration = {
 
             // قمع الأخطاء المتوقعة (عندما يكون Google Apps Script غير مفعّل)
             const errorMsg = error.message || 'خطأ غير معروف';
-            const isGoogleAppsScriptEnabled = AppState.googleConfig?.appsScript?.enabled && AppState.googleConfig?.appsScript?.scriptUrl;
-            const isExpectedError = !isGoogleAppsScriptEnabled ||
+            const isBackendRpcConfigured = this._isBackendRpcConfigured();
+            const isExpectedError = !isBackendRpcConfigured ||
                 errorMsg.includes('معرف Google Sheets غير محدد') ||
                 errorMsg.includes('Google Sheets غير مفعّل') ||
-                (!isGoogleAppsScriptEnabled && (errorMsg.includes('Failed to fetch') || errorMsg.includes('NetworkError')));
+                (!isBackendRpcConfigured && (errorMsg.includes('Failed to fetch') || errorMsg.includes('NetworkError')));
 
             if (!isExpectedError) {
                 Utils.safeError('❌ خطأ في مزامنة البيانات:', error);
             }
 
             if (notifyOnError && !isExpectedError) {
-                Notification.error('خطأ في المزامنة مع Google Sheets: ' + error.message);
+                Notification.error('خطأ في المزامنة مع الخادم: ' + error.message);
             }
             return false;
         }
@@ -3128,16 +3136,15 @@ const GoogleIntegration = {
             useQueue = false
         } = options;
 
-        // التحقق من تفعيل Google Apps Script
-        if (!AppState.googleConfig.appsScript.enabled || !AppState.googleConfig.appsScript.scriptUrl) {
+        if (!this._isBackendRpcConfigured()) {
             if (!silent) {
-                Utils.safeWarn('Google Apps Script غير مفعّل - سيتم حفظ البيانات محلياً');
+                Utils.safeWarn('الخادم الخلفي غير مفعّل - سيتم حفظ البيانات محلياً');
             }
             // إضافة البيانات إلى قائمة الانتظار للمزامنة
             if (typeof DataManager !== 'undefined' && DataManager.addToPendingSync) {
                 DataManager.addToPendingSync(sheetName, data);
             }
-            return { success: false, shouldDefer: true, message: 'Google Apps Script غير مفعّل' };
+            return { success: false, shouldDefer: true, message: 'الخادم الخلفي غير مفعّل' };
         }
 
         // التحقق من spreadsheetId
