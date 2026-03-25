@@ -4892,7 +4892,11 @@ const Loading = {
         const overlay = document.getElementById('loading-overlay');
         if (!overlay) return;
 
+        try {
+            window._hseLoadingSince = Date.now();
+        } catch (e) { /* ignore */ }
         overlay.style.display = 'flex';
+        overlay.style.visibility = 'visible';
         this.currentMessage = message;
 
         // تحديث الرسالة
@@ -4973,9 +4977,13 @@ const Loading = {
         const overlay = document.getElementById('loading-overlay');
         if (overlay) {
             overlay.style.display = 'none';
+            overlay.style.visibility = 'hidden';
             this.currentProgress = 0;
             this.currentMessage = '';
         }
+        try {
+            delete window._hseLoadingSince;
+        } catch (e) { /* ignore */ }
     }
 };
 

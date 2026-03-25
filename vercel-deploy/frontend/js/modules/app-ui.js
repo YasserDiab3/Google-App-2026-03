@@ -2156,6 +2156,9 @@ window.UI = {
             Permissions.updateNavigation();
         }
 
+        // مراقب استعادة الواجهة مبكراً (قبل أي await) حتى لا تبقى الصفحة «ميتة» إن تعطل مسار لاحق
+        this._installUiRecoveryWatchdog();
+
         // إزالة overlay استعادة الجلسة + إظهار التطبيق فوراً (أولوية قصوى)
         const restoreOverlay = document.getElementById('hse-session-restore-overlay');
         if (restoreOverlay && restoreOverlay.parentNode) restoreOverlay.remove();
@@ -2687,6 +2690,54 @@ window.UI = {
                 mainApp.style.pointerEvents = '';
             }
         } catch (e) { /* ignore */ }
+    },
+
+    /**
+     * مراقب دوري: إن بقيت فئة سياسة الدخول على body دون طبقة السياسة، أو علق التحميل طويلاً — أصلح الواجهة.
+     */
+    _installUiRecoveryWatchdog() {
+        if (window._hseUiRecoveryWatchdogInstalled) return;
+        window._hseUiRecoveryWatchdogInstalled = true;
+        try {
+            window.HSE_clearUiLock = () => {
+                try {
+                    if (typeof UI !== 'undefined' && typeof UI.clearPostLoginOverlayLock === 'function') {
+                        UI.clearPostLoginOverlayLock();
+                    }
+                    if (typeof Loading !== 'undefined' && typeof Loading.hide === 'function') {
+                        Loading.hide();
+                    }
+                } catch (e) { /* ignore */ }
+            };
+        } catch (e) { /* ignore */ }
+        const tick = () => {
+            try {
+                if (typeof AppState === 'undefined' || !AppState.currentUser) return;
+                const pol = document.getElementById('hse-post-login-overlay');
+                const main = document.getElementById('main-app');
+                const bodyLocked = document.body.classList.contains('hse-post-login-overlay-active');
+                const mainVisible = main && (main.style.display === 'flex' || (main.style.display !== 'none' && main.offsetParent !== null));
+                if (bodyLocked && !pol && mainVisible) {
+                    this.clearPostLoginOverlayLock();
+                    if (typeof Utils !== 'undefined' && Utils.safeWarn) {
+                        Utils.safeWarn('⚠️ تمت إزالة قفل واجهة ما بعد الدخول تلقائياً (حالة غير متسقة)');
+                    }
+                }
+                const lo = document.getElementById('loading-overlay');
+                if (lo && lo.style.display === 'flex' && typeof window._hseLoadingSince === 'number' && (Date.now() - window._hseLoadingSince > 120000)) {
+                    if (typeof Loading !== 'undefined' && typeof Loading.hide === 'function') {
+                        Loading.hide();
+                        if (typeof Utils !== 'undefined' && Utils.safeWarn) {
+                            Utils.safeWarn('⚠️ تم إزالة طبقة التحميل تلقائياً بعد مهلة طويلة');
+                        }
+                    }
+                }
+            } catch (e) { /* ignore */ }
+        };
+        setInterval(tick, 2500);
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'visible') tick();
+        });
     },
 
     /** متابعة تهيئة التطبيق الرئيسي (بعد شاشة السياسات أو مباشرة بعد الدخول) */

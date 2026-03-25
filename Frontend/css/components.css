@@ -958,9 +958,9 @@ body.app-active.hse-post-login-overlay-active {
     color: #1e293b;
 }
 
-/* إخفاء التطبيق بالكامل أثناء عرض السياسة (لا هيدر ولا شريط جانبي) */
+/* أثناء السياسة: الطبقة ذات z-index العالي تغطي الشاشة — لا نستخدم visibility:hidden على #main-app
+   لأن بقاء الفئة عالقة دون الطبقة يُبقي التطبيق غير مرئي/غير قابل للنقر (صفحة «ميتة»). */
 body.hse-post-login-overlay-active #main-app {
-    visibility: hidden !important;
     pointer-events: none !important;
 }
 
