@@ -258,20 +258,19 @@
                         log('⚠️ تعذر تنفيذ تنظيف الحسابات الافتراضية legacy:', cleanupError);
                     }
                     
-                    // تحميل إعدادات Google بشكل دائم (يجب أن تكون متاحة لجميع المستخدمين)
                     if (window.DataManager && window.DataManager.loadGoogleConfig) {
                         try {
                             window.DataManager.loadGoogleConfig();
-                            log('✅ تم تحميل إعدادات Google بنجاح');
+                            log('✅ تم تحميل إعدادات الاتصال بالخادم بنجاح');
                         } catch (configError) {
-                            console.warn('⚠️ خطأ في تحميل إعدادات Google:', configError);
+                            console.warn('⚠️ خطأ في تحميل إعدادات الاتصال بالخادم:', configError);
                         }
                     }
 
                     // ✅ تحسين: تحميل مسبق للبيانات المشتركة (المقاولين والموظفين)
                     // هذا يضمن توفرها فوراً عند فتح الموديولات التي تحتاجها (العيادة، التدريب، إلخ)
-                    if (typeof GoogleIntegration !== 'undefined' && GoogleIntegration.sendRequest && 
-                        AppState.googleConfig?.appsScript?.enabled && AppState.googleConfig?.appsScript?.scriptUrl) {
+                    if (typeof GoogleIntegration !== 'undefined' && GoogleIntegration.sendRequest &&
+                        typeof Utils !== 'undefined' && typeof Utils.hasCloudBackendSync === 'function' && Utils.hasCloudBackendSync()) {
                         // تحميل البيانات المشتركة في الخلفية بشكل متوازي (بدون انتظار)
                         Promise.all([
                             // تحميل بيانات المقاولين

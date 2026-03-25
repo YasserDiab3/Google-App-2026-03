@@ -31,14 +31,14 @@ var log = function() { try { console.log.apply(console, arguments); } catch(e) {
 
     // ===== مزامنة المستخدمين قبل تسجيل الدخول (إعداد المزامنة) =====
     const LoginSyncSetup = (function () {
-        const STORAGE_KEY = 'hse_google_config';
+        const STORAGE_KEY = 'hse_google_config'; /* مفتاح تخزين تاريخي — يحتوي إعدادات RPC/الخادم */
         const MODAL_ID = 'login-sync-settings-modal';
 
         function getDefaultGoogleConfig() {
             return {
-                appsScript: { enabled: true, scriptUrl: 'https://script.google.com/macros/s/AKfycbyXvHP2gsfzPSVvurI_MH1kIYf7vVGBYK3m9fv26QPzv-eoD1d7tiLJPYjecyf2YJNSBw/exec' },
-                sheets: { enabled: true, spreadsheetId: '1EanavJ2OodOmq8b1GagSj8baa-KF-o4mVme_Jlwmgxc', apiKey: '' },
-                maps: { enabled: true, apiKey: '' }
+                appsScript: { enabled: false, scriptUrl: '' },
+                sheets: { enabled: false, spreadsheetId: '', apiKey: '' },
+                maps: { enabled: false, apiKey: '' }
             };
         }
 
@@ -104,8 +104,11 @@ var log = function() { try { console.log.apply(console, arguments); } catch(e) {
                     return !!window.GoogleIntegration.isValidGoogleAppsScriptUrl(u);
                 }
             } catch (e) { /* ignore */ }
-
-            // fallback بسيط
+            try {
+                const x = new URL(u);
+                if (x.protocol !== 'https:') return false;
+                if (x.hostname.toLowerCase().endsWith('.supabase.co') && x.pathname.indexOf('/functions/v1/') !== -1) return true;
+            } catch (e) { return false; }
             if (!/^https:\/\/script\.google\.com\//i.test(u)) return false;
             if (!/\/exec(\?|#|$)/i.test(u)) return false;
             return true;
@@ -170,19 +173,19 @@ var log = function() { try { console.log.apply(console, arguments); } catch(e) {
                         <div class="space-y-4">
                             <div>
                                 <label class="block text-sm font-semibold text-gray-700 mb-2">
-                                    رابط Google Apps Script (scriptUrl)
+                                    رابط الخادم الخلفي (RPC / Supabase Edge)
                                 </label>
                                 <input id="login-sync-script-url" type="url" class="form-input" dir="ltr"
-                                    placeholder="https://script.google.com/macros/s/.../exec" autocomplete="off">
-                                <p class="text-xs text-gray-500 mt-2">مهم: يجب أن ينتهي الرابط بـ <b>/exec</b> وأن يكون الـ Deploy مضبوط على Anyone.</p>
+                                    placeholder="https://xxxx.supabase.co/functions/v1/hse-api" autocomplete="off">
+                                <p class="text-xs text-gray-500 mt-2">للنشر على Supabase: استخدم رابط دالة <b>hse-api</b> تحت <b>/functions/v1/</b>. إن وُجد نشر قديم متوافق، يمكن استخدام رابط ينتهي بـ <b>/exec</b>.</p>
                             </div>
                             <div>
                                 <label class="block text-sm font-semibold text-gray-700 mb-2">
-                                    معرف Google Sheet (spreadsheetId)
+                                    معرف الجدول (اختياري — إن يطلبه الخادم)
                                 </label>
                                 <input id="login-sync-spreadsheet-id" type="text" class="form-input" dir="ltr"
-                                    placeholder="مثال: 1AbC...XyZ" autocomplete="off">
-                                <p class="text-xs text-gray-500 mt-2">يمكنك نسخه من رابط Google Sheets بين <b>/d/</b> و <b>/edit</b>.</p>
+                                    placeholder="مثال: معرف جدول أو مشروع" autocomplete="off">
+                                <p class="text-xs text-gray-500 mt-2">اتركه فارغاً إذا لم يكن مطلوباً في إعداداتك الحالية.</p>
                             </div>
                             <div id="login-sync-settings-status" class="text-sm text-gray-700" style="display:none;"></div>
                         </div>

@@ -43,7 +43,7 @@ const Settings = {
                         const compressedDataUrl = canvas.toDataURL('image/jpeg', quality);
                         
                         // التحقق من الحجم (base64 string length)
-                        // Google Sheets limit: 50,000 chars
+                        // حد طول الحقل (قد يفرضه الخادم)
                         // نهدف إلى أقل من 45,000 حرف (لترك هامش أمان)
                         if (compressedDataUrl.length > 45000) {
                             // إذا كان الحجم لا يزال كبيراً، نضغط أكثر
@@ -463,12 +463,12 @@ const Settings = {
                             <i class="fas fa-cloud text-green-600 ml-2"></i>
                             التكامل والمزامنة
                         </h2>
-                        <p class="settings-group-subtitle">إعدادات التكامل مع Google Sheets و Google Apps Script</p>
+                        <p class="settings-group-subtitle">إعدادات الاتصال بالخادم الخلفي (Supabase / RPC) والمزامنة</p>
                     </div>
                     <div class="settings-group-content">
                         <div class="content-card">
                             <div class="card-header">
-                                <h2 class="card-title"><i class="fas fa-cloud ml-2"></i>تكامل Google</h2>
+                                <h2 class="card-title"><i class="fas fa-cloud ml-2"></i>الخادم والمزامنة</h2>
                             </div>
                             <div class="card-body">
                                 <form id="google-settings-form" class="space-y-6">
@@ -476,33 +476,33 @@ const Settings = {
                                         <label class="flex items-center mb-4">
                                             <input type="checkbox" id="google-apps-script-enabled" class="rounded border-gray-300 text-blue-600"
                                                 ${AppState.googleConfig.appsScript.enabled ? 'checked' : ''}>
-                                            <span class="mr-2 text-sm text-gray-700">تفعيل Google Apps Script</span>
+                                            <span class="mr-2 text-sm text-gray-700">تفعيل الاتصال بالخادم الخلفي</span>
                                         </label>
                                     </div>
                                     <div>
                                         <label class="block text-sm font-semibold text-gray-700 mb-2">
                                             <i class="fas fa-link ml-2"></i>
-                                            رابط Google Apps Script (مطلوب)
+                                            رابط نقطة النهاية RPC (مطلوب للمزامنة)
                                         </label>
                                         <input type="url" id="google-apps-script-url" class="form-input"
                                             value="${AppState.googleConfig.appsScript.scriptUrl || ''}"
-                                            placeholder="https://script.google.com/macros/s/.../exec">
+                                            placeholder="https://xxxx.supabase.co/functions/v1/hse-api">
                                     </div>
                                     <div>
                                         <label class="flex items-center mb-4">
                                             <input type="checkbox" id="google-sheets-enabled" class="rounded border-gray-300 text-blue-600"
                                                 ${AppState.googleConfig.sheets.enabled ? 'checked' : ''}>
-                                            <span class="mr-2 text-sm text-gray-700">تفعيل Google Sheets</span>
+                                            <span class="mr-2 text-sm text-gray-700">تفعيل مزامنة الجداول (إن يطلبها الخادم)</span>
                                         </label>
                                     </div>
                                     <div>
                                         <label class="block text-sm font-semibold text-gray-700 mb-2">
                                             <i class="fas fa-table ml-2"></i>
-                                            معرف Google Sheets (مطلوب)
+                                            معرف الجدول / المشروع (اختياري)
                                         </label>
                                         <input type="text" id="google-sheets-id" class="form-input"
                                             value="${AppState.googleConfig.sheets.spreadsheetId || ''}"
-                                            placeholder="معرف الجدول">
+                                            placeholder="إن وُجد في إعدادات الخادم">
                                     </div>
                                     <div class="flex items-center justify-end gap-4 pt-4 border-t">
                                         <button type="button" id="test-connection-btn" class="btn-secondary">
@@ -537,13 +537,13 @@ const Settings = {
                                 <div class="border-t pt-4">
                                     <button id="sync-data-btn" class="btn-primary w-full">
                                         <i class="fas fa-sync ml-2"></i>
-                                        مزامنة البيانات مع Google Sheets (قراءة)
+                                        مزامنة البيانات من الخادم (قراءة)
                                     </button>
                                 </div>
                                 <div class="border-t pt-4">
                                     <button id="save-all-data-btn" class="btn-success w-full">
                                         <i class="fas fa-cloud-upload-alt ml-2"></i>
-                                        حفظ جميع البيانات في Google Sheets (كتابة)
+                                        حفظ جميع البيانات في الخادم (كتابة)
                                     </button>
                                 </div>
                             </div>
@@ -1220,7 +1220,7 @@ const Settings = {
             const saveAllBtn = document.getElementById('save-all-data-btn');
             if (saveAllBtn) {
                 saveAllBtn.addEventListener('click', async () => {
-                    if (confirm('هل تريد حفظ جميع البيانات ي Google Sheets؟\nسيتم استبدال البيانات الموجودة.')) {
+                    if (confirm('هل تريد حفظ جميع البيانات في الخادم؟\nسيتم استبدال البيانات الموجودة هناك.')) {
                         await GoogleIntegration.saveAllToSheets();
                     }
                 });
@@ -1295,7 +1295,7 @@ const Settings = {
                             Utils.safeWarn('⚠️ DataManager غير متاح - لم يتم حفظ البيانات');
                         }
                         
-                        // حفظ الشعار في قاعدة البيانات (Google Sheets) عند التحميل الأول
+                        // حفظ الشعار في قاعدة البيانات عند التحميل الأول
                         if (AppState.googleConfig?.appsScript?.enabled && typeof GoogleIntegration !== 'undefined') {
                             try {
                                 const userData = AppState.currentUser || {};
@@ -1397,7 +1397,7 @@ const Settings = {
                             Utils.safeWarn('⚠️ DataManager غير متاح - لم يتم حفظ البيانات');
                         }
                         
-                        // حفظ إزالة الشعار في قاعدة البيانات (Google Sheets)
+                        // حفظ إزالة الشعار في قاعدة البيانات
                         if (AppState.googleConfig?.appsScript?.enabled && typeof GoogleIntegration !== 'undefined') {
                             try {
                                 const userData = AppState.currentUser || {};
@@ -1550,7 +1550,7 @@ const Settings = {
                     });
                     DataManager.saveCompanySettings();
                     
-                    // حفظ في Google Sheets إذا كان متاحاً
+                    // حفظ في الخادم إذا كان متاحاً
                     if (AppState.googleConfig?.appsScript?.enabled && typeof GoogleIntegration !== 'undefined') {
                         try {
                             const userData = AppState.currentUser || {};
@@ -1576,12 +1576,12 @@ const Settings = {
                             });
 
                             if (result && result.success) {
-                                Utils.safeLog('✅ تم حفظ إعدادات الشركة في Google Sheets بنجاح');
+                                Utils.safeLog('✅ تم حفظ إعدادات الشركة في الخادم بنجاح');
                             } else {
-                                Utils.safeWarn('⚠️ فشل حفظ إعدادات الشركة في Google Sheets:', result?.message);
+                                Utils.safeWarn('⚠️ فشل حفظ إعدادات الشركة في الخادم:', result?.message);
                             }
                         } catch (error) {
-                            Utils.safeWarn('⚠️ خطأ أثناء مزامنة إعدادات الشركة مع Google Sheets:', error);
+                            Utils.safeWarn('⚠️ خطأ أثناء مزامنة إعدادات الشركة مع الخادم:', error);
                         }
                     }
                     
@@ -1787,7 +1787,7 @@ const Settings = {
                     }
                     DataManager.saveCompanySettings();
                     
-                    // حفظ في Google Sheets إذا كان متاحاً
+                    // حفظ في الخادم إذا كان متاحاً
                     if (AppState.googleConfig?.appsScript?.enabled && typeof GoogleIntegration !== 'undefined') {
                         try {
                             const userData = AppState.currentUser || {};
@@ -1813,12 +1813,12 @@ const Settings = {
                             });
 
                             if (result && result.success) {
-                                Utils.safeLog('✅ تم حفظ إعدادات الشركة الافتراضية في Google Sheets بنجاح');
+                                Utils.safeLog('✅ تم حفظ إعدادات الشركة الافتراضية في الخادم بنجاح');
                             } else {
-                                Utils.safeWarn('⚠️ فشل حفظ إعدادات الشركة في Google Sheets:', result?.message);
+                                Utils.safeWarn('⚠️ فشل حفظ إعدادات الشركة في الخادم:', result?.message);
                             }
                         } catch (error) {
-                            Utils.safeWarn('⚠️ خطأ أثناء مزامنة إعدادات الشركة مع Google Sheets:', error);
+                            Utils.safeWarn('⚠️ خطأ أثناء مزامنة إعدادات الشركة مع الخادم:', error);
                         }
                     }
                     
@@ -3036,7 +3036,7 @@ const Settings = {
                 }
             }
         } catch (error) {
-            Utils.safeError('خطأ في حفظ إعدادات Google:', error);
+            Utils.safeError('خطأ في حفظ إعدادات الاتصال بالخادم:', error);
             Notification.error('فشل حفظ الإعدادات: ' + (error.message || 'خطأ غير معروف'));
         }
     },
@@ -3050,13 +3050,13 @@ const Settings = {
                 const result = await Utils.promiseWithTimeout(
                     GoogleIntegration.readFromSheets('Users'),
                     timeout,
-                    'انتهت مهلة الاتصال بالخادم\n\nتحقق من:\n1. اتصال الإنترنت\n2. أن Google Apps Script منشور ومفعّل\n3. عدم وجود قيود على الشبكة'
+                    'انتهت مهلة الاتصال بالخادم\n\nتحقق من:\n1. اتصال الإنترنت\n2. صحة رابط نقطة النهاية (RPC)\n3. عدم وجود قيود على الشبكة'
                 );
                 Loading.hide();
                 Notification.success('الاتصال نجح! تم العثور على ' + result.length + ' سجل');
             } else {
                 Loading.hide();
-                Notification.error('يرجى تفعيل Google Apps Script وإدخال الرابط');
+                Notification.error('يرجى تفعيل الاتصال بالخادم وإدخال رابط نقطة النهاية');
             }
         } catch (error) {
             Loading.hide();
@@ -3068,12 +3068,12 @@ const Settings = {
 
     async initializeSheets() {
         if (!AppState.googleConfig.appsScript.enabled) {
-            Notification.error('يرجى تفعيل Google Apps Script أولاً');
+            Notification.error('يرجى تفعيل الاتصال بالخادم أولاً');
             return;
         }
 
         if (!AppState.googleConfig.sheets.spreadsheetId) {
-            Notification.error('يرجى إدخال معرف Google Sheets أولاً');
+            Notification.error('يرجى إدخال معرف الجدول أولاً إذا كان مطلوباً');
             return;
         }
 
@@ -3239,7 +3239,7 @@ const Settings = {
             Utils.safeWarn('⚠️ DataManager غير متاح - لم يتم حفظ البيانات');
         }
 
-                        // حفظ الشعار في قاعدة البيانات (Google Sheets)
+                        // حفظ الشعار في قاعدة البيانات
                         if (AppState.googleConfig?.appsScript?.enabled && typeof GoogleIntegration !== 'undefined') {
                             try {
                                 const userData = AppState.currentUser || {};
@@ -3324,7 +3324,7 @@ const Settings = {
             Utils.safeWarn('⚠️ DataManager غير متاح - لم يتم حفظ البيانات');
         }
 
-                    // حفظ إزالة الشعار في قاعدة البيانات (Google Sheets)
+                    // حفظ إزالة الشعار في قاعدة البيانات
                     if (AppState.googleConfig?.appsScript?.enabled && typeof GoogleIntegration !== 'undefined') {
                         try {
                             const userData = AppState.currentUser || {};

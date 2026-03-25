@@ -2761,19 +2761,20 @@ const AppState = {
         lastSyncTime: 0, // آخر مرة تم فيها التحميل الكامل
         userEmail: null // البريد الإلكتروني للمستخدم الحالي
     },
+    /** إعدادات RPC للخادم الخلفي (الاسم التاريخي googleConfig — يُستخدم مع Supabase Edge / hse-api) */
     googleConfig: {
         appsScript: {
-            enabled: true,
-            scriptUrl: 'https://script.google.com/macros/s/AKfycbyXvHP2gsfzPSVvurI_MH1kIYf7vVGBYK3m9fv26QPzv-eoD1d7tiLJPYjecyf2YJNSBw/exec'
+            enabled: false,
+            scriptUrl: ''
         },
         sheets: {
-            enabled: true,
-            spreadsheetId: '1EanavJ2OodOmq8b1GagSj8baa-KF-o4mVme_Jlwmgxc',
+            enabled: false,
+            spreadsheetId: '',
             apiKey: ''
         },
         maps: {
-            enabled: true,
-            apiKey: '' // مفتاح Google Maps API - للحصول عليه: https://console.cloud.google.com/google/maps-apis
+            enabled: false,
+            apiKey: ''
         }
     },
     cloudStorageConfig: {
@@ -2833,6 +2834,42 @@ const AppState = {
         } else if (typeof window !== 'undefined' && /safety-icapp\.com$/i.test(String(window.location.hostname || ''))) {
             AppState.useSupabaseBackend = true;
         }
+        const rpc = typeof window !== 'undefined' && window.__HSE_RPC_URL__
+            ? String(window.__HSE_RPC_URL__).trim()
+            : '';
+        if (rpc && AppState.googleConfig && AppState.googleConfig.appsScript) {
+            AppState.googleConfig.appsScript.scriptUrl = rpc;
+            AppState.googleConfig.appsScript.enabled = true;
+        }
+        /** دمج إعدادات الاتصال من localStorage قبل أي وحدة أخرى — يمنع hasCloudBackendSync=false وواجهة «ميتة» بعد تفريغ الافتراضيات */
+        try {
+            if (typeof localStorage !== 'undefined' && AppState.googleConfig) {
+                const raw = localStorage.getItem('hse_google_config');
+                if (raw) {
+                    const parsed = JSON.parse(raw);
+                    if (parsed && typeof parsed === 'object') {
+                        if (parsed.appsScript && typeof parsed.appsScript === 'object') {
+                            AppState.googleConfig.appsScript = {
+                                ...AppState.googleConfig.appsScript,
+                                ...parsed.appsScript
+                            };
+                        }
+                        if (parsed.sheets && typeof parsed.sheets === 'object') {
+                            AppState.googleConfig.sheets = {
+                                ...AppState.googleConfig.sheets,
+                                ...parsed.sheets
+                            };
+                        }
+                        if (parsed.maps && typeof parsed.maps === 'object') {
+                            AppState.googleConfig.maps = {
+                                ...AppState.googleConfig.maps,
+                                ...parsed.maps
+                            };
+                        }
+                    }
+                }
+            }
+        } catch (mergeErr) { /* تجاهل تالف hse_google_config */ }
     } catch (e) { /* ignore */ }
 })();
 
@@ -2855,15 +2892,15 @@ const Utils = {
     },
 
     /**
-     * هل يوجد مسار سحابي للمزامنة (Supabase أو Apps Script مفعّل مع رابط سكربت)
-     * مع Supabase يجب ضبط scriptUrl كنقطة RPC (مثل hse-api) وإلا لا تُعتبر المزامنة جاهزة.
+     * هل يوجد مسار سحابي للمزامنة (وضع Supabase، أو تفعيل + رابط RPC)
+     * مع Supabase: true حتى لا تُجمّد الواجهة إن تأخر ضبط الرابط؛ الطبقات السفلى ترفض الطلب بدون scriptUrl.
      */
     hasCloudBackendSync() {
         const gc = typeof AppState !== 'undefined' ? AppState.googleConfig : null;
-        const url = gc && gc.appsScript ? String(gc.appsScript.scriptUrl || '').trim() : '';
-        if (!url) return false;
+        if (!gc || !gc.appsScript) return false;
+        const url = String(gc.appsScript.scriptUrl || '').trim();
         if (this.isSupabaseBackend()) return true;
-        return !!(gc.appsScript.enabled);
+        return !!(gc.appsScript.enabled && url);
     },
 
     /**

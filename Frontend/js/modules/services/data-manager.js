@@ -764,7 +764,7 @@ const DataManager = {
     },
 
     /**
-     * تحميل إعدادات التكامل مع Google
+     * تحميل إعدادات الاتصال بالخادم الخلفي (المفتاح التاريخي hse_google_config)
      */
     loadGoogleConfig() {
         try {
@@ -773,19 +773,19 @@ const DataManager = {
                 AppState.googleConfig = JSON.parse(config);
             }
         } catch (error) {
-            Utils.safeError('❌ خطأ في تحميل إعدادات Google:', error);
+            Utils.safeError('❌ خطأ في تحميل إعدادات الاتصال بالخادم:', error);
         }
     },
 
     /**
-     * حفظ إعدادات التكامل مع Google
+     * حفظ إعدادات الاتصال بالخادم الخلفي
      */
     saveGoogleConfig() {
         try {
             localStorage.setItem('hse_google_config', JSON.stringify(AppState.googleConfig));
             return true;
         } catch (error) {
-            Utils.safeError('❌ خطأ في حفظ إعدادات Google:', error);
+            Utils.safeError('❌ خطأ في حفظ إعدادات الاتصال بالخادم:', error);
             return false;
         }
     },

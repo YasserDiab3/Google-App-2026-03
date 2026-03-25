@@ -1,6 +1,6 @@
 /**
- * Google Integration Service
- * Handles Google Apps Script integration, data synchronization, and Google Sheets operations
+ * طبقة الاتصال بالخادم الخلفي (RPC)
+ * تدعم نقطة Supabase Edge / hse-api وأي نشر متوافق؛ يبقى الاسم GoogleIntegration لتوافق الوحدات القديمة.
  */
 
 const GoogleIntegration = {
@@ -216,38 +216,26 @@ const GoogleIntegration = {
     },
 
     /**
-     * التحقق من هل هو Google Apps Script URL
+     * التحقق من صحة رابط نقطة RPC (Supabase Edge، أو Google Apps Script legacy)
      */
     isValidGoogleAppsScriptUrl(url) {
         try {
             const urlObj = new URL(url);
-
-            // التحقق من هل هو valid Hostname
-            const validHostnames = [
-                'script.google.com',
-                'script.googleusercontent.com'
-            ];
-
-            const isValidHostname = validHostnames.some(hostname =>
-                urlObj.hostname === hostname ||
-                urlObj.hostname.endsWith('.' + hostname)
-            );
-
-            if (!isValidHostname) {
-                return false;
-            }
-
-            // التحقق من هل هو valid Pathname
-            if (!urlObj.pathname.endsWith('/exec')) {
-                return false;
-            }
-
-            // التحقق من هل هو valid Protocol
             if (urlObj.protocol !== 'https:') {
                 return false;
             }
-
-            return true;
+            const host = urlObj.hostname.toLowerCase();
+            const path = urlObj.pathname || '';
+            if (host.endsWith('.supabase.co') && path.includes('/functions/v1/')) {
+                return true;
+            }
+            if (host === 'script.google.com' || host.endsWith('.script.google.com')) {
+                return path.endsWith('/exec');
+            }
+            if (host.includes('googleusercontent.com')) {
+                return path.endsWith('/exec');
+            }
+            return false;
         } catch (error) {
             return false;
         }
@@ -592,9 +580,8 @@ const GoogleIntegration = {
 
         const scriptUrl = AppState.googleConfig.appsScript.scriptUrl.trim();
 
-        // التحقق من هل هو valid Google Apps Script URL
         if (!this.isValidGoogleAppsScriptUrl(scriptUrl)) {
-            throw new Error('URL غير معرف - التحقق من هل هو valid Google Apps Script URL');
+            throw new Error('رابط الخادم غير صالح. استخدم رابط Supabase Edge (…/functions/v1/…) أو رابط RPC المتوافق.');
         }
 
         try {
@@ -3238,7 +3225,8 @@ const GoogleIntegration = {
     }
 };
 
-// Export to global window (for script tag loading)
+// تصدير للواجهة — الاسم التاريخي GoogleIntegration؛ BackendRpc للوحدات الجديدة
 if (typeof window !== 'undefined') {
     window.GoogleIntegration = GoogleIntegration;
+    window.BackendRpc = GoogleIntegration;
 }
