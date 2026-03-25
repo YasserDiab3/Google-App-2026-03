@@ -204,11 +204,9 @@ const NearMiss = {
             ? record.attachments.map((attachment) => this.normalizeAttachment(attachment)).filter(Boolean)
             : [];
         const createdBy = record.createdBy ? record.createdBy : this.getCurrentUserSummary(record.createdBy);
-        const correctiveProposed = record.correctiveProposed === true
-            || record.correctiveAction === true
-            || record.correctiveProposal === true
-            || record.corrective === true
-            || record.suggestedAction === true;
+        // Simplify correctiveProposed logic to avoid overly broad inference.
+        // It should primarily rely on a single, clear indicator for corrective action proposal.
+        const correctiveProposed = record.correctiveProposed === true; // Or choose one primary field
 
         return {
             id,
@@ -229,7 +227,9 @@ const NearMiss = {
             createdAt: record.createdAt || isoDate,
             updatedAt: record.updatedAt || isoDate,
             updatedBy: record.updatedBy || null,
-            status: record.status || (correctiveProposed ? 'مفتوح' : 'مغلق'),
+            // Status should ideally be managed more granularly, not just based on correctiveProposed.
+            // Consider a dedicated status field with a clear lifecycle (e.g., New, Open, In Progress, Resolved, Closed).
+            status: record.status || 'جديد', // Default to 'جديد' or 'مفتوح' for new records
             reportedBy: record.reportedBy || record.observerName || ''
         };
     },
@@ -242,7 +242,7 @@ const NearMiss = {
         return {
             id: attachment.id || Utils.generateId('ATT'),
             name: attachment.name || 'attachment',
-            type: attachment.type || this.detectMimeType(attachment.name || ''),
+            type: attachment.type || this.detectMimeType(attachment.name || ''), // Prefer attachment.type if available
             data,
             size,
             uploadedAt: attachment.uploadedAt || new Date().toISOString()
@@ -688,6 +688,7 @@ const NearMiss = {
                                 <label for="nearmiss-department" class="block text-sm font-semibold text-gray-700 mb-2">الإدارة التابع لها *</label>
                                 <input type="text" id="nearmiss-department" class="form-input" list="nearmiss-departments-list" required value="${Utils.escapeHTML(record?.department || '')}" placeholder="اختر أو اكتب الإدارة">
                                 <datalist id="nearmiss-departments-list">
+                                    <!-- Datalist options should be dynamically updated if source data changes -->
                                     ${departmentOptions.map((department) => `<option value="${Utils.escapeHTML(department)}"></option>`).join('')}
                                 </datalist>
                             </div>

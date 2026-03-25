@@ -244,19 +244,10 @@ const DailyObservations = {
         }
 
         // التأكد من توفر DataManager - محاولة متعددة مع انتظار
-        let dataManagerAvailable = false;
-        const maxRetries = 10;
-        const retryDelay = 200;
-        
-        for (let i = 0; i < maxRetries; i++) {
-            if (typeof window !== 'undefined' && (typeof window.DataManager !== 'undefined' || typeof DataManager !== 'undefined')) {
-                dataManagerAvailable = true;
-                break;
-            }
-            if (i < maxRetries - 1) {
-                await new Promise(resolve => setTimeout(resolve, retryDelay));
-            }
-        }
+// Avoid busy-wait loops. Ensure DataManager is loaded and available before calling DailyObservations.load(),
+// or use an event-driven approach to wait for its availability.
+// For now, assuming DataManager is eventually available or handling its absence gracefully.
+let dataManagerAvailable = (typeof window !== 'undefined' && (typeof window.DataManager !== 'undefined' || typeof DataManager !== 'undefined'));
         
         if (!dataManagerAvailable) {
             const warnMsg = '⚠️ DailyObservations: DataManager غير متاح - قد لا تعمل بعض الوظائف بشكل صحيح';
@@ -372,11 +363,18 @@ const DailyObservations = {
                     <button onclick="DailyObservations.load()" class="btn-primary mt-4"><i class="fas fa-redo ml-2"></i>إعادة المحاولة</button>
                 </div></div></div>`;
 
-            const [listResult, analysisResult, top10Result] = await Promise.all([
-                withTimeout(this.renderList(), listErrorHtml),
-                isAdmin ? withTimeout(this.renderDataAnalysis(), analysisErrorHtml) : Promise.resolve(''),
-                withTimeout(this.renderTop10Observations(), top10ErrorHtml)
-            ]);
+            const [listResult, analysisResult, top10Result] = await Promise.race([
+                Promise.all([
+                    this.renderList(),
+                    isAdmin ? this.renderDataAnalysis() : Promise.resolve(''),
+                    this.renderTop10Observations()
+                ]),
+                new Promise((_, reject) => setTimeout(() => reject(new Error('انتهت مهلة التحميل')), CONTENT_TIMEOUT_MS))
+            ]).catch((error) => {
+                Utils?.safeWarn?.('⚠️ تحميل محتوى الملاحظات اليومية:', error?.message || error);
+                // Return fallback HTML for all sections if the entire loading times out
+                return [listErrorHtml, isAdmin ? analysisErrorHtml : '', top10ErrorHtml];
+            });
             let listContent = listResult || listErrorHtml;
             let analysisContent = isAdmin ? (analysisResult || analysisErrorHtml) : '';
             let top10Content = top10Result || top10ErrorHtml;
@@ -1033,122 +1031,11 @@ const DailyObservations = {
         const styleId = 'daily-observations-stats-cards-styles';
         if (document.getElementById(styleId)) return;
 
-        const style = document.createElement('style');
-        style.id = styleId;
-        style.textContent = `
-            @keyframes pulse-red {
-                0%, 100% {
-                    box-shadow: 0 0 20px rgba(239, 68, 68, 0.3), 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-                }
-                50% {
-                    box-shadow: 0 0 30px rgba(239, 68, 68, 0.6), 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-                }
-            }
-            .stats-card {
-                transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-                position: relative;
-            }
-            .stats-card:hover {
-                transform: translateY(-4px) scale(1.02);
-            }
-            .stats-card:active {
-                transform: translateY(-2px) scale(1.01);
-            }
-            .stats-card.ring-4 {
-                animation: pulse-ring 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-            }
-            @keyframes pulse-ring {
-                0%, 100% {
-                    opacity: 1;
-                }
-                50% {
-                    opacity: 0.5;
-                }
-            }
-            /* أنماط الفلاتر الاحترافية */
-            .observations-filters-row {
-                position: relative;
-            }
-            .filters-grid {
-                width: 100%;
-            }
-            .filter-field {
-                display: flex;
-                flex-direction: column;
-                gap: 6px;
-            }
-            .filter-label {
-                font-size: 12px;
-                font-weight: 600;
-                color: #4a5568;
-                text-transform: uppercase;
-                letter-spacing: 0.5px;
-                display: flex;
-                align-items: center;
-            }
-            .filter-label i {
-                font-size: 11px;
-                color: #667eea;
-            }
-            .filter-input {
-                width: 100%;
-                padding: 10px 12px;
-                border: 1px solid #e2e8f0;
-                border-radius: 8px;
-                background: white;
-                font-size: 14px;
-                color: #2d3748;
-                transition: all 0.2s ease;
-                box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
-            }
-            .filter-input:focus {
-                outline: none;
-                border-color: #667eea;
-                box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
-            }
-            .filter-input:hover {
-                border-color: #cbd5e0;
-            }
-            .filter-reset-btn {
-                width: 100%;
-                padding: 10px 16px;
-                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                color: white;
-                border: none;
-                border-radius: 8px;
-                font-size: 13px;
-                font-weight: 600;
-                cursor: pointer;
-                transition: all 0.2s ease;
-                box-shadow: 0 2px 4px rgba(102, 126, 234, 0.2);
-                display: flex;
-                align-items: center;
-                justify-content: center;
-            }
-            .filter-reset-btn:hover {
-                transform: translateY(-1px);
-                box-shadow: 0 4px 8px rgba(102, 126, 234, 0.3);
-            }
-            .filter-reset-btn:active {
-                transform: translateY(0);
-            }
-            @media (max-width: 1200px) {
-                .filters-grid {
-                    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-                }
-            }
-            @media (max-width: 768px) {
-                .filters-grid {
-                    grid-template-columns: repeat(2, 1fr);
-                }
-                .observations-filters-row {
-                    padding: 12px 16px;
-                    margin: 0 -16px 0 -16px;
-                    width: calc(100% + 32px);
-                }
-            }
-        `;
-        document.head.appendChild(style);
+        const link = document.createElement('link');
+        link.id = styleId;
+        link.rel = 'stylesheet';
+        link.href = 'Frontend/css/dailyobservations.css';
+        document.head.appendChild(link);
     },
 
     /**
@@ -1156,185 +1043,17 @@ const DailyObservations = {
      */
     injectTableScrollbarStyles() {
         const styleId = 'daily-observations-table-scrollbar-styles';
-        if (document.getElementById(styleId)) return;
+        // Check if the stylesheet is already linked to prevent duplicates
+        if (document.getElementById(styleId)) {
+            return;
+        }
 
-        const style = document.createElement('style');
-        style.id = styleId;
-        style.textContent = `
-            /* شريط التمرير لجدول الملاحظات */
-            .observations-table-wrapper {
-                position: relative;
-                overflow-x: auto;
-                overflow-y: auto;
-                -webkit-overflow-scrolling: touch;
-                scroll-behavior: smooth;
-                max-height: 70vh;
-                width: 100%;
-            }
-
-            /* تخصيص شريط التمرير الأفقي (الأسفل) */
-            .observations-table-wrapper::-webkit-scrollbar:horizontal {
-                height: 12px;
-            }
-
-            .observations-table-wrapper::-webkit-scrollbar-track:horizontal {
-                background: var(--bg-secondary, #f3f4f6);
-                border-radius: 6px;
-                margin: 0 10px;
-            }
-
-            .observations-table-wrapper::-webkit-scrollbar-thumb:horizontal {
-                background: var(--primary-color, #3b82f6);
-                border-radius: 6px;
-                border: 2px solid var(--bg-secondary, #f3f4f6);
-            }
-
-            .observations-table-wrapper::-webkit-scrollbar-thumb:horizontal:hover {
-                background: var(--primary-color-dark, #2563eb);
-            }
-
-            /* تخصيص شريط التمرير العمودي (الجانبي) */
-            .observations-table-wrapper::-webkit-scrollbar:vertical {
-                width: 12px;
-            }
-
-            .observations-table-wrapper::-webkit-scrollbar-track:vertical {
-                background: var(--bg-secondary, #f3f4f6);
-                border-radius: 6px;
-                margin: 10px 0;
-            }
-
-            .observations-table-wrapper::-webkit-scrollbar-thumb:vertical {
-                background: var(--primary-color, #3b82f6);
-                border-radius: 6px;
-                border: 2px solid var(--bg-secondary, #f3f4f6);
-            }
-
-            .observations-table-wrapper::-webkit-scrollbar-thumb:vertical:hover {
-                background: var(--primary-color-dark, #2563eb);
-            }
-
-            /* شريط التمرير العام (للتوافق مع المتصفحات) */
-            .observations-table-wrapper::-webkit-scrollbar {
-                width: 12px;
-                height: 12px;
-            }
-
-            .observations-table-wrapper::-webkit-scrollbar-track {
-                background: var(--bg-secondary, #f3f4f6);
-                border-radius: 6px;
-            }
-
-            .observations-table-wrapper::-webkit-scrollbar-thumb {
-                background: var(--primary-color, #3b82f6);
-                border-radius: 6px;
-                border: 2px solid var(--bg-secondary, #f3f4f6);
-            }
-
-            .observations-table-wrapper::-webkit-scrollbar-thumb:hover {
-                background: var(--primary-color-dark, #2563eb);
-            }
-
-            /* للوضع الداكن */
-            [data-theme="dark"] .observations-table-wrapper::-webkit-scrollbar-track {
-                background: var(--bg-secondary, #1f2937);
-            }
-
-            [data-theme="dark"] .observations-table-wrapper::-webkit-scrollbar-thumb {
-                background: var(--primary-color, #60a5fa);
-                border-color: var(--bg-secondary, #1f2937);
-            }
-
-            [data-theme="dark"] .observations-table-wrapper::-webkit-scrollbar-thumb:hover {
-                background: var(--primary-color-dark, #3b82f6);
-            }
-
-            /* تحسينات للجوال */
-            @media (max-width: 768px) {
-                .observations-table-wrapper {
-                    max-height: 60vh;
-                }
-
-                .observations-table-wrapper::-webkit-scrollbar {
-                    width: 8px;
-                    height: 8px;
-                }
-
-                .observations-table-wrapper::-webkit-scrollbar-thumb {
-                    border-width: 1px;
-                }
-            }
-
-            /* إضافة ظلال عند التمرير */
-            .observations-table-wrapper {
-                position: relative;
-            }
-
-            .observations-table-wrapper::before,
-            .observations-table-wrapper::after {
-                content: '';
-                position: sticky;
-                pointer-events: none;
-                z-index: 10;
-                opacity: 0;
-                transition: opacity 0.3s;
-            }
-
-            .observations-table-wrapper::before {
-                top: 0;
-                left: 0;
-                right: 0;
-                height: 20px;
-                background: linear-gradient(to bottom, rgba(0, 0, 0, 0.1), transparent);
-            }
-
-            .observations-table-wrapper::after {
-                bottom: 0;
-                left: 0;
-                right: 0;
-                height: 20px;
-                background: linear-gradient(to top, rgba(0, 0, 0, 0.1), transparent);
-            }
-
-            .observations-table-wrapper.scrolled-top::before {
-                opacity: 0;
-            }
-
-            .observations-table-wrapper:not(.scrolled-top)::before {
-                opacity: 1;
-            }
-
-            .observations-table-wrapper.scrolled-bottom::after {
-                opacity: 0;
-            }
-
-            .observations-table-wrapper:not(.scrolled-bottom)::after {
-                opacity: 1;
-            }
-            
-            /* ✅ شارة العدد على الفلاتر */
-            .filter-count-badge {
-                display: inline-flex;
-                align-items: center;
-                justify-content: center;
-                min-width: 24px;
-                height: 20px;
-                padding: 2px 8px;
-                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                color: white;
-                border-radius: 12px;
-                font-size: 11px;
-                font-weight: 700;
-                margin-right: 4px;
-                margin-left: 4px;
-                box-shadow: 0 2px 4px rgba(102, 126, 234, 0.3);
-            }
-            @keyframes spin {
-                from { transform: rotate(0deg); }
-                to { transform: rotate(360deg); }
-            }
-        `;
-        document.head.appendChild(style);
+        const link = document.createElement('link');
+        link.id = styleId; // Assign the same ID to the link tag
+        link.rel = 'stylesheet';
+        link.type = 'text/css';
+        link.href = 'Frontend/css/dailyobservations.css';
+        document.head.appendChild(link);
     },
 
     /**
@@ -4364,8 +4083,8 @@ const DailyObservations = {
             const totalDays = Math.floor(serial);
             const timeFraction = serial - totalDays;
             // حساب التاريخ (بدون الوقت)
-            const baseDate = new Date(1899, 11, 30); // 30 ديسمبر 1899 (التوقيت المحلي)
-            const date = new Date(baseDate.getTime() + totalDays * 24 * 60 * 60 * 1000);
+            const date = new Date(1899, 11, 30); // 30 ديسمبر 1899 (التوقيت المحلي)
+            date.setDate(date.getDate() + totalDays); // Add days in local time
             // إضافة الوقت من الجزء الكسري
             if (timeFraction > 0) {
                 const totalSeconds = Math.round(timeFraction * 24 * 60 * 60);

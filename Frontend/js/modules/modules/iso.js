@@ -169,6 +169,10 @@ const ISO = {
         const forms = AppState.appData.isoForms || [];
         const total = documents.length + procedures.length + forms.length;
         // حساب نسبة الامتثال بناءً على وجود وثائق وإجراءات ونماذج
+        // This is a very simplistic calculation. For a meaningful compliance rate,
+        // consider factors like: number of active/approved documents vs. total required,
+        // completion status of procedures, validity of forms, audit results, etc.
+        // The current implementation will always return 100% if at least one of each type exists.
         const complianceScore = documents.length > 0 ? 30 : 0;
         const proceduresScore = procedures.length > 0 ? 30 : 0;
         const formsScore = forms.length > 0 ? 40 : 0;
@@ -968,7 +972,8 @@ const ISO = {
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">إغلاق</button>
-                    <button type="button" onclick="ISO.showDocumentForm(${JSON.stringify(doc).replace(/"/g, '&quot;')}); this.closest('.modal-overlay').remove();" class="btn-primary">تعديل</button>
+                    <!-- Pass only the ID or a safe representation, or ensure all properties are escaped if passing the full object -->
+                    <button type="button" onclick="ISO.showDocumentForm('${Utils.escapeHTML(doc.id)}'); this.closest('.modal-overlay').remove();" class="btn-primary">تعديل</button>
                 </div>
             </div>
         `;
@@ -1006,7 +1011,8 @@ const ISO = {
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">إغلاق</button>
-                    <button type="button" onclick="ISO.showProcedureForm(${JSON.stringify(procedure).replace(/"/g, '&quot;')}); this.closest('.modal-overlay').remove();" class="btn-primary">تعديل</button>
+                    <!-- Pass only the ID or a safe representation, or ensure all properties are escaped if passing the full object -->
+                    <button type="button" onclick="ISO.showProcedureForm('${Utils.escapeHTML(procedure.id)}'); this.closest('.modal-overlay').remove();" class="btn-primary">تعديل</button>
                 </div>
             </div>
         `;

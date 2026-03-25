@@ -345,12 +345,20 @@ const Incidents = {
      */
     generateRegistrySequentialNumber() {
         const currentYear = new Date().getFullYear();
-        const yearRecords = this.registryData.filter(r => {
-            if (!r.incidentDate) return false;
-            const recordYear = new Date(r.incidentDate).getFullYear();
-            return recordYear === currentYear;
-        });
-        return yearRecords.length + 1;
+        // Filter records for the current year and find the maximum sequential number
+        const maxSequentialNumberForYear = this.registryData.reduce((max, r) => {
+            if (r.incidentDate) {
+                const recordYear = new Date(r.incidentDate).getFullYear();
+                if (recordYear === currentYear) {
+                    const seqNum = parseInt(r.sequentialNumber, 10);
+                    if (!isNaN(seqNum) && seqNum > max) {
+                        return seqNum;
+                    }
+                }
+            }
+            return max;
+        }, 0);
+        return maxSequentialNumberForYear + 1;
     },
 
     /**
@@ -359,8 +367,11 @@ const Incidents = {
     calculateTotalLeaveDays(leaveStartDate, returnToWorkDate) {
         if (!leaveStartDate || !returnToWorkDate) return 0;
         try {
+            // Ensure dates are treated as start of day to avoid time component issues
             const start = new Date(leaveStartDate);
+            start.setHours(0, 0, 0, 0);
             const end = new Date(returnToWorkDate);
+            end.setHours(0, 0, 0, 0);
 
             if (isNaN(start.getTime()) || isNaN(end.getTime())) {
                 return 0;
@@ -370,9 +381,9 @@ const Incidents = {
                 return 0;
             }
 
-            // حساب الفرق بالأيام (شامل تاريخ البدء وتاريخ العودة)
-            const diffTime = end - start;
-            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+            const diffTime = end.getTime() - start.getTime(); // Use getTime() for consistent timestamp comparison
+            // Calculate number of full days, including both start and end day
+            const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24)) + 1;
             return diffDays;
         } catch (error) {
             Utils.safeError('خطأ في حساب أيام الإجازة:', error);
@@ -1066,12 +1077,13 @@ const Incidents = {
             const severityClass = this.getSeverityBadgeClass(incident?.severity);
             const statusClass = this.getStatusBadgeClass(incident?.status);
             const incidentId = incident?.id || '';
+            const escapedIncidentId = Utils.escapeHTML(incidentId); // Escape incidentId for HTML attribute
             const actionsCell = incidentId ? `
                 <div class="flex items-center gap-2 justify-end">
-                    <button onclick="Incidents.viewIncident('${incidentId}')" class="btn-icon btn-icon-info" title="معاينة">
+                    <button onclick="Incidents.viewIncident('${escapedIncidentId}')" class="btn-icon btn-icon-info" title="معاينة">
                         <i class="fas fa-eye"></i>
                     </button>
-                    <button onclick="Incidents.exportPDF('${incidentId}')" class="btn-icon btn-icon-primary" title="طباعة / PDF">
+                    <button onclick="Incidents.exportPDF('${escapedIncidentId}')" class="btn-icon btn-icon-primary" title="طباعة / PDF">
                         <i class="fas fa-print"></i>
                     </button>
                 </div>
@@ -1409,10 +1421,13 @@ const Incidents = {
         `;
 
         sortedData.forEach(entry => {
-            const statusClass = entry.status === 'مفتوح' ? 'bg-blue-100 text-blue-800' : 
+            const statusClass = entry.status === 'مفتوح' ? 'bg-blue-100 text-blue-800' :
                                entry.status === 'قيد التحقيق' ? 'bg-yellow-100 text-yellow-800' :
                                entry.status === 'مكتمل' ? 'bg-green-100 text-green-800' :
                                'bg-gray-100 text-gray-800';
+
+            const escapedEntryId = Utils.escapeHTML(entry.id || '');
+            const escapedIncidentId = Utils.escapeHTML(entry.incidentId || '');
 
             tableHTML += `
                 <tr>
@@ -1433,14 +1448,14 @@ const Incidents = {
                     <td>${entry.totalLeaveDays || 0} يوم</td>
                     <td>
                         <div class="flex items-center gap-2">
-                            <button onclick="Incidents.viewRegistryEntry('${entry.id}')" class="btn-icon btn-icon-info" title="عرض التفاصيل">
+                            <button onclick="Incidents.viewRegistryEntry('${escapedEntryId}')" class="btn-icon btn-icon-info" title="عرض التفاصيل">
                                 <i class="fas fa-eye"></i>
                             </button>
                             ${entry.incidentId ? `
-                                <button onclick="Incidents.viewIncident('${entry.incidentId}')" class="btn-icon btn-icon-primary" title="عرض الحادث">
+                                <button onclick="Incidents.viewIncident('${escapedIncidentId}')" class="btn-icon btn-icon-primary" title="عرض الحادث">
                                     <i class="fas fa-exclamation-triangle"></i>
                                 </button>
-                                <button onclick="if(typeof Incidents !== 'undefined' && typeof Incidents.showInvestigationForm === 'function') { Incidents.showInvestigationForm('${entry.incidentId}'); } else { alert('نموذج التحقيق غير متاح'); }" class="btn-icon btn-icon-warning" title="التحقيق في الحادث">
+                                <button onclick="if(typeof Incidents !== 'undefined' && typeof Incidents.showInvestigationForm === 'function') { Incidents.showInvestigationForm('${escapedIncidentId}'); } else { alert('نموذج التحقيق غير متاح'); }" class="btn-icon btn-icon-warning" title="التحقيق في الحادث">
                                     <i class="fas fa-search"></i>
                                 </button>
                             ` : ''}
@@ -1830,7 +1845,10 @@ const Incidents = {
 
         modal.addEventListener('click', (e) => {
             if (e.target === modal) {
-                const ok = confirm('تنبيه: سيتم إغلاق النموذج.\nقد تفقد أي بيانات غير محفوظة.\n\nهل تريد الإغلاق؟');
+                // Ensure any dynamic content in confirm dialogs is escaped if it were to be dynamic.
+                // For static strings, this is less critical but good to be aware of the pattern.
+                const message = 'تنبيه: سيتم إغلاق النموذج.\nقد تفقد أي بيانات غير محفوظة.\n\nهل تريد الإغلاق؟';
+                const ok = confirm(message);
                 if (ok) modal.remove();
             }
         });
@@ -2779,24 +2797,24 @@ const Incidents = {
                                                         </button>
                                                     `}
                                                     ${incident.requiresApproval && this.canApproveIncident() ? `
-                                                        <button 
-                                                            onclick="Incidents.approveIncident('${incident.id}')" 
-                                                            class="btn-icon btn-icon-success" 
+                                                        <button
+                                                            onclick="Incidents.approveIncident('${Utils.escapeHTML(incident.id)}')"
+                                                            class="btn-icon btn-icon-success"
                                                             title="الموافقة"
                                                         >
                                                             <i class="fas fa-check"></i>
                                                         </button>
-                                                        <button 
-                                                            onclick="Incidents.rejectIncident('${incident.id}')" 
-                                                            class="btn-icon btn-icon-danger" 
+                                                        <button
+                                                            onclick="Incidents.rejectIncident('${Utils.escapeHTML(incident.id)}')"
+                                                            class="btn-icon btn-icon-danger"
                                                             title="رفض"
                                                         >
                                                             <i class="fas fa-times"></i>
                                                         </button>
                                                     ` : ''}
-                                                    <button 
-                                                        onclick="if(confirm('هل أنت متأكد من حذف هذا الحادث؟')) { Incidents.deleteIncident('${incident.id}'); }" 
-                                                        class="btn-icon btn-icon-danger" 
+                                                    <button
+                                                        onclick="if(confirm('هل أنت متأكد من حذف هذا الحادث؟')) { Incidents.deleteIncident('${Utils.escapeHTML(incident.id)}'); }"
+                                                        class="btn-icon btn-icon-danger"
                                                         title="حذف"
                                                     >
                                                         <i class="fas fa-trash"></i>
@@ -2885,7 +2903,10 @@ const Incidents = {
         document.body.appendChild(modal);
         modal.addEventListener('click', (e) => {
             if (e.target === modal) {
-                const ok = confirm('تنبيه: سيتم إغلاق النموذج.\nقد تفقد أي بيانات غير محفوظة.\n\nهل تريد الإغلاق؟');
+                // Ensure any dynamic content in confirm dialogs is escaped if it were to be dynamic.
+                // For static strings, this is less critical but good to be aware of the pattern.
+                const message = 'تنبيه: سيتم إغلاق النموذج.\nقد تفقد أي بيانات غير محفوظة.\n\nهل تريد الإغلاق؟';
+                const ok = confirm(message);
                 if (ok) modal.remove();
             }
         });
@@ -3222,13 +3243,16 @@ const Incidents = {
 
                 if (startDate && returnDate) {
                     try {
+                        // Ensure dates are treated as start of day to avoid time component issues
                         const start = new Date(startDate);
+                        start.setHours(0, 0, 0, 0);
                         const end = new Date(returnDate);
+                        end.setHours(0, 0, 0, 0);
 
                         if (end >= start) {
-                            // حساب الفرق بالأيام (شامل تاريخ البدء وتاريخ العودة)
-                            const diffTime = end - start;
-                            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+                            const diffTime = end.getTime() - start.getTime(); // Use getTime() for consistent timestamp comparison
+                            // Calculate number of full days, including both start and end day
+                            const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24)) + 1;
                             totalLeaveDaysInput.value = `${diffDays} يوم`;
                         } else {
                             totalLeaveDaysInput.value = '0 يوم';
@@ -3276,7 +3300,10 @@ const Incidents = {
 
         modal.addEventListener('click', (e) => {
             if (e.target === modal) {
-                const ok = confirm('تنبيه: سيتم إغلاق النموذج.\nقد تفقد أي بيانات غير محفوظة.\n\nهل تريد الإغلاق؟');
+                // Ensure any dynamic content in confirm dialogs is escaped if it were to be dynamic.
+                // For static strings, this is less critical but good to be aware of the pattern.
+                const message = 'تنبيه: سيتم إغلاق النموذج.\nقد تفقد أي بيانات غير محفوظة.\n\nهل تريد الإغلاق؟';
+                const ok = confirm(message);
                 if (ok) modal.remove();
             }
         });
@@ -5151,22 +5178,22 @@ const Incidents = {
                                         </td>
                                         <td>
                                             <div class="flex items-center gap-2 flex-wrap">
-                                                <button onclick="Incidents.viewIncident('${id}')" class="btn-icon btn-icon-info" title="عرض">
+                                                <button onclick="Incidents.viewIncident('${Utils.escapeHTML(id)}')" class="btn-icon btn-icon-info" title="عرض">
                                                     <i class="fas fa-eye"></i>
                                                 </button>
-                                                <button onclick="if(typeof Incidents !== 'undefined' && typeof Incidents.showInvestigationForm === 'function') { Incidents.showInvestigationForm('${id}'); } else { console.error('Incidents.showInvestigationForm is not available'); alert('نموذج التحقيق غير متاح. يرجى إعادة تحميل الصفحة.'); }" class="btn-icon btn-icon-warning" title="التحقيق في الحادث">
+                                                <button onclick="if(typeof Incidents !== 'undefined' && typeof Incidents.showInvestigationForm === 'function') { Incidents.showInvestigationForm('${Utils.escapeHTML(id)}'); } else { console.error('Incidents.showInvestigationForm is not available'); alert('نموذج التحقيق غير متاح. يرجى إعادة تحميل الصفحة.'); }" class="btn-icon btn-icon-warning" title="التحقيق في الحادث">
                                                     <i class="fas fa-search"></i>
                                                 </button>
-                                                <button onclick="Incidents.editIncident('${id}')" class="btn-icon btn-icon-primary" title="تعديل">
+                                                <button onclick="Incidents.editIncident('${Utils.escapeHTML(id)}')" class="btn-icon btn-icon-primary" title="تعديل">
                                                     <i class="fas fa-edit"></i>
                                                 </button>
-                                                <button onclick="Incidents.manageWorkflow('${id}')" class="btn-icon btn-icon-warning" title="إدارة التدفق">
+                                                <button onclick="Incidents.manageWorkflow('${Utils.escapeHTML(id)}')" class="btn-icon btn-icon-warning" title="إدارة التدفق">
                                                     <i class="fas fa-project-diagram"></i>
                                                 </button>
-                                                <button onclick="Incidents.exportPDF('${id}')" class="btn-icon btn-icon-secondary" title="تصدير / طباعة">
+                                                <button onclick="Incidents.exportPDF('${Utils.escapeHTML(id)}')" class="btn-icon btn-icon-secondary" title="تصدير / طباعة">
                                                     <i class="fas fa-print"></i>
                                                 </button>
-                                                <button onclick="Incidents.deleteIncident('${id}')" class="btn-icon btn-icon-danger" title="حذف">
+                                                <button onclick="Incidents.deleteIncident('${Utils.escapeHTML(id)}')" class="btn-icon btn-icon-danger" title="حذف">
                                                     <i class="fas fa-trash"></i>
                                                 </button>
                                             </div>

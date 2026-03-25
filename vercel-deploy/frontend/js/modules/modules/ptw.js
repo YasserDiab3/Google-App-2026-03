@@ -220,7 +220,7 @@ const PTW = {
             'أعمال في الأماكن المغلقة': 'CSW',
             'أعمال أخرى': 'OTW'
         };
-        return prefixes[workType] || 'PTW';
+        return prefixes[workType] || 'PTW'; // Consider if different work types sharing a prefix should have separate sequential IDs.
     },
 
     /**
@@ -235,6 +235,9 @@ const PTW = {
             if (!p.id) return false;
             // إذا كان workType فارغاً، نستخدم جميع التصاريح التي تبدأ بـ PTW_ أو لا تحتوي على workType
             if (!workType || workType.trim() === '') {
+                // If no specific workType is provided, consider if all generic PTWs should be grouped.
+                // Current logic groups PTWs with no workType or those starting with 'PTW_'.
+                // This might lead to incorrect sequential IDs if 'PTW_' is a generic prefix and specific work types should have their own sequences.
                 return !p.workType || p.workType.trim() === '' || p.id.startsWith('PTW_');
             }
             if (!p.workType) return false;
@@ -248,6 +251,8 @@ const PTW = {
             if (ptw.id && ptw.id.includes('_')) {
                 const parts = ptw.id.split('_');
                 if (parts.length > 1) {
+                    // Assuming the numeric part is always the last segment after the last underscore.
+                    // This might be fragile if ID formats vary or contain non-numeric last segments.
                     const num = parseInt(parts[parts.length - 1]);
                     if (!isNaN(num) && num > lastNumber) {
                         lastNumber = num;
@@ -303,7 +308,7 @@ const PTW = {
             const locationIds = ['manual-permit-location', 'ptw-filter-location', 'ptw-location', 'analysis-location'];
             locationIds.forEach(id => {
                 const el = document.getElementById(id);
-                if (el && el.tagName === 'SELECT') { const v = el.value; el.innerHTML = opts('اختر الموقع'); if (v) el.value = v; }
+                if (el && el.tagName === 'SELECT') { const v = el.value; el.innerHTML = opts('اختر الموقع'); if (v) el.value = esc(v); }
             });
             const subIds = ['manual-permit-sublocation', 'ptw-filter-sublocation', 'ptw-sublocation'];
             subIds.forEach(id => {
@@ -314,7 +319,7 @@ const PTW = {
                     const ph = 'اختر المكان الفرعي';
                     const v = el.value;
                     el.innerHTML = '<option value="">' + ph + '</option>' + (places || []).map(p => '<option value="' + esc(p.id) + '">' + esc(p.name) + '</option>').join('');
-                    if (v) el.value = v;
+                    if (v) el.value = esc(v);
                 }
             });
         } catch (e) { if (typeof Utils !== 'undefined' && Utils.safeWarn) Utils.safeWarn('⚠️ PTW.refreshSiteDropdowns:', e); }
@@ -619,26 +624,28 @@ const PTW = {
 
             // استخراج supervisor1 و supervisor2 كـ strings فقط (وليس objects)
             let supervisor1 = 'غير محدد';
-            if (permit.approvals && permit.approvals[0]) {
-                const approver1 = permit.approvals[0].approver;
+            const supervisor1Approval = permit.approvals?.find(a => a.role === 'مسؤول الجهة الطالبة' || a.role === 'مدير منطقة الأعمال'); // Example: find by specific role
+            if (supervisor1Approval) {
+                const approver1 = supervisor1Approval.approver;
                 if (typeof approver1 === 'string') {
                     supervisor1 = approver1;
                 } else if (typeof approver1 === 'object' && approver1) {
-                    supervisor1 = approver1.name || approver1.email || approver1.id || permit.approvals[0].role || 'غير محدد';
+                    supervisor1 = approver1.name || approver1.email || approver1.id || supervisor1Approval.role || 'غير محدد';
                 } else {
-                    supervisor1 = permit.approvals[0].role || 'غير محدد';
+                    supervisor1 = supervisor1Approval.role || 'غير محدد';
                 }
             }
 
             let supervisor2 = 'غير محدد';
-            if (permit.approvals && permit.approvals[1]) {
-                const approver2 = permit.approvals[1].approver;
+            const supervisor2Approval = permit.approvals?.find(a => a.role === 'مسؤول السلامة والصحة المهنية'); // Example: find by specific role
+            if (supervisor2Approval) {
+                const approver2 = supervisor2Approval.approver;
                 if (typeof approver2 === 'string') {
                     supervisor2 = approver2;
                 } else if (typeof approver2 === 'object' && approver2) {
-                    supervisor2 = approver2.name || approver2.email || approver2.id || permit.approvals[1].role || 'غير محدد';
+                    supervisor2 = approver2.name || approver2.email || approver2.id || supervisor2Approval.role || 'غير محدد';
                 } else {
-                    supervisor2 = permit.approvals[1].role || 'غير محدد';
+                    supervisor2 = supervisor2Approval.role || 'غير محدد';
                 }
             }
 
@@ -1280,13 +1287,17 @@ const PTW = {
                 mapContent.style.display = 'none';
                 mapContent.style.visibility = 'hidden';
                 mapContent.style.opacity = '0';
-                mapContent.style.position = 'absolute';
-                mapContent.style.left = '-9999px';
-                mapContent.style.width = '0';
-                mapContent.style.height = '0';
-                mapContent.style.overflow = 'hidden';
-                mapContent.style.pointerEvents = 'none';
-                mapContent.style.zIndex = '-1';
+                // Consider using a CSS class for hiding/showing to simplify style management
+                // e.g., mapContent.classList.add('hidden-map-tab');
+                // mapContent.classList.remove('hidden-map-tab');
+                // If absolute positioning is needed for layout, ensure it's managed carefully.
+                // mapContent.style.position = 'absolute';
+                // mapContent.style.left = '-9999px';
+                // mapContent.style.width = '0';
+                // mapContent.style.height = '0';
+                // mapContent.style.overflow = 'hidden';
+                // mapContent.style.pointerEvents = 'none';
+                // mapContent.style.zIndex = '-1';
                 // إيقاف أي عمليات تهيئة للخريطة
                 if (this.mapInitTimeout) {
                     clearTimeout(this.mapInitTimeout);
@@ -1609,9 +1620,14 @@ const PTW = {
                 allPermitsMap.set(permit.id, permit);
             }
         });
+        // Prioritize registry data for manual entries or if it's considered more authoritative
         permitsFromRegistry.forEach(permit => {
-            if (permit && permit.id && !allPermitsMap.has(permit.id)) {
-                allPermitsMap.set(permit.id, permit);
+            if (permit && permit.id) {
+                // If permit is already in map, decide which version to keep (e.g., registry version if it's a manual entry)
+                const existing = allPermitsMap.get(permit.id);
+                if (!existing || permit.isManualEntry) { // Example: Registry data takes precedence for manual entries
+                    allPermitsMap.set(permit.id, permit);
+                }
             }
         });
 
@@ -2778,9 +2794,9 @@ const PTW = {
                 resolved = true;
                 if (typeof google === 'undefined' || !google.maps) {
                     delete window[callbackName];
-                    reject(new Error('انتهت مهلة تحميل Google Maps API'));
+                    reject(new Error('انتهت مهلة تحميل Google Maps API (بعد 8 ثوانٍ)'));
                 }
-            }, 8000);
+            }, 8000); // Consider increasing timeout for slower networks or using a Promise.race pattern.
 
             document.head.appendChild(script);
         });

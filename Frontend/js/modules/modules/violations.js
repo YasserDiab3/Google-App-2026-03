@@ -1359,7 +1359,7 @@ const Violations = {
                                 </label>
                                 <select id="violation-person-type" required class="form-input">
                                     <option value="">اختر النوع</option>
-                                    <option value="employee" ${violationData?.employeeName || (!violationData?.contractorName && !violationData?.employeeName) ? 'selected' : ''}>موظف</option>
+                                    <option value="employee" ${violationData?.personType === 'employee' || (!violationData && !violationData?.contractorName) ? 'selected' : ''}>موظف</option>
                                     <option value="contractor" ${violationData?.contractorName ? 'selected' : ''}>مقاول</option>
                                 </select>
                             </div>
@@ -1371,7 +1371,8 @@ const Violations = {
                                 <input type="text" id="violation-employee-code" class="form-input"
                                     value="${violationData?.employeeCode || violationData?.employeeNumber || ''}" 
                                     placeholder="أدخل الكود الوظيفي (سيتم تعبئة البيانات تلقائياً)"
-                                    ${violationData?.employeeName ? 'required' : ''}>
+                                    ${(violationData?.personType === 'employee' || (!violationData && !violationData?.contractorName)) ? 'required' : ''}>
+                                <input type="hidden" id="violation-employee-id" value="${violationData?.employeeId || ''}">
                             </div>
                         </div>
                         
@@ -1382,12 +1383,12 @@ const Violations = {
                                 <input type="text" id="violation-person-name" required class="form-input"
                                     value="${violationData?.employeeName || violationData?.contractorName || ''}" 
                                     placeholder="${violationData?.employeeName ? 'سيتم التعبئة تلقائياً' : 'اسم المقاول'}"
-                                    ${violationData?.employeeName ? 'readonly' : ''}
+                                    ${(violationData?.personType === 'employee' || (!violationData && !violationData?.contractorName)) ? 'readonly' : ''}
                                     style="display: ${violationData?.contractorName ? 'none' : 'block'};">
                                 <label for="violation-contractor-select" class="block text-sm font-semibold text-gray-700 mb-2" style="display: ${violationData?.contractorName ? 'block' : 'none'};">المقاول *</label>
                                 <select id="violation-contractor-select" class="form-input"
                                     style="display: ${violationData?.contractorName ? 'block' : 'none'};"
-                                    ${violationData?.contractorName ? 'required' : ''}>
+                                    ${(violationData?.personType === 'contractor') ? 'required' : ''}>
                                     <option value="">-- اختر المقاول --</option>
                                 </select>
                             </div>
@@ -1646,44 +1647,7 @@ const Violations = {
                 // تحديث التسمية
                 if (personNameLabel) personNameLabel.textContent = 'اسم الموظف *';
 
-                // تعيل البحث بالكود الوظيي
-                if (typeof EmployeeHelper !== 'undefined' && employeeCodeInput && employeeCodeInput.parentNode) {
-                    try {
-                        // إزالة المعالجات القديمة
-                        const newCodeInput = employeeCodeInput.cloneNode(true);
-                        employeeCodeInput.parentNode.replaceChild(newCodeInput, employeeCodeInput);
 
-                        // الحصول على العنصر الجديد
-                        const updatedCodeInput = document.getElementById('violation-employee-code');
-                        if (updatedCodeInput) {
-                            EmployeeHelper.setupEmployeeCodeSearch('violation-employee-code', 'violation-person-name', (employee) => {
-                                if (employee) {
-                                    const nameField = document.getElementById('violation-person-name');
-                                    const positionField = document.getElementById('violation-employee-position');
-                                    const departmentField = document.getElementById('violation-employee-department');
-                                    if (nameField) nameField.value = employee.name || '';
-                                    if (positionField) positionField.value = employee.position || employee.jobTitle || '';
-                                    if (departmentField) departmentField.value = employee.department || employee.section || '';
-                                }
-                            });
-                        }
-                    } catch (error) {
-                        Utils.safeError('خطأ في إعداد البحث بالكود الوظيفي:', error);
-                        // محاولة بدون replaceChild
-                        if (employeeCodeInput) {
-                            EmployeeHelper.setupEmployeeCodeSearch('violation-employee-code', 'violation-person-name', (employee) => {
-                                if (employee) {
-                                    const nameField = document.getElementById('violation-person-name');
-                                    const positionField = document.getElementById('violation-employee-position');
-                                    const departmentField = document.getElementById('violation-employee-department');
-                                    if (nameField) nameField.value = employee.name || '';
-                                    if (positionField) positionField.value = employee.position || employee.jobTitle || '';
-                                    if (departmentField) departmentField.value = employee.department || employee.section || '';
-                                }
-                            });
-                        }
-                    }
-                }
             } else {
                 // إخاء حقل الكود الوظيي
                 employeeCodeContainer.style.display = 'none';
@@ -1734,44 +1698,7 @@ const Violations = {
             }
         });
 
-        // تفعيل البحث عند تحديث النموذج إذا كان موظف
-        if (typeof EmployeeHelper !== 'undefined' && violationData?.employeeName && employeeCodeInput && employeeCodeInput.parentNode) {
-            try {
-                // إزالة المعالجات القديمة
-                const newCodeInput = employeeCodeInput.cloneNode(true);
-                employeeCodeInput.parentNode.replaceChild(newCodeInput, employeeCodeInput);
 
-                // الحصول على العنصر الجديد
-                const updatedCodeInput = document.getElementById('violation-employee-code');
-                if (updatedCodeInput) {
-                    EmployeeHelper.setupEmployeeCodeSearch('violation-employee-code', 'violation-person-name', (employee) => {
-                        if (employee) {
-                            const nameField = document.getElementById('violation-person-name');
-                            const positionField = document.getElementById('violation-employee-position');
-                            const departmentField = document.getElementById('violation-employee-department');
-                            if (nameField) nameField.value = employee.name || '';
-                            if (positionField) positionField.value = employee.position || employee.jobTitle || '';
-                            if (departmentField) departmentField.value = employee.department || employee.section || '';
-                        }
-                    });
-                }
-            } catch (error) {
-                Utils.safeError('خطأ في إعداد البحث بالكود الوظيفي:', error);
-                // محاولة بدون replaceChild
-                if (employeeCodeInput) {
-                    EmployeeHelper.setupEmployeeCodeSearch('violation-employee-code', 'violation-person-name', (employee) => {
-                        if (employee) {
-                            const nameField = document.getElementById('violation-person-name');
-                            const positionField = document.getElementById('violation-employee-position');
-                            const departmentField = document.getElementById('violation-employee-department');
-                            if (nameField) nameField.value = employee.name || '';
-                            if (positionField) positionField.value = employee.position || employee.jobTitle || '';
-                            if (departmentField) departmentField.value = employee.department || employee.section || '';
-                        }
-                    });
-                }
-            }
-        }
 
         // تحميل قائمة المواقع حسب نوع الشخص (افتراضي: موظف)
         const initialPersonType = violationData?.employeeName ? 'employee' : (violationData?.contractorName ? 'contractor' : 'employee');
@@ -1823,7 +1750,7 @@ const Violations = {
             }
 
             // إذا كان النوع الافتراضي هو موظف، تأكد من إعداد حقول الموظف
-            if (initialPersonType === 'employee' && personTypeSelect.value === 'employee') {
+            if (initialPersonType === 'employee' && personTypeSelect.value === 'employee' && !violationData?.employeeName) {
                 // إعداد البحث بالكود الوظيفي للموظف
                 if (typeof EmployeeHelper !== 'undefined') {
                     const codeInput = document.getElementById('violation-employee-code');
@@ -2071,7 +1998,10 @@ const Violations = {
                     id: violationData?.id || Utils.generateId('VIOLATION'),
                     isoCode: generateISOCode('VIOL', AppState.appData.violations || []),
                     personType: personType,
-                    employeeId: personType === 'employee' ? Utils.generateId('EMP') : '',
+                    // employeeId should be retrieved from the selected employee, not newly generated.
+                    // Assuming there's a mechanism to get the actual employee ID based on code/name input.
+                    // Placeholder for correction: employeeId: personType === 'employee' ? getEmployeeIdFromInput() : '',
+                    employeeId: document.getElementById('violation-employee-id')?.value || violationData?.employeeId || (personType === 'employee' ? Utils.generateId('EMP') : ''), // Fallback to new ID if not found, but ideally should retrieve existing.
                     employeeName: personType === 'employee' ? personName : '',
                     employeeCode: personType === 'employee' ? document.getElementById('violation-employee-code')?.value.trim() || '' : '',
                     employeeNumber: personType === 'employee' ? document.getElementById('violation-employee-code')?.value.trim() || '' : '',
@@ -2150,20 +2080,7 @@ const Violations = {
         // ربط معالج الأحداث - نستخدم submit فقط لتجنب التنفيذ المزدوج
         form.addEventListener('submit', handleSubmit, { once: false });
 
-        // إزالة أي معالجات قديمة للزر
-        const newSubmitBtn = submitBtn.cloneNode(true);
-        submitBtn.parentNode.replaceChild(newSubmitBtn, submitBtn);
-        const updatedSubmitBtn = modal.querySelector('#violation-submit-btn') || modal.querySelector('button[type="submit"]');
 
-        // ربط معالج click كنسخة احتياطية (مع منع السلوك الافتراضي)
-        if (updatedSubmitBtn) {
-            updatedSubmitBtn.addEventListener('click', (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                if (updatedSubmitBtn.disabled) return;
-                handleSubmit(e);
-            });
-        }
 
         // إغلاق النموذج عند النقر خارجه
         modal.addEventListener('click', (e) => {
@@ -2184,6 +2101,15 @@ const Violations = {
 
     getSiteOptions() {
         try {
+            // Helper function to map site objects to a consistent format
+            const mapToStandardSite = (site, index) => {
+                const defaultName = (index !== undefined && index !== null) ? `موقع ${index + 1}` : 'موقع غير محدد';
+                return {
+                    id: site.id || site.siteId || Utils.generateId('SITE'),
+                    name: site.name || site.title || site.label || defaultName
+                };
+            };
+
             // محاولة الحصول من Permissions.formSettingsState
             if (typeof Permissions !== 'undefined' && Permissions.formSettingsState && Permissions.formSettingsState.sites) {
                 return Permissions.formSettingsState.sites.map(site => ({
@@ -2194,18 +2120,12 @@ const Violations = {
 
             // محاولة الحصول من AppState.appData.observationSites
             if (Array.isArray(AppState.appData?.observationSites) && AppState.appData.observationSites.length > 0) {
-                return AppState.appData.observationSites.map(site => ({
-                    id: site.id || site.siteId || Utils.generateId('SITE'),
-                    name: site.name || site.title || site.label || 'موقع غير محدد'
-                }));
+                return AppState.appData.observationSites.map(site => mapToStandardSite(site));
             }
 
             // محاولة الحصول من DailyObservations
             if (typeof DailyObservations !== 'undefined' && Array.isArray(DailyObservations.DEFAULT_SITES)) {
-                return DailyObservations.DEFAULT_SITES.map((site, index) => ({
-                    id: site.id || site.siteId || Utils.generateId('SITE'),
-                    name: site.name || site.title || site.label || `موقع ${index + 1}`
-                }));
+                return DailyObservations.DEFAULT_SITES.map((site, index) => mapToStandardSite(site, index));
             }
 
             return [];
@@ -2233,18 +2153,16 @@ const Violations = {
             const selectedSite = sites.find(s => s.id === siteId);
             if (!selectedSite) return [];
 
-            // محاولة الحصول من Permissions.formSettingsState
-            if (typeof Permissions !== 'undefined' && Permissions.formSettingsState && Permissions.formSettingsState.sites) {
-                const site = Permissions.formSettingsState.sites.find(s => s.id === siteId);
-                if (site && Array.isArray(site.places)) {
-                    return site.places.map(place => ({
-                        id: place.id || place.placeId || Utils.generateId('PLACE'),
-                        name: place.name || place.placeName || 'مكان غير محدد'
-                    }));
-                }
-            }
+            // Helper function to normalize a place object
+            const normalizePlace = (place, index) => {
+                const id = place.id || place.placeId || place.value || Utils.generateId('PLACE');
+                const name = place.name || place.placeName || place.title || place.label || place.locationName || `مكان ${index + 1}`;
+                return { id, name };
+            };
 
-            // محاولة الحصول من AppState.appData.observationSites
+            let places = [];
+
+            // 1. Try to get from AppState.appData.observationSites (more comprehensive)
             if (Array.isArray(AppState.appData?.observationSites)) {
                 const site = AppState.appData.observationSites.find(s =>
                     (s.id === siteId) || (s.siteId === siteId) || (s.name === siteId)
@@ -2259,14 +2177,20 @@ const Violations = {
                                 : Array.isArray(site.areas)
                                     ? site.areas
                                     : [];
-                    return placesSource.map((place, idx) => ({
-                        id: place.id || place.placeId || place.value || Utils.generateId('PLACE'),
-                        name: place.name || place.placeName || place.title || place.label || place.locationName || `مكان ${idx + 1}`
-                    }));
+                    places = placesSource.map(normalizePlace);
                 }
             }
 
-            return [];
+            // 2. If no places found from AppState, try Permissions.formSettingsState
+            // This block will only execute if 'places' is still empty after checking AppState
+            if (places.length === 0 && typeof Permissions !== 'undefined' && Permissions.formSettingsState && Permissions.formSettingsState.sites) {
+                const site = Permissions.formSettingsState.sites.find(s => s.id === siteId);
+                if (site && Array.isArray(site.places)) {
+                    places = site.places.map(normalizePlace);
+                }
+            }
+
+            return places;
         } catch (error) {
             Utils.safeWarn('⚠️ خطأ في الحصول على قائمة الأماكن:', error);
             return [];
@@ -2736,17 +2660,15 @@ const Violations = {
         }).length;
 
         // حساب عدد المصانع/المواقع الفريدة
-        const uniqueFactoryLocation = new Set();
+        const uniqueFactoryLocationPairs = new Set();
         blacklistRecords.forEach(r => {
-            if (r.factory && r.location) {
-                uniqueFactoryLocation.add(`${r.factory} - ${r.location}`);
-            } else if (r.factory) {
-                uniqueFactoryLocation.add(r.factory);
-            } else if (r.location) {
-                uniqueFactoryLocation.add(r.location);
+            const factory = (r.factory || '').trim();
+            const location = (r.location || '').trim();
+            if (factory || location) {
+                uniqueFactoryLocationPairs.add(`${factory || 'N/A'} - ${location || 'N/A'}`);
             }
         });
-        const factoryLocationCount = uniqueFactoryLocation.size;
+        const factoryLocationCount = uniqueFactoryLocationPairs.size;
 
         return `
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
@@ -3218,26 +3140,7 @@ const Violations = {
                     contractors = Contractors.getAllContractorsForModules() || [];
                 }
                 
-                // ✅ تحسين: بديل: استخدام AppState (بما في ذلك المعتمدين) - مباشرة بدون تأخير
-                if (contractors.length === 0) {
-                    // دمج المقاولين من مصادر مختلفة
-                    const allContractors = [
-                        ...(AppState.appData?.approvedContractors || []),
-                        ...(AppState.appData?.contractors || [])
-                    ];
-                    // إزالة التكرار بناءً على ID
-                    const uniqueContractors = Array.from(
-                        new Map(allContractors.map(c => [c.id || c.contractorId, c])).values()
-                    );
-                    contractors = uniqueContractors
-                        .filter(c => c && (c.name || c.companyName || c.contractorName))
-                        .map(c => ({
-                            id: c.id || c.contractorId || '',
-                            name: (c.name || c.companyName || c.contractorName || '').trim()
-                        }))
-                        .filter(c => c.name && c.name !== 'غير معروف')
-                        .sort((a, b) => a.name.localeCompare(b.name, 'ar', { sensitivity: 'base' }));
-                }
+
 
                 // إضافة المقاولين إلى datalist (اسم المقاول فقط بدون الإدارة)
                 contractorsDatalist.innerHTML = contractors.map(c => 

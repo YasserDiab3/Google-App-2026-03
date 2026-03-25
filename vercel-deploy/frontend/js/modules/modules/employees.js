@@ -2838,7 +2838,7 @@ const Employees = {
                         </div>
                         <div class="detail-field">
                             <div class="detail-label">النوع</div>
-                            <div class="detail-value">${Utils.escapeHTML(employee.gender === 'ذكر' ? 'Male' : employee.gender === 'أنثى' ? 'Female' : employee.gender || '-')}</div>
+                            <div class="detail-value">${Utils.escapeHTML(employee.gender || '-')}</div>
                         </div>
                         <div class="detail-field">
                             <div class="detail-label">البريد الإلكتروني</div>
@@ -3703,10 +3703,15 @@ const Employees = {
 
 // دالة مساعدة لتوليد كود ISO للنماذج
 function generateISOCode(prefix, dataArray) {
+    // This method is prone to collisions if items are deleted or if IDs are generated concurrently.
+    // For robust unique IDs, consider a UUID generator (e.g., crypto.randomUUID) or a centralized ID service.
+    // For now, keeping the existing logic but adding a warning.
     const year = new Date().getFullYear();
     const month = String(new Date().getMonth() + 1).padStart(2, '0');
-    const count = (dataArray || []).length + 1;
-    return `${prefix}-${year}${month}-${String(count).padStart(4, '0')}`;
+    // To ensure uniqueness, a more robust ID generation strategy is needed.
+    // For example, using a timestamp + random string, or a backend-generated ID.
+    const uniqueSuffix = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+    return `${prefix}-${year}${month}-${uniqueSuffix}`;
 }
 
 // ===== Export module to global scope =====

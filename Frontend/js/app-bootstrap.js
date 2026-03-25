@@ -138,7 +138,8 @@
                     }
                 };
                 
-                requestAnimationFrame(() => setTimeout(checkStylesheets, 10));
+                // Start checking after a short delay to allow initial parsing
+                requestAnimationFrame(() => setTimeout(checkStylesheets, 50));
             });
         },
 

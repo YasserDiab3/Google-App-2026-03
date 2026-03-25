@@ -1,0 +1,102 @@
+            .observations-table-wrapper::-webkit-scrollbar-thumb:hover {
+                background: var(--primary-color-dark, #2563eb);
+            }
+
+            /* للوضع الداكن */
+            [data-theme="dark"] .observations-table-wrapper::-webkit-scrollbar-track {
+                background: var(--bg-secondary, #1f2937);
+            }
+
+            [data-theme="dark"] .observations-table-wrapper::-webkit-scrollbar-thumb {
+                background: var(--primary-color, #60a5fa);
+                border-color: var(--bg-secondary, #1f2937);
+            }
+
+            [data-theme="dark"] .observations-table-wrapper::-webkit-scrollbar-thumb:hover {
+                background: var(--primary-color-dark, #3b82f6);
+            }
+
+            /* تحسينات للجوال */
+            @media (max-width: 768px) {
+                .observations-table-wrapper {
+                    max-height: 60vh;
+                }
+
+                .observations-table-wrapper::-webkit-scrollbar {
+                    width: 8px;
+                    height: 8px;
+                }
+
+                .observations-table-wrapper::-webkit-scrollbar-thumb {
+                    border-width: 1px;
+                }
+            }
+
+            /* إضافة ظلال عند التمرير */
+            .observations-table-wrapper {
+                position: relative;
+            }
+
+            .observations-table-wrapper::before,
+            .observations-table-wrapper::after {
+                content: '';
+                position: sticky;
+                pointer-events: none;
+                z-index: 10;
+                opacity: 0;
+                transition: opacity 0.3s;
+            }
+
+            .observations-table-wrapper::before {
+                top: 0;
+                left: 0;
+                right: 0;
+                height: 20px;
+                background: linear-gradient(to bottom, rgba(0, 0, 0, 0.1), transparent);
+            }
+
+            .observations-table-wrapper::after {
+                bottom: 0;
+                left: 0;
+                right: 0;
+                height: 20px;
+                background: linear-gradient(to top, rgba(0, 0, 0, 0.1), transparent);
+            }
+
+            .observations-table-wrapper.scrolled-top::before {
+                opacity: 0;
+            }
+
+            .observations-table-wrapper:not(.scrolled-top)::before {
+                opacity: 1;
+            }
+
+            .observations-table-wrapper.scrolled-bottom::after {
+                opacity: 0;
+            }
+
+            .observations-table-wrapper:not(.scrolled-bottom)::after {
+                opacity: 1;
+            }
+            
+            /* ✅ شارة العدد على الفلاتر */
+            .filter-count-badge {
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                min-width: 24px;
+                height: 20px;
+                padding: 2px 8px;
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                color: white;
+                border-radius: 12px;
+                font-size: 11px;
+                font-weight: 700;
+                margin-right: 4px;
+                margin-left: 4px;
+                box-shadow: 0 2px 4px rgba(102, 126, 234, 0.3);
+            }
+            @keyframes spin {
+                from { transform: rotate(0deg); }
+                to { transform: rotate(360deg); }
+            }

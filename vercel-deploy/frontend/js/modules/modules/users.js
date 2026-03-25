@@ -26,9 +26,11 @@ const Users = {
         if (!section) return;
 
         // التحقق من الصلاحيات - فقط المدير يمكنه الوصول
+        // Rely primarily on a server-side validated permission check.
+        // Client-side checks should only be for UI presentation, not for actual authorization.
         const isAdmin = (typeof Permissions !== 'undefined' && typeof Permissions.isCurrentUserAdmin === 'function')
             ? Permissions.isCurrentUserAdmin()
-            : (AppState.currentUser?.role || '').toLowerCase() === 'admin';
+            : false; // Default to false if Permissions service is unavailable or not fully initialized
 
         if (!isAdmin) {
             section.innerHTML = `

@@ -332,107 +332,8 @@ window.Auth = {
                 return { success: false, message: errorMessage };
             }
 
-            // ===== التحقق من تسجيل الدخول المتزامن =====
-            // منع تسجيل الدخول من جهاز آخر إذا كان المستخدم متصل بالفعل
-            // توليد معرف جلسة فريد لهذا المتصفح/الجهاز
-            const generateSessionId = () => {
-                // إنشاء معرف فريد يجمع بين timestamp و random string و user agent hash
-                const timestamp = Date.now();
-                const random = Math.random().toString(36).substring(2, 15);
-                const userAgent = navigator.userAgent.substring(0, 50);
-                const userAgentHash = userAgent.split('').reduce((acc, char) => {
-                    return ((acc << 5) - acc) + char.charCodeAt(0);
-                }, 0).toString(36);
-                return `SESS_${timestamp}_${random}_${userAgentHash}`;
-            };
-
-            // الحصول على معرف الجلسة الحالي من sessionStorage أو إنشاء واحد جديد
-            let currentSessionId = sessionStorage.getItem('hse_session_id');
-            if (!currentSessionId) {
-                currentSessionId = generateSessionId();
-                sessionStorage.setItem('hse_session_id', currentSessionId);
-            }
-
-            // محاولة مزامنة حالة المستخدم من Google Sheets للحصول على أحدث حالة
-            if (canSyncUsers && typeof GoogleIntegration !== 'undefined' && GoogleIntegration.syncUsers) {
-                try {
-                    Utils.safeLog('🔄 مزامنة حالة المستخدم من Google Sheets للتحقق من حالة الاتصال...');
-                    await GoogleIntegration.syncUsers(true);
-                    // إعادة البحث عن المستخدم بعد المزامنة
-                    const refreshedUsers = AppState.appData.users || [];
-                    const refreshedUser = refreshedUsers.find(u => {
-                        if (!u || !u.email) return false;
-                        const userEmail = typeof u.email === 'string' ? u.email.toLowerCase().trim() : '';
-                        return userEmail === email;
-                    });
-                    if (refreshedUser) {
-                        foundUser.isOnline = refreshedUser.isOnline;
-                        foundUser.activeSessionId = refreshedUser.activeSessionId;
-                        Utils.safeLog('✅ تم تحديث حالة الاتصال من Google Sheets:', {
-                            isOnline: foundUser.isOnline,
-                            activeSessionId: foundUser.activeSessionId
-                        });
-                    }
-                } catch (syncError) {
-                    Utils.safeWarn('⚠️ فشل مزامنة حالة المستخدم:', syncError);
-                    // نستمر في التحقق بالحالة المحلية
-                }
-            }
-
-            // التحقق من وجود جلسة نشطة في المتصفح الحالي
-            let hasActiveSession = false;
-            let currentSessionData = null;
-            try {
-                const currentSession = sessionStorage.getItem('hse_current_session');
-                if (currentSession) {
-                    currentSessionData = JSON.parse(currentSession);
-                    // إذا كانت الجلسة الحالية لنفس المستخدم، نتحقق من صحة الجلسة
-                    if (currentSessionData && currentSessionData.email && currentSessionData.email.toLowerCase() === email) {
-                        // التحقق من أن الجلسة غير منتهية (إذا كان هناك loginTime)
-                        if (currentSessionData.loginTime) {
-                            const loginTime = new Date(currentSessionData.loginTime);
-                            const now = new Date();
-                            const sessionAge = now - loginTime;
-                            const maxSessionAge = 24 * 60 * 60 * 1000; // 24 ساعة
-                            
-                            if (sessionAge < maxSessionAge) {
-                                // التحقق من أن معرف الجلسة يطابق
-                                if (currentSessionData.sessionId === currentSessionId) {
-                                    hasActiveSession = true;
-                                    Utils.safeLog('✅ المستخدم متصل بالفعل من نفس المتصفح - السماح بتسجيل الدخول');
-                                } else {
-                                    Utils.safeLog('⚠️ معرف الجلسة غير متطابق - سيتم إنشاء جلسة جديدة');
-                                }
-                            } else {
-                                Utils.safeLog('⚠️ الجلسة منتهية الصلاحية - سيتم السماح بتسجيل الدخول');
-                                // الجلسة منتهية، نسمح بتسجيل الدخول ولكن نحدث isOnline
-                            }
-                        } else {
-                            // لا يوجد loginTime، نعتبرها جلسة نشطة إذا كان sessionId يطابق
-                            if (currentSessionData.sessionId === currentSessionId) {
-                                hasActiveSession = true;
-                                Utils.safeLog('✅ المستخدم متصل بالفعل من نفس المتصفح - السماح بتسجيل الدخول');
-                            }
-                        }
-                    }
-                }
-            } catch (e) {
-                Utils.safeWarn('⚠️ خطأ في التحقق من الجلسة الحالية:', e);
-            }
-
-            // التحقق من وجود جلسة نشطة من جهاز آخر
-            if (foundUser.isOnline === true && foundUser.activeSessionId) {
-                // إذا كان هناك معرف جلسة نشط ولا يطابق الجلسة الحالية
-                if (foundUser.activeSessionId !== currentSessionId && !hasActiveSession) {
-                    Utils.safeWarn('⚠️ المستخدم متصل بالفعل من جهاز آخر', {
-                        activeSessionId: foundUser.activeSessionId,
-                        currentSessionId: currentSessionId
-                    });
-                    const errorMessage = '⚠️ هذا الحساب متصل بالفعل من جهاز آخر.\n\nيرجى تسجيل الخروج من الجهاز الآخر أولاً، أو انتظار انتهاء الجلسة (24 ساعة).\n\nلا يمكن تسجيل الدخول من أكثر من جهاز في نفس الوقت.';
-                    Notification.error(errorMessage);
-                    return { success: false, message: errorMessage };
-                }
-            }
+            // ملاحظة: مزامنة Google Sheets والتحقق من الجلسة المتزامنة تُنفَّذان بعد التحقق من كلمة المرور
+            // لتجنب انتظار الشبكة عند كل ضغطة دخول (خصوصاً عند كلمة مرور خاطئة).
 
             // ✅ تشخيص: عرض قيمة name الأصلية من foundUser
             console.log('🔍 [AUTH] foundUser.name الأصلي:', {
@@ -661,7 +562,9 @@ window.Auth = {
             if (AppState.googleConfig.appsScript.enabled) {
                 Utils.safeLog('🔄 كلمة المرور غير صحيحة - محاولة مزامنة قسرية...');
                 try {
-                    await GoogleIntegration.syncUsers(true);
+                    const wrongPwSyncMs = 4000;
+                    const tOut = new Promise(resolve => setTimeout(() => resolve(false), wrongPwSyncMs));
+                    await Promise.race([GoogleIntegration.syncUsers(true), tOut]);
 
                     // إعادة تحميل المستخدم
                     const refreshedUsers = AppState.appData.users || [];
@@ -701,6 +604,87 @@ window.Auth = {
                 const errorMessage = 'البريد الإلكتروني أو كلمة المرور غير صحيحة';
                 Notification.error(errorMessage);
                 return { success: false, message: errorMessage };
+            }
+        }
+
+        // ===== بعد نجاح كلمة المرور: مزامنة سريعة + منع الدخول المتزامن من جهازين =====
+        const skipConcurrentForBootstrap = this.isBootstrapEmail(email) && !this.isBootstrapDisabled();
+        if (foundUser && !skipConcurrentForBootstrap) {
+            const generateSessionId = () => {
+                const timestamp = Date.now();
+                const random = Math.random().toString(36).substring(2, 15);
+                const userAgent = navigator.userAgent.substring(0, 50);
+                const userAgentHash = userAgent.split('').reduce((acc, char) => {
+                    return ((acc << 5) - acc) + char.charCodeAt(0);
+                }, 0).toString(36);
+                return `SESS_${timestamp}_${random}_${userAgentHash}`;
+            };
+            let currentSessionIdPreLogin = sessionStorage.getItem('hse_session_id');
+            if (!currentSessionIdPreLogin) {
+                currentSessionIdPreLogin = generateSessionId();
+                sessionStorage.setItem('hse_session_id', currentSessionIdPreLogin);
+            }
+
+            if (canSyncUsers && typeof GoogleIntegration !== 'undefined' && GoogleIntegration.syncUsers) {
+                try {
+                    Utils.safeLog('🔄 مزامنة حالة الاتصال بعد التحقق من كلمة المرور...');
+                    const sessionSyncMs = 4000;
+                    const timeoutPromise = new Promise(resolve => setTimeout(() => resolve(false), sessionSyncMs));
+                    await Promise.race([GoogleIntegration.syncUsers(true), timeoutPromise]);
+                    const refreshedUsers = AppState.appData.users || [];
+                    const refreshedUser = refreshedUsers.find(u => {
+                        if (!u || !u.email) return false;
+                        const userEmail = typeof u.email === 'string' ? u.email.toLowerCase().trim() : '';
+                        return userEmail === email;
+                    });
+                    if (refreshedUser) {
+                        foundUser.isOnline = refreshedUser.isOnline;
+                        foundUser.activeSessionId = refreshedUser.activeSessionId;
+                        Utils.safeLog('✅ تم تحديث حالة الاتصال من Google Sheets:', {
+                            isOnline: foundUser.isOnline,
+                            activeSessionId: foundUser.activeSessionId
+                        });
+                    }
+                } catch (syncError) {
+                    Utils.safeWarn('⚠️ فشل مزامنة حالة المستخدم:', syncError);
+                }
+            }
+
+            let hasActiveSession = false;
+            try {
+                const currentSession = sessionStorage.getItem('hse_current_session');
+                if (currentSession) {
+                    const currentSessionData = JSON.parse(currentSession);
+                    if (currentSessionData && currentSessionData.email && currentSessionData.email.toLowerCase() === email) {
+                        if (currentSessionData.loginTime) {
+                            const loginTime = new Date(currentSessionData.loginTime);
+                            const now = new Date();
+                            const sessionAge = now - loginTime;
+                            const maxSessionAge = 24 * 60 * 60 * 1000;
+                            if (sessionAge < maxSessionAge && currentSessionData.sessionId === currentSessionIdPreLogin) {
+                                hasActiveSession = true;
+                                Utils.safeLog('✅ المستخدم متصل بالفعل من نفس المتصفح - السماح بتسجيل الدخول');
+                            }
+                        } else if (currentSessionData.sessionId === currentSessionIdPreLogin) {
+                            hasActiveSession = true;
+                            Utils.safeLog('✅ المستخدم متصل بالفعل من نفس المتصفح - السماح بتسجيل الدخول');
+                        }
+                    }
+                }
+            } catch (e) {
+                Utils.safeWarn('⚠️ خطأ في التحقق من الجلسة الحالية:', e);
+            }
+
+            if (foundUser.isOnline === true && foundUser.activeSessionId) {
+                if (foundUser.activeSessionId !== currentSessionIdPreLogin && !hasActiveSession) {
+                    Utils.safeWarn('⚠️ المستخدم متصل بالفعل من جهاز آخر', {
+                        activeSessionId: foundUser.activeSessionId,
+                        currentSessionId: currentSessionIdPreLogin
+                    });
+                    const errorMessage = '⚠️ هذا الحساب متصل بالفعل من جهاز آخر.\n\nيرجى تسجيل الخروج من الجهاز الآخر أولاً، أو انتظار انتهاء الجلسة (24 ساعة).\n\nلا يمكن تسجيل الدخول من أكثر من جهاز في نفس الوقت.';
+                    Notification.error(errorMessage);
+                    return { success: false, message: errorMessage };
+                }
             }
         }
 

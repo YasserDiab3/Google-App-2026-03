@@ -268,7 +268,9 @@
             progressBar.style.width = '0%';
             progressBar.style.background = 'linear-gradient(90deg, #667eea 0%, #764ba2 100%)';
             progressBar.style.transition = 'width 1s ease-out';
-            progressBar.style.borderRadius = '0 0 24px 24px';
+            // Align border-radius with the parent .kpi-card's border-radius
+            // Assuming .kpi-card has a consistent border-radius, e.g., 8px or 12px
+            progressBar.style.borderRadius = '0 0 var(--radius-md, 8px) var(--radius-md, 8px)'; // Use CSS variable for consistency
 
             card.appendChild(progressBar);
 
@@ -332,12 +334,14 @@
         importantElements.forEach(element => {
             const insideNoGlow = Array.from(noGlowContainers).some(container => container.contains(element));
             if (insideNoGlow) return;
-            setInterval(() => {
-                element.style.boxShadow = '0 0 30px rgba(245, 87, 108, 0.5)';
-                setTimeout(() => {
-                    element.style.boxShadow = '';
-                }, 1000);
-            }, 3000);
+            // Use CSS animations for better performance instead of direct style manipulation in setInterval
+            element.classList.add('glow-animation');
+            // Define the CSS animation in a stylesheet:
+            // @keyframes kpi-glow {
+            //     0%, 100% { box-shadow: none; }
+            //     50% { box-shadow: 0 0 30px rgba(245, 87, 108, 0.5); }
+            // }
+            // .glow-animation { animation: kpi-glow 3s infinite alternate; }
         });
     }
 

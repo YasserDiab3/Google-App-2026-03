@@ -2452,39 +2452,30 @@ const Contractors = {
                     return;
                 }
 
-                // التحقق من عدم وجود تكرار قبل الحفظ (للحالات الجديدة فقط)
-                if (!existing) {
-                    const approvedEntities = AppState.appData.approvedContractors || [];
-                    const normalizedCompanyName = companyName.trim().toLowerCase();
-                    const normalizedEntityType = this.normalizeApprovedEntityType(entityType);
-                    const normalizedLicenseNumber = licenseNumber.trim();
+                const approvedEntities = AppState.appData.approvedContractors || [];
+                const normalizedCompanyName = companyName.trim().toLowerCase();
+                const normalizedEntityType = this.normalizeApprovedEntityType(entityType);
+                const normalizedLicenseNumber = licenseNumber.trim();
 
-                    // فحص التكرار بناءً على اسم الشركة + نوع الجهة
-                    const duplicateByName = approvedEntities.find(item =>
-                        item.companyName &&
-                        item.companyName.trim().toLowerCase() === normalizedCompanyName &&
-                        this.normalizeApprovedEntityType(item.entityType) === normalizedEntityType &&
-                        (!existing || item.id !== existing.id)
-                    );
+                const isDuplicate = approvedEntities.some(item => {
+                    // Exclude the current item if in edit mode
+                    if (existing && item.id === existing.id) return false;
 
-                    if (duplicateByName) {
-                        Notification.error(`يوجد بالفعل مقاول/مورد معتمد بنفس الاسم (${companyName}) ونوع الجهة. يرجى التحقق من القائمة.`);
-                        return;
-                    }
+                    // Check for duplicate by name and type
+                    const nameMatch = item.companyName &&
+                                      item.companyName.trim().toLowerCase() === normalizedCompanyName &&
+                                      this.normalizeApprovedEntityType(item.entityType) === normalizedEntityType;
 
-                    // فحص التكرار بناءً على السجل التجاري (إذا كان موجوداً)
-                    if (normalizedLicenseNumber) {
-                        const duplicateByLicense = approvedEntities.find(item =>
-                            item.licenseNumber &&
-                            item.licenseNumber.trim() === normalizedLicenseNumber &&
-                            (!existing || item.id !== existing.id)
-                        );
+                    // Check for duplicate by license number
+                    const licenseMatch = normalizedLicenseNumber && item.licenseNumber &&
+                                         item.licenseNumber.trim() === normalizedLicenseNumber;
 
-                        if (duplicateByLicense) {
-                            Notification.error(`يوجد بالفعل مقاول/مورد معتمد بنفس السجل التجاري (${licenseNumber}). يرجى التحقق من القائمة.`);
-                            return;
-                        }
-                    }
+                    return nameMatch || licenseMatch;
+                });
+
+                if (isDuplicate) {
+                    Notification.error(`يوجد بالفعل مقاول/مورد معتمد بنفس الاسم أو السجل التجاري. يرجى التحقق من القائمة.`);
+                    return;
                 }
 
                 // توليد كود تلقائي للكيانات الجديدة - استخدام CON-xxx فقط
@@ -2616,8 +2607,14 @@ const Contractors = {
                     updatedAt: new Date().toISOString()
                 };
 
-                this.persistApprovedEntity(record, existing);
-                Notification.success(existing ? 'تم تحديث بيانات الجهة المعتمدة' : 'تم حفظ الجهة المعتمدة بنجاح');
+                const success = await this.persistApprovedEntity(record, existing);
+                if (success) {
+                    Notification.success(existing ? 'تم تحديث بيانات الجهة المعتمدة' : 'تم حفظ الجهة المعتمدة بنجاح');
+                } else {
+                    // If not successful, persistApprovedEntity already showed an error notification.
+                    // Do not close the modal or show a success message.
+                    return; // Exit the function
+                }
 
                 // تحديث قائمة المعتمدين
                 if (this.currentTab === 'approved') {
@@ -2753,7 +2750,7 @@ const Contractors = {
         });
     },
 
-    persistApprovedEntity(record, existing = null) {
+    async persistApprovedEntity(record, existing = null) {
         this.ensureApprovedSetup();
 
         // التأكد من قراءة البيانات الكاملة من AppState قبل التعديل
@@ -2764,26 +2761,33 @@ const Contractors = {
             // محاولة قراءة البيانات من Google Sheets إذا كانت متاحة
             try {
                 if (typeof GoogleIntegration !== 'undefined' && GoogleIntegration.syncData) {
-                    // سنقوم بمزامنة البيانات في الخلفية ولكن لا ننتظرها
-                    GoogleIntegration.syncData({
+                    // سنقوم بمزامنة البيانات وننتظرها
+                    await GoogleIntegration.syncData({
                         silent: true,
                         showLoader: false,
                         notifyOnSuccess: false,
                         notifyOnError: false,
                         sheets: ['ApprovedContractors']
-                    }).then(() => {
-                        // بعد المزامنة، نتحقق من البيانات مرة أخرى
-                        collection = AppState.appData.approvedContractors || [];
-                        if (Array.isArray(collection) && collection.length > 0) {
-                            // إعادة محاولة الحفظ بعد المزامنة
-                            this.persistApprovedEntity(record, existing);
-                        }
-                    }).catch(() => {
-                        // في حالة فشل المزامنة، نتابع بالبيانات الحالية
                     });
+                    // بعد المزامنة، نتحقق من البيانات مرة أخرى
+                    collection = AppState.appData.approvedContractors || [];
+                    if (Array.isArray(collection) && collection.length > 0) {
+                        // إعادة محاولة الحفظ بعد المزامنة
+                        // This recursive call will now execute with the updated collection
+                        // and its return value will be handled by the outer function.
+                        const success = await this.persistApprovedEntity(record, existing); // Await recursive call
+                        if (!success) {
+                            return false; // Propagate failure from recursive call
+                        }
+                        // If recursive call was successful, the record is now persisted, so we can return true.
+                        return true; // The record was handled by the recursive call
+                    }
                 }
             } catch (error) {
                 Utils.safeWarn('فشل محاولة مزامنة البيانات:', error);
+                // If sync fails, proceed with current (potentially empty) collection
+                // The duplicate check will then run on the (still empty) collection,
+                // and the new record will be added. This is acceptable if sync failed.
             }
         }
 
@@ -2849,15 +2853,9 @@ const Contractors = {
             });
 
             if (duplicateIndex !== -1) {
-                // تحديث السجل الموجود بدلاً من إضافة جديد
-                const existing = collection[duplicateIndex];
-                // الحفاظ على المعرف الأصلي وتاريخ الإنشاء
-                collection[duplicateIndex] = {
-                    ...record,
-                    id: existing.id,
-                    createdAt: existing.createdAt || record.createdAt
-                };
-                Utils.safeWarn(`⚠️ تم اكتشاف تكرار للمقاول/المورد: ${record.companyName} - تم التحديث بدلاً من الإضافة`);
+                // تم اكتشاف سجل مكرر، منع الإضافة وإظهار رسالة خطأ
+                Notification.error(`⚠️ لا يمكن إضافة المقاول/المورد "${record.companyName}" لأنه مكرر. يرجى التحقق من البيانات (المعرف، الكود، اسم الشركة، السجل التجاري).`);
+                return false; // منع الإضافة
             } else {
                 collection.push({ ...record });
             }
@@ -2883,6 +2881,7 @@ const Contractors = {
         }
 
         this.refreshApprovedEntitiesList();
+        return true; // تم الحفظ بنجاح
     },
 
     async requestDeleteApprovedEntity(id) {
@@ -4445,8 +4444,9 @@ const Contractors = {
                 } else {
                     // إضافة تقييم جديد - إرسال طلب اعتماد
                     // ✅ إزالة توليد ID من Frontend - Backend سيتولى توليده بشكل تسلسلي (CAR_1, CAR_2, ...)
-                    const approvalRequest = {
-                        // id سيتم توليده في Backend باستخدام generateSequentialId('CAR', ...)
+const approvalRequest = {
+                        // Frontend should not generate ID if backend is responsible. Remove this line.
+                        // id: Utils.generateId('CAR'), // Removed as backend generates ID
                         requestType: 'evaluation',
                         contractorId: record.contractorId,
                         contractorName: record.contractorName,
@@ -4458,52 +4458,24 @@ const Contractors = {
                     };
 
                     this.ensureApprovalRequestsSetup();
-                    
-                    // ✅ إصلاح: استخدام addContractorApprovalRequest مباشرة بدلاً من autoSave
-                    // ✅ هذا يضمن عدم حذف الطلبات الموجودة في Google Sheets
-                    try {
-                        const backendResult = await GoogleIntegration.sendRequest({
-                            action: 'addContractorApprovalRequest',
-                            data: approvalRequest
-                        });
 
-                        if (backendResult && backendResult.success) {
-                            // ✅ بعد نجاح الحفظ في Backend، إضافة الطلب إلى AppState محلياً
-                            AppState.appData.contractorApprovalRequests.push(approvalRequest);
-                            
-                            // حفظ البيانات محلياً
-                            if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
-                                window.DataManager.save();
-                            } else {
-                                Utils.safeWarn('⚠️ DataManager غير متاح - لم يتم حفظ البيانات');
-                            }
-                            
-                            Utils.safeLog('✅ تم حفظ طلب اعتماد التقييم في Google Sheets بنجاح');
-                        } else {
-                            // إذا فشل الحفظ في Backend، نضيف محلياً فقط
-                            AppState.appData.contractorApprovalRequests.push(approvalRequest);
-                            
-                            // حفظ البيانات محلياً
-                            if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
-                                window.DataManager.save();
-                            } else {
-                                Utils.safeWarn('⚠️ DataManager غير متاح - لم يتم حفظ البيانات');
-                            }
-                            
-                            Utils.safeWarn('⚠️ فشل حفظ طلب اعتماد التقييم في Google Sheets، تم الحفظ محلياً فقط');
-                        }
-                    } catch (error) {
-                        // في حالة الخطأ، نضيف محلياً فقط
-                        AppState.appData.contractorApprovalRequests.push(approvalRequest);
-                        
-                        // حفظ البيانات محلياً
+                    // Use the syncApprovalRequestToBackend helper to manage local state and backend sync
+                    try {
+                        // Temporarily add to local state with a temporary ID and pending sync flag
+                        const tempId = Utils.generateId('TEMP_CAR');
+                        const localApprovalRequest = { ...approvalRequest, id: tempId, _isPendingSync: true };
+                        AppState.appData.contractorApprovalRequests.push(localApprovalRequest);
                         if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
                             window.DataManager.save();
-                        } else {
-                            Utils.safeWarn('⚠️ DataManager غير متاح - لم يتم حفظ البيانات');
                         }
-                        
-                        Utils.safeWarn('⚠️ خطأ في حفظ طلب اعتماد التقييم في Google Sheets:', error);
+
+                        // Attempt to sync with backend
+                        await this.syncApprovalRequestToBackend(localApprovalRequest, [], tempId);
+                        Notification.success('تم إرسال طلب اعتماد التقييم بنجاح. سيتم مراجعته من قبل مدير النظام.');
+                    } catch (error) {
+                        Utils.safeError('خطأ في إرسال طلب اعتماد التقييم:', error);
+                        Notification.error('تعذر إرسال طلب اعتماد التقييم: ' + error.message);
+                        // The local state will retain the _isPendingSync flag, which will be handled by sync logic.
                     }
 
                     Notification.success('تم إرسال طلب اعتماد التقييم بنجاح. سيتم مراجعته من قبل مدير النظام.');
@@ -4719,26 +4691,35 @@ const Contractors = {
 
         // إذا لم يكن هناك معرف مقاول مباشر، نبحث بالاسم
         if (!contractorId) {
+            // Attempt to find contractor by approvedEntityId first, which is more reliable than name matching.
             const contractors = AppState.appData.contractors || [];
-            const contractor = contractors.find(c =>
-                c.name === approvedEntity.companyName ||
-                (c.approvedEntityId === approvedEntityId)
-            );
+            let contractor = contractors.find(c => c.approvedEntityId === approvedEntityId);
+
+            if (!contractor) {
+                // Fallback to name matching if approvedEntityId link is missing
+                contractor = contractors.find(c => c.name === approvedEntity.companyName || c.company === approvedEntity.companyName);
+            }
 
             if (contractor) {
                 contractorId = contractor.id;
             } else {
-                Notification.warning('لم يتم العثور على المقاول المرتبط. سيتم البحث بالتقييمات المرتبطة بالاسم.');
-                // البحث بالتقييمات باستخدام اسم الشركة
+                // If still no direct contractor, check if the approved entity itself has an ID that can be used as contractorId
+                // This assumes approvedEntity.id can sometimes act as a contractorId if no direct link exists.
+                // This might be a data modeling issue if approved entities and contractors are distinct.
                 const evaluations = AppState.appData.contractorEvaluations || [];
                 const relatedEvaluation = evaluations.find(e =>
-                    e.contractorName === approvedEntity.companyName
+                    e.contractorName === approvedEntity.companyName || e.contractorId === approvedEntityId
                 );
 
                 if (relatedEvaluation && relatedEvaluation.contractorId) {
                     contractorId = relatedEvaluation.contractorId;
+                } else if (approvedEntity.id) {
+                    // As a last resort, use the approved entity's ID if no contractor is found.
+                    // This might indicate a missing contractor record for an approved entity.
+                    contractorId = approvedEntity.id;
+                    Notification.warning('لم يتم العثور على المقاول المرتبط مباشرة. سيتم استخدام معرف الجهة المعتمدة.');
                 } else {
-                    Notification.error('لم يتم العثور على تقييمات مرتبطة بهذه الجهة');
+                    Notification.error('لم يتم العثور على تقييمات أو مقاول مرتبط بهذه الجهة');
                     return;
                 }
             }
@@ -7372,6 +7353,7 @@ const Contractors = {
             updated++;
         });
 
+        this.saveRequirements(); // Persist the changes to AppState and backend
         Notification.success(`تم تحديث ${updated} اشتراط`);
         document.querySelector('.modal-overlay')?.remove();
     },

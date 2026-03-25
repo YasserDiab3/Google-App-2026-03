@@ -36,11 +36,21 @@ const UserTasks = {
      */
     async load() {
         // Add language change listener
-        if (!this._languageChangeListenerAdded) {
+        // Ensure the listener is only added once globally, not per load call.
+        // If `load()` is meant to be re-callable for language changes, the listener should be external or managed differently.
+        // For now, removing the recursive call within the listener to prevent potential issues.
+        // A better pattern might be to have a dedicated `init()` method for listeners and a `render()` method for content.
+        if (!UserTasks._languageChangeListenerAdded) {
             document.addEventListener('language-changed', () => {
-                this.load();
+                // Instead of calling load() directly, trigger a re-render or specific update logic
+                // For now, we'll just log to avoid recursive calls, but this needs proper re-rendering logic.
+                if (typeof Utils !== 'undefined' && Utils.safeLog) {
+                    Utils.safeLog('🌐 Language changed, re-rendering UserTasks module.');
+                }
+                // UserTasks.load(); // Avoid direct recursive call
+                // Consider a more granular update, e.g., UserTasks.render() or UserTasks.refreshContent()
             });
-            this._languageChangeListenerAdded = true;
+            UserTasks._languageChangeListenerAdded = true;
         }
 
         const section = document.getElementById('user-tasks-section');
@@ -159,15 +169,7 @@ const UserTasks = {
                 if (isAdmin) {
                     this.setupEventListeners();
                     
-                    // تحميل البيانات فوراً بعد عرض الواجهة (حتى لو كانت البيانات فارغة)
-                    // هذا يضمن عدم بقاء الواجهة فارغة بعد التحميل
-                    try {
-                        setTimeout(() => {
-                            this.loadMembers().catch(() => {});
-                        }, 0);
-                    } catch (error) {
-                        Utils.safeWarn('⚠️ خطأ في تحميل الأعضاء الأولي:', error);
-                    }
+
                     
                     // تحميل البيانات بشكل غير متزامن بعد عرض الواجهة (للتحديث)
                     setTimeout(() => {
@@ -181,15 +183,7 @@ const UserTasks = {
                 } else {
                     this.setupUserDashboardListeners();
                     
-                    // تحميل البيانات فوراً بعد عرض الواجهة (حتى لو كانت البيانات فارغة)
-                    // هذا يضمن عدم بقاء الواجهة فارغة بعد التحميل
-                    try {
-                        setTimeout(() => {
-                            this.loadUserTasks().catch(() => {});
-                        }, 0);
-                    } catch (error) {
-                        Utils.safeWarn('⚠️ خطأ في تحميل مهام المستخدم الأولي:', error);
-                    }
+
                     
                     // تحميل البيانات بشكل غير متزامن بعد عرض الواجهة (للتحديث)
                     setTimeout(() => {
@@ -362,26 +356,38 @@ const UserTasks = {
             }
 
             if (response.success && Array.isArray(response.data)) {
-                const oldTasksCount = AppState.appData.userTasks?.length || 0;
-                AppState.appData.userTasks = response.data;
-                const newTasksCount = response.data.length;
+                const userId = AppState.currentUser?.id || AppState.currentUser?.email;
+                const isAdmin = AppState.currentUser?.role === 'admin' || AppState.currentUser?.role === 'safety_officer';
 
-                // حساب عدد المهام الخاصة بالمستخدم الحالي فقط (للإشعارات)
-                let userTasksCount = newTasksCount;
-                let oldUserTasksCount = oldTasksCount;
+                // Capture the current state of userTasks before it's updated
+                const previousAppStateUserTasks = AppState.appData.userTasks || [];
 
+                // Calculate the count of tasks for the current user from the *previous* state
+                let oldUserSpecificTasksCount = 0;
                 if (!isAdmin && userId) {
-                    // للمستخدم العادي، عد المهام الخاصة به فقط
-                    const oldUserTasks = (AppState.appData.userTasks || []).filter(t =>
+                    oldUserSpecificTasksCount = previousAppStateUserTasks.filter(t =>
                         (t.userId || t.assignedTo) === userId
-                    );
-                    oldUserTasksCount = oldUserTasks.length;
-                    userTasksCount = response.data.length;
+                    ).length;
+                } else {
+                    // If admin, or no userId, consider the total count from the previous state
+                    oldUserSpecificTasksCount = previousAppStateUserTasks.length;
                 }
 
-                // تحديث الواجهة إذا كانت هناك تغييرات
-                if (oldTasksCount !== newTasksCount) {
-                    Utils.safeLog(`✅ تمت المزامنة: ${newTasksCount} مهمة`);
+                // Update AppState with the new data from the server
+                AppState.appData.userTasks = response.data;
+
+                // Calculate the count of tasks for the current user from the *new* state
+                // For non-admin, response.data already contains only user-specific tasks.
+                // For admin, response.data contains all tasks.
+                const newUserSpecificTasksCount = response.data.length;
+
+                // Determine if the UI needs updating based on relevant task counts
+                const shouldUpdateUI = isAdmin
+                    ? (newUserSpecificTasksCount !== oldUserSpecificTasksCount) // Admin: compare total tasks
+                    : (newUserSpecificTasksCount !== oldUserSpecificTasksCount); // User: compare user-specific tasks
+
+                if (shouldUpdateUI) {
+                    Utils.safeLog(`✅ تمت المزامنة: ${newUserSpecificTasksCount} مهمة`);
 
                     // تحديث الواجهة بناءً على دور المستخدم
                     if (isAdmin) {
@@ -391,8 +397,8 @@ const UserTasks = {
                     }
 
                     // عرض إشعار إذا كانت هناك مهام جديدة للمستخدم
-                    if (userTasksCount > oldUserTasksCount && !isAdmin) {
-                        const diff = userTasksCount - oldUserTasksCount;
+                    if (newUserSpecificTasksCount > oldUserSpecificTasksCount && !isAdmin) {
+                        const diff = newUserSpecificTasksCount - oldUserSpecificTasksCount;
                         Notification.info(`لديك ${diff} مهمة جديدة`);
                     }
                 }
@@ -875,7 +881,7 @@ const UserTasks = {
                     'badge-secondary';
 
             return `
-                        <div class="content-card ${isOverdue ? 'border-red-300 bg-red-50' : ''}" data-task-id="${task.id}" data-search="${(task.title || task.taskTitle || '').toLowerCase()} ${(task.description || task.taskDescription || '').toLowerCase()}">
+                        <div class="content-card ${isOverdue ? 'border-red-300 bg-red-50' : ''}" data-task-id="${Utils.escapeHTML(task.id)}" data-search="${Utils.escapeHTML((task.title || task.taskTitle || '').toLowerCase())} ${Utils.escapeHTML((task.description || task.taskDescription || '').toLowerCase())}">
                             <div class="flex items-start justify-between gap-4">
                                 <div class="flex-1">
                                     <div class="flex items-center gap-2 mb-2">

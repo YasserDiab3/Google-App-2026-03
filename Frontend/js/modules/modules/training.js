@@ -241,16 +241,19 @@ const Training = {
         const existingScript = document.querySelector('script[src*="chart.js"], script[src*="chartjs"]');
         if (existingScript) {
             return new Promise((resolve) => {
+                let attempts = 0;
+                const maxAttempts = 60; // Max 6 seconds
                 const checkInterval = setInterval(() => {
+                    attempts++;
                     if (typeof Chart !== 'undefined') {
                         clearInterval(checkInterval);
                         resolve(true);
+                    } else if (attempts >= maxAttempts) {
+                        clearInterval(checkInterval);
+                        Utils.safeWarn('Chart.js did not load within expected time via existing script.');
+                        resolve(false);
                     }
                 }, 100);
-                setTimeout(() => {
-                    clearInterval(checkInterval);
-                    resolve(typeof Chart !== 'undefined');
-                }, 5000);
             });
         }
 
@@ -261,30 +264,44 @@ const Training = {
             script.src = 'https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js';
             script.crossOrigin = 'anonymous';
 
-            let done = false;
+            let loaded = false;
             const finish = (ok) => {
-                if (done) return;
-                done = true;
+                if (loaded) return;
+                loaded = true;
                 resolve(!!ok);
             };
 
-            script.onload = () => setTimeout(() => finish(typeof Chart !== 'undefined'), 400);
+            script.onload = () => {
+                // Give a small delay to ensure Chart object is fully initialized
+                setTimeout(() => finish(typeof Chart !== 'undefined'), 50);
+            };
             script.onerror = () => {
+                Utils.safeWarn('Failed to load Chart.js from CDN, trying fallback.');
                 const fallback = document.createElement('script');
                 fallback.type = 'text/javascript';
                 fallback.async = true;
                 fallback.src = 'https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js';
                 fallback.crossOrigin = 'anonymous';
-                fallback.onload = () => setTimeout(() => finish(typeof Chart !== 'undefined'), 400);
-                fallback.onerror = () => finish(false);
+                fallback.onload = () => setTimeout(() => finish(typeof Chart !== 'undefined'), 50);
+                fallback.onerror = () => {
+                    Utils.safeError('Failed to load Chart.js from all sources.');
+                    finish(false);
+                };
                 document.head.appendChild(fallback);
             };
 
-            setTimeout(() => finish(typeof Chart !== 'undefined'), 8000);
+            // Timeout for the entire loading process
+            setTimeout(() => {
+                if (!loaded) {
+                    Utils.safeWarn('Chart.js script loading timed out.');
+                    finish(false);
+                }
+            }, 8000);
 
             try {
                 document.head.appendChild(script);
             } catch (e) {
+                Utils.safeError('Error appending Chart.js script:', e);
                 finish(false);
             }
         });
@@ -6416,33 +6433,33 @@ const Training = {
         }
 
         const tbody = document.querySelector('#training-table-container tbody');
-        if (tbody && filtered.length > 0) {
-            tbody.innerHTML = filtered.map(item => `
-                <tr>
-                    <td>${Utils.escapeHTML(item.name || '')}</td>
-                    <td>${Utils.escapeHTML(item.trainer || '')}</td>
-                    <td>${item.startDate ? Utils.formatDate(item.startDate) : '-'}</td>
-                    <td>${this.getParticipantsCount(item)}</td>
-                    <td>
-                        <span class="badge badge-${item.status === 'مكتمل' ? 'success' : item.status === 'قيد التنيذ' ? 'info' : item.status === 'ملغي' ? 'danger' : 'warning'}">
-                            ${item.status || '-'}
-                        </span>
-                    </td>
-                    <td>
-                        <div class="flex items-center gap-2">
-                            <button onclick="Training.viewTraining('${item.id}')" class="btn-icon btn-icon-info">
-                                <i class="fas fa-eye"></i>
-                            </button>
-                            <button onclick="Training.editTraining('${item.id}')" class="btn-icon btn-icon-primary">
-                                <i class="fas fa-edit"></i>
-                            </button>
-                            <button onclick="Training.deleteTraining('${item.id}')" class="btn-icon btn-icon-danger">
-                                <i class="fas fa-trash"></i>
-                            </button>
-                        </div>
-                    </td>
-                </tr>
-            `).join('');
+        if (!tbody) return;
+
+        const allRows = Array.from(tbody.children);
+        const filteredIds = new Set(filtered.map(item => item.id));
+
+        allRows.forEach(row => {
+            const rowId = row.getAttribute('data-training-id'); // Assuming rows have a data-training-id attribute
+            if (filteredIds.has(rowId)) {
+                row.style.display = '';
+            } else {
+                row.style.display = 'none';
+            }
+        });
+
+        if (filtered.length === 0) {
+            // If no results, display an empty state message
+            if (!tbody.querySelector('.empty-filter-results')) {
+                tbody.innerHTML = `
+                    <tr class="empty-filter-results">
+                        <td colspan="7" class="text-center text-gray-500 py-4">لا توجد نتائج مطابقة للبحث</td>
+                    </tr>
+                `;
+            }
+        } else {
+            // Remove empty state message if results are present
+            const emptyResultsRow = tbody.querySelector('.empty-filter-results');
+            if (emptyResultsRow) emptyResultsRow.remove();
         }
     },
 

@@ -288,22 +288,14 @@ const UserAIAssistant = {
     clearConversation() {
         const messagesContainer = document.getElementById('user-ai-assistant-messages');
         if (messagesContainer) {
-            // الاحتفاظ بالرسالة الترحيبية فقط
-            const welcomeMessage = messagesContainer.querySelector('.user-ai-message-assistant:first-child');
             messagesContainer.innerHTML = '';
-            if (welcomeMessage) {
-                messagesContainer.appendChild(welcomeMessage);
-            } else {
-                // إضافة رسالة ترحيبية جديدة
-                this.addMessage('assistant', 'مرحباً! أنا مساعد النظام. كيف يمكنني مساعدتك اليوم؟');
-            }
         }
 
-        // إعادة تعيين السياق
         this.resetContext();
-
-        // مسح السجل
         this.conversationHistory = [];
+
+        // Re-add the initial welcome message to both UI and history
+        this.addMessage('assistant', 'مرحباً! أنا مساعد النظام. كيف يمكنني مساعدتك اليوم؟');
     },
 
     /**

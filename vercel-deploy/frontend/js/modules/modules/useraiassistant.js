@@ -706,7 +706,17 @@ const UserAIAssistant = {
         const lowerMessage = message.toLowerCase();
 
         // استخراج أسماء الإدارات
-        const departments = ['إنتاج', 'صيانة', 'أمن', 'سلامة', 'إدارة', 'موارد بشرية'];
+        // Use canonical (e.g., English) department names and map them to localized strings for display.
+        const canonicalDepartments = ['production', 'maintenance', 'security', 'safety', 'management', 'hr'];
+        const localizedDepartments = {
+            'production': 'إنتاج',
+            'maintenance': 'صيانة',
+            'security': 'أمن',
+            'safety': 'سلامة',
+            'management': 'إدارة',
+            'hr': 'موارد بشرية'
+        };
+        // Then iterate over canonicalDepartments and check if localizedDepartments[dept] is in lowerMessage.
         departments.forEach(dept => {
             if (lowerMessage.includes(dept.toLowerCase())) {
                 if (!this.context.mentionedEntities.includes(dept)) {

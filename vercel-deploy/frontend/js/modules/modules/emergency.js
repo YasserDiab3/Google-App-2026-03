@@ -1031,7 +1031,7 @@ const Emergency = {
                                     <option value="">اختر الخطورة</option>
                                     <option value="عالية" ${data?.severity === 'عالية' ? 'selected' : ''}>عالية</option>
                                     <option value="متوسطة" ${data?.severity === 'متوسطة' ? 'selected' : ''}>متوسطة</option>
-                                    <option value="منخضة" ${data?.severity === 'منخضة' ? 'selected' : ''}>منخضة</option>
+                                    <option value="منخفضة" ${data?.severity === 'منخفضة' ? 'selected' : ''}>منخفضة</option>
                                 </select>
                             </div>
                             <div>
@@ -1339,7 +1339,7 @@ const Emergency = {
 
         alert.acknowledgedAt = new Date().toISOString();
         alert.acknowledgedBy = this.getCurrentUserSummary();
-        if (alert.status === 'نشط') {
+        if (alert.status !== 'مغلق') { // Only change status if not already closed
             alert.status = 'قيد المعالجة';
         }
         alert.timeline = alert.timeline || [];
@@ -1683,8 +1683,13 @@ const Emergency = {
 
     async viewPlan(id) {
         const plan = AppState.appData.emergencyPlans.find(p => p.id === id);
-        if (!plan) return;
+        if (!plan) {
+            Notification.error('لم يتم العثور على الخطة المحددة');
+            return;
+        }
 
+        // Implement a dedicated modal or detailed view for emergency plans, similar to viewAlert.
+        // For now, keeping the Notification.info as a placeholder.
         Notification.info(`الخطة: ${plan.name}`, {
             title: 'خطة الطوارئ',
             description: plan.description || 'لا يوجد وصف'

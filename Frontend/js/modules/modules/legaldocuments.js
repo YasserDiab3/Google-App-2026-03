@@ -561,8 +561,8 @@ const LegalDocuments = {
             const expiryDate = new Date(doc.expiryDate);
             const today = new Date();
             const daysRemaining = Math.ceil((expiryDate - today) / (1000 * 60 * 60 * 24));
-            const isExpired = expiryDate < today;
-            const isExpiringSoon = daysRemaining <= doc.alertDays && daysRemaining > 0;
+            const isExpired = expiryDate <= today; // Include today as expired
+            const isExpiringSoon = daysRemaining <= doc.alertDays && daysRemaining > 0; // Still valid for expiring soon
 
             return `
                             <tr class="${isExpired ? 'bg-red-50' : isExpiringSoon ? 'bg-yellow-50' : ''}">
@@ -906,6 +906,8 @@ const LegalDocuments = {
 
         const formData = {
             id: editId || Utils.generateId('LEGAL'),
+            // ISO code generation should ideally be handled server-side to prevent race conditions
+            // or ensure uniqueness in a multi-user environment. For client-side, this is a best-effort.
             isoCode: generateISOCode('LEGAL', AppState.appData.legalDocuments),
             documentName: getElementValue('legal-doc-name'),
             documentType: getElementValue('legal-doc-type'),
@@ -968,9 +970,9 @@ const LegalDocuments = {
 
         const expiryDate = new Date(doc.expiryDate);
         const today = new Date();
-        const daysRemaining = Math.ceil((expiryDate - today) / (1000 * 60 * 60 * 24));
-        const isExpired = expiryDate < today;
-        const isExpiringSoon = daysRemaining <= doc.alertDays && daysRemaining > 0;
+            const daysRemaining = Math.ceil((expiryDate - today) / (1000 * 60 * 60 * 24));
+            const isExpired = expiryDate <= today; // Include today as expired
+            const isExpiringSoon = daysRemaining <= doc.alertDays && daysRemaining > 0; // Still valid for expiring soon
 
         const modal = document.createElement('div');
         modal.className = 'modal-overlay';
@@ -1099,10 +1101,10 @@ const LegalDocuments = {
             const formCode = doc.isoCode || doc.documentNumber || doc.id?.substring(0, 12) || 'LEGAL-UNKNOWN';
             const formTitle = 'المستند القانوني';
 
-            const expiryDate = new Date(doc.expiryDate);
-            const today = new Date();
-            const daysRemaining = Math.ceil((expiryDate - today) / (1000 * 60 * 60 * 24));
-            const isExpired = expiryDate < today;
+                const expiryDate = new Date(doc.expiryDate);
+                const today = new Date();
+                const daysRemaining = Math.ceil((expiryDate - today) / (1000 * 60 * 60 * 24));
+                const isExpired = expiryDate <= today; // Include today as expired
             const isExpiringSoon = daysRemaining <= doc.alertDays && daysRemaining > 0;
 
             const content = `
@@ -1229,12 +1231,12 @@ const LegalDocuments = {
                 const expiryDate = new Date(doc.expiryDate);
                 const daysRemaining = Math.ceil((expiryDate - today) / (1000 * 60 * 60 * 24));
 
-                if (daysRemaining <= doc.alertDays && daysRemaining > 0) {
+                if (daysRemaining > 0 && daysRemaining <= doc.alertDays) { // Explicitly check > 0 for 'expiring soon'
                     alerts.push({
                         type: 'warning',
                         message: `مستند قانوني "${doc.documentName}" سينتهي خلال ${daysRemaining} يوم`
                     });
-                } else if (daysRemaining <= 0) {
+                } else if (daysRemaining <= 0) { // Documents expired or expiring today
                     alerts.push({
                         type: 'critical',
                         message: `مستند قانوني "${doc.documentName}" منتهي صلاحيته!`
