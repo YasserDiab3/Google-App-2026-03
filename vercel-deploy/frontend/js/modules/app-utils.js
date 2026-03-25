@@ -248,6 +248,22 @@ const DEFAULT_ROLE_PERMISSIONS = {
 
 const Permissions = {
     /**
+     * هل الدور «مدير نظام»؟ يدعم اختلاف الحروف في الجدول/الجلسة (Admin، مدير النظام، …)
+     */
+    isAdminRole(role) {
+        if (role == null || role === '') return false;
+        const r = String(role).trim();
+        if (r === 'مدير النظام' || r === 'مدير') return true;
+        const low = r.toLowerCase();
+        return (
+            low === 'admin' ||
+            low === 'administrator' ||
+            low === 'system_admin' ||
+            low === 'system-manager'
+        );
+    },
+
+    /**
      * تطبيع كائن الصلاحيات (يُحوّل JSON string إلى كائن)
      */
     normalizePermissions(permissions) {
@@ -602,6 +618,9 @@ const Permissions = {
         return this.formSettingsState;
     },
 
+    /**
+     * استدعاء دالة عند جاهزية إعدادات النماذج (المواقع). إذا كانت جاهزة تُستدعى فوراً، وإلا بعد حدث formSettingsUpdated.
+     */
     onFormSettingsReady(callback) {
         if (typeof callback !== 'function') return;
         try {
@@ -1581,7 +1600,7 @@ const Permissions = {
      */
     getEffectivePermissions(user = AppState.currentUser) {
         if (!user) return {};
-        if (user.role === 'admin') {
+        if (this.isAdminRole(user.role)) {
             return { __isAdmin: true };
         }
 
@@ -1649,7 +1668,7 @@ const Permissions = {
         const moduleConfig = MODULE_PERMISSIONS_CONFIG.find(m => m.key === moduleName);
         if (moduleConfig && moduleConfig.adminOnly) {
             // الموديولات المحمية متاحة لمدير النظام فقط
-            const isAdmin = user.role === 'admin';
+            const isAdmin = this.isAdminRole(user.role);
             if (AppState.debugMode && !isAdmin) {
                 Utils.safeLog(`🔒 hasAccess(${moduleName}): موديول محمي - يتطلب صلاحيات مدير`);
             }
@@ -1657,7 +1676,7 @@ const Permissions = {
         }
 
         // المدير لديه صلاحيات كاملة
-        if (user.role === 'admin') {
+        if (this.isAdminRole(user.role)) {
             if (AppState.debugMode) {
                 Utils.safeLog(`✅ hasAccess(${moduleName}): مدير النظام - صلاحية كاملة`);
             }
@@ -1693,7 +1712,7 @@ const Permissions = {
         if (!user) return false;
 
         // المدير لديه صلاحيات كاملة
-        if (user.role === 'admin') return true;
+        if (this.isAdminRole(user.role)) return true;
 
         // التحقق من وجود صلاحية الوصول للمديول أولاً
         if (!this.hasAccess(moduleName)) return false;
@@ -1722,7 +1741,7 @@ const Permissions = {
         if (!user) return [];
 
         // المدير لديه صلاحيات كاملة
-        if (user.role === 'admin') {
+        if (this.isAdminRole(user.role)) {
             const moduleDetails = MODULE_DETAILED_PERMISSIONS[moduleName];
             if (moduleDetails && moduleDetails.permissions) {
                 return moduleDetails.permissions.map(p => p.key);
@@ -2508,7 +2527,7 @@ const Permissions = {
     getAccessibleModules(includeDefault = false) {
         const user = AppState.currentUser;
         if (!user) return [];
-        if (user.role === 'admin') return ['*'];
+        if (this.isAdminRole(user.role)) return ['*'];
 
         // لا يتم إضافة dashboard تلقائياً - يجب منح الصلاحية صراحةً من قبل المدير
         const modules = new Set();
@@ -2622,7 +2641,7 @@ const Permissions = {
      * التحقق من أن المستخدم الحالي هو مدير النظام
      */
     isAdmin() {
-        return AppState.currentUser?.role === 'admin';
+        return this.isAdminRole(AppState.currentUser?.role);
     }
 };
 
@@ -5946,6 +5965,7 @@ const EmployeeHelper = {
                 onSelect?.(null);
                 return;
             }
+
             try {
                 let employee = this.findByTerm(term);
                 if (!employee && term.length >= 4) {
@@ -6297,6 +6317,7 @@ if (typeof window !== 'undefined') {
     window.Permissions = Permissions;
     window.AppState = AppState;
 
+    // استدعاء تلقائي لتحديث قوائم المصنع/الموقع في جميع الموديولات عند اكتمال تحميل إعدادات النماذج
     (function () {
         function refreshAllSiteDropdowns() {
             var names = ['Training', 'Clinic', 'PTW', 'Incidents', 'Violations', 'FireEquipment', 'PeriodicInspections', 'BehaviorMonitoring'];
