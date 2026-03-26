@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Auth Module - موديول المصادقة
  * تم استخراجه من app-modules.js لتحسين الأداء
  */
@@ -1316,6 +1316,24 @@ window.Auth = {
         if (typeof window !== 'undefined' && window.Clinic && typeof window.Clinic === 'object') {
             try { window.Clinic._visitsBackendFetchOk = false; } catch (e) {}
         }
+        if (typeof window !== 'undefined' && window.Training && typeof window.Training === 'object') {
+            try {
+                window.Training._trainingBackendFetchOk = false;
+                window.Training._trainingDataLoadPromise = null;
+            } catch (e) {}
+        }
+        if (typeof window !== 'undefined' && window.ChemicalSafety && typeof window.ChemicalSafety === 'object') {
+            try {
+                window.ChemicalSafety._chemicalBackendFetchOk = false;
+                window.ChemicalSafety._chemicalDataLoadPromise = null;
+            } catch (e) {}
+        }
+        if (typeof window !== 'undefined' && window.DailyObservations && typeof window.DailyObservations === 'object') {
+            try {
+                window.DailyObservations._dailyObsBackendFetchOk = false;
+                window.DailyObservations._dailyObsLoadPromise = null;
+            } catch (e) {}
+        }
         
         // مسح جميع بيانات الجلسة
         try {
@@ -1973,6 +1991,9 @@ window.Auth = {
                 'clinic': 'clinic_last_sync',
                 'violations': 'violations_last_sync',
                 'periodic-inspections': 'periodic_inspections_last_sync',
+                'training': 'training_last_sync',
+                'chemical-safety': 'chemical_safety_last_sync',
+                'daily-observations': 'daily_observations_last_sync',
             };
 
             // خريطة أوراق Google Sheets إلى مفاتيح AppState
