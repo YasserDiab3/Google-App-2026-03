@@ -1846,7 +1846,11 @@
 
                     // ✅ إصلاح شامل: ضمان أن جميع الوصول إلى document آمن
                     // هذا يمنع الخطأ عندما تحاول الإضافة الوصول إلى .document على undefined
-                    if (window.EventTarget && EventTarget.prototype) {
+                    if (
+                        window.__HSE_SAFE_WRAP_EVENTS__ === true &&
+                        window.EventTarget &&
+                        EventTarget.prototype
+                    ) {
                         const originalAddEventListener =
                             EventTarget.prototype.addEventListener;
 
@@ -7151,61 +7155,58 @@
                             { size: 512, id: "favicon-512", rel: "icon" }, // PWA icon
                         ];
 
-                        sizes.forEach(({ size, id, rel }) => {
+                        const applyIcon = ({ size, id, rel }) => {
                             const canvas = document.createElement("canvas");
                             canvas.width = size;
                             canvas.height = size;
                             const ctx = canvas.getContext("2d");
-
-                            // Draw the logo on canvas with proper scaling
                             ctx.drawImage(img, 0, 0, size, size);
-
-                            // Convert to data URL
                             const dataUrl = canvas.toDataURL("image/png");
 
-                            // Update or create the icon link
                             let link = document.getElementById(id);
                             if (!link) {
                                 link = document.createElement("link");
                                 link.id = id;
                                 link.rel = rel;
                                 link.type = "image/png";
-                                if (rel === "apple-touch-icon") {
-                                    link.setAttribute(
-                                        "sizes",
-                                        size + "x" + size,
-                                    );
-                                } else {
-                                    link.setAttribute(
-                                        "sizes",
-                                        size + "x" + size,
-                                    );
-                                }
+                                link.setAttribute("sizes", size + "x" + size);
                                 document.head.appendChild(link);
                             }
-
                             link.href = dataUrl;
-                        });
+                        };
 
-                        // Update shortcut icon (use 32x32 size)
-                        let shortcutLink =
-                            document.getElementById("favicon-shortcut");
-                        if (!shortcutLink) {
-                            shortcutLink = document.createElement("link");
-                            shortcutLink.id = "favicon-shortcut";
-                            shortcutLink.rel = "shortcut icon";
-                            document.head.appendChild(shortcutLink);
-                        }
-                        // Get the 32x32 data URL
-                        const size32Canvas = document.createElement("canvas");
-                        size32Canvas.width = 32;
-                        size32Canvas.height = 32;
-                        const size32Ctx = size32Canvas.getContext("2d");
-                        size32Ctx.drawImage(img, 0, 0, 32, 32);
-                        shortcutLink.href = size32Canvas.toDataURL("image/png");
+                        let i = 0;
+                        const chunkSize = 3;
+                        const processChunk = () => {
+                            const end = Math.min(i + chunkSize, sizes.length);
+                            while (i < end) {
+                                applyIcon(sizes[i]);
+                                i++;
+                            }
+                            if (i < sizes.length) {
+                                setTimeout(processChunk, 0);
+                                return;
+                            }
 
-                        // Update manifest.json dynamically with PWA icons
-                        updateManifestIcons(img);
+                            // Update shortcut icon (use 32x32 size)
+                            let shortcutLink = document.getElementById("favicon-shortcut");
+                            if (!shortcutLink) {
+                                shortcutLink = document.createElement("link");
+                                shortcutLink.id = "favicon-shortcut";
+                                shortcutLink.rel = "shortcut icon";
+                                document.head.appendChild(shortcutLink);
+                            }
+                            const size32Canvas = document.createElement("canvas");
+                            size32Canvas.width = 32;
+                            size32Canvas.height = 32;
+                            const size32Ctx = size32Canvas.getContext("2d");
+                            size32Ctx.drawImage(img, 0, 0, 32, 32);
+                            shortcutLink.href = size32Canvas.toDataURL("image/png");
+
+                            // defer heavy manifest update خارج onload handler
+                            setTimeout(() => updateManifestIcons(img), 0);
+                        };
+                        processChunk();
                     };
 
                     // Function to update manifest.json icons dynamically

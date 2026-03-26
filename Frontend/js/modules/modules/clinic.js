@@ -10811,7 +10811,12 @@ const Clinic = {
                     this.ensureData();
                     this.renderUI();
                     if (this.state && this.state.activeTab === 'visits') {
-                        setTimeout(() => this.renderVisitsTab(false), 100);
+                        // تشغيل الرسم الثقيل في frame مستقل لتقليل تحذيرات setTimeout الطويلة
+                        if (typeof requestAnimationFrame === 'function') {
+                            requestAnimationFrame(() => this.renderVisitsTab(false));
+                        } else {
+                            setTimeout(() => this.renderVisitsTab(false), 0);
+                        }
                     }
                     if (typeof Utils !== 'undefined' && Utils.safeLog && AppState.appData) {
                         const visitsCount = (AppState.appData.clinicVisits || []).length;

@@ -4791,7 +4791,12 @@ window.UI = {
             this.loadSectionData(sectionName, isRefresh);
         } else {
             setTimeout(() => {
-                this.loadSectionData(sectionName, isRefresh);
+                // جدولة تحميل البيانات خارج setTimeout callback لتقليل [Violation] على المؤقت
+                if (typeof requestAnimationFrame === 'function') {
+                    requestAnimationFrame(() => this.loadSectionData(sectionName, isRefresh));
+                } else {
+                    this.loadSectionData(sectionName, isRefresh);
+                }
 
                 const addIconsAfterLoad = () => {
                     const section = document.getElementById(sectionId);
@@ -4805,9 +4810,7 @@ window.UI = {
                 setTimeout(addIconsAfterLoad, 300);
                 setTimeout(addIconsAfterLoad, 600);
                 setTimeout(addIconsAfterLoad, 1000);
-                setTimeout(addIconsAfterLoad, 1500);
-                setTimeout(addIconsAfterLoad, 2000);
-                setTimeout(addIconsAfterLoad, 3000);
+                setTimeout(addIconsAfterLoad, 1800);
             }, 50);
         }
     },

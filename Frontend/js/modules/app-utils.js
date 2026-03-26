@@ -4965,10 +4965,22 @@ window.Notification = {
 const Loading = {
     currentProgress: 0,
     currentMessage: '',
+    defaultMessage: 'جاري التحميل...',
 
     show(message = 'جاري التحميل...', progress = null) {
         const overlay = document.getElementById('loading-overlay');
         if (!overlay) return;
+
+        // تقليل الإزعاج: داخل التطبيق الرئيسي لا نعرض طبقة التحميل الكاملة
+        // عندما تكون الرسالة عامة فقط (ناتجة غالباً عن تحميلات خلفية/تلقائية).
+        try {
+            const isAppActive = document.body && document.body.classList.contains('app-active');
+            const normalizedMessage = String(message || '').trim();
+            const isGenericMessage = !normalizedMessage || normalizedMessage === this.defaultMessage;
+            if (isAppActive && isGenericMessage) {
+                return;
+            }
+        } catch (e) { /* ignore */ }
 
         try {
             window._hseLoadingSince = Date.now();
