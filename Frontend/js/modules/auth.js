@@ -167,7 +167,7 @@ window.Auth = {
         } else if (canSyncUsers) {
             Utils.safeLog('🔄 لا توجد بيانات محلية - مزامنة Users من Google Sheets قبل تسجيل الدخول...');
             try {
-                const timeoutMs = 8000; // تقليل مهلة مزامنة المستخدمين لتسريع الدخول
+                const timeoutMs = 1200; // مهلة قصيرة جداً لتسجيل دخول أسرع
                 const timeoutPromise = new Promise(resolve => setTimeout(() => resolve(false), timeoutMs));
                 const syncOk = await Promise.race([GoogleIntegration.syncUsers(true), timeoutPromise]);
                 if (syncOk) {
@@ -177,7 +177,10 @@ window.Auth = {
                     // ✅ إصلاح: محاولة تحميل البيانات المحلية إذا فشلت المزامنة
                     if (typeof window.DataManager !== 'undefined' && window.DataManager.load) {
                         try {
-                            await window.DataManager.load();
+                            await Promise.race([
+                                window.DataManager.load(),
+                                new Promise(resolve => setTimeout(resolve, 500))
+                            ]);
                             localUsersCount = Array.isArray(AppState.appData.users) ? AppState.appData.users.length : 0;
                             if (localUsersCount > 0) {
                                 Utils.safeLog(`✅ تم تحميل ${localUsersCount} مستخدم من البيانات المحلية`);
@@ -200,7 +203,10 @@ window.Auth = {
                     // ✅ إصلاح: محاولة تحميل البيانات المحلية عند الفشل
                     if (typeof window.DataManager !== 'undefined' && window.DataManager.load) {
                         try {
-                            await window.DataManager.load();
+                            await Promise.race([
+                                window.DataManager.load(),
+                                new Promise(resolve => setTimeout(resolve, 500))
+                            ]);
                             localUsersCount = Array.isArray(AppState.appData.users) ? AppState.appData.users.length : 0;
                             if (localUsersCount > 0) {
                                 Utils.safeLog(`✅ تم تحميل ${localUsersCount} مستخدم من البيانات المحلية بعد فشل المزامنة`);
@@ -218,7 +224,10 @@ window.Auth = {
             // ✅ إصلاح: محاولة تحميل البيانات المحلية إذا كانت متاحة
             if (localUsersCount === 0 && typeof window.DataManager !== 'undefined' && window.DataManager.load) {
                 try {
-                    await window.DataManager.load();
+                    await Promise.race([
+                        window.DataManager.load(),
+                        new Promise(resolve => setTimeout(resolve, 500))
+                    ]);
                     localUsersCount = Array.isArray(AppState.appData.users) ? AppState.appData.users.length : 0;
                     if (localUsersCount > 0) {
                         Utils.safeLog(`✅ تم تحميل ${localUsersCount} مستخدم من البيانات المحلية`);
@@ -2017,14 +2026,13 @@ window.Auth = {
                 'PeriodicInspectionChecklists': 'periodicInspectionChecklists'
             };
 
-            // تحميل بيانات كل موديول بشكل متسلسل
-            for (const moduleName of modulesToLoad) {
+            const processModule = async (moduleName) => {
                 try {
                     const sheets = moduleSheetsMap[moduleName] || [];
-                    
+
                     if (sheets.length === 0) {
                         Utils.safeLog(`⚠️ لا توجد أوراق Google Sheets للموديول: ${moduleName}`);
-                        continue;
+                        return;
                     }
 
                     // ✅ تحسين: تحميل جميع أوراق الموديول بشكل متوازي لتسريع العملية
@@ -2098,6 +2106,13 @@ window.Auth = {
                 } catch (error) {
                     Utils.safeWarn(`⚠️ فشل تحميل بيانات الموديول ${moduleName}:`, error);
                 }
+            };
+
+            // تحميل الموديولات على دفعات متوازية لتقليل زمن التحميل الكلي
+            const moduleConcurrency = 4;
+            for (let i = 0; i < modulesToLoad.length; i += moduleConcurrency) {
+                const chunk = modulesToLoad.slice(i, i + moduleConcurrency);
+                await Promise.allSettled(chunk.map(processModule));
             }
 
             // حفظ جميع البيانات بعد اكتمال التحميل

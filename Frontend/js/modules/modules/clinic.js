@@ -2135,7 +2135,8 @@ const Clinic = {
                 if (!tab || tab === this.state.activeTab) return;
                 this.state.activeTab = tab;
                 this.renderTabNavigation();
-                this.renderActiveTabContent();
+                // نقل الرسم الثقيل خارج click handler لتقليل Violation
+                setTimeout(() => this.renderActiveTabContent(), 0);
             });
         });
     },
@@ -10812,11 +10813,7 @@ const Clinic = {
                     this.renderUI();
                     if (this.state && this.state.activeTab === 'visits') {
                         // تشغيل الرسم الثقيل في frame مستقل لتقليل تحذيرات setTimeout الطويلة
-                        if (typeof requestAnimationFrame === 'function') {
-                            requestAnimationFrame(() => this.renderVisitsTab(false));
-                        } else {
-                            setTimeout(() => this.renderVisitsTab(false), 0);
-                        }
+                        setTimeout(() => this.renderVisitsTab(false), 0);
                     }
                     if (typeof Utils !== 'undefined' && Utils.safeLog && AppState.appData) {
                         const visitsCount = (AppState.appData.clinicVisits || []).length;

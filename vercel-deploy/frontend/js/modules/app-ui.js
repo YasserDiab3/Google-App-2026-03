@@ -2211,10 +2211,18 @@ window.UI = {
             (AppState.companySettings.postLoginItems === undefined || (hasNoItems && !AppState._companySettingsLoadedAfterLogin));
         if (shouldLoadSettings) {
             try {
-                await DataManager.loadCompanySettings(true);
-                AppState._companySettingsLoadedAfterLogin = true;
+                const settingsPromise = DataManager.loadCompanySettings(true)
+                    .then(() => { AppState._companySettingsLoadedAfterLogin = true; })
+                    .catch((e) => {
+                        if (AppState.debugMode) Utils.safeWarn('⚠️ فشل تحميل إعدادات الشركة لعرض السياسة:', e);
+                    });
+                // لا نحجب ظهور السياسة/القائمة أكثر من مدة قصيرة جداً
+                await Promise.race([
+                    settingsPromise,
+                    new Promise(resolve => setTimeout(resolve, 900))
+                ]);
             } catch (e) {
-                if (AppState.debugMode) Utils.safeWarn('⚠️ فشل تحميل إعدادات الشركة لعرض السياسة:', e);
+                if (AppState.debugMode) Utils.safeWarn('⚠️ خطأ غير متوقع أثناء تجهيز الإعدادات:', e);
             }
         }
         if (AppState.companySettings.postLoginItems === undefined) {
@@ -4802,34 +4810,24 @@ window.UI = {
         // حفظ القسم السابق
         AppState.previousSection = sectionName;
 
-        // التأكد من تحميل البيانات بعد عرض القسم مباشرة
+        // التأكد من تحميل البيانات بعد عرض القسم مباشرة مع تقليل الأحمال الثقيلة داخل callbacks
         const isRefresh = AppState.isPageRefresh;
-        // لوحة التحكم: تحميل البيانات فوراً في نفس الـ tick لتفادي وميض الكروت (لا setTimeout)
-        if (sectionName === 'dashboard') {
+        const loadSectionWork = () => {
             this.loadSectionData(sectionName, isRefresh);
-        } else {
-            setTimeout(() => {
-                // جدولة تحميل البيانات خارج setTimeout callback لتقليل [Violation] على المؤقت
-                if (typeof requestAnimationFrame === 'function') {
-                    requestAnimationFrame(() => this.loadSectionData(sectionName, isRefresh));
-                } else {
-                    this.loadSectionData(sectionName, isRefresh);
+            const section = document.getElementById(sectionId);
+            if (section) {
+                const sectionHeader = section.querySelector('.section-header');
+                if (sectionHeader) {
+                    this.removeNavigationIcons(section);
+                    this.addNavigationIcons(section, sectionName);
                 }
+            }
+        };
 
-                const addIconsAfterLoad = () => {
-                    const section = document.getElementById(sectionId);
-                    if (section) {
-                        let sectionHeader = section.querySelector('.section-header');
-                        if (!sectionHeader) return;
-                        this.removeNavigationIcons(section);
-                        this.addNavigationIcons(section, sectionName);
-                    }
-                };
-                setTimeout(addIconsAfterLoad, 300);
-                setTimeout(addIconsAfterLoad, 600);
-                setTimeout(addIconsAfterLoad, 1000);
-                setTimeout(addIconsAfterLoad, 1800);
-            }, 50);
+        if (sectionName === 'dashboard') {
+            loadSectionWork();
+        } else {
+            setTimeout(loadSectionWork, 0);
         }
     },
 

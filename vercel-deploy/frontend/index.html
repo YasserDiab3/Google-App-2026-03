@@ -267,8 +267,34 @@
                 // ✅ LAYER -1: تحويل Google Drive URLs إلى صيغة thumbnail الآمنة
                 // هذا يمنع تحميل uploadmanager.js من الأساس
                 // استخدام sz=w400 لتقليل احتمال 503 من خوادم Google
+                window.__failedDriveThumbnailIds =
+                    window.__failedDriveThumbnailIds || {};
+                window.__extractDriveFileId = function (url) {
+                    if (!url || typeof url !== "string") return "";
+                    var mThumb = url.match(
+                        /drive\.google\.com\/thumbnail\?id=([a-zA-Z0-9_-]+)/i,
+                    );
+                    if (mThumb && mThumb[1]) return mThumb[1];
+                    var mUc = url.match(
+                        /drive\.google\.com\/uc\?.*id=([a-zA-Z0-9_-]+)/i,
+                    );
+                    if (mUc && mUc[1]) return mUc[1];
+                    var mFile = url.match(
+                        /drive\.google\.com\/file\/d\/([a-zA-Z0-9_-]+)/i,
+                    );
+                    if (mFile && mFile[1]) return mFile[1];
+                    return "";
+                };
                 window.__convertGoogleDriveUrl = function (url) {
                     if (!url || typeof url !== "string") return url;
+                    var fileId = window.__extractDriveFileId(url);
+                    if (
+                        fileId &&
+                        window.__failedDriveThumbnailIds &&
+                        window.__failedDriveThumbnailIds[fileId]
+                    ) {
+                        return "";
+                    }
                     // تطبيع روابط thumbnail المخزنة قديماً (w1000 أو أي حجم) → w400
                     var thumbMatch = url.match(
                         /^(https?:\/\/drive\.google\.com\/thumbnail\?id=)([a-zA-Z0-9_-]+)(&.*)?$/i,
@@ -332,11 +358,30 @@
                         )
                             return;
                         img.setAttribute("data-drive-thumbnail-handled", "1");
+                        var id = window.__extractDriveFileId(img.src || "");
+                        if (
+                            id &&
+                            window.__failedDriveThumbnailIds &&
+                            window.__failedDriveThumbnailIds[id]
+                        ) {
+                            img.src = placeholderSvg;
+                            img.alt = img.alt || "فشل تحميل الصورة";
+                            return;
+                        }
                         var normalized = normalizeThumbnailSrc(img.src);
                         if (normalized !== img.src) {
                             img.src = normalized;
                         }
                         img.onerror = function () {
+                            try {
+                                var failedId = window.__extractDriveFileId(
+                                    this.currentSrc || this.src || "",
+                                );
+                                if (failedId) {
+                                    window.__failedDriveThumbnailIds[failedId] =
+                                        Date.now();
+                                }
+                            } catch (e) {}
                             this.onerror = null;
                             this.src = placeholderSvg;
                             this.alt = this.alt || "فشل تحميل الصورة";
@@ -7176,7 +7221,7 @@
                         };
 
                         let i = 0;
-                        const chunkSize = 3;
+                        const chunkSize = 1;
                         const processChunk = () => {
                             const end = Math.min(i + chunkSize, sizes.length);
                             while (i < end) {
@@ -7184,11 +7229,7 @@
                                 i++;
                             }
                             if (i < sizes.length) {
-                                if (typeof requestAnimationFrame === "function") {
-                                    requestAnimationFrame(processChunk);
-                                } else {
-                                    processChunk();
-                                }
+                                setTimeout(processChunk, 0);
                                 return;
                             }
 

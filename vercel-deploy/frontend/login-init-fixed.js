@@ -743,7 +743,7 @@ async function handleLogin(form, submitBtn) {
     // ✅ استجابة فورية للضغط: تعطيل الزر وإظهار التحميل قبل أي انتظار/منطق ثقيل
     const originalBtnText = submitBtn.innerHTML;
     submitBtn.disabled = true;
-    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin ml-2"></i> جاري تسجيل الدخول...';
+    submitBtn.setAttribute('aria-busy', 'true');
     try {
         await new Promise(r => requestAnimationFrame(() => r()));
     } catch (e) { /* ignore */ }
@@ -752,11 +752,11 @@ async function handleLogin(form, submitBtn) {
     let deps = checkDependencies();
     if (deps && deps.ok === false) {
         const start = Date.now();
-        const maxWaitMs = 2500;
-        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin ml-2"></i> جاري تجهيز النظام...';
+        const maxWaitMs = 700;
+        submitBtn.setAttribute('aria-busy', 'true');
 
         while (deps.ok === false && Date.now() - start < maxWaitMs) {
-            await new Promise(r => setTimeout(r, 100));
+            await new Promise(r => setTimeout(r, 60));
             deps = checkDependencies();
         }
 
@@ -775,7 +775,7 @@ async function handleLogin(form, submitBtn) {
         }
 
         // رجوع رسالة الزر لتسجيل الدخول بعد اكتمال تجهيز الاعتماديات
-        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin ml-2"></i> جاري تسجيل الدخول...';
+        submitBtn.setAttribute('aria-busy', 'true');
     }
     
     try {
@@ -810,12 +810,12 @@ async function handleLogin(form, submitBtn) {
             if (typeof window.UI !== 'undefined' && window.UI.showMainApp) {
                 try {
                     // حماية من التعليق: لو showMainApp تأخرت لا نترك المستخدم على شاشة الدخول بلا نهاية
-                    const warnAfterMs = 700;
-                    const hardTimeoutMs = 8000;
+                    const warnAfterMs = 300;
+                    const hardTimeoutMs = 2500;
                     const warnTimer = setTimeout(function () {
                         try {
                             if (submitBtn && !submitBtn.disabled) return;
-                            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin ml-2"></i> جاري تحميل الواجهة...';
+                            submitBtn.setAttribute('aria-busy', 'true');
                         } catch (e) { /* ignore */ }
                     }, warnAfterMs);
 
@@ -920,6 +920,7 @@ async function handleLogin(form, submitBtn) {
         
         submitBtn.disabled = false;
         submitBtn.innerHTML = originalBtnText;
+        submitBtn.removeAttribute('aria-busy');
     }
 }
 

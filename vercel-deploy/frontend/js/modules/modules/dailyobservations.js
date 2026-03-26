@@ -481,9 +481,9 @@ const DailyObservations = {
             // عرض القائمة فوراً بعد عرض الواجهة (حتى لو كانت البيانات فارغة)
             // هذا يضمن عدم بقاء الواجهة فارغة بعد التحميل
             try {
-                // استخدام setTimeout بسيط لضمان أن DOM جاهز
+                // جدولة على دفعتين لتخفيف ضغط setTimeout handler
                 setTimeout(() => {
-                    this.loadObservationsList();
+                    Promise.resolve().then(() => this.loadObservationsList());
                 }, 0);
             } catch (error) {
                 Utils.safeWarn('⚠️ خطأ في تحميل قائمة الملاحظات الأولي:', error);
@@ -493,11 +493,11 @@ const DailyObservations = {
             setTimeout(() => {
                 try {
                     // تحديث القائمة بعد تحميل البيانات (إذا كان هناك تحميل من Backend)
-                    this.loadObservationsList();
+                    Promise.resolve().then(() => this.loadObservationsList());
                 } catch (error) {
                     Utils.safeWarn('⚠️ تعذر تحديث قائمة الملاحظات:', error);
                     // حتى في حالة الخطأ، تأكد من أن الواجهة معروضة
-                    this.loadObservationsList();
+                    Promise.resolve().then(() => this.loadObservationsList());
                 }
             }, 100);
         } catch (error) {
