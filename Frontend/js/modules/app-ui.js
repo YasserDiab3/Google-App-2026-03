@@ -2812,7 +2812,8 @@ window.UI = {
                         // بدون نافذة "جاري تحميل قاعدة البيانات" وبدون تعطيل المستخدم.
                         GoogleIntegration.syncData({
                             silent: true,
-                            showLoader: false,
+                            // ✅ مطلوب: إظهار مؤشر التقدم تلقائياً بعد الدخول (بدون ضغط زر التحميل)
+                            showLoader: true,
                             notifyOnSuccess: false,
                             notifyOnError: false,
                             includeUsersSheet: true,
@@ -3044,12 +3045,15 @@ window.UI = {
                     typeof Utils !== 'undefined' && typeof Utils.hasCloudBackendSync === 'function' && Utils.hasCloudBackendSync() &&
                     typeof GoogleIntegration !== 'undefined' &&
                     typeof GoogleIntegration.syncData === 'function' &&
+                    !AppState._autoSyncStarted &&
                     !AppState.isPageRefresh) {
+                    AppState._autoSyncStarted = true;
                     
                     // تحميل البيانات في الخلفية (silent = true) بشكل تلقائي
                     GoogleIntegration.syncData({
                         silent: true, // تحميل صامت في الخلفية
-                        showLoader: false, // لا نعرض loader
+                        // ✅ إظهار مؤشر التقدم السفلي تلقائياً
+                        showLoader: true,
                         notifyOnSuccess: false, // لا نعرض إشعارات
                         notifyOnError: false,
                         incremental: false // تحميل كامل أول مرة

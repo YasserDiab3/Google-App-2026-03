@@ -7208,14 +7208,15 @@
                             shortcutLink.href = size32Canvas.toDataURL("image/png");
 
                             // defer heavy manifest update خارج onload handler
-                            if (typeof requestIdleCallback === "function") {
-                                requestIdleCallback(() => updateManifestIcons(img), {
-                                    timeout: 1000,
-                                });
-                            } else if (typeof requestAnimationFrame === "function") {
-                                requestAnimationFrame(() => updateManifestIcons(img));
-                            } else {
-                                updateManifestIcons(img);
+                            // مع منع التكرار لنفس الشعار لتقليل الحمل على الـ main thread.
+                            try {
+                                const manifestLogoKey = String(logoUrl || "");
+                                if (window.__hseLastManifestLogoKey !== manifestLogoKey) {
+                                    window.__hseLastManifestLogoKey = manifestLogoKey;
+                                    setTimeout(() => updateManifestIcons(img), 80);
+                                }
+                            } catch (e) {
+                                setTimeout(() => updateManifestIcons(img), 80);
                             }
                         };
                         processChunk();
@@ -8698,12 +8699,7 @@
                     setTimeout(function () {
                         performFontAwesomeCheck();
 
-                        // Start periodic checks
-                        if (!fontAwesomeCheckInterval) {
-                            fontAwesomeCheckInterval = setInterval(function () {
-                                performFontAwesomeCheck();
-                            }, CHECK_INTERVAL);
-                        }
+                        // Skip periodic checks to avoid unnecessary interval workload.
                     }, INITIAL_CHECK_DELAY);
                 });
 
