@@ -727,10 +727,10 @@ async function handleLogin(form, submitBtn) {
         return;
     }
 
-    // ✅ استجابة فورية للضغط: تعطيل الزر فقط بدون تغيير نصه
+    // ✅ استجابة فورية للضغط: تعطيل الزر وإظهار التحميل قبل أي انتظار/منطق ثقيل
     const originalBtnText = submitBtn.innerHTML;
     submitBtn.disabled = true;
-    submitBtn.setAttribute('aria-busy', 'true');
+    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin ml-2"></i> جاري تسجيل الدخول...';
     try {
         await new Promise(r => requestAnimationFrame(() => r()));
     } catch (e) { /* ignore */ }
@@ -739,7 +739,8 @@ async function handleLogin(form, submitBtn) {
     let deps = checkDependencies();
     if (deps && deps.ok === false) {
         const start = Date.now();
-        const maxWaitMs = 1200;
+        const maxWaitMs = 2500;
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin ml-2"></i> جاري تجهيز النظام...';
 
         while (deps.ok === false && Date.now() - start < maxWaitMs) {
             await new Promise(r => setTimeout(r, 100));
@@ -760,7 +761,8 @@ async function handleLogin(form, submitBtn) {
             return;
         }
 
-        // لا نغير نص الزر أثناء تجهيز الاعتماديات
+        // رجوع رسالة الزر لتسجيل الدخول بعد اكتمال تجهيز الاعتماديات
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin ml-2"></i> جاري تسجيل الدخول...';
     }
     
     try {
@@ -800,7 +802,7 @@ async function handleLogin(form, submitBtn) {
                     const warnTimer = setTimeout(function () {
                         try {
                             if (submitBtn && !submitBtn.disabled) return;
-                            // لا نغيّر نص الزر - المطلوب إبقاء "تسجيل الدخول" ثابتاً
+                            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin ml-2"></i> جاري تحميل الواجهة...';
                         } catch (e) { /* ignore */ }
                     }, warnAfterMs);
 
@@ -870,7 +872,6 @@ async function handleLogin(form, submitBtn) {
             }
             
             submitBtn.disabled = false;
-            submitBtn.removeAttribute('aria-busy');
             submitBtn.innerHTML = originalBtnText;
         }
     } catch (error) {
@@ -905,7 +906,6 @@ async function handleLogin(form, submitBtn) {
         }
         
         submitBtn.disabled = false;
-        submitBtn.removeAttribute('aria-busy');
         submitBtn.innerHTML = originalBtnText;
     }
 }

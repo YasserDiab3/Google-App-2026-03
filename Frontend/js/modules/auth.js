@@ -167,7 +167,7 @@ window.Auth = {
         } else if (canSyncUsers) {
             Utils.safeLog('🔄 لا توجد بيانات محلية - مزامنة Users من Google Sheets قبل تسجيل الدخول...');
             try {
-                const timeoutMs = 3000; // مهلة أقصر لتجنب تأخير الدخول عند بطء الشبكة
+                const timeoutMs = 8000; // تقليل مهلة مزامنة المستخدمين لتسريع الدخول
                 const timeoutPromise = new Promise(resolve => setTimeout(() => resolve(false), timeoutMs));
                 const syncOk = await Promise.race([GoogleIntegration.syncUsers(true), timeoutPromise]);
                 if (syncOk) {
@@ -559,7 +559,7 @@ window.Auth = {
             if (typeof Utils !== 'undefined' && typeof Utils.hasCloudBackendSync === 'function' && Utils.hasCloudBackendSync()) {
                 Utils.safeLog('🔄 كلمة المرور غير صحيحة - محاولة مزامنة قسرية...');
                 try {
-                    const wrongPwSyncMs = 1500;
+                    const wrongPwSyncMs = 4000;
                     const tOut = new Promise(resolve => setTimeout(() => resolve(false), wrongPwSyncMs));
                     await Promise.race([GoogleIntegration.syncUsers(true), tOut]);
 
@@ -625,7 +625,7 @@ window.Auth = {
             if (canSyncUsers && typeof GoogleIntegration !== 'undefined' && GoogleIntegration.syncUsers) {
                 try {
                     Utils.safeLog('🔄 مزامنة حالة الاتصال بعد التحقق من كلمة المرور...');
-                    const sessionSyncMs = 1500;
+                    const sessionSyncMs = 4000;
                     const timeoutPromise = new Promise(resolve => setTimeout(() => resolve(false), sessionSyncMs));
                     await Promise.race([GoogleIntegration.syncUsers(true), timeoutPromise]);
                     const refreshedUsers = AppState.appData.users || [];
