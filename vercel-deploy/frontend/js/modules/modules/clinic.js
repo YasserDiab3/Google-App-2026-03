@@ -5098,6 +5098,16 @@ const Clinic = {
         }
     },
 
+    scheduleVisitsTabRender(forceReload = false, delayMs = 0) {
+        if (this._visitsRenderTimer) {
+            clearTimeout(this._visitsRenderTimer);
+        }
+        this._visitsRenderTimer = setTimeout(() => {
+            this._visitsRenderTimer = null;
+            this.renderVisitsTab(forceReload);
+        }, Math.max(0, delayMs));
+    },
+
     async renderVisitsTab(forceReload = false) {
         try {
             const panel = document.querySelector('.clinic-tab-panel[data-tab-panel="visits"]');
@@ -10766,7 +10776,7 @@ const Clinic = {
                     // ✅ إذا كان تبويب سجل التردد مفتوحاً، تحديثه مباشرة
                     if (this.state && this.state.activeTab === 'visits') {
                         setTimeout(() => {
-                            this.renderVisitsTab(false); // false = لا force reload لأن البيانات محملة بالفعل
+                            this.scheduleVisitsTabRender(false, 0); // false = لا force reload لأن البيانات محملة بالفعل
                             if (AppState.debugMode) {
                                 Utils.safeLog('✅ تم تحديث سجل التردد تلقائياً بعد المزامنة');
                             }
@@ -10813,7 +10823,7 @@ const Clinic = {
                     this.renderUI();
                     if (this.state && this.state.activeTab === 'visits') {
                         // تشغيل الرسم الثقيل في frame مستقل لتقليل تحذيرات setTimeout الطويلة
-                        setTimeout(() => this.renderVisitsTab(false), 0);
+                        this.scheduleVisitsTabRender(false, 0);
                     }
                     if (typeof Utils !== 'undefined' && Utils.safeLog && AppState.appData) {
                         const visitsCount = (AppState.appData.clinicVisits || []).length;
@@ -11222,9 +11232,7 @@ const Clinic = {
                 
                 // ✅ إذا كان تبويب سجل التردد مفتوحاً، تحديثه مباشرة
                 if (this.state && this.state.activeTab === 'visits') {
-                    setTimeout(() => {
-                        this.renderVisitsTab(false); // false = لا force reload لأن البيانات محملة بالفعل
-                    }, 100);
+                    this.scheduleVisitsTabRender(false, 120); // false = لا force reload لأن البيانات محملة بالفعل
                 }
                 
                 Utils.safeLog('✅ تمت مزامنة بيانات العيادة في الخلفية');

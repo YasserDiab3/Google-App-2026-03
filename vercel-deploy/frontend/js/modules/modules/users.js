@@ -79,12 +79,10 @@ const Users = {
 
             this.setupEventListeners();
             
-            // ✅ تحميل القائمة فوراً بعد عرض الواجهة
-            setTimeout(async () => {
-                try {
-                    const contentArea = document.getElementById('users-content');
-                    if (!contentArea) return;
-                    
+            // ✅ تحميل القائمة فوراً بعد عرض الواجهة مع تجزئة بسيطة لتخفيف handler
+            try {
+                const contentArea = document.getElementById('users-content');
+                if (contentArea) {
                     const listContent = await this.renderList().catch(error => {
                         Utils.safeWarn('⚠️ خطأ في تحميل القائمة:', error);
                         return `
@@ -102,13 +100,12 @@ const Users = {
                             </div>
                         `;
                     });
-                    
                     contentArea.innerHTML = listContent;
-                    this.loadUsersList();
-                } catch (error) {
-                    Utils.safeWarn('⚠️ خطأ في تحميل القائمة:', error);
+                    setTimeout(() => this.loadUsersList(), 0);
                 }
-            }, 0);
+            } catch (error) {
+                Utils.safeWarn('⚠️ خطأ في تحميل القائمة:', error);
+            }
             
             // بدء التحديث التلقائي لحالة الاتصال وآخر تسجيل دخول
             this.startAutoRefresh();

@@ -3526,7 +3526,23 @@ const PeriodicInspections = {
         const url = URL.createObjectURL(blob);
         const printWindow = window.open(url, '_blank');
         if (printWindow) {
-            printWindow.onload = () => { setTimeout(() => { printWindow.print(); setTimeout(() => URL.revokeObjectURL(url), 500); }, 300); };
+            printWindow.onload = () => {
+                try {
+                    if (typeof requestAnimationFrame === 'function') {
+                        requestAnimationFrame(() => printWindow.print());
+                    } else {
+                        printWindow.print();
+                    }
+                    const cleanup = () => {
+                        try { URL.revokeObjectURL(url); } catch (e) {}
+                        try { printWindow.removeEventListener('afterprint', cleanup); } catch (e) {}
+                    };
+                    printWindow.addEventListener('afterprint', cleanup);
+                    setTimeout(cleanup, 1200);
+                } catch (e) {
+                    setTimeout(() => URL.revokeObjectURL(url), 1200);
+                }
+            };
         } else {
             Notification.error('يرجى السماح للنوافذ المنبثقة للطباعة');
         }

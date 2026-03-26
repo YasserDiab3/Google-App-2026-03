@@ -8229,14 +8229,26 @@ const Training = {
             const printWindow = window.open(url, '_blank');
             if (printWindow) {
                 printWindow.onload = () => {
-                    setTimeout(() => {
-                        printWindow.print();
+                    try {
+                        if (typeof requestAnimationFrame === 'function') {
+                            requestAnimationFrame(() => printWindow.print());
+                        } else {
+                            printWindow.print();
+                        }
+                        const cleanup = () => {
+                            try { URL.revokeObjectURL(url); } catch (e) {}
+                            try { printWindow.removeEventListener('afterprint', cleanup); } catch (e) {}
+                            Loading.hide();
+                            Notification.success('تم تجهيز البرنامج للطباعة');
+                        };
+                        printWindow.addEventListener('afterprint', cleanup);
+                        setTimeout(cleanup, 1400);
+                    } catch (e) {
                         setTimeout(() => {
                             URL.revokeObjectURL(url);
                             Loading.hide();
-                            Notification.success('تم تجهيز البرنامج للطباعة');
-                        }, 1000);
-                    }, 500);
+                        }, 1400);
+                    }
                 };
             } else {
                 Loading.hide();

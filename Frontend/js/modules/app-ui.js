@@ -3120,7 +3120,8 @@ window.UI = {
             }
 
             // ✅ إصلاح: تحديث صلاحيات المستخدم الحالي إذا تم تحديث ورقة Users
-            if (sheets && sheets.includes('users') && AppState.currentUser && AppState.appData.users) {
+            const includesUsersSheet = Array.isArray(sheets) && sheets.some(s => String(s || '').toLowerCase() === 'users');
+            if (includesUsersSheet && AppState.currentUser && AppState.appData.users) {
                 const currentUserEmail = AppState.currentUser.email?.toLowerCase();
                 const updatedUser = AppState.appData.users.find(u => 
                     u.email && u.email.toLowerCase() === currentUserEmail
@@ -3143,18 +3144,22 @@ window.UI = {
                         }
                     }
                     
-                    // تحديث القائمة الجانبية
+                    // تحديث القائمة الجانبية خارج المسار الحرج
                     if (typeof Permissions !== 'undefined' && typeof Permissions.updateNavigation === 'function') {
-                        Permissions.updateNavigation();
+                        setTimeout(() => {
+                            try { Permissions.updateNavigation(); } catch (e) {}
+                        }, 0);
                     }
                 }
             }
 
-            // تحديث الموديول الحالي إذا كان موجوداً
+            // تحديث الموديول الحالي إذا كان موجوداً (مع debouncing لمنع إعادة تحميل متكررة)
             const currentSection = AppState.currentSection;
             if (currentSection && currentSection !== 'dashboard') {
-                // تحديث الموديول الحالي بدون إعادة تحميل كامل
-                this.refreshCurrentSection(true); // silent = true
+                if (this._syncSectionRefreshTimer) clearTimeout(this._syncSectionRefreshTimer);
+                this._syncSectionRefreshTimer = setTimeout(() => {
+                    this.refreshCurrentSection(true); // silent = true
+                }, 120);
             }
 
             // تحديث Dashboard إذا كان مفتوحاً
@@ -3305,15 +3310,15 @@ window.UI = {
                 if (logoImgRight) logoImgRight.style.display = 'none';
             }
 
-            // إضافة padding-top لجميع الأقسام عند إظهار الهيدر
-            const allSections = document.querySelectorAll('.section');
-            allSections.forEach(section => {
-                if (header && header.style.display === 'flex' && window.innerWidth > 1024) {
-                    section.style.paddingTop = '70px';
-                } else {
-                    section.style.paddingTop = '0';
-                }
-            });
+            // إضافة padding-top للأقسام فقط عند تغير الحالة لتقليل forced reflow
+            const shouldApplyTopPadding = !!(header && header.style.display === 'flex' && window.innerWidth > 1024);
+            if (this._lastHeaderTopPaddingState !== shouldApplyTopPadding) {
+                this._lastHeaderTopPaddingState = shouldApplyTopPadding;
+                const allSections = document.querySelectorAll('.section');
+                allSections.forEach(section => {
+                    section.style.paddingTop = shouldApplyTopPadding ? '70px' : '0';
+                });
+            }
 
             // إظهار أزرار الهيدر (الإشعارات والوضع الليلي) عند إظهار الهيدر
             if (header && header.style.display === 'flex') {
@@ -6143,25 +6148,19 @@ window.UI = {
                     originalSet.call(this, value);
                 }
 
-                // إضافة الأيقونات بعد استبدال innerHTML مباشرة
+                // إضافة الأيقونات مرة واحدة فقط بعد استبدال innerHTML لتقليل الحمل
                 if (sectionName !== 'dashboard') {
-                    // محاولات متعددة مع زيادة الفترات لضمان إعادة الإضافة
-                    const retries = [0, 50, 150, 300, 600, 1000];
-                    retries.forEach((delay, index) => {
-                        setTimeout(() => {
-                            try {
-                                // التحقق من أن القسم لا يزال موجوداً في DOM
-                                if (this.isConnected && this.parentNode) {
-                                    self.addNavigationIcons(this, sectionName);
-                                }
-                            } catch (error) {
-                                // تجاهل الأخطاء في المحاولات المتأخرة
-                                if (index < 3 && AppState.debugMode) {
-                                    Utils.safeWarn('⚠️ خطأ في إضافة الأيقونات بعد innerHTML:', error);
-                                }
+                    setTimeout(() => {
+                        try {
+                            if (this.isConnected && this.parentNode) {
+                                self.addNavigationIcons(this, sectionName);
                             }
-                        }, delay);
-                    });
+                        } catch (error) {
+                            if (AppState.debugMode) {
+                                Utils.safeWarn('⚠️ خطأ في إضافة الأيقونات بعد innerHTML:', error);
+                            }
+                        }
+                    }, 60);
                 }
             },
             get: function () {
@@ -6238,7 +6237,7 @@ window.UI = {
                             Utils.safeWarn('⚠️ خطأ في MutationObserver:', error);
                         }
                     }
-                }, 100); // زيادة الفترة قليلاً لتقليل التكرار
+                }, 180); // زيادة الفترة لتجميع mutations وتقليل reflow
             }
         });
 

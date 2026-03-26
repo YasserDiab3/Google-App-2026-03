@@ -269,6 +269,26 @@
                 // استخدام sz=w400 لتقليل احتمال 503 من خوادم Google
                 window.__failedDriveThumbnailIds =
                     window.__failedDriveThumbnailIds || {};
+                try {
+                    if (!window.__failedDriveThumbnailIdsLoaded) {
+                        var persistedFailedThumbs = localStorage.getItem(
+                            "hse_failed_drive_thumbnails",
+                        );
+                        if (persistedFailedThumbs) {
+                            var parsedFailedThumbs = JSON.parse(
+                                persistedFailedThumbs,
+                            );
+                            if (
+                                parsedFailedThumbs &&
+                                typeof parsedFailedThumbs === "object"
+                            ) {
+                                window.__failedDriveThumbnailIds =
+                                    parsedFailedThumbs;
+                            }
+                        }
+                        window.__failedDriveThumbnailIdsLoaded = true;
+                    }
+                } catch (e) {}
                 window.__extractDriveFileId = function (url) {
                     if (!url || typeof url !== "string") return "";
                     var mThumb = url.match(
@@ -380,6 +400,14 @@
                                 if (failedId) {
                                     window.__failedDriveThumbnailIds[failedId] =
                                         Date.now();
+                                    try {
+                                        localStorage.setItem(
+                                            "hse_failed_drive_thumbnails",
+                                            JSON.stringify(
+                                                window.__failedDriveThumbnailIds,
+                                            ),
+                                        );
+                                    } catch (e) {}
                                 }
                             } catch (e) {}
                             this.onerror = null;
@@ -409,8 +437,6 @@
                                         var n = m.addedNodes[j];
                                         if (n.nodeType === 1) {
                                             runThumbnailFallbacks(n);
-                                            if (n.querySelectorAll)
-                                                runThumbnailFallbacks(n);
                                         }
                                     }
                                 if (
@@ -860,7 +886,21 @@
                                     var safeUrl =
                                         window.__convertGoogleDriveUrl(src);
                                     if (safeUrl !== src) {
-                                        img.setAttribute("src", safeUrl);
+                                        if (!safeUrl) {
+                                            img.setAttribute(
+                                                "src",
+                                                "data:image/svg+xml," +
+                                                    encodeURIComponent(
+                                                        '<svg xmlns="http://www.w3.org/2000/svg" width="200" height="120" viewBox="0 0 200 120"><rect fill="#f3f4f6" width="200" height="120"/><text x="100" y="65" text-anchor="middle" fill="#9ca3af" font-size="12" font-family="sans-serif">فشل تحميل الصورة</text></svg>',
+                                                    ),
+                                            );
+                                            img.setAttribute(
+                                                "alt",
+                                                "فشل تحميل الصورة",
+                                            );
+                                        } else {
+                                            img.setAttribute("src", safeUrl);
+                                        }
                                     }
                                     // إضافة error handler
                                     if (!img.__driveErrorHandler) {
@@ -908,10 +948,24 @@
                                                             src,
                                                         );
                                                     if (safeUrl !== src) {
-                                                        node.setAttribute(
-                                                            "src",
-                                                            safeUrl,
-                                                        );
+                                                        if (!safeUrl) {
+                                                            node.setAttribute(
+                                                                "src",
+                                                                "data:image/svg+xml," +
+                                                                    encodeURIComponent(
+                                                                        '<svg xmlns="http://www.w3.org/2000/svg" width="200" height="120" viewBox="0 0 200 120"><rect fill="#f3f4f6" width="200" height="120"/><text x="100" y="65" text-anchor="middle" fill="#9ca3af" font-size="12" font-family="sans-serif">فشل تحميل الصورة</text></svg>',
+                                                                    ),
+                                                            );
+                                                            node.setAttribute(
+                                                                "alt",
+                                                                "فشل تحميل الصورة",
+                                                            );
+                                                        } else {
+                                                            node.setAttribute(
+                                                                "src",
+                                                                safeUrl,
+                                                            );
+                                                        }
                                                     }
                                                     if (
                                                         !node.__driveErrorHandler
@@ -7184,19 +7238,12 @@
                         const sizes = [
                             { size: 16, id: "favicon-16", rel: "icon" },
                             { size: 32, id: "favicon-32", rel: "icon" },
-                            { size: 48, id: "favicon-48", rel: "icon" },
-                            { size: 72, id: "favicon-72", rel: "icon" },
-                            { size: 96, id: "favicon-96", rel: "icon" },
-                            { size: 128, id: "favicon-128", rel: "icon" },
-                            { size: 144, id: "favicon-144", rel: "icon" },
-                            { size: 152, id: "favicon-152", rel: "icon" },
                             {
                                 size: 180,
                                 id: "favicon-apple",
                                 rel: "apple-touch-icon",
                             },
                             { size: 192, id: "favicon-192", rel: "icon" }, // PWA icon
-                            { size: 384, id: "favicon-384", rel: "icon" },
                             { size: 512, id: "favicon-512", rel: "icon" }, // PWA icon
                         ];
 
