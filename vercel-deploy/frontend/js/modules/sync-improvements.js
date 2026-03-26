@@ -272,6 +272,14 @@
                         // ✅ دعم تحديد أوراق معينة (للاستخدام في تحديثات الموديولات بدون مزامنة كاملة)
                         sheets: requestedSheets = null
                     } = options;
+                    const suppressProgressOverlay = !!(
+                        typeof AppState !== 'undefined' &&
+                        typeof AppState._suppressSyncProgressOverlayUntil === 'number' &&
+                        Date.now() < AppState._suppressSyncProgressOverlayUntil
+                    );
+                    const effectiveShowLoader = showLoader && !suppressProgressOverlay;
+                    const effectiveNotifyOnSuccess = notifyOnSuccess && !suppressProgressOverlay;
+                    const effectiveNotifyOnError = notifyOnError && !suppressProgressOverlay;
                     
                     if (!AppState.googleConfig.appsScript.enabled || !AppState.googleConfig.appsScript.scriptUrl) {
                         if (!silent) {
@@ -287,7 +295,7 @@
                             Utils.safeLog('🔄  تحميل قاعدة البيانات    Database loading');
                         }
                         
-                        if (showLoader && typeof Loading !== 'undefined') {
+                        if (effectiveShowLoader && typeof Loading !== 'undefined') {
                             Loading.show();
                         }
                         
@@ -419,7 +427,7 @@
                         }
                         
                         if (sheets.length === 0) {
-                            if (showLoader && typeof Loading !== 'undefined') {
+                            if (effectiveShowLoader && typeof Loading !== 'undefined') {
                                 Loading.hide();
                             }
                             if (shouldLog) {
@@ -436,7 +444,7 @@
                         const failedSheets = [];
                         
                         // عرض مؤشر التقدم
-                        if (showLoader) {
+                        if (effectiveShowLoader) {
                             SyncImprovements.createProgressIndicator(sheets.length);
                             // بدء التقدم من 0%
                             SyncImprovements.updateProgress(0, sheets.length);
@@ -465,7 +473,7 @@
                             
                             // تحديث مؤشر التقدم بعد معالجة الدفعة
                             const completedSheets = Math.min(i + batch.length, sheets.length);
-                            if (showLoader) {
+                            if (effectiveShowLoader) {
                                 SyncImprovements.updateProgress(completedSheets, sheets.length);
                             }
                             
@@ -483,7 +491,7 @@
                         }
                         
                         // تحديث مؤشر التقدم إلى 100% قبل الحفظ النهائي
-                        if (showLoader) {
+                        if (effectiveShowLoader) {
                             SyncImprovements.updateProgress(sheets.length, sheets.length);
                         }
                         
@@ -518,26 +526,26 @@
                         }
                         
                         // إزالة مؤشر التقدم بعد التأكد من اكتمال الحفظ
-                        if (showLoader) {
+                        if (effectiveShowLoader) {
                             // انتظار قصير للتأكد من عرض التقدم الكامل
                             await new Promise(resolve => setTimeout(resolve, 500));
                             SyncImprovements.removeProgressIndicator();
                         }
                         
-                        if (showLoader && typeof Loading !== 'undefined') {
+                        if (effectiveShowLoader && typeof Loading !== 'undefined') {
                             Loading.hide();
                         }
                         
                         const success = failedSheets.length === 0;
                         
                         if (success) {
-                            if (notifyOnSuccess && syncedCount > 0) {
+                            if (effectiveNotifyOnSuccess && syncedCount > 0) {
                                 Notification.success('  ✅ تم تحميل قاعدة البيانات  بنجاح Database loaded successfully.');
                             } else if (shouldLog) {
                                 Utils.safeLog(`✅ مزامنة البيانات: ${syncedCount} ورقة تحتوي على بيانات`);
                             }
                         } else {
-                            if (notifyOnError) {
+                            if (effectiveNotifyOnError) {
                                 Notification.warning(`فشل مزامنة بعض الأوراق: ${failedSheets.join(', ')}`);
                             }
                             if (shouldLog) {
@@ -547,14 +555,14 @@
                         
                         return success || syncedCount > 0;
                     } catch (error) {
-                        if (showLoader) {
+                        if (effectiveShowLoader) {
                             SyncImprovements.removeProgressIndicator();
                             if (typeof Loading !== 'undefined') {
                                 Loading.hide();
                             }
                         }
                         Utils.safeError('خطأ في المزامنة:', error);
-                        if (notifyOnError) {
+                        if (effectiveNotifyOnError) {
                             Notification.error('خطأ في المزامنة مع Google Sheets: ' + error.message);
                         }
                         return false;

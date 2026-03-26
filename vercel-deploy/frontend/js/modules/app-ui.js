@@ -2181,6 +2181,8 @@ window.UI = {
         if (mainApp) mainApp.style.display = 'flex';
         document.body.classList.add('app-active');
         try { window._hseAppVisible = true; } catch (e) {}
+        // بعد تسجيل الدخول مباشرة: أي مزامنة تلقائية يجب أن تبقى بالخلفية بدون نافذة تقدم.
+        AppState._suppressSyncProgressOverlayUntil = Date.now() + (2 * 60 * 1000);
 
         // عند إعادة التحميل: عرض التطبيق فوراً ثم تحميل الإعدادات في الخلفية (بدون await)
         if (AppState.isPageRefresh) {
