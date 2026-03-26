@@ -1311,6 +1311,11 @@ window.Auth = {
         }
 
         AppState.currentUser = null;
+
+        // إعادة تعيين حالة جلب سجل التردد الكامل في العيادة (جلسة جديدة = جلب من الخادم مرة أخرى عند الحاجة)
+        if (typeof window !== 'undefined' && window.Clinic && typeof window.Clinic === 'object') {
+            try { window.Clinic._visitsBackendFetchOk = false; } catch (e) {}
+        }
         
         // مسح جميع بيانات الجلسة
         try {

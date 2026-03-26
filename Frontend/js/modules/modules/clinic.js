@@ -5149,33 +5149,25 @@ const Clinic = {
             // 1. forceReload = true (تم طلب إعادة تحميل قسري)
             // 2. لا توجد بيانات محلية
             // 3. البيانات قديمة (أكثر من 10 دقائق)
-            const shouldLoadData = forceReload || !hasLocalData || isDataStale;
+            // 4. لم يكتمل بعد جلب كامل من getAllClinicVisits (مثلاً انتهت مهلة 8ث في syncDataFromServer سابقاً)
+            const shouldLoadData = forceReload || !hasLocalData || isDataStale || this._visitsBackendFetchOk !== true;
             
             if (shouldLoadData && typeof GoogleIntegration !== 'undefined' && GoogleIntegration.sendRequest) {
-                const loadPromise = this.loadVisitsDataFromBackend();
-                // ✅ إذا لا توجد بيانات محلية: ننتظر قليلاً ليظهر المحتوى مباشرة "من أول مرة"
-                if (!hasLocalData && !forceReload) {
-                    try {
-                        await Promise.race([
-                            loadPromise,
-                            new Promise(resolve => setTimeout(resolve, 1200)),
-                        ]);
-                    } catch (e) {
-                        // تجاهل - سيتم الاعتماد على البيانات المحلية/الفارغة مؤقتاً
+                try {
+                    await this.loadVisitsDataFromBackend();
+                    const p = document.querySelector('.clinic-tab-panel[data-tab-panel="visits"]');
+                    if (p) {
+                        this.ensureData();
+                        this.renderVisitsTabContent(p);
                     }
-                }
-                // تحديث الواجهة بعد اكتمال التحميل (أو حتى لو تأخر)
-                Promise.resolve(loadPromise).then(() => {
-                    this.ensureData();
-                    this.renderVisitsTabContent(panel);
                     if (AppState.debugMode) {
                         Utils.safeLog('✅ تم تحديث سجل التردد بعد تحميل البيانات من Backend');
                     }
-                }).catch(error => {
+                } catch (error) {
                     if (AppState.debugMode) {
-                        Utils.safeWarn('⚠️ تعذر تحميل بيانات سجل التردد من الخادم:', error.message);
+                        Utils.safeWarn('⚠️ تعذر تحميل بيانات سجل التردد من الخادم:', error && error.message);
                     }
-                });
+                }
             }
         } catch (error) {
             Utils.safeError('❌ خطأ في عرض تبويب سجل التردد:', error);
@@ -5456,6 +5448,7 @@ const Clinic = {
                 
                 // ✅ حفظ وقت آخر مزامنة
                 localStorage.setItem('clinic_last_sync', Date.now().toString());
+                this._visitsBackendFetchOk = true;
                 
                 // ✅ إحصاءات البيانات المحملة (للتأكد من عدم فقدان البيانات)
                 const visitsWithMeds = normalizedVisits.filter(v => {
@@ -10915,7 +10908,9 @@ const Clinic = {
     async syncDataFromServer() {
         const promises = [];
         // ✅ تحسين الأداء: تقليل أوقات الانتظار لتحميل أسرع
-        const REQUEST_TIMEOUT = 8000; // 8 ثوان لكل طلب (معظم الطلبات تنتهي في <5 ثوان)
+        const REQUEST_TIMEOUT = 8000; // 8 ثوان لمعظم الطلبات
+        /** سجل التردد قد يكون كبيراً — نفس مهلة loadVisitsDataFromBackend لتفادي بيانات جزئية */
+        const CLINIC_VISITS_REQUEST_TIMEOUT = 20000;
         const TOTAL_TIMEOUT = 20000; // 20 ثانية كحد أقصى لجميع الطلبات (تحسين من 45 ثانية)
 
         // دالة مساعدة لإضافة timeout للطلب مع معالجة أفضل للأخطاء
@@ -11004,7 +10999,7 @@ const Clinic = {
                     action: 'getAllClinicVisits',
                     data: {}
                 }),
-                REQUEST_TIMEOUT,
+                CLINIC_VISITS_REQUEST_TIMEOUT,
                 'clinicVisits'
             )
                 .then(result => {
@@ -11151,6 +11146,7 @@ const Clinic = {
                         });
                         
                         AppState.appData.clinicVisits = normalizedVisits;
+                        this._visitsBackendFetchOk = true;
                 
                 // ✅ إعادة تطبيع البيانات بعد التحميل
                 this.ensureData();
