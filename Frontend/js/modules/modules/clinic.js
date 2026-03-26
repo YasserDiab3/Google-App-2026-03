@@ -5099,13 +5099,26 @@ const Clinic = {
     },
 
     scheduleVisitsTabRender(forceReload = false, delayMs = 0) {
+        // إلغاء أي جدولة سابقة
         if (this._visitsRenderTimer) {
-            clearTimeout(this._visitsRenderTimer);
+            if (typeof this._visitsRenderTimer === 'number') {
+                clearTimeout(this._visitsRenderTimer);
+            } else if (this._visitsRenderTimer && this._visitsRenderTimer._idle != null && typeof cancelIdleCallback === 'function') {
+                cancelIdleCallback(this._visitsRenderTimer._idle);
+            }
+            this._visitsRenderTimer = null;
         }
-        this._visitsRenderTimer = setTimeout(() => {
+        const doRender = () => {
             this._visitsRenderTimer = null;
             this.renderVisitsTab(forceReload);
-        }, Math.max(0, delayMs));
+        };
+        // استخدام requestIdleCallback عندما لا يوجد تأخير مطلوب لتجنب violation
+        if (delayMs === 0 && typeof requestIdleCallback === 'function') {
+            const idleId = requestIdleCallback(doRender, { timeout: 800 });
+            this._visitsRenderTimer = { _idle: idleId };
+        } else {
+            this._visitsRenderTimer = setTimeout(doRender, Math.max(0, delayMs));
+        }
     },
 
     async renderVisitsTab(forceReload = false) {
@@ -5136,23 +5149,25 @@ const Clinic = {
             // 1. forceReload = true (تم طلب إعادة تحميل قسري)
             // 2. لا توجد بيانات محلية
             // 3. البيانات قديمة (أكثر من 10 دقائق)
-            const shouldLoadData = forceReload || !hasLocalData || isDataStale;
+            // 4. لم يكتمل بعد جلب كامل من getAllClinicVisits (مثلاً انتهت مهلة 8ث في syncDataFromServer سابقاً)
+            const shouldLoadData = forceReload || !hasLocalData || isDataStale || this._visitsBackendFetchOk !== true;
             
             if (shouldLoadData && typeof GoogleIntegration !== 'undefined' && GoogleIntegration.sendRequest) {
-                // تحميل البيانات في الخلفية بدون حجب الواجهة
-                this.loadVisitsDataFromBackend().then(() => {
-                    // ✅ إعادة تطبيع البيانات بعد التحميل
-                    this.ensureData();
-                    // تحديث الواجهة بعد تحميل البيانات
-                    this.renderVisitsTabContent(panel);
+                try {
+                    await this.loadVisitsDataFromBackend();
+                    const p = document.querySelector('.clinic-tab-panel[data-tab-panel="visits"]');
+                    if (p) {
+                        this.ensureData();
+                        this.renderVisitsTabContent(p);
+                    }
                     if (AppState.debugMode) {
                         Utils.safeLog('✅ تم تحديث سجل التردد بعد تحميل البيانات من Backend');
                     }
-                }).catch(error => {
+                } catch (error) {
                     if (AppState.debugMode) {
-                        Utils.safeWarn('⚠️ تعذر تحميل بيانات سجل التردد من الخادم:', error.message);
+                        Utils.safeWarn('⚠️ تعذر تحميل بيانات سجل التردد من الخادم:', error && error.message);
                     }
-                });
+                }
             }
         } catch (error) {
             Utils.safeError('❌ خطأ في عرض تبويب سجل التردد:', error);
@@ -5177,7 +5192,12 @@ const Clinic = {
      * ✅ دالة منفصلة لتحميل بيانات الزيارات من Backend
      */
     async loadVisitsDataFromBackend() {
-        try {
+        // ✅ منع التكرار: نفس الطلب لا يبدأ أكثر من مرة
+        if (this._clinicVisitsLoadPromise) {
+            return this._clinicVisitsLoadPromise;
+        }
+        this._clinicVisitsLoadPromise = (async () => {
+            try {
             if (AppState.debugMode) {
                 Utils.safeLog('🔄 تحميل بيانات سجل التردد من Backend...');
             }
@@ -5428,6 +5448,7 @@ const Clinic = {
                 
                 // ✅ حفظ وقت آخر مزامنة
                 localStorage.setItem('clinic_last_sync', Date.now().toString());
+                this._visitsBackendFetchOk = true;
                 
                 // ✅ إحصاءات البيانات المحملة (للتأكد من عدم فقدان البيانات)
                 const visitsWithMeds = normalizedVisits.filter(v => {
@@ -5458,7 +5479,7 @@ const Clinic = {
                     Utils.safeLog(`   - إجمالي ${totalMedsCount} دواء منصرف`);
                 }
             }
-        } catch (error) {
+            } catch (error) {
             if (AppState.debugMode) {
                 Utils.safeWarn('⚠️ تعذر تحميل بيانات سجل التردد من الخادم:', error.message);
             }
@@ -5467,7 +5488,11 @@ const Clinic = {
                 AppState.appData.clinicVisits = [];
             }
             throw error;
-        }
+            }
+        })().finally(() => {
+            this._clinicVisitsLoadPromise = null;
+        });
+        return this._clinicVisitsLoadPromise;
     },
 
     /**
@@ -10883,7 +10908,9 @@ const Clinic = {
     async syncDataFromServer() {
         const promises = [];
         // ✅ تحسين الأداء: تقليل أوقات الانتظار لتحميل أسرع
-        const REQUEST_TIMEOUT = 8000; // 8 ثوان لكل طلب (معظم الطلبات تنتهي في <5 ثوان)
+        const REQUEST_TIMEOUT = 8000; // 8 ثوان لمعظم الطلبات
+        /** سجل التردد قد يكون كبيراً — نفس مهلة loadVisitsDataFromBackend لتفادي بيانات جزئية */
+        const CLINIC_VISITS_REQUEST_TIMEOUT = 20000;
         const TOTAL_TIMEOUT = 20000; // 20 ثانية كحد أقصى لجميع الطلبات (تحسين من 45 ثانية)
 
         // دالة مساعدة لإضافة timeout للطلب مع معالجة أفضل للأخطاء
@@ -10972,7 +10999,7 @@ const Clinic = {
                     action: 'getAllClinicVisits',
                     data: {}
                 }),
-                REQUEST_TIMEOUT,
+                CLINIC_VISITS_REQUEST_TIMEOUT,
                 'clinicVisits'
             )
                 .then(result => {
@@ -11119,6 +11146,7 @@ const Clinic = {
                         });
                         
                         AppState.appData.clinicVisits = normalizedVisits;
+                        this._visitsBackendFetchOk = true;
                 
                 // ✅ إعادة تطبيع البيانات بعد التحميل
                 this.ensureData();

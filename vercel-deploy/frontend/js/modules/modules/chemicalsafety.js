@@ -130,6 +130,8 @@ const ChemicalSafety = {
     // مراجع لتنظيف الموارد
     _eventListenersAbortController: null,
     _setupTimeoutId: null,
+    _chemicalDataLoadPromise: null,
+    _chemicalBackendFetchOk: false,
 
     /**
      * تحميل الموديول
@@ -258,28 +260,12 @@ const ChemicalSafety = {
 
             this.setupEventListeners();
             
-            // عرض القائمة فوراً بعد عرض الواجهة (حتى لو كانت البيانات فارغة)
-            // هذا يضمن عدم بقاء الواجهة فارغة بعد التحميل
             try {
-                // استخدام setTimeout بسيط لضمان أن DOM جاهز
-                setTimeout(() => {
-                    this.loadChemicalList();
-                }, 0);
+                await this.loadChemicalDataAsync();
             } catch (error) {
-                Utils.safeWarn('⚠️ خطأ في تحميل القائمة الأولي:', error);
+                Utils.safeWarn('⚠️ تعذر تحميل بيانات المواد الكيميائية:', error);
+                this.loadChemicalList();
             }
-            
-            // تحميل البيانات بشكل غير متزامن بعد عرض الواجهة
-            setTimeout(() => {
-                this.loadChemicalDataAsync().then(() => {
-                    // تحديث الواجهة بعد تحميل البيانات لضمان عرض البيانات المحدثة
-                    this.loadChemicalList();
-                }).catch(error => {
-                    Utils.safeWarn('⚠️ تعذر تحميل بيانات المواد الكيميائية:', error);
-                    // حتى في حالة الخطأ، تأكد من تحميل القائمة (قد تكون هناك بيانات محلية)
-                    this.loadChemicalList();
-                });
-            }, 100);
         } catch (error) {
             Utils.safeError('❌ خطأ في تحميل مديول المواد الكيميائية:', error);
             section.innerHTML = `
@@ -313,51 +299,68 @@ const ChemicalSafety = {
      * تحميل البيانات من Google Sheets
      */
     async loadChemicalDataAsync() {
-        try {
-            const result = await GoogleIntegration.sendRequest({
-                action: 'readFromSheet',
-                data: {
-                    sheetName: 'Chemical_Register',
-                    spreadsheetId: AppState.googleConfig?.sheets?.spreadsheetId
-                }
-            }).catch(error => {
-                Utils.safeWarn('⚠️ تعذر تحميل بيانات السجل:', error);
-                return { success: false, data: [] };
-            });
-
-            let dataUpdated = false;
-            if (result && result.success && Array.isArray(result.data)) {
-                AppState.appData.chemicalRegister = result.data;
-                dataUpdated = true;
-                Utils.safeLog(`✅ تم تحميل ${result.data.length} سجل من Google Sheets`);
-            } else {
-                // التأكد من وجود مصفوفة فارغة إذا لم يتم تحميل البيانات
-                if (!AppState.appData.chemicalRegister) {
-                    AppState.appData.chemicalRegister = [];
-                }
-            }
-
-            // تحديث الواجهة دائماً بعد التحميل (حتى لو لم يتم تحديث البيانات)
-            // هذا يضمن عدم بقاء الواجهة فارغة
-            const statsContainer = document.getElementById('chemical-stats-container');
-            if (statsContainer) {
-                statsContainer.innerHTML = this.renderStatisticsCards();
-            }
-            this.loadChemicalList();
-
-            // حفظ البيانات محلياً إذا تم تحديثها
-            if (dataUpdated && typeof window.DataManager !== 'undefined' && window.DataManager.save) {
-                window.DataManager.save();
-            }
-        } catch (error) {
-            Utils.safeError('❌ خطأ في تحميل البيانات:', error);
-            // حتى في حالة الخطأ، تأكد من تحديث الواجهة
-            const statsContainer = document.getElementById('chemical-stats-container');
-            if (statsContainer) {
-                statsContainer.innerHTML = this.renderStatisticsCards();
-            }
-            this.loadChemicalList();
+        if (this._chemicalDataLoadPromise) {
+            return this._chemicalDataLoadPromise;
         }
+        this._chemicalDataLoadPromise = (async () => {
+            if (!AppState.googleConfig?.appsScript?.enabled || !AppState.googleConfig?.appsScript?.scriptUrl) {
+                this._chemicalBackendFetchOk = true;
+                this.loadChemicalList();
+                return;
+            }
+            if (typeof GoogleIntegration === 'undefined' || typeof GoogleIntegration.sendRequest !== 'function') {
+                this._chemicalBackendFetchOk = true;
+                this.loadChemicalList();
+                return;
+            }
+            try {
+                const result = await GoogleIntegration.sendRequest({
+                    action: 'readFromSheet',
+                    data: {
+                        sheetName: 'Chemical_Register',
+                        spreadsheetId: AppState.googleConfig?.sheets?.spreadsheetId
+                    }
+                }).catch(error => {
+                    Utils.safeWarn('⚠️ تعذر تحميل بيانات السجل:', error);
+                    return { success: false, data: [] };
+                });
+
+                let dataUpdated = false;
+                if (result && result.success && Array.isArray(result.data)) {
+                    AppState.appData.chemicalRegister = result.data;
+                    dataUpdated = true;
+                    Utils.safeLog(`✅ تم تحميل ${result.data.length} سجل من Google Sheets`);
+                } else {
+                    if (!AppState.appData.chemicalRegister) {
+                        AppState.appData.chemicalRegister = [];
+                    }
+                }
+
+                const statsContainer = document.getElementById('chemical-stats-container');
+                if (statsContainer) {
+                    statsContainer.innerHTML = this.renderStatisticsCards();
+                }
+                this.loadChemicalList();
+
+                if (dataUpdated && typeof window.DataManager !== 'undefined' && window.DataManager.save) {
+                    window.DataManager.save();
+                }
+                try {
+                    localStorage.setItem('chemical_safety_last_sync', String(Date.now()));
+                } catch (e) {}
+            } catch (error) {
+                Utils.safeError('❌ خطأ في تحميل البيانات:', error);
+                const statsContainer = document.getElementById('chemical-stats-container');
+                if (statsContainer) {
+                    statsContainer.innerHTML = this.renderStatisticsCards();
+                }
+                this.loadChemicalList();
+            }
+            this._chemicalBackendFetchOk = true;
+        })().finally(() => {
+            this._chemicalDataLoadPromise = null;
+        });
+        return this._chemicalDataLoadPromise;
     },
 
     /**

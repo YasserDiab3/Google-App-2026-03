@@ -306,6 +306,18 @@ const PeriodicInspections = {
         const hasCachedData = (AppState.appData.periodicInspections && AppState.appData.periodicInspections.length > 0) ||
             (AppState.appData.dailySafetyCheckList && AppState.appData.dailySafetyCheckList.length > 0);
 
+        // ✅ تحميل مباشر عند أول فتح إذا لم تكن البيانات جاهزة محلياً (بدون تكرار طلبات متوازية)
+        if (!hasCachedData && typeof GoogleIntegration !== 'undefined') {
+            try {
+                await Promise.race([
+                    this.loadInspectionDataAsync(),
+                    new Promise(resolve => setTimeout(resolve, 1200)),
+                ]);
+            } catch (e) {
+                // تجاهل — سنعرض الواجهة بالبيانات المحلية ثم نكمل في الخلفية
+            }
+        }
+
         if (!hasCachedData) {
             section.innerHTML = `
             <div class="section-header">
@@ -420,51 +432,20 @@ const PeriodicInspections = {
             }
 
             // تحديث البيانات من الخادم في الخلفية دون مسح العرض الحالي (البيانات المحلية معروضة فوراً)
-            this.loadInspectionDataAsync().then(() => {
-                // تحديث الواجهة بعد تحميل البيانات لضمان عرض البيانات المحدثة
-                // إعادة تحميل المحتوى بناءً على التبويب الحالي
-                if (this.state.currentView !== 'form' && this.state.currentView !== 'edit') {
-                    const currentTab = this.state?.currentTab || 'inspections-list';
-                    if (currentTab === 'daily-safety-checklist') {
-                        this.renderDailySafetyCheckListContent().then(content => {
-                            if (content) {
-                                const contentContainer = document.getElementById('periodic-inspections-content-area');
-                                if (contentContainer) {
-                                    contentContainer.innerHTML = content;
-                                    this.setupEventListeners();
-                                }
-                            }
-                        }).catch(() => {});
-                    } else if (currentTab === 'inspection-records') {
-                        // تحديث سجل الفحوصات
-                        this.renderInspectionRecords().then(content => {
-                            if (content) {
-                                const contentContainer = document.getElementById('periodic-inspections-content-area');
-                                if (contentContainer) {
-                                    contentContainer.innerHTML = content;
-                                    this.setupEventListeners();
-                                }
-                            }
-                        }).catch(() => {});
-                    } else {
-                        // تحديث قائمة الفحوصات
-                        this.renderList().then(content => {
-                            if (content) {
-                                const contentContainer = document.getElementById('periodic-inspections-content-area');
-                                if (contentContainer) {
-                                    contentContainer.innerHTML = content;
-                                    this.setupEventListeners();
-                                }
-                            }
-                        }).catch(() => {});
+            // ✅ تجنب إعادة التحميل مباشرة بعد انتظار التحميل الأولي أعلاه
+            let skipBg = false;
+            try {
+                const ls = localStorage.getItem('periodic_inspections_last_sync');
+                if (ls) skipBg = (Date.now() - parseInt(ls, 10)) < 3000;
+            } catch (e) {}
+            if (!skipBg) {
+                this.loadInspectionDataAsync().catch(error => {
+                    Utils.safeWarn('⚠️ تعذر تحميل بيانات الفحوصات الدورية:', error);
+                    if (this.state.currentView !== 'form' && this.state.currentView !== 'edit') {
+                        this.refreshCurrentTabContent().catch(() => {});
                     }
-                }
-            }).catch(error => {
-                Utils.safeWarn('⚠️ تعذر تحميل بيانات الفحوصات الدورية:', error);
-                if (this.state.currentView !== 'form' && this.state.currentView !== 'edit') {
-                    this.refreshCurrentTabContent().catch(() => {});
-                }
-            });
+                });
+            }
         } catch (error) {
             if (typeof Utils !== 'undefined' && Utils.safeError) {
                 Utils.safeError('❌ خطأ في تحميل مديول الفحوصات الدورية:', error);
@@ -503,6 +484,10 @@ const PeriodicInspections = {
     },
 
     async loadInspectionDataAsync() {
+        if (this._periodicInspectionLoadPromise) {
+            return this._periodicInspectionLoadPromise;
+        }
+        this._periodicInspectionLoadPromise = (async () => {
         try {
             const inspectionResult = await GoogleIntegration.sendRequest({
                 action: 'getAllPeriodicInspections',
@@ -566,6 +551,8 @@ const PeriodicInspections = {
             } else if (!AppState.appData.dailySafetyCheckList) {
                 AppState.appData.dailySafetyCheckList = [];
             }
+
+            try { localStorage.setItem('periodic_inspections_last_sync', String(Date.now())); } catch (e) {}
             
             // تحديث محتوى التبويب الحالي فقط بعد جلب البيانات (بدون مسح البيانات المحلية عند فشل الشبكة)
             if (this.state.currentView !== 'form' && this.state.currentView !== 'edit') {
@@ -613,6 +600,10 @@ const PeriodicInspections = {
                 Notification.warning('حدث خطأ في تحميل بعض البيانات. سيتم استخدام البيانات المحلية.');
             }
         }
+        })().finally(() => {
+            this._periodicInspectionLoadPromise = null;
+        });
+        return this._periodicInspectionLoadPromise;
     },
 
     async renderContent() {

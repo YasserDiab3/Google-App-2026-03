@@ -1311,6 +1311,29 @@ window.Auth = {
         }
 
         AppState.currentUser = null;
+
+        // إعادة تعيين حالة جلب سجل التردد الكامل في العيادة (جلسة جديدة = جلب من الخادم مرة أخرى عند الحاجة)
+        if (typeof window !== 'undefined' && window.Clinic && typeof window.Clinic === 'object') {
+            try { window.Clinic._visitsBackendFetchOk = false; } catch (e) {}
+        }
+        if (typeof window !== 'undefined' && window.Training && typeof window.Training === 'object') {
+            try {
+                window.Training._trainingBackendFetchOk = false;
+                window.Training._trainingDataLoadPromise = null;
+            } catch (e) {}
+        }
+        if (typeof window !== 'undefined' && window.ChemicalSafety && typeof window.ChemicalSafety === 'object') {
+            try {
+                window.ChemicalSafety._chemicalBackendFetchOk = false;
+                window.ChemicalSafety._chemicalDataLoadPromise = null;
+            } catch (e) {}
+        }
+        if (typeof window !== 'undefined' && window.DailyObservations && typeof window.DailyObservations === 'object') {
+            try {
+                window.DailyObservations._dailyObsBackendFetchOk = false;
+                window.DailyObservations._dailyObsLoadPromise = null;
+            } catch (e) {}
+        }
         
         // مسح جميع بيانات الجلسة
         try {
@@ -1963,6 +1986,16 @@ window.Auth = {
                 'periodic-inspections': ['PeriodicInspectionCategories', 'PeriodicInspectionRecords', 'PeriodicInspectionSchedules', 'PeriodicInspectionChecklists']
             };
 
+            // خريطة مفاتيح المزامنة في localStorage لكل موديول (لمنع إعادة التحميل عند فتح الموديول)
+            const moduleSyncKeyMap = {
+                'clinic': 'clinic_last_sync',
+                'violations': 'violations_last_sync',
+                'periodic-inspections': 'periodic_inspections_last_sync',
+                'training': 'training_last_sync',
+                'chemical-safety': 'chemical_safety_last_sync',
+                'daily-observations': 'daily_observations_last_sync',
+            };
+
             // خريطة أوراق Google Sheets إلى مفاتيح AppState
             const sheetToKeyMap = {
                 'Incidents': 'incidents',
@@ -2102,6 +2135,12 @@ window.Auth = {
                     // ✅ إصلاح: إزالة المرجع للمتغير غير المعرّف silent - تسجيل التحذير دائماً إذا كانت هناك أوراق فارغة
                     if (emptySheets.length > 0) {
                         Utils.safeWarn(`⚠️ الموديول ${moduleName} يحتوي على ${emptySheets.length} ورقة فارغة: ${emptySheets.join(', ')}`);
+                    }
+
+                    // ✅ تعيين وقت آخر مزامنة للموديول في localStorage لمنع إعادة التحميل عند فتح الموديول
+                    const syncKey = moduleSyncKeyMap[moduleName];
+                    if (syncKey) {
+                        try { localStorage.setItem(syncKey, String(Date.now())); } catch (lsErr) {}
                     }
                 } catch (error) {
                     Utils.safeWarn(`⚠️ فشل تحميل بيانات الموديول ${moduleName}:`, error);

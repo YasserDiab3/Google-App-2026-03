@@ -180,6 +180,46 @@ const DailyObservations = {
     },
     currentFilter: null, // الفلتر النشط الحالي من الكروت
     sheetJsPromise: null,
+    _dailyObsLoadPromise: null,
+    _dailyObsBackendFetchOk: false,
+
+    /**
+     * تحميل ورقة DailyObservations من Google Sheets مرة واحدة (مع منع التكرار)
+     */
+    async ensureDailyObservationsDataLoaded({ force = false } = {}) {
+        if (this._dailyObsLoadPromise && !force) {
+            return this._dailyObsLoadPromise;
+        }
+        this._dailyObsLoadPromise = (async () => {
+            if (typeof GoogleIntegration === 'undefined' || !GoogleIntegration.readFromSheets) return;
+
+            const isEnabled = AppState?.googleConfig?.appsScript?.enabled && AppState?.googleConfig?.appsScript?.scriptUrl;
+            if (!isEnabled) {
+                this._dailyObsBackendFetchOk = true;
+                return;
+            }
+
+            const data = await GoogleIntegration.readFromSheets('DailyObservations').catch(() => null);
+            if (Array.isArray(data)) {
+                const oldData = AppState.appData.dailyObservations || [];
+                if (data.length === 0 && oldData.length > 0) {
+                    Utils?.safeLog?.('⚠️ DailyObservations: البيانات الجديدة فارغة - الاحتفاظ بالمحلي');
+                } else {
+                    AppState.appData.dailyObservations = data;
+                }
+            }
+
+            try { localStorage.setItem('daily_observations_last_sync', String(Date.now())); } catch (e) {}
+
+            if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
+                try { window.DataManager.save(); } catch (e) {}
+            }
+            this._dailyObsBackendFetchOk = true;
+        })().finally(() => {
+            this._dailyObsLoadPromise = null;
+        });
+        return this._dailyObsLoadPromise;
+    },
 
     /**
      * حفظ حالة الواجهة قبل إعادة الرسم
@@ -313,6 +353,28 @@ const DailyObservations = {
         const isAdmin = this.isCurrentUserAdmin();
 
         try {
+            const hasObsData = Array.isArray(AppState.appData.dailyObservations) && AppState.appData.dailyObservations.length > 0;
+            let lastSync = null;
+            try { lastSync = localStorage.getItem('daily_observations_last_sync'); } catch (e) {}
+            const cacheAge = lastSync ? (Date.now() - parseInt(lastSync, 10)) : Infinity;
+            const CACHE_DURATION = 10 * 60 * 1000;
+            const isStale = cacheAge >= CACHE_DURATION;
+            if ((!hasObsData || isStale) && typeof GoogleIntegration !== 'undefined' && GoogleIntegration.readFromSheets) {
+                try {
+                    await Promise.race([
+                        this.ensureDailyObservationsDataLoaded({ force: isStale && hasObsData }),
+                        new Promise(resolve => setTimeout(resolve, 45000))
+                    ]);
+                } catch (e) {
+                    // عرض المحلي ثم التحديث لاحقاً
+                }
+            } else if (hasObsData) {
+                this._dailyObsBackendFetchOk = true;
+            }
+            if (typeof GoogleIntegration === 'undefined' || !GoogleIntegration.readFromSheets) {
+                this._dailyObsBackendFetchOk = true;
+            }
+
             // Skeleton فوري قبل أي عمليات render قد تكون بطيئة
             section.innerHTML = `
                 <div class="section-header">
@@ -478,28 +540,17 @@ const DailyObservations = {
             // استعادة حالة الواجهة بعد إعادة الرسم
             this.restoreUIState();
             
-            // عرض القائمة فوراً بعد عرض الواجهة (حتى لو كانت البيانات فارغة)
-            // هذا يضمن عدم بقاء الواجهة فارغة بعد التحميل
             try {
-                // جدولة على دفعتين لتخفيف ضغط setTimeout handler
-                setTimeout(() => {
-                    Promise.resolve().then(() => this.loadObservationsList());
-                }, 0);
+                requestAnimationFrame(() => {
+                    try {
+                        this.loadObservationsList();
+                    } catch (err) {
+                        Utils.safeWarn('⚠️ خطأ في تحميل قائمة الملاحظات الأولي:', err);
+                    }
+                });
             } catch (error) {
                 Utils.safeWarn('⚠️ خطأ في تحميل قائمة الملاحظات الأولي:', error);
             }
-            
-            // تحميل البيانات بشكل غير متزامن بعد عرض الواجهة (للتحديث)
-            setTimeout(() => {
-                try {
-                    // تحديث القائمة بعد تحميل البيانات (إذا كان هناك تحميل من Backend)
-                    Promise.resolve().then(() => this.loadObservationsList());
-                } catch (error) {
-                    Utils.safeWarn('⚠️ تعذر تحديث قائمة الملاحظات:', error);
-                    // حتى في حالة الخطأ، تأكد من أن الواجهة معروضة
-                    Promise.resolve().then(() => this.loadObservationsList());
-                }
-            }, 100);
         } catch (error) {
             if (typeof Utils !== 'undefined' && Utils.safeError) {
                 Utils.safeError('خطأ عام في تحميل DailyObservations:', error);

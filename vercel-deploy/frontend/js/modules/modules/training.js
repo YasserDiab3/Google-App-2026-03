@@ -6,6 +6,10 @@
 const Training = {
     currentEditId: null,
     trainingAnalysisCharts: null,
+    /** يمنع طلبات متوازية متعددة لنفس تحميل بيانات التدريب */
+    _trainingDataLoadPromise: null,
+    /** true بعد أول محاولة جلب كاملة من الخادم (أو وضع بدون خادم) حتى لا يبقى تبويب المقاولين/الحضور بانتظار بيانات جزئية فقط */
+    _trainingBackendFetchOk: false,
 
     ensureData() {
         const data = AppState.appData || {};
@@ -484,6 +488,16 @@ const Training = {
     },
 
     async loadTrainingDataAsync() {
+        if (this._trainingDataLoadPromise) {
+            return this._trainingDataLoadPromise;
+        }
+        this._trainingDataLoadPromise = this._runLoadTrainingDataAsync().finally(() => {
+            this._trainingDataLoadPromise = null;
+        });
+        return this._trainingDataLoadPromise;
+    },
+
+    async _runLoadTrainingDataAsync() {
         // ✅ تحسين: استخدام البيانات المحلية أولاً فوراً
         const hasLocalData = AppState.appData?.training?.length > 0 || 
                             AppState.appData?.trainingSessions?.length > 0 ||
@@ -499,12 +513,14 @@ const Training = {
             if (AppState.debugMode) {
                 Utils.safeLog('⚠️ Google Apps Script غير مفعل - استخدام البيانات المحلية فقط');
             }
+            this._trainingBackendFetchOk = true;
             return;
         }
 
         // التحقق من توفر GoogleIntegration
         if (typeof GoogleIntegration === 'undefined' || typeof GoogleIntegration.sendRequest !== 'function') {
             Utils.safeWarn('⚠️ GoogleIntegration غير متاح - استخدام البيانات المحلية');
+            this._trainingBackendFetchOk = true;
             return;
         }
 
@@ -596,6 +612,7 @@ const Training = {
             if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
                 window.DataManager.save();
             }
+            try { localStorage.setItem('training_last_sync', String(Date.now())); } catch (e) {}
 
             // تحديث القوائم بعد تحميل البيانات
             this.loadTrainingList();
@@ -605,8 +622,10 @@ const Training = {
             if (contractorsTab && contractorsTab.classList.contains('active')) {
                 this.refreshContractorTrainingList();
             }
+            this._trainingBackendFetchOk = true;
         } catch (error) {
             Utils.safeError('❌ خطأ في تحميل بيانات التدريب:', error);
+            this._trainingBackendFetchOk = true;
         }
     },
 
@@ -2659,23 +2678,12 @@ const Training = {
             if (tabName === 'programs') {
                 this.loadTrainingList();
             } else if (tabName === 'contractors') {
-                // تحديث قائمة تدريبات المقاولين عند التبديل للتبويب
-                // التأكد من تحميل البيانات أولاً إذا لم تكن محمّلة
-                if (!AppState.appData.contractorTrainings || AppState.appData.contractorTrainings.length === 0) {
-                    // محاولة تحميل البيانات من الخادم
-                    this.loadTrainingDataAsync().then(() => {
-                        this.refreshContractorTrainingList();
-                    }).catch(() => {
-                        // في حالة الفشل، عرض القائمة الفارغة
-                        this.refreshContractorTrainingList();
-                    });
-                } else {
-                    this.refreshContractorTrainingList();
+                if (this._trainingBackendFetchOk !== true) {
+                    await this.loadTrainingDataAsync().catch(() => {});
                 }
+                this.refreshContractorTrainingList();
             } else if (tabName === 'attendance') {
-                // ضمان تحميل سجل الحضور من الخادم إذا كانت القائمة فارغة (تجنب عرض "لا توجد سجلات" قبل اكتمال التحميل)
-                const attendance = AppState.appData.trainingAttendance || [];
-                if (attendance.length === 0) {
+                if (this._trainingBackendFetchOk !== true) {
                     await this.loadTrainingDataAsync().catch(() => {});
                 }
                 this.loadAttendanceRegistry();
@@ -8097,6 +8105,7 @@ const Training = {
 
         try {
             Loading.show();
+            // جلب السجل الكامل من الخادم لضمان ظهور أسماء المتدربين في كشف الحضور
             if (typeof GoogleIntegration !== 'undefined' && typeof GoogleIntegration.sendRequest === 'function') {
                 try {
                     const res = await GoogleIntegration.sendRequest({ action: 'getTraining', data: { trainingId: id } });
