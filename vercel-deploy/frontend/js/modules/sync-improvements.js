@@ -277,6 +277,7 @@
                         typeof AppState._suppressSyncProgressOverlayUntil === 'number' &&
                         Date.now() < AppState._suppressSyncProgressOverlayUntil
                     );
+                    const useFloatingProgressOnly = showLoader && suppressProgressOverlay;
                     const effectiveShowLoader = showLoader && !suppressProgressOverlay;
                     const effectiveNotifyOnSuccess = notifyOnSuccess && !suppressProgressOverlay;
                     const effectiveNotifyOnError = notifyOnError && !suppressProgressOverlay;
@@ -448,6 +449,12 @@
                             SyncImprovements.createProgressIndicator(sheets.length);
                             // بدء التقدم من 0%
                             SyncImprovements.updateProgress(0, sheets.length);
+                        } else if (useFloatingProgressOnly) {
+                            // وضع ما بعد تسجيل الدخول: شريط سفلي فقط بدون نافذة منبثقة
+                            SyncImprovements._progressHidden = true;
+                            SyncImprovements._totalSheets = sheets.length;
+                            SyncImprovements._createFloatingBottomBar();
+                            SyncImprovements.updateProgress(0, sheets.length);
                         }
                         
                         // معالجة الأوراق على دفعات
@@ -473,7 +480,7 @@
                             
                             // تحديث مؤشر التقدم بعد معالجة الدفعة
                             const completedSheets = Math.min(i + batch.length, sheets.length);
-                            if (effectiveShowLoader) {
+                            if (effectiveShowLoader || useFloatingProgressOnly) {
                                 SyncImprovements.updateProgress(completedSheets, sheets.length);
                             }
                             
@@ -491,7 +498,7 @@
                         }
                         
                         // تحديث مؤشر التقدم إلى 100% قبل الحفظ النهائي
-                        if (effectiveShowLoader) {
+                        if (effectiveShowLoader || useFloatingProgressOnly) {
                             SyncImprovements.updateProgress(sheets.length, sheets.length);
                         }
                         
@@ -526,7 +533,7 @@
                         }
                         
                         // إزالة مؤشر التقدم بعد التأكد من اكتمال الحفظ
-                        if (effectiveShowLoader) {
+                        if (effectiveShowLoader || useFloatingProgressOnly) {
                             // انتظار قصير للتأكد من عرض التقدم الكامل
                             await new Promise(resolve => setTimeout(resolve, 500));
                             SyncImprovements.removeProgressIndicator();
@@ -555,7 +562,7 @@
                         
                         return success || syncedCount > 0;
                     } catch (error) {
-                        if (effectiveShowLoader) {
+                        if (effectiveShowLoader || useFloatingProgressOnly) {
                             SyncImprovements.removeProgressIndicator();
                             if (typeof Loading !== 'undefined') {
                                 Loading.hide();
