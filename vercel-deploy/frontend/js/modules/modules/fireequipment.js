@@ -57,10 +57,19 @@ FireEquipment = {
      * @returns {string} DeviceID بالتنسيق الجديد
      */
     generateFireDeviceID() {
-        // For robust unique IDs, consider a UUID generator (e.g., crypto.randomUUID) or a centralized ID service.
-        // This sequential generation is prone to collisions if items are deleted or generated concurrently.
-        // For now, generating a UUID-like string as a placeholder.
-        return `EFA-${Date.now().toString(36)}-${Math.random().toString(36).substring(2, 9)}`.toUpperCase();
+        const assets = this.getAssets();
+        const existingNumbers = assets
+            .map(a => a.id)
+            .filter(id => id && id.match(/^EFA-\d{4}$/))
+            .map(id => parseInt(id.split('-')[1]))
+            .filter(num => !isNaN(num));
+
+        const nextNumber = existingNumbers.length > 0
+            ? Math.max(...existingNumbers) + 1
+            : 1;
+
+        const paddedNumber = String(nextNumber).padStart(4, '0');
+        return `EFA-${paddedNumber}`;
     },
 
     async load() {
@@ -2464,9 +2473,10 @@ FireEquipment = {
                     const element = document.getElementById('asset-manufacturing-year');
                     return element && element.value ? parseInt(element.value) : null;
                 })(),
-                // If 'productionDate' is a separate field, ensure it's present in the form.
-                // If it's derived from 'manufacturingYear', implement the derivation logic.
-                productionDate: asset?.productionDate || null, // Keep existing value if editing, otherwise null or derive
+                productionDate: (() => {
+                    const element = document.getElementById('asset-production-date');
+                    return element ? this.toISODate(element.value) : null;
+                })(),
                 serialNumber: getElementValue('asset-serial-number'),
                 installationMethod: getElementValue('asset-installation-method'),
                 installationDate: (() => {
@@ -2840,13 +2850,13 @@ FireEquipment = {
      * إيقاف مسح QR Code
      */
     stopQRScan() {
-        if (this._qrStream) {
-            this._qrStream.getTracks().forEach(track => track.stop());
-            this._qrStream = null;
+        if (window._fireEquipmentStream) {
+            window._fireEquipmentStream.getTracks().forEach(track => track.stop());
+            window._fireEquipmentStream = null;
         }
-        if (this._qrScanInterval) {
-            clearInterval(this._qrScanInterval);
-            this._qrScanInterval = null;
+        if (window._fireEquipmentScanInterval) {
+            clearInterval(window._fireEquipmentScanInterval);
+            window._fireEquipmentScanInterval = null;
         }
     },
 
@@ -4523,10 +4533,13 @@ FireEquipment = {
                 .map(id => parseInt(id.split('-')[1]))
                 .filter(num => !isNaN(num));
 
-            // Rely on a robust ID generation strategy, e.g., UUIDs or backend-generated IDs.
-            // Sequential client-side ID generation is prone to collisions.
+            let nextSequenceNumber = existingNumbers.length > 0 ? Math.max(...existingNumbers) + 1 : 1;
+
             const data = jsonData.map(row => {
-                const assetId = this.generateFireDeviceID(); // Use the centralized ID generator
+                // توليد ID متسلسل بناءً على العداد المحلي للحلقة
+                const paddedNumber = String(nextSequenceNumber).padStart(4, '0');
+                const assetId = `EFA-${paddedNumber}`;
+                nextSequenceNumber++; // زيادة العداد للصف التالي
 
                 return {
                     id: assetId,
@@ -4694,8 +4707,7 @@ FireEquipment = {
             // والوقت كجزء كسري من اليوم
             const totalDays = Math.floor(dateValue);
             const timeFraction = dateValue - totalDays;
-            // Excel dates are typically UTC-based or timezone-agnostic. Perform calculations in UTC.
-            const baseDate = new Date(Date.UTC(1899, 11, 30)); // 30 December 1899 UTC
+            const baseDate = new Date(1899, 11, 30); // 30 ديسمبر 1899 (التوقيت المحلي)
             const date = new Date(baseDate.getTime() + totalDays * 24 * 60 * 60 * 1000);
             // إضافة الوقت من الجزء الكسري
             if (timeFraction > 0) {
@@ -6573,33 +6585,20 @@ FireEquipment = {
 
     refreshSiteDropdowns() {
         try {
-            const sites = this.getSiteOptions();
-            const esc = (typeof Utils !== 'undefined' && Utils.escapeHTML) ? Utils.escapeHTML : (s) => String(s == null ? '' : s);
-
-            const updateSelect = (id, options, currentValue = '') => {
-                const el = document.getElementById(id);
-                if (el && el.tagName === 'SELECT') {
-                    el.innerHTML = '<option value="">اختر المصنع</option>' + options.map(s => `<option value="${esc(s.id)}" ${s.id === currentValue ? 'selected' : ''}>${esc(s.name)}</option>`).join('');
-                    if (currentValue && el.value !== currentValue) el.value = currentValue; // Ensure value is set if it exists
-                }
-            };
-
-            const currentFactoryValue = document.getElementById('asset-factory')?.value || '';
-            const currentFireLocationValue = document.getElementById('fire-assets-location')?.value || '';
-
-            updateSelect('asset-factory', sites, currentFactoryValue);
-            updateSelect('fire-assets-location', sites, currentFireLocationValue);
-
-            const subLocationSelect = document.getElementById('asset-sub-location');
-            if (subLocationSelect && subLocationSelect.tagName === 'SELECT') {
-                const factoryId = document.getElementById('asset-factory')?.value || '';
-                const places = this.getPlaceOptions(factoryId);
-                const currentSubLocationValue = subLocationSelect.value;
-                subLocationSelect.innerHTML = '<option value="">اختر الموقع الفرعي</option>' + places.map(p => `<option value="${esc(p.id)}" ${p.id === currentSubLocationValue ? 'selected' : ''}>${esc(p.name)}</option>`).join('');
-                if (currentSubLocationValue && subLocationSelect.value !== currentSubLocationValue) subLocationSelect.value = currentSubLocationValue; // Ensure value is set if it exists
+            var sites = this.getSiteOptions();
+            var esc = (typeof Utils !== 'undefined' && Utils.escapeHTML) ? Utils.escapeHTML : function(s) { return String(s == null ? '' : s); };
+            var opts = '<option value="">اختر المصنع</option>' + (sites || []).map(function(s) { return '<option value="' + esc(s.id) + '">' + esc(s.name) + '</option>'; }).join('');
+            ['asset-factory', 'fire-assets-location'].forEach(function(id) {
+                var el = document.getElementById(id);
+                if (el && el.tagName === 'SELECT') { var v = el.value; el.innerHTML = opts; if (v) el.value = v; }
+            });
+            var sub = document.getElementById('asset-sub-location');
+            if (sub && sub.tagName === 'SELECT') {
+                var factoryId = (document.getElementById('asset-factory') || {}).value;
+                var places = this.getPlaceOptions(factoryId);
+                sub.innerHTML = '<option value="">اختر الموقع الفرعي</option>' + (places || []).map(function(p) { return '<option value="' + esc(p.id) + '">' + esc(p.name) + '</option>'; }).join('');
             }
         } catch (e) { if (typeof Utils !== 'undefined' && Utils.safeWarn) Utils.safeWarn('⚠️ FireEquipment.refreshSiteDropdowns:', e); }
-    }
     },
 
     /**

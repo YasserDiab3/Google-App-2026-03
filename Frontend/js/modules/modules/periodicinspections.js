@@ -887,11 +887,7 @@ const PeriodicInspections = {
         let filtered = [...inspections];
 
         if (this.state.filters.category) {
-            filtered = filtered.filter(i => {
-                const template = i.templateId ? this.INSPECTION_TEMPLATES[i.templateId] : null;
-                const displayCategory = template ? template.name : (i.category || '');
-                return displayCategory === this.state.filters.category;
-            });
+            filtered = filtered.filter(i => i.category === this.state.filters.category);
         }
 
         if (this.state.filters.result) {
@@ -1227,14 +1223,10 @@ const PeriodicInspections = {
             // التحقق من القائمة المطلوبة
             if (template && template.checklist) {
                 const requiredItems = template.checklist.filter(item => item.required);
-                const incompleteRequired = requiredItems.filter(item => {
+                const uncheckedRequired = requiredItems.filter(item => {
                     const result = checklistResults.find(r => r.id === item.id);
-                    // An item is considered incomplete if it's not checked OR if its status is not 'مطابق'
-                    return !result || !result.checked || result.status === ''; // Assuming empty status is also incomplete
+                    return !result || !result.checked;
                 });
-
-                if (incompleteRequired.length > 0) {
-                    Notification.warning(`يرجى التأكد من إكمال جميع العناصر المطلوبة في قائمة الفحص (${incompleteRequired.length} عنصر)`);
                 
                 if (uncheckedRequired.length > 0) {
                     Notification.warning(`يرجى التأكد من إكمال جميع العناصر المطلوبة في قائمة الفحص (${uncheckedRequired.length} عنصر)`);

@@ -141,7 +141,7 @@ const Sustainability = {
         });
 
         try {
-section.innerHTML = `
+            section.innerHTML = `
                 <div class="section-header">
                     <h1 class="section-title">
                         <i class="fas fa-leaf ml-3"></i>
@@ -149,7 +149,7 @@ section.innerHTML = `
                     </h1>
                     <p class="section-subtitle">إدارة ومتابعة استهلاك الموارد البيئية (مياه، كهرباء، غاز طبيعي)</p>
                 </div>
-
+                
                 <!-- لوحة المؤشرات السريعة -->
                 <div class="mt-6 grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
                     ${this.renderQuickStats()}
@@ -158,23 +158,23 @@ section.innerHTML = `
                 <!-- التبويبات -->
                 <div class="mt-6">
                     <div class="flex gap-2 mb-6 border-b overflow-x-auto">
-                        <button class="tab-btn ${Utils.escapeHTML(this.currentTab) === 'dashboard' ? 'active' : ''}" data-tab="dashboard">
+                        <button class="tab-btn ${this.currentTab === 'dashboard' ? 'active' : ''}" data-tab="dashboard">
                             <i class="fas fa-chart-line ml-2"></i>لوحة التحليل
                         </button>
-                        <button class="tab-btn ${Utils.escapeHTML(this.currentTab) === 'water' ? 'active' : ''}" data-tab="water">
+                        <button class="tab-btn ${this.currentTab === 'water' ? 'active' : ''}" data-tab="water">
                             <i class="fas fa-tint ml-2"></i>استهلاك المياه
                         </button>
-                        <button class="tab-btn ${Utils.escapeHTML(this.currentTab) === 'electricity' ? 'active' : ''}" data-tab="electricity">
+                        <button class="tab-btn ${this.currentTab === 'electricity' ? 'active' : ''}" data-tab="electricity">
                             <i class="fas fa-bolt ml-2"></i>استهلاك الكهرباء
                         </button>
-                        <button class="tab-btn ${Utils.escapeHTML(this.currentTab) === 'gas' ? 'active' : ''}" data-tab="gas">
+                        <button class="tab-btn ${this.currentTab === 'gas' ? 'active' : ''}" data-tab="gas">
                             <i class="fas fa-fire ml-2"></i>استهلاك الغاز الطبيعي
                         </button>
-                        <button class="tab-btn ${Utils.escapeHTML(this.currentTab) === 'waste-management' ? 'active' : ''}" data-tab="waste-management">
+                        <button class="tab-btn ${this.currentTab === 'waste-management' ? 'active' : ''}" data-tab="waste-management">
                             <i class="fas fa-recycle ml-2"></i>إدارة المخلفات
                         </button>
                         ${this.isAdmin() ? `
-                        <button class="tab-btn ${Utils.escapeHTML(this.currentTab) === 'settings' ? 'active' : ''}" data-tab="settings">
+                        <button class="tab-btn ${this.currentTab === 'settings' ? 'active' : ''}" data-tab="settings">
                             <i class="fas fa-cog ml-2"></i>الإعدادات
                         </button>
                         ` : ''}

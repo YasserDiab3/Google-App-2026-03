@@ -651,7 +651,7 @@ const Violations = {
                                     <button onclick="Violations.viewViolation('${violation.id}')" class="btn-icon btn-icon-primary" title="عرض">
                                         <i class="fas fa-eye"></i>
                                     </button>
-                                    <button onclick="Violations.showViolationForm('${violation.id}')" class="btn-icon btn-icon-warning" title="تعديل">"/g, '&quot;')})" class="btn-icon btn-icon-warning" title="تعديل">
+                                    <button onclick="Violations.showViolationForm(${JSON.stringify(violation).replace(/"/g, '&quot;')})" class="btn-icon btn-icon-warning" title="تعديل">
                                         <i class="fas fa-edit"></i>
                                     </button>
                                     <button onclick="Violations.deleteViolation('${violation.id}')" class="btn-icon btn-icon-danger" title="حذف">
@@ -2069,8 +2069,6 @@ const Violations = {
 
                 const formData = {
                     id: violationData?.id || Utils.generateId('VIOLATION'),
-                    // Assuming generateISOCode is a separate, correctly implemented function for ISO code generation.
-                    // If Utils.generateId is meant for this, ensure its parameters and logic are appropriate for ISO codes.
                     isoCode: generateISOCode('VIOL', AppState.appData.violations || []),
                     personType: personType,
                     employeeId: personType === 'employee' ? Utils.generateId('EMP') : '',

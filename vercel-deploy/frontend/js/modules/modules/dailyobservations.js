@@ -244,12 +244,10 @@ const DailyObservations = {
         }
 
         // التأكد من توفر DataManager - محاولة متعددة مع انتظار
-        // Consider using a more event-driven approach or a MutationObserver if DataManager is dynamically added
-        // For now, keep the retry loop but acknowledge it's a busy-wait pattern.
         let dataManagerAvailable = false;
         const maxRetries = 10;
         const retryDelay = 200;
-
+        
         for (let i = 0; i < maxRetries; i++) {
             if (typeof window !== 'undefined' && (typeof window.DataManager !== 'undefined' || typeof DataManager !== 'undefined')) {
                 dataManagerAvailable = true;
@@ -2058,8 +2056,7 @@ const DailyObservations = {
                 { id: 'site', label: 'الموقع', enabled: false }
             ];
             localStorage.setItem('dailyObservations_analysisItems', JSON.stringify(defaultItems));
-            // Directly use defaultItems instead of recursive call
-            return this.loadDataAnalysis(); // Re-call to render with newly set defaults
+            return this.loadDataAnalysis(); // إعادة التحميل
         }
 
         // عرض قائمة البنود
@@ -2398,8 +2395,7 @@ const DailyObservations = {
             // نقاط حسب الحالة
             if (obs.status === 'مفتوح' || obs.status === 'جديد') score += 20;
             else if (obs.status === 'جاري') score += 10;
-            // Do not add score for 'مغلق' status if 'top' implies active/critical
-            // else if (obs.status === 'مغلق') score += 5;
+            else if (obs.status === 'مغلق') score += 5;
 
             // نقاط حسب الأيام المتأخرة
             if (obs.overdays && obs.overdays > 0) {
@@ -2535,7 +2531,7 @@ const DailyObservations = {
 
         // إذا لم تكن هناك رسوم محفوظة، إنشاء رسوم افتراضية
         if (savedCharts.length === 0) {
-            const defaultCharts = [
+            savedCharts = [
                 {
                     id: 'chart_risk_distribution',
                     type: 'doughnut',
@@ -2565,8 +2561,7 @@ const DailyObservations = {
                     enabled: false
                 }
             ];
-            localStorage.setItem('dailyObservations_top10Charts', JSON.stringify(defaultCharts));
-            savedCharts = defaultCharts; // Use the default charts directly
+            localStorage.setItem('dailyObservations_top10Charts', JSON.stringify(savedCharts));
         }
 
         const enabledCharts = savedCharts.filter(chart => chart.enabled);
@@ -4481,16 +4476,7 @@ const DailyObservations = {
             const day = Number(m[1]);
             const monthName = String(m[2] || '').toLowerCase();
             let year = Number(m[3]);
-            if (year < 100) {
-                // More robust 2-digit year handling, e.g., assume 20xx for years <= current_year_last_two_digits + X
-                const currentYear = new Date().getFullYear();
-                const currentCentury = Math.floor(currentYear / 100) * 100;
-                if (year <= (currentYear % 100) + 10) { // e.g., if current year is 2023, assume 20xx for years up to 33
-                    year += currentCentury;
-                } else {
-                    year += currentCentury - 100; // Assume 19xx
-                }
-            }
+            if (year < 100) year += (year >= 70 ? 1900 : 2000);
 
             const monthMap = {
                 jan: 0, january: 0,
@@ -4884,8 +4870,7 @@ const DailyObservations = {
                 const obsDate = new Date(dateIso);
                 if (!Number.isNaN(obsDate.getTime())) {
                     const now = new Date();
-                    const diffMs = now.getTime() - obsDate.getTime();
-                    overdays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+                    overdays = Math.floor((now.getTime() - obsDate.getTime()) / (1000 * 60 * 60 * 24));
                     if (overdays < 0) overdays = 0;
                 } else {
                     overdays = 0;
@@ -5115,7 +5100,7 @@ const DailyObservations = {
         if (normalizedData) {
             this.state.editingId = normalizedData.id;
             this.state.currentAttachments = Array.isArray(normalizedData.attachments)
-                ? normalizedData.attachments.map((attachment) => JSON.parse(JSON.stringify(attachment))) // Deep copy
+                ? normalizedData.attachments.map((attachment) => Object.assign({}, attachment))
                 : [];
         }
 
@@ -5690,8 +5675,10 @@ const DailyObservations = {
             : getObservationIsoCodeFromId(recordId);
 
         // حساب Overdays (الوقت الحالي - تاريخ تسجيل الملاحظة)
-        // Centralize overdays calculation into a helper function
-        const overdays = this.calculateOverdays(isoDate.toISOString());
+        const observationDate = isoDate;
+        const currentDate = new Date();
+        const daysDiff = Math.floor((currentDate.getTime() - observationDate.getTime()) / (1000 * 60 * 60 * 24));
+        const overdays = daysDiff > 0 ? daysDiff : 0;
 
         // Timestamp - يتم تعبئته تلقائياً عند إنشاء الملاحظة
         const timestamp = existingRecord?.timestamp || now;
@@ -6248,7 +6235,16 @@ const DailyObservations = {
     refreshUpdatesSection(observationId) {
         try {
             // البحث عن modal الملاحظة (الذي يحتوي على "تفاصيل الملاحظة")
-            const observationModal = this._getOpenObservationModal();
+            const allModals = document.querySelectorAll('.modal-overlay');
+            let observationModal = null;
+            
+            for (const modal of allModals) {
+                const title = modal.querySelector('.modal-title');
+                if (title && title.textContent.includes('تفاصيل الملاحظة')) {
+                    observationModal = modal;
+                    break;
+                }
+            }
             
             if (!observationModal) return;
 
@@ -6667,7 +6663,7 @@ const DailyObservations = {
 
             // إضافة التحديث الجديد
             updates.push(newUpdate);
-            observation.updates = JSON.stringify(updates); // Ensure it's stored as a JSON string
+            observation.updates = updates;
 
             // تحديث السجل الزمني
             let timeLog = [];
@@ -6785,7 +6781,7 @@ const DailyObservations = {
 
             // إضافة التعليق الجديد
             comments.push(newComment);
-            observation.comments = JSON.stringify(comments); // Ensure it's stored as a JSON string
+            observation.comments = comments;
 
             // تحديث السجل الزمني
             let timeLog = [];

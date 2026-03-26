@@ -72,12 +72,8 @@ const Training = {
             // التحقق من وجود أوقات صحيحة
             const startVal = training.startTime || training.fromTime;
             const endVal = training.endTime || training.toTime;
-            const isTimeValid = (time) => {
-                const s = String(time || '').trim();
-                return s !== '' && s !== '—' && s !== '-' && s !== 'null' && s !== 'undefined';
-            };
-            const hasValidStartTime = isTimeValid(startVal);
-            const hasValidEndTime = isTimeValid(endVal);
+            const hasValidStartTime = startVal && String(startVal).trim() !== '' && startVal !== '—' && startVal !== '-' && startVal !== 'null' && startVal !== 'undefined';
+            const hasValidEndTime = endVal && String(endVal).trim() !== '' && endVal !== '—' && endVal !== '-' && endVal !== 'null' && endVal !== 'undefined';
 
             // إذا كانت الأوقات فارغة أو غير صحيحة، إضافة أوقات افتراضية (مطابق لتدريب الموظفين)
             if (!hasValidStartTime || !hasValidEndTime) {
@@ -143,9 +139,8 @@ const Training = {
             let duration = toMinutes - fromMinutes;
             
             // التعامل مع الحالة التي يكون فيها الوقت عبر منتصف الليل
-            // This assumes duration is within a 24-hour period. If it can span multiple days, more complex logic is needed.
             if (duration < 0) {
-                duration += 24 * 60; // Add 24 hours for durations spanning midnight
+                duration += 24 * 60; // إضافة يوم كامل
             }
             
             return duration;
@@ -860,10 +855,8 @@ const Training = {
             .map(t => {
                 const contractorId = String(t?.contractorId ?? '').trim();
         // ✅ لا نسمح للـ Map باستبدال الاسم المحفوظ في السجل (لتفادي تعارض IDs)
-        // Use canonical identifiers or a more robust check for empty/placeholder names.
-        const storedName = normalizeText(t?.contractorName || '');
-        const isPlaceholder = (name) => name === '' || name === 'غير محدد' || name === 'بدون اسم' || name === '—' || name === '-';
-        const hasStored = storedName && !isPlaceholder(storedName);
+        const storedName = normalizeText(t?.contractorName || 'غير محدد');
+        const hasStored = storedName && !['غير محدد', 'بدون اسم', '—', '-'].includes(storedName);
         const contractorName = hasStored ? storedName : normalizeText(contractorMap.get(contractorId) || storedName || 'غير محدد');
                 const trainer = normalizeText(t?.trainer || t?.conductedBy || 'غير محدد');
                 const topic = normalizeText(t?.topic || '—');
@@ -1039,7 +1032,7 @@ const Training = {
                         </thead>
                         <tbody>
                             ${rows.map((r, idx) => `
-                                <tr class="hover:bg-indigo-50 cursor-pointer transition-all duration-200 pivot-table-row" data-analytics-drill="${safe(r.label)}" data-analytics-mode="${mode}" data-row-idx="${idx}" style="background: ${idx % 2 === 0 ? '#ffffff' : '#f8fafc'};">
+                                <tr class="hover:bg-indigo-50 cursor-pointer transition-all duration-200" data-analytics-drill="${safe(r.label)}" data-analytics-mode="${mode}" style="background: ${idx % 2 === 0 ? '#ffffff' : '#f8fafc'};" onmouseover="this.style.background='#eef2ff'; this.style.transform='scale(1.005)'" onmouseout="this.style.background='${idx % 2 === 0 ? '#ffffff' : '#f8fafc'}'; this.style.transform='scale(1)'">
                                     <td style="padding: 12px 16px; font-size: 12px; text-align: right; border-bottom: 1px solid #f0f0f0;">
                                         <span style="color: #4c51bf; font-weight: 600; display: flex; align-items: center; gap: 8px;">
                                             <span style="width: 8px; height: 8px; background: linear-gradient(135deg, #667eea, #764ba2); border-radius: 50%; flex-shrink: 0;"></span>
@@ -1158,7 +1151,7 @@ const Training = {
                                 <i class="fas fa-building" style="color: #667eea; font-size: 0.7rem; width: 14px; text-align: center;"></i>
                                 <span>المقاول</span>
                             </label>
-                            <select id="contractor-analytics-contractor" class="form-input contractor-analytics-input" data-focus-style="true">${optionList(model.dimensions.contractors, state.contractor)}</select>
+                            <select id="contractor-analytics-contractor" class="form-input" style="border: 2px solid #e0e7ff; border-radius: 10px; padding: 10px 12px; font-size: 0.85rem; transition: all 0.25s ease; background: white; min-height: 42px; box-shadow: 0 1px 3px rgba(0,0,0,0.04);" onfocus="this.style.borderColor='#667eea'; this.style.boxShadow='0 0 0 4px rgba(102,126,234,0.12), 0 2px 6px rgba(102,126,234,0.15)'; this.style.transform='translateY(-1px)'" onblur="this.style.borderColor='#e0e7ff'; this.style.boxShadow='0 1px 3px rgba(0,0,0,0.04)'; this.style.transform='translateY(0)'">${optionList(model.dimensions.contractors, state.contractor)}</select>
                         </div>
                         <div style="display: flex; flex-direction: column; gap: 8px;">
                             <label style="font-size: 0.75rem; font-weight: 600; color: #4b5563; display: flex; align-items: center; gap: 6px; margin-bottom: 2px;">

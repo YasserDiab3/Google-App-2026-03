@@ -438,8 +438,7 @@ const Users = {
                                     </div>
                                 </td>
                                 <td>${Utils.escapeHTML(user.email || '')}</td>
-                                <!-- Password fields should not be displayed on the client-side -->
-                                <!-- <td>
+                                <td>
                                     <div class="flex items-center gap-2">
                                         <i class="fas fa-lock text-gray-400 text-sm"></i>
                                         <span class="text-sm text-gray-600" title="كلمة المرور مخفية للأمان">
@@ -454,7 +453,7 @@ const Users = {
                                             ${user.passwordHash ? (user.passwordHash.substring(0, 8) + '...') : '<span class="text-gray-400">غير محدد</span>'}
                                         </span>
                                     </div>
-                                </td> -->
+                                </td>
                                 <td>
                                     <span class="badge badge-${this.getRoleBadgeClass(user.role)}">
                                         ${this.getRoleName(user.role)}
@@ -482,22 +481,22 @@ const Users = {
                                 <td>${user.createdAt ? Utils.formatDate(user.createdAt) : '-'}</td>
                                 <td>
                                     <div class="flex items-center gap-2">
-                                        <button
-                                            onclick="Users.resetUserPassword('${Utils.escapeHTML(user.id)}', '${Utils.escapeHTML(user.email)}')"
+                                        <button 
+                                            onclick="Users.resetUserPassword('${user.id}', '${user.email}')" 
                                             class="btn-icon btn-icon-warning"
                                             title="إعادة تعيين كلمة المرور"
                                         >
                                             <i class="fas fa-key"></i>
                                         </button>
-                                        <button
-                                            onclick="Users.editUser('${Utils.escapeHTML(user.id)}')"
+                                        <button 
+                                            onclick="Users.editUser('${user.id}')" 
                                             class="btn-icon btn-icon-primary"
                                             title="تعديل"
                                         >
                                             <i class="fas fa-edit"></i>
                                         </button>
-                                        <button
-                                            onclick="Users.deleteUser('${Utils.escapeHTML(user.id)}')"
+                                        <button 
+                                            onclick="Users.deleteUser('${user.id}')" 
                                             class="btn-icon btn-icon-danger"
                                             title="حذف"
                                         >
@@ -1329,7 +1328,7 @@ const Users = {
 
         const confirmed = await Utils.confirmDialog(
             'إعادة تعيين كلمة المرور',
-            `هل أنت متأكد من إعادة تعيين كلمة المرور للمستخدم "${Utils.escapeHTML(user.name)}" (${Utils.escapeHTML(user.email)})؟\n\nسيتم إنشاء كلمة مرور مؤقتة جديدة.`,
+            `هل أنت متأكد من إعادة تعيين كلمة المرور للمستخدم "${user.name}" (${user.email})؟\n\nسيتم إنشاء كلمة مرور مؤقتة جديدة.`,
             'إعادة التعيين',
             'إلغاء'
         );

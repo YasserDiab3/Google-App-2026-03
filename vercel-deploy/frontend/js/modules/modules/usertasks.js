@@ -875,7 +875,7 @@ const UserTasks = {
                     'badge-secondary';
 
             return `
-                        <div class="content-card ${isOverdue ? 'border-red-300 bg-red-50' : ''}" data-task-id="${Utils.escapeHTML(task.id)}" data-search="${Utils.escapeHTML((task.title || task.taskTitle || '').toLowerCase())} ${Utils.escapeHTML((task.description || task.taskDescription || '').toLowerCase())}">
+                        <div class="content-card ${isOverdue ? 'border-red-300 bg-red-50' : ''}" data-task-id="${task.id}" data-search="${(task.title || task.taskTitle || '').toLowerCase()} ${(task.description || task.taskDescription || '').toLowerCase()}">
                             <div class="flex items-start justify-between gap-4">
                                 <div class="flex-1">
                                     <div class="flex items-center gap-2 mb-2">

@@ -631,11 +631,10 @@ const Contractors = {
     /**
      * ✅ التأكد من تحميل بيانات التقييمات عند فتح التبويب (مزامنة من Backend إن كانت القائمة فارغة)
      */
-    _isSyncingEvaluations: false,
     ensureEvaluationsDataLoaded() {
         const evaluations = AppState.appData.contractorEvaluations;
         const hasData = Array.isArray(evaluations) && evaluations.length > 0;
-        if (hasData || this._isSyncingEvaluations) return;
+        if (hasData) return;
 
         const canSync = typeof GoogleIntegration !== 'undefined' &&
             typeof GoogleIntegration.syncData === 'function' &&
@@ -644,7 +643,6 @@ const Contractors = {
 
         if (!canSync) return;
 
-        this._isSyncingEvaluations = true;
         GoogleIntegration.syncData({
             sheets: ['ContractorEvaluations'],
             silent: true,
@@ -656,9 +654,7 @@ const Contractors = {
             if (Array.isArray(after) && after.length > 0) {
                 this.refreshEvaluationsList(this.currentEvaluationFilter || '');
             }
-        }).catch(() => {}).finally(() => {
-            this._isSyncingEvaluations = false;
-        });
+        }).catch(() => {});
     },
 
     /**
@@ -907,10 +903,6 @@ const Contractors = {
         if (['approved', 'معتمد', 'accept', 'accepted', 'active', 'valid', 'pass'].includes(normalized)) {
             return 'approved';
         }
-        // Explicitly handle empty string if it should not default to 'under_review' but be an error or specific state
-        if (normalized === '') {
-            return 'under_review'; // Or a specific 'unknown' status
-        }
         if (['rejected', 'مرفوض', 'رفض', 'cancelled', 'canceled', 'denied', 'invalid', 'expired'].includes(normalized)) {
             return 'rejected';
         }
@@ -1084,7 +1076,7 @@ const Contractors = {
             const code = record.code || record.isoCode || '(بدون كود)';
             const status = (record.status || '').toString();
             
-            const isActive = this.isApprovalActive(record, false); // Should not include expired for a true 'active' check
+            const isActive = this.isApprovalActive(record, true);
             const isExpired = this.isApprovalExpired(record);
             
             const appearsInForms = forForms.some(c => 
@@ -1242,11 +1234,8 @@ const Contractors = {
             if (contractorCode && contractorCode.match(/^APP-(\d+)$/)) {
                 const match = contractorCode.match(/^APP-(\d+)$/);
                 if (match) {
-                    const newCode = `CON-${match[1]}`;
-                    if (newCode !== contractorCode) {
-                        contractorCode = newCode;
-                        mutated = true;
-                    }
+                    contractorCode = `CON-${match[1]}`;
+                    mutated = true;
                 }
             }
 
@@ -2171,13 +2160,10 @@ const Contractors = {
             const incomingHasRealName = incomingName && incomingName !== 'غير معروف';
             
             // تفضيل الاسم الحقيقي
-            // Prioritize incoming name if it's a 'real' name, otherwise keep current, or use incoming if current is not real
-            if (incomingHasRealName) {
+            if (incomingHasRealName && !currentHasRealName) {
                 merged.name = incoming.name;
             } else if (currentHasRealName) {
                 merged.name = current.name;
-            } else if (incoming.name) { // Fallback if current has no real name
-                merged.name = incoming.name;
             }
 
             // تفضيل وجود code / license
@@ -2814,8 +2800,22 @@ const Contractors = {
         } else {
             // توليد كود تلقائي للكيانات الجديدة إذا لم يكن موجوداً
             if (!record.isoCode && !record.code) {
-                // Use the centralized code generation function to ensure consistency
-                record.isoCode = this.generateContractorCode();
+                let maxNumber = 0;
+                collection.forEach(entity => {
+                    const code = entity.isoCode || entity.code;
+                    if (code) {
+                        const match = code.match(/APP-(\d+)/);
+                        if (match) {
+                            const num = parseInt(match[1], 10);
+                            if (num > maxNumber) {
+                                maxNumber = num;
+                            }
+                        }
+                    }
+                });
+
+                const newNumber = maxNumber + 1;
+                record.isoCode = `APP-${String(newNumber).padStart(3, '0')}`;
                 record.code = record.isoCode;
             }
 
@@ -3208,8 +3208,7 @@ const Contractors = {
                 if (typeof totalItems === 'string') totalItems = parseInt(totalItems) || 0;
                 
                 // ✅ إصلاح: إذا لم يوجد finalScore ولكن يوجد compliantCount و totalItems، احسب النسبة
-                // Ensure finalScore is calculated only if not explicitly provided and valid
-                if ((finalScore === null || isNaN(finalScore)) && compliantCount > 0 && totalItems > 0) {
+                if (finalScore === null && compliantCount > 0 && totalItems > 0) {
                     finalScore = Math.round((compliantCount / totalItems) * 100);
                 }
                 
@@ -3245,8 +3244,6 @@ const Contractors = {
                     status: record.status,
                     notes: record.notes
                 });
-                // Recalculate compliantCount and totalItems based on aggregated items if needed
-                // This might be better handled after all items are collected for an evaluation
             }
         });
         
@@ -3302,7 +3299,7 @@ const Contractors = {
                                             <i class="fas fa-eye"></i>
                                         </button>
                                         ${Permissions.isAdmin() ? `
-                                        <button class="btn-icon btn-icon-primary" title="تعديل التقييم" onclick="Contractors.showEvaluationForm('${record.contractorId}', '${record.id}')">
+                                        <button class="btn-icon btn-icon-primary" title="تعديل التقييم" onclick="Contractors.showEvaluationForm('${record.contractorId}', ${JSON.stringify(record).replace(/"/g, '&quot;')})">
                                             <i class="fas fa-edit"></i>
                                         </button>
                                         <button class="btn-icon btn-icon-danger" title="حذف التقييم" onclick="Contractors.requestDeleteEvaluation('${record.id}')">
@@ -4449,7 +4446,7 @@ const Contractors = {
                     // إضافة تقييم جديد - إرسال طلب اعتماد
                     // ✅ إزالة توليد ID من Frontend - Backend سيتولى توليده بشكل تسلسلي (CAR_1, CAR_2, ...)
                     const approvalRequest = {
-                        id: Utils.generateId('TEMP_CAR'), // Assign a temporary ID for local state consistency
+                        // id سيتم توليده في Backend باستخدام generateSequentialId('CAR', ...)
                         requestType: 'evaluation',
                         contractorId: record.contractorId,
                         contractorName: record.contractorName,
@@ -4558,12 +4555,9 @@ const Contractors = {
             updatedBy: record.updatedBy || AppState.currentUser?.id || ''
         };
 
-        // Create a new array to avoid direct mutation issues
-        let currentEvaluations = AppState.appData.contractorEvaluations || [];
-
         // ✅ حذف البنود القديمة للتقييم إذا كان تعديل
         if (existing) {
-            currentEvaluations = currentEvaluations.filter(
+            AppState.appData.contractorEvaluations = AppState.appData.contractorEvaluations.filter(
                 item => item.evaluationId !== evaluationId
             );
         }
@@ -4744,10 +4738,8 @@ const Contractors = {
                 if (relatedEvaluation && relatedEvaluation.contractorId) {
                     contractorId = relatedEvaluation.contractorId;
                 } else {
-                    // If no contractorId is found even through related evaluations, use the approvedEntityId as a fallback
-                    // This ensures that evaluations can still be linked even if the contractor record is missing or inconsistent.
-                    contractorId = approvedEntityId;
-                    // Notification.warning('لم يتم العثور على تقييمات مرتبطة بهذه الجهة بشكل مباشر، سيتم البحث باستخدام معرف الجهة المعتمدة.');
+                    Notification.error('لم يتم العثور على تقييمات مرتبطة بهذه الجهة');
+                    return;
                 }
             }
         }
@@ -7016,45 +7008,14 @@ const Contractors = {
         if (!list) return;
 
         // جمع جميع الاشتراطات من جميع الفئات
-        const requirements = [];
+        const allItems = [];
         list.querySelectorAll('.requirement-category-group').forEach(group => {
-            const categoryId = group.getAttribute('data-category');
-            let categoryOrder = 1;
             group.querySelectorAll('.requirement-item').forEach(item => {
-                const reqId = item.getAttribute('data-requirement-id');
-                const labelInput = item.querySelector('[data-field="label"]');
-                const typeSelect = item.querySelector('[data-field="type"]');
-                const requiredCheckbox = item.querySelector('[data-field="required"]');
-                const categorySelect = item.querySelector('[data-field="category"]');
-                const prioritySelect = item.querySelector('[data-field="priority"]');
-                const hasExpiryCheckbox = item.querySelector('[data-field="hasExpiry"]');
-                const expiryMonthsInput = item.querySelector('[data-field="expiryMonths"]');
-                const descriptionTextarea = item.querySelector('[data-field="description"]');
-
-                const requirement = {
-                    id: reqId,
-                    label: labelInput?.value.trim() || '',
-                    type: typeSelect?.value || 'document',
-                    required: requiredCheckbox?.checked || false,
-                    order: categoryOrder++, // Order within its category
-                    category: categorySelect?.value || categoryId || 'other',
-                    priority: prioritySelect?.value || 'medium',
-                    hasExpiry: hasExpiryCheckbox?.checked || false,
-                    expiryMonths: hasExpiryCheckbox?.checked ? parseInt(expiryMonthsInput?.value || 12) : null,
-                    description: descriptionTextarea?.value.trim() || '',
-                    applicableTypes: ['contractor', 'supplier']
-                };
-                requirements.push(requirement);
+                allItems.push(item);
             });
         });
 
-        // Re-sort all requirements by their new category and order for global persistence
-        requirements.sort((a, b) => {
-            const categoryA = REQUIREMENT_CATEGORIES[a.category]?.order || 99;
-            const categoryB = REQUIREMENT_CATEGORIES[b.category]?.order || 99;
-            if (categoryA !== categoryB) return categoryA - categoryB;
-            return a.order - b.order;
-        });
+        const requirements = allItems.map((item, index) => {
             const reqId = item.getAttribute('data-requirement-id');
             const labelInput = item.querySelector('[data-field="label"]');
             const typeSelect = item.querySelector('[data-field="type"]');
@@ -7122,14 +7083,8 @@ const Contractors = {
         const list = document.getElementById('requirements-list');
         if (!list) return;
 
-        const itemToMove = list.querySelector(`[data-requirement-id="${reqId}"]`);
-        if (!itemToMove) return;
-
-        const parentContainer = itemToMove.parentElement;
-        if (!parentContainer) return;
-
-        const items = Array.from(parentContainer.children);
-        const index = items.indexOf(itemToMove);
+        const items = Array.from(list.children);
+        const index = items.findIndex(item => item.getAttribute('data-requirement-id') === reqId);
 
         if (index > 0) {
             const item = items[index];
@@ -7346,10 +7301,12 @@ const Contractors = {
                                 <span class="text-sm text-gray-700">إضافة تاريخ انتهاء لجميع الاشتراطات</span>
                             </label>
                         </div>
-                        <div id="bulk-expiry-months-container" style="display: none;">
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">عدد أشهر الصلاحية:</label>
-                            <input type="number" id="bulk-expiry-months" class="form-input" value="12" min="1" max="60">
-                        </div>
+                        ${document.getElementById('bulk-has-expiry') ? '' : `
+                            <div id="bulk-expiry-months-container" style="display: none;">
+                                <label class="block text-sm font-semibold text-gray-700 mb-2">عدد أشهر الصلاحية:</label>
+                                <input type="number" id="bulk-expiry-months" class="form-input" value="12" min="1" max="60">
+                            </div>
+                        `}
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -8344,7 +8301,16 @@ const Contractors = {
             
             // ✅ تحديد actualTempId للاستخدام في جميع أنحاء الدالة
             // ✅ التحقق من أن tempIdToReplace يطابق tempId الذي تم تمريره
-            const actualTempId = tempId; // tempIdToReplace is always tempId at this point
+            let actualTempId;
+            if (tempIdToReplace && tempIdToReplace === tempId) {
+                actualTempId = tempId;
+            } else if (tempIdToReplace) {
+                Utils.safeWarn('⚠️ تحذير: tempIdToReplace (' + tempIdToReplace + ') لا يطابق tempId (' + tempId + ') - سيتم استخدام tempIdToReplace');
+                actualTempId = tempIdToReplace;
+            } else {
+                Utils.safeWarn('⚠️ تحذير: tempIdToReplace غير موجود - سيتم استخدام tempId الممرر');
+                actualTempId = tempId;
+            }
             
             // ✅ حذف tempId قبل الإرسال لضمان توليد ID جديد من Backend
             delete requestData.id; // ✅ حذف tempId قبل الإرسال لضمان توليد ID جديد من Backend
@@ -8660,13 +8626,14 @@ const Contractors = {
             evaluationData = request.evaluationData;
             
             // ✅ تحليل evaluationData إذا كان نصاً (JSON string) - معالجة التشفير المزدوج
-            // Parse evaluationData only if it's a string
-            if (evaluationData && typeof evaluationData === 'string') {
+            let parseAttempts = 0;
+            while (evaluationData && typeof evaluationData === 'string' && parseAttempts < 3) {
                 try {
                     evaluationData = JSON.parse(evaluationData);
+                    parseAttempts++;
                 } catch (error) {
-                    Utils.safeWarn('⚠️ فشل تحليل evaluationData من النص:', error);
-                    evaluationData = null; // Set to null or default object if parsing fails
+                    Utils.safeWarn('⚠️ فشل تحليل evaluationData من النص (محاولة ' + parseAttempts + '):', error);
+                    break;
                 }
             }
             
@@ -8704,13 +8671,15 @@ const Contractors = {
             }
             
             // ✅ تحليل items إذا كانت نصاً - معالجة التشفير المزدوج
-            // Parse evaluationData.items only if it's a string
-            if (evaluationData?.items && typeof evaluationData.items === 'string') {
+            let itemsParseAttempts = 0;
+            while (evaluationData?.items && typeof evaluationData.items === 'string' && itemsParseAttempts < 3) {
                 try {
                     evaluationData.items = JSON.parse(evaluationData.items);
+                    itemsParseAttempts++;
                 } catch (error) {
                     Utils.safeWarn('⚠️ فشل تحليل بنود التقييم من النص:', error);
-                    evaluationData.items = []; // Set to empty array if parsing fails
+                    evaluationData.items = [];
+                    break;
                 }
             }
             
@@ -9738,9 +9707,8 @@ const Contractors = {
             if (!Array.isArray(list)) return;
             list.forEach((c, idx) => {
                 if (!c || typeof c !== 'object') return;
-                    // Use a more robust unique identifier, e.g., a combination of ID and a normalized name/code if ID is missing
-                    const uniqueKey = c.id || c.contractorId || c.code || c.isoCode || `${(c.companyName || c.name || '').toString().trim()}-${c.entityType || 'unknown'}`; // Add entityType for better uniqueness
-                    if (!uniqueKey || seenIds.has(uniqueKey)) return;
+                const id = (c.id || c.contractorId || (c.companyName || c.name || '').toString().trim() || `_idx_${idx}`);
+                if (seenIds.has(id)) return;
                 seenIds.add(id);
                 mergedContractors.push({
                     ...c,

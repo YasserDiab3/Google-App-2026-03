@@ -1306,19 +1306,10 @@ const PPE = {
                             const match = p.receiptNumber.match(/\d+$/);
                             return match ? parseInt(match[0]) : 0;
                         });
-                    // The receiptNumber generation logic needs to be inside the loop if multiple items can be added
-                    // to ensure each item gets a unique receipt number, or the concept of receiptNumber needs to be re-evaluated
-                    // if it's meant to be a single identifier for a multi-item transaction.
-                    // For now, if multiple items are added, they will share the same receipt number based on this logic.
-                    // If unique receipt numbers per item are desired, this block needs to be moved inside the loop.
-                    let nextNumber = existingNumbers.length > 0 ? Math.max(...existingNumbers) + 1 : 1;
-                    let receiptNumber = isEdit && ppeData?.receiptNumber
+                    const nextNumber = existingNumbers.length > 0 ? Math.max(...existingNumbers) + 1 : 1;
+                    const receiptNumber = isEdit && ppeData?.receiptNumber
                         ? ppeData.receiptNumber
                         : `PPE-${currentYear}-${String(nextNumber).padStart(4, '0')}`;
-
-                    // If multiple items are added, ensure unique receipt numbers or clarify intent.
-                    // For now, we'll increment nextNumber within the loop if it's a new record.
-                    let currentReceiptNumber = receiptNumber;
 
                     // فحص العناصر قبل الاستخدام
                     const employeeNameEl = document.getElementById('ppe-employee-name');
@@ -1523,11 +1514,9 @@ const PPE = {
                 'حزام أمان', 'معدات حماية تنفسية', 'خوذة', 'نظارات وقاية'
             ];
             
-            const existingItemNames = new Set(items.map(i => (i.itemName || '').trim()));
             predefinedItems.forEach(item => {
-                if (!existingItemNames.has(item.trim())) {
+                if (!items.some(i => (i.itemName || '').trim() === item.trim())) {
                     items.push({ itemName: item, itemCode: '' });
-                    existingItemNames.add(item.trim()); // Add to set to prevent duplicates from subsequent predefined items
                 }
             });
 
@@ -1898,8 +1887,7 @@ const PPE = {
 
     async renderPPEMatrix() {
         const employees = AppState.appData.employees || [];
-        // Use employeePPEMatrixByCode for individual employee PPE requirements
-        const employeePPEMatrixByCode = AppState.appData.employeePPEMatrixByCode || {};
+        const matrixByCode = AppState.appData.employeePPEMatrixByCode || {};
         const ppeList = AppState.appData.ppe || [];
 
         // ✅ إرجاع التصميم السابق: عرض مصفوفة لكل موظف بشكل فردي
@@ -2047,7 +2035,7 @@ const PPE = {
                                     <select id="ppe-matrix-position" required class="form-input">
                                         <option value="">اختر الوظيفة</option>
                                         ${positions.map(p => `
-                                            <option value="${Utils.escapeHTML(p)}" ${isEdit && p === position ? 'selected' : (matrix[p] && !isEdit ? 'disabled' : '')}>${Utils.escapeHTML(p)}${matrix[p] && !isEdit ? ' (موجودة بالفعل)' : ''}</option>
+                                            <option value="${Utils.escapeHTML(p)}" ${matrix[p] ? 'disabled' : ''}>${Utils.escapeHTML(p)}${matrix[p] ? ' (موجودة بالفعل)' : ''}</option>
                                         `).join('')}
                                         <option value="__custom__">إضافة وظيفة جديدة</option>
                                     </select>
@@ -2187,10 +2175,6 @@ const PPE = {
             try {
                 // الحصول على جميع الموظفين بهذه الوظيفة (بناءً على الكود الوظيفي من جدول قاعدة بيانات الموظفين)
                 const employeesWithPosition = employees.filter(e => e.position === selectedPosition).map(e => e.employeeNumber || e.sapId || '');
-
-                // Before updating, consider clearing old PPE assignments for employees whose position might have changed
-                // This is a complex data consistency issue that might require a more centralized employee data management.
-                // For now, the current logic will add PPE to employees with the selected position.
 
                 if (!AppState.appData.employeePPEMatrix) {
                     AppState.appData.employeePPEMatrix = {};
