@@ -5099,13 +5099,26 @@ const Clinic = {
     },
 
     scheduleVisitsTabRender(forceReload = false, delayMs = 0) {
+        // إلغاء أي جدولة سابقة
         if (this._visitsRenderTimer) {
-            clearTimeout(this._visitsRenderTimer);
+            if (typeof this._visitsRenderTimer === 'number') {
+                clearTimeout(this._visitsRenderTimer);
+            } else if (this._visitsRenderTimer && this._visitsRenderTimer._idle != null && typeof cancelIdleCallback === 'function') {
+                cancelIdleCallback(this._visitsRenderTimer._idle);
+            }
+            this._visitsRenderTimer = null;
         }
-        this._visitsRenderTimer = setTimeout(() => {
+        const doRender = () => {
             this._visitsRenderTimer = null;
             this.renderVisitsTab(forceReload);
-        }, Math.max(0, delayMs));
+        };
+        // استخدام requestIdleCallback عندما لا يوجد تأخير مطلوب لتجنب violation
+        if (delayMs === 0 && typeof requestIdleCallback === 'function') {
+            const idleId = requestIdleCallback(doRender, { timeout: 800 });
+            this._visitsRenderTimer = { _idle: idleId };
+        } else {
+            this._visitsRenderTimer = setTimeout(doRender, Math.max(0, delayMs));
+        }
     },
 
     async renderVisitsTab(forceReload = false) {

@@ -902,12 +902,27 @@
                                             img.setAttribute("src", safeUrl);
                                         }
                                     }
-                                    // إضافة error handler
+                                    // إضافة error handler يسجّل الفشل ويعرض placeholder
                                     if (!img.__driveErrorHandler) {
                                         img.__driveErrorHandler = true;
                                         img.addEventListener(
                                             "error",
                                             function (e) {
+                                                try {
+                                                    var tgt = e.target || this;
+                                                    var fSrc = (tgt && tgt.getAttribute("src")) || "";
+                                                    var fId = window.__extractDriveFileId ? window.__extractDriveFileId(fSrc) : null;
+                                                    if (fId) {
+                                                        window.__failedDriveThumbnailIds = window.__failedDriveThumbnailIds || {};
+                                                        window.__failedDriveThumbnailIds[fId] = Date.now();
+                                                        try { localStorage.setItem("hse_failed_drive_thumbnails", JSON.stringify(window.__failedDriveThumbnailIds)); } catch (le) {}
+                                                    }
+                                                    if (tgt) {
+                                                        tgt.onerror = null;
+                                                        tgt.src = "data:image/svg+xml," + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="200" height="120" viewBox="0 0 200 120"><rect fill="#f3f4f6" width="200" height="120"/><text x="100" y="65" text-anchor="middle" fill="#9ca3af" font-size="12" font-family="sans-serif">فشل تحميل الصورة</text></svg>');
+                                                        tgt.alt = "فشل تحميل الصورة";
+                                                    }
+                                                } catch (re) {}
                                                 e.stopPropagation();
                                                 e.stopImmediatePropagation();
                                             },
@@ -974,6 +989,21 @@
                                                         node.addEventListener(
                                                             "error",
                                                             function (e) {
+                                                                try {
+                                                                    var tgt = e.target || this;
+                                                                    var fSrc = (tgt && tgt.getAttribute("src")) || "";
+                                                                    var fId = window.__extractDriveFileId ? window.__extractDriveFileId(fSrc) : null;
+                                                                    if (fId) {
+                                                                        window.__failedDriveThumbnailIds = window.__failedDriveThumbnailIds || {};
+                                                                        window.__failedDriveThumbnailIds[fId] = Date.now();
+                                                                        try { localStorage.setItem("hse_failed_drive_thumbnails", JSON.stringify(window.__failedDriveThumbnailIds)); } catch (le) {}
+                                                                    }
+                                                                    if (tgt) {
+                                                                        tgt.onerror = null;
+                                                                        tgt.src = "data:image/svg+xml," + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="200" height="120" viewBox="0 0 200 120"><rect fill="#f3f4f6" width="200" height="120"/><text x="100" y="65" text-anchor="middle" fill="#9ca3af" font-size="12" font-family="sans-serif">فشل تحميل الصورة</text></svg>');
+                                                                        tgt.alt = "فشل تحميل الصورة";
+                                                                    }
+                                                                } catch (re) {}
                                                                 e.stopPropagation();
                                                                 e.stopImmediatePropagation();
                                                             },

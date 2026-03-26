@@ -1963,6 +1963,11 @@ window.Auth = {
                 'periodic-inspections': ['PeriodicInspectionCategories', 'PeriodicInspectionRecords', 'PeriodicInspectionSchedules', 'PeriodicInspectionChecklists']
             };
 
+            // خريطة مفاتيح المزامنة في localStorage لكل موديول (لمنع إعادة التحميل عند فتح الموديول)
+            const moduleSyncKeyMap = {
+                'clinic': 'clinic_last_sync',
+            };
+
             // خريطة أوراق Google Sheets إلى مفاتيح AppState
             const sheetToKeyMap = {
                 'Incidents': 'incidents',
@@ -2102,6 +2107,12 @@ window.Auth = {
                     // ✅ إصلاح: إزالة المرجع للمتغير غير المعرّف silent - تسجيل التحذير دائماً إذا كانت هناك أوراق فارغة
                     if (emptySheets.length > 0) {
                         Utils.safeWarn(`⚠️ الموديول ${moduleName} يحتوي على ${emptySheets.length} ورقة فارغة: ${emptySheets.join(', ')}`);
+                    }
+
+                    // ✅ تعيين وقت آخر مزامنة للموديول في localStorage لمنع إعادة التحميل عند فتح الموديول
+                    const syncKey = moduleSyncKeyMap[moduleName];
+                    if (syncKey) {
+                        try { localStorage.setItem(syncKey, String(Date.now())); } catch (lsErr) {}
                     }
                 } catch (error) {
                     Utils.safeWarn(`⚠️ فشل تحميل بيانات الموديول ${moduleName}:`, error);
