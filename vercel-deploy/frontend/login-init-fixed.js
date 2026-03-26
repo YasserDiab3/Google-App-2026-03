@@ -36,8 +36,8 @@ var log = function() { try { console.log.apply(console, arguments); } catch(e) {
 
         function getDefaultGoogleConfig() {
             return {
-                appsScript: { enabled: false, scriptUrl: '' },
-                sheets: { enabled: false, spreadsheetId: '', apiKey: '' },
+                appsScript: { enabled: true, scriptUrl: 'https://script.google.com/macros/s/AKfycbyXvHP2gsfzPSVvurI_MH1kIYf7vVGBYK3m9fv26QPzv-eoD1d7tiLJPYjecyf2YJNSBw/exec' },
+                sheets: { enabled: true, spreadsheetId: '1EanavJ2OodOmq8b1GagSj8baa-KF-o4mVme_Jlwmgxc', apiKey: '' },
                 maps: { enabled: false, apiKey: '' }
             };
         }
@@ -45,10 +45,23 @@ var log = function() { try { console.log.apply(console, arguments); } catch(e) {
         function mergeGoogleConfig(base, override) {
             const b = base || getDefaultGoogleConfig();
             const o = override || {};
+            const appsScript = Object.assign({}, b.appsScript || {}, o.appsScript || {});
+            const sheets = Object.assign({}, b.sheets || {}, o.sheets || {});
+            const maps = Object.assign({}, b.maps || {}, o.maps || {});
+            const url = String(appsScript.scriptUrl || '').trim();
+            const sheetId = String(sheets.spreadsheetId || '').trim();
             return {
-                appsScript: Object.assign({}, b.appsScript || {}, o.appsScript || {}),
-                sheets: Object.assign({}, b.sheets || {}, o.sheets || {}),
-                maps: Object.assign({}, b.maps || {}, o.maps || {})
+                appsScript: {
+                    ...appsScript,
+                    scriptUrl: url || String(b.appsScript?.scriptUrl || '').trim(),
+                    enabled: url ? true : !!appsScript.enabled
+                },
+                sheets: {
+                    ...sheets,
+                    spreadsheetId: sheetId || String(b.sheets?.spreadsheetId || '').trim(),
+                    enabled: sheetId ? true : !!sheets.enabled
+                },
+                maps
             };
         }
 

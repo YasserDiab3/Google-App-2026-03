@@ -2764,12 +2764,12 @@ const AppState = {
     /** إعدادات RPC للخادم الخلفي (الاسم التاريخي googleConfig — يُستخدم مع Supabase Edge / hse-api) */
     googleConfig: {
         appsScript: {
-            enabled: false,
-            scriptUrl: ''
+            enabled: true,
+            scriptUrl: 'https://script.google.com/macros/s/AKfycbyXvHP2gsfzPSVvurI_MH1kIYf7vVGBYK3m9fv26QPzv-eoD1d7tiLJPYjecyf2YJNSBw/exec'
         },
         sheets: {
-            enabled: false,
-            spreadsheetId: '',
+            enabled: true,
+            spreadsheetId: '1EanavJ2OodOmq8b1GagSj8baa-KF-o4mVme_Jlwmgxc',
             apiKey: ''
         },
         maps: {
@@ -2849,15 +2849,27 @@ const AppState = {
                     const parsed = JSON.parse(raw);
                     if (parsed && typeof parsed === 'object') {
                         if (parsed.appsScript && typeof parsed.appsScript === 'object') {
+                            const currentApps = AppState.googleConfig.appsScript || {};
+                            const parsedApps = parsed.appsScript || {};
+                            const parsedUrl = String(parsedApps.scriptUrl || '').trim();
                             AppState.googleConfig.appsScript = {
-                                ...AppState.googleConfig.appsScript,
-                                ...parsed.appsScript
+                                ...currentApps,
+                                ...parsedApps,
+                                // لا نسمح لقيمة فارغة من localStorage بإلغاء URL افتراضي صالح
+                                scriptUrl: parsedUrl || String(currentApps.scriptUrl || '').trim(),
+                                // إذا كان URL صالحًا اعتبر التفعيل true حتى لا تتعطل المزامنة تلقائيًا
+                                enabled: parsedUrl ? true : !!(parsedApps.enabled ?? currentApps.enabled)
                             };
                         }
                         if (parsed.sheets && typeof parsed.sheets === 'object') {
+                            const currentSheets = AppState.googleConfig.sheets || {};
+                            const parsedSheets = parsed.sheets || {};
+                            const parsedSheetId = String(parsedSheets.spreadsheetId || '').trim();
                             AppState.googleConfig.sheets = {
-                                ...AppState.googleConfig.sheets,
-                                ...parsed.sheets
+                                ...currentSheets,
+                                ...parsedSheets,
+                                spreadsheetId: parsedSheetId || String(currentSheets.spreadsheetId || '').trim(),
+                                enabled: parsedSheetId ? true : !!(parsedSheets.enabled ?? currentSheets.enabled)
                             };
                         }
                         if (parsed.maps && typeof parsed.maps === 'object') {
