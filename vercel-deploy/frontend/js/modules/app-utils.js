@@ -264,6 +264,30 @@ const Permissions = {
     },
 
     /**
+     * مدير فعلي في الجلسة أو في عمود permissions أو في جدول المستخدمين (بعد المزامنة).
+     * يُستخدم لـ Users وإعدادات adminOnly وتبويبات التفصيل ومعدات الحريق.
+     */
+    isCurrentUserEffectiveAdmin(user = AppState.currentUser) {
+        if (!user) return false;
+        if (this.isAdminRole(user.role)) return true;
+        const sp = user.permissions;
+        if (sp && typeof sp === 'object' && !Array.isArray(sp) && this.isAdminRole(sp.role)) return true;
+        if (AppState.appData && Array.isArray(AppState.appData.users)) {
+            const emailOrId = (user.email || user.id || '').toString().toLowerCase().trim();
+            const dbUser = AppState.appData.users.find(u =>
+                (u.email && u.email.toString().toLowerCase().trim() === emailOrId) ||
+                (u.id && /@/.test(String(u.id)) && u.id.toString().toLowerCase().trim() === emailOrId)
+            );
+            if (dbUser) {
+                if (this.isAdminRole(dbUser.role)) return true;
+                const dp = dbUser.permissions;
+                if (dp && typeof dp === 'object' && !Array.isArray(dp) && this.isAdminRole(dp.role)) return true;
+            }
+        }
+        return false;
+    },
+
+    /**
      * تطبيع كائن الصلاحيات (يُحوّل JSON string إلى كائن)
      */
     normalizePermissions(permissions) {
@@ -1600,7 +1624,7 @@ const Permissions = {
      */
     getEffectivePermissions(user = AppState.currentUser) {
         if (!user) return {};
-        if (this.isAdminRole(user.role)) {
+        if (this.isCurrentUserEffectiveAdmin(user)) {
             return { __isAdmin: true };
         }
 
@@ -1668,7 +1692,7 @@ const Permissions = {
         const moduleConfig = MODULE_PERMISSIONS_CONFIG.find(m => m.key === moduleName);
         if (moduleConfig && moduleConfig.adminOnly) {
             // الموديولات المحمية متاحة لمدير النظام فقط
-            const isAdmin = this.isAdminRole(user.role);
+            const isAdmin = this.isCurrentUserEffectiveAdmin(user);
             if (AppState.debugMode && !isAdmin) {
                 Utils.safeLog(`🔒 hasAccess(${moduleName}): موديول محمي - يتطلب صلاحيات مدير`);
             }
@@ -1676,7 +1700,7 @@ const Permissions = {
         }
 
         // المدير لديه صلاحيات كاملة
-        if (this.isAdminRole(user.role)) {
+        if (this.isCurrentUserEffectiveAdmin(user)) {
             if (AppState.debugMode) {
                 Utils.safeLog(`✅ hasAccess(${moduleName}): مدير النظام - صلاحية كاملة`);
             }
@@ -1712,7 +1736,7 @@ const Permissions = {
         if (!user) return false;
 
         // المدير لديه صلاحيات كاملة
-        if (this.isAdminRole(user.role)) return true;
+        if (this.isCurrentUserEffectiveAdmin(user)) return true;
 
         // التحقق من وجود صلاحية الوصول للمديول أولاً
         if (!this.hasAccess(moduleName)) return false;
@@ -1741,7 +1765,7 @@ const Permissions = {
         if (!user) return [];
 
         // المدير لديه صلاحيات كاملة
-        if (this.isAdminRole(user.role)) {
+        if (this.isCurrentUserEffectiveAdmin(user)) {
             const moduleDetails = MODULE_DETAILED_PERMISSIONS[moduleName];
             if (moduleDetails && moduleDetails.permissions) {
                 return moduleDetails.permissions.map(p => p.key);
@@ -2411,7 +2435,7 @@ const Permissions = {
     },
     
     isCurrentUserAdmin() {
-        return (AppState.currentUser?.role || '').toLowerCase() === 'admin';
+        return this.isCurrentUserEffectiveAdmin();
     },
     
     getAnnualPlan(year, { createIfMissing = false } = {}) {
@@ -2653,7 +2677,7 @@ const Permissions = {
      * التحقق من أن المستخدم الحالي هو مدير النظام
      */
     isAdmin() {
-        return this.isAdminRole(AppState.currentUser?.role);
+        return this.isCurrentUserEffectiveAdmin();
     }
 };
 

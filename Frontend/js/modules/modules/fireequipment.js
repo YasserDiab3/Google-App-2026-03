@@ -4900,14 +4900,16 @@ FireEquipment = {
      * التحقق من أن المستخدم الحالي هو مدير النظام
      */
     isAdmin() {
+        if (typeof Permissions !== 'undefined' && typeof Permissions.isCurrentUserEffectiveAdmin === 'function') {
+            return Permissions.isCurrentUserEffectiveAdmin();
+        }
         const currentUser = (typeof AppState !== 'undefined' && AppState) ? AppState.currentUser : null;
-
-        return currentUser && (
+        return !!(currentUser && (
             currentUser.role === 'admin' ||
             currentUser.role === 'مدير النظام' ||
             currentUser.role === 'system_admin' ||
             (currentUser.permissions && (currentUser.permissions.admin === true || currentUser.permissions['manage-modules'] === true))
-        );
+        ));
     },
 
     /**

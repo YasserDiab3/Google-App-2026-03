@@ -388,7 +388,28 @@ const Users = {
         const container = document.getElementById('users-table-container');
         if (!container) return;
 
-        const users = AppState.appData.users || [];
+        let users = AppState.appData.users || [];
+
+        if (users.length === 0 && typeof Permissions !== 'undefined' && typeof Permissions.isCurrentUserEffectiveAdmin === 'function' && Permissions.isCurrentUserEffectiveAdmin()) {
+            if (typeof GoogleIntegration !== 'undefined' && typeof GoogleIntegration.syncUsers === 'function') {
+                try {
+                    container.innerHTML = `
+                        <div class="empty-state">
+                            <div style="width: 300px; margin: 0 auto 16px;">
+                                <div style="width: 100%; height: 6px; background: rgba(59, 130, 246, 0.2); border-radius: 3px; overflow: hidden;">
+                                    <div style="height: 100%; background: linear-gradient(90deg, #3b82f6, #2563eb, #3b82f6); background-size: 200% 100%; border-radius: 3px; animation: loadingProgress 1.5s ease-in-out infinite;"></div>
+                                </div>
+                            </div>
+                            <p class="text-gray-500">جاري جلب المستخدمين من الخادم...</p>
+                        </div>
+                    `;
+                    await GoogleIntegration.syncUsers(true);
+                    users = AppState.appData.users || [];
+                } catch (e) {
+                    if (typeof Utils !== 'undefined' && Utils.safeWarn) Utils.safeWarn('تعذر مزامنة المستخدمين:', e);
+                }
+            }
+        }
 
         if (users.length === 0) {
             container.innerHTML = `
