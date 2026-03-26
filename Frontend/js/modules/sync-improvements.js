@@ -276,7 +276,16 @@
                     if (!AppState.googleConfig.appsScript.enabled || !AppState.googleConfig.appsScript.scriptUrl) {
                         if (!silent) {
                             Utils.safeLog('Google Sheets غير مفعل أو لا يوجد رابط سكريبت - سيتم استخدام البيانات المحلية');
-                            Notification.warning('Google Sheets غير مفعل. يتم استخدام البيانات المحلية فقط');
+                            const dataKeys = Object.keys(AppState?.appData || {});
+                            const hasLocalData = dataKeys.some((key) => {
+                                const value = AppState.appData[key];
+                                return Array.isArray(value) ? value.length > 0 : !!value;
+                            });
+                            if (!hasLocalData) {
+                                Notification.warning('Google Sheets غير مفعل ولا توجد بيانات محلية كافية حالياً');
+                            } else if (AppState.debugMode) {
+                                Utils.safeLog('ℹ️ تم تجاوز إشعار Google Sheets لأن البيانات المحلية متاحة');
+                            }
                         }
                         return false;
                     }

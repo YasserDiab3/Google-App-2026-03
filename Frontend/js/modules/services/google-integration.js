@@ -2404,8 +2404,18 @@ const GoogleIntegration = {
 
         if (!this._isBackendRpcConfigured()) {
             if (!silent) {
+                const dataKeys = Object.keys(AppState?.appData || {});
+                const hasLocalData = dataKeys.some((key) => {
+                    const value = AppState.appData[key];
+                    return Array.isArray(value) ? value.length > 0 : !!value;
+                });
                 Utils.safeLog('الخادم الخلفي غير مُهيأ - سيتم استخدام البيانات المحلية فقط');
-                Notification.warning('الخادم الخلفي غير مُهيأ. سيتم استخدام البيانات المحلية فقط.');
+                // لا نزعج المستخدم بتحذير إذا كانت البيانات المحلية متاحة وتعمل بشكل طبيعي.
+                if (!hasLocalData) {
+                    Notification.warning('الخادم الخلفي غير مُهيأ. لا توجد بيانات محلية كافية حالياً.');
+                } else if (AppState.debugMode) {
+                    Utils.safeLog('ℹ️ تم تجاوز تنبيه المزامنة لأن البيانات المحلية متاحة');
+                }
             }
             return false;
         }
