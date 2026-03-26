@@ -5152,11 +5152,21 @@ const Clinic = {
             const shouldLoadData = forceReload || !hasLocalData || isDataStale;
             
             if (shouldLoadData && typeof GoogleIntegration !== 'undefined' && GoogleIntegration.sendRequest) {
-                // تحميل البيانات في الخلفية بدون حجب الواجهة
-                this.loadVisitsDataFromBackend().then(() => {
-                    // ✅ إعادة تطبيع البيانات بعد التحميل
+                const loadPromise = this.loadVisitsDataFromBackend();
+                // ✅ إذا لا توجد بيانات محلية: ننتظر قليلاً ليظهر المحتوى مباشرة "من أول مرة"
+                if (!hasLocalData && !forceReload) {
+                    try {
+                        await Promise.race([
+                            loadPromise,
+                            new Promise(resolve => setTimeout(resolve, 1200)),
+                        ]);
+                    } catch (e) {
+                        // تجاهل - سيتم الاعتماد على البيانات المحلية/الفارغة مؤقتاً
+                    }
+                }
+                // تحديث الواجهة بعد اكتمال التحميل (أو حتى لو تأخر)
+                Promise.resolve(loadPromise).then(() => {
                     this.ensureData();
-                    // تحديث الواجهة بعد تحميل البيانات
                     this.renderVisitsTabContent(panel);
                     if (AppState.debugMode) {
                         Utils.safeLog('✅ تم تحديث سجل التردد بعد تحميل البيانات من Backend');
@@ -5190,7 +5200,12 @@ const Clinic = {
      * ✅ دالة منفصلة لتحميل بيانات الزيارات من Backend
      */
     async loadVisitsDataFromBackend() {
-        try {
+        // ✅ منع التكرار: نفس الطلب لا يبدأ أكثر من مرة
+        if (this._clinicVisitsLoadPromise) {
+            return this._clinicVisitsLoadPromise;
+        }
+        this._clinicVisitsLoadPromise = (async () => {
+            try {
             if (AppState.debugMode) {
                 Utils.safeLog('🔄 تحميل بيانات سجل التردد من Backend...');
             }
@@ -5471,7 +5486,7 @@ const Clinic = {
                     Utils.safeLog(`   - إجمالي ${totalMedsCount} دواء منصرف`);
                 }
             }
-        } catch (error) {
+            } catch (error) {
             if (AppState.debugMode) {
                 Utils.safeWarn('⚠️ تعذر تحميل بيانات سجل التردد من الخادم:', error.message);
             }
@@ -5480,7 +5495,11 @@ const Clinic = {
                 AppState.appData.clinicVisits = [];
             }
             throw error;
-        }
+            }
+        })().finally(() => {
+            this._clinicVisitsLoadPromise = null;
+        });
+        return this._clinicVisitsLoadPromise;
     },
 
     /**

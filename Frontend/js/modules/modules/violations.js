@@ -99,6 +99,25 @@ const Violations = {
                 }
             }
 
+            // ✅ تحميل مباشر من قاعدة البيانات/Sheets عند أول فتح (بدون تكرار طلبات متوازية)
+            const hasViolationsData = Array.isArray(AppState.appData.violations) && AppState.appData.violations.length > 0;
+            const lastSync = (() => {
+                try { return localStorage.getItem('violations_last_sync'); } catch (e) { return null; }
+            })();
+            const cacheAge = lastSync ? (Date.now() - parseInt(lastSync, 10)) : Infinity;
+            const CACHE_DURATION = 10 * 60 * 1000; // 10 دقائق
+            const isStale = cacheAge >= CACHE_DURATION;
+            if ((!hasViolationsData || isStale) && typeof GoogleIntegration !== 'undefined' && GoogleIntegration.readFromSheets) {
+                try {
+                    await Promise.race([
+                        this.ensureViolationsCoreDataLoaded({ force: isStale && hasViolationsData }),
+                        new Promise(resolve => setTimeout(resolve, 1200)),
+                    ]);
+                } catch (e) {
+                    // تجاهل — سنعرض البيانات المحلية ثم نحدّث في الخلفية
+                }
+            }
+
             section.innerHTML = `
             <div class="section-header" style="background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%); border-radius: 16px; padding: 24px 32px; margin-bottom: 24px; box-shadow: 0 8px 32px rgba(220, 38, 38, 0.25);">
                 <div class="flex items-center justify-between">
@@ -159,6 +178,18 @@ const Violations = {
             </div>
         `;
             this.setupEventListeners();
+
+            // ✅ تحديث خلفي بعد العرض (بدون إعادة بناء كامل إذا كانت البيانات محدثة)
+            Promise.resolve(this.ensureViolationsCoreDataLoaded({ force: false }))
+                .then(() => {
+                    try {
+                        const list = document.getElementById('violations-list');
+                        if (list) list.innerHTML = this.renderViolationsList();
+                        const filters = document.getElementById('violations-filters-container');
+                        if (filters) filters.innerHTML = this.renderFilters();
+                    } catch (e) {}
+                })
+                .catch(() => {});
         } catch (error) {
             Utils.safeError('❌ خطأ في تحميل مديول المخالفات:', error);
             section.innerHTML = `
@@ -186,6 +217,48 @@ const Violations = {
                 </div>
             `;
         }
+    },
+
+    /**
+     * تحميل بيانات المخالفات الأساسية من Google Sheets مرة واحدة (مع منع التكرار)
+     */
+    async ensureViolationsCoreDataLoaded({ force = false } = {}) {
+        if (this._violationsCoreLoadPromise && !force) {
+            return this._violationsCoreLoadPromise;
+        }
+        this._violationsCoreLoadPromise = (async () => {
+            if (typeof GoogleIntegration === 'undefined' || !GoogleIntegration.readFromSheets) return;
+
+            const isEnabled = AppState?.googleConfig?.appsScript?.enabled && AppState?.googleConfig?.appsScript?.scriptUrl;
+            if (!isEnabled) return;
+
+            const [violationsData, typesData] = await Promise.all([
+                GoogleIntegration.readFromSheets('Violations').catch(() => null),
+                GoogleIntegration.readFromSheets('ViolationTypes').catch(() => null),
+            ]);
+
+            if (Array.isArray(violationsData)) {
+                AppState.appData.violations = violationsData;
+            }
+            if (Array.isArray(typesData)) {
+                AppState.appData.violationTypes = typesData;
+            }
+
+            try {
+                if (typeof ViolationTypesManager !== 'undefined' && ViolationTypesManager.ensureInitialized) {
+                    ViolationTypesManager.ensureInitialized();
+                }
+            } catch (e) {}
+
+            try { localStorage.setItem('violations_last_sync', String(Date.now())); } catch (e) {}
+
+            if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
+                try { window.DataManager.save(); } catch (e) {}
+            }
+        })().finally(() => {
+            this._violationsCoreLoadPromise = null;
+        });
+        return this._violationsCoreLoadPromise;
     },
 
     renderViolationsList() {

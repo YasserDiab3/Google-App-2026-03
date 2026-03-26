@@ -1966,6 +1966,8 @@ window.Auth = {
             // خريطة مفاتيح المزامنة في localStorage لكل موديول (لمنع إعادة التحميل عند فتح الموديول)
             const moduleSyncKeyMap = {
                 'clinic': 'clinic_last_sync',
+                'violations': 'violations_last_sync',
+                'periodic-inspections': 'periodic_inspections_last_sync',
             };
 
             // خريطة أوراق Google Sheets إلى مفاتيح AppState
