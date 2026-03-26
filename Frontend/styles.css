@@ -4868,77 +4868,55 @@ body.app-active {
     }
 }
 
-/* شريط تقدم المزامنة السفلي فقط - مضغوط ومتناسق */
+/* مؤشر تقدم المزامنة السفلي - دائري */
 .sync-progress-floating-bar {
     position: fixed;
     bottom: 20px;
-    left: 50%;
-    transform: translateX(-50%);
+    left: 16px;
     z-index: 10002;
+    width: 58px;
+    height: 58px;
     display: flex;
     align-items: center;
-    gap: 8px;
-    background: #fff;
-    padding: 6px 12px 6px 14px;
-    border-radius: 20px;
-    box-shadow: 0 2px 12px rgba(0,0,0,0.12);
-    direction: rtl;
-    border: 1px solid rgba(0,0,0,0.08);
-    font-size: 12px;
-    max-width: calc(100vw - 32px);
-    min-width: 200px;
+    justify-content: center;
 }
-.sync-floating-label {
-    color: #6b7280;
-    white-space: nowrap;
-    flex-shrink: 0;
+
+.sync-floating-circle {
+    width: 58px;
+    height: 58px;
+    border-radius: 50%;
+    background: #0b4f8a;
+    color: #6ee7f2;
+    border: none;
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.22);
+    position: relative;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
-.sync-floating-track {
-    flex: 1;
-    min-width: 48px;
-    height: 4px;
-    background: #e5e7eb;
-    border-radius: 4px;
-    overflow: hidden;
-}
-.sync-floating-fill {
-    height: 100%;
-    background: #3b82f6;
-    border-radius: 4px;
-    transition: width 0.3s ease;
+.sync-floating-circle i {
+    font-size: 20px;
 }
 .sync-floating-percent {
-    background: #3b82f6;
+    position: absolute;
+    bottom: -8px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #111827;
     color: #fff;
-    font-size: 11px;
-    font-weight: 600;
-    padding: 2px 8px;
     border-radius: 10px;
-    flex-shrink: 0;
-    min-width: 24px;
+    font-size: 10px;
+    font-weight: 600;
+    line-height: 1;
+    padding: 3px 6px;
+    min-width: 32px;
     text-align: center;
-}
-.sync-floating-btn {
-    background: #3b82f6;
-    color: #fff;
-    border: none;
-    padding: 4px 10px;
-    border-radius: 6px;
-    font-size: 12px;
-    cursor: pointer;
-    font-family: inherit;
-    flex-shrink: 0;
-}
-.sync-floating-btn:hover {
-    background: #2563eb;
 }
 @media (max-width: 480px) {
     .sync-progress-floating-bar {
         bottom: calc(16px + env(safe-area-inset-bottom));
-        left: 16px;
-        right: 16px;
-        transform: none;
-        width: auto;
+        left: 12px;
     }
 }
 

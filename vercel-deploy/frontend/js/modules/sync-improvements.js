@@ -117,10 +117,10 @@
             floating.setAttribute('role', 'status');
             floating.setAttribute('aria-live', 'polite');
             floating.innerHTML = `
-                <span class="sync-floating-label">جاري التحميل</span>
-                <div class="sync-floating-track"><div id="sync-floating-fill" class="sync-floating-fill" style="width: 0%;"></div></div>
-                <span id="sync-floating-percent" class="sync-floating-percent">0</span>
-                <button type="button" id="sync-floating-show-btn" class="sync-floating-btn">إظهار</button>
+                <button type="button" id="sync-floating-show-btn" class="sync-floating-circle" title="جاري التحميل - اضغط لإظهار التفاصيل">
+                    <i class="fas fa-sync fa-spin" aria-hidden="true"></i>
+                    <span id="sync-floating-percent" class="sync-floating-percent">0%</span>
+                </button>
             `;
             document.body.appendChild(floating);
             const showBtn = document.getElementById('sync-floating-show-btn');
@@ -130,10 +130,8 @@
 
         _updateFloatingProgress(completed, total) {
             const percent = total ? Math.round((completed / total) * 100) : 0;
-            const fill = document.getElementById('sync-floating-fill');
             const percentEl = document.getElementById('sync-floating-percent');
-            if (fill) fill.style.width = percent + '%';
-            if (percentEl) percentEl.textContent = percent;
+            if (percentEl) percentEl.textContent = percent + '%';
         },
 
         _removeFloatingShowButton() {
