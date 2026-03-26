@@ -2806,8 +2806,20 @@ window.UI = {
                 // تأخير بسيط للتأكد من تهيئة الواجهة والأزرار قبل البدء في التحميل
                 setTimeout(() => {
                     try {
-                        // استخدام نفس منطق زر "تحميل البيانات" لضمان الاتساق في واجهة المستخدم
-                        this.handleSyncClick();
+                        // ✅ تحميل تلقائي صامت بالكامل بعد الدخول:
+                        // بدون نافذة "جاري تحميل قاعدة البيانات" وبدون تعطيل المستخدم.
+                        GoogleIntegration.syncData({
+                            silent: true,
+                            showLoader: false,
+                            notifyOnSuccess: false,
+                            notifyOnError: false,
+                            includeUsersSheet: true,
+                            incremental: true
+                        }).catch((syncErr) => {
+                            if (AppState.debugMode && typeof Utils !== 'undefined' && typeof Utils.safeWarn === 'function') {
+                                Utils.safeWarn('⚠️ فشل التحميل التلقائي الصامت بعد تسجيل الدخول:', syncErr);
+                            }
+                        });
                     } catch (e) {
                         if (AppState.debugMode && typeof Utils !== 'undefined' && typeof Utils.safeWarn === 'function') {
                             Utils.safeWarn('⚠️ فشل التحميل التلقائي للبيانات بعد تسجيل الدخول:', e);

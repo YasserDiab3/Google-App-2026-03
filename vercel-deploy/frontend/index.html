@@ -7184,7 +7184,11 @@
                                 i++;
                             }
                             if (i < sizes.length) {
-                                setTimeout(processChunk, 0);
+                                if (typeof requestAnimationFrame === "function") {
+                                    requestAnimationFrame(processChunk);
+                                } else {
+                                    processChunk();
+                                }
                                 return;
                             }
 
@@ -7204,7 +7208,15 @@
                             shortcutLink.href = size32Canvas.toDataURL("image/png");
 
                             // defer heavy manifest update خارج onload handler
-                            setTimeout(() => updateManifestIcons(img), 0);
+                            if (typeof requestIdleCallback === "function") {
+                                requestIdleCallback(() => updateManifestIcons(img), {
+                                    timeout: 1000,
+                                });
+                            } else if (typeof requestAnimationFrame === "function") {
+                                requestAnimationFrame(() => updateManifestIcons(img));
+                            } else {
+                                updateManifestIcons(img);
+                            }
                         };
                         processChunk();
                     };
