@@ -382,9 +382,13 @@ const Permissions = {
         // ✅ ضمان وجود AppState.appData لتفادي أخطاء عند التعيين لاحقاً
         if (typeof AppState === 'undefined') return this.getFormSettingsState();
         if (!AppState.appData) AppState.appData = {};
+        const hasRemoteSettingsApi = (
+            typeof GoogleIntegration !== 'undefined' &&
+            typeof GoogleIntegration.sendToAppsScript === 'function'
+        );
 
         // محاولة تحميل إعدادات الشركة من Google Sheets أولاً
-        if (AppState.googleConfig?.appsScript?.enabled && typeof GoogleIntegration !== 'undefined') {
+        if (hasRemoteSettingsApi) {
             try {
                 const companyResult = await GoogleIntegration.sendToAppsScript('getCompanySettings', {});
                 if (companyResult && companyResult.success && companyResult.data) {
@@ -462,7 +466,7 @@ const Permissions = {
 
         // ✅ إصلاح: محاولة تحميل الإعدادات من Google Sheets أولاً
         // ✅ إصلاح: هذا يعمل لجميع المستخدمين بعد المزامنة وتسجيل الدخول
-        if (AppState.googleConfig?.appsScript?.enabled && typeof GoogleIntegration !== 'undefined') {
+        if (hasRemoteSettingsApi) {
             try {
                 // ✅ إصلاح: تحميل مباشر من قاعدة البيانات بدون تأخير
                 const result = await GoogleIntegration.sendToAppsScript('getFormSettings', {});

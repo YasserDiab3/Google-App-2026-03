@@ -3270,6 +3270,7 @@ window.UI = {
                 header.style.justifyContent = 'space-between';
                 header.style.alignItems = 'center';
                 header.style.padding = '10px 20px';
+                header.style.zIndex = '1001';
 
                 // تحديث موقع الهيدر بناءً على حالة القائمة الجانبية
                 const sidebar = document.querySelector('.sidebar');
@@ -4730,11 +4731,12 @@ window.UI = {
                 Utils.safeLog('✅ تم تعيل القسم:', sectionId);
             }
 
-            // إغلاق القائمة الجانبية تلقائياً عند فتح أي وحدة (عدا Dashboard) على جميع أحجام الشاشات
+            // إغلاق القائمة الجانبية تلقائياً عند فتح أي وحدة (عدا Dashboard) على الموبايل فقط
             if (sectionName !== 'dashboard') {
-                // إغلاق القائمة الجانبية فوراً - على جميع أحجام الشاشات
+                // على سطح المكتب نحافظ على حالة القائمة (لتسهيل الرجوع بين الموديولات)
+                const isMobile = window.innerWidth <= 1024;
                 const sidebar = document.querySelector('.sidebar');
-                if (sidebar) {
+                if (sidebar && isMobile) {
                     // إزالة class "open" مباشرة لضمان الإغلاق
                     sidebar.classList.remove('open');
                     // استدعاء toggleSidebar للتأكد من تطبيق جميع التغييرات

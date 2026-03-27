@@ -10774,6 +10774,9 @@ const Clinic = {
         if (!AppState.appData) {
             AppState.appData = {};
         }
+        if (typeof Permissions !== 'undefined' && typeof Permissions.ensureFormSettingsState === 'function') {
+            try { await Permissions.ensureFormSettingsState(); } catch (e) { /* ignore */ }
+        }
 
         // حقن أنماط CSS لشريط التمرير
         this.injectTableScrollbarStyles();

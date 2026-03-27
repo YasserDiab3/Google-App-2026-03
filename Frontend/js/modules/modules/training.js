@@ -303,6 +303,9 @@ const Training = {
             this._languageChangeListenerAdded = true;
         }
         this.ensureData();
+        if (typeof Permissions !== 'undefined' && typeof Permissions.ensureFormSettingsState === 'function') {
+            try { await Permissions.ensureFormSettingsState(); } catch (e) { /* ignore */ }
+        }
         const section = document.getElementById('training-section');
         if (!section) {
             if (typeof Utils !== 'undefined' && Utils.safeError) {

@@ -959,6 +959,9 @@ const PTW = {
             Utils.safeError('AppState غير متوفر!');
             return;
         }
+        if (typeof Permissions !== 'undefined' && typeof Permissions.ensureFormSettingsState === 'function') {
+            try { await Permissions.ensureFormSettingsState(); } catch (e) { /* ignore */ }
+        }
 
         const section = document.getElementById('ptw-section');
         if (!section) {
