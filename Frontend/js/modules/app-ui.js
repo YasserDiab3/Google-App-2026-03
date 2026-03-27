@@ -3744,14 +3744,20 @@ window.UI = {
         }
 
         if (!this.sidebarResizeBound) {
+            let resizeRaf = null;
             const handleResize = () => {
-                if (window.innerWidth > 1024) {
-                    this.toggleSidebar(false);
+                if (resizeRaf != null) {
+                    cancelAnimationFrame(resizeRaf);
                 }
-                // تحديث إظهار أزرار الهيدر عند تغيير حجم النافذة
-                this.showHeaderActions();
+                resizeRaf = requestAnimationFrame(() => {
+                    resizeRaf = null;
+                    if (window.innerWidth > 1024) {
+                        this.toggleSidebar(false);
+                    }
+                    this.showHeaderActions();
+                });
             };
-            window.addEventListener('resize', handleResize);
+            window.addEventListener('resize', handleResize, { passive: true });
             this.sidebarResizeBound = true;
         }
 

@@ -305,6 +305,15 @@
                     if (mFile && mFile[1]) return mFile[1];
                     return "";
                 };
+                // معاينات الصور: استخدم واجهة thumbnail (أقل تعرضاً لأخطاء 503 من /uc?export=view)
+                window.__googleDrivePreviewUrlFromId = function (id) {
+                    if (!id) return "";
+                    return (
+                        "https://drive.google.com/thumbnail?id=" +
+                        id +
+                        "&sz=w800"
+                    );
+                };
                 window.__convertGoogleDriveUrl = function (url) {
                     if (!url || typeof url !== "string") return url;
                     var fileId = window.__extractDriveFileId(url);
@@ -315,26 +324,28 @@
                     ) {
                         return "";
                     }
-                    // تطبيع روابط thumbnail المخزنة قديماً إلى صيغة uc/view الأكثر ثباتاً
+                    // توحيد أي رابط Drive يحتوي معرف ملف إلى صيغة thumbnail للمعاينة
                     var thumbMatch = url.match(
                         /^(https?:\/\/drive\.google\.com\/thumbnail\?id=)([a-zA-Z0-9_-]+)(&.*)?$/i,
                     );
                     if (thumbMatch && thumbMatch[2]) {
-                        return "https://drive.google.com/uc?export=view&id=" + thumbMatch[2];
+                        return window.__googleDrivePreviewUrlFromId(thumbMatch[2]);
                     }
-                    // تحويل /uc?export=view URLs إلى صيغة مستقرة
                     var driveUcMatch = url.match(
                         /drive\.google\.com\/uc\?.*id=([a-zA-Z0-9_-]+)/i,
                     );
                     if (driveUcMatch && driveUcMatch[1]) {
-                        return "https://drive.google.com/uc?export=view&id=" + driveUcMatch[1];
+                        return window.__googleDrivePreviewUrlFromId(
+                            driveUcMatch[1],
+                        );
                     }
-                    // تحويل /file/d/ URLs
                     var driveFileMatch = url.match(
                         /drive\.google\.com\/file\/d\/([a-zA-Z0-9_-]+)/i,
                     );
                     if (driveFileMatch && driveFileMatch[1]) {
-                        return "https://drive.google.com/uc?export=view&id=" + driveFileMatch[1];
+                        return window.__googleDrivePreviewUrlFromId(
+                            driveFileMatch[1],
+                        );
                     }
                     return url;
                 };
@@ -351,8 +362,8 @@
                         if (!src || src.indexOf("drive.google.com") === -1)
                             return src;
                         var id = window.__extractDriveFileId(src);
-                        return id
-                            ? "https://drive.google.com/uc?export=view&id=" + id
+                        return id && window.__googleDrivePreviewUrlFromId
+                            ? window.__googleDrivePreviewUrlFromId(id)
                             : src;
                     }
                     function addThumbnailFallback(img) {
@@ -379,26 +390,33 @@
                             img.src = normalized;
                         }
                         img.onerror = function () {
+                            var self = this;
+                            self.onerror = null;
+                            var failedId = "";
                             try {
-                                var failedId = window.__extractDriveFileId(
-                                    this.currentSrc || this.src || "",
+                                failedId = window.__extractDriveFileId(
+                                    self.currentSrc || self.src || "",
                                 );
-                                if (failedId) {
-                                    window.__failedDriveThumbnailIds[failedId] =
-                                        Date.now();
-                                    try {
-                                        localStorage.setItem(
-                                            "hse_failed_drive_thumbnails",
-                                            JSON.stringify(
-                                                window.__failedDriveThumbnailIds,
-                                            ),
-                                        );
-                                    } catch (e) {}
-                                }
-                            } catch (e) {}
-                            this.onerror = null;
-                            this.src = placeholderSvg;
-                            this.alt = this.alt || "فشل تحميل الصورة";
+                            } catch (e1) {}
+                            requestAnimationFrame(function () {
+                                try {
+                                    if (failedId) {
+                                        window.__failedDriveThumbnailIds[
+                                            failedId
+                                        ] = Date.now();
+                                        try {
+                                            localStorage.setItem(
+                                                "hse_failed_drive_thumbnails",
+                                                JSON.stringify(
+                                                    window.__failedDriveThumbnailIds,
+                                                ),
+                                            );
+                                        } catch (e2) {}
+                                    }
+                                } catch (e3) {}
+                                self.src = placeholderSvg;
+                                self.alt = self.alt || "فشل تحميل الصورة";
+                            });
                         };
                     }
                     function runThumbnailFallbacks(root) {
@@ -894,23 +912,27 @@
                                         img.addEventListener(
                                             "error",
                                             function (e) {
-                                                try {
-                                                    var tgt = e.target || this;
-                                                    var fSrc = (tgt && tgt.getAttribute("src")) || "";
-                                                    var fId = window.__extractDriveFileId ? window.__extractDriveFileId(fSrc) : null;
-                                                    if (fId) {
-                                                        window.__failedDriveThumbnailIds = window.__failedDriveThumbnailIds || {};
-                                                        window.__failedDriveThumbnailIds[fId] = Date.now();
-                                                        try { localStorage.setItem("hse_failed_drive_thumbnails", JSON.stringify(window.__failedDriveThumbnailIds)); } catch (le) {}
-                                                    }
-                                                    if (tgt) {
-                                                        tgt.onerror = null;
-                                                        tgt.src = "data:image/svg+xml," + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="200" height="120" viewBox="0 0 200 120"><rect fill="#f3f4f6" width="200" height="120"/><text x="100" y="65" text-anchor="middle" fill="#9ca3af" font-size="12" font-family="sans-serif">فشل تحميل الصورة</text></svg>');
-                                                        tgt.alt = "فشل تحميل الصورة";
-                                                    }
-                                                } catch (re) {}
+                                                var tgt = e.target || this;
                                                 e.stopPropagation();
                                                 e.stopImmediatePropagation();
+                                                var fSrc = (tgt && tgt.getAttribute("src")) || "";
+                                                var fId = window.__extractDriveFileId ? window.__extractDriveFileId(fSrc) : "";
+                                                requestAnimationFrame(function () {
+                                                    try {
+                                                        if (fId) {
+                                                            window.__failedDriveThumbnailIds = window.__failedDriveThumbnailIds || {};
+                                                            window.__failedDriveThumbnailIds[fId] = Date.now();
+                                                            try { localStorage.setItem("hse_failed_drive_thumbnails", JSON.stringify(window.__failedDriveThumbnailIds)); } catch (le) {}
+                                                        }
+                                                    } catch (re) {}
+                                                    if (tgt) {
+                                                        try {
+                                                            tgt.onerror = null;
+                                                            tgt.src = "data:image/svg+xml," + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="200" height="120" viewBox="0 0 200 120"><rect fill="#f3f4f6" width="200" height="120"/><text x="100" y="65" text-anchor="middle" fill="#9ca3af" font-size="12" font-family="sans-serif">فشل تحميل الصورة</text></svg>');
+                                                            tgt.alt = "فشل تحميل الصورة";
+                                                        } catch (re2) {}
+                                                    }
+                                                });
                                             },
                                             true,
                                         );
@@ -975,23 +997,27 @@
                                                         node.addEventListener(
                                                             "error",
                                                             function (e) {
-                                                                try {
-                                                                    var tgt = e.target || this;
-                                                                    var fSrc = (tgt && tgt.getAttribute("src")) || "";
-                                                                    var fId = window.__extractDriveFileId ? window.__extractDriveFileId(fSrc) : null;
-                                                                    if (fId) {
-                                                                        window.__failedDriveThumbnailIds = window.__failedDriveThumbnailIds || {};
-                                                                        window.__failedDriveThumbnailIds[fId] = Date.now();
-                                                                        try { localStorage.setItem("hse_failed_drive_thumbnails", JSON.stringify(window.__failedDriveThumbnailIds)); } catch (le) {}
-                                                                    }
-                                                                    if (tgt) {
-                                                                        tgt.onerror = null;
-                                                                        tgt.src = "data:image/svg+xml," + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="200" height="120" viewBox="0 0 200 120"><rect fill="#f3f4f6" width="200" height="120"/><text x="100" y="65" text-anchor="middle" fill="#9ca3af" font-size="12" font-family="sans-serif">فشل تحميل الصورة</text></svg>');
-                                                                        tgt.alt = "فشل تحميل الصورة";
-                                                                    }
-                                                                } catch (re) {}
+                                                                var tgt = e.target || this;
                                                                 e.stopPropagation();
                                                                 e.stopImmediatePropagation();
+                                                                var fSrc = (tgt && tgt.getAttribute("src")) || "";
+                                                                var fId = window.__extractDriveFileId ? window.__extractDriveFileId(fSrc) : "";
+                                                                requestAnimationFrame(function () {
+                                                                    try {
+                                                                        if (fId) {
+                                                                            window.__failedDriveThumbnailIds = window.__failedDriveThumbnailIds || {};
+                                                                            window.__failedDriveThumbnailIds[fId] = Date.now();
+                                                                            try { localStorage.setItem("hse_failed_drive_thumbnails", JSON.stringify(window.__failedDriveThumbnailIds)); } catch (le) {}
+                                                                        }
+                                                                    } catch (re) {}
+                                                                    if (tgt) {
+                                                                        try {
+                                                                            tgt.onerror = null;
+                                                                            tgt.src = "data:image/svg+xml," + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="200" height="120" viewBox="0 0 200 120"><rect fill="#f3f4f6" width="200" height="120"/><text x="100" y="65" text-anchor="middle" fill="#9ca3af" font-size="12" font-family="sans-serif">فشل تحميل الصورة</text></svg>');
+                                                                            tgt.alt = "فشل تحميل الصورة";
+                                                                        } catch (re2) {}
+                                                                    }
+                                                                });
                                                             },
                                                             true,
                                                         );
@@ -7286,11 +7312,10 @@
                         let i = 0;
                         const chunkSize = 1;
                         const scheduleNextChunk = (cb) => {
-                            // ✅ تجنّب Violation: اجعل requestIdleCallback خفيفاً، وادفع العمل الثقيل خارج callback
                             if (typeof requestIdleCallback === "function") {
-                                requestIdleCallback(() => setTimeout(cb, 0), { timeout: 80 });
+                                requestIdleCallback(cb, { timeout: 80 });
                             } else {
-                                requestAnimationFrame(() => setTimeout(cb, 0));
+                                requestAnimationFrame(cb);
                             }
                         };
                         const processChunk = () => {

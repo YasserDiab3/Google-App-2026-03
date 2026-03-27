@@ -63,13 +63,14 @@ const Users = {
                     try {
                         if (photoKey) sessionStorage.setItem(this._photoFailKey(photoKey), Date.now().toString());
                     } catch (e) { /* ignore */ }
-
-                    try {
-                        const parent = img.parentElement;
-                        if (parent) {
-                            parent.innerHTML = '<div class="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center"><i class="fas fa-user text-gray-400"></i></div>';
-                        }
-                    } catch (e) { /* ignore */ }
+                    requestAnimationFrame(() => {
+                        try {
+                            const parent = img.parentElement;
+                            if (parent) {
+                                parent.innerHTML = '<div class="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center"><i class="fas fa-user text-gray-400"></i></div>';
+                            }
+                        } catch (e2) { /* ignore */ }
+                    });
                 }, { passive: true });
             });
         } catch (e) {
