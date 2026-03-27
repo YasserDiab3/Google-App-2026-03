@@ -835,6 +835,16 @@ function toSheetCellValue_(header, value) {
         if (typeof value === 'object') return formatUserSummary_(value);
     }
 
+    // ✅ Keep full permissions payload in Users sheet (no truncation/summarization)
+    if (h === 'permissions') {
+        if (typeof value === 'string') return value.trim();
+        try {
+            return JSON.stringify(value || {});
+        } catch (e) {
+            return '{}';
+        }
+    }
+
     // Arrays: join to readable text (NO JSON)
     if (Array.isArray(value)) {
         // If it's an array of objects, summarize
