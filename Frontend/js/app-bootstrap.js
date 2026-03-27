@@ -291,9 +291,11 @@
                                     log(`✅ تم تحميل ${employeesResult.data.length} موظف مسبقاً`);
                                 }
                             }
-                            // حفظ البيانات محلياً
+                            // حفظ البيانات محلياً بشكل مؤجل لتجنب حجز الواجهة أثناء الإقلاع
                             if (window.DataManager && window.DataManager.save) {
-                                window.DataManager.save();
+                                setTimeout(() => {
+                                    try { window.DataManager.save(); } catch (e) {}
+                                }, 500);
                             }
                         }).catch(() => {
                             // تجاهل الأخطاء - البيانات المحلية ستكون متاحة

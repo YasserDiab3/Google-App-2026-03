@@ -1060,18 +1060,14 @@ window.Auth = {
                         'ApprovedContractors': 'approvedContractors'
                     };
 
-                    // تحميل متسلسل للبيانات الأساسية (مهم لضمان الترتيب وعدم فقدان البيانات)
-                    for (const sheetName of prioritySheets) {
+                    // تحميل شبه متوازي للبيانات الأساسية (عاملان) لتقليل زمن الانتظار بدون ضغط زائد
+                    const workerCount = 2;
+                    let cursor = 0;
+                    const loadPrioritySheet = async (sheetName) => {
                         try {
-                            // محاولة التحميل مع timeout لتجنب الانتظار الطويل
-                            const timeoutPromise = new Promise((_, reject) => 
-                                setTimeout(() => reject(new Error('انتهت مهلة التحميل')), 6000)
-                            );
-                            
-                            const dataPromise = GoogleIntegration.readFromSheets(sheetName);
-                            const data = await Promise.race([dataPromise, timeoutPromise]);
+                            const data = await GoogleIntegration.readFromSheets(sheetName, 8000);
                             const key = sheetMapping[sheetName];
-                            
+
                             if (key && Array.isArray(data) && data.length > 0) {
                                 AppState.appData[key] = data;
                                 Utils.safeLog(`✅ تم تحميل ${sheetName}: ${data.length} سجل`);
@@ -1081,29 +1077,25 @@ window.Auth = {
                         } catch (error) {
                             const key = sheetMapping[sheetName];
                             const errorMsg = error?.message || String(error);
-                            
-                            // ✅ معالجة الأخطاء: استخدام البيانات المحلية عند الفشل
+
                             if (key && Array.isArray(AppState.appData[key]) && AppState.appData[key].length > 0) {
                                 Utils.safeLog(`⚠️ ${sheetName}: فشل التحميل (${errorMsg}) - استخدام ${AppState.appData[key].length} سجل محلي`);
                             } else {
                                 Utils.safeWarn(`⚠️ ${sheetName}: فشل التحميل ولا توجد بيانات محلية احتياطية`);
-                                
-                                // إظهار رسالة للمستخدم فقط للأخطاء الحرجة
                                 if (sheetName === 'Users' && typeof Notification !== 'undefined') {
                                     Notification.warning('تعذر تحميل بيانات المستخدمين. قد تحتاج إلى تحديث الصفحة.', 5000);
                                 }
                             }
                         }
-                    }
-
-                    // حفظ البيانات الأساسية فوراً بعد التحميل
-                    if (typeof DataManager !== 'undefined' && DataManager.save) {
-                        try {
-                            DataManager.save();
-                        } catch (saveError) {
-                            Utils.safeWarn('⚠️ فشل حفظ البيانات المحلية:', saveError);
+                    };
+                    const workers = Array.from({ length: Math.min(workerCount, prioritySheets.length) }, async () => {
+                        while (cursor < prioritySheets.length) {
+                            const index = cursor++;
+                            const sheetName = prioritySheets[index];
+                            await loadPrioritySheet(sheetName);
                         }
-                    }
+                    });
+                    await Promise.allSettled(workers);
 
                     // ✅ تحميل إعدادات الشركة (بما فيها سياسة ما بعد الدخول) مع نفس تدفق بيانات المستخدمين لظهورها مباشرة بعد التسجيل
                     if (typeof DataManager !== 'undefined' && DataManager.loadCompanySettings) {
@@ -2148,7 +2140,7 @@ window.Auth = {
             };
 
             // تحميل الموديولات على دفعات متوازية لتقليل زمن التحميل الكلي
-            const moduleConcurrency = 4;
+            const moduleConcurrency = 6;
             for (let i = 0; i < modulesToLoad.length; i += moduleConcurrency) {
                 const chunk = modulesToLoad.slice(i, i + moduleConcurrency);
                 await Promise.allSettled(chunk.map(processModule));

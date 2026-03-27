@@ -265,7 +265,10 @@ const GoogleIntegration = {
     // Request Queue System
     _requestQueue: [],
     _isProcessingQueue: false,
+    _queueWorkers: 0,
+    _maxQueueWorkers: 3,
     _lastRequestTime: null,
+    _minQueueDelayMs: 80,
 
     // Circuit Breaker
     _circuitBreaker: {
@@ -456,14 +459,19 @@ const GoogleIntegration = {
      * التحقق من المزامنة في التقدم باستخدام Google Sheets
      */
     async _processRequestQueue() {
-        if (this._isProcessingQueue || this._requestQueue.length === 0) {
+        if (this._requestQueue.length === 0) {
+            return;
+        }
+        if (this._queueWorkers >= this._maxQueueWorkers) {
             return;
         }
 
         this._isProcessingQueue = true;
+        this._queueWorkers += 1;
 
-        while (this._requestQueue.length > 0) {
-            const request = this._requestQueue.shift();
+        try {
+            while (this._requestQueue.length > 0) {
+                const request = this._requestQueue.shift();
 
             const requestKey = this._getRequestKey(request.action, request.data);
 
@@ -474,7 +482,7 @@ const GoogleIntegration = {
                 // Throttling: التحقق من هل هو Throttling
                 if (this._lastRequestTime) {
                     const timeSinceLastRequest = Date.now() - this._lastRequestTime;
-                    const minDelay = 300; // 300ms التحقق من هل هو Throttling (429)
+                    const minDelay = this._minQueueDelayMs;
                     if (timeSinceLastRequest < minDelay) {
                         await new Promise(resolve => setTimeout(resolve, minDelay - timeSinceLastRequest));
                     }
@@ -520,9 +528,17 @@ const GoogleIntegration = {
                 // التحقق من هل هو activeRequests
                 this._activeRequests.delete(requestKey);
             }
-        }
+            }
+        } finally {
+            this._queueWorkers = Math.max(0, this._queueWorkers - 1);
+            this._isProcessingQueue = this._queueWorkers > 0;
 
-        this._isProcessingQueue = false;
+            if (this._requestQueue.length > 0) {
+                this._processRequestQueue().catch(err => {
+                    Utils.safeError('فشل متابعة معالجة طابور الطلبات:', err);
+                });
+            }
+        }
     },
 
     /**
@@ -567,6 +583,11 @@ const GoogleIntegration = {
             this._processRequestQueue().catch(err => {
                 Utils.safeError('فشل المزامنة في التقدم باستخدام Google Sheets:', err);
             });
+            if (this._queueWorkers < this._maxQueueWorkers) {
+                this._processRequestQueue().catch(err => {
+                    Utils.safeError('فشل تشغيل عامل إضافي لطابور الطلبات:', err);
+                });
+            }
         });
     },
 
@@ -593,9 +614,16 @@ const GoogleIntegration = {
 
             // التحقق من هل هو payload
             // Google Apps Script غير مفعل - التحقق من هل هو valid Google Apps Script URL
+            const cleanData = (data && typeof data === 'object')
+                ? { ...data }
+                : data;
+            if (cleanData && typeof cleanData === 'object' && '__timeoutMs' in cleanData) {
+                delete cleanData.__timeoutMs;
+            }
+
             const payload = {
                 action,
-                data,
+                data: cleanData,
                 csrfToken,
                 timestamp: new Date().toISOString()
             };
@@ -655,8 +683,10 @@ const GoogleIntegration = {
             const isHeavyOperation = heavyOperations.some(op => action.includes(op) || action === op);
             const isMediumOperation = mediumOperations.some(op => action.includes(op) || action === op);
 
-            // زيادة المهل الزمنية بشكل كبير لتجنب مشاكل الاتصال
-            const timeoutDuration = isHeavyOperation ? 300000 : (isMediumOperation ? 180000 : 120000); // 300/180/120 ثانية (5/3/2 دقائق)
+            // تقليل المهلات لتفعيل fail-fast ومنع تكدس الطابور لعدة دقائق
+            const timeoutDuration = Number(data?.__timeoutMs) > 0
+                ? Number(data.__timeoutMs)
+                : (isHeavyOperation ? 40000 : (isMediumOperation ? 20000 : 12000));
 
             const controller = new AbortController();
             const timeoutId = setTimeout(() => {
@@ -785,16 +815,17 @@ const GoogleIntegration = {
                     fetchError.name === 'AbortError' ||
                     fetchError.message?.includes('aborted')) {
 
-                    // إعادة المحاولة في حالة timeout
-                    // زيادة عدد المحاولات للعمليات الثقيلة
-                    let maxRetries = 3;
-                    if (isHeavyOperation) {
-                        maxRetries = 5; // 5 محاولات للعمليات الطويلة
+                    // إعادة محاولات محدودة لتقليل التأخير التراكمي
+                    const isWriteOperation = action === 'saveToSheet' || action === 'appendToSheet' ||
+                        action.startsWith('save') || action.startsWith('update') || action.startsWith('add');
+                    let maxRetries = isWriteOperation ? 2 : 1;
+                    if (isHeavyOperation && isWriteOperation) {
+                        maxRetries = 3;
                     }
 
                     if (retryCount < maxRetries) {
-                        // تأخير تصاعدي: 2s, 4s, 8s, 16s, 32s
-                        const delay = Math.pow(2, retryCount + 1) * 1000;
+                        // تأخير تصاعدي أقصر لتجنب الحجز الطويل للطابور
+                        const delay = Math.min(Math.pow(2, retryCount + 1) * 700, 3000);
                         Utils.safeLog(`⏱️ انتهت مهلة الاتصال للخادم (${Math.round(timeoutDuration / 1000)}s). إعادة المحاولة بعد ${delay / 1000} ثانية (المحاولة ${retryCount + 1}/${maxRetries})`);
                         await new Promise(resolve => setTimeout(resolve, delay));
 
@@ -1271,7 +1302,7 @@ const GoogleIntegration = {
     /**
      * قراءة البيانات من Google Sheets باستخدام Apps Script
      */
-    async readFromSheets(sheetName, timeout = 30000) {
+    async readFromSheets(sheetName, timeout = 15000) {
         if (!this._isBackendRpcConfigured()) {
             return [];
         }
@@ -1289,14 +1320,9 @@ const GoogleIntegration = {
                 payload.data.spreadsheetId = AppState.googleConfig.sheets.spreadsheetId;
             }
 
-            // إعداد timeout للطلب
-            const timeoutPromise = new Promise((_, reject) => {
-                setTimeout(() => reject(new Error(`انتهت مهلة قراءة البيانات من ${sheetName}`)), timeout);
-            });
-
-            const requestPromise = this.sendRequest(payload);
-
-            const result = await Promise.race([requestPromise, timeoutPromise]);
+            // تمرير timeout مباشرة لطبقة الشبكة حتى لا يظل الطلب معلقاً في الطابور
+            payload.data.__timeoutMs = timeout;
+            const result = await this.sendRequest(payload);
 
             if (result && result.success && result.data) {
                 return result.data;
