@@ -8797,6 +8797,16 @@ window.UI = {
         // إصلاحات إضافية للقائمة الجانبية في اللغة الإنجليزية
         this.fixSidebarForLanguage(lang, isRTL);
 
+        // إعادة تطبيق الصلاحيات بعد أي تغييرات تنسيقية للغة حتى لا تظهر موديولات غير مصرح بها
+        try {
+            if (typeof AppState !== 'undefined' && AppState.currentUser &&
+                typeof Permissions !== 'undefined' && typeof Permissions.updateNavigation === 'function') {
+                Permissions.updateNavigation();
+            }
+        } catch (permErr) {
+            Utils.safeWarn('⚠️ خطأ في إعادة تطبيق صلاحيات القائمة بعد تغيير اللغة:', permErr);
+        }
+
         // عرض الإشعار فقط إذا لم تكن هذه تهيئة أولية وكانت الواجهة جاهزة
         if (!isInitialLoad) {
             try {
@@ -8894,6 +8904,11 @@ window.UI = {
             // إصلاح عناصر القائمة
             const navItems = sidebar.querySelectorAll('.nav-item');
             navItems.forEach(item => {
+                const isPermissionHidden = item.getAttribute('data-permission-hidden') === 'true';
+                if (isPermissionHidden) {
+                    item.style.display = 'none';
+                    return;
+                }
                 item.style.display = 'flex';
                 item.style.alignItems = 'center';
                 item.style.width = 'calc(100% - 16px)';
@@ -9008,7 +9023,7 @@ window.UI = {
                     transform: translateX(0) !important;
                 }
                 
-                [dir="ltr"] .sidebar .nav-item {
+                [dir="ltr"] .sidebar .nav-item:not([data-permission-hidden="true"]) {
                     display: flex !important;
                     align-items: center !important;
                     width: calc(100% - 16px) !important;
@@ -9034,6 +9049,10 @@ window.UI = {
                     border-left-color: #FFC72C !important;
                 }
                 
+                [data-permission-hidden="true"] {
+                    display: none !important;
+                }
+
                 [dir="ltr"] .sidebar .nav-item i {
                     font-size: 18px !important;
                     width: 24px !important;

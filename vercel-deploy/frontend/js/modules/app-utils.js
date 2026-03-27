@@ -2605,8 +2605,10 @@ const Permissions = {
                 const hasAccess = this.hasAccess(module);
                 if (!hasAccess) {
                     item.style.display = 'none';
+                    item.setAttribute('data-permission-hidden', 'true');
                 } else {
                     item.style.display = '';
+                    item.setAttribute('data-permission-hidden', 'false');
                 }
             }
         });
@@ -2615,7 +2617,10 @@ const Permissions = {
         let visibleCount = Array.from(navItems).filter(item => item.style.display !== 'none').length;
         if (visibleCount === 0 && this.isAdminRole(AppState.currentUser.role)) {
             navItems.forEach(item => {
-                if (item.getAttribute('data-section')) item.style.display = '';
+                if (item.getAttribute('data-section')) {
+                    item.style.display = '';
+                    item.setAttribute('data-permission-hidden', 'false');
+                }
             });
             visibleCount = Array.from(navItems).filter(item => item.style.display !== 'none').length;
         }
