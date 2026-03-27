@@ -5818,7 +5818,8 @@ const Clinic = {
                 return true;
             });
 
-            const rows = visits.map((visit) => {
+            // ✅ تحسين الأداء: بناء صف واحد (يُستخدم لاحقاً في ضخ الصفوف تدريجياً)
+            const buildVisitRowHtml = (visit) => {
                 // ترتيب الأعمدة حسب نوع التبويب
                 const primaryValue = isContractorsTab
                     ? (visit.contractorName || visit.employeeName || visit.externalName || '-')
@@ -6042,7 +6043,7 @@ const Clinic = {
                     </td>
                 </tr>
             `;
-            }).join('');
+            };
 
             const tableHtml = visits.length
                 ? `
@@ -6066,9 +6067,7 @@ const Clinic = {
                                 <th class="text-center" style="min-width: 150px;">${t('table.actions')}</th>
                             </tr>
                         </thead>
-                        <tbody>
-                            ${rows}
-                        </tbody>
+                        <tbody id="clinic-visits-tbody"></tbody>
                     </table>
                 </div>
             `
@@ -6188,9 +6187,63 @@ const Clinic = {
             panel.innerHTML = content;
             
             // تحديث قيم الفلاتر بعد إدراج المحتوى في DOM
-            requestAnimationFrame(() => {
-                this.updateVisitFilterOptions(baseVisits);
-            });
+            // ✅ تجنّب Violation: updateVisitFilterOptions قد تكون ثقيلة، لذا ننقلها إلى idle/timeout
+            if (typeof requestIdleCallback === 'function') {
+                requestIdleCallback(() => this.updateVisitFilterOptions(baseVisits), { timeout: 900 });
+            } else {
+                setTimeout(() => this.updateVisitFilterOptions(baseVisits), 0);
+            }
+
+            // ✅ ضخ صفوف الجدول تدريجياً لتسريع فتح تبويب "سجل التردد"
+            try {
+                const tbody = panel.querySelector('#clinic-visits-tbody');
+                if (tbody && Array.isArray(visits) && visits.length > 0) {
+                    this._clinicVisitsRowsToken = (this._clinicVisitsRowsToken || 0) + 1;
+                    const myToken = this._clinicVisitsRowsToken;
+                    let i = 0;
+                    const total = visits.length;
+
+                    const pump = (deadline) => {
+                        if (myToken !== this._clinicVisitsRowsToken) return;
+                        if (this.state && this.state.activeTab !== 'visits') return;
+
+                        const start = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
+                        let chunkHtml = '';
+                        let rowsBuilt = 0;
+
+                        while (i < total) {
+                            chunkHtml += buildVisitRowHtml(visits[i]);
+                            i += 1;
+                            rowsBuilt += 1;
+
+                            const now = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
+                            const timeOk = deadline && typeof deadline.timeRemaining === 'function'
+                                ? deadline.timeRemaining() > 6
+                                : (now - start) < 12;
+                            if (rowsBuilt >= 25 && !timeOk) break;
+                            if (rowsBuilt >= 75) break;
+                        }
+
+                        if (chunkHtml) {
+                            tbody.insertAdjacentHTML('beforeend', chunkHtml);
+                        }
+
+                        if (i < total) {
+                            if (typeof requestIdleCallback === 'function') {
+                                requestIdleCallback(pump, { timeout: 900 });
+                            } else {
+                                setTimeout(() => pump(null), 0);
+                            }
+                        }
+                    };
+
+                    if (typeof requestIdleCallback === 'function') {
+                        requestIdleCallback(pump, { timeout: 900 });
+                    } else {
+                        setTimeout(() => pump(null), 0);
+                    }
+                }
+            } catch (e) { /* ignore */ }
             
             this.bindVisitsTabEvents(panel);
             
