@@ -7607,8 +7607,61 @@ const Clinic = {
     loadContractorsIntoSelect(selectElement) {
         if (!selectElement) return;
 
-        // ✅ مصدر موحّد: استخدام Contractors.populateContractorSelect
-        const currentValue = selectElement.value;
+        // ✅ دعم 2 نمط: select قديم أو input(list=datalist) جديد
+        const tag = (selectElement.tagName || '').toLowerCase();
+        const currentValue = (selectElement.value || '').toString();
+
+        // النمط الجديد (input + datalist)
+        if (tag === 'input') {
+            const listId = selectElement.getAttribute('list');
+            const datalist = listId ? document.getElementById(listId) : null;
+            if (!datalist) return;
+
+            // مصدر البيانات: من موديول Contractors إن وجد، أو fallback من AppState
+            let names = [];
+            try {
+                if (typeof Contractors !== 'undefined' && typeof Contractors.getAllContractorsForModules === 'function') {
+                    names = (Contractors.getAllContractorsForModules() || [])
+                        .map(c => (c && (c.name || c.companyName)) ? String(c.name || c.companyName).trim() : '')
+                        .filter(Boolean);
+                } else if (Array.isArray(AppState.appData?.approvedContractors)) {
+                    names = AppState.appData.approvedContractors
+                        .map(c => (c && (c.companyName || c.name)) ? String(c.companyName || c.name).trim() : '')
+                        .filter(Boolean);
+                } else if (Array.isArray(AppState.appData?.contractors)) {
+                    names = AppState.appData.contractors
+                        .map(c => (c && (c.name || c.companyName)) ? String(c.name || c.companyName).trim() : '')
+                        .filter(Boolean);
+                }
+            } catch (e) { /* ignore */ }
+
+            // إزالة تكرار + ترتيب بسيط
+            const seen = new Set();
+            const unique = [];
+            names.forEach(n => {
+                const key = n.toLowerCase();
+                if (seen.has(key)) return;
+                seen.add(key);
+                unique.push(n);
+            });
+
+            datalist.innerHTML = unique.map(n => `<option value="${Utils.escapeHTML(n)}"></option>`).join('');
+
+            if (currentValue) selectElement.value = currentValue;
+
+            if (!selectElement.hasAttribute('data-contractor-change-attached')) {
+                selectElement.setAttribute('data-contractor-change-attached', 'true');
+                selectElement.addEventListener('input', () => {
+                    const nameInput = document.getElementById('visit-employee-name');
+                    if (nameInput && selectElement.value) {
+                        nameInput.value = selectElement.value;
+                    }
+                });
+            }
+            return;
+        }
+
+        // النمط القديم (select)
         if (typeof Contractors !== 'undefined' && typeof Contractors.populateContractorSelect === 'function') {
             Contractors.populateContractorSelect(selectElement, {
                 placeholder: '-- اختر المقاول --',
@@ -7619,10 +7672,8 @@ const Clinic = {
             });
         }
 
-        // استعادة القيمة إذا كانت موجودة
         if (currentValue) selectElement.value = currentValue;
 
-        // ✅ منع تكرار event listener
         if (!selectElement.hasAttribute('data-contractor-change-attached')) {
             selectElement.setAttribute('data-contractor-change-attached', 'true');
             selectElement.addEventListener('change', () => {
@@ -7710,7 +7761,6 @@ const Clinic = {
 
         // التعامل مع حقل الاسم - عند موظف: input readonly، عند مقاول: select من قائمة المقاولين، عند عمالة خارجية: input يدوي
         const contractorNameSelect = document.getElementById('visit-contractor-name-select');
-        const contractorSearchInput = document.getElementById('visit-contractor-search');
 
         if (personType === 'employee') {
             if (nameInput) {
@@ -7723,10 +7773,6 @@ const Clinic = {
             if (contractorNameSelect) {
                 contractorNameSelect.style.display = 'none';
                 contractorNameSelect.required = false;
-            }
-            if (contractorSearchInput) {
-                contractorSearchInput.style.display = 'none';
-                contractorSearchInput.value = '';
             }
         } else if (personType === 'contractor') {
             // إظهار select المقاولين وإخفاء input
@@ -7742,9 +7788,6 @@ const Clinic = {
                 // ملء قائمة المقاولين
                 Clinic.loadContractorsIntoSelect(contractorNameSelect);
             }
-            if (contractorSearchInput) {
-                contractorSearchInput.style.display = 'block';
-            }
         } else {
             // عمالة خارجية - input يدوي
             if (nameInput) {
@@ -7757,10 +7800,6 @@ const Clinic = {
             if (contractorNameSelect) {
                 contractorNameSelect.style.display = 'none';
                 contractorNameSelect.required = false;
-            }
-            if (contractorSearchInput) {
-                contractorSearchInput.style.display = 'none';
-                contractorSearchInput.value = '';
             }
         }
 
@@ -8621,12 +8660,12 @@ const Clinic = {
                                     placeholder="${visitData?.personType === 'employee' || !visitData ? 'سيتم التعبئة تلقائياً' : visitData?.personType === 'contractor' ? 'أدخل اسم المقاول' : 'أدخل اسم العامل'}"
                                     ${visitData?.personType === 'employee' || !visitData ? 'readonly' : ''}
                                     style="display: ${visitData?.personType === 'contractor' ? 'none' : 'block'}; border: 2px solid #667eea; border-radius: 8px;">
-                                <input type="text" id="visit-contractor-search" class="form-input" placeholder="بحث باسم المقاول..." 
-                                    style="display: ${visitData?.personType === 'contractor' ? 'block' : 'none'}; border: 2px solid #667eea; border-radius: 8px; margin-bottom: 8px;"
+                                <input id="visit-contractor-name-select" required class="form-input"
+                                    list="visit-contractors-datalist"
+                                    placeholder="-- اختر المقاول --"
+                                    style="display: ${visitData?.personType === 'contractor' ? 'block' : 'none'}; border: 2px solid #667eea; border-radius: 8px;"
                                     autocomplete="off">
-                                <select id="visit-contractor-name-select" required class="form-input" style="display: ${visitData?.personType === 'contractor' ? 'block' : 'none'}; border: 2px solid #667eea; border-radius: 8px;">
-                                    <option value="">-- اختر المقاول --</option>
-                                </select>
+                                <datalist id="visit-contractors-datalist"></datalist>
                             </div>
                         </div>
                         
@@ -8731,10 +8770,11 @@ const Clinic = {
                                 <div id="visit-medications-container" class="space-y-2">
                                     <div class="flex gap-2 items-end">
                                         <div class="flex-1">
-                                            <input type="text" id="visit-medication-search" class="form-input" placeholder="بحث باسم الدواء..." style="margin-bottom: 8px;" autocomplete="off">
-                                            <select id="visit-medication-select" class="form-input">
-                                                <option value="">-- اختر الدواء --</option>
-                                            </select>
+                                            <input id="visit-medication-select" class="form-input"
+                                                list="visit-medications-datalist"
+                                                placeholder="-- اختر الدواء --"
+                                                autocomplete="off">
+                                            <datalist id="visit-medications-datalist"></datalist>
                                         </div>
                                         <div style="width: 120px;">
                                             <input type="number" id="visit-medication-quantity" class="form-input" min="1" placeholder="الكمية" value="1">
@@ -8888,47 +8928,7 @@ const Clinic = {
                 }
             }
 
-            // ✅ بحث داخل قائمة المقاولين (فلترة فورية حسب الكتابة)
-            const contractorSelectEl = document.getElementById('visit-contractor-name-select');
-            const contractorSearchEl = document.getElementById('visit-contractor-search');
-            if (contractorSelectEl && contractorSearchEl) {
-                const snapshotOptions = () => Array.from(contractorSelectEl.querySelectorAll('option')).map(o => ({
-                    value: o.value,
-                    text: o.textContent || '',
-                    disabled: o.disabled === true
-                }));
-                let allOptions = snapshotOptions();
-
-                const applyFilter = (termRaw) => {
-                    const term = String(termRaw || '').toLowerCase().trim();
-                    const current = contractorSelectEl.value;
-                    const list = !term
-                        ? allOptions
-                        : allOptions.filter(o => (o.text || '').toLowerCase().includes(term));
-
-                    contractorSelectEl.innerHTML = list.map((o) => {
-                        const sel = o.value === current ? 'selected' : '';
-                        const dis = o.disabled ? 'disabled' : '';
-                        return `<option value="${Utils.escapeHTML(o.value)}" ${sel} ${dis}>${Utils.escapeHTML(o.text)}</option>`;
-                    }).join('');
-
-                    // ضمان وجود الـ placeholder
-                    if (!contractorSelectEl.querySelector('option[value=""]')) {
-                        contractorSelectEl.insertAdjacentHTML('afterbegin', `<option value="">-- اختر المقاول --</option>`);
-                    }
-                };
-
-                // تحديث snapshot بعد أي ملء للقائمة
-                setTimeout(() => {
-                    allOptions = snapshotOptions();
-                    applyFilter(contractorSearchEl.value);
-                }, 0);
-
-                if (!contractorSearchEl.hasAttribute('data-search-attached')) {
-                    contractorSearchEl.setAttribute('data-search-attached', 'true');
-                    contractorSearchEl.addEventListener('input', () => applyFilter(contractorSearchEl.value));
-                }
-            }
+            // لا حاجة لحقل بحث منفصل — البحث يتم داخل نفس الحقل (datalist)
 
             if (typeof Clinic.handlePersonTypeChange === 'function') {
                 Clinic.handlePersonTypeChange();
@@ -8939,32 +8939,30 @@ const Clinic = {
             const medicationsList = document.getElementById('visit-medications-list');
             const addMedicationBtn = document.getElementById('visit-add-medication-btn');
             const medicationQuantityInput = document.getElementById('visit-medication-quantity');
-            const medicationSearchInput = document.getElementById('visit-medication-search');
+            const medicationDatalist = document.getElementById('visit-medications-datalist');
 
             let selectedMedications = visitData?.medications && Array.isArray(visitData.medications)
                 ? [...visitData.medications]
                 : [];
 
-            const loadMedicationsIntoSelect = (searchTerm = '') => {
-                if (!medicationSelect) return;
-                const q = String(searchTerm || '').toLowerCase().trim();
+            const loadMedicationsIntoSelect = () => {
+                if (!medicationSelect || !medicationDatalist) return;
                 const medications = this.getMedications().filter(m => {
                     const remaining = m.remainingQuantity ?? m.quantity ?? 0;
                     if (remaining <= 0) return false;
-                    if (!q) return true;
-                    const name = String(m.name || '').toLowerCase();
-                    const type = String(m.type || m.medicationType || m.category || '').toLowerCase();
-                    return name.includes(q) || type.includes(q);
+                    const alreadySelected = selectedMedications.some(sm => sm.medicationId === m.id);
+                    return !alreadySelected;
                 });
-
-                medicationSelect.innerHTML = '<option value="">-- اختر الدواء --</option>' +
-                    medications.map(m => {
-                        const remaining = m.remainingQuantity ?? m.quantity ?? 0;
-                        const alreadySelected = selectedMedications.some(sm => sm.medicationId === m.id);
-                        return `<option value="${m.id}" ${alreadySelected ? 'disabled' : ''} data-remaining="${remaining}">
-                            ${Utils.escapeHTML(m.name || '')} (متوفر: ${remaining})
-                        </option>`;
-                    }).join('');
+                const map = {};
+                medicationDatalist.innerHTML = medications.map(m => {
+                    const remaining = m.remainingQuantity ?? m.quantity ?? 0;
+                    const label = `${m.name || ''} (متوفر: ${remaining})`;
+                    const key = String(m.name || '').toLowerCase().trim();
+                    if (key) map[key] = m.id;
+                    return `<option value="${Utils.escapeHTML(label)}"></option>`;
+                }).join('');
+                medicationSelect.dataset.nameToId = JSON.stringify(map);
+                medicationSelect.dataset.selectedId = '';
             };
 
             const renderMedicationsList = () => {
@@ -9001,7 +8999,12 @@ const Clinic = {
 
             if (addMedicationBtn && medicationSelect && medicationQuantityInput) {
                 addMedicationBtn.addEventListener('click', () => {
-                    const medicationId = medicationSelect.value;
+                    const raw = (medicationSelect.value || '').trim();
+                    const nameOnly = raw.replace(/\s*\(.*\)\s*$/, '').trim();
+                    const map = (() => {
+                        try { return JSON.parse(medicationSelect.dataset.nameToId || '{}'); } catch (e) { return {}; }
+                    })();
+                    const medicationId = medicationSelect.dataset.selectedId || map[String(nameOnly).toLowerCase().trim()] || '';
                     const quantity = parseInt(medicationQuantityInput.value, 10) || 1;
 
                     if (!medicationId) {
@@ -9033,18 +9036,23 @@ const Clinic = {
 
                     medicationQuantityInput.value = '1';
                     medicationSelect.value = '';
-                    if (medicationSearchInput) medicationSearchInput.value = '';
                     renderMedicationsList();
-                    loadMedicationsIntoSelect('');
+                    loadMedicationsIntoSelect();
+                });
+            }
+            if (medicationSelect && !medicationSelect.hasAttribute('data-datalist-attached')) {
+                medicationSelect.setAttribute('data-datalist-attached', 'true');
+                medicationSelect.addEventListener('input', () => {
+                    const raw = (medicationSelect.value || '').trim();
+                    const nameOnly = raw.replace(/\s*\(.*\)\s*$/, '').trim();
+                    const map = (() => {
+                        try { return JSON.parse(medicationSelect.dataset.nameToId || '{}'); } catch (e) { return {}; }
+                    })();
+                    medicationSelect.dataset.selectedId = map[String(nameOnly).toLowerCase().trim()] || '';
                 });
             }
 
-            if (medicationSearchInput && !medicationSearchInput.hasAttribute('data-search-attached')) {
-                medicationSearchInput.setAttribute('data-search-attached', 'true');
-                medicationSearchInput.addEventListener('input', () => loadMedicationsIntoSelect(medicationSearchInput.value));
-            }
-
-            loadMedicationsIntoSelect(medicationSearchInput ? medicationSearchInput.value : '');
+            loadMedicationsIntoSelect();
             renderMedicationsList();
         }, 300);
 
