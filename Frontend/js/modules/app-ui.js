@@ -2645,7 +2645,8 @@ window.UI = {
         try {
             if (typeof fetch === 'undefined') return;
             const base = (typeof window !== 'undefined' && window.location && window.location.origin) ? window.location.origin : '';
-            if (!base || base.startsWith('file:')) return;
+            const isFileProtocol = typeof window !== 'undefined' && window.location && window.location.protocol === 'file:';
+            if (!base || base === 'null' || base.startsWith('file:') || isFileProtocol) return;
             const url = base + '/version.json?t=' + (Date.now ? Date.now() : '');
             const res = await fetch(url, { cache: 'no-store', method: 'GET' });
             if (!res || !res.ok) return;
@@ -6105,23 +6106,14 @@ window.UI = {
 
         if (typeof this.addNavigationIcons === 'function') {
             if (AppState.debugMode) Utils.safeLog('✅ استدعاء addNavigationIconsAfterRender للقسم:', sectionName);
-
-            // محاولات متعددة لضمان الإضافة
-            setTimeout(() => {
-                this.addNavigationIcons(section, sectionName);
-            }, 0);
-
-            setTimeout(() => {
-                this.addNavigationIcons(section, sectionName);
-            }, 100);
-
-            setTimeout(() => {
-                this.addNavigationIcons(section, sectionName);
-            }, 300);
-
-            setTimeout(() => {
-                this.addNavigationIcons(section, sectionName);
-            }, 600);
+            // جدولة واحدة فقط لكل قسم لتجنب setTimeout handlers الثقيلة
+            if (!this._addNavIconsTimers) this._addNavIconsTimers = {};
+            const previousTimer = this._addNavIconsTimers[sectionName];
+            if (previousTimer) clearTimeout(previousTimer);
+            this._addNavIconsTimers[sectionName] = setTimeout(() => {
+                try { this.addNavigationIcons(section, sectionName); } catch (e) {}
+                this._addNavIconsTimers[sectionName] = null;
+            }, 60);
         } else {
             Utils.safeError('❌ addNavigationIconsAfterRender: دالة addNavigationIcons غير موجودة');
         }

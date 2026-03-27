@@ -2136,7 +2136,13 @@ const Clinic = {
                 this.state.activeTab = tab;
                 this.renderTabNavigation();
                 // نقل الرسم الثقيل خارج click handler لتقليل Violation
-                setTimeout(() => this.renderActiveTabContent(), 0);
+                requestAnimationFrame(() => {
+                    if (this.state.activeTab === 'visits') {
+                        this.scheduleVisitsTabRender(false, 40);
+                    } else {
+                        this.renderActiveTabContent();
+                    }
+                });
             });
         });
     },
@@ -5114,7 +5120,7 @@ const Clinic = {
         };
         // استخدام requestIdleCallback عندما لا يوجد تأخير مطلوب لتجنب violation
         if (delayMs === 0 && typeof requestIdleCallback === 'function') {
-            const idleId = requestIdleCallback(doRender, { timeout: 800 });
+            const idleId = requestIdleCallback(() => setTimeout(doRender, 0), { timeout: 800 });
             this._visitsRenderTimer = { _idle: idleId };
         } else {
             this._visitsRenderTimer = setTimeout(doRender, Math.max(0, delayMs));
@@ -6088,15 +6094,15 @@ const Clinic = {
             panel.innerHTML = content;
             
             // تحديث قيم الفلاتر بعد إدراج المحتوى في DOM
-            setTimeout(() => {
+            requestAnimationFrame(() => {
                 this.updateVisitFilterOptions(baseVisits);
-            }, 0);
+            });
             
             this.bindVisitsTabEvents(panel);
             
             // استعادة التركيز على حقل البحث إذا كان نشطاً
             if (this.state._shouldFocusSearch) {
-                setTimeout(() => {
+                requestAnimationFrame(() => {
                     const searchInput = panel.querySelector('#visits-search');
                     if (searchInput) {
                         searchInput.focus();
@@ -6110,16 +6116,16 @@ const Clinic = {
                         }
                         this.state._shouldFocusSearch = false;
                     }
-                }, 50);
+                });
             }
             
             // إضافة مستمعي التمرير للجدول
-            setTimeout(() => {
+            requestAnimationFrame(() => {
                 const wrapper = panel.querySelector('.clinic-table-wrapper');
                 if (wrapper) {
                     this.setupTableScrollListeners(wrapper);
                 }
-            }, 100);
+            });
         } catch (error) {
             // عرض رسالة خطأ واضحة مع التفاصيل
             const errorMessage = error instanceof Error ? error.message : (typeof error === 'string' ? error : JSON.stringify(error));
@@ -6574,7 +6580,7 @@ const Clinic = {
                 this.state.filters = this.state.filters || {};
                 this.state.filters.visits = this.state.filters.visits || { search: '', factory: '', position: '', workplace: '' };
                 this.state.filters.visits.factory = factoryFilter.value || '';
-                this.renderVisitsTab();
+                this.scheduleVisitsTabRender(false, 50);
             });
         }
         
@@ -6585,7 +6591,7 @@ const Clinic = {
                 this.state.filters = this.state.filters || {};
                 this.state.filters.visits = this.state.filters.visits || { search: '', factory: '', position: '', workplace: '' };
                 this.state.filters.visits.position = positionFilter.value || '';
-                this.renderVisitsTab();
+                this.scheduleVisitsTabRender(false, 50);
             });
         }
         
@@ -6596,7 +6602,7 @@ const Clinic = {
                 this.state.filters = this.state.filters || {};
                 this.state.filters.visits = this.state.filters.visits || { search: '', factory: '', position: '', workplace: '' };
                 this.state.filters.visits.workplace = workplaceFilter.value || '';
-                this.renderVisitsTab();
+                this.scheduleVisitsTabRender(false, 50);
             });
         }
         
@@ -6618,13 +6624,13 @@ const Clinic = {
                         return;
                     }
                     this.state.activeVisitType = visitType;
-                    this.renderVisitsTab();
+                    this.scheduleVisitsTabRender(false, 30);
                 } catch (error) {
                     Utils.safeError('❌ خطأ في تبديل التبويب:', error);
                     // محاولة إعادة عرض التبويب الحالي في حالة الخطأ
                     if (this.state && this.state.activeVisitType) {
                         try {
-                            this.renderVisitsTab();
+                            this.scheduleVisitsTabRender(false, 30);
                         } catch (retryError) {
                             Utils.safeError('❌ فشل إعادة عرض التبويب:', retryError);
                         }
