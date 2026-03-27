@@ -266,9 +266,9 @@ const GoogleIntegration = {
     _requestQueue: [],
     _isProcessingQueue: false,
     _queueWorkers: 0,
-    _maxQueueWorkers: 3,
+    _maxQueueWorkers: 4,
     _lastRequestTime: null,
-    _minQueueDelayMs: 80,
+    _minQueueDelayMs: 40,
 
     // Circuit Breaker
     _circuitBreaker: {

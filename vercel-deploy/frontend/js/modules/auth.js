@@ -2051,6 +2051,26 @@ window.Auth = {
                 'PeriodicInspectionChecklists': 'periodicInspectionChecklists'
             };
 
+            const PRELOAD_CACHE_TTL_MS = 10 * 60 * 1000;
+            const PER_SHEET_TIMEOUT_MS = 7000;
+            const GLOBAL_PRELOAD_BUDGET_MS = 55000;
+            const preloadStartedAt = Date.now();
+
+            const isModuleFreshInCache = (moduleName, sheets) => {
+                const syncKey = moduleSyncKeyMap[moduleName];
+                if (!syncKey || !Array.isArray(sheets) || sheets.length === 0) return false;
+                const lastSyncRaw = localStorage.getItem(syncKey);
+                const lastSync = Number(lastSyncRaw || 0);
+                if (!lastSync || (Date.now() - lastSync) > PRELOAD_CACHE_TTL_MS) return false;
+
+                // نتجاوز التحميل فقط لو عندنا بيانات محلية حقيقية لجميع الأوراق
+                return sheets.every((sheetName) => {
+                    const key = sheetToKeyMap[sheetName];
+                    const arr = key ? AppState.appData[key] : null;
+                    return Array.isArray(arr) && arr.length > 0;
+                });
+            };
+
             const processModule = async (moduleName) => {
                 try {
                     const sheets = moduleSheetsMap[moduleName] || [];
@@ -2059,11 +2079,17 @@ window.Auth = {
                         Utils.safeLog(`⚠️ لا توجد أوراق Google Sheets للموديول: ${moduleName}`);
                         return;
                     }
+                    if (isModuleFreshInCache(moduleName, sheets)) {
+                        if (AppState.debugMode) {
+                            Utils.safeLog(`⚡ تخطي تحميل ${moduleName}: البيانات محلية ومحدثة`);
+                        }
+                        return;
+                    }
 
                     // ✅ تحسين: تحميل جميع أوراق الموديول بشكل متوازي لتسريع العملية
                     const sheetPromises = sheets.map(async (sheetName) => {
                         try {
-                            const data = await GoogleIntegration.readFromSheets(sheetName);
+                            const data = await GoogleIntegration.readFromSheets(sheetName, PER_SHEET_TIMEOUT_MS);
                             const key = sheetToKeyMap[sheetName];
                             
                             if (key && Array.isArray(data)) {
@@ -2140,8 +2166,12 @@ window.Auth = {
             };
 
             // تحميل الموديولات على دفعات متوازية لتقليل زمن التحميل الكلي
-            const moduleConcurrency = 6;
+            const moduleConcurrency = 8;
             for (let i = 0; i < modulesToLoad.length; i += moduleConcurrency) {
+                if ((Date.now() - preloadStartedAt) >= GLOBAL_PRELOAD_BUDGET_MS) {
+                    Utils.safeWarn('⏱️ تم الوصول للحد الزمني للتحميل الخلفي (55s) - استكمال التحميل عند فتح الموديول');
+                    break;
+                }
                 const chunk = modulesToLoad.slice(i, i + moduleConcurrency);
                 await Promise.allSettled(chunk.map(processModule));
             }
