@@ -4862,7 +4862,8 @@ window.UI = {
         if (sectionName === 'dashboard') {
             loadSectionWork();
         } else if (typeof requestIdleCallback === 'function') {
-            requestIdleCallback(() => loadSectionWork(), { timeout: 260 });
+            // ✅ تجنّب Violation: اجعل requestIdleCallback سريعاً، وادفع العمل الثقيل خارج callback
+            requestIdleCallback(() => setTimeout(loadSectionWork, 0), { timeout: 260 });
         } else {
             requestAnimationFrame(() => setTimeout(loadSectionWork, 0));
         }
