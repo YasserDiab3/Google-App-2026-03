@@ -50,6 +50,47 @@ function isSha256Hash(value) {
 }
 
 /**
+ * ✅ مؤشر خفيف لتحديثات المستخدمين (للـ sync الفوري بين الأجهزة)
+ * يتم تحديثه عند إضافة/تعديل/حذف مستخدم.
+ */
+function markUsersUpdated_() {
+    try {
+        PropertiesService.getScriptProperties().setProperty('users_last_updated', String(Date.now()));
+        PropertiesService.getScriptProperties().setProperty('users_last_updated_iso', new Date().toISOString());
+    } catch (e) {
+        Logger.log('Warning: could not set users_last_updated: ' + e.toString());
+    }
+}
+
+/**
+ * ✅ جلب مؤشر تحديثات المستخدمين (طلب خفيف جداً)
+ * @return {object} { success: true, data: { updatedAtMs, updatedAtIso, serverTimeIso } }
+ */
+function getUsersMeta() {
+    try {
+        var props = PropertiesService.getScriptProperties();
+        var msRaw = props.getProperty('users_last_updated');
+        var isoRaw = props.getProperty('users_last_updated_iso');
+        if (!msRaw) {
+            markUsersUpdated_();
+            msRaw = props.getProperty('users_last_updated');
+            isoRaw = props.getProperty('users_last_updated_iso');
+        }
+        return {
+            success: true,
+            data: {
+                updatedAtMs: Number(msRaw || 0) || 0,
+                updatedAtIso: isoRaw || '',
+                serverTimeIso: new Date().toISOString()
+            }
+        };
+    } catch (error) {
+        Logger.log('Error getUsersMeta: ' + error.toString());
+        return { success: false, message: 'Failed to get users meta: ' + error.toString() };
+    }
+}
+
+/**
  * إضافة مستخدم جديد مع تشفير كلمة المرور تلقائياً
  */
 function addUserToSheet(userData) {
@@ -137,6 +178,9 @@ function addUserToSheet(userData) {
         Logger.log('Error adding user to Google Sheets: ' + (result?.message || 'Unknown error'));
     }
     
+    if (result && result.success) {
+        markUsersUpdated_();
+    }
     return result;
 }
 
@@ -243,7 +287,11 @@ function updateUserInSheet(userId, updateData) {
         }
         
         // حفظ البيانات المحدثة
-        return saveToSheet(sheetName, data, spreadsheetId);
+        const saveRes = saveToSheet(sheetName, data, spreadsheetId);
+        if (saveRes && saveRes.success) {
+            markUsersUpdated_();
+        }
+        return saveRes;
     } catch (error) {
         Logger.log('Error updating user: ' + error.toString());
         return { success: false, message: 'حدث خطأ أثناء التحديث: ' + error.toString() };
@@ -395,6 +443,7 @@ function deleteUserFromSheet(userId) {
         
         if (saveResult && saveResult.success) {
             Logger.log('User deleted successfully: ' + userId);
+            markUsersUpdated_();
             return { 
                 success: true, 
                 message: 'تم حذف المستخدم بنجاح'

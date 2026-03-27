@@ -191,7 +191,9 @@ function doPost(e) {
             'testConnection',
             'getDocumentCodes', 'getDocumentVersions', 'getDocumentCodeAndVersion',
             // Read-only utility actions
-            'getPublicIP'
+            'getPublicIP',
+            // ✅ مؤشر تحديثات المستخدمين (للـ sync الفوري بين الأجهزة)
+            'getUsersMeta'
         ];
         
         // قائمة بالـ actions الحساسة التي تتطلب CSRF token إلزامي
@@ -401,6 +403,9 @@ function doPost(e) {
                     break;
                 case 'updateUser':
                     result = updateUserInSheet(payload.userId || payload.id, payload.updateData || payload);
+                    break;
+                case 'getUsersMeta':
+                    result = getUsersMeta();
                     break;
                 case 'resetUserPassword':
                     result = resetUserPassword(payload.userId || payload.id || payload.email, payload.newPassword);

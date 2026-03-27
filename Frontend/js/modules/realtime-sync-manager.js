@@ -25,6 +25,10 @@ const RealtimeSyncManager = {
         // الموديولات التي يتم مزامنتها تلقائياً
         // ملاحظة: الأسماء يجب أن تطابق مفاتيح AppState.appData
         autoSyncModules: [
+            // ✅ مهم للصلاحيات: تحديث قائمة المستخدمين وصلاحياتهم بشكل دوري
+            // هذا يسمح للمستخدم برؤية الصلاحيات الجديدة دون Logout/Reload
+            'users',
+
             // موديولات العيادة الطبية
             'medications',           // الأدوية
             'clinicVisits',         // زيارات العيادة
@@ -76,7 +80,10 @@ const RealtimeSyncManager = {
         enableSoundNotification: false,
 
         // الحد الأدنى للوقت بين مزامنتين للموديول نفسه (5 ثوانٍ) - تحسين من 10 ثوانٍ لتسريع المزامنة
-        minSyncInterval: 5000
+        minSyncInterval: 5000,
+
+        // ✅ “فوري” بين الأجهزة: فحص مؤشر تحديثات Users كل 3 ثوانٍ (طلب خفيف جداً)
+        usersMetaPollInterval: 3000
     },
 
     // حالة النظام
@@ -89,7 +96,9 @@ const RealtimeSyncManager = {
         currentSection: null,
         broadcastChannel: null,
         pendingUpdates: {},
-        lastDataHash: {}
+        lastDataHash: {},
+        usersMetaPollId: null,
+        usersMetaLastSeen: 0
     },
 
     // عدادات الإحصائيات
@@ -125,12 +134,63 @@ const RealtimeSyncManager = {
             // الاستماع لأحداث الإضافة/التحديث
             this.setupDataChangeListeners();
 
+            // ✅ فحص خفيف لتحديثات الصلاحيات بين الأجهزة (بدون تحميل Users كامل إلا عند وجود تغيير)
+            this.setupUsersMetaPolling();
+
             realtimeSyncLog('✅ تم تهيئة نظام المزامنة اللحظية بنجاح');
             return true;
         } catch (error) {
             console.error('❌ خطأ في تهيئة نظام المزامنة اللحظية:', error);
             this.stats.lastError = error.message;
             return false;
+        }
+    },
+
+    /**
+     * ✅ فحص “مؤشر” تحديثات Users كل عدة ثوانٍ (Cross-device شبه فوري)
+     */
+    setupUsersMetaPolling() {
+        try {
+            if (this.state.usersMetaPollId) return;
+
+            const isEnabled = AppState?.googleConfig?.appsScript?.enabled && AppState?.googleConfig?.appsScript?.scriptUrl;
+            if (!isEnabled || typeof GoogleIntegration === 'undefined' || !GoogleIntegration.sendRequest) {
+                return;
+            }
+
+            const pollEvery = Math.max(1500, Number(this.config.usersMetaPollInterval) || 3000);
+            const poll = async () => {
+                try {
+                    if (!AppState?.currentUser?.email) return;
+                    if (!this.config.enableAutoSync) return;
+
+                    const res = await GoogleIntegration.sendRequest({
+                        action: 'getUsersMeta',
+                        data: { __timeoutMs: 4500 }
+                    });
+                    const updatedAtMs = Number(res?.data?.updatedAtMs || 0) || 0;
+                    if (!updatedAtMs) return;
+
+                    if (!this.state.usersMetaLastSeen) {
+                        this.state.usersMetaLastSeen = updatedAtMs;
+                        return;
+                    }
+
+                    if (updatedAtMs > this.state.usersMetaLastSeen) {
+                        this.state.usersMetaLastSeen = updatedAtMs;
+                        // طلب سحب Users فوراً
+                        this.syncModule('users', true);
+                    }
+                } catch (e) {
+                    // تجاهل أخطاء الشبكة/timeout
+                }
+            };
+
+            this.state.usersMetaPollId = setInterval(poll, pollEvery);
+            // فحص سريع أولي
+            setTimeout(poll, 500);
+        } catch (error) {
+            console.warn('⚠️ setupUsersMetaPolling failed:', error);
         }
     },
 
@@ -183,6 +243,10 @@ const RealtimeSyncManager = {
                         case 'sync-completed':
                             // اكتملت مزامنة في تبويب آخر
                             this.handleExternalSyncCompleted(module, timestamp);
+                            break;
+                        case 'user-permissions-updated':
+                            // ✅ تحديث فوري لصلاحيات المستخدم (داخل نفس المتصفح / التبويبات)
+                            this.handleExternalUserPermissionsUpdate(data, timestamp);
                             break;
                     }
                 };
@@ -240,6 +304,53 @@ const RealtimeSyncManager = {
     handleExternalSyncCompleted(module, timestamp) {
         // تحديث وقت آخر مزامنة
         this.state.lastSyncTime[module] = timestamp;
+    },
+
+    /**
+     * ✅ تحديث صلاحيات مستخدم فوراً عند استلام Broadcast من تبويب آخر
+     */
+    handleExternalUserPermissionsUpdate(payload, timestamp) {
+        try {
+            const email = (payload?.email || '').toString().toLowerCase().trim();
+            const id = (payload?.id || '').toString().trim();
+            if (!email && !id) return;
+
+            if (!AppState.appData) AppState.appData = {};
+            if (!Array.isArray(AppState.appData.users)) AppState.appData.users = [];
+
+            const idx = AppState.appData.users.findIndex(u =>
+                (email && u?.email && u.email.toString().toLowerCase().trim() === email) ||
+                (id && u?.id && u.id.toString().trim() === id)
+            );
+
+            if (idx !== -1) {
+                AppState.appData.users[idx] = { ...AppState.appData.users[idx], ...payload };
+            } else {
+                AppState.appData.users.push({ ...payload });
+            }
+
+            // حفظ محلياً لتفادي فقد البيانات عند Reload
+            if (typeof DataManager !== 'undefined' && DataManager.save) {
+                try { DataManager.save(); } catch (e) { /* ignore */ }
+            }
+
+            // إذا كان هذا هو المستخدم الحالي، حدّث جلسته + القائمة فوراً
+            const currentEmail = AppState.currentUser?.email?.toLowerCase?.() || '';
+            if (currentEmail && email && currentEmail === email) {
+                if (typeof window.Auth !== 'undefined' && typeof window.Auth.updateUserSession === 'function') {
+                    try { window.Auth.updateUserSession(); } catch (e) { /* ignore */ }
+                }
+                if (typeof Permissions !== 'undefined' && typeof Permissions.updateNavigation === 'function') {
+                    try { Permissions.updateNavigation(); } catch (e) { /* ignore */ }
+                }
+            }
+
+            // تحديث واجهة المستخدمين إذا كانت مفتوحة
+            this.refreshModuleUI('users');
+            this.state.lastSyncTime['users'] = timestamp || Date.now();
+        } catch (error) {
+            console.warn('⚠️ خطأ في معالجة تحديث صلاحيات المستخدم:', error);
+        }
     },
 
     /**
@@ -698,6 +809,7 @@ const RealtimeSyncManager = {
      */
     getModulesForSection(section) {
         const sectionModulesMap = {
+            'users': ['users'],
             'clinic': ['medications', 'clinicVisits', 'sickLeave', 'injuries', 'clinicInventory'],
             'incidents': ['incidents'],
             'near-miss': ['nearmiss'],  // تصحيح: nearmiss في AppState
@@ -734,6 +846,7 @@ const RealtimeSyncManager = {
      */
     getSheetNameForModule(module) {
         const moduleToSheetMap = {
+            'users': 'Users',
             // موديولات العيادة الطبية
             'medications': 'Medications',
             'clinicVisits': 'ClinicVisits',
@@ -954,6 +1067,17 @@ const RealtimeSyncManager = {
 
         // تحديث الواجهة بناءً على الموديول
         const refreshMap = {
+            'users': () => {
+                if (typeof Users !== 'undefined') {
+                    // تحديث القائمة فقط إذا كان القسم مفتوحاً
+                    const section = document.getElementById('users-section');
+                    if (section && Users.load) {
+                        Users.load();
+                    } else if (section && Users.showList) {
+                        Users.showList();
+                    }
+                }
+            },
             'medications': () => {
                 if (typeof Clinic !== 'undefined' && Clinic.renderMedicationsTab) {
                     Clinic.renderMedicationsTab();
@@ -1506,6 +1630,11 @@ const RealtimeSyncManager = {
         if (this.state.broadcastChannel) {
             this.state.broadcastChannel.close();
             this.state.broadcastChannel = null;
+        }
+
+        if (this.state.usersMetaPollId) {
+            clearInterval(this.state.usersMetaPollId);
+            this.state.usersMetaPollId = null;
         }
 
         realtimeSyncLog('🧹 تم تنظيف موارد نظام المزامنة');

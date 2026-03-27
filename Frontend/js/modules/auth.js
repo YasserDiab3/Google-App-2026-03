@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Auth Module - موديول المصادقة
  * تم استخراجه من app-modules.js لتحسين الأداء
  */
@@ -1734,16 +1734,26 @@ window.Auth = {
             }
 
             // ✅ إصلاح: تطبيع الصلاحيات قبل التحديث
-            const normalizedPermissions = typeof Permissions !== 'undefined' && typeof Permissions.normalizePermissions === 'function'
-                ? Permissions.normalizePermissions(dbUser.permissions)
-                : (dbUser.permissions || {});
+            // ✅ حماية من فقد الصلاحيات: إذا كانت permissions غير موجودة/فارغة في قاعدة البيانات نحتفظ بصلاحيات الجلسة الحالية
+            const rawDbPerms = dbUser.permissions;
+            const dbPermsIsMissing =
+                rawDbPerms == null ||
+                (typeof rawDbPerms === 'string' && rawDbPerms.trim() === '');
+
+            const normalizedPermissions = !dbPermsIsMissing
+                ? (typeof Permissions !== 'undefined' && typeof Permissions.normalizePermissions === 'function'
+                    ? Permissions.normalizePermissions(rawDbPerms)
+                    : (rawDbPerms || {}))
+                : (AppState.currentUser.permissions || {});
             
             // ✅ إصلاح: التأكد من أن الصلاحيات المطبعة هي كائن صالح
             const finalPermissions = (normalizedPermissions && typeof normalizedPermissions === 'object' && !Array.isArray(normalizedPermissions))
                 ? normalizedPermissions
-                : (dbUser.permissions && typeof dbUser.permissions === 'object' && !Array.isArray(dbUser.permissions))
-                    ? dbUser.permissions
-                    : {};
+                : (!dbPermsIsMissing && rawDbPerms && typeof rawDbPerms === 'object' && !Array.isArray(rawDbPerms))
+                    ? rawDbPerms
+                    : (AppState.currentUser.permissions && typeof AppState.currentUser.permissions === 'object' && !Array.isArray(AppState.currentUser.permissions))
+                        ? AppState.currentUser.permissions
+                        : {};
             
             // تحديث AppState.currentUser بالبيانات الجديدة من قاعدة البيانات
             // ✅ الحل الجذري: التأكد من وجود name صحيح عند التحديث

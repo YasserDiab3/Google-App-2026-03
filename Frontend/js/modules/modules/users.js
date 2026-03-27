@@ -1362,6 +1362,22 @@ const Users = {
                 Permissions.updateNavigation();
                 Utils.safeLog('✅ تم تحديث القائمة الجانبية بعد تحديث الصلاحيات');
             }
+
+            // ✅ تحديث فوري للصلاحيات في نفس المتصفح (تبويبات متعددة) + طلب مزامنة للأجهزة الأخرى
+            try {
+                if (typeof window.RealtimeSyncManager !== 'undefined' && typeof window.RealtimeSyncManager.broadcast === 'function') {
+                    // إرسال تحديث مباشر (للجهاز/المتصفح نفسه)
+                    window.RealtimeSyncManager.broadcast('user-permissions-updated', 'users', {
+                        id: formData.id,
+                        email: formData.email,
+                        role: formData.role,
+                        active: formData.active,
+                        permissions: formData.permissions
+                    });
+                    // طلب مزامنة users (يفيد في تبويب آخر أو لتسريع الالتقاط في الدورة القادمة)
+                    window.RealtimeSyncManager.broadcast('sync-request', 'users');
+                }
+            } catch (e) { /* ignore */ }
             
             // استعادة الزر بعد النجاح
             if (submitBtn) {
