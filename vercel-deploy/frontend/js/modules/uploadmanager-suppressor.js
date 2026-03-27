@@ -17,16 +17,16 @@
         window.__convertGoogleDriveUrl = function(url) {
             if (!url || typeof url !== 'string') return url;
             
-            // تحويل /uc?export=view URLs إلى /thumbnail
+            // تحويل /uc?export=view URLs إلى صيغة عرض أكثر استقراراً من thumbnail
             var driveUcMatch = url.match(/drive\.google\.com\/uc\?.*id=([a-zA-Z0-9_-]+)/i);
             if (driveUcMatch && driveUcMatch[1]) {
-                return 'https://drive.google.com/thumbnail?id=' + driveUcMatch[1] + '&sz=w400';
+                return 'https://drive.google.com/uc?export=view&id=' + driveUcMatch[1];
             }
             
             // تحويل /file/d/ URLs
             var driveFileMatch = url.match(/drive\.google\.com\/file\/d\/([a-zA-Z0-9_-]+)/i);
             if (driveFileMatch && driveFileMatch[1]) {
-                return 'https://drive.google.com/thumbnail?id=' + driveFileMatch[1] + '&sz=w400';
+                return 'https://drive.google.com/uc?export=view&id=' + driveFileMatch[1];
             }
             
             return url;

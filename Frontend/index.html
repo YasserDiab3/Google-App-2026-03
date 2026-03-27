@@ -7299,6 +7299,13 @@
 
                         let i = 0;
                         const chunkSize = 1;
+                        const scheduleNextChunk = (cb) => {
+                            if (typeof requestIdleCallback === "function") {
+                                requestIdleCallback(cb, { timeout: 80 });
+                            } else {
+                                requestAnimationFrame(() => setTimeout(cb, 0));
+                            }
+                        };
                         const processChunk = () => {
                             const end = Math.min(i + chunkSize, sizes.length);
                             while (i < end) {
@@ -7306,7 +7313,7 @@
                                 i++;
                             }
                             if (i < sizes.length) {
-                                setTimeout(processChunk, 0);
+                                scheduleNextChunk(processChunk);
                                 return;
                             }
 
@@ -7331,10 +7338,10 @@
                                 const manifestLogoKey = String(logoUrl || "");
                                 if (window.__hseLastManifestLogoKey !== manifestLogoKey) {
                                     window.__hseLastManifestLogoKey = manifestLogoKey;
-                                    setTimeout(() => updateManifestIcons(img), 80);
+                                    scheduleNextChunk(() => updateManifestIcons(img));
                                 }
                             } catch (e) {
-                                setTimeout(() => updateManifestIcons(img), 80);
+                                scheduleNextChunk(() => updateManifestIcons(img));
                             }
                         };
                         processChunk();

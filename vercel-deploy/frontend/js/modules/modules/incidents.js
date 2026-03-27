@@ -10528,16 +10528,16 @@ const Incidents = {
         if (link.startsWith('data:image/')) {
             return link;
         }
-        // تطبيع روابط thumbnail المخزنة قديماً (w1000) → w400
+        // تطبيع روابط thumbnail المخزنة قديماً إلى صيغة uc/view الأكثر استقراراً
         if (link.includes('drive.google.com/thumbnail')) {
             const m = link.match(/drive\.google\.com\/thumbnail\?id=([a-zA-Z0-9_-]+)/i);
-            if (m && m[1]) return `https://drive.google.com/thumbnail?id=${m[1]}&sz=w400`;
+            if (m && m[1]) return `https://drive.google.com/uc?export=view&id=${m[1]}`;
         }
-        // إذا كان رابط Google Drive، استخدم صيغة thumbnail
+        // إذا كان رابط Google Drive، استخدم صيغة uc/view
         if (link.includes('drive.google.com')) {
             const fileIdMatch = link.match(/\/d\/([a-zA-Z0-9_-]+)/) || link.match(/id=([a-zA-Z0-9_-]+)/);
             if (fileIdMatch && fileIdMatch[1]) {
-                return `https://drive.google.com/thumbnail?id=${fileIdMatch[1]}&sz=w400`;
+                return `https://drive.google.com/uc?export=view&id=${fileIdMatch[1]}`;
             }
         }
         return link;

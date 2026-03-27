@@ -4820,19 +4820,23 @@ window.UI = {
         const loadSectionWork = () => {
             this.loadSectionData(sectionName, isRefresh);
             const section = document.getElementById(sectionId);
-            if (section) {
+            if (!section) return;
+
+            // تأجيل معالجة الأيقونات خطوة واحدة لتقليل Forced Reflow داخل نفس إطار التحميل
+            requestAnimationFrame(() => {
                 const sectionHeader = section.querySelector('.section-header');
-                if (sectionHeader) {
-                    this.removeNavigationIcons(section);
-                    this.addNavigationIcons(section, sectionName);
-                }
-            }
+                if (!sectionHeader) return;
+                this.removeNavigationIcons(section);
+                this.addNavigationIcons(section, sectionName);
+            });
         };
 
         if (sectionName === 'dashboard') {
             loadSectionWork();
+        } else if (typeof requestIdleCallback === 'function') {
+            requestIdleCallback(() => loadSectionWork(), { timeout: 120 });
         } else {
-            setTimeout(loadSectionWork, 0);
+            requestAnimationFrame(() => setTimeout(loadSectionWork, 0));
         }
     },
 
