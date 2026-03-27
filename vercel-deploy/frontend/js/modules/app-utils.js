@@ -270,8 +270,12 @@ const Permissions = {
     isCurrentUserEffectiveAdmin(user = AppState.currentUser) {
         if (!user) return false;
         if (this.isAdminRole(user.role)) return true;
-        const sp = user.permissions;
-        if (sp && typeof sp === 'object' && !Array.isArray(sp) && this.isAdminRole(sp.role)) return true;
+        const spRaw = user.permissions;
+        const sp = this.normalizePermissions(spRaw);
+        if (sp && typeof sp === 'object' && !Array.isArray(sp)) {
+            if (this.isAdminRole(sp.role)) return true;
+            if (sp.admin === true || sp.isAdmin === true || sp['manage-modules'] === true) return true;
+        }
         if (AppState.appData && Array.isArray(AppState.appData.users)) {
             const emailOrId = (user.email || user.id || '').toString().toLowerCase().trim();
             const dbUser = AppState.appData.users.find(u =>
@@ -280,8 +284,11 @@ const Permissions = {
             );
             if (dbUser) {
                 if (this.isAdminRole(dbUser.role)) return true;
-                const dp = dbUser.permissions;
-                if (dp && typeof dp === 'object' && !Array.isArray(dp) && this.isAdminRole(dp.role)) return true;
+                const dp = this.normalizePermissions(dbUser.permissions);
+                if (dp && typeof dp === 'object' && !Array.isArray(dp)) {
+                    if (this.isAdminRole(dp.role)) return true;
+                    if (dp.admin === true || dp.isAdmin === true || dp['manage-modules'] === true) return true;
+                }
             }
         }
         return false;
