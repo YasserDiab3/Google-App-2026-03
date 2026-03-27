@@ -337,8 +337,25 @@ const DailyObservations = {
             return;
         }
 
-        // عند فتح المديول يفتح دائماً على تبويب سجل الملاحظات
-        this.state.activeTab = 'observations-registry';
+        // ✅ عند فتح المديول: اختر أول تبويب متاح حسب الصلاحيات (بدلاً من ترك الواجهة فارغة)
+        const canRegistry = this.hasTabAccess('observations-registry');
+        const canTop10 = this.hasTabAccess('top-10-observations');
+        const canAnalysis = this.hasTabAccess('data-analysis');
+        const firstTab = canRegistry ? 'observations-registry' : (canTop10 ? 'top-10-observations' : (canAnalysis ? 'data-analysis' : ''));
+        if (!firstTab) {
+            section.innerHTML = `
+                <div class="content-card">
+                    <div class="card-body">
+                        <div class="empty-state">
+                            <i class="fas fa-lock text-4xl text-gray-300 mb-4"></i>
+                            <p class="text-gray-500">ليس لديك صلاحية للوصول إلى الملاحظات اليومية</p>
+                        </div>
+                    </div>
+                </div>
+            `;
+            return;
+        }
+        this.state.activeTab = firstTab;
         // حفظ حالة الواجهة قبل إعادة الرسم (بعد تعيين التبويب الافتراضي)
         this.saveUIState();
 
@@ -483,20 +500,20 @@ const DailyObservations = {
                 <!-- Tabs Navigation: سجل الملاحظات | أفضل 10 ملاحظات | تحليل البيانات | تحديث -->
                 <div class="tabs-container mt-6" style="border-bottom: 2px solid var(--border-color);">
                     <div class="tabs-nav" style="display: flex; gap: 8px; flex-wrap: wrap;">
-                        ${this.hasTabAccess('observations-registry') ? `
-                        <button class="tab-btn active" data-tab="observations-registry" style="padding: 12px 24px; border: none; background: transparent; border-bottom: 3px solid var(--primary-color); color: var(--primary-color); font-weight: 600; cursor: pointer; transition: all 0.3s;">
+                        ${canRegistry ? `
+                        <button class="tab-btn ${this.state.activeTab === 'observations-registry' ? 'active' : ''}" data-tab="observations-registry" style="padding: 12px 24px; border: none; background: transparent; border-bottom: 3px solid ${this.state.activeTab === 'observations-registry' ? 'var(--primary-color)' : 'transparent'}; color: ${this.state.activeTab === 'observations-registry' ? 'var(--primary-color)' : 'var(--text-secondary)'}; font-weight: 600; cursor: pointer; transition: all 0.3s;">
                             <i class="fas fa-list ml-2"></i>
                             سجل الملاحظات
                         </button>
                         ` : ''}
-                        ${this.hasTabAccess('top-10-observations') ? `
-                        <button class="tab-btn" data-tab="top-10-observations" style="padding: 12px 24px; border: none; background: transparent; border-bottom: 3px solid transparent; color: var(--text-secondary); font-weight: 600; cursor: pointer; transition: all 0.3s;">
+                        ${canTop10 ? `
+                        <button class="tab-btn ${this.state.activeTab === 'top-10-observations' ? 'active' : ''}" data-tab="top-10-observations" style="padding: 12px 24px; border: none; background: transparent; border-bottom: 3px solid ${this.state.activeTab === 'top-10-observations' ? 'var(--primary-color)' : 'transparent'}; color: ${this.state.activeTab === 'top-10-observations' ? 'var(--primary-color)' : 'var(--text-secondary)'}; font-weight: 600; cursor: pointer; transition: all 0.3s;">
                             <i class="fas fa-trophy ml-2"></i>
                             أفضل 10 ملاحظات
                         </button>
                         ` : ''}
-                        ${this.hasTabAccess('data-analysis') ? `
-                        <button class="tab-btn" data-tab="data-analysis" style="padding: 12px 24px; border: none; background: transparent; border-bottom: 3px solid transparent; color: var(--text-secondary); font-weight: 600; cursor: pointer; transition: all 0.3s;">
+                        ${canAnalysis ? `
+                        <button class="tab-btn ${this.state.activeTab === 'data-analysis' ? 'active' : ''}" data-tab="data-analysis" style="padding: 12px 24px; border: none; background: transparent; border-bottom: 3px solid ${this.state.activeTab === 'data-analysis' ? 'var(--primary-color)' : 'transparent'}; color: ${this.state.activeTab === 'data-analysis' ? 'var(--primary-color)' : 'var(--text-secondary)'}; font-weight: 600; cursor: pointer; transition: all 0.3s;">
                             <i class="fas fa-chart-line ml-2"></i>
                             تحليل البيانات
                         </button>
@@ -510,18 +527,18 @@ const DailyObservations = {
 
                 <!-- Tab Content -->
                 <div id="observations-content" class="mt-6">
-                    ${this.hasTabAccess('observations-registry') ? `
-                    <div id="tab-observations-registry" class="tab-content active">
+                    ${canRegistry ? `
+                    <div id="tab-observations-registry" class="tab-content ${this.state.activeTab === 'observations-registry' ? 'active' : ''}" style="${this.state.activeTab === 'observations-registry' ? '' : 'display: none;'}">
                         ${listContent}
                     </div>
                     ` : ''}
-                    ${this.hasTabAccess('top-10-observations') ? `
-                    <div id="tab-top-10-observations" class="tab-content" style="display: none;">
+                    ${canTop10 ? `
+                    <div id="tab-top-10-observations" class="tab-content ${this.state.activeTab === 'top-10-observations' ? 'active' : ''}" style="${this.state.activeTab === 'top-10-observations' ? '' : 'display: none;'}">
                         ${top10Content}
                     </div>
                     ` : ''}
-                    ${this.hasTabAccess('data-analysis') ? `
-                    <div id="tab-data-analysis" class="tab-content" style="display: none;">
+                    ${canAnalysis ? `
+                    <div id="tab-data-analysis" class="tab-content ${this.state.activeTab === 'data-analysis' ? 'active' : ''}" style="${this.state.activeTab === 'data-analysis' ? '' : 'display: none;'}">
                         ${analysisContent}
                     </div>
                     ` : ''}
@@ -533,9 +550,10 @@ const DailyObservations = {
             // تهيئة الفلتر الحالي
             this.currentFilter = null;
             
-            if (isAdmin) {
+            // تفعيل التبويبات لكل المستخدمين (إذا كان أكثر من تبويب متاح)
+            try {
                 this.setupTabs();
-            }
+            } catch (e) { /* ignore */ }
             
             // استعادة حالة الواجهة بعد إعادة الرسم
             this.restoreUIState();
@@ -543,7 +561,10 @@ const DailyObservations = {
             try {
                 requestAnimationFrame(() => {
                     try {
-                        this.loadObservationsList();
+                        // لا تبدأ تحديث القائمة إذا لم يكن تبويب "سجل الملاحظات" متاحاً
+                        if (this.state && this.state.activeTab === 'observations-registry') {
+                            this.loadObservationsList();
+                        }
                     } catch (err) {
                         Utils.safeWarn('⚠️ خطأ في تحميل قائمة الملاحظات الأولي:', err);
                     }
