@@ -4854,9 +4854,15 @@ window.UI = {
         // التأكد من تحميل البيانات بعد عرض القسم مباشرة مع تقليل الأحمال الثقيلة داخل callbacks
         const isRefresh = AppState.isPageRefresh;
         const loadSectionWork = () => {
-            this.loadSectionData(sectionName, isRefresh);
-            // تجنّب أي معالجة DOM إضافية في نفس دورة التنقل لتقليل Forced Reflow
-            this.addNavigationIconsAfterRender(sectionName);
+            // ✅ تقسيم العمل لتقليل setTimeout/idle Violations: تحميل البيانات أولاً، ثم الأيقونات لاحقاً
+            setTimeout(() => {
+                this.loadSectionData(sectionName, isRefresh);
+            }, 0);
+            if (typeof requestIdleCallback === 'function') {
+                requestIdleCallback(() => this.addNavigationIconsAfterRender(sectionName), { timeout: 800 });
+            } else {
+                setTimeout(() => this.addNavigationIconsAfterRender(sectionName), 60);
+            }
         };
 
         if (sectionName === 'dashboard') {

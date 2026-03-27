@@ -14,6 +14,69 @@ const Users = {
     refreshInterval: 5000, // تحديث كل 5 ثوان
     sectionChangeHandler: null, // لتخزين معالج حدث تغيير القسم
 
+    // ===== Photo loading guards (avoid repeated 503) =====
+    _photoFailKey(photoKey) {
+        return `hse_user_photo_failed_${String(photoKey || '').trim()}`;
+    },
+    _getDriveIdFromUrl(url) {
+        try {
+            const s = String(url || '').trim();
+            if (!s) return '';
+            const m = s.match(/[?&]id=([^&]+)/) || s.match(/\/file\/d\/([^/]+)/);
+            return m ? String(m[1] || '').trim() : '';
+        } catch (e) {
+            return '';
+        }
+    },
+    _normalizeUserPhotoUrl(photoUrl, userId = '') {
+        try {
+            const raw = String(photoUrl || '').trim();
+            if (!raw) return '';
+
+            let normalized = raw;
+            if (typeof window !== 'undefined' && typeof window.__convertGoogleDriveUrl === 'function') {
+                normalized = window.__convertGoogleDriveUrl(raw) || raw;
+            }
+
+            const driveId = this._getDriveIdFromUrl(normalized);
+            const photoKey = driveId || userId || normalized;
+            const failedAt = sessionStorage.getItem(this._photoFailKey(photoKey));
+            if (failedAt) return '';
+
+            return normalized;
+        } catch (e) {
+            return '';
+        }
+    },
+    _setupUserPhotoFallbacks(rootEl) {
+        try {
+            const root = rootEl || document;
+            const images = root.querySelectorAll('img[data-user-photo="1"]');
+            if (!images || images.length === 0) return;
+
+            images.forEach((img) => {
+                if (!img || img.dataset._fallbackBound === '1') return;
+                img.dataset._fallbackBound = '1';
+                const photoKey = (img.dataset.photoKey || '').trim();
+
+                img.addEventListener('error', () => {
+                    try {
+                        if (photoKey) sessionStorage.setItem(this._photoFailKey(photoKey), Date.now().toString());
+                    } catch (e) { /* ignore */ }
+
+                    try {
+                        const parent = img.parentElement;
+                        if (parent) {
+                            parent.innerHTML = '<div class="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center"><i class="fas fa-user text-gray-400"></i></div>';
+                        }
+                    } catch (e) { /* ignore */ }
+                }, { passive: true });
+            });
+        } catch (e) {
+            // ignore
+        }
+    },
+
     async load() {
         // Add language change listener
         if (!this._languageChangeListenerAdded) {
@@ -430,7 +493,15 @@ const Users = {
                             <tr>
                                 <td>
                                     <div class="flex items-center gap-3">
-                                        ${user.photo ? `<img src="${user.photo}" alt="${Utils.escapeHTML(user.name || '')}" class="w-10 h-10 rounded-full object-cover">` : `<div class="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center"><i class="fas fa-user text-gray-400"></i></div>`}
+                                        ${(() => {
+                                            const driveId = this._getDriveIdFromUrl(user.photo || '');
+                                            const photoKey = (driveId || user.id || user.email || user.name || '').toString();
+                                            const photoSrc = this._normalizeUserPhotoUrl(user.photo, user.id);
+                                            if (!photoSrc) {
+                                                return `<div class="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center"><i class="fas fa-user text-gray-400"></i></div>`;
+                                            }
+                                            return `<img data-user-photo="1" data-photo-key="${Utils.escapeHTML(photoKey)}" src="${Utils.escapeHTML(photoSrc)}" alt="${Utils.escapeHTML(user.name || '')}" class="w-10 h-10 rounded-full object-cover" loading="lazy" decoding="async" referrerpolicy="no-referrer">`;
+                                        })()}
                                         <span>${Utils.escapeHTML(user.name || '')}</span>
                                     </div>
                                 </td>
@@ -510,6 +581,13 @@ const Users = {
         `;
 
         container.innerHTML = tableHTML;
+
+        // ✅ تثبيت fallback لصور المستخدمين (503 Drive) بعد تحديث DOM
+        if (typeof requestIdleCallback === 'function') {
+            requestIdleCallback(() => this._setupUserPhotoFallbacks(container), { timeout: 600 });
+        } else {
+            setTimeout(() => this._setupUserPhotoFallbacks(container), 0);
+        }
     },
 
     getRoleName(role) {
