@@ -5241,6 +5241,11 @@ const Clinic = {
             const cacheAge = lastSync ? (Date.now() - parseInt(lastSync)) : Infinity;
             const CACHE_DURATION = 10 * 60 * 1000; // 10 دقائق
             const isDataStale = cacheAge >= CACHE_DURATION;
+
+            // ✅ عند Reload: إذا كانت البيانات المحلية موجودة وحديثة، اعتبر التحميل مكتملاً لتفادي إعادة الجلب وفقد/وميض البيانات
+            if (!forceReload && hasLocalData && !isDataStale) {
+                this._visitsBackendFetchOk = true;
+            }
             
             // عرض الواجهة فوراً بالبيانات المتوفرة (حتى لو كانت فارغة)
             this.renderVisitsTabContent(panel);
@@ -10311,6 +10316,54 @@ const Clinic = {
     /**
      * عرض tab طلبات الموافقة (للمدير فقط)
      */
+    async ensureApprovalsDataLoaded({ force = false } = {}) {
+        if (this._approvalsLoadPromise && !force) return this._approvalsLoadPromise;
+        this._approvalsLoadPromise = (async () => {
+            const isEnabled = AppState?.googleConfig?.appsScript?.enabled && AppState?.googleConfig?.appsScript?.scriptUrl;
+            if (!isEnabled || typeof GoogleIntegration === 'undefined' || !GoogleIntegration.sendRequest) {
+                this._approvalsBackendFetchOk = true;
+                return;
+            }
+
+            const deletionP = GoogleIntegration.sendRequest({
+                action: 'getAllMedicationDeletionRequests',
+                data: { filters: {} }
+            });
+            const supplyP = GoogleIntegration.sendRequest({
+                action: 'getAllSupplyRequests',
+                data: { filters: {} }
+            });
+
+            const [deletionResult, supplyResult] = await Promise.allSettled([
+                Utils.promiseWithTimeout(deletionP, 15000, 'انتهت مهلة تحميل طلبات حذف الأدوية'),
+                Utils.promiseWithTimeout(supplyP, 15000, 'انتهت مهلة تحميل طلبات الاحتياج')
+            ]);
+
+            const delVal = deletionResult.status === 'fulfilled' ? deletionResult.value : null;
+            const supVal = supplyResult.status === 'fulfilled' ? supplyResult.value : null;
+
+            const deletionRequests = Array.isArray(delVal?.data) ? delVal.data : [];
+            const supplyRequests = Array.isArray(supVal?.data) ? supVal.data : [];
+
+            // ✅ لا تستبدل بيانات محلية غير فارغة ببيانات فارغة من backend
+            if (deletionRequests.length > 0 || !(Array.isArray(AppState.appData?.clinicMedicationDeletionRequests) && AppState.appData.clinicMedicationDeletionRequests.length > 0)) {
+                AppState.appData.clinicMedicationDeletionRequests = deletionRequests;
+            }
+            if (supplyRequests.length > 0 || !(Array.isArray(AppState.appData?.clinicSupplyRequests) && AppState.appData.clinicSupplyRequests.length > 0)) {
+                AppState.appData.clinicSupplyRequests = supplyRequests;
+            }
+
+            try { localStorage.setItem('clinic_approvals_last_sync', String(Date.now())); } catch (e) {}
+            if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
+                try { window.DataManager.save(); } catch (e) {}
+            }
+            this._approvalsBackendFetchOk = true;
+        })().finally(() => {
+            this._approvalsLoadPromise = null;
+        });
+        return this._approvalsLoadPromise;
+    },
+
     async renderApprovalsTab() {
         const panel = document.querySelector('.clinic-tab-panel[data-tab-panel="approvals"]');
         if (!panel) {
@@ -10324,30 +10377,27 @@ const Clinic = {
             return;
         }
 
-        panel.innerHTML = '<div class="text-center py-8"><div style="width: 300px; margin: 0 auto 16px;"><div style="width: 100%; height: 6px; background: rgba(59, 130, 246, 0.2); border-radius: 3px; overflow: hidden;"><div style="height: 100%; background: linear-gradient(90deg, #3b82f6, #2563eb, #3b82f6); background-size: 200% 100%; border-radius: 3px; animation: loadingProgress 1.5s ease-in-out infinite;"></div></div></div><p class="mt-2">جاري التحميل...</p></div>';
+        // ✅ عرض فوري بالبيانات المحلية إن وجدت، ثم تحديث من backend عند الحاجة
+        panel.innerHTML = '<div class="text-center py-8"><div style="width: 300px; margin: 0 auto 16px;"><div style="width: 100%; height: 6px; background: rgba(59, 130, 246, 0.2); border-radius: 3px; overflow: hidden;"><div style="height: 100%; background: linear-gradient(90deg, #3b82f6, #2563eb, #3b82f6); background-size: 200% 100%; border-radius: 3px; animation: loadingProgress 1.5s ease-in-out infinite;"></div></div></div><p class="mt-2">جاري التحضير...</p></div>';
 
         try {
-            // تحميل طلبات الموافقة - حذف الأدوية
-            const deletionResult = await GoogleIntegration.sendRequest({
-                action: 'getAllMedicationDeletionRequests',
-                data: { filters: {} }
-            });
+            const lastSync = (() => { try { return localStorage.getItem('clinic_approvals_last_sync'); } catch (e) { return null; } })();
+            const cacheAge = lastSync ? (Date.now() - parseInt(lastSync, 10)) : Infinity;
+            const CACHE_DURATION = 5 * 60 * 1000; // 5 دقائق
+            const hasLocalDeletion = Array.isArray(AppState.appData?.clinicMedicationDeletionRequests) && AppState.appData.clinicMedicationDeletionRequests.length > 0;
+            const hasLocalSupply = Array.isArray(AppState.appData?.clinicSupplyRequests) && AppState.appData.clinicSupplyRequests.length > 0;
+            const hasLocalAny = hasLocalDeletion || hasLocalSupply;
+            const isStale = cacheAge >= CACHE_DURATION;
 
-            // تحميل طلبات الموافقة - طلبات الاحتياج
-            const supplyResult = await GoogleIntegration.sendRequest({
-                action: 'getAllSupplyRequests',
-                data: { filters: {} }
-            });
-
-            if (!deletionResult || !deletionResult.success) {
-                Utils.safeError('❌ فشل تحميل طلبات حذف الأدوية:', deletionResult);
+            if (!isStale && hasLocalAny) {
+                this._approvalsBackendFetchOk = true;
             }
-            if (!supplyResult || !supplyResult.success) {
-                Utils.safeError('❌ فشل تحميل طلبات الاحتياج:', supplyResult);
+            if ((isStale || !hasLocalAny || this._approvalsBackendFetchOk !== true) && typeof GoogleIntegration !== 'undefined' && GoogleIntegration.sendRequest) {
+                await this.ensureApprovalsDataLoaded({ force: isStale && hasLocalAny });
             }
 
-            const deletionRequests = Array.isArray(deletionResult?.data) ? deletionResult.data : [];
-            const supplyRequests = Array.isArray(supplyResult?.data) ? supplyResult.data : [];
+            const deletionRequests = Array.isArray(AppState.appData?.clinicMedicationDeletionRequests) ? AppState.appData.clinicMedicationDeletionRequests : [];
+            const supplyRequests = Array.isArray(AppState.appData?.clinicSupplyRequests) ? AppState.appData.clinicSupplyRequests : [];
 
             // إضافة نوع الطلب لكل طلب
             const allDeletionRequests = deletionRequests.map(r => ({ ...r, requestType: 'deletion' }));
