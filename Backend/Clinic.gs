@@ -1764,13 +1764,8 @@ function approveClinicVisitDeletion(requestId, approverData) {
             return { success: false, message: 'معرف الزيارة غير موجود في الطلب' };
         }
         
-        // حذف الزيارة فعلياً من شيت ClinicVisits
-        const sheetName = 'ClinicVisits';
-        const spreadsheetId = getSpreadsheetId();
-        const visits = readFromSheet(sheetName, spreadsheetId);
-        const filtered = visits.filter(v => v.id !== visitId);
-        
-        const saveResult = saveToSheet(sheetName, filtered, spreadsheetId);
+        // حذف الزيارة فعلياً
+        const saveResult = deleteClinicVisit(visitId);
         if (!saveResult.success) {
             // rollback
             updateClinicVisitDeletionRequest(requestId, {
@@ -1787,6 +1782,26 @@ function approveClinicVisitDeletion(requestId, approverData) {
     } catch (error) {
         Logger.log('Error approving clinic visit deletion: ' + error.toString());
         return { success: false, message: 'حدث خطأ أثناء الموافقة على حذف الزيارة: ' + error.toString() };
+    }
+}
+
+function deleteClinicVisit(visitId) {
+    try {
+        if (!visitId) {
+            return { success: false, message: 'معرف الزيارة غير محدد' };
+        }
+        const sheetName = 'ClinicVisits';
+        const spreadsheetId = getSpreadsheetId();
+        const visits = readFromSheet(sheetName, spreadsheetId);
+        const beforeCount = visits.length;
+        const filtered = visits.filter(v => v.id !== visitId);
+        if (filtered.length === beforeCount) {
+            return { success: false, message: 'الزيارة غير موجودة' };
+        }
+        return saveToSheet(sheetName, filtered, spreadsheetId);
+    } catch (error) {
+        Logger.log('Error deleting clinic visit: ' + error.toString());
+        return { success: false, message: 'حدث خطأ أثناء حذف الزيارة: ' + error.toString() };
     }
 }
 

@@ -713,6 +713,9 @@ function doPost(e) {
                 case 'rejectClinicVisitDeletion':
                     result = rejectClinicVisitDeletion(payload.requestId || payload.id, payload.rejectorData || payload.rejector, payload.reason);
                     break;
+                case 'deleteClinicVisit':
+                    result = deleteClinicVisit(payload.visitId || payload.id);
+                    break;
                 
                 // ============================================
                 // المقاولين والموظفين (Contractors & Employees)

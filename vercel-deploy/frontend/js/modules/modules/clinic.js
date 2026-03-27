@@ -5206,15 +5206,13 @@ const Clinic = {
         }
         const doRender = () => {
             this._visitsRenderTimer = null;
-            // ✅ تجنّب Violation: اجعل requestAnimationFrame callback خفيفاً
-            // renderVisitsTab قد يكون ثقيلاً، لذا ندفعه إلى setTimeout بعد أول frame.
-            requestAnimationFrame(() => setTimeout(() => {
+            requestAnimationFrame(() => {
                 this.renderVisitsTab(forceReload);
-            }, 0));
+            });
         };
         // استخدام requestIdleCallback عندما لا يوجد تأخير مطلوب لتجنب violation
         if (delayMs === 0 && typeof requestIdleCallback === 'function') {
-            const idleId = requestIdleCallback(() => setTimeout(doRender, 60), { timeout: 1200 });
+            const idleId = requestIdleCallback(doRender, { timeout: 1200 });
             this._visitsRenderTimer = { _idle: idleId };
         } else {
             this._visitsRenderTimer = setTimeout(doRender, Math.max(0, delayMs));
@@ -7076,39 +7074,21 @@ const Clinic = {
         Loading.show('جاري حذف الزيارة...');
 
         try {
-            // حذف الزيارة من البيانات المحلية
-            AppState.appData.clinicVisits = (AppState.appData.clinicVisits || []).filter(v => v.id !== visitId);
-
-            // حفظ البيانات محلياً
-            if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
-                window.DataManager.save();
+            // حذف فعلي من Backend باستخدام معرف الزيارة فقط (بدون إرسال كل سجل الزيارات)
+            if (AppState.googleConfig?.appsScript?.enabled) {
+                const deleteResult = await GoogleIntegration.sendRequest({
+                    action: 'deleteClinicVisit',
+                    data: { visitId: visitId }
+                });
+                if (!deleteResult || deleteResult.success !== true) {
+                    throw new Error(deleteResult?.message || 'فشل حذف الزيارة من الخادم');
+                }
             }
 
-            // حفظ في Google Sheets
-            if (AppState.googleConfig?.appsScript?.enabled) {
-                try {
-                    // استخدام updateClinicVisit مع حذف فعلي من البيانات
-                    // ملاحظة: لا يوجد deleteClinicVisit في Backend، لذا نستخدم readFromSheet ثم saveToSheet
-                    const visits = AppState.appData.clinicVisits || [];
-                    const filteredVisits = visits.filter(v => v.id !== visitId);
-
-                    // حفظ البيانات المحدثة
-                    await GoogleIntegration.sendRequest({
-                        action: 'saveToSheet',
-                        data: {
-                            sheetName: 'ClinicVisits',
-                            data: filteredVisits
-                        }
-                    });
-                } catch (error) {
-                    Utils.safeWarn('⚠️ فشل حذف الزيارة من Google Sheets، سيتم المحاولة لاحقاً:', error);
-                    // في حالة الفشل، نستخدم autoSave كبديل فقط
-                    if (typeof GoogleIntegration !== 'undefined' && GoogleIntegration.autoSave) {
-                        await GoogleIntegration.autoSave('ClinicVisits', AppState.appData.clinicVisits).catch(() => {
-                            // تجاهل الأخطاء في autoSave أيضاً
-                        });
-                    }
-                }
+            // تحديث محلي بعد نجاح الحذف من الخادم
+            AppState.appData.clinicVisits = (AppState.appData.clinicVisits || []).filter(v => v.id !== visitId);
+            if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
+                window.DataManager.save();
             }
 
             Loading.hide();
@@ -10067,9 +10047,15 @@ const Clinic = {
                     <button class="btn-success" style="background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); color: white; border: none; padding: 12px 24px; border-radius: 10px; font-weight: 600; transition: all 0.3s; box-shadow: 0 4px 15px 0 rgba(17, 153, 142, 0.4);" onclick="Clinic.exportVisitToPDF(${JSON.stringify(visit).replace(/"/g, '&quot;')});">
                         <i class="fas fa-file-pdf ml-2"></i>طباعة
                     </button>
+                    ${this.isCurrentUserAdmin() ? `
                     <button class="btn-danger" style="background: linear-gradient(135deg, #eb3349 0%, #f45c43 100%); color: white; border: none; padding: 12px 24px; border-radius: 10px; font-weight: 600; transition: all 0.3s; box-shadow: 0 4px 15px 0 rgba(235, 51, 73, 0.4);" onclick="if(confirm('هل أنت متأكد من حذف هذه الزيارة؟')) { Clinic.deleteVisit('${visit.id}'); this.closest('.modal-overlay').remove(); }">
                         <i class="fas fa-trash-alt ml-2"></i>حذف
                     </button>
+                    ` : `
+                    <button class="btn-warning" style="background: linear-gradient(135deg, #f59e0b 0%, #f97316 100%); color: white; border: none; padding: 12px 24px; border-radius: 10px; font-weight: 600; transition: all 0.3s; box-shadow: 0 4px 15px 0 rgba(245, 158, 11, 0.4);" onclick="Clinic.requestVisitDeletion('${visit.id}'); this.closest('.modal-overlay').remove();">
+                        <i class="fas fa-paper-plane ml-2"></i>طلب حذف
+                    </button>
+                    `}
                 </div>
             </div>
         `;
