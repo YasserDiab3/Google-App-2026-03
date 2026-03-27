@@ -241,7 +241,8 @@
             // تحميل البيانات من localStorage
             if (window.DataManager && window.DataManager.load) {
                 try {
-                    window.DataManager.load();
+                    // ✅ مهم عند Reload: ننتظر تحميل البيانات المحلية لتجنّب صفحة بيضاء/جداول فارغة ثم ظهور البيانات لاحقاً
+                    await window.DataManager.load();
                     this.updateLoader(55, 'تم تحميل البيانات المحلية');
 
                     // 🧹 تنظيف أمني: إزالة أي حسابات افتراضية legacy من البيانات المحلية (إن وُجدت)
