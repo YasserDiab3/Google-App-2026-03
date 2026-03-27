@@ -10777,7 +10777,7 @@ const Clinic = {
             AppState.appData = {};
         }
         if (typeof Permissions !== 'undefined' && typeof Permissions.ensureFormSettingsState === 'function') {
-            try { await Permissions.ensureFormSettingsState(); } catch (e) { /* ignore */ }
+            try { Permissions.ensureFormSettingsState().catch(() => {}); } catch (e) { /* ignore */ }
         }
 
         // حقن أنماط CSS لشريط التمرير

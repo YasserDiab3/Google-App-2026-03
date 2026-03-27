@@ -960,7 +960,7 @@ const PTW = {
             return;
         }
         if (typeof Permissions !== 'undefined' && typeof Permissions.ensureFormSettingsState === 'function') {
-            try { await Permissions.ensureFormSettingsState(); } catch (e) { /* ignore */ }
+            try { Permissions.ensureFormSettingsState().catch(() => {}); } catch (e) { /* ignore */ }
         }
 
         const section = document.getElementById('ptw-section');

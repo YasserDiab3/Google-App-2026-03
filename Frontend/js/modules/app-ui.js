@@ -3639,6 +3639,13 @@ window.UI = {
         const header = document.getElementById('company-logo-header');
         if (!header) return;
 
+        // وضع الهيدر أسفل شريط العنوان (mobile-topbar) حتى لا يغطي زر القائمة الرئيسية
+        try {
+            const topbar = document.querySelector('.mobile-topbar');
+            const topbarHeight = topbar ? Math.round(topbar.getBoundingClientRect().height) : 0;
+            header.style.top = (topbarHeight > 0 ? topbarHeight : 0) + 'px';
+        } catch (e) { /* ignore */ }
+
         // على الشاشات الكبيرة (> 1024px)، إذا كانت القائمة مفتوحة، الهيدر يكون بجانبها
         // وإذا كانت مغلقة، يكون كامل العرض
         if (window.innerWidth > 1024) {
