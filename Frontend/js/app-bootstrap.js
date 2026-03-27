@@ -293,9 +293,14 @@
                             }
                             // حفظ البيانات محلياً بشكل مؤجل لتجنب حجز الواجهة أثناء الإقلاع
                             if (window.DataManager && window.DataManager.save) {
-                                setTimeout(() => {
+                                const scheduleSave = () => {
                                     try { window.DataManager.save(); } catch (e) {}
-                                }, 500);
+                                };
+                                if (typeof requestIdleCallback === 'function') {
+                                    requestIdleCallback(scheduleSave, { timeout: 2000 });
+                                } else {
+                                    setTimeout(scheduleSave, 1200);
+                                }
                             }
                         }).catch(() => {
                             // تجاهل الأخطاء - البيانات المحلية ستكون متاحة

@@ -5116,11 +5116,13 @@ const Clinic = {
         }
         const doRender = () => {
             this._visitsRenderTimer = null;
-            this.renderVisitsTab(forceReload);
+            requestAnimationFrame(() => {
+                this.renderVisitsTab(forceReload);
+            });
         };
         // استخدام requestIdleCallback عندما لا يوجد تأخير مطلوب لتجنب violation
         if (delayMs === 0 && typeof requestIdleCallback === 'function') {
-            const idleId = requestIdleCallback(() => setTimeout(doRender, 0), { timeout: 800 });
+            const idleId = requestIdleCallback(() => setTimeout(doRender, 60), { timeout: 1200 });
             this._visitsRenderTimer = { _idle: idleId };
         } else {
             this._visitsRenderTimer = setTimeout(doRender, Math.max(0, delayMs));

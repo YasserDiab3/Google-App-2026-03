@@ -4822,22 +4822,14 @@ window.UI = {
         const isRefresh = AppState.isPageRefresh;
         const loadSectionWork = () => {
             this.loadSectionData(sectionName, isRefresh);
-            const section = document.getElementById(sectionId);
-            if (!section) return;
-
-            // تأجيل معالجة الأيقونات خطوة واحدة لتقليل Forced Reflow داخل نفس إطار التحميل
-            requestAnimationFrame(() => {
-                const sectionHeader = section.querySelector('.section-header');
-                if (!sectionHeader) return;
-                this.removeNavigationIcons(section);
-                this.addNavigationIcons(section, sectionName);
-            });
+            // تجنّب أي معالجة DOM إضافية في نفس دورة التنقل لتقليل Forced Reflow
+            this.addNavigationIconsAfterRender(sectionName);
         };
 
         if (sectionName === 'dashboard') {
             loadSectionWork();
         } else if (typeof requestIdleCallback === 'function') {
-            requestIdleCallback(() => loadSectionWork(), { timeout: 120 });
+            requestIdleCallback(() => loadSectionWork(), { timeout: 260 });
         } else {
             requestAnimationFrame(() => setTimeout(loadSectionWork, 0));
         }
