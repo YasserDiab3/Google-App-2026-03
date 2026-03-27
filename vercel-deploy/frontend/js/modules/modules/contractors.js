@@ -327,8 +327,14 @@ const Contractors = {
         }
         
         this._isLoading = true;
-        
+
         try {
+            try {
+                this._abortController?.abort();
+            } catch (e) { /* ignore */ }
+            this._abortController = new AbortController();
+            this._eventListenersAttached = false;
+
             const section = document.getElementById('contractors-section');
             if (!section) {
                 if (typeof Utils !== 'undefined' && Utils.safeWarn) {
@@ -504,12 +510,8 @@ const Contractors = {
             // ✅ تحديث المحتوى مباشرة
             this.safeSetInnerHTML(section, mainHTML);
 
-            // ✅ إعداد event listeners مرة واحدة فقط
-            if (!this._listenersInitialized) {
-                this._listenersInitialized = true;
-                this.setupEventListeners();
-                this.setupRealtimeListeners();
-            }
+            this.setupEventListeners();
+            this.setupRealtimeListeners();
 
             // ✅ ربط زر إرسال الطلب
             const sendBtn = document.getElementById('send-approval-request-btn');
@@ -1639,11 +1641,18 @@ const Contractors = {
                             قائمة المقاولين والموردين المعتمدين
                         </h2>
                         <div class="flex items-center gap-2 flex-wrap">
-                            <button id="export-approved-contractors-pdf-btn" class="btn-secondary">
+                            ${isAdmin ? `
+                            <input type="file" id="import-approved-contractors-input" accept=".xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel" tabindex="-1" aria-hidden="true" style="position:absolute;width:1px;height:1px;opacity:0;left:-9999px;">
+                            <button type="button" id="import-approved-contractors-excel-btn" class="btn-secondary" title="استيراد من ملف Excel (نفس أعمدة التصدير)">
+                                <i class="fas fa-file-import ml-2"></i>
+                                استيراد Excel
+                            </button>
+                            ` : ''}
+                            <button type="button" id="export-approved-contractors-pdf-btn" class="btn-secondary">
                                 <i class="fas fa-file-pdf ml-2"></i>
                                 تصدير PDF
                             </button>
-                            <button id="export-approved-contractors-excel-btn" class="btn-success">
+                            <button type="button" id="export-approved-contractors-excel-btn" class="btn-success">
                                 <i class="fas fa-file-excel ml-2"></i>
                                 تصدير Excel
                             </button>
@@ -3008,8 +3017,12 @@ const Contractors = {
             'نوع الجهة': this.getApprovedTypeLabel(record.entityType),
             'النشاط / نوع الخدمة': record.serviceType || '',
             'السجل التجاري / الترخيص': record.licenseNumber || '',
-            'تاريخ الاعتماد': record.approvalDate ? Utils.formatDate(record.approvalDate) : '',
-            'تاريخ انتهاء الاعتماد': record.expiryDate ? Utils.formatDate(record.expiryDate) : '',
+            'تاريخ الاعتماد': record.approvalDate && typeof Utils.formatDateForInput === 'function'
+                ? Utils.formatDateForInput(record.approvalDate)
+                : (record.approvalDate ? Utils.formatDate(record.approvalDate) : ''),
+            'تاريخ انتهاء الاعتماد': record.expiryDate && typeof Utils.formatDateForInput === 'function'
+                ? Utils.formatDateForInput(record.expiryDate)
+                : (record.expiryDate ? Utils.formatDate(record.expiryDate) : ''),
             'مسؤول السلامة': record.safetyReviewer || '',
             'الحالة': this.getApprovedStatusLabel(record.status),
             'ملاحظات': record.notes || ''
@@ -3032,6 +3045,172 @@ const Contractors = {
         const fileName = `الجهات_المعتمدة_${new Date().toISOString().slice(0, 10)}.xlsx`;
         XLSX.writeFile(wb, fileName);
         Notification.success('تم تصدير قائمة الجهات المعتمدة بنجاح');
+    },
+
+    /**
+     * تحويل قيمة تاريخ من Excel (نص، رقم تسلسلي، أو Date) إلى ISO
+     */
+    parseApprovedImportDate(value) {
+        if (value === null || value === undefined || value === '') return '';
+        if (value instanceof Date) {
+            return isNaN(value.getTime()) ? '' : value.toISOString();
+        }
+        if (typeof value === 'number' && !Number.isNaN(value)) {
+            const utcMs = Math.round((value - 25569) * 86400 * 1000);
+            const d = new Date(utcMs);
+            return isNaN(d.getTime()) ? '' : d.toISOString();
+        }
+        const s = String(value).trim();
+        if (!s || s === '-') return '';
+        if (/^\d{4}-\d{2}-\d{2}$/.test(s)) {
+            const d = new Date(s + 'T00:00:00');
+            return isNaN(d.getTime()) ? '' : d.toISOString();
+        }
+        const d2 = new Date(s);
+        return isNaN(d2.getTime()) ? '' : d2.toISOString();
+    },
+
+    getApprovedImportCell(row, ...aliases) {
+        if (!row || typeof row !== 'object') return '';
+        for (let i = 0; i < aliases.length; i++) {
+            const key = aliases[i];
+            if (key in row && row[key] !== undefined && row[key] !== null && String(row[key]).trim() !== '') {
+                return row[key];
+            }
+        }
+        const keys = Object.keys(row);
+        for (let j = 0; j < keys.length; j++) {
+            const k = keys[j];
+            for (let i = 0; i < aliases.length; i++) {
+                if (k && k.replace(/\s+/g, ' ').trim() === aliases[i]) {
+                    return row[k];
+                }
+            }
+        }
+        return '';
+    },
+
+    async importApprovedEntitiesFromExcelFile(file) {
+        this.ensureApprovedSetup();
+        if (!Permissions.isAdmin()) {
+            Notification.warning('يُسمح للمدير فقط باستيراد القائمة.');
+            return;
+        }
+        if (!file) return;
+        if (typeof XLSX === 'undefined') {
+            Notification.error('مكتبة SheetJS غير محمّلة. يرجى تحديث الصفحة.');
+            return;
+        }
+
+        const readOpts = { type: 'array' };
+        let workbook;
+        try {
+            const buf = await file.arrayBuffer();
+            workbook = XLSX.read(buf, { type: 'array', cellDates: true });
+        } catch (e) {
+            Notification.error('تعذر قراءة ملف Excel.');
+            return;
+        }
+
+        const sheetName = workbook.SheetNames[0];
+        const sheet = workbook.Sheets[sheetName];
+        if (!sheet) {
+            Notification.error('الملف لا يحتوي على ورقة بيانات.');
+            return;
+        }
+
+        const rows = XLSX.utils.sheet_to_json(sheet, { defval: '', raw: true });
+        if (!Array.isArray(rows) || rows.length === 0) {
+            Notification.warning('لا توجد صفوف في الملف.');
+            return;
+        }
+
+        let added = 0;
+        let updated = 0;
+        let skipped = 0;
+
+        Loading.show();
+        try {
+            for (let r = 0; r < rows.length; r++) {
+                const row = rows[r];
+                const companyName = String(this.getApprovedImportCell(row,
+                    'اسم الشركة / المقاول', 'اسم الشركة', 'companyName')).trim();
+                if (!companyName) {
+                    skipped++;
+                    continue;
+                }
+
+                const typeLabel = String(this.getApprovedImportCell(row, 'نوع الجهة', 'entityType')).trim();
+                const serviceType = String(this.getApprovedImportCell(row,
+                    'النشاط / نوع الخدمة', 'النشاط', 'serviceType')).trim();
+                const licenseNumber = String(this.getApprovedImportCell(row,
+                    'السجل التجاري / الترخيص', 'السجل التجاري', 'licenseNumber')).trim();
+
+                const approvalISO = this.parseApprovedImportDate(this.getApprovedImportCell(row,
+                    'تاريخ الاعتماد', 'approvalDate'));
+                const expiryISO = this.parseApprovedImportDate(this.getApprovedImportCell(row,
+                    'تاريخ انتهاء الاعتماد', 'expiryDate'));
+
+                if (!serviceType || !approvalISO || !expiryISO) {
+                    skipped++;
+                    continue;
+                }
+
+                if (new Date(expiryISO) < new Date(approvalISO)) {
+                    skipped++;
+                    continue;
+                }
+
+                const safetyReviewer = String(this.getApprovedImportCell(row,
+                    'مسؤول السلامة', 'safetyReviewer')).trim();
+                const statusLabel = String(this.getApprovedImportCell(row, 'الحالة', 'status')).trim();
+                const notes = String(this.getApprovedImportCell(row, 'ملاحظات', 'notes')).trim();
+
+                const entityType = this.normalizeApprovedEntityType(typeLabel || 'مقاول');
+                const status = this.normalizeApprovedStatus(statusLabel || 'معتمد');
+
+                const approvedEntities = AppState.appData.approvedContractors || [];
+                const existing = approvedEntities.find((item) =>
+                    item.companyName &&
+                    item.companyName.trim().toLowerCase() === companyName.toLowerCase() &&
+                    this.normalizeApprovedEntityType(item.entityType) === entityType
+                );
+
+                const record = {
+                    id: existing?.id || Utils.generateId('APPCON'),
+                    companyName,
+                    entityType,
+                    serviceType,
+                    licenseNumber,
+                    approvalDate: approvalISO,
+                    expiryDate: expiryISO,
+                    safetyReviewer,
+                    status,
+                    notes,
+                    isoCode: existing?.isoCode || existing?.code || '',
+                    code: existing?.code || existing?.isoCode || '',
+                    createdAt: existing?.createdAt || new Date().toISOString(),
+                    updatedAt: new Date().toISOString()
+                };
+
+                if (existing) {
+                    updated++;
+                } else {
+                    added++;
+                }
+                this.persistApprovedEntity(record, existing || null);
+            }
+
+            Notification.success(`اكتمل الاستيراد: صفوف جديدة ${added}، تحديث ${updated}، تخطي ${skipped}.`);
+            if (this.currentTab === 'approved') {
+                this.refreshApprovedEntitiesList();
+            }
+        } catch (err) {
+            Utils.safeError('فشل استيراد الجهات المعتمدة:', err);
+            Notification.error('فشل الاستيراد: ' + (err.message || 'خطأ غير معروف'));
+        } finally {
+            Loading.hide();
+        }
     },
 
     exportApprovedEntitiesPDF(id = null) {
@@ -3616,25 +3795,36 @@ const Contractors = {
     },
 
     setupEventListeners() {
-        // ✅ منع إعادة ربط الـ listeners إذا كانت مربوطة بالفعل
-        if (this._eventListenersAttached) {
+        const activeSignal = this._abortController?.signal;
+        if (!activeSignal) {
             return;
         }
         this._eventListenersAttached = true;
-        
-        // ✅ استخدام signal من AbortController لإمكانية إلغاء جميع الـ listeners
-        const signal = this._abortController?.signal;
-        if (!signal) {
-            // إنشاء AbortController جديد إذا لم يكن موجوداً
-            this._abortController = new AbortController();
-        }
-        const activeSignal = this._abortController?.signal;
 
         const exportApprovedExcelBtn = document.getElementById('export-approved-contractors-excel-btn');
         if (exportApprovedExcelBtn) exportApprovedExcelBtn.addEventListener('click', () => this.exportApprovedEntitiesExcel(), { signal: activeSignal });
 
         const exportApprovedPdfBtn = document.getElementById('export-approved-contractors-pdf-btn');
         if (exportApprovedPdfBtn) exportApprovedPdfBtn.addEventListener('click', () => this.exportApprovedEntitiesPDF(), { signal: activeSignal });
+
+        const importApprovedBtn = document.getElementById('import-approved-contractors-excel-btn');
+        const importApprovedInput = document.getElementById('import-approved-contractors-input');
+        if (importApprovedBtn && importApprovedInput) {
+            importApprovedBtn.addEventListener('click', () => {
+                try {
+                    importApprovedInput.value = '';
+                    importApprovedInput.click();
+                } catch (e) { /* ignore */ }
+            }, { signal: activeSignal });
+            importApprovedInput.addEventListener('change', (ev) => {
+                const f = ev.target?.files?.[0];
+                if (f) {
+                    this.importApprovedEntitiesFromExcelFile(f).finally(() => {
+                        try { ev.target.value = ''; } catch (e2) { /* ignore */ }
+                    });
+                }
+            }, { signal: activeSignal });
+        }
 
         const approvedSearchInput = document.getElementById('approved-contractors-search');
         if (approvedSearchInput) {
