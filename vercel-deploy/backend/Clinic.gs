@@ -117,9 +117,21 @@ function normalizeClinicVisitForSheet_(visitData) {
  * يقبل: employee/contractor/external أو قيم عربية مثل (موظف/مقاول/خارجي/عمالة خارجية)
  * @return {string} 'employee' | 'contractor' | 'external'
  */
-function normalizeClinicPersonType_(personType) {
+function normalizeClinicPersonType_(personType, visitData) {
     const raw = (personType || '').toString().trim().toLowerCase();
-    if (!raw) return 'employee';
+    if (!raw) {
+        // ✅ Hard safety: infer from payload fields when personType is missing
+        const hasExternalName = !!(visitData && String(visitData.externalName || '').trim());
+        const hasContractorHint = !!(visitData && (
+            String(visitData.contractorName || '').trim() ||
+            String(visitData.contractorWorkerName || '').trim() ||
+            String(visitData.contractorPosition || '').trim() ||
+            String(visitData.workArea || '').trim()
+        ));
+        if (hasExternalName) return 'external';
+        if (hasContractorHint) return 'contractor';
+        return 'employee';
+    }
 
     // English canonical
     if (raw === 'employee') return 'employee';
@@ -282,7 +294,7 @@ function addClinicVisitToSheet(visitData) {
 
         // ✅ تثبيت نوع الشخص بشكل موحّد لمنع التسجيل في الجدول الخطأ
         try {
-            visitData.personType = normalizeClinicPersonType_(visitData.personType);
+            visitData.personType = normalizeClinicPersonType_(visitData.personType, visitData);
         } catch (e) {}
         
         const sheetName = getClinicVisitSheetName_(visitData);
@@ -290,7 +302,7 @@ function addClinicVisitToSheet(visitData) {
 
         // ✅ تأكيد تطبيع personType في البيانات المكتوبة
         try {
-            normalized.personType = normalizeClinicPersonType_(normalized.personType || visitData.personType);
+            normalized.personType = normalizeClinicPersonType_(normalized.personType || visitData.personType, normalized);
         } catch (e) {}
         
         // إضافة حقول تلقائية

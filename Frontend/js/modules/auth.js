@@ -267,13 +267,16 @@ window.Auth = {
         // معالجة البيانات إذا كانت تحتوي على JSON strings (من Google Sheets)
         if (users.length > 0) {
             users = users.map(u => {
-                // إذا كانت permissions عبارة عن string JSON، نحولها إلى كائن
+                // ✅ لا تُسقط الصلاحيات إلى {} عند فشل JSON.parse
+                // بعض البيانات قد تصل بصيغ غير JSON قياسية من Google Sheets
                 if (typeof u.permissions === 'string' && u.permissions.trim() !== '') {
-                    try {
-                        u.permissions = JSON.parse(u.permissions);
-                    } catch (e) {
-                        Utils.safeWarn('⚠ شل تحليل permissions:', e);
-                        u.permissions = {};
+                    const normalizedPermissions = (typeof Permissions !== 'undefined' && typeof Permissions.normalizePermissions === 'function')
+                        ? Permissions.normalizePermissions(u.permissions)
+                        : null;
+                    if (normalizedPermissions && typeof normalizedPermissions === 'object' && !Array.isArray(normalizedPermissions)) {
+                        u.permissions = normalizedPermissions;
+                    } else {
+                        Utils.safeWarn('⚠ تعذر تطبيع permissions بصيغة صالحة، سيتم الاحتفاظ بالقيمة الأصلية');
                     }
                 }
                 // إذا كانت loginHistory عبارة عن string JSON، نحولها إلى مصفوفة
@@ -723,16 +726,22 @@ window.Auth = {
         }));
 
         let userPermissions = user.permissions || {};
-        if (fullUserData && fullUserData.permissions) {
-            if (typeof fullUserData.permissions === 'string') {
-                try {
-                    userPermissions = JSON.parse(fullUserData.permissions);
-                } catch (e) {
-                    Utils.safeWarn('⚠ فشل تحليل permissions:', e);
-                    userPermissions = {};
-                }
-            } else {
+        if (fullUserData && fullUserData.permissions != null) {
+            const normalizedPermissions = (typeof Permissions !== 'undefined' && typeof Permissions.normalizePermissions === 'function')
+                ? Permissions.normalizePermissions(fullUserData.permissions)
+                : (typeof fullUserData.permissions === 'string'
+                    ? (() => { try { return JSON.parse(fullUserData.permissions); } catch (e) { return null; } })()
+                    : fullUserData.permissions);
+
+            // ✅ حماية من فقد الصلاحيات: لا نستبدل صلاحيات صالحة بقيمة غير قابلة للتطبيع
+            if (normalizedPermissions && typeof normalizedPermissions === 'object' && !Array.isArray(normalizedPermissions)) {
+                userPermissions = normalizedPermissions;
+            } else if (fullUserData.permissions && typeof fullUserData.permissions === 'object' && !Array.isArray(fullUserData.permissions)) {
                 userPermissions = fullUserData.permissions;
+            } else if (user.permissions && typeof user.permissions === 'object' && !Array.isArray(user.permissions)) {
+                userPermissions = user.permissions;
+            } else {
+                userPermissions = {};
             }
         }
 
