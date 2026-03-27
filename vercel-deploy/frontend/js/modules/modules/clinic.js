@@ -5258,20 +5258,34 @@ const Clinic = {
             const shouldLoadData = forceReload || !hasLocalData || isDataStale || this._visitsBackendFetchOk !== true;
             
             if (shouldLoadData && typeof GoogleIntegration !== 'undefined' && GoogleIntegration.sendRequest) {
-                try {
-                    await this.loadVisitsDataFromBackend();
-                    const p = document.querySelector('.clinic-tab-panel[data-tab-panel="visits"]');
-                    if (p) {
-                        this.ensureData();
-                        this.renderVisitsTabContent(p);
+                const loadAndRerender = async () => {
+                    try {
+                        await this.loadVisitsDataFromBackend();
+                        const p = document.querySelector('.clinic-tab-panel[data-tab-panel="visits"]');
+                        if (p && this.state && this.state.activeTab === 'visits') {
+                            this.ensureData();
+                            this.renderVisitsTabContent(p);
+                        }
+                        if (AppState.debugMode) {
+                            Utils.safeLog('✅ تم تحديث سجل التردد بعد تحميل البيانات من Backend');
+                        }
+                    } catch (error) {
+                        if (AppState.debugMode) {
+                            Utils.safeWarn('⚠️ تعذر تحميل بيانات سجل التردد من الخادم:', error && error.message);
+                        }
                     }
-                    if (AppState.debugMode) {
-                        Utils.safeLog('✅ تم تحديث سجل التردد بعد تحميل البيانات من Backend');
-                    }
-                } catch (error) {
-                    if (AppState.debugMode) {
-                        Utils.safeWarn('⚠️ تعذر تحميل بيانات سجل التردد من الخادم:', error && error.message);
-                    }
+                };
+
+                // ✅ هدف 3-6 ثواني: لا ننتظر الـ backend إذا كانت هناك بيانات محلية (نعرضها فوراً ثم تحديث بالخلفية)
+                // في أول تحميل بدون بيانات محلية: ننتظر بحد أقصى 6 ثوان ثم نُكمل في الخلفية.
+                if (hasLocalData && !forceReload) {
+                    loadAndRerender(); // background
+                } else {
+                    await Promise.race([
+                        loadAndRerender(),
+                        new Promise(resolve => setTimeout(resolve, 6000))
+                    ]);
+                    // إذا لم يكتمل خلال 6 ثواني سيُكمل في الخلفية ويُعيد الرندر عند الانتهاء
                 }
             }
         } catch (error) {
@@ -10393,7 +10407,26 @@ const Clinic = {
                 this._approvalsBackendFetchOk = true;
             }
             if ((isStale || !hasLocalAny || this._approvalsBackendFetchOk !== true) && typeof GoogleIntegration !== 'undefined' && GoogleIntegration.sendRequest) {
-                await this.ensureApprovalsDataLoaded({ force: isStale && hasLocalAny });
+                const loadAndMaybeRerender = async () => {
+                    await this.ensureApprovalsDataLoaded({ force: isStale && hasLocalAny });
+                };
+
+                // ✅ لا ننتظر إذا لدينا بيانات محلية (فتح فوري)، وإلا ننتظر بحد أقصى 6 ثواني
+                if (hasLocalAny) {
+                    loadAndMaybeRerender().then(() => {
+                        try {
+                            // إعادة عرض سريعة بعد التحديث إذا ما زلنا على التبويب
+                            if (this.state && this.state.activeTab === 'approvals') {
+                                this.renderApprovalsTab();
+                            }
+                        } catch (e) { /* ignore */ }
+                    }).catch(() => {});
+                } else {
+                    await Promise.race([
+                        loadAndMaybeRerender(),
+                        new Promise(resolve => setTimeout(resolve, 6000))
+                    ]);
+                }
             }
 
             const deletionRequests = Array.isArray(AppState.appData?.clinicMedicationDeletionRequests) ? AppState.appData.clinicMedicationDeletionRequests : [];
