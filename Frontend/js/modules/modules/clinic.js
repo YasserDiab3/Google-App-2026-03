@@ -7646,6 +7646,10 @@ const Clinic = {
             });
 
             datalist.innerHTML = unique.map(n => `<option value="${Utils.escapeHTML(n)}"></option>`).join('');
+            // ✅ إلزام الاختيار من القائمة فقط (منع إدخال قيمة غير موجودة)
+            try {
+                selectElement.dataset.allowedValues = JSON.stringify(unique.map(v => String(v || '').toLowerCase().trim()).filter(Boolean));
+            } catch (e) { /* ignore */ }
 
             if (currentValue) selectElement.value = currentValue;
 
@@ -7656,6 +7660,22 @@ const Clinic = {
                     if (nameInput && selectElement.value) {
                         nameInput.value = selectElement.value;
                     }
+                });
+                selectElement.addEventListener('blur', () => {
+                    try {
+                        const raw = (selectElement.value || '').toString().trim();
+                        if (!raw) return;
+                        const allowed = (() => {
+                            try { return JSON.parse(selectElement.dataset.allowedValues || '[]'); } catch (e) { return []; }
+                        })();
+                        const ok = allowed.includes(raw.toLowerCase().trim());
+                        if (!ok) {
+                            selectElement.value = '';
+                            const nameInput = document.getElementById('visit-employee-name');
+                            if (nameInput) nameInput.value = '';
+                            Notification?.warning?.('يرجى اختيار اسم المقاول من القائمة فقط');
+                        }
+                    } catch (e) { /* ignore */ }
                 });
             }
             return;
@@ -9050,6 +9070,22 @@ const Clinic = {
                     })();
                     medicationSelect.dataset.selectedId = map[String(nameOnly).toLowerCase().trim()] || '';
                 });
+                medicationSelect.addEventListener('blur', () => {
+                    try {
+                        const raw = (medicationSelect.value || '').trim();
+                        if (!raw) return;
+                        const nameOnly = raw.replace(/\s*\(.*\)\s*$/, '').trim();
+                        const map = (() => {
+                            try { return JSON.parse(medicationSelect.dataset.nameToId || '{}'); } catch (e) { return {}; }
+                        })();
+                        const ok = !!(medicationSelect.dataset.selectedId || map[String(nameOnly).toLowerCase().trim()]);
+                        if (!ok) {
+                            medicationSelect.value = '';
+                            medicationSelect.dataset.selectedId = '';
+                            Notification?.warning?.('يرجى اختيار الدواء من القائمة فقط');
+                        }
+                    } catch (e) { /* ignore */ }
+                });
             }
 
             loadMedicationsIntoSelect();
@@ -9107,6 +9143,21 @@ const Clinic = {
                 const contractorSelect = document.getElementById('visit-contractor-name-select');
                 const employeeNameInput = document.getElementById('visit-employee-name');
                 personName = contractorSelect ? (contractorSelect.value || '').trim() : (employeeNameInput ? (employeeNameInput.value || '').trim() : '');
+
+                // ✅ إلزام الاختيار من القائمة فقط
+                if (contractorSelect) {
+                    const allowed = (() => {
+                        try { return JSON.parse(contractorSelect.dataset.allowedValues || '[]'); } catch (e) { return []; }
+                    })();
+                    if (personName && !allowed.includes(personName.toLowerCase().trim())) {
+                        Notification.error('اسم المقاول يجب اختياره من القائمة فقط');
+                        if (submitBtn) {
+                            submitBtn.disabled = false;
+                            submitBtn.innerHTML = originalText;
+                        }
+                        return;
+                    }
+                }
             } else {
                 const employeeNameInput = document.getElementById('visit-employee-name');
                 personName = employeeNameInput ? (employeeNameInput.value || '').trim() : '';
