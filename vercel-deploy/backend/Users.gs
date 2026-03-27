@@ -252,8 +252,9 @@ function updateUserInSheet(userId, updateData) {
             }
         }
         
-        // ✅ إصلاح: التأكد من حفظ الصلاحيات بشكل صحيح
-        // إذا كانت permissions موجودة في updateData، تأكد من تحويلها إلى JSON string إذا كانت كائن
+        // ✅ حماية من فقد الصلاحيات:
+        // لا نمسح permissions تلقائياً أبداً عند وصول قيمة غير صالحة.
+        // نحدثها فقط إذا كانت قيمة صالحة (object/string JSON صالح).
         if (processedUpdate.permissions !== undefined) {
             if (typeof processedUpdate.permissions === 'object' && processedUpdate.permissions !== null) {
                 // تحويل كائن الصلاحيات إلى JSON string للحفظ في Google Sheets
@@ -261,7 +262,7 @@ function updateUserInSheet(userId, updateData) {
                     processedUpdate.permissions = JSON.stringify(processedUpdate.permissions);
                 } catch (e) {
                     Logger.log('Error stringifying permissions: ' + e.toString());
-                    // في حالة الخطأ، نحتفظ بالصلاحيات الحالية
+                    // في حالة الخطأ، نحتفظ بالصلاحيات الحالية (لا تصفير)
                     processedUpdate.permissions = data[userIndex].permissions || '{}';
                 }
             } else if (typeof processedUpdate.permissions === 'string') {
@@ -269,12 +270,12 @@ function updateUserInSheet(userId, updateData) {
                 try {
                     JSON.parse(processedUpdate.permissions);
                 } catch (e) {
-                    // إذا لم تكن JSON صالح، نحولها إلى JSON string
-                    processedUpdate.permissions = JSON.stringify({});
+                    // إذا لم تكن JSON صالحة، نحتفظ بالقيمة الحالية بدلاً من مسح الصلاحيات
+                    processedUpdate.permissions = data[userIndex].permissions || '{}';
                 }
             } else {
-                // إذا كانت undefined أو null، نحفظ كائن فارغ
-                processedUpdate.permissions = '{}';
+                // أي نوع غير مدعوم (null/number/boolean...) => احتفظ بالقيمة الحالية
+                processedUpdate.permissions = data[userIndex].permissions || '{}';
             }
         }
         
