@@ -1517,14 +1517,16 @@ const Employees = {
             // إضافة مستمع لتحديثات البيانات في الخلفية
             this.handleDataUpdate = (event) => {
                 if (event.detail && event.detail.count) {
-                    // تحديث القائمة والكروت إذا كان الموديول مفتوحاً
-                    const container = document.getElementById('employees-table-container');
-                    if (container) {
-                        this.loadEmployeesList();
-                    } else {
-                        // إذا لم يكن الجدول موجوداً، تحديث الكروت فقط
-                        this.renderStatsCards();
-                    }
+                    // Debounce لتجنب handler ثقيل عند تكرار التحديثات المتتالية
+                    clearTimeout(this._employeesUpdateDebounceTimer);
+                    this._employeesUpdateDebounceTimer = setTimeout(() => {
+                        const container = document.getElementById('employees-table-container');
+                        if (container) {
+                            requestAnimationFrame(() => this.loadEmployeesList());
+                        } else {
+                            this.renderStatsCards();
+                        }
+                    }, 120);
                 }
             };
             window.addEventListener('employeesDataUpdated', this.handleDataUpdate);
@@ -3124,23 +3126,21 @@ const Employees = {
      * التمرير السلس إلى حقل البحث
      */
     scrollToSearchField() {
-        requestAnimationFrame(() => {
+        setTimeout(() => {
             const searchInput = document.getElementById('employees-search');
             if (searchInput) {
-                // الحصول على موضع حقل البحث
-                const searchRect = searchInput.getBoundingClientRect();
                 const currentScrollY = window.scrollY || document.documentElement.scrollTop;
-                const targetY = currentScrollY + searchRect.top - 20; // 20px padding من الأعلى
-
-                // التحقق من أن حقل البحث ليس مرئياً بالفعل
-                if (searchRect.top < 20 || searchRect.top > window.innerHeight - 100) {
+                const targetY = Math.max(0, (searchInput.offsetTop || 0) - 20);
+                const viewportBottom = currentScrollY + window.innerHeight;
+                const notVisible = targetY < currentScrollY || targetY > (viewportBottom - 100);
+                if (notVisible) {
                     window.scrollTo({
                         top: targetY,
                         behavior: 'smooth'
                     });
                 }
             }
-        });
+        }, 0);
     },
 
     /**
