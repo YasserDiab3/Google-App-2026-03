@@ -6805,25 +6805,26 @@ const Clinic = {
             });
         });
 
-        panel.querySelectorAll('[data-action="view-visit"]').forEach((btn) => {
-            btn.addEventListener('click', () => {
-                const visitId = btn.getAttribute('data-id');
-                const visit = (AppState.appData.clinicVisits || []).find(v => v.id === visitId);
-                if (visit) {
-                    this.viewVisitDetails(visit);
-                }
-            });
-        });
-
-        panel.querySelectorAll('[data-action="edit-visit"]').forEach((btn) => {
-            btn.addEventListener('click', () => {
-                const visitId = btn.getAttribute('data-id');
-                const visit = (AppState.appData.clinicVisits || []).find(v => v.id === visitId);
-                if (visit) {
-                    this.showVisitForm(visit);
-                }
-            });
-        });
+        // ✅ Fix: أزرار عرض/تعديل تُضاف عبر الرندر المُجزأ، لذا نستخدم Event Delegation مرة واحدة
+        if (!panel.hasAttribute('data-visits-actions-delegation')) {
+            panel.setAttribute('data-visits-actions-delegation', 'true');
+            panel.addEventListener('click', (evt) => {
+                try {
+                    const btn = evt.target?.closest?.('[data-action="view-visit"],[data-action="edit-visit"]');
+                    if (!btn) return;
+                    const action = btn.getAttribute('data-action');
+                    const visitId = btn.getAttribute('data-id');
+                    if (!visitId) return;
+                    const visit = (AppState.appData.clinicVisits || []).find(v => v.id === visitId);
+                    if (!visit) return;
+                    if (action === 'view-visit') {
+                        this.viewVisitDetails(visit);
+                    } else if (action === 'edit-visit') {
+                        this.showVisitForm(visit);
+                    }
+                } catch (e) { /* ignore */ }
+            }, { passive: true });
+        }
 
         // تم نقل أزرار الحذف والطباعة إلى نموذج تفاصيل الزيارة
     },
@@ -7020,9 +7021,15 @@ const Clinic = {
                     <button class="btn-success" style="background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); color: white; border: none; padding: 12px 24px; border-radius: 10px; font-weight: 600; transition: all 0.3s; box-shadow: 0 4px 15px 0 rgba(17, 153, 142, 0.4);" onclick="Clinic.exportVisitToPDF(${JSON.stringify(visit).replace(/"/g, '&quot;')});">
                         <i class="fas fa-file-pdf ml-2"></i>طباعة
                     </button>
+                    ${this.isCurrentUserAdmin() ? `
                     <button class="btn-danger" style="background: linear-gradient(135deg, #eb3349 0%, #f45c43 100%); color: white; border: none; padding: 12px 24px; border-radius: 10px; font-weight: 600; transition: all 0.3s; box-shadow: 0 4px 15px 0 rgba(235, 51, 73, 0.4);" onclick="if(confirm('هل أنت متأكد من حذف هذه الزيارة؟')) { Clinic.deleteVisit('${visit.id}'); this.closest('.modal-overlay').remove(); }">
                         <i class="fas fa-trash-alt ml-2"></i>حذف
                     </button>
+                    ` : `
+                    <button class="btn-warning" style="background: linear-gradient(135deg, #f59e0b 0%, #f97316 100%); color: white; border: none; padding: 12px 24px; border-radius: 10px; font-weight: 600; transition: all 0.3s; box-shadow: 0 4px 15px 0 rgba(245, 158, 11, 0.4);" onclick="Clinic.requestVisitDeletion('${visit.id}'); this.closest('.modal-overlay').remove();">
+                        <i class="fas fa-paper-plane ml-2"></i>طلب حذف
+                    </button>
+                    `}
                 </div>
             </div>
         `;
@@ -7039,6 +7046,12 @@ const Clinic = {
     async deleteVisit(visitId) {
         if (!visitId) {
             Notification.error('معرف الزيارة غير صحيح');
+            return;
+        }
+
+        // ✅ الحذف المباشر فقط للمدير — غير ذلك: طلب موافقة
+        if (!this.isCurrentUserAdmin()) {
+            await this.requestVisitDeletion(visitId);
             return;
         }
 
@@ -7107,6 +7120,68 @@ const Clinic = {
             Loading.hide();
             Notification.error('حدث خطأ أثناء حذف الزيارة: ' + error.message);
             Utils.safeError('خطأ في حذف الزيارة:', error);
+        }
+    },
+
+    async requestVisitDeletion(visitId) {
+        try {
+            if (!visitId) {
+                Notification.error('معرف الزيارة غير صحيح');
+                return;
+            }
+
+            const visit = (AppState.appData.clinicVisits || []).find(v => v.id === visitId);
+            if (!visit) {
+                Notification.error('الزيارة غير موجودة');
+                return;
+            }
+
+            const isEnabled = AppState?.googleConfig?.appsScript?.enabled && AppState?.googleConfig?.appsScript?.scriptUrl;
+            if (!isEnabled || typeof GoogleIntegration === 'undefined' || !GoogleIntegration.sendRequest) {
+                Notification.error('تعذر إرسال طلب الحذف (الخادم غير متاح)');
+                return;
+            }
+
+            const requestedBy = {
+                id: AppState.currentUser?.id || '',
+                name: AppState.currentUser?.name || '',
+                email: AppState.currentUser?.email || '',
+                role: AppState.currentUser?.role || ''
+            };
+
+            Loading.show('جاري إرسال طلب حذف الزيارة...');
+            const result = await GoogleIntegration.sendRequest({
+                action: 'addClinicVisitDeletionRequest',
+                data: {
+                    visitId: visitId,
+                    visitData: visit,
+                    requestedBy: requestedBy
+                }
+            });
+            Loading.hide();
+
+            if (!result || result.success !== true) {
+                throw new Error(result?.message || 'فشل إرسال طلب الحذف');
+            }
+
+            // ✅ تحديث محلي سريع
+            try {
+                AppState.appData.clinicVisitDeletionRequests = Array.isArray(AppState.appData.clinicVisitDeletionRequests)
+                    ? AppState.appData.clinicVisitDeletionRequests
+                    : [];
+                if (result.data) {
+                    AppState.appData.clinicVisitDeletionRequests.unshift({ ...result.data, requestType: 'visit' });
+                }
+                if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
+                    window.DataManager.save();
+                }
+            } catch (e) { /* ignore */ }
+
+            Notification.success('تم إرسال طلب حذف الزيارة إلى مدير النظام');
+        } catch (error) {
+            try { Loading.hide(); } catch (e) {}
+            Utils.safeError('خطأ في إرسال طلب حذف الزيارة:', error);
+            Notification.error('فشل إرسال طلب الحذف: ' + (error.message || 'حدث خطأ'));
         }
     },
 
@@ -10476,17 +10551,24 @@ const Clinic = {
                 action: 'getAllSupplyRequests',
                 data: { filters: {} }
             });
+            const visitDeletionP = GoogleIntegration.sendRequest({
+                action: 'getAllClinicVisitDeletionRequests',
+                data: { filters: {} }
+            });
 
-            const [deletionResult, supplyResult] = await Promise.allSettled([
+            const [deletionResult, supplyResult, visitDeletionResult] = await Promise.allSettled([
                 Utils.promiseWithTimeout(deletionP, 15000, 'انتهت مهلة تحميل طلبات حذف الأدوية'),
-                Utils.promiseWithTimeout(supplyP, 15000, 'انتهت مهلة تحميل طلبات الاحتياج')
+                Utils.promiseWithTimeout(supplyP, 15000, 'انتهت مهلة تحميل طلبات الاحتياج'),
+                Utils.promiseWithTimeout(visitDeletionP, 15000, 'انتهت مهلة تحميل طلبات حذف الزيارات')
             ]);
 
             const delVal = deletionResult.status === 'fulfilled' ? deletionResult.value : null;
             const supVal = supplyResult.status === 'fulfilled' ? supplyResult.value : null;
+            const visVal = visitDeletionResult.status === 'fulfilled' ? visitDeletionResult.value : null;
 
             const deletionRequests = Array.isArray(delVal?.data) ? delVal.data : [];
             const supplyRequests = Array.isArray(supVal?.data) ? supVal.data : [];
+            const visitDeletionRequests = Array.isArray(visVal?.data) ? visVal.data : [];
 
             // ✅ لا تستبدل بيانات محلية غير فارغة ببيانات فارغة من backend
             if (deletionRequests.length > 0 || !(Array.isArray(AppState.appData?.clinicMedicationDeletionRequests) && AppState.appData.clinicMedicationDeletionRequests.length > 0)) {
@@ -10494,6 +10576,9 @@ const Clinic = {
             }
             if (supplyRequests.length > 0 || !(Array.isArray(AppState.appData?.clinicSupplyRequests) && AppState.appData.clinicSupplyRequests.length > 0)) {
                 AppState.appData.clinicSupplyRequests = supplyRequests;
+            }
+            if (visitDeletionRequests.length > 0 || !(Array.isArray(AppState.appData?.clinicVisitDeletionRequests) && AppState.appData.clinicVisitDeletionRequests.length > 0)) {
+                AppState.appData.clinicVisitDeletionRequests = visitDeletionRequests;
             }
 
             try { localStorage.setItem('clinic_approvals_last_sync', String(Date.now())); } catch (e) {}
@@ -10529,7 +10614,8 @@ const Clinic = {
             const CACHE_DURATION = 5 * 60 * 1000; // 5 دقائق
             const hasLocalDeletion = Array.isArray(AppState.appData?.clinicMedicationDeletionRequests) && AppState.appData.clinicMedicationDeletionRequests.length > 0;
             const hasLocalSupply = Array.isArray(AppState.appData?.clinicSupplyRequests) && AppState.appData.clinicSupplyRequests.length > 0;
-            const hasLocalAny = hasLocalDeletion || hasLocalSupply;
+            const hasLocalVisitDeletion = Array.isArray(AppState.appData?.clinicVisitDeletionRequests) && AppState.appData.clinicVisitDeletionRequests.length > 0;
+            const hasLocalAny = hasLocalDeletion || hasLocalSupply || hasLocalVisitDeletion;
             const isStale = cacheAge >= CACHE_DURATION;
 
             if (!isStale && hasLocalAny) {
@@ -10560,15 +10646,17 @@ const Clinic = {
 
             const deletionRequests = Array.isArray(AppState.appData?.clinicMedicationDeletionRequests) ? AppState.appData.clinicMedicationDeletionRequests : [];
             const supplyRequests = Array.isArray(AppState.appData?.clinicSupplyRequests) ? AppState.appData.clinicSupplyRequests : [];
+            const visitDeletionRequests = Array.isArray(AppState.appData?.clinicVisitDeletionRequests) ? AppState.appData.clinicVisitDeletionRequests : [];
 
             // إضافة نوع الطلب لكل طلب
             const allDeletionRequests = deletionRequests.map(r => ({ ...r, requestType: 'deletion' }));
             const allSupplyRequests = supplyRequests.map(r => ({ ...r, requestType: 'supply' }));
+            const allVisitDeletionRequests = visitDeletionRequests.map(r => ({ ...r, requestType: 'visit' }));
 
             // دمج الطلبات
-            const allRequests = [...allDeletionRequests, ...allSupplyRequests];
+            const allRequests = [...allDeletionRequests, ...allSupplyRequests, ...allVisitDeletionRequests];
 
-            Utils.safeLog(`📋 تم تحميل ${allDeletionRequests.length} طلب حذف دواء و ${allSupplyRequests.length} طلب احتياج`);
+            Utils.safeLog(`📋 تم تحميل ${allDeletionRequests.length} طلب حذف دواء و ${allSupplyRequests.length} طلب احتياج و ${allVisitDeletionRequests.length} طلب حذف زيارة`);
 
             const pendingRequests = allRequests.filter(r => r.status === 'pending');
             const approvedRequests = allRequests.filter(r => r.status === 'approved');
@@ -10631,6 +10719,7 @@ const Clinic = {
                                     <option value="all">جميع الأنواع</option>
                                     <option value="deletion">طلبات حذف الأدوية</option>
                                     <option value="supply">طلبات الاحتياج</option>
+                                    <option value="visit">طلبات حذف الزيارات</option>
                                 </select>
                             </div>
                         </div>
@@ -10699,6 +10788,7 @@ const Clinic = {
             const requestType = request.requestType || 'deletion';
             const isDeletion = requestType === 'deletion';
             const isSupply = requestType === 'supply';
+            const isVisitDeletion = requestType === 'visit';
 
             let itemName = '-';
             let itemType = '-';
@@ -10719,6 +10809,15 @@ const Clinic = {
                 }[request.type] || request.type || '-';
                 itemType = typeLabel;
                 itemDetails = `${typeLabel}: ${Utils.escapeHTML(itemName)} (${request.quantity || ''} ${Utils.escapeHTML(request.unit || '')})`;
+            } else if (isVisitDeletion) {
+                const visitData = request.visitData || {};
+                const personName = visitData.employeeName || visitData.contractorWorkerName || visitData.contractorName || visitData.externalName || '-';
+                const typeLabel = visitData.personType === 'employee'
+                    ? 'موظف'
+                    : (visitData.personType === 'contractor' ? 'مقاول' : 'عمالة خارجية');
+                itemName = personName;
+                itemType = typeLabel;
+                itemDetails = `زيارة: ${Utils.escapeHTML(personName)} (${Utils.escapeHTML(typeLabel)})`;
             }
 
             const requestedBy = request.requestedBy || {};
@@ -10726,7 +10825,9 @@ const Clinic = {
             const isPending = request.status === 'pending';
             const requestTypeBadge = isDeletion
                 ? '<span class="badge badge-info">حذف دواء</span>'
-                : '<span class="badge badge-primary">طلب احتياج</span>';
+                : isSupply
+                    ? '<span class="badge badge-primary">طلب احتياج</span>'
+                    : '<span class="badge badge-warning">حذف زيارة</span>';
 
             return `
                 <tr>
@@ -10818,9 +10919,13 @@ const Clinic = {
 
     async approveRequest(requestId, requestType = 'deletion') {
         const isDeletion = requestType === 'deletion';
+        const isSupply = requestType === 'supply';
+        const isVisitDeletion = requestType === 'visit';
         const confirmMessage = isDeletion
             ? 'هل أنت متأكد من الموافقة على حذف هذا الدواء؟\n\nسيتم حذف الدواء نهائياً من النظام.'
-            : 'هل أنت متأكد من الموافقة على هذا الطلب؟';
+            : isSupply
+                ? 'هل أنت متأكد من الموافقة على هذا الطلب؟'
+                : 'هل أنت متأكد من الموافقة على حذف هذه الزيارة؟\n\nسيتم حذف الزيارة نهائياً من سجل التردد.';
 
         const confirmed = confirm(confirmMessage);
         if (!confirmed) return;
@@ -10843,9 +10948,17 @@ const Clinic = {
                         approverData: approverData
                     }
                 });
-            } else {
+            } else if (isSupply) {
                 result = await GoogleIntegration.sendRequest({
                     action: 'approveSupplyRequest',
+                    data: {
+                        requestId: requestId,
+                        approverData: approverData
+                    }
+                });
+            } else if (isVisitDeletion) {
+                result = await GoogleIntegration.sendRequest({
+                    action: 'approveClinicVisitDeletion',
                     data: {
                         requestId: requestId,
                         approverData: approverData
@@ -10857,7 +10970,9 @@ const Clinic = {
                 Loading.hide();
                 const successMessage = isDeletion
                     ? 'تمت الموافقة على الطلب وحذف الدواء بنجاح'
-                    : 'تمت الموافقة على الطلب بنجاح';
+                    : isSupply
+                        ? 'تمت الموافقة على الطلب بنجاح'
+                        : 'تمت الموافقة على طلب حذف الزيارة بنجاح';
                 Notification.success(successMessage);
 
                 // تحديث تبويبة طلبات الموافقة فقط بدون إعادة تحميل كامل
@@ -10921,9 +11036,18 @@ const Clinic = {
                         reason: reason || 'لم يتم تحديد سبب'
                     }
                 });
-            } else {
+            } else if (requestType === 'supply') {
                 result = await GoogleIntegration.sendRequest({
                     action: 'rejectSupplyRequest',
+                    data: {
+                        requestId: requestId,
+                        rejectorData: rejectorData,
+                        reason: reason || 'لم يتم تحديد سبب'
+                    }
+                });
+            } else if (requestType === 'visit') {
+                result = await GoogleIntegration.sendRequest({
+                    action: 'rejectClinicVisitDeletion',
                     data: {
                         requestId: requestId,
                         rejectorData: rejectorData,
@@ -10958,9 +11082,14 @@ const Clinic = {
                     action: 'getAllMedicationDeletionRequests',
                     data: { filters: {} }
                 });
-            } else {
+            } else if (requestType === 'supply') {
                 result = await GoogleIntegration.sendRequest({
                     action: 'getAllSupplyRequests',
+                    data: { filters: {} }
+                });
+            } else if (requestType === 'visit') {
+                result = await GoogleIntegration.sendRequest({
+                    action: 'getAllClinicVisitDeletionRequests',
                     data: { filters: {} }
                 });
             }
@@ -10977,6 +11106,7 @@ const Clinic = {
             }
 
             const isDeletion = requestType === 'deletion';
+            const isVisitDeletion = requestType === 'visit';
             const requestedBy = request.requestedBy || {};
             const approvedBy = request.approvedBy || {};
             const rejectedBy = request.rejectedBy || {};
@@ -10992,6 +11122,30 @@ const Clinic = {
                             <div><strong>النوع:</strong> ${Utils.escapeHTML(medication.type || '-')}</div>
                             <div><strong>الكمية:</strong> ${Utils.escapeHTML(medication.quantity || '-')}</div>
                             <div><strong>الموقع:</strong> ${Utils.escapeHTML(medication.location || '-')}</div>
+                        </div>
+                    </div>
+                `;
+            } else if (isVisitDeletion) {
+                const visit = request.visitData || {};
+                const personName = visit.employeeName || visit.contractorWorkerName || visit.contractorName || visit.externalName || '-';
+                const personTypeLabel = visit.personType === 'employee' ? 'موظف' : (visit.personType === 'contractor' ? 'مقاول' : 'عمالة خارجية');
+                const visitDate = visit.visitDate ? Utils.formatDateTime(visit.visitDate) : '-';
+                const exitDate = visit.exitDate ? Utils.formatDateTime(visit.exitDate) : 'لم يتم تسجيله';
+                itemDetailsHTML = `
+                    <div>
+                        <h3 class="font-semibold text-lg mb-2">معلومات الزيارة:</h3>
+                        <div class="grid grid-cols-2 gap-3">
+                            <div><strong>الاسم:</strong> ${Utils.escapeHTML(personName)}</div>
+                            <div><strong>النوع:</strong> ${Utils.escapeHTML(personTypeLabel)}</div>
+                            <div><strong>وقت الدخول:</strong> ${Utils.escapeHTML(visitDate)}</div>
+                            <div><strong>وقت الخروج:</strong> ${Utils.escapeHTML(exitDate)}</div>
+                            <div><strong>سبب الزيارة:</strong> ${Utils.escapeHTML(visit.reason || '-')}</div>
+                            <div><strong>التشخيص:</strong> ${Utils.escapeHTML(visit.diagnosis || '-')}</div>
+                        </div>
+                        <div class="mt-3">
+                            <button class="btn-secondary" onclick="Clinic.viewVisit('${Utils.escapeHTML(visit.id || request.visitId || '')}')">
+                                <i class="fas fa-eye ml-2"></i>عرض الزيارة
+                            </button>
                         </div>
                     </div>
                 `;

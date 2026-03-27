@@ -1608,6 +1608,203 @@ function rejectMedicationDeletion(requestId, rejectorData, reason) {
 
 /**
  * ============================================
+ * نظام الموافقات على حذف الزيارات (Clinic Visit Deletion Approvals)
+ * ============================================
+ */
+
+function addClinicVisitDeletionRequest(requestData) {
+    try {
+        if (!requestData) {
+            return { success: false, message: 'بيانات الطلب غير موجودة' };
+        }
+        
+        const sheetName = 'ClinicVisitDeletionRequests';
+        
+        if (!requestData.id) {
+            requestData.id = generateSequentialId('CVDR', sheetName);
+        }
+        if (!requestData.createdAt) {
+            requestData.createdAt = new Date();
+        }
+        if (!requestData.status) {
+            requestData.status = 'pending'; // pending, approved, rejected
+        }
+        
+        // حفظ بيانات الزيارة كاملة
+        if (requestData.visitData && typeof requestData.visitData === 'object') {
+            requestData.visitDataJSON = JSON.stringify(requestData.visitData);
+        }
+        
+        // حفظ بيانات مقدم الطلب
+        if (requestData.requestedBy && typeof requestData.requestedBy === 'object') {
+            requestData.requestedByJSON = JSON.stringify(requestData.requestedBy);
+            requestData.requestedById = requestData.requestedBy.id || requestData.requestedBy.userId || '';
+            requestData.requestedByName = requestData.requestedBy.name || '';
+        }
+        
+        return appendToSheet(sheetName, requestData);
+    } catch (error) {
+        Logger.log('Error in addClinicVisitDeletionRequest: ' + error.toString());
+        return { success: false, message: 'حدث خطأ أثناء إضافة طلب حذف الزيارة: ' + error.toString() };
+    }
+}
+
+function updateClinicVisitDeletionRequest(requestId, updateData) {
+    try {
+        if (!requestId) {
+            return { success: false, message: 'معرف الطلب غير محدد' };
+        }
+        
+        const sheetName = 'ClinicVisitDeletionRequests';
+        const spreadsheetId = getSpreadsheetId();
+        const data = readFromSheet(sheetName, spreadsheetId);
+        const requestIndex = data.findIndex(r => r.id === requestId);
+        
+        if (requestIndex === -1) {
+            return { success: false, message: 'الطلب غير موجود' };
+        }
+        
+        updateData.updatedAt = new Date();
+        
+        if (updateData.approvedBy && typeof updateData.approvedBy === 'object') {
+            updateData.approvedByJSON = JSON.stringify(updateData.approvedBy);
+        }
+        if (updateData.rejectedBy && typeof updateData.rejectedBy === 'object') {
+            updateData.rejectedByJSON = JSON.stringify(updateData.rejectedBy);
+        }
+        
+        for (var key in updateData) {
+            if (updateData.hasOwnProperty(key)) {
+                data[requestIndex][key] = updateData[key];
+            }
+        }
+        
+        return saveToSheet(sheetName, data, spreadsheetId);
+    } catch (error) {
+        Logger.log('Error updating clinic visit deletion request: ' + error.toString());
+        return { success: false, message: 'حدث خطأ أثناء تحديث الطلب: ' + error.toString() };
+    }
+}
+
+function getAllClinicVisitDeletionRequests(filters = {}) {
+    try {
+        const sheetName = 'ClinicVisitDeletionRequests';
+        let data = readFromSheet(sheetName, getSpreadsheetId());
+        
+        if (filters.status) {
+            data = data.filter(r => r.status === filters.status);
+        }
+        if (filters.requestedById) {
+            data = data.filter(r => r.requestedById === filters.requestedById);
+        }
+        
+        data.sort((a, b) => {
+            const dateA = new Date(a.createdAt || 0);
+            const dateB = new Date(b.createdAt || 0);
+            return dateB - dateA;
+        });
+        
+        data = data.map(request => {
+            if (request.visitDataJSON) {
+                try {
+                    request.visitData = JSON.parse(request.visitDataJSON);
+                } catch (e) {
+                    Logger.log('Error parsing visitDataJSON: ' + e.toString());
+                }
+            }
+            if (request.requestedByJSON) {
+                try {
+                    request.requestedBy = JSON.parse(request.requestedByJSON);
+                } catch (e) {
+                    Logger.log('Error parsing requestedByJSON: ' + e.toString());
+                }
+            }
+            if (request.approvedByJSON) {
+                try {
+                    request.approvedBy = JSON.parse(request.approvedByJSON);
+                } catch (e) {
+                    Logger.log('Error parsing approvedByJSON: ' + e.toString());
+                }
+            }
+            if (request.rejectedByJSON) {
+                try {
+                    request.rejectedBy = JSON.parse(request.rejectedByJSON);
+                } catch (e) {
+                    Logger.log('Error parsing rejectedByJSON: ' + e.toString());
+                }
+            }
+            return request;
+        });
+        
+        return { success: true, data: data, count: data.length };
+    } catch (error) {
+        Logger.log('Error getting clinic visit deletion requests: ' + error.toString());
+        return { success: false, message: 'حدث خطأ أثناء قراءة طلبات حذف الزيارات: ' + error.toString(), data: [] };
+    }
+}
+
+function approveClinicVisitDeletion(requestId, approverData) {
+    try {
+        const updateResult = updateClinicVisitDeletionRequest(requestId, {
+            status: 'approved',
+            approvedBy: approverData,
+            approvedById: approverData.id || approverData.userId,
+            approvedAt: new Date()
+        });
+        if (!updateResult.success) return updateResult;
+        
+        const requestsResult = getAllClinicVisitDeletionRequests();
+        if (!requestsResult.success) return requestsResult;
+        
+        const request = requestsResult.data.find(r => r.id === requestId);
+        if (!request) return { success: false, message: 'الطلب غير موجود' };
+        
+        const visitId = request.visitId || (request.visitData && request.visitData.id);
+        if (!visitId) {
+            return { success: false, message: 'معرف الزيارة غير موجود في الطلب' };
+        }
+        
+        const sheetName = 'ClinicVisits';
+        const spreadsheetId = getSpreadsheetId();
+        const visits = readFromSheet(sheetName, spreadsheetId);
+        const filtered = visits.filter(v => v.id !== visitId);
+        
+        const saveResult = saveToSheet(sheetName, filtered, spreadsheetId);
+        if (!saveResult.success) {
+            updateClinicVisitDeletionRequest(requestId, {
+                status: 'pending',
+                approvedBy: null,
+                approvedById: null,
+                approvedAt: null,
+                notes: 'فشل حذف الزيارة: ' + (saveResult.message || '')
+            });
+            return saveResult;
+        }
+        
+        return { success: true, message: 'تمت الموافقة وحذف الزيارة بنجاح' };
+    } catch (error) {
+        Logger.log('Error approving clinic visit deletion: ' + error.toString());
+        return { success: false, message: 'حدث خطأ أثناء الموافقة على حذف الزيارة: ' + error.toString() };
+    }
+}
+
+function rejectClinicVisitDeletion(requestId, rejectorData, reason) {
+    try {
+        return updateClinicVisitDeletionRequest(requestId, {
+            status: 'rejected',
+            rejectedBy: rejectorData,
+            rejectedById: rejectorData.id || rejectorData.userId,
+            rejectedAt: new Date(),
+            rejectionReason: reason || ''
+        });
+    } catch (error) {
+        Logger.log('Error rejecting clinic visit deletion: ' + error.toString());
+        return { success: false, message: 'حدث خطأ أثناء رفض طلب حذف الزيارة: ' + error.toString() };
+    }
+}
+
+/**
+ * ============================================
  * طلبات الاحتياج (Supply Requests)
  * ============================================
  */

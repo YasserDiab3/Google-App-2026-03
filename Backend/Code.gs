@@ -193,7 +193,11 @@ function doPost(e) {
             // Read-only utility actions
             'getPublicIP',
             // ✅ مؤشر تحديثات المستخدمين (للـ sync الفوري بين الأجهزة)
-            'getUsersMeta'
+            'getUsersMeta',
+            // ✅ طلبات موافقة - عيادة
+            'getAllMedicationDeletionRequests',
+            'getAllSupplyRequests',
+            'getAllClinicVisitDeletionRequests'
         ];
         
         // قائمة بالـ actions الحساسة التي تتطلب CSRF token إلزامي
@@ -693,6 +697,21 @@ function doPost(e) {
                     break;
                 case 'rejectSupplyRequest':
                     result = rejectSupplyRequest(payload.requestId || payload.id, payload.rejectorData || payload.rejector, payload.reason);
+                    break;
+                case 'addClinicVisitDeletionRequest':
+                    result = addClinicVisitDeletionRequest(payload);
+                    break;
+                case 'updateClinicVisitDeletionRequest':
+                    result = updateClinicVisitDeletionRequest(payload.requestId || payload.id, payload.updateData || payload);
+                    break;
+                case 'getAllClinicVisitDeletionRequests':
+                    result = getAllClinicVisitDeletionRequests(payload.filters || {});
+                    break;
+                case 'approveClinicVisitDeletion':
+                    result = approveClinicVisitDeletion(payload.requestId || payload.id, payload.approverData || payload.approver);
+                    break;
+                case 'rejectClinicVisitDeletion':
+                    result = rejectClinicVisitDeletion(payload.requestId || payload.id, payload.rejectorData || payload.rejector, payload.reason);
                     break;
                 
                 // ============================================
