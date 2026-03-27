@@ -2135,57 +2135,147 @@ const Clinic = {
                 if (!tab || tab === this.state.activeTab) return;
                 this.state.activeTab = tab;
                 this.renderTabNavigation();
-                // نقل الرسم الثقيل خارج click handler لتقليل Violation
+                // ✅ فتح فوري: تفعيل اللوحة مباشرة، ثم جدولة الرندر الثقيل خارج click handler
+                // هذا يقلل تأخير الانتقال بين التبويبات ويقلل Violations.
                 requestAnimationFrame(() => {
-                    if (this.state.activeTab === 'visits') {
-                        this.scheduleVisitsTabRender(false, 40);
-                    } else {
-                        this.renderActiveTabContent();
-                    }
+                    this._activateTabPanels(tab);
+                    this.scheduleClinicTabRender(tab, { delayMs: 20 });
                 });
             });
         });
     },
 
-    renderActiveTabContent() {
-        const active = this.state.activeTab || 'medications';
-        const panels = document.querySelectorAll('.clinic-tab-panel');
-        panels.forEach((panel) => {
-            const panelKey = panel.getAttribute('data-tab-panel');
-            // للتبويبات الرئيسية (تستخدم class active)
-            if (panel.classList.contains('active') || panelKey === active) {
-                if (panelKey === active) {
+    /**
+     * تفعيل/إخفاء لوحات التبويبات بسرعة (بدون رندر محتوى ثقيل)
+     */
+    _activateTabPanels(activeKey) {
+        try {
+            const panels = document.querySelectorAll('.clinic-tab-panel');
+            panels.forEach((panel) => {
+                const panelKey = panel.getAttribute('data-tab-panel');
+                const isActive = panelKey === activeKey;
+                if (isActive) {
                     panel.classList.add('active');
                     panel.style.display = 'block';
                 } else {
                     panel.classList.remove('active');
                     panel.style.display = 'none';
                 }
-            } else {
-                // للتبويبات في قسم "سجلات العيادة التفصيلية"
-                panel.style.display = panelKey === active ? 'block' : 'none';
-            }
-        });
+            });
+        } catch (e) { /* ignore */ }
+    },
 
-        if (active === 'medications') {
-            this.renderMedicationsTab();
-        } else if (active === 'sickLeave') {
-            this.renderSickLeaveTab();
-        } else if (active === 'injuries') {
-            this.renderInjuriesTab();
-        } else if (active === 'visits') {
-            this.renderVisitsTab(); // async - سيتم تحميل البيانات تلقائياً
-        } else if (active === 'approvals') {
-            this.renderApprovalsTab();
-        } else if (active === 'dispensed-medications') {
-            this.renderDispensedMedicationsTab(); // async - سيتم تحميل البيانات تلقائياً
-        } else if (active === 'analytics') {
-            this.renderAnalyticsTab();
-        } else if (active === 'data-analysis') {
-            this.renderDataAnalysisTab();
-        } else if (active === 'supply-request') {
-            this.renderSupplyRequestTab();
+    /**
+     * Skeleton خفيف لفتح التبويب فوراً بدون شاشة/تبويب فاضي أثناء الرندر
+     */
+    _renderTabSkeleton(panel, label) {
+        try {
+            if (!panel) return;
+            const current = (panel.innerHTML || '').trim();
+            // إذا كان هناك محتوى بالفعل لا نمسحه لتجنب وميض
+            if (current) return;
+            const safeLabel = Utils.escapeHTML(label || 'جاري التحميل...');
+            panel.innerHTML = `
+                <div class="content-card" style="margin:14px;">
+                    <div class="card-body" style="display:flex;align-items:center;justify-content:center;min-height:210px;gap:12px;">
+                        <div style="width:34px;height:34px;border:3px solid rgba(37,99,235,0.18);border-top-color:#2563eb;border-radius:50%;animation:hseSpin 0.9s linear infinite;"></div>
+                        <div style="font-weight:600;color:#334155;">${safeLabel}</div>
+                    </div>
+                </div>
+            `;
+            if (!document.getElementById('hse-mini-spinner-style')) {
+                const style = document.createElement('style');
+                style.id = 'hse-mini-spinner-style';
+                style.textContent = '@keyframes hseSpin{to{transform:rotate(360deg);}}';
+                document.head.appendChild(style);
+            }
+        } catch (e) { /* ignore */ }
+    },
+
+    /**
+     * Scheduler موحّد لرندر تبويبات العيادة
+     * - يضمن فتح مباشر (activate + skeleton)
+     * - يمنع تكرار الرندر عند التنقل السريع بين التبويبات (token + timer)
+     */
+    scheduleClinicTabRender(tabKey, { delayMs = 0 } = {}) {
+        try {
+            if (!tabKey) return;
+            if (!this._tabRenderState) this._tabRenderState = { token: 0, timers: {} };
+            const state = this._tabRenderState;
+            state.token += 1;
+            const myToken = state.token;
+
+            // إلغاء أي جدولة سابقة لهذا التبويب
+            const oldTimer = state.timers[tabKey];
+            if (oldTimer) {
+                clearTimeout(oldTimer);
+                state.timers[tabKey] = null;
+            }
+
+            const panel = document.querySelector(`.clinic-tab-panel[data-tab-panel="${tabKey}"]`);
+            const labelMap = {
+                visits: 'جاري فتح سجل التردد...',
+                medications: 'جاري فتح الأدوية...',
+                sickLeave: 'جاري فتح الإجازات المرضية...',
+                'dispensed-medications': 'جاري فتح سجل الأدوية المنصرفة...',
+                injuries: 'جاري فتح الإصابات...',
+                'supply-request': 'جاري فتح إرسال طلب احتياجات...',
+                approvals: 'جاري فتح طلبات الموافقة...'
+            };
+            this._renderTabSkeleton(panel, labelMap[tabKey] || 'جاري التحميل...');
+
+            const run = () => {
+                // تجاهل إذا تغيّر التبويب/تم جدولة أحدث
+                if (!this._tabRenderState || myToken !== this._tabRenderState.token) return;
+                // اجعل callback خفيفاً ثم ادفع الرندر الثقيل خارج rAF/idle
+                setTimeout(() => {
+                    if (!this._tabRenderState || myToken !== this._tabRenderState.token) return;
+                    try {
+                        this._renderTabByKey(tabKey);
+                    } catch (e) {
+                        if (AppState.debugMode) Utils.safeWarn('⚠️ خطأ في رندر تبويب العيادة:', tabKey, e);
+                    }
+                }, 0);
+            };
+
+            // ضمان سلاسة الانتقال: ننتظر frame ثم نستخدم idle إن توفر
+            requestAnimationFrame(() => {
+                if (typeof requestIdleCallback === 'function') {
+                    requestIdleCallback(run, { timeout: 900 });
+                } else {
+                    run();
+                }
+            });
+
+            state.timers[tabKey] = setTimeout(() => {
+                // إعادة جدولة بسيطة بعد delayMs (خصوصاً عند التنقل السريع)
+                if (!this._tabRenderState || myToken !== this._tabRenderState.token) return;
+                run();
+            }, Math.max(0, delayMs));
+        } catch (e) { /* ignore */ }
+    },
+
+    _renderTabByKey(tabKey) {
+        // لا نستخدم await هنا لتجنّب حجب التنقل، الدوال async تتعامل مع نفسها
+        if (tabKey === 'visits') {
+            this.scheduleVisitsTabRender(false, 0);
+            return;
         }
+        if (tabKey === 'medications') return this.renderMedicationsTab();
+        if (tabKey === 'sickLeave') return this.renderSickLeaveTab();
+        if (tabKey === 'injuries') return this.renderInjuriesTab();
+        if (tabKey === 'approvals') return this.renderApprovalsTab();
+        if (tabKey === 'dispensed-medications') return this.renderDispensedMedicationsTab();
+        if (tabKey === 'analytics') return this.renderAnalyticsTab();
+        if (tabKey === 'data-analysis') return this.renderDataAnalysisTab();
+        if (tabKey === 'supply-request') return this.renderSupplyRequestTab();
+    },
+
+    renderActiveTabContent() {
+        const active = this.state.activeTab || 'medications';
+        // ✅ بدل استدعاء render*Tab مباشرة (ثقيل)، نفعل اللوحة سريعاً ثم نُجدول الرندر
+        this._activateTabPanels(active);
+        this.scheduleClinicTabRender(active, { delayMs: 0 });
     },
 
     renderMedicationsTab() {
@@ -5116,9 +5206,11 @@ const Clinic = {
         }
         const doRender = () => {
             this._visitsRenderTimer = null;
-            requestAnimationFrame(() => {
+            // ✅ تجنّب Violation: اجعل requestAnimationFrame callback خفيفاً
+            // renderVisitsTab قد يكون ثقيلاً، لذا ندفعه إلى setTimeout بعد أول frame.
+            requestAnimationFrame(() => setTimeout(() => {
                 this.renderVisitsTab(forceReload);
-            });
+            }, 0));
         };
         // استخدام requestIdleCallback عندما لا يوجد تأخير مطلوب لتجنب violation
         if (delayMs === 0 && typeof requestIdleCallback === 'function') {
@@ -5726,7 +5818,8 @@ const Clinic = {
                 return true;
             });
 
-            const rows = visits.map((visit) => {
+            // ✅ تحسين الأداء: بناء صف واحد (يُستخدم لاحقاً في ضخ الصفوف تدريجياً)
+            const buildVisitRowHtml = (visit) => {
                 // ترتيب الأعمدة حسب نوع التبويب
                 const primaryValue = isContractorsTab
                     ? (visit.contractorName || visit.employeeName || visit.externalName || '-')
@@ -5950,7 +6043,7 @@ const Clinic = {
                     </td>
                 </tr>
             `;
-            }).join('');
+            };
 
             const tableHtml = visits.length
                 ? `
@@ -5974,9 +6067,7 @@ const Clinic = {
                                 <th class="text-center" style="min-width: 150px;">${t('table.actions')}</th>
                             </tr>
                         </thead>
-                        <tbody>
-                            ${rows}
-                        </tbody>
+                        <tbody id="clinic-visits-tbody"></tbody>
                     </table>
                 </div>
             `
@@ -6096,9 +6187,63 @@ const Clinic = {
             panel.innerHTML = content;
             
             // تحديث قيم الفلاتر بعد إدراج المحتوى في DOM
-            requestAnimationFrame(() => {
-                this.updateVisitFilterOptions(baseVisits);
-            });
+            // ✅ تجنّب Violation: updateVisitFilterOptions قد تكون ثقيلة، لذا ننقلها إلى idle/timeout
+            if (typeof requestIdleCallback === 'function') {
+                requestIdleCallback(() => this.updateVisitFilterOptions(baseVisits), { timeout: 900 });
+            } else {
+                setTimeout(() => this.updateVisitFilterOptions(baseVisits), 0);
+            }
+
+            // ✅ ضخ صفوف الجدول تدريجياً لتسريع فتح تبويب "سجل التردد"
+            try {
+                const tbody = panel.querySelector('#clinic-visits-tbody');
+                if (tbody && Array.isArray(visits) && visits.length > 0) {
+                    this._clinicVisitsRowsToken = (this._clinicVisitsRowsToken || 0) + 1;
+                    const myToken = this._clinicVisitsRowsToken;
+                    let i = 0;
+                    const total = visits.length;
+
+                    const pump = (deadline) => {
+                        if (myToken !== this._clinicVisitsRowsToken) return;
+                        if (this.state && this.state.activeTab !== 'visits') return;
+
+                        const start = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
+                        let chunkHtml = '';
+                        let rowsBuilt = 0;
+
+                        while (i < total) {
+                            chunkHtml += buildVisitRowHtml(visits[i]);
+                            i += 1;
+                            rowsBuilt += 1;
+
+                            const now = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
+                            const timeOk = deadline && typeof deadline.timeRemaining === 'function'
+                                ? deadline.timeRemaining() > 6
+                                : (now - start) < 12;
+                            if (rowsBuilt >= 25 && !timeOk) break;
+                            if (rowsBuilt >= 75) break;
+                        }
+
+                        if (chunkHtml) {
+                            tbody.insertAdjacentHTML('beforeend', chunkHtml);
+                        }
+
+                        if (i < total) {
+                            if (typeof requestIdleCallback === 'function') {
+                                requestIdleCallback(pump, { timeout: 900 });
+                            } else {
+                                setTimeout(() => pump(null), 0);
+                            }
+                        }
+                    };
+
+                    if (typeof requestIdleCallback === 'function') {
+                        requestIdleCallback(pump, { timeout: 900 });
+                    } else {
+                        setTimeout(() => pump(null), 0);
+                    }
+                }
+            } catch (e) { /* ignore */ }
             
             this.bindVisitsTabEvents(panel);
             

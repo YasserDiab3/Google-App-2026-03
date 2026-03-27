@@ -7286,8 +7286,9 @@
                         let i = 0;
                         const chunkSize = 1;
                         const scheduleNextChunk = (cb) => {
+                            // ✅ تجنّب Violation: اجعل requestIdleCallback خفيفاً، وادفع العمل الثقيل خارج callback
                             if (typeof requestIdleCallback === "function") {
-                                requestIdleCallback(cb, { timeout: 80 });
+                                requestIdleCallback(() => setTimeout(cb, 0), { timeout: 80 });
                             } else {
                                 requestAnimationFrame(() => setTimeout(cb, 0));
                             }

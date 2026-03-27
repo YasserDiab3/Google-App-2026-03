@@ -20,6 +20,72 @@ const Employees = {
         _refreshedOnceForInactive: false // مرة واحدة لكل جلسة لجلب المستقيلين من الخادم
     },
 
+    // ===== Photo loading guards (avoid repeated 503) =====
+    _photoFailKey(photoKey) {
+        return `hse_emp_photo_failed_${String(photoKey || '').trim()}`;
+    },
+    _getDriveIdFromUrl(url) {
+        try {
+            const s = String(url || '').trim();
+            if (!s) return '';
+            const m = s.match(/[?&]id=([^&]+)/) || s.match(/\/file\/d\/([^/]+)/);
+            return m ? String(m[1] || '').trim() : '';
+        } catch (e) {
+            return '';
+        }
+    },
+    _normalizeEmployeePhotoUrl(photoUrl, employeeId = '') {
+        try {
+            const raw = String(photoUrl || '').trim();
+            if (!raw) return '';
+
+            // Normalize Google Drive links when helper exists
+            let normalized = raw;
+            if (typeof window !== 'undefined' && typeof window.__convertGoogleDriveUrl === 'function') {
+                normalized = window.__convertGoogleDriveUrl(raw) || raw;
+            }
+
+            const driveId = this._getDriveIdFromUrl(normalized);
+            const photoKey = driveId || employeeId || normalized;
+
+            // If failed recently in this tab, skip re-request to avoid spam/slowdowns
+            const failedAt = sessionStorage.getItem(this._photoFailKey(photoKey));
+            if (failedAt) return '';
+
+            return normalized;
+        } catch (e) {
+            return '';
+        }
+    },
+    _setupEmployeePhotoFallbacks(rootEl) {
+        try {
+            const root = rootEl || document;
+            const images = root.querySelectorAll('img[data-emp-photo="1"]');
+            if (!images || images.length === 0) return;
+
+            images.forEach((img) => {
+                if (!img || img.dataset._fallbackBound === '1') return;
+                img.dataset._fallbackBound = '1';
+                const photoKey = (img.dataset.photoKey || '').trim();
+
+                img.addEventListener('error', () => {
+                    try {
+                        if (photoKey) sessionStorage.setItem(this._photoFailKey(photoKey), Date.now().toString());
+                    } catch (e) { /* ignore */ }
+
+                    try {
+                        const parent = img.parentElement;
+                        if (parent) {
+                            parent.innerHTML = '<div class="w-12 h-12 rounded-full bg-gray-200 flex items-center justify-center"><i class="fas fa-user text-gray-400"></i></div>';
+                        }
+                    } catch (e) { /* ignore */ }
+                }, { passive: true });
+            });
+        } catch (e) {
+            // ignore
+        }
+    },
+
     /**
      * التحقق من صلاحيات المستخدم للتحرير والحذف
      * فقط لمدير النظام (admin) - باقي الأدوار يمكنهم العرض والبحث فقط
@@ -1381,9 +1447,13 @@ const Employees = {
             if (isInactive) {
                 tr.style.cssText = rowStyle;
             }
+            const driveId = this._getDriveIdFromUrl(employee.photo || '');
+            const photoKey = (driveId || employee.id || employee.employeeNumber || employee.name || '').toString();
+            const photoSrc = this._normalizeEmployeePhotoUrl(employee.photo, employee.id);
+
             tr.innerHTML = `
                 <td style="word-wrap: break-word;">
-                    ${employee.photo ? `<img src="${employee.photo}" alt="${Utils.escapeHTML(employee.name || '')}" class="w-12 h-12 rounded-full object-cover">` : `<div class="w-12 h-12 rounded-full bg-gray-200 flex items-center justify-center"><i class="fas fa-user text-gray-400"></i></div>`}
+                    ${photoSrc ? `<img data-emp-photo="1" data-photo-key="${Utils.escapeHTML(photoKey)}" src="${Utils.escapeHTML(photoSrc)}" alt="${Utils.escapeHTML(employee.name || '')}" class="w-12 h-12 rounded-full object-cover" loading="lazy" decoding="async" referrerpolicy="no-referrer">` : `<div class="w-12 h-12 rounded-full bg-gray-200 flex items-center justify-center"><i class="fas fa-user text-gray-400"></i></div>`}
                 </td>
                 <td style="word-wrap: break-word; white-space: normal;">
                     ${Utils.escapeHTML(employee.employeeNumber || '')}
@@ -1433,6 +1503,13 @@ const Employees = {
         // تحديث DOM مرة واحدة فقط
         container.innerHTML = '';
         container.appendChild(fragment);
+
+        // ✅ تثبيت fallback لصور الموظفين (503 Drive) بعد تحديث DOM
+        if (typeof requestIdleCallback === 'function') {
+            requestIdleCallback(() => this._setupEmployeePhotoFallbacks(container), { timeout: 600 });
+        } else {
+            setTimeout(() => this._setupEmployeePhotoFallbacks(container), 0);
+        }
         
         // ✅ تعبئة الفلاتر بالقيم المتاحة بعد تحميل القائمة
         this.populateFilters();
@@ -1522,7 +1599,8 @@ const Employees = {
                     this._employeesUpdateDebounceTimer = setTimeout(() => {
                         const container = document.getElementById('employees-table-container');
                         if (container) {
-                            requestAnimationFrame(() => this.loadEmployeesList());
+                            // ✅ تجنّب Violation: اجعل rAF خفيفاً وادفع العمل الثقيل إلى setTimeout
+                            requestAnimationFrame(() => setTimeout(() => this.loadEmployeesList(), 0));
                         } else {
                             this.renderStatsCards();
                         }

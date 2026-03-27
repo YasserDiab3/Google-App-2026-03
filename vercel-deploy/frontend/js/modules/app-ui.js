@@ -2970,7 +2970,21 @@ window.UI = {
         // ✅ استعادة القسم المحفوظ إذا كان موجوداً (بغض النظر عن isPageRefresh)
         // لأن وجود قسم محفوظ يعني أن المستخدم كان في هذا القسم قبل إعادة التحميل
         const savedSection = sessionStorage.getItem('hse_current_section');
-        const sectionToShow = savedSection || 'dashboard';
+        let sectionToShow = savedSection || 'dashboard';
+
+        // ✅ إصلاح Reload: إذا كان القسم المحفوظ غير مسموح به للمستخدم (صلاحيات تغيّرت/مستخدم محدود)
+        // لا نترك التطبيق على صفحة بيضاء؛ نعود للـ dashboard فوراً.
+        try {
+            if (savedSection &&
+                typeof Permissions !== 'undefined' &&
+                typeof Permissions.checkBeforeShow === 'function') {
+                const ok = Permissions.checkBeforeShow(sectionToShow, true);
+                if (!ok) {
+                    sectionToShow = 'dashboard';
+                    try { sessionStorage.setItem('hse_current_section', 'dashboard'); } catch (e) { /* ignore */ }
+                }
+            }
+        } catch (e) { /* ignore */ }
 
         // ✅ تحديث AppState.currentSection قبل عرض القسم لضمان التزامن
         AppState.currentSection = sectionToShow;
@@ -4740,10 +4754,30 @@ window.UI = {
 
             // إغلاق القائمة الجانبية تلقائياً عند فتح أي وحدة (عدا Dashboard) على الموبايل فقط
             if (sectionName !== 'dashboard') {
-                // على سطح المكتب نحافظ على حالة القائمة (لتسهيل الرجوع بين الموديولات)
-                const isMobile = window.innerWidth <= 1024;
+                // ✅ منع "صفحة بيضاء": اعرض Skeleton خفيف فوراً إذا القسم فارغ عند Reload/قبل تحميل الموديول
+                try {
+                    const current = (section.innerHTML || '').trim();
+                    if (!current) {
+                        section.innerHTML = `
+                            <div class="content-card" style="margin:18px;">
+                                <div class="card-body" style="display:flex;align-items:center;justify-content:center;min-height:220px;gap:12px;">
+                                    <div class="hse-mini-spinner" style="width:34px;height:34px;border:3px solid rgba(37,99,235,0.18);border-top-color:#2563eb;border-radius:50%;animation:hseSpin 0.9s linear infinite;"></div>
+                                    <div style="font-weight:600;color:#334155;">جاري تحميل البيانات...</div>
+                                </div>
+                            </div>
+                        `;
+                        if (!document.getElementById('hse-mini-spinner-style')) {
+                            const style = document.createElement('style');
+                            style.id = 'hse-mini-spinner-style';
+                            style.textContent = '@keyframes hseSpin{to{transform:rotate(360deg);}}';
+                            document.head.appendChild(style);
+                        }
+                    }
+                } catch (e) { /* ignore */ }
+
+                // إغلاق القائمة الجانبية فوراً
                 const sidebar = document.querySelector('.sidebar');
-                if (sidebar && isMobile) {
+                if (sidebar) {
                     // إزالة class "open" مباشرة لضمان الإغلاق
                     sidebar.classList.remove('open');
                     // استدعاء toggleSidebar للتأكد من تطبيق جميع التغييرات
@@ -4828,15 +4862,22 @@ window.UI = {
         // التأكد من تحميل البيانات بعد عرض القسم مباشرة مع تقليل الأحمال الثقيلة داخل callbacks
         const isRefresh = AppState.isPageRefresh;
         const loadSectionWork = () => {
-            this.loadSectionData(sectionName, isRefresh);
-            // تجنّب أي معالجة DOM إضافية في نفس دورة التنقل لتقليل Forced Reflow
-            this.addNavigationIconsAfterRender(sectionName);
+            // ✅ تقسيم العمل لتقليل setTimeout/idle Violations: تحميل البيانات أولاً، ثم الأيقونات لاحقاً
+            setTimeout(() => {
+                this.loadSectionData(sectionName, isRefresh);
+            }, 0);
+            if (typeof requestIdleCallback === 'function') {
+                requestIdleCallback(() => this.addNavigationIconsAfterRender(sectionName), { timeout: 800 });
+            } else {
+                setTimeout(() => this.addNavigationIconsAfterRender(sectionName), 60);
+            }
         };
 
         if (sectionName === 'dashboard') {
             loadSectionWork();
         } else if (typeof requestIdleCallback === 'function') {
-            requestIdleCallback(() => loadSectionWork(), { timeout: 260 });
+            // ✅ تجنّب Violation: اجعل requestIdleCallback سريعاً، وادفع العمل الثقيل خارج callback
+            requestIdleCallback(() => setTimeout(loadSectionWork, 0), { timeout: 260 });
         } else {
             requestAnimationFrame(() => setTimeout(loadSectionWork, 0));
         }
