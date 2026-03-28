@@ -9486,9 +9486,9 @@
                         byId("login-forgot-text").textContent = t.forgot;
                     var submitBtn = byId("login-submit-text");
                     if (submitBtn) submitBtn.textContent = t.submit;
-                    var submitB = document.querySelector(
-                        '#login-form button[type="submit"]',
-                    );
+                    var submitB =
+                        document.getElementById("login-submit-btn") ||
+                        document.querySelector('#login-form button[type="submit"]');
                     if (submitB)
                         submitB.setAttribute("aria-label", t.submitAria);
                     var helpB = byId("help-btn");

@@ -249,16 +249,105 @@ const DailyObservations = {
         };
     },
 
+    /** مستخدمون نشطون من AppState لقائمة التعيين */
+    getObservationAssignableUsers() {
+        const raw = Array.isArray(AppState.appData.users) ? AppState.appData.users : [];
+        const seen = new Set();
+        const out = [];
+        raw.forEach((u) => {
+            if (!u || typeof u !== 'object') return;
+            if (u.isActive === false) return;
+            const st = String(u.status || '').toLowerCase();
+            if (st === 'inactive' || st === 'معطل' || st === 'disabled') return;
+            const email = String(u.email || '').trim();
+            const name = String(u.name || u.fullName || email || '').trim();
+            if (!name && !email) return;
+            const key = (email || name).toLowerCase();
+            if (seen.has(key)) return;
+            seen.add(key);
+            out.push({
+                name: name || email,
+                email,
+                department: String(u.department || '').trim()
+            });
+        });
+        out.sort((a, b) => String(a.name).localeCompare(String(b.name), 'ar'));
+        return out;
+    },
+
+    getWorkflowCommentFieldsVisibility(obs) {
+        const stage = String(obs?.workflowStage || '').trim() || 'pending_specialist';
+        const specOk = this.hasSpecialistWorkflowPermission() && (stage === 'pending_specialist' || stage === 'returned_specialist');
+        const mgrOk = this.hasManagerWorkflowPermission() && stage === 'pending_manager';
+        const adm = this._isAdminRole(AppState.currentUser);
+        return {
+            showOptional: specOk || mgrOk,
+            showReject: mgrOk || (adm && stage === 'pending_manager')
+        };
+    },
+
+    readWorkflowCommentsFromDetailModal(observationId) {
+        const oid = String(observationId || '').replace(/"/g, '');
+        const modal = document.querySelector('.modal-overlay[data-observation-id="' + oid + '"]');
+        if (!modal) return { comments: '', rejectionReason: '' };
+        const o = modal.querySelector('.obs-wf-optional-comment[data-oid="' + oid + '"]');
+        const r = modal.querySelector('.obs-wf-reject-reason[data-oid="' + oid + '"]');
+        return {
+            comments: (o && o.value ? o.value : '').trim(),
+            rejectionReason: (r && r.value ? r.value : '').trim()
+        };
+    },
+
+    buildWorkflowInlineCommentFieldsHtml(obs) {
+        const v = this.getWorkflowCommentFieldsVisibility(obs);
+        if (!v.showOptional && !v.showReject) return '';
+        const oidAttr = String(obs.id || '').replace(/"/g, '');
+        let html = '<div class="obs-wf-inline-fields" style="margin-top:0.85rem;display:flex;flex-direction:column;gap:0.45rem;">';
+        if (v.showOptional) {
+            html += `
+            <label style="font-size:0.8rem;opacity:0.95;">تعليق اختياري مع الإجراء</label>
+            <textarea class="form-input obs-wf-optional-comment" data-oid="${oidAttr}" rows="2" placeholder="يُرسل مع «إرسال لمدير السلامة» أو «اعتماد وإرسال للإدارة»…" style="width:100%;max-width:100%;color:#111;resize:vertical;"></textarea>`;
+        }
+        if (v.showReject) {
+            html += `
+            <label style="font-size:0.8rem;opacity:0.95;">سبب الرفض أو الإرجاع</label>
+            <textarea class="form-input obs-wf-reject-reason" data-oid="${oidAttr}" rows="2" placeholder="املأه قبل الضغط على رفض أو إرجاع…" style="width:100%;max-width:100%;color:#111;resize:vertical;"></textarea>`;
+        }
+        html += '</div>';
+        return html;
+    },
+
     buildAssignResponsibleHtml(obs) {
         if (!this.canShowAssignResponsiblePanel(obs)) return '';
         const oidAttr = String(obs.id || '').replace(/"/g, '');
         const an = Utils.escapeHTML(String(obs.assignedToName || ''));
         const ae = Utils.escapeHTML(String(obs.assignedToEmail || ''));
+        const users = this.getObservationAssignableUsers();
+        const currentEmail = String(obs.assignedToEmail || '').trim().toLowerCase();
+        const options = ['<option value="">— اختر مستخدماً من النظام —</option>'].concat(
+            users.map((u) => {
+                const payload = encodeURIComponent(JSON.stringify({ name: u.name, email: u.email }));
+                const label = Utils.escapeHTML(
+                    u.name + (u.email ? ' — ' + u.email : '') + (u.department ? ' (' + u.department + ')' : '')
+                );
+                const sel = currentEmail && String(u.email || '').trim().toLowerCase() === currentEmail ? ' selected' : '';
+                return `<option value="${payload}"${sel}>${label}</option>`;
+            })
+        );
+        const userListNote = users.length === 0
+            ? '<div style="font-size:0.72rem;opacity:0.85;margin-bottom:0.35rem;">لا توجد بيانات مستخدمين محمّلة؛ يمكن الإدخال يدوياً أو مزامنة المستخدمين من الإعدادات.</div>'
+            : '';
         return `
         <div class="obs-assign-box" style="margin-top: 1rem; padding: 0.85rem; background: rgba(255,255,255,0.14); border-radius: 12px; border: 1px solid rgba(255,255,255,0.28);">
             <div style="font-weight: 600; margin-bottom: 0.45rem;"><i class="fas fa-user-tag ml-2"></i>تعيين مسؤول المتابعة</div>
             <div style="font-size: 0.78rem; opacity: 0.9; margin-bottom: 0.5rem;">يحدده مسؤول السلامة (أخصائي) أو مدير السلامة (مدير النظام) أو مسؤول الإدارة المعنية.</div>
-            <input type="text" class="form-input obs-assign-name" data-oid="${oidAttr}" placeholder="اسم المسؤول" value="${an}" style="width:100%;max-width:340px;color:#111;margin-bottom:0.35rem;display:block;" />
+            ${userListNote}
+            <label style="display:block;font-size:0.8rem;opacity:0.9;margin-bottom:0.25rem;">مستخدمو النظام</label>
+            <select class="form-input obs-assign-user-select" data-oid="${oidAttr}" style="width:100%;max-width:420px;color:#111;margin-bottom:0.5rem;display:block;">
+                ${options.join('')}
+            </select>
+            <div style="font-size:0.75rem;opacity:0.85;margin-bottom:0.35rem;">أو تعديل يدوي:</div>
+            <input type="text" class="form-input obs-assign-name" data-oid="${oidAttr}" placeholder="الاسم" value="${an}" style="width:100%;max-width:340px;color:#111;margin-bottom:0.35rem;display:block;" />
             <input type="email" class="form-input obs-assign-email" data-oid="${oidAttr}" placeholder="البريد الإلكتروني" value="${ae}" style="width:100%;max-width:340px;color:#111;margin-bottom:0.5rem;display:block;" />
             <button type="button" class="btn-secondary btn-sm obs-wf-assign-save" data-oid="${oidAttr}" style="background: rgba(255,255,255,0.22); color: #fff; border: 1px solid rgba(255,255,255,0.45);">
                 <i class="fas fa-save ml-1"></i>حفظ التعيين
@@ -294,6 +383,9 @@ const DailyObservations = {
         el.innerHTML = `<div class="${cls}"><button type="button" class="obs-inline-alert-close" aria-label="إغلاق">&times;</button><span class="obs-inline-alert-msg">${safe}</span></div>`;
         const close = el.querySelector('.obs-inline-alert-close');
         if (close) close.addEventListener('click', () => { el.innerHTML = ''; });
+        try {
+            el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        } catch (e) { /* ignore */ }
         return true;
     },
 
@@ -388,6 +480,7 @@ const DailyObservations = {
         const actions = this.buildWorkflowActionButtonsHtml(observation);
         const deptForm = this.buildDepartmentWorkflowFormHtml(observation);
         const assignBox = this.buildAssignResponsibleHtml(observation);
+        const commentFields = this.buildWorkflowInlineCommentFieldsHtml(observation);
         if (observation.assignedToName || observation.assignedToEmail) {
             labelParts.push(`معيّن: ${Utils.escapeHTML(observation.assignedToName || '')}${observation.assignedToEmail ? ' — ' + Utils.escapeHTML(observation.assignedToEmail) : ''}`);
         }
@@ -400,6 +493,7 @@ const DailyObservations = {
                     <div style="font-size: 0.8rem; opacity: 0.85; margin-top: 0.35rem;">${labelParts.join(' · ')}</div>
                 </div>
             </div>
+            ${commentFields}
             ${assignBox}
             ${actions ? `<div style="margin-top: 1rem; display: flex; flex-wrap: wrap; gap: 0.5rem;">${actions}</div>` : ''}
             ${deptForm}
@@ -439,6 +533,29 @@ const DailyObservations = {
                 this.runWorkflowTransition(oid, 'assign_responsible', { assignedToName, assignedToEmail });
             });
         });
+        modal.querySelectorAll('.obs-assign-user-select').forEach((sel) => {
+            sel.addEventListener('change', () => {
+                const oid = sel.getAttribute('data-oid');
+                if (!oid) return;
+                let name = '';
+                let email = '';
+                try {
+                    const v = sel.value;
+                    if (v) {
+                        const o = JSON.parse(decodeURIComponent(v));
+                        name = String(o.name || '').trim();
+                        email = String(o.email || '').trim();
+                    }
+                } catch (e) { /* ignore */ }
+                const root = sel.closest('.modal-overlay');
+                if (!root) return;
+                const esc = oid.replace(/"/g, '');
+                const n = root.querySelector('.obs-assign-name[data-oid="' + esc + '"]');
+                const em = root.querySelector('.obs-assign-email[data-oid="' + esc + '"]');
+                if (n) n.value = name;
+                if (em) em.value = email;
+            });
+        });
     },
 
     promptAndRunWorkflowTransition(observationId, action) {
@@ -448,22 +565,24 @@ const DailyObservations = {
             action === 'manager_return_specialist' ||
             action === 'admin_return_specialist'
         );
-        let comments = '';
-        let rejectionReason = '';
+        const { comments, rejectionReason } = this.readWorkflowCommentsFromDetailModal(observationId);
         if (needsReason) {
-            rejectionReason = window.prompt('أدخل السبب (إلزامي):', '') || '';
             if (!rejectionReason.trim()) {
-                Notification.warning('السبب مطلوب');
+                const msg = 'يرجى إدخال سبب الرفض أو الإرجاع في الحقل المخصص داخل بطاقة سير الاعتماد.';
+                this.showObservationDetailInlineAlert(observationId, 'warning', msg);
+                if (typeof Notification !== 'undefined' && Notification.warning) Notification.warning('السبب مطلوب');
                 return;
             }
-        } else if (action === 'specialist_forward' || action === 'manager_approve') {
-            comments = window.prompt('تعليق اختياري:', '') || '';
         }
         const assign =
             action === 'specialist_forward' || action === 'manager_approve'
                 ? this.readAssignFieldsFromDetailModal(observationId)
                 : {};
-        this.runWorkflowTransition(observationId, action, { comments, rejectionReason, ...assign });
+        this.runWorkflowTransition(observationId, action, {
+            comments: needsReason ? '' : comments,
+            rejectionReason: needsReason ? rejectionReason : '',
+            ...assign
+        });
     },
 
     pushObservationInAppNotification(title, body, observationId) {

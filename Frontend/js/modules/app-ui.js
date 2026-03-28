@@ -123,10 +123,14 @@ window.UI = {
         }
 
         // إعادة تعيين حالة زر تسجيل الدخول (مع مراعاة اللغة المحفوظة)
+        // الزر الفعلي في index.html هو #login-submit-btn و type="button" وليس submit
         if (loginForm) {
-            const submitBtn = loginForm.querySelector('button[type="submit"]');
+            const submitBtn = loginForm.querySelector('#login-submit-btn')
+                || document.getElementById('login-submit-btn')
+                || loginForm.querySelector('button[type="submit"]');
             if (submitBtn) {
                 submitBtn.disabled = false;
+                submitBtn.removeAttribute('aria-busy');
                 const loginText = (localStorage.getItem('language') === 'en') ? 'Log in' : 'تسجيل الدخول';
                 submitBtn.innerHTML = '<i class="fas fa-sign-in-alt ml-2" aria-hidden="true"></i><span id="login-submit-text">' + loginText + '</span>';
             }

@@ -799,7 +799,12 @@ async function handleLogin(form, submitBtn) {
         
         if (success) {
             log('✅ تسجيل دخول ناجح!');
-            
+            try {
+                submitBtn.disabled = false;
+                submitBtn.removeAttribute('aria-busy');
+                submitBtn.innerHTML = originalBtnText;
+            } catch (e) { /* ignore */ }
+
             // عدم إخفاء شاشة الدخول هنا — showMainApp يخفيها بعد تحميل الإعدادات ثم يعرض السياسة مباشرة (بدون شاشة تحضيرية)
             // معالجة تغيير كلمة المرور إذا لزم الأمر
             if (requiresPasswordChange || isFirstLogin) {
