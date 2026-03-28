@@ -38,25 +38,38 @@
             // إذا فشل إعادة التعريف، نتجاهل
         }
 
-        // قمع أخطاء runtime.lastError في console
+        // قمع أخطاء runtime.lastError في console (تظهر غالباً من إضافات Chrome وليس من التطبيق)
+        const extNoise = (s) => {
+            const t = String(s || '');
+            return t.includes('runtime.lastError') ||
+                t.includes('Unchecked runtime.lastError') ||
+                t.includes('message port closed') ||
+                t.includes('Message port closed') ||
+                t.includes('message channel closed') ||
+                t.includes('asynchronous response') ||
+                t.includes('Receiving end does not exist') ||
+                t.includes('Could not establish connection') ||
+                t.includes('Extension context invalidated');
+        };
         const originalError = console.error;
         console.error = function (...args) {
             if (args.length > 0) {
-                const firstArg = String(args[0] || '');
-                const allArgs = args.map(arg => String(arg || '')).join(' ');
-                if (firstArg.includes('runtime.lastError') ||
-                    firstArg.includes('message port closed') ||
-                    firstArg.includes('message channel closed') ||
-                    firstArg.includes('asynchronous response') ||
-                    firstArg.includes('Receiving end does not exist') ||
-                    firstArg.includes('Could not establish connection') ||
-                    allArgs.includes('message port closed') ||
-                    allArgs.includes('message channel closed') ||
-                    allArgs.includes('asynchronous response')) {
-                    return; // تجاهل هذه الأخطاء
+                const allArgs = args.map((arg) => String(arg || '')).join(' ');
+                if (args.some((a) => extNoise(a)) || extNoise(allArgs)) {
+                    return;
                 }
             }
             originalError.apply(console, args);
+        };
+        const originalWarn = console.warn;
+        console.warn = function (...args) {
+            if (args.length > 0) {
+                const allArgs = args.map((arg) => String(arg || '')).join(' ');
+                if (args.some((a) => extNoise(a)) || extNoise(allArgs)) {
+                    return;
+                }
+            }
+            originalWarn.apply(console, args);
         };
     }
 
@@ -94,14 +107,16 @@
                 reason.includes('message port closed') ||
                 reason.includes('message channel closed') ||
                 reason.includes('asynchronous response') ||
-                reason.includes('Receiving end does not exist')
+                reason.includes('Receiving end does not exist') ||
+                reason.includes('Could not establish connection')
             )) ||
             (reason && reason.message && (
                 reason.message.includes('runtime.lastError') ||
                 reason.message.includes('message port closed') ||
                 reason.message.includes('message channel closed') ||
                 reason.message.includes('asynchronous response') ||
-                reason.message.includes('Receiving end does not exist')
+                reason.message.includes('Receiving end does not exist') ||
+                reason.message.includes('Could not establish connection')
             ))
         )) {
             event.preventDefault();

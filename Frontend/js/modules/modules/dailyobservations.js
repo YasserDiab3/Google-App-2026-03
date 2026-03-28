@@ -174,6 +174,17 @@ const DailyObservations = {
         };
     },
 
+    /** تفكيك مهام طويلة على الخيط الرئيسي (يقلّل تحذيرات Violation بعد انتظار الشبكة) */
+    async yieldToMain() {
+        if (typeof scheduler !== 'undefined' && typeof scheduler.yield === 'function') {
+            try {
+                await scheduler.yield();
+                return;
+            } catch (e) { /* ignore */ }
+        }
+        await new Promise((r) => setTimeout(r, 0));
+    },
+
     getWorkflowStageLabel(stage) {
         const s = String(stage || '').trim();
         if (!s) return '— (سجل قديم)';
@@ -506,7 +517,12 @@ const DailyObservations = {
             btn.addEventListener('click', () => {
                 const oid = btn.getAttribute('data-oid');
                 const wfa = btn.getAttribute('data-wfa');
-                if (oid && wfa) this.promptAndRunWorkflowTransition(oid, wfa);
+                if (!oid || !wfa) return;
+                requestAnimationFrame(() => {
+                    void this.promptAndRunWorkflowTransition(oid, wfa).catch((e) => {
+                        Utils.safeWarn('promptAndRunWorkflowTransition', e);
+                    });
+                });
             });
         });
         modal.querySelectorAll('.obs-wf-dept-save').forEach((btn) => {
@@ -515,9 +531,14 @@ const DailyObservations = {
                 if (!oid) return;
                 const corrEl = modal.querySelector('.obs-dept-corrective-input[data-oid="' + oid.replace(/"/g, '') + '"]');
                 const expEl = modal.querySelector('.obs-dept-expected-input[data-oid="' + oid.replace(/"/g, '') + '"]');
-                this.runWorkflowTransition(oid, 'department_update', {
+                const payload = {
                     correctiveAction: (corrEl?.value || '').trim(),
                     expectedCompletionDate: expEl?.value ? new Date(expEl.value).toISOString() : ''
+                };
+                requestAnimationFrame(() => {
+                    void this.runWorkflowTransition(oid, 'department_update', payload).catch((e) => {
+                        Utils.safeWarn('runWorkflowTransition department_update', e);
+                    });
                 });
             });
         });
@@ -530,7 +551,11 @@ const DailyObservations = {
                     if (typeof Notification !== 'undefined' && Notification.warning) Notification.warning('يرجى إدخال اسم المسؤول المعيّن');
                     return;
                 }
-                this.runWorkflowTransition(oid, 'assign_responsible', { assignedToName, assignedToEmail });
+                requestAnimationFrame(() => {
+                    void this.runWorkflowTransition(oid, 'assign_responsible', { assignedToName, assignedToEmail }).catch((e) => {
+                        Utils.safeWarn('runWorkflowTransition assign_responsible', e);
+                    });
+                });
             });
         });
         modal.querySelectorAll('.obs-assign-user-select').forEach((sel) => {
@@ -558,7 +583,7 @@ const DailyObservations = {
         });
     },
 
-    promptAndRunWorkflowTransition(observationId, action) {
+    async promptAndRunWorkflowTransition(observationId, action) {
         const needsReason = (
             action === 'manager_reject' ||
             action === 'admin_reject' ||
@@ -578,7 +603,7 @@ const DailyObservations = {
             action === 'specialist_forward' || action === 'manager_approve'
                 ? this.readAssignFieldsFromDetailModal(observationId)
                 : {};
-        this.runWorkflowTransition(observationId, action, {
+        await this.runWorkflowTransition(observationId, action, {
             comments: needsReason ? '' : comments,
             rejectionReason: needsReason ? rejectionReason : '',
             ...assign
@@ -648,11 +673,23 @@ const DailyObservations = {
                     if (typeof window.DataManager !== 'undefined' && window.DataManager.save) window.DataManager.save();
                 } catch (e) { /* ignore */ }
                 this.pushObservationInAppNotification('سير الملاحظات', res.message || 'تم تحديث الملاحظة', observationId);
-                this.loadObservationsList(this.currentFilter?.filter || null);
                 const oidEsc = String(observationId || '').replace(/"/g, '');
-                if (document.querySelector('.modal-overlay[data-observation-id="' + oidEsc + '"]')) {
-                    this.replaceObservationDetailModal(observationId, res.data);
+                const dataSnapshot = res.data;
+                await this.yieldToMain();
+                try {
+                    this.loadObservationsList(this.currentFilter?.filter || null);
+                } catch (e) {
+                    Utils.safeWarn('loadObservationsList بعد سير الملاحظة', e);
                 }
+                await this.yieldToMain();
+                if (dataSnapshot && document.querySelector('.modal-overlay[data-observation-id="' + oidEsc + '"]')) {
+                    try {
+                        this.replaceObservationDetailModal(observationId, dataSnapshot);
+                    } catch (e) {
+                        Utils.safeWarn('replaceObservationDetailModal بعد سير الملاحظة', e);
+                    }
+                }
+                await this.yieldToMain();
                 if (!this.showObservationDetailInlineAlert(observationId, 'success', okMsg)) {
                     Notification.success(okMsg);
                 }
