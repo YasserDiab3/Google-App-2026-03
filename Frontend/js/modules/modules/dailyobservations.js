@@ -182,11 +182,24 @@ const DailyObservations = {
     },
 
     /** من يملك رؤية كل الملاحظات محلياً (يتوافق مع منطق الخادم) */
+    _isAdminRole(user) {
+        if (!user) return false;
+        const r = String(user.role || '').trim();
+        const rl = r.toLowerCase();
+        return rl === 'admin' || rl === 'system_admin' || r === 'مدير النظام' || r === 'مدير';
+    },
+
+    _isSafetyOfficerRole(user) {
+        if (!user) return false;
+        const r = String(user.role || '').trim();
+        const rl = r.toLowerCase();
+        return rl === 'safety_officer' || r === 'مسئول السلامة' || r === 'مسؤول السلامة';
+    },
+
     canViewAllObservationsWorkflow() {
         const user = AppState.currentUser;
         if (!user) return false;
-        const r = String(user.role || '').toLowerCase();
-        if (r === 'admin' || r === 'safety_officer') return true;
+        if (this._isAdminRole(user) || this._isSafetyOfficerRole(user)) return true;
         if (typeof Permissions !== 'undefined' && Permissions.hasDetailedPermission) {
             if (Permissions.hasDetailedPermission('daily-observations', 'observations-specialist-review')) return true;
             if (Permissions.hasDetailedPermission('daily-observations', 'observations-manager-approve')) return true;
@@ -195,27 +208,27 @@ const DailyObservations = {
         return false;
     },
 
+    /** مرحلة مسؤول السلامة (أخصائي) = دور safety_officer أو مدير النظام أو صلاحية تفصيلية */
     hasSpecialistWorkflowPermission() {
         const user = AppState.currentUser;
         if (!user) return false;
-        const r = String(user.role || '').toLowerCase();
-        if (r === 'admin' || r === 'safety_officer') return true;
+        if (this._isAdminRole(user) || this._isSafetyOfficerRole(user)) return true;
         return typeof Permissions !== 'undefined' && Permissions.hasDetailedPermission &&
             Permissions.hasDetailedPermission('daily-observations', 'observations-specialist-review');
     },
 
+    /** اعتماد مدير السلامة = دور مدير النظام (admin) أو صلاحية تفصيلية — وليس مسؤول السلامة (أخصائي) */
     hasManagerWorkflowPermission() {
         const user = AppState.currentUser;
         if (!user) return false;
-        const r = String(user.role || '').toLowerCase();
-        if (r === 'admin' || r === 'safety_officer') return true;
+        if (this._isAdminRole(user)) return true;
         return typeof Permissions !== 'undefined' && Permissions.hasDetailedPermission &&
             Permissions.hasDetailedPermission('daily-observations', 'observations-manager-approve');
     },
 
     canShowAssignResponsiblePanel(obs) {
         const stage = String(obs?.workflowStage || '').trim();
-        const adm = String(AppState.currentUser?.role || '').toLowerCase() === 'admin';
+        const adm = this._isAdminRole(AppState.currentUser);
         const early = stage === 'pending_specialist' || stage === 'returned_specialist' || stage === 'pending_manager';
         const deptStages = stage === 'pending_department' || stage === 'in_progress';
         if (adm) return true;
@@ -244,7 +257,7 @@ const DailyObservations = {
         return `
         <div class="obs-assign-box" style="margin-top: 1rem; padding: 0.85rem; background: rgba(255,255,255,0.14); border-radius: 12px; border: 1px solid rgba(255,255,255,0.28);">
             <div style="font-weight: 600; margin-bottom: 0.45rem;"><i class="fas fa-user-tag ml-2"></i>تعيين مسؤول المتابعة</div>
-            <div style="font-size: 0.78rem; opacity: 0.9; margin-bottom: 0.5rem;">يحدده أخصائي السلامة أو مدير السلامة أو مسؤول الإدارة المعنية.</div>
+            <div style="font-size: 0.78rem; opacity: 0.9; margin-bottom: 0.5rem;">يحدده مسؤول السلامة (أخصائي) أو مدير السلامة (مدير النظام) أو مسؤول الإدارة المعنية.</div>
             <input type="text" class="form-input obs-assign-name" data-oid="${oidAttr}" placeholder="اسم المسؤول" value="${an}" style="width:100%;max-width:340px;color:#111;margin-bottom:0.35rem;display:block;" />
             <input type="email" class="form-input obs-assign-email" data-oid="${oidAttr}" placeholder="البريد الإلكتروني" value="${ae}" style="width:100%;max-width:340px;color:#111;margin-bottom:0.5rem;display:block;" />
             <button type="button" class="btn-secondary btn-sm obs-wf-assign-save" data-oid="${oidAttr}" style="background: rgba(255,255,255,0.22); color: #fff; border: 1px solid rgba(255,255,255,0.45);">
@@ -261,6 +274,32 @@ const DailyObservations = {
         const newModal = this.createObservationModal(updated);
         old.replaceWith(newModal);
         this.attachWorkflowPanelListeners(newModal);
+    },
+
+    getObservationDetailInlineAlertsEl(observationId) {
+        const oid = String(observationId || '').replace(/"/g, '');
+        const modal = document.querySelector('.modal-overlay[data-observation-id="' + oid + '"]');
+        return modal ? modal.querySelector('[data-obs-inline-alerts]') : null;
+    },
+
+    /** رسائل خطأ/نجاح أعلى نموذج التفاصيل (ظاهرة فوق شريط سير العمل) */
+    showObservationDetailInlineAlert(observationId, type, message) {
+        const el = this.getObservationDetailInlineAlertsEl(observationId);
+        if (!el || message == null || String(message).trim() === '') return false;
+        const safe = Utils.escapeHTML(String(message));
+        const cls = type === 'success' ? 'obs-inline-alert obs-inline-alert-success'
+            : type === 'warning' ? 'obs-inline-alert obs-inline-alert-warning'
+            : type === 'error' ? 'obs-inline-alert obs-inline-alert-error'
+            : 'obs-inline-alert obs-inline-alert-info';
+        el.innerHTML = `<div class="${cls}"><button type="button" class="obs-inline-alert-close" aria-label="إغلاق">&times;</button><span class="obs-inline-alert-msg">${safe}</span></div>`;
+        const close = el.querySelector('.obs-inline-alert-close');
+        if (close) close.addEventListener('click', () => { el.innerHTML = ''; });
+        return true;
+    },
+
+    clearObservationDetailInlineAlert(observationId) {
+        const el = this.getObservationDetailInlineAlertsEl(observationId);
+        if (el) el.innerHTML = '';
     },
 
     formatResponsibleTableCell(obs) {
@@ -303,12 +342,12 @@ const DailyObservations = {
         }
         if (this.hasManagerWorkflowPermission() && stage === 'pending_manager') {
             btns.push(`<button type="button" class="btn-primary btn-sm obs-wf-action" data-oid="${oidAttr}" data-wfa="manager_approve" style="background: #0ea5e9; border: none;"><i class="fas fa-check ml-1"></i>اعتماد وإرسال للإدارة</button>`);
-            btns.push(`<button type="button" class="btn-secondary btn-sm obs-wf-action" data-oid="${oidAttr}" data-wfa="manager_return_specialist" style="background: rgba(255,255,255,0.2); color: white; border: 1px solid rgba(255,255,255,0.4);"><i class="fas fa-undo ml-1"></i>إرجاع للأخصائي</button>`);
+            btns.push(`<button type="button" class="btn-secondary btn-sm obs-wf-action" data-oid="${oidAttr}" data-wfa="manager_return_specialist" style="background: rgba(255,255,255,0.2); color: white; border: 1px solid rgba(255,255,255,0.4);"><i class="fas fa-undo ml-1"></i>إرجاع لمسؤول السلامة (أخصائي)</button>`);
             btns.push(`<button type="button" class="btn-secondary btn-sm obs-wf-action" data-oid="${oidAttr}" data-wfa="manager_reject" style="background: #b91c1c; color: white; border: none;"><i class="fas fa-times ml-1"></i>رفض</button>`);
         }
-        const adm = String(AppState.currentUser?.role || '').toLowerCase() === 'admin';
+        const adm = this._isAdminRole(AppState.currentUser);
         if (adm && stage === 'pending_manager') {
-            btns.push(`<button type="button" class="btn-secondary btn-sm obs-wf-action" data-oid="${oidAttr}" data-wfa="admin_return_specialist" style="background: rgba(255,255,255,0.15); color: white; border: 1px solid rgba(255,255,255,0.35);"><i class="fas fa-user-shield ml-1"></i>إرجاع إداري للأخصائي</button>`);
+            btns.push(`<button type="button" class="btn-secondary btn-sm obs-wf-action" data-oid="${oidAttr}" data-wfa="admin_return_specialist" style="background: rgba(255,255,255,0.15); color: white; border: 1px solid rgba(255,255,255,0.35);"><i class="fas fa-user-shield ml-1"></i>إرجاع من مدير النظام لمسؤول السلامة</button>`);
             btns.push(`<button type="button" class="btn-secondary btn-sm obs-wf-action" data-oid="${oidAttr}" data-wfa="admin_reject" style="background: #7f1d1d; color: white; border: none;"><i class="fas fa-ban ml-1"></i>رفض إداري</button>`);
         }
         if ((this.hasManagerWorkflowPermission() || this.hasSpecialistWorkflowPermission() || adm) && (stage === 'in_progress' || stage === 'pending_department')) {
@@ -321,7 +360,7 @@ const DailyObservations = {
         const stage = (obs.workflowStage || '').trim();
         if (stage !== 'pending_department' && stage !== 'in_progress') return '';
         const isDept = this.isUserInResponsibleDepartment(obs);
-        const adm = String(AppState.currentUser?.role || '').toLowerCase() === 'admin';
+        const adm = this._isAdminRole(AppState.currentUser);
         if (!isDept && !adm) return '';
         const oidAttr = String(obs.id || '').replace(/"/g, '');
         const corr = Utils.escapeHTML(String(obs.correctiveAction || ''));
@@ -343,8 +382,8 @@ const DailyObservations = {
         const stage = (observation.workflowStage || '').trim();
         const labelParts = [];
         if (observation.submittedBy) labelParts.push(`المُسجِّل: ${Utils.escapeHTML(observation.submittedBy)}`);
-        if (observation.specialistReviewedBy) labelParts.push(`مراجعة أخصائي: ${Utils.escapeHTML(observation.specialistReviewedBy)}`);
-        if (observation.managerApprovedBy) labelParts.push(`اعتماد مدير سلامة: ${Utils.escapeHTML(observation.managerApprovedBy)}`);
+        if (observation.specialistReviewedBy) labelParts.push(`مراجعة مسؤول السلامة (أخصائي): ${Utils.escapeHTML(observation.specialistReviewedBy)}`);
+        if (observation.managerApprovedBy) labelParts.push(`اعتماد مدير السلامة (مدير النظام): ${Utils.escapeHTML(observation.managerApprovedBy)}`);
         if (observation.rejectionReason) labelParts.push(`ملاحظة: ${Utils.escapeHTML(observation.rejectionReason)}`);
         const actions = this.buildWorkflowActionButtonsHtml(observation);
         const deptForm = this.buildDepartmentWorkflowFormHtml(observation);
@@ -467,6 +506,7 @@ const DailyObservations = {
             } catch (e) { /* ignore */ }
         }
         Loading.show('جاري تحديث سير الملاحظة...');
+        this.clearObservationDetailInlineAlert(observationId);
         try {
             const res = await GoogleIntegration.callBackend('transitionObservationWorkflow', {
                 observationId,
@@ -480,7 +520,7 @@ const DailyObservations = {
                 actor
             });
             if (res && res.success) {
-                Notification.success(res.message || 'تم التحديث');
+                const okMsg = res.message || 'تم التحديث';
                 const idx = AppState.appData.dailyObservations.findIndex((o) => o.id === observationId);
                 if (idx !== -1 && res.data) {
                     AppState.appData.dailyObservations[idx] = this.normalizeRecord(res.data);
@@ -494,11 +534,20 @@ const DailyObservations = {
                 if (document.querySelector('.modal-overlay[data-observation-id="' + oidEsc + '"]')) {
                     this.replaceObservationDetailModal(observationId, res.data);
                 }
+                if (!this.showObservationDetailInlineAlert(observationId, 'success', okMsg)) {
+                    Notification.success(okMsg);
+                }
             } else {
-                Notification.error(res?.message || 'فشل التحديث');
+                const errMsg = res?.message || 'فشل التحديث';
+                if (!this.showObservationDetailInlineAlert(observationId, 'error', errMsg)) {
+                    Notification.error(errMsg);
+                }
             }
         } catch (err) {
-            Notification.error((err && err.message) ? err.message : String(err));
+            const errMsg = (err && err.message) ? err.message : String(err);
+            if (!this.showObservationDetailInlineAlert(observationId, 'error', errMsg)) {
+                Notification.error(errMsg);
+            }
         } finally {
             Loading.hide();
         }
@@ -552,10 +601,10 @@ const DailyObservations = {
 
     /** مراحل سير الاعتماد (مخزنة بالإنجليزية في الخلفية) */
     WORKFLOW_STAGES: {
-        pending_specialist: 'بانتظار مراجعة أخصائي السلامة',
-        pending_manager: 'بانتظار اعتماد مدير السلامة',
+        pending_specialist: 'بانتظار مراجعة مسؤول السلامة (أخصائي)',
+        pending_manager: 'بانتظار اعتماد مدير السلامة (مدير النظام)',
         pending_department: 'بانتظار إدخال الإجراء من الإدارة',
-        returned_specialist: 'معادة لمراجعة الأخصائي',
+        returned_specialist: 'معادة لمراجعة مسؤول السلامة (أخصائي)',
         in_progress: 'جاري التنفيذ',
         closed: 'مكتملة (مغلقة)',
         rejected: 'مرفوضة'
@@ -6483,6 +6532,7 @@ const DailyObservations = {
                 </div>
                 <div class="modal-body" style="padding: 30px; background: #f8f9fa; max-height: calc(90vh - 200px); overflow-y: auto;">
                     <div class="space-y-5">
+                        <div class="obs-detail-inline-alerts" data-obs-inline-alerts="" role="region" aria-label="تنبيهات الملاحظة"></div>
                         ${wfBannerHtml}
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div class="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
@@ -6739,6 +6789,8 @@ const DailyObservations = {
             }
         } catch (error) {
             Utils.safeWarn('خطأ في تحديث تفاصيل الملاحظة من Backend:', error);
+            const errMsg = (error && error.message) ? error.message : String(error);
+            this.showObservationDetailInlineAlert(observationId, 'error', errMsg);
         }
     },
 
@@ -6769,10 +6821,16 @@ const DailyObservations = {
                 // إعادة فتح النافذة لإظهار التحديثات
                 await this.viewObservation(observationId);
             } else {
-                throw new Error(result.message || 'حدث خطأ');
+                const errMsg = result.message || 'حدث خطأ';
+                if (!this.showObservationDetailInlineAlert(observationId, 'error', errMsg)) {
+                    Notification.error(errMsg);
+                }
             }
         } catch (error) {
-            Notification.error('حدث خطأ: ' + (error.message || error));
+            const errMsg = 'حدث خطأ: ' + (error.message || error);
+            if (!this.showObservationDetailInlineAlert(observationId, 'error', errMsg)) {
+                Notification.error(errMsg);
+            }
         } finally {
             Loading.hide();
         }

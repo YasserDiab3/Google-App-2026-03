@@ -1202,7 +1202,7 @@ function notifyObservationWorkflowEmails(eventKey, observation, extraEmails) {
             ),
             extraEmails
         );
-        _dobSendWorkflowEmail_(to, 'ملاحظة جديدة بانتظار مراجعة الأخصائي', base);
+        _dobSendWorkflowEmail_(to, 'ملاحظة جديدة بانتظار مراجعة مسؤول السلامة (أخصائي)', base);
     } else if (eventKey === 'pending_manager') {
         const to = merge(getActiveUserEmailsWithDailyObsPermission('observations-manager-approve'), extraEmails);
         _dobSendWorkflowEmail_(to, 'ملاحظة بانتظار اعتماد مدير السلامة', base);
@@ -1299,6 +1299,19 @@ function _dobAppendTimeLog_(observation, entry) {
     observation.timeLog = timeLog;
 }
 
+/** تطبيع دور الممثل: يدعم admin ومدير النظام ومسئول السلامة كما في الجدول */
+function _dobActorIsAdmin_(roleRaw) {
+    var r0 = String(roleRaw || '').trim();
+    var s = r0.toLowerCase();
+    return s === 'admin' || s === 'system_admin' || r0 === 'مدير النظام' || r0 === 'مدير';
+}
+
+function _dobActorIsSafetyOfficer_(roleRaw) {
+    var r0 = String(roleRaw || '').trim();
+    var s = r0.toLowerCase();
+    return s === 'safety_officer' || r0 === 'مسئول السلامة' || r0 === 'مسؤول السلامة';
+}
+
 /**
  * انتقال مرحلة سير اعتماد الملاحظة
  * payload: { observationId, action, comments, rejectionReason, correctiveAction, expectedCompletionDate,
@@ -1315,7 +1328,9 @@ function transitionObservationWorkflow(payload) {
         const actor = payload.actor || {};
         const actorName = String(actor.name || 'System');
         const actorEmail = String(actor.email || '');
-        const role = String(actor.role || '').toLowerCase();
+        var roleRaw = String(actor.role || '').trim();
+        var isAdminUser = _dobActorIsAdmin_(roleRaw);
+        var isSafetyOfficerUser = _dobActorIsSafetyOfficer_(roleRaw);
         const perms = actor.dailyObservationsPermissions || {};
 
         const sheetName = 'DailyObservations';
@@ -1331,9 +1346,9 @@ function transitionObservationWorkflow(payload) {
         var comments = String(payload.comments || '').trim();
         var rejectionReason = String(payload.rejectionReason || '').trim();
 
-        // مسؤول السلامة (safety_officer) يمكنه تنفيذ خطوة الأخصائي وخطوة مدير السلامة عملياً في نفس الدور
-        var hasSpecialist = role === 'admin' || role === 'safety_officer' || perms['observations-specialist-review'] === true;
-        var hasManager = role === 'admin' || role === 'safety_officer' || perms['observations-manager-approve'] === true;
+        // مسؤول السلامة (أخصائي) = safety_officer | مدير السلامة = مدير النظام (admin) | صلاحيات تفصيلية
+        var hasSpecialist = isAdminUser || isSafetyOfficerUser || perms['observations-specialist-review'] === true;
+        var hasManager = isAdminUser || perms['observations-manager-approve'] === true;
         var hasDept = _dobNormalizeDept_(actor.department) === _dobNormalizeDept_(obs.responsibleDepartment);
 
         var nowIso = new Date().toISOString();
@@ -1350,8 +1365,8 @@ function transitionObservationWorkflow(payload) {
             var specialistStages = (stage === 'pending_specialist' || stage === 'returned_specialist' || stage === 'pending_manager');
             var deptStages = (stage === 'pending_department' || stage === 'in_progress');
             var canSpec = hasSpecialist && specialistStages;
-            var canDept = (hasDept || role === 'admin') && deptStages;
-            if (!(role === 'admin' || canSpec || canDept)) {
+            var canDept = (hasDept || isAdminUser) && deptStages;
+            if (!(isAdminUser || canSpec || canDept)) {
                 return fail('لا صلاحية لتعيين المسؤول في هذه المرحلة');
             }
             obs.assignedToName = aName;
@@ -1367,7 +1382,7 @@ function transitionObservationWorkflow(payload) {
                 _dobSendWorkflowEmail_([aEmail], 'تعيينكم مسؤولاً عن متابعة ملاحظة', baseLocal + '\n\nالمعيّن: ' + aName);
             }
         } else if (action === 'specialist_forward') {
-            if (!hasSpecialist) return fail('لا صلاحية لمراجعة الأخصائي');
+            if (!hasSpecialist) return fail('لا صلاحية لمراجعة مسؤول السلامة (أخصائي)');
             if (stage !== 'pending_specialist' && stage !== 'returned_specialist') {
                 return fail('المرحلة الحالية لا تسمح بهذا الإجراء');
             }
@@ -1387,7 +1402,7 @@ function transitionObservationWorkflow(payload) {
             });
             notifyObservationWorkflowEmails('pending_manager', obs, [actorEmail]);
         } else if (action === 'manager_approve') {
-            if (!hasManager) return fail('لا صلاحية لاعتماد مدير السلامة');
+            if (!hasManager) return fail('لا صلاحية لاعتماد مدير السلامة (مدير النظام)');
             if (stage !== 'pending_manager') {
                 return fail('المرحلة الحالية لا تسمح بالاعتماد');
             }
@@ -1409,7 +1424,7 @@ function transitionObservationWorkflow(payload) {
             notifyObservationWorkflowEmails('pending_department', obs, [actorEmail]);
         } else if (action === 'manager_reject' || action === 'admin_reject') {
             if (action === 'admin_reject') {
-                if (role !== 'admin') return fail('الرفض الإداري لمدير النظام فقط');
+                if (!isAdminUser) return fail('الرفض الإداري لمدير النظام فقط');
                 var adminOkStage = (
                     stage === 'pending_manager' ||
                     stage === 'pending_specialist' ||
@@ -1436,8 +1451,8 @@ function transitionObservationWorkflow(payload) {
             });
             notifyObservationWorkflowEmails('rejected_or_return', obs, [actorEmail]);
         } else if (action === 'manager_return_specialist' || action === 'admin_return_specialist') {
-            if (action === 'admin_return_specialist' && role !== 'admin') return fail('إرجاع المدير الإداري لمدير النظام فقط');
-            if (!(hasManager || role === 'admin')) return fail('لا صلاحية للإرجاع');
+            if (action === 'admin_return_specialist' && !isAdminUser) return fail('إرجاع المدير الإداري لمدير النظام فقط');
+            if (!(hasManager || isAdminUser)) return fail('لا صلاحية للإرجاع');
             if (stage !== 'pending_manager') {
                 return fail('الإرجاع متاح في مرحلة بانتظار اعتماد مدير السلامة');
             }
@@ -1448,11 +1463,11 @@ function transitionObservationWorkflow(payload) {
                 action: 'return_specialist',
                 user: actorName,
                 timestamp: nowIso,
-                note: 'إرجاع للأخصائي: ' + rejectionReason
+                note: 'إرجاع لمسؤول السلامة (أخصائي): ' + rejectionReason
             });
             notifyObservationWorkflowEmails('rejected_or_return', obs, [actorEmail]);
         } else if (action === 'department_update') {
-            if (!hasDept && role !== 'admin') return fail('فقط إدارة التنفيذ يمكنها تحديث الإجراء');
+            if (!hasDept && !isAdminUser) return fail('فقط إدارة التنفيذ يمكنها تحديث الإجراء');
             if (stage !== 'pending_department' && stage !== 'in_progress') {
                 return fail('لا يمكن تحديث الإجراء في هذه المرحلة');
             }
@@ -1473,7 +1488,7 @@ function transitionObservationWorkflow(payload) {
                 note: 'تحديث الإجراء التصحيحي وموعد الإغلاق'
             });
         } else if (action === 'close_observation') {
-            if (!(hasManager || hasSpecialist || role === 'admin')) {
+            if (!(hasManager || hasSpecialist || isAdminUser)) {
                 return fail('لا صلاحية لإغلاق الملاحظة');
             }
             if (stage !== 'in_progress' && stage !== 'pending_department') {

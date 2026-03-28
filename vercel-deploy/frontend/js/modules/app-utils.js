@@ -4728,11 +4728,18 @@ window.Notification = {
                 persistent: messageOrOptions.persistent || false,
                 sound: messageOrOptions.sound !== false, // true by default for critical
                 onClick: messageOrOptions.onClick,
+                appendTo: messageOrOptions.appendTo,
                 ...options
             };
         }
 
-        const container = document.getElementById('notification-container');
+        let container = document.getElementById('notification-container');
+        if (config.appendTo) {
+            const el = typeof config.appendTo === 'string'
+                ? document.querySelector(config.appendTo)
+                : config.appendTo;
+            if (el && el.nodeType === 1) container = el;
+        }
         if (!container) {
             console.warn('⚠️ notification-container غير موجود');
             return null;
