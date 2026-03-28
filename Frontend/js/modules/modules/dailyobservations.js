@@ -169,7 +169,9 @@ const DailyObservations = {
             dailyObservationsPermissions: {
                 'observations-specialist-review': detailed['observations-specialist-review'] === true,
                 'observations-manager-approve': detailed['observations-manager-approve'] === true,
-                'observations-view-all': detailed['observations-view-all'] === true
+                'observations-view-all': detailed['observations-view-all'] === true,
+                /** افتراضياً مفعّل ما لم يُلغَ صراحةً (مفتاح مفقود = رؤية حسب الإدارة) */
+                'observations-view-department': detailed['observations-view-department'] !== false
             }
         };
     },
@@ -469,6 +471,8 @@ const DailyObservations = {
         const userDept = norm(ctx.department);
         const userEmail = String(ctx.email || '').trim().toLowerCase();
         const userName = String(ctx.name || '').trim().toLowerCase();
+        const perms = ctx.dailyObservationsPermissions || {};
+        const deptScope = perms['observations-view-department'] !== false;
 
         return list.filter((obs) => {
             if (!obs) return false;
@@ -483,7 +487,7 @@ const DailyObservations = {
 
             if (!stage) {
                 if (isSubmitter) return true;
-                if (userDept && resp && userDept === resp) return true;
+                if (deptScope && userDept && resp && userDept === resp) return true;
                 return false;
             }
             if (isSubmitter) return true;
@@ -491,7 +495,7 @@ const DailyObservations = {
             const early = (stage === 'pending_specialist' || stage === 'pending_manager' || stage === 'returned_specialist');
             if (early) return false;
 
-            if (userDept && resp && userDept === resp) {
+            if (deptScope && userDept && resp && userDept === resp) {
                 return (
                     stage === 'pending_department' ||
                     stage === 'in_progress' ||

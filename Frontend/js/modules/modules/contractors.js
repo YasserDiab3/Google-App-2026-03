@@ -10671,13 +10671,16 @@ const Contractors = {
      */
     buildContractorAnalyticsMatchers(contractor, contractorIdParam) {
         const contractorName = (contractor.name || contractor.companyName || '').trim();
-        const normalize = (v) => (v == null || v === '') ? '' : String(v).trim().toLowerCase();
+        /** مطابقة معرفات مع الخادم (_cabNormStr_): trim + lower + طي المسافات */
+        const normalizeId = (v) => (v == null || v === '') ? '' : String(v).trim().toLowerCase().replace(/\s+/g, ' ');
+        const normalize = normalizeId;
+        const sameContractorId = (a, b) => String(a ?? '').trim() === String(b ?? '').trim();
         const idsSet = new Set();
         [
             contractorIdParam, contractor.id, contractor.contractorId, contractor.code, contractor.isoCode,
             contractor.licenseNumber, contractor.contractNumber, contractor.approvedEntityId, contractor.entityCode
         ].forEach(x => {
-            if (x != null && x !== '') idsSet.add(normalize(x));
+            if (x != null && x !== '') idsSet.add(normalizeId(x));
         });
         const namesSet = new Set();
         if (contractorName) {
@@ -10703,10 +10706,10 @@ const Contractors = {
         };
         const matchesContractor = (record) => {
             if (!record) return false;
-            const rId = normalize(record.contractorId) || normalize(record.contractorCode) || normalize(record.code);
+            const rId = normalizeId(record.contractorId) || normalizeId(record.contractorCode) || normalizeId(record.code);
             if (rId && idsSet.has(rId)) return true;
-            if (record.contractorId != null && record.contractorId !== '' && idsSet.has(normalize(record.contractorId))) return true;
-            if (record.contractorCode != null && record.contractorCode !== '' && idsSet.has(normalize(record.contractorCode))) return true;
+            if (record.contractorId != null && record.contractorId !== '' && idsSet.has(normalizeId(record.contractorId))) return true;
+            if (record.contractorCode != null && record.contractorCode !== '' && idsSet.has(normalizeId(record.contractorCode))) return true;
             const rName = String(record.contractorName || record.companyName || record.company || record.contractorCompany || record.name || record.externalName || record.contractorWorkerName || record.contractorWorker || '').replace(/\s+/g, ' ').trim();
             if (!rName) return false;
             if (namesSet.has(rName) || namesSet.has(rName.toLowerCase())) return true;
@@ -10720,8 +10723,8 @@ const Contractors = {
                 (v.contractorId == null || String(v.contractorId).trim() === '')) {
                 return false;
             }
-            if (v.contractorId != null && String(v.contractorId).trim() !== '' && idsSet.has(normalize(v.contractorId))) return true;
-            if (v.contractorId === contractorIdParam || v.contractorId === contractor.id || v.contractorId === contractor.contractorId) return true;
+            if (v.contractorId != null && String(v.contractorId).trim() !== '' && idsSet.has(normalizeId(v.contractorId))) return true;
+            if (sameContractorId(v.contractorId, contractorIdParam) || sameContractorId(v.contractorId, contractor.id) || sameContractorId(v.contractorId, contractor.contractorId)) return true;
             const isContractorType = vPersonType === 'contractor' || vPersonType === 'مقاول';
             if (!isContractorType && !v.contractorName && (v.contractorId == null || String(v.contractorId).trim() === '')) return false;
             if (isContractorType || v.contractorName || (v.contractorId != null && String(v.contractorId).trim() !== '')) {
@@ -10733,8 +10736,9 @@ const Contractors = {
         };
         const evaluationBelongsToContractor = (e) => {
             if (!e) return false;
-            if (e.contractorId != null && String(e.contractorId).trim() !== '' && idsSet.has(normalize(e.contractorId))) return true;
-            if (e.contractorId === contractorIdParam || e.contractorId === contractor.id || e.contractorId === contractor.contractorId) return true;
+            if (e.contractorId != null && String(e.contractorId).trim() !== '' && idsSet.has(normalizeId(e.contractorId))) return true;
+            if (e.isoCode != null && String(e.isoCode).trim() !== '' && idsSet.has(normalizeId(e.isoCode))) return true;
+            if (sameContractorId(e.contractorId, contractorIdParam) || sameContractorId(e.contractorId, contractor.id) || sameContractorId(e.contractorId, contractor.contractorId)) return true;
             return matchesContractor(e);
         };
         return { normalize, idsSet, matchesContractor, violationBelongsToContractor, evaluationBelongsToContractor, contractorName };

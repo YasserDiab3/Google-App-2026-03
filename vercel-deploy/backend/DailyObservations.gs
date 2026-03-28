@@ -1284,6 +1284,9 @@ function filterDailyObservationsForRequestContext(rows, ctx) {
         return rows;
     }
 
+    const perms = ctx.dailyObservationsPermissions || ctx['daily-observationsPermissions'] || {};
+    var deptScope = perms['observations-view-department'] !== false;
+
     const userDept = _dobNormalizeDept_(ctx.department);
     const userEmail = String((ctx.email || ctx.userEmail || '')).trim().toLowerCase();
     const userName = String((ctx.name || ctx.userName || '')).trim().toLowerCase();
@@ -1301,7 +1304,7 @@ function filterDailyObservationsForRequestContext(rows, ctx) {
         // بيانات قديمة بلا workflowStage: نعرض للإدارة إن طابقت المسؤولية
         if (!stage) {
             if (isSubmitter) return true;
-            if (userDept && resp && userDept === resp) return true;
+            if (deptScope && userDept && resp && userDept === resp) return true;
             return false;
         }
 
@@ -1310,7 +1313,7 @@ function filterDailyObservationsForRequestContext(rows, ctx) {
         const early = (stage === 'pending_specialist' || stage === 'pending_manager' || stage === 'returned_specialist');
         if (early) return false;
 
-        if (userDept && resp && userDept === resp) {
+        if (deptScope && userDept && resp && userDept === resp) {
             return (
                 stage === 'pending_department' ||
                 stage === 'in_progress' ||

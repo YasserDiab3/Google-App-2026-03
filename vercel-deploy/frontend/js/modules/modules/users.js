@@ -885,19 +885,24 @@ const Users = {
                         حدد الصلاحيات التفصيلية التي تريد منحها للمستخدم داخل هذا المديول
                     </p>
                     <div class="space-y-2">
-                        ${moduleDetails.permissions.map(perm => `
+                        ${moduleDetails.permissions.map(perm => {
+                            const checked = perm.key === 'observations-view-department'
+                                ? modulePerms[perm.key] !== false
+                                : modulePerms[perm.key] === true;
+                            return `
                             <label class="flex items-center p-3 border rounded hover:bg-gray-50 cursor-pointer">
                                 <input 
                                     type="checkbox" 
                                     class="detailed-permission-checkbox rounded border-gray-300 text-blue-600 mr-2" 
                                     data-module="${moduleName}"
                                     data-permission="${perm.key}"
-                                    ${modulePerms[perm.key] === true ? 'checked' : ''}
+                                    ${checked ? 'checked' : ''}
                                 >
                                 <i class="fas ${perm.icon} ml-2 text-gray-600"></i>
                                 <span class="text-sm text-gray-700">${perm.label}</span>
                             </label>
-                        `).join('')}
+                        `;
+                        }).join('')}
                     </div>
                     <div class="flex gap-2 mt-4">
                         <button type="button" id="select-all-detailed-btn" class="text-xs px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 transition">

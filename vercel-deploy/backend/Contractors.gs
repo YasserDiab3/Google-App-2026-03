@@ -1292,6 +1292,8 @@ function _cabViolationBelongs_(v, idSet, cName, compName, contractorIdParam, con
 function _cabEvalBelongs_(e, idSet, cName, compName, contractorIdParam, contractor) {
     if (!e) return false;
     if (e.contractorId != null && String(e.contractorId).trim() !== '' && _cabIdInSet_(e.contractorId, idSet)) return true;
+    // ورقة التقييمات قد تخزّن كود المقاول في isoCode (ليس كود وثيقة المخالفة VIOL-)
+    if (e.isoCode != null && String(e.isoCode).trim() !== '' && _cabIdInSet_(e.isoCode, idSet)) return true;
     if (String(e.contractorId) === String(contractorIdParam)) return true;
     if (contractor && contractor.id && String(e.contractorId) === String(contractor.id)) return true;
     if (contractor && contractor.contractorId && String(e.contractorId) === String(contractor.contractorId)) return true;
