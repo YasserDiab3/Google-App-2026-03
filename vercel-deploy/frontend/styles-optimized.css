@@ -3717,6 +3717,28 @@ body.app-active {
     margin-bottom: 10px;
 }
 
+/* تجاوز: ui-ux-enhancements.css يعرّف .loading-spinner كدوّامة دائرية صغيرة — يشوّه صندوق التحميل الرئيسي والنص */
+#loading-overlay .loading-spinner {
+    display: block !important;
+    box-sizing: border-box;
+    width: auto !important;
+    min-width: 320px;
+    max-width: 90vw;
+    height: auto !important;
+    border: none !important;
+    border-radius: 16px;
+    animation: none !important;
+    -webkit-animation: none !important;
+    padding: 28px 36px 32px;
+}
+
+#loading-overlay .loading-spinner .loading-message {
+    transform: none !important;
+    writing-mode: horizontal-tb;
+    direction: rtl;
+    unicode-bidi: plaintext;
+}
+
 .loading-progress-bar {
     width: 100%;
     max-width: 300px;

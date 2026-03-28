@@ -198,7 +198,8 @@ const DailyObservations = {
     hasSpecialistWorkflowPermission() {
         const user = AppState.currentUser;
         if (!user) return false;
-        if (String(user.role || '').toLowerCase() === 'admin') return true;
+        const r = String(user.role || '').toLowerCase();
+        if (r === 'admin' || r === 'safety_officer') return true;
         return typeof Permissions !== 'undefined' && Permissions.hasDetailedPermission &&
             Permissions.hasDetailedPermission('daily-observations', 'observations-specialist-review');
     },
@@ -206,9 +207,67 @@ const DailyObservations = {
     hasManagerWorkflowPermission() {
         const user = AppState.currentUser;
         if (!user) return false;
-        if (String(user.role || '').toLowerCase() === 'admin') return true;
+        const r = String(user.role || '').toLowerCase();
+        if (r === 'admin' || r === 'safety_officer') return true;
         return typeof Permissions !== 'undefined' && Permissions.hasDetailedPermission &&
             Permissions.hasDetailedPermission('daily-observations', 'observations-manager-approve');
+    },
+
+    canShowAssignResponsiblePanel(obs) {
+        const stage = String(obs?.workflowStage || '').trim();
+        const adm = String(AppState.currentUser?.role || '').toLowerCase() === 'admin';
+        const early = stage === 'pending_specialist' || stage === 'returned_specialist' || stage === 'pending_manager';
+        const deptStages = stage === 'pending_department' || stage === 'in_progress';
+        if (adm) return true;
+        if (this.hasSpecialistWorkflowPermission() && early) return true;
+        if (this.isUserInResponsibleDepartment(obs) && deptStages) return true;
+        return false;
+    },
+
+    readAssignFieldsFromDetailModal(observationId) {
+        const oid = String(observationId || '').replace(/"/g, '');
+        const modal = document.querySelector('.modal-overlay[data-observation-id="' + oid + '"]');
+        if (!modal) return { assignedToName: '', assignedToEmail: '' };
+        const n = modal.querySelector('.obs-assign-name[data-oid="' + oid + '"]');
+        const e = modal.querySelector('.obs-assign-email[data-oid="' + oid + '"]');
+        return {
+            assignedToName: (n && n.value ? n.value : '').trim(),
+            assignedToEmail: (e && e.value ? e.value : '').trim()
+        };
+    },
+
+    buildAssignResponsibleHtml(obs) {
+        if (!this.canShowAssignResponsiblePanel(obs)) return '';
+        const oidAttr = String(obs.id || '').replace(/"/g, '');
+        const an = Utils.escapeHTML(String(obs.assignedToName || ''));
+        const ae = Utils.escapeHTML(String(obs.assignedToEmail || ''));
+        return `
+        <div class="obs-assign-box" style="margin-top: 1rem; padding: 0.85rem; background: rgba(255,255,255,0.14); border-radius: 12px; border: 1px solid rgba(255,255,255,0.28);">
+            <div style="font-weight: 600; margin-bottom: 0.45rem;"><i class="fas fa-user-tag ml-2"></i>تعيين مسؤول المتابعة</div>
+            <div style="font-size: 0.78rem; opacity: 0.9; margin-bottom: 0.5rem;">يحدده أخصائي السلامة أو مدير السلامة أو مسؤول الإدارة المعنية.</div>
+            <input type="text" class="form-input obs-assign-name" data-oid="${oidAttr}" placeholder="اسم المسؤول" value="${an}" style="width:100%;max-width:340px;color:#111;margin-bottom:0.35rem;display:block;" />
+            <input type="email" class="form-input obs-assign-email" data-oid="${oidAttr}" placeholder="البريد الإلكتروني" value="${ae}" style="width:100%;max-width:340px;color:#111;margin-bottom:0.5rem;display:block;" />
+            <button type="button" class="btn-secondary btn-sm obs-wf-assign-save" data-oid="${oidAttr}" style="background: rgba(255,255,255,0.22); color: #fff; border: 1px solid rgba(255,255,255,0.45);">
+                <i class="fas fa-save ml-1"></i>حفظ التعيين
+            </button>
+        </div>`;
+    },
+
+    replaceObservationDetailModal(observationId, record) {
+        const oid = String(observationId || '').replace(/"/g, '');
+        const old = document.querySelector('.modal-overlay[data-observation-id="' + oid + '"]');
+        if (!old || !record) return;
+        const updated = this.normalizeRecord(record);
+        const newModal = this.createObservationModal(updated);
+        old.replaceWith(newModal);
+        this.attachWorkflowPanelListeners(newModal);
+    },
+
+    formatResponsibleTableCell(obs) {
+        const dept = Utils.escapeHTML(obs.responsibleDepartment || '-');
+        const asn = (obs.assignedToName || '').trim();
+        if (!asn) return dept;
+        return `<div class="text-sm text-gray-800">${dept}</div><div class="text-xs text-gray-500">${Utils.escapeHTML(asn)}</div>`;
     },
 
     isUserInResponsibleDepartment(observation) {
@@ -289,6 +348,10 @@ const DailyObservations = {
         if (observation.rejectionReason) labelParts.push(`ملاحظة: ${Utils.escapeHTML(observation.rejectionReason)}`);
         const actions = this.buildWorkflowActionButtonsHtml(observation);
         const deptForm = this.buildDepartmentWorkflowFormHtml(observation);
+        const assignBox = this.buildAssignResponsibleHtml(observation);
+        if (observation.assignedToName || observation.assignedToEmail) {
+            labelParts.push(`معيّن: ${Utils.escapeHTML(observation.assignedToName || '')}${observation.assignedToEmail ? ' — ' + Utils.escapeHTML(observation.assignedToEmail) : ''}`);
+        }
         return `
         <div class="obs-workflow-panel" style="background: linear-gradient(135deg, #312e81 0%, #5b21b6 100%); color: white; padding: 1.25rem; border-radius: 16px; box-shadow: 0 10px 25px rgba(0,0,0,0.15);">
             <div style="display: flex; flex-wrap: wrap; justify-content: space-between; gap: 1rem; align-items: flex-start;">
@@ -298,6 +361,7 @@ const DailyObservations = {
                     <div style="font-size: 0.8rem; opacity: 0.85; margin-top: 0.35rem;">${labelParts.join(' · ')}</div>
                 </div>
             </div>
+            ${assignBox}
             ${actions ? `<div style="margin-top: 1rem; display: flex; flex-wrap: wrap; gap: 0.5rem;">${actions}</div>` : ''}
             ${deptForm}
         </div>`;
@@ -324,6 +388,18 @@ const DailyObservations = {
                 });
             });
         });
+        modal.querySelectorAll('.obs-wf-assign-save').forEach((btn) => {
+            btn.addEventListener('click', () => {
+                const oid = btn.getAttribute('data-oid');
+                if (!oid) return;
+                const { assignedToName, assignedToEmail } = this.readAssignFieldsFromDetailModal(oid);
+                if (!assignedToName) {
+                    if (typeof Notification !== 'undefined' && Notification.warning) Notification.warning('يرجى إدخال اسم المسؤول المعيّن');
+                    return;
+                }
+                this.runWorkflowTransition(oid, 'assign_responsible', { assignedToName, assignedToEmail });
+            });
+        });
     },
 
     promptAndRunWorkflowTransition(observationId, action) {
@@ -344,7 +420,11 @@ const DailyObservations = {
         } else if (action === 'specialist_forward' || action === 'manager_approve') {
             comments = window.prompt('تعليق اختياري:', '') || '';
         }
-        this.runWorkflowTransition(observationId, action, { comments, rejectionReason });
+        const assign =
+            action === 'specialist_forward' || action === 'manager_approve'
+                ? this.readAssignFieldsFromDetailModal(observationId)
+                : {};
+        this.runWorkflowTransition(observationId, action, { comments, rejectionReason, ...assign });
     },
 
     pushObservationInAppNotification(title, body, observationId) {
@@ -395,6 +475,8 @@ const DailyObservations = {
                 rejectionReason: extra.rejectionReason || '',
                 correctiveAction: extra.correctiveAction,
                 expectedCompletionDate: extra.expectedCompletionDate,
+                assignedToName: extra.assignedToName,
+                assignedToEmail: extra.assignedToEmail,
                 actor
             });
             if (res && res.success) {
@@ -407,9 +489,11 @@ const DailyObservations = {
                     if (typeof window.DataManager !== 'undefined' && window.DataManager.save) window.DataManager.save();
                 } catch (e) { /* ignore */ }
                 this.pushObservationInAppNotification('سير الملاحظات', res.message || 'تم تحديث الملاحظة', observationId);
-                await this.ensureDailyObservationsDataLoaded({ force: true });
                 this.loadObservationsList(this.currentFilter?.filter || null);
-                await this.viewObservation(observationId);
+                const oidEsc = String(observationId || '').replace(/"/g, '');
+                if (document.querySelector('.modal-overlay[data-observation-id="' + oidEsc + '"]')) {
+                    this.replaceObservationDetailModal(observationId, res.data);
+                }
             } else {
                 Notification.error(res?.message || 'فشل التحديث');
             }
@@ -3811,7 +3895,7 @@ const DailyObservations = {
                         <span class="badge badge-${this.getStatusBadgeClass(obs.status)}">${Utils.escapeHTML(obs.status || '-')}</span>
                     </td>
                     <td>${Utils.escapeHTML(obs.observerName || '-')}</td>
-                    <td>${Utils.escapeHTML(obs.responsibleDepartment || '-')}</td>
+                    <td>${this.formatResponsibleTableCell(obs)}</td>
                     <td>${obs.attachments && obs.attachments.length > 0 ? `<i class="fas fa-paperclip text-blue-500" title="${obs.attachments.length} ملف"></i>` : '-'}</td>
                     <td>
                         <button onclick="DailyObservations.viewObservation('${obs.id}')" class="btn-icon btn-icon-primary" title="عرض">
@@ -3867,7 +3951,7 @@ const DailyObservations = {
                                     <span class="badge badge-${this.getStatusBadgeClass(obs.status)}">${Utils.escapeHTML(obs.status || '-')}</span>
                                 </td>
                                 <td>${Utils.escapeHTML(obs.observerName || '-')}</td>
-                                <td>${Utils.escapeHTML(obs.responsibleDepartment || '-')}</td>
+                                <td>${this.formatResponsibleTableCell(obs)}</td>
                                 <td>${obs.attachments && obs.attachments.length > 0 ? `<i class="fas fa-paperclip text-blue-500" title="${obs.attachments.length} ملف"></i>` : '-'}</td>
                                 <td>
                                     <button onclick="DailyObservations.viewObservation('${obs.id}')" class="btn-icon btn-icon-primary" title="عرض">
@@ -5250,7 +5334,9 @@ const DailyObservations = {
             managerComments: '',
             departmentActionBy: '',
             departmentActionAt: '',
-            rejectionReason: ''
+            rejectionReason: '',
+            assignedToName: '',
+            assignedToEmail: ''
         };
 
         const siteId = record.siteId || record.site || record.locationSiteId || '';
@@ -5330,7 +5416,9 @@ const DailyObservations = {
             managerComments: record.managerComments || '',
             departmentActionBy: record.departmentActionBy || '',
             departmentActionAt: record.departmentActionAt || '',
-            rejectionReason: record.rejectionReason || ''
+            rejectionReason: record.rejectionReason || '',
+            assignedToName: record.assignedToName || '',
+            assignedToEmail: record.assignedToEmail || ''
         };
     },
 
@@ -6439,6 +6527,10 @@ const DailyObservations = {
                             <div class="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
                                 <strong class="text-gray-700 block mb-1">المسؤول عن التنفيذ:</strong>
                                 <span class="text-gray-900">${Utils.escapeHTML(observation.responsibleDepartment || '-')}</span>
+                            </div>
+                            <div class="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
+                                <strong class="text-gray-700 block mb-1">مسؤول المتابعة المعيّن:</strong>
+                                <span class="text-gray-900">${observation.assignedToName || observation.assignedToEmail ? Utils.escapeHTML([observation.assignedToName, observation.assignedToEmail].filter(Boolean).join(' — ')) : '-'}</span>
                             </div>
                             <div class="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
                                 <strong class="text-gray-700 block mb-1">صاحب الملاحظة:</strong>
