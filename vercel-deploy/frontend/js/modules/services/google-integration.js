@@ -1301,10 +1301,21 @@ const GoogleIntegration = {
 
     /**
      * قراءة البيانات من Google Sheets باستخدام Apps Script
+     * @param {string} sheetName
+     * @param {number|object} timeoutOrOptions - رقم المهلة بالمللي، أو { timeout, observationsRequestContext }
      */
-    async readFromSheets(sheetName, timeout = 15000) {
+    async readFromSheets(sheetName, timeoutOrOptions = 15000) {
         if (!this._isBackendRpcConfigured()) {
             return [];
+        }
+
+        let timeout = 15000;
+        let observationsRequestContext = null;
+        if (typeof timeoutOrOptions === 'number') {
+            timeout = timeoutOrOptions;
+        } else if (timeoutOrOptions && typeof timeoutOrOptions === 'object') {
+            timeout = timeoutOrOptions.timeout ?? 15000;
+            observationsRequestContext = timeoutOrOptions.observationsRequestContext ?? null;
         }
 
         // استخدام timeout للطلب
@@ -1318,6 +1329,9 @@ const GoogleIntegration = {
 
             if (AppState.googleConfig.sheets?.spreadsheetId) {
                 payload.data.spreadsheetId = AppState.googleConfig.sheets.spreadsheetId;
+            }
+            if (sheetName === 'DailyObservations' && observationsRequestContext) {
+                payload.data.observationsRequestContext = observationsRequestContext;
             }
 
             // تمرير timeout مباشرة لطبقة الشبكة حتى لا يظل الطلب معلقاً في الطابور

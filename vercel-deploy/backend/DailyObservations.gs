@@ -41,7 +41,14 @@ function addObservationToSheet(observationData) {
             observationData.updatedAt = new Date();
         } 
         if (!observationData.status) {
-            observationData.status = 'جديد';
+            observationData.status = 'مفتوح';
+        }
+        // سير اعتماد الملاحظات (قيم workflowStage بالإنجليزية للتخزين)
+        if (!observationData.workflowStage) {
+            observationData.workflowStage = 'pending_specialist';
+        }
+        if (!observationData.submittedAt) {
+            observationData.submittedAt = new Date().toISOString();
         }
         
         // معالجة attachments - التأكد من تحويلها إلى JSON string مع الروابط
@@ -84,6 +91,14 @@ function addObservationToSheet(observationData) {
         }
         
         const result = appendToSheet(sheetName, observationData);
+
+        if (result.success && String(observationData.workflowStage || '') === 'pending_specialist') {
+            try {
+                notifyObservationWorkflowEmails('new_pending_specialist', observationData, []);
+            } catch (notifyErr) {
+                Logger.log('notifyObservationWorkflowEmails new: ' + notifyErr.toString());
+            }
+        }
         
         // إنشاء إجراء تلقائي في Action Tracking إذا كان هناك إجراء تصحيحي
         if (result.success && observationData.correctiveAction) {
@@ -1024,5 +1039,440 @@ function updateObservationStatus(observationId, statusData) {
     } catch (error) {
         Logger.log('Error in updateObservationStatus: ' + error.toString());
         return { success: false, message: 'حدث خطأ أثناء تحديث الحالة: ' + error.toString() };
+    }
+}
+
+// ===== سير اعتماد الملاحظات + فلترة حسب المستخدم + بريد =====
+
+/**
+ * تطبيع اسم إدارة للمقارنة
+ */
+function _dobNormalizeDept_(s) {
+    return String(s || '').trim().toLowerCase().replace(/\s+/g, ' ');
+}
+
+/**
+ * تحليل حقل permissions للمستخدم (JSON)
+ */
+function _dobParseUserPermissions_(raw) {
+    if (!raw) return {};
+    if (typeof raw === 'object') return raw;
+    try {
+        return JSON.parse(String(raw));
+    } catch (e) {
+        return {};
+    }
+}
+
+/**
+ * هل يملك المستخدم صلاحية تفصيلية في مديول الملاحظات؟
+ */
+function _dobUserHasDailyObsDetail_(perms, key) {
+    const p = perms || {};
+    const nested = p['daily-observationsPermissions'] || p['dailyObservationsPermissions'] || {};
+    return nested[key] === true;
+}
+
+/**
+ * جمع بريد المستخدمين النشطين الذين لديهم مفتاح صلاحية تفصيلي
+ */
+function getActiveUserEmailsWithDailyObsPermission(permissionKey) {
+    try {
+        const key = String(permissionKey || '').trim();
+        if (!key) return [];
+        const users = readFromSheet('Users', getSpreadsheetId()) || [];
+        const emails = [];
+        const seen = {};
+        users.forEach(function (u) {
+            if (!u || u.active === false || u.active === 'false') return;
+            const email = String(u.email || '').trim();
+            if (!email || seen[email]) return;
+            const perms = _dobParseUserPermissions_(u.permissions);
+            if (_dobUserHasDailyObsDetail_(perms, key)) {
+                seen[email] = true;
+                emails.push(email);
+            }
+        });
+        return emails;
+    } catch (e) {
+        Logger.log('getActiveUserEmailsWithDailyObsPermission: ' + e.toString());
+        return [];
+    }
+}
+
+/**
+ * بريد مستخدمي إدارة معيّنة (حقل department في Users)
+ */
+function getActiveUserEmailsByDepartment(departmentName) {
+    const target = _dobNormalizeDept_(departmentName);
+    if (!target) return [];
+    try {
+        const users = readFromSheet('Users', getSpreadsheetId()) || [];
+        const emails = [];
+        const seen = {};
+        users.forEach(function (u) {
+            if (!u || u.active === false || u.active === 'false') return;
+            const email = String(u.email || '').trim();
+            if (!email || seen[email]) return;
+            if (_dobNormalizeDept_(u.department) === target) {
+                seen[email] = true;
+                emails.push(email);
+            }
+        });
+        return emails;
+    } catch (e) {
+        Logger.log('getActiveUserEmailsByDepartment: ' + e.toString());
+        return [];
+    }
+}
+
+/**
+ * رسالة بريد لحدث سير العمل (لا يوقف العملية عند الفشل)
+ */
+function _dobSendWorkflowEmail_(toList, subject, body) {
+    const recipients = (toList || []).filter(function (e) {
+        return e && String(e).indexOf('@') !== -1;
+    });
+    if (recipients.length === 0) return;
+    const subj = '[HSE — ملاحظات] ' + String(subject || '').slice(0, 200);
+    const text = String(body || '');
+    recipients.forEach(function (email) {
+        try {
+            MailApp.sendEmail({
+                to: email,
+                subject: subj,
+                body: text
+            });
+        } catch (mailErr) {
+            Logger.log('MailApp.sendEmail failed for ' + email + ': ' + mailErr.toString());
+        }
+    });
+}
+
+/**
+ * إشعار بريد حسب مرحلة / حدث
+ */
+function notifyObservationWorkflowEmails(eventKey, observation, extraEmails) {
+    const obs = observation || {};
+    const id = String(obs.isoCode || obs.id || '');
+    const dept = String(obs.responsibleDepartment || '');
+    const detailsShort = String(obs.details || '').slice(0, 280);
+    const base = 'رقم الملاحظة: ' + id + '\nالإدارة المسؤولة: ' + dept + '\nالمرحلة: ' + String(obs.workflowStage || '') + '\n\n' + detailsShort;
+
+    const merge = function (a, b) {
+        const m = {};
+        (a || []).concat(b || []).forEach(function (e) {
+            const x = String(e || '').trim();
+            if (x) m[x] = true;
+        });
+        return Object.keys(m);
+    };
+
+    if (eventKey === 'new_pending_specialist') {
+        const to = merge(getActiveUserEmailsWithDailyObsPermission('observations-specialist-review'), extraEmails);
+        _dobSendWorkflowEmail_(to, 'ملاحظة جديدة بانتظار مراجعة الأخصائي', base);
+    } else if (eventKey === 'pending_manager') {
+        const to = merge(getActiveUserEmailsWithDailyObsPermission('observations-manager-approve'), extraEmails);
+        _dobSendWorkflowEmail_(to, 'ملاحظة بانتظار اعتماد مدير السلامة', base);
+    } else if (eventKey === 'pending_department') {
+        const to = merge(getActiveUserEmailsByDepartment(dept), extraEmails);
+        _dobSendWorkflowEmail_(to, 'تسجيل ملاحظة تتطلب إجراءً من إدارتكم', base);
+    } else if (eventKey === 'rejected_or_return') {
+        const to = merge([], [obs.submittedByEmail], extraEmails);
+        const spec = getActiveUserEmailsWithDailyObsPermission('observations-specialist-review');
+        _dobSendWorkflowEmail_(merge(to, spec), 'تحديث على ملاحظة (رفض أو إرجاع)', base + '\n\nالسبب: ' + String(obs.rejectionReason || ''));
+    } else if (eventKey === 'closed') {
+        const to = merge([obs.submittedByEmail], getActiveUserEmailsByDepartment(dept), extraEmails);
+        _dobSendWorkflowEmail_(to, 'تم إغلاق ملاحظة', base);
+    }
+}
+
+/**
+ * هل السياق يسمح برؤية جميع الملاحظات؟
+ */
+function _dobContextCanViewAll_(ctx) {
+    if (!ctx) return true;
+    const role = String(ctx.role || '').toLowerCase();
+    if (role === 'admin') return true;
+    if (role === 'safety_officer') return true;
+    const perms = ctx.dailyObservationsPermissions || ctx['daily-observationsPermissions'] || {};
+    if (perms['observations-specialist-review'] === true) return true;
+    if (perms['observations-manager-approve'] === true) return true;
+    if (perms['observations-view-all'] === true) return true;
+    return false;
+}
+
+/**
+ * فلترة صفوف DailyObservations حسب مستخدم الطلب (يُستدعى من readFromSheet)
+ */
+function filterDailyObservationsForRequestContext(rows, ctx) {
+    if (!Array.isArray(rows)) return [];
+    if (!ctx || _dobContextCanViewAll_(ctx)) {
+        return rows;
+    }
+
+    const userDept = _dobNormalizeDept_(ctx.department);
+    const userEmail = String((ctx.email || ctx.userEmail || '')).trim().toLowerCase();
+    const userName = String((ctx.name || ctx.userName || '')).trim().toLowerCase();
+
+    return rows.filter(function (obs) {
+        if (!obs) return false;
+        const stage = String(obs.workflowStage || '').trim();
+        const resp = _dobNormalizeDept_(obs.responsibleDepartment);
+        const subEmail = String(obs.submittedByEmail || '').trim().toLowerCase();
+        const observer = String(obs.observerName || '').trim().toLowerCase();
+
+        const isSubmitter = (userEmail && subEmail && userEmail === subEmail) ||
+            (userName && observer && userName === observer);
+
+        // بيانات قديمة بلا workflowStage: نعرض للإدارة إن طابقت المسؤولية
+        if (!stage) {
+            if (isSubmitter) return true;
+            if (userDept && resp && userDept === resp) return true;
+            return false;
+        }
+
+        if (isSubmitter) return true;
+
+        const early = (stage === 'pending_specialist' || stage === 'pending_manager' || stage === 'returned_specialist');
+        if (early) return false;
+
+        if (userDept && resp && userDept === resp) {
+            return (
+                stage === 'pending_department' ||
+                stage === 'in_progress' ||
+                stage === 'closed' ||
+                stage === 'rejected'
+            );
+        }
+        return false;
+    });
+}
+
+/**
+ * دفع سجل في timeLog
+ */
+function _dobAppendTimeLog_(observation, entry) {
+    var timeLog = [];
+    try {
+        if (Array.isArray(observation.timeLog)) {
+            timeLog = observation.timeLog;
+        } else if (typeof observation.timeLog === 'string' && observation.timeLog) {
+            timeLog = JSON.parse(observation.timeLog);
+        }
+    } catch (e) {
+        timeLog = [];
+    }
+    timeLog.push(entry);
+    observation.timeLog = timeLog;
+}
+
+/**
+ * انتقال مرحلة سير اعتماد الملاحظة
+ * payload: { observationId, action, comments, rejectionReason, correctiveAction, expectedCompletionDate,
+ *   actor: { name, email, role, dailyObservationsPermissions } }
+ */
+function transitionObservationWorkflow(payload) {
+    try {
+        payload = payload || {};
+        const observationId = payload.observationId || payload.id;
+        if (!observationId) {
+            return { success: false, message: 'معرف الملاحظة غير محدد' };
+        }
+        const action = String(payload.action || '').trim();
+        const actor = payload.actor || {};
+        const actorName = String(actor.name || 'System');
+        const actorEmail = String(actor.email || '');
+        const role = String(actor.role || '').toLowerCase();
+        const perms = actor.dailyObservationsPermissions || {};
+
+        const sheetName = 'DailyObservations';
+        const spreadsheetId = getSpreadsheetId();
+        const data = readFromSheet(sheetName, spreadsheetId);
+        const idx = data.findIndex(function (o) { return o.id === observationId; });
+        if (idx === -1) {
+            return { success: false, message: 'الملاحظة غير موجودة' };
+        }
+        var obs = data[idx];
+        var stage = String(obs.workflowStage || '').trim() || 'pending_specialist';
+
+        var comments = String(payload.comments || '').trim();
+        var rejectionReason = String(payload.rejectionReason || '').trim();
+
+        var hasSpecialist = role === 'admin' || perms['observations-specialist-review'] === true;
+        var hasManager = role === 'admin' || perms['observations-manager-approve'] === true;
+        var hasDept = _dobNormalizeDept_(actor.department) === _dobNormalizeDept_(obs.responsibleDepartment);
+
+        var nowIso = new Date().toISOString();
+        var updates = {};
+
+        function fail(msg) {
+            return { success: false, message: msg };
+        }
+
+        if (action === 'specialist_forward') {
+            if (!hasSpecialist) return fail('لا صلاحية لمراجعة الأخصائي');
+            if (stage !== 'pending_specialist' && stage !== 'returned_specialist') {
+                return fail('المرحلة الحالية لا تسمح بهذا الإجراء');
+            }
+            obs.workflowStage = 'pending_manager';
+            obs.specialistReviewedBy = actorName;
+            obs.specialistReviewedAt = nowIso;
+            obs.specialistComments = comments || obs.specialistComments || '';
+            _dobAppendTimeLog_(obs, {
+                action: 'specialist_forward',
+                user: actorName,
+                timestamp: nowIso,
+                note: 'أرسلت الملاحظة لاعتماد مدير السلامة'
+            });
+            notifyObservationWorkflowEmails('pending_manager', obs, [actorEmail]);
+        } else if (action === 'manager_approve') {
+            if (!hasManager) return fail('لا صلاحية لاعتماد مدير السلامة');
+            if (stage !== 'pending_manager') {
+                return fail('المرحلة الحالية لا تسمح بالاعتماد');
+            }
+            obs.workflowStage = 'pending_department';
+            obs.managerApprovedBy = actorName;
+            obs.managerApprovedAt = nowIso;
+            obs.managerComments = comments || obs.managerComments || '';
+            obs.rejectionReason = '';
+            _dobAppendTimeLog_(obs, {
+                action: 'manager_approve',
+                user: actorName,
+                timestamp: nowIso,
+                note: 'اعتماد مدير السلامة — بانتظار إدارة التنفيذ'
+            });
+            notifyObservationWorkflowEmails('pending_department', obs, [actorEmail]);
+        } else if (action === 'manager_reject' || action === 'admin_reject') {
+            if (action === 'admin_reject') {
+                if (role !== 'admin') return fail('الرفض الإداري لمدير النظام فقط');
+                var adminOkStage = (
+                    stage === 'pending_manager' ||
+                    stage === 'pending_specialist' ||
+                    stage === 'returned_specialist' ||
+                    stage === 'pending_department' ||
+                    stage === 'in_progress'
+                );
+                if (!adminOkStage) return fail('لا يمكن الرفض في هذه المرحلة');
+            } else {
+                if (!hasManager) return fail('لا صلاحية لرفض مدير السلامة');
+                if (stage !== 'pending_manager') {
+                    return fail('الرفض متاح من مدير السلامة في مرحلة بانتظار الاعتماد');
+                }
+            }
+            if (!rejectionReason) return fail('يرجى إدخال سبب الرفض');
+            obs.workflowStage = 'rejected';
+            obs.rejectionReason = rejectionReason;
+            obs.status = 'مغلق';
+            _dobAppendTimeLog_(obs, {
+                action: 'rejected',
+                user: actorName,
+                timestamp: nowIso,
+                note: 'رفض: ' + rejectionReason
+            });
+            notifyObservationWorkflowEmails('rejected_or_return', obs, [actorEmail]);
+        } else if (action === 'manager_return_specialist' || action === 'admin_return_specialist') {
+            if (action === 'admin_return_specialist' && role !== 'admin') return fail('إرجاع المدير الإداري لمدير النظام فقط');
+            if (!(hasManager || role === 'admin')) return fail('لا صلاحية للإرجاع');
+            if (stage !== 'pending_manager') {
+                return fail('الإرجاع متاح في مرحلة بانتظار اعتماد مدير السلامة');
+            }
+            if (!rejectionReason) return fail('يرجى إدخال سبب الإرجاع');
+            obs.workflowStage = 'returned_specialist';
+            obs.rejectionReason = rejectionReason;
+            _dobAppendTimeLog_(obs, {
+                action: 'return_specialist',
+                user: actorName,
+                timestamp: nowIso,
+                note: 'إرجاع للأخصائي: ' + rejectionReason
+            });
+            notifyObservationWorkflowEmails('rejected_or_return', obs, [actorEmail]);
+        } else if (action === 'department_update') {
+            if (!hasDept && role !== 'admin') return fail('فقط إدارة التنفيذ يمكنها تحديث الإجراء');
+            if (stage !== 'pending_department' && stage !== 'in_progress') {
+                return fail('لا يمكن تحديث الإجراء في هذه المرحلة');
+            }
+            var corr = String(payload.correctiveAction != null ? payload.correctiveAction : '').trim();
+            var exp = payload.expectedCompletionDate ? String(payload.expectedCompletionDate) : '';
+            if (!corr) return fail('يرجى إدخال الإجراء التصحيحي');
+            if (!exp) return fail('يرجى تحديد تاريخ الإغلاق المتوقع');
+            obs.correctiveAction = corr;
+            obs.expectedCompletionDate = exp;
+            obs.workflowStage = 'in_progress';
+            obs.departmentActionBy = actorName;
+            obs.departmentActionAt = nowIso;
+            obs.status = 'جاري';
+            _dobAppendTimeLog_(obs, {
+                action: 'department_update',
+                user: actorName,
+                timestamp: nowIso,
+                note: 'تحديث الإجراء التصحيحي وموعد الإغلاق'
+            });
+        } else if (action === 'close_observation') {
+            if (!(hasManager || hasSpecialist || role === 'admin')) {
+                return fail('لا صلاحية لإغلاق الملاحظة');
+            }
+            if (stage !== 'in_progress' && stage !== 'pending_department') {
+                return fail('لا يمكن الإغلاق في هذه المرحلة');
+            }
+            obs.workflowStage = 'closed';
+            obs.status = 'مغلق';
+            _dobAppendTimeLog_(obs, {
+                action: 'closed',
+                user: actorName,
+                timestamp: nowIso,
+                note: 'إغلاق الملاحظة'
+            });
+            notifyObservationWorkflowEmails('closed', obs, [actorEmail]);
+        } else {
+            return fail('إجراء غير معروف');
+        }
+
+        obs.updatedAt = nowIso;
+        updates = {
+            workflowStage: obs.workflowStage,
+            specialistReviewedBy: obs.specialistReviewedBy,
+            specialistReviewedAt: obs.specialistReviewedAt,
+            specialistComments: obs.specialistComments,
+            managerApprovedBy: obs.managerApprovedBy,
+            managerApprovedAt: obs.managerApprovedAt,
+            managerComments: obs.managerComments,
+            departmentActionBy: obs.departmentActionBy,
+            departmentActionAt: obs.departmentActionAt,
+            rejectionReason: obs.rejectionReason,
+            correctiveAction: obs.correctiveAction,
+            expectedCompletionDate: obs.expectedCompletionDate,
+            status: obs.status,
+            timeLog: obs.timeLog,
+            updatedAt: obs.updatedAt
+        };
+
+        var res = updateSingleRowInSheet(sheetName, observationId, updates, spreadsheetId);
+        if (res && res.success) {
+            return { success: true, message: 'تم تحديث سير الملاحظة', data: obs };
+        }
+        return res || { success: false, message: 'فشل الحفظ' };
+    } catch (error) {
+        Logger.log('transitionObservationWorkflow: ' + error.toString());
+        return { success: false, message: 'حدث خطأ: ' + error.toString() };
+    }
+}
+
+/**
+ * إشعار بريد لملاحظة موجودة (بعد الحفظ المجمع saveToSheet من الواجهة)
+ */
+function notifyObservationWorkflowEvent(payload) {
+    try {
+        payload = payload || {};
+        var id = payload.observationId || payload.id;
+        var ev = String(payload.event || 'new_pending_specialist');
+        if (!id) return { success: false, message: 'معرف الملاحظة غير محدد' };
+        var r = getObservation(id);
+        if (!r.success || !r.data) return { success: false, message: 'الملاحظة غير موجودة' };
+        notifyObservationWorkflowEmails(ev, r.data, []);
+        return { success: true };
+    } catch (e) {
+        Logger.log('notifyObservationWorkflowEvent: ' + e.toString());
+        return { success: false, message: e.toString() };
     }
 }

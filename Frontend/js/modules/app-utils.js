@@ -164,7 +164,10 @@ const MODULE_DETAILED_PERMISSIONS = {
         label: 'صلاحيات مديول الملاحظات اليومية',
         permissions: [
             { key: 'observations-registry', label: 'سجل الملاحظات', icon: 'fa-book' },
-            { key: 'data-analysis', label: 'تحليل البيانات', icon: 'fa-chart-bar' }
+            { key: 'data-analysis', label: 'تحليل البيانات', icon: 'fa-chart-bar' },
+            { key: 'observations-specialist-review', label: 'مراجعة أخصائي السلامة (سير الاعتماد)', icon: 'fa-user-check' },
+            { key: 'observations-manager-approve', label: 'اعتماد مدير السلامة', icon: 'fa-stamp' },
+            { key: 'observations-view-all', label: 'عرض جميع الملاحظات (متابعة شاملة)', icon: 'fa-globe' }
         ]
     },
     'ptw': {

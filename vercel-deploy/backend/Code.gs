@@ -344,7 +344,11 @@ function doPost(e) {
                         result = { success: false, message: 'Sheet name is required for readFromSheet action' };
                     } else {
                         Logger.log('readFromSheet called with sheetName: ' + readSheetName);
-                        result = { success: true, data: readFromSheet(readSheetName, readSpreadsheetId) };
+                        var readRaw = readFromSheet(readSheetName, readSpreadsheetId);
+                        if (readSheetName === 'DailyObservations' && payload.observationsRequestContext) {
+                            readRaw = filterDailyObservationsForRequestContext(readRaw, payload.observationsRequestContext);
+                        }
+                        result = { success: true, data: readRaw };
                     }
                     break;
                 
@@ -850,6 +854,18 @@ function doPost(e) {
                     break;
                 case 'getObservation':
                     result = getObservation(payload.observationId || payload.id);
+                    if (result && result.success && result.data && payload.observationsRequestContext) {
+                        var _gof = filterDailyObservationsForRequestContext([result.data], payload.observationsRequestContext);
+                        if (_gof.length === 0) {
+                            result = { success: false, message: 'غير مصرح بعرض هذه الملاحظة' };
+                        }
+                    }
+                    break;
+                case 'transitionObservationWorkflow':
+                    result = transitionObservationWorkflow(payload);
+                    break;
+                case 'notifyObservationWorkflowEvent':
+                    result = notifyObservationWorkflowEvent(payload);
                     break;
                 case 'getAllObservations':
                     result = getAllObservations(payload.filters || {});
