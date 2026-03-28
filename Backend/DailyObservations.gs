@@ -1153,6 +1153,34 @@ function getActiveUserEmailsByRole(roleName) {
 }
 
 /**
+ * إشعارات داخل التطبيق (ورقة Notifications) لنفس مستلمي البريد عندما يكون userId = البريد
+ */
+function _dobPushInAppForEmails_(emails, title, message, relatedObservationId) {
+    if (!emails || !emails.length) return;
+    var rid = String(relatedObservationId || '').trim();
+    var msg = String(message || '').slice(0, 2000);
+    var ttl = String(title || '').slice(0, 200);
+    emails.forEach(function (e) {
+        var uid = String(e || '').trim();
+        if (!uid || uid.indexOf('@') === -1) return;
+        try {
+            addNotification({
+                userId: uid,
+                type: 'daily_observation',
+                priority: 'medium',
+                title: ttl,
+                message: msg,
+                relatedId: rid,
+                relatedType: 'DailyObservation',
+                read: false
+            });
+        } catch (err) {
+            Logger.log('_dobPushInAppForEmails_: ' + err.toString());
+        }
+    });
+}
+
+/**
  * رسالة بريد لحدث سير العمل (لا يوقف العملية عند الفشل)
  */
 function _dobSendWorkflowEmail_(toList, subject, body) {
@@ -1203,19 +1231,32 @@ function notifyObservationWorkflowEmails(eventKey, observation, extraEmails) {
             extraEmails
         );
         _dobSendWorkflowEmail_(to, 'ملاحظة جديدة بانتظار مراجعة مسؤول السلامة (أخصائي)', base);
+        _dobPushInAppForEmails_(to, 'ملاحظة جديدة — بانتظار السلامة', base, obs.id);
     } else if (eventKey === 'pending_manager') {
         const to = merge(getActiveUserEmailsWithDailyObsPermission('observations-manager-approve'), extraEmails);
         _dobSendWorkflowEmail_(to, 'ملاحظة بانتظار اعتماد مدير السلامة', base);
+        _dobPushInAppForEmails_(to, 'ملاحظة بانتظار اعتماد مدير السلامة', base, obs.id);
     } else if (eventKey === 'pending_department') {
         const to = merge(getActiveUserEmailsByDepartment(dept), extraEmails);
         _dobSendWorkflowEmail_(to, 'تسجيل ملاحظة تتطلب إجراءً من إدارتكم', base);
+        _dobPushInAppForEmails_(to, 'ملاحظة تتطلب إجراءً من إدارتكم', base, obs.id);
+    } else if (eventKey === 'department_update_from_safety') {
+        const to = merge(getActiveUserEmailsByDepartment(dept), [obs.assignedToEmail], extraEmails);
+        var bodyExtra = base + '\n\nتم تسجيل إجراء من إدارة السلامة.\nالإجراء التصحيحي: ' + String(obs.correctiveAction || '').slice(0, 280);
+        _dobSendWorkflowEmail_(to, 'تحديث ملاحظة من إدارة السلامة', bodyExtra);
+        _dobPushInAppForEmails_(to, 'تحديث ملاحظة من السلامة', bodyExtra, obs.id);
     } else if (eventKey === 'rejected_or_return') {
         const to = merge([], [obs.submittedByEmail], extraEmails);
         const spec = getActiveUserEmailsWithDailyObsPermission('observations-specialist-review');
-        _dobSendWorkflowEmail_(merge(to, spec), 'تحديث على ملاحظة (رفض أو إرجاع)', base + '\n\nالسبب: ' + String(obs.rejectionReason || ''));
+        var finalTo = merge(to, spec);
+        var subj = 'تحديث على ملاحظة (رفض أو إرجاع)';
+        var bodyFull = base + '\n\nالسبب: ' + String(obs.rejectionReason || '');
+        _dobSendWorkflowEmail_(finalTo, subj, bodyFull);
+        _dobPushInAppForEmails_(finalTo, subj, bodyFull, obs.id);
     } else if (eventKey === 'closed') {
         const to = merge([obs.submittedByEmail], getActiveUserEmailsByDepartment(dept), extraEmails);
         _dobSendWorkflowEmail_(to, 'تم إغلاق ملاحظة', base);
+        _dobPushInAppForEmails_(to, 'تم إغلاق ملاحظة', base, obs.id);
     }
 }
 
@@ -1380,6 +1421,7 @@ function transitionObservationWorkflow(payload) {
             if (aEmail) {
                 var baseLocal = 'رقم الملاحظة: ' + String(obs.isoCode || obs.id || '') + '\nالإدارة: ' + String(obs.responsibleDepartment || '') + '\n' + String(obs.details || '').slice(0, 280);
                 _dobSendWorkflowEmail_([aEmail], 'تعيينكم مسؤولاً عن متابعة ملاحظة', baseLocal + '\n\nالمعيّن: ' + aName);
+                _dobPushInAppForEmails_([aEmail], 'تعيينكم مسؤولاً عن متابعة ملاحظة', baseLocal + '\n\nالمعيّن: ' + aName, obs.id);
             }
         } else if (action === 'specialist_forward') {
             if (!hasSpecialist) return fail('لا صلاحية لمراجعة مسؤول السلامة (أخصائي)');
@@ -1487,6 +1529,9 @@ function transitionObservationWorkflow(payload) {
                 timestamp: nowIso,
                 note: 'تحديث الإجراء التصحيحي وموعد الإغلاق'
             });
+            if (isAdminUser && !hasDept) {
+                notifyObservationWorkflowEmails('department_update_from_safety', obs, [actorEmail]);
+            }
         } else if (action === 'close_observation') {
             if (!(hasManager || hasSpecialist || isAdminUser)) {
                 return fail('لا صلاحية لإغلاق الملاحظة');

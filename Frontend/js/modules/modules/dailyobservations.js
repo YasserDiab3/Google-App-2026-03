@@ -444,10 +444,76 @@ const DailyObservations = {
         return `<div class="text-sm text-gray-800">${dept}</div><div class="text-xs text-gray-500">${Utils.escapeHTML(asn)}</div>`;
     },
 
+    /** تطبيع اسم الإدارة (مطابق لـ _dobNormalizeDept_ في الخادم) */
+    normalizeObservationDepartment(s) {
+        return String(s || '').trim().toLowerCase().replace(/\s+/g, ' ');
+    },
+
     isUserInResponsibleDepartment(observation) {
-        const u = (AppState.currentUser?.department || '').trim().toLowerCase();
-        const d = (observation?.responsibleDepartment || '').trim().toLowerCase();
-        return u && d && u === d;
+        const u = this.normalizeObservationDepartment(AppState.currentUser?.department);
+        const d = this.normalizeObservationDepartment(observation?.responsibleDepartment);
+        return !!(u && d && u === d);
+    },
+
+    /**
+     * فلترة الملاحظات للمستخدم الحالي — نفس منطق filterDailyObservationsForRequestContext في الخادم.
+     * تُستخدم في الواجهة عندما تُحمَّل القائمة كاملة من المزامنة العامة دون سياق.
+     */
+    filterDailyObservationsForCurrentUserScope(rows) {
+        const list = Array.isArray(rows) ? rows : [];
+        if (this.canViewAllObservationsWorkflow()) return list.slice();
+        const ctx = typeof this.buildObservationsRequestContext === 'function' ? this.buildObservationsRequestContext() : null;
+        if (!ctx) return list.slice();
+
+        const norm = (x) => this.normalizeObservationDepartment(x);
+        const userDept = norm(ctx.department);
+        const userEmail = String(ctx.email || '').trim().toLowerCase();
+        const userName = String(ctx.name || '').trim().toLowerCase();
+
+        return list.filter((obs) => {
+            if (!obs) return false;
+            const o = this.normalizeRecord(obs);
+            const stage = String(o.workflowStage || '').trim();
+            const resp = norm(o.responsibleDepartment);
+            const subEmail = String(o.submittedByEmail || '').trim().toLowerCase();
+            const observer = String(o.observerName || '').trim().toLowerCase();
+
+            const isSubmitter = (userEmail && subEmail && userEmail === subEmail) ||
+                (userName && observer && userName === observer);
+
+            if (!stage) {
+                if (isSubmitter) return true;
+                if (userDept && resp && userDept === resp) return true;
+                return false;
+            }
+            if (isSubmitter) return true;
+
+            const early = (stage === 'pending_specialist' || stage === 'pending_manager' || stage === 'returned_specialist');
+            if (early) return false;
+
+            if (userDept && resp && userDept === resp) {
+                return (
+                    stage === 'pending_department' ||
+                    stage === 'in_progress' ||
+                    stage === 'closed' ||
+                    stage === 'rejected'
+                );
+            }
+            return false;
+        });
+    },
+
+    /** قائمة الملاحظات الظاهرة للمستخدم (سجل كامل في AppState قد يتضمن صفوفاً مخفية على الخادم) */
+    getDailyObservationsVisibleToCurrentUser() {
+        const raw = Array.isArray(AppState.appData.dailyObservations) ? AppState.appData.dailyObservations : [];
+        return this.filterDailyObservationsForCurrentUserScope(raw);
+    },
+
+    isDailyObservationVisibleToCurrentUser(rawOrNormalized) {
+        if (!rawOrNormalized) return false;
+        if (this.canViewAllObservationsWorkflow()) return true;
+        const one = this.normalizeRecord(rawOrNormalized);
+        return this.filterDailyObservationsForCurrentUserScope([one]).length === 1;
     },
 
     canEditObservationStatusInDetail(/* observation */) {
@@ -467,6 +533,10 @@ const DailyObservations = {
         const raw = (AppState.appData.dailyObservations || []).find((o) => o.id === observationId);
         if (!raw) {
             Notification.error('الملاحظة غير موجودة');
+            return;
+        }
+        if (typeof this.isDailyObservationVisibleToCurrentUser === 'function' && !this.isDailyObservationVisibleToCurrentUser(raw)) {
+            Notification.error('لا صلاحية لتعديل هذه الملاحظة');
             return;
         }
         this.showForm(this.normalizeRecord(raw));
@@ -748,7 +818,9 @@ const DailyObservations = {
 
     runObservationDueDateReminders() {
         try {
-            const list = AppState.appData.dailyObservations || [];
+            const list = typeof this.getDailyObservationsVisibleToCurrentUser === 'function'
+                ? this.getDailyObservationsVisibleToCurrentUser()
+                : (AppState.appData.dailyObservations || []);
             const now = new Date();
             const uid = (AppState.currentUser && AppState.currentUser.id) ? String(AppState.currentUser.id) : 'anon';
             list.forEach((raw) => {
@@ -848,7 +920,10 @@ const DailyObservations = {
             }).catch(() => null);
             if (Array.isArray(data)) {
                 const oldData = AppState.appData.dailyObservations || [];
-                if (data.length === 0 && oldData.length > 0) {
+                const viewAll = typeof this.canViewAllObservationsWorkflow === 'function' && this.canViewAllObservationsWorkflow();
+                if (!viewAll) {
+                    AppState.appData.dailyObservations = data;
+                } else if (data.length === 0 && oldData.length > 0) {
                     Utils?.safeLog?.('⚠️ DailyObservations: البيانات الجديدة فارغة - الاحتفاظ بالمحلي');
                 } else {
                     AppState.appData.dailyObservations = data;
@@ -1268,11 +1343,11 @@ const DailyObservations = {
     },
 
     async renderList() {
-        // جمع القيم الفريدة للفلاتر
-        const observationsRaw = Array.isArray(AppState.appData.dailyObservations)
-            ? AppState.appData.dailyObservations
-            : [];
-        
+        // جمع القيم الفريدة للفلاتر (حسب نطاق صلاحية المستخدم / الإدارة)
+        const observationsRaw = typeof this.getDailyObservationsVisibleToCurrentUser === 'function'
+            ? this.getDailyObservationsVisibleToCurrentUser()
+            : (Array.isArray(AppState.appData.dailyObservations) ? AppState.appData.dailyObservations : []);
+
         const observations = observationsRaw.map(item => this.normalizeRecord(item));
         
         // جمع القيم الفريدة
@@ -1437,9 +1512,9 @@ const DailyObservations = {
 
         // إذا لم يتم تمرير الملاحظات، جلبها من AppState
         if (!observations) {
-            const observationsRaw = Array.isArray(AppState.appData.dailyObservations)
-                ? AppState.appData.dailyObservations
-                : [];
+            const observationsRaw = typeof this.getDailyObservationsVisibleToCurrentUser === 'function'
+                ? this.getDailyObservationsVisibleToCurrentUser()
+                : (Array.isArray(AppState.appData.dailyObservations) ? AppState.appData.dailyObservations : []);
             observations = observationsRaw.map(item => this.normalizeRecord(item));
         }
 
@@ -2544,9 +2619,10 @@ const DailyObservations = {
      * حساب قيم الكروت التوضيحية
      */
     calculateCardValues() {
-        const observations = Array.isArray(AppState.appData.dailyObservations)
-            ? AppState.appData.dailyObservations.map(item => this.normalizeRecord(item))
-            : [];
+        const observationsRaw = typeof this.getDailyObservationsVisibleToCurrentUser === 'function'
+            ? this.getDailyObservationsVisibleToCurrentUser()
+            : (Array.isArray(AppState.appData.dailyObservations) ? AppState.appData.dailyObservations : []);
+        const observations = observationsRaw.map(item => this.normalizeRecord(item));
 
         const cards = JSON.parse(localStorage.getItem('dailyObservations_infoCards') || '[]');
         const enabledCards = cards.filter(card => card.enabled);
@@ -2842,9 +2918,10 @@ const DailyObservations = {
             return;
         }
 
-        const observations = Array.isArray(AppState.appData.dailyObservations)
-            ? AppState.appData.dailyObservations.map(item => this.normalizeRecord(item))
-            : [];
+        const observationsRaw = typeof this.getDailyObservationsVisibleToCurrentUser === 'function'
+            ? this.getDailyObservationsVisibleToCurrentUser()
+            : (Array.isArray(AppState.appData.dailyObservations) ? AppState.appData.dailyObservations : []);
+        const observations = observationsRaw.map(item => this.normalizeRecord(item));
 
         // تحديث قيم الكروت التوضيحية
         this.calculateCardValues();
@@ -3098,9 +3175,9 @@ const DailyObservations = {
         const container = document.getElementById('top10-observations-list');
         if (!container) return;
 
-        const observationsRaw = Array.isArray(AppState.appData.dailyObservations)
-            ? AppState.appData.dailyObservations
-            : [];
+        const observationsRaw = typeof this.getDailyObservationsVisibleToCurrentUser === 'function'
+            ? this.getDailyObservationsVisibleToCurrentUser()
+            : (Array.isArray(AppState.appData.dailyObservations) ? AppState.appData.dailyObservations : []);
 
         if (observationsRaw.length === 0) {
             container.innerHTML = `
@@ -4073,9 +4150,9 @@ const DailyObservations = {
             return;
         }
 
-        const observationsRaw = Array.isArray(AppState.appData.dailyObservations)
-            ? AppState.appData.dailyObservations
-            : [];
+        const observationsRaw = typeof this.getDailyObservationsVisibleToCurrentUser === 'function'
+            ? this.getDailyObservationsVisibleToCurrentUser()
+            : (Array.isArray(AppState.appData.dailyObservations) ? AppState.appData.dailyObservations : []);
 
         // تحديث قيم الفلاتر أولاً
         this.updateFilterOptions();
@@ -4345,10 +4422,10 @@ const DailyObservations = {
      * تحديث قيم الفلاتر ديناميكياً
      */
     updateFilterOptions() {
-        const observationsRaw = Array.isArray(AppState.appData.dailyObservations)
-            ? AppState.appData.dailyObservations
-            : [];
-        
+        const observationsRaw = typeof this.getDailyObservationsVisibleToCurrentUser === 'function'
+            ? this.getDailyObservationsVisibleToCurrentUser()
+            : (Array.isArray(AppState.appData.dailyObservations) ? AppState.appData.dailyObservations : []);
+
         const observations = observationsRaw.map(item => this.normalizeRecord(item));
         
         // جمع القيم الفريدة
@@ -6757,6 +6834,10 @@ const DailyObservations = {
             Notification.error('الملاحظة غير موجودة');
             return;
         }
+        if (typeof this.isDailyObservationVisibleToCurrentUser === 'function' && !this.isDailyObservationVisibleToCurrentUser(observationRaw)) {
+            Notification.error('لا صلاحية لعرض هذه الملاحظة');
+            return;
+        }
 
         const observation = this.normalizeRecord(observationRaw);
         
@@ -7078,6 +7159,8 @@ const DailyObservations = {
                     modal.replaceWith(newModal);
                     this.attachWorkflowPanelListeners(newModal);
                 }
+            } else if (response && !response.success && response.message) {
+                this.showObservationDetailInlineAlert(observationId, 'warning', response.message);
             }
         } catch (error) {
             Utils.safeWarn('خطأ في تحديث تفاصيل الملاحظة من Backend:', error);
@@ -7882,9 +7965,9 @@ const DailyObservations = {
     },
 
     async exportExcel() {
-        const observationsRaw = Array.isArray(AppState.appData.dailyObservations)
-            ? AppState.appData.dailyObservations
-            : [];
+        const observationsRaw = typeof this.getDailyObservationsVisibleToCurrentUser === 'function'
+            ? this.getDailyObservationsVisibleToCurrentUser()
+            : (Array.isArray(AppState.appData.dailyObservations) ? AppState.appData.dailyObservations : []);
 
         if (observationsRaw.length === 0) {
             Notification?.info?.('لا توجد ملاحظات يومية لتصديرها.');
