@@ -239,11 +239,18 @@ const DailyObservations = {
 
     canShowAssignResponsiblePanel(obs) {
         const stage = String(obs?.workflowStage || '').trim();
-        const adm = this._isAdminRole(AppState.currentUser);
+        const u = AppState.currentUser;
+        const adm = this._isAdminRole(u);
+        const specReviewPerm = typeof Permissions !== 'undefined' && Permissions.hasDetailedPermission &&
+            Permissions.hasDetailedPermission('daily-observations', 'observations-specialist-review');
+        const mgrApprovePerm = typeof Permissions !== 'undefined' && Permissions.hasDetailedPermission &&
+            Permissions.hasDetailedPermission('daily-observations', 'observations-manager-approve');
+        const canActAsSpecialist = adm || this._isSafetyOfficerRole(u) || specReviewPerm;
+        const canActAsSafetyManager = adm || mgrApprovePerm;
         const early = stage === 'pending_specialist' || stage === 'returned_specialist' || stage === 'pending_manager';
         const deptStages = stage === 'pending_department' || stage === 'in_progress';
         if (adm) return true;
-        if (this.hasSpecialistWorkflowPermission() && early) return true;
+        if ((canActAsSpecialist || canActAsSafetyManager) && early) return true;
         if (this.isUserInResponsibleDepartment(obs) && deptStages) return true;
         return false;
     },
@@ -288,9 +295,16 @@ const DailyObservations = {
 
     getWorkflowCommentFieldsVisibility(obs) {
         const stage = String(obs?.workflowStage || '').trim() || 'pending_specialist';
-        const specOk = this.hasSpecialistWorkflowPermission() && (stage === 'pending_specialist' || stage === 'returned_specialist');
-        const mgrOk = this.hasManagerWorkflowPermission() && stage === 'pending_manager';
-        const adm = this._isAdminRole(AppState.currentUser);
+        const u = AppState.currentUser;
+        const adm = this._isAdminRole(u);
+        const specReviewPerm = typeof Permissions !== 'undefined' && Permissions.hasDetailedPermission &&
+            Permissions.hasDetailedPermission('daily-observations', 'observations-specialist-review');
+        const mgrApprovePerm = typeof Permissions !== 'undefined' && Permissions.hasDetailedPermission &&
+            Permissions.hasDetailedPermission('daily-observations', 'observations-manager-approve');
+        const canActAsSpecialist = adm || this._isSafetyOfficerRole(u) || specReviewPerm;
+        const canActAsSafetyManager = adm || mgrApprovePerm;
+        const specOk = canActAsSpecialist && (stage === 'pending_specialist' || stage === 'returned_specialist');
+        const mgrOk = canActAsSafetyManager && stage === 'pending_manager';
         return {
             showOptional: specOk || mgrOk,
             showReject: mgrOk || (adm && stage === 'pending_manager')
@@ -376,6 +390,13 @@ const DailyObservations = {
         this.attachWorkflowPanelListeners(newModal);
     },
 
+    /** إغلاق نافذة تفاصيل الملاحظة فوراً (مثلاً بعد طلب سير العمل دون انتظار الخادم) */
+    closeObservationDetailModalIfOpen(observationId) {
+        const oid = String(observationId || '').replace(/"/g, '');
+        const m = document.querySelector('.modal-overlay[data-observation-id="' + oid + '"]');
+        if (m) m.remove();
+    },
+
     getObservationDetailInlineAlertsEl(observationId) {
         const oid = String(observationId || '').replace(/"/g, '');
         const modal = document.querySelector('.modal-overlay[data-observation-id="' + oid + '"]');
@@ -439,22 +460,35 @@ const DailyObservations = {
         const oidAttr = String(id || '').replace(/"/g, '');
         const stage = (obs.workflowStage || '').trim() || 'pending_specialist';
         const btns = [];
+        const u = AppState.currentUser;
+        const adm = this._isAdminRole(u);
+        const specReviewPerm = typeof Permissions !== 'undefined' && Permissions.hasDetailedPermission &&
+            Permissions.hasDetailedPermission('daily-observations', 'observations-specialist-review');
+        const mgrApprovePerm = typeof Permissions !== 'undefined' && Permissions.hasDetailedPermission &&
+            Permissions.hasDetailedPermission('daily-observations', 'observations-manager-approve');
+        /** إرسال للأخصائي/المدير: مدير النظام، أو مسؤول سلامة، أو صلاحية مراجعة أخصائي — وليس لكل المستخدمين */
+        const canActAsSpecialist = adm || this._isSafetyOfficerRole(u) || specReviewPerm;
+        /** أزرار اعتماد مدير السلامة (الثلاثة): مدير النظام أو صلاحية observations-manager-approve فقط */
+        const canActAsSafetyManager = adm || mgrApprovePerm;
 
-        if (this.hasSpecialistWorkflowPermission() && (stage === 'pending_specialist' || stage === 'returned_specialist')) {
+        if (canActAsSpecialist && (stage === 'pending_specialist' || stage === 'returned_specialist')) {
             btns.push(`<button type="button" class="btn-primary btn-sm obs-wf-action" data-oid="${oidAttr}" data-wfa="specialist_forward" style="background: #22c55e; border: none;"><i class="fas fa-share ml-1"></i>إرسال لمدير السلامة</button>`);
         }
-        if (this.hasManagerWorkflowPermission() && stage === 'pending_manager') {
+        if (canActAsSafetyManager && stage === 'pending_manager') {
             btns.push(`<button type="button" class="btn-primary btn-sm obs-wf-action" data-oid="${oidAttr}" data-wfa="manager_approve" style="background: #0ea5e9; border: none;"><i class="fas fa-check ml-1"></i>اعتماد وإرسال للإدارة</button>`);
             btns.push(`<button type="button" class="btn-secondary btn-sm obs-wf-action" data-oid="${oidAttr}" data-wfa="manager_return_specialist" style="background: rgba(255,255,255,0.2); color: white; border: 1px solid rgba(255,255,255,0.4);"><i class="fas fa-undo ml-1"></i>إرجاع لمسؤول السلامة (أخصائي)</button>`);
             btns.push(`<button type="button" class="btn-secondary btn-sm obs-wf-action" data-oid="${oidAttr}" data-wfa="manager_reject" style="background: #b91c1c; color: white; border: none;"><i class="fas fa-times ml-1"></i>رفض</button>`);
         }
-        const adm = this._isAdminRole(AppState.currentUser);
+        /** إرجاع/رفض إداري: مدير النظام فقط (لا تُعرض لمن لديه صلاحية اعتماد فقط) */
         if (adm && stage === 'pending_manager') {
             btns.push(`<button type="button" class="btn-secondary btn-sm obs-wf-action" data-oid="${oidAttr}" data-wfa="admin_return_specialist" style="background: rgba(255,255,255,0.15); color: white; border: 1px solid rgba(255,255,255,0.35);"><i class="fas fa-user-shield ml-1"></i>إرجاع من مدير النظام لمسؤول السلامة</button>`);
             btns.push(`<button type="button" class="btn-secondary btn-sm obs-wf-action" data-oid="${oidAttr}" data-wfa="admin_reject" style="background: #7f1d1d; color: white; border: none;"><i class="fas fa-ban ml-1"></i>رفض إداري</button>`);
         }
-        if ((this.hasManagerWorkflowPermission() || this.hasSpecialistWorkflowPermission() || adm) && (stage === 'in_progress' || stage === 'pending_department')) {
-            btns.push(`<button type="button" class="btn-primary btn-sm obs-wf-action" data-oid="${oidAttr}" data-wfa="close_observation" style="background: #6366f1; border: none;"><i class="fas fa-flag-checkered ml-1"></i>إغلاق الملاحظة</button>`);
+        if ((stage === 'in_progress' || stage === 'pending_department')) {
+            const deptUser = this.isUserInResponsibleDepartment(obs);
+            if (adm || canActAsSafetyManager || canActAsSpecialist || deptUser) {
+                btns.push(`<button type="button" class="btn-primary btn-sm obs-wf-action" data-oid="${oidAttr}" data-wfa="close_observation" style="background: #6366f1; border: none;"><i class="fas fa-flag-checkered ml-1"></i>إغلاق الملاحظة</button>`);
+            }
         }
         return btns.join('');
     },
@@ -649,8 +683,11 @@ const DailyObservations = {
                 actor.dailyObservationsPermissions = eff['daily-observationsPermissions'] || {};
             } catch (e) { /* ignore */ }
         }
-        Loading.show('جاري تحديث سير الملاحظة...');
-        this.clearObservationDetailInlineAlert(observationId);
+        // إغلاق النافذة فوراً وإشعار المستخدم دون انتظار الخادم (تجنّب شاشة التحميل الطويلة ومهلة 12 ثانية الافتراضية)
+        this.closeObservationDetailModalIfOpen(observationId);
+        if (typeof Notification !== 'undefined' && Notification.info) {
+            Notification.info('جاري تنفيذ طلب سير الملاحظة...');
+        }
         try {
             const res = await GoogleIntegration.callBackend('transitionObservationWorkflow', {
                 observationId,
@@ -661,7 +698,8 @@ const DailyObservations = {
                 expectedCompletionDate: extra.expectedCompletionDate,
                 assignedToName: extra.assignedToName,
                 assignedToEmail: extra.assignedToEmail,
-                actor
+                actor,
+                __timeoutMs: 120000
             });
             if (res && res.success) {
                 const okMsg = res.message || 'تم التحديث';
@@ -673,8 +711,6 @@ const DailyObservations = {
                     if (typeof window.DataManager !== 'undefined' && window.DataManager.save) window.DataManager.save();
                 } catch (e) { /* ignore */ }
                 this.pushObservationInAppNotification('سير الملاحظات', res.message || 'تم تحديث الملاحظة', observationId);
-                const oidEsc = String(observationId || '').replace(/"/g, '');
-                const dataSnapshot = res.data;
                 await this.yieldToMain();
                 try {
                     this.loadObservationsList(this.currentFilter?.filter || null);
@@ -682,30 +718,14 @@ const DailyObservations = {
                     Utils.safeWarn('loadObservationsList بعد سير الملاحظة', e);
                 }
                 await this.yieldToMain();
-                if (dataSnapshot && document.querySelector('.modal-overlay[data-observation-id="' + oidEsc + '"]')) {
-                    try {
-                        this.replaceObservationDetailModal(observationId, dataSnapshot);
-                    } catch (e) {
-                        Utils.safeWarn('replaceObservationDetailModal بعد سير الملاحظة', e);
-                    }
-                }
-                await this.yieldToMain();
-                if (!this.showObservationDetailInlineAlert(observationId, 'success', okMsg)) {
-                    Notification.success(okMsg);
-                }
+                Notification.success(okMsg);
             } else {
                 const errMsg = res?.message || 'فشل التحديث';
-                if (!this.showObservationDetailInlineAlert(observationId, 'error', errMsg)) {
-                    Notification.error(errMsg);
-                }
+                Notification.error(errMsg);
             }
         } catch (err) {
             const errMsg = (err && err.message) ? err.message : String(err);
-            if (!this.showObservationDetailInlineAlert(observationId, 'error', errMsg)) {
-                Notification.error(errMsg);
-            }
-        } finally {
-            Loading.hide();
+            Notification.error(errMsg);
         }
     },
 
@@ -6689,7 +6709,6 @@ const DailyObservations = {
                 <div class="modal-body" style="padding: 30px; background: #f8f9fa; max-height: calc(90vh - 200px); overflow-y: auto;">
                     <div class="space-y-5">
                         <div class="obs-detail-inline-alerts" data-obs-inline-alerts="" role="region" aria-label="تنبيهات الملاحظة"></div>
-                        ${wfBannerHtml}
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div class="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
                                 <strong class="text-gray-700 block mb-1">رقم الملاحظة:</strong>
@@ -6889,6 +6908,7 @@ const DailyObservations = {
                                 </div>
                             ` : '<p class="text-gray-500 text-sm">لا يوجد سجل زمني</p>'}
                         </div>
+                        ${wfBannerHtml}
                     </div>
                 </div>
                 <div class="modal-footer form-actions-centered" style="padding: 20px 30px; background: #f8f9fa; border-top: 1px solid #e5e7eb; border-radius: 0 0 20px 20px;">
