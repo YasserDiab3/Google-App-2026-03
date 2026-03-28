@@ -9826,10 +9826,31 @@ const Contractors = {
             `;
         }
 
+        let evaluations = AppState.appData.contractorEvaluations || [];
+        let violations = AppState.appData.violations || [];
+        if (typeof GoogleIntegration !== 'undefined' && GoogleIntegration.readFromSheets && AppState.googleConfig?.appsScript?.enabled) {
+            try {
+                if (!violations.length) {
+                    const v = await GoogleIntegration.readFromSheets('Violations');
+                    if (Array.isArray(v)) {
+                        AppState.appData.violations = v;
+                        violations = v;
+                    }
+                }
+                if (!evaluations.length) {
+                    const ev = await GoogleIntegration.readFromSheets('ContractorEvaluations');
+                    if (Array.isArray(ev)) {
+                        AppState.appData.contractorEvaluations = ev;
+                        evaluations = ev;
+                    }
+                }
+            } catch (e) {
+                if (typeof Utils !== 'undefined' && Utils.safeWarn) Utils.safeWarn('تعذر جلب مخالفات أو تقييمات لتحليل المقاولين:', e);
+            }
+        }
+
         const contractors = AppState.appData.contractors || [];
         const approvedContractors = AppState.appData.approvedContractors || [];
-        const evaluations = AppState.appData.contractorEvaluations || [];
-        const violations = AppState.appData.violations || [];
 
         // قائمة موحدة لعرض "تحليل مفصل لكل مقاول": استخدام المقاولين إن وُجدوا، وإلا قائمة المعتمدين بشكل معياري
         const contractorsForDetailed = (Array.isArray(contractors) && contractors.length > 0)
@@ -10646,6 +10667,79 @@ const Contractors = {
         `;
     },
 
+    /**
+     * مطابقة موحّدة لسجلات المقاول (مخالفات، تقييمات، تدريب، عيادة، إلخ).
+     * تُستخدم في جدول «تحليل مفصل» وفي نافذة «عرض» لتطابق الأرقام مع قاعدة البيانات.
+     */
+    buildContractorAnalyticsMatchers(contractor, contractorIdParam) {
+        const contractorName = (contractor.name || contractor.companyName || '').trim();
+        const normalize = (v) => (v == null || v === '') ? '' : String(v).trim().toLowerCase();
+        const idsSet = new Set();
+        [contractorIdParam, contractor.id, contractor.contractorId, contractor.code, contractor.isoCode].forEach(x => {
+            if (x != null && x !== '') idsSet.add(normalize(x));
+        });
+        const namesSet = new Set();
+        if (contractorName) {
+            namesSet.add(contractorName);
+            namesSet.add(contractorName.toLowerCase());
+        }
+        if (contractor.companyName) {
+            namesSet.add(String(contractor.companyName).trim());
+            namesSet.add(String(contractor.companyName).trim().toLowerCase());
+        }
+        const nameMatchesContractorStrict = (vName) => {
+            if (!vName || typeof vName !== 'string') return false;
+            const v = vName.replace(/\s+/g, ' ').trim().toLowerCase();
+            const cn = (contractorName || '').toLowerCase();
+            const comp = (String(contractor.companyName || '').trim()).toLowerCase();
+            if (!v) return false;
+            if (v === cn || v === comp) return true;
+            if (cn && (v === cn || v.startsWith(cn) || cn.startsWith(v))) return true;
+            if (comp && (v === comp || v.startsWith(comp) || comp.startsWith(v))) return true;
+            if (cn.length >= 4 && v.includes(cn)) return true;
+            if (comp.length >= 4 && v.includes(comp)) return true;
+            return false;
+        };
+        const matchesContractor = (record) => {
+            if (!record) return false;
+            const rId = normalize(record.contractorId) || normalize(record.contractorCode) || normalize(record.code);
+            if (rId && idsSet.has(rId)) return true;
+            if (record.contractorId != null && record.contractorId !== '' && idsSet.has(normalize(record.contractorId))) return true;
+            if (record.contractorCode != null && record.contractorCode !== '' && idsSet.has(normalize(record.contractorCode))) return true;
+            if (rId && nameMatchesContractorStrict(rId)) return true;
+            const rName = String(record.contractorName || record.companyName || record.company || record.contractorCompany || record.name || record.externalName || record.contractorWorkerName || record.contractorWorker || '').replace(/\s+/g, ' ').trim();
+            if (!rName) return false;
+            if (namesSet.has(rName) || namesSet.has(rName.toLowerCase())) return true;
+            return nameMatchesContractorStrict(rName);
+        };
+        const violationBelongsToContractor = (v) => {
+            if (!v) return false;
+            const vPersonType = (v.personType || '').toString().trim().toLowerCase();
+            if ((vPersonType === 'employee' || vPersonType === 'موظف') &&
+                !(v.contractorName && String(v.contractorName).trim()) &&
+                (v.contractorId == null || String(v.contractorId).trim() === '')) {
+                return false;
+            }
+            if (v.contractorId != null && String(v.contractorId).trim() !== '' && idsSet.has(normalize(v.contractorId))) return true;
+            if (v.contractorId === contractorIdParam || v.contractorId === contractor.id || v.contractorId === contractor.contractorId) return true;
+            const isContractorType = vPersonType === 'contractor' || vPersonType === 'مقاول';
+            if (!isContractorType && !v.contractorName && (v.contractorId == null || String(v.contractorId).trim() === '')) return false;
+            if (isContractorType || v.contractorName || (v.contractorId != null && String(v.contractorId).trim() !== '')) {
+                if (matchesContractor(v)) return true;
+                const vName = String(v.contractorName || v.contractorId || '').replace(/\s+/g, ' ').trim();
+                if (vName && nameMatchesContractorStrict(vName)) return true;
+            }
+            return false;
+        };
+        const evaluationBelongsToContractor = (e) => {
+            if (!e) return false;
+            if (e.contractorId != null && String(e.contractorId).trim() !== '' && idsSet.has(normalize(e.contractorId))) return true;
+            if (e.contractorId === contractorIdParam || e.contractorId === contractor.id || e.contractorId === contractor.contractorId) return true;
+            return matchesContractor(e);
+        };
+        return { normalize, idsSet, matchesContractor, violationBelongsToContractor, evaluationBelongsToContractor, contractorName };
+    },
+
     renderDetailedContractorAnalysis(contractors, approvedContractors, evaluations, violations) {
         // التحقق من وجود مقاولين
         if (!contractors || !Array.isArray(contractors) || contractors.length === 0) {
@@ -10680,17 +10774,9 @@ const Contractors = {
         // حساب الإحصائيات لكل مقاول (دعم شكل المقاولين والمعتمدين: name/companyName، id/contractorId)
         const contractorsWithStats = contractors.map(contractor => {
             const cId = contractor.id || contractor.contractorId;
-            const cName = (contractor.name || contractor.companyName || '').trim();
-            const contractorEvaluations = evaluations.filter(e =>
-                (e.contractorId && (e.contractorId === cId || e.contractorId === contractor.contractorId)) ||
-                (e.contractorName && (e.contractorName === cName || e.contractorName === (contractor.companyName || contractor.name)))
-            );
-            
-            const contractorViolations = violations.filter(v =>
-                (v.contractorId && (v.contractorId === cId || v.contractorId === contractor.contractorId)) ||
-                (v.contractorName && (v.contractorName === cName || v.contractorName === (contractor.companyName || contractor.name))) ||
-                (v.personType === 'contractor' && v.contractorName === cName)
-            );
+            const ctx = this.buildContractorAnalyticsMatchers(contractor, cId);
+            const contractorEvaluations = evaluations.filter(ctx.evaluationBelongsToContractor);
+            const contractorViolations = violations.filter(ctx.violationBelongsToContractor);
 
             // حساب متوسط التقييم بدقة
             let avgScore = 0;
@@ -10910,7 +10996,7 @@ const Contractors = {
         `;
     },
 
-    viewContractorAnalytics(contractorId) {
+    async viewContractorAnalytics(contractorId) {
         let contractor = (AppState.appData.contractors || []).find(c => c.id === contractorId || c.contractorId === contractorId);
         if (!contractor) {
             contractor = (AppState.appData.approvedContractors || []).find(c => c.id === contractorId || c.contractorId === contractorId);
@@ -10923,70 +11009,65 @@ const Contractors = {
             const needCT = !AppState.appData.contractorTrainings?.length;
             const needT = !AppState.appData.training?.length;
             const needPTW = (!AppState.appData.ptw || !AppState.appData.ptw.length) && (!AppState.appData.ptwRegistry || !AppState.appData.ptwRegistry.length);
-            if (needCT || needT || needPTW) {
-                const syncSheets = [];
-                if (needCT) syncSheets.push('ContractorTrainings');
-                if (needT) syncSheets.push('Training');
-                if (needPTW) syncSheets.push('PTW', 'PTWRegistry');
-                if (syncSheets.length && typeof GoogleIntegration.syncData === 'function') {
-                    GoogleIntegration.syncData({ sheets: syncSheets, silent: true, showLoader: false, notifyOnSuccess: false, notifyOnError: false }).then(() => {
-                        if (needCT && !AppState.appData.contractorTrainings?.length) {
-                            GoogleIntegration.sendRequest({ action: 'getAllContractorTrainings', data: {} }).then(ctRes => {
-                                if (ctRes && ctRes.success && Array.isArray(ctRes.data)) AppState.appData.contractorTrainings = ctRes.data;
-                            }).catch(() => null);
+            const needViol = !AppState.appData.violations?.length;
+            const needEval = !AppState.appData.contractorEvaluations?.length;
+            const needClinic = !AppState.appData.clinicVisits?.length;
+            const needInj = !AppState.appData.injuries?.length;
+            if (needCT || needT || needPTW || needViol || needEval || needClinic || needInj) {
+                try {
+                    const syncSheets = [];
+                    if (needCT) syncSheets.push('ContractorTrainings');
+                    if (needT) syncSheets.push('Training');
+                    if (needPTW) syncSheets.push('PTW', 'PTWRegistry');
+                    if (needViol) syncSheets.push('Violations');
+                    if (needEval) syncSheets.push('ContractorEvaluations');
+                    if (needClinic) syncSheets.push('ClinicVisits');
+                    if (needInj) syncSheets.push('Injuries');
+                    if (syncSheets.length && typeof GoogleIntegration.syncData === 'function') {
+                        await GoogleIntegration.syncData({ sheets: [...new Set(syncSheets)], silent: true, showLoader: false, notifyOnSuccess: false, notifyOnError: false });
+                    }
+                    if (needCT && !AppState.appData.contractorTrainings?.length) {
+                        const ctRes = await GoogleIntegration.sendRequest({ action: 'getAllContractorTrainings', data: {} });
+                        if (ctRes && ctRes.success && Array.isArray(ctRes.data)) AppState.appData.contractorTrainings = ctRes.data;
+                    }
+                    if (needT && !AppState.appData.training?.length) {
+                        const tRes = await GoogleIntegration.sendRequest({ action: 'getAllTrainings', data: {} });
+                        if (tRes && tRes.success && Array.isArray(tRes.data)) AppState.appData.training = tRes.data;
+                    }
+                    if (needPTW) {
+                        if (!AppState.appData.ptw?.length) {
+                            const ptwRes = await GoogleIntegration.sendRequest({ action: 'getAllPTWs', data: {} });
+                            if (ptwRes && ptwRes.success && Array.isArray(ptwRes.data)) AppState.appData.ptw = ptwRes.data;
                         }
-                        if (needT && !AppState.appData.training?.length) {
-                            GoogleIntegration.sendRequest({ action: 'getAllTrainings', data: {} }).then(tRes => {
-                                if (tRes && tRes.success && Array.isArray(tRes.data)) AppState.appData.training = tRes.data;
-                            }).catch(() => null);
+                        if (!AppState.appData.ptwRegistry?.length) {
+                            const regRes = await GoogleIntegration.sendRequest({ action: 'readFromSheet', data: { sheetName: 'PTWRegistry' } });
+                            if (regRes && regRes.success && Array.isArray(regRes.data)) AppState.appData.ptwRegistry = regRes.data;
                         }
-                        if (needPTW) {
-                            if (!AppState.appData.ptw || !AppState.appData.ptw.length) {
-                                GoogleIntegration.sendRequest({ action: 'getAllPTWs', data: {} }).then(ptwRes => {
-                                    if (ptwRes && ptwRes.success && Array.isArray(ptwRes.data)) AppState.appData.ptw = ptwRes.data;
-                                }).catch(() => null);
-                            }
-                            if (!AppState.appData.ptwRegistry || !AppState.appData.ptwRegistry.length) {
-                                GoogleIntegration.sendRequest({ action: 'readFromSheet', data: { sheetName: 'PTWRegistry' } }).then(regRes => {
-                                    if (regRes && regRes.success && Array.isArray(regRes.data)) AppState.appData.ptwRegistry = regRes.data;
-                                }).catch(() => null);
-                            }
-                        }
-                    }).catch(() => null);
+                    }
+                    if (needViol && typeof GoogleIntegration.readFromSheets === 'function') {
+                        const v = await GoogleIntegration.readFromSheets('Violations');
+                        if (Array.isArray(v)) AppState.appData.violations = v;
+                    }
+                    if (needEval && typeof GoogleIntegration.readFromSheets === 'function') {
+                        const ev = await GoogleIntegration.readFromSheets('ContractorEvaluations');
+                        if (Array.isArray(ev)) AppState.appData.contractorEvaluations = ev;
+                    }
+                    if (needClinic && typeof GoogleIntegration.readFromSheets === 'function') {
+                        const cv = await GoogleIntegration.readFromSheets('ClinicVisits');
+                        if (Array.isArray(cv)) AppState.appData.clinicVisits = cv;
+                    }
+                    if (needInj && typeof GoogleIntegration.readFromSheets === 'function') {
+                        const inj = await GoogleIntegration.readFromSheets('Injuries');
+                        if (Array.isArray(inj)) AppState.appData.injuries = inj;
+                    }
+                } catch (e) {
+                    if (typeof Utils !== 'undefined' && Utils.safeWarn) Utils.safeWarn('تعذر تحميل بعض بيانات التحليل:', e);
                 }
             }
         }
         const contractorName = (contractor.name || contractor.companyName || '').trim();
-        const normalize = (v) => (v == null || v === '') ? '' : String(v).trim().toLowerCase();
-        const idsSet = new Set();
-        [contractorId, contractor.id, contractor.contractorId, contractor.code, contractor.isoCode].forEach(x => { if (x != null && x !== '') idsSet.add(normalize(x)); });
-        const namesSet = new Set();
-        if (contractorName) { namesSet.add(contractorName); namesSet.add(contractorName.toLowerCase()); }
-        if (contractor.companyName) { namesSet.add(String(contractor.companyName).trim()); namesSet.add(String(contractor.companyName).trim().toLowerCase()); }
-        // مطابقة اسمية صارمة: تطابق تام أو أن أحد الاسمين يبدأ بالآخر فقط (لتجنب ربط مخالفات لشخص آخر مثل "محمد تمري" مع مقاول "تمري")
-        const nameMatchesContractorStrict = (vName) => {
-            if (!vName || typeof vName !== 'string') return false;
-            const v = vName.replace(/\s+/g, ' ').trim().toLowerCase();
-            const cn = (contractorName || '').toLowerCase();
-            const comp = (String(contractor.companyName || '').trim()).toLowerCase();
-            if (!v) return false;
-            if (v === cn || v === comp) return true;
-            if (cn && (v === cn || v.startsWith(cn) || cn.startsWith(v))) return true;
-            if (comp && (v === comp || v.startsWith(comp) || comp.startsWith(v))) return true;
-            return false;
-        };
-        const matchesContractor = (record) => {
-            if (!record) return false;
-            const rId = normalize(record.contractorId) || normalize(record.contractorCode) || normalize(record.code);
-            if (rId && idsSet.has(rId)) return true;
-            if (record.contractorId != null && record.contractorId !== '' && idsSet.has(normalize(record.contractorId))) return true;
-            if (record.contractorCode != null && record.contractorCode !== '' && idsSet.has(normalize(record.contractorCode))) return true;
-            if (rId && nameMatchesContractorStrict(rId)) return true;
-            const rName = String(record.contractorName || record.companyName || record.company || record.contractorCompany || record.name || record.externalName || record.contractorWorkerName || record.contractorWorker || '').replace(/\s+/g, ' ').trim();
-            if (!rName) return false;
-            if (namesSet.has(rName) || namesSet.has(rName.toLowerCase())) return true;
-            return nameMatchesContractorStrict(rName);
-        };
+        const ctx = this.buildContractorAnalyticsMatchers(contractor, contractorId);
+        const matchesContractor = ctx.matchesContractor;
         const matchesPtwContractor = (p) => {
             if (!p) return false;
             const req = String(p.requestingParty || '').replace(/\s+/g, ' ').trim();
@@ -11003,27 +11084,8 @@ const Contractors = {
             return false;
         };
 
-        const evaluations = (AppState.appData.contractorEvaluations || []).filter(e => {
-            if (!e) return false;
-            if (e.contractorId != null && e.contractorId !== '' && idsSet.has(normalize(e.contractorId))) return true;
-            if (e.contractorId === contractorId || e.contractorId === contractor.contractorId) return true;
-            return matchesContractor(e);
-        });
-        const violations = (AppState.appData.violations || []).filter(v => {
-            if (!v) return false;
-            const vPersonType = (v.personType || '').toString().trim().toLowerCase();
-            if (vPersonType === 'employee' || vPersonType === 'موظف') return false;
-            const isContractorType = vPersonType === 'contractor' || vPersonType === 'مقاول';
-            if (v.contractorId != null && v.contractorId !== '' && idsSet.has(normalize(v.contractorId))) return true;
-            if (v.contractorId === contractorId || v.contractorId === contractor.contractorId) return true;
-            if (!isContractorType && !v.contractorName && (v.contractorId == null || v.contractorId === '')) return false;
-            if (isContractorType || v.contractorName || (v.contractorId != null && v.contractorId !== '')) {
-                if (matchesContractor(v)) return true;
-                const vName = String(v.contractorName || v.contractorId || '').replace(/\s+/g, ' ').trim();
-                if (vName && nameMatchesContractorStrict(vName)) return true;
-            }
-            return false;
-        });
+        const evaluations = (AppState.appData.contractorEvaluations || []).filter(ctx.evaluationBelongsToContractor);
+        const violations = (AppState.appData.violations || []).filter(ctx.violationBelongsToContractor);
 
         const uniqueEvalIds = new Set(evaluations.map(e => e.id || e.evaluationId).filter(Boolean));
         const evaluationsCountDisplay = uniqueEvalIds.size > 0 ? uniqueEvalIds.size : evaluations.length;
