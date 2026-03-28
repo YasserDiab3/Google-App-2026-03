@@ -45,6 +45,8 @@
                 t.includes('Unchecked runtime.lastError') ||
                 t.includes('message port closed') ||
                 t.includes('Message port closed') ||
+                t.includes('port closed before a response') ||
+                t.includes('before a response was received') ||
                 t.includes('message channel closed') ||
                 t.includes('asynchronous response') ||
                 t.includes('Receiving end does not exist') ||
@@ -70,6 +72,16 @@
                 }
             }
             originalWarn.apply(console, args);
+        };
+        const originalLog = console.log;
+        console.log = function (...args) {
+            if (args.length > 0) {
+                const allArgs = args.map((arg) => String(arg || '')).join(' ');
+                if (args.some((a) => extNoise(a)) || extNoise(allArgs)) {
+                    return;
+                }
+            }
+            originalLog.apply(console, args);
         };
     }
 

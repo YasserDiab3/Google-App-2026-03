@@ -200,6 +200,17 @@ const DailyObservations = {
         return rl === 'admin' || rl === 'system_admin' || r === 'مدير النظام' || r === 'مدير';
     },
 
+    /**
+     * حذف/تعديل السجل، الاستيراد، تصدير PPT، حذف الجميع — لمدير النظام (الدور أو صلاحية المدير في Permissions)
+     */
+    canDailyObservationsFullAdminUi() {
+        if (this._isAdminRole(AppState.currentUser)) return true;
+        if (typeof Permissions !== 'undefined' && typeof Permissions.isCurrentUserAdmin === 'function') {
+            return Permissions.isCurrentUserAdmin();
+        }
+        return false;
+    },
+
     _isSafetyOfficerRole(user) {
         if (!user) return false;
         const r = String(user.role || '').trim();
@@ -444,6 +455,12 @@ const DailyObservations = {
     },
 
     openEditFromDetailModal(observationId) {
+        if (!this.canDailyObservationsFullAdminUi()) {
+            if (typeof Notification !== 'undefined' && Notification.error) {
+                Notification.error('تعديل الملاحظة متاح لمدير النظام فقط');
+            }
+            return;
+        }
         const openModal = document.querySelector('.modal-overlay[data-observation-id="' + observationId + '"]')
             || document.querySelector('.modal-overlay');
         if (openModal) openModal.remove();
@@ -1100,23 +1117,27 @@ const DailyObservations = {
                             <p class="section-subtitle">تسجيل الملاحظات اليومية ومتابعة الإجراءات التصحيحية</p>
                         </div>
                         <div class="flex items-center gap-2 flex-wrap">
+                            ${this.canDailyObservationsFullAdminUi() ? `
                             <button id="import-observations-excel-btn" class="btn-secondary">
                                 <i class="fas fa-file-import ml-2"></i>
                                 استيراد من Excel
                             </button>
+                            ` : ''}
                             <button id="export-observations-excel-btn" class="btn-success">
                                 <i class="fas fa-file-excel ml-2"></i>
                                 تصدير Excel
                             </button>
+                            ${this.canDailyObservationsFullAdminUi() ? `
                             <button id="export-observations-ppt-btn" class="btn-secondary">
                                 <i class="fas fa-file-powerpoint ml-2"></i>
                                 تصدير PPT
                             </button>
+                            ` : ''}
                             <button id="add-observation-btn" class="btn-primary">
                                 <i class="fas fa-plus ml-2"></i>
                                 إضافة ملاحظة جديدة
                             </button>
-                            ${this.isCurrentUserAdmin() ? `
+                            ${this.canDailyObservationsFullAdminUi() ? `
                             <button id="delete-all-observations-btn" class="btn-secondary" style="background-color: #dc3545; color: white; border-color: #dc3545;">
                                 <i class="fas fa-trash-alt ml-2"></i>
                                 حذف جميع الملاحظات
@@ -1189,18 +1210,24 @@ const DailyObservations = {
             
             try {
                 requestAnimationFrame(() => {
-                    try {
-                        // لا تبدأ تحديث القائمة إذا لم يكن تبويب "سجل الملاحظات" متاحاً
-                        if (this.state && this.state.activeTab === 'observations-registry') {
-                            this.loadObservationsList();
-                            try {
-                                this.runObservationDueDateReminders();
-                            } catch (remErr) {
-                                Utils.safeWarn('⚠️ تنبيهات مواعيد الملاحظات:', remErr);
+                    const runDeferred = () => {
+                        try {
+                            if (this.state && this.state.activeTab === 'observations-registry') {
+                                void this.loadObservationsList();
+                                try {
+                                    this.runObservationDueDateReminders();
+                                } catch (remErr) {
+                                    Utils.safeWarn('⚠️ تنبيهات مواعيد الملاحظات:', remErr);
+                                }
                             }
+                        } catch (err) {
+                            Utils.safeWarn('⚠️ خطأ في تحميل قائمة الملاحظات الأولي:', err);
                         }
-                    } catch (err) {
-                        Utils.safeWarn('⚠️ خطأ في تحميل قائمة الملاحظات الأولي:', err);
+                    };
+                    if (typeof requestIdleCallback !== 'undefined') {
+                        requestIdleCallback(runDeferred, { timeout: 2500 });
+                    } else {
+                        setTimeout(runDeferred, 0);
                     }
                 });
             } catch (error) {
@@ -4480,6 +4507,12 @@ const DailyObservations = {
      * - الشريحة الأخيرة: ثابتة
      */
     async showExportPptModal() {
+        if (!this.canDailyObservationsFullAdminUi()) {
+            if (typeof Notification !== 'undefined' && Notification.error) {
+                Notification.error('تصدير PPT متاح لمدير النظام فقط');
+            }
+            return;
+        }
         const modal = document.createElement('div');
         modal.className = 'modal-overlay';
 
@@ -4589,6 +4622,12 @@ const DailyObservations = {
 
     async exportPptReport({ department, reportDate, fromDate, toDate }) {
         try {
+            if (!this.canDailyObservationsFullAdminUi()) {
+                if (typeof Notification !== 'undefined' && Notification.error) {
+                    Notification.error('تصدير PPT متاح لمدير النظام فقط');
+                }
+                return;
+            }
             if (!AppState.googleConfig?.appsScript?.enabled || !AppState.googleConfig?.appsScript?.scriptUrl) {
                 Notification.error('Google Apps Script غير مفعّل. يرجى تفعيله في الإعدادات أولاً.');
                 return;
@@ -4714,6 +4753,12 @@ const DailyObservations = {
      * عرض نافذة إعداد Template ID لتصدير PPT
      */
     async showPptTemplateIdSetupModal() {
+        if (!this.canDailyObservationsFullAdminUi()) {
+            if (typeof Notification !== 'undefined' && Notification.error) {
+                Notification.error('إعدادات قالب PPT متاحة لمدير النظام فقط');
+            }
+            return;
+        }
         // محاولة الحصول على Template ID الحالي
         let currentTemplateId = null;
         let currentTemplateInfo = null;
@@ -6918,12 +6963,14 @@ const DailyObservations = {
                     <button type="button" onclick="DailyObservations.exportPDF('${observation.id}');" class="btn-secondary" style="margin: 0 5px;">
                         <i class="fas fa-file-pdf ml-2"></i>تصدير PDF
                     </button>
+                    ${this.canDailyObservationsFullAdminUi() ? `
                     <button type="button" onclick="DailyObservations.openEditFromDetailModal('${observation.id}')" class="btn-primary" style="margin: 0 5px;">
                         <i class="fas fa-edit ml-2"></i>تعديل
                     </button>
                     <button type="button" onclick="DailyObservations.deleteObservation('${observation.id}'); this.closest('.modal-overlay').remove();" class="btn-secondary" style="background-color: #dc3545; color: white; border-color: #dc3545; margin: 0 5px;">
                         <i class="fas fa-trash ml-2"></i>حذف
                     </button>
+                    ` : ''}
                 </div>
             </div>
         `;
@@ -7616,6 +7663,10 @@ const DailyObservations = {
             Notification.error('معرف الملاحظة غير موجود');
             return;
         }
+        if (!this.canDailyObservationsFullAdminUi()) {
+            Notification.error('حذف الملاحظة متاح لمدير النظام فقط');
+            return;
+        }
 
         const observation = AppState.appData.dailyObservations.find((o) => o.id === id);
         if (!observation) {
@@ -7669,8 +7720,7 @@ const DailyObservations = {
     },
 
     async deleteAllObservations() {
-        // التحقق من صلاحيات المدير
-        if (!this.isCurrentUserAdmin()) {
+        if (!this.canDailyObservationsFullAdminUi()) {
             Notification.error('هذه الميزة متاحة لمدير النظام فقط');
             return;
         }
@@ -7814,6 +7864,12 @@ const DailyObservations = {
     },
 
     async showImportExcelModal() {
+        if (!this.canDailyObservationsFullAdminUi()) {
+            if (typeof Notification !== 'undefined' && Notification.error) {
+                Notification.error('استيراد الملاحظات متاح لمدير النظام فقط');
+            }
+            return;
+        }
         const modal = document.createElement('div');
         modal.className = 'modal-overlay';
         modal.innerHTML = `
