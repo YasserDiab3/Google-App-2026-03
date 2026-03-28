@@ -5281,10 +5281,11 @@ const DailyObservations = {
         return place ? place.name : '';
     },
 
-    async fetchPlacesForSite(siteId) {
+    /** أماكن الموقع من الذاكرة المحلية فوراً (بدون انتظار شبكة) */
+    getPlacesForSiteSync(siteId) {
         if (!siteId) return [];
         const site = this.getAllSites().find((item) => item.id === siteId);
-        if (site && Array.isArray(site.places)) {
+        if (site && Array.isArray(site.places) && site.places.length > 0) {
             return site.places;
         }
 
@@ -5301,7 +5302,56 @@ const DailyObservations = {
             return placesSource.map((place, idx) => this.normalizePlace(place, idx, siteId)).filter(Boolean);
         }
 
-        return [];
+        return site && Array.isArray(site.places) ? site.places : [];
+    },
+
+    async fetchPlacesForSite(siteId) {
+        return this.getPlacesForSiteSync(siteId);
+    },
+
+    /** اسم العرض لصاحب الملاحظة من المستخدم الحالي */
+    getLoggedInObserverName() {
+        const u = AppState.currentUser || {};
+        const name = (u.name || u.fullName || u.displayName || '').toString().trim();
+        if (name) return name;
+        const email = (u.email || '').toString().trim();
+        if (email) return email.split('@')[0] || email;
+        return '';
+    },
+
+    /** خيارات select لحقل صاحب الملاحظة: افتراضياً اسم المستخدم الحالي عند إضافة ملاحظة جديدة */
+    buildObservationOwnerSelectOptionsHtml(normalizedData) {
+        const members = this.getSafetyTeamMembers();
+        const accountName = this.getLoggedInObserverName();
+        const isNew = !normalizedData;
+        const savedName = (normalizedData && String(normalizedData.observerName || '').trim()) || '';
+        const parts = ['<option value="">— اختر من القائمة —</option>'];
+
+        if (isNew && accountName) {
+            const esc = Utils.escapeHTML(accountName);
+            parts.push(`<option value="${esc}" selected data-observer-account="1">حسابك الحالي (${esc})</option>`);
+        }
+
+        const seen = new Set();
+        if (isNew && accountName) seen.add(accountName.toLowerCase());
+
+        members.forEach((member) => {
+            const n = (member.name || '').trim();
+            if (!n) return;
+            const key = n.toLowerCase();
+            if (seen.has(key)) return;
+            seen.add(key);
+            const esc = Utils.escapeHTML(n);
+            const sel = !isNew && savedName === n ? ' selected' : '';
+            parts.push(`<option value="${esc}"${sel}>${esc}</option>`);
+        });
+
+        if (!isNew && savedName && !members.some((m) => (m.name || '').trim() === savedName)) {
+            const esc = Utils.escapeHTML(savedName);
+            parts.splice(1, 0, `<option value="${esc}" selected>${esc}</option>`);
+        }
+
+        return parts.join('');
     },
 
     getDepartmentOptions() {
@@ -5773,14 +5823,14 @@ const DailyObservations = {
         return local.toISOString().slice(0, 16);
     },
 
-    async loadPlacesForSite(siteId, selectEl, customLocationWrapper, customLocationInput, stepTwoContainer, selectedPlaceId = '', fallbackLocationName = '') {
+    /**
+     * تعبئة قائمة الأماكن الفرعية فوراً من بيانات المواقع المحمّلة (بدون انتظار أو رسالة «جاري التحميل»)
+     */
+    loadPlacesForSite(siteId, selectEl, customLocationWrapper, customLocationInput, stepTwoContainer, selectedPlaceId = '', fallbackLocationName = '') {
         if (!selectEl) return;
         this.state.isLoadingPlaces = true;
-        selectEl.disabled = true;
-        selectEl.innerHTML = '<option value="">جاري تحميل الأماكن...</option>';
-
         try {
-            const places = await this.fetchPlacesForSite(siteId);
+            const places = this.getPlacesForSiteSync(siteId);
             this.state.availablePlaces = places;
 
             if (!places || places.length === 0) {
@@ -5994,13 +6044,13 @@ const DailyObservations = {
 
                             <div class="form-grid form-grid-2">
                                 <div class="form-group">
-                                    <label class="form-label">اسم صاحب الملاحظة</label>
-                                    <select id="observation-owner" class="form-input form-select">
-                                        <option value="">اختر اسم صاحب الملاحظة</option>
-                                        ${this.getSafetyTeamMembers().map((member) => `
-                                            <option value="${Utils.escapeHTML(member.name)}">${Utils.escapeHTML(member.name)}</option>
-                                        `).join('')}
+                                    <label class="form-label" for="observation-owner">اسم صاحب الملاحظة</label>
+                                    <select id="observation-owner" class="form-input form-select" aria-describedby="observation-owner-hint">
+                                        ${this.buildObservationOwnerSelectOptionsHtml(normalizedData)}
                                     </select>
+                                    <p id="observation-owner-hint" class="text-xs opacity-80 mt-1" style="color: var(--text-secondary, #64748b);">
+                                        ${normalizedData ? 'يمكنك تغيير الاسم من القائمة إن لزم.' : 'يُعرض افتراضياً اسم حسابك الحالي؛ اختر اسماً آخر من القائمة إذا سجّلت نيابة عن زميل.'}
+                                    </p>
                                 </div>
                                 <div class="form-group">
                                     <label for="observation-expected-date" class="form-label">التاريخ المتوقع للتنفيذ</label>
@@ -6144,7 +6194,17 @@ const DailyObservations = {
             form.querySelector('#observation-risk').value = normalizedData.riskLevel || '';
             form.querySelector('#observation-responsible').value = normalizedData.responsibleDepartment || '';
             form.querySelector('#observation-status').value = normalizedData.status || '';
-            form.querySelector('#observation-owner').value = normalizedData.observerName || '';
+            const ownerSel = form.querySelector('#observation-owner');
+            const obsName = String(normalizedData.observerName || '').trim();
+            if (ownerSel && obsName) {
+                if (!Array.from(ownerSel.options).some((o) => o.value === obsName)) {
+                    const opt = document.createElement('option');
+                    opt.value = obsName;
+                    opt.textContent = obsName;
+                    ownerSel.insertBefore(opt, ownerSel.children[1] || null);
+                }
+                ownerSel.value = obsName;
+            }
 
             const overdaysInput = form.querySelector('#observation-overdays');
             if (overdaysInput && normalizedData.overdays !== undefined) {
@@ -6204,7 +6264,7 @@ const DailyObservations = {
             dateInput.addEventListener('input', updateOverdays);
         }
 
-        siteSelect.addEventListener('change', async (event) => {
+        siteSelect.addEventListener('change', (event) => {
             const siteId = event.target.value;
             this.state.selectedSiteId = siteId;
             this.state.selectedSiteName = this.lookupSiteName(siteId);
@@ -6221,7 +6281,7 @@ const DailyObservations = {
                 return;
             }
 
-            await this.loadPlacesForSite(siteId, placeSelect, customLocationWrapper, customLocationInput, stepTwoContainer);
+            this.loadPlacesForSite(siteId, placeSelect, customLocationWrapper, customLocationInput, stepTwoContainer);
         });
 
         placeSelect.addEventListener('change', (event) => {
@@ -6311,7 +6371,7 @@ const DailyObservations = {
         });
 
         if (normalizedData && normalizedData.siteId) {
-            await this.loadPlacesForSite(
+            this.loadPlacesForSite(
                 normalizedData.siteId,
                 placeSelect,
                 customLocationWrapper,
@@ -6451,6 +6511,15 @@ const DailyObservations = {
             ? AppState.appData.dailyObservations.find((observation) => observation.id === editId)
             : null;
         const currentUser = AppState.currentUser || {};
+        const ownerPick = (ownerSelect?.value || '').trim();
+        const observerNameResolved = ownerPick
+            || (editId ? String(existingRecord?.observerName || '').trim() : '')
+            || this.getLoggedInObserverName()
+            || '';
+        if (!observerNameResolved) {
+            Notification.warning('يرجى تحديد اسم صاحب الملاحظة (من القائمة أو من بيانات حسابك).');
+            return;
+        }
 
         // تعديل: نحتفظ بنفس id دون تغيير. جديد: نولّد id ثم نشتق isoCode من أرقامه فقط
         const recordId = editId || generateDailyObservationId(AppState.appData.dailyObservations || []);
@@ -6493,7 +6562,7 @@ const DailyObservations = {
             correctiveAction: (correctiveInput?.value || '').trim(),
             responsibleDepartment,
             riskLevel,
-            observerName: ownerSelect?.value || '',
+            observerName: observerNameResolved,
             expectedCompletionDate: expectedIso,
             status,
             overdays: overdays,
@@ -6504,7 +6573,7 @@ const DailyObservations = {
             createdAt: existingRecord?.createdAt || now,
             updatedAt: now,
             workflowStage: editId ? (existingRecord?.workflowStage || 'pending_specialist') : 'pending_specialist',
-            submittedBy: editId ? (existingRecord?.submittedBy || '') : ((currentUser.name || '').trim() || (ownerSelect?.value || '').trim()),
+            submittedBy: editId ? (existingRecord?.submittedBy || '') : ((currentUser.name || '').trim() || observerNameResolved),
             submittedByEmail: editId ? (existingRecord?.submittedByEmail || '') : ((currentUser.email || '').trim()),
             submittedAt: editId ? (existingRecord?.submittedAt || now) : now,
             specialistReviewedBy: editId ? (existingRecord?.specialistReviewedBy || '') : '',
