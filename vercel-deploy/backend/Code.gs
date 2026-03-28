@@ -197,7 +197,8 @@ function doPost(e) {
             // ✅ طلبات موافقة - عيادة
             'getAllMedicationDeletionRequests',
             'getAllSupplyRequests',
-            'getAllClinicVisitDeletionRequests'
+            'getAllClinicVisitDeletionRequests',
+            'getContractorDetailedAnalytics'
         ];
         
         // قائمة بالـ actions الحساسة التي تتطلب CSRF token إلزامي
@@ -777,6 +778,9 @@ function doPost(e) {
                     break;
                 case 'getContractorEvaluations':
                     result = getContractorEvaluations(payload.contractorId || payload.id);
+                    break;
+                case 'getContractorDetailedAnalytics':
+                    result = getContractorDetailedAnalytics(payload);
                     break;
                 
                 // طلبات اعتماد المقاولين

@@ -1204,3 +1204,179 @@ function rejectContractorDeletionRequest(requestId, rejectionReason, userData) {
     }
 }
 
+// ========== تحليل المقاول — مصدر حقيقة من الجداول (Violations + ContractorEvaluations) ==========
+
+function _cabNormStr_(v) {
+    return String(v == null ? '' : v).trim().toLowerCase().replace(/\s+/g, ' ');
+}
+
+function _cabBuildIdSet_(contractor, contractorIdParam) {
+    var set = {};
+    function add(x) {
+        var k = _cabNormStr_(x);
+        if (k) set[k] = true;
+    }
+    if (!contractor) contractor = {};
+    add(contractorIdParam);
+    add(contractor.id);
+    add(contractor.contractorId);
+    add(contractor.code);
+    add(contractor.isoCode);
+    add(contractor.licenseNumber);
+    add(contractor.contractNumber);
+    add(contractor.approvedEntityId);
+    add(contractor.entityCode);
+    return set;
+}
+
+function _cabIdInSet_(val, idSet) {
+    var k = _cabNormStr_(val);
+    return k && idSet[k] === true;
+}
+
+function _cabNameMatchStrict_(vName, contractorName, companyName) {
+    if (!vName || typeof vName !== 'string') return false;
+    var v = vName.replace(/\s+/g, ' ').trim().toLowerCase();
+    var cn = String(contractorName || '').trim().toLowerCase();
+    var comp = String(companyName || '').trim().toLowerCase();
+    if (!v) return false;
+    if (v === cn || v === comp) return true;
+    if (cn && (v === cn || v.indexOf(cn) === 0 || cn.indexOf(v) === 0)) return true;
+    if (comp && (v === comp || v.indexOf(comp) === 0 || comp.indexOf(v) === 0)) return true;
+    if (cn.length >= 4 && v.indexOf(cn) !== -1) return true;
+    if (comp.length >= 4 && v.indexOf(comp) !== -1) return true;
+    return false;
+}
+
+function _cabRecordMatchesContractor_(record, idSet, contractorName, companyName) {
+    if (!record) return false;
+    var n = _cabNormStr_;
+    var rId = n(record.contractorId) || n(record.contractorCode) || n(record.code);
+    if (rId && idSet[rId]) return true;
+    if (record.contractorId != null && record.contractorId !== '' && idSet[n(record.contractorId)]) return true;
+    if (record.contractorCode != null && record.contractorCode !== '' && idSet[n(record.contractorCode)]) return true;
+    var rName = String(record.contractorName || record.companyName || record.company || record.contractorCompany || record.name || record.externalName || record.contractorWorkerName || record.contractorWorker || '').replace(/\s+/g, ' ').trim();
+    if (!rName) return false;
+    var rLower = rName.toLowerCase();
+    var cnLower = String(contractorName || '').trim().toLowerCase();
+    var compLower = String(companyName || '').trim().toLowerCase();
+    if (cnLower && rLower === cnLower) return true;
+    if (compLower && rLower === compLower) return true;
+    return _cabNameMatchStrict_(rName, contractorName, companyName);
+}
+
+function _cabViolationBelongs_(v, idSet, cName, compName, contractorIdParam, contractor) {
+    if (!v) return false;
+    var pt = String(v.personType || '').trim().toLowerCase();
+    if ((pt === 'employee' || pt === 'موظف') &&
+        !(v.contractorName && String(v.contractorName).trim()) &&
+        (v.contractorId == null || String(v.contractorId).trim() === '')) {
+        return false;
+    }
+    if (v.contractorId != null && String(v.contractorId).trim() !== '' && _cabIdInSet_(v.contractorId, idSet)) return true;
+    var cid = contractor && contractor.id;
+    var coid = contractor && contractor.contractorId;
+    if (String(v.contractorId) === String(contractorIdParam)) return true;
+    if (cid && String(v.contractorId) === String(cid)) return true;
+    if (coid && String(v.contractorId) === String(coid)) return true;
+    var isContractorType = pt === 'contractor' || pt === 'مقاول';
+    if (!isContractorType && !v.contractorName && (v.contractorId == null || String(v.contractorId).trim() === '')) return false;
+    if (isContractorType || v.contractorName || (v.contractorId != null && String(v.contractorId).trim() !== '')) {
+        if (_cabRecordMatchesContractor_(v, idSet, cName, compName)) return true;
+        var vName = String(v.contractorName || v.contractorId || '').replace(/\s+/g, ' ').trim();
+        if (vName && _cabNameMatchStrict_(vName, cName, compName)) return true;
+    }
+    return false;
+}
+
+function _cabEvalBelongs_(e, idSet, cName, compName, contractorIdParam, contractor) {
+    if (!e) return false;
+    if (e.contractorId != null && String(e.contractorId).trim() !== '' && _cabIdInSet_(e.contractorId, idSet)) return true;
+    if (String(e.contractorId) === String(contractorIdParam)) return true;
+    if (contractor && contractor.id && String(e.contractorId) === String(contractor.id)) return true;
+    if (contractor && contractor.contractorId && String(e.contractorId) === String(contractor.contractorId)) return true;
+    return _cabRecordMatchesContractor_(e, idSet, cName, compName);
+}
+
+/**
+ * إحصائيات مفصّلة للمقاول من ورقتي Violations و ContractorEvaluations (قراءة مباشرة من الجدول)
+ * payload: { contractor: { id, contractorId, code, isoCode, companyName, name, licenseNumber, ... }, contractorId?: string }
+ */
+function getContractorDetailedAnalytics(payload) {
+    try {
+        payload = payload || {};
+        var contractor = payload.contractor;
+        if (!contractor || typeof contractor !== 'object') {
+            contractor = (payload.id || payload.contractorId || payload.companyName || payload.name) ? payload : {};
+        }
+        var contractorIdParam = payload.contractorId || payload.contractorIdParam || contractor.id || contractor.contractorId;
+        if (!contractor || (String(contractor.id || '').trim() === '' && String(contractor.contractorId || '').trim() === '' &&
+            String(contractor.companyName || contractor.name || '').trim() === '')) {
+            return { success: false, message: 'بيانات المقاول غير كافية' };
+        }
+        var spreadsheetId = getSpreadsheetId();
+        if (!spreadsheetId || String(spreadsheetId).trim() === '') {
+            return { success: false, message: 'معرف Google Sheets غير محدد' };
+        }
+        var violations = readFromSheet('Violations', spreadsheetId) || [];
+        var evaluations = readFromSheet('ContractorEvaluations', spreadsheetId) || [];
+        var cName = String(contractor.name || contractor.companyName || '').trim();
+        var compName = String(contractor.companyName || '').trim();
+        var idSet = _cabBuildIdSet_(contractor, contractorIdParam);
+        var vList = [];
+        var i;
+        for (i = 0; i < violations.length; i++) {
+            if (_cabViolationBelongs_(violations[i], idSet, cName, compName, contractorIdParam, contractor)) {
+                vList.push(violations[i]);
+            }
+        }
+        var eList = [];
+        var j;
+        for (j = 0; j < evaluations.length; j++) {
+            if (_cabEvalBelongs_(evaluations[j], idSet, cName, compName, contractorIdParam, contractor)) {
+                eList.push(evaluations[j]);
+            }
+        }
+        var scores = [];
+        var k;
+        for (k = 0; k < eList.length; k++) {
+            var sc = parseFloat(eList[k].finalScore);
+            if (isNaN(sc)) sc = parseFloat(eList[k].score);
+            if (!isNaN(sc) && sc >= 0 && sc <= 100) scores.push(sc);
+        }
+        var avgScore = 0;
+        if (scores.length > 0) {
+            var sum = 0;
+            var s;
+            for (s = 0; s < scores.length; s++) sum += scores[s];
+            avgScore = Math.round((sum / scores.length) * 100) / 100;
+        }
+        var highV = 0;
+        var resolvedV = 0;
+        var x;
+        for (x = 0; x < vList.length; x++) {
+            var sev = String(vList[x].severity || '').trim();
+            if (sev === 'عالية' || sev === 'high' || sev === 'حرجة') highV++;
+            var st = String(vList[x].status || '').trim();
+            if (st === 'محلول' || st === 'resolved' || st === 'تم الحل') resolvedV++;
+        }
+        var resRate = vList.length > 0 ? Math.round((resolvedV / vList.length) * 100) : 100;
+        return {
+            success: true,
+            data: {
+                violations: vList,
+                evaluations: eList,
+                violationsCount: vList.length,
+                evaluationsCount: eList.length,
+                avgScore: avgScore,
+                highViolations: highV,
+                resolvedViolations: resolvedV,
+                resolutionRate: resRate
+            }
+        };
+    } catch (error) {
+        Logger.log('getContractorDetailedAnalytics: ' + error.toString());
+        return { success: false, message: 'حدث خطأ: ' + error.toString() };
+    }
+}
+

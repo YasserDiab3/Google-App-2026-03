@@ -9830,19 +9830,17 @@ const Contractors = {
         let violations = AppState.appData.violations || [];
         if (typeof GoogleIntegration !== 'undefined' && GoogleIntegration.readFromSheets && AppState.googleConfig?.appsScript?.enabled) {
             try {
-                if (!violations.length) {
-                    const v = await GoogleIntegration.readFromSheets('Violations');
-                    if (Array.isArray(v)) {
-                        AppState.appData.violations = v;
-                        violations = v;
-                    }
+                const [v, ev] = await Promise.all([
+                    GoogleIntegration.readFromSheets('Violations'),
+                    GoogleIntegration.readFromSheets('ContractorEvaluations')
+                ]);
+                if (Array.isArray(v)) {
+                    AppState.appData.violations = v;
+                    violations = v;
                 }
-                if (!evaluations.length) {
-                    const ev = await GoogleIntegration.readFromSheets('ContractorEvaluations');
-                    if (Array.isArray(ev)) {
-                        AppState.appData.contractorEvaluations = ev;
-                        evaluations = ev;
-                    }
+                if (Array.isArray(ev)) {
+                    AppState.appData.contractorEvaluations = ev;
+                    evaluations = ev;
                 }
             } catch (e) {
                 if (typeof Utils !== 'undefined' && Utils.safeWarn) Utils.safeWarn('تعذر جلب مخالفات أو تقييمات لتحليل المقاولين:', e);
@@ -10675,7 +10673,10 @@ const Contractors = {
         const contractorName = (contractor.name || contractor.companyName || '').trim();
         const normalize = (v) => (v == null || v === '') ? '' : String(v).trim().toLowerCase();
         const idsSet = new Set();
-        [contractorIdParam, contractor.id, contractor.contractorId, contractor.code, contractor.isoCode].forEach(x => {
+        [
+            contractorIdParam, contractor.id, contractor.contractorId, contractor.code, contractor.isoCode,
+            contractor.licenseNumber, contractor.contractNumber, contractor.approvedEntityId, contractor.entityCode
+        ].forEach(x => {
             if (x != null && x !== '') idsSet.add(normalize(x));
         });
         const namesSet = new Set();
@@ -10706,7 +10707,6 @@ const Contractors = {
             if (rId && idsSet.has(rId)) return true;
             if (record.contractorId != null && record.contractorId !== '' && idsSet.has(normalize(record.contractorId))) return true;
             if (record.contractorCode != null && record.contractorCode !== '' && idsSet.has(normalize(record.contractorCode))) return true;
-            if (rId && nameMatchesContractorStrict(rId)) return true;
             const rName = String(record.contractorName || record.companyName || record.company || record.contractorCompany || record.name || record.externalName || record.contractorWorkerName || record.contractorWorker || '').replace(/\s+/g, ' ').trim();
             if (!rName) return false;
             if (namesSet.has(rName) || namesSet.has(rName.toLowerCase())) return true;
@@ -11065,6 +11065,23 @@ const Contractors = {
                 }
             }
         }
+        let serverDetailedAnalytics = null;
+        if (typeof GoogleIntegration !== 'undefined' && GoogleIntegration.sendRequest && AppState.googleConfig?.appsScript?.enabled) {
+            try {
+                const analyticsRes = await GoogleIntegration.sendRequest({
+                    action: 'getContractorDetailedAnalytics',
+                    data: { contractor, contractorId }
+                });
+                if (analyticsRes && analyticsRes.success && analyticsRes.data &&
+                    Array.isArray(analyticsRes.data.violations) && Array.isArray(analyticsRes.data.evaluations)) {
+                    serverDetailedAnalytics = analyticsRes.data;
+                }
+            } catch (e) {
+                if (typeof Utils !== 'undefined' && Utils.safeWarn) {
+                    Utils.safeWarn('تعذر جلب تحليل المقاول من الخادم؛ يُستخدم التصفية المحلية:', e);
+                }
+            }
+        }
         const contractorName = (contractor.name || contractor.companyName || '').trim();
         const ctx = this.buildContractorAnalyticsMatchers(contractor, contractorId);
         const matchesContractor = ctx.matchesContractor;
@@ -11084,38 +11101,59 @@ const Contractors = {
             return false;
         };
 
-        const evaluations = (AppState.appData.contractorEvaluations || []).filter(ctx.evaluationBelongsToContractor);
-        const violations = (AppState.appData.violations || []).filter(ctx.violationBelongsToContractor);
+        let evaluations;
+        let violations;
+        let avgScore = 0;
+        let highViolations = 0;
+        let resolvedViolations = 0;
+        let resolutionRate = 100;
+
+        if (serverDetailedAnalytics) {
+            evaluations = serverDetailedAnalytics.evaluations;
+            violations = serverDetailedAnalytics.violations;
+            avgScore = typeof serverDetailedAnalytics.avgScore === 'number' ? serverDetailedAnalytics.avgScore : 0;
+            highViolations = typeof serverDetailedAnalytics.highViolations === 'number'
+                ? serverDetailedAnalytics.highViolations
+                : violations.filter(v => {
+                    const severity = (v.severity || '').toString().trim();
+                    return severity === 'عالية' || severity === 'high' || severity === 'حرجة';
+                }).length;
+            resolvedViolations = typeof serverDetailedAnalytics.resolvedViolations === 'number'
+                ? serverDetailedAnalytics.resolvedViolations
+                : violations.filter(v => {
+                    const status = (v.status || '').toString().trim();
+                    return status === 'محلول' || status === 'resolved' || status === 'تم الحل';
+                }).length;
+            resolutionRate = typeof serverDetailedAnalytics.resolutionRate === 'number'
+                ? serverDetailedAnalytics.resolutionRate
+                : (violations.length > 0 ? Math.round((resolvedViolations / violations.length) * 100) : 100);
+        } else {
+            evaluations = (AppState.appData.contractorEvaluations || []).filter(ctx.evaluationBelongsToContractor);
+            violations = (AppState.appData.violations || []).filter(ctx.violationBelongsToContractor);
+            if (evaluations.length > 0) {
+                const validScores = evaluations
+                    .map(e => parseFloat(e.finalScore) || parseFloat(e.score) || 0)
+                    .filter(score => !isNaN(score) && score >= 0 && score <= 100);
+                if (validScores.length > 0) {
+                    const sum = validScores.reduce((acc, score) => acc + score, 0);
+                    avgScore = Math.round((sum / validScores.length) * 100) / 100;
+                }
+            }
+            highViolations = violations.filter(v => {
+                const severity = (v.severity || '').toString().trim();
+                return severity === 'عالية' || severity === 'high' || severity === 'حرجة';
+            }).length;
+            resolvedViolations = violations.filter(v => {
+                const status = (v.status || '').toString().trim();
+                return status === 'محلول' || status === 'resolved' || status === 'تم الحل';
+            }).length;
+            resolutionRate = violations.length > 0
+                ? Math.round((resolvedViolations / violations.length) * 100)
+                : 100;
+        }
 
         const uniqueEvalIds = new Set(evaluations.map(e => e.id || e.evaluationId).filter(Boolean));
         const evaluationsCountDisplay = uniqueEvalIds.size > 0 ? uniqueEvalIds.size : evaluations.length;
-
-        // حساب الإحصائيات
-        let avgScore = 0;
-        if (evaluations.length > 0) {
-            const validScores = evaluations
-                .map(e => parseFloat(e.finalScore) || parseFloat(e.score) || 0)
-                .filter(score => !isNaN(score) && score >= 0 && score <= 100);
-            
-            if (validScores.length > 0) {
-                const sum = validScores.reduce((acc, score) => acc + score, 0);
-                avgScore = Math.round((sum / validScores.length) * 100) / 100;
-            }
-        }
-
-        const highViolations = violations.filter(v => {
-            const severity = (v.severity || '').toString().trim();
-            return severity === 'عالية' || severity === 'high' || severity === 'حرجة';
-        }).length;
-
-        const resolvedViolations = violations.filter(v => {
-            const status = (v.status || '').toString().trim();
-            return status === 'محلول' || status === 'resolved' || status === 'تم الحل';
-        }).length;
-
-        const resolutionRate = violations.length > 0
-            ? Math.round((resolvedViolations / violations.length) * 100)
-            : 100;
 
         const trainingList = AppState.appData.training || [];
         const trainingFromMain = trainingList.filter(t => {
