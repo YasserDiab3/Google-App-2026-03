@@ -5385,6 +5385,82 @@ body.app-active {
     color: var(--text-primary);
 }
 
+.notifications-dropdown-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+}
+
+.notifications-mark-all-read-btn {
+    background: transparent;
+    border: none;
+    color: var(--primary-color, #4f46e5);
+    cursor: pointer;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    padding: 0.35rem 0.5rem;
+    border-radius: 6px;
+    white-space: nowrap;
+}
+
+.notifications-mark-all-read-btn:hover {
+    background: var(--bg-tertiary);
+}
+
+.notification-item--observation {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.35rem;
+}
+
+.notification-item--observation-inner {
+    width: 100%;
+}
+
+.notification-item-obs-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+    direction: rtl;
+    text-align: right;
+}
+
+.notification-item--observation .notification-item-chevron {
+    flex-shrink: 0;
+    opacity: 0.45;
+    margin-top: 0.2rem;
+    font-size: 0.75rem;
+}
+
+.notification-item--observation .notification-item-content {
+    flex: 1;
+    min-width: 0;
+}
+
+.notification-item-open-obs {
+    background: none;
+    border: none;
+    color: var(--primary-color, #2563eb);
+    cursor: pointer;
+    font-size: 0.875rem;
+    font-weight: 600;
+    padding: 0.4rem 0 0;
+    margin: 0;
+    text-align: right;
+    text-decoration: underline;
+    width: auto;
+    align-self: flex-start;
+}
+
+.notification-item-open-obs:hover {
+    opacity: 0.9;
+}
+
+.notification-item--observation .notification-item-time {
+    padding-right: 1.35rem;
+    margin-top: 0.15rem;
+}
+
 .close-notifications-btn {
     background: transparent;
     border: none;

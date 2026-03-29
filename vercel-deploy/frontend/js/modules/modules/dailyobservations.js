@@ -883,6 +883,136 @@ const DailyObservations = {
         }
     },
 
+    /**
+     * عناصر صندوق الإشعارات العامة: حالة الملاحظات (تأخير، بانتظار مدير/أخصائي، إرسال للإدارة).
+     * تُربَط بـ localStorage للمقروء (نفس باقي الإشعارات في app-ui).
+     */
+    getObservationInboxNotifications(readNotifications) {
+        const read = Array.isArray(readNotifications) ? readNotifications : [];
+        const out = [];
+        if (!AppState?.appData?.dailyObservations || typeof this.getDailyObservationsVisibleToCurrentUser !== 'function') {
+            return out;
+        }
+        const u = AppState.currentUser;
+        if (!u) return out;
+
+        const adm = this._isAdminRole(u);
+        const specReviewPerm = typeof Permissions !== 'undefined' && Permissions.hasDetailedPermission &&
+            Permissions.hasDetailedPermission('daily-observations', 'observations-specialist-review');
+        const mgrApprovePerm = typeof Permissions !== 'undefined' && Permissions.hasDetailedPermission &&
+            Permissions.hasDetailedPermission('daily-observations', 'observations-manager-approve');
+        const canActAsSpecialist = adm || this._isSafetyOfficerRole(u) || specReviewPerm;
+        const canActAsSafetyManager = adm || mgrApprovePerm;
+
+        const navigateToObservation = (obsId) => {
+            return () => {
+                try {
+                    const nav = document.querySelector('a[data-section="daily-observations"]');
+                    if (nav) nav.click();
+                } catch (e) { /* ignore */ }
+                setTimeout(() => {
+                    if (typeof this.viewObservation === 'function') {
+                        void this.viewObservation(obsId);
+                    }
+                }, 320);
+            };
+        };
+
+        const list = this.getDailyObservationsVisibleToCurrentUser();
+        list.forEach((raw) => {
+            const o = this.normalizeRecord(raw);
+            const iso = String(o.isoCode || o.id || '').trim();
+            const oid = o.id;
+            const stage = String(o.workflowStage || '').trim();
+
+            const isDept = this.isUserInResponsibleDepartment(o);
+            const viewAll = this.canViewAllObservationsWorkflow();
+
+            if (stage === 'in_progress' && o.expectedCompletionDate) {
+                const due = new Date(o.expectedCompletionDate);
+                if (Number.isNaN(due.getTime())) return;
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+                const dueDay = new Date(due.getFullYear(), due.getMonth(), due.getDate());
+                if (dueDay < today && (viewAll || isDept)) {
+                    const daysOver = Math.floor((today - dueDay) / 86400000);
+                    const nid = `obs-delay-${oid}`;
+                    if (!read.includes(nid)) {
+                        const dayWord = daysOver === 1 ? 'يوماً' : `${daysOver} أيام`;
+                        out.push({
+                            id: nid,
+                            variant: 'observation',
+                            type: 'warning',
+                            title: 'تأخير موعد تنفيذ ملاحظة',
+                            message: `تجاوز موعد الإغلاق المتوقع للملاحظة ${iso} (${dayWord})`,
+                            time: o.updatedAt || o.expectedCompletionDate || new Date(),
+                            icon: 'fa-clock',
+                            observationId: oid,
+                            onClick: navigateToObservation(oid)
+                        });
+                    }
+                }
+            }
+
+            if (stage === 'pending_manager' && canActAsSafetyManager) {
+                const nid = `obs-pending-mgr-${oid}`;
+                if (!read.includes(nid)) {
+                    out.push({
+                        id: nid,
+                        variant: 'observation',
+                        type: 'info',
+                        title: 'ملاحظة بانتظار مدير السلامة',
+                        message: `الملاحظة ${iso} — راجعها واعتمدها لإرسالها للإدارة المعنية`,
+                        time: o.managerApprovedAt || o.updatedAt || new Date(),
+                        icon: 'fa-user-shield',
+                        observationId: oid,
+                        onClick: navigateToObservation(oid)
+                    });
+                }
+            }
+
+            if ((stage === 'pending_specialist' || stage === 'returned_specialist') && canActAsSpecialist) {
+                const nid = `obs-pending-spec-${oid}`;
+                if (!read.includes(nid)) {
+                    out.push({
+                        id: nid,
+                        variant: 'observation',
+                        type: 'info',
+                        title: 'ملاحظة بانتظار مراجعة مسؤول السلامة',
+                        message: `الملاحظة ${iso} — راجعها وأرسلها لمدير السلامة`,
+                        time: o.updatedAt || new Date(),
+                        icon: 'fa-clipboard-check',
+                        observationId: oid,
+                        onClick: navigateToObservation(oid)
+                    });
+                }
+            }
+
+            if (stage === 'pending_department' && (isDept || viewAll)) {
+                const nid = `obs-approved-dept-${oid}`;
+                if (!read.includes(nid)) {
+                    const detailShort = String(o.details || '').trim().slice(0, 120);
+                    const msg = detailShort
+                        ? `الملاحظة ${iso} — ${detailShort}${detailShort.length >= 120 ? '…' : ''}`
+                        : `الملاحظة ${iso} أرسلت للإدارة المسؤولة (${o.responsibleDepartment || ''}) لتسجيل الإجراء التصحيحي`;
+                    out.push({
+                        id: nid,
+                        variant: 'observation',
+                        type: 'success',
+                        title: 'تم اعتماد ملاحظة وإرسالها للإدارة',
+                        message: msg,
+                        time: o.managerApprovedAt || o.updatedAt || new Date(),
+                        icon: 'fa-check-circle',
+                        observationId: oid,
+                        onClick: navigateToObservation(oid)
+                    });
+                }
+            }
+        });
+
+        return out;
+    },
+
     DEFAULT_SITES: [
         { id: 'factory-1', name: 'مصنع 1' },
         { id: 'factory-2', name: 'مصنع 2' },

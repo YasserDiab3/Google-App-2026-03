@@ -6744,6 +6744,21 @@ window.UI = {
             }
         });
 
+        ['notifications-mark-all-read', 'mobile-notifications-mark-all-read', 'header-notifications-mark-all-read'].forEach((btnId) => {
+            const b = document.getElementById(btnId);
+            if (b && b.dataset.markAllBound !== 'true') {
+                b.dataset.markAllBound = 'true';
+                b.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    const uiObj = self || window.UI;
+                    if (uiObj && typeof uiObj.markAllNotificationsAsRead === 'function') {
+                        uiObj.markAllNotificationsAsRead();
+                    }
+                });
+            }
+        });
+
         // إغلاق dropdown عند النقر خارجها
         // تنظيف الـ listener القديم إذا كان موجوداً
         if (self._notificationsClickHandler) {
@@ -7497,6 +7512,38 @@ window.UI = {
     },
 
     /**
+     * تعليم جميع الإشعارات الظاهرة حالياً كمقروءة (بما فيها تنبيهات الملاحظات)
+     */
+    markAllNotificationsAsRead() {
+        try {
+            const items = this.getNotificationsList();
+            if (!items.length) return;
+            const read = this.getReadNotifications();
+            const next = [...new Set([...read, ...items.map((n) => n && n.id).filter(Boolean)])];
+            this.saveReadNotifications(next);
+            this.updateNotificationsBadge();
+            ['notifications-dropdown', 'mobile-notifications-dropdown', 'header-notifications-dropdown'].forEach((dropdownId) => {
+                const dropdown = document.getElementById(dropdownId);
+                if (!dropdown || dropdown.style.display === 'none') return;
+                const listId = dropdownId.replace('dropdown', 'list');
+                const emptyId = dropdownId.replace('dropdown', 'empty');
+                const list = document.getElementById(listId);
+                const empty = document.getElementById(emptyId);
+                if (list) {
+                    list.innerHTML = '';
+                    list.style.display = 'none';
+                }
+                if (empty) {
+                    empty.style.setProperty('display', 'flex', 'important');
+                }
+            });
+            Utils.safeLog('✅ تم تعليم جميع الإشعارات كمقروءة');
+        } catch (e) {
+            Utils.safeWarn('markAllNotificationsAsRead', e);
+        }
+    },
+
+    /**
      * الحصول على قائمة الإشعارات مع التفاصيل (غير المقروءة فقط)
      */
     getNotificationsList() {
@@ -7842,6 +7889,18 @@ window.UI = {
                     });
             }
 
+            // 7. تنبيهات الملاحظات اليومية (حالة السير + التأخير) — مربوطة بنفس نظام المقروء/غير المقروء
+            try {
+                if (typeof DailyObservations !== 'undefined' && typeof DailyObservations.getObservationInboxNotifications === 'function') {
+                    const obsInbox = DailyObservations.getObservationInboxNotifications(readNotifications);
+                    if (obsInbox && obsInbox.length) {
+                        obsInbox.forEach((n) => notifications.push(n));
+                    }
+                }
+            } catch (obsErr) {
+                Utils.safeWarn('⚠️ تنبيهات الملاحظات في الإشعارات:', obsErr);
+            }
+
             // ترتيب الإشعارات حسب التاريخ (الأحدث أولاً)
             notifications.sort((a, b) => {
                 const dateA = new Date(a.time);
@@ -7857,18 +7916,49 @@ window.UI = {
     },
 
     /**
+     * بطاقة تنبيه ملاحظة (نمط العنوان + الوصف + «فتح الملاحظة»)
+     */
+    renderObservationNotificationItem(notification) {
+        const timeAgo = this.getTimeAgo(notification.time);
+        const safeTitle = Utils.escapeHTML(notification.title);
+        const safeMsg = Utils.escapeHTML(notification.message);
+        const hasAction = typeof notification.onClick === 'function';
+        const idJson = JSON.stringify(notification.id || '');
+        const clickHandler = hasAction ? `onclick="window.UI.handleNotificationClick(${idJson})"` : '';
+        return `
+            <div class="notification-item notification-item--observation" data-notification-id="${Utils.escapeHTML(String(notification.id || ''))}" ${clickHandler} style="${hasAction ? 'cursor: pointer;' : ''}">
+                <div class="notification-item--observation-inner">
+                    <div class="notification-item-obs-row">
+                        <i class="fas fa-chevron-left notification-item-chevron" aria-hidden="true"></i>
+                        <div class="notification-item-content">
+                            <div class="notification-item-title">${safeTitle}</div>
+                            <div class="notification-item-message">${safeMsg}</div>
+                            <button type="button" class="notification-item-open-obs" onclick="event.stopPropagation(); window.UI.handleNotificationClick(${idJson})">فتح الملاحظة</button>
+                        </div>
+                    </div>
+                    <div class="notification-item-time">${timeAgo}</div>
+                </div>
+            </div>
+        `;
+    },
+
+    /**
      * رسم عنصر إشعار واحد
      */
     renderNotificationItem(notification) {
+        if (notification && notification.variant === 'observation') {
+            return this.renderObservationNotificationItem(notification);
+        }
         const timeAgo = this.getTimeAgo(notification.time);
         const iconClass = notification.icon || 'fa-bell';
         const typeClass = notification.type || 'info';
         const hasAction = typeof notification.onClick === 'function';
-        const clickHandler = hasAction ? `onclick="window.UI.handleNotificationClick('${notification.id}')"` : '';
+        const idJson = JSON.stringify(notification.id || '');
+        const clickHandler = hasAction ? `onclick="window.UI.handleNotificationClick(${idJson})"` : '';
         const cursorStyle = hasAction ? 'cursor: pointer;' : '';
 
         return `
-            <div class="notification-item" data-notification-id="${notification.id}" ${clickHandler} style="${cursorStyle}">
+            <div class="notification-item" data-notification-id="${Utils.escapeHTML(String(notification.id || ''))}" ${clickHandler} style="${cursorStyle}">
                 <div class="notification-item-icon ${typeClass}">
                     <i class="fas ${iconClass}"></i>
                 </div>
