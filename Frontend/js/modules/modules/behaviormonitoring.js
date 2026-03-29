@@ -905,133 +905,176 @@ const BehaviorMonitoring = {
         const isNegative = (data?.behaviorType || '') === 'سلبي';
 
         return `
-            <div class="behavior-form-wrapper ${inline ? 'behavior-form-inline' : 'behavior-form-modal'}" data-behavior-type="${Utils.escapeHTML(data?.behaviorType || '')}">
-                <form data-behavior-form="true" data-form-uid="${uid}" class="space-y-4">
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                            <label for="${ids.employeeCode}" class="block text-sm font-semibold text-gray-700 mb-2">الكود الوظيفي *</label>
-                            <input type="text" id="${ids.employeeCode}" required class="form-input"
-                                value="${Utils.escapeHTML(data?.employeeCode || data?.employeeNumber || '')}" placeholder="أدخل الكود الوظيفي">
-                        </div>
-                        <div>
-                            <label for="${ids.employeeName}" class="block text-sm font-semibold text-gray-700 mb-2">اسم الموظف *</label>
-                            <div class="relative">
-                                <input type="text" id="${ids.employeeName}" required class="form-input"
-                                    value="${Utils.escapeHTML(data?.employeeName || '')}" placeholder="ابحث بالاسم أو الكود الوظيفي" autocomplete="off">
-                                <div id="${ids.dropdown}" class="hse-lookup-dropdown absolute z-50 hidden w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-auto"></div>
+            <div class="behavior-form-wrapper bhm-form ${inline ? 'behavior-form-inline' : 'behavior-form-modal'}" data-behavior-type="${Utils.escapeHTML(data?.behaviorType || '')}">
+                <form data-behavior-form="true" data-form-uid="${uid}" class="bhm-form-inner">
+                    <section class="bhm-section" aria-labelledby="${uid}-sec-emp">
+                        <div class="bhm-section-head" id="${uid}-sec-emp">
+                            <span class="bhm-section-icon" aria-hidden="true"><i class="fas fa-id-card"></i></span>
+                            <div>
+                                <h4 class="bhm-section-title">بيانات الموظف</h4>
+                                <p class="bhm-section-hint">الكود والاسم والقسم والوظيفة</p>
                             </div>
                         </div>
-                        <div>
-                            <label for="${ids.department}" class="block text-sm font-semibold text-gray-700 mb-2">القسم *</label>
-                            <input type="text" id="${ids.department}" required class="form-input"
-                                value="${Utils.escapeHTML(data?.department || data?.employeeDepartment || '')}" placeholder="يتم تعبئته تلقائياً من الموظف (يمكن التعديل)">
-                        </div>
-                        <div>
-                            <label for="${ids.job}" class="block text-sm font-semibold text-gray-700 mb-2">الوظيفة *</label>
-                            <input type="text" id="${ids.job}" required class="form-input"
-                                value="${Utils.escapeHTML(data?.job || data?.position || data?.employeeJob || '')}" placeholder="يتم تعبئته تلقائياً من الموظف (يمكن التعديل)">
-                        </div>
-                    </div>
-
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div>
-                            <label for="${ids.behaviorType}" class="block text-sm font-semibold text-gray-700 mb-2">نوع التصرف *</label>
-                            <select id="${ids.behaviorType}" required class="form-input">
-                                <option value="">اختر النوع</option>
-                                <option value="إيجابي" ${data?.behaviorType === 'إيجابي' ? 'selected' : ''}>إيجابي</option>
-                                <option value="سلبي" ${data?.behaviorType === 'سلبي' ? 'selected' : ''}>سلبي</option>
-                            </select>
-                            <div class="mt-2">
-                                <span class="badge ${this.getBehaviorTypeBadgeClass(data?.behaviorType)}" id="${uid}-type-badge">${Utils.escapeHTML(data?.behaviorType || '—')}</span>
+                        <div class="bhm-section-body">
+                            <div class="bhm-grid bhm-grid-2">
+                                <div class="bhm-field">
+                                    <label for="${ids.employeeCode}" class="bhm-label">الكود الوظيفي <span class="bhm-req">*</span></label>
+                                    <input type="text" id="${ids.employeeCode}" required class="form-input bhm-input"
+                                        value="${Utils.escapeHTML(data?.employeeCode || data?.employeeNumber || '')}" placeholder="أدخل الكود الوظيفي">
+                                </div>
+                                <div class="bhm-field">
+                                    <label for="${ids.employeeName}" class="bhm-label">اسم الموظف <span class="bhm-req">*</span></label>
+                                    <div class="relative">
+                                        <input type="text" id="${ids.employeeName}" required class="form-input bhm-input"
+                                            value="${Utils.escapeHTML(data?.employeeName || '')}" placeholder="ابحث بالاسم أو الكود" autocomplete="off">
+                                        <div id="${ids.dropdown}" class="hse-lookup-dropdown absolute z-50 hidden w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-auto"></div>
+                                    </div>
+                                </div>
+                                <div class="bhm-field">
+                                    <label for="${ids.department}" class="bhm-label">القسم <span class="bhm-req">*</span></label>
+                                    <input type="text" id="${ids.department}" required class="form-input bhm-input"
+                                        value="${Utils.escapeHTML(data?.department || data?.employeeDepartment || '')}" placeholder="يُعبَّأ تلقائياً من بيانات الموظف">
+                                </div>
+                                <div class="bhm-field">
+                                    <label for="${ids.job}" class="bhm-label">الوظيفة <span class="bhm-req">*</span></label>
+                                    <input type="text" id="${ids.job}" required class="form-input bhm-input"
+                                        value="${Utils.escapeHTML(data?.job || data?.position || data?.employeeJob || '')}" placeholder="يُعبَّأ تلقائياً من بيانات الموظف">
+                                </div>
                             </div>
                         </div>
-                        <div>
-                            <label for="${ids.behaviorDate}" class="block text-sm font-semibold text-gray-700 mb-2">التاريخ *</label>
-                            <input type="date" id="${ids.behaviorDate}" required class="form-input" value="${dateValue}">
-                        </div>
-                        <div>
-                            <label for="${ids.behaviorRating}" class="block text-sm font-semibold text-gray-700 mb-2">التقييم *</label>
-                            <select id="${ids.behaviorRating}" required class="form-input">
-                                <option value="">اختر التقييم</option>
-                                <option value="ممتاز" ${data?.rating === 'ممتاز' ? 'selected' : ''}>ممتاز</option>
-                                <option value="جيد" ${data?.rating === 'جيد' ? 'selected' : ''}>جيد</option>
-                                <option value="مقبول" ${data?.rating === 'مقبول' ? 'selected' : ''}>مقبول</option>
-                                <option value="ضعيف" ${data?.rating === 'ضعيف' ? 'selected' : ''}>ضعيف</option>
-                            </select>
-                        </div>
-                    </div>
+                    </section>
 
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                            <label for="${ids.factory}" class="block text-sm font-semibold text-gray-700 mb-2">
-                                <i class="fas fa-industry ml-2"></i>
-                                المصنع *
-                            </label>
-                            <select id="${ids.factory}" required class="form-input">
-                                <option value="">اختر المصنع</option>
-                                ${sites.map(site => `
-                                    <option value="${site.id}" ${(resolvedFactoryId === site.id || selectedFactory === site.name) ? 'selected' : ''}>${Utils.escapeHTML(site.name)}</option>
-                                `).join('')}
-                            </select>
+                    <section class="bhm-section" aria-labelledby="${uid}-sec-act">
+                        <div class="bhm-section-head" id="${uid}-sec-act">
+                            <span class="bhm-section-icon bhm-section-icon--violet" aria-hidden="true"><i class="fas fa-clipboard-list"></i></span>
+                            <div>
+                                <h4 class="bhm-section-title">تفاصيل التصرف</h4>
+                                <p class="bhm-section-hint">النوع، التاريخ، والتقييم</p>
+                            </div>
                         </div>
-                        <div>
-                            <label for="${ids.subLocation}" class="block text-sm font-semibold text-gray-700 mb-2">
-                                <i class="fas fa-map-marker-alt ml-2"></i>
-                                الموقع الفرعي *
-                            </label>
-                            <select id="${ids.subLocation}" required class="form-input">
-                                <option value="">اختر الموقع الفرعي</option>
-                                ${places.map(place => `
-                                    <option value="${place.id}" ${(resolvedSubId === place.id || selectedSub === place.name) ? 'selected' : ''}>${Utils.escapeHTML(place.name)}</option>
-                                `).join('')}
-                            </select>
+                        <div class="bhm-section-body">
+                            <div class="bhm-grid bhm-grid-3">
+                                <div class="bhm-field bhm-field-type">
+                                    <div class="bhm-label-row">
+                                        <label for="${ids.behaviorType}" class="bhm-label mb-0">نوع التصرف <span class="bhm-req">*</span></label>
+                                        <span class="badge ${this.getBehaviorTypeBadgeClass(data?.behaviorType)} bhm-type-chip" id="${uid}-type-badge">${Utils.escapeHTML(data?.behaviorType || '—')}</span>
+                                    </div>
+                                    <select id="${ids.behaviorType}" required class="form-input bhm-input mt-2">
+                                        <option value="">اختر النوع</option>
+                                        <option value="إيجابي" ${data?.behaviorType === 'إيجابي' ? 'selected' : ''}>إيجابي</option>
+                                        <option value="سلبي" ${data?.behaviorType === 'سلبي' ? 'selected' : ''}>سلبي</option>
+                                    </select>
+                                </div>
+                                <div class="bhm-field">
+                                    <label for="${ids.behaviorDate}" class="bhm-label">التاريخ <span class="bhm-req">*</span></label>
+                                    <input type="date" id="${ids.behaviorDate}" required class="form-input bhm-input" value="${dateValue}">
+                                </div>
+                                <div class="bhm-field">
+                                    <label for="${ids.behaviorRating}" class="bhm-label">التقييم <span class="bhm-req">*</span></label>
+                                    <select id="${ids.behaviorRating}" required class="form-input bhm-input">
+                                        <option value="">اختر التقييم</option>
+                                        <option value="ممتاز" ${data?.rating === 'ممتاز' ? 'selected' : ''}>ممتاز</option>
+                                        <option value="جيد" ${data?.rating === 'جيد' ? 'selected' : ''}>جيد</option>
+                                        <option value="مقبول" ${data?.rating === 'مقبول' ? 'selected' : ''}>مقبول</option>
+                                        <option value="ضعيف" ${data?.rating === 'ضعيف' ? 'selected' : ''}>ضعيف</option>
+                                    </select>
+                                </div>
+                            </div>
                         </div>
-                    </div>
+                    </section>
 
-                    <div id="${uid}-negative-section" class="content-card" style="border: 1px dashed rgba(239, 68, 68, 0.35); ${isNegative ? '' : 'display:none;'}">
-                        <div class="card-header">
-                            <h3 class="card-title"><i class="fas fa-triangle-exclamation ml-2"></i>إجراء تصحيحي (للتصرف السلبي)</h3>
+                    <section class="bhm-section" aria-labelledby="${uid}-sec-loc">
+                        <div class="bhm-section-head" id="${uid}-sec-loc">
+                            <span class="bhm-section-icon bhm-section-icon--teal" aria-hidden="true"><i class="fas fa-map-marked-alt"></i></span>
+                            <div>
+                                <h4 class="bhm-section-title">الموقع</h4>
+                                <p class="bhm-section-hint">المصنع والموقع الفرعي للملاحظة</p>
+                            </div>
                         </div>
-                        <div class="card-body space-y-4">
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div>
-                                    <label class="block text-sm font-semibold text-gray-700 mb-2">الإجراء التصحيحي *</label>
-                                    <select id="${ids.correctiveAction}" class="form-input" ${isNegative ? 'required' : ''}>
+                        <div class="bhm-section-body">
+                            <div class="bhm-grid bhm-grid-2">
+                                <div class="bhm-field">
+                                    <label for="${ids.factory}" class="bhm-label"><i class="fas fa-industry ml-1 opacity-70"></i> المصنع <span class="bhm-req">*</span></label>
+                                    <select id="${ids.factory}" required class="form-input bhm-input">
+                                        <option value="">اختر المصنع</option>
+                                        ${sites.map(site => `
+                                            <option value="${site.id}" ${(resolvedFactoryId === site.id || selectedFactory === site.name) ? 'selected' : ''}>${Utils.escapeHTML(site.name)}</option>
+                                        `).join('')}
+                                    </select>
+                                </div>
+                                <div class="bhm-field">
+                                    <label for="${ids.subLocation}" class="bhm-label"><i class="fas fa-map-marker-alt ml-1 opacity-70"></i> الموقع الفرعي <span class="bhm-req">*</span></label>
+                                    <select id="${ids.subLocation}" required class="form-input bhm-input">
+                                        <option value="">اختر الموقع الفرعي</option>
+                                        ${places.map(place => `
+                                            <option value="${place.id}" ${(resolvedSubId === place.id || selectedSub === place.name) ? 'selected' : ''}>${Utils.escapeHTML(place.name)}</option>
+                                        `).join('')}
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <section id="${uid}-negative-section" class="bhm-negative-panel" style="${isNegative ? '' : 'display:none;'}">
+                        <div class="bhm-negative-head">
+                            <span class="bhm-negative-icon" aria-hidden="true"><i class="fas fa-exclamation-triangle"></i></span>
+                            <div>
+                                <h4 class="bhm-negative-title">إجراء تصحيحي (للتصرف السلبي)</h4>
+                                <p class="bhm-negative-sub">يظهر هذا القسم عند اختيار «سلبي» فقط</p>
+                            </div>
+                        </div>
+                        <div class="bhm-negative-body">
+                            <div class="bhm-grid bhm-grid-2">
+                                <div class="bhm-field">
+                                    <label for="${ids.correctiveAction}" class="bhm-label">الإجراء التصحيحي <span class="bhm-req">*</span></label>
+                                    <select id="${ids.correctiveAction}" class="form-input bhm-input" ${isNegative ? 'required' : ''}>
                                         <option value="">اختر الإجراء</option>
                                         ${this.NEGATIVE_ACTIONS.map(a => `
                                             <option value="${Utils.escapeHTML(a)}" ${data?.correctiveAction === a ? 'selected' : ''}>${Utils.escapeHTML(a)}</option>
                                         `).join('')}
                                     </select>
                                 </div>
-                                <div>
-                                    <label class="block text-sm font-semibold text-gray-700 mb-2">تفاصيل إضافية (اختياري)</label>
-                                    <input type="text" id="${ids.correctiveActionDetails}" class="form-input"
-                                        value="${Utils.escapeHTML(data?.correctiveActionDetails || '')}" placeholder="مثال: تدريب على SOP-01 / إنذار رقم...">
+                                <div class="bhm-field">
+                                    <label for="${ids.correctiveActionDetails}" class="bhm-label">تفاصيل إضافية <span class="bhm-optional">(اختياري)</span></label>
+                                    <input type="text" id="${ids.correctiveActionDetails}" class="form-input bhm-input"
+                                        value="${Utils.escapeHTML(data?.correctiveActionDetails || '')}" placeholder="مثال: تدريب على SOP-01 / إنذار رقم…">
                                 </div>
                             </div>
                         </div>
-                    </div>
+                    </section>
 
-                    <div>
-                        <label for="${ids.photoInput}" class="block text-sm font-semibold text-gray-700 mb-2">
-                            <i class="fas fa-image ml-2"></i>
-                            صورة (غير إلزامي)
-                        </label>
-                        <input type="file" id="${ids.photoInput}" accept="image/*" class="form-input">
-                        <div id="${ids.photoPreview}" class="mt-2 ${data?.photo ? '' : 'hidden'}">
-                            <img src="${data?.photo || ''}" alt="صورة" class="w-32 h-32 object-cover rounded border" id="${ids.photoImg}">
-                            <button type="button" class="mt-1 text-xs text-red-600" data-action="clear-photo">حذف الصورة</button>
+                    <section class="bhm-section bhm-section--media" aria-labelledby="${uid}-sec-desc">
+                        <div class="bhm-section-head" id="${uid}-sec-desc">
+                            <span class="bhm-section-icon bhm-section-icon--amber" aria-hidden="true"><i class="fas fa-align-right"></i></span>
+                            <div>
+                                <h4 class="bhm-section-title">الوصف والمرفقات</h4>
+                                <p class="bhm-section-hint">وصف التصرف وصورة اختيارية</p>
+                            </div>
                         </div>
-                    </div>
+                        <div class="bhm-section-body">
+                            <div class="bhm-grid bhm-grid-media">
+                                <div class="bhm-field bhm-upload-wrap">
+                                    <label for="${ids.photoInput}" class="bhm-label"><i class="fas fa-image ml-1 opacity-70"></i> صورة <span class="bhm-optional">(غير إلزامي)</span></label>
+                                    <div class="bhm-file-slot">
+                                        <input type="file" id="${ids.photoInput}" accept="image/*" class="bhm-file-input">
+                                        <span class="bhm-file-hint">PNG أو JPG — حتى 2 ميجا</span>
+                                    </div>
+                                    <div id="${ids.photoPreview}" class="bhm-photo-preview mt-3 ${data?.photo ? '' : 'hidden'}">
+                                        <img src="${data?.photo || ''}" alt="معاينة" class="bhm-photo-thumb" id="${ids.photoImg}">
+                                        <button type="button" class="bhm-photo-clear" data-action="clear-photo">حذف الصورة</button>
+                                    </div>
+                                </div>
+                                <div class="bhm-field bhm-field-grow">
+                                    <label for="${ids.description}" class="bhm-label">الوصف <span class="bhm-req">*</span></label>
+                                    <textarea id="${ids.description}" required class="form-input bhm-input bhm-textarea" rows="5" placeholder="وصف التصرف والظروف…">${Utils.escapeHTML(data?.description || '')}</textarea>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
 
-                    <div>
-                        <label for="${ids.description}" class="block text-sm font-semibold text-gray-700 mb-2">الوصف *</label>
-                        <textarea id="${ids.description}" required class="form-input" rows="4" placeholder="وصف التصرف">${Utils.escapeHTML(data?.description || '')}</textarea>
-                    </div>
-
-                    <div class="flex items-center justify-end gap-2 pt-2">
-                        ${inline ? '' : '<button type="button" class="btn-secondary" data-action="cancel-form">إلغاء</button>'}
-                        <button type="button" id="${ids.saveBtn}" class="btn-primary">
+                    <div class="bhm-form-footer">
+                        ${inline ? '' : '<button type="button" class="btn-secondary bhm-btn-cancel" data-action="cancel-form">إلغاء</button>'}
+                        <button type="button" id="${ids.saveBtn}" class="btn-primary bhm-btn-save">
                             <i class="fas fa-save ml-2"></i>
                             حفظ
                         </button>
@@ -1174,14 +1217,18 @@ const BehaviorMonitoring = {
         modal.className = 'modal-overlay';
         const uid = `bhm-modal-${Date.now()}`;
         modal.innerHTML = `
-            <div class="modal-content behavior-modal" data-behavior-type="${Utils.escapeHTML(data?.behaviorType || '')}" style="max-width: 760px;">
-                <div class="modal-header">
-                    <h2 class="modal-title">${data ? 'تعديل التصرف' : 'تسجيل تصرف جديد'}</h2>
-                    <button class="modal-close" onclick="this.closest('.modal-overlay').remove()">
+            <div class="modal-content behavior-modal bhm-registration-modal" data-behavior-type="${Utils.escapeHTML(data?.behaviorType || '')}">
+                <div class="bhm-modal-hero">
+                    <div class="bhm-modal-hero-text">
+                        <p class="bhm-modal-kicker"><i class="fas fa-user-check ml-2"></i>مراقبة السلوكيات</p>
+                        <h2 class="bhm-modal-title">${data ? 'تعديل التصرف' : 'تسجيل تصرف جديد'}</h2>
+                        <p class="bhm-modal-sub">${data ? 'تحديث بيانات التسجيل ثم احفظ.' : 'أدخل بيانات الموظف والموقع ثم وصف التصرف.'}</p>
+                    </div>
+                    <button type="button" class="bhm-modal-close" onclick="this.closest('.modal-overlay').remove()" aria-label="إغلاق">
                         <i class="fas fa-times"></i>
                     </button>
                 </div>
-                <div class="modal-body">
+                <div class="modal-body bhm-modal-body">
                     ${this.getBehaviorFormHTML(data, uid, { inline: false })}
                 </div>
             </div>
