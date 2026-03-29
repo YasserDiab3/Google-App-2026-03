@@ -1914,6 +1914,101 @@ const Clinic = {
         }
     },
 
+    /** المواقع الفرعية للمصنع المختار (نفس منطق التدريب/التصاريح) */
+    getPlaceOptions(siteId) {
+        try {
+            if (!siteId) return [];
+
+            const sites = this.getSiteOptions();
+            const selectedSite = sites.find(s => s.id === siteId);
+            if (!selectedSite) return [];
+
+            if (typeof Permissions !== 'undefined' && Permissions.formSettingsState && Permissions.formSettingsState.sites) {
+                const site = Permissions.formSettingsState.sites.find(s => s.id === siteId);
+                if (site && Array.isArray(site.places)) {
+                    return site.places.map(place => ({
+                        id: place.id,
+                        name: place.name
+                    }));
+                }
+            }
+
+            if (Array.isArray(AppState.appData?.observationSites)) {
+                const site = AppState.appData.observationSites.find(s => (s.id || s.siteId) === siteId);
+                if (site) {
+                    const placesSource = Array.isArray(site.places)
+                        ? site.places
+                        : Array.isArray(site.locations)
+                            ? site.locations
+                            : Array.isArray(site.children)
+                                ? site.children
+                                : Array.isArray(site.areas)
+                                    ? site.areas
+                                    : [];
+                    return placesSource.map((place, idx) => ({
+                        id: place.id || place.placeId || place.value || Utils.generateId('PLACE'),
+                        name: place.name || place.placeName || place.title || place.label || place.locationName || `مكان ${idx + 1}`
+                    }));
+                }
+            }
+
+            if (typeof DailyObservations !== 'undefined' && Array.isArray(DailyObservations.DEFAULT_SITES)) {
+                const site = DailyObservations.DEFAULT_SITES.find(s => (s.id || s.siteId) === siteId);
+                if (site) {
+                    const placesSource = Array.isArray(site.places)
+                        ? site.places
+                        : Array.isArray(site.locations)
+                            ? site.locations
+                            : Array.isArray(site.children)
+                                ? site.children
+                                : Array.isArray(site.areas)
+                                    ? site.areas
+                                    : [];
+                    return placesSource.map((place, idx) => ({
+                        id: place.id || place.placeId || place.value || Utils.generateId('PLACE'),
+                        name: place.name || place.placeName || place.title || place.label || place.locationName || `مكان ${idx + 1}`
+                    }));
+                }
+            }
+
+            return [];
+        } catch (error) {
+            Utils.safeWarn('⚠️ خطأ في الحصول على قائمة الأماكن الفرعية (العيادة):', error);
+            return [];
+        }
+    },
+
+    /**
+     * ربط المصنع بحقل مكان العمل: تعبئة datalist بالمواقع الفرعية + بحث أثناء الكتابة + إدخال يدوي حر.
+     * @param {string} factorySelectId
+     * @param {string} locationInputId
+     * @param {string} datalistId
+     * @param {{ clearOnFactoryChange?: boolean }} [opts]
+     */
+    setupClinicWorkplaceDatalist(factorySelectId, locationInputId, datalistId, opts = {}) {
+        const clearOnChange = opts.clearOnFactoryChange !== false;
+        const factoryEl = document.getElementById(factorySelectId);
+        const locInput = document.getElementById(locationInputId);
+        const dl = document.getElementById(datalistId);
+        if (!factoryEl || !locInput || !dl) return;
+
+        const fillList = (clearLocation) => {
+            const sid = (factoryEl.value || '').trim();
+            const places = sid ? this.getPlaceOptions(sid) : [];
+            dl.innerHTML = places.map(p => `<option value="${Utils.escapeHTML(p.name)}"></option>`).join('');
+            if (clearLocation) locInput.value = '';
+        };
+
+        const handlerKey = '_clinicWorkplaceFactoryChange';
+        if (factoryEl[handlerKey]) {
+            factoryEl.removeEventListener('change', factoryEl[handlerKey]);
+        }
+        const onChange = () => fillList(clearOnChange);
+        factoryEl[handlerKey] = onChange;
+        factoryEl.addEventListener('change', onChange);
+        fillList(false);
+    },
+
     /** إعادة تعبئة قوائم المصنع عند اكتمال تحميل إعدادات النماذج (استدعاء تلقائي من حدث formSettingsUpdated) */
     refreshSiteDropdowns() {
         try {
@@ -1924,6 +2019,11 @@ const Clinic = {
                 const el = document.getElementById(id);
                 if (el && el.tagName === 'SELECT') { const v = el.value; el.innerHTML = opts('اختر المصنع'); if (v) el.value = v; }
             });
+            if (typeof this.setupClinicWorkplaceDatalist === 'function') {
+                this.setupClinicWorkplaceDatalist('visit-factory', 'visit-employee-location', 'visit-employee-location-datalist');
+                this.setupClinicWorkplaceDatalist('visit-contractor-factory', 'visit-work-area', 'visit-work-area-datalist');
+                this.setupClinicWorkplaceDatalist('enhanced-visit-factory', 'enhanced-visit-employee-location', 'enhanced-visit-employee-location-datalist');
+            }
         } catch (e) { if (typeof Utils !== 'undefined' && Utils.safeWarn) Utils.safeWarn('⚠️ Clinic.refreshSiteDropdowns:', e); }
     },
 
@@ -8765,10 +8865,12 @@ const Clinic = {
                                 </select>
                             </div>
                             <div id="visit-employee-location-container" style="display: ${visitData?.personType === 'employee' || !visitData ? 'block' : 'none'};">
-                                <label for="visit-employee-location" class="block text-sm font-semibold text-gray-700 mb-2">مكان العمل *<span style="font-size: 11px; color: #666; display: block; margin-top: 2px;">أدخل مكان العمل يدوياً</span></label>
-                                <input type="text" id="visit-employee-location" class="form-input" 
+                                <label for="visit-employee-location" class="block text-sm font-semibold text-gray-700 mb-2">مكان العمل *<span style="font-size: 11px; color: #666; display: block; margin-top: 2px;">يُعرض المواقع الفرعية للمصنع أعلاه؛ اكتب للبحث أو أدخل نصاً يدوياً</span></label>
+                                <input type="text" id="visit-employee-location" class="form-input" list="visit-employee-location-datalist"
                                     value="${visitData?.employeeLocation || ''}" 
-                                    placeholder="أدخل مكان العمل يدوياً" required>
+                                    placeholder="اختر موقعاً فرعياً أو اكتب مكان العمل"
+                                    autocomplete="off" autocorrect="off" spellcheck="false" inputmode="text" required>
+                                <datalist id="visit-employee-location-datalist"></datalist>
                             </div>
                             <div id="visit-contractor-position-container" style="display: ${visitData?.personType === 'contractor' || visitData?.personType === 'external' ? 'block' : 'none'};">
                                 <label for="visit-contractor-position" class="block text-sm font-semibold text-gray-700 mb-2">الوظيفة *</label>
@@ -8787,10 +8889,12 @@ const Clinic = {
                                 </select>
                             </div>
                             <div id="visit-work-area-container" style="display: ${visitData?.personType === 'contractor' || visitData?.personType === 'external' ? 'block' : 'none'};">
-                                <label for="visit-work-area" class="block text-sm font-semibold text-gray-700 mb-2">مكان العمل *<span style="font-size: 11px; color: #666; display: block; margin-top: 2px;">أدخل مكان العمل يدوياً</span></label>
-                                <input type="text" id="visit-work-area" class="form-input"
-                                    value="${visitData?.workArea || ''}" placeholder="أدخل مكان العمل يدوياً"
+                                <label for="visit-work-area" class="block text-sm font-semibold text-gray-700 mb-2">مكان العمل *<span style="font-size: 11px; color: #666; display: block; margin-top: 2px;">يُعرض المواقع الفرعية للمصنع أعلاه؛ اكتب للبحث أو أدخل نصاً يدوياً</span></label>
+                                <input type="text" id="visit-work-area" class="form-input" list="visit-work-area-datalist"
+                                    value="${visitData?.workArea || ''}" placeholder="اختر موقعاً فرعياً أو اكتب مكان العمل"
+                                    autocomplete="off" autocorrect="off" spellcheck="false" inputmode="text"
                                     ${visitData?.personType === 'contractor' || visitData?.personType === 'external' ? 'required' : ''}>
+                                <datalist id="visit-work-area-datalist"></datalist>
                             </div>
                             <div id="visit-contractor-worker-container" style="display: ${visitData?.personType === 'contractor' || visitData?.personType === 'external' ? 'block' : 'none'};">
                                 <label for="visit-contractor-worker" id="visit-contractor-worker-label" class="block text-sm font-semibold text-gray-700 mb-2">اسم الموظف التابع للمقاول *</label>
@@ -9002,10 +9106,13 @@ const Clinic = {
                 }
             }
 
-            // لا حاجة لحقل بحث منفصل — البحث يتم داخل نفس الحقل (datalist)
-
             if (typeof Clinic.handlePersonTypeChange === 'function') {
                 Clinic.handlePersonTypeChange();
+            }
+
+            if (typeof Clinic.setupClinicWorkplaceDatalist === 'function') {
+                Clinic.setupClinicWorkplaceDatalist('visit-factory', 'visit-employee-location', 'visit-employee-location-datalist');
+                Clinic.setupClinicWorkplaceDatalist('visit-contractor-factory', 'visit-work-area', 'visit-work-area-datalist');
             }
 
             // تحميل قائمة الأدوية المتاحة
@@ -13012,9 +13119,10 @@ const Clinic = {
                                 <div>
                                     <label for="enhanced-visit-employee-location" class="block text-sm font-semibold text-gray-700 mb-2" style="display: flex; align-items: center; gap: 5px;">
                                         <i class="fas fa-map-marker-alt text-purple-600"></i>
-                                        مكان العمل *<span style="font-size: 11px; color: #666; display: block; margin-top: 2px;">أدخل مكان العمل يدوياً</span>
+                                        مكان العمل *<span style="font-size: 11px; color: #666; display: block; margin-top: 2px;">يُعرض المواقع الفرعية للمصنع أعلاه؛ اكتب للبحث أو أدخل نصاً يدوياً</span>
                                     </label>
-                                    <input type="text" id="enhanced-visit-employee-location" required class="form-input" placeholder="أدخل مكان العمل يدوياً" value="${Utils.escapeHTML(visitData?.employeeLocation || visitData?.workArea || '')}" style="border: 2px solid #667eea; border-radius: 10px; padding: 12px;">
+                                    <input type="text" id="enhanced-visit-employee-location" required class="form-input" list="enhanced-visit-employee-location-datalist" placeholder="اختر موقعاً فرعياً أو اكتب مكان العمل" value="${Utils.escapeHTML(visitData?.employeeLocation || visitData?.workArea || '')}" autocomplete="off" autocorrect="off" spellcheck="false" inputmode="text" style="border: 2px solid #667eea; border-radius: 10px; padding: 12px;">
+                                    <datalist id="enhanced-visit-employee-location-datalist"></datalist>
                                 </div>
                             </div>
                         </div>
@@ -13264,6 +13372,10 @@ const Clinic = {
             e.preventDefault();
             await this.saveEnhancedVisit(visitData, isEdit, modal);
         });
+
+        if (typeof this.setupClinicWorkplaceDatalist === 'function') {
+            this.setupClinicWorkplaceDatalist('enhanced-visit-factory', 'enhanced-visit-employee-location', 'enhanced-visit-employee-location-datalist');
+        }
 
         // ربط أحداث التنقل السريع في المسطرة الجانبية
         const navButtons = modal.querySelectorAll('.sidebar-nav-btn');
