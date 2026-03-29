@@ -360,7 +360,129 @@ const BehaviorMonitoring = {
 
     getBehaviors() {
         if (!AppState?.appData?.behaviorMonitoring || !Array.isArray(AppState.appData.behaviorMonitoring)) return [];
-        return AppState.appData.behaviorMonitoring;
+        return AppState.appData.behaviorMonitoring.map((b) => this.presentBehavior(b));
+    },
+
+    getRawBehaviorById(id) {
+        const list = AppState?.appData?.behaviorMonitoring;
+        if (!Array.isArray(list)) return null;
+        return list.find((b) => b && b.id === id) || null;
+    },
+
+    /**
+     * دمج مفاتيح بديلة (عربي / أسماء أعمدة قديمة / اختلاف حالة الأحرف) مع الحقول القياسية.
+     */
+    normalizeBehaviorRecord(raw) {
+        if (!raw || typeof raw !== 'object') return raw;
+        const out = { ...raw };
+        const pick = (aliases) => {
+            for (let i = 0; i < aliases.length; i++) {
+                const k = aliases[i];
+                if (!Object.prototype.hasOwnProperty.call(raw, k)) continue;
+                const v = raw[k];
+                if (v !== undefined && v !== null && String(v).trim() !== '') return v;
+            }
+            return undefined;
+        };
+        const setIfEmpty = (canon, aliases) => {
+            const cur = out[canon];
+            if (cur !== undefined && cur !== null && String(cur).trim() !== '') return;
+            const pv = pick(aliases);
+            if (pv !== undefined) out[canon] = pv;
+        };
+        setIfEmpty('isoCode', ['isoCode', 'ISO', 'IsoCode', 'كود ISO']);
+        setIfEmpty('employeeCode', ['employeeCode', 'employee_number', 'EmployeeCode', 'الكود الوظيفي']);
+        setIfEmpty('employeeNumber', ['employeeNumber', 'employeeCode', 'الكود الوظيفي']);
+        setIfEmpty('employeeName', ['employeeName', 'EmployeeName', 'اسم الموظف']);
+        setIfEmpty('department', ['department', 'Department', 'القسم', 'employeeDepartment', 'Dept']);
+        setIfEmpty('job', ['job', 'Job', 'position', 'Position', 'الوظيفة', 'المسمى الوظيفي', 'jobTitle']);
+        setIfEmpty('factory', ['factory', 'factoryId', 'Factory', 'FactoryId']);
+        setIfEmpty('factoryId', ['factoryId', 'factory']);
+        setIfEmpty('factoryName', ['factoryName', 'FactoryName', 'factory_name', 'اسم المصنع', 'المصنع', 'الموقع', 'موقع العمل', 'siteName', 'Site']);
+        setIfEmpty('subLocation', ['subLocation', 'subLocationId', 'SubLocation']);
+        setIfEmpty('subLocationId', ['subLocationId', 'subLocation']);
+        setIfEmpty('subLocationName', ['subLocationName', 'sub_location_name', 'الموقع الفرعي', 'موقع فرعي', 'SubLocationName', 'المكان']);
+        setIfEmpty('behaviorType', ['behaviorType', 'نوع التصرف', 'Type']);
+        setIfEmpty('rating', ['rating', 'التقييم']);
+        setIfEmpty('description', ['description', 'Description', 'الوصف', 'ملاحظات', 'Notes', 'details']);
+        setIfEmpty('correctiveAction', ['correctiveAction', 'الإجراء التصحيحي']);
+        setIfEmpty('correctiveActionDetails', ['correctiveActionDetails', 'تفاصيل الإجراء']);
+        setIfEmpty('date', ['date', 'Date', 'التاريخ', 'behaviorDate']);
+        setIfEmpty('photo', ['photo', 'Photo', 'صورة', 'image']);
+        return out;
+    },
+
+    enrichBehaviorRecord(out) {
+        if (!out || typeof out !== 'object') return out;
+        const merged = { ...out };
+        const code = String(merged.employeeCode || merged.employeeNumber || '').trim();
+        const needDept = !String(merged.department || '').trim();
+        const needJob = !String(merged.job || merged.position || '').trim();
+        if (code && (needDept || needJob)) {
+            const employees = Array.isArray(AppState?.appData?.employees) ? AppState.appData.employees : [];
+            const emp = employees.find((e) =>
+                String(e.employeeNumber || '').trim() === code ||
+                String(e.sapId || '').trim() === code ||
+                String(e.id || '').trim() === code
+            );
+            if (emp) {
+                if (needDept) merged.department = emp.department || emp.dept || '';
+                if (needJob) merged.job = emp.job || emp.position || emp.jobTitle || '';
+            }
+        }
+        const factoryKey = String(merged.factoryId || merged.factory || '').trim();
+        if (factoryKey && !String(merged.factoryName || '').trim()) {
+            merged.factoryName = this.resolveSiteName(factoryKey);
+        }
+        if (!String(merged.factoryName || '').trim() && String(merged.factory || '').trim()) {
+            merged.factoryName = this.resolveSiteName(merged.factory);
+        }
+        const subKey = String(merged.subLocationId || merged.subLocation || '').trim();
+        if (subKey && !String(merged.subLocationName || '').trim()) {
+            merged.subLocationName = this.resolvePlaceName(subKey, factoryKey || merged.factory);
+        }
+        return merged;
+    },
+
+    presentBehavior(raw) {
+        if (!raw || typeof raw !== 'object') return raw;
+        return this.enrichBehaviorRecord(this.normalizeBehaviorRecord(raw));
+    },
+
+    editBehavior(id) {
+        const raw = this.getRawBehaviorById(id);
+        if (!raw) {
+            Notification.error('التصرف غير موجود');
+            return;
+        }
+        this.showForm(this.presentBehavior(raw));
+    },
+
+    /** تاريخ عرض واضح بالعربية دون ترتيب غريب لـ toLocaleDateString(en-GB) */
+    formatBehaviorDateDisplay(behaviorOrValue) {
+        const v = behaviorOrValue && typeof behaviorOrValue === 'object' && !Array.isArray(behaviorOrValue)
+            ? this.getBehaviorDate(behaviorOrValue)
+            : behaviorOrValue;
+        if (!v) return '—';
+        try {
+            let d;
+            const s = String(v).trim();
+            if (/^\d{4}-\d{2}-\d{2}$/.test(s)) {
+                const p = s.split('-').map(Number);
+                d = new Date(p[0], p[1] - 1, p[2]);
+            } else {
+                d = new Date(v);
+            }
+            if (isNaN(d.getTime())) return '—';
+            return d.toLocaleDateString('ar-EG-u-ca-gregory', {
+                weekday: 'long',
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+            });
+        } catch (e) {
+            return '—';
+        }
     },
 
     parseDateSafe(value) {
@@ -374,7 +496,9 @@ const BehaviorMonitoring = {
     },
 
     getBehaviorDate(behavior) {
-        return behavior?.date || behavior?.createdAt || behavior?.updatedAt || null;
+        if (!behavior) return null;
+        return behavior.date || behavior.Date || behavior['التاريخ'] || behavior.behaviorDate
+            || behavior.createdAt || behavior.updatedAt || null;
     },
 
     getBehaviorTypeBadgeClass(behaviorType) {
@@ -399,6 +523,9 @@ const BehaviorMonitoring = {
             behavior?.employeeName,
             behavior?.employeeCode,
             behavior?.employeeNumber,
+            behavior?.department,
+            behavior?.factoryName,
+            behavior?.subLocationName,
             behavior?.behaviorType,
             behavior?.rating,
             behavior?.description
@@ -557,7 +684,7 @@ const BehaviorMonitoring = {
                                                         <td>${Utils.escapeHTML(b.factoryName || b.factory || '—')}</td>
                                                         <td>${Utils.escapeHTML(b.subLocationName || b.subLocation || '—')}</td>
                                                         <td><span class="badge ${this.getBehaviorTypeBadgeClass(b.behaviorType)}">${Utils.escapeHTML(b.behaviorType || '—')}</span></td>
-                                                        <td>${this.getBehaviorDate(b) ? Utils.formatDate(this.getBehaviorDate(b)) : '—'}</td>
+                                                        <td>${this.getBehaviorDate(b) ? this.formatBehaviorDateDisplay(b) : '—'}</td>
                                                         <td><span class="badge ${this.getRatingBadgeClass(b.rating)}">${Utils.escapeHTML(b.rating || '—')}</span></td>
                                                         <td class="text-center">
                                                             <button onclick="BehaviorMonitoring.viewBehavior('${b.id}')" class="btn-icon btn-icon-primary" title="عرض">
@@ -696,17 +823,17 @@ const BehaviorMonitoring = {
                                 <td>${Utils.escapeHTML(b.factoryName || b.factory || '—')}</td>
                                 <td>${Utils.escapeHTML(b.subLocationName || b.subLocation || '—')}</td>
                                 <td><span class="badge ${this.getBehaviorTypeBadgeClass(b.behaviorType)}">${Utils.escapeHTML(b.behaviorType || '—')}</span></td>
-                                <td>${this.getBehaviorDate(b) ? Utils.formatDate(this.getBehaviorDate(b)) : '—'}</td>
+                                <td>${this.getBehaviorDate(b) ? this.formatBehaviorDateDisplay(b) : '—'}</td>
                                 <td><span class="badge ${this.getRatingBadgeClass(b.rating)}">${Utils.escapeHTML(b.rating || '—')}</span></td>
-                                <td class="text-center">
-                                    <div class="flex items-center justify-center gap-2">
-                                        <button onclick="BehaviorMonitoring.viewBehavior('${b.id}')" class="btn-icon btn-icon-primary" title="عرض">
+                                <td class="text-center bhm-log-table-actions">
+                                    <div class="flex items-center justify-center gap-2 flex-wrap">
+                                        <button type="button" onclick="BehaviorMonitoring.viewBehavior('${b.id}')" class="btn-icon btn-icon-primary bhm-action-icon" title="عرض">
                                             <i class="fas fa-eye"></i>
                                         </button>
-                                        <button onclick="BehaviorMonitoring.exportPDF('${b.id}')" class="btn-icon btn-icon-success" title="تصدير PDF">
+                                        <button type="button" onclick="BehaviorMonitoring.exportPDF('${b.id}')" class="btn-icon btn-icon-success bhm-action-icon" title="تصدير PDF">
                                             <i class="fas fa-file-pdf"></i>
                                         </button>
-                                        <button onclick="BehaviorMonitoring.printReport('${b.id}')" class="btn-icon btn-icon-info" title="طباعة">
+                                        <button type="button" onclick="BehaviorMonitoring.printReport('${b.id}')" class="btn-icon btn-icon-info bhm-action-icon" title="طباعة">
                                             <i class="fas fa-print"></i>
                                         </button>
                                     </div>
@@ -759,7 +886,7 @@ const BehaviorMonitoring = {
                 escapeCsv(b.factoryName || b.factory || ''),
                 escapeCsv(b.subLocationName || b.subLocation || ''),
                 escapeCsv(b.behaviorType || ''),
-                escapeCsv(this.getBehaviorDate(b) ? Utils.formatDate(this.getBehaviorDate(b)) : ''),
+                escapeCsv(this.getBehaviorDate(b) ? Utils.formatDateForInput(this.getBehaviorDate(b)) : ''),
                 escapeCsv(b.rating || ''),
                 escapeCsv(b.correctiveAction || ''),
                 escapeCsv(b.correctiveActionDetails || ''),
@@ -1360,96 +1487,117 @@ const BehaviorMonitoring = {
     },
 
     async viewBehavior(id) {
-        const behavior = AppState.appData.behaviorMonitoring.find(b => b.id === id);
-        if (!behavior) {
+        const raw = this.getRawBehaviorById(id);
+        if (!raw) {
             Notification.error('التصرف غير موجود');
             return;
         }
+        const behavior = this.presentBehavior(raw);
+        const esc = (v) => Utils.escapeHTML((v ?? '').toString());
+        const valOrDash = (v) => {
+            const s = (v ?? '').toString().trim();
+            return s ? esc(s) : '<span class="bhm-detail-empty">—</span>';
+        };
+        const descText = (behavior.description || '').toString().trim();
+        const descBlock = descText
+            ? `<div class="bhm-detail-value bhm-detail-desc">${esc(descText)}</div>`
+            : '<div class="bhm-detail-empty-block"><i class="fas fa-align-right ml-2"></i>لا يوجد وصف مسجل لهذا التصرف.</div>';
+        const dateStr = this.getBehaviorDate(behavior) ? this.formatBehaviorDateDisplay(behavior) : '—';
 
         const modal = document.createElement('div');
-        modal.className = 'modal-overlay';
+        modal.className = 'modal-overlay bhm-detail-overlay';
         modal.innerHTML = `
-            <div class="modal-content behavior-modal" style="max-width: 760px;">
-                <div class="modal-header">
-                    <h2 class="modal-title">تفاصيل التصرف</h2>
-                    <button class="modal-close" onclick="this.closest('.modal-overlay').remove()">
+            <div class="modal-content behavior-modal bhm-detail-modal" style="max-width: 820px;">
+                <div class="bhm-detail-hero">
+                    <div class="bhm-detail-hero-text">
+                        <p class="bhm-detail-kicker"><i class="fas fa-clipboard-list ml-2"></i>مراقبة السلوكيات</p>
+                        <h2 class="bhm-detail-title">تفاصيل التصرف</h2>
+                        <p class="bhm-detail-sub">${esc(behavior.isoCode || '—')} <span class="bhm-detail-sub-sep">·</span> ${esc(behavior.employeeName || '')}</p>
+                    </div>
+                    <button type="button" class="bhm-detail-close" onclick="this.closest('.modal-overlay').remove()" aria-label="إغلاق">
                         <i class="fas fa-times"></i>
                     </button>
                 </div>
-                <div class="modal-body">
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                            <label class="text-sm font-semibold text-gray-600">كود ISO</label>
-                            <div class="text-gray-800">${Utils.escapeHTML(behavior.isoCode || '')}</div>
+                <div class="modal-body bhm-detail-body">
+                    <div class="bhm-detail-grid">
+                        <div class="bhm-detail-field">
+                            <span class="bhm-detail-label">كود ISO</span>
+                            <div class="bhm-detail-value">${valOrDash(behavior.isoCode)}</div>
                         </div>
-                        <div>
-                            <label class="text-sm font-semibold text-gray-600">الكود الوظيفي</label>
-                            <div class="text-gray-800">${Utils.escapeHTML(behavior.employeeCode || behavior.employeeNumber || '')}</div>
+                        <div class="bhm-detail-field">
+                            <span class="bhm-detail-label">الكود الوظيفي</span>
+                            <div class="bhm-detail-value">${valOrDash(behavior.employeeCode || behavior.employeeNumber)}</div>
                         </div>
-                        <div>
-                            <label class="text-sm font-semibold text-gray-600">اسم الموظف</label>
-                            <div class="text-gray-800">${Utils.escapeHTML(behavior.employeeName || '')}</div>
+                        <div class="bhm-detail-field bhm-detail-field-span2">
+                            <span class="bhm-detail-label">اسم الموظف</span>
+                            <div class="bhm-detail-value bhm-detail-value-strong">${valOrDash(behavior.employeeName)}</div>
                         </div>
-                        <div>
-                            <label class="text-sm font-semibold text-gray-600">القسم</label>
-                            <div class="text-gray-800">${Utils.escapeHTML(behavior.department || behavior.employeeDepartment || '—')}</div>
+                        <div class="bhm-detail-field">
+                            <span class="bhm-detail-label">القسم</span>
+                            <div class="bhm-detail-value">${valOrDash(behavior.department || behavior.employeeDepartment)}</div>
                         </div>
-                        <div>
-                            <label class="text-sm font-semibold text-gray-600">الوظيفة</label>
-                            <div class="text-gray-800">${Utils.escapeHTML(behavior.job || behavior.position || '—')}</div>
+                        <div class="bhm-detail-field">
+                            <span class="bhm-detail-label">الوظيفة</span>
+                            <div class="bhm-detail-value">${valOrDash(behavior.job || behavior.position)}</div>
                         </div>
-                        <div>
-                            <label class="text-sm font-semibold text-gray-600">المصنع</label>
-                            <div class="text-gray-800">${Utils.escapeHTML(behavior.factoryName || behavior.factory || '—')}</div>
+                        <div class="bhm-detail-field">
+                            <span class="bhm-detail-label">المصنع / الموقع</span>
+                            <div class="bhm-detail-value">${valOrDash(behavior.factoryName || behavior.factory)}</div>
                         </div>
-                        <div>
-                            <label class="text-sm font-semibold text-gray-600">الموقع الفرعي</label>
-                            <div class="text-gray-800">${Utils.escapeHTML(behavior.subLocationName || behavior.subLocation || '—')}</div>
+                        <div class="bhm-detail-field">
+                            <span class="bhm-detail-label">الموقع الفرعي</span>
+                            <div class="bhm-detail-value">${valOrDash(behavior.subLocationName || behavior.subLocation)}</div>
                         </div>
-                        <div>
-                            <label class="text-sm font-semibold text-gray-600">نوع التصرف</label>
-                            <div class="text-gray-800"><span class="badge ${this.getBehaviorTypeBadgeClass(behavior.behaviorType)}">${Utils.escapeHTML(behavior.behaviorType || '—')}</span></div>
+                        <div class="bhm-detail-field">
+                            <span class="bhm-detail-label">نوع التصرف</span>
+                            <div class="bhm-detail-value">
+                                <span class="badge ${this.getBehaviorTypeBadgeClass(behavior.behaviorType)}">${esc(behavior.behaviorType || '—')}</span>
+                            </div>
                         </div>
-                        <div>
-                            <label class="text-sm font-semibold text-gray-600">التاريخ</label>
-                            <div class="text-gray-800">${this.getBehaviorDate(behavior) ? Utils.formatDate(this.getBehaviorDate(behavior)) : '—'}</div>
+                        <div class="bhm-detail-field">
+                            <span class="bhm-detail-label">التاريخ</span>
+                            <div class="bhm-detail-value">${dateStr === '—' ? '<span class="bhm-detail-empty">—</span>' : esc(dateStr)}</div>
                         </div>
-                        <div>
-                            <label class="text-sm font-semibold text-gray-600">التقييم</label>
-                            <div class="text-gray-800"><span class="badge ${this.getRatingBadgeClass(behavior.rating)}">${Utils.escapeHTML(behavior.rating || '—')}</span></div>
+                        <div class="bhm-detail-field">
+                            <span class="bhm-detail-label">التقييم</span>
+                            <div class="bhm-detail-value">
+                                <span class="badge ${this.getRatingBadgeClass(behavior.rating)}">${esc(behavior.rating || '—')}</span>
+                            </div>
                         </div>
-                        <div class="md:col-span-2">
-                            <label class="text-sm font-semibold text-gray-600">الوصف</label>
-                            <div class="text-gray-800 whitespace-pre-line">${Utils.escapeHTML(behavior.description || '')}</div>
+                        <div class="bhm-detail-field bhm-detail-field-span2">
+                            <span class="bhm-detail-label">الوصف</span>
+                            ${descBlock}
                         </div>
                         ${(behavior.behaviorType === 'سلبي' && (behavior.correctiveAction || behavior.correctiveActionDetails)) ? `
-                            <div class="md:col-span-2">
-                                <label class="text-sm font-semibold text-gray-600">الإجراء التصحيحي</label>
-                                <div class="text-gray-800">
-                                    <span class="badge badge-danger">${Utils.escapeHTML(behavior.correctiveAction || '—')}</span>
-                                    ${behavior.correctiveActionDetails ? `<div class="text-sm text-gray-600 mt-2">${Utils.escapeHTML(behavior.correctiveActionDetails)}</div>` : ''}
+                            <div class="bhm-detail-field bhm-detail-field-span2 bhm-detail-corrective">
+                                <span class="bhm-detail-label">الإجراء التصحيحي</span>
+                                <div class="bhm-detail-value">
+                                    <span class="badge badge-danger">${esc(behavior.correctiveAction || '—')}</span>
+                                    ${behavior.correctiveActionDetails ? `<div class="bhm-detail-corrective-details">${esc(behavior.correctiveActionDetails)}</div>` : ''}
                                 </div>
                             </div>
                         ` : ''}
                         ${behavior.photo ? `
-                            <div class="md:col-span-2">
-                                <label class="text-sm font-semibold text-gray-600">الصورة</label>
-                                <div class="mt-2">
-                                    <img src="${behavior.photo}" alt="صورة" class="w-64 h-64 object-cover rounded border">
+                            <div class="bhm-detail-field bhm-detail-field-span2">
+                                <span class="bhm-detail-label">الصورة</span>
+                                <div class="bhm-detail-photo-wrap">
+                                    <img src="${behavior.photo}" alt="صورة التصرف" class="bhm-detail-photo">
                                 </div>
                             </div>
                         ` : ''}
                     </div>
                 </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">إغلاق</button>
-                    <button type="button" onclick="BehaviorMonitoring.exportPDF('${behavior.id}');" class="btn-secondary">
-                        <i class="fas fa-file-pdf ml-2"></i>تصدير PDF
+                <div class="bhm-detail-footer">
+                    <button type="button" class="btn-primary" onclick="BehaviorMonitoring.editBehavior('${behavior.id}'); this.closest('.modal-overlay').remove();">
+                        <i class="fas fa-pen ml-2"></i>تعديل
                     </button>
-                    <button type="button" onclick="BehaviorMonitoring.printReport('${behavior.id}');" class="btn-secondary">
+                    <button type="button" class="btn-secondary" onclick="BehaviorMonitoring.printReport('${behavior.id}');">
                         <i class="fas fa-print ml-2"></i>طباعة
                     </button>
-                    <button type="button" onclick="BehaviorMonitoring.showForm(${JSON.stringify(behavior).replace(/"/g, '&quot;')}); this.closest('.modal-overlay').remove();" class="btn-primary">تعديل</button>
+                    <button type="button" class="btn-secondary" onclick="BehaviorMonitoring.exportPDF('${behavior.id}');">
+                        <i class="fas fa-file-pdf ml-2"></i>تصدير PDF
+                    </button>
+                    <button type="button" class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">إغلاق</button>
                 </div>
             </div>
         `;
@@ -1460,16 +1608,18 @@ const BehaviorMonitoring = {
     },
 
     async exportPDF(id) {
-        const behavior = AppState.appData.behaviorMonitoring.find(b => b.id === id);
-        if (!behavior) {
+        const raw = this.getRawBehaviorById(id);
+        if (!raw) {
             Notification.error('التصرف غير موجود');
             return;
         }
+        const behavior = this.presentBehavior(raw);
 
         try {
             Loading.show();
             const formCode = behavior.isoCode || `BEH-${behavior.id?.substring(0, 8) || 'UNKNOWN'}`;
             const formTitle = 'تقرير مراقبة التصرفات';
+            const pdfDate = this.getBehaviorDate(behavior) ? this.formatBehaviorDateDisplay(behavior) : '—';
 
             const content = `
                 <table>
@@ -1481,7 +1631,7 @@ const BehaviorMonitoring = {
                     <tr><th>المصنع</th><td>${Utils.escapeHTML(behavior.factoryName || behavior.factory || '')}</td></tr>
                     <tr><th>الموقع الفرعي</th><td>${Utils.escapeHTML(behavior.subLocationName || behavior.subLocation || '')}</td></tr>
                     <tr><th>نوع التصرف</th><td>${Utils.escapeHTML(behavior.behaviorType || '')}</td></tr>
-                    <tr><th>التاريخ</th><td>${Utils.formatDate(behavior.date)}</td></tr>
+                    <tr><th>التاريخ</th><td>${Utils.escapeHTML(pdfDate)}</td></tr>
                     <tr><th>التقييم</th><td>${Utils.escapeHTML(behavior.rating || '')}</td></tr>
                     ${(behavior.behaviorType === 'سلبي' && (behavior.correctiveAction || behavior.correctiveActionDetails)) ? `
                         <tr><th>الإجراء التصحيحي</th><td>${Utils.escapeHTML(behavior.correctiveAction || '')}</td></tr>

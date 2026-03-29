@@ -10,6 +10,55 @@
  */
 
 /**
+ * توحيد مفاتيح الصفوف القادمة من الجدول (رؤوس عربية / أسماء بديلة) مع الحقول القياسية.
+ * @param {Object} row
+ * @returns {Object}
+ */
+function normalizeBehaviorSheetRow_(row) {
+    if (!row || typeof row !== 'object') return row;
+    var out = {};
+    for (var k in row) {
+        if (row.hasOwnProperty(k)) out[k] = row[k];
+    }
+    function first(keys) {
+        for (var i = 0; i < keys.length; i++) {
+            var kk = keys[i];
+            if (!row.hasOwnProperty(kk)) continue;
+            var v = row[kk];
+            if (v !== undefined && v !== null && String(v).trim() !== '') return v;
+        }
+        return null;
+    }
+    function fill(canon, keys) {
+        var v = first(keys);
+        if (v === null) return;
+        if (out[canon] === undefined || out[canon] === null || String(out[canon]).trim() === '') {
+            out[canon] = v;
+        }
+    }
+    fill('isoCode', ['isoCode', 'ISO', 'IsoCode', 'كود ISO']);
+    fill('employeeCode', ['employeeCode', 'الكود الوظيفي', 'EmployeeCode']);
+    fill('employeeNumber', ['employeeNumber', 'employeeCode', 'الكود الوظيفي']);
+    fill('employeeName', ['employeeName', 'اسم الموظف', 'EmployeeName']);
+    fill('department', ['department', 'القسم', 'employeeDepartment', 'Department']);
+    fill('job', ['job', 'position', 'الوظيفة', 'المسمى الوظيفي', 'jobTitle', 'Position']);
+    fill('factory', ['factory', 'factoryId', 'Factory', 'FactoryId']);
+    fill('factoryId', ['factoryId', 'factory']);
+    fill('factoryName', ['factoryName', 'اسم المصنع', 'المصنع', 'الموقع', 'موقع العمل', 'siteName', 'Site']);
+    fill('subLocation', ['subLocation', 'subLocationId', 'SubLocation']);
+    fill('subLocationId', ['subLocationId', 'subLocation']);
+    fill('subLocationName', ['subLocationName', 'الموقع الفرعي', 'موقع فرعي', 'المكان', 'SubLocationName']);
+    fill('behaviorType', ['behaviorType', 'نوع التصرف', 'Type']);
+    fill('rating', ['rating', 'التقييم']);
+    fill('description', ['description', 'الوصف', 'ملاحظات', 'Notes', 'Description', 'details']);
+    fill('correctiveAction', ['correctiveAction', 'الإجراء التصحيحي']);
+    fill('correctiveActionDetails', ['correctiveActionDetails', 'تفاصيل الإجراء']);
+    fill('date', ['date', 'Date', 'التاريخ', 'behaviorDate']);
+    fill('photo', ['photo', 'صورة', 'Photo', 'image']);
+    return out;
+}
+
+/**
  * ============================================
  * إضافة سجل مراقبة سلوك
  * ============================================
@@ -96,7 +145,8 @@ function updateBehavior(behaviorId, updateData) {
 function getAllBehaviors(filters = {}) {
     try {
         const sheetName = 'BehaviorMonitoring';
-        let data = readFromSheet(sheetName, getSpreadsheetId());
+        var raw = readFromSheet(sheetName, getSpreadsheetId());
+        let data = (raw || []).map(function (row) { return normalizeBehaviorSheetRow_(row); });
         
         // تطبيق الفلاتر
         if (filters.employeeId) {
@@ -154,7 +204,7 @@ function getBehavior(behaviorId) {
             return { success: false, message: 'السجل غير موجود' };
         }
         
-        return { success: true, data: behavior };
+        return { success: true, data: normalizeBehaviorSheetRow_(behavior) };
     } catch (error) {
         Logger.log('Error getting behavior: ' + error.toString());
         return { success: false, message: 'حدث خطأ أثناء قراءة السجل: ' + error.toString() };
