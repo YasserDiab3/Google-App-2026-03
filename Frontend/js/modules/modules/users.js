@@ -303,6 +303,7 @@ const Users = {
                                     type="email" 
                                     id="user-email" 
                                     name="email" 
+                                    autocomplete="email"
                                     required
                                     class="form-input"
                                     value="${userData?.email || ''}"
