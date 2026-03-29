@@ -607,20 +607,31 @@ const DailyObservations = {
     },
 
     buildWorkflowBannerHtml(observation) {
-        const labelParts = [];
-        if (observation.submittedBy) labelParts.push(`المُسجِّل: ${Utils.escapeHTML(observation.submittedBy)}`);
-        if (observation.specialistReviewedBy) labelParts.push(`مراجعة مسؤول السلامة (أخصائي): ${Utils.escapeHTML(observation.specialistReviewedBy)}`);
-        if (observation.managerApprovedBy) labelParts.push(`اعتماد مدير السلامة (مدير النظام): ${Utils.escapeHTML(observation.managerApprovedBy)}`);
-        if (observation.rejectionReason) labelParts.push(`ملاحظة: ${Utils.escapeHTML(observation.rejectionReason)}`);
+        const metaRows = [];
+        const pushMetaRow = (title, value) => {
+            const v = String(value ?? '').trim();
+            if (!v) return;
+            metaRows.push(
+                `<div class="obs-wf-meta-line" style="display:flex;flex-wrap:wrap;gap:0.35rem 0.5rem;align-items:baseline;direction:rtl;text-align:right;">` +
+                `<span style="opacity:0.88;">${Utils.escapeHTML(title)}</span>` +
+                `<strong style="font-weight:700;opacity:1;">${Utils.escapeHTML(v)}</strong>` +
+                `</div>`
+            );
+        };
+        pushMetaRow('المُسجِّل:', observation.submittedBy);
+        pushMetaRow('مراجعة مسؤول السلامة (أخصائي):', observation.specialistReviewedBy);
+        pushMetaRow('اعتماد مدير السلامة (مدير النظام):', observation.managerApprovedBy);
+        pushMetaRow('ملاحظة:', observation.rejectionReason);
         const actions = this.buildWorkflowActionButtonsHtml(observation);
         const deptForm = this.buildDepartmentWorkflowFormHtml(observation);
         const assignBox = this.buildAssignResponsibleHtml(observation);
         const commentFields = this.buildWorkflowInlineCommentFieldsHtml(observation);
         if (observation.assignedToName || observation.assignedToEmail) {
-            labelParts.push(`معيّن: ${Utils.escapeHTML(observation.assignedToName || '')}${observation.assignedToEmail ? ' — ' + Utils.escapeHTML(observation.assignedToEmail) : ''}`);
+            const assignLabel = [String(observation.assignedToName || '').trim(), String(observation.assignedToEmail || '').trim()].filter(Boolean).join(' — ');
+            if (assignLabel) pushMetaRow('معيّن:', assignLabel);
         }
-        const metaLine = labelParts.length
-            ? `<div style="font-size: 0.8rem; opacity: 0.88; line-height: 1.55; margin-bottom: 0.35rem;">${labelParts.join(' · ')}</div>`
+        const metaLine = metaRows.length
+            ? `<div class="obs-wf-meta" style="font-size: 0.8rem; line-height: 1.55; margin-bottom: 0.35rem; display: flex; flex-direction: column; gap: 0.4rem; direction: rtl; text-align: right;">${metaRows.join('')}</div>`
             : '';
         return `
         <div class="obs-workflow-panel" style="background: linear-gradient(135deg, #312e81 0%, #5b21b6 100%); color: white; padding: 1.25rem; border-radius: 16px; box-shadow: 0 10px 25px rgba(0,0,0,0.15);">
