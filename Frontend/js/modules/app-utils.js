@@ -6083,7 +6083,10 @@ const EmployeeHelper = {
             // إذا حدثت محاولة بحث أحدث أثناء انتظار التحميل، تجاهل هذه المحاولة.
             if (lookupSeq !== this._lookupSeq) return;
 
-            const employee = this.findByTerm(term);
+            // مطابقة تامة فقط (كود أو اسم). لا نستخدم findByPartial هنا: أثناء الكتابة
+            // تُطابق البادئة أول موظف يحتوي الرقم في employeeNumber فيُستبدل الحقل بـ getPrimaryCode
+            // فيبدو وكأن «أرقاماً تُكتب تلقائياً» أو تتغير بشكل خاطئ.
+            const employee = this.findByCode(term) || this.findByName(term);
             if (employee) {
                 const primaryCode = this.getPrimaryCode(employee);
                 if (primaryCode) codeInput.value = primaryCode;

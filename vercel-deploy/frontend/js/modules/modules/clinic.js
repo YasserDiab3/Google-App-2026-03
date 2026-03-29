@@ -8724,6 +8724,7 @@ const Clinic = {
                                 <input type="text" id="visit-employee-code" class="form-input" style="border: 2px solid #667eea; border-radius: 8px;"
                                     value="${visitData?.employeeCode || visitData?.employeeNumber || ''}" 
                                     placeholder="أدخل الكود الوظيفي (سيتم تعبئة البيانات تلقائياً)"
+                                    autocomplete="off" autocorrect="off" spellcheck="false" inputmode="text"
                                     ${visitData?.personType === 'employee' || !visitData ? 'required' : 'disabled'}>
                             </div>
                             <div id="visit-employee-name-container">
@@ -12966,7 +12967,7 @@ const Clinic = {
                                         <i class="fas fa-id-card text-purple-600"></i>
                                         الكود الوظيفي *
                                     </label>
-                                    <input type="text" id="enhanced-visit-employee-code" class="form-input" placeholder="أدخل الكود الوظيفي" value="${Utils.escapeHTML(visitData?.employeeCode || visitData?.employeeNumber || '')}" style="border: 2px solid #667eea; border-radius: 10px; padding: 12px; transition: all 0.3s;">
+                                    <input type="text" id="enhanced-visit-employee-code" class="form-input" placeholder="أدخل الكود الوظيفي" value="${Utils.escapeHTML(visitData?.employeeCode || visitData?.employeeNumber || '')}" autocomplete="off" autocorrect="off" spellcheck="false" inputmode="text" style="border: 2px solid #667eea; border-radius: 10px; padding: 12px; transition: all 0.3s;">
                                 </div>
                                 
                                 <div>
