@@ -464,6 +464,79 @@ const DailyObservations = {
         if (el) el.innerHTML = '';
     },
 
+    /** ترتيب السجل الزمني تنازلياً (الأحدث أولاً) */
+    normalizeTimeLogArray(raw) {
+        let timeLog = [];
+        try {
+            if (raw == null) return [];
+            if (Array.isArray(raw)) timeLog = raw.slice();
+            else if (typeof raw === 'string' && raw) timeLog = JSON.parse(raw);
+        } catch (e) {
+            timeLog = [];
+        }
+        if (!Array.isArray(timeLog)) timeLog = [];
+        return timeLog.sort((a, b) => {
+            const tb = new Date(b.timestamp || 0).getTime();
+            const ta = new Date(a.timestamp || 0).getTime();
+            return tb - ta;
+        });
+    },
+
+    /** سطر العرض: «الدور: التفصيل» أو النص القديم note */
+    formatTimelineDetailLine(log) {
+        if (!log || typeof log !== 'object') return '—';
+        const r = String(log.roleLabel || '').trim();
+        const d = String(log.actionDetail || '').trim();
+        if (r && d) return r + ': ' + d;
+        const n = String(log.note || '').trim();
+        return n || '—';
+    },
+
+    formatTimelineDate(ts) {
+        if (!ts) return '';
+        try {
+            const dt = new Date(ts);
+            if (Number.isNaN(dt.getTime())) return '';
+            return dt.toLocaleDateString('ar-EG', { year: 'numeric', month: 'long', day: 'numeric', calendar: 'gregory' });
+        } catch (e) {
+            return typeof Utils !== 'undefined' && Utils.formatDate ? Utils.formatDate(ts) : '';
+        }
+    },
+
+    /**
+     * HTML السجل الزمني (بطاقات: تاريخ | اسم + نقطة | سطر الدور والإجراء)
+     */
+    buildObservationTimelineHtml(timeLogRaw) {
+        const timeLog = this.normalizeTimeLogArray(timeLogRaw);
+        if (!timeLog.length) {
+            return '<p class="text-gray-500 text-sm">لا يوجد سجل زمني</p>';
+        }
+        return `
+            <div class="obs-timeline-list space-y-2">
+                ${timeLog.map((log) => `
+                    <div class="obs-timeline-item">
+                        <div class="obs-timeline-meta">
+                            <div class="obs-timeline-body">
+                                <div class="obs-timeline-user-row">
+                                    <span class="obs-timeline-name">${Utils.escapeHTML(log.user || '')}</span>
+                                    <span class="obs-timeline-dot" aria-hidden="true"></span>
+                                </div>
+                                <p class="obs-timeline-detail">${Utils.escapeHTML(this.formatTimelineDetailLine(log))}</p>
+                                ${log.action === 'status_changed' && log.oldStatus != null && log.newStatus != null ? `
+                                    <p class="obs-timeline-status-hint text-xs text-gray-500 mt-1">
+                                        من <span class="font-medium">${Utils.escapeHTML(String(log.oldStatus))}</span>
+                                        إلى <span class="font-medium">${Utils.escapeHTML(String(log.newStatus))}</span>
+                                    </p>
+                                ` : ''}
+                            </div>
+                            <time class="obs-timeline-date" datetime="${Utils.escapeHTML(String(log.timestamp || ''))}">${Utils.escapeHTML(this.formatTimelineDate(log.timestamp))}</time>
+                        </div>
+                    </div>
+                `).join('')}
+            </div>
+        `;
+    },
+
     formatResponsibleTableCell(obs) {
         const dept = Utils.escapeHTML(obs.responsibleDepartment || '-');
         const asn = (obs.assignedToName || '').trim();
@@ -7328,28 +7401,7 @@ const DailyObservations = {
                         <!-- السجل الزمني -->
                         <div class="bg-white p-5 rounded-lg border border-gray-200 shadow-sm">
                             <h3 class="text-lg font-semibold mb-4"><i class="fas fa-history ml-2"></i>السجل الزمني</h3>
-                            ${timeLog.length > 0 ? `
-                                <div class="space-y-2">
-                                    ${timeLog.map(log => `
-                                        <div class="flex items-start gap-3 p-3 bg-gray-50 rounded">
-                                            <i class="fas fa-circle text-xs text-blue-500 mt-1"></i>
-                                            <div class="flex-1">
-                                                <div class="flex items-center justify-between">
-                                                    <span class="text-sm font-semibold">${Utils.escapeHTML(log.user || '')}</span>
-                                                    <span class="text-xs text-gray-500">${log.timestamp ? Utils.formatDate(log.timestamp) : ''}</span>
-                                                </div>
-                                                <p class="text-sm text-gray-700 mt-1">${Utils.escapeHTML(log.note || '')}</p>
-                                                ${log.action === 'status_changed' && log.oldStatus && log.newStatus ? `
-                                                    <p class="text-xs text-gray-500 mt-1">
-                                                        من: <span class="badge badge-secondary">${Utils.escapeHTML(log.oldStatus)}</span>
-                                                        إلى: <span class="badge badge-info">${Utils.escapeHTML(log.newStatus)}</span>
-                                                    </p>
-                                                ` : ''}
-                                            </div>
-                                        </div>
-                                    `).join('')}
-                                </div>
-                            ` : '<p class="text-gray-500 text-sm">لا يوجد سجل زمني</p>'}
+                            ${this.buildObservationTimelineHtml(timeLog)}
                         </div>
                         ${wfBannerHtml}
                     </div>
@@ -7735,82 +7787,13 @@ const DailyObservations = {
             const observation = AppState.appData.dailyObservations.find(o => o.id === observationId);
             if (!observation) return;
 
-            // تحليل السجل الزمني
-            let timeLog = [];
-            try {
-                if (observation.timeLog) {
-                    timeLog = Array.isArray(observation.timeLog) ? observation.timeLog : 
-                             (typeof observation.timeLog === 'string' ? JSON.parse(observation.timeLog) : []);
-                }
-            } catch (e) {
-                timeLog = [];
-            }
-
-            // البحث عن container السجل الزمني
-            let timeLogContainer = timeLogSection.querySelector('.space-y-2');
-            if (!timeLogContainer) {
-                timeLogContainer = timeLogSection.querySelector('p.text-gray-500');
-            }
-
-            if (timeLog.length > 0) {
-                const timeLogHTML = `
-                    <div class="space-y-2">
-                        ${timeLog.map(log => `
-                            <div class="flex items-start gap-3 p-3 bg-gray-50 rounded">
-                                <i class="fas fa-circle text-xs text-blue-500 mt-1"></i>
-                                <div class="flex-1">
-                                    <div class="flex items-center justify-between">
-                                        <span class="text-sm font-semibold">${Utils.escapeHTML(log.user || '')}</span>
-                                        <span class="text-xs text-gray-500">${log.timestamp ? Utils.formatDate(log.timestamp) : ''}</span>
-                                    </div>
-                                    <p class="text-sm text-gray-700 mt-1">${Utils.escapeHTML(log.note || '')}</p>
-                                    ${log.action === 'status_changed' && log.oldStatus && log.newStatus ? `
-                                        <p class="text-xs text-gray-500 mt-1">
-                                            من: <span class="badge badge-secondary">${Utils.escapeHTML(log.oldStatus)}</span>
-                                            إلى: <span class="badge badge-info">${Utils.escapeHTML(log.newStatus)}</span>
-                                        </p>
-                                    ` : ''}
-                                </div>
-                            </div>
-                        `).join('')}
-                    </div>
-                `;
-
-                if (timeLogContainer) {
-                    if (timeLogContainer.tagName === 'P') {
-                        timeLogContainer.outerHTML = timeLogHTML;
-                    } else {
-                        timeLogContainer.innerHTML = timeLogHTML;
-                    }
-                } else {
-                    // إضافة container جديد بعد العنوان
-                    const heading = timeLogSection.querySelector('h3');
-                    const headingParent = heading?.parentElement;
-                    if (headingParent) {
-                        const container = document.createElement('div');
-                        container.innerHTML = timeLogHTML;
-                        headingParent.insertAdjacentElement('afterend', container);
-                    }
-                }
-            } else {
-                if (timeLogContainer) {
-                    if (timeLogContainer.tagName === 'P') {
-                        timeLogContainer.textContent = 'لا يوجد سجل زمني';
-                        timeLogContainer.className = 'text-gray-500 text-sm';
-                    } else {
-                        timeLogContainer.innerHTML = '<p class="text-gray-500 text-sm">لا يوجد سجل زمني</p>';
-                    }
-                } else {
-                    // إضافة رسالة "لا يوجد سجل زمني"
-                    const heading = timeLogSection.querySelector('h3');
-                    const headingParent = heading?.parentElement;
-                    if (headingParent) {
-                        const emptyMsg = document.createElement('p');
-                        emptyMsg.className = 'text-gray-500 text-sm';
-                        emptyMsg.textContent = 'لا يوجد سجل زمني';
-                        headingParent.insertAdjacentElement('afterend', emptyMsg);
-                    }
-                }
+            const timeLogHTML = this.buildObservationTimelineHtml(observation.timeLog);
+            const heading = timeLogSection.querySelector('h3');
+            const afterHeading = heading ? heading.nextElementSibling : null;
+            if (afterHeading) {
+                afterHeading.outerHTML = timeLogHTML;
+            } else if (heading) {
+                heading.insertAdjacentHTML('afterend', timeLogHTML);
             }
         } catch (error) {
             Utils.safeError('خطأ في تحديث قسم السجل الزمني:', error);
@@ -7908,7 +7891,9 @@ const DailyObservations = {
                 action: 'update_added',
                 user: AppState.currentUser?.name || 'System',
                 timestamp: new Date().toISOString(),
-                note: 'تم إضافة تحديث'
+                roleLabel: 'تحديث التنفيذ',
+                actionDetail: 'تم إضافة تحديث على سير التنفيذ',
+                note: 'تحديث التنفيذ: تم إضافة تحديث على سير التنفيذ'
             });
             observation.timeLog = timeLog;
             observation.updatedAt = new Date().toISOString();
@@ -8026,7 +8011,9 @@ const DailyObservations = {
                 action: 'comment_added',
                 user: AppState.currentUser?.name || 'System',
                 timestamp: new Date().toISOString(),
-                note: 'تم إضافة تعليق'
+                roleLabel: 'تعليق',
+                actionDetail: 'تم إضافة تعليق على الملاحظة',
+                note: 'تعليق: تم إضافة تعليق على الملاحظة'
             });
             observation.timeLog = timeLog;
             observation.updatedAt = new Date().toISOString();

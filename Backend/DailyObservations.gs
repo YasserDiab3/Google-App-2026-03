@@ -854,7 +854,9 @@ function addObservationComment(observationId, commentData) {
             action: 'comment_added',
             user: commentData.user || 'System',
             timestamp: new Date().toISOString(),
-            note: 'تم إضافة تعليق'
+            roleLabel: 'تعليق',
+            actionDetail: 'تم إضافة تعليق على الملاحظة',
+            note: 'تعليق: تم إضافة تعليق على الملاحظة'
         });
         
         // ✅ حفظ كـ array
@@ -948,7 +950,9 @@ function addObservationUpdate(observationId, updateData) {
             action: 'update_added',
             user: updateData.user || 'System',
             timestamp: new Date().toISOString(),
-            note: 'تم إضافة تحديث'
+            roleLabel: 'تحديث التنفيذ',
+            actionDetail: 'تم إضافة تحديث على سير التنفيذ',
+            note: 'تحديث التنفيذ: تم إضافة تحديث على سير التنفيذ'
         });
         
         // ✅ حفظ كـ array
@@ -1021,7 +1025,9 @@ function updateObservationStatus(observationId, statusData) {
                 action: 'status_changed',
                 user: statusData.updatedBy || statusData.user || 'System',
                 timestamp: new Date().toISOString(),
-                note: `تم تغيير الحالة من ${oldStatus} إلى ${newStatus}`,
+                roleLabel: 'تغيير الحالة',
+                actionDetail: 'من ' + String(oldStatus || '—') + ' إلى ' + String(newStatus || '—'),
+                note: 'تغيير الحالة: من ' + String(oldStatus || '—') + ' إلى ' + String(newStatus || '—'),
                 oldStatus: oldStatus,
                 newStatus: newStatus
             });
@@ -1419,7 +1425,9 @@ function transitionObservationWorkflow(payload) {
                 action: 'assign_responsible',
                 user: actorName,
                 timestamp: nowIso,
-                note: 'تعيين مسؤول متابعة: ' + aName + (aEmail ? ' — ' + aEmail : '')
+                roleLabel: 'تعيين المتابعة',
+                actionDetail: 'المعيّن: ' + aName + (aEmail ? ' — ' + aEmail : ''),
+                note: 'تعيين المتابعة: المعيّن: ' + aName + (aEmail ? ' — ' + aEmail : '')
             });
             if (aEmail) {
                 var baseLocal = 'رقم الملاحظة: ' + String(obs.isoCode || obs.id || '') + '\nالإدارة: ' + String(obs.responsibleDepartment || '') + '\n' + String(obs.details || '').slice(0, 280);
@@ -1443,7 +1451,9 @@ function transitionObservationWorkflow(payload) {
                 action: 'specialist_forward',
                 user: actorName,
                 timestamp: nowIso,
-                note: 'أرسلت الملاحظة لاعتماد مدير السلامة'
+                roleLabel: 'أخصائي السلامة',
+                actionDetail: 'تمرير لمدير السلامة',
+                note: 'أخصائي السلامة: تمرير لمدير السلامة'
             });
             notifyObservationWorkflowEmails('pending_manager', obs, [actorEmail]);
         } else if (action === 'manager_approve') {
@@ -1464,7 +1474,9 @@ function transitionObservationWorkflow(payload) {
                 action: 'manager_approve',
                 user: actorName,
                 timestamp: nowIso,
-                note: 'اعتماد مدير السلامة — بانتظار إدارة التنفيذ'
+                roleLabel: 'مدير السلامة',
+                actionDetail: 'اعتماد وإرسال للإدارة',
+                note: 'مدير السلامة: اعتماد وإرسال للإدارة'
             });
             notifyObservationWorkflowEmails('pending_department', obs, [actorEmail]);
         } else if (action === 'manager_reject' || action === 'admin_reject') {
@@ -1492,7 +1504,9 @@ function transitionObservationWorkflow(payload) {
                 action: 'rejected',
                 user: actorName,
                 timestamp: nowIso,
-                note: 'رفض: ' + rejectionReason
+                roleLabel: action === 'admin_reject' ? 'مدير النظام' : 'مدير السلامة',
+                actionDetail: 'رفض الملاحظة — ' + rejectionReason,
+                note: (action === 'admin_reject' ? 'مدير النظام' : 'مدير السلامة') + ': رفض الملاحظة — ' + rejectionReason
             });
             notifyObservationWorkflowEmails('rejected_or_return', obs, [actorEmail]);
         } else if (action === 'manager_return_specialist' || action === 'admin_return_specialist') {
@@ -1508,7 +1522,9 @@ function transitionObservationWorkflow(payload) {
                 action: 'return_specialist',
                 user: actorName,
                 timestamp: nowIso,
-                note: 'إرجاع لمسؤول السلامة (أخصائي): ' + rejectionReason
+                roleLabel: action === 'admin_return_specialist' ? 'مدير النظام' : 'مدير السلامة',
+                actionDetail: 'إرجاع لمسؤول السلامة (أخصائي) — ' + rejectionReason,
+                note: (action === 'admin_return_specialist' ? 'مدير النظام' : 'مدير السلامة') + ': إرجاع لمسؤول السلامة (أخصائي) — ' + rejectionReason
             });
             notifyObservationWorkflowEmails('rejected_or_return', obs, [actorEmail]);
         } else if (action === 'department_update') {
@@ -1530,7 +1546,9 @@ function transitionObservationWorkflow(payload) {
                 action: 'department_update',
                 user: actorName,
                 timestamp: nowIso,
-                note: 'تحديث الإجراء التصحيحي وموعد الإغلاق'
+                roleLabel: 'مدير الإدارة',
+                actionDetail: 'حفظ الإجراء التصحيحي وموعد الإغلاق',
+                note: 'مدير الإدارة: حفظ الإجراء التصحيحي وموعد الإغلاق'
             });
             if (isAdminUser && !hasDept) {
                 notifyObservationWorkflowEmails('department_update_from_safety', obs, [actorEmail]);
@@ -1548,7 +1566,9 @@ function transitionObservationWorkflow(payload) {
                 action: 'closed',
                 user: actorName,
                 timestamp: nowIso,
-                note: 'إغلاق الملاحظة'
+                roleLabel: 'إدارة السلامة',
+                actionDetail: 'إغلاق الملاحظة بعد التنفيذ',
+                note: 'إدارة السلامة: إغلاق الملاحظة بعد التنفيذ'
             });
             notifyObservationWorkflowEmails('closed', obs, [actorEmail]);
         } else {

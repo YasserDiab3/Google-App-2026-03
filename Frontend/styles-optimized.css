@@ -5401,6 +5401,78 @@ body.app-active {
     margin-top: 0.15rem;
 }
 
+/* السجل الزمني — تفاصيل الملاحظة */
+.obs-timeline-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.obs-timeline-item {
+    border: 1px solid var(--border-color, #e5e7eb);
+    border-radius: 10px;
+    background: #fafafa;
+    padding: 0.75rem 1rem;
+}
+
+.obs-timeline-meta {
+    display: flex;
+    flex-direction: row;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+    direction: rtl;
+    text-align: right;
+}
+
+.obs-timeline-body {
+    flex: 1;
+    min-width: 0;
+}
+
+.obs-timeline-user-row {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.4rem;
+    flex-wrap: wrap;
+}
+
+.obs-timeline-name {
+    font-size: 0.9375rem;
+    font-weight: 600;
+    color: var(--text-primary, #111827);
+}
+
+.obs-timeline-dot {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #2563eb;
+    flex-shrink: 0;
+}
+
+.obs-timeline-detail {
+    margin: 0.4rem 0 0 0;
+    font-size: 0.875rem;
+    line-height: 1.45;
+    color: #374151;
+    text-align: right;
+}
+
+.obs-timeline-date {
+    flex-shrink: 0;
+    font-size: 0.75rem;
+    color: #6b7280;
+    white-space: nowrap;
+    margin-top: 0.1rem;
+}
+
+.obs-timeline-status-hint {
+    margin-top: 0.35rem;
+}
+
 .close-notifications-btn {
     background: transparent;
     border: none;
