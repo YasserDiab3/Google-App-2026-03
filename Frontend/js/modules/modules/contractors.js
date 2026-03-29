@@ -354,23 +354,6 @@ const Contractors = {
             // ✅ إصلاح شامل: حقن CSS optimizations لتقليل layout shifts والاهتزاز
             this.injectAntiShakeStyles();
 
-            // عرض رسالة تحميل
-            // ✅ استخدام الدالة الآمنة لتحديث innerHTML
-            const loadingHTML = `
-                <div class="content-card">
-                    <div class="card-body">
-                        <div class="flex items-center justify-center py-12">
-                            <div class="text-center">
-                                <div class="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mb-4"></div>
-                                <p class="text-gray-600">جاري تحميل بيانات المقاولين...</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            `;
-            // ✅ فعلياً عرض شاشة التحميل لتفادي “وميض/اهتزاز” واجهة فارغة أثناء البناء
-            this.safeSetInnerHTML(section, loadingHTML);
-
             // ✅ إصلاح: التأكد من تحميل بيانات طلبات الاعتماد قبل الرسم
             this.ensureApprovedSetup();
             this.ensureEvaluationSetup();
@@ -423,22 +406,32 @@ const Contractors = {
                 `;
             };
 
-            // ✅ تحسين: تحميل جميع الأقسام بشكل متوازي مباشر بدون await إضافي
-            // استخدام Promise.all مباشرة لتسريع التحميل
-            const [
-                approvedSectionHTML,
-                evaluationsSectionHTML,
-                requirementsSectionHTML,
-                analyticsSectionHTML
-            ] = await Promise.all([
-                Promise.resolve().then(() => this.renderApprovedEntitiesSection()).catch(err => handleError('قائمة المعتمدين', err)),
-                Promise.resolve().then(() => this.renderEvaluationsSection()).catch(err => handleError('التقييمات', err)),
-                Promise.resolve().then(() => this.renderRequirementsManagementSection()).catch(err => handleError('الاشتراطات', err)),
-                isAdmin ? Promise.resolve().then(() => this.renderAnalyticsSection()).catch(err => handleError('التحليلات', err)) : Promise.resolve('')
-            ]);
+            // هيكل المديول أولاً (عنوان + تبويبات)، ثم ملء الأقسام بعد الجاهزية — دون شاشة تحميل كاملة
+            const TAB_PENDING_HTML = `
+                <div class="content-card">
+                    <div class="card-body">
+                        <div class="flex items-center justify-center py-8">
+                            <div class="text-center">
+                                <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mb-3"></div>
+                                <p class="text-gray-500 text-sm">جاري تجهيز القسم...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
 
-            // ✅ استخدام الدالة الآمنة لتحديث innerHTML
-            const mainHTML = `
+            const tc = this.currentTab || 'approval-request';
+            const tabBtnCls = (tabId) => (tc === tabId
+                ? 'contractors-tab-btn active px-6 py-3 font-semibold text-blue-600 border-b-2 border-blue-600'
+                : 'contractors-tab-btn px-6 py-3 font-semibold text-gray-500 hover:text-blue-600');
+            const tabPaneOpen = (suffix) => {
+                const active = tc === suffix;
+                return `id="contractors-${suffix}-content" class="contractors-tab-content${active ? ' active' : ''}" style="display: ${active ? 'block' : 'none'};"`;
+            };
+
+            const approvalShellBody = tc === 'approval-request' ? this.renderApprovalRequestSection() : TAB_PENDING_HTML;
+
+            const shellHTML = `
                 <div class="section-header">
                 <div class="flex items-center justify-between">
                     <div>
@@ -451,29 +444,28 @@ const Contractors = {
                 </div>
             </div>
             
-            <!-- تبويبات الموديول -->
             <div class="mt-6 mb-4">
                 <div class="contractors-tabs-wrapper">
                     <div class="contractors-tabs-container">
-                        <button id="contractors-tab-approval-request" class="contractors-tab-btn active px-6 py-3 font-semibold text-blue-600 border-b-2 border-blue-600" onclick="Contractors.switchTab('approval-request')">
+                        <button id="contractors-tab-approval-request" class="${tabBtnCls('approval-request')}" onclick="Contractors.switchTab('approval-request')">
                             <i class="fas fa-paper-plane ml-2"></i>
                             إرسال طلب اعتماد مقاول أو مقدم خدمة
                         </button>
-                        <button id="contractors-tab-approved" class="contractors-tab-btn px-6 py-3 font-semibold text-gray-500 hover:text-blue-600" onclick="Contractors.switchTab('approved')">
+                        <button id="contractors-tab-approved" class="${tabBtnCls('approved')}" onclick="Contractors.switchTab('approved')">
                             <i class="fas fa-check-circle ml-2"></i>
                             قائمة المقاولين والموردين المعتمدين
                         </button>
-                        <button id="contractors-tab-evaluations" class="contractors-tab-btn px-6 py-3 font-semibold text-gray-500 hover:text-blue-600" onclick="Contractors.switchTab('evaluations')">
+                        <button id="contractors-tab-evaluations" class="${tabBtnCls('evaluations')}" onclick="Contractors.switchTab('evaluations')">
                             <i class="fas fa-clipboard-check ml-2"></i>
                             تقييم وتأهيل المقاولين
                         </button>
                         ${isAdmin ? `
-                        <button id="contractors-tab-analytics" class="contractors-tab-btn px-6 py-3 font-semibold text-gray-500 hover:text-blue-600" onclick="Contractors.switchTab('analytics')">
+                        <button id="contractors-tab-analytics" class="${tabBtnCls('analytics')}" onclick="Contractors.switchTab('analytics')">
                             <i class="fas fa-chart-line ml-2"></i>
                             تحليل بيانات المقاولين
                         </button>
                         ` : ''}
-                        <button id="contractors-tab-requirements" class="contractors-tab-btn px-6 py-3 font-semibold text-gray-500 hover:text-blue-600" onclick="Contractors.switchTab('requirements')">
+                        <button id="contractors-tab-requirements" class="${tabBtnCls('requirements')}" onclick="Contractors.switchTab('requirements')">
                             <i class="fas fa-cog ml-2"></i>
                             إدارة اشتراطات اعتماد المقاولين
                         </button>
@@ -485,33 +477,70 @@ const Contractors = {
                 </div>
             </div>
             
-            <!-- محتوى التبويبات -->
             <div id="contractors-tab-content">
-                <!-- ✅ إصلاح جذري: إزالة content-visibility لمنع الاهتزاز -->
-                <div id="contractors-approval-request-content" class="contractors-tab-content active" style="display: block;">
-                    ${this.renderApprovalRequestSection()}
+                <div ${tabPaneOpen('approval-request')}>
+                    ${approvalShellBody}
                 </div>
-                <div id="contractors-approved-content" class="contractors-tab-content" style="display: none;">
-                    ${approvedSectionHTML}
+                <div ${tabPaneOpen('approved')}>
+                    ${TAB_PENDING_HTML}
                 </div>
-                <div id="contractors-evaluations-content" class="contractors-tab-content" style="display: none;">
-                    ${evaluationsSectionHTML}
+                <div ${tabPaneOpen('evaluations')}>
+                    ${TAB_PENDING_HTML}
                 </div>
                 ${isAdmin ? `
-                <div id="contractors-analytics-content" class="contractors-tab-content" style="display: none;">
-                    ${analyticsSectionHTML}
+                <div ${tabPaneOpen('analytics')}>
+                    ${TAB_PENDING_HTML}
                 </div>
                 ` : ''}
-                <div id="contractors-requirements-content" class="contractors-tab-content" style="display: none;">
-                    ${requirementsSectionHTML}
+                <div ${tabPaneOpen('requirements')}>
+                    ${TAB_PENDING_HTML}
                 </div>
             </div>
         `;
-            // ✅ تحديث المحتوى مباشرة
-            this.safeSetInnerHTML(section, mainHTML);
+            this.safeSetInnerHTML(section, shellHTML);
+
+            await new Promise((resolve) => {
+                if (typeof scheduler !== 'undefined' && typeof scheduler.yield === 'function') {
+                    scheduler.yield().then(resolve).catch(() => setTimeout(resolve, 0));
+                } else {
+                    setTimeout(resolve, 0);
+                }
+            });
+
+            const [
+                approvedSectionHTML,
+                evaluationsSectionHTML,
+                requirementsSectionHTML,
+                analyticsSectionHTML
+            ] = await Promise.all([
+                Promise.resolve().then(() => this.renderApprovedEntitiesSection()).catch(err => handleError('قائمة المعتمدين', err)),
+                Promise.resolve().then(() => this.renderEvaluationsSection()).catch(err => handleError('التقييمات', err)),
+                Promise.resolve().then(() => this.renderRequirementsManagementSection()).catch(err => handleError('الاشتراطات', err)),
+                isAdmin ? Promise.resolve().then(() => this.renderAnalyticsSection()).catch(err => handleError('التحليلات', err)) : Promise.resolve('')
+            ]);
+
+            const patchTabBody = (elementId, html) => {
+                if (html === undefined || html === '') return;
+                const el = document.getElementById(elementId);
+                if (el) this.safeSetInnerHTML(el, html);
+            };
+            patchTabBody('contractors-approved-content', approvedSectionHTML);
+            patchTabBody('contractors-evaluations-content', evaluationsSectionHTML);
+            patchTabBody('contractors-requirements-content', requirementsSectionHTML);
+            if (isAdmin) patchTabBody('contractors-analytics-content', analyticsSectionHTML);
+            if (tc !== 'approval-request') {
+                patchTabBody('contractors-approval-request-content', this.renderApprovalRequestSection());
+            }
 
             this.setupEventListeners();
             this.setupRealtimeListeners();
+
+            if (tc === 'evaluations') {
+                try {
+                    this.ensureEvaluationsEventListeners();
+                    this.ensureEvaluationsDataLoaded();
+                } catch (e) { /* ignore */ }
+            }
 
             // ✅ ربط زر إرسال الطلب
             const sendBtn = document.getElementById('send-approval-request-btn');
