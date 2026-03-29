@@ -607,7 +607,6 @@ const DailyObservations = {
     },
 
     buildWorkflowBannerHtml(observation) {
-        const stage = (observation.workflowStage || '').trim();
         const labelParts = [];
         if (observation.submittedBy) labelParts.push(`المُسجِّل: ${Utils.escapeHTML(observation.submittedBy)}`);
         if (observation.specialistReviewedBy) labelParts.push(`مراجعة مسؤول السلامة (أخصائي): ${Utils.escapeHTML(observation.specialistReviewedBy)}`);
@@ -620,15 +619,12 @@ const DailyObservations = {
         if (observation.assignedToName || observation.assignedToEmail) {
             labelParts.push(`معيّن: ${Utils.escapeHTML(observation.assignedToName || '')}${observation.assignedToEmail ? ' — ' + Utils.escapeHTML(observation.assignedToEmail) : ''}`);
         }
+        const metaLine = labelParts.length
+            ? `<div style="font-size: 0.8rem; opacity: 0.88; line-height: 1.55; margin-bottom: 0.35rem;">${labelParts.join(' · ')}</div>`
+            : '';
         return `
         <div class="obs-workflow-panel" style="background: linear-gradient(135deg, #312e81 0%, #5b21b6 100%); color: white; padding: 1.25rem; border-radius: 16px; box-shadow: 0 10px 25px rgba(0,0,0,0.15);">
-            <div style="display: flex; flex-wrap: wrap; justify-content: space-between; gap: 1rem; align-items: flex-start;">
-                <div>
-                    <div style="font-size: 0.85rem; opacity: 0.9;">سير الاعتماد</div>
-                    <div style="font-size: 1.25rem; font-weight: 700;">${Utils.escapeHTML(this.getWorkflowStageLabel(stage))}</div>
-                    <div style="font-size: 0.8rem; opacity: 0.85; margin-top: 0.35rem;">${labelParts.join(' · ')}</div>
-                </div>
-            </div>
+            ${metaLine}
             ${commentFields}
             ${assignBox}
             ${actions ? `<div style="margin-top: 1rem; display: flex; flex-wrap: wrap; gap: 0.5rem;">${actions}</div>` : ''}
@@ -877,6 +873,105 @@ const DailyObservations = {
         in_progress: 'جاري التنفيذ',
         closed: 'مكتملة (مغلقة)',
         rejected: 'مرفوضة'
+    },
+
+    /** خطوات مسار الاعتماد المعروض في نموذج التفاصيل (من اليمين لليسار في الواجهة) */
+    WORKFLOW_PATH_STEPS: [
+        { title: 'أخصائي السلامة' },
+        { title: 'مدير السلامة' },
+        { title: 'إدارة التنفيذ' },
+        { title: 'جاري التنفيذ' },
+        { title: 'مغلقة' }
+    ],
+
+    /**
+     * حالة المسار البصري: أي خطوة نشطة، وهل اكتمل المسار أو رُفض
+     */
+    getWorkflowPathVisualState(stage) {
+        const s = String(stage || '').trim() || 'pending_specialist';
+        if (s === 'rejected') {
+            return { mode: 'rejected', activeIndex: -1 };
+        }
+        if (s === 'closed') {
+            return { mode: 'closed', activeIndex: 4 };
+        }
+        let activeIndex = 0;
+        if (s === 'pending_specialist' || s === 'returned_specialist') activeIndex = 0;
+        else if (s === 'pending_manager') activeIndex = 1;
+        else if (s === 'pending_department') activeIndex = 2;
+        else if (s === 'in_progress') activeIndex = 3;
+        else activeIndex = 0;
+        return { mode: 'progress', activeIndex };
+    },
+
+    /** نص سطر «المرحلة الحالية» مع سياق اختياري (مثل الإدارة المسؤولة) — نص عادي يُهرب عند الإدراج في HTML */
+    getWorkflowCurrentStageLine(obs) {
+        const stage = String(obs?.workflowStage || '').trim();
+        let base = this.getWorkflowStageLabel(stage);
+        if (stage === 'in_progress' && obs && obs.responsibleDepartment) {
+            const dept = String(obs.responsibleDepartment).trim();
+            if (dept) base += ` (${dept})`;
+        }
+        return base;
+    },
+
+    /**
+     * بطاقة مسار الاعتماد المحسّنة (شارات أفقية + المرحلة الحالية)
+     */
+    buildWorkflowPathHtml(observation) {
+        const stage = (observation.workflowStage || '').trim();
+        const vs = this.getWorkflowPathVisualState(stage);
+        const steps = this.WORKFLOW_PATH_STEPS || [];
+        const badgeBase =
+            'display:inline-flex;align-items:center;gap:0.25rem;padding:0.4rem 0.85rem;border-radius:9999px;font-size:0.8rem;font-weight:600;white-space:nowrap;border:1px solid transparent;';
+        const badges = steps.map((step, i) => {
+            const n = i + 1;
+            const text = `${n}. ${step.title}`;
+            let st = '';
+            if (vs.mode === 'closed') {
+                st = `${badgeBase}background:#dcfce7;color:#166534;border-color:#bbf7d0;`;
+            } else if (vs.mode === 'rejected') {
+                st = `${badgeBase}background:#f3f4f6;color:#9ca3af;border-color:#e5e7eb;`;
+            } else if (vs.mode === 'progress') {
+                if (i < vs.activeIndex) {
+                    st = `${badgeBase}background:#dcfce7;color:#166534;border-color:#bbf7d0;`;
+                } else if (i === vs.activeIndex) {
+                    st = `${badgeBase}background:#7c3aed;color:#fff;border-color:#6d28d9;box-shadow:0 2px 8px rgba(124,58,237,0.35);`;
+                } else {
+                    st = `${badgeBase}background:#f3f4f6;color:#6b7280;border-color:#e5e7eb;`;
+                }
+            } else {
+                st = `${badgeBase}background:#f3f4f6;color:#6b7280;`;
+            }
+            return `<span class="obs-workflow-path-badge" style="${st}">${Utils.escapeHTML(text)}</span>`;
+        }).join('');
+
+        const currentLine =
+            vs.mode === 'rejected'
+                ? `<span style="color:#b91c1c;font-weight:600;">المرحلة الحالية: مرفوضة</span>${observation.rejectionReason ? ` — ${Utils.escapeHTML(String(observation.rejectionReason).slice(0, 120))}${String(observation.rejectionReason).length > 120 ? '…' : ''}` : ''}`
+                : `<span style="color:#374151;"><strong style="font-weight:700;">المرحلة الحالية:</strong> ${Utils.escapeHTML(this.getWorkflowCurrentStageLine(observation))}</span>`;
+
+        const rejectedBanner =
+            vs.mode === 'rejected'
+                ? `<div style="margin-bottom:0.65rem;padding:0.45rem 0.65rem;background:#fef2f2;border:1px solid #fecaca;border-radius:8px;font-size:0.8rem;color:#991b1b;"><i class="fas fa-ban ml-1"></i>سير الاعتماد متوقف — الملاحظة مرفوضة</div>`
+                : '';
+
+        return `
+        <div class="obs-workflow-path-card" dir="rtl" style="background:#fff;color:#111827;border-radius:14px;padding:1rem 1.15rem;border:1px solid #e5e7eb;box-shadow:0 1px 3px rgba(0,0,0,0.06);">
+            ${rejectedBanner}
+            <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.75rem;flex-wrap:wrap;">
+                <span style="display:inline-flex;align-items:center;justify-content:center;width:2rem;height:2rem;border-radius:10px;background:linear-gradient(135deg,#ede9fe,#ddd6fe);color:#5b21b6;">
+                    <i class="fas fa-project-diagram" style="font-size:0.95rem;"></i>
+                </span>
+                <span style="font-weight:800;font-size:1.05rem;color:#111827;letter-spacing:-0.02em;">مسار الاعتماد</span>
+            </div>
+            <div class="obs-workflow-path-steps" style="display:flex;flex-wrap:wrap;gap:0.45rem;align-items:center;justify-content:flex-start;direction:rtl;">
+                ${badges}
+            </div>
+            <div style="margin-top:0.85rem;padding-top:0.75rem;border-top:1px solid #f3f4f6;font-size:0.9rem;line-height:1.5;">
+                ${currentLine}
+            </div>
+        </div>`;
     },
 
     MAX_ATTACHMENT_SIZE: 10 * 1024 * 1024,
@@ -6870,6 +6965,7 @@ const DailyObservations = {
             comments = [];
         }
 
+        const wfPathHtml = this.buildWorkflowPathHtml(observation);
         const wfBannerHtml = this.buildWorkflowBannerHtml(observation);
 
         const modal = document.createElement('div');
@@ -6889,6 +6985,7 @@ const DailyObservations = {
                 <div class="modal-body" style="padding: 30px; background: #f8f9fa; max-height: calc(90vh - 200px); overflow-y: auto;">
                     <div class="space-y-5">
                         <div class="obs-detail-inline-alerts" data-obs-inline-alerts="" role="region" aria-label="تنبيهات الملاحظة"></div>
+                        ${wfPathHtml}
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div class="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
                                 <strong class="text-gray-700 block mb-1">رقم الملاحظة:</strong>

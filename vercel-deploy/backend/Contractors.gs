@@ -1276,9 +1276,12 @@ function _cabViolationBelongs_(v, idSet, cName, compName, contractorIdParam, con
     if (v.contractorId != null && String(v.contractorId).trim() !== '' && _cabIdInSet_(v.contractorId, idSet)) return true;
     var cid = contractor && contractor.id;
     var coid = contractor && contractor.contractorId;
-    if (String(v.contractorId) === String(contractorIdParam)) return true;
-    if (cid && String(v.contractorId) === String(cid)) return true;
-    if (coid && String(v.contractorId) === String(coid)) return true;
+    var vid = v.contractorId != null && String(v.contractorId).trim() !== '' ? String(v.contractorId).trim() : '';
+    if (vid) {
+        if (vid === String(contractorIdParam || '').trim()) return true;
+        if (cid && vid === String(cid).trim()) return true;
+        if (coid && vid === String(coid).trim()) return true;
+    }
     var isContractorType = pt === 'contractor' || pt === 'مقاول';
     if (!isContractorType && !v.contractorName && (v.contractorId == null || String(v.contractorId).trim() === '')) return false;
     if (isContractorType || v.contractorName || (v.contractorId != null && String(v.contractorId).trim() !== '')) {
@@ -1294,9 +1297,12 @@ function _cabEvalBelongs_(e, idSet, cName, compName, contractorIdParam, contract
     if (e.contractorId != null && String(e.contractorId).trim() !== '' && _cabIdInSet_(e.contractorId, idSet)) return true;
     // ورقة التقييمات قد تخزّن كود المقاول في isoCode (ليس كود وثيقة المخالفة VIOL-)
     if (e.isoCode != null && String(e.isoCode).trim() !== '' && _cabIdInSet_(e.isoCode, idSet)) return true;
-    if (String(e.contractorId) === String(contractorIdParam)) return true;
-    if (contractor && contractor.id && String(e.contractorId) === String(contractor.id)) return true;
-    if (contractor && contractor.contractorId && String(e.contractorId) === String(contractor.contractorId)) return true;
+    var eid = e.contractorId != null && String(e.contractorId).trim() !== '' ? String(e.contractorId).trim() : '';
+    if (eid) {
+        if (eid === String(contractorIdParam || '').trim()) return true;
+        if (contractor && contractor.id && eid === String(contractor.id).trim()) return true;
+        if (contractor && contractor.contractorId && eid === String(contractor.contractorId).trim()) return true;
+    }
     return _cabRecordMatchesContractor_(e, idSet, cName, compName);
 }
 
@@ -1307,13 +1313,26 @@ function _cabEvalBelongs_(e, idSet, cName, compName, contractorIdParam, contract
 function getContractorDetailedAnalytics(payload) {
     try {
         payload = payload || {};
-        var contractor = payload.contractor;
-        if (!contractor || typeof contractor !== 'object') {
-            contractor = (payload.id || payload.contractorId || payload.companyName || payload.name) ? payload : {};
+        var raw = payload.contractor;
+        if (!raw || typeof raw !== 'object') {
+            raw = {};
         }
+        // دمج حقول الجذر مع كائن المقاول (تفادي فشل الطلب عند {} أو حقول ناقصة بعد JSON)، مع الإبقاء على بقية الحقول
+        var contractor = Object.assign({}, raw, {
+            id: raw.id || payload.id,
+            contractorId: raw.contractorId || payload.contractorId || payload.contractorIdParam,
+            companyName: raw.companyName || payload.companyName,
+            name: raw.name || payload.name,
+            code: raw.code || payload.code,
+            isoCode: raw.isoCode || payload.isoCode,
+            licenseNumber: raw.licenseNumber || payload.licenseNumber,
+            contractNumber: raw.contractNumber || payload.contractNumber,
+            approvedEntityId: raw.approvedEntityId || payload.approvedEntityId,
+            entityCode: raw.entityCode || payload.entityCode
+        });
         var contractorIdParam = payload.contractorId || payload.contractorIdParam || contractor.id || contractor.contractorId;
-        if (!contractor || (String(contractor.id || '').trim() === '' && String(contractor.contractorId || '').trim() === '' &&
-            String(contractor.companyName || contractor.name || '').trim() === '')) {
+        if (String(contractor.id || '').trim() === '' && String(contractor.contractorId || '').trim() === '' &&
+            String(contractor.companyName || contractor.name || '').trim() === '') {
             return { success: false, message: 'بيانات المقاول غير كافية' };
         }
         var spreadsheetId = getSpreadsheetId();
