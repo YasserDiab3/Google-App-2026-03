@@ -306,6 +306,27 @@ const DailyObservations = {
         return out;
     },
 
+    /**
+     * عرض «المعيّن» للواجهة العامة: الاسم والإدارة فقط (بدون بريد إلكتروني)
+     */
+    formatAssigneePublicDisplay(obs) {
+        const name = String(obs?.assignedToName || '').trim();
+        const email = String(obs?.assignedToEmail || '').trim().toLowerCase();
+        if (!name && !email) return '';
+        const users = this.getObservationAssignableUsers();
+        let dept = '';
+        const u = users.find((x) => String(x.email || '').trim().toLowerCase() === email);
+        if (u && u.department) dept = String(u.department).trim();
+        if (name && dept) return `${name} (${dept})`;
+        if (name) return name;
+        if (email && u) {
+            const nm = String(u.name || '').trim();
+            if (nm && dept) return `${nm} (${dept})`;
+            if (nm) return nm;
+        }
+        return '—';
+    },
+
     getWorkflowCommentFieldsVisibility(obs) {
         const stage = String(obs?.workflowStage || '').trim() || 'pending_specialist';
         const u = AppState.currentUser;
@@ -365,9 +386,8 @@ const DailyObservations = {
         const options = ['<option value="">— اختر مستخدماً من النظام —</option>'].concat(
             users.map((u) => {
                 const payload = encodeURIComponent(JSON.stringify({ name: u.name, email: u.email }));
-                const label = Utils.escapeHTML(
-                    u.name + (u.email ? ' — ' + u.email : '') + (u.department ? ' (' + u.department + ')' : '')
-                );
+                const dept = u.department ? ` (${u.department})` : '';
+                const label = Utils.escapeHTML(String(u.name || '').trim() + dept);
                 const sel = currentEmail && String(u.email || '').trim().toLowerCase() === currentEmail ? ' selected' : '';
                 return `<option value="${payload}"${sel}>${label}</option>`;
             })
@@ -380,13 +400,14 @@ const DailyObservations = {
             <div style="font-weight: 600; margin-bottom: 0.45rem;"><i class="fas fa-user-tag ml-2"></i>تعيين مسؤول المتابعة</div>
             <div style="font-size: 0.78rem; opacity: 0.9; margin-bottom: 0.5rem;">يحدده مسؤول السلامة (أخصائي) أو مدير السلامة (مدير النظام) أو مسؤول الإدارة المعنية.</div>
             ${userListNote}
-            <label style="display:block;font-size:0.8rem;opacity:0.9;margin-bottom:0.25rem;">مستخدمو النظام</label>
+            <label style="display:block;font-size:0.8rem;opacity:0.9;margin-bottom:0.25rem;">مستخدمو النظام <span style="opacity:0.75;font-size:0.72rem;">(الاسم والإدارة — دون عرض البريد)</span></label>
             <select class="form-input obs-assign-user-select" data-oid="${oidAttr}" style="width:100%;max-width:420px;color:#111;margin-bottom:0.5rem;display:block;">
                 ${options.join('')}
             </select>
-            <div style="font-size:0.75rem;opacity:0.85;margin-bottom:0.35rem;">أو تعديل يدوي:</div>
-            <input type="text" class="form-input obs-assign-name" data-oid="${oidAttr}" placeholder="الاسم" value="${an}" style="width:100%;max-width:340px;color:#111;margin-bottom:0.35rem;display:block;" />
-            <input type="email" class="form-input obs-assign-email" data-oid="${oidAttr}" placeholder="البريد الإلكتروني" value="${ae}" style="width:100%;max-width:340px;color:#111;margin-bottom:0.5rem;display:block;" />
+            <div style="font-size:0.75rem;opacity:0.85;margin-bottom:0.35rem;">أو الاسم يدوياً:</div>
+            <input type="text" class="form-input obs-assign-name" data-oid="${oidAttr}" placeholder="الاسم الكامل" value="${an}" style="width:100%;max-width:340px;color:#111;margin-bottom:0.35rem;display:block;" />
+            <input type="hidden" class="obs-assign-email" data-oid="${oidAttr}" value="${ae}" autocomplete="off" />
+            <p style="font-size:0.72rem;opacity:0.82;margin:0 0 0.5rem;line-height:1.45;">يُربَط البريد تلقائياً عند الاختيار من القائمة ويُستخدم في الخلفية دون عرضه.</p>
             <button type="button" class="btn-secondary btn-sm obs-wf-assign-save" data-oid="${oidAttr}" style="background: rgba(255,255,255,0.22); color: #fff; border: 1px solid rgba(255,255,255,0.45);">
                 <i class="fas fa-save ml-1"></i>حفظ التعيين
             </button>
@@ -627,8 +648,8 @@ const DailyObservations = {
         const assignBox = this.buildAssignResponsibleHtml(observation);
         const commentFields = this.buildWorkflowInlineCommentFieldsHtml(observation);
         if (observation.assignedToName || observation.assignedToEmail) {
-            const assignLabel = [String(observation.assignedToName || '').trim(), String(observation.assignedToEmail || '').trim()].filter(Boolean).join(' — ');
-            if (assignLabel) pushMetaRow('معيّن:', assignLabel);
+            const assignLabel = this.formatAssigneePublicDisplay(observation);
+            if (assignLabel && assignLabel !== '—') pushMetaRow('معيّن:', assignLabel);
         }
         const metaLine = metaRows.length
             ? `<div class="obs-wf-meta" style="font-size: 0.8rem; line-height: 1.55; margin-bottom: 0.35rem; display: flex; flex-direction: column; gap: 0.4rem; direction: rtl; text-align: right;">${metaRows.join('')}</div>`
@@ -7043,7 +7064,7 @@ const DailyObservations = {
                             </div>
                             <div class="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
                                 <strong class="text-gray-700 block mb-1">مسؤول المتابعة المعيّن:</strong>
-                                <span class="text-gray-900">${observation.assignedToName || observation.assignedToEmail ? Utils.escapeHTML([observation.assignedToName, observation.assignedToEmail].filter(Boolean).join(' — ')) : '-'}</span>
+                                <span class="text-gray-900">${observation.assignedToName || observation.assignedToEmail ? Utils.escapeHTML(this.formatAssigneePublicDisplay(observation)) : '-'}</span>
                             </div>
                             <div class="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
                                 <strong class="text-gray-700 block mb-1">صاحب الملاحظة:</strong>

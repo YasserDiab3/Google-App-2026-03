@@ -2883,6 +2883,15 @@ window.UI = {
             }
         }, 2000);
 
+        // بعد اكتمال المزامنة المحتملة: إعادة تطبيق إخفاء عناصر القائمة حسب الصلاحيات (لا تُعرض أقسام غير مصرّح بها)
+        [5000, 8000].forEach((delayMs) => {
+            setTimeout(() => {
+                if (typeof Permissions !== 'undefined' && typeof Permissions.updateNavigation === 'function') {
+                    try { Permissions.updateNavigation(); } catch (e) { /* ignore */ }
+                }
+            }, delayMs);
+        });
+
         // عرض صورة المستخدم ي الشريط الجانبي
         this.updateUserProfilePhoto();
         // ✅ إعادة تحديث صورة المستخدم بعد تأخير قصير لضمان ظهورها بعد الدخول مباشرة (عند جاهزية الـ DOM)
