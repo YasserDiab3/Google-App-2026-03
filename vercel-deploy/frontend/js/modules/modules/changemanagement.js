@@ -13,7 +13,7 @@ const ChangeManagement = {
             changeType: 'all',
             priority: 'all',
             impact: 'all',
-            relatedModule: 'all',
+            relatedModule: '',
             search: '',
             startDate: '',
             endDate: ''
@@ -132,13 +132,98 @@ const ChangeManagement = {
     },
 
     renderRequestsListHTML() {
+        const f = this.state.filters || {};
+        const v = (key, def) => (f[key] !== undefined && f[key] !== null && f[key] !== '') ? String(f[key]) : def;
+        const escAttr = (s) => String(s ?? '')
+            .replace(/&/g, '&amp;')
+            .replace(/"/g, '&quot;')
+            .replace(/</g, '&lt;');
+        const searchVal = escAttr((f.search !== undefined && f.search !== null) ? f.search : '');
+        const moduleVal = escAttr((f.relatedModule && f.relatedModule !== 'all') ? f.relatedModule : '');
         return `
-            <div class="content-card" style="overflow:hidden;">
-                <div class="card-header border-b px-4 py-3" style="background:linear-gradient(135deg,rgba(59,130,246,0.12),rgba(14,165,233,0.08));text-align:center;">
-                    <h3 class="card-title text-lg font-semibold" style="margin:0;">الطلبات</h3>
+            <div class="content-card cm-requests-panel" style="overflow:hidden;">
+                <div class="card-header border-b px-4 py-3 cm-requests-card-header">
+                    <div class="flex items-center justify-between flex-wrap gap-3">
+                        <div class="text-right flex-1 min-w-0">
+                            <h3 class="card-title text-lg font-semibold" style="margin:0;">الطلبات</h3>
+                            <p class="text-sm text-gray-500 m-0 mt-1">عرض وتصفية طلبات التغيير الفني والإداري</p>
+                        </div>
+                        <div class="flex items-center gap-2 flex-wrap">
+                            <span class="cm-requests-count-badge" id="change-requests-count" title="عدد الطلبات المعروضة">—</span>
+                            <button type="button" class="btn-secondary btn-sm" onclick="ChangeManagement.loadChangeRequests()" title="تحديث القائمة">
+                                <i class="fas fa-sync-alt ml-1"></i> تحديث
+                            </button>
+                        </div>
+                    </div>
                 </div>
                 <div class="card-body" style="padding:0;">
-                    <div id="change-requests-list-container" style="max-height:480px;overflow-y:auto;overflow-x:hidden;padding:1rem;">
+                    <div class="cm-requests-toolbar">
+                        <div class="cm-requests-toolbar-grid">
+                            <div class="cm-requests-field cm-requests-field-span2">
+                                <label class="cm-requests-label" for="change-search">بحث</label>
+                                <input type="search" id="change-search" class="form-input form-input-sm" placeholder="رقم الطلب، الموضوع، المقدم…" value="${searchVal}" autocomplete="off">
+                            </div>
+                            <div class="cm-requests-field">
+                                <label class="cm-requests-label" for="change-status-filter">الحالة</label>
+                                <select id="change-status-filter" class="form-select form-select-sm">
+                                    <option value="all" ${v('status', 'all') === 'all' ? 'selected' : ''}>الكل</option>
+                                    <option value="Draft" ${v('status', 'all') === 'Draft' ? 'selected' : ''}>مسودة</option>
+                                    <option value="In Review" ${v('status', 'all') === 'In Review' ? 'selected' : ''}>قيد المراجعة</option>
+                                    <option value="Approved" ${v('status', 'all') === 'Approved' ? 'selected' : ''}>معتمد</option>
+                                    <option value="Rejected" ${v('status', 'all') === 'Rejected' ? 'selected' : ''}>مرفوض</option>
+                                    <option value="In Implementation" ${v('status', 'all') === 'In Implementation' ? 'selected' : ''}>قيد التنفيذ</option>
+                                    <option value="Completed" ${v('status', 'all') === 'Completed' ? 'selected' : ''}>منفذ</option>
+                                    <option value="Closed" ${v('status', 'all') === 'Closed' ? 'selected' : ''}>مغلق</option>
+                                </select>
+                            </div>
+                            <div class="cm-requests-field">
+                                <label class="cm-requests-label" for="change-type-filter">نوع التغيير</label>
+                                <select id="change-type-filter" class="form-select form-select-sm">
+                                    <option value="all" ${v('changeType', 'all') === 'all' ? 'selected' : ''}>الكل</option>
+                                    <option value="Technical" ${v('changeType', 'all') === 'Technical' ? 'selected' : ''}>تقني</option>
+                                    <option value="Administrative" ${v('changeType', 'all') === 'Administrative' ? 'selected' : ''}>إداري</option>
+                                    <option value="Organizational" ${v('changeType', 'all') === 'Organizational' ? 'selected' : ''}>تنظيمي</option>
+                                </select>
+                            </div>
+                            <div class="cm-requests-field">
+                                <label class="cm-requests-label" for="change-priority-filter">الأولوية</label>
+                                <select id="change-priority-filter" class="form-select form-select-sm">
+                                    <option value="all" ${v('priority', 'all') === 'all' ? 'selected' : ''}>الكل</option>
+                                    <option value="1-VeryHigh" ${v('priority', 'all') === '1-VeryHigh' ? 'selected' : ''}>عالي جداً</option>
+                                    <option value="2-High" ${v('priority', 'all') === '2-High' ? 'selected' : ''}>عالي</option>
+                                    <option value="3-Medium" ${v('priority', 'all') === '3-Medium' ? 'selected' : ''}>متوسط</option>
+                                    <option value="4-Low" ${v('priority', 'all') === '4-Low' ? 'selected' : ''}>منخفض</option>
+                                </select>
+                            </div>
+                            <div class="cm-requests-field">
+                                <label class="cm-requests-label" for="change-impact-filter">الأثر</label>
+                                <select id="change-impact-filter" class="form-select form-select-sm">
+                                    <option value="all" ${v('impact', 'all') === 'all' ? 'selected' : ''}>الكل</option>
+                                    <option value="1-Minor" ${v('impact', 'all') === '1-Minor' ? 'selected' : ''}>بسيط</option>
+                                    <option value="2-Major" ${v('impact', 'all') === '2-Major' ? 'selected' : ''}>كبير</option>
+                                    <option value="3-Critical" ${v('impact', 'all') === '3-Critical' ? 'selected' : ''}>حرج</option>
+                                </select>
+                            </div>
+                            <div class="cm-requests-field">
+                                <label class="cm-requests-label" for="change-module-filter">وحدة مرتبطة</label>
+                                <input type="text" id="change-module-filter" class="form-input form-input-sm" placeholder="اختياري" value="${moduleVal}">
+                            </div>
+                            <div class="cm-requests-field">
+                                <label class="cm-requests-label" for="change-start-date">من تاريخ</label>
+                                <input type="date" id="change-start-date" class="form-input form-input-sm" value="${v('startDate', '')}">
+                            </div>
+                            <div class="cm-requests-field">
+                                <label class="cm-requests-label" for="change-end-date">إلى تاريخ</label>
+                                <input type="date" id="change-end-date" class="form-input form-input-sm" value="${v('endDate', '')}">
+                            </div>
+                        </div>
+                        <div class="cm-requests-toolbar-actions">
+                            <button type="button" class="btn-secondary btn-sm" onclick="ChangeManagement.resetChangeRequestFilters()">
+                                <i class="fas fa-undo ml-1"></i> مسح الفلاتر
+                            </button>
+                        </div>
+                    </div>
+                    <div id="change-requests-list-container" class="cm-requests-list-container">
                         <div class="empty-state py-8" id="change-requests-initial"><p class="text-gray-500">لا توجد طلبات تغيير</p></div>
                     </div>
                 </div>
@@ -177,13 +262,17 @@ const ChangeManagement = {
         if (this.state._loadInProgress) return;
 
         if (!AppState.googleConfig?.appsScript?.enabled || !AppState.googleConfig?.appsScript?.scriptUrl) {
+            const c = document.getElementById('change-requests-count');
+            if (c) c.textContent = '—';
             container.innerHTML = this.showEmptyState('يجب تفعيل Google Integration أولاً');
             return;
         }
 
         this.state._loadInProgress = true;
+        const countEl = document.getElementById('change-requests-count');
+        if (countEl) countEl.textContent = '…';
         container.innerHTML = `
-            <div class="empty-state py-8" id="change-requests-loading">
+            <div class="empty-state py-8 cm-requests-loading" id="change-requests-loading">
                 <i class="fas fa-spinner fa-spin text-3xl text-blue-500 mb-3"></i>
                 <p class="text-gray-500">جاري تحميل الطلبات...</p>
             </div>
@@ -220,10 +309,14 @@ const ChangeManagement = {
                 }
             } else {
                 if (typeof Utils !== 'undefined' && Utils.safeError) Utils.safeError('خطأ في تحميل الطلبات:', response.message);
+                const ce = document.getElementById('change-requests-count');
+                if (ce) ce.textContent = '—';
                 container.innerHTML = this.showEmptyState('حدث خطأ أثناء تحميل الطلبات');
             }
         } catch (error) {
             if (typeof Utils !== 'undefined' && Utils.safeError) Utils.safeError('خطأ في تحميل الطلبات:', error);
+            const ce = document.getElementById('change-requests-count');
+            if (ce) ce.textContent = '—';
             container.innerHTML = this.showEmptyState('حدث خطأ أثناء تحميل الطلبات');
         } finally {
             this.state._loadInProgress = false;
@@ -241,7 +334,7 @@ const ChangeManagement = {
         const impact = document.getElementById('change-impact-filter')?.value;
         if (impact && impact !== 'all') f.impact = impact;
         const relatedModule = document.getElementById('change-module-filter')?.value;
-        if (relatedModule && relatedModule !== 'all') f.relatedModule = relatedModule;
+        if (relatedModule && String(relatedModule).trim()) f.relatedModule = String(relatedModule).trim();
         const search = document.getElementById('change-search')?.value;
         if (search) f.search = search;
         const startDate = document.getElementById('change-start-date')?.value;
@@ -255,17 +348,61 @@ const ChangeManagement = {
         const container = document.getElementById('change-requests-list-container');
         if (!container) return;
 
+        const countEl = document.getElementById('change-requests-count');
+        const n = requests ? requests.length : 0;
+        if (countEl) countEl.textContent = String(n);
+
         if (!requests || requests.length === 0) {
-            container.innerHTML = this.showEmptyState('لا توجد طلبات تغيير');
+            container.innerHTML = `<div class="cm-requests-empty">${this.showEmptyState('لا توجد طلبات تغيير مطابقة للفلتر')}</div>`;
             return;
         }
 
         const safe = (v) => (typeof Utils !== 'undefined' && Utils.escapeHTML) ? Utils.escapeHTML(String(v || '')) : String(v || '');
         container.innerHTML = `
-            <div class="space-y-4">
+            <div class="cm-requests-stack space-y-3">
                 ${requests.map(r => this.renderRequestCard(r, safe)).join('')}
             </div>
         `;
+    },
+
+    /** مزامنة الفلاتر من الواجهة إلى الحالة */
+    syncFiltersFromUI() {
+        this.state.filters = {
+            status: document.getElementById('change-status-filter')?.value || 'all',
+            changeType: document.getElementById('change-type-filter')?.value || 'all',
+            priority: document.getElementById('change-priority-filter')?.value || 'all',
+            impact: document.getElementById('change-impact-filter')?.value || 'all',
+            relatedModule: document.getElementById('change-module-filter')?.value || '',
+            search: document.getElementById('change-search')?.value || '',
+            startDate: document.getElementById('change-start-date')?.value || '',
+            endDate: document.getElementById('change-end-date')?.value || ''
+        };
+    },
+
+    resetChangeRequestFilters() {
+        this.state.filters = {
+            status: 'all',
+            changeType: 'all',
+            priority: 'all',
+            impact: 'all',
+            relatedModule: '',
+            search: '',
+            startDate: '',
+            endDate: ''
+        };
+        const setVal = (id, val) => {
+            const el = document.getElementById(id);
+            if (el) el.value = val;
+        };
+        setVal('change-status-filter', 'all');
+        setVal('change-type-filter', 'all');
+        setVal('change-priority-filter', 'all');
+        setVal('change-impact-filter', 'all');
+        setVal('change-module-filter', '');
+        setVal('change-search', '');
+        setVal('change-start-date', '');
+        setVal('change-end-date', '');
+        this.loadChangeRequests();
     },
 
     /** تحديد ما إذا كان هناك طلب يحتاج موافقة المستخدم الحالي */
@@ -426,28 +563,33 @@ const ChangeManagement = {
             '3-Medium': 'bg-yellow-100 text-yellow-800',
             '4-Low': 'bg-green-100 text-green-800'
         };
+        const num = safe(this.getDisplayRequestNumber(req) || (req.requestNumber || req.id || ''));
         return `
-            <div class="border rounded-lg p-4 hover:shadow-md transition-shadow cursor-pointer" onclick="ChangeManagement.showRequestDetail('${id}')" style="background:linear-gradient(135deg,rgba(255,255,255,0.95),rgba(248,250,252,0.95));border-color:rgba(59,130,246,0.2);border-left:4px solid #3b82f6;">
-                <div class="flex items-start justify-between">
-                    <div class="flex-1">
-                        <div class="flex items-center gap-2 mb-2 flex-wrap">
-                            <span class="text-sm font-medium" style="color:#0ea5e9;">${safe(this.getDisplayRequestNumber(req) || (req.requestNumber || req.id || ''))}</span>
-                            <h3 class="font-semibold text-lg" style="color:var(--text-primary);">${title}</h3>
-                            <span class="px-2 py-1 rounded text-xs font-medium ${statusColors[req.status] || 'bg-gray-100'}">${this.getStatusLabel(req.status)}</span>
-                            <span class="px-2 py-1 rounded text-xs font-medium ${priorityColors[req.priority] || 'bg-gray-100'}">${this.getPriorityLabel(req.priority)}</span>
+            <article class="cm-request-card" role="button" tabindex="0" onclick="ChangeManagement.showRequestDetail('${id}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();ChangeManagement.showRequestDetail('${id}');}">
+                <div class="cm-request-card-inner">
+                    <div class="cm-request-card-main">
+                        <div class="cm-request-card-top">
+                            <span class="cm-request-number">${num}</span>
+                            <div class="cm-request-badges">
+                                <span class="cm-request-badge cm-request-badge-status ${statusColors[req.status] || 'bg-gray-100'}">${this.getStatusLabel(req.status)}</span>
+                                <span class="cm-request-badge cm-request-badge-prio ${priorityColors[req.priority] || 'bg-gray-100'}">${this.getPriorityLabel(req.priority)}</span>
+                            </div>
                         </div>
-                        <p class="text-gray-600 mb-2">${descSafe}</p>
-                        <div class="flex items-center gap-4 text-sm text-gray-500">
-                            <span><i class="fas fa-user ml-1"></i> ${requestedBy}</span>
-                            <span><i class="fas fa-calendar ml-1"></i> ${this.formatDate(req.requestedAt || req.createdAt)}</span>
-                            <span><i class="fas fa-tag ml-1"></i> ${this.getChangeTypeLabel(req.changeType)}</span>
+                        <h3 class="cm-request-title">${title}</h3>
+                        <p class="cm-request-desc">${descSafe}</p>
+                        <div class="cm-request-meta">
+                            <span class="cm-request-meta-item" title="مقدم الطلب"><i class="fas fa-user ml-1"></i>${requestedBy}</span>
+                            <span class="cm-request-meta-item" title="التاريخ"><i class="fas fa-calendar ml-1"></i>${this.formatDate(req.requestedAt || req.createdAt)}</span>
+                            <span class="cm-request-meta-item" title="نوع التغيير"><i class="fas fa-exchange-alt ml-1"></i>${this.getChangeTypeLabel(req.changeType)}</span>
                         </div>
                     </div>
-                    <button type="button" onclick="event.stopPropagation(); ChangeManagement.showRequestDetail('${id}')" class="btn-secondary btn-sm">
-                        <i class="fas fa-eye ml-1"></i> عرض
-                    </button>
+                    <div class="cm-request-card-aside">
+                        <button type="button" onclick="event.stopPropagation(); ChangeManagement.showRequestDetail('${id}')" class="btn-secondary btn-sm cm-request-view-btn">
+                            <i class="fas fa-eye ml-1"></i> عرض
+                        </button>
+                    </div>
                 </div>
-            </div>
+            </article>
         `;
     },
 
@@ -2085,7 +2227,30 @@ ${data.map(r => '<tr>' + (Object.keys(data[0] || {})).map(k => '<td>' + safe(r[k
     },
 
     setupEventListeners() {
-        // يمكن ربط أحداث إضافية هنا
+        if (this._changeRequestsFilterDelegation) return;
+        this._changeRequestsFilterDelegation = true;
+        const onFilterChange = () => {
+            this.syncFiltersFromUI();
+            this.loadChangeRequests();
+        };
+        const debounceSearch = () => {
+            if (this.state._searchDebounce) clearTimeout(this.state._searchDebounce);
+            this.state._searchDebounce = setTimeout(() => {
+                this.state._searchDebounce = null;
+                onFilterChange();
+            }, 400);
+        };
+        document.addEventListener('change', (e) => {
+            const t = e.target;
+            if (!t || !t.id) return;
+            const ids = ['change-status-filter', 'change-type-filter', 'change-priority-filter', 'change-impact-filter', 'change-start-date', 'change-end-date'];
+            if (ids.indexOf(t.id) !== -1) onFilterChange();
+        });
+        document.addEventListener('input', (e) => {
+            const t = e.target;
+            if (t && t.id === 'change-search') debounceSearch();
+            else if (t && t.id === 'change-module-filter') debounceSearch();
+        });
     }
 };
 

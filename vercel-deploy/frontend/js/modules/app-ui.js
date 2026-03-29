@@ -6573,6 +6573,51 @@ window.UI = {
     },
 
     /**
+     * تفويض النقر على زر الجرس داخل القائمة الجانبية (capture) لتفادي فقدان الهدف أو تداخل المعالجات.
+     */
+    _bindSidebarNotificationsDelegation(self) {
+        const sidebar = document.querySelector('.sidebar');
+        if (!sidebar) return;
+
+        const handler = (e) => {
+            try {
+                const t = e.target;
+                if (!t || typeof t.closest !== 'function') return;
+                const btn = t.closest('#notifications-btn');
+                if (!btn || !sidebar.contains(btn)) return;
+                e.preventDefault();
+                e.stopPropagation();
+                if (self && typeof self.toggleNotificationsDropdown === 'function') {
+                    self.toggleNotificationsDropdown(
+                        'notifications-dropdown',
+                        'notifications-list',
+                        'notifications-empty',
+                        'close-notifications-dropdown',
+                        btn
+                    );
+                } else if (window.UI && typeof window.UI.toggleNotificationsDropdown === 'function') {
+                    window.UI.toggleNotificationsDropdown(
+                        'notifications-dropdown',
+                        'notifications-list',
+                        'notifications-empty',
+                        'close-notifications-dropdown',
+                        btn
+                    );
+                }
+            } catch (err) {
+                Utils.safeWarn('⚠️ خطأ في تفويض إشعارات الشريط الجانبي:', err);
+            }
+        };
+
+        if (sidebar._sidebarNotifDelegationHandler) {
+            sidebar.removeEventListener('click', sidebar._sidebarNotifDelegationHandler, true);
+        }
+        sidebar._sidebarNotifDelegationHandler = handler;
+        sidebar.addEventListener('click', handler, { capture: true });
+        Utils.safeLog('✅ تم ربط تفويض إشعارات القائمة الجانبية (capture)');
+    },
+
+    /**
      * تهيئة زر الإشعارات
      */
     initNotificationsButton() {
@@ -6580,35 +6625,37 @@ window.UI = {
         const self = this;
         
         try {
-            // الحصول على الأزرار مباشرة
-            const notificationButtons = [
-                document.getElementById('notifications-btn'),
-                document.getElementById('mobile-notifications-btn'),
-                document.getElementById('header-notifications-btn')
-            ].filter(Boolean);
-
-            // التحقق من وجود الأزرار بشكل منفصل للتأكد
-            const notificationsBtn = document.getElementById('notifications-btn');
+            const sidebarBtn = document.getElementById('notifications-btn');
             const mobileNotificationsBtn = document.getElementById('mobile-notifications-btn');
             const headerNotificationsBtn = document.getElementById('header-notifications-btn');
-            
-            if (notificationButtons.length === 0) {
+
+            // الجرس في الشريط الجانبي يُدار بتفويض على .sidebar (أدق من ربط مباشر عند تداخل الطبقات)
+            const notificationButtons = [mobileNotificationsBtn, headerNotificationsBtn].filter(Boolean);
+
+            if (!sidebarBtn && notificationButtons.length === 0) {
                 Utils.safeWarn('⚠️ لم يتم العثور على أزرار الإشعارات - سيتم المحاولة مرة أخرى بعد 500ms');
-                // إعادة المحاولة بعد تأخير قصير
                 setTimeout(() => {
                     this.initNotificationsButton();
                 }, 500);
                 return;
             }
 
-            // تسجيل الأزرار التي تم العثور عليها
-            Utils.safeLog('✅ تم العثور على الأزرار التالية:');
-            if (notificationsBtn) Utils.safeLog('  - notifications-btn');
+            Utils.safeLog('✅ تهيئة الإشعارات:');
+            if (sidebarBtn) Utils.safeLog('  - notifications-btn (تفويض على .sidebar)');
             if (mobileNotificationsBtn) Utils.safeLog('  - mobile-notifications-btn');
             if (headerNotificationsBtn) Utils.safeLog('  - header-notifications-btn');
 
-            // ربط جميع الأزرار
-            notificationButtons.forEach((btn, index) => {
+            if (sidebarBtn) {
+                this._bindSidebarNotificationsDelegation(self);
+                if (sidebarBtn._notificationClickHandler) {
+                    sidebarBtn.removeEventListener('click', sidebarBtn._notificationClickHandler, { capture: false });
+                    delete sidebarBtn._notificationClickHandler;
+                }
+                sidebarBtn.dataset.notificationsBound = 'sidebar-delegation';
+            }
+
+            // ربط أزرار الموبايل والهيدر مباشرة
+            notificationButtons.forEach((btn) => {
                 if (!btn) return;
 
                 try {
@@ -6618,9 +6665,9 @@ window.UI = {
                         return;
                     }
 
-                    // إزالة event listeners القديمة إن وجدت
+                    // إزالة event listeners القديمة — يجب تطابق خيارات الإضافة وإلا يبقى المستمع مكرراً
                     if (btn._notificationClickHandler) {
-                        btn.removeEventListener('click', btn._notificationClickHandler);
+                        btn.removeEventListener('click', btn._notificationClickHandler, { capture: false });
                         delete btn._notificationClickHandler;
                     }
 
@@ -6885,6 +6932,17 @@ window.UI = {
                 this._notificationsClickHandler = null;
             }
 
+            // إزالة تفويض الجرس على القائمة الجانبية
+            try {
+                const sidebar = document.querySelector('.sidebar');
+                if (sidebar && sidebar._sidebarNotifDelegationHandler) {
+                    sidebar.removeEventListener('click', sidebar._sidebarNotifDelegationHandler, true);
+                    delete sidebar._sidebarNotifDelegationHandler;
+                }
+            } catch (err) {
+                Utils.safeWarn('⚠️ خطأ في إزالة تفويض إشعارات الشريط:', err);
+            }
+
             // تنظيف event listeners من الأزرار
             try {
                 const notificationButtons = [
@@ -6896,14 +6954,15 @@ window.UI = {
                 notificationButtons.forEach(btn => {
                     try {
                         if (btn._notificationClickHandler) {
-                            btn.removeEventListener('click', btn._notificationClickHandler, false);
-                            // تنظيف debounce timer إن وجد (تم إزالته في الإصلاح الجديد)
+                            btn.removeEventListener('click', btn._notificationClickHandler, { capture: false });
                             if (btn._notificationClickDebounceTimer) {
                                 clearTimeout(btn._notificationClickDebounceTimer);
                                 btn._notificationClickDebounceTimer = null;
                             }
                             delete btn._notificationClickHandler;
-                            btn.dataset.notificationsBound = 'false';
+                        }
+                        if (btn.dataset) {
+                            delete btn.dataset.notificationsBound;
                         }
                     } catch (err) {
                         Utils.safeWarn('⚠️ خطأ في تنظيف زر الإشعارات:', btn.id, err);
