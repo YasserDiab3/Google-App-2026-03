@@ -310,7 +310,11 @@ const DailyObservations = {
      * عرض «المعيّن» للواجهة العامة: الاسم والإدارة فقط (بدون بريد إلكتروني)
      */
     formatAssigneePublicDisplay(obs) {
-        const name = String(obs?.assignedToName || '').trim();
+        let name = String(obs?.assignedToName || '').trim();
+        // بيانات قديمة أو يدوية: "الاسم — email@domain"
+        if (name) {
+            name = name.replace(/\s*[—–\-]\s*[^\s@]+@[^\s@]+\.[^\s@]+$/i, '').trim();
+        }
         const email = String(obs?.assignedToEmail || '').trim().toLowerCase();
         if (!name && !email) return '';
         const users = this.getObservationAssignableUsers();
