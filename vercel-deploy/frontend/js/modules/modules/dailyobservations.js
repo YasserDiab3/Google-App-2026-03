@@ -1102,14 +1102,21 @@ const DailyObservations = {
             const CACHE_DURATION = 10 * 60 * 1000;
             const isStale = cacheAge >= CACHE_DURATION;
             if ((!hasObsData || isStale) && typeof GoogleIntegration !== 'undefined' && GoogleIntegration.readFromSheets) {
-                try {
-                    await Promise.race([
-                        this.ensureDailyObservationsDataLoaded({ force: isStale && hasObsData }),
-                        new Promise(resolve => setTimeout(resolve, 45000))
-                    ]);
-                } catch (e) {
-                    // عرض المحلي ثم التحديث لاحقاً
-                }
+                void this.ensureDailyObservationsDataLoaded({ force: isStale && hasObsData })
+                    .catch(() => {})
+                    .finally(() => {
+                        try {
+                            const tableEl = document.getElementById('observations-table-container');
+                            const statsEl = document.getElementById('observations-stats-cards');
+                            if (!tableEl && !statsEl) return;
+                            if (tableEl && typeof this.loadObservationsList === 'function') {
+                                this.loadObservationsList();
+                            }
+                            if (statsEl && typeof this.renderStatsCards === 'function') {
+                                this.renderStatsCards();
+                            }
+                        } catch (e) { /* ignore */ }
+                    });
             } else if (hasObsData) {
                 this._dailyObsBackendFetchOk = true;
             }
@@ -1117,34 +1124,8 @@ const DailyObservations = {
                 this._dailyObsBackendFetchOk = true;
             }
 
-            // Skeleton فوري قبل أي عمليات render قد تكون بطيئة
-            section.innerHTML = `
-                <div class="section-header">
-                    <div class="flex items-center justify-between gap-4 flex-wrap">
-                        <div>
-                            <h1 class="section-title">
-                                <i class="fas fa-clipboard-check ml-3"></i>
-                                الملاحظات اليومية
-                            </h1>
-                            <p class="section-subtitle">جاري التحميل...</p>
-                        </div>
-                    </div>
-                </div>
-                <div class="mt-6">
-                    <div class="content-card">
-                        <div class="card-body">
-                            <div class="empty-state">
-                                <div style="width: 300px; margin: 0 auto 16px;">
-                                    <div style="width: 100%; height: 6px; background: rgba(59, 130, 246, 0.2); border-radius: 3px; overflow: hidden;">
-                                        <div style="height: 100%; background: linear-gradient(90deg, #3b82f6, #2563eb, #3b82f6); background-size: 200% 100%; border-radius: 3px; animation: loadingProgress 1.5s ease-in-out infinite;"></div>
-                                    </div>
-                                </div>
-                                <p class="text-gray-500">جاري تجهيز الواجهة...</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            `;
+            // إظهار الهيكل فوراً: لا ننتظر الشبكة ولا نغطي الشاشة بـ skeleton كامل
+            await this.yieldToMain();
 
             // تحميل المحتوى بالتوازي مع timeout لتجنب واجهة فارغة أو انتظار طويل
             const CONTENT_TIMEOUT_MS = 10000;
