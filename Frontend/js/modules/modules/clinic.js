@@ -8040,7 +8040,7 @@ const Clinic = {
             const newCodeInput = codeInput.cloneNode(true);
             codeInput.parentNode.replaceChild(newCodeInput, codeInput);
 
-            // تفعيل البحث بالكود الوظيفي
+            // تفعيل البحث بالكود الوظيفي — تحذير «لم يتم العثور» فقط عند Enter؛ الرسائل تُعرض أعلى النموذج
             EmployeeHelper.setupEmployeeCodeSearch('visit-employee-code', 'visit-employee-name', (employee) => {
                 if (employee) {
                     const nameField = document.getElementById('visit-employee-name');
@@ -8078,7 +8078,32 @@ const Clinic = {
                         }
                     }
                 }
+            }, {
+                inlineAlertId: 'visit-form-alerts',
+                employeeNotFoundWarn: 'enter'
             });
+        }
+    },
+
+    /** رسائل خطأ/تنبيه أعلى نموذج تسجيل الزيارة */
+    showVisitFormAlert(message, type = 'error') {
+        const el = document.getElementById('visit-form-alerts');
+        if (!el || message == null || String(message).trim() === '') return;
+        el.style.display = 'block';
+        const border = type === 'error'
+            ? 'border-red-300 bg-red-50 text-red-900'
+            : 'border-amber-300 bg-amber-50 text-amber-950';
+        el.innerHTML = `<div class="rounded-lg border ${border} px-3 py-2 text-sm text-right shadow-sm" role="alert">${Utils.escapeHTML(String(message))}</div>`;
+        try {
+            el.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+        } catch (e) { /* ignore */ }
+    },
+
+    clearVisitFormAlert() {
+        const el = document.getElementById('visit-form-alerts');
+        if (el) {
+            el.innerHTML = '';
+            el.style.display = 'none';
         }
     },
 
@@ -8812,6 +8837,7 @@ const Clinic = {
                 </div>
                 <div class="modal-body" style="background: #f8f9fa; padding: 25px;">
                     <form id="visit-form" class="space-y-4">
+                        <div id="visit-form-alerts" class="visit-form-alerts mb-2" style="display:none" aria-live="polite" role="region" aria-label="تنبيهات النموذج"></div>
                         <div class="grid grid-cols-2 gap-4" style="background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%); padding: 20px; border-radius: 10px; margin-bottom: 15px;">
                             <div>
                                 <label class="block text-sm font-semibold mb-2" style="color: #667eea; display: flex; align-items: center; gap: 5px;"><i class="fas fa-users"></i> نوع الشخص *</label>
@@ -9258,6 +9284,7 @@ const Clinic = {
         const form = modal.querySelector('#visit-form');
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
+            this.clearVisitFormAlert();
 
             // منع النقر المتكرر
             const submitBtn = form?.querySelector('button[type="submit"]') ||
@@ -9281,7 +9308,7 @@ const Clinic = {
             const exitValueEl = document.getElementById('visit-exit-date');
 
             if (!personTypeEl || !entryValueEl || !exitValueEl) {
-                Notification.error('بعض الحقول المطلوبة غير موجودة. يرجى تحديث الصفحة والمحاولة مرة أخرى.');
+                this.showVisitFormAlert('بعض الحقول المطلوبة غير موجودة. يرجى تحديث الصفحة والمحاولة مرة أخرى.');
                 if (submitBtn) {
                     submitBtn.disabled = false;
                     submitBtn.innerHTML = originalText;
@@ -9313,7 +9340,7 @@ const Clinic = {
                         try { return JSON.parse(contractorSelect.dataset.allowedValues || '[]'); } catch (e) { return []; }
                     })();
                     if (personName && !allowed.includes(personName.toLowerCase().trim())) {
-                        Notification.error('اسم المقاول يجب اختياره من القائمة فقط');
+                        this.showVisitFormAlert('اسم المقاول يجب اختياره من القائمة فقط');
                         if (submitBtn) {
                             submitBtn.disabled = false;
                             submitBtn.innerHTML = originalText;
@@ -9686,7 +9713,7 @@ const Clinic = {
 
             } catch (error) {
                 Loading.hide();
-                Notification.error('حدث خطأ: ' + error.message);
+                this.showVisitFormAlert('حدث خطأ: ' + (error.message || 'غير معروف'));
 
                 // استعادة الزر في حالة الخطأ
                 if (submitBtn) {

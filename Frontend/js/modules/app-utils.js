@@ -6063,31 +6063,63 @@ const EmployeeHelper = {
         return parts.join(' - ');
     },
 
-    setupEmployeeCodeSearch(codeInputId, nameInputId = null, onSelect = null) {
+    setupEmployeeCodeSearch(codeInputId, nameInputId = null, onSelect = null, options = {}) {
         const codeInput = typeof codeInputId === 'string' ? document.getElementById(codeInputId) : codeInputId;
         if (!codeInput) return;
 
+        const inlineAlertId = options.inlineAlertId || null;
+        /** blur-enter: تحذير عند الخروج من الحقل أو Enter (ليس أثناء الكتابة). enter: تحذير فقط عند Enter (مناسب للعيادة). never: لا تحذير */
+        const notFoundWarn = options.employeeNotFoundWarn || 'blur-enter';
+
+        const clearInlineAlert = () => {
+            if (!inlineAlertId) return;
+            const box = document.getElementById(inlineAlertId);
+            if (box) {
+                box.innerHTML = '';
+                box.style.display = 'none';
+            }
+        };
+
+        const showNotFoundMessage = (msg) => {
+            if (inlineAlertId) {
+                const box = document.getElementById(inlineAlertId);
+                if (box) {
+                    box.style.display = 'block';
+                    const safe = Utils.escapeHTML(msg);
+                    box.innerHTML = `<div class="rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-amber-950 text-sm text-right shadow-sm" role="alert"><i class="fas fa-exclamation-triangle ml-2" aria-hidden="true"></i>${safe}</div>`;
+                    try {
+                        box.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+                    } catch (e) { /* ignore */ }
+                    return;
+                }
+            }
+            if (typeof Notification !== 'undefined') {
+                Notification.warning(msg);
+            }
+        };
+
         const nameInput = nameInputId ? document.getElementById(nameInputId) : null;
-        const performLookup = async () => {
+
+        /**
+         * @param {'input-debounce'|'blur'|'enter'} source
+         */
+        const performLookup = async (source = 'input-debounce') => {
             const term = this.normalize(codeInput.value);
             if (!term) {
                 if (nameInput) nameInput.value = '';
                 onSelect?.(null);
+                clearInlineAlert();
                 return;
             }
 
             const lookupSeq = ++this._lookupSeq;
-            // تأكد من وجود بيانات الموظفين قبل البحث.
             await this.ensureEmployeesLoaded({ includeInactive: true });
 
-            // إذا حدثت محاولة بحث أحدث أثناء انتظار التحميل، تجاهل هذه المحاولة.
             if (lookupSeq !== this._lookupSeq) return;
 
-            // مطابقة تامة فقط (كود أو اسم). لا نستخدم findByPartial هنا: أثناء الكتابة
-            // تُطابق البادئة أول موظف يحتوي الرقم في employeeNumber فيُستبدل الحقل بـ getPrimaryCode
-            // فيبدو وكأن «أرقاماً تُكتب تلقائياً» أو تتغير بشكل خاطئ.
             const employee = this.findByCode(term) || this.findByName(term);
             if (employee) {
+                clearInlineAlert();
                 const primaryCode = this.getPrimaryCode(employee);
                 if (primaryCode) codeInput.value = primaryCode;
                 if (nameInput) nameInput.value = employee.name || '';
@@ -6096,29 +6128,40 @@ const EmployeeHelper = {
             }
 
             onSelect?.(null);
-            if (typeof Notification !== 'undefined' && term.length >= 4) {
-                Notification.warning('لم يتم العثور على موظف بهذا الكود أو الاسم');
+
+            const minLen = 4;
+            if (term.length < minLen || notFoundWarn === 'never') return;
+
+            let shouldWarn = false;
+            if (notFoundWarn === 'enter') {
+                shouldWarn = source === 'enter';
+            } else if (notFoundWarn === 'blur-enter') {
+                shouldWarn = source === 'blur' || source === 'enter';
+            }
+
+            if (shouldWarn) {
+                showNotFoundMessage('لم يتم العثور على موظف بهذا الكود أو الاسم');
             }
         };
 
         const handleKeyDown = (event) => {
             if (event.key === 'Enter') {
                 event.preventDefault();
-                performLookup().catch(() => {});
+                performLookup('enter').catch(() => {});
             }
         };
 
         let inputTimeout = null;
         const handleInput = () => {
+            clearInlineAlert();
             if (inputTimeout) clearTimeout(inputTimeout);
             inputTimeout = setTimeout(() => {
-                performLookup().catch(() => {});
+                performLookup('input-debounce').catch(() => {});
             }, 300);
         };
 
-        if (codeInput._employeeHelperLookup) {
-            codeInput.removeEventListener('change', codeInput._employeeHelperLookup);
-            codeInput.removeEventListener('blur', codeInput._employeeHelperLookup);
+        if (codeInput._employeeHelperLookupBlur) {
+            codeInput.removeEventListener('blur', codeInput._employeeHelperLookupBlur);
         }
         if (codeInput._employeeHelperKeyDown) {
             codeInput.removeEventListener('keydown', codeInput._employeeHelperKeyDown);
@@ -6127,12 +6170,12 @@ const EmployeeHelper = {
             codeInput.removeEventListener('input', codeInput._employeeHelperInput);
         }
 
-        codeInput._employeeHelperLookup = performLookup;
+        const onBlur = () => performLookup('blur').catch(() => {});
+        codeInput._employeeHelperLookupBlur = onBlur;
         codeInput._employeeHelperKeyDown = handleKeyDown;
         codeInput._employeeHelperInput = handleInput;
 
-        codeInput.addEventListener('change', () => performLookup().catch(() => {}));
-        codeInput.addEventListener('blur', () => performLookup().catch(() => {}));
+        codeInput.addEventListener('blur', onBlur);
         codeInput.addEventListener('keydown', handleKeyDown);
         codeInput.addEventListener('input', handleInput);
     },
