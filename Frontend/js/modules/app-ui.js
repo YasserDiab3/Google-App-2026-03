@@ -6486,7 +6486,8 @@ window.UI = {
         const themeToggles = [
             document.getElementById('theme-toggle'),
             document.getElementById('mobile-theme-toggle'),
-            document.getElementById('header-theme-toggle')
+            document.getElementById('header-theme-toggle'),
+            document.getElementById('sidebar-theme-toggle')
         ].filter(Boolean);
 
         if (themeToggles.length === 0) {
@@ -6533,7 +6534,8 @@ window.UI = {
         const icons = [
             document.getElementById('theme-icon'),
             document.getElementById('mobile-theme-icon'),
-            document.getElementById('header-theme-icon')
+            document.getElementById('header-theme-icon'),
+            document.getElementById('sidebar-theme-icon')
         ].filter(Boolean);
 
         icons.forEach(icon => {
@@ -6770,7 +6772,9 @@ window.UI = {
             try {
                 // إذا كان النقر على أحد أزرار الإشعارات: لا نغلق القائمة هنا — نترك الزر نفسه يفتح/يغلق عبر الـ handler المباشر (لتجنب عدم استجابة النقر في القائمة الجانبية)
                 if (e && e.target) {
-                    const notifBtn = e.target.closest('#notifications-btn, #mobile-notifications-btn, #header-notifications-btn');
+                    const notifBtn = e.target.closest(
+                        '#notifications-btn, #mobile-notifications-btn, #header-notifications-btn, #sidebar-notifications-container'
+                    );
                     if (notifBtn) {
                         return; // عدم منع الانتشار؛ الـ handler المربوط على الزر سيتولى فتح/إغلاق القائمة
                     }
@@ -6800,7 +6804,9 @@ window.UI = {
                             
                             if (isVisible && e && e.target) {
                                 // ✅ إصلاح: استخدام selector يشمل جميع أزرار الإشعارات
-                                const button = e.target.closest('#notifications-btn, #mobile-notifications-btn, #header-notifications-btn, [id$="-notifications-btn"]');
+                                const button = e.target.closest(
+                                    '#notifications-btn, #mobile-notifications-btn, #header-notifications-btn, #sidebar-notifications-container, [id$="-notifications-btn"]'
+                                );
                                 const insideDropdown = e.target.closest('.notifications-dropdown');
                                 if (!button && !insideDropdown) {
                                     // استخدام self أو window.UI
@@ -9402,89 +9408,32 @@ if (typeof window !== 'undefined') {
     };
 }
 
-// ✅ إصلاح: تهيئة أزرار الإشعارات عند تحميل الصفحة (DOMContentLoaded)
-// هذا يضمن عمل أزرار الإشعارات حتى قبل تسجيل الدخول
+// تهيئة أزرار الإشعارات بعد تحميل DOM.
+// ملاحظة: كان يوجد معالج click إضافي بـ capture:true على زر الجرس يستدعي toggle ثم معالج initNotificationsButton
+// بمرحلة الفقاعة يستدعي toggle مرة أخرى — فيُفتح القائمة ثم يُغلق في نفس النقرة ويبدو الزر «غير مستجيب».
 if (typeof document !== 'undefined') {
-    
-    // ✅ دالة مباشرة لربط زر الإشعارات في القائمة الجانبية
-    const bindSidebarNotificationBtn = () => {
-        const sidebarBtn = document.getElementById('notifications-btn');
-        if (sidebarBtn && !sidebarBtn._directClickBound) {
-            console.log('🔔 ربط زر الإشعارات في القائمة الجانبية مباشرة');
-            
-            sidebarBtn._directClickBound = true;
-            sidebarBtn.addEventListener('click', function(e) {
-                console.log('🔔 تم النقر على زر الإشعارات في القائمة الجانبية!');
-                e.preventDefault();
-                e.stopPropagation();
-                
-                // استدعاء دالة عرض الإشعارات
-                if (window.UI && typeof window.UI.toggleNotificationsDropdown === 'function') {
-                    window.UI.toggleNotificationsDropdown(
-                        'notifications-dropdown',
-                        'notifications-list',
-                        'notifications-empty',
-                        'close-notifications-dropdown',
-                        sidebarBtn
-                    );
-                } else {
-                    console.log('⚠️ UI.toggleNotificationsDropdown غير متاح');
-                    // محاولة فتح الـ dropdown مباشرة
-                    const dropdown = document.getElementById('notifications-dropdown');
-                    if (dropdown) {
-                        const isVisible = dropdown.style.display === 'flex';
-                        if (isVisible) {
-                            dropdown.style.display = 'none';
-                        } else {
-                            dropdown.style.setProperty('display', 'flex', 'important');
-                            dropdown.style.setProperty('visibility', 'visible', 'important');
-                            dropdown.style.setProperty('opacity', '1', 'important');
-                            dropdown.style.setProperty('position', 'fixed', 'important');
-                            dropdown.style.setProperty('z-index', '10001', 'important');
-                            dropdown.style.setProperty('top', '100px', 'important');
-                            dropdown.style.setProperty('left', '50%', 'important');
-                            dropdown.style.setProperty('transform', 'translateX(-50%)', 'important');
-                        }
-                    }
-                }
-            }, { capture: true });
-            
-            console.log('✅ تم ربط زر الإشعارات في القائمة الجانبية بنجاح');
+    const tryInitNotificationsOnly = () => {
+        if (typeof window.UI === 'undefined' || typeof window.UI.initNotificationsButton !== 'function') {
+            return;
+        }
+        try {
+            window.UI.initNotificationsButton();
+            if (typeof Utils !== 'undefined') {
+                Utils.safeLog('✅ تهيئة أزرار الإشعارات (معالج واحد لكل زر)');
+            }
+        } catch (e) {
+            if (typeof Utils !== 'undefined') {
+                Utils.safeWarn('⚠️ فشل تهيئة أزرار الإشعارات:', e);
+            }
         }
     };
-    
-    const initNotificationsEarly = () => {
-        // ربط الزر مباشرة أولاً
-        bindSidebarNotificationBtn();
-        
-        // انتظار قليل للتأكد من تحميل كل العناصر
-        setTimeout(() => {
-            // ربط مرة أخرى للتأكد
-            bindSidebarNotificationBtn();
-            
-            if (typeof window.UI !== 'undefined' && typeof window.UI.initNotificationsButton === 'function') {
-                try {
-                    window.UI.initNotificationsButton();
-                    if (typeof Utils !== 'undefined') {
-                        Utils.safeLog('✅ تم تهيئة أزرار الإشعارات مبكراً (DOMContentLoaded)');
-                    }
-                } catch (e) {
-                    if (typeof Utils !== 'undefined') {
-                        Utils.safeWarn('⚠️ فشل تهيئة أزرار الإشعارات مبكراً:', e);
-                    }
-                }
-            }
-        }, 500);
+    const runNotificationsInit = () => {
+        tryInitNotificationsOnly();
+        setTimeout(tryInitNotificationsOnly, 500);
     };
-
     if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', initNotificationsEarly);
+        document.addEventListener('DOMContentLoaded', runNotificationsInit);
     } else {
-        // DOM already loaded
-        initNotificationsEarly();
+        runNotificationsInit();
     }
-    
-    // ✅ محاولة إضافية بعد 1 ثانية
-    setTimeout(bindSidebarNotificationBtn, 1000);
-    setTimeout(bindSidebarNotificationBtn, 2000);
 }

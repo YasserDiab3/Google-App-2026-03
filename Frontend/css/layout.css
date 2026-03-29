@@ -124,6 +124,16 @@
     border-radius: 50%;
 }
 
+.sidebar.collapsed #sidebar-theme-toggle {
+    display: inline-flex !important;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    padding: 0;
+    border-radius: 50%;
+}
+
 .sidebar.collapsed #sync-btn .sync-label-text {
     display: none;
 }

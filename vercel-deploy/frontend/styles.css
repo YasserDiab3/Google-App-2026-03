@@ -5207,6 +5207,47 @@ body.app-active {
     font-size: 1rem;
 }
 
+/* زر الوضع الليلي بجانب «متصل» في القائمة الجانبية */
+.sidebar-theme-toggle {
+    position: relative;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    color: #fbbf24;
+    cursor: pointer;
+    transition: var(--transition);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1rem;
+    margin: 0;
+    padding: 0;
+    flex-shrink: 0;
+}
+
+.sidebar-theme-toggle:hover {
+    background: rgba(255, 255, 255, 0.18);
+    transform: scale(1.08);
+}
+
+.sidebar-theme-toggle:focus-visible {
+    outline: 2px solid rgba(251, 191, 36, 0.7);
+    outline-offset: 2px;
+}
+
+.sidebar .sidebar-theme-toggle,
+.sidebar #sidebar-theme-toggle {
+    pointer-events: auto !important;
+    z-index: 1002;
+}
+
+[data-theme="dark"] .sidebar-theme-toggle {
+    color: #fde68a;
+    border-color: rgba(253, 230, 138, 0.35);
+}
+
 @keyframes spin {
     from {
         transform: rotate(0deg);

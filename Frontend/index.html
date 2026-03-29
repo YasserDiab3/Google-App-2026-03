@@ -9841,7 +9841,7 @@
                     </div>
                 </div>
 
-                <!-- Notifications and Sync Buttons Container (زر الجرس + زر متصل + زر طي القائمة) -->
+                <!-- Notifications + Sync + Theme + Collapse (من اليمين: إشعارات، متصل، وضع ليلي، طي) -->
                 <div
                     class="sidebar-actions-row"
                     style="
@@ -9863,6 +9863,7 @@
                         "
                     >
                         <button
+                            type="button"
                             id="notifications-btn"
                             class="notifications-btn"
                             aria-label="الإشعارات"
@@ -9929,12 +9930,23 @@
 
                     <!-- Sync Button -->
                     <button
+                        type="button"
                         id="sync-btn"
                         class="sync-btn"
                         aria-label="تحميل البيانات من قاعدة البيانات"
                         title="متصل"
                     >
                         <i class="fas fa-sync-alt" id="sync-icon"></i>
+                    </button>
+                    <!-- Dark / light mode (sidebar) -->
+                    <button
+                        type="button"
+                        id="sidebar-theme-toggle"
+                        class="sidebar-theme-toggle"
+                        aria-label="تبديل الوضع الليلي"
+                        title="الوضع الليلي / النهاري"
+                    >
+                        <i class="fas fa-moon" id="sidebar-theme-icon" aria-hidden="true"></i>
                     </button>
                     <button
                         type="button"
