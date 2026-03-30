@@ -5441,6 +5441,36 @@ const Clinic = {
     },
 
     /**
+     * يجب أن يعيد الخادم success: true بعد كتابة الشيت؛ وإلا نعتبر الحفظ فاشلاً (لا نعتمد على ردود ناقصة).
+     */
+    assertClinicVisitRpcResult(result) {
+        if (!result || result.success !== true) {
+            throw new Error(
+                (result && result.message)
+                    ? result.message
+                    : 'لم يُؤكد الخادم حفظ الزيارة. تحقق من رابط Web App ونشر Apps Script ومعرف الجدول.'
+            );
+        }
+    },
+
+    /**
+     * مواءمة معرف الزيارة مع ما أعادته الخادم (إن وُجد visitId).
+     */
+    applyClinicVisitIdFromServer(formData, result) {
+        if (!formData || !result || !result.visitId) return;
+        const vid = String(result.visitId).trim();
+        if (!vid || String(formData.id) === vid) return;
+        const oldId = formData.id;
+        formData.id = vid;
+        const list = AppState.appData.clinicVisits;
+        if (!Array.isArray(list)) return;
+        const idx = list.findIndex((v) => v && v.id === oldId);
+        if (idx !== -1) {
+            list[idx] = { ...list[idx], id: vid };
+        }
+    },
+
+    /**
      * ✅ دالة منفصلة لتحميل بيانات الزيارات من Backend
      */
     async loadVisitsDataFromBackend() {
@@ -9664,17 +9694,14 @@ const Clinic = {
                             action: 'updateClinicVisit',
                             data: { visitId: visitData.id, updateData: formData, __timeoutMs: rpcTimeoutMs }
                         });
-                        if (vr && vr.success === false) {
-                            throw new Error(vr.message || 'فشل تحديث الزيارة في قاعدة البيانات');
-                        }
+                        this.assertClinicVisitRpcResult(vr);
                     } else {
                         const vr = await GoogleIntegration.sendRequest({
                             action: 'addClinicVisit',
                             data: { ...formData, __timeoutMs: rpcTimeoutMs }
                         });
-                        if (vr && vr.success === false) {
-                            throw new Error(vr.message || 'فشل تسجيل الزيارة في قاعدة البيانات');
-                        }
+                        this.assertClinicVisitRpcResult(vr);
+                        this.applyClinicVisitIdFromServer(formData, vr);
                     }
 
                     if (hasInventoryChange) {
@@ -9714,6 +9741,15 @@ const Clinic = {
                             data: formData
                         }
                     }));
+
+                    try {
+                        await this.loadVisitsDataFromBackend();
+                    } catch (reloadErr) {
+                        Utils.safeWarn('تعذر تحديث سجل التردد من الخادم بعد الحفظ:', reloadErr);
+                    }
+                    if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
+                        window.DataManager.save();
+                    }
                 } catch (syncError) {
                     Utils.safeError('⚠️ خطأ في المزامنة مع قاعدة البيانات:', syncError);
                     Loading.hide();
@@ -13773,12 +13809,22 @@ const Clinic = {
                         : { ...formData, __timeoutMs: rpcTimeoutMs }
                 });
 
-                if (result && result.success === false) {
-                    throw new Error(result.message || 'فشل حفظ الزيارة في قاعدة البيانات');
+                this.assertClinicVisitRpcResult(result);
+                if (!isEdit) {
+                    this.applyClinicVisitIdFromServer(formData, result);
                 }
 
                 if (AppState.debugMode) {
                     Utils.safeLog('✅ تم إرسال formData إلى Backend بنجاح', result);
+                }
+
+                try {
+                    await this.loadVisitsDataFromBackend();
+                } catch (reloadErr) {
+                    Utils.safeWarn('تعذر تحديث سجل التردد من الخادم بعد الحفظ:', reloadErr);
+                }
+                if (typeof DataManager !== 'undefined' && DataManager.save) {
+                    DataManager.save();
                 }
             } catch (syncErr) {
                 Utils.safeError('❌ خطأ في المزامنة:', syncErr);

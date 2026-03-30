@@ -435,8 +435,18 @@ function addClinicVisitToSheet(visitData) {
         Logger.log('🚀 [BACKEND] حفظ الزيارة في: ' + sheetName + ' | id: ' + normalized.id);
         const result = upsertClinicVisit_(sheetName, normalized);
         Logger.log('✅ [BACKEND] تم الحفظ بنجاح - Row: ' + (result.rowNumber || 'N/A'));
-        
-        return result;
+
+        if (result && result.success === false) {
+            return result;
+        }
+        var merged = (result && typeof result === 'object') ? result : { success: true };
+        merged.success = true;
+        merged.visitId = String(normalized.id);
+        merged.sheetName = sheetName;
+        if (!merged.message) {
+            merged.message = 'تم تسجيل الزيارة';
+        }
+        return merged;
     } catch (error) {
         Logger.log('❌ [BACKEND] ===== خطأ في addClinicVisitToSheet =====');
         Logger.log('❌ [BACKEND] الخطأ: ' + error.toString());
