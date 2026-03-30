@@ -1110,10 +1110,43 @@
                     return;
                 }
 
+                /** ضوضاء إضافات Chrome (ليست من تطبيقنا) — تظهر غالباً كـ Unchecked runtime.lastError */
+                function __hseIsChromeExtensionNoise(text) {
+                    if (!text) return false;
+                    const t = String(text).toLowerCase();
+                    return (
+                        t.includes("runtime.lasterror") ||
+                        t.includes("unchecked runtime.lasterror") ||
+                        t.includes("receiving end does not exist") ||
+                        t.includes("could not establish connection") ||
+                        t.includes("extension context invalidated") ||
+                        t.includes("message port closed")
+                    );
+                }
+
                 // قمع console.error فوراً - فحص كل المعاملات (الرسالة قد تكون في كائن Error)
                 if (typeof console !== "undefined" && console.error) {
                     const _originalError = console.error;
                     console.error = function (...args) {
+                        try {
+                            const joined = args
+                                .map(function (a) {
+                                    if (a && typeof a === "object") {
+                                        return (
+                                            (a.message || "") +
+                                            " " +
+                                            (a.stack || "") +
+                                            " " +
+                                            String(a)
+                                        );
+                                    }
+                                    return String(a || "");
+                                })
+                                .join(" ");
+                            if (__hseIsChromeExtensionNoise(joined)) {
+                                return;
+                            }
+                        } catch (e) { /* ignore */ }
                         for (let i = 0; i < args.length; i++) {
                             const a = args[i];
                             const first =
@@ -1124,6 +1157,9 @@
                                           (a.stack || "")
                                       ).toLowerCase()
                                     : String(a || "").toLowerCase();
+                            if (__hseIsChromeExtensionNoise(first)) {
+                                return;
+                            }
                             if (
                                 first.includes("uploadmanager") ||
                                 first.includes("uploadmanager.js") ||
@@ -1155,6 +1191,23 @@
                 if (typeof console !== "undefined" && console.warn) {
                     const _originalWarn = console.warn;
                     console.warn = function (...args) {
+                        try {
+                            const joined = args
+                                .map(function (a) {
+                                    if (a && typeof a === "object") {
+                                        return (
+                                            (a.message || "") +
+                                            " " +
+                                            (a.stack || "")
+                                        );
+                                    }
+                                    return String(a || "");
+                                })
+                                .join(" ");
+                            if (__hseIsChromeExtensionNoise(joined)) {
+                                return;
+                            }
+                        } catch (e) { /* ignore */ }
                         if (args.length > 0 && args[0]) {
                             const first = String(args[0]).toLowerCase();
                             if (
@@ -1178,6 +1231,10 @@
                     // فحص الرسالة
                     const msgLower = String(msg || "").toLowerCase();
                     const urlLower = String(url || "").toLowerCase();
+
+                    if (__hseIsChromeExtensionNoise(msgLower)) {
+                        return true;
+                    }
 
                     if (
                         msgLower.includes("uploadmanager") ||
@@ -1213,6 +1270,13 @@
                         const msg = String(e.message || "").toLowerCase();
                         const file = String(e.filename || "").toLowerCase();
 
+                        if (__hseIsChromeExtensionNoise(msg)) {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            e.stopImmediatePropagation();
+                            return false;
+                        }
+
                         if (
                             msg.includes("uploadmanager") ||
                             file.includes("uploadmanager") ||
@@ -1242,6 +1306,10 @@
                         const reason = String(e.reason || "").toLowerCase();
                         const msg = (e.reason && e.reason.message) ? String(e.reason.message).toLowerCase() : reason;
                         const combined = reason + " " + msg;
+                        if (__hseIsChromeExtensionNoise(combined)) {
+                            e.preventDefault();
+                            return false;
+                        }
                         if (
                             combined.includes("uploadmanager") ||
                             (combined.includes("cannot read") &&
