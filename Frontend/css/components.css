@@ -12,7 +12,6 @@
     font-weight: 400;
     line-height: 1.5;
     -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
 }
 
 .form-input[type="password"] {
@@ -1188,22 +1187,24 @@ body.hse-post-login-overlay-active #main-app {
     background: #ffffff;
 }
 
-.hse-post-login-overlay-body::-webkit-scrollbar {
-    width: 8px;
-}
+@supports selector(::-webkit-scrollbar-thumb) {
+    .hse-post-login-overlay-body::-webkit-scrollbar {
+        width: 8px;
+    }
 
-.hse-post-login-overlay-body::-webkit-scrollbar-track {
-    background: rgba(0, 0, 0, 0.04);
-    border-radius: 4px;
-}
+    .hse-post-login-overlay-body::-webkit-scrollbar-track {
+        background: rgba(0, 0, 0, 0.04);
+        border-radius: 4px;
+    }
 
-.hse-post-login-overlay-body::-webkit-scrollbar-thumb {
-    background: rgba(148, 163, 184, 0.4);
-    border-radius: 4px;
-}
+    .hse-post-login-overlay-body::-webkit-scrollbar-thumb {
+        background: rgba(148, 163, 184, 0.4);
+        border-radius: 4px;
+    }
 
-.hse-post-login-overlay-body::-webkit-scrollbar-thumb:hover {
-    background: rgba(148, 163, 184, 0.6);
+    .hse-post-login-overlay-body::-webkit-scrollbar-thumb:hover {
+        background: rgba(148, 163, 184, 0.6);
+    }
 }
 
 .hse-post-login-overlay-body br {
@@ -1608,7 +1609,11 @@ body.hse-post-login-overlay-active #main-app {
 /* Safari و iOS: منع اختفاء المحتوى خلف الشريط */
 @supports (-webkit-touch-callout: none) {
     .hse-post-login-overlay {
+        min-height: 100vh;
+        min-height: 100dvh;
         min-height: -webkit-fill-available;
+        height: 100vh;
+        height: 100dvh;
         height: -webkit-fill-available;
     }
 }

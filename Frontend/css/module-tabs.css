@@ -99,26 +99,28 @@
     margin-bottom: 1.5rem;
 }
 
-.module-tabs-wrapper::-webkit-scrollbar,
-.contractors-tabs-wrapper::-webkit-scrollbar {
-    height: 6px;
-}
+@supports selector(::-webkit-scrollbar-thumb) {
+    .module-tabs-wrapper::-webkit-scrollbar,
+    .contractors-tabs-wrapper::-webkit-scrollbar {
+        height: 6px;
+    }
 
-.module-tabs-wrapper::-webkit-scrollbar-track,
-.contractors-tabs-wrapper::-webkit-scrollbar-track {
-    background: transparent;
-    border-radius: 3px;
-}
+    .module-tabs-wrapper::-webkit-scrollbar-track,
+    .contractors-tabs-wrapper::-webkit-scrollbar-track {
+        background: transparent;
+        border-radius: 3px;
+    }
 
-.module-tabs-wrapper::-webkit-scrollbar-thumb,
-.contractors-tabs-wrapper::-webkit-scrollbar-thumb {
-    background: rgba(0, 0, 0, 0.2);
-    border-radius: 3px;
-}
+    .module-tabs-wrapper::-webkit-scrollbar-thumb,
+    .contractors-tabs-wrapper::-webkit-scrollbar-thumb {
+        background: rgba(0, 0, 0, 0.2);
+        border-radius: 3px;
+    }
 
-.module-tabs-wrapper::-webkit-scrollbar-thumb:hover,
-.contractors-tabs-wrapper::-webkit-scrollbar-thumb:hover {
-    background: rgba(0, 0, 0, 0.3);
+    .module-tabs-wrapper::-webkit-scrollbar-thumb:hover,
+    .contractors-tabs-wrapper::-webkit-scrollbar-thumb:hover {
+        background: rgba(0, 0, 0, 0.3);
+    }
 }
 
 /* ===== Tab Container Styles ===== */
@@ -186,14 +188,16 @@
     scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
 }
 
-[data-theme="dark"] .module-tabs-wrapper::-webkit-scrollbar-thumb,
-[data-theme="dark"] .contractors-tabs-wrapper::-webkit-scrollbar-thumb {
-    background: rgba(255, 255, 255, 0.2);
-}
+@supports selector(::-webkit-scrollbar-thumb) {
+    [data-theme="dark"] .module-tabs-wrapper::-webkit-scrollbar-thumb,
+    [data-theme="dark"] .contractors-tabs-wrapper::-webkit-scrollbar-thumb {
+        background: rgba(255, 255, 255, 0.2);
+    }
 
-[data-theme="dark"] .module-tabs-wrapper::-webkit-scrollbar-thumb:hover,
-[data-theme="dark"] .contractors-tabs-wrapper::-webkit-scrollbar-thumb:hover {
-    background: rgba(255, 255, 255, 0.3);
+    [data-theme="dark"] .module-tabs-wrapper::-webkit-scrollbar-thumb:hover,
+    [data-theme="dark"] .contractors-tabs-wrapper::-webkit-scrollbar-thumb:hover {
+        background: rgba(255, 255, 255, 0.3);
+    }
 }
 
 /* ===== Responsive Design ===== */
@@ -327,22 +331,24 @@
     scrollbar-color: rgba(0, 0, 0, 0.1) transparent;
 }
 
-.ppe-tabs-container::-webkit-scrollbar {
-    height: 4px;
-}
+@supports selector(::-webkit-scrollbar-thumb) {
+    .ppe-tabs-container::-webkit-scrollbar {
+        height: 4px;
+    }
 
-.ppe-tabs-container::-webkit-scrollbar-track {
-    background: transparent;
-    border-radius: 2px;
-}
+    .ppe-tabs-container::-webkit-scrollbar-track {
+        background: transparent;
+        border-radius: 2px;
+    }
 
-.ppe-tabs-container::-webkit-scrollbar-thumb {
-    background: rgba(0, 0, 0, 0.1);
-    border-radius: 2px;
-}
+    .ppe-tabs-container::-webkit-scrollbar-thumb {
+        background: rgba(0, 0, 0, 0.1);
+        border-radius: 2px;
+    }
 
-.ppe-tabs-container::-webkit-scrollbar-thumb:hover {
-    background: rgba(0, 0, 0, 0.2);
+    .ppe-tabs-container::-webkit-scrollbar-thumb:hover {
+        background: rgba(0, 0, 0, 0.2);
+    }
 }
 
 /* ===== Dark Mode Support for PPE Tabs ===== */
@@ -425,21 +431,23 @@
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
 }
 
-.action-tabs-container::-webkit-scrollbar {
-    height: 4px;
-}
+@supports selector(::-webkit-scrollbar-thumb) {
+    .action-tabs-container::-webkit-scrollbar {
+        height: 4px;
+    }
 
-.action-tabs-container::-webkit-scrollbar-track {
-    background: transparent;
-}
+    .action-tabs-container::-webkit-scrollbar-track {
+        background: transparent;
+    }
 
-.action-tabs-container::-webkit-scrollbar-thumb {
-    background: rgba(0, 0, 0, 0.1);
-    border-radius: 2px;
-}
+    .action-tabs-container::-webkit-scrollbar-thumb {
+        background: rgba(0, 0, 0, 0.1);
+        border-radius: 2px;
+    }
 
-.action-tabs-container::-webkit-scrollbar-thumb:hover {
-    background: rgba(0, 0, 0, 0.2);
+    .action-tabs-container::-webkit-scrollbar-thumb:hover {
+        background: rgba(0, 0, 0, 0.2);
+    }
 }
 
 /* ===== Action Tab Button Base Styles ===== */

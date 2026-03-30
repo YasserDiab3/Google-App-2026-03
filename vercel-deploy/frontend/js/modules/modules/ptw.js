@@ -2806,6 +2806,12 @@ const PTW = {
             leafletCSS.integrity = 'sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=';
             leafletCSS.crossOrigin = 'anonymous';
             document.head.appendChild(leafletCSS);
+            if (!document.querySelector('link[href*="leaflet-overrides"]')) {
+                const leafletOverrides = document.createElement('link');
+                leafletOverrides.rel = 'stylesheet';
+                leafletOverrides.href = 'css/leaflet-overrides.css';
+                document.head.appendChild(leafletOverrides);
+            }
         }
 
         if (typeof L === 'undefined') {
