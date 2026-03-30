@@ -153,7 +153,12 @@ function normalizeClinicPersonType_(personType, visitData) {
  * - contractor/external -> ClinicContractorVisits
  */
 function getClinicVisitSheetName_(visitData) {
-    const type = normalizeClinicPersonType_(visitData && visitData.personType);
+    // يجب تمرير visitData كاملاً لـ normalizeClinicPersonType_ عندما personType فارغ
+    // لاستنتاج المقاول/الخارجي من الحقول (contractorName، إلخ) وإلا يُسجّل دائماً في ClinicVisits
+    const type = normalizeClinicPersonType_(
+        visitData && visitData.personType,
+        visitData || {}
+    );
     if (type === 'contractor' || type === 'external') return 'ClinicContractorVisits';
     return 'ClinicVisits';
 }
@@ -494,7 +499,7 @@ function updateClinicVisit(visitId, updateData) {
         // ✅ تثبيت نوع الشخص (لو تم تمريره) لمنع النقل/التسجيل الخاطئ لاحقاً
         try {
             if (normalizedUpdate.personType) {
-                normalizedUpdate.personType = normalizeClinicPersonType_(normalizedUpdate.personType);
+                normalizedUpdate.personType = normalizeClinicPersonType_(normalizedUpdate.personType, normalizedUpdate);
             }
         } catch (e) {}
 
