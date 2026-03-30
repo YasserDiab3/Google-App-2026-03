@@ -7,83 +7,65 @@
 (function () {
     'use strict';
 
-    // قمع أخطاء runtime.lastError من Chrome Extensions بشكل شامل
-    if (typeof chrome !== 'undefined' && chrome.runtime) {
-        try {
-            // إعادة تعريف chrome.runtime.lastError
-            let lastErrorValue = null;
-            Object.defineProperty(chrome.runtime, 'lastError', {
-                get: function () {
-                    const error = chrome.runtime.lastError;
-                    if (error) {
-                        const msg = String(error.message || '');
-                        if (msg.includes('message port closed') ||
-                            msg.includes('message channel closed') ||
-                            msg.includes('asynchronous response') ||
-                            msg.includes('Receiving end does not exist') ||
-                            msg.includes('Could not establish connection') ||
-                            msg.includes('Extension context invalidated')) {
-                            return null; // تجاهل هذه الأخطاء
-                        }
-                    }
-                    return error;
-                },
-                set: function (value) {
-                    lastErrorValue = value;
-                },
-                configurable: true,
-                enumerable: true
-            });
-        } catch (e) {
-            // إذا فشل إعادة التعريف، نتجاهل
-        }
+    /**
+     * ضوضاء من إضافات المتصفح (Chrome/Edge) — ليست من تطبيقنا.
+     * تُسجَّل عادةً عندما يستدعي الامتداد sendMessage دون التحقق من runtime.lastError،
+     * أو عند إغلاق منفذ الرسائل قبل الرد.
+     * يجب قمعها دائماً: على الصفحات العادية غالباً لا يوجد chrome.runtime لذا كان القمع
+     * السابق داخل if (chrome.runtime) لا يعمل أبداً.
+     */
+    const extNoise = (s) => {
+        const t = String(s || '').toLowerCase();
+        return t.includes('runtime.lasterror') ||
+            t.includes('unchecked runtime.lasterror') ||
+            t.includes('message port closed') ||
+            t.includes('port closed before a response') ||
+            t.includes('before a response was received') ||
+            t.includes('message channel closed') ||
+            t.includes('asynchronous response') ||
+            t.includes('receiving end does not exist') ||
+            t.includes('could not establish connection') ||
+            t.includes('extension context invalidated') ||
+            t.includes('the message port closed');
+    };
 
-        // قمع أخطاء runtime.lastError في console (تظهر غالباً من إضافات Chrome وليس من التطبيق)
-        const extNoise = (s) => {
-            const t = String(s || '');
-            return t.includes('runtime.lastError') ||
-                t.includes('Unchecked runtime.lastError') ||
-                t.includes('message port closed') ||
-                t.includes('Message port closed') ||
-                t.includes('port closed before a response') ||
-                t.includes('before a response was received') ||
-                t.includes('message channel closed') ||
-                t.includes('asynchronous response') ||
-                t.includes('Receiving end does not exist') ||
-                t.includes('Could not establish connection') ||
-                t.includes('Extension context invalidated');
-        };
-        const originalError = console.error;
-        console.error = function (...args) {
-            if (args.length > 0) {
-                const allArgs = args.map((arg) => String(arg || '')).join(' ');
-                if (args.some((a) => extNoise(a)) || extNoise(allArgs)) {
-                    return;
-                }
+    const stringifyArg = (arg) => {
+        if (arg === null || arg === undefined) return '';
+        if (typeof arg === 'string') return arg;
+        if (typeof arg === 'object') {
+            try {
+                if (arg && arg.message) return String(arg.message) + (arg.stack ? ' ' + arg.stack : '');
+                return JSON.stringify(arg);
+            } catch (e) {
+                return String(arg);
             }
-            originalError.apply(console, args);
+        }
+        return String(arg);
+    };
+
+    const shouldSuppressConsoleArgs = (args) => {
+        if (!args || args.length === 0) return false;
+        const joined = args.map(stringifyArg).join(' ');
+        return args.some((a) => extNoise(stringifyArg(a))) || extNoise(joined);
+    };
+
+    const wrapConsole = (methodName) => {
+        const original = console[methodName];
+        if (typeof original !== 'function') return;
+        console[methodName] = function (...args) {
+            if (shouldSuppressConsoleArgs(args)) return;
+            return original.apply(console, args);
         };
-        const originalWarn = console.warn;
-        console.warn = function (...args) {
-            if (args.length > 0) {
-                const allArgs = args.map((arg) => String(arg || '')).join(' ');
-                if (args.some((a) => extNoise(a)) || extNoise(allArgs)) {
-                    return;
-                }
-            }
-            originalWarn.apply(console, args);
-        };
-        const originalLog = console.log;
-        console.log = function (...args) {
-            if (args.length > 0) {
-                const allArgs = args.map((arg) => String(arg || '')).join(' ');
-                if (args.some((a) => extNoise(a)) || extNoise(allArgs)) {
-                    return;
-                }
-            }
-            originalLog.apply(console, args);
-        };
-    }
+    };
+
+    wrapConsole('error');
+    wrapConsole('warn');
+    wrapConsole('log');
+    wrapConsole('info');
+    wrapConsole('debug');
+
+    // لا نعيد تعريف chrome.runtime.lastError هنا: القراءة داخل الـ getter كانت تستدعي نفسها (تكرار لا نهائي محتمل).
+    // الإضافات التي تتحقق من lastError تحتاج القيمة الأصلية دون تلاعب.
 
     // قمع أخطاء CSP المتعلقة بـ source maps و frame-ancestors
     const originalError = window.onerror;
@@ -95,11 +77,14 @@
                 msg.includes('Content Security Policy') ||
                 msg.includes('frame-ancestors') ||
                 msg.includes('runtime.lastError') ||
+                msg.includes('Unchecked runtime.lastError') ||
                 msg.includes('message port closed') ||
+                msg.includes('before a response was received') ||
                 msg.includes('message channel closed') ||
                 msg.includes('asynchronous response') ||
                 msg.includes('Receiving end does not exist') ||
-                msg.includes('Could not establish connection')
+                msg.includes('Could not establish connection') ||
+                msg.includes('Extension context invalidated')
             )
         )) {
             return true; // منع عرض الخطأ
@@ -117,18 +102,22 @@
             (typeof reason === 'string' && (
                 reason.includes('runtime.lastError') ||
                 reason.includes('message port closed') ||
+                reason.includes('before a response was received') ||
                 reason.includes('message channel closed') ||
                 reason.includes('asynchronous response') ||
                 reason.includes('Receiving end does not exist') ||
-                reason.includes('Could not establish connection')
+                reason.includes('Could not establish connection') ||
+                reason.includes('Extension context invalidated')
             )) ||
             (reason && reason.message && (
                 reason.message.includes('runtime.lastError') ||
                 reason.message.includes('message port closed') ||
+                reason.message.includes('before a response was received') ||
                 reason.message.includes('message channel closed') ||
                 reason.message.includes('asynchronous response') ||
                 reason.message.includes('Receiving end does not exist') ||
-                reason.message.includes('Could not establish connection')
+                reason.message.includes('Could not establish connection') ||
+                reason.message.includes('Extension context invalidated')
             ))
         )) {
             event.preventDefault();

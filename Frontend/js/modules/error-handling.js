@@ -5,41 +5,10 @@
 // معالجة أخطاء Chrome Extensions
 (function() {
     'use strict';
-    
-    // قمع أخطاء runtime.lastError من Chrome Extensions بشكل شامل
-    if (typeof chrome !== 'undefined' && chrome.runtime) {
-        try {
-            // إعادة تعريف chrome.runtime.lastError
-            let lastErrorValue = null;
-            Object.defineProperty(chrome.runtime, 'lastError', {
-                get: function() {
-                    const error = chrome.runtime.lastError;
-                    if (error) {
-                        const msg = String(error.message || '');
-                        if (msg.includes('message port closed') ||
-                            msg.includes('message channel closed') ||
-                            msg.includes('asynchronous response') ||
-                            msg.includes('Receiving end does not exist') ||
-                            msg.includes('Could not establish connection') ||
-                            msg.includes('Extension context invalidated')) {
-                            return null; // تجاهل هذه الأخطاء
-                        }
-                    }
-                    return error;
-                },
-                set: function(value) {
-                    lastErrorValue = value;
-                },
-                configurable: true,
-                enumerable: true
-            });
-        } catch (e) {
-            // إذا فشل إعادة التعريف، نتجاهل
-        }
-        
-        // قمع أخطاء runtime.lastError في console
-        const originalError = console.error;
-        console.error = function(...args) {
+
+    // قمع console.error دائماً (ليس داخل if chrome.runtime): على المواقع العادية chrome.runtime غير معرّف فلا يُطبَّق القمع.
+    const originalConsoleError = console.error;
+    console.error = function(...args) {
             if (args.length > 0) {
                 const firstArg = String(args[0] || '');
                 const allArgs = args.map(arg => {
@@ -127,7 +96,9 @@
                 }
                 
                 if (firstArgLower.includes('runtime.lasterror') ||
+                    firstArgLower.includes('unchecked runtime') ||
                     firstArgLower.includes('message port closed') ||
+                    firstArgLower.includes('before a response was received') ||
                     firstArgLower.includes('message channel closed') ||
                     firstArgLower.includes('asynchronous response') ||
                     firstArgLower.includes('receiving end does not exist') ||
@@ -140,6 +111,8 @@
                     firstArgLower.includes('htmlstyleelement') ||
                     firstArgLower.includes('uncaught typeerror') ||
                     allArgs.includes('message port closed') ||
+                    allArgs.includes('before a response was received') ||
+                    allArgs.includes('unchecked runtime') ||
                     allArgs.includes('message channel closed') ||
                     allArgs.includes('asynchronous response') ||
                     allArgs.includes('uploadmanager') ||
@@ -177,10 +150,9 @@
                     return; // تجاهل هذه الأخطاء
                 }
             }
-            originalError.apply(console, args);
+            originalConsoleError.apply(console, args);
         };
-    }
-    
+
     // قمع أخطاء CSP المتعلقة بـ source maps و frame-ancestors
     const originalError = window.onerror;
     window.onerror = function(msg, url, line, col, error) {
