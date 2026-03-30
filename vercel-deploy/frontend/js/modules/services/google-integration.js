@@ -692,7 +692,8 @@ const GoogleIntegration = {
                 'getClinicData', 'getFireEquipmentData', 'getPPEData',
                 'getPeriodicInspectionsData', 'getViolationsData',
                 'getActionTrackingData', 'getBehaviorMonitoringData',
-                'saveOrUpdate', 'getAll', 'import' // إضافة عمليات جديدة
+                'saveOrUpdate', 'getAll', 'import', // إضافة عمليات جديدة
+                'getAllClinicVisits' // سجل التردد كامل (موظفين + مقاولين) — يُفضّل تمرير __timeoutMs من الواجهة
             ];
             const mediumOperations = [
                 'getData', 'readData', 'loadData', 'fetchData', 'add', 'update'

@@ -5340,11 +5340,6 @@ const Clinic = {
             const CACHE_DURATION = 10 * 60 * 1000; // 10 دقائق
             const isDataStale = cacheAge >= CACHE_DURATION;
 
-            // ✅ عند Reload: إذا كانت البيانات المحلية موجودة وحديثة، اعتبر التحميل مكتملاً لتفادي إعادة الجلب وفقد/وميض البيانات
-            if (!forceReload && hasLocalData && !isDataStale) {
-                this._visitsBackendFetchOk = true;
-            }
-            
             // عرض الواجهة فوراً بالبيانات المتوفرة (حتى لو كانت فارغة)
             this.renderVisitsTabContent(panel);
             
@@ -5352,7 +5347,7 @@ const Clinic = {
             // 1. forceReload = true (تم طلب إعادة تحميل قسري)
             // 2. لا توجد بيانات محلية
             // 3. البيانات قديمة (أكثر من 10 دقائق)
-            // 4. لم يكتمل بعد جلب كامل من getAllClinicVisits (مثلاً انتهت مهلة 8ث في syncDataFromServer سابقاً)
+            // 4. لم يكتمل بعد جلب كامل من getAllClinicVisits (_visitsBackendFetchOk !== true)
             const shouldLoadData = forceReload || !hasLocalData || isDataStale || this._visitsBackendFetchOk !== true;
             
             if (shouldLoadData && typeof GoogleIntegration !== 'undefined' && GoogleIntegration.sendRequest) {
@@ -5374,16 +5369,11 @@ const Clinic = {
                     }
                 };
 
-                // ✅ هدف 3-6 ثواني: لا ننتظر الـ backend إذا كانت هناك بيانات محلية (نعرضها فوراً ثم تحديث بالخلفية)
-                // في أول تحميل بدون بيانات محلية: ننتظر بحد أقصى 6 ثوان ثم نُكمل في الخلفية.
-                if (hasLocalData && !forceReload) {
-                    loadAndRerender(); // background
+                // انتظار اكتمال الجلب (موظفين + مقاولين في طلب واحد) — لا نقطع بمهلة 6ث لتفادي عرض جزئي
+                if (this._visitsBackendFetchOk === true && hasLocalData && !forceReload && !isDataStale) {
+                    loadAndRerender();
                 } else {
-                    await Promise.race([
-                        loadAndRerender(),
-                        new Promise(resolve => setTimeout(resolve, 6000))
-                    ]);
-                    // إذا لم يكتمل خلال 6 ثواني سيُكمل في الخلفية ويُعيد الرندر عند الانتهاء
+                    await loadAndRerender();
                 }
             }
         } catch (error) {
@@ -5491,9 +5481,9 @@ const Clinic = {
             const result = await Utils.promiseWithTimeout(
                 GoogleIntegration.sendRequest({
                     action: 'getAllClinicVisits',
-                    data: {}
+                    data: { __timeoutMs: 120000 }
                 }),
-                20000, // 20 ثانية timeout
+                120000,
                 'انتهت مهلة تحميل بيانات سجل التردد'
             );
 
@@ -11577,7 +11567,7 @@ const Clinic = {
                 Utils.safeLog('🔄 تحميل بيانات العيادة من قاعدة البيانات (في الخلفية)...');
                 Utils.promiseWithTimeout(
                     this.syncDataFromServer(),
-                    25000,
+                    130000,
                     'انتهت مهلة تحميل البيانات'
                 ).then(() => {
                     localStorage.setItem('clinic_last_sync', Date.now().toString());
@@ -11644,11 +11634,9 @@ const Clinic = {
      */
     async syncDataFromServer() {
         const promises = [];
-        // ✅ تحسين الأداء: تقليل أوقات الانتظار لتحميل أسرع
-        const REQUEST_TIMEOUT = 8000; // 8 ثوان لمعظم الطلبات
-        /** سجل التردد قد يكون كبيراً — نفس مهلة loadVisitsDataFromBackend لتفادي بيانات جزئية */
-        const CLINIC_VISITS_REQUEST_TIMEOUT = 20000;
-        const TOTAL_TIMEOUT = 20000; // 20 ثانية كحد أقصى لجميع الطلبات (تحسين من 45 ثانية)
+        const REQUEST_TIMEOUT = 8000; // 8 ثوان لمعظم الطلبات الخفيفة
+        /** سجل التردد (الموظفين + المقاولين) قد يكون كبيراً — مهلة كافية لإكمال getAllClinicVisits */
+        const CLINIC_VISITS_REQUEST_TIMEOUT = 120000;
 
         // دالة مساعدة لإضافة timeout للطلب مع معالجة أفضل للأخطاء
         const requestWithTimeout = (promise, timeout, dataType) => {
@@ -11734,7 +11722,7 @@ const Clinic = {
             requestWithTimeout(
                 GoogleIntegration.sendRequest({
                     action: 'getAllClinicVisits',
-                    data: {}
+                    data: { __timeoutMs: CLINIC_VISITS_REQUEST_TIMEOUT }
                 }),
                 CLINIC_VISITS_REQUEST_TIMEOUT,
                 'clinicVisits'
@@ -11946,15 +11934,9 @@ const Clinic = {
                 })
         );
 
-        // انتظار انتهاء جميع الطلبات (مع حد أقصى محسّن)
+        // انتظار انتهاء جميع الطلبات دون قطع مجمع بمهلة قصيرة (كانت تُسقط سجل التردد قبل اكتماله)
         try {
-            await Promise.race([
-                Promise.allSettled(promises),
-                new Promise(resolve => setTimeout(() => {
-                    Utils.safeWarn('⚠️ انتهت مهلة انتظار تحميل البيانات');
-                    resolve();
-                }, TOTAL_TIMEOUT))
-            ]);
+            await Promise.allSettled(promises);
         } catch (error) {
             Utils.safeWarn('⚠️ خطأ في مزامنة البيانات:', error.message);
         }
@@ -11987,7 +11969,7 @@ const Clinic = {
             // ✅ تحسين: زيادة وقت المزامنة الخلفية قليلاً لإعطاء فرصة أفضل للنجاح
             await Utils.promiseWithTimeout(
                 this.syncDataFromServer(),
-                25000, // 25 ثانية في الخلفية (أطول قليلاً من التحميل الأولي)
+                130000,
                 () => new Error('Background sync timeout')
             );
 
