@@ -7267,7 +7267,7 @@ const Clinic = {
             if (AppState.googleConfig?.appsScript?.enabled) {
                 const deleteResult = await GoogleIntegration.sendRequest({
                     action: 'deleteClinicVisit',
-                    data: { visitId: visitId }
+                    data: { visitId: visitId, __timeoutMs: 90000 }
                 });
                 if (!deleteResult || deleteResult.success !== true) {
                     throw new Error(deleteResult?.message || 'فشل حذف الزيارة من الخادم');
@@ -7324,7 +7324,8 @@ const Clinic = {
                 data: {
                     visitId: visitId,
                     visitData: visit,
-                    requestedBy: requestedBy
+                    requestedBy: requestedBy,
+                    __timeoutMs: 90000
                 }
             });
             Loading.hide();
@@ -11158,7 +11159,12 @@ const Clinic = {
         const confirmed = confirm(confirmMessage);
         if (!confirmed) return;
 
-        Loading.show();
+        const approveLoadingMsg = isDeletion
+            ? 'جاري الموافقة على حذف الدواء...'
+            : isSupply
+                ? 'جاري الموافقة على طلب التوريد...'
+                : 'جاري الموافقة على حذف الزيارة...';
+        Loading.show(approveLoadingMsg);
         try {
             const approverData = {
                 id: AppState.currentUser?.id || '',
@@ -11167,13 +11173,16 @@ const Clinic = {
                 role: AppState.currentUser?.role || ''
             };
 
+            const approvalTimeout = { __timeoutMs: 90000 };
+
             let result;
             if (isDeletion) {
                 result = await GoogleIntegration.sendRequest({
                     action: 'approveMedicationDeletion',
                     data: {
                         requestId: requestId,
-                        approverData: approverData
+                        approverData: approverData,
+                        ...approvalTimeout
                     }
                 });
             } else if (isSupply) {
@@ -11181,7 +11190,8 @@ const Clinic = {
                     action: 'approveSupplyRequest',
                     data: {
                         requestId: requestId,
-                        approverData: approverData
+                        approverData: approverData,
+                        ...approvalTimeout
                     }
                 });
             } else if (isVisitDeletion) {
@@ -11189,7 +11199,8 @@ const Clinic = {
                     action: 'approveClinicVisitDeletion',
                     data: {
                         requestId: requestId,
-                        approverData: approverData
+                        approverData: approverData,
+                        ...approvalTimeout
                     }
                 });
             }
@@ -11231,6 +11242,11 @@ const Clinic = {
                         }
                     })();
                 }
+                if (isVisitDeletion) {
+                    try {
+                        this.refreshClinicVisitsFromServerAfterSave();
+                    } catch (e) { /* ignore */ }
+                }
             } else {
                 throw new Error(result.message || 'فشلت العملية');
             }
@@ -11245,7 +11261,12 @@ const Clinic = {
         const reason = prompt('يرجى إدخال سبب الرفض (اختياري):');
         if (reason === null) return;
 
-        Loading.show();
+        const rejectLoadingMsg = requestType === 'deletion'
+            ? 'جاري رفض طلب حذف الدواء...'
+            : requestType === 'supply'
+                ? 'جاري رفض طلب التوريد...'
+                : 'جاري رفض طلب حذف الزيارة...';
+        Loading.show(rejectLoadingMsg);
         try {
             const rejectorData = {
                 id: AppState.currentUser?.id || '',
@@ -11254,6 +11275,8 @@ const Clinic = {
                 role: AppState.currentUser?.role || ''
             };
 
+            const rejectTimeout = { __timeoutMs: 90000 };
+
             let result;
             if (requestType === 'deletion') {
                 result = await GoogleIntegration.sendRequest({
@@ -11261,7 +11284,8 @@ const Clinic = {
                     data: {
                         requestId: requestId,
                         rejectorData: rejectorData,
-                        reason: reason || 'لم يتم تحديد سبب'
+                        reason: reason || 'لم يتم تحديد سبب',
+                        ...rejectTimeout
                     }
                 });
             } else if (requestType === 'supply') {
@@ -11270,7 +11294,8 @@ const Clinic = {
                     data: {
                         requestId: requestId,
                         rejectorData: rejectorData,
-                        reason: reason || 'لم يتم تحديد سبب'
+                        reason: reason || 'لم يتم تحديد سبب',
+                        ...rejectTimeout
                     }
                 });
             } else if (requestType === 'visit') {
@@ -11279,7 +11304,8 @@ const Clinic = {
                     data: {
                         requestId: requestId,
                         rejectorData: rejectorData,
-                        reason: reason || 'لم يتم تحديد سبب'
+                        reason: reason || 'لم يتم تحديد سبب',
+                        ...rejectTimeout
                     }
                 });
             }

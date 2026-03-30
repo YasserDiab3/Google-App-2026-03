@@ -5076,7 +5076,8 @@ const Loading = {
         const overlay = document.getElementById('loading-overlay');
         if (!overlay) return;
 
-        this.currentProgress = Math.max(0, Math.min(100, percentage));
+        const safePct = Number.isFinite(percentage) ? percentage : 0;
+        this.currentProgress = Math.max(0, Math.min(100, safePct));
 
         // تحديث الرسالة إذا تم توفيرها
         if (message) {

@@ -132,8 +132,11 @@ const EnhancedLoader = {
             this.loadingState.currentStep = message;
         }
 
-        // حساب النسبة المئوية
-        const percentage = Math.round((this.loadingState.loaded / this.loadingState.total) * 100);
+        // حساب النسبة المئوية (تجنب NaN عند total = 0)
+        const total = this.loadingState.total;
+        const percentage = !total || total <= 0
+            ? 0
+            : Math.round((this.loadingState.loaded / total) * 100);
 
         // تحديث شريط التقدم
         if (this.elements.progressBar) {
@@ -258,7 +261,9 @@ const EnhancedLoader = {
             : 0;
         
         return {
-            percentage: Math.round((this.loadingState.loaded / this.loadingState.total) * 100),
+            percentage: !this.loadingState.total || this.loadingState.total <= 0
+                ? 0
+                : Math.round((this.loadingState.loaded / this.loadingState.total) * 100),
             loaded: this.loadingState.loaded,
             total: this.loadingState.total,
             elapsed: elapsed.toFixed(2),

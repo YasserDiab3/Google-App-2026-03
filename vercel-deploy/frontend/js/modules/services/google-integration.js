@@ -701,10 +701,24 @@ const GoogleIntegration = {
             const isHeavyOperation = heavyOperations.some(op => action.includes(op) || action === op);
             const isMediumOperation = mediumOperations.some(op => action.includes(op) || action === op);
 
+            // موافقات/حذف العيادة وطلبات الحذف: قد تتجاوز 12–20 ثانية على Google Apps Script
+            const longRunningApprovalActions = [
+                'approveClinicVisitDeletion',
+                'rejectClinicVisitDeletion',
+                'deleteClinicVisit',
+                'addClinicVisitDeletionRequest',
+                'approveMedicationDeletion',
+                'rejectMedicationDeletion',
+                'approveSupplyRequest',
+                'rejectSupplyRequest'
+            ];
+            const isLongRunningApproval = longRunningApprovalActions.includes(action);
+
             // تقليل المهلات لتفعيل fail-fast ومنع تكدس الطابور لعدة دقائق
             const timeoutDuration = Number(data?.__timeoutMs) > 0
                 ? Number(data.__timeoutMs)
-                : (isHeavyOperation ? 40000 : (isMediumOperation ? 20000 : 12000));
+                : (isLongRunningApproval ? 90000
+                    : (isHeavyOperation ? 40000 : (isMediumOperation ? 20000 : 12000)));
 
             const controller = new AbortController();
             const timeoutId = setTimeout(() => {
