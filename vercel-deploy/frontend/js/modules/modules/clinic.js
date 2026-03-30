@@ -5775,6 +5775,33 @@ const Clinic = {
     },
 
     /**
+     * بعد حفظ زيارة ناجح: إعادة جلب السجل من الخادم في الخلفية.
+     * لا يُستخدم await هنا — getAllClinicVisits قد يستغرق دقائق وكان يُبقي زر «جاري الحفظ...» والمودال معلقين.
+     */
+    refreshClinicVisitsFromServerAfterSave() {
+        this.loadVisitsDataFromBackend()
+            .then(() => {
+                if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
+                    try {
+                        window.DataManager.save();
+                    } catch (e) { /* ignore */ }
+                }
+                if (this.state && this.state.activeTab === 'visits') {
+                    const p = document.querySelector('.clinic-tab-panel[data-tab-panel="visits"]');
+                    if (p) {
+                        try {
+                            this.ensureData();
+                            this.renderVisitsTabContent(p);
+                        } catch (e) { /* ignore */ }
+                    }
+                }
+            })
+            .catch((reloadErr) => {
+                Utils.safeWarn('تعذر تحديث سجل التردد من الخادم بعد الحفظ:', reloadErr);
+            });
+    },
+
+    /**
      * ✅ دالة منفصلة لعرض محتوى تبويب سجل التردد (مثل الأدوية)
      * تعرض الواجهة بالبيانات المتوفرة فوراً دون انتظار التحميل
      */
@@ -9732,14 +9759,10 @@ const Clinic = {
                         }
                     }));
 
-                    try {
-                        await this.loadVisitsDataFromBackend();
-                    } catch (reloadErr) {
-                        Utils.safeWarn('تعذر تحديث سجل التردد من الخادم بعد الحفظ:', reloadErr);
-                    }
                     if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
                         window.DataManager.save();
                     }
+                    this.refreshClinicVisitsFromServerAfterSave();
                 } catch (syncError) {
                     Utils.safeError('⚠️ خطأ في المزامنة مع قاعدة البيانات:', syncError);
                     Loading.hide();
@@ -13800,14 +13823,10 @@ const Clinic = {
                     Utils.safeLog('✅ تم إرسال formData إلى Backend بنجاح', result);
                 }
 
-                try {
-                    await this.loadVisitsDataFromBackend();
-                } catch (reloadErr) {
-                    Utils.safeWarn('تعذر تحديث سجل التردد من الخادم بعد الحفظ:', reloadErr);
-                }
                 if (typeof DataManager !== 'undefined' && DataManager.save) {
                     DataManager.save();
                 }
+                this.refreshClinicVisitsFromServerAfterSave();
             } catch (syncErr) {
                 Utils.safeError('❌ خطأ في المزامنة:', syncErr);
                 Loading.hide();
