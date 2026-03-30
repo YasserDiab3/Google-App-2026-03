@@ -50,6 +50,23 @@ const GoogleIntegration = {
         }
     },
 
+    /**
+     * عمليات تعديل على الخادم — لا يجب أبداً اعتبار نسخة localStorage/cache قديمة «نجاحاً» لها
+     * (وإلا يظهر للمستخدم أن الزيارة/السجل حُفظ وهو غير موجود في الشيت).
+     */
+    _isWriteMutationAction(action) {
+        if (!action || typeof action !== 'string') return false;
+        const a = action.toLowerCase();
+        const readPrefixes = ['get', 'read', 'fetch', 'load', 'list', 'query', 'search', 'find'];
+        if (readPrefixes.some((p) => a.startsWith(p))) return false;
+        const writePrefixes = [
+            'add', 'update', 'delete', 'save', 'append', 'remove', 'submit', 'create',
+            'patch', 'set', 'upload', 'import', 'initialize', 'sync', 'send', 'move', 'copy',
+            'approve', 'reject', 'cancel', 'revoke', 'reset'
+        ];
+        return writePrefixes.some((p) => a.startsWith(p));
+    },
+
     prepareSheetPayload(sheetName, data) {
         if (sheetName !== 'Users') {
             return data;
@@ -1124,9 +1141,12 @@ const GoogleIntegration = {
         } catch (error) {
             // التحقق من هل هو Circuit Breaker
             const localData = this.getLocalData(action, data);
-            if (localData !== null) {
+            if (localData !== null && !this._isWriteMutationAction(action)) {
                 Utils.safeLog(`⚠️ Circuit Breaker مفتوح - تم تخطي العملية: ${action}`);
                 return localData;
+            }
+            if (localData !== null && this._isWriteMutationAction(action)) {
+                Utils.safeWarn(`⚠️ Circuit Breaker: لن تُستخدم نسخة محلية قديمة لعملية كتابة (${action})`);
             }
             return Promise.reject(error);
         }
@@ -1193,7 +1213,7 @@ const GoogleIntegration = {
             if (result && typeof result === 'object') {
                 if (result.success === false) {
                     const localData = this.getLocalData(action, data);
-                    if (localData !== null) {
+                    if (localData !== null && !this._isWriteMutationAction(action)) {
                         Utils.safeLog(`تم استخدام البيانات المحلية كبديل عند فشل المزامنة: ${action}`);
                         return localData;
                     }
@@ -1236,7 +1256,7 @@ const GoogleIntegration = {
                 errorMessage.includes('فشل الاتصال بالشبكة') ||
                 errorMessage.includes('Network request failed')) {
                 const localData = this.getLocalData(action, data);
-                if (localData !== null) {
+                if (localData !== null && !this._isWriteMutationAction(action)) {
                     Utils.safeLog(`تم استخدام البيانات المحلية كبديل عند فشل الاتصال: ${action} (الخطأ: ${errorMessage.substring(0, 50)})`);
                     return localData;
                 }
