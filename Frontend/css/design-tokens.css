@@ -1,0 +1,259 @@
+/* ============================================================
+   Design Tokens — Single source of truth for breakpoints,
+   spacing, typography, and layout dimensions.
+   ============================================================ */
+
+:root {
+    /* ─── Breakpoints (reference only – use in JS via CSS var read)  ─── */
+    /* Use these values when writing new media queries:
+       xs:  0 – 479px   (small phones)
+       sm:  480 – 767px  (phones)
+       md:  768 – 1023px (tablets)
+       lg:  1024 – 1279px (small desktops / landscape tablets)
+       xl:  1280 – 1599px (desktops)
+       2xl: 1600px+       (large desktops)
+    */
+    --bp-xs:  480px;
+    --bp-sm:  768px;
+    --bp-md:  1024px;
+    --bp-lg:  1280px;
+    --bp-xl:  1600px;
+
+    /* ─── Sidebar / Layout dimensions ─── */
+    --sidebar-width: 280px;
+    --sidebar-collapsed-width: 70px;
+    --header-height: 64px;
+    --header-height-mobile: 56px;
+    --content-max-width: 1440px;
+
+    /* ─── Spacing scale (fluid: shrinks on small screens) ─── */
+    --space-1:  clamp(0.25rem, 0.5vw,  0.25rem);   /* ~4px  */
+    --space-2:  clamp(0.5rem,  1vw,    0.5rem);     /* ~8px  */
+    --space-3:  clamp(0.75rem, 1.5vw,  0.75rem);   /* ~12px */
+    --space-4:  clamp(1rem,    2vw,    1rem);       /* ~16px */
+    --space-6:  clamp(1.25rem, 2.5vw,  1.5rem);    /* ~20-24px */
+    --space-8:  clamp(1.5rem,  3vw,    2rem);       /* ~24-32px */
+    --space-12: clamp(2rem,    4vw,    3rem);       /* ~32-48px */
+    --space-16: clamp(2.5rem,  5vw,    4rem);       /* ~40-64px */
+
+    /* ─── Typography scale (fluid) ─── */
+    --text-xs:   clamp(0.7rem,  1.5vw,  0.75rem);
+    --text-sm:   clamp(0.8rem,  1.8vw,  0.875rem);
+    --text-base: clamp(0.875rem,2vw,    1rem);
+    --text-lg:   clamp(1rem,    2.2vw,  1.125rem);
+    --text-xl:   clamp(1.1rem,  2.5vw,  1.25rem);
+    --text-2xl:  clamp(1.25rem, 3vw,    1.5rem);
+    --text-3xl:  clamp(1.5rem,  4vw,    1.875rem);
+    --text-4xl:  clamp(1.75rem, 5vw,    2.25rem);
+
+    /* ─── Border radius scale ─── */
+    --radius-sm: 4px;
+    --radius-md: 8px;
+    --radius-lg: 12px;
+    --radius-xl: 16px;
+    --radius-2xl: 20px;
+    --radius-full: 9999px;
+
+    /* ─── Z-index scale ─── */
+    --z-dropdown: 100;
+    --z-sticky:   200;
+    --z-overlay:  300;
+    --z-modal:    400;
+    --z-toast:    500;
+    --z-tooltip:  600;
+
+    /* ─── Button size tokens ─── */
+    --btn-h-sm:  36px;   /* small buttons */
+    --btn-h-md:  44px;   /* default — minimum touch target (WCAG) */
+    --btn-h-lg:  52px;   /* large CTA */
+    --btn-px-sm: 0.75rem;
+    --btn-px-md: 1rem;
+    --btn-px-lg: 1.5rem;
+    --btn-font-sm: var(--text-xs);
+    --btn-font-md: var(--text-sm);
+    --btn-font-lg: var(--text-base);
+    --btn-radius: var(--radius-xl);  /* unified button corner */
+
+    /* ─── Icon button tokens ─── */
+    --icon-btn-size-sm: 32px;
+    --icon-btn-size-md: 40px;
+    --icon-btn-size-lg: 44px;
+    --icon-btn-radius: var(--radius-lg);
+
+    /* ─── Card tokens ─── */
+    --card-radius:   var(--radius-2xl); /* 20px */
+    --card-padding:  clamp(1rem, 3vw, 1.25rem);
+    --card-padding-sm: 0.75rem;
+    --card-shadow:   0 2px 8px rgba(0,0,0,0.04), 0 1px 3px rgba(0,0,0,0.06);
+    --card-shadow-hover: 0 8px 24px rgba(0,0,0,0.08), 0 4px 12px rgba(0,0,0,0.06);
+
+    /* ─── KPI card tokens ─── */
+    --kpi-icon-size: 48px;
+    --kpi-icon-radius: var(--radius-xl);
+    --kpi-min-w: 140px;       /* minimum column width in KPI grid */
+    --kpi-min-h: 120px;       /* desktop min-height */
+    --kpi-min-h-mobile: 100px; /* mobile min-height */
+
+    /* ─── Form/input tokens ─── */
+    --input-h:      44px;   /* touch target */
+    --input-h-sm:   36px;
+    --input-px:     1rem;
+    --input-radius: var(--radius-xl);
+
+    /* ─── Badge tokens ─── */
+    --badge-px: 0.5rem;
+    --badge-py: 0.125rem;
+    --badge-radius: var(--radius-full);
+    --badge-font:   var(--text-xs);
+
+    /* ─── Animation ─── */
+    --duration-fast:   150ms;
+    --duration-normal: 300ms;
+    --duration-slow:   500ms;
+    --ease-default: cubic-bezier(0.4, 0, 0.2, 1);
+    --ease-spring:  cubic-bezier(0.34, 1.56, 0.64, 1);
+    --ease-out:     cubic-bezier(0, 0, 0.2, 1);
+    --ease-in:      cubic-bezier(0.4, 0, 1, 1);
+}
+
+/* ─── Viewport matrix (reference for QA — do not override) ─────────────────
+   360 × 800  → xs mobile (Android standard)
+   390 × 844  → xs mobile (iPhone 14)
+   768 × 1024 → tablet portrait
+   1024 × 768 → tablet landscape / small laptop
+   1366 × 768 → laptop HD
+   1600 × 900 → desktop FHD
+   ─────────────────────────────────────────────────────────────────────────── */
+
+/* ─── Button base utility (legacy use) ─── */
+.btn-base {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    min-height: var(--btn-h-md);
+    padding-block: 0;
+    padding-inline: var(--btn-px-md);
+    border-radius: var(--btn-radius);
+    font-size: var(--btn-font-md);
+    font-weight: 500;
+    line-height: 1;
+    border: none;
+    cursor: pointer;
+    transition: background-color var(--duration-fast) var(--ease-default),
+                box-shadow var(--duration-fast) var(--ease-default),
+                transform var(--duration-fast) var(--ease-default);
+    white-space: nowrap;
+    text-decoration: none;
+    touch-action: manipulation;
+}
+
+.btn-base:focus-visible {
+    outline: 2px solid currentColor;
+    outline-offset: 2px;
+}
+
+.btn-base:disabled,
+.btn-base[aria-disabled="true"] {
+    opacity: 0.5;
+    cursor: not-allowed;
+    pointer-events: none;
+}
+
+.btn-sm { min-height: var(--btn-h-sm); padding-inline: var(--btn-px-sm); font-size: var(--btn-font-sm); }
+.btn-lg { min-height: var(--btn-h-lg); padding-inline: var(--btn-px-lg); font-size: var(--btn-font-lg); }
+
+/* ─── Icon button ─── */
+.icon-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: var(--icon-btn-size-md);
+    height: var(--icon-btn-size-md);
+    min-width: var(--icon-btn-size-md);
+    border-radius: var(--icon-btn-radius);
+    padding: 0;
+    border: none;
+    cursor: pointer;
+    touch-action: manipulation;
+    transition: background-color var(--duration-fast) var(--ease-default);
+}
+.icon-btn-sm { width: var(--icon-btn-size-sm); height: var(--icon-btn-size-sm); min-width: var(--icon-btn-size-sm); }
+.icon-btn-lg { width: var(--icon-btn-size-lg); height: var(--icon-btn-size-lg); min-width: var(--icon-btn-size-lg); }
+
+/* ─── Card base utility (legacy use) ─── */
+.card-base {
+    border-radius: var(--card-radius);
+    padding: var(--card-padding);
+    box-shadow: var(--card-shadow);
+    transition: box-shadow var(--duration-normal) var(--ease-default);
+}
+
+.card-base:hover { box-shadow: var(--card-shadow-hover); }
+.card-compact { padding: var(--card-padding-sm); }
+
+/* ─── KPI grid utility ─── */
+.kpi-grid-auto {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(var(--kpi-min-w), 1fr));
+    gap: var(--space-4);
+}
+
+/* ─── Fluid container utility ─── */
+.container-fluid {
+    width: 100%;
+    max-width: var(--content-max-width);
+    margin-inline: auto;
+    padding-inline: clamp(1rem, 4vw, 2rem);
+}
+
+/* ─── Responsive grid utilities ─── */
+.auto-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(280px, 100%), 1fr));
+    gap: var(--space-6);
+}
+
+.auto-grid-sm {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(200px, 100%), 1fr));
+    gap: var(--space-4);
+}
+
+.auto-grid-lg {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(360px, 100%), 1fr));
+    gap: var(--space-8);
+}
+
+/* ─── Responsive table wrapper ─── */
+.table-responsive {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    border-radius: var(--radius-lg);
+}
+
+.table-responsive table {
+    min-width: 600px;
+}
+
+/* ─── Visually indicate horizontal scrollability ─── */
+.table-responsive::after {
+    content: '';
+    display: block;
+    height: 0;
+}
+
+@media (max-width: 767px) {
+    .table-responsive {
+        box-shadow: inset -4px 0 8px -4px rgba(0, 0, 0, 0.1);
+    }
+}
+
+/* ─── Hide/show by breakpoint ─── */
+@media (max-width: 767px)  { .hide-mobile  { display: none !important; } }
+@media (min-width: 768px) and (max-width: 1023px) { .hide-tablet { display: none !important; } }
+@media (min-width: 1024px) { .hide-desktop { display: none !important; } }
+@media (min-width: 768px)  { .mobile-only  { display: none !important; } }
+@media (max-width: 767px)  { .desktop-only { display: none !important; } }

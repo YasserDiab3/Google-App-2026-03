@@ -1,0 +1,25 @@
+{
+  "name": "hse-management-system",
+  "version": "1.0.5",
+  "description": "HSE Management System",
+  "scripts": {
+    "build:css": "node build-css.js",
+    "minify:css": "node minify-css.js",
+    "version:bump": "node update-version.js",
+    "check:refs": "node check-404-errors.js",
+    "smoke": "node smoke-check.js",
+    "compat": "node compatibility-test.js",
+    "deploy:check": "node deployment-check.js",
+    "lint:css": "npx stylelint \"css/*.css\" \"styles.css\"",
+    "precommit": "npm run check:refs && npm run smoke"
+  },
+  "devDependencies": {
+    "canvas": "^3.2.1",
+    "cssnano": "^6.0.1",
+    "postcss": "^8.4.32",
+    "postcss-cli": "^10.1.0"
+  },
+  "dependencies": {
+    "yargs": "^17.7.2"
+  }
+}

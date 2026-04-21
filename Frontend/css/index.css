@@ -1,0 +1,38 @@
+/* 1. Design tokens: breakpoints, spacing, typography scale */
+@import url('design-tokens.css');
+
+/* 2. CSS variables: colors, shadows, dark mode */
+@import url('variables.css');
+
+/* 3. Base reset and element defaults */
+@import url('base.css');
+
+/* 4. Layout structure */
+@import url('layout.css');
+
+/* 5. UI components */
+@import url('components.css');
+
+/* 6. Domain-specific module styles */
+@import url('modules.css');
+
+/* 7. Behavior monitoring module */
+@import url('behavior-monitoring.css');
+
+/* 8. Contractor tab styles */
+@import url('contractors-tabs.css');
+
+/* 9. Unified module tab styles */
+@import url('module-tabs.css');
+
+/* 10. Utility classes (tailwind-like) */
+@import url('tailwind-utilities.css');
+
+/* 11. Browser compatibility patches */
+@import url('browser-compatibility.css');
+
+/* 12. Responsive layer (must be last in the cascade) */
+@import url('responsive.css');
+
+/* 13. Responsive core improvements */
+@import url('responsive-core.css');

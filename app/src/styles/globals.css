@@ -1,0 +1,243 @@
+/* ─── Google Fonts must come before @tailwind directives ───────────────────── */
+@import url('https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ─── Base layer overrides ─────────────────────────────────────────────────── */
+@layer base {
+  :root {
+    --scrollbar-width: 6px;
+  }
+
+  * {
+    box-sizing: border-box;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  html {
+    font-size: clamp(14px, 1.5vw, 16px);
+    scroll-behavior: smooth;
+    /* prevent horizontal overflow at root level */
+    overflow-x: hidden;
+  }
+
+  body {
+    @apply font-sans antialiased text-gray-900 dark:text-gray-100 bg-gray-50 dark:bg-gray-900;
+    overflow-x: hidden;
+  }
+
+  /* Dark mode support via data-theme attribute (matches legacy app) */
+  [data-theme='dark'] {
+    color-scheme: dark;
+  }
+
+  /* Arabic + RTL base */
+  [dir='rtl'] {
+    text-align: right;
+  }
+
+  /* Custom scrollbar */
+  ::-webkit-scrollbar {
+    width: var(--scrollbar-width);
+    height: var(--scrollbar-width);
+  }
+  ::-webkit-scrollbar-track {
+    @apply bg-transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    @apply bg-gray-300 dark:bg-gray-600 rounded-full;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-gray-400 dark:bg-gray-500;
+  }
+
+  /* Focus ring */
+  :focus-visible {
+    @apply outline-none ring-2 ring-primary/50 ring-offset-1;
+  }
+
+  /* Mobile: prevent 300ms click delay */
+  a, button, [role='button'] {
+    touch-action: manipulation;
+  }
+}
+
+/* ─── Component layer ──────────────────────────────────────────────────────── */
+@layer components {
+  /* Responsive table wrapper */
+  .table-responsive {
+    @apply overflow-x-auto -mx-4 px-4 md:mx-0 md:px-0;
+  }
+
+  /* Consistent card base */
+  .card {
+    @apply bg-white dark:bg-gray-800 rounded-2xl shadow-card;
+  }
+
+  /* Full-height page container */
+  .page-container {
+    @apply max-w-[1600px] mx-auto space-y-6;
+  }
+
+  /* Page header pattern */
+  .page-header {
+    @apply flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3;
+  }
+
+  .page-title {
+    @apply text-xl font-bold text-gray-900 dark:text-white;
+  }
+
+  .page-subtitle {
+    @apply text-sm text-gray-500 dark:text-gray-400 mt-0.5;
+  }
+
+  /* Form field pattern */
+  .form-input {
+    @apply w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl
+           bg-white dark:bg-gray-700 text-gray-900 dark:text-white
+           focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary
+           text-base transition placeholder-gray-400;
+    min-height: 44px; /* touch target */
+  }
+
+  .form-label {
+    @apply block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1;
+  }
+
+  /* ── Button base ─────────────────────────────────────────────────────── */
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 px-btn-md rounded-xl
+           font-medium text-sm transition-all duration-150 ease-out
+           focus:outline-none focus:ring-2 focus:ring-offset-1
+           disabled:opacity-50 disabled:cursor-not-allowed
+           select-none whitespace-nowrap;
+    min-height: 44px; /* WCAG touch target */
+    touch-action: manipulation;
+  }
+
+  /* Size variants */
+  .btn-sm {
+    @apply text-xs px-3 rounded-lg;
+    min-height: 36px;
+  }
+
+  .btn-lg {
+    @apply text-base px-6 rounded-2xl;
+    min-height: 52px;
+  }
+
+  /* Color variants */
+  .btn-primary {
+    @apply btn bg-primary text-white hover:bg-primary-dark
+           active:scale-[0.98] focus:ring-primary/50;
+  }
+
+  .btn-secondary {
+    @apply btn bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200
+           hover:bg-gray-200 dark:hover:bg-gray-600 focus:ring-gray-400/50;
+  }
+
+  .btn-danger {
+    @apply btn bg-danger text-white hover:bg-red-700
+           active:scale-[0.98] focus:ring-danger/50;
+  }
+
+  .btn-ghost {
+    @apply btn bg-transparent text-gray-600 dark:text-gray-400
+           hover:bg-gray-100 dark:hover:bg-gray-700 focus:ring-gray-400/50;
+  }
+
+  .btn-outline {
+    @apply btn border border-gray-300 dark:border-gray-600 bg-transparent
+           text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/50
+           focus:ring-gray-400/50;
+  }
+
+  /* Icon-only button */
+  .btn-icon {
+    @apply inline-flex items-center justify-center rounded-lg
+           transition-colors duration-150 focus:outline-none focus:ring-2 focus:ring-offset-1
+           focus:ring-primary/50 disabled:opacity-50 disabled:cursor-not-allowed;
+    width: 40px;
+    height: 40px;
+    min-width: 40px;
+    padding: 0;
+    touch-action: manipulation;
+  }
+
+  .btn-icon-sm {
+    width: 32px;
+    height: 32px;
+    min-width: 32px;
+  }
+
+  .btn-icon-lg {
+    width: 44px;
+    height: 44px;
+    min-width: 44px;
+  }
+
+  /* ── Card variants ───────────────────────────────────────────────────── */
+  /* Base card (already defined above, extending with modifiers) */
+  .card-sm {
+    @apply card;
+    padding: 0.75rem;
+  }
+
+  .card-lg {
+    @apply card p-6 md:p-8;
+  }
+
+  .card-interactive {
+    @apply card cursor-pointer transition-shadow duration-200
+           hover:shadow-card-hover active:scale-[0.995];
+  }
+
+  /* ── Badge ─────────────────────────────────────────────────────────────── */
+  .badge {
+    @apply inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border;
+  }
+
+  .badge-success { @apply badge bg-success/10 text-success border-success/20; }
+  .badge-warning { @apply badge bg-warning/10 text-warning border-warning/20; }
+  .badge-danger  { @apply badge bg-danger/10  text-danger  border-danger/20; }
+  .badge-info    { @apply badge bg-info/10    text-info    border-info/20; }
+  .badge-primary { @apply badge bg-primary/10 text-primary border-primary/20; }
+  .badge-neutral { @apply badge bg-gray-100 text-gray-600 border-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:border-gray-600; }
+
+  /* Alert (block-level, used for form errors) */
+  .alert-danger {
+    @apply bg-danger/10 text-danger border border-danger/20 rounded-xl px-4 py-3 text-sm;
+  }
+
+  .alert-success {
+    @apply bg-success/10 text-success border border-success/20 rounded-xl px-4 py-3 text-sm;
+  }
+
+  .alert-warning {
+    @apply bg-warning/10 text-warning border border-warning/20 rounded-xl px-4 py-3 text-sm;
+  }
+}
+
+/* ─── Utilities layer ───────────────────────────────────────────────────────── */
+@layer utilities {
+  /* RTL-aware margin-start / margin-end via logical properties */
+  .ms-auto { margin-inline-start: auto; }
+  .me-auto { margin-inline-end: auto; }
+
+  /* Scrollbar thin class for sidebar */
+  .scrollbar-thin::-webkit-scrollbar { width: 4px; }
+  .scrollbar-thumb-white\/20::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 9999px; }
+
+  /* Animation helpers */
+  .transition-sidebar { transition: transform 300ms ease-out, width 300ms ease-out; }
+}
+
+/* ─── Print ─────────────────────────────────────────────────────────────────── */
+@media print {
+  .no-print { display: none !important; }
+  body { background: white !important; }
+}

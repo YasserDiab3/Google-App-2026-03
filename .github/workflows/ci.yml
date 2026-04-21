@@ -1,0 +1,162 @@
+name: CI Quality Gates
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ─── 1. React app quality gates ───────────────────────────────────────────────
+  react-checks:
+    name: React App (TypeScript + Build)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: app
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: app/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: TypeScript type-check
+        run: npm run typecheck
+
+      - name: Production build
+        run: npm run build
+
+      - name: Viewport regression checks
+        run: node scripts/viewport-regression.mjs
+
+      - name: Check bundle sizes
+        run: |
+          echo "=== Bundle sizes ==="
+          ls -lh dist/assets/*.js | awk '{print $5, $9}'
+          # Fail if any single JS chunk exceeds 400KB (gzip not counted here)
+          for f in dist/assets/*.js; do
+            size=$(stat -c%s "$f")
+            if [ "$size" -gt 409600 ]; then
+              echo "FAIL: $f is larger than 400KB ($size bytes)"
+              exit 1
+            fi
+          done
+          echo "All chunks within size limits."
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: react-dist
+          path: app/dist
+          retention-days: 7
+
+  # ─── 2. Legacy frontend smoke checks ─────────────────────────────────────────
+  legacy-smoke:
+    name: Legacy Frontend Smoke Check
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: Frontend/package-lock.json
+
+      - name: Install legacy dependencies
+        run: npm ci
+        working-directory: Frontend
+
+      - name: Check asset references
+        run: node check-404-errors.js
+        working-directory: Frontend
+        continue-on-error: true
+
+      - name: Run smoke check
+        run: node smoke-check.js
+        working-directory: Frontend
+
+  # ─── 3. i18n validation ───────────────────────────────────────────────────────
+  i18n-check:
+    name: i18n Validation
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Check for Arabic mojibake in app-ui.js
+        run: |
+          node -e "
+            const c = require('fs').readFileSync('./Frontend/js/modules/app-ui.js', 'utf8');
+            const mojibake = (c.match(/[\u00D8-\u00DF]/g) || []).length;
+            if (mojibake > 0) {
+              console.error('FAIL: Found ' + mojibake + ' mojibake characters in app-ui.js');
+              process.exit(1);
+            }
+            console.log('PASS: No mojibake found in app-ui.js');
+          "
+
+      - name: Check translation key parity (ar vs en)
+        run: |
+          node --input-type=module <<'EOF'
+          import { readFileSync } from 'fs';
+          const ar = (await import('./app/src/i18n/locales/ar.ts')).default;
+          const en = (await import('./app/src/i18n/locales/en.ts')).default;
+
+          function flatKeys(obj, prefix = '') {
+            return Object.entries(obj).flatMap(([k, v]) =>
+              typeof v === 'object'
+                ? flatKeys(v, prefix ? `${prefix}.${k}` : k)
+                : [prefix ? `${prefix}.${k}` : k]
+            );
+          }
+          const arKeys = new Set(flatKeys(ar));
+          const enKeys = new Set(flatKeys(en));
+          const missing = [...arKeys].filter(k => !enKeys.has(k));
+          const extra = [...enKeys].filter(k => !arKeys.has(k));
+          if (missing.length || extra.length) {
+            if (missing.length) console.error('Keys in AR but not EN:', missing);
+            if (extra.length) console.error('Keys in EN but not AR:', extra);
+            process.exit(1);
+          }
+          console.log('PASS: AR and EN translation keys match (' + arKeys.size + ' keys)');
+          EOF
+        continue-on-error: true
+
+  # ─── 4. Security headers check ────────────────────────────────────────────────
+  security-check:
+    name: Security Config Check
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Verify vercel.json has security headers
+        run: |
+          node -e "
+            const v = JSON.parse(require('fs').readFileSync('./vercel.json', 'utf8'));
+            const headers = v.headers || [];
+            const mainRoute = headers.find(h => h.source === '/(.*)');
+            if (!mainRoute) { console.error('FAIL: No catch-all security headers in vercel.json'); process.exit(1); }
+            const names = mainRoute.headers.map(h => h.key);
+            const required = ['X-Frame-Options', 'X-Content-Type-Options', 'Referrer-Policy'];
+            const missing = required.filter(r => !names.includes(r));
+            if (missing.length) { console.error('FAIL: Missing security headers:', missing); process.exit(1); }
+            console.log('PASS: Security headers present:', names.join(', '));
+          "

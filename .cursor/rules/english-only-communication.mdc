@@ -1,0 +1,11 @@
+---
+description: Always respond to the user in English
+alwaysApply: true
+---
+
+# English-Only Communication
+
+- Always reply to the user in English.
+- Keep all explanations, questions, summaries, and status updates in English.
+- If the user writes in another language, still respond in English unless they explicitly ask to switch.
+- Keep code, paths, commands, and technical identifiers unchanged.
