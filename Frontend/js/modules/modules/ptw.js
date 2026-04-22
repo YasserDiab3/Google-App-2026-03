@@ -6563,10 +6563,12 @@ const PTW = {
                             </div>
                             <!-- رقم التصريح الورقي -->
                             <div style="display: flex; flex-direction: column; align-items: center; gap: 4px;">
-                                <label for="manual-paper-permit-number" style="font-size: 0.8rem; font-weight: 600; color: #1e3a5f;">رقم التصريح الورقي</label>
-                                <input type="number" id="manual-paper-permit-number" min="0" step="1" placeholder="أدخل الرقم الورقي"
+                                <label for="manual-paper-permit-number" style="font-size: 0.8rem; font-weight: 600; color: #1e3a5f;">
+                                    رقم التصريح الورقي <span style="color: #e53e3e; font-size: 0.9rem;">*</span>
+                                </label>
+                                <input type="number" id="manual-paper-permit-number" min="1" step="1" placeholder="مطلوب - أدخل الرقم"
                                     value="${Utils.escapeHTML(existingEntry?.paperPermitNumber ?? '')}"
-                                    style="width: 140px; text-align: center; font-size: 1.1rem; font-weight: 600; font-family: 'Courier New', monospace; padding: 8px 12px; border: 2px solid #90caf9; border-radius: 8px; background: #fff;">
+                                    style="width: 150px; text-align: center; font-size: 1.1rem; font-weight: 600; font-family: 'Courier New', monospace; padding: 8px 12px; border: 2px solid ${existingEntry?.paperPermitNumber ? '#90caf9' : '#e53e3e'}; border-radius: 8px; background: #fff; box-shadow: ${existingEntry?.paperPermitNumber ? 'none' : '0 0 0 3px rgba(229,62,62,0.1)'};">
                             </div>
                         </div>
                     </div>
@@ -7054,6 +7056,15 @@ const PTW = {
                 if (ok) close();
             }
         });
+
+        // إزالة تلوين الخطأ الأحمر عن حقل رقم التصريح الورقي عند بدء الكتابة
+        const paperPermitInput = modal.querySelector('#manual-paper-permit-number');
+        if (paperPermitInput) {
+            paperPermitInput.addEventListener('input', () => {
+                paperPermitInput.style.border = '2px solid #90caf9';
+                paperPermitInput.style.boxShadow = 'none';
+            });
+        }
 
         // حساب إجمالي الوقت تلقائياً
         const timeFromInput = modal.querySelector('#manual-permit-time-from');
@@ -7882,6 +7893,41 @@ const PTW = {
                 closureReason: modal.querySelector('#manual-closure-reason')?.value.trim() || ''
             };
 
+            // التحقق من رقم التصريح الورقي (إلزامي)
+            const paperNum = String(formData.paperPermitNumber || '').trim();
+            const paperInput = modal.querySelector('#manual-paper-permit-number');
+            if (!paperNum || paperNum === '0') {
+                if (typeof Notification !== 'undefined' && Notification.warning) {
+                    Notification.warning('رقم التصريح الورقي إلزامي — يرجى إدخال الرقم قبل الحفظ');
+                }
+                if (paperInput) {
+                    paperInput.style.border = '2px solid #e53e3e';
+                    paperInput.style.boxShadow = '0 0 0 3px rgba(229,62,62,0.2)';
+                    paperInput.focus();
+                    paperInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
+                return;
+            }
+
+            // التحقق من عدم تكرار رقم التصريح الورقي
+            const duplicateEntry = this.registryData.find(r =>
+                String(r.paperPermitNumber || '').trim() === paperNum &&
+                r.id !== (entryId || null)
+            );
+            if (duplicateEntry) {
+                const dupSeq = duplicateEntry.sequentialNumber || '؟';
+                if (typeof Notification !== 'undefined' && Notification.error) {
+                    Notification.error(`رقم التصريح الورقي "${paperNum}" مستخدم مسبقاً في السجل #${dupSeq} — يرجى إدخال رقم مختلف`);
+                }
+                if (paperInput) {
+                    paperInput.style.border = '2px solid #e53e3e';
+                    paperInput.style.boxShadow = '0 0 0 3px rgba(229,62,62,0.2)';
+                    paperInput.focus();
+                    paperInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
+                return;
+            }
+
             // التحقق من البيانات المطلوبة (تخفيف الشروط للإدخال اليدوي)
             if (!formData.location || !formData.timeFrom || !formData.timeTo || !formData.workDescription || !formData.status) {
                 Notification.warning('يرجى إدخال الحقول المطلوبة: الموقع، تاريخ البدء والانتهاء، وصف العمل، وحالة التصريح');
@@ -7893,10 +7939,12 @@ const PTW = {
             const timeToISO = Utils.dateTimeLocalToISO(formData.timeTo) || new Date().toISOString();
             const openDate = timeFromISO || this.dateInputToISO(formData.date) || new Date().toISOString();
 
-            // توليد رقم تسلسلي جديد إذا كان إدخال جديد
+            // استخدام الرقم التسلسلي المعروض للمستخدم (من hidden input)
+            // لضمان التطابق بين ما يراه المستخدم وما يُحفظ فعلاً
+            const displayedSeq = parseInt(formData.sequentialNumber) || 0;
             const sequentialNumber = entryId
                 ? formData.sequentialNumber
-                : this.generateRegistrySequentialNumber();
+                : (displayedSeq > 0 ? displayedSeq : this.generateRegistrySequentialNumber());
 
             // تخزين الموقع الأساسي فقط بدون دمج الموقع الفرعي (تطبيع النموذج)
             const normalizedLocation = String(formData.location || '').trim();
