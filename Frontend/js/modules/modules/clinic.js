@@ -8290,12 +8290,12 @@ const Clinic = {
                         .filter(Boolean);
                 } else if (Array.isArray(AppState.appData?.approvedContractors)) {
                     names = AppState.appData.approvedContractors
-                        .filter(c => c && c.isActive !== false)
+                        .filter(c => c && c.isActive !== 'inactive' && c.isActive !== false && c.isActive !== 'false' && c.isActive !== 'FALSE')
                         .map(c => (c && (c.companyName || c.name)) ? String(c.companyName || c.name).trim() : '')
                         .filter(Boolean);
                 } else if (Array.isArray(AppState.appData?.contractors)) {
                     names = AppState.appData.contractors
-                        .filter(c => c && c.isActive !== false)
+                        .filter(c => c && c.isActive !== 'inactive' && c.isActive !== false && c.isActive !== 'false' && c.isActive !== 'FALSE')
                         .map(c => (c && (c.name || c.companyName)) ? String(c.name || c.companyName).trim() : '')
                         .filter(Boolean);
                 }

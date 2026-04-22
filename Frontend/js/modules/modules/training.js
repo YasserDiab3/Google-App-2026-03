@@ -3889,7 +3889,7 @@ const Training = {
         const allContractors = [
             ...(AppState.appData.approvedContractors || []),
             ...(AppState.appData.contractors || [])
-        ].filter((c) => c && c.isActive !== false);
+        ].filter((c) => c && c.isActive !== 'inactive' && c.isActive !== false && c.isActive !== 'false' && c.isActive !== 'FALSE');
         const map = new Map();
         const keyOf = (c) => {
             const code = normalizeCode(c.code || c.isoCode);
@@ -5813,7 +5813,7 @@ const Training = {
         const item = plan.items.find(i => i.id === itemId) || null;
         const positions = this.getUniquePositions();
         const contractors = (AppState.appData.contractors || [])
-            .filter(contractor => contractor && contractor.isActive !== false)
+            .filter(contractor => contractor && contractor.isActive !== 'inactive' && contractor.isActive !== false && contractor.isActive !== 'false' && contractor.isActive !== 'FALSE')
             .map(contractor => contractor.name || contractor.company)
             .filter(Boolean);
         const topics = this.getAllTrainingTopics();
@@ -6538,7 +6538,7 @@ const Training = {
 
         const employees = (AppState.appData.employees || []).sort((a, b) => (a.name || '').localeCompare(b.name || ''));
         const contractors = (AppState.appData.contractors || [])
-            .filter(c => c && c.isActive !== false)
+            .filter(c => c && c.isActive !== 'inactive' && c.isActive !== false && c.isActive !== 'false' && c.isActive !== 'FALSE')
             .sort((a, b) => (a.name || '').localeCompare(b.name || ''));
         const topics = this.getAllTrainingTopics();
 

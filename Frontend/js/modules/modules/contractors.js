@@ -1019,7 +1019,11 @@ const Contractors = {
      */
     isEntityEnabled(record) {
         if (!record || typeof record !== 'object') return true;
-        return record.isActive !== false;
+        const v = record.isActive;
+        // القيمة الجديدة 'active'/'inactive' + دعم القيم القديمة للتوافق
+        if (v === 'inactive') return false;
+        if (v === false || v === 'false' || v === 'FALSE' || v === 0 || v === '0') return false;
+        return true; // 'active', true, undefined, null كلها تعني مفعّل
     },
 
     /**
@@ -1480,7 +1484,7 @@ const Contractors = {
                 code: contractor.code,
                 contractNumber: contractor.contractNumber,
                 isRegularContractor: true, // علامة للتمييز
-                isActive: (contractor.isActive === false ? false : (relatedApproved?.isActive === false ? false : true)),
+                isActive: (!this.isEntityEnabled(contractor) ? false : (relatedApproved && !this.isEntityEnabled(relatedApproved) ? false : true)),
                 requirementsStatus: this.getContractorRequirementsStatus(contractor.id)
             };
         });
@@ -1940,10 +1944,10 @@ const Contractors = {
             // زر التفعيل/التعطيل (للمسؤول فقط)
             const toggleButtonHtml = isAdmin ? (
                 isEnabled
-                    ? `<button class="btn-icon btn-icon-warning" title="تعطيل المقاول" data-i18n-title="module.contractors.disable" onclick="Contractors.toggleEntityActive('${record.id}', false)">
+                    ? `<button class="btn-icon btn-icon-warning" title="تعطيل المقاول" data-i18n-title="module.contractors.disable" onclick="Contractors.toggleEntityActive('${record.id}', 'inactive')">
                         <i class="fas fa-toggle-off"></i>
                     </button>`
-                    : `<button class="btn-icon btn-icon-success" title="تفعيل المقاول" data-i18n-title="module.contractors.enable" onclick="Contractors.toggleEntityActive('${record.id}', true)">
+                    : `<button class="btn-icon btn-icon-success" title="تفعيل المقاول" data-i18n-title="module.contractors.enable" onclick="Contractors.toggleEntityActive('${record.id}', 'active')">
                         <i class="fas fa-toggle-on"></i>
                     </button>`
             ) : '';
@@ -3178,7 +3182,9 @@ const Contractors = {
             return;
         }
 
-        const nextActive = enable !== false;
+        // 'active' أو true أو أي قيمة غير 'inactive' تعني تفعيل
+        const nextActive = (enable === 'inactive' || enable === false) ? 'inactive' : 'active';
+        const isEnabling = nextActive === 'active';
         const i18nCore = (window.AppI18n && typeof window.AppI18n.t === 'function')
             ? window.AppI18n
             : ((window.I18n && typeof window.I18n.t === 'function') ? window.I18n : null);
@@ -3189,7 +3195,7 @@ const Contractors = {
                 return fallback;
             }
         };
-        const confirmMessage = nextActive
+        const confirmMessage = isEnabling
             ? tr('module.contractors.confirmEnable', 'هل تريد إعادة تفعيل هذا المقاول؟ سيعود للظهور في جميع الفلاتر والنماذج.')
             : tr('module.contractors.confirmDisable', 'هل تريد تعطيل هذا المقاول؟ لن يظهر في الفلاتر والنماذج مع الاحتفاظ بكامل بياناته.');
         if (!confirm(confirmMessage)) {
@@ -3197,19 +3203,19 @@ const Contractors = {
         }
 
         const record = approvedList[approvedIndex];
-        const previousActive = record.isActive !== false;
+        const previousIsActive = record.isActive; // حفظ القيمة الأصلية للتراجع
         record.isActive = nextActive;
         approvedList[approvedIndex] = record;
         AppState.appData.approvedContractors = approvedList;
 
         let linkedContractor = null;
-        let linkedContractorPreviousActive = null;
+        let linkedContractorPreviousIsActive = null;
         if (record.contractorId) {
             const contractors = AppState.appData.contractors || [];
             const cIndex = contractors.findIndex((c) => c && c.id === record.contractorId);
             if (cIndex !== -1) {
                 linkedContractor = contractors[cIndex];
-                linkedContractorPreviousActive = linkedContractor.isActive !== false;
+                linkedContractorPreviousIsActive = linkedContractor.isActive;
                 linkedContractor.isActive = nextActive;
                 contractors[cIndex] = linkedContractor;
                 AppState.appData.contractors = contractors;
@@ -3233,16 +3239,16 @@ const Contractors = {
                 window.DataManager.save();
             }
 
-            Notification.success(nextActive
+            Notification.success(isEnabling
                 ? tr('module.contractors.toggleEnableSuccess', 'تم تفعيل المقاول بنجاح')
                 : tr('module.contractors.toggleDisableSuccess', 'تم تعطيل المقاول بنجاح'));
         } catch (error) {
             // rollback عند فشل المزامنة
-            record.isActive = previousActive;
+            record.isActive = previousIsActive;
             approvedList[approvedIndex] = record;
             AppState.appData.approvedContractors = approvedList;
-            if (linkedContractor && linkedContractorPreviousActive !== null) {
-                linkedContractor.isActive = linkedContractorPreviousActive;
+            if (linkedContractor) {
+                linkedContractor.isActive = linkedContractorPreviousIsActive;
             }
             this.refreshApprovedEntitiesList();
             if (typeof Utils !== 'undefined' && Utils.safeWarn) {

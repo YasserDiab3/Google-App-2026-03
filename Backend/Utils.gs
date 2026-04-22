@@ -849,6 +849,13 @@ function toSheetCellValue_(header, value, sheetName) {
         return s;
     }
 
+    // حقل isActive: يُخزَّن دائماً كنص "active" أو "inactive" للوضوح في قاعدة البيانات
+    if (h === 'isActive') {
+        if (value === true || value === 'true' || value === 'TRUE' || value === 1 || value === '1' || value === 'active') return 'active';
+        if (value === false || value === 'false' || value === 'FALSE' || value === 0 || value === '0' || value === 'inactive') return 'inactive';
+        return 'active'; // القيمة الافتراضية
+    }
+
     // Numbers/booleans should stay numeric/boolean in Sheets when possible
     if (typeof value === 'number') return value;
     if (typeof value === 'boolean') return value;
@@ -2693,6 +2700,10 @@ function readFromSheet(sheetName, spreadsheetId = null) {
                             processedValue = trimmedValue;
                         }
                     }
+                    // الأنواع المنطقية (boolean) تُحفظ كما هي بدون تحويل إلى نص
+                    else if (typeof processedValue === 'boolean') {
+                        // keep boolean as-is (false stays false, true stays true)
+                    }
                     // أي نوع آخر، نحوله إلى String
                     else if (typeof processedValue !== 'string') {
                         processedValue = String(processedValue);
@@ -2716,6 +2727,19 @@ function readFromSheet(sheetName, spreadsheetId = null) {
             // ✅ تطبيع حقل النوع (gender) لورقة Employees عند القراءة
             if (sheetName === 'Employees' && obj.gender !== undefined) {
                 obj.gender = normalizeGenderValue(obj.gender);
+            }
+
+            // ✅ تطبيع حقل isActive: يُحوَّل دائماً إلى 'active' أو 'inactive'
+            if (obj.isActive !== undefined) {
+                const v = obj.isActive;
+                if (v === true || v === 'true' || v === 'TRUE' || v === 1 || v === '1' || v === 'active') {
+                    obj.isActive = 'active';
+                } else if (v === false || v === 'false' || v === 'FALSE' || v === 0 || v === '0' || v === 'inactive') {
+                    obj.isActive = 'inactive';
+                } else if (v === '' || v === null || v === undefined) {
+                    obj.isActive = 'active'; // القيمة الافتراضية للسجلات القديمة
+                }
+                // إذا كانت القيمة بالفعل 'active' أو 'inactive' فلا تغيير
             }
             
             return obj;

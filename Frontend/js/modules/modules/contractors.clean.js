@@ -999,7 +999,11 @@ const Contractors = {
 
     isEntityEnabled(record) {
         if (!record || typeof record !== 'object') return true;
-        return record.isActive !== false;
+        const v = record.isActive;
+        // القيمة الجديدة 'active'/'inactive' + دعم القيم القديمة للتوافق
+        if (v === 'inactive') return false;
+        if (v === false || v === 'false' || v === 'FALSE' || v === 0 || v === '0') return false;
+        return true; // 'active', true, undefined, null كلها تعني مفعّل
     },
 
     /**
@@ -1946,10 +1950,10 @@ const Contractors = {
 
             const toggleButtonHtml = isAdmin ? (
                 isEnabled
-                    ? `<button class="btn-icon btn-icon-warning" title="تعطيل المقاول" onclick="Contractors.toggleEntityActive('${record.id}', false)">
+                    ? `<button class="btn-icon btn-icon-warning" title="تعطيل المقاول" onclick="Contractors.toggleEntityActive('${record.id}', 'inactive')">
                         <i class="fas fa-toggle-off"></i>
                     </button>`
-                    : `<button class="btn-icon btn-icon-success" title="تفعيل المقاول" onclick="Contractors.toggleEntityActive('${record.id}', true)">
+                    : `<button class="btn-icon btn-icon-success" title="تفعيل المقاول" onclick="Contractors.toggleEntityActive('${record.id}', 'active')">
                         <i class="fas fa-toggle-on"></i>
                     </button>`
             ) : '';
@@ -3170,26 +3174,28 @@ const Contractors = {
             return;
         }
 
-        const nextActive = enable !== false;
-        const confirmMessage = nextActive
+        // 'active' أو true أو أي قيمة غير 'inactive' تعني تفعيل
+        const nextActive = (enable === 'inactive' || enable === false) ? 'inactive' : 'active';
+        const isEnabling = nextActive === 'active';
+        const confirmMessage = isEnabling
             ? 'هل تريد إعادة تفعيل هذا المقاول؟ سيعود للظهور في جميع الفلاتر والنماذج.'
             : 'هل تريد تعطيل هذا المقاول؟ لن يظهر في الفلاتر والنماذج مع الاحتفاظ بكامل بياناته.';
         if (!confirm(confirmMessage)) return;
 
         const record = approvedList[approvedIndex];
-        const previousActive = record.isActive !== false;
+        const previousIsActive = record.isActive; // حفظ القيمة الأصلية للتراجع
         record.isActive = nextActive;
         approvedList[approvedIndex] = record;
         AppState.appData.approvedContractors = approvedList;
 
         let linkedContractor = null;
-        let linkedContractorPreviousActive = null;
+        let linkedContractorPreviousIsActive = null;
         if (record.contractorId) {
             const contractors = AppState.appData.contractors || [];
             const cIndex = contractors.findIndex((c) => c && c.id === record.contractorId);
             if (cIndex !== -1) {
                 linkedContractor = contractors[cIndex];
-                linkedContractorPreviousActive = linkedContractor.isActive !== false;
+                linkedContractorPreviousIsActive = linkedContractor.isActive;
                 linkedContractor.isActive = nextActive;
                 contractors[cIndex] = linkedContractor;
                 AppState.appData.contractors = contractors;
@@ -3211,13 +3217,13 @@ const Contractors = {
             if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
                 window.DataManager.save();
             }
-            Notification.success(nextActive ? 'تم تفعيل المقاول بنجاح' : 'تم تعطيل المقاول بنجاح');
+            Notification.success(isEnabling ? 'تم تفعيل المقاول بنجاح' : 'تم تعطيل المقاول بنجاح');
         } catch (error) {
-            record.isActive = previousActive;
+            record.isActive = previousIsActive;
             approvedList[approvedIndex] = record;
             AppState.appData.approvedContractors = approvedList;
-            if (linkedContractor && linkedContractorPreviousActive !== null) {
-                linkedContractor.isActive = linkedContractorPreviousActive;
+            if (linkedContractor) {
+                linkedContractor.isActive = linkedContractorPreviousIsActive;
             }
             this.refreshApprovedEntitiesList();
             Notification.warning('تم تحديث الحالة محلياً، لكن تعذّرت المزامنة مع الخادم');

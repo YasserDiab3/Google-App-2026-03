@@ -944,7 +944,7 @@ const Employees = {
         }
 
         if (!Array.isArray(contractors) || contractors.length === 0) {
-            contractors = (AppState.appData.approvedContractors || []).filter(c => c && c.isActive !== false);
+            contractors = (AppState.appData.approvedContractors || []).filter(c => c && c.isActive !== 'inactive' && c.isActive !== false && c.isActive !== 'false' && c.isActive !== 'FALSE');
         }
 
         const unique = new Map();
