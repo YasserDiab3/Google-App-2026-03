@@ -479,6 +479,24 @@
             
             // إطلاق حدث جاهزية التطبيق
             this.dispatchEvent('app:ready');
+
+            // ✅ إعادة تحميل الحقول المبتورة من الخادم في الخلفية (إذا كانت البيانات المحلية مبتورة)
+            if (AppState && AppState._localDataIsTruncated && window.DataManager && window.DataManager.refreshTruncatedDataFromServer) {
+                // إظهار مؤشر خفيف للمستخدم
+                setTimeout(() => {
+                    try {
+                        if (typeof Notification !== 'undefined' && Notification.info) {
+                            Notification.info('جاري تحميل البيانات الكاملة من الخادم...', { duration: 8000 });
+                        }
+                    } catch (e) { /* ignore */ }
+                }, 1500);
+
+                setTimeout(() => {
+                    window.DataManager.refreshTruncatedDataFromServer().catch(e => {
+                        Utils?.safeWarn('⚠️ فشل تحديث البيانات المبتورة:', e);
+                    });
+                }, 2000);
+            }
             
             // ✅ إضافة: حفظ تلقائي للبيانات عند إغلاق الصفحة
             this.setupAutoSaveOnUnload();
@@ -860,9 +878,12 @@
                 // تحميل البيانات المطلوبة بشكل متوازي
                 const dataPromises = requiredDataTypes.map(dataType => {
                     const action = this.getActionForDataType(dataType);
+                    const sheetName = this.getSheetNameForDataType(dataType);
+                    // readFromSheet يتطلب sheetName إجبارياً في الـ payload
+                    const requestData = sheetName ? { sheetName } : {};
                     return GoogleIntegration.sendRequest({
                         action,
-                        data: {}
+                        data: requestData
                     }).then(result => ({
                         type: dataType,
                         result
@@ -954,6 +975,21 @@
             };
 
             return actionMap[dataType] || 'readFromSheet';
+        },
+
+        /**
+         * تحديد sheetName لنوع البيانات (مطلوب عند استخدام action=readFromSheet)
+         */
+        getSheetNameForDataType(dataType) {
+            const sheetMap = {
+                'users': 'Users',
+                'incidents': 'Incidents',
+                'nearmiss': 'NearMiss',
+                'training': 'Training',
+                'clinicVisits': 'ClinicVisits',
+                'clinicContractorVisits': 'ClinicContractorVisits'
+            };
+            return sheetMap[dataType] || null;
         },
 
         /**

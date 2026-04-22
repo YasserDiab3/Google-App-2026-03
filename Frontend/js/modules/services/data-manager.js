@@ -42,15 +42,20 @@ const DataManager = {
         ];
         const maxItems = this.MAX_ITEMS_PER_ARRAY_IN_LIGHT;
         const out = {};
+        // تتبع الحقول التي تم بترها مع عدد العناصر الحقيقي
+        const truncatedFields = {};
+
         for (const key of Object.keys(appData)) {
             const val = appData[key];
             if (heavyKeys.indexOf(key) >= 0 && Array.isArray(val) && val.length > maxItems) {
                 out[key] = val.slice(-maxItems);
+                truncatedFields[key] = val.length; // الحجم الحقيقي قبل البتر
             } else if (key === 'employeeTrainingMatrix' && val && typeof val === 'object') {
                 const entries = Object.entries(val);
                 if (entries.length > 500) {
                     const trimmed = entries.slice(-500);
                     out[key] = Object.fromEntries(trimmed);
+                    truncatedFields[key] = entries.length;
                 } else {
                     out[key] = val;
                 }
@@ -58,6 +63,16 @@ const DataManager = {
                 out[key] = val;
             }
         }
+
+        // إضافة metadata تشير إلى أن هذه نسخة مخففة مبتورة
+        if (Object.keys(truncatedFields).length > 0) {
+            out._lightDataMeta = {
+                isLight: true,
+                truncatedAt: Date.now(),
+                fields: truncatedFields // { fieldName: originalCount }
+            };
+        }
+
         return out;
     },
 
@@ -343,6 +358,16 @@ const DataManager = {
                     }, 0);
                     Utils.safeLog(`✅ تم تحميل ${totalRecords} سجل من البيانات المحلية`);
                 }
+
+                // ✅ اكتشاف البيانات المبتورة: إذا كانت النسخة المحلية مبتورة نُعلم التطبيق
+                if (parsedData._lightDataMeta && parsedData._lightDataMeta.isLight) {
+                    AppState._localDataIsTruncated = true;
+                    AppState._truncatedFields = parsedData._lightDataMeta.fields || {};
+                    Utils.safeLog('⚠️ البيانات المحلية مبتورة - سيتم إعادة التحميل من الخادم:', AppState._truncatedFields);
+                } else {
+                    AppState._localDataIsTruncated = false;
+                    AppState._truncatedFields = {};
+                }
             }
             
             // تهيئة systemStatistics إذا لم يكن موجوداً
@@ -531,6 +556,86 @@ const DataManager = {
             }
         } catch (e) {
             Utils.safeWarn('⚠️ فشل حفظ syncMeta:', e);
+        }
+    },
+
+    /**
+     * ✅ إعادة تحميل الحقول المبتورة من الخادم في الخلفية
+     * تُستدعى عند اكتشاف أن البيانات المحلية مبتورة (isLight=true)
+     */
+    async refreshTruncatedDataFromServer() {
+        if (!AppState._localDataIsTruncated) return;
+        if (typeof GoogleIntegration === 'undefined' || !GoogleIntegration.sendRequest) return;
+        if (!AppState.googleConfig?.appsScript?.enabled) return;
+
+        // خريطة اسم الحقل في AppState → اسم الورقة في Google Sheets
+        const fieldToSheetMap = {
+            'training': 'Training',
+            'trainingSessions': 'Training',
+            'violations': 'Violations',
+            'incidents': 'Incidents',
+            'dailyObservations': 'DailyObservations',
+            'dailySafetyCheckList': 'DailySafetyCheckList',
+            'ptwRegistry': 'PTW',
+            'contractorEvaluations': 'ContractorEvaluations',
+            'contractorApprovalRequests': 'ContractorApprovalRequests',
+            'contractorDeletionRequests': 'ContractorDeletionRequests',
+            'blacklistRegister': 'Blacklist_Register',
+            'annualTrainingPlans': 'AnnualTrainingPlans',
+            'trainingCertificates': 'TrainingCertificates',
+            'trainingAttendance': 'Training',
+            'contractorTrainings': 'ContractorTrainings',
+            'trainingAnalysisData': 'Training'
+        };
+
+        const truncatedFields = AppState._truncatedFields || {};
+        const fieldsToRefresh = Object.keys(truncatedFields).filter(f => fieldToSheetMap[f]);
+
+        if (fieldsToRefresh.length === 0) return;
+
+        Utils.safeLog(`🔄 إعادة تحميل ${fieldsToRefresh.length} حقل مبتور من الخادم...`);
+
+        const refreshPromises = fieldsToRefresh.map(field => {
+            const sheetName = fieldToSheetMap[field];
+            return GoogleIntegration.sendRequest({
+                action: 'readFromSheet',
+                data: { sheetName }
+            }).then(result => ({ field, result }))
+              .catch(err => ({ field, error: err }));
+        });
+
+        const results = await Promise.all(refreshPromises);
+
+        let refreshed = 0;
+        results.forEach(({ field, result, error }) => {
+            if (result && result.success && Array.isArray(result.data)) {
+                AppState.appData[field] = result.data;
+                refreshed++;
+                Utils.safeLog(`✅ تم تحديث ${field}: ${result.data.length} سجل (كان مبتوراً على ${truncatedFields[field]})`);
+            } else if (error) {
+                Utils.safeWarn(`⚠️ فشل تحديث ${field}:`, error.message || error);
+            }
+        });
+
+        if (refreshed > 0) {
+            // مسح علامة البتر بعد التحديث الناجح
+            AppState._localDataIsTruncated = false;
+            AppState._truncatedFields = {};
+            // حفظ البيانات الكاملة محلياً
+            try { this.save(); } catch (e) {}
+            Utils.safeLog(`✅ اكتمل تحديث البيانات المبتورة: ${refreshed}/${fieldsToRefresh.length} حقل`);
+            // إشعار المستخدم باكتمال التحميل
+            try {
+                if (typeof Notification !== 'undefined' && Notification.success) {
+                    Notification.success('تم تحميل البيانات الكاملة بنجاح');
+                }
+            } catch (e) { /* ignore */ }
+            // إطلاق حدث لتحديث واجهة المستخدم
+            try {
+                window.dispatchEvent(new CustomEvent('hse:dataRefreshed', {
+                    detail: { refreshedFields: fieldsToRefresh.slice(0, refreshed) }
+                }));
+            } catch (e) { /* ignore */ }
         }
     },
 

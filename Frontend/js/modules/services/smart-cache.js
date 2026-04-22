@@ -17,6 +17,7 @@ const SmartCache = {
 
     /**
      * إنشاء مفتاح cache ذكي
+     * ملاحظة: لا يتضمن timestamp في المفتاح — صلاحية الـ cache تُتحقق عبر isCacheValid() بالـ TTL
      */
     getCacheKey(action, data, userId, permissions) {
         try {
@@ -24,8 +25,7 @@ const SmartCache = {
                 action,
                 data: this._normalizeData(data),
                 userId,
-                permissionsHash: this.hashPermissions(permissions),
-                timestamp: Math.floor(Date.now() / (60 * 1000)) // دقيقة واحدة precision
+                permissionsHash: this.hashPermissions(permissions)
             };
             return btoa(JSON.stringify(keyData));
         } catch (e) {
