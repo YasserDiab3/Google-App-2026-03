@@ -184,7 +184,8 @@ function getDefaultHeaders(sheetName) {
         'PPE_Transactions': ['id', 'itemId', 'date', 'action', 'quantity', 'issuedTo', 'remarks', 'createdAt', 'updatedAt'],
         // ✅ Updated schema (matches current ApprovedContractors records used by Contractors module)
         // Note: keep contractorId for backward compatibility (often holds contractor code like CON-xxx)
-        'ApprovedContractors': ['id', 'code', 'isoCode', 'companyName', 'entityType', 'serviceType', 'licenseNumber', 'contractorId', 'approvalDate', 'expiryDate', 'status', 'notes', 'safetyReviewer', 'approvedBy', 'createdAt', 'updatedAt'],
+        // isActive: حقل التفعيل التشغيلي — false = معطّل، true أو غير موجود = نشط
+        'ApprovedContractors': ['id', 'code', 'isoCode', 'companyName', 'entityType', 'serviceType', 'licenseNumber', 'contractorId', 'approvalDate', 'expiryDate', 'status', 'notes', 'safetyReviewer', 'approvedBy', 'isActive', 'createdAt', 'updatedAt'],
         'ContractorEvaluations': ['id', 'contractorId', 'contractorName', 'evaluationDate', 'evaluatorName', 'projectName', 'location', 'generalNotes', 'items', 'compliantCount', 'totalItems', 'finalScore', 'finalRating', 'isoCode', 'status', 'approvedAt', 'approvedBy', 'createdAt', 'updatedAt', 'createdBy', 'updatedBy'],
         // ✅ Canonical order used by frontend (My Requests/Admin review) + backend approve/reject flows
         'ContractorApprovalRequests': [
