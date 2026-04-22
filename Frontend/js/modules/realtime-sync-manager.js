@@ -672,6 +672,61 @@ const RealtimeSyncManager = {
                 realtimeSyncLog(`🔄 مزامنة ${module}...`);
             }
 
+            // ✅ حالة خاصة: إصابات العيادة تُخزَّن في ورقتَين (Injuries + ClinicContractorInjuries)
+            // يجب استخدام getAllInjuries للحصول على البيانات المدمجة من كلتيهما
+            if (module === 'injuries') {
+                const result = await GoogleIntegration.sendRequest({
+                    action: 'getAllInjuries',
+                    data: {}
+                });
+
+                if (result && result.success) {
+                    const newData = result.data || [];
+                    const oldData = AppState.appData[module] || [];
+
+                    if (!Array.isArray(newData)) {
+                        if (!silent) realtimeSyncLog(`⚠️ injuries: البيانات المستلمة ليست مصفوفة`);
+                        return false;
+                    }
+
+                    if (newData.length === 0 && oldData.length > 0) {
+                        if (!silent) realtimeSyncLog(`⚠️ injuries: البيانات الجديدة فارغة - الاحتفاظ بالبيانات الحالية`);
+                        this.state.lastSyncTime[module] = now;
+                        return true;
+                    }
+
+                    const newHash = this.calculateDataHash(newData);
+                    const oldHash = this.state.lastDataHash[module];
+
+                    if (newHash !== oldHash) {
+                        AppState.appData[module] = newData;
+                        this.state.lastDataHash[module] = newHash;
+
+                        if (typeof DataManager !== 'undefined' && DataManager.save) {
+                            DataManager.save();
+                        }
+
+                        if (this.shouldRefreshModule(module)) {
+                            this.refreshModuleUI(module);
+                        }
+
+                        this.broadcast('sync-completed', module);
+                        this.stats.updatesReceived++;
+
+                        if (!silent) {
+                            realtimeSyncLog(`✅ injuries (مدمج): ${newData.length} سجل (موظفين + مقاولين)`);
+                        }
+                    } else if (!silent) {
+                        realtimeSyncLog(`ℹ️ injuries: لا توجد تحديثات جديدة`);
+                    }
+
+                    this.state.lastSyncTime[module] = now;
+                    return true;
+                }
+
+                return false;
+            }
+
             // تحديد اسم الـ Sheet المقابل للموديول
             const sheetName = this.getSheetNameForModule(module);
 

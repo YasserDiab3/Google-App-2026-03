@@ -501,6 +501,27 @@
                             SyncImprovements.updateProgress(sheets.length, sheets.length);
                         }
                         
+                        // ✅ إصلاح: إعادة جلب الإصابات المدمجة (Injuries + ClinicContractorInjuries)
+                        // لأن processBatch يقرأ ورقة Injuries فقط وقد يمسح إصابات المقاولين
+                        try {
+                            const injuriesResult = await GoogleIntegration.sendRequest({
+                                action: 'getAllInjuries',
+                                data: {}
+                            });
+                            if (injuriesResult && injuriesResult.success && Array.isArray(injuriesResult.data)) {
+                                if (injuriesResult.data.length > 0 || !(AppState.appData.injuries && AppState.appData.injuries.length > 0)) {
+                                    AppState.appData.injuries = injuriesResult.data;
+                                    if (shouldLog) {
+                                        Utils.safeLog(`✅ إصابات مدمجة: ${injuriesResult.data.length} سجل (موظفين + مقاولين)`);
+                                    }
+                                }
+                            }
+                        } catch (injErr) {
+                            if (shouldLog) {
+                                Utils.safeWarn('⚠️ تعذّر جلب الإصابات المدمجة:', injErr);
+                            }
+                        }
+
                         // التهيئة النهائية
                         if (typeof ViolationTypesManager !== 'undefined') {
                             ViolationTypesManager.ensureInitialized();
