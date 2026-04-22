@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Contractors Module
  * تم استخراجه من app-modules.js
  */
@@ -3221,7 +3221,11 @@ const Contractors = {
         try {
             if (typeof GoogleIntegration !== 'undefined' && GoogleIntegration.sendToAppsScript) {
                 await GoogleIntegration.sendToAppsScript('updateApprovedContractor', {
-                    data: { ...record, isActive: nextActive }
+                    approvedContractorId: record.id,
+                    updateData: {
+                        isActive: nextActive,
+                        updatedAt: new Date().toISOString()
+                    }
                 });
             }
 
