@@ -3146,23 +3146,13 @@ window.UI = {
             AppState.isNavigatingBack = false;
         }, 300);
 
-        // فتح القائمة الجانبية عند بدء التطبيق (على سطح المكتب) - بعد عرض القسم
+        // فتح القائمة الجانبية عند بدء التطبيق (على سطح المكتب) - دائماً مفتوحة
         // على الموبايل: إغلاق القائمة والستار صراحة لتفادي تغطية المحتوى أو المدولات
         if (window.innerWidth > 1024) {
             setTimeout(() => {
                 const sidebar = document.querySelector('.sidebar');
-                if (sidebar) {
-                    // إذا كان القسم المطلوب هو Dashboard، نفتح القائمة الجانبية
-                    if (sectionToShow === 'dashboard') {
-                        if (!sidebar.classList.contains('open')) {
-                            this.toggleSidebar(true);
-                        }
-                    } else {
-                        // إذا كان القسم ليس Dashboard، نتأكد من إغلاق القائمة
-                        if (sidebar.classList.contains('open')) {
-                            this.toggleSidebar(false);
-                        }
-                    }
+                if (sidebar && !sidebar.classList.contains('open')) {
+                    this.toggleSidebar(true);
                 }
             }, 100);
         } else {
@@ -3640,8 +3630,11 @@ window.UI = {
         const overlay = document.getElementById('sidebar-overlay');
         if (!sidebar) return;
 
-        const shouldOpen = open !== null ? open : !sidebar.classList.contains('open');
         const isMobile = window.innerWidth <= 1024;
+        // على سطح المكتب: القائمة دائماً مفتوحة، لا يمكن إغلاقها
+        if (!isMobile && open === false) return;
+
+        const shouldOpen = open !== null ? open : !sidebar.classList.contains('open');
 
         if (shouldOpen) {
             sidebar.classList.add('open');
@@ -3872,7 +3865,17 @@ window.UI = {
                 resizeRaf = requestAnimationFrame(() => {
                     resizeRaf = null;
                     if (window.innerWidth > 1024) {
-                        this.toggleSidebar(false);
+                        // على سطح المكتب: فتح القائمة دائماً
+                        const sidebar = document.querySelector('.sidebar');
+                        if (sidebar && !sidebar.classList.contains('open')) {
+                            this.toggleSidebar(true);
+                        }
+                    } else {
+                        // على الموبايل: إغلاق القائمة إذا كانت مفتوحة
+                        const sidebar = document.querySelector('.sidebar');
+                        if (sidebar && sidebar.classList.contains('open')) {
+                            this.toggleSidebar(false);
+                        }
                     }
                     this.showHeaderActions();
                 });
