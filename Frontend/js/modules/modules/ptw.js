@@ -490,6 +490,9 @@ const PTW = {
             // تحميل من AppState أولاً (الأحدث)
             if (AppState.appData && AppState.appData.ptwRegistry && Array.isArray(AppState.appData.ptwRegistry)) {
                 this.registryData = this.normalizeRegistryCollection(AppState.appData.ptwRegistry);
+                // Persist deduplicated version back to AppState and localStorage
+                AppState.appData.ptwRegistry = [...this.registryData];
+                try { localStorage.setItem('hse_ptw_registry', Utils.safeStringify(this.registryData)); } catch (_) {}
                 Utils.safeLog(`✅ تم تحميل ${this.registryData.length} سجل من AppState`);
                 // لا نقوم بالمزامنة عند التحميل من AppState - ننتظر تحميل Backend
                 return;
@@ -773,7 +776,39 @@ const PTW = {
 
     normalizeRegistryCollection(registryData) {
         if (!Array.isArray(registryData)) return [];
-        return registryData.map((entry) => this.normalizeRegistryEntry(entry)).filter(Boolean);
+        const normalized = registryData.map((entry) => this.normalizeRegistryEntry(entry)).filter(Boolean);
+
+        // Deduplicate by sequentialNumber (prefer real IDs over TMP IDs)
+        const seqMap = new Map();
+        const noSeqEntries = [];
+
+        for (const entry of normalized) {
+            const seq = (entry.sequentialNumber != null && entry.sequentialNumber !== '')
+                ? String(entry.sequentialNumber)
+                : null;
+
+            if (seq) {
+                if (!seqMap.has(seq)) {
+                    seqMap.set(seq, entry);
+                } else {
+                    // Prefer entries with real sequential IDs over TMP IDs
+                    const existing = seqMap.get(seq);
+                    const existingIsTmp = String(existing.id || '').includes('_TMP_');
+                    const newIsTmp = String(entry.id || '').includes('_TMP_');
+                    if (!newIsTmp && existingIsTmp) {
+                        seqMap.set(seq, entry);
+                    }
+                }
+            } else {
+                // No sequential number – deduplicate by id
+                const idKey = entry.id || entry.permitId;
+                if (!idKey || !noSeqEntries.some(e => e.id === idKey || e.permitId === idKey)) {
+                    noSeqEntries.push(entry);
+                }
+            }
+        }
+
+        return [...seqMap.values(), ...noSeqEntries];
     },
 
     normalizePermitStatus(status) {
@@ -860,12 +895,12 @@ const PTW = {
      * توليد رقم تسلسلي للسجل
      */
     generateRegistrySequentialNumber() {
-        const currentYear = new Date().getFullYear();
-        const yearRecords = this.registryData.filter(r => {
-            const recordYear = new Date(r.openDate).getFullYear();
-            return recordYear === currentYear;
-        });
-        return yearRecords.length + 1;
+        if (!this.registryData.length) return 1;
+        const maxSeq = this.registryData.reduce((max, r) => {
+            const n = parseInt(r.sequentialNumber) || 0;
+            return n > max ? n : max;
+        }, 0);
+        return maxSeq + 1;
     },
 
     /**
@@ -993,7 +1028,16 @@ const PTW = {
                 this.initRegistry();
             }
 
-            const existingEntry = this.registryData.find(r => r.permitId === permit.id);
+            const permitId = permit.id || permit.permitId;
+            const existingEntry = this.registryData.find(r =>
+                r.permitId === permitId ||
+                r.permitId === permit.id ||
+                r.permitId === permit.permitId ||
+                r.id === permit.registryId ||
+                // Match when backend resolved TMP → sequential ID: compare by paperPermitNumber
+                (permit.paperPermitNumber && r.paperPermitNumber &&
+                    String(r.paperPermitNumber).trim() === String(permit.paperPermitNumber).trim())
+            );
             if (existingEntry) {
                 Utils.safeLog('🔄 السجل موجود بالفعل - سيتم تحديثه');
                 return await this.updateRegistryEntry(permit);
