@@ -10,6 +10,50 @@ const PTW = {
     formCircuitName: '',
     _loadPTWListTimeout: null, // للتحكم في التحميل الزائد
     _isSubmitting: false, // منع الحفظ المتكرر
+    _i18nSectionObserver: null,
+    _i18nBodyObserver: null,
+
+    applyModuleI18n(root) {
+        const target = root || document;
+        const i18nCore = (window.AppI18n && typeof window.AppI18n.applyI18n === 'function')
+            ? window.AppI18n
+            : ((window.I18n && typeof window.I18n.applyI18n === 'function') ? window.I18n : null);
+        if (!i18nCore) return;
+        if (typeof i18nCore.applyI18n === 'function') i18nCore.applyI18n(target);
+        if (typeof i18nCore.applyLiteralTranslations === 'function') i18nCore.applyLiteralTranslations(target);
+    },
+
+    ensureI18nObservers(section) {
+        if (this._i18nSectionObserver) {
+            this._i18nSectionObserver.disconnect();
+            this._i18nSectionObserver = null;
+        }
+
+        if (section && typeof MutationObserver !== 'undefined') {
+            this._i18nSectionObserver = new MutationObserver((mutations) => {
+                mutations.forEach((mutation) => {
+                    mutation.addedNodes.forEach((node) => {
+                        if (node && node.nodeType === 1) this.applyModuleI18n(node);
+                    });
+                });
+            });
+            this._i18nSectionObserver.observe(section, { childList: true, subtree: true });
+        }
+
+        if (!this._i18nBodyObserver && typeof MutationObserver !== 'undefined') {
+            this._i18nBodyObserver = new MutationObserver((mutations) => {
+                mutations.forEach((mutation) => {
+                    mutation.addedNodes.forEach((node) => {
+                        if (!node || node.nodeType !== 1) return;
+                        if (node.classList?.contains('modal-overlay') || node.querySelector?.('.modal-overlay')) {
+                            this.applyModuleI18n(node);
+                        }
+                    });
+                });
+            });
+            this._i18nBodyObserver.observe(document.body, { childList: true, subtree: true });
+        }
+    },
 
     getDefaultApprovals() {
         return [
@@ -1403,6 +1447,8 @@ const PTW = {
                 </div>
             </div>
         `;
+            this.applyModuleI18n(section);
+            this.ensureI18nObservers(section);
             this.formSettingsState = null;
             this.formSettingsEventsBound = false;
             this.setupEventListeners();
@@ -1433,6 +1479,7 @@ const PTW = {
                     });
                     
                     permitsContent.innerHTML = listContent;
+                    this.applyModuleI18n(permitsContent);
                     // استخدام immediate = true في التحميل الأولي
                     this.loadPTWList(true);
                 } catch (error) {
@@ -1460,6 +1507,7 @@ const PTW = {
                         </div>
                     </div>
                 `;
+                this.applyModuleI18n(section);
             }
         }
     },
