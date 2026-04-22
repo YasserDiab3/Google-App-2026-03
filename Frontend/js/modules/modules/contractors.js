@@ -2345,11 +2345,22 @@ const Contractors = {
             contractorMap.set(key, chooseBetter(existing, record));
         };
 
-        // ✅ إضافة المقاولين من قائمة المقاولين (بدون اشتراط contractor.name فقط)
+        // بناء مجموعة معرفات المقاولين المعطلين من قائمة approvedContractors
+        const deactivatedContractorIds = new Set();
+        (AppState.appData.approvedContractors || []).forEach(approved => {
+            if (approved && !this.isEntityEnabled(approved)) {
+                if (approved.contractorId) deactivatedContractorIds.add(String(approved.contractorId).trim());
+                if (approved.id) deactivatedContractorIds.add(String(approved.id).trim());
+            }
+        });
+
+        // ✅ إضافة المقاولين النشطين فقط من قائمة المقاولين
         const allContractors = AppState.appData.contractors || [];
         allContractors.forEach((contractor) => {
             if (!contractor) return;
             if (!this.isEntityEnabled(contractor)) return;
+            const cId = String(contractor.id || contractor.contractorId || '').trim();
+            if (cId && deactivatedContractorIds.has(cId)) return; // معطل في approvedContractors
             const id = contractor.id || contractor.contractorId || '';
             const name = contractor.name || contractor.company || contractor.contractorName || contractor.companyName || '';
             if (!id && !name) return;

@@ -698,9 +698,9 @@ const Training = {
         // ملاحظة مهمة: استخدام ?? بدل || لتفادي فقدان قيم مثل 0
         const contractorMap = new Map(contractorOptions.map(c => [String(c?.id ?? '').trim(), c.name || '']));
         
-        // إضافة المقاولين القديمة إذا لم تكن موجودة
+        // إضافة المقاولين النشطين القديمة إذا لم تكن موجودة
         if (contractorMap.size === 0) {
-            const legacyContractors = AppState.appData.contractors || [];
+            const legacyContractors = (AppState.appData.contractors || []).filter(c => c && c.isActive !== 'inactive' && c.isActive !== false && c.isActive !== 'false' && c.isActive !== 'FALSE');
             legacyContractors.forEach(contractor => {
                 if (contractor?.id) {
                     // ✅ إصلاح: تطبيع المفتاح
@@ -3724,7 +3724,7 @@ const Training = {
         // ✅ إصلاح: بناء contractorMap بتحويل المفتاح إلى string لضمان التطابق
         const contractorMap = new Map(contractorOptions.map(contractor => [String(contractor?.id ?? '').trim(), contractor.name || '']));
         if (contractorMap.size === 0) {
-            const legacyContractors = AppState.appData.contractors || [];
+            const legacyContractors = (AppState.appData.contractors || []).filter(c => c && c.isActive !== 'inactive' && c.isActive !== false && c.isActive !== 'false' && c.isActive !== 'FALSE');
             legacyContractors.forEach(contractor => {
                 if (contractor?.id) {
                     // ✅ إصلاح: تطبيع المفتاح

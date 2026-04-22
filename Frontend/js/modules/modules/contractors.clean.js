@@ -2351,8 +2351,24 @@ const Contractors = {
             contractorMap.set(key, chooseBetter(existing, record));
         };
 
-        // ✅ إضافة المقاولين من قائمة المقاولين (بدون اشتراط contractor.name فقط)
-        const allContractors = AppState.appData.contractors || [];
+        // بناء مجموعة معرفات المقاولين المعطلين من قائمة approvedContractors
+        // (لأن contractors sheet قد لا تحتوي على حقل isActive)
+        const deactivatedContractorIds = new Set();
+        (AppState.appData.approvedContractors || []).forEach(approved => {
+            if (approved && !this.isEntityEnabled(approved)) {
+                if (approved.contractorId) deactivatedContractorIds.add(String(approved.contractorId).trim());
+                if (approved.id) deactivatedContractorIds.add(String(approved.id).trim());
+            }
+        });
+
+        // ✅ إضافة المقاولين النشطين فقط من قائمة المقاولين
+        const allContractors = (AppState.appData.contractors || []).filter(c => {
+            if (!c) return false;
+            if (!this.isEntityEnabled(c)) return false; // isActive على contractors sheet
+            const cId = String(c.id || c.contractorId || '').trim();
+            if (cId && deactivatedContractorIds.has(cId)) return false; // معطل في approvedContractors
+            return true;
+        });
         allContractors.forEach((contractor) => {
             if (!contractor) return;
             const id = contractor.id || contractor.contractorId || '';

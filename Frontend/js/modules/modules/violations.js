@@ -1289,13 +1289,13 @@ const Violations = {
             }
         }
 
-        // ✅ إذا لم توجد مقاولين، استخدم جميع المقاولين المعتمدين من AppState
+        // ✅ إذا لم توجد مقاولين، استخدم المقاولين المعتمدين النشطين من AppState
         if (contractors.length === 0) {
             const allContractors = AppState.appData.approvedContractors || [];
             const contractorMap = new Map(); // لإزالة التكرار
 
             allContractors
-                .filter(c => c && (c.companyName || c.name)) // تصفية المقاولين الفارغين
+                .filter(c => c && (c.companyName || c.name) && c.isActive !== 'inactive' && c.isActive !== false && c.isActive !== 'false' && c.isActive !== 'FALSE') // تصفية غير النشطين
                 .forEach(contractor => {
                     const name = (contractor.companyName || contractor.name || '').trim();
                     if (!name || name === 'غير معروف') return;
@@ -3430,11 +3430,11 @@ const Violations = {
                 
                 // ✅ تحسين: بديل: استخدام AppState (بما في ذلك المعتمدين) - مباشرة بدون تأخير
                 if (contractors.length === 0) {
-                    // دمج المقاولين من مصادر مختلفة
+                    // دمج المقاولين النشطين فقط من مصادر مختلفة
                     const allContractors = [
                         ...(AppState.appData?.approvedContractors || []),
                         ...(AppState.appData?.contractors || [])
-                    ];
+                    ].filter(c => c && c.isActive !== 'inactive' && c.isActive !== false && c.isActive !== 'false' && c.isActive !== 'FALSE');
                     // إزالة التكرار بناءً على ID
                     const uniqueContractors = Array.from(
                         new Map(allContractors.map(c => [c.id || c.contractorId, c])).values()
