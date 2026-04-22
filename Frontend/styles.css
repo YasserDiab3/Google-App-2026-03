@@ -959,52 +959,29 @@ body.app-active {
     }
 }
 
-/* إخفاء القائمة الجانبية على سطح المكتب عند إغلاقها */
+/* القائمة الجانبية على سطح المكتب: دائماً مرئية مع هامش ثابت */
 @media (min-width: 1025px) {
 
-    /* القائمة الجانبية مخفية افتراضياً إلا إذا كانت مفتوحة */
-    .sidebar:not(.open) {
-        transform: translateX(100%) !important;
-    }
-    [dir="ltr"] .sidebar:not(.open) {
-        transform: translateX(-100%) !important;
-    }
-
-    .sidebar.open {
+    /* القائمة دائماً ظاهرة على سطح المكتب */
+    .sidebar {
         transform: translateX(0) !important;
     }
 
-    /* تعديل margin-right للـ app-shell بناءً على حالة القائمة */
+    /* LTR: القائمة على اليسار دائماً ظاهرة */
+    [dir="ltr"] .sidebar {
+        transform: translateX(0) !important;
+    }
+
+    /* app-shell يأخذ هامشاً ثابتاً لحساب عرض القائمة دائماً */
     .app-shell {
-        margin-right: 0 !important;
+        margin-right: var(--sidebar-width) !important;
         transition: margin-right 0.3s ease;
     }
 
-    /* عندما تكون القائمة مفتوحة، نضيف margin للـ app-shell */
-    .sidebar.open~.app-shell {
-        margin-right: var(--sidebar-width) !important;
-    }
-    [dir="ltr"] .sidebar.open~.app-shell {
-        margin-right: 0 !important;
-        margin-left: var(--sidebar-width) !important;
-    }
+    /* LTR: الهامش على اليسار */
     [dir="ltr"] .app-shell {
         margin-right: 0 !important;
-        margin-left: 0 !important;
-        transition: margin-left 0.3s ease;
-    }
-
-    /* إظهار زر القائمة على سطح المكتب */
-    .mobile-topbar {
-        display: flex !important;
-        position: sticky;
-        top: 0;
-        z-index: 100;
-    }
-
-    .sidebar-toggle {
-        display: inline-flex !important;
-        z-index: 101;
+        margin-left: var(--sidebar-width) !important;
     }
 
     /* إخفاء الـ overlay على سطح المكتب (يستخدم فقط على الموبايل) */

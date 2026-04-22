@@ -4904,15 +4904,15 @@ window.UI = {
                     }
                 } catch (e) { /* ignore */ }
 
-                // إغلاق القائمة الجانبية فوراً
-                const sidebar = document.querySelector('.sidebar');
-                if (sidebar) {
-                    // إزالة class "open" مباشرة لضمان الإغلاق
-                    sidebar.classList.remove('open');
-                    // استدعاء toggleSidebar للتأكد من تطبيق جميع التغييرات
-                    this.toggleSidebar(false);
-                    if (AppState.debugMode) {
-                        Utils.safeLog('✅ تم إغلاق القائمة الجانبية تلقائياً عند فتح الوحدة:', sectionName);
+                // إغلاق القائمة الجانبية على الموبايل فقط عند فتح الوحدات
+                if (window.innerWidth <= 1024) {
+                    const sidebar = document.querySelector('.sidebar');
+                    if (sidebar) {
+                        sidebar.classList.remove('open');
+                        this.toggleSidebar(false);
+                        if (AppState.debugMode) {
+                            Utils.safeLog('✅ تم إغلاق القائمة الجانبية تلقائياً عند فتح الوحدة:', sectionName);
+                        }
                     }
                 }
 
