@@ -53,6 +53,19 @@
         _permissionLoadKey: null,
         _sharedFallbackPromise: null,
 
+        // ✅ مدة صلاحية البيانات المحلية لكل نوع (بالميلي ثانية) قبل إعادة الجلب من الخادم
+        _BOOTSTRAP_CACHE_TTL: {
+            'users':                  5  * 60 * 1000,  // 5 دقائق  (حساسة أمنياً)
+            'incidents':              10 * 60 * 1000,  // 10 دقائق
+            'nearmiss':               10 * 60 * 1000,  // 10 دقائق
+            'employees':              15 * 60 * 1000,  // 15 دقيقة
+            'training':               15 * 60 * 1000,  // 15 دقيقة
+            'approvedContractors':    15 * 60 * 1000,  // 15 دقيقة
+            'contractors':            15 * 60 * 1000,  // 15 دقيقة
+            'clinicVisits':           15 * 60 * 1000,  // 15 دقيقة
+            'clinicContractorVisits': 15 * 60 * 1000   // 15 دقيقة
+        },
+
         /**
          * بدء التطبيق
          */
@@ -873,10 +886,23 @@
                     return this.loadSharedDataFallback();
                 }
 
-                log(`🎯 تحميل ${requiredDataTypes.length} نوع بيانات حسب الصلاحيات`);
+                // ✅ تصفية: فصل البيانات الحديثة (لا تحتاج جلب) عن البيانات القديمة (تحتاج جلب)
+                const staleTypes = requiredDataTypes.filter(dt => !this._isBootstrapDataFresh(dt));
+                const freshTypes = requiredDataTypes.filter(dt =>  this._isBootstrapDataFresh(dt));
 
-                // تحميل البيانات المطلوبة بشكل متوازي
-                const dataPromises = requiredDataTypes.map(dataType => {
+                if (freshTypes.length > 0) {
+                    log(`⚡ ${freshTypes.length} نوع بيانات حديثة (من cache) — تخطي الخادم: [${freshTypes.join(', ')}]`);
+                }
+
+                if (staleTypes.length === 0) {
+                    log('✅ جميع البيانات المحلية حديثة — لا حاجة لأي طلب من الخادم');
+                    return;
+                }
+
+                log(`🎯 جلب ${staleTypes.length} نوع بيانات قديمة من الخادم: [${staleTypes.join(', ')}]`);
+
+                // تحميل البيانات القديمة فقط بشكل متوازي
+                const dataPromises = staleTypes.map(dataType => {
                     const action = this.getActionForDataType(dataType);
                     const sheetName = this.getSheetNameForDataType(dataType);
                     // readFromSheet يتطلب sheetName إجبارياً في الـ payload
@@ -895,21 +921,45 @@
 
                 const results = await Promise.all(dataPromises);
 
-                // حفظ النتائج في AppState
+                // حفظ النتائج في AppState وتحديث syncMeta
+                let fetchedCount = 0;
                 results.forEach(({ type, result, error }) => {
                     if (result && result.success && Array.isArray(result.data)) {
                         AppState.appData[type] = result.data;
-                        log(`✅ تم تحميل ${result.data.length} ${type}`);
+                        fetchedCount++;
+                        log(`✅ تم جلب ${result.data.length} سجل لـ ${type}`);
+
+                        // ✅ تحديث syncMeta.sheets بوقت الجلب الفعلي من الخادم
+                        const sheetKey = this._getSyncMetaSheetKey(type);
+                        if (sheetKey) {
+                            if (!AppState.syncMeta) AppState.syncMeta = { sheets: {} };
+                            if (!AppState.syncMeta.sheets) AppState.syncMeta.sheets = {};
+                            AppState.syncMeta.sheets[sheetKey] = Date.now();
+                            AppState.syncMeta.lastSyncTime = Date.now();
+                        }
                     } else if (error) {
-                        log(`⚠️ فشل تحميل ${type}:`, error.message);
+                        log(`⚠️ فشل جلب ${type}:`, error.message);
                     }
                 });
 
-                // حفظ البيانات محلياً
-                if (window.DataManager && window.DataManager.save) {
-                    setTimeout(() => {
-                        try { window.DataManager.save(); } catch (e) {}
-                    }, 1000);
+                // حفظ syncMeta المحدَّث في localStorage فوراً + تسجيل timestamps الجلب
+                if (fetchedCount > 0) {
+                    if (window.DataManager && window.DataManager._saveSyncMeta) {
+                        try { window.DataManager._saveSyncMeta(); } catch (e) {}
+                    }
+                    // ✅ تسجيل timestamps الجلب الفعلي من الخادم (للـ TTL check في الـ reload القادم)
+                    const fetchedKeys = results
+                        .filter(r => r.result && r.result.success && Array.isArray(r.result.data))
+                        .map(r => r.type);
+                    if (fetchedKeys.length > 0 && window.DataManager && window.DataManager.recordServerFetch) {
+                        try { window.DataManager.recordServerFetch(fetchedKeys); } catch (e) {}
+                    }
+                    // حفظ البيانات محلياً بعد تأخير بسيط
+                    if (window.DataManager && window.DataManager.save) {
+                        setTimeout(() => {
+                            try { window.DataManager.save(); } catch (e) {}
+                        }, 1000);
+                    }
                 }
             })();
 
@@ -993,6 +1043,59 @@
         },
 
         /**
+         * تحديد مفتاح syncMeta.sheets لنوع البيانات
+         * syncMeta.sheets تستخدم أسماء الأوراق (مثل 'Users') لا مفاتيح AppState (مثل 'users')
+         */
+        _getSyncMetaSheetKey(dataType) {
+            const map = {
+                'users':                  'Users',
+                'incidents':              'Incidents',
+                'nearmiss':               'NearMiss',
+                'employees':              'Employees',
+                'training':               'Training',
+                'approvedContractors':    'ApprovedContractors',
+                'contractors':            'ApprovedContractors',
+                'clinicVisits':           'ClinicVisits',
+                'clinicContractorVisits': 'ClinicContractorVisits'
+            };
+            return map[dataType] || null;
+        },
+
+        /**
+         * التحقق من أن بيانات نوع معين حديثة بما يكفي لتخطي الجلب من الخادم
+         * يعتمد على syncMeta.sheets المحفوظ في hse_sync_meta
+         */
+        _isBootstrapDataFresh(dataType) {
+            // يجب وجود بيانات محلية غير فارغة
+            const localData = AppState.appData[dataType];
+            if (!localData || !Array.isArray(localData) || localData.length === 0) {
+                return false;
+            }
+
+            const ttl = this._BOOTSTRAP_CACHE_TTL[dataType] || (10 * 60 * 1000);
+            const sheetKey = this._getSyncMetaSheetKey(dataType);
+
+            // 1. التحقق من syncMeta.sheets (المصدر الأساسي — يُحدَّث فقط بعد جلب ناجح من الخادم)
+            if (sheetKey && AppState.syncMeta && AppState.syncMeta.sheets) {
+                const lastSync = AppState.syncMeta.sheets[sheetKey];
+                if (lastSync && (Date.now() - lastSync) < ttl) {
+                    return true;
+                }
+            }
+
+            // 2. الاحتياط: التحقق من hse_cache_timestamps
+            if (window.DataManager && window.DataManager.isCacheValid) {
+                try {
+                    if (window.DataManager.isCacheValid(dataType, ttl)) {
+                        return true;
+                    }
+                } catch (e) { /* ignore */ }
+            }
+
+            return false;
+        },
+
+        /**
          * تحميل البيانات المشتركة كـ fallback
          */
         async loadSharedDataFallback() {
@@ -1006,25 +1109,54 @@
                     return;
                 }
 
+                // ✅ تحقق من الـ cache قبل الجلب في الـ fallback أيضاً
+                const contractorsFresh = this._isBootstrapDataFresh('approvedContractors');
+                const employeesFresh   = this._isBootstrapDataFresh('employees');
+
+                if (contractorsFresh && employeesFresh) {
+                    log('⚡ بيانات المقاولين والموظفين حديثة (cache) — تخطي fallback');
+                    return;
+                }
+
                 log('🔄 تحميل البيانات المشتركة (fallback)');
 
-                // تحميل البيانات الأساسية فقط
+                // تحميل البيانات الأساسية فقط (القديمة منها)
                 const basicDataPromises = [
-                    GoogleIntegration.sendRequest({ action: 'getAllApprovedContractors', data: {} }).catch(() => null),
-                    GoogleIntegration.sendRequest({ action: 'getAllEmployees', data: {} }).catch(() => null)
+                    contractorsFresh ? Promise.resolve(null) : GoogleIntegration.sendRequest({ action: 'getAllApprovedContractors', data: {} }).catch(() => null),
+                    employeesFresh   ? Promise.resolve(null) : GoogleIntegration.sendRequest({ action: 'getAllEmployees', data: {} }).catch(() => null)
                 ];
 
                 const results = await Promise.all(basicDataPromises);
+                const fetchedFallbackKeys = [];
 
                 if (results[0]?.success && Array.isArray(results[0].data)) {
                     AppState.appData.approvedContractors = results[0].data;
                     AppState.appData.contractors = results[0].data;
+                    fetchedFallbackKeys.push('approvedContractors', 'contractors');
+                    // تحديث syncMeta
+                    if (!AppState.syncMeta) AppState.syncMeta = { sheets: {} };
+                    if (!AppState.syncMeta.sheets) AppState.syncMeta.sheets = {};
+                    AppState.syncMeta.sheets['ApprovedContractors'] = Date.now();
                     log(`✅ تم تحميل ${results[0].data.length} مقاول`);
                 }
 
                 if (results[1]?.success && Array.isArray(results[1].data)) {
                     AppState.appData.employees = results[1].data;
+                    fetchedFallbackKeys.push('employees');
+                    // تحديث syncMeta
+                    if (!AppState.syncMeta) AppState.syncMeta = { sheets: {} };
+                    if (!AppState.syncMeta.sheets) AppState.syncMeta.sheets = {};
+                    AppState.syncMeta.sheets['Employees'] = Date.now();
                     log(`✅ تم تحميل ${results[1].data.length} موظف`);
+                }
+
+                // حفظ syncMeta وتسجيل timestamps الجلب
+                if (fetchedFallbackKeys.length > 0) {
+                    AppState.syncMeta.lastSyncTime = Date.now();
+                    if (window.DataManager) {
+                        try { window.DataManager._saveSyncMeta(); } catch (e) {}
+                        try { window.DataManager.recordServerFetch(fetchedFallbackKeys); } catch (e) {}
+                    }
                 }
             })();
 

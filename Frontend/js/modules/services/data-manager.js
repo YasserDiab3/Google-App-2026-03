@@ -498,9 +498,8 @@ const DataManager = {
             localStorage.setItem('hse_app_data', serialized);
             this.saveCompanySettings();
             this._saveSyncMeta();
-            
-            // ✅ NEW: حفظ timestamps لكل sheet لتتبع صلاحية الـ cache
-            this._saveCacheTimestamps();
+            // ملاحظة: _saveCacheTimestamps لا تُستدعى هنا — تُحدَّث timestamps فقط عبر recordServerFetch()
+            // بعد الجلب الفعلي من الخادم، لمنع إعادة ضبط TTL عند الحفظ المحلي
             
             return true;
         } catch (error) {
@@ -640,23 +639,29 @@ const DataManager = {
     },
 
     /**
-     * ✅ NEW: حفظ timestamps لكل sheet لتتبع صلاحية الـ cache
+     * حفظ timestamps فقط للحقول التي تم جلبها حديثاً من الخادم
+     * لا يُحدِّث timestamps للحقول غير المتأثرة — لمنع إعادة ضبط عداد TTL عند أي save() محلي
+     * @param {string[]} [updatedKeys] - مفاتيح AppState التي تم جلبها من الخادم الآن
      */
-    _saveCacheTimestamps() {
+    _saveCacheTimestamps(updatedKeys) {
         try {
-            if (!AppState.appData || !AppState.syncMeta) return;
-            
-            const timestamps = {};
+            // قراءة الـ timestamps الحالية (للاحتفاظ بقيم الحقول غير المحدَّثة)
+            let timestamps = {};
+            try {
+                const existing = localStorage.getItem('hse_cache_timestamps');
+                if (existing) timestamps = JSON.parse(existing);
+            } catch (e) { /* ignore */ }
+
             const now = Date.now();
-            
-            // تسجيل timestamp لكل sheet موجود في appData
-            Object.keys(AppState.appData).forEach(key => {
-                if (Array.isArray(AppState.appData[key])) {
+
+            if (updatedKeys && updatedKeys.length > 0) {
+                // ✅ تحديث الحقول المحدَّدة فقط (تم جلبها من الخادم)
+                updatedKeys.forEach(key => {
                     timestamps[key] = now;
-                }
-            });
-            
-            // حفظ في localStorage (خفيف الوزن)
+                });
+            }
+            // ملاحظة: بدون updatedKeys لا يحدث أي تحديث — يتم استدعاء الدالة فقط مع مفاتيح
+
             localStorage.setItem('hse_cache_timestamps', JSON.stringify(timestamps));
         } catch (e) {
             // فشل صامت - لا يؤثر على الوظائف الأخرى
@@ -664,10 +669,21 @@ const DataManager = {
     },
 
     /**
-     * ✅ NEW: التحقق من صلاحية الـ cache لورقة معينة
-     * @param {string} sheetKey - مفتاح الورقة في appData
+     * تسجيل وقت الجلب الفعلي من الخادم لحقل واحد أو أكثر
+     * يُستدعى بعد كل عملية جلب ناجحة من Google Sheets
+     * @param {string|string[]} keys - مفتاح appData أو مصفوفة من المفاتيح
+     */
+    recordServerFetch(keys) {
+        const keysArr = Array.isArray(keys) ? keys : [keys];
+        this._saveCacheTimestamps(keysArr);
+    },
+
+    /**
+     * التحقق من صلاحية الـ cache لحقل معين
+     * يقارن وقت آخر جلب من الخادم بالعمر الأقصى المسموح به
+     * @param {string} sheetKey - مفتاح الحقل في appData
      * @param {number} maxAge - العمر الأقصى بالمللي ثانية (افتراضي: 10 دقائق)
-     * @returns {boolean} - true إذا كان الـ cache صالح
+     * @returns {boolean} - true إذا كان الـ cache صالحاً لا يزال
      */
     isCacheValid(sheetKey, maxAge = 10 * 60 * 1000) {
         try {
