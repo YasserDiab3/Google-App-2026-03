@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Contractors Module
  * تم استخراجه من app-modules.js
  */
