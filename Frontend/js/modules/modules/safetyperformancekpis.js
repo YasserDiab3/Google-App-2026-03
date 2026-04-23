@@ -1,4 +1,4 @@
-/**
+﻿/**
  * SafetyPerformanceKPIs Module
  * ØªÙ… Ø§Ø³ØªØ®Ø±Ø§Ø¬Ù‡ Ù…Ù† app-modules.js
  */
@@ -67,7 +67,7 @@ const SafetyPerformanceKPIs = {
                     </div>
                 `;
             }
-            Notification.error('ليس لديك صلاحية للوصول إلى هذا القسم');
+            Notification.error(SafetyPerformanceKPIs._t('module.kpi.noPermission','ليس لديك صلاحية للوصول إلى هذا القسم'));
             UI.showSection('dashboard');
             return;
         }
@@ -157,6 +157,8 @@ const SafetyPerformanceKPIs = {
             }
 
             section.innerHTML = content;
+            if (window.AppI18n?.applyModuleI18n) window.AppI18n.applyModuleI18n(section);
+            else if (window.I18n?.applyModuleI18n) window.I18n.applyModuleI18n(section);
             this.enhanceWithScorecardTab(section);
             
             // تهيئة الأحداث بعد عرض الواجهة
@@ -229,29 +231,41 @@ const SafetyPerformanceKPIs = {
         }
     },
 
+    _t(key, fallback = '') {
+        try {
+            const core = window.AppI18n || window.I18n;
+            if (core && typeof core.t === 'function') {
+                const val = core.t(key);
+                return (val && val !== key) ? val : (fallback || key);
+            }
+        } catch (_) {}
+        return fallback || key;
+    },
+
     async render() {
+        const t = (k, f) => this._t(k, f);
         return `
             <div class="section-header">
                 <div class="flex items-center justify-between flex-wrap gap-4">
                     <div>
                         <h1 class="section-title">
                             <i class="fas fa-gauge-high ml-3"></i>
-                            ${(typeof i18n !== 'undefined' && i18n.translate) ? i18n.translate('kpis.title') : 'مؤشرات الأداء لإدارة السلامة (Safety Performance KPIs)'}
+                            ${t('module.kpi.title', 'مؤشرات الأداء لإدارة السلامة')}
                         </h1>
-                        <p class="section-subtitle">${(typeof i18n !== 'undefined' && i18n.translate) ? i18n.translate('kpis.subtitle') : 'تتبع وتحليل مؤشرات الأداء الرئيسية للسلامة عبر كل الإدارات والمواقع'}</p>
+                        <p class="section-subtitle">${t('module.kpi.subtitle', 'رصد وتحليل مؤشرات أداء السلامة والصحة المهنية')}</p>
                     </div>
                     <div class="flex gap-2">
                         <button id="kpis-export-excel-btn" class="btn-success">
                             <i class="fas fa-file-excel ml-2"></i>
-                            تصدير Excel
+                            Excel
                         </button>
                         <button id="kpis-export-pdf-btn" class="btn-secondary">
                             <i class="fas fa-file-pdf ml-2"></i>
-                            تصدير PDF
+                            ${t('module.kpi.exportPDF', 'تصدير PDF')}
                         </button>
                         <button id="kpis-settings-btn" class="btn-primary">
                             <i class="fas fa-cog ml-2"></i>
-                            إعدادات الأهداف
+                            ${t('module.kpi.settings', 'إعدادات الأهداف')}
                         </button>
                     </div>
                 </div>
@@ -265,19 +279,19 @@ const SafetyPerformanceKPIs = {
                                 data-tab="overview" 
                                 onclick="SafetyPerformanceKPIs.switchTab('overview')">
                             <i class="fas fa-chart-line ml-2"></i>
-                            نظرة عامة
+                            ${t('module.kpi.tab.overview', 'نظرة عامة')}
                         </button>
                         <button class="module-tab-btn ${this.activeTab === 'annual-plan' ? 'active' : ''}" 
                                 data-tab="annual-plan" 
                                 onclick="SafetyPerformanceKPIs.switchTab('annual-plan')">
                             <i class="fas fa-calendar-alt ml-2"></i>
-                            Key Performance Indicators (KPIs) - الخطة السنوية
+                            ${t('module.kpi.tab.annualPlan', 'مؤشرات الأداء (KPIs) - الخطة السنوية')}
                         </button>
                         <button class="module-tab-btn ${this.activeTab === 'monitoring-plan' ? 'active' : ''}" 
                                 data-tab="monitoring-plan" 
                                 onclick="SafetyPerformanceKPIs.switchTab('monitoring-plan')">
                             <i class="fas fa-clipboard-check ml-2"></i>
-                            HSE MONITORING PLAN - خطة المتابعة
+                            ${t('module.kpi.tab.monitoringPlan', 'خطة متابعة HSE')}
                         </button>
                     </div>
                 </div>
@@ -293,91 +307,160 @@ const SafetyPerformanceKPIs = {
     },
 
     renderOverviewTab() {
+        const t = (k, f) => this._t(k, f);
+        const isRTL = (window.AppI18n?.getCurrentLang?.() || window.I18n?.getCurrentLang?.() || 'ar') === 'ar';
+        const iconMargin = isRTL ? 'ml-2' : 'mr-2';
         return `
-            <!-- Filters -->
-            <div class="content-card mt-6">
-                <div class="card-header">
-                    <h2 class="card-title">
-                        <i class="fas fa-filter ml-2"></i>
-                        التصفية والبحث
+            <!-- ===================== HERO SUMMARY BAR ===================== -->
+            <div class="mt-4" style="background:linear-gradient(135deg,#0f172a 0%,#1e3a5f 50%,#1d4ed8 100%);border-radius:16px;padding:1.5rem 1.75rem;box-shadow:0 8px 32px rgba(15,23,42,.35);">
+                <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:1rem;align-items:stretch;">
+                    <!-- Days Without Incident -->
+                    <div style="background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);border-radius:12px;padding:1rem;text-align:center;position:relative;overflow:hidden;">
+                        <div style="position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,#22c55e,#86efac);border-radius:12px 12px 0 0;"></div>
+                        <div style="width:42px;height:42px;margin:0 auto .75rem;background:rgba(34,197,94,.2);border-radius:50%;display:flex;align-items:center;justify-content:center;">
+                            <i class="fas fa-shield-alt" style="color:#4ade80;font-size:1.1rem;"></i>
+                        </div>
+                        <div id="hero-days-without" style="font-size:2rem;font-weight:900;color:#fff;line-height:1;margin-bottom:.25rem;">-</div>
+                        <div style="font-size:.72rem;color:#94a3b8;font-weight:600;text-transform:uppercase;letter-spacing:.05em;">${t('module.kpi.hero.daysWithout','أيام بدون حوادث')}</div>
+                        <div style="font-size:.68rem;color:#64748b;margin-top:.25rem;">${t('module.kpi.hero.ytd','حتى الآن')}</div>
+                    </div>
+                    <!-- Total Incidents -->
+                    <div style="background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);border-radius:12px;padding:1rem;text-align:center;position:relative;overflow:hidden;">
+                        <div style="position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,#ef4444,#fca5a5);border-radius:12px 12px 0 0;"></div>
+                        <div style="width:42px;height:42px;margin:0 auto .75rem;background:rgba(239,68,68,.2);border-radius:50%;display:flex;align-items:center;justify-content:center;">
+                            <i class="fas fa-exclamation-triangle" style="color:#f87171;font-size:1.1rem;"></i>
+                        </div>
+                        <div id="hero-total-incidents" style="font-size:2rem;font-weight:900;color:#fff;line-height:1;margin-bottom:.25rem;">-</div>
+                        <div style="font-size:.72rem;color:#94a3b8;font-weight:600;text-transform:uppercase;letter-spacing:.05em;">${t('module.kpi.hero.totalIncidents','إجمالي الحوادث')}</div>
+                        <div style="font-size:.68rem;color:#64748b;margin-top:.25rem;">${t('module.kpi.hero.thisMonth','هذا الشهر')}</div>
+                    </div>
+                    <!-- LTIFR -->
+                    <div style="background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);border-radius:12px;padding:1rem;text-align:center;position:relative;overflow:hidden;">
+                        <div style="position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,#f97316,#fdba74);border-radius:12px 12px 0 0;"></div>
+                        <div style="width:42px;height:42px;margin:0 auto .75rem;background:rgba(249,115,22,.2);border-radius:50%;display:flex;align-items:center;justify-content:center;">
+                            <i class="fas fa-sync-alt" style="color:#fb923c;font-size:1.1rem;"></i>
+                        </div>
+                        <div id="hero-ltifr" style="font-size:2rem;font-weight:900;color:#fff;line-height:1;margin-bottom:.25rem;">-</div>
+                        <div style="font-size:.72rem;color:#94a3b8;font-weight:600;text-transform:uppercase;letter-spacing:.05em;">${t('module.kpi.hero.ltifr','معدل LTIFR')}</div>
+                        <div style="font-size:.68rem;color:#64748b;margin-top:.25rem;">${t('module.kpi.hero.ytd','حتى الآن')}</div>
+                    </div>
+                    <!-- Training Rate -->
+                    <div style="background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);border-radius:12px;padding:1rem;text-align:center;position:relative;overflow:hidden;">
+                        <div style="position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,#6366f1,#a5b4fc);border-radius:12px 12px 0 0;"></div>
+                        <div style="width:42px;height:42px;margin:0 auto .75rem;background:rgba(99,102,241,.2);border-radius:50%;display:flex;align-items:center;justify-content:center;">
+                            <i class="fas fa-graduation-cap" style="color:#818cf8;font-size:1.1rem;"></i>
+                        </div>
+                        <div id="hero-training-rate" style="font-size:2rem;font-weight:900;color:#fff;line-height:1;margin-bottom:.25rem;">-</div>
+                        <div style="font-size:.72rem;color:#94a3b8;font-weight:600;text-transform:uppercase;letter-spacing:.05em;">${t('module.kpi.hero.trainingRate','معدل التدريب')}</div>
+                        <div style="font-size:.68rem;color:#64748b;margin-top:.25rem;">${t('module.kpi.hero.thisMonth','هذا الشهر')}</div>
+                    </div>
+                    <!-- Open PTW -->
+                    <div style="background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);border-radius:12px;padding:1rem;text-align:center;position:relative;overflow:hidden;">
+                        <div style="position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,#06b6d4,#67e8f9);border-radius:12px 12px 0 0;"></div>
+                        <div style="width:42px;height:42px;margin:0 auto .75rem;background:rgba(6,182,212,.2);border-radius:50%;display:flex;align-items:center;justify-content:center;">
+                            <i class="fas fa-id-card" style="color:#22d3ee;font-size:1.1rem;"></i>
+                        </div>
+                        <div id="hero-open-ptw" style="font-size:2rem;font-weight:900;color:#fff;line-height:1;margin-bottom:.25rem;">-</div>
+                        <div style="font-size:.72rem;color:#94a3b8;font-weight:600;text-transform:uppercase;letter-spacing:.05em;">${t('module.kpi.hero.openPTW','تصاريح مفتوحة')}</div>
+                        <div style="font-size:.68rem;color:#64748b;margin-top:.25rem;">${t('module.kpi.hero.thisMonth','هذا الشهر')}</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ===================== FILTERS ===================== -->
+            <div class="content-card mt-5" style="border:1px solid #e2e8f0;border-radius:14px;box-shadow:0 2px 8px rgba(0,0,0,.06);">
+                <div class="card-header" style="background:linear-gradient(135deg,#f8fafc,#f1f5f9);border-bottom:1px solid #e2e8f0;border-radius:14px 14px 0 0;">
+                    <h2 class="card-title" style="color:#374151;">
+                        <i class="fas fa-sliders-h ${iconMargin}" style="color:#6366f1;"></i>
+                        ${t('module.kpi.filter.title','التصفية والبحث')}
                     </h2>
                 </div>
                 <div class="card-body">
                     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
                         <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">الفترة الزمنية</label>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">${t('module.kpi.filter.period','الفترة الزمنية')}</label>
                             <select id="kpi-filter-period" class="form-input">
-                                <option value="monthly">شهري</option>
-                                <option value="quarterly">ربع سنوي</option>
-                                <option value="yearly">سنوي</option>
-                                <option value="custom">مخصص</option>
+                                <option value="monthly">${t('module.kpi.filter.monthly','شهري')}</option>
+                                <option value="quarterly">${t('module.kpi.filter.quarterly','ربع سنوي')}</option>
+                                <option value="yearly">${t('module.kpi.filter.yearly','سنوي')}</option>
+                                <option value="custom">${t('module.kpi.filter.custom','مخصص')}</option>
                             </select>
                         </div>
                         <div id="kpi-custom-dates" class="hidden">
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">من تاريخ</label>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">${t('module.kpi.filter.fromDate','من تاريخ')}</label>
                             <input type="date" id="kpi-filter-start-date" class="form-input">
                         </div>
                         <div id="kpi-custom-dates-end" class="hidden">
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">إلى تاريخ</label>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">${t('module.kpi.filter.toDate','إلى تاريخ')}</label>
                             <input type="date" id="kpi-filter-end-date" class="form-input">
                         </div>
                         <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">الإدارة</label>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">${t('module.kpi.filter.department','الإدارة')}</label>
                             <select id="kpi-filter-department" class="form-input">
-                                <option value="">جميع الإدارات</option>
+                                <option value="">${t('module.kpi.filter.allDepartments','جميع الإدارات')}</option>
                                 ${this.getDepartmentOptions()}
                             </select>
                         </div>
                         <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">الموقع</label>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">${t('module.kpi.filter.location','الموقع')}</label>
                             <select id="kpi-filter-location" class="form-input">
-                                <option value="">جميع المواقع</option>
+                                <option value="">${t('module.kpi.filter.allLocations','جميع المواقع')}</option>
                                 ${this.getLocationOptions()}
                             </select>
                         </div>
                     </div>
-                    <div class="mt-4 flex gap-2">
-                        <button id="kpi-apply-filters" class="btn-primary">
-                            <i class="fas fa-search ml-2"></i>
-                            تطبيق التصفية
+                    <div class="mt-4 flex gap-2 flex-wrap">
+                        <button id="kpi-apply-filters" class="btn-primary" style="gap:.4rem;">
+                            <i class="fas fa-search ${iconMargin}"></i>
+                            ${t('module.kpi.filter.apply','تطبيق التصفية')}
                         </button>
                         <button id="kpi-reset-filters" class="btn-secondary">
-                            <i class="fas fa-redo ml-2"></i>
-                            إعادة تعيين
+                            <i class="fas fa-redo ${iconMargin}"></i>
+                            ${t('module.kpi.filter.reset','إعادة تعيين')}
                         </button>
                     </div>
                 </div>
             </div>
 
-            <!-- Leading Indicators Section -->
-            <div class="mt-6">
-                <div class="content-card">
-                    <div class="card-header bg-gradient-to-r from-green-50 to-emerald-50 border-b-4 border-green-500">
-                        <h2 class="card-title text-green-800">
-                            <i class="fas fa-arrow-trend-up ml-2"></i>
-                            المؤشرات الاستباقية (Leading Indicators)
-                        </h2>
-                        <p class="text-sm text-green-700 mt-2">مؤشرات تقيس أداء الوقاية والتحكم قبل وقوع الحوادث</p>
+            <!-- ===================== LEADING INDICATORS ===================== -->
+            <div class="mt-5">
+                <div style="border-radius:16px;overflow:hidden;box-shadow:0 4px 16px rgba(5,150,105,.1);border:1px solid #a7f3d0;">
+                    <div style="background:linear-gradient(135deg,#064e3b 0%,#065f46 50%,#047857 100%);padding:1.1rem 1.5rem;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.75rem;">
+                        <div>
+                            <h2 style="color:#fff;font-size:1.05rem;font-weight:700;margin:0;display:flex;align-items:center;gap:.5rem;">
+                                <span style="background:rgba(255,255,255,.15);padding:.3rem .5rem;border-radius:8px;"><i class="fas fa-arrow-trend-up" style="color:#6ee7b7;"></i></span>
+                                ${t('module.kpi.leading.title','المؤشرات الاستباقية')}
+                                <span style="font-size:.7rem;background:rgba(110,231,183,.2);color:#6ee7b7;border:1px solid rgba(110,231,183,.3);border-radius:20px;padding:.15rem .6rem;font-weight:600;">Leading Indicators</span>
+                            </h2>
+                            <p style="color:#a7f3d0;font-size:.78rem;margin:.3rem 0 0;">${t('module.kpi.leading.subtitle','مؤشرات تقيس أداء الوقاية والتحكم قبل وقوع الحوادث')}</p>
+                        </div>
+                        <div id="leading-score-badge" style="background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);border-radius:10px;padding:.4rem .9rem;text-align:center;display:none;">
+                            <div style="font-size:1.2rem;font-weight:900;color:#fff;" id="leading-score-value">-</div>
+                            <div style="font-size:.65rem;color:#a7f3d0;font-weight:600;">Overall Score</div>
+                        </div>
                     </div>
-                    <div class="card-body">
-                        <div id="leading-indicators-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div style="background:#f0fdf4;padding:1.25rem;">
+                        <div id="leading-indicators-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                             ${this.renderLeadingIndicators()}
                         </div>
                     </div>
                 </div>
             </div>
 
-            <!-- Lagging Indicators Section -->
-            <div class="mt-6">
-                <div class="content-card">
-                    <div class="card-header bg-gradient-to-r from-red-50 to-rose-50 border-b-4 border-red-500">
-                        <h2 class="card-title text-red-800">
-                            <i class="fas fa-arrow-trend-down ml-2"></i>
-                            المؤشرات التراجعية (Lagging Indicators)
-                        </h2>
-                        <p class="text-sm text-red-700 mt-2">مؤشرات تقيس النتائج الفعلية لما حدث</p>
+            <!-- ===================== LAGGING INDICATORS ===================== -->
+            <div class="mt-5">
+                <div style="border-radius:16px;overflow:hidden;box-shadow:0 4px 16px rgba(185,28,28,.1);border:1px solid #fecaca;">
+                    <div style="background:linear-gradient(135deg,#7f1d1d 0%,#991b1b 50%,#b91c1c 100%);padding:1.1rem 1.5rem;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.75rem;">
+                        <div>
+                            <h2 style="color:#fff;font-size:1.05rem;font-weight:700;margin:0;display:flex;align-items:center;gap:.5rem;">
+                                <span style="background:rgba(255,255,255,.15);padding:.3rem .5rem;border-radius:8px;"><i class="fas fa-arrow-trend-down" style="color:#fca5a5;"></i></span>
+                                ${t('module.kpi.lagging.title','المؤشرات التراجعية')}
+                                <span style="font-size:.7rem;background:rgba(252,165,165,.2);color:#fca5a5;border:1px solid rgba(252,165,165,.3);border-radius:20px;padding:.15rem .6rem;font-weight:600;">Lagging Indicators</span>
+                            </h2>
+                            <p style="color:#fecaca;font-size:.78rem;margin:.3rem 0 0;">${t('module.kpi.lagging.subtitle','مؤشرات تقيس النتائج الفعلية لما حدث')}</p>
+                        </div>
                     </div>
-                    <div class="card-body">
+                    <div style="background:#fff5f5;padding:1.25rem;">
                         <div id="lagging-indicators-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                             ${this.renderLaggingIndicators()}
                         </div>
@@ -385,82 +468,95 @@ const SafetyPerformanceKPIs = {
                 </div>
             </div>
 
-            <!-- Charts Section -->
-            <div class="mt-6">
-                <h2 class="text-xl font-bold text-gray-800 mb-4">
-                    <i class="fas fa-chart-bar ml-2"></i>
-                    الرسوم البيانية والتحليلات
-                </h2>
-                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    <div class="content-card">
-                        <div class="card-header bg-gradient-to-r from-red-50 to-rose-50">
-                            <h2 class="card-title text-red-800">
-                                <i class="fas fa-chart-bar ml-2"></i>
-                                الحوادث والإصابات الشهرية
-                            </h2>
+            <!-- ===================== CHARTS GRID ===================== -->
+            <div class="mt-5">
+                <div style="display:flex;align-items:center;gap:.75rem;margin-bottom:1rem;">
+                    <span style="background:linear-gradient(135deg,#6366f1,#8b5cf6);width:4px;height:24px;border-radius:2px;display:inline-block;"></span>
+                    <h2 style="font-size:1.1rem;font-weight:700;color:#1e293b;margin:0;">
+                        <i class="fas fa-chart-bar ${iconMargin}" style="color:#6366f1;"></i>
+                        ${t('module.kpi.chart.title','الرسوم البيانية والتحليلات')}
+                    </h2>
+                </div>
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
+                    <!-- Incidents Chart -->
+                    <div style="background:#fff;border-radius:14px;overflow:hidden;box-shadow:0 2px 12px rgba(239,68,68,.1);border:1px solid #fee2e2;">
+                        <div style="background:linear-gradient(135deg,#fef2f2,#fee2e2);padding:.85rem 1.1rem;border-bottom:1px solid #fecaca;display:flex;align-items:center;gap:.6rem;">
+                            <span style="background:#ef4444;width:8px;height:8px;border-radius:50%;display:inline-block;"></span>
+                            <h3 style="font-size:.88rem;font-weight:700;color:#991b1b;margin:0;">
+                                <i class="fas fa-chart-bar ${iconMargin}"></i>
+                                ${t('module.kpi.chart.incidents','الحوادث والإصابات الشهرية')}
+                            </h3>
                         </div>
-                        <div class="card-body">
-                            <div id="incidents-chart-container" style="height: 300px;"></div>
-                        </div>
-                    </div>
-                    <div class="content-card">
-                        <div class="card-header bg-gradient-to-r from-blue-50 to-indigo-50">
-                            <h2 class="card-title text-blue-800">
-                                <i class="fas fa-chart-pie ml-2"></i>
-                                توزيع الحوادث حسب الإدارة
-                            </h2>
-                        </div>
-                        <div class="card-body">
-                            <div id="department-chart-container" style="height: 300px;"></div>
+                        <div style="padding:1rem;">
+                            <div id="incidents-chart-container" style="height:280px;"></div>
                         </div>
                     </div>
-                    <div class="content-card">
-                        <div class="card-header bg-gradient-to-r from-purple-50 to-pink-50">
-                            <h2 class="card-title text-purple-800">
-                                <i class="fas fa-chart-line ml-2"></i>
-                                معدل LTIFR عبر الزمن
-                            </h2>
+                    <!-- Dept Distribution Chart -->
+                    <div style="background:#fff;border-radius:14px;overflow:hidden;box-shadow:0 2px 12px rgba(59,130,246,.1);border:1px solid #bfdbfe;">
+                        <div style="background:linear-gradient(135deg,#eff6ff,#dbeafe);padding:.85rem 1.1rem;border-bottom:1px solid #bfdbfe;display:flex;align-items:center;gap:.6rem;">
+                            <span style="background:#3b82f6;width:8px;height:8px;border-radius:50%;display:inline-block;"></span>
+                            <h3 style="font-size:.88rem;font-weight:700;color:#1e40af;margin:0;">
+                                <i class="fas fa-chart-pie ${iconMargin}"></i>
+                                ${t('module.kpi.chart.deptDistribution','توزيع الحوادث حسب الإدارة')}
+                            </h3>
                         </div>
-                        <div class="card-body">
-                            <div id="trir-chart-container" style="height: 300px;"></div>
+                        <div style="padding:1rem;">
+                            <div id="department-chart-container" style="height:280px;"></div>
                         </div>
                     </div>
-                    <div class="content-card">
-                        <div class="card-header bg-gradient-to-r from-green-50 to-emerald-50">
-                            <h2 class="card-title text-green-800">
-                                <i class="fas fa-chart-area ml-2"></i>
-                                معدل الالتزام بالتدريب
-                            </h2>
+                    <!-- LTIFR Chart -->
+                    <div style="background:#fff;border-radius:14px;overflow:hidden;box-shadow:0 2px 12px rgba(139,92,246,.1);border:1px solid #ddd6fe;">
+                        <div style="background:linear-gradient(135deg,#faf5ff,#ede9fe);padding:.85rem 1.1rem;border-bottom:1px solid #ddd6fe;display:flex;align-items:center;gap:.6rem;">
+                            <span style="background:#8b5cf6;width:8px;height:8px;border-radius:50%;display:inline-block;"></span>
+                            <h3 style="font-size:.88rem;font-weight:700;color:#5b21b6;margin:0;">
+                                <i class="fas fa-chart-line ${iconMargin}"></i>
+                                ${t('module.kpi.chart.ltifr','معدل LTIFR عبر الزمن')}
+                            </h3>
                         </div>
-                        <div class="card-body">
-                            <div id="training-chart-container" style="height: 300px;"></div>
+                        <div style="padding:1rem;">
+                            <div id="trir-chart-container" style="height:280px;"></div>
+                        </div>
+                    </div>
+                    <!-- Training Chart -->
+                    <div style="background:#fff;border-radius:14px;overflow:hidden;box-shadow:0 2px 12px rgba(16,185,129,.1);border:1px solid #a7f3d0;">
+                        <div style="background:linear-gradient(135deg,#f0fdf4,#dcfce7);padding:.85rem 1.1rem;border-bottom:1px solid #a7f3d0;display:flex;align-items:center;gap:.6rem;">
+                            <span style="background:#10b981;width:8px;height:8px;border-radius:50%;display:inline-block;"></span>
+                            <h3 style="font-size:.88rem;font-weight:700;color:#065f46;margin:0;">
+                                <i class="fas fa-chart-area ${iconMargin}"></i>
+                                ${t('module.kpi.chart.training','معدل الالتزام بالتدريب')}
+                            </h3>
+                        </div>
+                        <div style="padding:1rem;">
+                            <div id="training-chart-container" style="height:280px;"></div>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <!-- Department Comparison -->
-            <div class="content-card mt-6">
-                <div class="card-header">
-                    <h2 class="card-title">
-                        <i class="fas fa-balance-scale ml-2"></i>
-                        مقارنة بين الإدارات / المواقع
-                    </h2>
+            <!-- ===================== DEPARTMENT COMPARISON ===================== -->
+            <div class="mt-5" style="background:#fff;border-radius:14px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,.07);border:1px solid #e2e8f0;">
+                <div style="background:linear-gradient(135deg,#f8fafc,#f1f5f9);padding:.85rem 1.1rem;border-bottom:1px solid #e2e8f0;display:flex;align-items:center;gap:.6rem;">
+                    <span style="background:#0f172a;width:8px;height:8px;border-radius:50%;display:inline-block;"></span>
+                    <h3 style="font-size:.88rem;font-weight:700;color:#0f172a;margin:0;">
+                        <i class="fas fa-balance-scale ${iconMargin}"></i>
+                        ${t('module.kpi.chart.deptComparison','مقارنة بين الإدارات / المواقع')}
+                    </h3>
                 </div>
-                <div class="card-body">
-                    <div id="department-comparison-container" style="height: 400px;"></div>
+                <div style="padding:1rem;">
+                    <div id="department-comparison-container" style="height:380px;"></div>
                 </div>
             </div>
 
-            <!-- Heatmap -->
-            <div class="content-card mt-6">
-                <div class="card-header">
-                    <h2 class="card-title">
-                        <i class="fas fa-th ml-2"></i>
-                        خريطة الحرارة - أداء السلامة حسب الإدارة والموقع
-                    </h2>
+            <!-- ===================== HEATMAP ===================== -->
+            <div class="mt-5 mb-2" style="background:#fff;border-radius:14px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,.07);border:1px solid #e2e8f0;">
+                <div style="background:linear-gradient(135deg,#1e293b,#334155);padding:.85rem 1.1rem;border-bottom:1px solid #475569;display:flex;align-items:center;gap:.6rem;">
+                    <span style="background:#f59e0b;width:8px;height:8px;border-radius:50%;display:inline-block;"></span>
+                    <h3 style="font-size:.88rem;font-weight:700;color:#f1f5f9;margin:0;">
+                        <i class="fas fa-th ${iconMargin}"></i>
+                        ${t('module.kpi.chart.heatmap','خريطة الحرارة - أداء السلامة حسب الإدارة والموقع')}
+                    </h3>
                 </div>
-                <div class="card-body">
+                <div style="padding:1rem;">
                     <div id="heatmap-container"></div>
                 </div>
             </div>
@@ -473,10 +569,10 @@ const SafetyPerformanceKPIs = {
     },
 
     renderAnnualPlanTab() {
+        const t = (k, f) => this._t(k, f);
         const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
         const years = this.getScorecardYearRange();
         const currentYear = new Date().getFullYear();
-        // Safe fallback for permission check
         const isReadOnly = (typeof window !== 'undefined' && typeof window.isReadOnlyRole === 'function') 
             ? window.isReadOnlyRole() 
             : false;
@@ -490,27 +586,27 @@ const SafetyPerformanceKPIs = {
                             <i class="fas fa-calendar-alt text-blue-600 text-2xl"></i>
                             <div>
                                 <h2 class="card-title text-blue-800">
-                                    Key Performance Indicators (KPIs) - الخطة السنوية
+                                    ${t('module.kpi.annual.title','مؤشرات الأداء (KPIs) - الخطة السنوية')}
                                 </h2>
-                                <p class="text-sm text-blue-700 mt-1">Annual KPI Plan with Monthly Tracking</p>
+                                <p class="text-sm text-blue-700 mt-1">${t('module.kpi.annual.subtitle','الخطة السنوية لمؤشرات الأداء مع المتابعة الشهرية')}</p>
                             </div>
                         </div>
                         <div class="flex gap-2 items-center flex-wrap">
                             <select id="kpi-annual-year-selector" class="form-input" style="min-width: 100px;">
                                 ${years.map(y => `<option value="${y}" ${y === currentYear ? 'selected' : ''}>${y}</option>`).join('')}
                             </select>
-                            <button onclick="SafetyPerformanceKPIs.exportAnnualPlanToExcel()" class="btn-success" style="padding: 0.5rem 0.75rem; white-space: nowrap;" title="تصدير Excel">
+                            <button onclick="SafetyPerformanceKPIs.exportAnnualPlanToExcel()" class="btn-success" style="padding: 0.5rem 0.75rem; white-space: nowrap;" title="${t('module.kpi.notify.excelSuccess','تصدير Excel')}">
                                 <i class="fas fa-file-excel"></i>
                                 <span class="hidden lg:inline mr-1">Excel</span>
                             </button>
-                            <button onclick="SafetyPerformanceKPIs.exportAnnualPlanToPDF()" class="btn-secondary" style="padding: 0.5rem 0.75rem; white-space: nowrap;" title="تصدير PDF">
+                            <button onclick="SafetyPerformanceKPIs.exportAnnualPlanToPDF()" class="btn-secondary" style="padding: 0.5rem 0.75rem; white-space: nowrap;" title="${t('module.kpi.exportPDF','تصدير PDF')}">
                                 <i class="fas fa-file-pdf"></i>
                                 <span class="hidden lg:inline mr-1">PDF</span>
                             </button>
                             ${canEdit ? `
                             <button onclick="SafetyPerformanceKPIs.addKPIAnnualPlan()" class="btn-primary" style="padding: 0.5rem 1.25rem; white-space: nowrap; min-width: 180px; font-weight: 600;">
                                 <i class="fas fa-plus ml-2"></i>
-                                إضافة مؤشر جديد
+                                ${t('module.kpi.annual.addKPI','إضافة مؤشر جديد')}
                             </button>
                             ` : ''}
                         </div>
@@ -520,22 +616,22 @@ const SafetyPerformanceKPIs = {
                     <table class="kpi-annual-plan-table" style="width: 100%; border-collapse: collapse; font-size: 11px;">
                         <thead>
                             <tr style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
-                                <th style="padding: 12px 8px; border: 1px solid #e5e7eb; text-align: center; font-weight: 600; min-width: 90px;">Type</th>
-                                <th style="padding: 12px 8px; border: 1px solid #e5e7eb; text-align: center; font-weight: 600; min-width: 120px;">OBJECTIVE</th>
-                                <th style="padding: 12px 8px; border: 1px solid #e5e7eb; text-align: center; font-weight: 600; min-width: 150px;">KPI</th>
-                                <th style="padding: 12px 8px; border: 1px solid #e5e7eb; text-align: center; font-weight: 600; min-width: 120px;">TARGET</th>
-                                <th style="padding: 12px 8px; border: 1px solid #e5e7eb; text-align: center; font-weight: 600; min-width: 80px;">GOAL</th>
-                                <th style="padding: 12px 8px; border: 1px solid #e5e7eb; text-align: center; font-weight: 600; min-width: 250px;">IMPROVEMENT PLAN</th>
+                                <th style="padding: 12px 8px; border: 1px solid #e5e7eb; text-align: center; font-weight: 600; min-width: 90px;">${t('module.kpi.annual.col.type','النوع')}</th>
+                                <th style="padding: 12px 8px; border: 1px solid #e5e7eb; text-align: center; font-weight: 600; min-width: 120px;">${t('module.kpi.annual.col.objective','OBJECTIVE')}</th>
+                                <th style="padding: 12px 8px; border: 1px solid #e5e7eb; text-align: center; font-weight: 600; min-width: 150px;">${t('module.kpi.annual.col.kpi','KPI')}</th>
+                                <th style="padding: 12px 8px; border: 1px solid #e5e7eb; text-align: center; font-weight: 600; min-width: 120px;">${t('module.kpi.annual.col.target','TARGET')}</th>
+                                <th style="padding: 12px 8px; border: 1px solid #e5e7eb; text-align: center; font-weight: 600; min-width: 80px;">${t('module.kpi.annual.col.goal','GOAL')}</th>
+                                <th style="padding: 12px 8px; border: 1px solid #e5e7eb; text-align: center; font-weight: 600; min-width: 250px;">${t('module.kpi.annual.col.improvement','IMPROVEMENT PLAN')}</th>
                                 ${months.map(m => `<th style="padding: 12px 4px; border: 1px solid #e5e7eb; text-align: center; font-weight: 600; min-width: 50px; background: #3b82f6;">${m}</th>`).join('')}
-                                <th style="padding: 12px 8px; border: 1px solid #e5e7eb; text-align: center; font-weight: 600; min-width: 80px; background: #f97316;">Total</th>
-                                ${canEdit ? '<th style="padding: 12px 8px; border: 1px solid #e5e7eb; text-align: center; font-weight: 600; min-width: 100px;">Actions</th>' : ''}
+                                <th style="padding: 12px 8px; border: 1px solid #e5e7eb; text-align: center; font-weight: 600; min-width: 80px; background: #f97316;">${t('module.kpi.annual.col.total','Total')}</th>
+                                ${canEdit ? `<th style="padding: 12px 8px; border: 1px solid #e5e7eb; text-align: center; font-weight: 600; min-width: 100px;">${t('module.kpi.annual.col.actions','Actions')}</th>` : ''}
                             </tr>
                         </thead>
                         <tbody id="kpi-annual-plan-body">
                             <tr>
                                 <td colspan="21" style="padding: 40px; text-align: center; color: #6b7280;">
                                     <i class="fas fa-spinner fa-spin text-3xl mb-3"></i>
-                                    <p>جاري تحميل البيانات...</p>
+                                    <p>${t('module.kpi.annual.loading','جاري تحميل البيانات...')}</p>
                                 </td>
                             </tr>
                         </tbody>
@@ -548,12 +644,12 @@ const SafetyPerformanceKPIs = {
                 <div class="card-header">
                     <h2 class="card-title">
                         <i class="fas fa-info-circle ml-2"></i>
-                        Abbreviations / الاختصارات
+                        ${t('module.kpi.annual.abbrev','Abbreviations / الاختصارات')}
                     </h2>
                 </div>
                 <div class="card-body">
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-                        <div><strong>(1) HSE:</strong> Health, Safety & Environment</div>
+                        <div><strong>(1) HSE:</strong> Health, Safety &amp; Environment</div>
                         <div><strong>(2) LTI:</strong> Lost Time Injury</div>
                         <div><strong>(3) AIR:</strong> Accident Incident Ratio</div>
                     </div>
@@ -563,19 +659,19 @@ const SafetyPerformanceKPIs = {
     },
 
     renderMonitoringPlanTab() {
+        const t = (k, f) => this._t(k, f);
         const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
         const years = this.getScorecardYearRange();
         const currentYear = new Date().getFullYear();
-        // Safe fallback for permission check
         const isReadOnly = (typeof window !== 'undefined' && typeof window.isReadOnlyRole === 'function') 
             ? window.isReadOnlyRole() 
             : false;
         const canEdit = !isReadOnly && (this.isAdminUser() || (typeof Permissions !== 'undefined' && Permissions.hasAccess('hse-monitoring-plan')));
         const frequencies = [
-            { key: 'Weekly', label: 'Weekly Activities', icon: 'fa-calendar-week', color: 'yellow' },
-            { key: 'Monthly', label: 'Monthly Activities', icon: 'fa-calendar-alt', color: 'blue' },
-            { key: 'Semi-Annually', label: 'Semi-Annually Activities', icon: 'fa-calendar', color: 'purple' },
-            { key: 'Annually', label: 'Annually Activities', icon: 'fa-calendar-check', color: 'green' }
+            { key: 'Weekly', label: t('module.kpi.monitoring.freq.weekly','الأنشطة الأسبوعية'), icon: 'fa-calendar-week', color: 'yellow' },
+            { key: 'Monthly', label: t('module.kpi.monitoring.freq.monthly','الأنشطة الشهرية'), icon: 'fa-calendar-alt', color: 'blue' },
+            { key: 'Semi-Annually', label: t('module.kpi.monitoring.freq.semiAnnually','الأنشطة نصف السنوية'), icon: 'fa-calendar', color: 'purple' },
+            { key: 'Annually', label: t('module.kpi.monitoring.freq.annually','الأنشطة السنوية'), icon: 'fa-calendar-check', color: 'green' }
         ];
 
         return `
@@ -586,27 +682,27 @@ const SafetyPerformanceKPIs = {
                             <i class="fas fa-clipboard-check text-green-600 text-2xl"></i>
                             <div>
                                 <h2 class="card-title text-green-800">
-                                    HSE MONITORING PLAN
+                                    ${t('module.kpi.monitoring.title','خطة متابعة HSE')}
                                 </h2>
-                                <p class="text-sm text-green-700 mt-1">خطة متابعة HSE - التنفيذ والمتابعة الشهرية</p>
+                                <p class="text-sm text-green-700 mt-1">${t('module.kpi.monitoring.subtitle','خطة متابعة HSE - التنفيذ والمتابعة الشهرية')}</p>
                             </div>
                         </div>
                         <div class="flex gap-2 items-center flex-wrap">
                             <select id="hse-monitoring-year-selector" class="form-input" style="min-width: 100px;">
                                 ${years.map(y => `<option value="${y}" ${y === currentYear ? 'selected' : ''}>${y}</option>`).join('')}
                             </select>
-                            <button onclick="SafetyPerformanceKPIs.exportMonitoringPlanToExcel()" class="btn-success" style="padding: 0.5rem 0.75rem; white-space: nowrap;" title="تصدير Excel">
+                            <button onclick="SafetyPerformanceKPIs.exportMonitoringPlanToExcel()" class="btn-success" style="padding: 0.5rem 0.75rem; white-space: nowrap;" title="Excel">
                                 <i class="fas fa-file-excel"></i>
                                 <span class="hidden lg:inline mr-1">Excel</span>
                             </button>
-                            <button onclick="SafetyPerformanceKPIs.exportMonitoringPlanToPDF()" class="btn-secondary" style="padding: 0.5rem 0.75rem; white-space: nowrap;" title="تصدير PDF">
+                            <button onclick="SafetyPerformanceKPIs.exportMonitoringPlanToPDF()" class="btn-secondary" style="padding: 0.5rem 0.75rem; white-space: nowrap;" title="${t('module.kpi.exportPDF','تصدير PDF')}">
                                 <i class="fas fa-file-pdf"></i>
                                 <span class="hidden lg:inline mr-1">PDF</span>
                             </button>
                             ${canEdit ? `
                             <button onclick="SafetyPerformanceKPIs.addHSEMonitoringPlan()" class="btn-primary" style="padding: 0.5rem 1.25rem; white-space: nowrap; min-width: 180px; font-weight: 600;">
                                 <i class="fas fa-plus ml-2"></i>
-                                إضافة نشاط جديد
+                                ${t('module.kpi.monitoring.addActivity','إضافة نشاط جديد')}
                             </button>
                             ` : ''}
                         </div>
@@ -625,25 +721,25 @@ const SafetyPerformanceKPIs = {
                                 <table class="hse-monitoring-table" style="width: 100%; border-collapse: collapse; font-size: 10px;">
                                     <thead>
                                         <tr style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white;">
-                                            <th style="padding: 10px 6px; border: 1px solid #e5e7eb; text-align: center; font-weight: 600; min-width: 100px;">Activity</th>
-                                            <th style="padding: 10px 6px; border: 1px solid #e5e7eb; text-align: center; font-weight: 600; min-width: 120px;">Activity Description</th>
-                                            <th style="padding: 10px 6px; border: 1px solid #e5e7eb; text-align: center; font-weight: 600; min-width: 80px;">Area</th>
-                                            <th style="padding: 10px 6px; border: 1px solid #e5e7eb; text-align: center; font-weight: 600; min-width: 80px;">Frequency</th>
-                                            <th style="padding: 10px 6px; border: 1px solid #e5e7eb; text-align: center; font-weight: 600; min-width: 100px;">Responsibility</th>
-                                            <th style="padding: 10px 6px; border: 1px solid #e5e7eb; text-align: center; font-weight: 600; min-width: 100px;">Record Document</th>
+                                            <th style="padding: 10px 6px; border: 1px solid #e5e7eb; text-align: center; font-weight: 600; min-width: 100px;">${t('module.kpi.monitoring.col.activity','النشاط')}</th>
+                                            <th style="padding: 10px 6px; border: 1px solid #e5e7eb; text-align: center; font-weight: 600; min-width: 120px;">${t('module.kpi.monitoring.col.description','وصف النشاط')}</th>
+                                            <th style="padding: 10px 6px; border: 1px solid #e5e7eb; text-align: center; font-weight: 600; min-width: 80px;">${t('module.kpi.monitoring.col.area','المنطقة')}</th>
+                                            <th style="padding: 10px 6px; border: 1px solid #e5e7eb; text-align: center; font-weight: 600; min-width: 80px;">${t('module.kpi.monitoring.col.frequency','التكرار')}</th>
+                                            <th style="padding: 10px 6px; border: 1px solid #e5e7eb; text-align: center; font-weight: 600; min-width: 100px;">${t('module.kpi.monitoring.col.responsibility','المسؤولية')}</th>
+                                            <th style="padding: 10px 6px; border: 1px solid #e5e7eb; text-align: center; font-weight: 600; min-width: 100px;">${t('module.kpi.monitoring.col.record','وثيقة التسجيل')}</th>
                                             ${months.map(m => `<th style="padding: 10px 4px; border: 1px solid #e5e7eb; text-align: center; font-weight: 600; min-width: 60px; background: #3b82f6;" title="Target">${m}T</th>`).join('')}
                                             ${months.map(m => `<th style="padding: 10px 4px; border: 1px solid #e5e7eb; text-align: center; font-weight: 600; min-width: 60px; background: #10b981;" title="Executed">${m}E</th>`).join('')}
-                                            <th style="padding: 10px 6px; border: 1px solid #e5e7eb; text-align: center; font-weight: 600; min-width: 80px; background: #f97316;">Total Target</th>
-                                            <th style="padding: 10px 6px; border: 1px solid #e5e7eb; text-align: center; font-weight: 600; min-width: 80px; background: #10b981;">Total Executed</th>
-                                            <th style="padding: 10px 6px; border: 1px solid #e5e7eb; text-align: center; font-weight: 600; min-width: 80px; background: #8b5cf6;">Score %</th>
-                                            ${canEdit ? '<th style="padding: 10px 6px; border: 1px solid #e5e7eb; text-align: center; font-weight: 600; min-width: 100px;">Actions</th>' : ''}
+                                            <th style="padding: 10px 6px; border: 1px solid #e5e7eb; text-align: center; font-weight: 600; min-width: 80px; background: #f97316;">${t('module.kpi.monitoring.col.totalTarget','الإجمالي المستهدف')}</th>
+                                            <th style="padding: 10px 6px; border: 1px solid #e5e7eb; text-align: center; font-weight: 600; min-width: 80px; background: #10b981;">${t('module.kpi.monitoring.col.totalExecuted','الإجمالي المنفذ')}</th>
+                                            <th style="padding: 10px 6px; border: 1px solid #e5e7eb; text-align: center; font-weight: 600; min-width: 80px; background: #8b5cf6;">${t('module.kpi.monitoring.col.score','النسبة %')}</th>
+                                            ${canEdit ? `<th style="padding: 10px 6px; border: 1px solid #e5e7eb; text-align: center; font-weight: 600; min-width: 100px;">${t('module.kpi.monitoring.col.actions','الإجراءات')}</th>` : ''}
                                         </tr>
                                     </thead>
                                     <tbody id="hse-monitoring-${freq.key.toLowerCase().replace('-', '')}-body">
                                         <tr>
                                             <td colspan="30" style="padding: 30px; text-align: center; color: #6b7280;">
                                                 <i class="fas fa-spinner fa-spin text-2xl mb-2"></i>
-                                                <p>جاري تحميل البيانات...</p>
+                                                <p>${t('module.kpi.monitoring.loading','جاري تحميل البيانات...')}</p>
                                             </td>
                                         </tr>
                                     </tbody>
@@ -657,77 +753,82 @@ const SafetyPerformanceKPIs = {
     },
 
     renderLeadingIndicators() {
+        const t = (k, f) => this._t(k, f);
         return `
-            ${this.renderKPICard('inspection-tours', 'الجولات التفتيشية المنفذة', 'inspection-tours', 'fa-walking', 'blue', 'جولة')}
-            ${this.renderKPICard('observations-recorded', 'الملاحظات المسجلة والمعالجة', 'observations', 'fa-clipboard-list', 'indigo', 'ملاحظة')}
-            ${this.renderKPICard('corrective-actions-closure', 'نسبة إغلاق الإجراءات التصحيحية', 'actions-closure', 'fa-check-double', 'green', '%')}
-            ${this.renderKPICard('training-courses', 'الدورات التدريبية المنفذة', 'training-courses', 'fa-graduation-cap', 'teal', 'دورة')}
-            ${this.renderKPICard('training-attendance', 'نسبة حضور الموظفين للتدريب', 'training-attendance', 'fa-users', 'cyan', '%')}
-            ${this.renderKPICard('ptw-approved', 'تصاريح العمل المعتمدة والمنفذة', 'ptw-approved', 'fa-id-card', 'purple', 'تصريح')}
-            ${this.renderKPICard('ppe-compliance', 'نسبة الالتزام باستخدام معدات الوقاية', 'ppe-compliance', 'fa-hard-hat', 'orange', '%')}
-            ${this.renderKPICard('periodic-inspections-on-time', 'الفحوصات الدورية المنجزة في الموعد', 'inspections-on-time', 'fa-calendar-check', 'emerald', 'فحص')}
-            ${this.renderKPICard('safety-meetings', 'عدد الاجتماعات والتوعيات الخاصة بالسلامة', 'safety-meetings', 'fa-handshake', 'sky', 'اجتماع')}
+            ${this.renderKPICard('inspection-tours', t('module.kpi.leading.inspectionTours','الجولات التفتيشية المنفذة'), 'inspection-tours', 'fa-walking', '#2563eb', '#dbeafe', t('module.kpi.unit.tour','جولة'))}
+            ${this.renderKPICard('observations-recorded', t('module.kpi.leading.observations','الملاحظات المسجلة والمعالجة'), 'observations', 'fa-clipboard-list', '#4f46e5', '#e0e7ff', t('module.kpi.unit.observation','ملاحظة'))}
+            ${this.renderKPICard('corrective-actions-closure', t('module.kpi.leading.actionsClosure','نسبة إغلاق الإجراءات التصحيحية'), 'actions-closure', 'fa-check-double', '#059669', '#d1fae5', '%')}
+            ${this.renderKPICard('training-courses', t('module.kpi.leading.trainingCourses','الدورات التدريبية المنفذة'), 'training-courses', 'fa-graduation-cap', '#0d9488', '#ccfbf1', t('module.kpi.unit.course','دورة'))}
+            ${this.renderKPICard('training-attendance', t('module.kpi.leading.trainingAttendance','نسبة حضور الموظفين للتدريب'), 'training-attendance', 'fa-users', '#0284c7', '#e0f2fe', '%')}
+            ${this.renderKPICard('ptw-approved', t('module.kpi.leading.ptwApproved','تصاريح العمل المعتمدة والمنفذة'), 'ptw-approved', 'fa-id-card', '#7c3aed', '#ede9fe', t('module.kpi.unit.permit','تصريح'))}
+            ${this.renderKPICard('ppe-compliance', t('module.kpi.leading.ppeCompliance','نسبة الالتزام باستخدام معدات الوقاية'), 'ppe-compliance', 'fa-hard-hat', '#d97706', '#fef3c7', '%')}
+            ${this.renderKPICard('periodic-inspections-on-time', t('module.kpi.leading.inspectionsOnTime','الفحوصات الدورية المنجزة في الموعد'), 'inspections-on-time', 'fa-calendar-check', '#16a34a', '#dcfce7', t('module.kpi.unit.inspection','فحص'))}
+            ${this.renderKPICard('safety-meetings', t('module.kpi.leading.safetyMeetings','عدد الاجتماعات والتوعيات الخاصة بالسلامة'), 'safety-meetings', 'fa-handshake', '#0369a1', '#e0f2fe', t('module.kpi.unit.meeting','اجتماع'))}
         `;
     },
 
     renderLaggingIndicators() {
+        const t = (k, f) => this._t(k, f);
         return `
-            ${this.renderKPICard('total-injuries', 'عدد الإصابات المسجلة', 'injuries', 'fa-user-injured', 'red', 'إصابة')}
-            ${this.renderKPICard('lti-count', 'عدد الإصابات المؤدية لتوقف عن العمل (LTI)', 'lti', 'fa-bed', 'red', 'إصابة')}
-            ${this.renderKPICard('ltifr', 'معدل تكرار الإصابات (LTIFR)', 'ltifr', 'fa-sync-alt', 'orange', '')}
-            ${this.renderKPICard('severity-rate', 'معدل شدة الإصابات', 'severity', 'fa-exclamation-circle', 'red', '%')}
-            ${this.renderKPICard('near-miss-count', 'عدد الحوادث الوشيكة المسجلة', 'nearmiss-count', 'fa-eye', 'yellow', 'حادث')}
-            ${this.renderKPICard('fire-incidents', 'عدد الحرائق أو الحوادث في معدات الإطفاء', 'fire-incidents', 'fa-fire', 'red', 'حادث')}
-            ${this.renderKPICard('lost-days', 'عدد الأيام المهدورة بسبب الإصابات', 'lost-days', 'fa-calendar-times', 'rose', 'يوم')}
-            ${this.renderKPICard('accident-cost', 'تكلفة الحوادث (مباشرة / غير مباشرة)', 'accident-cost', 'fa-dollar-sign', 'red', 'ريال')}
+            ${this.renderKPICard('total-injuries', t('module.kpi.lagging.totalInjuries','عدد الإصابات المسجلة'), 'injuries', 'fa-user-injured', '#dc2626', '#fee2e2', t('module.kpi.unit.injury','إصابة'))}
+            ${this.renderKPICard('lti-count', t('module.kpi.lagging.ltiCount','عدد الإصابات المؤدية لتوقف عن العمل'), 'lti', 'fa-bed', '#b91c1c', '#fee2e2', t('module.kpi.unit.injury','إصابة'))}
+            ${this.renderKPICard('ltifr', t('module.kpi.lagging.ltifr','معدل تكرار الإصابات (LTIFR)'), 'ltifr', 'fa-sync-alt', '#ea580c', '#ffedd5', '')}
+            ${this.renderKPICard('severity-rate', t('module.kpi.lagging.severityRate','معدل شدة الإصابات'), 'severity', 'fa-exclamation-circle', '#e11d48', '#ffe4e6', '%')}
+            ${this.renderKPICard('near-miss-count', t('module.kpi.lagging.nearMissCount','عدد الحوادث الوشيكة المسجلة'), 'nearmiss-count', 'fa-eye', '#ca8a04', '#fef9c3', t('module.kpi.unit.incident','حادث'))}
+            ${this.renderKPICard('fire-incidents', t('module.kpi.lagging.fireIncidents','عدد الحرائق أو الحوادث في معدات الإطفاء'), 'fire-incidents', 'fa-fire', '#c2410c', '#ffedd5', t('module.kpi.unit.incident','حادث'))}
+            ${this.renderKPICard('lost-days', t('module.kpi.lagging.lostDays','عدد الأيام المهدورة بسبب الإصابات'), 'lost-days', 'fa-calendar-times', '#9f1239', '#ffe4e6', t('module.kpi.unit.day','يوم'))}
+            ${this.renderKPICard('accident-cost', t('module.kpi.lagging.accidentCost','تكلفة الحوادث'), 'accident-cost', 'fa-dollar-sign', '#991b1b', '#fee2e2', t('module.kpi.unit.sar','ريال'))}
         `;
     },
 
-    renderKPICard(id, label, type, icon, color, defaultUnit = '') {
-        // Determine status color based on indicator type
-        const statusClass = color.includes('red') || color.includes('rose') ? 'status-danger' :
-            color.includes('orange') || color.includes('yellow') ? 'status-warning' : 'status-success';
-
+    renderKPICard(id, label, type, icon, accentColor, bgColor, defaultUnit = '') {
+        const t = (k, f) => this._t(k, f);
+        const isLagging = ['injuries','lti','ltifr','severity','nearmiss-count','fire-incidents','lost-days','accident-cost'].includes(type);
+        const borderColor = isLagging ? '#fca5a5' : '#bbf7d0';
+        const headerBg = isLagging ? 'rgba(254,226,226,.5)' : 'rgba(220,252,231,.5)';
         return `
-            <div class="bg-white rounded-lg shadow-lg p-6 border-l-4 border-${color}-500 hover:shadow-xl transition-all transform hover:scale-105" style="position: relative; overflow: hidden;">
-                <div class="absolute top-0 right-0 w-20 h-20 bg-${color}-100 opacity-20 rounded-bl-full"></div>
-                <div class="relative z-10">
-                    <div class="flex items-center justify-between mb-4">
-                        <div class="flex items-center gap-3">
-                            <div class="bg-${color}-100 p-3 rounded-lg shadow-sm">
-                                <i class="fas ${icon} text-${color}-600 text-xl"></i>
-                            </div>
-                            <div>
-                                <h3 class="text-sm font-bold text-gray-800">${label}</h3>
-                                <p class="text-xs text-gray-500 mt-1" id="${id}-period">هذا الشهر</p>
-                            </div>
+            <div style="background:#fff;border-radius:14px;border:1px solid ${borderColor};box-shadow:0 2px 10px rgba(0,0,0,.06);overflow:hidden;transition:box-shadow .2s,transform .2s;" 
+                 onmouseover="this.style.boxShadow='0 8px 24px rgba(0,0,0,.13)';this.style.transform='translateY(-2px)';" 
+                 onmouseout="this.style.boxShadow='0 2px 10px rgba(0,0,0,.06)';this.style.transform='translateY(0)';">
+                <!-- Card Header -->
+                <div style="background:${headerBg};border-bottom:1px solid ${borderColor};padding:.65rem .9rem;display:flex;align-items:center;justify-content:space-between;gap:.5rem;">
+                    <div style="display:flex;align-items:center;gap:.55rem;flex:1;min-width:0;">
+                        <div style="width:34px;height:34px;border-radius:9px;background:${bgColor};display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:0 1px 4px rgba(0,0,0,.1);">
+                            <i class="fas ${icon}" style="color:${accentColor};font-size:.9rem;"></i>
                         </div>
-                        <div class="status-badge ${statusClass}" id="${id}-status" style="display: none;">
-                            <i class="fas fa-circle text-xs"></i>
+                        <div style="min-width:0;">
+                            <h3 style="font-size:.75rem;font-weight:700;color:#1e293b;margin:0;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${label}">${label}</h3>
+                            <p style="font-size:.65rem;color:#64748b;margin:.1rem 0 0;" id="${id}-period">${t('module.kpi.card.thisMonth','هذا الشهر')}</p>
                         </div>
                     </div>
-                    <div class="mt-4">
-                        <div class="flex items-baseline gap-2">
-                            <span class="text-4xl font-bold text-gray-900" id="${id}-value">-</span>
-                            <span class="text-lg text-gray-600" id="${id}-unit">${defaultUnit}</span>
+                    <div id="${id}-status" style="display:none;width:8px;height:8px;border-radius:50%;background:#d1d5db;flex-shrink:0;"></div>
+                </div>
+                <!-- Card Body -->
+                <div style="padding:.85rem .9rem;">
+                    <!-- Value + Unit -->
+                    <div style="display:flex;align-items:baseline;gap:.35rem;margin-bottom:.6rem;">
+                        <span id="${id}-value" style="font-size:1.95rem;font-weight:900;color:#0f172a;line-height:1;">-</span>
+                        <span id="${id}-unit" style="font-size:.85rem;font-weight:600;color:#64748b;">${defaultUnit}</span>
+                    </div>
+                    <!-- Target Row -->
+                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.55rem;">
+                        <span style="font-size:.7rem;color:#64748b;font-weight:600;">${t('module.kpi.card.target','الهدف:')}</span>
+                        <span id="${id}-target" style="font-size:.7rem;font-weight:700;color:#374151;">-</span>
+                    </div>
+                    <!-- Progress Bar -->
+                    <div>
+                        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.3rem;">
+                            <span style="font-size:.68rem;color:#64748b;font-weight:600;">${t('module.kpi.card.achievement','نسبة الإنجاز')}</span>
+                            <span id="${id}-progress" style="font-size:.7rem;font-weight:800;color:${accentColor};">-</span>
                         </div>
-                        <div class="mt-3 flex items-center gap-2">
-                            <span class="text-xs text-gray-600">الهدف:</span>
-                            <span class="text-xs font-bold text-gray-800" id="${id}-target">-</span>
+                        <div style="width:100%;background:#f1f5f9;border-radius:99px;height:6px;overflow:hidden;">
+                            <div id="${id}-progress-bar" style="height:6px;border-radius:99px;width:0%;background:${accentColor};transition:width .6s ease;"></div>
                         </div>
-                        <div class="mt-3">
-                            <div class="flex items-center justify-between text-xs mb-1">
-                                <span class="text-gray-600 font-semibold">نسبة الإنجاز</span>
-                                <span class="font-bold text-gray-800" id="${id}-progress">-</span>
-                            </div>
-                            <div class="w-full bg-gray-200 rounded-full h-2.5 shadow-inner">
-                                <div class="bg-${color}-500 h-2.5 rounded-full transition-all duration-500 shadow-sm" id="${id}-progress-bar" style="width: 0%"></div>
-                            </div>
-                        </div>
-                        <div class="mt-3 flex items-center gap-2 text-xs" id="${id}-trend">
-                            <i class="fas fa-minus text-gray-400"></i>
-                            <span class="text-gray-500">لا يوجد تغيير</span>
-                        </div>
+                    </div>
+                    <!-- Trend -->
+                    <div id="${id}-trend" style="margin-top:.55rem;display:flex;align-items:center;gap:.35rem;font-size:.68rem;color:#94a3b8;">
+                        <i class="fas fa-minus"></i>
+                        <span>${t('module.kpi.card.noChange','لا يوجد تغيير')}</span>
                     </div>
                 </div>
             </div>
@@ -1050,12 +1151,16 @@ const SafetyPerformanceKPIs = {
         annualPlanPanel.id = 'spk-annual-plan-panel';
         annualPlanPanel.className = 'spk-tab-panel hidden';
         annualPlanPanel.innerHTML = this.renderAnnualPlanTab();
+        if (window.AppI18n?.applyModuleI18n) window.AppI18n.applyModuleI18n(annualPlanPanel);
+        else if (window.I18n?.applyModuleI18n) window.I18n.applyModuleI18n(annualPlanPanel);
 
         // لوحة خطة المتابعة
         const monitoringPlanPanel = document.createElement('div');
         monitoringPlanPanel.id = 'spk-monitoring-plan-panel';
         monitoringPlanPanel.className = 'spk-tab-panel hidden';
         monitoringPlanPanel.innerHTML = this.renderMonitoringPlanTab();
+        if (window.AppI18n?.applyModuleI18n) window.AppI18n.applyModuleI18n(monitoringPlanPanel);
+        else if (window.I18n?.applyModuleI18n) window.I18n.applyModuleI18n(monitoringPlanPanel);
 
         // لوحة السكور كارد
         const scorecardPanel = document.createElement('div');
@@ -2397,7 +2502,7 @@ const SafetyPerformanceKPIs = {
                     ? 'text-green-500' : 'text-red-500';
                 trendEl.innerHTML = `<i class="fas fa-arrow-${type.includes('injuries') || type.includes('lti') || type.includes('fire') || type.includes('cost') || type.includes('lost-days') ? 'up' : 'down'} ${trendColor}"></i><span class="${trendColor}">${trendText} ${Math.abs(trend).toFixed(1)}%</span>`;
             } else {
-                trendEl.innerHTML = `<i class="fas fa-minus text-gray-400"></i><span class="text-gray-500">لا يوجد تغيير</span>`;
+                trendEl.innerHTML = `<i class="fas fa-minus text-gray-400"></i><span class="text-gray-500">${this._t('module.kpi.card.noChange','لا يوجد تغيير')}</span>`;
             }
         }
     },
@@ -2702,14 +2807,15 @@ const SafetyPerformanceKPIs = {
     },
 
     showSettingsModal() {
+        const t = (k, f) => this._t(k, f);
         const modal = document.createElement('div');
         modal.className = 'modal-overlay';
         modal.innerHTML = `
-            <div class="modal-content" style="max-width: 700px;" dir="rtl">
+            <div class="modal-content" style="max-width: 700px;" dir="auto">
                 <div class="modal-header">
-                    <h2 class="modal-title" style="text-align: right;">
+                    <h2 class="modal-title">
                         <i class="fas fa-cog ml-2"></i>
-                        إعدادات أهداف مؤشرات الأداء
+                        ${t('module.kpi.settings.title','إعدادات أهداف مؤشرات الأداء')}
                     </h2>
                     <button class="modal-close">
                         <i class="fas fa-times"></i>
@@ -2721,11 +2827,11 @@ const SafetyPerformanceKPIs = {
                 <div class="modal-footer" style="justify-content: flex-start; gap: 0.75rem;">
                     <button id="save-kpi-targets" class="btn-primary">
                         <i class="fas fa-save ml-2"></i>
-                        حفظ
+                        ${t('module.kpi.settings.save','حفظ')}
                     </button>
                     <button class="btn-secondary modal-close">
                         <i class="fas fa-times ml-2"></i>
-                        إلغاء
+                        ${t('module.kpi.settings.cancel','إلغاء')}
                     </button>
                 </div>
             </div>
@@ -2746,53 +2852,53 @@ const SafetyPerformanceKPIs = {
     },
 
     renderTargetInputs() {
+        const t = (k, f) => this._t(k, f);
         const leadingTargets = [
-            { key: 'inspection-tours', label: 'الجولات التفتيشية المنفذة', unit: 'جولة', section: 'استباقي' },
-            { key: 'observations', label: 'الملاحظات المسجلة والمعالجة', unit: 'ملاحظة', section: 'استباقي' },
-            { key: 'actions-closure', label: 'نسبة إغلاق الإجراءات التصحيحية', unit: '%', section: 'استباقي' },
-            { key: 'training-courses', label: 'الدورات التدريبية المنفذة', unit: 'دورة', section: 'استباقي' },
-            { key: 'training-attendance', label: 'نسبة حضور الموظفين للتدريب', unit: '%', section: 'استباقي' },
-            { key: 'ptw-approved', label: 'تصاريح العمل المعتمدة والمنفذة', unit: 'تصريح', section: 'استباقي' },
-            { key: 'ppe-compliance', label: 'نسبة الالتزام باستخدام معدات الوقاية', unit: '%', section: 'استباقي' },
-            { key: 'inspections-on-time', label: 'الفحوصات الدورية المنجزة في الموعد', unit: 'فحص', section: 'استباقي' },
-            { key: 'safety-meetings', label: 'عدد الاجتماعات والتوعيات الخاصة بالسلامة', unit: 'اجتماع', section: 'استباقي' }
+            { key: 'inspection-tours', label: t('module.kpi.leading.inspectionTours','الجولات التفتيشية المنفذة'), unit: t('module.kpi.unit.tour','جولة') },
+            { key: 'observations', label: t('module.kpi.leading.observations','الملاحظات المسجلة والمعالجة'), unit: t('module.kpi.unit.observation','ملاحظة') },
+            { key: 'actions-closure', label: t('module.kpi.leading.actionsClosure','نسبة إغلاق الإجراءات التصحيحية'), unit: '%' },
+            { key: 'training-courses', label: t('module.kpi.leading.trainingCourses','الدورات التدريبية المنفذة'), unit: t('module.kpi.unit.course','دورة') },
+            { key: 'training-attendance', label: t('module.kpi.leading.trainingAttendance','نسبة حضور الموظفين للتدريب'), unit: '%' },
+            { key: 'ptw-approved', label: t('module.kpi.leading.ptwApproved','تصاريح العمل المعتمدة والمنفذة'), unit: t('module.kpi.unit.permit','تصريح') },
+            { key: 'ppe-compliance', label: t('module.kpi.leading.ppeCompliance','نسبة الالتزام باستخدام معدات الوقاية'), unit: '%' },
+            { key: 'inspections-on-time', label: t('module.kpi.leading.inspectionsOnTime','الفحوصات الدورية المنجزة في الموعد'), unit: t('module.kpi.unit.inspection','فحص') },
+            { key: 'safety-meetings', label: t('module.kpi.leading.safetyMeetings','عدد الاجتماعات والتوعيات الخاصة بالسلامة'), unit: t('module.kpi.unit.meeting','اجتماع') }
         ];
 
         const laggingTargets = [
-            { key: 'injuries', label: 'عدد الإصابات المسجلة', unit: 'إصابة', section: 'تراجعي' },
-            { key: 'lti', label: 'عدد الإصابات المؤدية لتوقف عن العمل (LTI)', unit: 'إصابة', section: 'تراجعي' },
-            { key: 'ltifr', label: 'معدل تكرار الإصابات (LTIFR)', unit: '', section: 'تراجعي' },
-            { key: 'severity', label: 'معدل شدة الإصابات', unit: '%', section: 'تراجعي' },
-            { key: 'nearmiss-count', label: 'عدد الحوادث الوشيكة المسجلة', unit: 'حادث', section: 'تراجعي' },
-            { key: 'fire-incidents', label: 'عدد الحرائق أو الحوادث في معدات الإطفاء', unit: 'حادث', section: 'تراجعي' },
-            { key: 'lost-days', label: 'عدد الأيام المهدورة بسبب الإصابات', unit: 'يوم', section: 'تراجعي' },
-            { key: 'accident-cost', label: 'تكلفة الحوادث (مباشرة / غير مباشرة)', unit: 'ريال', section: 'تراجعي' }
+            { key: 'injuries', label: t('module.kpi.lagging.totalInjuries','عدد الإصابات المسجلة'), unit: t('module.kpi.unit.injury','إصابة') },
+            { key: 'lti', label: t('module.kpi.lagging.ltiCount','عدد الإصابات المؤدية لتوقف عن العمل (LTI)'), unit: t('module.kpi.unit.injury','إصابة') },
+            { key: 'ltifr', label: t('module.kpi.lagging.ltifr','معدل تكرار الإصابات (LTIFR)'), unit: '' },
+            { key: 'severity', label: t('module.kpi.lagging.severityRate','معدل شدة الإصابات'), unit: '%' },
+            { key: 'nearmiss-count', label: t('module.kpi.lagging.nearMissCount','عدد الحوادث الوشيكة المسجلة'), unit: t('module.kpi.unit.incident','حادث') },
+            { key: 'fire-incidents', label: t('module.kpi.lagging.fireIncidents','عدد الحرائق أو الحوادث في معدات الإطفاء'), unit: t('module.kpi.unit.incident','حادث') },
+            { key: 'lost-days', label: t('module.kpi.lagging.lostDays','عدد الأيام المهدورة بسبب الإصابات'), unit: t('module.kpi.unit.day','يوم') },
+            { key: 'accident-cost', label: t('module.kpi.lagging.accidentCost','تكلفة الحوادث (مباشرة / غير مباشرة)'), unit: t('module.kpi.unit.sar','ريال') }
         ];
 
-        const targets = [...leadingTargets, ...laggingTargets];
+        const placeholder = t('module.kpi.settings.placeholder','الهدف');
 
         return `
-            <div class="space-y-6" dir="rtl">
+            <div class="space-y-6" dir="auto">
                 <!-- Leading Indicators Section -->
                 <div>
-                    <h3 class="text-lg font-bold text-green-700 mb-4 pb-2 border-b-2 border-green-300 text-right">
+                    <h3 class="text-lg font-bold text-green-700 mb-4 pb-2 border-b-2 border-green-300">
                         <i class="fas fa-arrow-trend-up ml-2"></i>
-                        المؤشرات الاستباقية (Leading Indicators)
+                        ${t('module.kpi.settings.leadingSection','المؤشرات الاستباقية')} (Leading Indicators)
                     </h3>
                     <div class="space-y-4">
-                        ${leadingTargets.map(t => `
-                            <div class="flex items-center gap-3 flex-row-reverse">
-                                <label class="flex-1 text-sm font-semibold text-gray-700 text-right min-w-0">${t.label}</label>
+                        ${leadingTargets.map(item => `
+                            <div class="flex items-center gap-3">
+                                <label class="flex-1 text-sm font-semibold text-gray-700 min-w-0">${item.label}</label>
                                 <div class="flex items-center gap-2 flex-shrink-0">
-                                    ${t.unit ? `<span class="text-sm text-gray-600 whitespace-nowrap">${t.unit}</span>` : ''}
+                                    ${item.unit ? `<span class="text-sm text-gray-600 whitespace-nowrap">${item.unit}</span>` : ''}
                                     <input type="number" 
-                                        id="target-${t.key}" 
-                                        class="form-input w-32 text-right" 
-                                        value="${this.kpiTargets[t.key] || ''}" 
-                                        placeholder="الهدف"
+                                        id="target-${item.key}" 
+                                        class="form-input w-32" 
+                                        value="${this.kpiTargets[item.key] || ''}" 
+                                        placeholder="${placeholder}"
                                         step="0.1"
-                                        dir="ltr"
-                                        style="text-align: right;">
+                                        dir="ltr">
                                 </div>
                             </div>
                         `).join('')}
@@ -2801,24 +2907,23 @@ const SafetyPerformanceKPIs = {
                 
                 <!-- Lagging Indicators Section -->
                 <div>
-                    <h3 class="text-lg font-bold text-red-700 mb-4 pb-2 border-b-2 border-red-300 text-right">
+                    <h3 class="text-lg font-bold text-red-700 mb-4 pb-2 border-b-2 border-red-300">
                         <i class="fas fa-arrow-trend-down ml-2"></i>
-                        المؤشرات التراجعية (Lagging Indicators)
+                        ${t('module.kpi.settings.laggingSection','المؤشرات التراجعية')} (Lagging Indicators)
                     </h3>
                     <div class="space-y-4">
-                        ${laggingTargets.map(t => `
-                            <div class="flex items-center gap-3 flex-row-reverse">
-                                <label class="flex-1 text-sm font-semibold text-gray-700 text-right min-w-0">${t.label}</label>
+                        ${laggingTargets.map(item => `
+                            <div class="flex items-center gap-3">
+                                <label class="flex-1 text-sm font-semibold text-gray-700 min-w-0">${item.label}</label>
                                 <div class="flex items-center gap-2 flex-shrink-0">
-                                    ${t.unit ? `<span class="text-sm text-gray-600 whitespace-nowrap">${t.unit}</span>` : ''}
+                                    ${item.unit ? `<span class="text-sm text-gray-600 whitespace-nowrap">${item.unit}</span>` : ''}
                                     <input type="number" 
-                                        id="target-${t.key}" 
-                                        class="form-input w-32 text-right" 
-                                        value="${this.kpiTargets[t.key] || ''}" 
-                                        placeholder="الهدف"
+                                        id="target-${item.key}" 
+                                        class="form-input w-32" 
+                                        value="${this.kpiTargets[item.key] || ''}" 
+                                        placeholder="${placeholder}"
                                         step="0.1"
-                                        dir="ltr"
-                                        style="text-align: right;">
+                                        dir="ltr">
                                 </div>
                             </div>
                         `).join('')}
@@ -2843,7 +2948,7 @@ const SafetyPerformanceKPIs = {
             }
         });
         this.saveKPITargets();
-        Notification.success('تم حفظ الأهداف بنجاح');
+        Notification.success(this._t('module.kpi.notify.settingsSaved','تم حفظ الأهداف بنجاح'));
         this.updateAllKPIs();
     },
 
@@ -2876,7 +2981,7 @@ const SafetyPerformanceKPIs = {
     exportScorecardToExcel() {
         const table = this.getExportableScorecardTable();
         if (!table || typeof XLSX === 'undefined') {
-            Notification.error('تعذر تصدير السكور كارد إلى Excel');
+            Notification.error(this._t('module.kpi.notify.excelError','تعذر تصدير السكور كارد إلى Excel'));
             return;
         }
         const workbook = XLSX.utils.book_new();
@@ -2884,51 +2989,13 @@ const SafetyPerformanceKPIs = {
         worksheet['!cols'] = [{ wch: 34 }].concat(new Array(12).fill({ wch: 14 }), [{ wch: 18 }]);
         XLSX.utils.book_append_sheet(workbook, worksheet, 'Safety Scorecard');
         XLSX.writeFile(workbook, `Safety_Performance_Scorecard_${this.scorecardYear}.xlsx`);
-        Notification.success('تم تصدير Safety Performance Scorecard إلى Excel');
+        Notification.success(this._t('module.kpi.notify.excelSuccess','تم تصدير Safety Performance Scorecard إلى Excel'));
     },
 
     exportScorecardToPDF() {
         const table = this.getExportableScorecardTable();
         if (!table) {
-            Notification.error('تعذر تصدير السكور كارد إلى PDF');
-            return;
-        }
-
-        const printWindow = window.open('', '_blank');
-        if (!printWindow) {
-            Notification.error('يرجى السماح بالنوافذ المنبثقة لإتمام تصدير PDF');
-            return;
-        }
-
-        const styles = document.getElementById('safety-performance-scorecard-styles')?.outerHTML || '';
-        printWindow.document.write(`
-            <html lang="en" dir="ltr">
-                <head>
-                    <meta charset="UTF-8">
-                    <title>Safety Performance Scorecard ${this.scorecardYear}</title>
-                    ${styles}
-                    <style>
-                        body { font-family: Arial, sans-serif; margin: 24px; background: #fff; }
-                        .spk-scorecard-table { width: 100%; min-width: auto; }
-                        .spk-scorecard-table th:first-child,
-                        .spk-scorecard-table td:first-child { position: static; }
-                    </style>
-                </head>
-                <body>
-                    <h2 style="margin-bottom: 16px;">Safety Performance Scorecard ${this.scorecardYear}</h2>
-                    ${table.outerHTML}
-                </body>
-            </html>
-        `);
-        printWindow.document.close();
-        setTimeout(() => printWindow.print(), 400);
-        Notification.success('تم فتح معاينة PDF الخاصة بالسكور كارد');
-    },
-
-    exportScorecardToPDF() {
-        const table = this.getExportableScorecardTable();
-        if (!table) {
-            Notification.error('تعذر تصدير السكور كارد إلى PDF');
+            Notification.error(this._t('module.kpi.notify.pdfError','تعذر تصدير السكور كارد إلى PDF'));
             return;
         }
 
@@ -3006,7 +3073,7 @@ const SafetyPerformanceKPIs = {
         const printWindow = window.open(url, '_blank');
         if (!printWindow) {
             URL.revokeObjectURL(url);
-            Notification.error('يرجى السماح بالنوافذ المنبثقة لإتمام تصدير PDF');
+            Notification.error(this._t('module.kpi.notify.pdfBlocked','يرجى السماح بالنوافذ المنبثقة لإتمام تصدير PDF'));
             return;
         }
 
@@ -3016,13 +3083,13 @@ const SafetyPerformanceKPIs = {
                 setTimeout(() => URL.revokeObjectURL(url), 1000);
             }, 400);
         };
-        Notification.success('تم فتح معاينة PDF الخاصة بالسكور كارد');
+        Notification.success(this._t('module.kpi.notify.pdfSuccess','تم فتح معاينة PDF الخاصة بالسكور كارد'));
     },
 
     async exportToExcel() {
         try {
             if (!this.isAdminUser()) {
-                Notification.error('التصدير متاح لمدير النظام فقط');
+                Notification.error(this._t('module.kpi.notify.excelError','التصدير متاح لمدير النظام فقط'));
                 return;
             }
             if (this.activeTab === 'scorecard') {
@@ -3083,20 +3150,20 @@ const SafetyPerformanceKPIs = {
                 const ws = XLSX.utils.aoa_to_sheet(kpiData);
                 XLSX.utils.book_append_sheet(wb, ws, 'مؤشرات الأداء');
                 XLSX.writeFile(wb, `مؤشرات_الأداء_${new Date().toISOString().slice(0, 10)}.xlsx`);
-                Notification.success('تم تصدير البيانات بنجاح');
+                Notification.success(this._t('module.kpi.notify.excelSuccess','تم تصدير البيانات بنجاح'));
             } else {
-                Notification.error('مكتبة Excel غير متاحة');
+                Notification.error(this._t('module.kpi.notify.excelError','مكتبة Excel غير متاحة'));
             }
         } catch (error) {
             Utils.safeError('خطأ في التصدير:', error);
-            Notification.error('حدث خطأ أثناء التصدير: ' + error.message);
+            Notification.error(this._t('module.kpi.notify.saveError','حدث خطأ أثناء التصدير: ') + error.message);
         }
     },
 
     async exportToPDF() {
         try {
             if (!this.isAdminUser()) {
-                Notification.error('التصدير متاح لمدير النظام فقط');
+                Notification.error(this._t('module.kpi.notify.pdfError','التصدير متاح لمدير النظام فقط'));
                 return;
             }
             if (this.activeTab === 'scorecard') {
@@ -3184,7 +3251,7 @@ const SafetyPerformanceKPIs = {
                     }
 
                     doc.save(`مؤشرات_الأداء_${new Date().toISOString().slice(0, 10)}.pdf`);
-                    Notification.success('تم تصدير PDF بنجاح');
+                    Notification.success(this._t('module.kpi.notify.pdfSuccess','تم تصدير PDF بنجاح'));
                     return;
                 } catch (error) {
                     Utils.safeWarn('فشل استخدام jsPDF، سيتم استخدام طريقة HTML:', error);
@@ -3281,22 +3348,21 @@ const SafetyPerformanceKPIs = {
 
             const printWindow = window.open('', '_blank');
             if (!printWindow) {
-                Notification.error('يرجى السماح للنوافذ المنبثقة للطباعة');
+                Notification.error(this._t('module.kpi.notify.pdfBlocked','يرجى السماح للنوافذ المنبثقة للطباعة'));
                 return;
             }
 
             printWindow.document.write(html);
             printWindow.document.close();
 
-            // انتظار تحميل الصفحة ثم طباعتها
             setTimeout(() => {
                 printWindow.print();
             }, 500);
 
-            Notification.success('تم فتح نافذة الطباعة. يمكنك حفظها كـ PDF من قائمة الطباعة.');
+            Notification.success(this._t('module.kpi.notify.targetsSuccess','تم فتح نافذة الطباعة. يمكنك حفظها كـ PDF من قائمة الطباعة.'));
         } catch (error) {
             Utils.safeError('خطأ في تصدير PDF:', error);
-            Notification.error('حدث خطأ أثناء تصدير PDF: ' + error.message);
+            Notification.error(this._t('module.kpi.notify.targetsError','حدث خطأ أثناء تصدير PDF: ') + error.message);
         }
     }
 };
@@ -3343,6 +3409,7 @@ SafetyPerformanceKPIs.renderOverviewChartCard = function (containerId, title, ic
 };
 
 SafetyPerformanceKPIs.renderKPICard = function (id, label, type, icon, color, defaultUnit = '') {
+    const t = (k, f) => SafetyPerformanceKPIs._t(k, f);
     const ringColor = color.includes('red') || color.includes('rose')
         ? 'rgba(244,63,94,0.22)'
         : color.includes('orange') || color.includes('yellow')
@@ -3355,7 +3422,7 @@ SafetyPerformanceKPIs.renderKPICard = function (id, label, type, icon, color, de
                 <div class="min-w-0">
                     <div class="text-[11px] font-black uppercase tracking-[0.2em] text-slate-400">${type}</div>
                     <h3 class="mt-2 text-sm font-bold leading-6 text-slate-800">${label}</h3>
-                    <p class="text-xs text-slate-500 mt-2" id="${id}-period">هذا الشهر</p>
+                    <p class="text-xs text-slate-500 mt-2" id="${id}-period">${t('module.kpi.card.thisMonth','هذا الشهر')}</p>
                 </div>
                 <div class="h-12 w-12 rounded-2xl flex items-center justify-center text-${color}-600 bg-${color}-50 border border-${color}-100 shrink-0" style="box-shadow: inset 0 0 0 1px ${ringColor};">
                     <i class="fas ${icon} text-lg"></i>
@@ -3373,11 +3440,11 @@ SafetyPerformanceKPIs.renderKPICard = function (id, label, type, icon, color, de
 
                 <div class="mt-5 grid grid-cols-2 gap-3">
                     <div class="rounded-2xl bg-slate-50 border border-slate-200 px-3 py-3">
-                        <div class="text-[11px] font-bold text-slate-500">الهدف</div>
+                        <div class="text-[11px] font-bold text-slate-500">${t('module.kpi.hero.target','الهدف')}</div>
                         <div class="mt-1 text-sm font-black text-slate-800" id="${id}-target">-</div>
                     </div>
                     <div class="rounded-2xl bg-slate-50 border border-slate-200 px-3 py-3">
-                        <div class="text-[11px] font-bold text-slate-500">الإنجاز</div>
+                        <div class="text-[11px] font-bold text-slate-500">${t('module.kpi.card.achievement','الإنجاز')}</div>
                         <div class="mt-1 text-sm font-black text-slate-800" id="${id}-progress">-</div>
                     </div>
                 </div>
@@ -3391,7 +3458,7 @@ SafetyPerformanceKPIs.renderKPICard = function (id, label, type, icon, color, de
                 <div class="mt-4 flex items-center justify-between gap-2 flex-wrap">
                     <div class="flex items-center gap-2 text-xs" id="${id}-trend">
                         <i class="fas fa-minus text-slate-400"></i>
-                        <span class="text-slate-500">لا يوجد تغيير</span>
+                        <span class="text-slate-500">${t('module.kpi.card.noChange','لا يوجد تغيير')}</span>
                     </div>
                 </div>
             </div>
@@ -3400,28 +3467,29 @@ SafetyPerformanceKPIs.renderKPICard = function (id, label, type, icon, color, de
 };
 
 SafetyPerformanceKPIs.render = async function () {
+    const t = (k, f) => SafetyPerformanceKPIs._t(k, f);
     return `
         <div class="section-header">
             <div class="flex items-center justify-between flex-wrap gap-4">
                 <div class="min-w-0">
                     <h1 class="section-title">
                         <i class="fas fa-gauge-high ml-3"></i>
-                        ${(typeof i18n !== 'undefined' && i18n.translate) ? i18n.translate('kpis.title') : 'مؤشرات الأداء لإدارة السلامة (Safety Performance KPIs)'}
+                        ${t('module.kpi.title','مؤشرات الأداء لإدارة السلامة')}
                     </h1>
-                    <p class="section-subtitle">${(typeof i18n !== 'undefined' && i18n.translate) ? i18n.translate('kpis.subtitle') : 'تتبع وتحليل مؤشرات الأداء الرئيسية للسلامة عبر كل الإدارات والمواقع'}</p>
+                    <p class="section-subtitle">${t('module.kpi.subtitle','رصد وتحليل مؤشرات أداء السلامة والصحة المهنية')}</p>
                 </div>
                 <div class="flex gap-2 flex-wrap">
                     <button id="kpis-export-excel-btn" class="btn-success">
                         <i class="fas fa-file-excel ml-2"></i>
-                        تصدير Excel
+                        Excel
                     </button>
                     <button id="kpis-export-pdf-btn" class="btn-secondary">
                         <i class="fas fa-file-pdf ml-2"></i>
-                        تصدير PDF
+                        ${t('module.kpi.exportPDF','تصدير PDF')}
                     </button>
                     <button id="kpis-settings-btn" class="btn-primary">
                         <i class="fas fa-cog ml-2"></i>
-                        إعدادات الأهداف
+                        ${t('module.kpi.settings','إعدادات الأهداف')}
                     </button>
                 </div>
             </div>
@@ -3461,33 +3529,33 @@ SafetyPerformanceKPIs.render = async function () {
                         </div>
                         <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-1 gap-4">
                             <div>
-                                <label class="block text-sm font-semibold text-gray-700 mb-2">الفترة الزمنية</label>
+                                <label class="block text-sm font-semibold text-gray-700 mb-2">${t('module.kpi.filter.period','الفترة الزمنية')}</label>
                                 <select id="kpi-filter-period" class="form-input">
-                                    <option value="monthly">شهري</option>
-                                    <option value="quarterly">ربع سنوي</option>
-                                    <option value="yearly">سنوي</option>
-                                    <option value="custom">مخصص</option>
+                                    <option value="monthly">${t('module.kpi.filter.monthly','شهري')}</option>
+                                    <option value="quarterly">${t('module.kpi.filter.quarterly','ربع سنوي')}</option>
+                                    <option value="yearly">${t('module.kpi.filter.yearly','سنوي')}</option>
+                                    <option value="custom">${t('module.kpi.filter.custom','مخصص')}</option>
                                 </select>
                             </div>
                             <div id="kpi-custom-dates" class="hidden">
-                                <label class="block text-sm font-semibold text-gray-700 mb-2">من تاريخ</label>
+                                <label class="block text-sm font-semibold text-gray-700 mb-2">${t('module.kpi.filter.fromDate','من تاريخ')}</label>
                                 <input type="date" id="kpi-filter-start-date" class="form-input">
                             </div>
                             <div id="kpi-custom-dates-end" class="hidden">
-                                <label class="block text-sm font-semibold text-gray-700 mb-2">إلى تاريخ</label>
+                                <label class="block text-sm font-semibold text-gray-700 mb-2">${t('module.kpi.filter.toDate','إلى تاريخ')}</label>
                                 <input type="date" id="kpi-filter-end-date" class="form-input">
                             </div>
                             <div>
-                                <label class="block text-sm font-semibold text-gray-700 mb-2">الإدارة</label>
+                                <label class="block text-sm font-semibold text-gray-700 mb-2">${t('module.kpi.filter.department','الإدارة')}</label>
                                 <select id="kpi-filter-department" class="form-input">
-                                    <option value="">جميع الإدارات</option>
+                                    <option value="">${t('module.kpi.filter.allDepartments','جميع الإدارات')}</option>
                                     ${this.getDepartmentOptions()}
                                 </select>
                             </div>
                             <div>
-                                <label class="block text-sm font-semibold text-gray-700 mb-2">الموقع</label>
+                                <label class="block text-sm font-semibold text-gray-700 mb-2">${t('module.kpi.filter.location','الموقع')}</label>
                                 <select id="kpi-filter-location" class="form-input">
-                                    <option value="">جميع المواقع</option>
+                                    <option value="">${t('module.kpi.filter.allLocations','جميع المواقع')}</option>
                                     ${this.getLocationOptions()}
                                 </select>
                             </div>
@@ -3495,11 +3563,11 @@ SafetyPerformanceKPIs.render = async function () {
                         <div class="mt-4 flex gap-2 flex-wrap">
                             <button id="kpi-apply-filters" class="btn-primary">
                                 <i class="fas fa-search ml-2"></i>
-                                تطبيق التصفية
+                                ${t('module.kpi.filter.apply','تطبيق التصفية')}
                             </button>
                             <button id="kpi-reset-filters" class="btn-secondary">
                                 <i class="fas fa-redo ml-2"></i>
-                                إعادة تعيين
+                                ${t('module.kpi.filter.reset','إعادة تعيين')}
                             </button>
                         </div>
                     </div>
@@ -3540,9 +3608,9 @@ SafetyPerformanceKPIs.render = async function () {
                         <div>
                             <h2 class="card-title text-emerald-900">
                                 <i class="fas fa-arrow-trend-up ml-2"></i>
-                                المؤشرات الاستباقية
+                                ${t('module.kpi.leading.title','المؤشرات الاستباقية')}
                             </h2>
-                            <p class="text-sm text-emerald-800 mt-2">قياس الوقاية والالتزام والأنشطة الاستباقية قبل وقوع الحوادث.</p>
+                            <p class="text-sm text-emerald-800 mt-2">${t('module.kpi.leading.subtitle','مؤشرات تقيس أداء الوقاية والتحكم قبل وقوع الحوادث')}</p>
                         </div>
                         <div class="rounded-2xl bg-white/90 px-3 py-2 text-xs font-bold text-emerald-700 border border-emerald-100">Leading Indicators</div>
                     </div>
@@ -3560,9 +3628,9 @@ SafetyPerformanceKPIs.render = async function () {
                         <div>
                             <h2 class="card-title text-rose-900">
                                 <i class="fas fa-arrow-trend-down ml-2"></i>
-                                المؤشرات التراجعية
+                                ${t('module.kpi.lagging.title','المؤشرات التراجعية')}
                             </h2>
-                            <p class="text-sm text-rose-800 mt-2">عرض النتائج الفعلية والمخاطر وتأثيرها المباشر على الأداء.</p>
+                            <p class="text-sm text-rose-800 mt-2">${t('module.kpi.lagging.subtitle','مؤشرات تقيس النتائج الفعلية لما حدث')}</p>
                         </div>
                         <div class="rounded-2xl bg-white/90 px-3 py-2 text-xs font-bold text-rose-700 border border-rose-100">Lagging Indicators</div>
                     </div>
@@ -3580,9 +3648,9 @@ SafetyPerformanceKPIs.render = async function () {
                 <div>
                     <h2 class="text-xl font-black text-slate-900">
                         <i class="fas fa-chart-line ml-2 text-sky-600"></i>
-                        الرسوم البيانية والتحليلات
+                        ${t('module.kpi.chart.title','الرسوم البيانية والتحليلات')}
                     </h2>
-                    <p class="text-sm text-slate-500 mt-1">تحليل بصري مباشر للاتجاهات والمقارنات ومناطق التركيز.</p>
+                    <p class="text-sm text-slate-500 mt-1"></p>
                 </div>
             </div>
             <div class="grid grid-cols-1 xl:grid-cols-2 gap-6">
@@ -3707,7 +3775,7 @@ SafetyPerformanceKPIs.buildScorecardExcelWorksheet = function (tableRows, report
 SafetyPerformanceKPIs.exportScorecardToExcel = function () {
     const table = this.getExportableScorecardTable();
     if (!table || typeof XLSX === 'undefined') {
-        Notification.error('تعذر تصدير السكور كارد إلى Excel');
+        Notification.error(this._t('module.kpi.notify.excelError','تعذر تصدير السكور كارد إلى Excel'));
         return;
     }
 
@@ -3721,13 +3789,13 @@ SafetyPerformanceKPIs.exportScorecardToExcel = function () {
     );
     XLSX.utils.book_append_sheet(workbook, worksheet, 'Safety Scorecard');
     XLSX.writeFile(workbook, `Safety_Performance_Scorecard_${this.scorecardYear}.xlsx`);
-    Notification.success('تم تصدير Safety Performance Scorecard إلى Excel');
+    Notification.success(this._t('module.kpi.notify.excelSuccess','تم تصدير Safety Performance Scorecard إلى Excel'));
 };
 
 SafetyPerformanceKPIs.exportScorecardToPDF = function () {
     const table = this.getExportableScorecardTable();
     if (!table) {
-        Notification.error('تعذر تصدير السكور كارد إلى PDF');
+        Notification.error(this._t('module.kpi.notify.pdfError','تعذر تصدير السكور كارد إلى PDF'));
         return;
     }
 
@@ -3836,7 +3904,7 @@ SafetyPerformanceKPIs.exportScorecardToPDF = function () {
     const printWindow = window.open(url, '_blank');
     if (!printWindow) {
         URL.revokeObjectURL(url);
-        Notification.error('يرجى السماح بالنوافذ المنبثقة لإتمام تصدير PDF');
+        Notification.error(SafetyPerformanceKPIs._t('module.kpi.notify.pdfBlocked','يرجى السماح بالنوافذ المنبثقة لإتمام تصدير PDF'));
         return;
     }
 
@@ -3846,7 +3914,7 @@ SafetyPerformanceKPIs.exportScorecardToPDF = function () {
             setTimeout(() => URL.revokeObjectURL(url), 1000);
         }, 400);
     };
-    Notification.success('تم فتح معاينة PDF الخاصة بالسكور كارد');
+    Notification.success(SafetyPerformanceKPIs._t('module.kpi.notify.pdfSuccess','تم فتح معاينة PDF الخاصة بالسكور كارد'));
 };
 
 // ===== Export module to global scope =====
@@ -3892,15 +3960,17 @@ SafetyPerformanceKPIs.loadKPIAnnualPlans = async function() {
         console.error('Error loading KPI annual plans:', error);
         const tbody = document.getElementById('kpi-annual-plan-body');
         if (tbody) {
+            const errMsg = SafetyPerformanceKPIs._t('module.kpi.loadError','حدث خطأ في تحميل البيانات');
+            const retryLbl = SafetyPerformanceKPIs._t('module.kpi.retry','إعادة المحاولة');
             tbody.innerHTML = `
                 <tr>
                     <td colspan="20" style="padding: 40px; text-align: center; color: #6b7280;">
                         <i class="fas fa-exclamation-triangle text-3xl mb-3 text-yellow-500"></i>
-                        <p>حدث خطأ في تحميل البيانات</p>
-                        <p class="text-sm mt-2">${Utils.escapeHTML(error.message || 'خطأ غير معروف')}</p>
+                        <p>${errMsg}</p>
+                        <p class="text-sm mt-2">${Utils.escapeHTML(error.message || '')}</p>
                         <button onclick="SafetyPerformanceKPIs.loadKPIAnnualPlans()" class="btn-primary mt-4">
                             <i class="fas fa-redo ml-2"></i>
-                            إعادة المحاولة
+                            ${retryLbl}
                         </button>
                     </td>
                 </tr>
@@ -3914,7 +3984,6 @@ SafetyPerformanceKPIs.renderKPIAnnualPlanTable = function(data) {
     if (!tbody) return;
 
     const months = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
-    // Safe fallback for permission check
     const isReadOnly = (typeof window !== 'undefined' && typeof window.isReadOnlyRole === 'function') 
         ? window.isReadOnlyRole() 
         : false;
@@ -3922,11 +3991,12 @@ SafetyPerformanceKPIs.renderKPIAnnualPlanTable = function(data) {
 
     if (!data || data.length === 0) {
         const colSpan = canEdit ? 21 : 20;
+        const noDataMsg = this._t('module.kpi.annual.noData','لا توجد بيانات - اضغط على "إضافة مؤشر جديد" للبدء');
         tbody.innerHTML = `
             <tr>
                 <td colspan="${colSpan}" style="padding: 40px; text-align: center; color: #6b7280;">
                     <i class="fas fa-inbox text-3xl mb-3"></i>
-                    <p>لا توجد بيانات${canEdit ? ' - اضغط على "إضافة مؤشر جديد" للبدء' : ''}</p>
+                    <p>${noDataMsg}</p>
                 </td>
             </tr>
         `;
@@ -3966,10 +4036,10 @@ SafetyPerformanceKPIs.renderKPIAnnualPlanTable = function(data) {
 };
 
 SafetyPerformanceKPIs.addKPIAnnualPlan = function() {
+    const t = (k, f) => this._t(k, f);
     const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
     const year = new Date().getFullYear();
     
-    // إنشاء نموذج مضمن
     const panel = document.getElementById('spk-annual-plan-panel');
     if (!panel) return;
     
@@ -3979,11 +4049,11 @@ SafetyPerformanceKPIs.addKPIAnnualPlan = function() {
                 <div class="flex items-center justify-between">
                     <h2 class="card-title text-blue-800">
                         <i class="fas fa-plus-circle ml-2"></i>
-                        إضافة مؤشر أداء جديد - الخطة السنوية ${year}
+                        ${t('module.kpi.annual.form.title.add','إضافة مؤشر KPI جديد')} - ${year}
                     </h2>
                     <button onclick="SafetyPerformanceKPIs.cancelAddKPIAnnualPlan()" class="btn-secondary">
                         <i class="fas fa-times ml-2"></i>
-                        إلغاء
+                        ${t('module.kpi.annual.form.cancel','إلغاء')}
                     </button>
                 </div>
             </div>
@@ -3991,35 +4061,35 @@ SafetyPerformanceKPIs.addKPIAnnualPlan = function() {
                 <form id="kpi-annual-plan-form" class="space-y-6">
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">Indicator Type / نوع المؤشر *</label>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">${t('module.kpi.annual.form.type','نوع المؤشر')} *</label>
                             <select id="kpi-plan-indicator-type" class="form-input" required>
-                                <option value="Leading">📈 Leading Indicators (استباقي)</option>
-                                <option value="Lagging">📉 Lagging Indicators (تراجعي)</option>
+                                <option value="Leading">📈 Leading - ${t('module.kpi.annual.form.leading','استباقي')}</option>
+                                <option value="Lagging">📉 Lagging - ${t('module.kpi.annual.form.lagging','تراجعي')}</option>
                             </select>
                         </div>
                         <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">OBJECTIVE / الهدف *</label>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">${t('module.kpi.annual.form.objective','الهدف الاستراتيجي')} *</label>
                             <input type="text" id="kpi-plan-objective" class="form-input" placeholder="e.g., HSE Trainings" required>
                         </div>
                         <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">KPI / المؤشر *</label>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">${t('module.kpi.annual.form.kpi','المؤشر (KPI)')} *</label>
                             <input type="text" id="kpi-plan-kpi" class="form-input" placeholder="e.g., Number of unique employees attended" required>
                         </div>
                         <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">TARGET / الهدف المحدد</label>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">${t('module.kpi.annual.form.target','المستهدف')}</label>
                             <input type="text" id="kpi-plan-target" class="form-input" placeholder="e.g., Training program for employees">
                         </div>
                         <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">GOAL / الغاية</label>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">${t('module.kpi.annual.form.goal','الغاية')}</label>
                             <input type="text" id="kpi-plan-goal" class="form-input" placeholder="e.g., 300">
                         </div>
                     </div>
                     <div>
-                        <label class="block text-sm font-semibold text-gray-700 mb-2">IMPROVEMENT PLAN / خطة التحسين</label>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">${t('module.kpi.annual.form.improvement','خطة التحسين')}</label>
                         <textarea id="kpi-plan-improvement" class="form-input" rows="3" placeholder="Describe the improvement plan..."></textarea>
                     </div>
                     
-                    <h3 class="text-lg font-bold mt-6 mb-4 border-t pt-4">Monthly Values for ${year} / القيم الشهرية</h3>
+                    <h3 class="text-lg font-bold mt-6 mb-4 border-t pt-4">${t('module.kpi.annual.form.monthlyValues','القيم الشهرية')} - ${year}</h3>
                     <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                         ${months.map(m => `
                             <div>
@@ -4032,11 +4102,11 @@ SafetyPerformanceKPIs.addKPIAnnualPlan = function() {
                     <div class="flex gap-3 mt-6 pt-4 border-t">
                         <button type="button" id="kpi-save-btn" onclick="SafetyPerformanceKPIs.saveKPIAnnualPlan()" class="btn-primary">
                             <i class="fas fa-save ml-2"></i>
-                            <span id="kpi-save-text">حفظ المؤشر</span>
+                            <span id="kpi-save-text">${t('module.kpi.annual.form.save','حفظ المؤشر')}</span>
                         </button>
                         <button type="button" onclick="SafetyPerformanceKPIs.cancelAddKPIAnnualPlan()" class="btn-secondary">
                             <i class="fas fa-times ml-2"></i>
-                            إلغاء
+                            ${t('module.kpi.annual.form.cancel','إلغاء')}
                         </button>
                     </div>
                 </form>
@@ -4044,16 +4114,18 @@ SafetyPerformanceKPIs.addKPIAnnualPlan = function() {
         </div>
     `;
     
-    // Scroll to top for better UX
+    if (window.AppI18n?.applyModuleI18n) window.AppI18n.applyModuleI18n(panel);
+    else if (window.I18n?.applyModuleI18n) window.I18n.applyModuleI18n(panel);
     panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
 };
 
 SafetyPerformanceKPIs.cancelAddKPIAnnualPlan = function() {
-    // Instant cancel - just reload the tab view
     this.activeTab = 'annual-plan';
     const panel = document.getElementById('spk-annual-plan-panel');
     if (panel) {
         panel.innerHTML = this.renderAnnualPlanTab();
+        if (window.AppI18n?.applyModuleI18n) window.AppI18n.applyModuleI18n(panel);
+        else if (window.I18n?.applyModuleI18n) window.I18n.applyModuleI18n(panel);
     }
     // Reload data immediately
     setTimeout(() => this.loadKPIAnnualPlans(), 50);
@@ -4069,7 +4141,7 @@ SafetyPerformanceKPIs.saveKPIAnnualPlan = async function(id = null) {
             saveBtn.classList.add('opacity-50', 'cursor-not-allowed');
         }
         if (saveText) {
-            saveText.textContent = 'جاري الحفظ...';
+            saveText.textContent = this._t('module.kpi.annual.form.saving', 'جاري الحفظ...');
         }
 
         const planData = {
@@ -4098,12 +4170,13 @@ SafetyPerformanceKPIs.saveKPIAnnualPlan = async function(id = null) {
         const response = await GoogleIntegration.callBackend('saveKPIAnnualPlan', planData);
         
         if (response && response.success) {
-            Notification.success(id ? 'تم تحديث المؤشر بنجاح' : 'تم إضافة المؤشر بنجاح');
-            // Instant reload
+            Notification.success(id ? this._t('module.kpi.notify.updateSuccess','تم تحديث المؤشر بنجاح') : this._t('module.kpi.notify.saveSuccess','تم إضافة المؤشر بنجاح'));
             this.activeTab = 'annual-plan';
             const panel = document.getElementById('spk-annual-plan-panel');
             if (panel) {
                 panel.innerHTML = this.renderAnnualPlanTab();
+                if (window.AppI18n?.applyModuleI18n) window.AppI18n.applyModuleI18n(panel);
+                else if (window.I18n?.applyModuleI18n) window.I18n.applyModuleI18n(panel);
             }
             setTimeout(() => this.loadKPIAnnualPlans(), 50);
         } else {
@@ -4111,9 +4184,8 @@ SafetyPerformanceKPIs.saveKPIAnnualPlan = async function(id = null) {
         }
     } catch (error) {
         console.error('Error saving KPI annual plan:', error);
-        Notification.error('حدث خطأ أثناء الحفظ: ' + error.message);
+        Notification.error(this._t('module.kpi.notify.saveError','حدث خطأ أثناء الحفظ: ') + error.message);
     } finally {
-        // Reset button state
         const saveBtn = document.getElementById('kpi-save-btn');
         const saveText = document.getElementById('kpi-save-text');
         if (saveBtn) {
@@ -4121,7 +4193,7 @@ SafetyPerformanceKPIs.saveKPIAnnualPlan = async function(id = null) {
             saveBtn.classList.remove('opacity-50', 'cursor-not-allowed');
         }
         if (saveText) {
-            saveText.textContent = 'حفظ المؤشر';
+            saveText.textContent = this._t('module.kpi.annual.form.save','حفظ المؤشر');
         }
     }
 };
@@ -4134,7 +4206,7 @@ SafetyPerformanceKPIs.editKPIAnnualPlan = async function(id) {
         if (response && response.success) {
             const plan = (response.data || []).find(p => p.id === id);
             if (!plan) {
-                Notification.error('المؤشر غير موجود');
+                Notification.error(this._t('module.kpi.notify.notFound','المؤشر غير موجود'));
                 return;
             }
 
@@ -4157,25 +4229,25 @@ SafetyPerformanceKPIs.editKPIAnnualPlan = async function(id) {
         }
     } catch (error) {
         console.error('Error loading KPI plan for edit:', error);
-        Notification.error('حدث خطأ أثناء تحميل البيانات');
+        Notification.error(this._t('module.kpi.notify.loadError','حدث خطأ أثناء تحميل البيانات'));
     }
 };
 
 SafetyPerformanceKPIs.deleteKPIAnnualPlan = async function(id) {
-    if (!confirm('هل أنت متأكد من حذف هذا المؤشر؟')) return;
+    if (!confirm(this._t('module.kpi.notify.deleteConfirm','هل أنت متأكد من حذف هذا المؤشر؟'))) return;
     
     try {
         const response = await GoogleIntegration.callBackend('deleteKPIAnnualPlan', { planId: id });
         
         if (response && response.success) {
-            Notification.success('تم حذف المؤشر بنجاح');
+            Notification.success(this._t('module.kpi.notify.deleteSuccess','تم حذف المؤشر بنجاح'));
             this.loadKPIAnnualPlans();
         } else {
             throw new Error(response?.message || 'Failed to delete');
         }
     } catch (error) {
         console.error('Error deleting KPI annual plan:', error);
-        Notification.error('حدث خطأ أثناء الحذف: ' + error.message);
+        Notification.error(this._t('module.kpi.notify.deleteError','حدث خطأ أثناء الحذف: ') + error.message);
     }
 };
 
@@ -4473,7 +4545,7 @@ SafetyPerformanceKPIs.saveHSEMonitoringPlan = async function(id = null) {
         const response = await GoogleIntegration.callBackend('saveHSEMonitoringPlan', planData);
         
         if (response && response.success) {
-            Notification.success(id ? 'تم تحديث النشاط بنجاح' : 'تم إضافة النشاط بنجاح');
+            Notification.success(id ? this._t('module.kpi.notify.updateSuccess','تم تحديث النشاط بنجاح') : this._t('module.kpi.notify.saveSuccess','تم إضافة النشاط بنجاح'));
             // Instant reload
             this.activeTab = 'monitoring-plan';
             const panel = document.getElementById('spk-monitoring-plan-panel');
@@ -4486,7 +4558,7 @@ SafetyPerformanceKPIs.saveHSEMonitoringPlan = async function(id = null) {
         }
     } catch (error) {
         console.error('Error saving HSE monitoring plan:', error);
-        Notification.error('حدث خطأ أثناء الحفظ: ' + error.message);
+        Notification.error(this._t('module.kpi.notify.saveError','حدث خطأ أثناء الحفظ: ') + error.message);
     } finally {
         // Reset button state
         const saveBtn = document.getElementById('hse-save-btn');
@@ -4496,7 +4568,7 @@ SafetyPerformanceKPIs.saveHSEMonitoringPlan = async function(id = null) {
             saveBtn.classList.remove('opacity-50', 'cursor-not-allowed');
         }
         if (saveText) {
-            saveText.textContent = 'حفظ النشاط';
+            saveText.textContent = this._t('module.kpi.annual.form.save','حفظ النشاط');
         }
     }
 };
@@ -4509,7 +4581,7 @@ SafetyPerformanceKPIs.editHSEMonitoringPlan = async function(id) {
         if (response && response.success) {
             const plan = (response.data || []).find(p => p.id === id);
             if (!plan) {
-                Notification.error('النشاط غير موجود');
+                Notification.error(this._t('module.kpi.notify.notFound','النشاط غير موجود'));
                 return;
             }
 
@@ -4535,25 +4607,25 @@ SafetyPerformanceKPIs.editHSEMonitoringPlan = async function(id) {
         }
     } catch (error) {
         console.error('Error loading HSE monitoring plan for edit:', error);
-        Notification.error('حدث خطأ أثناء تحميل البيانات');
+        Notification.error(this._t('module.kpi.notify.loadError','حدث خطأ أثناء تحميل البيانات'));
     }
 };
 
 SafetyPerformanceKPIs.deleteHSEMonitoringPlan = async function(id) {
-    if (!confirm('هل أنت متأكد من حذف هذا النشاط؟')) return;
+    if (!confirm(this._t('module.kpi.notify.deleteConfirm','هل أنت متأكد من حذف هذا النشاط؟'))) return;
     
     try {
         const response = await GoogleIntegration.callBackend('deleteHSEMonitoringPlan', { planId: id });
         
         if (response && response.success) {
-            Notification.success('تم حذف النشاط بنجاح');
+            Notification.success(this._t('module.kpi.notify.deleteSuccess','تم حذف النشاط بنجاح'));
             this.loadHSEMonitoringPlans();
         } else {
             throw new Error(response?.message || 'Failed to delete');
         }
     } catch (error) {
         console.error('Error deleting HSE monitoring plan:', error);
-        Notification.error('حدث خطأ أثناء الحذف: ' + error.message);
+        Notification.error(this._t('module.kpi.notify.deleteError','حدث خطأ أثناء الحذف: ') + error.message);
     }
 };
 
@@ -4566,7 +4638,7 @@ SafetyPerformanceKPIs.exportAnnualPlanToExcel = async function() {
         const response = await GoogleIntegration.callBackend('getKPIAnnualPlans', { filters: { year } });
         
         if (!response || !response.success || !response.data || response.data.length === 0) {
-            Notification.warning('لا توجد بيانات للتصدير');
+            Notification.warning(this._t('module.kpi.notify.noData','لا توجد بيانات للتصدير'));
             return;
         }
 
@@ -4599,10 +4671,10 @@ SafetyPerformanceKPIs.exportAnnualPlanToExcel = async function() {
         link.click();
         URL.revokeObjectURL(url);
         
-        Notification.success('تم تصدير البيانات بنجاح');
+        Notification.success(this._t('module.kpi.notify.excelSuccess','تم تصدير البيانات بنجاح'));
     } catch (error) {
         console.error('Error exporting Annual Plan to Excel:', error);
-        Notification.error('حدث خطأ أثناء التصدير: ' + error.message);
+        Notification.error(this._t('module.kpi.notify.saveError','حدث خطأ أثناء التصدير: ') + error.message);
     }
 };
 
@@ -4614,7 +4686,7 @@ SafetyPerformanceKPIs.exportAnnualPlanToPDF = async function() {
         const response = await GoogleIntegration.callBackend('getKPIAnnualPlans', { filters: { year } });
         
         if (!response || !response.success || !response.data || response.data.length === 0) {
-            Notification.warning('لا توجد بيانات للتصدير');
+            Notification.warning(this._t('module.kpi.notify.noData','لا توجد بيانات للتصدير'));
             return;
         }
 
@@ -4692,7 +4764,7 @@ SafetyPerformanceKPIs.exportAnnualPlanToPDF = async function() {
         
         if (!printWindow) {
             URL.revokeObjectURL(url);
-            Notification.error('يرجى السماح بالنوافذ المنبثقة لإتمام التصدير');
+            Notification.error(this._t('module.kpi.notify.pdfBlocked','يرجى السماح بالنوافذ المنبثقة لإتمام التصدير'));
             return;
         }
 
@@ -4703,10 +4775,10 @@ SafetyPerformanceKPIs.exportAnnualPlanToPDF = async function() {
             }, 400);
         };
         
-        Notification.success('تم فتح معاينة PDF بنجاح');
+        Notification.success(this._t('module.kpi.notify.pdfSuccess','تم فتح معاينة PDF بنجاح'));
     } catch (error) {
         console.error('Error exporting Annual Plan to PDF:', error);
-        Notification.error('حدث خطأ أثناء التصدير: ' + error.message);
+        Notification.error(this._t('module.kpi.notify.saveError','حدث خطأ أثناء التصدير: ') + error.message);
     }
 };
 
@@ -4719,7 +4791,7 @@ SafetyPerformanceKPIs.exportMonitoringPlanToExcel = async function() {
         const response = await GoogleIntegration.callBackend('getHSEMonitoringPlans', { filters: { year } });
         
         if (!response || !response.success || !response.data || response.data.length === 0) {
-            Notification.warning('لا توجد بيانات للتصدير');
+            Notification.warning(this._t('module.kpi.notify.noData','لا توجد بيانات للتصدير'));
             return;
         }
 
@@ -4763,10 +4835,10 @@ SafetyPerformanceKPIs.exportMonitoringPlanToExcel = async function() {
         link.click();
         URL.revokeObjectURL(url);
         
-        Notification.success('تم تصدير البيانات بنجاح');
+        Notification.success(this._t('module.kpi.notify.excelSuccess','تم تصدير البيانات بنجاح'));
     } catch (error) {
         console.error('Error exporting Monitoring Plan to Excel:', error);
-        Notification.error('حدث خطأ أثناء التصدير: ' + error.message);
+        Notification.error(this._t('module.kpi.notify.saveError','حدث خطأ أثناء التصدير: ') + error.message);
     }
 };
 
@@ -4778,7 +4850,7 @@ SafetyPerformanceKPIs.exportMonitoringPlanToPDF = async function() {
         const response = await GoogleIntegration.callBackend('getHSEMonitoringPlans', { filters: { year } });
         
         if (!response || !response.success || !response.data || response.data.length === 0) {
-            Notification.warning('لا توجد بيانات للتصدير');
+            Notification.warning(this._t('module.kpi.notify.noData','لا توجد بيانات للتصدير'));
             return;
         }
 
@@ -4871,7 +4943,7 @@ SafetyPerformanceKPIs.exportMonitoringPlanToPDF = async function() {
         
         if (!printWindow) {
             URL.revokeObjectURL(url);
-            Notification.error('يرجى السماح بالنوافذ المنبثقة لإتمام التصدير');
+            Notification.error(this._t('module.kpi.notify.pdfBlocked','يرجى السماح بالنوافذ المنبثقة لإتمام التصدير'));
             return;
         }
 
@@ -4882,9 +4954,9 @@ SafetyPerformanceKPIs.exportMonitoringPlanToPDF = async function() {
             }, 400);
         };
         
-        Notification.success('تم فتح معاينة PDF بنجاح');
+        Notification.success(this._t('module.kpi.notify.pdfSuccess','تم فتح معاينة PDF بنجاح'));
     } catch (error) {
         console.error('Error exporting Monitoring Plan to PDF:', error);
-        Notification.error('حدث خطأ أثناء التصدير: ' + error.message);
+        Notification.error(this._t('module.kpi.notify.saveError','حدث خطأ أثناء التصدير: ') + error.message);
     }
 };
