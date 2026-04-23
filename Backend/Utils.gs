@@ -1219,7 +1219,20 @@ function saveToSheet(sheetName, data, spreadsheetId = null) {
         
         // التأكد من تحديث الرؤوس إذا لزم الأمر
         ensureSheetHeaders(sheet, sheetName, data);
-        
+
+        var _ptwRegistryScriptLock = null;
+        if (sheetName === 'PTWRegistry') {
+            _ptwRegistryScriptLock = LockService.getScriptLock();
+            try {
+                _ptwRegistryScriptLock.waitLock(45000);
+            } catch (lockEx) {
+                Logger.log('PTWRegistry saveToSheet lock timeout: ' + lockEx.toString());
+                return { success: false, message: 'ازدحام على توليد رقم التصريح. أعد المحاولة بعد لحظات.' };
+            }
+        }
+        var resolvedPTWRegistryForResponse = null;
+        try {
+
         // معالجة attachments و image/photo قبل الحفظ
         const processDataItem = function(item) {
             if (!item || typeof item !== 'object') return item;
@@ -1344,6 +1357,7 @@ function saveToSheet(sheetName, data, spreadsheetId = null) {
                         processed[f] = processed[f] === true || processed[f] === 'true' || processed[f] === 1;
                     }
                 });
+                resolvedPTWRegistryForResponse = processed;
             }
             
             // ✅ Attachments: store as plain text (NO JSON)
@@ -1443,6 +1457,10 @@ function saveToSheet(sheetName, data, spreadsheetId = null) {
                     Logger.log('❌ خطأ في معالجة الشعار في saveToSheet: ' + logoError.toString());
                 }
             }
+
+            if (sheetName === 'PTW') {
+                processed = normalizePTWRowForSheet_(processed);
+            }
             
             return processed;
         };
@@ -1521,7 +1539,20 @@ function saveToSheet(sheetName, data, spreadsheetId = null) {
         const cacheKey = 'hse_read_' + sheetName + '_v1';
         cache.remove(cacheKey);
 
-        return { success: true, message: 'تم حفظ البيانات بنجاح' };
+        const saveResult = { success: true, message: 'تم حفظ البيانات بنجاح' };
+        if (sheetName === 'PTWRegistry' && resolvedPTWRegistryForResponse) {
+            saveResult.resolvedPTWRegistry = resolvedPTWRegistryForResponse;
+        }
+        return saveResult;
+        } finally {
+            if (_ptwRegistryScriptLock) {
+                try {
+                    _ptwRegistryScriptLock.releaseLock();
+                } catch (relEx) {
+                    Logger.log('saveToSheet releaseLock: ' + relEx.toString());
+                }
+            }
+        }
     } catch (error) {
         Logger.log('Error in saveToSheet: ' + error.toString());
         return { success: false, message: 'حدث خطأ أثناء حفظ البيانات: ' + error.toString() };
@@ -1604,6 +1635,19 @@ function appendToSheet(sheetName, data, spreadsheetId = null) {
                 }
             }
         }
+
+        var _ptwRegistryAppendLock = null;
+        if (sheetName === 'PTWRegistry') {
+            _ptwRegistryAppendLock = LockService.getScriptLock();
+            try {
+                _ptwRegistryAppendLock.waitLock(45000);
+            } catch (lockEx) {
+                Logger.log('PTWRegistry appendToSheet lock timeout: ' + lockEx.toString());
+                return { success: false, message: 'ازدحام على توليد رقم التصريح. أعد المحاولة بعد لحظات.' };
+            }
+        }
+        var resolvedPTWRegistryForAppend = null;
+        try {
 
         // معالجة attachments و image/photo قبل الحفظ
         const processDataItemForAppend = function(item) {
@@ -1729,6 +1773,7 @@ function appendToSheet(sheetName, data, spreadsheetId = null) {
                         processed[f] = processed[f] === true || processed[f] === 'true' || processed[f] === 1;
                     }
                 });
+                resolvedPTWRegistryForAppend = processed;
             }
             
             // ✅ Attachments: store as plain text (NO JSON)
@@ -1805,6 +1850,10 @@ function appendToSheet(sheetName, data, spreadsheetId = null) {
                 }
                 // ✅ Store images as plain text (NO JSON)
                 processed.images = processedImages.filter(Boolean).map(v => String(v)).join('\n');
+            }
+
+            if (sheetName === 'PTW') {
+                processed = normalizePTWRowForSheet_(processed);
             }
             
             return processed;
@@ -1908,12 +1957,12 @@ function appendToSheet(sheetName, data, spreadsheetId = null) {
                 }
                 
                 if (uniqueData.length === 0) {
-                    return { 
+                    return withResolvedPTWRegistry_(sheetName, { 
                         success: true, 
                         message: 'جميع السجلات موجودة بالفعل، تم تحديثها',
                         duplicatesCount: duplicates.length,
                         updatedCount: duplicates.length
-                    };
+                    }, resolvedPTWRegistryForAppend);
                 }
                 
                 // معالجة البيانات الفريدة بكميات كبيرة - تحسين الأداء
@@ -2016,12 +2065,12 @@ function appendToSheet(sheetName, data, spreadsheetId = null) {
                             // تحديث السجل الموجود بدلاً من إضافة مكرر
                             const updateResult = updateSingleRowInSheet(sheetName, recordId, processedData, spreadsheetId);
                             if (updateResult && updateResult.success) {
-                                return { 
+                                return withResolvedPTWRegistry_(sheetName, { 
                                     success: true, 
                                     message: 'تم تحديث السجل الموجود بدلاً من إضافة مكرر',
                                     isDuplicate: true,
                                     rowNumber: updateResult.rowNumber || null
-                                };
+                                }, resolvedPTWRegistryForAppend);
                             } else {
                                 // إذا فشل التحديث، نتابع الإضافة (قد يكون هناك خطأ في updateSingleRowInSheet)
                                 Logger.log('⚠️ Failed to update existing record, proceeding with append');
@@ -2166,7 +2215,7 @@ function appendToSheet(sheetName, data, spreadsheetId = null) {
                 
                 Logger.log('✅ appendToSheet: Successfully appended row to ' + sheetName + ' at row ' + verifyLastRow + ' using appendRow() (was ' + lastRowBefore + ')');
                 
-                return { success: true, message: 'تم إضافة البيانات بنجاح', rowNumber: verifyLastRow };
+                return withResolvedPTWRegistry_(sheetName, { success: true, message: 'تم إضافة البيانات بنجاح', rowNumber: verifyLastRow }, resolvedPTWRegistryForAppend);
             } catch (error) {
                 Logger.log('Error appending single row with appendRow(): ' + error.toString());
                 Logger.log('Error details: ' + JSON.stringify(error));
@@ -2321,7 +2370,7 @@ function appendToSheet(sheetName, data, spreadsheetId = null) {
                     }
                     
                     Logger.log('✅ appendToSheet: Successfully appended row to ' + sheetName + ' at row ' + finalStartRow + ' using fallback method');
-                    return { success: true, message: 'تم إضافة البيانات بنجاح', rowNumber: finalStartRow };
+                    return withResolvedPTWRegistry_(sheetName, { success: true, message: 'تم إضافة البيانات بنجاح', rowNumber: finalStartRow }, resolvedPTWRegistryForAppend);
                 } catch (fallbackError) {
                     Logger.log('❌ Error in fallback method: ' + fallbackError.toString());
                     Logger.log('❌ Fallback error details: ' + JSON.stringify(fallbackError));
@@ -2330,7 +2379,16 @@ function appendToSheet(sheetName, data, spreadsheetId = null) {
             }
         }
 
-        return { success: true, message: 'تم إضافة البيانات بنجاح' };
+        return withResolvedPTWRegistry_(sheetName, { success: true, message: 'تم إضافة البيانات بنجاح' }, resolvedPTWRegistryForAppend);
+        } finally {
+            if (_ptwRegistryAppendLock) {
+                try {
+                    _ptwRegistryAppendLock.releaseLock();
+                } catch (relEx) {
+                    Logger.log('appendToSheet releaseLock: ' + relEx.toString());
+                }
+            }
+        }
     } catch (error) {
         Logger.log('Error in appendToSheet: ' + error.toString());
         return { success: false, message: 'حدث خطأ أثناء إضافة البيانات: ' + error.toString() };
@@ -3367,6 +3425,54 @@ function generateSequentialId(prefix, sheetName, spreadsheetId, idField) {
         // في حالة الخطأ، نستخدم UUID كبديل
         return Utilities.getUuid();
     }
+}
+
+/**
+ * اقتصار صف PTW على رؤوس PTW الافتراضية وتبسيط القيم لصيغة آمنة للورقة.
+ */
+function normalizePTWRowForSheet_(processed) {
+    if (!processed || typeof processed !== 'object') return processed;
+    var allowed = getDefaultHeaders('PTW');
+    if (!allowed || !allowed.length) return processed;
+    var out = {};
+    for (var i = 0; i < allowed.length; i++) {
+        var h = allowed[i];
+        if (!processed.hasOwnProperty(h)) continue;
+        var v = processed[h];
+        if (v === undefined) continue;
+        if (v === null) {
+            out[h] = v;
+            continue;
+        }
+        if (typeof v === 'object') {
+            if (Object.prototype.toString.call(v) === '[object Date]') {
+                out[h] = v;
+            } else if (Array.isArray(v)) {
+                out[h] = v.map(function(x) {
+                    if (x === null || x === undefined) return '';
+                    if (typeof x === 'object') {
+                        return normalizeTextValue(x.name || x.label || x.title || String(x));
+                    }
+                    return normalizeTextValue(String(x));
+                }).filter(Boolean).join('، ');
+            } else {
+                out[h] = normalizeTextValue(v.name || v.label || v.title || String(v));
+            }
+        } else {
+            out[h] = v;
+        }
+    }
+    return out;
+}
+
+/**
+ * إرفاق السجل المُعرَّف بعد الكتابة لورقة PTWRegistry في ردّ append/save (للواجهة).
+ */
+function withResolvedPTWRegistry_(sheetName, result, resolved) {
+    if (result && result.success === true && sheetName === 'PTWRegistry' && resolved && typeof resolved === 'object') {
+        result.resolvedPTWRegistry = resolved;
+    }
+    return result;
 }
 
 /**

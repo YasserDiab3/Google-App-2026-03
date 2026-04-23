@@ -589,29 +589,53 @@ const PTW = {
                 throw new Error(registryResult?.message || 'فشل حفظ سجل التصريح اليدوي في الخلفية');
             }
 
-            // إعادة تحميل السجل من الخلفية ثم توحيد permitData.id مع permitId الفعلي (بعد resolvePTWRegistryIdsForWrite_)
-            try {
-                if (typeof this.loadRegistryFromBackend === 'function') {
-                    await this.loadRegistryFromBackend();
-                }
-            } catch (reloadErr) {
-                Utils.safeWarn('⚠️ تعذر إعادة تحميل PTWRegistry بعد الحفظ:', reloadErr);
-            }
-
+            const resolvedReg = registryResult.resolvedPTWRegistry;
             const paperKey = String(entry.paperPermitNumber || permitData.paperPermitNumber || '').trim();
             const oldPermitId = String(entry.permitId || permitData.id || '').trim();
-            if (paperKey && Array.isArray(this.registryData)) {
-                const refreshed = this.registryData.find(r =>
-                    String(r.paperPermitNumber || '').trim() === paperKey &&
-                    (r.isManualEntry === true || r.isManualEntry === 'true')
-                );
-                if (refreshed && refreshed.permitId) {
-                    permitData.id = refreshed.permitId;
-                    if (typeof AppState !== 'undefined' && AppState.appData && Array.isArray(AppState.appData.ptw)) {
-                        const pi = AppState.appData.ptw.findIndex(p => String(p.id || '').trim() === oldPermitId);
-                        if (pi !== -1) {
-                            AppState.appData.ptw[pi] = { ...AppState.appData.ptw[pi], id: refreshed.permitId };
-                        }
+
+            const applyResolvedPermitIds = (newPermitId, registryRow) => {
+                const pid = String(newPermitId || '').trim();
+                if (!pid) return;
+                permitData.id = pid;
+                if (entry) {
+                    entry.permitId = pid;
+                    if (registryRow && registryRow.id) entry.id = registryRow.id;
+                }
+                if (typeof AppState !== 'undefined' && AppState.appData && Array.isArray(AppState.appData.ptw)) {
+                    const pi = AppState.appData.ptw.findIndex(p => String(p.id || '').trim() === oldPermitId);
+                    if (pi !== -1) {
+                        AppState.appData.ptw[pi] = { ...AppState.appData.ptw[pi], id: pid };
+                    }
+                }
+            };
+
+            if (resolvedReg && resolvedReg.permitId) {
+                applyResolvedPermitIds(resolvedReg.permitId, resolvedReg);
+                if (paperKey && Array.isArray(this.registryData)) {
+                    const ri = this.registryData.findIndex(r =>
+                        String(r.paperPermitNumber || '').trim() === paperKey &&
+                        (r.isManualEntry === true || r.isManualEntry === 'true')
+                    );
+                    if (ri !== -1) {
+                        this.registryData[ri] = { ...this.registryData[ri], ...resolvedReg };
+                    }
+                }
+            } else {
+                try {
+                    if (typeof this.loadRegistryFromBackend === 'function') {
+                        await this.loadRegistryFromBackend();
+                    }
+                } catch (reloadErr) {
+                    Utils.safeWarn('⚠️ تعذر إعادة تحميل PTWRegistry بعد الحفظ:', reloadErr);
+                }
+
+                if (paperKey && Array.isArray(this.registryData)) {
+                    const refreshed = this.registryData.find(r =>
+                        String(r.paperPermitNumber || '').trim() === paperKey &&
+                        (r.isManualEntry === true || r.isManualEntry === 'true')
+                    );
+                    if (refreshed && refreshed.permitId) {
+                        applyResolvedPermitIds(refreshed.permitId, refreshed);
                     }
                 }
             }
@@ -8232,23 +8256,36 @@ const PTW = {
             }
             this.updateKPIs();
 
-            Notification.success(entryId ? 'تم تحديث التصريح بنجاح' : 'تم إضافة التصريح اليدوي بنجاح');
-
-            // المزامنة في الخلفية (بدون انتظار) — حفظ السجل + التصاريح + Google Sheets
             const isNewEntry = !entryId;
             const isNewPermit = existingPermitIndex === -1;
 
-            Promise.resolve().then(() => this.saveRegistryData({ skipSync: true })).then(() => {
-                if (typeof window.DataManager !== 'undefined' && window.DataManager.save) return window.DataManager.save();
-            }).then(() => {
-                return this.syncManualPermitRecordsToBackend(entry, permitData, {
+            if (typeof Notification !== 'undefined' && Notification.info) {
+                Notification.info('جاري المزامنة مع PTWRegistry و PTW…');
+            }
+
+            try {
+                await this.saveRegistryData({ skipSync: true });
+                if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
+                    await Promise.resolve(window.DataManager.save());
+                }
+                await this.syncManualPermitRecordsToBackend(entry, permitData, {
                     isNewRegistryEntry: isNewEntry,
                     isNewPermit: isNewPermit
                 });
-            }).catch(error => {
-                Utils.safeError('خطأ في مزامنة التصريح اليدوي:', error);
-                Notification.warning('تم الحفظ محلياً. جاري المزامنة مع السحابة لاحقاً.');
-            });
+                Notification.success(
+                    entryId
+                        ? 'تم تحديث التصريح بنجاح وتمت مزامنته مع السحابة (PTWRegistry + PTW)'
+                        : 'تم إضافة التصريح اليدوي بنجاح وتمت مزامنته مع السحابة (PTWRegistry + PTW)'
+                );
+            } catch (syncError) {
+                Utils.safeError('خطأ في مزامنة التصريح اليدوي:', syncError);
+                const msg = syncError && syncError.message ? String(syncError.message) : '';
+                Notification.warning(
+                    'تم الحفظ محلياً. فشلت مزامنة السحابة (تحقق من ورقة PTW و PTWRegistry): ' +
+                    (msg || 'خطأ غير معروف') +
+                    ' — يمكن إعادة المحاولة من المزامنة لاحقاً.'
+                );
+            }
         } catch (error) {
             Utils.safeError('خطأ في حفظ التصريح اليدوي:', error);
             Notification.error('حدث خطأ أثناء حفظ التصريح: ' + (error.message || 'خطأ غير معروف'));
