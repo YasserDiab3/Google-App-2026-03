@@ -10,7 +10,347 @@ const PPE = {
         stockItemsCache: null, // Cache لبيانات المخزون
         stockItemsCacheTime: null, // وقت التخزين المؤقت
         stockCacheExpiry: 5 * 60 * 1000, // انتهاء صلاحية Cache بعد 5 دقائق
-        lastSyncTime: null // وقت آخر مزامنة
+        lastSyncTime: null, // وقت آخر مزامنة
+        /** فلاتر سجل الاستلامات (نفس نمط سجل التردد / المستندات القانونية) */
+        filters: {
+            receipts: {
+                search: '',
+                equipmentType: '',
+                status: '',
+                dateFrom: '',
+                dateTo: ''
+            }
+        }
+    },
+
+    _t(key, fallback) {
+        if (window.AppI18n && typeof window.AppI18n.t === 'function') {
+            return window.AppI18n.t(key, fallback);
+        }
+        if (window.I18n && typeof window.I18n.t === 'function') {
+            return window.I18n.t(key, fallback);
+        }
+        return fallback;
+    },
+
+    applyModuleI18n(root) {
+        const el = root && root.nodeType ? root : document.getElementById('ppe-section');
+        if (!el) return;
+        const i18n = (window.AppI18n && typeof window.AppI18n.applyModuleI18n === 'function')
+            ? window.AppI18n
+            : ((window.I18n && typeof window.I18n.applyModuleI18n === 'function') ? window.I18n : null);
+        if (i18n) i18n.applyModuleI18n(el);
+    },
+
+    ensurePpeFilterStyles() {
+        if (document.getElementById('ppe-module-filter-styles')) return;
+        const style = document.createElement('style');
+        style.id = 'ppe-module-filter-styles';
+        style.textContent = `
+            .ppe-visits-filters-row { position: relative; }
+            .ppe-visits-filters-row .filters-grid { width: 100%; }
+            .ppe-visits-filters-row .filter-field { display: flex; flex-direction: column; gap: 6px; }
+            .ppe-visits-filters-row .filter-label {
+                font-size: 12px; font-weight: 600; color: #4a5568; text-transform: uppercase;
+                letter-spacing: 0.5px; display: flex; align-items: center; gap: 4px;
+            }
+            .ppe-visits-filters-row .filter-label i { font-size: 11px; color: #667eea; }
+            .ppe-visits-filters-row .filter-input {
+                width: 100%; padding: 10px 12px; border: 1px solid #e2e8f0; border-radius: 8px;
+                background: white; font-size: 14px; color: #2d3748; transition: all 0.2s ease;
+                box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+            }
+            .ppe-visits-filters-row .filter-input:focus {
+                outline: none; border-color: #667eea; box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+            }
+            .ppe-visits-filters-row .filter-reset-btn {
+                width: 100%; padding: 10px 16px; min-height: 42px; border-radius: 12px;
+                border: 1px solid #cbd5e1; background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+                color: #0f172a; font-weight: 700; font-size: 13px; cursor: pointer; transition: all 0.2s ease;
+                display: flex; align-items: center; justify-content: center; gap: 4px;
+            }
+            .ppe-visits-filters-row .filter-reset-btn:hover {
+                transform: translateY(-1px); box-shadow: 0 6px 14px rgba(15, 23, 42, 0.12);
+            }
+            .ppe-visits-filters-row .filter-count-badge {
+                display: inline-flex; align-items: center; justify-content: center; min-width: 24px; height: 20px;
+                padding: 2px 8px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                color: white; border-radius: 12px; font-size: 11px; font-weight: 700; margin-inline-start: 4px;
+            }
+        `;
+        document.head.appendChild(style);
+    },
+
+    getDisplayStatus(status) {
+        const s = String(status || '').trim();
+        if (s === 'مستلم') return this._t('module.ppe.status.received', 'مستلم');
+        if (s === 'قيد التسليم') return this._t('module.ppe.status.pending', 'قيد التسليم');
+        return s || '—';
+    },
+
+    isStatusReceived(status) {
+        return String(status || '').trim() === 'مستلم';
+    },
+
+    getFilteredPpeReceipts(ppeList) {
+        const list = Array.isArray(ppeList) ? ppeList : [];
+        const f = this.state.filters?.receipts || {};
+        const search = (f.search || '').trim().toLowerCase();
+        const type = f.equipmentType || '';
+        const status = f.status || '';
+        const from = f.dateFrom ? new Date(f.dateFrom + 'T00:00:00') : null;
+        const to = f.dateTo ? new Date(f.dateTo + 'T23:59:59.999') : null;
+        if (from && isNaN(from.getTime())) return list;
+        if (to && isNaN(to.getTime())) return list;
+
+        return list.filter((item) => {
+            if (type && String(item.equipmentType || '') !== type) return false;
+            if (status && String(item.status || '') !== status) return false;
+            if (from || to) {
+                if (!item.receiptDate) return false;
+                const rd = new Date(item.receiptDate);
+                if (isNaN(rd.getTime())) return false;
+                if (from && rd < from) return false;
+                if (to && rd > to) return false;
+            }
+            if (search) {
+                const hay = [
+                    item.receiptNumber, item.id, item.employeeName, item.employeeCode, item.employeeNumber,
+                    item.equipmentType, item.status, item.employeeDepartment
+                ].map((x) => String(x || '').toLowerCase()).join(' | ');
+                if (!hay.includes(search)) return false;
+            }
+            return true;
+        });
+    },
+
+    hasActiveReceiptFilters() {
+        const f = this.state.filters?.receipts || {};
+        return !!(f.search || f.equipmentType || f.status || f.dateFrom || f.dateTo);
+    },
+
+    resetReceiptFilters() {
+        if (!this.state.filters) this.state.filters = {};
+        this.state.filters.receipts = {
+            search: '',
+            equipmentType: '',
+            status: '',
+            dateFrom: '',
+            dateTo: ''
+        };
+    },
+
+    /**
+     * محتوى سجل الاستلامات: فلاتر ديناميكية + جدول (نفس نمط visits-filters-row)
+     */
+    buildPPEListHtml() {
+        const t = (k, f) => this._t(k, f);
+        this.ensurePpeFilterStyles();
+        const ppeList = AppState.appData.ppe || [];
+        const filters = this.state.filters?.receipts || {};
+        const filtered = this.getFilteredPpeReceipts(ppeList);
+        const hasFilters = this.hasActiveReceiptFilters();
+        const isRTL = typeof document !== 'undefined'
+            && (document.documentElement.getAttribute('dir') === 'rtl'
+                || (window.AppI18n && window.AppI18n.getCurrentLang && window.AppI18n.getCurrentLang() === 'ar'));
+        const esc = (v) => Utils.escapeHTML(v);
+
+        if (ppeList.length === 0) {
+            return `<div class="empty-state"><p class="text-gray-500">${esc(t('module.ppe.empty.noReceipts', 'لا توجد استلامات مسجلة'))}</p></div>`;
+        }
+
+        const uniqueTypes = [...new Set(ppeList.map(p => p.equipmentType).filter(Boolean))].sort();
+        const uniqueStatuses = ['مستلم', 'قيد التسليم'];
+
+        const filterRow = `
+            <div class="ppe-visits-filters-row visits-filters-row" style="background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%); padding: 16px 20px; margin: 0 0 14px 0; width: 100%; direction: ${isRTL ? 'rtl' : 'ltr'};">
+                <div class="filters-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; align-items: end;">
+                    <div class="filter-field" style="min-width: 180px;">
+                        <label class="filter-label" for="ppe-receipts-search">
+                            <i class="fas fa-search ml-1"></i>${esc(t('module.ppe.filter.search', 'بحث'))}
+                        </label>
+                        <input type="text" id="ppe-receipts-search" class="form-input pr-10 filter-input" placeholder="${esc(t('module.ppe.filter.searchPlaceholder', ''))}" value="${esc(filters.search || '')}">
+                    </div>
+                    <div class="filter-field" style="min-width: 160px;">
+                        <label class="filter-label" for="ppe-receipts-filter-type">
+                            <i class="fas fa-hard-hat ml-1"></i>${esc(t('module.ppe.filter.equipmentType', 'نوع المعدة'))}
+                            ${filters.equipmentType ? `<span class="filter-count-badge" title="${esc(t('module.ppe.filter.badgeCount', ''))}">${filtered.length}</span>` : ''}
+                        </label>
+                        <select id="ppe-receipts-filter-type" class="form-input filter-input">
+                            <option value="">${esc(t('module.common.all', 'الكل'))}</option>
+                            ${uniqueTypes.map((typ) => `<option value="${esc(typ)}" ${filters.equipmentType === typ ? 'selected' : ''}>${esc(typ)}</option>`).join('')}
+                        </select>
+                    </div>
+                    <div class="filter-field" style="min-width: 160px;">
+                        <label class="filter-label" for="ppe-receipts-filter-status">
+                            <i class="fas fa-signal ml-1"></i>${esc(t('module.ppe.filter.status', 'الحالة'))}
+                            ${filters.status ? `<span class="filter-count-badge" title="${esc(t('module.ppe.filter.badgeCount', ''))}">${filtered.length}</span>` : ''}
+                        </label>
+                        <select id="ppe-receipts-filter-status" class="form-input filter-input">
+                            <option value="">${esc(t('module.common.all', 'الكل'))}</option>
+                            ${uniqueStatuses.map((st) => `<option value="${esc(st)}" ${filters.status === st ? 'selected' : ''}>${esc(this.getDisplayStatus(st))}</option>`).join('')}
+                        </select>
+                    </div>
+                    <div class="filter-field">
+                        <label class="filter-label" for="ppe-receipts-date-from"><i class="fas fa-calendar-alt ml-1"></i>${esc(t('module.ppe.filter.dateFrom', 'من تاريخ الاستلام'))}</label>
+                        <input type="date" id="ppe-receipts-date-from" class="form-input filter-input" value="${esc(filters.dateFrom || '')}">
+                    </div>
+                    <div class="filter-field">
+                        <label class="filter-label" for="ppe-receipts-date-to"><i class="fas fa-calendar-check ml-1"></i>${esc(t('module.ppe.filter.dateTo', 'إلى تاريخ الاستلام'))}</label>
+                        <input type="date" id="ppe-receipts-date-to" class="form-input filter-input" value="${esc(filters.dateTo || '')}">
+                    </div>
+                    <div class="filter-field" style="min-width: 170px;">
+                        <button type="button" id="ppe-receipts-reset-filters" class="filter-reset-btn" title="${esc(t('module.ppe.filter.resetTitle', ''))}">
+                            <i class="fas fa-rotate-left ml-1"></i>${esc(t('module.ppe.filter.reset', 'إعادة تعيين الفلاتر'))}
+                        </button>
+                    </div>
+                </div>
+            </div>`;
+
+        const noMatchBlock = (hasFilters && filtered.length === 0) ? `
+            <div class="empty-state">
+                <i class="fas fa-filter text-4xl text-gray-300 mb-4"></i>
+                <p class="text-gray-500 mb-2">${esc(t('module.ppe.filter.noMatch', 'لا توجد نتائج مطابقة'))}</p>
+                <button type="button" id="ppe-receipts-clear-empty-filters" class="btn-secondary mt-2">
+                    <i class="fas fa-undo-alt ml-2"></i>${esc(t('module.ppe.filter.clearEmpty', 'مسح الفلاتر'))}
+                </button>
+            </div>
+        ` : '';
+
+        if (filtered.length === 0) {
+            return filterRow + noMatchBlock;
+        }
+
+        const viewTitle = t('module.common.view', 'عرض');
+        const pdfT = t('module.kpi.exportPDF', 'تصدير PDF');
+        const editTitle = t('module.common.edit', 'تعديل');
+        const delTitle = t('module.ppe.btn.deleteReceipt', 'حذف');
+        const table = `
+            <table class="data-table table-header-blue">
+                <thead>
+                    <tr>
+                        <th>${esc(t('module.ppe.table.receiptNo', 'رقم الإيصال'))}</th>
+                        <th>${esc(t('module.ppe.table.employeeName', 'اسم الموظف'))}</th>
+                        <th>${esc(t('module.ppe.table.employeeCode', 'الكود الوظيفي'))}</th>
+                        <th>${esc(t('module.ppe.table.equipmentType', 'نوع المعدة'))}</th>
+                        <th>${esc(t('module.ppe.table.quantity', 'الكمية'))}</th>
+                        <th>${esc(t('module.ppe.table.receiptDate', 'تاريخ الاستلام'))}</th>
+                        <th>${esc(t('module.ppe.table.status', 'الحالة'))}</th>
+                        <th>${esc(t('module.ppe.table.actions', 'الإجراءات'))}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${filtered.map((item) => {
+            const stDisp = this.getDisplayStatus(item.status);
+            const idJs = String(item.id || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+            return `
+                        <tr>
+                            <td class="font-mono font-semibold">${esc(item.receiptNumber || item.id || '')}</td>
+                            <td>${esc(item.employeeName || '')}</td>
+                            <td>${esc(item.employeeCode || item.employeeNumber || '')}</td>
+                            <td>${esc(item.equipmentType || '')}</td>
+                            <td>${item.quantity || 0}</td>
+                            <td>${item.receiptDate ? Utils.formatDate(item.receiptDate) : '-'}</td>
+                            <td>
+                                <span class="badge badge-${this.isStatusReceived(item.status) ? 'success' : 'warning'}">
+                                    ${esc(stDisp)}
+                                </span>
+                            </td>
+                            <td>
+                                <div class="flex items-center gap-2">
+                                    <button onclick="PPE.viewPPE('${idJs}')" class="btn-icon btn-icon-info" title="${esc(viewTitle)}">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                    <button onclick="PPE.exportPDF('${idJs}')" class="btn-icon btn-icon-success" title="${esc(pdfT)}">
+                                        <i class="fas fa-file-pdf"></i>
+                                    </button>
+                                    <button onclick="PPE.showPPEForm(${JSON.stringify(item).replace(/"/g, '&quot;')});" class="btn-icon btn-icon-primary" title="${esc(editTitle)}">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                    <button onclick="PPE.deletePPE('${idJs}')" class="btn-icon btn-icon-danger" title="${esc(delTitle)}">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>`;
+        }).join('')}
+                </tbody>
+            </table>
+        `;
+
+        return filterRow + table;
+    },
+
+    _receiptsFilterTimer: null,
+
+    refreshReceiptsListUI() {
+        const container = document.getElementById('ppe-list');
+        if (!container) return;
+        container.innerHTML = this.buildPPEListHtml();
+        this.applyModuleI18n(container);
+        this.bindReceiptsFilters();
+    },
+
+    bindReceiptsFilters() {
+        if (this.state.activeTab !== 'receipts') return;
+        const run = (fn) => {
+            if (typeof requestAnimationFrame === 'function') {
+                requestAnimationFrame(fn);
+            } else {
+                setTimeout(fn, 0);
+            }
+        };
+        const search = document.getElementById('ppe-receipts-search');
+        if (search) {
+            const h = (e) => {
+                this.state.filters.receipts.search = (e.target && e.target.value) || '';
+                clearTimeout(this._receiptsFilterTimer);
+                this._receiptsFilterTimer = setTimeout(() => run(() => this.refreshReceiptsListUI()), 220);
+            };
+            search.addEventListener('input', h);
+        }
+        const typeEl = document.getElementById('ppe-receipts-filter-type');
+        if (typeEl) {
+            typeEl.addEventListener('change', (e) => {
+                this.state.filters.receipts.equipmentType = (e.target && e.target.value) || '';
+                this.refreshReceiptsListUI();
+            });
+        }
+        const statusEl = document.getElementById('ppe-receipts-filter-status');
+        if (statusEl) {
+            statusEl.addEventListener('change', (e) => {
+                this.state.filters.receipts.status = (e.target && e.target.value) || '';
+                this.refreshReceiptsListUI();
+            });
+        }
+        const fromEl = document.getElementById('ppe-receipts-date-from');
+        if (fromEl) {
+            fromEl.addEventListener('change', (e) => {
+                this.state.filters.receipts.dateFrom = (e.target && e.target.value) || '';
+                this.refreshReceiptsListUI();
+            });
+        }
+        const toEl = document.getElementById('ppe-receipts-date-to');
+        if (toEl) {
+            toEl.addEventListener('change', (e) => {
+                this.state.filters.receipts.dateTo = (e.target && e.target.value) || '';
+                this.refreshReceiptsListUI();
+            });
+        }
+        const resetEl = document.getElementById('ppe-receipts-reset-filters');
+        if (resetEl) {
+            resetEl.addEventListener('click', () => {
+                this.resetReceiptFilters();
+                this.refreshReceiptsListUI();
+            });
+        }
+        const clearEmpty = document.getElementById('ppe-receipts-clear-empty-filters');
+        if (clearEmpty) {
+            clearEmpty.addEventListener('click', () => {
+                this.resetReceiptFilters();
+                this.refreshReceiptsListUI();
+            });
+        }
     },
 
     /**
@@ -81,7 +421,7 @@ const PPE = {
                                         <div style="height: 100%; background: linear-gradient(90deg, #3b82f6, #2563eb, #3b82f6); background-size: 200% 100%; border-radius: 3px; animation: loadingProgress 1.5s ease-in-out infinite;"></div>
                                     </div>
                                 </div>
-                                <p class="text-gray-500 mb-4">جاري تحميل بيانات المخزون...</p>
+                                <p class="text-gray-500 mb-4">${this._t('module.ppe.loading.stockData', 'جاري تحميل بيانات المخزون...')}</p>
                             </div>
                         `;
                     }
@@ -93,20 +433,16 @@ const PPE = {
                     `;
                 case 'receipts':
                 default:
-                    const ppeList = AppState.appData.ppe || [];
-                    if (ppeList.length === 0) {
-                        return '<div class="empty-state"><p class="text-gray-500">لا توجد استلامات مسجلة</p></div>';
-                    }
-                    return this.renderPPEListSync(ppeList);
+                    return this.renderPPEListSync();
             }
         } catch (error) {
             Utils.safeError('❌ خطأ في renderActiveTabContentWithFallback:', error);
             return `
                 <div class="empty-state">
                     <i class="fas fa-exclamation-triangle text-yellow-500 text-4xl mb-4"></i>
-                    <p class="text-gray-500 mb-4">حدث خطأ أثناء تحميل المحتوى</p>
+                    <p class="text-gray-500 mb-4">${Utils.escapeHTML(this._t('module.ppe.empty.loadContentError', 'حدث خطأ أثناء تحميل المحتوى'))}</p>
                     <button onclick="PPE.load()" class="btn-primary">
-                        <i class="fas fa-redo ml-2"></i>إعادة المحاولة
+                        <i class="fas fa-redo ml-2"></i>${Utils.escapeHTML(this._t('module.common.retry', 'إعادة المحاولة'))}
                     </button>
                 </div>
             `;
@@ -116,67 +452,21 @@ const PPE = {
     /**
      * ✅ عرض قائمة الاستلامات بشكل متزامن (بدون await)
      */
-    renderPPEListSync(ppeList) {
-        if (!ppeList || ppeList.length === 0) {
-            return '<div class="empty-state"><p class="text-gray-500">لا توجد استلامات مسجلة</p></div>';
-        }
-        return `
-            <table class="data-table table-header-blue">
-                <thead>
-                    <tr>
-                        <th>رقم الإيصال</th>
-                        <th>اسم الموظف</th>
-                        <th>الكود الوظيفي</th>
-                        <th>نوع المعدة</th>
-                        <th>الكمية</th>
-                        <th>تاريخ الاستلام</th>
-                        <th>الحالة</th>
-                        <th>الإجراءات</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    ${ppeList.map(item => `
-                        <tr>
-                            <td class="font-mono font-semibold">${Utils.escapeHTML(item.receiptNumber || item.id || '')}</td>
-                            <td>${Utils.escapeHTML(item.employeeName || '')}</td>
-                            <td>${Utils.escapeHTML(item.employeeCode || item.employeeNumber || '')}</td>
-                            <td>${Utils.escapeHTML(item.equipmentType || '')}</td>
-                            <td>${item.quantity || 0}</td>
-                            <td>${item.receiptDate ? Utils.formatDate(item.receiptDate) : '-'}</td>
-                            <td>
-                                <span class="badge badge-${item.status === 'مستلم' ? 'success' : 'warning'}">
-                                    ${item.status || '-'}
-                                </span>
-                            </td>
-                            <td>
-                                <div class="flex items-center gap-2">
-                                    <button onclick="PPE.viewPPE('${item.id}')" class="btn-icon btn-icon-info" title="عرض">
-                                        <i class="fas fa-eye"></i>
-                                    </button>
-                                    <button onclick="PPE.editPPE('${item.id}')" class="btn-icon btn-icon-warning" title="تعديل">
-                                        <i class="fas fa-edit"></i>
-                                    </button>
-                                    <button onclick="PPE.deletePPE('${item.id}')" class="btn-icon btn-icon-danger" title="حذف">
-                                        <i class="fas fa-trash"></i>
-                                    </button>
-                                </div>
-                            </td>
-                        </tr>
-                    `).join('')}
-                </tbody>
-            </table>
-        `;
+    renderPPEListSync() {
+        return this.buildPPEListHtml();
     },
 
     /**
      * ✅ عرض جدول المخزون بشكل متزامن (بدون await)
      */
     renderStockTableSync(stockItems) {
+        const t = (k, f) => this._t(k, f);
+        const ut = (s) => Utils.escapeHTML(s);
         if (!stockItems || stockItems.length === 0) {
             return `
                 <div class="empty-state">
                     <i class="fas fa-box-open text-4xl text-gray-300 mb-4"></i>
-                    <p class="text-gray-500">لا توجد أصناف في المخزون</p>
+                    <p class="text-gray-500">${ut(t('module.ppe.empty.noStock', 'لا توجد أصناف في المخزون'))}</p>
                 </div>
             `;
         }
@@ -185,15 +475,15 @@ const PPE = {
                 <table class="data-table table-header-blue">
                     <thead>
                         <tr>
-                            <th>كود الصنف</th>
-                            <th>اسم الصنف</th>
-                            <th>الفئة</th>
-                            <th>الوارد</th>
-                            <th>المنصرف</th>
-                            <th>الرصيد</th>
-                            <th>حد إعادة الطلب</th>
-                            <th>المورد</th>
-                            <th>الإجراءات</th>
+                            <th>${ut(t('module.ppe.stock.itemCode', 'كود الصنف'))}</th>
+                            <th>${ut(t('module.ppe.stock.itemName', 'اسم الصنف'))}</th>
+                            <th>${ut(t('module.ppe.stock.category', 'الفئة'))}</th>
+                            <th>${ut(t('module.ppe.stock.in', 'الوارد'))}</th>
+                            <th>${ut(t('module.ppe.stock.out', 'المنصرف'))}</th>
+                            <th>${ut(t('module.ppe.stock.balance', 'الرصيد'))}</th>
+                            <th>${ut(t('module.ppe.stock.reorder', 'حد إعادة الطلب'))}</th>
+                            <th>${ut(t('module.ppe.stock.supplier', 'المورد'))}</th>
+                            <th>${ut(t('module.ppe.table.actions', 'الإجراءات'))}</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -213,10 +503,10 @@ const PPE = {
                                     <td>${Utils.escapeHTML(item.supplier || '')}</td>
                                     <td>
                                         <div class="flex items-center gap-2">
-                                            <button onclick="PPE.editStockItem('${item.itemId}')" class="btn-icon btn-icon-warning" title="تعديل">
+                                            <button onclick="PPE.editStockItem('${item.itemId}')" class="btn-icon btn-icon-warning" title="${ut(t('module.common.edit', 'تعديل'))}">
                                                 <i class="fas fa-edit"></i>
                                             </button>
-                                            <button onclick="PPE.deleteStockItem('${item.itemId}')" class="btn-icon btn-icon-danger" title="حذف">
+                                            <button onclick="PPE.deleteStockItem('${item.itemId}')" class="btn-icon btn-icon-danger" title="${ut(t('module.ppe.btn.deleteItem', 'حذف'))}">
                                                 <i class="fas fa-trash"></i>
                                             </button>
                                         </div>
@@ -279,6 +569,11 @@ const PPE = {
                 // ✅ تحميل محتوى التبويب الجديد بدون Loading overlay
                 const newContent = await this.renderActiveTabContent(false);
                 tabContentContainer.innerHTML = newContent;
+                this.applyModuleI18n(tabContentContainer);
+                if (this.state.activeTab === 'receipts') {
+                    this.ensurePpeFilterStyles();
+                    this.bindReceiptsFilters();
+                }
                 Utils.safeLog('✅ PPE: تم تحديث التبويب النشط بنجاح');
             } catch (error) {
                 Utils.safeError('❌ PPE: خطأ في تحديث التبويب:', error);
@@ -368,7 +663,7 @@ const PPE = {
                 tabContent = await Utils.promiseWithTimeout(
                     tabContentPromise,
                     3000, // ✅ تقليل timeout من 5 ثوان إلى 3 ثوان
-                    'انتهت مهلة تحميل المحتوى'
+                    this._t('module.ppe.timeout.content', 'انتهت مهلة تحميل المحتوى')
                 );
             } catch (error) {
                 if (typeof Utils !== 'undefined' && Utils.safeWarn) {
@@ -385,38 +680,40 @@ const PPE = {
                 Utils.safeWarn('⚠️ خطأ في تحميل البيانات في الخلفية:', error);
             });
 
+            const t = (k, f) => this._t(k, f);
+            const ut = (s) => Utils.escapeHTML(s);
         section.innerHTML = `
             <div class="section-header">
                 <div class="flex items-center justify-between">
                     <div>
                         <h1 class="section-title">
                             <i class="fas fa-hard-hat ml-3"></i>
-                            إدارة مهمات الوقاية الشخصية
+                            ${ut(t('module.ppe.title', 'إدارة مهمات الوقاية الشخصية'))}
                         </h1>
-                        <p class="section-subtitle">تسجيل ومتابعة استلام مهمات الوقاية الشخصية</p>
+                        <p class="section-subtitle">${ut(t('module.ppe.subtitle', 'تسجيل ومتابعة استلام مهمات الوقاية الشخصية'))}</p>
                     </div>
                     <div class="flex gap-2">
                         ${this.state.activeTab === 'receipts' ? `
                             <button id="view-ppe-matrix-btn" class="btn-secondary">
                                 <i class="fas fa-table ml-2"></i>
-                                مصفوفة مهمات الوقاية
+                                ${ut(t('module.ppe.btn.matrix', 'مصفوفة مهمات الوقاية'))}
                             </button>
                             <button id="add-ppe-btn" class="btn-primary">
                                 <i class="fas fa-plus ml-2"></i>
-                                تسجيل استلام جديد
+                                ${ut(t('module.ppe.btn.newReceipt', 'تسجيل استلام جديد'))}
                             </button>
-                            <button id="ppe-refresh-btn" type="button" class="btn-secondary border-2 border-green-500 text-green-600 hover:bg-green-50" title="تحديث المحتوى الحالي">
+                            <button id="ppe-refresh-btn" type="button" class="btn-secondary border-2 border-green-500 text-green-600 hover:bg-green-50" title="${ut(t('module.ppe.btn.refreshTitle', 'تحديث المحتوى الحالي'))}">
                                 <i class="fas fa-sync-alt ml-2"></i>
-                                تحديث
+                                ${ut(t('module.ppe.btn.refresh', 'تحديث'))}
                             </button>
                         ` : `
                             <button id="add-stock-item-btn" class="btn-primary">
                                 <i class="fas fa-plus ml-2"></i>
-                                إضافة صنف جديد
+                                ${ut(t('module.ppe.btn.addStockItem', 'إضافة صنف جديد'))}
                             </button>
                             <button id="add-transaction-btn" class="btn-secondary">
                                 <i class="fas fa-exchange-alt ml-2"></i>
-                                إضافة حركة
+                                ${ut(t('module.ppe.btn.addTransaction', 'إضافة حركة'))}
                             </button>
                         `}
                     </div>
@@ -428,11 +725,11 @@ const PPE = {
                         <div class="ppe-tabs-container">
                             <button type="button" class="ppe-tab-btn ${this.state.activeTab === 'receipts' ? 'active' : ''}" data-tab="receipts">
                                 <i class="fas fa-receipt"></i>
-                                سجل الاستلامات
+                                ${ut(t('module.ppe.tab.receipts', 'سجل الاستلامات'))}
                             </button>
                             <button type="button" class="ppe-tab-btn ${this.state.activeTab === 'stock-control' ? 'active' : ''}" data-tab="stock-control">
                                 <i class="fas fa-boxes"></i>
-                                إدارة مخزون مهمات الوقاية
+                                ${ut(t('module.ppe.tab.stock', 'إدارة مخزون مهمات الوقاية'))}
                             </button>
                         </div>
                     </div>
@@ -446,18 +743,25 @@ const PPE = {
         `;
             // تهيئة الأحداث بعد عرض الواجهة
             try {
+                this.ensurePpeFilterStyles();
                 this.setupEventListeners();
+                this.applyModuleI18n(section);
+                if (this.state.activeTab === 'receipts') {
+                    this.bindReceiptsFilters();
+                }
             } catch (error) {
                 Utils.safeWarn('⚠️ خطأ في setupEventListeners:', error);
             }
         } catch (error) {
             Utils.safeError('❌ خطأ في تحميل مديول معدات الحماية الشخصية:', error);
+            const te = (k, f) => this._t(k, f);
+            const ut = (s) => Utils.escapeHTML(s);
             section.innerHTML = `
                 <div class="section-header">
                     <div>
                         <h1 class="section-title">
                             <i class="fas fa-hard-hat ml-3"></i>
-                            إدارة مهمات الوقاية الشخصية
+                            ${ut(te('module.ppe.title', 'إدارة مهمات الوقاية الشخصية'))}
                         </h1>
                     </div>
                 </div>
@@ -466,10 +770,10 @@ const PPE = {
                         <div class="card-body">
                             <div class="empty-state">
                                 <i class="fas fa-exclamation-triangle text-yellow-500 text-4xl mb-4"></i>
-                                <p class="text-gray-500 mb-4">حدث خطأ أثناء تحميل البيانات</p>
+                                <p class="text-gray-500 mb-4">${ut(te('module.ppe.empty.loadError', 'حدث خطأ أثناء تحميل البيانات'))}</p>
                                 <button onclick="PPE.load()" class="btn-primary">
                                     <i class="fas fa-redo ml-2"></i>
-                                    إعادة المحاولة
+                                    ${ut(te('module.common.retry', 'إعادة المحاولة'))}
                                 </button>
                             </div>
                         </div>
@@ -489,7 +793,7 @@ const PPE = {
                 case 'stock-control':
                     // ✅ تحميل البيانات مباشرة عند الدخول للتبويب
                     if (showLoadingOverlay) {
-                        Loading.show('جاري تحميل بيانات المخزون...');
+                        Loading.show(this._t('module.ppe.loading.stock', 'جاري تحميل بيانات المخزون...'));
                     }
                     try {
                         const content = await this.renderStockControlTab();
@@ -505,9 +809,9 @@ const PPE = {
                         return `
                             <div class="empty-state">
                                 <i class="fas fa-exclamation-triangle text-yellow-500 text-4xl mb-4"></i>
-                                <p class="text-gray-500 mb-4">حدث خطأ أثناء تحميل بيانات المخزون</p>
+                                <p class="text-gray-500 mb-4">${Utils.escapeHTML(this._t('module.ppe.empty.loadStockError', 'حدث خطأ أثناء تحميل بيانات المخزون'))}</p>
                                 <button onclick="PPE.switchTab('stock-control')" class="btn-primary">
-                                    <i class="fas fa-redo ml-2"></i>إعادة المحاولة
+                                    <i class="fas fa-redo ml-2"></i>${Utils.escapeHTML(this._t('module.common.retry', 'إعادة المحاولة'))}
                                 </button>
                             </div>
                         `;
@@ -524,9 +828,9 @@ const PPE = {
             return `
                 <div class="empty-state">
                     <i class="fas fa-exclamation-triangle text-yellow-500 text-4xl mb-4"></i>
-                    <p class="text-gray-500 mb-4">حدث خطأ أثناء تحميل المحتوى</p>
+                    <p class="text-gray-500 mb-4">${Utils.escapeHTML(this._t('module.ppe.empty.loadContentError', 'حدث خطأ أثناء تحميل المحتوى'))}</p>
                     <button onclick="PPE.load()" class="btn-primary">
-                        <i class="fas fa-redo ml-2"></i>إعادة المحاولة
+                        <i class="fas fa-redo ml-2"></i>${Utils.escapeHTML(this._t('module.common.retry', 'إعادة المحاولة'))}
                     </button>
                 </div>
             `;
@@ -536,64 +840,8 @@ const PPE = {
     async renderReceiptsTab() {
         return `
             <div id="ppe-list">
-                ${await this.renderPPEList()}
+                ${this.buildPPEListHtml()}
             </div>
-        `;
-    },
-
-    async renderPPEList() {
-        const ppeList = AppState.appData.ppe || [];
-        if (ppeList.length === 0) {
-            return '<div class="empty-state"><p class="text-gray-500">لا توجد استلامات مسجلة</p></div>';
-        }
-        return `
-            <table class="data-table table-header-blue">
-                <thead>
-                    <tr>
-                        <th>رقم الإيصال</th>
-                        <th>اسم الموظف</th>
-                        <th>الكود الوظيفي</th>
-                        <th>نوع المعدة</th>
-                        <th>الكمية</th>
-                        <th>تاريخ الاستلام</th>
-                        <th>الحالة</th>
-                        <th>الإجراءات</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    ${ppeList.map(item => `
-                        <tr>
-                            <td class="font-mono font-semibold">${Utils.escapeHTML(item.receiptNumber || item.id || '')}</td>
-                            <td>${Utils.escapeHTML(item.employeeName || '')}</td>
-                            <td>${Utils.escapeHTML(item.employeeCode || item.employeeNumber || '')}</td>
-                            <td>${Utils.escapeHTML(item.equipmentType || '')}</td>
-                            <td>${item.quantity || 0}</td>
-                            <td>${item.receiptDate ? Utils.formatDate(item.receiptDate) : '-'}</td>
-                            <td>
-                                <span class="badge badge-${item.status === 'مستلم' ? 'success' : 'warning'}">
-                                    ${item.status || '-'}
-                                </span>
-                            </td>
-                            <td>
-                                <div class="flex items-center gap-2">
-                                    <button onclick="PPE.viewPPE('${item.id}')" class="btn-icon btn-icon-info" title="عرض">
-                                    <i class="fas fa-eye"></i>
-                                </button>
-                                    <button onclick="PPE.exportPDF('${item.id}')" class="btn-icon btn-icon-success" title="تصدير PDF">
-                                        <i class="fas fa-file-pdf"></i>
-                                    </button>
-                                    <button onclick="PPE.showPPEForm(${JSON.stringify(item).replace(/"/g, '&quot;')});" class="btn-icon btn-icon-primary" title="تعديل">
-                                        <i class="fas fa-edit"></i>
-                                    </button>
-                                    <button onclick="PPE.deletePPE('${item.id}')" class="btn-icon btn-icon-danger" title="حذف">
-                                        <i class="fas fa-trash"></i>
-                                    </button>
-                                </div>
-                            </td>
-                        </tr>
-                    `).join('')}
-                </tbody>
-            </table>
         `;
     },
 
@@ -688,34 +936,37 @@ const PPE = {
             }
         });
 
+        const t = (k, f) => this._t(k, f);
+        const ut = (s) => Utils.escapeHTML(s);
         // استبدال الأزرار
         if (this.state.activeTab === 'receipts') {
             headerButtonsContainer.innerHTML = `
                 <button id="view-ppe-matrix-btn" class="btn-secondary">
                     <i class="fas fa-table ml-2"></i>
-                    مصفوفة مهمات الوقاية
+                    ${ut(t('module.ppe.btn.matrix', 'مصفوفة مهمات الوقاية'))}
                 </button>
                 <button id="add-ppe-btn" class="btn-primary">
                     <i class="fas fa-plus ml-2"></i>
-                    تسجيل استلام جديد
+                    ${ut(t('module.ppe.btn.newReceipt', 'تسجيل استلام جديد'))}
                 </button>
-                <button id="ppe-refresh-btn" type="button" class="btn-secondary border-2 border-green-500 text-green-600 hover:bg-green-50" title="تحديث المحتوى الحالي">
+                <button id="ppe-refresh-btn" type="button" class="btn-secondary border-2 border-green-500 text-green-600 hover:bg-green-50" title="${ut(t('module.ppe.btn.refreshTitle', 'تحديث المحتوى الحالي'))}">
                     <i class="fas fa-sync-alt ml-2"></i>
-                    تحديث
+                    ${ut(t('module.ppe.btn.refresh', 'تحديث'))}
                 </button>
             `;
         } else {
             headerButtonsContainer.innerHTML = `
                 <button id="add-stock-item-btn" class="btn-primary">
                     <i class="fas fa-plus ml-2"></i>
-                    إضافة صنف جديد
+                    ${ut(t('module.ppe.btn.addStockItem', 'إضافة صنف جديد'))}
                 </button>
                 <button id="add-transaction-btn" class="btn-secondary">
                     <i class="fas fa-exchange-alt ml-2"></i>
-                    إضافة حركة
+                    ${ut(t('module.ppe.btn.addTransaction', 'إضافة حركة'))}
                 </button>
             `;
         }
+        this.applyModuleI18n(headerButtonsContainer);
 
         // إعادة إعداد مستمعي الأحداث للأزرار الجديدة
         const addBtn = document.getElementById('add-ppe-btn');
@@ -794,7 +1045,7 @@ const PPE = {
                                         <div style="height: 100%; background: linear-gradient(90deg, #3b82f6, #2563eb, #3b82f6); background-size: 200% 100%; border-radius: 3px; animation: loadingProgress 1.5s ease-in-out infinite;"></div>
                                     </div>
                                 </div>
-                                <p class="text-gray-500 mb-4">جاري تحميل بيانات المخزون...</p>
+                                <p class="text-gray-500 mb-4">${this._t('module.ppe.loading.stockData', 'جاري تحميل بيانات المخزون...')}</p>
                             </div>
                         `;
                     }
@@ -802,17 +1053,21 @@ const PPE = {
                     // تحميل محتوى التبويب الجديد
                     const newContent = await this.renderActiveTabContent();
                     tabContentContainer.innerHTML = newContent;
-                    
+                    this.applyModuleI18n(tabContentContainer);
+                    if (tabName === 'receipts') {
+                        this.ensurePpeFilterStyles();
+                        this.bindReceiptsFilters();
+                    }
                     Utils.safeLog(`✅ PPE: تم التبديل إلى تبويب ${tabName}`);
                 } catch (error) {
                     Utils.safeError('❌ خطأ في تحميل محتوى التبويب:', error);
                     tabContentContainer.innerHTML = `
                         <div class="empty-state">
                             <i class="fas fa-exclamation-triangle text-yellow-500 text-4xl mb-4"></i>
-                            <p class="text-gray-500 mb-4">حدث خطأ أثناء تحميل البيانات</p>
+                            <p class="text-gray-500 mb-4">${Utils.escapeHTML(this._t('module.ppe.empty.loadError', 'حدث خطأ أثناء تحميل البيانات'))}</p>
                             <button onclick="PPE.switchTab('${tabName}')" class="btn-primary">
                                 <i class="fas fa-redo ml-2"></i>
-                                إعادة المحاولة
+                                ${Utils.escapeHTML(this._t('module.common.retry', 'إعادة المحاولة'))}
                             </button>
                         </div>
                     `;
@@ -861,11 +1116,15 @@ const PPE = {
             location: initialEmployee?.location || ppeData?.employeeLocation || ''
         };
         const formatInfo = (value) => value ? Utils.escapeHTML(value) : '—';
+        const t = (k, f) => this._t(k, f);
+        const ut = (s) => Utils.escapeHTML(s);
+        const stReceived = t('module.ppe.status.received', 'مستلم');
+        const stPending = t('module.ppe.status.pending', 'قيد التسليم');
         modal.innerHTML = `
             <div class="modal-content" style="max-width: 720px; border-radius: 1rem; overflow: hidden;">
                 <div class="modal-header" style="background: linear-gradient(135deg, #1d4ed8, #0f766e); color: #ffffff; text-align: center; position: relative; padding: 1rem 1.5rem;">
                     <h2 class="modal-title" style="margin: 0 auto; font-weight: 700; letter-spacing: 0.03em;">
-                        ${isEdit ? 'تعديل استلام' : 'تسجيل استلام جديد'}
+                        ${isEdit ? ut(t('module.ppe.title.editReceipt', 'تعديل استلام')) : ut(t('module.ppe.title.newReceipt', 'تسجيل استلام جديد'))}
                     </h2>
                     <button class="modal-close" onclick="this.closest('.modal-overlay').remove()" style="position: absolute; left: 1rem; top: 50%; transform: translateY(-50%); color: #ffffff;">
                         <i class="fas fa-times"></i>
@@ -875,27 +1134,27 @@ const PPE = {
                     <form id="ppe-form" class="space-y-6">
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div class="md:col-span-2">
-                                <label class="block text-sm font-semibold text-gray-700 mb-2">الكود الوظيفي *</label>
+                                <label class="block text-sm font-semibold text-gray-700 mb-2">${ut(t('module.ppe.label.employeeCode', 'الكود الوظيفي *'))}</label>
                                 <div class="relative">
                                     <input type="text" id="ppe-employee-code" required class="form-input pr-12"
                                         value="${Utils.escapeHTML(ppeData?.employeeCode || ppeData?.employeeNumber || '')}"
-                                        placeholder="أدخل الكود الوظيفي أو امسح الباركود" autocomplete="off">
+                                        placeholder="${ut(t('module.ppe.searchEmployeeTitle', 'أدخل الكود الوظيفي أو امسح الباركود'))}" autocomplete="off">
                                     <button type="button" id="ppe-search-code-btn"
                                         class="absolute inset-y-0 left-0 flex items-center justify-center w-10 text-gray-500 hover:text-gray-700"
-                                        title="بحث عن الموظف">
+                                        title="${ut(t('module.ppe.searchEmployeeTitle', 'بحث عن الموظف'))}">
                                         <i class="fas fa-search"></i>
                                     </button>
                                     </div>
                                 <p class="text-xs text-gray-500 mt-1">
-                                    أدخل الكود الوظيفي ثم اضغط زر البحث أو مفتاح Enter لإحضار بيانات الموظف تلقائياً.
+                                    ${ut(t('module.ppe.hint.employeeCode', ''))}
                                 </p>
                                 </div>
                             <div class="md:col-span-2">
-                                <label class="block text-sm font-semibold text-gray-700 mb-2">اسم الموظف</label>
+                                <label class="block text-sm font-semibold text-gray-700 mb-2">${ut(t('module.ppe.label.employeeName', 'اسم الموظف'))}</label>
                                 <div class="relative">
                                     <input type="text" id="ppe-employee-name" class="form-input"
                                         value="${Utils.escapeHTML(ppeData?.employeeName || '')}"
-                                        placeholder="ابحث بالاسم أو الكود الوظيفي" autocomplete="off">
+                                        placeholder="${ut(t('module.ppe.placeholder.employeeName', ''))}" autocomplete="off">
                                     <div id="ppe-employee-dropdown" class="hse-lookup-dropdown absolute z-50 hidden w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-auto"></div>
                             </div>
                             </div>
@@ -909,24 +1168,24 @@ const PPE = {
                         <div class="bg-gray-50 border border-gray-200 rounded-lg p-4">
                             <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm">
                             <div>
-                                    <p class="text-gray-500 mb-1">الاسم</p>
+                                    <p class="text-gray-500 mb-1">${ut(t('module.ppe.label.name', 'الاسم'))}</p>
                                     <p id="ppe-employee-info-name" class="font-semibold text-gray-800">${formatInfo(employeeInfo.name)}</p>
                             </div>
                                 <div>
-                                    <p class="text-gray-500 mb-1">القسم</p>
+                                    <p class="text-gray-500 mb-1">${ut(t('module.ppe.label.department', 'القسم'))}</p>
                                     <p id="ppe-employee-info-department" class="font-semibold text-gray-800">${formatInfo(employeeInfo.department)}</p>
                                 </div>
                                 <div>
-                                    <p class="text-gray-500 mb-1">المنصب</p>
+                                    <p class="text-gray-500 mb-1">${ut(t('module.ppe.label.position', 'المنصب'))}</p>
                                     <p id="ppe-employee-info-position" class="font-semibold text-gray-800">${formatInfo(employeeInfo.position)}</p>
                                 </div>
                             </div>
                             <div class="text-xs text-gray-500 flex flex-wrap gap-4 mt-3">
                                 <span id="ppe-employee-info-branch" class="${employeeInfo.branch ? '' : 'hidden'}">
-                                    ${employeeInfo.branch ? `الفرع: ${Utils.escapeHTML(employeeInfo.branch)}` : ''}
+                                    ${employeeInfo.branch ? `${ut(t('module.ppe.label.branch', 'الفرع'))}: ${Utils.escapeHTML(employeeInfo.branch)}` : ''}
                                 </span>
                                 <span id="ppe-employee-info-location" class="${employeeInfo.location ? '' : 'hidden'}">
-                                    ${employeeInfo.location ? `الموقع: ${Utils.escapeHTML(employeeInfo.location)}` : ''}
+                                    ${employeeInfo.location ? `${ut(t('module.ppe.label.location', 'الموقع'))}: ${Utils.escapeHTML(employeeInfo.location)}` : ''}
                                 </span>
                             </div>
                         </div>
@@ -934,64 +1193,64 @@ const PPE = {
                         <div class="space-y-4">
                             <div>
                                 <div class="flex items-center justify-between mb-2">
-                                    <h3 class="text-sm font-semibold text-gray-800">الأصناف المستلمة *</h3>
+                                    <h3 class="text-sm font-semibold text-gray-800">${ut(t('module.ppe.items.title', 'الأصناف المستلمة *'))}</h3>
                                     <button type="button" id="ppe-add-item-btn" class="btn-secondary text-xs px-3 py-1">
-                                        <i class="fas fa-plus ml-1"></i>إضافة صنف آخر
+                                        <i class="fas fa-plus ml-1"></i>${ut(t('module.ppe.items.addRow', 'إضافة صنف آخر'))}
                                     </button>
                                 </div>
                                 <div id="ppe-items-container" class="space-y-3">
                                     <div class="ppe-item-row grid grid-cols-1 md:grid-cols-3 gap-3 items-end">
                                         <div class="md:col-span-2">
-                                            <label class="block text-xs font-semibold text-gray-700 mb-1">نوع المعدة *</label>
+                                            <label class="block text-xs font-semibold text-gray-700 mb-1">${ut(t('module.ppe.label.equipmentType', 'نوع المعدة *'))}</label>
                                             <select id="ppe-equipment-type" required class="form-input ppe-equipment-type">
-                                                <option value="">جاري التحميل...</option>
+                                                <option value="">${ut(t('module.ppe.equip.loading', 'جاري التحميل...'))}</option>
                                             </select>
                                             <p class="text-[11px] text-gray-500 mt-1">
-                                                يتم تحميل قائمة مهمات الوقاية من المخزون
+                                                ${ut(t('module.ppe.hint.fromStock', ''))}
                                             </p>
                                         </div>
                                         <div>
-                                            <label class="block text-xs font-semibold text-gray-700 mb-1">الكمية *</label>
+                                            <label class="block text-xs font-semibold text-gray-700 mb-1">${ut(t('module.ppe.label.qty', 'الكمية *'))}</label>
                                             <div class="flex items-center gap-2">
                                                 <input type="number" id="ppe-quantity" required class="form-input ppe-quantity" min="1"
-                                                    value="${ppeData?.quantity || 1}" placeholder="الكمية">
+                                                    value="${ppeData?.quantity || 1}" placeholder="${ut(t('module.ppe.table.quantity', 'الكمية'))}">
                                                 <button type="button" class="btn-secondary ppe-remove-item hidden text-xs px-3 py-2">
-                                                    <i class="fas fa-trash-alt ml-1"></i>حذف
+                                                    <i class="fas fa-trash-alt ml-1"></i>${ut(t('module.ppe.btn.removeRow', 'حذف'))}
                                                 </button>
                                             </div>
                                         </div>
                                     </div>
                                 </div>
                                 <p class="text-xs text-gray-500 mt-1">
-                                    يمكنك إضافة أكثر من صنف لنفس الموظف عن طريق تكرار السطر.
+                                    ${ut(t('module.ppe.items.hint', ''))}
                                 </p>
                             </div>
 
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div>
-                                    <label class="block text-sm font-semibold text-gray-700 mb-2">تاريخ الاستلام *</label>
+                                    <label class="block text-sm font-semibold text-gray-700 mb-2">${ut(t('module.ppe.label.receiptDate', 'تاريخ الاستلام *'))}</label>
                                     <input type="date" id="ppe-receipt-date" required class="form-input"
                                         value="${ppeData?.receiptDate ? new Date(ppeData.receiptDate).toISOString().slice(0, 10) : ''}">
                                 </div>
                                 <div>
-                                    <label class="block text-sm font-semibold text-gray-700 mb-2">الحالة *</label>
+                                    <label class="block text-sm font-semibold text-gray-700 mb-2">${ut(t('module.ppe.label.status', 'الحالة *'))}</label>
                                     <select id="ppe-status" required class="form-input">
-                                        <option value="مستلم" ${ppeData?.status === 'مستلم' ? 'selected' : ''}>مستلم</option>
-                                        <option value="قيد التسليم" ${ppeData?.status === 'قيد التسليم' ? 'selected' : ''}>قيد التسليم</option>
+                                        <option value="مستلم" ${ppeData?.status === 'مستلم' ? 'selected' : ''}>${ut(stReceived)}</option>
+                                        <option value="قيد التسليم" ${ppeData?.status === 'قيد التسليم' ? 'selected' : ''}>${ut(stPending)}</option>
                                     </select>
                                 </div>
                             </div>
 
                             <div>
-                                <label class="block text-sm font-semibold text-gray-700 mb-2">ملاحظات</label>
+                                <label class="block text-sm font-semibold text-gray-700 mb-2">${ut(t('module.ppe.label.notes', 'ملاحظات'))}</label>
                                 <textarea id="ppe-notes" class="form-input" rows="3"
-                                    placeholder="اكتب أي ملاحظات إضافية حول الاستلام">${Utils.escapeHTML(ppeData?.notes || '')}</textarea>
+                                    placeholder="${ut(t('module.ppe.placeholder.notes', ''))}">${Utils.escapeHTML(ppeData?.notes || '')}</textarea>
                             </div>
                         </div>
                         <div class="flex items-center justify-end gap-4 pt-4 border-t">
-                            <button type="button" class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">إلغاء</button>
+                            <button type="button" class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">${ut(t('module.common.cancel', 'إلغاء'))}</button>
                             <button type="submit" class="btn-primary">
-                                <i class="fas fa-save ml-2"></i>${isEdit ? 'حفظ التعديلات' : 'تسجيل الاستلام'}
+                                <i class="fas fa-save ml-2"></i>${isEdit ? ut(t('module.common.saveChanges', 'حفظ التعديلات')) : ut(t('module.ppe.btn.saveReceipt', 'تسجيل الاستلام'))}
                             </button>
                         </div>
                     </form>
@@ -999,6 +1258,7 @@ const PPE = {
             </div>
         `;
         document.body.appendChild(modal);
+        this.applyModuleI18n(modal);
 
         // Setup employee code search and autocomplete for PPE form
         setTimeout(() => {
@@ -1017,13 +1277,14 @@ const PPE = {
             const infoLocation = document.getElementById('ppe-employee-info-location');
             const employees = AppState.appData.employees || [];
 
+            const Lb = (k, f) => PPE._t(k, f);
             const updateInfoDisplay = (info = {}) => {
                 if (infoName) infoName.textContent = info.name || '—';
                 if (infoDepartment) infoDepartment.textContent = info.department || '—';
                 if (infoPosition) infoPosition.textContent = info.position || '—';
                 if (infoBranch) {
                     if (info.branch) {
-                        infoBranch.textContent = `الفرع: ${info.branch}`;
+                        infoBranch.textContent = `${Lb('module.ppe.label.branch', 'الفرع')}: ${info.branch}`;
                         infoBranch.classList.remove('hidden');
                     } else {
                         infoBranch.textContent = '';
@@ -1032,7 +1293,7 @@ const PPE = {
                 }
                 if (infoLocation) {
                     if (info.location) {
-                        infoLocation.textContent = `الموقع: ${info.location}`;
+                        infoLocation.textContent = `${Lb('module.ppe.label.location', 'الموقع')}: ${info.location}`;
                         infoLocation.classList.remove('hidden');
                     } else {
                         infoLocation.textContent = '';
@@ -1044,7 +1305,7 @@ const PPE = {
             const applyEmployee = (employee, { notifySuccess = false, notifyFail = false } = {}) => {
                 if (!employee) {
                     if (notifyFail) {
-                        Notification.warning('لم يتم العثور على موظف بهذا الكود');
+                        Notification.warning(Lb('module.ppe.notify.employeeNotFound', 'لم يتم العثور على موظف بهذا الكود'));
                     }
                     updateInfoDisplay({
                         name: nameInput?.value?.trim() || '—',
@@ -1075,7 +1336,7 @@ const PPE = {
                 });
 
                 if (notifySuccess) {
-                    Notification.success('تم جلب بيانات الموظف بنجاح');
+                    Notification.success(Lb('module.ppe.notify.employeeLoaded', 'تم جلب بيانات الموظف بنجاح'));
                 }
                 return true;
             };
@@ -1326,7 +1587,7 @@ const PPE = {
                     if (!employeeNameEl || !employeeCodeEl || !employeeDepartmentEl || !employeePositionEl || 
                         !employeeBranchEl || !employeeLocationEl || !itemsContainerEl || 
                         !receiptDateEl || !statusEl) {
-                        Notification.error('بعض الحقول المطلوبة غير موجودة. يرجى تحديث الصفحة والمحاولة مرة أخرى.');
+                        Notification.error(PPE._t('module.ppe.notify.fieldsMissing', 'بعض الحقول المطلوبة غير موجودة. يرجى تحديث الصفحة والمحاولة مرة أخرى.'));
                         if (submitBtn) {
                             submitBtn.disabled = false;
                             submitBtn.innerHTML = originalText;
@@ -1335,7 +1596,7 @@ const PPE = {
                     }
 
                     if (!receiptDateEl.value) {
-                        Notification.error('يرجى تحديد تاريخ الاستلام.');
+                        Notification.error(PPE._t('module.ppe.notify.dateRequired', 'يرجى تحديد تاريخ الاستلام.'));
                         if (submitBtn) {
                             submitBtn.disabled = false;
                             submitBtn.innerHTML = originalText;
@@ -1345,7 +1606,7 @@ const PPE = {
 
                     const itemRows = Array.from(itemsContainerEl.querySelectorAll('.ppe-item-row'));
                     if (!itemRows.length) {
-                        Notification.error('يجب إضافة صنف واحد على الأقل قبل حفظ الاستلام.');
+                        Notification.error(PPE._t('module.ppe.notify.itemsRequired', 'يجب إضافة صنف واحد على الأقل قبل حفظ الاستلام.'));
                         if (submitBtn) {
                             submitBtn.disabled = false;
                             submitBtn.innerHTML = originalText;
@@ -1359,7 +1620,7 @@ const PPE = {
                         const quantityInput = row.querySelector('.ppe-quantity');
 
                         if (!typeSelect || !quantityInput) {
-                            Notification.error('بعض صفوف الأصناف غير مكتملة. يرجى التأكد من أن كل صف يحتوي على نوع وكمية.');
+                            Notification.error(PPE._t('module.ppe.notify.rowsIncomplete', 'بعض صفوف الأصناف غير مكتملة. يرجى التأكد من أن كل صف يحتوي على نوع وكمية.'));
                             if (submitBtn) {
                                 submitBtn.disabled = false;
                                 submitBtn.innerHTML = originalText;
@@ -1371,7 +1632,7 @@ const PPE = {
                         const quantityValue = parseInt(quantityInput.value, 10) || 0;
 
                         if (!typeValue) {
-                            Notification.error('يرجى اختيار نوع المعدة لكل صف قبل الحفظ.');
+                            Notification.error(PPE._t('module.ppe.notify.selectEquipmentEachRow', 'يرجى اختيار نوع المعدة لكل صف قبل الحفظ.'));
                             if (submitBtn) {
                                 submitBtn.disabled = false;
                                 submitBtn.innerHTML = originalText;
@@ -1380,7 +1641,7 @@ const PPE = {
                         }
 
                         if (quantityValue <= 0) {
-                            Notification.error('الكمية لكل صنف يجب أن تكون رقمًا أكبر من صفر.');
+                            Notification.error(PPE._t('module.ppe.notify.qtyPositive', 'الكمية لكل صنف يجب أن تكون رقمًا أكبر من صفر.'));
                             if (submitBtn) {
                                 submitBtn.disabled = false;
                                 submitBtn.innerHTML = originalText;
@@ -1456,7 +1717,9 @@ const PPE = {
                         modal.remove();
                         
                         // 3. عرض رسالة نجاح فورية
-                        Notification.success(`تم ${isEdit ? 'تحديث' : 'تسجيل'} الاستلام بنجاح`);
+                        Notification.success(isEdit
+                            ? PPE._t('module.ppe.notify.updateSuccess', 'تم تحديث الاستلام بنجاح')
+                            : PPE._t('module.ppe.notify.saveSuccess', 'تم تسجيل الاستلام بنجاح'));
                         
                         // 4. استعادة الزر بعد النجاح
                         if (submitBtn) {
@@ -1472,7 +1735,7 @@ const PPE = {
                             Utils.safeError('خطأ في حفظ Google Sheets:', error);
                         });
                     } catch (error) {
-                        Notification.error('حدث خطأ: ' + error.message);
+                        Notification.error(PPE._t('module.ppe.notify.saveRuntimeError', 'حدث خطأ أثناء الحفظ') + ': ' + (error.message || error));
                         
                         // استعادة الزر في حالة الخطأ
                         if (submitBtn) {
@@ -1602,12 +1865,16 @@ const PPE = {
         const item = AppState.appData.ppe.find(p => p.id === id);
         if (!item) return;
 
+        const t = (k, f) => this._t(k, f);
+        const ut = (s) => Utils.escapeHTML(s);
+        const stLabel = this.getDisplayStatus(item.status);
         const modal = document.createElement('div');
         modal.className = 'modal-overlay';
+        const idJs = String(item.id || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'");
         modal.innerHTML = `
             <div class="modal-content" style="max-width: 700px;">
                 <div class="modal-header" style="text-align: center; position: relative;">
-                    <h2 class="modal-title" style="margin: 0 auto; text-align: center;">تفاصيل الاستلام</h2>
+                    <h2 class="modal-title" style="margin: 0 auto; text-align: center;">${ut(t('module.ppe.title.viewReceipt', 'تفاصيل الاستلام'))}</h2>
                     <button class="modal-close" onclick="this.closest('.modal-overlay').remove()" style="position: absolute; left: 0; top: 50%; transform: translateY(-50%);">
                         <i class="fas fa-times"></i>
                     </button>
@@ -1616,73 +1883,74 @@ const PPE = {
                     <div class="space-y-4">
                         <div class="grid grid-cols-2 gap-4">
                             <div>
-                                <label class="text-sm font-semibold text-gray-600">رقم الإيصال:</label>
+                                <label class="text-sm font-semibold text-gray-600">${ut(t('module.ppe.table.receiptNo', 'رقم الإيصال'))}:</label>
                                 <p class="text-gray-800 font-mono font-semibold text-lg">${Utils.escapeHTML(item.receiptNumber || item.id || '')}</p>
                             </div>
                             <div>
-                                <label class="text-sm font-semibold text-gray-600">اسم الموظف:</label>
+                                <label class="text-sm font-semibold text-gray-600">${ut(t('module.ppe.table.employeeName', 'اسم الموظف'))}:</label>
                                 <p class="text-gray-800">${Utils.escapeHTML(item.employeeName || '')}</p>
                             </div>
                             <div>
-                                <label class="text-sm font-semibold text-gray-600">الكود الوظيفي:</label>
+                                <label class="text-sm font-semibold text-gray-600">${ut(t('module.ppe.table.employeeCode', 'الكود الوظيفي'))}:</label>
                                 <p class="text-gray-800">${Utils.escapeHTML(item.employeeCode || item.employeeNumber || '')}</p>
                             </div>
                             <div>
-                                <label class="text-sm font-semibold text-gray-600">القسم:</label>
+                                <label class="text-sm font-semibold text-gray-600">${ut(t('module.ppe.label.department', 'القسم'))}:</label>
                                 <p class="text-gray-800">${Utils.escapeHTML(item.employeeDepartment || '')}</p>
                             </div>
                             <div>
-                                <label class="text-sm font-semibold text-gray-600">المنصب:</label>
+                                <label class="text-sm font-semibold text-gray-600">${ut(t('module.ppe.label.position', 'المنصب'))}:</label>
                                 <p class="text-gray-800">${Utils.escapeHTML(item.employeePosition || '')}</p>
                             </div>
                             <div>
-                                <label class="text-sm font-semibold text-gray-600">الفرع:</label>
+                                <label class="text-sm font-semibold text-gray-600">${ut(t('module.ppe.label.branch', 'الفرع'))}:</label>
                                 <p class="text-gray-800">${Utils.escapeHTML(item.employeeBranch || '')}</p>
                             </div>
                             <div>
-                                <label class="text-sm font-semibold text-gray-600">الموقع:</label>
+                                <label class="text-sm font-semibold text-gray-600">${ut(t('module.ppe.label.location', 'الموقع'))}:</label>
                                 <p class="text-gray-800">${Utils.escapeHTML(item.employeeLocation || '')}</p>
                             </div>
                             <div>
-                                <label class="text-sm font-semibold text-gray-600">نوع المعدة:</label>
+                                <label class="text-sm font-semibold text-gray-600">${ut(t('module.ppe.table.equipmentType', 'نوع المعدة'))}:</label>
                                 <p class="text-gray-800">${Utils.escapeHTML(item.equipmentType || '')}</p>
                             </div>
                             <div>
-                                <label class="text-sm font-semibold text-gray-600">الكمية:</label>
+                                <label class="text-sm font-semibold text-gray-600">${ut(t('module.ppe.table.quantity', 'الكمية'))}:</label>
                                 <p class="text-gray-800">${item.quantity || 0}</p>
                             </div>
                             <div>
-                                <label class="text-sm font-semibold text-gray-600">تاريخ الاستلام:</label>
+                                <label class="text-sm font-semibold text-gray-600">${ut(t('module.ppe.table.receiptDate', 'تاريخ الاستلام'))}:</label>
                                 <p class="text-gray-800">${item.receiptDate ? Utils.formatDate(item.receiptDate) : '-'}</p>
                             </div>
                             <div>
-                                <label class="text-sm font-semibold text-gray-600">الحالة:</label>
-                                <span class="badge badge-${item.status === 'مستلم' ? 'success' : 'warning'}">
-                                    ${item.status || '-'}
+                                <label class="text-sm font-semibold text-gray-600">${ut(t('module.ppe.table.status', 'الحالة'))}:</label>
+                                <span class="badge badge-${this.isStatusReceived(item.status) ? 'success' : 'warning'}">
+                                    ${ut(stLabel)}
                                 </span>
                             </div>
                         </div>
                         <div class="mt-4">
-                            <label class="text-sm font-semibold text-gray-600">ملاحظات:</label>
-                            <p class="text-gray-800 whitespace-pre-wrap">${Utils.escapeHTML(item.notes || 'لا توجد ملاحظات')}</p>
+                            <label class="text-sm font-semibold text-gray-600">${ut(t('module.ppe.label.notes', 'ملاحظات'))}:</label>
+                            <p class="text-gray-800 whitespace-pre-wrap">${Utils.escapeHTML(item.notes || t('module.ppe.notes.none', 'لا توجد ملاحظات'))}</p>
                         </div>
                     </div>
                 </div>
                 <div class="modal-footer" style="display: flex; justify-content: center; gap: 10px;">
-                    <button class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">إغلاق</button>
-                    <button class="btn-success" onclick="PPE.exportPDF('${item.id}');">
-                        <i class="fas fa-file-pdf ml-2"></i>تصدير PDF
+                    <button class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">${ut(t('module.common.close', 'إغلاق'))}</button>
+                    <button class="btn-success" onclick="PPE.exportPDF('${idJs}');">
+                        <i class="fas fa-file-pdf ml-2"></i>${ut(t('module.kpi.exportPDF', 'تصدير PDF'))}
                     </button>
                     <button class="btn-primary" onclick="PPE.showPPEForm(${JSON.stringify(item).replace(/"/g, '&quot;')}); this.closest('.modal-overlay').remove();">
-                        <i class="fas fa-edit ml-2"></i>تعديل
+                        <i class="fas fa-edit ml-2"></i>${ut(t('module.common.edit', 'تعديل'))}
                     </button>
-                    <button class="btn-danger" onclick="PPE.deletePPE('${item.id}'); this.closest('.modal-overlay').remove();">
-                        <i class="fas fa-trash ml-2"></i>حذف
+                    <button class="btn-danger" onclick="PPE.deletePPE('${idJs}'); this.closest('.modal-overlay').remove();">
+                        <i class="fas fa-trash ml-2"></i>${ut(t('module.ppe.btn.deleteReceipt', 'حذف'))}
                     </button>
                 </div>
             </div>
         `;
         document.body.appendChild(modal);
+        this.applyModuleI18n(modal);
         modal.addEventListener('click', (e) => {
             if (e.target === modal) modal.remove();
         });
@@ -1690,19 +1958,17 @@ const PPE = {
 
     async deletePPE(id) {
         if (!id) {
-            Notification.error('معرف الاستلام غير موجود');
+            Notification.error(this._t('module.ppe.notify.idMissing', 'معرف الاستلام غير موجود'));
             return;
         }
 
         const item = AppState.appData.ppe.find(p => p.id === id);
         if (!item) {
-            Notification.error('الاستلام غير موجود');
+            Notification.error(this._t('module.ppe.notify.receiptNotFound', 'الاستلام غير موجود'));
             return;
         }
 
-        // رسالة تأكيد الحذف
-        const confirmMessage = `هل أنت متأكد من حذف استلام "${item.receiptNumber || item.id}" للموظف "${item.employeeName || ''}"؟\n\n` +
-                              `⚠️ تحذير: سيتم حذف الاستلام نهائياً ولا يمكن التراجع عن هذه العملية.`;
+        const confirmMessage = `${this._t('module.ppe.confirm.delete', 'هل أنت متأكد من حذف هذا الاستلام؟')}\n\n${item.receiptNumber || item.id} — ${item.employeeName || ''}`;
 
         if (!confirm(confirmMessage)) {
             return;
@@ -1720,24 +1986,24 @@ const PPE = {
                         AppState.appData.ppe = AppState.appData.ppe.filter(p => p.id !== id);
                     }
                     
-                    Notification.success('تم حذف الاستلام بنجاح');
+                    Notification.success(this._t('module.ppe.notify.deleteSuccess', 'تم حذف الاستلام بنجاح'));
                     await this.load(); // إعادة تحميل البيانات
                 } else {
-                    Notification.error(result?.message || 'حدث خطأ أثناء حذف الاستلام');
+                    Notification.error(result?.message || this._t('module.ppe.notify.deleteError', 'حدث خطأ أثناء حذف الاستلام'));
                 }
             } else {
                 // Fallback to local storage
                 if (AppState.appData.ppe) {
                     AppState.appData.ppe = AppState.appData.ppe.filter(p => p.id !== id);
-                    Notification.success('تم حذف الاستلام بنجاح');
+                    Notification.success(this._t('module.ppe.notify.deleteSuccess', 'تم حذف الاستلام بنجاح'));
                     await this.load();
                 } else {
-                    Notification.error('لا توجد بيانات محلية للحذف');
+                    Notification.error(this._t('module.ppe.empty.noReceipts', 'لا توجد بيانات'));
                 }
             }
         } catch (error) {
             Utils.safeError('❌ خطأ في حذف الاستلام:', error);
-            Notification.error('حدث خطأ أثناء حذف الاستلام: ' + (error.message || error));
+            Notification.error(this._t('module.ppe.notify.deleteError', 'حدث خطأ أثناء حذف الاستلام') + ': ' + (error.message || error));
         } finally {
             Loading.hide();
         }
@@ -1746,7 +2012,7 @@ const PPE = {
     async exportPDF(id) {
         const item = AppState.appData.ppe.find(p => p.id === id);
         if (!item) {
-            Notification.error('الاستلام غير موجود');
+            Notification.error(this._t('module.ppe.notify.receiptNotFound', 'الاستلام غير موجود'));
             return;
         }
 
@@ -1782,7 +2048,7 @@ const PPE = {
             const htmlContent = (typeof FormHeader !== 'undefined' && typeof FormHeader.generatePDFHTML === 'function')
                 ? FormHeader.generatePDFHTML(
                     formCode,
-                    'إيصال استلام مهمات الوقاية الشخصية',
+                    this._t('module.ppe.pdf.receiptTitle', 'إيصال استلام مهمات الوقاية الشخصية'),
                     content,
                     false,
                     true,
@@ -1795,7 +2061,7 @@ const PPE = {
                     item.createdAt,
                     item.updatedAt || item.receiptDate || item.createdAt
                 )
-                : `<html dir="rtl" lang="ar"><head><meta charset="UTF-8"><style>@page { size: A4 portrait; margin: 1cm; } @media print { @page { size: A4 portrait; margin: 1cm; } body { padding: 0; } }</style><title>إيصال مهمات الوقاية الشخصية</title></head><body>${content}</body></html>`;
+                : `<html dir="rtl" lang="ar"><head><meta charset="UTF-8"><style>@page { size: A4 portrait; margin: 1cm; } @media print { @page { size: A4 portrait; margin: 1cm; } body { padding: 0; } }</style><title>${Utils.escapeHTML(this._t('module.ppe.pdf.pageTitle', 'إيصال مهمات الوقاية الشخصية'))}</title></head><body>${content}</body></html>`;
 
             const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
             const url = URL.createObjectURL(blob);
@@ -1813,12 +2079,12 @@ const PPE = {
                 };
             } else {
                 Loading.hide();
-                Notification.error('يرجى السماح للنوافذ المنبثقة لعرض التقرير');
+                Notification.error(this._t('module.ppe.notify.pdfBlocked', 'يرجى السماح للنوافذ المنبثقة لعرض التقرير'));
             }
         } catch (error) {
             Loading.hide();
             Utils.safeError('خطأ في تصدير PDF للاستلام:', error);
-            Notification.error('فشل في تصدير PDF: ' + error.message);
+            Notification.error(this._t('module.ppe.notify.pdfError', 'فشل في تصدير PDF') + ': ' + error.message);
         }
     },
 
@@ -1826,6 +2092,8 @@ const PPE = {
      * عرض مصوة مهمات الوقاية لكل موظ حسب الوظية
      */
     async showPPEMatrix() {
+        const t = (k, f) => this._t(k, f);
+        const ut = (s) => Utils.escapeHTML(s);
         const modal = document.createElement('div');
         modal.className = 'modal-overlay';
         modal.innerHTML = `
@@ -1833,7 +2101,7 @@ const PPE = {
                 <div class="modal-header">
                     <h2 class="modal-title">
                         <i class="fas fa-table ml-2"></i>
-                        مصفوفة مهمات الوقاية الشخصية لكل موظف
+                        ${ut(t('module.ppe.title.matrix', 'مصفوفة مهمات الوقاية الشخصية لكل موظف'))}
                     </h2>
                     <button class="modal-close" onclick="this.closest('.modal-overlay').remove()">
                         <i class="fas fa-times"></i>
@@ -1843,10 +2111,10 @@ const PPE = {
                     <div class="mb-4">
                         <div class="flex gap-2 items-center">
                             <input type="text" id="ppe-matrix-search" class="form-input" style="max-width: 400px;" 
-                                placeholder="ابحث بالموظف (الكود أو الاسم أو الوظيفة)">
+                                placeholder="${ut(t('module.ppe.matrix.searchPlaceholder', ''))}">
                             <button id="add-ppe-matrix-btn" class="btn-primary">
                                 <i class="fas fa-plus ml-2"></i>
-                                إضافة/تعديل مصفوفة لوظيفة
+                                ${ut(t('module.ppe.matrix.addEdit', 'إضافة/تعديل مصفوفة لوظيفة'))}
                             </button>
                         </div>
                     </div>
@@ -1855,14 +2123,15 @@ const PPE = {
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">إغلاق</button>
+                    <button class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">${ut(t('module.common.close', 'إغلاق'))}</button>
                     <button class="btn-primary" onclick="PPE.exportPPEMatrix()">
-                        <i class="fas fa-file-excel ml-2"></i>تصدير Excel
+                        <i class="fas fa-file-excel ml-2"></i>${ut(t('module.ppe.matrix.exportExcel', 'تصدير Excel'))}
                     </button>
                 </div>
             </div>
         `;
         document.body.appendChild(modal);
+        this.applyModuleI18n(modal);
 
         // Setup search
         const searchInput = document.getElementById('ppe-matrix-search');
@@ -1886,6 +2155,8 @@ const PPE = {
     },
 
     async renderPPEMatrix() {
+        const t = (k, f) => this._t(k, f);
+        const ut = (s) => Utils.escapeHTML(s);
         const employees = AppState.appData.employees || [];
         const matrixByCode = AppState.appData.employeePPEMatrixByCode || {};
         const ppeList = AppState.appData.ppe || [];
@@ -1895,7 +2166,7 @@ const PPE = {
             return `
                 <div class="empty-state">
                     <i class="fas fa-table text-4xl text-gray-300 mb-4"></i>
-                    <p class="text-gray-500">لا توجد بيانات موظفين لعرض مصفوفة مهمات الوقاية</p>
+                    <p class="text-gray-500">${ut(t('module.ppe.empty.matrixNoEmployees', 'لا توجد بيانات موظفين'))}</p>
                 </div>
             `;
         }
@@ -1904,7 +2175,7 @@ const PPE = {
         const matrixRows = employees.map(emp => {
             const code = emp.employeeNumber || emp.sapId || '';
             const name = emp.name || emp.employeeName || '-';
-            const position = emp.position || 'غير محدد';
+            const position = emp.position || t('module.ppe.label.undefinedDept', 'غير محدد');
             const department = emp.department || '-';
             
             // الحصول على مهمات الوقاية المطلوبة من المصفوفة
@@ -1931,24 +2202,24 @@ const PPE = {
                 <table class="data-table">
                     <thead>
                         <tr>
-                            <th>الكود الوظيفي</th>
-                            <th>اسم الموظف</th>
-                            <th>الوظيفة</th>
-                            <th>القسم/الإدارة</th>
-                            <th>مهمات الوقاية المطلوبة</th>
-                            <th>مهمات الوقاية المستلمة</th>
-                            <th>الإجراءات</th>
+                            <th>${ut(t('module.ppe.table.matrix.code', 'الكود الوظيفي'))}</th>
+                            <th>${ut(t('module.ppe.table.matrix.name', 'اسم الموظف'))}</th>
+                            <th>${ut(t('module.ppe.table.matrix.job', 'الوظيفة'))}</th>
+                            <th>${ut(t('module.ppe.table.matrix.dept', 'القسم/الإدارة'))}</th>
+                            <th>${ut(t('module.ppe.table.matrix.required', 'مهمات الوقاية المطلوبة'))}</th>
+                            <th>${ut(t('module.ppe.table.matrix.received', 'مهمات الوقاية المستلمة'))}</th>
+                            <th>${ut(t('module.ppe.table.actions', 'الإجراءات'))}</th>
                         </tr>
                     </thead>
                     <tbody>
                         ${matrixRows.map(emp => {
             const requiredPPEHtml = emp.requiredPPE.length > 0 
                 ? emp.requiredPPE.map(ppe => `<span class="badge badge-success mr-1 mb-1">${Utils.escapeHTML(ppe)}</span>`).join('')
-                : '<span class="text-gray-500 text-sm">لم يتم تحديد</span>';
+                : `<span class="text-gray-500 text-sm">${ut(t('module.ppe.matrix.notSet', 'لم يتم تحديد'))}</span>`;
             
             const receivedPPEHtml = emp.receivedPPE.length > 0
                 ? emp.receivedPPE.map(ppe => `<span class="badge badge-info mr-1 mb-1">${Utils.escapeHTML(ppe)}</span>`).join('')
-                : '<span class="text-gray-500 text-sm">لا توجد</span>';
+                : `<span class="text-gray-500 text-sm">${ut(t('module.ppe.matrix.noneReceived', 'لا توجد'))}</span>`;
 
             return `
                                 <tr data-employee-code="${Utils.escapeHTML(emp.code)}" data-employee-name="${Utils.escapeHTML(emp.name)}" data-position="${Utils.escapeHTML(emp.position)}">
@@ -1967,7 +2238,7 @@ const PPE = {
                                         </div>
                                     </td>
                                     <td>
-                                        <button onclick="PPE.editEmployeePPEMatrix('${Utils.escapeHTML(emp.code)}')" class="btn-icon btn-icon-primary" title="تعديل">
+                                        <button onclick="PPE.editEmployeePPEMatrix('${Utils.escapeHTML(emp.code)}')" class="btn-icon btn-icon-primary" title="${ut(t('module.common.edit', 'تعديل'))}">
                                             <i class="fas fa-edit"></i>
                                         </button>
                                     </td>
@@ -2245,7 +2516,7 @@ const PPE = {
                 });
 
             } catch (error) {
-                Notification.error('حدث خطأ: ' + error.message);
+                Notification.error(PPE._t('module.ppe.notify.saveRuntimeError', 'حدث خطأ') + ': ' + error.message);
                 Utils.safeError('خطأ في حفظ مصفوفة مهمات الوقاية:', error);
                 
                 // استعادة الزر في حالة الخطأ
@@ -2380,7 +2651,7 @@ const PPE = {
                     });
                 }
             } catch (error) {
-                Notification.error('حدث خطأ: ' + error.message);
+                Notification.error(PPE._t('module.ppe.notify.saveRuntimeError', 'حدث خطأ') + ': ' + error.message);
                 Utils.safeError('خطأ في حفظ مصفوفة مهمات الوقاية:', error);
             }
         });
@@ -2511,7 +2782,7 @@ const PPE = {
 
             if (typeof XLSX === 'undefined') {
                 Loading.hide();
-                Notification.error('مكتبة SheetJS غير محمّلة. يرجى تحديث الصحة');
+                Notification.error(this._t('module.ppe.notify.xlsxMissing', 'مكتبة SheetJS غير محمّلة. يرجى تحديث الصفحة'));
                 return;
             }
 
@@ -2536,10 +2807,10 @@ const PPE = {
             XLSX.writeFile(wb, 'مصوة_مهمات_الوقاية_' + new Date().toISOString().slice(0, 10) + '.xlsx');
 
             Loading.hide();
-            Notification.success('تم تصدير مصوة مهمات الوقاية بنجاح');
+            Notification.success(this._t('module.ppe.notify.matrixExportOk', 'تم تصدير مصفوفة مهمات الوقاية بنجاح'));
         } catch (error) {
             Loading.hide();
-            Notification.error('حدث خطأ: ' + error.message);
+            Notification.error(this._t('module.ppe.notify.matrixExportErr', 'حدث خطأ') + ': ' + error.message);
         }
     },
 
@@ -2555,9 +2826,9 @@ const PPE = {
                 return `
                     <div class="empty-state">
                         <i class="fas fa-exclamation-triangle text-yellow-500 text-4xl mb-4"></i>
-                        <p class="text-gray-500 mb-4">خطأ في تحميل بيانات المخزون</p>
+                        <p class="text-gray-500 mb-4">${Utils.escapeHTML(this._t('module.ppe.empty.loadStockError', 'خطأ في تحميل بيانات المخزون'))}</p>
                         <button onclick="PPE.switchTab('stock-control')" class="btn-primary">
-                            <i class="fas fa-redo ml-2"></i>إعادة المحاولة
+                            <i class="fas fa-redo ml-2"></i>${Utils.escapeHTML(this._t('module.common.retry', 'إعادة المحاولة'))}
                         </button>
                     </div>
                 `;
@@ -2581,9 +2852,9 @@ const PPE = {
             return `
                 <div class="empty-state">
                     <i class="fas fa-exclamation-triangle text-yellow-500 text-4xl mb-4"></i>
-                    <p class="text-gray-500 mb-4">حدث خطأ أثناء تحميل تبويب المخزون: ${error.message || error}</p>
+                    <p class="text-gray-500 mb-4">${Utils.escapeHTML(this._t('module.ppe.empty.stockErrorTab', 'حدث خطأ أثناء تحميل تبويب المخزون'))}: ${Utils.escapeHTML(String(error.message || error))}</p>
                     <button onclick="PPE.switchTab('stock-control')" class="btn-primary">
-                        <i class="fas fa-redo ml-2"></i>إعادة المحاولة
+                        <i class="fas fa-redo ml-2"></i>${Utils.escapeHTML(this._t('module.common.retry', 'إعادة المحاولة'))}
                     </button>
                 </div>
             `;
@@ -2591,6 +2862,8 @@ const PPE = {
     },
 
     async renderStockDashboard(stockItems, lowStockItems) {
+        const t = (k, f) => this._t(k, f);
+        const ut = (s) => Utils.escapeHTML(s);
         const totalItems = stockItems.length;
         const totalBalance = stockItems.reduce((sum, item) => sum + parseFloat(item.balance || 0), 0);
         const totalIn = stockItems.reduce((sum, item) => sum + parseFloat(item.stock_IN || 0), 0);
@@ -2601,7 +2874,7 @@ const PPE = {
                 <div class="bg-white rounded-lg shadow p-4 border-l-4 border-blue-500">
                     <div class="flex items-center justify-between">
                         <div>
-                            <p class="text-sm text-gray-600">إجمالي الأصناف</p>
+                            <p class="text-sm text-gray-600">${ut(t('module.ppe.stock.dashboard.totalItems', 'إجمالي الأصناف'))}</p>
                             <p class="text-2xl font-bold text-gray-800">${totalItems}</p>
                         </div>
                         <div class="text-3xl text-blue-500">
@@ -2612,7 +2885,7 @@ const PPE = {
                 <div class="bg-white rounded-lg shadow p-4 border-l-4 border-green-500">
                     <div class="flex items-center justify-between">
                         <div>
-                            <p class="text-sm text-gray-600">إجمالي الرصيد</p>
+                            <p class="text-sm text-gray-600">${ut(t('module.ppe.stock.dashboard.totalBalance', 'إجمالي الرصيد'))}</p>
                             <p class="text-2xl font-bold text-gray-800">${totalBalance.toFixed(0)}</p>
                         </div>
                         <div class="text-3xl text-green-500">
@@ -2623,7 +2896,7 @@ const PPE = {
                 <div class="bg-white rounded-lg shadow p-4 border-l-4 border-yellow-500">
                     <div class="flex items-center justify-between">
                         <div>
-                            <p class="text-sm text-gray-600">إجمالي الوارد</p>
+                            <p class="text-sm text-gray-600">${ut(t('module.ppe.stock.dashboard.totalIn', 'إجمالي الوارد'))}</p>
                             <p class="text-2xl font-bold text-gray-800">${totalIn.toFixed(0)}</p>
                         </div>
                         <div class="text-3xl text-yellow-500">
@@ -2634,7 +2907,7 @@ const PPE = {
                 <div class="bg-white rounded-lg shadow p-4 border-l-4 border-red-500">
                     <div class="flex items-center justify-between">
                         <div>
-                            <p class="text-sm text-gray-600">إجمالي المنصرف</p>
+                            <p class="text-sm text-gray-600">${ut(t('module.ppe.stock.dashboard.totalOut', 'إجمالي المنصرف'))}</p>
                             <p class="text-2xl font-bold text-gray-800">${totalOut.toFixed(0)}</p>
                         </div>
                         <div class="text-3xl text-red-500">
@@ -2648,8 +2921,8 @@ const PPE = {
                     <div class="flex items-center">
                         <i class="fas fa-exclamation-triangle text-red-500 text-2xl ml-3"></i>
                         <div>
-                            <h3 class="font-bold text-red-800">تحذير: مخزون منخفض</h3>
-                            <p class="text-sm text-red-700 mt-1">يوجد ${lowStockItems.length} صنف تحت حد إعادة الطلب</p>
+                            <h3 class="font-bold text-red-800">${ut(t('module.ppe.stock.lowTitle', 'تحذير: مخزون منخفض'))}</h3>
+                            <p class="text-sm text-red-700 mt-1">${lowStockItems.length} ${ut(t('module.ppe.stock.lowDesc', 'صنف/أصناف تحت حد إعادة الطلب'))}</p>
                         </div>
                     </div>
                     <div class="mt-3 flex flex-wrap gap-2">
@@ -2665,13 +2938,15 @@ const PPE = {
     },
 
     async renderStockTable(stockItems) {
+        const t = (k, f) => this._t(k, f);
+        const ut = (s) => Utils.escapeHTML(s);
         if (!stockItems || stockItems.length === 0) {
             return `
                 <div class="empty-state">
                     <i class="fas fa-box-open text-4xl text-gray-300 mb-4"></i>
-                    <p class="text-gray-500">لا توجد أصناف في المخزون</p>
+                    <p class="text-gray-500">${ut(t('module.ppe.empty.noStock', 'لا توجد أصناف في المخزون'))}</p>
                     <button onclick="PPE.showStockItemForm()" class="btn-primary mt-4">
-                        <i class="fas fa-plus ml-2"></i>إضافة صنف جديد
+                        <i class="fas fa-plus ml-2"></i>${ut(t('module.ppe.btn.addStockItem', 'إضافة صنف جديد'))}
                     </button>
                 </div>
             `;
@@ -2680,24 +2955,24 @@ const PPE = {
         return `
             <div class="content-card">
                 <div class="card-header">
-                    <h3 class="card-title"><i class="fas fa-list ml-2"></i>جدول المخزون</h3>
+                    <h3 class="card-title"><i class="fas fa-list ml-2"></i>${ut(t('module.ppe.stock.tableTitle', 'جدول المخزون'))}</h3>
                 </div>
                 <div class="card-body">
                     <div class="table-wrapper" style="overflow-x: auto;">
                         <table class="data-table">
                             <thead>
                                 <tr>
-                                    <th>كود الصنف</th>
-                                    <th>اسم الصنف</th>
-                                    <th>الفئة</th>
-                                    <th>الوارد</th>
-                                    <th>المنصرف</th>
-                                    <th>الرصيد</th>
-                                    <th>حد إعادة الطلب</th>
-                                    <th>المورد</th>
-                                    <th>آخر تحديث</th>
-                                    <th>الحالة</th>
-                                    <th>الإجراءات</th>
+                                    <th>${ut(t('module.ppe.stock.itemCode', 'كود الصنف'))}</th>
+                                    <th>${ut(t('module.ppe.stock.itemName', 'اسم الصنف'))}</th>
+                                    <th>${ut(t('module.ppe.stock.category', 'الفئة'))}</th>
+                                    <th>${ut(t('module.ppe.stock.in', 'الوارد'))}</th>
+                                    <th>${ut(t('module.ppe.stock.out', 'المنصرف'))}</th>
+                                    <th>${ut(t('module.ppe.stock.balance', 'الرصيد'))}</th>
+                                    <th>${ut(t('module.ppe.stock.reorder', 'حد إعادة الطلب'))}</th>
+                                    <th>${ut(t('module.ppe.stock.supplier', 'المورد'))}</th>
+                                    <th>${ut(t('module.ppe.table.lastUpdate', 'آخر تحديث'))}</th>
+                                    <th>${ut(t('module.ppe.table.status', 'الحالة'))}</th>
+                                    <th>${ut(t('module.ppe.table.actions', 'الإجراءات'))}</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -2724,24 +2999,24 @@ const PPE = {
                                                 ${isLowStock ? `
                                                     <span class="badge badge-warning">
                                                         <i class="fas fa-exclamation-triangle ml-1"></i>
-                                                        مخزون منخفض
+                                                        ${ut(t('module.ppe.status.lowStock', 'مخزون منخفض'))}
                                                     </span>
                                                 ` : `
-                                                    <span class="badge badge-success">متوفر</span>
+                                                    <span class="badge badge-success">${ut(t('module.ppe.status.available', 'متوفر'))}</span>
                                                 `}
                                             </td>
                                             <td>
                                                 <div class="flex items-center gap-2">
-                                                    <button onclick="PPE.showStockItemForm('${item.itemId}')" class="btn-icon btn-icon-primary" title="تعديل">
+                                                    <button onclick="PPE.showStockItemForm('${item.itemId}')" class="btn-icon btn-icon-primary" title="${ut(t('module.common.edit', 'تعديل'))}">
                                                         <i class="fas fa-edit"></i>
                                                     </button>
-                                                    <button onclick="PPE.showStockTransactions('${item.itemId}')" class="btn-icon btn-icon-info" title="الحركات">
+                                                    <button onclick="PPE.showStockTransactions('${item.itemId}')" class="btn-icon btn-icon-info" title="${ut(t('module.ppe.btn.transactions', 'الحركات'))}">
                                                         <i class="fas fa-list"></i>
                                                     </button>
-                                                    <button onclick="PPE.showTransactionForm('${item.itemId}')" class="btn-icon btn-icon-success" title="إضافة حركة">
+                                                    <button onclick="PPE.showTransactionForm('${item.itemId}')" class="btn-icon btn-icon-success" title="${ut(t('module.ppe.btn.addMovement', 'إضافة حركة'))}">
                                                         <i class="fas fa-plus"></i>
                                                     </button>
-                                                    <button onclick="PPE.deleteStockItem('${item.itemId}')" class="btn-icon btn-icon-danger" title="حذف الصنف">
+                                                    <button onclick="PPE.deleteStockItem('${item.itemId}')" class="btn-icon btn-icon-danger" title="${ut(t('module.ppe.btn.deleteItem', 'حذف الصنف'))}">
                                                         <i class="fas fa-trash"></i>
                                                     </button>
                                                 </div>
@@ -2848,12 +3123,14 @@ const PPE = {
             stockItem = stockItems.find(item => item.itemId === itemId);
         }
 
+        const t = (k, f) => this._t(k, f);
+        const ut = (s) => Utils.escapeHTML(s);
         const modal = document.createElement('div');
         modal.className = 'modal-overlay';
         modal.innerHTML = `
             <div class="modal-content" style="max-width: 700px;">
                 <div class="modal-header">
-                    <h2 class="modal-title">${isEdit ? 'تعديل صنف' : 'إضافة صنف جديد'}</h2>
+                    <h2 class="modal-title">${isEdit ? ut(t('module.ppe.title.stockItemEdit', 'تعديل صنف')) : ut(t('module.ppe.title.stockItemAdd', 'إضافة صنف جديد'))}</h2>
                     <button class="modal-close" onclick="this.closest('.modal-overlay').remove()">
                         <i class="fas fa-times"></i>
                     </button>
@@ -2862,40 +3139,40 @@ const PPE = {
                     <form id="stock-item-form" class="space-y-4">
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
-                                <label class="block text-sm font-semibold text-gray-700 mb-2">كود الصنف *</label>
+                                <label class="block text-sm font-semibold text-gray-700 mb-2">${ut(t('module.ppe.stock.itemCode', 'كود الصنف'))} *</label>
                                 <input type="text" id="stock-item-code" required class="form-input"
                                     value="${Utils.escapeHTML(stockItem?.itemCode || '')}"
-                                    placeholder="أدخل كود الصنف">
+                                    placeholder="${ut(t('module.ppe.placeholder.itemCode', ''))}">
                             </div>
                             <div>
-                                <label class="block text-sm font-semibold text-gray-700 mb-2">اسم الصنف *</label>
+                                <label class="block text-sm font-semibold text-gray-700 mb-2">${ut(t('module.ppe.stock.itemName', 'اسم الصنف'))} *</label>
                                 <input type="text" id="stock-item-name" required class="form-input"
                                     value="${Utils.escapeHTML(stockItem?.itemName || '')}"
-                                    placeholder="أدخل اسم الصنف">
+                                    placeholder="${ut(t('module.ppe.placeholder.itemName', ''))}">
                             </div>
                             <div>
-                                <label class="block text-sm font-semibold text-gray-700 mb-2">الفئة</label>
+                                <label class="block text-sm font-semibold text-gray-700 mb-2">${ut(t('module.ppe.label.category', 'الفئة'))}</label>
                                 <input type="text" id="stock-item-category" class="form-input"
                                     value="${Utils.escapeHTML(stockItem?.category || '')}"
-                                    placeholder="الفئة">
+                                    placeholder="${ut(t('module.ppe.stock.category', 'الفئة'))}">
                             </div>
                             <div>
-                                <label class="block text-sm font-semibold text-gray-700 mb-2">حد إعادة الطلب *</label>
+                                <label class="block text-sm font-semibold text-gray-700 mb-2">${ut(t('module.ppe.label.minThreshold', 'حد إعادة الطلب *'))}</label>
                                 <input type="number" id="stock-item-min-threshold" required class="form-input" min="0"
                                     value="${stockItem?.minThreshold || 0}"
-                                    placeholder="الحد الأدنى">
+                                    placeholder="${ut(t('module.ppe.stock.reorder', ''))}">
                             </div>
                             <div class="md:col-span-2">
-                                <label class="block text-sm font-semibold text-gray-700 mb-2">المورد</label>
+                                <label class="block text-sm font-semibold text-gray-700 mb-2">${ut(t('module.ppe.label.supplier', 'المورد'))}</label>
                                 <input type="text" id="stock-item-supplier" class="form-input"
                                     value="${Utils.escapeHTML(stockItem?.supplier || '')}"
-                                    placeholder="اسم المورد">
+                                    placeholder="${ut(t('module.ppe.label.supplier', ''))}">
                             </div>
                         </div>
                         <div class="flex items-center justify-end gap-4 pt-4 border-t">
-                            <button type="button" class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">إلغاء</button>
+                            <button type="button" class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">${ut(t('module.common.cancel', 'إلغاء'))}</button>
                             <button type="submit" class="btn-primary">
-                                <i class="fas fa-save ml-2"></i>${isEdit ? 'حفظ التعديلات' : 'إضافة الصنف'}
+                                <i class="fas fa-save ml-2"></i>${isEdit ? ut(t('module.common.saveChanges', 'حفظ التعديلات')) : ut(t('module.ppe.btn.addItem', 'إضافة الصنف'))}
                             </button>
                         </div>
                     </form>
@@ -2903,6 +3180,7 @@ const PPE = {
             </div>
         `;
         document.body.appendChild(modal);
+        this.applyModuleI18n(modal);
 
         const form = modal.querySelector('#stock-item-form');
         form.addEventListener('submit', async (e) => {
@@ -2919,7 +3197,7 @@ const PPE = {
                 
                 if (!itemCodeEl || !itemNameEl || !categoryEl || !minThresholdEl || !supplierEl) {
                     Loading.hide();
-                    Notification.error('بعض الحقول المطلوبة غير موجودة. يرجى تحديث الصفحة والمحاولة مرة أخرى.');
+                    Notification.error(PPE._t('module.ppe.notify.fieldsMissing', 'بعض الحقول المطلوبة غير موجودة. يرجى تحديث الصفحة والمحاولة مرة أخرى.'));
                     return;
                 }
 
@@ -2936,7 +3214,7 @@ const PPE = {
                     );
                     if (existingItem) {
                         Loading.hide();
-                        Notification.error('كود الصنف موجود بالفعل. يرجى استخدام كود آخر.');
+                        Notification.error(PPE._t('module.ppe.notify.duplicateCode', 'كود الصنف موجود بالفعل. يرجى استخدام كود آخر.'));
                         itemCodeEl.focus();
                         itemCodeEl.style.borderColor = '#ef4444';
                         return;
@@ -2953,7 +3231,7 @@ const PPE = {
                     );
                     if (existingItemByName) {
                         Loading.hide();
-                        Notification.error('اسم الصنف موجود بالفعل. يرجى استخدام اسم آخر.');
+                        Notification.error(PPE._t('module.ppe.notify.duplicateName', 'اسم الصنف موجود بالفعل. يرجى استخدام اسم آخر.'));
                         itemNameEl.focus();
                         itemNameEl.style.borderColor = '#ef4444';
                         return;
@@ -3021,7 +3299,7 @@ const PPE = {
                                 );
                                 if (duplicateCode) {
                                     Loading.hide();
-                                    Notification.error('كود الصنف موجود بالفعل في صنف آخر. يرجى استخدام كود آخر.');
+                                    Notification.error(PPE._t('module.ppe.notify.duplicateCode', 'كود الصنف موجود بالفعل. يرجى استخدام كود آخر.'));
                                     itemCodeEl.focus();
                                     itemCodeEl.style.borderColor = '#ef4444';
                                     return;
@@ -3036,7 +3314,7 @@ const PPE = {
                                 );
                                 if (duplicateName) {
                                     Loading.hide();
-                                    Notification.error('اسم الصنف موجود بالفعل في صنف آخر. يرجى استخدام اسم آخر.');
+                                    Notification.error(PPE._t('module.ppe.notify.duplicateName', 'اسم الصنف موجود بالفعل. يرجى استخدام اسم آخر.'));
                                     itemNameEl.focus();
                                     itemNameEl.style.borderColor = '#ef4444';
                                     return;
@@ -3053,7 +3331,7 @@ const PPE = {
                             );
                             if (duplicateCode) {
                                 Loading.hide();
-                                Notification.error('كود الصنف موجود بالفعل. يرجى استخدام كود آخر.');
+                                Notification.error(PPE._t('module.ppe.notify.duplicateCode', 'كود الصنف موجود بالفعل. يرجى استخدام كود آخر.'));
                                 itemCodeEl.focus();
                                 itemCodeEl.style.borderColor = '#ef4444';
                                 return;
@@ -3067,7 +3345,7 @@ const PPE = {
                             );
                             if (duplicateName) {
                                 Loading.hide();
-                                Notification.error('اسم الصنف موجود بالفعل. يرجى استخدام اسم آخر.');
+                                Notification.error(PPE._t('module.ppe.notify.duplicateName', 'اسم الصنف موجود بالفعل. يرجى استخدام اسم آخر.'));
                                 itemNameEl.focus();
                                 itemNameEl.style.borderColor = '#ef4444';
                                 return;
@@ -3093,7 +3371,7 @@ const PPE = {
                     return; // منع Loading.hide() في finally
                 }
             } catch (error) {
-                Notification.error('حدث خطأ: ' + error.message);
+                Notification.error(PPE._t('module.ppe.notify.saveRuntimeError', 'حدث خطأ') + ': ' + error.message);
             } finally {
                 Loading.hide();
             }
@@ -3263,7 +3541,7 @@ const PPE = {
                     return; // منع Loading.hide() في finally
                 }
             } catch (error) {
-                Notification.error('حدث خطأ: ' + error.message);
+                Notification.error(PPE._t('module.ppe.notify.saveRuntimeError', 'حدث خطأ') + ': ' + error.message);
             } finally {
                 Loading.hide();
             }
