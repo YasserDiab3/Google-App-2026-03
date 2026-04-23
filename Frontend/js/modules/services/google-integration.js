@@ -2620,7 +2620,7 @@ const GoogleIntegration = {
             }
 
             if (showLoader && typeof Loading !== 'undefined') {
-                Loading.show('جاري تحميل البيانات من قاعدة البيانات', 0);
+                Loading.show('جاري تحميل البيانات', 0);
             }
 
             // ✅ إصلاح: تقسيم الأوراق إلى أولوية عالية ومنخفضة لتسريع التحميل
@@ -2922,7 +2922,7 @@ const GoogleIntegration = {
                 }
                 
                 if (showLoader && typeof Loading !== 'undefined') {
-                    Loading.setProgress(10, `جاري تحميل البيانات الأساسية... (${prioritySheetsInList.length} ورقة)`);
+                    Loading.setProgress(10, 'جاري تحميل البيانات');
                 }
 
                 // تحميل البيانات الأساسية بشكل متوازي تماماً
@@ -3031,7 +3031,7 @@ const GoogleIntegration = {
             const baseProgress = prioritySheetsInList.length > 0 ? 30 : 10;
 
             if (showLoader && typeof Loading !== 'undefined') {
-                Loading.setProgress(baseProgress, `جاري تحميل باقي البيانات... (${totalSheets} ورقة)`);
+                Loading.setProgress(baseProgress, 'جاري تحميل البيانات');
             }
 
             // ✅ NEW: استخدام Batch Reading لتقليل عدد الطلبات من 70+ إلى 5-6 فقط
@@ -3074,7 +3074,7 @@ const GoogleIntegration = {
 
                     // تحديث شريط التقدم بعد اكتمال التحميل
                     if (showLoader && typeof Loading !== 'undefined') {
-                        Loading.setProgress(90, `تم تحميل جميع البيانات... (${totalSheets}/${totalSheets})`);
+                        Loading.setProgress(90, 'جاري تحميل البيانات');
                     }
                 } catch (batchError) {
                     Utils.safeError('❌ فشل Batch Read:', batchError);
@@ -3196,7 +3196,7 @@ const GoogleIntegration = {
 
             // حفظ البيانات في localStorage
             if (showLoader && typeof Loading !== 'undefined') {
-                Loading.setProgress(95, 'جاري حفظ البيانات في التخزين المحلي...');
+                Loading.setProgress(95, 'جاري تحميل البيانات');
             }
 
             ViolationTypesManager.ensureInitialized();
@@ -3273,7 +3273,7 @@ const GoogleIntegration = {
 
             // اكتمال المزامنة
             if (showLoader && typeof Loading !== 'undefined') {
-                Loading.setProgress(100, 'اكتملت المزامنة بنجاح!');
+                Loading.setProgress(100, 'جاري تحميل البيانات');
                 // إخفاء شريط التقدم بعد ثانية واحدة
                 setTimeout(() => {
                     Loading.hide();

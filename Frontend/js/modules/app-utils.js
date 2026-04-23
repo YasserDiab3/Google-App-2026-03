@@ -5561,12 +5561,22 @@ const Loading = {
 
         this.currentProgress = Math.max(0, Math.min(100, percentage));
 
+        const messageEl = overlay.querySelector('.loading-message') || overlay.querySelector('p');
+
         // تحديث الرسالة إذا تم توفيرها
         if (message) {
             this.currentMessage = message;
-            const messageEl = overlay.querySelector('.loading-message') || overlay.querySelector('p');
             if (messageEl) {
                 messageEl.textContent = message;
+            }
+        }
+
+        // إخفاء شريط التحميل غير المحدد (animation) عند عرض تقدم مئوي واضح
+        const spinner = overlay.querySelector('.loading-spinner');
+        if (spinner) {
+            const anim = spinner.querySelector('.loading-progress-animation');
+            if (anim && anim.parentElement && anim.parentElement.parentElement) {
+                anim.parentElement.parentElement.style.display = 'none';
             }
         }
 
@@ -5575,23 +5585,25 @@ const Loading = {
         let progressFill = overlay.querySelector('.loading-progress-fill');
         let progressText = overlay.querySelector('.loading-progress-text');
 
-        if (!progressBar) {
-            // إنشاء شريط التقدم
-            const spinner = overlay.querySelector('.loading-spinner');
-            if (spinner) {
-                progressBar = document.createElement('div');
-                progressBar.className = 'loading-progress-bar';
-                progressBar.style.cssText = 'width: 300px; height: 8px; background: rgba(255,255,255,0.3); border-radius: 4px; margin: 20px auto 10px; overflow: hidden;';
+        if (!progressBar && spinner) {
+            progressBar = document.createElement('div');
+            progressBar.className = 'loading-progress-bar';
+            progressBar.style.cssText = 'width: 300px; height: 8px; background: rgba(59, 130, 246, 0.2); border-radius: 4px; margin: 12px auto 8px; overflow: hidden;';
 
-                progressFill = document.createElement('div');
-                progressFill.className = 'loading-progress-fill';
-                progressFill.style.cssText = 'height: 100%; background: linear-gradient(90deg, #3b82f6, #2563eb); border-radius: 4px; transition: width 0.3s ease; width: 0%;';
+            progressFill = document.createElement('div');
+            progressFill.className = 'loading-progress-fill';
+            progressFill.style.cssText = 'height: 100%; background: linear-gradient(90deg, #3b82f6, #2563eb); border-radius: 4px; transition: width 0.3s ease; width: 0%;';
 
-                progressText = document.createElement('div');
-                progressText.className = 'loading-progress-text';
-                progressText.style.cssText = 'text-align: center; color: white; font-weight: bold; font-size: 18px; margin-top: 10px;';
+            progressText = document.createElement('div');
+            progressText.className = 'loading-progress-text';
+            progressText.style.cssText = 'text-align: center; color: #374151; font-weight: 700; font-size: 1.125rem; margin-top: 4px; font-family: Cairo, Segoe UI, sans-serif;';
 
-                progressBar.appendChild(progressFill);
+            progressBar.appendChild(progressFill);
+            // ترتيب: النص ثم الشريط ثم النسبة المئوية أسفل الشريط
+            if (messageEl) {
+                messageEl.insertAdjacentElement('afterend', progressBar);
+                progressBar.insertAdjacentElement('afterend', progressText);
+            } else {
                 spinner.appendChild(progressBar);
                 spinner.appendChild(progressText);
             }
@@ -5603,6 +5615,7 @@ const Loading = {
 
         if (progressText) {
             progressText.textContent = `${Math.round(this.currentProgress)}%`;
+            progressText.style.color = '#374151';
         }
     },
 
@@ -5623,6 +5636,16 @@ const Loading = {
             this.normalizeOverlayPresentation(overlay, false);
             this.currentProgress = 0;
             this.currentMessage = '';
+            // إعادة إظهار شريط التحميل غير المحدد للمرة القادمة
+            try {
+                const spinner = overlay.querySelector('.loading-spinner');
+                if (spinner) {
+                    const anim = spinner.querySelector('.loading-progress-animation');
+                    if (anim && anim.parentElement && anim.parentElement.parentElement) {
+                        anim.parentElement.parentElement.style.display = '';
+                    }
+                }
+            } catch (e) { /* ignore */ }
         }
         try {
             delete window._hseLoadingSince;

@@ -66,6 +66,14 @@
             'dash.behaviorMonitoring': 'مراقبة السلوكيات',
             'dash.clinicVisits': 'التردد على العيادة',
             'dash.incidents': 'الحوادث',
+            'dash.trirTitle': 'معدل الإصابات القابلة للتسجيل',
+            'dash.trirSubtitle': 'لكل 200 ألف ساعة عمل',
+            'dash.faTitle': 'معدل التكرار',
+            'dash.frequencyRateSubtitle': 'لكل مليون ساعة عمل',
+            'dash.tirTitle': 'نسبة الإصابات الإجمالية',
+            'dash.totalInjuryRateSubtitle': 'لكل 100 عامل',
+            'dash.ltiTitle': 'عدد إصابات فقدان وقت العمل',
+            'dash.lostTimeInjurySubtitle': 'عدد الحالات المسجّلة',
             'login.email': 'البريد الإلكتروني',
             'login.password': 'كلمة المرور',
             'login.submit': 'تسجيل الدخول',
@@ -617,6 +625,14 @@
             'dash.behaviorMonitoring': 'Behavior Monitoring',
             'dash.clinicVisits': 'Clinic Visits',
             'dash.incidents': 'Incidents',
+            'dash.trirTitle': 'Total Recordable Injury Rate',
+            'dash.trirSubtitle': 'Per 200,000 work hours',
+            'dash.faTitle': 'Frequency Rate',
+            'dash.frequencyRateSubtitle': 'Per million work hours',
+            'dash.tirTitle': 'Total Injury Rate (%)',
+            'dash.totalInjuryRateSubtitle': 'Per 100 employees',
+            'dash.ltiTitle': 'Lost-Time Injuries (count)',
+            'dash.lostTimeInjurySubtitle': 'Recorded cases',
             'login.email': 'Email',
             'login.password': 'Password',
             'login.submit': 'Log in',
@@ -1693,7 +1709,16 @@
         'المقاولين النشطين': 'Active Contractors',
         'معدل حل المخالفات': 'Violation Resolution Rate',
         'مخالفة محلولة': 'resolved violations',
-        'العقود المنتهية': 'Expired Contracts'
+        'العقود المنتهية': 'Expired Contracts',
+        /* عبارات كاملة لعناوين مؤشرات السلامة في لوحة التحكم — تُستبدل قبل كلمات مثل Time/Rate */
+        'معدل الإصابات القابلة للتسجيل': 'Total Recordable Injury Rate',
+        'معدل التكرار': 'Frequency Rate',
+        'نسبة الإصابات الإجمالية': 'Total Injury Rate (%)',
+        'عدد إصابات فقدان وقت العمل': 'Lost-Time Injuries (count)',
+        'عدد الحالات المسجّلة': 'Recorded cases',
+        'لكل 200 ألف ساعة عمل': 'Per 200,000 work hours',
+        'لكل مليون ساعة عمل': 'Per million work hours',
+        'لكل 100 عامل': 'Per 100 employees'
     };
 
     const literalEnToAr = Object.fromEntries(Object.entries(literalArToEn).map(([ar, en]) => [en, ar]));
