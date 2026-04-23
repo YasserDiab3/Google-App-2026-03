@@ -589,6 +589,33 @@ const PTW = {
                 throw new Error(registryResult?.message || 'فشل حفظ سجل التصريح اليدوي في الخلفية');
             }
 
+            // إعادة تحميل السجل من الخلفية ثم توحيد permitData.id مع permitId الفعلي (بعد resolvePTWRegistryIdsForWrite_)
+            try {
+                if (typeof this.loadRegistryFromBackend === 'function') {
+                    await this.loadRegistryFromBackend();
+                }
+            } catch (reloadErr) {
+                Utils.safeWarn('⚠️ تعذر إعادة تحميل PTWRegistry بعد الحفظ:', reloadErr);
+            }
+
+            const paperKey = String(entry.paperPermitNumber || permitData.paperPermitNumber || '').trim();
+            const oldPermitId = String(entry.permitId || permitData.id || '').trim();
+            if (paperKey && Array.isArray(this.registryData)) {
+                const refreshed = this.registryData.find(r =>
+                    String(r.paperPermitNumber || '').trim() === paperKey &&
+                    (r.isManualEntry === true || r.isManualEntry === 'true')
+                );
+                if (refreshed && refreshed.permitId) {
+                    permitData.id = refreshed.permitId;
+                    if (typeof AppState !== 'undefined' && AppState.appData && Array.isArray(AppState.appData.ptw)) {
+                        const pi = AppState.appData.ptw.findIndex(p => String(p.id || '').trim() === oldPermitId);
+                        if (pi !== -1) {
+                            AppState.appData.ptw[pi] = { ...AppState.appData.ptw[pi], id: refreshed.permitId };
+                        }
+                    }
+                }
+            }
+
             const permitResult = await sendSheetRecord('PTW', permitData, isNewPermit);
             if (!permitResult || permitResult.success !== true) {
                 throw new Error(permitResult?.message || 'فشل حفظ التصريح اليدوي في الخلفية');
@@ -597,6 +624,18 @@ const PTW = {
             if (typeof GoogleIntegration.clearCache === 'function') {
                 GoogleIntegration.clearCache('PTWRegistry');
                 GoogleIntegration.clearCache('PTW');
+            }
+
+            // حفظ محلي بعد توحيد المعرفات مع الخلفية
+            try {
+                if (typeof this.saveRegistryData === 'function') {
+                    await this.saveRegistryData({ skipSync: true });
+                }
+                if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
+                    await Promise.resolve(window.DataManager.save());
+                }
+            } catch (persistErr) {
+                Utils.safeWarn('⚠️ تعذر حفظ البيانات المحلية بعد المزامنة:', persistErr);
             }
 
             return true;
@@ -896,9 +935,20 @@ const PTW = {
      */
     generateRegistrySequentialNumber() {
         if (!this.registryData.length) return 1;
+        const parseReg = (id) => {
+            const m = String(id || '').match(/^REG_(\d+)$/i);
+            return m ? parseInt(m[1], 10) : 0;
+        };
+        const parsePtw = (pid) => {
+            const m = String(pid || '').match(/^PTW_(\d+)$/i);
+            return m ? parseInt(m[1], 10) : 0;
+        };
         const maxSeq = this.registryData.reduce((max, r) => {
-            const n = parseInt(r.sequentialNumber) || 0;
-            return n > max ? n : max;
+            const a = parseInt(r.sequentialNumber) || 0;
+            const b = parseReg(r.id);
+            const c = parsePtw(r.permitId);
+            const rowMax = Math.max(a, b, c);
+            return rowMax > max ? rowMax : max;
         }, 0);
         return maxSeq + 1;
     },

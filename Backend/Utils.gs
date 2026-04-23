@@ -3231,6 +3231,48 @@ function fixUsersSheetHeaders(spreadsheetId = null) {
 }
 
 /**
+ * أكبر رقم تسلسلي موحّد من ورقة PTWRegistry: id (REG)، permitId (PTW)، sequentialNumber.
+ * يمنع اختلاف الرقم التالي بين عمود id و permitId عند التوليد السابق المنفصل.
+ */
+function getMaxUnifiedPTWRegistryNumeric_(existingData) {
+    var maxN = 0;
+    if (!existingData || !Array.isArray(existingData)) return maxN;
+    var regRe = /^REG_(\d+)$/i;
+    var ptwRe = /^PTW_(\d+)$/i;
+    for (var i = 0; i < existingData.length; i++) {
+        var record = existingData[i];
+        if (!record) continue;
+        var idStr = record.id != null ? String(record.id).trim() : '';
+        var pidStr = record.permitId != null ? String(record.permitId).trim() : '';
+        var m;
+        var n;
+        if (idStr && (m = idStr.match(regRe))) {
+            n = parseInt(m[1], 10);
+            if (!isNaN(n) && n > maxN) maxN = n;
+        }
+        if (pidStr && (m = pidStr.match(ptwRe))) {
+            n = parseInt(m[1], 10);
+            if (!isNaN(n) && n > maxN) maxN = n;
+        }
+        if (record.sequentialNumber != null && record.sequentialNumber !== '') {
+            n = parseInt(String(record.sequentialNumber).trim(), 10);
+            if (!isNaN(n) && n > maxN) maxN = n;
+        }
+    }
+    return maxN;
+}
+
+/** استخراج الرقم من معرف بتنسيق PREFIX_123 */
+function extractNumericFromPrefixedId_(value, prefix) {
+    var pfx = String(prefix || '').toUpperCase();
+    var str = String(value || '').trim();
+    var m = str.match(new RegExp('^' + pfx + '_(\\d+)$', 'i'));
+    if (!m) return null;
+    var n = parseInt(m[1], 10);
+    return (isNaN(n) || n < 1) ? null : n;
+}
+
+/**
  * ============================================
  * نظام توليد المعرفات الموحد
  * ============================================
@@ -3280,18 +3322,25 @@ function generateSequentialId(prefix, sheetName, spreadsheetId, idField) {
         // استخراج جميع الأرقام الموجودة بتنسيق PREFIX_NUMBER
         var existingNumbers = [];
         if (existingData && Array.isArray(existingData)) {
-            for (var i = 0; i < existingData.length; i++) {
-                var record = existingData[i];
-                if (record && record[idKey]) {
-                    var id = record[idKey].toString();
-                    // التحقق من التنسيق: PREFIX_NUMBER (مثل PTW_01, PTW_100, إلخ)
-                    var match = id.match(new RegExp('^' + prefix + '_(\\d+)$'));
-                    if (match) {
-                        // استخراج الرقم
-                        var numberPart = match[1];
-                        var number = parseInt(numberPart, 10);
-                        if (!isNaN(number) && number > 0) {
-                            existingNumbers.push(number);
+            if (sheetName === 'PTWRegistry') {
+                var unifiedMax = getMaxUnifiedPTWRegistryNumeric_(existingData);
+                if (unifiedMax > 0) {
+                    existingNumbers.push(unifiedMax);
+                }
+            } else {
+                for (var i = 0; i < existingData.length; i++) {
+                    var record = existingData[i];
+                    if (record && record[idKey]) {
+                        var id = record[idKey].toString();
+                        // التحقق من التنسيق: PREFIX_NUMBER (مثل PTW_01, PTW_100, إلخ)
+                        var match = id.match(new RegExp('^' + prefix + '_(\\d+)$'));
+                        if (match) {
+                            // استخراج الرقم
+                            var numberPart = match[1];
+                            var number = parseInt(numberPart, 10);
+                            if (!isNaN(number) && number > 0) {
+                                existingNumbers.push(number);
+                            }
                         }
                     }
                 }
@@ -3333,7 +3382,17 @@ function resolvePTWRegistryIdsForWrite_(record, spreadsheetId) {
     }
 
     resolved.id = resolveHybridId_(resolved.id, 'REG', 'PTWRegistry', 'id', spreadsheetId, true);
-    resolved.permitId = resolveHybridId_(resolved.permitId, 'PTW', 'PTWRegistry', 'permitId', spreadsheetId, false);
+    var regNum = extractNumericFromPrefixedId_(resolved.id, 'REG');
+    if (regNum !== null) {
+        resolved.permitId = 'PTW_' + String(regNum).padStart(4, '0');
+        resolved.sequentialNumber = regNum;
+    } else {
+        resolved.permitId = resolveHybridId_(resolved.permitId, 'PTW', 'PTWRegistry', 'permitId', spreadsheetId, true);
+        var ptwNum = extractNumericFromPrefixedId_(resolved.permitId, 'PTW');
+        if (ptwNum !== null) {
+            resolved.sequentialNumber = ptwNum;
+        }
+    }
     return resolved;
 }
 
