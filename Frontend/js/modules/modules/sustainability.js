@@ -274,12 +274,15 @@ const Sustainability = {
         const electricityData = AppState.appData.resourceConsumption?.electricity || [];
         const gasData = AppState.appData.resourceConsumption?.gas || [];
 
-        const currentMonth = new Date().getMonth();
-        const currentYear = new Date().getFullYear();
+        // استخدم آخر شهر متاح في البيانات بدلاً من الشهر الحالي فقط،
+        // حتى لا تظهر الكروت بصفر عند عدم وجود إدخالات للشهر الجاري.
+        const waterLatest = this.getLatestMonthlyConsumption(waterData);
+        const electricityLatest = this.getLatestMonthlyConsumption(electricityData);
+        const gasLatest = this.getLatestMonthlyConsumption(gasData);
 
-        const waterThisMonth = this.getMonthlyConsumption(waterData, currentMonth, currentYear);
-        const electricityThisMonth = this.getMonthlyConsumption(electricityData, currentMonth, currentYear);
-        const gasThisMonth = this.getMonthlyConsumption(gasData, currentMonth, currentYear);
+        const waterThisMonth = waterLatest.total;
+        const electricityThisMonth = electricityLatest.total;
+        const gasThisMonth = gasLatest.total;
 
         const waterTrend = this.getTrend(waterData, 'water');
         const electricityTrend = this.getTrend(electricityData, 'electricity');
@@ -1256,15 +1259,39 @@ const Sustainability = {
             .reduce((sum, record) => sum + (parseFloat(record.totalConsumption) || 0), 0);
     },
 
+    getLatestMonthContext(data = []) {
+        const validDates = (data || [])
+            .map((record) => new Date(record?.date))
+            .filter((d) => !Number.isNaN(d.getTime()))
+            .sort((a, b) => a - b);
+
+        if (!validDates.length) return null;
+        const latest = validDates[validDates.length - 1];
+        return { month: latest.getMonth(), year: latest.getFullYear() };
+    },
+
+    getLatestMonthlyConsumption(data = []) {
+        const latest = this.getLatestMonthContext(data);
+        if (!latest) {
+            return { total: 0, month: null, year: null };
+        }
+        return {
+            total: this.getMonthlyConsumption(data, latest.month, latest.year),
+            month: latest.month,
+            year: latest.year
+        };
+    },
+
     /**
      * الحصول على اتجاه الاستهلاك
      */
     getTrend(data, type) {
         if (data.length < 2) return 'stable';
 
-        const now = new Date();
-        const currentMonth = now.getMonth();
-        const currentYear = now.getFullYear();
+        const latest = this.getLatestMonthContext(data);
+        if (!latest) return 'stable';
+        const currentMonth = latest.month;
+        const currentYear = latest.year;
         const lastMonth = currentMonth === 0 ? 11 : currentMonth - 1;
         const lastMonthYear = currentMonth === 0 ? currentYear - 1 : currentYear;
 
@@ -1348,14 +1375,12 @@ const Sustainability = {
         const electricityData = AppState.appData.resourceConsumption?.electricity || [];
         const gasData = AppState.appData.resourceConsumption?.gas || [];
 
-        const now = new Date();
-        const currentMonth = now.getMonth();
-        const currentYear = now.getFullYear();
-
         const checkAlerts = (data, type, name, icon) => {
+            const latest = this.getLatestMonthContext(data);
+            if (!latest) return;
             const monthlyData = data.filter(r => {
                 const recordDate = new Date(r.date);
-                return recordDate.getMonth() === currentMonth && recordDate.getFullYear() === currentYear;
+                return recordDate.getMonth() === latest.month && recordDate.getFullYear() === latest.year;
             });
 
             if (monthlyData.length === 0) return;
