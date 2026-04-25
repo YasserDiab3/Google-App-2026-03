@@ -12598,7 +12598,8 @@ const PTW = {
         } catch (error) {
             Loading.hide();
             Utils.safeError('خطأ في تصدير PDF:', error);
-            Notification.error(this._t('module.ptw.notify.pdfErr', 'فشل تصدير PDF: ') + (error.message || ''));
+            const unk = this._t('module.ptw.notify.unknownError', 'خطأ غير معروف');
+            Notification.error(this._t('module.ptw.notify.pdfErr', 'فشل تصدير PDF: ') + (error && error.message ? error.message : unk));
         }
     },
 
@@ -13750,20 +13751,32 @@ const PTW = {
             Notification.warning(this._t('module.ptw.notify.analysisNoExport', 'لا توجد بيانات للتصدير. غيّر الفلتر أو أضف تصاريح.'));
             return;
         }
+        const t = (k, f) => this._t(k, f);
+        const _lang = (typeof AppState !== 'undefined' && AppState.currentLanguage) || (typeof localStorage !== 'undefined' && localStorage.getItem('language')) || 'ar';
+        const _dateLoc = _lang === 'en' ? 'en-GB' : 'ar-EG';
         const formatDate = (d) => {
             if (!d) return '-';
-            try { return new Date(d).toLocaleDateString('ar-EG'); } catch (e) { return String(d); }
+            try { return new Date(d).toLocaleDateString(_dateLoc); } catch (e) { return String(d); }
         };
-        const workTypeStr = (p) => Array.isArray(p.workType) ? (p.workType || []).join('، ') : (p.workType || '-');
+        const sep = this._t('module.ptw.common.listSep', '، ');
+        const workTypeStr = (p) => Array.isArray(p.workType) ? (p.workType || []).join(sep) : (p.workType || '-');
+        const kSeq = t('module.ptw.excelColSeq', 'م');
+        const kType = t('module.ptw.excelColPermitType', 'نوع التصريح');
+        const kReq = t('module.ptw.excelColReq', 'الجهة الطالبة');
+        const kAuth = t('module.ptw.excelColAuth', 'الجهة المصرح لها');
+        const kLoc = t('module.ptw.excelColLoc', 'الموقع');
+        const kDate = t('module.ptw.excelColDate', 'التاريخ');
+        const kSt = t('module.ptw.excelColStatus', 'الحالة');
+        const kDesc = t('module.ptw.excelColWorkDesc', 'وصف العمل');
         const data = list.map((p, i) => ({
-            'م': i + 1,
-            'نوع التصريح': workTypeStr(p),
-            'الجهة الطالبة': (p.requestingParty || '-'),
-            'الجهة المصرح لها': (p.authorizedParty || '-'),
-            'الموقع': (p.location || p.siteName || '-'),
-            'التاريخ': formatDate(p.startDate || p.openDate || p.createdAt),
-            'الحالة': (p.status || '-'),
-            'وصف العمل': (p.workDescription || '-').toString().slice(0, 200)
+            [kSeq]: i + 1,
+            [kType]: workTypeStr(p),
+            [kReq]: (p.requestingParty || '-'),
+            [kAuth]: (p.authorizedParty || '-'),
+            [kLoc]: (p.location || p.siteName || '-'),
+            [kDate]: formatDate(p.startDate || p.openDate || p.createdAt),
+            [kSt]: this.statusLabel(p.status || '-'),
+            [kDesc]: (p.workDescription || '-').toString().slice(0, 200)
         }));
         if (typeof XLSX === 'undefined') {
             Notification.error(this._t('module.ptw.notify.xlsxNoLib', 'مكتبة Excel غير متوفرة'));
@@ -13771,10 +13784,13 @@ const PTW = {
         }
         const ws = XLSX.utils.json_to_sheet(data);
         const wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, ws, 'تقرير التحليل');
+        const sheetName = t('module.ptw.excelSheetAnalysis', 'تقرير التحليل');
+        XLSX.utils.book_append_sheet(wb, ws, sheetName);
         const dateFrom = document.getElementById('ptw-analysis-date-from')?.value || '';
         const dateTo = document.getElementById('ptw-analysis-date-to')?.value || '';
-        const name = `تقرير_تحليل_التصاريح_${dateFrom || 'كل'}_${dateTo || 'الوقت'}.xlsx`.replace(/\s/g, '_');
+        const name = t('module.ptw.excelNameAnalysis', 'تقرير_تحليل_التصاريح_{f}_{t}.xlsx')
+            .replace(/\{f\}/g, (dateFrom || t('module.ptw.excelNameAll', 'كل')).replace(/\s/g, '_'))
+            .replace(/\{t\}/g, (dateTo || t('module.ptw.excelNameTime', 'الوقت')).replace(/\s/g, '_'));
         XLSX.writeFile(wb, name);
         Notification.success(this._t('module.ptw.notify.analysisExportXlsxOk', 'تم تصدير تقرير التحليل إلى Excel بنجاح'));
     },
@@ -13788,10 +13804,18 @@ const PTW = {
             Notification.warning(this._t('module.ptw.notify.analysisNoExport', 'لا توجد بيانات للتصدير. غيّر الفلتر أو أضف تصاريح.'));
             return;
         }
+        const t = (k, f) => this._t(k, f);
+        const _lang = (typeof AppState !== 'undefined' && AppState.currentLanguage) || (typeof localStorage !== 'undefined' && localStorage.getItem('language')) || 'ar';
+        const _dateLoc = _lang === 'en' ? 'en-GB' : 'ar-EG';
+        const isRtl = _lang !== 'en';
+        const htmlDir = isRtl ? 'rtl' : 'ltr';
+        const htmlLang = _lang === 'en' ? 'en' : 'ar';
+        const alignMain = isRtl ? 'right' : 'left';
         try {
-            Loading.show('جاري تصدير التقرير PDF...');
-            const formatDate = (d) => { if (!d) return '-'; try { return new Date(d).toLocaleDateString('ar-EG'); } catch (e) { return String(d); } };
-            const workTypeStr = (p) => Array.isArray(p.workType) ? (p.workType || []).join('، ') : (p.workType || '-');
+            Loading.show(t('module.ptw.pdf.exportLoading', 'جاري تصدير التقرير PDF...'));
+            const formatDate = (d) => { if (!d) return '-'; try { return new Date(d).toLocaleDateString(_dateLoc); } catch (e) { return String(d); } };
+            const sep = this._t('module.ptw.common.listSep', '، ');
+            const workTypeStr = (p) => Array.isArray(p.workType) ? (p.workType || []).join(sep) : (p.workType || '-');
             const dateFromEl = document.getElementById('ptw-analysis-date-from');
             const dateToEl = document.getElementById('ptw-analysis-date-to');
             const workTypeEl = document.getElementById('ptw-analysis-work-type');
@@ -13799,54 +13823,69 @@ const PTW = {
             const requestingEl = document.getElementById('ptw-analysis-requesting');
             const statusEl = document.getElementById('ptw-analysis-status');
             const filterParts = [];
-            if (dateFromEl && dateFromEl.value) filterParts.push('من تاريخ: ' + dateFromEl.value);
-            if (dateToEl && dateToEl.value) filterParts.push('إلى تاريخ: ' + dateToEl.value);
-            if (workTypeEl && workTypeEl.value) filterParts.push('نوع التصريح: ' + workTypeEl.value);
-            if (authorizedEl && authorizedEl.value) filterParts.push('الجهة المصرح لها: ' + authorizedEl.value);
-            if (requestingEl && requestingEl.value) filterParts.push('الجهة الطالبة: ' + requestingEl.value);
-            if (statusEl && statusEl.value) filterParts.push('الحالة: ' + statusEl.value);
-            const filterText = filterParts.length ? filterParts.join(' | ') : 'بدون فلتر (جميع التصاريح)';
+            if (dateFromEl && dateFromEl.value) filterParts.push(t('module.ptw.analysis.fromDate', 'من تاريخ') + ': ' + dateFromEl.value);
+            if (dateToEl && dateToEl.value) filterParts.push(t('module.ptw.analysis.toDate', 'إلى تاريخ') + ': ' + dateToEl.value);
+            if (workTypeEl && workTypeEl.value) filterParts.push(t('module.ptw.analysis.permitType', 'نوع التصريح') + ': ' + workTypeEl.value);
+            if (authorizedEl && authorizedEl.value) filterParts.push(t('module.ptw.analysis.authorized', 'الجهة المصرح لها (مقاول)') + ': ' + authorizedEl.value);
+            if (requestingEl && requestingEl.value) filterParts.push(t('module.ptw.analysis.requesting', 'الجهة الطالبة') + ': ' + requestingEl.value);
+            if (statusEl && statusEl.value) filterParts.push(t('module.ptw.analysis.filterStatus', 'الحالة') + ': ' + statusEl.value);
+            const partSep = t('module.ptw.analysis.partSep', ' | ');
+            const filterText = filterParts.length ? filterParts.join(partSep) : t('module.ptw.analysis.noFilters', 'بدون فلتر (جميع التصاريح)');
             const openCount = list.filter(p => { const s = (p.status || '').trim(); return s !== 'مغلق' && s !== 'مرفوض' && s !== 'اكتمل العمل بشكل آمن' && s !== 'إغلاق جبري'; }).length;
             const closedCount = list.filter(p => { const s = (p.status || '').trim(); return s === 'مغلق' || s === 'اكتمل العمل بشكل آمن' || s === 'إغلاق جبري'; }).length;
+            const kSeq = t('module.ptw.excelColSeq', 'م');
+            const kType = t('module.ptw.excelColPermitType', 'نوع التصريح');
+            const kReq = t('module.ptw.excelColReq', 'الجهة الطالبة');
+            const kAuth = t('module.ptw.excelColAuth', 'الجهة المصرح لها');
+            const kLoc = t('module.ptw.excelColLoc', 'الموقع');
+            const kDate = t('module.ptw.excelColDate', 'التاريخ');
+            const kSt = t('module.ptw.excelColStatus', 'الحالة');
+            const kDesc = t('module.ptw.excelColWorkDesc', 'وصف العمل');
             const tableRows = list.map((p, i) => `
                 <tr>
                     <td style="border: 1px solid #d1d5db; padding: 5px; text-align: center;">${i + 1}</td>
-                    <td style="border: 1px solid #d1d5db; padding: 5px; text-align: right; font-size: 9px;">${Utils.escapeHTML(workTypeStr(p))}</td>
-                    <td style="border: 1px solid #d1d5db; padding: 5px; text-align: right;">${Utils.escapeHTML(p.requestingParty || '-')}</td>
-                    <td style="border: 1px solid #d1d5db; padding: 5px; text-align: right;">${Utils.escapeHTML(p.authorizedParty || '-')}</td>
-                    <td style="border: 1px solid #d1d5db; padding: 5px; text-align: right;">${Utils.escapeHTML(p.location || p.siteName || '-')}</td>
-                    <td style="border: 1px solid #d1d5db; padding: 5px; text-align: right;">${formatDate(p.startDate || p.openDate || p.createdAt)}</td>
-                    <td style="border: 1px solid #d1d5db; padding: 5px; text-align: right;">${Utils.escapeHTML(p.status || '-')}</td>
-                    <td style="border: 1px solid #d1d5db; padding: 5px; text-align: right; font-size: 9px; max-width: 120px;">${Utils.escapeHTML((p.workDescription || '-').toString().slice(0, 80))}</td>
+                    <td style="border: 1px solid #d1d5db; padding: 5px; text-align: ${alignMain}; font-size: 9px;">${Utils.escapeHTML(workTypeStr(p))}</td>
+                    <td style="border: 1px solid #d1d5db; padding: 5px; text-align: ${alignMain};">${Utils.escapeHTML(p.requestingParty || '-')}</td>
+                    <td style="border: 1px solid #d1d5db; padding: 5px; text-align: ${alignMain};">${Utils.escapeHTML(p.authorizedParty || '-')}</td>
+                    <td style="border: 1px solid #d1d5db; padding: 5px; text-align: ${alignMain};">${Utils.escapeHTML(p.location || p.siteName || '-')}</td>
+                    <td style="border: 1px solid #d1d5db; padding: 5px; text-align: ${alignMain};">${formatDate(p.startDate || p.openDate || p.createdAt)}</td>
+                    <td style="border: 1px solid #d1d5db; padding: 5px; text-align: ${alignMain};">${Utils.escapeHTML(this.statusLabel(p.status || '-'))}</td>
+                    <td style="border: 1px solid #d1d5db; padding: 5px; text-align: ${alignMain}; font-size: 9px; max-width: 120px;">${Utils.escapeHTML((p.workDescription || '-').toString().slice(0, 80))}</td>
                 </tr>
             `).join('');
+            const title = t('module.ptw.pdf.analysisReportTitle', 'تقرير تحليل تصاريح العمل');
+            const filterLine = t('module.ptw.pdf.filterCriteriaLine', 'معايير الفلتر: {text}').replace(/\{text\}/g, filterText);
+            const totalsLine = t('module.ptw.pdf.totalsLine', 'إجمالي: {total} | مفتوحة: {open} | مغلقة: {closed}')
+                .replace(/\{total\}/g, String(list.length))
+                .replace(/\{open\}/g, String(openCount))
+                .replace(/\{closed\}/g, String(closedCount));
             const content = `
                 <div style="margin-bottom: 18px;">
-                    <h2 style="text-align: center; color: #1f2937; margin-bottom: 10px;">تقرير تحليل تصاريح العمل</h2>
-                    <p style="text-align: center; color: #6b7280; font-size: 12px; margin-bottom: 6px;">معايير الفلتر: ${Utils.escapeHTML(filterText)}</p>
-                    <p style="text-align: center; color: #374151; font-size: 12px;">إجمالي: ${list.length} | مفتوحة: ${openCount} | مغلقة: ${closedCount}</p>
+                    <h2 style="text-align: center; color: #1f2937; margin-bottom: 10px;">${Utils.escapeHTML(title)}</h2>
+                    <p style="text-align: center; color: #6b7280; font-size: 12px; margin-bottom: 6px;">${Utils.escapeHTML(filterLine)}</p>
+                    <p style="text-align: center; color: #374151; font-size: 12px;">${Utils.escapeHTML(totalsLine)}</p>
                 </div>
                 <table style="width: 100%; border-collapse: collapse; font-size: 10px;">
                     <thead>
                         <tr style="background-color: #3b82f6; color: white;">
-                            <th style="border: 1px solid #d1d5db; padding: 6px; text-align: center;">م</th>
-                            <th style="border: 1px solid #d1d5db; padding: 6px; text-align: right;">نوع التصريح</th>
-                            <th style="border: 1px solid #d1d5db; padding: 6px; text-align: right;">الجهة الطالبة</th>
-                            <th style="border: 1px solid #d1d5db; padding: 6px; text-align: right;">الجهة المصرح لها</th>
-                            <th style="border: 1px solid #d1d5db; padding: 6px; text-align: right;">الموقع</th>
-                            <th style="border: 1px solid #d1d5db; padding: 6px; text-align: right;">التاريخ</th>
-                            <th style="border: 1px solid #d1d5db; padding: 6px; text-align: right;">الحالة</th>
-                            <th style="border: 1px solid #d1d5db; padding: 6px; text-align: right;">وصف العمل</th>
+                            <th style="border: 1px solid #d1d5db; padding: 6px; text-align: center;">${Utils.escapeHTML(kSeq)}</th>
+                            <th style="border: 1px solid #d1d5db; padding: 6px; text-align: ${alignMain};">${Utils.escapeHTML(kType)}</th>
+                            <th style="border: 1px solid #d1d5db; padding: 6px; text-align: ${alignMain};">${Utils.escapeHTML(kReq)}</th>
+                            <th style="border: 1px solid #d1d5db; padding: 6px; text-align: ${alignMain};">${Utils.escapeHTML(kAuth)}</th>
+                            <th style="border: 1px solid #d1d5db; padding: 6px; text-align: ${alignMain};">${Utils.escapeHTML(kLoc)}</th>
+                            <th style="border: 1px solid #d1d5db; padding: 6px; text-align: ${alignMain};">${Utils.escapeHTML(kDate)}</th>
+                            <th style="border: 1px solid #d1d5db; padding: 6px; text-align: ${alignMain};">${Utils.escapeHTML(kSt)}</th>
+                            <th style="border: 1px solid #d1d5db; padding: 6px; text-align: ${alignMain};">${Utils.escapeHTML(kDesc)}</th>
                         </tr>
                     </thead>
                     <tbody>${tableRows}</tbody>
                 </table>
             `;
             const formCode = 'PTW-ANALYSIS-' + new Date().toISOString().slice(0, 10);
-            const formTitle = 'تقرير تحليل تصاريح العمل';
+            const formTitle = title;
             const htmlContent = typeof FormHeader !== 'undefined' && FormHeader.generatePDFHTML
                 ? FormHeader.generatePDFHTML(formCode, formTitle, content, false, true, { source: 'PTWAnalysis' }, new Date().toISOString(), new Date().toISOString())
-                : `<html dir="rtl" lang="ar"><head><meta charset="UTF-8"><title>${formTitle}</title></head><body>${content}</body></html>`;
+                : `<html dir="${htmlDir}" lang="${htmlLang}"><head><meta charset="UTF-8"><title>${Utils.escapeHTML(formTitle)}</title></head><body>${content}</body></html>`;
             const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
             const url = URL.createObjectURL(blob);
             const printWindow = window.open(url, '_blank');
@@ -13864,7 +13903,8 @@ const PTW = {
         } catch (error) {
             Loading.hide();
             Utils.safeError('خطأ في تصدير تقرير التحليل PDF:', error);
-            Notification.error('فشل تصدير PDF: ' + (error && error.message ? error.message : 'خطأ غير معروف'));
+            const unk = this._t('module.ptw.notify.unknownError', 'خطأ غير معروف');
+            Notification.error(this._t('module.ptw.notify.pdfErr', 'فشل تصدير PDF: ') + (error && error.message ? error.message : unk));
         }
     },
 
@@ -13972,6 +14012,7 @@ const PTW = {
         const allPermits = AppState.appData.ptw || [];
         const workTypes = [...new Set(allPermits.map(p => p && p.workType).filter(Boolean))];
         const locations = [...new Set(allPermits.map(p => (p && (p.siteName || p.location))).filter(Boolean))];
+        const t = (k, f) => this._t(k, f);
 
         const modal = document.createElement('div');
         modal.className = 'modal-overlay';
@@ -13980,29 +14021,29 @@ const PTW = {
                 <div class="modal-header modal-header-centered">
                     <h2 class="modal-title">
                         <i class="fas fa-chart-line ml-2"></i>
-                        ${analysisData ? 'تعديل تحليل' : 'إضافة تحليل جديد'}
+                        ${analysisData ? t('module.ptw.analysis.form.titleEdit', 'تعديل تحليل') : t('module.ptw.analysis.form.titleAdd', 'إضافة تحليل جديد')}
                     </h2>
-                    <button class="modal-close" aria-label="إغلاق">
+                    <button class="modal-close" aria-label="${t('module.ptw.analysis.form.closeAria', 'إغلاق')}">
                         <i class="fas fa-times"></i>
                     </button>
                 </div>
                 <form id="ptw-analysis-form" class="modal-body">
                     <div class="space-y-4">
                         <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">تاريخ التحليل <span class="text-red-500">*</span></label>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">${t('module.ptw.analysis.form.dateLabel', 'تاريخ التحليل')} <span class="text-red-500">*</span></label>
                             <input type="date" id="analysis-date" required class="form-input"
                                 value="${analysisData?.analysisDate ? new Date(analysisData.analysisDate).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]}">
                         </div>
                         <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">الفترة</label>
-                            <input type="text" id="analysis-period" class="form-input" placeholder="مثال: يناير 2024"
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">${t('module.ptw.analysis.form.periodLabel', 'الفترة')}</label>
+                            <input type="text" id="analysis-period" class="form-input" placeholder="${t('module.ptw.analysis.form.periodPh', 'مثال: يناير 2024')}"
                                 value="${Utils.escapeHTML(analysisData?.period || '')}">
                         </div>
                         <div class="grid grid-cols-2 gap-4">
                             <div>
-                                <label class="block text-sm font-semibold text-gray-700 mb-2">نوع العمل</label>
+                                <label class="block text-sm font-semibold text-gray-700 mb-2">${t('module.ptw.analysis.form.workType', 'نوع العمل')}</label>
                                 <select id="analysis-work-type" class="form-input">
-                                    <option value="">جميع الأنواع</option>
+                                    <option value="">${t('module.ptw.analysis.form.allTypes', 'جميع الأنواع')}</option>
                                     ${workTypes.map(type => `
                                         <option value="${Utils.escapeHTML(type)}" ${analysisData?.workType === type ? 'selected' : ''}>
                                             ${Utils.escapeHTML(type)}
@@ -14011,9 +14052,9 @@ const PTW = {
                                 </select>
                             </div>
                             <div>
-                                <label class="block text-sm font-semibold text-gray-700 mb-2">الموقع</label>
+                                <label class="block text-sm font-semibold text-gray-700 mb-2">${t('module.ptw.analysis.form.location', 'الموقع')}</label>
                                 <select id="analysis-location" class="form-input">
-                                    <option value="">جميع المواقع</option>
+                                    <option value="">${t('module.ptw.analysis.form.allSites', 'جميع المواقع')}</option>
                                     ${locations.map(loc => `
                                         <option value="${Utils.escapeHTML(loc)}" ${analysisData?.location === loc ? 'selected' : ''}>
                                             ${Utils.escapeHTML(loc)}
@@ -14023,19 +14064,19 @@ const PTW = {
                             </div>
                         </div>
                         <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">الملاحظات والتحليل</label>
-                            <textarea id="analysis-notes" class="form-input" rows="6" placeholder="أدخل ملاحظات التحليل والنتائج...">${Utils.escapeHTML(analysisData?.notes || '')}</textarea>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">${t('module.ptw.analysis.form.notesLabel', 'الملاحظات والتحليل')}</label>
+                            <textarea id="analysis-notes" class="form-input" rows="6" placeholder="${t('module.ptw.analysis.form.notesPh', 'أدخل ملاحظات التحليل والنتائج...')}">${Utils.escapeHTML(analysisData?.notes || '')}</textarea>
                         </div>
                         <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">التوصيات</label>
-                            <textarea id="analysis-recommendations" class="form-input" rows="4" placeholder="أدخل التوصيات...">${Utils.escapeHTML(analysisData?.recommendations || '')}</textarea>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">${t('module.ptw.analysis.form.recsLabel', 'التوصيات')}</label>
+                            <textarea id="analysis-recommendations" class="form-input" rows="4" placeholder="${t('module.ptw.analysis.form.recsPh', 'أدخل التوصيات...')}">${Utils.escapeHTML(analysisData?.recommendations || '')}</textarea>
                         </div>
                     </div>
                     <div class="modal-footer mt-6 form-actions-centered">
-                        <button type="button" class="btn-secondary" data-action="close">إلغاء</button>
+                        <button type="button" class="btn-secondary" data-action="close">${t('module.ptw.analysis.form.cancel', 'إلغاء')}</button>
                         <button type="submit" class="btn-primary">
                             <i class="fas fa-save ml-2"></i>
-                            ${analysisData ? 'تحديث' : 'حفظ'}
+                            ${analysisData ? t('module.ptw.analysis.form.update', 'تحديث') : t('module.ptw.analysis.form.save', 'حفظ')}
                         </button>
                     </div>
                 </form>
@@ -14083,14 +14124,14 @@ const PTW = {
             // التحقق من وجود جميع العناصر قبل الاستخدام
             const dateInput = document.getElementById('analysis-date');
             if (!dateInput || !dateInput.value) {
-                Notification.error('يرجى إدخال تاريخ التحليل');
+                Notification.error(this._t('module.ptw.notify.dateRequired', 'يرجى إدخال تاريخ التحليل'));
                 return;
             }
 
             // التحقق من صحة التاريخ
             const dateValue = new Date(dateInput.value);
             if (isNaN(dateValue.getTime())) {
-                Notification.error('تاريخ التحليل غير صحيح');
+                Notification.error(this._t('module.ptw.notify.dateInvalid', 'تاريخ التحليل غير صحيح'));
                 return;
             }
 
@@ -14127,7 +14168,7 @@ const PTW = {
                 window.DataManager.save();
             }
 
-            Notification.success(analysisId ? 'تم تحديث التحليل بنجاح' : 'تم إضافة التحليل بنجاح');
+            Notification.success(analysisId ? this._t('module.ptw.notify.analysisUpdated', 'تم تحديث التحليل بنجاح') : this._t('module.ptw.notify.analysisAdded', 'تم إضافة التحليل بنجاح'));
             if (modal && modal.parentNode) {
                 modal.remove();
             }
@@ -14140,7 +14181,7 @@ const PTW = {
             }
         } catch (error) {
             Utils.safeError('❌ خطأ في حفظ التحليل:', error);
-            Notification.error('حدث خطأ أثناء حفظ التحليل');
+            Notification.error(this._t('module.ptw.notify.analysisSaveErr', 'حدث خطأ أثناء حفظ التحليل'));
         }
     },
 
@@ -14172,7 +14213,7 @@ const PTW = {
 
             if (AppState.appData.ptwAnalysis.length === initialLength) {
                 Utils.safeWarn('⚠️ لم يتم العثور على التحليل للحذف');
-                Notification.warning('لم يتم العثور على التحليل المحدد');
+                Notification.warning(this._t('module.ptw.notify.analysisNotFound', 'لم يتم العثور على التحليل المحدد'));
                 return;
             }
 
@@ -14181,7 +14222,7 @@ const PTW = {
                 window.DataManager.save();
             }
 
-            Notification.success('تم حذف التحليل بنجاح');
+            Notification.success(this._t('module.ptw.notify.analysisDeleted', 'تم حذف التحليل بنجاح'));
 
             // تحديث العرض
             const analysisContent = document.getElementById('ptw-analysis-content');
@@ -14191,7 +14232,7 @@ const PTW = {
             }
         } catch (error) {
             Utils.safeError('❌ خطأ في حذف التحليل:', error);
-            Notification.error('حدث خطأ أثناء حذف التحليل');
+            Notification.error(this._t('module.ptw.notify.analysisDeleteErr', 'حدث خطأ أثناء حذف التحليل'));
         }
     },
 
