@@ -838,6 +838,9 @@ function doPost(e) {
                 case 'getEmployeeStatistics':
                     result = getEmployeeStatistics(payload.filters || {});
                     break;
+                case 'getOrCreatePublicProfileToken':
+                    result = getOrCreatePublicProfileToken(payload || {});
+                    break;
                 case 'addApprovedContractor':
                     result = addApprovedContractorToSheet(payload);
                     break;
@@ -2407,6 +2410,56 @@ function doGet(e) {
             }
         }
 
+        // بطاقة الملف العام (HTML) عبر token
+        if (action === 'publicProfileCard') {
+            const token = String(e.parameter.token || '').trim();
+            const profileResult = getPublicProfileByToken(token);
+            if (!profileResult || profileResult.success === false || !profileResult.data) {
+                const message = (profileResult && profileResult.message) ? profileResult.message : 'الرابط غير صالح أو منتهي الصلاحية';
+                const htmlError = HtmlService.createHtmlOutput(
+                    '<!doctype html><html dir="rtl" lang="ar"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Public Profile</title></head><body style="font-family:Arial,sans-serif;background:#f8fafc;padding:24px;"><div style="max-width:680px;margin:0 auto;background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:20px;"><h2 style="margin:0 0 8px;color:#0f172a;">تعذر عرض البطاقة</h2><p style="margin:0;color:#475569;">' + message + '</p></div></body></html>'
+                );
+                return htmlError;
+            }
+
+            const p = profileResult.data || {};
+            const esc = function(v) {
+                return String(v || '')
+                    .replace(/&/g, '&amp;')
+                    .replace(/</g, '&lt;')
+                    .replace(/>/g, '&gt;')
+                    .replace(/"/g, '&quot;')
+                    .replace(/'/g, '&#39;');
+            };
+
+            const html = '<!doctype html><html dir="rtl" lang="ar"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>بطاقة الموظف</title></head><body style="font-family:Arial,sans-serif;background:#f1f5f9;padding:16px;">'
+                + '<div style="max-width:780px;margin:0 auto;background:#fff;border:1px solid #e2e8f0;border-radius:16px;overflow:hidden;">'
+                + '<div style="padding:18px;background:linear-gradient(135deg,#1a634f,#144e3e);color:#fff;"><h1 style="margin:0;font-size:22px;">بطاقة الموظف</h1><p style="margin:6px 0 0;font-size:13px;opacity:.9;">' + esc(p.companyName || 'Americana HSE') + '</p></div>'
+                + '<div style="padding:18px;">'
+                + '<div style="display:flex;gap:14px;align-items:center;flex-wrap:wrap;">'
+                + (p.photo ? '<img src="' + esc(p.photo) + '" alt="photo" style="width:86px;height:86px;border-radius:999px;object-fit:cover;border:2px solid #d1fae5;">' : '<div style="width:86px;height:86px;border-radius:999px;background:#ecfdf5;color:#065f46;display:flex;align-items:center;justify-content:center;font-size:28px;">👤</div>')
+                + '<div><h2 style="margin:0;color:#0f172a;">' + esc(p.fullName || '-') + '</h2><p style="margin:4px 0 0;color:#334155;">' + esc(p.position || '-') + '</p><p style="margin:2px 0 0;color:#64748b;font-size:13px;">' + esc(p.department || '-') + '</p></div>'
+                + '</div>'
+                + '<div style="margin-top:16px;display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:10px;">'
+                + '<div style="border:1px solid #e2e8f0;border-radius:10px;padding:10px;"><div style="color:#64748b;font-size:12px;">الرقم الوظيفي</div><div style="color:#0f172a;font-weight:700;">' + esc(p.employeeNumber || '-') + '</div></div>'
+                + '<div style="border:1px solid #e2e8f0;border-radius:10px;padding:10px;"><div style="color:#64748b;font-size:12px;">الهاتف</div><div style="color:#0f172a;font-weight:700;">' + esc(p.phone || '-') + '</div></div>'
+                + '<div style="border:1px solid #e2e8f0;border-radius:10px;padding:10px;"><div style="color:#64748b;font-size:12px;">البريد الإلكتروني</div><div style="color:#0f172a;font-weight:700;">' + esc(p.email || '-') + '</div></div>'
+                + '<div style="border:1px solid #e2e8f0;border-radius:10px;padding:10px;"><div style="color:#64748b;font-size:12px;">الدورات التدريبية</div><div style="color:#0f172a;font-weight:700;">' + esc(p.trainingSessions || 0) + '</div></div>'
+                + '<div style="border:1px solid #e2e8f0;border-radius:10px;padding:10px;"><div style="color:#64748b;font-size:12px;">المخالفات</div><div style="color:#0f172a;font-weight:700;">' + esc(p.violationsCount || 0) + '</div></div>'
+                + '<div style="border:1px solid #e2e8f0;border-radius:10px;padding:10px;"><div style="color:#64748b;font-size:12px;">مهمات الوقاية</div><div style="color:#0f172a;font-weight:700;">' + esc(p.ppeCount || 0) + '</div></div>'
+                + '</div></div></div></body></html>';
+            return HtmlService.createHtmlOutput(html);
+        }
+
+        // API عام (JSON) عبر token - بيانات محدودة
+        if (action === 'getPublicProfileData') {
+            const token = String(e.parameter.token || '').trim();
+            const profileResult = getPublicProfileByToken(token);
+            const output = ContentService.createTextOutput(JSON.stringify(profileResult || { success: false, message: 'فشل جلب بيانات الملف العام' }))
+                .setMimeType(ContentService.MimeType.JSON);
+            return setCorsHeaders(output);
+        }
+
         // معالجة طلب getData
         if (action === 'getData') {
             if (!sheetName || sheetName.trim() === '') {
@@ -2463,7 +2516,7 @@ function doGet(e) {
                 step5: 'تحقق من Execution Logs في Google Apps Script لمزيد من التفاصيل'
             },
             note: 'ملاحظة: ملف google-apps-script.gs غير مطلوب. الملف الرئيسي هو Code.gs',
-            supportedGetActions: ['getData', 'getProfileImage'],
+            supportedGetActions: ['getData', 'getProfileImage', 'publicProfileCard', 'getPublicProfileData'],
             recommendedMethod: 'POST',
             commonIssues: {
                 issue1: 'URL ينتهي بـ /dev بدلاً من /exec → استخدم رابط /exec',

@@ -3931,6 +3931,28 @@ window.UI = {
                 this.userAvatarPhotoBound = true;
             }
         }
+
+        // النقر على اسم/بريد المستخدم لفتح تبويب "ملفي الشخصي"
+        if (!this.userProfileSectionNavBound) {
+            const openProfileSection = (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                this.showSection('profile');
+            };
+            const nameEl = document.getElementById('userDisplayName');
+            const emailEl = document.getElementById('adminEmail');
+            [nameEl, emailEl].filter(Boolean).forEach((el) => {
+                if (el.dataset.profileBound === 'true') return;
+                el.addEventListener('click', openProfileSection);
+                el.addEventListener('keydown', (ev) => {
+                    if (ev.key === 'Enter' || ev.key === ' ') {
+                        openProfileSection(ev);
+                    }
+                });
+                el.dataset.profileBound = 'true';
+            });
+            this.userProfileSectionNavBound = true;
+        }
     },
 
     /**
@@ -4624,6 +4646,361 @@ window.UI = {
         this.updateUserConnectionStatus();
     },
 
+    _getProfileEmployeeRecord() {
+        const user = AppState.currentUser || {};
+        const employees = Array.isArray(AppState.appData?.employees) ? AppState.appData.employees : [];
+        if (!employees.length) return null;
+
+        const norm = (v) => String(v || '').trim().toLowerCase();
+        const email = norm(user.email);
+        const userId = norm(user.id);
+        const userName = norm(user.name);
+
+        return employees.find((emp) => {
+            if (!emp) return false;
+            const empEmail = norm(emp.email);
+            const empId = norm(emp.id || emp.employeeNumber || emp.sapId);
+            const empName = norm(emp.name);
+            return (email && empEmail && empEmail === email)
+                || (userId && empId && empId === userId)
+                || (userName && empName && empName === userName);
+        }) || null;
+    },
+
+    _collectProfileStats(profileModel = {}) {
+        const norm = (v) => String(v || '').trim().toLowerCase();
+        const employeeId = norm(profileModel.employeeId || profileModel.employeeNumber);
+        const employeeName = norm(profileModel.fullName);
+        const email = norm(profileModel.email);
+
+        const isSameEmployee = (record = {}) => {
+            const rEmployeeId = norm(record.employeeId || record.employeeNumber || record.employeeCode || record.id);
+            const rEmployeeName = norm(record.employeeName || record.name || record.personName);
+            const rEmail = norm(record.email);
+            return (employeeId && rEmployeeId && employeeId === rEmployeeId)
+                || (employeeName && rEmployeeName && employeeName === rEmployeeName)
+                || (email && rEmail && email === rEmail);
+        };
+
+        const training = Array.isArray(AppState.appData?.training) ? AppState.appData.training : [];
+        const violations = Array.isArray(AppState.appData?.violations) ? AppState.appData.violations : [];
+        const ppe = Array.isArray(AppState.appData?.ppe) ? AppState.appData.ppe : [];
+        const clinicVisits = Array.isArray(AppState.appData?.clinicVisits) ? AppState.appData.clinicVisits : [];
+        const emergencyPlans = Array.isArray(AppState.appData?.emergencyPlans) ? AppState.appData.emergencyPlans : [];
+
+        let trainingSessions = 0;
+        let trainingHours = 0;
+        training.forEach((item) => {
+            const participants = String(item?.participants || '').toLowerCase();
+            if (isSameEmployee(item) || (employeeName && participants.includes(employeeName))) {
+                trainingSessions += 1;
+                const h = Number(item?.hours || item?.totalHours || 0);
+                if (!isNaN(h)) trainingHours += h;
+            }
+        });
+
+        const matchedViolations = violations.filter((v) => isSameEmployee(v));
+        const violationsCount = matchedViolations.length;
+        const openViolations = matchedViolations.filter((v) => {
+            const st = String(v?.status || '').toLowerCase();
+            return st !== 'closed' && st !== 'resolved' && st !== 'approved' && st !== 'مغلق' && st !== 'معالج';
+        }).length;
+
+        const ppeItems = ppe.filter((item) => isSameEmployee(item));
+        const ppeTotalQuantity = ppeItems.reduce((sum, item) => {
+            const qty = Number(item?.quantity || 0);
+            return sum + (isNaN(qty) ? 0 : qty);
+        }, 0);
+
+        const clinicVisitsCount = clinicVisits.filter((visit) => isSameEmployee(visit)).length;
+
+        const emergencyPhoneSet = new Set();
+        emergencyPlans.forEach((plan) => {
+            const contacts = plan?.contacts;
+            if (!contacts) return;
+            if (Array.isArray(contacts)) {
+                contacts.forEach((c) => {
+                    const val = String(c?.phone || c?.mobile || c?.number || '').trim();
+                    if (val) emergencyPhoneSet.add(val);
+                });
+                return;
+            }
+            if (typeof contacts === 'object') {
+                Object.keys(contacts).forEach((k) => {
+                    const val = String(contacts[k] || '').trim();
+                    if (val && /[0-9+]{5,}/.test(val)) emergencyPhoneSet.add(val);
+                });
+                return;
+            }
+            const raw = String(contacts || '');
+            const matches = raw.match(/[+0-9][0-9\s\-()]{4,}/g) || [];
+            matches.forEach((m) => emergencyPhoneSet.add(m.trim()));
+        });
+
+        return {
+            trainingSessions,
+            trainingHours: Math.round(trainingHours * 10) / 10,
+            violationsCount,
+            openViolations,
+            ppeTotalQuantity,
+            clinicVisitsCount,
+            emergencyPhones: Array.from(emergencyPhoneSet).slice(0, 6)
+        };
+    },
+
+    _buildProfileModel() {
+        const user = AppState.currentUser || {};
+        const dbUsers = Array.isArray(AppState.appData?.users) ? AppState.appData.users : [];
+        const currentUserRecord = dbUsers.find((u) => String(u?.email || '').trim().toLowerCase() === String(user?.email || '').trim().toLowerCase()) || {};
+        const employee = this._getProfileEmployeeRecord();
+
+        const fullName = employee?.name || user?.name || currentUserRecord?.name || '';
+        const email = user?.email || employee?.email || currentUserRecord?.email || '';
+        const phone = employee?.phone || currentUserRecord?.phone || '';
+        const department = employee?.department || user?.department || currentUserRecord?.department || '';
+        const position = employee?.position || employee?.job || currentUserRecord?.position || currentUserRecord?.job || '';
+        const branch = employee?.branch || user?.branch || currentUserRecord?.branch || '';
+        const location = employee?.location || user?.subLocationName || user?.subLocation || '';
+        const employeeNumber = employee?.employeeNumber || employee?.id || '';
+        const employeeId = employee?.id || user?.id || '';
+        const photo = employee?.photo || user?.photo || currentUserRecord?.photo || '';
+
+        const stats = this._collectProfileStats({
+            fullName,
+            email,
+            employeeId,
+            employeeNumber
+        });
+
+        return {
+            fullName,
+            email,
+            phone,
+            department,
+            position,
+            branch,
+            location,
+            employeeNumber,
+            employeeId,
+            photo,
+            stats
+        };
+    },
+
+    async getOrCreatePublicProfileCardLink(forceRotate = false) {
+        const user = AppState.currentUser;
+        if (!user || !user.email) return null;
+        if (typeof GoogleIntegration === 'undefined' || typeof GoogleIntegration.callBackend !== 'function') return null;
+
+        const response = await GoogleIntegration.callBackend('getOrCreatePublicProfileToken', {
+            userId: user.id || '',
+            email: user.email || '',
+            forceRotate: !!forceRotate
+        });
+        if (!response || response.success === false || !response.data?.token) return null;
+
+        const scriptUrl = String(AppState?.googleConfig?.appsScript?.scriptUrl || '').trim();
+        if (!scriptUrl) return null;
+        const joiner = scriptUrl.includes('?') ? '&' : '?';
+        return `${scriptUrl}${joiner}action=publicProfileCard&token=${encodeURIComponent(response.data.token)}`;
+    },
+
+    async renderMyProfileSection() {
+        const section = document.getElementById('profile-section');
+        if (!section) return;
+        const t = (k, f) => (typeof this._t === 'function' ? this._t(k, f) : f);
+        const esc = (v) => (typeof Utils !== 'undefined' && typeof Utils.escapeHTML === 'function')
+            ? Utils.escapeHTML(String(v ?? ''))
+            : String(v ?? '');
+
+        try {
+            if (typeof GoogleIntegration !== 'undefined' && typeof GoogleIntegration.batchReadFromSheets === 'function') {
+                const needSheets = [];
+                if (!Array.isArray(AppState.appData?.employees) || AppState.appData.employees.length === 0) needSheets.push('Employees');
+                if (!Array.isArray(AppState.appData?.training) || AppState.appData.training.length === 0) needSheets.push('Training');
+                if (!Array.isArray(AppState.appData?.violations) || AppState.appData.violations.length === 0) needSheets.push('Violations');
+                if (!Array.isArray(AppState.appData?.ppe) || AppState.appData.ppe.length === 0) needSheets.push('PPE');
+                if (!Array.isArray(AppState.appData?.clinicVisits) || AppState.appData.clinicVisits.length === 0) needSheets.push('ClinicVisits');
+                if (!Array.isArray(AppState.appData?.emergencyPlans) || AppState.appData.emergencyPlans.length === 0) needSheets.push('EmergencyPlans');
+                if (needSheets.length > 0) {
+                    const batch = await GoogleIntegration.batchReadFromSheets(needSheets, { timeout: 25000, batchSize: 10 });
+                    if (batch && batch.data) {
+                        needSheets.forEach((sheet) => {
+                            const key = ({
+                                Employees: 'employees',
+                                Training: 'training',
+                                Violations: 'violations',
+                                PPE: 'ppe',
+                                ClinicVisits: 'clinicVisits',
+                                EmergencyPlans: 'emergencyPlans'
+                            })[sheet];
+                            if (key && Array.isArray(batch.data[sheet])) {
+                                AppState.appData[key] = batch.data[sheet];
+                            }
+                        });
+                    }
+                }
+            }
+        } catch (_) { /* ignore non-critical profile preload errors */ }
+
+        const profile = this._buildProfileModel();
+        const stats = profile.stats || {};
+        const phoneList = (stats.emergencyPhones || []).length
+            ? stats.emergencyPhones.map((p) => `<span class="profile-chip">${esc(p)}</span>`).join('')
+            : `<span class="text-slate-500">${t('module.profile.noEmergencyPhones', 'لا توجد أرقام طوارئ متاحة حالياً')}</span>`;
+        const avatarSrc = profile.photo ? `src="${esc(profile.photo)}"` : '';
+        const avatarDisplay = profile.photo ? '' : 'display:none;';
+        const iconDisplay = profile.photo ? 'display:none;' : '';
+
+        section.innerHTML = `
+            <div class="section-header">
+                <h2 class="section-title"><i class="fas fa-id-card ml-2"></i>${t('nav.profile', 'ملفي الشخصي')}</h2>
+            </div>
+            <div class="profile-dashboard-grid">
+                <div class="content-card profile-hero-card">
+                    <div class="card-body profile-hero-body">
+                        <div class="profile-avatar-wrap">
+                            <img id="profile-section-photo" ${avatarSrc} alt="${t('module.profile.photoAlt', 'الصورة الشخصية')}" style="${avatarDisplay}">
+                            <i id="profile-section-photo-icon" class="fas fa-user-circle" style="${iconDisplay}"></i>
+                        </div>
+                        <div class="profile-hero-content">
+                            <h3 class="profile-hero-name">${esc(profile.fullName || t('module.profile.unknownUser', 'مستخدم النظام'))}</h3>
+                            <p class="profile-hero-role">${esc(profile.position || t('module.profile.noPosition', 'غير محدد'))}</p>
+                            <p class="profile-hero-meta">${esc(profile.department || t('module.profile.noDepartment', 'قسم غير محدد'))}</p>
+                            <div class="profile-actions">
+                                <button id="profile-change-photo-btn" class="btn-secondary btn-sm"><i class="fas fa-camera ml-1"></i>${t('module.profile.changePhoto', 'تغيير الصورة')}</button>
+                                <button id="profile-change-password-btn" class="btn-primary btn-sm"><i class="fas fa-key ml-1"></i>${t('module.profile.changePassword', 'تغيير كلمة المرور')}</button>
+                                <input type="file" id="profile-photo-input" accept="image/jpeg,image/png,image/gif,image/webp" style="display:none;">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="content-card profile-card">
+                    <div class="card-header"><h3 class="card-title">${t('module.profile.basicInfo', 'بيانات الموظف')}</h3></div>
+                    <div class="card-body profile-info-list">
+                        <div><span>${t('module.profile.employeeNumber', 'الرقم الوظيفي')}</span><strong>${esc(profile.employeeNumber || '-')}</strong></div>
+                        <div><span>${t('module.profile.email', 'البريد الإلكتروني')}</span><strong>${esc(profile.email || '-')}</strong></div>
+                        <div><span>${t('module.profile.phone', 'رقم الهاتف')}</span><strong>${esc(profile.phone || '-')}</strong></div>
+                        <div><span>${t('module.profile.branch', 'الفرع')}</span><strong>${esc(profile.branch || '-')}</strong></div>
+                        <div><span>${t('module.profile.location', 'الموقع')}</span><strong>${esc(profile.location || '-')}</strong></div>
+                    </div>
+                </div>
+
+                <div class="content-card profile-card">
+                    <div class="card-header"><h3 class="card-title">${t('module.profile.professionalStats', 'تفاصيل مهنية')}</h3></div>
+                    <div class="card-body profile-kpi-grid">
+                        <div class="profile-kpi"><span>${t('module.profile.trainingSessions', 'الدورات التدريبية')}</span><strong>${esc(stats.trainingSessions || 0)}</strong></div>
+                        <div class="profile-kpi"><span>${t('module.profile.trainingHours', 'ساعات التدريب')}</span><strong>${esc(stats.trainingHours || 0)}</strong></div>
+                        <div class="profile-kpi"><span>${t('module.profile.violationsCount', 'عدد المخالفات')}</span><strong>${esc(stats.violationsCount || 0)}</strong></div>
+                        <div class="profile-kpi"><span>${t('module.profile.openViolations', 'المخالفات المفتوحة')}</span><strong>${esc(stats.openViolations || 0)}</strong></div>
+                        <div class="profile-kpi"><span>${t('module.profile.ppeTotal', 'إجمالي مهمات الوقاية')}</span><strong>${esc(stats.ppeTotalQuantity || 0)}</strong></div>
+                        <div class="profile-kpi"><span>${t('module.profile.clinicVisits', 'زيارات العيادة')}</span><strong>${esc(stats.clinicVisitsCount || 0)}</strong></div>
+                    </div>
+                </div>
+
+                <div class="content-card profile-card">
+                    <div class="card-header"><h3 class="card-title">${t('module.profile.emergencyPhones', 'أرقام الطوارئ')}</h3></div>
+                    <div class="card-body profile-emergency-list">${phoneList}</div>
+                </div>
+
+                <div class="content-card profile-card profile-qr-card">
+                    <div class="card-header"><h3 class="card-title">${t('module.profile.publicCard', 'بطاقة الأعمال عبر QR')}</h3></div>
+                    <div class="card-body">
+                        <p class="text-sm text-slate-600 mb-3">${t('module.profile.publicCardDesc', 'امسح الرمز لعرض بطاقة عامة آمنة ببيانات الموظف الأساسية.')}</p>
+                        <div id="profile-qr-holder" class="profile-qr-holder">
+                            <div class="text-slate-500 text-sm">${t('module.profile.loadingQr', 'جاري توليد رمز QR...')}</div>
+                        </div>
+                        <div class="profile-qr-actions">
+                            <input id="profile-public-link" class="form-input" type="text" readonly value="">
+                            <button id="profile-copy-link-btn" class="btn-secondary btn-sm"><i class="fas fa-copy ml-1"></i>${t('module.profile.copyLink', 'نسخ الرابط')}</button>
+                            <button id="profile-refresh-qr-btn" class="btn-secondary btn-sm"><i class="fas fa-rotate ml-1"></i>${t('module.profile.refreshQr', 'تحديث QR')}</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        const photoInput = document.getElementById('profile-photo-input');
+        const changePhotoBtn = document.getElementById('profile-change-photo-btn');
+        const changePassBtn = document.getElementById('profile-change-password-btn');
+        const copyBtn = document.getElementById('profile-copy-link-btn');
+        const refreshQrBtn = document.getElementById('profile-refresh-qr-btn');
+        const linkInput = document.getElementById('profile-public-link');
+        const qrHolder = document.getElementById('profile-qr-holder');
+
+        if (changePhotoBtn && photoInput) {
+            changePhotoBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                photoInput.value = '';
+                photoInput.click();
+            });
+            photoInput.addEventListener('change', (ev) => {
+                const file = ev.target?.files?.[0];
+                if (file) this.handleUserProfilePhotoUpload(file);
+                setTimeout(() => this.renderMyProfileSection(), 1300);
+                ev.target.value = '';
+            });
+        }
+        if (changePassBtn) {
+            changePassBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                this.showChangePasswordModal(false);
+            });
+        }
+
+        const paintQr = async (forceRotate = false) => {
+            if (!qrHolder || !linkInput) return;
+            try {
+                qrHolder.innerHTML = `<div class="text-slate-500 text-sm">${t('module.profile.loadingQr', 'جاري توليد رمز QR...')}</div>`;
+                const publicLink = await this.getOrCreatePublicProfileCardLink(forceRotate);
+                if (!publicLink) {
+                    qrHolder.innerHTML = `<div class="text-amber-600 text-sm">${t('module.profile.qrUnavailable', 'تعذر إنشاء رابط البطاقة العامة حالياً')}</div>`;
+                    linkInput.value = '';
+                    return;
+                }
+                linkInput.value = publicLink;
+                const qrSrc = (typeof window !== 'undefined' && window.QRCode && typeof window.QRCode.generate === 'function')
+                    ? window.QRCode.generate(publicLink, 220)
+                    : null;
+                if (!qrSrc) {
+                    qrHolder.innerHTML = `<div class="text-amber-600 text-sm">${t('module.profile.qrUnavailable', 'تعذر إنشاء رمز QR حالياً')}</div>`;
+                    return;
+                }
+                qrHolder.innerHTML = `<img src="${esc(qrSrc)}" alt="${t('module.profile.qrAlt', 'رمز QR لبطاقة الموظف')}" class="profile-qr-image">`;
+            } catch (err) {
+                qrHolder.innerHTML = `<div class="text-red-600 text-sm">${t('module.profile.qrError', 'حدث خطأ أثناء إنشاء QR')}</div>`;
+            }
+        };
+
+        if (copyBtn) {
+            copyBtn.addEventListener('click', async (e) => {
+                e.preventDefault();
+                const val = String(linkInput?.value || '').trim();
+                if (!val) return;
+                try {
+                    if (navigator.clipboard && navigator.clipboard.writeText) {
+                        await navigator.clipboard.writeText(val);
+                    } else {
+                        linkInput.select();
+                        document.execCommand('copy');
+                    }
+                    if (typeof Notification !== 'undefined') Notification.success(t('module.profile.linkCopied', 'تم نسخ رابط البطاقة العامة'));
+                } catch (_) {
+                    if (typeof Notification !== 'undefined') Notification.warning(t('module.profile.copyFailed', 'تعذر نسخ الرابط'));
+                }
+            });
+        }
+        if (refreshQrBtn) {
+            refreshQrBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                paintQr(true);
+            });
+        }
+
+        paintQr(false);
+    },
+
     /**
      * تحديث صورة المستخدم ي الشريط الجانبي
      */
@@ -5061,6 +5438,9 @@ window.UI = {
                     } else {
                         if (!silent) Utils.safeWarn('وحدة Dashboard غير موجودة');
                     }
+                    break;
+                case 'profile':
+                    this.renderMyProfileSection();
                     break;
                 case 'users':
                     if (typeof Users !== 'undefined' && Users.load) {

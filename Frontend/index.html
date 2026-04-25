@@ -9981,7 +9981,14 @@
                         <i id="user-profile-icon" class="fas fa-user"></i>
                     </div>
                     <div class="user-info">
-                        <h3 class="user-name" id="userDisplayName">المستخدم</h3>
+                        <h3
+                            class="user-name user-name-clickable"
+                            id="userDisplayName"
+                            role="button"
+                            tabindex="0"
+                            aria-label="فتح ملفي الشخصي"
+                            title="فتح ملفي الشخصي"
+                        >المستخدم</h3>
                         <p class="user-email" id="adminEmail">
                             user@example.com
                         </p>
@@ -10136,6 +10143,16 @@
                     >
                         <i class="fas fa-chart-pie" aria-hidden="true"></i>
                         <span data-i18n="nav.dashboard">لوحة التحكم</span>
+                    </a>
+                    <a
+                        href="#profile"
+                        class="nav-item"
+                        data-section="profile"
+                        role="menuitem"
+                        title="ملفي الشخصي"
+                    >
+                        <i class="fas fa-id-card" aria-hidden="true"></i>
+                        <span data-i18n="nav.profile">ملفي الشخصي</span>
                     </a>
                     <a
                         href="#users"
@@ -12007,6 +12024,14 @@
                         </div>
                         <!-- End of Content Grid -->
                     </section>
+
+                    <!-- Profile Section -->
+                    <section
+                        id="profile-section"
+                        class="section"
+                        role="region"
+                        aria-label="قسم ملفي الشخصي"
+                    ></section>
 
                     <!-- Other Sections (will be added dynamically) -->
                     <section

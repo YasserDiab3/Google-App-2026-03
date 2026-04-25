@@ -1743,6 +1743,11 @@ const Permissions = {
             return false;
         }
 
+        // ملفي الشخصي متاح دائماً لأي مستخدم مسجل الدخول
+        if (moduleName === 'profile') {
+            return true;
+        }
+
         // التحقق من الموديولات المحمية (adminOnly)
         const moduleConfig = MODULE_PERMISSIONS_CONFIG.find(m => m.key === moduleName);
         if (moduleConfig && moduleConfig.adminOnly) {

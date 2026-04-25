@@ -415,3 +415,171 @@ function getEmployeeStatistics(filters = {}) {
     }
 }
 
+/**
+ * إنشاء/جلب token عام لبطاقة الملف الشخصي للمستخدم الحالي
+ * payload: { userId, email, forceRotate }
+ */
+function getOrCreatePublicProfileToken(payload) {
+    try {
+        const data = payload || {};
+        const userId = String(data.userId || '').trim();
+        const email = String(data.email || '').trim().toLowerCase();
+        const forceRotate = data.forceRotate === true;
+
+        if (!userId && !email) {
+            return { success: false, message: 'userId أو email مطلوبان' };
+        }
+
+        const sheetName = 'Users';
+        const spreadsheetId = getSpreadsheetId();
+        const users = readFromSheet(sheetName, spreadsheetId);
+        const user = (users || []).find(function(u) {
+            if (!u) return false;
+            const byId = userId && String(u.id || '').trim() === userId;
+            const byEmail = email && String(u.email || '').trim().toLowerCase() === email;
+            return byId || byEmail;
+        });
+
+        if (!user || !user.id) {
+            return { success: false, message: 'المستخدم غير موجود' };
+        }
+
+        const now = new Date();
+        const existingToken = String(user.profilePublicToken || '').trim();
+        const expiryStr = String(user.profilePublicTokenExpiry || '').trim();
+        const expiryDate = expiryStr ? new Date(expiryStr) : null;
+        const isTokenValid = existingToken && expiryDate && !isNaN(expiryDate.getTime()) && expiryDate.getTime() > now.getTime();
+
+        var token = existingToken;
+        var expiresAt = expiryStr;
+        if (!isTokenValid || forceRotate) {
+            token = Utilities.getUuid().replace(/-/g, '') + Utilities.getUuid().replace(/-/g, '').slice(0, 8);
+            expiresAt = new Date(now.getTime() + (180 * 24 * 60 * 60 * 1000)).toISOString();
+            const updateResult = updateSingleRowInSheet(sheetName, user.id, {
+                profilePublicToken: token,
+                profilePublicTokenExpiry: expiresAt,
+                updatedAt: new Date()
+            }, spreadsheetId);
+            if (!updateResult || updateResult.success === false) {
+                return { success: false, message: 'فشل حفظ token العام للمستخدم' };
+            }
+        }
+
+        return {
+            success: true,
+            data: {
+                token: token,
+                expiresAt: expiresAt
+            }
+        };
+    } catch (error) {
+        Logger.log('Error in getOrCreatePublicProfileToken: ' + error.toString());
+        return { success: false, message: 'حدث خطأ أثناء إنشاء token الملف العام: ' + error.toString() };
+    }
+}
+
+/**
+ * جلب بيانات الملف العام بالاعتماد على token (بيانات محدودة وآمنة)
+ */
+function getPublicProfileByToken(token) {
+    try {
+        const tokenValue = String(token || '').trim();
+        if (!tokenValue) {
+            return { success: false, message: 'token مطلوب' };
+        }
+
+        const spreadsheetId = getSpreadsheetId();
+        const users = readFromSheet('Users', spreadsheetId);
+        const now = new Date();
+        const user = (users || []).find(function(u) {
+            if (!u) return false;
+            const t = String(u.profilePublicToken || '').trim();
+            if (!t || t !== tokenValue) return false;
+            const expiry = new Date(String(u.profilePublicTokenExpiry || ''));
+            return !!expiry && !isNaN(expiry.getTime()) && expiry.getTime() > now.getTime();
+        });
+
+        if (!user) {
+            return { success: false, message: 'token غير صالح أو منتهي الصلاحية' };
+        }
+
+        const employees = readFromSheet('Employees', spreadsheetId) || [];
+        const userEmail = String(user.email || '').trim().toLowerCase();
+        const userName = String(user.name || '').trim().toLowerCase();
+        const userId = String(user.id || '').trim().toLowerCase();
+        const employee = employees.find(function(emp) {
+            if (!emp) return false;
+            const empEmail = String(emp.email || '').trim().toLowerCase();
+            const empName = String(emp.name || '').trim().toLowerCase();
+            const empId = String(emp.id || emp.employeeNumber || '').trim().toLowerCase();
+            return (userEmail && empEmail && userEmail === empEmail)
+                || (userId && empId && userId === empId)
+                || (userName && empName && userName === empName);
+        }) || {};
+
+        const fullName = String(employee.name || user.name || '').trim();
+        const employeeNumber = String(employee.employeeNumber || employee.id || '').trim();
+        const department = String(employee.department || user.department || '').trim();
+        const position = String(employee.position || employee.job || '').trim();
+        const phone = String(employee.phone || '').trim();
+        const email = String(employee.email || user.email || '').trim();
+        const photo = String(employee.photo || user.photo || '').trim();
+
+        const norm = function(v) { return String(v || '').trim().toLowerCase(); };
+        const matchesProfile = function(record) {
+            if (!record) return false;
+            const rId = norm(record.employeeId || record.employeeNumber || record.employeeCode || record.id);
+            const rName = norm(record.employeeName || record.name || record.personName);
+            const rEmail = norm(record.email);
+            return (employeeNumber && rId && norm(employeeNumber) === rId)
+                || (fullName && rName && norm(fullName) === rName)
+                || (email && rEmail && norm(email) === rEmail);
+        };
+
+        const training = readFromSheet('Training', spreadsheetId) || [];
+        const violations = readFromSheet('Violations', spreadsheetId) || [];
+        const ppe = readFromSheet('PPE', spreadsheetId) || [];
+
+        var trainingSessions = 0;
+        training.forEach(function(item) {
+            const participants = String(item && item.participants || '').toLowerCase();
+            if (matchesProfile(item) || (fullName && participants.indexOf(norm(fullName)) !== -1)) {
+                trainingSessions += 1;
+            }
+        });
+
+        var violationsCount = 0;
+        violations.forEach(function(item) {
+            if (matchesProfile(item)) violationsCount += 1;
+        });
+
+        var ppeCount = 0;
+        ppe.forEach(function(item) {
+            if (matchesProfile(item)) {
+                const qty = Number(item.quantity || 0);
+                ppeCount += (isNaN(qty) ? 0 : qty);
+            }
+        });
+
+        return {
+            success: true,
+            data: {
+                fullName: fullName,
+                employeeNumber: employeeNumber,
+                department: department,
+                position: position,
+                phone: phone,
+                email: email,
+                photo: photo,
+                companyName: 'Americana HSE',
+                trainingSessions: trainingSessions,
+                violationsCount: violationsCount,
+                ppeCount: ppeCount
+            }
+        };
+    } catch (error) {
+        Logger.log('Error in getPublicProfileByToken: ' + error.toString());
+        return { success: false, message: 'حدث خطأ أثناء جلب بيانات الملف العام: ' + error.toString() };
+    }
+}
+
