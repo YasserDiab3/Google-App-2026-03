@@ -6583,6 +6583,165 @@ const PTW = {
                     #manual-work-type-select-wrap { width: 100% !important; max-width: 100%; }
                     .manual-work-type-inline-panel { min-width: 100% !important; }
                 }
+                .ptw-manual-permit-modal .modal-body {
+                    background: #000 !important;
+                }
+                .ptw-manual-form-section {
+                    background: #000 !important;
+                    border: 1px solid #4b5563 !important;
+                    border-radius: 0 !important;
+                    box-shadow: none !important;
+                    margin-bottom: 16px !important;
+                    padding: 12px !important;
+                }
+                .ptw-manual-form-section:hover {
+                    box-shadow: none !important;
+                    transform: none !important;
+                }
+                .ptw-manual-form-section h3 {
+                    margin: -12px -12px 12px !important;
+                    padding: 10px 12px !important;
+                    border: 1px solid #9ca3af !important;
+                    background: #cbd5e1 !important;
+                    color: #111827 !important;
+                    justify-content: center !important;
+                    font-size: 1rem !important;
+                }
+                .ptw-manual-form-section h3 i {
+                    background: transparent !important;
+                    font-size: 0.95rem !important;
+                    padding: 0 !important;
+                }
+                .ptw-manual-permit-modal label {
+                    color: #e5e7eb !important;
+                }
+                .ptw-manual-permit-modal .form-input,
+                .ptw-manual-permit-modal textarea,
+                .ptw-manual-permit-modal select,
+                .ptw-manual-permit-modal input[type="text"],
+                .ptw-manual-permit-modal input[type="number"],
+                .ptw-manual-permit-modal input[type="datetime-local"] {
+                    background: #f9fafb !important;
+                    color: #111827 !important;
+                    border: 1px solid #9ca3af !important;
+                }
+                .ptw-manual-permit-modal .ptw-paper-grid-table {
+                    width: 100%;
+                    border-collapse: collapse !important;
+                    table-layout: fixed;
+                    border: 1.2px solid #9ca3af !important;
+                    background: #000;
+                }
+                .ptw-manual-permit-modal .ptw-paper-grid-table th,
+                .ptw-manual-permit-modal .ptw-paper-grid-table td {
+                    border: 1.2px solid #9ca3af !important;
+                    min-height: 42px;
+                    padding: 7px 8px !important;
+                    vertical-align: middle;
+                }
+                .ptw-manual-permit-modal .ptw-paper-grid-table th {
+                    background: #cbd5e1 !important;
+                    color: #111827 !important;
+                    font-size: 13px;
+                    font-weight: 700;
+                }
+                .ptw-manual-permit-modal .ptw-paper-grid-table td {
+                    background: #000 !important;
+                    color: #f3f4f6 !important;
+                    font-size: 13px;
+                }
+                .ptw-manual-permit-modal .ptw-paper-grid-table td.bg-gray-50 {
+                    background: #cbd5e1 !important;
+                    color: #111827 !important;
+                    font-weight: 700;
+                }
+                @media (max-width: 1024px) {
+                    .ptw-manual-permit-modal .ptw-paper-grid-table th,
+                    .ptw-manual-permit-modal .ptw-paper-grid-table td {
+                        min-height: 38px;
+                        font-size: 12px !important;
+                        padding: 6px 7px !important;
+                    }
+                }
+                @media (max-width: 768px) {
+                    .ptw-manual-permit-modal .modal-content {
+                        width: 100% !important;
+                        max-height: 100vh !important;
+                        border-radius: 0 !important;
+                    }
+                    .ptw-manual-permit-modal .modal-header {
+                        padding: 14px 12px !important;
+                    }
+                    .ptw-manual-permit-modal #manual-permit-modal-body {
+                        padding: 10px !important;
+                        max-height: calc(100vh - 210px) !important;
+                    }
+                    .ptw-manual-permit-modal .ptw-manual-form-section {
+                        margin-bottom: 10px !important;
+                        padding: 9px !important;
+                    }
+                    .ptw-manual-permit-modal .ptw-manual-form-section h3 {
+                        margin: -9px -9px 9px !important;
+                        font-size: 0.9rem !important;
+                        padding: 8px !important;
+                    }
+                    .ptw-manual-permit-modal .overflow-x-auto {
+                        overflow-x: auto !important;
+                    }
+                    .ptw-manual-permit-modal .ptw-paper-grid-table {
+                        min-width: 760px;
+                    }
+                }
+                /* قفل بصري للنموذج اليدوي ليطابق المرجع بدون زخارف */
+                .ptw-manual-permit-modal * {
+                    border-radius: 0 !important;
+                    box-shadow: none !important;
+                }
+                .ptw-manual-permit-modal .modal-header {
+                    background: #000 !important;
+                    border-bottom: 1px solid #9ca3af !important;
+                }
+                .ptw-manual-permit-modal .modal-header h2,
+                .ptw-manual-permit-modal .modal-header p,
+                .ptw-manual-permit-modal .text-gray-700,
+                .ptw-manual-permit-modal .text-gray-800,
+                .ptw-manual-permit-modal .text-gray-600,
+                .ptw-manual-permit-modal .text-gray-500,
+                .ptw-manual-permit-modal .font-medium,
+                .ptw-manual-permit-modal .font-semibold {
+                    color: #e5e7eb !important;
+                }
+                .ptw-manual-permit-modal .bg-white,
+                .ptw-manual-permit-modal .bg-gray-50,
+                .ptw-manual-permit-modal .bg-red-50,
+                .ptw-manual-permit-modal .bg-blue-50,
+                .ptw-manual-permit-modal .bg-yellow-50,
+                .ptw-manual-permit-modal .bg-green-50,
+                .ptw-manual-permit-modal [class*="from-"],
+                .ptw-manual-permit-modal [class*="to-"] {
+                    background: #000 !important;
+                }
+                .ptw-manual-permit-modal .border,
+                .ptw-manual-permit-modal [class*="border-"] {
+                    border-color: #9ca3af !important;
+                }
+                .ptw-manual-permit-modal .manual-section-3-header,
+                .ptw-manual-permit-modal .manual-section-3-content,
+                .ptw-manual-permit-modal #manual-work-type-select-wrap,
+                .ptw-manual-permit-modal .manual-work-type-inline-panel {
+                    background: #000 !important;
+                    border-color: #9ca3af !important;
+                }
+                .ptw-manual-permit-modal #manual-work-type-select,
+                .ptw-manual-permit-modal .manual-other-input {
+                    background: #f9fafb !important;
+                    color: #111827 !important;
+                    border: 1px solid #9ca3af !important;
+                }
+                .ptw-manual-permit-modal .btn-secondary,
+                .ptw-manual-permit-modal .btn-primary {
+                    border-radius: 0 !important;
+                }
             </style>
             <div class="modal-content ptw-manual-permit-modal" style="max-width: 1400px; width: 98%; max-height: 95vh; overflow-y: auto; padding: 0; border-radius: 16px; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);">
                 <!-- رأس النموذج -->
@@ -6608,6 +6767,8 @@ const PTW = {
                         </button>
                     </div>
                 </div>
+
+                ${this.renderPermitSystemHeader()}
 
                 <!-- نص الإعلان/التنبيه - مشابه لنموذج إصدار تصريح العمل -->
                 <div style="margin: 24px 24px 0 24px; padding: 0;">
@@ -6741,7 +6902,7 @@ const PTW = {
                             <h3><i class="fas fa-users"></i><span>القسم الثاني : أسماء القائمين بالعمل</span></h3>
                             
                             <div class="overflow-x-auto bg-white">
-                                <table class="w-full" style="border-collapse: collapse; border: 1px solid #000;">
+                                <table class="w-full ptw-paper-grid-table" style="border-collapse: collapse; border: 1px solid #000;">
                                     <thead>
                                         <tr style="background: linear-gradient(135deg, #b3e5fc 0%, #81d4fa 100%);">
                                             <th class="p-3 text-center font-bold text-gray-900 border border-gray-800" style="width: 50%;">أسماء القائمين بالعمل</th>
@@ -6980,7 +7141,7 @@ const PTW = {
                             
                             <!-- اعتماد التصريح (يشترط جميع التوقيعات لبدء العمل) -->
                             <div class="overflow-x-auto bg-white">
-                                <table class="w-full" style="border-collapse: collapse; border: 1px solid #000;">
+                                <table class="w-full ptw-paper-grid-table" style="border-collapse: collapse; border: 1px solid #000;">
                                     <thead>
                                         <tr>
                                             <th colspan="5" class="p-3 text-center font-bold text-white" style="background: linear-gradient(135deg, #81d4fa 0%, #4fc3f7 100%); border: 1px solid #0288d1;">
@@ -7050,7 +7211,7 @@ const PTW = {
                             
                             <!-- اعتماد اغلاق التصريح (يشترط جميع التوقيعات) -->
                             <div class="overflow-x-auto bg-white">
-                                <table class="w-full" style="border-collapse: collapse; border: 1px solid #000;">
+                                <table class="w-full ptw-paper-grid-table" style="border-collapse: collapse; border: 1px solid #000;">
                                     <thead>
                                         <tr>
                                             <th colspan="5" class="p-3 text-center font-bold text-gray-900" style="background: linear-gradient(135deg, #81d4fa 0%, #4fc3f7 100%); border: 1px solid #0288d1;">
@@ -9349,6 +9510,32 @@ const PTW = {
         };
     },
 
+    renderPermitSystemHeader() {
+        const settings = AppState?.companySettings || {};
+        const companyName = settings.companyName || settings.name || settings.organizationName || 'HSE System';
+        const logoUrl = settings.logoUrl || settings.companyLogo || settings.logo || '';
+        const formTitle = 'نموذج تصريح العمل';
+        const subTitle = 'Permit To Work';
+
+        return `
+            <div class="ptw-paper-header">
+                <div class="ptw-paper-header-right">
+                    <div class="ptw-paper-header-title">${Utils.escapeHTML(formTitle)}</div>
+                    <div class="ptw-paper-header-subtitle">${Utils.escapeHTML(subTitle)}</div>
+                </div>
+                <div class="ptw-paper-header-center">
+                    <div class="ptw-paper-header-company">${Utils.escapeHTML(companyName)}</div>
+                </div>
+                <div class="ptw-paper-header-left">
+                    ${logoUrl
+                        ? `<img src="${Utils.escapeHTML(logoUrl)}" alt="Company Logo" class="ptw-paper-header-logo">`
+                        : `<div class="ptw-paper-header-logo-fallback">LOGO</div>`
+                    }
+                </div>
+            </div>
+        `;
+    },
+
     async renderForm(ptwData = null) {
         const isEdit = !!ptwData;
         const isManual = ptwData?.isManualEntry === true;
@@ -9443,6 +9630,31 @@ const PTW = {
 
         return `
             <style>
+                .ptw-paper-theme {
+                    background: #000;
+                    color: #fff;
+                    border: 1px solid #1e3a8a;
+                    border-radius: 8px;
+                    overflow: hidden;
+                }
+                .ptw-paper-header {
+                    display: grid;
+                    grid-template-columns: 1fr 1.4fr 1fr;
+                    align-items: center;
+                    gap: 12px;
+                    background: #000;
+                    border-bottom: 1px solid #6b7280;
+                    padding: 12px 16px;
+                    min-height: 86px;
+                }
+                .ptw-paper-header-right { text-align: right; }
+                .ptw-paper-header-title { font-weight: 700; font-size: 15px; color: #dbeafe; }
+                .ptw-paper-header-subtitle { font-size: 12px; color: #93c5fd; }
+                .ptw-paper-header-center { text-align: center; }
+                .ptw-paper-header-company { font-size: 17px; font-weight: 700; color: #f9fafb; letter-spacing: 0.3px; }
+                .ptw-paper-header-left { display: flex; justify-content: flex-end; }
+                .ptw-paper-header-logo { max-height: 60px; max-width: 150px; object-fit: contain; background: #fff; border-radius: 4px; padding: 4px; }
+                .ptw-paper-header-logo-fallback { width: 90px; height: 48px; border: 1px solid #6b7280; display: flex; align-items: center; justify-content: center; color: #d1d5db; font-size: 12px; }
                 .ptw-form-header-centered {
                     position: relative;
                     display: flex;
@@ -9566,8 +9778,172 @@ const PTW = {
                     border-radius: 4px;
                     font-size: 14px;
                 }
+                .ptw-paper-theme .ptw-form-section {
+                    background: #000 !important;
+                    border: 1px solid #4b5563 !important;
+                    border-radius: 0 !important;
+                    box-shadow: none !important;
+                    margin-bottom: 16px !important;
+                    padding: 12px !important;
+                }
+                .ptw-paper-theme .ptw-form-section:hover {
+                    box-shadow: none !important;
+                    transform: none !important;
+                }
+                .ptw-paper-theme .ptw-form-section h3 {
+                    margin: -12px -12px 12px !important;
+                    padding: 10px 12px !important;
+                    border: 1px solid #9ca3af !important;
+                    background: #cbd5e1 !important;
+                    color: #111827 !important;
+                    justify-content: center !important;
+                    font-size: 1rem !important;
+                }
+                .ptw-paper-theme .ptw-form-section h3 i {
+                    background: transparent !important;
+                    font-size: 0.95rem !important;
+                    padding: 0 !important;
+                }
+                .ptw-paper-theme label {
+                    color: #e5e7eb !important;
+                }
+                .ptw-paper-theme .form-input,
+                .ptw-paper-theme textarea,
+                .ptw-paper-theme select,
+                .ptw-paper-theme input[type="text"],
+                .ptw-paper-theme input[type="datetime-local"] {
+                    background: #f9fafb !important;
+                    color: #111827 !important;
+                    border: 1px solid #9ca3af !important;
+                }
+                .ptw-paper-theme .data-table {
+                    width: 100%;
+                    border-collapse: collapse !important;
+                    table-layout: fixed;
+                    background: #000;
+                    border: 1.2px solid #9ca3af;
+                }
+                .ptw-paper-theme .data-table th,
+                .ptw-paper-theme .data-table td {
+                    border: 1.2px solid #9ca3af !important;
+                    min-height: 42px;
+                    padding: 8px 10px !important;
+                    vertical-align: middle;
+                }
+                .ptw-paper-theme .data-table thead th {
+                    background: #cbd5e1 !important;
+                    color: #111827 !important;
+                    font-weight: 700;
+                    font-size: 13px;
+                    line-height: 1.35;
+                }
+                .ptw-paper-theme .data-table tbody td {
+                    background: #000 !important;
+                    color: #f3f4f6 !important;
+                    font-size: 13px;
+                    line-height: 1.35;
+                }
+                .ptw-paper-theme .grid,
+                .ptw-paper-theme .space-y-6,
+                .ptw-paper-theme .space-y-4 {
+                    row-gap: 14px !important;
+                }
+                .ptw-paper-theme .card-body {
+                    padding: 12px !important;
+                }
+                @media (max-width: 1024px) {
+                    .ptw-paper-header {
+                        grid-template-columns: 1fr;
+                        text-align: center;
+                        gap: 8px;
+                    }
+                    .ptw-paper-header-left,
+                    .ptw-paper-header-right {
+                        justify-content: center;
+                        text-align: center;
+                    }
+                    .ptw-paper-theme .data-table th,
+                    .ptw-paper-theme .data-table td {
+                        min-height: 38px;
+                        padding: 7px 8px !important;
+                        font-size: 12px !important;
+                    }
+                }
+                @media (max-width: 768px) {
+                    .ptw-paper-theme .ptw-form-section {
+                        margin-bottom: 12px !important;
+                        padding: 10px !important;
+                    }
+                    .ptw-paper-theme .ptw-form-section h3 {
+                        margin: -10px -10px 10px !important;
+                        font-size: 0.92rem !important;
+                        padding: 8px 10px !important;
+                    }
+                    .ptw-paper-theme .table-wrapper {
+                        overflow-x: auto;
+                    }
+                    .ptw-paper-theme .data-table {
+                        min-width: 760px;
+                    }
+                }
+                /* قفل بصري مطابق للنموذج المرجعي: إزالة أي زخارف أو تدرجات متبقية */
+                .ptw-paper-theme * {
+                    border-radius: 0 !important;
+                    box-shadow: none !important;
+                }
+                .ptw-paper-theme .card-header {
+                    background: #000 !important;
+                    border: 1px solid #9ca3af !important;
+                    margin-bottom: 12px !important;
+                }
+                .ptw-paper-theme .card-title,
+                .ptw-paper-theme .text-gray-700,
+                .ptw-paper-theme .text-gray-800,
+                .ptw-paper-theme .text-gray-600,
+                .ptw-paper-theme .text-gray-500,
+                .ptw-paper-theme .font-medium,
+                .ptw-paper-theme .font-semibold {
+                    color: #e5e7eb !important;
+                }
+                .ptw-paper-theme .bg-red-50,
+                .ptw-paper-theme .bg-blue-50,
+                .ptw-paper-theme .bg-yellow-50,
+                .ptw-paper-theme .bg-green-50,
+                .ptw-paper-theme .bg-gray-50,
+                .ptw-paper-theme .bg-white,
+                .ptw-paper-theme .from-blue-100,
+                .ptw-paper-theme .to-purple-100,
+                .ptw-paper-theme .from-blue-50,
+                .ptw-paper-theme .to-white {
+                    background: #000 !important;
+                }
+                .ptw-paper-theme .border,
+                .ptw-paper-theme [class*="border-"] {
+                    border-color: #9ca3af !important;
+                }
+                .ptw-paper-theme .ptw-permit-disclaimer {
+                    margin: 0 0 10px 0 !important;
+                }
+                .ptw-paper-theme #ptw-disclaimer-font-decrease,
+                .ptw-paper-theme #ptw-disclaimer-font-reset,
+                .ptw-paper-theme #ptw-disclaimer-font-increase,
+                .ptw-paper-theme #ptw-disclaimer-font-size-display {
+                    display: none !important;
+                }
+                .ptw-paper-theme #ptw-permit-disclaimer-text {
+                    background: #000 !important;
+                    color: #f3f4f6 !important;
+                    border: 1px solid #9ca3af !important;
+                    min-height: 92px !important;
+                    line-height: 1.8 !important;
+                }
+                .ptw-paper-theme .btn-secondary,
+                .ptw-paper-theme .btn-primary {
+                    border-radius: 0 !important;
+                }
             </style>
-            <div class="content-card bg-gray-50 border-none shadow-none">
+            <div class="content-card bg-gray-50 border-none shadow-none ptw-paper-theme">
+                ${this.renderPermitSystemHeader()}
                 <div class="card-header bg-white shadow-sm rounded-xl border border-gray-100 mb-6 p-4 flex items-center justify-between ptw-form-header-centered" style="background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%); color: white;">
                     <h2 class="card-title text-xl" style="color: white; font-weight: 700;">
                         <span class="w-10 h-10 inline-flex items-center justify-center rounded-full bg-white bg-opacity-20 ml-3 shadow-sm">
