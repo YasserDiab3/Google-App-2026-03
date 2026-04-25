@@ -1276,6 +1276,7 @@ function saveToSheet(sheetName, data, spreadsheetId = null) {
             // ✅ تطبيع خاص بورقة PTWRegistry لضمان تخزين نص أو رقم فقط (لا JSON ولا objects)
             if (sheetName === 'PTWRegistry') {
                 processed = resolvePTWRegistryIdsForWrite_(processed, spreadsheetId);
+                processed = resolvePTWRegistryByPaperPermitNumber_(processed, spreadsheetId);
                 // permitType: string فقط
                 if (processed.permitType !== undefined) {
                     if (Array.isArray(processed.permitType)) {
@@ -1692,6 +1693,7 @@ function appendToSheet(sheetName, data, spreadsheetId = null) {
             // ✅ تطبيع خاص بورقة PTWRegistry لضمان تخزين نص أو رقم فقط (لا JSON ولا objects)
             if (sheetName === 'PTWRegistry') {
                 processed = resolvePTWRegistryIdsForWrite_(processed, spreadsheetId);
+                processed = resolvePTWRegistryByPaperPermitNumber_(processed, spreadsheetId);
                 // permitType: string فقط
                 if (processed.permitType !== undefined) {
                     if (Array.isArray(processed.permitType)) {
@@ -3500,6 +3502,47 @@ function resolvePTWRegistryIdsForWrite_(record, spreadsheetId) {
         }
     }
     return resolved;
+}
+
+/**
+ * منع تكرار رقم التصريح الورقي في PTWRegistry.
+ * إذا وُجد سجل بنفس paperPermitNumber نعيد استخدام id/permitId/sequentialNumber الخاصة به.
+ */
+function resolvePTWRegistryByPaperPermitNumber_(record, spreadsheetId) {
+    if (!record || typeof record !== 'object') return record;
+    var paper = String(record.paperPermitNumber || '').trim();
+    if (!paper) return record;
+
+    try {
+        var targetSpreadsheetId = spreadsheetId || getSpreadsheetId();
+        var existingData = readFromSheet('PTWRegistry', targetSpreadsheetId);
+        if (!Array.isArray(existingData) || existingData.length === 0) return record;
+
+        for (var i = 0; i < existingData.length; i++) {
+            var row = existingData[i];
+            if (!row) continue;
+            if (String(row.paperPermitNumber || '').trim() !== paper) continue;
+
+            var existingId = String(row.id || '').trim();
+            var existingPermitId = String(row.permitId || '').trim();
+            if (existingId) record.id = existingId;
+            if (existingPermitId) record.permitId = existingPermitId;
+
+            var n = parseInt(String(row.sequentialNumber || '').trim(), 10);
+            if (!isNaN(n) && n > 0) {
+                record.sequentialNumber = n;
+            } else {
+                var fromReg = extractNumericFromPrefixedId_(existingId, 'REG');
+                var fromPtw = extractNumericFromPrefixedId_(existingPermitId, 'PTW');
+                var fallbackN = fromReg || fromPtw;
+                if (fallbackN) record.sequentialNumber = fallbackN;
+            }
+            return record;
+        }
+    } catch (e) {
+        Logger.log('resolvePTWRegistryByPaperPermitNumber_ failed: ' + e.toString());
+    }
+    return record;
 }
 
 function resolveHybridId_(rawValue, prefix, sheetName, idField, spreadsheetId, mapUnknownFormats) {
