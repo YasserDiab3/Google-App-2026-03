@@ -9271,8 +9271,7 @@
             (function () {
                 try {
                     const savedTheme = localStorage.getItem("theme") || "light";
-                    const savedColorTheme =
-                        localStorage.getItem("color-theme") || "emerald";
+                    const savedColorTheme = "emerald";
                     document.documentElement.setAttribute(
                         "data-theme",
                         savedTheme,
@@ -9283,6 +9282,7 @@
                     );
                     document.body.setAttribute("data-theme", savedTheme);
                     document.body.setAttribute("data-color-theme", savedColorTheme);
+                    localStorage.setItem("color-theme", savedColorTheme);
                 } catch (e) {
                     // تجاهل الأخطاء في حالة عدم توفر localStorage
                 }

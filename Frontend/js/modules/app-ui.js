@@ -1,12 +1,13 @@
 // تطبيق الوضع الليلي فوراً عند تحميل الصفحة (قبل تعريف UI)
 (function applyThemeImmediately() {
     const savedTheme = localStorage.getItem('theme') || 'light';
-    const savedColorTheme = localStorage.getItem('color-theme') || 'emerald';
+    const savedColorTheme = 'emerald';
     document.documentElement.setAttribute('data-theme', savedTheme);
     document.documentElement.setAttribute('data-color-theme', savedColorTheme);
     if (document.body) {
         document.body.setAttribute('data-color-theme', savedColorTheme);
     }
+    localStorage.setItem('color-theme', savedColorTheme);
 })();
 
 // تعريف UI كمتغير عام (global) ليكون متاحاً لجميع الملفات
@@ -6714,8 +6715,8 @@ window.UI = {
             return;
         }
 
-        const savedColorTheme = localStorage.getItem('color-theme') || 'emerald';
-        this.setColorTheme(savedColorTheme);
+        // افتراضياً عند كل فتح للنظام نبدأ بالسيم الأخضر
+        this.setColorTheme('emerald');
 
         colorThemeToggles.forEach(btn => {
             if (btn.dataset.colorThemeBound === 'true') return;

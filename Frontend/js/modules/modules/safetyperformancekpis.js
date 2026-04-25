@@ -5241,12 +5241,7 @@ SafetyPerformanceKPIs.renderChartScorecardVisuals = function () {
         const q = String(ui.search || '').trim().toLowerCase();
         return !q || ds.label.toLowerCase().includes(q);
     });
-
-    if (!filteredTrend.length) {
-        grid.innerHTML = `<div class="content-card"><div class="card-body text-sm text-slate-500">${t('module.kpi.chart.noData', 'لا توجد بيانات ضمن الفترة المحددة')}</div></div>`;
-        this.bindChartScorecardControls();
-        return;
-    }
+    const trendForMain = filteredTrend.length ? filteredTrend : trendDatasets;
 
     const kpiOverall = ((rollingScore(sliceTail(rows.trainingHours || []), false) + rollingScore(sliceTail(rows.permitTotal || []), false) + rollingScore(sliceTail(rows.trir || []), true)) / 3);
     grid.innerHTML = `
@@ -5288,12 +5283,68 @@ SafetyPerformanceKPIs.renderChartScorecardVisuals = function () {
                 <div style="height:${ui.compact ? '220px' : '300px'}"><canvas id="spk-safety-rates-chart"></canvas></div>
             </div>
         </div>
+        <div class="content-card">
+            <div class="card-header">
+                <h2 class="card-title">${t('module.kpi.chart.card.workforceHours.title', '0 Workforce & Hours')}</h2>
+            </div>
+            <div class="card-body">
+                <div style="height:${ui.compact ? '220px' : '300px'}"><canvas id="spk-workforce-chart"></canvas></div>
+            </div>
+        </div>
+        <div class="content-card">
+            <div class="card-header">
+                <h2 class="card-title">${t('module.kpi.chart.card.safetyReported.subtitle', 'LTI / NLTI / First Aid / Near Miss')}</h2>
+            </div>
+            <div class="card-body">
+                <div style="height:${ui.compact ? '220px' : '300px'}"><canvas id="spk-incidents-chart"></canvas></div>
+            </div>
+        </div>
+        <div class="content-card">
+            <div class="card-header">
+                <h2 class="card-title">${t('module.kpi.chart.card.occupationalHealth.subtitle', 'LTOI / NLTOI / Occ Health Near Miss')}</h2>
+            </div>
+            <div class="card-body">
+                <div style="height:${ui.compact ? '220px' : '300px'}"><canvas id="spk-occ-health-chart"></canvas></div>
+            </div>
+        </div>
+        <div class="content-card">
+            <div class="card-header">
+                <h2 class="card-title">${t('module.kpi.scorecard.section.nebosh', '4 NEBOSH Training')}</h2>
+            </div>
+            <div class="card-body">
+                <div style="height:${ui.compact ? '220px' : '300px'}"><canvas id="spk-nebosh-chart"></canvas></div>
+            </div>
+        </div>
+        <div class="content-card">
+            <div class="card-header">
+                <h2 class="card-title">${t('module.kpi.scorecard.section.trainingMetrics', 'Training Metrics')}</h2>
+            </div>
+            <div class="card-body">
+                <div style="height:${ui.compact ? '220px' : '300px'}"><canvas id="spk-training-fte-chart"></canvas></div>
+            </div>
+        </div>
+        <div class="content-card">
+            <div class="card-header">
+                <h2 class="card-title">${t('module.kpi.scorecard.row.totalHoursWorked', 'Total Employee Hours Worked')}</h2>
+            </div>
+            <div class="card-body">
+                <div style="height:${ui.compact ? '220px' : '300px'}"><canvas id="spk-hours-chart"></canvas></div>
+            </div>
+        </div>
+        <div class="content-card">
+            <div class="card-header">
+                <h2 class="card-title">${t('module.kpi.chart.card.sections', 'Sections')}</h2>
+            </div>
+            <div class="card-body">
+                <div style="height:${ui.compact ? '220px' : '300px'}"><canvas id="spk-performance-balance-chart"></canvas></div>
+            </div>
+        </div>
     `;
 
     const baseType = ui.chartType === 'bar' ? 'bar' : 'line';
     this._chartScorecardCharts.push(new Chart(document.getElementById('spk-main-trend-chart'), {
         type: baseType,
-        data: { labels: monthLabels, datasets: filteredTrend.map(ds => ({ ...ds, tension: 0.35, fill: baseType === 'line' })) },
+        data: { labels: monthLabels, datasets: trendForMain.map(ds => ({ ...ds, tension: 0.35, fill: baseType === 'line' })) },
         options: this.getChartScorecardOptions({ stacked: false, title: t('module.kpi.chart.control.group', 'نوع المؤشر') })
     }));
 
@@ -5334,6 +5385,108 @@ SafetyPerformanceKPIs.renderChartScorecardVisuals = function () {
             ]
         },
         options: this.getChartScorecardOptions({ stacked: false, title: t('module.kpi.chart.card.safetyRates', 'Safety Rates') })
+    }));
+
+    this._chartScorecardCharts.push(new Chart(document.getElementById('spk-workforce-chart'), {
+        type: 'line',
+        data: {
+            labels: monthLabels,
+            datasets: [
+                { label: t('module.kpi.chart.card.operationalEmployeesCurrent', 'Operational Employees'), data: sliceTail(rows.employeeCounts || []), borderColor: '#7c3aed', backgroundColor: 'rgba(124,58,237,.14)', tension: 0.35, fill: true },
+                { label: t('module.kpi.chart.card.employeeHoursCurrent', 'Employee Hours Worked'), data: sliceTail(rows.hoursWorked || []), borderColor: '#2563eb', backgroundColor: 'rgba(37,99,235,.14)', tension: 0.35, fill: false, yAxisID: 'y1' }
+            ]
+        },
+        options: this.getChartScorecardOptions({ dualAxis: true, title: t('module.kpi.chart.card.workforceHours.subtitle', 'Number Operational employees / Total Employee Hours Worked') })
+    }));
+
+    this._chartScorecardCharts.push(new Chart(document.getElementById('spk-incidents-chart'), {
+        type: 'bar',
+        data: {
+            labels: monthLabels,
+            datasets: [
+                { label: 'LTI', data: sliceTail(rows.lti || []), backgroundColor: 'rgba(225,29,72,.72)' },
+                { label: 'NLTI', data: sliceTail(rows.nlti || []), backgroundColor: 'rgba(245,158,11,.72)' },
+                { label: 'First Aid', data: sliceTail(rows.firstAid || []), backgroundColor: 'rgba(59,130,246,.72)' },
+                { label: 'Near Miss', data: sliceTail(rows.nearMiss || []), backgroundColor: 'rgba(5,150,105,.72)' }
+            ]
+        },
+        options: this.getChartScorecardOptions({ stacked: true, title: t('module.kpi.chart.card.safetyReported.subtitle', 'LTI / NLTI / First Aid / Near Miss') })
+    }));
+
+    this._chartScorecardCharts.push(new Chart(document.getElementById('spk-occ-health-chart'), {
+        type: 'line',
+        data: {
+            labels: monthLabels,
+            datasets: [
+                { label: 'LTOI', data: sliceTail(rows.ltoi || []), borderColor: '#e11d48', backgroundColor: 'rgba(225,29,72,.14)', tension: 0.35, fill: true },
+                { label: 'NLTOI', data: sliceTail(rows.nltoi || []), borderColor: '#d97706', backgroundColor: 'rgba(217,119,6,.14)', tension: 0.35, fill: true },
+                { label: t('module.kpi.scorecard.row.occNearMissHazards', 'Occ Health Near Miss/Hazards Reported'), data: sliceTail(rows.occHazards || []), borderColor: '#7c3aed', backgroundColor: 'rgba(124,58,237,.14)', tension: 0.35, fill: false }
+            ]
+        },
+        options: this.getChartScorecardOptions({ stacked: false, title: t('module.kpi.chart.card.occupationalHealth.subtitle', 'LTOI / NLTOI / Occ Health Near Miss') })
+    }));
+
+    this._chartScorecardCharts.push(new Chart(document.getElementById('spk-nebosh-chart'), {
+        type: 'bar',
+        data: {
+            labels: monthLabels,
+            datasets: [{
+                label: t('module.kpi.scorecard.row.neboshStatus', 'Certification status of UAE HSE Lead'),
+                data: sliceTail((rows.neboshStatus || []).map((v) => (String(v || '').toLowerCase().includes('cert') || String(v || '').includes('معتمد')) ? 1 : (String(v || '').trim() ? 0.5 : 0))),
+                backgroundColor: 'rgba(124,58,237,.72)'
+            }]
+        },
+        options: this.getChartScorecardOptions({ stacked: false, title: t('module.kpi.scorecard.section.nebosh', '4 NEBOSH Training') })
+    }));
+
+    this._chartScorecardCharts.push(new Chart(document.getElementById('spk-training-fte-chart'), {
+        type: 'line',
+        data: {
+            labels: monthLabels,
+            datasets: [{
+                label: t('module.kpi.scorecard.row.training.hoursPerFte', 'Training Hours per Operational FTE'),
+                data: sliceTail(rows.trainingHoursPerFte || []),
+                borderColor: '#059669',
+                backgroundColor: 'rgba(5,150,105,.14)',
+                tension: 0.35,
+                fill: true
+            }]
+        },
+        options: this.getChartScorecardOptions({ stacked: false, title: t('module.kpi.scorecard.section.trainingMetrics', 'Training Metrics') })
+    }));
+
+    this._chartScorecardCharts.push(new Chart(document.getElementById('spk-hours-chart'), {
+        type: 'bar',
+        data: {
+            labels: monthLabels,
+            datasets: [{
+                label: t('module.kpi.scorecard.row.totalHoursWorked', 'Total Employee Hours Worked'),
+                data: sliceTail(rows.hoursWorked || []),
+                backgroundColor: 'rgba(37,99,235,.72)'
+            }]
+        },
+        options: this.getChartScorecardOptions({ stacked: false, title: t('module.kpi.scorecard.row.totalHoursWorked', 'Total Employee Hours Worked') })
+    }));
+
+    this._chartScorecardCharts.push(new Chart(document.getElementById('spk-performance-balance-chart'), {
+        type: 'bar',
+        data: {
+            labels: [
+                t('module.kpi.chart.leadingScore', 'Leading'),
+                t('module.kpi.chart.laggingScore', 'Lagging'),
+                t('module.kpi.chart.overall', 'Overall')
+            ],
+            datasets: [{
+                label: t('module.kpi.chart.overall', 'Overall Performance Index'),
+                data: [
+                    (rollingScore(sliceTail(rows.permitTotal || []), false) + rollingScore(sliceTail(rows.trainingHours || []), false)) / 2,
+                    (rollingScore(sliceTail(rows.trir || []), true) + rollingScore(sliceTail(rows.ltir || []), true)) / 2,
+                    kpiOverall
+                ],
+                backgroundColor: ['rgba(5,150,105,.72)', 'rgba(225,29,72,.72)', 'rgba(37,99,235,.72)']
+            }]
+        },
+        options: this.getChartScorecardOptions({ stacked: false, title: t('module.kpi.chart.card.sectionsValue', 'Workforce, Rates, PTW, Training, NEBOSH') })
     }));
 
     grid.classList.toggle('spk-compact-mode', !!ui.compact);
