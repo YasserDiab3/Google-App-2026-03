@@ -4687,15 +4687,18 @@ window.UI = {
         const norm = (v) => String(v || '').trim().toLowerCase();
         const email = norm(user.email);
         const userId = norm(user.id);
+        const userEmployeeCode = norm(user.employeeNumber || user.employeeCode || user.employeeId || user.sapId);
         const userName = norm(user.name);
 
         return employees.find((emp) => {
             if (!emp) return false;
             const empEmail = norm(emp.email);
-            const empId = norm(emp.id || emp.employeeNumber || emp.sapId);
+            const empId = norm(emp.id);
+            const empCode = norm(emp.employeeNumber || emp.employeeCode || emp.sapId);
             const empName = norm(emp.name);
             return (email && empEmail && empEmail === email)
-                || (userId && empId && empId === userId)
+                || (userId && (empId === userId || empCode === userId))
+                || (userEmployeeCode && (empCode === userEmployeeCode || empId === userEmployeeCode))
                 || (userName && empName && empName === userName);
         }) || null;
     },
@@ -4820,10 +4823,10 @@ window.UI = {
         const phone = employee?.phone || currentUserRecord?.phone || '';
         const department = employee?.department || user?.department || currentUserRecord?.department || '';
         const position = employee?.position || employee?.job || currentUserRecord?.position || currentUserRecord?.job || '';
-        const branch = employee?.branch || user?.branch || currentUserRecord?.branch || '';
-        const location = employee?.location || user?.subLocationName || user?.subLocation || '';
-        const employeeNumber = employee?.employeeNumber || employee?.id || '';
-        const employeeId = employee?.id || user?.id || '';
+        const branch = employee?.branch || employee?.factory || user?.branch || currentUserRecord?.branch || '';
+        const location = employee?.location || employee?.address || user?.subLocationName || user?.subLocation || '';
+        const employeeNumber = employee?.employeeNumber || employee?.employeeCode || employee?.id || user?.employeeNumber || '';
+        const employeeId = employee?.id || employee?.employeeNumber || user?.id || '';
         const photo = employee?.photo || user?.photo || currentUserRecord?.photo || '';
         const hireRaw = employee?.hireDate;
         const hireDateDisplay = this._formatProfileHireDateDisplay(hireRaw);
@@ -4913,6 +4916,14 @@ window.UI = {
                     }
                 }
             }
+            if ((!Array.isArray(AppState.appData?.employees) || AppState.appData.employees.length === 0)
+                && typeof GoogleIntegration !== 'undefined'
+                && typeof GoogleIntegration.callBackend === 'function') {
+                const employeesRes = await GoogleIntegration.callBackend('getAllEmployees', { filters: {} });
+                if (employeesRes && employeesRes.success !== false && Array.isArray(employeesRes.data)) {
+                    AppState.appData.employees = employeesRes.data;
+                }
+            }
         } catch (_) { /* ignore non-critical profile preload errors */ }
 
         const profile = this._buildProfileModel();
@@ -4963,13 +4974,28 @@ window.UI = {
         const avatarSrc = profile.photo ? `src="${esc(profile.photo)}"` : '';
         const avatarDisplay = profile.photo ? '' : 'display:none;';
         const iconDisplay = profile.photo ? 'display:none;' : '';
+        const personalRows = [
+            [t('module.profile.employeeNumber', 'الكود الوظيفي'), profile.employeeNumber || '-'],
+            [t('module.profile.personalName', 'الاسم'), profile.fullName || '-'],
+            [t('module.profile.personalJob', 'الوظيفة'), profile.position || '-'],
+            [t('module.profile.phone', 'رقم الهاتف'), profile.phone || '-'],
+            [t('module.profile.personalFactory', 'المصنع'), profile.branch || '-'],
+            [t('module.profile.personalAddress', 'العنوان'), profile.location || '-'],
+            [t('module.profile.hireDate', 'تاريخ التعيين'), profile.hireDateDisplay || '-'],
+            [t('module.profile.seniority', 'مدة العمل (الأقدمية)'), profile.tenureText || (profile.hireDateDisplay ? '—' : '-')]
+        ];
+        const personalInfoHtml = personalRows.map((entry, idx) => {
+            const val = String(entry[1] ?? '-');
+            const isLtr = idx === 0 || idx === 3 || /\d/.test(val);
+            return `<div><span>${esc(entry[0])}</span><strong ${isLtr ? 'dir="ltr"' : ''}>${esc(val)}</strong></div>`;
+        }).join('');
 
         section.innerHTML = `
             <div class="section-header">
                 <h2 class="section-title"><i class="fas fa-id-card ml-2"></i>${t('nav.profile', 'ملفي الشخصي')}</h2>
             </div>
             <div class="profile-dashboard-grid">
-                <div class="content-card profile-hero-card">
+                <div class="content-card profile-hero-card profile-linkedin-shell">
                     <div class="card-body profile-hero-body">
                         <div class="profile-avatar-wrap">
                             <img id="profile-section-photo" ${avatarSrc} alt="${t('module.profile.photoAlt', 'الصورة الشخصية')}" style="${avatarDisplay}">
@@ -4978,7 +5004,7 @@ window.UI = {
                         <div class="profile-hero-content">
                             <h3 class="profile-hero-name">${esc(profile.fullName || t('module.profile.unknownUser', 'مستخدم النظام'))}</h3>
                             <p class="profile-hero-role">${esc(profile.position || t('module.profile.noPosition', 'غير محدد'))}</p>
-                            <p class="profile-hero-meta">${esc(profile.department || t('module.profile.noDepartment', 'قسم غير محدد'))}</p>
+                            <p class="profile-hero-meta">${esc(profile.branch || profile.department || t('module.profile.noDepartment', 'قسم غير محدد'))}</p>
                             ${hireRow}
                             <div class="profile-actions">
                                 <button id="profile-change-photo-btn" class="btn-secondary btn-sm"><i class="fas fa-camera ml-1"></i>${t('module.profile.changePhoto', 'تغيير الصورة')}</button>
@@ -4989,16 +5015,10 @@ window.UI = {
                     </div>
                 </div>
 
-                <div class="content-card profile-card">
-                    <div class="card-header"><h3 class="card-title">${t('module.profile.basicInfo', 'بيانات الموظف')}</h3></div>
+                <div class="content-card profile-card profile-personal-card">
+                    <div class="card-header"><h3 class="card-title">${t('module.profile.personalInfo', 'البيانات الشخصية')}</h3></div>
                     <div class="card-body profile-info-list">
-                        <div><span>${t('module.profile.employeeNumber', 'الرقم الوظيفي')}</span><strong dir="ltr">${esc(profile.employeeNumber || '-')}</strong></div>
-                        <div><span>${t('module.profile.email', 'البريد الإلكتروني')}</span><strong class="profile-break-all">${esc(profile.email || '-')}</strong></div>
-                        <div><span>${t('module.profile.phone', 'رقم الهاتف')}</span><strong dir="ltr">${esc(profile.phone || '-')}</strong></div>
-                        <div><span>${t('module.profile.branch', 'الفرع')}</span><strong>${esc(profile.branch || '-')}</strong></div>
-                        <div><span>${t('module.profile.location', 'الموقع')}</span><strong>${esc(profile.location || '-')}</strong></div>
-                        <div><span>${t('module.profile.hireDate', 'تاريخ التعيين')}</span><strong dir="ltr">${esc(profile.hireDateDisplay || '-')}</strong></div>
-                        <div><span>${t('module.profile.seniority', 'مدة العمل (الأقدمية)')}</span><strong>${esc(profile.tenureText || (profile.hireDateDisplay ? '—' : '-'))}</strong></div>
+                        ${personalInfoHtml}
                     </div>
                 </div>
 

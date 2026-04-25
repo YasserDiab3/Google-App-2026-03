@@ -2004,7 +2004,7 @@ const PTW = {
                 if (icon) icon.classList.remove('fa-spin');
             }
             this.updateKPIs();
-            if (typeof Notification !== 'undefined' && Notification.success) Notification.success('تم التحديث');
+            if (typeof Notification !== 'undefined' && Notification.success) Notification.success(PTW._t('module.ptw.refresh.success', 'تم التحديث'));
         };
         try {
             if (tab === 'permits') {
@@ -2031,7 +2031,7 @@ const PTW = {
         } catch (err) {
             Utils.safeError('خطأ عند التحديث:', err);
             if (refreshBtn) { refreshBtn.disabled = false; const i = refreshBtn.querySelector('i.fa-sync-alt'); if (i) i.classList.remove('fa-spin'); }
-            if (typeof Notification !== 'undefined' && Notification.error) Notification.error('حدث خطأ أثناء التحديث');
+            if (typeof Notification !== 'undefined' && Notification.error) Notification.error(PTW._t('module.ptw.refresh.error', 'حدث خطأ أثناء التحديث'));
         }
     },
 
@@ -2039,11 +2039,7 @@ const PTW = {
      * عرض محتوى سجل حصر التصاريح
      */
     renderRegistryContent() {
-        const t = (key, fallback) => {
-            if (window.AppI18n && typeof window.AppI18n.t === 'function') return window.AppI18n.t(key, fallback);
-            if (window.I18n && typeof window.I18n.t === 'function') return window.I18n.t(key, fallback);
-            return fallback;
-        };
+        const t = (key, fallback) => this._t(key, fallback);
         // التأكد من إخفاء الخريطة في تبويب السجل
         const mapContent = document.getElementById('ptw-map-content');
         if (mapContent) {
@@ -2082,7 +2078,7 @@ const PTW = {
 
         // حساب متوسط الوقت للحالات المغلقة (من السجل فقط)
         const closedRecords = this.registryData.filter(r => this.isPermitClosedStatus(r?.status) && (r.closureDate || r.timeTo));
-        let avgTime = 'غير متاح';
+        let avgTime = t('module.ptw.registry.avgNotAvailable', 'غير متاح');
         if (closedRecords.length > 0) {
             let totalMs = 0;
             closedRecords.forEach(r => {
@@ -2092,7 +2088,7 @@ const PTW = {
             });
             if (totalMs > 0) {
                 const avgHours = Math.round(totalMs / closedRecords.length / (1000 * 60 * 60));
-                avgTime = `${avgHours} ساعة`;
+                avgTime = t('module.ptw.registry.avgHours', '{n} ساعة').replace(/\{n\}/g, String(avgHours));
             }
         }
 
@@ -2106,15 +2102,15 @@ const PTW = {
                 <div class="flex gap-2">
                     <button id="ptw-registry-import-excel" class="btn-secondary">
                         <i class="fas fa-file-import ml-2"></i>
-                        استيراد Excel
+                        ${t('module.ptw.registry.importExcel', 'استيراد Excel')}
                     </button>
                     <button id="ptw-registry-export-excel" class="btn-secondary">
                         <i class="fas fa-file-excel ml-2"></i>
-                        تصدير Excel
+                        ${t('module.ptw.registry.exportExcel', 'تصدير Excel')}
                     </button>
                     <button id="ptw-registry-export-pdf" class="btn-primary">
                         <i class="fas fa-file-pdf ml-2"></i>
-                        تصدير PDF
+                        ${t('module.ptw.registry.exportPdf', 'تصدير PDF')}
                     </button>
                 </div>
             </div>
@@ -2218,11 +2214,7 @@ const PTW = {
      * عرض جدول السجل
      */
     renderRegistryTable() {
-        const t = (key, fallback) => {
-            if (window.AppI18n && typeof window.AppI18n.t === 'function') return window.AppI18n.t(key, fallback);
-            if (window.I18n && typeof window.I18n.t === 'function') return window.I18n.t(key, fallback);
-            return fallback;
-        };
+        const t = (key, fallback) => this._t(key, fallback);
         if (this.registryData.length === 0) {
             return `
                 <div class="empty-state">
@@ -2309,6 +2301,10 @@ const PTW = {
             // عرض أنواع التصريح (يمكن أن تكون مصفوفة أو نص)
             const permitTypeDisplay = this.getPermitTypeDisplay(entry);
             const permitTypeShort = permitTypeDisplay.length > 50 ? permitTypeDisplay.substring(0, 50) + '...' : permitTypeDisplay;
+            const totalDisp = (entry.timeFrom && entry.timeTo)
+                ? this.calculateTotalTime(entry.timeFrom, entry.timeTo)
+                : (this.isUsableDurationText(entry.totalTime) ? entry.totalTime : t('module.ptw.common.notSpecified', 'غير محدد'));
+            const statusText = this.statusLabel(entry.status);
 
             tableHTML += `
                 <tr data-registry-id="${entry.id}">
@@ -2319,7 +2315,7 @@ const PTW = {
                     <td>${Utils.escapeHTML(entry.location)}</td>
                     <td>${Utils.escapeHTML(timeFromDisplay)}</td>
                     <td>${Utils.escapeHTML(timeToDisplay)}</td>
-                    <td class="font-semibold">${Utils.escapeHTML(entry.totalTime)}</td>
+                    <td class="font-semibold">${Utils.escapeHTML(String(totalDisp))}</td>
                     <td>${Utils.escapeHTML(entry.authorizedParty)}</td>
                     <td class="max-w-xs truncate" title="${Utils.escapeHTML(entry.workDescription)}">${Utils.escapeHTML(entry.workDescription).substring(0, 30)}...</td>
                     <td>${Utils.escapeHTML(entry.supervisor1)}</td>
@@ -2327,18 +2323,18 @@ const PTW = {
                     <td>
                         <span class="badge ${statusClass}">
                             <i class="fas ${statusIcon} ml-1"></i>
-                            ${entry.status}
+                            ${Utils.escapeHTML(String(statusText))}
                         </span>
                     </td>
                     <td>
                         <div class="flex items-center gap-1 flex-wrap">
                             ${entry.isManualEntry ? `
-                                <button class="btn btn-primary btn-sm" onclick="PTW.viewManualPermitDetails('${entry.id}')" title="عرض التفاصيل">
-                                    <i class="fas fa-eye ml-1"></i> عرض التفاصيل
+                                <button class="btn btn-primary btn-sm" onclick="PTW.viewManualPermitDetails('${entry.id}')" title="${t('module.ptw.registry.viewDetails', 'عرض التفاصيل')}">
+                                    <i class="fas fa-eye ml-1"></i> ${t('module.ptw.registry.viewDetails', 'عرض التفاصيل')}
                                 </button>
                             ` : `
-                                <button class="btn btn-primary btn-sm" onclick="PTW.viewRegistryDetails('${entry.permitId}')" title="عرض التفاصيل">
-                                    <i class="fas fa-eye ml-1"></i> عرض التفاصيل
+                                <button class="btn btn-primary btn-sm" onclick="PTW.viewRegistryDetails('${entry.permitId}')" title="${t('module.ptw.registry.viewDetails', 'عرض التفاصيل')}">
+                                    <i class="fas fa-eye ml-1"></i> ${t('module.ptw.registry.viewDetails', 'عرض التفاصيل')}
                                 </button>
                             `}
                         </div>
@@ -2355,6 +2351,7 @@ const PTW = {
      * عرض محتوى الخريطة
      */
     renderMapContent() {
+        const t = (k, f) => this._t(k, f);
         return `
             <style>
                 #ptw-map-content {
@@ -2409,48 +2406,48 @@ const PTW = {
                     <div>
                         <h2 class="text-lg font-bold text-gray-800">
                             <i class="fas fa-map-marked-alt ml-2 text-primary-500"></i>
-                            خريطة مواقع التصاريح
+                            ${t('module.ptw.map.title', 'خريطة مواقع التصاريح')}
                         </h2>
-                        <p class="text-sm text-gray-500 mt-1">عرض حالة ومواقع تصاريح العمل</p>
+                        <p class="text-sm text-gray-500 mt-1">${t('module.ptw.map.subtitle', 'عرض حالة ومواقع تصاريح العمل')}</p>
                     </div>
                     <div class="flex flex-wrap items-center gap-3">
                         <select id="ptw-map-filter-status" class="form-select text-sm w-40 border-gray-300 rounded-md shadow-sm focus:border-blue-500 focus:ring-blue-500">
-                            <option value="">كل الحالات</option>
-                            <option value="مفتوح">مفتوح</option>
-                            <option value="قيد المراجعة">قيد المراجعة</option>
-                            <option value="موافق عليه">موافق عليه</option>
-                            <option value="مغلق">مغلق</option>
-                            <option value="مرفوض">مرفوض</option>
+                            <option value="">${t('module.ptw.map.filterAllStatus', 'كل الحالات')}</option>
+                            <option value="مفتوح">${t('module.ptw.status.open', 'مفتوح')}</option>
+                            <option value="قيد المراجعة">${t('module.ptw.status.underReview', 'قيد المراجعة')}</option>
+                            <option value="موافق عليه">${t('module.ptw.status.approved', 'موافق عليه')}</option>
+                            <option value="مغلق">${t('module.ptw.status.closed', 'مغلق')}</option>
+                            <option value="مرفوض">${t('module.ptw.status.rejected', 'مرفوض')}</option>
                         </select>
                         <select id="ptw-map-filter-type" class="form-select text-sm w-40 border-gray-300 rounded-md shadow-sm focus:border-blue-500 focus:ring-blue-500">
-                            <option value="">كل الأنواع</option>
-                            <option value="أعمال ساخنة">أعمال ساخنة</option>
-                            <option value="أماكن مغلقة">أماكن مغلقة</option>
-                            <option value="أعمال على ارتفاع">أعمال على ارتفاع</option>
-                            <option value="أعمال كهربائية">أعمال كهربائية</option>
-                            <option value="أعمال باردة">أعمال باردة</option>
+                            <option value="">${t('module.ptw.map.filterAllTypes', 'كل الأنواع')}</option>
+                            <option value="أعمال ساخنة">${t('module.ptw.map.wt.hot', 'أعمال ساخنة')}</option>
+                            <option value="أماكن مغلقة">${t('module.ptw.map.wt.enclosed', 'أماكن مغلقة')}</option>
+                            <option value="أعمال على ارتفاع">${t('module.ptw.map.wt.height', 'أعمال على ارتفاع')}</option>
+                            <option value="أعمال كهربائية">${t('module.ptw.map.wt.elec', 'أعمال كهربائية')}</option>
+                            <option value="أعمال باردة">${t('module.ptw.map.wt.cold', 'أعمال باردة')}</option>
                         </select>
                         <div class="flex items-center gap-2 bg-white border border-gray-300 rounded-md p-1 shadow-sm">
-                            <button id="ptw-map-type-normal" class="px-3 py-1.5 text-xs font-semibold rounded transition-all duration-200 bg-blue-500 text-white shadow-sm" title="الخريطة العادية">
+                            <button id="ptw-map-type-normal" class="px-3 py-1.5 text-xs font-semibold rounded transition-all duration-200 bg-blue-500 text-white shadow-sm" title="${t('module.ptw.map.tooltipRoad', 'الخريطة العادية')}">
                                 <i class="fas fa-map ml-1"></i>
-                                عادي
+                                ${t('module.ptw.map.mapNormal', 'عادي')}
                             </button>
-                            <button id="ptw-map-type-satellite" class="px-3 py-1.5 text-xs font-semibold rounded transition-all duration-200 text-gray-700 hover:bg-gray-100" title="الخريطة الفضائية">
+                            <button id="ptw-map-type-satellite" class="px-3 py-1.5 text-xs font-semibold rounded transition-all duration-200 text-gray-700 hover:bg-gray-100" title="${t('module.ptw.map.tooltipSatellite', 'الخريطة الفضائية')}">
                                 <i class="fas fa-satellite ml-1"></i>
-                                ستالايت
+                                ${t('module.ptw.map.mapSatellite', 'ستالايت')}
                             </button>
-                            <button id="ptw-map-type-terrain" class="px-3 py-1.5 text-xs font-semibold rounded transition-all duration-200 text-gray-700 hover:bg-gray-100" title="الخريطة الطبوغرافية">
+                            <button id="ptw-map-type-terrain" class="px-3 py-1.5 text-xs font-semibold rounded transition-all duration-200 text-gray-700 hover:bg-gray-100" title="${t('module.ptw.map.tooltipTerrain', 'الخريطة الطبوغرافية')}">
                                 <i class="fas fa-mountain ml-1"></i>
-                                تضاريس
+                                ${t('module.ptw.map.mapTerrain', 'تضاريس')}
                             </button>
                     </div>
-                        <button id="ptw-map-fullscreen-btn" class="btn-secondary text-sm px-3 py-2" title="ملء الشاشة">
+                        <button id="ptw-map-fullscreen-btn" class="btn-secondary text-sm px-3 py-2" title="${t('module.ptw.map.fullscreen', 'ملء الشاشة')}">
                             <i class="fas fa-expand ml-2"></i>
                         </button>
                         ${this.isAdmin() ? `
-                            <button id="ptw-map-settings-btn" class="btn-secondary text-sm px-4 py-2" title="إعدادات الخريطة">
+                            <button id="ptw-map-settings-btn" class="btn-secondary text-sm px-4 py-2" title="${t('module.ptw.map.locationSettingsTitle', 'إعدادات الخريطة')}">
                                 <i class="fas fa-cog ml-2"></i>
-                                إعدادات المواقع
+                                ${t('module.ptw.map.locationSettings', 'إعدادات المواقع')}
                             </button>
                         ` : ''}
                     </div>
@@ -2459,37 +2456,37 @@ const PTW = {
                     <div id="ptw-map"></div>
                         
                         <div id="ptw-map-legend" class="absolute bottom-4 right-4 bg-white p-3 rounded-lg shadow-lg text-sm z-[400] hidden md:block border border-gray-200 opacity-90 hover:opacity-100 transition-opacity">
-                            <h4 class="font-bold mb-2 text-gray-700 border-b pb-1">مفتاح الخريطة</h4>
+                            <h4 class="font-bold mb-2 text-gray-700 border-b pb-1">${t('module.ptw.map.legend', 'مفتاح الخريطة')}</h4>
                             <div class="space-y-1">
-                                <div class="flex items-center gap-2"><span class="w-3 h-3 rounded-full bg-yellow-500"></span> <span>مفتوح/قيد العمل</span></div>
-                                <div class="flex items-center gap-2"><span class="w-3 h-3 rounded-full bg-blue-500"></span> <span>قيد المراجعة</span></div>
-                                <div class="flex items-center gap-2"><span class="w-3 h-3 rounded-full bg-green-500"></span> <span>موافق عليه/ساري</span></div>
-                                <div class="flex items-center gap-2"><span class="w-3 h-3 rounded-full bg-gray-500"></span> <span>مغلق</span></div>
-                                <div class="flex items-center gap-2"><span class="w-3 h-3 rounded-full bg-red-500"></span> <span>مرفوض/منتهي</span></div>
+                                <div class="flex items-center gap-2"><span class="w-3 h-3 rounded-full bg-yellow-500"></span> <span>${t('module.ptw.map.legendOpen', 'مفتوح/قيد العمل')}</span></div>
+                                <div class="flex items-center gap-2"><span class="w-3 h-3 rounded-full bg-blue-500"></span> <span>${t('module.ptw.map.legendReview', 'قيد المراجعة')}</span></div>
+                                <div class="flex items-center gap-2"><span class="w-3 h-3 rounded-full bg-green-500"></span> <span>${t('module.ptw.map.legendApproved', 'موافق عليه/ساري')}</span></div>
+                                <div class="flex items-center gap-2"><span class="w-3 h-3 rounded-full bg-gray-500"></span> <span>${t('module.ptw.map.legendClosed', 'مغلق')}</span></div>
+                                <div class="flex items-center gap-2"><span class="w-3 h-3 rounded-full bg-red-500"></span> <span>${t('module.ptw.map.legendRejected', 'مرفوض/منتهي')}</span></div>
                             </div>
                         </div>
 
                         <div id="ptw-map-loading" class="absolute inset-0 flex items-center justify-center bg-gray-100/90 backdrop-blur-sm" style="z-index: 1000;">
                             <div class="text-center">
                                 <i class="fas fa-circle-notch fa-spin text-4xl text-blue-500 mb-4"></i>
-                                <p class="text-gray-600 font-medium">جاري تحميل الخريطة...</p>
+                                <p class="text-gray-600 font-medium">${t('module.ptw.map.loadingMap', 'جاري تحميل الخريطة...')}</p>
                             </div>
                         </div>
                         <div id="ptw-map-error" class="hidden absolute inset-0 flex items-center justify-center bg-gray-100" style="z-index: 1000;">
                             <div class="text-center p-6 max-w-md">
                                 <i class="fas fa-exclamation-triangle text-4xl text-yellow-500 mb-4"></i>
-                                <p class="text-gray-700 font-semibold mb-2">تعذر تحميل الخريطة</p>
+                                <p class="text-gray-700 font-semibold mb-2">${t('module.ptw.map.loadErrorTitle', 'تعذر تحميل الخريطة')}</p>
                                 <div id="ptw-map-error-message" class="text-sm text-gray-500 mb-4 text-right">
-                                    يرجى التأكد من إعدادات الإحداثيات واتصال الإنترنت
+                                    ${t('module.ptw.map.loadErrorHint', 'يرجى التأكد من إعدادات الإحداثيات واتصال الإنترنت')}
                                 </div>
                                 <div class="flex gap-2 justify-center">
                                     <button onclick="PTW.initMap()" class="btn-primary">
                                         <i class="fas fa-redo ml-2"></i>
-                                        إعادة المحاولة
+                                        ${t('module.ptw.map.retry', 'إعادة المحاولة')}
                                     </button>
                                     <button onclick="PTW.showMapDebugInfo()" class="btn-secondary">
                                         <i class="fas fa-info-circle ml-2"></i>
-                                        تشخيص
+                                        ${t('module.ptw.map.debug', 'تشخيص')}
                                     </button>
                             </div>
                         </div>
@@ -2575,7 +2572,7 @@ const PTW = {
                         errorDiv.classList.remove('hidden');
                         const errorMsg = errorDiv.querySelector('#ptw-map-error-message');
                         if (errorMsg) {
-                            errorMsg.innerHTML = '<p>خطأ: حاوية الخريطة غير موجودة. يرجى تحديث الصفحة.</p>';
+                            errorMsg.innerHTML = '<p>' + this._t('module.ptw.mapError.containerMissing', 'خطأ: حاوية الخريطة غير موجودة. يرجى تحديث الصفحة.') + '</p>';
                         }
                     }
                     return;
@@ -2586,7 +2583,7 @@ const PTW = {
                     errorDiv.classList.remove('hidden');
                     const errorMsg = errorDiv.querySelector('#ptw-map-error-message');
                     if (errorMsg) {
-                        errorMsg.innerHTML = '<p>خطأ: حاوية الخريطة غير موجودة. يرجى تحديث الصفحة.</p>';
+                        errorMsg.innerHTML = '<p>' + this._t('module.ptw.mapError.containerMissing', 'خطأ: حاوية الخريطة غير موجودة. يرجى تحديث الصفحة.') + '</p>';
                     }
                 }
                 return;
@@ -4269,10 +4266,11 @@ const PTW = {
      */
     showMapSettingsModal() {
         if (!this.isAdmin()) {
-            Notification.warning('ليس لديك صلاحية للوصول إلى هذه الصفحة');
+            Notification.warning(this._t('module.ptw.mapSettings.nopermission', 'ليس لديك صلاحية للوصول إلى هذه الصفحة'));
             return;
         }
 
+        const t = (k, f) => this._t(k, f);
         const modal = document.createElement('div');
         modal.className = 'modal-overlay';
         modal.innerHTML = `
@@ -4280,9 +4278,9 @@ const PTW = {
                 <div class="modal-header modal-header-centered">
                     <h2 class="modal-title">
                         <i class="fas fa-cog ml-2"></i>
-                        إعدادات إحداثيات المواقع
+                        ${t('module.ptw.mapSettings.title', 'إعدادات إحداثيات المواقع')}
                     </h2>
-                    <button class="modal-close" aria-label="إغلاق">
+                    <button class="modal-close" aria-label="${t('module.ptw.mapSettings.closeAria', 'إغلاق')}">
                         <i class="fas fa-times"></i>
                     </button>
                 </div>
@@ -4307,7 +4305,7 @@ const PTW = {
 
         modal.addEventListener('click', (e) => {
             if (e.target === modal || e.target.classList.contains('modal-overlay')) {
-                const ok = confirm('تنبيه: سيتم إغلاق النافذة.\nقد تفقد أي بيانات غير محفوظة.\n\nهل تريد الإغلاق؟');
+                const ok = confirm(this._t('module.ptw.mapSettings.closeUnsaved', 'تنبيه: سيتم إغلاق النافذة.\\nقد تفقد أي بيانات غير محفوظة.\\n\\nهل تريد الإغلاق؟').replace(/\\n/g, '\n'));
                 if (ok) close();
             }
         });
@@ -4354,13 +4352,14 @@ const PTW = {
      * عرض إعدادات المواقع (للمدير فقط)
      */
     renderMapSettings() {
+        const t = (k, f) => this._t(k, f);
         if (!this.isAdmin()) {
             return `
                 <div class="content-card">
                     <div class="card-body">
                         <div class="empty-state">
                             <i class="fas fa-lock text-4xl text-gray-300 mb-4"></i>
-                            <p class="text-gray-500">ليس لديك صلاحية للوصول إلى هذه الصفحة</p>
+                            <p class="text-gray-500">${t('module.ptw.mapSettings.nopermission', 'ليس لديك صلاحية للوصول إلى هذه الصفحة')}</p>
                         </div>
                     </div>
                 </div>
@@ -4370,40 +4369,40 @@ const PTW = {
         // الحصول على المواقع من الإعدادات
         const sites = this.getMapSites();
         const defaultCoords = this.getDefaultFactoryCoordinates();
-
+        const emptyAddHint = t('module.ptw.mapSettings.empty', 'لا توجد مواقع محددة. اضغط على "إضافة موقع جديد" لبدء الإضافة.');
         return `
             <div class="space-y-6">
                 <div class="content-card">
                     <div class="card-header">
                         <h2 class="card-title">
                             <i class="fas fa-cog ml-2"></i>
-                            إعدادات إحداثيات المواقع
+                            ${t('module.ptw.mapSettings.title', 'إعدادات إحداثيات المواقع')}
                         </h2>
-                        <p class="text-sm text-gray-500 mt-1">إدارة إحداثيات المواقع التي تظهر على الخريطة</p>
+                        <p class="text-sm text-gray-500 mt-1">${t('module.ptw.mapSettings.cardSubtitle', 'إدارة إحداثيات المواقع التي تظهر على الخريطة')}</p>
                     </div>
                     <div class="card-body">
                         <div class="mb-4">
                             <button id="ptw-map-settings-add-site" class="btn-primary">
                                 <i class="fas fa-plus ml-2"></i>
-                                إضافة موقع جديد
+                                ${t('module.ptw.mapSettings.addNew', 'إضافة موقع جديد')}
                             </button>
                         </div>
                         <div class="table-responsive">
                             <table class="data-table">
                                 <thead>
                                     <tr>
-                                        <th>اسم الموقع</th>
-                                        <th>خط العرض (Latitude)</th>
-                                        <th>خط الطول (Longitude)</th>
-                                        <th>مستوى التكبير</th>
-                                        <th>الإجراءات</th>
+                                        <th>${t('module.ptw.mapSettings.col.name', 'اسم الموقع')}</th>
+                                        <th>${t('module.ptw.mapSettings.col.lat', 'خط العرض (Latitude)')}</th>
+                                        <th>${t('module.ptw.mapSettings.col.lng', 'خط الطول (Longitude)')}</th>
+                                        <th>${t('module.ptw.mapSettings.col.zoom', 'مستوى التكبير')}</th>
+                                        <th>${t('module.ptw.registry.col.actions', 'الإجراءات')}</th>
                                     </tr>
                                 </thead>
                                 <tbody id="ptw-map-settings-sites-list">
                                     ${sites.length === 0 ? `
                                         <tr>
                                             <td colspan="5" class="text-center text-gray-500 py-8">
-                                                لا توجد مواقع محددة. اضغط على "إضافة موقع جديد" لبدء الإضافة.
+                                                ${emptyAddHint}
                                             </td>
                                         </tr>
                                     ` : sites.map(site => `
@@ -4412,7 +4411,7 @@ const PTW = {
                                                 <input type="text" class="form-input site-name-input" 
                                                     value="${Utils.escapeHTML(site.name || '')}" 
                                                     data-site-id="${Utils.escapeHTML(site.id || '')}"
-                                                    placeholder="اسم الموقع">
+                                                    placeholder="${t('module.ptw.mapSettings.placeholderSiteName', 'اسم الموقع')}">
                                             </td>
                                             <td>
                                                 <input type="number" step="0.000001" class="form-input site-lat-input" 
@@ -4436,12 +4435,12 @@ const PTW = {
                                                 <div class="flex items-center gap-2">
                                                     <button class="btn-icon btn-icon-success save-site-btn" 
                                                         data-site-id="${Utils.escapeHTML(site.id || '')}" 
-                                                        title="حفظ">
+                                                        title="${t('module.ptw.mapSettings.btnSave', 'حفظ')}">
                                                         <i class="fas fa-save"></i>
                                                     </button>
                                                     <button class="btn-icon btn-icon-danger delete-site-btn" 
                                                         data-site-id="${Utils.escapeHTML(site.id || '')}" 
-                                                        title="حذف">
+                                                        title="${t('module.ptw.mapSettings.btnDelete', 'حذف')}">
                                                         <i class="fas fa-trash"></i>
                                                     </button>
                                                 </div>
@@ -4458,23 +4457,23 @@ const PTW = {
                     <div class="card-header">
                         <h2 class="card-title">
                             <i class="fas fa-map-marker-alt ml-2"></i>
-                            الإحداثيات الافتراضية
+                            ${t('module.ptw.mapSettings.defaultTitle', 'الإحداثيات الافتراضية')}
                         </h2>
                     </div>
                     <div class="card-body">
                         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                             <div>
-                                <label class="block text-sm font-semibold text-gray-700 mb-2">خط العرض الافتراضي</label>
+                                <label class="block text-sm font-semibold text-gray-700 mb-2">${t('module.ptw.mapSettings.defaultLat', 'خط العرض الافتراضي')}</label>
                                 <input type="number" step="0.000001" id="ptw-default-lat" class="form-input" 
                                     value="${defaultCoords.lat}" placeholder="24.7136">
                             </div>
                             <div>
-                                <label class="block text-sm font-semibold text-gray-700 mb-2">خط الطول الافتراضي</label>
+                                <label class="block text-sm font-semibold text-gray-700 mb-2">${t('module.ptw.mapSettings.defaultLng', 'خط الطول الافتراضي')}</label>
                                 <input type="number" step="0.000001" id="ptw-default-lng" class="form-input" 
                                     value="${defaultCoords.lng}" placeholder="46.6753">
                             </div>
                             <div>
-                                <label class="block text-sm font-semibold text-gray-700 mb-2">مستوى التكبير الافتراضي</label>
+                                <label class="block text-sm font-semibold text-gray-700 mb-2">${t('module.ptw.mapSettings.defaultZoom', 'مستوى التكبير الافتراضي')}</label>
                                 <input type="number" min="1" max="20" id="ptw-default-zoom" class="form-input" 
                                     value="${defaultCoords.zoom || 15}" placeholder="15">
                             </div>
@@ -4482,7 +4481,7 @@ const PTW = {
                         <div class="mt-4">
                             <button id="ptw-save-default-coords" class="btn-primary">
                                 <i class="fas fa-save ml-2"></i>
-                                حفظ الإحداثيات الافتراضية
+                                ${t('module.ptw.mapSettings.saveDefault', 'حفظ الإحداثيات الافتراضية')}
                             </button>
                         </div>
                     </div>
@@ -4561,12 +4560,12 @@ const PTW = {
             site.zoom = zoomInput ? (parseInt(zoomInput.value) || 15) : 15;
 
             if (!site.name) {
-                Notification.warning('يرجى إدخال اسم الموقع');
+                Notification.warning(this._t('module.ptw.mapSettings.warnings.enterSiteName', 'يرجى إدخال اسم الموقع'));
                 return;
             }
 
             await this.saveMapSites(sites);
-            Notification.success('تم حفظ الموقع بنجاح');
+            Notification.success(this._t('module.ptw.mapSettings.warnings.saveSiteOk', 'تم حفظ الموقع بنجاح'));
         }
     },
 
@@ -4574,7 +4573,7 @@ const PTW = {
      * حذف موقع
      */
     async deleteMapSite(siteId, modal) {
-        if (!confirm('هل أنت متأكد من حذف هذا الموقع؟')) {
+        if (!confirm(this._t('module.ptw.mapSettings.deleteConfirm', 'هل أنت متأكد من حذف هذا الموقع؟'))) {
             return;
         }
 
@@ -4582,7 +4581,7 @@ const PTW = {
         const filtered = sites.filter(s => s.id !== siteId);
         await this.saveMapSites(filtered);
         
-        Notification.success('تم حذف الموقع بنجاح');
+        Notification.success(this._t('module.ptw.mapSettings.warnings.deleteSiteOk', 'تم حذف الموقع بنجاح'));
         
         // تحديث العرض
         if (modal) {
@@ -4626,7 +4625,7 @@ const PTW = {
         const zoomInput = document.getElementById('ptw-default-zoom');
 
         if (!latInput || !lngInput) {
-            Notification.error('خطأ في الحصول على الإحداثيات');
+            Notification.error(this._t('module.ptw.mapSettings.warnings.coordsGetError', 'خطأ في الحصول على الإحداثيات'));
             return;
         }
 
@@ -4635,7 +4634,7 @@ const PTW = {
         const zoom = zoomInput ? (parseInt(zoomInput.value) || 15) : 15;
 
         if (isNaN(lat) || isNaN(lng)) {
-            Notification.error('يرجى إدخال إحداثيات صحيحة');
+            Notification.error(this._t('module.ptw.mapSettings.warnings.coordsInvalid', 'يرجى إدخال إحداثيات صحيحة'));
             return;
         }
 
@@ -4646,7 +4645,7 @@ const PTW = {
             try {
                 const success = await MapCoordinatesManager.saveDefaultCoordinates(coords);
                 if (success) {
-                    Notification.success('تم حفظ الإحداثيات الافتراضية بنجاح في جميع المصادر');
+                    Notification.success(this._t('module.ptw.mapSettings.warnings.defaultSavedAll', 'تم حفظ الإحداثيات الافتراضية بنجاح في جميع المصادر'));
                     return;
                 }
             } catch (error) {
@@ -4664,7 +4663,7 @@ const PTW = {
             window.DataManager.save();
         }
 
-        Notification.success('تم حفظ الإحداثيات الافتراضية بنجاح');
+        Notification.success(this._t('module.ptw.mapSettings.warnings.defaultSaved', 'تم حفظ الإحداثيات الافتراضية بنجاح'));
     },
 
     /**
@@ -4998,7 +4997,7 @@ const PTW = {
         const isManualPermit = registryEntry && registryEntry.isManualEntry === true;
 
         if (!item && !registryEntry) {
-            Notification.error('لم يتم العثور على التصريح');
+            Notification.error(this._t('module.ptw.notify.permitNotFound', 'لم يتم العثور على التصريح'));
             return;
         }
 
@@ -5010,7 +5009,7 @@ const PTW = {
         }
 
         if (!item) {
-            Notification.error('لم يتم العثور على التصريح');
+            Notification.error(this._t('module.ptw.notify.permitNotFound', 'لم يتم العثور على التصريح'));
             return;
         }
 
@@ -5170,7 +5169,7 @@ const PTW = {
         document.body.appendChild(modal);
         modal.addEventListener('click', (e) => {
             if (e.target === modal) {
-                const ok = confirm('تنبيه: سيتم إغلاق النافذة.\nقد تفقد أي بيانات غير محفوظة.\n\nهل تريد الإغلاق؟');
+                const ok = confirm(PTW._t('module.ptw.mapSettings.closeUnsaved', 'تنبيه: سيتم إغلاق النافذة.\\nقد تفقد أي بيانات غير محفوظة.\\n\\nهل تريد الإغلاق؟').replace(/\\n/g, '\n'));
                 if (ok) modal.remove();
             }
         });
@@ -5182,7 +5181,7 @@ const PTW = {
     viewManualPermitDetails(entryId) {
         const entry = this.registryData.find(r => r.id === entryId);
         if (!entry) {
-            Notification.error('لم يتم العثور على التصريح اليدوي');
+            Notification.error(this._t('module.ptw.notify.permitNotFoundM', 'لم يتم العثور على التصريح اليدوي'));
             return;
         }
 
@@ -5302,7 +5301,7 @@ const PTW = {
         // إغلاق عند الضغط خارج النموذج
         modal.addEventListener('click', (event) => {
             if (event.target === modal) {
-                const ok = confirm('تنبيه: سيتم إغلاق النافذة.\nقد تفقد أي بيانات غير محفوظة.\n\nهل تريد الإغلاق؟');
+                const ok = confirm(PTW._t('module.ptw.mapSettings.closeUnsaved', 'تنبيه: سيتم إغلاق النافذة.\\nقد تفقد أي بيانات غير محفوظة.\\n\\nهل تريد الإغلاق؟').replace(/\\n/g, '\n'));
                 if (ok) modal.remove();
             }
         });
@@ -5314,7 +5313,7 @@ const PTW = {
     printPermitForm() {
         const form = document.getElementById('ptw-form');
         if (!form) {
-            Notification.warning('النموذج غير موجود');
+            Notification.warning(this._t('module.ptw.notify.formNotFound', 'النموذج غير موجود'));
             return;
         }
 
@@ -5360,11 +5359,11 @@ const PTW = {
                     }, 500);
                 };
             } else {
-                Notification.error('يرجى السماح بالنوافذ المنبثقة للطباعة');
+                Notification.error(this._t('module.ptw.notify.popupsPrint', 'يرجى السماح بالنوافذ المنبثقة للطباعة'));
             }
         } catch (error) {
             Utils.safeError('خطأ في طباعة النموذج:', error);
-            Notification.error('حدث خطأ أثناء الطباعة: ' + error.message);
+            Notification.error(this._t('module.ptw.notify.printErr', 'حدث خطأ أثناء الطباعة: ') + error.message);
         }
     },
 
@@ -6177,7 +6176,7 @@ const PTW = {
             };
         }
         if (!item) {
-            Notification.error('لم يتم العثور على التصريح');
+            Notification.error(this._t('module.ptw.notify.permitNotFound', 'لم يتم العثور على التصريح'));
             return;
         }
 
@@ -6226,11 +6225,11 @@ const PTW = {
      */
     async deletePermitFromRegistry(permitId) {
         if (AppState.currentUser?.role !== 'admin') {
-            Notification.error('غير مصرح لك بحذف التصاريح');
+            Notification.error(this._t('module.ptw.notify.cannotDeletePerm', 'غير مصرح لك بحذف التصاريح'));
             return;
         }
 
-        if (!confirm('هل أنت متأكد من حذف هذا التصريح؟\nسيتم حذفه نهائياً من النظام.')) return;
+        if (!confirm(this._t('module.ptw.notify.deletePtwFromSystem', 'هل أنت متأكد من حذف هذا التصريح؟\nسيتم حذفه نهائياً من النظام.'))) return;
 
         try {
             Loading.show();
@@ -6260,10 +6259,10 @@ const PTW = {
                 this.setupRegistryEventListeners();
             }
 
-            Notification.success('تم حذف التصريح بنجاح');
+            Notification.success(this._t('module.ptw.notify.deleted', 'تم حذف التصريح بنجاح'));
         } catch (error) {
             Utils.safeError('خطأ في حذف التصريح:', error);
-            Notification.error('حدث خطأ أثناء حذف التصريح');
+            Notification.error(this._t('module.ptw.notify.deleteErr', 'حدث خطأ أثناء حذف التصريح'));
         } finally {
             Loading.hide();
         }
@@ -7340,7 +7339,7 @@ const PTW = {
         modal.querySelector('[data-action="close"]')?.addEventListener('click', close);
         modal.addEventListener('click', (event) => {
             if (event.target === modal) {
-                const ok = confirm('تنبيه: سيتم إغلاق النموذج.\nقد تفقد أي بيانات غير محفوظة.\n\nهل تريد الإغلاق؟');
+                const ok = confirm(PTW._t('module.ptw.form.analysis.closeUnsaved', 'تنبيه: سيتم إغلاق النموذج.\\nقد تفقد أي بيانات غير محفوظة.\\n\\nهل تريد الإغلاق؟').replace(/\\n/g, '\n'));
                 if (ok) close();
             }
         });
@@ -7494,13 +7493,13 @@ const PTW = {
                 entry.locationId === selectedSiteId && entry.sublocationId === selectedSublocationId
             );
             if (duplicate) {
-                Notification.warning('تم اختيار هذا المكان الفرعي بالفعل');
+                Notification.warning(this._t('module.ptw.notify.sublocDup', 'تم اختيار هذا المكان الفرعي بالفعل'));
                 sublocationSelect.value = '';
                 return;
             }
 
             if (selectedLocationEntries.length >= maxSublocationSelections) {
-                Notification.warning('يمكن اختيار 3 أماكن فرعية فقط كحد أقصى');
+                Notification.warning(this._t('module.ptw.notify.sublocMax3', 'يمكن اختيار 3 أماكن فرعية فقط كحد أقصى'));
                 sublocationSelect.value = '';
                 return;
             }
@@ -8186,7 +8185,7 @@ const PTW = {
             const paperInput = modal.querySelector('#manual-paper-permit-number');
             if (!paperNum || paperNum === '0') {
                 if (typeof Notification !== 'undefined' && Notification.warning) {
-                    Notification.warning('رقم التصريح الورقي إلزامي — يرجى إدخال الرقم قبل الحفظ');
+                    Notification.warning(PTW._t('module.ptw.notify.paperNumRequired', 'رقم التصريح الورقي إلزامي — يرجى إدخال الرقم قبل الحفظ'));
                 }
                 if (paperInput) {
                     paperInput.style.border = '2px solid #e53e3e';
@@ -8205,7 +8204,7 @@ const PTW = {
             if (duplicateEntry) {
                 const dupSeq = duplicateEntry.sequentialNumber || '؟';
                 if (typeof Notification !== 'undefined' && Notification.error) {
-                    Notification.error(`رقم التصريح الورقي "${paperNum}" مستخدم مسبقاً في السجل #${dupSeq} — يرجى إدخال رقم مختلف`);
+                    Notification.error(PTW._t('module.ptw.notify.paperNumDup', 'رقم التصريح الورقي "{n}" مستخدم مسبقاً في السجل #{s} — يرجى إدخال رقم مختلف').replace(/\{n\}/g, paperNum).replace(/\{s\}/g, String(dupSeq)));
                 }
                 if (paperInput) {
                     paperInput.style.border = '2px solid #e53e3e';
@@ -8218,7 +8217,7 @@ const PTW = {
 
             // التحقق من البيانات المطلوبة (تخفيف الشروط للإدخال اليدوي)
             if (!formData.location || !formData.timeFrom || !formData.timeTo || !formData.workDescription || !formData.status) {
-                Notification.warning('يرجى إدخال الحقول المطلوبة: الموقع، تاريخ البدء والانتهاء، وصف العمل، وحالة التصريح');
+                Notification.warning(this._t('module.ptw.notify.manualRequiredFields', 'يرجى إدخال الحقول المطلوبة: الموقع، تاريخ البدء والانتهاء، وصف العمل، وحالة التصريح'));
                 return;
             }
 
@@ -8316,7 +8315,7 @@ const PTW = {
                 // عند التحديث: الحفاظ على جميع البيانات الموجودة ودمجها مع البيانات الجديدة
                 const existingEntry = this.registryData.find(r => r.id === entryId);
                 if (!existingEntry) {
-                    Notification.error('السجل غير موجود');
+                    Notification.error(this._t('module.ptw.notify.recNotFound', 'السجل غير موجود'));
                     return;
                 }
                 
@@ -8343,7 +8342,7 @@ const PTW = {
                 if (index !== -1) {
                     this.registryData[index] = entry;
                 } else {
-                    Notification.error('السجل غير موجود في البيانات');
+                    Notification.error(this._t('module.ptw.notify.recNotInData', 'السجل غير موجود في البيانات'));
                     return;
                 }
             } else {
@@ -8474,7 +8473,7 @@ const PTW = {
             const isNewPermit = existingPermitIndex === -1;
 
             if (typeof Notification !== 'undefined' && Notification.info) {
-                Notification.info('جاري المزامنة مع PTWRegistry و PTW…');
+                Notification.info(this._t('module.ptw.notify.syncPtw', 'جاري المزامنة مع PTWRegistry و PTW…'));
             }
 
             try {
@@ -8502,7 +8501,7 @@ const PTW = {
             }
         } catch (error) {
             Utils.safeError('خطأ في حفظ التصريح اليدوي:', error);
-            Notification.error('حدث خطأ أثناء حفظ التصريح: ' + (error.message || 'خطأ غير معروف'));
+            Notification.error(this._t('module.ptw.notify.savePermitErr', 'حدث خطأ أثناء حفظ التصريح: ') + (error.message || this._t('module.ptw.notify.unknownError', 'خطأ غير معروف')));
         }
     },
 
@@ -8510,19 +8509,19 @@ const PTW = {
      * حذف تصريح يدوي من السجل
      */
     async deleteManualPermitEntry(entryId) {
-        if (!confirm('هل أنت متأكد من حذف هذا التصريح اليدوي؟\nسيتم حذفه نهائياً من السجل.')) return;
+        if (!confirm(this._t('module.ptw.notify.deleteManualPermConfirm', 'هل أنت متأكد من حذف هذا التصريح اليدوي؟\nسيتم حذفه نهائياً من السجل.'))) return;
 
         try {
             const index = this.registryData.findIndex(r => r.id === entryId);
             if (index === -1) {
-                Notification.error('التصريح غير موجود');
+                Notification.error(this._t('module.ptw.notify.permitNotFound', 'لم يتم العثور على التصريح'));
                 return;
             }
 
             // التأكد من أنه تصريح يدوي
             const entry = this.registryData[index];
             if (!entry.isManualEntry) {
-                Notification.warning('يمكن حذف التصاريح اليدوية فقط من هنا');
+                Notification.warning(this._t('module.ptw.notify.manualDeleteOnly', 'يمكن حذف التصاريح اليدوية فقط من هنا'));
                 return;
             }
 
@@ -8538,10 +8537,10 @@ const PTW = {
                 }
             }
 
-            Notification.success('تم حذف التصريح اليدوي بنجاح');
+            Notification.success(this._t('module.ptw.notify.manualDeleteOk', 'تم حذف التصريح اليدوي بنجاح'));
         } catch (error) {
             Utils.safeError('خطأ في حذف التصريح اليدوي:', error);
-            Notification.error('حدث خطأ أثناء حذف التصريح');
+            Notification.error(this._t('module.ptw.notify.deleteErr', 'حدث خطأ أثناء حذف التصريح'));
         }
     },
 
@@ -8549,15 +8548,15 @@ const PTW = {
      * إغلاق تصريح من السجل
      */
     async closePermitFromRegistry(permitId) {
-        if (!confirm('هل أنت متأكد من إغلاق هذا التصريح؟')) return;
+        if (!confirm(this._t('module.ptw.notify.closePermitConfirm', 'هل أنت متأكد من إغلاق هذا التصريح؟'))) return;
 
         const permit = AppState.appData.ptw?.find(p => p.id === permitId);
         if (!permit) {
-            Notification.error('التصريح غير موجود');
+            Notification.error(this._t('module.ptw.notify.permitNotFound', 'لم يتم العثور على التصريح'));
             return;
         }
 
-        const closureReason = prompt('أدخل سبب إغلاق التصريح:');
+        const closureReason = prompt(this._t('module.ptw.notify.closureReasonPrompt', 'أدخل سبب إغلاق التصريح:'));
         if (!closureReason) return;
 
         permit.status = 'مغلق';
@@ -8583,7 +8582,7 @@ const PTW = {
             }
         }
 
-        Notification.success('تم إغلاق التصريح بنجاح');
+        Notification.success(this._t('module.ptw.notify.closeOk', 'تم إغلاق التصريح بنجاح'));
     },
 
     /**
@@ -8591,7 +8590,7 @@ const PTW = {
      */
     async exportRegistryToExcel() {
         if (this.registryData.length === 0) {
-            Notification.warning('لا توجد بيانات للتصدير');
+            Notification.warning(this._t('module.ptw.notify.noDataExport', 'لا توجد بيانات للتصدير'));
             return;
         }
 
@@ -8616,9 +8615,9 @@ const PTW = {
             const wb = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(wb, ws, 'سجل التصاريح');
             XLSX.writeFile(wb, `سجل_تصاريح_العمل_${new Date().toISOString().split('T')[0]}.xlsx`);
-            Notification.success('تم تصدير السجل إلى Excel بنجاح');
+            Notification.success(this._t('module.ptw.notify.excelOk', 'تم تصدير السجل إلى Excel بنجاح'));
         } else {
-            Notification.error('مكتبة Excel غير متوفرة');
+            Notification.error(this._t('module.ptw.notify.xlsxNoLib', 'مكتبة Excel غير متوفرة'));
         }
     },
 
@@ -8627,7 +8626,7 @@ const PTW = {
      */
     async exportRegistryToPDF() {
         if (this.registryData.length === 0) {
-            Notification.warning('لا توجد بيانات للتصدير');
+            Notification.warning(this._t('module.ptw.notify.noDataExport', 'لا توجد بيانات للتصدير'));
             return;
         }
 
@@ -8738,18 +8737,18 @@ const PTW = {
                         setTimeout(() => {
                             URL.revokeObjectURL(url);
                             Loading.hide();
-                            Notification.success('تم تحضير السجل للطباعة/الحفظ كـ PDF');
+                            Notification.success(this._t('module.ptw.notify.registryPrintReady', 'تم تحضير السجل للطباعة/الحفظ كـ PDF'));
                         }, 800);
                     }, 500);
                 };
             } else {
                 Loading.hide();
-                Notification.error('يرجى السماح بالنوافذ المنبثقة لتصدير PDF');
+                Notification.error(this._t('module.ptw.notify.popupsPdf', 'يرجى السماح بالنوافذ المنبثقة لتصدير PDF'));
             }
         } catch (error) {
             Loading.hide();
             Utils.safeError('خطأ في تصدير PDF:', error);
-            Notification.error('فشل تصدير PDF: ' + (error.message || 'خطأ غير معروف'));
+            Notification.error(this._t('module.ptw.notify.pdfErr', 'فشل تصدير PDF: ') + (error.message || this._t('module.ptw.notify.unknownError', 'خطأ غير معروف')));
         }
     },
 
@@ -8836,7 +8835,7 @@ const PTW = {
 
         modal.addEventListener('click', (event) => {
             if (event.target === modal) {
-                const ok = confirm('تنبيه: سيتم إغلاق النافذة.\nقد تفقد أي بيانات غير محفوظة.\n\nهل تريد الإغلاق؟');
+                const ok = confirm(PTW._t('module.ptw.mapSettings.closeUnsaved', 'تنبيه: سيتم إغلاق النافذة.\\nقد تفقد أي بيانات غير محفوظة.\\n\\nهل تريد الإغلاق؟').replace(/\\n/g, '\n'));
                 if (ok) modal.remove();
             }
         });
@@ -8847,7 +8846,7 @@ const PTW = {
             if (!file) return;
 
             if (typeof XLSX === 'undefined') {
-                Notification.error('مكتبة Excel غير متوفرة. يرجى التأكد من تحميل المكتبة.');
+                Notification.error(this._t('module.ptw.notify.xlsxLibDetail', 'مكتبة Excel غير متوفرة. يرجى التأكد من تحميل المكتبة.'));
                 return;
             }
 
@@ -8860,7 +8859,7 @@ const PTW = {
                 const jsonData = XLSX.utils.sheet_to_json(worksheet);
 
                 if (jsonData.length === 0) {
-                    Notification.error('الملف فارغ أو لا يحتوي على بيانات');
+                    Notification.error(this._t('module.ptw.notify.fileEmpty', 'الملف فارغ أو لا يحتوي على بيانات'));
                     Loading.hide();
                     return;
                 }
@@ -8883,7 +8882,7 @@ const PTW = {
             } catch (error) {
                 Loading.hide();
                 Utils.safeError('فشل قراءة ملف Excel:', error);
-                Notification.error('فشل قراءة الملف: ' + (error.message || 'خطأ غير معروف'));
+                Notification.error(this._t('module.ptw.notify.readFileErr', 'فشل قراءة الملف: ') + (error.message || this._t('module.ptw.notify.unknownError', 'خطأ غير معروف')));
             }
         };
 
@@ -8893,7 +8892,7 @@ const PTW = {
 
         confirmBtn?.addEventListener('click', async () => {
             if (importedRows.length === 0) {
-                Notification.warning('يرجى اختيار ملف يحتوي على بيانات قبل الاستيراد.');
+                Notification.warning(this._t('module.ptw.notify.selectFileFirst', 'يرجى اختيار ملف يحتوي على بيانات قبل الاستيراد.'));
                 return;
             }
             await this.importRegistryFromExcel(importedRows, modal);
@@ -8905,7 +8904,7 @@ const PTW = {
      */
     async importRegistryFromExcel(rows, modal) {
         if (!rows || rows.length === 0) {
-            Notification.error('لا توجد بيانات للاستيراد');
+            Notification.error(this._t('module.ptw.notify.noImportData', 'لا توجد بيانات للاستيراد'));
             return;
         }
 
@@ -9067,7 +9066,7 @@ const PTW = {
         } catch (error) {
             Loading.hide();
             Utils.safeError('خطأ في استيراد البيانات:', error);
-            Notification.error('حدث خطأ أثناء الاستيراد: ' + (error.message || 'خطأ غير معروف'));
+            Notification.error(this._t('module.ptw.notify.importErr', 'حدث خطأ أثناء الاستيراد: ') + (error.message || this._t('module.ptw.notify.unknownError', 'خطأ غير معروف')));
         }
     },
 
@@ -11059,7 +11058,7 @@ const PTW = {
 
         // منع النقر المتكرر - فحص الحالة العامة
         if (this._isSubmitting) {
-            Notification.info('جاري معالجة الطلب السابق، يرجى الانتظار...');
+            Notification.info(this._t('module.ptw.notify.waitRequest', 'جاري معالجة الطلب السابق، يرجى الانتظار...'));
             return;
         }
 
@@ -11191,7 +11190,7 @@ const PTW = {
         const endDateEl = document.getElementById('ptw-endDate');
 
         if (!workDescriptionEl || !startDateEl || !endDateEl) {
-            Notification.error('بعض الحقول المطلوبة غير موجودة. يرجى تحديث الصفحة والمحاولة مرة أخرى.');
+            Notification.error(this._t('module.ptw.notify.missingFormFields', 'بعض الحقول المطلوبة غير موجودة. يرجى تحديث الصفحة والمحاولة مرة أخرى.'));
             if (submitBtn) {
                 submitBtn.disabled = false;
                 submitBtn.innerHTML = originalText;
@@ -11325,7 +11324,7 @@ const PTW = {
         this.updateStatusField(formData.status);
 
         if (!formData.workDescription || !formData.location || !formData.status) {
-            Notification.error('يرجى ملء جميع الحقول المطلوبة');
+            Notification.error(this._t('module.ptw.notify.fillRequired', 'يرجى ملء جميع الحقول المطلوبة'));
             // استعادة حالة الزر عند فشل التحقق
             this._isSubmitting = false;
             if (submitBtn) {
@@ -11348,15 +11347,15 @@ const PTW = {
 
                     // كشف إغلاق التصريح
                     if (wasOpen && nowClosed) {
-                        Notification.success('تم إغلاق التصريح بنجاح');
+                        Notification.success(this._t('module.ptw.notify.closeOk', 'تم إغلاق التصريح بنجاح'));
                     } else {
-                        Notification.success('تم تحديث التصريح بنجاح');
+                        Notification.success(this._t('module.ptw.notify.permUpdateOk', 'تم تحديث التصريح بنجاح'));
                     }
                 }
             } else {
                 AppState.appData.ptw.push(formData);
                 this.notifyPermitCreated(formData);
-                Notification.success('تم إضافة التصريح بنجاح');
+                Notification.success(this._t('module.ptw.notify.permAddOk', 'تم إضافة التصريح بنجاح'));
             }
 
             // التأكد من حفظ بيانات السجل في AppState قبل حفظ DataManager
@@ -11424,7 +11423,7 @@ const PTW = {
                 }
             });
         } catch (error) {
-            Notification.error('حدث خطأ: ' + error.message);
+            Notification.error(this._t('module.ptw.notify.errorGeneric', 'حدث خطأ: ') + error.message);
 
             // استعادة حالة الزر في حالة الخطأ
             this._isSubmitting = false;
@@ -12182,7 +12181,7 @@ const PTW = {
         document.body.appendChild(modal);
         modal.addEventListener('click', (e) => {
             if (e.target === modal) {
-                const ok = confirm('تنبيه: سيتم إغلاق النافذة.\nقد تفقد أي بيانات غير محفوظة.\n\nهل تريد الإغلاق؟');
+                const ok = confirm(PTW._t('module.ptw.mapSettings.closeUnsaved', 'تنبيه: سيتم إغلاق النافذة.\\nقد تفقد أي بيانات غير محفوظة.\\n\\nهل تريد الإغلاق؟').replace(/\\n/g, '\n'));
                 if (ok) modal.remove();
             }
         });
@@ -12244,30 +12243,30 @@ const PTW = {
         // منع المعالجة المتكررة
         const actionKey = `approval_${id}_${approvalIndex}`;
         if (this[`_processing_${actionKey}`]) {
-            Notification.info('جاري معالجة هذا الاعتماد، يرجى الانتظار...');
+            Notification.info(this._t('module.ptw.notify.approvalProcessing', 'جاري معالجة هذا الاعتماد، يرجى الانتظار...'));
             return;
         }
 
         const permit = AppState.appData.ptw.find(i => i.id === id);
         if (!permit) {
-            Notification.error('تعذر العثور على تصريح العمل المحدد');
+            Notification.error(this._t('module.ptw.notify.findPermitFail', 'تعذر العثور على تصريح العمل المحدد'));
             return;
         }
 
         permit.approvals = this.normalizeApprovals(permit.approvals || []);
         const approval = permit.approvals[approvalIndex];
         if (!approval) {
-            Notification.error('عنصر الاعتماد غير موجود');
+            Notification.error(this._t('module.ptw.notify.approvalItemMissing', 'عنصر الاعتماد غير موجود'));
             return;
         }
 
         if (permit.status === 'مغلق') {
-            Notification.warning('لا يمكن تعديل تصريح مغلق');
+            Notification.warning(this._t('module.ptw.notify.cannotEditClosed', 'لا يمكن تعديل تصريح مغلق'));
             return;
         }
 
         if (approval.status !== 'pending') {
-            Notification.info('تمت معالجة هذا الاعتماد بالفعل');
+            Notification.info(this._t('module.ptw.notify.approvalDone', 'تمت معالجة هذا الاعتماد بالفعل'));
             return;
         }
 
@@ -12275,7 +12274,7 @@ const PTW = {
         if (approval.approverEmail && currentUserEmail &&
             approval.approverEmail.toLowerCase() !== currentUserEmail &&
             AppState.currentUser?.role !== 'admin') {
-            Notification.warning('هذا الاعتماد موجه إلى مستخدم آخر.');
+            Notification.warning(this._t('module.ptw.notify.otherUser', 'هذا الاعتماد موجه إلى مستخدم آخر.'));
             return;
         }
 
@@ -12288,11 +12287,13 @@ const PTW = {
                 .some(a => a.status !== 'approved');
             
             if (pendingBefore) {
+                const ns = this._t('module.ptw.common.notSpecified', 'غير محدد');
+                const sep = this._t('module.ptw.common.listSep', '، ');
                 const pendingRoles = requiredApprovalsBefore
                     .filter(a => a.status !== 'approved')
-                    .map(a => a.role || 'غير محدد')
-                    .join('، ');
-                Notification.warning(`يجب اعتماد الموافقات السابقة أولاً: ${pendingRoles}`);
+                    .map(a => this.approvalRoleLabel(a.role || ns))
+                    .join(sep);
+                Notification.warning(this._t('module.ptw.notify.prevApprovals', 'يجب اعتماد الموافقات السابقة أولاً: {roles}').replace(/\{roles\}/g, pendingRoles));
                 return;
             }
         }
@@ -12302,7 +12303,7 @@ const PTW = {
 
         let comments = approval.comments || '';
         if (action === 'rejected') {
-            const reason = prompt('أدخل سبب الرفض (اختياري):', comments);
+            const reason = prompt(this._t('module.ptw.approval.rejectPrompt', 'أدخل سبب الرفض (اختياري):'), comments);
             if (reason === null) {
                 // إلغاء العملية - إزالة علامة المعالجة
                 this[`_processing_${actionKey}`] = false;
@@ -12353,19 +12354,22 @@ const PTW = {
             if (action === 'approved') {
                 const nextApproval = this.getNextPendingApproval(permit.approvals);
                 if (permit.status === 'موافق عليه') {
-                    Notification.success('تم اعتماد تصريح العمل بشكل نهائي بعد موافقة جميع الموافقات المطلوبة.');
+                    Notification.success(this._t('module.ptw.notify.permAllApproved', 'تم اعتماد تصريح العمل بشكل نهائي بعد موافقة جميع الموافقات المطلوبة.'));
                 } else {
-                    Notification.success(`تم اعتماد مرحلة "${approval.role}".`);
+                    const r1 = this.approvalRoleLabel(approval.role);
+                    Notification.success(this._t('module.ptw.notify.stageApproved', 'تم اعتماد مرحلة "{r}".').replace(/\{r\}/g, r1));
                     if (nextApproval && nextApproval.role) {
-                        Notification.info(`المرحلة التالية بانتظار الاعتماد: ${nextApproval.role}`);
+                        const r2 = this.approvalRoleLabel(nextApproval.role);
+                        Notification.info(this._t('module.ptw.notify.nextRole', 'المرحلة التالية بانتظار الاعتماد: {r}').replace(/\{r\}/g, r2));
                     } else {
-                        Notification.info('جميع المراحل المطلوبة تم اعتمادها.');
+                        Notification.info(this._t('module.ptw.notify.allStages', 'جميع المراحل المطلوبة تم اعتمادها.'));
                     }
                 }
             } else {
-                Notification.error(`تم رفض تصريح العمل من قبل "${approval.role}".`);
+                const rj = this.approvalRoleLabel(approval.role);
+                Notification.error(this._t('module.ptw.notify.rejectedBy', 'تم رفض تصريح العمل من قبل "{r}".').replace(/\{r\}/g, rj));
                 if (comments) {
-                    Notification.info(`سبب الرفض: ${comments}`);
+                    Notification.info(this._t('module.ptw.notify.rejectionReason', 'سبب الرفض: {c}').replace(/\{c\}/g, comments));
                 }
             }
 
@@ -12397,7 +12401,7 @@ const PTW = {
             }
         } catch (error) {
             Utils.safeError('خطأ أثناء معالجة الاعتماد:', error);
-            Notification.error('حدث خطأ أثناء تحديث حالة الاعتماد');
+            Notification.error(this._t('module.ptw.notify.approvalUpdateErr', 'حدث خطأ أثناء تحديث حالة الاعتماد'));
         } finally {
             // إزالة علامة المعالجة
             this[`_processing_${actionKey}`] = false;
@@ -12408,32 +12412,32 @@ const PTW = {
     async assignApproval(id, approvalIndex) {
         const permit = AppState.appData.ptw.find(i => i.id === id);
         if (!permit) {
-            Notification.error('تعذر العثور على تصريح العمل المحدد');
+            Notification.error(this._t('module.ptw.notify.findPermitFail', 'تعذر العثور على تصريح العمل المحدد'));
             return;
         }
 
         permit.approvals = this.normalizeApprovals(permit.approvals || []);
         const approval = permit.approvals[approvalIndex];
         if (!approval) {
-            Notification.error('عنصر الاعتماد غير موجود');
+            Notification.error(this._t('module.ptw.notify.approvalItemMissing', 'عنصر الاعتماد غير موجود'));
             return;
         }
 
         const selectEl = document.getElementById(`approval-assign-${id}-${approvalIndex}`);
         if (!selectEl) {
-            Notification.error('تعذر تحديد خانة التعيين');
+            Notification.error(this._t('module.ptw.notify.cannotFindAssignee', 'تعذر تحديد خانة التعيين'));
             return;
         }
 
         const selectedId = selectEl.value;
         if (!selectedId) {
-            Notification.warning('يرجى اختيار المستخدم المسؤول عن هذا الاعتماد.');
+            Notification.warning(this._t('module.ptw.notify.selectApprover', 'يرجى اختيار المستخدم المسؤول عن هذا الاعتماد.'));
             return;
         }
 
         const user = ApprovalCircuits.getUserById(selectedId);
         if (!user) {
-            Notification.error('المستخدم المحدد غير موجود في النظام.');
+            Notification.error(this._t('module.ptw.notify.userNotInSystem', 'المستخدم المحدد غير موجود في النظام.'));
             return;
         }
 
@@ -12461,7 +12465,7 @@ const PTW = {
             }
             await GoogleIntegration.autoSave('PTW', AppState.appData.ptw);
 
-            Notification.success(`تم توجيه الاعتماد إلى ${approval.approver}.`);
+            Notification.success(this._t('module.ptw.notify.assignedTo', 'تم توجيه الاعتماد إلى {name}.').replace(/\{name\}/g, approval.approver || ''));
             this.triggerNotificationsUpdate();
             this.loadPTWList();
 
@@ -12479,7 +12483,7 @@ const PTW = {
             }
         } catch (error) {
             Utils.safeError('خطأ أثناء تعيين الموافقة:', error);
-            Notification.error('حدث خطأ أثناء تعيين المسؤول عن الاعتماد');
+            Notification.error(this._t('module.ptw.notify.assignErr', 'حدث خطأ أثناء تعيين المسؤول عن الاعتماد'));
         } finally {
             Loading.hide();
         }
@@ -12487,7 +12491,7 @@ const PTW = {
 
 
     async deletePTW(id) {
-        if (!confirm('هل أنت متأكد من حذف هذا التصريح؟')) return;
+        if (!confirm(this._t('module.ptw.notify.deletePtwShort', 'هل أنت متأكد من حذف هذا التصريح؟'))) return;
         Loading.show();
         try {
             // حذف من السجل تلقائياً
@@ -12503,7 +12507,7 @@ const PTW = {
             // حظ تلقائي ي Google Sheets
             await GoogleIntegration.autoSave('PTW', AppState.appData.ptw);
             Loading.hide();
-            Notification.success('تم حذف التصريح بنجاح');
+            Notification.success(this._t('module.ptw.notify.deleted', 'تم حذف التصريح بنجاح'));
             this.updateKPIs(); // تحديث KPIs بعد الحذف
             this.loadPTWList();
             this.triggerNotificationsUpdate();
@@ -12515,7 +12519,7 @@ const PTW = {
                 this.setupAnalysisEventListeners();
             }
         } catch (error) {
-            Notification.error('حدث خطأ: ' + error.message);
+            Notification.error(this._t('module.ptw.notify.errorGeneric', 'حدث خطأ: ') + error.message);
 
             // استعادة الزر في حالة الخطأ
             if (submitBtn) {
@@ -12543,7 +12547,7 @@ const PTW = {
             };
         }
         if (!item) {
-            Notification.error('التصريح غير موجود');
+            Notification.error(this._t('module.ptw.notify.permitNotFound', 'لم يتم العثور على التصريح'));
             return;
         }
 
@@ -12583,18 +12587,18 @@ const PTW = {
                         setTimeout(() => {
                             URL.revokeObjectURL(url);
                             Loading.hide();
-                            Notification.success('تم فتح التصريح للطباعة أو الحفظ كملف PDF');
+                            Notification.success(this._t('module.ptw.notify.pdfViewReady', 'تم فتح التصريح للطباعة أو الحفظ كملف PDF'));
                         }, 1000);
                     }, 500);
                 };
             } else {
                 Loading.hide();
-                Notification.error('يرجى السماح للنوافذ المنبثقة لعرض التصريح');
+                Notification.error(this._t('module.ptw.notify.popupsViewPtw', 'يرجى السماح للنوافذ المنبثقة لعرض التصريح'));
             }
         } catch (error) {
             Loading.hide();
             Utils.safeError('خطأ في تصدير PDF:', error);
-            Notification.error('فشل تصدير PDF: ' + (error.message || ''));
+            Notification.error(this._t('module.ptw.notify.pdfErr', 'فشل تصدير PDF: ') + (error.message || ''));
         }
     },
 
@@ -13214,6 +13218,8 @@ const PTW = {
         const sumCheck = openPermits + closedPermits + rejectedPermits;
         const verificationOk = totalPermits === 0 || sumCheck === totalPermits;
 
+        const t = (k, f) => this._t(k, f);
+
         const workTypeLabels = (p) => {
             const wt = p.workType;
             if (Array.isArray(wt)) return wt.length ? wt : ['أخرى'];
@@ -13231,55 +13237,55 @@ const PTW = {
                     <div class="card-body">
                         <h3 class="text-lg font-semibold text-gray-800 mb-2 flex items-center gap-2">
                             <i class="fas fa-filter ml-2"></i>
-                            فلتر التحليل
+                            ${t('module.ptw.analysis.filterTitle', 'فلتر التحليل')}
                             <span id="ptw-analysis-current-count-badge" class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-indigo-100 text-indigo-700 border border-indigo-200">
-                                إجمالي التصاريح في التحليل: <span id="ptw-analysis-current-count" class="ml-1">${totalPermits}</span>
+                                ${t('module.ptw.analysis.badgeAll', 'إجمالي التصاريح في التحليل: ')}<span id="ptw-analysis-current-count" class="ml-1">${totalPermits}</span>
                             </span>
                         </h3>
                         <p id="ptw-analysis-summary" class="text-xs text-gray-600 mb-3">
-                            لا يوجد أي فلتر مطبق حالياً، يتم عرض تحليل لجميع التصاريح المسجلة (${totalPermits} تصريحاً).
+                            ${t('module.ptw.analysis.summaryAll', 'لا يوجد أي فلتر مطبق حالياً، يتم عرض تحليل لجميع التصاريح المسجلة ({n} تصريحاً).').replace(/\{n\}/g, String(totalPermits))}
                         </p>
                         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-1 ptw-analysis-filter-label" data-filter-id="ptw-analysis-date-from">من تاريخ</label>
-                                <input type="date" id="ptw-analysis-date-from" class="form-input w-full" placeholder="اختياري">
+                                <label class="block text-sm font-medium text-gray-700 mb-1 ptw-analysis-filter-label" data-filter-id="ptw-analysis-date-from">${t('module.ptw.analysis.fromDate', 'من تاريخ')}</label>
+                                <input type="date" id="ptw-analysis-date-from" class="form-input w-full" placeholder="${t('module.ptw.analysis.optional', 'اختياري')}">
                             </div>
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-1 ptw-analysis-filter-label" data-filter-id="ptw-analysis-date-to">إلى تاريخ</label>
-                                <input type="date" id="ptw-analysis-date-to" class="form-input w-full" placeholder="اختياري">
+                                <label class="block text-sm font-medium text-gray-700 mb-1 ptw-analysis-filter-label" data-filter-id="ptw-analysis-date-to">${t('module.ptw.analysis.toDate', 'إلى تاريخ')}</label>
+                                <input type="date" id="ptw-analysis-date-to" class="form-input w-full" placeholder="${t('module.ptw.analysis.optional', 'اختياري')}">
                             </div>
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-1 ptw-analysis-filter-label" data-filter-id="ptw-analysis-work-type">نوع التصريح</label>
+                                <label class="block text-sm font-medium text-gray-700 mb-1 ptw-analysis-filter-label" data-filter-id="ptw-analysis-work-type">${t('module.ptw.analysis.permitType', 'نوع التصريح')}</label>
                                 <select id="ptw-analysis-work-type" class="form-input w-full">
-                                    <option value="">— الكل —</option>
+                                    <option value="">${t('module.ptw.analysis.all', '— الكل —')}</option>
                                     ${(uniqueWorkTypes.length ? uniqueWorkTypes : ['أعمال ساخنة', 'أماكن مغلقة', 'عمل على ارتفاع', 'أعمال حفر', 'أعمال كهرباء', 'أعمال أخرى']).map(w => `<option value="${Utils.escapeHTML(w)}">${Utils.escapeHTML(w)}</option>`).join('')}
                                 </select>
                             </div>
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-1 ptw-analysis-filter-label" data-filter-id="ptw-analysis-authorized">الجهة المصرح لها (مقاول)</label>
+                                <label class="block text-sm font-medium text-gray-700 mb-1 ptw-analysis-filter-label" data-filter-id="ptw-analysis-authorized">${t('module.ptw.analysis.authorized', 'الجهة المصرح لها (مقاول)')}</label>
                                 <select id="ptw-analysis-authorized" class="form-input w-full">
-                                    <option value="">— الكل —</option>
+                                    <option value="">${t('module.ptw.analysis.all', '— الكل —')}</option>
                                     ${uniqueAuthorized.map(a => `<option value="${Utils.escapeHTML(a)}">${Utils.escapeHTML(a)}</option>`).join('')}
                                 </select>
                             </div>
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-1 ptw-analysis-filter-label" data-filter-id="ptw-analysis-requesting">الجهة الطالبة</label>
+                                <label class="block text-sm font-medium text-gray-700 mb-1 ptw-analysis-filter-label" data-filter-id="ptw-analysis-requesting">${t('module.ptw.analysis.requesting', 'الجهة الطالبة')}</label>
                                 <select id="ptw-analysis-requesting" class="form-input w-full">
-                                    <option value="">— الكل —</option>
+                                    <option value="">${t('module.ptw.analysis.all', '— الكل —')}</option>
                                     ${uniqueRequesting.map(r => `<option value="${Utils.escapeHTML(r)}">${Utils.escapeHTML(r)}</option>`).join('')}
                                 </select>
                             </div>
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-1 ptw-analysis-filter-label" data-filter-id="ptw-analysis-status">الحالة</label>
+                                <label class="block text-sm font-medium text-gray-700 mb-1 ptw-analysis-filter-label" data-filter-id="ptw-analysis-status">${t('module.ptw.analysis.filterStatus', 'الحالة')}</label>
                                 <select id="ptw-analysis-status" class="form-input w-full">
-                                    <option value="">— الكل —</option>
+                                    <option value="">${t('module.ptw.analysis.all', '— الكل —')}</option>
                                     ${statusOptions.map(s => `<option value="${Utils.escapeHTML(s)}">${Utils.escapeHTML(s)}</option>`).join('')}
                                 </select>
                             </div>
                         </div>
                         <div class="mt-3 flex flex-wrap gap-2">
-                            <button type="button" id="ptw-analysis-apply-filter" class="btn-primary"><i class="fas fa-chart-line ml-2"></i>تطبيق الفلتر</button>
-                            <button type="button" id="ptw-analysis-reset-filter" class="btn-secondary"><i class="fas fa-undo ml-2"></i>إعادة تعيين</button>
+                            <button type="button" id="ptw-analysis-apply-filter" class="btn-primary"><i class="fas fa-chart-line ml-2"></i>${t('module.ptw.analysis.apply', 'تطبيق الفلتر')}</button>
+                            <button type="button" id="ptw-analysis-reset-filter" class="btn-secondary"><i class="fas fa-undo ml-2"></i>${t('module.ptw.analysis.reset', 'إعادة تعيين')}</button>
                         </div>
                     </div>
                 </div>
@@ -13290,7 +13296,7 @@ const PTW = {
                         <div class="card-body">
                             <div class="flex items-center justify-between">
                                 <div>
-                                    <p class="text-sm text-gray-600 mb-1">إجمالي التصاريح</p>
+                                    <p class="text-sm text-gray-600 mb-1">${t('module.ptw.analysis.kpiTotal', 'إجمالي التصاريح')}</p>
                                     <p id="ptw-kpi-total" class="text-2xl font-bold text-blue-600">${totalPermits}</p>
                                 </div>
                                 <i class="fas fa-file-alt text-3xl text-blue-400"></i>
@@ -13301,9 +13307,9 @@ const PTW = {
                         <div class="card-body">
                             <div class="flex items-center justify-between">
                                 <div>
-                                    <p class="text-sm text-gray-600 mb-1">مفتوحة / قيد التنفيذ</p>
+                                    <p class="text-sm text-gray-600 mb-1">${t('module.ptw.analysis.kpiOpenExec', 'مفتوحة / قيد التنفيذ')}</p>
                                     <p id="ptw-kpi-open" class="text-2xl font-bold text-amber-600">${openPermits}</p>
-                                    <p id="ptw-kpi-open-pct" class="text-xs text-gray-500 mt-1">${openRate}% من الإجمالي</p>
+                                    <p id="ptw-kpi-open-pct" class="text-xs text-gray-500 mt-1">${t('module.ptw.analysis.pctOfTotal', '{n}% من الإجمالي').replace(/\{n\}/g, String(openRate))}</p>
                                 </div>
                                 <i class="fas fa-folder-open text-3xl text-amber-400"></i>
                             </div>
@@ -13313,9 +13319,9 @@ const PTW = {
                         <div class="card-body">
                             <div class="flex items-center justify-between">
                                 <div>
-                                    <p class="text-sm text-gray-600 mb-1">مغلقة / مكتملة</p>
+                                    <p class="text-sm text-gray-600 mb-1">${t('module.ptw.analysis.kpiClosed', 'مغلقة / مكتملة')}</p>
                                     <p id="ptw-kpi-closed" class="text-2xl font-bold text-green-600">${closedPermits}</p>
-                                    <p id="ptw-kpi-closure-pct" class="text-xs text-gray-500 mt-1">${closureRate}% نسبة الإغلاق</p>
+                                    <p id="ptw-kpi-closure-pct" class="text-xs text-gray-500 mt-1">${t('module.ptw.analysis.closureShare', '{n}% نسبة الإغلاق').replace(/\{n\}/g, String(closureRate))}</p>
                                 </div>
                                 <i class="fas fa-check-circle text-3xl text-green-400"></i>
                             </div>
@@ -13325,9 +13331,9 @@ const PTW = {
                         <div class="card-body">
                             <div class="flex items-center justify-between">
                                 <div>
-                                    <p class="text-sm text-gray-600 mb-1">موافق عليها</p>
+                                    <p class="text-sm text-gray-600 mb-1">${t('module.ptw.analysis.kpiApproved', 'موافق عليها')}</p>
                                     <p id="ptw-kpi-approved" class="text-2xl font-bold text-purple-600">${approvedPermits}</p>
-                                    <p id="ptw-kpi-approved-pct" class="text-xs text-gray-500 mt-1">${approvalRate}% من الإجمالي</p>
+                                    <p id="ptw-kpi-approved-pct" class="text-xs text-gray-500 mt-1">${t('module.ptw.analysis.pctOfTotal', '{n}% من الإجمالي').replace(/\{n\}/g, String(approvalRate))}</p>
                                 </div>
                                 <i class="fas fa-thumbs-up text-3xl text-purple-400"></i>
                             </div>
@@ -13339,7 +13345,7 @@ const PTW = {
                         <div class="card-body">
                             <div class="flex items-center justify-between">
                                 <div>
-                                    <p class="text-sm text-gray-600 mb-1">قيد المراجعة</p>
+                                    <p class="text-sm text-gray-600 mb-1">${t('module.ptw.analysis.kpiPending', 'قيد المراجعة')}</p>
                                     <p id="ptw-kpi-pending" class="text-2xl font-bold text-yellow-600">${pendingPermits}</p>
                                 </div>
                                 <i class="fas fa-clock text-3xl text-yellow-400"></i>
@@ -13350,7 +13356,7 @@ const PTW = {
                         <div class="card-body">
                             <div class="flex items-center justify-between">
                                 <div>
-                                    <p class="text-sm text-gray-600 mb-1">مرفوضة</p>
+                                    <p class="text-sm text-gray-600 mb-1">${t('module.ptw.analysis.kpiRejected', 'مرفوضة')}</p>
                                     <p id="ptw-kpi-rejected" class="text-2xl font-bold text-red-600">${rejectedPermits}</p>
                                 </div>
                                 <i class="fas fa-times-circle text-3xl text-red-400"></i>
@@ -13361,9 +13367,9 @@ const PTW = {
                         <div class="card-body">
                             <div class="flex items-center justify-between">
                                 <div>
-                                    <p class="text-sm text-gray-600 mb-1">معادلات التحليل</p>
-                                    <p id="ptw-kpi-formulas" class="text-xs font-semibold text-slate-700 mb-0.5">نسبة الإغلاق = ${closureRate}% | المفتوحة = ${openRate}% | المرفوضة = ${rejectedRate}%</p>
-                                    <p class="text-xs text-gray-500 mt-1 border-t border-slate-200 pt-1">التحقق: إجمالي = مفتوحة + مغلقة + مرفوضة ${verificationOk ? '✓' : ''}</p>
+                                    <p class="text-sm text-gray-600 mb-1">${t('module.ptw.analysis.formulaLabel', 'معادلات التحليل')}</p>
+                                    <p id="ptw-kpi-formulas" class="text-xs font-semibold text-slate-700 mb-0.5">${t('module.ptw.analysis.formulaText', 'نسبة الإغلاق = {c}% | المفتوحة = {o}% | المرفوضة = {r}%').replace(/\{c\}/g, String(closureRate)).replace(/\{o\}/g, String(openRate)).replace(/\{r\}/g, String(rejectedRate))}</p>
+                                    <p class="text-xs text-gray-500 mt-1 border-t border-slate-200 pt-1">${t('module.ptw.analysis.verify', 'التحقق: إجمالي = مفتوحة + مغلقة + مرفوضة {ok}').replace(/\{ok\}/g, verificationOk ? '✓' : '')}</p>
                                 </div>
                                 <i class="fas fa-calculator text-2xl text-slate-400"></i>
                             </div>
@@ -13374,22 +13380,22 @@ const PTW = {
                 <!-- الرسوم البيانية -->
                 <div class="content-card">
                     <div class="card-body">
-                        <h3 class="text-lg font-semibold text-gray-800 mb-4"><i class="fas fa-chart-bar ml-2"></i>الرسوم البيانية</h3>
+                        <h3 class="text-lg font-semibold text-gray-800 mb-4"><i class="fas fa-chart-bar ml-2"></i>${t('module.ptw.analysis.chartsTitle', 'الرسوم البيانية')}</h3>
                         <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
                             <div class="bg-white rounded-lg border border-gray-200 p-4">
-                                <p class="text-sm font-medium text-gray-700 mb-2">توزيع حسب نوع التصريح</p>
+                                <p class="text-sm font-medium text-gray-700 mb-2">${t('module.ptw.analysis.chartByType', 'توزيع حسب نوع التصريح')}</p>
                                 <div class="relative" style="height: 260px;"><canvas id="ptw-chart-work-type"></canvas></div>
                             </div>
                             <div class="bg-white rounded-lg border border-gray-200 p-4">
-                                <p class="text-sm font-medium text-gray-700 mb-2">توزيع حسب الجهة المصرح لها (مقاول)</p>
+                                <p class="text-sm font-medium text-gray-700 mb-2">${t('module.ptw.analysis.chartByAuth', 'توزيع حسب الجهة المصرح لها (مقاول)')}</p>
                                 <div class="relative" style="height: 260px;"><canvas id="ptw-chart-authorized"></canvas></div>
                             </div>
                             <div class="bg-white rounded-lg border border-gray-200 p-4">
-                                <p class="text-sm font-medium text-gray-700 mb-2">توزيع حسب الحالة</p>
+                                <p class="text-sm font-medium text-gray-700 mb-2">${t('module.ptw.analysis.chartByStatus', 'توزيع حسب الحالة')}</p>
                                 <div class="relative" style="height: 260px;"><canvas id="ptw-chart-status"></canvas></div>
                             </div>
                             <div class="bg-white rounded-lg border border-gray-200 p-4">
-                                <p class="text-sm font-medium text-gray-700 mb-2">التصاريح عبر الزمن (شهرياً)</p>
+                                <p class="text-sm font-medium text-gray-700 mb-2">${t('module.ptw.analysis.chartTimeline', 'التصاريح عبر الزمن (شهرياً)')}</p>
                                 <div class="relative" style="height: 260px;"><canvas id="ptw-chart-timeline"></canvas></div>
                             </div>
                         </div>
@@ -13400,20 +13406,20 @@ const PTW = {
                 <div class="flex flex-wrap justify-between items-center gap-3">
                     <h2 class="text-xl font-bold text-gray-800">
                         <i class="fas fa-chart-line ml-2"></i>
-                        تحليل بيانات التصاريح
+                        ${t('module.ptw.analysis.headerTitle', 'تحليل بيانات التصاريح')}
                     </h2>
                     <div class="flex flex-wrap items-center gap-2">
-                        <button type="button" id="ptw-analysis-export-excel" class="btn-secondary" title="تصدير التقرير الحالي (حسب الفلتر) إلى Excel">
+                        <button type="button" id="ptw-analysis-export-excel" class="btn-secondary" title="${t('module.ptw.analysis.exportCurrentExcel', 'تصدير التقرير الحالي (حسب الفلتر) إلى Excel')}">
                             <i class="fas fa-file-excel ml-2"></i>
-                            تصدير Excel
+                            ${t('module.ptw.registry.exportExcel', 'تصدير Excel')}
                         </button>
-                        <button type="button" id="ptw-analysis-export-pdf" class="btn-secondary" title="تصدير التقرير الحالي (حسب الفلتر) إلى PDF">
+                        <button type="button" id="ptw-analysis-export-pdf" class="btn-secondary" title="${t('module.ptw.analysis.exportCurrentPdf', 'تصدير التقرير الحالي (حسب الفلتر) إلى PDF')}">
                             <i class="fas fa-file-pdf ml-2"></i>
-                            تصدير PDF
+                            ${t('module.ptw.registry.exportPdf', 'تصدير PDF')}
                         </button>
                         <button id="ptw-analysis-add" class="btn-primary">
                             <i class="fas fa-plus ml-2"></i>
-                            إضافة تحليل جديد
+                            ${t('module.ptw.analysis.addNew', 'إضافة تحليل جديد')}
                         </button>
                     </div>
                 </div>
@@ -13425,19 +13431,19 @@ const PTW = {
                             <table class="data-table">
                                 <thead>
                                     <tr>
-                                        <th>تاريخ التحليل</th>
-                                        <th>الفترة</th>
-                                        <th>نوع العمل</th>
-                                        <th>الموقع</th>
-                                        <th>الملاحظات</th>
-                                        <th>الإجراءات</th>
+                                        <th>${t('module.ptw.analysis.tblDate', 'تاريخ التحليل')}</th>
+                                        <th>${t('module.ptw.analysis.tblPeriod', 'الفترة')}</th>
+                                        <th>${t('module.ptw.analysis.tblWorkType', 'نوع العمل')}</th>
+                                        <th>${t('module.ptw.analysis.tblLocation', 'الموقع')}</th>
+                                        <th>${t('module.ptw.analysis.tblNotes', 'الملاحظات')}</th>
+                                        <th>${t('module.ptw.analysis.tblActions', 'الإجراءات')}</th>
                                     </tr>
                                 </thead>
                                 <tbody id="ptw-analysis-table-body">
                                     ${analysisData.length === 0 ? `
                                         <tr>
                                             <td colspan="6" class="text-center text-gray-500 py-8">
-                                                لا توجد تحليلات مسجلة بعد. اضغط على "إضافة تحليل جديد" لبدء التحليل.
+                                                ${t('module.ptw.analysis.emptyList', 'لا توجد تحليلات مسجلة بعد. اضغط على "إضافة تحليل جديد" لبدء التحليل.')}
                                             </td>
                                         </tr>
                                     ` : analysisData.map(item => {
@@ -13456,10 +13462,10 @@ const PTW = {
                                             <td class="max-w-xs truncate">${Utils.escapeHTML(item.notes || '-')}</td>
                                             <td>
                                                 <div class="flex items-center gap-2">
-                                                    <button onclick="PTW.editAnalysis('${safeId}')" class="btn-icon btn-icon-primary" title="تعديل">
+                                                    <button onclick="PTW.editAnalysis('${safeId}')" class="btn-icon btn-icon-primary" title="${t('module.ptw.analysis.btnEdit', 'تعديل')}">
                                                         <i class="fas fa-edit"></i>
                                                     </button>
-                                                    <button onclick="PTW.deleteAnalysis('${safeId}')" class="btn-icon btn-icon-danger" title="حذف">
+                                                    <button onclick="PTW.deleteAnalysis('${safeId}')" class="btn-icon btn-icon-danger" title="${t('module.ptw.analysis.btnDelete', 'حذف')}">
                                                         <i class="fas fa-trash"></i>
                                                     </button>
                                                 </div>
@@ -13543,6 +13549,7 @@ const PTW = {
      * تحديث مؤشرات الأداء والرسوم البيانية في تبويب التحليل حسب التصاريح المصفاة
      */
     updateAnalysisChartsAndKPIs(permits) {
+        const t = (k, f) => this._t(k, f);
         const list = Array.isArray(permits) ? permits : this.getFilteredAnalysisPermits();
         const total = list.length;
         const openPermits = list.filter(p => this.isPermitOpenStatus(p?.status)).length;
@@ -13560,14 +13567,15 @@ const PTW = {
         const setEl = (id, text) => { const el = document.getElementById(id); if (el) el.textContent = text; };
         setEl('ptw-kpi-total', total);
         setEl('ptw-kpi-open', openPermits);
-        setEl('ptw-kpi-open-pct', openRate + '% من الإجمالي');
+        setEl('ptw-kpi-open-pct', t('module.ptw.analysis.pctOfTotal', '{n}% من الإجمالي').replace(/\{n\}/g, String(openRate)));
         setEl('ptw-kpi-closed', closedPermits);
-        setEl('ptw-kpi-closure-pct', closureRate + '% نسبة الإغلاق');
+        setEl('ptw-kpi-closure-pct', t('module.ptw.analysis.closureShare', '{n}% نسبة الإغلاق').replace(/\{n\}/g, String(closureRate)));
         setEl('ptw-kpi-approved', approvedPermits);
-        setEl('ptw-kpi-approved-pct', approvalRate + '% من الإجمالي');
+        setEl('ptw-kpi-approved-pct', t('module.ptw.analysis.pctOfTotal', '{n}% من الإجمالي').replace(/\{n\}/g, String(approvalRate)));
         setEl('ptw-kpi-pending', pendingPermits);
         setEl('ptw-kpi-rejected', rejectedPermits);
-        setEl('ptw-kpi-formulas', 'نسبة الإغلاق = ' + closureRate + '% | المفتوحة = ' + openRate + '% | المرفوضة = ' + rejectedRate + '%');
+        setEl('ptw-kpi-formulas', t('module.ptw.analysis.formulaText', 'نسبة الإغلاق = {c}% | المفتوحة = {o}% | المرفوضة = {r}%')
+            .replace(/\{c\}/g, String(closureRate)).replace(/\{o\}/g, String(openRate)).replace(/\{r\}/g, String(rejectedRate)));
 
         const countBadge = document.getElementById('ptw-analysis-current-count');
         if (countBadge) {
@@ -13577,7 +13585,7 @@ const PTW = {
         const summaryEl = document.getElementById('ptw-analysis-summary');
         if (summaryEl) {
             if (total === 0) {
-                summaryEl.textContent = 'لا توجد تصاريح مطابقة لمعايير الفلتر الحالية. جرّب توسيع الفترة أو إزالة بعض الفلاتر للحصول على بيانات للتحليل.';
+                summaryEl.textContent = t('module.ptw.analysis.summaryNoData', 'لا توجد تصاريح مطابقة لمعايير الفلتر الحالية. جرّب توسيع الفترة أو إزالة بعض الفلاتر للحصول على بيانات للتحليل.');
             } else {
                 const parts = [];
                 const fromVal = document.getElementById('ptw-analysis-date-from')?.value || '';
@@ -13589,17 +13597,17 @@ const PTW = {
 
                 if (fromVal || toVal) {
                     const rangeText = (fromVal && toVal)
-                        ? ('من ' + fromVal + ' إلى ' + toVal)
-                        : (fromVal ? ('من ' + fromVal) : ('حتى ' + toVal));
-                    parts.push('الفترة: ' + rangeText);
+                        ? (t('module.ptw.analysis.fromWord', 'من') + ' ' + fromVal + ' ' + t('module.ptw.analysis.toConnector', 'إلى') + ' ' + toVal)
+                        : (fromVal ? (t('module.ptw.analysis.fromWord', 'من') + ' ' + fromVal) : (t('module.ptw.analysis.until', 'حتى') + ' ' + toVal));
+                    parts.push(t('module.ptw.analysis.range', 'الفترة: ') + rangeText);
                 }
-                if (wtVal) parts.push('نوع التصريح: ' + wtVal);
-                if (authVal) parts.push('الجهة المصرح لها: ' + authVal);
-                if (reqVal) parts.push('الجهة الطالبة: ' + reqVal);
-                if (stVal) parts.push('الحالة: ' + stVal);
+                if (wtVal) parts.push(t('module.ptw.analysis.wt', 'نوع التصريح: ') + wtVal);
+                if (authVal) parts.push(t('module.ptw.analysis.ap', 'الجهة المصرح لها: ') + authVal);
+                if (reqVal) parts.push(t('module.ptw.analysis.rp', 'الجهة الطالبة: ') + reqVal);
+                if (stVal) parts.push(t('module.ptw.analysis.st', 'الحالة: ') + stVal);
 
-                const filterText = parts.length ? parts.join(' | ') : 'بدون فلاتر (جميع التصاريح)';
-                summaryEl.textContent = 'عدد التصاريح في الفلتر الحالي: ' + total + ' — ' + filterText;
+                const filterText = parts.length ? parts.join(t('module.ptw.analysis.partSep', ' | ')) : t('module.ptw.analysis.noFilters', 'بدون فلاتر (جميع التصاريح)');
+                summaryEl.textContent = t('module.ptw.analysis.currentCount', 'عدد التصاريح في الفلتر الحالي: ') + total + t('module.ptw.analysis.filterSep', ' — ') + filterText;
             }
         }
 
@@ -13657,7 +13665,7 @@ const PTW = {
             if (isActive && total > 0) {
                 const badge = document.createElement('span');
                 badge.className = 'ptw-analysis-filter-badge';
-                badge.title = 'عدد التصاريح المطابقة لهذا الفلتر مع الفلاتر الأخرى';
+                badge.title = t('module.ptw.analysis.badgeCountTitle', 'عدد التصاريح المطابقة لهذا الفلتر مع الفلاتر الأخرى');
                 badge.textContent = String(total);
                 const icon = label.querySelector('i');
                 if (icon && icon.nextSibling) {
@@ -13712,7 +13720,7 @@ const PTW = {
             const ctx = canvas.getContext('2d');
             this.analysisCharts[canvasId] = new Chart(ctx, {
                 type: 'bar',
-                data: { labels, datasets: [{ label: 'العدد', data: values, backgroundColor: colors[0], borderColor: '#1d4ed8', borderWidth: 1 }] },
+                data: { labels, datasets: [{ label: t('module.ptw.analysis.chartCount', 'العدد'), data: values, backgroundColor: colors[0], borderColor: '#1d4ed8', borderWidth: 1 }] },
                 options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { beginAtZero: true } } }
             });
         };
@@ -13722,7 +13730,7 @@ const PTW = {
             const ctx = canvas.getContext('2d');
             this.analysisCharts[canvasId] = new Chart(ctx, {
                 type: 'line',
-                data: { labels, datasets: [{ label: 'عدد التصاريح', data: values, borderColor: colors[0], backgroundColor: colors[0] + '33', fill: true, tension: 0.2 }] },
+                data: { labels, datasets: [{ label: t('module.ptw.analysis.permitsPerMonth', 'عدد التصاريح'), data: values, borderColor: colors[0], backgroundColor: colors[0] + '33', fill: true, tension: 0.2 }] },
                 options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
             });
         };
@@ -13739,7 +13747,7 @@ const PTW = {
     exportAnalysisReportToExcel() {
         const list = this.getFilteredAnalysisPermits();
         if (!list || list.length === 0) {
-            Notification.warning('لا توجد بيانات للتصدير. غيّر الفلتر أو أضف تصاريح.');
+            Notification.warning(this._t('module.ptw.notify.analysisNoExport', 'لا توجد بيانات للتصدير. غيّر الفلتر أو أضف تصاريح.'));
             return;
         }
         const formatDate = (d) => {
@@ -13758,7 +13766,7 @@ const PTW = {
             'وصف العمل': (p.workDescription || '-').toString().slice(0, 200)
         }));
         if (typeof XLSX === 'undefined') {
-            Notification.error('مكتبة Excel غير متوفرة');
+            Notification.error(this._t('module.ptw.notify.xlsxNoLib', 'مكتبة Excel غير متوفرة'));
             return;
         }
         const ws = XLSX.utils.json_to_sheet(data);
@@ -13768,7 +13776,7 @@ const PTW = {
         const dateTo = document.getElementById('ptw-analysis-date-to')?.value || '';
         const name = `تقرير_تحليل_التصاريح_${dateFrom || 'كل'}_${dateTo || 'الوقت'}.xlsx`.replace(/\s/g, '_');
         XLSX.writeFile(wb, name);
-        Notification.success('تم تصدير تقرير التحليل إلى Excel بنجاح');
+        Notification.success(this._t('module.ptw.notify.analysisExportXlsxOk', 'تم تصدير تقرير التحليل إلى Excel بنجاح'));
     },
 
     /**
@@ -13777,7 +13785,7 @@ const PTW = {
     async exportAnalysisReportToPDF() {
         const list = this.getFilteredAnalysisPermits();
         if (!list || list.length === 0) {
-            Notification.warning('لا توجد بيانات للتصدير. غيّر الفلتر أو أضف تصاريح.');
+            Notification.warning(this._t('module.ptw.notify.analysisNoExport', 'لا توجد بيانات للتصدير. غيّر الفلتر أو أضف تصاريح.'));
             return;
         }
         try {
@@ -13846,12 +13854,12 @@ const PTW = {
                 printWindow.onload = () => {
                     setTimeout(() => {
                         printWindow.print();
-                        setTimeout(() => { URL.revokeObjectURL(url); Loading.hide(); Notification.success('تم تحضير التقرير للطباعة/الحفظ كـ PDF'); }, 800);
+                        setTimeout(() => { URL.revokeObjectURL(url); Loading.hide(); Notification.success(PTW._t('module.ptw.pdf.readyPrint', 'تم تحضير التقرير للطباعة/الحفظ كـ PDF')); }, 800);
                     }, 500);
                 };
             } else {
                 Loading.hide();
-                Notification.error('يرجى السماح بالنوافذ المنبثقة لتصدير PDF');
+                Notification.error(this._t('module.ptw.notify.popupsPdf', 'يرجى السماح بالنوافذ المنبثقة لتصدير PDF'));
             }
         } catch (error) {
             Loading.hide();
@@ -14051,7 +14059,7 @@ const PTW = {
         }
         modal.addEventListener('click', (e) => {
             if (e.target === modal || e.target.classList.contains('modal-overlay')) {
-                const ok = confirm('تنبيه: سيتم إغلاق النموذج.\nقد تفقد أي بيانات غير محفوظة.\n\nهل تريد الإغلاق؟');
+                const ok = confirm(PTW._t('module.ptw.form.analysis.closeUnsaved', 'تنبيه: سيتم إغلاق النموذج.\\nقد تفقد أي بيانات غير محفوظة.\\n\\nهل تريد الإغلاق؟').replace(/\\n/g, '\n'));
                 if (ok) close();
             }
         });
@@ -14147,7 +14155,7 @@ const PTW = {
      * حذف تحليل
      */
     async deleteAnalysis(analysisId) {
-        if (!confirm('هل أنت متأكد من حذف هذا التحليل؟')) {
+        if (!confirm(this._t('module.ptw.notify.deleteAnalysisConfirm', 'هل أنت متأكد من حذف هذا التحليل؟'))) {
             return;
         }
 
@@ -14204,6 +14212,7 @@ const PTW = {
         }
 
         try {
+            const t = (k, f) => this._t(k, f);
             const currentUserEmail = AppState.currentUser?.email?.toLowerCase() || '';
 
             // Filter pending approvals for current user with error handling
@@ -14266,12 +14275,12 @@ const PTW = {
                      <div class="card-header bg-gradient-to-r from-blue-50 to-white border-b border-blue-100 p-4 flex justify-between items-center">
                         <h2 class="card-title text-blue-800 font-bold text-lg">
                             <i class="fas fa-signature ml-2 text-blue-600"></i>
-                            الموافقات المعلقة الخاصة بي
+                            ${t('module.ptw.approvals.myPending', 'الموافقات المعلقة الخاصة بي')}
                             <span class="mr-2 bg-blue-100 text-blue-700 text-xs py-1 px-2 rounded-full">${pendingPermits.length}</span>
                         </h2>
-                        <button onclick="PTW.refreshApprovalsContent()" class="btn-secondary btn-sm flex items-center gap-2" title="تحديث القائمة">
+                        <button onclick="PTW.refreshApprovalsContent()" class="btn-secondary btn-sm flex items-center gap-2" title="${t('module.ptw.approvals.updateList', 'تحديث القائمة')}">
                             <i class="fas fa-sync-alt"></i>
-                            <span>تحديث</span>
+                            <span>${t('module.common.refresh', 'تحديث')}</span>
                         </button>
                     </div>
                     <div class="card-body p-0">
@@ -14280,58 +14289,62 @@ const PTW = {
                                 <table class="w-full text-right">
                                     <thead class="bg-gray-50 text-gray-600 text-xs uppercase font-semibold">
                                         <tr>
-                                            <th class="px-6 py-4">رقم التصريح</th>
-                                            <th class="px-6 py-4">نوع العمل</th>
-                                            <th class="px-6 py-4">الموقع</th>
-                                            <th class="px-6 py-4">تاريخ البدء</th>
-                                            <th class="px-6 py-4">الحالة</th>
-                                            <th class="px-6 py-4">الإجراء</th>
+                                            <th class="px-6 py-4">${t('module.ptw.approvals.colPermit', 'رقم التصريح')}</th>
+                                            <th class="px-6 py-4">${t('module.ptw.approvals.colWorkType', 'نوع العمل')}</th>
+                                            <th class="px-6 py-4">${t('module.ptw.approvals.colLocation', 'الموقع')}</th>
+                                            <th class="px-6 py-4">${t('module.ptw.approvals.colStart', 'تاريخ البدء')}</th>
+                                            <th class="px-6 py-4">${t('module.ptw.approvals.colStatus', 'الحالة')}</th>
+                                            <th class="px-6 py-4">${t('module.ptw.approvals.colAction', 'الإجراء')}</th>
                                         </tr>
                                     </thead>
                                     <tbody class="divide-y divide-gray-100">
                                         ${pendingPermits.map(item => {
                 try {
                     const itemId = item?.id || '';
-                    const workType = Utils.escapeHTML(item?.workType || 'غير محدد');
-                    const location = Utils.escapeHTML(item?.location || item?.siteName || 'غير محدد');
+                    const ns = t('module.ptw.common.notSpecified', 'غير محدد');
+                    const workType = Utils.escapeHTML(String(item?.workType || ns));
+                    const location = Utils.escapeHTML(String(item?.location || item?.siteName || ns));
                     const startDate = item?.startDate ? (typeof Utils.formatDate === 'function' ? Utils.formatDate(item.startDate) : new Date(item.startDate).toLocaleDateString('ar-SA')) : '-';
                     
                     // الحصول على تفاصيل الموافقة المعلقة
                     const approvals = this.normalizeApprovals(item.approvals || []);
                     const pendingApproval = approvals.find(a => a && a.status === 'pending');
-                    const pendingRole = pendingApproval ? (pendingApproval.role || 'موافقة مطلوبة') : 'موافقة مطلوبة';
-                    const requesterName = item?.requesterName || item?.requestedBy?.name || item?.requestedBy || 'غير محدد';
-                    const requesterInfo = requesterName !== 'غير محدد' ? `من: ${Utils.escapeHTML(requesterName)}` : '';
-                    const statusText = item?.status || 'قيد المراجعة';
+                    const pendingRoleRaw = pendingApproval ? (pendingApproval.role || t('module.ptw.approval.approvalRequired', 'موافقة مطلوبة')) : t('module.ptw.approval.approvalRequired', 'موافقة مطلوبة');
+                    const requesterName = String(item?.requesterName || item?.requestedBy?.name || item?.requestedBy || ns);
+                    const requesterLine = requesterName !== ns
+                        ? `<div class="text-xs text-gray-500 mt-1">${t('module.ptw.approvals.fromRequester', 'من: {name}').replace(/\{name\}/g, Utils.escapeHTML(requesterName))}</div>`
+                        : '';
+                    const statusText = this.statusLabel(item?.status || 'قيد المراجعة');
+                    const roleLine = this.approvalRoleLabel(pendingRoleRaw);
 
                     return `
                                                     <tr class="hover:bg-gray-50 transition-colors">
                                                         <td class="px-6 py-4">
                                                             <div class="font-mono text-sm text-gray-700 font-semibold">#${Utils.escapeHTML(String(itemId))}</div>
-                                                            ${requesterInfo ? `<div class="text-xs text-gray-500 mt-1">${requesterInfo}</div>` : ''}
+                                                            ${requesterLine}
                                                         </td>
                                                         <td class="px-6 py-4">
                                                             <div class="font-medium text-gray-800">${workType}</div>
-                                                            ${pendingRole ? `<div class="text-xs text-blue-600 mt-1">
-                                                                <i class="fas fa-tasks mr-1"></i>${Utils.escapeHTML(pendingRole)}
+                                                            ${roleLine ? `<div class="text-xs text-blue-600 mt-1">
+                                                                <i class="fas fa-tasks mr-1"></i>${Utils.escapeHTML(roleLine)}
                                                             </div>` : ''}
                                                         </td>
                                                         <td class="px-6 py-4 text-gray-600 text-sm">${location}</td>
                                                         <td class="px-6 py-4">
                                                             <div class="text-gray-600 text-sm">${startDate}</div>
                                                             ${item?.createdAt ? `<div class="text-xs text-gray-500 mt-1">
-                                                                إنشاء: ${typeof Utils.formatDate === 'function' ? Utils.formatDate(item.createdAt) : new Date(item.createdAt).toLocaleDateString('ar-SA')}
+                                                                ${t('module.ptw.approvals.createdOn', 'إنشاء: ')}${typeof Utils.formatDate === 'function' ? Utils.formatDate(item.createdAt) : new Date(item.createdAt).toLocaleDateString('ar-SA')}
                                                             </div>` : ''}
                                                         </td>
                                                         <td class="px-6 py-4">
                                                             <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                                                                <i class="fas fa-clock mr-1"></i> بانتظار موافقتك
+                                                                <i class="fas fa-clock mr-1"></i> ${t('module.ptw.approvals.badge', 'بانتظار موافقتك')}
                                                             </span>
-                                                            <div class="text-xs text-gray-500 mt-1">${Utils.escapeHTML(statusText)}</div>
+                                                            <div class="text-xs text-gray-500 mt-1">${Utils.escapeHTML(String(statusText))}</div>
                                                         </td>
                                                         <td class="px-6 py-4">
                                                             <button onclick="PTW.viewPTW('${Utils.escapeHTML(String(itemId))}')" class="text-white bg-blue-600 hover:bg-blue-700 px-3 py-1.5 rounded-md text-xs font-bold transition-colors shadow-sm flex items-center justify-center">
-                                                                <i class="fas fa-eye ml-1"></i> مراجعة
+                                                                <i class="fas fa-eye ml-1"></i> ${t('module.ptw.approvals.review', 'مراجعة')}
                                                             </button>
                                                         </td>
                                                     </tr>
@@ -14349,8 +14362,8 @@ const PTW = {
                                 <div class="bg-gray-50 rounded-full p-4 mb-3">
                                     <i class="fas fa-check text-gray-300 text-3xl"></i>
                                 </div>
-                                <h3 class="text-gray-900 font-medium">لا يوجد موافقات معلقة</h3>
-                                <p class="text-gray-500 text-sm mt-1">جميع المهام الموكلة إليك مكتملة.</p>
+                                <h3 class="text-gray-900 font-medium">${t('module.ptw.approvals.noneTitle', 'لا يوجد موافقات معلقة')}</h3>
+                                <p class="text-gray-500 text-sm mt-1">${t('module.ptw.approvals.noneSub', 'جميع المهام الموكلة إليك مكتملة.')}</p>
                             </div>
                         `}
                     </div>
@@ -14361,7 +14374,7 @@ const PTW = {
                     <div class="card-header bg-gradient-to-r from-purple-50 to-white border-b border-purple-100 p-4">
                         <h2 class="card-title text-purple-800 font-bold text-lg">
                             <i class="fas fa-project-diagram ml-2 text-purple-600"></i>
-                             إدارة مسارات الاعتماد
+                             ${t('module.ptw.approvals.circuits', 'إدارة مسارات الاعتماد')}
                         </h2>
                     </div>
                     <div class="card-body p-6">
@@ -14376,7 +14389,7 @@ const PTW = {
                             <div class="text-center py-8">
                                 <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
                                     <i class="fas fa-exclamation-triangle text-yellow-600 text-2xl mb-2"></i>
-                                    <p class="text-yellow-800 text-sm">حدث خطأ أثناء تحميل مدير مسارات الاعتماد. يرجى المحاولة مرة أخرى.</p>
+                                    <p class="text-yellow-800 text-sm">${t('module.ptw.approvals.circuitsError', 'حدث خطأ أثناء تحميل مدير مسارات الاعتماد. يرجى المحاولة مرة أخرى.')}</p>
                                 </div>
                             </div>
                         `;
@@ -14387,14 +14400,14 @@ const PTW = {
                                         <div class="bg-purple-50 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
                                             <i class="fas fa-route text-purple-400 text-2xl"></i>
                                         </div>
-                                        <h3 class="text-lg font-medium text-gray-900 mb-2">نظام مسارات الاعتماد</h3>
-                                        <p class="text-gray-500 text-sm max-w-md mx-auto mb-6">يمكنك إدارة تكوينات مسارات الاعتماد وتحديد الموافقين من خلال لوحة تحكم الاعتمادات.</p>
+                                        <h3 class="text-lg font-medium text-gray-900 mb-2">${t('module.ptw.approvals.circuitsTitle', 'نظام مسارات الاعتماد')}</h3>
+                                        <p class="text-gray-500 text-sm max-w-md mx-auto mb-6">${t('module.ptw.approvals.circuitsDesc', 'يمكنك إدارة تكوينات مسارات الاعتماد وتحديد الموافقين من خلال لوحة تحكم الاعتمادات.')}</p>
                                         <div class="bg-blue-50 border border-blue-100 rounded-lg p-4 max-w-2xl mx-auto text-right">
-                                            <h4 class="font-bold text-blue-800 mb-2 text-sm">كيف تعمل الاعتمادات؟</h4>
+                                            <h4 class="font-bold text-blue-800 mb-2 text-sm">${t('module.ptw.approvals.circuitsHow', 'كيف تعمل الاعتمادات؟')}</h4>
                                             <ul class="text-sm text-blue-700 space-y-2 list-disc list-inside">
-                                                <li>يتم تحديد مسار الاعتماد بناءً على نوع التصريح والموقع.</li>
-                                                <li>يمكن للمسؤولين تعيين موافقين محددين لكل مرحلة.</li>
-                                                <li>تصل إشعارات للموافقين عند وصول دورهم في الاعتماد.</li>
+                                                <li>${t('module.ptw.approvals.circuitsLi1', 'يتم تحديد مسار الاعتماد بناءً على نوع التصريح والموقع.')}</li>
+                                                <li>${t('module.ptw.approvals.circuitsLi2', 'يمكن للمسؤولين تعيين موافقين محددين لكل مرحلة.')}</li>
+                                                <li>${t('module.ptw.approvals.circuitsLi3', 'تصل إشعارات للموافقين عند وصول دورهم في الاعتماد.')}</li>
                                             </ul>
                                         </div>
                                     </div>
@@ -14407,15 +14420,16 @@ const PTW = {
         `;
         } catch (error) {
             Utils.safeError('خطأ في عرض محتوى الموافقات:', error);
+            const te = (k, f) => this._t(k, f);
             return `
                 <div class="content-card">
                     <div class="card-body">
                         <div class="empty-state">
                             <i class="fas fa-exclamation-triangle text-red-500 text-4xl mb-4"></i>
-                            <p class="text-gray-500 mb-4">حدث خطأ أثناء تحميل قسم الموافقات</p>
+                            <p class="text-gray-500 mb-4">${te('module.ptw.approvals.errorLoad', 'حدث خطأ أثناء تحميل قسم الموافقات')}</p>
                             <button onclick="PTW.switchTab('approvals')" class="btn-primary">
                                 <i class="fas fa-redo ml-2"></i>
-                                إعادة المحاولة
+                                ${te('module.common.retry', 'إعادة المحاولة')}
                             </button>
                         </div>
                     </div>
@@ -14440,13 +14454,13 @@ const PTW = {
                 
                 // إظهار إشعار نجاح
                 if (typeof Notification !== 'undefined') {
-                    Notification.success('تم تحديث قائمة الموافقات المعلقة');
+                    Notification.success(this._t('module.ptw.approvals.notifyUpdated', 'تم تحديث قائمة الموافقات المعلقة'));
                 }
             }
         } catch (error) {
             Utils.safeError('خطأ في تحديث محتوى الموافقات:', error);
             if (typeof Notification !== 'undefined') {
-                Notification.error('حدث خطأ أثناء تحديث الموافقات');
+                Notification.error(this._t('module.ptw.approvals.notifyErr', 'حدث خطأ أثناء تحديث الموافقات'));
             }
         }
     },
