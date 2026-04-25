@@ -99,9 +99,9 @@ i[class*="fa-"] {
     --text-tertiary: var(--gray-500);
     --border-color: var(--gray-200);
     --card-bg: #ffffff;
-    --sidebar-bg: linear-gradient(180deg, #1d684f 0%, #1b7a5d 50%, #16513e 100%);
-    --login-bg: linear-gradient(135deg, #1d684f 0%, #16513e 100%);
-    --sidebar-avatar-bg: linear-gradient(135deg, #2a8b69 0%, #1d684f 100%);
+    --sidebar-bg: linear-gradient(180deg, var(--brand-primary) 0%, var(--brand-primary-light) 50%, var(--brand-primary-dark) 100%);
+    --login-bg: linear-gradient(135deg, var(--brand-primary) 0%, var(--brand-primary-dark) 100%);
+    --sidebar-avatar-bg: linear-gradient(135deg, var(--brand-primary-light) 0%, var(--brand-primary) 100%);
     --btn-primary-bg: linear-gradient(135deg, var(--brand-primary) 0%, var(--brand-primary-dark) 100%);
     --btn-primary-bg-hover: linear-gradient(135deg, var(--brand-primary-dark) 0%, var(--brand-primary) 100%);
 }
@@ -116,9 +116,9 @@ i[class*="fa-"] {
     --text-tertiary: #9ca3af;
     --border-color: #3a3a3a;
     --card-bg: #252525;
-    --sidebar-bg: linear-gradient(180deg, #0f3f31 0%, #1d684f 50%, #0f3f31 100%);
-    --login-bg: linear-gradient(135deg, #0f3f31 0%, #1d684f 100%);
-    --sidebar-avatar-bg: linear-gradient(135deg, #2a8b69 0%, #1d684f 100%);
+    --sidebar-bg: linear-gradient(180deg, var(--brand-primary-dark) 0%, var(--brand-primary) 50%, var(--brand-primary-dark) 100%);
+    --login-bg: linear-gradient(135deg, var(--brand-primary-dark) 0%, var(--brand-primary) 100%);
+    --sidebar-avatar-bg: linear-gradient(135deg, var(--brand-primary-light) 0%, var(--brand-primary) 100%);
 
     /* Adjust shadows for dark mode */
     --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
@@ -132,6 +132,9 @@ i[class*="fa-"] {
     --brand-primary: #1d684f;
     --brand-primary-dark: #16513e;
     --brand-primary-light: #2a8b69;
+    --sidebar-bg: linear-gradient(180deg, var(--brand-primary) 0%, var(--brand-primary-light) 50%, var(--brand-primary-dark) 100%);
+    --login-bg: linear-gradient(135deg, var(--brand-primary) 0%, var(--brand-primary-dark) 100%);
+    --sidebar-avatar-bg: linear-gradient(135deg, var(--brand-primary-light) 0%, var(--brand-primary) 100%);
     --sidebar-accent: #8fe3bf;
     --sidebar-accent-rgb: 143, 227, 191;
     --sidebar-shadow-rgb: 29, 104, 79;
@@ -141,6 +144,9 @@ i[class*="fa-"] {
     --brand-primary: #1d4f68;
     --brand-primary-dark: #163d51;
     --brand-primary-light: #2a6a8b;
+    --sidebar-bg: linear-gradient(180deg, var(--brand-primary) 0%, var(--brand-primary-light) 50%, var(--brand-primary-dark) 100%);
+    --login-bg: linear-gradient(135deg, var(--brand-primary) 0%, var(--brand-primary-dark) 100%);
+    --sidebar-avatar-bg: linear-gradient(135deg, var(--brand-primary-light) 0%, var(--brand-primary) 100%);
     --sidebar-accent: #93c5fd;
     --sidebar-accent-rgb: 147, 197, 253;
     --sidebar-shadow-rgb: 29, 79, 104;
@@ -150,6 +156,9 @@ i[class*="fa-"] {
     --brand-primary: #5b2d8b;
     --brand-primary-dark: #46226d;
     --brand-primary-light: #7a43b8;
+    --sidebar-bg: linear-gradient(180deg, var(--brand-primary) 0%, var(--brand-primary-light) 50%, var(--brand-primary-dark) 100%);
+    --login-bg: linear-gradient(135deg, var(--brand-primary) 0%, var(--brand-primary-dark) 100%);
+    --sidebar-avatar-bg: linear-gradient(135deg, var(--brand-primary-light) 0%, var(--brand-primary) 100%);
     --sidebar-accent: #c4b5fd;
     --sidebar-accent-rgb: 196, 181, 253;
     --sidebar-shadow-rgb: 91, 45, 139;
@@ -159,6 +168,9 @@ i[class*="fa-"] {
     --brand-primary: #8b5a1d;
     --brand-primary-dark: #6e4817;
     --brand-primary-light: #b57a2a;
+    --sidebar-bg: linear-gradient(180deg, var(--brand-primary) 0%, var(--brand-primary-light) 50%, var(--brand-primary-dark) 100%);
+    --login-bg: linear-gradient(135deg, var(--brand-primary) 0%, var(--brand-primary-dark) 100%);
+    --sidebar-avatar-bg: linear-gradient(135deg, var(--brand-primary-light) 0%, var(--brand-primary) 100%);
     --sidebar-accent: #fde68a;
     --sidebar-accent-rgb: 253, 230, 138;
     --sidebar-shadow-rgb: 139, 90, 29;
@@ -1064,7 +1076,7 @@ body.app-active {
 /* ألوان شعار الشركة: أزرق (#003865), أحمر (#C8102E), ذهبي (#FFC72C) */
 .sidebar {
     width: var(--sidebar-width);
-    background: linear-gradient(180deg, #003865 0%, #004C8C 50%, #003865 100%);
+    background: var(--sidebar-bg);
     color: white;
     display: flex;
     flex-direction: column;
@@ -1074,12 +1086,12 @@ body.app-active {
     /* Dynamic viewport height for mobile */
     overflow-y: auto;
     overflow-x: hidden;
-    box-shadow: 4px 0 20px rgba(0, 56, 101, 0.3);
+    box-shadow: 4px 0 20px rgba(var(--sidebar-shadow-rgb), 0.3);
     z-index: 1000;
     right: 0;
     top: 0;
     transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), background 0.3s ease;
-    border-left: 3px solid #FFC72C;
+    border-left: 3px solid var(--sidebar-accent);
     -webkit-overflow-scrolling: touch;
     /* Removed will-change: transform to reduce memory consumption - apply dynamically when sidebar is animating */
 }
@@ -1095,20 +1107,20 @@ body.app-active {
     width: 80px;
     height: 80px;
     border-radius: 50%;
-    background: linear-gradient(135deg, #004C8C 0%, #003865 100%);
-    border: 3px solid #FFC72C;
+    background: var(--sidebar-avatar-bg);
+    border: 3px solid var(--sidebar-accent);
     display: flex;
     align-items: center;
     justify-content: center;
     margin: 0 auto 1rem;
     font-size: 2rem;
-    box-shadow: 0 4px 15px rgba(255, 199, 44, 0.3);
+    box-shadow: 0 4px 15px rgba(var(--sidebar-accent-rgb), 0.3);
     transition: transform 0.3s ease;
 }
 
 .user-avatar:hover {
     transform: scale(1.05);
-    box-shadow: 0 6px 20px rgba(255, 199, 44, 0.5);
+    box-shadow: 0 6px 20px rgba(var(--sidebar-accent-rgb), 0.5);
 }
 
 .user-avatar-clickable:focus-visible {
@@ -1379,13 +1391,13 @@ body.app-active {
     height: 44px;
     border-radius: 12px;
     border: none;
-    background: linear-gradient(135deg, #003865 0%, #004C8C 100%);
+    background: var(--btn-primary-bg);
     color: #ffffff;
     font-size: 1.25rem;
     cursor: pointer;
     align-items: center;
     justify-content: center;
-    box-shadow: 0 2px 8px rgba(0, 56, 101, 0.2);
+    box-shadow: 0 2px 8px rgba(var(--sidebar-shadow-rgb), 0.2);
     transition: transform 0.2s ease, box-shadow 0.2s ease;
     text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
 }
@@ -5297,7 +5309,9 @@ body.app-active {
 }
 
 .header-language-toggle-compact:hover {
-    background: var(--bg-secondary);
+    background: rgba(var(--sidebar-shadow-rgb), 0.08);
+    border-color: rgba(var(--sidebar-shadow-rgb), 0.28) !important;
+    color: var(--brand-primary) !important;
     transform: translateY(-1px);
     box-shadow: var(--shadow-md);
 }

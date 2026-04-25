@@ -83,7 +83,7 @@
 
 /* ===== Buttons ===== */
 .btn-primary {
-    background: linear-gradient(135deg, #003865 0%, #004C8C 100%);
+    background: var(--btn-primary-bg);
     color: #ffffff;
     padding: 0.875rem 1.5rem;
     border: none;
@@ -97,24 +97,24 @@
     justify-content: center;
     font-family: 'Cairo', sans-serif;
     text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
-    box-shadow: 0 2px 8px rgba(0, 56, 101, 0.2);
+    box-shadow: 0 2px 8px rgba(var(--sidebar-shadow-rgb), 0.2);
 }
 
 .btn-primary:hover {
-    background: linear-gradient(135deg, #004C8C 0%, #003865 100%);
+    background: var(--btn-primary-bg-hover);
     transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0, 56, 101, 0.3);
+    box-shadow: 0 4px 12px rgba(var(--sidebar-shadow-rgb), 0.3);
     color: #ffffff;
 }
 
 .btn-primary:active {
     transform: translateY(0);
-    box-shadow: 0 2px 6px rgba(0, 56, 101, 0.25);
+    box-shadow: 0 2px 6px rgba(var(--sidebar-shadow-rgb), 0.25);
 }
 
 .btn-primary:focus {
     outline: none;
-    box-shadow: 0 0 0 3px rgba(0, 56, 101, 0.3);
+    box-shadow: 0 0 0 3px rgba(var(--sidebar-shadow-rgb), 0.3);
 }
 
 .btn-primary:disabled {
@@ -295,9 +295,9 @@
 /* Outline Button Variants */
 .btn-outline-primary {
     background: transparent;
-    color: #003865;
+    color: var(--brand-primary);
     padding: 0.875rem 1.5rem;
-    border: 2px solid #003865;
+    border: 2px solid var(--brand-primary);
     border-radius: 10px;
     font-size: 1rem;
     font-weight: 600;
@@ -311,7 +311,7 @@
 }
 
 .btn-outline-primary:hover {
-    background: #003865;
+    background: var(--brand-primary);
     color: #ffffff;
     transform: translateY(-2px);
     box-shadow: 0 4px 12px rgba(0, 56, 101, 0.3);
@@ -711,7 +711,9 @@
 
 .header-theme-toggle:hover,
 .header-notifications-btn:hover {
-    background: var(--bg-secondary);
+    background: rgba(var(--sidebar-shadow-rgb), 0.08);
+    border-color: rgba(var(--sidebar-shadow-rgb), 0.28);
+    color: var(--brand-primary);
     transform: scale(1.1);
     box-shadow: var(--shadow-md);
 }
