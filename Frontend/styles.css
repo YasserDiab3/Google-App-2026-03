@@ -14307,6 +14307,45 @@ body {
     }
 }
 
+/* ===== Final Theme Override (Color Sims) ===== */
+html[data-color-theme] .sidebar,
+body[data-color-theme] .sidebar {
+    background: var(--sidebar-bg) !important;
+    border-left-color: var(--sidebar-accent) !important;
+    box-shadow: 4px 0 20px rgba(var(--sidebar-shadow-rgb), 0.3) !important;
+}
+
+html[data-color-theme] .user-avatar,
+body[data-color-theme] .user-avatar {
+    background: var(--sidebar-avatar-bg) !important;
+    border-color: var(--sidebar-accent) !important;
+    box-shadow: 0 4px 15px rgba(var(--sidebar-accent-rgb), 0.3) !important;
+}
+
+html[data-color-theme] .user-avatar:hover,
+body[data-color-theme] .user-avatar:hover {
+    box-shadow: 0 6px 20px rgba(var(--sidebar-accent-rgb), 0.5) !important;
+}
+
+html[data-color-theme] .nav-item:hover,
+body[data-color-theme] .nav-item:hover {
+    border-right-color: var(--sidebar-accent) !important;
+}
+
+html[data-color-theme] .nav-item:hover i,
+html[data-color-theme] .nav-item.active i,
+body[data-color-theme] .nav-item:hover i,
+body[data-color-theme] .nav-item.active i {
+    color: var(--sidebar-accent) !important;
+}
+
+html[data-color-theme] .nav-item.active,
+body[data-color-theme] .nav-item.active {
+    border-right-color: var(--sidebar-accent) !important;
+    background: linear-gradient(90deg, rgba(var(--sidebar-accent-rgb), 0.2) 0%, rgba(var(--sidebar-accent-rgb), 0.05) 100%) !important;
+    box-shadow: -2px 0 10px rgba(var(--sidebar-accent-rgb), 0.3) !important;
+}
+
 /* ===== تحسينات الأداء لجميع الأجهزة ===== */
 @media (max-width: 768px) {
     /* تحسين Rendering */
