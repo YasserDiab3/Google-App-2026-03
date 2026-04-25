@@ -2486,6 +2486,18 @@ const SafetyPerformanceKPIs = {
         this.renderHeatmap(data);
     },
 
+    renderChartNoDataState(container, message) {
+        if (!container) return;
+        container.innerHTML = `
+            <div class="h-full min-h-[180px] flex items-center justify-center">
+                <div class="text-center text-slate-500">
+                    <i class="fas fa-chart-line text-2xl mb-2 text-slate-300"></i>
+                    <div class="text-sm font-semibold">${message || this._t('module.kpi.chart.noData', 'لا توجد بيانات ضمن الفترة المحددة')}</div>
+                </div>
+            </div>
+        `;
+    },
+
     renderIncidentsChart(data, start, end, containerId = 'incidents-chart-container') {
         const container = document.getElementById(containerId);
         if (!container) return;
@@ -2500,6 +2512,10 @@ const SafetyPerformanceKPIs = {
 
         const labels = Object.keys(incidentsByDate).sort();
         const values = labels.map(label => incidentsByDate[label]);
+        if (!labels.length) {
+            this.renderChartNoDataState(container, this._t('module.kpi.chart.noIncidents', 'لا توجد حوادث ضمن الفترة المحددة'));
+            return;
+        }
 
         const canvasId = `${containerId}-canvas`;
         container.innerHTML = `
@@ -2552,6 +2568,10 @@ const SafetyPerformanceKPIs = {
         });
 
         const total = Object.values(deptCounts).reduce((a, b) => a + b, 0);
+        if (!total) {
+            this.renderChartNoDataState(container, this._t('module.kpi.chart.noDeptData', 'لا توجد بيانات توزيع إدارات للفترة المحددة'));
+            return;
+        }
 
         container.innerHTML = `
             <div class="space-y-3">
@@ -2668,6 +2688,10 @@ const SafetyPerformanceKPIs = {
         });
 
         const maxValue = Math.max(...Object.values(deptStats).map(s => s.incidents + s.nearmiss), 1);
+        if (!departments.size) {
+            this.renderChartNoDataState(container, this._t('module.kpi.chart.noComparisonData', 'لا توجد بيانات مقارنة للإدارات/المواقع في هذه الفترة'));
+            return;
+        }
 
         container.innerHTML = `
             <div class="space-y-4">
@@ -2714,6 +2738,10 @@ const SafetyPerformanceKPIs = {
         });
 
         const maxValue = Math.max(...Object.values(deptLocMatrix), 1);
+        if (!departments.size || !locations.size) {
+            this.renderChartNoDataState(container, this._t('module.kpi.chart.noHeatmapData', 'لا توجد بيانات كافية لبناء خريطة الحرارة'));
+            return;
+        }
 
         container.innerHTML = `
             <div class="overflow-x-auto">
