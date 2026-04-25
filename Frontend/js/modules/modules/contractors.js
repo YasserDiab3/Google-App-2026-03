@@ -1235,9 +1235,6 @@ const Contractors = {
             return;
         }
 
-        // تحويل الأكواد القديمة APP-xxx إلى CON-xxx
-        this.convertOldApprovedCodes();
-
         let mutated = false;
         AppState.appData.approvedContractors = collection.map((item) => {
             const normalized = Object.assign({}, item);
@@ -1298,76 +1295,18 @@ const Contractors = {
                 normalized.contractorCode || normalized['كود المقاول'] ||
                 normalized['كود'] || normalized.codeNumber || '';
 
-            // تحويل الأكواد القديمة APP-xxx إلى CON-xxx
-            if (contractorCode && contractorCode.match(/^APP-(\d+)$/)) {
-                const match = contractorCode.match(/^APP-(\d+)$/);
-                if (match) {
-                    contractorCode = `CON-${match[1]}`;
-                    mutated = true;
-                }
-            }
-
             // إذا كان هناك contractorId، البحث عن كود المقاول في قائمة المقاولين
             if (!contractorCode && normalized.contractorId) {
                 const contractors = AppState.appData.contractors || [];
                 const contractor = contractors.find(c => c.id === normalized.contractorId);
                 if (contractor && contractor.code) {
                     contractorCode = contractor.code;
-                    mutated = true;
                 }
             }
 
-            // توليد كود تلقائي إذا لم يكن موجوداً - استخدام CON-xxx فقط
-            if (!contractorCode) {
-                // البحث عن أكبر رقم في الأكواد الموجودة (CON-xxx و APP-xxx القديمة)
-                const contractors = AppState.appData.contractors || [];
-                let maxNumber = 0;
-
-                // البحث في قائمة المقاولين
-                contractors.forEach(contractor => {
-                    if (contractor.code) {
-                        const match = contractor.code.match(/CON-(\d+)/);
-                        if (match) {
-                            const num = parseInt(match[1], 10);
-                            if (num > maxNumber) {
-                                maxNumber = num;
-                            }
-                        }
-                    }
-                });
-
-                // البحث في قائمة المعتمدين
-                collection.forEach(entity => {
-                    const code = entity.isoCode || entity.code || entity.contractorCode ||
-                        entity['كود المقاول'] || entity['كود'] || entity.codeNumber;
-                    if (code) {
-                        // البحث عن كود CON-xxx
-                        let match = code.match(/CON-(\d+)/);
-                        if (match) {
-                            const num = parseInt(match[1], 10);
-                            if (num > maxNumber) {
-                                maxNumber = num;
-                            }
-                        }
-                        // البحث عن كود APP-xxx القديم (للتحويل)
-                        match = code.match(/APP-(\d+)/);
-                        if (match) {
-                            const num = parseInt(match[1], 10);
-                            if (num > maxNumber) {
-                                maxNumber = num;
-                            }
-                        }
-                    }
-                });
-
-                const newNumber = maxNumber + 1;
-                contractorCode = `CON-${String(newNumber).padStart(3, '0')}`;
-                mutated = true;
-            }
-
-            // استخدام الكود الموجود أو المولد
-            normalized.isoCode = contractorCode;
-            normalized.code = contractorCode;
+            // لا نولّد ولا نعدّل كود المعتمد في الواجهة تلقائياً للحفاظ على ثباته بعد توليده
+            normalized.isoCode = contractorCode || normalized.isoCode || '';
+            normalized.code = contractorCode || normalized.code || '';
             // التأكد من تطابق الحقلين
             if (normalized.isoCode !== normalized.code) {
                 normalized.code = normalized.isoCode;
@@ -1824,101 +1763,12 @@ const Contractors = {
                 record.contractorCode || record['كود المقاول'] ||
                 record['كود'] || record.codeNumber || '';
 
-            // تحويل الأكواد القديمة APP-xxx إلى CON-xxx
-            if (contractorCode && contractorCode.match(/^APP-(\d+)$/)) {
-                const match = contractorCode.match(/^APP-(\d+)$/);
-                if (match) {
-                    contractorCode = `CON-${match[1]}`;
-                    record.code = contractorCode;
-                    record.isoCode = contractorCode;
-                    // تحديث السجل في AppState
-                    const approvedEntities = AppState.appData.approvedContractors || [];
-                    const approvedIndex = approvedEntities.findIndex(e => e.id === record.id);
-                    if (approvedIndex !== -1) {
-                        approvedEntities[approvedIndex] = record;
-                        AppState.appData.approvedContractors = approvedEntities;
-                    }
-                }
-            }
-
             // إذا كان هناك contractorId، البحث عن كود المقاول في قائمة المقاولين
             if (!contractorCode && record.contractorId) {
                 const contractors = AppState.appData.contractors || [];
                 const contractor = contractors.find(c => c.id === record.contractorId);
                 if (contractor && contractor.code) {
                     contractorCode = contractor.code;
-                    record.code = contractorCode;
-                    record.isoCode = contractorCode;
-                    // تحديث السجل في AppState
-                    const approvedEntities = AppState.appData.approvedContractors || [];
-                    const approvedIndex = approvedEntities.findIndex(e => e.id === record.id);
-                    if (approvedIndex !== -1) {
-                        approvedEntities[approvedIndex] = record;
-                        AppState.appData.approvedContractors = approvedEntities;
-                    }
-                }
-            }
-
-            // توليد كود تلقائي إذا لم يكن موجوداً (يتم تلقائياً بعد الاعتماد) - استخدام CON-xxx فقط
-            if (!contractorCode && record.status === 'approved') {
-                // توليد كود تلقائي CON-xxx
-                const contractors = AppState.appData.contractors || [];
-                const approvedEntities = AppState.appData.approvedContractors || [];
-                let maxNumber = 0;
-
-                // البحث في قائمة المقاولين
-                contractors.forEach(contractor => {
-                    if (contractor.code) {
-                        const match = contractor.code.match(/CON-(\d+)/);
-                        if (match) {
-                            const num = parseInt(match[1], 10);
-                            if (num > maxNumber) {
-                                maxNumber = num;
-                            }
-                        }
-                    }
-                });
-
-                // البحث في قائمة المعتمدين
-                approvedEntities.forEach(entity => {
-                    const code = entity.isoCode || entity.code;
-                    if (code) {
-                        // البحث عن كود CON-xxx
-                        let match = code.match(/CON-(\d+)/);
-                        if (match) {
-                            const num = parseInt(match[1], 10);
-                            if (num > maxNumber) {
-                                maxNumber = num;
-                            }
-                        }
-                        // البحث عن كود APP-xxx القديم (للتحويل)
-                        match = code.match(/APP-(\d+)/);
-                        if (match) {
-                            const num = parseInt(match[1], 10);
-                            if (num > maxNumber) {
-                                maxNumber = num;
-                            }
-                        }
-                    }
-                });
-
-                const newNumber = maxNumber + 1;
-                contractorCode = `CON-${String(newNumber).padStart(3, '0')}`;
-                // حفظ الكود في السجل وفي AppState
-                record.code = contractorCode;
-                record.isoCode = contractorCode;
-                // تحديث السجل في AppState
-                const approvedIndex = approvedEntities.findIndex(e => e.id === record.id);
-                if (approvedIndex !== -1) {
-                    approvedEntities[approvedIndex] = record;
-                    AppState.appData.approvedContractors = approvedEntities;
-                    // حفظ التغييرات
-                    if (typeof GoogleIntegration !== 'undefined' && GoogleIntegration.sendRequest) {
-                        GoogleIntegration.sendRequest({
-                            action: 'updateApprovedContractor',
-                            data: record
-                        }).catch(err => Utils.safeWarn('خطأ في حفظ كود المقاول:', err));
-                    }
                 }
             }
 

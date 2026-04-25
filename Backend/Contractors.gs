@@ -67,6 +67,7 @@ function migrateContractorsToApproved() {
                 }
                 
                 // إنشاء سجل معتمد جديد من بيانات المقاول
+                const contractorCode = contractor.code || generateContractorCode(spreadsheetId);
                 const approvedEntity = {
                     id: contractor.approvedEntityId || generateSequentialId('ACN', 'ApprovedContractors', spreadsheetId),
                     contractorId: contractor.id, // الحفاظ على ID الأصلي للربط
@@ -74,8 +75,8 @@ function migrateContractorsToApproved() {
                     entityType: contractor.entityType || 'contractor',
                     serviceType: contractor.serviceType || '',
                     licenseNumber: contractor.contractNumber || contractor.licenseNumber || '',
-                    code: contractor.code || generateContractorCode(spreadsheetId),
-                    isoCode: contractor.code || generateContractorCode(spreadsheetId),
+                    code: contractorCode,
+                    isoCode: contractorCode,
                     approvalDate: contractor.createdAt || new Date(),
                     expiryDate: contractor.endDate || new Date(Date.now() + 365 * 24 * 60 * 60 * 1000),
                     status: (contractor.status === 'نشط' || contractor.status === 'active') ? 'approved' : 'pending',
@@ -179,6 +180,14 @@ function addApprovedContractorToSheet(contractorData) {
         
         const sheetName = 'ApprovedContractors';
         const spreadsheetId = getSpreadsheetId();
+        
+        // توحيد حقل الكود قبل أي فحص/حفظ (الكود يولد مرة واحدة ويظل ثابتاً)
+        var stableContractorCode = String(contractorData.code || contractorData.isoCode || '').trim();
+        if (!stableContractorCode) {
+            stableContractorCode = generateContractorCode(spreadsheetId);
+        }
+        contractorData.code = stableContractorCode;
+        contractorData.isoCode = stableContractorCode;
         
         // قراءة البيانات الحالية للتأكد من عدم وجود مكرر
         const existingData = readFromSheet(sheetName, spreadsheetId);
@@ -308,29 +317,20 @@ function addApprovedContractorToSheet(contractorData) {
         // ✅ (appendToSheet تستدعي flush() بالفعل، لكن نضيفه هنا للتأكد)
         SpreadsheetApp.flush();
         
-        // ✅ التحقق من النتيجة والتحقق من أن الصف تم إضافته وليس استبداله
+        // ✅ التحقق من النتيجة
         if (result.success) {
             Logger.log('✅ addApprovedContractorToSheet: Successfully added contractor. Row number: ' + (result.rowNumber || 'N/A'));
             
-            // ✅ التحقق النهائي: قراءة البيانات بعد الإضافة للتأكد من أن عدد الصفوف زاد
+            // ✅ تحقق معلوماتي فقط (لا نُفشل العملية إذا اختلف عدّ readFromSheet عن getLastRow)
             try {
                 const dataAfterAppend = readFromSheet(sheetName, spreadsheetId);
                 const rowCountAfter = Array.isArray(dataAfterAppend) ? dataAfterAppend.length : 0;
-                Logger.log('📝 Row count after append: ' + rowCountAfter + ' (was ' + rowCountBefore + ')');
-                
-                if (rowCountAfter <= rowCountBefore) {
-                    Logger.log('❌ ERROR: Row count did not increase! Row was not added correctly.');
-                    Logger.log('❌ This indicates the row may have been overwritten instead of appended.');
-                    return { 
-                        success: false, 
-                        message: 'فشل إضافة المقاول: لم يتم إضافة صف جديد (قد يكون تم استبدال صف موجود)' 
-                    };
-                } else {
-                    Logger.log('✅ VERIFIED: Row count increased from ' + rowCountBefore + ' to ' + rowCountAfter + ' - New row was added successfully');
-                }
+                const sheet = SpreadsheetApp.openById(spreadsheetId).getSheetByName(sheetName);
+                const sheetLastRow = sheet ? sheet.getLastRow() : 0;
+                Logger.log('📝 Row count after append (readFromSheet): ' + rowCountAfter + ' (was ' + rowCountBefore + '), sheetLastRow=' + sheetLastRow);
             } catch (verifyError) {
                 Logger.log('⚠️ Warning: Could not verify row count after append: ' + verifyError.toString());
-                // لا نعيد خطأ هنا، لأن appendToSheet قد تكون نجحت
+                // لا نعيد خطأ هنا لأن نجاح appendToSheet هو المرجع الأساسي
             }
         } else {
             Logger.log('❌ addApprovedContractorToSheet: Failed to add contractor: ' + (result.message || 'Unknown error'));
@@ -356,8 +356,29 @@ function updateApprovedContractor(approvedContractorId, updateData) {
         const sheetName = 'ApprovedContractors';
         const spreadsheetId = getSpreadsheetId();
         
+        // منع تعديل كود المقاول بعد توليده (قاعدة عدم التغيير)
+        const safeUpdateData = Object.assign({}, updateData || {});
+        const immutableCodeFields = ['code', 'isoCode', 'contractorCode', 'codeNumber'];
+        const attemptedImmutableEdits = immutableCodeFields.filter(function(field) {
+            return Object.prototype.hasOwnProperty.call(safeUpdateData, field);
+        });
+        
+        attemptedImmutableEdits.forEach(function(field) {
+            delete safeUpdateData[field];
+        });
+        
+        if (attemptedImmutableEdits.length > 0) {
+            Logger.log('⚠️ Blocked immutable contractor code update for ' + approvedContractorId + ' fields=' + attemptedImmutableEdits.join(','));
+        }
+        
+        if (Object.keys(safeUpdateData).length === 0) {
+            return { success: false, message: 'لا يمكن تعديل كود المقاول بعد توليده' };
+        }
+        
+        safeUpdateData.updatedAt = new Date();
+        
         // ✅ استخدام updateSingleRowInSheet() لتحديث صف واحد فقط بدون حذف الصفوف الأخرى
-        const result = updateSingleRowInSheet(sheetName, approvedContractorId, updateData, spreadsheetId);
+        const result = updateSingleRowInSheet(sheetName, approvedContractorId, safeUpdateData, spreadsheetId);
         
         if (result.success) {
             Logger.log('✅ Successfully updated approved contractor: ' + approvedContractorId);
@@ -746,31 +767,64 @@ function getAllContractorApprovalRequests(filters = {}) {
  * @param {string} spreadsheetId - معرف جدول البيانات
  * @returns {string} - كود المقاول بصيغة CON-xxx
  */
-function generateContractorCode(spreadsheetId) {
+function getMaxExistingContractorCodeNumber_(spreadsheetId) {
+    // ✅ البحث فقط في ApprovedContractors
+    const approvedData = readFromSheet('ApprovedContractors', spreadsheetId);
+    let maxNumber = 0;
+    
+    if (Array.isArray(approvedData)) {
+        approvedData.forEach(function(approved) {
+            if (!approved) return;
+            const code = approved.code || approved.isoCode;
+            if (!code) return;
+            const match = String(code).match(/CON-(\d+)/);
+            if (!match) return;
+            const num = parseInt(match[1], 10);
+            if (!isNaN(num) && num > maxNumber) {
+                maxNumber = num;
+            }
+        });
+    }
+    
+    return maxNumber;
+}
+
+function getNextContractorCodeNumber_(spreadsheetId, options) {
+    const useLock = !(options && options.skipLock === true);
+    const lock = useLock ? LockService.getScriptLock() : null;
+    
+    if (lock) {
+        lock.waitLock(30000);
+    }
+    
     try {
-        // ✅ البحث فقط في ApprovedContractors (تم إزالة Contractors)
-        const approvedData = readFromSheet('ApprovedContractors', spreadsheetId);
-        let maxNumber = 0;
+        const props = PropertiesService.getScriptProperties();
+        const seqKey = 'CONTRACTOR_CODE_SEQUENCE';
+        const storedValue = props.getProperty(seqKey);
+        let current = parseInt(storedValue || '0', 10);
         
-        // البحث في المعتمدين
-        if (Array.isArray(approvedData)) {
-            approvedData.forEach(function(approved) {
-                if (approved) { // ✅ التحقق من approved أولاً
-                    const code = approved.code || approved.isoCode;
-                    if (code) {
-                        const match = code.match(/CON-(\d+)/);
-                        if (match) {
-                            const num = parseInt(match[1], 10);
-                            if (!isNaN(num) && num > maxNumber) { // ✅ التحقق من isNaN
-                                maxNumber = num;
-                            }
-                        }
-                    }
-                }
-            });
+        if (isNaN(current) || current < 0) {
+            current = 0;
         }
         
-        const newNumber = maxNumber + 1;
+        // مزامنة أولية مع أكبر كود موجود (لحماية البيانات القديمة)
+        if (current === 0) {
+            current = getMaxExistingContractorCodeNumber_(spreadsheetId);
+        }
+        
+        const next = current + 1;
+        props.setProperty(seqKey, String(next));
+        return next;
+    } finally {
+        if (lock) {
+            lock.releaseLock();
+        }
+    }
+}
+
+function generateContractorCode(spreadsheetId, options) {
+    try {
+        const newNumber = getNextContractorCodeNumber_(spreadsheetId, options);
         const paddedNumber = ('000' + newNumber).slice(-3); // تنسيق الرقم بـ 3 خانات
         return 'CON-' + paddedNumber;
     } catch (error) {
@@ -785,7 +839,10 @@ function generateContractorCode(spreadsheetId) {
  */
 
 function approveContractorApprovalRequest(requestId, userData) {
+    const approvalLock = LockService.getScriptLock();
     try {
+        approvalLock.waitLock(30000);
+        
         if (!requestId) {
             return { success: false, message: 'معرف الطلب غير محدد' };
         }
@@ -819,7 +876,7 @@ function approveContractorApprovalRequest(requestId, userData) {
         // إضافة المقاول/المورد إلى قائمة المعتمدين
         if (request.requestType === 'contractor' || request.requestType === 'supplier') {
             // ✅ توليد كود CON-xxx موحد
-            const contractorCode = generateContractorCode(spreadsheetId);
+            const contractorCode = generateContractorCode(spreadsheetId, { skipLock: true });
             
             approvedEntity = {
                 id: generateSequentialId('ACN', 'ApprovedContractors', spreadsheetId),
@@ -844,29 +901,39 @@ function approveContractorApprovalRequest(requestId, userData) {
             Logger.log('📝 Adding approved contractor to ApprovedContractors sheet (separate from ContractorApprovalRequests)');
             
             const addResult = addApprovedContractorToSheet(approvedEntity);
-            if (!addResult.success) {
+            
+            // التكرار هنا ليس خطأ تشغيلياً: نكمل اعتماد الطلب بدون إنشاء سجل جديد
+            if (addResult && addResult.isDuplicate) {
+                Logger.log('⚠️ Duplicate contractor detected during approval; request will be approved without creating a new approved-contractor record');
+                approvedEntity.id = (addResult.duplicateInfo && addResult.duplicateInfo.id) || approvedEntity.id;
+                approvedEntity.code = (addResult.duplicateInfo && addResult.duplicateInfo.code) || approvedEntity.code;
+                approvedEntity.isoCode = approvedEntity.code;
+                approvedEntity._isDuplicate = true;
+                approvedEntity._duplicateMessage = addResult.message;
+                finalContractor = approvedEntity;
+            } else if (!addResult.success) {
                 Logger.log('❌ Error: Failed to add approved contractor: ' + addResult.message);
                 // ✅ إرجاع خطأ فوري - لا نكمل العملية إذا فشل إضافة المعتمد
                 return { success: false, message: 'فشل إضافة المقاول إلى قائمة المعتمدين: ' + addResult.message };
             }
             
             // ✅ التحقق من نجاح الإضافة أو التحديث
-            if (addResult.isDuplicate) {
+            if (addResult && addResult.isDuplicate) {
                 Logger.log('⚠️ Contractor already exists - updated existing record instead of adding new one');
                 Logger.log('⚠️ Duplicate info: id=' + (addResult.duplicateInfo?.id || 'N/A') + ', companyName=' + (addResult.duplicateInfo?.companyName || 'N/A'));
-            } else {
+            } else if (addResult) {
                 Logger.log('✅ Successfully added approved contractor to ApprovedContractors. Row number: ' + (addResult.rowNumber || 'N/A'));
             }
             
             // ✅ في حالة التحديث (duplicate)، نستخدم id من addResult
             // في حالة الإضافة الجديدة، approvedEntity.id موجود بالفعل
-            if (addResult.id) {
+            if (addResult && addResult.id) {
                 approvedEntity.id = addResult.id;
                 Logger.log('✅ Using approved contractor ID: ' + approvedEntity.id);
             }
             
             // ✅ إضافة معلومات التكرار إلى النتيجة النهائية
-            if (addResult.isDuplicate) {
+            if (addResult && addResult.isDuplicate) {
                 approvedEntity._isDuplicate = true;
                 approvedEntity._duplicateMessage = addResult.message;
             }
@@ -955,6 +1022,12 @@ function approveContractorApprovalRequest(requestId, userData) {
     } catch (error) {
         Logger.log('❌ Error approving contractor approval request: ' + error.toString());
         return { success: false, message: 'حدث خطأ أثناء اعتماد الطلب: ' + error.toString() };
+    } finally {
+        try {
+            approvalLock.releaseLock();
+        } catch (releaseError) {
+            Logger.log('⚠️ Could not release approval lock: ' + releaseError.toString());
+        }
     }
 }
 

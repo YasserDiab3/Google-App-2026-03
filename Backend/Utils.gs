@@ -2339,15 +2339,20 @@ function appendToSheet(sheetName, data, spreadsheetId = null) {
                     // ✅ حفظ البيانات مباشرة لضمان أن readFromSheet() يقرأ البيانات المحدثة
                     SpreadsheetApp.flush();
                     
-                    // ✅ التحقق من أن الصف تم إضافته بشكل صحيح - استخدام readFromSheet()
+                    // ✅ التحقق من أن الصف تم إضافته بشكل صحيح
+                    // ملاحظة: readFromSheet() قد يُرجع عدداً أقل عند وجود صفوف شبه فارغة/منسقة،
+                    // لذلك نعتبر getLastRow() هو المرجع الأساسي لموضع آخر صف فعلي.
                     let verifyAfterWrite = finalStartRow;
                     try {
                         const dataAfterWrite = readFromSheet(sheetName, spreadsheetId);
+                        const sheetLastRowAfterWrite = sheet.getLastRow() || finalStartRow;
                         if (Array.isArray(dataAfterWrite) && dataAfterWrite.length > 0) {
-                            verifyAfterWrite = dataAfterWrite.length + 1;
-                            Logger.log('✅ Using readFromSheet() after write: found ' + dataAfterWrite.length + ' rows, lastRow=' + verifyAfterWrite);
+                            const readBasedLastRow = dataAfterWrite.length + 1;
+                            verifyAfterWrite = Math.max(readBasedLastRow, sheetLastRowAfterWrite);
+                            Logger.log('✅ Verify after write: readBasedLastRow=' + readBasedLastRow + ', sheetLastRow=' + sheetLastRowAfterWrite + ', selected=' + verifyAfterWrite);
                         } else {
-                            verifyAfterWrite = 1;
+                            verifyAfterWrite = sheetLastRowAfterWrite;
+                            Logger.log('✅ Verify after write: readFromSheet empty, using sheetLastRow=' + verifyAfterWrite);
                         }
                     } catch (readError) {
                         Logger.log('⚠️ Could not read from sheet after write, using getLastRow(): ' + readError.toString());
@@ -2366,7 +2371,7 @@ function appendToSheet(sheetName, data, spreadsheetId = null) {
                     }
                     
                     // ✅ التحقق النهائي: التأكد من أن الصف في المكان الصحيح
-                    if (verifyAfterWrite !== finalStartRow && verifyAfterWrite < finalStartRow) {
+                    if (verifyAfterWrite < finalStartRow) {
                         Logger.log('❌ Error: Row was not added at the expected position. Expected: ' + finalStartRow + ', Actual: ' + verifyAfterWrite);
                         return { success: false, message: 'فشل إضافة الصف في المكان الصحيح. المتوقع: ' + finalStartRow + ', الفعلي: ' + verifyAfterWrite };
                     }
