@@ -17,6 +17,52 @@ const Dashboard = {
         return fallback || key;
     },
 
+    normalizePTWStatus(status) {
+        if (window.PTW && typeof window.PTW.normalizePermitStatus === 'function') {
+            return window.PTW.normalizePermitStatus(status);
+        }
+        const t = String(status || '').trim();
+        if (!t) return 'مغلق';
+        if (t === 'closed' || t === 'Closed' || t === 'CLOSED' || t === 'مغلقة' || t === 'اكتمل') return 'مغلق';
+        return t;
+    },
+
+    isPTWClosedStatus(status) {
+        if (window.PTW && typeof window.PTW.isPermitClosedStatus === 'function') {
+            return window.PTW.isPermitClosedStatus(status);
+        }
+        const t = this.normalizePTWStatus(status);
+        return t === 'مغلق' || t === 'مرفوض' || t === 'اكتمل العمل بشكل آمن' || t === 'إغلاق جبري' || t === 'لم يكتمل العمل';
+    },
+
+    getUnifiedPTWDataset(data) {
+        if (window.PTW && typeof window.PTW.getPermitMetricsDataset === 'function') {
+            const dataset = window.PTW.getPermitMetricsDataset();
+            const source = Array.isArray(dataset?.source) ? dataset.source : [];
+            return source.map((p) => ({ ...p, status: this.normalizePTWStatus(p?.status) }));
+        }
+
+        const list = Array.isArray(data?.ptw) ? data.ptw : [];
+        const registryRaw = Array.isArray(data?.ptwRegistry) ? data.ptwRegistry : [];
+        const registry = registryRaw.map((r) => ({
+            id: r?.permitId || r?.id,
+            ...r,
+            status: this.normalizePTWStatus(r?.status),
+            isFromRegistry: true
+        }));
+
+        const mergedMap = new Map();
+        list.forEach((p) => {
+            if (!p || !p.id) return;
+            mergedMap.set(p.id, { ...p, status: this.normalizePTWStatus(p.status) });
+        });
+        registry.forEach((r) => {
+            if (!r || !r.id) return;
+            mergedMap.set(r.id, r);
+        });
+        return registry.length > 0 ? registry : Array.from(mergedMap.values());
+    },
+
     /**
      * تحميل لوحة التحكم
      */
@@ -2033,7 +2079,7 @@ const Dashboard = {
             });
         });
 
-        const ptwAll = (data.ptw || []).concat(Array.isArray(data.ptwRegistry) ? data.ptwRegistry : []);
+        const ptwAll = this.getUnifiedPTWDataset(data);
         const matchesPtwContractor = (p) => {
             if (!p) return false;
             const req = String(p.requestingParty || '').replace(/\s+/g, ' ').trim();
@@ -2042,14 +2088,8 @@ const Dashboard = {
             return contractorCtx ? contractorCtx.matchFieldsByName([req, auth, resp]) : false;
         };
         let ptwContractor = ptwAll.filter(matchesPtwContractor);
-        let ptwOpen = ptwContractor.filter(p => {
-            const s = (p.status || '').toLowerCase();
-            return s === 'مفتوح' || s === 'قيد المراجعة' || s === 'قيد الانتظار' || s === 'open' || s === 'pending' || s === 'under review';
-        }).length;
-        let ptwClosed = ptwContractor.filter(p => {
-            const s = (p.status || '').toLowerCase();
-            return s === 'مغلق' || s === 'مكتمل' || s === 'منتهي' || s === 'closed' || s === 'completed' || s === 'finished';
-        }).length;
+        let ptwOpen = ptwContractor.filter(p => !this.isPTWClosedStatus(p?.status)).length;
+        let ptwClosed = ptwContractor.filter(p => this.isPTWClosedStatus(p?.status)).length;
 
         const injuriesAll = data.injuries || [];
         let injuriesContractor = injuriesAll.filter(inj => {
@@ -2523,7 +2563,7 @@ const Dashboard = {
         try {
             const incidents = Array.isArray(data.incidents) ? data.incidents : [];
             const users = Array.isArray(data.users) ? data.users : [];
-            const ptw = Array.isArray(data.ptw) ? data.ptw : [];
+            const ptwDataset = this.getUnifiedPTWDataset(data);
             const nearmiss = Array.isArray(data.nearmiss) ? data.nearmiss : [];
             const employees = Array.isArray(data.employees) ? data.employees : [];
             const registryData = Array.isArray(data.incidentsRegistry) ? data.incidentsRegistry : [];
@@ -2540,17 +2580,9 @@ const Dashboard = {
             }).length;
             const activeUsersCount = users.filter(u => u && u.active !== false).length;
 
-            const openPTWCount = ptw.filter(p => {
-                if (!p || !p.status) return false;
-                const s = (p.status || '').toLowerCase();
-                return s === 'مفتوح' || s === 'قيد المراجعة' || s === 'قيد الانتظار' || s === 'open' || s === 'pending' || s === 'under review';
-            }).length;
-            const closedPTWCount = ptw.filter(p => {
-                if (!p || !p.status) return false;
-                const s = (p.status || '').toLowerCase();
-                return s === 'مغلق' || s === 'مكتمل' || s === 'منتهي' || s === 'closed' || s === 'completed' || s === 'finished';
-            }).length;
-            const totalPTWCount = ptw.length;
+            const openPTWCount = ptwDataset.filter(p => !this.isPTWClosedStatus(p?.status)).length;
+            const closedPTWCount = ptwDataset.filter(p => this.isPTWClosedStatus(p?.status)).length;
+            const totalPTWCount = ptwDataset.length;
 
             const totalItems = incidents.length + nearmiss.length;
             const resolvedIncidents = incidents.filter(i => i && (i.status === 'مغلق' || i.status === 'محلول')).length;
@@ -3072,7 +3104,7 @@ const Dashboard = {
             const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
 
             const incidents = Array.isArray(data.incidents) ? data.incidents : [];
-            const ptw = Array.isArray(data.ptw) ? data.ptw : [];
+            const ptwDataset = this.getUnifiedPTWDataset(data);
             const training = Array.isArray(data.training) ? data.training : [];
 
             // حساب الإحصائيات الأسبوعية مع معالجة الأخطاء
@@ -3086,11 +3118,7 @@ const Dashboard = {
                 }
             }).length;
 
-            const openPTW = ptw.filter(p => {
-                if (!p || !p.status) return false;
-                const status = String(p.status).toLowerCase();
-                return status === 'قيد المراجعة' || status === 'مفتوح' || status === 'open' || status === 'pending';
-            }).length;
+            const openPTW = ptwDataset.filter(p => !this.isPTWClosedStatus(p?.status)).length;
 
             const completedTraining = training.filter(t => {
                 if (!t || !t.status) return false;

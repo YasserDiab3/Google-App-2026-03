@@ -4000,7 +4000,11 @@ const PTW = {
             'CSP script-src': document.querySelector('meta[http-equiv="Content-Security-Policy"]') ? 'موجود' : 'غير موجود',
             'حاوية الخريطة': document.getElementById('ptw-map') ? 'موجودة' : 'غير موجودة',
             'الإحداثيات الافتراضية': JSON.stringify(this.getDefaultFactoryCoordinates()),
-            'عدد التصاريح المفتوحة': (AppState.appData?.ptw || []).filter(p => { const s = (p?.status || '').trim(); return s !== 'مغلق' && s !== 'مرفوض' && s !== 'اكتمل العمل بشكل آمن' && s !== 'إغلاق جبري'; }).length
+            'عدد التصاريح المفتوحة': (() => {
+                const dataset = this.getPermitMetricsDataset?.();
+                const source = Array.isArray(dataset?.source) ? dataset.source : (AppState.appData?.ptw || []);
+                return source.filter(p => this.isPermitOpenStatus(p?.status)).length;
+            })()
         };
 
         const infoText = Object.entries(debugInfo)
