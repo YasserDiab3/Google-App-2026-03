@@ -59,9 +59,15 @@ i[class*="fa-"] {
 
 /* ===== CSS Variables ===== */
 :root {
-    --primary-color: #2563eb;
-    --primary-dark: #1e40af;
-    --primary-light: #3b82f6;
+    --brand-primary: #1d684f;
+    --brand-primary-dark: #16513e;
+    --brand-primary-light: #2a8b69;
+    --sidebar-accent: #8fe3bf;
+    --sidebar-accent-rgb: 143, 227, 191;
+    --sidebar-shadow-rgb: 29, 104, 79;
+    --primary-color: var(--brand-primary);
+    --primary-dark: var(--brand-primary-dark);
+    --primary-light: var(--brand-primary-light);
     --success-color: #10b981;
     --warning-color: #f59e0b;
     --danger-color: #aa3636;
@@ -93,8 +99,11 @@ i[class*="fa-"] {
     --text-tertiary: var(--gray-500);
     --border-color: var(--gray-200);
     --card-bg: #ffffff;
-    --sidebar-bg: linear-gradient(180deg, #003865 0%, #004C8C 50%, #003865 100%);
-    --login-bg: linear-gradient(135deg, #003865 0%, #004C8C 100%);
+    --sidebar-bg: linear-gradient(180deg, #1d684f 0%, #1b7a5d 50%, #16513e 100%);
+    --login-bg: linear-gradient(135deg, #1d684f 0%, #16513e 100%);
+    --sidebar-avatar-bg: linear-gradient(135deg, #2a8b69 0%, #1d684f 100%);
+    --btn-primary-bg: linear-gradient(135deg, var(--brand-primary) 0%, var(--brand-primary-dark) 100%);
+    --btn-primary-bg-hover: linear-gradient(135deg, var(--brand-primary-dark) 0%, var(--brand-primary) 100%);
 }
 
 /* ===== Dark Mode Variables ===== */
@@ -107,14 +116,52 @@ i[class*="fa-"] {
     --text-tertiary: #9ca3af;
     --border-color: #3a3a3a;
     --card-bg: #252525;
-    --sidebar-bg: linear-gradient(180deg, #001a31 0%, #003865 50%, #001a33 100%);
-    --login-bg: linear-gradient(135deg, #001a33 0%, #003865 100%);
+    --sidebar-bg: linear-gradient(180deg, #0f3f31 0%, #1d684f 50%, #0f3f31 100%);
+    --login-bg: linear-gradient(135deg, #0f3f31 0%, #1d684f 100%);
+    --sidebar-avatar-bg: linear-gradient(135deg, #2a8b69 0%, #1d684f 100%);
 
     /* Adjust shadows for dark mode */
     --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
     --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.4);
     --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.5);
     --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.6);
+}
+
+/* ===== Color Themes (Sims) ===== */
+[data-color-theme="emerald"] {
+    --brand-primary: #1d684f;
+    --brand-primary-dark: #16513e;
+    --brand-primary-light: #2a8b69;
+    --sidebar-accent: #8fe3bf;
+    --sidebar-accent-rgb: 143, 227, 191;
+    --sidebar-shadow-rgb: 29, 104, 79;
+}
+
+[data-color-theme="blue"] {
+    --brand-primary: #1d4f68;
+    --brand-primary-dark: #163d51;
+    --brand-primary-light: #2a6a8b;
+    --sidebar-accent: #93c5fd;
+    --sidebar-accent-rgb: 147, 197, 253;
+    --sidebar-shadow-rgb: 29, 79, 104;
+}
+
+[data-color-theme="purple"] {
+    --brand-primary: #5b2d8b;
+    --brand-primary-dark: #46226d;
+    --brand-primary-light: #7a43b8;
+    --sidebar-accent: #c4b5fd;
+    --sidebar-accent-rgb: 196, 181, 253;
+    --sidebar-shadow-rgb: 91, 45, 139;
+}
+
+[data-color-theme="amber"] {
+    --brand-primary: #8b5a1d;
+    --brand-primary-dark: #6e4817;
+    --brand-primary-light: #b57a2a;
+    --sidebar-accent: #fde68a;
+    --sidebar-accent-rgb: 253, 230, 138;
+    --sidebar-shadow-rgb: 139, 90, 29;
 }
 
 /* ===== Base Styles ===== */
@@ -514,7 +561,7 @@ body.app-active {
 
 /* ===== Buttons ===== */
 .btn-primary {
-    background: linear-gradient(135deg, #003865 0%, #004C8C 100%);
+    background: var(--btn-primary-bg);
     color: #ffffff;
     padding: 0.875rem 1.5rem;
     border: none;
@@ -532,7 +579,7 @@ body.app-active {
 }
 
 .btn-primary:hover {
-    background: linear-gradient(135deg, #004C8C 0%, #003865 100%);
+    background: var(--btn-primary-bg-hover);
     transform: translateY(-2px);
     box-shadow: 0 4px 12px rgba(0, 56, 101, 0.3);
     color: #ffffff;

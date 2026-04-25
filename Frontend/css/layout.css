@@ -2,7 +2,7 @@
 /* ألوان شعار الشركة: أزرق (#003865), أحمر (#C8102E), ذهبي (#FFC72C) */
 .sidebar {
     width: var(--sidebar-width);
-    background: linear-gradient(180deg, #003865 0%, #004C8C 50%, #003865 100%);
+    background: var(--sidebar-bg);
     color: white;
     display: flex;
     flex-direction: column;
@@ -12,12 +12,12 @@
     /* Dynamic viewport height for mobile */
     overflow-y: auto;
     overflow-x: hidden;
-    box-shadow: 4px 0 20px rgba(0, 56, 101, 0.3);
+    box-shadow: 4px 0 20px rgba(var(--sidebar-shadow-rgb), 0.3);
     z-index: 1000;
     right: 0;
     top: 0;
     transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), background 0.3s ease;
-    border-left: 3px solid #FFC72C;
+    border-left: 3px solid var(--sidebar-accent);
     -webkit-overflow-scrolling: touch;
     /* إزالة will-change لمنع memory leaks - يتم إضافتها ديناميكياً عند الحاجة */
     /* will-change: transform; */
@@ -95,7 +95,7 @@
 /* Sidebar action buttons row (collapse + sync + notifications + theme) */
 .sidebar .sidebar-actions-row {
     display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-columns: repeat(5, minmax(0, 1fr));
     align-items: center;
     gap: 0.5rem;
     margin: 0.5rem 1rem;
@@ -204,20 +204,20 @@
     width: 80px;
     height: 80px;
     border-radius: 50%;
-    background: linear-gradient(135deg, #004C8C 0%, #003865 100%);
-    border: 3px solid #FFC72C;
+    background: var(--sidebar-avatar-bg);
+    border: 3px solid var(--sidebar-accent);
     display: flex;
     align-items: center;
     justify-content: center;
     margin: 0 auto 1rem;
     font-size: 2rem;
-    box-shadow: 0 4px 15px rgba(255, 199, 44, 0.3);
+    box-shadow: 0 4px 15px rgba(var(--sidebar-accent-rgb), 0.3);
     transition: transform 0.3s ease;
 }
 
 .user-avatar:hover {
     transform: scale(1.05);
-    box-shadow: 0 6px 20px rgba(255, 199, 44, 0.5);
+    box-shadow: 0 6px 20px rgba(var(--sidebar-accent-rgb), 0.5);
 }
 
 .user-info {
@@ -293,25 +293,25 @@
 .nav-item:hover {
     background: rgba(255, 255, 255, 0.08);
     color: white;
-    border-right-color: #FFC72C;
+    border-right-color: var(--sidebar-accent);
     transform: translateX(-3px);
 }
 
 .nav-item:hover i {
     transform: scale(1.1);
-    color: #FFC72C;
+    color: var(--sidebar-accent);
 }
 
 .nav-item.active {
-    background: linear-gradient(90deg, rgba(255, 199, 44, 0.2) 0%, rgba(255, 199, 44, 0.05) 100%);
+    background: linear-gradient(90deg, rgba(var(--sidebar-accent-rgb), 0.2) 0%, rgba(var(--sidebar-accent-rgb), 0.05) 100%);
     color: white;
-    border-right-color: #FFC72C;
+    border-right-color: var(--sidebar-accent);
     font-weight: 600;
-    box-shadow: -2px 0 10px rgba(255, 199, 44, 0.3);
+    box-shadow: -2px 0 10px rgba(var(--sidebar-accent-rgb), 0.3);
 }
 
 .nav-item.active i {
-    color: #FFC72C;
+    color: var(--sidebar-accent);
     transform: scale(1.1);
 }
 

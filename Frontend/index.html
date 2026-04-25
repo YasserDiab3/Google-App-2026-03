@@ -9271,11 +9271,18 @@
             (function () {
                 try {
                     const savedTheme = localStorage.getItem("theme") || "light";
+                    const savedColorTheme =
+                        localStorage.getItem("color-theme") || "emerald";
                     document.documentElement.setAttribute(
                         "data-theme",
                         savedTheme,
                     );
+                    document.documentElement.setAttribute(
+                        "data-color-theme",
+                        savedColorTheme,
+                    );
                     document.body.setAttribute("data-theme", savedTheme);
+                    document.body.setAttribute("data-color-theme", savedColorTheme);
                 } catch (e) {
                     // تجاهل الأخطاء في حالة عدم توفر localStorage
                 }
@@ -10014,6 +10021,16 @@
                         title="الوضع الليلي / النهاري"
                     >
                         <i class="fas fa-moon" id="sidebar-theme-icon" aria-hidden="true"></i>
+                    </button>
+                    <button
+                        type="button"
+                        id="sidebar-color-theme-toggle"
+                        class="sidebar-theme-toggle sidebar-action-btn"
+                        data-i18n-title="app.toggleColorTheme"
+                        aria-label="تغيير سمة اللون"
+                        title="تغيير سمة اللون"
+                    >
+                        <i class="fas fa-palette" aria-hidden="true"></i>
                     </button>
 
                     <!-- Notifications Badge -->

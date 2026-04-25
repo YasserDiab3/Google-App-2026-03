@@ -1,7 +1,12 @@
 // تطبيق الوضع الليلي فوراً عند تحميل الصفحة (قبل تعريف UI)
 (function applyThemeImmediately() {
     const savedTheme = localStorage.getItem('theme') || 'light';
+    const savedColorTheme = localStorage.getItem('color-theme') || 'emerald';
     document.documentElement.setAttribute('data-theme', savedTheme);
+    document.documentElement.setAttribute('data-color-theme', savedColorTheme);
+    if (document.body) {
+        document.body.setAttribute('data-color-theme', savedColorTheme);
+    }
 })();
 
 // تعريف UI كمتغير عام (global) ليكون متاحاً لجميع الملفات
@@ -6597,6 +6602,7 @@ window.UI = {
     initSidebarButtons() {
         // تهيئة زر الوضع الليلي
         this.initThemeToggle();
+        this.initColorThemeToggle();
 
         // تهيئة زر الإشعارات
         this.initNotificationsButton();
@@ -6696,6 +6702,69 @@ window.UI = {
 
         if (typeof Notification !== 'undefined') {
             Notification.success(newTheme === 'dark' ? 'تم تفعيل الوضع الليلي' : 'تم تفعيل الوضع النهاري');
+        }
+    },
+
+    initColorThemeToggle() {
+        const colorThemeToggles = [
+            document.getElementById('sidebar-color-theme-toggle')
+        ].filter(Boolean);
+
+        if (colorThemeToggles.length === 0) {
+            return;
+        }
+
+        const savedColorTheme = localStorage.getItem('color-theme') || 'emerald';
+        this.setColorTheme(savedColorTheme);
+
+        colorThemeToggles.forEach(btn => {
+            if (btn.dataset.colorThemeBound === 'true') return;
+            btn.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                this.toggleColorTheme();
+            });
+            btn.dataset.colorThemeBound = 'true';
+        });
+    },
+
+    setColorTheme(colorTheme) {
+        const supportedThemes = ['emerald', 'blue', 'purple', 'amber'];
+        const safeTheme = supportedThemes.includes(colorTheme) ? colorTheme : 'emerald';
+
+        document.documentElement.setAttribute('data-color-theme', safeTheme);
+        if (document.body) {
+            document.body.setAttribute('data-color-theme', safeTheme);
+        }
+        localStorage.setItem('color-theme', safeTheme);
+
+        const currentTheme = localStorage.getItem('theme') || 'light';
+        const computedPrimary = getComputedStyle(document.documentElement).getPropertyValue('--brand-primary').trim();
+        let metaThemeColor = document.querySelector('meta[name="theme-color"]');
+        if (!metaThemeColor) {
+            metaThemeColor = document.createElement('meta');
+            metaThemeColor.name = 'theme-color';
+            document.head.appendChild(metaThemeColor);
+        }
+        metaThemeColor.content = currentTheme === 'dark' ? '#1a1a1a' : (computedPrimary || '#1d684f');
+    },
+
+    toggleColorTheme() {
+        const themes = ['emerald', 'blue', 'purple', 'amber'];
+        const labels = {
+            emerald: 'الأخضر',
+            blue: 'الأزرق',
+            purple: 'البنفسجي',
+            amber: 'العنبري'
+        };
+
+        const currentTheme = localStorage.getItem('color-theme') || 'emerald';
+        const currentIndex = themes.indexOf(currentTheme);
+        const nextTheme = themes[(currentIndex + 1) % themes.length];
+        this.setColorTheme(nextTheme);
+
+        if (typeof Notification !== 'undefined') {
+            Notification.success(`تم تغيير سمة اللون إلى ${labels[nextTheme] || nextTheme}`);
         }
     },
 
