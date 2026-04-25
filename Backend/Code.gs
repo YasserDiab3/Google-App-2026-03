@@ -199,7 +199,8 @@ function doPost(e) {
             'getAllMedicationDeletionRequests',
             'getAllSupplyRequests',
             'getAllClinicVisitDeletionRequests',
-            'getContractorDetailedAnalytics'
+            'getContractorDetailedAnalytics',
+            'getAllAppEmergencyNumbers'
         ];
         
         // قائمة بالـ actions الحساسة التي تتطلب CSRF token إلزامي
@@ -840,6 +841,15 @@ function doPost(e) {
                     break;
                 case 'getOrCreatePublicProfileToken':
                     result = getOrCreatePublicProfileToken(payload || {});
+                    break;
+                case 'getAllAppEmergencyNumbers':
+                    result = getAllAppEmergencyNumbers();
+                    break;
+                case 'upsertAppEmergencyNumber':
+                    result = upsertAppEmergencyNumber(payload || {});
+                    break;
+                case 'deleteAppEmergencyNumber':
+                    result = deleteAppEmergencyNumber(payload || {});
                     break;
                 case 'addApprovedContractor':
                     result = addApprovedContractorToSheet(payload);
@@ -2432,21 +2442,71 @@ function doGet(e) {
                     .replace(/'/g, '&#39;');
             };
 
-            const html = '<!doctype html><html dir="rtl" lang="ar"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>بطاقة الموظف</title></head><body style="font-family:Arial,sans-serif;background:#f1f5f9;padding:16px;">'
-                + '<div style="max-width:780px;margin:0 auto;background:#fff;border:1px solid #e2e8f0;border-radius:16px;overflow:hidden;">'
-                + '<div style="padding:18px;background:linear-gradient(135deg,#1a634f,#144e3e);color:#fff;"><h1 style="margin:0;font-size:22px;">بطاقة الموظف</h1><p style="margin:6px 0 0;font-size:13px;opacity:.9;">' + esc(p.companyName || 'Americana HSE') + '</p></div>'
-                + '<div style="padding:18px;">'
-                + '<div style="display:flex;gap:14px;align-items:center;flex-wrap:wrap;">'
-                + (p.photo ? '<img src="' + esc(p.photo) + '" alt="photo" style="width:86px;height:86px;border-radius:999px;object-fit:cover;border:2px solid #d1fae5;">' : '<div style="width:86px;height:86px;border-radius:999px;background:#ecfdf5;color:#065f46;display:flex;align-items:center;justify-content:center;font-size:28px;">👤</div>')
-                + '<div><h2 style="margin:0;color:#0f172a;">' + esc(p.fullName || '-') + '</h2><p style="margin:4px 0 0;color:#334155;">' + esc(p.position || '-') + '</p><p style="margin:2px 0 0;color:#64748b;font-size:13px;">' + esc(p.department || '-') + '</p></div>'
+            const pubPhoto = p.photoPublic || '';
+            const photoIsData = pubPhoto && String(pubPhoto).indexOf('data:') === 0;
+            const photoIsHttp = pubPhoto && /^https?:\/\//i.test(String(pubPhoto));
+            let photoBlock = '';
+            if (photoIsData || photoIsHttp) {
+                photoBlock = '<img src="' + esc(pubPhoto) + '" alt="photo" style="width:92px;height:92px;border-radius:999px;object-fit:cover;border:3px solid rgba(255,255,255,.35);box-shadow:0 4px 12px rgba(0,0,0,.2);">';
+            } else {
+                photoBlock = '<div style="width:92px;height:92px;border-radius:999px;background:rgba(255,255,255,.2);color:#fff;display:flex;align-items:center;justify-content:center;font-size:32px;">👤</div>';
+            }
+
+            const ecList = p.emergencyContacts || [];
+            let emRows = '';
+            for (var ei = 0; ei < ecList.length; ei++) {
+                const ec = ecList[ei] || {};
+                const lab = String(ec.label || 'طوارئ').trim();
+                const ph = String(ec.phone || '').trim();
+                const tel = ph.replace(/[^\d+]/g, '');
+                emRows += '<tr><td style="padding:8px 10px;border-bottom:1px solid #e2e8f0;color:#0f172a;">' + esc(lab) + '</td>'
+                    + '<td style="padding:8px 10px;border-bottom:1px solid #e2e8f0;text-align:left;direction:ltr;">'
+                    + (ph ? '<a href="tel:' + esc(tel) + '" style="color:#0d9488;font-weight:700;text-decoration:none;">' + esc(ph) + '</a>' : '—')
+                    + '</td></tr>';
+            }
+            const emSection = (emRows)
+                ? ('<h3 style="margin:0 0 8px;font-size:15px;color:#0f172a;">أرقام طوارئ المؤسسة</h3>'
+                    + '<table style="width:100%;border-collapse:collapse;font-size:14px;"><tbody>' + emRows + '</tbody></table>')
+                : '<p style="margin:0;color:#94a3b8;font-size:13px;">لا توجد أرقام طوارئ مسجّلة حالياً</p>';
+
+            const hireBlock = (p.hireDateDisplay) ? (
+                '<div style="grid-column:1/-1;border:1px solid #e2e8f0;border-radius:10px;padding:10px;background:#f8fafc;">'
+                    + '<div style="color:#64748b;font-size:12px;">تاريخ التعيين</div>'
+                    + '<div style="color:#0f172a;font-weight:700;">' + esc(p.hireDateDisplay) + '</div>'
+                    + (p.tenureText ? '<div style="color:#475569;font-size:12px;margin-top:4px;">مدة الخدمة: ' + esc(p.tenureText) + '</div>' : '')
+                    + '</div>'
+            ) : (
+                '<div style="grid-column:1/-1;border:1px solid #e2e8f0;border-radius:10px;padding:10px;"><div style="color:#64748b;font-size:12px;">تاريخ التعيين</div><div style="color:#0f172a;font-weight:700;">—</div></div>'
+            );
+
+            const html = '<!doctype html><html dir="rtl" lang="ar"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>بطاقة الموظف</title><style>body{-webkit-text-size-adjust:100%;}</style></head><body style="margin:0;font-family:system-ui,-apple-system,\'Segoe UI\',Arial,sans-serif;background:linear-gradient(180deg,#e0f2f1 0%,#f1f5f9 40%);min-height:100vh;padding:16px;box-sizing:border-box;">'
+                + '<div style="max-width:800px;margin:0 auto;">'
+                + '<div style="background:#fff;border:1px solid #e2e8f0;border-radius:20px;overflow:hidden;box-shadow:0 12px 40px rgba(15,23,42,.08);">'
+                + '<div style="padding:20px 22px;background:linear-gradient(125deg,#0f766e 0%,#115e59 50%,#134e4a 100%);color:#fff;">'
+                + '<div style="display:flex;gap:16px;align-items:center;flex-wrap:wrap;justify-content:flex-end;">'
+                + '<div style="flex:1;min-width:200px;">'
+                + '<div style="font-size:12px;letter-spacing:.04em;opacity:.85;">بطاقة موظف معتمدة</div>'
+                + '<h1 style="margin:6px 0 0;font-size:22px;font-weight:800;">' + esc(p.fullName || '—') + '</h1>'
+                + '<p style="margin:6px 0 0;font-size:14px;opacity:.95;">' + esc(p.position || '—') + '</p>'
+                + '<p style="margin:4px 0 0;font-size:12px;opacity:.85;">' + esc(p.department || '—') + '</p></div>'
+                + photoBlock
+                + '</div><p style="margin:12px 0 0;font-size:12px;opacity:.8;">' + esc(p.companyName || 'HSE') + '</p></div>'
+                + '<div style="padding:18px 20px 22px;">'
+                + '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px;margin-bottom:12px;">'
+                + '<div style="border:1px solid #e2e8f0;border-radius:10px;padding:10px;"><div style="color:#64748b;font-size:12px;">الرقم الوظيفي</div><div style="color:#0f172a;font-weight:700;">' + esc(p.employeeNumber || '—') + '</div></div>'
+                + '<div style="border:1px solid #e2e8f0;border-radius:10px;padding:10px;"><div style="color:#64748b;font-size:12px;">الهاتف</div><div style="color:#0f172a;font-weight:700;direction:ltr;text-align:right;">' + esc(p.phone || '—') + '</div></div>'
+                + '<div style="border:1px solid #e2e8f0;border-radius:10px;padding:10px;grid-column:1/-1;word-break:break-all;"><div style="color:#64748b;font-size:12px;">البريد الإلكتروني</div><div style="color:#0f172a;font-weight:600;">' + esc(p.email || '—') + '</div></div>'
+                + (p.branch ? ('<div style="border:1px solid #e2e8f0;border-radius:10px;padding:10px;"><div style="color:#64748b;font-size:12px;">الفرع</div><div style="color:#0f172a;font-weight:700;">' + esc(p.branch) + '</div></div>') : '')
+                + (p.location ? ('<div style="border:1px solid #e2e8f0;border-radius:10px;padding:10px;"><div style="color:#64748b;font-size:12px;">الموقع</div><div style="color:#0f172a;font-weight:700;">' + esc(p.location) + '</div></div>') : '')
+                + hireBlock
                 + '</div>'
-                + '<div style="margin-top:16px;display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:10px;">'
-                + '<div style="border:1px solid #e2e8f0;border-radius:10px;padding:10px;"><div style="color:#64748b;font-size:12px;">الرقم الوظيفي</div><div style="color:#0f172a;font-weight:700;">' + esc(p.employeeNumber || '-') + '</div></div>'
-                + '<div style="border:1px solid #e2e8f0;border-radius:10px;padding:10px;"><div style="color:#64748b;font-size:12px;">الهاتف</div><div style="color:#0f172a;font-weight:700;">' + esc(p.phone || '-') + '</div></div>'
-                + '<div style="border:1px solid #e2e8f0;border-radius:10px;padding:10px;"><div style="color:#64748b;font-size:12px;">البريد الإلكتروني</div><div style="color:#0f172a;font-weight:700;">' + esc(p.email || '-') + '</div></div>'
-                + '<div style="border:1px solid #e2e8f0;border-radius:10px;padding:10px;"><div style="color:#64748b;font-size:12px;">الدورات التدريبية</div><div style="color:#0f172a;font-weight:700;">' + esc(p.trainingSessions || 0) + '</div></div>'
-                + '<div style="border:1px solid #e2e8f0;border-radius:10px;padding:10px;"><div style="color:#64748b;font-size:12px;">المخالفات</div><div style="color:#0f172a;font-weight:700;">' + esc(p.violationsCount || 0) + '</div></div>'
-                + '<div style="border:1px solid #e2e8f0;border-radius:10px;padding:10px;"><div style="color:#64748b;font-size:12px;">مهمات الوقاية</div><div style="color:#0f172a;font-weight:700;">' + esc(p.ppeCount || 0) + '</div></div>'
+                + '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin-bottom:16px;">'
+                + '<div style="border:1px solid #ccfbf1;border-radius:10px;padding:10px;background:#f0fdfa;"><div style="color:#0f766e;font-size:11px;">دورات تدريبية</div><div style="color:#0f172a;font-weight:800;font-size:18px;">' + esc(p.trainingSessions || 0) + '</div></div>'
+                + '<div style="border:1px solid #fee2e2;border-radius:10px;padding:10px;background:#fffbeb;"><div style="color:#b45309;font-size:11px;">مخالفات مسجّلة</div><div style="color:#0f172a;font-weight:800;font-size:18px;">' + esc(p.violationsCount || 0) + '</div></div>'
+                + '<div style="border:1px solid #e0e7ff;border-radius:10px;padding:10px;background:#f5f3ff;"><div style="color:#4f46e5;font-size:11px;">مهمات وقاية</div><div style="color:#0f172a;font-weight:800;font-size:18px;">' + esc(p.ppeCount || 0) + '</div></div>'
+                + '</div>'
+                + '<div style="border:1px solid #e2e8f0;border-radius:12px;padding:12px 14px;background:#fafafa;">' + emSection + '</div>'
+                + '<p style="margin:16px 0 0;font-size:11px;color:#94a3b8;">بطاقة عامة محدودة — لعرض معلومات التعريف الأساسية فقط. لا تُبنى لها صلاحيات دخول للنظام.</p>'
                 + '</div></div></div></body></html>';
             return HtmlService.createHtmlOutput(html);
         }

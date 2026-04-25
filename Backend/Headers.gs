@@ -236,7 +236,9 @@ function getDefaultHeaders(sheetName) {
         'Notifications': ['id', 'userId', 'type', 'priority', 'title', 'message', 'read', 'readAt', 'relatedId', 'relatedType', 'taskId', 'actionId', 'ptwId', 'scheduleId', 'trainingId', 'dueDate', 'scheduledDate', 'startDate', 'endDate', 'createdAt', 'updatedAt'],
         // نظام النسخ الاحتياطي
         'BackupLog': ['id', 'backupType', 'backupName', 'fileId', 'fileUrl', 'fileName', 'fileSize', 'fileSizeFormatted', 'sheetsCount', 'totalRecords', 'sheetsDetails', 'sourceSpreadsheetId', 'sourceSpreadsheetName', 'status', 'duration', 'errorMessage', 'restoredFromBackupId', 'restoredSheets', 'errors', 'createdBy', 'createdById', 'createdAt', 'updatedAt'],
-        'BackupSettings': ['id', 'autoBackupEnabled', 'backupTimes', 'maxBackupFiles', 'backupFolderName', 'retentionDays', 'notifyOnBackup', 'notifyOnFailure', 'updatedAt', 'updatedBy', 'updatedById']
+        'BackupSettings': ['id', 'autoBackupEnabled', 'backupTimes', 'maxBackupFiles', 'backupFolderName', 'retentionDays', 'notifyOnBackup', 'notifyOnFailure', 'updatedAt', 'updatedBy', 'updatedById'],
+        // أرقام طوارئ المؤسسة (يُديرها المدير) — تظهر في الملف الشخصي والبطاقة العامة
+        'AppEmergencyNumbers': ['id', 'label', 'phone', 'sortOrder', 'isActive', 'createdAt', 'updatedAt']
     };
     
     return headersMap[sheetName] || [];

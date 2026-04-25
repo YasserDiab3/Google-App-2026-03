@@ -479,11 +479,232 @@ function getOrCreatePublicProfileToken(payload) {
 }
 
 /**
+ * تطبيع token من مسح QR (إزالة مسافات/أحرف غير مرئية)
+ */
+function _profileTokenNormalize_(token) {
+    return String(token || '').trim().replace(/[\s\u200B-\u200D\uFEFF]+/g, '');
+}
+
+/**
+ * تنسيق تاريخ التعيين ومدة الخدمة (للعربية)
+ */
+function _formatHireAndTenureAr_(hireRaw) {
+    if (!hireRaw) {
+        return { hireDateDisplay: '', tenureText: '' };
+    }
+    const d = (hireRaw instanceof Date) ? hireRaw : new Date(hireRaw);
+    if (isNaN(d.getTime())) {
+        return { hireDateDisplay: '', tenureText: '' };
+    }
+    const tz = Session.getScriptTimeZone() || 'Etc/GMT';
+    const hireDateDisplay = Utilities.formatDate(d, tz, 'dd/MM/yyyy');
+    const now = new Date();
+    if (d.getTime() > now.getTime()) {
+        return { hireDateDisplay: hireDateDisplay, tenureText: '—' };
+    }
+    var years = now.getFullYear() - d.getFullYear();
+    var months = now.getMonth() - d.getMonth();
+    var days = now.getDate() - d.getDate();
+    if (days < 0) {
+        months -= 1;
+    }
+    if (months < 0) {
+        years -= 1;
+        months += 12;
+    }
+    if (years < 0) {
+        years = 0;
+        months = 0;
+    }
+    const parts = [];
+    if (years > 0) {
+        parts.push(years + (years === 1 ? ' سنة' : ' سنوات'));
+    }
+    if (months > 0) {
+        parts.push(months + (months === 1 ? ' شهراً' : ' أشهر'));
+    }
+    if (parts.length === 0) {
+        parts.push('أقل من شهر');
+    }
+    return { hireDateDisplay: hireDateDisplay, tenureText: parts.join(' و') };
+}
+
+/**
+ * صورة للبطاقة العامة: رفع صورة Drive كـ data URI (تجاوز حظر الربط المباشر)
+ */
+function _getProfilePhotoDataUriForCard_(photoUrl) {
+    if (!photoUrl) {
+        return '';
+    }
+    const s = String(photoUrl);
+    if (s.indexOf('drive.google.com') === -1) {
+        if (/^https?:\/\//i.test(s)) {
+            return s;
+        }
+        return s;
+    }
+    const m = s.match(/[?&]id=([^&]+)/) || s.match(/\/file\/d\/([^/]+)/);
+    if (!m) {
+        return s;
+    }
+    try {
+        const file = DriveApp.getFileById(String(m[1]).trim());
+        const blob = file.getBlob();
+        const mime = blob.getContentType() || 'image/jpeg';
+        if (String(mime).indexOf('image/') !== 0) {
+            return '';
+        }
+        return 'data:' + mime + ';base64,' + Utilities.base64Encode(blob.getBytes());
+    } catch (e) {
+        Logger.log('_getProfilePhotoDataUriForCard_: ' + e.toString());
+        return '';
+    }
+}
+
+/**
+ * أرقام طوارئ المؤسسة النشطة (للبطاقة العامة والملف)
+ */
+function _loadActiveAppEmergencyNumbers_() {
+    const rows = readFromSheet('AppEmergencyNumbers', getSpreadsheetId()) || [];
+    const out = [];
+    for (let i = 0; i < rows.length; i++) {
+        const r = rows[i];
+        if (!r) {
+            continue;
+        }
+        const a = r.isActive;
+        if (a === false || a === 'false' || a === '0' || a === 0) {
+            continue;
+        }
+        const phone = String(r.phone || '').trim();
+        if (!phone) {
+            continue;
+        }
+        out.push({
+            label: String(r.label || '').trim(),
+            phone: phone,
+            sortOrder: Number(r.sortOrder) || 0
+        });
+    }
+    out.sort(function (x, y) {
+        return (x.sortOrder - y.sortOrder) || String(x.label).localeCompare(String(y.label), 'ar');
+    });
+    return out;
+}
+
+/**
+ * جميع سجلات أرقام الطوارئ (للمدير)
+ */
+function getAllAppEmergencyNumbers() {
+    try {
+        const rows = readFromSheet('AppEmergencyNumbers', getSpreadsheetId()) || [];
+        const list = rows.map(function (r) {
+            if (!r) {
+                return null;
+            }
+            const a = r.isActive;
+            const isActive = !(a === false || a === 'false' || a === '0' || a === 0);
+            return {
+                id: r.id,
+                label: r.label,
+                phone: r.phone,
+                sortOrder: Number(r.sortOrder) || 0,
+                isActive: isActive
+            };
+        }).filter(function (x) {
+            return x !== null;
+        });
+        list.sort(function (a, b) {
+            return (a.sortOrder - b.sortOrder) || String(a.label || '').localeCompare(String(b.label || ''), 'ar');
+        });
+        return { success: true, data: list };
+    } catch (error) {
+        Logger.log('Error in getAllAppEmergencyNumbers: ' + error.toString());
+        return { success: false, message: error.toString(), data: [] };
+    }
+}
+
+/**
+ * إضافة أو تعديل رقم طوارئ مؤسسي (مدير فقط)
+ */
+function upsertAppEmergencyNumber(payload) {
+    try {
+        const data = payload || {};
+        const userData = data.userData || data;
+        if (typeof checkAdminPermissions !== 'function' || !checkAdminPermissions(userData)) {
+            return {
+                success: false,
+                message: 'ليس لديك صلاحية لإدارة أرقام الطوارئ. هذه العملية محجوزة للمدير.',
+                errorCode: 'PERMISSION_DENIED'
+            };
+        }
+        const sheetName = 'AppEmergencyNumbers';
+        const spreadsheetId = getSpreadsheetId();
+        const label = String(data.label || '').trim();
+        const phone = String(data.phone || '').trim();
+        if (!label || !phone) {
+            return { success: false, message: 'يجب إدخال التسمية ورقم الاتصال' };
+        }
+        const sortOrder = (data.sortOrder != null && data.sortOrder !== '') ? Number(data.sortOrder) : 0;
+        const isActive = !(data.isActive === false || data.isActive === 'false' || data.isActive === '0' || data.isActive === 0);
+        const id = String(data.id || '').trim();
+        const now = new Date();
+        if (id) {
+            return updateSingleRowInSheet(sheetName, id, {
+                label: label,
+                phone: phone,
+                sortOrder: isNaN(sortOrder) ? 0 : sortOrder,
+                isActive: isActive,
+                updatedAt: now
+            }, spreadsheetId);
+        }
+        const newId = generateSequentialId('AEN', sheetName, spreadsheetId, 'id');
+        return appendToSheet(sheetName, {
+            id: newId,
+            label: label,
+            phone: phone,
+            sortOrder: isNaN(sortOrder) ? 0 : sortOrder,
+            isActive: isActive,
+            createdAt: now,
+            updatedAt: now
+        });
+    } catch (error) {
+        Logger.log('Error in upsertAppEmergencyNumber: ' + error.toString());
+        return { success: false, message: 'حدث خطأ: ' + error.toString() };
+    }
+}
+
+/**
+ * حذف سجل رقم طوارئ (مدير فقط)
+ */
+function deleteAppEmergencyNumber(payload) {
+    try {
+        const data = payload || {};
+        const userData = data.userData || data;
+        if (typeof checkAdminPermissions !== 'function' || !checkAdminPermissions(userData)) {
+            return {
+                success: false,
+                message: 'ليس لديك صلاحية لحذف أرقام الطوارئ.',
+                errorCode: 'PERMISSION_DENIED'
+            };
+        }
+        const id = String(data.id || '').trim();
+        if (!id) {
+            return { success: false, message: 'المعرف مطلوب' };
+        }
+        return deleteRowById('AppEmergencyNumbers', id, getSpreadsheetId());
+    } catch (error) {
+        Logger.log('Error in deleteAppEmergencyNumber: ' + error.toString());
+        return { success: false, message: 'حدث خطأ: ' + error.toString() };
+    }
+}
+
+/**
  * جلب بيانات الملف العام بالاعتماد على token (بيانات محدودة وآمنة)
  */
 function getPublicProfileByToken(token) {
     try {
-        const tokenValue = String(token || '').trim();
+        const tokenValue = _profileTokenNormalize_(token);
         if (!tokenValue) {
             return { success: false, message: 'token مطلوب' };
         }
@@ -493,7 +714,7 @@ function getPublicProfileByToken(token) {
         const now = new Date();
         const user = (users || []).find(function(u) {
             if (!u) return false;
-            const t = String(u.profilePublicToken || '').trim();
+            const t = _profileTokenNormalize_(u.profilePublicToken);
             if (!t || t !== tokenValue) return false;
             const expiry = new Date(String(u.profilePublicTokenExpiry || ''));
             return !!expiry && !isNaN(expiry.getTime()) && expiry.getTime() > now.getTime();
@@ -521,9 +742,14 @@ function getPublicProfileByToken(token) {
         const employeeNumber = String(employee.employeeNumber || employee.id || '').trim();
         const department = String(employee.department || user.department || '').trim();
         const position = String(employee.position || employee.job || '').trim();
+        const branch = String(employee.branch || '').trim();
+        const location = String(employee.location || '').trim();
         const phone = String(employee.phone || '').trim();
         const email = String(employee.email || user.email || '').trim();
         const photo = String(employee.photo || user.photo || '').trim();
+        const hireInfo = _formatHireAndTenureAr_(employee.hireDate);
+        const photoPublic = _getProfilePhotoDataUriForCard_(photo);
+        const emergencyContacts = _loadActiveAppEmergencyNumbers_();
 
         const norm = function(v) { return String(v || '').trim().toLowerCase(); };
         const matchesProfile = function(record) {
@@ -568,9 +794,15 @@ function getPublicProfileByToken(token) {
                 employeeNumber: employeeNumber,
                 department: department,
                 position: position,
+                branch: branch,
+                location: location,
                 phone: phone,
                 email: email,
                 photo: photo,
+                photoPublic: photoPublic,
+                hireDateDisplay: hireInfo.hireDateDisplay,
+                tenureText: hireInfo.tenureText,
+                emergencyContacts: emergencyContacts,
                 companyName: 'Americana HSE',
                 trainingSessions: trainingSessions,
                 violationsCount: violationsCount,

@@ -4646,6 +4646,39 @@ window.UI = {
         this.updateUserConnectionStatus();
     },
 
+    _formatProfileHireDateDisplay(hireRaw) {
+        if (!hireRaw) return '';
+        const d = new Date(hireRaw);
+        if (isNaN(d.getTime())) return String(hireRaw);
+        const pad = (n) => String(n).padStart(2, '0');
+        return `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()}`;
+    },
+
+    _computeProfileTenure(hireDate) {
+        if (!hireDate) return '';
+        const d = hireDate instanceof Date ? hireDate : new Date(hireDate);
+        if (isNaN(d.getTime())) return '';
+        const now = new Date();
+        if (d > now) return '—';
+        let years = now.getFullYear() - d.getFullYear();
+        let months = now.getMonth() - d.getMonth();
+        let days = now.getDate() - d.getDate();
+        if (days < 0) months -= 1;
+        if (months < 0) {
+            years -= 1;
+            months += 12;
+        }
+        if (years < 0) {
+            years = 0;
+            months = 0;
+        }
+        const parts = [];
+        if (years > 0) parts.push(years + (years === 1 ? ' سنة' : ' سنوات'));
+        if (months > 0) parts.push(months + (months === 1 ? ' شهراً' : ' أشهر'));
+        if (parts.length === 0) return 'أقل من شهر';
+        return parts.join(' و');
+    },
+
     _getProfileEmployeeRecord() {
         const user = AppState.currentUser || {};
         const employees = Array.isArray(AppState.appData?.employees) ? AppState.appData.employees : [];
@@ -4737,6 +4770,33 @@ window.UI = {
             matches.forEach((m) => emergencyPhoneSet.add(m.trim()));
         });
 
+        const appEmergencySrc = Array.isArray(AppState.appData?.appEmergencyNumbers)
+            ? AppState.appData.appEmergencyNumbers
+            : [];
+        const appEmergencyActive = appEmergencySrc
+            .filter((r) => {
+                if (!r) return false;
+                const a = r.isActive;
+                if (a === false || a === 'false' || a === '0' || a === 0) return false;
+                return true;
+            })
+            .sort((a, b) => (Number(a.sortOrder) || 0) - (Number(b.sortOrder) || 0));
+
+        const emergencyItems = [];
+        const seenPhones = new Set();
+        appEmergencyActive.forEach((r) => {
+            const phone = String(r.phone || '').trim();
+            if (!phone) return;
+            const label = String(r.label || '').trim() || 'طوارئ';
+            emergencyItems.push({ label, phone, source: 'app' });
+            seenPhones.add(phone);
+        });
+        emergencyPhoneSet.forEach((phone) => {
+            if (seenPhones.has(phone)) return;
+            emergencyItems.push({ label: '', phone, source: 'plan' });
+            seenPhones.add(phone);
+        });
+
         return {
             trainingSessions,
             trainingHours: Math.round(trainingHours * 10) / 10,
@@ -4744,7 +4804,8 @@ window.UI = {
             openViolations,
             ppeTotalQuantity,
             clinicVisitsCount,
-            emergencyPhones: Array.from(emergencyPhoneSet).slice(0, 6)
+            emergencyPhones: emergencyItems.map((e) => e.phone).slice(0, 20),
+            emergencyItems
         };
     },
 
@@ -4764,6 +4825,9 @@ window.UI = {
         const employeeNumber = employee?.employeeNumber || employee?.id || '';
         const employeeId = employee?.id || user?.id || '';
         const photo = employee?.photo || user?.photo || currentUserRecord?.photo || '';
+        const hireRaw = employee?.hireDate;
+        const hireDateDisplay = this._formatProfileHireDateDisplay(hireRaw);
+        const tenureText = hireRaw ? this._computeProfileTenure(hireRaw) : '';
 
         const stats = this._collectProfileStats({
             fullName,
@@ -4783,6 +4847,8 @@ window.UI = {
             employeeNumber,
             employeeId,
             photo,
+            hireDateDisplay,
+            tenureText,
             stats
         };
     },
@@ -4799,8 +4865,12 @@ window.UI = {
         });
         if (!response || response.success === false || !response.data?.token) return null;
 
-        const scriptUrl = String(AppState?.googleConfig?.appsScript?.scriptUrl || '').trim();
+        let scriptUrl = String(AppState?.googleConfig?.appsScript?.scriptUrl || '').trim();
         if (!scriptUrl) return null;
+        // نسخة اختبار /dev قد لا تعمل كبطاقة عامة — استخدم /exec لنشر تطبيق الويب
+        if (scriptUrl.indexOf('script.google.com/macros/s/') !== -1) {
+            scriptUrl = scriptUrl.replace(/\/dev(\?|#|$)/, '/exec$1');
+        }
         const joiner = scriptUrl.includes('?') ? '&' : '?';
         return `${scriptUrl}${joiner}action=publicProfileCard&token=${encodeURIComponent(response.data.token)}`;
     },
@@ -4822,6 +4892,7 @@ window.UI = {
                 if (!Array.isArray(AppState.appData?.ppe) || AppState.appData.ppe.length === 0) needSheets.push('PPE');
                 if (!Array.isArray(AppState.appData?.clinicVisits) || AppState.appData.clinicVisits.length === 0) needSheets.push('ClinicVisits');
                 if (!Array.isArray(AppState.appData?.emergencyPlans) || AppState.appData.emergencyPlans.length === 0) needSheets.push('EmergencyPlans');
+                needSheets.push('AppEmergencyNumbers');
                 if (needSheets.length > 0) {
                     const batch = await GoogleIntegration.batchReadFromSheets(needSheets, { timeout: 25000, batchSize: 10 });
                     if (batch && batch.data) {
@@ -4832,7 +4903,8 @@ window.UI = {
                                 Violations: 'violations',
                                 PPE: 'ppe',
                                 ClinicVisits: 'clinicVisits',
-                                EmergencyPlans: 'emergencyPlans'
+                                EmergencyPlans: 'emergencyPlans',
+                                AppEmergencyNumbers: 'appEmergencyNumbers'
                             })[sheet];
                             if (key && Array.isArray(batch.data[sheet])) {
                                 AppState.appData[key] = batch.data[sheet];
@@ -4845,9 +4917,49 @@ window.UI = {
 
         const profile = this._buildProfileModel();
         const stats = profile.stats || {};
-        const phoneList = (stats.emergencyPhones || []).length
-            ? stats.emergencyPhones.map((p) => `<span class="profile-chip">${esc(p)}</span>`).join('')
+        const emItems = Array.isArray(stats.emergencyItems) ? stats.emergencyItems : [];
+        const phoneList = emItems.length
+            ? emItems.map((it) => {
+                const ph = String(it?.phone || '');
+                const lab = String(it?.label || '').trim();
+                const tel = ph.replace(/[^\d+]/g, '');
+                const link = tel
+                    ? `<a class="profile-em-link" href="tel:${esc(tel)}">${esc(ph)}</a>`
+                    : esc(ph);
+                const inner = lab
+                    ? `<span class="profile-em-label">${esc(lab)}</span><span class="profile-em-sep"> </span>${link}${it?.source === 'plan' ? ` <span class="profile-em-badge">${t('module.profile.fromPlans', 'من خطط طوارئ')}</span>` : ''}`
+                    : link;
+                return `<span class="profile-chip profile-chip--em">${inner}</span>`;
+            }).join('')
             : `<span class="text-slate-500">${t('module.profile.noEmergencyPhones', 'لا توجد أرقام طوارئ متاحة حالياً')}</span>`;
+        const isAdmin = typeof Permissions !== 'undefined' && typeof Permissions.isCurrentUserAdmin === 'function' && Permissions.isCurrentUserAdmin();
+        const allAppEm = (isAdmin && Array.isArray(AppState.appData?.appEmergencyNumbers))
+            ? [...AppState.appData.appEmergencyNumbers].sort((a, b) => (Number(a?.sortOrder) || 0) - (Number(b?.sortOrder) || 0))
+            : [];
+        const adminTableRows = isAdmin
+            ? allAppEm.map((r) => {
+                if (!r) return '';
+                const a = r.isActive;
+                const isOn = !(a === false || a === 'false' || a === '0' || a === 0);
+                const ph = String(r.phone || '');
+                const tel = ph.replace(/[^\d+]/g, '');
+                return `<tr>
+                    <td class="profile-admin-td">${esc(r.label || '')}</td>
+                    <td class="profile-admin-td" dir="ltr"><a class="profile-em-link" href="tel:${esc(tel)}">${esc(ph)}</a></td>
+                    <td class="profile-admin-td">${esc(r.sortOrder ?? '')}</td>
+                    <td class="profile-admin-td">${isOn ? t('module.profile.activeY', 'مفعّل') : t('module.profile.inactiveN', 'معطّل')}</td>
+                    <td class="profile-admin-td"><button type="button" class="btn-danger btn-xs profile-app-em-del" data-id="${esc(r.id || '')}"><i class="fas fa-trash"></i></button></td>
+                </tr>`;
+            }).filter(Boolean).join('')
+            : '';
+        const adminTbody = isAdmin
+            ? (adminTableRows
+                || `<tr><td colspan="5" class="profile-admin-empty text-slate-500">${t('module.profile.noAppEmergency', 'لا توجد سجلات بعد. أضف أول رقم أدناه.')}</td></tr>`)
+            : '';
+        const hireRow = (profile.hireDateDisplay)
+            ? `<div class="profile-hire-pill"><span class="profile-hire-label">${t('module.profile.hireDate', 'تاريخ التعيين')}</span><strong class="profile-hire-val">${esc(profile.hireDateDisplay)}</strong>
+                ${profile.tenureText ? `<span class="profile-tenure">${t('module.profile.seniority', 'الأقدمية')}: ${esc(profile.tenureText)}</span>` : ''}</div>`
+            : '';
         const avatarSrc = profile.photo ? `src="${esc(profile.photo)}"` : '';
         const avatarDisplay = profile.photo ? '' : 'display:none;';
         const iconDisplay = profile.photo ? 'display:none;' : '';
@@ -4867,6 +4979,7 @@ window.UI = {
                             <h3 class="profile-hero-name">${esc(profile.fullName || t('module.profile.unknownUser', 'مستخدم النظام'))}</h3>
                             <p class="profile-hero-role">${esc(profile.position || t('module.profile.noPosition', 'غير محدد'))}</p>
                             <p class="profile-hero-meta">${esc(profile.department || t('module.profile.noDepartment', 'قسم غير محدد'))}</p>
+                            ${hireRow}
                             <div class="profile-actions">
                                 <button id="profile-change-photo-btn" class="btn-secondary btn-sm"><i class="fas fa-camera ml-1"></i>${t('module.profile.changePhoto', 'تغيير الصورة')}</button>
                                 <button id="profile-change-password-btn" class="btn-primary btn-sm"><i class="fas fa-key ml-1"></i>${t('module.profile.changePassword', 'تغيير كلمة المرور')}</button>
@@ -4879,11 +4992,13 @@ window.UI = {
                 <div class="content-card profile-card">
                     <div class="card-header"><h3 class="card-title">${t('module.profile.basicInfo', 'بيانات الموظف')}</h3></div>
                     <div class="card-body profile-info-list">
-                        <div><span>${t('module.profile.employeeNumber', 'الرقم الوظيفي')}</span><strong>${esc(profile.employeeNumber || '-')}</strong></div>
-                        <div><span>${t('module.profile.email', 'البريد الإلكتروني')}</span><strong>${esc(profile.email || '-')}</strong></div>
-                        <div><span>${t('module.profile.phone', 'رقم الهاتف')}</span><strong>${esc(profile.phone || '-')}</strong></div>
+                        <div><span>${t('module.profile.employeeNumber', 'الرقم الوظيفي')}</span><strong dir="ltr">${esc(profile.employeeNumber || '-')}</strong></div>
+                        <div><span>${t('module.profile.email', 'البريد الإلكتروني')}</span><strong class="profile-break-all">${esc(profile.email || '-')}</strong></div>
+                        <div><span>${t('module.profile.phone', 'رقم الهاتف')}</span><strong dir="ltr">${esc(profile.phone || '-')}</strong></div>
                         <div><span>${t('module.profile.branch', 'الفرع')}</span><strong>${esc(profile.branch || '-')}</strong></div>
                         <div><span>${t('module.profile.location', 'الموقع')}</span><strong>${esc(profile.location || '-')}</strong></div>
+                        <div><span>${t('module.profile.hireDate', 'تاريخ التعيين')}</span><strong dir="ltr">${esc(profile.hireDateDisplay || '-')}</strong></div>
+                        <div><span>${t('module.profile.seniority', 'مدة العمل (الأقدمية)')}</span><strong>${esc(profile.tenureText || (profile.hireDateDisplay ? '—' : '-'))}</strong></div>
                     </div>
                 </div>
 
@@ -4899,20 +5014,57 @@ window.UI = {
                     </div>
                 </div>
 
+                ${isAdmin ? `
+                <div class="content-card profile-card profile-card--admin-eme">
+                    <div class="card-header"><h3 class="card-title"><i class="fas fa-shield-halved ml-2 text-emerald-700"></i>${t('module.profile.adminEmergencyTitle', 'أرقام طوارئ المؤسسة (للمدير)')}</h3></div>
+                    <div class="card-body">
+                        <p class="text-sm text-slate-600 mb-3">${t('module.profile.adminEmergencyDesc', 'تُعرض لجميع الموظفين في الملف والبطاقة العامة عند مسح رمز QR.')}</p>
+                        <div class="profile-admin-table-wrap">
+                        <table class="profile-admin-table" role="grid">
+                            <thead><tr>
+                                <th>${t('module.profile.emLabel', 'التسمية')}</th>
+                                <th>${t('module.profile.emPhone', 'الرقم')}</th>
+                                <th>${t('module.profile.sortOrder', 'الترتيب')}</th>
+                                <th>${t('module.profile.state', 'الحالة')}</th>
+                                <th></th>
+                            </tr></thead>
+                            <tbody>${adminTbody}</tbody>
+                        </table>
+                        </div>
+                        <form id="profile-app-emergency-form" class="profile-admin-em-form">
+                            <input type="hidden" name="id" value="">
+                            <div class="profile-admin-em-row">
+                                <input name="label" class="form-input" required placeholder="${t('module.profile.emLabel', 'التسمية')}" maxlength="120" autocomplete="off">
+                                <input name="phone" class="form-input" required placeholder="${t('module.profile.emPhone', 'رقم (مع رمز الدولة إن وُجد)')}" inputmode="tel" autocomplete="tel">
+                            </div>
+                            <div class="profile-admin-em-row">
+                                <input name="sortOrder" class="form-input" type="number" placeholder="${t('module.profile.sortOrder', 'الترتيب')}" value="0" step="1">
+                                <label class="profile-admin-cb"><input name="isActive" type="checkbox" checked> ${t('module.profile.activeY', 'مفعّل')}</label>
+                            </div>
+                            <div class="profile-admin-em-row">
+                                <button type="submit" class="btn-primary btn-sm"><i class="fas fa-plus ml-1"></i>${t('module.profile.addEmergency', 'إضافة / حفظ')}</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+                ` : ''}
+
                 <div class="content-card profile-card">
-                    <div class="card-header"><h3 class="card-title">${t('module.profile.emergencyPhones', 'أرقام الطوارئ')}</h3></div>
+                    <div class="card-header"><h3 class="card-title">${t('module.profile.emergencyPhones', 'أرقام الطوارئ')}</h3><p class="card-subtitle text-slate-500 text-sm mt-1 mb-0">${t('module.profile.emergencyHint', 'مؤسسية (من المدير) + مستخرجة من خطط الطوارئ')}</p></div>
                     <div class="card-body profile-emergency-list">${phoneList}</div>
                 </div>
 
                 <div class="content-card profile-card profile-qr-card">
                     <div class="card-header"><h3 class="card-title">${t('module.profile.publicCard', 'بطاقة الأعمال عبر QR')}</h3></div>
                     <div class="card-body">
-                        <p class="text-sm text-slate-600 mb-3">${t('module.profile.publicCardDesc', 'امسح الرمز لعرض بطاقة عامة آمنة ببيانات الموظف الأساسية.')}</p>
+                        <p class="text-sm text-slate-600 mb-2">${t('module.profile.publicCardDesc', 'امسح الرمز بكاميرا الهاتف لفتح البطاقة. يجب نشر تطبيق الويب واستخدام رابط ينتهي بـ /exec في الإعدادات.')}</p>
+                        <p class="text-xs text-slate-500 mb-3 profile-qr-hint">${t('module.profile.qrScanHint', 'إذا فشل المسح: انسخ الرابط وافتحه في المتصفح. الرمز قد يضيف مسافات — يتم تنظيفها تلقائياً في الخادم.')}</p>
                         <div id="profile-qr-holder" class="profile-qr-holder">
                             <div class="text-slate-500 text-sm">${t('module.profile.loadingQr', 'جاري توليد رمز QR...')}</div>
                         </div>
                         <div class="profile-qr-actions">
                             <input id="profile-public-link" class="form-input" type="text" readonly value="">
+                            <button type="button" id="profile-open-card-btn" class="btn-primary btn-sm"><i class="fas fa-external-link-alt ml-1"></i>${t('module.profile.openCard', 'فتح البطاقة')}</button>
                             <button id="profile-copy-link-btn" class="btn-secondary btn-sm"><i class="fas fa-copy ml-1"></i>${t('module.profile.copyLink', 'نسخ الرابط')}</button>
                             <button id="profile-refresh-qr-btn" class="btn-secondary btn-sm"><i class="fas fa-rotate ml-1"></i>${t('module.profile.refreshQr', 'تحديث QR')}</button>
                         </div>
@@ -4924,10 +5076,12 @@ window.UI = {
         const photoInput = document.getElementById('profile-photo-input');
         const changePhotoBtn = document.getElementById('profile-change-photo-btn');
         const changePassBtn = document.getElementById('profile-change-password-btn');
+        const openCardBtn = document.getElementById('profile-open-card-btn');
         const copyBtn = document.getElementById('profile-copy-link-btn');
         const refreshQrBtn = document.getElementById('profile-refresh-qr-btn');
         const linkInput = document.getElementById('profile-public-link');
         const qrHolder = document.getElementById('profile-qr-holder');
+        const emForm = document.getElementById('profile-app-emergency-form');
 
         if (changePhotoBtn && photoInput) {
             changePhotoBtn.addEventListener('click', (e) => {
@@ -4946,6 +5100,85 @@ window.UI = {
             changePassBtn.addEventListener('click', (e) => {
                 e.preventDefault();
                 this.showChangePasswordModal(false);
+            });
+        }
+
+        if (openCardBtn && linkInput) {
+            openCardBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                const v = String(linkInput.value || '').trim();
+                if (v) {
+                    try {
+                        window.open(v, '_blank', 'noopener,noreferrer');
+                    } catch (_) {
+                        window.location.href = v;
+                    }
+                } else if (typeof Notification !== 'undefined') {
+                    Notification.warning(t('module.profile.qrUnavailable', 'تعذر إنشاء رابط البطاقة العامة حالياً'));
+                }
+            });
+        }
+
+        if (emForm && isAdmin && typeof GoogleIntegration !== 'undefined' && GoogleIntegration.callBackend) {
+            emForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const fd = new FormData(emForm);
+                const user = AppState.currentUser || {};
+                const res = await GoogleIntegration.callBackend('upsertAppEmergencyNumber', {
+                    id: String(fd.get('id') || '').trim(),
+                    label: String(fd.get('label') || '').trim(),
+                    phone: String(fd.get('phone') || '').trim(),
+                    sortOrder: fd.get('sortOrder'),
+                    isActive: !!(emForm.querySelector('input[name="isActive"]') && emForm.querySelector('input[name="isActive"]').checked),
+                    userData: {
+                        id: user.id,
+                        email: user.email,
+                        role: user.role,
+                        permissions: user.permissions
+                    }
+                });
+                if (res && res.success) {
+                    if (typeof Notification !== 'undefined') {
+                        Notification.success(t('module.profile.emergencySaved', 'تم حفظ رقم الطوارئ'));
+                    }
+                    emForm.reset();
+                    const cb = emForm.querySelector('input[name="isActive"]');
+                    if (cb) cb.checked = true;
+                    const hid = emForm.querySelector('input[name="id"]');
+                    if (hid) hid.value = '';
+                    this.renderMyProfileSection();
+                } else if (typeof Notification !== 'undefined') {
+                    Notification.error((res && res.message) || t('module.profile.emergencySaveErr', 'تعذر الحفظ'));
+                }
+            });
+        }
+        if (isAdmin) {
+            section.querySelectorAll('.profile-app-em-del').forEach((btn) => {
+                btn.addEventListener('click', async (e) => {
+                    e.preventDefault();
+                    const id = btn.getAttribute('data-id');
+                    if (!id) return;
+                    if (typeof window !== 'undefined' && !window.confirm(t('module.profile.confirmDeleteEm', 'حذف هذا السجل؟'))) return;
+                    const user = AppState.currentUser || {};
+                    if (typeof GoogleIntegration === 'undefined' || !GoogleIntegration.callBackend) return;
+                    const res = await GoogleIntegration.callBackend('deleteAppEmergencyNumber', {
+                        id,
+                        userData: {
+                            id: user.id,
+                            email: user.email,
+                            role: user.role,
+                            permissions: user.permissions
+                        }
+                    });
+                    if (res && res.success) {
+                        if (typeof Notification !== 'undefined') {
+                            Notification.success(t('module.profile.emergencyDeleted', 'تم الحذف'));
+                        }
+                        this.renderMyProfileSection();
+                    } else if (typeof Notification !== 'undefined') {
+                        Notification.error((res && res.message) || t('module.profile.emergencyDeleteErr', 'تعذر الحذف'));
+                    }
+                });
             });
         }
 

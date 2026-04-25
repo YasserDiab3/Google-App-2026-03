@@ -64,7 +64,7 @@ function getRequiredSheets() {
         'EnergyEfficiency', 'WaterManagement', 'RecyclingPrograms', 'PeriodicInspections', 'PeriodicInspectionCategories', 
         'PeriodicInspectionChecklists', 'PeriodicInspectionSchedules', 'PeriodicInspectionRecords', 'SafetyBudget', 
         'SafetyBudgets', 'SafetyBudgetTransactions', 'SafetyBudgetPurchaseOrders', 'SafetyPerformanceKPIs', 'ActionTrackingRegister', 'Budget', 'KPIs', 
-        'EmergencyAlerts', 'EmergencyPlans', 'EmergencyPlansUpdates', 'EmployeeTrainingMatrix', 'ContractorTrainings', 'ExternalWorkforceMonthly', 'FireEquipmentAssets', 
+        'EmergencyAlerts', 'EmergencyPlans', 'EmergencyPlansUpdates', 'AppEmergencyNumbers', 'EmployeeTrainingMatrix', 'ContractorTrainings', 'ExternalWorkforceMonthly', 'FireEquipmentAssets', 
         'FireEquipmentInspections', 'ViolationTypes', 'PPEMatrix', 'PPE_Stock', 'PPE_Transactions', 'ApprovedContractors', 'ContractorEvaluations', 'ContractorApprovalRequests', 'ContractorDeletionRequests', 
         'AuditLog', 'UserActivityLog', 'AIAssistantSettings', 'UserAILog', 'ObservationSites', 'AnnualTrainingPlans',
         'SafetyTeamMembers', 'SafetyOrganizationalStructure', 'SafetyJobDescriptions', 'SafetyTeamKPIs', 

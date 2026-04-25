@@ -23,6 +23,59 @@ const PTW = {
         if (typeof i18nCore.applyLiteralTranslations === 'function') i18nCore.applyLiteralTranslations(target);
     },
 
+    _t(key, fallback) {
+        if (window.AppI18n && typeof window.AppI18n.t === 'function') return window.AppI18n.t(key, fallback);
+        if (window.I18n && typeof window.I18n.t === 'function') return window.I18n.t(key, fallback);
+        return fallback;
+    },
+
+    /**
+     * عرض حالة التصريح حسب لغة الواجهة (تُبقى القيم المخزنة عربية للمنطق والفلترة).
+     */
+    statusLabel(raw) {
+        const s = String(raw || '').trim();
+        if (!s) return this._t('module.ptw.common.notSpecified', 'غير محدد');
+        const map = {
+            'مغلق': 'module.ptw.status.closed',
+            'مفتوح': 'module.ptw.status.open',
+            'مرفوض': 'module.ptw.status.rejected',
+            'قيد المراجعة': 'module.ptw.status.underReview',
+            'موافق عليه': 'module.ptw.status.approved',
+            'اكتمل العمل بشكل آمن': 'module.ptw.status.safelyCompleted',
+            'إغلاق جبري': 'module.ptw.status.forcedClose',
+            'لم يكتمل العمل': 'module.ptw.status.incomplete'
+        };
+        const k = map[s];
+        if (k) return this._t(k, s);
+        return s;
+    },
+
+    approvalRoleLabel(raw) {
+        const s = String(raw || '').trim();
+        if (!s) return '';
+        const map = {
+            'مسؤول الجهة الطالبة': 'module.ptw.approval.requestingOfficer',
+            'مدير منطقة الأعمال': 'module.ptw.approval.areaManager',
+            'مسؤول السلامة والصحة المهنية': 'module.ptw.approval.safetyOfficer',
+            'موافقة مطلوبة': 'module.ptw.approval.approvalRequired'
+        };
+        const k = map[s];
+        if (k) return this._t(k, s);
+        return s;
+    },
+
+    formatDurationI18n(diffMs) {
+        if (!Number.isFinite(diffMs)) return this._t('module.ptw.duration.error', 'خطأ');
+        if (diffMs < 0) return this._t('module.ptw.duration.invalid', 'غير صحيح');
+        const totalMinutes = Math.floor(diffMs / (1000 * 60));
+        const h = Math.floor(totalMinutes / 60);
+        const m = totalMinutes % 60;
+        if (h === 0) return this._t('module.ptw.duration.minutesOnly', '{n} دقيقة').replace(/\{n\}/g, String(m));
+        if (m === 0) return this._t('module.ptw.duration.hoursOnly', '{n} ساعة').replace(/\{n\}/g, String(h));
+        return this._t('module.ptw.duration.hoursAndMinutes', '{h} ساعة و {m} دقيقة')
+            .replace(/\{h\}/g, String(h)).replace(/\{m\}/g, String(m));
+    },
+
     ensureI18nObservers(section) {
         if (this._i18nSectionObserver) {
             this._i18nSectionObserver.disconnect();
@@ -221,12 +274,15 @@ const PTW = {
 
     notifyPermitCreated(permit) {
         const nextApproval = this.getNextPendingApproval(permit.approvals || []);
-        let message = 'تم إرسال طلب تصريح العمل للمراجعة.';
+        let message = this._t('module.ptw.notify.submitted', 'تم إرسال طلب تصريح العمل للمراجعة.');
         if (nextApproval && nextApproval.role) {
+            const roleDisp = this.approvalRoleLabel(nextApproval.role);
             if (nextApproval.approver) {
-                message += ` المرحلة التالية: ${nextApproval.role} (المسؤول: ${nextApproval.approver}).`;
+                message += ' ' + this._t('module.ptw.notify.nextWithApprover', 'المرحلة التالية: {role} (المسؤول: {name}).')
+                    .replace(/\{role\}/g, roleDisp).replace(/\{name\}/g, String(nextApproval.approver));
             } else {
-                message += ` المرحلة التالية: ${nextApproval.role}. يرجى تعيين المسؤول عن الاعتماد.`;
+                message += ' ' + this._t('module.ptw.notify.nextNeedAssign', 'المرحلة التالية: {role}. يرجى تعيين المسؤول عن الاعتماد.')
+                    .replace(/\{role\}/g, roleDisp);
             }
         }
         Notification.success(message);
@@ -241,7 +297,7 @@ const PTW = {
         statusField.setAttribute('data-current-status', value);
         statusField.disabled = true;
         statusField.classList.add('opacity-70', 'cursor-not-allowed');
-        statusField.setAttribute('title', 'يتم تحديث الحالة تلقائياً عبر الاعتمادات');
+        statusField.setAttribute('title', this._t('module.ptw.statusField.title', 'يتم تحديث الحالة تلقائياً عبر الاعتمادات'));
     },
 
     /**
@@ -322,11 +378,7 @@ const PTW = {
     // الحصول على قائمة المواقع من الإعدادات
     getSiteOptions() {
         try {
-            const t = (key, fallback) => {
-                if (window.AppI18n && typeof window.AppI18n.t === 'function') return window.AppI18n.t(key, fallback);
-                if (window.I18n && typeof window.I18n.t === 'function') return window.I18n.t(key, fallback);
-                return fallback;
-            };
+            const t = (key, fallback) => PTW._t(key, fallback);
             // محاولة الحصول من Permissions.formSettingsState
             if (typeof Permissions !== 'undefined' && Permissions.formSettingsState && Permissions.formSettingsState.sites) {
                 return Permissions.formSettingsState.sites.map(site => ({
@@ -339,7 +391,7 @@ const PTW = {
             if (Array.isArray(AppState.appData?.observationSites) && AppState.appData.observationSites.length > 0) {
                 return AppState.appData.observationSites.map(site => ({
                     id: site.id || site.siteId || Utils.generateId('SITE'),
-                    name: site.name || site.title || site.label || 'موقع غير محدد'
+                    name: site.name || site.title || site.label || t('module.ptw.fallback.unnamedSite', 'موقع غير محدد')
                 }));
             }
 
@@ -347,7 +399,7 @@ const PTW = {
             if (typeof DailyObservations !== 'undefined' && Array.isArray(DailyObservations.DEFAULT_SITES)) {
                 return DailyObservations.DEFAULT_SITES.map((site, index) => ({
                     id: site.id || site.siteId || Utils.generateId('SITE'),
-                    name: site.name || site.title || site.label || `موقع ${index + 1}`
+                    name: site.name || site.title || site.label || t('module.ptw.fallback.numberedSite', 'موقع {n}').replace(/\{n\}/g, String(index + 1))
                 }));
             }
 
@@ -363,11 +415,12 @@ const PTW = {
         try {
             const sites = this.getSiteOptions();
             const esc = (typeof Utils !== 'undefined' && Utils.escapeHTML) ? Utils.escapeHTML : (s) => String(s == null ? '' : s);
-            const opts = (empty) => '<option value="">' + (empty || 'اختر الموقع') + '</option>' + (sites || []).map(s => '<option value="' + esc(s.id) + '">' + esc(s.name) + '</option>').join('');
+            const t = (k, f) => this._t(k, f);
+            const opts = (empty) => '<option value="">' + (empty || t('module.ptw.placeholder.selectSite', 'اختر الموقع')) + '</option>' + (sites || []).map(s => '<option value="' + esc(s.id) + '">' + esc(s.name) + '</option>').join('');
             const locationIds = ['manual-permit-location', 'ptw-filter-location', 'ptw-location', 'analysis-location'];
             locationIds.forEach(id => {
                 const el = document.getElementById(id);
-                if (el && el.tagName === 'SELECT') { const v = el.value; el.innerHTML = opts('اختر الموقع'); if (v) el.value = v; }
+                if (el && el.tagName === 'SELECT') { const v = el.value; el.innerHTML = opts(t('module.ptw.placeholder.selectSite', 'اختر الموقع')); if (v) el.value = v; }
             });
             const subIds = ['manual-permit-sublocation', 'ptw-filter-sublocation', 'ptw-sublocation'];
             subIds.forEach(id => {
@@ -375,7 +428,7 @@ const PTW = {
                 if (el && el.tagName === 'SELECT') {
                     const locId = (document.getElementById('ptw-location') || document.getElementById('manual-permit-location') || {}).value;
                     const places = this.getPlaceOptions(locId);
-                    const ph = 'اختر المكان الفرعي';
+                    const ph = t('module.ptw.placeholder.selectSub', 'اختر المكان الفرعي');
                     const v = el.value;
                     el.innerHTML = '<option value="">' + ph + '</option>' + (places || []).map(p => '<option value="' + esc(p.id) + '">' + esc(p.name) + '</option>').join('');
                     if (v) el.value = v;
@@ -695,30 +748,10 @@ const PTW = {
     },
 
     /**
-     * حساب إجمالي الوقت
-     */
-    calculateTotalTime(startDate, endDate) {
-        if (!startDate || !endDate) return 'غير محدد';
-        try {
-            const start = new Date(startDate);
-            const end = new Date(endDate);
-            const diffMs = end - start;
-            if (diffMs < 0) return 'غير صحيح';
-            const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
-            const diffMinutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
-            if (diffHours === 0) return `${diffMinutes} دقيقة`;
-            if (diffMinutes === 0) return `${diffHours} ساعة`;
-            return `${diffHours} ساعة و ${diffMinutes} دقيقة`;
-        } catch (error) {
-            return 'خطأ';
-        }
-    },
-
-    /**
      * الحصول على نص نوع التصريح للعرض (يدعم الأنواع المتعددة)
      */
     parseDateTimeValue(value) {
-        if (value === null || value === undefined || value === '' || value === 'غير محدد') return null;
+        if (value === null || value === undefined || value === '' || value === 'غير محدد' || String(value).trim() === 'Not specified') return null;
         if (value instanceof Date) {
             return isNaN(value.getTime()) ? null : new Date(value.getTime());
         }
@@ -757,16 +790,7 @@ const PTW = {
     },
 
     formatDurationFromMilliseconds(diffMs) {
-        if (!Number.isFinite(diffMs)) return 'خطأ';
-        if (diffMs < 0) return 'غير صحيح';
-
-        const totalMinutes = Math.floor(diffMs / (1000 * 60));
-        const diffHours = Math.floor(totalMinutes / 60);
-        const diffMinutes = totalMinutes % 60;
-
-        if (diffHours === 0) return `${diffMinutes} دقيقة`;
-        if (diffMinutes === 0) return `${diffHours} ساعة`;
-        return `${diffHours} ساعة و ${diffMinutes} دقيقة`;
+        return this.formatDurationI18n(diffMs);
     },
 
     dateInputToISO(dateInputValue) {
@@ -779,20 +803,25 @@ const PTW = {
     },
 
     calculateTotalTime(startDate, endDate) {
-        if (!startDate || !endDate) return 'غير محدد';
+        if (!startDate || !endDate) return this._t('module.ptw.common.notSpecified', 'غير محدد');
         try {
             const start = this.parseDateTimeValue(startDate);
             const end = this.parseDateTimeValue(endDate);
-            if (!start || !end) return 'غير محدد';
+            if (!start || !end) return this._t('module.ptw.common.notSpecified', 'غير محدد');
             return this.formatDurationFromMilliseconds(end - start);
         } catch (error) {
-            return 'خطأ';
+            return this._t('module.ptw.duration.error', 'خطأ');
         }
     },
 
     isUsableDurationText(value) {
         const text = String(value || '').trim();
-        return !!text && text !== 'غير محدد' && text !== 'غير صحيح' && text !== 'خطأ';
+        if (!text) return false;
+        if (['غير محدد', 'غير صحيح', 'خطأ', 'Not specified', 'Invalid', 'Error'].includes(text)) return false;
+        if (text === this._t('module.ptw.common.notSpecified', 'غير محدد')) return false;
+        if (text === this._t('module.ptw.duration.invalid', 'غير صحيح')) return false;
+        if (text === this._t('module.ptw.duration.error', 'خطأ')) return false;
+        return true;
     },
 
     normalizeRegistryEntry(entry) {

@@ -1178,7 +1178,7 @@ const GoogleIntegration = {
             'getSafetyTeamMember', 'getOrganizationalStructure', 'getJobDescription',
             'getSafetyTeamKPIs', 'getSafetyHealthManagementSettings', 'getActionTrackingSettings',
             'getAllActionTracking', 'getActionTracking',
-            'getAllApprovedContractors', 'getAllContractors', 'getAllEmployees'];
+            'getAllApprovedContractors', 'getAllContractors', 'getAllEmployees', 'getAllAppEmergencyNumbers'];
 
         const isCacheable = cacheableActions.includes(action);
 
