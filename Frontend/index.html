@@ -12712,6 +12712,22 @@
                                 registration.scope,
                             );
 
+                        // إجبار فحص تحديث جديد مباشرة بعد التسجيل
+                        try {
+                            await registration.update();
+                        } catch (_) {}
+
+                        // إعادة تحميل الصفحة مرة واحدة فقط عند تفعيل Service Worker جديد
+                        let __swRefreshing = false;
+                        navigator.serviceWorker.addEventListener(
+                            "controllerchange",
+                            () => {
+                                if (__swRefreshing) return;
+                                __swRefreshing = true;
+                                window.location.reload();
+                            },
+                        );
+
                         // التحقق من التحديثات
                         registration.addEventListener("updatefound", () => {
                             const newWorker = registration.installing;
@@ -12737,8 +12753,19 @@
                                             "function"
                                     ) {
                                         window.Notification.info(
-                                            "يوجد تحديث جديد! يُرجى إعادة تحميل الصفحة.",
+                                            "تم العثور على تحديث جديد... جاري التفعيل الآن.",
                                         );
+                                    }
+
+                                    // تفعيل النسخة الجديدة فورًا بدون انتظار إغلاق كل التبويبات
+                                    if (registration.waiting) {
+                                        registration.waiting.postMessage({
+                                            type: "SKIP_WAITING",
+                                        });
+                                    } else if (newWorker) {
+                                        newWorker.postMessage({
+                                            type: "SKIP_WAITING",
+                                        });
                                     }
                                 }
                             });
