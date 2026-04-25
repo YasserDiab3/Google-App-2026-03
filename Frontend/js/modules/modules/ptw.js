@@ -322,6 +322,11 @@ const PTW = {
     // الحصول على قائمة المواقع من الإعدادات
     getSiteOptions() {
         try {
+            const t = (key, fallback) => {
+                if (window.AppI18n && typeof window.AppI18n.t === 'function') return window.AppI18n.t(key, fallback);
+                if (window.I18n && typeof window.I18n.t === 'function') return window.I18n.t(key, fallback);
+                return fallback;
+            };
             // محاولة الحصول من Permissions.formSettingsState
             if (typeof Permissions !== 'undefined' && Permissions.formSettingsState && Permissions.formSettingsState.sites) {
                 return Permissions.formSettingsState.sites.map(site => ({
@@ -1394,6 +1399,11 @@ const PTW = {
         if (typeof Utils !== 'undefined' && Utils.safeLog) {
             Utils.safeLog('✅ مديول PTW يكتب في قسم: ptw-section');
         }
+        const t = (key, fallback) => {
+            if (window.AppI18n && typeof window.AppI18n.t === 'function') return window.AppI18n.t(key, fallback);
+            if (window.I18n && typeof window.I18n.t === 'function') return window.I18n.t(key, fallback);
+            return fallback;
+        };
 
         try {
             // تحميل إحداثيات المواقع من MapCoordinatesManager (إذا كان متاحاً)
@@ -1462,14 +1472,14 @@ const PTW = {
                     <div>
                         <h1 class="section-title">
                             <i class="fas fa-file-alt ml-3" aria-hidden="true"></i>
-                            إدارة تصاريح العمل
+                            ${t('module.ptw.title', 'إدارة تصاريح العمل')}
                         </h1>
-                        <p class="section-subtitle">إصدار ومتابعة تصاريح العمل مع دائرة الاعتمادات</p>
+                        <p class="section-subtitle">${t('module.ptw.subtitle', 'إصدار ومتابعة تصاريح العمل مع دائرة الاعتمادات')}</p>
                     </div>
                     <div class="flex items-center gap-2">
                         <button id="add-ptw-btn" class="btn-primary">
                             <i class="fas fa-plus ml-2"></i>
-                            إصدار تصريح جديد
+                            ${t('module.ptw.btn.newPermit', 'إصدار تصريح جديد')}
                         </button>
                     </div>
                 </div>
@@ -1479,27 +1489,27 @@ const PTW = {
             <div class="ptw-tabs mt-4 mb-4 bg-white rounded-lg shadow-sm p-1 flex overflow-x-auto" style="flex-wrap: nowrap; overflow-y: visible; min-width: 0; width: 100%; max-width: 100%; box-sizing: border-box;">
                 <button id="ptw-tab-permits" class="ptw-tab-btn px-6 py-3 font-semibold text-sm rounded-md transition-all duration-200 text-blue-600 bg-blue-50 shadow-sm" style="flex-shrink: 0 !important; min-width: fit-content !important; white-space: nowrap !important; width: auto !important; max-width: none !important;" onclick="PTW.switchTab('permits')">
                     <i class="fas fa-list ml-2"></i>
-                    قائمة التصاريح
+                    ${t('module.ptw.tab.permits', 'قائمة التصاريح')}
                 </button>
                 <button id="ptw-tab-registry" class="ptw-tab-btn px-6 py-3 font-semibold text-sm rounded-md transition-all duration-200 text-gray-600 hover:bg-gray-50" style="flex-shrink: 0 !important; min-width: fit-content !important; white-space: nowrap !important; width: auto !important; max-width: none !important;" onclick="PTW.switchTab('registry')">
                     <i class="fas fa-clipboard-list ml-2"></i>
-                    سجل حصر التصاريح
+                    ${t('module.ptw.tab.registry', 'سجل حصر التصاريح')}
                 </button>
                 <button id="ptw-tab-map" class="ptw-tab-btn px-6 py-3 font-semibold text-sm rounded-md transition-all duration-200 text-gray-600 hover:bg-gray-50" style="flex-shrink: 0 !important; min-width: fit-content !important; white-space: nowrap !important; width: auto !important; max-width: none !important;" onclick="PTW.switchTab('map')">
                     <i class="fas fa-map-marked-alt ml-2"></i>
-                    خريطة مواقع التصاريح
+                    ${t('module.ptw.tab.map', 'خريطة مواقع التصاريح')}
                 </button>
                 <button id="ptw-tab-analysis" class="ptw-tab-btn px-6 py-3 font-semibold text-sm rounded-md transition-all duration-200 text-gray-600 hover:bg-gray-50" style="flex-shrink: 0 !important; min-width: fit-content !important; white-space: nowrap !important; width: auto !important; max-width: none !important;" onclick="PTW.switchTab('analysis')">
                     <i class="fas fa-chart-line ml-2"></i>
-                    تحليل البيانات
+                    ${t('module.ptw.tab.analysis', 'تحليل البيانات')}
                 </button>
                 <button id="ptw-tab-approvals" class="ptw-tab-btn px-6 py-3 font-semibold text-sm rounded-md transition-all duration-200 text-gray-600 hover:bg-gray-50" style="flex-shrink: 0 !important; min-width: fit-content !important; white-space: nowrap !important; width: auto !important; max-width: none !important;" onclick="PTW.switchTab('approvals')">
                     <i class="fas fa-check-double ml-2"></i>
-                    الموافقات
+                    ${t('module.ptw.tab.approvals', 'الموافقات')}
                 </button>
-                <button id="ptw-refresh-header-btn" type="button" class="px-4 py-3 font-semibold text-sm rounded-md transition-all duration-200 border-2 border-green-500 text-green-600 hover:bg-green-50 hover:border-green-600 ml-2" style="flex-shrink: 0 !important; min-width: fit-content !important; white-space: nowrap !important;" title="تحديث المحتوى الحالي">
+                <button id="ptw-refresh-header-btn" type="button" class="px-4 py-3 font-semibold text-sm rounded-md transition-all duration-200 border-2 border-green-500 text-green-600 hover:bg-green-50 hover:border-green-600 ml-2" style="flex-shrink: 0 !important; min-width: fit-content !important; white-space: nowrap !important;" title="${t('module.ptw.btn.refreshTitle', 'تحديث المحتوى الحالي')}">
                     <i class="fas fa-sync-alt ml-2"></i>
-                    تحديث
+                    ${t('module.common.refresh', 'تحديث')}
                 </button>
             </div>
             
@@ -1546,7 +1556,7 @@ const PTW = {
                                         <div style="height: 100%; background: linear-gradient(90deg, #3b82f6, #2563eb, #3b82f6); background-size: 200% 100%; border-radius: 3px; animation: loadingProgress 1.5s ease-in-out infinite;"></div>
                                     </div>
                                 </div>
-                                <p class="text-gray-500">جاري تحميل قائمة التصاريح...</p>
+                                <p class="text-gray-500">${t('module.ptw.loading.permits', 'جاري تحميل قائمة التصاريح...')}</p>
                             </div>
                         </div>
                     </div>
@@ -1585,10 +1595,10 @@ const PTW = {
                                 <div class="card-body">
                                     <div class="empty-state">
                                         <i class="fas fa-exclamation-triangle text-yellow-500 text-4xl mb-4"></i>
-                                        <p class="text-gray-500 mb-4">حدث خطأ في تحميل البيانات</p>
+                                        <p class="text-gray-500 mb-4">${t('module.common.loadDataError', 'حدث خطأ في تحميل البيانات')}</p>
                                         <button onclick="PTW.load()" class="btn-primary">
                                             <i class="fas fa-redo ml-2"></i>
-                                            إعادة المحاولة
+                                            ${t('module.common.retry', 'إعادة المحاولة')}
                                         </button>
                                     </div>
                                 </div>
@@ -1616,10 +1626,10 @@ const PTW = {
                         <div class="card-body">
                             <div class="empty-state">
                                 <i class="fas fa-exclamation-triangle text-yellow-500 text-4xl mb-4"></i>
-                                <p class="text-gray-500 mb-4">حدث خطأ أثناء تحميل البيانات</p>
+                                <p class="text-gray-500 mb-4">${t('module.common.loadDataRuntimeError', 'حدث خطأ أثناء تحميل البيانات')}</p>
                                 <button onclick="PTW.load()" class="btn-primary">
                                     <i class="fas fa-redo ml-2"></i>
-                                    إعادة المحاولة
+                                    ${t('module.common.retry', 'إعادة المحاولة')}
                                 </button>
                             </div>
                         </div>
@@ -2000,6 +2010,11 @@ const PTW = {
      * عرض محتوى سجل حصر التصاريح
      */
     renderRegistryContent() {
+        const t = (key, fallback) => {
+            if (window.AppI18n && typeof window.AppI18n.t === 'function') return window.AppI18n.t(key, fallback);
+            if (window.I18n && typeof window.I18n.t === 'function') return window.I18n.t(key, fallback);
+            return fallback;
+        };
         // التأكد من إخفاء الخريطة في تبويب السجل
         const mapContent = document.getElementById('ptw-map-content');
         if (mapContent) {
@@ -2057,7 +2072,7 @@ const PTW = {
             <div class="flex justify-between items-center gap-2 mb-4">
                 <button id="ptw-registry-add-manual" class="btn-success">
                     <i class="fas fa-plus-circle ml-2"></i>
-                    إضافة تصريح يدوي / Manual Permit Entry
+                    ${t('module.ptw.registry.addManual', 'إضافة تصريح يدوي / Manual Permit Entry')}
                 </button>
                 <div class="flex gap-2">
                     <button id="ptw-registry-import-excel" class="btn-secondary">
@@ -2080,7 +2095,7 @@ const PTW = {
                 <div class="kpi-card kpi-info">
                     <div class="kpi-icon"><i class="fas fa-list-ol"></i></div>
                     <div class="kpi-content">
-                        <h3 class="kpi-label">إجمالي السجلات</h3>
+                        <h3 class="kpi-label">${t('module.ptw.registry.totalRecords', 'إجمالي السجلات')}</h3>
                         <p class="kpi-value">${registryTotalCount}</p>
                         <p class="text-xs text-gray-500 mt-1">(مدمج: ${totalCount})</p>
                     </div>
@@ -2088,21 +2103,21 @@ const PTW = {
                 <div class="kpi-card kpi-primary">
                     <div class="kpi-icon"><i class="fas fa-folder-open"></i></div>
                     <div class="kpi-content">
-                        <h3 class="kpi-label">تصاريح مفتوحة</h3>
+                        <h3 class="kpi-label">${t('module.ptw.registry.openPermits', 'تصاريح مفتوحة')}</h3>
                         <p class="kpi-value">${openCount}</p>
                     </div>
                 </div>
                 <div class="kpi-card kpi-success">
                     <div class="kpi-icon"><i class="fas fa-check-circle"></i></div>
                     <div class="kpi-content">
-                        <h3 class="kpi-label">تصاريح مغلقة</h3>
+                        <h3 class="kpi-label">${t('module.ptw.registry.closedPermits', 'تصاريح مغلقة')}</h3>
                         <p class="kpi-value">${closedCount}</p>
                     </div>
                 </div>
                 <div class="kpi-card kpi-warning">
                     <div class="kpi-icon"><i class="fas fa-clock"></i></div>
                     <div class="kpi-content">
-                        <h3 class="kpi-label">متوسط الوقت</h3>
+                        <h3 class="kpi-label">${t('module.ptw.registry.avgTime', 'متوسط الوقت')}</h3>
                         <p class="kpi-value" style="font-size: 1.2rem;">${avgTime}</p>
                     </div>
                 </div>
@@ -2114,16 +2129,16 @@ const PTW = {
                     <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
                         <div>
                             <label class="block text-sm font-semibold text-gray-700 mb-2">
-                                <i class="fas fa-search ml-2"></i>بحث
+                                <i class="fas fa-search ml-2"></i>${t('module.ptw.registry.search', 'بحث')}
                             </label>
-                            <input type="text" id="registry-search" class="form-input" placeholder="ابحث برقم التصريح أو الوصف...">
+                            <input type="text" id="registry-search" class="form-input" placeholder="${t('module.ptw.registry.searchPlaceholder', 'ابحث برقم التصريح أو الوصف...')}">
                         </div>
                         <div>
                             <label class="block text-sm font-semibold text-gray-700 mb-2">
-                                <i class="fas fa-filter ml-2"></i>الحالة
+                                <i class="fas fa-filter ml-2"></i>${t('module.ptw.registry.status', 'الحالة')}
                             </label>
                             <select id="registry-filter-status" class="form-input">
-                                <option value="">جميع الحالات</option>
+                                <option value="">${t('module.ptw.registry.allStatuses', 'جميع الحالات')}</option>
                                 <option value="مفتوح">مفتوح</option>
                                 <option value="مغلق">مغلق</option>
                                 <option value="اكتمل العمل بشكل آمن">اكتمل العمل بشكل آمن</option>
@@ -2133,17 +2148,17 @@ const PTW = {
                         </div>
                         <div>
                             <label class="block text-sm font-semibold text-gray-700 mb-2">
-                                <i class="fas fa-calendar ml-2"></i>من تاريخ
+                                <i class="fas fa-calendar ml-2"></i>${t('module.ptw.registry.fromDate', 'من تاريخ')}
                             </label>
                             <input type="date" id="registry-filter-date-from" class="form-input">
                         </div>
                         <div>
                             <label class="block text-sm font-semibold text-gray-700 mb-2">
-                                <i class="fas fa-calendar ml-2"></i>إلى تاريخ
+                                <i class="fas fa-calendar ml-2"></i>${t('module.ptw.registry.toDate', 'إلى تاريخ')}
                             </label>
                             <input type="date" id="registry-filter-date-to" class="form-input">
                             <div id="registry-filter-count-wrapper" class="text-xs text-gray-600 mt-1">
-                                عدد التصاريح في الفترة: <span id="registry-filter-count">-</span>
+                                ${t('module.ptw.registry.permitCountInRange', 'عدد التصاريح في الفترة:')} <span id="registry-filter-count">-</span>
                             </div>
                         </div>
                     </div>
@@ -2155,9 +2170,9 @@ const PTW = {
                 <div class="card-header">
                     <h2 class="card-title">
                         <i class="fas fa-table ml-2"></i>
-                        جدول سجل حصر التصاريح (${registryTotalCount} سجل)
+                        ${t('module.ptw.registry.tableTitle', 'جدول سجل حصر التصاريح')} (${registryTotalCount} ${t('module.ptw.registry.recordWord', 'سجل')})
                         <span class="text-sm font-normal text-gray-500 ml-2">
-                            (إجمالي التصاريح المدمجة: ${totalCount})
+                            (${t('module.ptw.registry.totalMerged', 'إجمالي التصاريح المدمجة:')} ${totalCount})
                         </span>
                     </h2>
                 </div>
@@ -2174,12 +2189,17 @@ const PTW = {
      * عرض جدول السجل
      */
     renderRegistryTable() {
+        const t = (key, fallback) => {
+            if (window.AppI18n && typeof window.AppI18n.t === 'function') return window.AppI18n.t(key, fallback);
+            if (window.I18n && typeof window.I18n.t === 'function') return window.I18n.t(key, fallback);
+            return fallback;
+        };
         if (this.registryData.length === 0) {
             return `
                 <div class="empty-state">
                     <i class="fas fa-clipboard-list text-4xl text-gray-300 mb-4"></i>
-                    <p class="text-gray-500">لا توجد سجلات حتى الآن</p>
-                    <p class="text-sm text-gray-400 mt-2">سيتم إضافة السجلات تلقائياً عند إنشاء تصاريح عمل جديدة</p>
+                    <p class="text-gray-500">${t('module.ptw.registry.empty', 'لا توجد سجلات حتى الآن')}</p>
+                    <p class="text-sm text-gray-400 mt-2">${t('module.ptw.registry.emptyHint', 'سيتم إضافة السجلات تلقائياً عند إنشاء تصاريح عمل جديدة')}</p>
                 </div>
             `;
         }
@@ -2195,20 +2215,20 @@ const PTW = {
             <table class="data-table">
                 <thead>
                     <tr>
-                        <th>مسلسل</th>
-                        <th>التاريخ</th>
-                        <th>نوع التصريح</th>
-                        <th>الجهة الطالبة</th>
-                        <th>الموقع</th>
-                        <th>الوقت من</th>
-                        <th>الوقت إلى</th>
-                        <th>إجمالي الوقت</th>
-                        <th>الجهة المصرح لها</th>
-                        <th>وصف العمل</th>
-                        <th>مسئول المتابعة 01</th>
-                        <th>مسئول المتابعة 02</th>
-                        <th>حالة التصريح</th>
-                        <th>الإجراءات</th>
+                        <th>${t('module.ptw.registry.col.seq', 'مسلسل')}</th>
+                        <th>${t('module.ptw.registry.col.date', 'التاريخ')}</th>
+                        <th>${t('module.ptw.registry.col.permitType', 'نوع التصريح')}</th>
+                        <th>${t('module.ptw.registry.col.requestingParty', 'الجهة الطالبة')}</th>
+                        <th>${t('module.ptw.registry.col.location', 'الموقع')}</th>
+                        <th>${t('module.ptw.registry.col.timeFrom', 'الوقت من')}</th>
+                        <th>${t('module.ptw.registry.col.timeTo', 'الوقت إلى')}</th>
+                        <th>${t('module.ptw.registry.col.totalTime', 'إجمالي الوقت')}</th>
+                        <th>${t('module.ptw.registry.col.authorizedParty', 'الجهة المصرح لها')}</th>
+                        <th>${t('module.ptw.registry.col.workDesc', 'وصف العمل')}</th>
+                        <th>${t('module.ptw.registry.col.followUp1', 'مسئول المتابعة 01')}</th>
+                        <th>${t('module.ptw.registry.col.followUp2', 'مسئول المتابعة 02')}</th>
+                        <th>${t('module.ptw.registry.col.permitStatus', 'حالة التصريح')}</th>
+                        <th>${t('module.ptw.registry.col.actions', 'الإجراءات')}</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -2238,18 +2258,18 @@ const PTW = {
             const workStartSource = entry.timeFrom || entry.openDate;
             const registryDateStr = workStartSource && Utils.formatDate
                 ? Utils.formatDate(workStartSource)
-                : 'غير محدد';
-            const registryDateDisplay = !workStartSource || registryDateStr === '-' ? 'غير محدد' : registryDateStr;
+                : t('module.ptw.common.notSpecified', 'غير محدد');
+            const registryDateDisplay = !workStartSource || registryDateStr === '-' ? t('module.ptw.common.notSpecified', 'غير محدد') : registryDateStr;
 
             /** وقت فقط — نفس أسلوب طباعة التصريح (من الساعة / إلى الساعة) */
             const formatRegistryTime = (dateStr) => {
-                if (!dateStr || dateStr === 'غير محدد') return 'غير محدد';
+                if (!dateStr || dateStr === t('module.ptw.common.notSpecified', 'غير محدد')) return t('module.ptw.common.notSpecified', 'غير محدد');
                 try {
                     const date = this.parseDateTimeValue(dateStr);
-                    if (!date || isNaN(date.getTime())) return 'غير محدد';
+                    if (!date || isNaN(date.getTime())) return t('module.ptw.common.notSpecified', 'غير محدد');
                     return date.toLocaleTimeString('en-GB-u-nu-latn', { hour: '2-digit', minute: '2-digit', hour12: false });
                 } catch {
-                    return 'غير محدد';
+                    return t('module.ptw.common.notSpecified', 'غير محدد');
                 }
             };
 

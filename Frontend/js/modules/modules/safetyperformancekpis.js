@@ -5040,6 +5040,14 @@ SafetyPerformanceKPIs.renderChartScorecardShell = function () {
             #chart-scorecard-grid.spk-compact-mode .chart-scorecard-card .card-body { padding: 9px !important; }
             #chart-scorecard-grid.spk-compact-mode .chart-scorecard-card .card-title { font-size: 0.95rem !important; }
             #chart-scorecard-grid.spk-compact-mode .chart-scorecard-card .text-xl { font-size: 1rem !important; }
+            .spk-chart-controls-row { display: grid; grid-template-columns: 1fr; gap: 8px; align-items: end; }
+            .spk-chart-control { margin: 0; min-width: 0; }
+            .spk-chart-control-title { display: block; margin-bottom: 4px; font-size: 11px; font-weight: 700; color: #475569; line-height: 1.2; white-space: nowrap; }
+            .spk-chart-control-field { height: 32px !important; font-size: 12px !important; }
+            #chart-scorecard-compact-toggle.spk-chart-control-field { margin-top: 0 !important; padding: 0 10px; white-space: nowrap; }
+            @media (min-width: 1280px) {
+                .spk-chart-controls-row { grid-template-columns: 1.05fr 1.05fr 1.4fr 1fr 1fr; }
+            }
         </style>
         <div class="spk-scorecard-hero" style="margin-bottom:1rem;">
             <div class="spk-scorecard-title">
@@ -5052,36 +5060,36 @@ SafetyPerformanceKPIs.renderChartScorecardShell = function () {
         </div>
         <div class="content-card mb-4" style="border:1px solid rgba(15,23,42,.08);">
             <div class="card-body" style="padding:12px 14px;">
-                <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-3">
-                    <label class="text-xs font-semibold text-slate-600">
-                        ${t('module.kpi.chart.control.group', 'نوع المؤشر')}
-                        <select id="chart-scorecard-group" class="form-select mt-1" style="height:34px; font-size:12px;">
+                <div class="spk-chart-controls-row">
+                    <label class="spk-chart-control">
+                        <span class="spk-chart-control-title">${t('module.kpi.chart.control.group', 'نوع المؤشر')}</span>
+                        <select id="chart-scorecard-group" class="form-select spk-chart-control-field">
                             <option value="all" ${ui.group === 'all' ? 'selected' : ''}>${t('module.kpi.chart.group.all', 'الكل')}</option>
                             <option value="leading" ${ui.group === 'leading' ? 'selected' : ''}>${t('module.kpi.chart.group.leading', 'استباقي')}</option>
                             <option value="lagging" ${ui.group === 'lagging' ? 'selected' : ''}>${t('module.kpi.chart.group.lagging', 'تراجعي')}</option>
                             <option value="capacity" ${ui.group === 'capacity' ? 'selected' : ''}>${t('module.kpi.chart.group.capacity', 'سعة/موارد')}</option>
                         </select>
                     </label>
-                    <label class="text-xs font-semibold text-slate-600">
-                        ${t('module.kpi.chart.control.months', 'النطاق الزمني')}
-                        <select id="chart-scorecard-months" class="form-select mt-1" style="height:34px; font-size:12px;">
+                    <label class="spk-chart-control">
+                        <span class="spk-chart-control-title">${t('module.kpi.chart.control.months', 'النطاق الزمني')}</span>
+                        <select id="chart-scorecard-months" class="form-select spk-chart-control-field">
                             <option value="3" ${selectedMonths === 3 ? 'selected' : ''}>${t('module.kpi.chart.months.3', 'آخر 3 أشهر')}</option>
                             <option value="6" ${selectedMonths === 6 ? 'selected' : ''}>${t('module.kpi.chart.months.6', 'آخر 6 أشهر')}</option>
                             <option value="12" ${selectedMonths === 12 ? 'selected' : ''}>${t('module.kpi.chart.months.12', 'آخر 12 شهر')}</option>
                         </select>
                     </label>
-                    <label class="text-xs font-semibold text-slate-600">
-                        ${t('module.kpi.chart.control.search', 'بحث داخل الكروت')}
-                        <input id="chart-scorecard-search" type="search" class="form-input mt-1" style="height:34px; font-size:12px;"
+                    <label class="spk-chart-control">
+                        <span class="spk-chart-control-title">${t('module.kpi.chart.control.search', 'بحث داخل الكروت')}</span>
+                        <input id="chart-scorecard-search" type="search" class="form-input spk-chart-control-field"
                             placeholder="${t('module.kpi.chart.searchPlaceholder', 'اكتب اسم المؤشر...')}" value="${Utils.escapeHTML(ui.search || '')}">
                     </label>
-                    <button id="chart-scorecard-compact-toggle" class="btn-secondary" style="height:34px; margin-top:18px; font-size:12px;">
+                    <button id="chart-scorecard-compact-toggle" class="btn-secondary spk-chart-control-field">
                         <i class="fas ${ui.compact ? 'fa-expand-arrows-alt' : 'fa-compress-arrows-alt'} ml-1"></i>
                         ${ui.compact ? t('module.kpi.chart.compact.off', 'إلغاء الوضع المضغوط') : t('module.kpi.chart.compact.on', 'تفعيل الوضع المضغوط')}
                     </button>
-                    <label class="text-xs font-semibold text-slate-600">
-                        ${t('module.kpi.chart.control.chartType', 'نمط الرسم')}
-                        <select id="chart-scorecard-chart-type" class="form-select mt-1" style="height:34px; font-size:12px;">
+                    <label class="spk-chart-control">
+                        <span class="spk-chart-control-title">${t('module.kpi.chart.control.chartType', 'نمط الرسم')}</span>
+                        <select id="chart-scorecard-chart-type" class="form-select spk-chart-control-field">
                             <option value="line" ${ui.chartType === 'line' ? 'selected' : ''}>${t('module.kpi.chart.type.line', 'خطي')}</option>
                             <option value="bar" ${ui.chartType === 'bar' ? 'selected' : ''}>${t('module.kpi.chart.type.bar', 'أعمدة')}</option>
                         </select>
