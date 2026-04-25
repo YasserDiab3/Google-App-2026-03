@@ -5038,29 +5038,84 @@ SafetyPerformanceKPIs.renderChartScorecardShell = function () {
     `;
 };
 
-SafetyPerformanceKPIs.renderChartScorecardDetailCard = function (title, subtitle, rows = [], tone = 'blue') {
+SafetyPerformanceKPIs.renderChartScorecardDetailCard = function (config = {}) {
+    const {
+        title = '',
+        subtitle = '',
+        tone = 'blue',
+        currentValue = 0,
+        ytdValue = 0,
+        unit = '',
+        score = 0,
+        series = [],
+        labels = [],
+        metricLabel = '',
+        ytdLabel = ''
+    } = config;
     const palettes = {
-        blue: { chip: '#dbeafe', text: '#1e40af', border: 'rgba(59,130,246,.24)' },
-        emerald: { chip: '#d1fae5', text: '#065f46', border: 'rgba(16,185,129,.24)' },
-        amber: { chip: '#fef3c7', text: '#92400e', border: 'rgba(245,158,11,.24)' },
-        rose: { chip: '#ffe4e6', text: '#9f1239', border: 'rgba(244,63,94,.24)' },
-        violet: { chip: '#ede9fe', text: '#5b21b6', border: 'rgba(139,92,246,.24)' }
+        blue: { line: '#2563eb', fill: 'rgba(37,99,235,.14)', text: '#1e3a8a', soft: '#dbeafe', border: 'rgba(59,130,246,.22)' },
+        emerald: { line: '#059669', fill: 'rgba(5,150,105,.14)', text: '#065f46', soft: '#d1fae5', border: 'rgba(16,185,129,.22)' },
+        amber: { line: '#d97706', fill: 'rgba(217,119,6,.14)', text: '#92400e', soft: '#fef3c7', border: 'rgba(245,158,11,.22)' },
+        rose: { line: '#e11d48', fill: 'rgba(225,29,72,.14)', text: '#9f1239', soft: '#ffe4e6', border: 'rgba(244,63,94,.22)' },
+        violet: { line: '#7c3aed', fill: 'rgba(124,58,237,.14)', text: '#5b21b6', soft: '#ede9fe', border: 'rgba(139,92,246,.22)' }
     };
     const p = palettes[tone] || palettes.blue;
+
+    const cleanSeries = (series || []).map(v => Number(v) || 0);
+    const maxV = Math.max(...cleanSeries, 1);
+    const minV = Math.min(...cleanSeries, 0);
+    const range = Math.max(maxV - minV, 1);
+    const width = 220;
+    const height = 64;
+    const stepX = cleanSeries.length > 1 ? width / (cleanSeries.length - 1) : width;
+    const points = cleanSeries.map((v, i) => {
+        const x = i * stepX;
+        const y = height - (((v - minV) / range) * (height - 10)) - 5;
+        return `${x.toFixed(2)},${y.toFixed(2)}`;
+    }).join(' ');
+    const areaPoints = `0,${height} ${points} ${width},${height}`;
+
+    const gaugePct = Math.max(0, Math.min(100, Number(score) || 0));
+    const r = 26;
+    const circ = 2 * Math.PI * r;
+    const offset = circ * (1 - gaugePct / 100);
+
+    const formatValue = (v) => {
+        const n = Number(v) || 0;
+        return n.toLocaleString('en-US', { maximumFractionDigits: 2 });
+    };
+
     return `
-        <div class="content-card overflow-hidden" style="border:1px solid ${p.border}; box-shadow:0 12px 30px rgba(15,23,42,.06);">
+        <div class="content-card overflow-hidden" style="border:1px solid ${p.border}; box-shadow:0 14px 32px rgba(15,23,42,.08);">
             <div class="card-header" style="background:linear-gradient(135deg,#fff,#f8fafc); border-bottom:1px solid ${p.border};">
                 <h2 class="card-title text-slate-900">${title}</h2>
-                <p class="text-sm text-slate-500 mt-2">${subtitle || ''}</p>
+                <p class="text-sm text-slate-500 mt-2">${subtitle}</p>
             </div>
             <div class="card-body">
-                <div class="space-y-2">
-                    ${rows.map((row) => `
-                        <div class="flex items-center justify-between gap-3 rounded-xl px-3 py-2" style="background:${p.chip};">
-                            <div class="text-xs font-bold" style="color:${p.text};">${row.label}</div>
-                            <div class="text-xs font-black text-slate-900">${row.value}</div>
-                        </div>
-                    `).join('')}
+                <div class="grid grid-cols-[1fr_auto] gap-3 items-center">
+                    <div>
+                        <div class="text-xs font-bold mb-1" style="color:${p.text};">${metricLabel}</div>
+                        <div class="text-2xl font-black text-slate-900">${formatValue(currentValue)} <span class="text-sm font-bold text-slate-400">${unit}</span></div>
+                        <div class="text-xs text-slate-500 mt-1">${ytdLabel}: <span class="font-bold text-slate-700">${formatValue(ytdValue)}</span></div>
+                    </div>
+                    <div class="rounded-2xl p-2" style="background:${p.soft};">
+                        <svg width="64" height="64" viewBox="0 0 64 64" aria-hidden="true">
+                            <circle cx="32" cy="32" r="${r}" fill="none" stroke="rgba(15,23,42,.12)" stroke-width="8"></circle>
+                            <circle cx="32" cy="32" r="${r}" fill="none" stroke="${p.line}" stroke-width="8" stroke-linecap="round"
+                                stroke-dasharray="${circ.toFixed(2)}" stroke-dashoffset="${offset.toFixed(2)}" transform="rotate(-90 32 32)"></circle>
+                            <text x="32" y="36" text-anchor="middle" font-size="12" font-weight="800" fill="${p.text}">${gaugePct.toFixed(0)}%</text>
+                        </svg>
+                    </div>
+                </div>
+                <div class="mt-3 rounded-xl p-2" style="background:rgba(15,23,42,.03);">
+                    <svg width="100%" height="${height}" viewBox="0 0 ${width} ${height}" preserveAspectRatio="none" aria-hidden="true">
+                        <polyline points="${areaPoints}" fill="${p.fill}" stroke="none"></polyline>
+                        <polyline points="${points}" fill="none" stroke="${p.line}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"></polyline>
+                    </svg>
+                    <div class="mt-1 flex items-center justify-between text-[10px] text-slate-400">
+                        <span>${labels[0] || ''}</span>
+                        <span>${labels[labels.length - 1] || ''}</span>
+                    </div>
                 </div>
             </div>
         </div>
@@ -5088,122 +5143,159 @@ SafetyPerformanceKPIs.renderChartScorecardVisuals = function () {
     const permitTotalMonth = (cm(rows.permitsHeight) || 0) + (cm(rows.permitsElectrical) || 0) + (cm(rows.permitsHot) || 0) + (cm(rows.permitsOther) || 0);
     const permitTotalYtd = ytd(rows.permitsHeight) + ytd(rows.permitsElectrical) + ytd(rows.permitsHot) + ytd(rows.permitsOther);
 
+    const months = model.months || [];
+    const monthLabels = months.map(m => m.label);
+    const rollingScore = (arr = [], invert = false) => {
+        const vals = arr.map(v => Number(v) || 0);
+        const avg = vals.length ? (vals.reduce((s, v) => s + v, 0) / vals.length) : 0;
+        const pct = invert ? Math.max(0, 100 - (avg * 12)) : Math.min(100, avg > 100 ? 100 : avg);
+        return pct;
+    };
+
     const cards = [
-        this.renderChartScorecardDetailCard(
-            t('module.kpi.chart.card.workforceHours.title', '0 Workforce & Hours'),
-            t('module.kpi.chart.card.workforceHours.subtitle', 'Number Operational employees / Total Employee Hours Worked'),
-            [
-                { label: t('module.kpi.chart.card.operationalEmployeesCurrent', 'Operational Employees (Current Month)'), value: fmt0(cm(rows.employeeCounts)) },
-                { label: t('module.kpi.chart.card.operationalEmployeesYtd', 'Operational Employees (YTD Sum)'), value: fmt0(ytd(rows.employeeCounts)) },
-                { label: t('module.kpi.chart.card.employeeHoursCurrent', 'Employee Hours Worked (Current Month)'), value: fmt0(cm(rows.hoursWorked)) },
-                { label: t('module.kpi.chart.card.employeeHoursYtd', 'Employee Hours Worked (YTD)'), value: fmt0(ytd(rows.hoursWorked)) }
-            ],
-            'blue'
-        ),
-        this.renderChartScorecardDetailCard(
-            t('module.kpi.scorecard.section.safetyReported', '1.1 Safety (number reported)'),
-            t('module.kpi.chart.card.safetyReported.subtitle', 'LTI / NLTI / First Aid / Near Miss'),
-            [
-                { label: t('module.kpi.scorecard.row.lti', 'LTI - Lost Time Incidents'), value: `${fmt0(cm(rows.lti))} | ${t('module.kpi.scorecard.short.ytd', 'YTD')} ${fmt0(ytd(rows.lti))}` },
-                { label: t('module.kpi.scorecard.row.nlti', 'NLTI - Non Lost Time Incidents'), value: `${fmt0(cm(rows.nlti))} | ${t('module.kpi.scorecard.short.ytd', 'YTD')} ${fmt0(ytd(rows.nlti))}` },
-                { label: t('module.kpi.scorecard.row.firstAid', 'First Aid Cases'), value: `${fmt0(cm(rows.firstAid))} | ${t('module.kpi.scorecard.short.ytd', 'YTD')} ${fmt0(ytd(rows.firstAid))}` },
-                { label: t('module.kpi.scorecard.row.nearMissHazards', 'Near Miss/Hazards Reported'), value: `${fmt0(cm(rows.hazards))} | ${t('module.kpi.scorecard.short.ytd', 'YTD')} ${fmt0(ytd(rows.hazards))}` }
-            ],
-            'emerald'
-        ),
-        this.renderChartScorecardDetailCard(
-            t('module.kpi.chart.card.safetyRates.title', '1.1 Safety Rates'),
-            t('module.kpi.chart.card.safetyRates.subtitle', 'LTIR / TRIR (In Month + Rolling 12 Month)'),
-            [
-                { label: t('module.kpi.chart.card.ltirInMonth', 'LTIR (In Month)'), value: fmt2(cm(rows.ltir)) },
-                { label: t('module.kpi.chart.card.trirInMonth', 'TRIR (In Month)'), value: fmt2(cm(rows.trir)) },
-                { label: t('module.kpi.chart.card.ltirRolling12', 'LTIR (Rolling 12M)'), value: fmt2(cm(rows.rollingLtir)) },
-                { label: t('module.kpi.chart.card.trirRolling12', 'TRIR (Rolling 12M)'), value: fmt2(cm(rows.rollingTrir)) }
-            ],
-            'amber'
-        ),
-        this.renderChartScorecardDetailCard(
-            t('module.kpi.scorecard.section.occupationalHealth', '1.2 Occupational Health (number reported)'),
-            t('module.kpi.chart.card.occupationalHealth.subtitle', 'LTOI / NLTOI / Occ Health Near Miss'),
-            [
-                { label: t('module.kpi.scorecard.row.ltoi', 'LTOI - Lost Time Occupational Illness'), value: `${fmt0(cm(rows.occLti))} | ${t('module.kpi.scorecard.short.ytd', 'YTD')} ${fmt0(ytd(rows.occLti))}` },
-                { label: t('module.kpi.scorecard.row.nltoi', 'NLTOI - Non Lost Time Occupational Illness'), value: `${fmt0(cm(rows.occNlti))} | ${t('module.kpi.scorecard.short.ytd', 'YTD')} ${fmt0(ytd(rows.occNlti))}` },
-                { label: t('module.kpi.scorecard.row.occNearMissHazards', 'Occ Health Near Miss/Hazards Reported'), value: `${fmt0(cm(rows.occHazards))} | ${t('module.kpi.scorecard.short.ytd', 'YTD')} ${fmt0(ytd(rows.occHazards))}` }
-            ],
-            'violet'
-        ),
-        this.renderChartScorecardDetailCard(
-            t('module.kpi.chart.card.occupationalHealthRates.title', '1.2 Occupational Health Rates'),
-            t('module.kpi.chart.card.occupationalHealthRates.subtitle', 'LTOIR / TROIR (In Month + Rolling 12 Month)'),
-            [
-                { label: t('module.kpi.chart.card.ltoirInMonth', 'LTOIR (In Month)'), value: fmt2(cm(rows.occLtir)) },
-                { label: t('module.kpi.chart.card.troirInMonth', 'TROIR (In Month)'), value: fmt2(cm(rows.occTrir)) },
-                { label: t('module.kpi.chart.card.ltoirRolling12', 'LTOIR (Rolling 12M)'), value: fmt2(cm(rows.rollingOccLtir)) },
-                { label: t('module.kpi.chart.card.troirRolling12', 'TROIR (Rolling 12M)'), value: fmt2(cm(rows.rollingOccTrir)) }
-            ],
-            'rose'
-        ),
-        this.renderChartScorecardDetailCard(
-            t('module.kpi.scorecard.section.permits', '2 Permits to Work'),
-            t('module.kpi.chart.card.permits.subtitle', 'Heights / Electrical-LOTO / Hot Work / All Others'),
-            [
-                { label: t('module.kpi.scorecard.row.permits.heights', 'Heights'), value: `${fmt0(cm(rows.permitsHeight))} | ${t('module.kpi.scorecard.short.ytd', 'YTD')} ${fmt0(ytd(rows.permitsHeight))}` },
-                { label: t('module.kpi.scorecard.row.permits.electrical', 'Electrical Work / LOTO'), value: `${fmt0(cm(rows.permitsElectrical))} | ${t('module.kpi.scorecard.short.ytd', 'YTD')} ${fmt0(ytd(rows.permitsElectrical))}` },
-                { label: t('module.kpi.scorecard.row.permits.hot', 'Hot Work'), value: `${fmt0(cm(rows.permitsHot))} | ${t('module.kpi.scorecard.short.ytd', 'YTD')} ${fmt0(ytd(rows.permitsHot))}` },
-                { label: t('module.kpi.scorecard.row.permits.others', 'All Others'), value: `${fmt0(cm(rows.permitsOther))} | ${t('module.kpi.scorecard.short.ytd', 'YTD')} ${fmt0(ytd(rows.permitsOther))}` },
-                { label: t('module.kpi.scorecard.row.permits.total', 'TOTAL PER MONTH'), value: `${fmt0(permitTotalMonth)} | ${t('module.kpi.scorecard.short.ytd', 'YTD')} ${fmt0(permitTotalYtd)}` }
-            ],
-            'blue'
-        ),
-        this.renderChartScorecardDetailCard(
-            t('module.kpi.scorecard.section.training', '3 Health & Safety Training'),
-            t('module.kpi.chart.card.training.subtitle', 'Sessions / Attendees / Training Hours'),
-            [
-                { label: t('module.kpi.scorecard.row.training.sessions', 'Total Number sessions run'), value: `${fmt0(cm(rows.trainingSessions))} | ${t('module.kpi.scorecard.short.ytd', 'YTD')} ${fmt0(ytd(rows.trainingSessions))}` },
-                { label: t('module.kpi.scorecard.row.training.attendees', 'Total Number of attendees'), value: `${fmt0(cm(rows.trainingAttendees))} | ${t('module.kpi.scorecard.short.ytd', 'YTD')} ${fmt0(ytd(rows.trainingAttendees))}` },
-                { label: t('module.kpi.scorecard.row.training.hours', 'Total Number H&S Training Hours'), value: `${fmt2(cm(rows.trainingHours))} | ${t('module.kpi.scorecard.short.ytd', 'YTD')} ${fmt2(ytd(rows.trainingHours))}` }
-            ],
-            'emerald'
-        ),
-        this.renderChartScorecardDetailCard(
-            t('module.kpi.scorecard.section.trainingMetrics', '3 Training Metrics'),
-            t('module.kpi.chart.card.trainingMetrics.subtitle', 'Per Operational FTE'),
-            [
-                { label: t('module.kpi.scorecard.row.training.hoursPerFte', 'Training Hours per Operational FTE'), value: `${fmt2(cm(rows.trainingHoursPerFte))} | ${t('module.kpi.scorecard.short.avgYtd', 'Avg YTD')} ${fmt2(ytd(rows.trainingHoursPerFte, 'avg'))}` },
-                { label: t('module.kpi.scorecard.row.training.minutesPerFte', 'equates to Minutes of training per FTE'), value: `${fmt0(cm(rows.trainingMinutesPerFte))} | ${t('module.kpi.scorecard.short.avgYtd', 'Avg YTD')} ${fmt0(ytd(rows.trainingMinutesPerFte, 'avg'))}` },
-                { label: t('module.kpi.scorecard.row.training.hoursPerFteYtd', 'equates to Hours of training per FTE YTD'), value: fmt2(ytd(rows.trainingHoursPerFteYtd, 'last')) }
-            ],
-            'amber'
-        ),
-        this.renderChartScorecardDetailCard(
-            t('module.kpi.scorecard.section.nebosh', '4 NEBOSH Training'),
-            t('module.kpi.scorecard.row.neboshStatus', 'Certification status of UAE HSE Lead'),
-            [
-                { label: t('module.kpi.chart.card.currentMonthStatus', 'Current Month Status'), value: `${cm(rows.neboshStatus) || '-'}` },
-                { label: t('module.kpi.chart.card.ytdStatusLast', 'YTD Status (Last)'), value: `${ytd(rows.neboshStatus, 'last') || '-'}` }
-            ],
-            'violet'
-        ),
-        this.renderChartScorecardDetailCard(
-            t('module.kpi.chart.card.dataScope.title', 'Data Scope'),
-            t('module.kpi.chart.card.dataScope.subtitle', 'Monthly + Cumulative YTD + Rolling 12M'),
-            [
-                { label: t('module.kpi.chart.card.scorecardYear', 'Scorecard Year'), value: String(this.scorecardYear) },
-                { label: t('module.kpi.chart.card.currentMonthIndex', 'Current Month Index'), value: String(monthIndex + 1) },
-                { label: t('module.kpi.chart.card.renderingSource', 'Rendering Source'), value: 'buildScorecardData()' }
-            ],
-            'rose'
-        ),
-        this.renderChartScorecardDetailCard(
-            t('module.kpi.chart.overall', 'Overall Readability Summary'),
-            t('module.kpi.chart.card.overall.subtitle', 'This tab mirrors your listed scorecard structure'),
-            [
-                { label: t('module.kpi.chart.card.sections', 'Sections'), value: t('module.kpi.chart.card.sectionsValue', 'Workforce, Rates, PTW, Training, NEBOSH') },
-                { label: t('module.kpi.chart.card.safetyRates', 'Safety Rates'), value: `LTIR ${fmt2(cm(rows.ltir))} | TRIR ${fmt2(cm(rows.trir))}` },
-                { label: t('module.kpi.chart.card.occHealthRates', 'Occ Health Rates'), value: `LTOIR ${fmt2(cm(rows.occLtir))} | TROIR ${fmt2(cm(rows.occTrir))}` }
-            ],
-            'blue'
-        )
+        this.renderChartScorecardDetailCard({
+            title: t('module.kpi.chart.card.workforceHours.title', '0 Workforce & Hours'),
+            subtitle: t('module.kpi.chart.card.workforceHours.subtitle', 'Number Operational employees / Total Employee Hours Worked'),
+            tone: 'blue',
+            currentValue: cm(rows.employeeCounts),
+            ytdValue: ytd(rows.employeeCounts),
+            unit: t('module.kpi.unit.employee', 'Emp'),
+            score: rollingScore(rows.employeeCounts, false),
+            series: rows.employeeCounts || [],
+            labels: monthLabels,
+            metricLabel: t('module.kpi.chart.card.operationalEmployeesCurrent', 'Operational Employees (Current Month)'),
+            ytdLabel: t('module.kpi.chart.card.operationalEmployeesYtd', 'Operational Employees (YTD Sum)')
+        }),
+        this.renderChartScorecardDetailCard({
+            title: t('module.kpi.scorecard.row.totalHoursWorked', 'Total Employee Hours Worked'),
+            subtitle: t('module.kpi.chart.card.employeeHoursCurrent', 'Employee Hours Worked (Current Month)'),
+            tone: 'violet',
+            currentValue: cm(rows.hoursWorked),
+            ytdValue: ytd(rows.hoursWorked),
+            unit: 'h',
+            score: rollingScore(rows.hoursWorked, false),
+            series: rows.hoursWorked || [],
+            labels: monthLabels,
+            metricLabel: t('module.kpi.chart.card.employeeHoursCurrent', 'Employee Hours Worked (Current Month)'),
+            ytdLabel: t('module.kpi.chart.card.employeeHoursYtd', 'Employee Hours Worked (YTD)')
+        }),
+        this.renderChartScorecardDetailCard({
+            title: t('module.kpi.scorecard.row.lti', 'LTI - Lost Time Incidents'),
+            subtitle: t('module.kpi.chart.card.safetyReported.subtitle', 'LTI / NLTI / First Aid / Near Miss'),
+            tone: 'rose',
+            currentValue: cm(rows.lti),
+            ytdValue: ytd(rows.lti),
+            unit: t('module.kpi.unit.incident', 'Incident'),
+            score: rollingScore(rows.lti, true),
+            series: rows.lti || [],
+            labels: monthLabels,
+            metricLabel: t('module.kpi.chart.card.currentMonthIndex', 'Current Month'),
+            ytdLabel: t('module.kpi.scorecard.short.ytd', 'YTD')
+        }),
+        this.renderChartScorecardDetailCard({
+            title: t('module.kpi.scorecard.row.trir', 'TRIR - Total Recordable Incident Rate'),
+            subtitle: t('module.kpi.chart.card.safetyRates.subtitle', 'LTIR / TRIR (In Month + Rolling 12 Month)'),
+            tone: 'amber',
+            currentValue: cm(rows.trir),
+            ytdValue: ytd(rows.trir, 'avg'),
+            unit: 'rate',
+            score: rollingScore(rows.trir, true),
+            series: rows.trir || [],
+            labels: monthLabels,
+            metricLabel: t('module.kpi.chart.card.trirInMonth', 'TRIR (In Month)'),
+            ytdLabel: t('module.kpi.scorecard.short.avgYtd', 'Avg YTD')
+        }),
+        this.renderChartScorecardDetailCard({
+            title: t('module.kpi.scorecard.row.occNearMissHazards', 'Occ Health Near Miss/Hazards Reported'),
+            subtitle: t('module.kpi.chart.card.occupationalHealth.subtitle', 'LTOI / NLTOI / Occ Health Near Miss'),
+            tone: 'violet',
+            currentValue: cm(rows.occHazards),
+            ytdValue: ytd(rows.occHazards),
+            unit: t('module.kpi.unit.incident', 'Incident'),
+            score: rollingScore(rows.occHazards, true),
+            series: rows.occHazards || [],
+            labels: monthLabels,
+            metricLabel: t('module.kpi.scorecard.row.occNearMissHazards', 'Occ Health Near Miss/Hazards Reported'),
+            ytdLabel: t('module.kpi.scorecard.short.ytd', 'YTD')
+        }),
+        this.renderChartScorecardDetailCard({
+            title: t('module.kpi.scorecard.section.permits', '2 Permits to Work'),
+            subtitle: t('module.kpi.chart.card.permits.subtitle', 'Heights / Electrical-LOTO / Hot Work / All Others'),
+            tone: 'blue',
+            currentValue: permitTotalMonth,
+            ytdValue: permitTotalYtd,
+            unit: t('module.kpi.unit.permit', 'Permit'),
+            score: rollingScore(rows.permitTotal || [], false),
+            series: rows.permitTotal || [],
+            labels: monthLabels,
+            metricLabel: t('module.kpi.scorecard.row.permits.total', 'TOTAL PER MONTH'),
+            ytdLabel: t('module.kpi.scorecard.short.ytd', 'YTD')
+        }),
+        this.renderChartScorecardDetailCard({
+            title: t('module.kpi.scorecard.section.training', '3 Health & Safety Training'),
+            subtitle: t('module.kpi.chart.card.training.subtitle', 'Sessions / Attendees / Training Hours'),
+            tone: 'emerald',
+            currentValue: cm(rows.trainingHours),
+            ytdValue: ytd(rows.trainingHours),
+            unit: 'h',
+            score: rollingScore(rows.trainingHours, false),
+            series: rows.trainingHours || [],
+            labels: monthLabels,
+            metricLabel: t('module.kpi.scorecard.row.training.hours', 'Total Number H&S Training Hours'),
+            ytdLabel: t('module.kpi.scorecard.short.ytd', 'YTD')
+        }),
+        this.renderChartScorecardDetailCard({
+            title: t('module.kpi.scorecard.section.trainingMetrics', 'Training Metrics'),
+            subtitle: t('module.kpi.chart.card.trainingMetrics.subtitle', 'Per Operational FTE'),
+            tone: 'amber',
+            currentValue: cm(rows.trainingHoursPerFte),
+            ytdValue: ytd(rows.trainingHoursPerFte, 'avg'),
+            unit: 'h/FTE',
+            score: rollingScore(rows.trainingHoursPerFte, false),
+            series: rows.trainingHoursPerFte || [],
+            labels: monthLabels,
+            metricLabel: t('module.kpi.scorecard.row.training.hoursPerFte', 'Training Hours per Operational FTE'),
+            ytdLabel: t('module.kpi.scorecard.short.avgYtd', 'Avg YTD')
+        }),
+        this.renderChartScorecardDetailCard({
+            title: t('module.kpi.scorecard.section.nebosh', '4 NEBOSH Training'),
+            subtitle: t('module.kpi.scorecard.row.neboshStatus', 'Certification status of UAE HSE Lead'),
+            tone: 'violet',
+            currentValue: String(cm(rows.neboshStatus) || '-'),
+            ytdValue: String(ytd(rows.neboshStatus, 'last') || '-'),
+            unit: '',
+            score: (String(cm(rows.neboshStatus) || '').toLowerCase().includes('cert') || String(cm(rows.neboshStatus) || '').includes('معتمد')) ? 100 : 45,
+            series: (rows.neboshStatus || []).map((v) => (String(v || '').trim() ? 1 : 0)),
+            labels: monthLabels,
+            metricLabel: t('module.kpi.chart.card.currentMonthStatus', 'Current Month Status'),
+            ytdLabel: t('module.kpi.chart.card.ytdStatusLast', 'YTD Status (Last)')
+        }),
+        this.renderChartScorecardDetailCard({
+            title: t('module.kpi.chart.card.safetyRates', 'Safety Rates'),
+            subtitle: t('module.kpi.chart.card.safetyRates.subtitle', 'LTIR / TRIR (In Month + Rolling 12 Month)'),
+            tone: 'rose',
+            currentValue: cm(rows.ltir),
+            ytdValue: ytd(rows.ltir, 'avg'),
+            unit: 'LTIR',
+            score: rollingScore(rows.ltir, true),
+            series: rows.ltir || [],
+            labels: monthLabels,
+            metricLabel: t('module.kpi.chart.card.ltirInMonth', 'LTIR (In Month)'),
+            ytdLabel: t('module.kpi.scorecard.short.avgYtd', 'Avg YTD')
+        }),
+        this.renderChartScorecardDetailCard({
+            title: t('module.kpi.chart.overall', 'Overall Readability Summary'),
+            subtitle: t('module.kpi.chart.card.overall.subtitle', 'This tab mirrors your listed scorecard structure'),
+            tone: 'blue',
+            currentValue: ((rollingScore(rows.trainingHours, false) + rollingScore(rows.permitTotal, false) + rollingScore(rows.trir, true)) / 3).toFixed(1),
+            ytdValue: ytd(rows.permitTotal),
+            unit: '%',
+            score: ((rollingScore(rows.trainingHours, false) + rollingScore(rows.permitTotal, false) + rollingScore(rows.trir, true)) / 3),
+            series: (rows.permitTotal || []).map((v, i) => (Number(v || 0) + Number((rows.trainingSessions || [])[i] || 0))),
+            labels: monthLabels,
+            metricLabel: t('module.kpi.chart.card.sections', 'Sections'),
+            ytdLabel: t('module.kpi.chart.card.sectionsValue', 'Workforce, Rates, PTW, Training, NEBOSH')
+        })
     ];
 
     grid.innerHTML = cards.join('');
