@@ -4679,23 +4679,41 @@ window.UI = {
         return parts.join(' و');
     },
 
+    _profileNorm(v) {
+        return String(v || '')
+            .trim()
+            .toLowerCase()
+            .replace(/[\s\-_.()]+/g, '');
+    },
+
+    _pickProfileField(record, aliases = []) {
+        if (!record || typeof record !== 'object') return '';
+        for (let i = 0; i < aliases.length; i++) {
+            const key = aliases[i];
+            if (record[key] !== undefined && record[key] !== null && String(record[key]).trim() !== '') {
+                return String(record[key]).trim();
+            }
+        }
+        return '';
+    },
+
     _getProfileEmployeeRecord() {
         const user = AppState.currentUser || {};
         const employees = Array.isArray(AppState.appData?.employees) ? AppState.appData.employees : [];
         if (!employees.length) return null;
 
-        const norm = (v) => String(v || '').trim().toLowerCase();
+        const norm = (v) => this._profileNorm(v);
         const email = norm(user.email);
         const userId = norm(user.id);
-        const userEmployeeCode = norm(user.employeeNumber || user.employeeCode || user.employeeId || user.sapId);
-        const userName = norm(user.name);
+        const userEmployeeCode = norm(user.employeeNumber || user.employeeCode || user.employeeId || user.sapId || user.nationalId);
+        const userName = norm(user.name || user.fullName || user.displayName);
 
         return employees.find((emp) => {
             if (!emp) return false;
-            const empEmail = norm(emp.email);
-            const empId = norm(emp.id);
-            const empCode = norm(emp.employeeNumber || emp.employeeCode || emp.sapId);
-            const empName = norm(emp.name);
+            const empEmail = norm(this._pickProfileField(emp, ['email', 'mail', 'البريد الإلكتروني', 'الايميل']));
+            const empId = norm(this._pickProfileField(emp, ['id', 'employeeId', 'معرف الموظف']));
+            const empCode = norm(this._pickProfileField(emp, ['employeeNumber', 'employeeCode', 'sapId', 'code', 'الكود الوظيفي', 'الرقم الوظيفي']));
+            const empName = norm(this._pickProfileField(emp, ['name', 'employeeName', 'fullName', 'اسم الموظف', 'الاسم']));
             return (email && empEmail && empEmail === email)
                 || (userId && (empId === userId || empCode === userId))
                 || (userEmployeeCode && (empCode === userEmployeeCode || empId === userEmployeeCode))
@@ -4818,17 +4836,17 @@ window.UI = {
         const currentUserRecord = dbUsers.find((u) => String(u?.email || '').trim().toLowerCase() === String(user?.email || '').trim().toLowerCase()) || {};
         const employee = this._getProfileEmployeeRecord();
 
-        const fullName = employee?.name || user?.name || currentUserRecord?.name || '';
+        const fullName = this._pickProfileField(employee, ['name', 'employeeName', 'fullName', 'اسم الموظف', 'الاسم']) || user?.name || currentUserRecord?.name || '';
         const email = user?.email || employee?.email || currentUserRecord?.email || '';
-        const phone = employee?.phone || currentUserRecord?.phone || '';
+        const phone = this._pickProfileField(employee, ['phone', 'mobile', 'cellPhone', 'phoneNumber', 'رقم الهاتف', 'الجوال']) || currentUserRecord?.phone || '';
         const department = employee?.department || user?.department || currentUserRecord?.department || '';
-        const position = employee?.position || employee?.job || currentUserRecord?.position || currentUserRecord?.job || '';
-        const branch = employee?.branch || employee?.factory || user?.branch || currentUserRecord?.branch || '';
-        const location = employee?.location || employee?.address || user?.subLocationName || user?.subLocation || '';
-        const employeeNumber = employee?.employeeNumber || employee?.employeeCode || employee?.id || user?.employeeNumber || '';
+        const position = this._pickProfileField(employee, ['position', 'job', 'jobTitle', 'title', 'الوظيفة', 'المسمى الوظيفي']) || currentUserRecord?.position || currentUserRecord?.job || '';
+        const branch = this._pickProfileField(employee, ['branch', 'factory', 'siteName', 'المصنع', 'الفرع']) || user?.branch || currentUserRecord?.branch || '';
+        const location = this._pickProfileField(employee, ['location', 'address', 'homeAddress', 'siteLocation', 'العنوان', 'الموقع']) || user?.subLocationName || user?.subLocation || '';
+        const employeeNumber = this._pickProfileField(employee, ['employeeNumber', 'employeeCode', 'code', 'sapId', 'الرقم الوظيفي', 'الكود الوظيفي']) || user?.employeeNumber || '';
         const employeeId = employee?.id || employee?.employeeNumber || user?.id || '';
         const photo = employee?.photo || user?.photo || currentUserRecord?.photo || '';
-        const hireRaw = employee?.hireDate;
+        const hireRaw = this._pickProfileField(employee, ['hireDate', 'appointmentDate', 'employmentDate', 'startDate', 'تاريخ التعيين']);
         const hireDateDisplay = this._formatProfileHireDateDisplay(hireRaw);
         const tenureText = hireRaw ? this._computeProfileTenure(hireRaw) : '';
 

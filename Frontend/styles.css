@@ -14891,17 +14891,36 @@ body[data-color-theme] .nav-item.active {
     border-radius: 12px;
     background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
     padding: 10px 12px;
+    border-right: 4px solid rgba(var(--sidebar-accent-rgb), 0.55);
+    transition: transform .16s ease, box-shadow .16s ease, border-color .16s ease;
+}
+
+.profile-info-list>div:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 8px 18px rgba(15, 23, 42, 0.08);
+    border-color: rgba(var(--sidebar-accent-rgb), 0.45);
 }
 
 .profile-info-list span {
-    color: #64748b;
+    color: #475569;
     font-size: .85rem;
+    font-weight: 700;
 }
 
 .profile-info-list strong {
     color: #0f172a;
     font-size: .96rem;
     font-weight: 800;
+}
+
+.profile-personal-card .card-header {
+    background: linear-gradient(90deg, rgba(var(--sidebar-accent-rgb), 0.08) 0%, rgba(15, 23, 42, 0.02) 100%);
+    border-bottom: 1px solid rgba(var(--sidebar-accent-rgb), 0.2);
+}
+
+.profile-personal-card .card-title {
+    color: #0f172a;
+    font-weight: 900;
 }
 
 .profile-kpi-grid {
