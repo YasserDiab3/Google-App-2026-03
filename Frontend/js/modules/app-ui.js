@@ -4937,9 +4937,18 @@ window.UI = {
             if ((!Array.isArray(AppState.appData?.employees) || AppState.appData.employees.length === 0)
                 && typeof GoogleIntegration !== 'undefined'
                 && typeof GoogleIntegration.callBackend === 'function') {
-                const employeesRes = await GoogleIntegration.callBackend('getAllEmployees', { filters: {} });
+                const employeesRes = await GoogleIntegration.callBackend('getAllEmployees', { filters: { includeInactive: true } });
                 if (employeesRes && employeesRes.success !== false && Array.isArray(employeesRes.data)) {
                     AppState.appData.employees = employeesRes.data;
+                }
+            }
+            // fallback أخير: قراءة مباشرة من الشيت في حال فشل API الموظفين لأي سبب
+            if ((!Array.isArray(AppState.appData?.employees) || AppState.appData.employees.length === 0)
+                && typeof GoogleIntegration !== 'undefined'
+                && typeof GoogleIntegration.callBackend === 'function') {
+                const directRes = await GoogleIntegration.callBackend('readFromSheet', { sheetName: 'Employees' });
+                if (directRes && directRes.success !== false && Array.isArray(directRes.data)) {
+                    AppState.appData.employees = directRes.data;
                 }
             }
         } catch (_) { /* ignore non-critical profile preload errors */ }

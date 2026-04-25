@@ -178,12 +178,15 @@ function getAllEmployees(filters = {}) {
         let data = readFromSheet(sheetName, getSpreadsheetId());
         
         // ✅ تصفية الموظفين النشطين فقط (ما لم يُطلب خلاف ذلك)
+        // ملاحظة: ندعم قيم حالة مختلفة (عربي/إنجليزي/Boolean/رقمي)
         if (filters.includeInactive !== true) {
-            data = data.filter(e => 
-                e.status === undefined || 
-                e.status === '' || 
-                e.status === 'active'
-            );
+            data = data.filter(e => {
+                if (!e) return false;
+                const raw = String(e.status === undefined || e.status === null ? '' : e.status).trim().toLowerCase();
+                if (raw === '' || raw === 'active' || raw === 'نشط' || raw === 'true' || raw === '1') return true;
+                if (e.status === true || e.status === 1) return true;
+                return false;
+            });
         }
         
         // تطبيق الفلاتر
