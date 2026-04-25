@@ -2486,8 +2486,8 @@ const SafetyPerformanceKPIs = {
         this.renderHeatmap(data);
     },
 
-    renderIncidentsChart(data, start, end) {
-        const container = document.getElementById('incidents-chart-container');
+    renderIncidentsChart(data, start, end, containerId = 'incidents-chart-container') {
+        const container = document.getElementById(containerId);
         if (!container) return;
 
         // Group by date
@@ -2501,15 +2501,16 @@ const SafetyPerformanceKPIs = {
         const labels = Object.keys(incidentsByDate).sort();
         const values = labels.map(label => incidentsByDate[label]);
 
+        const canvasId = `${containerId}-canvas`;
         container.innerHTML = `
             <div class="text-center p-8">
-                <canvas id="incidents-chart-canvas" style="max-height: 250px;"></canvas>
+                <canvas id="${canvasId}" style="max-height: 250px;"></canvas>
             </div>
         `;
 
         // Simple bar chart using CSS
         setTimeout(() => {
-            const canvas = document.getElementById('incidents-chart-canvas');
+            const canvas = document.getElementById(canvasId);
             if (canvas && canvas.getContext) {
                 const ctx = canvas.getContext('2d');
                 const maxValue = Math.max(...values, 1);
@@ -2540,8 +2541,8 @@ const SafetyPerformanceKPIs = {
         }, 100);
     },
 
-    renderDepartmentChart(data) {
-        const container = document.getElementById('department-chart-container');
+    renderDepartmentChart(data, containerId = 'department-chart-container') {
+        const container = document.getElementById(containerId);
         if (!container) return;
 
         const deptCounts = {};
@@ -2575,8 +2576,8 @@ const SafetyPerformanceKPIs = {
         `;
     },
 
-    renderTRIRChart(data, start, end) {
-        const container = document.getElementById('trir-chart-container');
+    renderTRIRChart(data, start, end, containerId = 'trir-chart-container') {
+        const container = document.getElementById(containerId);
         if (!container) return;
 
         // Calculate LTIFR for each month in the period
@@ -2610,8 +2611,8 @@ const SafetyPerformanceKPIs = {
         `;
     },
 
-    renderTrainingChart(data, start, end) {
-        const container = document.getElementById('training-chart-container');
+    renderTrainingChart(data, start, end, containerId = 'training-chart-container') {
+        const container = document.getElementById(containerId);
         if (!container) return;
 
         const completed = data.training.filter(tr =>
@@ -2641,8 +2642,8 @@ const SafetyPerformanceKPIs = {
         `;
     },
 
-    renderDepartmentComparison(data) {
-        const container = document.getElementById('department-comparison-container');
+    renderDepartmentComparison(data, containerId = 'department-comparison-container') {
+        const container = document.getElementById(containerId);
         if (!container) return;
 
         const deptStats = {};
@@ -2695,8 +2696,8 @@ const SafetyPerformanceKPIs = {
         `;
     },
 
-    renderHeatmap(data) {
-        const container = document.getElementById('heatmap-container');
+    renderHeatmap(data, containerId = 'heatmap-container') {
+        const container = document.getElementById(containerId);
         if (!container) return;
 
         const deptLocMatrix = {};
@@ -4925,5 +4926,140 @@ SafetyPerformanceKPIs.exportMonitoringPlanToPDF = async function() {
     } catch (error) {
         console.error('Error exporting Monitoring Plan to PDF:', error);
         Notification.error(this._t('module.kpi.notify.saveError','حدث خطأ أثناء التصدير: ') + error.message);
+    }
+};
+
+// ===== Chart Score Card Tab (Professional charts based on overview data) =====
+SafetyPerformanceKPIs.renderChartScorecardShell = function () {
+    const t = (k, f) => this._t(k, f);
+    return `
+        <div class="spk-scorecard-hero" style="margin-bottom: 1rem;">
+            <div class="spk-scorecard-title">
+                <div>
+                    <div class="spk-scorecard-eyebrow">${t('module.kpi.scorecard.eyebrow', 'مصدر الحقيقة الواحد')}</div>
+                    <h2 class="text-2xl font-black text-slate-900 mt-2">Chart Score Card</h2>
+                    <p class="text-sm text-slate-600 mt-2">${t('module.kpi.chart.subtitle', 'لوحة رسوم بيانية تنفيذية مبنية على نفس بيانات لوحة التحكم.')}</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
+            ${this.renderOverviewMiniStat('chart-scorecard-incidents-total', t('module.kpi.quick.incidents', 'إجمالي الحوادث'), 'fa-triangle-exclamation', 'rose', t('module.kpi.unit.incident', 'حادث'))}
+            ${this.renderOverviewMiniStat('chart-scorecard-observations-total', t('module.kpi.quick.observations', 'الملاحظات/الوشيكة'), 'fa-eye', 'amber', t('module.kpi.unit.observation', 'ملاحظة'))}
+            ${this.renderOverviewMiniStat('chart-scorecard-training-total', t('module.kpi.quick.training', 'برامج التدريب'), 'fa-graduation-cap', 'emerald', t('module.kpi.unit.course', 'دورة'))}
+            ${this.renderOverviewMiniStat('chart-scorecard-ptw-total', t('module.kpi.quick.ptw', 'تصاريح العمل'), 'fa-id-card', 'blue', t('module.kpi.unit.permit', 'تصريح'))}
+        </div>
+
+        <div class="grid grid-cols-1 xl:grid-cols-2 gap-6">
+            ${this.renderOverviewChartCard('chart-scorecard-incidents-container', t('module.kpi.chart.incidents', 'الحوادث والإصابات الشهرية'), 'fa-chart-column', 'rose', t('module.kpi.overview.chartDesc.incidents', 'اتجاه الحوادث والإصابات خلال الفترة.'))}
+            ${this.renderOverviewChartCard('chart-scorecard-department-container', t('module.kpi.chart.deptDistribution', 'توزيع الحوادث حسب الإدارة'), 'fa-chart-pie', 'blue', t('module.kpi.overview.chartDesc.dept', 'الإدارات الأعلى تعرضاً ومتابعة بؤر المخاطر.'))}
+            ${this.renderOverviewChartCard('chart-scorecard-trir-container', t('module.kpi.chart.ltifr', 'معدل LTIFR عبر الزمن'), 'fa-chart-line', 'violet', t('module.kpi.overview.chartDesc.ltifr', 'تغيّر مؤشرات الإصابات عبر الفترات.'))}
+            ${this.renderOverviewChartCard('chart-scorecard-training-container', t('module.kpi.chart.training', 'معدل الالتزام بالتدريب'), 'fa-chart-area', 'emerald', t('module.kpi.overview.chartDesc.training', 'تقدم التدريب ومستوى الالتزام.'))}
+        </div>
+
+        <div class="grid grid-cols-1 xl:grid-cols-[1.15fr_0.85fr] gap-6 mt-6">
+            <div class="content-card overflow-hidden">
+                <div class="card-header" style="background: linear-gradient(135deg, rgba(15,23,42,0.04), rgba(59,130,246,0.06));">
+                    <h2 class="card-title text-slate-900">
+                        <i class="fas fa-balance-scale ml-2 text-sky-700"></i>
+                        ${t('module.kpi.chart.deptComparison', 'مقارنة بين الإدارات / المواقع')}
+                    </h2>
+                </div>
+                <div class="card-body">
+                    <div id="chart-scorecard-comparison-container" style="height: 400px;"></div>
+                </div>
+            </div>
+
+            <div class="content-card overflow-hidden">
+                <div class="card-header" style="background: linear-gradient(135deg, rgba(15,23,42,0.04), rgba(244,63,94,0.06));">
+                    <h2 class="card-title text-slate-900">
+                        <i class="fas fa-th ml-2 text-rose-600"></i>
+                        ${t('module.kpi.chart.heatmapTitle', 'خريطة الحرارة')}
+                    </h2>
+                </div>
+                <div class="card-body">
+                    <div id="chart-scorecard-heatmap-container"></div>
+                </div>
+            </div>
+        </div>
+    `;
+};
+
+SafetyPerformanceKPIs.renderChartScorecardVisuals = function (data, start, end) {
+    // رسم نفس رسومات لوحة التحكم لكن داخل حاويات تبويب Chart Score Card
+    this.renderIncidentsChart(data, start, end, 'chart-scorecard-incidents-container');
+    this.renderDepartmentChart(data, 'chart-scorecard-department-container');
+    this.renderTRIRChart(data, start, end, 'chart-scorecard-trir-container');
+    this.renderTrainingChart(data, start, end, 'chart-scorecard-training-container');
+    this.renderDepartmentComparison(data, 'chart-scorecard-comparison-container');
+    this.renderHeatmap(data, 'chart-scorecard-heatmap-container');
+
+    const incidentsTotal = ((data.incidents || []).length + (data.medicalInjuries || []).length) || 0;
+    const observationsTotal = ((data.nearmiss || []).length + (data.dailyObservations || []).length) || 0;
+    const trainingTotal = (data.training || []).length || 0;
+    const permitsTotal = (data.ptw || []).length || 0;
+    const lang = (window.AppI18n && window.AppI18n.getCurrentLang && window.AppI18n.getCurrentLang() === 'en') ? 'en-US' : 'ar-SA';
+    const setText = (id, val) => {
+        const node = document.getElementById(id);
+        if (node) node.textContent = val;
+    };
+    setText('chart-scorecard-incidents-total', incidentsTotal.toLocaleString(lang));
+    setText('chart-scorecard-observations-total', observationsTotal.toLocaleString(lang));
+    setText('chart-scorecard-training-total', trainingTotal.toLocaleString(lang));
+    setText('chart-scorecard-ptw-total', permitsTotal.toLocaleString(lang));
+};
+
+const __origEnhanceWithScorecardTab = SafetyPerformanceKPIs.enhanceWithScorecardTab;
+SafetyPerformanceKPIs.enhanceWithScorecardTab = function (section) {
+    __origEnhanceWithScorecardTab.call(this, section);
+    const tabBar = section ? section.querySelector('.spk-tab-bar') : null;
+    if (!tabBar || tabBar.querySelector('#spk-tab-chart-scorecard')) return;
+
+    const t = (k, f) => this._t(k, f);
+    const scoreBtn = tabBar.querySelector('#spk-tab-scorecard');
+    const chartBtn = document.createElement('button');
+    chartBtn.type = 'button';
+    chartBtn.id = 'spk-tab-chart-scorecard';
+    chartBtn.className = 'spk-tab-btn';
+    chartBtn.setAttribute('data-tab', 'chart-scorecard');
+    chartBtn.innerHTML = `<i class="fas fa-chart-line ml-1"></i>${t('module.kpi.tab.chartScoreCard', 'Chart Score Card')}`;
+    if (scoreBtn && scoreBtn.nextSibling) tabBar.insertBefore(chartBtn, scoreBtn.nextSibling);
+    else tabBar.appendChild(chartBtn);
+
+    const chartPanel = document.createElement('div');
+    chartPanel.id = 'spk-chart-scorecard-panel';
+    chartPanel.className = 'spk-tab-panel hidden';
+    chartPanel.innerHTML = this.renderChartScorecardShell();
+    this.applyModuleI18n(chartPanel);
+    section.appendChild(chartPanel);
+
+    chartBtn.addEventListener('click', () => this.switchScorecardTab('chart-scorecard'));
+};
+
+const __origSwitchScorecardTab = SafetyPerformanceKPIs.switchScorecardTab;
+SafetyPerformanceKPIs.switchScorecardTab = function (tab) {
+    __origSwitchScorecardTab.call(this, tab);
+    const chartPanel = document.getElementById('spk-chart-scorecard-panel');
+    const showChart = tab === 'chart-scorecard';
+    if (chartPanel) chartPanel.classList.toggle('hidden', !showChart);
+
+    document.querySelectorAll('.spk-tab-btn').forEach(button => {
+        button.classList.toggle('active', button.getAttribute('data-tab') === tab);
+    });
+
+    if (showChart) {
+        const { start, end } = this.getDateRange();
+        const data = this.getFilteredData(start, end);
+        this.renderChartScorecardVisuals(data, start, end);
+    }
+};
+
+const __origUpdateAllKPIs_v2 = SafetyPerformanceKPIs.updateAllKPIs;
+SafetyPerformanceKPIs.updateAllKPIs = function () {
+    __origUpdateAllKPIs_v2.call(this);
+    if (this.activeTab === 'chart-scorecard' && document.getElementById('spk-chart-scorecard-panel')) {
+        const { start, end } = this.getDateRange();
+        const data = this.getFilteredData(start, end);
+        this.renderChartScorecardVisuals(data, start, end);
     }
 };
