@@ -27,8 +27,10 @@ const SafetyPerformanceKPIs = {
         group: 'all',
         months: 12,
         compact: false,
-        search: ''
+        search: '',
+        chartType: 'line'
     },
+    _chartScorecardCharts: [],
 
     async load() {
         // Add language change listener
@@ -5030,7 +5032,7 @@ SafetyPerformanceKPIs.updateAllKPIs = function () {
 // ===== Final clarity override: Chart Score Card mirrors Score Card model exactly =====
 SafetyPerformanceKPIs.renderChartScorecardShell = function () {
     const t = (k, f) => this._t(k, f);
-    const ui = this._chartScorecardUiState || { group: 'all', months: 12, compact: false, search: '' };
+    const ui = this._chartScorecardUiState || { group: 'all', months: 12, compact: false, search: '', chartType: 'line' };
     const selectedMonths = Number(ui.months) || 12;
     return `
         <style>
@@ -5050,7 +5052,7 @@ SafetyPerformanceKPIs.renderChartScorecardShell = function () {
         </div>
         <div class="content-card mb-4" style="border:1px solid rgba(15,23,42,.08);">
             <div class="card-body" style="padding:12px 14px;">
-                <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3">
+                <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-3">
                     <label class="text-xs font-semibold text-slate-600">
                         ${t('module.kpi.chart.control.group', 'نوع المؤشر')}
                         <select id="chart-scorecard-group" class="form-select mt-1" style="height:34px; font-size:12px;">
@@ -5077,10 +5079,17 @@ SafetyPerformanceKPIs.renderChartScorecardShell = function () {
                         <i class="fas ${ui.compact ? 'fa-expand-arrows-alt' : 'fa-compress-arrows-alt'} ml-1"></i>
                         ${ui.compact ? t('module.kpi.chart.compact.off', 'إلغاء الوضع المضغوط') : t('module.kpi.chart.compact.on', 'تفعيل الوضع المضغوط')}
                     </button>
+                    <label class="text-xs font-semibold text-slate-600">
+                        ${t('module.kpi.chart.control.chartType', 'نمط الرسم')}
+                        <select id="chart-scorecard-chart-type" class="form-select mt-1" style="height:34px; font-size:12px;">
+                            <option value="line" ${ui.chartType === 'line' ? 'selected' : ''}>${t('module.kpi.chart.type.line', 'خطي')}</option>
+                            <option value="bar" ${ui.chartType === 'bar' ? 'selected' : ''}>${t('module.kpi.chart.type.bar', 'أعمدة')}</option>
+                        </select>
+                    </label>
                 </div>
             </div>
         </div>
-        <div id="chart-scorecard-grid" class="grid grid-cols-1 lg:grid-cols-2 2xl:grid-cols-3 gap-4"></div>
+        <div id="chart-scorecard-grid" class="grid grid-cols-1 xl:grid-cols-2 gap-4"></div>
     `;
 };
 
@@ -5182,10 +5191,16 @@ SafetyPerformanceKPIs.renderChartScorecardVisuals = function () {
     const t = (k, f) => this._t(k, f);
     const grid = document.getElementById('chart-scorecard-grid');
     if (!grid) return;
+    this.destroyChartScorecardCharts();
     if (!this._chartScorecardUiState) {
-        this._chartScorecardUiState = { group: 'all', months: 12, compact: false, search: '' };
+        this._chartScorecardUiState = { group: 'all', months: 12, compact: false, search: '', chartType: 'line' };
     }
     const ui = this._chartScorecardUiState;
+    if (typeof Chart === 'undefined') {
+        grid.innerHTML = `<div class="content-card"><div class="card-body text-sm text-slate-500">${t('module.kpi.chart.noData', 'لا توجد بيانات ضمن الفترة المحددة')}</div></div>`;
+        this.bindChartScorecardControls();
+        return;
+    }
 
     const model = this.buildScorecardData(this.scorecardYear);
     const rows = model.rows || {};
@@ -5215,189 +5230,144 @@ SafetyPerformanceKPIs.renderChartScorecardVisuals = function () {
         return pct;
     };
 
-    const cardsData = [
-        {
-            title: t('module.kpi.chart.card.workforceHours.title', '0 Workforce & Hours'),
-            subtitle: t('module.kpi.chart.card.workforceHours.subtitle', 'Number Operational employees / Total Employee Hours Worked'),
-            tone: 'blue',
-            currentValue: cm(rows.employeeCounts),
-            ytdValue: ytd(rows.employeeCounts),
-            unit: t('module.kpi.unit.employee', 'Emp'),
-            score: rollingScore(sliceTail(rows.employeeCounts || []), false),
-            series: sliceTail(rows.employeeCounts || []),
-            labels: monthLabels,
-            metricLabel: t('module.kpi.chart.card.operationalEmployeesCurrent', 'Operational Employees (Current Month)'),
-            ytdLabel: t('module.kpi.chart.card.operationalEmployeesYtd', 'Operational Employees (YTD Sum)'),
-            cardId: 'workforce',
-            group: 'capacity'
-        },
-        {
-            title: t('module.kpi.scorecard.row.totalHoursWorked', 'Total Employee Hours Worked'),
-            subtitle: t('module.kpi.chart.card.employeeHoursCurrent', 'Employee Hours Worked (Current Month)'),
-            tone: 'violet',
-            currentValue: cm(rows.hoursWorked),
-            ytdValue: ytd(rows.hoursWorked),
-            unit: 'h',
-            score: rollingScore(sliceTail(rows.hoursWorked || []), false),
-            series: sliceTail(rows.hoursWorked || []),
-            labels: monthLabels,
-            metricLabel: t('module.kpi.chart.card.employeeHoursCurrent', 'Employee Hours Worked (Current Month)'),
-            ytdLabel: t('module.kpi.chart.card.employeeHoursYtd', 'Employee Hours Worked (YTD)'),
-            cardId: 'hours',
-            group: 'capacity'
-        },
-        {
-            title: t('module.kpi.scorecard.row.lti', 'LTI - Lost Time Incidents'),
-            subtitle: t('module.kpi.chart.card.safetyReported.subtitle', 'LTI / NLTI / First Aid / Near Miss'),
-            tone: 'rose',
-            currentValue: cm(rows.lti),
-            ytdValue: ytd(rows.lti),
-            unit: t('module.kpi.unit.incident', 'Incident'),
-            score: rollingScore(sliceTail(rows.lti || []), true),
-            series: sliceTail(rows.lti || []),
-            labels: monthLabels,
-            metricLabel: t('module.kpi.chart.card.currentMonthIndex', 'Current Month'),
-            ytdLabel: t('module.kpi.scorecard.short.ytd', 'YTD'),
-            cardId: 'lti',
-            group: 'lagging'
-        },
-        {
-            title: t('module.kpi.scorecard.row.trir', 'TRIR - Total Recordable Incident Rate'),
-            subtitle: t('module.kpi.chart.card.safetyRates.subtitle', 'LTIR / TRIR (In Month + Rolling 12 Month)'),
-            tone: 'amber',
-            currentValue: cm(rows.trir),
-            ytdValue: ytd(rows.trir, 'avg'),
-            unit: 'rate',
-            score: rollingScore(sliceTail(rows.trir || []), true),
-            series: sliceTail(rows.trir || []),
-            labels: monthLabels,
-            metricLabel: t('module.kpi.chart.card.trirInMonth', 'TRIR (In Month)'),
-            ytdLabel: t('module.kpi.scorecard.short.avgYtd', 'Avg YTD'),
-            cardId: 'trir',
-            group: 'lagging'
-        },
-        {
-            title: t('module.kpi.scorecard.row.occNearMissHazards', 'Occ Health Near Miss/Hazards Reported'),
-            subtitle: t('module.kpi.chart.card.occupationalHealth.subtitle', 'LTOI / NLTOI / Occ Health Near Miss'),
-            tone: 'violet',
-            currentValue: cm(rows.occHazards),
-            ytdValue: ytd(rows.occHazards),
-            unit: t('module.kpi.unit.incident', 'Incident'),
-            score: rollingScore(sliceTail(rows.occHazards || []), true),
-            series: sliceTail(rows.occHazards || []),
-            labels: monthLabels,
-            metricLabel: t('module.kpi.scorecard.row.occNearMissHazards', 'Occ Health Near Miss/Hazards Reported'),
-            ytdLabel: t('module.kpi.scorecard.short.ytd', 'YTD'),
-            cardId: 'occ-hazards',
-            group: 'lagging'
-        },
-        {
-            title: t('module.kpi.scorecard.section.permits', '2 Permits to Work'),
-            subtitle: t('module.kpi.chart.card.permits.subtitle', 'Heights / Electrical-LOTO / Hot Work / All Others'),
-            tone: 'blue',
-            currentValue: permitTotalMonth,
-            ytdValue: permitTotalYtd,
-            unit: t('module.kpi.unit.permit', 'Permit'),
-            score: rollingScore(sliceTail(rows.permitTotal || []), false),
-            series: sliceTail(rows.permitTotal || []),
-            labels: monthLabels,
-            metricLabel: t('module.kpi.scorecard.row.permits.total', 'TOTAL PER MONTH'),
-            ytdLabel: t('module.kpi.scorecard.short.ytd', 'YTD'),
-            cardId: 'permits',
-            group: 'leading'
-        },
-        {
-            title: t('module.kpi.scorecard.section.training', '3 Health & Safety Training'),
-            subtitle: t('module.kpi.chart.card.training.subtitle', 'Sessions / Attendees / Training Hours'),
-            tone: 'emerald',
-            currentValue: cm(rows.trainingHours),
-            ytdValue: ytd(rows.trainingHours),
-            unit: 'h',
-            score: rollingScore(sliceTail(rows.trainingHours || []), false),
-            series: sliceTail(rows.trainingHours || []),
-            labels: monthLabels,
-            metricLabel: t('module.kpi.scorecard.row.training.hours', 'Total Number H&S Training Hours'),
-            ytdLabel: t('module.kpi.scorecard.short.ytd', 'YTD'),
-            cardId: 'training',
-            group: 'leading'
-        },
-        {
-            title: t('module.kpi.scorecard.section.trainingMetrics', 'Training Metrics'),
-            subtitle: t('module.kpi.chart.card.trainingMetrics.subtitle', 'Per Operational FTE'),
-            tone: 'amber',
-            currentValue: cm(rows.trainingHoursPerFte),
-            ytdValue: ytd(rows.trainingHoursPerFte, 'avg'),
-            unit: 'h/FTE',
-            score: rollingScore(sliceTail(rows.trainingHoursPerFte || []), false),
-            series: sliceTail(rows.trainingHoursPerFte || []),
-            labels: monthLabels,
-            metricLabel: t('module.kpi.scorecard.row.training.hoursPerFte', 'Training Hours per Operational FTE'),
-            ytdLabel: t('module.kpi.scorecard.short.avgYtd', 'Avg YTD'),
-            cardId: 'training-fte',
-            group: 'leading'
-        },
-        {
-            title: t('module.kpi.scorecard.section.nebosh', '4 NEBOSH Training'),
-            subtitle: t('module.kpi.scorecard.row.neboshStatus', 'Certification status of UAE HSE Lead'),
-            tone: 'violet',
-            currentValue: String(cm(rows.neboshStatus) || '-'),
-            ytdValue: String(ytd(rows.neboshStatus, 'last') || '-'),
-            unit: '',
-            score: (String(cm(rows.neboshStatus) || '').toLowerCase().includes('cert') || String(cm(rows.neboshStatus) || '').includes('معتمد')) ? 100 : 45,
-            series: sliceTail((rows.neboshStatus || []).map((v) => (String(v || '').trim() ? 1 : 0))),
-            labels: monthLabels,
-            metricLabel: t('module.kpi.chart.card.currentMonthStatus', 'Current Month Status'),
-            ytdLabel: t('module.kpi.chart.card.ytdStatusLast', 'YTD Status (Last)'),
-            cardId: 'nebosh',
-            group: 'capacity'
-        },
-        {
-            title: t('module.kpi.chart.card.safetyRates', 'Safety Rates'),
-            subtitle: t('module.kpi.chart.card.safetyRates.subtitle', 'LTIR / TRIR (In Month + Rolling 12 Month)'),
-            tone: 'rose',
-            currentValue: cm(rows.ltir),
-            ytdValue: ytd(rows.ltir, 'avg'),
-            unit: 'LTIR',
-            score: rollingScore(sliceTail(rows.ltir || []), true),
-            series: sliceTail(rows.ltir || []),
-            labels: monthLabels,
-            metricLabel: t('module.kpi.chart.card.ltirInMonth', 'LTIR (In Month)'),
-            ytdLabel: t('module.kpi.scorecard.short.avgYtd', 'Avg YTD'),
-            cardId: 'ltir',
-            group: 'lagging'
-        },
-        {
-            title: t('module.kpi.chart.overall', 'Overall Readability Summary'),
-            subtitle: t('module.kpi.chart.card.overall.subtitle', 'This tab mirrors your listed scorecard structure'),
-            tone: 'blue',
-            currentValue: ((rollingScore(rows.trainingHours, false) + rollingScore(rows.permitTotal, false) + rollingScore(rows.trir, true)) / 3).toFixed(1),
-            ytdValue: ytd(rows.permitTotal),
-            unit: '%',
-            score: ((rollingScore(rows.trainingHours, false) + rollingScore(rows.permitTotal, false) + rollingScore(rows.trir, true)) / 3),
-            series: sliceTail((rows.permitTotal || []).map((v, i) => (Number(v || 0) + Number((rows.trainingSessions || [])[i] || 0)))),
-            labels: monthLabels,
-            metricLabel: t('module.kpi.chart.card.sections', 'Sections'),
-            ytdLabel: t('module.kpi.chart.card.sectionsValue', 'Workforce, Rates, PTW, Training, NEBOSH'),
-            cardId: 'overall',
-            group: 'all'
-        }
+    const trendDatasets = [
+        { key: 'permitTotal', label: t('module.kpi.scorecard.row.permits.total', 'TOTAL PER MONTH'), data: sliceTail(rows.permitTotal || []), borderColor: '#2563eb', backgroundColor: 'rgba(37,99,235,.18)', group: 'leading' },
+        { key: 'trainingHours', label: t('module.kpi.scorecard.row.training.hours', 'Training Hours'), data: sliceTail(rows.trainingHours || []), borderColor: '#059669', backgroundColor: 'rgba(5,150,105,.18)', group: 'leading' },
+        { key: 'trir', label: t('module.kpi.scorecard.row.trir', 'TRIR'), data: sliceTail(rows.trir || []), borderColor: '#d97706', backgroundColor: 'rgba(217,119,6,.18)', group: 'lagging' },
+        { key: 'ltir', label: t('module.kpi.chart.card.ltirInMonth', 'LTIR'), data: sliceTail(rows.ltir || []), borderColor: '#e11d48', backgroundColor: 'rgba(225,29,72,.18)', group: 'lagging' },
+        { key: 'employeeCounts', label: t('module.kpi.chart.card.operationalEmployeesCurrent', 'Operational Employees'), data: sliceTail(rows.employeeCounts || []), borderColor: '#7c3aed', backgroundColor: 'rgba(124,58,237,.18)', group: 'capacity' }
     ];
-
-    const query = String(ui.search || '').trim().toLowerCase();
-    const visibleCards = cardsData.filter(card => {
-        const groupMatch = ui.group === 'all' || card.group === ui.group;
-        if (!groupMatch) return false;
-        if (!query) return true;
-        return `${card.title} ${card.subtitle} ${card.metricLabel}`.toLowerCase().includes(query);
+    const filteredTrend = trendDatasets.filter(ds => ui.group === 'all' || ds.group === ui.group).filter(ds => {
+        const q = String(ui.search || '').trim().toLowerCase();
+        return !q || ds.label.toLowerCase().includes(q);
     });
 
-    if (!visibleCards.length) {
+    if (!filteredTrend.length) {
         grid.innerHTML = `<div class="content-card"><div class="card-body text-sm text-slate-500">${t('module.kpi.chart.noData', 'لا توجد بيانات ضمن الفترة المحددة')}</div></div>`;
-    } else {
-        grid.innerHTML = visibleCards.map((card) => this.renderChartScorecardDetailCard(card)).join('');
+        this.bindChartScorecardControls();
+        return;
     }
+
+    const kpiOverall = ((rollingScore(sliceTail(rows.trainingHours || []), false) + rollingScore(sliceTail(rows.permitTotal || []), false) + rollingScore(sliceTail(rows.trir || []), true)) / 3);
+    grid.innerHTML = `
+        <div class="content-card">
+            <div class="card-header">
+                <h2 class="card-title">${t('module.kpi.chart.overall', 'Overall Performance Index')}</h2>
+                <p class="text-xs text-slate-500 mt-1">${t('module.kpi.chart.subtitle', 'لوحة رسوم بيانية تنفيذية مبنية على نفس بيانات لوحة التحكم.')}</p>
+            </div>
+            <div class="card-body">
+                <div class="grid grid-cols-3 gap-2 mb-3">
+                    <div class="rounded-lg p-2 bg-slate-50 text-center"><div class="text-[10px] text-slate-500">${t('module.kpi.scorecard.row.permits.total', 'TOTAL PER MONTH')}</div><div class="text-sm font-bold">${fmt0(permitTotalMonth)}</div></div>
+                    <div class="rounded-lg p-2 bg-slate-50 text-center"><div class="text-[10px] text-slate-500">${t('module.kpi.scorecard.row.trir', 'TRIR')}</div><div class="text-sm font-bold">${fmt2(cm(rows.trir))}</div></div>
+                    <div class="rounded-lg p-2 bg-slate-50 text-center"><div class="text-[10px] text-slate-500">${t('module.kpi.chart.overall', 'Overall')}</div><div class="text-sm font-bold">${fmt2(kpiOverall)}%</div></div>
+                </div>
+                <div style="height:${ui.compact ? '220px' : '300px'}"><canvas id="spk-main-trend-chart"></canvas></div>
+            </div>
+        </div>
+        <div class="content-card">
+            <div class="card-header">
+                <h2 class="card-title">${t('module.kpi.scorecard.section.permits', '2 Permits to Work')}</h2>
+            </div>
+            <div class="card-body">
+                <div style="height:${ui.compact ? '220px' : '300px'}"><canvas id="spk-permits-stacked-chart"></canvas></div>
+            </div>
+        </div>
+        <div class="content-card">
+            <div class="card-header">
+                <h2 class="card-title">${t('module.kpi.scorecard.section.training', '3 Health & Safety Training')}</h2>
+            </div>
+            <div class="card-body">
+                <div style="height:${ui.compact ? '220px' : '300px'}"><canvas id="spk-training-mix-chart"></canvas></div>
+            </div>
+        </div>
+        <div class="content-card">
+            <div class="card-header">
+                <h2 class="card-title">${t('module.kpi.chart.card.safetyRates', 'Safety Rates')}</h2>
+            </div>
+            <div class="card-body">
+                <div style="height:${ui.compact ? '220px' : '300px'}"><canvas id="spk-safety-rates-chart"></canvas></div>
+            </div>
+        </div>
+    `;
+
+    const baseType = ui.chartType === 'bar' ? 'bar' : 'line';
+    this._chartScorecardCharts.push(new Chart(document.getElementById('spk-main-trend-chart'), {
+        type: baseType,
+        data: { labels: monthLabels, datasets: filteredTrend.map(ds => ({ ...ds, tension: 0.35, fill: baseType === 'line' })) },
+        options: this.getChartScorecardOptions({ stacked: false, title: t('module.kpi.chart.control.group', 'نوع المؤشر') })
+    }));
+
+    this._chartScorecardCharts.push(new Chart(document.getElementById('spk-permits-stacked-chart'), {
+        type: 'bar',
+        data: {
+            labels: monthLabels,
+            datasets: [
+                { label: t('module.kpi.scorecard.row.permits.heights', 'Heights'), data: sliceTail(rows.permitsHeight || []), backgroundColor: 'rgba(37,99,235,.72)' },
+                { label: t('module.kpi.scorecard.row.permits.electrical', 'Electrical-LOTO'), data: sliceTail(rows.permitsElectrical || []), backgroundColor: 'rgba(5,150,105,.72)' },
+                { label: t('module.kpi.scorecard.row.permits.hot', 'Hot Work'), data: sliceTail(rows.permitsHot || []), backgroundColor: 'rgba(217,119,6,.72)' },
+                { label: t('module.kpi.scorecard.row.permits.other', 'All Others'), data: sliceTail(rows.permitsOther || []), backgroundColor: 'rgba(124,58,237,.72)' }
+            ]
+        },
+        options: this.getChartScorecardOptions({ stacked: true, title: t('module.kpi.scorecard.section.permits', '2 Permits to Work') })
+    }));
+
+    this._chartScorecardCharts.push(new Chart(document.getElementById('spk-training-mix-chart'), {
+        type: 'bar',
+        data: {
+            labels: monthLabels,
+            datasets: [
+                { type: 'bar', label: t('module.kpi.scorecard.row.training.sessions', 'Training Sessions'), data: sliceTail(rows.trainingSessions || []), backgroundColor: 'rgba(5,150,105,.72)' },
+                { type: 'line', label: t('module.kpi.scorecard.row.training.hours', 'Training Hours'), data: sliceTail(rows.trainingHours || []), borderColor: '#059669', backgroundColor: 'rgba(5,150,105,.14)', yAxisID: 'y1', tension: 0.35 }
+            ]
+        },
+        options: this.getChartScorecardOptions({ dualAxis: true, title: t('module.kpi.scorecard.section.training', '3 Health & Safety Training') })
+    }));
+
+    this._chartScorecardCharts.push(new Chart(document.getElementById('spk-safety-rates-chart'), {
+        type: 'line',
+        data: {
+            labels: monthLabels,
+            datasets: [
+                { label: 'TRIR', data: sliceTail(rows.trir || []), borderColor: '#d97706', backgroundColor: 'rgba(217,119,6,.14)', tension: 0.35, fill: true },
+                { label: 'LTIR', data: sliceTail(rows.ltir || []), borderColor: '#e11d48', backgroundColor: 'rgba(225,29,72,.14)', tension: 0.35, fill: true },
+                { label: 'LTOIR', data: sliceTail(rows.ltoir || []), borderColor: '#2563eb', backgroundColor: 'rgba(37,99,235,.14)', tension: 0.35, fill: true }
+            ]
+        },
+        options: this.getChartScorecardOptions({ stacked: false, title: t('module.kpi.chart.card.safetyRates', 'Safety Rates') })
+    }));
+
     grid.classList.toggle('spk-compact-mode', !!ui.compact);
     this.bindChartScorecardControls();
+};
+
+SafetyPerformanceKPIs.destroyChartScorecardCharts = function () {
+    if (!Array.isArray(this._chartScorecardCharts)) {
+        this._chartScorecardCharts = [];
+        return;
+    }
+    this._chartScorecardCharts.forEach((c) => {
+        try { c && c.destroy && c.destroy(); } catch (e) { /* noop */ }
+    });
+    this._chartScorecardCharts = [];
+};
+
+SafetyPerformanceKPIs.getChartScorecardOptions = function (cfg = {}) {
+    const { stacked = false, dualAxis = false, title = '' } = cfg;
+    return {
+        responsive: true,
+        maintainAspectRatio: false,
+        interaction: { mode: 'index', intersect: false },
+        plugins: {
+            legend: { display: true, position: 'bottom' },
+            title: { display: !!title, text: title },
+            tooltip: { enabled: true, padding: 10, bodySpacing: 5 }
+        },
+        scales: {
+            x: { stacked, grid: { display: false } },
+            y: { stacked, beginAtZero: true },
+            ...(dualAxis ? { y1: { beginAtZero: true, position: 'right', grid: { drawOnChartArea: false } } } : {})
+        }
+    };
 };
 
 SafetyPerformanceKPIs.bindChartScorecardControls = function () {
@@ -5405,9 +5375,10 @@ SafetyPerformanceKPIs.bindChartScorecardControls = function () {
     const monthsEl = document.getElementById('chart-scorecard-months');
     const searchEl = document.getElementById('chart-scorecard-search');
     const compactEl = document.getElementById('chart-scorecard-compact-toggle');
-    if (!groupEl || !monthsEl || !searchEl || !compactEl) return;
+    const chartTypeEl = document.getElementById('chart-scorecard-chart-type');
+    if (!groupEl || !monthsEl || !searchEl || !compactEl || !chartTypeEl) return;
     if (!this._chartScorecardUiState) {
-        this._chartScorecardUiState = { group: 'all', months: 12, compact: false, search: '' };
+        this._chartScorecardUiState = { group: 'all', months: 12, compact: false, search: '', chartType: 'line' };
     }
 
     const rerender = () => this.renderChartScorecardVisuals();
@@ -5443,5 +5414,13 @@ SafetyPerformanceKPIs.bindChartScorecardControls = function () {
             rerender();
         });
         compactEl.dataset.bound = 'true';
+    }
+
+    if (chartTypeEl.dataset.bound !== 'true') {
+        chartTypeEl.addEventListener('change', () => {
+            this._chartScorecardUiState.chartType = chartTypeEl.value || 'line';
+            rerender();
+        });
+        chartTypeEl.dataset.bound = 'true';
     }
 };

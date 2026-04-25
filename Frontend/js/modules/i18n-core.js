@@ -448,6 +448,7 @@
             'module.kpi.chart.control.group': 'نوع المؤشر',
             'module.kpi.chart.control.months': 'النطاق الزمني',
             'module.kpi.chart.control.search': 'بحث داخل الكروت',
+            'module.kpi.chart.control.chartType': 'نمط الرسم',
             'module.kpi.chart.group.all': 'الكل',
             'module.kpi.chart.group.leading': 'استباقي',
             'module.kpi.chart.group.lagging': 'تراجعي',
@@ -458,6 +459,8 @@
             'module.kpi.chart.searchPlaceholder': 'اكتب اسم المؤشر...',
             'module.kpi.chart.compact.on': 'تفعيل الوضع المضغوط',
             'module.kpi.chart.compact.off': 'إلغاء الوضع المضغوط',
+            'module.kpi.chart.type.line': 'خطي',
+            'module.kpi.chart.type.bar': 'أعمدة',
             // تبويب الخطة السنوية
             'module.kpi.annual.title': 'مؤشرات الأداء (KPIs) - الخطة السنوية',
             'module.kpi.annual.subtitle': 'الخطة السنوية لمؤشرات الأداء مع المتابعة الشهرية',
@@ -1124,6 +1127,7 @@
             'module.kpi.chart.control.group': 'Indicator type',
             'module.kpi.chart.control.months': 'Time range',
             'module.kpi.chart.control.search': 'Search cards',
+            'module.kpi.chart.control.chartType': 'Chart type',
             'module.kpi.chart.group.all': 'All',
             'module.kpi.chart.group.leading': 'Leading',
             'module.kpi.chart.group.lagging': 'Lagging',
@@ -1134,6 +1138,8 @@
             'module.kpi.chart.searchPlaceholder': 'Type KPI name...',
             'module.kpi.chart.compact.on': 'Enable compact mode',
             'module.kpi.chart.compact.off': 'Disable compact mode',
+            'module.kpi.chart.type.line': 'Line',
+            'module.kpi.chart.type.bar': 'Bar',
             // Annual Plan Tab
             'module.kpi.annual.title': 'Key Performance Indicators (KPIs) - Annual Plan',
             'module.kpi.annual.subtitle': 'Annual KPI Plan with Monthly Tracking',
