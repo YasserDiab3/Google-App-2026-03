@@ -23,6 +23,12 @@ const SafetyPerformanceKPIs = {
     _scorecardRefreshTimer: null,
     _lastScorecardSignature: '',
     _scorecardCache: new Map(),
+    _chartScorecardUiState: {
+        group: 'all',
+        months: 12,
+        compact: false,
+        search: ''
+    },
 
     async load() {
         // Add language change listener
@@ -5024,17 +5030,57 @@ SafetyPerformanceKPIs.updateAllKPIs = function () {
 // ===== Final clarity override: Chart Score Card mirrors Score Card model exactly =====
 SafetyPerformanceKPIs.renderChartScorecardShell = function () {
     const t = (k, f) => this._t(k, f);
+    const ui = this._chartScorecardUiState || { group: 'all', months: 12, compact: false, search: '' };
+    const selectedMonths = Number(ui.months) || 12;
     return `
+        <style>
+            #chart-scorecard-grid.spk-compact-mode .chart-scorecard-card .card-header { padding: 8px 10px !important; }
+            #chart-scorecard-grid.spk-compact-mode .chart-scorecard-card .card-body { padding: 9px !important; }
+            #chart-scorecard-grid.spk-compact-mode .chart-scorecard-card .card-title { font-size: 0.95rem !important; }
+            #chart-scorecard-grid.spk-compact-mode .chart-scorecard-card .text-xl { font-size: 1rem !important; }
+        </style>
         <div class="spk-scorecard-hero" style="margin-bottom:1rem;">
             <div class="spk-scorecard-title">
                 <div>
                     <div class="spk-scorecard-eyebrow">${t('module.kpi.scorecard.eyebrow', 'مصدر الحقيقة الواحد')}</div>
-                    <h2 class="text-2xl font-black text-slate-900 mt-2">${t('module.kpi.tab.chartScoreCard', 'Chart Score Card')}</h2>
+                    <h2 class="text-xl font-black text-slate-900 mt-2">${t('module.kpi.tab.chartScoreCard', 'Chart Score Card')}</h2>
                     <p class="text-sm text-slate-600 mt-2">${t('module.kpi.chart.subtitle', 'عرض بياني احترافي مطابق لبيانات لوحة التحكم، مقسّم إلى 11 وحدة تحليلية.')}</p>
                 </div>
             </div>
         </div>
-        <div id="chart-scorecard-grid" class="grid grid-cols-1 xl:grid-cols-2 gap-6"></div>
+        <div class="content-card mb-4" style="border:1px solid rgba(15,23,42,.08);">
+            <div class="card-body" style="padding:12px 14px;">
+                <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3">
+                    <label class="text-xs font-semibold text-slate-600">
+                        ${t('module.kpi.chart.control.group', 'نوع المؤشر')}
+                        <select id="chart-scorecard-group" class="form-select mt-1" style="height:34px; font-size:12px;">
+                            <option value="all" ${ui.group === 'all' ? 'selected' : ''}>${t('module.kpi.chart.group.all', 'الكل')}</option>
+                            <option value="leading" ${ui.group === 'leading' ? 'selected' : ''}>${t('module.kpi.chart.group.leading', 'استباقي')}</option>
+                            <option value="lagging" ${ui.group === 'lagging' ? 'selected' : ''}>${t('module.kpi.chart.group.lagging', 'تراجعي')}</option>
+                            <option value="capacity" ${ui.group === 'capacity' ? 'selected' : ''}>${t('module.kpi.chart.group.capacity', 'سعة/موارد')}</option>
+                        </select>
+                    </label>
+                    <label class="text-xs font-semibold text-slate-600">
+                        ${t('module.kpi.chart.control.months', 'النطاق الزمني')}
+                        <select id="chart-scorecard-months" class="form-select mt-1" style="height:34px; font-size:12px;">
+                            <option value="3" ${selectedMonths === 3 ? 'selected' : ''}>${t('module.kpi.chart.months.3', 'آخر 3 أشهر')}</option>
+                            <option value="6" ${selectedMonths === 6 ? 'selected' : ''}>${t('module.kpi.chart.months.6', 'آخر 6 أشهر')}</option>
+                            <option value="12" ${selectedMonths === 12 ? 'selected' : ''}>${t('module.kpi.chart.months.12', 'آخر 12 شهر')}</option>
+                        </select>
+                    </label>
+                    <label class="text-xs font-semibold text-slate-600">
+                        ${t('module.kpi.chart.control.search', 'بحث داخل الكروت')}
+                        <input id="chart-scorecard-search" type="search" class="form-input mt-1" style="height:34px; font-size:12px;"
+                            placeholder="${t('module.kpi.chart.searchPlaceholder', 'اكتب اسم المؤشر...')}" value="${Utils.escapeHTML(ui.search || '')}">
+                    </label>
+                    <button id="chart-scorecard-compact-toggle" class="btn-secondary" style="height:34px; margin-top:18px; font-size:12px;">
+                        <i class="fas ${ui.compact ? 'fa-expand-arrows-alt' : 'fa-compress-arrows-alt'} ml-1"></i>
+                        ${ui.compact ? t('module.kpi.chart.compact.off', 'إلغاء الوضع المضغوط') : t('module.kpi.chart.compact.on', 'تفعيل الوضع المضغوط')}
+                    </button>
+                </div>
+            </div>
+        </div>
+        <div id="chart-scorecard-grid" class="grid grid-cols-1 lg:grid-cols-2 2xl:grid-cols-3 gap-4"></div>
     `;
 };
 
@@ -5050,7 +5096,9 @@ SafetyPerformanceKPIs.renderChartScorecardDetailCard = function (config = {}) {
         series = [],
         labels = [],
         metricLabel = '',
-        ytdLabel = ''
+        ytdLabel = '',
+        cardId = '',
+        group = 'all'
     } = config;
     const palettes = {
         blue: { line: '#2563eb', fill: 'rgba(37,99,235,.14)', text: '#1e3a8a', soft: '#dbeafe', border: 'rgba(59,130,246,.22)' },
@@ -5066,7 +5114,7 @@ SafetyPerformanceKPIs.renderChartScorecardDetailCard = function (config = {}) {
     const minV = Math.min(...cleanSeries, 0);
     const range = Math.max(maxV - minV, 1);
     const width = 220;
-    const height = 64;
+    const height = 56;
     const stepX = cleanSeries.length > 1 ? width / (cleanSeries.length - 1) : width;
     const points = cleanSeries.map((v, i) => {
         const x = i * stepX;
@@ -5085,21 +5133,28 @@ SafetyPerformanceKPIs.renderChartScorecardDetailCard = function (config = {}) {
         return n.toLocaleString('en-US', { maximumFractionDigits: 2 });
     };
 
+    const pointNodes = cleanSeries.map((v, i) => {
+        const x = i * stepX;
+        const y = height - (((v - minV) / range) * (height - 10)) - 5;
+        const label = labels[i] || `M${i + 1}`;
+        return `<circle cx="${x.toFixed(2)}" cy="${y.toFixed(2)}" r="2.4" fill="${p.line}" opacity="0.9"><title>${Utils.escapeHTML(`${label}: ${formatValue(v)} ${unit || ''}`)}</title></circle>`;
+    }).join('');
+
     return `
-        <div class="content-card overflow-hidden" style="border:1px solid ${p.border}; box-shadow:0 14px 32px rgba(15,23,42,.08);">
-            <div class="card-header" style="background:linear-gradient(135deg,#fff,#f8fafc); border-bottom:1px solid ${p.border};">
+        <div class="content-card overflow-hidden chart-scorecard-card" data-chart-card-id="${Utils.escapeHTML(cardId)}" data-chart-group="${Utils.escapeHTML(group)}" style="border:1px solid ${p.border}; box-shadow:0 10px 22px rgba(15,23,42,.07);">
+            <div class="card-header" style="background:linear-gradient(135deg,#fff,#f8fafc); border-bottom:1px solid ${p.border}; padding:10px 12px;">
                 <h2 class="card-title text-slate-900">${title}</h2>
-                <p class="text-sm text-slate-500 mt-2">${subtitle}</p>
+                <p class="text-xs text-slate-500 mt-1">${subtitle}</p>
             </div>
-            <div class="card-body">
+            <div class="card-body" style="padding:12px;">
                 <div class="grid grid-cols-[1fr_auto] gap-3 items-center">
                     <div>
                         <div class="text-xs font-bold mb-1" style="color:${p.text};">${metricLabel}</div>
-                        <div class="text-2xl font-black text-slate-900">${formatValue(currentValue)} <span class="text-sm font-bold text-slate-400">${unit}</span></div>
+                        <div class="text-xl font-black text-slate-900">${formatValue(currentValue)} <span class="text-xs font-bold text-slate-400">${unit}</span></div>
                         <div class="text-xs text-slate-500 mt-1">${ytdLabel}: <span class="font-bold text-slate-700">${formatValue(ytdValue)}</span></div>
                     </div>
                     <div class="rounded-2xl p-2" style="background:${p.soft};">
-                        <svg width="64" height="64" viewBox="0 0 64 64" aria-hidden="true">
+                        <svg width="58" height="58" viewBox="0 0 64 64" aria-hidden="true">
                             <circle cx="32" cy="32" r="${r}" fill="none" stroke="rgba(15,23,42,.12)" stroke-width="8"></circle>
                             <circle cx="32" cy="32" r="${r}" fill="none" stroke="${p.line}" stroke-width="8" stroke-linecap="round"
                                 stroke-dasharray="${circ.toFixed(2)}" stroke-dashoffset="${offset.toFixed(2)}" transform="rotate(-90 32 32)"></circle>
@@ -5111,6 +5166,7 @@ SafetyPerformanceKPIs.renderChartScorecardDetailCard = function (config = {}) {
                     <svg width="100%" height="${height}" viewBox="0 0 ${width} ${height}" preserveAspectRatio="none" aria-hidden="true">
                         <polyline points="${areaPoints}" fill="${p.fill}" stroke="none"></polyline>
                         <polyline points="${points}" fill="none" stroke="${p.line}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"></polyline>
+                        ${pointNodes}
                     </svg>
                     <div class="mt-1 flex items-center justify-between text-[10px] text-slate-400">
                         <span>${labels[0] || ''}</span>
@@ -5126,6 +5182,10 @@ SafetyPerformanceKPIs.renderChartScorecardVisuals = function () {
     const t = (k, f) => this._t(k, f);
     const grid = document.getElementById('chart-scorecard-grid');
     if (!grid) return;
+    if (!this._chartScorecardUiState) {
+        this._chartScorecardUiState = { group: 'all', months: 12, compact: false, search: '' };
+    }
+    const ui = this._chartScorecardUiState;
 
     const model = this.buildScorecardData(this.scorecardYear);
     const rows = model.rows || {};
@@ -5144,7 +5204,10 @@ SafetyPerformanceKPIs.renderChartScorecardVisuals = function () {
     const permitTotalYtd = ytd(rows.permitsHeight) + ytd(rows.permitsElectrical) + ytd(rows.permitsHot) + ytd(rows.permitsOther);
 
     const months = model.months || [];
-    const monthLabels = months.map(m => m.label);
+    const allMonthLabels = months.map(m => m.label);
+    const monthsToShow = Math.max(3, Math.min(12, Number(ui.months) || 12));
+    const sliceTail = (arr = []) => (arr || []).slice(Math.max(0, (arr || []).length - monthsToShow));
+    const monthLabels = sliceTail(allMonthLabels);
     const rollingScore = (arr = [], invert = false) => {
         const vals = arr.map(v => Number(v) || 0);
         const avg = vals.length ? (vals.reduce((s, v) => s + v, 0) / vals.length) : 0;
@@ -5152,112 +5215,128 @@ SafetyPerformanceKPIs.renderChartScorecardVisuals = function () {
         return pct;
     };
 
-    const cards = [
-        this.renderChartScorecardDetailCard({
+    const cardsData = [
+        {
             title: t('module.kpi.chart.card.workforceHours.title', '0 Workforce & Hours'),
             subtitle: t('module.kpi.chart.card.workforceHours.subtitle', 'Number Operational employees / Total Employee Hours Worked'),
             tone: 'blue',
             currentValue: cm(rows.employeeCounts),
             ytdValue: ytd(rows.employeeCounts),
             unit: t('module.kpi.unit.employee', 'Emp'),
-            score: rollingScore(rows.employeeCounts, false),
-            series: rows.employeeCounts || [],
+            score: rollingScore(sliceTail(rows.employeeCounts || []), false),
+            series: sliceTail(rows.employeeCounts || []),
             labels: monthLabels,
             metricLabel: t('module.kpi.chart.card.operationalEmployeesCurrent', 'Operational Employees (Current Month)'),
-            ytdLabel: t('module.kpi.chart.card.operationalEmployeesYtd', 'Operational Employees (YTD Sum)')
-        }),
-        this.renderChartScorecardDetailCard({
+            ytdLabel: t('module.kpi.chart.card.operationalEmployeesYtd', 'Operational Employees (YTD Sum)'),
+            cardId: 'workforce',
+            group: 'capacity'
+        },
+        {
             title: t('module.kpi.scorecard.row.totalHoursWorked', 'Total Employee Hours Worked'),
             subtitle: t('module.kpi.chart.card.employeeHoursCurrent', 'Employee Hours Worked (Current Month)'),
             tone: 'violet',
             currentValue: cm(rows.hoursWorked),
             ytdValue: ytd(rows.hoursWorked),
             unit: 'h',
-            score: rollingScore(rows.hoursWorked, false),
-            series: rows.hoursWorked || [],
+            score: rollingScore(sliceTail(rows.hoursWorked || []), false),
+            series: sliceTail(rows.hoursWorked || []),
             labels: monthLabels,
             metricLabel: t('module.kpi.chart.card.employeeHoursCurrent', 'Employee Hours Worked (Current Month)'),
-            ytdLabel: t('module.kpi.chart.card.employeeHoursYtd', 'Employee Hours Worked (YTD)')
-        }),
-        this.renderChartScorecardDetailCard({
+            ytdLabel: t('module.kpi.chart.card.employeeHoursYtd', 'Employee Hours Worked (YTD)'),
+            cardId: 'hours',
+            group: 'capacity'
+        },
+        {
             title: t('module.kpi.scorecard.row.lti', 'LTI - Lost Time Incidents'),
             subtitle: t('module.kpi.chart.card.safetyReported.subtitle', 'LTI / NLTI / First Aid / Near Miss'),
             tone: 'rose',
             currentValue: cm(rows.lti),
             ytdValue: ytd(rows.lti),
             unit: t('module.kpi.unit.incident', 'Incident'),
-            score: rollingScore(rows.lti, true),
-            series: rows.lti || [],
+            score: rollingScore(sliceTail(rows.lti || []), true),
+            series: sliceTail(rows.lti || []),
             labels: monthLabels,
             metricLabel: t('module.kpi.chart.card.currentMonthIndex', 'Current Month'),
-            ytdLabel: t('module.kpi.scorecard.short.ytd', 'YTD')
-        }),
-        this.renderChartScorecardDetailCard({
+            ytdLabel: t('module.kpi.scorecard.short.ytd', 'YTD'),
+            cardId: 'lti',
+            group: 'lagging'
+        },
+        {
             title: t('module.kpi.scorecard.row.trir', 'TRIR - Total Recordable Incident Rate'),
             subtitle: t('module.kpi.chart.card.safetyRates.subtitle', 'LTIR / TRIR (In Month + Rolling 12 Month)'),
             tone: 'amber',
             currentValue: cm(rows.trir),
             ytdValue: ytd(rows.trir, 'avg'),
             unit: 'rate',
-            score: rollingScore(rows.trir, true),
-            series: rows.trir || [],
+            score: rollingScore(sliceTail(rows.trir || []), true),
+            series: sliceTail(rows.trir || []),
             labels: monthLabels,
             metricLabel: t('module.kpi.chart.card.trirInMonth', 'TRIR (In Month)'),
-            ytdLabel: t('module.kpi.scorecard.short.avgYtd', 'Avg YTD')
-        }),
-        this.renderChartScorecardDetailCard({
+            ytdLabel: t('module.kpi.scorecard.short.avgYtd', 'Avg YTD'),
+            cardId: 'trir',
+            group: 'lagging'
+        },
+        {
             title: t('module.kpi.scorecard.row.occNearMissHazards', 'Occ Health Near Miss/Hazards Reported'),
             subtitle: t('module.kpi.chart.card.occupationalHealth.subtitle', 'LTOI / NLTOI / Occ Health Near Miss'),
             tone: 'violet',
             currentValue: cm(rows.occHazards),
             ytdValue: ytd(rows.occHazards),
             unit: t('module.kpi.unit.incident', 'Incident'),
-            score: rollingScore(rows.occHazards, true),
-            series: rows.occHazards || [],
+            score: rollingScore(sliceTail(rows.occHazards || []), true),
+            series: sliceTail(rows.occHazards || []),
             labels: monthLabels,
             metricLabel: t('module.kpi.scorecard.row.occNearMissHazards', 'Occ Health Near Miss/Hazards Reported'),
-            ytdLabel: t('module.kpi.scorecard.short.ytd', 'YTD')
-        }),
-        this.renderChartScorecardDetailCard({
+            ytdLabel: t('module.kpi.scorecard.short.ytd', 'YTD'),
+            cardId: 'occ-hazards',
+            group: 'lagging'
+        },
+        {
             title: t('module.kpi.scorecard.section.permits', '2 Permits to Work'),
             subtitle: t('module.kpi.chart.card.permits.subtitle', 'Heights / Electrical-LOTO / Hot Work / All Others'),
             tone: 'blue',
             currentValue: permitTotalMonth,
             ytdValue: permitTotalYtd,
             unit: t('module.kpi.unit.permit', 'Permit'),
-            score: rollingScore(rows.permitTotal || [], false),
-            series: rows.permitTotal || [],
+            score: rollingScore(sliceTail(rows.permitTotal || []), false),
+            series: sliceTail(rows.permitTotal || []),
             labels: monthLabels,
             metricLabel: t('module.kpi.scorecard.row.permits.total', 'TOTAL PER MONTH'),
-            ytdLabel: t('module.kpi.scorecard.short.ytd', 'YTD')
-        }),
-        this.renderChartScorecardDetailCard({
+            ytdLabel: t('module.kpi.scorecard.short.ytd', 'YTD'),
+            cardId: 'permits',
+            group: 'leading'
+        },
+        {
             title: t('module.kpi.scorecard.section.training', '3 Health & Safety Training'),
             subtitle: t('module.kpi.chart.card.training.subtitle', 'Sessions / Attendees / Training Hours'),
             tone: 'emerald',
             currentValue: cm(rows.trainingHours),
             ytdValue: ytd(rows.trainingHours),
             unit: 'h',
-            score: rollingScore(rows.trainingHours, false),
-            series: rows.trainingHours || [],
+            score: rollingScore(sliceTail(rows.trainingHours || []), false),
+            series: sliceTail(rows.trainingHours || []),
             labels: monthLabels,
             metricLabel: t('module.kpi.scorecard.row.training.hours', 'Total Number H&S Training Hours'),
-            ytdLabel: t('module.kpi.scorecard.short.ytd', 'YTD')
-        }),
-        this.renderChartScorecardDetailCard({
+            ytdLabel: t('module.kpi.scorecard.short.ytd', 'YTD'),
+            cardId: 'training',
+            group: 'leading'
+        },
+        {
             title: t('module.kpi.scorecard.section.trainingMetrics', 'Training Metrics'),
             subtitle: t('module.kpi.chart.card.trainingMetrics.subtitle', 'Per Operational FTE'),
             tone: 'amber',
             currentValue: cm(rows.trainingHoursPerFte),
             ytdValue: ytd(rows.trainingHoursPerFte, 'avg'),
             unit: 'h/FTE',
-            score: rollingScore(rows.trainingHoursPerFte, false),
-            series: rows.trainingHoursPerFte || [],
+            score: rollingScore(sliceTail(rows.trainingHoursPerFte || []), false),
+            series: sliceTail(rows.trainingHoursPerFte || []),
             labels: monthLabels,
             metricLabel: t('module.kpi.scorecard.row.training.hoursPerFte', 'Training Hours per Operational FTE'),
-            ytdLabel: t('module.kpi.scorecard.short.avgYtd', 'Avg YTD')
-        }),
-        this.renderChartScorecardDetailCard({
+            ytdLabel: t('module.kpi.scorecard.short.avgYtd', 'Avg YTD'),
+            cardId: 'training-fte',
+            group: 'leading'
+        },
+        {
             title: t('module.kpi.scorecard.section.nebosh', '4 NEBOSH Training'),
             subtitle: t('module.kpi.scorecard.row.neboshStatus', 'Certification status of UAE HSE Lead'),
             tone: 'violet',
@@ -5265,25 +5344,29 @@ SafetyPerformanceKPIs.renderChartScorecardVisuals = function () {
             ytdValue: String(ytd(rows.neboshStatus, 'last') || '-'),
             unit: '',
             score: (String(cm(rows.neboshStatus) || '').toLowerCase().includes('cert') || String(cm(rows.neboshStatus) || '').includes('معتمد')) ? 100 : 45,
-            series: (rows.neboshStatus || []).map((v) => (String(v || '').trim() ? 1 : 0)),
+            series: sliceTail((rows.neboshStatus || []).map((v) => (String(v || '').trim() ? 1 : 0))),
             labels: monthLabels,
             metricLabel: t('module.kpi.chart.card.currentMonthStatus', 'Current Month Status'),
-            ytdLabel: t('module.kpi.chart.card.ytdStatusLast', 'YTD Status (Last)')
-        }),
-        this.renderChartScorecardDetailCard({
+            ytdLabel: t('module.kpi.chart.card.ytdStatusLast', 'YTD Status (Last)'),
+            cardId: 'nebosh',
+            group: 'capacity'
+        },
+        {
             title: t('module.kpi.chart.card.safetyRates', 'Safety Rates'),
             subtitle: t('module.kpi.chart.card.safetyRates.subtitle', 'LTIR / TRIR (In Month + Rolling 12 Month)'),
             tone: 'rose',
             currentValue: cm(rows.ltir),
             ytdValue: ytd(rows.ltir, 'avg'),
             unit: 'LTIR',
-            score: rollingScore(rows.ltir, true),
-            series: rows.ltir || [],
+            score: rollingScore(sliceTail(rows.ltir || []), true),
+            series: sliceTail(rows.ltir || []),
             labels: monthLabels,
             metricLabel: t('module.kpi.chart.card.ltirInMonth', 'LTIR (In Month)'),
-            ytdLabel: t('module.kpi.scorecard.short.avgYtd', 'Avg YTD')
-        }),
-        this.renderChartScorecardDetailCard({
+            ytdLabel: t('module.kpi.scorecard.short.avgYtd', 'Avg YTD'),
+            cardId: 'ltir',
+            group: 'lagging'
+        },
+        {
             title: t('module.kpi.chart.overall', 'Overall Readability Summary'),
             subtitle: t('module.kpi.chart.card.overall.subtitle', 'This tab mirrors your listed scorecard structure'),
             tone: 'blue',
@@ -5291,12 +5374,74 @@ SafetyPerformanceKPIs.renderChartScorecardVisuals = function () {
             ytdValue: ytd(rows.permitTotal),
             unit: '%',
             score: ((rollingScore(rows.trainingHours, false) + rollingScore(rows.permitTotal, false) + rollingScore(rows.trir, true)) / 3),
-            series: (rows.permitTotal || []).map((v, i) => (Number(v || 0) + Number((rows.trainingSessions || [])[i] || 0))),
+            series: sliceTail((rows.permitTotal || []).map((v, i) => (Number(v || 0) + Number((rows.trainingSessions || [])[i] || 0)))),
             labels: monthLabels,
             metricLabel: t('module.kpi.chart.card.sections', 'Sections'),
-            ytdLabel: t('module.kpi.chart.card.sectionsValue', 'Workforce, Rates, PTW, Training, NEBOSH')
-        })
+            ytdLabel: t('module.kpi.chart.card.sectionsValue', 'Workforce, Rates, PTW, Training, NEBOSH'),
+            cardId: 'overall',
+            group: 'all'
+        }
     ];
 
-    grid.innerHTML = cards.join('');
+    const query = String(ui.search || '').trim().toLowerCase();
+    const visibleCards = cardsData.filter(card => {
+        const groupMatch = ui.group === 'all' || card.group === ui.group;
+        if (!groupMatch) return false;
+        if (!query) return true;
+        return `${card.title} ${card.subtitle} ${card.metricLabel}`.toLowerCase().includes(query);
+    });
+
+    if (!visibleCards.length) {
+        grid.innerHTML = `<div class="content-card"><div class="card-body text-sm text-slate-500">${t('module.kpi.chart.noData', 'لا توجد بيانات ضمن الفترة المحددة')}</div></div>`;
+    } else {
+        grid.innerHTML = visibleCards.map((card) => this.renderChartScorecardDetailCard(card)).join('');
+    }
+    grid.classList.toggle('spk-compact-mode', !!ui.compact);
+    this.bindChartScorecardControls();
+};
+
+SafetyPerformanceKPIs.bindChartScorecardControls = function () {
+    const groupEl = document.getElementById('chart-scorecard-group');
+    const monthsEl = document.getElementById('chart-scorecard-months');
+    const searchEl = document.getElementById('chart-scorecard-search');
+    const compactEl = document.getElementById('chart-scorecard-compact-toggle');
+    if (!groupEl || !monthsEl || !searchEl || !compactEl) return;
+    if (!this._chartScorecardUiState) {
+        this._chartScorecardUiState = { group: 'all', months: 12, compact: false, search: '' };
+    }
+
+    const rerender = () => this.renderChartScorecardVisuals();
+
+    if (groupEl.dataset.bound !== 'true') {
+        groupEl.addEventListener('change', () => {
+            this._chartScorecardUiState.group = groupEl.value || 'all';
+            rerender();
+        });
+        groupEl.dataset.bound = 'true';
+    }
+
+    if (monthsEl.dataset.bound !== 'true') {
+        monthsEl.addEventListener('change', () => {
+            this._chartScorecardUiState.months = Number(monthsEl.value) || 12;
+            rerender();
+        });
+        monthsEl.dataset.bound = 'true';
+    }
+
+    if (searchEl.dataset.bound !== 'true') {
+        searchEl.addEventListener('input', () => {
+            this._chartScorecardUiState.search = searchEl.value || '';
+            rerender();
+        });
+        searchEl.dataset.bound = 'true';
+    }
+
+    if (compactEl.dataset.bound !== 'true') {
+        compactEl.addEventListener('click', (e) => {
+            e.preventDefault();
+            this._chartScorecardUiState.compact = !this._chartScorecardUiState.compact;
+            rerender();
+        });
+        compactEl.dataset.bound = 'true';
+    }
 };
