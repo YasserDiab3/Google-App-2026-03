@@ -6747,7 +6747,7 @@ window.UI = {
             metaThemeColor.name = 'theme-color';
             document.head.appendChild(metaThemeColor);
         }
-        metaThemeColor.content = currentTheme === 'dark' ? '#1a1a1a' : (computedPrimary || '#1d684f');
+        metaThemeColor.content = currentTheme === 'dark' ? '#1a1a1a' : (computedPrimary || '#1a634f');
     },
 
     toggleColorTheme() {
