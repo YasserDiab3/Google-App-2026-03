@@ -3444,6 +3444,8 @@ const Sustainability = {
                 };
             }
 
+            const normalizeList = (list = []) => (Array.isArray(list) ? list : []).map((row) => this.normalizeResourceConsumptionRecord(row)).filter(Boolean);
+
             // تحميل سجلات المياه
             try {
                 const waterResult = await GoogleIntegration.sendRequest({
@@ -3454,7 +3456,7 @@ const Sustainability = {
                     }
                 });
                 if (waterResult && waterResult.success && Array.isArray(waterResult.data)) {
-                    AppState.appData.resourceConsumption.water = waterResult.data;
+                    AppState.appData.resourceConsumption.water = normalizeList(waterResult.data);
                 }
             } catch (error) {
                 Utils.safeWarn('⚠️ تعذر تحميل سجلات المياه:', error);
@@ -3470,7 +3472,7 @@ const Sustainability = {
                     }
                 });
                 if (gasResult && gasResult.success && Array.isArray(gasResult.data)) {
-                    AppState.appData.resourceConsumption.gas = gasResult.data;
+                    AppState.appData.resourceConsumption.gas = normalizeList(gasResult.data);
                 }
             } catch (error) {
                 Utils.safeWarn('⚠️ تعذر تحميل سجلات الغاز:', error);
@@ -3486,7 +3488,7 @@ const Sustainability = {
                     }
                 });
                 if (electricityResult && electricityResult.success && Array.isArray(electricityResult.data)) {
-                    AppState.appData.resourceConsumption.electricity = electricityResult.data;
+                    AppState.appData.resourceConsumption.electricity = normalizeList(electricityResult.data);
                 }
             } catch (error) {
                 Utils.safeWarn('⚠️ تعذر تحميل سجلات الكهرباء:', error);
@@ -3497,13 +3499,77 @@ const Sustainability = {
                 window.DataManager.save();
             }
 
-            // إعادة تحميل الواجهة إذا كان التبويب مفتوحاً
-            if (this.currentTab === 'resource-consumption') {
-                this.load();
+            // تحديث الكروت العلوية فوراً بعد اكتمال التحميل (حتى لو التحميل كان في الخلفية)
+            const quickStatsPanel = document.getElementById('sustainability-quick-stats');
+            if (quickStatsPanel) {
+                quickStatsPanel.innerHTML = this.renderQuickStats();
+            }
+
+            // إعادة تحديث المحتوى عند وجود تبويب الاستدامة مفتوح
+            const sustainabilitySection = document.getElementById('sustainability-section');
+            if (sustainabilitySection && sustainabilitySection.offsetParent !== null) {
+                if (this.currentTab === 'dashboard') {
+                    const contentArea = document.getElementById('sustainability-content');
+                    if (contentArea) {
+                        contentArea.innerHTML = await this.renderDashboard();
+                        this.renderCharts();
+                    }
+                } else if (this.currentTab === 'water' || this.currentTab === 'electricity' || this.currentTab === 'gas') {
+                    const contentArea = document.getElementById('sustainability-content');
+                    if (contentArea) {
+                        contentArea.innerHTML = await this.renderContent();
+                    }
+                }
             }
         } catch (error) {
             Utils.safeError('❌ خطأ في تحميل بيانات استهلاك الموارد:', error);
         }
+    },
+
+    normalizeResourceConsumptionRecord(record) {
+        if (!record || typeof record !== 'object') return null;
+        const pick = (...keys) => {
+            for (const key of keys) {
+                if (record[key] !== undefined && record[key] !== null && String(record[key]).trim() !== '') {
+                    return record[key];
+                }
+            }
+            return '';
+        };
+
+        const parsedDate = (() => {
+            const rawDate = pick('date', 'Date', 'التاريخ', 'recordDate');
+            const d = new Date(rawDate || new Date());
+            return Number.isNaN(d.getTime()) ? new Date() : d;
+        })();
+
+        const totalConsumption = parseFloat(
+            pick(
+                'totalConsumption',
+                'total',
+                'consumption',
+                'quantity',
+                'Total Consumption',
+                'إجمالي الاستهلاك',
+                'الاستهلاك'
+            )
+        ) || 0;
+
+        return {
+            ...record,
+            id: String(pick('id', 'ID', 'recordId') || Utils.generateId('RES')),
+            serialNumber: String(pick('serialNumber', 'serial', 'Serial Number', 'الرقم التسلسلي') || ''),
+            date: parsedDate.toISOString(),
+            monthYear: String(pick('monthYear', 'month', 'Month/Year', 'الشهر / السنة') || this.getMonthYear(parsedDate)),
+            location: String(pick('location', 'site', 'locationName', 'الموقع') || ''),
+            quantity: parseFloat(pick('quantity', 'Quantity', 'الكمية')) || 0,
+            totalConsumption: totalConsumption,
+            notes: String(pick('notes', 'Notes', 'ملاحظات') || ''),
+            createdAt: String(pick('createdAt', 'Created At', 'تاريخ الإنشاء') || parsedDate.toISOString()),
+            updatedAt: new Date().toISOString(),
+            createdBy: String(pick('createdBy', 'created_by', 'المنشئ') || ''),
+            updatedBy: String(pick('updatedBy', 'updated_by', 'المعدل') || '')
+        };
     },
 
     /**
