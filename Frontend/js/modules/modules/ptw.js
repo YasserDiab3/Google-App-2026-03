@@ -6635,75 +6635,105 @@ const PTW = {
                     #manual-work-type-select-wrap { width: 100% !important; max-width: 100%; }
                     .manual-work-type-inline-panel { min-width: 100% !important; }
                 }
-                .ptw-manual-permit-modal .modal-body {
-                    background: #000 !important;
+                /* رأس الورق + الشعار: يُحقن عبر renderPermitSystemHeader() ولا يمر بنمط نموذج PTW العادي */
+                .ptw-manual-permit-modal .ptw-paper-header {
+                    display: grid;
+                    grid-template-columns: 1fr 1.35fr 1fr;
+                    align-items: center;
+                    gap: 10px 14px;
+                    padding: 10px 20px;
+                    margin: 0 24px;
+                    background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+                    color: #fff;
+                    border-radius: 0 0 12px 12px;
+                    border: 1px solid rgba(255, 255, 255, 0.22);
+                    border-top: none;
+                    min-height: 64px;
+                    max-height: 84px;
+                    box-sizing: border-box;
                 }
-                .ptw-manual-form-section {
-                    background: #000 !important;
-                    border: 1px solid #4b5563 !important;
-                    border-radius: 0 !important;
-                    box-shadow: none !important;
-                    margin-bottom: 16px !important;
-                    padding: 12px !important;
+                .ptw-manual-permit-modal .ptw-paper-header-right { text-align: right; min-width: 0; }
+                .ptw-manual-permit-modal .ptw-paper-header-title { font-weight: 700; font-size: 14px; color: #fff; line-height: 1.25; }
+                .ptw-manual-permit-modal .ptw-paper-header-subtitle { font-size: 11px; color: rgba(255, 255, 255, 0.88); margin-top: 2px; }
+                .ptw-manual-permit-modal .ptw-paper-header-center { text-align: center; min-width: 0; }
+                .ptw-manual-permit-modal .ptw-paper-header-company {
+                    font-size: 15px;
+                    font-weight: 700;
+                    color: #fff;
+                    letter-spacing: 0.2px;
+                    overflow: hidden;
+                    text-overflow: ellipsis;
+                    white-space: nowrap;
                 }
-                .ptw-manual-form-section:hover {
-                    box-shadow: none !important;
-                    transform: none !important;
+                .ptw-manual-permit-modal .ptw-paper-header-left {
+                    display: flex;
+                    justify-content: flex-end;
+                    align-items: center;
+                    min-width: 0;
                 }
-                .ptw-manual-form-section h3 {
-                    margin: -12px -12px 12px !important;
-                    padding: 10px 12px !important;
-                    border: 1px solid #9ca3af !important;
-                    background: #cbd5e1 !important;
-                    color: #111827 !important;
-                    justify-content: center !important;
-                    font-size: 1rem !important;
+                .ptw-manual-permit-modal .ptw-paper-header-logo {
+                    max-height: 44px;
+                    max-width: 120px;
+                    width: auto;
+                    height: auto;
+                    object-fit: contain;
+                    background: #fff;
+                    border-radius: 6px;
+                    padding: 3px;
+                    display: block;
+                    flex-shrink: 0;
                 }
-                .ptw-manual-form-section h3 i {
-                    background: transparent !important;
-                    font-size: 0.95rem !important;
-                    padding: 0 !important;
+                .ptw-manual-permit-modal .ptw-paper-header-logo-fallback {
+                    width: 72px;
+                    height: 40px;
+                    border: 1px solid rgba(255, 255, 255, 0.55);
+                    border-radius: 6px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    color: rgba(255, 255, 255, 0.95);
+                    font-size: 11px;
+                    flex-shrink: 0;
                 }
-                .ptw-manual-permit-modal label {
-                    color: #e5e7eb !important;
+                @media (max-width: 640px) {
+                    .ptw-manual-permit-modal .ptw-paper-header {
+                        grid-template-columns: 1fr;
+                        max-height: none;
+                        text-align: center;
+                    }
+                    .ptw-manual-permit-modal .ptw-paper-header-right,
+                    .ptw-manual-permit-modal .ptw-paper-header-center { text-align: center; }
+                    .ptw-manual-permit-modal .ptw-paper-header-left { justify-content: center; }
+                    .ptw-manual-permit-modal .ptw-paper-header-company { white-space: normal; }
                 }
-                .ptw-manual-permit-modal .form-input,
-                .ptw-manual-permit-modal textarea,
-                .ptw-manual-permit-modal select,
-                .ptw-manual-permit-modal input[type="text"],
-                .ptw-manual-permit-modal input[type="number"],
-                .ptw-manual-permit-modal input[type="datetime-local"] {
-                    background: #f9fafb !important;
-                    color: #111827 !important;
-                    border: 1px solid #9ca3af !important;
-                }
+                /* جداول النموذج اليدوي — خلفية فاتحة ووضوح دون فرض ثيم أسود */
                 .ptw-manual-permit-modal .ptw-paper-grid-table {
                     width: 100%;
                     border-collapse: collapse !important;
                     table-layout: fixed;
-                    border: 1.2px solid #9ca3af !important;
-                    background: #000;
+                    border: 1.2px solid #94a3b8 !important;
+                    background: #fff;
                 }
                 .ptw-manual-permit-modal .ptw-paper-grid-table th,
                 .ptw-manual-permit-modal .ptw-paper-grid-table td {
-                    border: 1.2px solid #9ca3af !important;
+                    border: 1.2px solid #94a3b8 !important;
                     min-height: 42px;
                     padding: 7px 8px !important;
                     vertical-align: middle;
                 }
                 .ptw-manual-permit-modal .ptw-paper-grid-table th {
-                    background: #cbd5e1 !important;
+                    background: linear-gradient(135deg, #b3e5fc 0%, #81d4fa 100%) !important;
                     color: #111827 !important;
                     font-size: 13px;
                     font-weight: 700;
                 }
                 .ptw-manual-permit-modal .ptw-paper-grid-table td {
-                    background: #000 !important;
-                    color: #f3f4f6 !important;
+                    background: #fff !important;
+                    color: #111827 !important;
                     font-size: 13px;
                 }
                 .ptw-manual-permit-modal .ptw-paper-grid-table td.bg-gray-50 {
-                    background: #cbd5e1 !important;
+                    background: #f1f5f9 !important;
                     color: #111827 !important;
                     font-weight: 700;
                 }
@@ -6733,9 +6763,8 @@ const PTW = {
                         padding: 9px !important;
                     }
                     .ptw-manual-permit-modal .ptw-manual-form-section h3 {
-                        margin: -9px -9px 9px !important;
-                        font-size: 0.9rem !important;
-                        padding: 8px !important;
+                        font-size: 0.95rem !important;
+                        padding-bottom: 10px !important;
                     }
                     .ptw-manual-permit-modal .overflow-x-auto {
                         overflow-x: auto !important;
@@ -6743,56 +6772,6 @@ const PTW = {
                     .ptw-manual-permit-modal .ptw-paper-grid-table {
                         min-width: 760px;
                     }
-                }
-                /* قفل بصري للنموذج اليدوي ليطابق المرجع بدون زخارف */
-                .ptw-manual-permit-modal * {
-                    border-radius: 0 !important;
-                    box-shadow: none !important;
-                }
-                .ptw-manual-permit-modal .modal-header {
-                    background: #000 !important;
-                    border-bottom: 1px solid #9ca3af !important;
-                }
-                .ptw-manual-permit-modal .modal-header h2,
-                .ptw-manual-permit-modal .modal-header p,
-                .ptw-manual-permit-modal .text-gray-700,
-                .ptw-manual-permit-modal .text-gray-800,
-                .ptw-manual-permit-modal .text-gray-600,
-                .ptw-manual-permit-modal .text-gray-500,
-                .ptw-manual-permit-modal .font-medium,
-                .ptw-manual-permit-modal .font-semibold {
-                    color: #e5e7eb !important;
-                }
-                .ptw-manual-permit-modal .bg-white,
-                .ptw-manual-permit-modal .bg-gray-50,
-                .ptw-manual-permit-modal .bg-red-50,
-                .ptw-manual-permit-modal .bg-blue-50,
-                .ptw-manual-permit-modal .bg-yellow-50,
-                .ptw-manual-permit-modal .bg-green-50,
-                .ptw-manual-permit-modal [class*="from-"],
-                .ptw-manual-permit-modal [class*="to-"] {
-                    background: #000 !important;
-                }
-                .ptw-manual-permit-modal .border,
-                .ptw-manual-permit-modal [class*="border-"] {
-                    border-color: #9ca3af !important;
-                }
-                .ptw-manual-permit-modal .manual-section-3-header,
-                .ptw-manual-permit-modal .manual-section-3-content,
-                .ptw-manual-permit-modal #manual-work-type-select-wrap,
-                .ptw-manual-permit-modal .manual-work-type-inline-panel {
-                    background: #000 !important;
-                    border-color: #9ca3af !important;
-                }
-                .ptw-manual-permit-modal #manual-work-type-select,
-                .ptw-manual-permit-modal .manual-other-input {
-                    background: #f9fafb !important;
-                    color: #111827 !important;
-                    border: 1px solid #9ca3af !important;
-                }
-                .ptw-manual-permit-modal .btn-secondary,
-                .ptw-manual-permit-modal .btn-primary {
-                    border-radius: 0 !important;
                 }
             </style>
             <div class="modal-content ptw-manual-permit-modal" style="max-width: 1400px; width: 98%; max-height: 95vh; overflow-y: auto; padding: 0; border-radius: 16px; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);">
@@ -7878,6 +7857,7 @@ const PTW = {
                 <td class="p-2 border border-gray-800" style="border-right: 4px solid #1e3a8a;"><input type="text" class="form-input text-sm w-full manual-team-member-signature border-0 focus:ring-0" placeholder="التوقيع" value=""></td>
             `;
             tbody.appendChild(tr);
+            attachAutoCopyToTeamRow(tr);
         });
 
         // معالجة الضغط على مصفوفة المخاطر (التصنيف اللوني العالمي)
