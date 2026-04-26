@@ -1579,19 +1579,34 @@ function _cabHasContractorMarkers_(record) {
     return false;
 }
 
+function _cabHasContractorAffinity_(record) {
+    if (!record) return false;
+    var personType = _cabNormStr_(record.personType || record.affiliation || record.type);
+    if (personType === 'contractor' || personType === 'مقاول' || personType === 'external' || personType === 'خارجي') {
+        return true;
+    }
+    return _cabHasContractorMarkers_(record);
+}
+
 function _cabIncidentBelongs_(record, idSet, nameSets) {
-    if (!record || !_cabHasContractorMarkers_(record)) return false;
-    return _cabRecordMatchesContractor_(record, idSet, nameSets);
+    if (!record || !_cabHasContractorAffinity_(record)) return false;
+    if (_cabRecordMatchesContractor_(record, idSet, nameSets)) return true;
+    if (_cabHasExplicitContractorIds_(record)) return false;
+    return _cabMatchRecordFieldsByName_(record, ['contractorName', 'companyName', 'company', 'contractorCompany', 'externalName', 'personName', 'employeeName'], nameSets);
 }
 
 function _cabSickLeaveBelongs_(record, idSet, nameSets) {
-    if (!record || !_cabHasContractorMarkers_(record)) return false;
-    return _cabRecordMatchesContractor_(record, idSet, nameSets);
+    if (!record || !_cabHasContractorAffinity_(record)) return false;
+    if (_cabRecordMatchesContractor_(record, idSet, nameSets)) return true;
+    if (_cabHasExplicitContractorIds_(record)) return false;
+    return _cabMatchRecordFieldsByName_(record, ['contractorName', 'companyName', 'company', 'contractorCompany', 'externalName', 'personName', 'employeeName'], nameSets);
 }
 
 function _cabClinicBelongs_(record, idSet, nameSets) {
-    if (!record || !_cabHasContractorMarkers_(record)) return false;
-    return _cabRecordMatchesContractor_(record, idSet, nameSets);
+    if (!record || !_cabHasContractorAffinity_(record)) return false;
+    if (_cabRecordMatchesContractor_(record, idSet, nameSets)) return true;
+    if (_cabHasExplicitContractorIds_(record)) return false;
+    return _cabMatchRecordFieldsByName_(record, ['contractorName', 'companyName', 'company', 'contractorCompany', 'externalName', 'contractorWorkerName', 'contractorWorker', 'personName'], nameSets);
 }
 
 function _cabInjuryBelongs_(record, idSet, nameSets) {
@@ -1635,8 +1650,10 @@ function _cabTrainingBelongs_(record, idSet, nameSets) {
     return false;
 }
 
-function _cabPTWBelongs_(record, nameSets) {
+function _cabPTWBelongs_(record, idSet, nameSets) {
     if (!record) return false;
+    if (_cabRecordMatchesContractor_(record, idSet, nameSets)) return true;
+    if (_cabHasExplicitContractorIds_(record)) return false;
     return _cabMatchRecordFieldsByName_(record, ['requestingParty', 'authorizedParty', 'responsible'], nameSets);
 }
 
@@ -1848,7 +1865,7 @@ function getContractorDetailedAnalytics(payload) {
         var ptwSources = ptw.concat(ptwRegistry);
         var t;
         for (t = 0; t < ptwSources.length; t++) {
-            if (_cabPTWBelongs_(ptwSources[t], nameSets)) {
+            if (_cabPTWBelongs_(ptwSources[t], idSet, nameSets)) {
                 ptwList.push(ptwSources[t]);
             }
         }

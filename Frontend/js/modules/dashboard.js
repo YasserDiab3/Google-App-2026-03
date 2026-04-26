@@ -2120,6 +2120,8 @@ const Dashboard = {
         const ptwAll = this.getUnifiedPTWDataset(data);
         const matchesPtwContractor = (p) => {
             if (!p) return false;
+            if (matchesContractor(p)) return true;
+            if (contractorCtx && contractorCtx.hasAnyRecordIds(p)) return false;
             const req = String(p.requestingParty || '').replace(/\s+/g, ' ').trim();
             const auth = String(p.authorizedParty || '').replace(/\s+/g, ' ').trim();
             const resp = String(p.responsible || '').replace(/\s+/g, ' ').trim();
