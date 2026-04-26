@@ -622,6 +622,11 @@ const Violations = {
                             <div id="violations-filters-container" class="mb-4">
                                 ${this.renderFilters('contractor')}
                             </div>
+                            <div class="mb-4 flex items-center justify-end">
+                                <button type="button" class="btn-primary" onclick="Violations.exportContractorViolationsReport()">
+                                    <i class="fas fa-file-pdf ml-2"></i>تصدير تقرير مخالفة المقاولين
+                                </button>
+                            </div>
                             <div id="violations-list">
                                 ${this.renderContractorViolationsList()}
                             </div>
@@ -794,6 +799,115 @@ const Violations = {
                 </tbody>
             </table>
         `;
+    },
+
+    exportContractorViolationsReport() {
+        const violations = this.getFilteredViolations().filter(v =>
+            v.contractorName || v.personType === 'contractor'
+        );
+
+        if (!violations.length) {
+            Notification.warning('لا توجد بيانات لمخالفات المقاولين لتصديرها');
+            return;
+        }
+
+        try {
+            Loading.show('جاري إنشاء تقرير مخالفات المقاولين...');
+
+            const highCount = violations.filter(v => String(v.severity || '').trim() === 'عالية').length;
+            const mediumCount = violations.filter(v => String(v.severity || '').trim() === 'متوسطة').length;
+            const lowCount = violations.filter(v => String(v.severity || '').trim() === 'منخضة').length;
+            const resolvedCount = violations.filter(v => String(v.status || '').trim() === 'محلول').length;
+            const unresolvedCount = Math.max(0, violations.length - resolvedCount);
+            const resolutionRate = violations.length > 0 ? Math.round((resolvedCount / violations.length) * 100) : 0;
+            const uniqueContractors = new Set(violations.map(v => String(v.contractorName || '').trim()).filter(Boolean)).size;
+
+            const rowsHtml = violations.map((v, index) => `
+                <tr>
+                    <td style="padding: 10px 8px; border: 1px solid #E5E7EB; text-align: center; font-size: 11px;">${index + 1}</td>
+                    <td style="padding: 10px 8px; border: 1px solid #E5E7EB; text-align: right; font-size: 11px;">${Utils.escapeHTML(v.contractorName || '-')}</td>
+                    <td style="padding: 10px 8px; border: 1px solid #E5E7EB; text-align: right; font-size: 11px;">${Utils.escapeHTML(v.violationType || '-')}</td>
+                    <td style="padding: 10px 8px; border: 1px solid #E5E7EB; text-align: center; font-size: 11px;">${v.violationDate ? Utils.formatDate(v.violationDate) : '-'}</td>
+                    <td style="padding: 10px 8px; border: 1px solid #E5E7EB; text-align: center; font-size: 11px;">${Utils.escapeHTML(v.severity || '-')}</td>
+                    <td style="padding: 10px 8px; border: 1px solid #E5E7EB; text-align: right; font-size: 11px;">${Utils.escapeHTML(v.actionTaken || '-')}</td>
+                    <td style="padding: 10px 8px; border: 1px solid #E5E7EB; text-align: center; font-size: 11px;">${Utils.escapeHTML(v.status || '-')}</td>
+                </tr>
+            `).join('');
+
+            const content = `
+                <div style="margin-bottom: 24px;">
+                    <h2 style="font-size: 20px; margin-bottom: 12px; color: #991B1B; font-weight: 700;">تقرير مخالفات المقاولين</h2>
+                    <div style="display: flex; flex-wrap: wrap; gap: 16px;">
+                        <div style="flex: 1 1 180px; padding: 14px; border-radius: 10px; background: #FEF2F2; border: 1px solid #FECACA;">
+                            <div style="font-size: 12px; color: #B91C1C; margin-bottom: 6px; font-weight: 600;">إجمالي المخالفات</div>
+                            <div style="font-size: 24px; font-weight: 700; color: #991B1B;">${violations.length}</div>
+                        </div>
+                        <div style="flex: 1 1 180px; padding: 14px; border-radius: 10px; background: #EFF6FF; border: 1px solid #BFDBFE;">
+                            <div style="font-size: 12px; color: #1D4ED8; margin-bottom: 6px; font-weight: 600;">عدد المقاولين</div>
+                            <div style="font-size: 24px; font-weight: 700; color: #1E3A8A;">${uniqueContractors}</div>
+                        </div>
+                        <div style="flex: 1 1 180px; padding: 14px; border-radius: 10px; background: #FFF7ED; border: 1px solid #FED7AA;">
+                            <div style="font-size: 12px; color: #C2410C; margin-bottom: 6px; font-weight: 600;">عالية / متوسطة / منخفضة</div>
+                            <div style="font-size: 20px; font-weight: 700; color: #9A3412;">${highCount} / ${mediumCount} / ${lowCount}</div>
+                        </div>
+                        <div style="flex: 1 1 180px; padding: 14px; border-radius: 10px; background: #ECFDF5; border: 1px solid #BBF7D0;">
+                            <div style="font-size: 12px; color: #047857; margin-bottom: 6px; font-weight: 600;">معدل الحل</div>
+                            <div style="font-size: 24px; font-weight: 700; color: #065F46;">${resolutionRate}%</div>
+                            <div style="font-size: 11px; color: #065F46; margin-top: 4px;">محلول: ${resolvedCount} | غير محلول: ${unresolvedCount}</div>
+                        </div>
+                    </div>
+                </div>
+                <div style="margin-bottom: 16px;">
+                    <h3 style="font-size: 18px; margin-bottom: 12px; color: #991B1B; font-weight: 700; border-bottom: 2px solid #DC2626; padding-bottom: 8px;">جدول المخالفات</h3>
+                </div>
+                <div style="overflow-x: auto;">
+                    <table style="width: 100%; border-collapse: collapse; font-size: 11px; direction: rtl;">
+                        <thead>
+                            <tr style="background: #B91C1C; color: #FFFFFF;">
+                                <th style="padding: 12px 8px; border: 1px solid #991B1B; text-align: center; font-weight: 700;">#</th>
+                                <th style="padding: 12px 8px; border: 1px solid #991B1B; text-align: center; font-weight: 700;">اسم المقاول</th>
+                                <th style="padding: 12px 8px; border: 1px solid #991B1B; text-align: center; font-weight: 700;">نوع المخالفة</th>
+                                <th style="padding: 12px 8px; border: 1px solid #991B1B; text-align: center; font-weight: 700;">التاريخ</th>
+                                <th style="padding: 12px 8px; border: 1px solid #991B1B; text-align: center; font-weight: 700;">الشدة</th>
+                                <th style="padding: 12px 8px; border: 1px solid #991B1B; text-align: center; font-weight: 700;">الإجراء المتخذ</th>
+                                <th style="padding: 12px 8px; border: 1px solid #991B1B; text-align: center; font-weight: 700;">الحالة</th>
+                            </tr>
+                        </thead>
+                        <tbody>${rowsHtml}</tbody>
+                    </table>
+                </div>
+            `;
+
+            const formCode = `CONTRACTOR-VIOL-${new Date().toISOString().slice(0, 10)}`;
+            const reportTitle = 'تقرير مخالفات المقاولين';
+            const htmlContent = typeof FormHeader !== 'undefined' && typeof FormHeader.generatePDFHTML === 'function'
+                ? FormHeader.generatePDFHTML(formCode, reportTitle, content, false, true, { source: 'ContractorViolationsTab' }, new Date().toISOString(), new Date().toISOString())
+                : `<html dir="rtl" lang="ar"><head><meta charset="UTF-8"><title>${reportTitle}</title></head><body>${content}</body></html>`;
+
+            const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const reportWindow = window.open(url, '_blank');
+            if (reportWindow) {
+                reportWindow.onload = () => {
+                    try {
+                        reportWindow.print();
+                    } finally {
+                        setTimeout(() => URL.revokeObjectURL(url), 1000);
+                        Loading.hide();
+                    }
+                };
+            } else {
+                URL.revokeObjectURL(url);
+                Loading.hide();
+                Notification.error('يرجى السماح بالنوافذ المنبثقة للطباعة');
+            }
+
+            Notification.success('تم إنشاء تقرير مخالفات المقاولين بنجاح');
+        } catch (error) {
+            Loading.hide();
+            Utils.safeError('خطأ في إنشاء تقرير مخالفات المقاولين:', error);
+            Notification.error('تعذر إنشاء تقرير مخالفات المقاولين: ' + (error.message || 'خطأ غير معروف'));
+        }
     },
 
     async deleteViolation(id) {
