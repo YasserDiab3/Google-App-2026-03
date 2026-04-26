@@ -6791,6 +6791,34 @@ const PTW = {
                         min-width: 760px;
                     }
                 }
+                /* تنسيق القسم الخامس ليتطابق مع النسخة الورقية (بدون خلفية سوداء) */
+                .ptw-manual-permit-modal .manual-section-5.ptw-manual-ppe-section {
+                    background: #ffffff !important;
+                    border: 1px solid #1e3a8a !important;
+                    border-radius: 0 !important;
+                    padding: 0 !important;
+                    overflow: hidden;
+                }
+                .ptw-manual-permit-modal .manual-section-5.ptw-manual-ppe-section > h3 { display: none !important; }
+                .ptw-manual-permit-modal .manual-section-5 .ptw-manual-ppe-header {
+                    background: #dbeafe !important;
+                    color: #111827 !important;
+                    text-align: center;
+                    font-size: 1.6rem;
+                    font-weight: 700;
+                    padding: 10px 14px;
+                    border-bottom: 1px solid #1e3a8a;
+                }
+                .ptw-manual-permit-modal .manual-section-5 .ptw-manual-ppe-body {
+                    background: #ffffff !important;
+                    padding: 16px;
+                }
+                .ptw-manual-permit-modal .manual-section-5 #manual-ppe-matrix {
+                    background: #ffffff !important;
+                    border: 1px solid #cbd5e1;
+                    border-radius: 8px;
+                    padding: 10px;
+                }
             </style>
             <div class="modal-content ptw-manual-permit-modal" style="max-width: 1400px; width: 98%; max-height: 95vh; overflow-y: auto; padding: 0; border-radius: 16px; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);">
                 <!-- رأس النموذج -->
@@ -7081,14 +7109,17 @@ const PTW = {
                         </div>
 
                         <!-- القسم الخامس: تحديد مهمات الوقاية -->
-                        <div class="ptw-manual-form-section manual-section-5">
+                        <div class="ptw-manual-form-section manual-section-5 ptw-manual-ppe-section">
                             <h3><i class="fas fa-hard-hat"></i><span>القسم الخامس : تحديد مهمات الوقاية</span></h3>
-                            <div id="manual-ppe-matrix" class="bg-gray-50 rounded-lg p-2">
-                                ${typeof PPEMatrix !== 'undefined' ? PPEMatrix.generate('manual-ppe-matrix') : '<div class="text-center p-4 text-gray-500">مصفوفة المهمات غير محملة - يمكنك إدخال البيانات يدوياً أدناه</div>'}
-                            </div>
-                            <div class="mt-4">
-                                <label class="block text-sm font-bold text-gray-700 mb-2">مهمات الوقاية المطلوبة (يدوي)</label>
-                                <textarea id="manual-ppe-notes" class="form-input" rows="2" placeholder="أدخل مهمات الوقاية المطلوبة...">${Utils.escapeHTML(existingEntry?.ppeNotes || (existingEntry?.requiredPPE ? existingEntry.requiredPPE.join('، ') : ''))}</textarea>
+                            <div class="ptw-manual-ppe-header">تحديد مهمات الوقاية / وسائل الوقاية الأخرى</div>
+                            <div class="ptw-manual-ppe-body">
+                                <div id="manual-ppe-matrix" class="bg-white rounded-lg p-2">
+                                    ${typeof PPEMatrix !== 'undefined' ? PPEMatrix.generate('manual-ppe-matrix') : '<div class="text-center p-4 text-gray-500">مصفوفة المهمات غير محملة - يمكنك إدخال البيانات يدوياً أدناه</div>'}
+                                </div>
+                                <div class="mt-4">
+                                    <label class="block text-sm font-bold text-gray-700 mb-2">مهمات الوقاية المطلوبة (يدوي)</label>
+                                    <textarea id="manual-ppe-notes" class="form-input bg-white" rows="2" placeholder="أدخل مهمات الوقاية المطلوبة...">${Utils.escapeHTML(existingEntry?.ppeNotes || (existingEntry?.requiredPPE ? existingEntry.requiredPPE.join('، ') : ''))}</textarea>
+                                </div>
                             </div>
                         </div>
 
@@ -7593,6 +7624,23 @@ const PTW = {
         populateSublocationOptions(locationSelect?.value);
         parseExistingSelectedSublocations();
 
+        // مزامنة حقل المعدة/المكينة/العملية مع حقل الأدوات أو العدد تلقائياً
+        const equipmentInput = modal.querySelector('#manual-permit-equipment');
+        const toolsInput = modal.querySelector('#manual-permit-tools');
+        if (equipmentInput && toolsInput) {
+            const syncToolsFromEquipment = () => {
+                const equipmentValue = String(equipmentInput.value || '').trim();
+                const currentTools = String(toolsInput.value || '').trim();
+                const previousAuto = String(equipmentInput.dataset.autoToolsValue || '').trim();
+                if (!currentTools || currentTools === previousAuto) {
+                    toolsInput.value = equipmentValue;
+                    equipmentInput.dataset.autoToolsValue = equipmentValue;
+                }
+            };
+            syncToolsFromEquipment();
+            equipmentInput.addEventListener('input', syncToolsFromEquipment);
+        }
+
         // نسخ الاسم للتوقيع (القسم الثاني - أعضاء الفريق)
         const attachAutoCopySignature = (nameInput, signatureInput) => {
             if (!nameInput || !signatureInput) return;
@@ -7801,6 +7849,24 @@ const PTW = {
                 badge.style.background = bgColor;
                 badge.style.color = textColor;
                 badge.textContent = score;
+
+                // توليد وصف تلقائي في ملاحظات التقييم بناءً على الخلية المختارة
+                const riskNotesInput = modal.querySelector('#manual-risk-notes');
+                if (riskNotesInput) {
+                    const recommendationByLevel = {
+                        'منخفض': 'يمكن تنفيذ العمل مع الالتزام بالضوابط الأساسية والمتابعة الدورية.',
+                        'متوسط': 'يلزم تعزيز الضوابط الوقائية والمتابعة الميدانية قبل وأثناء التنفيذ.',
+                        'مرتفع': 'لا يبدأ العمل قبل اعتماد ضوابط إضافية واضحة ومتابعة إشرافية مباشرة.',
+                        'حرج': 'إيقاف التنفيذ فوراً حتى إزالة/خفض الخطر واعتماد خطة تحكم مشددة.'
+                    };
+                    const autoText = `تقييم تلقائي: مستوى الخطر ${level} (درجة ${score}) — الاحتمالية ${likelihood} × الخطورة ${consequence}. ${recommendationByLevel[level] || ''}`.trim();
+                    const existingNotes = String(riskNotesInput.value || '').trim();
+                    const previousAuto = String(riskNotesInput.dataset.autoRiskText || '').trim();
+                    if (!existingNotes || existingNotes === previousAuto || existingNotes.startsWith('تقييم تلقائي:')) {
+                        riskNotesInput.value = autoText;
+                        riskNotesInput.dataset.autoRiskText = autoText;
+                    }
+                }
             });
         });
 
