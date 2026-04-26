@@ -6845,34 +6845,31 @@ const PTW = {
                         min-width: 760px;
                     }
                 }
-                /* القسم الخامس — مطابقة النموذج الورقي: إطار أسود رفيع، عنوان #B8CCE4، شبكة 9 أعمدة */
+                /* القسم الخامس — نفس ألوان/شكل باقي الأقسام؛ القيم داخل إطار شبيه بجداول النموذج الورقي */
                 .ptw-manual-permit-modal .manual-section-5.ptw-manual-ppe-section {
-                    background: #ffffff !important;
-                    border: 1px solid #000000 !important;
-                    border-radius: 0 !important;
-                    padding: 0 !important;
-                    overflow: hidden;
-                }
-                .ptw-manual-permit-modal .manual-section-5.ptw-manual-ppe-section > h3 { display: none !important; }
-                .ptw-manual-permit-modal .manual-section-5 .ptw-manual-ppe-header {
-                    background: #B8CCE4 !important;
-                    color: #000000 !important;
-                    text-align: center;
-                    font-size: 1rem;
-                    font-weight: 700;
-                    padding: 12px 14px;
-                    border-bottom: 1px solid #000000;
+                    overflow: visible;
                 }
                 .ptw-manual-permit-modal .manual-section-5 .ptw-manual-ppe-body {
-                    background: #ffffff !important;
-                    color: #000000 !important;
-                    padding: 14px 12px;
+                    margin-top: 0;
                 }
                 .ptw-manual-permit-modal .manual-section-5 #manual-ppe-matrix {
                     background: #ffffff !important;
-                    border: none !important;
-                    border-radius: 0 !important;
-                    padding: 0 !important;
+                    border: 1.2px solid #94a3b8 !important;
+                    border-radius: 10px !important;
+                    padding: 16px 14px !important;
+                    box-shadow: 0 1px 4px rgba(15, 23, 42, 0.07);
+                }
+                .ptw-manual-permit-modal .manual-section-5 .ptw-manual-ppe-notes-frame {
+                    margin-top: 1rem;
+                    background: #ffffff;
+                    border: 1.2px solid #94a3b8;
+                    border-radius: 10px;
+                    padding: 14px 14px 10px;
+                    box-shadow: 0 1px 4px rgba(15, 23, 42, 0.06);
+                }
+                .ptw-manual-permit-modal .manual-section-5 .ptw-manual-ppe-notes-frame label {
+                    color: #1e3a5f;
+                    font-weight: 700;
                 }
                 .ptw-manual-permit-modal .manual-section-5 .ptw-manual-ppe-fixed-wrap {
                     width: 100%;
@@ -7204,15 +7201,14 @@ const PTW = {
 
                         <!-- القسم الخامس: تحديد مهمات الوقاية -->
                         <div class="ptw-manual-form-section manual-section-5 ptw-manual-ppe-section">
-                            <h3><i class="fas fa-hard-hat"></i><span>القسم الخامس : تحديد مهمات الوقاية</span></h3>
-                            <div class="ptw-manual-ppe-header">تحديد مهمات الوقاية / وسائل الوقاية الأخرى</div>
+                            <h3><i class="fas fa-hard-hat"></i><span>القسم الخامس : تحديد مهمات الوقاية / وسائل الوقاية الأخرى</span></h3>
                             <div class="ptw-manual-ppe-body">
                                 <div id="manual-ppe-matrix">
                                     ${this.buildManualFixedPPECheckboxesHtml(manualPpeSelectedItems)}
                                 </div>
-                                <div class="mt-4">
-                                    <label class="block text-sm font-bold text-gray-700 mb-2">مهمات الوقاية المطلوبة (يدوي)</label>
-                                    <textarea id="manual-ppe-notes" class="form-input bg-white" rows="2" placeholder="أدخل مهمات الوقاية المطلوبة...">${Utils.escapeHTML(existingEntry?.ppeNotes || (existingEntry?.requiredPPE ? existingEntry.requiredPPE.join('، ') : ''))}</textarea>
+                                <div class="ptw-manual-ppe-notes-frame">
+                                    <label class="block text-sm mb-2">مهمات الوقاية المطلوبة (إضافي يدوي)</label>
+                                    <textarea id="manual-ppe-notes" class="form-input bg-white w-full" rows="2" placeholder="أدخل مهمات الوقاية المطلوبة...">${Utils.escapeHTML(existingEntry?.ppeNotes || (existingEntry?.requiredPPE ? existingEntry.requiredPPE.join('، ') : ''))}</textarea>
                                 </div>
                             </div>
                         </div>
