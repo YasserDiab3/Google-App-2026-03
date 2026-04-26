@@ -9046,7 +9046,7 @@
         </script>
 
         <!-- Custom CSS -->
-        <link rel="stylesheet" href="styles.css?v=20260430-1" />
+        <link rel="stylesheet" href="styles.css?v=20260426-2" />
         <!-- Sidebar/Layout specific styles (needed for collapse visuals) -->
         <link rel="stylesheet" href="css/layout.css" />
         <!-- مكوّنات شاشة السياسة والتحميل بعد الدخول (بدون شاشة بيضاء، هيدر/فوتر منمق) -->
@@ -12590,7 +12590,7 @@
 
         <!-- Main App - Refactored Modules -->
         <!-- 1. Utils and Constants (must be loaded first) -->
-        <script src="js/modules/app-utils.js?v=20260430-1" defer></script>
+        <script src="js/modules/app-utils.js?v=20260426-2" defer></script>
 
         <!-- 1.1 DOM Safety Utilities (safe DOM access functions) -->
         <script src="js/modules/dom-safety-utils.js" defer></script>
@@ -12604,7 +12604,7 @@
         <!-- 2. Services (Data fetching, Google Integration, etc.) -->
         <!-- CRITICAL: DataManager is defined here and must be loaded before login-init-fixed.js -->
         <!-- Load individual service modules first (they expose themselves to window) -->
-        <script src="js/modules/services/data-manager.js?v=20260430-2" defer></script>
+        <script src="js/modules/services/data-manager.js?v=20260426-3" defer></script>
         <script
             src="js/modules/services/periodic-inspection-store.js"
             defer
@@ -12630,8 +12630,8 @@
         <script src="js/modules/app-services.js" defer></script>
 
         <!-- 3. UI (UI rendering and DOM manipulation) -->
-        <script src="js/modules/i18n-core.js?v=20260430-1" defer></script>
-        <script src="js/modules/app-ui.js?v=20260430-2" defer></script>
+        <script src="js/modules/i18n-core.js?v=20260426-2" defer></script>
+        <script src="js/modules/app-ui.js?v=20260426-3" defer></script>
 
         <!-- 4. Modules (Auth, Dashboard, Users, etc.) -->
         <!-- CRITICAL: Auth is defined here and must be loaded before login-init-fixed.js -->
@@ -12647,7 +12647,7 @@
         <script src="js/modules/modules/ptw.js?v=20260426-7" defer></script>
         <script src="js/modules/modules/training.js" defer></script>
         <script src="js/modules/modules/reports.js" defer></script>
-        <script src="js/modules/modules/settings.js?v=20260430-1" defer></script>
+        <script src="js/modules/modules/settings.js?v=20260426-2" defer></script>
         <script src="js/modules/modules/clinic.js" defer></script>
         <script src="js/modules/modules/fireequipment.js" defer></script>
         <script src="js/modules/modules/ppe.js" defer></script>
@@ -12726,6 +12726,41 @@
                         return;
                     }
 
+                    // تعطيل الـ SW: ?nosw=1 يحفظ التفضيل ثم يعيد التحميل بدون المعامل
+                    try {
+                        const __swQ = new URLSearchParams(
+                            window.location.search,
+                        );
+                        if (__swQ.get("nosw") === "1") {
+                            localStorage.setItem(
+                                "hse_disable_service_worker",
+                                "1",
+                            );
+                        }
+                        if (
+                            localStorage.getItem(
+                                "hse_disable_service_worker",
+                            ) === "1"
+                        ) {
+                            const __swRegs =
+                                await navigator.serviceWorker.getRegistrations();
+                            for (const __r of __swRegs) {
+                                await __r.unregister();
+                            }
+                            if (__swQ.get("nosw") === "1") {
+                                const __u = new URL(window.location.href);
+                                __u.searchParams.delete("nosw");
+                                window.history.replaceState(
+                                    {},
+                                    "",
+                                    __u.pathname + __u.search + __u.hash,
+                                );
+                                window.location.reload();
+                            }
+                            return;
+                        }
+                    } catch (_) {}
+
                     // تحديد المسار الصحيح لـ Service Worker تلقائياً
                     const currentPath = window.location.pathname;
                     let swPath;
@@ -12740,7 +12775,7 @@
                     }
 
                     // مطابقة CACHE_VERSION في service-worker.js — تسريع جلب سكربت SW بعد النشر (تجاوز كاش الشبكة/الوسيط)
-                    const __SW_REGISTER_QUERY = "v=hse-app-v1.0.14-20260430";
+                    const __SW_REGISTER_QUERY = "v=hse-app-v1.0.15-20260426";
                     const swUrl =
                         swPath +
                         (swPath.includes("?") ? "&" : "?") +
