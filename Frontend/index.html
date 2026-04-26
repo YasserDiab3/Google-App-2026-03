@@ -12739,15 +12739,22 @@
                         swPath = "/service-worker.js";
                     }
 
+                    // مطابقة CACHE_VERSION في service-worker.js — تسريع جلب سكربت SW بعد النشر (تجاوز كاش الشبكة/الوسيط)
+                    const __SW_REGISTER_QUERY = "v=hse-app-v1.0.12-20260428";
+                    const swUrl =
+                        swPath +
+                        (swPath.includes("?") ? "&" : "?") +
+                        __SW_REGISTER_QUERY;
+
                     if (__isDev) {
                         console.log("📍 المسار الحالي:", currentPath);
-                        console.log("🔧 مسار Service Worker:", swPath);
+                        console.log("🔧 مسار Service Worker:", swUrl);
                     }
 
                     // محاولة التسجيل بالمسار المحدد
                     try {
                         const registration =
-                            await navigator.serviceWorker.register(swPath);
+                            await navigator.serviceWorker.register(swUrl);
                         if (__isDev)
                             console.log(
                                 "✅ Service Worker مسجل بنجاح:",
@@ -12828,13 +12835,17 @@
                             swPath === "/service-worker.js"
                                 ? "/Frontend/service-worker.js"
                                 : "/service-worker.js";
+                        const altSwUrl =
+                            altPath +
+                            (altPath.includes("?") ? "&" : "?") +
+                            __SW_REGISTER_QUERY;
 
                         if (__isDev)
-                            console.log("🔄 محاولة مسار بديل:", altPath);
+                            console.log("🔄 محاولة مسار بديل:", altSwUrl);
 
                         try {
                             const registration =
-                                await navigator.serviceWorker.register(altPath);
+                                await navigator.serviceWorker.register(altSwUrl);
                             if (__isDev)
                                 console.log(
                                     "✅ نجح التسجيل بالمسار البديل:",

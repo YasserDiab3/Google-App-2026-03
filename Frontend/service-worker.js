@@ -15,56 +15,49 @@
 })();
 
 // Bump cache version to force clients to pick up latest JS/CSS updates (زيادة عند كل نشر لظهور التحديثات)
-// Service Worker Version: 20260401235000 - STABLE RELEASE
-const CACHE_VERSION = 'hse-app-v1.0.10-STABLE';
+// يجب تحديث __SW_REGISTER_QUERY في index.html بنفس اللاحقة عند تغيير الإصدار لتسريع اكتشاف service-worker.js
+// Service Worker Version: 20260428 — precache أخف لتقليل التأخير وحجم Cache Storage
+const CACHE_VERSION = 'hse-app-v1.0.12-20260428';
 const CACHE_NAME = `hse-cache-${CACHE_VERSION}`;
+
+/** أقصى حجم لعنصر في الكاش (بايت) — يحدّ تخزين ملفات CDN الضخمة */
+const MAX_CACHE_ENTRY_BYTES = 1.25 * 1024 * 1024;
+
+function responseOkToCache(response) {
+    if (!response || !response.ok || response.status !== 200) return false;
+    const len = response.headers.get('content-length');
+    if (len != null) {
+        const n = parseInt(len, 10);
+        if (!Number.isNaN(n) && n > MAX_CACHE_ENTRY_BYTES) return false;
+    }
+    return true;
+}
+
+async function safeCachePut(cache, request, response) {
+    if (!responseOkToCache(response)) return;
+    try {
+        await cache.put(request, response.clone());
+    } catch (e) {}
+}
 
 // تحديد المسار الأساسي بناءً على موقع Service Worker
 const BASE_PATH = self.location.pathname.includes('/Frontend/') ? '/Frontend' : '';
 
 console.log('[Service Worker] المسار الأساسي:', BASE_PATH);
 
-// الملفات التي سيتم تخزينها مؤقتاً
+// عند تثبيت SW فقط — قائمة مختصرة؛ الموديولات الأخرى تُحمَّل عند الطلب (شبكة أولاً) دون دفعة تحميل ضخمة
 const CORE_CACHE_FILES = [
     `${BASE_PATH}/index.html`,
     `${BASE_PATH}/styles.css`,
     `${BASE_PATH}/manifest.json`,
-    
-    // PWA Icons - Required for proper installation
-    `${BASE_PATH}/icons/icon-16x16.png`,
-    `${BASE_PATH}/icons/icon-32x32.png`,
-    `${BASE_PATH}/icons/icon-48x48.png`,
-    `${BASE_PATH}/icons/icon-72x72.png`,
-    `${BASE_PATH}/icons/icon-96x96.png`,
-    `${BASE_PATH}/icons/icon-128x128.png`,
-    `${BASE_PATH}/icons/icon-144x144.png`,
-    `${BASE_PATH}/icons/icon-152x152.png`,
-    `${BASE_PATH}/icons/icon-180x180.png`,
     `${BASE_PATH}/icons/icon-192x192.png`,
     `${BASE_PATH}/icons/icon-384x384.png`,
     `${BASE_PATH}/icons/icon-512x512.png`,
-    
-    // JavaScript الأساسي
     `${BASE_PATH}/js/app-bootstrap.js`,
     `${BASE_PATH}/js/modules/lazy-loader.js`,
     `${BASE_PATH}/js/modules/enhanced-loader.js`,
     `${BASE_PATH}/js/modules/app-utils.js`,
-    // Service modules (loaded before app-services.js)
-    `${BASE_PATH}/js/modules/services/data-manager.js`,
-    `${BASE_PATH}/js/modules/services/periodic-inspection-store.js`,
-    `${BASE_PATH}/js/modules/services/approval-circuits.js`,
-    `${BASE_PATH}/js/modules/services/audit-log.js`,
-    `${BASE_PATH}/js/modules/services/user-activity-log.js`,
-    `${BASE_PATH}/js/modules/services/cloud-storage-integration.js`,
-    `${BASE_PATH}/js/modules/services/workflow.js`,
-    `${BASE_PATH}/js/modules/services/google-integration.js`,
-    `${BASE_PATH}/js/modules/app-services.js`,
-    `${BASE_PATH}/js/modules/app-ui.js`,
-    `${BASE_PATH}/js/modules/app-events.js`,
-    `${BASE_PATH}/login-init-fixed.js`,
-    
-    // المكتبات الخارجية (CDN)
-    // ملاحظة: هذه ستُخزن عند الطلب الأول
+    `${BASE_PATH}/login-init-fixed.js`
 ];
 
 // الموديولات التي سيتم تخزينها مؤقتاً عند الطلب
@@ -187,7 +180,7 @@ self.addEventListener('fetch', (event) => {
                                 if (cached) {
                                     // تحديث في الخلفية
                                     fetch(request).then(response => {
-                                        if (response && response.ok) {
+                                        if (response && response.ok && responseOkToCache(response)) {
                                             cache.put(request, response.clone()).catch(() => {});
                                         }
                                     }).catch(() => {});
@@ -212,7 +205,7 @@ self.addEventListener('fetch', (event) => {
                                 if (!isChartJS) {
                                     try {
                                         const cache = await caches.open(CACHE_NAME);
-                                        await cache.put(request, response.clone());
+                                        await safeCachePut(cache, request, response);
                                     } catch (e) {}
                                 }
                                 return response;
@@ -235,7 +228,7 @@ self.addEventListener('fetch', (event) => {
                                     if (!isChartJS) {
                                         try {
                                             const cache = await caches.open(CACHE_NAME);
-                                            await cache.put(request, fallbackResponse.clone());
+                                            await safeCachePut(cache, request, fallbackResponse);
                                         } catch (e) {}
                                     }
                                     return fallbackResponse;
@@ -302,13 +295,13 @@ self.addEventListener('fetch', (event) => {
         // index.html وملفات الـ shell الحرجة: الشبكة أولاً لضمان ظهور التحديثات فوراً بعد النشر
         if (isShellOrCriticalFile(url.pathname)) {
             strategy = CACHE_STRATEGIES.NETWORK_FIRST;
+        } else if (isModuleFile(url.pathname)) {
+            // الموديولات ومسار js/modules أولاً (قبل isCoreFile) — كثير من الملفات مدرجة في CORE_CACHE_FILES
+            // وإلا تُخدم CACHE_FIRST وتبقى نسخ قديمة رغم وجود ?v= على index
+            strategy = CACHE_STRATEGIES.NETWORK_FIRST;
         } else if (isCoreFile(url.pathname)) {
             // الملفات الأساسية الأخرى: التخزين المؤقت أولاً
             strategy = CACHE_STRATEGIES.CACHE_FIRST;
-        } else if (isModuleFile(url.pathname)) {
-            // الموديولات: الشبكة أولاً (للحصول على أحدث نسخة تلقائياً)
-            // هذا يسمح بتحديث الموديولات دون إعادة نشر التطبيق
-            strategy = CACHE_STRATEGIES.NETWORK_FIRST;
         } else if (isAPIRequest(url)) {
             // طلبات API: الشبكة أولاً (لكن لا نخزنها في Cache)
             strategy = CACHE_STRATEGIES.NETWORK_ONLY;
@@ -410,8 +403,8 @@ async function cacheFirst(request) {
             if (isCDNResource(new URL(request.url))) {
                 // تحديث في الخلفية بدون انتظار
                 fetch(request).then(response => {
-                    if (response && response.ok) {
-                        cache.put(request, response.clone());
+                    if (response && response.ok && responseOkToCache(response)) {
+                        cache.put(request, response.clone()).catch(() => {});
                     }
                 }).catch(() => {
                     // تجاهل أخطاء التحديث في الخلفية
@@ -449,7 +442,7 @@ async function cacheFirst(request) {
             if (response.type === 'basic' || response.type === 'cors') {
                 try {
                     const cache = await caches.open(CACHE_NAME);
-                    await cache.put(request, response.clone());
+                    await safeCachePut(cache, request, response);
                 } catch (cacheError) {
                     // تجاهل أخطاء التخزين المؤقت
                 }
@@ -481,7 +474,7 @@ async function cacheFirst(request) {
                         // تخزين الاستجابة من fallback
                         try {
                             const cache = await caches.open(CACHE_NAME);
-                            await cache.put(request, fallbackResponse.clone());
+                            await safeCachePut(cache, request, fallbackResponse);
                         } catch (cacheError) {
                             // تجاهل أخطاء التخزين المؤقت
                         }
@@ -526,9 +519,12 @@ async function networkFirst(request) {
     
     const url = new URL(request.url);
     const isModule = isModuleFile(url.pathname);
+    const isLocalScript =
+        url.origin === self.location.origin &&
+        (url.pathname.endsWith('.js') || url.pathname.endsWith('.mjs'));
     
-    // للموديولات: استخدام cache: 'no-cache' لضمان التحقق من التحديثات
-    const fetchOptions = isModule ? {
+    // للموديولات وأي سكربت محلي: التحقق من الخادم (تجاوز كاش المتصفح القديم)
+    const fetchOptions = isModule || isLocalScript ? {
         cache: 'no-cache',
         headers: {
             'Cache-Control': 'no-cache'
@@ -547,7 +543,7 @@ async function networkFirst(request) {
                 if (response.type === 'basic' || response.type === 'cors') {
                     try {
                         const cache = await caches.open(CACHE_NAME);
-                        await cache.put(request, response.clone());
+                        await safeCachePut(cache, request, response);
                     } catch (cacheError) {
                         // تجاهل أخطاء التخزين المؤقت
                     }
