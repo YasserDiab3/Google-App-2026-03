@@ -623,7 +623,7 @@ const Violations = {
                                 ${this.renderFilters('contractor')}
                             </div>
                             <div class="mb-4 flex items-center justify-end">
-                                <button type="button" class="btn-primary" onclick="Violations.exportContractorViolationsReport()">
+                                <button type="button" class="btn-primary" onclick="Violations.showContractorViolationsReportDialog()">
                                     <i class="fas fa-file-pdf ml-2"></i>تصدير تقرير مخالفة المقاولين
                                 </button>
                             </div>
@@ -801,13 +801,213 @@ const Violations = {
         `;
     },
 
-    exportContractorViolationsReport() {
-        const violations = this.getFilteredViolations().filter(v =>
-            v.contractorName || v.personType === 'contractor'
-        );
+    getContractorViolationsExportOptions() {
+        const optionsMap = new Map();
+        const addOption = (id, name) => {
+            const cleanName = String(name || '').replace(/\s+/g, ' ').trim();
+            if (!cleanName) return;
+            const key = String(id || cleanName).trim();
+            if (!optionsMap.has(key)) {
+                optionsMap.set(key, { id: key, name: cleanName });
+            }
+        };
+
+        const appViolations = Array.isArray(AppState.appData?.violations) ? AppState.appData.violations : [];
+        appViolations.forEach(v => {
+            if (v?.contractorName) addOption(v.contractorId || v.contractorName, v.contractorName);
+        });
+
+        const approved = Array.isArray(AppState.appData?.approvedContractors) ? AppState.appData.approvedContractors : [];
+        approved.forEach(c => addOption(c?.contractorId || c?.id || c?.code, c?.companyName || c?.name || c?.contractorName));
+
+        const contractors = Array.isArray(AppState.appData?.contractors) ? AppState.appData.contractors : [];
+        contractors.forEach(c => addOption(c?.id || c?.contractorId || c?.code, c?.name || c?.companyName || c?.contractorName));
+
+        return Array.from(optionsMap.values()).sort((a, b) => a.name.localeCompare(b.name, 'ar', { sensitivity: 'base' }));
+    },
+
+    showContractorViolationsReportDialog() {
+        const contractors = this.getContractorViolationsExportOptions();
+        const currentDate = new Date();
+        const currentYear = currentDate.getFullYear();
+        const months = [];
+        for (let i = 0; i < 24; i++) {
+            const date = new Date(currentYear, currentDate.getMonth() - i, 1);
+            const year = date.getFullYear();
+            const month = date.getMonth() + 1;
+            const monthKey = `${year}-${String(month).padStart(2, '0')}`;
+            const monthLabel = date.toLocaleDateString('ar-SA', { year: 'numeric', month: 'long' });
+            months.push({ value: monthKey, label: monthLabel });
+        }
+
+        const modal = document.createElement('div');
+        modal.className = 'modal-overlay';
+        modal.innerHTML = `
+            <div class="modal-content" style="max-width: 700px;">
+                <div class="modal-header">
+                    <h2 class="modal-title">
+                        <i class="fas fa-file-pdf ml-2"></i>
+                        تصدير تقرير مخالفات المقاولين
+                    </h2>
+                    <button class="modal-close" title="إغلاق">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="modal-body space-y-4">
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">
+                            <i class="fas fa-building ml-2"></i>
+                            اختر المقاول
+                        </label>
+                        <select id="contractor-violations-report-select" class="form-input">
+                            <option value="">جميع المقاولين</option>
+                            ${contractors.map(contractor => `
+                                <option value="${Utils.escapeHTML(String(contractor.id ?? '').trim())}">
+                                    ${Utils.escapeHTML(contractor.name || 'بدون اسم')}
+                                </option>
+                            `).join('')}
+                        </select>
+                        <p class="text-xs text-gray-500 mt-2">
+                            <i class="fas fa-info-circle ml-1"></i>
+                            اختر مقاولاً محدداً لعرض تقريره فقط، أو اتركه فارغاً لعرض جميع المقاولين
+                        </p>
+                    </div>
+
+                    <div style="border-top: 1px solid #E5E7EB; padding-top: 16px; margin-top: 16px;">
+                        <label class="block text-sm font-semibold text-gray-700 mb-3">
+                            <i class="fas fa-calendar-alt ml-2"></i>
+                            فترة التصدير
+                        </label>
+                        <div class="space-y-3">
+                            <div class="flex items-center">
+                                <input type="radio" id="contractor-violations-range-all" name="contractor-violations-range-type" value="all" class="ml-2" checked>
+                                <label for="contractor-violations-range-all" class="text-sm text-gray-700 cursor-pointer">جميع السجلات</label>
+                            </div>
+                            <div class="flex items-center">
+                                <input type="radio" id="contractor-violations-range-month" name="contractor-violations-range-type" value="month" class="ml-2">
+                                <label for="contractor-violations-range-month" class="text-sm text-gray-700 cursor-pointer mr-2">شهر محدد</label>
+                                <select id="contractor-violations-report-month" class="form-input flex-1" disabled style="max-width: 300px;">
+                                    <option value="">اختر الشهر</option>
+                                    ${months.map(month => `<option value="${month.value}">${month.label}</option>`).join('')}
+                                </select>
+                            </div>
+                            <div class="flex items-center">
+                                <input type="radio" id="contractor-violations-range-custom" name="contractor-violations-range-type" value="custom" class="ml-2">
+                                <label for="contractor-violations-range-custom" class="text-sm text-gray-700 cursor-pointer mr-2">فترة محددة</label>
+                                <div class="flex items-center gap-2 flex-1" style="max-width: 400px;">
+                                    <input type="date" id="contractor-violations-report-from-date" class="form-input flex-1" disabled>
+                                    <span class="text-sm text-gray-600">إلى</span>
+                                    <input type="date" id="contractor-violations-report-to-date" class="form-input flex-1" disabled>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn-secondary" data-action="close">إلغاء</button>
+                    <button type="button" class="btn-primary" id="generate-contractor-violations-report-btn">
+                        <i class="fas fa-file-export ml-2"></i>
+                        إنشاء التقرير
+                    </button>
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(modal);
+        const close = () => modal.remove();
+        modal.querySelector('.modal-close')?.addEventListener('click', close);
+        modal.querySelector('[data-action="close"]')?.addEventListener('click', close);
+        modal.addEventListener('click', (event) => {
+            if (event.target === modal) close();
+        });
+
+        const rangeInputs = modal.querySelectorAll('input[name="contractor-violations-range-type"]');
+        const monthSelect = modal.querySelector('#contractor-violations-report-month');
+        const fromDateInput = modal.querySelector('#contractor-violations-report-from-date');
+        const toDateInput = modal.querySelector('#contractor-violations-report-to-date');
+
+        const updateDateFields = () => {
+            const selectedType = modal.querySelector('input[name="contractor-violations-range-type"]:checked')?.value || 'all';
+            monthSelect.disabled = selectedType !== 'month';
+            monthSelect.required = selectedType === 'month';
+            fromDateInput.disabled = selectedType !== 'custom';
+            fromDateInput.required = selectedType === 'custom';
+            toDateInput.disabled = selectedType !== 'custom';
+            toDateInput.required = selectedType === 'custom';
+        };
+        rangeInputs.forEach(input => input.addEventListener('change', updateDateFields));
+
+        modal.querySelector('#generate-contractor-violations-report-btn')?.addEventListener('click', async () => {
+            const contractorSelect = modal.querySelector('#contractor-violations-report-select');
+            const selectedContractorId = contractorSelect?.value ? String(contractorSelect.value).trim() : '';
+            const selectedContractorName = selectedContractorId
+                ? String(contractorSelect?.options?.[contractorSelect.selectedIndex]?.textContent || '').replace(/\s+/g, ' ').trim()
+                : '';
+            const dateRangeType = modal.querySelector('input[name="contractor-violations-range-type"]:checked')?.value || 'all';
+            const month = modal.querySelector('#contractor-violations-report-month')?.value || '';
+            const fromDate = modal.querySelector('#contractor-violations-report-from-date')?.value || '';
+            const toDate = modal.querySelector('#contractor-violations-report-to-date')?.value || '';
+
+            if (dateRangeType === 'month' && !month) {
+                Notification.warning('يرجى اختيار الشهر المطلوب');
+                return;
+            }
+            if (dateRangeType === 'custom') {
+                if (!fromDate || !toDate) {
+                    Notification.warning('يرجى اختيار تاريخ البداية والنهاية للفترة');
+                    return;
+                }
+                if (new Date(fromDate) > new Date(toDate)) {
+                    Notification.warning('تاريخ البداية يجب أن يكون قبل تاريخ النهاية');
+                    return;
+                }
+            }
+
+            close();
+            await this.generateContractorViolationsReport(selectedContractorId, {
+                dateRangeType,
+                month,
+                fromDate,
+                toDate
+            }, selectedContractorName);
+        });
+    },
+
+    async generateContractorViolationsReport(contractorId = '', dateFilter = {}, selectedContractorName = '') {
+        const normalizedContractorId = String(contractorId || '').trim();
+        const normalizedName = String(selectedContractorName || '').replace(/\s+/g, ' ').trim().toLowerCase();
+        let violations = (AppState.appData.violations || []).filter(v => v.contractorName || v.personType === 'contractor');
+
+        if (normalizedContractorId || normalizedName) {
+            violations = violations.filter(v => {
+                const recordId = String(v.contractorId || '').trim();
+                const recordName = String(v.contractorName || '').replace(/\s+/g, ' ').trim().toLowerCase();
+                if (normalizedContractorId && recordId && normalizedContractorId === recordId) return true;
+                if (normalizedName && recordName && (recordName === normalizedName || recordName.includes(normalizedName) || normalizedName.includes(recordName))) return true;
+                return false;
+            });
+        }
+
+        const { dateRangeType = 'all', month = '', fromDate = '', toDate = '' } = dateFilter || {};
+        if (dateRangeType === 'month' && month) {
+            const [year, monthNum] = month.split('-');
+            violations = violations.filter(v => {
+                if (!v.violationDate) return false;
+                const d = new Date(v.violationDate);
+                return d.getFullYear() === parseInt(year, 10) && (d.getMonth() + 1) === parseInt(monthNum, 10);
+            });
+        } else if (dateRangeType === 'custom' && fromDate && toDate) {
+            const start = new Date(fromDate); start.setHours(0, 0, 0, 0);
+            const end = new Date(toDate); end.setHours(23, 59, 59, 999);
+            violations = violations.filter(v => {
+                if (!v.violationDate) return false;
+                const d = new Date(v.violationDate);
+                return d >= start && d <= end;
+            });
+        }
 
         if (!violations.length) {
-            Notification.warning('لا توجد بيانات لمخالفات المقاولين لتصديرها');
+            Notification.warning('لا توجد بيانات لمخالفات المقاولين وفق المحددات المختارة');
             return;
         }
 
@@ -822,6 +1022,15 @@ const Violations = {
             const resolutionRate = violations.length > 0 ? Math.round((resolvedCount / violations.length) * 100) : 0;
             const uniqueContractors = new Set(violations.map(v => String(v.contractorName || '').trim()).filter(Boolean)).size;
 
+            let periodInfo = '';
+            if (dateRangeType === 'month' && month) {
+                const [y, m] = month.split('-');
+                const d = new Date(parseInt(y, 10), parseInt(m, 10) - 1, 1);
+                periodInfo = d.toLocaleDateString('ar-SA', { year: 'numeric', month: 'long' });
+            } else if (dateRangeType === 'custom' && fromDate && toDate) {
+                periodInfo = `من ${Utils.formatDate(fromDate)} إلى ${Utils.formatDate(toDate)}`;
+            }
+
             const rowsHtml = violations.map((v, index) => `
                 <tr>
                     <td style="padding: 10px 8px; border: 1px solid #E5E7EB; text-align: center; font-size: 11px;">${index + 1}</td>
@@ -834,27 +1043,16 @@ const Violations = {
                 </tr>
             `).join('');
 
+            const headingName = selectedContractorName ? ` - ${Utils.escapeHTML(selectedContractorName)}` : '';
             const content = `
                 <div style="margin-bottom: 24px;">
-                    <h2 style="font-size: 20px; margin-bottom: 12px; color: #991B1B; font-weight: 700;">تقرير مخالفات المقاولين</h2>
+                    <h2 style="font-size: 20px; margin-bottom: 12px; color: #991B1B; font-weight: 700;">تقرير مخالفات المقاولين${headingName}</h2>
+                    ${periodInfo ? `<div style="margin-bottom: 16px; padding: 12px; background: #FFF7ED; border-right: 4px solid #F59E0B; border-radius: 8px;"><strong style="color: #D97706;">الفترة:</strong> <span style="color: #1F2937;">${Utils.escapeHTML(periodInfo)}</span></div>` : ''}
                     <div style="display: flex; flex-wrap: wrap; gap: 16px;">
-                        <div style="flex: 1 1 180px; padding: 14px; border-radius: 10px; background: #FEF2F2; border: 1px solid #FECACA;">
-                            <div style="font-size: 12px; color: #B91C1C; margin-bottom: 6px; font-weight: 600;">إجمالي المخالفات</div>
-                            <div style="font-size: 24px; font-weight: 700; color: #991B1B;">${violations.length}</div>
-                        </div>
-                        <div style="flex: 1 1 180px; padding: 14px; border-radius: 10px; background: #EFF6FF; border: 1px solid #BFDBFE;">
-                            <div style="font-size: 12px; color: #1D4ED8; margin-bottom: 6px; font-weight: 600;">عدد المقاولين</div>
-                            <div style="font-size: 24px; font-weight: 700; color: #1E3A8A;">${uniqueContractors}</div>
-                        </div>
-                        <div style="flex: 1 1 180px; padding: 14px; border-radius: 10px; background: #FFF7ED; border: 1px solid #FED7AA;">
-                            <div style="font-size: 12px; color: #C2410C; margin-bottom: 6px; font-weight: 600;">عالية / متوسطة / منخفضة</div>
-                            <div style="font-size: 20px; font-weight: 700; color: #9A3412;">${highCount} / ${mediumCount} / ${lowCount}</div>
-                        </div>
-                        <div style="flex: 1 1 180px; padding: 14px; border-radius: 10px; background: #ECFDF5; border: 1px solid #BBF7D0;">
-                            <div style="font-size: 12px; color: #047857; margin-bottom: 6px; font-weight: 600;">معدل الحل</div>
-                            <div style="font-size: 24px; font-weight: 700; color: #065F46;">${resolutionRate}%</div>
-                            <div style="font-size: 11px; color: #065F46; margin-top: 4px;">محلول: ${resolvedCount} | غير محلول: ${unresolvedCount}</div>
-                        </div>
+                        <div style="flex: 1 1 180px; padding: 14px; border-radius: 10px; background: #FEF2F2; border: 1px solid #FECACA;"><div style="font-size: 12px; color: #B91C1C; margin-bottom: 6px; font-weight: 600;">إجمالي المخالفات</div><div style="font-size: 24px; font-weight: 700; color: #991B1B;">${violations.length}</div></div>
+                        <div style="flex: 1 1 180px; padding: 14px; border-radius: 10px; background: #EFF6FF; border: 1px solid #BFDBFE;"><div style="font-size: 12px; color: #1D4ED8; margin-bottom: 6px; font-weight: 600;">عدد المقاولين</div><div style="font-size: 24px; font-weight: 700; color: #1E3A8A;">${uniqueContractors}</div></div>
+                        <div style="flex: 1 1 180px; padding: 14px; border-radius: 10px; background: #FFF7ED; border: 1px solid #FED7AA;"><div style="font-size: 12px; color: #C2410C; margin-bottom: 6px; font-weight: 600;">عالية / متوسطة / منخفضة</div><div style="font-size: 20px; font-weight: 700; color: #9A3412;">${highCount} / ${mediumCount} / ${lowCount}</div></div>
+                        <div style="flex: 1 1 180px; padding: 14px; border-radius: 10px; background: #ECFDF5; border: 1px solid #BBF7D0;"><div style="font-size: 12px; color: #047857; margin-bottom: 6px; font-weight: 600;">معدل الحل</div><div style="font-size: 24px; font-weight: 700; color: #065F46;">${resolutionRate}%</div><div style="font-size: 11px; color: #065F46; margin-top: 4px;">محلول: ${resolvedCount} | غير محلول: ${unresolvedCount}</div></div>
                     </div>
                 </div>
                 <div style="margin-bottom: 16px;">
@@ -879,9 +1077,9 @@ const Violations = {
             `;
 
             const formCode = `CONTRACTOR-VIOL-${new Date().toISOString().slice(0, 10)}`;
-            const reportTitle = 'تقرير مخالفات المقاولين';
+            const reportTitle = selectedContractorName ? `تقرير مخالفات المقاول: ${selectedContractorName}` : 'تقرير مخالفات المقاولين';
             const htmlContent = typeof FormHeader !== 'undefined' && typeof FormHeader.generatePDFHTML === 'function'
-                ? FormHeader.generatePDFHTML(formCode, reportTitle, content, false, true, { source: 'ContractorViolationsTab' }, new Date().toISOString(), new Date().toISOString())
+                ? FormHeader.generatePDFHTML(formCode, reportTitle, content, false, true, { source: 'ContractorViolationsTab', contractorId: contractorId || '', contractorName: selectedContractorName || '' }, new Date().toISOString(), new Date().toISOString())
                 : `<html dir="rtl" lang="ar"><head><meta charset="UTF-8"><title>${reportTitle}</title></head><body>${content}</body></html>`;
 
             const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
@@ -900,6 +1098,7 @@ const Violations = {
                 URL.revokeObjectURL(url);
                 Loading.hide();
                 Notification.error('يرجى السماح بالنوافذ المنبثقة للطباعة');
+                return;
             }
 
             Notification.success('تم إنشاء تقرير مخالفات المقاولين بنجاح');
