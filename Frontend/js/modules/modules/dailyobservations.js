@@ -6237,50 +6237,16 @@ const DailyObservations = {
         return Array.from(set).filter(Boolean).sort((a, b) => a.localeCompare(b, 'ar'));
     },
 
+    /** مصدر واحد: Training.getSafetyTeamMembers (يُحمَّل training.js قبل dailyobservations.js في index.html) */
     getSafetyTeamMembers() {
-        const membersMap = new Map();
-
-        const settingsTeam = AppState.companySettings?.safetyTeam || AppState.companySettings?.safetyTeamMembers;
-        if (Array.isArray(settingsTeam)) {
-            settingsTeam.forEach((entry, index) => {
-                const name = (entry?.name || entry).toString().trim();
-                if (name) {
-                    membersMap.set(name, { id: `settings-${index}`, name });
-                }
-            });
-        } else if (typeof settingsTeam === 'string') {
-            settingsTeam.split(/\n|,/).forEach((entry, index) => {
-                const name = entry.trim();
-                if (name) {
-                    membersMap.set(name, { id: `settings-${index}`, name });
-                }
-            });
+        try {
+            if (typeof Training !== 'undefined' && typeof Training.getSafetyTeamMembers === 'function') {
+                return Training.getSafetyTeamMembers();
+            }
+        } catch (error) {
+            if (typeof Utils !== 'undefined' && Utils.safeWarn) Utils.safeWarn('⚠️ خطأ في getSafetyTeamMembers:', error);
         }
-
-        (AppState.appData.users || []).forEach((user) => {
-            const role = (user.role || '').toLowerCase();
-            const isSafety = role.includes('safety') || role.includes('hse') || role.includes('سلامة');
-            if (isSafety) {
-                const name = user.name || user.fullName || user.email || '';
-                if (name) {
-                    membersMap.set(name, { id: user.id || user.email || name, name });
-                }
-            }
-        });
-
-        (AppState.appData.employees || []).forEach((employee) => {
-            const department = (employee.department || '').toLowerCase();
-            const jobTitle = (employee.position || employee.jobTitle || '').toLowerCase();
-            const isSafety = department.includes('سلامة') || department.includes('hse') || jobTitle.includes('سلامة') || jobTitle.includes('hse');
-            if (isSafety) {
-                const name = employee.name || employee.fullName || '';
-                if (name) {
-                    membersMap.set(name, { id: employee.id || employee.employeeNumber || name, name });
-                }
-            }
-        });
-
-        return Array.from(membersMap.values()).sort((a, b) => a.name.localeCompare(b.name, 'ar'));
+        return [];
     },
 
     isSystemManager() {

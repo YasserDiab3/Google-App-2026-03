@@ -6421,6 +6421,24 @@ const PTW = {
         const hasDepartments = departmentOptions.length > 0;
         const requestingPartyValue = existingEntry?.requestingParty || '';
 
+        const safetyTeamForManual = (typeof Training !== 'undefined' && typeof Training.getSafetyTeamMembers === 'function')
+            ? Training.getSafetyTeamMembers()
+            : [];
+        const buildManualSupervisorOptions = (placeholder, selectedValue) => {
+            const esc = Utils.escapeHTML;
+            const sel = String(selectedValue || '').trim();
+            const names = safetyTeamForManual.map((m) => String(m.name || '').trim()).filter(Boolean);
+            let html = `<option value="">${esc(placeholder)}</option>`;
+            names.forEach((n) => {
+                html += `<option value="${esc(n)}"${sel === n ? ' selected' : ''}>${esc(n)}</option>`;
+            });
+            if (sel && !names.includes(sel)) {
+                html += `<option value="${esc(sel)}" selected>${esc(sel)}</option>`;
+            }
+            return html;
+        };
+        const manualSupervisorSelectAttrs = 'class="form-input" style="border: 2px solid #e0e7ff; border-radius: 10px; transition: all 0.3s; padding: 10px 12px; width: 100%;" onfocus="this.style.borderColor=\'#667eea\'; this.style.boxShadow=\'0 0 0 3px rgba(102,126,234,0.15)\'" onblur="this.style.borderColor=\'#e0e7ff\'; this.style.boxShadow=\'none\'"';
+
         const modal = document.createElement('div');
         modal.className = 'modal-overlay';
         modal.style.cssText = 'display: flex; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.5); z-index: 10000; align-items: center; justify-content: center;';
@@ -6898,14 +6916,15 @@ const PTW = {
                                 <div>
                                     <label class="block text-sm font-bold text-gray-700 mb-2">الجهة الطالبة للتصريح</label>
                                     ${hasDepartments ? `
-                                        <div class="relative manual-permit-same-field-slot">
-                                            <select id="manual-permit-requesting-party-select" class="form-input transition-all focus:ring-2 focus:ring-blue-200 w-full">
-                                                <option value="">اختر الإدارة</option>
-                                                ${departmentOptions.map(dept => `<option value="${Utils.escapeHTML(dept)}" ${requestingPartyValue === dept ? 'selected' : ''}>${Utils.escapeHTML(dept)}</option>`).join('')}
-                                                <option value="__custom__">إدخال يدوي</option>
-                                            </select>
-                                            <input type="text" id="manual-permit-requesting-party" class="form-input transition-all focus:ring-2 focus:ring-blue-200 w-full hidden absolute inset-0"
-                                                value="${Utils.escapeHTML(requestingPartyValue)}" placeholder="الجهة الطالبة للتصريح">
+                                        <div class="relative">
+                                            <input type="text" id="manual-permit-requesting-party" class="form-input transition-all focus:ring-2 focus:ring-blue-200 w-full"
+                                                list="manual-requesting-party-datalist"
+                                                autocomplete="off"
+                                                value="${Utils.escapeHTML(requestingPartyValue)}"
+                                                placeholder="ابدأ الكتابة لتصفية الإدارات أو أدخل جهة غير مدرجة">
+                                            <datalist id="manual-requesting-party-datalist">
+                                                ${departmentOptions.map(dept => `<option value="${Utils.escapeHTML(dept)}"></option>`).join('')}
+                                            </datalist>
                                         </div>
                                     ` : `<input type="text" id="manual-permit-requesting-party" class="form-input transition-all focus:ring-2 focus:ring-blue-200"
                                         value="${Utils.escapeHTML(requestingPartyValue)}" placeholder="الجهة الطالبة للتصريح">`}
@@ -7286,14 +7305,17 @@ const PTW = {
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div>
                                     <label class="block text-sm font-bold text-gray-700 mb-2"><i class="fas fa-user-tie ml-2 text-indigo-600"></i>مسؤول المتابعة الأول</label>
-                                    <input type="text" id="manual-permit-supervisor1" class="form-input transition-all focus:ring-2 focus:ring-indigo-200" list="manual-safety-officer-datalist" value="${Utils.escapeHTML(existingEntry?.supervisor1 || '')}" placeholder="اختر مسؤول المتابعة الأول">
+                                    <select id="manual-permit-supervisor1" ${manualSupervisorSelectAttrs}>
+                                        ${buildManualSupervisorOptions('اختر مسؤول المتابعة الأول', existingEntry?.supervisor1)}
+                                    </select>
                                 </div>
                                 <div>
                                     <label class="block text-sm font-bold text-gray-700 mb-2"><i class="fas fa-user-tie ml-2 text-indigo-600"></i>مسؤول المتابعة الثاني</label>
-                                    <input type="text" id="manual-permit-supervisor2" class="form-input transition-all focus:ring-2 focus:ring-indigo-200" list="manual-safety-officer-datalist" value="${Utils.escapeHTML(existingEntry?.supervisor2 || '')}" placeholder="اختر مسؤول المتابعة الثاني">
+                                    <select id="manual-permit-supervisor2" ${manualSupervisorSelectAttrs}>
+                                        ${buildManualSupervisorOptions('اختر مسؤول المتابعة الثاني', existingEntry?.supervisor2)}
+                                    </select>
                                 </div>
                             </div>
-                            <datalist id="manual-safety-officer-datalist"></datalist>
                         </div>
 
                     </form>
@@ -7621,64 +7643,6 @@ const PTW = {
         attachAutoCopyToApprovals('#manual-approvals-list', '.manual-approval-name', '.manual-approval-sig');
         attachAutoCopyToApprovals('#manual-closure-approvals-list', '.manual-closure-approval-name', '.manual-closure-approval-sig');
 
-        // قائمة مسئولي السلامة (القسم العاشر)
-        (function initSafetyDatalist() {
-            const sup1 = modal.querySelector('#manual-permit-supervisor1');
-            const sup2 = modal.querySelector('#manual-permit-supervisor2');
-            const dataListId = 'manual-safety-officer-datalist';
-            const dataList = modal.querySelector(`#${dataListId}`);
-            if (!dataList) return;
-
-            const officers = [];
-            const blockedSystemNames = new Set();
-            const addOfficer = (value) => {
-                const name = String(value || '').trim();
-                if (name && !officers.includes(name)) officers.push(name);
-            };
-
-            (AppState.appData?.users || []).forEach((user) => {
-                [
-                    user?.name,
-                    user?.fullName,
-                    user?.username,
-                    user?.email
-                ].forEach(value => {
-                    const normalized = String(value || '').trim();
-                    if (normalized) blockedSystemNames.add(normalized);
-                });
-            });
-
-            if (typeof Training !== 'undefined' && typeof Training.getSafetyTeamMembers === 'function') {
-                (Training.getSafetyTeamMembers() || []).forEach((member) => {
-                    addOfficer(member?.name || member);
-                });
-            } else {
-                const settingsTeam = AppState.companySettings?.safetyTeam || AppState.companySettings?.safetyTeamMembers;
-                if (Array.isArray(settingsTeam)) {
-                    settingsTeam.forEach(entry => addOfficer(entry?.name || entry));
-                } else if (typeof settingsTeam === 'string') {
-                    settingsTeam.split(/\n|,/).forEach(entry => addOfficer(entry));
-                }
-
-                (AppState.appData?.employees || []).forEach((employee) => {
-                    const department = String(employee?.department || '').toLowerCase();
-                    const jobTitle = String(employee?.position || employee?.jobTitle || '').toLowerCase();
-                    const isSafetyMember = department.includes('سلامة') || department.includes('hse') || jobTitle.includes('سلامة') || jobTitle.includes('hse');
-                    if (isSafetyMember) {
-                        addOfficer(employee?.name || employee?.fullName || '');
-                    }
-                });
-            }
-
-            dataList.innerHTML = officers
-                .filter(name => !blockedSystemNames.has(name) && !name.includes('@'))
-                .sort((a, b) => a.localeCompare(b, 'ar'))
-                .map(name => `<option value="${Utils.escapeHTML(name)}"></option>`)
-                .join('');
-
-            [sup1, sup2].filter(Boolean).forEach(input => input.setAttribute('list', dataListId));
-        })();
-
         // معالجة اختيار الجهة المصرح لها من القائمة المنسدلة
         const authorizedPartySelect = modal.querySelector('#manual-permit-authorized-party-select');
         const authorizedPartyInput = modal.querySelector('#manual-permit-authorized-party');
@@ -7705,33 +7669,6 @@ const PTW = {
                     authorizedPartySelect.classList.remove('hidden');
                     authorizedPartyInput.classList.add('hidden');
                     authorizedPartyInput.value = authorizedPartySelect.value;
-                }
-            });
-        }
-
-        // معالجة اختيار الجهة الطالبة للتصريح من قائمة الإدارات
-        const requestingPartySelect = modal.querySelector('#manual-permit-requesting-party-select');
-        const requestingPartyInput = modal.querySelector('#manual-permit-requesting-party');
-        if (requestingPartySelect && requestingPartyInput) {
-            if (requestingPartySelect.value && requestingPartySelect.value !== '__custom__') {
-                requestingPartyInput.value = requestingPartySelect.value;
-                requestingPartyInput.classList.add('hidden');
-                requestingPartySelect.classList.remove('hidden');
-            } else if (requestingPartyInput.value && !departmentOptions.includes(requestingPartyInput.value.trim())) {
-                requestingPartySelect.value = '__custom__';
-                requestingPartySelect.classList.add('hidden');
-                requestingPartyInput.classList.remove('hidden');
-            }
-            requestingPartySelect.addEventListener('change', () => {
-                if (requestingPartySelect.value === '__custom__') {
-                    requestingPartySelect.classList.add('hidden');
-                    requestingPartyInput.classList.remove('hidden');
-                    requestingPartyInput.value = '';
-                    requestingPartyInput.focus();
-                } else {
-                    requestingPartySelect.classList.remove('hidden');
-                    requestingPartyInput.classList.add('hidden');
-                    requestingPartyInput.value = requestingPartySelect.value;
                 }
             });
         }

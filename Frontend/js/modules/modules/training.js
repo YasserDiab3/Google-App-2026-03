@@ -4113,21 +4113,57 @@ const Training = {
         }
     },
 
+    /**
+     * اسم العرض للقائم بالتدريب / فريق السلامة من سجل مستخدم النظام:
+     * يفضّل الاسم الكامل، ولا يعرض البريد ولا اسم الدخول كاسم ظاهر (مع محاولة الربط بسجل موظف).
+     */
+    resolveSafetyTrainerDisplayName(user) {
+        if (!user) return '';
+        const full = String(user.fullName || '').trim();
+        const nm = String(user.name || '').trim();
+        const un = String(user.username || '').trim().toLowerCase();
+        const em = String(user.email || '').trim();
+        const looksEmail = (s) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(s || '').trim());
+
+        if (full) return full;
+        if (nm && looksEmail(nm)) return '';
+        if (nm && un && nm.toLowerCase() === un) {
+            const emp = (AppState.appData?.employees || []).find((e) => String(e.email || '').toLowerCase() === em.toLowerCase());
+            return emp ? String(emp.name || emp.fullName || '').trim() : '';
+        }
+        if (nm) return nm;
+        if (em) {
+            const emp = (AppState.appData?.employees || []).find((e) => String(e.email || '').toLowerCase() === em.toLowerCase());
+            if (emp) return String(emp.name || emp.fullName || '').trim();
+        }
+        return '';
+    },
+
     // الحصول على قائمة أعضاء فريق السلامة (بنفس منطق الملاحظات اليومية)
     getSafetyTeamMembers() {
         const membersMap = new Map();
 
+        const resolveSettingsMemberLabel = (raw) => {
+            const s = String(raw || '').trim();
+            if (!s) return '';
+            if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s)) {
+                const emp = (AppState.appData?.employees || []).find((e) => String(e.email || '').toLowerCase() === s.toLowerCase());
+                return emp ? String(emp.name || emp.fullName || '').trim() : '';
+            }
+            return s;
+        };
+
         const settingsTeam = AppState.companySettings?.safetyTeam || AppState.companySettings?.safetyTeamMembers;
         if (Array.isArray(settingsTeam)) {
             settingsTeam.forEach((entry, index) => {
-                const name = (entry?.name || entry).toString().trim();
+                const name = resolveSettingsMemberLabel(entry?.name || entry);
                 if (name) {
                     membersMap.set(name, { id: `settings-${index}`, name });
                 }
             });
         } else if (typeof settingsTeam === 'string') {
             settingsTeam.split(/\n|,/).forEach((entry, index) => {
-                const name = entry.trim();
+                const name = resolveSettingsMemberLabel(entry);
                 if (name) {
                     membersMap.set(name, { id: `settings-${index}`, name });
                 }
@@ -4137,11 +4173,10 @@ const Training = {
         (AppState.appData.users || []).forEach((user) => {
             const role = (user.role || '').toLowerCase();
             const isSafety = role.includes('safety') || role.includes('hse') || role.includes('سلامة');
-            if (isSafety) {
-                const name = user.name || user.fullName || user.email || '';
-                if (name) {
-                    membersMap.set(name, { id: user.id || user.email || name, name });
-                }
+            if (!isSafety) return;
+            const display = this.resolveSafetyTrainerDisplayName(user);
+            if (display) {
+                membersMap.set(display, { id: user.id || user.email || display, name: display });
             }
         });
 
