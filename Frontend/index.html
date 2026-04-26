@@ -9046,7 +9046,7 @@
         </script>
 
         <!-- Custom CSS -->
-        <link rel="stylesheet" href="styles.css" />
+        <link rel="stylesheet" href="styles.css?v=20260429-1" />
         <!-- Sidebar/Layout specific styles (needed for collapse visuals) -->
         <link rel="stylesheet" href="css/layout.css" />
         <!-- مكوّنات شاشة السياسة والتحميل بعد الدخول (بدون شاشة بيضاء، هيدر/فوتر منمق) -->
@@ -12604,7 +12604,7 @@
         <!-- 2. Services (Data fetching, Google Integration, etc.) -->
         <!-- CRITICAL: DataManager is defined here and must be loaded before login-init-fixed.js -->
         <!-- Load individual service modules first (they expose themselves to window) -->
-        <script src="js/modules/services/data-manager.js?v=2" defer></script>
+        <script src="js/modules/services/data-manager.js?v=20260429-1" defer></script>
         <script
             src="js/modules/services/periodic-inspection-store.js"
             defer
@@ -12630,8 +12630,8 @@
         <script src="js/modules/app-services.js" defer></script>
 
         <!-- 3. UI (UI rendering and DOM manipulation) -->
-        <script src="js/modules/i18n-core.js" defer></script>
-        <script src="js/modules/app-ui.js?v=3" defer></script>
+        <script src="js/modules/i18n-core.js?v=20260429-1" defer></script>
+        <script src="js/modules/app-ui.js?v=20260429-1" defer></script>
 
         <!-- 4. Modules (Auth, Dashboard, Users, etc.) -->
         <!-- CRITICAL: Auth is defined here and must be loaded before login-init-fixed.js -->
@@ -12647,7 +12647,7 @@
         <script src="js/modules/modules/ptw.js?v=20260426-7" defer></script>
         <script src="js/modules/modules/training.js" defer></script>
         <script src="js/modules/modules/reports.js" defer></script>
-        <script src="js/modules/modules/settings.js?v=20260428-1" defer></script>
+        <script src="js/modules/modules/settings.js?v=20260429-2" defer></script>
         <script src="js/modules/modules/clinic.js" defer></script>
         <script src="js/modules/modules/fireequipment.js" defer></script>
         <script src="js/modules/modules/ppe.js" defer></script>
@@ -12740,7 +12740,7 @@
                     }
 
                     // مطابقة CACHE_VERSION في service-worker.js — تسريع جلب سكربت SW بعد النشر (تجاوز كاش الشبكة/الوسيط)
-                    const __SW_REGISTER_QUERY = "v=hse-app-v1.0.12-20260428";
+                    const __SW_REGISTER_QUERY = "v=hse-app-v1.0.13-20260429";
                     const swUrl =
                         swPath +
                         (swPath.includes("?") ? "&" : "?") +
