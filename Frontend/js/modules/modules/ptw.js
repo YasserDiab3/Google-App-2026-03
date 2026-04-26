@@ -6856,7 +6856,7 @@ const PTW = {
                     background: #ffffff !important;
                     border: 1.2px solid #94a3b8 !important;
                     border-radius: 10px !important;
-                    padding: 14px 10px !important;
+                    padding: 18px 12px !important;
                     box-shadow: 0 1px 4px rgba(15, 23, 42, 0.07);
                     width: 100%;
                     max-width: 100%;
@@ -6892,8 +6892,8 @@ const PTW = {
                 .ptw-manual-permit-modal .manual-section-5 .ptw-manual-ppe-fixed-row {
                     display: grid;
                     grid-template-columns: repeat(9, minmax(0, 1fr));
-                    gap: 8px 4px;
-                    margin-bottom: 10px;
+                    gap: 12px 5px;
+                    margin-bottom: 14px;
                     direction: rtl;
                 }
                 .ptw-manual-permit-modal .manual-section-5 .ptw-manual-ppe-fixed-row:last-child {
@@ -6902,14 +6902,14 @@ const PTW = {
                 .ptw-manual-permit-modal .manual-section-5 .ptw-manual-ppe-cell {
                     display: flex;
                     align-items: flex-start;
-                    gap: 4px;
-                    font-size: 0.72rem;
+                    gap: 5px;
+                    font-size: 0.8125rem;
                     font-weight: 600;
                     color: #000000 !important;
                     cursor: pointer;
                     direction: rtl;
                     min-width: 0;
-                    line-height: 1.25;
+                    line-height: 1.32;
                     word-break: break-word;
                 }
                 .ptw-manual-permit-modal .manual-section-5 .ptw-manual-ppe-cell span {
@@ -6917,18 +6917,18 @@ const PTW = {
                 }
                 .ptw-manual-permit-modal .manual-section-5 .ptw-manual-ppe-cell input[type="checkbox"] {
                     flex-shrink: 0;
-                    width: 0.95rem;
-                    height: 0.95rem;
-                    margin-top: 1px;
+                    width: 1.05rem;
+                    height: 1.05rem;
+                    margin-top: 2px;
                     accent-color: #1e3a5f;
                 }
                 @media (max-width: 1200px) {
                     .ptw-manual-permit-modal .manual-section-5 .ptw-manual-ppe-fixed-row {
                         grid-template-columns: repeat(9, minmax(0, 1fr));
-                        gap: 6px 3px;
+                        gap: 9px 4px;
                     }
                     .ptw-manual-permit-modal .manual-section-5 .ptw-manual-ppe-cell {
-                        font-size: 0.68rem;
+                        font-size: 0.75rem;
                     }
                 }
                 @media (max-width: 900px) {
