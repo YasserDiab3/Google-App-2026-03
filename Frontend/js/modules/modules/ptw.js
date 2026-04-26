@@ -6420,6 +6420,18 @@ const PTW = {
         const departmentOptions = this.getDepartmentOptionsForPTW();
         const hasDepartments = departmentOptions.length > 0;
         const requestingPartyValue = existingEntry?.requestingParty || '';
+        const manualPpeSelectedItems = (() => {
+            if (existingEntry?.requiredPPE && Array.isArray(existingEntry.requiredPPE) && existingEntry.requiredPPE.length) {
+                return existingEntry.requiredPPE.map((s) => String(s || '').trim()).filter(Boolean);
+            }
+            if (existingEntry?.ppeNotes) {
+                return String(existingEntry.ppeNotes)
+                    .split(/[،,]/)
+                    .map((s) => s.trim())
+                    .filter(Boolean);
+            }
+            return [];
+        })();
 
         const safetyTeamForManual = (typeof Training !== 'undefined' && typeof Training.getSafetyTeamMembers === 'function')
             ? Training.getSafetyTeamMembers({ excludeSystemUsers: true })
@@ -6791,33 +6803,47 @@ const PTW = {
                         min-width: 760px;
                     }
                 }
-                /* تنسيق القسم الخامس ليتطابق مع النسخة الورقية (بدون خلفية سوداء) */
+                /* القسم الخامس — مطابقة النموذج الورقي: شريط عنوان فاتح #a9c4e9، إطار أسود، محتوى أبيض */
                 .ptw-manual-permit-modal .manual-section-5.ptw-manual-ppe-section {
                     background: #ffffff !important;
-                    border: 1px solid #1e3a8a !important;
+                    border: 2px solid #000000 !important;
                     border-radius: 0 !important;
                     padding: 0 !important;
                     overflow: hidden;
                 }
                 .ptw-manual-permit-modal .manual-section-5.ptw-manual-ppe-section > h3 { display: none !important; }
                 .ptw-manual-permit-modal .manual-section-5 .ptw-manual-ppe-header {
-                    background: #dbeafe !important;
-                    color: #111827 !important;
+                    background: #a9c4e9 !important;
+                    color: #000000 !important;
                     text-align: center;
-                    font-size: 1.6rem;
+                    font-size: 1.05rem;
                     font-weight: 700;
                     padding: 10px 14px;
-                    border-bottom: 1px solid #1e3a8a;
+                    border-bottom: 2px solid #000000;
                 }
                 .ptw-manual-permit-modal .manual-section-5 .ptw-manual-ppe-body {
                     background: #ffffff !important;
+                    color: #000000 !important;
                     padding: 16px;
                 }
                 .ptw-manual-permit-modal .manual-section-5 #manual-ppe-matrix {
-                    background: #ffffff !important;
-                    border: 1px solid #cbd5e1;
-                    border-radius: 8px;
-                    padding: 10px;
+                    background: transparent !important;
+                    border: none !important;
+                    border-radius: 0 !important;
+                    padding: 0 !important;
+                }
+                .ptw-manual-permit-modal .manual-section-5 #manual-ppe-matrix .ppe-matrix-root.ppe-matrix-standalone {
+                    background: transparent !important;
+                    border: none !important;
+                    box-shadow: none !important;
+                    padding: 0 !important;
+                }
+                .ptw-manual-permit-modal .manual-section-5 #manual-ppe-matrix .ppe-matrix-items label {
+                    color: #000000 !important;
+                    font-weight: 600;
+                }
+                .ptw-manual-permit-modal .manual-section-5 #manual-ppe-matrix .ppe-matrix-items input[type="checkbox"] {
+                    accent-color: #1e3a5f;
                 }
             </style>
             <div class="modal-content ptw-manual-permit-modal" style="max-width: 1400px; width: 98%; max-height: 95vh; overflow-y: auto; padding: 0; border-radius: 16px; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);">
@@ -7113,8 +7139,8 @@ const PTW = {
                             <h3><i class="fas fa-hard-hat"></i><span>القسم الخامس : تحديد مهمات الوقاية</span></h3>
                             <div class="ptw-manual-ppe-header">تحديد مهمات الوقاية / وسائل الوقاية الأخرى</div>
                             <div class="ptw-manual-ppe-body">
-                                <div id="manual-ppe-matrix" class="bg-white rounded-lg p-2">
-                                    ${typeof PPEMatrix !== 'undefined' ? PPEMatrix.generate('manual-ppe-matrix') : '<div class="text-center p-4 text-gray-500">مصفوفة المهمات غير محملة - يمكنك إدخال البيانات يدوياً أدناه</div>'}
+                                <div id="manual-ppe-matrix">
+                                    ${typeof PPEMatrix !== 'undefined' ? PPEMatrix.generate('manual-ppe-matrix', { omitPositionSelector: true, omitFooterHint: true, selectedItems: manualPpeSelectedItems }) : '<div class="text-center p-4 text-gray-500">مصفوفة المهمات غير محملة - يمكنك إدخال البيانات يدوياً أدناه</div>'}
                                 </div>
                                 <div class="mt-4">
                                     <label class="block text-sm font-bold text-gray-700 mb-2">مهمات الوقاية المطلوبة (يدوي)</label>
@@ -8133,6 +8159,23 @@ const PTW = {
                 closureReason: modal.querySelector('#manual-closure-reason')?.value.trim() || ''
             };
 
+            const manualPpeFromNotes = formData.ppeNotes
+                ? String(formData.ppeNotes)
+                    .split(/[،,]/)
+                    .map((s) => s.trim())
+                    .filter(Boolean)
+                : [];
+            const manualPpeFromMatrix =
+                typeof PPEMatrix !== 'undefined' ? PPEMatrix.getSelected('manual-ppe-matrix') : [];
+            const mergedRequiredPPE = [
+                ...new Set(
+                    [...manualPpeFromMatrix, ...manualPpeFromNotes]
+                        .map((s) => String(s || '').trim())
+                        .filter(Boolean)
+                )
+            ];
+            formData.ppeNotes = mergedRequiredPPE.length ? mergedRequiredPPE.join('، ') : formData.ppeNotes;
+
             // التحقق من رقم التصريح الورقي (إلزامي)
             const paperNum = String(formData.paperPermitNumber || '').trim();
             const paperInput = modal.querySelector('#manual-paper-permit-number');
@@ -8237,9 +8280,9 @@ const PTW = {
                 riskAssessmentAttached: formData.riskAssessmentAttached,
                 gasTesting: formData.gasTesting,
                 mocRequest: formData.mocRequest,
-                // مهمات الوقاية
+                // مهمات الوقاية (مصفوفة الاختيار + النص اليدوي)
                 ppeNotes: formData.ppeNotes,
-                requiredPPE: formData.ppeNotes ? formData.ppeNotes.split('،').map(s => s.trim()).filter(Boolean) : [],
+                requiredPPE: mergedRequiredPPE,
                 // تقييم المخاطر - حقول نصية
                 riskLikelihood: formData.riskLikelihood,
                 riskConsequence: formData.riskConsequence,

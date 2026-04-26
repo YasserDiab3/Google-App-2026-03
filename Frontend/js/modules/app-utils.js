@@ -6898,16 +6898,18 @@ const PPEMatrix = {
     generate(containerId = 'ppe-matrix', options = {}) {
         const positions = this.collectPositions();
         const availableItems = this.collectItems();
+        const omitPositionSelector = options.omitPositionSelector === true;
+        const omitFooterHint = options.omitFooterHint === true;
 
         const selectedPosition = options.selectedPosition && positions.includes(options.selectedPosition)
             ? options.selectedPosition
             : (positions[0] || '');
         const selectedItems = options.selectedItems && Array.isArray(options.selectedItems)
             ? options.selectedItems
-            : this.getPositionItems(selectedPosition);
+            : (omitPositionSelector ? [] : this.getPositionItems(selectedPosition));
 
         const hasPositions = positions.length > 0;
-        const positionSelectHTML = hasPositions ? `
+        const positionSelectHTML = omitPositionSelector ? '' : (hasPositions ? `
             <div class="mb-4">
                 <label for="ppe-matrix-position" class="block text-sm font-semibold text-gray-700 mb-2">اختر الوظيفة</label>
                 <select id="ppe-matrix-position" class="form-input ppe-matrix-position">
@@ -6926,10 +6928,16 @@ const PPEMatrix = {
             <div class="mb-4 bg-yellow-50 border border-yellow-200 rounded p-3 text-sm text-yellow-800">
                 لا توجد وظائف مسجلة في مصفوفة مهمات الوقاية. يمكنك إضافة مهمات الوقاية المطلوبة يدوياً أدناه ثم حفظ النموذج.
             </div>
-        `;
+        `);
+
+        const rootExtraClass = omitPositionSelector ? ' ppe-matrix-standalone' : '';
+        const footerHTML = omitFooterHint ? '' : `
+                <p class="text-xs text-gray-500">
+                    يتم حفظ الاختيارات مع النموذج الحالي فقط. لتحديث مصفوفة مهمات الوقاية بشكل دائم، استخدم شاشة "إدارة مهمات الوقاية".
+                </p>`;
 
         const html = `
-            <div class="ppe-matrix-root space-y-4" data-matrix-id="${containerId}">
+            <div class="ppe-matrix-root space-y-4${rootExtraClass}" data-matrix-id="${containerId}">
                 ${positionSelectHTML}
                 <div class="ppe-matrix-items grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                     ${this.renderCheckboxMarkup(availableItems, selectedItems)}
@@ -6939,10 +6947,7 @@ const PPEMatrix = {
                     <button type="button" class="btn-secondary ppe-matrix-add-btn">
                         <i class="fas fa-plus ml-2"></i>إضافة
                     </button>
-                </div>
-                <p class="text-xs text-gray-500">
-                    يتم حفظ الاختيارات مع النموذج الحالي فقط. لتحديث مصفوفة مهمات الوقاية بشكل دائم، استخدم شاشة "إدارة مهمات الوقاية".
-                </p>
+                </div>${footerHTML}
             </div>
             <script>
                 setTimeout(() => {
@@ -6950,7 +6955,7 @@ const PPEMatrix = {
                         PPEMatrix.init('${containerId}', ${JSON.stringify({
             positions,
             items: availableItems,
-            selectedPosition,
+            selectedPosition: omitPositionSelector ? '' : selectedPosition,
             selectedItems
         })});
                     }
