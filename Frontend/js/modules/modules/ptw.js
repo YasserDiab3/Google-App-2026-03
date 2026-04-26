@@ -6422,7 +6422,7 @@ const PTW = {
         const requestingPartyValue = existingEntry?.requestingParty || '';
 
         const safetyTeamForManual = (typeof Training !== 'undefined' && typeof Training.getSafetyTeamMembers === 'function')
-            ? Training.getSafetyTeamMembers()
+            ? Training.getSafetyTeamMembers({ excludeSystemUsers: true })
             : [];
         const buildManualSupervisorOptions = (placeholder, selectedValue) => {
             const esc = Utils.escapeHTML;
@@ -6901,33 +6901,29 @@ const PTW = {
                                 </div>
                                 <div>
                                     <label class="block text-sm font-bold text-gray-700 mb-2">الجهة المصرح لها بالعمل</label>
-                                    ${hasApprovedEntities ? `
-                                        <div class="relative manual-permit-same-field-slot">
-                                            <select id="manual-permit-authorized-party-select" class="form-input transition-all focus:ring-2 focus:ring-blue-200 w-full">
-                                                <option value="">اختر الجهة المعتمدة</option>
-                                                ${approvedEntities.map(entity => `<option value="${Utils.escapeHTML(entity.name || '')}" ${authorizedPartyValue === entity.name ? 'selected' : ''}>${Utils.escapeHTML(entity.name || '')}</option>`).join('')}
-                                                <option value="__custom__">إدخال يدوي</option>
-                                            </select>
-                                            <input type="text" id="manual-permit-authorized-party" class="form-input transition-all focus:ring-2 focus:ring-blue-200 w-full hidden absolute inset-0"
-                                                value="${Utils.escapeHTML(authorizedPartyValue)}" placeholder="الجهة المصرح لها بالعمل">
-                                        </div>
-                                    ` : `<input type="text" id="manual-permit-authorized-party" class="form-input transition-all focus:ring-2 focus:ring-blue-200" value="${Utils.escapeHTML(authorizedPartyValue)}" placeholder="الجهة المصرح لها بالعمل">`}
+                                    <div class="relative">
+                                        <input type="text" id="manual-permit-authorized-party" class="form-input transition-all focus:ring-2 focus:ring-blue-200 w-full"
+                                            ${hasApprovedEntities ? 'list="manual-authorized-party-datalist" autocomplete="off"' : ''}
+                                            value="${Utils.escapeHTML(authorizedPartyValue)}"
+                                            placeholder="${hasApprovedEntities ? 'اكتب للبحث في الجهات المعتمدة أو أدخل جهة يدوياً' : 'الجهة المصرح لها بالعمل'}">
+                                        ${hasApprovedEntities ? `
+                                        <datalist id="manual-authorized-party-datalist">
+                                            ${approvedEntities.map(entity => `<option value="${Utils.escapeHTML(entity.name || '')}"></option>`).join('')}
+                                        </datalist>` : ''}
+                                    </div>
                                 </div>
                                 <div>
                                     <label class="block text-sm font-bold text-gray-700 mb-2">الجهة الطالبة للتصريح</label>
-                                    ${hasDepartments ? `
-                                        <div class="relative">
-                                            <input type="text" id="manual-permit-requesting-party" class="form-input transition-all focus:ring-2 focus:ring-blue-200 w-full"
-                                                list="manual-requesting-party-datalist"
-                                                autocomplete="off"
-                                                value="${Utils.escapeHTML(requestingPartyValue)}"
-                                                placeholder="ابدأ الكتابة لتصفية الإدارات أو أدخل جهة غير مدرجة">
-                                            <datalist id="manual-requesting-party-datalist">
-                                                ${departmentOptions.map(dept => `<option value="${Utils.escapeHTML(dept)}"></option>`).join('')}
-                                            </datalist>
-                                        </div>
-                                    ` : `<input type="text" id="manual-permit-requesting-party" class="form-input transition-all focus:ring-2 focus:ring-blue-200"
-                                        value="${Utils.escapeHTML(requestingPartyValue)}" placeholder="الجهة الطالبة للتصريح">`}
+                                    <div class="relative">
+                                        <input type="text" id="manual-permit-requesting-party" class="form-input transition-all focus:ring-2 focus:ring-blue-200 w-full"
+                                            ${hasDepartments ? 'list="manual-requesting-party-datalist" autocomplete="off"' : ''}
+                                            value="${Utils.escapeHTML(requestingPartyValue)}"
+                                            placeholder="${hasDepartments ? 'اكتب للبحث في الإدارات أو أدخل جهة يدوياً' : 'الجهة الطالبة للتصريح (إدخال يدوي)'}">
+                                        ${hasDepartments ? `
+                                        <datalist id="manual-requesting-party-datalist">
+                                            ${departmentOptions.map(dept => `<option value="${Utils.escapeHTML(dept)}"></option>`).join('')}
+                                        </datalist>` : ''}
+                                    </div>
                                 </div>
                                 <div class="md:col-span-3">
                                     <label class="block text-sm font-bold text-gray-700 mb-2">المعدة / المكينة / العملية</label>
@@ -7642,36 +7638,6 @@ const PTW = {
         modal.querySelectorAll('#manual-team-members-list tr.manual-team-member-row').forEach(attachAutoCopyToTeamRow);
         attachAutoCopyToApprovals('#manual-approvals-list', '.manual-approval-name', '.manual-approval-sig');
         attachAutoCopyToApprovals('#manual-closure-approvals-list', '.manual-closure-approval-name', '.manual-closure-approval-sig');
-
-        // معالجة اختيار الجهة المصرح لها من القائمة المنسدلة
-        const authorizedPartySelect = modal.querySelector('#manual-permit-authorized-party-select');
-        const authorizedPartyInput = modal.querySelector('#manual-permit-authorized-party');
-        
-        if (authorizedPartySelect && authorizedPartyInput) {
-            // تعيين القيمة الأولية من القائمة
-            if (authorizedPartySelect.value && authorizedPartySelect.value !== '__custom__') {
-                authorizedPartyInput.value = authorizedPartySelect.value;
-                authorizedPartyInput.classList.add('hidden');
-                authorizedPartySelect.classList.remove('hidden');
-            } else if (authorizedPartyInput.value && !Array.from(authorizedPartySelect.options).find(o => o.value === authorizedPartyInput.value)) {
-                authorizedPartySelect.value = '__custom__';
-                authorizedPartySelect.classList.add('hidden');
-                authorizedPartyInput.classList.remove('hidden');
-            }
-
-            authorizedPartySelect.addEventListener('change', () => {
-                if (authorizedPartySelect.value === '__custom__') {
-                    authorizedPartySelect.classList.add('hidden');
-                    authorizedPartyInput.classList.remove('hidden');
-                    authorizedPartyInput.value = '';
-                    authorizedPartyInput.focus();
-                } else {
-                    authorizedPartySelect.classList.remove('hidden');
-                    authorizedPartyInput.classList.add('hidden');
-                    authorizedPartyInput.value = authorizedPartySelect.value;
-                }
-            });
-        }
 
         // القائمة الأساسية ثابتة يمين؛ عند الاختيار من القائمة تفتح اللوحة بالعرض بجانبها
         const panel = modal.querySelector('#manual-work-type-panel');

@@ -4139,8 +4139,13 @@ const Training = {
         return '';
     },
 
-    // الحصول على قائمة أعضاء فريق السلامة (بنفس منطق الملاحظات اليومية)
-    getSafetyTeamMembers() {
+    /**
+     * أعضاء فريق السلامة للقوائم (تدريب، ملاحظات، إلخ).
+     * @param {{ excludeSystemUsers?: boolean }} [options] إن كان true: لا تُضاف أسماء من مستخدمي النظام (appData.users) حتى لو دورهم سلامة — مفيد لمسؤولي المتابعة في التصريح اليدوي.
+     */
+    getSafetyTeamMembers(options) {
+        const opts = options && typeof options === 'object' ? options : {};
+        const excludeSystemUsers = opts.excludeSystemUsers === true;
         const membersMap = new Map();
 
         const resolveSettingsMemberLabel = (raw) => {
@@ -4170,15 +4175,17 @@ const Training = {
             });
         }
 
-        (AppState.appData.users || []).forEach((user) => {
-            const role = (user.role || '').toLowerCase();
-            const isSafety = role.includes('safety') || role.includes('hse') || role.includes('سلامة');
-            if (!isSafety) return;
-            const display = this.resolveSafetyTrainerDisplayName(user);
-            if (display) {
-                membersMap.set(display, { id: user.id || user.email || display, name: display });
-            }
-        });
+        if (!excludeSystemUsers) {
+            (AppState.appData.users || []).forEach((user) => {
+                const role = (user.role || '').toLowerCase();
+                const isSafety = role.includes('safety') || role.includes('hse') || role.includes('سلامة');
+                if (!isSafety) return;
+                const display = this.resolveSafetyTrainerDisplayName(user);
+                if (display) {
+                    membersMap.set(display, { id: user.id || user.email || display, name: display });
+                }
+            });
+        }
 
         (AppState.appData.employees || []).forEach((employee) => {
             const department = (employee.department || '').toLowerCase();
