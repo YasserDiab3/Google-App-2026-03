@@ -6375,6 +6375,48 @@ const PTW = {
     },
 
     /**
+     * شبكة مهمات الوقاية الثابتة للتصريح اليدوي (مطابقة النموذج الورقي: 9 أعمدة × صفّان + صف خامس بخمس عناصر)
+     */
+    buildManualFixedPPECheckboxesHtml(selectedItems = []) {
+        const esc = Utils.escapeHTML;
+        const raw = new Set(
+            (selectedItems || []).map((s) => String(s || '').trim()).filter(Boolean)
+        );
+        const normKey = (x) =>
+            String(x || '')
+                .trim()
+                .replace(/\s+/g, ' ')
+                .replace(/[أإآٱ]/g, 'ا')
+                .replace(/ة/g, 'ه')
+                .replace(/ى/g, 'ي');
+        const isSel = (label) => {
+            const t = String(label).trim();
+            if (raw.has(t)) return true;
+            const nk = normKey(t);
+            for (const s of raw) {
+                if (normKey(s) === nk) return true;
+            }
+            return false;
+        };
+        const rows = [
+            ['حذاء سلامة', 'جوانتي سلامة', 'جوانتى احماض', 'جوانتي كهربي', 'كمامة', 'سدادة أذن', 'كاتم أذن', 'بدلة كيمائية', 'كشاف إنارة'],
+            ['واقي رأس', 'نظارة واقية', 'وجه لحام', 'أذرع واقية', 'حزام أمان', 'حبل سلامة', 'جهاز تنفس', 'سترة عاكسة', 'شريط عاكس'],
+            ['حواجز', 'أقماع مرور', 'وسائل اتصال', 'بطانية حريق', 'أخرى']
+        ];
+        let html = '<div class="ptw-manual-ppe-fixed-wrap">';
+        rows.forEach((row) => {
+            html += '<div class="ptw-manual-ppe-fixed-row">';
+            row.forEach((label) => {
+                const checked = isSel(label) ? ' checked' : '';
+                html += `<label class="ptw-manual-ppe-cell"><input type="checkbox" class="manual-ppe-fixed-cb" value="${esc(label)}"${checked}><span>${esc(label)}</span></label>`;
+            });
+            html += '</div>';
+        });
+        html += '</div>';
+        return html;
+    },
+
+    /**
      * فتح نموذج إدخال تصريح يدوي
      */
     openManualPermitForm(entryId = null) {
@@ -6803,47 +6845,73 @@ const PTW = {
                         min-width: 760px;
                     }
                 }
-                /* القسم الخامس — مطابقة النموذج الورقي: شريط عنوان فاتح #a9c4e9، إطار أسود، محتوى أبيض */
+                /* القسم الخامس — مطابقة النموذج الورقي: إطار أسود رفيع، عنوان #B8CCE4، شبكة 9 أعمدة */
                 .ptw-manual-permit-modal .manual-section-5.ptw-manual-ppe-section {
                     background: #ffffff !important;
-                    border: 2px solid #000000 !important;
+                    border: 1px solid #000000 !important;
                     border-radius: 0 !important;
                     padding: 0 !important;
                     overflow: hidden;
                 }
                 .ptw-manual-permit-modal .manual-section-5.ptw-manual-ppe-section > h3 { display: none !important; }
                 .ptw-manual-permit-modal .manual-section-5 .ptw-manual-ppe-header {
-                    background: #a9c4e9 !important;
+                    background: #B8CCE4 !important;
                     color: #000000 !important;
                     text-align: center;
-                    font-size: 1.05rem;
+                    font-size: 1rem;
                     font-weight: 700;
-                    padding: 10px 14px;
-                    border-bottom: 2px solid #000000;
+                    padding: 12px 14px;
+                    border-bottom: 1px solid #000000;
                 }
                 .ptw-manual-permit-modal .manual-section-5 .ptw-manual-ppe-body {
                     background: #ffffff !important;
                     color: #000000 !important;
-                    padding: 16px;
+                    padding: 14px 12px;
                 }
                 .ptw-manual-permit-modal .manual-section-5 #manual-ppe-matrix {
-                    background: transparent !important;
+                    background: #ffffff !important;
                     border: none !important;
                     border-radius: 0 !important;
                     padding: 0 !important;
                 }
-                .ptw-manual-permit-modal .manual-section-5 #manual-ppe-matrix .ppe-matrix-root.ppe-matrix-standalone {
-                    background: transparent !important;
-                    border: none !important;
-                    box-shadow: none !important;
-                    padding: 0 !important;
+                .ptw-manual-permit-modal .manual-section-5 .ptw-manual-ppe-fixed-wrap {
+                    width: 100%;
+                    overflow-x: auto;
+                    -webkit-overflow-scrolling: touch;
                 }
-                .ptw-manual-permit-modal .manual-section-5 #manual-ppe-matrix .ppe-matrix-items label {
-                    color: #000000 !important;
+                .ptw-manual-permit-modal .manual-section-5 .ptw-manual-ppe-fixed-row {
+                    display: grid;
+                    grid-template-columns: repeat(9, minmax(0, 1fr));
+                    gap: 10px 8px;
+                    margin-bottom: 12px;
+                    direction: rtl;
+                }
+                .ptw-manual-permit-modal .manual-section-5 .ptw-manual-ppe-fixed-row:last-child {
+                    margin-bottom: 0;
+                }
+                .ptw-manual-permit-modal .manual-section-5 .ptw-manual-ppe-cell {
+                    display: flex;
+                    align-items: flex-start;
+                    gap: 6px;
+                    font-size: 0.8125rem;
                     font-weight: 600;
+                    color: #000000 !important;
+                    cursor: pointer;
+                    direction: rtl;
+                    min-width: 0;
+                    line-height: 1.35;
                 }
-                .ptw-manual-permit-modal .manual-section-5 #manual-ppe-matrix .ppe-matrix-items input[type="checkbox"] {
+                .ptw-manual-permit-modal .manual-section-5 .ptw-manual-ppe-cell input[type="checkbox"] {
+                    flex-shrink: 0;
+                    width: 1rem;
+                    height: 1rem;
+                    margin-top: 2px;
                     accent-color: #1e3a5f;
+                }
+                @media (max-width: 1100px) {
+                    .ptw-manual-permit-modal .manual-section-5 .ptw-manual-ppe-fixed-row {
+                        grid-template-columns: repeat(3, minmax(0, 1fr));
+                    }
                 }
             </style>
             <div class="modal-content ptw-manual-permit-modal" style="max-width: 1400px; width: 98%; max-height: 95vh; overflow-y: auto; padding: 0; border-radius: 16px; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);">
@@ -7140,7 +7208,7 @@ const PTW = {
                             <div class="ptw-manual-ppe-header">تحديد مهمات الوقاية / وسائل الوقاية الأخرى</div>
                             <div class="ptw-manual-ppe-body">
                                 <div id="manual-ppe-matrix">
-                                    ${typeof PPEMatrix !== 'undefined' ? PPEMatrix.generate('manual-ppe-matrix', { omitPositionSelector: true, omitFooterHint: true, selectedItems: manualPpeSelectedItems }) : '<div class="text-center p-4 text-gray-500">مصفوفة المهمات غير محملة - يمكنك إدخال البيانات يدوياً أدناه</div>'}
+                                    ${this.buildManualFixedPPECheckboxesHtml(manualPpeSelectedItems)}
                                 </div>
                                 <div class="mt-4">
                                     <label class="block text-sm font-bold text-gray-700 mb-2">مهمات الوقاية المطلوبة (يدوي)</label>
@@ -8165,8 +8233,11 @@ const PTW = {
                     .map((s) => s.trim())
                     .filter(Boolean)
                 : [];
-            const manualPpeFromMatrix =
-                typeof PPEMatrix !== 'undefined' ? PPEMatrix.getSelected('manual-ppe-matrix') : [];
+            const manualPpeFromMatrix = Array.from(
+                modal.querySelectorAll('#manual-ppe-matrix .manual-ppe-fixed-cb:checked')
+            )
+                .map((el) => String(el.value || '').trim())
+                .filter(Boolean);
             const mergedRequiredPPE = [
                 ...new Set(
                     [...manualPpeFromMatrix, ...manualPpeFromNotes]
