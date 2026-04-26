@@ -6856,31 +6856,44 @@ const PTW = {
                     background: #ffffff !important;
                     border: 1.2px solid #94a3b8 !important;
                     border-radius: 10px !important;
-                    padding: 16px 14px !important;
+                    padding: 14px 10px !important;
                     box-shadow: 0 1px 4px rgba(15, 23, 42, 0.07);
+                    width: 100%;
+                    max-width: 100%;
+                    box-sizing: border-box;
                 }
                 .ptw-manual-permit-modal .manual-section-5 .ptw-manual-ppe-notes-frame {
-                    margin-top: 1rem;
+                    margin-top: 0.5rem;
                     background: #ffffff;
-                    border: 1.2px solid #94a3b8;
-                    border-radius: 10px;
-                    padding: 14px 14px 10px;
-                    box-shadow: 0 1px 4px rgba(15, 23, 42, 0.06);
+                    border: 1px solid #cbd5e1;
+                    border-radius: 8px;
+                    padding: 6px 8px 6px;
+                    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05);
                 }
                 .ptw-manual-permit-modal .manual-section-5 .ptw-manual-ppe-notes-frame label {
-                    color: #1e3a5f;
-                    font-weight: 700;
+                    color: #334155;
+                    font-weight: 600;
+                    font-size: 0.72rem;
+                    margin-bottom: 4px;
+                }
+                .ptw-manual-permit-modal .manual-section-5 .ptw-manual-ppe-notes-frame textarea {
+                    min-height: 2rem;
+                    max-height: 4rem;
+                    padding: 6px 8px;
+                    font-size: 0.8rem;
+                    line-height: 1.35;
+                    resize: vertical;
                 }
                 .ptw-manual-permit-modal .manual-section-5 .ptw-manual-ppe-fixed-wrap {
                     width: 100%;
-                    overflow-x: auto;
-                    -webkit-overflow-scrolling: touch;
+                    max-width: 100%;
+                    overflow-x: visible;
                 }
                 .ptw-manual-permit-modal .manual-section-5 .ptw-manual-ppe-fixed-row {
                     display: grid;
                     grid-template-columns: repeat(9, minmax(0, 1fr));
-                    gap: 10px 8px;
-                    margin-bottom: 12px;
+                    gap: 8px 4px;
+                    margin-bottom: 10px;
                     direction: rtl;
                 }
                 .ptw-manual-permit-modal .manual-section-5 .ptw-manual-ppe-fixed-row:last-child {
@@ -6889,29 +6902,42 @@ const PTW = {
                 .ptw-manual-permit-modal .manual-section-5 .ptw-manual-ppe-cell {
                     display: flex;
                     align-items: flex-start;
-                    gap: 6px;
-                    font-size: 0.8125rem;
+                    gap: 4px;
+                    font-size: 0.72rem;
                     font-weight: 600;
                     color: #000000 !important;
                     cursor: pointer;
                     direction: rtl;
                     min-width: 0;
-                    line-height: 1.35;
+                    line-height: 1.25;
+                    word-break: break-word;
+                }
+                .ptw-manual-permit-modal .manual-section-5 .ptw-manual-ppe-cell span {
+                    min-width: 0;
                 }
                 .ptw-manual-permit-modal .manual-section-5 .ptw-manual-ppe-cell input[type="checkbox"] {
                     flex-shrink: 0;
-                    width: 1rem;
-                    height: 1rem;
-                    margin-top: 2px;
+                    width: 0.95rem;
+                    height: 0.95rem;
+                    margin-top: 1px;
                     accent-color: #1e3a5f;
                 }
-                @media (max-width: 1100px) {
+                @media (max-width: 1200px) {
+                    .ptw-manual-permit-modal .manual-section-5 .ptw-manual-ppe-fixed-row {
+                        grid-template-columns: repeat(9, minmax(0, 1fr));
+                        gap: 6px 3px;
+                    }
+                    .ptw-manual-permit-modal .manual-section-5 .ptw-manual-ppe-cell {
+                        font-size: 0.68rem;
+                    }
+                }
+                @media (max-width: 900px) {
                     .ptw-manual-permit-modal .manual-section-5 .ptw-manual-ppe-fixed-row {
                         grid-template-columns: repeat(3, minmax(0, 1fr));
                     }
                 }
             </style>
-            <div class="modal-content ptw-manual-permit-modal" style="max-width: 1400px; width: 98%; max-height: 95vh; overflow-y: auto; padding: 0; border-radius: 16px; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);">
+            <div class="modal-content ptw-manual-permit-modal" style="max-width: min(1720px, 99vw); width: 99%; max-height: 95vh; overflow-y: auto; padding: 0; border-radius: 16px; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);">
                 <!-- رأس النموذج -->
                 <div class="modal-header" style="background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%); color: white; padding: 24px 32px; display: flex; align-items: center; justify-content: space-between;">
                     <div style="display: flex; align-items: center; gap: 16px;">
@@ -7207,8 +7233,8 @@ const PTW = {
                                     ${this.buildManualFixedPPECheckboxesHtml(manualPpeSelectedItems)}
                                 </div>
                                 <div class="ptw-manual-ppe-notes-frame">
-                                    <label class="block text-sm mb-2">مهمات الوقاية المطلوبة (إضافي يدوي)</label>
-                                    <textarea id="manual-ppe-notes" class="form-input bg-white w-full" rows="2" placeholder="أدخل مهمات الوقاية المطلوبة...">${Utils.escapeHTML(existingEntry?.ppeNotes || (existingEntry?.requiredPPE ? existingEntry.requiredPPE.join('، ') : ''))}</textarea>
+                                    <label class="block">مهمات الوقاية المطلوبة (إضافي يدوي)</label>
+                                    <textarea id="manual-ppe-notes" class="form-input bg-white w-full" rows="1" placeholder="إضافات نصية اختيارية...">${Utils.escapeHTML(existingEntry?.ppeNotes || (existingEntry?.requiredPPE ? existingEntry.requiredPPE.join('، ') : ''))}</textarea>
                                 </div>
                             </div>
                         </div>
