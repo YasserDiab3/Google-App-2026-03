@@ -4998,6 +4998,38 @@ window.UI = {
             ? `<div class="profile-hire-pill"><span class="profile-hire-label">${t('module.profile.hireDate', 'تاريخ التعيين')}</span><strong class="profile-hire-val">${esc(profile.hireDateDisplay)}</strong>
                 ${profile.tenureText ? `<span class="profile-tenure">${t('module.profile.seniority', 'الأقدمية')}: ${esc(profile.tenureText)}</span>` : ''}</div>`
             : '';
+        const pickHttpUrl = (s) => {
+            const u = String(s || '').trim();
+            if (!u || !/^https?:\/\//i.test(u)) return '';
+            try {
+                const parsed = new URL(u);
+                return parsed.protocol === 'http:' || parsed.protocol === 'https:' ? u : '';
+            } catch (_) {
+                return '';
+            }
+        };
+        let teamsHref = pickHttpUrl(
+            AppState?.companySettings?.profileTeamsUrl
+            || AppState?.companySettings?.teamsUrl
+            || ''
+        );
+        let whatsappHref = pickHttpUrl(
+            AppState?.companySettings?.profileWhatsAppUrl
+            || AppState?.companySettings?.whatsappUrl
+            || ''
+        );
+        if (!whatsappHref && profile.phone) {
+            const digits = String(profile.phone).replace(/\D/g, '');
+            if (digits.length >= 8 && digits.length <= 15) {
+                whatsappHref = `https://wa.me/${digits}`;
+            }
+        }
+        const teamsLinkHtml = teamsHref
+            ? `<a href="${esc(teamsHref)}" class="profile-contact-icon-btn profile-contact-icon-btn--teams" target="_blank" rel="noopener noreferrer" title="${esc(t('module.profile.openTeams', 'Microsoft Teams — اجتماعات وتواصل'))}" aria-label="${esc(t('module.profile.openTeams', 'Microsoft Teams — اجتماعات وتواصل'))}"><i class="fab fa-microsoft" aria-hidden="true"></i></a>`
+            : '';
+        const whatsappLinkHtml = whatsappHref
+            ? `<a href="${esc(whatsappHref)}" class="profile-contact-icon-btn profile-contact-icon-btn--wa" target="_blank" rel="noopener noreferrer" title="${esc(t('module.profile.openWhatsApp', 'واتساب — تواصل'))}" aria-label="${esc(t('module.profile.openWhatsApp', 'واتساب — تواصل'))}"><i class="fab fa-whatsapp" aria-hidden="true"></i></a>`
+            : '';
         const avatarSrc = profile.photo ? `src="${esc(profile.photo)}"` : '';
         const avatarDisplay = profile.photo ? '' : 'display:none;';
         const iconDisplay = profile.photo ? 'display:none;' : '';
@@ -5036,6 +5068,8 @@ window.UI = {
                             <div class="profile-actions">
                                 <button id="profile-change-photo-btn" class="btn-secondary btn-sm"><i class="fas fa-camera ml-1"></i>${t('module.profile.changePhoto', 'تغيير الصورة')}</button>
                                 <button id="profile-change-password-btn" class="btn-primary btn-sm"><i class="fas fa-key ml-1"></i>${t('module.profile.changePassword', 'تغيير كلمة المرور')}</button>
+                                ${teamsLinkHtml}
+                                ${whatsappLinkHtml}
                                 <input type="file" id="profile-photo-input" accept="image/jpeg,image/png,image/gif,image/webp" style="display:none;">
                             </div>
                         </div>

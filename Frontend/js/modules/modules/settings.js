@@ -359,6 +359,32 @@ const Settings = {
                                     عند وصول أو تجاوز عدد زيارات موظف/مقاول لهذا الحد في الشهر، يظهر تنبيه للمستخدم ويُرسل إشعار لمدير النظام.
                                 </p>
                             </div>
+                            <div>
+                                <label for="profile-teams-url-input" class="block text-sm font-semibold text-gray-700 mb-2">
+                                    <i class="fab fa-microsoft ml-2"></i>
+                                    رابط Microsoft Teams (يظهر في الملف الشخصي)
+                                </label>
+                                <input type="url" id="profile-teams-url-input" class="form-input" dir="ltr"
+                                    placeholder="https://teams.microsoft.com/..."
+                                    value="${Utils.escapeHTML(AppState.companySettings?.profileTeamsUrl || '')}">
+                                <p class="text-xs text-gray-500 mt-1">
+                                    <i class="fas fa-info-circle ml-1"></i>
+                                    رابط قناة أو فريق أو اجتماع Teams. يُعرض كأيقونة بجانب «تغيير كلمة المرور».
+                                </p>
+                            </div>
+                            <div>
+                                <label for="profile-whatsapp-url-input" class="block text-sm font-semibold text-gray-700 mb-2">
+                                    <i class="fab fa-whatsapp ml-2"></i>
+                                    رابط واتساب (يظهر في الملف الشخصي)
+                                </label>
+                                <input type="url" id="profile-whatsapp-url-input" class="form-input" dir="ltr"
+                                    placeholder="https://wa.me/9665xxxxxxxx أو رابط مجموعة"
+                                    value="${Utils.escapeHTML(AppState.companySettings?.profileWhatsAppUrl || '')}">
+                                <p class="text-xs text-gray-500 mt-1">
+                                    <i class="fas fa-info-circle ml-1"></i>
+                                    إذا تُرك فارغاً، يُستخدم رقم الهاتف من بيانات الموظف لرابط wa.me عندما يكون الرقم صالحاً.
+                                </p>
+                            </div>
                             <div class="flex items-center gap-3 pt-2 border-t">
                                 <button type="button" id="save-company-settings-btn" class="btn-primary">
                                     <i class="fas fa-save ml-2"></i>حفظ بيانات الشركة
@@ -1480,6 +1506,8 @@ const Settings = {
             const companySecondaryNameColorTextInput = document.getElementById('company-secondary-name-color-text-input');
             const formVersionInput = document.getElementById('form-version-input');
             const clinicMonthlyVisitsThresholdInput = document.getElementById('clinic-monthly-visits-threshold-input');
+            const profileTeamsUrlInput = document.getElementById('profile-teams-url-input');
+            const profileWhatsAppUrlInput = document.getElementById('profile-whatsapp-url-input');
             const saveCompanySettingsBtn = document.getElementById('save-company-settings-btn');
             const resetCompanyNameBtn = document.getElementById('reset-company-name-btn');
 
@@ -1539,6 +1567,9 @@ const Settings = {
                         if (!isNaN(v) && v >= 1 && v <= 1000) clinicMonthlyVisitsAlertThreshold = v;
                     }
 
+                    const profileTeamsUrl = profileTeamsUrlInput ? profileTeamsUrlInput.value.trim() : '';
+                    const profileWhatsAppUrl = profileWhatsAppUrlInput ? profileWhatsAppUrlInput.value.trim() : '';
+
                     AppState.companySettings = Object.assign({}, AppState.companySettings, {
                         name: newName,
                         secondaryName,
@@ -1546,7 +1577,9 @@ const Settings = {
                         nameFontSize,
                         secondaryNameFontSize,
                         secondaryNameColor,
-                        clinicMonthlyVisitsAlertThreshold
+                        clinicMonthlyVisitsAlertThreshold,
+                        profileTeamsUrl,
+                        profileWhatsAppUrl
                     });
                     DataManager.saveCompanySettings();
                     
@@ -1562,6 +1595,8 @@ const Settings = {
                                 secondaryNameFontSize,
                                 secondaryNameColor,
                                 clinicMonthlyVisitsAlertThreshold,
+                                profileTeamsUrl,
+                                profileWhatsAppUrl,
                                 address: AppState.companySettings?.address || '',
                                 phone: AppState.companySettings?.phone || '',
                                 email: AppState.companySettings?.email || '',

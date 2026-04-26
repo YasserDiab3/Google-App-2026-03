@@ -783,7 +783,9 @@ const DataManager = {
                             phone: result.data.phone || AppState.companySettings?.phone,
                             email: result.data.email || AppState.companySettings?.email,
                             postLoginItems: postLoginItems,
-                            clinicMonthlyVisitsAlertThreshold: result.data.clinicMonthlyVisitsAlertThreshold ?? AppState.companySettings?.clinicMonthlyVisitsAlertThreshold ?? 10
+                            clinicMonthlyVisitsAlertThreshold: result.data.clinicMonthlyVisitsAlertThreshold ?? AppState.companySettings?.clinicMonthlyVisitsAlertThreshold ?? 10,
+                            profileTeamsUrl: String(result.data.profileTeamsUrl ?? AppState.companySettings?.profileTeamsUrl ?? '').trim(),
+                            profileWhatsAppUrl: String(result.data.profileWhatsAppUrl ?? AppState.companySettings?.profileWhatsAppUrl ?? '').trim()
                         });
                         
                         // تحديث شعار الشركة (حتى لو كان فارغاً لمسحه)

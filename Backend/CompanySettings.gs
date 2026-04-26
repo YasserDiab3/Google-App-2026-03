@@ -96,6 +96,8 @@ function initCompanySettingsTable(spreadsheetId = null) {
                 'logo',
                 'postLoginItems',
                 'clinicMonthlyVisitsAlertThreshold',
+                'profileTeamsUrl',
+                'profileWhatsAppUrl',
                 'createdAt',
                 'updatedAt',
                 'createdBy',
@@ -181,6 +183,8 @@ function saveCompanySettingsToSheet(settingsData) {
             logo: settingsData.logo || '',
             postLoginItems: postLoginItemsValue,
             clinicMonthlyVisitsAlertThreshold: clinicMonthlyVisitsAlertThreshold,
+            profileTeamsUrl: settingsData.profileTeamsUrl != null ? String(settingsData.profileTeamsUrl) : '',
+            profileWhatsAppUrl: settingsData.profileWhatsAppUrl != null ? String(settingsData.profileWhatsAppUrl) : '',
             updatedAt: now,
             updatedBy: userName
         };
@@ -190,6 +194,13 @@ function saveCompanySettingsToSheet(settingsData) {
             const existing = existingSettings[0];
             settingsToSave.createdAt = existing.createdAt || now;
             settingsToSave.createdBy = existing.createdBy || userName;
+            // عدم مسح روابط Teams/واتساب عند حفظ من واجهات لا ترسل الحقلين
+            if (settingsData.profileTeamsUrl === undefined && existing.profileTeamsUrl != null && String(existing.profileTeamsUrl).trim() !== '') {
+                settingsToSave.profileTeamsUrl = String(existing.profileTeamsUrl);
+            }
+            if (settingsData.profileWhatsAppUrl === undefined && existing.profileWhatsAppUrl != null && String(existing.profileWhatsAppUrl).trim() !== '') {
+                settingsToSave.profileWhatsAppUrl = String(existing.profileWhatsAppUrl);
+            }
         } else {
             settingsToSave.createdAt = now;
             settingsToSave.createdBy = userName;
@@ -297,6 +308,8 @@ function getDefaultCompanySettings() {
         logo: '',
         postLoginItems: '',
         clinicMonthlyVisitsAlertThreshold: 10,
+        profileTeamsUrl: '',
+        profileWhatsAppUrl: '',
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
         createdBy: 'System',

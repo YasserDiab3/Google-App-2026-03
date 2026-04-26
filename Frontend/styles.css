@@ -14862,6 +14862,42 @@ body[data-color-theme] .nav-item.active {
     display: flex;
     flex-wrap: wrap;
     gap: 8px;
+    align-items: center;
+}
+
+/* Teams / WhatsApp بجانب أزرار الملف الشخصي */
+.profile-contact-icon-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.25rem;
+    height: 2.25rem;
+    border-radius: 10px;
+    text-decoration: none;
+    color: #fff;
+    font-size: 1.15rem;
+    line-height: 1;
+    transition: transform 0.15s ease, box-shadow 0.15s ease, filter 0.15s ease;
+    flex-shrink: 0;
+}
+
+.profile-contact-icon-btn:hover {
+    transform: translateY(-1px);
+    filter: brightness(1.05);
+    box-shadow: 0 4px 12px rgba(15, 23, 42, 0.15);
+}
+
+.profile-contact-icon-btn:focus-visible {
+    outline: 2px solid rgba(var(--sidebar-accent-rgb), 0.85);
+    outline-offset: 2px;
+}
+
+.profile-contact-icon-btn--teams {
+    background: #6264a7;
+}
+
+.profile-contact-icon-btn--wa {
+    background: #25d366;
 }
 
 .profile-personal-card {
