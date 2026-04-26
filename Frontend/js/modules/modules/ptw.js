@@ -7837,18 +7837,24 @@ const PTW = {
                 
                 // تحديث العرض
                 const resultDiv = modal.querySelector('#manual-risk-result');
-                resultDiv.classList.remove('hidden');
+                if (resultDiv) resultDiv.classList.remove('hidden');
                 
-                modal.querySelector('#manual-risk-score-display').textContent = score;
-                modal.querySelector('#manual-risk-level-display').textContent = level;
-                modal.querySelector('#manual-risk-likelihood-display').textContent = likelihood;
-                modal.querySelector('#manual-risk-consequence-display').textContent = consequence;
+                const scoreEl = modal.querySelector('#manual-risk-score-display');
+                const levelEl = modal.querySelector('#manual-risk-level-display');
+                const likeEl = modal.querySelector('#manual-risk-likelihood-display');
+                const consEl = modal.querySelector('#manual-risk-consequence-display');
+                if (scoreEl) scoreEl.textContent = score;
+                if (levelEl) levelEl.textContent = level;
+                if (likeEl) likeEl.textContent = likelihood;
+                if (consEl) consEl.textContent = consequence;
                 
                 // تحديث لون الشارة حسب التصنيف اللوني العالمي
                 const badge = modal.querySelector('#manual-risk-result-badge');
-                badge.style.background = bgColor;
-                badge.style.color = textColor;
-                badge.textContent = score;
+                if (badge) {
+                    badge.style.background = bgColor;
+                    badge.style.color = textColor;
+                    badge.textContent = score;
+                }
 
                 // توليد وصف تلقائي في ملاحظات التقييم بناءً على الخلية المختارة
                 const riskNotesInput = modal.querySelector('#manual-risk-notes');
@@ -7873,6 +7879,7 @@ const PTW = {
         // معالجة إضافة اعتماد جديد (تصميم جدول)
         modal.querySelector('#manual-add-approval-btn')?.addEventListener('click', () => {
             const tbody = modal.querySelector('#manual-approvals-list');
+            if (!tbody) return;
             const count = tbody.querySelectorAll('tr').length + 1;
             const newRow = document.createElement('tr');
             newRow.className = 'manual-approval-row border-b border-gray-100 hover:bg-amber-50 transition-colors';
@@ -7885,15 +7892,12 @@ const PTW = {
                 <td class="p-2 text-center"><button type="button" class="text-red-500 hover:text-red-700 hover:bg-red-50 p-2 rounded-full transition-colors" onclick="this.closest('tr').remove(); PTW.updateApprovalNumbers('manual-approvals-list')" title="حذف"><i class="fas fa-trash-alt"></i></button></td>
             `;
             tbody.appendChild(newRow);
-       
-
-        // ================================================================
-
- });
+        });
 
         // معالجة إضافة اعتماد إغلاق جديد (تصميم جدول)
         modal.querySelector('#manual-add-closure-approval-btn')?.addEventListener('click', () => {
             const tbody = modal.querySelector('#manual-closure-approvals-list');
+            if (!tbody) return;
             const count = tbody.querySelectorAll('tr').length + 1;
             const newRow = document.createElement('tr');
             newRow.className = 'manual-closure-approval-row border-b border-gray-100 hover:bg-cyan-50 transition-colors';
