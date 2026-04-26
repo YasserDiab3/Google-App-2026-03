@@ -1520,9 +1520,11 @@ function _cabViolationBelongs_(v, idSet, nameSets) {
         }
     }
     if (hasEntityNames && !namesMatch) return false;
-    if (hasRecordIds || hasEntityNames) {
-        return (!hasRecordIds || idsMatch) && (!hasEntityNames || namesMatch);
-    }
+    // عند وجود معرفات صريحة للمقاول نعتمدها كمصدر الحقيقة
+    // ولا نفرض تطابق الاسم (قد يختلف شكل الكتابة بين الموديولات/الجداول).
+    if (hasRecordIds) return idsMatch;
+    // بدون معرفات، نرجع لمطابقة الاسم فقط.
+    if (hasEntityNames) return namesMatch;
     return _cabRecordMatchesContractor_(v, idSet, nameSets);
 }
 

@@ -2011,9 +2011,42 @@ const Dashboard = {
             }
         }
 
-        const violations = Array.isArray(serverDetailedAnalytics?.violations)
+        const dedupeContractorRecords = (records, primaryFields = [], fallbackFields = []) => {
+            const unique = [];
+            const primarySet = new Set();
+            const fallbackSet = new Set();
+            const list = Array.isArray(records) ? records : [];
+
+            list.forEach((record) => {
+                if (!record || typeof record !== 'object') return;
+                const primaryKey = (Array.isArray(primaryFields) ? primaryFields : [])
+                    .map((field) => String(record?.[field] || '').trim().toLowerCase())
+                    .find(Boolean);
+                if (primaryKey) {
+                    if (primarySet.has(primaryKey)) return;
+                    primarySet.add(primaryKey);
+                    unique.push(record);
+                    return;
+                }
+                const fallbackKey = (Array.isArray(fallbackFields) ? fallbackFields : [])
+                    .map((field) => String(record?.[field] || '').trim().toLowerCase())
+                    .join('|');
+                if (!fallbackKey || fallbackSet.has(fallbackKey)) return;
+                fallbackSet.add(fallbackKey);
+                unique.push(record);
+            });
+
+            return unique;
+        };
+
+        const violationsRaw = Array.isArray(serverDetailedAnalytics?.violations)
             ? serverDetailedAnalytics.violations
             : (data.violations || []).filter(v => (v.personType === 'contractor' || v.contractorName) && matchesContractor(v));
+        const violations = dedupeContractorRecords(
+            violationsRaw,
+            ['isoCode', 'id'],
+            ['contractorId', 'contractorName', 'violationType', 'violationDate', 'violationTime']
+        );
         const isContractorIncident = (i) => (i && (i.personType === 'contractor' || i.contractorName || i.affiliation === 'contractor' || (i.contractorId != null && i.contractorId !== '')));
         const incidents = Array.isArray(serverDetailedAnalytics?.incidents)
             ? serverDetailedAnalytics.incidents
@@ -2025,9 +2058,14 @@ const Dashboard = {
         const clinicVisits = Array.isArray(serverDetailedAnalytics?.clinicVisits)
             ? serverDetailedAnalytics.clinicVisits
             : clinicSources.filter(c => (c.personType === 'contractor' || c.personType === 'external' || c.contractorName) && matchesContractor(c));
-        const contractorEvaluationRows = Array.isArray(serverDetailedAnalytics?.evaluations)
+        const contractorEvaluationRowsRaw = Array.isArray(serverDetailedAnalytics?.evaluations)
             ? serverDetailedAnalytics.evaluations
             : (data.contractorEvaluations || []).filter(e => matchesContractor(e));
+        const contractorEvaluationRows = dedupeContractorRecords(
+            contractorEvaluationRowsRaw,
+            ['evaluationId', 'id', 'isoCode'],
+            ['contractorId', 'contractorName', 'evaluationDate', 'projectName', 'finalScore']
+        );
         const seenEvaluationIds = new Set();
         const contractorEvaluations = contractorEvaluationRows.filter(e => {
             const evaluationId = String(e?.evaluationId || e?.id || '').trim();

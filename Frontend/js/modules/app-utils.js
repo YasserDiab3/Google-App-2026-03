@@ -3713,12 +3713,21 @@ const Utils = {
                 const hasEntityNames = entityNames.length > 0;
                 const namesMatch = entityNames.some(matchesNameValue);
                 if (hasEntityNames && !namesMatch) return false;
-                if (hasRecordIds || hasEntityNames) {
-                    return (!hasRecordIds || idsMatch) && (!hasEntityNames || namesMatch);
-                }
+                // Prefer explicit IDs as source of truth across modules/sheets.
+                // Name mismatches (spacing/spelling variants) should not hide valid records.
+                if (hasRecordIds) return idsMatch;
+                if (hasEntityNames) return namesMatch;
                 return matchesContractor(record);
             },
             evaluationBelongsToContractor(record) {
+                if (!record || typeof record !== 'object') return false;
+                const recordIds = collectRecordIds(record);
+                const hasRecordIds = recordIds.length > 0;
+                const idsMatch = recordIds.some(id => idsSet.has(id));
+                if (hasRecordIds) return idsMatch;
+                const entityNames = collectContractorEntityNames(record);
+                const hasEntityNames = entityNames.length > 0;
+                if (hasEntityNames) return entityNames.some(matchesNameValue);
                 return matchesContractor(record);
             }
         };

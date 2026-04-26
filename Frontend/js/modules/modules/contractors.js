@@ -10513,6 +10513,38 @@ const Contractors = {
         `;
     },
 
+    dedupeContractorRecords(records, primaryFields = [], fallbackFields = []) {
+        const unique = [];
+        const primarySet = new Set();
+        const fallbackSet = new Set();
+        const list = Array.isArray(records) ? records : [];
+
+        list.forEach((record) => {
+            if (!record || typeof record !== 'object') return;
+
+            const primaryKey = (Array.isArray(primaryFields) ? primaryFields : [])
+                .map((field) => String(record?.[field] || '').trim().toLowerCase())
+                .find(Boolean);
+
+            if (primaryKey) {
+                if (primarySet.has(primaryKey)) return;
+                primarySet.add(primaryKey);
+                unique.push(record);
+                return;
+            }
+
+            const fallbackKey = (Array.isArray(fallbackFields) ? fallbackFields : [])
+                .map((field) => String(record?.[field] || '').trim().toLowerCase())
+                .join('|');
+
+            if (!fallbackKey || fallbackSet.has(fallbackKey)) return;
+            fallbackSet.add(fallbackKey);
+            unique.push(record);
+        });
+
+        return unique;
+    },
+
     renderContractorViolationsAnalysis(contractors, violations) {
         if (!violations || violations.length === 0) {
             return `
@@ -10534,80 +10566,36 @@ const Contractors = {
             `;
         }
 
-        // ✅ إصلاح جذري: استخدام نظام التجميع الدقيق (Map-Reduce)
-        // بدلاً من المطابقة النصية المعقدة التي تسببت في تضاعف الأرقام
-        
-        // 1. تجميع المخالفات بناءً على المعرف أو الاسم بدقة
-        const violationsStatsMap = new Map();
+        // توحيد المطابقة مع "التحليل المفصل لكل مقاول" لضمان نفس الأرقام عبر الموديول
+        const contractorsWithStats = (contractors || []).map((contractor) => {
+            const analyticsContractor = this.prepareContractorForAnalytics(contractor);
+            const lookupKey = this.getPreferredContractorAnalyticsKey(
+                analyticsContractor,
+                contractor.id || contractor.contractorId || contractor.code || contractor.isoCode
+            );
+            const ctx = this.buildContractorAnalyticsMatchers(analyticsContractor, lookupKey);
+            const contractorViolations = this.dedupeContractorRecords(
+                violations.filter(ctx.violationBelongsToContractor),
+                ['isoCode', 'id'],
+                ['contractorId', 'contractorName', 'violationType', 'violationDate', 'violationTime']
+            );
+            const stats = { total: 0, high: 0, medium: 0, low: 0, resolved: 0, pending: 0 };
 
-        violations.forEach(v => {
-            // تحديد مفتاح فريد للمقاول (الأولوية للمعرف ثم الاسم)
-            let mapKey = null;
-            if (v.contractorId) {
-                mapKey = `ID:${String(v.contractorId).trim().toLowerCase()}`;
-            } else if (v.contractorName) {
-                mapKey = `NAME:${String(v.contractorName).trim().toLowerCase()}`;
-            }
-
-            if (mapKey) {
-                if (!violationsStatsMap.has(mapKey)) {
-                    violationsStatsMap.set(mapKey, { total: 0, high: 0, medium: 0, low: 0, resolved: 0, pending: 0 });
-                }
-                
-                const stats = violationsStatsMap.get(mapKey);
+            contractorViolations.forEach((v) => {
                 stats.total++;
-
-                // حساب الشدة
                 const severity = (v.severity || '').toString().trim();
-                if (severity === 'عالية' || severity === 'high' || severity === 'حرجة') {
-                    stats.high++;
-                } else if (severity === 'متوسطة' || severity === 'medium') {
-                    stats.medium++;
-                } else {
-                    stats.low++;
-                }
+                if (severity === 'عالية' || severity === 'high' || severity === 'حرجة') stats.high++;
+                else if (severity === 'متوسطة' || severity === 'medium') stats.medium++;
+                else stats.low++;
 
-                // حساب الحالة
                 const status = (v.status || '').toString().trim();
-                if (status === 'محلول' || status === 'resolved' || status === 'تم الحل') {
-                    stats.resolved++;
-                } else {
-                    stats.pending++;
-                }
-            }
-        });
-
-        // 2. ربط الإحصائيات بقائمة المقاولين
-        const contractorsWithStats = (contractors || []).map(contractor => {
-            let stats = { total: 0, high: 0, medium: 0, low: 0, resolved: 0, pending: 0 };
-
-            // البحث بالمعرف أولاً (أدق)
-            if (contractor.id) {
-                const idKey = `ID:${String(contractor.id).trim().toLowerCase()}`;
-                if (violationsStatsMap.has(idKey)) {
-                    stats = violationsStatsMap.get(idKey);
-                }
-            }
-
-            // إذا لم يوجد، البحث بالاسم (مطابقة تامة)
-            if (stats.total === 0 && contractor.name) {
-                const nameKey = `NAME:${String(contractor.name).trim().toLowerCase()}`;
-                if (violationsStatsMap.has(nameKey)) {
-                    stats = violationsStatsMap.get(nameKey);
-                }
-            }
-            
-            // دعم حقل contractorId كبديل
-            if (stats.total === 0 && contractor.contractorId) {
-                const altIdKey = `ID:${String(contractor.contractorId).trim().toLowerCase()}`;
-                if (violationsStatsMap.has(altIdKey)) {
-                    stats = violationsStatsMap.get(altIdKey);
-                }
-            }
+                if (status === 'محلول' || status === 'resolved' || status === 'تم الحل') stats.resolved++;
+                else stats.pending++;
+            });
 
             return {
-                name: contractor.name || contractor.companyName || 'غير محدد',
-                stats: stats
+                name: analyticsContractor.name || analyticsContractor.companyName || contractor.name || contractor.companyName || 'غير محدد',
+                stats
             };
         }).filter(item => item.stats.total > 0); // عرض من لديهم مخالفات فقط
 
@@ -11088,9 +11076,9 @@ const Contractors = {
                 const hasEntityNames = entityNames.length > 0;
                 const namesMatch = entityNames.some(matchesNameValue);
                 if (hasEntityNames && !namesMatch) return false;
-                if (hasRecordIds || hasEntityNames) {
-                    return (!hasRecordIds || idsMatch) && (!hasEntityNames || namesMatch);
-                }
+                // Explicit contractor IDs are authoritative across modules.
+                if (hasRecordIds) return idsMatch;
+                if (hasEntityNames) return namesMatch;
                 return matchesContractor(record);
             },
             evaluationBelongsToContractor(record) {
@@ -11098,14 +11086,10 @@ const Contractors = {
                 const recordIds = collectRecordIds(record);
                 const hasRecordIds = recordIds.length > 0;
                 const idsMatch = recordIds.some((id) => idsSet.has(id));
-                if (hasRecordIds && !idsMatch) return false;
+                if (hasRecordIds) return idsMatch;
                 const entityNames = collectEntityNames(record);
                 const hasEntityNames = entityNames.length > 0;
-                const namesMatch = entityNames.some(matchesNameValue);
-                if (hasEntityNames && !namesMatch) return false;
-                if (hasRecordIds || hasEntityNames) {
-                    return (!hasRecordIds || idsMatch) && (!hasEntityNames || namesMatch);
-                }
+                if (hasEntityNames) return entityNames.some(matchesNameValue);
                 return matchesContractor(record);
             }
         };
@@ -11147,14 +11131,22 @@ const Contractors = {
             const analyticsContractor = this.prepareContractorForAnalytics(contractor);
             const cId = this.getPreferredContractorAnalyticsKey(analyticsContractor, contractor.id || contractor.contractorId);
             const ctx = this.buildContractorAnalyticsMatchers(analyticsContractor, cId);
-            const contractorEvaluationRows = evaluations.filter(ctx.evaluationBelongsToContractor);
+            const contractorEvaluationRows = this.dedupeContractorRecords(
+                evaluations.filter(ctx.evaluationBelongsToContractor),
+                ['evaluationId', 'id', 'isoCode'],
+                ['contractorId', 'contractorName', 'evaluationDate', 'projectName', 'finalScore']
+            );
             const uniqueEvaluationIds = new Set(
                 contractorEvaluationRows
                     .map(record => String(record?.evaluationId || record?.id || '').trim())
                     .filter(Boolean)
             );
             const contractorEvaluationsCount = uniqueEvaluationIds.size > 0 ? uniqueEvaluationIds.size : contractorEvaluationRows.length;
-            const contractorViolations = violations.filter(ctx.violationBelongsToContractor);
+            const contractorViolations = this.dedupeContractorRecords(
+                violations.filter(ctx.violationBelongsToContractor),
+                ['isoCode', 'id'],
+                ['contractorId', 'contractorName', 'violationType', 'violationDate', 'violationTime']
+            );
 
             // حساب متوسط التقييم بدقة
             let avgScore = 0;
