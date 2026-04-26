@@ -16,8 +16,8 @@
 
 // Bump cache version to force clients to pick up latest JS/CSS updates (زيادة عند كل نشر لظهور التحديثات)
 // يجب تحديث __SW_REGISTER_QUERY في index.html بنفس اللاحقة عند تغيير الإصدار لتسريع اكتشاف service-worker.js
-// Service Worker Version: 20260429 — إجبار تجديد الكاش بعد تحديثات الملف الشخصي والأنماط
-const CACHE_VERSION = 'hse-app-v1.0.13-20260429';
+// Service Worker Version: 20260430 — CSS وملفات الواجهة الحرجة شبكة أولاً (مسارات js/modules)
+const CACHE_VERSION = 'hse-app-v1.0.14-20260430';
 const CACHE_NAME = `hse-cache-${CACHE_VERSION}`;
 
 /** أقصى حجم لعنصر في الكاش (بايت) — يحدّ تخزين ملفات CDN الضخمة */
@@ -522,9 +522,11 @@ async function networkFirst(request) {
     const isLocalScript =
         url.origin === self.location.origin &&
         (url.pathname.endsWith('.js') || url.pathname.endsWith('.mjs'));
+    const isLocalCss =
+        url.origin === self.location.origin && url.pathname.endsWith('.css');
     
-    // للموديولات وأي سكربت محلي: التحقق من الخادم (تجاوز كاش المتصفح القديم)
-    const fetchOptions = isModule || isLocalScript ? {
+    // للموديولات وأي سكربت/نمط محلي: التحقق من الخادم (تجاوز كاش المتصفح/الوسيط)
+    const fetchOptions = isModule || isLocalScript || isLocalCss ? {
         cache: 'no-cache',
         headers: {
             'Cache-Control': 'no-cache'
@@ -634,8 +636,16 @@ async function networkOnly(request) {
  */
 function isShellOrCriticalFile(pathname) {
     const p = pathname.replace(BASE_PATH, '') || pathname;
-    return p === '/' || p === '/index.html' || p.endsWith('/index.html') ||
-           p.endsWith('/js/app-ui.js') || p.endsWith('/js/app-bootstrap.js') || p.endsWith('/js/app-utils.js');
+    if (p === '/' || p === '/index.html' || p.endsWith('/index.html')) return true;
+    // Vercel يخدم الواجهة من الجذر: الملفات الحرجة تحت js/modules وليس js/app-ui.js مباشرة
+    if (p.endsWith('.css')) return true;
+    if (p.endsWith('/js/app-bootstrap.js')) return true;
+    if (/\/js\/modules\/app-ui\.js$/i.test(p)) return true;
+    if (/\/js\/modules\/app-utils\.js$/i.test(p)) return true;
+    if (/\/js\/modules\/i18n-core\.js$/i.test(p)) return true;
+    if (/\/js\/modules\/services\/data-manager\.js$/i.test(p)) return true;
+    if (/\/js\/modules\/modules\/settings\.js$/i.test(p)) return true;
+    return p.endsWith('/js/app-ui.js') || p.endsWith('/js/app-bootstrap.js') || p.endsWith('/js/app-utils.js');
 }
 
 /**
