@@ -454,7 +454,7 @@ const PeriodicInspections = {
                     </button>
                     <button class="tab-btn ${this.state.currentTab === 'daily-safety-checklist' ? 'active' : ''}" data-tab="daily-safety-checklist">
                         <i class="fas fa-tasks ml-2"></i>
-                        ${this._t('module.periodic.dsc.recordTitle', 'سجل المرور اليومي للسلامة')}
+                        ${this._t('module.periodic.tab.dailySafety', 'قائمة المرور اليومي للسلامة')}
                     </button>
                 </div>
             </div>
@@ -2989,8 +2989,18 @@ const PeriodicInspections = {
         return `
             <style>
                 @page { size: A4 portrait !important; margin: 10mm 8mm !important; }
-                .report-wrapper { padding-bottom: 10px !important; }
-                .report-footer { margin-top: 6px !important; font-size: 9px !important; }
+                html, body { min-height: 100% !important; }
+                body { display: flex !important; flex-direction: column !important; }
+                .report-wrapper {
+                    padding-bottom: 10px !important;
+                    flex: 1 0 auto !important;
+                    display: flex !important;
+                    flex-direction: column !important;
+                    min-height: 100vh !important;
+                    min-height: 100dvh !important;
+                }
+                .report-body { flex: 1 1 auto !important; min-height: 0 !important; }
+                .report-footer { margin-top: auto !important; padding-top: 6px !important; font-size: 9px !important; }
                 .footer-watermark-frame { padding: 5px 8px !important; margin-top: 2px !important; border-radius: 7px !important; border-width: 1px !important; }
                 .footer-bottom { gap: 2px !important; }
                 .footer-bottom-qr { width: 52px !important; height: 52px !important; border-radius: 6px !important; }

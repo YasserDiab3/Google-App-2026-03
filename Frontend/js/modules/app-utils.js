@@ -5780,12 +5780,20 @@ const PDFTemplates = {
     <style>
         :root { color-scheme: light; }
         @page { size: A4; margin: 25mm 20mm; }
+        html {
+            height: 100%;
+        }
         body {
             font-family: 'Cairo', 'Segoe UI', Tahoma, sans-serif;
             background: #f3f4f6;
             margin: 0;
             color: #1f2937;
             line-height: 1.8;
+            min-height: 100%;
+            min-height: 100vh;
+            min-height: 100dvh;
+            display: flex;
+            flex-direction: column;
         }
         .report-wrapper {
             width: 100%;
@@ -5796,6 +5804,10 @@ const PDFTemplates = {
             box-sizing: border-box;
             box-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.25);
             border-radius: 24px;
+            flex: 1 0 auto;
+            display: flex;
+            flex-direction: column;
+            min-height: 0;
         }
         .report-header {
             display: grid;
@@ -5807,6 +5819,7 @@ const PDFTemplates = {
             border-bottom: 3px solid #003865;
             padding-bottom: 16px;
             margin-bottom: 20px;
+            flex-shrink: 0;
         }
         .report-logo {
             display: flex;
@@ -5931,6 +5944,8 @@ const PDFTemplates = {
         }
         .report-body {
             font-size: 15px;
+            flex: 1 1 auto;
+            min-height: 0;
         }
         .report-body p {
             margin-bottom: 16px;
@@ -6028,13 +6043,14 @@ const PDFTemplates = {
         }
         .report-footer {
             border-top: 2px solid #e0e7ff;
-            margin-top: 28px;
-            padding: 0;
+            margin-top: auto;
+            padding: 12px 0 0;
             font-size: 12px;
             color: #475569;
             position: relative;
             width: 100%;
             box-sizing: border-box;
+            flex-shrink: 0;
         }
         .footer-watermark-frame {
             background: linear-gradient(135deg, rgba(59, 130, 246, 0.03), rgba(37, 99, 235, 0.05));
@@ -6317,6 +6333,10 @@ const PDFTemplates = {
             letter-spacing: 0.3px;
         }
         @media print {
+            html, body {
+                height: auto;
+                min-height: 100vh;
+            }
             body {
                 background: #ffffff;
             }
@@ -6326,6 +6346,16 @@ const PDFTemplates = {
                 width: 100%;
                 max-width: 100%;
                 padding: 18px 16px;
+                flex: 1 0 auto;
+                min-height: 100vh;
+                display: flex;
+                flex-direction: column;
+            }
+            .report-body {
+                flex: 1 1 auto;
+            }
+            .report-footer {
+                margin-top: auto;
             }
             .report-header {
                 grid-template-columns: minmax(180px, 1.3fr) minmax(280px, 2fr) minmax(84px, 110px);
