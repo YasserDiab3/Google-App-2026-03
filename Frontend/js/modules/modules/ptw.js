@@ -2084,11 +2084,11 @@ const PTW = {
 
         const allItems = this.mergePermitsPreferRegistry(permitsFromList, permitsFromRegistry);
         const totalCount = allItems.length;
-        const openCount = allItems.filter(r => this.isPermitOpenStatus(r?.status)).length;
-        const closedCount = allItems.filter(r => this.isPermitClosedStatus(r?.status)).length;
 
-        // استخدام بيانات السجل فقط للعرض في الجدول
+        // استخدام بيانات السجل فقط للعرض في الجدول وبطاقات KPI — يطابق عدد صفوف الجدول
         const registryTotalCount = this.registryData.length;
+        const openCount = this.registryData.filter(r => this.isPermitOpenStatus(r?.status)).length;
+        const closedCount = this.registryData.filter(r => this.isPermitClosedStatus(r?.status)).length;
 
         // حساب متوسط الوقت للحالات المغلقة (من السجل فقط)
         const closedRecords = this.registryData.filter(r => this.isPermitClosedStatus(r?.status) && (r.closureDate || r.timeTo));
@@ -2136,7 +2136,7 @@ const PTW = {
                     <div class="kpi-content">
                         <h3 class="kpi-label">${t('module.ptw.registry.totalRecords', 'إجمالي السجلات')}</h3>
                         <p class="kpi-value">${registryTotalCount}</p>
-                        <p class="text-xs text-gray-500 mt-1">(مدمج: ${totalCount})</p>
+                        <p class="text-xs text-gray-500 mt-1" title="${t('module.ptw.registry.mergedCountHint', 'عدد التصاريح الفريدة بعد دمج جدول التصاريح وسجل الحصر؛ الرقم الكبير أعلاه = عدد صفوف جدول السجل فقط')}">(${t('module.ptw.registry.mergedLabel', 'مدمج')}: ${totalCount})</p>
                     </div>
                 </div>
                 <div class="kpi-card kpi-primary">
@@ -6332,6 +6332,9 @@ const PTW = {
         const filterDateTo = document.getElementById('registry-filter-date-to');
         if (filterDateFrom) filterDateFrom.onchange = () => this.applyRegistryFilters();
         if (filterDateTo) filterDateTo.onchange = () => this.applyRegistryFilters();
+
+        // مزامنة عدد الصفوف الظاهر مع الفلاتر الحالية (وإصلاح اختلاف نوع id بين DOM والبيانات)
+        this.applyRegistryFilters();
     },
 
     /**
@@ -6349,7 +6352,11 @@ const PTW = {
             let show = true;
             const rowText = row.textContent.toLowerCase();
             const registryId = row.getAttribute('data-registry-id');
-            const entry = this.registryData.find(r => r.id === registryId);
+            const rid = registryId != null ? String(registryId) : '';
+            const entry = this.registryData.find(r =>
+                (r.id != null && String(r.id) === rid) ||
+                (r.permitId != null && String(r.permitId) === rid)
+            );
 
             if (!entry) { row.style.display = 'none'; return; }
 
