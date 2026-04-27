@@ -584,6 +584,30 @@ function getHeaders(sheetName, data) {
     if (sheetName === 'TrainingAttendance') {
         return getDefaultHeaders('TrainingAttendance');
     }
+
+    // ✅ PTW: دمج الرؤوس الافتراضية مع مفاتيح أول صف في البيانات — يضمن ظهور أعمدة جديدة (مثل مسار الاعتماد) حتى لو أقدم صف لا يحتويها
+    if (sheetName === 'PTW') {
+        const dynamicHeaders = extractHeadersFromData(data);
+        const defaults = getDefaultHeaders('PTW');
+        if (!dynamicHeaders || dynamicHeaders.length === 0) {
+            return defaults;
+        }
+        const seen = {};
+        const merged = [];
+        dynamicHeaders.forEach((h) => {
+            if (h && !seen[h]) {
+                seen[h] = true;
+                merged.push(h);
+            }
+        });
+        defaults.forEach((h) => {
+            if (h && !seen[h]) {
+                seen[h] = true;
+                merged.push(h);
+            }
+        });
+        return merged;
+    }
     
     // للأوراق الأخرى، نستخدم الرؤوس الديناميكية أو الافتراضية
     const dynamicHeaders = extractHeadersFromData(data);
@@ -1291,7 +1315,7 @@ function saveToSheet(sheetName, data, spreadsheetId = null) {
                     processed.permitTypeDisplay = normalizeTextValue(processed.permitTypeDisplay);
                 }
                 // حقول نصية بسيطة
-                const textFields = ['requestingParty', 'location', 'sublocation', 'authorizedParty', 'workDescription', 'supervisor1', 'supervisor2', 'status', 'closureReason', 'paperPermitNumber', 'equipment', 'tools', 'toolsList', 'hotWorkOther', 'confinedSpaceOther', 'heightWorkOther', 'electricalWorkType', 'coldWorkType', 'otherWorkType', 'excavationLength', 'excavationWidth', 'excavationDepth', 'soilType', 'ppeNotes', 'riskLikelihood', 'riskConsequence', 'riskLevel', 'riskNotes', 'manualApprovalsText', 'manualClosureApprovalsText'];
+                const textFields = ['requestingParty', 'location', 'sublocation', 'authorizedParty', 'workDescription', 'supervisor1', 'supervisor2', 'status', 'closureReason', 'paperPermitNumber', 'equipment', 'tools', 'toolsList', 'hotWorkOther', 'confinedSpaceOther', 'heightWorkOther', 'electricalWorkType', 'coldWorkType', 'otherWorkType', 'excavationLength', 'excavationWidth', 'excavationDepth', 'soilType', 'ppeNotes', 'riskLikelihood', 'riskConsequence', 'riskLevel', 'riskNotes', 'manualApprovalsText', 'manualClosureApprovalsText', 'approvalCircuitOwnerId', 'approvalCircuitName', 'skipApprovalFlow'];
                 textFields.forEach(field => {
                     if (processed[field] !== undefined && processed[field] !== null) {
                         if (typeof processed[field] === 'object') {
@@ -1708,7 +1732,7 @@ function appendToSheet(sheetName, data, spreadsheetId = null) {
                     processed.permitTypeDisplay = normalizeTextValue(processed.permitTypeDisplay);
                 }
                 // حقول نصية بسيطة
-                const textFields = ['requestingParty', 'location', 'sublocation', 'authorizedParty', 'workDescription', 'supervisor1', 'supervisor2', 'status', 'closureReason', 'paperPermitNumber', 'equipment', 'tools', 'toolsList', 'hotWorkOther', 'confinedSpaceOther', 'heightWorkOther', 'electricalWorkType', 'coldWorkType', 'otherWorkType', 'excavationLength', 'excavationWidth', 'excavationDepth', 'soilType', 'ppeNotes', 'riskLikelihood', 'riskConsequence', 'riskLevel', 'riskNotes', 'manualApprovalsText', 'manualClosureApprovalsText'];
+                const textFields = ['requestingParty', 'location', 'sublocation', 'authorizedParty', 'workDescription', 'supervisor1', 'supervisor2', 'status', 'closureReason', 'paperPermitNumber', 'equipment', 'tools', 'toolsList', 'hotWorkOther', 'confinedSpaceOther', 'heightWorkOther', 'electricalWorkType', 'coldWorkType', 'otherWorkType', 'excavationLength', 'excavationWidth', 'excavationDepth', 'soilType', 'ppeNotes', 'riskLikelihood', 'riskConsequence', 'riskLevel', 'riskNotes', 'manualApprovalsText', 'manualClosureApprovalsText', 'approvalCircuitOwnerId', 'approvalCircuitName', 'skipApprovalFlow'];
                 textFields.forEach(field => {
                     if (processed[field] !== undefined && processed[field] !== null) {
                         if (typeof processed[field] === 'object') {

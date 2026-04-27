@@ -865,6 +865,12 @@ const PTW = {
         if (normalized.isManualEntry === true) {
             normalized.approvals = [];
             normalized.skipApprovalFlow = true;
+            if (!String(normalized.approvalCircuitOwnerId || '').trim()) {
+                normalized.approvalCircuitOwnerId = '__manual__';
+            }
+            if (!String(normalized.approvalCircuitName || '').trim()) {
+                normalized.approvalCircuitName = 'Manual Entry';
+            }
             const st = String(normalized.status || '').trim();
             // تصريح يدوي مكتمل افتراضياً (دائرة الاعتمادات مكتملة من النموذج الورقي)
             normalized.status = st || 'اكتمل العمل بشكل آمن';
@@ -953,6 +959,7 @@ const PTW = {
                     isManualEntry: permit.isManualEntry ?? existing.isManualEntry,
                     skipApprovalFlow: permit.skipApprovalFlow ?? existing.skipApprovalFlow,
                     approvalCircuitOwnerId: permit.approvalCircuitOwnerId || existing.approvalCircuitOwnerId,
+                    approvalCircuitName: permit.approvalCircuitName || existing.approvalCircuitName,
                     sequentialNumber: permit.sequentialNumber ?? existing.sequentialNumber,
                     paperPermitNumber: permit.paperPermitNumber || existing.paperPermitNumber
                 });
@@ -8421,8 +8428,11 @@ const PTW = {
                 // بيانات الإغلاق
                 closureDate: formData.closureTime ? Utils.dateTimeLocalToISO(formData.closureTime) : (formData.status === 'اكتمل العمل بشكل آمن' || formData.status === 'إغلاق جبري' ? timeToISO : null),
                 closureReason: formData.closureReason || (formData.status === 'إغلاق جبري' ? 'إغلاق جبري' : ''),
-                // علامة التصريح اليدوي
+                // علامة التصريح اليدوي + معرّف المسار (للعرض في الجدول والورقة)
                 isManualEntry: true,
+                skipApprovalFlow: true,
+                approvalCircuitOwnerId: '__manual__',
+                approvalCircuitName: 'Manual Entry',
                 updatedAt: new Date().toISOString()
             };
 
@@ -9469,12 +9479,13 @@ const PTW = {
                                     <th>تاريخ البدء</th>
                                     <th>تاريخ الانتهاء</th>
                                     <th>الحالة</th>
+                                    <th>مسار الاعتماد</th>
                                     <th>الإجراءات</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 <tr>
-                                    <td colspan="7" class="text-center text-gray-500 py-8">
+                                    <td colspan="8" class="text-center text-gray-500 py-8">
                                         <div style="width: 300px; margin: 0 auto 16px;">
                                             <div style="width: 100%; height: 6px; background: rgba(59, 130, 246, 0.2); border-radius: 3px; overflow: hidden;">
                                                 <div style="height: 100%; background: linear-gradient(90deg, #3b82f6, #2563eb, #3b82f6); background-size: 200% 100%; border-radius: 3px; animation: loadingProgress 1.5s ease-in-out infinite;"></div>
@@ -13116,6 +13127,34 @@ const PTW = {
     },
 
     /**
+     * خلية جدول القائمة: معرّف مسار الاعتماد والاسم الظاهر (تصريح يدوي: __manual__ + Manual Entry)
+     */
+    formatPermitApprovalSourceCell(item) {
+        if (!item) return '<span class="text-gray-400 text-sm">—</span>';
+        const owner = String(item.approvalCircuitOwnerId || '').trim();
+        const name = String(item.approvalCircuitName || '').trim();
+        const manual =
+            item.isManualEntry === true
+            || item.skipApprovalFlow === true
+            || owner === '__manual__';
+        if (manual) {
+            const nameLine = name || 'Manual Entry';
+            return `
+                <div class="ptw-approval-source-cell text-xs text-right leading-snug" dir="ltr">
+                    <div class="font-mono text-gray-600">__manual__</div>
+                    <div class="text-gray-800 font-medium" dir="auto">${Utils.escapeHTML(nameLine)}</div>
+                </div>`;
+        }
+        if (name) {
+            return `<div class="text-xs text-gray-800">${Utils.escapeHTML(name)}</div>`;
+        }
+        if (owner && owner !== '__default__') {
+            return `<div class="text-xs font-mono text-gray-600" dir="ltr">${Utils.escapeHTML(owner)}</div>`;
+        }
+        return '<span class="text-gray-400 text-sm">—</span>';
+    },
+
+    /**
      * دمج التصاريح من القائمة والسجل للاستخدام في الفلتر والعرض
      */
     getMergedPermitsForFilter() {
@@ -13142,6 +13181,7 @@ const PTW = {
             isManualEntry: registryEntry.isManualEntry === true || registryEntry.isManualEntry === 'true',
             skipApprovalFlow: registryEntry.skipApprovalFlow === true || registryEntry.isManualEntry === true || registryEntry.isManualEntry === 'true',
             approvalCircuitOwnerId: registryEntry.approvalCircuitOwnerId || ((registryEntry.isManualEntry === true || registryEntry.isManualEntry === 'true') ? '__manual__' : undefined),
+            approvalCircuitName: registryEntry.approvalCircuitName || ((registryEntry.isManualEntry === true || registryEntry.isManualEntry === 'true') ? 'Manual Entry' : undefined),
             sequentialNumber: registryEntry.sequentialNumber,
             paperPermitNumber: registryEntry.paperPermitNumber
         }));
@@ -13191,7 +13231,9 @@ const PTW = {
                 item.sublocation?.toLowerCase().includes(term) ||
                 item.sublocationName?.toLowerCase().includes(term) ||
                 item.requestingParty?.toLowerCase().includes(term) ||
-                item.authorizedParty?.toLowerCase().includes(term)
+                item.authorizedParty?.toLowerCase().includes(term) ||
+                String(item.approvalCircuitOwnerId || '').toLowerCase().includes(term) ||
+                String(item.approvalCircuitName || '').toLowerCase().includes(term)
             );
         }
         if (statusFilter) filtered = filtered.filter(item => (item.status || '').trim() === statusFilter);
@@ -13213,7 +13255,7 @@ const PTW = {
         const tbody = document.querySelector('#ptw-table-container tbody');
         if (tbody) {
             tbody.innerHTML = filtered.length === 0 ?
-                '<tr><td colspan="7" class="text-center text-gray-500 py-8">لا توجد نتائج</td></tr>' :
+                '<tr><td colspan="8" class="text-center text-gray-500 py-8">لا توجد نتائج</td></tr>' :
                 filtered.map(item => {
                     const skipApprovalUi = item.isManualEntry === true
                         || item.skipApprovalFlow === true
@@ -13247,6 +13289,7 @@ const PTW = {
                                 ${Utils.escapeHTML(item.status || '-')}
                             </span>
                         </td>
+                        <td class="align-top">${this.formatPermitApprovalSourceCell(item)}</td>
                         <td>
                             <div class="flex items-center gap-2">
                                 <button onclick="PTW.viewPTW('${item.id}')" class="btn-icon btn-icon-info" title="عرض التفاصيل">
@@ -14696,12 +14739,13 @@ const PTW = {
                                 <th>تاريخ البدء</th>
                                 <th>تاريخ الانتهاء</th>
                                 <th>الحالة</th>
+                                <th>مسار الاعتماد</th>
                                 <th>الإجراءات</th>
                             </tr>
                         </thead>
                         <tbody>
                             <tr>
-                                <td colspan="7" class="text-center text-gray-500 py-8">
+                                <td colspan="8" class="text-center text-gray-500 py-8">
                                     <div style="width: 300px; margin: 0 auto 16px;">
                                         <div style="width: 100%; height: 6px; background: rgba(59, 130, 246, 0.2); border-radius: 3px; overflow: hidden;">
                                             <div style="height: 100%; background: linear-gradient(90deg, #3b82f6, #2563eb, #3b82f6); background-size: 200% 100%; border-radius: 3px; animation: loadingProgress 1.5s ease-in-out infinite;"></div>
@@ -14735,6 +14779,7 @@ const PTW = {
                                     <th>تاريخ البدء</th>
                                     <th>تاريخ الانتهاء</th>
                                     <th>الحالة</th>
+                                    <th>مسار الاعتماد</th>
                                     <th>الإجراءات</th>
                                 </tr>
                             `;
@@ -14748,7 +14793,7 @@ const PTW = {
                             const tbody = document.createElement('tbody');
                             tbody.innerHTML = `
                                 <tr>
-                                    <td colspan="7" class="text-center text-gray-500 py-8">
+                                    <td colspan="8" class="text-center text-gray-500 py-8">
                                         <div style="width: 300px; margin: 0 auto 16px;">
                                             <div style="width: 100%; height: 6px; background: rgba(59, 130, 246, 0.2); border-radius: 3px; overflow: hidden;">
                                                 <div style="height: 100%; background: linear-gradient(90deg, #3b82f6, #2563eb, #3b82f6); background-size: 200% 100%; border-radius: 3px; animation: loadingProgress 1.5s ease-in-out infinite;"></div>
