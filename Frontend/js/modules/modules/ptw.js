@@ -888,11 +888,30 @@ const PTW = {
         if (!Array.isArray(registryData)) return [];
         const normalized = registryData.map((entry) => this.normalizeRegistryEntry(entry)).filter(Boolean);
 
-        // Deduplicate by sequentialNumber (prefer real IDs over TMP IDs)
+        const preferEntry = (existing, incoming) => {
+            const existingIsTmp = String(existing.id || '').includes('_TMP_');
+            const newIsTmp = String(incoming.id || '').includes('_TMP_');
+            if (!newIsTmp && existingIsTmp) return incoming;
+            return existing;
+        };
+
+        // 1) لكل صف له id في PTWRegistry: صف واحد لكل id (يطابق عدد صفوف الورقة عادةً)
+        // 2) بدون id (قديم): الإبقاء على دمج التكرار حسب sequentialNumber أو permitId
+        const byRegistryId = new Map();
         const seqMap = new Map();
         const noSeqEntries = [];
 
         for (const entry of normalized) {
+            const rid = String(entry.id || '').trim();
+            if (rid) {
+                if (!byRegistryId.has(rid)) {
+                    byRegistryId.set(rid, entry);
+                } else {
+                    byRegistryId.set(rid, preferEntry(byRegistryId.get(rid), entry));
+                }
+                continue;
+            }
+
             const seq = (entry.sequentialNumber != null && entry.sequentialNumber !== '')
                 ? String(entry.sequentialNumber)
                 : null;
@@ -901,7 +920,6 @@ const PTW = {
                 if (!seqMap.has(seq)) {
                     seqMap.set(seq, entry);
                 } else {
-                    // Prefer entries with real sequential IDs over TMP IDs
                     const existing = seqMap.get(seq);
                     const existingIsTmp = String(existing.id || '').includes('_TMP_');
                     const newIsTmp = String(entry.id || '').includes('_TMP_');
@@ -910,15 +928,14 @@ const PTW = {
                     }
                 }
             } else {
-                // No sequential number – deduplicate by id
-                const idKey = entry.id || entry.permitId;
-                if (!idKey || !noSeqEntries.some(e => e.id === idKey || e.permitId === idKey)) {
+                const idKey = entry.permitId;
+                if (!idKey || !noSeqEntries.some(e => e.permitId === idKey)) {
                     noSeqEntries.push(entry);
                 }
             }
         }
 
-        return [...seqMap.values(), ...noSeqEntries];
+        return [...byRegistryId.values(), ...seqMap.values(), ...noSeqEntries];
     },
 
     normalizePermitStatus(status) {
@@ -2092,8 +2109,8 @@ const PTW = {
         const allItems = this.mergePermitsPreferRegistry(permitsFromList, permitsFromRegistry);
         const totalCount = allItems.length;
 
-        // استخدام بيانات السجل فقط للعرض في الجدول وبطاقات KPI — يطابق عدد صفوف الجدول
-        const registryTotalCount = this.registryData.length;
+        // عدد صفوف السجل المعروضة = صفوف الجدول = الكارت (بعد تطبيع PTWRegistry؛ دمج التكرار بمعرف السجل id وليس بمسلسل واحد فقط)
+        const registryRowCount = this.registryData.length;
         const openCount = this.registryData.filter(r => this.isPermitOpenStatus(r?.status)).length;
         const closedCount = this.registryData.filter(r => this.isPermitClosedStatus(r?.status)).length;
 
@@ -2142,8 +2159,8 @@ const PTW = {
                     <div class="kpi-icon"><i class="fas fa-list-ol"></i></div>
                     <div class="kpi-content">
                         <h3 class="kpi-label">${t('module.ptw.registry.totalRecords', 'إجمالي السجلات')}</h3>
-                        <p class="kpi-value">${registryTotalCount}</p>
-                        <p class="text-xs text-gray-500 mt-1" title="${t('module.ptw.registry.mergedCountHint', 'عدد التصاريح الفريدة بعد دمج جدول التصاريح وسجل الحصر؛ الرقم الكبير أعلاه = عدد صفوف جدول السجل فقط')}">(${t('module.ptw.registry.mergedLabel', 'مدمج')}: ${totalCount})</p>
+                        <p class="kpi-value">${registryRowCount}</p>
+                        <p class="text-xs text-gray-500 mt-1" title="${t('module.ptw.registry.mergedCountHint', 'تصاريح فريدة (قائمة PTW + سجل) حسب معرف التصريح؛ قد يختلف إن وُجد تصريح في القائمة بلا صف سجل')}">${totalCount !== registryRowCount ? `${t('module.ptw.registry.withPtwListUnique', 'مع قائمة PTW (فريد)')}: ${totalCount}` : t('module.ptw.registry.sameAsTable', 'يطابق صفوف الجدول')}</p>
                     </div>
                 </div>
                 <div class="kpi-card kpi-primary">
@@ -2216,10 +2233,7 @@ const PTW = {
                 <div class="card-header">
                     <h2 class="card-title">
                         <i class="fas fa-table ml-2"></i>
-                        ${t('module.ptw.registry.tableTitle', 'جدول سجل حصر التصاريح')} (${registryTotalCount} ${t('module.ptw.registry.recordWord', 'سجل')})
-                        <span class="text-sm font-normal text-gray-500 ml-2">
-                            (${t('module.ptw.registry.totalMerged', 'إجمالي التصاريح المدمجة:')} ${totalCount})
-                        </span>
+                        ${t('module.ptw.registry.tableTitle', 'جدول سجل حصر التصاريح')} (${registryRowCount} ${t('module.ptw.registry.recordWord', 'سجل')})
                     </h2>
                 </div>
                 <div class="card-body">
