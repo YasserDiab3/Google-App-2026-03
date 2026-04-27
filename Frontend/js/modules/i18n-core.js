@@ -2812,7 +2812,6 @@
         'نظام إدارة السلامة والصحة المهنية والبيئة': 'Occupational Safety, Health and Environment Management System',
         'نظام تتبع المشاكل وحلولها': 'Issue Tracking and Resolution System',
         'المستندات القانونية والتشريعية': 'Legal and Regulatory Documents',
-        'الفحوصات الدورية': 'Periodic Inspections',
         'الملاحظات اليومية': 'Daily Observations',
         'إدارة المقاولين': 'Contractors Management',
         'سجل المواد الكيميائية': 'Chemical Safety Register',
@@ -3206,6 +3205,12 @@
         });
     }
 
+    /** تجنب استبدال حرفي جزئي داخل مديول الفحوصات الدورية — النصوص تُدار بمفاتيح _t() */
+    function isInsidePeriodicInspectionsSection(el) {
+        if (!el || typeof el.closest !== 'function') return false;
+        return !!(el.closest('#periodic-inspections-section') || el.closest('#periodicinspections-section'));
+    }
+
     function applyLiteralTranslations(root = document, lang) {
         const selectedLang = lang || getCurrentLang();
         const map = selectedLang === 'en' ? literalArToEn : literalEnToAr;
@@ -3215,6 +3220,8 @@
         const walker = document.createTreeWalker(target, NodeFilter.SHOW_TEXT);
         let node;
         while ((node = walker.nextNode())) {
+            const parentEl = node.parentElement;
+            if (parentEl && isInsidePeriodicInspectionsSection(parentEl)) continue;
             const original = node.nodeValue;
             if (!original || !original.trim()) continue;
             let updated = original;
@@ -3228,6 +3235,7 @@
         }
 
         target.querySelectorAll?.('[title], [placeholder], [aria-label]').forEach((el) => {
+            if (isInsidePeriodicInspectionsSection(el)) return;
             ['title', 'placeholder', 'aria-label'].forEach((attr) => {
                 const value = el.getAttribute(attr);
                 if (!value) return;
