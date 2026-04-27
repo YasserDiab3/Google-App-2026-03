@@ -251,6 +251,30 @@ const PeriodicInspections = {
         return fallback;
     },
 
+    _isEnglishUI() {
+        try {
+            if (typeof I18n !== 'undefined' && I18n && typeof I18n.getCurrentLanguage === 'function') {
+                return I18n.getCurrentLanguage() === 'en';
+            }
+        } catch (_) {}
+        return false;
+    },
+
+    _formatDailyShiftLabel(value) {
+        const raw = String(value || '').trim();
+        const mapAr = {
+            'الأولى': this._t('module.periodic.dsc.shift.first', 'الوردية الأولى'),
+            'الثانية': this._t('module.periodic.dsc.shift.second', 'الوردية الثانية'),
+            'الثالثة': this._t('module.periodic.dsc.shift.third', 'الوردية الثالثة')
+        };
+        const mapEn = {
+            'الأولى': this._t('module.periodic.dsc.shift.first', 'First Shift'),
+            'الثانية': this._t('module.periodic.dsc.shift.second', 'Second Shift'),
+            'الثالثة': this._t('module.periodic.dsc.shift.third', 'Third Shift')
+        };
+        return this._isEnglishUI() ? (mapEn[raw] || raw || '-') : (mapAr[raw] || raw || '-');
+    },
+
     async load() {
         // Add language change listener
         if (!this._languageChangeListenerAdded) {
@@ -424,7 +448,7 @@ const PeriodicInspections = {
                     </button>
                     <button class="tab-btn ${this.state.currentTab === 'daily-safety-checklist' ? 'active' : ''}" data-tab="daily-safety-checklist">
                         <i class="fas fa-tasks ml-2"></i>
-                        ${this._t('module.periodic.dsc.recordTitleEn', 'Daily Safety Patrol List')}
+                        ${this._t('module.periodic.dsc.recordTitle', 'سجل المرور اليومي للسلامة')}
                     </button>
                 </div>
             </div>
@@ -2958,13 +2982,15 @@ const PeriodicInspections = {
     _getDailySafetyCompactFooterStyle() {
         return `
             <style>
-                .report-footer { margin-top: 14px !important; font-size: 10px !important; }
-                .footer-watermark-frame { padding: 8px 10px !important; margin-top: 6px !important; border-radius: 8px !important; }
-                .footer-bottom { gap: 5px !important; }
-                .footer-bottom-qr { width: 62px !important; height: 62px !important; border-radius: 8px !important; }
-                .footer-meta-line { gap: 8px !important; padding: 4px 0 !important; margin-top: 2px !important; font-size: 10px !important; }
-                .footer-meta-item { padding: 2px 4px !important; font-size: 10px !important; line-height: 1.3 !important; }
-                .footer-bottom-text { gap: 1px !important; font-size: 10px !important; line-height: 1.3 !important; }
+                @page { size: A4 portrait !important; margin: 10mm 8mm !important; }
+                .report-wrapper { padding-bottom: 10px !important; }
+                .report-footer { margin-top: 6px !important; font-size: 9px !important; }
+                .footer-watermark-frame { padding: 5px 8px !important; margin-top: 2px !important; border-radius: 7px !important; border-width: 1px !important; }
+                .footer-bottom { gap: 2px !important; }
+                .footer-bottom-qr { width: 52px !important; height: 52px !important; border-radius: 6px !important; }
+                .footer-meta-line { gap: 4px !important; padding: 2px 0 !important; margin-top: 1px !important; font-size: 9px !important; }
+                .footer-meta-item { padding: 1px 2px !important; font-size: 9px !important; line-height: 1.2 !important; }
+                .footer-bottom-text { gap: 0 !important; font-size: 9px !important; line-height: 1.2 !important; }
             </style>
         `;
     },
@@ -3087,7 +3113,8 @@ const PeriodicInspections = {
     },
 
     renderDailySafetyCheckListTable(records) {
-        if (!records || records.length === 0) return '<div class="empty-state"><p class="text-gray-500">لا توجد سجلات. اضغط \"إضافة سجل\" لتسجيل فحص يومي جديد.</p></div>';
+        const t = (key, fallback) => this._t(key, fallback);
+        if (!records || records.length === 0) return `<div class="empty-state"><p class="text-gray-500">${t('module.periodic.dsc.emptyRecords', 'لا توجد سجلات. اضغط "إضافة سجل" لتسجيل مرور يومي جديد.')}</p></div>`;
         const rows = records
             .sort((a, b) => new Date(b.date || b.createdAt) - new Date(a.date || a.createdAt))
             .map(r => `
@@ -3096,17 +3123,18 @@ const PeriodicInspections = {
                 <td>${Utils.escapeHTML(r.siteName || '-')}</td>
                 <td>${r.date ? Utils.formatDate(r.date) : '-'}</td>
                 <td>${Utils.escapeHTML(r.inspectorName || '-')}</td>
-                <td>${Utils.escapeHTML(r.shift || '-')}</td>
+                <td>${Utils.escapeHTML(this._formatDailyShiftLabel(r.shift || '-'))}</td>
                 <td class="text-left">
-                    <button type="button" class="btn-icon btn-icon-info ml-2" onclick="PeriodicInspections.showDailySafetyCheckListView('${Utils.escapeHTML(r.id)}')" title="عرض"><i class="fas fa-eye"></i></button>
-                    <button type="button" class="btn-icon btn-icon-primary" onclick="PeriodicInspections.showDailySafetyCheckListForm('${Utils.escapeHTML(r.id)}')" title="تعديل"><i class="fas fa-edit"></i></button>
-                    <button type="button" class="btn-icon btn-icon-danger" onclick="PeriodicInspections.deleteDailySafetyCheckListRecord('${Utils.escapeHTML(r.id)}')" title="حذف"><i class="fas fa-trash"></i></button>
+                    <button type="button" class="btn-icon btn-icon-info ml-2" onclick="PeriodicInspections.showDailySafetyCheckListView('${Utils.escapeHTML(r.id)}')" title="${t('module.periodic.dsc.action.view', 'عرض')}"><i class="fas fa-eye"></i></button>
+                    <button type="button" class="btn-icon btn-icon-success ml-2" onclick="PeriodicInspections.exportDailySafetyCheckListRecord('${Utils.escapeHTML(r.id)}')" title="${t('module.periodic.dsc.action.downloadPdf', 'تحميل PDF')}"><i class="fas fa-file-pdf"></i></button>
+                    <button type="button" class="btn-icon btn-icon-primary" onclick="PeriodicInspections.showDailySafetyCheckListForm('${Utils.escapeHTML(r.id)}')" title="${t('module.periodic.dsc.action.edit', 'تعديل')}"><i class="fas fa-edit"></i></button>
+                    <button type="button" class="btn-icon btn-icon-danger" onclick="PeriodicInspections.deleteDailySafetyCheckListRecord('${Utils.escapeHTML(r.id)}')" title="${t('module.periodic.dsc.action.delete', 'حذف')}"><i class="fas fa-trash"></i></button>
                 </td>
             </tr>
         `).join('');
         return `<div class="table-wrapper" style="width:100%; overflow-x:auto;">
             <table class="data-table table-header-red" style="width:100%;">
-                <thead><tr><th style="min-width:90px;">رقم التقرير</th><th style="min-width:120px;">المصنع/الموقع</th><th style="min-width:100px;">التاريخ</th><th style="min-width:120px;">القائم بالمرور</th><th style="min-width:80px;">الوردية</th><th style="min-width:100px;">الإجراء</th></tr></thead>
+                <thead><tr><th style="min-width:90px;">${t('module.periodic.dsc.table.reportNumber', 'رقم التقرير')}</th><th style="min-width:120px;">${t('module.periodic.dsc.table.site', 'المصنع/الموقع')}</th><th style="min-width:100px;">${t('module.periodic.dsc.table.date', 'التاريخ')}</th><th style="min-width:120px;">${t('module.periodic.dsc.table.inspector', 'القائم بالمرور')}</th><th style="min-width:80px;">${t('module.periodic.dsc.table.shift', 'الوردية')}</th><th style="min-width:140px;">${t('module.periodic.dsc.table.action', 'الإجراء')}</th></tr></thead>
                 <tbody>${rows}</tbody>
             </table>
         </div>`;
@@ -3230,7 +3258,7 @@ const PeriodicInspections = {
         }).join('');
         const qHeaders = this.DAILY_SAFETY_CHECKLIST_QUESTIONS.map(q => `<th style="padding:4px; border:1px solid #ddd; background:#003865; color:#fff; font-size:10px;">${Utils.escapeHTML(q.label)}</th>`).join('');
         const content = `
-            ${this._getDailySafetyCompactFooterStyle()}
+            ${this._getDailySafetyCompactFooterStyle().replace('portrait', 'landscape')}
             <p style="text-align:center; margin:0 0 12px 0; font-weight:bold;">${this._t('module.periodic.dsc.fullExportHeadingAr', 'تصدير كامل لسجل قائمة المرور اليومي للسلامة')} (${records.length} ${this._t('module.periodic.dsc.recordsWord', 'سجل')})</p>
             <table style="width:100%; border-collapse:collapse; font-size:11px;">
                 <thead>
@@ -3282,10 +3310,11 @@ const PeriodicInspections = {
     ],
 
     showDailySafetyCheckListForm(editId) {
+        const t = (key, fallback) => this._t(key, fallback);
         const record = editId ? this.getDailySafetyCheckListRecords().find(r => r.id === editId) : null;
         const sites = this.getSiteOptions();
-        const complianceOptions = '<option value="">اختر</option><option value="مطابق">مطابق</option><option value="غير مطابق">غير مطابق</option>';
-        const shiftOptions = '<option value="">اختر الوردية</option><option value="الأولى">الأولى</option><option value="الثانية">الثانية</option><option value="الثالثة">الثالثة</option>';
+        const complianceOptions = `<option value="">${t('module.periodic.dsc.select.choose', 'اختر')}</option><option value="مطابق">${t('module.periodic.dsc.status.compliant', 'مطابق')}</option><option value="غير مطابق">${t('module.periodic.dsc.status.nonCompliant', 'غير مطابق')}</option>`;
+        const shiftOptions = `<option value="">${t('module.periodic.dsc.select.shift', 'اختر الوردية')}</option><option value="الأولى">${t('module.periodic.dsc.shift.first', 'الوردية الأولى')}</option><option value="الثانية">${t('module.periodic.dsc.shift.second', 'الوردية الثانية')}</option><option value="الثالثة">${t('module.periodic.dsc.shift.third', 'الوردية الثالثة')}</option>`;
         const fieldToRecordKey = { q16: 'q15Reading', q17: 'q16', q18: 'q17' };
         const questionsHtml = this.DAILY_SAFETY_CHECKLIST_QUESTIONS.map((q, idx) => {
             const isReading = q.key === 'q16';
@@ -3294,7 +3323,7 @@ const PeriodicInspections = {
             if (isReading) return `<div class="form-group"><label class="form-label required">${idx + 1}- ${Utils.escapeHTML(q.label)}</label><input type="text" id="dsc-${q.key}" class="form-input" value="${Utils.escapeHTML(val)}" placeholder="أدخل القراءة" required></div>`;
             return `<div class="form-group"><label class="form-label required">${idx + 1}- ${Utils.escapeHTML(q.label)}</label><select id="dsc-${q.key}" class="form-input" required>${complianceOptions}</select></div>`;
         }).join('');
-        const siteOptions = '<option value="">اختر المصنع/الموقع</option>' + (sites.map(s => `<option value="${Utils.escapeHTML(s.id)}">${Utils.escapeHTML(s.name)}</option>`).join(''));
+        const siteOptions = `<option value="">${t('module.periodic.dsc.select.site', 'اختر المصنع/الموقع')}</option>` + (sites.map(s => `<option value="${Utils.escapeHTML(s.id)}">${Utils.escapeHTML(s.name)}</option>`).join(''));
         const dateVal = record && record.date ? String(record.date).slice(0, 10) : new Date().toISOString().slice(0, 10);
         const modal = document.createElement('div');
         modal.className = 'modal-overlay dsc-modal-overlay';
@@ -3318,33 +3347,33 @@ const PeriodicInspections = {
             </style>
             <div class="modal-content dsc-modal-box">
                 <div class="dsc-modal-header">
-                    <button type="button" class="dsc-modal-close" aria-label="إغلاق" onclick="this.closest('.modal-overlay').remove()"><i class="fas fa-times"></i></button>
-                    <h2 class="dsc-modal-title"><i class="fas fa-clipboard-check ml-2"></i>${record ? 'تعديل' : 'إضافة'} ${this._t('module.periodic.dsc.recordTitleEn', 'Daily Safety Patrol List')}</h2>
-                    <p class="dsc-form-serial" style="margin: 0.25rem 0 0; font-size: 0.9rem; opacity: 0.95;">${record ? 'رقم التقرير: ' + Utils.escapeHTML(this.getDailySafetyCheckListSerialNumber(record)) : 'رقم التقرير: سيُعيّن تلقائياً عند الحفظ (اليوم-الوردية-الترتيب)'}</p>
+                    <button type="button" class="dsc-modal-close" aria-label="${t('module.periodic.dsc.action.close', 'إغلاق')}" onclick="this.closest('.modal-overlay').remove()"><i class="fas fa-times"></i></button>
+                    <h2 class="dsc-modal-title"><i class="fas fa-clipboard-check ml-2"></i>${record ? t('module.periodic.dsc.action.edit', 'تعديل') : t('module.periodic.dsc.action.add', 'إضافة')} ${this._t('module.periodic.dsc.recordTitle', 'سجل المرور اليومي للسلامة')}</h2>
+                    <p class="dsc-form-serial" style="margin: 0.25rem 0 0; font-size: 0.9rem; opacity: 0.95;">${record ? `${t('module.periodic.dsc.table.reportNumber', 'رقم التقرير')}: ` + Utils.escapeHTML(this.getDailySafetyCheckListSerialNumber(record)) : `${t('module.periodic.dsc.table.reportNumber', 'رقم التقرير')}: ${t('module.periodic.dsc.reportNumberAuto', 'سيُعيّن تلقائياً عند الحفظ (اليوم-الوردية-الترتيب)')}`}</p>
                 </div>
                 <div class="dsc-modal-body">
                     <div class="dsc-section">
-                        <h3 class="dsc-section-title"><i class="fas fa-info-circle"></i>البيانات الأساسية</h3>
+                        <h3 class="dsc-section-title"><i class="fas fa-info-circle"></i>${t('module.periodic.dsc.section.basicData', 'البيانات الأساسية')}</h3>
                         <div class="form-grid form-grid-2">
-                            <div class="form-group"><label class="form-label">رقم التقرير</label><input type="text" id="dsc-reportNumber" class="form-input" value="${reportNumberDisplayValue}" placeholder="سيُعيّن تلقائياً عند الحفظ" readonly></div>
-                            <div class="form-group"><label class="form-label required">المصنع/الموقع</label><select id="dsc-siteId" class="form-input" required>${siteOptions}</select></div>
-                            <div class="form-group"><label class="form-label required">التاريخ</label><input type="date" id="dsc-date" class="form-input" required value="${dateVal}"></div>
-                            <div class="form-group"><label class="form-label required">القائم بالمرور</label><select id="dsc-inspectorName" class="form-input" required><option value="">جاري التحميل...</option></select></div>
-                            <div class="form-group"><label class="form-label required">الوردية</label><select id="dsc-shift" class="form-input" required>${shiftOptions}</select></div>
+                            <div class="form-group"><label class="form-label">${t('module.periodic.dsc.table.reportNumber', 'رقم التقرير')}</label><input type="text" id="dsc-reportNumber" class="form-input" value="${reportNumberDisplayValue}" placeholder="${t('module.periodic.dsc.reportNumberAutoSimple', 'سيُعيّن تلقائياً عند الحفظ')}" readonly></div>
+                            <div class="form-group"><label class="form-label required">${t('module.periodic.dsc.table.site', 'المصنع/الموقع')}</label><select id="dsc-siteId" class="form-input" required>${siteOptions}</select></div>
+                            <div class="form-group"><label class="form-label required">${t('module.periodic.dsc.table.date', 'التاريخ')}</label><input type="date" id="dsc-date" class="form-input" required value="${dateVal}"></div>
+                            <div class="form-group"><label class="form-label required">${t('module.periodic.dsc.table.inspector', 'القائم بالمرور')}</label><select id="dsc-inspectorName" class="form-input" required><option value="">${t('module.periodic.dsc.loading', 'جاري التحميل...')}</option></select></div>
+                            <div class="form-group"><label class="form-label required">${t('module.periodic.dsc.table.shift', 'الوردية')}</label><select id="dsc-shift" class="form-input" required>${shiftOptions}</select></div>
                         </div>
                     </div>
                     <div class="dsc-section">
-                        <h3 class="dsc-section-title"><i class="fas fa-tasks"></i>بنود الفحص اليومي للسلامة</h3>
+                        <h3 class="dsc-section-title"><i class="fas fa-tasks"></i>${t('module.periodic.dsc.section.items', 'بنود المرور اليومي للسلامة')}</h3>
                         <div class="space-y-3" style="max-height: 42vh; overflow-y: auto;">${questionsHtml}</div>
                     </div>
                     <div class="dsc-section">
-                        <h3 class="dsc-section-title"><i class="fas fa-sticky-note"></i>الملاحظات</h3>
-                        <textarea id="dsc-notes" class="form-input form-textarea" rows="3" placeholder="الملاحظات الموجودة أثناء المرور...">${record ? Utils.escapeHTML(record.notes || '') : ''}</textarea>
+                        <h3 class="dsc-section-title"><i class="fas fa-sticky-note"></i>${t('module.periodic.dsc.notes', 'الملاحظات')}</h3>
+                        <textarea id="dsc-notes" class="form-input form-textarea" rows="3" placeholder="${t('module.periodic.dsc.notesPlaceholder', 'الملاحظات الموجودة أثناء المرور...')}">${record ? Utils.escapeHTML(record.notes || '') : ''}</textarea>
                     </div>
                 </div>
                 <div class="dsc-modal-footer">
-                    <button type="button" class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">إلغاء</button>
-                    <button type="button" id="dsc-save-btn" class="btn-primary"><i class="fas fa-save ml-2"></i>حفظ</button>
+                    <button type="button" class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">${t('module.periodic.dsc.action.cancel', 'إلغاء')}</button>
+                    <button type="button" id="dsc-save-btn" class="btn-primary"><i class="fas fa-save ml-2"></i>${t('module.periodic.dsc.action.save', 'حفظ')}</button>
                 </div>
             </div>
         `;
@@ -3361,7 +3390,7 @@ const PeriodicInspections = {
             });
         }
         const fillInspectorAndRecord = (members) => {
-            inspectorSelect.innerHTML = '<option value="">اختر القائم بالمرور</option>' + (members.map(m => `<option value="${Utils.escapeHTML(m.name)}">${Utils.escapeHTML(m.name)}</option>`).join(''));
+            inspectorSelect.innerHTML = `<option value="">${t('module.periodic.dsc.select.inspector', 'اختر القائم بالمرور')}</option>` + (members.map(m => `<option value="${Utils.escapeHTML(m.name)}">${Utils.escapeHTML(m.name)}</option>`).join(''));
             if (record && record.inspectorName) inspectorSelect.value = record.inspectorName;
         };
         Promise.resolve(this.getSafetyTeamMembersForCheckList()).then(members => { const arr = Array.isArray(members) ? members : []; fillInspectorAndRecord(arr); }).catch(() => fillInspectorAndRecord([]));
@@ -3427,6 +3456,7 @@ const PeriodicInspections = {
      * عرض سجل Daily Safety Check List بالكامل مع أزرار الطباعة والتصدير والتعديل والحذف
      */
     showDailySafetyCheckListView(recordId) {
+        const t = (key, fallback) => this._t(key, fallback);
         const record = this.getDailySafetyCheckListRecords().find(r => r.id === recordId);
         if (!record) { Notification.error('السجل غير موجود'); return; }
         const serialNo = this.getDailySafetyCheckListSerialNumber(record);
@@ -3454,35 +3484,35 @@ const PeriodicInspections = {
             </style>
             <div class="modal-content dsc-view-box">
                 <div class="dsc-view-header" style="position: relative;">
-                    <button type="button" class="dsc-view-close" aria-label="إغلاق" onclick="this.closest('.modal-overlay').remove()"><i class="fas fa-times"></i></button>
-                    <h2 class="dsc-view-title"><i class="fas fa-clipboard-check ml-2"></i>عرض ${this._t('module.periodic.dsc.recordTitleEn', 'Daily Safety Patrol List')}</h2>
-                    <p class="dsc-view-serial" style="margin: 0.25rem 0 0; font-size: 0.95rem; opacity: 0.95;">رقم التقرير: ${Utils.escapeHTML(serialNo)}</p>
+                    <button type="button" class="dsc-view-close" aria-label="${t('module.periodic.dsc.action.close', 'إغلاق')}" onclick="this.closest('.modal-overlay').remove()"><i class="fas fa-times"></i></button>
+                    <h2 class="dsc-view-title"><i class="fas fa-clipboard-check ml-2"></i>${t('module.periodic.dsc.action.view', 'عرض')} ${this._t('module.periodic.dsc.recordTitle', 'سجل المرور اليومي للسلامة')}</h2>
+                    <p class="dsc-view-serial" style="margin: 0.25rem 0 0; font-size: 0.95rem; opacity: 0.95;">${t('module.periodic.dsc.table.reportNumber', 'رقم التقرير')}: ${Utils.escapeHTML(serialNo)}</p>
                 </div>
                 <div class="dsc-view-body">
                     <div class="dsc-view-section">
-                        <div class="dsc-view-section-title"><i class="fas fa-info-circle ml-2"></i>البيانات الأساسية</div>
+                        <div class="dsc-view-section-title"><i class="fas fa-info-circle ml-2"></i>${t('module.periodic.dsc.section.basicData', 'البيانات الأساسية')}</div>
                         <div style="display:grid; grid-template-columns: repeat(2, 1fr); gap: 0.75rem;">
-                            <div><span style="color:#64748b;">المصنع/الموقع:</span> ${Utils.escapeHTML(record.siteName || '-')}</div>
-                            <div><span style="color:#64748b;">التاريخ:</span> ${record.date ? Utils.formatDate(record.date) : '-'}</div>
-                            <div><span style="color:#64748b;">القائم بالمرور:</span> ${Utils.escapeHTML(record.inspectorName || '-')}</div>
-                            <div><span style="color:#64748b;">الوردية:</span> ${Utils.escapeHTML(record.shift || '-')}</div>
+                            <div><span style="color:#64748b;">${t('module.periodic.dsc.table.site', 'المصنع/الموقع')}:</span> ${Utils.escapeHTML(record.siteName || '-')}</div>
+                            <div><span style="color:#64748b;">${t('module.periodic.dsc.table.date', 'التاريخ')}:</span> ${record.date ? Utils.formatDate(record.date) : '-'}</div>
+                            <div><span style="color:#64748b;">${t('module.periodic.dsc.table.inspector', 'القائم بالمرور')}:</span> ${Utils.escapeHTML(record.inspectorName || '-')}</div>
+                            <div><span style="color:#64748b;">${t('module.periodic.dsc.table.shift', 'الوردية')}:</span> ${Utils.escapeHTML(this._formatDailyShiftLabel(record.shift || '-'))}</div>
                         </div>
                     </div>
                     <div class="dsc-view-section">
-                        <div class="dsc-view-section-title"><i class="fas fa-tasks ml-2"></i>بنود الفحص اليومي للسلامة</div>
+                        <div class="dsc-view-section-title"><i class="fas fa-tasks ml-2"></i>${t('module.periodic.dsc.section.items', 'بنود المرور اليومي للسلامة')}</div>
                         <table class="dsc-view-table">
-                            <thead><tr><th style="width:28px;">#</th><th>البنود</th><th style="min-width:100px;">الإجابة</th></tr></thead>
+                            <thead><tr><th style="width:28px;">#</th><th>${t('module.periodic.dsc.table.items', 'البنود')}</th><th style="min-width:100px;">${t('module.periodic.dsc.table.answer', 'الإجابة')}</th></tr></thead>
                             <tbody>${questionsRows}</tbody>
                         </table>
                     </div>
-                    ${(record.notes || '').trim() ? `<div class="dsc-view-section"><div class="dsc-view-section-title"><i class="fas fa-sticky-note ml-2"></i>الملاحظات</div><p style="margin:0;">${Utils.escapeHTML(record.notes)}</p></div>` : ''}
+                    ${(record.notes || '').trim() ? `<div class="dsc-view-section"><div class="dsc-view-section-title"><i class="fas fa-sticky-note ml-2"></i>${t('module.periodic.dsc.notes', 'الملاحظات')}</div><p style="margin:0;">${Utils.escapeHTML(record.notes)}</p></div>` : ''}
                 </div>
                 <div class="dsc-view-footer">
-                    <button type="button" class="btn-primary" onclick="PeriodicInspections.printDailySafetyCheckListRecord('${Utils.escapeHTML(record.id)}')"><i class="fas fa-print ml-2"></i>طباعة</button>
-                    <button type="button" class="btn-primary" onclick="PeriodicInspections.exportDailySafetyCheckListRecord('${Utils.escapeHTML(record.id)}')"><i class="fas fa-file-export ml-2"></i>تصدير</button>
-                    <button type="button" class="btn-secondary" onclick="this.closest('.modal-overlay').remove(); PeriodicInspections.showDailySafetyCheckListForm('${Utils.escapeHTML(record.id)}');"><i class="fas fa-edit ml-2"></i>تعديل</button>
-                    <button type="button" class="btn-secondary" style="color:#b91c1c;" onclick="if(confirm('هل أنت متأكد من حذف هذا السجل؟')) { this.closest('.modal-overlay').remove(); PeriodicInspections.deleteDailySafetyCheckListRecord('${Utils.escapeHTML(record.id)}'); }"><i class="fas fa-trash ml-2"></i>حذف</button>
-                    <button type="button" class="btn-secondary" onclick="this.closest('.modal-overlay').remove()"><i class="fas fa-times ml-2"></i>إغلاق</button>
+                    <button type="button" class="btn-primary" onclick="PeriodicInspections.printDailySafetyCheckListRecord('${Utils.escapeHTML(record.id)}')"><i class="fas fa-print ml-2"></i>${t('module.periodic.dsc.action.print', 'طباعة')}</button>
+                    <button type="button" class="btn-primary" onclick="PeriodicInspections.exportDailySafetyCheckListRecord('${Utils.escapeHTML(record.id)}')"><i class="fas fa-file-pdf ml-2"></i>${t('module.periodic.dsc.action.downloadPdf', 'تحميل PDF')}</button>
+                    <button type="button" class="btn-secondary" onclick="this.closest('.modal-overlay').remove(); PeriodicInspections.showDailySafetyCheckListForm('${Utils.escapeHTML(record.id)}');"><i class="fas fa-edit ml-2"></i>${t('module.periodic.dsc.action.edit', 'تعديل')}</button>
+                    <button type="button" class="btn-secondary" style="color:#b91c1c;" onclick="if(confirm('${t('module.periodic.dsc.confirmDelete', 'هل أنت متأكد من حذف هذا السجل؟')}')) { this.closest('.modal-overlay').remove(); PeriodicInspections.deleteDailySafetyCheckListRecord('${Utils.escapeHTML(record.id)}'); }"><i class="fas fa-trash ml-2"></i>${t('module.periodic.dsc.action.delete', 'حذف')}</button>
+                    <button type="button" class="btn-secondary" onclick="this.closest('.modal-overlay').remove()"><i class="fas fa-times ml-2"></i>${t('module.periodic.dsc.action.close', 'إغلاق')}</button>
                 </div>
             </div>
         `;
@@ -3676,11 +3706,11 @@ const PeriodicInspections = {
                 doc.setFontSize(12);
                 doc.text(this._t('module.periodic.dsc.titleAr', 'قائمة المرور اليومي للسلامة'), 105, 22, { align: 'center' });
                 doc.setFontSize(10);
-                doc.text('رقم التقرير: ' + serialNo, 105, 30, { align: 'center' });
-                doc.text('المصنع/الموقع: ' + (record.siteName || '-'), 14, 40);
-                doc.text('التاريخ: ' + (record.date ? Utils.formatDate(record.date) : '-'), 14, 46);
-                doc.text('القائم بالمرور: ' + (record.inspectorName || '-'), 14, 52);
-                doc.text('الوردية: ' + (record.shift || '-'), 14, 58);
+                doc.text(this._t('module.periodic.dsc.table.reportNumber', 'رقم التقرير') + ': ' + serialNo, 105, 30, { align: 'center' });
+                doc.text(this._t('module.periodic.dsc.table.site', 'المصنع/الموقع') + ': ' + (record.siteName || '-'), 14, 40);
+                doc.text(this._t('module.periodic.dsc.table.date', 'التاريخ') + ': ' + (record.date ? Utils.formatDate(record.date) : '-'), 14, 46);
+                doc.text(this._t('module.periodic.dsc.table.inspector', 'القائم بالمرور') + ': ' + (record.inspectorName || '-'), 14, 52);
+                doc.text(this._t('module.periodic.dsc.table.shift', 'الوردية') + ': ' + this._formatDailyShiftLabel(record.shift || '-'), 14, 58);
                 const tableBody = this.DAILY_SAFETY_CHECKLIST_QUESTIONS.map((q, idx) => {
                     const key = fieldToRecordKey[q.key] || q.key;
                     const val = record[key] != null ? String(record[key]).trim() : '-';
@@ -3688,7 +3718,7 @@ const PeriodicInspections = {
                 });
                 if (typeof doc.autoTable !== 'undefined') {
                     doc.autoTable({
-                        head: [['#', 'البنود', 'الإجابة']],
+                        head: [['#', this._t('module.periodic.dsc.table.items', 'البنود'), this._t('module.periodic.dsc.table.answer', 'الإجابة')]],
                         body: tableBody,
                         startY: 65,
                         styles: { fontSize: 8, cellPadding: 2 },
