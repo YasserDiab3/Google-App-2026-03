@@ -275,6 +275,12 @@ const PeriodicInspections = {
         return this._isEnglishUI() ? (mapEn[raw] || raw || '-') : (mapAr[raw] || raw || '-');
     },
 
+    _getDailySafetyQuestionLabel(question) {
+        const key = question && question.key ? `module.periodic.dsc.question.${question.key}` : '';
+        if (!key) return String(question?.label || '');
+        return this._t(key, String(question?.label || ''));
+    },
+
     async load() {
         // Add language change listener
         if (!this._languageChangeListenerAdded) {
@@ -358,9 +364,9 @@ const PeriodicInspections = {
                     <div>
                         <h1 class="section-title">
                             <i class="fas fa-clipboard-check ml-3"></i>
-                            الفحوصات الدورية
+                            ${this._t('module.periodic.title', 'الفحوصات الدورية')}
                         </h1>
-                        <p class="section-subtitle">جاري التحميل...</p>
+                        <p class="section-subtitle">${this._t('module.periodic.loading', 'جاري التحميل...')}</p>
                     </div>
                 </div>
             </div>
@@ -373,7 +379,7 @@ const PeriodicInspections = {
                                     <div style="height: 100%; background: linear-gradient(90deg, #3b82f6, #2563eb, #3b82f6); background-size: 200% 100%; border-radius: 3px; animation: loadingProgress 1.5s ease-in-out infinite;"></div>
                                 </div>
                             </div>
-                            <p class="text-gray-500">جاري تجهيز الواجهة...</p>
+                            <p class="text-gray-500">${this._t('module.periodic.preparingUi', 'جاري تجهيز الواجهة...')}</p>
                         </div>
                     </div>
                 </div>
@@ -402,10 +408,10 @@ const PeriodicInspections = {
                         <div class="card-body">
                             <div class="empty-state">
                                 <i class="fas fa-exclamation-triangle text-yellow-500 text-4xl mb-4"></i>
-                                <p class="text-gray-500 mb-4">حدث خطأ في تحميل البيانات</p>
+                                <p class="text-gray-500 mb-4">${this._t('module.periodic.loadError', 'حدث خطأ في تحميل البيانات')}</p>
                                 <button onclick="PeriodicInspections.load()" class="btn-primary">
                                     <i class="fas fa-redo ml-2"></i>
-                                    إعادة المحاولة
+                                    ${this._t('module.periodic.retry', 'إعادة المحاولة')}
                                 </button>
                             </div>
                         </div>
@@ -419,15 +425,15 @@ const PeriodicInspections = {
                     <div>
                         <h1 class="section-title">
                             <i class="fas fa-clipboard-check ml-3"></i>
-                            الفحوصات الدورية
+                            ${this._t('module.periodic.title', 'الفحوصات الدورية')}
                         </h1>
-                        <p class="section-subtitle">تسجيل ومتابعة الفحوصات الدورية للمعدات والمنشآت</p>
+                        <p class="section-subtitle">${this._t('module.periodic.subtitle', 'تسجيل ومتابعة الفحوصات الدورية للمعدات والمنشآت')}</p>
                     </div>
                     <div class="flex gap-2">
                         ${this.state.currentView !== 'form' && this.state.currentView !== 'edit' ? `
                             <button id="add-periodic-inspection-btn" class="btn-primary">
                                 <i class="fas fa-plus ml-2"></i>
-                                إضافة فحص دوري جديد
+                                ${this._t('module.periodic.addNewInspection', 'إضافة فحص دوري جديد')}
                             </button>
                         ` : ''}
                     </div>
@@ -440,11 +446,11 @@ const PeriodicInspections = {
                 <div class="tabs-nav">
                     <button class="tab-btn ${this.state.currentTab === 'inspections-list' ? 'active' : ''}" data-tab="inspections-list">
                         <i class="fas fa-list ml-2"></i>
-                        قائمة الفحوصات
+                        ${this._t('module.periodic.tab.inspectionsList', 'قائمة الفحوصات')}
                     </button>
                     <button class="tab-btn ${this.state.currentTab === 'inspection-records' ? 'active' : ''}" data-tab="inspection-records">
                         <i class="fas fa-history ml-2"></i>
-                        سجل الفحوصات الدورية
+                        ${this._t('module.periodic.tab.inspectionsRecords', 'سجل الفحوصات الدورية')}
                     </button>
                     <button class="tab-btn ${this.state.currentTab === 'daily-safety-checklist' ? 'active' : ''}" data-tab="daily-safety-checklist">
                         <i class="fas fa-tasks ml-2"></i>
@@ -3097,7 +3103,7 @@ const PeriodicInspections = {
             <div class="mb-4" style="direction:rtl; text-align:right;">
                 <div class="flex flex-col items-end gap-2 mb-3">
                     <h3 class="text-xl font-bold text-gray-900 m-0" style="display:flex; align-items:center; gap:0.5rem;"><i class="fas fa-tasks" style="color:#1e40af;"></i>${t('module.periodic.dsc.recordTitleAr', 'سجل المرور اليومي للسلامة')}</h3>
-                    <p class="text-sm font-medium text-gray-500 m-0">${t('module.periodic.dsc.recordTitleEn', 'Daily Safety Patrol List')}</p>
+                    <p class="text-sm font-medium text-gray-500 m-0">${t('module.periodic.dsc.recordTitleEn', 'Daily Safety Report')}</p>
                 </div>
                 <div class="flex flex-row gap-2 flex-wrap" style="justify-content:flex-end;">
                     <button type="button" id="daily-safety-checklist-add-btn" class="btn-primary" style="background:linear-gradient(180deg, #3b82f6 0%, #2563eb 100%); border:none; color:#fff; padding:0.5rem 1rem; border-radius:8px; font-weight:600;"><i class="fas fa-plus ml-2"></i>${t('module.periodic.dsc.addRecord', 'إضافة سجل')}</button>
@@ -3171,7 +3177,7 @@ const PeriodicInspections = {
             return;
         }
         const fieldToRecordKey = { q16: 'q15Reading', q17: 'q16', q18: 'q17' };
-        const headers = ['رقم التسلسل', 'المصنع/الموقع', 'التاريخ', 'القائم بالمرور', 'الوردية', 'الملاحظات'].concat(this.DAILY_SAFETY_CHECKLIST_QUESTIONS.map(q => q.label));
+        const headers = [this._t('module.periodic.dsc.excel.serial', 'رقم التسلسل'), this._t('module.periodic.dsc.table.site', 'المصنع/الموقع'), this._t('module.periodic.dsc.table.date', 'التاريخ'), this._t('module.periodic.dsc.table.inspector', 'القائم بالمرور'), this._t('module.periodic.dsc.table.shift', 'الوردية'), this._t('module.periodic.dsc.notes', 'الملاحظات')].concat(this.DAILY_SAFETY_CHECKLIST_QUESTIONS.map(q => this._getDailySafetyQuestionLabel(q)));
         const rows = records.sort((a, b) => new Date(b.date || b.createdAt) - new Date(a.date || a.createdAt)).map((r, idx) => {
             const serial = this.getDailySafetyCheckListSerialNumber(r);
             const base = [serial, Utils.escapeHTML(r.siteName || ''), r.date ? Utils.formatDate(r.date) : '', Utils.escapeHTML(r.inspectorName || ''), Utils.escapeHTML(r.shift || ''), Utils.escapeHTML((r.notes || '').replace(/\r?\n/g, ' '))];
@@ -3209,10 +3215,13 @@ const PeriodicInspections = {
                 const { jsPDF } = window.jsPDF;
                 const doc = new jsPDF('l', 'mm', 'a4');
                 doc.setFontSize(14);
-                doc.text(this._t('module.periodic.dsc.fullExportEn', 'Daily Safety Patrol List - Full Export'), 148, 12, { align: 'center' });
+                doc.text(this._t('module.periodic.dsc.fullExportEn', 'Daily Safety Report - Full Export'), 148, 12, { align: 'center' });
                 doc.setFontSize(10);
                 doc.text(this._t('module.periodic.dsc.fullExportAr', 'قائمة المرور اليومي للسلامة - تصدير كامل') + ' (' + records.length + ' ' + this._t('module.periodic.dsc.recordsWord', 'سجل') + ')', 148, 18, { align: 'center' });
-                const headRow = ['رقم', 'الموقع', 'التاريخ', 'القائم بالمرور', 'الوردية'].concat(this.DAILY_SAFETY_CHECKLIST_QUESTIONS.map(q => (q.label.length > 22 ? q.label.substring(0, 22) + '..' : q.label)));
+                const headRow = [this._t('module.periodic.dsc.pdf.no', 'رقم'), this._t('module.periodic.dsc.pdf.site', 'الموقع'), this._t('module.periodic.dsc.table.date', 'التاريخ'), this._t('module.periodic.dsc.table.inspector', 'القائم بالمرور'), this._t('module.periodic.dsc.table.shift', 'الوردية')].concat(this.DAILY_SAFETY_CHECKLIST_QUESTIONS.map(q => {
+                    const label = this._getDailySafetyQuestionLabel(q);
+                    return label.length > 22 ? label.substring(0, 22) + '..' : label;
+                }));
                 const bodyRows = records.sort((a, b) => new Date(b.date || b.createdAt) - new Date(a.date || a.createdAt)).map(r => {
                     const serial = this.getDailySafetyCheckListSerialNumber(r);
                     const qVals = this.DAILY_SAFETY_CHECKLIST_QUESTIONS.map(q => {
@@ -3256,7 +3265,7 @@ const PeriodicInspections = {
             }).join('');
             return `<tr><td style="padding:4px; border:1px solid #ddd;">${Utils.escapeHTML(serial)}</td><td style="padding:4px; border:1px solid #ddd;">${Utils.escapeHTML(r.siteName || '-')}</td><td style="padding:4px; border:1px solid #ddd;">${r.date ? Utils.formatDate(r.date) : '-'}</td><td style="padding:4px; border:1px solid #ddd;">${Utils.escapeHTML(r.inspectorName || '-')}</td><td style="padding:4px; border:1px solid #ddd;">${Utils.escapeHTML(r.shift || '-')}</td>${qCells}</tr>`;
         }).join('');
-        const qHeaders = this.DAILY_SAFETY_CHECKLIST_QUESTIONS.map(q => `<th style="padding:4px; border:1px solid #ddd; background:#003865; color:#fff; font-size:10px;">${Utils.escapeHTML(q.label)}</th>`).join('');
+        const qHeaders = this.DAILY_SAFETY_CHECKLIST_QUESTIONS.map(q => `<th style="padding:4px; border:1px solid #ddd; background:#003865; color:#fff; font-size:10px;">${Utils.escapeHTML(this._getDailySafetyQuestionLabel(q))}</th>`).join('');
         const content = `
             ${this._getDailySafetyCompactFooterStyle().replace('portrait', 'landscape')}
             <p style="text-align:center; margin:0 0 12px 0; font-weight:bold;">${this._t('module.periodic.dsc.fullExportHeadingAr', 'تصدير كامل لسجل قائمة المرور اليومي للسلامة')} (${records.length} ${this._t('module.periodic.dsc.recordsWord', 'سجل')})</p>
@@ -3276,7 +3285,7 @@ const PeriodicInspections = {
         `;
         const formTitle = this._t('module.periodic.dsc.fullExportFormTitleAr', 'سجل قائمة المرور اليومي للسلامة - تصدير كامل');
         const htmlContent = typeof FormHeader !== 'undefined' && FormHeader.generatePDFHTML
-            ? FormHeader.generatePDFHTML('DSC-FULL-' + new Date().toISOString().slice(0, 10), formTitle, content, false, false, { source: 'DailySafetyCheckList', titleEn: this._t('module.periodic.dsc.titleEn', 'Daily Safety Patrol List'), titleAr: this._t('module.periodic.dsc.titleAr', 'قائمة المرور اليومي للسلامة') }, new Date().toISOString(), new Date().toISOString())
+            ? FormHeader.generatePDFHTML('DSC-FULL-' + new Date().toISOString().slice(0, 10), formTitle, content, false, false, { source: 'DailySafetyCheckList', titleEn: this._t('module.periodic.dsc.titleEn', 'Daily Safety Report'), titleAr: this._t('module.periodic.dsc.titleAr', 'قائمة المرور اليومي للسلامة') }, new Date().toISOString(), new Date().toISOString())
             : `<!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="UTF-8"><title>${formTitle}</title></head><body style="font-family:Arial,Tahoma,sans-serif;direction:rtl;padding:20px;">${content}</body></html>`;
         const url = URL.createObjectURL(new Blob(['\ufeff' + htmlContent], { type: 'text/html;charset=utf-8' }));
         const w = window.open(url, '_blank');
@@ -3284,7 +3293,7 @@ const PeriodicInspections = {
             w.onload = () => { setTimeout(() => { w.print(); URL.revokeObjectURL(url); }, 300); };
             Notification.info(this._t('module.periodic.dsc.printSavePdfHint', 'استخدم "حفظ كـ PDF" في نافذة الطباعة لإنشاء ملف PDF'));
         } else {
-            Notification.error('يرجى السماح للنوافذ المنبثقة لفتح التقرير');
+            Notification.error(this._t('module.periodic.dsc.allowPopupsOpenReport', 'يرجى السماح للنوافذ المنبثقة لفتح التقرير'));
         }
     },
 
@@ -3320,8 +3329,9 @@ const PeriodicInspections = {
             const isReading = q.key === 'q16';
             const recordKey = fieldToRecordKey[q.key] || q.key;
             const val = record ? (record[recordKey] || '') : '';
-            if (isReading) return `<div class="form-group"><label class="form-label required">${idx + 1}- ${Utils.escapeHTML(q.label)}</label><input type="text" id="dsc-${q.key}" class="form-input" value="${Utils.escapeHTML(val)}" placeholder="أدخل القراءة" required></div>`;
-            return `<div class="form-group"><label class="form-label required">${idx + 1}- ${Utils.escapeHTML(q.label)}</label><select id="dsc-${q.key}" class="form-input" required>${complianceOptions}</select></div>`;
+            const qLabel = this._getDailySafetyQuestionLabel(q);
+            if (isReading) return `<div class="form-group"><label class="form-label required">${idx + 1}- ${Utils.escapeHTML(qLabel)}</label><input type="text" id="dsc-${q.key}" class="form-input" value="${Utils.escapeHTML(val)}" placeholder="${t('module.periodic.dsc.readingPlaceholder', 'أدخل القراءة')}" required></div>`;
+            return `<div class="form-group"><label class="form-label required">${idx + 1}- ${Utils.escapeHTML(qLabel)}</label><select id="dsc-${q.key}" class="form-input" required>${complianceOptions}</select></div>`;
         }).join('');
         const siteOptions = `<option value="">${t('module.periodic.dsc.select.site', 'اختر المصنع/الموقع')}</option>` + (sites.map(s => `<option value="${Utils.escapeHTML(s.id)}">${Utils.escapeHTML(s.name)}</option>`).join(''));
         const dateVal = record && record.date ? String(record.date).slice(0, 10) : new Date().toISOString().slice(0, 10);
@@ -3458,13 +3468,13 @@ const PeriodicInspections = {
     showDailySafetyCheckListView(recordId) {
         const t = (key, fallback) => this._t(key, fallback);
         const record = this.getDailySafetyCheckListRecords().find(r => r.id === recordId);
-        if (!record) { Notification.error('السجل غير موجود'); return; }
+        if (!record) { Notification.error(t('module.periodic.dsc.recordNotFound', 'السجل غير موجود')); return; }
         const serialNo = this.getDailySafetyCheckListSerialNumber(record);
         const fieldToRecordKey = { q16: 'q15Reading', q17: 'q16', q18: 'q17' };
         const questionsRows = this.DAILY_SAFETY_CHECKLIST_QUESTIONS.map((q, idx) => {
             const recordKey = fieldToRecordKey[q.key] || q.key;
             const val = record[recordKey] != null ? String(record[recordKey]).trim() : '-';
-            return `<tr><td style="width:28px; text-align:center; font-weight:bold;">${idx + 1}</td><td style="padding:8px; border:1px solid #e2e8f0;">${Utils.escapeHTML(q.label)}</td><td style="padding:8px; border:1px solid #e2e8f0; min-width:100px;">${Utils.escapeHTML(val)}</td></tr>`;
+            return `<tr><td style="width:28px; text-align:center; font-weight:bold;">${idx + 1}</td><td style="padding:8px; border:1px solid #e2e8f0;">${Utils.escapeHTML(this._getDailySafetyQuestionLabel(q))}</td><td style="padding:8px; border:1px solid #e2e8f0; min-width:100px;">${Utils.escapeHTML(val)}</td></tr>`;
         }).join('');
         const modal = document.createElement('div');
         modal.className = 'modal-overlay dsc-view-modal-overlay';
@@ -3529,7 +3539,7 @@ const PeriodicInspections = {
         const rows = this.DAILY_SAFETY_CHECKLIST_QUESTIONS.map((q, idx) => {
             const recordKey = fieldToRecordKey[q.key] || q.key;
             const val = record[recordKey] != null ? String(record[recordKey]).trim() : '-';
-            return `<tr><td style="text-align:center; padding:5px 6px; border:1px solid #d7e0ea; width:38px;">${idx + 1}</td><td style="padding:5px 6px; border:1px solid #d7e0ea; line-height:1.35;">${Utils.escapeHTML(q.label)}</td><td style="padding:5px 6px; border:1px solid #d7e0ea; width:88px; text-align:center; font-weight:600;">${Utils.escapeHTML(val)}</td></tr>`;
+            return `<tr><td style="text-align:center; padding:5px 6px; border:1px solid #d7e0ea; width:38px;">${idx + 1}</td><td style="padding:5px 6px; border:1px solid #d7e0ea; line-height:1.35;">${Utils.escapeHTML(this._getDailySafetyQuestionLabel(q))}</td><td style="padding:5px 6px; border:1px solid #d7e0ea; width:88px; text-align:center; font-weight:600;">${Utils.escapeHTML(val)}</td></tr>`;
         }).join('');
         return `
             <style>
@@ -3659,12 +3669,12 @@ const PeriodicInspections = {
 
     printDailySafetyCheckListRecord(recordId) {
         const record = this.getDailySafetyCheckListRecords().find(r => r.id === recordId);
-        if (!record) { Notification.error('السجل غير موجود'); return; }
+        if (!record) { Notification.error(this._t('module.periodic.dsc.recordNotFound', 'السجل غير موجود')); return; }
         const content = this.getDailySafetyCheckListRecordPrintContent(record);
         const formCode = `DSC-${record.id || ''}-${(record.date || '').toString().slice(0, 10)}`;
-        const formTitle = this._t('module.periodic.dsc.singleRecordTitleAr', 'سجل Daily Safety Patrol List - قائمة المرور اليومي للسلامة');
+        const formTitle = this._t('module.periodic.dsc.singleRecordTitleAr', 'سجل Daily Safety Report - قائمة المرور اليومي للسلامة');
         const htmlContent = typeof FormHeader !== 'undefined' && FormHeader.generatePDFHTML
-            ? FormHeader.generatePDFHTML(formCode, formTitle, this._getDailySafetyCompactFooterStyle() + content, false, false, { source: 'DailySafetyCheckList', titleEn: this._t('module.periodic.dsc.titleEn', 'Daily Safety Patrol List'), titleAr: this._t('module.periodic.dsc.titleAr', 'قائمة المرور اليومي للسلامة') }, record.createdAt || new Date().toISOString(), record.updatedAt || record.createdAt || new Date().toISOString())
+            ? FormHeader.generatePDFHTML(formCode, formTitle, this._getDailySafetyCompactFooterStyle() + content, false, false, { source: 'DailySafetyCheckList', titleEn: this._t('module.periodic.dsc.titleEn', 'Daily Safety Report'), titleAr: this._t('module.periodic.dsc.titleAr', 'قائمة المرور اليومي للسلامة') }, record.createdAt || new Date().toISOString(), record.updatedAt || record.createdAt || new Date().toISOString())
             : `<!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="UTF-8"><title>${formTitle}</title></head><body style="font-family:Arial,Tahoma,sans-serif;direction:rtl;padding:20px;">${content}</body></html>`;
         const blob = new Blob(['\ufeff' + htmlContent], { type: 'text/html;charset=utf-8' });
         const url = URL.createObjectURL(blob);
@@ -3688,13 +3698,13 @@ const PeriodicInspections = {
                 }
             };
         } else {
-            Notification.error('يرجى السماح للنوافذ المنبثقة للطباعة');
+            Notification.error(this._t('module.periodic.dsc.allowPopupsPrint', 'يرجى السماح للنوافذ المنبثقة للطباعة'));
         }
     },
 
     exportDailySafetyCheckListRecord(recordId) {
         const record = this.getDailySafetyCheckListRecords().find(r => r.id === recordId);
-        if (!record) { Notification.error('السجل غير موجود'); return; }
+        if (!record) { Notification.error(this._t('module.periodic.dsc.recordNotFound', 'السجل غير موجود')); return; }
         if (typeof window.jsPDF !== 'undefined' && typeof window.jsPDF.jsPDF !== 'undefined') {
             try {
                 const { jsPDF } = window.jsPDF;
@@ -3702,7 +3712,7 @@ const PeriodicInspections = {
                 const serialNo = this.getDailySafetyCheckListSerialNumber(record);
                 const fieldToRecordKey = { q16: 'q15Reading', q17: 'q16', q18: 'q17' };
                 doc.setFontSize(14);
-                doc.text(this._t('module.periodic.dsc.titleEn', 'Daily Safety Patrol List'), 105, 15, { align: 'center' });
+                doc.text(this._t('module.periodic.dsc.titleEn', 'Daily Safety Report'), 105, 15, { align: 'center' });
                 doc.setFontSize(12);
                 doc.text(this._t('module.periodic.dsc.titleAr', 'قائمة المرور اليومي للسلامة'), 105, 22, { align: 'center' });
                 doc.setFontSize(10);
@@ -3714,7 +3724,8 @@ const PeriodicInspections = {
                 const tableBody = this.DAILY_SAFETY_CHECKLIST_QUESTIONS.map((q, idx) => {
                     const key = fieldToRecordKey[q.key] || q.key;
                     const val = record[key] != null ? String(record[key]).trim() : '-';
-                    return [String(idx + 1), q.label.substring(0, 55) + (q.label.length > 55 ? '...' : ''), val];
+                    const qLabel = this._getDailySafetyQuestionLabel(q);
+                    return [String(idx + 1), qLabel.substring(0, 55) + (qLabel.length > 55 ? '...' : ''), val];
                 });
                 if (typeof doc.autoTable !== 'undefined') {
                     doc.autoTable({
@@ -3743,9 +3754,9 @@ const PeriodicInspections = {
             }
         }
         const content = this.getDailySafetyCheckListRecordPrintContent(record);
-        const formTitle = this._t('module.periodic.dsc.singleRecordTitleAr', 'سجل Daily Safety Patrol List - قائمة المرور اليومي للسلامة');
+        const formTitle = this._t('module.periodic.dsc.singleRecordTitleAr', 'سجل Daily Safety Report - قائمة المرور اليومي للسلامة');
         const htmlContent = typeof FormHeader !== 'undefined' && FormHeader.generatePDFHTML
-            ? FormHeader.generatePDFHTML(`DSC-${record.id || ''}`, formTitle, this._getDailySafetyCompactFooterStyle() + content, false, false, { source: 'DailySafetyCheckList', titleEn: this._t('module.periodic.dsc.titleEn', 'Daily Safety Patrol List'), titleAr: this._t('module.periodic.dsc.titleAr', 'قائمة المرور اليومي للسلامة') }, record.createdAt || new Date().toISOString(), record.updatedAt || record.createdAt || new Date().toISOString())
+            ? FormHeader.generatePDFHTML(`DSC-${record.id || ''}`, formTitle, this._getDailySafetyCompactFooterStyle() + content, false, false, { source: 'DailySafetyCheckList', titleEn: this._t('module.periodic.dsc.titleEn', 'Daily Safety Report'), titleAr: this._t('module.periodic.dsc.titleAr', 'قائمة المرور اليومي للسلامة') }, record.createdAt || new Date().toISOString(), record.updatedAt || record.createdAt || new Date().toISOString())
             : `<!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="UTF-8"><title>${formTitle}</title></head><body style="font-family:Arial,Tahoma,sans-serif;direction:rtl;padding:20px;">${content}</body></html>`;
         const url = URL.createObjectURL(new Blob(['\ufeff' + htmlContent], { type: 'text/html;charset=utf-8' }));
         const w = window.open(url, '_blank');
@@ -3753,7 +3764,7 @@ const PeriodicInspections = {
             w.onload = () => { setTimeout(() => { w.print(); URL.revokeObjectURL(url); }, 300); };
             Notification.info(this._t('module.periodic.dsc.printSavePdfHint', 'استخدم "حفظ كـ PDF" في نافذة الطباعة لإنشاء ملف PDF'));
         } else {
-            Notification.error('يرجى السماح للنوافذ المنبثقة لفتح التقرير');
+            Notification.error(this._t('module.periodic.dsc.allowPopupsOpenReport', 'يرجى السماح للنوافذ المنبثقة لفتح التقرير'));
         }
     },
 
@@ -3768,16 +3779,17 @@ const PeriodicInspections = {
         const inspectorName = (modalElement.querySelector('#dsc-inspectorName') || {}).value || '';
         const shift = (modalElement.querySelector('#dsc-shift') || {}).value || '';
         if (!siteId || !date || !inspectorName || !shift) {
-            return { valid: false, message: 'يرجى استكمال جميع البيانات الأساسية (المصنع/الموقع، التاريخ، القائم بالمرور، الوردية).' };
+            return { valid: false, message: this._t('module.periodic.dsc.validation.basicFields', 'يرجى استكمال جميع البيانات الأساسية (المصنع/الموقع، التاريخ، القائم بالمرور، الوردية).') };
         }
         const fieldToRecordKey = { q16: 'q15Reading', q17: 'q16', q18: 'q17' };
         for (const q of this.DAILY_SAFETY_CHECKLIST_QUESTIONS) {
             const el = modalElement.querySelector('#dsc-' + q.key);
             const val = el ? (el.value || '').trim() : '';
             if (!val) {
-                const recordKey = fieldToRecordKey[q.key] || q.key;
-                const label = q.key === 'q16' ? 'قراءة الضغط (السؤال 16)' : `السؤال ${this.DAILY_SAFETY_CHECKLIST_QUESTIONS.indexOf(q) + 1}`;
-                return { valid: false, message: `يرجى الإجابة على جميع بنود الفحص. الحقل الناقص: ${label}.` };
+                const label = q.key === 'q16'
+                    ? this._t('module.periodic.dsc.readingLabel', 'قراءة الضغط (السؤال 16)')
+                    : `${this._t('module.periodic.dsc.questionWord', 'السؤال')} ${this.DAILY_SAFETY_CHECKLIST_QUESTIONS.indexOf(q) + 1}`;
+                return { valid: false, message: `${this._t('module.periodic.dsc.validation.answerAll', 'يرجى الإجابة على جميع بنود الفحص. الحقل الناقص:')} ${label}.` };
             }
         }
         return { valid: true };
@@ -3786,7 +3798,7 @@ const PeriodicInspections = {
     saveDailySafetyCheckListRecord(modalElement, editId) {
         const validation = this.validateDailySafetyCheckListForm(modalElement);
         if (!validation.valid) {
-            if (typeof Notification !== 'undefined' && Notification.error) Notification.error(validation.message || 'يرجى استكمال جميع البيانات والأسئلة قبل الحفظ');
+            if (typeof Notification !== 'undefined' && Notification.error) Notification.error(validation.message || this._t('module.periodic.dsc.validation.completeAll', 'يرجى استكمال جميع البيانات والأسئلة قبل الحفظ'));
             return;
         }
         const siteSelect = modalElement.querySelector('#dsc-siteId');
