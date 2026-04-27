@@ -865,7 +865,14 @@ const PTW = {
         if (normalized.isManualEntry === true) {
             normalized.approvals = [];
             normalized.skipApprovalFlow = true;
-            normalized.status = String(normalized.status || '').trim() || 'مغلق';
+            const st = String(normalized.status || '').trim();
+            // تصريح يدوي مكتمل افتراضياً (دائرة الاعتمادات مكتملة من النموذج الورقي)
+            normalized.status = st || 'اكتمل العمل بشكل آمن';
+        }
+
+        if (normalized.sequentialNumber != null && normalized.sequentialNumber !== '') {
+            const sn = parseInt(String(normalized.sequentialNumber).replace(/^0+(?=\d)/, ''), 10);
+            if (!isNaN(sn) && sn > 0) normalized.sequentialNumber = sn;
         }
 
         return normalized;
@@ -937,10 +944,17 @@ const PTW = {
         // Registry should override list status/details for same permit ID.
         (permitsFromRegistry || []).forEach((permit) => {
             if (permit && permit.id) {
+                const existing = allPermitsMap.get(permit.id) || {};
                 allPermitsMap.set(permit.id, {
+                    ...existing,
                     ...permit,
                     status: this.normalizePermitStatus(permit.status),
-                    isFromRegistry: true
+                    isFromRegistry: true,
+                    isManualEntry: permit.isManualEntry ?? existing.isManualEntry,
+                    skipApprovalFlow: permit.skipApprovalFlow ?? existing.skipApprovalFlow,
+                    approvalCircuitOwnerId: permit.approvalCircuitOwnerId || existing.approvalCircuitOwnerId,
+                    sequentialNumber: permit.sequentialNumber ?? existing.sequentialNumber,
+                    paperPermitNumber: permit.paperPermitNumber || existing.paperPermitNumber
                 });
             }
         });
@@ -2306,9 +2320,14 @@ const PTW = {
                 : (this.isUsableDurationText(entry.totalTime) ? entry.totalTime : t('module.ptw.common.notSpecified', 'غير محدد'));
             const statusText = this.statusLabel(entry.status);
 
+            const seqRaw = entry.sequentialNumber;
+            const seqDisplay = (seqRaw != null && String(seqRaw).trim() !== '' && !Number.isNaN(parseInt(String(seqRaw), 10)))
+                ? String(parseInt(String(seqRaw).replace(/^0+(?=\d)/, ''), 10))
+                : (String(entry.paperPermitNumber || '').trim() ? `(${String(entry.paperPermitNumber).trim()})` : '—');
+
             tableHTML += `
                 <tr data-registry-id="${entry.id}">
-                    <td class="font-bold text-blue-600">${entry.sequentialNumber}</td>
+                    <td class="font-bold text-blue-600">${Utils.escapeHTML(seqDisplay)}</td>
                     <td>${Utils.escapeHTML(registryDateDisplay)}</td>
                     <td title="${Utils.escapeHTML(permitTypeDisplay)}">${Utils.escapeHTML(permitTypeShort)}</td>
                     <td>${Utils.escapeHTML(entry.requestingParty)}</td>
@@ -6446,6 +6465,8 @@ const PTW = {
         const sites = this.getSiteOptions();
         const permitTypes = ['أعمال ساخنة', 'أعمال باردة', 'أعمال كهربائية', 'أعمال في الأماكن المغلقة', 'أعمال في الارتفاعات', 'أعمال أخرى'];
         const statusOptions = ['اكتمل العمل بشكل آمن', 'لم يكتمل العمل', 'إغلاق جبري'];
+        const defaultManualClosureStatus = 'اكتمل العمل بشكل آمن';
+        const effectiveManualStatus = String(existingEntry?.status || '').trim() || defaultManualClosureStatus;
 
         // توليد رقم مسلسل تلقائي إذا كان جديد (سيتم إعادة حسابه عند الحفظ)
         const sequentialNumber = existingEntry?.sequentialNumber || this.generateRegistrySequentialNumber();
@@ -7383,7 +7404,7 @@ const PTW = {
                                 ${statusOptions.map((status, idx) => {
             const statusStyles = { 'اكتمل العمل بشكل آمن': { icon: 'fa-check-circle', color: '#4caf50', bg: '#e8f5e9' }, 'لم يكتمل العمل': { icon: 'fa-pause-circle', color: '#ff9800', bg: '#fff3e0' }, 'إغلاق جبري': { icon: 'fa-exclamation-circle', color: '#f44336', bg: '#ffebee' } };
             const style = statusStyles[status];
-            const isSelected = existingEntry?.status === status;
+            const isSelected = effectiveManualStatus === status;
             return `<label class="flex items-center space-x-2 space-x-reverse cursor-pointer p-3 rounded-lg border border-gray-200 hover:bg-opacity-80 transition-all" style="background: ${isSelected ? style.bg : 'white'}; border-color: ${isSelected ? style.color : '#e5e7eb'};">
                                     <input type="radio" name="manual-permit-status-radio" value="${Utils.escapeHTML(status)}" class="form-radio h-5 w-5" style="accent-color: ${style.color};" ${isSelected ? 'checked' : ''} onchange="document.getElementById('manual-permit-status').value = this.value;">
                                     <i class="fas ${style.icon}" style="color: ${style.color};"></i>
@@ -7395,7 +7416,7 @@ const PTW = {
                                 <div><label class="block text-sm font-bold text-gray-700 mb-2">وقت الإغلاق:</label><input type="datetime-local" id="manual-closure-time" class="form-input" value="${existingEntry?.closureDate ? Utils.toDateTimeLocalString(existingEntry.closureDate) : ''}"></div>
                                 <div><label class="block text-sm font-bold text-gray-700 mb-2">السبب:</label><input type="text" id="manual-closure-reason" class="form-input" value="${Utils.escapeHTML(existingEntry?.closureReason || '')}" placeholder="اذكر سبب الإغلاق"></div>
                             </div>
-                            <input type="hidden" id="manual-permit-status" value="${Utils.escapeHTML(existingEntry?.status || 'مغلق')}">
+                            <input type="hidden" id="manual-permit-status" value="${Utils.escapeHTML(effectiveManualStatus)}">
                         </div>
 
                         <!-- القسم التاسع: اعتماد إغلاق التصريح (نفس تصميم القسم السابع - كما بالصورة) -->
@@ -8201,7 +8222,7 @@ const PTW = {
                 workDescription: modal.querySelector('#manual-permit-work-description')?.value.trim() || '',
                 supervisor1: modal.querySelector('#manual-permit-supervisor1')?.value.trim() || '',
                 supervisor2: modal.querySelector('#manual-permit-supervisor2')?.value.trim() || '',
-                status: modal.querySelector('#manual-permit-status')?.value || 'مغلق',
+                status: modal.querySelector('#manual-permit-status')?.value || 'اكتمل العمل بشكل آمن',
                 // رقم التصريح الورقي
                 paperPermitNumber: modal.querySelector('#manual-paper-permit-number')?.value?.trim() || '',
                 // الحقول الجديدة
@@ -8454,7 +8475,7 @@ const PTW = {
                 sublocationName: entry.sublocation,
                 startDate: entry.openDate,
                 endDate: entry.timeTo,
-                status: String(entry.status || '').trim() || 'مغلق', // حالة مغلقة افتراضياً للتصريح اليدوي
+                status: String(entry.status || '').trim() || 'اكتمل العمل بشكل آمن',
                 requestingParty: entry.requestingParty,
                 authorizedParty: entry.authorizedParty,
                 workDescription: entry.workDescription,
@@ -8502,6 +8523,7 @@ const PTW = {
                 closureDate: entry.closureDate || '',
                 closureReason: entry.closureReason || '',
                 paperPermitNumber: entry.paperPermitNumber || '',
+                sequentialNumber: entry.sequentialNumber,
                 equipment: entry.equipment || '',
                 tools: entry.tools || '',
                 toolsList: entry.toolsList || '',
@@ -13109,7 +13131,12 @@ const PTW = {
             approvals: [],
             createdAt: registryEntry.createdAt,
             updatedAt: registryEntry.updatedAt,
-            isFromRegistry: true
+            isFromRegistry: true,
+            isManualEntry: registryEntry.isManualEntry === true || registryEntry.isManualEntry === 'true',
+            skipApprovalFlow: registryEntry.skipApprovalFlow === true || registryEntry.isManualEntry === true || registryEntry.isManualEntry === 'true',
+            approvalCircuitOwnerId: registryEntry.approvalCircuitOwnerId || ((registryEntry.isManualEntry === true || registryEntry.isManualEntry === 'true') ? '__manual__' : undefined),
+            sequentialNumber: registryEntry.sequentialNumber,
+            paperPermitNumber: registryEntry.paperPermitNumber
         }));
         return this.mergePermitsPreferRegistry(permitsFromList, permitsFromRegistry);
     },
@@ -13181,12 +13208,21 @@ const PTW = {
             tbody.innerHTML = filtered.length === 0 ?
                 '<tr><td colspan="7" class="text-center text-gray-500 py-8">لا توجد نتائج</td></tr>' :
                 filtered.map(item => {
-                    const approvals = this.normalizeApprovals(item.approvals || []);
-                    const requiredApprovals = approvals.filter(a => a.required !== false);
-                    const approvedCount = requiredApprovals.filter(a => a.status === 'approved').length;
-                    const totalCount = requiredApprovals.length;
-                    // التصريح اليدوي أو بدون دائرة موافقات: يعرض مكتمل ولا يحتاج إكمال الموافقة
-                    const isManualOrNoApproval = item.isManualEntry === true || totalCount === 0;
+                    const skipApprovalUi = item.isManualEntry === true
+                        || item.skipApprovalFlow === true
+                        || String(item.approvalCircuitOwnerId || '').trim() === '__manual__';
+                    let approvedCount;
+                    let totalCount;
+                    if (skipApprovalUi) {
+                        // تصريح يدوي: دائرة الاعتمادات مكتملة من النموذج (3/3) — لا نستخدم normalizeApprovals([]) لأنه يحقن 3 خطوات غير معتمدة
+                        totalCount = 3;
+                        approvedCount = 3;
+                    } else {
+                        const approvals = this.normalizeApprovals(item.approvals || []);
+                        const requiredApprovals = approvals.filter(a => a.required !== false);
+                        approvedCount = requiredApprovals.filter(a => a.status === 'approved').length;
+                        totalCount = requiredApprovals.length;
+                    }
 
                     return `
                     <tr>
@@ -13196,19 +13232,13 @@ const PTW = {
                         <td>${item.startDate ? Utils.formatDate(item.startDate) : '-'}</td>
                         <td>${item.endDate ? Utils.formatDate(item.endDate) : '-'}</td>
                         <td>
-                            ${isManualOrNoApproval ? `
-                                <span class="badge badge-success">
-                                    <i class="fas fa-check-circle ml-1"></i> مكتمل
-                                </span>
-                            ` : `
-                                <span class="badge badge-${approvedCount === totalCount ? 'success' : 'warning'}">
-                                    ${approvedCount}/${totalCount}
-                                </span>
-                                <br>
-                                <span class="badge badge-${this.getStatusBadgeClass(item.status)}">
-                                    ${item.status || '-'}
-                                </span>
-                            `}
+                            <span class="badge badge-${approvedCount === totalCount && totalCount > 0 ? 'success' : 'warning'}">
+                                ${totalCount > 0 ? `${approvedCount}/${totalCount}` : '—'}
+                            </span>
+                            <br>
+                            <span class="badge badge-${this.getStatusBadgeClass(item.status)}">
+                                ${Utils.escapeHTML(item.status || '-')}
+                            </span>
                         </td>
                         <td>
                             <div class="flex items-center gap-2">
