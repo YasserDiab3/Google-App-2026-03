@@ -3150,12 +3150,31 @@
     }
 
     function getCurrentLang() {
-        return (global.localStorage && localStorage.getItem('language')) || global?.AppState?.currentLanguage || 'ar';
+        // نفس أولويات app-utils I18n.getCurrentLanguage لتفادي اختلاف اللغة بين الموديولات
+        return global?.AppState?.currentLanguage
+            || (global.localStorage && localStorage.getItem('language'))
+            || 'ar';
     }
 
-    function t(key, lang, fallback = '') {
-        const selectedLang = lang || getCurrentLang();
-        return (translations[selectedLang]?.[key] ?? translations.ar?.[key] ?? fallback) || key;
+    /**
+     * ترجمة بالمفتاح.
+     * - t(key) — لغة المستخدم الحالية
+     * - t(key, 'ar'|'en') — لغة صريحة (نادر)
+     * - t(key, fallback) — توافق مع I18n القديم في app-utils: المعامل الثاني نص احتياطي وليس لغة
+     * - t(key, lang, fallback) — لغة + احتياطي (مثل applyI18n)
+     */
+    function t(key, arg2, arg3) {
+        const current = getCurrentLang();
+        if (arg3 !== undefined) {
+            const lang = arg2 === 'ar' || arg2 === 'en' ? arg2 : current;
+            const fallback = arg3 != null ? String(arg3) : '';
+            return (translations[lang]?.[key] ?? translations.ar?.[key] ?? fallback) || key;
+        }
+        if (arg2 === 'ar' || arg2 === 'en') {
+            return (translations[arg2]?.[key] ?? translations.ar?.[key] ?? '') || key;
+        }
+        const fallback = arg2 != null && arg2 !== '' ? String(arg2) : '';
+        return (translations[current]?.[key] ?? translations.ar?.[key] ?? fallback) || key;
     }
 
     function applyI18n(root = document, lang) {
@@ -3256,7 +3275,8 @@
         applyModuleI18n,
         applyLiteralTranslations,
         observeDomForI18n,
-        getCurrentLang
+        getCurrentLang,
+        getCurrentLanguage: getCurrentLang
     };
 
     // Expose a dedicated namespace to avoid collisions with legacy window.I18n in app-utils.

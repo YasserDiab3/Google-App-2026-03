@@ -3053,6 +3053,11 @@ const PeriodicInspections = {
         const records = this.getDailySafetyCheckListRecords();
         const stats = this.getDailySafetyCheckListStats(records);
         const t = (key, fallback) => this._t(key, fallback);
+        const en = this._isEnglishUI();
+        const dscDir = en ? 'ltr' : 'rtl';
+        const dscAlign = en ? 'left' : 'right';
+        const dscItems = en ? 'items-start' : 'items-end';
+        const dscJustify = en ? 'flex-start' : 'flex-end';
         return `
             <!-- إحصائيات قائمة المرور اليومي للسلامة -->
             <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
@@ -3110,19 +3115,19 @@ const PeriodicInspections = {
                 </div>
             </div>
             <!-- شريط العنوان والأزرار أسفل الكروت - بنفس شكل الصورة (عنوان + عنوان فرعي ثم أزرار محاذاة لليمين) -->
-            <div class="mb-4" style="direction:rtl; text-align:right;">
-                <div class="flex flex-col items-end gap-2 mb-3">
-                    <h3 class="text-xl font-bold text-gray-900 m-0" style="display:flex; align-items:center; gap:0.5rem;"><i class="fas fa-tasks" style="color:#1e40af;"></i>${t('module.periodic.dsc.recordTitleAr', 'سجل المرور اليومي للسلامة')}</h3>
-                    <p class="text-sm font-medium text-gray-500 m-0">${t('module.periodic.dsc.recordTitleEn', 'Daily Safety Report')}</p>
+            <div class="mb-4" style="direction:${dscDir}; text-align:${dscAlign};">
+                <div class="flex flex-col ${dscItems} gap-2 mb-3">
+                    <h3 class="text-xl font-bold text-gray-900 m-0" style="display:flex; align-items:center; gap:0.5rem; flex-direction:row;"><i class="fas fa-tasks" style="color:#1e40af;"></i>${en ? t('module.periodic.tab.dailySafety', 'Daily Safety Report') : t('module.periodic.dsc.recordTitleAr', 'سجل المرور اليومي للسلامة')}</h3>
+                    ${en ? '' : `<p class="text-sm font-medium text-gray-500 m-0">${t('module.periodic.dsc.recordTitleEn', 'Daily Safety Report')}</p>`}
                 </div>
-                <div class="flex flex-row gap-2 flex-wrap" style="justify-content:flex-end;">
+                <div class="flex flex-row gap-2 flex-wrap" style="justify-content:${dscJustify};">
                     <button type="button" id="daily-safety-checklist-add-btn" class="btn-primary" style="background:linear-gradient(180deg, #3b82f6 0%, #2563eb 100%); border:none; color:#fff; padding:0.5rem 1rem; border-radius:8px; font-weight:600;"><i class="fas fa-plus ml-2"></i>${t('module.periodic.dsc.addRecord', 'إضافة سجل')}</button>
                     <button type="button" id="daily-safety-checklist-export-pdf-btn" class="btn-secondary" title="${t('module.periodic.dsc.exportPdfHint', 'تصدير السجل كامل إلى PDF')}" style="background:#fff; border:1px solid #d1d5db; color:#374151;"><i class="fas fa-file-pdf ml-2"></i>${t('module.periodic.dsc.exportPdf', 'تصدير PDF')}</button>
                     <button type="button" id="daily-safety-checklist-export-excel-btn" class="btn-secondary" title="${t('module.periodic.dsc.exportExcelHint', 'تصدير السجل كامل إلى Excel')}" style="background:#fff; border:1px solid #d1d5db; color:#374151;"><i class="fas fa-file-excel ml-2"></i>${t('module.periodic.dsc.exportExcel', 'تصدير Excel')}</button>
                 </div>
             </div>
             <div class="content-card">
-                <div class="card-header"><h2 class="card-title"><i class="fas fa-list ml-2"></i>${t('module.periodic.dsc.recordTitleAr', 'سجل المرور اليومي للسلامة')}</h2></div>
+                <div class="card-header"><h2 class="card-title"><i class="fas fa-list ml-2"></i>${en ? t('module.periodic.dsc.recordTitle', 'Daily Safety Report Log') : t('module.periodic.dsc.recordTitleAr', 'سجل المرور اليومي للسلامة')}</h2></div>
                 <div class="card-body" id="daily-safety-checklist-table">${this.renderDailySafetyCheckListTable(records)}</div>
             </div>
         `;
