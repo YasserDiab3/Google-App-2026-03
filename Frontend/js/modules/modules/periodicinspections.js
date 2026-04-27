@@ -242,6 +242,15 @@ const PeriodicInspections = {
         selectedTemplate: null
     },
 
+    _t(key, fallback = '') {
+        try {
+            if (typeof I18n !== 'undefined' && I18n && typeof I18n.t === 'function') {
+                return I18n.t(key, fallback);
+            }
+        } catch (_) {}
+        return fallback;
+    },
+
     async load() {
         // Add language change listener
         if (!this._languageChangeListenerAdded) {
@@ -415,7 +424,7 @@ const PeriodicInspections = {
                     </button>
                     <button class="tab-btn ${this.state.currentTab === 'daily-safety-checklist' ? 'active' : ''}" data-tab="daily-safety-checklist">
                         <i class="fas fa-tasks ml-2"></i>
-                        Daily Safety Check List
+                        ${this._t('module.periodic.dsc.recordTitleEn', 'Daily Safety Patrol List')}
                     </button>
                 </div>
             </div>
@@ -2945,7 +2954,21 @@ const PeriodicInspections = {
         Notification.success('تم تصدير الفحص بنجاح');
     },
 
-    // ========== Daily Safety Check List (قائمة الفحص اليومي للسلامة) ==========
+    // ========== Daily Safety Check List (قائمة المرور اليومي للسلامة) ==========
+    _getDailySafetyCompactFooterStyle() {
+        return `
+            <style>
+                .report-footer { margin-top: 14px !important; font-size: 10px !important; }
+                .footer-watermark-frame { padding: 8px 10px !important; margin-top: 6px !important; border-radius: 8px !important; }
+                .footer-bottom { gap: 5px !important; }
+                .footer-bottom-qr { width: 62px !important; height: 62px !important; border-radius: 8px !important; }
+                .footer-meta-line { gap: 8px !important; padding: 4px 0 !important; margin-top: 2px !important; font-size: 10px !important; }
+                .footer-meta-item { padding: 2px 4px !important; font-size: 10px !important; line-height: 1.3 !important; }
+                .footer-bottom-text { gap: 1px !important; font-size: 10px !important; line-height: 1.3 !important; }
+            </style>
+        `;
+    },
+
     getDailySafetyCheckListRecords() {
         if (!AppState.appData.dailySafetyCheckList) AppState.appData.dailySafetyCheckList = [];
         return AppState.appData.dailySafetyCheckList;
@@ -2987,14 +3010,15 @@ const PeriodicInspections = {
     async renderDailySafetyCheckListContent() {
         const records = this.getDailySafetyCheckListRecords();
         const stats = this.getDailySafetyCheckListStats(records);
+        const t = (key, fallback) => this._t(key, fallback);
         return `
-            <!-- إحصائيات قائمة الفحص اليومي للسلامة -->
+            <!-- إحصائيات قائمة المرور اليومي للسلامة -->
             <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
                 <div class="content-card bg-gradient-to-br from-blue-50 to-blue-100 border border-blue-200">
                     <div class="card-body">
                         <div class="flex items-center justify-between">
                             <div>
-                                <p class="text-sm font-medium text-blue-700 mb-1">إجمالي السجلات</p>
+                                <p class="text-sm font-medium text-blue-700 mb-1">${t('module.periodic.dsc.stats.total', 'إجمالي السجلات')}</p>
                                 <p class="text-3xl font-bold text-blue-800">${stats.total}</p>
                             </div>
                             <div class="bg-blue-500 rounded-full p-3">
@@ -3007,7 +3031,7 @@ const PeriodicInspections = {
                     <div class="card-body">
                         <div class="flex items-center justify-between">
                             <div>
-                                <p class="text-sm font-medium text-indigo-700 mb-1">هذا الشهر</p>
+                                <p class="text-sm font-medium text-indigo-700 mb-1">${t('module.periodic.dsc.stats.thisMonth', 'هذا الشهر')}</p>
                                 <p class="text-3xl font-bold text-indigo-800">${stats.thisMonth}</p>
                             </div>
                             <div class="bg-indigo-500 rounded-full p-3">
@@ -3020,7 +3044,7 @@ const PeriodicInspections = {
                     <div class="card-body">
                         <div class="flex items-center justify-between">
                             <div>
-                                <p class="text-sm font-medium text-green-700 mb-1">الوردية الأولى</p>
+                                <p class="text-sm font-medium text-green-700 mb-1">${t('module.periodic.dsc.stats.shift1', 'الوردية الأولى')}</p>
                                 <p class="text-3xl font-bold text-green-800">${stats.shift1}</p>
                             </div>
                             <div class="bg-green-500 rounded-full p-3">
@@ -3033,7 +3057,7 @@ const PeriodicInspections = {
                     <div class="card-body">
                         <div class="flex items-center justify-between">
                             <div>
-                                <p class="text-sm font-medium text-orange-700 mb-1">الوردية الثانية / الثالثة</p>
+                                <p class="text-sm font-medium text-orange-700 mb-1">${t('module.periodic.dsc.stats.shift23', 'الوردية الثانية / الثالثة')}</p>
                                 <p class="text-3xl font-bold text-orange-800">${stats.shift2 + stats.shift3}</p>
                             </div>
                             <div class="bg-orange-500 rounded-full p-3">
@@ -3046,17 +3070,17 @@ const PeriodicInspections = {
             <!-- شريط العنوان والأزرار أسفل الكروت - بنفس شكل الصورة (عنوان + عنوان فرعي ثم أزرار محاذاة لليمين) -->
             <div class="mb-4" style="direction:rtl; text-align:right;">
                 <div class="flex flex-col items-end gap-2 mb-3">
-                    <h3 class="text-xl font-bold text-gray-900 m-0" style="display:flex; align-items:center; gap:0.5rem;"><i class="fas fa-tasks" style="color:#1e40af;"></i>سجل المرور اليومي للسلامة</h3>
-                    <p class="text-sm font-medium text-gray-500 m-0">Daily Safety Check List</p>
+                    <h3 class="text-xl font-bold text-gray-900 m-0" style="display:flex; align-items:center; gap:0.5rem;"><i class="fas fa-tasks" style="color:#1e40af;"></i>${t('module.periodic.dsc.recordTitleAr', 'سجل المرور اليومي للسلامة')}</h3>
+                    <p class="text-sm font-medium text-gray-500 m-0">${t('module.periodic.dsc.recordTitleEn', 'Daily Safety Patrol List')}</p>
                 </div>
                 <div class="flex flex-row gap-2 flex-wrap" style="justify-content:flex-end;">
-                    <button type="button" id="daily-safety-checklist-add-btn" class="btn-primary" style="background:linear-gradient(180deg, #3b82f6 0%, #2563eb 100%); border:none; color:#fff; padding:0.5rem 1rem; border-radius:8px; font-weight:600;"><i class="fas fa-plus ml-2"></i>إضافة سجل</button>
-                    <button type="button" id="daily-safety-checklist-export-pdf-btn" class="btn-secondary" title="تصدير السجل كامل إلى PDF" style="background:#fff; border:1px solid #d1d5db; color:#374151;"><i class="fas fa-file-pdf ml-2"></i>تصدير PDF</button>
-                    <button type="button" id="daily-safety-checklist-export-excel-btn" class="btn-secondary" title="تصدير السجل كامل إلى Excel" style="background:#fff; border:1px solid #d1d5db; color:#374151;"><i class="fas fa-file-excel ml-2"></i>تصدير Excel</button>
+                    <button type="button" id="daily-safety-checklist-add-btn" class="btn-primary" style="background:linear-gradient(180deg, #3b82f6 0%, #2563eb 100%); border:none; color:#fff; padding:0.5rem 1rem; border-radius:8px; font-weight:600;"><i class="fas fa-plus ml-2"></i>${t('module.periodic.dsc.addRecord', 'إضافة سجل')}</button>
+                    <button type="button" id="daily-safety-checklist-export-pdf-btn" class="btn-secondary" title="${t('module.periodic.dsc.exportPdfHint', 'تصدير السجل كامل إلى PDF')}" style="background:#fff; border:1px solid #d1d5db; color:#374151;"><i class="fas fa-file-pdf ml-2"></i>${t('module.periodic.dsc.exportPdf', 'تصدير PDF')}</button>
+                    <button type="button" id="daily-safety-checklist-export-excel-btn" class="btn-secondary" title="${t('module.periodic.dsc.exportExcelHint', 'تصدير السجل كامل إلى Excel')}" style="background:#fff; border:1px solid #d1d5db; color:#374151;"><i class="fas fa-file-excel ml-2"></i>${t('module.periodic.dsc.exportExcel', 'تصدير Excel')}</button>
                 </div>
             </div>
             <div class="content-card">
-                <div class="card-header"><h2 class="card-title"><i class="fas fa-list ml-2"></i>سجل المرور اليومي للسلامة</h2></div>
+                <div class="card-header"><h2 class="card-title"><i class="fas fa-list ml-2"></i>${t('module.periodic.dsc.recordTitleAr', 'سجل المرور اليومي للسلامة')}</h2></div>
                 <div class="card-body" id="daily-safety-checklist-table">${this.renderDailySafetyCheckListTable(records)}</div>
             </div>
         `;
@@ -3115,7 +3139,7 @@ const PeriodicInspections = {
     exportDailySafetyCheckListFullExcel() {
         const records = this.getDailySafetyCheckListRecords();
         if (!records || records.length === 0) {
-            Notification.warning('لا توجد سجلات لتصديرها');
+            Notification.warning(this._t('module.periodic.dsc.noRecordsToExport', 'لا توجد سجلات لتصديرها'));
             return;
         }
         const fieldToRecordKey = { q16: 'q15Reading', q17: 'q16', q18: 'q17' };
@@ -3134,12 +3158,12 @@ const PeriodicInspections = {
         const url = URL.createObjectURL(blob);
         const link = document.createElement('a');
         link.href = url;
-        link.download = `DailySafetyCheckList_${new Date().toISOString().slice(0, 10)}.xls`;
+        link.download = `DailySafetyPatrolList_${new Date().toISOString().slice(0, 10)}.xls`;
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
         URL.revokeObjectURL(url);
-        Notification.success('تم تصدير السجل إلى Excel بنجاح');
+        Notification.success(this._t('module.periodic.dsc.exportExcelSuccess', 'تم تصدير السجل إلى Excel بنجاح'));
     },
 
     /**
@@ -3148,7 +3172,7 @@ const PeriodicInspections = {
     exportDailySafetyCheckListFullPDF() {
         const records = this.getDailySafetyCheckListRecords();
         if (!records || records.length === 0) {
-            Notification.warning('لا توجد سجلات لتصديرها');
+            Notification.warning(this._t('module.periodic.dsc.noRecordsToExport', 'لا توجد سجلات لتصديرها'));
             return;
         }
         const fieldToRecordKey = { q16: 'q15Reading', q17: 'q16', q18: 'q17' };
@@ -3157,9 +3181,9 @@ const PeriodicInspections = {
                 const { jsPDF } = window.jsPDF;
                 const doc = new jsPDF('l', 'mm', 'a4');
                 doc.setFontSize(14);
-                doc.text('Daily Safety Check List - Full Export', 148, 12, { align: 'center' });
+                doc.text(this._t('module.periodic.dsc.fullExportEn', 'Daily Safety Patrol List - Full Export'), 148, 12, { align: 'center' });
                 doc.setFontSize(10);
-                doc.text('قائمة الفحص اليومي للسلامة - تصدير كامل (' + records.length + ' سجل)', 148, 18, { align: 'center' });
+                doc.text(this._t('module.periodic.dsc.fullExportAr', 'قائمة المرور اليومي للسلامة - تصدير كامل') + ' (' + records.length + ' ' + this._t('module.periodic.dsc.recordsWord', 'سجل') + ')', 148, 18, { align: 'center' });
                 const headRow = ['رقم', 'الموقع', 'التاريخ', 'القائم بالمرور', 'الوردية'].concat(this.DAILY_SAFETY_CHECKLIST_QUESTIONS.map(q => (q.label.length > 22 ? q.label.substring(0, 22) + '..' : q.label)));
                 const bodyRows = records.sort((a, b) => new Date(b.date || b.createdAt) - new Date(a.date || a.createdAt)).map(r => {
                     const serial = this.getDailySafetyCheckListSerialNumber(r);
@@ -3187,9 +3211,9 @@ const PeriodicInspections = {
                         y += 5;
                     });
                 }
-                const fileName = `DailySafetyCheckList_Full_${new Date().toISOString().slice(0, 10)}.pdf`;
+                const fileName = `DailySafetyPatrolList_Full_${new Date().toISOString().slice(0, 10)}.pdf`;
                 doc.save(fileName);
-                Notification.success('تم تصدير السجل إلى PDF بنجاح');
+                Notification.success(this._t('module.periodic.dsc.exportPdfSuccess', 'تم تصدير السجل إلى PDF بنجاح'));
                 return;
             } catch (e) {
                 Utils.safeWarn('تصدير PDF بـ jsPDF فشل، استخدام نافذة الطباعة:', e);
@@ -3206,7 +3230,8 @@ const PeriodicInspections = {
         }).join('');
         const qHeaders = this.DAILY_SAFETY_CHECKLIST_QUESTIONS.map(q => `<th style="padding:4px; border:1px solid #ddd; background:#003865; color:#fff; font-size:10px;">${Utils.escapeHTML(q.label)}</th>`).join('');
         const content = `
-            <p style="text-align:center; margin:0 0 12px 0; font-weight:bold;">تصدير كامل لسجل قائمة الفحص اليومي للسلامة (${records.length} سجل)</p>
+            ${this._getDailySafetyCompactFooterStyle()}
+            <p style="text-align:center; margin:0 0 12px 0; font-weight:bold;">${this._t('module.periodic.dsc.fullExportHeadingAr', 'تصدير كامل لسجل قائمة المرور اليومي للسلامة')} (${records.length} ${this._t('module.periodic.dsc.recordsWord', 'سجل')})</p>
             <table style="width:100%; border-collapse:collapse; font-size:11px;">
                 <thead>
                     <tr style="background:#003865; color:#fff;">
@@ -3221,15 +3246,15 @@ const PeriodicInspections = {
                 <tbody>${fullTableRows}</tbody>
             </table>
         `;
-        const formTitle = 'سجل قائمة الفحص اليومي للسلامة - تصدير كامل';
+        const formTitle = this._t('module.periodic.dsc.fullExportFormTitleAr', 'سجل قائمة المرور اليومي للسلامة - تصدير كامل');
         const htmlContent = typeof FormHeader !== 'undefined' && FormHeader.generatePDFHTML
-            ? FormHeader.generatePDFHTML('DSC-FULL-' + new Date().toISOString().slice(0, 10), formTitle, content, false, true, { source: 'DailySafetyCheckList', titleEn: 'Daily Safety Check List', titleAr: 'قائمة الفحص اليومي للسلامة' }, new Date().toISOString(), new Date().toISOString())
+            ? FormHeader.generatePDFHTML('DSC-FULL-' + new Date().toISOString().slice(0, 10), formTitle, content, false, false, { source: 'DailySafetyCheckList', titleEn: this._t('module.periodic.dsc.titleEn', 'Daily Safety Patrol List'), titleAr: this._t('module.periodic.dsc.titleAr', 'قائمة المرور اليومي للسلامة') }, new Date().toISOString(), new Date().toISOString())
             : `<!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="UTF-8"><title>${formTitle}</title></head><body style="font-family:Arial,Tahoma,sans-serif;direction:rtl;padding:20px;">${content}</body></html>`;
         const url = URL.createObjectURL(new Blob(['\ufeff' + htmlContent], { type: 'text/html;charset=utf-8' }));
         const w = window.open(url, '_blank');
         if (w) {
             w.onload = () => { setTimeout(() => { w.print(); URL.revokeObjectURL(url); }, 300); };
-            Notification.info('استخدم "حفظ كـ PDF" في نافذة الطباعة لإنشاء ملف PDF');
+            Notification.info(this._t('module.periodic.dsc.printSavePdfHint', 'استخدم "حفظ كـ PDF" في نافذة الطباعة لإنشاء ملف PDF'));
         } else {
             Notification.error('يرجى السماح للنوافذ المنبثقة لفتح التقرير');
         }
@@ -3294,7 +3319,7 @@ const PeriodicInspections = {
             <div class="modal-content dsc-modal-box">
                 <div class="dsc-modal-header">
                     <button type="button" class="dsc-modal-close" aria-label="إغلاق" onclick="this.closest('.modal-overlay').remove()"><i class="fas fa-times"></i></button>
-                    <h2 class="dsc-modal-title"><i class="fas fa-clipboard-check ml-2"></i>${record ? 'تعديل' : 'إضافة'} سجل Daily Safety Check List</h2>
+                    <h2 class="dsc-modal-title"><i class="fas fa-clipboard-check ml-2"></i>${record ? 'تعديل' : 'إضافة'} ${this._t('module.periodic.dsc.recordTitleEn', 'Daily Safety Patrol List')}</h2>
                     <p class="dsc-form-serial" style="margin: 0.25rem 0 0; font-size: 0.9rem; opacity: 0.95;">${record ? 'رقم التقرير: ' + Utils.escapeHTML(this.getDailySafetyCheckListSerialNumber(record)) : 'رقم التقرير: سيُعيّن تلقائياً عند الحفظ (اليوم-الوردية-الترتيب)'}</p>
                 </div>
                 <div class="dsc-modal-body">
@@ -3430,7 +3455,7 @@ const PeriodicInspections = {
             <div class="modal-content dsc-view-box">
                 <div class="dsc-view-header" style="position: relative;">
                     <button type="button" class="dsc-view-close" aria-label="إغلاق" onclick="this.closest('.modal-overlay').remove()"><i class="fas fa-times"></i></button>
-                    <h2 class="dsc-view-title"><i class="fas fa-clipboard-check ml-2"></i>عرض سجل Daily Safety Check List</h2>
+                    <h2 class="dsc-view-title"><i class="fas fa-clipboard-check ml-2"></i>عرض ${this._t('module.periodic.dsc.recordTitleEn', 'Daily Safety Patrol List')}</h2>
                     <p class="dsc-view-serial" style="margin: 0.25rem 0 0; font-size: 0.95rem; opacity: 0.95;">رقم التقرير: ${Utils.escapeHTML(serialNo)}</p>
                 </div>
                 <div class="dsc-view-body">
@@ -3607,9 +3632,9 @@ const PeriodicInspections = {
         if (!record) { Notification.error('السجل غير موجود'); return; }
         const content = this.getDailySafetyCheckListRecordPrintContent(record);
         const formCode = `DSC-${record.id || ''}-${(record.date || '').toString().slice(0, 10)}`;
-        const formTitle = 'سجل Daily Safety Check List - قائمة الفحص اليومي للسلامة';
+        const formTitle = this._t('module.periodic.dsc.singleRecordTitleAr', 'سجل Daily Safety Patrol List - قائمة المرور اليومي للسلامة');
         const htmlContent = typeof FormHeader !== 'undefined' && FormHeader.generatePDFHTML
-            ? FormHeader.generatePDFHTML(formCode, formTitle, content, false, false, { source: 'DailySafetyCheckList', titleEn: 'Daily Safety Check List', titleAr: 'قائمة الفحص اليومي للسلامة' }, record.createdAt || new Date().toISOString(), record.updatedAt || record.createdAt || new Date().toISOString())
+            ? FormHeader.generatePDFHTML(formCode, formTitle, this._getDailySafetyCompactFooterStyle() + content, false, false, { source: 'DailySafetyCheckList', titleEn: this._t('module.periodic.dsc.titleEn', 'Daily Safety Patrol List'), titleAr: this._t('module.periodic.dsc.titleAr', 'قائمة المرور اليومي للسلامة') }, record.createdAt || new Date().toISOString(), record.updatedAt || record.createdAt || new Date().toISOString())
             : `<!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="UTF-8"><title>${formTitle}</title></head><body style="font-family:Arial,Tahoma,sans-serif;direction:rtl;padding:20px;">${content}</body></html>`;
         const blob = new Blob(['\ufeff' + htmlContent], { type: 'text/html;charset=utf-8' });
         const url = URL.createObjectURL(blob);
@@ -3647,9 +3672,9 @@ const PeriodicInspections = {
                 const serialNo = this.getDailySafetyCheckListSerialNumber(record);
                 const fieldToRecordKey = { q16: 'q15Reading', q17: 'q16', q18: 'q17' };
                 doc.setFontSize(14);
-                doc.text('Daily Safety Check List', 105, 15, { align: 'center' });
+                doc.text(this._t('module.periodic.dsc.titleEn', 'Daily Safety Patrol List'), 105, 15, { align: 'center' });
                 doc.setFontSize(12);
-                doc.text('قائمة الفحص اليومي للسلامة', 105, 22, { align: 'center' });
+                doc.text(this._t('module.periodic.dsc.titleAr', 'قائمة المرور اليومي للسلامة'), 105, 22, { align: 'center' });
                 doc.setFontSize(10);
                 doc.text('رقم التقرير: ' + serialNo, 105, 30, { align: 'center' });
                 doc.text('المصنع/الموقع: ' + (record.siteName || '-'), 14, 40);
@@ -3679,24 +3704,24 @@ const PeriodicInspections = {
                         y += 6;
                     });
                 }
-                const fileName = `DailySafetyCheckList_${(record.date || '').toString().slice(0, 10)}_${(record.id || '').replace(/[^a-zA-Z0-9-]/g, '')}.pdf`;
+                const fileName = `DailySafetyPatrolList_${(record.date || '').toString().slice(0, 10)}_${(record.id || '').replace(/[^a-zA-Z0-9-]/g, '')}.pdf`;
                 doc.save(fileName);
-                Notification.success('تم تصدير السجل إلى PDF بنجاح');
+                Notification.success(this._t('module.periodic.dsc.exportPdfSuccess', 'تم تصدير السجل إلى PDF بنجاح'));
                 return;
             } catch (e) {
                 Utils.safeWarn('تصدير PDF بـ jsPDF فشل، استخدام نافذة الطباعة:', e);
             }
         }
         const content = this.getDailySafetyCheckListRecordPrintContent(record);
-        const formTitle = 'سجل Daily Safety Check List - قائمة الفحص اليومي للسلامة';
+        const formTitle = this._t('module.periodic.dsc.singleRecordTitleAr', 'سجل Daily Safety Patrol List - قائمة المرور اليومي للسلامة');
         const htmlContent = typeof FormHeader !== 'undefined' && FormHeader.generatePDFHTML
-            ? FormHeader.generatePDFHTML(`DSC-${record.id || ''}`, formTitle, content, false, false, { source: 'DailySafetyCheckList', titleEn: 'Daily Safety Check List', titleAr: 'قائمة الفحص اليومي للسلامة' }, record.createdAt || new Date().toISOString(), record.updatedAt || record.createdAt || new Date().toISOString())
+            ? FormHeader.generatePDFHTML(`DSC-${record.id || ''}`, formTitle, this._getDailySafetyCompactFooterStyle() + content, false, false, { source: 'DailySafetyCheckList', titleEn: this._t('module.periodic.dsc.titleEn', 'Daily Safety Patrol List'), titleAr: this._t('module.periodic.dsc.titleAr', 'قائمة المرور اليومي للسلامة') }, record.createdAt || new Date().toISOString(), record.updatedAt || record.createdAt || new Date().toISOString())
             : `<!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="UTF-8"><title>${formTitle}</title></head><body style="font-family:Arial,Tahoma,sans-serif;direction:rtl;padding:20px;">${content}</body></html>`;
         const url = URL.createObjectURL(new Blob(['\ufeff' + htmlContent], { type: 'text/html;charset=utf-8' }));
         const w = window.open(url, '_blank');
         if (w) {
             w.onload = () => { setTimeout(() => { w.print(); URL.revokeObjectURL(url); }, 300); };
-            Notification.info('استخدم "حفظ كـ PDF" في نافذة الطباعة لإنشاء ملف PDF');
+            Notification.info(this._t('module.periodic.dsc.printSavePdfHint', 'استخدم "حفظ كـ PDF" في نافذة الطباعة لإنشاء ملف PDF'));
         } else {
             Notification.error('يرجى السماح للنوافذ المنبثقة لفتح التقرير');
         }
