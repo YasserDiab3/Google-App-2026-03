@@ -16,8 +16,8 @@
 
 // Bump cache version to force clients to pick up latest JS/CSS updates (زيادة عند كل نشر لظهور التحديثات)
 // يجب تحديث __SW_REGISTER_QUERY في index.html بنفس اللاحقة عند تغيير الإصدار لتسريع اكتشاف service-worker.js
-// Service Worker Version: 20260430 — CSS وملفات الواجهة الحرجة شبكة أولاً (مسارات js/modules)
-const CACHE_VERSION = 'hse-app-v1.0.15-20260426';
+// Service Worker Version: 20260430 — تقليل precache لتسريع التثبيت؛ الموديولات شبكة أولاً
+const CACHE_VERSION = 'hse-app-v1.0.16-20260430';
 const CACHE_NAME = `hse-cache-${CACHE_VERSION}`;
 
 /** أقصى حجم لعنصر في الكاش (بايت) — يحدّ تخزين ملفات CDN الضخمة */
@@ -46,6 +46,7 @@ const BASE_PATH = self.location.pathname.includes('/Frontend/') ? '/Frontend' : 
 console.log('[Service Worker] المسار الأساسي:', BASE_PATH);
 
 // عند تثبيت SW فقط — قائمة مختصرة؛ الموديولات الأخرى تُحمَّل عند الطلب (شبكة أولاً) دون دفعة تحميل ضخمة
+// الحد الأدنى للتثبيت السريع؛ app-utils والموديولات تُحمَّل عند الطلب (شبكة أولاً) لتفادي كاش قديم في precache
 const CORE_CACHE_FILES = [
     `${BASE_PATH}/index.html`,
     `${BASE_PATH}/styles.css`,
@@ -55,9 +56,7 @@ const CORE_CACHE_FILES = [
     `${BASE_PATH}/icons/icon-512x512.png`,
     `${BASE_PATH}/js/app-bootstrap.js`,
     `${BASE_PATH}/js/modules/lazy-loader.js`,
-    `${BASE_PATH}/js/modules/enhanced-loader.js`,
-    `${BASE_PATH}/js/modules/app-utils.js`,
-    `${BASE_PATH}/login-init-fixed.js`
+    `${BASE_PATH}/js/modules/enhanced-loader.js`
 ];
 
 // الموديولات التي سيتم تخزينها مؤقتاً عند الطلب

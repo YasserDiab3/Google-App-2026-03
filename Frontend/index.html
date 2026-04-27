@@ -12703,7 +12703,7 @@
         <script>
             // تسجيل Service Worker للتخزين المؤقت وتحسين الأداء
             if ("serviceWorker" in navigator) {
-                window.addEventListener("load", async () => {
+                const __registerHseServiceWorker = async () => {
                     const __isDev =
                         window.location.hostname === "localhost" ||
                         window.location.hostname === "127.0.0.1" ||
@@ -12775,11 +12775,12 @@
                     }
 
                     // مطابقة CACHE_VERSION في service-worker.js — تسريع جلب سكربت SW بعد النشر (تجاوز كاش الشبكة/الوسيط)
-                    const __SW_REGISTER_QUERY = "v=hse-app-v1.0.15-20260426";
+                    const __SW_REGISTER_QUERY = "v=hse-app-v1.0.16-20260430";
                     const swUrl =
                         swPath +
                         (swPath.includes("?") ? "&" : "?") +
                         __SW_REGISTER_QUERY;
+                    const __swRegisterOpts = { updateViaCache: "none" };
 
                     if (__isDev) {
                         console.log("📍 المسار الحالي:", currentPath);
@@ -12789,7 +12790,10 @@
                     // محاولة التسجيل بالمسار المحدد
                     try {
                         const registration =
-                            await navigator.serviceWorker.register(swUrl);
+                            await navigator.serviceWorker.register(
+                                swUrl,
+                                __swRegisterOpts,
+                            );
                         if (__isDev)
                             console.log(
                                 "✅ Service Worker مسجل بنجاح:",
@@ -12800,6 +12804,17 @@
                         try {
                             await registration.update();
                         } catch (_) {}
+
+                        // عند العودة للتبويب: فحص نسخة SW جديدة دون انتظار إعادة فتح الموقع
+                        document.addEventListener(
+                            "visibilitychange",
+                            () => {
+                                if (document.visibilityState !== "visible")
+                                    return;
+                                registration.update().catch(() => {});
+                            },
+                            { passive: true },
+                        );
 
                         // إعادة تحميل الصفحة مرة واحدة فقط عند تفعيل Service Worker جديد
                         let __swRefreshing = false;
@@ -12880,12 +12895,65 @@
 
                         try {
                             const registration =
-                                await navigator.serviceWorker.register(altSwUrl);
+                                await navigator.serviceWorker.register(
+                                    altSwUrl,
+                                    __swRegisterOpts,
+                                );
                             if (__isDev)
                                 console.log(
                                     "✅ نجح التسجيل بالمسار البديل:",
                                     registration.scope,
                                 );
+                            try {
+                                await registration.update();
+                            } catch (_) {}
+                            document.addEventListener(
+                                "visibilitychange",
+                                () => {
+                                    if (document.visibilityState !== "visible")
+                                        return;
+                                    registration.update().catch(() => {});
+                                },
+                                { passive: true },
+                            );
+                            let __swRefreshingAlt = false;
+                            navigator.serviceWorker.addEventListener(
+                                "controllerchange",
+                                () => {
+                                    if (__swRefreshingAlt) return;
+                                    __swRefreshingAlt = true;
+                                    window.location.reload();
+                                },
+                            );
+                            registration.addEventListener("updatefound", () => {
+                                const newWorker = registration.installing;
+                                if (!newWorker) return;
+                                newWorker.addEventListener("statechange", () => {
+                                    if (
+                                        newWorker.state === "installed" &&
+                                        navigator.serviceWorker.controller
+                                    ) {
+                                        if (
+                                            window.Notification &&
+                                            typeof window.Notification.info ===
+                                                "function"
+                                        ) {
+                                            window.Notification.info(
+                                                "تم العثور على تحديث جديد... جاري التفعيل الآن.",
+                                            );
+                                        }
+                                        if (registration.waiting) {
+                                            registration.waiting.postMessage({
+                                                type: "SKIP_WAITING",
+                                            });
+                                        } else {
+                                            newWorker.postMessage({
+                                                type: "SKIP_WAITING",
+                                            });
+                                        }
+                                    }
+                                });
+                            });
                         } catch (altError) {
                             // عرض رسائل الخطأ فقط في وضع التطوير
                             if (__isDev) {
@@ -12899,7 +12967,19 @@
                             // في الإنتاج، نقمع الرسائل لأن Service Worker اختياري
                         }
                     }
-                });
+                };
+
+                if (document.readyState === "loading") {
+                    document.addEventListener(
+                        "DOMContentLoaded",
+                        () => {
+                            void __registerHseServiceWorker();
+                        },
+                        { once: true },
+                    );
+                } else {
+                    void __registerHseServiceWorker();
+                }
             } else {
                 // Service Worker غير مدعوم - هذه حالة طبيعية في بعض المتصفحات القديمة
                 // لا حاجة لعرض تحذير لأن Service Worker اختياري
