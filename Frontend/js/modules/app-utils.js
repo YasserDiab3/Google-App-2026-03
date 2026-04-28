@@ -5955,6 +5955,40 @@ const PDFTemplates = {
             font-size: clamp(18px, 2vw, 30px);
             width: 100%;
         }
+        .report-wrapper.dsc-report .report-header {
+            direction: ltr;
+            grid-template-columns: 120px minmax(0, 1fr) minmax(280px, 360px);
+            align-items: center;
+            gap: 16px;
+        }
+        .report-wrapper.dsc-report .report-logo {
+            grid-column: 1;
+            justify-content: flex-start;
+        }
+        .report-wrapper.dsc-report .header-info {
+            grid-column: 2;
+            align-self: end;
+            margin-top: 8px;
+        }
+        .report-wrapper.dsc-report .company-brand {
+            grid-column: 3;
+            align-items: flex-end;
+            text-align: right;
+            direction: rtl;
+            justify-self: stretch;
+        }
+        .report-wrapper.dsc-report .header-title-dual {
+            width: 100%;
+        }
+        .report-wrapper.dsc-report .footer-bottom-text span {
+            display: block;
+            direction: rtl;
+            unicode-bidi: isolate;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 100%;
+        }
         .header-meta {
             display: flex;
             flex-wrap: wrap;

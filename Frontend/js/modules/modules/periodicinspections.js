@@ -3328,26 +3328,64 @@ const PeriodicInspections = {
                 useCORS: true,
                 backgroundColor: '#ffffff'
             });
-            const imgData = canvas.toDataURL('image/jpeg', 0.98);
-
             const pageWidth = doc.internal.pageSize.getWidth();
             const pageHeight = doc.internal.pageSize.getHeight();
             const margin = 5;
             const usableWidth = pageWidth - margin * 2;
             const usableHeight = pageHeight - margin * 2;
-            const imgHeight = (canvas.height * usableWidth) / canvas.width;
+            const pxPerMm = canvas.width / usableWidth;
 
-            let heightLeft = imgHeight;
-            let position = margin;
+            const headerEl = container.querySelector('.report-header');
+            const footerEl = container.querySelector('.report-footer');
+            const headerCssPx = headerEl ? headerEl.getBoundingClientRect().height : 0;
+            const footerCssPx = footerEl ? footerEl.getBoundingClientRect().height : 0;
+            const renderScale = canvas.width / Math.max(1, container.getBoundingClientRect().width);
+            const headerPx = Math.max(0, Math.round(headerCssPx * renderScale));
+            const footerPx = Math.max(0, Math.round(footerCssPx * renderScale));
 
-            doc.addImage(imgData, 'JPEG', margin, position, usableWidth, imgHeight, undefined, 'FAST');
-            heightLeft -= usableHeight;
+            const headerMm = headerPx > 0 ? (headerPx / pxPerMm) : 0;
+            const footerMm = footerPx > 0 ? (footerPx / pxPerMm) : 0;
+            const bodyMmPerPage = Math.max(10, usableHeight - headerMm - footerMm);
+            const bodyPxPerPage = Math.max(1, Math.floor(bodyMmPerPage * pxPerMm));
 
-            while (heightLeft > 0) {
-                position = heightLeft - imgHeight + margin;
-                doc.addPage();
-                doc.addImage(imgData, 'JPEG', margin, position, usableWidth, imgHeight, undefined, 'FAST');
-                heightLeft -= usableHeight;
+            const contentStartPx = headerPx;
+            const contentEndPx = Math.max(contentStartPx, canvas.height - footerPx);
+            const contentHeightPx = Math.max(1, contentEndPx - contentStartPx);
+            const totalPages = Math.max(1, Math.ceil(contentHeightPx / bodyPxPerPage));
+
+            const sliceToImage = (yPx, hPx) => {
+                if (hPx <= 0) return '';
+                const temp = document.createElement('canvas');
+                temp.width = canvas.width;
+                temp.height = hPx;
+                const ctx = temp.getContext('2d');
+                ctx.drawImage(canvas, 0, yPx, canvas.width, hPx, 0, 0, canvas.width, hPx);
+                return temp.toDataURL('image/jpeg', 0.98);
+            };
+
+            const headerImg = headerPx > 0 ? sliceToImage(0, headerPx) : '';
+            const footerImg = footerPx > 0 ? sliceToImage(canvas.height - footerPx, footerPx) : '';
+
+            for (let pageIndex = 0; pageIndex < totalPages; pageIndex++) {
+                if (pageIndex > 0) doc.addPage();
+
+                let cursorY = margin;
+
+                if (headerImg) {
+                    doc.addImage(headerImg, 'JPEG', margin, cursorY, usableWidth, headerMm, undefined, 'FAST');
+                    cursorY += headerMm;
+                }
+
+                const bodyStartPx = contentStartPx + pageIndex * bodyPxPerPage;
+                const bodyHeightPx = Math.max(1, Math.min(bodyPxPerPage, contentEndPx - bodyStartPx));
+                const bodyImg = sliceToImage(bodyStartPx, bodyHeightPx);
+                const bodyMm = bodyHeightPx / pxPerMm;
+                doc.addImage(bodyImg, 'JPEG', margin, cursorY, usableWidth, bodyMm, undefined, 'FAST');
+
+                if (footerImg) {
+                    const footerY = margin + usableHeight - footerMm;
+                    doc.addImage(footerImg, 'JPEG', margin, footerY, usableWidth, footerMm, undefined, 'FAST');
+                }
             }
 
             doc.save(fileName);
