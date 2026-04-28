@@ -5933,42 +5933,39 @@ const PDFTemplates = {
             padding-bottom: 2px;
             word-break: break-word;
         }
-        .report-wrapper.dsc-report .company-brand .company-name {
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            line-height: 1.2;
-            font-size: clamp(14px, 1.6vw, 24px);
-        }
-        .report-wrapper.dsc-report .company-brand .company-name-secondary {
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            line-height: 1.2;
-            font-size: clamp(12px, 1.3vw, 20px);
-        }
-        .report-wrapper.dsc-report .header-title-dual .header-title-ar {
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            line-height: 1.2;
-            font-size: clamp(18px, 2vw, 30px);
-            width: 100%;
-        }
         .report-wrapper.dsc-report .report-header {
             direction: ltr;
-            grid-template-columns: 120px minmax(0, 1fr) minmax(280px, 360px);
-            align-items: center;
-            gap: 16px;
+            grid-template-columns: 110px minmax(0, 1fr) minmax(300px, 380px);
+            align-items: start;
+            gap: 14px;
         }
         .report-wrapper.dsc-report .report-logo {
             grid-column: 1;
             justify-content: flex-start;
+            align-self: center;
         }
         .report-wrapper.dsc-report .header-info {
             grid-column: 2;
+            justify-content: flex-start;
             align-self: end;
-            margin-top: 8px;
+            margin-top: 6px;
+            min-width: 0;
+        }
+        .report-wrapper.dsc-report .header-title-dual {
+            width: 100%;
+        }
+        .report-wrapper.dsc-report .header-title-dual .header-title-en {
+            white-space: nowrap;
+            line-height: 1.15;
+            font-size: clamp(16px, 2vw, 28px);
+        }
+        .report-wrapper.dsc-report .header-title-dual .header-title-ar {
+            white-space: nowrap;
+            line-height: 1.15;
+            font-size: clamp(20px, 2.15vw, 32px);
+            width: 100%;
+            letter-spacing: 0 !important;
+            font-family: 'Cairo', 'Tahoma', 'Segoe UI', sans-serif !important;
         }
         .report-wrapper.dsc-report .company-brand {
             grid-column: 3;
@@ -5976,9 +5973,25 @@ const PDFTemplates = {
             text-align: right;
             direction: rtl;
             justify-self: stretch;
+            min-width: 0;
+            gap: 2px;
         }
-        .report-wrapper.dsc-report .header-title-dual {
-            width: 100%;
+        .report-wrapper.dsc-report .company-brand .company-name,
+        .report-wrapper.dsc-report .company-brand .company-name-secondary {
+            display: block;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 100%;
+            line-height: 1.15;
+            letter-spacing: 0 !important;
+            font-family: 'Cairo', 'Tahoma', 'Segoe UI', sans-serif !important;
+        }
+        .report-wrapper.dsc-report .company-brand .company-name {
+            font-size: clamp(15px, 1.45vw, 23px);
+        }
+        .report-wrapper.dsc-report .company-brand .company-name-secondary {
+            font-size: clamp(13px, 1.2vw, 20px);
         }
         .report-wrapper.dsc-report .footer-bottom-text span {
             display: block;
@@ -5988,6 +6001,9 @@ const PDFTemplates = {
             overflow: hidden;
             text-overflow: ellipsis;
             max-width: 100%;
+            letter-spacing: 0;
+            font-family: 'Cairo', 'Tahoma', 'Segoe UI', sans-serif;
+            line-height: 1.25;
         }
         .header-meta {
             display: flex;
