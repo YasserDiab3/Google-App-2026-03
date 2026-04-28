@@ -3185,22 +3185,40 @@ const PeriodicInspections = {
     /**
      * تصدير سجل Daily Safety Check List بالكامل إلى Excel
      */
+    getJsPdfCtor() {
+        if (window.jsPDF && window.jsPDF.jsPDF) return window.jsPDF.jsPDF;
+        if (window.jspdf && window.jspdf.jsPDF) return window.jspdf.jsPDF;
+        return null;
+    },
+
     async ensureJsPdfReadyForDailySafetyExport() {
-        if (typeof window.jsPDF !== 'undefined' && typeof window.jsPDF.jsPDF !== 'undefined') {
-            return true;
-        }
+        if (this.getJsPdfCtor()) return true;
 
         const loadScript = (src) => new Promise((resolve, reject) => {
-            const existing = document.querySelector(`script[src="${src}"]`);
+            const existing = Array.from(document.querySelectorAll('script[src]'))
+                .find((s) => String(s.src || '').includes(src));
+
             if (existing) {
-                if (existing.dataset.loaded === 'true') {
+                // السكربت موجود مسبقاً وقد يكون محملاً قبل إضافة listener
+                if (this.getJsPdfCtor() || existing.dataset.loaded === 'true' || existing.readyState === 'complete') {
                     resolve(true);
                     return;
                 }
-                existing.addEventListener('load', () => resolve(true), { once: true });
-                existing.addEventListener('error', () => reject(new Error('failed to load script')), { once: true });
+                const timeoutId = setTimeout(() => {
+                    if (this.getJsPdfCtor()) resolve(true);
+                    else reject(new Error('script load timeout'));
+                }, 4000);
+                existing.addEventListener('load', () => {
+                    clearTimeout(timeoutId);
+                    resolve(true);
+                }, { once: true });
+                existing.addEventListener('error', () => {
+                    clearTimeout(timeoutId);
+                    reject(new Error('failed to load script'));
+                }, { once: true });
                 return;
             }
+
             const script = document.createElement('script');
             script.type = 'text/javascript';
             script.async = true;
@@ -3215,9 +3233,9 @@ const PeriodicInspections = {
         });
 
         try {
-            await loadScript('https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js');
-            await loadScript('https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.2/dist/jspdf.plugin.autotable.min.js');
-            return typeof window.jsPDF !== 'undefined' && typeof window.jsPDF.jsPDF !== 'undefined';
+            await loadScript('jspdf.umd.min.js');
+            await loadScript('jspdf.plugin.autotable.min.js');
+            return Boolean(this.getJsPdfCtor());
         } catch (error) {
             Utils.safeWarn('تعذر تحميل مكتبات PDF للتصدير المباشر:', error);
             return false;
@@ -3273,7 +3291,7 @@ const PeriodicInspections = {
             return;
         }
         try {
-            const { jsPDF } = window.jsPDF;
+            const jsPDF = this.getJsPdfCtor();
             const doc = new jsPDF('l', 'mm', 'a4');
             doc.setFontSize(14);
             doc.text(this._t('module.periodic.dsc.fullExportEn', 'Daily Safety Report - Full Export'), 148, 12, { align: 'center' });
@@ -3732,7 +3750,7 @@ const PeriodicInspections = {
             return;
         }
         try {
-            const { jsPDF } = window.jsPDF;
+            const jsPDF = this.getJsPdfCtor();
             const doc = new jsPDF('p', 'mm', 'a4');
             const serialNo = this.getDailySafetyCheckListSerialNumber(record);
             const fieldToRecordKey = { q16: 'q15Reading', q17: 'q16', q18: 'q17' };
