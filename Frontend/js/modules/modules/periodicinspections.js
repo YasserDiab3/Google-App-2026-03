@@ -246,8 +246,10 @@ const PeriodicInspections = {
             dateTo: ''
         },
         dailySafetyAnalyticsControls: {
-            topN: 10,
-            rankingMetric: 'nonCompliantRate'
+            topN: 18,
+            rankingMetric: 'nonCompliantRate',
+            cardStyle: 'gradient',
+            barStyle: 'rounded'
         },
         currentView: 'list', // list, form, edit
         currentEditId: null,
@@ -462,6 +464,15 @@ const PeriodicInspections = {
                 nonCompliantRate: v.totalAnswers > 0 ? Math.round((v.nonCompliant / v.totalAnswers) * 100) : 0
             }))
             .sort((a, b) => a.month.localeCompare(b.month));
+    },
+
+    _getDailySafetyAnalyticsRecordsByScope(scopeInspector = '') {
+        const allRecords = this.getDailySafetyCheckListRecords();
+        let records = this.applyDailySafetyFilters(allRecords);
+        if (scopeInspector && scopeInspector !== '__all__') {
+            records = records.filter((r) => String(r.inspectorName || '') === String(scopeInspector));
+        }
+        return records;
     },
 
     async load() {
@@ -3403,12 +3414,13 @@ const PeriodicInspections = {
 
     async renderDailySafetyAnalyticsContent() {
         const allRecords = this.getDailySafetyCheckListRecords();
-        const filteredRecords = this.applyDailySafetyFilters(allRecords);
+        const filteredRecords = this._getDailySafetyAnalyticsRecordsByScope('__all__');
         const analytics = this.getDailySafetyAnalytics(filteredRecords);
         const t = (key, fallback) => this._t(key, fallback);
-        const controls = this.state.dailySafetyAnalyticsControls || { topN: 10, rankingMetric: 'nonCompliantRate' };
+        const controls = this.state.dailySafetyAnalyticsControls || { topN: 18, rankingMetric: 'nonCompliantRate', cardStyle: 'gradient', barStyle: 'rounded' };
         const topN = Math.max(3, Math.min(20, Number(controls.topN || 10)));
         const trend = this.getDailySafetyTrend(filteredRecords);
+        const isAdmin = this.isCurrentUserAdmin();
         const topInspectors = analytics.inspectorList.slice(0, topN);
         const topSites = analytics.siteList.slice(0, topN);
         const points = [...analytics.points];
@@ -3419,7 +3431,7 @@ const PeriodicInspections = {
         } else {
             points.sort((a, b) => b.nonCompliantRate - a.nonCompliantRate);
         }
-        const worstPoints = points.slice(0, topN);
+        const worstPoints = points.slice(0, this.DAILY_SAFETY_CHECKLIST_QUESTIONS.length);
 
         const renderRankBars = (items, colorClass = 'bg-blue-500') => {
             const max = Math.max(1, ...(items.map((i) => i.count)));
@@ -3429,8 +3441,8 @@ const PeriodicInspections = {
                         <span class="font-medium text-gray-700">${Utils.escapeHTML(item.name || '-')}</span>
                         <span class="text-gray-500">${item.count}</span>
                     </div>
-                    <div style="width:100%; height:8px; background:#eef2f7; border-radius:6px; overflow:hidden;">
-                        <div class="${colorClass}" style="width:${Math.round((item.count / max) * 100)}%; height:8px; border-radius:6px;"></div>
+                    <div style="width:100%; height:8px; background:#eef2f7; border-radius:${controls.barStyle === 'square' ? '2px' : '6px'}; overflow:hidden;">
+                        <div class="${colorClass}" style="width:${Math.round((item.count / max) * 100)}%; height:8px; border-radius:${controls.barStyle === 'square' ? '2px' : '6px'};"></div>
                     </div>
                 </div>
             `).join('');
@@ -3450,21 +3462,25 @@ const PeriodicInspections = {
                 <div class="card-body">
                     <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-3">
                         <div>
-                            <label class="form-label">${t('module.periodic.search', 'بحث')}</label>
-                            <input id="dsc-filter-search" class="form-input" type="text" value="${Utils.escapeHTML(f.search || '')}" placeholder="${t('module.periodic.searchPlaceholder', 'بحث برقم التقرير/الموقع/الاسم')}">
+                            <label class="form-label">${t('module.periodic.fromDate', 'من تاريخ')}</label>
+                            <input id="dsc-filter-date-from" class="form-input" type="date" value="${Utils.escapeHTML(f.dateFrom || '')}">
                         </div>
                         <div>
-                            <label class="form-label">${t('module.periodic.dsc.table.site', 'المصنع/الموقع')}</label>
-                            <select id="dsc-filter-site" class="form-input">
-                                <option value="">${t('module.periodic.all', 'الكل')}</option>
-                                ${filterOptions.sites.map((s) => `<option value="${Utils.escapeHTML(s.id)}" ${String(f.siteId || '') === String(s.id) ? 'selected' : ''}>${Utils.escapeHTML(s.name)}</option>`).join('')}
-                            </select>
+                            <label class="form-label">${t('module.periodic.toDate', 'إلى تاريخ')}</label>
+                            <input id="dsc-filter-date-to" class="form-input" type="date" value="${Utils.escapeHTML(f.dateTo || '')}">
                         </div>
                         <div>
                             <label class="form-label">${t('module.periodic.dsc.table.inspector', 'القائم بالمرور')}</label>
                             <select id="dsc-filter-inspector" class="form-input">
                                 <option value="">${t('module.periodic.all', 'الكل')}</option>
                                 ${filterOptions.inspectors.map((name) => `<option value="${Utils.escapeHTML(name)}" ${String(f.inspectorName || '') === String(name) ? 'selected' : ''}>${Utils.escapeHTML(name)}</option>`).join('')}
+                            </select>
+                        </div>
+                        <div>
+                            <label class="form-label">${t('module.periodic.dsc.table.site', 'المصنع/الموقع')}</label>
+                            <select id="dsc-filter-site" class="form-input">
+                                <option value="">${t('module.periodic.all', 'الكل')}</option>
+                                ${filterOptions.sites.map((s) => `<option value="${Utils.escapeHTML(s.id)}" ${String(f.siteId || '') === String(s.id) ? 'selected' : ''}>${Utils.escapeHTML(s.name)}</option>`).join('')}
                             </select>
                         </div>
                         <div>
@@ -3475,19 +3491,15 @@ const PeriodicInspections = {
                             </select>
                         </div>
                         <div>
-                            <label class="form-label">${t('module.periodic.fromDate', 'من تاريخ')}</label>
-                            <input id="dsc-filter-date-from" class="form-input" type="date" value="${Utils.escapeHTML(f.dateFrom || '')}">
-                        </div>
-                        <div>
-                            <label class="form-label">${t('module.periodic.toDate', 'إلى تاريخ')}</label>
-                            <input id="dsc-filter-date-to" class="form-input" type="date" value="${Utils.escapeHTML(f.dateTo || '')}">
+                            <label class="form-label">${t('module.periodic.search', 'بحث')}</label>
+                            <input id="dsc-filter-search" class="form-input" type="text" value="${Utils.escapeHTML(f.search || '')}" placeholder="${t('module.periodic.searchPlaceholder', 'بحث برقم التقرير/الموقع/الاسم')}">
                         </div>
                     </div>
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mt-3">
+                    <div class="grid grid-cols-1 md:grid-cols-5 gap-3 mt-3">
                         <div>
                             <label class="form-label">${t('module.periodic.analytics.topN', 'عدد العناصر المعروضة')}</label>
                             <select id="dsc-analytics-topn" class="form-input">
-                                ${[5, 8, 10, 12, 15, 20].map((n) => `<option value="${n}" ${n === topN ? 'selected' : ''}>Top ${n}</option>`).join('')}
+                                ${[5, 8, 10, 12, 15, 18, 20].map((n) => `<option value="${n}" ${n === topN ? 'selected' : ''}>Top ${n}</option>`).join('')}
                             </select>
                         </div>
                         <div>
@@ -3498,6 +3510,42 @@ const PeriodicInspections = {
                                 <option value="complianceRate" ${controls.rankingMetric === 'complianceRate' ? 'selected' : ''}>${t('module.periodic.analytics.byComplianceRate', 'نسبة المطابقة')}</option>
                             </select>
                         </div>
+                        <div>
+                            <label class="form-label">${t('module.periodic.analytics.exportScope', 'نطاق التصدير')}</label>
+                            <select id="dsc-analytics-export-inspector" class="form-input">
+                                <option value="__all__">${t('module.periodic.analytics.exportAll', 'الكل')}</option>
+                                ${filterOptions.inspectors.map((name) => `<option value="${Utils.escapeHTML(name)}">${Utils.escapeHTML(name)}</option>`).join('')}
+                            </select>
+                        </div>
+                        <div class="flex items-end">
+                            <button type="button" id="dsc-analytics-export-pdf-btn" class="btn-secondary" style="background:#fff; border:1px solid #d1d5db; color:#374151; width:100%;">
+                                <i class="fas fa-file-pdf ml-2"></i>${t('module.periodic.analytics.exportPdf', 'تصدير تحليل PDF')}
+                            </button>
+                        </div>
+                        <div class="flex items-end">
+                            <button type="button" id="dsc-analytics-export-excel-btn" class="btn-secondary" style="background:#fff; border:1px solid #d1d5db; color:#374151; width:100%;">
+                                <i class="fas fa-file-excel ml-2"></i>${t('module.periodic.analytics.exportExcel', 'تصدير تحليل Excel')}
+                            </button>
+                        </div>
+                    </div>
+                    ${isAdmin ? `
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mt-3">
+                        <div>
+                            <label class="form-label">${t('module.periodic.analytics.cardStyle', 'نمط البطاقات')}</label>
+                            <select id="dsc-analytics-card-style" class="form-input">
+                                <option value="gradient" ${controls.cardStyle === 'gradient' ? 'selected' : ''}>${t('module.periodic.analytics.styleGradient', 'متدرج')}</option>
+                                <option value="flat" ${controls.cardStyle === 'flat' ? 'selected' : ''}>${t('module.periodic.analytics.styleFlat', 'مسطح')}</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="form-label">${t('module.periodic.analytics.barStyle', 'نمط الأشرطة')}</label>
+                            <select id="dsc-analytics-bar-style" class="form-input">
+                                <option value="rounded" ${controls.barStyle === 'rounded' ? 'selected' : ''}>${t('module.periodic.analytics.styleRounded', 'حواف ناعمة')}</option>
+                                <option value="square" ${controls.barStyle === 'square' ? 'selected' : ''}>${t('module.periodic.analytics.styleSquare', 'حواف مستقيمة')}</option>
+                            </select>
+                        </div>
+                    </div>` : ''}
+                    <div class="grid grid-cols-1 md:grid-cols-1 gap-3 mt-3">
                         <div class="flex items-end">
                             <button type="button" id="dsc-filter-reset-btn" class="btn-secondary" style="background:#fff; border:1px solid #d1d5db; color:#374151; width:100%;">
                                 <i class="fas fa-eraser ml-2"></i>${t('module.periodic.resetFilters', 'مسح الفلاتر')}
@@ -3508,10 +3556,10 @@ const PeriodicInspections = {
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-                <div class="content-card" style="border:1px solid #dbeafe; background:linear-gradient(135deg, #eff6ff, #dbeafe);"><div class="card-body"><p class="text-sm font-medium text-blue-700 mb-1">${t('module.periodic.dsc.stats.total', 'إجمالي السجلات')}</p><p class="text-3xl font-bold text-blue-900">${analytics.totalRecords}</p></div></div>
-                <div class="content-card" style="border:1px solid #bbf7d0; background:linear-gradient(135deg, #f0fdf4, #dcfce7);"><div class="card-body"><p class="text-sm font-medium text-green-700 mb-1">${t('module.periodic.complianceRate', 'نسبة المطابقة')}</p><p class="text-3xl font-bold text-green-900">${analytics.complianceRate}%</p></div></div>
-                <div class="content-card" style="border:1px solid #fecaca; background:linear-gradient(135deg, #fef2f2, #fee2e2);"><div class="card-body"><p class="text-sm font-medium text-red-700 mb-1">${t('module.periodic.nonCompliantPoints', 'إجمالي غير المطابق')}</p><p class="text-3xl font-bold text-red-900">${analytics.overallNonCompliant}</p></div></div>
-                <div class="content-card" style="border:1px solid #c7d2fe; background:linear-gradient(135deg, #eef2ff, #e0e7ff);"><div class="card-body"><p class="text-sm font-medium text-indigo-700 mb-1">${t('module.periodic.pointsChecked', 'إجمالي نقاط الفحص')}</p><p class="text-3xl font-bold text-indigo-900">${analytics.overallPointsTotal}</p></div></div>
+                <div class="content-card" style="border:1px solid #dbeafe; background:${controls.cardStyle === 'flat' ? '#eff6ff' : 'linear-gradient(135deg, #eff6ff, #dbeafe)'};"><div class="card-body"><p class="text-sm font-medium text-blue-700 mb-1">${t('module.periodic.dsc.stats.total', 'إجمالي السجلات')}</p><p class="text-3xl font-bold text-blue-900">${analytics.totalRecords}</p></div></div>
+                <div class="content-card" style="border:1px solid #bbf7d0; background:${controls.cardStyle === 'flat' ? '#f0fdf4' : 'linear-gradient(135deg, #f0fdf4, #dcfce7)'};"><div class="card-body"><p class="text-sm font-medium text-green-700 mb-1">${t('module.periodic.complianceRate', 'نسبة المطابقة')}</p><p class="text-3xl font-bold text-green-900">${analytics.complianceRate}%</p></div></div>
+                <div class="content-card" style="border:1px solid #fecaca; background:${controls.cardStyle === 'flat' ? '#fef2f2' : 'linear-gradient(135deg, #fef2f2, #fee2e2)'};"><div class="card-body"><p class="text-sm font-medium text-red-700 mb-1">${t('module.periodic.nonCompliantPoints', 'إجمالي غير المطابق')}</p><p class="text-3xl font-bold text-red-900">${analytics.overallNonCompliant}</p></div></div>
+                <div class="content-card" style="border:1px solid #c7d2fe; background:${controls.cardStyle === 'flat' ? '#eef2ff' : 'linear-gradient(135deg, #eef2ff, #e0e7ff)'};"><div class="card-body"><p class="text-sm font-medium text-indigo-700 mb-1">${t('module.periodic.pointsChecked', 'إجمالي نقاط الفحص')}</p><p class="text-3xl font-bold text-indigo-900">${analytics.overallPointsTotal}</p></div></div>
             </div>
 
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
@@ -3565,8 +3613,8 @@ const PeriodicInspections = {
                                             <td>${p.compliant}</td>
                                             <td class="text-red-600 font-bold">${p.nonCompliant}</td>
                                             <td>
-                                                <div style="width:100%; height:8px; background:#eef2f7; border-radius:6px; overflow:hidden;">
-                                                    <div class="${p.nonCompliantRate >= 40 ? 'bg-red-500' : (p.nonCompliantRate >= 20 ? 'bg-orange-500' : 'bg-green-500')}" style="width:${Math.max(2, p.nonCompliantRate)}%; height:8px; border-radius:6px;"></div>
+                                                <div style="width:100%; height:8px; background:#eef2f7; border-radius:${controls.barStyle === 'square' ? '2px' : '6px'}; overflow:hidden;">
+                                                    <div class="${p.nonCompliantRate >= 40 ? 'bg-red-500' : (p.nonCompliantRate >= 20 ? 'bg-orange-500' : 'bg-green-500')}" style="width:${Math.max(2, p.nonCompliantRate)}%; height:8px; border-radius:${controls.barStyle === 'square' ? '2px' : '6px'};"></div>
                                                 </div>
                                                 <div class="text-xs mt-1 text-gray-600">${p.nonCompliantRate}%</div>
                                             </td>
@@ -3579,6 +3627,78 @@ const PeriodicInspections = {
                 </div>
             </div>
         `;
+    },
+
+    async exportDailySafetyAnalyticsPDF(scopeInspector = '__all__') {
+        const t = (key, fallback) => this._t(key, fallback);
+        const records = this._getDailySafetyAnalyticsRecordsByScope(scopeInspector);
+        if (!records.length) {
+            Notification.warning(t('module.periodic.dsc.noRecordsToExport', 'لا توجد سجلات لتصديرها'));
+            return;
+        }
+        const analytics = this.getDailySafetyAnalytics(records);
+        const trend = this.getDailySafetyTrend(records);
+        const inspectorLabel = (scopeInspector && scopeInspector !== '__all__') ? scopeInspector : t('module.periodic.analytics.exportAll', 'الكل');
+        const rows = analytics.points.map((p) => `
+            <tr>
+                <td>${Utils.escapeHTML(p.label)}</td>
+                <td>${p.total}</td>
+                <td>${p.compliant}</td>
+                <td>${p.nonCompliant}</td>
+                <td>${p.nonCompliantRate}%</td>
+            </tr>
+        `).join('');
+        const trendRows = trend.map((r) => `
+            <tr><td>${Utils.escapeHTML(r.month)}</td><td>${r.records}</td><td>${r.complianceRate}%</td><td>${r.nonCompliantRate}%</td></tr>
+        `).join('');
+        const htmlContent = `
+            <html dir="rtl" lang="ar"><head><meta charset="UTF-8"></head><body style="font-family:Tahoma,Arial,sans-serif;padding:16px;">
+            <h2 style="margin:0 0 8px;">${t('module.periodic.tab.dailySafetyAnalytics', 'تحليل البيانات')}</h2>
+            <p style="margin:0 0 14px;color:#475569;">${t('module.periodic.analytics.exportScope', 'نطاق التصدير')}: ${Utils.escapeHTML(inspectorLabel)}</p>
+            <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-bottom:12px;">
+                <div style="padding:8px;border:1px solid #dbeafe;border-radius:8px;">${t('module.periodic.dsc.stats.total', 'إجمالي السجلات')}: <strong>${analytics.totalRecords}</strong></div>
+                <div style="padding:8px;border:1px solid #bbf7d0;border-radius:8px;">${t('module.periodic.complianceRate', 'نسبة المطابقة')}: <strong>${analytics.complianceRate}%</strong></div>
+            </div>
+            <h3 style="margin:12px 0 8px;">${t('module.periodic.criticalPoints', 'تحليل نقاط الفحص (مثل Power BI)')}</h3>
+            <table style="width:100%;border-collapse:collapse;font-size:12px;">
+                <thead><tr><th style="border:1px solid #e2e8f0;padding:6px;">${t('module.periodic.point', 'النقطة')}</th><th style="border:1px solid #e2e8f0;padding:6px;">${t('module.periodic.checked', 'المرات المفحوصة')}</th><th style="border:1px solid #e2e8f0;padding:6px;">${t('module.periodic.compliant', 'مطابق')}</th><th style="border:1px solid #e2e8f0;padding:6px;">${t('module.periodic.nonCompliant', 'غير مطابق')}</th><th style="border:1px solid #e2e8f0;padding:6px;">${t('module.periodic.riskRate', 'معدل الخطورة')}</th></tr></thead>
+                <tbody>${rows}</tbody>
+            </table>
+            <h3 style="margin:12px 0 8px;">${t('module.periodic.analytics.trend', 'الاتجاه الزمني')}</h3>
+            <table style="width:100%;border-collapse:collapse;font-size:12px;">
+                <thead><tr><th style="border:1px solid #e2e8f0;padding:6px;">${t('module.periodic.analytics.month', 'الشهر')}</th><th style="border:1px solid #e2e8f0;padding:6px;">${t('module.periodic.dsc.stats.total', 'إجمالي السجلات')}</th><th style="border:1px solid #e2e8f0;padding:6px;">${t('module.periodic.complianceRate', 'نسبة المطابقة')}</th><th style="border:1px solid #e2e8f0;padding:6px;">${t('module.periodic.riskRate', 'معدل الخطورة')}</th></tr></thead>
+                <tbody>${trendRows}</tbody>
+            </table>
+            </body></html>
+        `;
+        const fileName = this._buildDailySafetyFileName({ ext: 'pdf', dateValue: new Date().toISOString(), shiftValue: inspectorLabel, full: true });
+        const ok = await this.exportDailySafetyHtmlToPdf({ htmlContent, fileName, orientation: 'p', forceSinglePage: false });
+        if (ok) Notification.success(t('module.periodic.analytics.exportPdfSuccess', 'تم تصدير تقرير التحليل PDF بنجاح'));
+        else Notification.error(t('module.periodic.analytics.exportPdfError', 'تعذر تصدير تقرير التحليل PDF'));
+    },
+
+    exportDailySafetyAnalyticsExcel(scopeInspector = '__all__') {
+        const t = (key, fallback) => this._t(key, fallback);
+        const records = this._getDailySafetyAnalyticsRecordsByScope(scopeInspector);
+        if (!records.length) {
+            Notification.warning(t('module.periodic.dsc.noRecordsToExport', 'لا توجد سجلات لتصديرها'));
+            return;
+        }
+        const analytics = this.getDailySafetyAnalytics(records);
+        const rows = analytics.points.map((p) => [p.label, p.total, p.compliant, p.nonCompliant, `${p.nonCompliantRate}%`]);
+        const header = [t('module.periodic.point', 'النقطة'), t('module.periodic.checked', 'المرات المفحوصة'), t('module.periodic.compliant', 'مطابق'), t('module.periodic.nonCompliant', 'غير مطابق'), t('module.periodic.riskRate', 'معدل الخطورة')];
+        const csvContent = '\uFEFF' + [header.join('\t'), ...rows.map((r) => r.join('\t'))].join('\r\n');
+        const blob = new Blob([csvContent], { type: 'application/vnd.ms-excel;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        const inspectorLabel = (scopeInspector && scopeInspector !== '__all__') ? scopeInspector : t('module.periodic.analytics.exportAll', 'الكل');
+        link.download = this._buildDailySafetyFileName({ ext: 'xls', dateValue: new Date().toISOString(), shiftValue: inspectorLabel, full: true });
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+        Notification.success(t('module.periodic.analytics.exportExcelSuccess', 'تم تصدير تقرير التحليل Excel بنجاح'));
     },
 
     bindDailySafetyCheckListTableEvents() {
@@ -3642,6 +3762,35 @@ const PeriodicInspections = {
             rankingEl.addEventListener('change', () => {
                 this.state.dailySafetyAnalyticsControls.rankingMetric = rankingEl.value || 'nonCompliantRate';
                 this.refreshCurrentTabContent();
+            });
+        }
+
+        const cardStyleEl = document.getElementById('dsc-analytics-card-style');
+        if (cardStyleEl) {
+            cardStyleEl.addEventListener('change', () => {
+                this.state.dailySafetyAnalyticsControls.cardStyle = cardStyleEl.value || 'gradient';
+                this.refreshCurrentTabContent();
+            });
+        }
+        const barStyleEl = document.getElementById('dsc-analytics-bar-style');
+        if (barStyleEl) {
+            barStyleEl.addEventListener('change', () => {
+                this.state.dailySafetyAnalyticsControls.barStyle = barStyleEl.value || 'rounded';
+                this.refreshCurrentTabContent();
+            });
+        }
+        const exportPdfBtn = document.getElementById('dsc-analytics-export-pdf-btn');
+        if (exportPdfBtn) {
+            exportPdfBtn.addEventListener('click', () => {
+                const scope = document.getElementById('dsc-analytics-export-inspector')?.value || '__all__';
+                this.exportDailySafetyAnalyticsPDF(scope);
+            });
+        }
+        const exportExcelBtn = document.getElementById('dsc-analytics-export-excel-btn');
+        if (exportExcelBtn) {
+            exportExcelBtn.addEventListener('click', () => {
+                const scope = document.getElementById('dsc-analytics-export-inspector')?.value || '__all__';
+                this.exportDailySafetyAnalyticsExcel(scope);
             });
         }
     },
