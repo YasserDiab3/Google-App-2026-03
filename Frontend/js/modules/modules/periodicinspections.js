@@ -3233,11 +3233,63 @@ const PeriodicInspections = {
         });
 
         try {
-            await loadScript('jspdf.umd.min.js');
-            await loadScript('jspdf.plugin.autotable.min.js');
+            await loadScript('https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js');
+            await loadScript('https://cdn.jsdelivr.net/npm/jspdf-autotable@3.5.24/dist/jspdf.plugin.autotable.min.js');
             return Boolean(this.getJsPdfCtor());
         } catch (error) {
             Utils.safeWarn('تعذر تحميل مكتبات PDF للتصدير المباشر:', error);
+            return false;
+        }
+    },
+
+    async ensureHtml2CanvasReadyForDailySafetyExport() {
+        if (typeof window.html2canvas === 'function') return true;
+
+        const loadScript = (src) => new Promise((resolve, reject) => {
+            const existing = Array.from(document.querySelectorAll('script[src]'))
+                .find((s) => String(s.src || '').includes(src));
+
+            if (existing) {
+                if (typeof window.html2canvas === 'function' || existing.dataset.loaded === 'true' || existing.readyState === 'complete') {
+                    resolve(true);
+                    return;
+                }
+                const timeoutId = setTimeout(() => {
+                    if (typeof window.html2canvas === 'function') resolve(true);
+                    else reject(new Error('html2canvas load timeout'));
+                }, 6000);
+                existing.addEventListener('load', () => {
+                    clearTimeout(timeoutId);
+                    resolve(true);
+                }, { once: true });
+                existing.addEventListener('error', () => {
+                    clearTimeout(timeoutId);
+                    reject(new Error('failed to load html2canvas'));
+                }, { once: true });
+                return;
+            }
+
+            const script = document.createElement('script');
+            script.type = 'text/javascript';
+            script.async = true;
+            script.src = src;
+            script.crossOrigin = 'anonymous';
+            script.onload = () => {
+                script.dataset.loaded = 'true';
+                resolve(true);
+            };
+            script.onerror = () => reject(new Error('failed to load html2canvas'));
+            document.head.appendChild(script);
+        });
+
+        try {
+            await loadScript('https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js');
+            if (typeof window.html2canvas !== 'function') {
+                await loadScript('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js');
+            }
+            return typeof window.html2canvas === 'function';
+        } catch (error) {
+            Utils.safeWarn('تعذر تحميل html2canvas لتصدير PDF:', error);
             return false;
         }
     },
@@ -3249,11 +3301,18 @@ const PeriodicInspections = {
             return false;
         }
 
+        const canvasReady = await this.ensureHtml2CanvasReadyForDailySafetyExport();
+        if (!canvasReady) {
+            Notification.error(this._t('module.periodic.dsc.pdfCanvasLoadError', 'تعذر تحميل محرك تحويل الصفحة إلى PDF. يرجى إعادة المحاولة.'));
+            return false;
+        }
+
+        let container = null;
         try {
             const jsPDF = this.getJsPdfCtor();
             const doc = new jsPDF(orientation, 'mm', 'a4');
 
-            const container = document.createElement('div');
+            container = document.createElement('div');
             container.style.position = 'fixed';
             container.style.left = '-100000px';
             container.style.top = '0';
@@ -3264,29 +3323,42 @@ const PeriodicInspections = {
             container.innerHTML = htmlContent;
             document.body.appendChild(container);
 
-            await new Promise((resolve, reject) => {
-                doc.html(container, {
-                    x: 5,
-                    y: 5,
-                    width: orientation === 'l' ? 287 : 200,
-                    windowWidth: orientation === 'l' ? 1120 : 794,
-                    autoPaging: 'text',
-                    html2canvas: {
-                        scale: 2,
-                        useCORS: true,
-                        backgroundColor: '#ffffff'
-                    },
-                    callback: () => resolve(true)
-                });
-                setTimeout(() => reject(new Error('html-to-pdf timeout')), 20000);
+            const canvas = await window.html2canvas(container, {
+                scale: 2,
+                useCORS: true,
+                backgroundColor: '#ffffff'
             });
+            const imgData = canvas.toDataURL('image/jpeg', 0.98);
+
+            const pageWidth = doc.internal.pageSize.getWidth();
+            const pageHeight = doc.internal.pageSize.getHeight();
+            const margin = 5;
+            const usableWidth = pageWidth - margin * 2;
+            const usableHeight = pageHeight - margin * 2;
+            const imgHeight = (canvas.height * usableWidth) / canvas.width;
+
+            let heightLeft = imgHeight;
+            let position = margin;
+
+            doc.addImage(imgData, 'JPEG', margin, position, usableWidth, imgHeight, undefined, 'FAST');
+            heightLeft -= usableHeight;
+
+            while (heightLeft > 0) {
+                position = heightLeft - imgHeight + margin;
+                doc.addPage();
+                doc.addImage(imgData, 'JPEG', margin, position, usableWidth, imgHeight, undefined, 'FAST');
+                heightLeft -= usableHeight;
+            }
 
             doc.save(fileName);
-            container.remove();
             return true;
         } catch (error) {
             Utils.safeWarn('فشل تحويل HTML إلى PDF:', error);
             return false;
+        } finally {
+            if (container && container.parentNode) {
+                container.remove();
+            }
         }
     },
 
