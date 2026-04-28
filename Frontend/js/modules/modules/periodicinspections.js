@@ -245,6 +245,10 @@ const PeriodicInspections = {
             dateFrom: '',
             dateTo: ''
         },
+        dailySafetyAnalyticsControls: {
+            topN: 10,
+            rankingMetric: 'nonCompliantRate'
+        },
         currentView: 'list', // list, form, edit
         currentEditId: null,
         selectedTemplate: null
@@ -430,6 +434,34 @@ const PeriodicInspections = {
             overallPointsTotal,
             complianceRate
         };
+    },
+
+    getDailySafetyTrend(records) {
+        const list = Array.isArray(records) ? records : [];
+        const byMonth = {};
+        list.forEach((r) => {
+            const date = new Date(r.date || r.createdAt || '');
+            if (Number.isNaN(date.getTime())) return;
+            const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+            if (!byMonth[monthKey]) byMonth[monthKey] = { records: 0, compliant: 0, nonCompliant: 0, totalAnswers: 0 };
+            byMonth[monthKey].records += 1;
+            this.DAILY_SAFETY_CHECKLIST_QUESTIONS.forEach((q) => {
+                const val = r[this._getDailySafetyQuestionRecordKey(q.key)];
+                const kind = this._getDailySafetyStatusKind(val);
+                if (kind === 'empty') return;
+                byMonth[monthKey].totalAnswers += 1;
+                if (kind === 'compliant') byMonth[monthKey].compliant += 1;
+                if (kind === 'nonCompliant') byMonth[monthKey].nonCompliant += 1;
+            });
+        });
+        return Object.entries(byMonth)
+            .map(([month, v]) => ({
+                month,
+                records: v.records,
+                complianceRate: v.totalAnswers > 0 ? Math.round((v.compliant / v.totalAnswers) * 100) : 0,
+                nonCompliantRate: v.totalAnswers > 0 ? Math.round((v.nonCompliant / v.totalAnswers) * 100) : 0
+            }))
+            .sort((a, b) => a.month.localeCompare(b.month));
     },
 
     async load() {
@@ -3373,10 +3405,21 @@ const PeriodicInspections = {
         const allRecords = this.getDailySafetyCheckListRecords();
         const filteredRecords = this.applyDailySafetyFilters(allRecords);
         const analytics = this.getDailySafetyAnalytics(filteredRecords);
-        const worstPoints = analytics.points.slice(0, 8);
-        const topInspectors = analytics.inspectorList.slice(0, 10);
-        const topSites = analytics.siteList.slice(0, 10);
         const t = (key, fallback) => this._t(key, fallback);
+        const controls = this.state.dailySafetyAnalyticsControls || { topN: 10, rankingMetric: 'nonCompliantRate' };
+        const topN = Math.max(3, Math.min(20, Number(controls.topN || 10)));
+        const trend = this.getDailySafetyTrend(filteredRecords);
+        const topInspectors = analytics.inspectorList.slice(0, topN);
+        const topSites = analytics.siteList.slice(0, topN);
+        const points = [...analytics.points];
+        if (controls.rankingMetric === 'complianceRate') {
+            points.sort((a, b) => b.complianceRate - a.complianceRate);
+        } else if (controls.rankingMetric === 'nonCompliantCount') {
+            points.sort((a, b) => b.nonCompliant - a.nonCompliant);
+        } else {
+            points.sort((a, b) => b.nonCompliantRate - a.nonCompliantRate);
+        }
+        const worstPoints = points.slice(0, topN);
 
         const renderRankBars = (items, colorClass = 'bg-blue-500') => {
             const max = Math.max(1, ...(items.map((i) => i.count)));
@@ -3386,19 +3429,89 @@ const PeriodicInspections = {
                         <span class="font-medium text-gray-700">${Utils.escapeHTML(item.name || '-')}</span>
                         <span class="text-gray-500">${item.count}</span>
                     </div>
-                    <div class="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
-                        <div class="${colorClass}" style="width:${Math.round((item.count / max) * 100)}%; height:100%;"></div>
+                    <div style="width:100%; height:8px; background:#eef2f7; border-radius:6px; overflow:hidden;">
+                        <div class="${colorClass}" style="width:${Math.round((item.count / max) * 100)}%; height:8px; border-radius:6px;"></div>
                     </div>
                 </div>
             `).join('');
         };
 
+        const filterOptions = this.getDailySafetyFilterOptions(allRecords);
+        const f = this.state.dailySafetyFilters || {};
+        const trendMax = Math.max(1, ...(trend.map((r) => r.records)));
+
         return `
+            <div class="mb-4">
+                <h3 class="text-xl font-bold text-gray-900 m-0"><i class="fas fa-chart-line ml-2" style="color:#1e40af;"></i>${t('module.periodic.tab.dailySafetyAnalytics', 'تحليل البيانات')}</h3>
+                <p class="text-sm text-gray-500 mt-1 mb-0">${t('module.periodic.analytics.subtitle', 'لوحة تحليل ديناميكية شاملة لسجلات المرور اليومي للسلامة')}</p>
+            </div>
+
+            <div class="content-card mb-4">
+                <div class="card-body">
+                    <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-3">
+                        <div>
+                            <label class="form-label">${t('module.periodic.search', 'بحث')}</label>
+                            <input id="dsc-filter-search" class="form-input" type="text" value="${Utils.escapeHTML(f.search || '')}" placeholder="${t('module.periodic.searchPlaceholder', 'بحث برقم التقرير/الموقع/الاسم')}">
+                        </div>
+                        <div>
+                            <label class="form-label">${t('module.periodic.dsc.table.site', 'المصنع/الموقع')}</label>
+                            <select id="dsc-filter-site" class="form-input">
+                                <option value="">${t('module.periodic.all', 'الكل')}</option>
+                                ${filterOptions.sites.map((s) => `<option value="${Utils.escapeHTML(s.id)}" ${String(f.siteId || '') === String(s.id) ? 'selected' : ''}>${Utils.escapeHTML(s.name)}</option>`).join('')}
+                            </select>
+                        </div>
+                        <div>
+                            <label class="form-label">${t('module.periodic.dsc.table.inspector', 'القائم بالمرور')}</label>
+                            <select id="dsc-filter-inspector" class="form-input">
+                                <option value="">${t('module.periodic.all', 'الكل')}</option>
+                                ${filterOptions.inspectors.map((name) => `<option value="${Utils.escapeHTML(name)}" ${String(f.inspectorName || '') === String(name) ? 'selected' : ''}>${Utils.escapeHTML(name)}</option>`).join('')}
+                            </select>
+                        </div>
+                        <div>
+                            <label class="form-label">${t('module.periodic.dsc.table.shift', 'الوردية')}</label>
+                            <select id="dsc-filter-shift" class="form-input">
+                                <option value="">${t('module.periodic.all', 'الكل')}</option>
+                                ${filterOptions.shifts.map((shift) => `<option value="${Utils.escapeHTML(shift)}" ${String(f.shift || '') === String(shift) ? 'selected' : ''}>${Utils.escapeHTML(this._formatDailyShiftLabel(shift))}</option>`).join('')}
+                            </select>
+                        </div>
+                        <div>
+                            <label class="form-label">${t('module.periodic.fromDate', 'من تاريخ')}</label>
+                            <input id="dsc-filter-date-from" class="form-input" type="date" value="${Utils.escapeHTML(f.dateFrom || '')}">
+                        </div>
+                        <div>
+                            <label class="form-label">${t('module.periodic.toDate', 'إلى تاريخ')}</label>
+                            <input id="dsc-filter-date-to" class="form-input" type="date" value="${Utils.escapeHTML(f.dateTo || '')}">
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mt-3">
+                        <div>
+                            <label class="form-label">${t('module.periodic.analytics.topN', 'عدد العناصر المعروضة')}</label>
+                            <select id="dsc-analytics-topn" class="form-input">
+                                ${[5, 8, 10, 12, 15, 20].map((n) => `<option value="${n}" ${n === topN ? 'selected' : ''}>Top ${n}</option>`).join('')}
+                            </select>
+                        </div>
+                        <div>
+                            <label class="form-label">${t('module.periodic.analytics.rankingMetric', 'ترتيب نقاط الفحص حسب')}</label>
+                            <select id="dsc-analytics-ranking" class="form-input">
+                                <option value="nonCompliantRate" ${controls.rankingMetric === 'nonCompliantRate' ? 'selected' : ''}>${t('module.periodic.analytics.byRiskRate', 'معدل الخطورة')}</option>
+                                <option value="nonCompliantCount" ${controls.rankingMetric === 'nonCompliantCount' ? 'selected' : ''}>${t('module.periodic.analytics.byNonCompliantCount', 'عدد غير المطابق')}</option>
+                                <option value="complianceRate" ${controls.rankingMetric === 'complianceRate' ? 'selected' : ''}>${t('module.periodic.analytics.byComplianceRate', 'نسبة المطابقة')}</option>
+                            </select>
+                        </div>
+                        <div class="flex items-end">
+                            <button type="button" id="dsc-filter-reset-btn" class="btn-secondary" style="background:#fff; border:1px solid #d1d5db; color:#374151; width:100%;">
+                                <i class="fas fa-eraser ml-2"></i>${t('module.periodic.resetFilters', 'مسح الفلاتر')}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-                <div class="content-card bg-gradient-to-br from-blue-50 to-blue-100 border border-blue-200"><div class="card-body"><p class="text-sm font-medium text-blue-700 mb-1">${t('module.periodic.dsc.stats.total', 'إجمالي السجلات')}</p><p class="text-3xl font-bold text-blue-800">${analytics.totalRecords}</p></div></div>
-                <div class="content-card bg-gradient-to-br from-green-50 to-green-100 border border-green-200"><div class="card-body"><p class="text-sm font-medium text-green-700 mb-1">${t('module.periodic.complianceRate', 'نسبة المطابقة')}</p><p class="text-3xl font-bold text-green-800">${analytics.complianceRate}%</p></div></div>
-                <div class="content-card bg-gradient-to-br from-red-50 to-red-100 border border-red-200"><div class="card-body"><p class="text-sm font-medium text-red-700 mb-1">${t('module.periodic.nonCompliantPoints', 'إجمالي غير المطابق')}</p><p class="text-3xl font-bold text-red-800">${analytics.overallNonCompliant}</p></div></div>
-                <div class="content-card bg-gradient-to-br from-indigo-50 to-indigo-100 border border-indigo-200"><div class="card-body"><p class="text-sm font-medium text-indigo-700 mb-1">${t('module.periodic.pointsChecked', 'إجمالي نقاط الفحص')}</p><p class="text-3xl font-bold text-indigo-800">${analytics.overallPointsTotal}</p></div></div>
+                <div class="content-card" style="border:1px solid #dbeafe; background:linear-gradient(135deg, #eff6ff, #dbeafe);"><div class="card-body"><p class="text-sm font-medium text-blue-700 mb-1">${t('module.periodic.dsc.stats.total', 'إجمالي السجلات')}</p><p class="text-3xl font-bold text-blue-900">${analytics.totalRecords}</p></div></div>
+                <div class="content-card" style="border:1px solid #bbf7d0; background:linear-gradient(135deg, #f0fdf4, #dcfce7);"><div class="card-body"><p class="text-sm font-medium text-green-700 mb-1">${t('module.periodic.complianceRate', 'نسبة المطابقة')}</p><p class="text-3xl font-bold text-green-900">${analytics.complianceRate}%</p></div></div>
+                <div class="content-card" style="border:1px solid #fecaca; background:linear-gradient(135deg, #fef2f2, #fee2e2);"><div class="card-body"><p class="text-sm font-medium text-red-700 mb-1">${t('module.periodic.nonCompliantPoints', 'إجمالي غير المطابق')}</p><p class="text-3xl font-bold text-red-900">${analytics.overallNonCompliant}</p></div></div>
+                <div class="content-card" style="border:1px solid #c7d2fe; background:linear-gradient(135deg, #eef2ff, #e0e7ff);"><div class="card-body"><p class="text-sm font-medium text-indigo-700 mb-1">${t('module.periodic.pointsChecked', 'إجمالي نقاط الفحص')}</p><p class="text-3xl font-bold text-indigo-900">${analytics.overallPointsTotal}</p></div></div>
             </div>
 
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
@@ -3409,6 +3522,23 @@ const PeriodicInspections = {
                 <div class="content-card">
                     <div class="card-header"><h3 class="card-title"><i class="fas fa-industry ml-2"></i>${t('module.periodic.topSites', 'تحليل المواقع')}</h3></div>
                     <div class="card-body">${topSites.length ? renderRankBars(topSites, 'bg-blue-500') : `<div class="empty-state"><p class="text-gray-500">${t('module.periodic.noData', 'لا توجد بيانات')}</p></div>`}</div>
+                </div>
+            </div>
+
+            <div class="content-card mb-6">
+                <div class="card-header"><h3 class="card-title"><i class="fas fa-chart-area ml-2"></i>${t('module.periodic.analytics.trend', 'الاتجاه الزمني')}</h3></div>
+                <div class="card-body">
+                    ${trend.length ? trend.map((item) => `
+                        <div class="mb-3">
+                            <div class="flex items-center justify-between text-sm mb-1">
+                                <span class="font-medium text-gray-700">${Utils.escapeHTML(item.month)}</span>
+                                <span class="text-gray-500">${t('module.periodic.dsc.stats.total', 'إجمالي السجلات')}: ${item.records} | ${t('module.periodic.complianceRate', 'نسبة المطابقة')}: ${item.complianceRate}%</span>
+                            </div>
+                            <div style="width:100%; height:10px; background:#eef2f7; border-radius:6px; overflow:hidden;">
+                                <div style="width:${Math.round((item.records / trendMax) * 100)}%; height:10px; background:linear-gradient(90deg,#2563eb,#3b82f6); border-radius:6px;"></div>
+                            </div>
+                        </div>
+                    `).join('') : `<div class="empty-state"><p class="text-gray-500">${t('module.periodic.noData', 'لا توجد بيانات')}</p></div>`}
                 </div>
             </div>
 
@@ -3435,8 +3565,8 @@ const PeriodicInspections = {
                                             <td>${p.compliant}</td>
                                             <td class="text-red-600 font-bold">${p.nonCompliant}</td>
                                             <td>
-                                                <div class="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
-                                                    <div class="${p.nonCompliantRate >= 40 ? 'bg-red-500' : (p.nonCompliantRate >= 20 ? 'bg-orange-500' : 'bg-green-500')}" style="width:${Math.max(2, p.nonCompliantRate)}%; height:100%;"></div>
+                                                <div style="width:100%; height:8px; background:#eef2f7; border-radius:6px; overflow:hidden;">
+                                                    <div class="${p.nonCompliantRate >= 40 ? 'bg-red-500' : (p.nonCompliantRate >= 20 ? 'bg-orange-500' : 'bg-green-500')}" style="width:${Math.max(2, p.nonCompliantRate)}%; height:8px; border-radius:6px;"></div>
                                                 </div>
                                                 <div class="text-xs mt-1 text-gray-600">${p.nonCompliantRate}%</div>
                                             </td>
@@ -3495,6 +3625,22 @@ const PeriodicInspections = {
         if (resetBtn) {
             resetBtn.addEventListener('click', () => {
                 this.state.dailySafetyFilters = { search: '', siteId: '', inspectorName: '', shift: '', dateFrom: '', dateTo: '' };
+                this.refreshCurrentTabContent();
+            });
+        }
+
+        const topNEl = document.getElementById('dsc-analytics-topn');
+        if (topNEl) {
+            topNEl.addEventListener('change', () => {
+                const val = Number(topNEl.value || 10);
+                this.state.dailySafetyAnalyticsControls.topN = Number.isFinite(val) ? val : 10;
+                this.refreshCurrentTabContent();
+            });
+        }
+        const rankingEl = document.getElementById('dsc-analytics-ranking');
+        if (rankingEl) {
+            rankingEl.addEventListener('change', () => {
+                this.state.dailySafetyAnalyticsControls.rankingMetric = rankingEl.value || 'nonCompliantRate';
                 this.refreshCurrentTabContent();
             });
         }
