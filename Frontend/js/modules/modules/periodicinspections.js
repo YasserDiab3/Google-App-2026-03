@@ -275,6 +275,26 @@ const PeriodicInspections = {
         return this._isEnglishUI() ? (mapEn[raw] || raw || '-') : (mapAr[raw] || raw || '-');
     },
 
+    _sanitizeFileNamePart(value) {
+        return String(value || '')
+            .trim()
+            .replace(/[\\/:*?"<>|]/g, '-')
+            .replace(/\s+/g, ' ')
+            .replace(/-+/g, '-');
+    },
+
+    _buildDailySafetyFileName({ ext = 'pdf', dateValue = '', shiftValue = '', full = false } = {}) {
+        const reportTitle = this._isEnglishUI() ? 'Daily Safety Report' : 'تقرير_المرور_اليومي_للسلامة';
+        const safeTitle = this._sanitizeFileNamePart(reportTitle).replace(/\s+/g, '_');
+        const rawDate = String(dateValue || '').slice(0, 10);
+        const safeDate = rawDate || new Date().toISOString().slice(0, 10);
+        const shiftLabel = this._formatDailyShiftLabel(shiftValue || '').replace(/^الوردية\s+/i, '');
+        const safeShift = this._sanitizeFileNamePart(shiftLabel || (this._isEnglishUI() ? 'Shift-Unknown' : 'وردية-غير-محددة')).replace(/\s+/g, '_');
+        const safeExt = String(ext || 'pdf').replace('.', '').toLowerCase();
+        const fullTag = full ? (this._isEnglishUI() ? 'Full' : 'كامل') : '';
+        return [safeTitle, safeDate, safeShift, fullTag].filter(Boolean).join('_') + '.' + safeExt;
+    },
+
     _getDailySafetyQuestionLabel(question) {
         const key = question && question.key ? `module.periodic.dsc.question.${question.key}` : '';
         if (!key) return String(question?.label || '');
@@ -3470,7 +3490,13 @@ const PeriodicInspections = {
         const url = URL.createObjectURL(blob);
         const link = document.createElement('a');
         link.href = url;
-        link.download = `DailySafetyPatrolList_${new Date().toISOString().slice(0, 10)}.xls`;
+        const firstRecord = (records || [])[0] || {};
+        link.download = this._buildDailySafetyFileName({
+            ext: 'xls',
+            dateValue: firstRecord.date || new Date().toISOString(),
+            shiftValue: firstRecord.shift || '',
+            full: true
+        });
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
@@ -3521,7 +3547,13 @@ const PeriodicInspections = {
             : `<!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="UTF-8"><title>${formTitle}</title></head><body style="font-family:Arial,Tahoma,sans-serif;direction:rtl;padding:20px;">${content}</body></html>`;
         const htmlContent = this.prepareDailySafetyPdfHtmlContent(rawHtmlContent, { landscape: true });
 
-        const fileName = `DailySafetyPatrolList_Full_${new Date().toISOString().slice(0, 10)}.pdf`;
+        const firstRecord = (records || [])[0] || {};
+        const fileName = this._buildDailySafetyFileName({
+            ext: 'pdf',
+            dateValue: firstRecord.date || new Date().toISOString(),
+            shiftValue: firstRecord.shift || '',
+            full: true
+        });
         const ok = await this.exportDailySafetyHtmlToPdf({ htmlContent, fileName, orientation: 'l', forceSinglePage: true });
         if (ok) Notification.success(this._t('module.periodic.dsc.exportPdfSuccess', 'تم تصدير السجل إلى PDF بنجاح'));
         else Notification.error(this._t('module.periodic.dsc.exportPdfError', 'تعذر إنشاء ملف PDF بشكل مباشر.'));
@@ -3941,7 +3973,12 @@ const PeriodicInspections = {
             ? FormHeader.generatePDFHTML(`DSC-${record.id || ''}`, formTitle, this._getDailySafetyCompactFooterStyle() + content, false, false, { source: 'DailySafetyCheckList', titleEn: this._t('module.periodic.dsc.titleEn', 'Daily Safety Report'), titleAr: this._t('module.periodic.dsc.titleAr', 'قائمة المرور اليومي للسلامة') }, record.createdAt || new Date().toISOString(), record.updatedAt || record.createdAt || new Date().toISOString())
             : `<!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="UTF-8"><title>${formTitle}</title></head><body style="font-family:Arial,Tahoma,sans-serif;direction:rtl;padding:20px;">${content}</body></html>`;
         const htmlContent = this.prepareDailySafetyPdfHtmlContent(rawHtmlContent, { landscape: false });
-        const fileName = `DailySafetyPatrolList_${(record.date || '').toString().slice(0, 10)}_${(record.id || '').replace(/[^a-zA-Z0-9-]/g, '')}.pdf`;
+        const fileName = this._buildDailySafetyFileName({
+            ext: 'pdf',
+            dateValue: record.date || new Date().toISOString(),
+            shiftValue: record.shift || '',
+            full: false
+        });
         const ok = await this.exportDailySafetyHtmlToPdf({ htmlContent, fileName, orientation: 'p', forceSinglePage: true });
         if (ok) Notification.success(this._t('module.periodic.dsc.exportPdfSuccess', 'تم تصدير السجل إلى PDF بنجاح'));
         else Notification.error(this._t('module.periodic.dsc.exportPdfError', 'تعذر إنشاء ملف PDF بشكل مباشر.'));

@@ -5935,29 +5935,34 @@ const PDFTemplates = {
         }
         .report-wrapper.dsc-report .report-header {
             direction: ltr;
-            grid-template-columns: minmax(0, 1fr) minmax(280px, 360px);
+            grid-template-columns: 110px minmax(0, 1fr) minmax(280px, 360px);
             align-items: start;
-            gap: 12px;
+            gap: 14px;
         }
-        .report-wrapper.dsc-report .header-info {
+        .report-wrapper.dsc-report .report-logo {
             grid-column: 1;
             justify-content: flex-start;
             align-self: start;
+            width: 100%;
+            margin-top: 0;
+            min-height: 72px;
+            display: flex;
+            align-items: flex-start;
+        }
+        .report-wrapper.dsc-report .report-logo img {
+            max-height: 64px;
+            max-width: 96px;
+        }
+        .report-wrapper.dsc-report .header-info {
+            grid-column: 2;
+            justify-content: flex-start;
+            align-self: end;
             min-width: 0;
             display: flex;
             flex-direction: column;
             align-items: center;
             gap: 6px;
-        }
-        .report-wrapper.dsc-report .report-logo {
-            justify-content: center;
-            align-self: center;
-            width: 100%;
-            margin-bottom: 2px;
-        }
-        .report-wrapper.dsc-report .report-logo img {
-            max-height: 58px;
-            max-width: 90px;
+            margin-top: 18px;
         }
         .report-wrapper.dsc-report .header-title-dual {
             width: 100%;
@@ -5981,13 +5986,15 @@ const PDFTemplates = {
             text-align: center;
         }
         .report-wrapper.dsc-report .company-brand {
-            grid-column: 2;
+            grid-column: 3;
             align-items: flex-end;
             text-align: right;
             direction: rtl;
             justify-self: stretch;
             min-width: 0;
             gap: 2px;
+            align-self: start;
+            padding-top: 0;
         }
         .report-wrapper.dsc-report .company-brand .company-name,
         .report-wrapper.dsc-report .company-brand .company-name-secondary {
