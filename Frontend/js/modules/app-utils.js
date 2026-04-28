@@ -5739,9 +5739,15 @@ const PDFTemplates = {
             .replace(/<table(?![^>]*class=)/g, '<table class="report-table"')
             .replace(/<ul(?![^>]*class=)/g, '<ul class="report-list"');
 
+        const isDailySafetyTemplate = String(meta?.source || '').trim() === 'DailySafetyCheckList';
         const excludedMetaKeys = ['version', 'releaseDate', 'revisionDate', 'issueDate', 'includeQRCode', 'qrData', 'modifiedAt', 'titleEn', 'titleAr'];
         const metaRows = Object.entries(meta || {})
-            .filter(([key, value]) => value !== undefined && value !== null && value !== '' && !excludedMetaKeys.includes(key))
+            .filter(([key, value]) => {
+                if (value === undefined || value === null || value === '') return false;
+                if (excludedMetaKeys.includes(key)) return false;
+                if (isDailySafetyTemplate && key === 'source') return false;
+                return true;
+            })
             .map(([key, value]) => `
                 <div class="meta-item">
                     <span class="meta-label">${escape(key)}</span>
@@ -5771,8 +5777,6 @@ const PDFTemplates = {
         const formCodeDisplay = escape(formCode || '-');
         // تسمية كود التقرير - يمكن تخصيصها من إعدادات الشركة
         const formCodeLabel = formCode ? 'كود التقرير' : '';
-        const isDailySafetyTemplate = String(meta?.source || '').trim() === 'DailySafetyCheckList';
-
         return `<!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
@@ -5936,16 +5940,20 @@ const PDFTemplates = {
         .report-wrapper.dsc-report .report-header {
             direction: ltr;
             grid-template-columns: 110px minmax(0, 1fr) minmax(280px, 360px);
+            grid-template-rows: auto auto;
+            grid-template-areas:
+                "logo company company"
+                "logo title title";
             align-items: start;
-            gap: 14px;
+            gap: 10px 14px;
         }
         .report-wrapper.dsc-report .report-logo {
-            grid-column: 1;
+            grid-area: logo;
             justify-content: flex-start;
             align-self: start;
             width: 100%;
             margin-top: 0;
-            min-height: 72px;
+            min-height: 64px;
             display: flex;
             align-items: flex-start;
         }
@@ -5954,15 +5962,15 @@ const PDFTemplates = {
             max-width: 96px;
         }
         .report-wrapper.dsc-report .header-info {
-            grid-column: 2;
+            grid-area: title;
             justify-content: flex-start;
-            align-self: end;
+            align-self: start;
             min-width: 0;
             display: flex;
             flex-direction: column;
             align-items: center;
-            gap: 6px;
-            margin-top: 18px;
+            gap: 4px;
+            margin-top: 0;
         }
         .report-wrapper.dsc-report .header-title-dual {
             width: 100%;
@@ -5986,13 +5994,13 @@ const PDFTemplates = {
             text-align: center;
         }
         .report-wrapper.dsc-report .company-brand {
-            grid-column: 3;
+            grid-area: company;
             align-items: flex-end;
             text-align: right;
             direction: rtl;
             justify-self: stretch;
             min-width: 0;
-            gap: 2px;
+            gap: 4px;
             align-self: start;
             padding-top: 0;
         }

@@ -3335,6 +3335,7 @@ const PeriodicInspections = {
             </div>
             <div class="content-card mb-4">
                 <div class="card-body">
+                    <div class="mb-2 text-sm font-semibold text-slate-700"><i class="fas fa-filter ml-2 text-blue-600"></i>${t('module.periodic.analytics.filterData', 'فلترة البيانات')}</div>
                     <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-3">
                         <div>
                             <label class="form-label">${t('module.periodic.search', 'بحث')}</label>
@@ -3495,7 +3496,10 @@ const PeriodicInspections = {
                             <input id="dsc-filter-search" class="form-input" type="text" value="${Utils.escapeHTML(f.search || '')}" placeholder="${t('module.periodic.searchPlaceholder', 'بحث برقم التقرير/الموقع/الاسم')}">
                         </div>
                     </div>
-                    <div class="grid grid-cols-1 md:grid-cols-5 gap-3 mt-3">
+                    <div class="mt-3 pt-3 border-t border-slate-200">
+                        <div class="mb-2 text-sm font-semibold text-slate-700"><i class="fas fa-sliders-h ml-2 text-indigo-600"></i>${t('module.periodic.analytics.displaySettings', 'إعدادات العرض والتحكم')}</div>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-5 gap-3">
                         <div>
                             <label class="form-label">${t('module.periodic.analytics.topN', 'عدد العناصر المعروضة')}</label>
                             <select id="dsc-analytics-topn" class="form-input">
@@ -3529,7 +3533,10 @@ const PeriodicInspections = {
                         </div>
                     </div>
                     ${isAdmin ? `
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mt-3">
+                    <div class="mt-3 pt-3 border-t border-slate-200">
+                        <div class="mb-2 text-sm font-semibold text-slate-700"><i class="fas fa-user-cog ml-2 text-emerald-600"></i>${t('module.periodic.analytics.adminDisplay', 'خيارات المدير لتخصيص الشكل')}</div>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                         <div>
                             <label class="form-label">${t('module.periodic.analytics.cardStyle', 'نمط البطاقات')}</label>
                             <select id="dsc-analytics-card-style" class="form-input">
