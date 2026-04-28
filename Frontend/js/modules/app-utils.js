@@ -5771,6 +5771,7 @@ const PDFTemplates = {
         const formCodeDisplay = escape(formCode || '-');
         // تسمية كود التقرير - يمكن تخصيصها من إعدادات الشركة
         const formCodeLabel = formCode ? 'كود التقرير' : '';
+        const isDailySafetyTemplate = String(meta?.source || '').trim() === 'DailySafetyCheckList';
 
         return `<!DOCTYPE html>
 <html lang="ar" dir="rtl">
@@ -5931,6 +5932,28 @@ const PDFTemplates = {
             border-bottom: 2px solid #003865;
             padding-bottom: 2px;
             word-break: break-word;
+        }
+        .report-wrapper.dsc-report .company-brand .company-name {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            line-height: 1.2;
+            font-size: clamp(14px, 1.6vw, 24px);
+        }
+        .report-wrapper.dsc-report .company-brand .company-name-secondary {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            line-height: 1.2;
+            font-size: clamp(12px, 1.3vw, 20px);
+        }
+        .report-wrapper.dsc-report .header-title-dual .header-title-ar {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            line-height: 1.2;
+            font-size: clamp(18px, 2vw, 30px);
+            width: 100%;
         }
         .header-meta {
             display: flex;
@@ -6423,7 +6446,7 @@ const PDFTemplates = {
     </style>
 </head>
 <body>
-    <div class="report-wrapper">
+    <div class="report-wrapper${isDailySafetyTemplate ? ' dsc-report' : ''}">
         <div class="report-header">
             <div class="company-brand">
                 <div class="company-name-group">
