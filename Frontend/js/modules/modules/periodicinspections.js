@@ -237,6 +237,14 @@ const PeriodicInspections = {
             },
             inspector: ''
         },
+        dailySafetyFilters: {
+            search: '',
+            siteId: '',
+            inspectorName: '',
+            shift: '',
+            dateFrom: '',
+            dateTo: ''
+        },
         currentView: 'list', // list, form, edit
         currentEditId: null,
         selectedTemplate: null
@@ -299,6 +307,129 @@ const PeriodicInspections = {
         const key = question && question.key ? `module.periodic.dsc.question.${question.key}` : '';
         if (!key) return String(question?.label || '');
         return this._t(key, String(question?.label || ''));
+    },
+
+    _getDailySafetyQuestionRecordKey(questionKey) {
+        const map = { q16: 'q15Reading', q17: 'q16', q18: 'q17' };
+        return map[questionKey] || questionKey;
+    },
+
+    _getDailySafetyStatusKind(value) {
+        const raw = String(value || '').trim();
+        if (!raw) return 'empty';
+        if (raw === 'مطابق') return 'compliant';
+        if (raw === 'غير مطابق') return 'nonCompliant';
+        return 'other';
+    },
+
+    _normalizeDateOnly(value) {
+        const raw = String(value || '').slice(0, 10);
+        return /^\d{4}-\d{2}-\d{2}$/.test(raw) ? raw : '';
+    },
+
+    getDailySafetyFilterOptions(records) {
+        const list = Array.isArray(records) ? records : this.getDailySafetyCheckListRecords();
+        const siteMap = new Map();
+        const inspectors = new Set();
+        const shifts = new Set();
+        list.forEach((r) => {
+            const siteId = String(r.siteId || '').trim();
+            const siteName = String(r.siteName || '').trim();
+            if (siteId || siteName) siteMap.set(siteId || siteName, siteName || siteId);
+            if (r.inspectorName) inspectors.add(String(r.inspectorName).trim());
+            if (r.shift) shifts.add(String(r.shift).trim());
+        });
+        return {
+            sites: Array.from(siteMap.entries()).map(([id, name]) => ({ id, name })).sort((a, b) => a.name.localeCompare(b.name, 'ar')),
+            inspectors: Array.from(inspectors).sort((a, b) => a.localeCompare(b, 'ar')),
+            shifts: Array.from(shifts)
+        };
+    },
+
+    applyDailySafetyFilters(records) {
+        const list = Array.isArray(records) ? records : [];
+        const f = this.state.dailySafetyFilters || {};
+        const search = String(f.search || '').trim().toLowerCase();
+        const from = this._normalizeDateOnly(f.dateFrom);
+        const to = this._normalizeDateOnly(f.dateTo);
+        return list.filter((r) => {
+            const dateOnly = this._normalizeDateOnly(r.date || r.createdAt);
+            if (f.siteId && String(r.siteId || r.siteName || '') !== String(f.siteId)) return false;
+            if (f.inspectorName && String(r.inspectorName || '') !== String(f.inspectorName)) return false;
+            if (f.shift && String(r.shift || '') !== String(f.shift)) return false;
+            if (from && (!dateOnly || dateOnly < from)) return false;
+            if (to && (!dateOnly || dateOnly > to)) return false;
+            if (search) {
+                const haystack = [
+                    r.id, this.getDailySafetyCheckListSerialNumber(r), r.siteName, r.inspectorName, r.shift, r.notes
+                ].join(' ').toLowerCase();
+                if (!haystack.includes(search)) return false;
+            }
+            return true;
+        });
+    },
+
+    getDailySafetyAnalytics(records) {
+        const list = Array.isArray(records) ? records : [];
+        const siteCount = {};
+        const inspectorCount = {};
+        const shiftCount = {};
+        const points = this.DAILY_SAFETY_CHECKLIST_QUESTIONS.map((q) => ({
+            key: q.key,
+            label: this._getDailySafetyQuestionLabel(q),
+            total: 0,
+            compliant: 0,
+            nonCompliant: 0,
+            other: 0
+        }));
+        const pointByKey = points.reduce((acc, p) => { acc[p.key] = p; return acc; }, {});
+
+        list.forEach((r) => {
+            const siteName = String(r.siteName || '-').trim();
+            const inspectorName = String(r.inspectorName || '-').trim();
+            const shift = String(r.shift || '-').trim();
+            siteCount[siteName] = (siteCount[siteName] || 0) + 1;
+            inspectorCount[inspectorName] = (inspectorCount[inspectorName] || 0) + 1;
+            shiftCount[shift] = (shiftCount[shift] || 0) + 1;
+
+            this.DAILY_SAFETY_CHECKLIST_QUESTIONS.forEach((q) => {
+                const point = pointByKey[q.key];
+                if (!point) return;
+                const val = r[this._getDailySafetyQuestionRecordKey(q.key)];
+                const kind = this._getDailySafetyStatusKind(val);
+                if (kind === 'empty') return;
+                point.total += 1;
+                if (kind === 'compliant') point.compliant += 1;
+                else if (kind === 'nonCompliant') point.nonCompliant += 1;
+                else point.other += 1;
+            });
+        });
+
+        const toSortedList = (obj) => Object.entries(obj)
+            .map(([name, count]) => ({ name, count }))
+            .sort((a, b) => b.count - a.count);
+
+        const overallPointsTotal = points.reduce((sum, p) => sum + p.total, 0);
+        const overallNonCompliant = points.reduce((sum, p) => sum + p.nonCompliant, 0);
+        const complianceRate = overallPointsTotal > 0
+            ? Math.round((points.reduce((sum, p) => sum + p.compliant, 0) / overallPointsTotal) * 100)
+            : 0;
+
+        points.forEach((p) => {
+            p.nonCompliantRate = p.total > 0 ? Math.round((p.nonCompliant / p.total) * 100) : 0;
+            p.complianceRate = p.total > 0 ? Math.round((p.compliant / p.total) * 100) : 0;
+        });
+
+        return {
+            totalRecords: list.length,
+            siteList: toSortedList(siteCount),
+            inspectorList: toSortedList(inspectorCount),
+            shiftList: toSortedList(shiftCount),
+            points: points.sort((a, b) => b.nonCompliantRate - a.nonCompliantRate),
+            overallNonCompliant,
+            overallPointsTotal,
+            complianceRate
+        };
     },
 
     async load() {
@@ -475,6 +606,10 @@ const PeriodicInspections = {
                     <button class="tab-btn ${this.state.currentTab === 'daily-safety-checklist' ? 'active' : ''}" data-tab="daily-safety-checklist">
                         <i class="fas fa-tasks ml-2"></i>
                         ${this._t('module.periodic.tab.dailySafety', 'قائمة المرور اليومي للسلامة')}
+                    </button>
+                    <button class="tab-btn ${this.state.currentTab === 'daily-safety-analytics' ? 'active' : ''}" data-tab="daily-safety-analytics">
+                        <i class="fas fa-chart-line ml-2"></i>
+                        ${this._t('module.periodic.tab.dailySafetyAnalytics', 'تحليل البيانات')}
                     </button>
                 </div>
             </div>
@@ -674,6 +809,9 @@ const PeriodicInspections = {
             default:
                 if (this.state.currentTab === 'daily-safety-checklist') {
                     return await this.renderDailySafetyCheckListContent();
+                }
+                if (this.state.currentTab === 'daily-safety-analytics') {
+                    return await this.renderDailySafetyAnalyticsContent();
                 }
                 if (this.state.currentTab === 'inspection-records') {
                     return await this.renderInspectionRecords();
@@ -3071,7 +3209,11 @@ const PeriodicInspections = {
 
     async renderDailySafetyCheckListContent() {
         const records = this.getDailySafetyCheckListRecords();
-        const stats = this.getDailySafetyCheckListStats(records);
+        const filteredRecords = this.applyDailySafetyFilters(records);
+        const stats = this.getDailySafetyCheckListStats(filteredRecords);
+        const allStats = this.getDailySafetyCheckListStats(records);
+        const filterOptions = this.getDailySafetyFilterOptions(records);
+        const f = this.state.dailySafetyFilters || {};
         const t = (key, fallback) => this._t(key, fallback);
         const en = this._isEnglishUI();
         const dscDir = en ? 'ltr' : 'rtl';
@@ -3087,6 +3229,7 @@ const PeriodicInspections = {
                             <div>
                                 <p class="text-sm font-medium text-blue-700 mb-1">${t('module.periodic.dsc.stats.total', 'إجمالي السجلات')}</p>
                                 <p class="text-3xl font-bold text-blue-800">${stats.total}</p>
+                                <p class="text-xs text-blue-600 mt-1">${records.length !== filteredRecords.length ? `${t('module.periodic.filtered', 'بعد التصفية')}: ${filteredRecords.length} / ${records.length}` : t('module.periodic.allData', 'كل البيانات')}</p>
                             </div>
                             <div class="bg-blue-500 rounded-full p-3">
                                 <i class="fas fa-file-alt text-white text-2xl"></i>
@@ -3100,6 +3243,7 @@ const PeriodicInspections = {
                             <div>
                                 <p class="text-sm font-medium text-indigo-700 mb-1">${t('module.periodic.dsc.stats.thisMonth', 'هذا الشهر')}</p>
                                 <p class="text-3xl font-bold text-indigo-800">${stats.thisMonth}</p>
+                                <p class="text-xs text-indigo-600 mt-1">${t('module.periodic.total', 'الإجمالي')}: ${allStats.thisMonth}</p>
                             </div>
                             <div class="bg-indigo-500 rounded-full p-3">
                                 <i class="fas fa-calendar-alt text-white text-2xl"></i>
@@ -3146,9 +3290,53 @@ const PeriodicInspections = {
                     <button type="button" id="daily-safety-checklist-export-excel-btn" class="btn-secondary" title="${t('module.periodic.dsc.exportExcelHint', 'تصدير السجل كامل إلى Excel')}" style="background:#fff; border:1px solid #d1d5db; color:#374151;"><i class="fas fa-file-excel ml-2"></i>${t('module.periodic.dsc.exportExcel', 'تصدير Excel')}</button>
                 </div>
             </div>
+            <div class="content-card mb-4">
+                <div class="card-body">
+                    <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-3">
+                        <div>
+                            <label class="form-label">${t('module.periodic.search', 'بحث')}</label>
+                            <input id="dsc-filter-search" class="form-input" type="text" value="${Utils.escapeHTML(f.search || '')}" placeholder="${t('module.periodic.searchPlaceholder', 'بحث برقم التقرير/الموقع/الاسم')}">
+                        </div>
+                        <div>
+                            <label class="form-label">${t('module.periodic.dsc.table.site', 'المصنع/الموقع')}</label>
+                            <select id="dsc-filter-site" class="form-input">
+                                <option value="">${t('module.periodic.all', 'الكل')}</option>
+                                ${filterOptions.sites.map((s) => `<option value="${Utils.escapeHTML(s.id)}" ${String(f.siteId || '') === String(s.id) ? 'selected' : ''}>${Utils.escapeHTML(s.name)}</option>`).join('')}
+                            </select>
+                        </div>
+                        <div>
+                            <label class="form-label">${t('module.periodic.dsc.table.inspector', 'القائم بالمرور')}</label>
+                            <select id="dsc-filter-inspector" class="form-input">
+                                <option value="">${t('module.periodic.all', 'الكل')}</option>
+                                ${filterOptions.inspectors.map((name) => `<option value="${Utils.escapeHTML(name)}" ${String(f.inspectorName || '') === String(name) ? 'selected' : ''}>${Utils.escapeHTML(name)}</option>`).join('')}
+                            </select>
+                        </div>
+                        <div>
+                            <label class="form-label">${t('module.periodic.dsc.table.shift', 'الوردية')}</label>
+                            <select id="dsc-filter-shift" class="form-input">
+                                <option value="">${t('module.periodic.all', 'الكل')}</option>
+                                ${filterOptions.shifts.map((shift) => `<option value="${Utils.escapeHTML(shift)}" ${String(f.shift || '') === String(shift) ? 'selected' : ''}>${Utils.escapeHTML(this._formatDailyShiftLabel(shift))}</option>`).join('')}
+                            </select>
+                        </div>
+                        <div>
+                            <label class="form-label">${t('module.periodic.fromDate', 'من تاريخ')}</label>
+                            <input id="dsc-filter-date-from" class="form-input" type="date" value="${Utils.escapeHTML(f.dateFrom || '')}">
+                        </div>
+                        <div>
+                            <label class="form-label">${t('module.periodic.toDate', 'إلى تاريخ')}</label>
+                            <input id="dsc-filter-date-to" class="form-input" type="date" value="${Utils.escapeHTML(f.dateTo || '')}">
+                        </div>
+                    </div>
+                    <div class="mt-3 flex items-center gap-2" style="justify-content:${dscJustify};">
+                        <button type="button" id="dsc-filter-reset-btn" class="btn-secondary" style="background:#fff; border:1px solid #d1d5db; color:#374151;">
+                            <i class="fas fa-eraser ml-2"></i>${t('module.periodic.resetFilters', 'مسح الفلاتر')}
+                        </button>
+                    </div>
+                </div>
+            </div>
             <div class="content-card">
                 <div class="card-header"><h2 class="card-title"><i class="fas fa-list ml-2"></i>${en ? t('module.periodic.dsc.recordTitle', 'Daily Safety Report Log') : t('module.periodic.dsc.recordTitleAr', 'سجل المرور اليومي للسلامة')}</h2></div>
-                <div class="card-body" id="daily-safety-checklist-table">${this.renderDailySafetyCheckListTable(records)}</div>
+                <div class="card-body" id="daily-safety-checklist-table">${this.renderDailySafetyCheckListTable(filteredRecords)}</div>
             </div>
         `;
     },
@@ -3181,6 +3369,88 @@ const PeriodicInspections = {
         </div>`;
     },
 
+    async renderDailySafetyAnalyticsContent() {
+        const allRecords = this.getDailySafetyCheckListRecords();
+        const filteredRecords = this.applyDailySafetyFilters(allRecords);
+        const analytics = this.getDailySafetyAnalytics(filteredRecords);
+        const worstPoints = analytics.points.slice(0, 8);
+        const topInspectors = analytics.inspectorList.slice(0, 10);
+        const topSites = analytics.siteList.slice(0, 10);
+        const t = (key, fallback) => this._t(key, fallback);
+
+        const renderRankBars = (items, colorClass = 'bg-blue-500') => {
+            const max = Math.max(1, ...(items.map((i) => i.count)));
+            return items.map((item) => `
+                <div class="mb-2">
+                    <div class="flex items-center justify-between text-sm mb-1">
+                        <span class="font-medium text-gray-700">${Utils.escapeHTML(item.name || '-')}</span>
+                        <span class="text-gray-500">${item.count}</span>
+                    </div>
+                    <div class="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
+                        <div class="${colorClass}" style="width:${Math.round((item.count / max) * 100)}%; height:100%;"></div>
+                    </div>
+                </div>
+            `).join('');
+        };
+
+        return `
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+                <div class="content-card bg-gradient-to-br from-blue-50 to-blue-100 border border-blue-200"><div class="card-body"><p class="text-sm font-medium text-blue-700 mb-1">${t('module.periodic.dsc.stats.total', 'إجمالي السجلات')}</p><p class="text-3xl font-bold text-blue-800">${analytics.totalRecords}</p></div></div>
+                <div class="content-card bg-gradient-to-br from-green-50 to-green-100 border border-green-200"><div class="card-body"><p class="text-sm font-medium text-green-700 mb-1">${t('module.periodic.complianceRate', 'نسبة المطابقة')}</p><p class="text-3xl font-bold text-green-800">${analytics.complianceRate}%</p></div></div>
+                <div class="content-card bg-gradient-to-br from-red-50 to-red-100 border border-red-200"><div class="card-body"><p class="text-sm font-medium text-red-700 mb-1">${t('module.periodic.nonCompliantPoints', 'إجمالي غير المطابق')}</p><p class="text-3xl font-bold text-red-800">${analytics.overallNonCompliant}</p></div></div>
+                <div class="content-card bg-gradient-to-br from-indigo-50 to-indigo-100 border border-indigo-200"><div class="card-body"><p class="text-sm font-medium text-indigo-700 mb-1">${t('module.periodic.pointsChecked', 'إجمالي نقاط الفحص')}</p><p class="text-3xl font-bold text-indigo-800">${analytics.overallPointsTotal}</p></div></div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
+                <div class="content-card">
+                    <div class="card-header"><h3 class="card-title"><i class="fas fa-user-shield ml-2"></i>${t('module.periodic.topInspectors', 'تحليل القائمين بالمرور')}</h3></div>
+                    <div class="card-body">${topInspectors.length ? renderRankBars(topInspectors, 'bg-green-500') : `<div class="empty-state"><p class="text-gray-500">${t('module.periodic.noData', 'لا توجد بيانات')}</p></div>`}</div>
+                </div>
+                <div class="content-card">
+                    <div class="card-header"><h3 class="card-title"><i class="fas fa-industry ml-2"></i>${t('module.periodic.topSites', 'تحليل المواقع')}</h3></div>
+                    <div class="card-body">${topSites.length ? renderRankBars(topSites, 'bg-blue-500') : `<div class="empty-state"><p class="text-gray-500">${t('module.periodic.noData', 'لا توجد بيانات')}</p></div>`}</div>
+                </div>
+            </div>
+
+            <div class="content-card">
+                <div class="card-header"><h3 class="card-title"><i class="fas fa-chart-bar ml-2"></i>${t('module.periodic.criticalPoints', 'تحليل نقاط الفحص (مثل Power BI)')}</h3></div>
+                <div class="card-body">
+                    ${worstPoints.length ? `
+                        <div class="table-wrapper" style="width:100%; overflow-x:auto;">
+                            <table class="data-table table-header-red" style="width:100%;">
+                                <thead>
+                                    <tr>
+                                        <th>${t('module.periodic.point', 'النقطة')}</th>
+                                        <th>${t('module.periodic.checked', 'المرات المفحوصة')}</th>
+                                        <th>${t('module.periodic.compliant', 'مطابق')}</th>
+                                        <th>${t('module.periodic.nonCompliant', 'غير مطابق')}</th>
+                                        <th>${t('module.periodic.riskRate', 'معدل الخطورة')}</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${worstPoints.map((p) => `
+                                        <tr>
+                                            <td>${Utils.escapeHTML(p.label)}</td>
+                                            <td>${p.total}</td>
+                                            <td>${p.compliant}</td>
+                                            <td class="text-red-600 font-bold">${p.nonCompliant}</td>
+                                            <td>
+                                                <div class="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
+                                                    <div class="${p.nonCompliantRate >= 40 ? 'bg-red-500' : (p.nonCompliantRate >= 20 ? 'bg-orange-500' : 'bg-green-500')}" style="width:${Math.max(2, p.nonCompliantRate)}%; height:100%;"></div>
+                                                </div>
+                                                <div class="text-xs mt-1 text-gray-600">${p.nonCompliantRate}%</div>
+                                            </td>
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                    ` : `<div class="empty-state"><p class="text-gray-500">${t('module.periodic.noData', 'لا توجد بيانات')}</p></div>`}
+                </div>
+            </div>
+        `;
+    },
+
     bindDailySafetyCheckListTableEvents() {
         const addBtn = document.getElementById('daily-safety-checklist-add-btn');
         if (addBtn) {
@@ -3199,6 +3469,34 @@ const PeriodicInspections = {
             const pdfBtnNew = pdfBtn.cloneNode(true);
             pdfBtn.parentNode.replaceChild(pdfBtnNew, pdfBtn);
             pdfBtnNew.addEventListener('click', () => this.exportDailySafetyCheckListFullPDF());
+        }
+
+        const updateFilterState = () => {
+            this.state.dailySafetyFilters.search = (document.getElementById('dsc-filter-search')?.value || '').trim();
+            this.state.dailySafetyFilters.siteId = document.getElementById('dsc-filter-site')?.value || '';
+            this.state.dailySafetyFilters.inspectorName = document.getElementById('dsc-filter-inspector')?.value || '';
+            this.state.dailySafetyFilters.shift = document.getElementById('dsc-filter-shift')?.value || '';
+            this.state.dailySafetyFilters.dateFrom = document.getElementById('dsc-filter-date-from')?.value || '';
+            this.state.dailySafetyFilters.dateTo = document.getElementById('dsc-filter-date-to')?.value || '';
+        };
+        const onFilterChange = () => {
+            updateFilterState();
+            this.refreshCurrentTabContent();
+        };
+        ['dsc-filter-search', 'dsc-filter-site', 'dsc-filter-inspector', 'dsc-filter-shift', 'dsc-filter-date-from', 'dsc-filter-date-to']
+            .forEach((id) => {
+                const el = document.getElementById(id);
+                if (!el) return;
+                const eventName = el.tagName === 'INPUT' && el.type === 'text' ? 'input' : 'change';
+                el.addEventListener(eventName, onFilterChange);
+            });
+
+        const resetBtn = document.getElementById('dsc-filter-reset-btn');
+        if (resetBtn) {
+            resetBtn.addEventListener('click', () => {
+                this.state.dailySafetyFilters = { search: '', siteId: '', inspectorName: '', shift: '', dateFrom: '', dateTo: '' };
+                this.refreshCurrentTabContent();
+            });
         }
     },
 
@@ -4041,10 +4339,10 @@ const PeriodicInspections = {
         if (typeof DataManager !== 'undefined' && DataManager.save) DataManager.save();
         // إغلاق النموذج فوراً ثم تحديث الجدول والمزامنة في الخلفية
         modalElement.remove();
-        if (this.state.currentTab === 'daily-safety-checklist') {
+        if (this.state.currentTab === 'daily-safety-checklist' || this.state.currentTab === 'daily-safety-analytics') {
             const contentContainer = document.getElementById('periodic-inspections-content-area');
             if (contentContainer) {
-                this.renderDailySafetyCheckListContent().then(html => { contentContainer.innerHTML = html; this.bindDailySafetyCheckListTableEvents(); }).catch(() => {});
+                this.refreshCurrentTabContent().catch(() => {});
             }
         }
         if (editId) Notification.success('تم تحديث السجل بنجاح');
@@ -4065,10 +4363,9 @@ const PeriodicInspections = {
         if (typeof DataManager !== 'undefined' && DataManager.save) DataManager.save();
         if (typeof GoogleIntegration !== 'undefined' && GoogleIntegration.autoSave) await GoogleIntegration.autoSave('DailySafetyCheckList', list).catch(() => {});
         Notification.success('تم حذف السجل');
-        if (this.state.currentTab === 'daily-safety-checklist') {
+        if (this.state.currentTab === 'daily-safety-checklist' || this.state.currentTab === 'daily-safety-analytics') {
             const contentContainer = document.getElementById('periodic-inspections-content-area');
-            if (contentContainer) contentContainer.innerHTML = await this.renderDailySafetyCheckListContent();
-            this.bindDailySafetyCheckListTableEvents();
+            if (contentContainer) await this.refreshCurrentTabContent();
         }
     },
 
@@ -4082,6 +4379,8 @@ const PeriodicInspections = {
             let html = '';
             if (this.state.currentTab === 'daily-safety-checklist') {
                 html = await this.renderDailySafetyCheckListContent();
+            } else if (this.state.currentTab === 'daily-safety-analytics') {
+                html = await this.renderDailySafetyAnalyticsContent();
             } else if (this.state.currentTab === 'inspection-records') {
                 html = await this.renderInspectionRecords();
             } else {
