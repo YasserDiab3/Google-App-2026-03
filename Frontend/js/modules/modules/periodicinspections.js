@@ -3231,8 +3231,8 @@ const PeriodicInspections = {
                                 <p class="text-3xl font-bold text-blue-800">${stats.total}</p>
                                 <p class="text-xs text-blue-600 mt-1">${records.length !== filteredRecords.length ? `${t('module.periodic.filtered', 'بعد التصفية')}: ${filteredRecords.length} / ${records.length}` : t('module.periodic.allData', 'كل البيانات')}</p>
                             </div>
-                            <div class="bg-blue-500 rounded-full p-3">
-                                <i class="fas fa-file-alt text-white text-2xl"></i>
+                            <div class="bg-blue-500/90 rounded-xl px-3 py-2 shadow-sm border border-blue-400/40">
+                                <i class="fas fa-file-alt text-white text-lg"></i>
                             </div>
                         </div>
                     </div>
@@ -3245,8 +3245,8 @@ const PeriodicInspections = {
                                 <p class="text-3xl font-bold text-indigo-800">${stats.thisMonth}</p>
                                 <p class="text-xs text-indigo-600 mt-1">${t('module.periodic.total', 'الإجمالي')}: ${allStats.thisMonth}</p>
                             </div>
-                            <div class="bg-indigo-500 rounded-full p-3">
-                                <i class="fas fa-calendar-alt text-white text-2xl"></i>
+                            <div class="bg-indigo-500/90 rounded-xl px-3 py-2 shadow-sm border border-indigo-400/40">
+                                <i class="fas fa-calendar-alt text-white text-lg"></i>
                             </div>
                         </div>
                     </div>
@@ -3258,8 +3258,8 @@ const PeriodicInspections = {
                                 <p class="text-sm font-medium text-green-700 mb-1">${t('module.periodic.dsc.stats.shift1', 'الوردية الأولى')}</p>
                                 <p class="text-3xl font-bold text-green-800">${stats.shift1}</p>
                             </div>
-                            <div class="bg-green-500 rounded-full p-3">
-                                <i class="fas fa-sun text-white text-2xl"></i>
+                            <div class="bg-green-500/90 rounded-xl px-3 py-2 shadow-sm border border-green-400/40">
+                                <i class="fas fa-sun text-white text-lg"></i>
                             </div>
                         </div>
                     </div>
@@ -3271,8 +3271,8 @@ const PeriodicInspections = {
                                 <p class="text-sm font-medium text-orange-700 mb-1">${t('module.periodic.dsc.stats.shift23', 'الوردية الثانية / الثالثة')}</p>
                                 <p class="text-3xl font-bold text-orange-800">${stats.shift2 + stats.shift3}</p>
                             </div>
-                            <div class="bg-orange-500 rounded-full p-3">
-                                <i class="fas fa-moon text-white text-2xl"></i>
+                            <div class="bg-orange-500/90 rounded-xl px-3 py-2 shadow-sm border border-orange-400/40">
+                                <i class="fas fa-moon text-white text-lg"></i>
                             </div>
                         </div>
                     </div>
@@ -4463,8 +4463,8 @@ const PeriodicInspections = {
                                     <p class="text-sm font-medium text-blue-700 mb-1">إجمالي السجلات</p>
                                     <p class="text-3xl font-bold text-blue-800">${stats.total}</p>
                                 </div>
-                                <div class="bg-blue-500 rounded-full p-3">
-                                    <i class="fas fa-file-alt text-white text-2xl"></i>
+                                <div class="bg-blue-500/90 rounded-xl px-3 py-2 shadow-sm border border-blue-400/40">
+                                    <i class="fas fa-file-alt text-white text-lg"></i>
                                 </div>
                             </div>
                         </div>
@@ -4477,8 +4477,8 @@ const PeriodicInspections = {
                                     <p class="text-3xl font-bold text-green-800">${stats.compliant}</p>
                                     <p class="text-xs text-green-600 mt-1">${stats.total > 0 ? Math.round((stats.compliant / stats.total) * 100) : 0}%</p>
                                 </div>
-                                <div class="bg-green-500 rounded-full p-3">
-                                    <i class="fas fa-check-circle text-white text-2xl"></i>
+                                <div class="bg-green-500/90 rounded-xl px-3 py-2 shadow-sm border border-green-400/40">
+                                    <i class="fas fa-check-circle text-white text-lg"></i>
                                 </div>
                             </div>
                         </div>
@@ -4491,8 +4491,8 @@ const PeriodicInspections = {
                                     <p class="text-3xl font-bold text-red-800">${stats.nonCompliant}</p>
                                     <p class="text-xs text-red-600 mt-1">${stats.total > 0 ? Math.round((stats.nonCompliant / stats.total) * 100) : 0}%</p>
                                 </div>
-                                <div class="bg-red-500 rounded-full p-3">
-                                    <i class="fas fa-times-circle text-white text-2xl"></i>
+                                <div class="bg-red-500/90 rounded-xl px-3 py-2 shadow-sm border border-red-400/40">
+                                    <i class="fas fa-times-circle text-white text-lg"></i>
                                 </div>
                             </div>
                         </div>
@@ -4505,8 +4505,8 @@ const PeriodicInspections = {
                                     <p class="text-3xl font-bold text-orange-800">${stats.partialCompliant}</p>
                                     <p class="text-xs text-orange-600 mt-1">${stats.total > 0 ? Math.round((stats.partialCompliant / stats.total) * 100) : 0}%</p>
                                 </div>
-                                <div class="bg-orange-500 rounded-full p-3">
-                                    <i class="fas fa-exclamation-circle text-white text-2xl"></i>
+                                <div class="bg-orange-500/90 rounded-xl px-3 py-2 shadow-sm border border-orange-400/40">
+                                    <i class="fas fa-exclamation-circle text-white text-lg"></i>
                                 </div>
                             </div>
                         </div>
