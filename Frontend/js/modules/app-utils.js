@@ -5924,7 +5924,10 @@ const PDFTemplates = {
             font-weight: 800;
             color: #003865;
             line-height: 1.3;
-            letter-spacing: 0.6px;
+            letter-spacing: 0;
+            direction: rtl;
+            unicode-bidi: isolate;
+            font-family: 'Tahoma', 'Cairo', 'Segoe UI', sans-serif;
             border-bottom: 2px solid #003865;
             padding-bottom: 2px;
             word-break: break-word;
@@ -6132,6 +6135,10 @@ const PDFTemplates = {
             font-size: 13px;
             line-height: 1.6;
             word-break: break-word;
+            direction: rtl;
+            unicode-bidi: isolate;
+            letter-spacing: 0;
+            font-family: 'Tahoma', 'Cairo', 'Segoe UI', sans-serif;
         }
         .footer-meta-left {
             justify-content: flex-start;

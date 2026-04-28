@@ -3373,9 +3373,6 @@ const PeriodicInspections = {
                 }
                 body {
                     display: block !important;
-                    direction: rtl !important;
-                    unicode-bidi: plaintext !important;
-                    font-family: Tahoma, Arial, "Segoe UI", sans-serif !important;
                     line-height: 1.35 !important;
                     margin: 0 !important;
                     padding: 0 !important;
@@ -3397,42 +3394,6 @@ const PeriodicInspections = {
                     padding-top: 4px !important;
                     page-break-inside: avoid !important;
                     break-inside: avoid !important;
-                }
-                .footer-watermark-frame {
-                    padding: 6px 10px !important;
-                    margin-top: 0 !important;
-                }
-                .footer-bottom {
-                    gap: 4px !important;
-                    display: block !important;
-                }
-                .footer-meta-line {
-                    display: grid !important;
-                    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
-                    direction: rtl !important;
-                    unicode-bidi: plaintext !important;
-                    gap: 6px !important;
-                    margin-top: 0 !important;
-                }
-                .footer-meta-item,
-                .footer-meta-left,
-                .footer-meta-center,
-                .footer-meta-right {
-                    display: block !important;
-                    text-align: right !important;
-                    justify-content: unset !important;
-                    direction: rtl !important;
-                    unicode-bidi: plaintext !important;
-                    font-family: Tahoma, Arial, "Segoe UI", sans-serif !important;
-                    font-size: 11px !important;
-                    letter-spacing: 0 !important;
-                    word-break: normal !important;
-                    overflow-wrap: anywhere !important;
-                    white-space: normal !important;
-                }
-                .footer-bottom-text {
-                    margin-top: 4px !important;
-                    text-align: center !important;
                 }
             </style>
         `;
