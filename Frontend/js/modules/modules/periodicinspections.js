@@ -3294,7 +3294,7 @@ const PeriodicInspections = {
         }
     },
 
-    async exportDailySafetyHtmlToPdf({ htmlContent, fileName, orientation = 'p' }) {
+    async exportDailySafetyHtmlToPdf({ htmlContent, fileName, orientation = 'p', forceSinglePage = false }) {
         const pdfReady = await this.ensureJsPdfReadyForDailySafetyExport();
         if (!pdfReady) {
             Notification.error(this._t('module.periodic.dsc.pdfLibLoadError', 'تعذر تحميل مكتبة PDF. يرجى التحقق من الاتصال بالإنترنت ثم إعادة المحاولة.'));
@@ -3351,7 +3351,7 @@ const PeriodicInspections = {
             const contentStartPx = headerPx;
             const contentEndPx = Math.max(contentStartPx, canvas.height - footerPx);
             const contentHeightPx = Math.max(1, contentEndPx - contentStartPx);
-            const totalPages = Math.max(1, Math.ceil(contentHeightPx / bodyPxPerPage));
+            const totalPages = forceSinglePage ? 1 : Math.max(1, Math.ceil(contentHeightPx / bodyPxPerPage));
 
             const sliceToImage = (yPx, hPx) => {
                 if (hPx <= 0) return '';
@@ -3377,9 +3377,12 @@ const PeriodicInspections = {
                 }
 
                 const bodyStartPx = contentStartPx + pageIndex * bodyPxPerPage;
-                const bodyHeightPx = Math.max(1, Math.min(bodyPxPerPage, contentEndPx - bodyStartPx));
+                const bodyHeightPx = forceSinglePage
+                    ? Math.max(1, contentEndPx - contentStartPx)
+                    : Math.max(1, Math.min(bodyPxPerPage, contentEndPx - bodyStartPx));
                 const bodyImg = sliceToImage(bodyStartPx, bodyHeightPx);
-                const bodyMm = bodyHeightPx / pxPerMm;
+                const rawBodyMm = bodyHeightPx / pxPerMm;
+                const bodyMm = forceSinglePage ? Math.min(rawBodyMm, bodyMmPerPage) : rawBodyMm;
                 doc.addImage(bodyImg, 'JPEG', margin, cursorY, usableWidth, bodyMm, undefined, 'FAST');
 
                 if (footerImg) {
@@ -3519,7 +3522,7 @@ const PeriodicInspections = {
         const htmlContent = this.prepareDailySafetyPdfHtmlContent(rawHtmlContent, { landscape: true });
 
         const fileName = `DailySafetyPatrolList_Full_${new Date().toISOString().slice(0, 10)}.pdf`;
-        const ok = await this.exportDailySafetyHtmlToPdf({ htmlContent, fileName, orientation: 'l' });
+        const ok = await this.exportDailySafetyHtmlToPdf({ htmlContent, fileName, orientation: 'l', forceSinglePage: true });
         if (ok) Notification.success(this._t('module.periodic.dsc.exportPdfSuccess', 'تم تصدير السجل إلى PDF بنجاح'));
         else Notification.error(this._t('module.periodic.dsc.exportPdfError', 'تعذر إنشاء ملف PDF بشكل مباشر.'));
     },
@@ -3939,7 +3942,7 @@ const PeriodicInspections = {
             : `<!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="UTF-8"><title>${formTitle}</title></head><body style="font-family:Arial,Tahoma,sans-serif;direction:rtl;padding:20px;">${content}</body></html>`;
         const htmlContent = this.prepareDailySafetyPdfHtmlContent(rawHtmlContent, { landscape: false });
         const fileName = `DailySafetyPatrolList_${(record.date || '').toString().slice(0, 10)}_${(record.id || '').replace(/[^a-zA-Z0-9-]/g, '')}.pdf`;
-        const ok = await this.exportDailySafetyHtmlToPdf({ htmlContent, fileName, orientation: 'p' });
+        const ok = await this.exportDailySafetyHtmlToPdf({ htmlContent, fileName, orientation: 'p', forceSinglePage: true });
         if (ok) Notification.success(this._t('module.periodic.dsc.exportPdfSuccess', 'تم تصدير السجل إلى PDF بنجاح'));
         else Notification.error(this._t('module.periodic.dsc.exportPdfError', 'تعذر إنشاء ملف PDF بشكل مباشر.'));
     },
