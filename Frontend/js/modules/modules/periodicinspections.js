@@ -3324,7 +3324,7 @@ const PeriodicInspections = {
             document.body.appendChild(container);
 
             const canvas = await window.html2canvas(container, {
-                scale: 2,
+                scale: 1.6,
                 useCORS: true,
                 backgroundColor: '#ffffff'
             });
@@ -3360,6 +3360,87 @@ const PeriodicInspections = {
                 container.remove();
             }
         }
+    },
+
+    prepareDailySafetyPdfHtmlContent(htmlContent, { landscape = false } = {}) {
+        const overrideStyle = `
+            <style id="dsc-pdf-export-overrides">
+                @page { size: ${landscape ? 'A4 landscape' : 'A4 portrait'} !important; margin: 6mm !important; }
+                html, body {
+                    min-height: auto !important;
+                    height: auto !important;
+                    background: #ffffff !important;
+                }
+                body {
+                    display: block !important;
+                    direction: rtl !important;
+                    unicode-bidi: plaintext !important;
+                    font-family: Tahoma, Arial, "Segoe UI", sans-serif !important;
+                    line-height: 1.35 !important;
+                    margin: 0 !important;
+                    padding: 0 !important;
+                }
+                .report-wrapper {
+                    min-height: auto !important;
+                    height: auto !important;
+                    display: block !important;
+                    box-shadow: none !important;
+                    border-radius: 0 !important;
+                    padding: 10px !important;
+                }
+                .report-body {
+                    flex: none !important;
+                    min-height: auto !important;
+                }
+                .report-footer {
+                    margin-top: 10px !important;
+                    padding-top: 4px !important;
+                    page-break-inside: avoid !important;
+                    break-inside: avoid !important;
+                }
+                .footer-watermark-frame {
+                    padding: 6px 10px !important;
+                    margin-top: 0 !important;
+                }
+                .footer-bottom {
+                    gap: 4px !important;
+                    display: block !important;
+                }
+                .footer-meta-line {
+                    display: grid !important;
+                    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+                    direction: rtl !important;
+                    unicode-bidi: plaintext !important;
+                    gap: 6px !important;
+                    margin-top: 0 !important;
+                }
+                .footer-meta-item,
+                .footer-meta-left,
+                .footer-meta-center,
+                .footer-meta-right {
+                    display: block !important;
+                    text-align: right !important;
+                    justify-content: unset !important;
+                    direction: rtl !important;
+                    unicode-bidi: plaintext !important;
+                    font-family: Tahoma, Arial, "Segoe UI", sans-serif !important;
+                    font-size: 11px !important;
+                    letter-spacing: 0 !important;
+                    word-break: normal !important;
+                    overflow-wrap: anywhere !important;
+                    white-space: normal !important;
+                }
+                .footer-bottom-text {
+                    margin-top: 4px !important;
+                    text-align: center !important;
+                }
+            </style>
+        `;
+
+        if (/<\/head>/i.test(htmlContent)) {
+            return htmlContent.replace(/<\/head>/i, `${overrideStyle}</head>`);
+        }
+        return `${overrideStyle}${htmlContent}`;
     },
 
     /**
@@ -3433,9 +3514,10 @@ const PeriodicInspections = {
             </table>
         `;
         const formTitle = this._t('module.periodic.dsc.fullExportFormTitleAr', 'سجل قائمة المرور اليومي للسلامة - تصدير كامل');
-        const htmlContent = typeof FormHeader !== 'undefined' && FormHeader.generatePDFHTML
+        const rawHtmlContent = typeof FormHeader !== 'undefined' && FormHeader.generatePDFHTML
             ? FormHeader.generatePDFHTML('DSC-FULL-' + new Date().toISOString().slice(0, 10), formTitle, content, false, false, { source: 'DailySafetyCheckList', titleEn: this._t('module.periodic.dsc.titleEn', 'Daily Safety Report'), titleAr: this._t('module.periodic.dsc.titleAr', 'قائمة المرور اليومي للسلامة') }, new Date().toISOString(), new Date().toISOString())
             : `<!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="UTF-8"><title>${formTitle}</title></head><body style="font-family:Arial,Tahoma,sans-serif;direction:rtl;padding:20px;">${content}</body></html>`;
+        const htmlContent = this.prepareDailySafetyPdfHtmlContent(rawHtmlContent, { landscape: true });
 
         const fileName = `DailySafetyPatrolList_Full_${new Date().toISOString().slice(0, 10)}.pdf`;
         const ok = await this.exportDailySafetyHtmlToPdf({ htmlContent, fileName, orientation: 'l' });
@@ -3853,9 +3935,10 @@ const PeriodicInspections = {
         if (!record) { Notification.error(this._t('module.periodic.dsc.recordNotFound', 'السجل غير موجود')); return; }
         const content = this.getDailySafetyCheckListRecordPrintContent(record);
         const formTitle = this._t('module.periodic.dsc.singleRecordTitleAr', 'سجل Daily Safety Report - قائمة المرور اليومي للسلامة');
-        const htmlContent = typeof FormHeader !== 'undefined' && FormHeader.generatePDFHTML
+        const rawHtmlContent = typeof FormHeader !== 'undefined' && FormHeader.generatePDFHTML
             ? FormHeader.generatePDFHTML(`DSC-${record.id || ''}`, formTitle, this._getDailySafetyCompactFooterStyle() + content, false, false, { source: 'DailySafetyCheckList', titleEn: this._t('module.periodic.dsc.titleEn', 'Daily Safety Report'), titleAr: this._t('module.periodic.dsc.titleAr', 'قائمة المرور اليومي للسلامة') }, record.createdAt || new Date().toISOString(), record.updatedAt || record.createdAt || new Date().toISOString())
             : `<!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="UTF-8"><title>${formTitle}</title></head><body style="font-family:Arial,Tahoma,sans-serif;direction:rtl;padding:20px;">${content}</body></html>`;
+        const htmlContent = this.prepareDailySafetyPdfHtmlContent(rawHtmlContent, { landscape: false });
         const fileName = `DailySafetyPatrolList_${(record.date || '').toString().slice(0, 10)}_${(record.id || '').replace(/[^a-zA-Z0-9-]/g, '')}.pdf`;
         const ok = await this.exportDailySafetyHtmlToPdf({ htmlContent, fileName, orientation: 'p' });
         if (ok) Notification.success(this._t('module.periodic.dsc.exportPdfSuccess', 'تم تصدير السجل إلى PDF بنجاح'));
