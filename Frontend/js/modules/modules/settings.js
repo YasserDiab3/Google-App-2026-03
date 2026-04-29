@@ -2320,6 +2320,7 @@ const Settings = {
                         <tr>
                             <th>نوع المخالفة</th>
                             <th>الوصف</th>
+                            <th>القيمة المالية</th>
                             <th>الحالة</th>
                             <th>عدد السجلات</th>
                             <th>الإجراءات</th>
@@ -2335,6 +2336,9 @@ const Settings = {
                                         </td>
                                         <td class="align-top">
                                             ${type.description ? `<span class="text-sm text-gray-600">${Utils.escapeHTML(type.description)}</span>` : '<span class="text-sm text-gray-400">—</span>'}
+                                        </td>
+                                        <td class="align-top font-semibold text-red-700">
+                                            ${Number(type.fineAmount || 0).toLocaleString('ar-EG')} ج.م
                                         </td>
                                         <td class="align-top">
                                             <span class="badge ${type.isDefault ? 'badge-info' : 'badge-primary'}">
@@ -2420,6 +2424,13 @@ const Settings = {
                             <textarea id="violation-type-description" class="form-input" rows="3"
                                 placeholder="وصف مختصر لهذا النوع">${existing ? Utils.escapeHTML(existing.description || '') : ''}</textarea>
                         </div>
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">القيمة المالية الافتراضية</label>
+                            <input type="number" id="violation-type-fine-amount" class="form-input" min="0" step="1"
+                                value="${existing ? Number(existing.fineAmount || 0) : 0}"
+                                placeholder="مثال: 500">
+                            <p class="text-xs text-gray-500 mt-1">تُستخدم هذه القيمة تلقائياً عند اختيار نوع المخالفة في التسجيل.</p>
+                        </div>
                         <div class="flex items-center justify-end gap-3 pt-4 border-t">
                             <button type="button" class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">إلغاء</button>
                             <button type="submit" class="btn-primary">
@@ -2438,8 +2449,12 @@ const Settings = {
             event.preventDefault();
             const nameInput = modal.querySelector('#violation-type-name');
             const descriptionInput = modal.querySelector('#violation-type-description');
+            const fineAmountInput = modal.querySelector('#violation-type-fine-amount');
             const name = nameInput?.value.trim() || '';
             const description = descriptionInput?.value.trim() || '';
+            const fineAmountRaw = fineAmountInput?.value ?? '0';
+            const parsedFineAmount = Number(fineAmountRaw);
+            const fineAmount = Number.isFinite(parsedFineAmount) && parsedFineAmount >= 0 ? parsedFineAmount : 0;
 
             if (!name) {
                 Notification.error('يرجى إدخال اسم النوع');
@@ -2449,10 +2464,10 @@ const Settings = {
 
             try {
                 if (existing) {
-                    ViolationTypesManager.updateType(existing.id, { name, description });
+                    ViolationTypesManager.updateType(existing.id, { name, description, fineAmount });
                     Notification.success('تم تحديث نوع المخالفة بنجاح');
                 } else {
-                    ViolationTypesManager.addType({ name, description });
+                    ViolationTypesManager.addType({ name, description, fineAmount });
                     Notification.success('تم إضافة نوع المخالفة بنجاح');
                 }
                 modal.remove();

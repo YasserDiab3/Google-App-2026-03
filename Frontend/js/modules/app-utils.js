@@ -4703,6 +4703,7 @@ const DEFAULT_VIOLATION_TYPES = [
         id: 'default_violation_1',
         name: 'عدم استخدام معدات الوقاية',
         description: '',
+        fineAmount: 0,
         isDefault: true,
         order: 1
     },
@@ -4710,6 +4711,7 @@ const DEFAULT_VIOLATION_TYPES = [
         id: 'default_violation_2',
         name: 'عدم اتباع إجراءات السلامة',
         description: '',
+        fineAmount: 0,
         isDefault: true,
         order: 2
     },
@@ -4717,6 +4719,7 @@ const DEFAULT_VIOLATION_TYPES = [
         id: 'default_violation_3',
         name: 'التدخين ي المناطق الممنوعة',
         description: '',
+        fineAmount: 0,
         isDefault: true,
         order: 3
     },
@@ -4724,6 +4727,7 @@ const DEFAULT_VIOLATION_TYPES = [
         id: 'default_violation_4',
         name: 'عدم الحصول على تصريح عمل',
         description: '',
+        fineAmount: 0,
         isDefault: true,
         order: 4
     },
@@ -4731,6 +4735,7 @@ const DEFAULT_VIOLATION_TYPES = [
         id: 'default_violation_5',
         name: 'أخرى',
         description: '',
+        fineAmount: 0,
         isDefault: true,
         order: 5
     }
@@ -4777,6 +4782,8 @@ const ViolationTypesManager = {
             }
 
             const description = (item.description || item.notes || '').trim();
+            const parsedFineAmount = Number(item.fineAmount ?? item.defaultFineAmount ?? 0);
+            const fineAmount = Number.isFinite(parsedFineAmount) && parsedFineAmount >= 0 ? parsedFineAmount : 0;
             const createdAt = item.createdAt || now;
             const updatedAt = item.updatedAt || now;
             const isDefault = item.isDefault === true || DEFAULT_VIOLATION_TYPES.some(def => def.name === name || def.id === id);
@@ -4786,6 +4793,7 @@ const ViolationTypesManager = {
                 id,
                 name,
                 description,
+                fineAmount,
                 isDefault,
                 createdAt,
                 updatedAt,
@@ -4837,6 +4845,7 @@ const ViolationTypesManager = {
                     id: defaultType.id,
                     name: defaultType.name,
                     description: defaultType.description || '',
+                    fineAmount: Number(defaultType.fineAmount) || 0,
                     isDefault: true,
                     createdAt: now,
                     updatedAt: now,
@@ -4940,7 +4949,7 @@ const ViolationTypesManager = {
         }, 0);
     },
 
-    addType({ name, description = '' } = {}) {
+    addType({ name, description = '', fineAmount = 0 } = {}) {
         const trimmedName = (name || '').trim();
         if (!trimmedName) {
             throw new Error('يرجى إدخال اسم نوع المخالفة');
@@ -4953,10 +4962,12 @@ const ViolationTypesManager = {
         }
 
         const now = new Date().toISOString();
+        const parsedFineAmount = Number(fineAmount);
         const newType = {
             id: Utils.generateId('VTYPE'),
             name: trimmedName,
             description: (description || '').trim(),
+            fineAmount: Number.isFinite(parsedFineAmount) && parsedFineAmount >= 0 ? parsedFineAmount : 0,
             isDefault: false,
             createdAt: now,
             updatedAt: now
@@ -4968,7 +4979,7 @@ const ViolationTypesManager = {
         return newType;
     },
 
-    updateType(id, { name, description, isDefault } = {}) {
+    updateType(id, { name, description, fineAmount, isDefault } = {}) {
         if (!id) {
             throw new Error('معرف نوع المخالفة غير محدد');
         }
@@ -4995,8 +5006,14 @@ const ViolationTypesManager = {
         }
 
         const previousName = type.name;
+        const parsedFineAmount = Number(fineAmount);
         type.name = newName;
         type.description = (description ?? type.description).trim();
+        if (fineAmount !== undefined) {
+            type.fineAmount = Number.isFinite(parsedFineAmount) && parsedFineAmount >= 0 ? parsedFineAmount : 0;
+        } else if (!Number.isFinite(Number(type.fineAmount)) || Number(type.fineAmount) < 0) {
+            type.fineAmount = 0;
+        }
         if (typeof isDefault === 'boolean') {
             type.isDefault = isDefault;
         }
@@ -5981,17 +5998,21 @@ const PDFTemplates = {
         }
         .report-wrapper.dsc-report .header-title-dual .header-title-en {
             white-space: nowrap;
-            line-height: 1.15;
-            font-size: clamp(14px, 1.6vw, 24px);
+            line-height: 1.2;
+            font-size: clamp(11px, 1.05vw, 17px);
+            font-weight: 700;
+            border-bottom-width: 1px;
         }
         .report-wrapper.dsc-report .header-title-dual .header-title-ar {
             white-space: nowrap;
-            line-height: 1.15;
-            font-size: clamp(16px, 1.8vw, 28px);
+            line-height: 1.2;
+            font-size: clamp(12px, 1.15vw, 19px);
+            font-weight: 700;
             width: 100%;
             letter-spacing: 0 !important;
             font-family: 'Cairo', 'Tahoma', 'Segoe UI', sans-serif !important;
             text-align: center;
+            border-bottom-width: 1px;
         }
         .report-wrapper.dsc-report .company-brand {
             grid-area: company;
@@ -6016,10 +6037,12 @@ const PDFTemplates = {
             font-family: 'Cairo', 'Tahoma', 'Segoe UI', sans-serif !important;
         }
         .report-wrapper.dsc-report .company-brand .company-name {
-            font-size: clamp(14px, 1.25vw, 20px);
+            font-size: clamp(10px, 0.9vw, 14px);
+            font-weight: 700;
         }
         .report-wrapper.dsc-report .company-brand .company-name-secondary {
-            font-size: clamp(12px, 1.05vw, 18px);
+            font-size: clamp(9px, 0.78vw, 12px);
+            font-weight: 600;
         }
         .report-wrapper.dsc-report .footer-bottom-text span {
             display: block;

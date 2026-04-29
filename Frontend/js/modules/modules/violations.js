@@ -166,6 +166,7 @@ const Violations = {
                         <h2 class="card-title"><i class="fas fa-list ml-2"></i>قائمة المخالفات</h2>
                     </div>
                     <div class="card-body">
+                        ${this.renderAllViolationsStats()}
                         <div id="violations-filters-container" class="mb-4">
                             ${this.renderFilters()}
                         </div>
@@ -183,6 +184,8 @@ const Violations = {
             Promise.resolve(this.ensureViolationsCoreDataLoaded({ force: false }))
                 .then(() => {
                     try {
+                        const stats = document.getElementById('violations-stats-cards');
+                        if (stats) stats.outerHTML = this.renderAllViolationsStats();
                         const list = document.getElementById('violations-list');
                         if (list) list.innerHTML = this.renderViolationsList();
                         const filters = document.getElementById('violations-filters-container');
@@ -277,6 +280,7 @@ const Violations = {
                             <tr style="background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);">
                                 <th style="color: white; font-weight: 600; padding: 16px 12px; text-align: center; font-size: 0.9rem;">اسم الموظف/المقاول</th>
                                 <th style="color: white; font-weight: 600; padding: 16px 12px; text-align: center; font-size: 0.9rem;">نوع المخالفة</th>
+                                <th style="color: white; font-weight: 600; padding: 16px 12px; text-align: center; font-size: 0.9rem;">القيمة المالية</th>
                                 <th style="color: white; font-weight: 600; padding: 16px 12px; text-align: center; font-size: 0.9rem;">الموقع</th>
                                 <th style="color: white; font-weight: 600; padding: 16px 12px; text-align: center; font-size: 0.9rem;">التاريخ</th>
                                 <th style="color: white; font-weight: 600; padding: 16px 12px; text-align: center; font-size: 0.9rem;">الشدة</th>
@@ -295,6 +299,9 @@ const Violations = {
                                     </td>
                                     <td style="padding: 14px 12px; text-align: center; border-bottom: 1px solid #fecaca;">
                                         ${Utils.escapeHTML(violation.violationType || '-')}
+                                    </td>
+                                    <td style="padding: 14px 12px; text-align: center; border-bottom: 1px solid #fecaca; font-weight: 600; color: #166534;">
+                                        ${Number(violation.fineAmount || 0).toLocaleString('ar-EG')} ج.م
                                     </td>
                                     <td style="padding: 14px 12px; text-align: center; border-bottom: 1px solid #fecaca; font-size: 0.85rem; color: #6b7280;">
                                         ${Utils.escapeHTML(violation.violationLocation || '-')}
@@ -340,6 +347,58 @@ const Violations = {
             }
             return `<div class="empty-state"><p class="text-gray-500">حدث خطأ في عرض البيانات</p></div>`;
         }
+    },
+
+    renderAllViolationsStats() {
+        const violations = this.getFilteredViolations();
+        const total = violations.length;
+        const employeeCount = violations.filter(v => v && (v.personType === 'employee' || (!!v.employeeName && !v.contractorName))).length;
+        const contractorCount = violations.filter(v => v && (v.personType === 'contractor' || !!v.contractorName)).length;
+        const totalFineAmount = violations.reduce((sum, violation) => {
+            const amount = Number(violation?.fineAmount || 0);
+            return sum + (Number.isFinite(amount) && amount > 0 ? amount : 0);
+        }, 0);
+
+        return `
+            <div id="violations-stats-cards" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 mb-5">
+                <div class="stat-card" style="background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%); border: 1px solid #fca5a5;">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="stat-label">إجمالي المخالفات</p>
+                            <p class="text-2xl font-bold text-red-700">${total}</p>
+                        </div>
+                        <i class="fas fa-list text-red-600 text-xl"></i>
+                    </div>
+                </div>
+                <div class="stat-card" style="background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%); border: 1px solid #86efac;">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="stat-label">إجمالي القيمة المالية</p>
+                            <p class="text-2xl font-bold text-green-700">${totalFineAmount.toLocaleString('ar-EG')} ج.م</p>
+                        </div>
+                        <i class="fas fa-money-bill-wave text-green-600 text-xl"></i>
+                    </div>
+                </div>
+                <div class="stat-card" style="background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%); border: 1px solid #93c5fd;">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="stat-label">مخالفات الموظفين</p>
+                            <p class="text-2xl font-bold text-blue-700">${employeeCount}</p>
+                        </div>
+                        <i class="fas fa-user-tie text-blue-600 text-xl"></i>
+                    </div>
+                </div>
+                <div class="stat-card" style="background: linear-gradient(135deg, #ffedd5 0%, #fed7aa 100%); border: 1px solid #fdba74;">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="stat-label">مخالفات المقاولين</p>
+                            <p class="text-2xl font-bold text-orange-700">${contractorCount}</p>
+                        </div>
+                        <i class="fas fa-users-cog text-orange-600 text-xl"></i>
+                    </div>
+                </div>
+            </div>
+        `;
     },
 
     hasActiveFilters() {
@@ -528,6 +587,10 @@ const Violations = {
                     listContainer.innerHTML = this.renderViolationsList();
             }
         }
+        const statsContainer = document.getElementById('violations-stats-cards');
+        if (statsContainer) {
+            statsContainer.outerHTML = this.renderAllViolationsStats();
+        }
         const filtersContainer = document.getElementById('violations-filters-container');
         if (filtersContainer) {
             const activeTab = document.querySelector('.tab-btn.active')?.dataset.tab || 'all';
@@ -583,6 +646,7 @@ const Violations = {
                             <h2 class="card-title"><i class="fas fa-list ml-2"></i>قائمة المخالفات</h2>
                         </div>
                         <div class="card-body">
+                            ${this.renderAllViolationsStats()}
                             <div id="violations-filters-container" class="mb-4">
                                 ${this.renderFilters()}
                             </div>
@@ -1702,12 +1766,15 @@ const Violations = {
         }
         const selectedTypeId = violationData?.violationTypeId || '';
         const selectedTypeName = (violationData?.violationType || '').trim();
+        const currentUserRole = (AppState?.currentUser?.role || '').toString().trim().toLowerCase();
+        const canManagerEditFineAmount = ['admin', 'manager', 'مدير', 'مدير النظام', 'system-manager', 'system_admin'].includes(currentUserRole);
         const typeOptions = violationTypes.map(type => {
             const isSelected = selectedTypeId
                 ? type.id === selectedTypeId
                 : type.name === selectedTypeName;
+            const typeFineAmount = Number(type?.fineAmount || 0);
             return `
-                <option value="${Utils.escapeHTML(type.name)}" data-type-id="${Utils.escapeHTML(type.id)}" ${isSelected ? 'selected' : ''}>
+                <option value="${Utils.escapeHTML(type.name)}" data-type-id="${Utils.escapeHTML(type.id)}" data-fine-amount="${typeFineAmount}" ${isSelected ? 'selected' : ''}>
                     ${Utils.escapeHTML(type.name)}
                 </option>
             `;
@@ -1717,7 +1784,7 @@ const Violations = {
             : type.name === selectedTypeName);
         const legacyTypeOption = !hasSelectedType && selectedTypeName
             ? `
-                <option value="${Utils.escapeHTML(selectedTypeName)}" data-type-id="${Utils.escapeHTML(selectedTypeId)}" selected>
+                <option value="${Utils.escapeHTML(selectedTypeName)}" data-type-id="${Utils.escapeHTML(selectedTypeId)}" data-fine-amount="${Number(violationData?.fineAmount || 0)}" selected>
                     ${Utils.escapeHTML(selectedTypeName)} (غير معرف)
                 </option>
             `
@@ -1821,6 +1888,18 @@ const Violations = {
                                     ${legacyTypeOption}
                                     ${typeOptions}
                                 </select>
+                            </div>
+                            <div>
+                                <label for="violation-fine-amount" class="block text-sm font-semibold text-gray-700 mb-2">
+                                    <i class="fas fa-money-bill-wave ml-2 text-green-600"></i>
+                                    القيمة المالية (ج.م)
+                                </label>
+                                <input type="number" id="violation-fine-amount" class="form-input" min="0" step="1"
+                                    value="${Number(violationData?.fineAmount || 0)}"
+                                    placeholder="القيمة المالية">
+                                <p class="text-xs text-gray-500 mt-1">
+                                    ${canManagerEditFineAmount ? 'يتم التحديد تلقائياً ويمكنك التعديل لأنك مدير.' : 'يتم التحديد تلقائياً حسب نوع المخالفة، والتعديل متاح للمدير فقط.'}
+                                </p>
                             </div>
                         </div>
                         <!-- حقول المقاول (تظهر فقط عند اختيار مقاول) -->
@@ -1983,10 +2062,52 @@ const Violations = {
         const contractorDepartmentInput = document.getElementById('violation-contractor-department');
 
         const locationFieldsContainer = document.getElementById('violation-location-fields-container');
+        const violationTypeSelect = document.getElementById('violation-type');
+        const fineAmountInput = document.getElementById('violation-fine-amount');
+        const typeById = new Map((violationTypes || []).map(type => [String(type.id || '').trim(), type]));
+        const typeByName = new Map((violationTypes || []).map(type => [String(type.name || '').trim().toLowerCase(), type]));
+
+        const getDefaultFineAmountForSelectedType = () => {
+            const selectedOption = violationTypeSelect?.selectedOptions?.[0];
+            const typeId = selectedOption?.getAttribute('data-type-id') || '';
+            const typeName = (violationTypeSelect?.value || '').trim().toLowerCase();
+            const type = (typeId && typeById.get(typeId)) || (typeName && typeByName.get(typeName)) || null;
+            const optionFine = Number(selectedOption?.getAttribute('data-fine-amount') || 0);
+            const mappedFine = Number(type?.fineAmount ?? optionFine ?? 0);
+            return Number.isFinite(mappedFine) && mappedFine >= 0 ? mappedFine : 0;
+        };
+
+        const applyFineAmountFromType = ({ force = false } = {}) => {
+            if (!fineAmountInput) return;
+            const isEmployeeSelected = (personTypeSelect?.value || '') === 'employee';
+            if (isEmployeeSelected) {
+                if (force) fineAmountInput.value = '';
+                return;
+            }
+            const defaultFineAmount = getDefaultFineAmountForSelectedType();
+            if (force || !canManagerEditFineAmount || fineAmountInput.value === '') {
+                fineAmountInput.value = String(defaultFineAmount);
+            }
+        };
+
+        if (fineAmountInput) {
+            fineAmountInput.readOnly = !canManagerEditFineAmount;
+        }
+        if (violationTypeSelect) {
+            violationTypeSelect.addEventListener('change', () => applyFineAmountFromType({ force: true }));
+        }
+        if (fineAmountInput && canManagerEditFineAmount && violationData && violationData.fineAmount !== undefined && violationData.fineAmount !== null) {
+            fineAmountInput.value = String(Number(violationData.fineAmount) || 0);
+        } else {
+            applyFineAmountFromType({ force: true });
+        }
 
         personTypeSelect.addEventListener('change', (e) => {
             const personType = e.target.value;
             if (personType === 'employee') {
+                if (fineAmountInput) {
+                    fineAmountInput.value = '';
+                }
                 // إظهار حقل الكود الوظيفي
                 employeeCodeContainer.style.display = 'block';
                 employeeCodeInput.required = true;
@@ -2072,6 +2193,7 @@ const Violations = {
                     }
                 }
             } else {
+                applyFineAmountFromType({ force: true });
                 // إخاء حقل الكود الوظيي
                 employeeCodeContainer.style.display = 'none';
                 employeeCodeInput.required = false;
@@ -2323,6 +2445,17 @@ const Violations = {
                 const status = document.getElementById('violation-status')?.value;
                 const violationDetails = document.getElementById('violation-details')?.value.trim() || '';
                 const actionTaken = document.getElementById('violation-action')?.value.trim() || '';
+                const fineAmountRaw = document.getElementById('violation-fine-amount')?.value;
+                const isEmployeePerson = personType === 'employee';
+                let fineAmount = '';
+                if (fineAmountRaw !== '' && fineAmountRaw !== null && fineAmountRaw !== undefined) {
+                    const fineAmountParsed = Number(fineAmountRaw);
+                    if (Number.isFinite(fineAmountParsed) && fineAmountParsed >= 0) {
+                        fineAmount = fineAmountParsed;
+                    }
+                } else if (!isEmployeePerson) {
+                    fineAmount = getDefaultFineAmountForSelectedType();
+                }
 
                 // التحقق من البيانات الإلزامية
                 const missing = [];
@@ -2446,7 +2579,6 @@ const Violations = {
                 }
 
                 // إنشاء كائن البيانات
-                const violationTypeSelect = document.getElementById('violation-type');
                 const violationTypeOption = violationTypeSelect?.selectedOptions?.[0];
                 const violationTypeId = violationTypeOption?.getAttribute('data-type-id') || '';
 
@@ -2471,6 +2603,7 @@ const Violations = {
                     contractorDepartment: personType === 'contractor' ? document.getElementById('violation-contractor-department')?.value.trim() || '' : '',
                     violationTypeId: violationTypeId,
                     violationType: violationType,
+                    fineAmount: fineAmount,
                     violationDate: violationDateTime,
                     violationTime: violationTime,
                     // حفظ ID الموقع واسمه
