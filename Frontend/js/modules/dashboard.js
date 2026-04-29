@@ -79,6 +79,10 @@ const Dashboard = {
         // تحميل الودجات الإضافية
         this.loadReportsWidget();
         this.loadEmployeeReportWidget();
+        // بيانات المياه/الكهرباء/الغاز تُقرأ من أوراق منفصلة؛ بدء التحميل مبكراً يحدّ من بطء كروت الاستهلاك في لوحة التحكم
+        if (typeof Sustainability !== 'undefined' && typeof Sustainability.loadResourceConsumptionFromSheets === 'function') {
+            void Sustainability.loadResourceConsumptionFromSheets().catch(() => {});
+        }
         const i18nCore = (window.AppI18n && typeof window.AppI18n.applyI18n === 'function')
             ? window.AppI18n
             : ((window.I18n && typeof window.I18n.applyI18n === 'function') ? window.I18n : null);

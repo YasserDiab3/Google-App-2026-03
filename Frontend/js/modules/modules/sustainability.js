@@ -3445,9 +3445,9 @@ const Sustainability = {
 
     /**
      * تحميل بيانات استهلاك الموارد من Google Sheets (جداول منفصلة)
+     * — طلبات متوازية لتقليل زمن الانتظار، ودمج متزامن لمنع تكرار الشبكة.
      */
     async loadResourceConsumptionFromSheets() {
-        // التحقق من تفعيل Google Integration
         if (!AppState.googleConfig?.appsScript?.enabled || !AppState.googleConfig?.appsScript?.scriptUrl) {
             return;
         }
@@ -3456,99 +3456,86 @@ const Sustainability = {
             return;
         }
 
-        try {
-            const spreadsheetId = AppState.googleConfig?.sheets?.spreadsheetId;
-            if (!spreadsheetId) return;
-
-            // تهيئة بنية البيانات إذا لم تكن موجودة
-            if (!AppState.appData.resourceConsumption) {
-                AppState.appData.resourceConsumption = {
-                    water: [],
-                    electricity: [],
-                    gas: []
-                };
-            }
-
-            const normalizeList = (list = []) => (Array.isArray(list) ? list : []).map((row) => this.normalizeResourceConsumptionRecord(row)).filter(Boolean);
-
-            // تحميل سجلات المياه
-            try {
-                const waterResult = await GoogleIntegration.sendRequest({
-                    action: 'readFromSheet',
-                    data: {
-                        sheetName: 'WaterManagement_Records',
-                        spreadsheetId: spreadsheetId
-                    }
-                });
-                if (waterResult && waterResult.success && Array.isArray(waterResult.data)) {
-                    AppState.appData.resourceConsumption.water = normalizeList(waterResult.data);
-                }
-            } catch (error) {
-                Utils.safeWarn('⚠️ تعذر تحميل سجلات المياه:', error);
-            }
-
-            // تحميل سجلات الغاز
-            try {
-                const gasResult = await GoogleIntegration.sendRequest({
-                    action: 'readFromSheet',
-                    data: {
-                        sheetName: 'GasManagement_Records',
-                        spreadsheetId: spreadsheetId
-                    }
-                });
-                if (gasResult && gasResult.success && Array.isArray(gasResult.data)) {
-                    AppState.appData.resourceConsumption.gas = normalizeList(gasResult.data);
-                }
-            } catch (error) {
-                Utils.safeWarn('⚠️ تعذر تحميل سجلات الغاز:', error);
-            }
-
-            // تحميل سجلات الكهرباء
-            try {
-                const electricityResult = await GoogleIntegration.sendRequest({
-                    action: 'readFromSheet',
-                    data: {
-                        sheetName: 'ElectricityManagement_Records',
-                        spreadsheetId: spreadsheetId
-                    }
-                });
-                if (electricityResult && electricityResult.success && Array.isArray(electricityResult.data)) {
-                    AppState.appData.resourceConsumption.electricity = normalizeList(electricityResult.data);
-                }
-            } catch (error) {
-                Utils.safeWarn('⚠️ تعذر تحميل سجلات الكهرباء:', error);
-            }
-
-            // حفظ البيانات المحلية
-            if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
-                window.DataManager.save();
-            }
-
-            // تحديث الكروت العلوية فوراً بعد اكتمال التحميل (حتى لو التحميل كان في الخلفية)
-            const quickStatsPanel = document.getElementById('sustainability-quick-stats');
-            if (quickStatsPanel) {
-                quickStatsPanel.innerHTML = this.renderQuickStats();
-            }
-
-            // إعادة تحديث المحتوى عند وجود تبويب الاستدامة مفتوح
-            const sustainabilitySection = document.getElementById('sustainability-section');
-            if (sustainabilitySection && sustainabilitySection.offsetParent !== null) {
-                if (this.currentTab === 'dashboard') {
-                    const contentArea = document.getElementById('sustainability-content');
-                    if (contentArea) {
-                        contentArea.innerHTML = await this.renderDashboard();
-                        this.renderCharts();
-                    }
-                } else if (this.currentTab === 'water' || this.currentTab === 'electricity' || this.currentTab === 'gas') {
-                    const contentArea = document.getElementById('sustainability-content');
-                    if (contentArea) {
-                        contentArea.innerHTML = await this.renderContent();
-                    }
-                }
-            }
-        } catch (error) {
-            Utils.safeError('❌ خطأ في تحميل بيانات استهلاك الموارد:', error);
+        if (this._resourceConsumptionFetchPromise) {
+            return this._resourceConsumptionFetchPromise;
         }
+
+        const spreadsheetId = AppState.googleConfig?.sheets?.spreadsheetId;
+        if (!spreadsheetId) return;
+
+        this._resourceConsumptionFetchPromise = (async () => {
+            try {
+                if (!AppState.appData.resourceConsumption) {
+                    AppState.appData.resourceConsumption = {
+                        water: [],
+                        electricity: [],
+                        gas: []
+                    };
+                }
+
+                const normalizeList = (list = []) => (Array.isArray(list) ? list : []).map((row) => this.normalizeResourceConsumptionRecord(row)).filter(Boolean);
+
+                const readSheet = async (sheetName) => {
+                    try {
+                        const result = await GoogleIntegration.sendRequest({
+                            action: 'readFromSheet',
+                            data: { sheetName, spreadsheetId }
+                        });
+                        if (result && result.success && Array.isArray(result.data)) {
+                            return normalizeList(result.data);
+                        }
+                    } catch (error) {
+                        Utils.safeWarn(`⚠️ تعذر تحميل ${sheetName}:`, error);
+                    }
+                    return undefined;
+                };
+
+                const [waterList, gasList, electricityList] = await Promise.all([
+                    readSheet('WaterManagement_Records'),
+                    readSheet('GasManagement_Records'),
+                    readSheet('ElectricityManagement_Records')
+                ]);
+
+                if (waterList !== undefined) AppState.appData.resourceConsumption.water = waterList;
+                if (gasList !== undefined) AppState.appData.resourceConsumption.gas = gasList;
+                if (electricityList !== undefined) AppState.appData.resourceConsumption.electricity = electricityList;
+
+                if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
+                    window.DataManager.save();
+                }
+
+                const quickStatsPanel = document.getElementById('sustainability-quick-stats');
+                if (quickStatsPanel) {
+                    quickStatsPanel.innerHTML = this.renderQuickStats();
+                }
+
+                const onSustainabilitySection = typeof AppState !== 'undefined' && AppState.currentSection === 'sustainability';
+                if (onSustainabilitySection && document.getElementById('sustainability-section')) {
+                    if (this.currentTab === 'dashboard') {
+                        const contentArea = document.getElementById('sustainability-content');
+                        if (contentArea) {
+                            contentArea.innerHTML = await this.renderDashboard();
+                            this.renderCharts();
+                        }
+                    } else if (this.currentTab === 'water' || this.currentTab === 'electricity' || this.currentTab === 'gas') {
+                        const contentArea = document.getElementById('sustainability-content');
+                        if (contentArea) {
+                            contentArea.innerHTML = await this.renderContent();
+                        }
+                    }
+                }
+
+                if (typeof Dashboard !== 'undefined' && typeof Dashboard.updateReportsStatistics === 'function') {
+                    Dashboard.updateReportsStatistics();
+                }
+            } catch (error) {
+                Utils.safeError('❌ خطأ في تحميل بيانات استهلاك الموارد:', error);
+            } finally {
+                this._resourceConsumptionFetchPromise = null;
+            }
+        })();
+
+        return this._resourceConsumptionFetchPromise;
     },
 
     normalizeResourceConsumptionRecord(record) {
