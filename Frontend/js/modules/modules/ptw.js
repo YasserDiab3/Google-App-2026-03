@@ -8099,6 +8099,24 @@ const PTW = {
      */
     async saveManualPermitEntry(modal, entryId = null) {
         try {
+            const markFieldInvalid = (fieldEl) => {
+                if (!fieldEl) return;
+                fieldEl.style.border = '2px solid #e53e3e';
+                fieldEl.style.boxShadow = '0 0 0 3px rgba(229,62,62,0.15)';
+            };
+            const clearFieldInvalid = (fieldEl) => {
+                if (!fieldEl) return;
+                fieldEl.style.border = '';
+                fieldEl.style.boxShadow = '';
+            };
+
+            const paperPermitInput = modal.querySelector('#manual-paper-permit-number');
+            const timeFromInputEl = modal.querySelector('#manual-permit-time-from');
+            const timeToInputEl = modal.querySelector('#manual-permit-time-to');
+            const authorizedPartyInputEl = modal.querySelector('#manual-permit-authorized-party');
+            const requestingPartyInputEl = modal.querySelector('#manual-permit-requesting-party');
+            const workDescriptionInputEl = modal.querySelector('#manual-permit-work-description');
+
             // الحصول على بيانات الموقع والمواقع الفرعية المختارة
             const locationSelect = modal.querySelector('#manual-permit-location');
             const selectedLocationOption = locationSelect?.options[locationSelect?.selectedIndex];
@@ -8110,6 +8128,42 @@ const PTW = {
             ).trim();
             const sublocationSelect = modal.querySelector('#manual-permit-sublocation');
             const locationEntriesInput = modal.querySelector('#manual-permit-location-entries');
+
+            // التحقق من الحقول الأساسية الإلزامية قبل أي معالجة
+            [
+                paperPermitInput,
+                locationSelect,
+                timeFromInputEl,
+                timeToInputEl,
+                authorizedPartyInputEl,
+                requestingPartyInputEl,
+                workDescriptionInputEl
+            ].forEach(clearFieldInvalid);
+
+            const requiredFieldChecks = [
+                { label: 'رقم التصريح الورقي', element: paperPermitInput, value: String(paperPermitInput?.value || '').trim() },
+                { label: 'الموقع / القسم', element: locationSelect, value: locationId },
+                { label: 'تاريخ البدء', element: timeFromInputEl, value: String(timeFromInputEl?.value || '').trim() },
+                { label: 'تاريخ الانتهاء', element: timeToInputEl, value: String(timeToInputEl?.value || '').trim() },
+                { label: 'الجهة المصرح لها بالعمل', element: authorizedPartyInputEl, value: String(authorizedPartyInputEl?.value || '').trim() },
+                { label: 'الجهة الطالبة للتصريح', element: requestingPartyInputEl, value: String(requestingPartyInputEl?.value || '').trim() },
+                { label: 'وصف العمل', element: workDescriptionInputEl, value: String(workDescriptionInputEl?.value || '').trim() }
+            ];
+
+            const missingRequiredFields = requiredFieldChecks.filter(item => !item.value);
+            if (missingRequiredFields.length > 0) {
+                missingRequiredFields.forEach(item => markFieldInvalid(item.element));
+                const firstMissingEl = missingRequiredFields[0]?.element;
+                if (firstMissingEl && typeof firstMissingEl.focus === 'function') {
+                    firstMissingEl.focus();
+                    firstMissingEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
+                Notification.error(
+                    this._t('module.ptw.notify.manualRequiredFieldsDetailed', 'لا يمكن الإرسال قبل استكمال البيانات الأساسية المطلوبة:\n{fields}')
+                        .replace('{fields}', missingRequiredFields.map(item => `• ${item.label}`).join('\n'))
+                );
+                return;
+            }
 
             let selectedLocationEntries = [];
             if (locationEntriesInput?.value) {
@@ -8318,18 +8372,15 @@ const PTW = {
             ];
             formData.ppeNotes = mergedRequiredPPE.length ? mergedRequiredPPE.join('، ') : formData.ppeNotes;
 
-            // التحقق من رقم التصريح الورقي (إلزامي)
             const paperNum = String(formData.paperPermitNumber || '').trim();
-            const paperInput = modal.querySelector('#manual-paper-permit-number');
             if (!paperNum || paperNum === '0') {
                 if (typeof Notification !== 'undefined' && Notification.warning) {
                     Notification.warning(PTW._t('module.ptw.notify.paperNumRequired', 'رقم التصريح الورقي إلزامي — يرجى إدخال الرقم قبل الحفظ'));
                 }
-                if (paperInput) {
-                    paperInput.style.border = '2px solid #e53e3e';
-                    paperInput.style.boxShadow = '0 0 0 3px rgba(229,62,62,0.2)';
-                    paperInput.focus();
-                    paperInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                if (paperPermitInput) {
+                    markFieldInvalid(paperPermitInput);
+                    paperPermitInput.focus();
+                    paperPermitInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
                 }
                 return;
             }
@@ -8344,18 +8395,11 @@ const PTW = {
                 if (typeof Notification !== 'undefined' && Notification.error) {
                     Notification.error(PTW._t('module.ptw.notify.paperNumDup', 'رقم التصريح الورقي "{n}" مستخدم مسبقاً في السجل #{s} — يرجى إدخال رقم مختلف').replace(/\{n\}/g, paperNum).replace(/\{s\}/g, String(dupSeq)));
                 }
-                if (paperInput) {
-                    paperInput.style.border = '2px solid #e53e3e';
-                    paperInput.style.boxShadow = '0 0 0 3px rgba(229,62,62,0.2)';
-                    paperInput.focus();
-                    paperInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                if (paperPermitInput) {
+                    markFieldInvalid(paperPermitInput);
+                    paperPermitInput.focus();
+                    paperPermitInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
                 }
-                return;
-            }
-
-            // التحقق من البيانات المطلوبة (تخفيف الشروط للإدخال اليدوي)
-            if (!formData.location || !formData.timeFrom || !formData.timeTo || !formData.workDescription || !formData.status) {
-                Notification.warning(this._t('module.ptw.notify.manualRequiredFields', 'يرجى إدخال الحقول المطلوبة: الموقع، تاريخ البدء والانتهاء، وصف العمل، وحالة التصريح'));
                 return;
             }
 
