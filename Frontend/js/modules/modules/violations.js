@@ -2079,11 +2079,6 @@ const Violations = {
 
         const applyFineAmountFromType = ({ force = false } = {}) => {
             if (!fineAmountInput) return;
-            const isEmployeeSelected = (personTypeSelect?.value || '') === 'employee';
-            if (isEmployeeSelected) {
-                if (force) fineAmountInput.value = '';
-                return;
-            }
             const defaultFineAmount = getDefaultFineAmountForSelectedType();
             if (force || !canManagerEditFineAmount || fineAmountInput.value === '') {
                 fineAmountInput.value = String(defaultFineAmount);
@@ -2095,6 +2090,8 @@ const Violations = {
         }
         if (violationTypeSelect) {
             violationTypeSelect.addEventListener('change', () => applyFineAmountFromType({ force: true }));
+            // دعم تحديث فوري إضافي على بعض المتصفحات التي تُطلق input أثناء التنقل
+            violationTypeSelect.addEventListener('input', () => applyFineAmountFromType({ force: true }));
         }
         if (fineAmountInput && canManagerEditFineAmount && violationData && violationData.fineAmount !== undefined && violationData.fineAmount !== null) {
             fineAmountInput.value = String(Number(violationData.fineAmount) || 0);
@@ -2105,9 +2102,6 @@ const Violations = {
         personTypeSelect.addEventListener('change', (e) => {
             const personType = e.target.value;
             if (personType === 'employee') {
-                if (fineAmountInput) {
-                    fineAmountInput.value = '';
-                }
                 // إظهار حقل الكود الوظيفي
                 employeeCodeContainer.style.display = 'block';
                 employeeCodeInput.required = true;
@@ -2446,14 +2440,13 @@ const Violations = {
                 const violationDetails = document.getElementById('violation-details')?.value.trim() || '';
                 const actionTaken = document.getElementById('violation-action')?.value.trim() || '';
                 const fineAmountRaw = document.getElementById('violation-fine-amount')?.value;
-                const isEmployeePerson = personType === 'employee';
                 let fineAmount = '';
                 if (fineAmountRaw !== '' && fineAmountRaw !== null && fineAmountRaw !== undefined) {
                     const fineAmountParsed = Number(fineAmountRaw);
                     if (Number.isFinite(fineAmountParsed) && fineAmountParsed >= 0) {
                         fineAmount = fineAmountParsed;
                     }
-                } else if (!isEmployeePerson) {
+                } else {
                     fineAmount = getDefaultFineAmountForSelectedType();
                 }
 
