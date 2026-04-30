@@ -2856,7 +2856,7 @@ const AppState = {
     googleConfig: {
         appsScript: {
             enabled: true,
-            scriptUrl: 'https://script.google.com/macros/s/AKfycbyXvHP2gsfzPSVvurI_MH1kIYf7vVGBYK3m9fv26QPzv-eoD1d7tiLJPYjecyf2YJNSBw/exec'
+            scriptUrl: 'https://script.google.com/macros/s/AKfycbxvkmbrq7neYpDhDkVL1btPtmMaxRR7XC2ntI11wTKru45GAkRws4tjAOPcp8WHy6Sg/exec'
         },
         sheets: {
             enabled: true,
