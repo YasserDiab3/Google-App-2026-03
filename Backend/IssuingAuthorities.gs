@@ -349,26 +349,53 @@ function getEmployeeByCode(employeeCode) {
 
         const spreadsheetId = getSpreadsheetId();
         const employees = readFromSheet('Employees', spreadsheetId) || [];
-        const normalize = function (v) { return String(v || '').trim().toLowerCase(); };
-        const target = normalize(query);
+        const normalizeText = function (v) { return String(v || '').trim().toLowerCase(); };
+        const normalizeCode = function (v) {
+            let s = String(v || '').trim().toLowerCase();
+            if (!s) return '';
+            // Convert Arabic digits to English digits for robust matching
+            s = s
+                .replace(/[٠-٩]/g, function (d) { return String('٠١٢٣٤٥٦٧٨٩'.indexOf(d)); })
+                .replace(/[۰-۹]/g, function (d) { return String('۰۱۲۳۴۵۶۷۸۹'.indexOf(d)); });
+            // Handle Google Sheets numeric formatting like 12345.0
+            s = s.replace(/\.0+$/g, '');
+            // Remove spaces and common separators
+            s = s.replace(/[\s\-_\/\\]+/g, '');
+            return s;
+        };
+        const target = normalizeCode(query);
+        const targetText = normalizeText(query);
 
         // Try strict match by code/id first
         let emp = employees.find(function (e) {
-            return normalize(e.employeeNumber) === target ||
-                normalize(e.sapId) === target ||
-                normalize(e.id) === target ||
-                normalize(e.employeeCode) === target;
+            return normalizeCode(e.employeeNumber) === target ||
+                normalizeCode(e.sapId) === target ||
+                normalizeCode(e.id) === target ||
+                normalizeCode(e.employeeCode) === target;
         });
+
+        // Fallback: contains match by code fields (helps with prefixed/suffixed values)
+        if (!emp && target) {
+            emp = employees.find(function (e) {
+                const codeCandidates = [
+                    normalizeCode(e.employeeNumber),
+                    normalizeCode(e.sapId),
+                    normalizeCode(e.id),
+                    normalizeCode(e.employeeCode)
+                ].filter(Boolean);
+                return codeCandidates.some(function (c) { return c.indexOf(target) !== -1 || target.indexOf(c) !== -1; });
+            });
+        }
 
         // Fallback: match by name (exact then includes)
         if (!emp) {
             emp = employees.find(function (e) {
-                return normalize(e.name) === target;
+                return normalizeText(e.name) === targetText;
             });
         }
         if (!emp) {
             emp = employees.find(function (e) {
-                return normalize(e.name).indexOf(target) !== -1;
+                return normalizeText(e.name).indexOf(targetText) !== -1;
             });
         }
 

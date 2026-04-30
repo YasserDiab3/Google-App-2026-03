@@ -23,6 +23,52 @@ const IssuingAuthorities = {
         return msg.includes('غير معترف') || msg.includes('not recognized') || msg.includes('unknown action');
     },
 
+    _isNoisyExtensionError(message) {
+        const msg = String(message || '').toLowerCase();
+        return msg.includes('could not establish connection') || msg.includes('receiving end does not exist');
+    },
+
+    _classifyRequestError(message) {
+        const msg = String(message || '').toLowerCase();
+        if (msg.includes('403') || msg.includes('forbidden')) return 'forbidden';
+        if (msg.includes('timeout') || msg.includes('مهلة') || msg.includes('timed out')) return 'timeout';
+        if (this._isActionUnknownMessage(msg)) return 'unknown_action';
+        if (msg.includes('cors') || msg.includes('access-control-allow-origin')) return 'cors';
+        return 'generic';
+    },
+
+    _getFriendlyErrorMessage(rawMessage) {
+        const kind = this._classifyRequestError(rawMessage);
+        if (kind === 'forbidden') {
+            return 'تعذر الاتصال بالخادم (403). تحقق من صلاحية نشر Web App (Who has access) وأن الرابط صحيح.';
+        }
+        if (kind === 'timeout') {
+            return 'الخادم تأخر في الاستجابة. يرجى إعادة المحاولة أو التحقق من حالة Google Apps Script.';
+        }
+        if (kind === 'unknown_action') {
+            return 'نسخة الخادم أقدم من الواجهة الحالية. يلزم إعادة نشر Web App بأحدث ملفات Backend.';
+        }
+        if (kind === 'cors') {
+            return 'فشل الاتصال بسبب إعدادات CORS/الوصول في Web App. تأكد من إعدادات النشر.';
+        }
+        return 'تعذر تحميل البيانات من الخادم. يرجى إعادة المحاولة.';
+    },
+
+    _reportModuleError(contextLabel, rawError) {
+        const rawMessage = String((rawError && rawError.message) || rawError || '');
+        if (this._isNoisyExtensionError(rawMessage)) {
+            // Ignore browser extension noise for this module only.
+            return;
+        }
+        const friendly = this._getFriendlyErrorMessage(rawMessage);
+        if (typeof Utils !== 'undefined' && Utils.showNotification) {
+            Utils.showNotification(friendly, 'error');
+        }
+        if (typeof Utils !== 'undefined') {
+            Utils.safeWarn(`${contextLabel}: ${friendly}`, rawMessage);
+        }
+    },
+
     _withTimeout(promise, timeoutMs = 7000) {
         return Promise.race([
             promise,
@@ -453,7 +499,7 @@ const IssuingAuthorities = {
             }
         } catch (err) {
             this._data = [];
-            if (typeof Utils !== 'undefined') Utils.safeError('خطأ في تحميل Issuing Authorities:', err);
+            this._reportModuleError('IssuingAuthorities._fetchData', err);
         }
         this._loading = false;
     },
@@ -736,7 +782,7 @@ const IssuingAuthorities = {
                 Utils.showNotification('تم تحميل بيانات الموظف بنجاح', 'success');
             }
         } catch (err) {
-            if (typeof Utils !== 'undefined') Utils.safeWarn('تعذر جلب بيانات الموظف بالكود الوظيفي');
+            this._reportModuleError('IssuingAuthorities._lookupEmployeeByCode', err);
         }
     },
 
@@ -865,12 +911,7 @@ const IssuingAuthorities = {
                 }
             }
         } catch (err) {
-            const msg = err && err.message ? err.message : 'حدث خطأ أثناء الحفظ';
-            if (typeof Utils !== 'undefined' && Utils.showNotification) {
-                Utils.showNotification(msg, 'error');
-            } else {
-                alert(msg);
-            }
+            this._reportModuleError('IssuingAuthorities._saveModal', err);
         } finally {
             if (saveBtn) { saveBtn.disabled = false; saveBtn.innerHTML = '<i class="fas fa-save" style="margin-left:6px;"></i>حفظ'; }
         }
@@ -919,10 +960,7 @@ const IssuingAuthorities = {
                 }
             }
         } catch (err) {
-            const msg = err && err.message ? err.message : 'حدث خطأ أثناء الحذف';
-            if (typeof Utils !== 'undefined' && Utils.showNotification) {
-                Utils.showNotification(msg, 'error');
-            }
+            this._reportModuleError('IssuingAuthorities._deleteRecord', err);
         }
     },
 
