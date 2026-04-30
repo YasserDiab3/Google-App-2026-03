@@ -215,6 +215,32 @@ window.UI = {
         `;
     },
 
+    /** تحديث لوحة الطوارئ؛ يُفوَّض إلى Emergency عند التوفر (رسم مؤجّل بين الإطارات). */
+    renderAll() {
+        if (typeof Emergency !== 'undefined' && typeof Emergency.renderAll === 'function') {
+            Emergency.renderAll();
+            return;
+        }
+        this.renderSummary();
+        const activeTab = document.querySelector('#emergency-section .tab-btn.active');
+        if (activeTab) {
+            const tabId = activeTab.getAttribute('data-tab');
+            if (tabId === 'alerts') {
+                this.renderAlertsBoard();
+                this.renderTimelineBoard();
+            } else if (tabId === 'plans') {
+                this.renderPlansBoard();
+            }
+        } else {
+            this.renderAlertsBoard();
+            this.renderTimelineBoard();
+            this.renderPlansBoard();
+        }
+        if (typeof NotificationsManager !== 'undefined') {
+            NotificationsManager.updateBadge();
+        }
+    },
+
     renderAlertsBoard() {
         const container = document.getElementById('emergency-alerts-board');
         if (!container) return;

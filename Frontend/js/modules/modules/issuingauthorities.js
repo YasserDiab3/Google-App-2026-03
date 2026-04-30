@@ -581,7 +581,7 @@ const IssuingAuthorities = {
                 </label>
                 <div class="ia-radio-group">
                     ${['G', 'Y', 'X'].map(v => `
-                        <label class="ia-radio-label ia-radio-${v.toLowerCase()} ${pv(pt.key) === v ? 'is-selected' : ''}" style="${pv(pt.key) === v ? 'opacity:1;' : 'opacity:0.55;'}">
+                        <label class="ia-radio-label ia-radio-${v.toLowerCase()} ${pv(pt.key) === v ? 'is-selected' : ''}">
                             <input type="radio" name="permit_${pt.key}" value="${v}" ${pv(pt.key) === v ? 'checked' : ''} style="display:none;">
                             ${v}
                         </label>
@@ -898,7 +898,6 @@ const IssuingAuthorities = {
                 group.forEach(radio => {
                     const lbl = radio.closest('label.ia-radio-label');
                     if (lbl) {
-                        lbl.style.opacity = radio.checked ? '1' : '0.55';
                         lbl.classList.toggle('is-selected', !!radio.checked);
                     }
                 });
@@ -1068,7 +1067,6 @@ const IssuingAuthorities = {
         body.querySelectorAll('input[type="radio"]').forEach(radio => {
             const lbl = radio.closest('label.ia-radio-label');
             if (lbl) {
-                lbl.style.opacity = radio.checked ? '1' : '0.55';
                 lbl.classList.toggle('is-selected', !!radio.checked);
             }
         });
@@ -1323,9 +1321,12 @@ const IssuingAuthorities = {
     },
 
     _injectStyles() {
-        if (document.getElementById('ia-styles')) return;
-        const style = document.createElement('style');
-        style.id = 'ia-styles';
+        let style = document.getElementById('ia-styles');
+        if (!style) {
+            style = document.createElement('style');
+            style.id = 'ia-styles';
+            document.head.appendChild(style);
+        }
         style.textContent = `
             .ia-badge-g {
                 display:inline-block;padding:2px 8px;border-radius:4px;font-weight:700;font-size:0.8rem;
@@ -1339,15 +1340,66 @@ const IssuingAuthorities = {
                 display:inline-block;padding:2px 8px;border-radius:4px;font-weight:700;font-size:0.8rem;
                 background:#fee2e2;color:#991b1b;border:1px solid #fca5a5;
             }
-            .ia-radio-g { background:#dcfce7;color:#166534;border:1px solid #86efac; }
-            .ia-radio-y { background:#fef9c3;color:#854d0e;border:1px solid #fde047; }
-            .ia-radio-x { background:#fee2e2;color:#991b1b;border:1px solid #fca5a5; }
+            /* أزرار G / Y / X: غير المحدد = إطار ملون واضح؛ المحدد = تعبئة قوية + هالة */
             .ia-radio-label {
-                border-radius:6px; transition:opacity .15s, transform .1s, box-shadow .15s;
-                cursor:pointer; padding:4px 12px; font-weight:700; font-size:0.83rem; min-width:34px; text-align:center;
+                border-radius:8px;
+                cursor:pointer;
+                padding:8px 14px;
+                font-weight:800;
+                font-size:0.88rem;
+                min-width:42px;
+                text-align:center;
+                user-select:none;
+                -webkit-tap-highlight-color:transparent;
+                border:2px solid transparent;
+                transition:transform .12s ease, box-shadow .15s ease, background .15s ease, color .15s ease, border-color .15s ease;
             }
-            .ia-radio-label:hover { opacity:1 !important; transform: translateY(-1px); }
-            .ia-radio-label.is-selected { box-shadow:0 0 0 2px rgba(37, 99, 235, 0.16); }
+            .ia-radio-label.ia-radio-g {
+                background:#ffffff;
+                color:#047857;
+                border-color:#6ee7b7;
+                box-shadow:0 1px 2px rgba(15,23,42,0.06);
+            }
+            .ia-radio-label.ia-radio-g.is-selected {
+                background:linear-gradient(180deg,#34d399 0%,#10b981 100%);
+                color:#ffffff;
+                border-color:#047857;
+                box-shadow:0 0 0 3px rgba(16,185,129,0.45), 0 4px 14px rgba(5,150,105,0.28);
+                transform:scale(1.06);
+            }
+            .ia-radio-label.ia-radio-y {
+                background:#ffffff;
+                color:#b45309;
+                border-color:#fcd34d;
+                box-shadow:0 1px 2px rgba(15,23,42,0.06);
+            }
+            .ia-radio-label.ia-radio-y.is-selected {
+                background:linear-gradient(180deg,#fbbf24 0%,#f59e0b 100%);
+                color:#422006;
+                border-color:#b45309;
+                box-shadow:0 0 0 3px rgba(245,158,11,0.5), 0 4px 14px rgba(180,83,9,0.22);
+                transform:scale(1.06);
+            }
+            .ia-radio-label.ia-radio-x {
+                background:#ffffff;
+                color:#b91c1c;
+                border-color:#fca5a5;
+                box-shadow:0 1px 2px rgba(15,23,42,0.06);
+            }
+            .ia-radio-label.ia-radio-x.is-selected {
+                background:linear-gradient(180deg,#f87171 0%,#ef4444 100%);
+                color:#ffffff;
+                border-color:#991b1b;
+                box-shadow:0 0 0 3px rgba(239,68,68,0.45), 0 4px 14px rgba(185,28,28,0.25);
+                transform:scale(1.06);
+            }
+            .ia-radio-label:hover:not(.is-selected) {
+                transform:translateY(-1px);
+                filter:brightness(0.98);
+            }
+            .ia-radio-label.is-selected:hover {
+                transform:scale(1.07);
+            }
             .ia-module table th, .ia-module table td {
                 border-bottom:1px solid #f1f5f9;
             }
@@ -1411,7 +1463,7 @@ const IssuingAuthorities = {
                 display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-bottom:10px;
                 color:#334155; font-size:0.8rem;
             }
-            .ia-permits-card { background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:8px 12px; }
+            .ia-permits-card { background:#f1f5f9; border:1px solid #cbd5e1; border-radius:10px; padding:12px 14px; box-shadow:inset 0 1px 0 rgba(255,255,255,0.7); }
             .ia-permit-row { display:flex; align-items:center; justify-content:space-between; padding:10px 0; border-bottom:1px solid #e5e7eb; gap:10px; }
             .ia-permit-row:last-child { border-bottom:none; }
             .ia-permit-label { font-size:0.9rem; color:#1f2937; font-weight:600; display:flex; align-items:center; gap:6px; }
@@ -1430,7 +1482,6 @@ const IssuingAuthorities = {
                 .ia-permit-row { flex-direction:column; align-items:flex-start; }
             }
         `;
-        document.head.appendChild(style);
     }
 };
 

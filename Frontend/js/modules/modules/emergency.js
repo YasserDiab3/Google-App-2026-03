@@ -561,29 +561,47 @@ const Emergency = {
     },
 
     renderAll() {
-        // رسم الملخص (يظهر في تبويب التنبيهات)
-        this.renderSummary();
-        
-        // رسم محتوى التبويبات حسب التبويب النشط
-        const activeTab = document.querySelector('#emergency-section .tab-btn.active');
-        if (activeTab) {
-            const tabId = activeTab.getAttribute('data-tab');
-            if (tabId === 'alerts') {
-                this.renderAlertsBoard();
-                this.renderTimelineBoard();
-            } else if (tabId === 'plans') {
-                this.renderPlansBoard();
+        const self = this;
+        const runBadge = () => {
+            if (typeof NotificationsManager !== 'undefined') {
+                NotificationsManager.updateBadge();
             }
-        } else {
-            // إذا لم يكن هناك تبويب نشط، رسم كل شيء (للتوافق مع الكود القديم)
-            this.renderAlertsBoard();
-            this.renderTimelineBoard();
-            this.renderPlansBoard();
-        }
-        
-        if (typeof NotificationsManager !== 'undefined') {
-            NotificationsManager.updateBadge();
-        }
+        };
+        const next = typeof requestAnimationFrame === 'function'
+            ? (cb) => { requestAnimationFrame(cb); }
+            : (cb) => { setTimeout(cb, 0); };
+
+        // تقسيم الرسم على عدة إطارات لتقليل تحذيرات Violation (معالج نقر/مؤقت طويل)
+        next(() => {
+            self.renderSummary();
+            const activeTab = document.querySelector('#emergency-section .tab-btn.active');
+            next(() => {
+                if (activeTab) {
+                    const tabId = activeTab.getAttribute('data-tab');
+                    if (tabId === 'alerts') {
+                        self.renderAlertsBoard();
+                        next(() => {
+                            self.renderTimelineBoard();
+                            runBadge();
+                        });
+                    } else if (tabId === 'plans') {
+                        self.renderPlansBoard();
+                        runBadge();
+                    } else {
+                        runBadge();
+                    }
+                } else {
+                    self.renderAlertsBoard();
+                    next(() => {
+                        self.renderTimelineBoard();
+                        next(() => {
+                            self.renderPlansBoard();
+                            runBadge();
+                        });
+                    });
+                }
+            });
+        });
     },
 
     renderTimelineBoard() {
