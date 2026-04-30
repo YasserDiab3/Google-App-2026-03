@@ -11954,10 +11954,11 @@ const Training = {
         }
     }
 };
-// يتاح على window فور اكتمال تعريف الكائن (قبل أي async قد يستدعي loadSectionData أثناء سلسلة تحميل السكربتات)
+// يتاح على window فور اكتمال تعريف الكائن (قبل app-ui وقبل أي refreshCurrentSection)
 if (typeof window !== 'undefined') {
     try {
         window.Training = Training;
+        document.dispatchEvent(new CustomEvent('hse-training-module-ready', { detail: { source: 'training.js' } }));
     } catch (e) { /* ignore */ }
 }
 // ===== Export module to global scope =====

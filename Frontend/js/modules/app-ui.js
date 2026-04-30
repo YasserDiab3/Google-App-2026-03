@@ -5832,10 +5832,55 @@ window.UI = {
                     break;
                 case 'training':
                     Utils.safeLog(' تحميل مديول التدريب (Training) ي قسم training-section');
-                    if (typeof Training !== 'undefined' && Training.load) {
-                        Training.load();
-                    } else {
-                        Utils.safeError('❌ موديول Training غير متوفر - الموديول لم يُحمّل بشكل صحيح');
+                    {
+                        const tryTrainingLoad = () => {
+                            if (document.getElementById('training-content')) {
+                                return true;
+                            }
+                            const M = window.Training;
+                            if (!M || typeof M.load !== 'function') {
+                                return false;
+                            }
+                            try {
+                                M.load();
+                            } catch (loadErr) {
+                                if (!silent) {
+                                    Utils.safeError('❌ خطأ أثناء Training.load:', loadErr);
+                                }
+                            }
+                            return true;
+                        };
+                        if (tryTrainingLoad()) {
+                            break;
+                        }
+                        const t0 = Date.now();
+                        const maxMs = 25000;
+                        let iv = null;
+                        const cleanupTrainingWait = () => {
+                            document.removeEventListener('hse-training-module-ready', onTrainingScriptReady);
+                            if (iv) {
+                                clearInterval(iv);
+                                iv = null;
+                            }
+                        };
+                        const onTrainingScriptReady = () => {
+                            if (tryTrainingLoad()) {
+                                cleanupTrainingWait();
+                            }
+                        };
+                        document.addEventListener('hse-training-module-ready', onTrainingScriptReady);
+                        iv = setInterval(() => {
+                            if (tryTrainingLoad()) {
+                                cleanupTrainingWait();
+                                return;
+                            }
+                            if (Date.now() - t0 > maxMs) {
+                                cleanupTrainingWait();
+                                if (!silent) {
+                                    Utils.safeError('❌ موديول Training غير متوفر - الموديول لم يُحمّل بشكل صحيح');
+                                }
+                            }
+                        }, 50);
                     }
                     break;
                 case 'clinic':

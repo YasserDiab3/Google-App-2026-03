@@ -12658,7 +12658,9 @@
 
         <!-- 3. UI (UI rendering and DOM manipulation) -->
         <script src="js/modules/i18n-core.js?v=20260430-5" defer></script>
-        <script src="js/modules/app-ui.js?v=20260430-11" defer></script>
+        <!-- Training قبل app-ui: loadSectionData/refreshCurrentSection قد تُستدعى قبل نهاية سلسلة الموديولات -->
+        <script src="js/modules/modules/training.js?v=20260430-3" defer></script>
+        <script src="js/modules/app-ui.js?v=20260430-12" defer></script>
 
         <!-- 4. Modules (Auth, Dashboard, Users, etc.) -->
         <!-- CRITICAL: Auth is defined here and must be loaded before login-init-fixed.js -->
@@ -12672,7 +12674,6 @@
         <script src="js/modules/modules/incidents.js" defer></script>
         <script src="js/modules/modules/nearmiss.js" defer></script>
         <script src="js/modules/modules/ptw.js?v=20260430-5" defer></script>
-        <script src="js/modules/modules/training.js?v=20260430-2" defer></script>
         <script src="js/modules/modules/reports.js" defer></script>
         <script src="js/modules/modules/settings.js?v=20260426-2" defer></script>
         <script src="js/modules/modules/clinic.js" defer></script>
