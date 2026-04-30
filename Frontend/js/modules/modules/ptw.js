@@ -11278,10 +11278,10 @@ const PTW = {
                     try {
                         const selectedSiteId = locationSelect.value;
                         if (selectedSiteId) {
-                            ptwMultiSublocationWrapper.style.display = 'block';
+                            sublocationWrapper.style.display = 'block';
                             const places = this.getPlaceOptions(selectedSiteId);
                             // حفظ القيمة المحددة حالياً
-                            const currentValue = ptwMultiSublocationSelect.value;
+                            const currentValue = sublocationSelect.value;
                             sublocationSelect.innerHTML = '<option value="">اختر المكان الفرعي</option>' +
                                 places.map(place => {
                                     // التحقق من التطابق مع البيانات الحالية
@@ -11296,9 +11296,9 @@ const PTW = {
                                     return `<option value="${Utils.escapeHTML(place.id)}" ${isSelected ? 'selected' : ''}>${Utils.escapeHTML(place.name)}</option>`;
                                 }).join('');
                         } else {
-                            ptwMultiSublocationWrapper.style.display = 'none';
+                            sublocationWrapper.style.display = 'none';
                             sublocationSelect.innerHTML = '<option value="">اختر المكان الفرعي</option>';
-                            ptwMultiSublocationSelect.value = '';
+                            sublocationSelect.value = '';
                         }
                     } catch (error) {
                         Utils.safeError('خطأ في تحديث المكان الفرعي:', error);
@@ -13497,10 +13497,10 @@ const PTW = {
         } else {
             sublocations = [...new Set(allPermits.map(p => (p.sublocationName || p.sublocation || '').trim()).filter(Boolean))].sort();
         }
-        const currentValue = ptwMultiSublocationSelect.value;
+        const currentValue = sublocationSelect.value;
         sublocationSelect.innerHTML = '<option value="">الكل</option>' + sublocations.map(s => `<option value="${Utils.escapeHTML(s)}">${Utils.escapeHTML(s)}</option>`).join('');
-        if (sublocations.includes(currentValue)) ptwMultiSublocationSelect.value = currentValue;
-        else ptwMultiSublocationSelect.value = '';
+        if (sublocations.includes(currentValue)) sublocationSelect.value = currentValue;
+        else sublocationSelect.value = '';
     },
 
     filterItems() {

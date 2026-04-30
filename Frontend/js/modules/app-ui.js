@@ -6559,9 +6559,45 @@ window.UI = {
                             Utils.safeError('خطأ في استدعاء IssuingAuthorities.load:', error);
                         }
                     } else {
-                        if (!silent) {
-                            Utils.safeError('❌ موديول IssuingAuthorities غير متوفر - الموديول لم يُحمّل بشكل صحيح');
-                        }
+                        const loadIssuingAuthoritiesScript = () => {
+                            return new Promise((resolve) => {
+                                try {
+                                    const existing = document.getElementById('issuing-authorities-module-script');
+                                    if (existing) {
+                                        existing.addEventListener('load', () => resolve(true), { once: true });
+                                        existing.addEventListener('error', () => resolve(false), { once: true });
+                                        return;
+                                    }
+                                    const script = document.createElement('script');
+                                    script.id = 'issuing-authorities-module-script';
+                                    script.src = 'js/modules/modules/issuingauthorities.js';
+                                    script.async = false;
+                                    script.onload = () => resolve(true);
+                                    script.onerror = () => resolve(false);
+                                    document.head.appendChild(script);
+                                } catch (e) {
+                                    Utils.safeError('خطأ أثناء محاولة تحميل سكربت IssuingAuthorities:', e);
+                                    resolve(false);
+                                }
+                            });
+                        };
+
+                        loadIssuingAuthoritiesScript().then((ok) => {
+                            if (ok && typeof IssuingAuthorities !== 'undefined' && IssuingAuthorities.load) {
+                                try {
+                                    const retryResult = IssuingAuthorities.load();
+                                    if (retryResult && typeof retryResult.then === 'function') {
+                                        retryResult.catch(error => {
+                                            Utils.safeError('خطأ في إعادة تحميل موديول Issuing Authorities:', error);
+                                        });
+                                    }
+                                } catch (error) {
+                                    Utils.safeError('خطأ في استدعاء IssuingAuthorities.load بعد التحميل الديناميكي:', error);
+                                }
+                            } else if (!silent) {
+                                Utils.safeError('❌ موديول IssuingAuthorities غير متوفر - الموديول لم يُحمّل بشكل صحيح');
+                            }
+                        });
                     }
                     break;
                 default:
