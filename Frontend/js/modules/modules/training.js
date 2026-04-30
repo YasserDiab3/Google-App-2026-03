@@ -569,8 +569,16 @@ const Training = {
         // 1) تفضيل getTrainingModuleBundle (طلب شبكة واحد من الخادم).
         // 2) إصلاح تصنيف «ثقيل» لـ getAll* في google-integration + __timeoutMs للطلبات الاحتياطية.
         const bundleTimeoutMs = 25000;
-        const fallbackTimeoutMs = 8000;
+        const fallbackTimeoutMs = 12000;
         const timeoutMessage = 'انتهت مهلة الاتصال بالخادم\n\nتحقق من الاتصال وإعدادات Google Apps Script.';
+
+        // حفظ/قراءة حالة عدم دعم getTrainingModuleBundle بين جلسات المتصفح
+        const bundleUnsupportedKey = 'training_bundle_action_unsupported';
+        try {
+            if (localStorage.getItem(bundleUnsupportedKey) === '1') {
+                this._bundleActionUnsupported = true;
+            }
+        } catch (e) { /* ignore */ }
 
         const persistAndRefreshUi = () => {
             if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
@@ -613,6 +621,7 @@ const Training = {
                         (msg.includes('غير معترف') || msg.toLowerCase().includes('not recognized'))
                     ) {
                         this._bundleActionUnsupported = true;
+                        try { localStorage.setItem(bundleUnsupportedKey, '1'); } catch (e) { /* ignore */ }
                         Utils.safeWarn('⚠️ إجراء getTrainingModuleBundle غير متاح في نسخة الخادم الحالية، سيتم استخدام الجلب المنفصل مباشرة.');
                     } else {
                         Utils.safeWarn('⚠️ تحميل مجمّع التدريب تعذّر، سيتم الطلبات المنفصلة:', err);
