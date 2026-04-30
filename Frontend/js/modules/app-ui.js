@@ -5582,9 +5582,11 @@ window.UI = {
                     const current = (section.innerHTML || '').trim();
                     if (!current) {
                         // التدريب: عرض هيكل الموديول فوراً بدل شاشة «جاري تحميل البيانات...» البيضاء
-                        if (sectionName === 'training' && typeof Training !== 'undefined' && typeof Training.load === 'function') {
+                        const trainingModEarly = (typeof window !== 'undefined' && window.Training) ||
+                            (typeof Training !== 'undefined' ? Training : null);
+                        if (sectionName === 'training' && trainingModEarly && typeof trainingModEarly.load === 'function') {
                             try {
-                                Training.load();
+                                trainingModEarly.load();
                             } catch (err) {
                                 Utils.safeWarn('⚠️ تعذر رسم موديول التدريب فوراً:', err);
                                 section.innerHTML = `
@@ -5861,14 +5863,37 @@ window.UI = {
                     break;
                 case 'training':
                     Utils.safeLog(' تحميل مديول التدريب (Training) ي قسم training-section');
-                    if (typeof Training !== 'undefined' && Training.load) {
-                        // إن رُسم الهيكل مسبقاً في showSection فلا نعيد استبدال الواجهة (تفادي وميض وطلبات مزدوجة)
-                        if (document.getElementById('training-content')) {
+                    // ترتيب السكربتات: app-ui وauth قبل training.js؛ showMainApp قد يستدعي refreshCurrentSection
+                    // بعد await قصير قبل تنفيذ training.js — ننتظر واجهة window.Training قليلاً بدل إعلان فشل فوري.
+                    {
+                        const tryTrainingLoad = () => {
+                            if (document.getElementById('training-content')) {
+                                return true;
+                            }
+                            const Mod = (typeof window !== 'undefined' && window.Training) ||
+                                (typeof Training !== 'undefined' ? Training : null);
+                            if (!Mod || typeof Mod.load !== 'function') {
+                                return false;
+                            }
+                            Mod.load();
+                            return true;
+                        };
+                        if (tryTrainingLoad()) {
                             break;
                         }
-                        Training.load();
-                    } else {
-                        Utils.safeError('❌ موديول Training غير متوفر - الموديول لم يُحمّل بشكل صحيح');
+                        let attempts = 0;
+                        const maxAttempts = 80;
+                        const intervalMs = 50;
+                        const timerId = setInterval(() => {
+                            attempts += 1;
+                            const ok = tryTrainingLoad();
+                            if (ok || attempts >= maxAttempts) {
+                                clearInterval(timerId);
+                                if (!ok) {
+                                    Utils.safeError('❌ موديول Training غير متوفر - الموديول لم يُحمّل بشكل صحيح');
+                                }
+                            }
+                        }, intervalMs);
                     }
                     break;
                 case 'clinic':

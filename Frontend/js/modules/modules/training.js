@@ -540,15 +540,62 @@ const Training = {
             return;
         }
 
-        // تحميل البيانات من Google Sheets — مهلة قصوى 10 ثوانٍ لكل طلب (الطلبات متوازية؛ لا تتجاوز الواجهة انتظاراً طويلاً)
-        const timeout = 10000;
-        const timeoutMessage = 'انتهت مهلة الاتصال بالخادم (10 ثوانٍ كحد أقصى)\n\nتحقق من:\n1. اتصال الإنترنت\n2. أن Google Apps Script منشور ومفعّل\n3. عدم وجود قيود على الشبكة';
-        const requestWithTimeout = (promise) => Utils.promiseWithTimeout(promise, timeout, timeoutMessage);
+        // طابور GoogleIntegration ينفّذ طلبات متتالية: 5 طلبات كانت تُراكم ~60–80 ثانية.
+        // 1) تفضيل getTrainingModuleBundle (طلب شبكة واحد من الخادم).
+        // 2) إصلاح تصنيف «ثقيل» لـ getAll* في google-integration + __timeoutMs للطلبات الاحتياطية.
+        const bundleTimeoutMs = 25000;
+        const fallbackTimeoutMs = 12000;
+        const timeoutMessage = 'انتهت مهلة الاتصال بالخادم\n\nتحقق من الاتصال وإعدادات Google Apps Script.';
+
+        const persistAndRefreshUi = () => {
+            if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
+                window.DataManager.save();
+            }
+            try { localStorage.setItem('training_last_sync', String(Date.now())); } catch (e) {}
+            this.loadTrainingList();
+            const contractorsTab = document.querySelector('.tab-btn[data-tab="contractors"]');
+            if (contractorsTab && contractorsTab.classList.contains('active')) {
+                this.refreshContractorTrainingList();
+            }
+            this._trainingBackendFetchOk = true;
+        };
 
         try {
+            const bundleRaw = await Utils.promiseWithTimeout(
+                GoogleIntegration.sendRequest({
+                    action: 'getTrainingModuleBundle',
+                    data: { filters: {}, __timeoutMs: bundleTimeoutMs }
+                }),
+                bundleTimeoutMs + 1500,
+                timeoutMessage
+            ).catch((err) => {
+                Utils.safeWarn('⚠️ تحميل مجمّع التدريب تعذّر، سيتم الطلبات المنفصلة:', err);
+                return null;
+            });
+
+            const bundle = bundleRaw && bundleRaw.success === true && bundleRaw.data && typeof bundleRaw.data === 'object'
+                ? bundleRaw.data
+                : null;
+
+            if (bundle) {
+                if (Array.isArray(bundle.training)) {
+                    AppState.appData.training = bundle.training;
+                    Utils.safeLog(`✅ تم تحميل ${bundle.training.length} برنامج تدريبي (مجمّع)`);
+                }
+                if (Array.isArray(bundle.trainingSessions)) AppState.appData.trainingSessions = bundle.trainingSessions;
+                if (Array.isArray(bundle.trainingCertificates)) AppState.appData.trainingCertificates = bundle.trainingCertificates;
+                if (Array.isArray(bundle.trainingAttendance)) AppState.appData.trainingAttendance = bundle.trainingAttendance;
+                if (Array.isArray(bundle.contractorTrainings)) AppState.appData.contractorTrainings = bundle.contractorTrainings;
+                persistAndRefreshUi();
+                return;
+            }
+
+            const requestWithTimeout = (promise) => Utils.promiseWithTimeout(promise, fallbackTimeoutMs, timeoutMessage);
+            const dataOpts = { filters: {}, __timeoutMs: fallbackTimeoutMs };
+
             const requests = [
                 requestWithTimeout(
-                    GoogleIntegration.sendRequest({ action: 'getAllTrainings', data: {} })
+                    GoogleIntegration.sendRequest({ action: 'getAllTrainings', data: { ...dataOpts } })
                 ).catch(error => {
                     const errorMsg = error?.message || error?.toString() || '';
                     if (errorMsg.includes('انتهت مهلة الاتصال') || errorMsg.includes('timeout')) {
@@ -559,7 +606,7 @@ const Training = {
                     return { success: false, data: [] };
                 }),
                 requestWithTimeout(
-                    GoogleIntegration.sendRequest({ action: 'getAllTrainingSessions', data: {} })
+                    GoogleIntegration.sendRequest({ action: 'getAllTrainingSessions', data: { ...dataOpts } })
                 ).catch(error => {
                     const errorMsg = error?.message || error?.toString() || '';
                     if (errorMsg.includes('انتهت مهلة الاتصال') || errorMsg.includes('timeout')) {
@@ -570,7 +617,7 @@ const Training = {
                     return { success: false, data: [] };
                 }),
                 requestWithTimeout(
-                    GoogleIntegration.sendRequest({ action: 'getAllTrainingCertificates', data: {} })
+                    GoogleIntegration.sendRequest({ action: 'getAllTrainingCertificates', data: { ...dataOpts } })
                 ).catch(error => {
                     const errorMsg = error?.message || error?.toString() || '';
                     if (errorMsg.includes('انتهت مهلة الاتصال') || errorMsg.includes('timeout')) {
@@ -581,7 +628,7 @@ const Training = {
                     return { success: false, data: [] };
                 }),
                 requestWithTimeout(
-                    GoogleIntegration.sendRequest({ action: 'getAllTrainingAttendance', data: {} })
+                    GoogleIntegration.sendRequest({ action: 'getAllTrainingAttendance', data: { ...dataOpts } })
                 ).catch(error => {
                     const errorMsg = error?.message || error?.toString() || '';
                     if (errorMsg.includes('انتهت مهلة الاتصال') || errorMsg.includes('timeout')) {
@@ -592,7 +639,7 @@ const Training = {
                     return { success: false, data: [] };
                 }),
                 requestWithTimeout(
-                    GoogleIntegration.sendRequest({ action: 'getAllContractorTrainings', data: {} })
+                    GoogleIntegration.sendRequest({ action: 'getAllContractorTrainings', data: { ...dataOpts } })
                 ).catch(error => {
                     const errorMsg = error?.message || error?.toString() || '';
                     if (errorMsg.includes('انتهت مهلة الاتصال') || errorMsg.includes('timeout')) {
@@ -606,7 +653,6 @@ const Training = {
 
             const [trainingResult, sessionsResult, certificatesResult, attendanceResult, contractorResult] = await Promise.allSettled(requests);
 
-            // معالجة النتائج
             if (trainingResult.status === 'fulfilled' && trainingResult.value?.success && Array.isArray(trainingResult.value.data)) {
                 AppState.appData.training = trainingResult.value.data;
                 Utils.safeLog(`✅ تم تحميل ${trainingResult.value.data.length} برنامج تدريبي`);
@@ -624,21 +670,7 @@ const Training = {
                 AppState.appData.contractorTrainings = contractorResult.value.data;
             }
 
-            // حفظ البيانات محلياً
-            if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
-                window.DataManager.save();
-            }
-            try { localStorage.setItem('training_last_sync', String(Date.now())); } catch (e) {}
-
-            // تحديث القوائم بعد تحميل البيانات
-            this.loadTrainingList();
-            
-            // تحديث قائمة تدريبات المقاولين إذا كان التبويب مفتوحاً
-            const contractorsTab = document.querySelector('.tab-btn[data-tab="contractors"]');
-            if (contractorsTab && contractorsTab.classList.contains('active')) {
-                this.refreshContractorTrainingList();
-            }
-            this._trainingBackendFetchOk = true;
+            persistAndRefreshUi();
         } catch (error) {
             Utils.safeError('❌ خطأ في تحميل بيانات التدريب:', error);
             this._trainingBackendFetchOk = true;
@@ -11922,6 +11954,12 @@ const Training = {
         }
     }
 };
+// يتاح على window فور اكتمال تعريف الكائن (قبل أي async قد يستدعي loadSectionData أثناء سلسلة تحميل السكربتات)
+if (typeof window !== 'undefined') {
+    try {
+        window.Training = Training;
+    } catch (e) { /* ignore */ }
+}
 // ===== Export module to global scope =====
 // تصدير الموديول إلى window فوراً لضمان توافره
 (function () {

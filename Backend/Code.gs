@@ -693,6 +693,9 @@ function doPost(e) {
                 case 'getAllContractorTrainings':
                     result = getAllContractorTrainings(payload.filters || {});
                     break;
+                case 'getTrainingModuleBundle':
+                    result = getTrainingModuleBundle(payload || {});
+                    break;
                 
                 // ============================================
                 // العيادة الطبية (Clinic)

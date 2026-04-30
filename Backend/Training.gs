@@ -762,3 +762,31 @@ function getAllContractorTrainings(filters = {}) {
     }
 }
 
+/**
+ * تحميل مجمّع لموديول التدريب في استدعاء واحد — يقلل طلبات HTTP ووقت انتظار طابور الواجهة.
+ * @param {Object} payload - { filters: {...} } اختياري
+ */
+function getTrainingModuleBundle(payload) {
+    try {
+        var filters = (payload && payload.filters) ? payload.filters : {};
+        var r1 = getAllTrainings(filters);
+        var r2 = getAllTrainingSessions(filters);
+        var r3 = getAllTrainingCertificates(filters);
+        var r4 = getAllTrainingAttendance(filters);
+        var r5 = getAllContractorTrainings(filters);
+        return {
+            success: true,
+            data: {
+                training: (r1 && r1.success && r1.data) ? r1.data : [],
+                trainingSessions: (r2 && r2.success && r2.data) ? r2.data : [],
+                trainingCertificates: (r3 && r3.success && r3.data) ? r3.data : [],
+                trainingAttendance: (r4 && r4.success && r4.data) ? r4.data : [],
+                contractorTrainings: (r5 && r5.success && r5.data) ? r5.data : []
+            }
+        };
+    } catch (error) {
+        Logger.log('Error in getTrainingModuleBundle: ' + error.toString());
+        return { success: false, message: 'حدث خطأ أثناء تحميل بيانات التدريب: ' + error.toString(), data: null };
+    }
+}
+

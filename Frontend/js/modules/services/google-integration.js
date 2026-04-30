@@ -698,7 +698,14 @@ const GoogleIntegration = {
             const mediumOperations = [
                 'getData', 'readData', 'loadData', 'fetchData', 'add', 'update'
             ];
-            const isHeavyOperation = heavyOperations.some(op => action.includes(op) || action === op);
+            // تجنب مطابقة السلسلة الفرعية «getAll» لأي إجراء يحتويها (مثل getAllTrainings → كان يُصنَّف ثقيلاً بمهلة 40s + إعادة محاولة)
+            const isHeavyOperation = heavyOperations.some((op) => {
+                if (action === op) return true;
+                if (op === 'getAll') {
+                    return action === 'getAll' || action === 'getAllData';
+                }
+                return action.includes(op);
+            });
             const isMediumOperation = mediumOperations.some(op => action.includes(op) || action === op);
 
             // تقليل المهلات لتفعيل fail-fast ومنع تكدس الطابور لعدة دقائق
