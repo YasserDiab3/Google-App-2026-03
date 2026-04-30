@@ -1776,7 +1776,13 @@ const Violations = {
         } else if (typeof violationDataOrId === 'object') {
             violationData = violationDataOrId;
         }
+        violationData = this.normalizeViolationRecord(violationData);
         const isEdit = !!violationData;
+        const recordPersonType = String(violationData?.personType || '').trim().toLowerCase();
+        const isContractorRecord = recordPersonType === 'contractor' || (!!violationData?.contractorName && !violationData?.employeeName);
+        const isEmployeeRecord = !isContractorRecord;
+        const selectedLocationValue = String(violationData?.violationLocationId || violationData?.violationLocation || '').trim();
+        const selectedPlaceValue = String(violationData?.violationPlaceId || violationData?.violationPlace || '').trim();
 
         // التحقق من وجود ViolationTypesManager
         let violationTypes = [];
@@ -1840,11 +1846,11 @@ const Violations = {
                                 </label>
                                 <select id="violation-person-type" required class="form-input">
                                     <option value="">اختر النوع</option>
-                                    <option value="employee" ${violationData?.employeeName || (!violationData?.contractorName && !violationData?.employeeName) ? 'selected' : ''}>موظف</option>
-                                    <option value="contractor" ${violationData?.contractorName ? 'selected' : ''}>مقاول</option>
+                                    <option value="employee" ${isEmployeeRecord ? 'selected' : ''}>موظف</option>
+                                    <option value="contractor" ${isContractorRecord ? 'selected' : ''}>مقاول</option>
                                 </select>
                             </div>
-                            <div id="violation-employee-code-container" style="display: ${violationData?.employeeName || (!violationData?.contractorName && !violationData?.employeeName) ? 'block' : 'none'};">
+                            <div id="violation-employee-code-container" style="display: ${isEmployeeRecord ? 'block' : 'none'};">
                                 <label for="violation-employee-code" class="block text-sm font-semibold text-gray-700 mb-2">
                                     <i class="fas fa-id-card ml-2"></i>
                                     الكود الوظيفي المخالف *
@@ -1852,7 +1858,7 @@ const Violations = {
                                 <input type="text" id="violation-employee-code" class="form-input"
                                     value="${violationData?.employeeCode || violationData?.employeeNumber || ''}" 
                                     placeholder="أدخل الكود الوظيفي (سيتم تعبئة البيانات تلقائياً)"
-                                    ${violationData?.employeeName ? 'required' : ''}>
+                                    ${isEmployeeRecord ? 'required' : ''}>
                             </div>
                         </div>
                         
@@ -1862,17 +1868,17 @@ const Violations = {
                                 <label for="violation-person-name" class="block text-sm font-semibold text-gray-700 mb-2" id="violation-person-name-label">اسم المخالف *</label>
                                 <input type="text" id="violation-person-name" required class="form-input"
                                     value="${violationData?.employeeName || violationData?.contractorName || ''}" 
-                                    placeholder="${violationData?.employeeName ? 'سيتم التعبئة تلقائياً' : 'اسم المقاول'}"
-                                    ${violationData?.employeeName ? 'readonly' : ''}
-                                    style="display: ${violationData?.contractorName ? 'none' : 'block'};">
-                                <label for="violation-contractor-select" class="block text-sm font-semibold text-gray-700 mb-2" style="display: ${violationData?.contractorName ? 'block' : 'none'};">المقاول *</label>
+                                    placeholder="${isEmployeeRecord ? 'سيتم التعبئة تلقائياً' : 'اسم المقاول'}"
+                                    ${isEmployeeRecord ? 'readonly' : ''}
+                                    style="display: ${isContractorRecord ? 'none' : 'block'};">
+                                <label for="violation-contractor-select" class="block text-sm font-semibold text-gray-700 mb-2" style="display: ${isContractorRecord ? 'block' : 'none'};">المقاول *</label>
                                 <select id="violation-contractor-select" class="form-input"
-                                    style="display: ${violationData?.contractorName ? 'block' : 'none'};"
-                                    ${violationData?.contractorName ? 'required' : ''}>
+                                    style="display: ${isContractorRecord ? 'block' : 'none'};"
+                                    ${isContractorRecord ? 'required' : ''}>
                                     <option value="">-- اختر المقاول --</option>
                                 </select>
                             </div>
-                            <div id="violation-employee-position-container" style="display: ${violationData?.employeeName || (!violationData?.contractorName && !violationData?.employeeName) ? 'block' : 'none'};">
+                            <div id="violation-employee-position-container" style="display: ${isEmployeeRecord ? 'block' : 'none'};">
                                 <label for="violation-employee-position" class="block text-sm font-semibold text-gray-700 mb-2">الوظيفة</label>
                                 <input type="text" id="violation-employee-position" class="form-input"
                                     value="${violationData?.employeePosition || ''}" 
@@ -1882,7 +1888,7 @@ const Violations = {
                         
                         <!-- الصف الثالث: الإدارة وتاريخ المخالفة -->
                         <div class="grid grid-cols-2 gap-4">
-                            <div id="violation-employee-department-container" style="display: ${violationData?.employeeName || (!violationData?.contractorName && !violationData?.employeeName) ? 'block' : 'none'};">
+                            <div id="violation-employee-department-container" style="display: ${isEmployeeRecord ? 'block' : 'none'};">
                                 <label for="violation-employee-department" class="block text-sm font-semibold text-gray-700 mb-2">الإدارة</label>
                                 <input type="text" id="violation-employee-department" class="form-input"
                                     value="${violationData?.employeeDepartment || ''}" 
@@ -1930,7 +1936,7 @@ const Violations = {
                             </div>
                         </div>
                         <!-- حقول المقاول (تظهر فقط عند اختيار مقاول) -->
-                        <div id="violation-contractor-fields-container" style="display: ${violationData?.contractorName ? 'block' : 'none'};">
+                        <div id="violation-contractor-fields-container" style="display: ${isContractorRecord ? 'block' : 'none'};">
                             <div class="grid grid-cols-2 gap-4">
                                 <div id="violation-contractor-worker-container">
                                     <label for="violation-contractor-worker" class="block text-sm font-semibold text-gray-700 mb-2">اسم العامل التابع للمقاول</label>
@@ -1970,7 +1976,7 @@ const Violations = {
                         </div>
                         
                         <!-- حقول الموقع ومكان المخالفة (للموظف) -->
-                        <div id="violation-location-fields-container" style="display: ${violationData?.employeeName || (!violationData?.contractorName && !violationData?.employeeName) ? 'block' : 'none'};">
+                        <div id="violation-location-fields-container" style="display: ${isEmployeeRecord ? 'block' : 'none'};">
                             <div class="grid grid-cols-2 gap-4">
                                 <div>
                                     <label for="violation-employee-location" class="block text-sm font-semibold text-gray-700 mb-2">الموقع *</label>
@@ -2304,7 +2310,7 @@ const Violations = {
         }
 
         // تحميل قائمة المواقع حسب نوع الشخص (افتراضي: موظف)
-        const initialPersonType = violationData?.employeeName ? 'employee' : (violationData?.contractorName ? 'contractor' : 'employee');
+        const initialPersonType = isContractorRecord ? 'contractor' : 'employee';
         // تحميل خيارات الموقع للموظف (الافتراضي) والمقاول
         setTimeout(async () => {
             await this.loadLocationOptions('employee');
@@ -2378,22 +2384,22 @@ const Violations = {
         }, 100);
 
         // تعيين القيم إذا كان التعديل (سيتم إعداد event listeners في setTimeout)
-        if (violationData?.violationLocation) {
+        if (selectedLocationValue) {
             setTimeout(() => {
-                if (violationData?.employeeName) {
+                if (initialPersonType === 'employee') {
                     const employeeLocationSelect = document.getElementById('violation-employee-location');
                     if (employeeLocationSelect) {
-                        employeeLocationSelect.value = violationData.violationLocation;
-                        if (violationData.violationLocation) {
-                            this.loadPlaceOptions(violationData.violationLocation, violationData.violationPlace, 'employee');
+                        employeeLocationSelect.value = selectedLocationValue;
+                        if (selectedLocationValue) {
+                            this.loadPlaceOptions(selectedLocationValue, selectedPlaceValue, 'employee');
                         }
                     }
-                } else if (violationData?.contractorName) {
+                } else if (initialPersonType === 'contractor') {
                     const contractorLocationSelect = document.getElementById('violation-contractor-location');
                     if (contractorLocationSelect) {
-                        contractorLocationSelect.value = violationData.violationLocation;
-                        if (violationData.violationLocation) {
-                            this.loadPlaceOptions(violationData.violationLocation, violationData.violationPlace, 'contractor');
+                        contractorLocationSelect.value = selectedLocationValue;
+                        if (selectedLocationValue) {
+                            this.loadPlaceOptions(selectedLocationValue, selectedPlaceValue, 'contractor');
                         }
                     }
                 }
