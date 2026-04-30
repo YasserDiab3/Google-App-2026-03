@@ -240,15 +240,179 @@ function logMessage(level, message, error) {
  * ملاحظة: بسبب مشكلة CORS مع custom headers في Google Apps Script،
  * نتحقق من CSRF token في payload فقط
  */
-function validateCSRFToken(requestToken) {
+function validateCSRFToken(requestToken, options) {
+    // دعم التوافق مع الاستدعاء القديم: validateCSRFToken(token)
+    options = options || {};
+
     // إذا لم يتم إرسال token، نرفض الطلب
     if (!requestToken || requestToken.length < 32) {
         return false;
     }
-    
+
     // التحقق من أن token هو hexadecimal string (SHA-256 hash)
     const hexPattern = /^[0-9a-f]{32,}$/i;
-    return hexPattern.test(requestToken);
+    if (!hexPattern.test(requestToken)) {
+        return false;
+    }
+
+    // في حال عدم تمرير sessionKey نكتفي بالتوافق القديم
+    const sessionKey = String(options.sessionKey || '').trim();
+    if (!sessionKey) return true;
+
+    // ربط token بالجلسة مع TTL في CacheService
+    const ttlSec = Math.max(300, Math.min(86400, Number(options.ttlSec || 7200)));
+    const cacheKey = 'csrf_binding_v2:' + requestToken;
+    const cache = CacheService.getScriptCache();
+
+    try {
+        const cached = cache.get(cacheKey);
+        if (!cached) {
+            const payload = {
+                sessionKey: sessionKey,
+                createdAt: new Date().toISOString()
+            };
+            cache.put(cacheKey, JSON.stringify(payload), ttlSec);
+            return true;
+        }
+
+        const parsed = JSON.parse(String(cached));
+        if (!parsed || !parsed.sessionKey) return false;
+        return String(parsed.sessionKey) === sessionKey;
+    } catch (error) {
+        Logger.log('validateCSRFToken session-bind error: ' + error.toString());
+        return false;
+    }
+}
+
+/**
+ * تنظيف آمن لكائنات الطلب لمنع prototype pollution
+ */
+function sanitizeRequestObject(input, depth) {
+    const maxDepth = 8;
+    const currentDepth = Number(depth || 0);
+    if (currentDepth > maxDepth) return null;
+
+    if (input === null || input === undefined) return input;
+
+    if (typeof input === 'string') {
+        return input.replace(/\u0000/g, '');
+    }
+
+    if (typeof input !== 'object') return input;
+
+    if (Array.isArray(input)) {
+        return input.map(function(item) {
+            return sanitizeRequestObject(item, currentDepth + 1);
+        });
+    }
+
+    const out = {};
+    const blockedKeys = { '__proto__': true, 'constructor': true, 'prototype': true };
+    Object.keys(input).forEach(function(key) {
+        if (blockedKeys[key]) return;
+        out[key] = sanitizeRequestObject(input[key], currentDepth + 1);
+    });
+    return out;
+}
+
+/**
+ * تحديد هوية سياقية للطلب (لـ rate-limit و CSRF session binding)
+ */
+function buildRequestSessionKey(action, token, sessionId, userHint) {
+    const actionPart = String(action || '').trim().substring(0, 80);
+    const tokenPart = String(token || '').trim().substring(0, 64);
+    const sessionPart = String(sessionId || '').trim().substring(0, 120);
+    const userPart = String(userHint || '').trim().toLowerCase().substring(0, 120);
+    return [actionPart, tokenPart, sessionPart, userPart].join('|');
+}
+
+/**
+ * Rate limit بسيط باستخدام CacheService
+ */
+function checkRateLimit(limitKey, limit, windowSec) {
+    const maxHits = Math.max(5, Number(limit || 60));
+    const windowSeconds = Math.max(10, Number(windowSec || 60));
+    const cacheKey = 'rl_v1:' + String(limitKey || 'anon');
+    const cache = CacheService.getScriptCache();
+
+    try {
+        const raw = cache.get(cacheKey);
+        const current = raw ? Number(raw) : 0;
+        const next = current + 1;
+        cache.put(cacheKey, String(next), windowSeconds);
+        return {
+            allowed: next <= maxHits,
+            current: next,
+            limit: maxHits,
+            windowSec: windowSeconds
+        };
+    } catch (error) {
+        Logger.log('checkRateLimit error: ' + error.toString());
+        return { allowed: true, current: 0, limit: maxHits, windowSec: windowSeconds };
+    }
+}
+
+/**
+ * فحص عام سريع للبيانات الواردة قبل الكتابة
+ */
+function validatePayloadForSheetWrite(sheetName, data) {
+    const result = { valid: true, message: '' };
+    const safeSheetName = String(sheetName || '').trim();
+    if (!safeSheetName) {
+        return { valid: false, message: 'sheetName مطلوب' };
+    }
+
+    const headers = getDefaultHeaders(safeSheetName) || [];
+    if (!headers.length) return result; // لا نكسر الوحدات القديمة
+
+    const records = Array.isArray(data) ? data : [data];
+    const allowed = {};
+    headers.forEach(function(h) { allowed[String(h)] = true; });
+
+    for (var i = 0; i < records.length; i++) {
+        const row = records[i];
+        if (!row || typeof row !== 'object' || Array.isArray(row)) continue;
+        const keys = Object.keys(row);
+        for (var k = 0; k < keys.length; k++) {
+            const key = keys[k];
+            if (!allowed[key]) {
+                return {
+                    valid: false,
+                    message: 'حقل غير مسموح في البيانات: ' + key + ' (sheet=' + safeSheetName + ')'
+                };
+            }
+        }
+    }
+
+    return result;
+}
+
+/**
+ * سجل أمني مركزي لمحاولات الرفض/الهجوم
+ */
+function logSecurityEvent(eventName, details) {
+    try {
+        const spreadsheetId = getSpreadsheetId();
+        if (!spreadsheetId) return;
+        const ss = SpreadsheetApp.openById(spreadsheetId);
+        const sheetName = 'SecurityAuditLog';
+        let sheet = ss.getSheetByName(sheetName);
+        if (!sheet) {
+            sheet = ss.insertSheet(sheetName);
+            sheet.getRange(1, 1, 1, 5).setValues([['timestamp', 'event', 'details', 'source', 'severity']]);
+        }
+
+        const payload = details && typeof details === 'object' ? details : { value: String(details || '') };
+        sheet.appendRow([
+            new Date().toISOString(),
+            String(eventName || 'unknown'),
+            JSON.stringify(payload).substring(0, 45000),
+            'Code.gs',
+            String(payload.severity || 'medium')
+        ]);
+    } catch (error) {
+        Logger.log('logSecurityEvent error: ' + error.toString());
+    }
 }
 
 /**

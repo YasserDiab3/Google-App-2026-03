@@ -27,6 +27,8 @@ const Training = {
     _tabCache: { programs: null, contractors: null, attendance: null, analysis: null },
     /** علامات «بحاجة لإعادة بناء» لكل تبويب */
     _tabDirty: { programs: true, contractors: true, attendance: true, analysis: true },
+    /** إذا كان إجراء المجمّع غير مدعوم في نسخة Apps Script الحالية، نتجاوزه مباشرة في المحاولات التالية */
+    _bundleActionUnsupported: false,
 
     ensureData() {
         const data = AppState.appData || {};
@@ -567,7 +569,7 @@ const Training = {
         // 1) تفضيل getTrainingModuleBundle (طلب شبكة واحد من الخادم).
         // 2) إصلاح تصنيف «ثقيل» لـ getAll* في google-integration + __timeoutMs للطلبات الاحتياطية.
         const bundleTimeoutMs = 25000;
-        const fallbackTimeoutMs = 12000;
+        const fallbackTimeoutMs = 8000;
         const timeoutMessage = 'انتهت مهلة الاتصال بالخادم\n\nتحقق من الاتصال وإعدادات Google Apps Script.';
 
         const persistAndRefreshUi = () => {
@@ -595,17 +597,29 @@ const Training = {
         };
 
         try {
-            const bundleRaw = await Utils.promiseWithTimeout(
-                GoogleIntegration.sendRequest({
-                    action: 'getTrainingModuleBundle',
-                    data: { filters: {}, __timeoutMs: bundleTimeoutMs }
-                }),
-                bundleTimeoutMs + 1500,
-                timeoutMessage
-            ).catch((err) => {
-                Utils.safeWarn('⚠️ تحميل مجمّع التدريب تعذّر، سيتم الطلبات المنفصلة:', err);
-                return null;
-            });
+            let bundleRaw = null;
+            if (!this._bundleActionUnsupported) {
+                bundleRaw = await Utils.promiseWithTimeout(
+                    GoogleIntegration.sendRequest({
+                        action: 'getTrainingModuleBundle',
+                        data: { filters: {}, __timeoutMs: bundleTimeoutMs }
+                    }),
+                    bundleTimeoutMs + 1500,
+                    timeoutMessage
+                ).catch((err) => {
+                    const msg = String(err?.message || err || '');
+                    if (
+                        msg.includes('getTrainingModuleBundle') &&
+                        (msg.includes('غير معترف') || msg.toLowerCase().includes('not recognized'))
+                    ) {
+                        this._bundleActionUnsupported = true;
+                        Utils.safeWarn('⚠️ إجراء getTrainingModuleBundle غير متاح في نسخة الخادم الحالية، سيتم استخدام الجلب المنفصل مباشرة.');
+                    } else {
+                        Utils.safeWarn('⚠️ تحميل مجمّع التدريب تعذّر، سيتم الطلبات المنفصلة:', err);
+                    }
+                    return null;
+                });
+            }
 
             const bundle = bundleRaw && bundleRaw.success === true && bundleRaw.data && typeof bundleRaw.data === 'object'
                 ? bundleRaw.data
@@ -626,85 +640,56 @@ const Training = {
 
             const requestWithTimeout = (promise) => Utils.promiseWithTimeout(promise, fallbackTimeoutMs, timeoutMessage);
             const dataOpts = { filters: {}, __timeoutMs: fallbackTimeoutMs };
+            const runAction = async (action, warnLabel) => {
+                const result = await requestWithTimeout(
+                    GoogleIntegration.sendRequest({ action, data: { ...dataOpts } })
+                ).catch(error => {
+                    const errorMsg = error?.message || error?.toString() || '';
+                    if (errorMsg.includes('انتهت مهلة الاتصال') || errorMsg.includes('timeout')) {
+                        Utils.safeWarn('⚠️ انتهت مهلة الاتصال بالخادم - استخدام البيانات المحلية');
+                    } else {
+                        Utils.safeWarn(`⚠️ تعذر تحميل ${warnLabel}:`, error);
+                    }
+                    return { success: false, data: [] };
+                });
+                return (result && result.success && Array.isArray(result.data)) ? result.data : null;
+            };
 
-            const requests = [
-                requestWithTimeout(
-                    GoogleIntegration.sendRequest({ action: 'getAllTrainings', data: { ...dataOpts } })
-                ).catch(error => {
-                    const errorMsg = error?.message || error?.toString() || '';
-                    if (errorMsg.includes('انتهت مهلة الاتصال') || errorMsg.includes('timeout')) {
-                        Utils.safeWarn('⚠️ انتهت مهلة الاتصال بالخادم - استخدام البيانات المحلية');
-                    } else {
-                        Utils.safeWarn('⚠️ تعذر تحميل برامج التدريب:', error);
-                    }
-                    return { success: false, data: [] };
-                }),
-                requestWithTimeout(
-                    GoogleIntegration.sendRequest({ action: 'getAllTrainingSessions', data: { ...dataOpts } })
-                ).catch(error => {
-                    const errorMsg = error?.message || error?.toString() || '';
-                    if (errorMsg.includes('انتهت مهلة الاتصال') || errorMsg.includes('timeout')) {
-                        Utils.safeWarn('⚠️ انتهت مهلة الاتصال بالخادم - استخدام البيانات المحلية');
-                    } else {
-                        Utils.safeWarn('⚠️ تعذر تحميل جلسات التدريب:', error);
-                    }
-                    return { success: false, data: [] };
-                }),
-                requestWithTimeout(
-                    GoogleIntegration.sendRequest({ action: 'getAllTrainingCertificates', data: { ...dataOpts } })
-                ).catch(error => {
-                    const errorMsg = error?.message || error?.toString() || '';
-                    if (errorMsg.includes('انتهت مهلة الاتصال') || errorMsg.includes('timeout')) {
-                        Utils.safeWarn('⚠️ انتهت مهلة الاتصال بالخادم - استخدام البيانات المحلية');
-                    } else {
-                        Utils.safeWarn('⚠️ تعذر تحميل الشهادات:', error);
-                    }
-                    return { success: false, data: [] };
-                }),
-                requestWithTimeout(
-                    GoogleIntegration.sendRequest({ action: 'getAllTrainingAttendance', data: { ...dataOpts } })
-                ).catch(error => {
-                    const errorMsg = error?.message || error?.toString() || '';
-                    if (errorMsg.includes('انتهت مهلة الاتصال') || errorMsg.includes('timeout')) {
-                        Utils.safeWarn('⚠️ انتهت مهلة الاتصال بالخادم - استخدام البيانات المحلية');
-                    } else {
-                        Utils.safeWarn('⚠️ تعذر تحميل سجل الحضور:', error);
-                    }
-                    return { success: false, data: [] };
-                }),
-                requestWithTimeout(
-                    GoogleIntegration.sendRequest({ action: 'getAllContractorTrainings', data: { ...dataOpts } })
-                ).catch(error => {
-                    const errorMsg = error?.message || error?.toString() || '';
-                    if (errorMsg.includes('انتهت مهلة الاتصال') || errorMsg.includes('timeout')) {
-                        Utils.safeWarn('⚠️ انتهت مهلة الاتصال بالخادم - استخدام البيانات المحلية');
-                    } else {
-                        Utils.safeWarn('⚠️ تعذر تحميل تدريبات المقاولين:', error);
-                    }
-                    return { success: false, data: [] };
-                })
-            ];
-
-            const [trainingResult, sessionsResult, certificatesResult, attendanceResult, contractorResult] = await Promise.allSettled(requests);
-
-            if (trainingResult.status === 'fulfilled' && trainingResult.value?.success && Array.isArray(trainingResult.value.data)) {
-                AppState.appData.training = trainingResult.value.data;
-                Utils.safeLog(`✅ تم تحميل ${trainingResult.value.data.length} برنامج تدريبي`);
+            // أولوية التحميل حسب التبويب النشط لتقليل التأخير المرئي.
+            const active = this._currentActiveTab || 'programs';
+            if (active === 'contractors') {
+                const contractorData = await runAction('getAllContractorTrainings', 'تدريبات المقاولين');
+                if (contractorData) AppState.appData.contractorTrainings = contractorData;
+                persistAndRefreshUi();
+                runAction('getAllTrainings', 'برامج التدريب').then((data) => { if (data) { AppState.appData.training = data; this._markAllTabsDirty(); } });
+                runAction('getAllTrainingAttendance', 'سجل الحضور').then((data) => { if (data) { AppState.appData.trainingAttendance = data; this._markAllTabsDirty(); } });
+                runAction('getAllTrainingSessions', 'جلسات التدريب').then((data) => { if (data) { AppState.appData.trainingSessions = data; this._markAllTabsDirty(); } });
+                runAction('getAllTrainingCertificates', 'الشهادات').then((data) => { if (data) { AppState.appData.trainingCertificates = data; this._markAllTabsDirty(); } });
+                return;
             }
-            if (sessionsResult.status === 'fulfilled' && sessionsResult.value?.success && Array.isArray(sessionsResult.value.data)) {
-                AppState.appData.trainingSessions = sessionsResult.value.data;
-            }
-            if (certificatesResult.status === 'fulfilled' && certificatesResult.value?.success && Array.isArray(certificatesResult.value.data)) {
-                AppState.appData.trainingCertificates = certificatesResult.value.data;
-            }
-            if (attendanceResult.status === 'fulfilled' && attendanceResult.value?.success && Array.isArray(attendanceResult.value.data)) {
-                AppState.appData.trainingAttendance = attendanceResult.value.data;
-            }
-            if (contractorResult.status === 'fulfilled' && contractorResult.value?.success && Array.isArray(contractorResult.value.data)) {
-                AppState.appData.contractorTrainings = contractorResult.value.data;
+            if (active === 'attendance') {
+                const attendanceData = await runAction('getAllTrainingAttendance', 'سجل الحضور');
+                if (attendanceData) AppState.appData.trainingAttendance = attendanceData;
+                const trainingData = await runAction('getAllTrainings', 'برامج التدريب');
+                if (trainingData) AppState.appData.training = trainingData;
+                persistAndRefreshUi();
+                runAction('getAllContractorTrainings', 'تدريبات المقاولين').then((data) => { if (data) { AppState.appData.contractorTrainings = data; this._markAllTabsDirty(); } });
+                runAction('getAllTrainingSessions', 'جلسات التدريب').then((data) => { if (data) { AppState.appData.trainingSessions = data; this._markAllTabsDirty(); } });
+                runAction('getAllTrainingCertificates', 'الشهادات').then((data) => { if (data) { AppState.appData.trainingCertificates = data; this._markAllTabsDirty(); } });
+                return;
             }
 
+            // باقي الحالات (programs/analysis): ابدأ ببرامج التدريب ثم أكمل بقية البيانات.
+            const trainingData = await runAction('getAllTrainings', 'برامج التدريب');
+            if (trainingData) {
+                AppState.appData.training = trainingData;
+                Utils.safeLog(`✅ تم تحميل ${trainingData.length} برنامج تدريبي`);
+            }
             persistAndRefreshUi();
+            runAction('getAllTrainingSessions', 'جلسات التدريب').then((data) => { if (data) { AppState.appData.trainingSessions = data; this._markAllTabsDirty(); } });
+            runAction('getAllTrainingCertificates', 'الشهادات').then((data) => { if (data) { AppState.appData.trainingCertificates = data; this._markAllTabsDirty(); } });
+            runAction('getAllTrainingAttendance', 'سجل الحضور').then((data) => { if (data) { AppState.appData.trainingAttendance = data; this._markAllTabsDirty(); } });
+            runAction('getAllContractorTrainings', 'تدريبات المقاولين').then((data) => { if (data) { AppState.appData.contractorTrainings = data; this._markAllTabsDirty(); } });
         } catch (error) {
             Utils.safeError('❌ خطأ في تحميل بيانات التدريب:', error);
             this._trainingBackendFetchOk = true;
@@ -4213,12 +4198,22 @@ const Training = {
         const opts = options && typeof options === 'object' ? options : {};
         const excludeSystemUsers = opts.excludeSystemUsers === true;
         const membersMap = new Map();
+        const isResigned = (emp) => {
+            if (typeof EmployeeHelper !== 'undefined' && typeof EmployeeHelper.isResignedEmployee === 'function') {
+                return EmployeeHelper.isResignedEmployee(emp);
+            }
+            const statusText = String(
+                emp?.status || emp?.employeeStatus || emp?.workStatus || emp?.employmentStatus || ''
+            ).toLowerCase();
+            return statusText.includes('مستقيل') || statusText.includes('استقال') || statusText.includes('resign') || statusText.includes('terminated');
+        };
 
         const resolveSettingsMemberLabel = (raw) => {
             const s = String(raw || '').trim();
             if (!s) return '';
             if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s)) {
                 const emp = (AppState.appData?.employees || []).find((e) => String(e.email || '').toLowerCase() === s.toLowerCase());
+                if (emp && isResigned(emp)) return '';
                 return emp ? String(emp.name || emp.fullName || '').trim() : '';
             }
             return s;
@@ -4254,6 +4249,7 @@ const Training = {
         }
 
         (AppState.appData.employees || []).forEach((employee) => {
+            if (isResigned(employee)) return;
             const department = (employee.department || '').toLowerCase();
             const jobTitle = (employee.position || employee.jobTitle || '').toLowerCase();
             const isSafety = department.includes('سلامة') || department.includes('hse') || jobTitle.includes('سلامة') || jobTitle.includes('hse');
@@ -5169,7 +5165,7 @@ const Training = {
                                 <select id="contractor-report-month" class="form-input flex-1" disabled style="max-width: 300px;">
                                     <option value="">اختر الشهر</option>
                                     ${months.map(month => `
-                                        <option value="${month.value}">${month.label}</option>
+                                        <option value="${Utils.escapeHTML(month.value)}">${Utils.escapeHTML(month.label)}</option>
                                     `).join('')}
                                 </select>
                             </div>
@@ -5872,7 +5868,7 @@ const Training = {
                                 <td>
                                     ${this.isCurrentUserAdmin() ? `
                                         <select class="form-input plan-status-select" data-item-id="${item.id}">
-                                            ${statusOptions.map(status => `<option value="${status}" ${item.status === status ? 'selected' : ''}>${status}</option>`).join('')}
+                                            ${statusOptions.map(status => `<option value="${Utils.escapeHTML(status)}" ${item.status === status ? 'selected' : ''}>${Utils.escapeHTML(status)}</option>`).join('')}
                                         </select>
                                     ` : `
                                         <span class="badge ${item.status === 'مكتمل' ? 'badge-success' :
@@ -5886,7 +5882,7 @@ const Training = {
                                         <select class="form-input plan-training-link" data-item-id="${item.id}">
                                             <option value="">—</option>
                                             ${trainingOptions.map(option => `
-                                                <option value="${option.id}" ${option.id === item.linkedTrainingId ? 'selected' : ''}>
+                                                <option value="${Utils.escapeHTML(option.id)}" ${option.id === item.linkedTrainingId ? 'selected' : ''}>
                                                     ${Utils.escapeHTML(option.name)} (${option.date ? Utils.formatDate(option.date) : 'بدون تاريخ'})
                                                 </option>
                                             `).join('')}
@@ -7293,7 +7289,7 @@ const Training = {
                                         onblur="this.style.borderColor='#e5e7eb'; this.style.boxShadow='none';">
                                         <option value="">اختر المصنع</option>
                                         ${this.getSiteOptions().map(site => `
-                                            <option value="${site.id}" ${data?.factory === site.id || data?.factory === site.name ? 'selected' : ''}>${Utils.escapeHTML(site.name)}</option>
+                                            <option value="${Utils.escapeHTML(site.id)}" ${data?.factory === site.id || data?.factory === site.name ? 'selected' : ''}>${Utils.escapeHTML(site.name)}</option>
                                         `).join('')}
                                     </select>
                                 </div>
@@ -7307,7 +7303,7 @@ const Training = {
                                         onblur="this.style.borderColor='#e5e7eb'; this.style.boxShadow='none';">
                                         <option value="">اختر مكان التدريب</option>
                                         ${this.getPlaceOptions(data?.factory || '').map(place => `
-                                            <option value="${place.id}" ${data?.location === place.id || data?.location === place.name ? 'selected' : ''}>${Utils.escapeHTML(place.name)}</option>
+                                            <option value="${Utils.escapeHTML(place.id)}" ${data?.location === place.id || data?.location === place.name ? 'selected' : ''}>${Utils.escapeHTML(place.name)}</option>
                                         `).join('')}
                                     </select>
                                 </div>
@@ -9116,11 +9112,12 @@ const Training = {
             const fieldsMap = this.getTrainingAnalysisFieldsMap();
             const fields = fieldsMap[dataset] || [];
             
-            fieldSelect.innerHTML = `
+            const optionsHtml = `
                 <option value="">اختر الحقل</option>
-                ${fields.map(f => `<option value="${f.value}">${Utils.escapeHTML(f.label)}</option>`).join('')}
+                ${fields.map(f => `<option value="${Utils.escapeHTML(f.value)}">${Utils.escapeHTML(f.label)}</option>`).join('')}
                 <option value="__custom__">حقل مخصص...</option>
             `;
+            Utils.setSafeHTML(fieldSelect, optionsHtml);
         };
         
         datasetSelect.addEventListener('change', updateFields);
@@ -10386,7 +10383,7 @@ const Training = {
                         <select id="attendance-registry-filter-factory" class="form-input" style="max-width: 200px;">
                             <option value="">جميع المصانع</option>
                             ${this.getSiteOptions().map(site => `
-                                <option value="${site.id}">${Utils.escapeHTML(site.name)}</option>
+                                <option value="${Utils.escapeHTML(site.id)}">${Utils.escapeHTML(site.name)}</option>
                             `).join('')}
                         </select>
                     </div>

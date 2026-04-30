@@ -274,6 +274,19 @@ const GoogleIntegration = {
     },
 
     /**
+     * معرف جلسة عميل بسيط لربط CSRF بالجلسة على الخادم
+     */
+    getOrCreateClientSessionId() {
+        let sessionId = sessionStorage.getItem('client_session_id');
+        if (!sessionId) {
+            const randomPart = Math.random().toString(36).slice(2, 10);
+            sessionId = `sid_${Date.now().toString(36)}_${randomPart}`;
+            sessionStorage.setItem('client_session_id', sessionId);
+        }
+        return sessionId;
+    },
+
+    /**
      * ============================================
      * التحقق من المزامنة في التقدم باستخدام Google Sheets
      * ============================================
@@ -628,6 +641,7 @@ const GoogleIntegration = {
 
             // التحقق من هل هو CSRF Token
             const csrfToken = this.getOrCreateCSRFToken();
+            const clientSessionId = this.getOrCreateClientSessionId();
 
             // التحقق من هل هو payload
             // Google Apps Script غير مفعل - التحقق من هل هو valid Google Apps Script URL
@@ -642,6 +656,7 @@ const GoogleIntegration = {
                 action,
                 data: cleanData,
                 csrfToken,
+                clientSessionId,
                 timestamp: new Date().toISOString()
             };
 

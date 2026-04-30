@@ -118,12 +118,35 @@ function doPost(e) {
             }));
             return setCorsHeaders(errorOutput);
         }
+
+        // حماية إضافية: حد أقصى لحجم الطلب لتقليل إساءة الاستخدام
+        const maxRequestBytes = 1024 * 1024; // 1MB
+        if (e.postData.contents.length > maxRequestBytes) {
+            Logger.log('Security: Request body too large: ' + e.postData.contents.length + ' bytes');
+            return setCorsHeaders(ContentService.createTextOutput(JSON.stringify({
+                success: false,
+                message: 'حجم الطلب كبير جداً',
+                errorCode: 'REQUEST_TOO_LARGE'
+            })));
+        }
+
+        if (!postData || typeof postData !== 'object' || Array.isArray(postData)) {
+            Logger.log('Security: Invalid request envelope type');
+            return setCorsHeaders(ContentService.createTextOutput(JSON.stringify({
+                success: false,
+                message: 'صيغة الطلب غير صحيحة',
+                errorCode: 'INVALID_REQUEST_ENVELOPE'
+            })));
+        }
         
         // ============================================
         // 4. استخراج action و payload
         // ============================================
         let action = postData.action;
-        const payload = postData.data || postData;
+        const rawPayload = postData.data || postData;
+        const payload = (typeof sanitizeRequestObject === 'function')
+            ? sanitizeRequestObject(rawPayload, 0)
+            : rawPayload;
         
         // ✅ Debug logging لمعرفة ما يتم استخراجه
         Logger.log('🔍 [CODE.GS] postData.action: ' + JSON.stringify(action));
@@ -139,6 +162,17 @@ function doPost(e) {
         // تنظيف action (إزالة المسافات والحروف غير المرئية)
         if (action && typeof action === 'string') {
             action = action.trim();
+        }
+
+        // حماية إضافية: تقييد شكل action لمنع القيم غير المتوقعة
+        const actionPattern = /^[a-zA-Z][a-zA-Z0-9_]{1,79}$/;
+        if (typeof action === 'string' && !actionPattern.test(action)) {
+            Logger.log('Security: Invalid action format: ' + action);
+            return setCorsHeaders(ContentService.createTextOutput(JSON.stringify({
+                success: false,
+                message: 'صيغة action غير صالحة',
+                errorCode: 'INVALID_ACTION_FORMAT'
+            })));
         }
         
         // التحقق من وجود action
@@ -180,7 +214,27 @@ function doPost(e) {
         // 5. التحقق من CSRF Token (محسن للأمان)
         // ============================================
         const requestToken = postData.csrfToken || '';
-        const skipCSRFCheck = postData.skipCSRFCheck === true || postData.skipCSRF === true;
+        const clientSessionId = String(postData.clientSessionId || (postData.data && postData.data.clientSessionId) || '').trim();
+        const userHint = String(
+            (postData.userData && (postData.userData.email || postData.userData.id || postData.userData.name)) ||
+            (postData.data && postData.data.email) ||
+            ''
+        ).trim();
+        const requestSessionKey = (typeof buildRequestSessionKey === 'function')
+            ? buildRequestSessionKey(action, requestToken, clientSessionId, userHint)
+            : [action, requestToken, clientSessionId, userHint].join('|');
+        const clientRequestedSkipCSRF = postData.skipCSRFCheck === true || postData.skipCSRF === true;
+        
+        // لا نسمح للعميل بتجاوز CSRF نهائياً
+        if (clientRequestedSkipCSRF) {
+            Logger.log('Security: Client attempted to bypass CSRF check. action=' + action);
+            return setCorsHeaders(ContentService.createTextOutput(JSON.stringify({
+                success: false,
+                message: 'طلب غير آمن: لا يمكن تجاوز التحقق الأمني',
+                errorCode: 'CSRF_BYPASS_REJECTED',
+                action: action
+            })));
+        }
         
         // قائمة بالـ actions التي لا تتطلب CSRF token (عمليات قراءة فقط)
         const readOnlyActions = [
@@ -214,12 +268,16 @@ function doPost(e) {
             'addUserToSheet', 'deleteUser', 'updateUser', 'changePassword',
             'saveToSheet', 'deleteFromSheet', 'updateSheetData'
         ];
+        const strictAdminActions = [
+            'deleteUser', 'resetUserPassword', 'fixUsersSheetHeaders',
+            'fixMissingSheetHeaders', 'initializeSheets'
+        ];
         
         const isReadOnlyAction = readOnlyActions.includes(action);
         const isSensitiveAction = sensitiveActions.includes(action);
         
         // التحقق من CSRF Token - إلزامي للعمليات الحساسة
-        if (!skipCSRFCheck && (isSensitiveAction || (!isReadOnlyAction && action !== 'addUser' && action !== 'initializeSheets'))) {
+        if (isSensitiveAction || (!isReadOnlyAction && action !== 'addUser' && action !== 'initializeSheets')) {
             if (!requestToken || requestToken.length < 32) {
                 Logger.log('Security: CSRF token missing or too short for action: ' + action);
                 const errorOutput = ContentService.createTextOutput(JSON.stringify({
@@ -245,8 +303,11 @@ function doPost(e) {
             }
             
             // التحقق من CSRF Token باستخدام validateCSRFToken
-            if (typeof validateCSRFToken === 'function' && !validateCSRFToken(requestToken)) {
+            if (typeof validateCSRFToken === 'function' && !validateCSRFToken(requestToken, { sessionKey: requestSessionKey, ttlSec: 7200 })) {
                 Logger.log('Security: CSRF token validation failed for action: ' + action);
+                if (typeof logSecurityEvent === 'function') {
+                    logSecurityEvent('csrf_validation_failed', { action: action, session: requestSessionKey, severity: 'high' });
+                }
                 const errorOutput = ContentService.createTextOutput(JSON.stringify({
                     success: false,
                     message: 'طلب غير آمن: فشل التحقق من CSRF token',
@@ -254,6 +315,38 @@ function doPost(e) {
                     action: action
                 }));
                 return setCorsHeaders(errorOutput);
+            }
+        }
+
+        // حماية أساسية ضد flood/abuse
+        if (typeof checkRateLimit === 'function') {
+            const rl = checkRateLimit(requestSessionKey, 180, 60);
+            if (!rl.allowed) {
+                if (typeof logSecurityEvent === 'function') {
+                    logSecurityEvent('rate_limit_blocked', { action: action, current: rl.current, limit: rl.limit, severity: 'medium' });
+                }
+                return setCorsHeaders(ContentService.createTextOutput(JSON.stringify({
+                    success: false,
+                    message: 'تم تجاوز الحد المسموح من الطلبات، حاول لاحقاً',
+                    errorCode: 'RATE_LIMIT_EXCEEDED'
+                })));
+            }
+        }
+
+        // ربط العمليات الإدارية الحرجة بهوية مستخدم واضحة (متوافق مع الإنتاج: لا يطبق إلا على قائمة حرجة)
+        if (strictAdminActions.includes(action)) {
+            const actor = postData.userData || payload.userData || payload.user || null;
+            const hasActorIdentity = !!(actor && (actor.email || actor.id || actor.name));
+            if (!hasActorIdentity) {
+                if (typeof logSecurityEvent === 'function') {
+                    logSecurityEvent('missing_actor_identity', { action: action, severity: 'high' });
+                }
+                return setCorsHeaders(ContentService.createTextOutput(JSON.stringify({
+                    success: false,
+                    message: 'رفض أمني: بيانات المستخدم المنفذ مطلوبة لهذه العملية',
+                    errorCode: 'ACTOR_IDENTITY_REQUIRED',
+                    action: action
+                })));
             }
         }
         
@@ -268,6 +361,16 @@ function doPost(e) {
                 // العمليات الأساسية (Google Sheets)
                 // ============================================
                 case 'saveToSheet':
+                    if (typeof validatePayloadForSheetWrite === 'function') {
+                        const vr = validatePayloadForSheetWrite(payload.sheetName, payload.data);
+                        if (!vr.valid) {
+                            if (typeof logSecurityEvent === 'function') {
+                                logSecurityEvent('payload_validation_failed', { action: action, reason: vr.message, severity: 'high' });
+                            }
+                            result = { success: false, message: vr.message, errorCode: 'PAYLOAD_VALIDATION_FAILED' };
+                            break;
+                        }
+                    }
                     // البحث عن spreadsheetId في عدة أماكن
                     let spreadsheetId = payload.spreadsheetId || 
                                       postData.spreadsheetId || 
@@ -297,6 +400,16 @@ function doPost(e) {
                     break;
                     
                 case 'appendToSheet':
+                    if (typeof validatePayloadForSheetWrite === 'function') {
+                        const vr = validatePayloadForSheetWrite(payload.sheetName, payload.data);
+                        if (!vr.valid) {
+                            if (typeof logSecurityEvent === 'function') {
+                                logSecurityEvent('payload_validation_failed', { action: action, reason: vr.message, severity: 'high' });
+                            }
+                            result = { success: false, message: vr.message, errorCode: 'PAYLOAD_VALIDATION_FAILED' };
+                            break;
+                        }
+                    }
                     // البحث عن spreadsheetId في عدة أماكن
                     let appendSpreadsheetId = payload.spreadsheetId || 
                                              postData.spreadsheetId || 
@@ -2435,6 +2548,35 @@ function doGet(e) {
         const action = e.parameter.action;
         const sheetName = e.parameter.sheetName;
         const spreadsheetId = e.parameter.spreadsheetId || getSpreadsheetId();
+        const getActionPattern = /^[a-zA-Z][a-zA-Z0-9_]{1,79}$/;
+        if (action && !getActionPattern.test(String(action))) {
+            if (typeof logSecurityEvent === 'function') {
+                logSecurityEvent('invalid_get_action_format', { action: String(action), severity: 'medium' });
+            }
+            return setCorsHeaders(ContentService.createTextOutput(JSON.stringify({
+                success: false,
+                message: 'صيغة action غير صالحة في GET',
+                errorCode: 'INVALID_GET_ACTION_FORMAT'
+            })));
+        }
+
+        const allowedGetActions = {
+            getData: true,
+            getProfileImage: true,
+            publicProfileCard: true,
+            getPublicProfileData: true
+        };
+        if (action && !allowedGetActions[action]) {
+            if (typeof logSecurityEvent === 'function') {
+                logSecurityEvent('blocked_get_action', { action: String(action), severity: 'low' });
+            }
+            return setCorsHeaders(ContentService.createTextOutput(JSON.stringify({
+                success: false,
+                message: 'هذا الإجراء غير مسموح عبر GET. استخدم POST.',
+                errorCode: 'GET_ACTION_NOT_ALLOWED',
+                action: action
+            })));
+        }
         
         // معالجة طلب getProfileImage: إرجاع صورة الملف الشخصي من Drive كـ data URI (يعمل بعد النشر)
         if (action === 'getProfileImage') {

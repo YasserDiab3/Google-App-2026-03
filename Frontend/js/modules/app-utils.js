@@ -3392,6 +3392,51 @@ const Utils = {
         return div.innerHTML;
     },
 
+    /**
+     * تنقية HTML ديناميكي بشكل محافظ قبل حقنه في DOM
+     */
+    sanitizeHTML(html) {
+        const raw = String(html || '');
+        if (!raw) return '';
+        const template = document.createElement('template');
+        template.innerHTML = raw;
+
+        const blockedTags = new Set(['script', 'iframe', 'object', 'embed', 'link', 'meta']);
+        const walker = document.createTreeWalker(template.content, NodeFilter.SHOW_ELEMENT);
+        const nodes = [];
+        while (walker.nextNode()) nodes.push(walker.currentNode);
+
+        nodes.forEach((el) => {
+            const tag = String(el.tagName || '').toLowerCase();
+            if (blockedTags.has(tag)) {
+                el.remove();
+                return;
+            }
+            const attrs = Array.from(el.attributes || []);
+            attrs.forEach((attr) => {
+                const name = String(attr.name || '').toLowerCase();
+                const value = String(attr.value || '');
+                if (name.startsWith('on')) {
+                    el.removeAttribute(attr.name);
+                    return;
+                }
+                if ((name === 'href' || name === 'src' || name === 'xlink:href') && /^\s*javascript:/i.test(value)) {
+                    el.removeAttribute(attr.name);
+                }
+            });
+        });
+
+        return template.innerHTML;
+    },
+
+    /**
+     * تعيين innerHTML بعد التنقية
+     */
+    setSafeHTML(element, html) {
+        if (!element) return;
+        element.innerHTML = this.sanitizeHTML(html);
+    },
+
     extractImageSourceCandidate(source) {
         if (!source) return '';
         if (typeof source === 'string') return source;
@@ -6672,9 +6717,35 @@ if (typeof window !== 'undefined') {
 
 // ===== Employee Helper =====
 const EmployeeHelper = {
-    getEmployees() {
+    isResignedEmployee(employee) {
+        if (!employee || typeof employee !== 'object') return false;
+        const normalize = (v) => String(v ?? '').trim().toLowerCase();
+        const statusFields = [
+            employee.status,
+            employee.employeeStatus,
+            employee.workStatus,
+            employee.employmentStatus,
+            employee.state,
+            employee.activeStatus
+        ];
+        const statusText = statusFields.map(normalize).filter(Boolean).join(' | ');
+        if (!statusText) return false;
+        return (
+            statusText.includes('مستقيل') ||
+            statusText.includes('استقال') ||
+            statusText.includes('resign') ||
+            statusText.includes('resigned') ||
+            statusText.includes('terminated') ||
+            statusText.includes('inactive')
+        );
+    },
+
+    getEmployees(options = {}) {
+        const includeResigned = options && typeof options === 'object' && options.includeResigned === true;
         const employees = AppState?.appData?.employees;
-        return Array.isArray(employees) ? employees : [];
+        const list = Array.isArray(employees) ? employees : [];
+        if (includeResigned) return list;
+        return list.filter(emp => !this.isResignedEmployee(emp));
     },
 
     _lookupSeq: 0,
