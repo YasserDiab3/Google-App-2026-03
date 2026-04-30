@@ -784,17 +784,18 @@ const Violations = {
             return `<div class="empty-state"><p class="text-gray-500">لا توجد مخالفات للموظفين</p></div>`;
         }
         return `
-            <table class="data-table">
+            <div class="table-responsive" style="border-radius: 12px; overflow: hidden; box-shadow: 0 4px 16px rgba(0,0,0,0.08);">
+            <table class="data-table" style="width: 100%; border-collapse: collapse;">
                 <thead>
-                    <tr>
-                        <th>اسم الموظف</th>
-                        <th>الكود الوظيفي</th>
-                        <th>نوع المخالفة</th>
-                        <th>التاريخ</th>
-                        <th>الشدة</th>
-                        <th>الإجراء المتخذ</th>
-                        <th>الحالة</th>
-                        <th>الإجراءات</th>
+                    <tr style="background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);">
+                        <th style="color: white; font-weight: 600; padding: 16px 12px; text-align: center; font-size: 0.9rem;">اسم الموظف</th>
+                        <th style="color: white; font-weight: 600; padding: 16px 12px; text-align: center; font-size: 0.9rem;">الكود الوظيفي</th>
+                        <th style="color: white; font-weight: 600; padding: 16px 12px; text-align: center; font-size: 0.9rem;">نوع المخالفة</th>
+                        <th style="color: white; font-weight: 600; padding: 16px 12px; text-align: center; font-size: 0.9rem;">التاريخ</th>
+                        <th style="color: white; font-weight: 600; padding: 16px 12px; text-align: center; font-size: 0.9rem;">الشدة</th>
+                        <th style="color: white; font-weight: 600; padding: 16px 12px; text-align: center; font-size: 0.9rem;">الإجراء المتخذ</th>
+                        <th style="color: white; font-weight: 600; padding: 16px 12px; text-align: center; font-size: 0.9rem;">الحالة</th>
+                        <th style="color: white; font-weight: 600; padding: 16px 12px; text-align: center; font-size: 0.9rem;">الإجراءات</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -832,6 +833,7 @@ const Violations = {
                     `).join('')}
                 </tbody>
             </table>
+            </div>
         `;
     },
 
@@ -843,16 +845,17 @@ const Violations = {
             return `<div class="empty-state"><p class="text-gray-500">لا توجد مخالفات للمقاولين</p></div>`;
         }
         return `
-            <table class="data-table">
+            <div class="table-responsive" style="border-radius: 12px; overflow: hidden; box-shadow: 0 4px 16px rgba(0,0,0,0.08);">
+            <table class="data-table" style="width: 100%; border-collapse: collapse;">
                 <thead>
-                    <tr>
-                        <th>اسم المقاول</th>
-                        <th>نوع المخالفة</th>
-                        <th>التاريخ</th>
-                        <th>الشدة</th>
-                        <th>الإجراء المتخذ</th>
-                        <th>الحالة</th>
-                        <th>الإجراءات</th>
+                    <tr style="background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);">
+                        <th style="color: white; font-weight: 600; padding: 16px 12px; text-align: center; font-size: 0.9rem;">اسم المقاول</th>
+                        <th style="color: white; font-weight: 600; padding: 16px 12px; text-align: center; font-size: 0.9rem;">نوع المخالفة</th>
+                        <th style="color: white; font-weight: 600; padding: 16px 12px; text-align: center; font-size: 0.9rem;">التاريخ</th>
+                        <th style="color: white; font-weight: 600; padding: 16px 12px; text-align: center; font-size: 0.9rem;">الشدة</th>
+                        <th style="color: white; font-weight: 600; padding: 16px 12px; text-align: center; font-size: 0.9rem;">الإجراء المتخذ</th>
+                        <th style="color: white; font-weight: 600; padding: 16px 12px; text-align: center; font-size: 0.9rem;">الحالة</th>
+                        <th style="color: white; font-weight: 600; padding: 16px 12px; text-align: center; font-size: 0.9rem;">الإجراءات</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -889,6 +892,7 @@ const Violations = {
                     `).join('')}
                 </tbody>
             </table>
+            </div>
         `;
     },
 
