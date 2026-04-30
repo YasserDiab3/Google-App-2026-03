@@ -140,9 +140,112 @@ const IssuingAuthorities = {
         if (document.getElementById('ia-f-name')) document.getElementById('ia-f-name').value = data.name || '';
         if (document.getElementById('ia-f-dept')) document.getElementById('ia-f-dept').value = data.departmentName || '';
         if (document.getElementById('ia-f-job-title')) document.getElementById('ia-f-job-title').value = data.jobTitle || '';
-        if (document.getElementById('ia-f-factory')) document.getElementById('ia-f-factory').value = data.factory || '';
+        if (document.getElementById('ia-f-branch')) document.getElementById('ia-f-branch').value = data.branch || '';
+        const factoryEl = document.getElementById('ia-f-factory');
+        if (factoryEl) {
+            const desiredFactory = String(data.factory || '').trim();
+            if (desiredFactory && !Array.from(factoryEl.options || []).some(o => String(o.value || '').trim() === desiredFactory)) {
+                const fallbackOpt = document.createElement('option');
+                fallbackOpt.value = desiredFactory;
+                fallbackOpt.textContent = desiredFactory;
+                factoryEl.appendChild(fallbackOpt);
+            }
+            factoryEl.value = desiredFactory;
+        }
         if (document.getElementById('ia-f-location')) document.getElementById('ia-f-location').value = data.location || '';
-        if (document.getElementById('ia-f-sublocation')) document.getElementById('ia-f-sublocation').value = data.sublocation || '';
+        this._refreshSublocationOptions(data.sublocation || '');
+    },
+
+    _getSiteOptions() {
+        try {
+            if (typeof Permissions !== 'undefined' && Permissions.formSettingsState && Array.isArray(Permissions.formSettingsState.sites)) {
+                return Permissions.formSettingsState.sites.map(site => ({
+                    id: String(site.id || site.siteId || '').trim(),
+                    name: String(site.name || site.title || site.label || '').trim()
+                })).filter(s => s.id && s.name);
+            }
+            if (Array.isArray(AppState?.appData?.observationSites) && AppState.appData.observationSites.length > 0) {
+                return AppState.appData.observationSites.map(site => ({
+                    id: String(site.id || site.siteId || '').trim(),
+                    name: String(site.name || site.title || site.label || '').trim()
+                })).filter(s => s.id && s.name);
+            }
+            if (typeof DailyObservations !== 'undefined' && Array.isArray(DailyObservations.DEFAULT_SITES)) {
+                return DailyObservations.DEFAULT_SITES.map(site => ({
+                    id: String(site.id || site.siteId || '').trim(),
+                    name: String(site.name || site.title || site.label || '').trim()
+                })).filter(s => s.id && s.name);
+            }
+        } catch (e) {
+            if (typeof Utils !== 'undefined') Utils.safeWarn('IssuingAuthorities._getSiteOptions', e);
+        }
+        return [];
+    },
+
+    _getPlaceOptions(siteId) {
+        try {
+            const selectedSiteId = String(siteId || '').trim();
+            if (!selectedSiteId) return [];
+
+            const getPlaces = (site) => {
+                const placesSource = Array.isArray(site?.places)
+                    ? site.places
+                    : Array.isArray(site?.locations)
+                        ? site.locations
+                        : Array.isArray(site?.children)
+                            ? site.children
+                            : Array.isArray(site?.areas)
+                                ? site.areas
+                                : [];
+                return placesSource.map((p, idx) => ({
+                    id: String(p.id || p.placeId || p.value || `PLACE_${idx + 1}`).trim(),
+                    name: String(p.name || p.placeName || p.title || p.label || p.locationName || `مكان ${idx + 1}`).trim()
+                })).filter(p => p.id && p.name);
+            };
+
+            if (typeof Permissions !== 'undefined' && Permissions.formSettingsState && Array.isArray(Permissions.formSettingsState.sites)) {
+                const site = Permissions.formSettingsState.sites.find(s => String(s.id || s.siteId || '').trim() === selectedSiteId);
+                if (site) return getPlaces(site);
+            }
+            if (Array.isArray(AppState?.appData?.observationSites)) {
+                const site = AppState.appData.observationSites.find(s => String(s.id || s.siteId || '').trim() === selectedSiteId);
+                if (site) return getPlaces(site);
+            }
+        } catch (e) {
+            if (typeof Utils !== 'undefined') Utils.safeWarn('IssuingAuthorities._getPlaceOptions', e);
+        }
+        return [];
+    },
+
+    _renderFactoryOptions(selectedFactory) {
+        const selected = String(selectedFactory || '').trim();
+        const options = this._getSiteOptions();
+        const esc = (typeof Utils !== 'undefined' && Utils.escapeHTML) ? Utils.escapeHTML : (s) => String(s == null ? '' : s);
+        let html = '<option value="">-- اختر المصنع --</option>';
+        html += options.map(site => `<option value="${esc(site.id)}" ${selected === site.id ? 'selected' : ''}>${esc(site.name)}</option>`).join('');
+        if (selected && !options.some(site => site.id === selected)) {
+            html += `<option value="${esc(selected)}" selected>${esc(selected)}</option>`;
+        }
+        return html;
+    },
+
+    _renderSublocationOptions(factoryId, selectedSublocation) {
+        const selected = String(selectedSublocation || '').trim();
+        const options = this._getPlaceOptions(factoryId);
+        const esc = (typeof Utils !== 'undefined' && Utils.escapeHTML) ? Utils.escapeHTML : (s) => String(s == null ? '' : s);
+        let html = '<option value="">-- اختر الموقع الفرعي --</option>';
+        html += options.map(place => `<option value="${esc(place.id)}" ${selected === place.id ? 'selected' : ''}>${esc(place.name)}</option>`).join('');
+        if (selected && !options.some(place => place.id === selected)) {
+            html += `<option value="${esc(selected)}" selected>${esc(selected)}</option>`;
+        }
+        return html;
+    },
+
+    _refreshSublocationOptions(selectedSublocation = '') {
+        const factoryEl = document.getElementById('ia-f-factory');
+        const subEl = document.getElementById('ia-f-sublocation');
+        if (!factoryEl || !subEl) return;
+        subEl.innerHTML = this._renderSublocationOptions(factoryEl.value, selectedSublocation);
     },
 
     /**
@@ -166,7 +269,8 @@ const IssuingAuthorities = {
                 name: String(employee.name || '').trim(),
                 departmentName: String(employee.department || employee.unit || employee.section || '').trim(),
                 jobTitle: String(employee.position || employee.job || employee.jobTitle || '').trim(),
-                factory: String(employee.branch || employee.factory || employee.factoryName || '').trim(),
+                branch: String(employee.branch || '').trim(),
+                factory: String(employee.factoryId || employee.factory || employee.factoryName || '').trim(),
                 location: String(employee.location || employee.locationName || employee.employeeLocation || '').trim(),
                 sublocation: String(employee.sublocation || employee.subLocation || employee.subLocationName || '').trim()
             });
@@ -187,6 +291,7 @@ const IssuingAuthorities = {
         });
 
         document.getElementById('ia-f-contractor-name')?.addEventListener('change', () => this._onContractorChanged());
+        document.getElementById('ia-f-factory')?.addEventListener('change', () => this._refreshSublocationOptions(''));
         document.getElementById('ia-f-name')?.addEventListener('blur', () => {
             const personType = (document.getElementById('ia-f-person-type')?.value || 'employee').toLowerCase();
             const code = (document.getElementById('ia-f-employee-code')?.value || '').trim();
@@ -224,6 +329,7 @@ const IssuingAuthorities = {
         normalized.name = String(normalized.name || '').trim();
         normalized.departmentName = String(normalized.departmentName || '').trim();
         normalized.jobTitle = String(normalized.jobTitle || '').trim();
+        normalized.branch = String(normalized.branch || '').trim();
         normalized.factory = String(normalized.factory || '').trim();
         normalized.location = String(normalized.location || '').trim();
         normalized.sublocation = String(normalized.sublocation || '').trim();
@@ -534,7 +640,7 @@ const IssuingAuthorities = {
                 </div>
                 <div class="form-group">
                     <label class="form-label">الفرع / Branch</label>
-                    <input type="text" id="ia-f-factory" class="form-input" value="${val('factory')}" placeholder="اسم الفرع">
+                    <input type="text" id="ia-f-branch" class="form-input" value="${val('branch') || ''}" placeholder="اسم الفرع">
                 </div>
                 </div>
                 <div class="ia-form-two-cols">
@@ -543,9 +649,20 @@ const IssuingAuthorities = {
                     <input type="text" id="ia-f-location" class="form-input" value="${val('location')}" placeholder="الموقع">
                 </div>
                 <div class="form-group">
-                    <label class="form-label">الموقع الفرعي</label>
-                    <input type="text" id="ia-f-sublocation" class="form-input" value="${val('sublocation')}" placeholder="الموقع الفرعي">
+                    <label class="form-label">المصنع</label>
+                    <select id="ia-f-factory" class="form-select ia-form-select">
+                        ${this._renderFactoryOptions(val('factoryId') || val('factory'))}
+                    </select>
                 </div>
+                </div>
+                <div class="ia-form-two-cols">
+                <div class="form-group">
+                    <label class="form-label">الموقع الفرعي</label>
+                    <select id="ia-f-sublocation" class="form-select ia-form-select">
+                        ${this._renderSublocationOptions(val('factoryId') || val('factory'), val('sublocationId') || val('sublocation'))}
+                    </select>
+                </div>
+                <div class="form-group"></div>
                 </div>
                 <div class="ia-form-two-cols">
                 <div class="form-group">
@@ -812,7 +929,7 @@ const IssuingAuthorities = {
                 ? 'وضع الموظف: أدخل الكود الوظيفي ثم اضغط "بحث" لملء البيانات تلقائياً.'
                 : 'وضع المقاول: أدخل البيانات يدويًا.';
         }
-        const autoFields = ['ia-f-name', 'ia-f-dept', 'ia-f-job-title', 'ia-f-factory'];
+        const autoFields = ['ia-f-name', 'ia-f-dept', 'ia-f-job-title', 'ia-f-branch'];
         autoFields.forEach(id => {
             const el = document.getElementById(id);
             if (!el) return;
@@ -851,7 +968,8 @@ const IssuingAuthorities = {
                     name: String(localEmployee.name || '').trim(),
                     departmentName: String(localEmployee.department || localEmployee.unit || localEmployee.section || '').trim(),
                     jobTitle: String(localEmployee.position || localEmployee.job || localEmployee.jobTitle || '').trim(),
-                    factory: String(localEmployee.branch || localEmployee.factory || localEmployee.factoryName || '').trim(),
+                    branch: String(localEmployee.branch || '').trim(),
+                    factory: String(localEmployee.factoryId || localEmployee.factory || localEmployee.factoryName || '').trim(),
                     location: String(localEmployee.location || localEmployee.locationName || localEmployee.employeeLocation || '').trim(),
                     sublocation: String(localEmployee.sublocation || localEmployee.subLocation || localEmployee.subLocationName || '').trim()
                 });
@@ -895,7 +1013,8 @@ const IssuingAuthorities = {
                                 name: String(emp.name || '').trim(),
                                 departmentName: String(emp.department || '').trim(),
                                 jobTitle: String(emp.job || emp.position || '').trim(),
-                                factory: String(emp.branch || '').trim(),
+                                branch: String(emp.branch || '').trim(),
+                                factory: String(emp.factoryId || emp.factory || '').trim(),
                                 location: String(emp.location || '').trim(),
                                 sublocation: String(emp.sublocation || emp.subLocation || emp.subLocationName || emp.locationName || '').trim()
                             }
@@ -915,6 +1034,7 @@ const IssuingAuthorities = {
                 name: data.name || '',
                 departmentName: data.departmentName || '',
                 jobTitle: data.jobTitle || '',
+                branch: data.branch || '',
                 factory: data.factory || '',
                 location: data.location || '',
                 sublocation: data.sublocation || ''
@@ -942,6 +1062,7 @@ const IssuingAuthorities = {
         modal.style.display = 'flex';
         this._togglePersonTypeInputs();
         this._bindModalFieldEvents();
+        this._refreshSublocationOptions(String(record?.sublocationId || record?.sublocation || ''));
 
         // Re-attach radio feedback
         body.querySelectorAll('input[type="radio"]').forEach(radio => {
@@ -994,15 +1115,22 @@ const IssuingAuthorities = {
         }
 
         const userData = AppState && AppState.currentUser ? AppState.currentUser : {};
+        const factorySelect = document.getElementById('ia-f-factory');
+        const sublocationSelect = document.getElementById('ia-f-sublocation');
+        const selectedFactoryText = factorySelect?.options?.[factorySelect.selectedIndex]?.text || '';
+        const selectedSublocationText = sublocationSelect?.options?.[sublocationSelect.selectedIndex]?.text || '';
         const payload = {
             personType,
             employeeCode,
             name,
             departmentName: document.getElementById('ia-f-dept')?.value?.trim() || '',
             jobTitle:       document.getElementById('ia-f-job-title')?.value?.trim() || '',
-            factory:        document.getElementById('ia-f-factory')?.value?.trim() || '',
+            branch:         document.getElementById('ia-f-branch')?.value?.trim() || '',
+            factory:        (selectedFactoryText && !selectedFactoryText.includes('اختر')) ? selectedFactoryText.trim() : (document.getElementById('ia-f-factory')?.value?.trim() || ''),
+            factoryId:      document.getElementById('ia-f-factory')?.value?.trim() || '',
             location:       document.getElementById('ia-f-location')?.value?.trim() || '',
-            sublocation:    document.getElementById('ia-f-sublocation')?.value?.trim() || '',
+            sublocation:    (selectedSublocationText && !selectedSublocationText.includes('اختر')) ? selectedSublocationText.trim() : (document.getElementById('ia-f-sublocation')?.value?.trim() || ''),
+            sublocationId:  document.getElementById('ia-f-sublocation')?.value?.trim() || '',
             email:          document.getElementById('ia-f-email')?.value?.trim() || '',
             phone:          document.getElementById('ia-f-phone')?.value?.trim() || '',
             isActive:       document.getElementById('ia-f-active')?.checked !== false,
