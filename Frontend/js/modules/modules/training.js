@@ -4275,7 +4275,7 @@ const Training = {
                                     </label>
                                     <select id="contractor-training-trainer" class="form-input" required style="border: 2px solid #e0e7ff; border-radius: 10px; transition: all 0.3s; padding: 10px 12px;" onfocus="this.style.borderColor='#667eea'; this.style.boxShadow='0 0 0 3px rgba(102,126,234,0.15)'" onblur="this.style.borderColor='#e0e7ff'; this.style.boxShadow='none'">
                                         <option value="">اختر القائم بالتدريب</option>
-                                        ${this.getSafetyTeamMembers().map(member => `
+                                        ${this.getSafetyTeamMembers({ excludeSystemUsers: true }).map(member => `
                                             <option value="${Utils.escapeHTML(member.name)}" ${existing && (existing.trainer === member.name || existing.conductedBy === member.name) ? 'selected' : ''}>
                                                 ${Utils.escapeHTML(member.name)}
                                             </option>
@@ -7163,6 +7163,12 @@ const Training = {
     },
 
     async renderForm(data = null) {
+        const safetyTeamTrainers = this.getSafetyTeamMembers({ excludeSystemUsers: true });
+        const selectedTrainerName = String(data?.trainer || '').trim();
+        const selectedTrainerExists = safetyTeamTrainers.some(member => member.name === selectedTrainerName);
+        const selectedTrainerLegacyOption = selectedTrainerName && !selectedTrainerExists
+            ? `<option value="${Utils.escapeHTML(selectedTrainerName)}" selected>${Utils.escapeHTML(selectedTrainerName)}</option>`
+            : '';
         return `
             <div class="content-card" style="box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);">
                 <div class="card-header" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 12px 12px 0 0; padding: 1.5rem;">
@@ -7250,10 +7256,17 @@ const Training = {
                                         <i class="fas fa-chalkboard-teacher ml-2 text-blue-600"></i>
                                         اسم المحاضر *
                                     </label>
-                                    <input type="text" id="training-trainer" required class="form-input" style="border: 2px solid #e5e7eb; transition: all 0.3s;"
-                                        value="${data?.trainer || ''}" placeholder="أدخل اسم المحاضر"
+                                    <select id="training-trainer" required class="form-input" style="border: 2px solid #e5e7eb; transition: all 0.3s;"
                                         onfocus="this.style.borderColor='#3b82f6'; this.style.boxShadow='0 0 0 3px rgba(59, 130, 246, 0.1)';"
                                         onblur="this.style.borderColor='#e5e7eb'; this.style.boxShadow='none';">
+                                        <option value="">اختر اسم المحاضر</option>
+                                        ${selectedTrainerLegacyOption}
+                                        ${safetyTeamTrainers.map(member => `
+                                            <option value="${Utils.escapeHTML(member.name)}" ${member.name === selectedTrainerName ? 'selected' : ''}>
+                                                ${Utils.escapeHTML(member.name)}
+                                            </option>
+                                        `).join('')}
+                                    </select>
                                 </div>
                                 <div>
                                     <label class="block text-sm font-semibold text-gray-700 mb-2">
@@ -11236,7 +11249,12 @@ const Training = {
                         </div>
                         <div>
                             <label class="block text-sm font-semibold text-gray-700 mb-2">اسم المحاضر</label>
-                            <input type="text" id="add-attendance-trainer" class="form-input" placeholder="اسم المحاضر">
+                            <select id="add-attendance-trainer" class="form-input">
+                                <option value="">اختر اسم المحاضر</option>
+                                ${this.getSafetyTeamMembers({ excludeSystemUsers: true }).map(member => `
+                                    <option value="${Utils.escapeHTML(member.name)}">${Utils.escapeHTML(member.name)}</option>
+                                `).join('')}
+                            </select>
                         </div>
                         <div>
                             <label class="block text-sm font-semibold text-gray-700 mb-2">وقت البدء</label>
@@ -11465,6 +11483,12 @@ const Training = {
             Notification.error('السجل غير موجود');
             return;
         }
+        const safetyTeamTrainers = this.getSafetyTeamMembers({ excludeSystemUsers: true });
+        const selectedTrainerName = String(record?.trainer || '').trim();
+        const selectedTrainerExists = safetyTeamTrainers.some(member => member.name === selectedTrainerName);
+        const selectedTrainerLegacyOption = selectedTrainerName && !selectedTrainerExists
+            ? `<option value="${Utils.escapeHTML(selectedTrainerName)}" selected>${Utils.escapeHTML(selectedTrainerName)}</option>`
+            : '';
         
         const modal = document.createElement('div');
         modal.className = 'modal-overlay';
@@ -11522,8 +11546,15 @@ const Training = {
                         </div>
                         <div>
                             <label class="block text-sm font-semibold text-gray-700 mb-2">اسم المحاضر</label>
-                            <input type="text" id="edit-attendance-trainer" class="form-input" 
-                                value="${Utils.escapeHTML(record.trainer || '')}">
+                            <select id="edit-attendance-trainer" class="form-input">
+                                <option value="">اختر اسم المحاضر</option>
+                                ${selectedTrainerLegacyOption}
+                                ${safetyTeamTrainers.map(member => `
+                                    <option value="${Utils.escapeHTML(member.name)}" ${member.name === selectedTrainerName ? 'selected' : ''}>
+                                        ${Utils.escapeHTML(member.name)}
+                                    </option>
+                                `).join('')}
+                            </select>
                         </div>
                         <div>
                             <label class="block text-sm font-semibold text-gray-700 mb-2">وقت البدء</label>
