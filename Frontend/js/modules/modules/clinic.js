@@ -5867,13 +5867,8 @@ const Clinic = {
     },
 
     scheduleVisitsTabRender(forceReload = false, delayMs = 0) {
-        // إلغاء أي جدولة سابقة
         if (this._visitsRenderTimer) {
-            if (typeof this._visitsRenderTimer === 'number') {
-                clearTimeout(this._visitsRenderTimer);
-            } else if (this._visitsRenderTimer && this._visitsRenderTimer._idle != null && typeof cancelIdleCallback === 'function') {
-                cancelIdleCallback(this._visitsRenderTimer._idle);
-            }
+            clearTimeout(this._visitsRenderTimer);
             this._visitsRenderTimer = null;
         }
         const doRender = () => {
@@ -5882,13 +5877,8 @@ const Clinic = {
                 this.renderVisitsTab(forceReload);
             });
         };
-        // استخدام requestIdleCallback عندما لا يوجد تأخير مطلوب لتجنب violation
-        if (delayMs === 0 && typeof requestIdleCallback === 'function') {
-            const idleId = requestIdleCallback(doRender, { timeout: 1200 });
-            this._visitsRenderTimer = { _idle: idleId };
-        } else {
-            this._visitsRenderTimer = setTimeout(doRender, Math.max(0, delayMs));
-        }
+        // setTimeout(0) بدل requestIdleCallback لتفادي تأخير يصل إلى ~1.2 ثانية
+        this._visitsRenderTimer = setTimeout(doRender, Math.max(0, delayMs));
     },
 
     async renderVisitsTab(forceReload = false) {
@@ -5912,41 +5902,29 @@ const Clinic = {
             const CACHE_DURATION = 10 * 60 * 1000; // 10 دقائق
             const isDataStale = cacheAge >= CACHE_DURATION;
 
-            // عرض الواجهة فوراً بالبيانات المتوفرة (حتى لو كانت فارغة)
-            this.renderVisitsTabContent(panel);
-            
-            // ✅ تحميل البيانات إذا:
-            // 1. forceReload = true (تم طلب إعادة تحميل قسري)
-            // 2. لا توجد بيانات محلية
-            // 3. البيانات قديمة (أكثر من 10 دقائق)
-            // 4. لم يكتمل بعد جلب كامل من getAllClinicVisits (_visitsBackendFetchOk !== true)
+            // جلب كامل مرّة واحدة (موظفين + مقاولين في getAllClinicVisits) ثم رسم واحد — بدون رسم جزئي ثم إعادة رسم
             const shouldLoadData = forceReload || !hasLocalData || isDataStale || this._visitsBackendFetchOk !== true;
-            
-            if (shouldLoadData && typeof GoogleIntegration !== 'undefined' && GoogleIntegration.sendRequest) {
-                const loadAndRerender = async () => {
-                    try {
-                        await this.loadVisitsDataFromBackend();
-                        const p = document.querySelector('.clinic-tab-panel[data-tab-panel="visits"]');
-                        if (p && this.state && this.state.activeTab === 'visits') {
-                            this.ensureData();
-                            this.renderVisitsTabContent(p);
-                        }
-                        if (AppState.debugMode) {
-                            Utils.safeLog('✅ تم تحديث سجل التردد بعد تحميل البيانات من Backend');
-                        }
-                    } catch (error) {
-                        if (AppState.debugMode) {
-                            Utils.safeWarn('⚠️ تعذر تحميل بيانات سجل التردد من الخادم:', error && error.message);
-                        }
-                    }
-                };
 
-                // انتظار اكتمال الجلب (موظفين + مقاولين في طلب واحد) — لا نقطع بمهلة 6ث لتفادي عرض جزئي
-                if (this._visitsBackendFetchOk === true && hasLocalData && !forceReload && !isDataStale) {
-                    loadAndRerender();
-                } else {
-                    await loadAndRerender();
+            if (shouldLoadData && typeof GoogleIntegration !== 'undefined' && GoogleIntegration.sendRequest) {
+                panel.innerHTML = '<div class="p-6 text-center text-gray-600"><i class="fas fa-spinner fa-spin ml-2"></i> جاري تحميل سجل التردد (الموظفين والمقاولين)...</div>';
+                try {
+                    await this.loadVisitsDataFromBackend();
+                    const p = document.querySelector('.clinic-tab-panel[data-tab-panel="visits"]');
+                    if (p && this.state && this.state.activeTab === 'visits') {
+                        this.ensureData();
+                        this.renderVisitsTabContent(p);
+                    }
+                    if (AppState.debugMode) {
+                        Utils.safeLog('✅ تم تحديث سجل التردد بعد جلب كامل من Backend (طلب واحد)');
+                    }
+                } catch (error) {
+                    if (AppState.debugMode) {
+                        Utils.safeWarn('⚠️ تعذر تحميل بيانات سجل التردد من الخادم:', error && error.message);
+                    }
+                    this.renderVisitsTabContent(panel);
                 }
+            } else {
+                this.renderVisitsTabContent(panel);
             }
         } catch (error) {
             Utils.safeError('❌ خطأ في عرض تبويب سجل التردد:', error);
@@ -12188,12 +12166,10 @@ const Clinic = {
                     
                     // ✅ إذا كان تبويب سجل التردد مفتوحاً، تحديثه مباشرة
                     if (this.state && this.state.activeTab === 'visits') {
-                        setTimeout(() => {
-                            this.scheduleVisitsTabRender(false, 0); // false = لا force reload لأن البيانات محملة بالفعل
-                            if (AppState.debugMode) {
-                                Utils.safeLog('✅ تم تحديث سجل التردد تلقائياً بعد المزامنة');
-                            }
-                        }, 200);
+                        this.scheduleVisitsTabRender(false, 0);
+                        if (AppState.debugMode) {
+                            Utils.safeLog('✅ تم تحديث سجل التردد تلقائياً بعد المزامنة');
+                        }
                     }
                 }
             });
@@ -12378,217 +12354,22 @@ const Clinic = {
                 })
         );
 
-        // ✅ تحميل سجل التردد على العيادة - مع تطبيع البيانات مثل loadVisitsDataFromBackend() تماماً
+        // سجل التردد: طلب واحد فقط عبر loadVisitsDataFromBackend (موظفين + مقاولين) — بدون تكرار getAllClinicVisits
         promises.push(
             requestWithTimeout(
-                GoogleIntegration.sendRequest({
-                    action: 'getAllClinicVisits',
-                    data: { __timeoutMs: CLINIC_VISITS_REQUEST_TIMEOUT }
-                }),
+                this.loadVisitsDataFromBackend(),
                 CLINIC_VISITS_REQUEST_TIMEOUT,
                 'clinicVisits'
             )
-                .then(result => {
-                    if (result && result.success && Array.isArray(result.data)) {
-                        const previousLocalVisits = Array.isArray(AppState.appData.clinicVisits)
-                            ? AppState.appData.clinicVisits.slice()
-                            : [];
-                        // ✅ تطبيع البيانات فور تحميلها (تماماً مثل loadVisitsDataFromBackend())
-                        const normalizedVisits = result.data.map(visit => {
-                            if (!visit || typeof visit !== 'object') return visit;
-                            
-                            // التأكد من وجود personType
-                            if (!visit.personType) {
-                                // محاولة تحديد النوع من الحقول المتوفرة
-                                if (visit.contractorName || visit.contractorWorkerName || visit.externalName) {
-                                    visit.personType = 'contractor';
-                                } else {
-                                    visit.personType = 'employee';
-                                }
-                            }
-                            
-                            // ✅ تطبيع الأدوية بشكل شامل (تماماً مثل loadVisitsDataFromBackend())
-                            let normalizedMeds = [];
-                            
-                            // أولاً: normalize medications الموجودة (إذا كانت موجودة)
-                            if (visit.medications) {
-                                normalizedMeds = this.normalizeVisitMedications(visit.medications);
-                            }
-                            
-                            // ثانياً: إذا كانت medications فارغة أو غير صحيحة، نحاول من medicationsDispensed
-                            if ((!normalizedMeds || normalizedMeds.length === 0) && visit.medicationsDispensed) {
-                                // استخدام normalizeVisitMedications لتحويل medicationsDispensed (يدعم النص)
-                                const medsFromText = this.normalizeVisitMedications(visit.medicationsDispensed);
-                                if (medsFromText && medsFromText.length > 0) {
-                                    normalizedMeds = medsFromText;
-                                }
-                            }
-                            
-                            // تعيين medications النهائي
-                            visit.medications = normalizedMeds && normalizedMeds.length > 0 ? normalizedMeds : [];
-                            
-                            // ✅ تطبيع visitDate و exitDate (تماماً مثل loadVisitsDataFromBackend)
-                            if (visit.visitDate) {
-                                try {
-                                    if (visit.visitDate instanceof Date) {
-                                        if (!isNaN(visit.visitDate.getTime())) {
-                                            visit.visitDate = visit.visitDate.toISOString();
-                                        } else {
-                                            visit.visitDate = null;
-                                        }
-                                    } else {
-                                        const visitDateStr = String(visit.visitDate).trim();
-                                        if (visitDateStr.includes('T') && (visitDateStr.includes('Z') || visitDateStr.includes('+') || visitDateStr.match(/-\d{2}:\d{2}$/))) {
-                                            const parsed = new Date(visitDateStr);
-                                            if (!isNaN(parsed.getTime())) {
-                                                visit.visitDate = parsed.toISOString();
-                                            } else {
-                                                visit.visitDate = null;
-                                            }
-                                        } else if (visitDateStr.length === 10 && visitDateStr.match(/^\d{4}-\d{2}-\d{2}$/)) {
-                                            const dateOnly = new Date(visitDateStr + 'T00:00:00');
-                                            if (!isNaN(dateOnly.getTime())) {
-                                                visit.visitDate = dateOnly.toISOString();
-                                            } else {
-                                                visit.visitDate = null;
-                                            }
-                                        } else {
-                                            const parsed = new Date(visitDateStr);
-                                            if (!isNaN(parsed.getTime())) {
-                                                visit.visitDate = parsed.toISOString();
-                                            } else {
-                                                visit.visitDate = null;
-                                            }
-                                        }
-                                    }
-                                } catch (e) {
-                                    visit.visitDate = null;
-                                }
-                            }
-                            
-                            if (visit.exitDate) {
-                                try {
-                                    if (visit.exitDate instanceof Date) {
-                                        if (!isNaN(visit.exitDate.getTime())) {
-                                            visit.exitDate = visit.exitDate.toISOString();
-                                        } else {
-                                            visit.exitDate = null;
-                                        }
-                                    } else {
-                                        const exitDateStr = String(visit.exitDate).trim();
-                                        if (exitDateStr.includes('T') && (exitDateStr.includes('Z') || exitDateStr.includes('+') || exitDateStr.match(/-\d{2}:\d{2}$/))) {
-                                            const parsed = new Date(exitDateStr);
-                                            if (!isNaN(parsed.getTime())) {
-                                                visit.exitDate = parsed.toISOString();
-                                            } else {
-                                                visit.exitDate = null;
-                                            }
-                                        } else if (exitDateStr.length === 10 && exitDateStr.match(/^\d{4}-\d{2}-\d{2}$/)) {
-                                            const dateOnly = new Date(exitDateStr + 'T00:00:00');
-                                            if (!isNaN(dateOnly.getTime())) {
-                                                visit.exitDate = dateOnly.toISOString();
-                                            } else {
-                                                visit.exitDate = null;
-                                            }
-                                        } else {
-                                            const parsed = new Date(exitDateStr);
-                                            if (!isNaN(parsed.getTime())) {
-                                                visit.exitDate = parsed.toISOString();
-                                            } else {
-                                                visit.exitDate = null;
-                                            }
-                                        }
-                                    }
-                                } catch (e) {
-                                    visit.exitDate = null;
-                                }
-                            }
-                            
-                            // ✅ تطبيع createdBy و updatedBy (تماماً مثل loadVisitsDataFromBackend)
-                            if (visit.createdBy) {
-                                if (typeof visit.createdBy === 'string') {
-                                    const trimmed = visit.createdBy.trim();
-                                    visit.createdBy = trimmed || null;
-                                } else if (typeof visit.createdBy === 'object') {
-                                    // ✅ استخدام الاسم فقط (وليس email أو id)
-                                    const name = visit.createdBy.name || '';
-                                    visit.createdBy = (name || 'مستخدم').trim();
-                                }
-                            } else {
-                                visit.createdBy = null;
-                            }
-                            
-                            if (visit.updatedBy) {
-                                if (typeof visit.updatedBy === 'string') {
-                                    visit.updatedBy = visit.updatedBy.trim() || null;
-                                } else if (typeof visit.updatedBy === 'object') {
-                                    const name = visit.updatedBy.name || '';
-                                    const email = visit.updatedBy.email || '';
-                                    const id = visit.updatedBy.id || '';
-                                    visit.updatedBy = (name || email || id || 'النظام').trim();
-                                }
-                            } else {
-                                visit.updatedBy = null;
-                            }
-                            
-                            return visit;
-                        });
-                        
-                        AppState.appData.clinicVisits = this.mergeClinicVisitsWithLocalOnly(
-                            normalizedVisits,
-                            previousLocalVisits
-                        );
-                        this._visitsBackendFetchOk = true;
-                
-                // ✅ إعادة تطبيع البيانات بعد التحميل
-                this.ensureData();
-                
-                // ✅ حفظ البيانات محلياً فوراً بعد التحميل (مثل loadVisitsDataFromBackend)
-                if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
-                    try {
-                        window.DataManager.save();
-                        if (AppState.debugMode) {
-                            Utils.safeLog('✅ تم حفظ بيانات الزيارات محلياً في syncDataFromServer');
-                        }
-                    } catch (error) {
-                        if (AppState.debugMode) {
-                            Utils.safeWarn('⚠️ تعذر حفظ بيانات الزيارات محلياً في syncDataFromServer:', error.message);
-                        }
-                    }
-                }
-                
-                // ✅ حفظ وقت آخر مزامنة
-                localStorage.setItem('clinic_last_sync', Date.now().toString());
-                        
-                        // ✅ إحصاءات البيانات المحملة (للتأكد من عدم فقدان البيانات)
-                        const mergedVisits = AppState.appData.clinicVisits;
-                        const visitsWithMeds = mergedVisits.filter(v => {
-                            const meds = this.normalizeVisitMedications(v.medications);
-                            if (meds && meds.length > 0) return true;
-                            if (v.medicationsDispensed) {
-                                const medsFromText = this.normalizeVisitMedications(v.medicationsDispensed);
-                                return medsFromText && medsFromText.length > 0;
-                            }
-                            return false;
-                        });
-                        
-                        const totalMedsCount = mergedVisits.reduce((sum, v) => {
-                            const meds = this.normalizeVisitMedications(v.medications);
-                            if (meds && meds.length > 0) return sum + meds.length;
-                            if (v.medicationsDispensed) {
-                                const medsFromText = this.normalizeVisitMedications(v.medicationsDispensed);
-                                if (medsFromText && medsFromText.length > 0) return sum + medsFromText.length;
-                            }
-                            return sum;
-                        }, 0);
-                        
-                        Utils.safeLog(`✅ تم تحميل ${normalizedVisits.length} زيارة من الخادم؛ بعد الدمج: ${mergedVisits.length} (${mergedVisits.filter(v => v.personType === 'employee' || !v.personType).length} موظف، ${mergedVisits.filter(v => v.personType === 'contractor').length} مقاول)`);
-                        if (AppState.debugMode && visitsWithMeds.length > 0) {
-                            Utils.safeLog(`   - ${visitsWithMeds.length} زيارة تحتوي على أدوية منصرفة`);
-                            Utils.safeLog(`   - إجمالي ${totalMedsCount} دواء منصرف`);
-                        }
-                    }
-                }).catch(error => {
+                .then(() => {
+                    const mergedVisits = AppState.appData.clinicVisits || [];
+                    Utils.safeLog(
+                        `✅ مزامنة سجل التردد: ${mergedVisits.length} زيارة ` +
+                        `(${mergedVisits.filter(v => v.personType === 'employee' || !v.personType).length} موظف، ` +
+                        `${mergedVisits.filter(v => v.personType === 'contractor').length} مقاول)`
+                    );
+                })
+                .catch(error => {
                     if (AppState.debugMode) {
                         Utils.safeWarn('⚠️ تعذر تحميل سجل التردد:', error.message);
                     }
@@ -12647,7 +12428,7 @@ const Clinic = {
                 
                 // ✅ إذا كان تبويب سجل التردد مفتوحاً، تحديثه مباشرة
                 if (this.state && this.state.activeTab === 'visits') {
-                    this.scheduleVisitsTabRender(false, 120); // false = لا force reload لأن البيانات محملة بالفعل
+                    this.scheduleVisitsTabRender(false, 0);
                 }
                 
                 Utils.safeLog('✅ تمت مزامنة بيانات العيادة في الخلفية');
