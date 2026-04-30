@@ -3211,7 +3211,7 @@ const Clinic = {
             <div class="modal-content" style="max-width: 500px; border-radius: 15px;">
                 <div class="modal-header" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
                     <h2 class="modal-title"><i class="fas fa-list-ul ml-2"></i> إدارة أنواع الزيارة</h2>
-                    <button class="modal-close" style="color: white;" onclick="this.closest('.modal-overlay').remove()">
+                    <button class="modal-close" style="color: white;" onclick="this.closest('.modal-overlay')?.remove()">
                         <i class="fas fa-times"></i>
                     </button>
                 </div>
