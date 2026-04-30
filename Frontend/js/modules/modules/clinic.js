@@ -5902,29 +5902,28 @@ const Clinic = {
             const CACHE_DURATION = 10 * 60 * 1000; // 10 دقائق
             const isDataStale = cacheAge >= CACHE_DURATION;
 
-            // جلب كامل مرّة واحدة (موظفين + مقاولين في getAllClinicVisits) ثم رسم واحد — بدون رسم جزئي ثم إعادة رسم
+            // تحميل مباشر: عرض فوري بما هو متاح محلياً، ثم جلب كامل في الخلفية (طلب واحد — نفس promise إن وُجد)
             const shouldLoadData = forceReload || !hasLocalData || isDataStale || this._visitsBackendFetchOk !== true;
 
+            this.renderVisitsTabContent(panel);
+
             if (shouldLoadData && typeof GoogleIntegration !== 'undefined' && GoogleIntegration.sendRequest) {
-                panel.innerHTML = '<div class="p-6 text-center text-gray-600"><i class="fas fa-spinner fa-spin ml-2"></i> جاري تحميل سجل التردد (الموظفين والمقاولين)...</div>';
-                try {
-                    await this.loadVisitsDataFromBackend();
-                    const p = document.querySelector('.clinic-tab-panel[data-tab-panel="visits"]');
-                    if (p && this.state && this.state.activeTab === 'visits') {
-                        this.ensureData();
-                        this.renderVisitsTabContent(p);
-                    }
-                    if (AppState.debugMode) {
-                        Utils.safeLog('✅ تم تحديث سجل التردد بعد جلب كامل من Backend (طلب واحد)');
-                    }
-                } catch (error) {
-                    if (AppState.debugMode) {
-                        Utils.safeWarn('⚠️ تعذر تحميل بيانات سجل التردد من الخادم:', error && error.message);
-                    }
-                    this.renderVisitsTabContent(panel);
-                }
-            } else {
-                this.renderVisitsTabContent(panel);
+                this.loadVisitsDataFromBackend()
+                    .then(() => {
+                        const p = document.querySelector('.clinic-tab-panel[data-tab-panel="visits"]');
+                        if (p && this.state && this.state.activeTab === 'visits') {
+                            this.ensureData();
+                            this.renderVisitsTabContent(p);
+                        }
+                        if (AppState.debugMode) {
+                            Utils.safeLog('✅ تم تحديث سجل التردد بعد المزامنة مع الخادم (بدون حجب الواجهة)');
+                        }
+                    })
+                    .catch((error) => {
+                        if (AppState.debugMode) {
+                            Utils.safeWarn('⚠️ تعذر تحميل بيانات سجل التردد من الخادم:', error && error.message);
+                        }
+                    });
             }
         } catch (error) {
             Utils.safeError('❌ خطأ في عرض تبويب سجل التردد:', error);
