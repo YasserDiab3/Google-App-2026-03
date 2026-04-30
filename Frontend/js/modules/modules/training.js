@@ -2861,6 +2861,11 @@ const Training = {
                 exportPdfBtn.addEventListener('click', () => this.showTrainingReportDialog());
             }
 
+            const printAttendanceFormBtn = document.getElementById('training-form-print-btn');
+            if (printAttendanceFormBtn) {
+                printAttendanceFormBtn.addEventListener('click', () => this.printAttendanceFormFromScreen());
+            }
+
             // Search and filter
             const searchInput = document.getElementById('training-search');
             const statusFilter = document.getElementById('training-filter-status');
@@ -7397,7 +7402,11 @@ const Training = {
                         </div>
                         
                         <!-- أزرار الإجراءات -->
-                        <div class="flex items-center justify-end gap-4 pt-6 mt-6 border-t-2 border-gray-200">
+                        <div class="flex items-center justify-end gap-4 pt-6 mt-6 border-t-2 border-gray-200 flex-wrap">
+                            <button type="button" id="training-form-print-btn" class="btn-secondary" style="padding: 0.875rem 2rem; font-weight: 600; border-radius: 8px; border: 2px solid #6366f1; color: #4338ca;">
+                                <i class="fas fa-print ml-2"></i>
+                                طباعة / PDF
+                            </button>
                             <button type="button" onclick="Training.showList()" class="btn-secondary" style="padding: 0.875rem 2rem; font-weight: 600; border-radius: 8px;">
                                 <i class="fas fa-times ml-2"></i>
                                 إلغاء
@@ -8166,6 +8175,300 @@ const Training = {
         }
     },
 
+    /**
+     * طباعة/حفظ PDF مع هيدر وفوتر النظام (FormHeader / PDFTemplates).
+     */
+    _openTrainingAttendancePrint(innerHtml, options = {}) {
+        const {
+            formCode = 'TRN-ATT',
+            docTitle = 'نموذج حضور تدريب',
+            createdAt = new Date().toISOString(),
+            updatedAt = null,
+            meta = {},
+            successMessage = 'تم تجهيز نموذج الحضور للطباعة'
+        } = options;
+
+        const htmlContent = typeof FormHeader !== 'undefined' && typeof FormHeader.generatePDFHTML === 'function'
+            ? FormHeader.generatePDFHTML(
+                formCode,
+                docTitle,
+                innerHtml,
+                false,
+                true,
+                Object.assign({ version: '1.0' }, meta),
+                createdAt,
+                updatedAt || createdAt
+            )
+            : `<!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="UTF-8"><title>${Utils.escapeHTML(docTitle)}</title></head><body>${innerHtml}</body></html>`;
+
+        const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const printWindow = window.open(url, '_blank');
+        if (printWindow) {
+            printWindow.onload = () => {
+                try {
+                    if (typeof requestAnimationFrame === 'function') {
+                        requestAnimationFrame(() => printWindow.print());
+                    } else {
+                        printWindow.print();
+                    }
+                    const cleanup = () => {
+                        try { URL.revokeObjectURL(url); } catch (e) {}
+                        try { printWindow.removeEventListener('afterprint', cleanup); } catch (e) {}
+                        Loading.hide();
+                        Notification.success(successMessage);
+                    };
+                    printWindow.addEventListener('afterprint', cleanup);
+                    setTimeout(cleanup, 1400);
+                } catch (e) {
+                    setTimeout(() => {
+                        try { URL.revokeObjectURL(url); } catch (err) {}
+                        Loading.hide();
+                    }, 1400);
+                }
+            };
+        } else {
+            Loading.hide();
+            Notification.error('يرجى السماح للنافذة المنبثقة لعرض التقرير');
+        }
+    },
+
+    /**
+     * تحويل سجل تدريب محفوظ إلى هيكل عرض نموذج الحضور للطباعة.
+     */
+    trainingRecordToAttendancePrintPayload(training) {
+        let locationName = training.locationName || '';
+        if (!locationName && training.location) {
+            locationName = this.getPlaceName(training.location, training.factory);
+        }
+        let factoryName = training.factoryName || '';
+        if (!factoryName && training.factory) {
+            const sites = this.getSiteOptions();
+            const site = sites.find(s => s.id === training.factory);
+            factoryName = site ? site.name : training.factory;
+        }
+        const trainingDate = training.startDate ? Utils.formatDate(training.startDate) : (training.date ? Utils.formatDate(training.date) : '');
+        const scientificSubject = (training.topics && Array.isArray(training.topics) ? training.topics.join('، ') : '') || '';
+        const participants = this.getParticipantsArray(training).map((p) => {
+            const isContractor = p.type === 'contractor' || p.personType === 'contractor';
+            return {
+                code: p.code || p.employeeNumber || p.employeeCode || '—',
+                name: p.name || p.contractorName || '',
+                typeLabel: isContractor ? 'مقاول / عمالة خارجية' : 'موظف',
+                company: isContractor ? (p.company || p.contractorCompany || '—') : '—',
+                position: p.position || p.jobTitle || '',
+                department: p.department || ''
+            };
+        });
+        return {
+            isEdit: false,
+            trainingType: training.trainingType || 'داخلي',
+            trainingTypeDisplay: training.trainingType || 'داخلي',
+            dateDisplay: trainingDate,
+            factoryName: factoryName || '',
+            locationName: locationName || '',
+            topic: training.name || training.subject || '',
+            trainer: training.trainer || '',
+            startTime: this.cleanTime(training.startTime) || '',
+            endTime: this.cleanTime(training.endTime) || '',
+            status: training.status || 'مخطط',
+            statusDisplay: training.status || 'مخطط',
+            topicsScientific: scientificSubject,
+            participants
+        };
+    },
+
+    /**
+     * قراءة نموذج الحضور الحالي من الواجهة (مسودة أو قبل الحفظ).
+     */
+    collectAttendanceFormDraftFromDOM() {
+        const typeEl = document.getElementById('training-type');
+        const trainingType = typeEl?.value || 'داخلي';
+        const trainingTypeDisplay = typeEl?.selectedOptions?.[0]?.textContent?.trim() || trainingType;
+
+        const startDateEl = document.getElementById('training-startDate');
+        const dateRaw = startDateEl?.value;
+        const dateDisplay = dateRaw ? Utils.formatDate(new Date(dateRaw).toISOString()) : '';
+
+        const factoryName = document.getElementById('training-factory')?.selectedOptions?.[0]?.textContent?.trim() || '';
+        const locationName = document.getElementById('training-location')?.selectedOptions?.[0]?.textContent?.trim() || '';
+
+        const topic = document.getElementById('training-name')?.value?.trim() || '';
+        const trainerEl = document.getElementById('training-trainer');
+        const trainer = (trainerEl?.value || trainerEl?.selectedOptions?.[0]?.textContent || '').trim();
+
+        const startTime = this.cleanTime(document.getElementById('training-startTime')?.value || '') || '';
+        const endTime = this.cleanTime(document.getElementById('training-endTime')?.value || '') || '';
+
+        const statusEl = document.getElementById('training-status');
+        const status = statusEl?.value || '';
+        const statusDisplay = statusEl?.selectedOptions?.[0]?.textContent?.trim() || status;
+
+        const participants = [];
+        const tableBody = document.getElementById('training-participants-table-body');
+        if (tableBody) {
+            tableBody.querySelectorAll('tr[data-code]').forEach((row) => {
+                const code = row.getAttribute('data-code') || '';
+                const name = row.getAttribute('data-name') || '';
+                const type = row.getAttribute('data-type') || 'employee';
+                const company = row.getAttribute('data-company') || '';
+                const position = row.getAttribute('data-position') || '';
+                const department = row.getAttribute('data-department') || '';
+                const isContractor = type === 'contractor';
+                participants.push({
+                    code: code || '—',
+                    name,
+                    typeLabel: isContractor ? 'مقاول / عمالة خارجية' : 'موظف',
+                    company: isContractor ? (company || '—') : '—',
+                    position,
+                    department
+                });
+            });
+        }
+
+        return {
+            isEdit: !!this.currentEditId,
+            trainingType,
+            trainingTypeDisplay,
+            dateDisplay,
+            factoryName,
+            locationName,
+            topic,
+            trainer,
+            startTime,
+            endTime,
+            status,
+            statusDisplay,
+            topicsScientific: '',
+            participants
+        };
+    },
+
+    /**
+     * HTML نموذج حضور التدريب بنفس أقسام الواجهة (أنماط مضمّنة للطباعة).
+     */
+    buildTrainingAttendanceFormPrintHTML(payload) {
+        const esc = (s) => Utils.escapeHTML(String(s ?? ''));
+        const title = payload.isEdit ? 'تعديل نموذج حضور تدريب' : 'نموذج حضور تدريب';
+        const sectionTitleStyle = 'margin:0;font-size:1.05rem;font-weight:700;color:#1f2937;display:flex;align-items:center;gap:10px';
+        const iconBox = (bg) => `width:40px;height:40px;border-radius:10px;background:${bg};display:flex;align-items:center;justify-content:center;color:#fff;flex-shrink:0`;
+        const fieldLabel = 'font-size:0.8rem;font-weight:600;color:#4b5563;margin:0 0 6px 0';
+        const fieldBox = 'background:#f9fafb;border:2px solid #e5e7eb;border-radius:10px;padding:10px 12px;font-size:0.95rem;color:#111827;min-height:22px';
+
+        const participantsRows = (payload.participants && payload.participants.length)
+            ? payload.participants.map((p, i) => `
+                <tr>
+                    <td style="border:1px solid #d1d5db;padding:10px 8px;text-align:center;font-size:0.85rem">${i + 1}</td>
+                    <td style="border:1px solid #d1d5db;padding:10px 8px;text-align:center;font-size:0.85rem">${esc(p.code)}</td>
+                    <td style="border:1px solid #d1d5db;padding:10px 8px;text-align:right;font-size:0.85rem">${esc(p.name)}</td>
+                    <td style="border:1px solid #d1d5db;padding:10px 8px;text-align:right;font-size:0.85rem">${esc(p.typeLabel)}</td>
+                    <td style="border:1px solid #d1d5db;padding:10px 8px;text-align:right;font-size:0.85rem">${esc(p.company)}</td>
+                    <td style="border:1px solid #d1d5db;padding:10px 8px;text-align:right;font-size:0.85rem">${esc(p.position)}</td>
+                    <td style="border:1px solid #d1d5db;padding:10px 8px;text-align:right;font-size:0.85rem">${esc(p.department)}</td>
+                    <td style="border:1px solid #d1d5db;padding:10px 8px;min-width:72px">&nbsp;</td>
+                </tr>`).join('')
+            : '<tr><td colspan="8" style="border:1px solid #d1d5db;padding:16px;text-align:center;color:#6b7280">لا يوجد مشاركين في القائمة</td></tr>';
+
+        const scientificBlock = payload.topicsScientific
+            ? `<div style="grid-column:1/-1;margin-top:4px"><p style="${fieldLabel}">المادة العلمية / الموضوعات</p><div style="${fieldBox}">${esc(payload.topicsScientific)}</div></div>`
+            : '';
+
+        return `
+<div class="training-attendance-print-root" style="font-family:'Cairo','Segoe UI',Tahoma,sans-serif;direction:rtl;text-align:right;color:#1f2937;-webkit-print-color-adjust:exact;print-color-adjust:exact">
+  <div style="border-radius:14px;overflow:hidden;box-shadow:0 4px 6px -1px rgba(0,0,0,0.08);border:1px solid #e5e7eb">
+    <div style="background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);padding:1.35rem 1.5rem">
+      <h1 style="margin:0;font-size:1.35rem;font-weight:700;color:#fff;display:flex;align-items:center;gap:12px">
+        <span style="${iconBox('rgba(255,255,255,0.25)}"><span style="display:block;width:10px;height:10px;background:#fff;border-radius:2px;opacity:0.95"></span></span>
+        ${esc(title)}
+      </h1>
+    </div>
+    <div style="padding:1.5rem 1.5rem 1.75rem;background:#fff">
+      <div style="background:linear-gradient(135deg,#eff6ff 0%,#eef2ff 100%);border:2px solid #bfdbfe;border-radius:14px;padding:1.35rem 1.25rem;margin-bottom:1.25rem">
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:1.1rem;padding-bottom:0.65rem;border-bottom:2px solid rgba(191,219,254,0.7)">
+          <div style="${iconBox('#2563eb')}"><span style="display:block;width:10px;height:10px;background:#fff;border-radius:2px;opacity:0.95"></span></div>
+          <h2 style="${sectionTitleStyle}">بيانات التدريب الأساسية</h2>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px 20px">
+          <div><p style="${fieldLabel}">نوع التدريب</p><div style="${fieldBox}">${esc(payload.trainingTypeDisplay || payload.trainingType)}</div></div>
+          <div><p style="${fieldLabel}">التاريخ</p><div style="${fieldBox}">${esc(payload.dateDisplay)}</div></div>
+          <div><p style="${fieldLabel}">المصنع</p><div style="${fieldBox}">${esc(payload.factoryName)}</div></div>
+          <div><p style="${fieldLabel}">مكان التدريب</p><div style="${fieldBox}">${esc(payload.locationName)}</div></div>
+          <div style="grid-column:1/-1"><p style="${fieldLabel}">موضوع المحاضرة</p><div style="${fieldBox}">${esc(payload.topic)}</div></div>
+          <div><p style="${fieldLabel}">اسم المحاضر</p><div style="${fieldBox}">${esc(payload.trainer)}</div></div>
+          <div><p style="${fieldLabel}">وقت البدء</p><div style="${fieldBox}">${esc(payload.startTime)}</div></div>
+          <div><p style="${fieldLabel}">وقت الانتهاء</p><div style="${fieldBox}">${esc(payload.endTime)}</div></div>
+          <div><p style="${fieldLabel}">حالة البرنامج</p><div style="${fieldBox}">${esc(payload.statusDisplay || payload.status)}</div></div>
+          ${scientificBlock}
+        </div>
+      </div>
+      <div style="background:linear-gradient(135deg,#ecfdf5 0%,#d1fae5 100%);border:2px solid #a7f3d0;border-radius:14px;padding:1.35rem 1.25rem">
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:1rem;padding-bottom:0.65rem;border-bottom:2px solid rgba(167,243,208,0.8)">
+          <div style="${iconBox('#059669')}"><span style="display:block;width:10px;height:10px;background:#fff;border-radius:2px;opacity:0.95"></span></div>
+          <h2 style="${sectionTitleStyle}">قائمة المشاركين (${esc(String((payload.participants || []).length))})</h2>
+        </div>
+        <table style="width:100%;border-collapse:collapse;font-size:0.88rem">
+          <thead>
+            <tr style="background:linear-gradient(135deg,#10b981 0%,#059669 100%);color:#fff">
+              <th style="border:1px solid #047857;padding:10px 6px;text-align:center;font-weight:600;width:40px">م</th>
+              <th style="border:1px solid #047857;padding:10px 6px;text-align:center;font-weight:600">الكود الوظيفي</th>
+              <th style="border:1px solid #047857;padding:10px 6px;text-align:right;font-weight:600">اسم المشارك</th>
+              <th style="border:1px solid #047857;padding:10px 6px;text-align:right;font-weight:600">النوع</th>
+              <th style="border:1px solid #047857;padding:10px 6px;text-align:right;font-weight:600">الشركة / الجهة</th>
+              <th style="border:1px solid #047857;padding:10px 6px;text-align:right;font-weight:600">الوظيفة</th>
+              <th style="border:1px solid #047857;padding:10px 6px;text-align:right;font-weight:600">القسم/الإدارة</th>
+              <th style="border:1px solid #047857;padding:10px 6px;text-align:center;font-weight:600;width:80px">التوقيع</th>
+            </tr>
+          </thead>
+          <tbody>${participantsRows}</tbody>
+        </table>
+        <p style="margin:1.25rem 0 0;font-size:0.95rem;color:#374151">توقيع المحاضر: ________________________________ ${esc(payload.trainer)}</p>
+      </div>
+    </div>
+  </div>
+</div>`;
+    },
+
+    /**
+     * طباعة نموذج الحضور من الشاشة الحالية (قبل أو بعد الحفظ) مع هيدر/فوتر النظام.
+     */
+    printAttendanceFormFromScreen() {
+        try {
+            if (!document.getElementById('training-form')) {
+                Notification.warning('افتح نموذج حضور التدريب أولاً');
+                return;
+            }
+            Loading.show();
+            const payload = this.collectAttendanceFormDraftFromDOM();
+            const body = this.buildTrainingAttendanceFormPrintHTML(payload);
+            const formCode = this.currentEditId
+                ? `TRN-ATT-${String(this.currentEditId).substring(0, 8)}`
+                : `TRN-ATT-DRAFT-${Date.now()}`;
+            const docTitle = payload.topic ? `نموذج حضور تدريب — ${payload.topic}` : 'نموذج حضور تدريب';
+            this._openTrainingAttendancePrint(body, {
+                formCode,
+                docTitle,
+                meta: {
+                    version: '1.0',
+                    source: 'TrainingAttendanceForm',
+                    releaseDate: new Date().toISOString(),
+                    revisionDate: new Date().toISOString(),
+                    qrData: {
+                        type: 'TrainingAttendanceForm',
+                        editId: this.currentEditId || null,
+                        topic: payload.topic
+                    }
+                },
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString(),
+                successMessage: 'تم تجهيز نموذج الحضور للطباعة'
+            });
+        } catch (error) {
+            Loading.hide();
+            Utils.safeError('خطأ في طباعة نموذج الحضور:', error);
+            Notification.error('حدث خطأ أثناء الطباعة: ' + (error?.message || ''));
+        }
+    },
+
     async printTraining(id) {
         this.ensureData();
         let training = AppState.appData.training.find(t => t.id === id);
@@ -8176,7 +8479,6 @@ const Training = {
 
         try {
             Loading.show();
-            // جلب السجل الكامل من الخادم لضمان ظهور أسماء المتدربين في كشف الحضور
             if (typeof GoogleIntegration !== 'undefined' && typeof GoogleIntegration.sendRequest === 'function') {
                 try {
                     const res = await GoogleIntegration.sendRequest({ action: 'getTraining', data: { trainingId: id } });
@@ -8186,153 +8488,30 @@ const Training = {
                 }
             }
 
-            // الحصول على اسم المكان
-            let locationName = training.locationName || '';
-            if (!locationName && training.location) {
-                locationName = this.getPlaceName(training.location, training.factory);
-            }
-            
-            // الحصول على اسم المصنع
-            let factoryName = training.factoryName || '';
-            if (!factoryName && training.factory) {
-                const sites = this.getSiteOptions();
-                const site = sites.find(s => s.id === training.factory);
-                factoryName = site ? site.name : training.factory;
-            }
-            
-            const participants = this.getParticipantsArray(training);
-            const count = this.getParticipantsCount(training);
-            const isInternal = (training.trainingType || 'داخلي') !== 'خارجي';
-            const internalCheck = isInternal ? '√' : ' ';
-            const externalCheck = isInternal ? ' ' : '√';
-            const trainingDate = training.startDate ? Utils.formatDate(training.startDate) : (training.date ? Utils.formatDate(training.date) : '');
-            const topicText = Utils.escapeHTML(training.name || training.subject || '');
-            const trainerName = Utils.escapeHTML(training.trainer || '');
-            const startTime = this.cleanTime(training.startTime) || '';
-            const endTime = this.cleanTime(training.endTime) || '';
-            const scientificSubject = (training.topics && Array.isArray(training.topics) ? training.topics.join('، ') : '') || '';
-            const locationFull = [locationName, factoryName].filter(Boolean).map(Utils.escapeHTML).join(' — ') || Utils.escapeHTML(training.location || '');
-
-            const maxRows = Math.max(participants.length, 20);
-            const rowsHtml = Array.from({ length: maxRows }, (_, idx) => {
-                const p = participants[idx];
-                if (!p) {
-                    return `
-                    <tr>
-                        <td style="border:1px solid #333; padding:8px; text-align:center; width:40px;">${idx + 1}</td>
-                        <td style="border:1px solid #333; padding:8px; text-align:center; width:90px;"></td>
-                        <td style="border:1px solid #333; padding:8px; text-align:right;"></td>
-                        <td style="border:1px solid #333; padding:8px; text-align:right;"></td>
-                        <td style="border:1px solid #333; padding:8px; min-width:80px;">&nbsp;</td>
-                    </tr>`;
-                }
-                const isContractor = p.type === 'contractor' || p.personType === 'contractor';
-                const nameDisplay = p.name || p.contractorName || '';
-                const codeDisplay = p.code || p.employeeNumber || p.employeeCode || '';
-                const jobDisplay = isContractor ? (p.company || p.contractorCompany || '') : (p.position || p.jobTitle || '');
-                const signatureDisplay = nameDisplay;
-                const name = Utils.escapeHTML(nameDisplay);
-                const code = Utils.escapeHTML(codeDisplay);
-                const job = Utils.escapeHTML(jobDisplay);
-                const signature = Utils.escapeHTML(signatureDisplay);
-                return `
-                    <tr>
-                        <td style="border:1px solid #333; padding:8px; text-align:center; width:40px;">${idx + 1}</td>
-                        <td style="border:1px solid #333; padding:8px; text-align:center; width:90px;">${code}</td>
-                        <td style="border:1px solid #333; padding:8px; text-align:right;">${name}</td>
-                        <td style="border:1px solid #333; padding:8px; text-align:right;">${job}</td>
-                        <td style="border:1px solid #333; padding:8px; min-width:80px;">${signature}</td>
-                    </tr>`;
-            }).join('');
-
-            const content = `
-                <div class="report-body" style="font-family: 'Cairo', 'Segoe UI', Tahoma, sans-serif; direction: rtl; text-align: right;">
-                    <h2 style="margin: 0 0 20px 0; font-size: 20px; font-weight: 700; color: #1f2937;">
-                        كشف حضور تدريب داخلي ( ${internalCheck} ) / خارجي ( ${externalCheck} )
-                    </h2>
-                    <table style="width:100%; border-collapse: collapse; margin-bottom: 16px; font-size: 15px;">
-                        <tr><td style="padding: 4px 12px 4px 0; width: 160px;">التاريخ :</td><td style="padding: 4px 0;">${Utils.escapeHTML(trainingDate)}</td></tr>
-                        <tr><td style="padding: 4px 12px 4px 0;">المكان :</td><td style="padding: 4px 0;">${locationFull}</td></tr>
-                        <tr><td style="padding: 4px 12px 4px 0;">موضوع المحاضرة :</td><td style="padding: 4px 0;">${topicText}</td></tr>
-                        <tr><td style="padding: 4px 12px 4px 0;">اسم المحاضر :</td><td style="padding: 4px 0;">${trainerName}</td></tr>
-                        <tr><td style="padding: 4px 12px 4px 0;">المادة العلمية :</td><td style="padding: 4px 0;">${Utils.escapeHTML(scientificSubject)}</td></tr>
-                        <tr><td style="padding: 4px 12px 4px 0;">من ساعة :</td><td style="padding: 4px 0;">${Utils.escapeHTML(startTime)}</td></tr>
-                        <tr><td style="padding: 4px 12px 4px 0;">الي ساعة :</td><td style="padding: 4px 0;">${Utils.escapeHTML(endTime)}</td></tr>
-                    </table>
-                    <p style="margin: 16px 0 8px 0; font-size: 16px; font-weight: 600;">الحاضرون :-</p>
-                    <table class="report-table" style="width:100%; border-collapse: collapse; margin-bottom: 24px; font-size: 14px;">
-                        <thead>
-                            <tr style="background: #1e3a8a; color: #fff;">
-                                <th style="border:1px solid #333; padding:10px; text-align:center; width:50px;">م</th>
-                                <th style="border:1px solid #333; padding:10px; text-align:center; width:90px;">الكود الوظيفي</th>
-                                <th style="border:1px solid #333; padding:10px; text-align:right;">الإسم</th>
-                                <th style="border:1px solid #333; padding:10px; text-align:right;">الوظيفة</th>
-                                <th style="border:1px solid #333; padding:10px; text-align:center; min-width:100px;">التوقيع</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            ${rowsHtml}
-                        </tbody>
-                    </table>
-                    <p style="margin: 20px 0 0 0; font-size: 15px;">توقيع المحاضر : _________________________ ${trainerName}</p>
-                </div>
-            `;
+            const payload = this.trainingRecordToAttendancePrintPayload(training);
+            const content = this.buildTrainingAttendanceFormPrintHTML(payload);
 
             const formCode = training.isoCode || `TRN-ATT-${training.id?.substring(0, 8) || 'UNKNOWN'}`;
-            const docTitle = `كشف حضور تدريب - ${Utils.escapeHTML(training.name || '')}`;
-            const htmlContent = typeof FormHeader !== 'undefined' && FormHeader.generatePDFHTML
-                ? FormHeader.generatePDFHTML(
-                    formCode,
-                    docTitle,
-                    content,
-                    false,
-                    true,
-                    {
-                        version: training.version || '1.0',
-                        releaseDate: training.startDate || training.createdAt,
-                        revisionDate: training.updatedAt || training.endDate || training.startDate,
-                        qrData: {
-                            type: 'Training',
-                            id: training.id,
-                            code: formCode,
-                            name: training.name
-                        }
-                    },
-                    training.createdAt || training.startDate,
-                    training.updatedAt || training.endDate || training.createdAt
-                )
-                : `<html><body>${content}</body></html>`;
+            const docTitle = training.name ? `نموذج حضور تدريب — ${training.name}` : 'نموذج حضور تدريب';
 
-            const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
-            const url = URL.createObjectURL(blob);
-            const printWindow = window.open(url, '_blank');
-            if (printWindow) {
-                printWindow.onload = () => {
-                    try {
-                        if (typeof requestAnimationFrame === 'function') {
-                            requestAnimationFrame(() => printWindow.print());
-                        } else {
-                            printWindow.print();
-                        }
-                        const cleanup = () => {
-                            try { URL.revokeObjectURL(url); } catch (e) {}
-                            try { printWindow.removeEventListener('afterprint', cleanup); } catch (e) {}
-                            Loading.hide();
-                            Notification.success('تم تجهيز البرنامج للطباعة');
-                        };
-                        printWindow.addEventListener('afterprint', cleanup);
-                        setTimeout(cleanup, 1400);
-                    } catch (e) {
-                        setTimeout(() => {
-                            URL.revokeObjectURL(url);
-                            Loading.hide();
-                        }, 1400);
+            this._openTrainingAttendancePrint(content, {
+                formCode,
+                docTitle,
+                meta: {
+                    version: training.version || '1.0',
+                    releaseDate: training.startDate || training.createdAt,
+                    revisionDate: training.updatedAt || training.endDate || training.startDate,
+                    qrData: {
+                        type: 'Training',
+                        id: training.id,
+                        code: formCode,
+                        name: training.name
                     }
-                };
-            } else {
-                Loading.hide();
-                Notification.error('يرجى السماح للنافذة المنبثقة لعرض التقرير');
-            }
+                },
+                createdAt: training.createdAt || training.startDate,
+                updatedAt: training.updatedAt || training.endDate || training.createdAt,
+                successMessage: 'تم تجهيز نموذج الحضور للطباعة'
+            });
         } catch (error) {
             Loading.hide();
             Utils.safeError('خطأ في الطباعة:', error);
