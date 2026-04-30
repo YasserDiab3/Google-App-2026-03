@@ -536,6 +536,58 @@ const IssuingAuthorities = {
             };
     },
 
+    /**
+     * التبويب الظاهر في الواجهة (مصدر الحقيقة عند الحفظ) — يمنع الخلط عندما يُستدعى
+     * getAuthoritiesForPermitType من PTW أثناء وجود المستخدم في تبويب الموظفين.
+     */
+    _getActiveCategoryFromUi() {
+        const root = document.getElementById('ia-module-root');
+        if (!root) return (this._activeCategory === 'contractors' ? 'contractors' : 'employees');
+        const activeBtn = root.querySelector('.ia-tab-btn.active');
+        const cat = activeBtn && String(activeBtn.getAttribute('data-category') || '').trim();
+        return cat === 'contractors' ? 'contractors' : 'employees';
+    },
+
+    /**
+     * جلب صفوف جدول معيّن بدون تعديل this._activeCategory أو this._data (آمن مع PTW بالتوازي).
+     */
+    async _fetchNormalizedRowsForCategory(category) {
+        const isContractor = category === 'contractors';
+        const sheetName = isContractor ? 'PTWContractorIssuingAuthorities' : 'PTWIssuingAuthorities';
+        const categoryKey = isContractor ? 'contractors' : 'employees';
+        const getAction = isContractor ? 'getAllContractorIssuingAuthorities' : 'getAllIssuingAuthorities';
+        try {
+            const fallbackResult = await this._withTimeout(GoogleIntegration.sendRequest({
+                action: 'readFromSheet',
+                data: { sheetName }
+            }), 7000);
+            if (fallbackResult && fallbackResult.success) {
+                const raw = Array.isArray(fallbackResult.data) ? fallbackResult.data : [];
+                return raw.map(r => this._normalizeRow(r)).filter(r => r.id || r.name || r.contractorCompanyName);
+            }
+        } catch (err) {
+            /* نفس صمت _fetchViaReadFromSheet */
+        }
+        if (!this._unsupportedActions[categoryKey]) {
+            try {
+                const result = await this._withTimeout(
+                    GoogleIntegration.sendRequest({ action: getAction, data: {} }),
+                    4500
+                );
+                if (result && result.success) {
+                    const raw = Array.isArray(result.data) ? result.data : [];
+                    return raw.map(r => this._normalizeRow(r)).filter(r => r.id || r.name || r.contractorCompanyName);
+                }
+            } catch (rpcErr) {
+                const msg = String((rpcErr && rpcErr.message) || '');
+                if (this._isActionUnknownMessage(msg)) {
+                    this._unsupportedActions[categoryKey] = true;
+                }
+            }
+        }
+        return [];
+    },
+
     async load() {
         const section = document.getElementById('issuing-authorities-section');
         if (!section) return;
@@ -1704,7 +1756,9 @@ const IssuingAuthorities = {
 
         try {
             let result;
-            const actions = this._actionsForCategory(this._activeCategory);
+            const saveCategory = this._getActiveCategoryFromUi();
+            this._activeCategory = saveCategory;
+            const actions = this._actionsForCategory(saveCategory);
             if (this._currentEditId) {
                 payload.id = this._currentEditId;
                 result = await GoogleIntegration.sendRequest({
@@ -1764,7 +1818,9 @@ const IssuingAuthorities = {
         try {
             const userData = AppState && AppState.currentUser ? AppState.currentUser : {};
             const rec = (this._data || []).find(x => x.id === id) || {};
-            const actions = this._actionsForCategory(this._activeCategory);
+            const delCategory = this._getActiveCategoryFromUi();
+            this._activeCategory = delCategory;
+            const actions = this._actionsForCategory(delCategory);
             const result = await GoogleIntegration.sendRequest({
                 action: actions.remove,
                 data: { id, userData }
@@ -1797,33 +1853,17 @@ const IssuingAuthorities = {
      * @returns {Promise<Array>} قائمة المرشحين مع permitLevel وrequiresHseCoApproval
      */
     async getAuthoritiesForPermitType(permitType) {
-        const originalCategory = this._activeCategory;
         try {
             const key = String(permitType || '').trim();
             if (!key) return [];
-            // Avoid extra network calls if data for the active category is already loaded.
-            if (!this._data || this._data.length === 0) {
-                await this._fetchData();
-            }
-            const employeeData = originalCategory === 'employees'
-                ? (Array.isArray(this._data) ? [...this._data] : [])
-                : [];
-
-            let merged = employeeData;
+            /** لا نلمس this._activeCategory هنا أبداً (تعارض زمني مع حفظ المستخدم في الواجهة). */
+            let merged = [];
             if (key === 'contractorPTW') {
-                if (originalCategory !== 'employees') {
-                    this._activeCategory = 'employees';
-                    await this._fetchData();
-                    merged = Array.isArray(this._data) ? [...this._data] : [];
-                }
-                this._activeCategory = 'contractors';
-                await this._fetchData();
-                const contractorData = Array.isArray(this._data) ? [...this._data] : [];
-                merged = merged.concat(contractorData);
-            } else if (originalCategory !== 'employees') {
-                this._activeCategory = 'employees';
-                await this._fetchData();
-                merged = Array.isArray(this._data) ? [...this._data] : [];
+                const emp = await this._fetchNormalizedRowsForCategory('employees');
+                const con = await this._fetchNormalizedRowsForCategory('contractors');
+                merged = emp.concat(con);
+            } else {
+                merged = await this._fetchNormalizedRowsForCategory('employees');
             }
             return (merged || [])
                 .filter(r => r.isActive !== false)
@@ -1845,8 +1885,6 @@ const IssuingAuthorities = {
         } catch (err) {
             if (typeof Utils !== 'undefined') Utils.safeError('IssuingAuthorities.getAuthoritiesForPermitType error:', err);
             return [];
-        } finally {
-            this._activeCategory = originalCategory;
         }
     },
 
