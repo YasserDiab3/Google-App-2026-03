@@ -16,16 +16,36 @@ const Violations = {
         if (typeof value === 'number') {
             return Number.isFinite(value) && value >= 0 ? value : 0;
         }
+        const arabicIndicDigits = '٠١٢٣٤٥٦٧٨٩';
+        const easternArabicDigits = '۰۱۲۳۴۵۶۷۸۹';
+        const toAsciiDigits = (input) => String(input || '').replace(/[٠-٩۰-۹]/g, (char) => {
+            const idxArabicIndic = arabicIndicDigits.indexOf(char);
+            if (idxArabicIndic >= 0) return String(idxArabicIndic);
+            const idxEasternArabic = easternArabicDigits.indexOf(char);
+            return idxEasternArabic >= 0 ? String(idxEasternArabic) : char;
+        });
         const normalized = String(value)
+            .trim();
+        const normalizedDigits = toAsciiDigits(normalized)
             .replace(/[,\u066C]/g, '')
+            .replace(/\u066B/g, '.')
             .replace(/[^\d.\-]/g, '');
-        const parsed = Number(normalized);
+        const parsed = Number(normalizedDigits);
         return Number.isFinite(parsed) && parsed >= 0 ? parsed : 0;
     },
 
     normalizeViolationRecord(record) {
         if (!record || typeof record !== 'object') return null;
-        const fineAmount = this.parseFineAmount(record.fineAmount ?? record.defaultFineAmount ?? 0);
+        const fineAmountRaw =
+            record.fineAmount ??
+            record.defaultFineAmount ??
+            record.fine_amount ??
+            record.fine ??
+            record.amount ??
+            record['القيمة المالية'] ??
+            record['قيمة مالية'] ??
+            0;
+        const fineAmount = this.parseFineAmount(fineAmountRaw);
         const personType = record.personType || (record.contractorName ? 'contractor' : 'employee');
         return {
             ...record,
