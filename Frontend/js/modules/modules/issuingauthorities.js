@@ -22,6 +22,13 @@ const IssuingAuthorities = {
         return msg.includes('غير معترف') || msg.includes('not recognized') || msg.includes('unknown action');
     },
 
+    _withTimeout(promise, timeoutMs = 7000) {
+        return Promise.race([
+            promise,
+            new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), timeoutMs))
+        ]);
+    },
+
     _normalizeBoolean(value, defaultValue = false) {
         if (value === true || value === false) return value;
         if (typeof value === 'string') {
@@ -59,10 +66,10 @@ const IssuingAuthorities = {
             const sheetName = this._activeCategory === 'contractors'
                 ? 'PTWContractorIssuingAuthorities'
                 : 'PTWIssuingAuthorities';
-            const fallbackResult = await GoogleIntegration.sendRequest({
+            const fallbackResult = await this._withTimeout(GoogleIntegration.sendRequest({
                 action: 'readFromSheet',
                 data: { sheetName }
-            });
+            }), 7000);
             if (fallbackResult && fallbackResult.success) {
                 const raw = Array.isArray(fallbackResult.data) ? fallbackResult.data : [];
                 this._data = raw.map(r => this._normalizeRow(r)).filter(r => r.id || r.name);
@@ -193,17 +200,17 @@ const IssuingAuthorities = {
 
         <!-- Modal إضافة/تعديل -->
         <div id="ia-modal-overlay" class="modal-overlay" style="display:none;" role="dialog" aria-modal="true" aria-labelledby="ia-modal-title">
-            <div class="modal-container ia-modal-container" style="max-width:760px;width:95%;">
+            <div class="modal-container ia-modal-container" style="max-width:900px;width:95%;">
                 <div class="modal-header">
                     <h3 id="ia-modal-title" class="modal-title">إضافة شخص مصرح له</h3>
                     <button class="modal-close" id="ia-modal-close" aria-label="إغلاق">
                         <i class="fas fa-times"></i>
                     </button>
                 </div>
-                <div class="modal-body" id="ia-modal-body">
+                <div class="modal-body ia-modal-body" id="ia-modal-body">
                     ${this._renderForm()}
                 </div>
-                <div class="modal-footer">
+                <div class="modal-footer ia-modal-footer">
                     <button class="btn-secondary" id="ia-modal-cancel">إلغاء</button>
                     <button class="btn-primary" id="ia-modal-save">
                         <i class="fas fa-save" style="margin-left:6px;"></i>حفظ
@@ -278,9 +285,9 @@ const IssuingAuthorities = {
                 </div>
                 <div class="form-group ia-employee-code-wrap" id="ia-employee-code-wrap" style="${personType === 'employee' ? '' : 'display:none;'}">
                     <label class="form-label">الكود الوظيفي <span style="color:red;">*</span></label>
-                    <div style="display:flex;gap:8px;">
+                    <div class="ia-employee-lookup-row">
                         <input type="text" id="ia-f-employee-code" class="form-input" value="${val('employeeCode')}" placeholder="أدخل الكود الوظيفي">
-                        <button type="button" class="btn-secondary" id="ia-lookup-employee-btn" style="white-space:nowrap;">بحث</button>
+                        <button type="button" class="btn-secondary ia-lookup-btn" id="ia-lookup-employee-btn">بحث</button>
                     </div>
                 </div>
                 </div>
@@ -366,10 +373,17 @@ const IssuingAuthorities = {
                 ? 'getAllContractorIssuingAuthorities'
                 : 'getAllIssuingAuthorities';
             let ok = false;
+
+            // Fast path: direct sheet read avoids delays/noise on legacy deployments.
+            ok = await this._fetchViaReadFromSheet();
+
             // If this endpoint already proved it doesn't support this action, skip noisy RPC and go straight to fallback.
-            if (!this._unsupportedActions[categoryKey]) {
+            if (!ok && !this._unsupportedActions[categoryKey]) {
                 try {
-                    const result = await GoogleIntegration.sendRequest({ action: getAction, data: {} });
+                    const result = await this._withTimeout(
+                        GoogleIntegration.sendRequest({ action: getAction, data: {} }),
+                        4500
+                    );
                     if (result && result.success) {
                         const raw = Array.isArray(result.data) ? result.data : [];
                         this._data = raw.map(r => this._normalizeRow(r)).filter(r => r.id || r.name);
@@ -383,9 +397,6 @@ const IssuingAuthorities = {
                         Utils.safeWarn(`تعذر تنفيذ ${getAction} وسيتم التحويل إلى fallback`, msg);
                     }
                 }
-            }
-            if (!ok) {
-                ok = await this._fetchViaReadFromSheet();
             }
             if (!ok) {
                 this._data = [];
@@ -924,12 +935,24 @@ const IssuingAuthorities = {
             }
             .ia-tab-btn.active { border-color:#2563eb; color:#1d4ed8; background:#eff6ff; }
             .ia-module table tbody tr:hover { background:#f8fafc; }
-            .ia-modal-container .modal-body { max-height:72vh; overflow:auto; }
+            .ia-modal-container { border-radius:12px; overflow:hidden; }
+            .ia-modal-container .modal-header {
+                position:sticky; top:0; z-index:3; background:#ffffff;
+                border-bottom:1px solid #e2e8f0;
+            }
+            .ia-modal-body {
+                max-height:68vh; overflow:auto; padding:14px;
+                background:#f1f5f9;
+            }
+            .ia-modal-footer.ia-modal-footer {
+                position:sticky; bottom:0; z-index:3;
+                background:#ffffff; border-top:1px solid #e2e8f0;
+            }
             .ia-form-grid { display:grid; gap:14px; }
-            .ia-form-section { border:1px solid #e2e8f0; border-radius:10px; padding:12px; background:#ffffff; }
+            .ia-form-section { border:1px solid #dbeafe; border-radius:10px; padding:14px; background:#ffffff; box-shadow:0 1px 2px rgba(15,23,42,0.03); }
             .ia-form-section-title { margin:0 0 10px; color:#1e3a8a; font-size:0.95rem; font-weight:700; }
             .ia-form-section-subtitle { display:block; margin-top:4px; color:#475569; font-size:0.78rem; font-weight:500; }
-            .ia-form-two-cols { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+            .ia-form-two-cols { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
             .ia-form-select,
             .ia-form .form-input,
             .ia-form .form-select {
@@ -950,6 +973,8 @@ const IssuingAuthorities = {
                 background:#f8fafc;
                 color:#475569;
             }
+            .ia-employee-lookup-row { display:grid; grid-template-columns:1fr auto; gap:8px; align-items:center; }
+            .ia-lookup-btn { min-width:72px; height:42px; white-space:nowrap; border-radius:8px; }
             .ia-person-mode-hint {
                 margin-bottom:10px;
                 padding:8px 10px;
@@ -977,6 +1002,8 @@ const IssuingAuthorities = {
             .ia-form .form-input::placeholder { color:#94a3b8; }
             @media (max-width: 768px) {
                 .ia-form-two-cols { grid-template-columns:1fr; }
+                .ia-employee-lookup-row { grid-template-columns:1fr; }
+                .ia-lookup-btn { width:100%; }
                 .ia-active-group { padding-top:4px; }
                 .ia-permit-row { flex-direction:column; align-items:flex-start; }
             }
