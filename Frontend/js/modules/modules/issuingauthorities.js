@@ -406,11 +406,14 @@ const IssuingAuthorities = {
         return this._activeCategory === 'contractors' ? 'المقاولين' : 'الموظفين';
     },
 
-    _actionsForCategory(category, personType) {
+    /**
+     * يحدد جدول Google Sheets من **التبويب الحالي** (موظفين / مقاولين) فقط.
+     * عدم دمج personType هنا يمنع حفظ سجلات تبويب الموظفين في PTWContractorIssuingAuthorities
+     * إذا اختُمِل نوع الشخص في النموذج، أو إذا بقي _activeCategory عالقاً بعد استدعاء PTW.
+     */
+    _actionsForCategory(category) {
         const isContractorCategory = (category === 'contractors');
-        const isContractorPerson = String(personType || '').toLowerCase().trim() === 'contractor';
-        const useContractorDb = isContractorCategory || isContractorPerson;
-        return useContractorDb
+        return isContractorCategory
             ? {
                 add: 'addContractorIssuingAuthority',
                 update: 'updateContractorIssuingAuthority',
@@ -1516,7 +1519,7 @@ const IssuingAuthorities = {
 
         try {
             let result;
-            const actions = this._actionsForCategory(this._activeCategory, personType);
+            const actions = this._actionsForCategory(this._activeCategory);
             if (this._currentEditId) {
                 payload.id = this._currentEditId;
                 result = await GoogleIntegration.sendRequest({
@@ -1576,7 +1579,7 @@ const IssuingAuthorities = {
         try {
             const userData = AppState && AppState.currentUser ? AppState.currentUser : {};
             const rec = (this._data || []).find(x => x.id === id) || {};
-            const actions = this._actionsForCategory(this._activeCategory, rec.personType);
+            const actions = this._actionsForCategory(this._activeCategory);
             const result = await GoogleIntegration.sendRequest({
                 action: actions.remove,
                 data: { id, userData }
@@ -1609,6 +1612,7 @@ const IssuingAuthorities = {
      * @returns {Promise<Array>} قائمة المرشحين مع permitLevel وrequiresHseCoApproval
      */
     async getAuthoritiesForPermitType(permitType) {
+        const originalCategory = this._activeCategory;
         try {
             const key = String(permitType || '').trim();
             if (!key) return [];
@@ -1616,7 +1620,6 @@ const IssuingAuthorities = {
             if (!this._data || this._data.length === 0) {
                 await this._fetchData();
             }
-            const originalCategory = this._activeCategory;
             const employeeData = originalCategory === 'employees'
                 ? (Array.isArray(this._data) ? [...this._data] : [])
                 : [];
@@ -1637,7 +1640,6 @@ const IssuingAuthorities = {
                 await this._fetchData();
                 merged = Array.isArray(this._data) ? [...this._data] : [];
             }
-            this._activeCategory = originalCategory;
             return (merged || [])
                 .filter(r => r.isActive !== false)
                 .map(r => {
@@ -1658,6 +1660,8 @@ const IssuingAuthorities = {
         } catch (err) {
             if (typeof Utils !== 'undefined') Utils.safeError('IssuingAuthorities.getAuthoritiesForPermitType error:', err);
             return [];
+        } finally {
+            this._activeCategory = originalCategory;
         }
     },
 
