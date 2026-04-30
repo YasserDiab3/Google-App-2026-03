@@ -540,9 +540,9 @@ const Training = {
             return;
         }
 
-        // تحميل البيانات من Google Sheets مع timeout محسّن (مع تنظيف الـ timer)
-        const timeout = 60000; // 60 ثانية timeout لكل طلب (زيادة من 30 ثانية)
-        const timeoutMessage = 'انتهت مهلة الاتصال بالخادم\n\nتحقق من:\n1. اتصال الإنترنت\n2. أن Google Apps Script منشور ومفعّل\n3. عدم وجود قيود على الشبكة';
+        // تحميل البيانات من Google Sheets — مهلة قصوى 10 ثوانٍ لكل طلب (الطلبات متوازية؛ لا تتجاوز الواجهة انتظاراً طويلاً)
+        const timeout = 10000;
+        const timeoutMessage = 'انتهت مهلة الاتصال بالخادم (10 ثوانٍ كحد أقصى)\n\nتحقق من:\n1. اتصال الإنترنت\n2. أن Google Apps Script منشور ومفعّل\n3. عدم وجود قيود على الشبكة';
         const requestWithTimeout = (promise) => Utils.promiseWithTimeout(promise, timeout, timeoutMessage);
 
         try {
@@ -2536,13 +2536,32 @@ const Training = {
                     </div>
                     <div class="card-body">
                         <div id="training-table-container">
-                            <div class="empty-state">
-                                <div style="width: 300px; margin: 0 auto 16px;">
-                                    <div style="width: 100%; height: 6px; background: rgba(59, 130, 246, 0.2); border-radius: 3px; overflow: hidden;">
-                                        <div style="height: 100%; background: linear-gradient(90deg, #3b82f6, #2563eb, #3b82f6); background-size: 200% 100%; border-radius: 3px; animation: loadingProgress 1.5s ease-in-out infinite;"></div>
-                                    </div>
-                                </div>
-                                <p class="text-gray-500">جاري التحميل...</p>
+                            <div class="table-wrapper" style="overflow-x: auto;">
+                                <table class="data-table table-header-purple">
+                                    <thead>
+                                        <tr>
+                                            <th>اسم البرنامج</th>
+                                            <th>نوع التدريب</th>
+                                            <th>المدرب</th>
+                                            <th>تاريخ البدء</th>
+                                            <th>عدد المشاركين</th>
+                                            <th>الحالة</th>
+                                            <th>الإجراءات</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td colspan="7" class="text-center text-gray-500 py-10">
+                                                <div class="flex flex-col items-center justify-center gap-3">
+                                                    <div style="width:200px;height:4px;background:rgba(59,130,246,0.2);border-radius:3px;overflow:hidden">
+                                                        <div style="height:100%;width:40%;background:linear-gradient(90deg,#3b82f6,#2563eb);border-radius:3px;animation:loadingProgress 1.2s ease-in-out infinite"></div>
+                                                    </div>
+                                                    <span>جاري تحديث القائمة…</span>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
                             </div>
                         </div>
                     </div>

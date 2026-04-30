@@ -5581,19 +5581,42 @@ window.UI = {
                 try {
                     const current = (section.innerHTML || '').trim();
                     if (!current) {
-                        section.innerHTML = `
-                            <div class="content-card" style="margin:18px;">
-                                <div class="card-body" style="display:flex;align-items:center;justify-content:center;min-height:220px;gap:12px;">
-                                    <div class="hse-mini-spinner" style="width:34px;height:34px;border:3px solid rgba(37,99,235,0.18);border-top-color:#2563eb;border-radius:50%;animation:hseSpin 0.9s linear infinite;"></div>
-                                    <div style="font-weight:600;color:#334155;">جاري تحميل البيانات...</div>
+                        // التدريب: عرض هيكل الموديول فوراً بدل شاشة «جاري تحميل البيانات...» البيضاء
+                        if (sectionName === 'training' && typeof Training !== 'undefined' && typeof Training.load === 'function') {
+                            try {
+                                Training.load();
+                            } catch (err) {
+                                Utils.safeWarn('⚠️ تعذر رسم موديول التدريب فوراً:', err);
+                                section.innerHTML = `
+                                    <div class="content-card" style="margin:18px;">
+                                        <div class="card-body" style="display:flex;align-items:center;justify-content:center;min-height:220px;gap:12px;">
+                                            <div class="hse-mini-spinner" style="width:34px;height:34px;border:3px solid rgba(37,99,235,0.18);border-top-color:#2563eb;border-radius:50%;animation:hseSpin 0.9s linear infinite;"></div>
+                                            <div style="font-weight:600;color:#334155;">جاري تحميل البيانات...</div>
+                                        </div>
+                                    </div>
+                                `;
+                                if (!document.getElementById('hse-mini-spinner-style')) {
+                                    const style = document.createElement('style');
+                                    style.id = 'hse-mini-spinner-style';
+                                    style.textContent = '@keyframes hseSpin{to{transform:rotate(360deg);}}';
+                                    document.head.appendChild(style);
+                                }
+                            }
+                        } else {
+                            section.innerHTML = `
+                                <div class="content-card" style="margin:18px;">
+                                    <div class="card-body" style="display:flex;align-items:center;justify-content:center;min-height:220px;gap:12px;">
+                                        <div class="hse-mini-spinner" style="width:34px;height:34px;border:3px solid rgba(37,99,235,0.18);border-top-color:#2563eb;border-radius:50%;animation:hseSpin 0.9s linear infinite;"></div>
+                                        <div style="font-weight:600;color:#334155;">جاري تحميل البيانات...</div>
+                                    </div>
                                 </div>
-                            </div>
-                        `;
-                        if (!document.getElementById('hse-mini-spinner-style')) {
-                            const style = document.createElement('style');
-                            style.id = 'hse-mini-spinner-style';
-                            style.textContent = '@keyframes hseSpin{to{transform:rotate(360deg);}}';
-                            document.head.appendChild(style);
+                            `;
+                            if (!document.getElementById('hse-mini-spinner-style')) {
+                                const style = document.createElement('style');
+                                style.id = 'hse-mini-spinner-style';
+                                style.textContent = '@keyframes hseSpin{to{transform:rotate(360deg);}}';
+                                document.head.appendChild(style);
+                            }
                         }
                     }
                 } catch (e) { /* ignore */ }
@@ -5839,6 +5862,10 @@ window.UI = {
                 case 'training':
                     Utils.safeLog(' تحميل مديول التدريب (Training) ي قسم training-section');
                     if (typeof Training !== 'undefined' && Training.load) {
+                        // إن رُسم الهيكل مسبقاً في showSection فلا نعيد استبدال الواجهة (تفادي وميض وطلبات مزدوجة)
+                        if (document.getElementById('training-content')) {
+                            break;
+                        }
                         Training.load();
                     } else {
                         Utils.safeError('❌ موديول Training غير متوفر - الموديول لم يُحمّل بشكل صحيح');
