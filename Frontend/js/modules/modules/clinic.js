@@ -6028,7 +6028,7 @@ const Clinic = {
                     if (!visit.personType) {
                         // محاولة تحديد النوع من الحقول المتوفرة
                         if (visit.contractorName || visit.contractorWorkerName || visit.externalName) {
-                            visit.personType = visit.contractorName ? 'contractor' : 'external';
+                            visit.personType = 'contractor';
                         } else {
                             visit.personType = 'employee';
                         }
@@ -6285,7 +6285,7 @@ const Clinic = {
                 if (AppState.debugMode) {
                     Utils.safeLog(`✅ تم تحميل ${normalizedVisits.length} زيارة من الخادم؛ بعد الدمج مع المحلي: ${mergedVisits.length}`);
                     Utils.safeLog(`   - ${mergedVisits.filter(v => v.personType === 'employee' || !v.personType).length} موظف`);
-                    Utils.safeLog(`   - ${mergedVisits.filter(v => v.personType === 'contractor' || v.personType === 'external').length} مقاول`);
+                    Utils.safeLog(`   - ${mergedVisits.filter(v => v.personType === 'contractor').length} مقاول`);
                     Utils.safeLog(`   - ${visitsWithMeds.length} زيارة تحتوي على أدوية منصرفة`);
                     Utils.safeLog(`   - إجمالي ${totalMedsCount} دواء منصرف`);
                 }
@@ -6387,7 +6387,7 @@ const Clinic = {
                 if (!v.personType) {
                     // محاولة تحديد النوع من الحقول المتوفرة
                     if (v.contractorName || v.contractorWorkerName || v.externalName) {
-                        v.personType = v.contractorName ? 'contractor' : 'external';
+                        v.personType = 'contractor';
                     } else {
                         v.personType = 'employee';
                     }
@@ -6400,12 +6400,12 @@ const Clinic = {
                 if (!v.personType) {
                     // محاولة تحديد النوع من الحقول المتوفرة
                     if (v.contractorName || v.contractorWorkerName || v.externalName) {
-                        v.personType = v.contractorName ? 'contractor' : 'external';
+                        v.personType = 'contractor';
                     } else {
                         v.personType = 'employee';
                     }
                 }
-                return v.personType === 'contractor' || v.personType === 'external';
+                return v.personType === 'contractor';
             });
 
             const baseVisits = activeVisitType === 'employees' ? employeeVisits : contractorVisits;
@@ -7916,10 +7916,15 @@ const Clinic = {
         data.clinicVisits = data.clinicVisits.map((visit) => {
             if (!visit || typeof visit !== 'object') return visit;
             
+            // توحيد النوع: النظام يدعم موظف/مقاول فقط
+            if (String(visit.personType || '').toLowerCase().trim() === 'external') {
+                visit.personType = 'contractor';
+                visitsChanged = true;
+            }
             // التأكد من وجود personType
             if (!visit.personType) {
                 if (visit.contractorName || visit.contractorWorkerName || visit.externalName) {
-                    visit.personType = visit.contractorName ? 'contractor' : 'external';
+                    visit.personType = 'contractor';
                 } else {
                     visit.personType = 'employee';
                 }
@@ -9982,20 +9987,21 @@ const Clinic = {
                 return;
             }
 
-            const personType = personTypeEl.value;
+            const rawPersonType = String(personTypeEl.value || '').trim().toLowerCase();
+            const personType = rawPersonType === 'employee' ? 'employee' : 'contractor';
             const entryValue = entryValueEl.value;
             const exitValue = exitValueEl.value;
             const contractorWorkerValue = document.getElementById('visit-contractor-worker')?.value.trim() || '';
             const workAreaValue = personType === 'employee'
                 ? document.getElementById('visit-employee-location')?.value.trim() || ''
                 : document.getElementById('visit-work-area')?.value.trim() || '';
-            const contractorPositionValue = personType === 'contractor' || personType === 'external'
+            const contractorPositionValue = personType === 'contractor'
                 ? document.getElementById('visit-contractor-position')?.value.trim() || ''
                 : null;
 
             // الحصول على اسم المقاول من select أو input حسب النوع
             let personName = '';
-            if (personType === 'contractor') {
+            if (rawPersonType === 'contractor') {
                 const contractorSelect = document.getElementById('visit-contractor-name-select');
                 const employeeNameInput = document.getElementById('visit-employee-name');
                 personName = contractorSelect ? (contractorSelect.value || '').trim() : (employeeNameInput ? (employeeNameInput.value || '').trim() : '');
@@ -10147,8 +10153,8 @@ const Clinic = {
                 factoryName: factoryName,
                 employeeLocation: personType === 'employee' ? workAreaValue : null,
                 contractorName: personType === 'contractor' ? personName : null,
-                contractorWorkerName: personType === 'contractor' || personType === 'external' ? contractorWorkerValue : null,
-                externalName: personType === 'external' ? personName : null,
+                contractorWorkerName: personType === 'contractor' ? contractorWorkerValue : null,
+                externalName: null,
                 workArea: workAreaValue || null,
                 visitDate: visitDateISO,
                 exitDate: exitDateISO,
@@ -11022,7 +11028,7 @@ const Clinic = {
 
         // فلترة الزيارات حسب النوع
         const employeeVisits = allVisits.filter(v => v.personType === 'employee' || !v.personType);
-        const contractorVisits = allVisits.filter(v => v.personType === 'contractor' || v.personType === 'external');
+        const contractorVisits = allVisits.filter(v => v.personType === 'contractor');
 
         const visits = activeVisitType === 'employees' ? employeeVisits : contractorVisits;
         if (visits.length === 0) {
@@ -11114,7 +11120,7 @@ const Clinic = {
 
         const allVisits = (AppState.appData.clinicVisits || []).slice().reverse();
         const employeeVisits = allVisits.filter(v => v.personType === 'employee' || !v.personType);
-        const contractorVisits = allVisits.filter(v => v.personType === 'contractor' || v.personType === 'external');
+        const contractorVisits = allVisits.filter(v => v.personType === 'contractor');
         const visits = activeVisitType === 'employees' ? employeeVisits : contractorVisits;
 
         if (visits.length === 0) {
@@ -12355,7 +12361,7 @@ const Clinic = {
                             if (!visit.personType) {
                                 // محاولة تحديد النوع من الحقول المتوفرة
                                 if (visit.contractorName || visit.contractorWorkerName || visit.externalName) {
-                                    visit.personType = visit.contractorName ? 'contractor' : 'external';
+                                    visit.personType = 'contractor';
                                 } else {
                                     visit.personType = 'employee';
                                 }
@@ -12536,7 +12542,7 @@ const Clinic = {
                             return sum;
                         }, 0);
                         
-                        Utils.safeLog(`✅ تم تحميل ${normalizedVisits.length} زيارة من الخادم؛ بعد الدمج: ${mergedVisits.length} (${mergedVisits.filter(v => v.personType === 'employee' || !v.personType).length} موظف، ${mergedVisits.filter(v => v.personType === 'contractor' || v.personType === 'external').length} مقاول)`);
+                        Utils.safeLog(`✅ تم تحميل ${normalizedVisits.length} زيارة من الخادم؛ بعد الدمج: ${mergedVisits.length} (${mergedVisits.filter(v => v.personType === 'employee' || !v.personType).length} موظف، ${mergedVisits.filter(v => v.personType === 'contractor').length} مقاول)`);
                         if (AppState.debugMode && visitsWithMeds.length > 0) {
                             Utils.safeLog(`   - ${visitsWithMeds.length} زيارة تحتوي على أدوية منصرفة`);
                             Utils.safeLog(`   - إجمالي ${totalMedsCount} دواء منصرف`);
@@ -12955,7 +12961,7 @@ const Clinic = {
                             employeeDepartment: visit.employeeDepartment || visit.department || '',
                             factory: factoryName,
                             location: location,
-                            personType: visit.personType || (visit.contractorName ? 'contractor' : (visit.externalName ? 'external' : 'employee')),
+                            personType: visit.personType || (visit.contractorName || visit.externalName ? 'contractor' : 'employee'),
                             medicationName: med.medicationName || med.name || '',
                             quantity: (med.quantity !== null && med.quantity !== undefined) ? parseInt(med.quantity, 10) : 0,
                             unit: med.unit || 'وحدة',
@@ -12983,7 +12989,7 @@ const Clinic = {
         // ✅ إضافة logging للتحقق من البيانات
         if (AppState.debugMode) {
             const employeeCount = dispensedMedications.filter(m => m.personType === 'employee' || !m.personType).length;
-            const contractorCount = dispensedMedications.filter(m => m.personType === 'contractor' || m.personType === 'external').length;
+            const contractorCount = dispensedMedications.filter(m => m.personType === 'contractor').length;
             Utils.safeLog(`✅ سجل الأدوية المنصرفة: ${dispensedMedications.length} دواء من ${visits.length} زيارة (${employeeCount} موظف، ${contractorCount} مقاول)`);
         }
 

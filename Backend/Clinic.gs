@@ -115,7 +115,7 @@ function normalizeClinicVisitForSheet_(visitData) {
 /**
  * تطبيع نوع الشخص لضمان الكتابة في الشيت الصحيح
  * يقبل: employee/contractor/external أو قيم عربية مثل (موظف/مقاول/خارجي/عمالة خارجية)
- * @return {string} 'employee' | 'contractor' | 'external'
+ * @return {string} 'employee' | 'contractor'
  */
 function normalizeClinicPersonType_(personType, visitData) {
     const raw = (personType || '').toString().trim().toLowerCase();
@@ -128,7 +128,7 @@ function normalizeClinicPersonType_(personType, visitData) {
             String(visitData.contractorPosition || '').trim() ||
             String(visitData.workArea || '').trim()
         ));
-        if (hasExternalName) return 'external';
+        if (hasExternalName) return 'contractor';
         if (hasContractorHint) return 'contractor';
         return 'employee';
     }
@@ -136,11 +136,11 @@ function normalizeClinicPersonType_(personType, visitData) {
     // English canonical
     if (raw === 'employee') return 'employee';
     if (raw === 'contractor') return 'contractor';
-    if (raw === 'external') return 'external';
+    if (raw === 'external') return 'contractor';
 
     // Arabic / mixed
     if (raw.includes('مقاول')) return 'contractor';
-    if (raw.includes('خار')) return 'external'; // خارجي / عمالة خارجية
+    if (raw.includes('خار')) return 'contractor'; // خارجي / عمالة خارجية => مقاول
     if (raw.includes('موظ')) return 'employee';
 
     // Fallback: treat unknown as employee
@@ -150,7 +150,7 @@ function normalizeClinicPersonType_(personType, visitData) {
 /**
  * تحديد اسم الشيت الصحيح حسب نوع الشخص
  * - employee/undefined -> ClinicVisits
- * - contractor/external -> ClinicContractorVisits
+ * - contractor -> ClinicContractorVisits
  */
 function getClinicVisitSheetName_(visitData) {
     // يجب تمرير visitData كاملاً لـ normalizeClinicPersonType_ عندما personType فارغ
@@ -159,21 +159,21 @@ function getClinicVisitSheetName_(visitData) {
         visitData && visitData.personType,
         visitData || {}
     );
-    if (type === 'contractor' || type === 'external') return 'ClinicContractorVisits';
+    if (type === 'contractor') return 'ClinicContractorVisits';
     return 'ClinicVisits';
 }
 
 /**
  * تحديد اسم شيت الإصابات حسب نوع الشخص
  * - employee -> Injuries (الجدول الحالي)
- * - contractor/external -> ClinicContractorInjuries (جدول جديد)
+ * - contractor -> ClinicContractorInjuries (جدول جديد)
  */
 function getClinicInjurySheetName_(injuryData) {
     const type = normalizeClinicPersonType_(
         injuryData && injuryData.personType,
         injuryData || {}
     );
-    if (type === 'contractor' || type === 'external') return 'ClinicContractorInjuries';
+    if (type === 'contractor') return 'ClinicContractorInjuries';
     return 'Injuries';
 }
 
