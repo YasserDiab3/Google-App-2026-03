@@ -3095,6 +3095,8 @@ const Utils = {
                 firstArgStr.includes('sendrequest (savetosheet)') ||
                 firstArgStr.includes('sendrequest (appendtosheet)') ||
                 firstArgStr.includes('sendrequest (readfromsheet)') ||
+                firstArgStr.includes('sendrequest (batchreadsheets)') ||
+                firstArgStr.includes('❌ فشل batch') ||
                 (firstArgStr.includes('خطأ في الوصول إلى الكاميرا') && (allArgsText.includes('notallowederror') || allArgsText.includes('permission denied'))) ||
                 (firstArgStr.includes('خطأ في الوصول إلى الكاميرا') && allArgsText.includes('permissions policy violation'));
 

@@ -1156,6 +1156,18 @@ const GoogleIntegration = {
         return this._addToQueue(action, data, retryCount);
     },
 
+    _isTransientRpcError(errorMessage = '') {
+        const msg = String(errorMessage || '').toLowerCase();
+        return msg.includes('timeout') ||
+            msg.includes('timed out') ||
+            msg.includes('aborterror') ||
+            msg.includes('aborted') ||
+            msg.includes('network request failed') ||
+            msg.includes('failed to fetch') ||
+            msg.includes('networkerror') ||
+            msg.includes('انتهت مهلة');
+    },
+
     /**
      * دوال ربط ومعالجة Google Apps Script (wrapper حول sendToAppsScript)
      * التعامل مع البيانات والعمليات المرتبطة بالنماذج، قواعد البيانات،
@@ -1300,7 +1312,21 @@ const GoogleIntegration = {
                     this._lastCircuitBreakerLog[action] = now;
                 }
             } else {
-                Utils.safeError(`sendRequest (${action}):`, errorMessage);
+                // أخطاء timeout/الشبكة المتقطعة متوقعة في الـ batch والقراءات الكبيرة:
+                // نسجلها كتحذير مقنن بدلاً من error متكرر يسبب ضوضاء.
+                if (this._isTransientRpcError(errorMessage) &&
+                    (action === 'batchReadSheets' || action === 'readFromSheet' || action === 'getAllData')) {
+                    const key = `${action}:${String(errorMessage).slice(0, 60)}`;
+                    const now = Date.now();
+                    this._transientWarnAt = this._transientWarnAt || {};
+                    const last = this._transientWarnAt[key] || 0;
+                    if (now - last > 15000) {
+                        Utils.safeWarn(`⚠️ تعذر إكمال ${action} حالياً (اتصال/مهلة). سيتم استخدام fallback عند الإمكان.`);
+                        this._transientWarnAt[key] = now;
+                    }
+                } else {
+                    Utils.safeError(`sendRequest (${action}):`, errorMessage);
+                }
             }
             throw new Error(errorMessage);
         }
@@ -1487,11 +1513,23 @@ const GoogleIntegration = {
                     throw new Error(result?.message || 'فشل في القراءة المجمعة');
                 }
             } catch (error) {
-                Utils.safeError(`❌ فشل batch ${batchIndex + 1}:`, error.message);
-                // إضافة كل الأوراق في هذا batch إلى الفاشلة
-                batch.forEach(sheetName => {
-                    failedSheets.push(sheetName);
-                });
+                Utils.safeWarn(`⚠️ فشل batch ${batchIndex + 1}، جاري fallback للقراءة المنفصلة`);
+                // fallback: قراءة كل ورقة منفصلة بدلاً من فشل الباتش بالكامل
+                for (let i = 0; i < batch.length; i++) {
+                    const sheetName = batch[i];
+                    try {
+                        const sheetData = await this.readFromSheets(sheetName, {
+                            timeout: Math.min(timeout, 15000),
+                            observationsRequestContext: options.observationsRequestContext || null
+                        });
+                        results[sheetName] = Array.isArray(sheetData) ? sheetData : [];
+                    } catch (fallbackError) {
+                        failedSheets.push(sheetName);
+                        if (AppState?.debugMode) {
+                            Utils.safeWarn(`⚠️ fallback failed for ${sheetName}: ${fallbackError?.message || fallbackError}`);
+                        }
+                    }
+                }
             }
         }
 

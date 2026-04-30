@@ -533,8 +533,8 @@ const IssuingAuthorities = {
                     <input type="text" id="ia-f-job-title" class="form-input" value="${val('jobTitle')}" placeholder="المسمى الوظيفي">
                 </div>
                 <div class="form-group">
-                    <label class="form-label">المصنع</label>
-                    <input type="text" id="ia-f-factory" class="form-input" value="${val('factory')}" placeholder="اسم المصنع">
+                    <label class="form-label">الفرع / Branch</label>
+                    <input type="text" id="ia-f-factory" class="form-input" value="${val('factory')}" placeholder="اسم الفرع">
                 </div>
                 </div>
                 <div class="ia-form-two-cols">
