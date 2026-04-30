@@ -51,17 +51,22 @@ const IssuingAuthorities = {
     },
 
     async _fetchViaReadFromSheet() {
-        const sheetName = this._activeCategory === 'contractors'
-            ? 'PTWContractorIssuingAuthorities'
-            : 'PTWIssuingAuthorities';
-        const fallbackResult = await GoogleIntegration.sendRequest({
-            action: 'readFromSheet',
-            data: { sheetName }
-        });
-        if (fallbackResult && fallbackResult.success) {
-            const raw = Array.isArray(fallbackResult.data) ? fallbackResult.data : [];
-            this._data = raw.map(r => this._normalizeRow(r)).filter(r => r.id || r.name);
-            return true;
+        try {
+            const sheetName = this._activeCategory === 'contractors'
+                ? 'PTWContractorIssuingAuthorities'
+                : 'PTWIssuingAuthorities';
+            const fallbackResult = await GoogleIntegration.sendRequest({
+                action: 'readFromSheet',
+                data: { sheetName }
+            });
+            if (fallbackResult && fallbackResult.success) {
+                const raw = Array.isArray(fallbackResult.data) ? fallbackResult.data : [];
+                this._data = raw.map(r => this._normalizeRow(r)).filter(r => r.id || r.name);
+                return true;
+            }
+        } catch (err) {
+            // Keep silent here to avoid noisy console loops on legacy backends.
+            // _fetchData() decides whether to show one final warning.
         }
         return false;
     },
@@ -254,10 +259,15 @@ const IssuingAuthorities = {
         <div class="ia-form ia-form-grid">
             <section class="ia-form-section">
                 <h4 class="ia-form-section-title">بيانات الشخص</h4>
+                <div class="ia-person-mode-hint" id="ia-person-mode-hint">
+                    ${personType === 'employee'
+                        ? 'وضع الموظف: أدخل الكود الوظيفي ثم اضغط "بحث" لملء البيانات تلقائياً.'
+                        : 'وضع المقاول: أدخل البيانات يدويًا.'}
+                </div>
                 <div class="ia-form-two-cols">
                 <div class="form-group">
                     <label class="form-label">نوع الشخص <span style="color:red;">*</span></label>
-                    <select id="ia-f-person-type" class="form-select">
+                    <select id="ia-f-person-type" class="form-select ia-form-select">
                         <option value="employee" ${personType === 'employee' ? 'selected' : ''}>موظف</option>
                         <option value="contractor" ${personType === 'contractor' ? 'selected' : ''}>مقاول</option>
                     </select>
@@ -273,31 +283,31 @@ const IssuingAuthorities = {
                 <div class="ia-form-two-cols">
                 <div class="form-group">
                     <label class="form-label">الاسم <span style="color:red;">*</span></label>
-                    <input type="text" id="ia-f-name" class="form-input" value="${val('name')}" placeholder="اسم الشخص المصرح له" required>
+                    <input type="text" id="ia-f-name" class="form-input" value="${val('name')}" placeholder="اسم الشخص المصرح له" ${personType === 'employee' ? 'readonly' : ''} required>
                 </div>
                 <div class="form-group">
                     <label class="form-label">الإدارة / القسم</label>
-                    <input type="text" id="ia-f-dept" class="form-input" value="${val('departmentName')}" placeholder="اسم الإدارة">
+                    <input type="text" id="ia-f-dept" class="form-input" value="${val('departmentName')}" placeholder="اسم الإدارة" ${personType === 'employee' ? 'readonly' : ''}>
                 </div>
                 </div>
                 <div class="ia-form-two-cols">
                 <div class="form-group">
                     <label class="form-label">الوظيفة</label>
-                    <input type="text" id="ia-f-job-title" class="form-input" value="${val('jobTitle')}" placeholder="المسمى الوظيفي">
+                    <input type="text" id="ia-f-job-title" class="form-input" value="${val('jobTitle')}" placeholder="المسمى الوظيفي" ${personType === 'employee' ? 'readonly' : ''}>
                 </div>
                 <div class="form-group">
                     <label class="form-label">المصنع</label>
-                    <input type="text" id="ia-f-factory" class="form-input" value="${val('factory')}" placeholder="اسم المصنع">
+                    <input type="text" id="ia-f-factory" class="form-input" value="${val('factory')}" placeholder="اسم المصنع" ${personType === 'employee' ? 'readonly' : ''}>
                 </div>
                 </div>
                 <div class="ia-form-two-cols">
                 <div class="form-group">
                     <label class="form-label">الموقع</label>
-                    <input type="text" id="ia-f-location" class="form-input" value="${val('location')}" placeholder="الموقع">
+                    <input type="text" id="ia-f-location" class="form-input" value="${val('location')}" placeholder="الموقع" ${personType === 'employee' ? 'readonly' : ''}>
                 </div>
                 <div class="form-group">
                     <label class="form-label">الموقع الفرعي</label>
-                    <input type="text" id="ia-f-sublocation" class="form-input" value="${val('sublocation')}" placeholder="الموقع الفرعي">
+                    <input type="text" id="ia-f-sublocation" class="form-input" value="${val('sublocation')}" placeholder="الموقع الفرعي" ${personType === 'employee' ? 'readonly' : ''}>
                 </div>
                 </div>
                 <div class="ia-form-two-cols">
@@ -351,11 +361,20 @@ const IssuingAuthorities = {
                 ? 'getAllContractorIssuingAuthorities'
                 : 'getAllIssuingAuthorities';
             let ok = false;
-            const result = await GoogleIntegration.sendRequest({ action: getAction, data: {} });
-            if (result && result.success) {
-                const raw = Array.isArray(result.data) ? result.data : [];
-                this._data = raw.map(r => this._normalizeRow(r)).filter(r => r.id || r.name);
-                ok = true;
+            try {
+                const result = await GoogleIntegration.sendRequest({ action: getAction, data: {} });
+                if (result && result.success) {
+                    const raw = Array.isArray(result.data) ? result.data : [];
+                    this._data = raw.map(r => this._normalizeRow(r)).filter(r => r.id || r.name);
+                    ok = true;
+                }
+            } catch (rpcErr) {
+                const msg = String((rpcErr && rpcErr.message) || '');
+                // Legacy production deployments may not have new actions yet.
+                // In that case, continue to readFromSheet fallback instead of surfacing hard errors.
+                if (!this._isActionUnknownMessage(msg) && typeof Utils !== 'undefined') {
+                    Utils.safeWarn(`تعذر تنفيذ ${getAction} وسيتم التحويل إلى fallback`, msg);
+                }
             }
             if (!ok) {
                 ok = await this._fetchViaReadFromSheet();
@@ -541,6 +560,22 @@ const IssuingAuthorities = {
         const type = (document.getElementById('ia-f-person-type')?.value || 'employee').toLowerCase();
         const codeWrap = document.getElementById('ia-employee-code-wrap');
         if (codeWrap) codeWrap.style.display = type === 'employee' ? '' : 'none';
+        const hint = document.getElementById('ia-person-mode-hint');
+        if (hint) {
+            hint.textContent = type === 'employee'
+                ? 'وضع الموظف: أدخل الكود الوظيفي ثم اضغط "بحث" لملء البيانات تلقائياً.'
+                : 'وضع المقاول: أدخل البيانات يدويًا.';
+        }
+        const autoFields = ['ia-f-name', 'ia-f-dept', 'ia-f-job-title', 'ia-f-factory', 'ia-f-location', 'ia-f-sublocation'];
+        autoFields.forEach(id => {
+            const el = document.getElementById(id);
+            if (!el) return;
+            if (type === 'employee') {
+                el.setAttribute('readonly', 'readonly');
+            } else {
+                el.removeAttribute('readonly');
+            }
+        });
     },
 
     async _lookupEmployeeByCode() {
@@ -858,6 +893,36 @@ const IssuingAuthorities = {
             .ia-form-section-title { margin:0 0 10px; color:#1e3a8a; font-size:0.95rem; font-weight:700; }
             .ia-form-section-subtitle { display:block; margin-top:4px; color:#475569; font-size:0.78rem; font-weight:500; }
             .ia-form-two-cols { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+            .ia-form-select,
+            .ia-form .form-input,
+            .ia-form .form-select {
+                width:100%;
+                border:1px solid #cbd5e1;
+                border-radius:8px;
+                padding:10px 12px;
+                font-size:0.9rem;
+                background:#fff;
+            }
+            .ia-form .form-input:focus,
+            .ia-form .form-select:focus {
+                outline:none;
+                border-color:#3b82f6;
+                box-shadow:0 0 0 3px rgba(59,130,246,0.15);
+            }
+            .ia-form .form-input[readonly] {
+                background:#f8fafc;
+                color:#475569;
+            }
+            .ia-person-mode-hint {
+                margin-bottom:10px;
+                padding:8px 10px;
+                border-radius:8px;
+                background:#f1f5f9;
+                border:1px dashed #cbd5e1;
+                color:#334155;
+                font-size:0.82rem;
+                font-weight:600;
+            }
             .ia-legend-inline {
                 display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-bottom:10px;
                 color:#334155; font-size:0.8rem;
