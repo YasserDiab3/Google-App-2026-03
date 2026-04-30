@@ -11,6 +11,29 @@ const Violations = {
         status: ''
     },
 
+    parseFineAmount(value) {
+        if (value === null || value === undefined || value === '') return 0;
+        if (typeof value === 'number') {
+            return Number.isFinite(value) && value >= 0 ? value : 0;
+        }
+        const normalized = String(value)
+            .replace(/[,\u066C]/g, '')
+            .replace(/[^\d.\-]/g, '');
+        const parsed = Number(normalized);
+        return Number.isFinite(parsed) && parsed >= 0 ? parsed : 0;
+    },
+
+    normalizeViolationRecord(record) {
+        if (!record || typeof record !== 'object') return null;
+        const fineAmount = this.parseFineAmount(record.fineAmount ?? record.defaultFineAmount ?? 0);
+        const personType = record.personType || (record.contractorName ? 'contractor' : 'employee');
+        return {
+            ...record,
+            personType,
+            fineAmount
+        };
+    },
+
     async load() {
         // Add language change listener
         if (!this._languageChangeListenerAdded) {
@@ -241,7 +264,9 @@ const Violations = {
             ]);
 
             if (Array.isArray(violationsData)) {
-                AppState.appData.violations = violationsData;
+                AppState.appData.violations = violationsData
+                    .map((item) => this.normalizeViolationRecord(item))
+                    .filter(Boolean);
             }
             if (Array.isArray(typesData)) {
                 AppState.appData.violationTypes = typesData;
@@ -411,7 +436,9 @@ const Violations = {
             if (typeof AppState === 'undefined' || !AppState.appData) {
                 return [];
             }
-            const violations = AppState.appData.violations || [];
+            const violations = (AppState.appData.violations || [])
+                .map((item) => this.normalizeViolationRecord(item))
+                .filter(Boolean);
             const filters = this.currentFilters || {};
 
             const personFilter = filters.personType || '';
@@ -2442,12 +2469,12 @@ const Violations = {
                 const fineAmountRaw = document.getElementById('violation-fine-amount')?.value;
                 let fineAmount = '';
                 if (fineAmountRaw !== '' && fineAmountRaw !== null && fineAmountRaw !== undefined) {
-                    const fineAmountParsed = Number(fineAmountRaw);
+                    const fineAmountParsed = this.parseFineAmount(fineAmountRaw);
                     if (Number.isFinite(fineAmountParsed) && fineAmountParsed >= 0) {
                         fineAmount = fineAmountParsed;
                     }
                 } else {
-                    fineAmount = getDefaultFineAmountForSelectedType();
+                    fineAmount = this.parseFineAmount(getDefaultFineAmountForSelectedType());
                 }
 
                 // التحقق من البيانات الإلزامية
@@ -2596,7 +2623,7 @@ const Violations = {
                     contractorDepartment: personType === 'contractor' ? document.getElementById('violation-contractor-department')?.value.trim() || '' : '',
                     violationTypeId: violationTypeId,
                     violationType: violationType,
-                    fineAmount: fineAmount,
+                    fineAmount: this.parseFineAmount(fineAmount),
                     violationDate: violationDateTime,
                     violationTime: violationTime,
                     // حفظ ID الموقع واسمه
