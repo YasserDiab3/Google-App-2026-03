@@ -344,21 +344,35 @@ function getContractorIssuingAuthoritiesForPermitType(permitType) {
  */
 function getEmployeeByCode(employeeCode) {
     try {
-        const code = String(employeeCode || '').trim();
-        if (!code) return { success: false, message: 'الكود الوظيفي مطلوب' };
+        const query = String(employeeCode || '').trim();
+        if (!query) return { success: false, message: 'الكود الوظيفي أو الاسم مطلوب' };
 
         const spreadsheetId = getSpreadsheetId();
         const employees = readFromSheet('Employees', spreadsheetId) || [];
         const normalize = function (v) { return String(v || '').trim().toLowerCase(); };
-        const target = normalize(code);
-        const emp = employees.find(function (e) {
+        const target = normalize(query);
+
+        // Try strict match by code/id first
+        let emp = employees.find(function (e) {
             return normalize(e.employeeNumber) === target ||
-                   normalize(e.sapId) === target ||
-                   normalize(e.id) === target ||
-                   normalize(e.employeeCode) === target;
+                normalize(e.sapId) === target ||
+                normalize(e.id) === target ||
+                normalize(e.employeeCode) === target;
         });
 
-        if (!emp) return { success: false, message: 'لم يتم العثور على موظف بهذا الكود' };
+        // Fallback: match by name (exact then includes)
+        if (!emp) {
+            emp = employees.find(function (e) {
+                return normalize(e.name) === target;
+            });
+        }
+        if (!emp) {
+            emp = employees.find(function (e) {
+                return normalize(e.name).indexOf(target) !== -1;
+            });
+        }
+
+        if (!emp) return { success: false, message: 'لم يتم العثور على موظف بهذا الكود/الاسم' };
         return {
             success: true,
             data: {
@@ -368,7 +382,7 @@ function getEmployeeByCode(employeeCode) {
                 jobTitle: String(emp.job || emp.position || '').trim(),
                 factory: String(emp.branch || '').trim(),
                 location: String(emp.location || '').trim(),
-                sublocation: ''
+                sublocation: String(emp.sublocation || emp.subLocation || emp.subLocationName || emp.locationName || '').trim()
             }
         };
     } catch (error) {

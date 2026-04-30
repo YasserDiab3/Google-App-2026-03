@@ -287,31 +287,31 @@ const IssuingAuthorities = {
                 <div class="ia-form-two-cols">
                 <div class="form-group">
                     <label class="form-label">الاسم <span style="color:red;">*</span></label>
-                    <input type="text" id="ia-f-name" class="form-input" value="${val('name')}" placeholder="اسم الشخص المصرح له" ${personType === 'employee' ? 'readonly' : ''} required>
+                    <input type="text" id="ia-f-name" class="form-input" value="${val('name')}" placeholder="اسم الشخص المصرح له" required>
                 </div>
                 <div class="form-group">
                     <label class="form-label">الإدارة / القسم</label>
-                    <input type="text" id="ia-f-dept" class="form-input" value="${val('departmentName')}" placeholder="اسم الإدارة" ${personType === 'employee' ? 'readonly' : ''}>
+                    <input type="text" id="ia-f-dept" class="form-input" value="${val('departmentName')}" placeholder="اسم الإدارة">
                 </div>
                 </div>
                 <div class="ia-form-two-cols">
                 <div class="form-group">
                     <label class="form-label">الوظيفة</label>
-                    <input type="text" id="ia-f-job-title" class="form-input" value="${val('jobTitle')}" placeholder="المسمى الوظيفي" ${personType === 'employee' ? 'readonly' : ''}>
+                    <input type="text" id="ia-f-job-title" class="form-input" value="${val('jobTitle')}" placeholder="المسمى الوظيفي">
                 </div>
                 <div class="form-group">
                     <label class="form-label">المصنع</label>
-                    <input type="text" id="ia-f-factory" class="form-input" value="${val('factory')}" placeholder="اسم المصنع" ${personType === 'employee' ? 'readonly' : ''}>
+                    <input type="text" id="ia-f-factory" class="form-input" value="${val('factory')}" placeholder="اسم المصنع">
                 </div>
                 </div>
                 <div class="ia-form-two-cols">
                 <div class="form-group">
                     <label class="form-label">الموقع</label>
-                    <input type="text" id="ia-f-location" class="form-input" value="${val('location')}" placeholder="الموقع" ${personType === 'employee' ? 'readonly' : ''}>
+                    <input type="text" id="ia-f-location" class="form-input" value="${val('location')}" placeholder="الموقع">
                 </div>
                 <div class="form-group">
                     <label class="form-label">الموقع الفرعي</label>
-                    <input type="text" id="ia-f-sublocation" class="form-input" value="${val('sublocation')}" placeholder="الموقع الفرعي" ${personType === 'employee' ? 'readonly' : ''}>
+                    <input type="text" id="ia-f-sublocation" class="form-input" value="${val('sublocation')}" placeholder="الموقع الفرعي">
                 </div>
                 </div>
                 <div class="ia-form-two-cols">
@@ -562,6 +562,14 @@ const IssuingAuthorities = {
 
         document.getElementById('ia-lookup-employee-btn')?.addEventListener('click', () => this._lookupEmployeeByCode());
         document.getElementById('ia-f-employee-code')?.addEventListener('blur', () => this._lookupEmployeeByCode());
+        document.getElementById('ia-f-name')?.addEventListener('blur', () => {
+            const personType = (document.getElementById('ia-f-person-type')?.value || 'employee').toLowerCase();
+            const code = (document.getElementById('ia-f-employee-code')?.value || '').trim();
+            const name = (document.getElementById('ia-f-name')?.value || '').trim();
+            if (personType === 'employee' && !code && name) {
+                this._lookupEmployeeByCode(name);
+            }
+        });
     },
 
     _togglePersonTypeInputs() {
@@ -574,37 +582,45 @@ const IssuingAuthorities = {
                 ? 'وضع الموظف: أدخل الكود الوظيفي ثم اضغط "بحث" لملء البيانات تلقائياً.'
                 : 'وضع المقاول: أدخل البيانات يدويًا.';
         }
-        const autoFields = ['ia-f-name', 'ia-f-dept', 'ia-f-job-title', 'ia-f-factory', 'ia-f-location', 'ia-f-sublocation'];
+        const autoFields = ['ia-f-name', 'ia-f-dept', 'ia-f-job-title', 'ia-f-factory'];
         autoFields.forEach(id => {
             const el = document.getElementById(id);
             if (!el) return;
             if (type === 'employee') {
-                el.setAttribute('readonly', 'readonly');
+                el.removeAttribute('readonly');
             } else {
                 el.removeAttribute('readonly');
             }
         });
     },
 
-    async _lookupEmployeeByCode() {
+    async _lookupEmployeeByCode(queryOverride) {
         try {
             const personType = (document.getElementById('ia-f-person-type')?.value || 'employee').toLowerCase();
             if (personType !== 'employee') return;
-            const code = (document.getElementById('ia-f-employee-code')?.value || '').trim();
-            if (!code) return;
+            const query = String(queryOverride || '').trim() || (document.getElementById('ia-f-employee-code')?.value || '').trim();
+            if (!query) return;
             const result = await GoogleIntegration.sendRequest({
                 action: 'getEmployeeByCode',
-                data: { employeeCode: code }
+                data: { employeeCode: query }
             });
-            if (!result || !result.success || !result.data) return;
+            if (!result || !result.success || !result.data) {
+                if (typeof Utils !== 'undefined' && Utils.showNotification) {
+                    Utils.showNotification((result && result.message) || 'لم يتم العثور على بيانات موظف', 'warning');
+                }
+                return;
+            }
             const data = result.data;
             if (document.getElementById('ia-f-name')) document.getElementById('ia-f-name').value = data.name || '';
             if (document.getElementById('ia-f-dept')) document.getElementById('ia-f-dept').value = data.departmentName || '';
             if (document.getElementById('ia-f-job-title')) document.getElementById('ia-f-job-title').value = data.jobTitle || '';
             if (document.getElementById('ia-f-factory')) document.getElementById('ia-f-factory').value = data.factory || '';
             if (document.getElementById('ia-f-location')) document.getElementById('ia-f-location').value = data.location || '';
-            if (document.getElementById('ia-f-sublocation') && !document.getElementById('ia-f-sublocation').value) {
+            if (document.getElementById('ia-f-sublocation')) {
                 document.getElementById('ia-f-sublocation').value = data.sublocation || '';
+            }
+            if (typeof Utils !== 'undefined' && Utils.showNotification) {
+                Utils.showNotification('تم تحميل بيانات الموظف بنجاح', 'success');
             }
         } catch (err) {
             if (typeof Utils !== 'undefined') Utils.safeWarn('تعذر جلب بيانات الموظف بالكود الوظيفي');
