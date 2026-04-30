@@ -250,7 +250,8 @@ const MODULE_PERMISSIONS_CONFIG = [
     { key: 'settings', label: 'الإعدادات', icon: 'fa-cog', adminOnly: true },
     { key: 'action-tracking', label: 'سجل متابعة الإجراءات', icon: 'fa-clipboard-list' },
     { key: 'issue-tracking', label: 'تتبع المشاكل', icon: 'fa-bug', hasDetailedPermissions: true },
-    { key: 'change-management', label: 'إدارة التغيرات', icon: 'fa-exchange-alt', hasDetailedPermissions: true }
+    { key: 'change-management', label: 'إدارة التغيرات', icon: 'fa-exchange-alt', hasDetailedPermissions: true },
+    { key: 'issuing-authorities', label: 'المصرح لهم بالتوقيع على تصاريح العمل', icon: 'fa-user-check', parentModule: 'ptw', adminOnly: true }
 ];
 
 const buildRoleDefaults = (enabledKeys = []) => {

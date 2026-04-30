@@ -200,7 +200,9 @@ function doPost(e) {
             'getAllSupplyRequests',
             'getAllClinicVisitDeletionRequests',
             'getContractorDetailedAnalytics',
-            'getAllAppEmergencyNumbers'
+            'getAllAppEmergencyNumbers',
+            'getAllIssuingAuthorities',
+            'getIssuingAuthoritiesForPermitType'
         ];
         
         // قائمة بالـ actions الحساسة التي تتطلب CSRF token إلزامي
@@ -593,6 +595,27 @@ function doPost(e) {
                     break;
                 case 'getPTWAlerts':
                     result = getPTWAlerts();
+                    break;
+                // ============================================
+                // Issuing Authorities - المصرح لهم بالتوقيع على تصاريح العمل
+                // ============================================
+                case 'getAllIssuingAuthorities':
+                    result = getAllIssuingAuthorities();
+                    break;
+                case 'addIssuingAuthority':
+                    result = addIssuingAuthority(payload);
+                    break;
+                case 'updateIssuingAuthority':
+                    result = updateIssuingAuthority(payload.id || payload.recordId, payload);
+                    break;
+                case 'deleteIssuingAuthority':
+                    result = deleteIssuingAuthority(payload.id || payload.recordId, payload.userData || payload.user);
+                    break;
+                case 'getIssuingAuthoritiesForPermitType':
+                    result = getIssuingAuthoritiesForPermitType(payload.permitType);
+                    break;
+                case 'initIssuingAuthoritiesTable':
+                    result = initIssuingAuthoritiesTable();
                     break;
                 case 'addViolation':
                     result = addViolationToSheet(payload);

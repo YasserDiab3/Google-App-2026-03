@@ -46,7 +46,8 @@ const MODULES_TO_LOAD = [
     'useraiassistant',
     'issuetracking',
     'changemanagement',
-    'apptester'
+    'apptester',
+    'issuingauthorities'
 ];
 
 /** عدد إعادة المحاولات عند 503 أو فشل التحميل */

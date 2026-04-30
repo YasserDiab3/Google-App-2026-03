@@ -6545,6 +6545,25 @@ window.UI = {
                         }
                     }
                     break;
+                case 'issuing-authorities':
+                    Utils.safeLog('تحميل موديول المصرح لهم بالتوقيع في قسم issuing-authorities-section');
+                    if (typeof IssuingAuthorities !== 'undefined' && IssuingAuthorities.load) {
+                        try {
+                            const loadResult = IssuingAuthorities.load();
+                            if (loadResult && typeof loadResult.then === 'function') {
+                                loadResult.catch(error => {
+                                    Utils.safeError('خطأ في تحميل موديول Issuing Authorities:', error);
+                                });
+                            }
+                        } catch (error) {
+                            Utils.safeError('خطأ في استدعاء IssuingAuthorities.load:', error);
+                        }
+                    } else {
+                        if (!silent) {
+                            Utils.safeError('❌ موديول IssuingAuthorities غير متوفر - الموديول لم يُحمّل بشكل صحيح');
+                        }
+                    }
+                    break;
                 default:
                     Utils.safeWarn('قسم غير معروف:', sectionName);
             }

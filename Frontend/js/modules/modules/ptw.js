@@ -9679,7 +9679,204 @@ const PTW = {
         }
     },
 
-    prepareApprovalsForForm(ptwData = null) {
+    /**
+     * استخراج أنواع التصاريح النشطة من بيانات التصريح
+     * يُعيد مصفوفة بمفاتيح حقول IssuingAuthorities (coldWork, loto, hotWork...)
+     */
+    _extractPermitTypeFields(ptwData) {
+        if (!ptwData) return [];
+        const types = [];
+        if (ptwData.hotWorkDetails && (Array.isArray(ptwData.hotWorkDetails) ? ptwData.hotWorkDetails.length > 0 : true)) {
+            types.push('hotWork');
+        }
+        if (ptwData.confinedSpaceDetails && (Array.isArray(ptwData.confinedSpaceDetails) ? ptwData.confinedSpaceDetails.length > 0 : true)) {
+            types.push('confinedSpace');
+        }
+        if (ptwData.heightWorkDetails && (Array.isArray(ptwData.heightWorkDetails) ? ptwData.heightWorkDetails.length > 0 : true)) {
+            types.push('workAtHeight');
+        }
+        if (ptwData.lotoApplied === true || ptwData.lotoApplied === 'true') {
+            types.push('loto');
+        }
+        if (ptwData.coldWorkType && String(ptwData.coldWorkType).trim()) {
+            types.push('coldWork');
+        }
+        if (ptwData.excavationLength || ptwData.excavationWidth || ptwData.excavationDepth) {
+            types.push('excavation');
+        }
+        // حقل permitType/workType قد يحتوي على إشارات للمقاول وخطة الرفع
+        const permitTypeStr = String(ptwData.permitType || ptwData.workType || '').toLowerCase();
+        if (permitTypeStr.includes('مقاول') || permitTypeStr.includes('contractor')) {
+            types.push('contractorPTW');
+        }
+        if (permitTypeStr.includes('رفع') || permitTypeStr.includes('lifting')) {
+            types.push('liftingPlan');
+        }
+        // إذا لم يُكتشف أي نوع، ننظر في permitType كمصفوفة أو نص
+        if (types.length === 0 && ptwData.permitType) {
+            const ptArr = Array.isArray(ptwData.permitType) ? ptwData.permitType : [ptwData.permitType];
+            const iaModule = typeof IssuingAuthorities !== 'undefined' ? IssuingAuthorities : null;
+            if (iaModule && typeof iaModule.mapPermitTypeToField === 'function') {
+                ptArr.forEach(pt => {
+                    const field = iaModule.mapPermitTypeToField(pt);
+                    if (field && !types.includes(field)) types.push(field);
+                });
+            }
+        }
+        return [...new Set(types)];
+    },
+
+    /**
+     * بناء خطوات الـ Workflow من قائمة Issuing Authorities
+     *
+     * الخوارزمية:
+     *   - لكل نوع تصريح نشط → جلب المرشحين من القائمة
+     *   - دمج جميع المرشحين (بإزالة التكرار بـ id)
+     *   - G → خطوة اعتماد مباشرة
+     *   - Y → خطوة اعتماد + خطوة HSE Co-Approval قبله
+     *   - إذا لا يوجد مرشح صالح → إعادة null (fallback للدوائر الحالية)
+     */
+    async _buildIssuingAuthoritiesWorkflow(permitTypeFields) {
+        if (!permitTypeFields || permitTypeFields.length === 0) return null;
+        const iaModule = typeof IssuingAuthorities !== 'undefined' ? IssuingAuthorities : null;
+        if (!iaModule || typeof iaModule.getAuthoritiesForPermitType !== 'function') return null;
+
+        const allAuthoritiesMap = {};
+        for (const field of permitTypeFields) {
+            try {
+                const list = await iaModule.getAuthoritiesForPermitType(field);
+                (list || []).forEach(auth => {
+                    const key = auth.id || auth.email || auth.name;
+                    if (!key) return;
+                    if (!allAuthoritiesMap[key]) {
+                        allAuthoritiesMap[key] = { ...auth, _permitFields: [] };
+                    }
+                    allAuthoritiesMap[key]._permitFields.push(field);
+                    // إذا كان G في أي نوع → يبقى G (الأولوية لـ G)
+                    if (auth.permitLevel === 'G') {
+                        allAuthoritiesMap[key].permitLevel = 'G';
+                        allAuthoritiesMap[key].requiresHseCoApproval = false;
+                    }
+                });
+            } catch (err) {
+                if (typeof Utils !== 'undefined') Utils.safeWarn('_buildIssuingAuthoritiesWorkflow fetch error:', err);
+            }
+        }
+
+        const authorities = Object.values(allAuthoritiesMap);
+        if (authorities.length === 0) return null;
+
+        const approvals = [];
+        let order = 0;
+
+        // نفصل G عن Y لترتيب G أولاً
+        const gAuthorities = authorities.filter(a => a.permitLevel === 'G');
+        const yAuthorities = authorities.filter(a => a.permitLevel === 'Y');
+
+        // مرشحو G → خطوة واحدة مع candidates (بدون شرط إضافي)
+        if (gAuthorities.length > 0) {
+            approvals.push({
+                role: 'مسؤول الجهة المصرح لهم بالتوقيع (G)',
+                required: true,
+                approved: false,
+                rejected: false,
+                status: 'pending',
+                approver: '',
+                approverEmail: '',
+                approverId: '',
+                date: '',
+                comments: '',
+                order: order++,
+                isSafetyOfficer: false,
+                issuingAuthoritySource: true,
+                requiresHseCoApproval: false,
+                candidates: gAuthorities.map(a => ({
+                    id: a.id || '',
+                    name: a.name || '',
+                    email: a.email || '',
+                    phone: a.phone || '',
+                    permitLevel: 'G'
+                }))
+            });
+        }
+
+        // مرشحو Y → خطوة HSE Co-Approval أولاً، ثم خطوة التوقيع
+        if (yAuthorities.length > 0) {
+            // خطوة 1: تنسيق مدير السلامة (HSE Gate)
+            const hseSafetyTeam = this._getHseSafetyTeamCandidates();
+            approvals.push({
+                role: 'مسؤول السلامة والصحة المهنية (تنسيق Y)',
+                required: true,
+                approved: false,
+                rejected: false,
+                status: 'pending',
+                approver: '',
+                approverEmail: '',
+                approverId: '',
+                date: '',
+                comments: '',
+                order: order++,
+                isSafetyOfficer: true,
+                issuingAuthoritySource: true,
+                requiresHseCoApproval: false,
+                isHseCoApprovalGate: true,
+                candidates: hseSafetyTeam
+            });
+            // خطوة 2: توقيع الشخص (Y)
+            approvals.push({
+                role: 'مسؤول الجهة المصرح لهم بالتوقيع (Y - بعد تنسيق HSE)',
+                required: true,
+                approved: false,
+                rejected: false,
+                status: 'pending',
+                approver: '',
+                approverEmail: '',
+                approverId: '',
+                date: '',
+                comments: '',
+                order: order++,
+                isSafetyOfficer: false,
+                issuingAuthoritySource: true,
+                requiresHseCoApproval: true,
+                candidates: yAuthorities.map(a => ({
+                    id: a.id || '',
+                    name: a.name || '',
+                    email: a.email || '',
+                    phone: a.phone || '',
+                    permitLevel: 'Y'
+                }))
+            });
+        }
+
+        if (approvals.length === 0) return null;
+
+        return {
+            approvals,
+            circuitOwnerId: '__issuing_authorities__',
+            circuitName: 'قائمة المصرح لهم بالتوقيع',
+            issuingAuthoritiesSource: true
+        };
+    },
+
+    /**
+     * الحصول على مرشحي فريق السلامة لخطوة HSE Co-Approval
+     */
+    _getHseSafetyTeamCandidates() {
+        try {
+            const safetyTeam = AppState?.appData?.safetyTeam || AppState?.formSettingsState?.safetyTeam || [];
+            if (Array.isArray(safetyTeam) && safetyTeam.length > 0) {
+                return safetyTeam.slice(0, 5).map(m => ({
+                    id: m.id || m.employeeCode || '',
+                    name: m.name || m.memberName || '',
+                    email: m.email || '',
+                    phone: m.phone || ''
+                })).filter(m => m.name);
+            }
+        } catch (e) {}
+        return [];
+    },
+
+    async prepareApprovalsForForm(ptwData = null) {
         // التصاريح اليدوية لا تستخدم دائرة الاعتمادات النظامية
         if (ptwData && ptwData.isManualEntry === true) {
             return {
@@ -9702,6 +9899,26 @@ const PTW = {
             };
         }
 
+        // ✅ محاولة توليد الـ workflow من قائمة Issuing Authorities
+        try {
+            const permitTypeFields = this._extractPermitTypeFields(ptwData);
+            if (permitTypeFields.length > 0) {
+                const iaWorkflow = await this._buildIssuingAuthoritiesWorkflow(permitTypeFields);
+                if (iaWorkflow && iaWorkflow.approvals && iaWorkflow.approvals.length > 0) {
+                    const approvals = this.normalizeApprovals(iaWorkflow.approvals);
+                    return {
+                        approvals,
+                        circuitOwnerId: iaWorkflow.circuitOwnerId,
+                        circuitName: iaWorkflow.circuitName,
+                        issuingAuthoritiesSource: true
+                    };
+                }
+            }
+        } catch (iaErr) {
+            if (typeof Utils !== 'undefined') Utils.safeWarn('فشل توليد workflow من IssuingAuthorities، سيتم استخدام ApprovalCircuits:', iaErr);
+        }
+
+        // fallback: ApprovalCircuits الحالية
         const requesterId = AppState.currentUser?.id || '';
         const generated = ApprovalCircuits.generateApprovalsForUser(requesterId);
         const approvals = this.normalizeApprovals(generated.approvals || []);
@@ -9778,7 +9995,7 @@ const PTW = {
     async renderForm(ptwData = null) {
         const isEdit = !!ptwData;
         const isManual = ptwData?.isManualEntry === true;
-        const approvalPackage = this.prepareApprovalsForForm(ptwData);
+        const approvalPackage = await this.prepareApprovalsForForm(ptwData);
         const approvals = approvalPackage.approvals || [];
         this.formApprovals = approvals.map(approval => Object.assign({}, approval));
         this.formCircuitOwnerId = approvalPackage.circuitOwnerId || '__default__';
@@ -11512,13 +11729,31 @@ const PTW = {
 
         if (!formData.workDescription || !formData.location || !formData.status) {
             Notification.error(this._t('module.ptw.notify.fillRequired', 'يرجى ملء جميع الحقول المطلوبة'));
-            // استعادة حالة الزر عند فشل التحقق
             this._isSubmitting = false;
             if (submitBtn) {
                 submitBtn.disabled = false;
                 submitBtn.innerHTML = originalText;
             }
             return;
+        }
+
+        // ✅ التحقق من وجود معتمدين صالحين عند استخدام Issuing Authorities كمصدر للـ workflow
+        if (isNewPermit &&
+            this.formCircuitOwnerId === '__issuing_authorities__' &&
+            (!formData.approvals || formData.approvals.length === 0)) {
+            const permitTypeFields = this._extractPermitTypeFields(formData);
+            if (permitTypeFields.length > 0) {
+                Notification.error(
+                    'لا يوجد أشخاص مصرح لهم بالتوقيع على هذا النوع من التصاريح. ' +
+                    'يرجى مراجعة قائمة المصرح لهم بالتوقيع (Issuing Authorities) أو التنسيق مع مدير النظام.'
+                );
+                this._isSubmitting = false;
+                if (submitBtn) {
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = originalText;
+                }
+                return;
+            }
         }
 
         try {

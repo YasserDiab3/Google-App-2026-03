@@ -240,7 +240,18 @@ function getDefaultHeaders(sheetName) {
         'BackupLog': ['id', 'backupType', 'backupName', 'fileId', 'fileUrl', 'fileName', 'fileSize', 'fileSizeFormatted', 'sheetsCount', 'totalRecords', 'sheetsDetails', 'sourceSpreadsheetId', 'sourceSpreadsheetName', 'status', 'duration', 'errorMessage', 'restoredFromBackupId', 'restoredSheets', 'errors', 'createdBy', 'createdById', 'createdAt', 'updatedAt'],
         'BackupSettings': ['id', 'autoBackupEnabled', 'backupTimes', 'maxBackupFiles', 'backupFolderName', 'retentionDays', 'notifyOnBackup', 'notifyOnFailure', 'updatedAt', 'updatedBy', 'updatedById'],
         // أرقام طوارئ المؤسسة (يُديرها المدير) — تظهر في الملف الشخصي والبطاقة العامة
-        'AppEmergencyNumbers': ['id', 'label', 'phone', 'sortOrder', 'isActive', 'createdAt', 'updatedAt']
+        'AppEmergencyNumbers': ['id', 'label', 'phone', 'sortOrder', 'isActive', 'createdAt', 'updatedAt'],
+        // ✅ قائمة الأشخاص المصرح لهم بالتوقيع على تصاريح العمل (Issuing Authorities)
+        // G = مصرح بالتوقيع في كل الحالات
+        // Y = مصرح بالتوقيع بعد التنسيق مع مدير السلامة (يُضاف شرط HSE)
+        // X = غير مصرح له بالتوقيع
+        'PTWIssuingAuthorities': [
+            'id', 'name', 'departmentId', 'departmentName', 'email', 'phone', 'isActive',
+            'coldWork', 'loto', 'hotWork', 'workAtHeight', 'confinedSpace',
+            'excavation', 'contractorPTW', 'liftingPlan',
+            'sortOrder', 'notes',
+            'createdAt', 'updatedAt', 'createdBy', 'updatedBy'
+        ]
     };
     
     return headersMap[sheetName] || [];
