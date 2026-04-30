@@ -3085,7 +3085,22 @@ const Clinic = {
      * @returns {string[]}
      */
     getVisitTypeOptions() {
-        const custom = AppState.appData?.clinicVisitTypes;
+        let custom = AppState.companySettings?.clinicVisitTypes;
+        if (typeof custom === 'string') {
+            const raw = custom.trim();
+            if (raw) {
+                try {
+                    custom = JSON.parse(raw);
+                } catch (e) {
+                    custom = raw.split(/\n|,/).map((item) => item.trim()).filter(Boolean);
+                }
+            } else {
+                custom = [];
+            }
+        }
+        if ((!Array.isArray(custom) || custom.length === 0) && AppState.appData?.clinicVisitTypes) {
+            custom = AppState.appData.clinicVisitTypes;
+        }
         if (Array.isArray(custom) && custom.length > 0) {
             return custom.map((v) => (typeof v === 'string' ? v.trim() : String(v))).filter(Boolean);
         }
@@ -3226,7 +3241,7 @@ const Clinic = {
             items = listToEditableItems(this.DEFAULT_VISIT_TYPES || []);
             renderList();
         });
-        modal.querySelector('#clinic-visit-types-save').addEventListener('click', () => {
+        modal.querySelector('#clinic-visit-types-save').addEventListener('click', async () => {
             modal.querySelectorAll('#clinic-visit-types-list input').forEach(input => {
                 const id = input.getAttribute('data-id');
                 const it = items.find(i => i.id === id);
@@ -3239,10 +3254,35 @@ const Clinic = {
             }
             if (!AppState.appData) AppState.appData = {};
             AppState.appData.clinicVisitTypes = list;
+            if (!AppState.companySettings || typeof AppState.companySettings !== 'object') {
+                AppState.companySettings = {};
+            }
+            AppState.companySettings.clinicVisitTypes = list;
+
+            // حفظ مركزي في إعدادات الشركة ليظهر لجميع المستخدمين
+            try {
+                const userData = AppState.currentUser || {};
+                const savePayload = {
+                    ...AppState.companySettings,
+                    clinicVisitTypes: list,
+                    userData
+                };
+                const result = await GoogleIntegration.sendRequest({
+                    action: 'saveCompanySettings',
+                    data: savePayload
+                });
+                if (!result || result.success !== true) {
+                    throw new Error((result && result.message) || 'تعذر حفظ أنواع الزيارة في قاعدة البيانات');
+                }
+            } catch (error) {
+                Notification?.error?.(error?.message || 'تعذر حفظ أنواع الزيارة لجميع المستخدمين');
+                return;
+            }
+
             if (typeof DataManager !== 'undefined' && DataManager.save) {
                 DataManager.save();
             }
-            Notification?.success?.('تم حفظ قائمة أنواع الزيارة');
+            Notification?.success?.('تم حفظ قائمة أنواع الزيارة وتعميمها على المستخدمين');
             modal.remove();
         });
         modal.querySelectorAll('.modal-close, .modal-close-btn').forEach(btn => {

@@ -460,6 +460,24 @@ const Permissions = {
                     }
                     if (!Array.isArray(postLoginItems)) postLoginItems = [];
 
+                    // تحليل clinicVisitTypes إذا كانت نصاً (JSON)
+                    let clinicVisitTypes = AppState.companySettings?.clinicVisitTypes;
+                    if (companyResult.data.clinicVisitTypes !== undefined) {
+                        const rawClinicTypes = companyResult.data.clinicVisitTypes;
+                        if (typeof rawClinicTypes === 'string' && rawClinicTypes.trim() !== '') {
+                            try {
+                                clinicVisitTypes = JSON.parse(rawClinicTypes);
+                            } catch (e) {
+                                clinicVisitTypes = rawClinicTypes.split(/\n|,/).map((item) => item.trim()).filter(Boolean);
+                            }
+                        } else if (Array.isArray(rawClinicTypes)) {
+                            clinicVisitTypes = rawClinicTypes;
+                        } else {
+                            clinicVisitTypes = [];
+                        }
+                    }
+                    if (!Array.isArray(clinicVisitTypes)) clinicVisitTypes = [];
+
                     // تحديث AppState ببيانات الشركة من Google Sheets
                     AppState.companySettings = Object.assign({}, AppState.companySettings, {
                         name: companyResult.data.name || AppState.companySettings?.name,
@@ -472,7 +490,8 @@ const Permissions = {
                         phone: companyResult.data.phone || AppState.companySettings?.phone,
                         email: companyResult.data.email || AppState.companySettings?.email,
                         postLoginItems: postLoginItems,
-                        clinicMonthlyVisitsAlertThreshold: companyResult.data.clinicMonthlyVisitsAlertThreshold ?? AppState.companySettings?.clinicMonthlyVisitsAlertThreshold ?? 10
+                        clinicMonthlyVisitsAlertThreshold: companyResult.data.clinicMonthlyVisitsAlertThreshold ?? AppState.companySettings?.clinicMonthlyVisitsAlertThreshold ?? 10,
+                        clinicVisitTypes: clinicVisitTypes
                     });
 
                     // تحديث شعار الشركة إذا كان موجوداً

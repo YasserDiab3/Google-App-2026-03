@@ -769,6 +769,28 @@ const DataManager = {
                         }
                         if (!Array.isArray(postLoginItems)) postLoginItems = [];
 
+                        // تحليل clinicVisitTypes (أنواع زيارة العيادة المشتركة)
+                        let clinicVisitTypes = AppState.companySettings?.clinicVisitTypes;
+                        if (result.data.clinicVisitTypes !== undefined) {
+                            const rawVisitTypes = result.data.clinicVisitTypes;
+                            if (typeof rawVisitTypes === 'string') {
+                                if (rawVisitTypes.trim() !== '') {
+                                    try {
+                                        clinicVisitTypes = JSON.parse(rawVisitTypes);
+                                    } catch (e) {
+                                        clinicVisitTypes = rawVisitTypes.split(/\n|,/).map((item) => item.trim()).filter(Boolean);
+                                    }
+                                } else {
+                                    clinicVisitTypes = [];
+                                }
+                            } else if (Array.isArray(rawVisitTypes)) {
+                                clinicVisitTypes = rawVisitTypes;
+                            } else {
+                                clinicVisitTypes = [];
+                            }
+                        }
+                        if (!Array.isArray(clinicVisitTypes)) clinicVisitTypes = [];
+
                         // تحديث AppState بالبيانات من Google Sheets
                         AppState.companySettings = Object.assign({}, AppState.companySettings, {
                             name: result.data.name || AppState.companySettings?.name,
@@ -782,6 +804,7 @@ const DataManager = {
                             email: result.data.email || AppState.companySettings?.email,
                             postLoginItems: postLoginItems,
                             clinicMonthlyVisitsAlertThreshold: result.data.clinicMonthlyVisitsAlertThreshold ?? AppState.companySettings?.clinicMonthlyVisitsAlertThreshold ?? 10,
+                            clinicVisitTypes: clinicVisitTypes,
                             profileTeamsUrl: String(result.data.profileTeamsUrl ?? AppState.companySettings?.profileTeamsUrl ?? '').trim(),
                             profileWhatsAppUrl: String(result.data.profileWhatsAppUrl ?? AppState.companySettings?.profileWhatsAppUrl ?? '').trim()
                         });

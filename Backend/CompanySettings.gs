@@ -96,6 +96,7 @@ function initCompanySettingsTable(spreadsheetId = null) {
                 'logo',
                 'postLoginItems',
                 'clinicMonthlyVisitsAlertThreshold',
+                'clinicVisitTypes',
                 'profileTeamsUrl',
                 'profileWhatsAppUrl',
                 'createdAt',
@@ -165,6 +166,20 @@ function saveCompanySettingsToSheet(settingsData) {
             }
         }
 
+        // clinicVisitTypes: مصفوفة أو JSON string (أنواع زيارة العيادة المشتركة لكل المستخدمين)
+        let clinicVisitTypesValue = '';
+        if (settingsData.clinicVisitTypes !== undefined && settingsData.clinicVisitTypes !== null) {
+            if (typeof settingsData.clinicVisitTypes === 'string') {
+                clinicVisitTypesValue = settingsData.clinicVisitTypes;
+            } else if (Array.isArray(settingsData.clinicVisitTypes)) {
+                try {
+                    clinicVisitTypesValue = JSON.stringify(settingsData.clinicVisitTypes);
+                } catch (e) {
+                    clinicVisitTypesValue = '';
+                }
+            }
+        }
+
         const clinicThreshold = settingsData.clinicMonthlyVisitsAlertThreshold;
         const clinicThresholdNum = (clinicThreshold !== undefined && clinicThreshold !== null && clinicThreshold !== '') ? parseInt(clinicThreshold, 10) : 10;
         const clinicMonthlyVisitsAlertThreshold = (isNaN(clinicThresholdNum) || clinicThresholdNum < 1) ? 10 : Math.min(1000, clinicThresholdNum);
@@ -183,6 +198,7 @@ function saveCompanySettingsToSheet(settingsData) {
             logo: settingsData.logo || '',
             postLoginItems: postLoginItemsValue,
             clinicMonthlyVisitsAlertThreshold: clinicMonthlyVisitsAlertThreshold,
+            clinicVisitTypes: clinicVisitTypesValue,
             profileTeamsUrl: settingsData.profileTeamsUrl != null ? String(settingsData.profileTeamsUrl) : '',
             profileWhatsAppUrl: settingsData.profileWhatsAppUrl != null ? String(settingsData.profileWhatsAppUrl) : '',
             updatedAt: now,
@@ -200,6 +216,10 @@ function saveCompanySettingsToSheet(settingsData) {
             }
             if (settingsData.profileWhatsAppUrl === undefined && existing.profileWhatsAppUrl != null && String(existing.profileWhatsAppUrl).trim() !== '') {
                 settingsToSave.profileWhatsAppUrl = String(existing.profileWhatsAppUrl);
+            }
+            // لا نمسح أنواع الزيارة إذا لم تُرسل من الواجهة الحالية
+            if (settingsData.clinicVisitTypes === undefined && existing.clinicVisitTypes != null && String(existing.clinicVisitTypes).trim() !== '') {
+                settingsToSave.clinicVisitTypes = String(existing.clinicVisitTypes);
             }
         } else {
             settingsToSave.createdAt = now;
@@ -308,6 +328,7 @@ function getDefaultCompanySettings() {
         logo: '',
         postLoginItems: '',
         clinicMonthlyVisitsAlertThreshold: 10,
+        clinicVisitTypes: '',
         profileTeamsUrl: '',
         profileWhatsAppUrl: '',
         createdAt: new Date().toISOString(),
