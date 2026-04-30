@@ -5581,44 +5581,19 @@ window.UI = {
                 try {
                     const current = (section.innerHTML || '').trim();
                     if (!current) {
-                        // التدريب: عرض هيكل الموديول فوراً بدل شاشة «جاري تحميل البيانات...» البيضاء
-                        const trainingModEarly = (typeof window !== 'undefined' && window.Training) ||
-                            (typeof Training !== 'undefined' ? Training : null);
-                        if (sectionName === 'training' && trainingModEarly && typeof trainingModEarly.load === 'function') {
-                            try {
-                                trainingModEarly.load();
-                            } catch (err) {
-                                Utils.safeWarn('⚠️ تعذر رسم موديول التدريب فوراً:', err);
-                                section.innerHTML = `
-                                    <div class="content-card" style="margin:18px;">
-                                        <div class="card-body" style="display:flex;align-items:center;justify-content:center;min-height:220px;gap:12px;">
-                                            <div class="hse-mini-spinner" style="width:34px;height:34px;border:3px solid rgba(37,99,235,0.18);border-top-color:#2563eb;border-radius:50%;animation:hseSpin 0.9s linear infinite;"></div>
-                                            <div style="font-weight:600;color:#334155;">جاري تحميل البيانات...</div>
-                                        </div>
-                                    </div>
-                                `;
-                                if (!document.getElementById('hse-mini-spinner-style')) {
-                                    const style = document.createElement('style');
-                                    style.id = 'hse-mini-spinner-style';
-                                    style.textContent = '@keyframes hseSpin{to{transform:rotate(360deg);}}';
-                                    document.head.appendChild(style);
-                                }
-                            }
-                        } else {
-                            section.innerHTML = `
-                                <div class="content-card" style="margin:18px;">
-                                    <div class="card-body" style="display:flex;align-items:center;justify-content:center;min-height:220px;gap:12px;">
-                                        <div class="hse-mini-spinner" style="width:34px;height:34px;border:3px solid rgba(37,99,235,0.18);border-top-color:#2563eb;border-radius:50%;animation:hseSpin 0.9s linear infinite;"></div>
-                                        <div style="font-weight:600;color:#334155;">جاري تحميل البيانات...</div>
-                                    </div>
+                        section.innerHTML = `
+                            <div class="content-card" style="margin:18px;">
+                                <div class="card-body" style="display:flex;align-items:center;justify-content:center;min-height:220px;gap:12px;">
+                                    <div class="hse-mini-spinner" style="width:34px;height:34px;border:3px solid rgba(37,99,235,0.18);border-top-color:#2563eb;border-radius:50%;animation:hseSpin 0.9s linear infinite;"></div>
+                                    <div style="font-weight:600;color:#334155;">جاري تحميل البيانات...</div>
                                 </div>
-                            `;
-                            if (!document.getElementById('hse-mini-spinner-style')) {
-                                const style = document.createElement('style');
-                                style.id = 'hse-mini-spinner-style';
-                                style.textContent = '@keyframes hseSpin{to{transform:rotate(360deg);}}';
-                                document.head.appendChild(style);
-                            }
+                            </div>
+                        `;
+                        if (!document.getElementById('hse-mini-spinner-style')) {
+                            const style = document.createElement('style');
+                            style.id = 'hse-mini-spinner-style';
+                            style.textContent = '@keyframes hseSpin{to{transform:rotate(360deg);}}';
+                            document.head.appendChild(style);
                         }
                     }
                 } catch (e) { /* ignore */ }
@@ -5711,13 +5686,9 @@ window.UI = {
         const isRefresh = AppState.isPageRefresh;
         const loadSectionWork = () => {
             // ✅ تقسيم العمل لتقليل setTimeout/idle Violations: تحميل البيانات أولاً، ثم الأيقونات لاحقاً
-            const runData = () => this.loadSectionData(sectionName, isRefresh);
-            // التدريب: استدعاء مباشر بدون setTimeout(0) لتقليل تأخير ظهور الواجهة
-            if (sectionName === 'training') {
-                runData();
-            } else {
-                setTimeout(runData, 0);
-            }
+            setTimeout(() => {
+                this.loadSectionData(sectionName, isRefresh);
+            }, 0);
             if (typeof requestIdleCallback === 'function') {
                 requestIdleCallback(() => this.addNavigationIconsAfterRender(sectionName), { timeout: 800 });
             } else {
@@ -5725,9 +5696,7 @@ window.UI = {
             }
         };
 
-        // Dashboard والتدريب: تحميل فوري لعرض البنية والواجهة دون انتظار requestIdleCallback
-        // (موديول التدريب كان يظهر «جاري تحميل البيانات...» لثوانٍ بسبب تأجيل idle حتى يُستدعى Training.load)
-        if (sectionName === 'dashboard' || sectionName === 'training') {
+        if (sectionName === 'dashboard') {
             loadSectionWork();
         } else if (typeof requestIdleCallback === 'function') {
             // ✅ تجنّب Violation: اجعل requestIdleCallback سريعاً، وادفع العمل الثقيل خارج callback
@@ -5863,37 +5832,10 @@ window.UI = {
                     break;
                 case 'training':
                     Utils.safeLog(' تحميل مديول التدريب (Training) ي قسم training-section');
-                    // ترتيب السكربتات: app-ui وauth قبل training.js؛ showMainApp قد يستدعي refreshCurrentSection
-                    // بعد await قصير قبل تنفيذ training.js — ننتظر واجهة window.Training قليلاً بدل إعلان فشل فوري.
-                    {
-                        const tryTrainingLoad = () => {
-                            if (document.getElementById('training-content')) {
-                                return true;
-                            }
-                            const Mod = (typeof window !== 'undefined' && window.Training) ||
-                                (typeof Training !== 'undefined' ? Training : null);
-                            if (!Mod || typeof Mod.load !== 'function') {
-                                return false;
-                            }
-                            Mod.load();
-                            return true;
-                        };
-                        if (tryTrainingLoad()) {
-                            break;
-                        }
-                        let attempts = 0;
-                        const maxAttempts = 160;
-                        const intervalMs = 50;
-                        const timerId = setInterval(() => {
-                            attempts += 1;
-                            const ok = tryTrainingLoad();
-                            if (ok || attempts >= maxAttempts) {
-                                clearInterval(timerId);
-                                if (!ok) {
-                                    Utils.safeError('❌ موديول Training غير متوفر - الموديول لم يُحمّل بشكل صحيح');
-                                }
-                            }
-                        }, intervalMs);
+                    if (typeof Training !== 'undefined' && Training.load) {
+                        Training.load();
+                    } else {
+                        Utils.safeError('❌ موديول Training غير متوفر - الموديول لم يُحمّل بشكل صحيح');
                     }
                     break;
                 case 'clinic':
