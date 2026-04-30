@@ -145,6 +145,60 @@ const IssuingAuthorities = {
         if (document.getElementById('ia-f-sublocation')) document.getElementById('ia-f-sublocation').value = data.sublocation || '';
     },
 
+    /**
+     * نفس أسلوب نموذج تسجيل زيارة العيادة: استنساخ حقل الكود لإزالة أي معالجات قديمة ثم EmployeeHelper.setupEmployeeCodeSearch.
+     */
+    _installEmployeeCodeLookupLikeClinic() {
+        const personType = (document.getElementById('ia-f-person-type')?.value || 'employee').toLowerCase();
+        if (personType !== 'employee') return;
+        if (typeof EmployeeHelper === 'undefined' || !EmployeeHelper.setupEmployeeCodeSearch) return;
+
+        const codeInput = document.getElementById('ia-f-employee-code');
+        if (!codeInput || !codeInput.parentNode) return;
+
+        const freshInput = codeInput.cloneNode(true);
+        codeInput.parentNode.replaceChild(freshInput, codeInput);
+
+        EmployeeHelper.setupEmployeeCodeSearch('ia-f-employee-code', 'ia-f-name', (employee) => {
+            if (!employee) return;
+            this._fillEmployeeFields({
+                employeeCode: String(employee.employeeNumber || employee.employeeCode || employee.sapId || employee.id || '').trim(),
+                name: String(employee.name || '').trim(),
+                departmentName: String(employee.department || employee.unit || employee.section || '').trim(),
+                jobTitle: String(employee.position || employee.job || employee.jobTitle || '').trim(),
+                factory: String(employee.branch || employee.factory || employee.factoryName || '').trim(),
+                location: String(employee.location || employee.locationName || employee.employeeLocation || '').trim(),
+                sublocation: String(employee.sublocation || employee.subLocation || employee.subLocationName || '').trim()
+            });
+            if (Array.isArray(AppState?.appData?.employees)) {
+                this._employeesCache = AppState.appData.employees;
+            }
+        }, {
+            inlineAlertId: 'ia-form-alerts',
+            employeeNotFoundWarn: 'enter'
+        });
+    },
+
+    _bindModalFieldEvents() {
+        document.getElementById('ia-lookup-employee-btn')?.addEventListener('click', () => {
+            const inp = document.getElementById('ia-f-employee-code');
+            if (!inp) return;
+            inp.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
+        });
+
+        document.getElementById('ia-f-contractor-name')?.addEventListener('change', () => this._onContractorChanged());
+        document.getElementById('ia-f-name')?.addEventListener('blur', () => {
+            const personType = (document.getElementById('ia-f-person-type')?.value || 'employee').toLowerCase();
+            const code = (document.getElementById('ia-f-employee-code')?.value || '').trim();
+            const name = (document.getElementById('ia-f-name')?.value || '').trim();
+            if (personType === 'employee' && !code && name) {
+                this._lookupEmployeeByCode(name);
+            }
+        });
+
+        this._installEmployeeCodeLookupLikeClinic();
+    },
+
     _withTimeout(promise, timeoutMs = 7000) {
         return Promise.race([
             promise,
@@ -432,6 +486,7 @@ const IssuingAuthorities = {
 
         return `
         <div class="ia-form ia-form-grid">
+            <div id="ia-form-alerts" class="ia-form-alerts" style="display:none;margin-bottom:10px;"></div>
             <section class="ia-form-section">
                 <h4 class="ia-form-section-title">بيانات الشخص</h4>
                 <div class="ia-person-mode-hint" id="ia-person-mode-hint">
@@ -742,39 +797,7 @@ const IssuingAuthorities = {
             if (m) m.style.display = 'none';
         });
 
-        document.getElementById('ia-lookup-employee-btn')?.addEventListener('click', () => this._lookupEmployeeByCode());
-        document.getElementById('ia-f-employee-code')?.addEventListener('blur', () => this._lookupEmployeeByCode());
-        document.getElementById('ia-f-employee-code')?.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter') {
-                e.preventDefault();
-                this._lookupEmployeeByCode();
-            }
-        });
-        document.getElementById('ia-f-contractor-name')?.addEventListener('change', () => this._onContractorChanged());
-        document.getElementById('ia-f-name')?.addEventListener('blur', () => {
-            const personType = (document.getElementById('ia-f-person-type')?.value || 'employee').toLowerCase();
-            const code = (document.getElementById('ia-f-employee-code')?.value || '').trim();
-            const name = (document.getElementById('ia-f-name')?.value || '').trim();
-            if (personType === 'employee' && !code && name) {
-                this._lookupEmployeeByCode(name);
-            }
-        });
-
-        // Match clinic behavior: wire employee lookup helper directly on code input.
-        if (typeof EmployeeHelper !== 'undefined' && EmployeeHelper.setupEmployeeCodeSearch) {
-            EmployeeHelper.setupEmployeeCodeSearch('ia-f-employee-code', 'ia-f-name', (employee) => {
-                if (!employee) return;
-                this._fillEmployeeFields({
-                    employeeCode: String(employee.employeeNumber || employee.employeeCode || employee.sapId || employee.id || '').trim(),
-                    name: String(employee.name || '').trim(),
-                    departmentName: String(employee.department || '').trim(),
-                    jobTitle: String(employee.position || employee.job || '').trim(),
-                    factory: String(employee.branch || '').trim(),
-                    location: String(employee.location || '').trim(),
-                    sublocation: String(employee.sublocation || employee.subLocation || employee.subLocationName || employee.locationName || '').trim()
-                });
-            }, { employeeNotFoundWarn: 'enter' });
-        }
+        this._bindModalFieldEvents();
     },
 
     _togglePersonTypeInputs() {
@@ -800,6 +823,7 @@ const IssuingAuthorities = {
             }
         });
         if (type === 'contractor') this._onContractorChanged();
+        if (type === 'employee') this._installEmployeeCodeLookupLikeClinic();
     },
 
     _onContractorChanged() {
@@ -825,11 +849,11 @@ const IssuingAuthorities = {
                 this._fillEmployeeFields({
                     employeeCode: String(localEmployee.employeeNumber || localEmployee.employeeCode || localEmployee.sapId || localEmployee.id || '').trim(),
                     name: String(localEmployee.name || '').trim(),
-                    departmentName: String(localEmployee.department || '').trim(),
-                    jobTitle: String(localEmployee.job || localEmployee.position || '').trim(),
+                    departmentName: String(localEmployee.department || localEmployee.unit || localEmployee.section || '').trim(),
+                    jobTitle: String(localEmployee.position || localEmployee.job || localEmployee.jobTitle || '').trim(),
                     factory: String(localEmployee.branch || localEmployee.factory || localEmployee.factoryName || '').trim(),
                     location: String(localEmployee.location || localEmployee.locationName || localEmployee.employeeLocation || '').trim(),
-                    sublocation: String(localEmployee.sublocation || localEmployee.subLocation || localEmployee.subLocationName || localEmployee.locationName || '').trim()
+                    sublocation: String(localEmployee.sublocation || localEmployee.subLocation || localEmployee.subLocationName || '').trim()
                 });
                 if (typeof Utils !== 'undefined' && Utils.showNotification) {
                     Utils.showNotification('تم تحميل بيانات الموظف بنجاح', 'success');
@@ -917,6 +941,7 @@ const IssuingAuthorities = {
         body.innerHTML = this._renderForm(record);
         modal.style.display = 'flex';
         this._togglePersonTypeInputs();
+        this._bindModalFieldEvents();
 
         // Re-attach radio feedback
         body.querySelectorAll('input[type="radio"]').forEach(radio => {

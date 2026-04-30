@@ -6700,10 +6700,25 @@ const EmployeeHelper = {
             if (!AppState?.googleConfig?.appsScript?.enabled || !AppState?.googleConfig?.appsScript?.scriptUrl) return false;
 
             this._employeesLoadPromise = (async () => {
-                const result = await GoogleIntegration.sendRequest({
+                let result = await GoogleIntegration.sendRequest({
                     action: 'getAllEmployees',
                     data: { filters: { includeInactive } }
                 });
+
+                const needFallback = !result || !result.success || !Array.isArray(result.data) || result.data.length === 0;
+                if (needFallback) {
+                    try {
+                        const alt = await GoogleIntegration.sendRequest({
+                            action: 'readFromSheet',
+                            data: { sheetName: 'Employees' }
+                        });
+                        if (alt && alt.success && Array.isArray(alt.data) && alt.data.length > 0) {
+                            result = { success: true, data: alt.data };
+                        }
+                    } catch (eAlt) {
+                        // keep original result
+                    }
+                }
 
                 if (result && result.success && Array.isArray(result.data)) {
                     AppState.appData = AppState.appData || {};
@@ -6875,7 +6890,10 @@ const EmployeeHelper = {
 
             if (lookupSeq !== this._lookupSeq) return;
 
-            const employee = this.findByCode(term) || this.findByName(term);
+            // أثناء الكتابة: مطابقة تامة فقط لتجنب اختيار موظف خاطئ عند أرقام قصيرة؛ Enter/blur: findByTerm (يشمل الجزئي).
+            const employee = source === 'input-debounce'
+                ? (this.findByCode(term) || this.findByName(term))
+                : this.findByTerm(term);
             if (employee) {
                 clearInlineAlert();
                 const primaryCode = this.getPrimaryCode(employee);
