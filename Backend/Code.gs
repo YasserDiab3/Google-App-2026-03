@@ -202,7 +202,10 @@ function doPost(e) {
             'getContractorDetailedAnalytics',
             'getAllAppEmergencyNumbers',
             'getAllIssuingAuthorities',
-            'getIssuingAuthoritiesForPermitType'
+            'getIssuingAuthoritiesForPermitType',
+            'getAllContractorIssuingAuthorities',
+            'getContractorIssuingAuthoritiesForPermitType',
+            'getEmployeeByCode'
         ];
         
         // قائمة بالـ actions الحساسة التي تتطلب CSRF token إلزامي
@@ -613,6 +616,24 @@ function doPost(e) {
                     break;
                 case 'getIssuingAuthoritiesForPermitType':
                     result = getIssuingAuthoritiesForPermitType(payload.permitType);
+                    break;
+                case 'getAllContractorIssuingAuthorities':
+                    result = getAllContractorIssuingAuthorities();
+                    break;
+                case 'addContractorIssuingAuthority':
+                    result = addContractorIssuingAuthority(payload);
+                    break;
+                case 'updateContractorIssuingAuthority':
+                    result = updateContractorIssuingAuthority(payload.id || payload.recordId, payload);
+                    break;
+                case 'deleteContractorIssuingAuthority':
+                    result = deleteContractorIssuingAuthority(payload.id || payload.recordId, payload.userData || payload.user);
+                    break;
+                case 'getContractorIssuingAuthoritiesForPermitType':
+                    result = getContractorIssuingAuthoritiesForPermitType(payload.permitType);
+                    break;
+                case 'getEmployeeByCode':
+                    result = getEmployeeByCode(payload.employeeCode || payload.code);
                     break;
                 case 'initIssuingAuthoritiesTable':
                     result = initIssuingAuthoritiesTable();

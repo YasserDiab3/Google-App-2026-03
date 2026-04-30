@@ -11,6 +11,7 @@
 const IssuingAuthorities = {
     _data: [],
     _loading: false,
+    _activeCategory: 'employees',
 
     _isActionUnknownMessage(message) {
         const msg = String(message || '').toLowerCase();
@@ -30,8 +31,14 @@ const IssuingAuthorities = {
     _normalizeRow(row) {
         const normalized = { ...(row || {}) };
         normalized.id = String(normalized.id || '').trim();
+        normalized.personType = String(normalized.personType || '').toLowerCase().trim() === 'contractor' ? 'contractor' : 'employee';
+        normalized.employeeCode = String(normalized.employeeCode || '').trim();
         normalized.name = String(normalized.name || '').trim();
         normalized.departmentName = String(normalized.departmentName || '').trim();
+        normalized.jobTitle = String(normalized.jobTitle || '').trim();
+        normalized.factory = String(normalized.factory || '').trim();
+        normalized.location = String(normalized.location || '').trim();
+        normalized.sublocation = String(normalized.sublocation || '').trim();
         normalized.email = String(normalized.email || '').trim();
         normalized.phone = String(normalized.phone || '').trim();
         normalized.notes = String(normalized.notes || '').trim();
@@ -44,9 +51,12 @@ const IssuingAuthorities = {
     },
 
     async _fetchViaReadFromSheet() {
+        const sheetName = this._activeCategory === 'contractors'
+            ? 'PTWContractorIssuingAuthorities'
+            : 'PTWIssuingAuthorities';
         const fallbackResult = await GoogleIntegration.sendRequest({
             action: 'readFromSheet',
-            data: { sheetName: 'PTWIssuingAuthorities' }
+            data: { sheetName }
         });
         if (fallbackResult && fallbackResult.success) {
             const raw = Array.isArray(fallbackResult.data) ? fallbackResult.data : [];
@@ -84,6 +94,27 @@ const IssuingAuthorities = {
         return role === 'admin' || role === 'administrator';
     },
 
+    _categoryTitleAr() {
+        return this._activeCategory === 'contractors' ? 'المقاولين' : 'الموظفين';
+    },
+
+    _actionsForCategory(category, personType) {
+        const isContractorCategory = (category === 'contractors');
+        const isContractorPerson = String(personType || '').toLowerCase().trim() === 'contractor';
+        const useContractorDb = isContractorCategory || isContractorPerson;
+        return useContractorDb
+            ? {
+                add: 'addContractorIssuingAuthority',
+                update: 'updateContractorIssuingAuthority',
+                remove: 'deleteContractorIssuingAuthority'
+            }
+            : {
+                add: 'addIssuingAuthority',
+                update: 'updateIssuingAuthority',
+                remove: 'deleteIssuingAuthority'
+            };
+    },
+
     async load() {
         const section = document.getElementById('issuing-authorities-section');
         if (!section) return;
@@ -108,7 +139,7 @@ const IssuingAuthorities = {
                             قائمة الأشخاص المصرح لهم بالتوقيع على تصاريح العمل
                         </h2>
                         <p class="card-subtitle" style="margin:4px 0 0;color:#64748b;font-size:0.85rem;">
-                            Issuing Authorities for Work Permits
+                            Issuing Authorities for Work Permits - ${this._categoryTitleAr()}
                         </p>
                     </div>
                     <div style="display:flex;gap:8px;align-items:center;">
@@ -120,6 +151,13 @@ const IssuingAuthorities = {
                         <button class="btn-secondary" id="ia-refresh-btn" style="gap:6px;">
                             <i class="fas fa-sync-alt"></i>
                         </button>
+                    </div>
+                </div>
+
+                <div style="padding:0 16px 10px;">
+                    <div class="ia-category-tabs">
+                        <button type="button" class="ia-tab-btn ${this._activeCategory === 'employees' ? 'active' : ''}" data-category="employees">الموظفين</button>
+                        <button type="button" class="ia-tab-btn ${this._activeCategory === 'contractors' ? 'active' : ''}" data-category="contractors">المقاولين</button>
                     </div>
                 </div>
 
@@ -191,6 +229,9 @@ const IssuingAuthorities = {
     _renderForm(record) {
         const val = (key) => record ? (record[key] || '') : '';
         const pv  = (key) => record ? (String(record[key] || 'X').toUpperCase()) : 'X';
+        const personType = String(val('personType') || (this._activeCategory === 'contractors' ? 'contractor' : 'employee')).toLowerCase() === 'contractor'
+            ? 'contractor'
+            : 'employee';
 
         const permitRows = this.PERMIT_TYPES.map(pt => `
             <div class="ia-permit-row">
@@ -215,12 +256,48 @@ const IssuingAuthorities = {
                 <h4 class="ia-form-section-title">بيانات الشخص</h4>
                 <div class="ia-form-two-cols">
                 <div class="form-group">
+                    <label class="form-label">نوع الشخص <span style="color:red;">*</span></label>
+                    <select id="ia-f-person-type" class="form-select">
+                        <option value="employee" ${personType === 'employee' ? 'selected' : ''}>موظف</option>
+                        <option value="contractor" ${personType === 'contractor' ? 'selected' : ''}>مقاول</option>
+                    </select>
+                </div>
+                <div class="form-group ia-employee-code-wrap" id="ia-employee-code-wrap" style="${personType === 'employee' ? '' : 'display:none;'}">
+                    <label class="form-label">الكود الوظيفي <span style="color:red;">*</span></label>
+                    <div style="display:flex;gap:8px;">
+                        <input type="text" id="ia-f-employee-code" class="form-input" value="${val('employeeCode')}" placeholder="أدخل الكود الوظيفي">
+                        <button type="button" class="btn-secondary" id="ia-lookup-employee-btn" style="white-space:nowrap;">بحث</button>
+                    </div>
+                </div>
+                </div>
+                <div class="ia-form-two-cols">
+                <div class="form-group">
                     <label class="form-label">الاسم <span style="color:red;">*</span></label>
                     <input type="text" id="ia-f-name" class="form-input" value="${val('name')}" placeholder="اسم الشخص المصرح له" required>
                 </div>
                 <div class="form-group">
                     <label class="form-label">الإدارة / القسم</label>
                     <input type="text" id="ia-f-dept" class="form-input" value="${val('departmentName')}" placeholder="اسم الإدارة">
+                </div>
+                </div>
+                <div class="ia-form-two-cols">
+                <div class="form-group">
+                    <label class="form-label">الوظيفة</label>
+                    <input type="text" id="ia-f-job-title" class="form-input" value="${val('jobTitle')}" placeholder="المسمى الوظيفي">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">المصنع</label>
+                    <input type="text" id="ia-f-factory" class="form-input" value="${val('factory')}" placeholder="اسم المصنع">
+                </div>
+                </div>
+                <div class="ia-form-two-cols">
+                <div class="form-group">
+                    <label class="form-label">الموقع</label>
+                    <input type="text" id="ia-f-location" class="form-input" value="${val('location')}" placeholder="الموقع">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">الموقع الفرعي</label>
+                    <input type="text" id="ia-f-sublocation" class="form-input" value="${val('sublocation')}" placeholder="الموقع الفرعي">
                 </div>
                 </div>
                 <div class="ia-form-two-cols">
@@ -270,13 +347,22 @@ const IssuingAuthorities = {
     async _fetchData() {
         this._loading = true;
         try {
-            // ✅ قراءة مباشرة من الشيت لتفادي ضجيج الأخطاء عند بيئات production القديمة
-            const ok = await this._fetchViaReadFromSheet();
+            const getAction = this._activeCategory === 'contractors'
+                ? 'getAllContractorIssuingAuthorities'
+                : 'getAllIssuingAuthorities';
+            let ok = false;
+            const result = await GoogleIntegration.sendRequest({ action: getAction, data: {} });
+            if (result && result.success) {
+                const raw = Array.isArray(result.data) ? result.data : [];
+                this._data = raw.map(r => this._normalizeRow(r)).filter(r => r.id || r.name);
+                ok = true;
+            }
+            if (!ok) {
+                ok = await this._fetchViaReadFromSheet();
+            }
             if (!ok) {
                 this._data = [];
-                if (typeof Utils !== 'undefined') {
-                    Utils.safeWarn('تحذير: فشل تحميل بيانات Issuing Authorities عبر readFromSheet');
-                }
+                if (typeof Utils !== 'undefined') Utils.safeWarn('تحذير: فشل تحميل بيانات Issuing Authorities');
             }
         } catch (err) {
             this._data = [];
@@ -303,7 +389,7 @@ const IssuingAuthorities = {
                     <i class="fas fa-user-check" style="font-size:2.5rem;color:#cbd5e1;margin-bottom:12px;"></i>
                     <h3 style="color:#64748b;margin-bottom:6px;">لا يوجد سجلات بعد</h3>
                     <p style="color:#94a3b8;font-size:0.88rem;">
-                        ${isAdmin ? 'انقر على "إضافة شخص" لإضافة أول سجل في القائمة.' : 'لم تتم إضافة أي سجلات بعد.'}
+                        ${isAdmin ? `انقر على "إضافة شخص" لإضافة أول سجل في قائمة ${this._categoryTitleAr()}.` : `لم تتم إضافة سجلات ${this._categoryTitleAr()} بعد.`}
                     </p>
                 </div>`;
             return;
@@ -341,6 +427,7 @@ const IssuingAuthorities = {
                 <td style="padding:8px 10px;">
                     <div style="font-weight:600;color:#1e293b;">${rec.name || ''}</div>
                     <div style="font-size:0.78rem;color:#64748b;">${rec.departmentName || ''} ${activeIndicator}</div>
+                    <div style="font-size:0.75rem;color:#94a3b8;">${[rec.jobTitle, rec.factory, rec.location, rec.sublocation].filter(Boolean).join(' - ')}</div>
                 </td>
                 ${permitCells}
                 ${isAdmin ? `<td style="text-align:center;white-space:nowrap;">${actionBtns}</td>` : ''}
@@ -378,6 +465,20 @@ const IssuingAuthorities = {
         if (refreshBtn) refreshBtn.addEventListener('click', async () => {
             await this._fetchData();
             this._renderTable();
+        });
+
+        root.querySelectorAll('.ia-tab-btn').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                const nextCategory = btn.getAttribute('data-category') || 'employees';
+                if (nextCategory === this._activeCategory) return;
+                this._activeCategory = nextCategory;
+                const section = document.getElementById('issuing-authorities-section');
+                if (!section) return;
+                section.innerHTML = this._renderShell();
+                await this._fetchData();
+                this._renderTable();
+                this._attachEvents();
+            });
         });
 
         // أزرار تعديل وحذف (event delegation)
@@ -421,6 +522,9 @@ const IssuingAuthorities = {
                     }
                 });
             }
+            if (e.target.id === 'ia-f-person-type') {
+                this._togglePersonTypeInputs();
+            }
         });
 
         // Delete modal
@@ -428,6 +532,40 @@ const IssuingAuthorities = {
             const m = document.getElementById('ia-delete-modal');
             if (m) m.style.display = 'none';
         });
+
+        document.getElementById('ia-lookup-employee-btn')?.addEventListener('click', () => this._lookupEmployeeByCode());
+        document.getElementById('ia-f-employee-code')?.addEventListener('blur', () => this._lookupEmployeeByCode());
+    },
+
+    _togglePersonTypeInputs() {
+        const type = (document.getElementById('ia-f-person-type')?.value || 'employee').toLowerCase();
+        const codeWrap = document.getElementById('ia-employee-code-wrap');
+        if (codeWrap) codeWrap.style.display = type === 'employee' ? '' : 'none';
+    },
+
+    async _lookupEmployeeByCode() {
+        try {
+            const personType = (document.getElementById('ia-f-person-type')?.value || 'employee').toLowerCase();
+            if (personType !== 'employee') return;
+            const code = (document.getElementById('ia-f-employee-code')?.value || '').trim();
+            if (!code) return;
+            const result = await GoogleIntegration.sendRequest({
+                action: 'getEmployeeByCode',
+                data: { employeeCode: code }
+            });
+            if (!result || !result.success || !result.data) return;
+            const data = result.data;
+            if (document.getElementById('ia-f-name')) document.getElementById('ia-f-name').value = data.name || '';
+            if (document.getElementById('ia-f-dept')) document.getElementById('ia-f-dept').value = data.departmentName || '';
+            if (document.getElementById('ia-f-job-title')) document.getElementById('ia-f-job-title').value = data.jobTitle || '';
+            if (document.getElementById('ia-f-factory')) document.getElementById('ia-f-factory').value = data.factory || '';
+            if (document.getElementById('ia-f-location')) document.getElementById('ia-f-location').value = data.location || '';
+            if (document.getElementById('ia-f-sublocation') && !document.getElementById('ia-f-sublocation').value) {
+                document.getElementById('ia-f-sublocation').value = data.sublocation || '';
+            }
+        } catch (err) {
+            if (typeof Utils !== 'undefined') Utils.safeWarn('تعذر جلب بيانات الموظف بالكود الوظيفي');
+        }
     },
 
     _currentEditId: null,
@@ -442,6 +580,7 @@ const IssuingAuthorities = {
         title.textContent = record ? 'تعديل بيانات الشخص المصرح له' : 'إضافة شخص مصرح له';
         body.innerHTML = this._renderForm(record);
         modal.style.display = 'flex';
+        this._togglePersonTypeInputs();
 
         // Re-attach radio feedback
         body.querySelectorAll('input[type="radio"]').forEach(radio => {
@@ -460,6 +599,10 @@ const IssuingAuthorities = {
     },
 
     async _saveModal() {
+        const personType = (document.getElementById('ia-f-person-type')?.value || 'employee').toLowerCase() === 'contractor'
+            ? 'contractor'
+            : 'employee';
+        const employeeCode = (document.getElementById('ia-f-employee-code')?.value || '').trim();
         const name = (document.getElementById('ia-f-name')?.value || '').trim();
         if (!name) {
             if (typeof Utils !== 'undefined' && Utils.showNotification) {
@@ -469,11 +612,25 @@ const IssuingAuthorities = {
             }
             return;
         }
+        if (personType === 'employee' && !employeeCode) {
+            if (typeof Utils !== 'undefined' && Utils.showNotification) {
+                Utils.showNotification('الكود الوظيفي مطلوب للموظف', 'error');
+            } else {
+                alert('الكود الوظيفي مطلوب للموظف');
+            }
+            return;
+        }
 
         const userData = AppState && AppState.currentUser ? AppState.currentUser : {};
         const payload = {
+            personType,
+            employeeCode,
             name,
             departmentName: document.getElementById('ia-f-dept')?.value?.trim() || '',
+            jobTitle:       document.getElementById('ia-f-job-title')?.value?.trim() || '',
+            factory:        document.getElementById('ia-f-factory')?.value?.trim() || '',
+            location:       document.getElementById('ia-f-location')?.value?.trim() || '',
+            sublocation:    document.getElementById('ia-f-sublocation')?.value?.trim() || '',
             email:          document.getElementById('ia-f-email')?.value?.trim() || '',
             phone:          document.getElementById('ia-f-phone')?.value?.trim() || '',
             isActive:       document.getElementById('ia-f-active')?.checked !== false,
@@ -492,15 +649,16 @@ const IssuingAuthorities = {
 
         try {
             let result;
+            const actions = this._actionsForCategory(this._activeCategory, personType);
             if (this._currentEditId) {
                 payload.id = this._currentEditId;
                 result = await GoogleIntegration.sendRequest({
-                    action: 'updateIssuingAuthority',
+                    action: actions.update,
                     data: payload
                 });
             } else {
                 result = await GoogleIntegration.sendRequest({
-                    action: 'addIssuingAuthority',
+                    action: actions.add,
                     data: payload
                 });
             }
@@ -555,8 +713,10 @@ const IssuingAuthorities = {
     async _deleteRecord(id) {
         try {
             const userData = AppState && AppState.currentUser ? AppState.currentUser : {};
+            const rec = (this._data || []).find(x => x.id === id) || {};
+            const actions = this._actionsForCategory(this._activeCategory, rec.personType);
             const result = await GoogleIntegration.sendRequest({
-                action: 'deleteIssuingAuthority',
+                action: actions.remove,
                 data: { id, userData }
             });
             if (result && result.success) {
@@ -591,12 +751,22 @@ const IssuingAuthorities = {
      */
     async getAuthoritiesForPermitType(permitType) {
         try {
-            if (!this._data || this._data.length === 0) {
-                await this._fetchData();
-            }
             const key = String(permitType || '').trim();
             if (!key) return [];
-            return (this._data || [])
+            const originalCategory = this._activeCategory;
+            this._activeCategory = 'employees';
+            await this._fetchData();
+            const employeeData = Array.isArray(this._data) ? [...this._data] : [];
+
+            let merged = employeeData;
+            if (key === 'contractorPTW') {
+                this._activeCategory = 'contractors';
+                await this._fetchData();
+                const contractorData = Array.isArray(this._data) ? [...this._data] : [];
+                merged = employeeData.concat(contractorData);
+            }
+            this._activeCategory = originalCategory;
+            return (merged || [])
                 .filter(r => r.isActive !== false)
                 .map(r => {
                     const level = String(r[key] || 'X').toUpperCase().trim();
@@ -676,6 +846,11 @@ const IssuingAuthorities = {
             .ia-module table th, .ia-module table td {
                 border-bottom:1px solid #f1f5f9;
             }
+            .ia-category-tabs { display:flex; gap:8px; flex-wrap:wrap; }
+            .ia-tab-btn {
+                border:1px solid #cbd5e1; background:#fff; color:#334155; border-radius:8px; padding:6px 12px; cursor:pointer; font-weight:700;
+            }
+            .ia-tab-btn.active { border-color:#2563eb; color:#1d4ed8; background:#eff6ff; }
             .ia-module table tbody tr:hover { background:#f8fafc; }
             .ia-modal-container .modal-body { max-height:72vh; overflow:auto; }
             .ia-form-grid { display:grid; gap:14px; }
