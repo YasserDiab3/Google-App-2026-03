@@ -146,7 +146,7 @@ const IssuingAuthorities = {
 
         <!-- Modal إضافة/تعديل -->
         <div id="ia-modal-overlay" class="modal-overlay" style="display:none;" role="dialog" aria-modal="true" aria-labelledby="ia-modal-title">
-            <div class="modal-container" style="max-width:680px;width:95%;">
+            <div class="modal-container ia-modal-container" style="max-width:760px;width:95%;">
                 <div class="modal-header">
                     <h3 id="ia-modal-title" class="modal-title">إضافة شخص مصرح له</h3>
                     <button class="modal-close" id="ia-modal-close" aria-label="إغلاق">
@@ -193,14 +193,14 @@ const IssuingAuthorities = {
         const pv  = (key) => record ? (String(record[key] || 'X').toUpperCase()) : 'X';
 
         const permitRows = this.PERMIT_TYPES.map(pt => `
-            <div style="display:flex;align-items:center;justify-content:space-between;padding:6px 0;border-bottom:1px solid #f1f5f9;">
-                <label style="font-size:0.88rem;color:#374151;font-weight:500;">
-                    ${pt.labelAr}
-                    <span style="color:#94a3b8;font-size:0.78rem;margin-right:4px;">${pt.labelEn}</span>
+            <div class="ia-permit-row">
+                <label class="ia-permit-label">
+                    <span>${pt.labelAr}</span>
+                    <span class="ia-permit-label-en">${pt.labelEn}</span>
                 </label>
-                <div class="ia-radio-group" style="display:flex;gap:8px;">
+                <div class="ia-radio-group">
                     ${['G', 'Y', 'X'].map(v => `
-                        <label class="ia-radio-label ia-radio-${v.toLowerCase()}" style="cursor:pointer;padding:3px 10px;border-radius:4px;font-weight:600;font-size:0.82rem;${pv(pt.key) === v ? 'opacity:1;' : 'opacity:0.45;'}">
+                        <label class="ia-radio-label ia-radio-${v.toLowerCase()} ${pv(pt.key) === v ? 'is-selected' : ''}" style="${pv(pt.key) === v ? 'opacity:1;' : 'opacity:0.55;'}">
                             <input type="radio" name="permit_${pt.key}" value="${v}" ${pv(pt.key) === v ? 'checked' : ''} style="display:none;">
                             ${v}
                         </label>
@@ -210,8 +210,10 @@ const IssuingAuthorities = {
         `).join('');
 
         return `
-        <div class="ia-form" style="display:grid;gap:12px;">
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+        <div class="ia-form ia-form-grid">
+            <section class="ia-form-section">
+                <h4 class="ia-form-section-title">بيانات الشخص</h4>
+                <div class="ia-form-two-cols">
                 <div class="form-group">
                     <label class="form-label">الاسم <span style="color:red;">*</span></label>
                     <input type="text" id="ia-f-name" class="form-input" value="${val('name')}" placeholder="اسم الشخص المصرح له" required>
@@ -220,8 +222,8 @@ const IssuingAuthorities = {
                     <label class="form-label">الإدارة / القسم</label>
                     <input type="text" id="ia-f-dept" class="form-input" value="${val('departmentName')}" placeholder="اسم الإدارة">
                 </div>
-            </div>
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+                </div>
+                <div class="ia-form-two-cols">
                 <div class="form-group">
                     <label class="form-label">البريد الإلكتروني</label>
                     <input type="email" id="ia-f-email" class="form-input" value="${val('email')}" placeholder="example@company.com" dir="ltr">
@@ -230,28 +232,37 @@ const IssuingAuthorities = {
                     <label class="form-label">رقم الهاتف</label>
                     <input type="text" id="ia-f-phone" class="form-input" value="${val('phone')}" placeholder="01xxxxxxxxx" dir="ltr">
                 </div>
-            </div>
+                </div>
+            </section>
 
-            <div class="form-group">
-                <label class="form-label" style="margin-bottom:10px;font-weight:600;color:#1e40af;">
-                    <i class="fas fa-clipboard-check" style="margin-left:6px;"></i>
+            <section class="ia-form-section">
+                <h4 class="ia-form-section-title">
                     صلاحيات التوقيع على أنواع التصاريح
-                </label>
-                <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:10px 14px;">
+                    <span class="ia-form-section-subtitle">اختر G أو Y أو X لكل نوع تصريح</span>
+                </h4>
+                <div class="ia-legend-inline">
+                    <span class="ia-badge-g">G</span><span>توقيع مباشر في كل الحالات</span>
+                    <span class="ia-badge-y">Y</span><span>توقيع بعد التنسيق مع HSE</span>
+                    <span class="ia-badge-x">X</span><span>غير مصرح بالتوقيع</span>
+                </div>
+                <div class="ia-permits-card">
                     ${permitRows}
                 </div>
-            </div>
+            </section>
 
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
-                <div class="form-group">
-                    <label class="form-label">ملاحظات</label>
-                    <input type="text" id="ia-f-notes" class="form-input" value="${val('notes')}" placeholder="ملاحظات اختيارية">
+            <section class="ia-form-section">
+                <h4 class="ia-form-section-title">إعدادات السجل</h4>
+                <div class="ia-form-two-cols ia-settings-row">
+                    <div class="form-group">
+                        <label class="form-label">ملاحظات</label>
+                        <input type="text" id="ia-f-notes" class="form-input" value="${val('notes')}" placeholder="ملاحظات اختيارية">
+                    </div>
+                    <div class="form-group ia-active-group">
+                        <input type="checkbox" id="ia-f-active" ${!record || record.isActive !== false ? 'checked' : ''} style="width:16px;height:16px;cursor:pointer;">
+                        <label for="ia-f-active">نشط (مفعّل في قائمة المرشحين)</label>
+                    </div>
                 </div>
-                <div class="form-group" style="display:flex;align-items:center;gap:10px;padding-top:22px;">
-                    <input type="checkbox" id="ia-f-active" ${!record || record.isActive !== false ? 'checked' : ''} style="width:16px;height:16px;cursor:pointer;">
-                    <label for="ia-f-active" style="cursor:pointer;font-size:0.9rem;color:#374151;">نشط (مفعّل في قائمة المرشحين)</label>
-                </div>
-            </div>
+            </section>
         </div>
         `;
     },
@@ -404,7 +415,10 @@ const IssuingAuthorities = {
                 const group = document.querySelectorAll(`input[name="${e.target.name}"]`);
                 group.forEach(radio => {
                     const lbl = radio.closest('label.ia-radio-label');
-                    if (lbl) lbl.style.opacity = radio.checked ? '1' : '0.45';
+                    if (lbl) {
+                        lbl.style.opacity = radio.checked ? '1' : '0.55';
+                        lbl.classList.toggle('is-selected', !!radio.checked);
+                    }
                 });
             }
         });
@@ -432,7 +446,10 @@ const IssuingAuthorities = {
         // Re-attach radio feedback
         body.querySelectorAll('input[type="radio"]').forEach(radio => {
             const lbl = radio.closest('label.ia-radio-label');
-            if (lbl) lbl.style.opacity = radio.checked ? '1' : '0.45';
+            if (lbl) {
+                lbl.style.opacity = radio.checked ? '1' : '0.55';
+                lbl.classList.toggle('is-selected', !!radio.checked);
+            }
         });
     },
 
@@ -650,12 +667,42 @@ const IssuingAuthorities = {
             .ia-radio-g { background:#dcfce7;color:#166534;border:1px solid #86efac; }
             .ia-radio-y { background:#fef9c3;color:#854d0e;border:1px solid #fde047; }
             .ia-radio-x { background:#fee2e2;color:#991b1b;border:1px solid #fca5a5; }
-            .ia-radio-label { border-radius:4px;transition:opacity .15s; }
-            .ia-radio-label:hover { opacity:1 !important; }
+            .ia-radio-label {
+                border-radius:6px; transition:opacity .15s, transform .1s, box-shadow .15s;
+                cursor:pointer; padding:4px 12px; font-weight:700; font-size:0.83rem; min-width:34px; text-align:center;
+            }
+            .ia-radio-label:hover { opacity:1 !important; transform: translateY(-1px); }
+            .ia-radio-label.is-selected { box-shadow:0 0 0 2px rgba(37, 99, 235, 0.16); }
             .ia-module table th, .ia-module table td {
                 border-bottom:1px solid #f1f5f9;
             }
             .ia-module table tbody tr:hover { background:#f8fafc; }
+            .ia-modal-container .modal-body { max-height:72vh; overflow:auto; }
+            .ia-form-grid { display:grid; gap:14px; }
+            .ia-form-section { border:1px solid #e2e8f0; border-radius:10px; padding:12px; background:#ffffff; }
+            .ia-form-section-title { margin:0 0 10px; color:#1e3a8a; font-size:0.95rem; font-weight:700; }
+            .ia-form-section-subtitle { display:block; margin-top:4px; color:#475569; font-size:0.78rem; font-weight:500; }
+            .ia-form-two-cols { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+            .ia-legend-inline {
+                display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-bottom:10px;
+                color:#334155; font-size:0.8rem;
+            }
+            .ia-permits-card { background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:8px 12px; }
+            .ia-permit-row { display:flex; align-items:center; justify-content:space-between; padding:10px 0; border-bottom:1px solid #e5e7eb; gap:10px; }
+            .ia-permit-row:last-child { border-bottom:none; }
+            .ia-permit-label { font-size:0.9rem; color:#1f2937; font-weight:600; display:flex; align-items:center; gap:6px; }
+            .ia-permit-label-en { color:#64748b; font-size:0.78rem; font-weight:500; }
+            .ia-radio-group { display:flex; gap:8px; }
+            .ia-settings-row { align-items:center; }
+            .ia-active-group { display:flex; align-items:center; gap:10px; padding-top:24px; }
+            .ia-active-group label { cursor:pointer; font-size:0.9rem; color:#334155; font-weight:600; }
+            .ia-form .form-label { color:#334155; font-weight:700; }
+            .ia-form .form-input::placeholder { color:#94a3b8; }
+            @media (max-width: 768px) {
+                .ia-form-two-cols { grid-template-columns:1fr; }
+                .ia-active-group { padding-top:4px; }
+                .ia-permit-row { flex-direction:column; align-items:flex-start; }
+            }
         `;
         document.head.appendChild(style);
     }
