@@ -2749,7 +2749,7 @@ const Training = {
                         </div>
                     </div>
                     <div class="card-body" id="contractor-training-container">
-                        ${await this.renderContractorTrainingSection()}
+                        <div class="contractor-training-loading text-center py-8 text-gray-500">جاري تحميل السجل…</div>
                     </div>
                 </div>
             `;
@@ -2799,7 +2799,7 @@ const Training = {
         if (tabName === 'programs') {
             this.loadTrainingList();
         } else if (tabName === 'contractors') {
-            this.refreshContractorTrainingList();
+            void this.refreshContractorTrainingList().catch(() => {});
         } else if (tabName === 'attendance') {
             this.loadAttendanceRegistry();
             const attendanceMonthFilter = document.getElementById('attendance-month-filter');
