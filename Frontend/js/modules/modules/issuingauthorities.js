@@ -12,6 +12,7 @@ const IssuingAuthorities = {
     _data: [],
     _loading: false,
     _activeCategory: 'employees',
+    _contractorOptions: [],
     _unsupportedActions: {
         employees: false,
         contractors: false
@@ -135,12 +136,49 @@ const IssuingAuthorities = {
         const section = document.getElementById('issuing-authorities-section');
         if (!section) return;
 
+        await this._fetchContractorOptions();
         section.innerHTML = this._renderShell();
         this._injectStyles();
 
         await this._fetchData();
         this._renderTable();
         this._attachEvents();
+    },
+
+    async _fetchContractorOptions() {
+        try {
+            let rows = [];
+            const primary = await this._withTimeout(GoogleIntegration.sendRequest({
+                action: 'getAllApprovedContractors',
+                data: { filters: {} }
+            }), 7000);
+            if (primary && primary.success && Array.isArray(primary.data)) {
+                rows = primary.data;
+            } else {
+                const fallback = await this._withTimeout(GoogleIntegration.sendRequest({
+                    action: 'readFromSheet',
+                    data: { sheetName: 'ApprovedContractors' }
+                }), 7000);
+                if (fallback && fallback.success && Array.isArray(fallback.data)) {
+                    rows = fallback.data;
+                }
+            }
+
+            this._contractorOptions = (rows || [])
+                .filter((c) => {
+                    const status = String(c.status || '').toLowerCase().trim();
+                    const active = String(c.isActive ?? '').toLowerCase().trim();
+                    return (status === '' || status === 'approved') && active !== 'false' && active !== 'inactive';
+                })
+                .map((c) => ({
+                    id: String(c.id || c.contractorId || c.code || '').trim(),
+                    name: String(c.companyName || c.name || c.contractorName || '').trim()
+                }))
+                .filter((c) => c.name)
+                .sort((a, b) => a.name.localeCompare(b.name, 'ar'));
+        } catch (_) {
+            this._contractorOptions = [];
+        }
     },
 
     _renderShell() {
@@ -248,6 +286,10 @@ const IssuingAuthorities = {
         const personType = String(val('personType') || (this._activeCategory === 'contractors' ? 'contractor' : 'employee')).toLowerCase() === 'contractor'
             ? 'contractor'
             : 'employee';
+        const contractorName = String(val('name') || '').trim();
+        const contractorOptionsHtml = (this._contractorOptions || []).map(c => `
+            <option value="${c.name}" ${contractorName === c.name ? 'selected' : ''}>${c.name}</option>
+        `).join('');
 
         const permitRows = this.PERMIT_TYPES.map(pt => `
             <div class="ia-permit-row">
@@ -281,6 +323,13 @@ const IssuingAuthorities = {
                     <select id="ia-f-person-type" class="form-select ia-form-select">
                         <option value="employee" ${personType === 'employee' ? 'selected' : ''}>موظف</option>
                         <option value="contractor" ${personType === 'contractor' ? 'selected' : ''}>مقاول</option>
+                    </select>
+                </div>
+                <div class="form-group ia-contractor-wrap" id="ia-contractor-wrap" style="${personType === 'contractor' ? '' : 'display:none;'}">
+                    <label class="form-label">المقاول <span style="color:red;">*</span></label>
+                    <select id="ia-f-contractor-name" class="form-select ia-form-select">
+                        <option value="">-- اختر المقاول --</option>
+                        ${contractorOptionsHtml}
                     </select>
                 </div>
                 <div class="form-group ia-employee-code-wrap" id="ia-employee-code-wrap" style="${personType === 'employee' ? '' : 'display:none;'}">
@@ -573,6 +622,7 @@ const IssuingAuthorities = {
 
         document.getElementById('ia-lookup-employee-btn')?.addEventListener('click', () => this._lookupEmployeeByCode());
         document.getElementById('ia-f-employee-code')?.addEventListener('blur', () => this._lookupEmployeeByCode());
+        document.getElementById('ia-f-contractor-name')?.addEventListener('change', () => this._onContractorChanged());
         document.getElementById('ia-f-name')?.addEventListener('blur', () => {
             const personType = (document.getElementById('ia-f-person-type')?.value || 'employee').toLowerCase();
             const code = (document.getElementById('ia-f-employee-code')?.value || '').trim();
@@ -586,7 +636,9 @@ const IssuingAuthorities = {
     _togglePersonTypeInputs() {
         const type = (document.getElementById('ia-f-person-type')?.value || 'employee').toLowerCase();
         const codeWrap = document.getElementById('ia-employee-code-wrap');
+        const contractorWrap = document.getElementById('ia-contractor-wrap');
         if (codeWrap) codeWrap.style.display = type === 'employee' ? '' : 'none';
+        if (contractorWrap) contractorWrap.style.display = type === 'contractor' ? '' : 'none';
         const hint = document.getElementById('ia-person-mode-hint');
         if (hint) {
             hint.textContent = type === 'employee'
@@ -603,6 +655,16 @@ const IssuingAuthorities = {
                 el.removeAttribute('readonly');
             }
         });
+        if (type === 'contractor') this._onContractorChanged();
+    },
+
+    _onContractorChanged() {
+        const personType = (document.getElementById('ia-f-person-type')?.value || 'employee').toLowerCase();
+        if (personType !== 'contractor') return;
+        const selectedName = (document.getElementById('ia-f-contractor-name')?.value || '').trim();
+        if (!selectedName) return;
+        const nameInput = document.getElementById('ia-f-name');
+        if (nameInput) nameInput.value = selectedName;
     },
 
     async _lookupEmployeeByCode(queryOverride) {
@@ -611,10 +673,47 @@ const IssuingAuthorities = {
             if (personType !== 'employee') return;
             const query = String(queryOverride || '').trim() || (document.getElementById('ia-f-employee-code')?.value || '').trim();
             if (!query) return;
-            const result = await GoogleIntegration.sendRequest({
-                action: 'getEmployeeByCode',
-                data: { employeeCode: query }
-            });
+            let result = null;
+            try {
+                result = await this._withTimeout(GoogleIntegration.sendRequest({
+                    action: 'getEmployeeByCode',
+                    data: { employeeCode: query }
+                }), 4500);
+            } catch (_) {
+                // fallback below
+            }
+            if (!result || !result.success || !result.data) {
+                const fallback = await this._withTimeout(GoogleIntegration.sendRequest({
+                    action: 'readFromSheet',
+                    data: { sheetName: 'Employees' }
+                }), 7000);
+                if (fallback && fallback.success && Array.isArray(fallback.data)) {
+                    const norm = (v) => String(v || '').trim().toLowerCase();
+                    const target = norm(query);
+                    const emp = fallback.data.find((e) =>
+                        norm(e.employeeNumber) === target ||
+                        norm(e.sapId) === target ||
+                        norm(e.id) === target ||
+                        norm(e.employeeCode) === target ||
+                        norm(e.name) === target ||
+                        norm(e.name).includes(target)
+                    );
+                    if (emp) {
+                        result = {
+                            success: true,
+                            data: {
+                                employeeCode: String(emp.employeeNumber || emp.sapId || emp.id || '').trim(),
+                                name: String(emp.name || '').trim(),
+                                departmentName: String(emp.department || '').trim(),
+                                jobTitle: String(emp.job || emp.position || '').trim(),
+                                factory: String(emp.branch || '').trim(),
+                                location: String(emp.location || '').trim(),
+                                sublocation: String(emp.sublocation || emp.subLocation || emp.subLocationName || emp.locationName || '').trim()
+                            }
+                        };
+                    }
+                }
+            }
             if (!result || !result.success || !result.data) {
                 if (typeof Utils !== 'undefined' && Utils.showNotification) {
                     Utils.showNotification((result && result.message) || 'لم يتم العثور على بيانات موظف', 'warning');
@@ -622,6 +721,9 @@ const IssuingAuthorities = {
                 return;
             }
             const data = result.data;
+            if (document.getElementById('ia-f-employee-code')) {
+                document.getElementById('ia-f-employee-code').value = data.employeeCode || query;
+            }
             if (document.getElementById('ia-f-name')) document.getElementById('ia-f-name').value = data.name || '';
             if (document.getElementById('ia-f-dept')) document.getElementById('ia-f-dept').value = data.departmentName || '';
             if (document.getElementById('ia-f-job-title')) document.getElementById('ia-f-job-title').value = data.jobTitle || '';
@@ -640,7 +742,7 @@ const IssuingAuthorities = {
 
     _currentEditId: null,
 
-    _openModal(record) {
+    async _openModal(record) {
         const modal = document.getElementById('ia-modal-overlay');
         const title = document.getElementById('ia-modal-title');
         const body  = document.getElementById('ia-modal-body');
@@ -648,6 +750,7 @@ const IssuingAuthorities = {
 
         this._currentEditId = record ? record.id : null;
         title.textContent = record ? 'تعديل بيانات الشخص المصرح له' : 'إضافة شخص مصرح له';
+        await this._fetchContractorOptions();
         body.innerHTML = this._renderForm(record);
         modal.style.display = 'flex';
         this._togglePersonTypeInputs();
@@ -673,7 +776,10 @@ const IssuingAuthorities = {
             ? 'contractor'
             : 'employee';
         const employeeCode = (document.getElementById('ia-f-employee-code')?.value || '').trim();
-        const name = (document.getElementById('ia-f-name')?.value || '').trim();
+        const contractorName = (document.getElementById('ia-f-contractor-name')?.value || '').trim();
+        const name = personType === 'contractor'
+            ? contractorName
+            : (document.getElementById('ia-f-name')?.value || '').trim();
         if (!name) {
             if (typeof Utils !== 'undefined' && Utils.showNotification) {
                 Utils.showNotification('اسم الشخص مطلوب', 'error');
@@ -687,6 +793,14 @@ const IssuingAuthorities = {
                 Utils.showNotification('الكود الوظيفي مطلوب للموظف', 'error');
             } else {
                 alert('الكود الوظيفي مطلوب للموظف');
+            }
+            return;
+        }
+        if (personType === 'contractor' && !contractorName) {
+            if (typeof Utils !== 'undefined' && Utils.showNotification) {
+                Utils.showNotification('اختيار المقاول مطلوب', 'error');
+            } else {
+                alert('اختيار المقاول مطلوب');
             }
             return;
         }
