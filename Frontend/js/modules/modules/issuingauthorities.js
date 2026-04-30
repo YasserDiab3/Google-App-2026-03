@@ -69,6 +69,54 @@ const IssuingAuthorities = {
         }
     },
 
+    _normalizeEmployeeCode(v) {
+        let s = String(v || '').trim().toLowerCase();
+        if (!s) return '';
+        s = s
+            .replace(/[٠-٩]/g, (d) => String('٠١٢٣٤٥٦٧٨٩'.indexOf(d)))
+            .replace(/[۰-۹]/g, (d) => String('۰۱۲۳۴۵۶۷۸۹'.indexOf(d)));
+        s = s.replace(/\.0+$/g, '').replace(/[\s\-_\/\\]+/g, '');
+        return s;
+    },
+
+    _findEmployeeLocal(query) {
+        const list = Array.isArray(AppState?.appData?.employees) ? AppState.appData.employees : [];
+        if (!list.length) return null;
+        const normText = (v) => String(v || '').trim().toLowerCase();
+        const targetCode = this._normalizeEmployeeCode(query);
+        const targetText = normText(query);
+        let emp = list.find((e) =>
+            this._normalizeEmployeeCode(e.employeeNumber) === targetCode ||
+            this._normalizeEmployeeCode(e.sapId) === targetCode ||
+            this._normalizeEmployeeCode(e.id) === targetCode ||
+            this._normalizeEmployeeCode(e.employeeCode) === targetCode
+        );
+        if (!emp && targetCode) {
+            emp = list.find((e) => {
+                const codes = [
+                    this._normalizeEmployeeCode(e.employeeNumber),
+                    this._normalizeEmployeeCode(e.sapId),
+                    this._normalizeEmployeeCode(e.id),
+                    this._normalizeEmployeeCode(e.employeeCode)
+                ].filter(Boolean);
+                return codes.some((c) => c.includes(targetCode) || targetCode.includes(c));
+            });
+        }
+        if (!emp) emp = list.find((e) => normText(e.name) === targetText);
+        if (!emp) emp = list.find((e) => normText(e.name).includes(targetText));
+        return emp || null;
+    },
+
+    _fillEmployeeFields(data) {
+        if (document.getElementById('ia-f-employee-code')) document.getElementById('ia-f-employee-code').value = data.employeeCode || '';
+        if (document.getElementById('ia-f-name')) document.getElementById('ia-f-name').value = data.name || '';
+        if (document.getElementById('ia-f-dept')) document.getElementById('ia-f-dept').value = data.departmentName || '';
+        if (document.getElementById('ia-f-job-title')) document.getElementById('ia-f-job-title').value = data.jobTitle || '';
+        if (document.getElementById('ia-f-factory')) document.getElementById('ia-f-factory').value = data.factory || '';
+        if (document.getElementById('ia-f-location')) document.getElementById('ia-f-location').value = data.location || '';
+        if (document.getElementById('ia-f-sublocation')) document.getElementById('ia-f-sublocation').value = data.sublocation || '';
+    },
+
     _withTimeout(promise, timeoutMs = 7000) {
         return Promise.race([
             promise,
@@ -677,6 +725,22 @@ const IssuingAuthorities = {
                 this._lookupEmployeeByCode(name);
             }
         });
+
+        // Match clinic behavior: wire employee lookup helper directly on code input.
+        if (typeof EmployeeHelper !== 'undefined' && EmployeeHelper.setupEmployeeCodeSearch) {
+            EmployeeHelper.setupEmployeeCodeSearch('ia-f-employee-code', 'ia-f-name', (employee) => {
+                if (!employee) return;
+                this._fillEmployeeFields({
+                    employeeCode: String(employee.employeeNumber || employee.employeeCode || employee.sapId || employee.id || '').trim(),
+                    name: String(employee.name || '').trim(),
+                    departmentName: String(employee.department || '').trim(),
+                    jobTitle: String(employee.position || employee.job || '').trim(),
+                    factory: String(employee.branch || '').trim(),
+                    location: String(employee.location || '').trim(),
+                    sublocation: String(employee.sublocation || employee.subLocation || employee.subLocationName || employee.locationName || '').trim()
+                });
+            }, { employeeNotFoundWarn: 'enter' });
+        }
     },
 
     _togglePersonTypeInputs() {
@@ -719,6 +783,26 @@ const IssuingAuthorities = {
             if (personType !== 'employee') return;
             const query = String(queryOverride || '').trim() || (document.getElementById('ia-f-employee-code')?.value || '').trim();
             if (!query) return;
+
+            // 1) Fast local lookup (same spirit as clinic flow).
+            const localEmployee = this._findEmployeeLocal(query);
+            if (localEmployee) {
+                this._fillEmployeeFields({
+                    employeeCode: String(localEmployee.employeeNumber || localEmployee.employeeCode || localEmployee.sapId || localEmployee.id || '').trim(),
+                    name: String(localEmployee.name || '').trim(),
+                    departmentName: String(localEmployee.department || '').trim(),
+                    jobTitle: String(localEmployee.job || localEmployee.position || '').trim(),
+                    factory: String(localEmployee.branch || '').trim(),
+                    location: String(localEmployee.location || '').trim(),
+                    sublocation: String(localEmployee.sublocation || localEmployee.subLocation || localEmployee.subLocationName || localEmployee.locationName || '').trim()
+                });
+                if (typeof Utils !== 'undefined' && Utils.showNotification) {
+                    Utils.showNotification('تم تحميل بيانات الموظف بنجاح', 'success');
+                }
+                return;
+            }
+
+            // 2) Backend lookup/fallback if local cache misses.
             let result = null;
             try {
                 result = await this._withTimeout(GoogleIntegration.sendRequest({
@@ -767,17 +851,15 @@ const IssuingAuthorities = {
                 return;
             }
             const data = result.data;
-            if (document.getElementById('ia-f-employee-code')) {
-                document.getElementById('ia-f-employee-code').value = data.employeeCode || query;
-            }
-            if (document.getElementById('ia-f-name')) document.getElementById('ia-f-name').value = data.name || '';
-            if (document.getElementById('ia-f-dept')) document.getElementById('ia-f-dept').value = data.departmentName || '';
-            if (document.getElementById('ia-f-job-title')) document.getElementById('ia-f-job-title').value = data.jobTitle || '';
-            if (document.getElementById('ia-f-factory')) document.getElementById('ia-f-factory').value = data.factory || '';
-            if (document.getElementById('ia-f-location')) document.getElementById('ia-f-location').value = data.location || '';
-            if (document.getElementById('ia-f-sublocation')) {
-                document.getElementById('ia-f-sublocation').value = data.sublocation || '';
-            }
+            this._fillEmployeeFields({
+                employeeCode: data.employeeCode || query,
+                name: data.name || '',
+                departmentName: data.departmentName || '',
+                jobTitle: data.jobTitle || '',
+                factory: data.factory || '',
+                location: data.location || '',
+                sublocation: data.sublocation || ''
+            });
             if (typeof Utils !== 'undefined' && Utils.showNotification) {
                 Utils.showNotification('تم تحميل بيانات الموظف بنجاح', 'success');
             }
