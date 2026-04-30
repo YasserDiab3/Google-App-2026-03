@@ -259,27 +259,17 @@ const IssuingAuthorities = {
     async _fetchData() {
         this._loading = true;
         try {
-            const result = await GoogleIntegration.sendRequest({
-                action: 'getAllIssuingAuthorities',
-                data: {}
-            });
-            if (result && result.success) {
-                this._data = (result.data || []).map(r => this._normalizeRow(r));
-            } else {
-                const fallbackUsed = this._isActionUnknownMessage(result && result.message) && await this._fetchViaReadFromSheet();
-                if (!fallbackUsed) {
-                    this._data = [];
-                    if (typeof Utils !== 'undefined') {
-                        Utils.safeWarn('تحذير: فشل تحميل بيانات Issuing Authorities:', result && result.message);
-                    }
+            // ✅ قراءة مباشرة من الشيت لتفادي ضجيج الأخطاء عند بيئات production القديمة
+            const ok = await this._fetchViaReadFromSheet();
+            if (!ok) {
+                this._data = [];
+                if (typeof Utils !== 'undefined') {
+                    Utils.safeWarn('تحذير: فشل تحميل بيانات Issuing Authorities عبر readFromSheet');
                 }
             }
         } catch (err) {
-            const fallbackUsed = this._isActionUnknownMessage(err && err.message) && await this._fetchViaReadFromSheet();
-            if (!fallbackUsed) {
-                this._data = [];
-                if (typeof Utils !== 'undefined') Utils.safeError('خطأ في تحميل Issuing Authorities:', err);
-            }
+            this._data = [];
+            if (typeof Utils !== 'undefined') Utils.safeError('خطأ في تحميل Issuing Authorities:', err);
         }
         this._loading = false;
     },
@@ -584,62 +574,29 @@ const IssuingAuthorities = {
      */
     async getAuthoritiesForPermitType(permitType) {
         try {
-            const result = await GoogleIntegration.sendRequest({
-                action: 'getIssuingAuthoritiesForPermitType',
-                data: { permitType }
-            });
-            if (result && result.success) {
-                return result.authorities || [];
+            if (!this._data || this._data.length === 0) {
+                await this._fetchData();
             }
-            if (this._isActionUnknownMessage(result && result.message)) {
-                if (!this._data || this._data.length === 0) {
-                    await this._fetchData();
-                }
-                const key = String(permitType || '').trim();
-                if (!key) return [];
-                return (this._data || [])
-                    .filter(r => r.isActive !== false)
-                    .map(r => {
-                        const level = String(r[key] || 'X').toUpperCase().trim();
-                        return {
-                            id: r.id,
-                            name: r.name,
-                            departmentId: r.departmentId,
-                            departmentName: r.departmentName,
-                            email: r.email,
-                            phone: r.phone,
-                            permitLevel: level,
-                            requiresHseCoApproval: level === 'Y'
-                        };
-                    })
-                    .filter(x => x.permitLevel === 'G' || x.permitLevel === 'Y')
-                    .sort((a, b) => (a.permitLevel === 'G' && b.permitLevel !== 'G') ? -1 : (b.permitLevel === 'G' && a.permitLevel !== 'G') ? 1 : 0);
-            }
-            return [];
+            const key = String(permitType || '').trim();
+            if (!key) return [];
+            return (this._data || [])
+                .filter(r => r.isActive !== false)
+                .map(r => {
+                    const level = String(r[key] || 'X').toUpperCase().trim();
+                    return {
+                        id: r.id,
+                        name: r.name,
+                        departmentId: r.departmentId,
+                        departmentName: r.departmentName,
+                        email: r.email,
+                        phone: r.phone,
+                        permitLevel: level,
+                        requiresHseCoApproval: level === 'Y'
+                    };
+                })
+                .filter(x => x.permitLevel === 'G' || x.permitLevel === 'Y')
+                .sort((a, b) => (a.permitLevel === 'G' && b.permitLevel !== 'G') ? -1 : (b.permitLevel === 'G' && a.permitLevel !== 'G') ? 1 : 0);
         } catch (err) {
-            if (this._isActionUnknownMessage(err && err.message)) {
-                if (!this._data || this._data.length === 0) {
-                    await this._fetchData();
-                }
-                const key = String(permitType || '').trim();
-                return (this._data || [])
-                    .filter(r => r.isActive !== false)
-                    .map(r => {
-                        const level = String(r[key] || 'X').toUpperCase().trim();
-                        return {
-                            id: r.id,
-                            name: r.name,
-                            departmentId: r.departmentId,
-                            departmentName: r.departmentName,
-                            email: r.email,
-                            phone: r.phone,
-                            permitLevel: level,
-                            requiresHseCoApproval: level === 'Y'
-                        };
-                    })
-                    .filter(x => x.permitLevel === 'G' || x.permitLevel === 'Y')
-                    .sort((a, b) => (a.permitLevel === 'G' && b.permitLevel !== 'G') ? -1 : (b.permitLevel === 'G' && a.permitLevel !== 'G') ? 1 : 0);
-            }
             if (typeof Utils !== 'undefined') Utils.safeError('IssuingAuthorities.getAuthoritiesForPermitType error:', err);
             return [];
         }
