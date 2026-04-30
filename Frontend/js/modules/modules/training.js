@@ -444,7 +444,7 @@ const Training = {
                     </div>
                 </div>
                 <div id="training-tab-content">
-                    ${await this.renderTabContent('programs')}
+                    ${this.buildProgramsTabMarkup()}
                 </div>
             </div>
         `;
@@ -2462,10 +2462,10 @@ const Training = {
         }).join('');
     },
 
-    async renderTabContent(tabName) {
-        if (tabName === 'programs') {
-            const stats = this.getStats();
-            return `
+    /** محتوى تبويب «برامج التدريب» — متزامن لتجنب تأخير await عند أول عرض للموديول */
+    buildProgramsTabMarkup() {
+        const stats = this.getStats();
+        return `
                 <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
                     <div class="content-card h-full">
                         <div class="flex items-center gap-4">
@@ -2548,6 +2548,11 @@ const Training = {
                     </div>
                 </div>
             `;
+    },
+
+    async renderTabContent(tabName) {
+        if (tabName === 'programs') {
+            return this.buildProgramsTabMarkup();
         } else if (tabName === 'contractors') {
             const contractorStats = this.getContractorTrainingStats();
             const analyticsModel = this.getContractorTrainingAnalyticsModel('');

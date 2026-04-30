@@ -5686,9 +5686,13 @@ window.UI = {
         const isRefresh = AppState.isPageRefresh;
         const loadSectionWork = () => {
             // ✅ تقسيم العمل لتقليل setTimeout/idle Violations: تحميل البيانات أولاً، ثم الأيقونات لاحقاً
-            setTimeout(() => {
-                this.loadSectionData(sectionName, isRefresh);
-            }, 0);
+            const runData = () => this.loadSectionData(sectionName, isRefresh);
+            // التدريب: استدعاء مباشر بدون setTimeout(0) لتقليل تأخير ظهور الواجهة
+            if (sectionName === 'training') {
+                runData();
+            } else {
+                setTimeout(runData, 0);
+            }
             if (typeof requestIdleCallback === 'function') {
                 requestIdleCallback(() => this.addNavigationIconsAfterRender(sectionName), { timeout: 800 });
             } else {
@@ -5696,7 +5700,9 @@ window.UI = {
             }
         };
 
-        if (sectionName === 'dashboard') {
+        // Dashboard والتدريب: تحميل فوري لعرض البنية والواجهة دون انتظار requestIdleCallback
+        // (موديول التدريب كان يظهر «جاري تحميل البيانات...» لثوانٍ بسبب تأجيل idle حتى يُستدعى Training.load)
+        if (sectionName === 'dashboard' || sectionName === 'training') {
             loadSectionWork();
         } else if (typeof requestIdleCallback === 'function') {
             // ✅ تجنّب Violation: اجعل requestIdleCallback سريعاً، وادفع العمل الثقيل خارج callback
