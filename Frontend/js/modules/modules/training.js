@@ -21,6 +21,12 @@ const Training = {
     _trainingDataLoadPromise: null,
     /** true بعد أول محاولة جلب كاملة من الخادم (أو وضع بدون خادم) حتى لا يبقى تبويب المقاولين/الحضور بانتظار بيانات جزئية فقط */
     _trainingBackendFetchOk: false,
+    /** التبويب النشط حالياً (programs | contractors | attendance | analysis) */
+    _currentActiveTab: 'programs',
+    /** كاش HTML لكل تبويب لتجنب إعادة الرسم عند التبديل */
+    _tabCache: { programs: null, contractors: null, attendance: null, analysis: null },
+    /** علامات «بحاجة لإعادة بناء» لكل تبويب */
+    _tabDirty: { programs: true, contractors: true, attendance: true, analysis: true },
 
     ensureData() {
         const data = AppState.appData || {};
@@ -306,10 +312,18 @@ const Training = {
     },
 
     async load() {
-        // Add language change listener
+        // مستمع تغيير اللغة: لا يعيد تحميل الموديول كاملاً ولا يطلب الشبكة؛
+        // يطبق i18n على القسم ويبطل الكاش ثم يعيد رسم التبويب النشط فقط.
         if (!this._languageChangeListenerAdded) {
             document.addEventListener('language-changed', () => {
-                this.load();
+                try {
+                    const sec = document.getElementById('training-section');
+                    if (sec) this.applyModuleI18n(sec);
+                } catch (e) { /* ignore */ }
+                this._markAllTabsDirty();
+                if (this._currentActiveTab) {
+                    this.switchTab(this._currentActiveTab);
+                }
             });
             this._languageChangeListenerAdded = true;
         }
@@ -450,12 +464,20 @@ const Training = {
         `;
             this.applyModuleI18n(section);
             this.setupEventListeners();
-            
-            // ✅ تحسين: تحميل البيانات مباشرة بدون أي تأخير
-            // تحميل القائمة المحلية أولاً فوراً لعرض البيانات الفورية
-            this.loadTrainingList();
-            
-            // تحميل البيانات من Backend مباشرة بشكل متوازي (بدون requestAnimationFrame لتجنب التأخير)
+
+            // ✅ التبويب الافتراضي «programs» مرسوم بالفعل عبر buildProgramsTabMarkup داخل innerHTML أعلاه.
+            // نملأ كاش التبويب من DOM الحالي ونعتمد على hydrate لتحميل قائمة البرامج (loadTrainingList) مرة واحدة.
+            this._currentActiveTab = 'programs';
+            try {
+                const tabContent = document.getElementById('training-tab-content');
+                if (tabContent) {
+                    this._tabCache.programs = tabContent.innerHTML;
+                    this._tabDirty.programs = false;
+                }
+            } catch (e) { /* ignore */ }
+            this._hydrateTab('programs');
+
+            // البيانات من Backend في الخلفية: تحديث الكاش/الواجهة عبر persistAndRefreshUi.
             this.loadTrainingDataAsync().catch(error => {
                 Utils.safeWarn('⚠️ تعذر تحميل بعض بيانات التدريب:', error);
             });
@@ -519,8 +541,9 @@ const Training = {
                             AppState.appData?.trainingSessions?.length > 0 ||
                             AppState.appData?.trainingCertificates?.length > 0;
         
-        // تحديث القائمة فوراً بالبيانات المحلية إذا كانت موجودة
-        if (hasLocalData) {
+        // تحديث القائمة فوراً بالبيانات المحلية إذا كانت موجودة وكان تبويب البرامج نشطاً.
+        // التبويبات الأخرى ستُحدّث عبر persistAndRefreshUi بعد اكتمال الجلب فقط لتفادي تكرار الرسم.
+        if (hasLocalData && this._currentActiveTab === 'programs') {
             this.loadTrainingList();
         }
 
@@ -552,11 +575,22 @@ const Training = {
                 window.DataManager.save();
             }
             try { localStorage.setItem('training_last_sync', String(Date.now())); } catch (e) {}
-            this.loadTrainingList();
-            const contractorsTab = document.querySelector('.tab-btn[data-tab="contractors"]');
-            if (contractorsTab && contractorsTab.classList.contains('active')) {
+
+            // البيانات تغيّرت: علّم جميع التبويبات بأنها تحتاج إعادة بناء عند زيارتها.
+            this._markAllTabsDirty();
+
+            // حدّث التبويب النشط فقط لتفادي إعادة الرسم المكلفة لتبويبات غير ظاهرة.
+            const active = this._currentActiveTab || 'programs';
+            if (active === 'programs') {
+                this.loadTrainingList();
+            } else if (active === 'contractors') {
                 this.refreshContractorTrainingList();
+            } else if (active === 'attendance') {
+                this.loadAttendanceRegistry();
+            } else if (active === 'analysis') {
+                this.updateTrainingAnalysisResults();
             }
+
             this._trainingBackendFetchOk = true;
         };
 
@@ -2734,53 +2768,79 @@ const Training = {
     },
 
     async switchTab(tabName) {
-        // Update tab buttons
         document.querySelectorAll('.tab-btn').forEach(btn => {
             btn.classList.remove('active');
         });
         const activeBtn = document.querySelector(`.tab-btn[data-tab="${tabName}"]`);
         if (activeBtn) activeBtn.classList.add('active');
 
-        // Update content
         const content = document.getElementById('training-tab-content');
-        if (content) {
+        if (!content) return;
+
+        this._currentActiveTab = tabName;
+
+        const cached = this._tabCache[tabName];
+        const isDirty = this._tabDirty[tabName] !== false;
+
+        if (cached && !isDirty) {
+            content.innerHTML = cached;
+        } else {
             content.innerHTML = await this.renderTabContent(tabName);
-            
-            // Setup event listeners for the new content
-            if (tabName === 'programs') {
-                this.loadTrainingList();
-            } else if (tabName === 'contractors') {
-                if (this._trainingBackendFetchOk !== true) {
-                    await this.loadTrainingDataAsync().catch(() => {});
-                }
-                this.refreshContractorTrainingList();
-            } else if (tabName === 'attendance') {
-                if (this._trainingBackendFetchOk !== true) {
-                    await this.loadTrainingDataAsync().catch(() => {});
-                }
-                this.loadAttendanceRegistry();
-                const attendanceMonthFilter = document.getElementById('attendance-month-filter');
-                const resetAttendanceFilter = document.getElementById('reset-attendance-filter');
-                if (attendanceMonthFilter) {
-                    attendanceMonthFilter.addEventListener('change', () => {
-                        this.refreshAttendanceAnalytics(attendanceMonthFilter.value || '');
-                    });
-                }
-                if (resetAttendanceFilter) {
-                    resetAttendanceFilter.addEventListener('click', () => {
-                        if (attendanceMonthFilter) attendanceMonthFilter.value = '';
-                        this.refreshAttendanceAnalytics('');
-                    });
-                }
-                this.bindAttendanceAnalyticsEvents((document.getElementById('attendance-month-filter') || {}).value || '');
-            } else if (tabName === 'analysis') {
-                this.loadTrainingAnalysisItemsUI();
-                this.updateTrainingAnalysisResults();
-                this.bindAnalysisFilterEvents();
-            }
-            
-            this.setupEventListeners();
+            this._tabCache[tabName] = content.innerHTML;
+            this._tabDirty[tabName] = false;
         }
+
+        this._hydrateTab(tabName);
+
+        // البيانات من الخادم في الخلفية: لا توقف الواجهة
+        if (this._trainingBackendFetchOk !== true && (tabName === 'contractors' || tabName === 'attendance')) {
+            this.loadTrainingDataAsync().catch(() => {});
+        }
+
+        this.setupEventListeners();
+    },
+
+    /** ربط الأحداث وتحميل البيانات الديناميكية لتبويب بعد لصق HTML من الكاش أو الرسم. */
+    _hydrateTab(tabName) {
+        if (tabName === 'programs') {
+            this.loadTrainingList();
+        } else if (tabName === 'contractors') {
+            this.refreshContractorTrainingList();
+        } else if (tabName === 'attendance') {
+            this.loadAttendanceRegistry();
+            const attendanceMonthFilter = document.getElementById('attendance-month-filter');
+            const resetAttendanceFilter = document.getElementById('reset-attendance-filter');
+            if (attendanceMonthFilter && !attendanceMonthFilter.dataset.bound) {
+                attendanceMonthFilter.addEventListener('change', () => {
+                    this.refreshAttendanceAnalytics(attendanceMonthFilter.value || '');
+                });
+                attendanceMonthFilter.dataset.bound = '1';
+            }
+            if (resetAttendanceFilter && !resetAttendanceFilter.dataset.bound) {
+                resetAttendanceFilter.addEventListener('click', () => {
+                    if (attendanceMonthFilter) attendanceMonthFilter.value = '';
+                    this.refreshAttendanceAnalytics('');
+                });
+                resetAttendanceFilter.dataset.bound = '1';
+            }
+            this.bindAttendanceAnalyticsEvents((document.getElementById('attendance-month-filter') || {}).value || '');
+        } else if (tabName === 'analysis') {
+            this.loadTrainingAnalysisItemsUI();
+            this.updateTrainingAnalysisResults();
+            this.bindAnalysisFilterEvents();
+        }
+    },
+
+    /** يضع علامات «بحاجة إعادة بناء» على جميع التبويبات (تستدعى بعد تغيّر البيانات). */
+    _markAllTabsDirty() {
+        this._tabDirty.programs = true;
+        this._tabDirty.contractors = true;
+        this._tabDirty.attendance = true;
+        this._tabDirty.analysis = true;
+        this._tabCache.programs = null;
+        this._tabCache.contractors = null;
+        this._tabCache.attendance = null;
+        this._tabCache.analysis = null;
     },
 
     async renderList() {
@@ -2899,111 +2959,56 @@ const Training = {
     },
 
     setupEventListeners() {
-        setTimeout(() => {
-            const addBtn = document.getElementById('add-training-btn');
-            const addEmptyBtn = document.getElementById('add-training-empty-btn');
-            if (addBtn) addBtn.addEventListener('click', () => this.showForm());
-            if (addEmptyBtn) addEmptyBtn.addEventListener('click', () => this.showForm());
-            const form = document.getElementById('training-form');
-            if (form) form.addEventListener('submit', (e) => this.handleSubmit(e));
+        // ربط مرة واحدة لكل عنصر باستخدام علامة data-bound؛ يُستدعى بعد كل rebuild بدون تكرار الربط ولا setTimeout.
+        const bindOnce = (el, type, handler) => {
+            if (!el || el.dataset.bound === '1') return;
+            el.addEventListener(type, handler);
+            el.dataset.bound = '1';
+        };
 
-            // Export Excel button
-            const exportExcelBtn = document.getElementById('export-training-excel-btn');
-            if (exportExcelBtn) {
-                exportExcelBtn.addEventListener('click', () => this.exportToExcel());
-            }
-            const exportPdfBtn = document.getElementById('export-training-pdf-btn');
-            if (exportPdfBtn) {
-                exportPdfBtn.addEventListener('click', () => this.showTrainingReportDialog());
-            }
+        bindOnce(document.getElementById('add-training-btn'), 'click', () => this.showForm());
+        bindOnce(document.getElementById('add-training-empty-btn'), 'click', () => this.showForm());
+        bindOnce(document.getElementById('training-form'), 'submit', (e) => this.handleSubmit(e));
 
-            const printAttendanceFormBtn = document.getElementById('training-form-print-btn');
-            if (printAttendanceFormBtn) {
-                printAttendanceFormBtn.addEventListener('click', () => this.printAttendanceFormFromScreen());
-            }
+        bindOnce(document.getElementById('export-training-excel-btn'), 'click', () => this.exportToExcel());
+        bindOnce(document.getElementById('export-training-pdf-btn'), 'click', () => this.showTrainingReportDialog());
 
-            // Search and filter
-            const searchInput = document.getElementById('training-search');
-            const statusFilter = document.getElementById('training-filter-status');
+        bindOnce(document.getElementById('training-form-print-btn'), 'click', () => this.printAttendanceFormFromScreen());
+        bindOnce(document.getElementById('training-form-back-btn'), 'click', () => this.showList());
 
-            if (searchInput) {
-                searchInput.addEventListener('input', (e) => {
-                    this.filterItems(e.target.value, statusFilter?.value || '');
-                });
-            }
+        const searchInput = document.getElementById('training-search');
+        const statusFilter = document.getElementById('training-filter-status');
+        bindOnce(searchInput, 'input', (e) => this.filterItems(e.target.value, statusFilter?.value || ''));
+        bindOnce(statusFilter, 'change', (e) => this.filterItems(searchInput?.value || '', e.target.value));
 
-            if (statusFilter) {
-                statusFilter.addEventListener('change', (e) => {
-                    this.filterItems(searchInput?.value || '', e.target.value);
-                });
-            }
+        bindOnce(document.getElementById('view-training-matrix-btn'), 'click', () => this.showTrainingMatrix());
+        bindOnce(document.getElementById('view-annual-training-plan-btn'), 'click', () => this.showAnnualPlanModal());
+        bindOnce(document.getElementById('training-refresh-btn'), 'click', () => this.refresh());
 
-            // View Training Matrix button
-            const viewMatrixBtn = document.getElementById('view-training-matrix-btn');
-            if (viewMatrixBtn) {
-                viewMatrixBtn.addEventListener('click', () => this.showTrainingMatrix());
-            }
-            const viewPlanBtn = document.getElementById('view-annual-training-plan-btn');
-            if (viewPlanBtn) {
-                viewPlanBtn.addEventListener('click', () => this.showAnnualPlanModal());
-            }
-            
-            // زر تحديث البيانات في الواجهة الرئيسية
-            const refreshBtn = document.getElementById('training-refresh-btn');
-            if (refreshBtn) {
-                refreshBtn.addEventListener('click', () => this.refresh());
-            }
-            
-            // زر تسجيل تدريب مقاول في الواجهة الرئيسية
-            const addContractorTrainingHeaderBtn = document.getElementById('add-contractor-training-header-btn');
-            if (addContractorTrainingHeaderBtn) {
-                addContractorTrainingHeaderBtn.addEventListener('click', () => this.openContractorTrainingForm());
-            }
-            
-            // زر تسجيل تدريب مقاول في تبويب المقاولين
-            const addContractorTrainingBtn = document.getElementById('add-contractor-training-btn');
-            if (addContractorTrainingBtn) {
-                addContractorTrainingBtn.addEventListener('click', () => this.openContractorTrainingForm());
-            }
-            const contractorTrainingSearch = document.getElementById('contractor-training-search');
-            if (contractorTrainingSearch) {
-                contractorTrainingSearch.addEventListener('input', (e) => this.filterContractorTraining(e.target.value));
-            }
-            const exportContractorExcelBtn = document.getElementById('export-contractor-training-excel-btn');
-            if (exportContractorExcelBtn) {
-                exportContractorExcelBtn.addEventListener('click', () => this.exportContractorTrainingExcel());
-            }
-            const exportContractorPdfBtn = document.getElementById('export-contractor-training-pdf-btn');
-            if (exportContractorPdfBtn) {
-                exportContractorPdfBtn.addEventListener('click', () => this.showContractorTrainingReportDialog());
-            }
+        bindOnce(document.getElementById('add-contractor-training-header-btn'), 'click', () => this.openContractorTrainingForm());
+        bindOnce(document.getElementById('add-contractor-training-btn'), 'click', () => this.openContractorTrainingForm());
 
-            // فلتر الشهر للمقاولين
-            const contractorMonthFilter = document.getElementById('contractor-month-filter');
-            if (contractorMonthFilter) {
-                contractorMonthFilter.addEventListener('change', (e) => this.updateContractorStatsWithFilter(e.target.value));
-            }
-            const resetContractorFilter = document.getElementById('reset-contractor-filter');
-            if (resetContractorFilter) {
-                resetContractorFilter.addEventListener('click', () => {
-                    const filterSelect = document.getElementById('contractor-month-filter');
-                    if (filterSelect) {
-                        filterSelect.value = '';
-                        this.updateContractorStatsWithFilter('');
-                    }
-                });
-            }
+        bindOnce(document.getElementById('contractor-training-search'), 'input', (e) => this.filterContractorTraining(e.target.value));
+        bindOnce(document.getElementById('export-contractor-training-excel-btn'), 'click', () => this.exportContractorTrainingExcel());
+        bindOnce(document.getElementById('export-contractor-training-pdf-btn'), 'click', () => this.showContractorTrainingReportDialog());
 
-            // تهيئة التحليل التفاعلي لأول مرة + إعادة تعيين
-            const contractorAnalyticsResetBtn = document.getElementById('contractor-analytics-reset-btn');
-            if (contractorAnalyticsResetBtn) {
-                contractorAnalyticsResetBtn.addEventListener('click', () => {
-                    // سيتم التعامل معه أيضاً داخل bindContractorAnalyticsEvents، لكن نضمن الربط في أول تحميل
-                    this.refreshContractorAnalytics(document.getElementById('contractor-month-filter')?.value || '');
-                });
+        bindOnce(document.getElementById('contractor-month-filter'), 'change', (e) => this.updateContractorStatsWithFilter(e.target.value));
+        bindOnce(document.getElementById('reset-contractor-filter'), 'click', () => {
+            const filterSelect = document.getElementById('contractor-month-filter');
+            if (filterSelect) {
+                filterSelect.value = '';
+                this.updateContractorStatsWithFilter('');
             }
+        });
+
+        bindOnce(document.getElementById('contractor-analytics-reset-btn'), 'click', () => {
             this.refreshContractorAnalytics(document.getElementById('contractor-month-filter')?.value || '');
-        }, 100);
+        });
+
+        // تهيئة التحليل التفاعلي للمقاولين عند توفر الحاوية فقط (يتجنب عمل ثقيل عندما تبويب المقاولين غير مرسوم).
+        if (document.getElementById('contractor-analytics-dashboard')) {
+            this.refreshContractorAnalytics(document.getElementById('contractor-month-filter')?.value || '');
+        }
     },
 
     updateContractorStatsWithFilter(monthFilter) {
@@ -7232,11 +7237,15 @@ const Training = {
             : '';
         return `
             <div class="content-card" style="box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);">
-                <div class="card-header" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 12px 12px 0 0; padding: 1.5rem;">
-                    <h2 class="card-title" style="color: white; margin: 0;">
+                <div class="card-header" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 12px 12px 0 0; padding: 1.5rem; display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;">
+                    <h2 class="card-title" style="color: white; margin: 0; flex: 1; min-width: 220px;">
                         <i class="fas fa-${data ? 'edit' : 'clipboard-check'} ml-2"></i>
                         ${data ? 'تعديل نموذج حضور تدريب' : 'نموذج حضور تدريب'}
                     </h2>
+                    <button type="button" id="training-form-back-btn" class="btn-secondary" title="العودة إلى قائمة البرامج" style="background: rgba(255,255,255,0.18); color:#fff; border:1px solid rgba(255,255,255,0.4); padding: 0.55rem 1.1rem; border-radius:8px; font-weight:600; display:inline-flex; align-items:center; gap:8px; cursor:pointer; transition: background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.28)'" onmouseout="this.style.background='rgba(255,255,255,0.18)'">
+                        <i class="fas fa-arrow-right"></i>
+                        العودة
+                    </button>
                 </div>
                 <div class="card-body" style="padding: 2rem;">
                     <form id="training-form" class="space-y-6">
