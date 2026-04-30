@@ -660,6 +660,17 @@ const GoogleIntegration = {
                 timestamp: new Date().toISOString()
             };
 
+            // هوية المُنفِّذ للخادم: Code.gs يتطلب postData.userData لعمليات strictAdminActions
+            // (deleteUser، resetUserPassword، initializeSheets، إصلاح رؤوس الجداول) وإلا يُرفض الطلب.
+            if (typeof AppState !== 'undefined' && AppState.currentUser) {
+                const cu = AppState.currentUser;
+                payload.userData = {
+                    email: String(cu.email || '').trim(),
+                    id: cu.id != null && cu.id !== '' ? String(cu.id).trim() : '',
+                    name: String(cu.name || '').trim()
+                };
+            }
+
             // التحقق من هل هو spreadsheetId
             // التحقق من هل هو AppState
             let spreadsheetId = AppState.googleConfig.sheets?.spreadsheetId;
