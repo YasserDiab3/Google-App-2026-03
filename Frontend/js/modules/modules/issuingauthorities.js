@@ -1,6 +1,6 @@
 /**
  * Issuing Authorities Module
- * موديول إدارة الأشخاص المصرح لهم بالتوقيع على تصاريح العمل
+ * موديول إدارة الأشخاص المصرح لهم باعتماد تصاريح العمل (PTW Approvers)
  *
  * قيم الصلاحية:
  *   G = مصرح بالتوقيع في كل الحالات
@@ -640,11 +640,12 @@ const IssuingAuthorities = {
             `<th style="border:1px solid #d1d5db;padding:8px;text-align:center;font-size:10px;">${pt.labelAr}<br><span style="color:#6b7280;font-weight:500;">${pt.labelEn}</span></th>`
         ).join('');
         const rows = this._buildExportTableRowsHtml(records, { escapeForHtml: true });
-        const title = `الأشخاص المصرح لهم — ${this._categoryTitleAr()}`;
+        const titleAr = `الأشخاص المصرح لهم باعتماد تصاريح العمل — ${this._categoryTitleAr()}`;
         const subtitle = `عدد السجلات: ${records.length} — ${new Date().toLocaleString('ar-SA')}`;
         return `
         <div style="margin-bottom:16px;text-align:center;">
-            <h2 style="margin:0 0 8px;color:#1f2937;font-size:18px;">${title}</h2>
+            <h2 style="margin:0 0 4px;color:#1f2937;font-size:18px;">${titleAr}</h2>
+            <p style="margin:0 0 8px;color:#4b5563;font-size:14px;font-weight:600;letter-spacing:0.02em;">PTW Approvers</p>
             <p style="margin:0;color:#6b7280;font-size:13px;">${subtitle}</p>
         </div>
         <table style="width:100%;border-collapse:collapse;font-size:11px;direction:rtl;">
@@ -679,7 +680,7 @@ const IssuingAuthorities = {
             this._iaNotify('يرجى السماح بالنوافذ المنبثقة للطباعة', 'error');
             return;
         }
-        w.document.write(`<!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="UTF-8"><title>طباعة المصرح لهم</title></head><body style="padding:16px;font-family:Segoe UI,Tahoma,sans-serif;">${inner}</body></html>`);
+        w.document.write(`<!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="UTF-8"><title>الأشخاص المصرح لهم باعتماد تصاريح العمل — PTW Approvers</title></head><body style="padding:16px;font-family:Segoe UI,Tahoma,sans-serif;">${inner}</body></html>`);
         w.document.close();
         w.onload = () => {
             setTimeout(() => {
@@ -739,10 +740,11 @@ const IssuingAuthorities = {
         try {
             const content = this._buildExportTableHtml(records);
             const formCode = `IA-LIST-${new Date().toISOString().slice(0, 10)}`;
-            const formTitle = 'الأشخاص المصرح لهم بتصاريح العمل';
+            const formTitleAr = 'الأشخاص المصرح لهم باعتماد تصاريح العمل';
+            const formTitleEn = 'PTW Approvers';
             const htmlContent = typeof FormHeader !== 'undefined' && FormHeader.generatePDFHTML
-                ? FormHeader.generatePDFHTML(formCode, formTitle, content, false, true, { source: 'IssuingAuthorities' }, new Date().toISOString(), new Date().toISOString())
-                : `<!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="UTF-8"><title>${formTitle}</title></head><body style="padding:16px;">${content}</body></html>`;
+                ? FormHeader.generatePDFHTML(formCode, formTitleAr, content, false, true, { source: 'IssuingAuthorities', titleEn: formTitleEn, titleAr: formTitleAr }, new Date().toISOString(), new Date().toISOString())
+                : `<!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="UTF-8"><title>${formTitleAr} — ${formTitleEn}</title></head><body style="padding:16px;">${content}</body></html>`;
             const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
             url = URL.createObjectURL(blob);
             const printWindow = window.open(url, '_blank');
@@ -804,10 +806,10 @@ const IssuingAuthorities = {
                     <div>
                         <h2 class="card-title" style="margin:0;">
                             <i class="fas fa-user-check" style="margin-left:8px;color:#2563eb;"></i>
-                            قائمة الأشخاص المصرح لهم بالتوقيع على تصاريح العمل
+                            قائمة الأشخاص المصرح لهم باعتماد تصاريح العمل
                         </h2>
                         <p class="card-subtitle" style="margin:4px 0 0;color:#64748b;font-size:0.85rem;">
-                            Issuing Authorities for Work Permits - ${this._categoryTitleAr()}
+                            PTW Approvers — ${this._categoryTitleAr()}
                         </p>
                     </div>
                     <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">

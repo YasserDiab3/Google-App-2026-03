@@ -6624,7 +6624,7 @@ const PDFTemplates = {
             </div>
             <div class="header-info">
                 ${(meta && meta.titleEn != null && meta.titleAr != null)
-            ? `<div class="header-title-dual"><div class="header-title-en">${escape(meta.titleEn)}</div><div class="header-title-ar">${escape(meta.titleAr)}</div></div>`
+            ? `<div class="header-title-dual"><div class="header-title-ar">${escape(meta.titleAr)}</div><div class="header-title-en">${escape(meta.titleEn)}</div></div>`
             : `<h1>${escape(title || '')}</h1>`}
                 ${metaRows ? `<div class="meta-block">${metaRows}</div>` : ''}
             </div>
