@@ -5882,7 +5882,7 @@ window.UI = {
                             break;
                         }
                         let attempts = 0;
-                        const maxAttempts = 80;
+                        const maxAttempts = 160;
                         const intervalMs = 50;
                         const timerId = setInterval(() => {
                             attempts += 1;
