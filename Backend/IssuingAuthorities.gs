@@ -107,6 +107,7 @@ function _buildIssuingAuthorityRecordData(data, fallbackPersonType, targetSheet)
         id:            generateSequentialId(personType === 'contractor' ? 'IAC' : 'IA', targetSheet),
         personType:    personType,
         employeeCode:  String(data.employeeCode || '').trim(),
+        contractorCompanyName: String(data.contractorCompanyName || '').trim(),
         name:          String(data.name || '').trim(),
         departmentId:  String(data.departmentId || '').trim(),
         departmentName:String(data.departmentName || '').trim(),
@@ -159,6 +160,9 @@ function _addIssuingAuthorityBySheet(data, sheetName, fallbackPersonType) {
 
         const recordData = _buildIssuingAuthorityRecordData(data, fallbackPersonType, sheetName);
         if (!recordData.name) return { success: false, message: 'اسم الشخص مطلوب' };
+        if (recordData.personType === 'contractor' && !recordData.contractorCompanyName) {
+            return { success: false, message: 'اسم المقاول / الشركة (المورد) مطلوب' };
+        }
 
         const result = appendToSheet(sheetName, recordData);
         if (result && result.success) return { success: true, message: 'تم إضافة السجل بنجاح', data: recordData };
@@ -186,6 +190,7 @@ function _updateIssuingAuthorityBySheet(recordId, data, sheetName, fallbackPerso
         records[idx] = Object.assign({}, existing, {
             personType:    data.personType    !== undefined ? _normalizePersonType(data.personType, fallbackPersonType) : _normalizePersonType(existing.personType, fallbackPersonType),
             employeeCode:  data.employeeCode  !== undefined ? String(data.employeeCode).trim()  : existing.employeeCode,
+            contractorCompanyName: data.contractorCompanyName !== undefined ? String(data.contractorCompanyName).trim() : existing.contractorCompanyName,
             name:          data.name          !== undefined ? String(data.name).trim()          : existing.name,
             departmentId:  data.departmentId  !== undefined ? String(data.departmentId).trim()  : existing.departmentId,
             departmentName:data.departmentName!== undefined ? String(data.departmentName).trim(): existing.departmentName,

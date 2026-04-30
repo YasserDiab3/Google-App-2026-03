@@ -147,7 +147,17 @@ const IssuingAuthorities = {
     _fillEmployeeFields(data) {
         if (document.getElementById('ia-f-employee-code')) document.getElementById('ia-f-employee-code').value = data.employeeCode || '';
         if (document.getElementById('ia-f-name')) document.getElementById('ia-f-name').value = data.name || '';
-        if (document.getElementById('ia-f-dept')) document.getElementById('ia-f-dept').value = data.departmentName || '';
+        const deptEl = document.getElementById('ia-f-dept');
+        if (deptEl) {
+            const d = String(data.departmentName || '').trim();
+            if (deptEl.tagName === 'SELECT' && d && !Array.from(deptEl.options || []).some(o => String(o.value || '').trim() === d)) {
+                const o = document.createElement('option');
+                o.value = d;
+                o.textContent = d;
+                deptEl.appendChild(o);
+            }
+            deptEl.value = d;
+        }
         if (document.getElementById('ia-f-job-title')) document.getElementById('ia-f-job-title').value = data.jobTitle || '';
         if (document.getElementById('ia-f-branch')) document.getElementById('ia-f-branch').value = data.branch || '';
         const factoryEl = document.getElementById('ia-f-factory');
@@ -335,6 +345,7 @@ const IssuingAuthorities = {
         normalized.id = String(normalized.id || '').trim();
         normalized.personType = String(normalized.personType || '').toLowerCase().trim() === 'contractor' ? 'contractor' : 'employee';
         normalized.employeeCode = String(normalized.employeeCode || '').trim();
+        normalized.contractorCompanyName = String(normalized.contractorCompanyName || '').trim();
         normalized.name = String(normalized.name || '').trim();
         normalized.departmentName = String(normalized.departmentName || '').trim();
         normalized.jobTitle = String(normalized.jobTitle || '').trim();
@@ -364,7 +375,7 @@ const IssuingAuthorities = {
             }), 7000);
             if (fallbackResult && fallbackResult.success) {
                 const raw = Array.isArray(fallbackResult.data) ? fallbackResult.data : [];
-                this._data = raw.map(r => this._normalizeRow(r)).filter(r => r.id || r.name);
+                this._data = raw.map(r => this._normalizeRow(r)).filter(r => r.id || r.name || r.contractorCompanyName);
                 return true;
             }
         } catch (err) {
@@ -404,6 +415,105 @@ const IssuingAuthorities = {
 
     _categoryTitleAr() {
         return this._activeCategory === 'contractors' ? 'المقاولين' : 'الموظفين';
+    },
+
+    /** نفس مصدر قائمة الإدارات المستخدم في تصاريح العمل (PTW). */
+    _getDepartmentOptionsLikePTW() {
+        try {
+            if (typeof PTW !== 'undefined' && typeof PTW.getDepartmentOptionsForPTW === 'function') {
+                const list = PTW.getDepartmentOptionsForPTW();
+                if (Array.isArray(list) && list.length > 0) return list;
+            }
+            if (typeof DailyObservations !== 'undefined' && typeof DailyObservations.getDepartmentOptions === 'function') {
+                const list = DailyObservations.getDepartmentOptions();
+                if (Array.isArray(list) && list.length > 0) return list;
+            }
+            if (typeof AppUtils !== 'undefined' && typeof AppUtils.getInitialFormDepartments === 'function') {
+                const list = AppUtils.getInitialFormDepartments();
+                if (Array.isArray(list) && list.length > 0) return list;
+            }
+            const settings = AppState?.companySettings || {};
+            if (Array.isArray(settings.formDepartments) && settings.formDepartments.length > 0) {
+                return settings.formDepartments.map((item) => String(item || '').trim()).filter(Boolean);
+            }
+            if (Array.isArray(settings.departments)) {
+                return settings.departments.map((item) => String(item || '').trim()).filter(Boolean);
+            }
+            if (typeof settings.departments === 'string') {
+                return settings.departments.split(/\n|,/).map((item) => item.trim()).filter(Boolean);
+            }
+        } catch (e) { /* ignore */ }
+        return [];
+    },
+
+    _renderDepartmentControl(selectedValue) {
+        const sel = String(selectedValue || '').trim();
+        const depts = this._getDepartmentOptionsLikePTW();
+        const esc = (typeof Utils !== 'undefined' && Utils.escapeHTML)
+            ? Utils.escapeHTML
+            : (s) => String(s == null ? '' : s)
+                .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+        if (depts.length) {
+            const opts = depts.map((d) => {
+                const v = String(d || '').trim();
+                return `<option value="${esc(v)}" ${v === sel ? 'selected' : ''}>${esc(v)}</option>`;
+            }).join('');
+            return `<select id="ia-f-dept" class="form-select ia-form-select" title="من نفس قائمة إدارات التصريح">
+                <option value="">— اختر الإدارة / القسم —</option>
+                ${opts}
+            </select>`;
+        }
+        return `<input type="text" id="ia-f-dept" class="form-input" value="${esc(sel)}" placeholder="اسم الإدارة (إدخال يدوي)">`;
+    },
+
+    _contractorCompanyFromRecord(record) {
+        if (!record) return '';
+        const cc = String(record.contractorCompanyName || '').trim();
+        if (cc) return cc;
+        const n = String(record.name || '').trim();
+        const opts = this._contractorOptions || [];
+        if (n && opts.some(c => c.name === n)) return n;
+        return '';
+    },
+
+    _responsibleNameFromRecord(record) {
+        if (!record) return '';
+        const cc = String(record.contractorCompanyName || '').trim();
+        const n = String(record.name || '').trim();
+        if (cc) return n;
+        const opts = this._contractorOptions || [];
+        if (n && opts.some(c => c.name === n)) return '';
+        return n;
+    },
+
+    _displayContractorCompany(rec) {
+        if (!rec) return '';
+        const cc = String(rec.contractorCompanyName || '').trim();
+        if (cc) return cc;
+        const n = String(rec.name || '').trim();
+        const opts = this._contractorOptions || [];
+        if (n && opts.some(c => c.name === n)) return n;
+        return n || '';
+    },
+
+    _displayResponsibleName(rec) {
+        if (!rec) return '';
+        const cc = String(rec.contractorCompanyName || '').trim();
+        const n = String(rec.name || '').trim();
+        if (cc) return n;
+        const opts = this._contractorOptions || [];
+        if (n && opts.some(c => c.name === n)) return '—';
+        return n;
+    },
+
+    /** اسم العرض في سير عمل PTW (شركة + مسؤول عند المقاول). */
+    _authorityWorkflowDisplayName(r) {
+        if (!r) return '';
+        const co = String(r.contractorCompanyName || '').trim();
+        const person = String(r.name || '').trim();
+        if (co && person) return `${co} — ${person}`;
+        if (co) return co;
+        return person;
     },
 
     /**
@@ -523,7 +633,7 @@ const IssuingAuthorities = {
         if (q) {
             list = list.filter((r) => {
                 const hay = [
-                    r.name, r.employeeCode, r.departmentName, r.jobTitle, r.branch, r.factory,
+                    r.name, r.contractorCompanyName, r.employeeCode, r.departmentName, r.jobTitle, r.branch, r.factory,
                     r.location, r.sublocation, r.email, r.phone, r.notes
                 ].map(x => String(x || '').toLowerCase()).join(' ');
                 return hay.includes(q);
@@ -575,6 +685,9 @@ const IssuingAuthorities = {
         const deptOpts = '<option value="">كل الإدارات</option>' + departments.map(v =>
             `<option value="${esc(v)}" ${v === f.department ? 'selected' : ''}>${esc(v)}</option>`
         ).join('');
+        const searchPh = this._activeCategory === 'contractors'
+            ? 'مقاول، مسؤول، إدارة، مصنع، موقع…'
+            : 'اسم، كود، إدارة، مصنع، موقع…';
         return `
         <div class="ia-filters-row" style="background:linear-gradient(135deg,#f8f9fa 0%,#e9ecef 100%);padding:16px 20px;border-radius:10px;border:1px solid #dee2e6;">
             <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;align-items:end;">
@@ -582,7 +695,7 @@ const IssuingAuthorities = {
                     <label for="ia-filter-search" class="form-label" style="font-size:0.8rem;margin-bottom:4px;display:block;color:#334155;">
                         <i class="fas fa-search" style="margin-left:6px;"></i>بحث
                     </label>
-                    <input type="text" id="ia-filter-search" class="form-input" placeholder="اسم، كود، إدارة، مصنع، موقع…" value="${esc(f.search)}" dir="rtl" style="width:100%;min-height:42px;">
+                    <input type="text" id="ia-filter-search" class="form-input" placeholder="${esc(searchPh)}" value="${esc(f.search)}" dir="rtl" style="width:100%;min-height:42px;">
                 </div>
                 <div>
                     <label for="ia-filter-factory" class="form-label" style="font-size:0.8rem;margin-bottom:4px;display:block;color:#334155;">
@@ -611,7 +724,7 @@ const IssuingAuthorities = {
         </div>`;
     },
 
-    _buildExportTableRowsHtml(records, { escapeForHtml = true } = {}) {
+    _buildExportTableRowsHtml(records, { escapeForHtml = true, isContractorView = false } = {}) {
         const esc = escapeForHtml && typeof Utils !== 'undefined' && Utils.escapeHTML
             ? Utils.escapeHTML
             : (s) => String(s == null ? '' : s);
@@ -621,6 +734,24 @@ const IssuingAuthorities = {
                 return `<td style="border:1px solid #d1d5db;padding:6px;text-align:center;">${esc(v)}</td>`;
             }).join('');
             const activeTxt = rec.isActive === false ? 'غير نشط' : 'نشط';
+            if (isContractorView) {
+                const co = esc(this._displayContractorCompany(rec));
+                const resp = esc(this._displayResponsibleName(rec));
+                return `
+            <tr>
+                <td style="border:1px solid #d1d5db;padding:6px;text-align:center;">${idx + 1}</td>
+                <td style="border:1px solid #d1d5db;padding:6px;text-align:right;">${co}</td>
+                <td style="border:1px solid #d1d5db;padding:6px;text-align:right;">${resp}</td>
+                <td style="border:1px solid #d1d5db;padding:6px;text-align:right;">${esc(rec.departmentName || '')}</td>
+                <td style="border:1px solid #d1d5db;padding:6px;text-align:right;">${esc(rec.jobTitle || '')}</td>
+                <td style="border:1px solid #d1d5db;padding:6px;text-align:right;">${esc(rec.branch || '')}</td>
+                <td style="border:1px solid #d1d5db;padding:6px;text-align:right;">${esc(rec.factory || '')}</td>
+                <td style="border:1px solid #d1d5db;padding:6px;text-align:right;">${esc(rec.location || '')}</td>
+                <td style="border:1px solid #d1d5db;padding:6px;text-align:right;">${esc(rec.sublocation || '')}</td>
+                ${permitCells}
+                <td style="border:1px solid #d1d5db;padding:6px;text-align:center;">${esc(activeTxt)}</td>
+            </tr>`;
+            }
             return `
             <tr>
                 <td style="border:1px solid #d1d5db;padding:6px;text-align:center;">${idx + 1}</td>
@@ -642,9 +773,29 @@ const IssuingAuthorities = {
         const permitHeaders = this.PERMIT_TYPES.map(pt =>
             `<th style="border:1px solid #d1d5db;padding:8px;text-align:center;font-size:10px;">${pt.labelAr}<br><span style="color:#6b7280;font-weight:500;">${pt.labelEn}</span></th>`
         ).join('');
-        const rows = this._buildExportTableRowsHtml(records, { escapeForHtml: true });
+        const isCv = this._activeCategory === 'contractors';
+        const rows = this._buildExportTableRowsHtml(records, { escapeForHtml: true, isContractorView: isCv });
         const titleAr = `الأشخاص المصرح لهم باعتماد تصاريح العمل — ${this._categoryTitleAr()}`;
         const subtitle = `عدد السجلات: ${records.length} — ${new Date().toLocaleString('ar-SA')}`;
+        const headMain = isCv
+            ? `<th style="border:1px solid #d1d5db;padding:8px;">م</th>
+                    <th style="border:1px solid #d1d5db;padding:8px;">المقاول / المورد</th>
+                    <th style="border:1px solid #d1d5db;padding:8px;">اسم المسؤول</th>
+                    <th style="border:1px solid #d1d5db;padding:8px;">الإدارة</th>
+                    <th style="border:1px solid #d1d5db;padding:8px;">الوظيفة</th>
+                    <th style="border:1px solid #d1d5db;padding:8px;">الفرع</th>
+                    <th style="border:1px solid #d1d5db;padding:8px;">المصنع</th>
+                    <th style="border:1px solid #d1d5db;padding:8px;">الموقع</th>
+                    <th style="border:1px solid #d1d5db;padding:8px;">الموقع الفرعي</th>`
+            : `<th style="border:1px solid #d1d5db;padding:8px;">م</th>
+                    <th style="border:1px solid #d1d5db;padding:8px;">الاسم</th>
+                    <th style="border:1px solid #d1d5db;padding:8px;">الكود</th>
+                    <th style="border:1px solid #d1d5db;padding:8px;">الإدارة</th>
+                    <th style="border:1px solid #d1d5db;padding:8px;">الوظيفة</th>
+                    <th style="border:1px solid #d1d5db;padding:8px;">الفرع</th>
+                    <th style="border:1px solid #d1d5db;padding:8px;">المصنع</th>
+                    <th style="border:1px solid #d1d5db;padding:8px;">الموقع</th>
+                    <th style="border:1px solid #d1d5db;padding:8px;">الموقع الفرعي</th>`;
         return `
         <div style="margin-bottom:16px;text-align:center;">
             <h2 style="margin:0 0 4px;color:#1f2937;font-size:18px;">${titleAr}</h2>
@@ -654,15 +805,7 @@ const IssuingAuthorities = {
         <table style="width:100%;border-collapse:collapse;font-size:11px;direction:rtl;">
             <thead>
                 <tr style="background:#f3f4f6;">
-                    <th style="border:1px solid #d1d5db;padding:8px;">م</th>
-                    <th style="border:1px solid #d1d5db;padding:8px;">الاسم</th>
-                    <th style="border:1px solid #d1d5db;padding:8px;">الكود</th>
-                    <th style="border:1px solid #d1d5db;padding:8px;">الإدارة</th>
-                    <th style="border:1px solid #d1d5db;padding:8px;">الوظيفة</th>
-                    <th style="border:1px solid #d1d5db;padding:8px;">الفرع</th>
-                    <th style="border:1px solid #d1d5db;padding:8px;">المصنع</th>
-                    <th style="border:1px solid #d1d5db;padding:8px;">الموقع</th>
-                    <th style="border:1px solid #d1d5db;padding:8px;">الموقع الفرعي</th>
+                    ${headMain}
                     ${permitHeaders}
                     <th style="border:1px solid #d1d5db;padding:8px;">الحالة</th>
                 </tr>
@@ -704,18 +847,31 @@ const IssuingAuthorities = {
             return;
         }
         try {
+            const isCv = this._activeCategory === 'contractors';
             const rows = records.map((rec) => {
-                const row = {
-                    'الاسم': rec.name || '',
-                    'الكود الوظيفي': rec.employeeCode || '',
-                    'الإدارة': rec.departmentName || '',
-                    'الوظيفة': rec.jobTitle || '',
-                    'الفرع': rec.branch || '',
-                    'المصنع': rec.factory || '',
-                    'الموقع': rec.location || '',
-                    'الموقع الفرعي': rec.sublocation || '',
-                    'الحالة': rec.isActive === false ? 'غير نشط' : 'نشط'
-                };
+                const row = isCv
+                    ? {
+                        'المقاول / المورد': this._displayContractorCompany(rec),
+                        'اسم المسؤول': this._displayResponsibleName(rec),
+                        'الإدارة': rec.departmentName || '',
+                        'الوظيفة': rec.jobTitle || '',
+                        'الفرع': rec.branch || '',
+                        'المصنع': rec.factory || '',
+                        'الموقع': rec.location || '',
+                        'الموقع الفرعي': rec.sublocation || '',
+                        'الحالة': rec.isActive === false ? 'غير نشط' : 'نشط'
+                    }
+                    : {
+                        'الاسم': rec.name || '',
+                        'الكود الوظيفي': rec.employeeCode || '',
+                        'الإدارة': rec.departmentName || '',
+                        'الوظيفة': rec.jobTitle || '',
+                        'الفرع': rec.branch || '',
+                        'المصنع': rec.factory || '',
+                        'الموقع': rec.location || '',
+                        'الموقع الفرعي': rec.sublocation || '',
+                        'الحالة': rec.isActive === false ? 'غير نشط' : 'نشط'
+                    };
                 this.PERMIT_TYPES.forEach((pt) => {
                     row[`تصريح: ${pt.labelAr}`] = String(rec[pt.key] || 'X').toUpperCase();
                 });
@@ -922,10 +1078,18 @@ const IssuingAuthorities = {
         const personType = String(val('personType') || (this._activeCategory === 'contractors' ? 'contractor' : 'employee')).toLowerCase() === 'contractor'
             ? 'contractor'
             : 'employee';
-        const contractorName = String(val('name') || '').trim();
+        const contractorCompanySel = personType === 'contractor' ? this._contractorCompanyFromRecord(record) : '';
+        const escOpt = (typeof Utils !== 'undefined' && Utils.escapeHTML) ? Utils.escapeHTML : (s) => String(s == null ? '' : s);
         const contractorOptionsHtml = (this._contractorOptions || []).map(c => `
-            <option value="${c.name}" ${contractorName === c.name ? 'selected' : ''}>${c.name}</option>
+            <option value="${escOpt(c.name)}" ${contractorCompanySel === c.name ? 'selected' : ''}>${escOpt(c.name)}</option>
         `).join('');
+        const nameFieldValue = personType === 'contractor' ? this._responsibleNameFromRecord(record) : val('name');
+        const nameLabel = personType === 'contractor'
+            ? 'اسم الشخص المسؤول من الشركة <span style="color:red;">*</span>'
+            : 'الاسم <span style="color:red;">*</span>';
+        const namePlaceholder = personType === 'contractor'
+            ? 'أدخل اسم المسؤول عن الاعتماد من جهة المقاول يدوياً'
+            : 'اسم الشخص المصرح له';
 
         const permitRows = this.PERMIT_TYPES.map(pt => `
             <div class="ia-permit-row">
@@ -952,7 +1116,7 @@ const IssuingAuthorities = {
                 <div class="ia-person-mode-hint" id="ia-person-mode-hint">
                     ${personType === 'employee'
                         ? 'وضع الموظف: أدخل الكود الوظيفي ثم اضغط "بحث" لملء البيانات تلقائياً.'
-                        : 'وضع المقاول: أدخل البيانات يدويًا.'}
+                        : 'وضع المقاول: اختر المقاول / المورد من القائمة، ثم أدخل اسم الشخص المسؤول من الشركة يدوياً.'}
                 </div>
                 <div class="ia-form-two-cols">
                 <div class="form-group">
@@ -963,9 +1127,9 @@ const IssuingAuthorities = {
                     </select>
                 </div>
                 <div class="form-group ia-contractor-wrap" id="ia-contractor-wrap" style="${personType === 'contractor' ? '' : 'display:none;'}">
-                    <label class="form-label">المقاول <span style="color:red;">*</span></label>
+                    <label class="form-label">المقاول / المورد <span style="color:red;">*</span></label>
                     <select id="ia-f-contractor-name" class="form-select ia-form-select">
-                        <option value="">-- اختر المقاول --</option>
+                        <option value="">— اختر المقاول / المورد —</option>
                         ${contractorOptionsHtml}
                     </select>
                 </div>
@@ -979,12 +1143,12 @@ const IssuingAuthorities = {
                 </div>
                 <div class="ia-form-two-cols">
                 <div class="form-group">
-                    <label class="form-label">الاسم <span style="color:red;">*</span></label>
-                    <input type="text" id="ia-f-name" class="form-input" value="${val('name')}" placeholder="اسم الشخص المصرح له" required>
+                    <label class="form-label">${nameLabel}</label>
+                    <input type="text" id="ia-f-name" class="form-input" value="${personType === 'contractor' ? escOpt(nameFieldValue) : escOpt(val('name'))}" placeholder="${escOpt(namePlaceholder)}" required>
                 </div>
                 <div class="form-group">
                     <label class="form-label">الإدارة / القسم</label>
-                    <input type="text" id="ia-f-dept" class="form-input" value="${val('departmentName')}" placeholder="اسم الإدارة">
+                    ${this._renderDepartmentControl(val('departmentName'))}
                 </div>
                 </div>
                 <div class="ia-form-two-cols">
@@ -1083,7 +1247,7 @@ const IssuingAuthorities = {
                     );
                     if (result && result.success) {
                         const raw = Array.isArray(result.data) ? result.data : [];
-                        this._data = raw.map(r => this._normalizeRow(r)).filter(r => r.id || r.name);
+                        this._data = raw.map(r => this._normalizeRow(r)).filter(r => r.id || r.name || r.contractorCompanyName);
                         ok = true;
                     }
                 } catch (rpcErr) {
@@ -1151,6 +1315,15 @@ const IssuingAuthorities = {
             </th>
         `).join('');
 
+        const esc = (typeof Utils !== 'undefined' && Utils.escapeHTML)
+            ? Utils.escapeHTML
+            : (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
+        const isCv = this._activeCategory === 'contractors';
+        const nameHead = isCv
+            ? `<th style="text-align:right;padding:8px 10px;color:#1e40af;min-width:140px;">المقاول / المورد</th>
+                    <th style="text-align:right;padding:8px 10px;color:#1e40af;min-width:120px;">اسم المسؤول</th>`
+            : `<th style="text-align:right;padding:8px 12px;color:#1e40af;min-width:160px;">اسم الشخص المصرح له</th>`;
+
         const bodyRows = records.map((rec, idx) => {
             const permitCells = this.PERMIT_TYPES.map(pt => {
                 const v = String(rec[pt.key] || 'X').toUpperCase().trim();
@@ -1162,22 +1335,40 @@ const IssuingAuthorities = {
                 ? '<span style="color:#ef4444;font-size:0.75rem;">(غير نشط)</span>'
                 : '';
 
+            const delName = isCv
+                ? `${this._displayContractorCompany(rec)} — ${this._displayResponsibleName(rec)}`
+                : (rec.name || '');
+
             const actionBtns = isAdmin ? `
-                <button class="ia-btn-edit" data-id="${rec.id}" title="تعديل" style="padding:4px 8px;border:none;background:none;cursor:pointer;color:#2563eb;">
+                <button class="ia-btn-edit" data-id="${esc(rec.id)}" title="تعديل" style="padding:4px 8px;border:none;background:none;cursor:pointer;color:#2563eb;">
                     <i class="fas fa-edit"></i>
                 </button>
-                <button class="ia-btn-delete" data-id="${rec.id}" data-name="${rec.name || ''}" title="حذف" style="padding:4px 8px;border:none;background:none;cursor:pointer;color:#dc2626;">
+                <button class="ia-btn-delete" data-id="${esc(rec.id)}" data-name="${esc(delName)}" title="حذف" style="padding:4px 8px;border:none;background:none;cursor:pointer;color:#dc2626;">
                     <i class="fas fa-trash"></i>
                 </button>` : '';
+
+            const metaLine = `${esc(rec.departmentName || '')} ${activeIndicator}`;
+            const subLine = esc([rec.jobTitle, rec.factory, rec.location, rec.sublocation].filter(Boolean).join(' - '));
+
+            const nameCells = isCv
+                ? `<td style="padding:8px 10px;">
+                    <div style="font-weight:600;color:#1e293b;">${esc(this._displayContractorCompany(rec))}</div>
+                    <div style="font-size:0.75rem;color:#94a3b8;">${subLine}</div>
+                </td>
+                <td style="padding:8px 10px;">
+                    <div style="font-weight:600;color:#1e293b;">${esc(this._displayResponsibleName(rec))}</div>
+                    <div style="font-size:0.78rem;color:#64748b;">${metaLine}</div>
+                </td>`
+                : `<td style="padding:8px 10px;">
+                    <div style="font-weight:600;color:#1e293b;">${esc(rec.name || '')}</div>
+                    <div style="font-size:0.78rem;color:#64748b;">${metaLine}</div>
+                    <div style="font-size:0.75rem;color:#94a3b8;">${subLine}</div>
+                </td>`;
 
             return `
             <tr style="border-bottom:1px solid #f1f5f9;${rec.isActive === false ? 'opacity:0.55;' : ''}">
                 <td style="text-align:center;color:#64748b;font-size:0.85rem;padding:8px 6px;">${idx + 1}</td>
-                <td style="padding:8px 10px;">
-                    <div style="font-weight:600;color:#1e293b;">${rec.name || ''}</div>
-                    <div style="font-size:0.78rem;color:#64748b;">${rec.departmentName || ''} ${activeIndicator}</div>
-                    <div style="font-size:0.75rem;color:#94a3b8;">${[rec.jobTitle, rec.factory, rec.location, rec.sublocation].filter(Boolean).join(' - ')}</div>
-                </td>
+                ${nameCells}
                 ${permitCells}
                 ${isAdmin ? `<td style="text-align:center;white-space:nowrap;">${actionBtns}</td>` : ''}
             </tr>`;
@@ -1190,7 +1381,7 @@ const IssuingAuthorities = {
             <thead>
                 <tr style="background:#eff6ff;border-bottom:2px solid #bfdbfe;">
                     <th style="text-align:center;padding:8px 6px;color:#1e40af;width:40px;">م</th>
-                    <th style="text-align:right;padding:8px 12px;color:#1e40af;min-width:160px;">اسم الشخص المصرح له</th>
+                    ${nameHead}
                     ${headerCells}
                     ${actionHeader}
                 </tr>
@@ -1315,12 +1506,7 @@ const IssuingAuthorities = {
     },
 
     _onContractorChanged() {
-        const personType = (document.getElementById('ia-f-person-type')?.value || 'employee').toLowerCase();
-        if (personType !== 'contractor') return;
-        const selectedName = (document.getElementById('ia-f-contractor-name')?.value || '').trim();
-        if (!selectedName) return;
-        const nameInput = document.getElementById('ia-f-name');
-        if (nameInput) nameInput.value = selectedName;
+        /* لا ننسخ اسم المقاول إلى حقل المسؤول — المستخدم يدخل اسم الشخص يدوياً. */
     },
 
     async _lookupEmployeeByCode(queryOverride) {
@@ -1455,15 +1641,13 @@ const IssuingAuthorities = {
             ? 'contractor'
             : 'employee';
         const employeeCode = (document.getElementById('ia-f-employee-code')?.value || '').trim();
-        const contractorName = (document.getElementById('ia-f-contractor-name')?.value || '').trim();
-        const name = personType === 'contractor'
-            ? contractorName
-            : (document.getElementById('ia-f-name')?.value || '').trim();
+        const contractorCompanyName = (document.getElementById('ia-f-contractor-name')?.value || '').trim();
+        const name = (document.getElementById('ia-f-name')?.value || '').trim();
         if (!name) {
             if (typeof Utils !== 'undefined' && Utils.showNotification) {
-                Utils.showNotification('اسم الشخص مطلوب', 'error');
+                Utils.showNotification(personType === 'contractor' ? 'اسم الشخص المسؤول من الشركة مطلوب' : 'اسم الشخص مطلوب', 'error');
             } else {
-                alert('اسم الشخص مطلوب');
+                alert(personType === 'contractor' ? 'اسم الشخص المسؤول من الشركة مطلوب' : 'اسم الشخص مطلوب');
             }
             return;
         }
@@ -1475,11 +1659,11 @@ const IssuingAuthorities = {
             }
             return;
         }
-        if (personType === 'contractor' && !contractorName) {
+        if (personType === 'contractor' && !contractorCompanyName) {
             if (typeof Utils !== 'undefined' && Utils.showNotification) {
-                Utils.showNotification('اختيار المقاول مطلوب', 'error');
+                Utils.showNotification('اختيار المقاول / المورد مطلوب', 'error');
             } else {
-                alert('اختيار المقاول مطلوب');
+                alert('اختيار المقاول / المورد مطلوب');
             }
             return;
         }
@@ -1491,7 +1675,8 @@ const IssuingAuthorities = {
         const selectedSublocationText = sublocationSelect?.options?.[sublocationSelect.selectedIndex]?.text || '';
         const payload = {
             personType,
-            employeeCode,
+            employeeCode: personType === 'contractor' ? '' : employeeCode,
+            contractorCompanyName: personType === 'contractor' ? contractorCompanyName : '',
             name,
             departmentName: document.getElementById('ia-f-dept')?.value?.trim() || '',
             jobTitle:       document.getElementById('ia-f-job-title')?.value?.trim() || '',
@@ -1646,7 +1831,7 @@ const IssuingAuthorities = {
                     const level = String(r[key] || 'X').toUpperCase().trim();
                     return {
                         id: r.id,
-                        name: r.name,
+                        name: this._authorityWorkflowDisplayName(r),
                         departmentId: r.departmentId,
                         departmentName: r.departmentName,
                         email: r.email,
