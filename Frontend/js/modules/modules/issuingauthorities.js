@@ -12,6 +12,10 @@ const IssuingAuthorities = {
     _data: [],
     _loading: false,
     _activeCategory: 'employees',
+    _unsupportedActions: {
+        employees: false,
+        contractors: false
+    },
 
     _isActionUnknownMessage(message) {
         const msg = String(message || '').toLowerCase();
@@ -357,23 +361,27 @@ const IssuingAuthorities = {
     async _fetchData() {
         this._loading = true;
         try {
+            const categoryKey = this._activeCategory === 'contractors' ? 'contractors' : 'employees';
             const getAction = this._activeCategory === 'contractors'
                 ? 'getAllContractorIssuingAuthorities'
                 : 'getAllIssuingAuthorities';
             let ok = false;
-            try {
-                const result = await GoogleIntegration.sendRequest({ action: getAction, data: {} });
-                if (result && result.success) {
-                    const raw = Array.isArray(result.data) ? result.data : [];
-                    this._data = raw.map(r => this._normalizeRow(r)).filter(r => r.id || r.name);
-                    ok = true;
-                }
-            } catch (rpcErr) {
-                const msg = String((rpcErr && rpcErr.message) || '');
-                // Legacy production deployments may not have new actions yet.
-                // In that case, continue to readFromSheet fallback instead of surfacing hard errors.
-                if (!this._isActionUnknownMessage(msg) && typeof Utils !== 'undefined') {
-                    Utils.safeWarn(`تعذر تنفيذ ${getAction} وسيتم التحويل إلى fallback`, msg);
+            // If this endpoint already proved it doesn't support this action, skip noisy RPC and go straight to fallback.
+            if (!this._unsupportedActions[categoryKey]) {
+                try {
+                    const result = await GoogleIntegration.sendRequest({ action: getAction, data: {} });
+                    if (result && result.success) {
+                        const raw = Array.isArray(result.data) ? result.data : [];
+                        this._data = raw.map(r => this._normalizeRow(r)).filter(r => r.id || r.name);
+                        ok = true;
+                    }
+                } catch (rpcErr) {
+                    const msg = String((rpcErr && rpcErr.message) || '');
+                    if (this._isActionUnknownMessage(msg)) {
+                        this._unsupportedActions[categoryKey] = true;
+                    } else if (typeof Utils !== 'undefined') {
+                        Utils.safeWarn(`تعذر تنفيذ ${getAction} وسيتم التحويل إلى fallback`, msg);
+                    }
                 }
             }
             if (!ok) {
@@ -788,17 +796,30 @@ const IssuingAuthorities = {
         try {
             const key = String(permitType || '').trim();
             if (!key) return [];
+            // Avoid extra network calls if data for the active category is already loaded.
+            if (!this._data || this._data.length === 0) {
+                await this._fetchData();
+            }
             const originalCategory = this._activeCategory;
-            this._activeCategory = 'employees';
-            await this._fetchData();
-            const employeeData = Array.isArray(this._data) ? [...this._data] : [];
+            const employeeData = originalCategory === 'employees'
+                ? (Array.isArray(this._data) ? [...this._data] : [])
+                : [];
 
             let merged = employeeData;
             if (key === 'contractorPTW') {
+                if (originalCategory !== 'employees') {
+                    this._activeCategory = 'employees';
+                    await this._fetchData();
+                    merged = Array.isArray(this._data) ? [...this._data] : [];
+                }
                 this._activeCategory = 'contractors';
                 await this._fetchData();
                 const contractorData = Array.isArray(this._data) ? [...this._data] : [];
-                merged = employeeData.concat(contractorData);
+                merged = merged.concat(contractorData);
+            } else if (originalCategory !== 'employees') {
+                this._activeCategory = 'employees';
+                await this._fetchData();
+                merged = Array.isArray(this._data) ? [...this._data] : [];
             }
             this._activeCategory = originalCategory;
             return (merged || [])
