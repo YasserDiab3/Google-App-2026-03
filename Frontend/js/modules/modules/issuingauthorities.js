@@ -12,6 +12,50 @@ const IssuingAuthorities = {
     _data: [],
     _loading: false,
 
+    _isActionUnknownMessage(message) {
+        const msg = String(message || '').toLowerCase();
+        return msg.includes('غير معترف') || msg.includes('not recognized') || msg.includes('unknown action');
+    },
+
+    _normalizeBoolean(value, defaultValue = false) {
+        if (value === true || value === false) return value;
+        if (typeof value === 'string') {
+            const v = value.trim().toLowerCase();
+            if (v === 'true') return true;
+            if (v === 'false') return false;
+        }
+        return defaultValue;
+    },
+
+    _normalizeRow(row) {
+        const normalized = { ...(row || {}) };
+        normalized.id = String(normalized.id || '').trim();
+        normalized.name = String(normalized.name || '').trim();
+        normalized.departmentName = String(normalized.departmentName || '').trim();
+        normalized.email = String(normalized.email || '').trim();
+        normalized.phone = String(normalized.phone || '').trim();
+        normalized.notes = String(normalized.notes || '').trim();
+        normalized.isActive = this._normalizeBoolean(normalized.isActive, true);
+        this.PERMIT_TYPES.forEach(pt => {
+            const value = String(normalized[pt.key] || 'X').toUpperCase().trim();
+            normalized[pt.key] = ['G', 'Y', 'X'].includes(value) ? value : 'X';
+        });
+        return normalized;
+    },
+
+    async _fetchViaReadFromSheet() {
+        const fallbackResult = await GoogleIntegration.sendRequest({
+            action: 'readFromSheet',
+            data: { sheetName: 'PTWIssuingAuthorities' }
+        });
+        if (fallbackResult && fallbackResult.success) {
+            const raw = Array.isArray(fallbackResult.data) ? fallbackResult.data : [];
+            this._data = raw.map(r => this._normalizeRow(r)).filter(r => r.id || r.name);
+            return true;
+        }
+        return false;
+    },
+
     // أنواع التصاريح وتسمياتها (مطابق للنموذج الورقي)
     PERMIT_TYPES: [
         { key: 'coldWork',      labelAr: 'الأعمال الباردة',         labelEn: 'Cold Work' },
@@ -220,16 +264,22 @@ const IssuingAuthorities = {
                 data: {}
             });
             if (result && result.success) {
-                this._data = result.data || [];
+                this._data = (result.data || []).map(r => this._normalizeRow(r));
             } else {
-                this._data = [];
-                if (typeof Utils !== 'undefined') {
-                    Utils.safeWarn('تحذير: فشل تحميل بيانات Issuing Authorities:', result && result.message);
+                const fallbackUsed = this._isActionUnknownMessage(result && result.message) && await this._fetchViaReadFromSheet();
+                if (!fallbackUsed) {
+                    this._data = [];
+                    if (typeof Utils !== 'undefined') {
+                        Utils.safeWarn('تحذير: فشل تحميل بيانات Issuing Authorities:', result && result.message);
+                    }
                 }
             }
         } catch (err) {
-            this._data = [];
-            if (typeof Utils !== 'undefined') Utils.safeError('خطأ في تحميل Issuing Authorities:', err);
+            const fallbackUsed = this._isActionUnknownMessage(err && err.message) && await this._fetchViaReadFromSheet();
+            if (!fallbackUsed) {
+                this._data = [];
+                if (typeof Utils !== 'undefined') Utils.safeError('خطأ في تحميل Issuing Authorities:', err);
+            }
         }
         this._loading = false;
     },
@@ -541,8 +591,55 @@ const IssuingAuthorities = {
             if (result && result.success) {
                 return result.authorities || [];
             }
+            if (this._isActionUnknownMessage(result && result.message)) {
+                if (!this._data || this._data.length === 0) {
+                    await this._fetchData();
+                }
+                const key = String(permitType || '').trim();
+                if (!key) return [];
+                return (this._data || [])
+                    .filter(r => r.isActive !== false)
+                    .map(r => {
+                        const level = String(r[key] || 'X').toUpperCase().trim();
+                        return {
+                            id: r.id,
+                            name: r.name,
+                            departmentId: r.departmentId,
+                            departmentName: r.departmentName,
+                            email: r.email,
+                            phone: r.phone,
+                            permitLevel: level,
+                            requiresHseCoApproval: level === 'Y'
+                        };
+                    })
+                    .filter(x => x.permitLevel === 'G' || x.permitLevel === 'Y')
+                    .sort((a, b) => (a.permitLevel === 'G' && b.permitLevel !== 'G') ? -1 : (b.permitLevel === 'G' && a.permitLevel !== 'G') ? 1 : 0);
+            }
             return [];
         } catch (err) {
+            if (this._isActionUnknownMessage(err && err.message)) {
+                if (!this._data || this._data.length === 0) {
+                    await this._fetchData();
+                }
+                const key = String(permitType || '').trim();
+                return (this._data || [])
+                    .filter(r => r.isActive !== false)
+                    .map(r => {
+                        const level = String(r[key] || 'X').toUpperCase().trim();
+                        return {
+                            id: r.id,
+                            name: r.name,
+                            departmentId: r.departmentId,
+                            departmentName: r.departmentName,
+                            email: r.email,
+                            phone: r.phone,
+                            permitLevel: level,
+                            requiresHseCoApproval: level === 'Y'
+                        };
+                    })
+                    .filter(x => x.permitLevel === 'G' || x.permitLevel === 'Y')
+                    .sort((a, b) => (a.permitLevel === 'G' && b.permitLevel !== 'G') ? -1 : (b.permitLevel === 'G' && a.permitLevel !== 'G') ? 1 : 0);
+            }
             if (typeof Utils !== 'undefined') Utils.safeError('IssuingAuthorities.getAuthoritiesForPermitType error:', err);
             return [];
         }
