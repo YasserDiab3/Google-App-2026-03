@@ -13,6 +13,7 @@ const IssuingAuthorities = {
     _loading: false,
     _activeCategory: 'employees',
     _contractorOptions: [],
+    _employeesCache: null,
     _unsupportedActions: {
         employees: false,
         contractors: false
@@ -80,7 +81,9 @@ const IssuingAuthorities = {
     },
 
     _findEmployeeLocal(query) {
-        const list = Array.isArray(AppState?.appData?.employees) ? AppState.appData.employees : [];
+        const list = Array.isArray(this._employeesCache)
+            ? this._employeesCache
+            : (Array.isArray(AppState?.appData?.employees) ? AppState.appData.employees : []);
         if (!list.length) return null;
         const normText = (v) => String(v || '').trim().toLowerCase();
         const targetCode = this._normalizeEmployeeCode(query);
@@ -105,6 +108,31 @@ const IssuingAuthorities = {
         if (!emp) emp = list.find((e) => normText(e.name) === targetText);
         if (!emp) emp = list.find((e) => normText(e.name).includes(targetText));
         return emp || null;
+    },
+
+    async _ensureEmployeesLoaded() {
+        if (Array.isArray(this._employeesCache) && this._employeesCache.length > 0) return this._employeesCache;
+        let local = Array.isArray(AppState?.appData?.employees) ? AppState.appData.employees : [];
+        if (local.length > 0) {
+            this._employeesCache = local;
+            return local;
+        }
+        try {
+            const res = await this._withTimeout(GoogleIntegration.sendRequest({
+                action: 'readFromSheet',
+                data: { sheetName: 'Employees' }
+            }), 8000);
+            if (res && res.success && Array.isArray(res.data)) {
+                this._employeesCache = res.data;
+                if (!AppState.appData) AppState.appData = {};
+                AppState.appData.employees = res.data;
+                return res.data;
+            }
+        } catch (_) {
+            // ignore and return empty array below
+        }
+        this._employeesCache = [];
+        return [];
     },
 
     _fillEmployeeFields(data) {
@@ -716,6 +744,12 @@ const IssuingAuthorities = {
 
         document.getElementById('ia-lookup-employee-btn')?.addEventListener('click', () => this._lookupEmployeeByCode());
         document.getElementById('ia-f-employee-code')?.addEventListener('blur', () => this._lookupEmployeeByCode());
+        document.getElementById('ia-f-employee-code')?.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                this._lookupEmployeeByCode();
+            }
+        });
         document.getElementById('ia-f-contractor-name')?.addEventListener('change', () => this._onContractorChanged());
         document.getElementById('ia-f-name')?.addEventListener('blur', () => {
             const personType = (document.getElementById('ia-f-person-type')?.value || 'employee').toLowerCase();
@@ -783,6 +817,7 @@ const IssuingAuthorities = {
             if (personType !== 'employee') return;
             const query = String(queryOverride || '').trim() || (document.getElementById('ia-f-employee-code')?.value || '').trim();
             if (!query) return;
+            await this._ensureEmployeesLoaded();
 
             // 1) Fast local lookup (same spirit as clinic flow).
             const localEmployee = this._findEmployeeLocal(query);
@@ -792,8 +827,8 @@ const IssuingAuthorities = {
                     name: String(localEmployee.name || '').trim(),
                     departmentName: String(localEmployee.department || '').trim(),
                     jobTitle: String(localEmployee.job || localEmployee.position || '').trim(),
-                    factory: String(localEmployee.branch || '').trim(),
-                    location: String(localEmployee.location || '').trim(),
+                    factory: String(localEmployee.branch || localEmployee.factory || localEmployee.factoryName || '').trim(),
+                    location: String(localEmployee.location || localEmployee.locationName || localEmployee.employeeLocation || '').trim(),
                     sublocation: String(localEmployee.sublocation || localEmployee.subLocation || localEmployee.subLocationName || localEmployee.locationName || '').trim()
                 });
                 if (typeof Utils !== 'undefined' && Utils.showNotification) {
