@@ -7913,11 +7913,18 @@ window.UI = {
             self._notificationsInterval = null;
         }
 
-        // تحديث عدد الإشعارات كل 30 ثانية
+        // تحديث عدد الإشعارات كل 30 ثانية (rAF يخفّض تحذير طول معالج setInterval)
         self._notificationsInterval = setInterval(() => {
-            const uiObj = self || window.UI;
-            if (uiObj && typeof uiObj.updateNotificationsBadge === 'function') {
-                uiObj.updateNotificationsBadge();
+            const run = () => {
+                const uiObj = self || window.UI;
+                if (uiObj && typeof uiObj.updateNotificationsBadge === 'function') {
+                    uiObj.updateNotificationsBadge();
+                }
+            };
+            if (typeof requestAnimationFrame === 'function') {
+                requestAnimationFrame(run);
+            } else {
+                setTimeout(run, 0);
             }
         }, 30000);
 

@@ -19,6 +19,15 @@ const IssuingAuthorities = {
         contractors: false
     },
 
+    /** فلترة القائمة (مشابه لتبويب زيارات العيادة) */
+    _listFilters: {
+        search: '',
+        factory: '',
+        department: '',
+        status: ''
+    },
+    _filterSearchTimer: null,
+
     _isActionUnknownMessage(message) {
         const msg = String(message || '').toLowerCase();
         return msg.includes('غير معترف') || msg.includes('not recognized') || msg.includes('unknown action');
@@ -463,6 +472,329 @@ const IssuingAuthorities = {
         }
     },
 
+    _iaNotify(message, type = 'info') {
+        const msg = String(message || '');
+        if (!msg) return;
+        if (typeof Notification !== 'undefined') {
+            if (type === 'success' && Notification.success) Notification.success(msg);
+            else if (type === 'error' && Notification.error) Notification.error(msg);
+            else if (type === 'warning' && Notification.warning) Notification.warning(msg);
+            else if (Notification.info) Notification.info(msg);
+            else if (Notification.success) Notification.success(msg);
+            return;
+        }
+        if (typeof Utils !== 'undefined' && Utils.showNotification) {
+            const t = type === 'error' ? 'error' : type === 'warning' ? 'warning' : type === 'success' ? 'success' : 'info';
+            Utils.showNotification(msg, t);
+        }
+    },
+
+    _collectFilterOptionLists() {
+        const factories = [...new Set(this._data.map(r => String(r.factory || '').trim()).filter(Boolean))]
+            .sort((a, b) => a.localeCompare(b, 'ar'));
+        const departments = [...new Set(this._data.map(r => String(r.departmentName || '').trim()).filter(Boolean))]
+            .sort((a, b) => a.localeCompare(b, 'ar'));
+        return { factories, departments };
+    },
+
+    _getBaseRecordsForView() {
+        const isAdmin = this.isAdmin();
+        if (!isAdmin) return this._data.filter(r => r.isActive !== false);
+        return this._data.slice();
+    },
+
+    _getFilteredRecords() {
+        let list = this._getBaseRecordsForView();
+        const f = this._listFilters;
+        const st = String(f.status || '').trim();
+        if (st === 'active') {
+            list = list.filter(r => r.isActive !== false);
+        } else if (st === 'inactive' && this.isAdmin()) {
+            list = list.filter(r => r.isActive === false);
+        }
+        const fac = String(f.factory || '').trim();
+        if (fac) list = list.filter(r => String(r.factory || '').trim() === fac);
+        const dep = String(f.department || '').trim();
+        if (dep) list = list.filter(r => String(r.departmentName || '').trim() === dep);
+        const q = String(f.search || '').trim().toLowerCase();
+        if (q) {
+            list = list.filter((r) => {
+                const hay = [
+                    r.name, r.employeeCode, r.departmentName, r.jobTitle, r.branch, r.factory,
+                    r.location, r.sublocation, r.email, r.phone, r.notes
+                ].map(x => String(x || '').toLowerCase()).join(' ');
+                return hay.includes(q);
+            });
+        }
+        return list;
+    },
+
+    _readFiltersFromDom() {
+        this._listFilters.search = (document.getElementById('ia-filter-search')?.value || '').trim();
+        this._listFilters.factory = (document.getElementById('ia-filter-factory')?.value || '').trim();
+        this._listFilters.department = (document.getElementById('ia-filter-department')?.value || '').trim();
+        this._listFilters.status = (document.getElementById('ia-filter-status')?.value || '').trim();
+    },
+
+    _applyFiltersAndRender() {
+        this._readFiltersFromDom();
+        this._renderTable();
+    },
+
+    _syncFilterDropdowns() {
+        const fac = document.getElementById('ia-filter-factory');
+        const dep = document.getElementById('ia-filter-department');
+        if (!fac || !dep) return;
+        const { factories, departments } = this._collectFilterOptionLists();
+        const esc = (typeof Utils !== 'undefined' && Utils.escapeHTML) ? Utils.escapeHTML : (s) => String(s == null ? '' : s);
+        const curF = this._listFilters.factory;
+        const curD = this._listFilters.department;
+        fac.innerHTML = '<option value="">كل المصانع</option>' + factories.map(f =>
+            `<option value="${esc(f)}" ${f === curF ? 'selected' : ''}>${esc(f)}</option>`
+        ).join('');
+        dep.innerHTML = '<option value="">كل الإدارات</option>' + departments.map(d =>
+            `<option value="${esc(d)}" ${d === curD ? 'selected' : ''}>${esc(d)}</option>`
+        ).join('');
+    },
+
+    _renderFiltersHtml() {
+        const f = this._listFilters;
+        const esc = (typeof Utils !== 'undefined' && Utils.escapeHTML) ? Utils.escapeHTML : (s) => String(s == null ? '' : s);
+        const isAdmin = this.isAdmin();
+        const { factories, departments } = this._collectFilterOptionLists();
+        const statusOpts = `
+            <option value="" ${!f.status ? 'selected' : ''}>الكل</option>
+            <option value="active" ${f.status === 'active' ? 'selected' : ''}>نشط فقط</option>
+            ${isAdmin ? `<option value="inactive" ${f.status === 'inactive' ? 'selected' : ''}>غير نشط فقط</option>` : ''}`;
+        const factoryOpts = '<option value="">كل المصانع</option>' + factories.map(v =>
+            `<option value="${esc(v)}" ${v === f.factory ? 'selected' : ''}>${esc(v)}</option>`
+        ).join('');
+        const deptOpts = '<option value="">كل الإدارات</option>' + departments.map(v =>
+            `<option value="${esc(v)}" ${v === f.department ? 'selected' : ''}>${esc(v)}</option>`
+        ).join('');
+        return `
+        <div class="ia-filters-row" style="background:linear-gradient(135deg,#f8f9fa 0%,#e9ecef 100%);padding:16px 20px;border-radius:10px;border:1px solid #dee2e6;">
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;align-items:end;">
+                <div>
+                    <label for="ia-filter-search" class="form-label" style="font-size:0.8rem;margin-bottom:4px;display:block;color:#334155;">
+                        <i class="fas fa-search" style="margin-left:6px;"></i>بحث
+                    </label>
+                    <input type="text" id="ia-filter-search" class="form-input" placeholder="اسم، كود، إدارة، مصنع، موقع…" value="${esc(f.search)}" dir="rtl" style="width:100%;min-height:42px;">
+                </div>
+                <div>
+                    <label for="ia-filter-factory" class="form-label" style="font-size:0.8rem;margin-bottom:4px;display:block;color:#334155;">
+                        <i class="fas fa-industry" style="margin-left:6px;"></i>المصنع
+                    </label>
+                    <select id="ia-filter-factory" class="form-select" style="width:100%;min-height:42px;">${factoryOpts}</select>
+                </div>
+                <div>
+                    <label for="ia-filter-department" class="form-label" style="font-size:0.8rem;margin-bottom:4px;display:block;color:#334155;">
+                        <i class="fas fa-building" style="margin-left:6px;"></i>الإدارة
+                    </label>
+                    <select id="ia-filter-department" class="form-select" style="width:100%;min-height:42px;">${deptOpts}</select>
+                </div>
+                <div>
+                    <label for="ia-filter-status" class="form-label" style="font-size:0.8rem;margin-bottom:4px;display:block;color:#334155;">
+                        <i class="fas fa-toggle-on" style="margin-left:6px;"></i>حالة السجل
+                    </label>
+                    <select id="ia-filter-status" class="form-select" style="width:100%;min-height:42px;">${statusOpts}</select>
+                </div>
+                <div style="display:flex;align-items:flex-end;gap:8px;">
+                    <button type="button" id="ia-filter-reset" class="btn-secondary" style="min-height:42px;white-space:nowrap;">
+                        <i class="fas fa-undo" style="margin-left:6px;"></i>مسح الفلاتر
+                    </button>
+                </div>
+            </div>
+        </div>`;
+    },
+
+    _buildExportTableRowsHtml(records, { escapeForHtml = true } = {}) {
+        const esc = escapeForHtml && typeof Utils !== 'undefined' && Utils.escapeHTML
+            ? Utils.escapeHTML
+            : (s) => String(s == null ? '' : s);
+        return records.map((rec, idx) => {
+            const permitCells = this.PERMIT_TYPES.map(pt => {
+                const v = String(rec[pt.key] || 'X').toUpperCase().trim();
+                return `<td style="border:1px solid #d1d5db;padding:6px;text-align:center;">${esc(v)}</td>`;
+            }).join('');
+            const activeTxt = rec.isActive === false ? 'غير نشط' : 'نشط';
+            return `
+            <tr>
+                <td style="border:1px solid #d1d5db;padding:6px;text-align:center;">${idx + 1}</td>
+                <td style="border:1px solid #d1d5db;padding:6px;text-align:right;">${esc(rec.name || '')}</td>
+                <td style="border:1px solid #d1d5db;padding:6px;text-align:center;">${esc(rec.employeeCode || '')}</td>
+                <td style="border:1px solid #d1d5db;padding:6px;text-align:right;">${esc(rec.departmentName || '')}</td>
+                <td style="border:1px solid #d1d5db;padding:6px;text-align:right;">${esc(rec.jobTitle || '')}</td>
+                <td style="border:1px solid #d1d5db;padding:6px;text-align:right;">${esc(rec.branch || '')}</td>
+                <td style="border:1px solid #d1d5db;padding:6px;text-align:right;">${esc(rec.factory || '')}</td>
+                <td style="border:1px solid #d1d5db;padding:6px;text-align:right;">${esc(rec.location || '')}</td>
+                <td style="border:1px solid #d1d5db;padding:6px;text-align:right;">${esc(rec.sublocation || '')}</td>
+                ${permitCells}
+                <td style="border:1px solid #d1d5db;padding:6px;text-align:center;">${esc(activeTxt)}</td>
+            </tr>`;
+        }).join('');
+    },
+
+    _buildExportTableHtml(records) {
+        const permitHeaders = this.PERMIT_TYPES.map(pt =>
+            `<th style="border:1px solid #d1d5db;padding:8px;text-align:center;font-size:10px;">${pt.labelAr}<br><span style="color:#6b7280;font-weight:500;">${pt.labelEn}</span></th>`
+        ).join('');
+        const rows = this._buildExportTableRowsHtml(records, { escapeForHtml: true });
+        const title = `الأشخاص المصرح لهم — ${this._categoryTitleAr()}`;
+        const subtitle = `عدد السجلات: ${records.length} — ${new Date().toLocaleString('ar-SA')}`;
+        return `
+        <div style="margin-bottom:16px;text-align:center;">
+            <h2 style="margin:0 0 8px;color:#1f2937;font-size:18px;">${title}</h2>
+            <p style="margin:0;color:#6b7280;font-size:13px;">${subtitle}</p>
+        </div>
+        <table style="width:100%;border-collapse:collapse;font-size:11px;direction:rtl;">
+            <thead>
+                <tr style="background:#f3f4f6;">
+                    <th style="border:1px solid #d1d5db;padding:8px;">م</th>
+                    <th style="border:1px solid #d1d5db;padding:8px;">الاسم</th>
+                    <th style="border:1px solid #d1d5db;padding:8px;">الكود</th>
+                    <th style="border:1px solid #d1d5db;padding:8px;">الإدارة</th>
+                    <th style="border:1px solid #d1d5db;padding:8px;">الوظيفة</th>
+                    <th style="border:1px solid #d1d5db;padding:8px;">الفرع</th>
+                    <th style="border:1px solid #d1d5db;padding:8px;">المصنع</th>
+                    <th style="border:1px solid #d1d5db;padding:8px;">الموقع</th>
+                    <th style="border:1px solid #d1d5db;padding:8px;">الموقع الفرعي</th>
+                    ${permitHeaders}
+                    <th style="border:1px solid #d1d5db;padding:8px;">الحالة</th>
+                </tr>
+            </thead>
+            <tbody>${rows}</tbody>
+        </table>`;
+    },
+
+    printFilteredList() {
+        const records = this._getFilteredRecords();
+        if (!records.length) {
+            this._iaNotify('لا توجد بيانات مطابقة للفلتر للطباعة', 'warning');
+            return;
+        }
+        const inner = this._buildExportTableHtml(records);
+        const w = window.open('', '_blank');
+        if (!w) {
+            this._iaNotify('يرجى السماح بالنوافذ المنبثقة للطباعة', 'error');
+            return;
+        }
+        w.document.write(`<!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="UTF-8"><title>طباعة المصرح لهم</title></head><body style="padding:16px;font-family:Segoe UI,Tahoma,sans-serif;">${inner}</body></html>`);
+        w.document.close();
+        w.onload = () => {
+            setTimeout(() => {
+                try { w.print(); } catch (e) { /* ignore */ }
+                this._iaNotify('تم فتح نافذة الطباعة', 'success');
+            }, 200);
+        };
+    },
+
+    exportListToExcel() {
+        const records = this._getFilteredRecords();
+        if (!records.length) {
+            this._iaNotify('لا توجد بيانات مطابقة للفلتر للتصدير', 'warning');
+            return;
+        }
+        if (typeof XLSX === 'undefined') {
+            this._iaNotify('مكتبة Excel غير متوفرة في الصفحة', 'error');
+            return;
+        }
+        try {
+            const rows = records.map((rec) => {
+                const row = {
+                    'الاسم': rec.name || '',
+                    'الكود الوظيفي': rec.employeeCode || '',
+                    'الإدارة': rec.departmentName || '',
+                    'الوظيفة': rec.jobTitle || '',
+                    'الفرع': rec.branch || '',
+                    'المصنع': rec.factory || '',
+                    'الموقع': rec.location || '',
+                    'الموقع الفرعي': rec.sublocation || '',
+                    'الحالة': rec.isActive === false ? 'غير نشط' : 'نشط'
+                };
+                this.PERMIT_TYPES.forEach((pt) => {
+                    row[`تصريح: ${pt.labelAr}`] = String(rec[pt.key] || 'X').toUpperCase();
+                });
+                return row;
+            });
+            const workbook = XLSX.utils.book_new();
+            const worksheet = XLSX.utils.json_to_sheet(rows);
+            XLSX.utils.book_append_sheet(workbook, worksheet, `مصرح_${this._activeCategory === 'contractors' ? 'مقاولين' : 'موظفين'}`);
+            const fileName = `IssuingAuthorities_${this._activeCategory}_${new Date().toISOString().slice(0, 10)}.xlsx`;
+            XLSX.writeFile(workbook, fileName);
+            this._iaNotify('تم تصدير Excel بنجاح', 'success');
+        } catch (err) {
+            if (typeof Utils !== 'undefined') Utils.safeWarn('IssuingAuthorities.exportListToExcel', err);
+            this._iaNotify('فشل تصدير Excel', 'error');
+        }
+    },
+
+    exportListToPDF() {
+        const records = this._getFilteredRecords();
+        if (!records.length) {
+            this._iaNotify('لا توجد بيانات مطابقة للفلتر للتصدير', 'warning');
+            return;
+        }
+        let url = null;
+        try {
+            const content = this._buildExportTableHtml(records);
+            const formCode = `IA-LIST-${new Date().toISOString().slice(0, 10)}`;
+            const formTitle = 'الأشخاص المصرح لهم بتصاريح العمل';
+            const htmlContent = typeof FormHeader !== 'undefined' && FormHeader.generatePDFHTML
+                ? FormHeader.generatePDFHTML(formCode, formTitle, content, false, true, { source: 'IssuingAuthorities' }, new Date().toISOString(), new Date().toISOString())
+                : `<!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="UTF-8"><title>${formTitle}</title></head><body style="padding:16px;">${content}</body></html>`;
+            const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
+            url = URL.createObjectURL(blob);
+            const printWindow = window.open(url, '_blank');
+            if (printWindow) {
+                printWindow.onload = () => {
+                    setTimeout(() => {
+                        printWindow.print();
+                        setTimeout(() => { if (url) URL.revokeObjectURL(url); }, 1000);
+                        this._iaNotify('تم تحضير PDF / الطباعة', 'success');
+                    }, 250);
+                };
+            } else {
+                if (url) URL.revokeObjectURL(url);
+                this._iaNotify('يرجى السماح بالنوافذ المنبثقة', 'error');
+            }
+        } catch (err) {
+            if (url) try { URL.revokeObjectURL(url); } catch (e) { /* ignore */ }
+            if (typeof Utils !== 'undefined') Utils.safeWarn('IssuingAuthorities.exportListToPDF', err);
+            this._iaNotify('فشل تصدير PDF', 'error');
+        }
+    },
+
+    _bindListFilterEvents() {
+        const onChange = () => this._applyFiltersAndRender();
+        document.getElementById('ia-filter-factory')?.addEventListener('change', onChange);
+        document.getElementById('ia-filter-department')?.addEventListener('change', onChange);
+        document.getElementById('ia-filter-status')?.addEventListener('change', onChange);
+        const searchEl = document.getElementById('ia-filter-search');
+        if (searchEl) {
+            searchEl.addEventListener('input', () => {
+                if (this._filterSearchTimer) clearTimeout(this._filterSearchTimer);
+                this._filterSearchTimer = setTimeout(() => this._applyFiltersAndRender(), 320);
+            });
+        }
+        document.getElementById('ia-filter-reset')?.addEventListener('click', () => {
+            this._listFilters = { search: '', factory: '', department: '', status: '' };
+            const s = document.getElementById('ia-filter-search');
+            if (s) s.value = '';
+            const ff = document.getElementById('ia-filter-factory');
+            if (ff) ff.value = '';
+            const dd = document.getElementById('ia-filter-department');
+            if (dd) dd.value = '';
+            const st = document.getElementById('ia-filter-status');
+            if (st) st.value = '';
+            this._applyFiltersAndRender();
+            this._syncFilterDropdowns();
+        });
+        document.getElementById('ia-print-btn')?.addEventListener('click', () => this.printFilteredList());
+        document.getElementById('ia-export-excel-btn')?.addEventListener('click', () => this.exportListToExcel());
+        document.getElementById('ia-export-pdf-btn')?.addEventListener('click', () => this.exportListToPDF());
+    },
+
     _renderShell() {
         const isAdmin = this.isAdmin();
         return `
@@ -478,12 +810,24 @@ const IssuingAuthorities = {
                             Issuing Authorities for Work Permits - ${this._categoryTitleAr()}
                         </p>
                     </div>
-                    <div style="display:flex;gap:8px;align-items:center;">
+                    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
                         ${isAdmin ? `
                         <button class="btn-primary" id="ia-add-btn" style="gap:6px;">
                             <i class="fas fa-plus"></i>
                             <span>إضافة شخص</span>
                         </button>` : ''}
+                        <button type="button" class="btn-secondary" id="ia-print-btn" style="gap:6px;" title="طباعة القائمة المفلترة">
+                            <i class="fas fa-print"></i>
+                            <span>طباعة</span>
+                        </button>
+                        <button type="button" class="btn-success" id="ia-export-excel-btn" style="gap:6px;" title="تصدير Excel للقائمة المفلترة">
+                            <i class="fas fa-file-excel"></i>
+                            <span>Excel</span>
+                        </button>
+                        <button type="button" class="btn-secondary" id="ia-export-pdf-btn" style="gap:6px;" title="تصدير / طباعة PDF">
+                            <i class="fas fa-file-pdf"></i>
+                            <span>PDF</span>
+                        </button>
                         <button class="btn-secondary" id="ia-refresh-btn" style="gap:6px;">
                             <i class="fas fa-sync-alt"></i>
                         </button>
@@ -507,6 +851,11 @@ const IssuingAuthorities = {
                     <span class="ia-badge-x" style="margin-right:14px;">X</span>
                     <span style="font-size:0.82rem;color:#991b1b;margin-left:4px;">غير مصرح له بالتوقيع</span>
                 </div>
+
+                <div id="ia-filters-wrap" style="margin:0 16px 12px;">
+                    ${this._renderFiltersHtml()}
+                </div>
+                <p id="ia-filter-count" style="margin:0 16px 8px;font-size:0.82rem;color:#64748b;display:none;"></p>
 
                 <div class="card-body" style="padding:0 0 16px;">
                     <div id="ia-table-wrapper" style="overflow-x:auto;">
@@ -762,17 +1111,31 @@ const IssuingAuthorities = {
         }
 
         const isAdmin = this.isAdmin();
-        const records = this._data.filter(r => isAdmin || r.isActive !== false);
+        const baseCount = this._getBaseRecordsForView().length;
+        const records = this._getFilteredRecords();
+
+        const countEl = document.getElementById('ia-filter-count');
+        if (countEl) {
+            const fActive = !!(this._listFilters.search || this._listFilters.factory || this._listFilters.department || this._listFilters.status);
+            if (this._data.length && fActive) {
+                countEl.style.display = 'block';
+                countEl.textContent = `عرض ${records.length} من أصل ${baseCount} سجلًا (بعد تطبيق الفلتر).`;
+            } else {
+                countEl.style.display = 'none';
+            }
+        }
 
         if (records.length === 0) {
+            const hasAnyData = this._getBaseRecordsForView().length > 0;
             wrapper.innerHTML = `
                 <div class="empty-state" style="padding:48px 24px;">
                     <i class="fas fa-user-check" style="font-size:2.5rem;color:#cbd5e1;margin-bottom:12px;"></i>
-                    <h3 style="color:#64748b;margin-bottom:6px;">لا يوجد سجلات بعد</h3>
+                    <h3 style="color:#64748b;margin-bottom:6px;">${hasAnyData ? 'لا توجد نتائج مطابقة للفلتر' : 'لا يوجد سجلات بعد'}</h3>
                     <p style="color:#94a3b8;font-size:0.88rem;">
-                        ${isAdmin ? `انقر على "إضافة شخص" لإضافة أول سجل في قائمة ${this._categoryTitleAr()}.` : `لم تتم إضافة سجلات ${this._categoryTitleAr()} بعد.`}
+                        ${hasAnyData ? 'جرّب تعديل البحث أو الفلاتر أعلاه.' : (isAdmin ? `انقر على "إضافة شخص" لإضافة أول سجل في قائمة ${this._categoryTitleAr()}.` : `لم تتم إضافة سجلات ${this._categoryTitleAr()} بعد.`)}
                     </p>
                 </div>`;
+            this._syncFilterDropdowns();
             return;
         }
 
@@ -831,6 +1194,7 @@ const IssuingAuthorities = {
                 ${bodyRows}
             </tbody>
         </table>`;
+        this._syncFilterDropdowns();
     },
 
     _attachEvents() {
@@ -844,6 +1208,7 @@ const IssuingAuthorities = {
         // زر تحديث
         const refreshBtn = document.getElementById('ia-refresh-btn');
         if (refreshBtn) refreshBtn.addEventListener('click', async () => {
+            this._readFiltersFromDom();
             await this._fetchData();
             this._renderTable();
         });
@@ -853,6 +1218,7 @@ const IssuingAuthorities = {
                 const nextCategory = btn.getAttribute('data-category') || 'employees';
                 if (nextCategory === this._activeCategory) return;
                 this._activeCategory = nextCategory;
+                this._listFilters = { search: '', factory: '', department: '', status: '' };
                 const section = document.getElementById('issuing-authorities-section');
                 if (!section) return;
                 section.innerHTML = this._renderShell();
@@ -914,6 +1280,7 @@ const IssuingAuthorities = {
         });
 
         this._bindModalFieldEvents();
+        this._bindListFilterEvents();
     },
 
     _togglePersonTypeInputs() {
