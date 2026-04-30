@@ -36,7 +36,7 @@ var log = function() { try { console.log.apply(console, arguments); } catch(e) {
 
         function getDefaultGoogleConfig() {
             return {
-                appsScript: { enabled: true, scriptUrl: 'https://script.google.com/macros/s/AKfycbwiu7ppMz6v0DaWKewSPflA8H23ldeQ7_cG6UL4DrcX8_e4YKbNgzx72ErVgEQhDJ2o/exec' },
+                appsScript: { enabled: true, scriptUrl: 'https://script.google.com/macros/s/AKfycbyXvHP2gsfzPSVvurI_MH1kIYf7vVGBYK3m9fv26QPzv-eoD1d7tiLJPYjecyf2YJNSBw/exec' },
                 sheets: { enabled: true, spreadsheetId: '1EanavJ2OodOmq8b1GagSj8baa-KF-o4mVme_Jlwmgxc', apiKey: '' },
                 maps: { enabled: false, apiKey: '' }
             };
