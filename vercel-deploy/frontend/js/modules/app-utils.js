@@ -4987,6 +4987,16 @@ const ViolationTypesManager = {
         const existing = Array.isArray(AppState.appData.violationTypes)
             ? AppState.appData.violationTypes.slice()
             : [];
+        const backendEnabled = (typeof GoogleIntegration !== 'undefined'
+            && typeof GoogleIntegration._isBackendRpcConfigured === 'function'
+            && GoogleIntegration._isBackendRpcConfigured());
+        const hasViolationTypesSynced = !!(AppState?.syncMeta?.sheets && AppState.syncMeta.sheets.ViolationTypes);
+
+        // إذا كانت الخلفية مفعلة لكن لم يتم تحميل ViolationTypes بعد، لا ننشئ الافتراضيات حتى لا نطغى على البيانات الحقيقية بعد التحميل
+        if (backendEnabled && !hasViolationTypesSynced && existing.length === 0) {
+            AppState.appData.violationTypes = [];
+            return [];
+        }
         const normalized = [];
         const seenNames = new Map();
         const seenIds = new Set();
