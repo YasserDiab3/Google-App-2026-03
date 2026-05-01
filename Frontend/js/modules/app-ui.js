@@ -4922,41 +4922,43 @@ window.UI = {
         return `${scriptUrl}${joiner}action=publicProfileCard&token=${encodeURIComponent(response.data.token)}`;
     },
 
-    async renderMyProfileSection() {
-        const section = document.getElementById('profile-section');
-        if (!section) return;
-        const t = (k, f) => (typeof this._t === 'function' ? this._t(k, f) : f);
-        const esc = (v) => (typeof Utils !== 'undefined' && typeof Utils.escapeHTML === 'function')
-            ? Utils.escapeHTML(String(v ?? ''))
-            : String(v ?? '');
+    _mergeProfileBatchIntoAppState(batch, sheetNames) {
+        if (!batch || !batch.data || !Array.isArray(sheetNames)) return;
+        const keyMap = {
+            Employees: 'employees',
+            Training: 'training',
+            Violations: 'violations',
+            PPE: 'ppe',
+            ClinicVisits: 'clinicVisits',
+            EmergencyPlans: 'emergencyPlans',
+            AppEmergencyNumbers: 'appEmergencyNumbers'
+        };
+        sheetNames.forEach((sheet) => {
+            const key = keyMap[sheet];
+            if (key && Array.isArray(batch.data[sheet])) {
+                AppState.appData[key] = batch.data[sheet];
+            }
+        });
+    },
 
+    /**
+     * تحميل سريع لبيانات الملف الشخصي (موظفين + أرقام طوارئ المؤسسة) ثم الرسم.
+     * بقية الشيتات تُحمَّل لاحقاً لتفادي بقاء «جاري التحميل» طويلاً بسبب batch كبير.
+     */
+    async _preloadProfileCriticalSheets() {
         try {
             if (typeof GoogleIntegration !== 'undefined' && typeof GoogleIntegration.batchReadFromSheets === 'function') {
-                const needSheets = [];
-                if (!Array.isArray(AppState.appData?.employees) || AppState.appData.employees.length === 0) needSheets.push('Employees');
-                if (!Array.isArray(AppState.appData?.training) || AppState.appData.training.length === 0) needSheets.push('Training');
-                if (!Array.isArray(AppState.appData?.violations) || AppState.appData.violations.length === 0) needSheets.push('Violations');
-                if (!Array.isArray(AppState.appData?.ppe) || AppState.appData.ppe.length === 0) needSheets.push('PPE');
-                if (!Array.isArray(AppState.appData?.clinicVisits) || AppState.appData.clinicVisits.length === 0) needSheets.push('ClinicVisits');
-                if (!Array.isArray(AppState.appData?.emergencyPlans) || AppState.appData.emergencyPlans.length === 0) needSheets.push('EmergencyPlans');
-                needSheets.push('AppEmergencyNumbers');
-                if (needSheets.length > 0) {
-                    const batch = await GoogleIntegration.batchReadFromSheets(needSheets, { timeout: 25000, batchSize: 10 });
+                const need = [];
+                if (!Array.isArray(AppState.appData?.employees) || AppState.appData.employees.length === 0) {
+                    need.push('Employees');
+                }
+                if (!Array.isArray(AppState.appData?.appEmergencyNumbers) || AppState.appData.appEmergencyNumbers.length === 0) {
+                    need.push('AppEmergencyNumbers');
+                }
+                if (need.length > 0) {
+                    const batch = await GoogleIntegration.batchReadFromSheets(need, { timeout: 12000, batchSize: 10 });
                     if (batch && batch.data) {
-                        needSheets.forEach((sheet) => {
-                            const key = ({
-                                Employees: 'employees',
-                                Training: 'training',
-                                Violations: 'violations',
-                                PPE: 'ppe',
-                                ClinicVisits: 'clinicVisits',
-                                EmergencyPlans: 'emergencyPlans',
-                                AppEmergencyNumbers: 'appEmergencyNumbers'
-                            })[sheet];
-                            if (key && Array.isArray(batch.data[sheet])) {
-                                AppState.appData[key] = batch.data[sheet];
-                            }
-                        });
+                        this._mergeProfileBatchIntoAppState(batch, need);
                     }
                 }
             }
@@ -4968,7 +4970,6 @@ window.UI = {
                     AppState.appData.employees = employeesRes.data;
                 }
             }
-            // fallback أخير: قراءة مباشرة من الشيت في حال فشل API الموظفين لأي سبب
             if ((!Array.isArray(AppState.appData?.employees) || AppState.appData.employees.length === 0)
                 && typeof GoogleIntegration !== 'undefined'
                 && typeof GoogleIntegration.callBackend === 'function') {
@@ -4977,7 +4978,90 @@ window.UI = {
                     AppState.appData.employees = directRes.data;
                 }
             }
-        } catch (_) { /* ignore non-critical profile preload errors */ }
+            if ((!Array.isArray(AppState.appData?.employees) || AppState.appData.employees.length === 0)
+                && typeof Utils !== 'undefined' && Utils.safeWarn) {
+                Utils.safeWarn('الملف الشخصي: تعذر تحميل جدول الموظفين — قد تظهر بيانات من حساب المستخدم فقط. تحقق من الصلاحيات أو نشر Web App.');
+            }
+        } catch (err) {
+            if (typeof Utils !== 'undefined' && Utils.safeWarn) {
+                Utils.safeWarn('الملف الشخصي: فشل التحميل السريع للبيانات', err && err.message ? err.message : err);
+            }
+        }
+    },
+
+    _collectProfileStatsSheetNeeds() {
+        if (!this._profileStatsSheetsFetchedSet) {
+            this._profileStatsSheetsFetchedSet = new Set();
+        }
+        const got = this._profileStatsSheetsFetchedSet;
+        const pairs = [
+            ['Training', 'training'],
+            ['Violations', 'violations'],
+            ['PPE', 'ppe'],
+            ['ClinicVisits', 'clinicVisits'],
+            ['EmergencyPlans', 'emergencyPlans']
+        ];
+        const needSheets = [];
+        pairs.forEach(([sheet]) => {
+            if (!got.has(sheet)) needSheets.push(sheet);
+        });
+        return needSheets;
+    },
+
+    async _preloadProfileStatsSheets() {
+        const needSheets = this._collectProfileStatsSheetNeeds();
+        if (needSheets.length === 0) return false;
+        if (typeof GoogleIntegration === 'undefined' || typeof GoogleIntegration.batchReadFromSheets !== 'function') {
+            return false;
+        }
+        try {
+            const batch = await GoogleIntegration.batchReadFromSheets(needSheets, { timeout: 22000, batchSize: 10 });
+            if (batch && batch.data) {
+                this._mergeProfileBatchIntoAppState(batch, needSheets);
+            }
+            needSheets.forEach((s) => {
+                if (this._profileStatsSheetsFetchedSet) this._profileStatsSheetsFetchedSet.add(s);
+            });
+            return true;
+        } catch (err) {
+            if (typeof Utils !== 'undefined' && Utils.safeWarn) {
+                Utils.safeWarn('الملف الشخصي: تعذر تحميل شيتات الإحصائيات', err?.message || err);
+            }
+            return false;
+        }
+    },
+
+    _scheduleProfileStatsEnrichment() {
+        if (this._profileStatsEnriching) return;
+        if (this._collectProfileStatsSheetNeeds().length === 0) return;
+        this._profileStatsEnriching = true;
+        Promise.resolve()
+            .then(() => this._preloadProfileStatsSheets())
+            .then((updated) => {
+                if (updated && AppState.currentSection === 'profile') {
+                    return this.renderMyProfileSection();
+                }
+                return null;
+            })
+            .catch((err) => {
+                if (typeof Utils !== 'undefined' && Utils.safeWarn) {
+                    Utils.safeWarn('الملف الشخصي: تعذر تحميل إحصائيات إضافية (تدريب/مخالفات/…)', err && err.message ? err.message : err);
+                }
+            })
+            .finally(() => {
+                this._profileStatsEnriching = false;
+            });
+    },
+
+    async renderMyProfileSection() {
+        const section = document.getElementById('profile-section');
+        if (!section) return;
+        const t = (k, f) => (typeof this._t === 'function' ? this._t(k, f) : f);
+        const esc = (v) => (typeof Utils !== 'undefined' && typeof Utils.escapeHTML === 'function')
+            ? Utils.escapeHTML(String(v ?? ''))
+            : String(v ?? '');
+
+        await this._preloadProfileCriticalSheets();
 
         const profile = this._buildProfileModel();
         const stats = profile.stats || {};
@@ -5371,6 +5455,8 @@ window.UI = {
         }
 
         paintQr(false);
+
+        this._scheduleProfileStatsEnrichment();
     },
 
     /**
@@ -5782,7 +5868,8 @@ window.UI = {
             }
         };
 
-        if (sectionName === 'dashboard') {
+        // الملف الشخصي: تحميل فوري لتفادي بقاء هيكل «جاري تحميل البيانات» بانتظار requestIdleCallback
+        if (sectionName === 'dashboard' || sectionName === 'profile') {
             loadSectionWork();
         } else if (typeof requestIdleCallback === 'function') {
             // ✅ تجنّب Violation: اجعل requestIdleCallback سريعاً، وادفع العمل الثقيل خارج callback
@@ -5840,7 +5927,11 @@ window.UI = {
                     }
                     break;
                 case 'profile':
-                    this.renderMyProfileSection();
+                    Promise.resolve(this.renderMyProfileSection()).catch((err) => {
+                        if (typeof Utils !== 'undefined' && Utils.safeWarn) {
+                            Utils.safeWarn('فشل عرض الملف الشخصي:', err);
+                        }
+                    });
                     break;
                 case 'users':
                     if (typeof Users !== 'undefined' && Users.load) {
