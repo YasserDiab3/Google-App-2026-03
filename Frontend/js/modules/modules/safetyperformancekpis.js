@@ -1688,13 +1688,22 @@ const SafetyPerformanceKPIs = {
             return avgEmployees > 0 ? totalHours / avgEmployees : 0;
         });
 
+        const contractorHoursDisplay = base.contractorEmployeeCounts.map(c => Number(c || 0) * 8 * 22);
+        const directHoursDisplay = base.directEmployeeCounts.map(c => Number(c || 0) * 8 * 22);
+        const combinedHoursDisplay = base.directEmployeeCounts.map((c, i) => (Number(c || 0) + Number(base.contractorEmployeeCounts[i] || 0)) * 8 * 22);
+
         const model = {
             year,
             ytdLimit,
             months: this.getScorecardMonths(),
             rows: {
                 employeeCounts: base.employeeCounts,
+                directEmployeeCounts: base.directEmployeeCounts,
+                contractorEmployeeCounts: base.contractorEmployeeCounts,
                 hoursWorked: base.hoursWorked,
+                contractorHoursDisplay,
+                directHoursDisplay,
+                combinedHoursDisplay,
                 lti: base.lti,
                 nlti: base.nlti,
                 firstAid: base.firstAid,
@@ -1820,8 +1829,11 @@ const SafetyPerformanceKPIs = {
                     </tr>
                 </thead>
                 <tbody>
-                    ${renderMetricRow(t('module.kpi.scorecard.row.operationalEmployees','Number Operational employees:'), rows.employeeCounts, 'blue', this.getYtdValue(rows.employeeCounts, 'sum', ytdLimit), 'yellow', 0)}
+                    ${renderMetricRow(t('module.kpi.scorecard.row.operationalEmployees','Number of Permanent Employees'), rows.employeeCounts, 'blue', this.getYtdValue(rows.employeeCounts, 'sum', ytdLimit), 'yellow', 0)}
+                    ${renderMetricRow(t('module.kpi.scorecard.row.contractorEmployees','Number of Temporary Workers'), rows.contractorEmployeeCounts, 'blue', this.getYtdValue(rows.contractorEmployeeCounts, 'sum', ytdLimit), 'yellow', 0)}
+                    ${renderMetricRow(t('module.kpi.scorecard.row.contractorHoursDisplay','Total Temporary Workers Hours'), rows.contractorHoursDisplay, 'blue', this.getYtdValue(rows.contractorHoursDisplay, 'sum', ytdLimit), 'yellow', 0)}
                     ${renderMetricRow(t('module.kpi.scorecard.row.totalHoursWorked','Total Employee Hours Worked'), rows.hoursWorked, 'blue', this.getYtdValue(rows.hoursWorked, 'sum', ytdLimit), 'yellow', 0, { manual: 'hoursWorked' })}
+                    ${renderMetricRow(t('module.kpi.scorecard.row.combinedHoursDisplay','Combined Total Hours (Employees + Temps)'), rows.combinedHoursDisplay, 'blue', this.getYtdValue(rows.combinedHoursDisplay, 'sum', ytdLimit), 'yellow', 0)}
                     <tr class="spk-row-section"><td colspan="14">${t('module.kpi.scorecard.section.accidentRates','1 Accident, Incident, & Illness Rates')}</td></tr>
                     <tr class="spk-row-subsection"><td colspan="13">${t('module.kpi.scorecard.section.safetyReported','1.1 Safety (number reported)')}</td><td class="spk-subsection-ytd">${t('module.kpi.scorecard.table.cumulativeYtd','Cumulative YTD')}</td></tr>
                     ${renderMetricRow(t('module.kpi.scorecard.row.lti','LTI - Lost Time Incidents'), rows.lti, 'blue', this.getYtdValue(rows.lti, 'sum', ytdLimit), 'yellow', 0)}
