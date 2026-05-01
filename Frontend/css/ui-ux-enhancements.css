@@ -332,6 +332,20 @@ select.form-select option {
     border-bottom: none;
 }
 
+/* قائمة المستخدمين: صورة الملف الشخصي — الأصناف w-10/h-10 غير مضمّنة في tailwind-utilities الجزئي */
+.data-table img[data-user-photo="1"] {
+    width: 2.5rem;
+    height: 2.5rem;
+    max-width: 2.5rem;
+    max-height: 2.5rem;
+    min-width: 2.5rem;
+    min-height: 2.5rem;
+    object-fit: cover;
+    border-radius: 50%;
+    flex-shrink: 0;
+    box-sizing: border-box;
+}
+
 /* Table Actions */
 .table-actions {
     display: flex;
