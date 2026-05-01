@@ -955,6 +955,7 @@ const IssuingAuthorities = {
     _buildExportTableHtml(records, options = {}) {
         const esc = (typeof Utils !== 'undefined' && Utils.escapeHTML) ? Utils.escapeHTML : (s) => String(s == null ? '' : s);
         const omitInnerTitle = !!options.omitInnerTitle;
+        const omitLegend = !!options.omitLegend;
         const lang = this._getI18nCore()?.getCurrentLang?.() || 'ar';
         const isRtl = lang !== 'en';
         const permitHeaders = this.PERMIT_TYPES.map(pt => {
@@ -1008,7 +1009,7 @@ const IssuingAuthorities = {
             </thead>
             <tbody>${rows}</tbody>
         </table>
-        ${this._buildExportLegendHtml(isRtl)}`;
+        ${omitLegend ? '' : this._buildExportLegendHtml(isRtl)}`;
     },
 
     printFilteredList() {
@@ -1116,7 +1117,7 @@ const IssuingAuthorities = {
         }
         let url = null;
         try {
-            const content = this._buildExportTableHtml(records, { omitInnerTitle: true });
+            const content = this._buildExportTableHtml(records, { omitInnerTitle: true, omitLegend: true });
             const formCode = `IA-LIST-${new Date().toISOString().slice(0, 10)}`;
             const core = this._getI18nCore();
             const formTitleAr = core ? core.t('module.issuingAuthorities.form.pdfTitle', 'ar', 'الأشخاص المصرح لهم باعتماد تصاريح العمل') : 'الأشخاص المصرح لهم باعتماد تصاريح العمل';
@@ -1124,18 +1125,22 @@ const IssuingAuthorities = {
             const nowIso = new Date().toISOString();
             const lang = core?.getCurrentLang?.() || 'ar';
             const isRtl = lang !== 'en';
+            const footerLegendHtml = this._buildExportLegendHtml(isRtl);
             const htmlContent = typeof FormHeader !== 'undefined' && FormHeader.generatePDFHTML
                 ? FormHeader.generatePDFHTML(
                     formCode,
                     formTitleAr,
                     content,
                     false,
-                    true,
+                    false,
                     {
                         source: 'IssuingAuthorities',
                         titleEn: formTitleEn,
                         titleAr: formTitleAr,
-                        version: AppState?.companySettings?.formVersion || '1.0'
+                        version: AppState?.companySettings?.formVersion || '1.0',
+                        includeQRCode: false,
+                        footerLegendHtml,
+                        compactPdfFooter: true
                     },
                     nowIso,
                     nowIso

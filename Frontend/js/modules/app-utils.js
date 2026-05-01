@@ -5956,7 +5956,7 @@ const PDFTemplates = {
             .replace(/<ul(?![^>]*class=)/g, '<ul class="report-list"');
 
         const isDailySafetyTemplate = String(meta?.source || '').trim() === 'DailySafetyCheckList';
-        const excludedMetaKeys = ['version', 'releaseDate', 'revisionDate', 'issueDate', 'includeQRCode', 'qrData', 'modifiedAt', 'titleEn', 'titleAr'];
+        const excludedMetaKeys = ['version', 'releaseDate', 'revisionDate', 'issueDate', 'includeQRCode', 'qrData', 'modifiedAt', 'titleEn', 'titleAr', 'footerLegendHtml', 'compactPdfFooter'];
         const metaRows = Object.entries(meta || {})
             .filter(([key, value]) => {
                 if (value === undefined || value === null || value === '') return false;
@@ -5985,6 +5985,8 @@ const PDFTemplates = {
 
         const metaIncludeQRCode = (meta && Object.prototype.hasOwnProperty.call(meta, 'includeQRCode')) ? Boolean(meta.includeQRCode) : true;
         const shouldRenderQRCode = includeQRCode !== false && metaIncludeQRCode;
+        const footerLegendHtml = (typeof meta?.footerLegendHtml === 'string' && meta.footerLegendHtml.trim()) ? meta.footerLegendHtml : '';
+        const compactPdfFooter = !!meta?.compactPdfFooter;
         const qrPayloadRaw = qrData != null ? qrData
             : (meta && meta.qrData != null ? meta.qrData
                 : `Form: ${formCode || '-'} | Title: ${title || ''} | Company: ${companyNameRaw}`);
@@ -6378,6 +6380,47 @@ const PDFTemplates = {
             box-sizing: border-box;
             flex-shrink: 0;
         }
+        .pdf-footer-legend-wrap {
+            width: 100%;
+            box-sizing: border-box;
+            margin-bottom: 6px;
+            break-inside: avoid;
+            page-break-inside: avoid;
+        }
+        .pdf-footer-legend-wrap .ia-export-legend {
+            margin-top: 0 !important;
+            margin-bottom: 0 !important;
+            padding: 8px 10px !important;
+        }
+        .pdf-compact-footer .report-footer {
+            padding: 6px 0 0;
+            font-size: 10px;
+            border-top-width: 1px;
+        }
+        .pdf-compact-footer .footer-watermark-frame {
+            padding: 8px 12px;
+            margin-top: 4px;
+            border-radius: 8px;
+        }
+        .pdf-compact-footer .footer-meta-line {
+            font-size: 10px;
+            gap: 8px;
+            padding: 4px 0;
+            margin-top: 2px;
+        }
+        .pdf-compact-footer .footer-meta-item {
+            font-size: 10px;
+            padding: 2px 4px;
+            line-height: 1.45;
+        }
+        .pdf-compact-footer .footer-bottom {
+            gap: 6px;
+            margin-top: 0;
+        }
+        .pdf-compact-footer .footer-bottom-text {
+            font-size: 10px;
+            gap: 2px;
+        }
         .footer-watermark-frame {
             background: linear-gradient(135deg, rgba(59, 130, 246, 0.03), rgba(37, 99, 235, 0.05));
             border: 2px solid rgba(59, 130, 246, 0.15);
@@ -6663,12 +6706,17 @@ const PDFTemplates = {
             letter-spacing: 0.3px;
         }
         @media print {
+            * {
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }
             html, body {
                 height: auto;
                 min-height: 100vh;
             }
             body {
-                background: #ffffff;
+                background: #ffffff !important;
+                visibility: visible !important;
             }
             .report-wrapper {
                 box-shadow: none;
@@ -6678,18 +6726,33 @@ const PDFTemplates = {
                 padding: 18px 16px;
                 flex: 1 0 auto;
                 min-height: 100vh;
-                display: flex;
+                display: flex !important;
                 flex-direction: column;
+                visibility: visible !important;
+                background: #ffffff !important;
             }
             .report-body {
                 flex: 1 1 auto;
+                visibility: visible !important;
             }
             .report-footer {
                 margin-top: auto;
+                visibility: visible !important;
+                display: block !important;
+                break-inside: avoid;
+                page-break-inside: avoid;
             }
             .report-header {
+                visibility: visible !important;
+                display: grid !important;
+                break-inside: avoid;
+                page-break-inside: avoid;
                 grid-template-columns: minmax(180px, 1.3fr) minmax(280px, 2fr) minmax(84px, 110px);
                 gap: 14px;
+            }
+            .pdf-footer-legend-wrap {
+                break-inside: avoid;
+                page-break-inside: avoid;
             }
             .summary-card {
                 box-shadow: none;
@@ -6703,6 +6766,9 @@ const PDFTemplates = {
             }
             .footer-meta-line {
                 gap: 12px;
+            }
+            .pdf-compact-footer .footer-meta-line {
+                gap: 8px;
             }
         }
         @media (max-width: 1100px) {
@@ -6746,7 +6812,7 @@ const PDFTemplates = {
     </style>
 </head>
 <body>
-    <div class="report-wrapper${isDailySafetyTemplate ? ' dsc-report' : ''}">
+    <div class="report-wrapper${isDailySafetyTemplate ? ' dsc-report' : ''}${compactPdfFooter ? ' pdf-compact-footer' : ''}">
         <div class="report-header">
             <div class="company-brand">
                 <div class="company-name-group">
@@ -6768,6 +6834,7 @@ const PDFTemplates = {
             ${enhancedContent}
         </div>
         <div class="report-footer">
+            ${footerLegendHtml ? `<div class="pdf-footer-legend-wrap">${footerLegendHtml}</div>` : ''}
             <div class="footer-watermark-frame">
                 <div class="footer-bottom">
                     ${shouldRenderQRCode ? `<div id="report-qr-code" class="footer-bottom-qr"></div>` : ''}
@@ -6830,6 +6897,7 @@ FormHeader.generatePDFHTML = function (
     if (!Object.prototype.hasOwnProperty.call(extendedMeta, 'includeQRCode')) {
         extendedMeta.includeQRCode = includeQrInFooter;
     }
+    const effectiveIncludeQr = extendedMeta.includeQRCode !== false && includeQrInFooter !== false;
 
     return PDFTemplates.buildDocument({
         title,
@@ -6838,7 +6906,7 @@ FormHeader.generatePDFHTML = function (
         createdAt,
         updatedAt,
         meta: extendedMeta,
-        includeQRCode: includeQrInFooter,
+        includeQRCode: effectiveIncludeQr,
         qrData: extendedMeta.qrData || null
     });
 };
