@@ -549,6 +549,34 @@ const IssuingAuthorities = {
     },
 
     /**
+     * جدول الحفظ/التعديل/الحذف: من نوع الشخص عند الإضافة، ومن معرف السجل (IA… / IAC…) عند التعديل أو الحذف.
+     * يمنع تسجيل موظف في PTWContractorIssuingAuthorities عندما يبقى تبويب المقاولين ظاهراً والمستخدم يختار «موظف» في النموذج.
+     */
+    _categoryForWrite(personType, recordId) {
+        if (recordId) {
+            const idStr = String(recordId).trim().toUpperCase();
+            return idStr.startsWith('IAC') ? 'contractors' : 'employees';
+        }
+        return personType === 'contractor' ? 'contractors' : 'employees';
+    },
+
+    /** مزامنة تبويب الموظفين/المقاولين والعنوان الفرعي مع this._activeCategory بعد حفظ بجدول مختلف عن التبويب السابق. */
+    _syncIssuingAuthoritiesCategoryUi() {
+        const root = document.getElementById('ia-module-root');
+        if (root) {
+            const cat = this._activeCategory === 'contractors' ? 'contractors' : 'employees';
+            root.querySelectorAll('.ia-tab-btn').forEach((btn) => {
+                const bc = btn.getAttribute('data-category') || '';
+                btn.classList.toggle('active', bc === cat);
+            });
+        }
+        const sub = document.getElementById('ia-card-subtitle');
+        if (sub) {
+            sub.textContent = `PTW Approvers — ${this._categoryTitleAr()}`;
+        }
+    },
+
+    /**
      * جلب صفوف جدول معيّن بدون تعديل this._activeCategory أو this._data (آمن مع PTW بالتوازي).
      */
     async _fetchNormalizedRowsForCategory(category) {
@@ -1019,7 +1047,7 @@ const IssuingAuthorities = {
                             <i class="fas fa-user-check" style="margin-left:8px;color:#2563eb;"></i>
                             قائمة الأشخاص المصرح لهم باعتماد تصاريح العمل
                         </h2>
-                        <p class="card-subtitle" style="margin:4px 0 0;color:#64748b;font-size:0.85rem;">
+                        <p id="ia-card-subtitle" class="card-subtitle" style="margin:4px 0 0;color:#64748b;font-size:0.85rem;">
                             PTW Approvers — ${this._categoryTitleAr()}
                         </p>
                     </div>
@@ -1756,8 +1784,7 @@ const IssuingAuthorities = {
 
         try {
             let result;
-            const saveCategory = this._getActiveCategoryFromUi();
-            this._activeCategory = saveCategory;
+            const saveCategory = this._categoryForWrite(personType, this._currentEditId);
             const actions = this._actionsForCategory(saveCategory);
             if (this._currentEditId) {
                 payload.id = this._currentEditId;
@@ -1773,6 +1800,8 @@ const IssuingAuthorities = {
             }
 
             if (result && result.success) {
+                this._activeCategory = saveCategory;
+                this._syncIssuingAuthoritiesCategoryUi();
                 this._closeModal();
                 await this._fetchData();
                 this._renderTable();
@@ -1817,15 +1846,15 @@ const IssuingAuthorities = {
     async _deleteRecord(id) {
         try {
             const userData = AppState && AppState.currentUser ? AppState.currentUser : {};
-            const rec = (this._data || []).find(x => x.id === id) || {};
-            const delCategory = this._getActiveCategoryFromUi();
-            this._activeCategory = delCategory;
+            const delCategory = this._categoryForWrite(null, id);
             const actions = this._actionsForCategory(delCategory);
             const result = await GoogleIntegration.sendRequest({
                 action: actions.remove,
                 data: { id, userData }
             });
             if (result && result.success) {
+                this._activeCategory = delCategory;
+                this._syncIssuingAuthoritiesCategoryUi();
                 await this._fetchData();
                 this._renderTable();
                 if (typeof Utils !== 'undefined' && Utils.showNotification) {
