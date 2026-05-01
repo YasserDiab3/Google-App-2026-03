@@ -117,11 +117,6 @@
     align-items: flex-end;
 }
 
-#dashboard-section .section-header-text {
-    flex: 1;
-    min-width: 0;
-}
-
 .section-title {
     font-size: 1.875rem;
     font-weight: 700;

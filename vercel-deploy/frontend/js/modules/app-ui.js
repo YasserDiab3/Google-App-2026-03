@@ -7841,9 +7841,9 @@ window.UI = {
                 const btn = t.closest('#notifications-btn');
                 if (!btn || !sidebar.contains(btn)) return;
                 
-                // منع السلوك الافتراضي فقط، ونسمح بمرور الحدث حتى تعمل أي fallback handlers
                 e.preventDefault();
-                
+                e.stopPropagation();
+
                 Utils.safeLog('🔔 [Delegation] تم النقر على زر الإشعارات');
 
                 if (self && typeof self.toggleNotificationsDropdown === 'function') {
@@ -7887,42 +7887,39 @@ window.UI = {
     initNotificationsButton() {
         // حفظ مرجع إلى this للاستخدام داخل arrow function
         const self = this;
-        
-        // ✅ إصلاح: منع الاستدعاء المتكرر اللانهائي
-        if (this._notificationsInitCount && this._notificationsInitCount > 20) {
-            Utils.safeError('⚠️ توقف تهيئة الإشعارات: تجاوز عدد المحاولات (20)');
-            return;
-        }
-        this._notificationsInitCount = (this._notificationsInitCount || 0) + 1;
 
         try {
             const sidebarBtn = document.getElementById('notifications-btn');
             const mobileNotificationsBtn = document.getElementById('mobile-notifications-btn');
             const headerNotificationsBtn = document.getElementById('header-notifications-btn');
-            const dashboardNotificationsBtn = document.getElementById('dashboard-notifications-btn');
 
-            // ربط جميع أزرار الإشعارات مباشرة بنفس المنطق (sidebar + mobile + header + لوحة التحكم)
-            const notificationButtons = [sidebarBtn, mobileNotificationsBtn, headerNotificationsBtn, dashboardNotificationsBtn].filter(Boolean);
+            const notificationButtons = [sidebarBtn, mobileNotificationsBtn, headerNotificationsBtn].filter(Boolean);
 
-            if (!sidebarBtn && notificationButtons.length === 0) {
-                Utils.safeWarn('⚠️ لم يتم العثور على أزرار الإشعارات - المحاولة #' + this._notificationsInitCount);
-                if (this._notificationsInitCount < 20) {
-                    setTimeout(() => {
-                        this.initNotificationsButton();
-                    }, 500);
+            if (notificationButtons.length === 0) {
+                this._notificationsInitCount = (this._notificationsInitCount || 0) + 1;
+                if (this._notificationsInitCount > 20) {
+                    Utils.safeError('⚠️ توقف تهيئة الإشعارات: تجاوز عدد المحاولات (20)');
+                    return;
                 }
+                Utils.safeWarn('⚠️ لم يتم العثور على أزرار الإشعارات - المحاولة #' + this._notificationsInitCount);
+                setTimeout(() => {
+                    this.initNotificationsButton();
+                }, 500);
                 return;
             }
+            this._notificationsInitCount = 0;
 
             Utils.safeLog('✅ تهيئة الإشعارات:');
             if (sidebarBtn) Utils.safeLog('  - notifications-btn (تفويض على .sidebar)');
             if (mobileNotificationsBtn) Utils.safeLog('  - mobile-notifications-btn');
             if (headerNotificationsBtn) Utils.safeLog('  - header-notifications-btn');
-            if (dashboardNotificationsBtn) Utils.safeLog('  - dashboard-notifications-btn');
 
-            // ربط أزرار الإشعارات مباشرة
+            // ربط أزرار الإشعارات مباشرة (عدا الجرس في الشريط الجانبي — يُدار بتفويض capture)
             notificationButtons.forEach((btn) => {
                 if (!btn) return;
+                if (btn.id === 'notifications-btn') {
+                    return;
+                }
 
                 try {
                     // التحقق من أن الزر موجود في DOM
@@ -7955,7 +7952,7 @@ window.UI = {
                                 listId = 'mobile-notifications-list';
                                 emptyId = 'mobile-notifications-empty';
                                 closeBtnId = 'close-mobile-notifications-dropdown';
-                            } else if (btn.id === 'header-notifications-btn' || btn.id === 'dashboard-notifications-btn') {
+                            } else if (btn.id === 'header-notifications-btn') {
                                 dropdownId = 'header-notifications-dropdown';
                                 listId = 'header-notifications-list';
                                 emptyId = 'header-notifications-empty';
@@ -7985,7 +7982,7 @@ window.UI = {
                             try {
                                 const dropdownId = btn.id === 'notifications-btn' ? 'notifications-dropdown' :
                                     btn.id === 'mobile-notifications-btn' ? 'mobile-notifications-dropdown' :
-                                        (btn.id === 'header-notifications-btn' || btn.id === 'dashboard-notifications-btn') ? 'header-notifications-dropdown' : null;
+                                        btn.id === 'header-notifications-btn' ? 'header-notifications-dropdown' : null;
                                 if (dropdownId) {
                                     const dropdown = document.getElementById(dropdownId);
                                     if (dropdown) {
@@ -8020,13 +8017,14 @@ window.UI = {
                     if (btn.id === 'header-notifications-btn') {
                         Utils.safeLog('🔔 تم ربط زر الإشعارات العلوي (header-notifications-btn)');
                     }
-                    if (btn.id === 'dashboard-notifications-btn') {
-                        Utils.safeLog('🔔 تم ربط زر الإشعارات في لوحة التحكم (dashboard-notifications-btn)');
-                    }
                 } catch (error) {
                     Utils.safeError('⚠️ خطأ في ربط زر الإشعارات:', btn.id, error);
                 }
             });
+
+            if (sidebarBtn) {
+                this._bindSidebarNotificationsDelegation(self);
+            }
         } catch (error) {
             Utils.safeError('⚠️ خطأ في تهيئة أزرار الإشعارات:', error);
         }
@@ -8080,7 +8078,7 @@ window.UI = {
                 // إذا كان النقر على أحد أزرار الإشعارات: لا نغلق القائمة هنا — نترك الزر نفسه يفتح/يغلق عبر الـ handler المباشر (لتجنب عدم استجابة النقر في القائمة الجانبية)
                 if (e && e.target) {
                     const notifBtn = e.target.closest(
-                        '#notifications-btn, #mobile-notifications-btn, #header-notifications-btn, #dashboard-notifications-btn, #sidebar-notifications-container'
+                        '#notifications-btn, #mobile-notifications-btn, #header-notifications-btn, #sidebar-notifications-container'
                     );
                     if (notifBtn) {
                         return; // عدم منع الانتشار؛ الـ handler المربوط على الزر سيتولى فتح/إغلاق القائمة
@@ -8216,8 +8214,7 @@ window.UI = {
                 const notificationButtons = [
                     document.getElementById('notifications-btn'),
                     document.getElementById('mobile-notifications-btn'),
-                    document.getElementById('header-notifications-btn'),
-                    document.getElementById('dashboard-notifications-btn')
+                    document.getElementById('header-notifications-btn')
                 ].filter(Boolean);
 
                 notificationButtons.forEach(btn => {
@@ -8257,8 +8254,7 @@ window.UI = {
         const badges = [
             document.getElementById('notifications-badge'),
             document.getElementById('mobile-notifications-badge'),
-            document.getElementById('header-notifications-badge'),
-            document.getElementById('dashboard-notifications-badge')
+            document.getElementById('header-notifications-badge')
         ].filter(Boolean);
 
         badges.forEach(badge => {
@@ -8272,8 +8268,7 @@ window.UI = {
         const notificationButtons = [
             document.getElementById('notifications-btn'),
             document.getElementById('mobile-notifications-btn'),
-            document.getElementById('header-notifications-btn'),
-            document.getElementById('dashboard-notifications-btn')
+            document.getElementById('header-notifications-btn')
         ].filter(Boolean);
 
         notificationButtons.forEach(btn => {
@@ -10720,8 +10715,7 @@ if (typeof window !== 'undefined') {
 }
 
 // تهيئة أزرار الإشعارات بعد تحميل DOM.
-// ملاحظة: كان يوجد معالج click إضافي بـ capture:true على زر الجرس يستدعي toggle ثم معالج initNotificationsButton
-// بمرحلة الفقاعة يستدعي toggle مرة أخرى — فيُفتح القائمة ثم يُغلق في نفس النقرة ويبدو الزر «غير مستجيب».
+// زر الجرس في الشريط الجانبي: تفويض capture على .sidebar مع stopPropagation، دون مستمع منفصل على الزر (يمنع التبديل المزدوج).
 if (typeof document !== 'undefined') {
     const tryInitNotificationsOnly = () => {
         if (typeof window.UI === 'undefined' || typeof window.UI.initNotificationsButton !== 'function') {
