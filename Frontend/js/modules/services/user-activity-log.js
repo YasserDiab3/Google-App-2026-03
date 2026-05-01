@@ -254,7 +254,8 @@ const UserActivityLog = {
     },
 
     /**
-     * تصدير السجلات إلى ملف PDF
+     * تصدير السجلات كـ PDF عبر نافذة طباعة HTML (دعم العربية وRTL).
+     * jsPDF/Helvetica لا يدعمان الحروف العربية فيظهر النص مشوّهاً.
      */
     exportToPDF(filters = {}) {
         const logs = this.getAll(filters);
@@ -265,54 +266,75 @@ const UserActivityLog = {
         }
 
         try {
-            // Check for jsPDF v2.x UMD module (window.jspdf)
-            if (typeof window.jspdf === 'undefined') {
-                Notification.error('مكتبة jsPDF غير متاحة');
+            const printWindow = window.open('', '_blank');
+            if (!printWindow) {
+                Notification.error('يرجى السماح للنوافذ المنبثقة، ثم اختر «حفظ كـ PDF» من مربع الطباعة');
                 return;
             }
 
-            const { jsPDF } = window.jspdf;
-            const doc = new jsPDF('l', 'mm', 'a4'); // Landscape orientation
+            const exportTime = Utils.formatDateTime(new Date().toISOString());
+            const rowsHtml = logs.map(log => {
+                const detRaw = typeof log.details === 'string' ? log.details : JSON.stringify(log.details || {});
+                const det = detRaw.length > 120 ? detRaw.substring(0, 120) + '…' : detRaw;
+                return '<tr>' +
+                    '<td>' + Utils.escapeHTML(String(log.username || '')) + '</td>' +
+                    '<td>' + Utils.escapeHTML(String(Utils.formatDateTime(log.timestamp) || '')) + '</td>' +
+                    '<td>' + Utils.escapeHTML(String(this.getActionTypeLabel(log.actionType))) + '</td>' +
+                    '<td>' + Utils.escapeHTML(String(log.module || '')) + '</td>' +
+                    '<td>' + Utils.escapeHTML(det) + '</td>' +
+                    '<td>' + Utils.escapeHTML(String(log.ipAddress || '')) + '</td>' +
+                    '</tr>';
+            }).join('');
 
-            // Check if autoTable plugin is loaded
-            if (typeof doc.autoTable !== 'function') {
-                Notification.error('مكتبة autoTable غير متاحة');
-                return;
-            }
+            const html = '<!DOCTYPE html>' +
+                '<html dir="rtl" lang="ar">' +
+                '<head>' +
+                '<meta charset="UTF-8">' +
+                '<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">' +
+                '<title>سجل أنشطة المستخدمين</title>' +
+                '<link rel="preconnect" href="https://fonts.googleapis.com">' +
+                '<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>' +
+                '<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">' +
+                '<style>' +
+                '* { font-family: \'Cairo\', \'Arial\', \'Tahoma\', sans-serif; box-sizing: border-box; }' +
+                'body { direction: rtl; text-align: right; padding: 20px; margin: 0; }' +
+                'h1 { color: #1e40af; font-size: 1.25rem; margin: 0 0 12px 0; }' +
+                '.meta { color: #4b5563; font-size: 0.9rem; margin-bottom: 16px; }' +
+                'table { border-collapse: collapse; width: 100%; font-size: 0.72rem; }' +
+                'th, td { border: 1px solid #cbd5e1; padding: 6px 8px; vertical-align: top; word-break: break-word; }' +
+                'th { background: #3b82f6; color: #fff; }' +
+                'tr:nth-child(even) { background: #f8fafc; }' +
+                '@media print { body { padding: 12px; } }' +
+                '</style></head><body>' +
+                '<h1>سجل أنشطة المستخدمين</h1>' +
+                '<div class="meta">تاريخ التصدير: ' + Utils.escapeHTML(exportTime) + ' — عدد السجلات: ' + logs.length + '</div>' +
+                '<table><thead><tr>' +
+                '<th>اسم المستخدم</th><th>التاريخ والوقت</th><th>نوع العملية</th><th>الموديول</th><th>التفاصيل</th><th>IP</th>' +
+                '</tr></thead><tbody>' + rowsHtml + '</tbody></table>' +
+                '</body></html>';
 
-            // العنوان
-            doc.setFontSize(18);
-            doc.text('سجل أنشطة المستخدمين - User Activity Log', 14, 15);
+            printWindow.document.open();
+            printWindow.document.write(html);
+            printWindow.document.close();
 
-            // المعلومات
-            doc.setFontSize(10);
-            doc.text(`تاريخ التصدير: ${Utils.formatDateTime(new Date().toISOString())}`, 14, 22);
-            doc.text(`عدد السجلات: ${logs.length}`, 14, 27);
+            let didPrint = false;
+            const triggerPrintOnce = () => {
+                if (didPrint) return;
+                didPrint = true;
+                try {
+                    printWindow.focus();
+                    printWindow.print();
+                    Notification.success('استخدم «حفظ كـ PDF» أو الطابعة من مربع الحوار');
+                } catch (printErr) {
+                    Utils.safeWarn('print dialog:', printErr);
+                    Notification.warning('تم فتح التقرير في نافذة جديدة — استخدم طباعة المتصفح');
+                }
+            };
 
-            // البيانات
-            const tableData = logs.map(log => [
-                log.username || '',
-                Utils.formatDateTime(log.timestamp) || '',
-                this.getActionTypeLabel(log.actionType),
-                log.module || '',
-                typeof log.details === 'string' ? log.details.substring(0, 30) : '',
-                log.ipAddress || ''
-            ]);
-
-            doc.autoTable({
-                head: [['اسم المستخدم', 'التاريخ والوقت', 'نوع العملية', 'الموديول', 'التفاصيل', 'IP']],
-                body: tableData,
-                startY: 35,
-                styles: { fontSize: 8 },
-                headStyles: { fillColor: [59, 130, 246], textColor: 255 },
-                alternateRowStyles: { fillColor: [245, 247, 250] }
-            });
-
-            // حفظ الملف
-            const fileName = `سجل_الأنشطة_${new Date().toISOString().split('T')[0]}.pdf`;
-            doc.save(fileName);
-
-            Notification.success('✅ تم تصدير السجلات بنجاح');
+            printWindow.onload = () => {
+                setTimeout(triggerPrintOnce, 900);
+            };
+            setTimeout(triggerPrintOnce, 1400);
         } catch (error) {
             Utils.safeError('❌ خطأ في تصدير PDF:', error);
             Notification.error('❌ فشل تصدير السجلات');
