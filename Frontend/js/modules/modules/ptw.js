@@ -1438,20 +1438,33 @@ const PTW = {
     },
 
     async load() {
+        // منع إعادة تحميل متداخلة (مثلاً بسبب language-changed أو إعادة دخول القسم بسرعة)
+        if (this._isLoading) {
+            this._reloadRequested = true;
+            return;
+        }
+
         // Add language change listener
         if (!this._languageChangeListenerAdded) {
             document.addEventListener('language-changed', () => {
+                if (this._isLoading) {
+                    this._reloadRequested = true;
+                    return;
+                }
                 this.load();
             });
             this._languageChangeListenerAdded = true;
         }
+        this._isLoading = true;
         // التحقق من وجود التبعيات المطلوبة
         if (typeof Utils === 'undefined') {
             console.error('Utils غير متوفر!');
+            this._isLoading = false;
             return;
         }
         if (typeof AppState === 'undefined') {
             Utils.safeError('AppState غير متوفر!');
+            this._isLoading = false;
             return;
         }
         if (typeof Permissions !== 'undefined' && typeof Permissions.ensureFormSettingsState === 'function') {
@@ -1465,6 +1478,7 @@ const PTW = {
             } else {
                 console.error(' قسم ptw-section غير موجود!');
             }
+            this._isLoading = false;
             return;
         }
         if (typeof Utils !== 'undefined' && Utils.safeLog) {
@@ -1707,6 +1721,14 @@ const PTW = {
                     </div>
                 `;
                 this.applyModuleI18n(section);
+            }
+        } finally {
+            this._isLoading = false;
+            if (this._reloadRequested) {
+                this._reloadRequested = false;
+                setTimeout(() => {
+                    try { this.load(); } catch (_) { /* ignore */ }
+                }, 0);
             }
         }
     },

@@ -55,6 +55,22 @@ const MODULE_LOAD_MAX_RETRIES = 2;
 /** التأخير قبل إعادة المحاولة (ms) */
 const MODULE_LOAD_RETRY_DELAY = 1000;
 
+function getModuleLoaderLogger() {
+    const log = (typeof Utils !== 'undefined' && Utils.safeLog) ? Utils.safeLog : console.log;
+    const logError = (typeof Utils !== 'undefined' && Utils.safeError) ? Utils.safeError : console.error;
+    const warn = (typeof Utils !== 'undefined' && Utils.safeWarn) ? Utils.safeWarn : console.warn;
+    return { log, logError, warn };
+}
+
+let _modulesLoadPromise = null;
+function startModuleLoadOnce() {
+    if (_modulesLoadPromise) return _modulesLoadPromise;
+    const { log } = getModuleLoaderLogger();
+    log('📦 بدء تحميل الموديولات (مرة واحدة)...');
+    _modulesLoadPromise = loadAllModules();
+    return _modulesLoadPromise;
+}
+
 /**
  * تحميل موديول واحد (مع إعادة محاولة عند 503)
  * @param {string} moduleName - اسم الموديول
@@ -331,8 +347,7 @@ function loadModule(moduleName, retryCount) {
  * تحميل جميع الموديولات
  */
 async function loadAllModules() {
-    const log = (typeof Utils !== 'undefined' && Utils.safeLog) ? Utils.safeLog : console.log;
-    const logError = (typeof Utils !== 'undefined' && Utils.safeError) ? Utils.safeError : console.error;
+    const { log, logError } = getModuleLoaderLogger();
 
     try {
         // التأكد من تحميل Utils و AppState أولاً
@@ -395,6 +410,7 @@ async function loadAllModules() {
  * تحميل الموديولات حسب صلاحيات المستخدم
  */
 async function loadModulesBasedOnPermissions(userPermissions) {
+    const { log, logError } = getModuleLoaderLogger();
     if (!userPermissions) {
         return loadModulesFallback();
     }
@@ -481,6 +497,7 @@ function getRequiredModulesForPermissions(permissions) {
  * تحميل الموديولات كـ fallback (التقليدي)
  */
 async function loadModulesFallback() {
+    const { log, logError } = getModuleLoaderLogger();
     log('🔄 تحميل الموديولات بالطريقة التقليدية (fallback)');
 
     // تحميل contractors أولاً
@@ -507,36 +524,13 @@ async function loadModulesFallback() {
 console.log('🔥 Setting up module loading...');
 console.log('🔥 Document readyState:', document.readyState);
 
-// Force immediate execution - don't wait for DOMContentLoaded
-(async function immediateLoad() {
-    console.log('🔥 IMMEDIATE LOAD FUNCTION EXECUTING');
-    
-    // Wait a tiny bit for Utils to be available
-    let waitCount = 0;
-    while (typeof Utils === 'undefined' && waitCount < 30) {
-        await new Promise(resolve => setTimeout(resolve, 50));
-        waitCount++;
-    }
-    
-    if (typeof Utils === 'undefined') {
-        console.error('❌ Utils not available after 5 seconds - loading anyway');
-    } else {
-        console.log('✅ Utils is available');
-    }
-    
-    // Start loading immediately
-    console.log('🔥 Starting loadAllModules NOW');
-    loadAllModules();
-})();
-
-// Also set up the normal DOMContentLoaded listener as backup
 if (document.readyState === 'loading') {
     console.log('🔥 Document still loading - adding DOMContentLoaded listener');
     document.addEventListener('DOMContentLoaded', () => {
-        console.log('🔥 DOMContentLoaded fired - calling loadAllModules');
-        loadAllModules();
+        console.log('🔥 DOMContentLoaded fired - starting modules load once');
+        startModuleLoadOnce();
     });
 } else {
-    console.log('🔥 Document already loaded - calling loadAllModules immediately');
-    loadAllModules();
+    console.log('🔥 Document already loaded - starting modules load once');
+    startModuleLoadOnce();
 }

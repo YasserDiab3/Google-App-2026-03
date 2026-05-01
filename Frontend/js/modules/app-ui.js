@@ -5732,7 +5732,11 @@ window.UI = {
         // التحقق من الصلاحيات
         // عند العودة للتنقل (isNavigatingBack)، لا نعرض رسالة الخطأ
         const suppressMessage = AppState.isNavigatingBack;
-        if (!Permissions.checkBeforeShow(sectionName, suppressMessage)) {
+        const canCheckPermissions = (typeof Permissions !== 'undefined' &&
+            typeof Permissions.checkBeforeShow === 'function' &&
+            typeof Permissions.hasAccess === 'function');
+
+        if (canCheckPermissions && !Permissions.checkBeforeShow(sectionName, suppressMessage)) {
             // إذا لم يكن لديه صلاحية، نعرض Dashboard بدلاً منه
             if (sectionName !== 'dashboard' && Permissions.hasAccess('dashboard')) {
                 sectionName = 'dashboard';
