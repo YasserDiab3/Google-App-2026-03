@@ -1203,8 +1203,14 @@ const SafetyHealthManagement = {
             <div class="member-card bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
                 <div class="flex flex-col items-center text-center mb-3">
                     ${member.photo ? `
-                        <img src="${Utils.escapeHTML(member.photo)}" alt="${Utils.escapeHTML(member.name)}" 
-                             class="w-20 h-20 rounded-full object-cover border-4 border-blue-100 mb-3">
+                        ${(() => {
+                            const disp = typeof Utils.resolveDriveAwareImgDisplay === 'function'
+                                ? Utils.resolveDriveAwareImgDisplay(member.photo)
+                                : { canonical: String(member.photo), displaySrc: String(member.photo), needsProxy: false, proxyFileId: '' };
+                            const pa = typeof Utils.driveProxyImgAttrs === 'function' ? Utils.driveProxyImgAttrs(disp) : '';
+                            return `<img src="${Utils.escapeHTML(disp.displaySrc)}" alt="${Utils.escapeHTML(member.name)}"${pa}
+                             class="shm-member-photo w-20 h-20 rounded-full object-cover border-4 border-blue-100 mb-3">`;
+                        })()}
                     ` : `
                         <div class="w-20 h-20 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center mb-3 shadow-lg">
                             <i class="fas fa-user text-3xl text-white"></i>
@@ -1251,6 +1257,19 @@ const SafetyHealthManagement = {
                 </div>
             </div>
         `).join('');
+
+        if (typeof Utils.hydrateDriveProxyImages === 'function') {
+            Utils.hydrateDriveProxyImages(container, {
+                onFetchFail: (img) => {
+                    try {
+                        const d = document.createElement('div');
+                        d.className = 'w-20 h-20 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center mb-3 shadow-lg';
+                        d.innerHTML = '<i class="fas fa-user text-3xl text-white"></i>';
+                        img.replaceWith(d);
+                    } catch (e) { /* ignore */ }
+                }
+            });
+        }
     },
 
     /** ربط زر "إضافة عضو جديد" في تبويب فريق السلامة (يُستدعى بعد عرض المحتوى في DOM) */

@@ -572,7 +572,22 @@ const IssuingAuthorities = {
         }
         const sub = document.getElementById('ia-card-subtitle');
         if (sub) {
-            sub.textContent = `PTW Approvers — ${this._categoryTitleAr()}`;
+            const cat = this._categoryTitleAr();
+            sub.innerHTML = `<span style="color:#334155;">القائمة الحالية:</span> ${cat}`;
+        }
+        const secSub = document.getElementById('ia-section-module-subtitle');
+        if (secSub) {
+            secSub.textContent = `عرض القائمة: ${this._categoryTitleAr()} — PTW Approvers`;
+        }
+    },
+
+    /** مسح cache قراءة الشيتين بعد أي تعديل حتى يعكس الجدول أحدث بيانات من الخادم. */
+    _bustIssuingAuthoritiesSheetCache() {
+        if (typeof GoogleIntegration !== 'undefined' && typeof GoogleIntegration.invalidateReadFromSheetCacheForSheets === 'function') {
+            GoogleIntegration.invalidateReadFromSheetCacheForSheets([
+                'PTWIssuingAuthorities',
+                'PTWContractorIssuingAuthorities'
+            ]);
         }
     },
 
@@ -627,6 +642,9 @@ const IssuingAuthorities = {
         await this._fetchData();
         this._renderTable();
         this._attachEvents();
+        if (typeof UI !== 'undefined' && typeof UI.addNavigationIconsAfterRender === 'function') {
+            UI.addNavigationIconsAfterRender('issuing-authorities');
+        }
     },
 
     async _fetchContractorOptions() {
@@ -849,7 +867,8 @@ const IssuingAuthorities = {
         }).join('');
     },
 
-    _buildExportTableHtml(records) {
+    _buildExportTableHtml(records, options = {}) {
+        const omitInnerTitle = !!options.omitInnerTitle;
         const permitHeaders = this.PERMIT_TYPES.map(pt =>
             `<th style="border:1px solid #d1d5db;padding:8px;text-align:center;font-size:10px;">${pt.labelAr}<br><span style="color:#6b7280;font-weight:500;">${pt.labelEn}</span></th>`
         ).join('');
@@ -876,12 +895,16 @@ const IssuingAuthorities = {
                     <th style="border:1px solid #d1d5db;padding:8px;">المصنع</th>
                     <th style="border:1px solid #d1d5db;padding:8px;">الموقع</th>
                     <th style="border:1px solid #d1d5db;padding:8px;">الموقع الفرعي</th>`;
-        return `
+        const titleBlock = omitInnerTitle
+            ? `<p style="margin:0 0 12px;color:#6b7280;font-size:13px;text-align:center;">${subtitle}</p>`
+            : `
         <div style="margin-bottom:16px;text-align:center;">
             <h2 style="margin:0 0 4px;color:#1f2937;font-size:18px;">${titleAr}</h2>
             <p style="margin:0 0 8px;color:#4b5563;font-size:14px;font-weight:600;letter-spacing:0.02em;">PTW Approvers</p>
             <p style="margin:0;color:#6b7280;font-size:13px;">${subtitle}</p>
-        </div>
+        </div>`;
+        return `
+        ${titleBlock}
         <table style="width:100%;border-collapse:collapse;font-size:11px;direction:rtl;">
             <thead>
                 <tr style="background:#f3f4f6;">
@@ -977,24 +1000,50 @@ const IssuingAuthorities = {
         }
         let url = null;
         try {
-            const content = this._buildExportTableHtml(records);
+            const content = this._buildExportTableHtml(records, { omitInnerTitle: true });
             const formCode = `IA-LIST-${new Date().toISOString().slice(0, 10)}`;
             const formTitleAr = 'الأشخاص المصرح لهم باعتماد تصاريح العمل';
             const formTitleEn = 'PTW Approvers';
+            const nowIso = new Date().toISOString();
             const htmlContent = typeof FormHeader !== 'undefined' && FormHeader.generatePDFHTML
-                ? FormHeader.generatePDFHTML(formCode, formTitleAr, content, false, true, { source: 'IssuingAuthorities', titleEn: formTitleEn, titleAr: formTitleAr }, new Date().toISOString(), new Date().toISOString())
+                ? FormHeader.generatePDFHTML(
+                    formCode,
+                    formTitleAr,
+                    content,
+                    false,
+                    true,
+                    {
+                        source: 'IssuingAuthorities',
+                        titleEn: formTitleEn,
+                        titleAr: formTitleAr,
+                        version: AppState?.companySettings?.formVersion || '1.0'
+                    },
+                    nowIso,
+                    nowIso
+                )
                 : `<!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="UTF-8"><title>${formTitleAr} — ${formTitleEn}</title></head><body style="padding:16px;">${content}</body></html>`;
             const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
             url = URL.createObjectURL(blob);
             const printWindow = window.open(url, '_blank');
             if (printWindow) {
-                printWindow.onload = () => {
-                    setTimeout(() => {
-                        printWindow.print();
-                        setTimeout(() => { if (url) URL.revokeObjectURL(url); }, 1000);
-                        this._iaNotify('تم تحضير PDF / الطباعة', 'success');
-                    }, 250);
+                const cleanup = () => {
+                    try {
+                        if (url) URL.revokeObjectURL(url);
+                    } catch (e) { /* ignore */ }
                 };
+                let printed = false;
+                const runPrint = () => {
+                    if (printed) return;
+                    printed = true;
+                    try {
+                        printWindow.focus();
+                        printWindow.print();
+                    } catch (e) { /* ignore */ }
+                    this._iaNotify('تم تحضير PDF / الطباعة', 'success');
+                    setTimeout(cleanup, 1200);
+                };
+                printWindow.addEventListener('load', () => setTimeout(runPrint, 350));
+                setTimeout(runPrint, 900);
             } else {
                 if (url) URL.revokeObjectURL(url);
                 this._iaNotify('يرجى السماح بالنوافذ المنبثقة', 'error');
@@ -1039,16 +1088,25 @@ const IssuingAuthorities = {
     _renderShell() {
         const isAdmin = this.isAdmin();
         return `
+        <div class="section-header" style="margin-bottom:0.5rem;">
+            <div class="flex items-center justify-between flex-wrap gap-4">
+                <div>
+                    <h1 class="section-title">
+                        <i class="fas fa-user-check ml-3"></i>
+                        قائمة الأشخاص المصرح لهم باعتماد تصاريح العمل
+                    </h1>
+                    <p id="ia-section-module-subtitle" class="section-subtitle">
+                        عرض القائمة: ${this._categoryTitleAr()} — PTW Approvers
+                    </p>
+                </div>
+            </div>
+        </div>
         <div class="ia-module" id="ia-module-root">
             <div class="content-card">
                 <div class="card-header" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
                     <div>
-                        <h2 class="card-title" style="margin:0;">
-                            <i class="fas fa-user-check" style="margin-left:8px;color:#2563eb;"></i>
-                            قائمة الأشخاص المصرح لهم باعتماد تصاريح العمل
-                        </h2>
-                        <p id="ia-card-subtitle" class="card-subtitle" style="margin:4px 0 0;color:#64748b;font-size:0.85rem;">
-                            PTW Approvers — ${this._categoryTitleAr()}
+                        <p id="ia-card-subtitle" class="card-subtitle" style="margin:0;color:#64748b;font-size:0.9rem;font-weight:600;">
+                            <span style="color:#334155;">القائمة الحالية:</span> ${this._categoryTitleAr()}
                         </p>
                     </div>
                     <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
@@ -1803,6 +1861,7 @@ const IssuingAuthorities = {
                 this._activeCategory = saveCategory;
                 this._syncIssuingAuthoritiesCategoryUi();
                 this._closeModal();
+                this._bustIssuingAuthoritiesSheetCache();
                 await this._fetchData();
                 this._renderTable();
                 if (typeof Utils !== 'undefined' && Utils.showNotification) {
@@ -1855,6 +1914,7 @@ const IssuingAuthorities = {
             if (result && result.success) {
                 this._activeCategory = delCategory;
                 this._syncIssuingAuthoritiesCategoryUi();
+                this._bustIssuingAuthoritiesSheetCache();
                 await this._fetchData();
                 this._renderTable();
                 if (typeof Utils !== 'undefined' && Utils.showNotification) {

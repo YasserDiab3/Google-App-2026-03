@@ -393,6 +393,32 @@ const GoogleIntegration = {
     },
 
     /**
+     * إبطال نتائج readFromSheet المخزنة مؤقتاً لشيت محدد (بعد append/update من Apps Script).
+     * بدون ذلك قد تبقى الواجهة تعرض قائمة قديمة رغم نجاح الحفظ في الشيت.
+     */
+    invalidateReadFromSheetCacheForSheets(sheetNames) {
+        const list = Array.isArray(sheetNames) ? sheetNames : [sheetNames];
+        const userPermissions = this._getCurrentUserPermissions();
+        const userId = AppState?.currentUser?.id;
+        list.forEach((sheetName) => {
+            if (!sheetName) return;
+            const data = { sheetName: String(sheetName) };
+            try {
+                const legacyKey = `readFromSheet_${JSON.stringify(data)}`;
+                this._cache.data.delete(legacyKey);
+                this._cache.timestamps.delete(legacyKey);
+            } catch (e) { /* ignore */ }
+            if (typeof SmartCache !== 'undefined' && SmartCache.getCacheKey) {
+                try {
+                    const sk = SmartCache.getCacheKey('readFromSheet', data, userId, userPermissions);
+                    localStorage.removeItem(`hse_smart_cache_${sk}`);
+                } catch (e) { /* ignore */ }
+            }
+            this.clearCache(String(sheetName));
+        });
+    },
+
+    /**
      * التحقق من Rate Limiting للـ API
      */
     _checkRateLimit() {

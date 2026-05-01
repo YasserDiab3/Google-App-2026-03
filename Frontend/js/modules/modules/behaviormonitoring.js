@@ -982,6 +982,17 @@ const BehaviorMonitoring = {
             const uid = form?.getAttribute('data-form-uid');
             if (form && uid) {
                 this.bindBehaviorForm({ form, uid, data: null, modal: null, signal });
+                const wrap = document.getElementById('behavior-form-container');
+                if (wrap && typeof Utils.hydrateDriveProxyImages === 'function') {
+                    Utils.hydrateDriveProxyImages(wrap, {
+                        onFetchFail: (img) => {
+                            try {
+                                img.onerror = null;
+                                img.removeAttribute('src');
+                            } catch (e) { /* ignore */ }
+                        }
+                    });
+                }
             }
         }
     },
@@ -1041,6 +1052,13 @@ const BehaviorMonitoring = {
             places.find(p => p.name === selectedSub)?.id ||
             selectedSub;
         const isNegative = (data?.behaviorType || '') === 'سلبي';
+
+        const existingPhoto = this.processPhoto(data?.photo);
+        const photoDisp = existingPhoto && typeof Utils.resolveDriveAwareImgDisplay === 'function'
+            ? Utils.resolveDriveAwareImgDisplay(existingPhoto)
+            : { canonical: existingPhoto || '', displaySrc: existingPhoto || '', needsProxy: false, proxyFileId: '' };
+        const photoThumbSrc = photoDisp.canonical ? photoDisp.displaySrc : '';
+        const photoThumbProxyAttr = typeof Utils.driveProxyImgAttrs === 'function' ? Utils.driveProxyImgAttrs(photoDisp) : '';
 
         return `
             <div class="behavior-form-wrapper bhm-form ${inline ? 'behavior-form-inline' : 'behavior-form-modal'}" data-behavior-type="${Utils.escapeHTML(data?.behaviorType || '')}">
@@ -1198,7 +1216,7 @@ const BehaviorMonitoring = {
                                         <span class="bhm-file-hint">PNG أو JPG — حتى 2 ميجا</span>
                                     </div>
                                     <div id="${ids.photoPreview}" class="bhm-photo-preview mt-3 ${data?.photo ? '' : 'hidden'}">
-                                        <img src="${data?.photo || ''}" alt="معاينة" class="bhm-photo-thumb" id="${ids.photoImg}">
+                                        <img src="${Utils.escapeHTML(photoThumbSrc)}" alt="معاينة"${photoThumbProxyAttr} class="bhm-photo-thumb" id="${ids.photoImg}">
                                         <button type="button" class="bhm-photo-clear" data-action="clear-photo">حذف الصورة</button>
                                     </div>
                                 </div>
@@ -1380,6 +1398,17 @@ const BehaviorMonitoring = {
 
         const form = modal.querySelector('form[data-behavior-form="true"]');
         if (form) this.bindBehaviorForm({ form, uid, data, modal, signal });
+
+        if (typeof Utils.hydrateDriveProxyImages === 'function') {
+            Utils.hydrateDriveProxyImages(modal, {
+                onFetchFail: (img) => {
+                    try {
+                        img.onerror = null;
+                        img.src = 'data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22200%22 height=%22150%22%3E%3Crect fill=%22%23f0f0f0%22 width=%22200%22 height=%22150%22/%3E%3Ctext fill=%22%23999%22 font-size=%2212%22 x=%2250%25%22 y=%2250%25%22 text-anchor=%22middle%22%3Eمعاينة%3C/text%3E%3C/svg%3E';
+                    } catch (e) { /* ignore */ }
+                }
+            });
+        }
 
         modal.addEventListener('click', (e) => {
             if (e.target === modal) modal.remove();
@@ -1590,15 +1619,20 @@ const BehaviorMonitoring = {
                         ` : ''}
                         ${(() => {
                             const photoUrl = this.processPhoto(behavior.photo);
-                            return photoUrl ? `
+                            if (!photoUrl) return '';
+                            const disp = typeof Utils.resolveDriveAwareImgDisplay === 'function'
+                                ? Utils.resolveDriveAwareImgDisplay(photoUrl)
+                                : { canonical: photoUrl, displaySrc: photoUrl, needsProxy: false, proxyFileId: '' };
+                            const pa = typeof Utils.driveProxyImgAttrs === 'function' ? Utils.driveProxyImgAttrs(disp) : '';
+                            return `
                             <div class="bhm-detail-field bhm-detail-field-span2">
                                 <span class="bhm-detail-label">الصورة</span>
                                 <div class="bhm-detail-photo-wrap">
-                                    <img src="${Utils.escapeHTML(photoUrl)}" alt="صورة التصرف" class="bhm-detail-photo"
+                                    <img src="${Utils.escapeHTML(disp.displaySrc)}" alt="صورة التصرف"${pa} class="bhm-detail-photo"
                                          onerror="this.onerror=null; this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22400%22 height=%22300%22%3E%3Crect fill=%22%23f0f0f0%22 width=%22400%22 height=%22300%22/%3E%3Ctext fill=%22%23999%22 font-family=%22sans-serif%22 font-size=%2216%22 x=%2250%25%22 y=%2250%25%22 text-anchor=%22middle%22 dy=%22.3em%22%3Eلا توجد صورة%3C/text%3E%3C/svg%3E';">
                                 </div>
                             </div>
-                        ` : '';})()}
+                        `;})()}
                     </div>
                 </div>
                 <div class="bhm-detail-footer">
@@ -1616,6 +1650,16 @@ const BehaviorMonitoring = {
             </div>
         `;
         document.body.appendChild(modal);
+        if (typeof Utils.hydrateDriveProxyImages === 'function') {
+            Utils.hydrateDriveProxyImages(modal, {
+                onFetchFail: (img) => {
+                    try {
+                        img.onerror = null;
+                        img.src = 'data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22400%22 height=%22300%22%3E%3Crect fill=%22%23f0f0f0%22 width=%22400%22 height=%22300%22/%3E%3Ctext fill=%22%23999%22 font-family=%22sans-serif%22 font-size=%2216%22 x=%2250%25%22 y=%2250%25%22 text-anchor=%22middle%22 dy=%22.3em%22%3Eلا توجد صورة%3C/text%3E%3C/svg%3E';
+                    } catch (e) { /* ignore */ }
+                }
+            });
+        }
         modal.addEventListener('click', (e) => {
             if (e.target === modal) modal.remove();
         });

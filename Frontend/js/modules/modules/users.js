@@ -105,11 +105,11 @@ const Users = {
                     } catch (e) { /* ignore */ }
                     requestAnimationFrame(() => {
                         try {
-                            const parent = img.parentElement;
-                            if (parent) {
-                                // ✅ استبدال الصورة بأيقونة افتراضية بدلاً من فشل التحميل
-                                parent.innerHTML = `<div class="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center" title="الصورة غير متاحة"><i class="fas fa-user text-gray-400"></i></div>`;
-                            }
+                            const d = document.createElement('div');
+                            d.className = 'w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center';
+                            d.title = 'الصورة غير متاحة';
+                            d.innerHTML = '<i class="fas fa-user text-gray-400"></i>';
+                            img.replaceWith(d);
                         } catch (e2) { /* ignore */ }
                     });
                 }, { passive: true });
@@ -585,7 +585,11 @@ const Users = {
                                             if (!photoSrc) {
                                                 return `<div class="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center"><i class="fas fa-user text-gray-400"></i></div>`;
                                             }
-                                            return `<img data-user-photo="1" data-photo-key="${Utils.escapeHTML(photoKey)}" src="${Utils.escapeHTML(photoSrc)}" alt="${Utils.escapeHTML(user.name || '')}" class="w-10 h-10 rounded-full object-cover" loading="lazy" decoding="async" referrerpolicy="no-referrer">`;
+                                            const disp = typeof Utils.resolveDriveAwareImgDisplay === 'function'
+                                                ? Utils.resolveDriveAwareImgDisplay(photoSrc)
+                                                : { canonical: photoSrc, displaySrc: photoSrc, needsProxy: false, proxyFileId: '' };
+                                            const pa = typeof Utils.driveProxyImgAttrs === 'function' ? Utils.driveProxyImgAttrs(disp) : '';
+                                            return `<img data-user-photo="1" data-photo-key="${Utils.escapeHTML(photoKey)}" src="${Utils.escapeHTML(disp.displaySrc)}" alt="${Utils.escapeHTML(user.name || '')}"${pa} class="w-10 h-10 rounded-full object-cover" loading="lazy" decoding="async" referrerpolicy="no-referrer">`;
                                         })()}
                                         <span>${Utils.escapeHTML(user.name || '')}</span>
                                     </div>
@@ -669,10 +673,29 @@ const Users = {
         this.applyModuleI18n(container);
 
         // ✅ تثبيت fallback لصور المستخدمين (503 Drive) بعد تحديث DOM
+        const runUserPhotoEnhancements = () => {
+            this._setupUserPhotoFallbacks(container);
+            if (typeof Utils.hydrateDriveProxyImages === 'function') {
+                Utils.hydrateDriveProxyImages(container, {
+                    onFetchFail: (img) => {
+                        try {
+                            const pk = (img.dataset.photoKey || '').trim();
+                            if (pk) sessionStorage.setItem(this._photoFailKey(pk), Date.now().toString());
+                        } catch (e) { /* ignore */ }
+                        try {
+                            const d = document.createElement('div');
+                            d.className = 'w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center';
+                            d.innerHTML = '<i class="fas fa-user text-gray-400"></i>';
+                            img.replaceWith(d);
+                        } catch (e2) { /* ignore */ }
+                    }
+                });
+            }
+        };
         if (typeof requestIdleCallback === 'function') {
-            requestIdleCallback(() => this._setupUserPhotoFallbacks(container), { timeout: 600 });
+            requestIdleCallback(() => runUserPhotoEnhancements(), { timeout: 600 });
         } else {
-            setTimeout(() => this._setupUserPhotoFallbacks(container), 0);
+            setTimeout(() => runUserPhotoEnhancements(), 0);
         }
     },
 

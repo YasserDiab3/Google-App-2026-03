@@ -1335,8 +1335,15 @@ const LegalDocuments = {
                             <div>
                                 <label class="text-sm font-semibold text-gray-600 mb-2">صورة المستند:</label>
                                 <div class="mt-2">
-                                    <img src="${Utils.escapeHTML(this.processPhoto(doc.documentImage))}" alt="صورة المستند" class="max-w-full h-auto rounded border shadow-sm" style="max-height: 400px;"
-                                         onerror="this.onerror=null; this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22400%22 height=%22300%22%3E%3Crect fill=%22%23f0f0f0%22 width=%22400%22 height=%22300%22/%3E%3Ctext fill=%22%23999%22 font-family=%22sans-serif%22 font-size=%2216%22 x=%2250%25%22 y=%2250%25%22 text-anchor=%22middle%22 dy=%22.3em%22%3Eلا توجد صورة%3C/text%3E%3C/svg%3E';">
+                                    ${(() => {
+                                        const pu = this.processPhoto(doc.documentImage);
+                                        const disp = pu && typeof Utils.resolveDriveAwareImgDisplay === 'function'
+                                            ? Utils.resolveDriveAwareImgDisplay(pu)
+                                            : { canonical: pu || '', displaySrc: pu || '', needsProxy: false, proxyFileId: '' };
+                                        const pa = typeof Utils.driveProxyImgAttrs === 'function' ? Utils.driveProxyImgAttrs(disp) : '';
+                                        return `<img src="${Utils.escapeHTML(disp.displaySrc)}" alt="صورة المستند"${pa} class="legal-doc-view-img max-w-full h-auto rounded border shadow-sm" style="max-height: 400px;"
+                                         onerror="this.onerror=null; this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22400%22 height=%22300%22%3E%3Crect fill=%22%23f0f0f0%22 width=%22400%22 height=%22300%22/%3E%3Ctext fill=%22%23999%22 font-family=%22sans-serif%22 font-size=%2216%22 x=%2250%25%22 y=%2250%25%22 text-anchor=%22middle%22 dy=%22.3em%22%3Eلا توجد صورة%3C/text%3E%3C/svg%3E';">`;
+                                    })()}
                                 </div>
                             </div>
                         ` : ''}
@@ -1354,6 +1361,16 @@ const LegalDocuments = {
             </div>
         `;
         document.body.appendChild(modal);
+        if (typeof Utils.hydrateDriveProxyImages === 'function') {
+            Utils.hydrateDriveProxyImages(modal, {
+                onFetchFail: (img) => {
+                    try {
+                        img.onerror = null;
+                        img.src = 'data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22400%22 height=%22300%22%3E%3Crect fill=%22%23f0f0f0%22 width=%22400%22 height=%22300%22/%3E%3Ctext fill=%22%23999%22 font-family=%22sans-serif%22 font-size=%2216%22 x=%2250%25%22 y=%2250%25%22 text-anchor=%22middle%22 dy=%22.3em%22%3Eلا توجد صورة%3C/text%3E%3C/svg%3E';
+                    } catch (e) { /* ignore */ }
+                }
+            });
+        }
         modal.addEventListener('click', (e) => {
             if (e.target === modal) modal.remove();
         });

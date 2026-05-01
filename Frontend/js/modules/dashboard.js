@@ -1518,7 +1518,13 @@ const Dashboard = {
                         ${employee.department ? `<p class="text-gray-600 mt-1"><i class="fas fa-building ml-2"></i>القسم: ${Utils.escapeHTML(employee.department)}</p>` : ''}
                         ${employee.position ? `<p class="text-gray-600 mt-1"><i class="fas fa-briefcase ml-2"></i>المنصب: ${Utils.escapeHTML(employee.position)}</p>` : ''}
                     </div>
-                    ${employee.photo ? `<img src="${employee.photo}" alt="صورة الموظف" class="w-24 h-24 rounded-full object-cover border-2 border-blue-500">` : ''}
+                    ${employee.photo ? (() => {
+                        const disp = typeof Utils.resolveDriveAwareImgDisplay === 'function'
+                            ? Utils.resolveDriveAwareImgDisplay(employee.photo)
+                            : { canonical: String(employee.photo), displaySrc: String(employee.photo), needsProxy: false, proxyFileId: '' };
+                        const pa = typeof Utils.driveProxyImgAttrs === 'function' ? Utils.driveProxyImgAttrs(disp) : '';
+                        return `<img src="${Utils.escapeHTML(disp.displaySrc)}" alt="صورة الموظف"${pa} class="dash-emp-photo w-24 h-24 rounded-full object-cover border-2 border-blue-500">`;
+                    })() : ''}
                 </div>
             </div>
             
@@ -1695,6 +1701,19 @@ const Dashboard = {
 
         contentContainer.classList.remove('hidden');
         if (exportBtn) exportBtn.disabled = false;
+
+        if (typeof Utils.hydrateDriveProxyImages === 'function') {
+            Utils.hydrateDriveProxyImages(reportContainer, {
+                onFetchFail: (img) => {
+                    try {
+                        const ph = document.createElement('div');
+                        ph.className = 'w-24 h-24 rounded-full bg-gray-200 border-2 border-blue-500 flex items-center justify-center';
+                        ph.innerHTML = '<i class="fas fa-user text-gray-500 text-2xl"></i>';
+                        img.replaceWith(ph);
+                    } catch (e) { /* ignore */ }
+                }
+            });
+        }
 
         // ✅ إصلاح: استخدام المعرف الأساسي للموظف (وليس مصطلح البحث)
         const primaryEmployeeCode = employee.employeeNumber || employee.sapId || employee.id || employee.employeeCode || employeeCode;

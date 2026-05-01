@@ -2423,10 +2423,15 @@ const Employees = {
             const driveId = this._getDriveIdFromUrl(employee.photo || '');
             const photoKey = (driveId || employee.id || employee.employeeNumber || employee.name || '').toString();
             const photoSrc = this._normalizeEmployeePhotoUrl(employee.photo, employee.id);
+            const photoDisp = photoSrc && typeof Utils.resolveDriveAwareImgDisplay === 'function'
+                ? Utils.resolveDriveAwareImgDisplay(photoSrc)
+                : { canonical: photoSrc || '', displaySrc: photoSrc || '', needsProxy: false, proxyFileId: '' };
+            const imgTagSrc = photoDisp.canonical ? photoDisp.displaySrc : '';
+            const photoProxyAttr = typeof Utils.driveProxyImgAttrs === 'function' ? Utils.driveProxyImgAttrs(photoDisp) : '';
 
             tr.innerHTML = `
                 <td style="word-wrap: break-word;">
-                    ${photoSrc ? `<img data-emp-photo="1" data-photo-key="${Utils.escapeHTML(photoKey)}" src="${Utils.escapeHTML(photoSrc)}" alt="${Utils.escapeHTML(employee.name || '')}" class="w-12 h-12 rounded-full object-cover" loading="lazy" decoding="async" referrerpolicy="no-referrer">` : `<div class="w-12 h-12 rounded-full bg-gray-200 flex items-center justify-center"><i class="fas fa-user text-gray-400"></i></div>`}
+                    ${photoSrc ? `<img data-emp-photo="1" data-photo-key="${Utils.escapeHTML(photoKey)}" src="${Utils.escapeHTML(imgTagSrc)}" alt="${Utils.escapeHTML(employee.name || '')}"${photoProxyAttr} class="w-12 h-12 rounded-full object-cover" loading="lazy" decoding="async" referrerpolicy="no-referrer">` : `<div class="w-12 h-12 rounded-full bg-gray-200 flex items-center justify-center"><i class="fas fa-user text-gray-400"></i></div>`}
                 </td>
                 <td style="word-wrap: break-word; white-space: normal;">
                     ${Utils.escapeHTML(employee.employeeNumber || '')}
@@ -2480,9 +2485,45 @@ const Employees = {
 
         // ✅ تثبيت fallback لصور الموظفين (503 Drive) بعد تحديث DOM
         if (typeof requestIdleCallback === 'function') {
-            requestIdleCallback(() => this._setupEmployeePhotoFallbacks(container), { timeout: 600 });
+            requestIdleCallback(() => {
+                this._setupEmployeePhotoFallbacks(container);
+                if (typeof Utils.hydrateDriveProxyImages === 'function') {
+                    Utils.hydrateDriveProxyImages(container, {
+                        onFetchFail: (img) => {
+                            try {
+                                const key = (img.dataset.photoKey || '').trim();
+                                if (key) sessionStorage.setItem(this._photoFailKey(key), Date.now().toString());
+                            } catch (e) { /* ignore */ }
+                            try {
+                                const parent = img.parentElement;
+                                if (parent) {
+                                    parent.innerHTML = '<div class="w-12 h-12 rounded-full bg-gray-200 flex items-center justify-center"><i class="fas fa-user text-gray-400"></i></div>';
+                                }
+                            } catch (e2) { /* ignore */ }
+                        }
+                    });
+                }
+            }, { timeout: 600 });
         } else {
-            setTimeout(() => this._setupEmployeePhotoFallbacks(container), 0);
+            setTimeout(() => {
+                this._setupEmployeePhotoFallbacks(container);
+                if (typeof Utils.hydrateDriveProxyImages === 'function') {
+                    Utils.hydrateDriveProxyImages(container, {
+                        onFetchFail: (img) => {
+                            try {
+                                const key = (img.dataset.photoKey || '').trim();
+                                if (key) sessionStorage.setItem(this._photoFailKey(key), Date.now().toString());
+                            } catch (e) { /* ignore */ }
+                            try {
+                                const parent = img.parentElement;
+                                if (parent) {
+                                    parent.innerHTML = '<div class="w-12 h-12 rounded-full bg-gray-200 flex items-center justify-center"><i class="fas fa-user text-gray-400"></i></div>';
+                                }
+                            } catch (e2) { /* ignore */ }
+                        }
+                    });
+                }
+            }, 0);
         }
         
         // ✅ تعبئة الفلاتر بالقيم المتاحة بعد تحميل القائمة
@@ -3772,7 +3813,7 @@ const Employees = {
         if (employee) await this.showForm(employee);
     },
 
-    printEmployee(id) {
+    async printEmployee(id) {
         const employee = AppState.appData.employees.find(e => e.id === id);
         if (!employee) {
             Notification.error('الموظف غير موجود');
@@ -3781,6 +3822,20 @@ const Employees = {
 
         try {
             Loading.show();
+
+            let printPhotoSrc = '';
+            const normPhoto = this._normalizeEmployeePhotoUrl(employee.photo, employee.id);
+            if (normPhoto && typeof Utils.resolveDriveAwareImgDisplay === 'function') {
+                const pd = Utils.resolveDriveAwareImgDisplay(normPhoto);
+                if (pd.needsProxy && typeof Utils.fetchDriveImageDataUri === 'function') {
+                    try {
+                        printPhotoSrc = await Utils.fetchDriveImageDataUri(pd.proxyFileId) || '';
+                    } catch (e) { printPhotoSrc = ''; }
+                }
+                if (!printPhotoSrc) printPhotoSrc = pd.canonical || normPhoto;
+            } else if (normPhoto) {
+                printPhotoSrc = normPhoto;
+            }
             
             const birthDate = this.formatDateSafe(employee.birthDate);
             const hireDate = this.formatDateSafe(employee.hireDate);
@@ -3928,16 +3983,14 @@ const Employees = {
                         <div class="header-line"></div>
                     </div>
                     <div class="employee-photo">
-                        ${(() => {
-                            const photoUrl = this._normalizeEmployeePhotoUrl(employee.photo, employee.id);
-                            return photoUrl
-                                ? `<img src="${Utils.escapeHTML(photoUrl)}" alt="${Utils.escapeHTML(employee.name || '')}"
-                                         onerror="this.onerror=null; this.parentElement.innerHTML='<div class=\\'employee-photo-placeholder\\'><svg viewBox=\\'0 0 24 24\\' xmlns=\\'http://www.w3.org/2000/svg\\'><path d=\\'M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z\\'/></svg></div>';">`
-                                : `<div class="employee-photo-placeholder">
+                        ${printPhotoSrc
+                            ? `<img src="${Utils.escapeHTML(printPhotoSrc)}" alt="${Utils.escapeHTML(employee.name || '')}"
+                                     onerror="this.onerror=null; this.parentElement.innerHTML='<div class=\\'employee-photo-placeholder\\'><svg viewBox=\\'0 0 24 24\\' xmlns=\\'http://www.w3.org/2000/svg\\'><path d=\\'M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z\\'/></svg></div>';">`
+                            : `<div class="employee-photo-placeholder">
                                     <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                                         <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
                                     </svg>
-                                </div>`;})()}
+                                </div>`}
                     </div>
                     <div class="employee-details">
                         <div class="detail-field">
@@ -4108,7 +4161,15 @@ const Employees = {
                 <div class="modal-body">
                     <div class="space-y-4">
                         <div class="text-center mb-4">
-                            ${employee.photo ? `<img src="${employee.photo}" alt="${Utils.escapeHTML(employee.name || '')}" class="w-32 h-32 rounded-full object-cover mx-auto border-4 border-gray-200">` : `<div class="w-32 h-32 rounded-full bg-gray-200 flex items-center justify-center mx-auto"><i class="fas fa-user text-5xl text-gray-400"></i></div>`}
+                            ${(() => {
+                                const p = this._normalizeEmployeePhotoUrl(employee.photo, employee.id);
+                                if (!p) return `<div class="w-32 h-32 rounded-full bg-gray-200 flex items-center justify-center mx-auto"><i class="fas fa-user text-5xl text-gray-400"></i></div>`;
+                                const disp = typeof Utils.resolveDriveAwareImgDisplay === 'function'
+                                    ? Utils.resolveDriveAwareImgDisplay(p)
+                                    : { canonical: p, displaySrc: p, needsProxy: false, proxyFileId: '' };
+                                const pa = typeof Utils.driveProxyImgAttrs === 'function' ? Utils.driveProxyImgAttrs(disp) : '';
+                                return `<img src="${Utils.escapeHTML(disp.displaySrc)}" alt="${Utils.escapeHTML(employee.name || '')}"${pa} class="emp-detail-photo w-32 h-32 rounded-full object-cover mx-auto border-4 border-gray-200">`;
+                            })()}
                         </div>
                         <div class="grid grid-cols-2 gap-4">
                             <div>
@@ -4177,6 +4238,18 @@ const Employees = {
         `;
         this.applyModuleI18n(modal);
         document.body.appendChild(modal);
+        if (typeof Utils.hydrateDriveProxyImages === 'function') {
+            Utils.hydrateDriveProxyImages(modal, {
+                onFetchFail: (img) => {
+                    try {
+                        const d = document.createElement('div');
+                        d.className = 'w-32 h-32 rounded-full bg-gray-200 flex items-center justify-center mx-auto';
+                        d.innerHTML = '<i class="fas fa-user text-5xl text-gray-400"></i>';
+                        img.replaceWith(d);
+                    } catch (e) { /* ignore */ }
+                }
+            });
+        }
         modal.addEventListener('click', (e) => {
             if (e.target === modal) modal.remove();
         });
@@ -4467,9 +4540,17 @@ const Employees = {
                 if (isInactive) {
                     tr.style.cssText = rowStyle;
                 }
+                const fPhotoSrc = this._normalizeEmployeePhotoUrl(employee.photo, employee.id);
+                const fDriveId = this._getDriveIdFromUrl(employee.photo || '');
+                const fPhotoKey = (fDriveId || employee.id || employee.employeeNumber || employee.name || '').toString();
+                const fDisp = fPhotoSrc && typeof Utils.resolveDriveAwareImgDisplay === 'function'
+                    ? Utils.resolveDriveAwareImgDisplay(fPhotoSrc)
+                    : { canonical: fPhotoSrc || '', displaySrc: fPhotoSrc || '', needsProxy: false, proxyFileId: '' };
+                const fImgSrc = fDisp.canonical ? fDisp.displaySrc : '';
+                const fProxyAttr = typeof Utils.driveProxyImgAttrs === 'function' ? Utils.driveProxyImgAttrs(fDisp) : '';
                 tr.innerHTML = `
                     <td style="word-wrap: break-word;">
-                        ${employee.photo ? `<img src="${employee.photo}" alt="${Utils.escapeHTML(employee.name || '')}" class="w-12 h-12 rounded-full object-cover">` : `<div class="w-12 h-12 rounded-full bg-gray-200 flex items-center justify-center"><i class="fas fa-user text-gray-400"></i></div>`}
+                        ${fPhotoSrc ? `<img data-emp-photo="1" data-photo-key="${Utils.escapeHTML(fPhotoKey)}" src="${Utils.escapeHTML(fImgSrc)}" alt="${Utils.escapeHTML(employee.name || '')}"${fProxyAttr} class="w-12 h-12 rounded-full object-cover" loading="lazy" decoding="async" referrerpolicy="no-referrer">` : `<div class="w-12 h-12 rounded-full bg-gray-200 flex items-center justify-center"><i class="fas fa-user text-gray-400"></i></div>`}
                     </td>
                     <td style="word-wrap: break-word; white-space: normal;">
                         ${Utils.escapeHTML(employee.employeeNumber || '')}
@@ -4515,6 +4596,23 @@ const Employees = {
         // تحديث DOM مرة واحدة فقط لتقليل reflow
         tbody.innerHTML = '';
         tbody.appendChild(fragment);
+
+        if (typeof Utils.hydrateDriveProxyImages === 'function') {
+            Utils.hydrateDriveProxyImages(tbody, {
+                onFetchFail: (img) => {
+                    try {
+                        const key = (img.dataset.photoKey || '').trim();
+                        if (key) sessionStorage.setItem(this._photoFailKey(key), Date.now().toString());
+                    } catch (e) { /* ignore */ }
+                    try {
+                        const parent = img.parentElement;
+                        if (parent) {
+                            parent.innerHTML = '<div class="w-12 h-12 rounded-full bg-gray-200 flex items-center justify-center"><i class="fas fa-user text-gray-400"></i></div>';
+                        }
+                    } catch (e2) { /* ignore */ }
+                }
+            });
+        }
         
         // ✅ تحديث شارات العد على الفلاتر النشطة (مشابه لـ DailyObservations)
         this.updateFilterBadges(employees, filtered, filters);

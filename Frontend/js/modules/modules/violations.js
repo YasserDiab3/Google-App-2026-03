@@ -3038,15 +3038,20 @@ const Violations = {
                         <!-- صورة المخالفة -->
                         ${(() => {
                             const photoUrl = this.processPhoto(violation.photo);
-                            return photoUrl ? `
+                            if (!photoUrl) return '';
+                            const disp = typeof Utils.resolveDriveAwareImgDisplay === 'function'
+                                ? Utils.resolveDriveAwareImgDisplay(photoUrl)
+                                : { canonical: photoUrl, displaySrc: photoUrl, needsProxy: false, proxyFileId: '' };
+                            const proxyAttr = typeof Utils.driveProxyImgAttrs === 'function' ? Utils.driveProxyImgAttrs(disp) : '';
+                            return `
                         <div style="background: #f8fafc; border-radius: 12px; padding: 16px;">
                             <h3 style="font-weight: 600; color: #475569; margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">
                                 <i class="fas fa-image"></i> صورة المخالفة
                             </h3>
-                            <img src="${Utils.escapeHTML(photoUrl)}" alt="صورة المخالفة" class="w-full max-w-md h-64 object-cover rounded-lg border-2 border-gray-200 shadow-sm"
+                            <img src="${Utils.escapeHTML(disp.displaySrc)}" alt="صورة المخالفة"${proxyAttr} class="violation-detail-photo w-full max-w-md h-64 object-cover rounded-lg border-2 border-gray-200 shadow-sm"
                                  onerror="this.onerror=null; this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22400%22 height=%22200%22%3E%3Crect fill=%22%23f0f0f0%22 width=%22400%22 height=%22200%22/%3E%3Ctext fill=%22%23999%22 font-family=%22sans-serif%22 font-size=%2216%22 x=%2250%25%22 y=%2250%25%22 text-anchor=%22middle%22 dy=%22.3em%22%3Eلا توجد صورة%3C/text%3E%3C/svg%3E';">
                         </div>
-                        ` : '';})()}
+                        `;})()}
                     </div>
                 </div>
                 <div class="modal-footer" style="background: #f8fafc; padding: 16px 24px; display: flex; gap: 12px; justify-content: flex-end;">
@@ -3061,6 +3066,16 @@ const Violations = {
             </div>
         `;
         document.body.appendChild(modal);
+        if (typeof Utils.hydrateDriveProxyImages === 'function') {
+            Utils.hydrateDriveProxyImages(modal, {
+                onFetchFail: (img) => {
+                    try {
+                        img.onerror = null;
+                        img.src = 'data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22400%22 height=%22200%22%3E%3Crect fill=%22%23f0f0f0%22 width=%22400%22 height=%22200%22/%3E%3Ctext fill=%22%23999%22 font-family=%22sans-serif%22 font-size=%2216%22 x=%2250%25%22 y=%2250%25%22 text-anchor=%22middle%22 dy=%22.3em%22%3Eلا توجد صورة%3C/text%3E%3C/svg%3E';
+                    } catch (e) { /* ignore */ }
+                }
+            });
+        }
         modal.addEventListener('click', (e) => {
             if (e.target === modal) modal.remove();
         });
@@ -3491,6 +3506,48 @@ const Violations = {
         return null;
     },
 
+    _onBlacklistCardPhotoError(img) {
+        try {
+            if (!img) return;
+            img.onerror = null;
+            const d = document.createElement('div');
+            d.className = 'w-16 h-16 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center border-2 border-red-200 dark:border-red-800';
+            d.innerHTML = '<i class="fas fa-user text-red-500 dark:text-red-400 text-2xl"></i>';
+            img.replaceWith(d);
+        } catch (e) { /* ignore */ }
+    },
+
+    _onBlacklistTablePhotoError(img) {
+        try {
+            if (!img) return;
+            img.onerror = null;
+            img.src = 'data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22100%22 height=%22100%22%3E%3Crect fill=%22%23f0f0f0%22 width=%22100%22 height=%22100%22/%3E%3Ctext fill=%22%23999%22 font-family=%22sans-serif%22 font-size=%2212%22 x=%2250%25%22 y=%2250%25%22 text-anchor=%22middle%22 dy=%22.3em%22%3Eلا توجد صورة%3C/text%3E%3C/svg%3E';
+        } catch (e) { /* ignore */ }
+    },
+
+    _hydrateBlacklistDrivePhotos() {
+        try {
+            if (typeof Utils.hydrateDriveProxyImages !== 'function') return;
+            const fail = (img) => {
+                if (!img) return;
+                const cls = img.className || '';
+                if (cls.indexOf('blacklist-table-photo') !== -1) {
+                    this._onBlacklistTablePhotoError(img);
+                } else if (cls.indexOf('blacklist-detail-photo') !== -1) {
+                    this._onBlacklistTablePhotoError(img);
+                } else if (cls.indexOf('blacklist-form-photo') !== -1) {
+                    this._onBlacklistTablePhotoError(img);
+                } else {
+                    this._onBlacklistCardPhotoError(img);
+                }
+            };
+            const cards = document.getElementById('blacklist-cards-container');
+            const table = document.getElementById('blacklist-table');
+            if (cards) Utils.hydrateDriveProxyImages(cards, { onFetchFail: fail });
+            if (table) Utils.hydrateDriveProxyImages(table, { onFetchFail: fail });
+        } catch (e) { /* ignore */ }
+    },
+
     renderBlacklistCards() {
         const blacklistRecords = AppState.appData?.blacklistRegister || [];
         if (blacklistRecords.length === 0) {
@@ -3513,6 +3570,11 @@ const Violations = {
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 ${sortedRecords.map(record => {
                     const photoUrl = this.processPhoto(record);
+                    const disp = photoUrl && typeof Utils.resolveDriveAwareImgDisplay === 'function'
+                        ? Utils.resolveDriveAwareImgDisplay(photoUrl)
+                        : { canonical: photoUrl || '', displaySrc: photoUrl || '', needsProxy: false, proxyFileId: '' };
+                    const imgSrc = disp.canonical ? disp.displaySrc : '';
+                    const proxyAttr = typeof Utils.driveProxyImgAttrs === 'function' ? Utils.driveProxyImgAttrs(disp) : '';
                     return `
                     <div class="content-card blacklist-card" style="position: relative; overflow: hidden;">
                         <div class="absolute top-0 right-0 w-20 h-20 bg-red-100 dark:bg-red-900/20 opacity-10 rounded-bl-full"></div>
@@ -3521,12 +3583,12 @@ const Violations = {
                                 <div class="flex items-start justify-between mb-3">
                                     <div class="flex items-center gap-3">
                                         ${photoUrl ? `
-                                            <img src="${Utils.escapeHTML(photoUrl)}" alt="صورة"
+                                            <img src="${Utils.escapeHTML(imgSrc)}" alt="صورة"${proxyAttr}
                                                 data-photo-url="${Utils.escapeHTML(photoUrl)}"
-                                                class="w-16 h-16 rounded-full object-cover border-2 border-red-200 dark:border-red-800 cursor-pointer shadow-sm"
+                                                class="blacklist-card-photo w-16 h-16 rounded-full object-cover border-2 border-red-200 dark:border-red-800 cursor-pointer shadow-sm"
                                                 onclick="Violations.viewBlacklistPhoto(this.dataset.photoUrl)"
                                                 title="انقر لعرض الصورة"
-                                                onerror="this.onerror=null; this.parentElement.innerHTML='<div class=\\'w-16 h-16 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center border-2 border-red-200 dark:border-red-800\\'><i class=\\'fas fa-user text-red-500 dark:text-red-400 text-2xl\\'></i></div>';">
+                                                onerror="Violations._onBlacklistCardPhotoError(this)">
                                         ` : `
                                             <div class="w-16 h-16 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center border-2 border-red-200 dark:border-red-800">
                                                 <i class="fas fa-user text-red-500 dark:text-red-400 text-2xl"></i>
@@ -3682,6 +3744,12 @@ const Violations = {
             Utils.safeWarn('⚠️ خطأ في إعداد نموذج Blacklist:', error);
         });
 
+        if (typeof Utils.hydrateDriveProxyImages === 'function') {
+            Utils.hydrateDriveProxyImages(modal, {
+                onFetchFail: (img) => this._onBlacklistTablePhotoError(img)
+            });
+        }
+
         // إغلاق النموذج عند النقر خارجه
         modal.addEventListener('click', (e) => {
             if (e.target === modal) {
@@ -3702,6 +3770,11 @@ const Violations = {
     renderBlacklistFormContent(blacklistData, nextSerial, siteOptions, placeOptions, departmentOptions, currentUser) {
         const isEdit = !!blacklistData;
         const previewPhotoUrl = this.processPhoto(blacklistData);
+        const previewDisp = previewPhotoUrl && typeof Utils.resolveDriveAwareImgDisplay === 'function'
+            ? Utils.resolveDriveAwareImgDisplay(previewPhotoUrl)
+            : { canonical: previewPhotoUrl || '', displaySrc: previewPhotoUrl || '', needsProxy: false, proxyFileId: '' };
+        const previewImgSrc = previewDisp.canonical ? previewDisp.displaySrc : '';
+        const previewProxyAttr = typeof Utils.driveProxyImgAttrs === 'function' ? Utils.driveProxyImgAttrs(previewDisp) : '';
         return `
             <form id="blacklist-form" class="space-y-4">
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -3843,8 +3916,8 @@ const Violations = {
                         </label>
                         <input type="file" id="blacklist-photo-input" accept="image/*" class="form-input">
                         <div id="blacklist-photo-preview" class="mt-2 ${previewPhotoUrl ? '' : 'hidden'}">
-                            <img src="${previewPhotoUrl || ''}" alt="صورة شخصية"
-                                class="w-32 h-32 object-cover rounded border" id="blacklist-photo-img">
+                            <img src="${previewImgSrc ? Utils.escapeHTML(previewImgSrc) : ''}" alt="صورة شخصية"${previewProxyAttr}
+                                class="blacklist-form-photo w-32 h-32 object-cover rounded border" id="blacklist-photo-img">
                             <button type="button" onclick="const blPhotoInput = document.getElementById('blacklist-photo-input'); if (blPhotoInput) blPhotoInput.value=''; const blPhotoPreview = document.getElementById('blacklist-photo-preview'); if (blPhotoPreview) blPhotoPreview.classList.add('hidden');" 
                                 class="mt-2 text-sm text-red-600 hover:text-red-800">
                                 <i class="fas fa-trash ml-1"></i>حذف الصورة
@@ -4050,6 +4123,11 @@ const Violations = {
                         <tbody id="blacklist-table-body">
                             ${sortedRecords.map(record => {
                                 const photoUrl = this.processPhoto(record);
+                                const disp = photoUrl && typeof Utils.resolveDriveAwareImgDisplay === 'function'
+                                    ? Utils.resolveDriveAwareImgDisplay(photoUrl)
+                                    : { canonical: photoUrl || '', displaySrc: photoUrl || '', needsProxy: false, proxyFileId: '' };
+                                const imgSrc = disp.canonical ? disp.displaySrc : '';
+                                const proxyAttr = typeof Utils.driveProxyImgAttrs === 'function' ? Utils.driveProxyImgAttrs(disp) : '';
                                 return `
                                 <tr>
                                     <td>${record.serialNumber || '-'}</td>
@@ -4064,15 +4142,12 @@ const Violations = {
                                     <td>${Utils.escapeHTML(record.bannedBy || '-')}</td>
                                     <td>${Utils.escapeHTML(record.editor || '-')}</td>
                                     <td>
-                                        ${(() => {
-                                            const photoUrl = this.processPhoto(record);
-                                            return photoUrl ? 
-                `<img src="${Utils.escapeHTML(photoUrl)}" alt="صورة" class="w-12 h-12 object-cover rounded cursor-pointer"
+                                        ${photoUrl ? 
+                `<img src="${Utils.escapeHTML(imgSrc)}" alt="صورة"${proxyAttr} class="blacklist-table-photo w-12 h-12 object-cover rounded cursor-pointer"
                                                 data-photo-url="${Utils.escapeHTML(photoUrl)}"
                                                 onclick="Violations.viewBlacklistPhoto(this.dataset.photoUrl)" title="انقر لعرض الصورة"
-                                                onerror="this.onerror=null; this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22100%22 height=%22100%22%3E%3Crect fill=%22%23f0f0f0%22 width=%22100%22 height=%22100%22/%3E%3Ctext fill=%22%23999%22 font-family=%22sans-serif%22 font-size=%2212%22 x=%2250%25%22 y=%2250%25%22 text-anchor=%22middle%22 dy=%22.3em%22%3Eلا توجد صورة%3C/text%3E%3C/svg%3E';">` 
-                : '-';
-                                        })()}
+                                                onerror="Violations._onBlacklistTablePhotoError(this)">` 
+                : '-'}
                                     </td>
                                     <td class="max-w-xs truncate" title="${Utils.escapeHTML(record.banReason || '')}">
                                         ${Utils.escapeHTML((record.banReason || '-').substring(0, 50))}${(record.banReason || '').length > 50 ? '...' : ''}
@@ -4199,6 +4274,8 @@ const Violations = {
                 exportExcelBtn.parentNode.replaceChild(newExportExcelBtn, exportExcelBtn);
                 newExportExcelBtn.addEventListener('click', () => this.exportBlacklistToExcel());
             }
+
+            this._hydrateBlacklistDrivePhotos();
         }, 100);
     },
 
@@ -4480,9 +4557,10 @@ const Violations = {
             return;
         }
 
-        const modal = document.createElement('div');
-        modal.className = 'modal-overlay';
-        modal.innerHTML = `
+        const openPhotoModal = (src) => {
+            const modal = document.createElement('div');
+            modal.className = 'modal-overlay';
+            modal.innerHTML = `
             <div class="modal-content" style="max-width: 600px;">
                 <div class="modal-header">
                     <h2 class="modal-title">الصورة الشخصية</h2>
@@ -4491,12 +4569,26 @@ const Violations = {
                     </button>
                 </div>
                 <div class="modal-body">
-                    <img src="${Utils.escapeHTML(processedUrl)}" alt="صورة شخصية" style="width: 100%; max-height: 70vh; object-fit: contain;"
+                    <img src="${Utils.escapeHTML(src)}" alt="صورة شخصية" style="width: 100%; max-height: 70vh; object-fit: contain;"
                          onerror="this.onerror=null; this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22400%22 height=%22300%22%3E%3Crect fill=%22%23ddd%22 width=%22400%22 height=%22300%22/%3E%3Ctext fill=%22%23666%22 font-family=%22sans-serif%22 font-size=%2220%22 x=%2250%25%22 y=%2250%25%22 text-anchor=%22middle%22 dy=%22.3em%22%3Eفشل تحميل الصورة%3C/text%3E%3C/svg%3E';">
                 </div>
             </div>
         `;
-        document.body.appendChild(modal);
+            document.body.appendChild(modal);
+        };
+
+        const disp = typeof Utils.resolveDriveAwareImgDisplay === 'function'
+            ? Utils.resolveDriveAwareImgDisplay(processedUrl)
+            : { needsProxy: false, proxyFileId: '' };
+        if (disp.needsProxy && typeof Utils.fetchDriveImageDataUri === 'function') {
+            Utils.fetchDriveImageDataUri(disp.proxyFileId).then((dataUri) => {
+                if (dataUri) openPhotoModal(dataUri);
+                else Notification.error('تعذر تحميل الصورة من Google Drive');
+            }).catch(() => Notification.error('تعذر تحميل الصورة'));
+            return;
+        }
+
+        openPhotoModal(processedUrl);
     },
 
     viewBlacklistDetails(recordId) {
@@ -4508,6 +4600,11 @@ const Violations = {
 
         // ✅ معالجة الصورة بشكل صحيح
         const photoUrl = this.processPhoto(record);
+        const photoDisp = photoUrl && typeof Utils.resolveDriveAwareImgDisplay === 'function'
+            ? Utils.resolveDriveAwareImgDisplay(photoUrl)
+            : { canonical: photoUrl || '', displaySrc: photoUrl || '', needsProxy: false, proxyFileId: '' };
+        const photoImgSrc = photoDisp.canonical ? photoDisp.displaySrc : '';
+        const photoProxyAttr = typeof Utils.driveProxyImgAttrs === 'function' ? Utils.driveProxyImgAttrs(photoDisp) : '';
 
         const modal = document.createElement('div');
         modal.className = 'modal-overlay';
@@ -4585,11 +4682,12 @@ const Violations = {
                     <div class="mt-4">
                         <label class="text-sm font-semibold text-gray-600 mb-2 block">الصورة الشخصية</label>
                         <div class="flex justify-center">
-                            <img src="${Utils.escapeHTML(photoUrl)}" alt="صورة شخصية"
-                                class="max-w-xs max-h-64 object-cover rounded-lg cursor-pointer border-2 border-gray-200"
-                                onclick="Violations.viewBlacklistPhoto('${Utils.escapeHTML(photoUrl).replace(/'/g, "\\'")}')"
+                            <img src="${Utils.escapeHTML(photoImgSrc)}" alt="صورة شخصية"${photoProxyAttr}
+                                class="blacklist-detail-photo max-w-xs max-h-64 object-cover rounded-lg cursor-pointer border-2 border-gray-200"
+                                data-photo-url="${Utils.escapeHTML(photoUrl)}"
+                                onclick="Violations.viewBlacklistPhoto(this.dataset.photoUrl)"
                                 title="انقر لعرض الصورة بحجم كامل"
-                                onerror="this.onerror=null; this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22200%22 height=%22200%22%3E%3Crect fill=%22%23f0f0f0%22 width=%22200%22 height=%22200%22/%3E%3Ctext fill=%22%23999%22 font-family=%22sans-serif%22 font-size=%2214%22 x=%2250%25%22 y=%2250%25%22 text-anchor=%22middle%22 dy=%22.3em%22%3Eفشل تحميل الصورة%3C/text%3E%3C/svg%3E';">
+                                onerror="Violations._onBlacklistTablePhotoError(this)">
                         </div>
                     </div>
                     ` : ''}
@@ -4619,6 +4717,11 @@ const Violations = {
             </div>
         `;
         document.body.appendChild(modal);
+        if (typeof Utils.hydrateDriveProxyImages === 'function') {
+            Utils.hydrateDriveProxyImages(modal, {
+                onFetchFail: (img) => this._onBlacklistTablePhotoError(img)
+            });
+        }
     },
 
     printBlacklistDetails(recordId) {

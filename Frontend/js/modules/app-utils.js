@@ -3542,6 +3542,134 @@ const Utils = {
         return '';
     },
 
+    /**
+     * رابط نشر Apps Script (Web App) إن وُجد في الإعدادات.
+     */
+    getAppsScriptScriptUrl() {
+        try {
+            const u = (typeof AppState !== 'undefined' && AppState.googleConfig && AppState.googleConfig.appsScript && AppState.googleConfig.appsScript.scriptUrl)
+                ? String(AppState.googleConfig.appsScript.scriptUrl).trim()
+                : '';
+            return u;
+        } catch (e) {
+            return '';
+        }
+    },
+
+    /**
+     * URL لطلب getProfileImage (صورة من Drive كـ JSON يحوي dataUri) — يتجاوز حظر hotlinking لـ Google Drive في وسم img.
+     */
+    buildGetProfileImageProxyUrl(fileId) {
+        const id = String(fileId || '').trim();
+        if (!id) return '';
+        const scriptUrl = this.getAppsScriptScriptUrl();
+        if (!scriptUrl || scriptUrl.indexOf('script.google.com') === -1) return '';
+        return scriptUrl + (scriptUrl.indexOf('?') !== -1 ? '&' : '?') + 'action=getProfileImage&id=' + encodeURIComponent(id);
+    },
+
+    /**
+     * جلب صورة Drive عبر السكربت وإرجاع data URI للعرض في img.
+     */
+    async fetchDriveImageDataUri(fileId) {
+        const url = this.buildGetProfileImageProxyUrl(fileId);
+        if (!url) return null;
+        try {
+            const res = await fetch(url, { method: 'GET', credentials: 'omit' });
+            const data = await res.json();
+            if (data && data.success && data.dataUri) return String(data.dataUri);
+        } catch (e) {
+            /* ignore */
+        }
+        return null;
+    },
+
+    /**
+     * تعبئة عناصر img التي تحمل data-drive-proxy-id بتحميل الصورة عبر الوكيل.
+     * @param {ParentNode|null|undefined} rootEl
+     * @param {{ onFetchFail?: (img: HTMLImageElement) => void }} [callbacks]
+     */
+    hydrateDriveProxyImages(rootEl, callbacks) {
+        try {
+            const root = rootEl || document;
+            if (!root || typeof root.querySelectorAll !== 'function') return;
+            const scriptUrl = this.getAppsScriptScriptUrl();
+            if (!scriptUrl || scriptUrl.indexOf('script.google.com') === -1) return;
+
+            const imgs = root.querySelectorAll('img[data-drive-proxy-id]');
+            if (!imgs || !imgs.length) return;
+
+            const onFetchFail = callbacks && typeof callbacks.onFetchFail === 'function' ? callbacks.onFetchFail : null;
+
+            imgs.forEach((img) => {
+                if (!img || img.dataset.driveProxyHydrated === '1') return;
+                const id = String(img.getAttribute('data-drive-proxy-id') || '').trim();
+                if (!id) return;
+                img.dataset.driveProxyHydrated = '1';
+                this.fetchDriveImageDataUri(id).then((dataUri) => {
+                    if (dataUri) {
+                        img.src = dataUri;
+                        try {
+                            if (img.dataset.photoUrl !== undefined) img.dataset.photoUrl = dataUri;
+                        } catch (e2) { /* ignore */ }
+                    } else if (onFetchFail) {
+                        onFetchFail(img);
+                    }
+                });
+            });
+        } catch (e) {
+            /* ignore */
+        }
+    },
+
+    /** صورة شفافة 1×1 تُستخدم كـ src مؤقت قبل جلب صور Drive عبر الوكيل */
+    IMG_DRIVE_PLACEHOLDER_GIF: 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7',
+
+    /**
+     * توحيد منطق عرض الصور: روابط Google Drive تُعرض عبر وكيل getProfileImage عند توفر scriptUrl.
+     * @param {*} source - نص أو كائن يُمرَّر إلى normalizeImageSource
+     * @returns {{ canonical: string, displaySrc: string, proxyFileId: string, needsProxy: boolean }}
+     */
+    resolveDriveAwareImgDisplay(source) {
+        const empty = { canonical: '', displaySrc: '', proxyFileId: '', needsProxy: false };
+        try {
+            const canonical = this.normalizeImageSource(source);
+            if (!canonical) return empty;
+
+            if (/^data:image\//i.test(canonical) || String(canonical).indexOf('blob:') === 0) {
+                return { canonical, displaySrc: canonical, proxyFileId: '', needsProxy: false };
+            }
+            if (!/^https?:\/\//i.test(canonical)) {
+                return { canonical, displaySrc: canonical, proxyFileId: '', needsProxy: false };
+            }
+            if (!/drive\.google\.com|googleusercontent\.com/i.test(canonical)) {
+                return { canonical, displaySrc: canonical, proxyFileId: '', needsProxy: false };
+            }
+            const fileId = this.extractDriveFileId(canonical);
+            const scriptUrl = this.getAppsScriptScriptUrl();
+            const canProxy = !!(fileId && scriptUrl && scriptUrl.indexOf('script.google.com') !== -1);
+            if (canProxy) {
+                return {
+                    canonical,
+                    displaySrc: this.IMG_DRIVE_PLACEHOLDER_GIF,
+                    proxyFileId: fileId,
+                    needsProxy: true
+                };
+            }
+            return { canonical, displaySrc: canonical, proxyFileId: '', needsProxy: false };
+        } catch (e) {
+            return empty;
+        }
+    },
+
+    /**
+     * سمات HTML لوسم img عند استخدام وكيل Drive (مع resolveDriveAwareImgDisplay).
+     * @param {{ needsProxy?: boolean, proxyFileId?: string }} info
+     */
+    driveProxyImgAttrs(info) {
+        if (!info || !info.needsProxy || !info.proxyFileId) return '';
+        return ` data-drive-proxy-id="${this.escapeHTML(String(info.proxyFileId))}"`;
+    },
+
     normalizeContractorIdentityValue(value) {
         if (value === undefined || value === null) return '';
         return String(value)

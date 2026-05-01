@@ -1085,6 +1085,18 @@ const Settings = {
         // تأخير بسيط لضمان تحميل DOM قبل تهيئة التبويبات
         setTimeout(() => {
             this.setupTabsNavigation();
+            const permList = document.getElementById('users-permissions-list');
+            if (permList && typeof Utils.hydrateDriveProxyImages === 'function') {
+                Utils.hydrateDriveProxyImages(permList, {
+                    onFetchFail: (img) => {
+                        try {
+                            const i = document.createElement('i');
+                            i.className = 'fas fa-user text-gray-600';
+                            img.replaceWith(i);
+                        } catch (e) { /* ignore */ }
+                    }
+                });
+            }
         }, 0);
 
         // تهيئة إعدادات النماذج بعد تحميل الإعدادات
@@ -2872,8 +2884,13 @@ const Settings = {
                 <div class="flex items-center justify-between p-3 border rounded hover:bg-gray-50">
                     <div class="flex items-center flex-1">
                         <div class="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center ml-3">
-                            ${user.photo ?
-                    `<img src="${user.photo}" alt="${Utils.escapeHTML(user.name)}" class="w-full h-full rounded-full object-cover">` :
+                            ${user.photo ? (() => {
+                    const disp = typeof Utils.resolveDriveAwareImgDisplay === 'function'
+                        ? Utils.resolveDriveAwareImgDisplay(user.photo)
+                        : { canonical: String(user.photo), displaySrc: String(user.photo), needsProxy: false, proxyFileId: '' };
+                    const pa = typeof Utils.driveProxyImgAttrs === 'function' ? Utils.driveProxyImgAttrs(disp) : '';
+                    return `<img src="${Utils.escapeHTML(disp.displaySrc)}" alt="${Utils.escapeHTML(user.name)}"${pa} class="settings-perm-user-photo w-full h-full rounded-full object-cover">`;
+                })() :
                     `<i class="fas fa-user text-gray-600"></i>`
                 }
                         </div>
