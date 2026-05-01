@@ -4,6 +4,9 @@
  */
 
 const UserActivityLog = {
+    /** آخر استجابة تقرير الجلسات اليومي (للتصدير والنسخ) */
+    _lastDailyReport: null,
+
     /**
      * معرف الجلسة الحالي لربط السجلات من الدخول حتى الخروج
      */
@@ -173,6 +176,11 @@ const UserActivityLog = {
             );
         }
 
+        if (filters.sessionId && String(filters.sessionId).trim()) {
+            const sid = String(filters.sessionId).trim();
+            logs = logs.filter(log => String(log.sessionId || '').trim() === sid);
+        }
+
         return logs;
     },
 
@@ -225,7 +233,8 @@ const UserActivityLog = {
                 'الموديول': log.module || '',
                 'معرف السجل': log.recordId || '',
                 'التفاصيل': typeof log.details === 'string' ? log.details : JSON.stringify(log.details),
-                'عنوان IP': log.ipAddress || ''
+                'عنوان IP': log.ipAddress || '',
+                'معرف الجلسة': log.sessionId || ''
             }));
 
             // إنشاء ورقة العمل
@@ -461,6 +470,36 @@ const UserActivityLog = {
                             </button>
                         </div>
                     </div>
+
+                    <!-- تقرير الجلسات اليومي -->
+                    <div class="bg-slate-50 border border-slate-200 p-4 rounded-lg mb-4">
+                        <h3 class="text-lg font-semibold text-slate-800 mb-2">
+                            <i class="fas fa-user-clock ml-2"></i>تقرير الجلسات اليومي (من الدخول حتى الخروج)
+                        </h3>
+                        <p class="text-xs text-gray-600 mb-3">
+                            يعرض الأحداث المسجّلة في سجل النشاط فقط. للبريد اليومي: أنشئ <strong>Trigger</strong> زمنياً في Google Apps Script يستدعي الدالة
+                            <code class="text-xs bg-white px-1 rounded">runDailyUserSessionEmailReport</code>
+                            ويمكن تعيين المستلمين عبر خاصية السكربت <code class="text-xs bg-white px-1 rounded">DAILY_ACTIVITY_REPORT_EMAILS</code>.
+                        </p>
+                        <div class="flex flex-wrap items-end gap-3 mb-3">
+                            <div>
+                                <label class="block text-sm font-semibold text-gray-700 mb-1">تاريخ التقرير</label>
+                                <input type="date" id="daily-session-report-date" class="form-input">
+                            </div>
+                            <button type="button" class="btn-primary" onclick="UserActivityLog.loadDailySessionReport()">
+                                <i class="fas fa-sync ml-2"></i>تحميل التقرير
+                            </button>
+                            <button type="button" class="btn-secondary" onclick="UserActivityLog.exportDailySessionsToExcel()" title="آخر تقرير محمّل">
+                                <i class="fas fa-file-excel ml-2"></i>تصدير الجلسات Excel
+                            </button>
+                            <button type="button" class="btn-secondary" onclick="UserActivityLog.copyDailyReportText()">
+                                <i class="fas fa-copy ml-2"></i>نسخ الملخص
+                            </button>
+                        </div>
+                        <div id="daily-session-report-container" class="text-sm">
+                            <p class="text-gray-500">اختر التاريخ ثم اضغط «تحميل التقرير».</p>
+                        </div>
+                    </div>
                     
                     <!-- جدول السجلات -->
                     <div id="activity-log-table-container">
@@ -583,6 +622,154 @@ const UserActivityLog = {
     },
 
     /**
+     * تحميل تقرير الجلسات ليوم محدد من الخادم (تجميع حسب sessionId أو استنتاج من login/logout)
+     */
+    async loadDailySessionReport() {
+        const dateInput = document.getElementById('daily-session-report-date');
+        const container = document.getElementById('daily-session-report-container');
+        if (!dateInput || !container) return;
+        const dateStr = dateInput.value || new Date().toISOString().split('T')[0];
+        if (typeof GoogleIntegration === 'undefined' || !GoogleIntegration.sendToAppsScript) {
+            Notification.error('التكامل مع الخادم غير متاح');
+            return;
+        }
+        container.innerHTML = '<p class="text-gray-600"><i class="fas fa-spinner fa-spin ml-2"></i>جارٍ التحميل...</p>';
+        try {
+            let tz = 'UTC';
+            try {
+                tz = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+            } catch (e) { /* ignore */ }
+            const result = await GoogleIntegration.sendToAppsScript('getDailyUserSessionActivityReport', {
+                date: dateStr,
+                timezone: tz
+            });
+            this._lastDailyReport = result;
+            if (!result || !result.success) {
+                const msg = result?.message || 'فشل تحميل التقرير';
+                container.innerHTML = '<div class="text-red-600">' + Utils.escapeHTML(msg) + '</div>';
+                return;
+            }
+            container.innerHTML = this.renderDailySessionReportHTML(result);
+        } catch (err) {
+            Utils.safeWarn('loadDailySessionReport', err);
+            container.innerHTML = '<div class="text-red-600">تعذر تحميل التقرير</div>';
+            Notification.error('تعذر تحميل تقرير الجلسات');
+        }
+    },
+
+    /**
+     * HTML جدول تقرير الجلسات
+     */
+    renderDailySessionReportHTML(report) {
+        const sessions = report.sessions || [];
+        if (!sessions.length) {
+            return '<p class="text-gray-500">لا توجد جلسات مسجّلة في هذا التاريخ (حسب المنطقة الزمنية والبيانات المتوفرة).</p>';
+        }
+        let rows = '';
+        for (let i = 0; i < sessions.length; i++) {
+            const s = sessions[i];
+            const who = Utils.escapeHTML(s.userEmail || s.username || s.userKey || '');
+            const infer = (s.inferred || s.orphan) ? '<span class="text-xs text-amber-700 mr-1">(استنتاج/يتيم)</span>' : '';
+            const sidCell = s.sessionId
+                ? '<span class="font-mono text-xs break-all">' + Utils.escapeHTML(String(s.sessionId)) + '</span>'
+                : (s.inferred ? '<span class="text-amber-700 text-xs">مستنتج</span>' : '—');
+            const loginAt = s.loginAt ? Utils.formatDateTime(s.loginAt) : '—';
+            const logoutAt = s.logoutAt ? Utils.formatDateTime(s.logoutAt) : '<span class="text-gray-500">بدون تسجيل خروج</span>';
+            const detailId = 'daily-session-detail-' + i;
+            const evRows = (s.events || []).map(ev => {
+                const t = Utils.formatDateTime(ev.timestamp);
+                const act = Utils.escapeHTML(this.getActionTypeLabel(ev.actionType || ev.action));
+                const mod = Utils.escapeHTML(ev.module || '');
+                const detRaw = String(ev.details || '');
+                const det = Utils.escapeHTML(detRaw.substring(0, 120));
+                return '<tr><td class="text-xs">' + t + '</td><td class="text-xs">' + act + '</td><td class="text-xs">' + mod + '</td><td class="text-xs max-w-md truncate" title="' + Utils.escapeHTML(detRaw) + '">' + det + '</td></tr>';
+            }).join('');
+            rows += '<tr class="border-b border-slate-200">' +
+                '<td class="py-2 px-2">' + who + infer + '</td>' +
+                '<td class="py-2 px-2">' + sidCell + '</td>' +
+                '<td class="py-2 px-2 text-xs">' + loginAt + '</td>' +
+                '<td class="py-2 px-2 text-xs">' + logoutAt + '</td>' +
+                '<td class="py-2 px-2 text-center">' + (s.eventCount || 0) + '</td>' +
+                '<td class="py-2 px-2"><button type="button" class="btn-secondary text-xs" onclick="UserActivityLog.toggleDailySessionDetail(\'' + detailId + '\')">تفاصيل</button></td></tr>' +
+                '<tr id="' + detailId + '" style="display:none"><td colspan="6" class="bg-white p-2"><table class="data-table w-full"><thead><tr><th>وقت</th><th>نوع</th><th>موديول</th><th>تفاصيل</th></tr></thead><tbody>' + (evRows || '<tr><td colspan="4">لا تفاصيل</td></tr>') + '</tbody></table>' + (s.note ? '<p class="text-xs text-amber-800 mt-2">' + Utils.escapeHTML(s.note) + '</p>' : '') + '</td></tr>';
+        }
+        return '<div class="mb-2 text-gray-700">عدد الجلسات: <strong>' + sessions.length + '</strong> — سجلات اليوم: <strong>' + (report.rawLogCount || 0) + '</strong></div>' +
+            '<div class="overflow-x-auto"><table class="data-table w-full text-sm"><thead><tr><th>مستخدم</th><th>جلسة</th><th>بداية</th><th>نهاية</th><th>أحداث</th><th></th></tr></thead><tbody>' + rows + '</tbody></table></div>';
+    },
+
+    toggleDailySessionDetail(detailId) {
+        const el = document.getElementById(detailId);
+        if (!el) return;
+        el.style.display = el.style.display === 'none' ? 'table-row' : 'none';
+    },
+
+    exportDailySessionsToExcel() {
+        const report = this._lastDailyReport;
+        if (!report || !report.success || !Array.isArray(report.sessions) || !report.sessions.length) {
+            Notification.warning('حمّل تقرير الجلسات أولاً');
+            return;
+        }
+        if (typeof XLSX === 'undefined') {
+            Notification.error('مكتبة Excel غير متاحة');
+            return;
+        }
+        try {
+            const rows = [];
+            (report.sessions || []).forEach(s => {
+                const who = s.userEmail || s.username || s.userKey || '';
+                const sess = s.sessionId || (s.inferred ? '(مستنتج)' : '');
+                (s.events || []).forEach(ev => {
+                    rows.push({
+                        'تاريخ التقرير': report.date || '',
+                        'المستخدم': who,
+                        'معرف الجلسة': sess,
+                        'بداية الجلسة': s.loginAt ? Utils.formatDateTime(s.loginAt) : '',
+                        'نهاية الجلسة': s.logoutAt ? Utils.formatDateTime(s.logoutAt) : '',
+                        'وقت الحدث': Utils.formatDateTime(ev.timestamp),
+                        'نوع الحدث': this.getActionTypeLabel(ev.actionType || ev.action),
+                        'الموديول': ev.module || '',
+                        'التفاصيل': String(ev.details || '')
+                    });
+                });
+            });
+            const ws = XLSX.utils.json_to_sheet(rows);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, 'جلسات');
+            XLSX.writeFile(wb, 'تقرير_جلسات_' + (report.date || '') + '.xlsx');
+            Notification.success('تم تصدير تقرير الجلسات');
+        } catch (e) {
+            Utils.safeError('exportDailySessionsToExcel', e);
+            Notification.error('فشل التصدير');
+        }
+    },
+
+    async copyDailyReportText() {
+        const report = this._lastDailyReport;
+        if (!report || !report.success) {
+            Notification.warning('حمّل تقرير الجلسات أولاً');
+            return;
+        }
+        const lines = [];
+        lines.push('تقرير الجلسات — ' + (report.date || ''));
+        lines.push('المنطقة الزمنية: ' + (report.timezone || '') + ' | جلسات: ' + (report.count || 0) + ' | سجلات خام: ' + (report.rawLogCount || 0));
+        (report.sessions || []).forEach(s => {
+            const who = s.userEmail || s.username || s.userKey || '';
+            lines.push('— ' + who + ' | ' + (s.sessionId || 'مستنتج') + ' | أحداث: ' + (s.eventCount || 0));
+        });
+        const text = lines.join('\n');
+        try {
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                await navigator.clipboard.writeText(text);
+                Notification.success('تم نسخ الملخص');
+            } else {
+                Notification.warning('المتصفح لا يدعم النسخ التلقائي');
+            }
+        } catch (e) {
+            Notification.error('فشل النسخ');
+        }
+    },
+
+    /**
      * عرض النموذج
      */
     showModal() {
@@ -654,6 +841,11 @@ const UserActivityLog = {
             const dateToInput = document.getElementById('activity-log-date-to');
             if (dateToInput) {
                 dateToInput.addEventListener('change', () => this.applyFilters());
+            }
+
+            const dailyDate = document.getElementById('daily-session-report-date');
+            if (dailyDate && !dailyDate.value) {
+                dailyDate.value = new Date().toISOString().split('T')[0];
             }
             
             // بدء التحديث الدوري التلقائي
@@ -746,7 +938,9 @@ const UserActivityLog = {
     },
     
     /**
-     * دالة مساعدة لتسجيل عمليات CRUD بشكل موحد
+     * دالة مساعدة لتسجيل عمليات CRUD بشكل موحد.
+     * لتوسيع تغطية «ما تم إجراؤه» في تقارير الجلسات، استدعِ هذه الدالة من مسارات الحفظ
+     * في الموديولات (بعد نجاح العملية) دون انتظار — انظر أيضاً `log`.
      * @param {string} action - 'add', 'update', 'delete'
      * @param {string} module - اسم الموديول
      * @param {string} recordId - معرف السجل

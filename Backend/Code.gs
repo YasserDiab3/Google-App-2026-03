@@ -1959,9 +1959,6 @@ function doPost(e) {
                 case 'getDailyUserSessionActivityReport':
                     result = getDailyUserSessionActivityReport(payload.filters || payload || {});
                     break;
-                case 'runDailyUserSessionEmailReport':
-                    result = runDailyUserSessionEmailReport();
-                    break;
                 case 'addAIAssistantSettings':
                     result = addAIAssistantSettingsToSheet(payload);
                     break;
