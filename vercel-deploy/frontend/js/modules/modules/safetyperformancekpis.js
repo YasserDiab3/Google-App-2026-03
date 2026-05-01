@@ -1331,10 +1331,29 @@ const SafetyPerformanceKPIs = {
         const monthKey = this.getExternalWorkforceMonthKey(monthIndex);
         if (!monthKey) return 0;
 
+        const Emp = typeof Employees !== 'undefined' ? Employees : (typeof window !== 'undefined' ? window.Employees : null);
+        if (Emp && typeof Emp.getAvailableContractorsForExternalWorkforce === 'function' && typeof Emp.getExternalWorkforceRecord === 'function') {
+            const contractors = Emp.getAvailableContractorsForExternalWorkforce();
+            if (Array.isArray(contractors) && contractors.length > 0) {
+                return contractors.reduce((sum, contractor) => {
+                    const rec = Emp.getExternalWorkforceRecord(year, contractor.stableKey);
+                    if (!rec) return sum;
+                    const v = parseFloat(rec[monthKey]);
+                    return sum + (Number.isFinite(v) && v >= 0 ? v : 0);
+                }, 0);
+            }
+        }
+
         return (AppState.appData?.externalWorkforceMonthly || []).reduce((sum, record) => {
             if (!record || Number(record.year) !== Number(year)) return sum;
             return sum + (parseFloat(record[monthKey]) || 0);
         }, 0);
+    },
+
+    getContractorDerivedHoursForMonth(year, monthIndex) {
+        const count = this.getExternalWorkforceForMonth(year, monthIndex);
+        const derived = Number(count || 0) * 8 * 22;
+        return parseFloat(derived.toFixed(2));
     },
 
     getManualScorecardRecord(year, monthIndex) {
@@ -1446,8 +1465,18 @@ const SafetyPerformanceKPIs = {
         }
 
         if (metricKey === 'hoursWorked') {
-            const parsed = parseFloat(rawValue);
-            record[metricKey] = Number.isFinite(parsed) ? parsed : '';
+            const trimmed = String(rawValue ?? '').trim();
+            if (!trimmed) {
+                record.hoursWorked = '';
+            } else {
+                const permanent = parseFloat(trimmed);
+                if (!Number.isFinite(permanent)) {
+                    record.hoursWorked = '';
+                } else {
+                    const contractorH = this.getContractorDerivedHoursForMonth(year, monthIndex);
+                    record.hoursWorked = parseFloat((Math.max(0, permanent) + contractorH).toFixed(2));
+                }
+            }
         } else {
             record[metricKey] = String(rawValue || '').trim();
         }
@@ -1693,10 +1722,15 @@ const SafetyPerformanceKPIs = {
             return parseFloat(derived.toFixed(2));
         };
         const contractorHoursDisplay = base.contractorEmployeeCounts.map(c => toDerivedHoursFromHeadcount(c));
-        const directHoursDisplay = base.directEmployeeCounts.map(c => toDerivedHoursFromHeadcount(c));
-        const combinedHoursDisplay = contractorHoursDisplay.map((contractorH, i) =>
-            parseFloat((contractorH + (directHoursDisplay[i] || 0)).toFixed(2))
-        );
+        const permanentHoursDisplay = base.hoursWorked.map((total, i) => {
+            const t = parseFloat(total) || 0;
+            const ch = contractorHoursDisplay[i] || 0;
+            return Math.max(0, parseFloat((t - ch).toFixed(2)));
+        });
+        const combinedHoursDisplay = base.hoursWorked.map(total => {
+            const t = parseFloat(total);
+            return Number.isFinite(t) ? parseFloat(t.toFixed(2)) : 0;
+        });
 
         const model = {
             year,
@@ -1708,7 +1742,7 @@ const SafetyPerformanceKPIs = {
                 contractorEmployeeCounts: base.contractorEmployeeCounts,
                 hoursWorked: base.hoursWorked,
                 contractorHoursDisplay,
-                directHoursDisplay,
+                permanentHoursDisplay,
                 combinedHoursDisplay,
                 lti: base.lti,
                 nlti: base.nlti,
@@ -1835,10 +1869,10 @@ const SafetyPerformanceKPIs = {
                     </tr>
                 </thead>
                 <tbody>
-                    ${renderMetricRow(t('module.kpi.scorecard.row.operationalEmployees','Number of Permanent Employees'), rows.employeeCounts, 'blue', this.getYtdValue(rows.employeeCounts, 'sum', ytdLimit), 'yellow', 0)}
+                    ${renderMetricRow(t('module.kpi.scorecard.row.operationalEmployees','Number of Permanent Employees'), rows.directEmployeeCounts, 'blue', this.getYtdValue(rows.directEmployeeCounts, 'sum', ytdLimit), 'yellow', 0)}
                     ${renderMetricRow(t('module.kpi.scorecard.row.contractorEmployees','Number of Temporary Workers'), rows.contractorEmployeeCounts, 'blue', this.getYtdValue(rows.contractorEmployeeCounts, 'sum', ytdLimit), 'yellow', 0)}
                     ${renderMetricRow(t('module.kpi.scorecard.row.contractorHoursDisplay','Total Temporary Workers Hours'), rows.contractorHoursDisplay, 'blue', this.getYtdValue(rows.contractorHoursDisplay, 'sum', ytdLimit), 'yellow', 0)}
-                    ${renderMetricRow(t('module.kpi.scorecard.row.totalHoursWorked','Total Employee Hours Worked'), rows.hoursWorked, 'blue', this.getYtdValue(rows.hoursWorked, 'sum', ytdLimit), 'yellow', 0, { manual: 'hoursWorked' })}
+                    ${renderMetricRow(t('module.kpi.scorecard.row.totalHoursWorked','Total Employee Hours Worked'), rows.permanentHoursDisplay, 'blue', this.getYtdValue(rows.permanentHoursDisplay, 'sum', ytdLimit), 'yellow', 0, { manual: 'hoursWorked' })}
                     ${renderMetricRow(t('module.kpi.scorecard.row.combinedHoursDisplay','Combined Total Hours (Employees + Temps)'), rows.combinedHoursDisplay, 'blue', this.getYtdValue(rows.combinedHoursDisplay, 'sum', ytdLimit), 'yellow', 0)}
                     <tr class="spk-row-section"><td colspan="14">${t('module.kpi.scorecard.section.accidentRates','1 Accident, Incident, & Illness Rates')}</td></tr>
                     <tr class="spk-row-subsection"><td colspan="13">${t('module.kpi.scorecard.section.safetyReported','1.1 Safety (number reported)')}</td><td class="spk-subsection-ytd">${t('module.kpi.scorecard.table.cumulativeYtd','Cumulative YTD')}</td></tr>
