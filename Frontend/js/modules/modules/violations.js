@@ -2638,9 +2638,9 @@ const Violations = {
 
                 const formData = {
                     id: violationData?.id || Utils.generateId('VIOLATION'),
-                    isoCode: generateISOCode('VIOL', AppState.appData.violations || []),
+                    isoCode: violationData?.isoCode || generateISOCode('VIOL', AppState.appData.violations || []),
                     personType: personType,
-                    employeeId: personType === 'employee' ? Utils.generateId('EMP') : '',
+                    employeeId: personType === 'employee' ? (violationData?.employeeId || Utils.generateId('EMP')) : '',
                     employeeName: personType === 'employee' ? personName : '',
                     employeeCode: personType === 'employee' ? document.getElementById('violation-employee-code')?.value.trim() || '' : '',
                     employeeNumber: personType === 'employee' ? document.getElementById('violation-employee-code')?.value.trim() || '' : '',
@@ -2679,9 +2679,17 @@ const Violations = {
                 if (isEdit && violationData?.id) {
                     const index = AppState.appData.violations.findIndex(v => v.id === violationData.id);
                     if (index !== -1) {
-                        AppState.appData.violations[index] = formData;
+                        // نحافظ على البيانات المرتبطة القديمة (المرفقات/المرجعيات) أثناء التعديل
+                        AppState.appData.violations[index] = {
+                            ...AppState.appData.violations[index],
+                            ...formData,
+                            id: violationData.id,
+                            isoCode: violationData.isoCode || formData.isoCode,
+                            createdAt: violationData.createdAt || formData.createdAt,
+                            updatedAt: new Date().toISOString()
+                        };
                     } else {
-                        AppState.appData.violations.push(formData);
+                        throw new Error('تعذر العثور على سجل المخالفة الأصلي للتعديل. أعد تحميل الصفحة ثم حاول مرة أخرى.');
                     }
                 } else {
                     AppState.appData.violations.push(formData);
