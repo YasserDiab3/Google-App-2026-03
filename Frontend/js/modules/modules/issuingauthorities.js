@@ -931,12 +931,15 @@ const IssuingAuthorities = {
         }
         w.document.write(`<!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="UTF-8"><title>الأشخاص المصرح لهم باعتماد تصاريح العمل — PTW Approvers</title></head><body style="padding:16px;font-family:Segoe UI,Tahoma,sans-serif;">${inner}</body></html>`);
         w.document.close();
-        w.onload = () => {
-            setTimeout(() => {
-                try { w.print(); } catch (e) { /* ignore */ }
-                this._iaNotify('تم فتح نافذة الطباعة', 'success');
-            }, 200);
+        let printed = false;
+        const runPrint = () => {
+            if (printed) return;
+            printed = true;
+            try { w.print(); } catch (e) { /* ignore */ }
+            this._iaNotify('تم فتح نافذة الطباعة', 'success');
         };
+        w.addEventListener('load', () => setTimeout(runPrint, 200));
+        setTimeout(runPrint, 700);
     },
 
     exportListToExcel() {
@@ -1543,6 +1546,7 @@ const IssuingAuthorities = {
         const refreshBtn = document.getElementById('ia-refresh-btn');
         if (refreshBtn) refreshBtn.addEventListener('click', async () => {
             this._readFiltersFromDom();
+            this._bustIssuingAuthoritiesSheetCache();
             await this._fetchData();
             this._renderTable();
         });
@@ -1556,9 +1560,13 @@ const IssuingAuthorities = {
                 const section = document.getElementById('issuing-authorities-section');
                 if (!section) return;
                 section.innerHTML = this._renderShell();
+                this._injectStyles();
                 await this._fetchData();
                 this._renderTable();
                 this._attachEvents();
+                if (typeof UI !== 'undefined' && typeof UI.addNavigationIconsAfterRender === 'function') {
+                    UI.addNavigationIconsAfterRender('issuing-authorities');
+                }
             });
         });
 
@@ -2088,11 +2096,30 @@ const IssuingAuthorities = {
             .ia-module table th, .ia-module table td {
                 border-bottom:1px solid #f1f5f9;
             }
-            .ia-category-tabs { display:flex; gap:8px; flex-wrap:wrap; }
+            .ia-category-tabs { display:flex; gap:12px; flex-wrap:wrap; align-items:center; }
             .ia-tab-btn {
-                border:1px solid #cbd5e1; background:#fff; color:#334155; border-radius:8px; padding:6px 12px; cursor:pointer; font-weight:700;
+                border:2px solid #cbd5e1;
+                background:#fff;
+                color:#334155;
+                border-radius:12px;
+                padding:12px 22px;
+                min-height:48px;
+                cursor:pointer;
+                font-weight:800;
+                font-size:1rem;
+                letter-spacing:0.01em;
+                transition:background 0.15s ease,border-color 0.15s ease,color 0.15s ease,box-shadow 0.15s ease;
             }
-            .ia-tab-btn.active { border-color:#2563eb; color:#1d4ed8; background:#eff6ff; }
+            .ia-tab-btn:hover:not(.active) {
+                border-color:#94a3b8;
+                background:#f8fafc;
+            }
+            .ia-tab-btn.active {
+                border-color:#2563eb;
+                color:#1d4ed8;
+                background:#eff6ff;
+                box-shadow:0 2px 8px rgba(37,99,235,0.12);
+            }
             .ia-module table tbody tr:hover { background:#f8fafc; }
             .ia-modal-container { border-radius:12px; overflow:hidden; }
             .ia-modal-container .modal-header {

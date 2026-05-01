@@ -5056,9 +5056,21 @@ window.UI = {
         const whatsappLinkHtml = whatsappHref
             ? `<a href="${esc(whatsappHref)}" class="profile-contact-icon-btn profile-contact-icon-btn--wa" target="_blank" rel="noopener noreferrer" title="${esc(t('module.profile.openWhatsApp', 'واتساب — تواصل'))}" aria-label="${esc(t('module.profile.openWhatsApp', 'واتساب — تواصل'))}"><i class="fab fa-whatsapp" aria-hidden="true"></i></a>`
             : '';
-        const avatarSrc = profile.photo ? `src="${esc(profile.photo)}"` : '';
-        const avatarDisplay = profile.photo ? '' : 'display:none;';
-        const iconDisplay = profile.photo ? 'display:none;' : '';
+        let avatarSrc = '';
+        let avatarProxyAttr = '';
+        let hasProfileAvatar = false;
+        if (profile.photo) {
+            const disp = typeof Utils.resolveDriveAwareImgDisplay === 'function'
+                ? Utils.resolveDriveAwareImgDisplay(profile.photo)
+                : { canonical: String(profile.photo).trim(), displaySrc: String(profile.photo).trim(), needsProxy: false, proxyFileId: '' };
+            if (disp.canonical) {
+                hasProfileAvatar = true;
+                avatarSrc = `src="${esc(disp.displaySrc)}"`;
+                avatarProxyAttr = typeof Utils.driveProxyImgAttrs === 'function' ? Utils.driveProxyImgAttrs(disp) : '';
+            }
+        }
+        const avatarDisplay = hasProfileAvatar ? '' : 'display:none;';
+        const iconDisplay = hasProfileAvatar ? 'display:none;' : '';
         const personalRows = [
             [t('module.profile.employeeNumber', 'الكود الوظيفي'), profile.employeeNumber || '-'],
             [t('module.profile.personalName', 'الاسم'), profile.fullName || '-'],
@@ -5083,7 +5095,7 @@ window.UI = {
                 <div class="content-card profile-hero-card profile-linkedin-shell">
                     <div class="card-body profile-hero-body">
                         <div class="profile-avatar-wrap">
-                            <img id="profile-section-photo" ${avatarSrc} alt="${t('module.profile.photoAlt', 'الصورة الشخصية')}" style="${avatarDisplay}">
+                            <img id="profile-section-photo" ${avatarSrc}${avatarProxyAttr} alt="${t('module.profile.photoAlt', 'الصورة الشخصية')}" style="${avatarDisplay}">
                             <i id="profile-section-photo-icon" class="fas fa-user-circle" style="${iconDisplay}"></i>
                         </div>
                         <div class="profile-hero-content">
@@ -5179,6 +5191,26 @@ window.UI = {
                 </div>
             </div>
         `;
+
+        const sectionPhotoEl = document.getElementById('profile-section-photo');
+        const sectionPhotoIconEl = document.getElementById('profile-section-photo-icon');
+        const showProfileSectionPhotoFallback = () => {
+            try {
+                if (sectionPhotoEl) sectionPhotoEl.style.display = 'none';
+                if (sectionPhotoIconEl) sectionPhotoIconEl.style.display = 'block';
+            } catch (_) { /* ignore */ }
+        };
+        if (sectionPhotoEl && hasProfileAvatar) {
+            sectionPhotoEl.addEventListener('error', function onProfileSectionPhotoErr() {
+                sectionPhotoEl.removeEventListener('error', onProfileSectionPhotoErr);
+                showProfileSectionPhotoFallback();
+            });
+            if (typeof Utils.hydrateDriveProxyImages === 'function' && sectionPhotoEl.getAttribute('data-drive-proxy-id')) {
+                Utils.hydrateDriveProxyImages(section, {
+                    onFetchFail: () => showProfileSectionPhotoFallback()
+                });
+            }
+        }
 
         const photoInput = document.getElementById('profile-photo-input');
         const changePhotoBtn = document.getElementById('profile-change-photo-btn');
@@ -5381,7 +5413,7 @@ window.UI = {
         const userEmailForCache = (user && user.email) || (AppState.currentUser && AppState.currentUser.email) || '';
 
         if (photoUrl && profilePhoto && profileIcon) {
-            const isDriveUrl = photoUrl.includes('drive.google.com');
+            const isDriveUrl = /drive\.google\.com|googleusercontent\.com/i.test(photoUrl);
             const cacheKey = `photo_failed_${userEmailForCache}`;
             const failedRecently = sessionStorage.getItem(cacheKey);
 
@@ -5405,8 +5437,12 @@ window.UI = {
             }
 
             // استخراج معرف ملف Drive من الرابط (للاستخدام بعد النشر عبر proxy)
-            const driveIdMatch = photoUrl.match(/[?&]id=([^&]+)/) || photoUrl.match(/\/file\/d\/([^/]+)/);
-            const driveFileId = driveIdMatch ? driveIdMatch[1].trim() : null;
+            const driveFileId = typeof Utils.extractDriveFileId === 'function'
+                ? String(Utils.extractDriveFileId(photoUrl) || '').trim()
+                : (() => {
+                    const driveIdMatch = photoUrl.match(/[?&]id=([^&]+)/) || photoUrl.match(/\/file\/d\/([^/]+)/);
+                    return driveIdMatch ? driveIdMatch[1].trim() : '';
+                })();
             const scriptUrl = (AppState.googleConfig && AppState.googleConfig.appsScript && AppState.googleConfig.appsScript.scriptUrl) ? AppState.googleConfig.appsScript.scriptUrl.trim() : '';
 
             // بعد النشر: صور Drive قد لا تظهر بسبب منع الـ hotlinking؛ نستخدم proxy عبر السكربت
