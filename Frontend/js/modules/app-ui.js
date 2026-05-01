@@ -5408,14 +5408,22 @@ window.UI = {
         const profilePhoto = document.getElementById('user-profile-photo');
         const profileIcon = document.getElementById('user-profile-icon');
 
-        // ✅ استخدام صورة من appData.users أو من currentUser (بعد الدخول مباشرة)
-        const photoUrl = (user && user.photo) || (AppState.currentUser && AppState.currentUser.photo) || '';
+        // ✅ نفس منطق الملف الشخصي: مستخدم + currentUser + سجل الموظف المطابق (كثيراً ما تُخزَّن الصورة في Employees فقط)
+        const employee = typeof this._getProfileEmployeeRecord === 'function' ? this._getProfileEmployeeRecord() : null;
+        const photoRaw = (user && user.photo)
+            || (AppState.currentUser && AppState.currentUser.photo)
+            || (employee && this._pickProfileField(employee, ['photo', 'personalPhoto', 'image', 'imageUrl', 'Photo', 'الصورة']))
+            || '';
+        const photoUrl = typeof Utils.normalizeImageSource === 'function'
+            ? Utils.normalizeImageSource(photoRaw)
+            : String(photoRaw || '').trim();
         const userEmailForCache = (user && user.email) || (AppState.currentUser && AppState.currentUser.email) || '';
 
         if (photoUrl && profilePhoto && profileIcon) {
             const isDriveUrl = /drive\.google\.com|googleusercontent\.com/i.test(photoUrl);
             const cacheKey = `photo_failed_${userEmailForCache}`;
-            const failedRecently = sessionStorage.getItem(cacheKey);
+            const failedAtStr = sessionStorage.getItem(cacheKey);
+            const PHOTO_FAIL_COOLDOWN_MS = 5 * 60 * 1000;
 
             const showIcon = () => {
                 profilePhoto.style.display = 'none';
@@ -5431,36 +5439,52 @@ window.UI = {
                 if (isDriveUrl) sessionStorage.setItem(cacheKey, Date.now().toString());
             };
 
-            if (isDriveUrl && failedRecently) {
-                showIcon();
-                return;
+            if (isDriveUrl && failedAtStr) {
+                const failedAt = parseInt(failedAtStr, 10);
+                if (!isNaN(failedAt) && (Date.now() - failedAt) < PHOTO_FAIL_COOLDOWN_MS) {
+                    showIcon();
+                    return;
+                }
+                sessionStorage.removeItem(cacheKey);
             }
 
-            // استخراج معرف ملف Drive من الرابط (للاستخدام بعد النشر عبر proxy)
-            const driveFileId = typeof Utils.extractDriveFileId === 'function'
+            let driveFileId = typeof Utils.extractDriveFileId === 'function'
                 ? String(Utils.extractDriveFileId(photoUrl) || '').trim()
-                : (() => {
-                    const driveIdMatch = photoUrl.match(/[?&]id=([^&]+)/) || photoUrl.match(/\/file\/d\/([^/]+)/);
-                    return driveIdMatch ? driveIdMatch[1].trim() : '';
-                })();
-            const scriptUrl = (AppState.googleConfig && AppState.googleConfig.appsScript && AppState.googleConfig.appsScript.scriptUrl) ? AppState.googleConfig.appsScript.scriptUrl.trim() : '';
+                : '';
+            if (isDriveUrl && !driveFileId && typeof Utils.normalizeGoogleDriveImageUrl === 'function') {
+                const normalized = Utils.normalizeGoogleDriveImageUrl(photoUrl);
+                driveFileId = typeof Utils.extractDriveFileId === 'function'
+                    ? String(Utils.extractDriveFileId(normalized) || '').trim()
+                    : '';
+            }
+            const scriptUrl = typeof Utils.getAppsScriptScriptUrl === 'function'
+                ? Utils.getAppsScriptScriptUrl()
+                : ((AppState.googleConfig && AppState.googleConfig.appsScript && AppState.googleConfig.appsScript.scriptUrl) ? String(AppState.googleConfig.appsScript.scriptUrl).trim() : '');
 
-            // بعد النشر: صور Drive قد لا تظهر بسبب منع الـ hotlinking؛ نستخدم proxy عبر السكربت
+            // بعد النشر: صور Drive عبر وكيل getProfileImage (يُطبَّق /exec تلقائياً في getAppsScriptScriptUrl)
             if (isDriveUrl && driveFileId && scriptUrl && scriptUrl.includes('script.google.com')) {
-                const proxyUrl = scriptUrl + (scriptUrl.indexOf('?') !== -1 ? '&' : '?') + 'action=getProfileImage&id=' + encodeURIComponent(driveFileId);
-                fetch(proxyUrl, { method: 'GET', credentials: 'omit' })
-                    .then(function(res) { return res.json(); })
-                    .then(function(data) {
-                        if (data && data.success && data.dataUri) {
-                            showPhoto(data.dataUri);
-                            return;
-                        }
-                        throw new Error(data && data.message ? data.message : 'لا توجد صورة');
-                    })
-                    .catch(function() {
+                const loadViaProxy = function() {
+                    if (typeof Utils.fetchDriveImageDataUri === 'function') {
+                        return Utils.fetchDriveImageDataUri(driveFileId);
+                    }
+                    const proxyUrl = scriptUrl + (scriptUrl.indexOf('?') !== -1 ? '&' : '?') + 'action=getProfileImage&id=' + encodeURIComponent(driveFileId);
+                    return fetch(proxyUrl, { method: 'GET', credentials: 'omit' })
+                        .then(function(res) { return res.json(); })
+                        .then(function(data) {
+                            if (data && data.success && data.dataUri) return data.dataUri;
+                            throw new Error(data && data.message ? data.message : 'لا توجد صورة');
+                        });
+                };
+                Promise.resolve(loadViaProxy()).then(function(uri) {
+                    if (uri) showPhoto(uri);
+                    else {
                         markFailed();
                         showIcon();
-                    });
+                    }
+                }).catch(function() {
+                    markFailed();
+                    showIcon();
+                });
                 return;
             }
 

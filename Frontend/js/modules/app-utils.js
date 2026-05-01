@@ -3547,9 +3547,13 @@ const Utils = {
      */
     getAppsScriptScriptUrl() {
         try {
-            const u = (typeof AppState !== 'undefined' && AppState.googleConfig && AppState.googleConfig.appsScript && AppState.googleConfig.appsScript.scriptUrl)
+            let u = (typeof AppState !== 'undefined' && AppState.googleConfig && AppState.googleConfig.appsScript && AppState.googleConfig.appsScript.scriptUrl)
                 ? String(AppState.googleConfig.appsScript.scriptUrl).trim()
                 : '';
+            // نشر الويب يعمل عادة عبر /exec؛ /dev قد يعيد HTML أو يرفض طلبات getProfileImage
+            if (u && u.indexOf('script.google.com/macros/s/') !== -1) {
+                u = u.replace(/\/dev(\?|#|$)/, '/exec$1');
+            }
             return u;
         } catch (e) {
             return '';
