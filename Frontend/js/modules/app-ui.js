@@ -7856,8 +7856,12 @@ window.UI = {
             if (headerNotificationsBtn) Utils.safeLog('  - header-notifications-btn');
 
             // ربط أزرار الإشعارات — capture: true لمرحلة واحدة فقط (يمنع تبديلاً مزدوجاً مع معالجات الفقاعة)
+            // زر الشريط الجانبي: يُربط عبر #sidebar-notifications-container لأن النقر قد يقع على مساحة الحاوية وليس على الزر فقط
             notificationButtons.forEach((btn) => {
                 if (!btn) return;
+                if (btn.id === 'notifications-btn') {
+                    return;
+                }
 
                 try {
                     // التحقق من أن الزر موجود في DOM
@@ -7959,6 +7963,40 @@ window.UI = {
                     Utils.safeError('⚠️ خطأ في ربط زر الإشعارات:', btn.id, error);
                 }
             });
+
+            const sidebarNotifContainer = document.getElementById('sidebar-notifications-container');
+            if (sidebarNotifContainer && sidebarBtn) {
+                if (sidebarNotifContainer._sidebarNotifContainerHandler) {
+                    sidebarNotifContainer.removeEventListener('click', sidebarNotifContainer._sidebarNotifContainerHandler, true);
+                    delete sidebarNotifContainer._sidebarNotifContainerHandler;
+                }
+                const containerHandler = (e) => {
+                    try {
+                        if (e.target && typeof e.target.closest === 'function' && e.target.closest('#notifications-dropdown')) {
+                            return;
+                        }
+                        e.preventDefault();
+                        e.stopPropagation();
+                        const uiObj = self || window.UI;
+                        const btnEl = document.getElementById('notifications-btn');
+                        if (!btnEl || !sidebarNotifContainer.contains(btnEl)) return;
+                        if (uiObj && typeof uiObj.toggleNotificationsDropdown === 'function') {
+                            uiObj.toggleNotificationsDropdown(
+                                'notifications-dropdown',
+                                'notifications-list',
+                                'notifications-empty',
+                                'close-notifications-dropdown',
+                                btnEl
+                            );
+                        }
+                    } catch (err) {
+                        Utils.safeError('⚠️ خطأ في نقر حاوية إشعارات الشريط:', err);
+                    }
+                };
+                sidebarNotifContainer._sidebarNotifContainerHandler = containerHandler;
+                sidebarNotifContainer.addEventListener('click', containerHandler, { capture: true, passive: false });
+                Utils.safeLog('✅ تم ربط حاوية إشعارات الشريط الجانبية (#sidebar-notifications-container)');
+            }
         } catch (error) {
             Utils.safeError('⚠️ خطأ في تهيئة أزرار الإشعارات:', error);
         }
@@ -8141,6 +8179,16 @@ window.UI = {
                 }
             } catch (err) {
                 Utils.safeWarn('⚠️ خطأ في إزالة تفويض إشعارات الشريط:', err);
+            }
+
+            try {
+                const sidebarNotifContainer = document.getElementById('sidebar-notifications-container');
+                if (sidebarNotifContainer && sidebarNotifContainer._sidebarNotifContainerHandler) {
+                    sidebarNotifContainer.removeEventListener('click', sidebarNotifContainer._sidebarNotifContainerHandler, true);
+                    delete sidebarNotifContainer._sidebarNotifContainerHandler;
+                }
+            } catch (err) {
+                Utils.safeWarn('⚠️ خطأ في إزالة مستمع حاوية إشعارات الشريط:', err);
             }
 
             // تنظيف event listeners من الأزرار
@@ -10649,7 +10697,7 @@ if (typeof window !== 'undefined') {
 }
 
 // تهيئة أزرار الإشعارات بعد تحميل DOM.
-// جميع أزرار الجرس تستخدم مستمعاً واحداً بـ capture: true لتفادي فتح ثم إغلاق القائمة في نفس النقرة.
+// أزرار الجرس: capture: true. جرس الشريط: مستمع على #sidebar-notifications-container حتى يعمل النقر على مساحة الحاوية وليس الزر فقط.
 if (typeof document !== 'undefined') {
     const tryInitNotificationsOnly = () => {
         if (typeof window.UI === 'undefined' || typeof window.UI.initNotificationsButton !== 'function') {
