@@ -986,7 +986,11 @@ const PTW = {
     },
 
     getRegistryPermitsForMetrics() {
-        return (this.registryData || []).map((registryEntry) => ({
+        // قبل تهيئة الموديول يبقى registryData فارغاً بينما لوحة التحكم قد تملأ AppState.ptwRegistry (جلب مجمع)
+        const localReg = Array.isArray(this.registryData) ? this.registryData : [];
+        const stateReg = Array.isArray(AppState?.appData?.ptwRegistry) ? AppState.appData.ptwRegistry : [];
+        const raw = localReg.length > 0 ? localReg : stateReg;
+        return raw.map((registryEntry) => ({
             id: registryEntry.permitId || registryEntry.id,
             workType: Array.isArray(registryEntry.permitType)
                 ? (registryEntry.permitTypeDisplay || registryEntry.permitType.join('، '))

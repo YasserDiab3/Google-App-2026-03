@@ -39,7 +39,10 @@ const Dashboard = {
         if (window.PTW && typeof window.PTW.getPermitMetricsDataset === 'function') {
             const dataset = window.PTW.getPermitMetricsDataset();
             const source = Array.isArray(dataset?.source) ? dataset.source : [];
-            return source.map((p) => ({ ...p, status: this.normalizePTWStatus(p?.status) }));
+            if (source.length > 0) {
+                return source.map((p) => ({ ...p, status: this.normalizePTWStatus(p?.status) }));
+            }
+            // مصفوفة فارغة رغم وجود بيانات في AppState (مثلاً قبل مزامنة registryData داخل الموديول)
         }
 
         const list = Array.isArray(data?.ptw) ? data.ptw : [];
@@ -65,19 +68,21 @@ const Dashboard = {
 
     /**
      * تحميل لوحة التحكم
+     * يُنتظر تحميل كارت التقارير والجلب المجمع أولاً حتى تُحدَّث كروت التصاريح وغيرها بأرقام فعلية دون وميض خاطئ.
      */
-    load() {
-        // تحديث KPIs (يتضمن تحديث التقارير والإحصائيات تلقائياً)
-        this.updateKPIs();
-        // إعداد معالجات النقر لكروت التقارير والإحصائيات مرة واحدة فقط (منع وميض)
+    async load() {
         this.setupReportsStatisticsCardsClickHandlers();
-        // تحميل الأنشطة والمهام
+        try {
+            await this.loadReportsWidget();
+        } catch (e) {
+            if (typeof Utils !== 'undefined' && Utils.safeWarn) Utils.safeWarn('⚠️ تعذر تحميل كارت التقارير:', e);
+            try {
+                this.updateKPIs();
+                this.updateStats();
+            } catch (_) { /* ignore */ }
+        }
         this.loadRecentActivities();
         this.loadUserTasksWidget();
-        // تحديث الإحصائيات السريعة
-        this.updateStats();
-        // تحميل الودجات الإضافية
-        this.loadReportsWidget();
         this.loadEmployeeReportWidget();
         // بيانات المياه/الكهرباء/الغاز تُقرأ من أوراق منفصلة؛ بدء التحميل مبكراً يحدّ من بطء كروت الاستهلاك في لوحة التحكم
         if (typeof Sustainability !== 'undefined' && typeof Sustainability.loadResourceConsumptionFromSheets === 'function') {
@@ -500,7 +505,19 @@ const Dashboard = {
     async loadReportsWidget(forceOrOpts) {
         const forceRefresh = forceOrOpts === true || (forceOrOpts && forceOrOpts.forceRefresh === true);
         const container = document.getElementById('dashboard-reports-widget');
-        if (!container) return;
+        if (!container) {
+            try {
+                await Promise.all([
+                    this.prefetchReportStatsSheetsForDashboard({ forceRefresh }),
+                    this.prefetchClinicVisitsForDashboard({ forceRefresh })
+                ]);
+                this.updateKPIs();
+                this.updateStats();
+            } catch (e) {
+                if (typeof Utils !== 'undefined' && Utils.safeWarn) Utils.safeWarn('⚠️ جلب بيانات لوحة التحكم بدون حاوية التقارير:', e);
+            }
+            return;
+        }
 
         const data = AppState.appData || {};
         // تجنب وميض Skeleton: إذا كانت البيانات جاهزة لا نعرض الهيكل المؤقت، نعرض المحتوى مباشرة
@@ -564,6 +581,10 @@ const Dashboard = {
                     </div>
                 </div>
             `;
+            try {
+                this.updateKPIs();
+                this.updateStats();
+            } catch (_) { /* ignore */ }
         }
     },
 
