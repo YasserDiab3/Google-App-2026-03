@@ -2822,6 +2822,8 @@ const Training = {
             this.loadTrainingAnalysisItemsUI();
             this.updateTrainingAnalysisResults();
             this.bindAnalysisFilterEvents();
+            this.bindAnalysisPeriodReportsEvents();
+            void this.refreshAnalysisPeriodReports();
         }
     },
 
@@ -8796,6 +8798,82 @@ const Training = {
                 </div>
             </div>
 
+            <!-- تقارير المدربين والمتدربين حسب نفس فترة التحليل -->
+            <div id="training-analysis-period-reports" class="content-card mb-6">
+                <div class="card-header">
+                    <h3 class="card-title"><i class="fas fa-file-export ml-2"></i>تقارير الفترة (مدربون — متدربون)</h3>
+                    <p class="text-sm text-gray-500 mt-1">نفس تصميم التحليل: جدول بعدد السجلات ورسم بياني. التصدير يعكس الفترة المحددة أعلاه.</p>
+                </div>
+                <div class="card-body">
+                    <div class="grid grid-cols-1 xl:grid-cols-2 gap-8">
+                        <div class="border rounded-lg p-4 bg-gray-50/50">
+                            <h4 class="text-base font-bold text-gray-800 mb-3 flex items-center gap-2"><i class="fas fa-chalkboard-teacher text-indigo-600"></i> اسم المدرب — عدد البرامج التدريبية</h4>
+                            <div class="flex flex-wrap items-end gap-3 mb-4">
+                                <div>
+                                    <label class="block text-xs font-medium text-gray-600 mb-1">أقصى عدد مدربين في العرض والتصدير</label>
+                                    <input type="number" id="training-analysis-trainer-limit" class="form-input" style="width:110px;" min="1" max="500" value="30">
+                                </div>
+                                <button type="button" id="training-analysis-export-trainers-excel" class="btn-success">
+                                    <i class="fas fa-file-excel ml-2"></i>تصدير Excel
+                                </button>
+                                <button type="button" id="training-analysis-export-trainers-pdf" class="btn-secondary">
+                                    <i class="fas fa-file-pdf ml-2"></i>تصدير PDF
+                                </button>
+                            </div>
+                            <div class="table-wrapper mb-4" style="overflow-x:auto; max-height:280px;">
+                                <table class="data-table text-sm">
+                                    <thead>
+                                        <tr>
+                                            <th>اسم المدرب</th>
+                                            <th class="text-center">عدد البرامج</th>
+                                            <th class="text-center">مجموع المشاركين</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="training-analysis-trainers-tbody">
+                                        <tr><td colspan="3" class="text-center text-gray-500 py-6">—</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                            <div id="training-analysis-trainers-chart-wrap" style="position:relative;height:300px;">
+                                <canvas id="training-analysis-trainers-chart"></canvas>
+                            </div>
+                        </div>
+                        <div class="border rounded-lg p-4 bg-gray-50/50">
+                            <h4 class="text-base font-bold text-gray-800 mb-3 flex items-center gap-2"><i class="fas fa-user-friends text-teal-600"></i> الأشخاص في سجل الحضور (نفس الفترة)</h4>
+                            <div class="flex flex-wrap items-end gap-3 mb-4">
+                                <div>
+                                    <label class="block text-xs font-medium text-gray-600 mb-1">أقصى عدد أشخاص في العرض والتصدير</label>
+                                    <input type="number" id="training-analysis-attendees-limit" class="form-input" style="width:110px;" min="1" max="2000" value="50">
+                                </div>
+                                <button type="button" id="training-analysis-export-attendees-excel" class="btn-success">
+                                    <i class="fas fa-file-excel ml-2"></i>تصدير Excel
+                                </button>
+                                <button type="button" id="training-analysis-export-attendees-pdf" class="btn-secondary">
+                                    <i class="fas fa-file-pdf ml-2"></i>تصدير PDF
+                                </button>
+                            </div>
+                            <div class="table-wrapper mb-4" style="overflow-x:auto; max-height:280px;">
+                                <table class="data-table text-sm">
+                                    <thead>
+                                        <tr>
+                                            <th>الشخص</th>
+                                            <th class="text-center">عدد الجلسات</th>
+                                            <th class="text-center">مجموع الساعات</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="training-analysis-attendees-tbody">
+                                        <tr><td colspan="3" class="text-center text-gray-500 py-6">—</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                            <div id="training-analysis-attendees-chart-wrap" style="position:relative;height:300px;">
+                                <canvas id="training-analysis-attendees-chart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- الكروت الإحصائية القابلة للتخصيص -->
             <div class="content-card mb-6">
                 <div class="card-header">
@@ -9610,6 +9688,7 @@ const Training = {
     refreshAnalysisTabContent() {
         this.refreshAnalysisCards();
         this.updateTrainingAnalysisResults();
+        this.refreshAnalysisPeriodReports();
     },
 
     /** تحديث كروت التحليل فقط (تقرأ الفلتر من DOM) */
@@ -9638,13 +9717,412 @@ const Training = {
         };
         const refresh = () => this.refreshAnalysisTabContent();
 
-        if (typeEl) {
+        if (typeEl && !typeEl.dataset.trainingAnalysisFilterBound) {
             typeEl.addEventListener('change', () => { updateVisibility(); refresh(); });
+            typeEl.dataset.trainingAnalysisFilterBound = '1';
         }
-        if (monthEl) monthEl.addEventListener('change', refresh);
-        if (fromEl) fromEl.addEventListener('change', refresh);
-        if (toEl) toEl.addEventListener('change', refresh);
+        if (monthEl && !monthEl.dataset.trainingAnalysisFilterBound) {
+            monthEl.addEventListener('change', refresh);
+            monthEl.dataset.trainingAnalysisFilterBound = '1';
+        }
+        if (fromEl && !fromEl.dataset.trainingAnalysisFilterBound) {
+            fromEl.addEventListener('change', refresh);
+            fromEl.dataset.trainingAnalysisFilterBound = '1';
+        }
+        if (toEl && !toEl.dataset.trainingAnalysisFilterBound) {
+            toEl.addEventListener('change', refresh);
+            toEl.dataset.trainingAnalysisFilterBound = '1';
+        }
         updateVisibility();
+    },
+
+    /** مقطع نصي آمن لأسماء ملفات التصدير */
+    getAnalysisPeriodExportSlug() {
+        const f = this.getAnalysisDateFilter();
+        if (!f || f.type === 'all') return 'all';
+        if (f.type === 'month' && f.month) return `month_${String(f.month).replace(/[^\d-]/g, '')}`;
+        if (f.type === 'range') {
+            const a = String(f.start || '').replace(/[^\d-]/g, '');
+            const b = String(f.end || '').replace(/[^\d-]/g, '');
+            if (a || b) return `range_${a || 'x'}_${b || 'x'}`;
+        }
+        return 'filtered';
+    },
+
+    /** وصف فترة التحليل للعرض في التقارير (PDF وغيرها) */
+    getAnalysisPeriodLabelAr() {
+        const f = this.getAnalysisDateFilter();
+        if (!f || f.type === 'all') return 'جميع البيانات';
+        if (f.type === 'month' && f.month) {
+            const parts = String(f.month).split('-');
+            const y = parts[0];
+            const m = parseInt(parts[1], 10);
+            const monthNames = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
+            if (y && m >= 1 && m <= 12) return `${monthNames[m - 1]} ${y}`;
+            return String(f.month);
+        }
+        if (f.type === 'range') {
+            const a = f.start ? (typeof Utils !== 'undefined' && Utils.formatDate ? Utils.formatDate(f.start) : f.start) : '—';
+            const b = f.end ? (typeof Utils !== 'undefined' && Utils.formatDate ? Utils.formatDate(f.end) : f.end) : '—';
+            return `من ${a} إلى ${b}`;
+        }
+        return 'فترة محددة';
+    },
+
+    buildTrainerProgramsReportRows() {
+        const records = this.getTrainingDatasetForAnalysis('training');
+        const map = {};
+        records.forEach(rec => {
+            const label = this.getTrainingAnalysisValue('training', 'trainer', rec);
+            if (!map[label]) {
+                map[label] = { trainer: label, programs: 0, participants: 0 };
+            }
+            map[label].programs += 1;
+            map[label].participants += this.getParticipantsCount(rec);
+        });
+        return Object.values(map).sort((a, b) =>
+            b.programs - a.programs || b.participants - a.participants || String(a.trainer).localeCompare(String(b.trainer), 'ar')
+        );
+    },
+
+    buildAttendancePersonsReportRows() {
+        const records = this.getTrainingDatasetForAnalysis('trainingAttendance');
+        const map = {};
+        records.forEach((rec, idx) => {
+            if (!rec || typeof rec !== 'object') return;
+            const code = String(rec.employeeCode || rec.code || rec.employeeNumber || '').trim();
+            const name = String(rec.employeeName || rec.name || '').trim();
+            const key = code ? `c:${code}` : (name ? `n:${name}` : `_row:${idx}`);
+            const display = name
+                ? (code ? `${name} (${code})` : name)
+                : (code || 'غير محدد');
+            if (!map[key]) {
+                map[key] = { person: display, sessions: 0, totalHours: 0 };
+            }
+            map[key].sessions += 1;
+            const h = parseFloat(rec.totalHours);
+            map[key].totalHours += Number.isFinite(h) ? h : 0;
+        });
+        return Object.values(map).sort((a, b) =>
+            b.sessions - a.sessions || b.totalHours - a.totalHours || String(a.person).localeCompare(String(b.person), 'ar')
+        );
+    },
+
+    _destroyAnalysisPeriodCharts() {
+        if (this._analysisPeriodCharts) {
+            Object.values(this._analysisPeriodCharts).forEach(ch => {
+                if (ch && typeof ch.destroy === 'function') ch.destroy();
+            });
+        }
+        this._analysisPeriodCharts = {};
+    },
+
+    async refreshAnalysisPeriodReports() {
+        const trainerTbody = document.getElementById('training-analysis-trainers-tbody');
+        const attendeeTbody = document.getElementById('training-analysis-attendees-tbody');
+        const trainerCanvas = document.getElementById('training-analysis-trainers-chart');
+        const attendeeCanvas = document.getElementById('training-analysis-attendees-chart');
+        if (!trainerTbody || !attendeeTbody) return;
+
+        const limitTr = Math.min(500, Math.max(1, parseInt(document.getElementById('training-analysis-trainer-limit')?.value || '30', 10) || 30));
+        const limitAtt = Math.min(2000, Math.max(1, parseInt(document.getElementById('training-analysis-attendees-limit')?.value || '50', 10) || 50));
+
+        const trainerRows = this.buildTrainerProgramsReportRows();
+        const attRows = this.buildAttendancePersonsReportRows();
+        const trainerSlice = trainerRows.slice(0, limitTr);
+        const attSlice = attRows.slice(0, limitAtt);
+
+        if (trainerSlice.length === 0) {
+            trainerTbody.innerHTML = '<tr><td colspan="3" class="text-center text-gray-500 py-6">لا توجد برامج في هذه الفترة</td></tr>';
+        } else {
+            trainerTbody.innerHTML = trainerSlice.map(r => `
+                <tr>
+                    <td class="font-medium">${Utils.escapeHTML(r.trainer)}</td>
+                    <td class="text-center font-bold text-indigo-600">${r.programs}</td>
+                    <td class="text-center text-gray-700">${r.participants}</td>
+                </tr>
+            `).join('');
+        }
+
+        if (attSlice.length === 0) {
+            attendeeTbody.innerHTML = '<tr><td colspan="3" class="text-center text-gray-500 py-6">لا توجد سجلات حضور في هذه الفترة</td></tr>';
+        } else {
+            attendeeTbody.innerHTML = attSlice.map(r => `
+                <tr>
+                    <td class="font-medium">${Utils.escapeHTML(r.person)}</td>
+                    <td class="text-center font-bold text-teal-600">${r.sessions}</td>
+                    <td class="text-center text-gray-700">${Number.isFinite(r.totalHours) ? r.totalHours.toFixed(2) : '0.00'}</td>
+                </tr>
+            `).join('');
+        }
+
+        await this.ensureChartJSLoaded();
+        if (typeof Chart === 'undefined') return;
+
+        this._destroyAnalysisPeriodCharts();
+
+        const mkBar = (canvas, labels, data, label, colors) => {
+            if (!canvas || !labels.length) return;
+            const wrap = canvas.parentElement;
+            if (wrap) {
+                wrap.style.display = labels.length ? 'block' : 'none';
+            }
+            try {
+                this._analysisPeriodCharts[canvas.id] = new Chart(canvas, {
+                    type: 'bar',
+                    data: {
+                        labels,
+                        datasets: [{
+                            label,
+                            data,
+                            backgroundColor: colors.slice(0, labels.length)
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { legend: { display: false } },
+                        scales: {
+                            y: { beginAtZero: true, ticks: { precision: 0 } },
+                            x: { ticks: { maxRotation: 45, minRotation: 0, autoSkip: true, maxTicksLimit: 16 } }
+                        }
+                    }
+                });
+            } catch (e) {
+                Utils.safeError('خطأ رسم تقرير الفترة:', e);
+            }
+        };
+
+        const pal = this.getChartColors(Math.max(trainerSlice.length, attSlice.length, 10)).map(c => c.replace('0.6', '0.75'));
+
+        if (trainerCanvas) {
+            if (trainerSlice.length === 0) {
+                trainerCanvas.parentElement.style.display = 'none';
+            } else {
+                trainerCanvas.parentElement.style.display = 'block';
+                mkBar(
+                    trainerCanvas,
+                    trainerSlice.map(r => r.trainer),
+                    trainerSlice.map(r => r.programs),
+                    'عدد البرامج',
+                    pal
+                );
+            }
+        }
+        if (attendeeCanvas) {
+            if (attSlice.length === 0) {
+                attendeeCanvas.parentElement.style.display = 'none';
+            } else {
+                attendeeCanvas.parentElement.style.display = 'block';
+                mkBar(
+                    attendeeCanvas,
+                    attSlice.map(r => r.person),
+                    attSlice.map(r => r.sessions),
+                    'عدد الجلسات',
+                    pal
+                );
+            }
+        }
+    },
+
+    bindAnalysisPeriodReportsEvents() {
+        const root = document.getElementById('training-analysis-period-reports');
+        if (!root || root.dataset.bound === '1') return;
+        root.dataset.bound = '1';
+
+        const limTr = document.getElementById('training-analysis-trainer-limit');
+        const limAtt = document.getElementById('training-analysis-attendees-limit');
+        const exTr = document.getElementById('training-analysis-export-trainers-excel');
+        const exTrPdf = document.getElementById('training-analysis-export-trainers-pdf');
+        const exAtt = document.getElementById('training-analysis-export-attendees-excel');
+        const exAttPdf = document.getElementById('training-analysis-export-attendees-pdf');
+
+        const debounce = (fn, ms) => {
+            let t;
+            return () => {
+                clearTimeout(t);
+                t = setTimeout(fn, ms);
+            };
+        };
+        const refreshDebounced = debounce(() => this.refreshAnalysisPeriodReports(), 350);
+
+        if (limTr) limTr.addEventListener('change', () => this.refreshAnalysisPeriodReports());
+        if (limAtt) limAtt.addEventListener('change', () => this.refreshAnalysisPeriodReports());
+        if (limTr) limTr.addEventListener('input', refreshDebounced);
+        if (limAtt) limAtt.addEventListener('input', refreshDebounced);
+
+        if (exTr) {
+            exTr.addEventListener('click', () => this.exportAnalysisTrainersExcel());
+        }
+        if (exAtt) {
+            exAtt.addEventListener('click', () => this.exportAnalysisAttendeesExcel());
+        }
+        if (exTrPdf) {
+            exTrPdf.addEventListener('click', () => this.exportAnalysisTrainersPDF());
+        }
+        if (exAttPdf) {
+            exAttPdf.addEventListener('click', () => this.exportAnalysisAttendeesPDF());
+        }
+    },
+
+    exportAnalysisTrainersExcel() {
+        if (typeof XLSX === 'undefined') {
+            Notification.error('مكتبة Excel غير متاحة');
+            return;
+        }
+        const limit = Math.min(500, Math.max(1, parseInt(document.getElementById('training-analysis-trainer-limit')?.value || '30', 10) || 30));
+        const rows = this.buildTrainerProgramsReportRows().slice(0, limit);
+        if (!rows.length) {
+            Notification.warning('لا توجد بيانات للتصدير في هذه الفترة');
+            return;
+        }
+        const slug = this.getAnalysisPeriodExportSlug();
+        const data = rows.map(r => ({
+            'اسم المدرب': r.trainer,
+            'عدد البرامج التدريبية': r.programs,
+            'مجموع المشاركين (عبر البرامج)': r.participants
+        }));
+        const wb = XLSX.utils.book_new();
+        const ws = XLSX.utils.json_to_sheet(data);
+        XLSX.utils.book_append_sheet(wb, ws, 'المدربون');
+        XLSX.writeFile(wb, `تقرير_المدربين_${slug}_${new Date().toISOString().slice(0, 10)}.xlsx`);
+        Notification.success('تم تصدير تقرير المدربين');
+    },
+
+    exportAnalysisAttendeesExcel() {
+        if (typeof XLSX === 'undefined') {
+            Notification.error('مكتبة Excel غير متاحة');
+            return;
+        }
+        const limit = Math.min(2000, Math.max(1, parseInt(document.getElementById('training-analysis-attendees-limit')?.value || '50', 10) || 50));
+        const rows = this.buildAttendancePersonsReportRows().slice(0, limit);
+        if (!rows.length) {
+            Notification.warning('لا توجد بيانات للتصدير في هذه الفترة');
+            return;
+        }
+        const slug = this.getAnalysisPeriodExportSlug();
+        const data = rows.map(r => ({
+            'الشخص': r.person,
+            'عدد جلسات التدريب': r.sessions,
+            'مجموع الساعات': Number.isFinite(r.totalHours) ? r.totalHours.toFixed(2) : '0.00'
+        }));
+        const wb = XLSX.utils.book_new();
+        const ws = XLSX.utils.json_to_sheet(data);
+        XLSX.utils.book_append_sheet(wb, ws, 'المتدربون');
+        XLSX.writeFile(wb, `تقرير_المتدربين_${slug}_${new Date().toISOString().slice(0, 10)}.xlsx`);
+        Notification.success('تم تصدير تقرير المتدربين');
+    },
+
+    /** صفوف جدول HTML للطباعة/PDF (نمط مشابه لسجل الحضور) */
+    _analysisPeriodPdfTableRows(matrixRows) {
+        return matrixRows.map((row, idx) => `
+                <tr style="${idx % 2 === 0 ? 'background-color: #FFFFFF;' : 'background-color: #F9FAFB;'}">
+                    ${row.map(cell => `<td style="padding: 10px 8px; border: 1px solid #E5E7EB; text-align: center; font-size: 11px; line-height: 1.5;">${Utils.escapeHTML(String(cell))}</td>`).join('')}
+                </tr>
+            `).join('');
+    },
+
+    exportAnalysisTrainersPDF() {
+        const limit = Math.min(500, Math.max(1, parseInt(document.getElementById('training-analysis-trainer-limit')?.value || '30', 10) || 30));
+        const rows = this.buildTrainerProgramsReportRows().slice(0, limit);
+        if (!rows.length) {
+            Notification.warning('لا توجد بيانات للتصدير في هذه الفترة');
+            return;
+        }
+        Loading.show('جاري تجهيز PDF...');
+        const periodAr = this.getAnalysisPeriodLabelAr();
+        const slug = this.getAnalysisPeriodExportSlug();
+        const headers = ['م', 'اسم المدرب', 'عدد البرامج التدريبية', 'مجموع المشاركين'];
+        const matrix = rows.map((r, i) => [i + 1, r.trainer, r.programs, r.participants]);
+        const tableRows = this._analysisPeriodPdfTableRows(matrix);
+        const content = `
+                <div style="margin-bottom: 20px;">
+                    <div style="display: flex; flex-wrap: wrap; gap: 16px;">
+                        <div style="flex: 1 1 200px; padding: 12px 16px; border-radius: 8px; background: #EEF2FF; border: 1px solid #C7D2FE;">
+                            <div style="font-size: 12px; color: #4338CA; font-weight: 600;">فترة التحليل</div>
+                            <div style="font-size: 15px; font-weight: 700; color: #312E81;">${Utils.escapeHTML(periodAr)}</div>
+                        </div>
+                        <div style="flex: 1 1 200px; padding: 12px 16px; border-radius: 8px; background: #ECFDF5; border: 1px solid #BBF7D0;">
+                            <div style="font-size: 12px; color: #047857; font-weight: 600;">عدد المدربين في التقرير</div>
+                            <div style="font-size: 22px; font-weight: 800; color: #065F46;">${rows.length}</div>
+                        </div>
+                    </div>
+                </div>
+                <div style="margin-bottom: 16px;">
+                    <h2 style="font-size: 18px; margin-bottom: 12px; color: #312E81; font-weight: 700; border-bottom: 3px solid #4F46E5; padding-bottom: 8px;">جدول المدربين وعدد البرامج</h2>
+                    <div style="overflow-x: auto;">
+                        <table style="width: 100%; border-collapse: collapse; font-size: 11px; direction: rtl;">
+                            <thead>
+                                <tr style="background: #312E81; color: #FFFFFF;">
+                                    ${headers.map(h => `<th style="padding: 12px 8px; border: 1px solid #1E1B4B; font-weight: 700;">${Utils.escapeHTML(h)}</th>`).join('')}
+                                </tr>
+                            </thead>
+                            <tbody>${tableRows}</tbody>
+                        </table>
+                    </div>
+                </div>
+                <p style="font-size: 11px; color: #6B7280;">يُحسب عدد البرامج من برامج التدريب ضمن الفترة المحددة أعلاه. «مجموع المشاركين» هو مجموع أعداد المشاركين في تلك البرامج (قد يتكرر نفس الشخص في برامج متعددة).</p>
+            `;
+        this._openTrainingAttendancePrint(content, {
+            formCode: `TRN-ANL-TRAINERS-${slug}-${new Date().toISOString().slice(0, 10)}`,
+            docTitle: 'تقرير المدربين — تحليل التدريب',
+            meta: { period: periodAr, rowCount: rows.length, reportType: 'training_analysis_trainers' },
+            successMessage: `تم تجهيز تقرير ${rows.length} مدرب للطباعة / PDF`
+        });
+    },
+
+    exportAnalysisAttendeesPDF() {
+        const limit = Math.min(2000, Math.max(1, parseInt(document.getElementById('training-analysis-attendees-limit')?.value || '50', 10) || 50));
+        const rows = this.buildAttendancePersonsReportRows().slice(0, limit);
+        if (!rows.length) {
+            Notification.warning('لا توجد بيانات للتصدير في هذه الفترة');
+            return;
+        }
+        Loading.show('جاري تجهيز PDF...');
+        const periodAr = this.getAnalysisPeriodLabelAr();
+        const slug = this.getAnalysisPeriodExportSlug();
+        const headers = ['م', 'الشخص', 'عدد الجلسات', 'مجموع الساعات'];
+        const matrix = rows.map((r, i) => [
+            i + 1,
+            r.person,
+            r.sessions,
+            Number.isFinite(r.totalHours) ? r.totalHours.toFixed(2) : '0.00'
+        ]);
+        const tableRows = this._analysisPeriodPdfTableRows(matrix);
+        const content = `
+                <div style="margin-bottom: 20px;">
+                    <div style="display: flex; flex-wrap: wrap; gap: 16px;">
+                        <div style="flex: 1 1 200px; padding: 12px 16px; border-radius: 8px; background: #F0FDFA; border: 1px solid #99F6E4;">
+                            <div style="font-size: 12px; color: #0F766E; font-weight: 600;">فترة التحليل</div>
+                            <div style="font-size: 15px; font-weight: 700; color: #134E4A;">${Utils.escapeHTML(periodAr)}</div>
+                        </div>
+                        <div style="flex: 1 1 200px; padding: 12px 16px; border-radius: 8px; background: #ECFEFF; border: 1px solid #A5F3FC;">
+                            <div style="font-size: 12px; color: #0E7490; font-weight: 600;">عدد الأشخاص في التقرير</div>
+                            <div style="font-size: 22px; font-weight: 800; color: #155E75;">${rows.length}</div>
+                        </div>
+                    </div>
+                </div>
+                <div style="margin-bottom: 16px;">
+                    <h2 style="font-size: 18px; margin-bottom: 12px; color: #134E4A; font-weight: 700; border-bottom: 3px solid #0D9488; padding-bottom: 8px;">جدول المتدربين — سجل الحضور</h2>
+                    <div style="overflow-x: auto;">
+                        <table style="width: 100%; border-collapse: collapse; font-size: 11px; direction: rtl;">
+                            <thead>
+                                <tr style="background: #0F766E; color: #FFFFFF;">
+                                    ${headers.map(h => `<th style="padding: 12px 8px; border: 1px solid #115E59; font-weight: 700;">${Utils.escapeHTML(h)}</th>`).join('')}
+                                </tr>
+                            </thead>
+                            <tbody>${tableRows}</tbody>
+                        </table>
+                    </div>
+                </div>
+                <p style="font-size: 11px; color: #6B7280;">البيانات من سجل حضور التدريب للموظفين، مُفلترة بنفس فترة التحليل.</p>
+            `;
+        this._openTrainingAttendancePrint(content, {
+            formCode: `TRN-ANL-ATTENDEES-${slug}-${new Date().toISOString().slice(0, 10)}`,
+            docTitle: 'تقرير المتدربين — تحليل التدريب',
+            meta: { period: periodAr, rowCount: rows.length, reportType: 'training_analysis_attendees' },
+            successMessage: `تم تجهيز تقرير ${rows.length} شخص للطباعة / PDF`
+        });
     },
 
     renderTrainingAnalysisCharts(enabledItems) {
@@ -11474,6 +11952,7 @@ const Training = {
                     const content = document.getElementById('training-tab-content');
                     if (content) {
                         content.innerHTML = await this.renderAnalysisTab();
+                        this._hydrateTab('analysis');
                         this.renderAnalysisCharts();
                     }
                 }
