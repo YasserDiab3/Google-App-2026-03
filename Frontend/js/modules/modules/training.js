@@ -249,7 +249,7 @@ const Training = {
         return [
             { id: 'trainings_by_status', label: 'البرامج حسب الحالة', enabled: true, dataset: 'training', field: 'status', chartType: 'doughnut' },
             { id: 'trainings_by_type', label: 'البرامج حسب النوع', enabled: true, dataset: 'training', field: 'trainingType', chartType: 'bar' },
-            { id: 'trainings_by_month', label: 'البرامج حسب الشهر', enabled: true, dataset: 'training', field: 'startDate', chartType: 'line' },
+            { id: 'trainings_by_month', label: 'البرامج حسب الشهر', enabled: true, dataset: 'training', field: 'byMonth', chartType: 'line' },
             { id: 'contractor_by_company', label: 'تدريبات المقاولين حسب الشركة', enabled: false, dataset: 'contractorTrainings', field: 'contractorName', chartType: 'bar' },
             { id: 'contractor_by_topic', label: 'تدريبات المقاولين حسب الموضوع', enabled: false, dataset: 'contractorTrainings', field: 'topic', chartType: 'bar' },
             { id: 'attendance_by_type', label: 'الحضور حسب نوع التدريب', enabled: false, dataset: 'trainingAttendance', field: 'trainingType', chartType: 'doughnut' },
