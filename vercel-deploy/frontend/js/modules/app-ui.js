@@ -8335,10 +8335,21 @@ window.UI = {
             
             Utils.safeLog('🔔 تم العثور على dropdown:', dropdown.id);
 
-            // التأكد من أن الـ parent element له position: relative
+            // لوحة الشريط الجانبي داخل .sidebar الذي يستخدم transform — fixed يصبح نسبياً للشريط فيُموضع اللوح خطأ أو يُقصّ بـ overflow. ننقلها مؤقتاً إلى body مثل لوحة الهيدر.
+            if (dropdownId === 'notifications-dropdown' && dropdown.parentElement !== document.body) {
+                try {
+                    dropdown._hseNotifSidebarRestoreParent = dropdown.parentElement;
+                    dropdown._hseNotifSidebarRestoreBefore = dropdown.nextSibling;
+                    document.body.appendChild(dropdown);
+                } catch (reparentErr) {
+                    Utils.safeWarn('⚠️ تعذر نقل لوحة إشعارات الشريط إلى body:', reparentErr);
+                }
+            }
+
+            // التأكد من أن الـ parent element له position: relative (للقوائم داخل الحاوية الأصلية فقط)
             try {
                 const parent = dropdown.parentElement;
-                if (parent && window.getComputedStyle(parent).position === 'static') {
+                if (parent && parent !== document.body && window.getComputedStyle(parent).position === 'static') {
                     parent.style.position = 'relative';
                 }
             } catch (err) {
@@ -8708,6 +8719,23 @@ window.UI = {
                 dropdown.style.setProperty('display', 'none', 'important');
                 dropdown.style.setProperty('visibility', 'hidden', 'important');
                 dropdown.style.setProperty('opacity', '0', 'important');
+                if (dropdownId === 'notifications-dropdown' && dropdown._hseNotifSidebarRestoreParent) {
+                    try {
+                        const p = dropdown._hseNotifSidebarRestoreParent;
+                        const before = dropdown._hseNotifSidebarRestoreBefore;
+                        if (p && document.body.contains(p)) {
+                            if (before && before.parentNode === p) {
+                                p.insertBefore(dropdown, before);
+                            } else {
+                                p.appendChild(dropdown);
+                            }
+                        }
+                    } catch (restoreErr) {
+                        Utils.safeWarn('⚠️ تعذر إعادة إدراج لوحة إشعارات الشريط:', restoreErr);
+                    }
+                    delete dropdown._hseNotifSidebarRestoreParent;
+                    delete dropdown._hseNotifSidebarRestoreBefore;
+                }
             }
         } catch (error) {
             Utils.safeWarn('⚠️ خطأ في إخفاء dropdown:', dropdownId, error);
