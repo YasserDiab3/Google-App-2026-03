@@ -5023,7 +5023,7 @@ const ViolationTypesManager = {
             const fineAmount = Number.isFinite(parsedFineAmount) && parsedFineAmount >= 0 ? parsedFineAmount : 0;
             const createdAt = item.createdAt || now;
             const updatedAt = item.updatedAt || now;
-            const isDefault = item.isDefault === true || DEFAULT_VIOLATION_TYPES.some(def => def.name === name || def.id === id);
+            const isDefault = item.isDefault === true;
             const order = typeof item.order === 'number' ? item.order : undefined;
 
             return {
@@ -5061,23 +5061,9 @@ const ViolationTypesManager = {
             normalized.push(normalizedItem);
         });
 
-        DEFAULT_VIOLATION_TYPES.forEach(defaultType => {
-            const lowerName = defaultType.name.toLowerCase();
-            if (seenNames.has(lowerName)) {
-                const existingType = seenNames.get(lowerName);
-                if (!existingType.isDefault) {
-                    existingType.isDefault = true;
-                    shouldSave = true;
-                }
-                if (!existingType.order && typeof defaultType.order === 'number') {
-                    existingType.order = defaultType.order;
-                    shouldSave = true;
-                }
-                if (!existingType.id || existingType.id.startsWith('VTYPE_')) {
-                    existingType.id = defaultType.id;
-                    shouldSave = true;
-                }
-            } else {
+        // نضيف الأنواع الافتراضية مرة واحدة فقط عند التهيئة الأولى (عندما لا توجد أي أنواع محفوظة)
+        if (normalized.length === 0) {
+            DEFAULT_VIOLATION_TYPES.forEach(defaultType => {
                 normalized.push({
                     id: defaultType.id,
                     name: defaultType.name,
@@ -5088,11 +5074,11 @@ const ViolationTypesManager = {
                     updatedAt: now,
                     order: defaultType.order
                 });
-                seenNames.set(lowerName, normalized[normalized.length - 1]);
+                seenNames.set(defaultType.name.toLowerCase(), normalized[normalized.length - 1]);
                 seenIds.add(defaultType.id);
                 shouldSave = true;
-            }
-        });
+            });
+        }
 
         normalized.sort((a, b) => {
             const orderA = typeof a.order === 'number' ? a.order : 9999;
@@ -5344,18 +5330,15 @@ const ViolationTypesManager = {
             dm.save();
         }
 
-        if (syncSheets && typeof GoogleIntegration !== 'undefined' && typeof GoogleIntegration.autoSave === 'function') {
-            // حفظ اللقطة الكاملة في Violation_Types_DB لضمان أن الحذف ينعكس فعلياً بعد إعادة التحميل
-            if (typeof GoogleIntegration.sendRequest === 'function') {
-                GoogleIntegration.sendRequest({
-                    action: 'saveViolationTypes',
-                    data: {
-                        violationTypes: AppState.appData.violationTypes || [],
-                        userData: AppState.currentUser || {}
-                    }
-                }).catch(() => { });
-            }
-            GoogleIntegration.autoSave('ViolationTypes', AppState.appData.violationTypes).catch(() => { });
+        if (syncSheets && typeof GoogleIntegration !== 'undefined' && typeof GoogleIntegration.sendRequest === 'function') {
+            // حفظ لقطة الأنواع الكاملة في ViolationTypes عبر الخادم (diff + حذف صفوف حقيقي)
+            GoogleIntegration.sendRequest({
+                action: 'saveViolationTypes',
+                data: {
+                    violationTypes: AppState.appData.violationTypes || [],
+                    userData: AppState.currentUser || {}
+                }
+            }).catch(() => { });
         }
     },
 

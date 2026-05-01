@@ -1448,23 +1448,6 @@ const GoogleIntegration = {
 
         // استخدام timeout للطلب
         try {
-            // أنواع المخالفات تُقرأ من Violation_Types_DB عبر endpoint المخصص
-            // لأن saveToSheet التقليدي يعمل upsert ولا يحذف الصفوف القديمة من ViolationTypes legacy.
-            if (sheetName === 'ViolationTypes') {
-                const violationTypesResult = await this.sendRequest({
-                    action: 'getViolationTypes',
-                    data: AppState.googleConfig.sheets?.spreadsheetId
-                        ? { spreadsheetId: AppState.googleConfig.sheets.spreadsheetId }
-                        : {}
-                });
-
-                if (violationTypesResult?.success && Array.isArray(violationTypesResult.data)) {
-                    return violationTypesResult.data;
-                }
-
-                return [];
-            }
-
             const payload = {
                 action: 'readFromSheet',
                 data: {
@@ -1539,28 +1522,11 @@ const GoogleIntegration = {
 
         const results = {};
         const failedSheets = [];
-        let normalizedSheetNames = sheetNames.slice();
-
-        // ViolationTypes يجب قراءتها من endpoint المخصص (getViolationTypes)
-        const hasViolationTypes = normalizedSheetNames.includes('ViolationTypes');
-        if (hasViolationTypes) {
-            normalizedSheetNames = normalizedSheetNames.filter(name => name !== 'ViolationTypes');
-            try {
-                results.ViolationTypes = await this.readFromSheets('ViolationTypes', {
-                    timeout: Math.min(timeout, 15000)
-                });
-            } catch (violationTypesError) {
-                failedSheets.push('ViolationTypes');
-                if (AppState?.debugMode) {
-                    Utils.safeWarn(`⚠️ فشل تحميل ViolationTypes من endpoint المخصص: ${violationTypesError?.message || violationTypesError}`);
-                }
-            }
-        }
 
         // تقسيم الأوراق إلى مجموعات بحجم batchSize
         const batches = [];
-        for (let i = 0; i < normalizedSheetNames.length; i += batchSize) {
-            batches.push(normalizedSheetNames.slice(i, i + batchSize));
+        for (let i = 0; i < sheetNames.length; i += batchSize) {
+            batches.push(sheetNames.slice(i, i + batchSize));
         }
 
         Utils.safeLog(`📦 Batch Read: ${sheetNames.length} sheets in ${batches.length} batches`);
