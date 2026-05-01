@@ -8798,35 +8798,78 @@ const Training = {
                 </div>
             </div>
 
-            <!-- تقارير المدربين والمتدربين حسب نفس فترة التحليل -->
-            <div id="training-analysis-period-reports" class="content-card mb-6">
-                <div class="card-header">
-                    <h3 class="card-title"><i class="fas fa-file-export ml-2"></i>تقارير الفترة (مدربون — متدربون)</h3>
-                    <p class="text-sm text-gray-500 mt-1">نفس تصميم التحليل: جدول بعدد السجلات ورسم بياني. التصدير يعكس الفترة المحددة أعلاه.</p>
+            <!-- تقارير المدربين والمتدربين + خيارات التصدير -->
+            <div id="training-analysis-period-reports" class="content-card mb-6" style="border:1px solid #e0e7ff; box-shadow:0 8px 30px rgba(79,70,229,0.07);">
+                <div class="card-header" style="background:linear-gradient(135deg,#eef2ff 0%,#f8fafc 55%,#ecfdf5 100%); border-bottom:1px solid #e0e7ff;">
+                    <h3 class="card-title"><i class="fas fa-file-export ml-2 text-indigo-600"></i>تقارير التحليل والتصدير</h3>
+                    <p class="text-sm text-gray-600 mt-1 max-w-4xl">حدّد فترة التصدير (أو اتبع فترة التحليل)، وفئة الأشخاص (موظف / مقاول / الكل)، واختر شخصاً أو مدرباً للتركيز. المعاينة والتصدير (Excel / PDF) يستخدمان نفس الخيارات. PDF يتضمن رسوماً بيانية إضافية عند اختيار شخص أو مدرب محدد.</p>
                 </div>
                 <div class="card-body">
+                    <div id="training-export-options-panel" class="mb-8 p-5 rounded-2xl border border-indigo-100/80 bg-white shadow-sm" style="background:linear-gradient(180deg,#ffffff 0%,#fafbff 100%);">
+                        <h4 class="text-base font-bold text-gray-800 mb-4 flex items-center gap-2"><i class="fas fa-sliders-h text-indigo-600"></i> خيارات الفلترة والتصدير</h4>
+                        <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+                            <div>
+                                <label class="block text-xs font-semibold text-gray-600 mb-1">فترة التصدير</label>
+                                <select id="training-export-period-mode" class="form-input w-full">
+                                    <option value="follow">مطابقة فترة التحليل أعلاه</option>
+                                    <option value="custom">فترة مخصصة (من — إلى)</option>
+                                </select>
+                            </div>
+                            <div class="md:col-span-2 flex flex-wrap gap-3 items-end" id="training-export-custom-dates" style="display:none;">
+                                <div class="flex-1 min-w-[140px]">
+                                    <label class="block text-xs font-semibold text-gray-600 mb-1">من تاريخ</label>
+                                    <input type="date" id="training-export-from" class="form-input w-full">
+                                </div>
+                                <div class="flex-1 min-w-[140px]">
+                                    <label class="block text-xs font-semibold text-gray-600 mb-1">إلى تاريخ</label>
+                                    <input type="date" id="training-export-to" class="form-input w-full">
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-gray-600 mb-1">سجل الحضور: الفئة</label>
+                                <select id="training-export-audience" class="form-input w-full" title="تمييز المقاول/الخارجي عبر personType أو نوع التدريب">
+                                    <option value="all">الكل</option>
+                                    <option value="employee">موظفون</option>
+                                    <option value="contractor">مقاولون / خارجيون</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-gray-600 mb-1">شخص محدد (سجل الحضور)</label>
+                                <select id="training-export-person-key" class="form-input w-full">
+                                    <option value="">— كل الأشخاص —</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-gray-600 mb-1">مدرب محدد (البرامج)</label>
+                                <select id="training-export-trainer-key" class="form-input w-full">
+                                    <option value="">— كل المدربين —</option>
+                                </select>
+                            </div>
+                        </div>
+                        <p class="text-xs text-gray-500 mt-3"><i class="fas fa-info-circle ml-1"></i> تُحدَّث القوائم عند تغيير الفترة أو الفئة. التغييرات تنعكس على الجداول أدناه تلقائياً.</p>
+                    </div>
                     <div class="grid grid-cols-1 xl:grid-cols-2 gap-8">
-                        <div class="border rounded-lg p-4 bg-gray-50/50">
-                            <h4 class="text-base font-bold text-gray-800 mb-3 flex items-center gap-2"><i class="fas fa-chalkboard-teacher text-indigo-600"></i> اسم المدرب — عدد البرامج التدريبية</h4>
+                        <div class="rounded-2xl p-5 border border-indigo-100 bg-indigo-50/30 shadow-sm">
+                            <h4 class="text-base font-bold text-gray-900 mb-3 flex items-center gap-2"><i class="fas fa-chalkboard-teacher text-indigo-600"></i> المدربون — عدد البرامج</h4>
                             <div class="flex flex-wrap items-end gap-3 mb-4">
                                 <div>
-                                    <label class="block text-xs font-medium text-gray-600 mb-1">أقصى عدد مدربين في العرض والتصدير</label>
+                                    <label class="block text-xs font-medium text-gray-600 mb-1">أقصى عدد في العرض والتصدير</label>
                                     <input type="number" id="training-analysis-trainer-limit" class="form-input" style="width:110px;" min="1" max="500" value="30">
                                 </div>
                                 <button type="button" id="training-analysis-export-trainers-excel" class="btn-success">
-                                    <i class="fas fa-file-excel ml-2"></i>تصدير Excel
+                                    <i class="fas fa-file-excel ml-2"></i>Excel
                                 </button>
                                 <button type="button" id="training-analysis-export-trainers-pdf" class="btn-secondary">
-                                    <i class="fas fa-file-pdf ml-2"></i>تصدير PDF
+                                    <i class="fas fa-file-pdf ml-2"></i>PDF
                                 </button>
                             </div>
-                            <div class="table-wrapper mb-4" style="overflow-x:auto; max-height:280px;">
+                            <div class="table-wrapper mb-4 rounded-xl border border-indigo-100/60 overflow-hidden" style="max-height:280px;">
                                 <table class="data-table text-sm">
                                     <thead>
                                         <tr>
                                             <th>اسم المدرب</th>
-                                            <th class="text-center">عدد البرامج</th>
-                                            <th class="text-center">مجموع المشاركين</th>
+                                            <th class="text-center">البرامج</th>
+                                            <th class="text-center">المشاركون</th>
                                         </tr>
                                     </thead>
                                     <tbody id="training-analysis-trainers-tbody">
@@ -8834,31 +8877,31 @@ const Training = {
                                     </tbody>
                                 </table>
                             </div>
-                            <div id="training-analysis-trainers-chart-wrap" style="position:relative;height:300px;">
+                            <div id="training-analysis-trainers-chart-wrap" class="rounded-xl border border-indigo-100/50 bg-white p-2" style="position:relative;height:300px;">
                                 <canvas id="training-analysis-trainers-chart"></canvas>
                             </div>
                         </div>
-                        <div class="border rounded-lg p-4 bg-gray-50/50">
-                            <h4 class="text-base font-bold text-gray-800 mb-3 flex items-center gap-2"><i class="fas fa-user-friends text-teal-600"></i> الأشخاص في سجل الحضور (نفس الفترة)</h4>
+                        <div class="rounded-2xl p-5 border border-teal-100 bg-teal-50/30 shadow-sm">
+                            <h4 class="text-base font-bold text-gray-900 mb-3 flex items-center gap-2"><i class="fas fa-user-friends text-teal-600"></i> الأشخاص — سجل الحضور</h4>
                             <div class="flex flex-wrap items-end gap-3 mb-4">
                                 <div>
-                                    <label class="block text-xs font-medium text-gray-600 mb-1">أقصى عدد أشخاص في العرض والتصدير</label>
+                                    <label class="block text-xs font-medium text-gray-600 mb-1">أقصى عدد في العرض والتصدير</label>
                                     <input type="number" id="training-analysis-attendees-limit" class="form-input" style="width:110px;" min="1" max="2000" value="50">
                                 </div>
                                 <button type="button" id="training-analysis-export-attendees-excel" class="btn-success">
-                                    <i class="fas fa-file-excel ml-2"></i>تصدير Excel
+                                    <i class="fas fa-file-excel ml-2"></i>Excel
                                 </button>
                                 <button type="button" id="training-analysis-export-attendees-pdf" class="btn-secondary">
-                                    <i class="fas fa-file-pdf ml-2"></i>تصدير PDF
+                                    <i class="fas fa-file-pdf ml-2"></i>PDF
                                 </button>
                             </div>
-                            <div class="table-wrapper mb-4" style="overflow-x:auto; max-height:280px;">
+                            <div class="table-wrapper mb-4 rounded-xl border border-teal-100/60 overflow-hidden" style="max-height:280px;">
                                 <table class="data-table text-sm">
                                     <thead>
                                         <tr>
                                             <th>الشخص</th>
-                                            <th class="text-center">عدد الجلسات</th>
-                                            <th class="text-center">مجموع الساعات</th>
+                                            <th class="text-center">الجلسات</th>
+                                            <th class="text-center">الساعات</th>
                                         </tr>
                                     </thead>
                                     <tbody id="training-analysis-attendees-tbody">
@@ -8866,7 +8909,7 @@ const Training = {
                                     </tbody>
                                 </table>
                             </div>
-                            <div id="training-analysis-attendees-chart-wrap" style="position:relative;height:300px;">
+                            <div id="training-analysis-attendees-chart-wrap" class="rounded-xl border border-teal-100/50 bg-white p-2" style="position:relative;height:300px;">
                                 <canvas id="training-analysis-attendees-chart"></canvas>
                             </div>
                         </div>
@@ -9602,9 +9645,9 @@ const Training = {
             
             if (!analysisData || analysisData.length === 0) {
                 resultsHTML += `
-                    <div class="content-card mb-6">
-                        <div class="card-header">
-                            <h3 class="card-title"><i class="fas fa-chart-bar ml-2"></i>${Utils.escapeHTML(item.label)}</h3>
+                    <div class="content-card mb-6" style="border:1px solid #e2e8f0;border-radius:16px;overflow:hidden;box-shadow:0 4px 20px rgba(15,23,42,0.06);">
+                        <div class="card-header" style="background:linear-gradient(135deg,#f8fafc,#f1f5f9);border-bottom:1px solid #e2e8f0;">
+                            <h3 class="card-title"><i class="fas fa-chart-bar ml-2 text-slate-600"></i>${Utils.escapeHTML(item.label)}</h3>
                         </div>
                         <div class="card-body">
                             <p class="text-center text-gray-500 py-4">لا توجد بيانات متاحة</p>
@@ -9617,8 +9660,8 @@ const Training = {
             const rows = analysisData.map(({ label, count, percentage }) => `
                 <tr>
                     <td class="font-semibold">${Utils.escapeHTML(label)}</td>
-                    <td class="text-center font-bold text-blue-600">${count}</td>
-                    <td class="text-center text-gray-500">${percentage}%</td>
+                    <td class="text-center font-bold text-indigo-600">${count}</td>
+                    <td class="text-center text-gray-600">${percentage}%</td>
                 </tr>
             `).join('');
 
@@ -9626,18 +9669,18 @@ const Training = {
             const chartContainerId = `training-chart-container-${item.id}-${index}`;
 
             resultsHTML += `
-                <div class="content-card mb-6">
-                    <div class="card-header">
-                        <h3 class="card-title"><i class="fas fa-chart-bar ml-2"></i>${Utils.escapeHTML(item.label)}</h3>
+                <div class="content-card mb-6" style="border:1px solid #e0e7ff;border-radius:16px;overflow:hidden;box-shadow:0 8px 28px rgba(79,70,229,0.08);">
+                    <div class="card-header" style="background:linear-gradient(135deg,#eef2ff 0%,#faf5ff 100%);border-bottom:1px solid #e0e7ff;">
+                        <h3 class="card-title"><i class="fas fa-chart-pie ml-2 text-indigo-600"></i>${Utils.escapeHTML(item.label)}</h3>
                     </div>
-                    <div class="card-body">
-                        <div class="table-wrapper mb-4" style="overflow-x: auto;">
+                    <div class="card-body" style="background:#fafbff;">
+                        <div class="table-wrapper mb-4 rounded-xl border border-slate-200/80 overflow-hidden shadow-sm" style="overflow-x: auto;">
                             <table class="data-table">
                                 <thead>
-                                    <tr>
-                                        <th>القيمة</th>
-                                        <th class="text-center">العدد</th>
-                                        <th class="text-center">النسبة</th>
+                                    <tr style="background:linear-gradient(180deg,#3730a3,#4f46e5);color:#fff;">
+                                        <th style="border:none;">القيمة</th>
+                                        <th class="text-center" style="border:none;">العدد</th>
+                                        <th class="text-center" style="border:none;">النسبة</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -9645,7 +9688,7 @@ const Training = {
                                 </tbody>
                             </table>
                         </div>
-                        <div id="${chartContainerId}" style="position: relative; height: 350px;">
+                        <div id="${chartContainerId}" class="rounded-xl border border-indigo-100 bg-white p-2 shadow-sm" style="position: relative; height: 350px;">
                             <canvas id="${chartId}"></canvas>
                         </div>
                     </div>
@@ -9769,8 +9812,212 @@ const Training = {
         return 'فترة محددة';
     },
 
+    /** فلتر التاريخ المستخدم في تقارير التصدير/المعاينة (قد ي differ عن فترة التحليل) */
+    getExportDateFilterForReports() {
+        const modeEl = document.getElementById('training-export-period-mode');
+        const mode = modeEl ? modeEl.value : 'follow';
+        if (mode !== 'custom') {
+            return this.getAnalysisDateFilter();
+        }
+        const start = document.getElementById('training-export-from')?.value?.trim() || '';
+        const end = document.getElementById('training-export-to')?.value?.trim() || '';
+        if (!start && !end) {
+            return this.getAnalysisDateFilter();
+        }
+        return { type: 'range', month: '', start, end };
+    },
+
+    _toggleTrainingExportCustomDates() {
+        const mode = document.getElementById('training-export-period-mode')?.value || 'follow';
+        const wrap = document.getElementById('training-export-custom-dates');
+        if (wrap) wrap.style.display = mode === 'custom' ? 'flex' : 'none';
+    },
+
+    /** تمييز سجل حضور كـ مقاول/خارجي */
+    _isAttendanceContractorLike(rec) {
+        if (!rec || typeof rec !== 'object') return false;
+        const pt = String(rec.personType || rec.participantType || rec.type || '').toLowerCase();
+        if (pt === 'contractor' || pt === 'external') return true;
+        const tt = String(rec.trainingType || '').trim();
+        if (tt === 'خارجي') {
+            const code = String(rec.employeeCode || rec.code || rec.employeeNumber || '').trim();
+            if (!code) return true;
+        }
+        return false;
+    },
+
+    _attendancePersonRowKey(rec) {
+        if (!rec || typeof rec !== 'object') return 'n:غير محدد';
+        const code = String(rec.employeeCode || rec.code || rec.employeeNumber || '').trim();
+        const name = String(rec.employeeName || rec.name || '').trim();
+        if (code) return `c:${code}`;
+        if (name) return `n:${name}`;
+        return 'n:غير محدد';
+    },
+
+    getTrainingRecordsForReportsFiltered() {
+        this.ensureData();
+        let records = Array.isArray(AppState.appData.training) ? AppState.appData.training : [];
+        const filter = this.getExportDateFilterForReports();
+        records = this.filterRecordsByAnalysisDate(records, filter, 'training');
+        const trainerKey = document.getElementById('training-export-trainer-key')?.value?.trim() || '';
+        if (trainerKey) {
+            records = records.filter(rec => this.getTrainingAnalysisValue('training', 'trainer', rec) === trainerKey);
+        }
+        return records;
+    },
+
+    getAttendanceRecordsForReportsFiltered() {
+        this.ensureData();
+        let records = Array.isArray(AppState.appData.trainingAttendance) ? AppState.appData.trainingAttendance : [];
+        const filter = this.getExportDateFilterForReports();
+        records = this.filterRecordsByAnalysisDate(records, filter, 'trainingAttendance');
+        const audience = document.getElementById('training-export-audience')?.value || 'all';
+        if (audience === 'employee') {
+            records = records.filter(r => !this._isAttendanceContractorLike(r));
+        } else if (audience === 'contractor') {
+            records = records.filter(r => this._isAttendanceContractorLike(r));
+        }
+        const personKey = document.getElementById('training-export-person-key')?.value?.trim() || '';
+        if (personKey) {
+            records = records.filter(rec => this._attendancePersonRowKey(rec) === personKey);
+        }
+        return records;
+    },
+
+    /** وصف فترة التصدير الحالية للعناوين */
+    getExportPeriodLabelAr() {
+        const f = this.getExportDateFilterForReports();
+        if (!f || f.type === 'all') return 'جميع البيانات';
+        if (f.type === 'month' && f.month) {
+            const parts = String(f.month).split('-');
+            const y = parts[0];
+            const m = parseInt(parts[1], 10);
+            const monthNames = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
+            if (y && m >= 1 && m <= 12) return `${monthNames[m - 1]} ${y}`;
+            return String(f.month);
+        }
+        if (f.type === 'range') {
+            const a = f.start ? (typeof Utils !== 'undefined' && Utils.formatDate ? Utils.formatDate(f.start) : f.start) : '—';
+            const b = f.end ? (typeof Utils !== 'undefined' && Utils.formatDate ? Utils.formatDate(f.end) : f.end) : '—';
+            return `من ${a} إلى ${b}`;
+        }
+        return 'فترة محددة';
+    },
+
+    getAnalysisPeriodExportSlugFromFilter(f) {
+        if (!f || f.type === 'all') return 'all';
+        if (f.type === 'month' && f.month) return `month_${String(f.month).replace(/[^\d-]/g, '')}`;
+        if (f.type === 'range') {
+            const a = String(f.start || '').replace(/[^\d-]/g, '');
+            const b = String(f.end || '').replace(/[^\d-]/g, '');
+            if (a || b) return `range_${a || 'x'}_${b || 'x'}`;
+        }
+        return 'filtered';
+    },
+
+    getExportPeriodExportSlug() {
+        return this.getAnalysisPeriodExportSlugFromFilter(this.getExportDateFilterForReports());
+    },
+
+    populateTrainingExportFilterSelects() {
+        const personSel = document.getElementById('training-export-person-key');
+        const trainerSel = document.getElementById('training-export-trainer-key');
+        if (personSel) {
+            const prev = personSel.value;
+            let records = Array.isArray(AppState.appData.trainingAttendance) ? AppState.appData.trainingAttendance : [];
+            const filter = this.getExportDateFilterForReports();
+            records = this.filterRecordsByAnalysisDate(records, filter, 'trainingAttendance');
+            const audience = document.getElementById('training-export-audience')?.value || 'all';
+            if (audience === 'employee') records = records.filter(r => !this._isAttendanceContractorLike(r));
+            else if (audience === 'contractor') records = records.filter(r => this._isAttendanceContractorLike(r));
+            const seen = new Map();
+            records.forEach(rec => {
+                const key = this._attendancePersonRowKey(rec);
+                if (seen.has(key)) return;
+                const code = String(rec.employeeCode || rec.code || rec.employeeNumber || '').trim();
+                const name = String(rec.employeeName || rec.name || '').trim();
+                const label = name ? (code ? `${name} (${code})` : name) : (code || 'غير محدد');
+                seen.set(key, label);
+            });
+            const options = Array.from(seen.entries()).sort((a, b) => String(a[1]).localeCompare(String(b[1]), 'ar'));
+            personSel.innerHTML = '<option value="">— كل الأشخاص —</option>' +
+                options.map(([k, lab]) => `<option value="${Utils.escapeHTML(k)}">${Utils.escapeHTML(lab)}</option>`).join('');
+            if (prev && seen.has(prev)) personSel.value = prev;
+        }
+        if (trainerSel) {
+            const prevT = trainerSel.value;
+            let trec = Array.isArray(AppState.appData.training) ? AppState.appData.training : [];
+            const filter = this.getExportDateFilterForReports();
+            trec = this.filterRecordsByAnalysisDate(trec, filter, 'training');
+            const trainers = new Set();
+            trec.forEach(rec => trainers.add(this.getTrainingAnalysisValue('training', 'trainer', rec)));
+            const list = Array.from(trainers).filter(t => t && t !== 'غير محدد').sort((a, b) => String(a).localeCompare(String(b), 'ar'));
+            trainerSel.innerHTML = '<option value="">— كل المدربين —</option>' +
+                list.map(t => `<option value="${Utils.escapeHTML(t)}">${Utils.escapeHTML(t)}</option>`).join('');
+            if (prevT && list.includes(prevT)) trainerSel.value = prevT;
+        }
+    },
+
+    /** رسم أعمدة أفقية يعمل في نافذة الطباعة/PDF */
+    _buildPrintableBarChartHtml(title, items, barColor) {
+        if (!items || !items.length) return '';
+        const max = Math.max(...items.map(x => Number(x.value) || 0), 1);
+        const rows = items.map(it => {
+            const v = Number(it.value) || 0;
+            const pct = Math.round((v / max) * 100);
+            return `
+                <div style="display:flex;align-items:center;margin-bottom:8px;gap:10px;direction:rtl;">
+                    <div style="min-width:100px;max-width:140px;font-size:10px;text-align:right;word-break:break-word;">${Utils.escapeHTML(String(it.label))}</div>
+                    <div style="flex:1;background:#f1f5f9;height:20px;border-radius:6px;overflow:hidden;">
+                        <div style="width:${pct}%;background:${barColor};height:100%;min-width:${v > 0 ? '4px' : '0'};"></div>
+                    </div>
+                    <div style="width:36px;font-size:11px;font-weight:700;text-align:left;">${v}</div>
+                </div>`;
+        }).join('');
+        return `
+            <div style="margin:20px 0;padding:16px;border:1px solid #e2e8f0;border-radius:12px;background:#fafafa;">
+                <div style="font-size:14px;font-weight:800;margin-bottom:12px;color:#0f172a;">${Utils.escapeHTML(title)}</div>
+                ${rows}
+            </div>`;
+    },
+
+    _buildTrainerMonthlyChartItems(records) {
+        const byMonth = {};
+        records.forEach(rec => {
+            const d = this.getRecordDateForFilter(rec, 'training');
+            if (!d) return;
+            const mk = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+            byMonth[mk] = (byMonth[mk] || 0) + 1;
+        });
+        return Object.keys(byMonth).sort().map(k => ({ label: k, value: byMonth[k] }));
+    },
+
+    _buildAttendanceMonthlyChartItems(records) {
+        const byMonth = {};
+        records.forEach(rec => {
+            const d = this.getRecordDateForFilter(rec, 'trainingAttendance');
+            if (!d) return;
+            const mk = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+            byMonth[mk] = (byMonth[mk] || 0) + 1;
+        });
+        return Object.keys(byMonth).sort().map(k => ({ label: k, value: byMonth[k] }));
+    },
+
+    _buildAttendanceTopicChartItems(records) {
+        const byTopic = {};
+        records.forEach(rec => {
+            const t = String(rec.topic || rec.trainingTopic || '—').trim() || '—';
+            byTopic[t] = (byTopic[t] || 0) + 1;
+        });
+        return Object.entries(byTopic)
+            .map(([label, value]) => ({ label, value }))
+            .sort((a, b) => b.value - a.value)
+            .slice(0, 12);
+    },
+
     buildTrainerProgramsReportRows() {
-        const records = this.getTrainingDatasetForAnalysis('training');
+        const records = this.getTrainingRecordsForReportsFiltered();
         const map = {};
         records.forEach(rec => {
             const label = this.getTrainingAnalysisValue('training', 'trainer', rec);
@@ -9786,13 +10033,13 @@ const Training = {
     },
 
     buildAttendancePersonsReportRows() {
-        const records = this.getTrainingDatasetForAnalysis('trainingAttendance');
+        const records = this.getAttendanceRecordsForReportsFiltered();
         const map = {};
-        records.forEach((rec, idx) => {
+        records.forEach(rec => {
             if (!rec || typeof rec !== 'object') return;
+            const key = this._attendancePersonRowKey(rec);
             const code = String(rec.employeeCode || rec.code || rec.employeeNumber || '').trim();
             const name = String(rec.employeeName || rec.name || '').trim();
-            const key = code ? `c:${code}` : (name ? `n:${name}` : `_row:${idx}`);
             const display = name
                 ? (code ? `${name} (${code})` : name)
                 : (code || 'غير محدد');
@@ -9823,6 +10070,9 @@ const Training = {
         const trainerCanvas = document.getElementById('training-analysis-trainers-chart');
         const attendeeCanvas = document.getElementById('training-analysis-attendees-chart');
         if (!trainerTbody || !attendeeTbody) return;
+
+        this._toggleTrainingExportCustomDates();
+        this.populateTrainingExportFilterSelects();
 
         const limitTr = Math.min(500, Math.max(1, parseInt(document.getElementById('training-analysis-trainer-limit')?.value || '30', 10) || 30));
         const limitAtt = Math.min(2000, Math.max(1, parseInt(document.getElementById('training-analysis-attendees-limit')?.value || '50', 10) || 50));
@@ -9963,6 +10213,36 @@ const Training = {
         if (exAttPdf) {
             exAttPdf.addEventListener('click', () => this.exportAnalysisAttendeesPDF());
         }
+
+        const periodMode = document.getElementById('training-export-period-mode');
+        const exFrom = document.getElementById('training-export-from');
+        const exTo = document.getElementById('training-export-to');
+        const audience = document.getElementById('training-export-audience');
+        const personKey = document.getElementById('training-export-person-key');
+        const trainerKey = document.getElementById('training-export-trainer-key');
+
+        const exportRefresh = debounce(() => this.refreshAnalysisPeriodReports(), 320);
+        if (periodMode && !periodMode.dataset.exportBound) {
+            periodMode.addEventListener('change', () => {
+                this._toggleTrainingExportCustomDates();
+                exportRefresh();
+            });
+            periodMode.dataset.exportBound = '1';
+        }
+        [exFrom, exTo, audience].forEach(el => {
+            if (el && !el.dataset.exportBound) {
+                el.addEventListener('change', exportRefresh);
+                el.dataset.exportBound = '1';
+            }
+        });
+        if (personKey && !personKey.dataset.exportBound) {
+            personKey.addEventListener('change', exportRefresh);
+            personKey.dataset.exportBound = '1';
+        }
+        if (trainerKey && !trainerKey.dataset.exportBound) {
+            trainerKey.addEventListener('change', exportRefresh);
+            trainerKey.dataset.exportBound = '1';
+        }
     },
 
     exportAnalysisTrainersExcel() {
@@ -9976,7 +10256,7 @@ const Training = {
             Notification.warning('لا توجد بيانات للتصدير في هذه الفترة');
             return;
         }
-        const slug = this.getAnalysisPeriodExportSlug();
+        const slug = this.getExportPeriodExportSlug();
         const data = rows.map(r => ({
             'اسم المدرب': r.trainer,
             'عدد البرامج التدريبية': r.programs,
@@ -9985,6 +10265,19 @@ const Training = {
         const wb = XLSX.utils.book_new();
         const ws = XLSX.utils.json_to_sheet(data);
         XLSX.utils.book_append_sheet(wb, ws, 'المدربون');
+        const trainerFocus = document.getElementById('training-export-trainer-key')?.value?.trim() || '';
+        if (trainerFocus) {
+            const prog = this.getTrainingRecordsForReportsFiltered().map((t, i) => ({
+                'م': i + 1,
+                'البرنامج': t.name || t.subject || t.topic || '—',
+                'تاريخ البدء': t.startDate ? (Utils.formatDate ? Utils.formatDate(t.startDate) : t.startDate) : '—',
+                'المشاركون': this.getParticipantsCount(t),
+                'الحالة': t.status || '—'
+            }));
+            if (prog.length) {
+                XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(prog), 'برامج_المدرب');
+            }
+        }
         XLSX.writeFile(wb, `تقرير_المدربين_${slug}_${new Date().toISOString().slice(0, 10)}.xlsx`);
         Notification.success('تم تصدير تقرير المدربين');
     },
@@ -10000,7 +10293,7 @@ const Training = {
             Notification.warning('لا توجد بيانات للتصدير في هذه الفترة');
             return;
         }
-        const slug = this.getAnalysisPeriodExportSlug();
+        const slug = this.getExportPeriodExportSlug();
         const data = rows.map(r => ({
             'الشخص': r.person,
             'عدد جلسات التدريب': r.sessions,
@@ -10009,6 +10302,21 @@ const Training = {
         const wb = XLSX.utils.book_new();
         const ws = XLSX.utils.json_to_sheet(data);
         XLSX.utils.book_append_sheet(wb, ws, 'المتدربون');
+        const personFocus = document.getElementById('training-export-person-key')?.value?.trim() || '';
+        if (personFocus) {
+            const det = this.getAttendanceRecordsForReportsFiltered().map((r, i) => ({
+                'م': i + 1,
+                'التاريخ': r.date ? (Utils.formatDate ? Utils.formatDate(r.date) : r.date) : '',
+                'الموضوع': r.topic || '—',
+                'نوع التدريب': r.trainingType || '—',
+                'المصنع': r.factoryName || r.factory || '',
+                'المحاضر': r.trainerName || r.trainer || '',
+                'الساعات': Number.isFinite(parseFloat(r.totalHours)) ? parseFloat(r.totalHours).toFixed(2) : '0.00'
+            }));
+            if (det.length) {
+                XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(det), 'تفصيل_الجلسات');
+            }
+        }
         XLSX.writeFile(wb, `تقرير_المتدربين_${slug}_${new Date().toISOString().slice(0, 10)}.xlsx`);
         Notification.success('تم تصدير تقرير المتدربين');
     },
@@ -10030,22 +10338,35 @@ const Training = {
             return;
         }
         Loading.show('جاري تجهيز PDF...');
-        const periodAr = this.getAnalysisPeriodLabelAr();
-        const slug = this.getAnalysisPeriodExportSlug();
+        const periodAr = this.getExportPeriodLabelAr();
+        const slug = this.getExportPeriodExportSlug();
+        const trainerFocus = document.getElementById('training-export-trainer-key')?.value?.trim() || '';
         const headers = ['م', 'اسم المدرب', 'عدد البرامج التدريبية', 'مجموع المشاركين'];
         const matrix = rows.map((r, i) => [i + 1, r.trainer, r.programs, r.participants]);
         const tableRows = this._analysisPeriodPdfTableRows(matrix);
+        let extraCharts = '';
+        if (trainerFocus) {
+            const trec = this.getTrainingRecordsForReportsFiltered();
+            const months = this._buildTrainerMonthlyChartItems(trec);
+            if (months.length) {
+                extraCharts += this._buildPrintableBarChartHtml(`توزيع البرامج حسب الشهر — ${trainerFocus}`, months, '#4f46e5');
+            }
+        }
         const content = `
                 <div style="margin-bottom: 20px;">
                     <div style="display: flex; flex-wrap: wrap; gap: 16px;">
                         <div style="flex: 1 1 200px; padding: 12px 16px; border-radius: 8px; background: #EEF2FF; border: 1px solid #C7D2FE;">
-                            <div style="font-size: 12px; color: #4338CA; font-weight: 600;">فترة التحليل</div>
+                            <div style="font-size: 12px; color: #4338CA; font-weight: 600;">فترة التقرير</div>
                             <div style="font-size: 15px; font-weight: 700; color: #312E81;">${Utils.escapeHTML(periodAr)}</div>
                         </div>
                         <div style="flex: 1 1 200px; padding: 12px 16px; border-radius: 8px; background: #ECFDF5; border: 1px solid #BBF7D0;">
                             <div style="font-size: 12px; color: #047857; font-weight: 600;">عدد المدربين في التقرير</div>
                             <div style="font-size: 22px; font-weight: 800; color: #065F46;">${rows.length}</div>
                         </div>
+                        ${trainerFocus ? `<div style="flex: 1 1 200px; padding: 12px 16px; border-radius: 8px; background: #FEF3C7; border: 1px solid #FCD34D;">
+                            <div style="font-size: 12px; color: #B45309; font-weight: 600;">مدرب محدد</div>
+                            <div style="font-size: 15px; font-weight: 700; color: #92400E;">${Utils.escapeHTML(trainerFocus)}</div>
+                        </div>` : ''}
                     </div>
                 </div>
                 <div style="margin-bottom: 16px;">
@@ -10061,7 +10382,8 @@ const Training = {
                         </table>
                     </div>
                 </div>
-                <p style="font-size: 11px; color: #6B7280;">يُحسب عدد البرامج من برامج التدريب ضمن الفترة المحددة أعلاه. «مجموع المشاركين» هو مجموع أعداد المشاركين في تلك البرامج (قد يتكرر نفس الشخص في برامج متعددة).</p>
+                ${extraCharts}
+                <p style="font-size: 11px; color: #6B7280;">يُحسب عدد البرامج من برامج التدريب ضمن فترة التقرير. «مجموع المشاركين» هو مجموع أعداد المشاركين في تلك البرامج.</p>
             `;
         this._openTrainingAttendancePrint(content, {
             formCode: `TRN-ANL-TRAINERS-${slug}-${new Date().toISOString().slice(0, 10)}`,
@@ -10079,8 +10401,12 @@ const Training = {
             return;
         }
         Loading.show('جاري تجهيز PDF...');
-        const periodAr = this.getAnalysisPeriodLabelAr();
-        const slug = this.getAnalysisPeriodExportSlug();
+        const periodAr = this.getExportPeriodLabelAr();
+        const slug = this.getExportPeriodExportSlug();
+        const aud = document.getElementById('training-export-audience')?.value || 'all';
+        const audienceLabel = { all: 'الكل', employee: 'موظفون فقط', contractor: 'مقاولون/خارجيون' }[aud] || aud;
+        const personFocus = document.getElementById('training-export-person-key')?.value?.trim() || '';
+        const attDetail = this.getAttendanceRecordsForReportsFiltered();
         const headers = ['م', 'الشخص', 'عدد الجلسات', 'مجموع الساعات'];
         const matrix = rows.map((r, i) => [
             i + 1,
@@ -10089,16 +10415,51 @@ const Training = {
             Number.isFinite(r.totalHours) ? r.totalHours.toFixed(2) : '0.00'
         ]);
         const tableRows = this._analysisPeriodPdfTableRows(matrix);
+        let extraBlock = '';
+        if (personFocus && attDetail.length) {
+            const months = this._buildAttendanceMonthlyChartItems(attDetail);
+            const topics = this._buildAttendanceTopicChartItems(attDetail);
+            if (months.length) {
+                extraBlock += this._buildPrintableBarChartHtml('جلسات هذا الشخص حسب الشهر', months, '#0d9488');
+            }
+            if (topics.length) {
+                extraBlock += this._buildPrintableBarChartHtml('حسب موضوع المحاضرة', topics, '#14b8a6');
+            }
+            const dh = ['م', 'التاريخ', 'الموضوع', 'نوع التدريب', 'المحاضر', 'الساعات'];
+            const sorted = [...attDetail].sort((a, b) => new Date(a.date || 0) - new Date(b.date || 0));
+            const dmatrix = sorted.map((r, i) => [
+                i + 1,
+                r.date ? (Utils.formatDate ? Utils.formatDate(r.date) : r.date) : '',
+                String(r.topic || '—'),
+                String(r.trainingType || '—'),
+                String(r.trainerName || r.trainer || '—'),
+                Number.isFinite(parseFloat(r.totalHours)) ? parseFloat(r.totalHours).toFixed(2) : '0.00'
+            ]);
+            extraBlock += `
+                <h2 style="font-size:17px;margin:24px 0 12px;color:#134E4A;font-weight:700;border-bottom:2px solid #0d9488;padding-bottom:6px;">تفصيل الجلسات للشخص المحدد</h2>
+                <div style="overflow-x:auto;">
+                    <table style="width:100%;border-collapse:collapse;font-size:10px;direction:rtl;">
+                        <thead><tr style="background:#115e59;color:#fff;">
+                            ${dh.map(h => `<th style="padding:8px;border:1px solid #0f766e;">${Utils.escapeHTML(h)}</th>`).join('')}
+                        </tr></thead>
+                        <tbody>${this._analysisPeriodPdfTableRows(dmatrix)}</tbody>
+                    </table>
+                </div>`;
+        }
         const content = `
                 <div style="margin-bottom: 20px;">
                     <div style="display: flex; flex-wrap: wrap; gap: 16px;">
                         <div style="flex: 1 1 200px; padding: 12px 16px; border-radius: 8px; background: #F0FDFA; border: 1px solid #99F6E4;">
-                            <div style="font-size: 12px; color: #0F766E; font-weight: 600;">فترة التحليل</div>
+                            <div style="font-size: 12px; color: #0F766E; font-weight: 600;">فترة التقرير</div>
                             <div style="font-size: 15px; font-weight: 700; color: #134E4A;">${Utils.escapeHTML(periodAr)}</div>
                         </div>
                         <div style="flex: 1 1 200px; padding: 12px 16px; border-radius: 8px; background: #ECFEFF; border: 1px solid #A5F3FC;">
                             <div style="font-size: 12px; color: #0E7490; font-weight: 600;">عدد الأشخاص في التقرير</div>
                             <div style="font-size: 22px; font-weight: 800; color: #155E75;">${rows.length}</div>
+                        </div>
+                        <div style="flex: 1 1 200px; padding: 12px 16px; border-radius: 8px; background: #f8fafc; border: 1px solid #e2e8f0;">
+                            <div style="font-size: 12px; color: #475569; font-weight: 600;">الفئة</div>
+                            <div style="font-size: 15px; font-weight: 700; color: #1e293b;">${Utils.escapeHTML(audienceLabel)}</div>
                         </div>
                     </div>
                 </div>
@@ -10115,7 +10476,8 @@ const Training = {
                         </table>
                     </div>
                 </div>
-                <p style="font-size: 11px; color: #6B7280;">البيانات من سجل حضور التدريب للموظفين، مُفلترة بنفس فترة التحليل.</p>
+                ${extraBlock}
+                <p style="font-size: 11px; color: #6B7280;">البيانات من سجل الحضور وفق خيارات الفترة والفئة أعلاه.</p>
             `;
         this._openTrainingAttendancePrint(content, {
             formCode: `TRN-ANL-ATTENDEES-${slug}-${new Date().toISOString().slice(0, 10)}`,
