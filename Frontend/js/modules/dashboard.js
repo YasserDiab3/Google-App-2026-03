@@ -519,48 +519,47 @@ const Dashboard = {
     },
 
     /**
-     * إجمالي سجلات التردد على العيادة (موظفين + مقاولين) مع تجنب الازدواج عند دمج المصادر
+     * هل السجل يمثل زيارة مقاول/خارجي (وليس موظفاً فقط) — لاكتشاف دمج getAllClinicVisits في clinicVisits
+     */
+    _isClinicContractorLikeVisit(v) {
+        if (!v || typeof v !== 'object') return false;
+        const t = String(v.personType || '').toLowerCase();
+        if (t === 'contractor' || t === 'external') return true;
+        if (String(v.contractorName || '').trim()) return true;
+        if (String(v.externalName || '').trim()) return true;
+        if (String(v.contractorWorkerName || '').trim()) return true;
+        return false;
+    },
+
+    /**
+     * إجمالي التردد على العيادة (موظفين + مقاولين).
+     * - بعد getAllClinicVisits: كل السجلات في clinicVisits فقط؛ لا نجمع clinicContractorVisits لتفادي العد المزدوج.
+     * - عند التحميل المنفصل من الشيتين: نجمع الطولين دون دمج بالمعرف (تصادم ids بين الشيتين كان يسبب نقصاً في العد).
      */
     getClinicVisitsTotalCount(data) {
         if (!data || typeof data !== 'object') return 0;
-        const emp = Array.isArray(data.clinicVisits) ? data.clinicVisits : [];
-        const contr = Array.isArray(data.clinicContractorVisits) ? data.clinicContractorVisits : [];
+        const main = Array.isArray(data.clinicVisits) ? data.clinicVisits : [];
+        const extra = Array.isArray(data.clinicContractorVisits) ? data.clinicContractorVisits : [];
         const legacy = Array.isArray(data.Clinic) ? data.Clinic : [];
 
-        const idSet = new Set();
-        let count = 0;
-        const addList = (list) => {
-            if (!Array.isArray(list)) return;
-            for (let i = 0; i < list.length; i++) {
-                const v = list[i];
-                if (!v || typeof v !== 'object') continue;
-                const idRaw = v.id;
-                const id = idRaw != null && String(idRaw).trim() !== '' ? String(idRaw) : null;
-                if (id) {
-                    if (!idSet.has(id)) {
-                        idSet.add(id);
-                        count++;
-                    }
-                } else {
-                    count++;
-                }
-            }
-        };
+        const mergedFromServer =
+            typeof Clinic !== 'undefined' &&
+            Clinic._visitsBackendFetchOk === true &&
+            main.length > 0;
+        if (mergedFromServer) {
+            return main.length;
+        }
 
-        if (emp.length > 0) {
-            addList(emp);
-            if (contr.length > 0) addList(contr);
-            return count;
+        const hasContractorRowsInMain = main.some((v) => this._isClinicContractorLikeVisit(v));
+        if (main.length > 0 && hasContractorRowsInMain) {
+            return main.length;
         }
-        if (legacy.length > 0) {
-            addList(legacy);
-            return count;
+
+        let total = main.length + extra.length;
+        if (total === 0 && legacy.length > 0) {
+            total = legacy.length;
         }
-        if (contr.length > 0) {
-            addList(contr);
-            return count;
-        }
-        return 0;
+        return total;
     },
 
     /**
