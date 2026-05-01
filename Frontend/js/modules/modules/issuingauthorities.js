@@ -1485,13 +1485,19 @@ const IssuingAuthorities = {
                 ? `${this._displayContractorCompany(rec)} — ${this._displayResponsibleName(rec)}`
                 : (rec.name || '');
 
-            const actionBtns = isAdmin ? `
-                <button class="ia-btn-edit" data-id="${esc(rec.id)}" title="تعديل" style="padding:4px 8px;border:none;background:none;cursor:pointer;color:#2563eb;">
+            const actionBtns = `
+                <span style="display:inline-flex;align-items:center;gap:6px;justify-content:center;">
+                <button type="button" class="ia-btn-view" data-id="${esc(rec.id)}" title="عرض" style="padding:4px 8px;border:none;background:none;cursor:pointer;color:#0d9488;">
+                    <i class="fas fa-eye"></i>
+                </button>
+                ${isAdmin ? `
+                <button type="button" class="ia-btn-edit" data-id="${esc(rec.id)}" title="تعديل" style="padding:4px 8px;border:none;background:none;cursor:pointer;color:#2563eb;">
                     <i class="fas fa-edit"></i>
                 </button>
-                <button class="ia-btn-delete" data-id="${esc(rec.id)}" data-name="${esc(delName)}" title="حذف" style="padding:4px 8px;border:none;background:none;cursor:pointer;color:#dc2626;">
+                <button type="button" class="ia-btn-delete" data-id="${esc(rec.id)}" data-name="${esc(delName)}" title="حذف" style="padding:4px 8px;border:none;background:none;cursor:pointer;color:#dc2626;">
                     <i class="fas fa-trash"></i>
-                </button>` : '';
+                </button>` : ''}
+                </span>`;
 
             const metaLine = `${esc(rec.departmentName || '')} ${activeIndicator}`;
             const subLine = esc([rec.jobTitle, rec.factory, rec.location, rec.sublocation].filter(Boolean).join(' - '));
@@ -1516,11 +1522,11 @@ const IssuingAuthorities = {
                 <td style="text-align:center;color:#64748b;font-size:0.85rem;padding:8px 6px;">${idx + 1}</td>
                 ${nameCells}
                 ${permitCells}
-                ${isAdmin ? `<td style="text-align:center;white-space:nowrap;">${actionBtns}</td>` : ''}
+                <td style="text-align:center;white-space:nowrap;">${actionBtns}</td>
             </tr>`;
         }).join('');
 
-        const actionHeader = isAdmin ? '<th style="text-align:center;padding:8px 6px;">إجراءات</th>' : '';
+        const actionHeader = '<th style="text-align:center;padding:8px 6px;">إجراءات</th>';
 
         wrapper.innerHTML = `
         <table style="width:100%;border-collapse:collapse;font-size:0.88rem;">
@@ -1575,8 +1581,15 @@ const IssuingAuthorities = {
             });
         });
 
-        // أزرار تعديل وحذف (event delegation)
+        // أزرار عرض وتعديل وحذف (event delegation)
         document.addEventListener('click', (e) => {
+            const viewBtn = e.target.closest('.ia-btn-view');
+            if (viewBtn) {
+                const id = viewBtn.getAttribute('data-id');
+                const rec = this._data.find(r => r.id === id);
+                if (rec) this._openModal(rec, { readOnly: true });
+                return;
+            }
             const editBtn = e.target.closest('.ia-btn-edit');
             if (editBtn) {
                 const id = editBtn.getAttribute('data-id');
@@ -1756,15 +1769,35 @@ const IssuingAuthorities = {
     },
 
     _currentEditId: null,
+    _modalReadOnly: false,
 
-    async _openModal(record) {
+    _applyModalReadOnly(readOnly) {
+        const saveBtn = document.getElementById('ia-modal-save');
+        if (saveBtn) saveBtn.style.display = readOnly ? 'none' : '';
+        const body = document.getElementById('ia-modal-body');
+        if (!body) return;
+        body.querySelectorAll('input, select, textarea, button').forEach((el) => {
+            if (readOnly) el.setAttribute('disabled', 'disabled');
+            else el.removeAttribute('disabled');
+        });
+    },
+
+    async _openModal(record, opts) {
+        const readOnly = !!(opts && opts.readOnly);
         const modal = document.getElementById('ia-modal-overlay');
         const title = document.getElementById('ia-modal-title');
         const body  = document.getElementById('ia-modal-body');
         if (!modal || !title || !body) return;
 
-        this._currentEditId = record ? record.id : null;
-        title.textContent = record ? 'تعديل بيانات الشخص المصرح له' : 'إضافة شخص مصرح له';
+        this._modalReadOnly = readOnly;
+        this._currentEditId = readOnly ? null : (record ? record.id : null);
+        if (readOnly && record) {
+            title.textContent = 'عرض بيانات الشخص المصرح له';
+        } else {
+            title.textContent = record ? 'تعديل بيانات الشخص المصرح له' : 'إضافة شخص مصرح له';
+        }
+        const cancelBtn = document.getElementById('ia-modal-cancel');
+        if (cancelBtn) cancelBtn.textContent = readOnly ? 'إغلاق' : 'إلغاء';
         await this._fetchContractorOptions();
         body.innerHTML = this._renderForm(record);
         modal.style.display = 'flex';
@@ -1779,15 +1812,22 @@ const IssuingAuthorities = {
                 lbl.classList.toggle('is-selected', !!radio.checked);
             }
         });
+        this._applyModalReadOnly(readOnly);
     },
 
     _closeModal() {
         const modal = document.getElementById('ia-modal-overlay');
         if (modal) modal.style.display = 'none';
         this._currentEditId = null;
+        this._modalReadOnly = false;
+        const saveBtn = document.getElementById('ia-modal-save');
+        if (saveBtn) saveBtn.style.display = '';
+        const cancelBtn = document.getElementById('ia-modal-cancel');
+        if (cancelBtn) cancelBtn.textContent = 'إلغاء';
     },
 
     async _saveModal() {
+        if (this._modalReadOnly) return;
         const personType = (document.getElementById('ia-f-person-type')?.value || 'employee').toLowerCase() === 'contractor'
             ? 'contractor'
             : 'employee';
