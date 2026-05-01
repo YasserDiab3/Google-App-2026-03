@@ -28,6 +28,55 @@ const IssuingAuthorities = {
     },
     _filterSearchTimer: null,
 
+    _getI18nCore() {
+        return (window.AppI18n && typeof window.AppI18n.t === 'function')
+            ? window.AppI18n
+            : ((window.I18n && typeof window.I18n.t === 'function') ? window.I18n : null);
+    },
+    t(key, fallback) {
+        const core = this._getI18nCore();
+        if (core) return core.t(key, null, fallback != null ? String(fallback) : '');
+        return fallback != null ? String(fallback) : key;
+    },
+    _tReplace(key, fallback, vars) {
+        let s = this.t(key, fallback);
+        if (vars && typeof vars === 'object') {
+            Object.keys(vars).forEach((k) => {
+                s = s.split(`{{${k}}}`).join(String(vars[k] ?? ''));
+            });
+        }
+        return s;
+    },
+    _categoryTitle() {
+        return this._activeCategory === 'contractors'
+            ? this.t('module.issuingAuthorities.cat.contractors', 'المقاولين')
+            : this.t('module.issuingAuthorities.cat.employees', 'الموظفين');
+    },
+    _permitKey(pt) {
+        return `module.issuingAuthorities.permit.${pt.key}`;
+    },
+    _permitLabel(pt) {
+        return this.t(this._permitKey(pt), pt.labelAr);
+    },
+    _permitBilingualHeader(pt) {
+        const core = this._getI18nCore();
+        const key = this._permitKey(pt);
+        const cur = core && typeof core.getCurrentLang === 'function' ? core.getCurrentLang() : 'ar';
+        const primary = this.t(key, pt.labelAr);
+        const secondary = cur === 'ar'
+            ? (core ? core.t(key, 'en', pt.labelEn) : pt.labelEn)
+            : (core ? core.t(key, 'ar', pt.labelAr) : pt.labelAr);
+        return { primary, secondary };
+    },
+    _badgeMeta(code) {
+        const c = String(code || 'X').toUpperCase();
+        const st = this.PERMIT_VALUE_STYLES[c] || this.PERMIT_VALUE_STYLES.X;
+        return {
+            class: st.class,
+            title: this.t(`module.issuingAuthorities.badge.${c}.title`, st.title)
+        };
+    },
+
     _isActionUnknownMessage(message) {
         const msg = String(message || '').toLowerCase();
         return msg.includes('غير معترف') || msg.includes('not recognized') || msg.includes('unknown action');
@@ -50,18 +99,18 @@ const IssuingAuthorities = {
     _getFriendlyErrorMessage(rawMessage) {
         const kind = this._classifyRequestError(rawMessage);
         if (kind === 'forbidden') {
-            return 'تعذر الاتصال بالخادم (403). تحقق من صلاحية نشر Web App (Who has access) وأن الرابط صحيح.';
+            return this.t('module.issuingAuthorities.err.forbidden', 'تعذر الاتصال بالخادم (403). تحقق من صلاحية نشر Web App (Who has access) وأن الرابط صحيح.');
         }
         if (kind === 'timeout') {
-            return 'الخادم تأخر في الاستجابة. يرجى إعادة المحاولة أو التحقق من حالة Google Apps Script.';
+            return this.t('module.issuingAuthorities.err.timeout', 'الخادم تأخر في الاستجابة. يرجى إعادة المحاولة أو التحقق من حالة Google Apps Script.');
         }
         if (kind === 'unknown_action') {
-            return 'نسخة الخادم أقدم من الواجهة الحالية. يلزم إعادة نشر Web App بأحدث ملفات Backend.';
+            return this.t('module.issuingAuthorities.err.unknownAction', 'نسخة الخادم أقدم من الواجهة الحالية. يلزم إعادة نشر Web App بأحدث ملفات Backend.');
         }
         if (kind === 'cors') {
-            return 'فشل الاتصال بسبب إعدادات CORS/الوصول في Web App. تأكد من إعدادات النشر.';
+            return this.t('module.issuingAuthorities.err.cors', 'فشل الاتصال بسبب إعدادات CORS/الوصول في Web App. تأكد من إعدادات النشر.');
         }
-        return 'تعذر تحميل البيانات من الخادم. يرجى إعادة المحاولة.';
+        return this.t('module.issuingAuthorities.err.generic', 'تعذر تحميل البيانات من الخادم. يرجى إعادة المحاولة.');
     },
 
     _reportModuleError(contextLabel, rawError) {
@@ -218,7 +267,7 @@ const IssuingAuthorities = {
                                 : [];
                 return placesSource.map((p, idx) => ({
                     id: String(p.id || p.placeId || p.value || `PLACE_${idx + 1}`).trim(),
-                    name: String(p.name || p.placeName || p.title || p.label || p.locationName || `مكان ${idx + 1}`).trim()
+                    name: String(p.name || p.placeName || p.title || p.label || p.locationName || this._tReplace('module.issuingAuthorities.placeFallback', `مكان ${idx + 1}`, { n: idx + 1 })).trim()
                 })).filter(p => p.id && p.name);
             };
 
@@ -240,7 +289,7 @@ const IssuingAuthorities = {
         const selected = String(selectedFactory || '').trim();
         const options = this._getSiteOptions();
         const esc = (typeof Utils !== 'undefined' && Utils.escapeHTML) ? Utils.escapeHTML : (s) => String(s == null ? '' : s);
-        let html = '<option value="">-- اختر المصنع --</option>';
+        let html = `<option value="">${esc(this.t('module.issuingAuthorities.select.factory', '-- اختر المصنع --'))}</option>`;
         html += options.map(site => `<option value="${esc(site.id)}" ${selected === site.id ? 'selected' : ''}>${esc(site.name)}</option>`).join('');
         if (selected && !options.some(site => site.id === selected)) {
             html += `<option value="${esc(selected)}" selected>${esc(selected)}</option>`;
@@ -252,7 +301,7 @@ const IssuingAuthorities = {
         const selected = String(selectedSublocation || '').trim();
         const options = this._getPlaceOptions(factoryId);
         const esc = (typeof Utils !== 'undefined' && Utils.escapeHTML) ? Utils.escapeHTML : (s) => String(s == null ? '' : s);
-        let html = '<option value="">-- اختر الموقع الفرعي --</option>';
+        let html = `<option value="">${esc(this.t('module.issuingAuthorities.select.sublocation', '-- اختر الموقع الفرعي --'))}</option>`;
         html += options.map(place => `<option value="${esc(place.id)}" ${selected === place.id ? 'selected' : ''}>${esc(place.name)}</option>`).join('');
         if (selected && !options.some(place => place.id === selected)) {
             html += `<option value="${esc(selected)}" selected>${esc(selected)}</option>`;
@@ -418,10 +467,6 @@ const IssuingAuthorities = {
         return role === 'admin' || role === 'administrator';
     },
 
-    _categoryTitleAr() {
-        return this._activeCategory === 'contractors' ? 'المقاولين' : 'الموظفين';
-    },
-
     /** نفس مصدر قائمة الإدارات المستخدم في تصاريح العمل (PTW). */
     _getDepartmentOptionsLikePTW() {
         try {
@@ -463,12 +508,12 @@ const IssuingAuthorities = {
                 const v = String(d || '').trim();
                 return `<option value="${esc(v)}" ${v === sel ? 'selected' : ''}>${esc(v)}</option>`;
             }).join('');
-            return `<select id="ia-f-dept" class="form-select ia-form-select" title="من نفس قائمة إدارات التصريح">
-                <option value="">— اختر الإدارة / القسم —</option>
+            return `<select id="ia-f-dept" class="form-select ia-form-select" title="${esc(this.t('module.issuingAuthorities.dept.titleHint', 'من نفس قائمة إدارات التصريح'))}">
+                <option value="">${esc(this.t('module.issuingAuthorities.dept.selectPlaceholder', '— اختر الإدارة / القسم —'))}</option>
                 ${opts}
             </select>`;
         }
-        return `<input type="text" id="ia-f-dept" class="form-input" value="${esc(sel)}" placeholder="اسم الإدارة (إدخال يدوي)">`;
+        return `<input type="text" id="ia-f-dept" class="form-input" value="${esc(sel)}" placeholder="${esc(this.t('module.issuingAuthorities.dept.manualPlaceholder', 'اسم الإدارة (إدخال يدوي)'))}">`;
     },
 
     _contractorCompanyFromRecord(record) {
@@ -577,12 +622,15 @@ const IssuingAuthorities = {
         }
         const sub = document.getElementById('ia-card-subtitle');
         if (sub) {
-            const cat = this._categoryTitleAr();
-            sub.innerHTML = `<span style="color:#334155;">القائمة الحالية:</span> ${cat}`;
+            const cat = this._categoryTitle();
+            sub.innerHTML = `<span style="color:#334155;">${this.t('module.issuingAuthorities.cardCurrentList', 'القائمة الحالية:')}</span> ${cat}`;
         }
         const secSub = document.getElementById('ia-section-module-subtitle');
         if (secSub) {
-            secSub.textContent = `عرض القائمة: ${this._categoryTitleAr()} — PTW Approvers`;
+            secSub.textContent = this._tReplace('module.issuingAuthorities.sectionSubtitle', 'عرض القائمة: {{cat}} — {{tag}}', {
+                cat: this._categoryTitle(),
+                tag: this.t('module.issuingAuthorities.ptwTagline', 'PTW Approvers')
+            });
         }
     },
 
@@ -765,10 +813,10 @@ const IssuingAuthorities = {
         const esc = (typeof Utils !== 'undefined' && Utils.escapeHTML) ? Utils.escapeHTML : (s) => String(s == null ? '' : s);
         const curF = this._listFilters.factory;
         const curD = this._listFilters.department;
-        fac.innerHTML = '<option value="">كل المصانع</option>' + factories.map(f =>
+        fac.innerHTML = `<option value="">${esc(this.t('module.issuingAuthorities.filter.allFactories', 'كل المصانع'))}</option>` + factories.map(f =>
             `<option value="${esc(f)}" ${f === curF ? 'selected' : ''}>${esc(f)}</option>`
         ).join('');
-        dep.innerHTML = '<option value="">كل الإدارات</option>' + departments.map(d =>
+        dep.innerHTML = `<option value="">${esc(this.t('module.issuingAuthorities.filter.allDepartments', 'كل الإدارات'))}</option>` + departments.map(d =>
             `<option value="${esc(d)}" ${d === curD ? 'selected' : ''}>${esc(d)}</option>`
         ).join('');
     },
@@ -779,48 +827,48 @@ const IssuingAuthorities = {
         const isAdmin = this.isAdmin();
         const { factories, departments } = this._collectFilterOptionLists();
         const statusOpts = `
-            <option value="" ${!f.status ? 'selected' : ''}>الكل</option>
-            <option value="active" ${f.status === 'active' ? 'selected' : ''}>نشط فقط</option>
-            ${isAdmin ? `<option value="inactive" ${f.status === 'inactive' ? 'selected' : ''}>غير نشط فقط</option>` : ''}`;
-        const factoryOpts = '<option value="">كل المصانع</option>' + factories.map(v =>
+            <option value="" ${!f.status ? 'selected' : ''}>${esc(this.t('module.issuingAuthorities.filter.all', 'الكل'))}</option>
+            <option value="active" ${f.status === 'active' ? 'selected' : ''}>${esc(this.t('module.issuingAuthorities.filter.activeOnly', 'نشط فقط'))}</option>
+            ${isAdmin ? `<option value="inactive" ${f.status === 'inactive' ? 'selected' : ''}>${esc(this.t('module.issuingAuthorities.filter.inactiveOnly', 'غير نشط فقط'))}</option>` : ''}`;
+        const factoryOpts = `<option value="">${esc(this.t('module.issuingAuthorities.filter.allFactories', 'كل المصانع'))}</option>` + factories.map(v =>
             `<option value="${esc(v)}" ${v === f.factory ? 'selected' : ''}>${esc(v)}</option>`
         ).join('');
-        const deptOpts = '<option value="">كل الإدارات</option>' + departments.map(v =>
+        const deptOpts = `<option value="">${esc(this.t('module.issuingAuthorities.filter.allDepartments', 'كل الإدارات'))}</option>` + departments.map(v =>
             `<option value="${esc(v)}" ${v === f.department ? 'selected' : ''}>${esc(v)}</option>`
         ).join('');
         const searchPh = this._activeCategory === 'contractors'
-            ? 'مقاول، مسؤول، إدارة، مصنع، موقع…'
-            : 'اسم، كود، إدارة، مصنع، موقع…';
+            ? this.t('module.issuingAuthorities.filter.searchPh.contractors', 'مقاول، مسؤول، إدارة، مصنع، موقع…')
+            : this.t('module.issuingAuthorities.filter.searchPh.employees', 'اسم، كود، إدارة، مصنع، موقع…');
         return `
         <div class="ia-filters-row" style="background:linear-gradient(135deg,#f8f9fa 0%,#e9ecef 100%);padding:16px 20px;border-radius:10px;border:1px solid #dee2e6;">
             <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;align-items:end;">
                 <div>
                     <label for="ia-filter-search" class="form-label" style="font-size:0.8rem;margin-bottom:4px;display:block;color:#334155;">
-                        <i class="fas fa-search" style="margin-left:6px;"></i>بحث
+                        <i class="fas fa-search" style="margin-left:6px;"></i>${esc(this.t('module.issuingAuthorities.filter.search', 'بحث'))}
                     </label>
                     <input type="text" id="ia-filter-search" class="form-input" placeholder="${esc(searchPh)}" value="${esc(f.search)}" dir="rtl" style="width:100%;min-height:42px;">
                 </div>
                 <div>
                     <label for="ia-filter-factory" class="form-label" style="font-size:0.8rem;margin-bottom:4px;display:block;color:#334155;">
-                        <i class="fas fa-industry" style="margin-left:6px;"></i>المصنع
+                        <i class="fas fa-industry" style="margin-left:6px;"></i>${esc(this.t('module.issuingAuthorities.filter.factory', 'المصنع'))}
                     </label>
                     <select id="ia-filter-factory" class="form-select" style="width:100%;min-height:42px;">${factoryOpts}</select>
                 </div>
                 <div>
                     <label for="ia-filter-department" class="form-label" style="font-size:0.8rem;margin-bottom:4px;display:block;color:#334155;">
-                        <i class="fas fa-building" style="margin-left:6px;"></i>الإدارة
+                        <i class="fas fa-building" style="margin-left:6px;"></i>${esc(this.t('module.issuingAuthorities.filter.department', 'الإدارة'))}
                     </label>
                     <select id="ia-filter-department" class="form-select" style="width:100%;min-height:42px;">${deptOpts}</select>
                 </div>
                 <div>
                     <label for="ia-filter-status" class="form-label" style="font-size:0.8rem;margin-bottom:4px;display:block;color:#334155;">
-                        <i class="fas fa-toggle-on" style="margin-left:6px;"></i>حالة السجل
+                        <i class="fas fa-toggle-on" style="margin-left:6px;"></i>${esc(this.t('module.issuingAuthorities.filter.status', 'حالة السجل'))}
                     </label>
                     <select id="ia-filter-status" class="form-select" style="width:100%;min-height:42px;">${statusOpts}</select>
                 </div>
                 <div style="display:flex;align-items:flex-end;gap:8px;">
                     <button type="button" id="ia-filter-reset" class="btn-secondary" style="min-height:42px;white-space:nowrap;">
-                        <i class="fas fa-undo" style="margin-left:6px;"></i>مسح الفلاتر
+                        <i class="fas fa-undo" style="margin-left:6px;"></i>${esc(this.t('module.issuingAuthorities.filter.reset', 'مسح الفلاتر'))}
                     </button>
                 </div>
             </div>
@@ -836,7 +884,9 @@ const IssuingAuthorities = {
                 const v = String(rec[pt.key] || 'X').toUpperCase().trim();
                 return `<td style="border:1px solid #d1d5db;padding:6px;text-align:center;">${esc(v)}</td>`;
             }).join('');
-            const activeTxt = rec.isActive === false ? 'غير نشط' : 'نشط';
+            const activeTxt = rec.isActive === false
+                ? this.t('module.issuingAuthorities.status.inactive', 'غير نشط')
+                : this.t('module.issuingAuthorities.status.active', 'نشط');
             if (isContractorView) {
                 const co = esc(this._displayContractorCompany(rec));
                 const resp = esc(this._displayResponsibleName(rec));
@@ -873,49 +923,57 @@ const IssuingAuthorities = {
     },
 
     _buildExportTableHtml(records, options = {}) {
+        const esc = (typeof Utils !== 'undefined' && Utils.escapeHTML) ? Utils.escapeHTML : (s) => String(s == null ? '' : s);
         const omitInnerTitle = !!options.omitInnerTitle;
-        const permitHeaders = this.PERMIT_TYPES.map(pt =>
-            `<th style="border:1px solid #d1d5db;padding:8px;text-align:center;font-size:10px;">${pt.labelAr}<br><span style="color:#6b7280;font-weight:500;">${pt.labelEn}</span></th>`
-        ).join('');
+        const lang = this._getI18nCore()?.getCurrentLang?.() || 'ar';
+        const isRtl = lang !== 'en';
+        const permitHeaders = this.PERMIT_TYPES.map(pt => {
+            const { primary, secondary } = this._permitBilingualHeader(pt);
+            return `<th style="border:1px solid #d1d5db;padding:8px;text-align:center;font-size:10px;">${esc(primary)}<br><span style="color:#6b7280;font-weight:500;">${esc(secondary)}</span></th>`;
+        }).join('');
         const isCv = this._activeCategory === 'contractors';
         const rows = this._buildExportTableRowsHtml(records, { escapeForHtml: true, isContractorView: isCv });
-        const titleAr = `الأشخاص المصرح لهم باعتماد تصاريح العمل — ${this._categoryTitleAr()}`;
-        const subtitle = `عدد السجلات: ${records.length} — ${new Date().toLocaleString('ar-SA')}`;
+        const titleAr = this._tReplace('module.issuingAuthorities.export.titleWithCat', 'الأشخاص المصرح لهم باعتماد تصاريح العمل — {{cat}}', { cat: this._categoryTitle() });
+        const dateStr = new Date().toLocaleString(lang === 'en' ? 'en-GB' : 'ar-SA');
+        const subtitle = this._tReplace('module.issuingAuthorities.export.subtitle', 'عدد السجلات: {{count}} — {{date}}', { count: records.length, date: dateStr });
+        const tag = esc(this.t('module.issuingAuthorities.ptwTagline', 'PTW Approvers'));
+        const h = (key, fb) => esc(this.t(key, fb));
         const headMain = isCv
-            ? `<th style="border:1px solid #d1d5db;padding:8px;">م</th>
-                    <th style="border:1px solid #d1d5db;padding:8px;">المقاول / المورد</th>
-                    <th style="border:1px solid #d1d5db;padding:8px;">اسم المسؤول</th>
-                    <th style="border:1px solid #d1d5db;padding:8px;">الإدارة</th>
-                    <th style="border:1px solid #d1d5db;padding:8px;">الوظيفة</th>
-                    <th style="border:1px solid #d1d5db;padding:8px;">الفرع</th>
-                    <th style="border:1px solid #d1d5db;padding:8px;">المصنع</th>
-                    <th style="border:1px solid #d1d5db;padding:8px;">الموقع</th>
-                    <th style="border:1px solid #d1d5db;padding:8px;">الموقع الفرعي</th>`
-            : `<th style="border:1px solid #d1d5db;padding:8px;">م</th>
-                    <th style="border:1px solid #d1d5db;padding:8px;">الاسم</th>
-                    <th style="border:1px solid #d1d5db;padding:8px;">الكود</th>
-                    <th style="border:1px solid #d1d5db;padding:8px;">الإدارة</th>
-                    <th style="border:1px solid #d1d5db;padding:8px;">الوظيفة</th>
-                    <th style="border:1px solid #d1d5db;padding:8px;">الفرع</th>
-                    <th style="border:1px solid #d1d5db;padding:8px;">المصنع</th>
-                    <th style="border:1px solid #d1d5db;padding:8px;">الموقع</th>
-                    <th style="border:1px solid #d1d5db;padding:8px;">الموقع الفرعي</th>`;
+            ? `<th style="border:1px solid #d1d5db;padding:8px;">${h('module.issuingAuthorities.col.idx', 'م')}</th>
+                    <th style="border:1px solid #d1d5db;padding:8px;">${h('module.issuingAuthorities.col.contractorSupplier', 'المقاول / المورد')}</th>
+                    <th style="border:1px solid #d1d5db;padding:8px;">${h('module.issuingAuthorities.col.responsibleName', 'اسم المسؤول')}</th>
+                    <th style="border:1px solid #d1d5db;padding:8px;">${h('module.issuingAuthorities.export.col.department', 'الإدارة')}</th>
+                    <th style="border:1px solid #d1d5db;padding:8px;">${h('module.issuingAuthorities.export.col.jobTitle', 'الوظيفة')}</th>
+                    <th style="border:1px solid #d1d5db;padding:8px;">${h('module.issuingAuthorities.export.col.branch', 'الفرع')}</th>
+                    <th style="border:1px solid #d1d5db;padding:8px;">${h('module.issuingAuthorities.export.col.factory', 'المصنع')}</th>
+                    <th style="border:1px solid #d1d5db;padding:8px;">${h('module.issuingAuthorities.export.col.location', 'الموقع')}</th>
+                    <th style="border:1px solid #d1d5db;padding:8px;">${h('module.issuingAuthorities.export.col.sublocation', 'الموقع الفرعي')}</th>`
+            : `<th style="border:1px solid #d1d5db;padding:8px;">${h('module.issuingAuthorities.col.idx', 'م')}</th>
+                    <th style="border:1px solid #d1d5db;padding:8px;">${h('module.issuingAuthorities.export.col.name', 'الاسم')}</th>
+                    <th style="border:1px solid #d1d5db;padding:8px;">${h('module.issuingAuthorities.export.col.code', 'الكود')}</th>
+                    <th style="border:1px solid #d1d5db;padding:8px;">${h('module.issuingAuthorities.export.col.department', 'الإدارة')}</th>
+                    <th style="border:1px solid #d1d5db;padding:8px;">${h('module.issuingAuthorities.export.col.jobTitle', 'الوظيفة')}</th>
+                    <th style="border:1px solid #d1d5db;padding:8px;">${h('module.issuingAuthorities.export.col.branch', 'الفرع')}</th>
+                    <th style="border:1px solid #d1d5db;padding:8px;">${h('module.issuingAuthorities.export.col.factory', 'المصنع')}</th>
+                    <th style="border:1px solid #d1d5db;padding:8px;">${h('module.issuingAuthorities.export.col.location', 'الموقع')}</th>
+                    <th style="border:1px solid #d1d5db;padding:8px;">${h('module.issuingAuthorities.export.col.sublocation', 'الموقع الفرعي')}</th>`;
         const titleBlock = omitInnerTitle
-            ? `<p style="margin:0 0 12px;color:#6b7280;font-size:13px;text-align:center;">${subtitle}</p>`
+            ? `<p style="margin:0 0 12px;color:#6b7280;font-size:13px;text-align:center;">${esc(subtitle)}</p>`
             : `
         <div style="margin-bottom:16px;text-align:center;">
-            <h2 style="margin:0 0 4px;color:#1f2937;font-size:18px;">${titleAr}</h2>
-            <p style="margin:0 0 8px;color:#4b5563;font-size:14px;font-weight:600;letter-spacing:0.02em;">PTW Approvers</p>
-            <p style="margin:0;color:#6b7280;font-size:13px;">${subtitle}</p>
+            <h2 style="margin:0 0 4px;color:#1f2937;font-size:18px;">${esc(titleAr)}</h2>
+            <p style="margin:0 0 8px;color:#4b5563;font-size:14px;font-weight:600;letter-spacing:0.02em;">${tag}</p>
+            <p style="margin:0;color:#6b7280;font-size:13px;">${esc(subtitle)}</p>
         </div>`;
+        const statusH = h('module.issuingAuthorities.export.col.status', 'الحالة');
         return `
         ${titleBlock}
-        <table style="width:100%;border-collapse:collapse;font-size:11px;direction:rtl;">
+        <table style="width:100%;border-collapse:collapse;font-size:11px;direction:${isRtl ? 'rtl' : 'ltr'};">
             <thead>
                 <tr style="background:#f3f4f6;">
                     ${headMain}
                     ${permitHeaders}
-                    <th style="border:1px solid #d1d5db;padding:8px;">الحالة</th>
+                    <th style="border:1px solid #d1d5db;padding:8px;">${statusH}</th>
                 </tr>
             </thead>
             <tbody>${rows}</tbody>
@@ -925,23 +983,26 @@ const IssuingAuthorities = {
     printFilteredList() {
         const records = this._getFilteredRecords();
         if (!records.length) {
-            this._iaNotify('لا توجد بيانات مطابقة للفلتر للطباعة', 'warning');
+            this._iaNotify(this.t('module.issuingAuthorities.export.noDataPrint', 'لا توجد بيانات مطابقة للفلتر للطباعة'), 'warning');
             return;
         }
         const inner = this._buildExportTableHtml(records);
         const w = window.open('', '_blank');
         if (!w) {
-            this._iaNotify('يرجى السماح بالنوافذ المنبثقة للطباعة', 'error');
+            this._iaNotify(this.t('module.issuingAuthorities.export.popupBlocked', 'يرجى السماح بالنوافذ المنبثقة للطباعة'), 'error');
             return;
         }
-        w.document.write(`<!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="UTF-8"><title>الأشخاص المصرح لهم باعتماد تصاريح العمل — PTW Approvers</title></head><body style="padding:16px;font-family:Segoe UI,Tahoma,sans-serif;">${inner}</body></html>`);
+        const lang = this._getI18nCore()?.getCurrentLang?.() || 'ar';
+        const isRtl = lang !== 'en';
+        const docTitle = this.t('module.issuingAuthorities.export.docTitle', 'الأشخاص المصرح لهم باعتماد تصاريح العمل — PTW Approvers');
+        w.document.write(`<!DOCTYPE html><html dir="${isRtl ? 'rtl' : 'ltr'}" lang="${lang}"><head><meta charset="UTF-8"><title>${docTitle.replace(/</g, '')}</title></head><body style="padding:16px;font-family:Segoe UI,Tahoma,sans-serif;">${inner}</body></html>`);
         w.document.close();
         let printed = false;
         const runPrint = () => {
             if (printed) return;
             printed = true;
             try { w.print(); } catch (e) { /* ignore */ }
-            this._iaNotify('تم فتح نافذة الطباعة', 'success');
+            this._iaNotify(this.t('module.issuingAuthorities.export.printOpened', 'تم فتح نافذة الطباعة'), 'success');
         };
         w.addEventListener('load', () => setTimeout(runPrint, 200));
         setTimeout(runPrint, 700);
@@ -950,69 +1011,78 @@ const IssuingAuthorities = {
     exportListToExcel() {
         const records = this._getFilteredRecords();
         if (!records.length) {
-            this._iaNotify('لا توجد بيانات مطابقة للفلتر للتصدير', 'warning');
+            this._iaNotify(this.t('module.issuingAuthorities.export.noDataExport', 'لا توجد بيانات مطابقة للفلتر للتصدير'), 'warning');
             return;
         }
         if (typeof XLSX === 'undefined') {
-            this._iaNotify('مكتبة Excel غير متوفرة في الصفحة', 'error');
+            this._iaNotify(this.t('module.issuingAuthorities.export.excelLibMissing', 'مكتبة Excel غير متوفرة في الصفحة'), 'error');
             return;
         }
         try {
             const isCv = this._activeCategory === 'contractors';
+            const stInactive = this.t('module.issuingAuthorities.status.inactive', 'غير نشط');
+            const stActive = this.t('module.issuingAuthorities.status.active', 'نشط');
+            const permitPrefix = this.t('module.issuingAuthorities.export.permitPrefix', 'تصريح:');
             const rows = records.map((rec) => {
                 const row = isCv
                     ? {
-                        'المقاول / المورد': this._displayContractorCompany(rec),
-                        'اسم المسؤول': this._displayResponsibleName(rec),
-                        'الإدارة': rec.departmentName || '',
-                        'الوظيفة': rec.jobTitle || '',
-                        'الفرع': rec.branch || '',
-                        'المصنع': rec.factory || '',
-                        'الموقع': rec.location || '',
-                        'الموقع الفرعي': rec.sublocation || '',
-                        'الحالة': rec.isActive === false ? 'غير نشط' : 'نشط'
+                        [this.t('module.issuingAuthorities.col.contractorSupplier', 'المقاول / المورد')]: this._displayContractorCompany(rec),
+                        [this.t('module.issuingAuthorities.col.responsibleName', 'اسم المسؤول')]: this._displayResponsibleName(rec),
+                        [this.t('module.issuingAuthorities.export.col.department', 'الإدارة')]: rec.departmentName || '',
+                        [this.t('module.issuingAuthorities.export.col.jobTitle', 'الوظيفة')]: rec.jobTitle || '',
+                        [this.t('module.issuingAuthorities.export.col.branch', 'الفرع')]: rec.branch || '',
+                        [this.t('module.issuingAuthorities.export.col.factory', 'المصنع')]: rec.factory || '',
+                        [this.t('module.issuingAuthorities.export.col.location', 'الموقع')]: rec.location || '',
+                        [this.t('module.issuingAuthorities.export.col.sublocation', 'الموقع الفرعي')]: rec.sublocation || '',
+                        [this.t('module.issuingAuthorities.export.col.status', 'الحالة')]: rec.isActive === false ? stInactive : stActive
                     }
                     : {
-                        'الاسم': rec.name || '',
-                        'الكود الوظيفي': rec.employeeCode || '',
-                        'الإدارة': rec.departmentName || '',
-                        'الوظيفة': rec.jobTitle || '',
-                        'الفرع': rec.branch || '',
-                        'المصنع': rec.factory || '',
-                        'الموقع': rec.location || '',
-                        'الموقع الفرعي': rec.sublocation || '',
-                        'الحالة': rec.isActive === false ? 'غير نشط' : 'نشط'
+                        [this.t('module.issuingAuthorities.export.col.name', 'الاسم')]: rec.name || '',
+                        [this.t('module.issuingAuthorities.export.col.jobCode', 'الكود الوظيفي')]: rec.employeeCode || '',
+                        [this.t('module.issuingAuthorities.export.col.department', 'الإدارة')]: rec.departmentName || '',
+                        [this.t('module.issuingAuthorities.export.col.jobTitle', 'الوظيفة')]: rec.jobTitle || '',
+                        [this.t('module.issuingAuthorities.export.col.branch', 'الفرع')]: rec.branch || '',
+                        [this.t('module.issuingAuthorities.export.col.factory', 'المصنع')]: rec.factory || '',
+                        [this.t('module.issuingAuthorities.export.col.location', 'الموقع')]: rec.location || '',
+                        [this.t('module.issuingAuthorities.export.col.sublocation', 'الموقع الفرعي')]: rec.sublocation || '',
+                        [this.t('module.issuingAuthorities.export.col.status', 'الحالة')]: rec.isActive === false ? stInactive : stActive
                     };
                 this.PERMIT_TYPES.forEach((pt) => {
-                    row[`تصريح: ${pt.labelAr}`] = String(rec[pt.key] || 'X').toUpperCase();
+                    row[`${permitPrefix} ${this._permitLabel(pt)}`] = String(rec[pt.key] || 'X').toUpperCase();
                 });
                 return row;
             });
             const workbook = XLSX.utils.book_new();
             const worksheet = XLSX.utils.json_to_sheet(rows);
-            XLSX.utils.book_append_sheet(workbook, worksheet, `مصرح_${this._activeCategory === 'contractors' ? 'مقاولين' : 'موظفين'}`);
+            const sheetName = this._activeCategory === 'contractors'
+                ? this.t('module.issuingAuthorities.excel.sheet.contractors', 'مصرح_مقاولين')
+                : this.t('module.issuingAuthorities.excel.sheet.employees', 'مصرح_موظفين');
+            XLSX.utils.book_append_sheet(workbook, worksheet, sheetName.slice(0, 31));
             const fileName = `IssuingAuthorities_${this._activeCategory}_${new Date().toISOString().slice(0, 10)}.xlsx`;
             XLSX.writeFile(workbook, fileName);
-            this._iaNotify('تم تصدير Excel بنجاح', 'success');
+            this._iaNotify(this.t('module.issuingAuthorities.export.excelOk', 'تم تصدير Excel بنجاح'), 'success');
         } catch (err) {
             if (typeof Utils !== 'undefined') Utils.safeWarn('IssuingAuthorities.exportListToExcel', err);
-            this._iaNotify('فشل تصدير Excel', 'error');
+            this._iaNotify(this.t('module.issuingAuthorities.export.excelFail', 'فشل تصدير Excel'), 'error');
         }
     },
 
     exportListToPDF() {
         const records = this._getFilteredRecords();
         if (!records.length) {
-            this._iaNotify('لا توجد بيانات مطابقة للفلتر للتصدير', 'warning');
+            this._iaNotify(this.t('module.issuingAuthorities.export.noDataExport', 'لا توجد بيانات مطابقة للفلتر للتصدير'), 'warning');
             return;
         }
         let url = null;
         try {
             const content = this._buildExportTableHtml(records, { omitInnerTitle: true });
             const formCode = `IA-LIST-${new Date().toISOString().slice(0, 10)}`;
-            const formTitleAr = 'الأشخاص المصرح لهم باعتماد تصاريح العمل';
-            const formTitleEn = 'PTW Approvers';
+            const core = this._getI18nCore();
+            const formTitleAr = core ? core.t('module.issuingAuthorities.form.pdfTitle', 'ar', 'الأشخاص المصرح لهم باعتماد تصاريح العمل') : 'الأشخاص المصرح لهم باعتماد تصاريح العمل';
+            const formTitleEn = core ? core.t('module.issuingAuthorities.ptwTagline', 'en', 'PTW Approvers') : 'PTW Approvers';
             const nowIso = new Date().toISOString();
+            const lang = core?.getCurrentLang?.() || 'ar';
+            const isRtl = lang !== 'en';
             const htmlContent = typeof FormHeader !== 'undefined' && FormHeader.generatePDFHTML
                 ? FormHeader.generatePDFHTML(
                     formCode,
@@ -1029,7 +1099,7 @@ const IssuingAuthorities = {
                     nowIso,
                     nowIso
                 )
-                : `<!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="UTF-8"><title>${formTitleAr} — ${formTitleEn}</title></head><body style="padding:16px;">${content}</body></html>`;
+                : `<!DOCTYPE html><html dir="${isRtl ? 'rtl' : 'ltr'}" lang="${lang}"><head><meta charset="UTF-8"><title>${formTitleAr} — ${formTitleEn}</title></head><body style="padding:16px;">${content}</body></html>`;
             const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
             url = URL.createObjectURL(blob);
             const printWindow = window.open(url, '_blank');
@@ -1047,19 +1117,19 @@ const IssuingAuthorities = {
                         printWindow.focus();
                         printWindow.print();
                     } catch (e) { /* ignore */ }
-                    this._iaNotify('تم تحضير PDF / الطباعة', 'success');
+                    this._iaNotify(this.t('module.issuingAuthorities.export.pdfReady', 'تم تحضير PDF / الطباعة'), 'success');
                     setTimeout(cleanup, 1200);
                 };
                 printWindow.addEventListener('load', () => setTimeout(runPrint, 350));
                 setTimeout(runPrint, 900);
             } else {
                 if (url) URL.revokeObjectURL(url);
-                this._iaNotify('يرجى السماح بالنوافذ المنبثقة', 'error');
+                this._iaNotify(this.t('module.issuingAuthorities.export.popupBlockedPdf', 'يرجى السماح بالنوافذ المنبثقة'), 'error');
             }
         } catch (err) {
             if (url) try { URL.revokeObjectURL(url); } catch (e) { /* ignore */ }
             if (typeof Utils !== 'undefined') Utils.safeWarn('IssuingAuthorities.exportListToPDF', err);
-            this._iaNotify('فشل تصدير PDF', 'error');
+            this._iaNotify(this.t('module.issuingAuthorities.export.pdfFail', 'فشل تصدير PDF'), 'error');
         }
     },
 
@@ -1095,16 +1165,23 @@ const IssuingAuthorities = {
 
     _renderShell() {
         const isAdmin = this.isAdmin();
+        const esc = (typeof Utils !== 'undefined' && Utils.escapeHTML) ? Utils.escapeHTML : (s) => String(s == null ? '' : s);
+        const secSub = esc(this._tReplace('module.issuingAuthorities.sectionSubtitle', 'عرض القائمة: {{cat}} — {{tag}}', {
+            cat: this._categoryTitle(),
+            tag: this.t('module.issuingAuthorities.ptwTagline', 'PTW Approvers')
+        }));
+        const cardListLabel = esc(this.t('module.issuingAuthorities.cardCurrentList', 'القائمة الحالية:'));
+        const catTitle = esc(this._categoryTitle());
         return `
         <div class="section-header" style="margin-bottom:0.5rem;">
             <div class="flex items-center justify-between flex-wrap gap-4">
                 <div>
                     <h1 class="section-title">
                         <i class="fas fa-user-check ml-3"></i>
-                        قائمة الأشخاص المصرح لهم باعتماد تصاريح العمل
+                        ${esc(this.t('module.issuingAuthorities.pageTitle', 'قائمة الأشخاص المصرح لهم باعتماد تصاريح العمل'))}
                     </h1>
                     <p id="ia-section-module-subtitle" class="section-subtitle">
-                        عرض القائمة: ${this._categoryTitleAr()} — PTW Approvers
+                        ${secSub}
                     </p>
                 </div>
             </div>
@@ -1114,28 +1191,28 @@ const IssuingAuthorities = {
                 <div class="card-header" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
                     <div>
                         <p id="ia-card-subtitle" class="card-subtitle" style="margin:0;color:#64748b;font-size:0.9rem;font-weight:600;">
-                            <span style="color:#334155;">القائمة الحالية:</span> ${this._categoryTitleAr()}
+                            <span style="color:#334155;">${cardListLabel}</span> ${catTitle}
                         </p>
                     </div>
                     <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
                         ${isAdmin ? `
                         <button class="btn-primary" id="ia-add-btn" style="gap:6px;">
                             <i class="fas fa-plus"></i>
-                            <span>إضافة شخص</span>
+                            <span>${esc(this.t('module.issuingAuthorities.btn.addPerson', 'إضافة شخص'))}</span>
                         </button>` : ''}
-                        <button type="button" class="btn-secondary" id="ia-print-btn" style="gap:6px;" title="طباعة القائمة المفلترة">
+                        <button type="button" class="btn-secondary" id="ia-print-btn" style="gap:6px;" title="${esc(this.t('module.issuingAuthorities.btn.printTitle', 'طباعة القائمة المفلترة'))}">
                             <i class="fas fa-print"></i>
-                            <span>طباعة</span>
+                            <span>${esc(this.t('module.issuingAuthorities.btn.print', 'طباعة'))}</span>
                         </button>
-                        <button type="button" class="btn-success" id="ia-export-excel-btn" style="gap:6px;" title="تصدير Excel للقائمة المفلترة">
+                        <button type="button" class="btn-success" id="ia-export-excel-btn" style="gap:6px;" title="${esc(this.t('module.issuingAuthorities.btn.excelTitle', 'تصدير Excel للقائمة المفلترة'))}">
                             <i class="fas fa-file-excel"></i>
-                            <span>Excel</span>
+                            <span>${esc(this.t('module.issuingAuthorities.btn.excel', 'Excel'))}</span>
                         </button>
-                        <button type="button" class="btn-secondary" id="ia-export-pdf-btn" style="gap:6px;" title="تصدير / طباعة PDF">
+                        <button type="button" class="btn-secondary" id="ia-export-pdf-btn" style="gap:6px;" title="${esc(this.t('module.issuingAuthorities.btn.pdfTitle', 'تصدير / طباعة PDF'))}">
                             <i class="fas fa-file-pdf"></i>
-                            <span>PDF</span>
+                            <span>${esc(this.t('module.issuingAuthorities.btn.pdf', 'PDF'))}</span>
                         </button>
-                        <button class="btn-secondary" id="ia-refresh-btn" style="gap:6px;">
+                        <button class="btn-secondary" id="ia-refresh-btn" style="gap:6px;" title="${esc(this.t('module.common.refresh', 'تحديث'))}">
                             <i class="fas fa-sync-alt"></i>
                         </button>
                     </div>
@@ -1143,20 +1220,20 @@ const IssuingAuthorities = {
 
                 <div style="padding:0 16px 10px;">
                     <div class="ia-category-tabs">
-                        <button type="button" class="ia-tab-btn ${this._activeCategory === 'employees' ? 'active' : ''}" data-category="employees">الموظفين</button>
-                        <button type="button" class="ia-tab-btn ${this._activeCategory === 'contractors' ? 'active' : ''}" data-category="contractors">المقاولين</button>
+                        <button type="button" class="ia-tab-btn ${this._activeCategory === 'employees' ? 'active' : ''}" data-category="employees">${esc(this.t('module.issuingAuthorities.cat.employees', 'الموظفين'))}</button>
+                        <button type="button" class="ia-tab-btn ${this._activeCategory === 'contractors' ? 'active' : ''}" data-category="contractors">${esc(this.t('module.issuingAuthorities.cat.contractors', 'المقاولين'))}</button>
                     </div>
                 </div>
 
                 <!-- شرح مفتاح الجدول -->
                 <div class="ia-legend" style="margin:0 16px 12px;padding:10px 14px;background:#f8fafc;border-radius:8px;border:1px solid #e2e8f0;">
-                    <strong style="font-size:0.82rem;color:#475569;">مفتاح الجدول:</strong>
+                    <strong style="font-size:0.82rem;color:#475569;">${esc(this.t('module.issuingAuthorities.legend.title', 'مفتاح الجدول:'))}</strong>
                     <span class="ia-badge-g" style="margin-right:10px;">G</span>
-                    <span style="font-size:0.82rem;color:#166534;margin-left:4px;">التوقيع في كل الحالات</span>
+                    <span style="font-size:0.82rem;color:#166534;margin-left:4px;">${esc(this.t('module.issuingAuthorities.legend.g', 'التوقيع في كل الحالات'))}</span>
                     <span class="ia-badge-y" style="margin-right:14px;">Y</span>
-                    <span style="font-size:0.82rem;color:#854d0e;margin-left:4px;">التوقيع بعد التنسيق مع مدير السلامة والصحة المهنية</span>
+                    <span style="font-size:0.82rem;color:#854d0e;margin-left:4px;">${esc(this.t('module.issuingAuthorities.legend.y', 'التوقيع بعد التنسيق مع مدير السلامة والصحة المهنية'))}</span>
                     <span class="ia-badge-x" style="margin-right:14px;">X</span>
-                    <span style="font-size:0.82rem;color:#991b1b;margin-left:4px;">غير مصرح له بالتوقيع</span>
+                    <span style="font-size:0.82rem;color:#991b1b;margin-left:4px;">${esc(this.t('module.issuingAuthorities.legend.x', 'غير مصرح له بالتوقيع'))}</span>
                 </div>
 
                 <div id="ia-filters-wrap" style="margin:0 16px 12px;">
@@ -1178,8 +1255,8 @@ const IssuingAuthorities = {
         <div id="ia-modal-overlay" class="modal-overlay" style="display:none;" role="dialog" aria-modal="true" aria-labelledby="ia-modal-title">
             <div class="modal-container ia-modal-container" style="max-width:900px;width:95%;">
                 <div class="modal-header">
-                    <h3 id="ia-modal-title" class="modal-title">إضافة شخص مصرح له</h3>
-                    <button class="modal-close" id="ia-modal-close" aria-label="إغلاق">
+                    <h3 id="ia-modal-title" class="modal-title">${esc(this.t('module.issuingAuthorities.modal.addTitle', 'إضافة شخص مصرح له'))}</h3>
+                    <button class="modal-close" id="ia-modal-close" aria-label="${esc(this.t('module.issuingAuthorities.modal.closeAria', 'إغلاق'))}">
                         <i class="fas fa-times"></i>
                     </button>
                 </div>
@@ -1187,9 +1264,9 @@ const IssuingAuthorities = {
                     ${this._renderForm()}
                 </div>
                 <div class="modal-footer ia-modal-footer">
-                    <button class="btn-secondary" id="ia-modal-cancel">إلغاء</button>
+                    <button class="btn-secondary" id="ia-modal-cancel">${esc(this.t('module.common.cancel', 'إلغاء'))}</button>
                     <button class="btn-primary" id="ia-modal-save">
-                        <i class="fas fa-save" style="margin-left:6px;"></i>حفظ
+                        <i class="fas fa-save" style="margin-left:6px;"></i>${esc(this.t('module.issuingAuthorities.modal.save', 'حفظ'))}
                     </button>
                 </div>
             </div>
@@ -1201,16 +1278,16 @@ const IssuingAuthorities = {
                 <div class="modal-header">
                     <h3 class="modal-title" style="color:#dc2626;">
                         <i class="fas fa-exclamation-triangle" style="margin-left:8px;"></i>
-                        تأكيد الحذف
+                        ${esc(this.t('module.issuingAuthorities.delete.title', 'تأكيد الحذف'))}
                     </h3>
                 </div>
                 <div class="modal-body">
                     <p id="ia-delete-msg" style="color:#374151;"></p>
                 </div>
                 <div class="modal-footer">
-                    <button class="btn-secondary" id="ia-delete-cancel">إلغاء</button>
+                    <button class="btn-secondary" id="ia-delete-cancel">${esc(this.t('module.common.cancel', 'إلغاء'))}</button>
                     <button class="btn-danger" id="ia-delete-confirm">
-                        <i class="fas fa-trash" style="margin-left:6px;"></i>حذف
+                        <i class="fas fa-trash" style="margin-left:6px;"></i>${esc(this.t('module.issuingAuthorities.delete.btn', 'حذف'))}
                     </button>
                 </div>
             </div>
@@ -1231,17 +1308,19 @@ const IssuingAuthorities = {
         `).join('');
         const nameFieldValue = personType === 'contractor' ? this._responsibleNameFromRecord(record) : val('name');
         const nameLabel = personType === 'contractor'
-            ? 'اسم الشخص المسؤول من الشركة <span style="color:red;">*</span>'
-            : 'الاسم <span style="color:red;">*</span>';
+            ? `${this.t('module.issuingAuthorities.form.nameContractor', 'اسم الشخص المسؤول من الشركة')} <span style="color:red;">*</span>`
+            : `${this.t('module.issuingAuthorities.form.nameEmployee', 'الاسم')} <span style="color:red;">*</span>`;
         const namePlaceholder = personType === 'contractor'
-            ? 'أدخل اسم المسؤول عن الاعتماد من جهة المقاول يدوياً'
-            : 'اسم الشخص المصرح له';
+            ? this.t('module.issuingAuthorities.form.namePh.contractor', 'أدخل اسم المسؤول عن الاعتماد من جهة المقاول يدوياً')
+            : this.t('module.issuingAuthorities.form.namePh.employee', 'اسم الشخص المصرح له');
 
-        const permitRows = this.PERMIT_TYPES.map(pt => `
+        const permitRows = this.PERMIT_TYPES.map(pt => {
+            const { primary, secondary } = this._permitBilingualHeader(pt);
+            return `
             <div class="ia-permit-row">
                 <label class="ia-permit-label">
-                    <span>${pt.labelAr}</span>
-                    <span class="ia-permit-label-en">${pt.labelEn}</span>
+                    <span>${escOpt(primary)}</span>
+                    <span class="ia-permit-label-en">${escOpt(secondary)}</span>
                 </label>
                 <div class="ia-radio-group">
                     ${['G', 'Y', 'X'].map(v => `
@@ -1252,38 +1331,39 @@ const IssuingAuthorities = {
                     `).join('')}
                 </div>
             </div>
-        `).join('');
+        `;
+        }).join('');
 
         return `
         <div class="ia-form ia-form-grid">
             <div id="ia-form-alerts" class="ia-form-alerts" style="display:none;margin-bottom:10px;"></div>
             <section class="ia-form-section">
-                <h4 class="ia-form-section-title">بيانات الشخص</h4>
+                <h4 class="ia-form-section-title">${escOpt(this.t('module.issuingAuthorities.form.section.person', 'بيانات الشخص'))}</h4>
                 <div class="ia-person-mode-hint" id="ia-person-mode-hint">
                     ${personType === 'employee'
-                        ? 'وضع الموظف: أدخل الكود الوظيفي ثم اضغط "بحث" لملء البيانات تلقائياً.'
-                        : 'وضع المقاول: اختر المقاول / المورد من القائمة، ثم أدخل اسم الشخص المسؤول من الشركة يدوياً.'}
+                        ? escOpt(this.t('module.issuingAuthorities.form.hint.employee', 'وضع الموظف: أدخل الكود الوظيفي ثم اضغط "بحث" لملء البيانات تلقائياً.'))
+                        : escOpt(this.t('module.issuingAuthorities.form.hint.contractor', 'وضع المقاول: اختر المقاول / المورد من القائمة، ثم أدخل اسم الشخص المسؤول من الشركة يدوياً.'))}
                 </div>
                 <div class="ia-form-two-cols">
                 <div class="form-group">
-                    <label class="form-label">نوع الشخص <span style="color:red;">*</span></label>
+                    <label class="form-label">${escOpt(this.t('module.issuingAuthorities.form.personType', 'نوع الشخص'))} <span style="color:red;">*</span></label>
                     <select id="ia-f-person-type" class="form-select ia-form-select">
-                        <option value="employee" ${personType === 'employee' ? 'selected' : ''}>موظف</option>
-                        <option value="contractor" ${personType === 'contractor' ? 'selected' : ''}>مقاول</option>
+                        <option value="employee" ${personType === 'employee' ? 'selected' : ''}>${escOpt(this.t('module.issuingAuthorities.form.personType.employee', 'موظف'))}</option>
+                        <option value="contractor" ${personType === 'contractor' ? 'selected' : ''}>${escOpt(this.t('module.issuingAuthorities.form.personType.contractor', 'مقاول'))}</option>
                     </select>
                 </div>
                 <div class="form-group ia-contractor-wrap" id="ia-contractor-wrap" style="${personType === 'contractor' ? '' : 'display:none;'}">
-                    <label class="form-label">المقاول / المورد <span style="color:red;">*</span></label>
+                    <label class="form-label">${escOpt(this.t('module.issuingAuthorities.form.contractor', 'المقاول / المورد'))} <span style="color:red;">*</span></label>
                     <select id="ia-f-contractor-name" class="form-select ia-form-select">
-                        <option value="">— اختر المقاول / المورد —</option>
+                        <option value="">${escOpt(this.t('module.issuingAuthorities.form.contractorPlaceholder', '— اختر المقاول / المورد —'))}</option>
                         ${contractorOptionsHtml}
                     </select>
                 </div>
                 <div class="form-group ia-employee-code-wrap" id="ia-employee-code-wrap" style="${personType === 'employee' ? '' : 'display:none;'}">
-                    <label class="form-label">الكود الوظيفي <span style="color:red;">*</span></label>
+                    <label class="form-label">${escOpt(this.t('module.issuingAuthorities.form.employeeCode', 'الكود الوظيفي'))} <span style="color:red;">*</span></label>
                     <div class="ia-employee-lookup-row">
-                        <input type="text" id="ia-f-employee-code" class="form-input" value="${val('employeeCode')}" placeholder="أدخل الكود الوظيفي">
-                        <button type="button" class="btn-secondary ia-lookup-btn" id="ia-lookup-employee-btn">بحث</button>
+                        <input type="text" id="ia-f-employee-code" class="form-input" value="${val('employeeCode')}" placeholder="${escOpt(this.t('module.issuingAuthorities.form.employeeCodePh', 'أدخل الكود الوظيفي'))}">
+                        <button type="button" class="btn-secondary ia-lookup-btn" id="ia-lookup-employee-btn">${escOpt(this.t('module.issuingAuthorities.form.lookup', 'بحث'))}</button>
                     </div>
                 </div>
                 </div>
@@ -1293,27 +1373,27 @@ const IssuingAuthorities = {
                     <input type="text" id="ia-f-name" class="form-input" value="${personType === 'contractor' ? escOpt(nameFieldValue) : escOpt(val('name'))}" placeholder="${escOpt(namePlaceholder)}" required>
                 </div>
                 <div class="form-group">
-                    <label class="form-label">الإدارة / القسم</label>
+                    <label class="form-label">${escOpt(this.t('module.issuingAuthorities.form.department', 'الإدارة / القسم'))}</label>
                     ${this._renderDepartmentControl(val('departmentName'))}
                 </div>
                 </div>
                 <div class="ia-form-two-cols">
                 <div class="form-group">
-                    <label class="form-label">الوظيفة</label>
-                    <input type="text" id="ia-f-job-title" class="form-input" value="${val('jobTitle')}" placeholder="المسمى الوظيفي">
+                    <label class="form-label">${escOpt(this.t('module.issuingAuthorities.form.jobTitle', 'الوظيفة'))}</label>
+                    <input type="text" id="ia-f-job-title" class="form-input" value="${val('jobTitle')}" placeholder="${escOpt(this.t('module.issuingAuthorities.form.jobTitlePh', 'المسمى الوظيفي'))}">
                 </div>
                 <div class="form-group">
-                    <label class="form-label">الفرع / Branch</label>
-                    <input type="text" id="ia-f-branch" class="form-input" value="${val('branch') || ''}" placeholder="اسم الفرع">
+                    <label class="form-label">${escOpt(this.t('module.issuingAuthorities.form.branch', 'الفرع / Branch'))}</label>
+                    <input type="text" id="ia-f-branch" class="form-input" value="${val('branch') || ''}" placeholder="${escOpt(this.t('module.issuingAuthorities.form.branchPh', 'اسم الفرع'))}">
                 </div>
                 </div>
                 <div class="ia-form-two-cols">
                 <div class="form-group">
-                    <label class="form-label">الموقع</label>
-                    <input type="text" id="ia-f-location" class="form-input" value="${val('location')}" placeholder="الموقع">
+                    <label class="form-label">${escOpt(this.t('module.issuingAuthorities.form.location', 'الموقع'))}</label>
+                    <input type="text" id="ia-f-location" class="form-input" value="${val('location')}" placeholder="${escOpt(this.t('module.issuingAuthorities.form.locationPh', 'الموقع'))}">
                 </div>
                 <div class="form-group">
-                    <label class="form-label">المصنع</label>
+                    <label class="form-label">${escOpt(this.t('module.issuingAuthorities.form.factory', 'المصنع'))}</label>
                     <select id="ia-f-factory" class="form-select ia-form-select">
                         ${this._renderFactoryOptions(val('factoryId') || val('factory'))}
                     </select>
@@ -1321,7 +1401,7 @@ const IssuingAuthorities = {
                 </div>
                 <div class="ia-form-two-cols">
                 <div class="form-group">
-                    <label class="form-label">الموقع الفرعي</label>
+                    <label class="form-label">${escOpt(this.t('module.issuingAuthorities.form.sublocation', 'الموقع الفرعي'))}</label>
                     <select id="ia-f-sublocation" class="form-select ia-form-select">
                         ${this._renderSublocationOptions(val('factoryId') || val('factory'), val('sublocationId') || val('sublocation'))}
                     </select>
@@ -1330,25 +1410,25 @@ const IssuingAuthorities = {
                 </div>
                 <div class="ia-form-two-cols">
                 <div class="form-group">
-                    <label class="form-label">البريد الإلكتروني</label>
+                    <label class="form-label">${escOpt(this.t('module.issuingAuthorities.form.email', 'البريد الإلكتروني'))}</label>
                     <input type="email" id="ia-f-email" class="form-input" value="${val('email')}" placeholder="example@company.com" dir="ltr">
                 </div>
                 <div class="form-group">
-                    <label class="form-label">رقم الهاتف</label>
-                    <input type="text" id="ia-f-phone" class="form-input" value="${val('phone')}" placeholder="01xxxxxxxxx" dir="ltr">
+                    <label class="form-label">${escOpt(this.t('module.issuingAuthorities.form.phone', 'رقم الهاتف'))}</label>
+                    <input type="text" id="ia-f-phone" class="form-input" value="${val('phone')}" placeholder="${escOpt(this.t('module.issuingAuthorities.form.phonePh', '01xxxxxxxxx'))}" dir="ltr">
                 </div>
                 </div>
             </section>
 
             <section class="ia-form-section">
                 <h4 class="ia-form-section-title">
-                    صلاحيات التوقيع على أنواع التصاريح
-                    <span class="ia-form-section-subtitle">اختر G أو Y أو X لكل نوع تصريح</span>
+                    ${escOpt(this.t('module.issuingAuthorities.form.section.permits', 'صلاحيات التوقيع على أنواع التصاريح'))}
+                    <span class="ia-form-section-subtitle">${escOpt(this.t('module.issuingAuthorities.form.section.permitsSub', 'اختر G أو Y أو X لكل نوع تصريح'))}</span>
                 </h4>
                 <div class="ia-legend-inline">
-                    <span class="ia-badge-g">G</span><span>توقيع مباشر في كل الحالات</span>
-                    <span class="ia-badge-y">Y</span><span>توقيع بعد التنسيق مع HSE</span>
-                    <span class="ia-badge-x">X</span><span>غير مصرح بالتوقيع</span>
+                    <span class="ia-badge-g">G</span><span>${escOpt(this.t('module.issuingAuthorities.form.legendInline.g', 'توقيع مباشر في كل الحالات'))}</span>
+                    <span class="ia-badge-y">Y</span><span>${escOpt(this.t('module.issuingAuthorities.form.legendInline.y', 'توقيع بعد التنسيق مع HSE'))}</span>
+                    <span class="ia-badge-x">X</span><span>${escOpt(this.t('module.issuingAuthorities.form.legendInline.x', 'غير مصرح بالتوقيع'))}</span>
                 </div>
                 <div class="ia-permits-card">
                     ${permitRows}
@@ -1356,15 +1436,15 @@ const IssuingAuthorities = {
             </section>
 
             <section class="ia-form-section">
-                <h4 class="ia-form-section-title">إعدادات السجل</h4>
+                <h4 class="ia-form-section-title">${escOpt(this.t('module.issuingAuthorities.form.section.settings', 'إعدادات السجل'))}</h4>
                 <div class="ia-form-two-cols ia-settings-row">
                     <div class="form-group">
-                        <label class="form-label">ملاحظات</label>
-                        <input type="text" id="ia-f-notes" class="form-input" value="${val('notes')}" placeholder="ملاحظات اختيارية">
+                        <label class="form-label">${escOpt(this.t('module.issuingAuthorities.form.notes', 'ملاحظات'))}</label>
+                        <input type="text" id="ia-f-notes" class="form-input" value="${val('notes')}" placeholder="${escOpt(this.t('module.issuingAuthorities.form.notesPh', 'ملاحظات اختيارية'))}">
                     </div>
                     <div class="form-group ia-active-group">
                         <input type="checkbox" id="ia-f-active" ${!record || record.isActive !== false ? 'checked' : ''} style="width:16px;height:16px;cursor:pointer;">
-                        <label for="ia-f-active">نشط (مفعّل في قائمة المرشحين)</label>
+                        <label for="ia-f-active">${escOpt(this.t('module.issuingAuthorities.form.activeLabel', 'نشط (مفعّل في قائمة المرشحين)'))}</label>
                     </div>
                 </div>
             </section>
@@ -1407,7 +1487,7 @@ const IssuingAuthorities = {
             }
             if (!ok) {
                 this._data = [];
-                if (typeof Utils !== 'undefined') Utils.safeWarn('تحذير: فشل تحميل بيانات Issuing Authorities');
+                if (typeof Utils !== 'undefined') Utils.safeWarn(this.t('module.issuingAuthorities.warn.loadFailed', 'تحذير: فشل تحميل بيانات Issuing Authorities'));
             }
         } catch (err) {
             this._data = [];
@@ -1420,8 +1500,12 @@ const IssuingAuthorities = {
         const wrapper = document.getElementById('ia-table-wrapper');
         if (!wrapper) return;
 
+        const esc = (typeof Utils !== 'undefined' && Utils.escapeHTML)
+            ? Utils.escapeHTML
+            : (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
+
         if (this._loading) {
-            wrapper.innerHTML = `<div style="text-align:center;padding:40px;"><i class="fas fa-spinner fa-spin" style="font-size:1.8rem;color:#2563eb;"></i></div>`;
+            wrapper.innerHTML = `<div style="text-align:center;padding:40px;"><i class="fas fa-spinner fa-spin" style="font-size:1.8rem;color:#2563eb;"></i><div style="margin-top:8px;color:#64748b;font-size:0.88rem;">${esc(this.t('module.common.loading', 'جاري التحميل...'))}</div></div>`;
             return;
         }
 
@@ -1434,7 +1518,10 @@ const IssuingAuthorities = {
             const fActive = !!(this._listFilters.search || this._listFilters.factory || this._listFilters.department || this._listFilters.status);
             if (this._data.length && fActive) {
                 countEl.style.display = 'block';
-                countEl.textContent = `عرض ${records.length} من أصل ${baseCount} سجلًا (بعد تطبيق الفلتر).`;
+                countEl.textContent = this._tReplace('module.issuingAuthorities.filterCount', 'عرض {{shown}} من أصل {{total}} سجلًا (بعد تطبيق الفلتر).', {
+                    shown: records.length,
+                    total: baseCount
+                });
             } else {
                 countEl.style.display = 'none';
             }
@@ -1442,59 +1529,72 @@ const IssuingAuthorities = {
 
         if (records.length === 0) {
             const hasAnyData = this._getBaseRecordsForView().length > 0;
+            const emptyTitle = hasAnyData
+                ? this.t('module.issuingAuthorities.empty.noFilterResults', 'لا توجد نتائج مطابقة للفلتر')
+                : this.t('module.issuingAuthorities.empty.noRecords', 'لا يوجد سجلات بعد');
+            const emptyHint = hasAnyData
+                ? this.t('module.issuingAuthorities.empty.hintFiltered', 'جرّب تعديل البحث أو الفلاتر أعلاه.')
+                : (isAdmin
+                    ? this._tReplace('module.issuingAuthorities.empty.hintAdmin', 'انقر على "{{add}}" لإضافة أول سجل في قائمة {{cat}}.', {
+                        add: this.t('module.issuingAuthorities.btn.addPerson', 'إضافة شخص'),
+                        cat: this._categoryTitle()
+                    })
+                    : this._tReplace('module.issuingAuthorities.empty.hintViewer', 'لم تتم إضافة سجلات {{cat}} بعد.', { cat: this._categoryTitle() }));
             wrapper.innerHTML = `
                 <div class="empty-state" style="padding:48px 24px;">
                     <i class="fas fa-user-check" style="font-size:2.5rem;color:#cbd5e1;margin-bottom:12px;"></i>
-                    <h3 style="color:#64748b;margin-bottom:6px;">${hasAnyData ? 'لا توجد نتائج مطابقة للفلتر' : 'لا يوجد سجلات بعد'}</h3>
+                    <h3 style="color:#64748b;margin-bottom:6px;">${esc(emptyTitle)}</h3>
                     <p style="color:#94a3b8;font-size:0.88rem;">
-                        ${hasAnyData ? 'جرّب تعديل البحث أو الفلاتر أعلاه.' : (isAdmin ? `انقر على "إضافة شخص" لإضافة أول سجل في قائمة ${this._categoryTitleAr()}.` : `لم تتم إضافة سجلات ${this._categoryTitleAr()} بعد.`)}
+                        ${esc(emptyHint)}
                     </p>
                 </div>`;
             this._syncFilterDropdowns();
             return;
         }
 
-        const headerCells = this.PERMIT_TYPES.map(pt => `
+        const headerCells = this.PERMIT_TYPES.map(pt => {
+            const { primary, secondary } = this._permitBilingualHeader(pt);
+            return `
             <th style="text-align:center;white-space:nowrap;padding:8px 6px;font-size:0.8rem;">
-                <div style="font-weight:700;color:#1e40af;">${pt.labelEn}</div>
-                <div style="font-weight:400;color:#64748b;font-size:0.72rem;">${pt.labelAr}</div>
-            </th>
-        `).join('');
-
-        const esc = (typeof Utils !== 'undefined' && Utils.escapeHTML)
-            ? Utils.escapeHTML
-            : (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
+                <div style="font-weight:700;color:#1e40af;">${esc(primary)}</div>
+                <div style="font-weight:400;color:#64748b;font-size:0.72rem;">${esc(secondary)}</div>
+            </th>`;
+        }).join('');
         const isCv = this._activeCategory === 'contractors';
         const nameHead = isCv
-            ? `<th style="text-align:right;padding:8px 10px;color:#1e40af;min-width:140px;">المقاول / المورد</th>
-                    <th style="text-align:right;padding:8px 10px;color:#1e40af;min-width:120px;">اسم المسؤول</th>`
-            : `<th style="text-align:right;padding:8px 12px;color:#1e40af;min-width:160px;">اسم الشخص المصرح له</th>`;
+            ? `<th style="text-align:right;padding:8px 10px;color:#1e40af;min-width:140px;">${esc(this.t('module.issuingAuthorities.col.contractorSupplier', 'المقاول / المورد'))}</th>
+                    <th style="text-align:right;padding:8px 10px;color:#1e40af;min-width:120px;">${esc(this.t('module.issuingAuthorities.col.responsibleName', 'اسم المسؤول'))}</th>`
+            : `<th style="text-align:right;padding:8px 12px;color:#1e40af;min-width:160px;">${esc(this.t('module.issuingAuthorities.col.approverName', 'اسم الشخص المصرح له'))}</th>`;
 
         const bodyRows = records.map((rec, idx) => {
             const permitCells = this.PERMIT_TYPES.map(pt => {
                 const v = String(rec[pt.key] || 'X').toUpperCase().trim();
-                const style = this.PERMIT_VALUE_STYLES[v] || this.PERMIT_VALUE_STYLES.X;
-                return `<td style="text-align:center;"><span class="${style.class}" title="${style.title}">${v}</span></td>`;
+                const meta = this._badgeMeta(v);
+                return `<td style="text-align:center;"><span class="${meta.class}" title="${esc(meta.title)}">${v}</span></td>`;
             }).join('');
 
+            const inactiveLbl = esc(this.t('module.issuingAuthorities.inactiveTag', '(غير نشط)'));
             const activeIndicator = rec.isActive === false
-                ? '<span style="color:#ef4444;font-size:0.75rem;">(غير نشط)</span>'
+                ? `<span style="color:#ef4444;font-size:0.75rem;">${inactiveLbl}</span>`
                 : '';
 
             const delName = isCv
                 ? `${this._displayContractorCompany(rec)} — ${this._displayResponsibleName(rec)}`
                 : (rec.name || '');
 
+            const tView = esc(this.t('module.common.view', 'عرض'));
+            const tEdit = esc(this.t('module.common.edit', 'تعديل'));
+            const tDel = esc(this.t('module.issuingAuthorities.delete.btn', 'حذف'));
             const actionBtns = `
                 <span style="display:inline-flex;align-items:center;gap:6px;justify-content:center;">
-                <button type="button" class="ia-btn-view" data-id="${esc(rec.id)}" title="عرض" style="padding:4px 8px;border:none;background:none;cursor:pointer;color:#0d9488;">
+                <button type="button" class="ia-btn-view" data-id="${esc(rec.id)}" title="${tView}" style="padding:4px 8px;border:none;background:none;cursor:pointer;color:#0d9488;">
                     <i class="fas fa-eye"></i>
                 </button>
                 ${isAdmin ? `
-                <button type="button" class="ia-btn-edit" data-id="${esc(rec.id)}" title="تعديل" style="padding:4px 8px;border:none;background:none;cursor:pointer;color:#2563eb;">
+                <button type="button" class="ia-btn-edit" data-id="${esc(rec.id)}" title="${tEdit}" style="padding:4px 8px;border:none;background:none;cursor:pointer;color:#2563eb;">
                     <i class="fas fa-edit"></i>
                 </button>
-                <button type="button" class="ia-btn-delete" data-id="${esc(rec.id)}" data-name="${esc(delName)}" title="حذف" style="padding:4px 8px;border:none;background:none;cursor:pointer;color:#dc2626;">
+                <button type="button" class="ia-btn-delete" data-id="${esc(rec.id)}" data-name="${esc(delName)}" title="${tDel}" style="padding:4px 8px;border:none;background:none;cursor:pointer;color:#dc2626;">
                     <i class="fas fa-trash"></i>
                 </button>` : ''}
                 </span>`;
@@ -1526,13 +1626,13 @@ const IssuingAuthorities = {
             </tr>`;
         }).join('');
 
-        const actionHeader = '<th style="text-align:center;padding:8px 6px;">إجراءات</th>';
+        const actionHeader = `<th style="text-align:center;padding:8px 6px;">${esc(this.t('module.issuingAuthorities.col.actions', 'إجراءات'))}</th>`;
 
         wrapper.innerHTML = `
         <table style="width:100%;border-collapse:collapse;font-size:0.88rem;">
             <thead>
                 <tr style="background:#eff6ff;border-bottom:2px solid #bfdbfe;">
-                    <th style="text-align:center;padding:8px 6px;color:#1e40af;width:40px;">م</th>
+                    <th style="text-align:center;padding:8px 6px;color:#1e40af;width:40px;">${esc(this.t('module.issuingAuthorities.col.idx', 'م'))}</th>
                     ${nameHead}
                     ${headerCells}
                     ${actionHeader}
@@ -1652,8 +1752,8 @@ const IssuingAuthorities = {
         const hint = document.getElementById('ia-person-mode-hint');
         if (hint) {
             hint.textContent = type === 'employee'
-                ? 'وضع الموظف: أدخل الكود الوظيفي ثم اضغط "بحث" لملء البيانات تلقائياً.'
-                : 'وضع المقاول: أدخل البيانات يدويًا.';
+                ? this.t('module.issuingAuthorities.toggle.hint.employee', 'وضع الموظف: أدخل الكود الوظيفي ثم اضغط "بحث" لملء البيانات تلقائياً.')
+                : this.t('module.issuingAuthorities.toggle.hint.contractor', 'وضع المقاول: أدخل البيانات يدويًا.');
         }
         const autoFields = ['ia-f-name', 'ia-f-dept', 'ia-f-job-title', 'ia-f-branch'];
         autoFields.forEach(id => {
@@ -1695,7 +1795,7 @@ const IssuingAuthorities = {
                     sublocation: String(localEmployee.sublocation || localEmployee.subLocation || localEmployee.subLocationName || '').trim()
                 });
                 if (typeof Utils !== 'undefined' && Utils.showNotification) {
-                    Utils.showNotification('تم تحميل بيانات الموظف بنجاح', 'success');
+                    Utils.showNotification(this.t('module.issuingAuthorities.notify.empLoaded', 'تم تحميل بيانات الموظف بنجاح'), 'success');
                 }
                 return;
             }
@@ -1745,7 +1845,7 @@ const IssuingAuthorities = {
             }
             if (!result || !result.success || !result.data) {
                 if (typeof Utils !== 'undefined' && Utils.showNotification) {
-                    Utils.showNotification((result && result.message) || 'لم يتم العثور على بيانات موظف', 'warning');
+                    Utils.showNotification((result && result.message) || this.t('module.issuingAuthorities.notify.empNotFound', 'لم يتم العثور على بيانات موظف'), 'warning');
                 }
                 return;
             }
@@ -1761,7 +1861,7 @@ const IssuingAuthorities = {
                 sublocation: data.sublocation || ''
             });
             if (typeof Utils !== 'undefined' && Utils.showNotification) {
-                Utils.showNotification('تم تحميل بيانات الموظف بنجاح', 'success');
+                Utils.showNotification(this.t('module.issuingAuthorities.notify.empLoaded', 'تم تحميل بيانات الموظف بنجاح'), 'success');
             }
         } catch (err) {
             this._reportModuleError('IssuingAuthorities._lookupEmployeeByCode', err);
@@ -1792,12 +1892,18 @@ const IssuingAuthorities = {
         this._modalReadOnly = readOnly;
         this._currentEditId = readOnly ? null : (record ? record.id : null);
         if (readOnly && record) {
-            title.textContent = 'عرض بيانات الشخص المصرح له';
+            title.textContent = this.t('module.issuingAuthorities.modal.viewTitle', 'عرض بيانات الشخص المصرح له');
         } else {
-            title.textContent = record ? 'تعديل بيانات الشخص المصرح له' : 'إضافة شخص مصرح له';
+            title.textContent = record
+                ? this.t('module.issuingAuthorities.modal.editTitle', 'تعديل بيانات الشخص المصرح له')
+                : this.t('module.issuingAuthorities.modal.addTitle', 'إضافة شخص مصرح له');
         }
         const cancelBtn = document.getElementById('ia-modal-cancel');
-        if (cancelBtn) cancelBtn.textContent = readOnly ? 'إغلاق' : 'إلغاء';
+        if (cancelBtn) {
+            cancelBtn.textContent = readOnly
+                ? this.t('module.common.close', 'إغلاق')
+                : this.t('module.common.cancel', 'إلغاء');
+        }
         await this._fetchContractorOptions();
         body.innerHTML = this._renderForm(record);
         modal.style.display = 'flex';
@@ -1823,7 +1929,7 @@ const IssuingAuthorities = {
         const saveBtn = document.getElementById('ia-modal-save');
         if (saveBtn) saveBtn.style.display = '';
         const cancelBtn = document.getElementById('ia-modal-cancel');
-        if (cancelBtn) cancelBtn.textContent = 'إلغاء';
+        if (cancelBtn) cancelBtn.textContent = this.t('module.common.cancel', 'إلغاء');
     },
 
     async _saveModal() {
@@ -1835,26 +1941,31 @@ const IssuingAuthorities = {
         const contractorCompanyName = (document.getElementById('ia-f-contractor-name')?.value || '').trim();
         const name = (document.getElementById('ia-f-name')?.value || '').trim();
         if (!name) {
+            const msg = personType === 'contractor'
+                ? this.t('module.issuingAuthorities.notify.nameRequired.contractor', 'اسم الشخص المسؤول من الشركة مطلوب')
+                : this.t('module.issuingAuthorities.notify.nameRequired.employee', 'اسم الشخص مطلوب');
             if (typeof Utils !== 'undefined' && Utils.showNotification) {
-                Utils.showNotification(personType === 'contractor' ? 'اسم الشخص المسؤول من الشركة مطلوب' : 'اسم الشخص مطلوب', 'error');
+                Utils.showNotification(msg, 'error');
             } else {
-                alert(personType === 'contractor' ? 'اسم الشخص المسؤول من الشركة مطلوب' : 'اسم الشخص مطلوب');
+                alert(msg);
             }
             return;
         }
         if (personType === 'employee' && !employeeCode) {
+            const msg = this.t('module.issuingAuthorities.notify.codeRequired', 'الكود الوظيفي مطلوب للموظف');
             if (typeof Utils !== 'undefined' && Utils.showNotification) {
-                Utils.showNotification('الكود الوظيفي مطلوب للموظف', 'error');
+                Utils.showNotification(msg, 'error');
             } else {
-                alert('الكود الوظيفي مطلوب للموظف');
+                alert(msg);
             }
             return;
         }
         if (personType === 'contractor' && !contractorCompanyName) {
+            const msg = this.t('module.issuingAuthorities.notify.contractorRequired', 'اختيار المقاول / المورد مطلوب');
             if (typeof Utils !== 'undefined' && Utils.showNotification) {
-                Utils.showNotification('اختيار المقاول / المورد مطلوب', 'error');
+                Utils.showNotification(msg, 'error');
             } else {
-                alert('اختيار المقاول / المورد مطلوب');
+                alert(msg);
             }
             return;
         }
@@ -1864,6 +1975,12 @@ const IssuingAuthorities = {
         const sublocationSelect = document.getElementById('ia-f-sublocation');
         const selectedFactoryText = factorySelect?.options?.[factorySelect.selectedIndex]?.text || '';
         const selectedSublocationText = sublocationSelect?.options?.[sublocationSelect.selectedIndex]?.text || '';
+        const facPh = this.t('module.issuingAuthorities.select.factory', '-- اختر المصنع --').trim();
+        const subPh = this.t('module.issuingAuthorities.select.sublocation', '-- اختر الموقع الفرعي --').trim();
+        const facTxt = String(selectedFactoryText || '').trim();
+        const subTxt = String(selectedSublocationText || '').trim();
+        const isFacPlaceholder = !facTxt || facTxt === facPh || /^(--|—)/.test(facTxt);
+        const isSubPlaceholder = !subTxt || subTxt === subPh || /^(--|—)/.test(subTxt);
         const payload = {
             personType,
             employeeCode: personType === 'contractor' ? '' : employeeCode,
@@ -1872,10 +1989,10 @@ const IssuingAuthorities = {
             departmentName: document.getElementById('ia-f-dept')?.value?.trim() || '',
             jobTitle:       document.getElementById('ia-f-job-title')?.value?.trim() || '',
             branch:         document.getElementById('ia-f-branch')?.value?.trim() || '',
-            factory:        (selectedFactoryText && !selectedFactoryText.includes('اختر')) ? selectedFactoryText.trim() : (document.getElementById('ia-f-factory')?.value?.trim() || ''),
+            factory:        !isFacPlaceholder ? facTxt : (document.getElementById('ia-f-factory')?.value?.trim() || ''),
             factoryId:      document.getElementById('ia-f-factory')?.value?.trim() || '',
             location:       document.getElementById('ia-f-location')?.value?.trim() || '',
-            sublocation:    (selectedSublocationText && !selectedSublocationText.includes('اختر')) ? selectedSublocationText.trim() : (document.getElementById('ia-f-sublocation')?.value?.trim() || ''),
+            sublocation:    !isSubPlaceholder ? subTxt : (document.getElementById('ia-f-sublocation')?.value?.trim() || ''),
             sublocationId:  document.getElementById('ia-f-sublocation')?.value?.trim() || '',
             email:          document.getElementById('ia-f-email')?.value?.trim() || '',
             phone:          document.getElementById('ia-f-phone')?.value?.trim() || '',
@@ -1891,7 +2008,8 @@ const IssuingAuthorities = {
         });
 
         const saveBtn = document.getElementById('ia-modal-save');
-        if (saveBtn) { saveBtn.disabled = true; saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري الحفظ...'; }
+        const savingHtml = `<i class="fas fa-spinner fa-spin"></i> ${this.t('module.issuingAuthorities.modal.saving', 'جاري الحفظ...')}`;
+        if (saveBtn) { saveBtn.disabled = true; saveBtn.innerHTML = savingHtml; }
 
         try {
             let result;
@@ -1918,12 +2036,17 @@ const IssuingAuthorities = {
                 await this._fetchData();
                 this._renderTable();
                 if (typeof Utils !== 'undefined' && Utils.showNotification) {
-                    Utils.showNotification(this._currentEditId ? 'تم التحديث بنجاح' : 'تم الإضافة بنجاح', 'success');
+                    Utils.showNotification(
+                        this._currentEditId
+                            ? this.t('module.issuingAuthorities.notify.updated', 'تم التحديث بنجاح')
+                            : this.t('module.issuingAuthorities.notify.added', 'تم الإضافة بنجاح'),
+                        'success'
+                    );
                 }
                 // إعلام PTW بتغيير البيانات
                 document.dispatchEvent(new CustomEvent('issuingAuthoritiesUpdated', { detail: { data: this._data } }));
             } else {
-                const msg = (result && result.message) || 'فشل الحفظ';
+                const msg = (result && result.message) || this.t('module.issuingAuthorities.notify.saveFail', 'فشل الحفظ');
                 if (typeof Utils !== 'undefined' && Utils.showNotification) {
                     Utils.showNotification(msg, 'error');
                 } else {
@@ -1933,7 +2056,10 @@ const IssuingAuthorities = {
         } catch (err) {
             this._reportModuleError('IssuingAuthorities._saveModal', err);
         } finally {
-            if (saveBtn) { saveBtn.disabled = false; saveBtn.innerHTML = '<i class="fas fa-save" style="margin-left:6px;"></i>حفظ'; }
+            if (saveBtn) {
+                saveBtn.disabled = false;
+                saveBtn.innerHTML = `<i class="fas fa-save" style="margin-left:6px;"></i>${this.t('module.issuingAuthorities.modal.save', 'حفظ')}`;
+            }
         }
     },
 
@@ -1941,7 +2067,7 @@ const IssuingAuthorities = {
         const modal = document.getElementById('ia-delete-modal');
         const msg   = document.getElementById('ia-delete-msg');
         if (!modal || !msg) return;
-        msg.textContent = `هل تريد حذف السجل الخاص بـ "${name}"؟ لا يمكن التراجع عن هذا الإجراء.`;
+        msg.textContent = this._tReplace('module.issuingAuthorities.delete.message', 'هل تريد حذف السجل الخاص بـ "{{name}}"؟ لا يمكن التراجع عن هذا الإجراء.', { name: String(name || '') });
         modal.style.display = 'flex';
 
         const confirmBtn = document.getElementById('ia-delete-confirm');
@@ -1971,11 +2097,11 @@ const IssuingAuthorities = {
                 await this._fetchData();
                 this._renderTable();
                 if (typeof Utils !== 'undefined' && Utils.showNotification) {
-                    Utils.showNotification('تم حذف السجل بنجاح', 'success');
+                    Utils.showNotification(this.t('module.issuingAuthorities.notify.deleted', 'تم حذف السجل بنجاح'), 'success');
                 }
                 document.dispatchEvent(new CustomEvent('issuingAuthoritiesUpdated', { detail: { data: this._data } }));
             } else {
-                const msg = (result && result.message) || 'فشل الحذف';
+                const msg = (result && result.message) || this.t('module.issuingAuthorities.notify.deleteFail', 'فشل الحذف');
                 if (typeof Utils !== 'undefined' && Utils.showNotification) {
                     Utils.showNotification(msg, 'error');
                 } else {
