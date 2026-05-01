@@ -792,24 +792,41 @@ const Permissions = {
                         من هنا يمكنك إدارة المواقع وأماكنها، وتحديد قوائم الإدارات المسؤولة وفريق السلامة المستخدمين داخل النماذج (مثل الملاحظات اليومية).
                         أي تعديل يتم حفظه مباشرة في قاعدة البيانات ويظهر في النماذج عند تعبئتها. جميع العمليات تُسجل في سجل النشاطات مع اسم المستخدم والتاريخ.
                     </p>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div>
-                            <h3 class="text-sm font-semibold text-gray-700 mb-3">
-                                <i class="fas fa-map-marker-alt ml-2"></i>المواقع
+                    <div class="rounded-xl border border-gray-200 bg-gray-50 p-4 md:p-6 shadow">
+                        <div class="flex flex-col gap-1 mb-4 pb-4 border-b border-gray-200">
+                            <h3 class="text-sm font-semibold text-gray-800 flex items-center gap-2">
+                                <span class="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-blue-100 text-blue-700" aria-hidden="true">
+                                    <i class="fas fa-map-marked-alt text-sm"></i>
+                                </span>
+                                المواقع والأماكن
                             </h3>
-                            <div id="form-settings-sites-list" class="space-y-2"></div>
-                            <button type="button" class="btn-primary btn-sm mt-2" data-action="add-site">
-                                <i class="fas fa-plus ml-2"></i>إضافة موقع
-                            </button>
+                            <p class="text-xs text-gray-500 pr-2">
+                                اختر موقعاً من العمود الأول لإدارة الأماكن التابعة له في العمود الثاني. الترتيب المعروض هنا يُستخدم في قوائم النماذج.
+                            </p>
                         </div>
-                        <div>
-                            <h3 class="text-sm font-semibold text-gray-700 mb-3">
-                                <i class="fas fa-location-dot ml-2"></i>الأماكن داخل الموقع المحدد
-                            </h3>
-                            <div id="form-settings-places-list" class="space-y-2"></div>
-                            <button type="button" class="btn-secondary btn-sm mt-2" data-action="add-place" id="form-settings-add-place-btn">
-                                <i class="fas fa-plus ml-2"></i>إضافة مكان
-                            </button>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+                            <div class="rounded-lg border border-gray-200 bg-white p-4 shadow flex flex-col" style="min-height: 12rem;">
+                                <h4 class="text-sm font-semibold text-gray-700 mb-1 flex items-center gap-2">
+                                    <i class="fas fa-map-marker-alt text-gray-400 text-xs" aria-hidden="true"></i>
+                                    المواقع
+                                </h4>
+                                <p class="text-xs text-gray-500 mb-3">قائمة المصانع أو المواقع؛ استخدم «اختيار» لتحديد الموقع النشط.</p>
+                                <div id="form-settings-sites-list" class="space-y-2 flex-1 min-h-0 max-h-96 overflow-y-auto pr-1"></div>
+                                <button type="button" class="btn-primary btn-sm mt-3 w-full flex-shrink-0" data-action="add-site">
+                                    <i class="fas fa-plus ml-2"></i>إضافة موقع
+                                </button>
+                            </div>
+                            <div class="rounded-lg border border-gray-200 bg-white p-4 shadow flex flex-col" style="min-height: 12rem; border-inline-start: 4px solid #3b82f6;">
+                                <h4 class="text-sm font-semibold text-gray-700 mb-1 flex items-center gap-2">
+                                    <i class="fas fa-location-dot text-gray-400 text-xs" aria-hidden="true"></i>
+                                    الأماكن داخل الموقع المحدد
+                                </h4>
+                                <p id="form-settings-places-context" class="text-xs text-gray-600 mb-3 rounded-md bg-gray-50 border border-dashed border-gray-200 px-3 py-2" style="min-height: 2.75rem;" aria-live="polite"></p>
+                                <div id="form-settings-places-list" class="space-y-2 flex-1 min-h-0 max-h-96 overflow-y-auto pr-1"></div>
+                                <button type="button" class="btn-secondary btn-sm mt-3 w-full flex-shrink-0" data-action="add-place" id="form-settings-add-place-btn">
+                                    <i class="fas fa-plus ml-2"></i>إضافة مكان
+                                </button>
+                            </div>
                         </div>
                     </div>
                     <div>
@@ -899,14 +916,14 @@ const Permissions = {
         // ✅ إصلاح: عرض جميع المواقع بدون أي قيود (50 موقع أو أكثر)
         // لا نستخدم slice() أو limit - نعرض جميع المواقع
         return state.sites.map((site, index) => `
-            <div class="flex items-center gap-2 p-2 border border-gray-200 rounded-lg bg-white" data-site-id="${Utils.escapeHTML(site.id)}">
-                <span class="text-xs text-gray-400">#${index + 1}</span>
-                <input type="text" class="form-input flex-1" data-field="site-name" data-site-id="${Utils.escapeHTML(site.id)}"
-                    value="${Utils.escapeHTML(site.name || '')}" placeholder="اسم الموقع">
-                <button type="button" class="btn-secondary btn-xs ${site.id === state.selectedSiteId ? 'btn-primary' : ''}" data-action="select-site" data-site-id="${Utils.escapeHTML(site.id)}">
+            <div class="flex flex-wrap items-center gap-2 p-3 border border-gray-200 rounded-lg bg-white hover:border-gray-300 transition-colors ${site.id === state.selectedSiteId ? 'border-blue-500 bg-blue-50' : ''}" data-site-id="${Utils.escapeHTML(site.id)}">
+                <span class="inline-flex items-center justify-center rounded-md bg-gray-100 px-2 py-1 text-xs font-medium text-gray-600 flex-shrink-0" title="الترتيب">#${index + 1}</span>
+                <input type="text" class="form-input flex-1 min-w-0" data-field="site-name" data-site-id="${Utils.escapeHTML(site.id)}"
+                    value="${Utils.escapeHTML(site.name || '')}" placeholder="اسم الموقع" style="min-width: 8rem;">
+                <button type="button" class="btn-secondary btn-xs flex-shrink-0 ${site.id === state.selectedSiteId ? 'btn-primary' : ''}" data-action="select-site" data-site-id="${Utils.escapeHTML(site.id)}">
                     ${site.id === state.selectedSiteId ? '<i class="fas fa-check ml-1"></i>محدد' : 'اختيار'}
                 </button>
-                <button type="button" class="btn-danger btn-xs" data-action="remove-site" data-site-id="${Utils.escapeHTML(site.id)}">
+                <button type="button" class="btn-danger btn-xs flex-shrink-0" data-action="remove-site" data-site-id="${Utils.escapeHTML(site.id)}" title="حذف الموقع">
                     <i class="fas fa-trash"></i>
                 </button>
             </div>
@@ -915,25 +932,30 @@ const Permissions = {
 
     renderFormPlacesList() {
         const state = this.getFormSettingsState();
+        const emptyBox = (body) => `
+            <div class="bg-gray-50 border border-dashed border-gray-300 rounded-lg p-4 text-sm text-gray-600 leading-relaxed">
+                ${body}
+            </div>`;
         if (!state || !Array.isArray(state.sites)) {
-            return `<p class="text-sm text-gray-500">لا توجد مواقع متاحة.</p>`;
+            return emptyBox('لا توجد مواقع متاحة. أضف موقعاً أولاً من العمود المجاور.');
         }
         if (!state.selectedSiteId) {
-            return `<p class="text-sm text-gray-500">اختر موقعاً من القائمة لعرض الأماكن التابعة له.</p>`;
+            return emptyBox('اختر موقعاً من قائمة المواقع باستخدام زر <strong>اختيار</strong> لعرض وتعديل الأماكن التابعة له.');
         }
         const site = state.sites.find((item) => item.id === state.selectedSiteId);
         if (!site) {
-            return `<p class="text-sm text-gray-500">الموقع المحدد غير موجود.</p>`;
+            return emptyBox('الموقع المحدد غير موجود. اختر موقعاً صالحاً من القائمة.');
         }
         if (!Array.isArray(site.places) || site.places.length === 0) {
-            return `<p class="text-sm text-gray-500">لا توجد أماكن مسجلة لهذا الموقع. يمكنك إضافة أماكن جديدة باستخدام الزر أدناه.</p>`;
+            const label = (site.name || '').trim() || 'هذا الموقع';
+            return emptyBox(`لا توجد أماكن مسجلة لـ <strong>${Utils.escapeHTML(label)}</strong>. استخدم زر <strong>إضافة مكان</strong> أدناه.`);
         }
         return site.places.map((place, index) => `
-            <div class="flex items-center gap-2 p-2 border border-gray-200 rounded-lg bg-white" data-place-id="${Utils.escapeHTML(place.id)}">
-                <span class="text-xs text-gray-400">#${index + 1}</span>
-                <input type="text" class="form-input flex-1" data-field="place-name" data-place-id="${Utils.escapeHTML(place.id)}"
-                    value="${Utils.escapeHTML(place.name || '')}" placeholder="اسم المكان داخل الموقع">
-                <button type="button" class="btn-danger btn-xs" data-action="remove-place" data-place-id="${Utils.escapeHTML(place.id)}">
+            <div class="flex flex-wrap items-center gap-2 p-3 border border-gray-200 rounded-lg bg-white hover:border-gray-300 transition-colors" data-place-id="${Utils.escapeHTML(place.id)}">
+                <span class="inline-flex items-center justify-center rounded-md bg-gray-100 px-2 py-1 text-xs font-medium text-gray-600 flex-shrink-0" title="الترتيب">#${index + 1}</span>
+                <input type="text" class="form-input flex-1 min-w-0" data-field="place-name" data-place-id="${Utils.escapeHTML(place.id)}"
+                    value="${Utils.escapeHTML(place.name || '')}" placeholder="اسم المكان داخل الموقع" style="min-width: 8rem;">
+                <button type="button" class="btn-danger btn-xs flex-shrink-0" data-action="remove-place" data-place-id="${Utils.escapeHTML(place.id)}" title="حذف المكان">
                     <i class="fas fa-trash"></i>
                 </button>
             </div>
@@ -995,6 +1017,22 @@ const Permissions = {
         const addPlaceBtn = document.getElementById('form-settings-add-place-btn');
         if (addPlaceBtn) {
             addPlaceBtn.disabled = !state.selectedSiteId;
+        }
+        const placesCtx = document.getElementById('form-settings-places-context');
+        if (placesCtx) {
+            if (!state || !state.selectedSiteId || !Array.isArray(state.sites)) {
+                placesCtx.textContent =
+                    'لم يُحدد موقع بعد. اختر موقعاً من قائمة «المواقع» بزر «اختيار» لعرض الأماكن التابعة له.';
+            } else {
+                const sel = state.sites.find((s) => s.id === state.selectedSiteId);
+                if (!sel) {
+                    placesCtx.textContent = 'الموقع المحدد غير متوفر في القائمة. اختر موقعاً آخر.';
+                } else {
+                    const name = String(sel.name || '').trim() || sel.id;
+                    const n = Array.isArray(sel.places) ? sel.places.length : 0;
+                    placesCtx.textContent = `الموقع النشط: ${name} — عدد الأماكن المسجلة: ${n}`;
+                }
+            }
         }
     },
 
