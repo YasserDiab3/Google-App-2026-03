@@ -367,6 +367,19 @@ select.form-select option {
     vertical-align: middle;
 }
 
+/* إعدادات الشركة: معاينة شعار الشركة — w-32/h-32 و object-contain غير معرّفة في tailwind-utilities الجزئي */
+#company-logo-preview {
+    width: 8rem;
+    height: 8rem;
+    max-width: 8rem;
+    max-height: 8rem;
+    min-width: 0;
+    object-fit: contain;
+    box-sizing: border-box;
+    display: block;
+    flex-shrink: 0;
+}
+
 /* Table Actions */
 .table-actions {
     display: flex;
