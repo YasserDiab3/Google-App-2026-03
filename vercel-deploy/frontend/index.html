@@ -10818,21 +10818,45 @@
                         aria-labelledby="dashboard-title"
                     >
                         <header class="section-header">
-                            <h1 id="dashboard-title" class="section-title">
-                                <i
-                                    class="fas fa-tachometer-alt ml-3"
-                                    aria-hidden="true"
-                                ></i>
-                                <span data-i18n="nav.dashboard"
-                                    >لوحة التحكم</span
+                            <div class="section-header-text">
+                                <h1 id="dashboard-title" class="section-title">
+                                    <i
+                                        class="fas fa-tachometer-alt ml-3"
+                                        aria-hidden="true"
+                                    ></i>
+                                    <span data-i18n="nav.dashboard"
+                                        >لوحة التحكم</span
+                                    >
+                                </h1>
+                                <p
+                                    class="section-subtitle"
+                                    data-i18n="dash.overview"
                                 >
-                            </h1>
-                            <p
-                                class="section-subtitle"
-                                data-i18n="dash.overview"
+                                    نظرة عامة على أنشطة السلامة المهنية
+                                </p>
+                            </div>
+                            <div
+                                class="dashboard-header-actions"
+                                style="position: relative; align-self: center"
                             >
-                                نظرة عامة على أنشطة السلامة المهنية
-                            </p>
+                                <button
+                                    type="button"
+                                    id="dashboard-notifications-btn"
+                                    class="header-notifications-btn"
+                                    data-i18n-title="app.notifications"
+                                    aria-label="الإشعارات"
+                                    title="الإشعارات"
+                                    style="position: relative"
+                                >
+                                    <i class="fas fa-bell" aria-hidden="true"></i>
+                                    <span
+                                        id="dashboard-notifications-badge"
+                                        class="header-notifications-badge"
+                                        style="display: none"
+                                        >0</span
+                                    >
+                                </button>
+                            </div>
                         </header>
 
                         <!-- KPI Cards -->
