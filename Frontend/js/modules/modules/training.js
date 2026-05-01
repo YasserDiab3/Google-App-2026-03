@@ -9072,6 +9072,31 @@ const Training = {
             } catch (e) {
                 Utils.safeWarn('فشل حفظ بنود التحليل الافتراضية:', e);
             }
+        } else {
+            let migrated = false;
+            items = items.map(item => {
+                if (!item || typeof item !== 'object') return item;
+                const isMonthPreset =
+                    item.id === 'trainings_by_month' ||
+                    String(item.label || '').trim() === 'البرامج حسب الشهر';
+                if (
+                    item.dataset === 'training' &&
+                    item.field === 'startDate' &&
+                    isMonthPreset
+                ) {
+                    migrated = true;
+                    return { ...item, field: 'byMonth' };
+                }
+                return item;
+            });
+            if (migrated) {
+                try {
+                    localStorage.setItem(keys.items, JSON.stringify(items));
+                    this.updateTrainingAnalysisResults();
+                } catch (e) {
+                    Utils.safeWarn('فشل حفظ ترحيل بنود التحليل:', e);
+                }
+            }
         }
         
         const container = document.getElementById('training-analysis-items-list');
@@ -9395,6 +9420,17 @@ const Training = {
         return this.filterRecordsByAnalysisDate(records, filter, dataset);
     },
 
+    /** حقول تاريخ تُجمَّع في التحليل على مستوى الشهر (YYYY-MM) بدل النص الخام */
+    _trainingAnalysisFieldBucketsByMonth(dataset, field) {
+        const map = {
+            training: ['startDate', 'endDate', 'date', 'createdAt'],
+            contractorTrainings: ['date', 'createdAt', 'trainingDate'],
+            trainingAttendance: ['date', 'createdAt', 'attendanceDate']
+        };
+        const list = map[dataset];
+        return Array.isArray(list) && list.includes(field);
+    },
+
     getTrainingAnalysisValue(dataset, field, record) {
         if (!record || typeof record !== 'object') return 'غير محدد';
 
@@ -9408,6 +9444,14 @@ const Training = {
             if (!dateStr) return 'غير محدد';
             const d = new Date(dateStr);
             if (isNaN(d.getTime())) return 'غير محدد';
+            return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+        }
+
+        if (this._trainingAnalysisFieldBucketsByMonth(dataset, field)) {
+            const raw = record[field];
+            if (raw == null || raw === '') return 'غير محدد';
+            const d = new Date(raw);
+            if (Number.isNaN(d.getTime())) return 'غير محدد';
             return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
         }
 
