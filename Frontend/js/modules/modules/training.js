@@ -29,6 +29,8 @@ const Training = {
     _tabDirty: { programs: true, contractors: true, attendance: true, analysis: true },
     /** إذا كان إجراء المجمّع غير مدعوم في نسخة Apps Script الحالية، نتجاوزه مباشرة في المحاولات التالية */
     _bundleActionUnsupported: false,
+    /** سياق مؤقت لخيارات نافذة تصدير تقرير التحليل (يُفرَّغ بعد التصدير) */
+    _analysisExportContext: null,
 
     ensureData() {
         const data = AppState.appData || {};
@@ -8863,11 +8865,8 @@ const Training = {
                                     <label class="block text-xs font-medium text-gray-600 mb-1">أقصى عدد في العرض والتصدير</label>
                                     <input type="number" id="training-analysis-trainer-limit" class="form-input" style="width:110px;" min="1" max="500" value="30">
                                 </div>
-                                <button type="button" id="training-analysis-export-trainers-excel" class="btn-success">
-                                    <i class="fas fa-file-excel ml-2"></i>Excel
-                                </button>
-                                <button type="button" id="training-analysis-export-trainers-pdf" class="btn-secondary">
-                                    <i class="fas fa-file-pdf ml-2"></i>PDF
+                                <button type="button" id="training-analysis-export-trainers-open" class="btn-primary">
+                                    <i class="fas fa-file-export ml-2"></i>تصدير تقرير المدربين
                                 </button>
                             </div>
                             <div class="table-wrapper mb-4 rounded-xl border border-indigo-100/60 overflow-hidden" style="max-height:280px;">
@@ -8896,11 +8895,8 @@ const Training = {
                                     <label class="block text-xs font-medium text-gray-600 mb-1">أقصى عدد في العرض والتصدير</label>
                                     <input type="number" id="training-analysis-attendees-limit" class="form-input" style="width:110px;" min="1" max="2000" value="50">
                                 </div>
-                                <button type="button" id="training-analysis-export-attendees-excel" class="btn-success">
-                                    <i class="fas fa-file-excel ml-2"></i>Excel
-                                </button>
-                                <button type="button" id="training-analysis-export-attendees-pdf" class="btn-secondary">
-                                    <i class="fas fa-file-pdf ml-2"></i>PDF
+                                <button type="button" id="training-analysis-export-attendees-open" class="btn-primary">
+                                    <i class="fas fa-file-export ml-2"></i>تصدير تقرير المتدربين
                                 </button>
                             </div>
                             <div class="table-wrapper mb-4 rounded-xl border border-teal-100/60 overflow-hidden" style="max-height:280px;">
