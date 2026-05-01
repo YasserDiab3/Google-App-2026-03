@@ -5,6 +5,21 @@
 
 const UserActivityLog = {
     /**
+     * معرف الجلسة الحالي لربط السجلات من الدخول حتى الخروج
+     */
+    getCurrentSessionId() {
+        try {
+            if (typeof AppState !== 'undefined' && AppState.currentUser && AppState.currentUser.sessionId) {
+                return String(AppState.currentUser.sessionId);
+            }
+            const fromStorage = sessionStorage.getItem('hse_session_id');
+            return fromStorage ? String(fromStorage) : '';
+        } catch (e) {
+            return '';
+        }
+    },
+
+    /**
      * الحصول على عنوان IP للمستخدم الحالي
      */
     async getUserIP() {
@@ -58,6 +73,8 @@ const UserActivityLog = {
 
         // الحصول على عنوان IP
         const ipAddress = await this.getUserIP();
+        const sessionId = this.getCurrentSessionId();
+        const sessionLoginTime = user.loginTime || null;
 
         const entry = {
             id: Utils.generateId('UAL'),
@@ -69,7 +86,9 @@ const UserActivityLog = {
             module: module || 'Unknown',
             recordId: recordId,
             details: typeof details === 'string' ? details : (details.description || JSON.stringify(details)),
-            ipAddress: ipAddress
+            ipAddress: ipAddress,
+            sessionId: sessionId || '',
+            sessionLoginTime: sessionLoginTime || ''
         };
 
         AppState.appData.user_activity_log.push(entry);

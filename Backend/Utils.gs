@@ -749,6 +749,11 @@ function getHeaders(sheetName, data) {
         return getDefaultHeaders('TrainingAttendance');
     }
 
+    // ✅ سجل نشاط المستخدم: رؤوس ثابتة؛ ensureSheetHeaders يضيف الأعمدة الجديدة للأوراق القديمة دون إعادة ترتيب الصفوف
+    if (sheetName === 'UserActivityLog') {
+        return getDefaultHeaders('UserActivityLog');
+    }
+
     // ✅ PTW: دمج الرؤوس الافتراضية مع مفاتيح أول صف في البيانات — يضمن ظهور أعمدة جديدة (مثل مسار الاعتماد) حتى لو أقدم صف لا يحتويها
     if (sheetName === 'PTW') {
         const dynamicHeaders = extractHeadersFromData(data);

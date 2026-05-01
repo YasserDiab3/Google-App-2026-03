@@ -838,17 +838,9 @@ window.Auth = {
             }
         }
 
-        // تسجيل حركة تسجيل الدخول
-        if (typeof UserActivityLog !== 'undefined') {
-            UserActivityLog.log('login', 'Authentication', null, {
-                description: `تسجيل دخول المستخدم ${AppState.currentUser.name || AppState.currentUser.email}`
-            }).catch(() => { }); // لا ننتظر حتى لا نبطئ عملية تسجيل الدخول
-        }
-
-        // الحصول على معرف الجلسة الحالي (تم إنشاؤه مسبقاً في بداية الدالة)
+        // معرف الجلسة قبل تسجيل «login» في السجل لربط كل الأحداث بنفس الجلسة
         let currentSessionId = sessionStorage.getItem('hse_session_id');
         if (!currentSessionId) {
-            // إنشاء معرف جلسة جديد إذا لم يكن موجوداً
             const timestamp = Date.now();
             const random = Math.random().toString(36).substring(2, 15);
             const userAgent = navigator.userAgent.substring(0, 50);
@@ -857,6 +849,13 @@ window.Auth = {
             }, 0).toString(36);
             currentSessionId = `SESS_${timestamp}_${random}_${userAgentHash}`;
             sessionStorage.setItem('hse_session_id', currentSessionId);
+        }
+        AppState.currentUser.sessionId = currentSessionId;
+
+        if (typeof UserActivityLog !== 'undefined') {
+            UserActivityLog.log('login', 'Authentication', null, {
+                description: `تسجيل دخول المستخدم ${AppState.currentUser.name || AppState.currentUser.email}`
+            }).catch(() => { });
         }
 
         // تحديث بيانات تسجيل الدخول للمستخدم في قاعدة البيانات
@@ -947,10 +946,12 @@ window.Auth = {
                 permissions: user.permissions || {},
                 lastLogin: loginTime,
                 isOnline: true,
+                activeSessionId: currentSessionId,
                 loginHistory: [{
                     time: loginTime,
                     ip: 'N/A',
-                    userAgent: navigator.userAgent.substring(0, 100)
+                    userAgent: navigator.userAgent.substring(0, 100),
+                    sessionId: currentSessionId
                 }],
                 createdAt: new Date().toISOString(),
                 updatedAt: new Date().toISOString()

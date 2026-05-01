@@ -259,7 +259,13 @@ function doPost(e) {
             'getIssuingAuthoritiesForPermitType',
             'getAllContractorIssuingAuthorities',
             'getContractorIssuingAuthoritiesForPermitType',
-            'getEmployeeByCode'
+            'getEmployeeByCode',
+            // تقرير الجلسات اليومي (قراءة فقط)
+            'getDailyUserSessionActivityReport',
+            'getAllUserActivityLogs',
+            'getUserActivityLogs',
+            'getLogStatistics',
+            'getAllAuditLogs'
         ];
         
         // قائمة بالـ actions الحساسة التي تتطلب CSRF token إلزامي
@@ -1949,6 +1955,12 @@ function doPost(e) {
                     break;
                 case 'getLogStatistics':
                     result = getLogStatistics(payload.filters || {});
+                    break;
+                case 'getDailyUserSessionActivityReport':
+                    result = getDailyUserSessionActivityReport(payload.filters || payload || {});
+                    break;
+                case 'runDailyUserSessionEmailReport':
+                    result = runDailyUserSessionEmailReport();
                     break;
                 case 'addAIAssistantSettings':
                     result = addAIAssistantSettingsToSheet(payload);
