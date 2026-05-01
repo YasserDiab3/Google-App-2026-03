@@ -2912,7 +2912,11 @@ const GoogleIntegration = {
                 'action-tracking': ['ActionTrackingRegister', 'HSECorrectiveActions', 'HSENonConformities', 'HSEObjectives']
             };
 
-            if (AppState.currentUser && AppState.currentUser.role !== 'admin') {
+            const isEffectiveAdmin = !!(AppState.currentUser && typeof Permissions !== 'undefined'
+                && typeof Permissions.isCurrentUserEffectiveAdmin === 'function'
+                && Permissions.isCurrentUserEffectiveAdmin(AppState.currentUser));
+
+            if (AppState.currentUser && !isEffectiveAdmin) {
                 const accessibleModules = Permissions.getAccessibleModules(true);
                 // ⚠️ أمان: لا يتم السماح بقراءة ورقة Users إلا لمن لديه صلاحية users صراحةً
                 const allowedSheets = new Set();
@@ -2926,6 +2930,11 @@ const GoogleIntegration = {
                         moduleSheets.forEach(sheet => allowedSheets.add(sheet));
                     }
                 });
+
+                // ✅ أنواع المخالفات تُدار من الإعدادات أيضاً — نضمن السماح بتحميلها لمن لديه صلاحية وصول للمخالفات
+                if (Permissions.hasAccess('violations')) {
+                    allowedSheets.add('ViolationTypes');
+                }
 
                 // ✅ إصلاح: إضافة أوراق المقاولين تلقائياً عند وجود صلاحيات لمديولات تحتاجها
                 // المديولات التي تحتاج قائمة المقاولين (dropdown/select):
