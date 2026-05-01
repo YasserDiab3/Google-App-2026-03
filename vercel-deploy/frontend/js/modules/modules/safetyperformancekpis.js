@@ -1688,9 +1688,15 @@ const SafetyPerformanceKPIs = {
             return avgEmployees > 0 ? totalHours / avgEmployees : 0;
         });
 
-        const contractorHoursDisplay = base.contractorEmployeeCounts.map(c => Number(c || 0) * 8 * 22);
-        const directHoursDisplay = base.directEmployeeCounts.map(c => Number(c || 0) * 8 * 22);
-        const combinedHoursDisplay = base.directEmployeeCounts.map((c, i) => (Number(c || 0) + Number(base.contractorEmployeeCounts[i] || 0)) * 8 * 22);
+        const toDerivedHoursFromHeadcount = (count) => {
+            const derived = Number(count || 0) * 8 * 22;
+            return parseFloat(derived.toFixed(2));
+        };
+        const contractorHoursDisplay = base.contractorEmployeeCounts.map(c => toDerivedHoursFromHeadcount(c));
+        const directHoursDisplay = base.directEmployeeCounts.map(c => toDerivedHoursFromHeadcount(c));
+        const combinedHoursDisplay = contractorHoursDisplay.map((contractorH, i) =>
+            parseFloat((contractorH + (directHoursDisplay[i] || 0)).toFixed(2))
+        );
 
         const model = {
             year,

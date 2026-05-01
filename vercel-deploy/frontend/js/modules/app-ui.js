@@ -7855,13 +7855,9 @@ window.UI = {
             if (mobileNotificationsBtn) Utils.safeLog('  - mobile-notifications-btn');
             if (headerNotificationsBtn) Utils.safeLog('  - header-notifications-btn');
 
-            // ربط أزرار الإشعارات — capture: true لمرحلة واحدة فقط (يمنع تبديلاً مزدوجاً مع معالجات الفقاعة)
-            // زر الشريط الجانبي: يُربط عبر #sidebar-notifications-container لأن النقر قد يقع على مساحة الحاوية وليس على الزر فقط
+            // ربط أزرار الإشعارات — capture: false (فقاعة) ليتوافق مع معالج document في مرحلة الالتقاط الذي يخرج مبكراً عند النقر على الجرس
             notificationButtons.forEach((btn) => {
                 if (!btn) return;
-                if (btn.id === 'notifications-btn') {
-                    return;
-                }
 
                 try {
                     // التحقق من أن الزر موجود في DOM
@@ -7872,7 +7868,7 @@ window.UI = {
 
                     // إزالة event listeners القديمة
                     if (btn._notificationClickHandler) {
-                        btn.removeEventListener('click', btn._notificationClickHandler, { capture: true });
+                        btn.removeEventListener('click', btn._notificationClickHandler, { capture: false });
                         delete btn._notificationClickHandler;
                     }
 
@@ -7946,7 +7942,7 @@ window.UI = {
 
                     // ربط الـ handler
                     btn._notificationClickHandler = clickHandler;
-                    btn.addEventListener('click', clickHandler, { capture: true, passive: false });
+                    btn.addEventListener('click', clickHandler, { capture: false, passive: false });
                     btn.dataset.notificationsBound = 'true';
 
                     Utils.safeLog('✅ تم ربط زر الإشعارات:', btn.id);
@@ -7964,38 +7960,32 @@ window.UI = {
                 }
             });
 
-            const sidebarNotifContainer = document.getElementById('sidebar-notifications-container');
-            if (sidebarNotifContainer && sidebarBtn) {
-                if (sidebarNotifContainer._sidebarNotifContainerHandler) {
-                    sidebarNotifContainer.removeEventListener('click', sidebarNotifContainer._sidebarNotifContainerHandler, true);
-                    delete sidebarNotifContainer._sidebarNotifContainerHandler;
+            const sidebarWrap = document.getElementById('sidebar-notifications-container');
+            if (sidebarWrap && sidebarBtn) {
+                if (sidebarWrap._sidebarNotifBubbleDeleg) {
+                    sidebarWrap.removeEventListener('click', sidebarWrap._sidebarNotifBubbleDeleg, false);
+                    delete sidebarWrap._sidebarNotifBubbleDeleg;
                 }
-                const containerHandler = (e) => {
+                const bubbleDeleg = (e) => {
                     try {
-                        if (e.target && typeof e.target.closest === 'function' && e.target.closest('#notifications-dropdown')) {
-                            return;
-                        }
-                        e.preventDefault();
-                        e.stopPropagation();
+                        if (!e || !e.target || typeof e.target.closest !== 'function') return;
+                        if (e.target.closest('#notifications-dropdown')) return;
+                        if (e.target.closest('#notifications-btn')) return;
                         const uiObj = self || window.UI;
-                        const btnEl = document.getElementById('notifications-btn');
-                        if (!btnEl || !sidebarNotifContainer.contains(btnEl)) return;
-                        if (uiObj && typeof uiObj.toggleNotificationsDropdown === 'function') {
-                            uiObj.toggleNotificationsDropdown(
-                                'notifications-dropdown',
-                                'notifications-list',
-                                'notifications-empty',
-                                'close-notifications-dropdown',
-                                btnEl
-                            );
-                        }
+                        if (!uiObj || typeof uiObj.toggleNotificationsDropdown !== 'function') return;
+                        uiObj.toggleNotificationsDropdown(
+                            'notifications-dropdown',
+                            'notifications-list',
+                            'notifications-empty',
+                            'close-notifications-dropdown',
+                            sidebarBtn
+                        );
                     } catch (err) {
-                        Utils.safeError('⚠️ خطأ في نقر حاوية إشعارات الشريط:', err);
+                        Utils.safeWarn('⚠️ خطأ في تفويض فقاعة حاوية الجرس:', err);
                     }
                 };
-                sidebarNotifContainer._sidebarNotifContainerHandler = containerHandler;
-                sidebarNotifContainer.addEventListener('click', containerHandler, { capture: true, passive: false });
-                Utils.safeLog('✅ تم ربط حاوية إشعارات الشريط الجانبية (#sidebar-notifications-container)');
+                sidebarWrap._sidebarNotifBubbleDeleg = bubbleDeleg;
+                sidebarWrap.addEventListener('click', bubbleDeleg, false);
             }
         } catch (error) {
             Utils.safeError('⚠️ خطأ في تهيئة أزرار الإشعارات:', error);
@@ -8182,13 +8172,13 @@ window.UI = {
             }
 
             try {
-                const sidebarNotifContainer = document.getElementById('sidebar-notifications-container');
-                if (sidebarNotifContainer && sidebarNotifContainer._sidebarNotifContainerHandler) {
-                    sidebarNotifContainer.removeEventListener('click', sidebarNotifContainer._sidebarNotifContainerHandler, true);
-                    delete sidebarNotifContainer._sidebarNotifContainerHandler;
+                const sidebarWrap = document.getElementById('sidebar-notifications-container');
+                if (sidebarWrap && sidebarWrap._sidebarNotifBubbleDeleg) {
+                    sidebarWrap.removeEventListener('click', sidebarWrap._sidebarNotifBubbleDeleg, false);
+                    delete sidebarWrap._sidebarNotifBubbleDeleg;
                 }
             } catch (err) {
-                Utils.safeWarn('⚠️ خطأ في إزالة مستمع حاوية إشعارات الشريط:', err);
+                Utils.safeWarn('⚠️ خطأ في إزالة تفويض فقاعة الجرس:', err);
             }
 
             // تنظيف event listeners من الأزرار
@@ -8202,7 +8192,7 @@ window.UI = {
                 notificationButtons.forEach(btn => {
                     try {
                         if (btn._notificationClickHandler) {
-                            btn.removeEventListener('click', btn._notificationClickHandler, { capture: true });
+                            btn.removeEventListener('click', btn._notificationClickHandler, { capture: false });
                             if (btn._notificationClickDebounceTimer) {
                                 clearTimeout(btn._notificationClickDebounceTimer);
                                 btn._notificationClickDebounceTimer = null;
@@ -8271,7 +8261,12 @@ window.UI = {
     handleSidebarNotificationClick(btn) {
         try {
             Utils.safeLog('🔔 handleSidebarNotificationClick - تم النقر على زر الإشعارات في القائمة الجانبية');
-            this.toggleNotificationsDropdown(
+            const ui = typeof window !== 'undefined' && window.UI ? window.UI : this;
+            if (!ui || typeof ui.toggleNotificationsDropdown !== 'function') {
+                Utils.safeWarn('⚠️ toggleNotificationsDropdown غير متاح');
+                return;
+            }
+            ui.toggleNotificationsDropdown(
                 'notifications-dropdown',
                 'notifications-list',
                 'notifications-empty',
