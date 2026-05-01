@@ -8187,13 +8187,13 @@ window.UI = {
             }
 
             try {
-                const sidebarWrap = document.getElementById('sidebar-notifications-container');
-                if (sidebarWrap && sidebarWrap._sidebarNotifBubbleDeleg) {
-                    sidebarWrap.removeEventListener('click', sidebarWrap._sidebarNotifBubbleDeleg, false);
-                    delete sidebarWrap._sidebarNotifBubbleDeleg;
+                const sidebarElCleanup = document.querySelector('.sidebar');
+                if (sidebarElCleanup && sidebarElCleanup._hseSidebarNotifCaptureHandler) {
+                    sidebarElCleanup.removeEventListener('click', sidebarElCleanup._hseSidebarNotifCaptureHandler, true);
+                    delete sidebarElCleanup._hseSidebarNotifCaptureHandler;
                 }
             } catch (err) {
-                Utils.safeWarn('⚠️ خطأ في إزالة تفويض فقاعة الجرس:', err);
+                Utils.safeWarn('⚠️ خطأ في إزالة تفويض جرس الشريط (التقاط):', err);
             }
 
             // تنظيف event listeners من الأزرار
@@ -10707,7 +10707,7 @@ if (typeof window !== 'undefined') {
 }
 
 // تهيئة أزرار الإشعارات بعد تحميل DOM.
-// أزرار الجرس: مستمع click بمرحلة الفقاعة (capture: false) بعد معالج document في الالتقاط.
+// جرس الشريط الجانبي: تفويض التقاط على .sidebar؛ الهاتف/الهيدر: مستمع فقاعة على الزر.
 if (typeof document !== 'undefined') {
     const tryInitNotificationsOnly = () => {
         if (typeof window.UI === 'undefined' || typeof window.UI.initNotificationsButton !== 'function') {

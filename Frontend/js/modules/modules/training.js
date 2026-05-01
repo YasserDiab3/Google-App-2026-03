@@ -5355,6 +5355,7 @@ const Training = {
                 list.map(x => `<option value="${Utils.escapeHTML(x)}">${Utils.escapeHTML(x)}</option>`).join('');
             if (prev && list.includes(prev)) sel.value = prev;
         } else {
+            const deptSel = modal.querySelector('#ta-modal-department-select');
             const sel = modal.querySelector('#ta-modal-person-select');
             if (!sel) return;
             const prev = sel.value;
@@ -5363,6 +5364,20 @@ const Training = {
             rec = this.filterRecordsByAnalysisDate(rec, dateFilter, 'trainingAttendance');
             if (audience === 'employee') rec = rec.filter(r => !this._isAttendanceContractorLike(r));
             else if (audience === 'contractor') rec = rec.filter(r => this._isAttendanceContractorLike(r));
+
+            if (deptSel) {
+                const prevDept = deptSel.value;
+                const deptLabels = Array.from(new Set(rec.map(r => this._attendanceRecordDepartmentLabel(r))))
+                    .sort((a, b) => String(a).localeCompare(String(b), 'ar', { sensitivity: 'base' }));
+                deptSel.innerHTML = '<option value="">— كل الإدارات —</option>' +
+                    deptLabels.map(l => `<option value="${Utils.escapeHTML(l)}">${Utils.escapeHTML(l)}</option>`).join('');
+                if (prevDept && deptLabels.includes(prevDept)) deptSel.value = prevDept;
+                const deptFilter = deptSel.value || '';
+                if (deptFilter) {
+                    rec = rec.filter(r => this._attendanceRecordDepartmentLabel(r) === deptFilter);
+                }
+            }
+
             const seen = new Map();
             rec.forEach(r => {
                 const key = this._attendancePersonRowKey(r);
@@ -5451,6 +5466,11 @@ const Training = {
                         </select>
                     </div>
                     <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2"><i class="fas fa-building ml-2 text-gray-500"></i>الإدارة (اختياري)</label>
+                        <select id="ta-modal-department-select" class="form-input w-full"><option value="">— كل الإدارات —</option></select>
+                        <p class="text-xs text-gray-500 mt-1">تُستخرج الإدارات من سجل الحضور ضمن الفترة والفئة المختارة.</p>
+                    </div>
+                    <div>
                         <label class="block text-sm font-semibold text-gray-700 mb-2">شخص محدد (اختياري)</label>
                         <select id="ta-modal-person-select" class="form-input w-full"><option value="">— كل الأشخاص —</option></select>
                     </div>
@@ -5505,6 +5525,8 @@ const Training = {
         if (toDateInput) toDateInput.addEventListener('change', () => this._refreshAnalysisExportModalLists(modal, isTrainers ? 'trainers' : 'attendees'));
         const audSel = modal.querySelector('#ta-modal-audience');
         if (audSel) audSel.addEventListener('change', () => this._refreshAnalysisExportModalLists(modal, 'attendees'));
+        const deptSelModal = modal.querySelector('#ta-modal-department-select');
+        if (deptSelModal) deptSelModal.addEventListener('change', () => this._refreshAnalysisExportModalLists(modal, 'attendees'));
 
         updateDateFields();
         this._refreshAnalysisExportModalLists(modal, isTrainers ? 'trainers' : 'attendees');
@@ -5539,6 +5561,7 @@ const Training = {
                 ctx.limitTrainers = Math.min(500, Math.max(1, parseInt(modal.querySelector('#ta-modal-limit-trainers')?.value || '30', 10) || 30));
             } else {
                 ctx.audience = modal.querySelector('#ta-modal-audience')?.value || 'all';
+                ctx.attendanceDepartment = modal.querySelector('#ta-modal-department-select')?.value?.trim() || '';
                 ctx.personKey = modal.querySelector('#ta-modal-person-select')?.value?.trim() || '';
                 ctx.limitAttendees = Math.min(2000, Math.max(1, parseInt(modal.querySelector('#ta-modal-limit-attendees')?.value || '50', 10) || 50));
             }
@@ -10117,6 +10140,13 @@ const Training = {
         return 'n:غير محدد';
     },
 
+    /** تسمية الإدارة لسجل حضور (للفلترة والقوائم؛ الفارغ يُعرض كـ «غير محدد») */
+    _attendanceRecordDepartmentLabel(rec) {
+        if (!rec || typeof rec !== 'object') return 'غير محدد';
+        const d = String(rec.department ?? '').replace(/\s+/g, ' ').trim();
+        return d || 'غير محدد';
+    },
+
     getTrainingRecordsForReportsFiltered() {
         this.ensureData();
         let records = Array.isArray(AppState.appData.training) ? AppState.appData.training : [];
@@ -10151,6 +10181,12 @@ const Training = {
             : (document.getElementById('training-export-person-key')?.value?.trim() || '');
         if (personKey) {
             records = records.filter(rec => this._attendancePersonRowKey(rec) === personKey);
+        }
+        const deptFilter = ctx && ctx.attendanceDepartment
+            ? String(ctx.attendanceDepartment).trim()
+            : '';
+        if (deptFilter) {
+            records = records.filter(rec => this._attendanceRecordDepartmentLabel(rec) === deptFilter);
         }
         return records;
     },
@@ -10588,6 +10624,7 @@ const Training = {
                 'التاريخ': r.date ? (Utils.formatDate ? Utils.formatDate(r.date) : r.date) : '',
                 'الموضوع': r.topic || '—',
                 'نوع التدريب': r.trainingType || '—',
+                'الإدارة': this._attendanceRecordDepartmentLabel(r),
                 'المصنع': r.factoryName || r.factory || '',
                 'المحاضر': r.trainerName || r.trainer || '',
                 'الساعات': Number.isFinite(parseFloat(r.totalHours)) ? parseFloat(r.totalHours).toFixed(2) : '0.00'
@@ -10703,6 +10740,9 @@ const Training = {
         const personFocus = xctx
             ? String(xctx.personKey || '').trim()
             : (document.getElementById('training-export-person-key')?.value?.trim() || '');
+        const departmentFocus = xctx && xctx.attendanceDepartment
+            ? String(xctx.attendanceDepartment).trim()
+            : '';
         const attDetail = this.getAttendanceRecordsForReportsFiltered();
         const headers = ['م', 'الشخص', 'عدد الجلسات', 'مجموع الساعات'];
         const matrix = rows.map((r, i) => [
@@ -10722,13 +10762,14 @@ const Training = {
             if (topics.length) {
                 extraBlock += this._buildPrintableBarChartHtml('حسب موضوع المحاضرة', topics, '#14b8a6');
             }
-            const dh = ['م', 'التاريخ', 'الموضوع', 'نوع التدريب', 'المحاضر', 'الساعات'];
+            const dh = ['م', 'التاريخ', 'الموضوع', 'نوع التدريب', 'الإدارة', 'المحاضر', 'الساعات'];
             const sorted = [...attDetail].sort((a, b) => new Date(a.date || 0) - new Date(b.date || 0));
             const dmatrix = sorted.map((r, i) => [
                 i + 1,
                 r.date ? (Utils.formatDate ? Utils.formatDate(r.date) : r.date) : '',
                 String(r.topic || '—'),
                 String(r.trainingType || '—'),
+                this._attendanceRecordDepartmentLabel(r),
                 String(r.trainerName || r.trainer || '—'),
                 Number.isFinite(parseFloat(r.totalHours)) ? parseFloat(r.totalHours).toFixed(2) : '0.00'
             ]);
@@ -10758,6 +10799,10 @@ const Training = {
                             <div style="font-size: 12px; color: #475569; font-weight: 600;">الفئة</div>
                             <div style="font-size: 15px; font-weight: 700; color: #1e293b;">${Utils.escapeHTML(audienceLabel)}</div>
                         </div>
+                        ${departmentFocus ? `<div style="flex: 1 1 200px; padding: 12px 16px; border-radius: 8px; background: #fffbeb; border: 1px solid #fde68a;">
+                            <div style="font-size: 12px; color: #92400e; font-weight: 600;">الإدارة</div>
+                            <div style="font-size: 15px; font-weight: 700; color: #78350f;">${Utils.escapeHTML(departmentFocus)}</div>
+                        </div>` : ''}
                     </div>
                 </div>
                 <div style="margin-bottom: 16px;">
@@ -10774,12 +10819,12 @@ const Training = {
                     </div>
                 </div>
                 ${extraBlock}
-                <p style="font-size: 11px; color: #6B7280;">البيانات من سجل الحضور وفق خيارات الفترة والفئة أعلاه.</p>
+                <p style="font-size: 11px; color: #6B7280;">البيانات من سجل الحضور وفق خيارات الفترة والفئة${departmentFocus ? ' والإدارة' : ''} أعلاه.</p>
             `;
         this._openTrainingAttendancePrint(content, {
             formCode: `TRN-ANL-ATTENDEES-${slug}-${new Date().toISOString().slice(0, 10)}`,
             docTitle: 'تقرير المتدربين — تحليل التدريب',
-            meta: { period: periodAr, rowCount: rows.length, reportType: 'training_analysis_attendees' },
+            meta: { period: periodAr, rowCount: rows.length, reportType: 'training_analysis_attendees', department: departmentFocus || undefined },
             successMessage: `تم تجهيز تقرير ${rows.length} شخص للطباعة / PDF`
         });
     },

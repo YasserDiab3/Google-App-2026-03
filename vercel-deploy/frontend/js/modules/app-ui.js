@@ -7855,7 +7855,7 @@ window.UI = {
             if (mobileNotificationsBtn) Utils.safeLog('  - mobile-notifications-btn');
             if (headerNotificationsBtn) Utils.safeLog('  - header-notifications-btn');
 
-            // ربط أزرار الإشعارات — capture: false (فقاعة) ليتوافق مع معالج document في مرحلة الالتقاط الذي يخرج مبكراً عند النقر على الجرس
+            // ربط أزرار الإشعارات — الجرس في الشريط الجانبي يُدار بتفويض capture على .sidebar (أدناه) لتفادي عدم وصول النقر للزر
             notificationButtons.forEach((btn) => {
                 if (!btn) return;
 
@@ -7863,6 +7863,16 @@ window.UI = {
                     // التحقق من أن الزر موجود في DOM
                     if (!document.body.contains(btn)) {
                         Utils.safeWarn('⚠️ الزر غير موجود في DOM:', btn.id);
+                        return;
+                    }
+
+                    // جرس الشريط الجانبي: لا نربط هنا (مستمع capture على .sidebar)
+                    if (btn.id === 'notifications-btn') {
+                        if (btn._notificationClickHandler) {
+                            btn.removeEventListener('click', btn._notificationClickHandler, { capture: false });
+                            delete btn._notificationClickHandler;
+                        }
+                        delete btn.dataset.notificationsBound;
                         return;
                     }
 
@@ -7960,32 +7970,37 @@ window.UI = {
                 }
             });
 
-            const sidebarWrap = document.getElementById('sidebar-notifications-container');
-            if (sidebarWrap && sidebarBtn) {
-                if (sidebarWrap._sidebarNotifBubbleDeleg) {
-                    sidebarWrap.removeEventListener('click', sidebarWrap._sidebarNotifBubbleDeleg, false);
-                    delete sidebarWrap._sidebarNotifBubbleDeleg;
+            // تفويض جرس الشريط الجانبي: capture على .sidebar قبل وصول الحدث للزر (يعالج تعارض المستمعات أو حجب النقر)
+            const sidebarEl = document.querySelector('.sidebar');
+            if (sidebarEl && sidebarBtn && document.body.contains(sidebarBtn)) {
+                if (sidebarEl._hseSidebarNotifCaptureHandler) {
+                    sidebarEl.removeEventListener('click', sidebarEl._hseSidebarNotifCaptureHandler, true);
+                    delete sidebarEl._hseSidebarNotifCaptureHandler;
                 }
-                const bubbleDeleg = (e) => {
+                const captureHandler = (e) => {
                     try {
                         if (!e || !e.target || typeof e.target.closest !== 'function') return;
+                        if (!e.target.closest('#sidebar-notifications-container')) return;
                         if (e.target.closest('#notifications-dropdown')) return;
-                        if (e.target.closest('#notifications-btn')) return;
+                        e.preventDefault();
+                        e.stopPropagation();
                         const uiObj = self || window.UI;
                         if (!uiObj || typeof uiObj.toggleNotificationsDropdown !== 'function') return;
+                        const anchor = document.getElementById('notifications-btn');
                         uiObj.toggleNotificationsDropdown(
                             'notifications-dropdown',
                             'notifications-list',
                             'notifications-empty',
                             'close-notifications-dropdown',
-                            sidebarBtn
+                            anchor || sidebarBtn
                         );
                     } catch (err) {
-                        Utils.safeWarn('⚠️ خطأ في تفويض فقاعة حاوية الجرس:', err);
+                        Utils.safeWarn('⚠️ خطأ في تفويض جرس الشريط (التقاط):', err);
                     }
                 };
-                sidebarWrap._sidebarNotifBubbleDeleg = bubbleDeleg;
-                sidebarWrap.addEventListener('click', bubbleDeleg, false);
+                sidebarEl._hseSidebarNotifCaptureHandler = captureHandler;
+                sidebarEl.addEventListener('click', captureHandler, true);
+                Utils.safeLog('🔔 تم ربط جرس إشعارات الشريط الجانبي (تفويض التقاط على .sidebar)');
             }
         } catch (error) {
             Utils.safeError('⚠️ خطأ في تهيئة أزرار الإشعارات:', error);
@@ -8172,13 +8187,13 @@ window.UI = {
             }
 
             try {
-                const sidebarWrap = document.getElementById('sidebar-notifications-container');
-                if (sidebarWrap && sidebarWrap._sidebarNotifBubbleDeleg) {
-                    sidebarWrap.removeEventListener('click', sidebarWrap._sidebarNotifBubbleDeleg, false);
-                    delete sidebarWrap._sidebarNotifBubbleDeleg;
+                const sidebarElCleanup = document.querySelector('.sidebar');
+                if (sidebarElCleanup && sidebarElCleanup._hseSidebarNotifCaptureHandler) {
+                    sidebarElCleanup.removeEventListener('click', sidebarElCleanup._hseSidebarNotifCaptureHandler, true);
+                    delete sidebarElCleanup._hseSidebarNotifCaptureHandler;
                 }
             } catch (err) {
-                Utils.safeWarn('⚠️ خطأ في إزالة تفويض فقاعة الجرس:', err);
+                Utils.safeWarn('⚠️ خطأ في إزالة تفويض جرس الشريط (التقاط):', err);
             }
 
             // تنظيف event listeners من الأزرار
@@ -10692,7 +10707,7 @@ if (typeof window !== 'undefined') {
 }
 
 // تهيئة أزرار الإشعارات بعد تحميل DOM.
-// أزرار الجرس: capture: true. جرس الشريط: مستمع على #sidebar-notifications-container حتى يعمل النقر على مساحة الحاوية وليس الزر فقط.
+// جرس الشريط الجانبي: تفويض التقاط على .sidebar؛ الهاتف/الهيدر: مستمع فقاعة على الزر.
 if (typeof document !== 'undefined') {
     const tryInitNotificationsOnly = () => {
         if (typeof window.UI === 'undefined' || typeof window.UI.initNotificationsButton !== 'function') {
