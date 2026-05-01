@@ -5345,6 +5345,16 @@ const ViolationTypesManager = {
         }
 
         if (syncSheets && typeof GoogleIntegration !== 'undefined' && typeof GoogleIntegration.autoSave === 'function') {
+            // حفظ اللقطة الكاملة في Violation_Types_DB لضمان أن الحذف ينعكس فعلياً بعد إعادة التحميل
+            if (typeof GoogleIntegration.sendRequest === 'function') {
+                GoogleIntegration.sendRequest({
+                    action: 'saveViolationTypes',
+                    data: {
+                        violationTypes: AppState.appData.violationTypes || [],
+                        userData: AppState.currentUser || {}
+                    }
+                }).catch(() => { });
+            }
             GoogleIntegration.autoSave('ViolationTypes', AppState.appData.violationTypes).catch(() => { });
         }
     },
