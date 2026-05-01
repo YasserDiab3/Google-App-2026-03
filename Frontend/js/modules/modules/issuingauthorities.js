@@ -922,6 +922,36 @@ const IssuingAuthorities = {
         }).join('');
     },
 
+    /**
+     * مفتاح G/Y/X للطباعة والتصدير PDF — أسفل الجدول، بشكل منسّق، مع دعم RTL/LTR والترجمة.
+     */
+    _buildExportLegendHtml(isRtl) {
+        const esc = (typeof Utils !== 'undefined' && Utils.escapeHTML) ? Utils.escapeHTML : (s) => String(s == null ? '' : s);
+        const dir = isRtl ? 'rtl' : 'ltr';
+        const title = esc(this.t('module.issuingAuthorities.legend.title', 'مفتاح الجدول:'));
+        const gTxt = esc(this.t('module.issuingAuthorities.legend.g', 'التوقيع في كل الحالات'));
+        const yTxt = esc(this.t('module.issuingAuthorities.legend.y', 'التوقيع بعد التنسيق مع مدير السلامة والصحة المهنية'));
+        const xTxt = esc(this.t('module.issuingAuthorities.legend.x', 'غير مصرح له بالتوقيع'));
+        return `
+        <div class="ia-export-legend" dir="${dir}" style="margin-top:20px;padding:14px 16px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;page-break-inside:avoid;-webkit-print-color-adjust:exact;print-color-adjust:exact;">
+            <div style="font-weight:700;font-size:12px;color:#475569;margin-bottom:12px;letter-spacing:0.02em;">${title}</div>
+            <div style="display:flex;flex-wrap:wrap;gap:12px 22px;align-items:flex-start;font-size:11px;line-height:1.5;color:#334155;">
+                <div style="display:flex;align-items:flex-start;gap:10px;min-width:0;flex:1 1 200px;">
+                    <span style="flex-shrink:0;display:inline-block;padding:4px 11px;border-radius:6px;font-weight:800;font-size:11px;background:#dcfce7;color:#166534;border:1px solid #86efac;">G</span>
+                    <span style="padding-top:2px;">${gTxt}</span>
+                </div>
+                <div style="display:flex;align-items:flex-start;gap:10px;min-width:0;flex:1 1 220px;">
+                    <span style="flex-shrink:0;display:inline-block;padding:4px 11px;border-radius:6px;font-weight:800;font-size:11px;background:#fef9c3;color:#854d0e;border:1px solid #fde047;">Y</span>
+                    <span style="padding-top:2px;">${yTxt}</span>
+                </div>
+                <div style="display:flex;align-items:flex-start;gap:10px;min-width:0;flex:1 1 180px;">
+                    <span style="flex-shrink:0;display:inline-block;padding:4px 11px;border-radius:6px;font-weight:800;font-size:11px;background:#fee2e2;color:#991b1b;border:1px solid #fca5a5;">X</span>
+                    <span style="padding-top:2px;">${xTxt}</span>
+                </div>
+            </div>
+        </div>`;
+    },
+
     _buildExportTableHtml(records, options = {}) {
         const esc = (typeof Utils !== 'undefined' && Utils.escapeHTML) ? Utils.escapeHTML : (s) => String(s == null ? '' : s);
         const omitInnerTitle = !!options.omitInnerTitle;
@@ -977,7 +1007,8 @@ const IssuingAuthorities = {
                 </tr>
             </thead>
             <tbody>${rows}</tbody>
-        </table>`;
+        </table>
+        ${this._buildExportLegendHtml(isRtl)}`;
     },
 
     printFilteredList() {
@@ -1052,6 +1083,16 @@ const IssuingAuthorities = {
                 });
                 return row;
             });
+            if (rows.length) {
+                const keys = Object.keys(rows[0]);
+                const empty = Object.fromEntries(keys.map((key) => [key, '']));
+                const firstKey = keys[0];
+                rows.push(empty);
+                rows.push({ ...empty, [firstKey]: this.t('module.issuingAuthorities.legend.title', 'مفتاح الجدول:') });
+                rows.push({ ...empty, [firstKey]: `G — ${this.t('module.issuingAuthorities.legend.g', 'التوقيع في كل الحالات')}` });
+                rows.push({ ...empty, [firstKey]: `Y — ${this.t('module.issuingAuthorities.legend.y', 'التوقيع بعد التنسيق مع مدير السلامة والصحة المهنية')}` });
+                rows.push({ ...empty, [firstKey]: `X — ${this.t('module.issuingAuthorities.legend.x', 'غير مصرح له بالتوقيع')}` });
+            }
             const workbook = XLSX.utils.book_new();
             const worksheet = XLSX.utils.json_to_sheet(rows);
             const sheetName = this._activeCategory === 'contractors'
