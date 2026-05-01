@@ -5309,6 +5309,256 @@ const Training = {
         });
     },
 
+    /** خيارات أشهر لقائمة نافذة تصدير تحليل التدريب (مثل تقرير المقاولين) */
+    _buildTrainingAnalysisExportMonthOptionsHtml() {
+        const currentDate = new Date();
+        const currentYear = currentDate.getFullYear();
+        const parts = [];
+        for (let i = 0; i < 24; i++) {
+            const date = new Date(currentYear, currentDate.getMonth() - i, 1);
+            const year = date.getFullYear();
+            const month = date.getMonth() + 1;
+            const monthKey = `${year}-${String(month).padStart(2, '0')}`;
+            const monthLabel = date.toLocaleDateString('ar-SA', { year: 'numeric', month: 'long' });
+            parts.push(`<option value="${Utils.escapeHTML(monthKey)}">${Utils.escapeHTML(monthLabel)}</option>`);
+        }
+        return parts.join('');
+    },
+
+    _readDateFilterFromTrainingExportModal(modal) {
+        const type = modal.querySelector('input[name="ta-modal-date-range"]:checked')?.value || 'all';
+        if (type === 'all') {
+            return { type: 'all', month: '', start: '', end: '' };
+        }
+        if (type === 'month') {
+            const m = modal.querySelector('#ta-modal-month')?.value?.trim() || '';
+            return { type: 'month', month: m, start: '', end: '' };
+        }
+        const start = modal.querySelector('#ta-modal-from-date')?.value?.trim() || '';
+        const end = modal.querySelector('#ta-modal-to-date')?.value?.trim() || '';
+        return { type: 'range', month: '', start, end };
+    },
+
+    _refreshAnalysisExportModalLists(modal, kind) {
+        this.ensureData();
+        const dateFilter = this._readDateFilterFromTrainingExportModal(modal);
+        if (kind === 'trainers') {
+            const sel = modal.querySelector('#ta-modal-trainer-select');
+            if (!sel) return;
+            const prev = sel.value;
+            let t = Array.isArray(AppState.appData.training) ? AppState.appData.training : [];
+            t = this.filterRecordsByAnalysisDate(t, dateFilter, 'training');
+            const trainers = new Set();
+            t.forEach(r => trainers.add(this.getTrainingAnalysisValue('training', 'trainer', r)));
+            const list = Array.from(trainers).filter(x => x && x !== 'غير محدد').sort((a, b) => String(a).localeCompare(String(b), 'ar'));
+            sel.innerHTML = '<option value="">— كل المدربين —</option>' +
+                list.map(x => `<option value="${Utils.escapeHTML(x)}">${Utils.escapeHTML(x)}</option>`).join('');
+            if (prev && list.includes(prev)) sel.value = prev;
+        } else {
+            const sel = modal.querySelector('#ta-modal-person-select');
+            if (!sel) return;
+            const prev = sel.value;
+            const audience = modal.querySelector('#ta-modal-audience')?.value || 'all';
+            let rec = Array.isArray(AppState.appData.trainingAttendance) ? AppState.appData.trainingAttendance : [];
+            rec = this.filterRecordsByAnalysisDate(rec, dateFilter, 'trainingAttendance');
+            if (audience === 'employee') rec = rec.filter(r => !this._isAttendanceContractorLike(r));
+            else if (audience === 'contractor') rec = rec.filter(r => this._isAttendanceContractorLike(r));
+            const seen = new Map();
+            rec.forEach(r => {
+                const key = this._attendancePersonRowKey(r);
+                if (seen.has(key)) return;
+                const code = String(r.employeeCode || r.code || r.employeeNumber || '').trim();
+                const name = String(r.employeeName || r.name || '').trim();
+                const label = name ? (code ? `${name} (${code})` : name) : (code || 'غير محدد');
+                seen.set(key, label);
+            });
+            const options = Array.from(seen.entries()).sort((a, b) => String(a[1]).localeCompare(String(b[1]), 'ar'));
+            sel.innerHTML = '<option value="">— كل الأشخاص —</option>' +
+                options.map(([k, lab]) => `<option value="${Utils.escapeHTML(k)}">${Utils.escapeHTML(lab)}</option>`).join('');
+            if (prev && seen.has(prev)) sel.value = prev;
+        }
+    },
+
+    /**
+     * نافذة تصدير تقرير تحليل التدريب (مدربين أو متدربين) — نمط مشابه لتقرير المقاولين
+     * @param {'trainers'|'attendees'} kind
+     */
+    showTrainingAnalysisExportDialog(kind) {
+        if (typeof this.isCurrentUserAdmin === 'function' && !this.isCurrentUserAdmin()) {
+            Notification.error('ليس لديك صلاحية لتصدير تقارير التحليل');
+            return;
+        }
+        this.ensureData();
+        const isTrainers = kind === 'trainers';
+        const title = isTrainers ? 'تصدير تقرير المدربين — تحليل التدريب' : 'تصدير تقرير المتدربين — تحليل التدريب';
+        const monthOpts = this._buildTrainingAnalysisExportMonthOptionsHtml();
+
+        const modal = document.createElement('div');
+        modal.className = 'modal-overlay';
+        modal.innerHTML = `
+            <div class="modal-content" style="max-width: 720px;">
+                <div class="modal-header">
+                    <h2 class="modal-title"><i class="fas fa-file-export ml-2"></i>${Utils.escapeHTML(title)}</h2>
+                    <button type="button" class="modal-close" title="إغلاق"><i class="fas fa-times"></i></button>
+                </div>
+                <div class="modal-body space-y-4">
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">صيغة التصدير</label>
+                        <div class="flex flex-wrap gap-4">
+                            <label class="flex items-center gap-2 cursor-pointer"><input type="radio" name="ta-modal-format" value="excel" class="ml-1" checked><span>Excel</span></label>
+                            <label class="flex items-center gap-2 cursor-pointer"><input type="radio" name="ta-modal-format" value="pdf" class="ml-1"><span>PDF (طباعة)</span></label>
+                        </div>
+                    </div>
+                    <div style="border-top: 1px solid #E5E7EB; padding-top: 16px;">
+                        <label class="block text-sm font-semibold text-gray-700 mb-3"><i class="fas fa-calendar-alt ml-2"></i>فترة التقرير</label>
+                        <div class="space-y-3">
+                            <div class="flex items-center">
+                                <input type="radio" id="ta-modal-dr-all" name="ta-modal-date-range" value="all" class="ml-2" checked>
+                                <label for="ta-modal-dr-all" class="text-sm text-gray-700 cursor-pointer">جميع السجلات (بدون تقييد بالتاريخ)</label>
+                            </div>
+                            <div class="flex items-center flex-wrap gap-2">
+                                <input type="radio" id="ta-modal-dr-month" name="ta-modal-date-range" value="month" class="ml-2">
+                                <label for="ta-modal-dr-month" class="text-sm text-gray-700 cursor-pointer">شهر محدد</label>
+                                <select id="ta-modal-month" class="form-input flex-1" disabled style="max-width: 280px;">
+                                    <option value="">اختر الشهر</option>
+                                    ${monthOpts}
+                                </select>
+                            </div>
+                            <div class="flex items-center flex-wrap gap-2">
+                                <input type="radio" id="ta-modal-dr-custom" name="ta-modal-date-range" value="custom" class="ml-2">
+                                <label for="ta-modal-dr-custom" class="text-sm text-gray-700 cursor-pointer">فترة محددة</label>
+                                <input type="date" id="ta-modal-from-date" class="form-input" disabled style="max-width: 150px;">
+                                <span class="text-sm text-gray-600">إلى</span>
+                                <input type="date" id="ta-modal-to-date" class="form-input" disabled style="max-width: 150px;">
+                            </div>
+                        </div>
+                    </div>
+                    ${isTrainers ? `
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2"><i class="fas fa-chalkboard-teacher ml-2"></i>مدرب محدد (اختياري)</label>
+                        <select id="ta-modal-trainer-select" class="form-input w-full"><option value="">— كل المدربين —</option></select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">أقصى عدد مدربين في التقرير</label>
+                        <input type="number" id="ta-modal-limit-trainers" class="form-input" style="max-width:120px;" min="1" max="500" value="30">
+                    </div>` : `
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">فئة الأشخاص</label>
+                        <select id="ta-modal-audience" class="form-input w-full">
+                            <option value="all">الكل</option>
+                            <option value="employee">موظفون</option>
+                            <option value="contractor">مقاولون / خارجيون</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">شخص محدد (اختياري)</label>
+                        <select id="ta-modal-person-select" class="form-input w-full"><option value="">— كل الأشخاص —</option></select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">أقصى عدد أشخاص في التقرير</label>
+                        <input type="number" id="ta-modal-limit-attendees" class="form-input" style="max-width:120px;" min="1" max="2000" value="50">
+                    </div>`}
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn-secondary" data-action="close">إلغاء</button>
+                    <button type="button" class="btn-primary" id="ta-modal-generate-btn"><i class="fas fa-file-export ml-2"></i>إنشاء التقرير</button>
+                </div>
+            </div>`;
+
+        document.body.appendChild(modal);
+        const close = () => {
+            modal.remove();
+        };
+        modal.querySelector('.modal-close')?.addEventListener('click', close);
+        modal.querySelector('[data-action="close"]')?.addEventListener('click', close);
+        modal.addEventListener('click', (e) => { if (e.target === modal) close(); });
+
+        const monthSelect = modal.querySelector('#ta-modal-month');
+        const fromDateInput = modal.querySelector('#ta-modal-from-date');
+        const toDateInput = modal.querySelector('#ta-modal-to-date');
+
+        const updateDateFields = () => {
+            const selectedType = modal.querySelector('input[name="ta-modal-date-range"]:checked')?.value || 'all';
+            if (selectedType === 'month') {
+                monthSelect.disabled = false;
+                if (fromDateInput) fromDateInput.disabled = true;
+                if (toDateInput) toDateInput.disabled = true;
+            } else if (selectedType === 'custom') {
+                monthSelect.disabled = true;
+                if (fromDateInput) fromDateInput.disabled = false;
+                if (toDateInput) toDateInput.disabled = false;
+            } else {
+                monthSelect.disabled = true;
+                if (fromDateInput) fromDateInput.disabled = true;
+                if (toDateInput) toDateInput.disabled = true;
+            }
+        };
+
+        modal.querySelectorAll('input[name="ta-modal-date-range"]').forEach(inp => {
+            inp.addEventListener('change', () => {
+                updateDateFields();
+                this._refreshAnalysisExportModalLists(modal, isTrainers ? 'trainers' : 'attendees');
+            });
+        });
+        if (monthSelect) monthSelect.addEventListener('change', () => this._refreshAnalysisExportModalLists(modal, isTrainers ? 'trainers' : 'attendees'));
+        if (fromDateInput) fromDateInput.addEventListener('change', () => this._refreshAnalysisExportModalLists(modal, isTrainers ? 'trainers' : 'attendees'));
+        if (toDateInput) toDateInput.addEventListener('change', () => this._refreshAnalysisExportModalLists(modal, isTrainers ? 'trainers' : 'attendees'));
+        const audSel = modal.querySelector('#ta-modal-audience');
+        if (audSel) audSel.addEventListener('change', () => this._refreshAnalysisExportModalLists(modal, 'attendees'));
+
+        updateDateFields();
+        this._refreshAnalysisExportModalLists(modal, isTrainers ? 'trainers' : 'attendees');
+
+        modal.querySelector('#ta-modal-generate-btn')?.addEventListener('click', () => {
+            const dateRangeType = modal.querySelector('input[name="ta-modal-date-range"]:checked')?.value || 'all';
+            const selectedMonth = modal.querySelector('#ta-modal-month')?.value || '';
+            const fromDate = modal.querySelector('#ta-modal-from-date')?.value || '';
+            const toDate = modal.querySelector('#ta-modal-to-date')?.value || '';
+
+            if (dateRangeType === 'month' && !selectedMonth) {
+                Notification.warning('يرجى اختيار الشهر');
+                return;
+            }
+            if (dateRangeType === 'custom') {
+                if (!fromDate || !toDate) {
+                    Notification.warning('يرجى اختيار تاريخ البداية والنهاية');
+                    return;
+                }
+                if (new Date(fromDate) > new Date(toDate)) {
+                    Notification.warning('تاريخ البداية يجب أن يكون قبل تاريخ النهاية');
+                    return;
+                }
+            }
+
+            const dateFilter = this._readDateFilterFromTrainingExportModal(modal);
+            const format = modal.querySelector('input[name="ta-modal-format"]:checked')?.value || 'excel';
+
+            const ctx = { dateFilter };
+            if (isTrainers) {
+                ctx.trainerKey = modal.querySelector('#ta-modal-trainer-select')?.value?.trim() || '';
+                ctx.limitTrainers = Math.min(500, Math.max(1, parseInt(modal.querySelector('#ta-modal-limit-trainers')?.value || '30', 10) || 30));
+            } else {
+                ctx.audience = modal.querySelector('#ta-modal-audience')?.value || 'all';
+                ctx.personKey = modal.querySelector('#ta-modal-person-select')?.value?.trim() || '';
+                ctx.limitAttendees = Math.min(2000, Math.max(1, parseInt(modal.querySelector('#ta-modal-limit-attendees')?.value || '50', 10) || 50));
+            }
+
+            close();
+            this._analysisExportContext = ctx;
+            try {
+                if (isTrainers) {
+                    if (format === 'pdf') this.exportAnalysisTrainersPDF();
+                    else this.exportAnalysisTrainersExcel();
+                } else {
+                    if (format === 'pdf') this.exportAnalysisAttendeesPDF();
+                    else this.exportAnalysisAttendeesExcel();
+                }
+            } finally {
+                this._analysisExportContext = null;
+            }
+        });
+    },
+
     async generateContractorTrainingReport(contractorId = null, dateFilter = {}, uiSelectedContractorName = '') {
         this.ensureData();
         try {
@@ -9816,8 +10066,8 @@ const Training = {
         return 'فترة محددة';
     },
 
-    /** فلتر التاريخ المستخدم في تقارير التصدير/المعاينة (قد ي differ عن فترة التحليل) */
-    getExportDateFilterForReports() {
+    /** فلتر التاريخ من حقول تبويب التحليل (بدون النافذة المنبثقة) */
+    _getExportDateFilterFromAnalysisDom() {
         const modeEl = document.getElementById('training-export-period-mode');
         const mode = modeEl ? modeEl.value : 'follow';
         if (mode !== 'custom') {
@@ -9829,6 +10079,14 @@ const Training = {
             return this.getAnalysisDateFilter();
         }
         return { type: 'range', month: '', start, end };
+    },
+
+    /** فلتر التاريخ المستخدم في تقارير التصدير/المعاينة */
+    getExportDateFilterForReports() {
+        if (this._analysisExportContext && this._analysisExportContext.dateFilter) {
+            return this._analysisExportContext.dateFilter;
+        }
+        return this._getExportDateFilterFromAnalysisDom();
     },
 
     _toggleTrainingExportCustomDates() {
@@ -9864,7 +10122,10 @@ const Training = {
         let records = Array.isArray(AppState.appData.training) ? AppState.appData.training : [];
         const filter = this.getExportDateFilterForReports();
         records = this.filterRecordsByAnalysisDate(records, filter, 'training');
-        const trainerKey = document.getElementById('training-export-trainer-key')?.value?.trim() || '';
+        const ctx = this._analysisExportContext;
+        const trainerKey = ctx
+            ? String(ctx.trainerKey || '').trim()
+            : (document.getElementById('training-export-trainer-key')?.value?.trim() || '');
         if (trainerKey) {
             records = records.filter(rec => this.getTrainingAnalysisValue('training', 'trainer', rec) === trainerKey);
         }
@@ -9876,13 +10137,18 @@ const Training = {
         let records = Array.isArray(AppState.appData.trainingAttendance) ? AppState.appData.trainingAttendance : [];
         const filter = this.getExportDateFilterForReports();
         records = this.filterRecordsByAnalysisDate(records, filter, 'trainingAttendance');
-        const audience = document.getElementById('training-export-audience')?.value || 'all';
+        const ctx = this._analysisExportContext;
+        const audience = ctx
+            ? (ctx.audience || 'all')
+            : (document.getElementById('training-export-audience')?.value || 'all');
         if (audience === 'employee') {
             records = records.filter(r => !this._isAttendanceContractorLike(r));
         } else if (audience === 'contractor') {
             records = records.filter(r => this._isAttendanceContractorLike(r));
         }
-        const personKey = document.getElementById('training-export-person-key')?.value?.trim() || '';
+        const personKey = ctx
+            ? String(ctx.personKey || '').trim()
+            : (document.getElementById('training-export-person-key')?.value?.trim() || '');
         if (personKey) {
             records = records.filter(rec => this._attendancePersonRowKey(rec) === personKey);
         }
@@ -10191,10 +10457,8 @@ const Training = {
 
         const limTr = document.getElementById('training-analysis-trainer-limit');
         const limAtt = document.getElementById('training-analysis-attendees-limit');
-        const exTr = document.getElementById('training-analysis-export-trainers-excel');
-        const exTrPdf = document.getElementById('training-analysis-export-trainers-pdf');
-        const exAtt = document.getElementById('training-analysis-export-attendees-excel');
-        const exAttPdf = document.getElementById('training-analysis-export-attendees-pdf');
+        const exTrOpen = document.getElementById('training-analysis-export-trainers-open');
+        const exAttOpen = document.getElementById('training-analysis-export-attendees-open');
 
         const debounce = (fn, ms) => {
             let t;
@@ -10210,17 +10474,11 @@ const Training = {
         if (limTr) limTr.addEventListener('input', refreshDebounced);
         if (limAtt) limAtt.addEventListener('input', refreshDebounced);
 
-        if (exTr) {
-            exTr.addEventListener('click', () => this.exportAnalysisTrainersExcel());
+        if (exTrOpen) {
+            exTrOpen.addEventListener('click', () => this.showTrainingAnalysisExportDialog('trainers'));
         }
-        if (exAtt) {
-            exAtt.addEventListener('click', () => this.exportAnalysisAttendeesExcel());
-        }
-        if (exTrPdf) {
-            exTrPdf.addEventListener('click', () => this.exportAnalysisTrainersPDF());
-        }
-        if (exAttPdf) {
-            exAttPdf.addEventListener('click', () => this.exportAnalysisAttendeesPDF());
+        if (exAttOpen) {
+            exAttOpen.addEventListener('click', () => this.showTrainingAnalysisExportDialog('attendees'));
         }
 
         const periodMode = document.getElementById('training-export-period-mode');
@@ -10259,7 +10517,10 @@ const Training = {
             Notification.error('مكتبة Excel غير متاحة');
             return;
         }
-        const limit = Math.min(500, Math.max(1, parseInt(document.getElementById('training-analysis-trainer-limit')?.value || '30', 10) || 30));
+        const xctx = this._analysisExportContext;
+        const limit = xctx && typeof xctx.limitTrainers === 'number'
+            ? Math.min(500, Math.max(1, xctx.limitTrainers))
+            : Math.min(500, Math.max(1, parseInt(document.getElementById('training-analysis-trainer-limit')?.value || '30', 10) || 30));
         const rows = this.buildTrainerProgramsReportRows().slice(0, limit);
         if (!rows.length) {
             Notification.warning('لا توجد بيانات للتصدير في هذه الفترة');
@@ -10275,7 +10536,9 @@ const Training = {
         const wb = XLSX.utils.book_new();
         const ws = XLSX.utils.json_to_sheet(data);
         XLSX.utils.book_append_sheet(wb, ws, 'المدربون');
-        const trainerFocus = document.getElementById('training-export-trainer-key')?.value?.trim() || '';
+        const trainerFocus = xctx
+            ? String(xctx.trainerKey || '').trim()
+            : (document.getElementById('training-export-trainer-key')?.value?.trim() || '');
         if (trainerFocus) {
             const prog = this.getTrainingRecordsForReportsFiltered().map((t, i) => ({
                 'م': i + 1,
@@ -10298,7 +10561,10 @@ const Training = {
             Notification.error('مكتبة Excel غير متاحة');
             return;
         }
-        const limit = Math.min(2000, Math.max(1, parseInt(document.getElementById('training-analysis-attendees-limit')?.value || '50', 10) || 50));
+        const xctx = this._analysisExportContext;
+        const limit = xctx && typeof xctx.limitAttendees === 'number'
+            ? Math.min(2000, Math.max(1, xctx.limitAttendees))
+            : Math.min(2000, Math.max(1, parseInt(document.getElementById('training-analysis-attendees-limit')?.value || '50', 10) || 50));
         const rows = this.buildAttendancePersonsReportRows().slice(0, limit);
         if (!rows.length) {
             Notification.warning('لا توجد بيانات للتصدير في هذه الفترة');
@@ -10313,7 +10579,9 @@ const Training = {
         const wb = XLSX.utils.book_new();
         const ws = XLSX.utils.json_to_sheet(data);
         XLSX.utils.book_append_sheet(wb, ws, 'المتدربون');
-        const personFocus = document.getElementById('training-export-person-key')?.value?.trim() || '';
+        const personFocus = xctx
+            ? String(xctx.personKey || '').trim()
+            : (document.getElementById('training-export-person-key')?.value?.trim() || '');
         if (personFocus) {
             const det = this.getAttendanceRecordsForReportsFiltered().map((r, i) => ({
                 'م': i + 1,
@@ -10342,7 +10610,10 @@ const Training = {
     },
 
     exportAnalysisTrainersPDF() {
-        const limit = Math.min(500, Math.max(1, parseInt(document.getElementById('training-analysis-trainer-limit')?.value || '30', 10) || 30));
+        const xctx = this._analysisExportContext;
+        const limit = xctx && typeof xctx.limitTrainers === 'number'
+            ? Math.min(500, Math.max(1, xctx.limitTrainers))
+            : Math.min(500, Math.max(1, parseInt(document.getElementById('training-analysis-trainer-limit')?.value || '30', 10) || 30));
         const rows = this.buildTrainerProgramsReportRows().slice(0, limit);
         if (!rows.length) {
             Notification.warning('لا توجد بيانات للتصدير في هذه الفترة');
@@ -10351,7 +10622,9 @@ const Training = {
         Loading.show('جاري تجهيز PDF...');
         const periodAr = this.getExportPeriodLabelAr();
         const slug = this.getExportPeriodExportSlug();
-        const trainerFocus = document.getElementById('training-export-trainer-key')?.value?.trim() || '';
+        const trainerFocus = xctx
+            ? String(xctx.trainerKey || '').trim()
+            : (document.getElementById('training-export-trainer-key')?.value?.trim() || '');
         const headers = ['م', 'اسم المدرب', 'عدد البرامج التدريبية', 'مجموع المشاركين', 'إجمالي ساعات التدريب'];
         const matrix = rows.map((r, i) => [
             i + 1,
@@ -10411,7 +10684,10 @@ const Training = {
     },
 
     exportAnalysisAttendeesPDF() {
-        const limit = Math.min(2000, Math.max(1, parseInt(document.getElementById('training-analysis-attendees-limit')?.value || '50', 10) || 50));
+        const xctx = this._analysisExportContext;
+        const limit = xctx && typeof xctx.limitAttendees === 'number'
+            ? Math.min(2000, Math.max(1, xctx.limitAttendees))
+            : Math.min(2000, Math.max(1, parseInt(document.getElementById('training-analysis-attendees-limit')?.value || '50', 10) || 50));
         const rows = this.buildAttendancePersonsReportRows().slice(0, limit);
         if (!rows.length) {
             Notification.warning('لا توجد بيانات للتصدير في هذه الفترة');
@@ -10420,9 +10696,13 @@ const Training = {
         Loading.show('جاري تجهيز PDF...');
         const periodAr = this.getExportPeriodLabelAr();
         const slug = this.getExportPeriodExportSlug();
-        const aud = document.getElementById('training-export-audience')?.value || 'all';
+        const aud = xctx && xctx.audience
+            ? xctx.audience
+            : (document.getElementById('training-export-audience')?.value || 'all');
         const audienceLabel = { all: 'الكل', employee: 'موظفون فقط', contractor: 'مقاولون/خارجيون' }[aud] || aud;
-        const personFocus = document.getElementById('training-export-person-key')?.value?.trim() || '';
+        const personFocus = xctx
+            ? String(xctx.personKey || '').trim()
+            : (document.getElementById('training-export-person-key')?.value?.trim() || '');
         const attDetail = this.getAttendanceRecordsForReportsFiltered();
         const headers = ['م', 'الشخص', 'عدد الجلسات', 'مجموع الساعات'];
         const matrix = rows.map((r, i) => [

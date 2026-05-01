@@ -422,7 +422,83 @@ const Dashboard = {
     /**
      * تحميل قسم التقارير في Dashboard - تصميم محسّن وتحديثات غير متزحمة
      */
-    async loadReportsWidget() {
+    /**
+     * جلب أوراق إحصائيات التقارير (مخالفات، تدريب، مهمات، سلوكيات، إجازات، حوادث/سجل، تصاريح العمل)
+     * دون انتظار فتح الموديول — نفس فكرة كارت العيادة عبر readFromSheet / batchReadSheets.
+     */
+    async prefetchReportStatsSheetsForDashboard(opts = {}) {
+        const forceRefresh = opts && opts.forceRefresh === true;
+        try {
+            if (!AppState || !AppState.appData) return;
+            if (typeof GoogleIntegration === 'undefined' || typeof GoogleIntegration.batchReadFromSheets !== 'function') return;
+            if (typeof GoogleIntegration._isBackendRpcConfigured !== 'function' || !GoogleIntegration._isBackendRpcConfigured()) return;
+
+            const CACHE_MS = 5 * 60 * 1000;
+            const now = Date.now();
+            if (!forceRefresh && typeof this._reportStatsSheetsFetchedAt === 'number' && (now - this._reportStatsSheetsFetchedAt) < CACHE_MS) {
+                return;
+            }
+
+            const can = (moduleKey) => {
+                if (typeof Permissions === 'undefined' || typeof Permissions.hasAccess !== 'function') return true;
+                return Permissions.hasAccess(moduleKey);
+            };
+
+            const tuples = [];
+            if (can('violations')) tuples.push(['Violations', 'violations']);
+            if (can('training')) tuples.push(['Training', 'training']);
+            if (can('ppe')) tuples.push(['PPE', 'ppe']);
+            if (can('behavior-monitoring')) tuples.push(['BehaviorMonitoring', 'behaviorMonitoring']);
+            if (can('clinic')) {
+                tuples.push(['SickLeave', 'sickLeave']);
+                tuples.push(['Medications', 'medications']);
+                tuples.push(['ClinicInventory', 'clinicInventory']);
+            }
+            if (can('incidents')) {
+                tuples.push(['Incidents', 'incidents']);
+                tuples.push(['IncidentsRegistry', 'incidentsRegistry']);
+            }
+            if (can('ptw')) {
+                tuples.push(['PTW', 'ptw']);
+                tuples.push(['PTWRegistry', 'ptwRegistry']);
+            }
+
+            const sheetNames = [];
+            tuples.forEach(([sheet]) => {
+                if (!sheetNames.includes(sheet)) sheetNames.push(sheet);
+            });
+
+            if (sheetNames.length === 0) {
+                this._reportStatsSheetsFetchedAt = now;
+                return;
+            }
+
+            const res = await GoogleIntegration.batchReadFromSheets(sheetNames, { timeout: 45000, batchSize: 12 });
+            const map = res && res.data && typeof res.data === 'object' ? res.data : {};
+
+            tuples.forEach(([sheet, appKey]) => {
+                const rows = map[sheet];
+                if (Array.isArray(rows)) {
+                    AppState.appData[appKey] = rows;
+                }
+            });
+
+            this._reportStatsSheetsFetchedAt = now;
+
+            if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
+                try {
+                    window.DataManager.save();
+                } catch (e) { /* ignore */ }
+            }
+        } catch (e) {
+            if (typeof Utils !== 'undefined' && Utils.safeWarn) {
+                Utils.safeWarn('⚠️ تعذر جلب أوراق إحصائيات لوحة التحكم:', e);
+            }
+        }
+    },
+
+    async loadReportsWidget(forceOrOpts) {
+        const forceRefresh = forceOrOpts === true || (forceOrOpts && forceOrOpts.forceRefresh === true);
         const container = document.getElementById('dashboard-reports-widget');
         if (!container) return;
 
@@ -447,8 +523,11 @@ const Dashboard = {
 
             const dataForRender = AppState.appData;
 
-            // سجل التردد: نفس مسار العيادة (getAllClinicVisits) حتى لا يبقى العدد صفراً حتى فتح الموديول
-            await this.prefetchClinicVisitsForDashboard();
+            // إحصائيات الكروت: جلب من الخلفية بالتوازي مع سجل التردد (دون الاعتماد على فتح الموديولات)
+            await Promise.all([
+                this.prefetchReportStatsSheetsForDashboard({ forceRefresh }),
+                this.prefetchClinicVisitsForDashboard({ forceRefresh })
+            ]);
 
             // حساب الإحصائيات بشكل تدريجي
             const stats = await this.calculateStatsAsync(AppState.appData || dataForRender);
@@ -462,6 +541,14 @@ const Dashboard = {
 
             // إعداد مستمعي الأحداث
             this.setupReportsWidgetEvents(container);
+
+            // تحديث كروت تصاريح العمل ومؤشرات KPI الأخرى بعد جلب PTW/PTWRegistry (كانت تُحدَّث قبل الجلب المبكر)
+            try {
+                this.updateKPIs();
+                this.updateStats();
+            } catch (kpiErr) {
+                if (typeof Utils !== 'undefined' && Utils.safeWarn) Utils.safeWarn('⚠️ تعذر تحديث KPI بعد التقارير:', kpiErr);
+            }
         } catch (error) {
             Utils.safeError('خطأ في تحميل كارت التقارير:', error);
             container.innerHTML = `
@@ -470,7 +557,7 @@ const Dashboard = {
                         <div class="empty-state">
                             <i class="fas fa-exclamation-triangle text-4xl text-gray-300 mb-4"></i>
                             <p class="text-gray-500">حدث خطأ أثناء تحميل البيانات</p>
-                            <button onclick="Dashboard.loadReportsWidget()" class="btn-primary mt-4">
+                            <button onclick="Dashboard.loadReportsWidget(true)" class="btn-primary mt-4">
                                 <i class="fas fa-redo ml-2"></i>إعادة المحاولة
                             </button>
                         </div>
@@ -566,7 +653,8 @@ const Dashboard = {
      * جلب سجل التردد الكامل للوحة التحكم (لا يعتمد على فتح موديول العيادة)
      * يطابق شروط تحديث تبويب الزيارات: بيانات ناقصة، انتهاء الكاش، أو عدم إكمال جلب الخادم بعد.
      */
-    async prefetchClinicVisitsForDashboard() {
+    async prefetchClinicVisitsForDashboard(opts = {}) {
+        const forceRefresh = opts && opts.forceRefresh === true;
         try {
             if (!AppState || !AppState.appData) return;
             if (typeof Permissions !== 'undefined' && typeof Permissions.hasAccess === 'function') {
@@ -575,13 +663,15 @@ const Dashboard = {
             if (typeof Clinic === 'undefined' || typeof Clinic.loadVisitsDataFromBackend !== 'function') return;
             if (typeof GoogleIntegration === 'undefined' || typeof GoogleIntegration.sendRequest !== 'function') return;
 
-            const hasLocalData = Array.isArray(AppState.appData.clinicVisits) && AppState.appData.clinicVisits.length > 0;
-            const lastSync = localStorage.getItem('clinic_last_sync');
-            const cacheAge = lastSync ? (Date.now() - parseInt(lastSync, 10)) : Infinity;
-            const CACHE_DURATION = 10 * 60 * 1000;
-            const isDataStale = !Number.isFinite(cacheAge) || cacheAge >= CACHE_DURATION;
-            const shouldLoad = !hasLocalData || isDataStale || Clinic._visitsBackendFetchOk !== true;
-            if (!shouldLoad) return;
+            if (!forceRefresh) {
+                const hasLocalData = Array.isArray(AppState.appData.clinicVisits) && AppState.appData.clinicVisits.length > 0;
+                const lastSync = localStorage.getItem('clinic_last_sync');
+                const cacheAge = lastSync ? (Date.now() - parseInt(lastSync, 10)) : Infinity;
+                const CACHE_DURATION = 10 * 60 * 1000;
+                const isDataStale = !Number.isFinite(cacheAge) || cacheAge >= CACHE_DURATION;
+                const shouldLoad = !hasLocalData || isDataStale || Clinic._visitsBackendFetchOk !== true;
+                if (!shouldLoad) return;
+            }
 
             await Clinic.loadVisitsDataFromBackend();
         } catch (e) {
@@ -1022,7 +1112,7 @@ const Dashboard = {
                         icon.style.transform = 'rotate(0deg)';
                     }, 500);
                 }
-                await this.loadReportsWidget();
+                await this.loadReportsWidget({ forceRefresh: true });
             });
         }
 
@@ -3330,11 +3420,12 @@ const Dashboard = {
             const inspections = Array.isArray(data.inspections) ? data.inspections : [];
             const training = Array.isArray(data.training) ? data.training : [];
             const violations = Array.isArray(data.violations) ? data.violations : [];
-            const ptw = Array.isArray(data.ptw) ? data.ptw : [];
+            const ptwDataset = this.getUnifiedPTWDataset(data);
+            const ptwCount = ptwDataset.length;
             const audits = Array.isArray(data.audits) ? data.audits : [];
 
             const totalReports = incidents.length + nearmiss.length + inspections.length +
-                               training.length + violations.length + ptw.length + audits.length;
+                               training.length + violations.length + ptwCount + audits.length;
 
             const resourceConsumption = data.resourceConsumption || {};
             const electricityData = Array.isArray(resourceConsumption.electricity) ? resourceConsumption.electricity : [];
@@ -3356,7 +3447,7 @@ const Dashboard = {
                 ['training-sessions-value', training.length, 'report'],
                 ['violations-value', violations.length, 'report'],
                 ['approved-contractors-value', approvedContractorsCount, 'report'],
-                ['ptw-reports-value', ptw.length, 'report'],
+                ['ptw-reports-value', ptwCount, 'report'],
                 ['audits-value', audits.length, 'report'],
                 ['electricity-consumption-value', electricityTotal, 'consumption'],
                 ['water-consumption-value', waterTotal, 'consumption'],

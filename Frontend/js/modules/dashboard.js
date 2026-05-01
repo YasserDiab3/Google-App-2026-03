@@ -423,7 +423,7 @@ const Dashboard = {
      * تحميل قسم التقارير في Dashboard - تصميم محسّن وتحديثات غير متزحمة
      */
     /**
-     * جلب أوراق إحصائيات التقارير (مخالفات، تدريب، مهمات، سلوكيات، إجازات، حوادث/سجل)
+     * جلب أوراق إحصائيات التقارير (مخالفات، تدريب، مهمات، سلوكيات، إجازات، حوادث/سجل، تصاريح العمل)
      * دون انتظار فتح الموديول — نفس فكرة كارت العيادة عبر readFromSheet / batchReadSheets.
      */
     async prefetchReportStatsSheetsForDashboard(opts = {}) {
@@ -457,6 +457,10 @@ const Dashboard = {
             if (can('incidents')) {
                 tuples.push(['Incidents', 'incidents']);
                 tuples.push(['IncidentsRegistry', 'incidentsRegistry']);
+            }
+            if (can('ptw')) {
+                tuples.push(['PTW', 'ptw']);
+                tuples.push(['PTWRegistry', 'ptwRegistry']);
             }
 
             const sheetNames = [];
@@ -537,6 +541,14 @@ const Dashboard = {
 
             // إعداد مستمعي الأحداث
             this.setupReportsWidgetEvents(container);
+
+            // تحديث كروت تصاريح العمل ومؤشرات KPI الأخرى بعد جلب PTW/PTWRegistry (كانت تُحدَّث قبل الجلب المبكر)
+            try {
+                this.updateKPIs();
+                this.updateStats();
+            } catch (kpiErr) {
+                if (typeof Utils !== 'undefined' && Utils.safeWarn) Utils.safeWarn('⚠️ تعذر تحديث KPI بعد التقارير:', kpiErr);
+            }
         } catch (error) {
             Utils.safeError('خطأ في تحميل كارت التقارير:', error);
             container.innerHTML = `
@@ -3408,11 +3420,12 @@ const Dashboard = {
             const inspections = Array.isArray(data.inspections) ? data.inspections : [];
             const training = Array.isArray(data.training) ? data.training : [];
             const violations = Array.isArray(data.violations) ? data.violations : [];
-            const ptw = Array.isArray(data.ptw) ? data.ptw : [];
+            const ptwDataset = this.getUnifiedPTWDataset(data);
+            const ptwCount = ptwDataset.length;
             const audits = Array.isArray(data.audits) ? data.audits : [];
 
             const totalReports = incidents.length + nearmiss.length + inspections.length +
-                               training.length + violations.length + ptw.length + audits.length;
+                               training.length + violations.length + ptwCount + audits.length;
 
             const resourceConsumption = data.resourceConsumption || {};
             const electricityData = Array.isArray(resourceConsumption.electricity) ? resourceConsumption.electricity : [];
@@ -3434,7 +3447,7 @@ const Dashboard = {
                 ['training-sessions-value', training.length, 'report'],
                 ['violations-value', violations.length, 'report'],
                 ['approved-contractors-value', approvedContractorsCount, 'report'],
-                ['ptw-reports-value', ptw.length, 'report'],
+                ['ptw-reports-value', ptwCount, 'report'],
                 ['audits-value', audits.length, 'report'],
                 ['electricity-consumption-value', electricityTotal, 'consumption'],
                 ['water-consumption-value', waterTotal, 'consumption'],
