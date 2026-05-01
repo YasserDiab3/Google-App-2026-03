@@ -344,9 +344,14 @@ const IssuingAuthorities = {
         const normalized = { ...(row || {}) };
         normalized.id = String(normalized.id || '').trim();
         normalized.personType = String(normalized.personType || '').toLowerCase().trim() === 'contractor' ? 'contractor' : 'employee';
-        normalized.employeeCode = String(normalized.employeeCode || '').trim();
-        normalized.contractorCompanyName = String(normalized.contractorCompanyName || '').trim();
-        normalized.name = String(normalized.name || '').trim();
+        normalized.employeeCode = String(
+            normalized.employeeCode || normalized['الكود الوظيفي'] || normalized['الرقم الوظيفي'] || ''
+        ).trim();
+        normalized.contractorCompanyName = String(
+            normalized.contractorCompanyName || normalized['المقاول'] || normalized['اسم الشركة'] || ''
+        ).trim();
+        let nameVal = normalized.name || normalized['اسم الموظف'] || normalized['الاسم'] || normalized['name'];
+        normalized.name = String(nameVal || '').trim();
         normalized.departmentName = String(normalized.departmentName || '').trim();
         normalized.jobTitle = String(normalized.jobTitle || '').trim();
         normalized.branch = String(normalized.branch || '').trim();

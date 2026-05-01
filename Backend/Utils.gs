@@ -2576,6 +2576,13 @@ function appendToSheet(sheetName, data, spreadsheetId = null) {
 
         return withResolvedPTWRegistry_(sheetName, { success: true, message: 'تم إضافة البيانات بنجاح' }, resolvedPTWRegistryForAppend);
         } finally {
+            // ✅ إبطال CacheService لقراءة الورقة — وإلا تبقى readFromSheet تعيد JSON قديماً دون الصف المضاف (مثل PTWIssuingAuthorities)
+            try {
+                const _readCache = CacheService.getScriptCache();
+                _readCache.remove('hse_read_' + sheetName + '_v1');
+            } catch (_cacheInvEx) {
+                Logger.log('appendToSheet cache invalidate: ' + _cacheInvEx.toString());
+            }
             if (_ptwRegistryAppendLock) {
                 try {
                     _ptwRegistryAppendLock.releaseLock();
