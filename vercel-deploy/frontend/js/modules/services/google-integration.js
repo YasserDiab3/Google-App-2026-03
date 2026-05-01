@@ -1434,7 +1434,7 @@ const GoogleIntegration = {
      */
     async readFromSheets(sheetName, timeoutOrOptions = 15000) {
         if (!this._isBackendRpcConfigured()) {
-            return [];
+            return null;
         }
 
         let timeout = 15000;
@@ -1466,13 +1466,13 @@ const GoogleIntegration = {
             payload.data.__timeoutMs = timeout;
             const result = await this.sendRequest(payload);
 
-            if (result && result.success && result.data) {
-                return result.data;
+            if (result && result.success && result.data !== undefined) {
+                return Array.isArray(result.data) ? result.data : [];
             } else if (result && result.success && Array.isArray(result)) {
                 return result;
             }
 
-            return [];
+            return null;
         } catch (error) {
             const errorMsg = error.message || 'خطأ غير معروف';
             const isBackendRpcConfigured = this._isBackendRpcConfigured();
@@ -1494,7 +1494,7 @@ const GoogleIntegration = {
             if (!isExpectedError && AppState.debugMode) {
                 Utils.safeWarn(`⚠️ فشل قراءة البيانات من ${sheetName}:`, error.message || error);
             }
-            return [];
+            return null;
         }
     },
 
@@ -3251,7 +3251,8 @@ const GoogleIntegration = {
                 if (Array.isArray(data)) {
                     const oldData = Array.isArray(AppState.appData[key]) ? AppState.appData[key] : [];
                     // ✅ حماية: لا نُبدّل البيانات المحلية بمصفوفة فارغة
-                    const shouldKeepOld = data.length === 0 && oldData.length > 0;
+                    // ملاحظة: ورقة ViolationTypes يجب أن تعكس الشيت بدقة. لا نحتفظ بالقديم إذا كانت القراءة ناجحة لكنها فارغة.
+                    const shouldKeepOld = sheetName !== 'ViolationTypes' && data.length === 0 && oldData.length > 0;
                     const effectiveData = shouldKeepOld ? oldData : data;
 
                     if (!shouldKeepOld) {
