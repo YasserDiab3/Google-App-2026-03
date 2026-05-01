@@ -3,9 +3,50 @@
  * يدير التخزين المؤقت للملفات لتحسين الأداء
  */
 
-// تعطيل جميع رسائل Console في Service Worker
-(function() {
-    const noop = function() {};
+/**
+ * مضيفات إضافية تُفعّل سجلات تشخيص Service Worker (إلى جانب localhost)
+ * ضع هنا نطاق المعاينة/الاختبار الثابت، مثال: 'preview.example.com'
+ */
+const SW_DEV_EXTRA_HOSTS = [
+    // 'preview.example.com',
+    // 'staging.example.com',
+];
+
+/**
+ * لاحقات مضيف: يُطابق إن كان المضيف يساوي اللاحقة أو ينتهي بـ .لاحقة
+ * مثال: '.internal' يطابق 'app.internal' و 'x.y.internal'
+ */
+const SW_DEV_HOST_SUFFIXES = [
+    // 'pages.dev',
+    // 'staging.example.com',
+];
+
+function isSwDev() {
+    try {
+        const h = self.location.hostname;
+        const q = String(self.location.search || '');
+        if (h === 'localhost' || h === '127.0.0.1') return true;
+        if (q.includes('dev=true')) return true;
+        if (SW_DEV_EXTRA_HOSTS.length && SW_DEV_EXTRA_HOSTS.includes(h)) return true;
+        for (let i = 0; i < SW_DEV_HOST_SUFFIXES.length; i++) {
+            const s = SW_DEV_HOST_SUFFIXES[i];
+            if (!s) continue;
+            if (h === s || h.endsWith('.' + s) || (s.startsWith('.') && h.endsWith(s))) {
+                return true;
+            }
+        }
+        // معاينات Vercel: غالباً يحتوي المضيف على -git- ضمن *.vercel.app (ليس نشر الإنتاج الافتراضي)
+        if (h.endsWith('.vercel.app') && h.includes('-git-')) return true;
+        return false;
+    } catch (_) {
+        return false;
+    }
+}
+
+// في الإنتاج: كتم console لتقليل الضوضاء؛ في التطوير المحلي تبقى السجلات للتشخيص
+(function () {
+    if (isSwDev()) return;
+    const noop = function () {};
     console.log = noop;
     console.error = noop;
     console.warn = noop;
@@ -16,8 +57,8 @@
 
 // Bump cache version to force clients to pick up latest JS/CSS updates (زيادة عند كل نشر لظهور التحديثات)
 // يجب تحديث __SW_REGISTER_QUERY في index.html بنفس اللاحقة عند تغيير الإصدار لتسريع اكتشاف service-worker.js
-// Service Worker Version: 20260430 — تقليل precache لتسريع التثبيت؛ الموديولات شبكة أولاً
-const CACHE_VERSION = 'hse-app-v1.0.16-20260430';
+// Service Worker Version: 20260501 — isSwDev: مضيفات إضافية + معاينة Vercel
+const CACHE_VERSION = 'hse-app-v1.0.18-20260501';
 const CACHE_NAME = `hse-cache-${CACHE_VERSION}`;
 
 /** أقصى حجم لعنصر في الكاش (بايت) — يحدّ تخزين ملفات CDN الضخمة */
@@ -79,21 +120,31 @@ const CACHE_STRATEGIES = {
  * حدث التثبيت
  */
 self.addEventListener('install', (event) => {
-    console.log('[Service Worker] تثبيت Service Worker...');
-    
+    if (isSwDev()) console.log('[Service Worker] تثبيت Service Worker...');
+
     event.waitUntil(
-        caches.open(CACHE_NAME)
-            .then((cache) => {
-                console.log('[Service Worker] تخزين الملفات الأساسية...');
-                return cache.addAll(CORE_CACHE_FILES.map(url => new Request(url, { cache: 'reload' })));
-            })
-            .then(() => {
-                console.log('[Service Worker] تم التثبيت بنجاح');
-                return self.skipWaiting();
-            })
-            .catch((error) => {
-                console.error('[Service Worker] فشل التثبيت:', error);
-            })
+        (async () => {
+            try {
+                const cache = await caches.open(CACHE_NAME);
+                if (isSwDev()) console.log('[Service Worker] تخزين الملفات الأساسية...');
+                await Promise.all(
+                    CORE_CACHE_FILES.map((url) =>
+                        cache
+                            .add(new Request(url, { cache: 'reload' }))
+                            .catch((err) => {
+                                if (isSwDev()) {
+                                    console.warn('[Service Worker] تخطّي ملف precache:', url, err);
+                                }
+                            })
+                    )
+                );
+                if (isSwDev()) console.log('[Service Worker] انتهى التثبيت (قد يكون precache جزئياً)');
+            } catch (error) {
+                if (isSwDev()) console.error('[Service Worker] فشل فتح الكاش أثناء التثبيت:', error);
+            } finally {
+                await self.skipWaiting();
+            }
+        })()
     );
 });
 
