@@ -447,8 +447,11 @@ const Dashboard = {
 
             const dataForRender = AppState.appData;
 
+            // سجل التردد: نفس مسار العيادة (getAllClinicVisits) حتى لا يبقى العدد صفراً حتى فتح الموديول
+            await this.prefetchClinicVisitsForDashboard();
+
             // حساب الإحصائيات بشكل تدريجي
-            const stats = await this.calculateStatsAsync(dataForRender);
+            const stats = await this.calculateStatsAsync(AppState.appData || dataForRender);
             const expiringMedications = await this.getExpiringMedicationsAsync(dataForRender);
 
             // عرض الكارت مع البيانات
@@ -516,6 +519,80 @@ const Dashboard = {
     },
 
     /**
+     * إجمالي سجلات التردد على العيادة (موظفين + مقاولين) مع تجنب الازدواج عند دمج المصادر
+     */
+    getClinicVisitsTotalCount(data) {
+        if (!data || typeof data !== 'object') return 0;
+        const emp = Array.isArray(data.clinicVisits) ? data.clinicVisits : [];
+        const contr = Array.isArray(data.clinicContractorVisits) ? data.clinicContractorVisits : [];
+        const legacy = Array.isArray(data.Clinic) ? data.Clinic : [];
+
+        const idSet = new Set();
+        let count = 0;
+        const addList = (list) => {
+            if (!Array.isArray(list)) return;
+            for (let i = 0; i < list.length; i++) {
+                const v = list[i];
+                if (!v || typeof v !== 'object') continue;
+                const idRaw = v.id;
+                const id = idRaw != null && String(idRaw).trim() !== '' ? String(idRaw) : null;
+                if (id) {
+                    if (!idSet.has(id)) {
+                        idSet.add(id);
+                        count++;
+                    }
+                } else {
+                    count++;
+                }
+            }
+        };
+
+        if (emp.length > 0) {
+            addList(emp);
+            if (contr.length > 0) addList(contr);
+            return count;
+        }
+        if (legacy.length > 0) {
+            addList(legacy);
+            return count;
+        }
+        if (contr.length > 0) {
+            addList(contr);
+            return count;
+        }
+        return 0;
+    },
+
+    /**
+     * جلب سجل التردد الكامل للوحة التحكم (لا يعتمد على فتح موديول العيادة)
+     * يطابق شروط تحديث تبويب الزيارات: بيانات ناقصة، انتهاء الكاش، أو عدم إكمال جلب الخادم بعد.
+     */
+    async prefetchClinicVisitsForDashboard() {
+        try {
+            if (!AppState || !AppState.appData) return;
+            if (typeof Permissions !== 'undefined' && typeof Permissions.hasAccess === 'function') {
+                if (!Permissions.hasAccess('clinic')) return;
+            }
+            if (typeof Clinic === 'undefined' || typeof Clinic.loadVisitsDataFromBackend !== 'function') return;
+            if (typeof GoogleIntegration === 'undefined' || typeof GoogleIntegration.sendRequest !== 'function') return;
+
+            const hasLocalData = Array.isArray(AppState.appData.clinicVisits) && AppState.appData.clinicVisits.length > 0;
+            const lastSync = localStorage.getItem('clinic_last_sync');
+            const cacheAge = lastSync ? (Date.now() - parseInt(lastSync, 10)) : Infinity;
+            const CACHE_DURATION = 10 * 60 * 1000;
+            const isDataStale = !Number.isFinite(cacheAge) || cacheAge >= CACHE_DURATION;
+            const shouldLoad = !hasLocalData || isDataStale || Clinic._visitsBackendFetchOk !== true;
+            if (!shouldLoad) return;
+
+            await Clinic.loadVisitsDataFromBackend();
+        } catch (e) {
+            if (typeof Utils !== 'undefined' && Utils.safeWarn) {
+                Utils.safeWarn('⚠️ تعذر جلب سجل التردد على العيادة للوحة التحكم:', e);
+            }
+        }
+    },
+
+    /**
      * حساب الإحصائيات بشكل غير متزحم
      */
     async calculateStatsAsync(data) {
@@ -535,7 +612,7 @@ const Dashboard = {
                     sickLeave: (data.sickLeave || []).length,
                     ppe: (data.ppe || []).length,
                     behaviorMonitoring: (data.behaviorMonitoring || []).length,
-                    clinicVisits: (data.clinicVisits || []).length
+                    clinicVisits: this.getClinicVisitsTotalCount(data)
                 });
             };
 
