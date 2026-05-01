@@ -3268,6 +3268,11 @@ const GoogleIntegration = {
                     }
                     
                     // ✅ إضافة: تحديث syncMeta بعد تحميل ناجح
+                    // مهم: حتى لو كانت الورقة فارغة وتم الاحتفاظ بالبيانات القديمة (shouldKeepOld)، نعتبرها "تم تحميلها"
+                    // لتفادي إعادة تهيئة ViolationTypes افتراضياً قبل اكتمال التحميل.
+                    if (!AppState.syncMeta) {
+                        AppState.syncMeta = { sheets: {}, lastSyncTime: 0, userEmail: null };
+                    }
                     if (!AppState.syncMeta.sheets) {
                         AppState.syncMeta.sheets = {};
                     }
