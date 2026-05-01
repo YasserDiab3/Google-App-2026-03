@@ -7866,10 +7866,16 @@ window.UI = {
                         return;
                     }
 
+                    // جرس الشريط: التقاط على الزر نفسه يعمل قبل الفقاعة ويقلّل تعارض المستمعات/اللمس
+                    const useCapture = btn.id === 'notifications-btn';
+
                     // إزالة event listeners القديمة
                     if (btn._notificationClickHandler) {
-                        btn.removeEventListener('click', btn._notificationClickHandler, { capture: false });
+                        btn.removeEventListener('click', btn._notificationClickHandler, {
+                            capture: !!btn._notificationClickUsesCapture
+                        });
                         delete btn._notificationClickHandler;
+                        delete btn._notificationClickUsesCapture;
                     }
 
                     // إنشاء handler جديد
@@ -7908,11 +7914,14 @@ window.UI = {
 
                             Utils.safeLog('🔔 فتح dropdown:', dropdownId);
 
-                            // استدعاء toggle بشكل آمن
-                            if (self && typeof self.toggleNotificationsDropdown === 'function') {
-                                self.toggleNotificationsDropdown(dropdownId, listId, emptyId, closeBtnId, btn);
-                            } else if (window.UI && typeof window.UI.toggleNotificationsDropdown === 'function') {
-                                window.UI.toggleNotificationsDropdown(dropdownId, listId, emptyId, closeBtnId, btn);
+                            // استدعاء toggle مع ربط this صريح (ضمان hide/show حتى لو اختلف سياق الاستدعاء)
+                            const uiToggle = (self && typeof self.toggleNotificationsDropdown === 'function')
+                                ? self
+                                : (typeof window !== 'undefined' && window.UI && typeof window.UI.toggleNotificationsDropdown === 'function')
+                                    ? window.UI
+                                    : null;
+                            if (uiToggle) {
+                                uiToggle.toggleNotificationsDropdown.call(uiToggle, dropdownId, listId, emptyId, closeBtnId, btn);
                             }
                         } catch (error) {
                             Utils.safeError('⚠️ خطأ في معالجة حدث الإشعارات:', error);
@@ -7942,7 +7951,8 @@ window.UI = {
 
                     // ربط الـ handler
                     btn._notificationClickHandler = clickHandler;
-                    btn.addEventListener('click', clickHandler, { capture: false, passive: false });
+                    btn._notificationClickUsesCapture = useCapture;
+                    btn.addEventListener('click', clickHandler, { capture: useCapture, passive: false });
                     btn.dataset.notificationsBound = 'true';
 
                     Utils.safeLog('✅ تم ربط زر الإشعارات:', btn.id);
@@ -8104,8 +8114,12 @@ window.UI = {
         // إعادة محاولة تهيئة الأزرار بعد تأخير (محاولة واحدة فقط)
         setTimeout(() => {
             const mobileBtn = document.getElementById('mobile-notifications-btn');
-            if (mobileBtn && !mobileBtn.dataset.notificationsBound && self._notificationsInitCount < 5) {
-                Utils.safeLog('⚠️ الزر الجانبي لم يتم ربطه بعد، إعادة المحاولة الأخيرة...');
+            const sidebarBell = document.getElementById('notifications-btn');
+            const needRetry =
+                (mobileBtn && !mobileBtn.dataset.notificationsBound) ||
+                (sidebarBell && !sidebarBell.dataset.notificationsBound);
+            if (needRetry && self._notificationsInitCount < 5) {
+                Utils.safeLog('⚠️ أزرار الإشعارات لم تُربط بعد، إعادة تهيئة...');
                 this.initNotificationsButton();
             }
         }, 1000);
@@ -8154,7 +8168,10 @@ window.UI = {
                 notificationButtons.forEach(btn => {
                     try {
                         if (btn._notificationClickHandler) {
-                            btn.removeEventListener('click', btn._notificationClickHandler, { capture: false });
+                            btn.removeEventListener('click', btn._notificationClickHandler, {
+                                capture: !!btn._notificationClickUsesCapture
+                            });
+                            delete btn._notificationClickUsesCapture;
                             if (btn._notificationClickDebounceTimer) {
                                 clearTimeout(btn._notificationClickDebounceTimer);
                                 btn._notificationClickDebounceTimer = null;
@@ -8490,7 +8507,10 @@ window.UI = {
             const selfRef = this;
             const updateNotificationsList = () => {
                 try {
-                    if (!dropdown || dropdown.style.display !== 'flex') return;
+                    if (!dropdown) return;
+                    const inlineD = dropdown.style && dropdown.style.display;
+                    const computedD = window.getComputedStyle(dropdown).display;
+                    if (inlineD !== 'flex' && computedD !== 'flex') return;
                     const updatedNotifications = typeof selfRef.getNotificationsList === 'function' ? selfRef.getNotificationsList() : [];
                     if (!list || typeof selfRef.renderNotificationItem !== 'function') return;
                     
@@ -8729,6 +8749,9 @@ window.UI = {
                             } else {
                                 p.appendChild(dropdown);
                             }
+                        } else {
+                            const fallback = document.getElementById('sidebar-notifications-container');
+                            if (fallback) fallback.appendChild(dropdown);
                         }
                     } catch (restoreErr) {
                         Utils.safeWarn('⚠️ تعذر إعادة إدراج لوحة إشعارات الشريط:', restoreErr);

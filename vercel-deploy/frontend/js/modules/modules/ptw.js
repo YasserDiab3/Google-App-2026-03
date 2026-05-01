@@ -5533,6 +5533,7 @@ const PTW = {
             requiredPPE: requiredPPE,
             riskAssessment: riskAssessment,
             riskNotes: riskNotes,
+            permitDisclaimer: document.getElementById('ptw-permit-disclaimer-text')?.value.trim() || '',
             approvals: approvals,
             closureStatus: document.querySelector('input[name="ptw-closure-status"]:checked')?.value || '',
             closureTime: document.getElementById('ptw-closure-time')?.value || '',
@@ -5847,7 +5848,7 @@ const PTW = {
                         <div class="print-field-value">${escape(formData.requestingParty) || '-'}</div>
                     </div>
                     <div class="print-field print-full-width">
-                        <div class="print-field-label">المعدة / المكينة / العملية</div>
+                        <div class="print-field-label">المعدة / الماكينة / العملية</div>
                         <div class="print-field-value">${escape(formData.equipment) || '-'}</div>
                     </div>
                     <div class="print-field print-full-width">
@@ -7124,7 +7125,7 @@ const PTW = {
                                     </div>
                                 </div>
                                 <div class="md:col-span-3">
-                                    <label class="block text-sm font-bold text-gray-700 mb-2">المعدة / المكينة / العملية</label>
+                                    <label class="block text-sm font-bold text-gray-700 mb-2">المعدة / الماكينة / العملية</label>
                                     <textarea id="manual-permit-equipment" class="form-input transition-all focus:ring-2 focus:ring-blue-200" rows="2" placeholder="أدخل تفاصيل المعدات أو العملية المستخدمة">${Utils.escapeHTML(existingEntry?.equipment || '')}</textarea>
                                 </div>
                                 <div class="md:col-span-3">
@@ -7793,7 +7794,7 @@ const PTW = {
         populateSublocationOptions(locationSelect?.value);
         parseExistingSelectedSublocations();
 
-        // مزامنة حقل المعدة/المكينة/العملية مع حقل الأدوات أو العدد تلقائياً
+        // مزامنة حقل المعدة/الماكينة/العملية مع حقل الأدوات أو العدد تلقائياً
         const equipmentInput = modal.querySelector('#manual-permit-equipment');
         const toolsInput = modal.querySelector('#manual-permit-tools');
         if (equipmentInput && toolsInput) {
@@ -10541,7 +10542,7 @@ const PTW = {
                                     `}
                                 </div>
                                 <div class="md:col-span-3">
-                                    <label class="block text-sm font-bold text-gray-700 mb-2">المعدة / المكينة / العملية</label>
+                                    <label class="block text-sm font-bold text-gray-700 mb-2">المعدة / الماكينة / العملية</label>
                                     <textarea id="ptw-equipment" class="form-input transition-all focus:ring-2 focus:ring-blue-200" rows="2" placeholder="أدخل تفاصيل المعدات أو العملية المستخدمة">${escapeHTML(ptwData?.equipment)}</textarea>
                                 </div>
                                 <div class="md:col-span-3">
@@ -11398,7 +11399,7 @@ const PTW = {
                             </h2>
                             <p style="font-size: 0.875rem; opacity: 0.8; margin: 4px 0 0 0;">
                                 <i class="fas fa-info-circle ml-1"></i>
-                                إصدار تصريح عمل جديد مع دورة الموافقات
+                                ${data?.id ? 'تعديل تصريح العمل مع دورة الموافقات' : 'إصدار تصريح عمل جديد مع دورة الموافقات'}
                             </p>
                         </div>
                     </div>
@@ -11718,6 +11719,7 @@ const PTW = {
                 signature3: document.getElementById('ptw-closure-approval-signature-3')?.value.trim() || '',
                 signature4: document.getElementById('ptw-closure-approval-signature-4')?.value.trim() || ''
             },
+            permitDisclaimer: document.getElementById('ptw-permit-disclaimer-text')?.value.trim() || existingPermit?.permitDisclaimer || '',
             createdAt: existingPermit?.createdAt || new Date().toISOString(),
             updatedAt: new Date().toISOString(),
             approvalCircuitOwnerId: this.formCircuitOwnerId || existingPermit?.approvalCircuitOwnerId || '__default__',
@@ -11730,6 +11732,20 @@ const PTW = {
         }
 
         this.updateStatusField(formData.status);
+
+        if (formData.startDate && formData.endDate) {
+            const tStart = this.parseDateTimeValue(formData.startDate);
+            const tEnd = this.parseDateTimeValue(formData.endDate);
+            if (tStart && tEnd && tEnd <= tStart) {
+                Notification.error(this._t('module.ptw.notify.endBeforeStart', 'يجب أن يكون تاريخ الانتهاء بعد تاريخ البدء.'));
+                this._isSubmitting = false;
+                if (submitBtn) {
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = originalText;
+                }
+                return;
+            }
+        }
 
         if (!formData.workDescription || !formData.location || !formData.status) {
             Notification.error(this._t('module.ptw.notify.fillRequired', 'يرجى ملء جميع الحقول المطلوبة'));
@@ -12342,7 +12358,7 @@ const PTW = {
                                 <p class="text-gray-800">${Utils.escapeHTML(item.requestingParty || '-')}</p>
                             </div>
                             <div class="md:col-span-2">
-                                <label class="text-sm font-semibold text-gray-600">المعدة / المكينة / العملية:</label>
+                                <label class="text-sm font-semibold text-gray-600">المعدة / الماكينة / العملية:</label>
                                 <p class="text-gray-800">${Utils.escapeHTML(item.equipment || '-')}</p>
                             </div>
                             <div class="md:col-span-2">
