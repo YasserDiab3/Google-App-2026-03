@@ -192,82 +192,79 @@ function checkViolationTypesPermission(userData) {
 }
 
 /**
- * حفظ جميع أنواع المخالفات في Violation_Types_DB (من الإعدادات)
+ * حفظ جميع أنواع المخالفات في ورقة ViolationTypes فقط (مصدر حقيقة واحد).
+ * يحذف الصفوف غير الموجودة في snapshot ثم يُحدّث/يضيف الباقي عبر saveToSheet (upsert).
  */
 function saveViolationTypesToSheet(violationTypesData) {
     try {
-        // التحقق من الصلاحيات
         const userData = violationTypesData.userData || violationTypesData.user || {};
         const permissionCheck = checkViolationTypesPermission(userData);
-        
+
         if (!permissionCheck.hasPermission) {
-            return { 
-                success: false, 
+            return {
+                success: false,
                 message: permissionCheck.message || 'ليس لديك صلاحية لحفظ أنواع المخالفات',
                 errorCode: 'PERMISSION_DENIED'
             };
         }
-        
-        const sheetName = 'Violation_Types_DB';
+
         const spreadsheetId = getSpreadsheetId();
-        
         if (!spreadsheetId) {
             return { success: false, message: 'معرف Google Sheets غير محدد' };
         }
-        
-        // التحقق من أن violationTypes موجودة
+
         const violationTypes = violationTypesData.violationTypes || violationTypesData.data || [];
-        
+
         if (!Array.isArray(violationTypes)) {
             return { success: false, message: 'بيانات أنواع المخالفات غير صحيحة' };
         }
-        
-        // حفظ كل نوع في سطر منفصل
-        // أولاً، نحذف البيانات القديمة (نحفظ نسخة احتياطية)
-        const existingData = readFromSheet(sheetName, spreadsheetId);
-        
-        // ✅ حفظ البيانات الجديدة - array (سيتم تحويلها تلقائياً)
-        const result = saveToSheet(sheetName, { 
-            id: 'VIOLATION-TYPES-ALL',
-            violationTypes: violationTypes, // ✅ array بدون JSON.stringify
-            updatedAt: new Date().toISOString(),
-            updatedBy: userData.name || userData.email || 'System'
-        }, spreadsheetId);
-        
-        // أيضاً، نحفظ في ViolationTypes (للتوافق مع النظام القديم)
-        if (result.success) {
-            // محاولة حفظ في ViolationTypes أيضاً (لكل نوع سطر)
-            try {
-                const violationTypesSheetName = 'ViolationTypes';
-                // نحفظ جميع الأنواع في ViolationTypes
-                violationTypes.forEach(type => {
-                    if (type && type.id) {
-                        // تحقق إذا كان موجوداً بالفعل
-                        const existingTypes = readFromSheet(violationTypesSheetName, spreadsheetId);
-                        const existingIndex = existingTypes.findIndex(t => t.id === type.id);
-                        
-                        if (existingIndex >= 0) {
-                            // تحديث
-                            const updateData = { ...type, updatedAt: new Date().toISOString() };
-                            saveToSheet(violationTypesSheetName, updateData, spreadsheetId);
-                        } else {
-                            // إضافة جديد
-                            const newType = {
-                                ...type,
-                                createdAt: type.createdAt || new Date().toISOString(),
-                                updatedAt: new Date().toISOString()
-                            };
-                            appendToSheet(violationTypesSheetName, newType, spreadsheetId);
-                        }
-                    }
-                });
-            } catch (syncError) {
-                Logger.log('Warning: Could not sync to ViolationTypes sheet: ' + syncError.toString());
-                // لا نعتبر هذا خطأ فادح
+
+        const sheetName = 'ViolationTypes';
+        const existingRows = readFromSheet(sheetName, spreadsheetId) || [];
+
+        // حماية: رفض مسح كل الأنواع عن طريق snapshot فارغة إن وُجدت بيانات سابقاً
+        if (violationTypes.length === 0 && existingRows.length > 0) {
+            return {
+                success: false,
+                message: 'تم رفض الحفظ: قائمة الأنواع فارغة بينما توجد أنواع مسجلة. أعد تحميل الصفحة ثم حاول مرة أخرى.'
+            };
+        }
+
+        const snapshotIds = new Set();
+        violationTypes.forEach(function (t) {
+            if (t && t.id) snapshotIds.add(String(t.id).trim());
+        });
+
+        const toDelete = existingRows.filter(function (row) {
+            const rid = row && row.id ? String(row.id).trim() : '';
+            return rid && !snapshotIds.has(rid);
+        });
+
+        var i;
+        for (i = 0; i < toDelete.length; i++) {
+            const delResult = deleteRowById(sheetName, toDelete[i].id, spreadsheetId);
+            if (!delResult || !delResult.success) {
+                Logger.log('saveViolationTypesToSheet deleteRowById failed for id ' + toDelete[i].id + ': ' + (delResult && delResult.message));
             }
         }
-        
-        return result;
+
+        const nowIso = new Date().toISOString();
+        for (i = 0; i < violationTypes.length; i++) {
+            const type = violationTypes[i];
+            if (!type || !type.id) continue;
+            const payload = Object.assign({}, type, {
+                updatedAt: type.updatedAt || nowIso
+            });
+            if (!payload.createdAt) {
+                payload.createdAt = nowIso;
+            }
+            const saveResult = saveToSheet(sheetName, payload, spreadsheetId);
+            if (!saveResult || !saveResult.success) {
+                return { success: false, message: (saveResult && saveResult.message) || 'فشل حفظ نوع مخالفة' };
+            }
+        }
+
+        return { success: true, message: 'تم حفظ أنواع المخالفات بنجاح' };
     } catch (error) {
         Logger.log('Error in saveViolationTypesToSheet: ' + error.toString());
         return { success: false, message: 'حدث خطأ أثناء حفظ أنواع المخالفات: ' + error.toString() };
@@ -275,126 +272,79 @@ function saveViolationTypesToSheet(violationTypesData) {
 }
 
 /**
- * الحصول على جميع أنواع المخالفات من Violation_Types_DB
+ * الحصول على جميع أنواع المخالفات من ورقة ViolationTypes (مصدر الحقيقة الوحيد)
  */
 function getViolationTypesFromSheet() {
     try {
-        const sheetName = 'Violation_Types_DB';
-        const spreadsheetId = getSpreadsheetId();
-        
-        if (!spreadsheetId) {
-            // إذا لم يكن هناك spreadsheetId، نحاول من ViolationTypes القديم
-            return getViolationTypesFromLegacySheet();
-        }
-        
-        const data = readFromSheet(sheetName, spreadsheetId);
-        
-        // إذا لم تكن هناك بيانات، نحاول من ViolationTypes القديم
-        if (!data || data.length === 0) {
-            return getViolationTypesFromLegacySheet();
-        }
-        
-        // نأخذ آخر سجل (النسخة الأحدث)
-        const latestRecord = data[data.length - 1];
-        
-        // تحليل JSON string
-        let violationTypes = [];
-        if (typeof latestRecord.violationTypes === 'string') {
-            try {
-                violationTypes = JSON.parse(latestRecord.violationTypes);
-            } catch (e) {
-                Logger.log('Error parsing violationTypes JSON: ' + e.toString());
-                // نحاول من ViolationTypes القديم
-                return getViolationTypesFromLegacySheet();
-            }
-        } else if (Array.isArray(latestRecord.violationTypes)) {
-            violationTypes = latestRecord.violationTypes;
-        }
-        
-        return { 
-            success: true, 
-            data: violationTypes,
-            updatedAt: latestRecord.updatedAt || new Date().toISOString()
-        };
-    } catch (error) {
-        Logger.log('Error in getViolationTypesFromSheet: ' + error.toString());
-        // نحاول من ViolationTypes القديم
-        return getViolationTypesFromLegacySheet();
-    }
-}
-
-/**
- * الحصول على أنواع المخالفات من ViolationTypes (للتوافق مع النظام القديم)
- */
-function getViolationTypesFromLegacySheet() {
-    try {
         const sheetName = 'ViolationTypes';
         const spreadsheetId = getSpreadsheetId();
-        
+
         if (!spreadsheetId) {
             return { success: true, data: [], message: 'معرف Google Sheets غير محدد' };
         }
-        
+
         const data = readFromSheet(sheetName, spreadsheetId);
-        
+
         if (!data || data.length === 0) {
             return { success: true, data: [] };
         }
-        
-        // تصفية الأنواع النشطة فقط
-        const activeTypes = data.filter(type => type.isActive !== false);
-        
-        return { success: true, data: activeTypes };
+
+        const activeTypes = data.filter(function (type) {
+            return type && type.isActive !== false && type.isActive !== 'inactive';
+        });
+
+        return {
+            success: true,
+            data: activeTypes,
+            updatedAt: new Date().toISOString()
+        };
     } catch (error) {
-        Logger.log('Error in getViolationTypesFromLegacySheet: ' + error.toString());
+        Logger.log('Error in getViolationTypesFromSheet: ' + error.toString());
         return { success: true, data: [], message: 'حدث خطأ أثناء قراءة أنواع المخالفات' };
     }
 }
 
 /**
- * تحديث نوع مخالفة (من الإعدادات)
+ * تحديث نوع مخالفة (من الإعدادات) — upsert سطر واحد في ViolationTypes
  */
 function updateViolationTypeInSheet(typeId, updateData) {
     try {
-        // التحقق من الصلاحيات
         const userData = updateData.userData || updateData.user || {};
         const permissionCheck = checkViolationTypesPermission(userData);
-        
+
         if (!permissionCheck.hasPermission) {
-            return { 
-                success: false, 
+            return {
+                success: false,
                 message: permissionCheck.message || 'ليس لديك صلاحية لتحديث أنواع المخالفات',
                 errorCode: 'PERMISSION_DENIED'
             };
         }
-        
-        // الحصول على جميع الأنواع
-        const allTypesResult = getViolationTypesFromSheet();
-        if (!allTypesResult.success) {
-            return { success: false, message: 'فشل في قراءة أنواع المخالفات' };
+
+        const spreadsheetId = getSpreadsheetId();
+        if (!spreadsheetId) {
+            return { success: false, message: 'معرف Google Sheets غير محدد' };
         }
-        
-        let violationTypes = allTypesResult.data || [];
-        
-        // البحث عن النوع وتحديثه
-        const typeIndex = violationTypes.findIndex(t => t.id === typeId);
-        if (typeIndex < 0) {
+
+        const sheetName = 'ViolationTypes';
+        const existingRows = readFromSheet(sheetName, spreadsheetId) || [];
+        const existing = existingRows.find(function (t) {
+            return t && String(t.id).trim() === String(typeId).trim();
+        });
+        if (!existing) {
             return { success: false, message: 'نوع المخالفة غير موجود' };
         }
-        
-        // تحديث البيانات
-        violationTypes[typeIndex] = {
-            ...violationTypes[typeIndex],
-            ...updateData,
-            id: typeId, // التأكد من عدم تغيير ID
-            updatedAt: new Date().toISOString()
-        };
-        
-        // حفظ جميع الأنواع
-        return saveViolationTypesToSheet({
-            violationTypes: violationTypes,
-            userData: userData
-        });
+
+        const merged = Object.assign({}, existing);
+        var k;
+        for (k in updateData) {
+            if (!updateData.hasOwnProperty(k)) continue;
+            if (k === 'userData' || k === 'user' || k === 'id') continue;
+            merged[k] = updateData[k];
+        }
+        merged.id = typeId;
+        merged.updatedAt = new Date().toISOString();
+
+        return saveToSheet(sheetName, merged, spreadsheetId);
     } catch (error) {
         Logger.log('Error in updateViolationTypeInSheet: ' + error.toString());
         return { success: false, message: 'حدث خطأ أثناء تحديث نوع المخالفة: ' + error.toString() };
@@ -402,37 +352,26 @@ function updateViolationTypeInSheet(typeId, updateData) {
 }
 
 /**
- * حذف نوع مخالفة (من الإعدادات)
+ * حذف نوع مخالفة (من الإعدادات) — حذف صف حقيقي من ViolationTypes
  */
 function deleteViolationTypeFromSheet(typeId, userData) {
     try {
-        // التحقق من الصلاحيات
         const permissionCheck = checkViolationTypesPermission(userData || {});
-        
+
         if (!permissionCheck.hasPermission) {
-            return { 
-                success: false, 
+            return {
+                success: false,
                 message: permissionCheck.message || 'ليس لديك صلاحية لحذف أنواع المخالفات',
                 errorCode: 'PERMISSION_DENIED'
             };
         }
-        
-        // الحصول على جميع الأنواع
-        const allTypesResult = getViolationTypesFromSheet();
-        if (!allTypesResult.success) {
-            return { success: false, message: 'فشل في قراءة أنواع المخالفات' };
+
+        const spreadsheetId = getSpreadsheetId();
+        if (!spreadsheetId) {
+            return { success: false, message: 'معرف Google Sheets غير محدد' };
         }
-        
-        let violationTypes = allTypesResult.data || [];
-        
-        // حذف النوع
-        violationTypes = violationTypes.filter(t => t.id !== typeId);
-        
-        // حفظ جميع الأنواع
-        return saveViolationTypesToSheet({
-            violationTypes: violationTypes,
-            userData: userData
-        });
+
+        return deleteRowById('ViolationTypes', typeId, spreadsheetId);
     } catch (error) {
         Logger.log('Error in deleteViolationTypeFromSheet: ' + error.toString());
         return { success: false, message: 'حدث خطأ أثناء حذف نوع المخالفة: ' + error.toString() };
