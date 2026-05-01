@@ -59,6 +59,13 @@ const Training = {
         return Array.isArray(record.participants) ? record.participants.length : 0;
     },
 
+    /** إجمالي ساعات التدريب المسجلة للبرنامج (كما في الشيت — غالباً إجمالي ساعات × مشاركين) */
+    getTrainingProgramHours(record) {
+        if (!record || typeof record !== 'object') return 0;
+        const h = parseFloat(record.totalHours ?? record.trainingHours ?? record.hours ?? 0);
+        return Number.isFinite(h) ? h : 0;
+    },
+
     /**
      * إرجاع مصفوفة المشاركين من سجل تدريب — مع دعم تحليل JSON إذا كان الحقل نصاً (من الورقة).
      */
@@ -8868,12 +8875,13 @@ const Training = {
                                     <thead>
                                         <tr>
                                             <th>اسم المدرب</th>
-                                            <th class="text-center">البرامج</th>
-                                            <th class="text-center">المشاركون</th>
+                                            <th class="text-center">عدد البرامج</th>
+                                            <th class="text-center">مجموع المشاركين</th>
+                                            <th class="text-center">إجمالي ساعات التدريب</th>
                                         </tr>
                                     </thead>
                                     <tbody id="training-analysis-trainers-tbody">
-                                        <tr><td colspan="3" class="text-center text-gray-500 py-6">—</td></tr>
+                                        <tr><td colspan="4" class="text-center text-gray-500 py-6">—</td></tr>
                                     </tbody>
                                 </table>
                             </div>
@@ -10022,13 +10030,17 @@ const Training = {
         records.forEach(rec => {
             const label = this.getTrainingAnalysisValue('training', 'trainer', rec);
             if (!map[label]) {
-                map[label] = { trainer: label, programs: 0, participants: 0 };
+                map[label] = { trainer: label, programs: 0, participants: 0, hoursTotal: 0 };
             }
             map[label].programs += 1;
             map[label].participants += this.getParticipantsCount(rec);
+            map[label].hoursTotal += this.getTrainingProgramHours(rec);
         });
         return Object.values(map).sort((a, b) =>
-            b.programs - a.programs || b.participants - a.participants || String(a.trainer).localeCompare(String(b.trainer), 'ar')
+            b.programs - a.programs ||
+            b.hoursTotal - a.hoursTotal ||
+            b.participants - a.participants ||
+            String(a.trainer).localeCompare(String(b.trainer), 'ar')
         );
     },
 
@@ -10083,13 +10095,14 @@ const Training = {
         const attSlice = attRows.slice(0, limitAtt);
 
         if (trainerSlice.length === 0) {
-            trainerTbody.innerHTML = '<tr><td colspan="3" class="text-center text-gray-500 py-6">لا توجد برامج في هذه الفترة</td></tr>';
+            trainerTbody.innerHTML = '<tr><td colspan="4" class="text-center text-gray-500 py-6">لا توجد برامج في هذه الفترة</td></tr>';
         } else {
             trainerTbody.innerHTML = trainerSlice.map(r => `
                 <tr>
                     <td class="font-medium">${Utils.escapeHTML(r.trainer)}</td>
                     <td class="text-center font-bold text-indigo-600">${r.programs}</td>
                     <td class="text-center text-gray-700">${r.participants}</td>
+                    <td class="text-center text-gray-800 font-semibold" dir="ltr">${Number.isFinite(r.hoursTotal) ? r.hoursTotal.toFixed(2) : '0.00'}</td>
                 </tr>
             `).join('');
         }
@@ -10260,7 +10273,8 @@ const Training = {
         const data = rows.map(r => ({
             'اسم المدرب': r.trainer,
             'عدد البرامج التدريبية': r.programs,
-            'مجموع المشاركين (عبر البرامج)': r.participants
+            'مجموع المشاركين': r.participants,
+            'إجمالي ساعات التدريب': Number.isFinite(r.hoursTotal) ? Number(r.hoursTotal.toFixed(2)) : 0
         }));
         const wb = XLSX.utils.book_new();
         const ws = XLSX.utils.json_to_sheet(data);
@@ -10272,6 +10286,7 @@ const Training = {
                 'البرنامج': t.name || t.subject || t.topic || '—',
                 'تاريخ البدء': t.startDate ? (Utils.formatDate ? Utils.formatDate(t.startDate) : t.startDate) : '—',
                 'المشاركون': this.getParticipantsCount(t),
+                'إجمالي ساعات التدريب': this.getTrainingProgramHours(t),
                 'الحالة': t.status || '—'
             }));
             if (prog.length) {
@@ -10341,8 +10356,14 @@ const Training = {
         const periodAr = this.getExportPeriodLabelAr();
         const slug = this.getExportPeriodExportSlug();
         const trainerFocus = document.getElementById('training-export-trainer-key')?.value?.trim() || '';
-        const headers = ['م', 'اسم المدرب', 'عدد البرامج التدريبية', 'مجموع المشاركين'];
-        const matrix = rows.map((r, i) => [i + 1, r.trainer, r.programs, r.participants]);
+        const headers = ['م', 'اسم المدرب', 'عدد البرامج التدريبية', 'مجموع المشاركين', 'إجمالي ساعات التدريب'];
+        const matrix = rows.map((r, i) => [
+            i + 1,
+            r.trainer,
+            r.programs,
+            r.participants,
+            Number.isFinite(r.hoursTotal) ? r.hoursTotal.toFixed(2) : '0.00'
+        ]);
         const tableRows = this._analysisPeriodPdfTableRows(matrix);
         let extraCharts = '';
         if (trainerFocus) {
