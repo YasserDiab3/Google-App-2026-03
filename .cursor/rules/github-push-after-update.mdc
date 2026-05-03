@@ -13,8 +13,8 @@ alwaysApply: true
 4. إذا كتب المستخدم كلمة **«رفع»**:
    - تنفيذ `git add` للملفات المعدّلة.
    - تنفيذ `git commit` برسالة واضحة بالعربية تصف التحديث.
-   - تنفيذ `git push origin main` فقط (المستودع الرسمي: `YasserDiab3/google-TR` — انظر قاعدة `github-remote-canonical.mdc`).
-   - **لا** تنفّذ `git push legacy` ولا أي دفع إلى `Google-App-2026-03` إلا إذا طلب المستخدم ذلك صراحة.
+   - تنفيذ **`git push origin main` فقط** (البعيد **`origin`** — انظر `github-remote-canonical.mdc`).
+   - **ممنوع** تنفيذ **`git push google-tr`** أو أي دفع إلى المستودع **`YasserDiab3/google-TR`** ما لم يطلب المستخدم ذلك **صراحة** في نفس الطلب (ذكر google-TR أو الرابط مع طلب الرفع هناك).
 5. إذا لم يكتب المستخدم كلمة **«رفع»**، لا تنفّذ أي أوامر `commit` أو `push`.
 
 الأمثلة المقبولة للتأكيد:
