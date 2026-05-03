@@ -13,13 +13,19 @@
                 } catch (e) {}
             })();
         </script>
-        <!-- رابط نقطة RPC (Supabase Edge hse-api). عيّن window.__HSE_RPC_URL__ بعد النشر أو عبر Vercel inject -->
+        <!-- رابط نقطة RPC (Supabase Edge hse-api). يُفعّل على الإنتاج ومعاينات Vercel -->
         <script>
             (function () {
                 try {
                     var h = window.location.hostname || "";
-                    if (/safety-icapp\.com$/i.test(h)) {
-                        // window.__HSE_RPC_URL__ = "https://YOUR_PROJECT.supabase.co/functions/v1/hse-api";
+                    var supabaseRpc =
+                        "https://apsawzzqurfnpsucyozb.supabase.co/functions/v1/hse-api";
+                    if (/safety-icapp\.com$/i.test(h) || /\.vercel\.app$/i.test(h)) {
+                        window.__HSE_RPC_URL__ = supabaseRpc;
+                        window.__HSE_USE_SUPABASE__ = true;
+                        /* مفتاح anon العام من لوحة Supabase (Settings → API) — مطلوب لبوابة دوال Edge */
+                        window.__HSE_SUPABASE_ANON_KEY__ =
+                            "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFwc2F3enpxdXJmbnBzdWN5b3piIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc3OTI4NDMsImV4cCI6MjA5MzM2ODg0M30.hmZEfoyhD7MwAeDjCE3DLDcGHXQP-ecMvtzVlQ1Q4w8";
                     }
                 } catch (e) {}
             })();

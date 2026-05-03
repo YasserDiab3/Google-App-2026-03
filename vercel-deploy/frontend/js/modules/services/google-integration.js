@@ -774,6 +774,25 @@ const GoogleIntegration = {
 
             let response;
             try {
+                const fetchHeaders = {
+                    'Content-Type': 'text/plain;charset=utf-8',
+                };
+                try {
+                    const su = new URL(scriptUrl);
+                    const h = su.hostname.toLowerCase();
+                    if (h.endsWith('.supabase.co') && su.pathname.includes('/functions/v1/')) {
+                        const anon =
+                            typeof window !== 'undefined' && window.__HSE_SUPABASE_ANON_KEY__
+                                ? String(window.__HSE_SUPABASE_ANON_KEY__).trim()
+                                : '';
+                        if (anon) {
+                            fetchHeaders['Authorization'] = 'Bearer ' + anon;
+                            fetchHeaders['apikey'] = anon;
+                        }
+                    }
+                } catch (_) {
+                    /* ignore URL parse */
+                }
                 // التحقق من هل هو fetch
                 // التحقق من هل هو CSRF Token
                 // التحقق من هل هو payload
@@ -783,12 +802,7 @@ const GoogleIntegration = {
                     method: 'POST',
                     mode: 'cors',
                     credentials: 'omit',
-                    headers: {
-                        'Content-Type': 'text/plain;charset=utf-8'
-                        // التحقق من هل هو 'X-CSRF-Token'
-                        // التحقق من هل هو CSRF Token
-                        // التحقق من هل هو payload.csrfToken
-                    },
+                    headers: fetchHeaders,
                     body: JSON.stringify(payload),
                     signal: controller.signal
                 }).catch(error => {

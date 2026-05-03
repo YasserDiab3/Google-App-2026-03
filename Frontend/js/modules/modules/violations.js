@@ -54,6 +54,355 @@ const Violations = {
         };
     },
 
+    _normKeyStr(v) {
+        return String(v == null ? '' : v).trim().toLowerCase();
+    },
+
+    sameViolationPersonForSequence(draft, existing) {
+        const pt = this._normKeyStr(draft.personType) || 'employee';
+        const p2 = this._normKeyStr(existing.personType) || 'employee';
+        if (pt !== p2) return false;
+        if (pt === 'contractor') {
+            const n1 = this._normKeyStr(draft.contractorName);
+            const n2 = this._normKeyStr(existing.contractorName);
+            if (!n1 || !n2 || n1 !== n2) return false;
+            const w1 = this._normKeyStr(draft.contractorWorker);
+            const w2 = this._normKeyStr(existing.contractorWorker);
+            if (!w1 && !w2) return true;
+            return w1 === w2;
+        }
+        const c1 = this._normKeyStr(draft.employeeCode || draft.employeeNumber);
+        const c2 = this._normKeyStr(existing.employeeCode || existing.employeeNumber);
+        return !!c1 && c1 === c2;
+    },
+
+    getViolationYearMonthKey(violationDate) {
+        const d = new Date(violationDate);
+        if (isNaN(d.getTime())) return null;
+        return d.getFullYear() * 12 + d.getMonth();
+    },
+
+    countPriorViolationsSamePersonMonth(draft, excludeId) {
+        const ym = this.getViolationYearMonthKey(draft.violationDate);
+        if (ym == null) return 0;
+        const list = AppState.appData.violations || [];
+        let n = 0;
+        for (let i = 0; i < list.length; i++) {
+            const v = list[i];
+            if (!v || (excludeId && String(v.id) === String(excludeId))) continue;
+            if (this.getViolationYearMonthKey(v.violationDate) !== ym) continue;
+            if (this.sameViolationPersonForSequence(draft, v)) n++;
+        }
+        return n;
+    },
+
+    refreshViolationSequenceBadgeInModal(modal, excludeViolationId) {
+        const info = modal && modal.querySelector ? modal.querySelector('#violation-sequence-info') : null;
+        const textEl = modal && modal.querySelector ? modal.querySelector('#violation-sequence-text') : null;
+        if (!info || !textEl) return;
+        const personType = document.getElementById('violation-person-type')?.value;
+        const violationDate = document.getElementById('violation-date')?.value;
+        if (!personType || !violationDate) {
+            info.classList.add('hidden');
+            return;
+        }
+        const draft = { personType, violationDate: `${violationDate}T12:00:00` };
+        if (personType === 'employee') {
+            draft.employeeCode = document.getElementById('violation-employee-code')?.value.trim() || '';
+            if (!draft.employeeCode) {
+                info.classList.add('hidden');
+                return;
+            }
+        } else {
+            const sel = document.getElementById('violation-contractor-select');
+            draft.contractorName = (sel?.value || '').trim();
+            draft.contractorWorker = document.getElementById('violation-contractor-worker')?.value.trim() || '';
+            if (!draft.contractorName) {
+                info.classList.add('hidden');
+                return;
+            }
+        }
+        const prior = this.countPriorViolationsSamePersonMonth(draft, excludeViolationId);
+        const seq = prior + 1;
+        textEl.textContent = seq <= 1
+            ? 'أول مخالفة في الشهر لهذا الشخص (يُحسب تلقائياً من سجل المخالفات لنفس الشخص ونفس الشهر).'
+            : `المخالفة رقم ${seq} في الشهر لنفس الشخص.`;
+        info.classList.remove('hidden');
+    },
+
+    _violationsImportNormalizeHeaderKey(h) {
+        return String(h == null ? '' : h).trim().replace(/\s+/g, '_').replace(/[^\w\u0600-\u06FF]/g, '').toLowerCase();
+    },
+
+    _violationsImportPick(row, candidates) {
+        const map = {};
+        Object.keys(row || {}).forEach((k) => {
+            map[this._violationsImportNormalizeHeaderKey(k)] = row[k];
+        });
+        for (let i = 0; i < candidates.length; i++) {
+            const ck = this._violationsImportNormalizeHeaderKey(candidates[i]);
+            if (map[ck] !== undefined && map[ck] !== null && String(map[ck]).trim() !== '') {
+                return map[ck];
+            }
+        }
+        return '';
+    },
+
+    downloadViolationsImportTemplate() {
+        if (typeof XLSX === 'undefined') {
+            Notification.error('مكتبة Excel غير محمّلة. حدّث الصفحة وحاول مرة أخرى.');
+            return;
+        }
+        const headers = [
+            'نوع_الشخص',
+            'الكود_الوظيفي',
+            'اسم_الموظف',
+            'اسم_المقاول',
+            'عامل_المقاول',
+            'نوع_المخالفة',
+            'تاريخ_المخالفة',
+            'وقت_المخالفة',
+            'الموقع',
+            'مكان_المخالفة',
+            'الشدة',
+            'الحالة',
+            'التفاصيل',
+            'الاجراء_المتخذ',
+            'الغرامة'
+        ];
+        const example = [
+            'موظف',
+            '12345',
+            '',
+            '',
+            '',
+            'تأخر عن العمل',
+            '2026-05-01',
+            '08:30',
+            'المصنع الرئيسي',
+            'خط الإنتاج 1',
+            'متوسطة',
+            'قيد المراجعة',
+            'وصف مختصر',
+            'إنذار شفهي',
+            '100'
+        ];
+        const wb = XLSX.utils.book_new();
+        const ws = XLSX.utils.aoa_to_sheet([headers, example]);
+        ws['!cols'] = headers.map(() => ({ wch: 18 }));
+        XLSX.utils.book_append_sheet(wb, ws, 'المخالفات');
+        const note = [
+            ['تعليمات:'],
+            ['• نوع_الشخص: اكتب "موظف" أو "مقاول".'],
+            ['• للموظف: عبّئ الكود_الوظيفي ونوع_المخالفة والتاريخ والوقت والموقع ومكان_المخالفة.'],
+            ['• للمقاول: عبّئ اسم_المقاول كما في القائمة ويمكن تعبئة عامل_المقاول.'],
+            ['• التاريخ بصيغة YYYY-MM-DD أو تنسيق تاريخ إكسل.']
+        ];
+        const ws2 = XLSX.utils.aoa_to_sheet(note);
+        XLSX.utils.book_append_sheet(wb, ws2, 'تعليمات');
+        XLSX.writeFile(wb, `قالب_استيراد_المخالفات_${new Date().toISOString().slice(0, 10)}.xlsx`);
+    },
+
+    showViolationsImportModal() {
+        const modal = document.createElement('div');
+        modal.className = 'modal-overlay';
+        modal.innerHTML = `
+            <div class="modal-content" style="max-width: 720px;">
+                <div class="modal-header">
+                    <h2 class="modal-title"><i class="fas fa-file-excel ml-2 text-green-600"></i>استيراد مخالفات من Excel</h2>
+                    <button type="button" class="modal-close" onclick="this.closest('.modal-overlay').remove()"><i class="fas fa-times"></i></button>
+                </div>
+                <div class="modal-body space-y-4">
+                    <div class="bg-blue-50 border border-blue-200 rounded p-3 text-sm text-blue-900">
+                        <p class="m-0 mb-2"><i class="fas fa-download ml-2"></i>حمّل القالب الفارغ (صف عناوين + صف مثال)، عبّئ البيانات ثم ارفع الملف.</p>
+                        <button type="button" id="violations-import-download-template" class="btn-secondary btn-sm">
+                            <i class="fas fa-file-download ml-2"></i>تحميل قالب Excel
+                        </button>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">ملف Excel (.xlsx)</label>
+                        <input type="file" id="violations-import-file" accept=".xlsx,.xls" class="form-input">
+                    </div>
+                    <div id="violations-import-preview" class="hidden text-sm text-gray-600 max-h-48 overflow-auto border rounded p-2 bg-gray-50"></div>
+                    <div class="flex justify-end gap-2 pt-2 border-t">
+                        <button type="button" class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">إلغاء</button>
+                        <button type="button" id="violations-import-confirm" class="btn-primary" disabled>
+                            <i class="fas fa-upload ml-2"></i>تأكيد الاستيراد
+                        </button>
+                    </div>
+                </div>
+            </div>`;
+        document.body.appendChild(modal);
+        let parsedRows = [];
+        const fileInput = modal.querySelector('#violations-import-file');
+        const preview = modal.querySelector('#violations-import-preview');
+        const confirmBtn = modal.querySelector('#violations-import-confirm');
+        modal.querySelector('#violations-import-download-template')?.addEventListener('click', () => this.downloadViolationsImportTemplate());
+        fileInput?.addEventListener('change', async (e) => {
+            const f = e.target.files && e.target.files[0];
+            parsedRows = [];
+            confirmBtn.disabled = true;
+            preview.classList.add('hidden');
+            if (!f) return;
+            if (typeof XLSX === 'undefined') {
+                Notification.error('مكتبة Excel غير محمّلة.');
+                return;
+            }
+            try {
+                const buf = await f.arrayBuffer();
+                const wb = XLSX.read(buf, { type: 'array' });
+                const sheet = wb.Sheets[wb.SheetNames[0]];
+                const json = XLSX.utils.sheet_to_json(sheet, { defval: '' });
+                parsedRows = Array.isArray(json) ? json : [];
+                preview.innerHTML = `<p>تم قراءة <strong>${parsedRows.length}</strong> صفاً من الورقة الأولى «${Utils.escapeHTML(wb.SheetNames[0] || '')}».</p>`;
+                preview.classList.remove('hidden');
+                confirmBtn.disabled = parsedRows.length === 0;
+            } catch (err) {
+                Utils.safeError('استيراد مخالفات:', err);
+                Notification.error('تعذّر قراءة الملف: ' + (err.message || ''));
+            }
+        });
+        confirmBtn?.addEventListener('click', async () => {
+            if (!parsedRows.length) return;
+            confirmBtn.disabled = true;
+            await this.processViolationsImportRows(parsedRows, modal);
+        });
+        modal.addEventListener('click', (ev) => { if (ev.target === modal) modal.remove(); });
+    },
+
+    async processViolationsImportRows(rows, modal) {
+        let ok = 0;
+        let fail = 0;
+        const errors = [];
+        if (!Array.isArray(AppState.appData.violations)) AppState.appData.violations = [];
+        let violationTypes = [];
+        if (typeof ViolationTypesManager !== 'undefined' && ViolationTypesManager.ensureInitialized && ViolationTypesManager.getAll) {
+            try {
+                ViolationTypesManager.ensureInitialized();
+                violationTypes = ViolationTypesManager.getAll();
+            } catch (e) {
+                violationTypes = AppState.appData.violationTypes || [];
+            }
+        } else {
+            violationTypes = AppState.appData.violationTypes || [];
+        }
+        const typeByName = new Map((violationTypes || []).map(t => [String(t.name || '').trim().toLowerCase(), t]));
+        for (let i = 0; i < rows.length; i++) {
+            const row = rows[i] || {};
+            try {
+                const ptRaw = String(this._violationsImportPick(row, ['نوع_الشخص', 'نوع الشخص', 'personType', 'persontype']) || '').trim();
+                const ptLower = ptRaw.toLowerCase();
+                const personType = (ptLower.includes('مقاول') || ptLower === 'contractor') ? 'contractor' : 'employee';
+                const empCode = String(this._violationsImportPick(row, ['الكود_الوظيفي', 'الكود الوظيفي', 'employeeCode', 'employeenumber', 'employeeNumber']) || '').trim();
+                const empName = String(this._violationsImportPick(row, ['اسم_الموظف', 'اسم الموظف', 'employeeName']) || '').trim();
+                const cName = String(this._violationsImportPick(row, ['اسم_المقاول', 'اسم المقاول', 'contractorName']) || '').trim();
+                const cWorker = String(this._violationsImportPick(row, ['عامل_المقاول', 'عامل المقاول', 'contractorWorker']) || '').trim();
+                const vTypeName = String(this._violationsImportPick(row, ['نوع_المخالفة', 'نوع المخالفة', 'violationType']) || '').trim();
+                const vDateRaw = this._violationsImportPick(row, ['تاريخ_المخالفة', 'تاريخ المخالفة', 'violationDate', 'date']);
+                const vTimeRaw = String(this._violationsImportPick(row, ['وقت_المخالفة', 'وقت المخالفة', 'violationTime', 'time']) || '08:00');
+                const loc = String(this._violationsImportPick(row, ['الموقع', 'violationLocation', 'location']) || '').trim();
+                const place = String(this._violationsImportPick(row, ['مكان_المخالفة', 'مكان المخالفة', 'violationPlace', 'place']) || '').trim();
+                const sev = String(this._violationsImportPick(row, ['الشدة', 'severity']) || 'متوسطة').trim();
+                const st = String(this._violationsImportPick(row, ['الحالة', 'status']) || 'قيد المراجعة').trim();
+                const details = String(this._violationsImportPick(row, ['التفاصيل', 'violationDetails', 'details']) || '').trim();
+                const action = String(this._violationsImportPick(row, ['الاجراء_المتخذ', 'الإجراء المتخذ', 'actionTaken', 'action']) || '').trim();
+                const fineRaw = this._violationsImportPick(row, ['الغرامة', 'fineAmount', 'fine']);
+                if (!vTypeName || !vDateRaw) {
+                    fail++;
+                    errors.push(`صف ${i + 2}: نوع المخالفة أو التاريخ ناقص`);
+                    continue;
+                }
+                if (personType === 'employee' && !empCode) {
+                    fail++;
+                    errors.push(`صف ${i + 2}: الكود الوظيفي مطلوب للموظف`);
+                    continue;
+                }
+                if (personType === 'contractor' && !cName) {
+                    fail++;
+                    errors.push(`صف ${i + 2}: اسم المقاول مطلوب`);
+                    continue;
+                }
+                let violationDate = vDateRaw;
+                if (typeof violationDate === 'number' && typeof XLSX !== 'undefined' && XLSX.SSF) {
+                    try {
+                        const d = XLSX.SSF.parse_date_code(violationDate);
+                        if (d) violationDate = new Date(Date.UTC(d.y, d.m - 1, d.d)).toISOString();
+                    } catch (e1) { /* keep */ }
+                } else if (typeof violationDate === 'string' && /^\d{4}-\d{2}-\d{2}/.test(violationDate.trim())) {
+                    violationDate = new Date(violationDate.trim().slice(0, 10) + 'T12:00:00').toISOString();
+                } else {
+                    const dTry = new Date(violationDate);
+                    violationDate = isNaN(dTry.getTime()) ? new Date().toISOString() : dTry.toISOString();
+                }
+                const typeObj = typeByName.get(vTypeName.toLowerCase());
+                const violationTypeId = typeObj ? String(typeObj.id || '') : '';
+                const fineAmount = this.parseFineAmount(fineRaw !== '' && fineRaw !== undefined ? fineRaw : (typeObj ? typeObj.fineAmount : 0));
+                const draft = {
+                    personType,
+                    violationDate,
+                    employeeCode: empCode,
+                    employeeNumber: empCode,
+                    employeeName: empName,
+                    contractorName: cName,
+                    contractorWorker: cWorker
+                };
+                const seq = this.countPriorViolationsSamePersonMonth(draft, null) + 1;
+                const rec = {
+                    id: Utils.generateId('VIOLATION'),
+                    isoCode: typeof generateISOCode === 'function' ? generateISOCode('VIOL', AppState.appData.violations) : ('VIOL-' + Date.now() + '-' + i),
+                    personType,
+                    employeeId: personType === 'employee' ? Utils.generateId('EMP') : '',
+                    employeeName: personType === 'employee' ? empName : '',
+                    employeeCode: personType === 'employee' ? empCode : '',
+                    employeeNumber: personType === 'employee' ? empCode : '',
+                    employeePosition: '',
+                    employeeDepartment: '',
+                    contractorId: '',
+                    contractorName: personType === 'contractor' ? cName : '',
+                    contractorWorker: personType === 'contractor' ? cWorker : '',
+                    contractorPosition: '',
+                    contractorDepartment: '',
+                    violationTypeId,
+                    violationType: vTypeName,
+                    fineAmount,
+                    violationDate,
+                    violationTime: vTimeRaw.length >= 5 ? vTimeRaw.slice(0, 5) : '08:00',
+                    violationLocation: loc,
+                    violationLocationId: loc,
+                    violationPlace: place,
+                    violationPlaceId: place,
+                    violationDetails: details,
+                    severity: sev || 'متوسطة',
+                    actionTaken: action,
+                    status: st || 'قيد المراجعة',
+                    photo: '',
+                    violationSequenceInMonth: seq,
+                    createdAt: new Date().toISOString(),
+                    updatedAt: new Date().toISOString()
+                };
+                AppState.appData.violations.push(this.normalizeViolationRecord(rec));
+                ok++;
+            } catch (rowErr) {
+                fail++;
+                errors.push(`صف ${i + 2}: ${rowErr.message || rowErr}`);
+            }
+        }
+        if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
+            try { window.DataManager.save(); } catch (e) { /* ignore */ }
+        }
+        GoogleIntegration.autoSave('Violations', AppState.appData.violations).catch(() => {
+            Notification.warning('تم الاستيراد محلياً. راجع المزامنة مع الشيت لاحقاً.');
+        });
+        if (modal && modal.parentNode) modal.remove();
+        Notification.success(`تم استيراد ${ok} مخالفة${fail ? ` (تخطي ${fail})` : ''}.`);
+        if (errors.length && errors.length <= 5) {
+            errors.forEach((m) => Utils.safeWarn(m));
+        } else if (errors.length) {
+            Utils.safeWarn('استيراد مخالفات: ' + errors.slice(0, 5).join(' | ') + ' ...');
+        }
+        this.load();
+    },
+
     async load() {
         // Add language change listener
         if (!this._languageChangeListenerAdded) {
@@ -163,18 +512,24 @@ const Violations = {
 
             section.innerHTML = `
             <div class="section-header" style="background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%); border-radius: 16px; padding: 24px 32px; margin-bottom: 24px; box-shadow: 0 8px 32px rgba(220, 38, 38, 0.25);">
-                <div class="flex items-center justify-between">
-                    <div class="text-center w-full" style="flex-grow: 1;">
+                <div class="flex items-center justify-between flex-wrap gap-3">
+                    <div class="text-center w-full" style="flex-grow: 1; min-width: 200px;">
                         <h1 class="section-title" style="color: white; font-size: 2rem; font-weight: 700; text-shadow: 0 2px 4px rgba(0,0,0,0.2); margin-bottom: 8px; display: flex; align-items: center; justify-content: center;">
                             <i class="fas fa-exclamation-triangle ml-3" style="font-size: 1.8rem;"></i>
                             سجل المخالفات
                         </h1>
                         <p class="section-subtitle" style="color: rgba(255,255,255,0.9); font-size: 1rem; margin: 0;">تسجيل ومتابعة مخالفات الموظفين والمقاولين</p>
                     </div>
-                    <button id="add-violation-btn" class="btn-primary" style="background: white; color: #dc2626; border: none; padding: 12px 24px; border-radius: 12px; font-weight: 600; box-shadow: 0 4px 12px rgba(0,0,0,0.15); transition: all 0.3s ease;">
-                        <i class="fas fa-plus ml-2"></i>
-                        تسجيل مخالفة جديدة
-                    </button>
+                    <div class="flex flex-shrink-0 flex-wrap gap-2 justify-center">
+                        <button type="button" id="violations-import-excel-btn" class="btn-primary" style="background: rgba(255,255,255,0.95); color: #166534; border: none; padding: 12px 20px; border-radius: 12px; font-weight: 600; box-shadow: 0 4px 12px rgba(0,0,0,0.15);">
+                            <i class="fas fa-file-excel ml-2"></i>
+                            استيراد Excel
+                        </button>
+                        <button type="button" id="add-violation-btn" class="btn-primary" style="background: white; color: #dc2626; border: none; padding: 12px 24px; border-radius: 12px; font-weight: 600; box-shadow: 0 4px 12px rgba(0,0,0,0.15); transition: all 0.3s ease;">
+                            <i class="fas fa-plus ml-2"></i>
+                            تسجيل مخالفة جديدة
+                        </button>
+                    </div>
                 </div>
             </div>
             <div class="mt-6">
@@ -328,6 +683,7 @@ const Violations = {
                                 <th style="color: white; font-weight: 600; padding: 16px 12px; text-align: center; font-size: 0.9rem;">القيمة المالية</th>
                                 <th style="color: white; font-weight: 600; padding: 16px 12px; text-align: center; font-size: 0.9rem;">الموقع</th>
                                 <th style="color: white; font-weight: 600; padding: 16px 12px; text-align: center; font-size: 0.9rem;">التاريخ</th>
+                                <th style="color: white; font-weight: 600; padding: 16px 12px; text-align: center; font-size: 0.85rem;">تسلسل الشهر</th>
                                 <th style="color: white; font-weight: 600; padding: 16px 12px; text-align: center; font-size: 0.9rem;">الشدة</th>
                                 <th style="color: white; font-weight: 600; padding: 16px 12px; text-align: center; font-size: 0.9rem;">الحالة</th>
                                 <th style="color: white; font-weight: 600; padding: 16px 12px; text-align: center; font-size: 0.9rem;">الإجراءات</th>
@@ -353,6 +709,9 @@ const Violations = {
                                     </td>
                                     <td style="padding: 14px 12px; text-align: center; border-bottom: 1px solid #fecaca;">
                                         ${violation.violationDate ? Utils.formatDate(violation.violationDate) : '-'}
+                                    </td>
+                                    <td style="padding: 14px 12px; text-align: center; border-bottom: 1px solid #fecaca; font-size: 0.85rem; color: #92400e;">
+                                        ${violation.violationSequenceInMonth != null && violation.violationSequenceInMonth !== '' ? Utils.escapeHTML(String(violation.violationSequenceInMonth)) : '—'}
                                     </td>
                                     <td style="padding: 14px 12px; text-align: center; border-bottom: 1px solid #fecaca;">
                                         <span style="display: inline-block; padding: 6px 14px; border-radius: 20px; font-size: 0.8rem; font-weight: 600; background: ${violation.severity === 'عالية' ? 'linear-gradient(135deg, #ef4444, #dc2626)' : violation.severity === 'متوسطة' ? 'linear-gradient(135deg, #f59e0b, #d97706)' : 'linear-gradient(135deg, #3b82f6, #2563eb)'}; color: white; box-shadow: 0 2px 6px ${violation.severity === 'عالية' ? 'rgba(239,68,68,0.3)' : violation.severity === 'متوسطة' ? 'rgba(245,158,11,0.3)' : 'rgba(59,130,246,0.3)'};">
@@ -651,6 +1010,8 @@ const Violations = {
         setTimeout(() => {
             const addBtn = document.getElementById('add-violation-btn');
             if (addBtn) addBtn.addEventListener('click', () => this.showViolationForm());
+            const importBtn = document.getElementById('violations-import-excel-btn');
+            if (importBtn) importBtn.addEventListener('click', () => this.showViolationsImportModal());
             this.bindFilters();
         }, 100);
     },
@@ -1924,6 +2285,9 @@ const Violations = {
                                     value="${violationData?.violationDate ? new Date(violationData.violationDate).toISOString().slice(0, 10) : ''}">
                             </div>
                         </div>
+                        <div id="violation-sequence-info" class="hidden mb-2 p-3 rounded-lg bg-amber-50 border border-amber-200 text-sm text-amber-900">
+                            <i class="fas fa-layer-group ml-2 text-amber-700"></i><span id="violation-sequence-text"></span>
+                        </div>
                         
                         <!-- الصف الرابع: وقت المخالفة ونوع المخالفة -->
                         <div class="grid grid-cols-2 gap-4">
@@ -2292,7 +2656,18 @@ const Violations = {
                 // تحديث التسمية
                 if (personNameLabel) personNameLabel.textContent = 'اسم المقاول *';
             }
+            scheduleViolationSeqBadge();
         });
+
+        const scheduleViolationSeqBadge = () => {
+            clearTimeout(this._violationSeqBadgeTimer);
+            this._violationSeqBadgeTimer = setTimeout(() => {
+                this.refreshViolationSequenceBadgeInModal(modal, isEdit ? violationData?.id : null);
+            }, 200);
+        };
+        modal.addEventListener('input', scheduleViolationSeqBadge);
+        modal.addEventListener('change', scheduleViolationSeqBadge);
+        setTimeout(scheduleViolationSeqBadge, 350);
 
         // تفعيل البحث عند تحديث النموذج إذا كان موظف
         if (typeof EmployeeHelper !== 'undefined' && violationData?.employeeName && employeeCodeInput && employeeCodeInput.parentNode) {
@@ -2670,6 +3045,20 @@ const Violations = {
                     createdAt: violationData?.createdAt || new Date().toISOString(),
                     updatedAt: new Date().toISOString()
                 };
+
+                const seqDraft = {
+                    personType,
+                    violationDate: violationDateTime,
+                    employeeCode: formData.employeeCode,
+                    employeeNumber: formData.employeeNumber,
+                    contractorName: formData.contractorName,
+                    contractorWorker: formData.contractorWorker
+                };
+                const priorSeq = this.countPriorViolationsSamePersonMonth(
+                    seqDraft,
+                    isEdit && violationData?.id ? violationData.id : null
+                );
+                formData.violationSequenceInMonth = priorSeq + 1;
 
                 // حفظ في AppState
                 if (!AppState.appData.violations) {
