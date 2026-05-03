@@ -587,12 +587,20 @@ const ISO = {
             Utils.safeWarn('⚠️ DataManager غير متاح - لم يتم حفظ البيانات');
         }
 
-            // حفظ تلقائي في Google Sheets
-            await GoogleIntegration.autoSave('ISODocuments', AppState.appData.isoDocuments);
-
             Loading.hide();
-            modal.remove();
+            try {
+                if (modal && modal.parentNode) modal.remove();
+            } catch (removeErr) {
+                Utils.safeWarn('⚠️ خطأ في إغلاق نموذج الوثيقة:', removeErr);
+            }
             this.load();
+
+            GoogleIntegration.autoSave('ISODocuments', AppState.appData.isoDocuments).catch(error => {
+                Utils.safeError('خطأ في حفظ Google Sheets (وثائق ISO):', error);
+                if (typeof Notification !== 'undefined' && Notification.warning) {
+                    Notification.warning('تم الحفظ محلياً. تعذّرت المزامنة الفورية مع الشيت.');
+                }
+            });
         } catch (error) {
             Loading.hide();
             Notification.error('حدث خطأ: ' + error.message);
@@ -728,12 +736,20 @@ const ISO = {
             Utils.safeWarn('⚠️ DataManager غير متاح - لم يتم حفظ البيانات');
         }
 
-            // حفظ تلقائي في Google Sheets
-            await GoogleIntegration.autoSave('ISOProcedures', AppState.appData.isoProcedures);
-
             Loading.hide();
-            modal.remove();
+            try {
+                if (modal && modal.parentNode) modal.remove();
+            } catch (removeErr) {
+                Utils.safeWarn('⚠️ خطأ في إغلاق نموذج الإجراء:', removeErr);
+            }
             this.load();
+
+            GoogleIntegration.autoSave('ISOProcedures', AppState.appData.isoProcedures).catch(error => {
+                Utils.safeError('خطأ في حفظ Google Sheets (إجراءات ISO):', error);
+                if (typeof Notification !== 'undefined' && Notification.warning) {
+                    Notification.warning('تم الحفظ محلياً. تعذّرت المزامنة الفورية مع الشيت.');
+                }
+            });
         } catch (error) {
             Loading.hide();
             Notification.error('حدث خطأ: ' + error.message);
