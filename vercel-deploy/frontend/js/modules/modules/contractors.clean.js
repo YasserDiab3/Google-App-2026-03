@@ -8526,9 +8526,6 @@ const Contractors = {
                 return;
             }
             
-            // ✅ استدعاء callback لتعطيل الزر ومنع التكرار
-            if (onStart) onStart();
-            
             const form = modal.querySelector('#approval-request-form');
             // ✅ التحقق من وجود form قبل الاستمرار
             if (!form) {
@@ -8607,6 +8604,8 @@ const Contractors = {
                 return;
             }
 
+            if (onStart) onStart();
+
             this.ensureApprovalRequestsSetup();
             
             // ✅ حفظ محلياً أولاً للاستجابة السريعة
@@ -8616,27 +8615,26 @@ const Contractors = {
             
             AppState.appData.contractorApprovalRequests.push(requestData);
             
-            // حفظ البيانات محلياً
-            if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
-                window.DataManager.save();
-            }
-            
-            Utils.safeLog('✅ تم حفظ الطلب محلياً. ID مؤقت: ' + tempId);
-            
-            // ✅ الإغلاق الفوري للنموذج بعد الحفظ المحلي — لا انتظار للمزامنة
-            Loading.hide();
-            Notification.success('تم حفظ الطلب بنجاح. جاري المزامنة مع الخادم...');
-            
+            // ✅ إغلاق النموذج قبل DataManager.save() — الحفظ المحلي قد يكون ثقيلاً ويؤخر الإغلاق بصرياً
             try {
                 if (modal && modal.parentNode) {
                     modal.remove();
                 }
             } catch (removeError) {
                 Utils.safeWarn('⚠️ خطأ في إزالة النموذج:', removeError);
-                if (modal.parentNode) {
+                if (modal && modal.parentNode) {
                     modal.parentNode.removeChild(modal);
                 }
             }
+
+            if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
+                window.DataManager.save();
+            }
+            
+            Utils.safeLog('✅ تم حفظ الطلب محلياً. ID مؤقت: ' + tempId);
+            
+            Loading.hide();
+            Notification.success('تم حفظ الطلب بنجاح. جاري المزامنة مع الخادم...');
             
             // ✅ تحديث قائمة الطلبات مباشرة بعد الحفظ المحلي
             this.refreshApprovalRequestsSection();
