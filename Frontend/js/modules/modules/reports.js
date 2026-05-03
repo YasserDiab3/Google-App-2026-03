@@ -64,7 +64,7 @@ const Reports = {
                 'report.basicStats': 'الإحصائيات الأساسية',
                 'report.type': 'النوع',
                 'report.total': 'الإجمالي',
-                'report.incidents': 'الحوادث',
+                'report.incidentsRow': 'الحوادث',
                 'report.nearmiss': 'الحوادث الوشيكة',
                 'report.observations': 'الملاحظات',
                 'report.ptw': 'تصاريح العمل',
@@ -139,7 +139,7 @@ const Reports = {
                 'report.basicStats': 'Basic Statistics',
                 'report.type': 'Type',
                 'report.total': 'Total',
-                'report.incidents': 'Incidents',
+                'report.incidentsRow': 'Incidents',
                 'report.nearmiss': 'Near Miss',
                 'report.observations': 'Observations',
                 'report.ptw': 'Work Permits',
@@ -747,7 +747,7 @@ const Reports = {
                         <td>${observations.length}</td>
                     </tr>
                     <tr>
-                        <td>${t('report.incidents')}</td>
+                        <td>${t('report.incidentsRow')}</td>
                         <td>${incidents.length}</td>
                     </tr>
                     <tr>
@@ -1030,7 +1030,7 @@ const Reports = {
                 </thead>
                 <tbody>
                     <tr>
-                        <td>${t('report.incidents')}</td>
+                        <td>${t('report.incidentsRow')}</td>
                         <td>${(data.incidents || []).length}</td>
                     </tr>
                     <tr>

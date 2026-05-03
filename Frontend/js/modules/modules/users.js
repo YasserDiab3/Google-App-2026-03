@@ -1407,7 +1407,12 @@ const Users = {
             }
 
             // ✅ إصلاح: تحديث صورة المستخدم والصلاحيات في الشريط الجانبي إذا كان المستخدم الحالي
-            if (AppState.currentUser && formData.email === AppState.currentUser.email) {
+            // المقارنة غير حساسة لحالة الأحرف: formData.email دائماً lowercase بينما جلسة الدخول قد تحتفظ بالبريد كما أُدخل
+            const isEditingCurrentUser = AppState.currentUser && (
+                (formData.email || '').toLowerCase() === (AppState.currentUser.email || '').toLowerCase() ||
+                (formData.id && AppState.currentUser.id && String(formData.id).trim() === String(AppState.currentUser.id).trim())
+            );
+            if (isEditingCurrentUser) {
                 // ✅ إصلاح: تحديث بيانات المستخدم الحالي مع الحفاظ على loginTime
                 AppState.currentUser = { 
                     ...AppState.currentUser, 

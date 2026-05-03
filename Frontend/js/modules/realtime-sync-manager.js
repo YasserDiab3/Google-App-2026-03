@@ -342,9 +342,13 @@ const RealtimeSyncManager = {
                 try { DataManager.save(); } catch (e) { /* ignore */ }
             }
 
-            // إذا كان هذا هو المستخدم الحالي، حدّث جلسته + القائمة فوراً
+            // إذا كان هذا هو المستخدم الحالي، حدّث جلسته + القائمة فوراً (بريد أو معرّف — يغطي تبويبات متعددة وعدم تطابق حالة الأحرف)
             const currentEmail = AppState.currentUser?.email?.toLowerCase?.() || '';
-            if (currentEmail && email && currentEmail === email) {
+            const currentId = (AppState.currentUser?.id || '').toString().trim();
+            const matchesCurrent =
+                (currentEmail && email && currentEmail === email) ||
+                (currentId && id && currentId === id);
+            if (matchesCurrent) {
                 if (typeof window.Auth !== 'undefined' && typeof window.Auth.updateUserSession === 'function') {
                     try { window.Auth.updateUserSession(); } catch (e) { /* ignore */ }
                 }

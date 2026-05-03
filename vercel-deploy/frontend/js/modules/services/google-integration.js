@@ -117,59 +117,6 @@ const GoogleIntegration = {
 
     /**
      * التحقق من المزامنة في التقدم باستخدام Google Sheets
-     * التحقق من المزامنة في التقدم باستخدام Google Sheets
-     */
-    async autoSave(sheetName, data) {
-        if (!this._isBackendRpcConfigured()) {
-            // لا يوجد Google Apps Script - يتم تخزينه في التقدم
-            if (typeof DataManager !== 'undefined' && DataManager.addToPendingSync) {
-                DataManager.addToPendingSync(sheetName, data);
-            }
-            return;
-        }
-
-        try {
-            const spreadsheetId = AppState.googleConfig.sheets?.spreadsheetId;
-            if (!spreadsheetId || spreadsheetId.trim() === '' || spreadsheetId === 'YOUR_SPREADSHEET_ID_HERE') {
-                // لا يوجد spreadsheetId - يتم تخزينه في التقدم
-                Utils.safeWarn(`فشل تحميل الملف إلى Google Sheets - يتم تخزينه في التقدم ${sheetName}`);
-                if (typeof DataManager !== 'undefined' && DataManager.addToPendingSync) {
-                    DataManager.addToPendingSync(sheetName, data);
-                }
-                return;
-            }
-
-            const preparedData = this.prepareSheetPayload(sheetName, data);
-
-            // يتم التحقق من هل هو spreadsheetId
-            await this.sendToAppsScript('saveToSheet', {
-                sheetName,
-                data: preparedData,
-                spreadsheetId: spreadsheetId.trim()
-            });
-
-            // يتم حذف الملف من التقدم
-            if (typeof DataManager !== 'undefined' && DataManager.removeFromPendingSync) {
-                DataManager.removeFromPendingSync(sheetName);
-            }
-
-            // مسح الـ cache للـ sheet المحدث
-            this.clearCache(sheetName);
-
-            Utils.safeLog(`تم تحميل الملف إلى Google Sheets ${sheetName}`);
-        } catch (error) {
-            // فشل تحميل الملف إلى Google Sheets
-            Utils.safeWarn(`فشل تحميل الملف إلى Google Sheets ${sheetName}:`, error.message);
-
-            if (typeof DataManager !== 'undefined' && DataManager.addToPendingSync) {
-                DataManager.addToPendingSync(sheetName, data);
-                Utils.safeLog(`فشل تحميل الملف إلى Google Sheets ${sheetName}`);
-            }
-        }
-    },
-
-    /**
-     * التحقق من المزامنة في التقدم باستخدام Google Sheets
      * @param {string} action - نوع العملية (addUser, updateUser)
      * @param {any} data - البيانات
      * @param {number} maxRetries - عدد المحاولات (3)
@@ -3499,6 +3446,8 @@ const GoogleIntegration = {
             return { success: false, shouldDefer: true, message: 'معرف Google Sheets غير محدد' };
         }
 
+        const preparedData = this.prepareSheetPayload(sheetName, data);
+
         try {
             // محاولة الحفظ مع إعادة المحاولة
             let lastError = null;
@@ -3509,7 +3458,7 @@ const GoogleIntegration = {
                         action: 'saveToSheet',
                         data: {
                             sheetName: sheetName,
-                            data: data,
+                            data: preparedData,
                             spreadsheetId: spreadsheetId
                         }
                     });
@@ -3519,6 +3468,8 @@ const GoogleIntegration = {
                         if (typeof DataManager !== 'undefined' && DataManager.removeFromPendingSync) {
                             DataManager.removeFromPendingSync(sheetName);
                         }
+
+                        this.clearCache(sheetName);
 
                         if (!silent) {
                             Utils.safeLog(`✅ تم حفظ ${sheetName} في Google Sheets بنجاح`);

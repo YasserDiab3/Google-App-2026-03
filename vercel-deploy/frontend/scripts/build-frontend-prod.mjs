@@ -4,7 +4,7 @@
  * - تصغير كل ملف .js عبر esbuild: minify، إسقاط console/debugger، بدون source maps
  *
  * الاستخدام: من مجلد Frontend نفّذ npm install ثم npm run build
- * الناتج: Frontend/dist/ — انشر محتويات dist كموقع ثابت.
+ * الناتج: Frontend/dist/ ثم نسخ إلى dist/ عند جذر المستودع (لتوافق إعدادات Vercel التي تتوقع dist).
  */
 import * as esbuild from 'esbuild';
 import fs from 'fs';
@@ -14,6 +14,8 @@ import { fileURLToPath } from 'url';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const frontendRoot = path.resolve(__dirname, '..');
 const distRoot = path.join(frontendRoot, 'dist');
+const repoRoot = path.resolve(frontendRoot, '..');
+const rootDist = path.join(repoRoot, 'dist');
 
 function walkJsFiles(dir, acc = []) {
     if (!fs.existsSync(dir)) return acc;
@@ -72,7 +74,11 @@ await esbuild.build({
     platform: 'browser',
     drop: ['console', 'debugger'],
     sourcemap: false,
-    logLevel: 'info'
+    logLevel: 'info',
+    logOverride: {
+        'duplicate-object-key': 'silent',
+        'assign-to-constant': 'warning'
+    }
 });
 
 const info = [
@@ -82,4 +88,8 @@ const info = [
 ].join('\n');
 fs.writeFileSync(path.join(distRoot, 'BUILD_INFO.txt'), info, 'utf8');
 
-console.log(`Done. Minified ${entryPoints.length} JS files → ${distRoot}`);
+rmrf(rootDist);
+cpDir(distRoot, rootDist);
+fs.writeFileSync(path.join(rootDist, 'BUILD_INFO.txt'), info, 'utf8');
+
+console.log(`Done. Minified ${entryPoints.length} JS files → ${distRoot} and ${rootDist}`);

@@ -236,7 +236,7 @@ const ActionTrackingRegister = {
         }
 
         // التحقق من الصلاحيات المخصصة
-        const permissions = user.permissions || {};
+        let permissions = user.permissions || {};
         if (typeof permissions === 'string') {
             try {
                 permissions = JSON.parse(permissions);
