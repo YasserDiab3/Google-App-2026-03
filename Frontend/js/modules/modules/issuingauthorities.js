@@ -894,6 +894,20 @@ const IssuingAuthorities = {
         </div>`;
     },
 
+    /** تنسيق حرف G/Y/X للطباعة/PDF بنفس ألوان المفتاح في الواجهة */
+    _exportStyledPermitLetter(v, esc) {
+        const c0 = String(v || 'X').toUpperCase().trim();
+        const c = ['G', 'Y', 'X'].includes(c0) ? c0 : 'X';
+        const safe = esc(c);
+        const base = 'font-weight:800;border-radius:6px;padding:4px 10px;display:inline-block;min-width:22px;text-align:center;-webkit-print-color-adjust:exact;print-color-adjust:exact;';
+        const style = c === 'G'
+            ? `${base}background:#dcfce7;color:#166534;border:1px solid #86efac;`
+            : c === 'Y'
+                ? `${base}background:#fef9c3;color:#854d0e;border:1px solid #fde047;`
+                : `${base}background:#fee2e2;color:#991b1b;border:1px solid #fca5a5;`;
+        return `<span style="${style}">${safe}</span>`;
+    },
+
     _buildExportTableRowsHtml(records, { escapeForHtml = true, isContractorView = false } = {}) {
         const esc = escapeForHtml && typeof Utils !== 'undefined' && Utils.escapeHTML
             ? Utils.escapeHTML
@@ -901,7 +915,7 @@ const IssuingAuthorities = {
         return records.map((rec, idx) => {
             const permitCells = this.PERMIT_TYPES.map(pt => {
                 const v = String(rec[pt.key] || 'X').toUpperCase().trim();
-                return `<td style="border:1px solid #d1d5db;padding:6px;text-align:center;">${esc(v)}</td>`;
+                return `<td style="border:1px solid #d1d5db;padding:6px;text-align:center;vertical-align:middle;">${this._exportStyledPermitLetter(v, esc)}</td>`;
             }).join('');
             const activeTxt = rec.isActive === false
                 ? this.t('module.issuingAuthorities.status.inactive', 'غير نشط')
@@ -909,11 +923,13 @@ const IssuingAuthorities = {
             if (isContractorView) {
                 const co = esc(this._displayContractorCompany(rec));
                 const resp = esc(this._displayResponsibleName(rec));
+                const codeVal = esc(String(rec.id || rec.employeeCode || '').trim());
                 return `
             <tr>
                 <td style="border:1px solid #d1d5db;padding:6px;text-align:center;">${idx + 1}</td>
-                <td style="border:1px solid #d1d5db;padding:6px;text-align:right;">${co}</td>
+                <td style="border:1px solid #d1d5db;padding:6px;text-align:center;">${codeVal}</td>
                 <td style="border:1px solid #d1d5db;padding:6px;text-align:right;">${resp}</td>
+                <td style="border:1px solid #d1d5db;padding:6px;text-align:right;">${co}</td>
                 <td style="border:1px solid #d1d5db;padding:6px;text-align:right;">${esc(rec.departmentName || '')}</td>
                 <td style="border:1px solid #d1d5db;padding:6px;text-align:right;">${esc(rec.jobTitle || '')}</td>
                 <td style="border:1px solid #d1d5db;padding:6px;text-align:right;">${esc(rec.branch || '')}</td>
@@ -927,8 +943,8 @@ const IssuingAuthorities = {
             return `
             <tr>
                 <td style="border:1px solid #d1d5db;padding:6px;text-align:center;">${idx + 1}</td>
-                <td style="border:1px solid #d1d5db;padding:6px;text-align:right;">${esc(rec.name || '')}</td>
                 <td style="border:1px solid #d1d5db;padding:6px;text-align:center;">${esc(rec.employeeCode || '')}</td>
+                <td style="border:1px solid #d1d5db;padding:6px;text-align:right;">${esc(rec.name || '')}</td>
                 <td style="border:1px solid #d1d5db;padding:6px;text-align:right;">${esc(rec.departmentName || '')}</td>
                 <td style="border:1px solid #d1d5db;padding:6px;text-align:right;">${esc(rec.jobTitle || '')}</td>
                 <td style="border:1px solid #d1d5db;padding:6px;text-align:right;">${esc(rec.branch || '')}</td>
@@ -990,8 +1006,9 @@ const IssuingAuthorities = {
         const h = (key, fb) => esc(this.t(key, fb));
         const headMain = isCv
             ? `<th style="border:1px solid #d1d5db;padding:8px;">${h('module.issuingAuthorities.col.idx', 'م')}</th>
+                    <th style="border:1px solid #d1d5db;padding:8px;">${h('module.issuingAuthorities.export.col.code', 'الكود')}</th>
+                    <th style="border:1px solid #d1d5db;padding:8px;">${h('module.issuingAuthorities.export.col.name', 'الاسم')}</th>
                     <th style="border:1px solid #d1d5db;padding:8px;">${h('module.issuingAuthorities.col.contractorSupplier', 'المقاول / المورد')}</th>
-                    <th style="border:1px solid #d1d5db;padding:8px;">${h('module.issuingAuthorities.col.responsibleName', 'اسم المسؤول')}</th>
                     <th style="border:1px solid #d1d5db;padding:8px;">${h('module.issuingAuthorities.export.col.department', 'الإدارة')}</th>
                     <th style="border:1px solid #d1d5db;padding:8px;">${h('module.issuingAuthorities.export.col.jobTitle', 'الوظيفة')}</th>
                     <th style="border:1px solid #d1d5db;padding:8px;">${h('module.issuingAuthorities.export.col.branch', 'الفرع')}</th>
@@ -999,8 +1016,8 @@ const IssuingAuthorities = {
                     <th style="border:1px solid #d1d5db;padding:8px;">${h('module.issuingAuthorities.export.col.location', 'الموقع')}</th>
                     <th style="border:1px solid #d1d5db;padding:8px;">${h('module.issuingAuthorities.export.col.sublocation', 'الموقع الفرعي')}</th>`
             : `<th style="border:1px solid #d1d5db;padding:8px;">${h('module.issuingAuthorities.col.idx', 'م')}</th>
-                    <th style="border:1px solid #d1d5db;padding:8px;">${h('module.issuingAuthorities.export.col.name', 'الاسم')}</th>
                     <th style="border:1px solid #d1d5db;padding:8px;">${h('module.issuingAuthorities.export.col.code', 'الكود')}</th>
+                    <th style="border:1px solid #d1d5db;padding:8px;">${h('module.issuingAuthorities.export.col.name', 'الاسم')}</th>
                     <th style="border:1px solid #d1d5db;padding:8px;">${h('module.issuingAuthorities.export.col.department', 'الإدارة')}</th>
                     <th style="border:1px solid #d1d5db;padding:8px;">${h('module.issuingAuthorities.export.col.jobTitle', 'الوظيفة')}</th>
                     <th style="border:1px solid #d1d5db;padding:8px;">${h('module.issuingAuthorities.export.col.branch', 'الفرع')}</th>
@@ -1074,29 +1091,43 @@ const IssuingAuthorities = {
             const stInactive = this.t('module.issuingAuthorities.status.inactive', 'غير نشط');
             const stActive = this.t('module.issuingAuthorities.status.active', 'نشط');
             const permitPrefix = this.t('module.issuingAuthorities.export.permitPrefix', 'تصريح:');
-            const rows = records.map((rec) => {
+            const kIdx = this.t('module.issuingAuthorities.col.idx', 'م');
+            const kCode = this.t('module.issuingAuthorities.export.col.code', 'الكود');
+            const kName = this.t('module.issuingAuthorities.export.col.name', 'الاسم');
+            const kCo = this.t('module.issuingAuthorities.col.contractorSupplier', 'المقاول / المورد');
+            const kDept = this.t('module.issuingAuthorities.export.col.department', 'الإدارة');
+            const kJob = this.t('module.issuingAuthorities.export.col.jobTitle', 'الوظيفة');
+            const kBr = this.t('module.issuingAuthorities.export.col.branch', 'الفرع');
+            const kFa = this.t('module.issuingAuthorities.export.col.factory', 'المصنع');
+            const kLoc = this.t('module.issuingAuthorities.export.col.location', 'الموقع');
+            const kSub = this.t('module.issuingAuthorities.export.col.sublocation', 'الموقع الفرعي');
+            const kSt = this.t('module.issuingAuthorities.export.col.status', 'الحالة');
+            const rows = records.map((rec, rowIdx) => {
                 const row = isCv
                     ? {
-                        [this.t('module.issuingAuthorities.col.contractorSupplier', 'المقاول / المورد')]: this._displayContractorCompany(rec),
-                        [this.t('module.issuingAuthorities.col.responsibleName', 'اسم المسؤول')]: this._displayResponsibleName(rec),
-                        [this.t('module.issuingAuthorities.export.col.department', 'الإدارة')]: rec.departmentName || '',
-                        [this.t('module.issuingAuthorities.export.col.jobTitle', 'الوظيفة')]: rec.jobTitle || '',
-                        [this.t('module.issuingAuthorities.export.col.branch', 'الفرع')]: rec.branch || '',
-                        [this.t('module.issuingAuthorities.export.col.factory', 'المصنع')]: rec.factory || '',
-                        [this.t('module.issuingAuthorities.export.col.location', 'الموقع')]: rec.location || '',
-                        [this.t('module.issuingAuthorities.export.col.sublocation', 'الموقع الفرعي')]: rec.sublocation || '',
-                        [this.t('module.issuingAuthorities.export.col.status', 'الحالة')]: rec.isActive === false ? stInactive : stActive
+                        [kIdx]: rowIdx + 1,
+                        [kCode]: String(rec.id || rec.employeeCode || '').trim(),
+                        [kName]: this._displayResponsibleName(rec),
+                        [kCo]: this._displayContractorCompany(rec),
+                        [kDept]: rec.departmentName || '',
+                        [kJob]: rec.jobTitle || '',
+                        [kBr]: rec.branch || '',
+                        [kFa]: rec.factory || '',
+                        [kLoc]: rec.location || '',
+                        [kSub]: rec.sublocation || '',
+                        [kSt]: rec.isActive === false ? stInactive : stActive
                     }
                     : {
-                        [this.t('module.issuingAuthorities.export.col.name', 'الاسم')]: rec.name || '',
-                        [this.t('module.issuingAuthorities.export.col.jobCode', 'الكود الوظيفي')]: rec.employeeCode || '',
-                        [this.t('module.issuingAuthorities.export.col.department', 'الإدارة')]: rec.departmentName || '',
-                        [this.t('module.issuingAuthorities.export.col.jobTitle', 'الوظيفة')]: rec.jobTitle || '',
-                        [this.t('module.issuingAuthorities.export.col.branch', 'الفرع')]: rec.branch || '',
-                        [this.t('module.issuingAuthorities.export.col.factory', 'المصنع')]: rec.factory || '',
-                        [this.t('module.issuingAuthorities.export.col.location', 'الموقع')]: rec.location || '',
-                        [this.t('module.issuingAuthorities.export.col.sublocation', 'الموقع الفرعي')]: rec.sublocation || '',
-                        [this.t('module.issuingAuthorities.export.col.status', 'الحالة')]: rec.isActive === false ? stInactive : stActive
+                        [kIdx]: rowIdx + 1,
+                        [kCode]: rec.employeeCode || '',
+                        [kName]: rec.name || '',
+                        [kDept]: rec.departmentName || '',
+                        [kJob]: rec.jobTitle || '',
+                        [kBr]: rec.branch || '',
+                        [kFa]: rec.factory || '',
+                        [kLoc]: rec.location || '',
+                        [kSub]: rec.sublocation || '',
+                        [kSt]: rec.isActive === false ? stInactive : stActive
                     };
                 this.PERMIT_TYPES.forEach((pt) => {
                     row[`${permitPrefix} ${this._permitLabel(pt)}`] = String(rec[pt.key] || 'X').toUpperCase();
