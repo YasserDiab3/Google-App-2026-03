@@ -1431,21 +1431,25 @@ const Users = {
                 }
                 
                 // ✅ إصلاح: تحديث الجلسة بالصلاحيات الجديدة (مزامنة فورية)
+                let sessionUpdated = false;
                 if (typeof window.Auth !== 'undefined' && typeof window.Auth.updateUserSession === 'function') {
-                    const sessionUpdated = window.Auth.updateUserSession();
+                    sessionUpdated = !!window.Auth.updateUserSession();
                     if (sessionUpdated) {
                         Utils.safeLog('✅ تم تحديث جلسة المستخدم الحالي بالصلاحيات الجديدة');
                         Notification.success('تم تحديث صلاحياتك بنجاح. الصلاحيات الجديدة متاحة الآن بدون الحاجة لتسجيل الخروج.');
                     }
                 } else {
-                    // إذا لم تكن الدالة متاحة، نحدث يدوياً
-                    if (typeof UI !== 'undefined' && typeof UI.updateUserProfilePhoto === 'function') {
-                        UI.updateUserProfilePhoto();
-                    }
                     if (typeof Permissions !== 'undefined' && typeof Permissions.updateNavigation === 'function') {
                         Permissions.updateNavigation();
                     }
                     Notification.info('تم تحديث بياناتك. قد تحتاج لتحديث الصفحة لرؤية التغييرات.');
+                }
+                // إذا تخطّى Auth.updateUserSession (مهلة 500ms أو قيد تنفيذ) لم يُستدعَ تحديث الصورة داخل Auth — نحدّث الشريط من AppState
+                if (!sessionUpdated && typeof UI !== 'undefined' && typeof UI.updateUserProfilePhoto === 'function') {
+                    UI.updateUserProfilePhoto();
+                }
+                if (typeof UI !== 'undefined' && AppState.currentSection === 'profile' && typeof UI.renderMyProfileSection === 'function') {
+                    Promise.resolve(UI.renderMyProfileSection()).catch(() => { /* ignore */ });
                 }
             } else {
                 // ✅ إصلاح: تحديث جلسة المستخدم المعدل إذا كان متصل حالياً

@@ -4036,8 +4036,14 @@ window.UI = {
                 if (updateResult && updateResult.success && photoUrl) {
                     if (userRecord) userRecord.photo = photoUrl;
                     if (AppState.currentUser) AppState.currentUser.photo = photoUrl;
+                    if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
+                        try { window.DataManager.save(); } catch (e) { /* ignore */ }
+                    }
                     if (typeof Auth !== 'undefined' && Auth.updateUserSession) Auth.updateUserSession();
                     self.updateUserProfilePhoto();
+                    if (typeof AppState !== 'undefined' && AppState.currentSection === 'profile' && typeof self.renderMyProfileSection === 'function') {
+                        Promise.resolve(self.renderMyProfileSection()).catch(function() { /* ignore */ });
+                    }
                     if (typeof Notification !== 'undefined') Notification.success('تم حفظ صورة المستخدم بنجاح.');
                 } else {
                     if (typeof Notification !== 'undefined') Notification.error(updateResult && updateResult.message ? updateResult.message : 'فشل تحديث الصورة.');
@@ -4939,10 +4945,11 @@ window.UI = {
             || '';
         const employeeNumber = this._pickProfileField(employee, ['employeeNumber', 'employeeCode', 'code', 'sapId', 'الرقم الوظيفي', 'الكود الوظيفي']) || user?.employeeNumber || '';
         const employeeId = employee?.id || employee?.employeeNumber || user?.id || '';
-        const photo = this._pickProfileField(employee, ['photo', 'personalPhoto', 'image', 'imageUrl', 'Photo', 'الصورة'])
-            || (employee && employee.photo)
-            || user?.photo
-            || currentUserRecord?.photo
+        // صورة حساب المستخدم (جدول Users / الجلسة) تسبق صورة سجل الموظف حتى تظهر التغييرات فوراً بعد الرفع أو تعديل المدير
+        const accountPhoto = String(currentUserRecord?.photo || user?.photo || '').trim();
+        const photo = accountPhoto
+            || this._pickProfileField(employee, ['photo', 'personalPhoto', 'image', 'imageUrl', 'Photo', 'الصورة'])
+            || String(employee?.photo || '').trim()
             || '';
         const hireRaw = this._pickProfileField(employee, ['hireDate', 'appointmentDate', 'employmentDate', 'startDate', 'joiningDate', 'تاريخ التعيين']);
         const hireDateDisplay = this._formatProfileHireDateDisplay(hireRaw);
@@ -5394,7 +5401,6 @@ window.UI = {
             photoInput.addEventListener('change', (ev) => {
                 const file = ev.target?.files?.[0];
                 if (file) this.handleUserProfilePhotoUpload(file);
-                setTimeout(() => this.renderMyProfileSection(), 1300);
                 ev.target.value = '';
             });
         }
