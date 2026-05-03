@@ -9648,7 +9648,7 @@ const Contractors = {
                 return;
             }
             
-            // ✅ التحقق من وجود الطلب (نقبل أي معرف محفوظ: CAR_ أو UUID من Supabase)
+            // ✅ التحقق من وجود الطلب (نقبل أي معرف محفوظ: CAR_ أو UUID)
             if (!request) {
                 Loading.hide();
                 Notification.error('طلب الاعتماد غير موجود');

@@ -120,7 +120,6 @@ var log = function() { try { console.log.apply(console, arguments); } catch(e) {
             try {
                 const x = new URL(u);
                 if (x.protocol !== 'https:') return false;
-                if (x.hostname.toLowerCase().endsWith('.supabase.co') && x.pathname.indexOf('/functions/v1/') !== -1) return true;
             } catch (e) { return false; }
             if (!/^https:\/\/script\.google\.com\//i.test(u)) return false;
             if (!/\/exec(\?|#|$)/i.test(u)) return false;
@@ -186,11 +185,11 @@ var log = function() { try { console.log.apply(console, arguments); } catch(e) {
                         <div class="space-y-4">
                             <div>
                                 <label class="block text-sm font-semibold text-gray-700 mb-2">
-                                    رابط الخادم الخلفي (RPC / Supabase Edge)
+                                    رابط نشر Google Apps Script (Web App)
                                 </label>
                                 <input id="login-sync-script-url" type="url" class="form-input" dir="ltr"
-                                    placeholder="https://xxxx.supabase.co/functions/v1/hse-api" autocomplete="off">
-                                <p class="text-xs text-gray-500 mt-2">للنشر على Supabase: استخدم رابط دالة <b>hse-api</b> تحت <b>/functions/v1/</b>. إن وُجد نشر قديم متوافق، يمكن استخدام رابط ينتهي بـ <b>/exec</b>.</p>
+                                    placeholder="https://script.google.com/macros/s/…/exec" autocomplete="off">
+                                <p class="text-xs text-gray-500 mt-2">الصق رابط النشر من محرر Apps Script (نشر → تطبيق ويب) ويجب أن ينتهي بـ <b>/exec</b>.</p>
                             </div>
                             <div>
                                 <label class="block text-sm font-semibold text-gray-700 mb-2">

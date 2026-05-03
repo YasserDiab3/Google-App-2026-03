@@ -1322,7 +1322,10 @@ const PTW = {
      */
     async loadPTWFromBackend() {
         try {
-            if (!GoogleIntegration || !AppState.googleConfig?.appsScript?.enabled) {
+            const rpcReady = GoogleIntegration &&
+                typeof GoogleIntegration._isBackendRpcConfigured === 'function' &&
+                GoogleIntegration._isBackendRpcConfigured();
+            if (!GoogleIntegration || !rpcReady) {
                 if (AppState.debugMode) {
                     Utils.safeLog('⚠️ Backend غير متاح - استخدام البيانات المحلية');
                 }
@@ -1333,10 +1336,36 @@ const PTW = {
                 Utils.safeLog('🔄 تحميل تصاريح العمل من Backend...');
             }
 
-            const result = await GoogleIntegration.sendRequest({
-                action: 'getAllPTWs',
-                data: {}
-            });
+            let result;
+            try {
+                result = await GoogleIntegration.sendRequest({
+                    action: 'getAllPTWs',
+                    data: {}
+                });
+            } catch (firstErr) {
+                const m = String(firstErr?.message || firstErr || '');
+                const missingLegacyAction = /not implemented|NOT_IMPLEMENTED|غير معتمد|ACTION_NOT_RECOGNIZED|الإجراء غير معروف|Action not recognized/i.test(m);
+                if (!missingLegacyAction) {
+                    if (AppState.debugMode) {
+                        Utils.safeError('❌ خطأ في تحميل التصاريح من Backend:', firstErr);
+                    }
+                    return false;
+                }
+                try {
+                    result = await GoogleIntegration.sendRequest({
+                        action: 'readFromSheet',
+                        data: {
+                            sheetName: 'PTW',
+                            spreadsheetId: AppState.googleConfig?.sheets?.spreadsheetId
+                        }
+                    });
+                } catch (fallbackErr) {
+                    if (AppState.debugMode) {
+                        Utils.safeError('❌ فشل بديل readFromSheet(PTW):', fallbackErr);
+                    }
+                    return false;
+                }
+            }
 
             if (result && result.success && Array.isArray(result.data)) {
                 // تحديث البيانات المحلية بما في Backend
@@ -1370,7 +1399,10 @@ const PTW = {
      */
     async loadRegistryFromBackend() {
         try {
-            if (!GoogleIntegration || !AppState.googleConfig?.appsScript?.enabled) {
+            const rpcReady = GoogleIntegration &&
+                typeof GoogleIntegration._isBackendRpcConfigured === 'function' &&
+                GoogleIntegration._isBackendRpcConfigured();
+            if (!GoogleIntegration || !rpcReady) {
                 return false;
             }
 

@@ -1,6 +1,5 @@
 /**
- * طبقة الاتصال بالخادم الخلفي (RPC)
- * تدعم نقطة Supabase Edge / hse-api وأي نشر متوافق؛ يبقى الاسم GoogleIntegration لتوافق الوحدات القديمة.
+ * طبقة الاتصال بـ Google Apps Script (Web App) كخلفية للمزامنة مع Google Sheets.
  */
 
 const GoogleIntegration = {
@@ -34,16 +33,13 @@ const GoogleIntegration = {
     },
 
     /**
-     * هل الخلفية جاهزة لاستدعاء RPC (نفس scriptUrl؛ مع Supabase يُسمح بالاتصال إذا وُجد الرابط حتى لو عُطّل «تفعيل Apps Script» في الإعدادات)
+     * هل خلفية Google Apps Script جاهزة (رابط Web App + تفعيل الاتصال)
      */
     _isBackendRpcConfigured() {
         try {
             const sc = AppState && AppState.googleConfig && AppState.googleConfig.appsScript;
             const url = sc && String(sc.scriptUrl || '').trim();
             if (!url) return false;
-            if (typeof Utils !== 'undefined' && typeof Utils.isSupabaseBackend === 'function' && Utils.isSupabaseBackend()) {
-                return true;
-            }
             return !!(sc && sc.enabled);
         } catch (e) {
             return false;
@@ -180,7 +176,7 @@ const GoogleIntegration = {
     },
 
     /**
-     * التحقق من صحة رابط نقطة RPC (Supabase Edge، أو Google Apps Script legacy)
+     * التحقق من صحة رابط نشر Google Apps Script (Web App ينتهي بـ /exec)
      */
     isValidGoogleAppsScriptUrl(url) {
         try {
@@ -190,9 +186,6 @@ const GoogleIntegration = {
             }
             const host = urlObj.hostname.toLowerCase();
             const path = urlObj.pathname || '';
-            if (host.endsWith('.supabase.co') && path.includes('/functions/v1/')) {
-                return true;
-            }
             if (host === 'script.google.com' || host.endsWith('.script.google.com')) {
                 return path.endsWith('/exec');
             }
@@ -605,7 +598,7 @@ const GoogleIntegration = {
         const scriptUrl = AppState.googleConfig.appsScript.scriptUrl.trim();
 
         if (!this.isValidGoogleAppsScriptUrl(scriptUrl)) {
-            throw new Error('رابط الخادم غير صالح. استخدم رابط Supabase Edge (…/functions/v1/…) أو رابط RPC المتوافق.');
+            throw new Error('رابط Web App غير صالح. يجب أن يكون رابط Google Apps Script من النوع https://script.google.com/macros/s/.../exec');
         }
 
         try {
@@ -724,22 +717,6 @@ const GoogleIntegration = {
                 const fetchHeaders = {
                     'Content-Type': 'text/plain;charset=utf-8',
                 };
-                try {
-                    const su = new URL(scriptUrl);
-                    const h = su.hostname.toLowerCase();
-                    if (h.endsWith('.supabase.co') && su.pathname.includes('/functions/v1/')) {
-                        const anon =
-                            typeof window !== 'undefined' && window.__HSE_SUPABASE_ANON_KEY__
-                                ? String(window.__HSE_SUPABASE_ANON_KEY__).trim()
-                                : '';
-                        if (anon) {
-                            fetchHeaders['Authorization'] = 'Bearer ' + anon;
-                            fetchHeaders['apikey'] = anon;
-                        }
-                    }
-                } catch (_) {
-                    /* ignore URL parse */
-                }
                 // التحقق من هل هو fetch
                 // التحقق من هل هو CSRF Token
                 // التحقق من هل هو payload

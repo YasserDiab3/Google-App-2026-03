@@ -508,14 +508,8 @@ window.Auth = {
                 
                 // إذا لم يتم العثور على المستخدم بعد إعادة المحاولة
                 if (!foundUser && users.length === 0) {
-                    const useSupabase = !!(typeof AppState !== 'undefined' && AppState.useSupabaseBackend === true);
                     let msg = 'لا يوجد مستخدمون مسجلون بعد.';
-                    if (useSupabase) {
-                        msg +=
-                            ' أضف صفاً في جدول public."Users" من Supabase (Table Editor أو SQL)، مع passwordHash = SHA-256 لكلمة المرور (64 حرفاً hex). أو سجّل الدخول بحساب التهيئة admin@hse.local إن كان لا يزال مفعّلاً.';
-                        Notification.error(msg);
-                        if (typeof this.showCreateFirstUserBox === 'function') this.showCreateFirstUserBox();
-                    } else if (canSyncUsers) {
+                    if (canSyncUsers) {
                         msg += ' يرجى التحقق من إعدادات Google Apps Script وورقة Users.';
                         Notification.error(msg);
                     } else {

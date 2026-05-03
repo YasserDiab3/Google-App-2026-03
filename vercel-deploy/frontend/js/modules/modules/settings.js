@@ -489,7 +489,7 @@ const Settings = {
                             <i class="fas fa-cloud text-green-600 ml-2"></i>
                             التكامل والمزامنة
                         </h2>
-                        <p class="settings-group-subtitle">إعدادات الاتصال بالخادم الخلفي (Supabase / RPC) والمزامنة</p>
+                        <p class="settings-group-subtitle">إعدادات الاتصال بـ Google Apps Script والمزامنة مع Google Sheets</p>
                     </div>
                     <div class="settings-group-content">
                         <div class="content-card">
@@ -508,11 +508,11 @@ const Settings = {
                                     <div>
                                         <label class="block text-sm font-semibold text-gray-700 mb-2">
                                             <i class="fas fa-link ml-2"></i>
-                                            رابط نقطة النهاية RPC (مطلوب للمزامنة)
+                                            رابط Web App لـ Google Apps Script (مطلوب للمزامنة)
                                         </label>
                                         <input type="url" id="google-apps-script-url" class="form-input"
                                             value="${AppState.googleConfig.appsScript.scriptUrl || ''}"
-                                            placeholder="https://xxxx.supabase.co/functions/v1/hse-api">
+                                            placeholder="https://script.google.com/macros/s/…/exec">
                                     </div>
                                     <div>
                                         <label class="flex items-center mb-4">

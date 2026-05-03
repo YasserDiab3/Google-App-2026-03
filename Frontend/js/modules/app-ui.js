@@ -2440,7 +2440,7 @@ window.UI = {
             if (idx !== -1 && users[idx]) users[idx].postLoginPolicySeenAt = seenAt;
         }
         const userId = user.id || user.email;
-        /** RPC موحّد (قد يتجه إلى Supabase عبر hse-api حسب إعدادات النشر) */
+        /** مزامنة عبر Google Apps Script */
         if (userId && typeof GoogleIntegration !== 'undefined' && GoogleIntegration.sendToAppsScript) {
             GoogleIntegration.sendToAppsScript('updateUser', { userId: userId, updateData: { postLoginPolicySeenAt: seenAt } }).catch(() => {});
         }
@@ -3098,10 +3098,7 @@ window.UI = {
                     Array.isArray(AppState.appData[key]) && AppState.appData[key].length > 0
                 );
                 if (!hasLocalData) {
-                    const msg = Utils.isSupabaseBackend && Utils.isSupabaseBackend()
-                        ? 'لا توجد بيانات محلية. تحقق من اتصال الخادم وإعدادات Supabase.'
-                        : 'لا توجد بيانات محلية. فعّل الاتصال بالخادم من الإعدادات أو Supabase.';
-                    Notification.info(msg);
+                    Notification.info('لا توجد بيانات محلية. فعّل الاتصال بـ Google Apps Script من الإعدادات وتحقق من ورقة البيانات.');
                 }
             }
         }

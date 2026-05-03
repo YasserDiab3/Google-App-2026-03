@@ -2822,8 +2822,6 @@ const AppState = {
     /** نص اختياري لرسالة التحديث (ملخص التغييرات). إن تُركت فارغة يُستخدم النص الافتراضي. */
     updateMessage: '',
     debugMode: false,
-    /** عند true: الخلفية الأساسية Supabase (hse-api)؛ منطق الواجهة لا يشترط تفعيل Google Sheets في الإعدادات */
-    useSupabaseBackend: false,
     currentUser: null,
     currentSection: 'dashboard',
     currentLanguage: 'ar',
@@ -2918,7 +2916,7 @@ const AppState = {
         lastSyncTime: 0, // آخر مرة تم فيها التحميل الكامل
         userEmail: null // البريد الإلكتروني للمستخدم الحالي
     },
-    /** إعدادات RPC للخادم الخلفي (الاسم التاريخي googleConfig — يُستخدم مع Supabase Edge / hse-api) */
+    /** إعدادات Google Apps Script و Google Sheets (الاسم التاريخي googleConfig) */
     googleConfig: {
         appsScript: {
             enabled: true,
@@ -2984,62 +2982,46 @@ const AppState = {
     legalAutoNotify: false // تفعيل التنبيهات التلقائية للتحديثات القانونية
 };
 
-(function applySupabaseBackendFlag() {
+(function applyGoogleConfigFromStorage() {
+    /** دمج إعدادات الاتصال من localStorage قبل أي وحدة أخرى */
     try {
-        if (typeof window !== 'undefined' && window.__HSE_USE_SUPABASE__ === true) {
-            AppState.useSupabaseBackend = true;
-        } else if (typeof window !== 'undefined' && /safety-icapp\.com$/i.test(String(window.location.hostname || ''))) {
-            AppState.useSupabaseBackend = true;
-        }
-        const rpc = typeof window !== 'undefined' && window.__HSE_RPC_URL__
-            ? String(window.__HSE_RPC_URL__).trim()
-            : '';
-        if (rpc && AppState.googleConfig && AppState.googleConfig.appsScript) {
-            AppState.googleConfig.appsScript.scriptUrl = rpc;
-            AppState.googleConfig.appsScript.enabled = true;
-        }
-        /** دمج إعدادات الاتصال من localStorage قبل أي وحدة أخرى — يمنع hasCloudBackendSync=false وواجهة «ميتة» بعد تفريغ الافتراضيات */
-        try {
-            if (typeof localStorage !== 'undefined' && AppState.googleConfig) {
-                const raw = localStorage.getItem('hse_google_config');
-                if (raw) {
-                    const parsed = JSON.parse(raw);
-                    if (parsed && typeof parsed === 'object') {
-                        if (parsed.appsScript && typeof parsed.appsScript === 'object') {
-                            const currentApps = AppState.googleConfig.appsScript || {};
-                            const parsedApps = parsed.appsScript || {};
-                            const parsedUrl = String(parsedApps.scriptUrl || '').trim();
-                            AppState.googleConfig.appsScript = {
-                                ...currentApps,
-                                ...parsedApps,
-                                // لا نسمح لقيمة فارغة من localStorage بإلغاء URL افتراضي صالح
-                                scriptUrl: parsedUrl || String(currentApps.scriptUrl || '').trim(),
-                                // إذا كان URL صالحًا اعتبر التفعيل true حتى لا تتعطل المزامنة تلقائيًا
-                                enabled: parsedUrl ? true : !!(parsedApps.enabled ?? currentApps.enabled)
-                            };
-                        }
-                        if (parsed.sheets && typeof parsed.sheets === 'object') {
-                            const currentSheets = AppState.googleConfig.sheets || {};
-                            const parsedSheets = parsed.sheets || {};
-                            const parsedSheetId = String(parsedSheets.spreadsheetId || '').trim();
-                            AppState.googleConfig.sheets = {
-                                ...currentSheets,
-                                ...parsedSheets,
-                                spreadsheetId: parsedSheetId || String(currentSheets.spreadsheetId || '').trim(),
-                                enabled: parsedSheetId ? true : !!(parsedSheets.enabled ?? currentSheets.enabled)
-                            };
-                        }
-                        if (parsed.maps && typeof parsed.maps === 'object') {
-                            AppState.googleConfig.maps = {
-                                ...AppState.googleConfig.maps,
-                                ...parsed.maps
-                            };
-                        }
+        if (typeof localStorage !== 'undefined' && AppState.googleConfig) {
+            const raw = localStorage.getItem('hse_google_config');
+            if (raw) {
+                const parsed = JSON.parse(raw);
+                if (parsed && typeof parsed === 'object') {
+                    if (parsed.appsScript && typeof parsed.appsScript === 'object') {
+                        const currentApps = AppState.googleConfig.appsScript || {};
+                        const parsedApps = parsed.appsScript || {};
+                        const parsedUrl = String(parsedApps.scriptUrl || '').trim();
+                        AppState.googleConfig.appsScript = {
+                            ...currentApps,
+                            ...parsedApps,
+                            scriptUrl: parsedUrl || String(currentApps.scriptUrl || '').trim(),
+                            enabled: parsedUrl ? true : !!(parsedApps.enabled ?? currentApps.enabled)
+                        };
+                    }
+                    if (parsed.sheets && typeof parsed.sheets === 'object') {
+                        const currentSheets = AppState.googleConfig.sheets || {};
+                        const parsedSheets = parsed.sheets || {};
+                        const parsedSheetId = String(parsedSheets.spreadsheetId || '').trim();
+                        AppState.googleConfig.sheets = {
+                            ...currentSheets,
+                            ...parsedSheets,
+                            spreadsheetId: parsedSheetId || String(currentSheets.spreadsheetId || '').trim(),
+                            enabled: parsedSheetId ? true : !!(parsedSheets.enabled ?? currentSheets.enabled)
+                        };
+                    }
+                    if (parsed.maps && typeof parsed.maps === 'object') {
+                        AppState.googleConfig.maps = {
+                            ...AppState.googleConfig.maps,
+                            ...parsed.maps
+                        };
                     }
                 }
             }
-        } catch (mergeErr) { /* تجاهل تالف hse_google_config */ }
-    } catch (e) { /* ignore */ }
+        }
+    } catch (mergeErr) { /* تجاهل تالف hse_google_config */ }
 })();
 
 // ===== Utility Functions =====
@@ -3055,20 +3037,13 @@ const Utils = {
         return r || 'user';
     },
 
-    /** هل الخلفية الحالية مضبوطة على Supabase */
-    isSupabaseBackend() {
-        return !!(typeof AppState !== 'undefined' && AppState.useSupabaseBackend === true);
-    },
-
     /**
-     * هل يوجد مسار سحابي للمزامنة (وضع Supabase، أو تفعيل + رابط RPC)
-     * مع Supabase: true حتى لا تُجمّد الواجهة إن تأخر ضبط الرابط؛ الطبقات السفلى ترفض الطلب بدون scriptUrl.
+     * هل يوجد مسار مزامنة عبر Google Apps Script (تفعيل + رابط Web App /exec)
      */
     hasCloudBackendSync() {
         const gc = typeof AppState !== 'undefined' ? AppState.googleConfig : null;
         if (!gc || !gc.appsScript) return false;
         const url = String(gc.appsScript.scriptUrl || '').trim();
-        if (this.isSupabaseBackend()) return true;
         return !!(gc.appsScript.enabled && url);
     },
 
