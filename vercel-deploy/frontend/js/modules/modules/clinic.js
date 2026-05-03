@@ -5893,17 +5893,8 @@ const Clinic = {
             this.ensureFilterDefaults(); // ✅ التأكد من تهيئة الفلاتر بشكل صحيح
 
             // ✅ عرض الواجهة أولاً بالبيانات المتوفرة (مثل الأدوية تماماً)
-            // هذا يضمن بقاء الواجهة ثابتة ومرئية أثناء التحميل
-            const hasLocalData = AppState.appData.clinicVisits && AppState.appData.clinicVisits.length > 0;
-            
-            // ✅ التحقق من عمر البيانات المحلية
-            const lastSync = localStorage.getItem('clinic_last_sync');
-            const cacheAge = lastSync ? (Date.now() - parseInt(lastSync)) : Infinity;
-            const CACHE_DURATION = 10 * 60 * 1000; // 10 دقائق
-            const isDataStale = cacheAge >= CACHE_DURATION;
-
-            // تحميل مباشر: عرض فوري بما هو متاح محلياً، ثم جلب كامل في الخلفية (طلب واحد — نفس promise إن وُجد)
-            const shouldLoadData = forceReload || !hasLocalData || isDataStale || this._visitsBackendFetchOk !== true;
+            // تحميل من الخادم فقط عند الحاجة — نفس شروط prefetch لوحة التحكم
+            const shouldLoadData = this.shouldFetchClinicVisitsFromBackend({ forceRefresh: forceReload });
 
             this.renderVisitsTabContent(panel);
 
@@ -6007,6 +5998,21 @@ const Clinic = {
         if (idx !== -1) {
             list[idx] = { ...list[idx], id: vid };
         }
+    },
+
+    /**
+     * هل يجب جلب سجل التردد من الخادم؟ نفس شروط prefetch لوحة التحكم لتقليل تكرار getAllClinicVisits.
+     * @param {{ forceRefresh?: boolean }} opts — forceRefresh يفرض الجلب (مثل إعادة المحاولة في التبويب).
+     */
+    shouldFetchClinicVisitsFromBackend(opts = {}) {
+        if (opts && opts.forceRefresh === true) return true;
+        if (typeof AppState === 'undefined' || !AppState || !AppState.appData) return true;
+        const hasLocalData = Array.isArray(AppState.appData.clinicVisits) && AppState.appData.clinicVisits.length > 0;
+        const lastSync = localStorage.getItem('clinic_last_sync');
+        const cacheAge = lastSync ? (Date.now() - parseInt(lastSync, 10)) : Infinity;
+        const CACHE_DURATION = 10 * 60 * 1000;
+        const isDataStale = !Number.isFinite(cacheAge) || cacheAge >= CACHE_DURATION;
+        return !hasLocalData || isDataStale || this._visitsBackendFetchOk !== true;
     },
 
     /**
@@ -12353,27 +12359,31 @@ const Clinic = {
                 })
         );
 
-        // سجل التردد: طلب واحد فقط عبر loadVisitsDataFromBackend (موظفين + مقاولين) — بدون تكرار getAllClinicVisits
-        promises.push(
-            requestWithTimeout(
-                this.loadVisitsDataFromBackend(),
-                CLINIC_VISITS_REQUEST_TIMEOUT,
-                'clinicVisits'
-            )
-                .then(() => {
-                    const mergedVisits = AppState.appData.clinicVisits || [];
-                    Utils.safeLog(
-                        `✅ مزامنة سجل التردد: ${mergedVisits.length} زيارة ` +
-                        `(${mergedVisits.filter(v => v.personType === 'employee' || !v.personType).length} موظف، ` +
-                        `${mergedVisits.filter(v => v.personType === 'contractor').length} مقاول)`
-                    );
-                })
-                .catch(error => {
-                    if (AppState.debugMode) {
-                        Utils.safeWarn('⚠️ تعذر تحميل سجل التردد:', error.message);
-                    }
-                })
-        );
+        // سجل التردد: لا نعيد getAllClinicVisits إذا كان الـ prefetch (أو جلب سابق) قد حدّث الكاش للتو
+        if (this.shouldFetchClinicVisitsFromBackend()) {
+            promises.push(
+                requestWithTimeout(
+                    this.loadVisitsDataFromBackend(),
+                    CLINIC_VISITS_REQUEST_TIMEOUT,
+                    'clinicVisits'
+                )
+                    .then(() => {
+                        const mergedVisits = AppState.appData.clinicVisits || [];
+                        Utils.safeLog(
+                            `✅ مزامنة سجل التردد: ${mergedVisits.length} زيارة ` +
+                            `(${mergedVisits.filter(v => v.personType === 'employee' || !v.personType).length} موظف، ` +
+                            `${mergedVisits.filter(v => v.personType === 'contractor').length} مقاول)`
+                        );
+                    })
+                    .catch(error => {
+                        if (AppState.debugMode) {
+                            Utils.safeWarn('⚠️ تعذر تحميل سجل التردد:', error.message);
+                        }
+                    })
+            );
+        } else if (AppState.debugMode) {
+            Utils.safeLog('ℹ️ تخطي جلب سجل التردد في المزامنة — بيانات حديثة ومؤكدة من الخادم');
+        }
 
         // انتظار انتهاء جميع الطلبات دون قطع مجمع بمهلة قصيرة (كانت تُسقط سجل التردد قبل اكتماله)
         try {

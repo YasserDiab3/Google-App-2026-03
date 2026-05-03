@@ -684,14 +684,8 @@ const Dashboard = {
             if (typeof Clinic === 'undefined' || typeof Clinic.loadVisitsDataFromBackend !== 'function') return;
             if (typeof GoogleIntegration === 'undefined' || typeof GoogleIntegration.sendRequest !== 'function') return;
 
-            if (!forceRefresh) {
-                const hasLocalData = Array.isArray(AppState.appData.clinicVisits) && AppState.appData.clinicVisits.length > 0;
-                const lastSync = localStorage.getItem('clinic_last_sync');
-                const cacheAge = lastSync ? (Date.now() - parseInt(lastSync, 10)) : Infinity;
-                const CACHE_DURATION = 10 * 60 * 1000;
-                const isDataStale = !Number.isFinite(cacheAge) || cacheAge >= CACHE_DURATION;
-                const shouldLoad = !hasLocalData || isDataStale || Clinic._visitsBackendFetchOk !== true;
-                if (!shouldLoad) return;
+            if (!forceRefresh && typeof Clinic.shouldFetchClinicVisitsFromBackend === 'function') {
+                if (!Clinic.shouldFetchClinicVisitsFromBackend()) return;
             }
 
             await Clinic.loadVisitsDataFromBackend();
