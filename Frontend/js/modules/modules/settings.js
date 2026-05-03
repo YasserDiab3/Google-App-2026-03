@@ -2457,7 +2457,7 @@ const Settings = {
         document.body.appendChild(modal);
 
         const form = modal.querySelector('#violation-type-form');
-        form.addEventListener('submit', (event) => {
+        form.addEventListener('submit', async (event) => {
             event.preventDefault();
             const nameInput = modal.querySelector('#violation-type-name');
             const descriptionInput = modal.querySelector('#violation-type-description');
@@ -2477,9 +2477,11 @@ const Settings = {
             try {
                 if (existing) {
                     ViolationTypesManager.updateType(existing.id, { name, description, fineAmount });
+                    await ViolationTypesManager.persist();
                     Notification.success('تم تحديث نوع المخالفة بنجاح');
                 } else {
                     ViolationTypesManager.addType({ name, description, fineAmount });
+                    await ViolationTypesManager.persist();
                     Notification.success('تم إضافة نوع المخالفة بنجاح');
                 }
                 modal.remove();
@@ -2514,13 +2516,16 @@ const Settings = {
             return;
         }
 
-        try {
-            ViolationTypesManager.deleteType(typeId);
-            Notification.success('تم حذف نوع المخالفة بنجاح');
-            this.refreshViolationTypesList();
-        } catch (error) {
-            Notification.error(error.message);
-        }
+        (async () => {
+            try {
+                ViolationTypesManager.deleteType(typeId);
+                await ViolationTypesManager.persist();
+                Notification.success('تم حذف نوع المخالفة بنجاح');
+                this.refreshViolationTypesList();
+            } catch (error) {
+                Notification.error(error.message);
+            }
+        })();
     },
 
     normalizeOwner(ownerId) {
