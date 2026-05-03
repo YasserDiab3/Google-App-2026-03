@@ -25,8 +25,10 @@ Thumbs.db
 .vscode/settings.json
 .idea/
 
-# Cursor AI
-.cursor/
+# Cursor AI (نُبقي القواعد في Git؛ باقي إعدادات Cursor محلية)
+.cursor/*
+!.cursor/rules/
+!.cursor/rules/**
 
 # Logs
 *.log

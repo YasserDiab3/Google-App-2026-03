@@ -1,0 +1,27 @@
+---
+description: المستودع الرسمي على GitHub وأسماء remotes
+alwaysApply: true
+---
+
+# المستودع الرسمي وـ Git remotes
+
+## المستودع الافتراضي (الإنتاج / Vercel)
+
+- **`origin`** يجب أن يشير دائماً إلى المستودع الرئيسي للمشروع:
+  - **URL:** `https://github.com/YasserDiab3/google-TR.git`
+- الفرع الافتراضي للرفع: **`main`**.
+- أمر الرفع المعتاد بعد الـ commit: `git push origin main`.
+
+## المستودع القديم (مرجعية فقط)
+
+- **`legacy`** يشير إلى المستودع السابق (نسخة أرشيفية / مقارنة):
+  - **URL:** `https://github.com/YasserDiab3/Google-App-2026-03.git`
+- لا تُستخدم `legacy` للرفع اليومي إلا إذا طلب المستخدم صراحة مزامنة أو دفعاً هناك.
+
+## قواعد للوكيل
+
+1. عند إعداد `git remote` أو توثيق روابط GitHub في الردود، استخدم **`origin`** أعلاه كمصدر الحقيقة للمشروع الحالي.
+2. لا تغيّر URL الخاص بـ `origin` إلى مستودع آخر إلا إذا طلب المستخدم ذلك صراحة.
+3. لا تُضِف remote ثانياً بنفس URL الخاص بـ `origin` (تجنّب التكرار مثل `google-tr` + `origin`).
+4. عند استنساخ المشروع جديداً: `git clone https://github.com/YasserDiab3/google-TR.git` ثم إضافة `legacy` اختيارياً للمرجع:
+   `git remote add legacy https://github.com/YasserDiab3/Google-App-2026-03.git`

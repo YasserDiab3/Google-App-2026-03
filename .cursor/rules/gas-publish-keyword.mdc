@@ -1,0 +1,26 @@
+---
+description: عند طلب "نشر" داخل ملفات GAS يتم تنفيذ نشر عبر clasp
+globs:
+  - "Backend/**/*.gs"
+  - "Backend/appsscript.json"
+  - "Backend/.clasp.json"
+  - "vercel-deploy/backend/**/*.gs"
+  - "vercel-deploy/backend/appsscript.json"
+  - "vercel-deploy/backend/.clasp.json"
+alwaysApply: false
+---
+
+# قاعدة كلمة نشر (Google Apps Script)
+
+عند طلب المستخدم كلمة **«نشر»** أو **«نشر GAS»** أثناء العمل على ملفات Google Apps Script:
+
+1. اعتبر المقصود هو نشر Google Apps Script عبر `clasp` وليس `git push`.
+2. نفّذ النشر في مسار `Backend/` بالأمر:
+   - `clasp push`
+3. بعد التنفيذ، أعرض للمستخدم نتيجة النشر بوضوح (نجاح/فشل + سبب الفشل إن وجد).
+4. لا تنفّذ `commit` أو `push` إلى GitHub إلا إذا طلب المستخدم صراحة كلمة **«رفع»**.
+5. إذا لم تكن المصادقة جاهزة (`clasp login`) أو كان `scriptId` غير مهيأ، بلّغ المستخدم بالخطوة المطلوبة لإكمال النشر.
+
+مثال:
+- المستخدم: «نشر»
+- التنفيذ: `Backend/ -> clasp push`
