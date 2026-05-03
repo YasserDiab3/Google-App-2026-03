@@ -758,12 +758,18 @@ const Settings = {
                     </div>
                     <div class="settings-group-content">
                         <div class="content-card">
-                            <div class="card-header flex items-center justify-between">
+                            <div class="card-header flex items-center justify-between flex-wrap gap-2">
                                 <h2 class="card-title"><i class="fas fa-tags ml-2"></i>إدارة أنواع المخالفات</h2>
-                                <button id="add-violation-type-btn" class="btn-primary">
-                                    <i class="fas fa-plus ml-2"></i>
-                                    إضافة نوع مخالفة
-                                </button>
+                                <div class="flex flex-wrap gap-2 items-center">
+                                    <button type="button" id="import-violation-types-btn" class="btn-secondary">
+                                        <i class="fas fa-file-excel ml-2 text-green-700"></i>
+                                        استيراد من Excel
+                                    </button>
+                                    <button type="button" id="add-violation-type-btn" class="btn-primary">
+                                        <i class="fas fa-plus ml-2"></i>
+                                        إضافة نوع مخالفة
+                                    </button>
+                                </div>
                             </div>
                             <div class="card-body">
                                 <div id="violation-types-management">
@@ -2314,6 +2320,177 @@ const Settings = {
         `;
     },
 
+    _violationTypesImportNormalizeKey(h) {
+        return String(h == null ? '' : h).trim().replace(/\s+/g, '_').replace(/[^\w\u0600-\u06FF]/g, '').toLowerCase();
+    },
+
+    _violationTypesImportPick(row, candidates) {
+        const map = {};
+        Object.keys(row || {}).forEach((k) => {
+            map[this._violationTypesImportNormalizeKey(k)] = row[k];
+        });
+        for (let i = 0; i < candidates.length; i++) {
+            const ck = this._violationTypesImportNormalizeKey(candidates[i]);
+            if (map[ck] !== undefined && map[ck] !== null && String(map[ck]).trim() !== '') {
+                return map[ck];
+            }
+        }
+        return '';
+    },
+
+    _parseViolationTypeFineForImport(raw) {
+        if (raw === null || raw === undefined || raw === '') return 0;
+        if (typeof Violations !== 'undefined' && typeof Violations.parseFineAmount === 'function') {
+            return Violations.parseFineAmount(raw);
+        }
+        const n = Number(String(raw).replace(/[^\d.\-]/g, ''));
+        return Number.isFinite(n) && n >= 0 ? n : 0;
+    },
+
+    downloadViolationTypesImportTemplate() {
+        if (typeof XLSX === 'undefined') {
+            Notification.error('مكتبة Excel غير محمّلة. حدّث الصفحة وحاول مرة أخرى.');
+            return;
+        }
+        const headers = ['اسم_النوع', 'الوصف', 'القيمة_المالية'];
+        const example = ['مثال: عدم ارتداء خوذة', 'وصف اختياري', '500'];
+        const wb = XLSX.utils.book_new();
+        const ws = XLSX.utils.aoa_to_sheet([headers, example]);
+        ws['!cols'] = [{ wch: 40 }, { wch: 50 }, { wch: 14 }];
+        XLSX.utils.book_append_sheet(wb, ws, 'أنواع_المخالفات');
+        const note = [
+            ['تعليمات:'],
+            ['• عمود «اسم_النوع» إلزامي.'],
+            ['• إذا وُجد نوع بنفس الاسم مسبقاً، يُحدَّث الوصف والقيمة المالية من الملف.'],
+            ['• «القيمة_المالية» رقم بالجنيه (يمكن استخدام أرقام عربية حسب إعدادات المتصفح).']
+        ];
+        XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(note), 'تعليمات');
+        XLSX.writeFile(wb, `قالب_استيراد_أنواع_المخالفات_${new Date().toISOString().slice(0, 10)}.xlsx`);
+    },
+
+    showViolationTypesImportModal() {
+        if (typeof ViolationTypesManager === 'undefined') {
+            Notification.error('إدارة أنواع المخالفات غير متاحة حالياً.');
+            return;
+        }
+        const modal = document.createElement('div');
+        modal.className = 'modal-overlay';
+        modal.innerHTML = `
+            <div class="modal-content" style="max-width: 640px;">
+                <div class="modal-header">
+                    <h2 class="modal-title"><i class="fas fa-file-excel ml-2 text-green-600"></i>استيراد أنواع مخالفات من Excel</h2>
+                    <button type="button" class="modal-close" onclick="this.closest('.modal-overlay').remove()"><i class="fas fa-times"></i></button>
+                </div>
+                <div class="modal-body space-y-4">
+                    <div class="bg-blue-50 border border-blue-200 rounded p-3 text-sm text-blue-900">
+                        <p class="m-0 mb-2"><i class="fas fa-download ml-2"></i>حمّل القالب (عناوين + صف مثال)، عبّئ الأنواع ثم ارفع الملف.</p>
+                        <button type="button" id="violation-types-import-download-template" class="btn-secondary btn-sm">
+                            <i class="fas fa-file-download ml-2"></i>تحميل قالب Excel
+                        </button>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">ملف Excel (.xlsx)</label>
+                        <input type="file" id="violation-types-import-file" accept=".xlsx,.xls" class="form-input">
+                    </div>
+                    <div id="violation-types-import-preview" class="hidden text-sm text-gray-600 max-h-40 overflow-auto border rounded p-2 bg-gray-50"></div>
+                    <div class="flex justify-end gap-2 pt-2 border-t">
+                        <button type="button" class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">إلغاء</button>
+                        <button type="button" id="violation-types-import-confirm" class="btn-primary" disabled>
+                            <i class="fas fa-upload ml-2"></i>تأكيد الاستيراد
+                        </button>
+                    </div>
+                </div>
+            </div>`;
+        document.body.appendChild(modal);
+        let parsedRows = [];
+        const preview = modal.querySelector('#violation-types-import-preview');
+        const confirmBtn = modal.querySelector('#violation-types-import-confirm');
+        modal.querySelector('#violation-types-import-download-template')?.addEventListener('click', () => this.downloadViolationTypesImportTemplate());
+        modal.querySelector('#violation-types-import-file')?.addEventListener('change', async (e) => {
+            const f = e.target.files && e.target.files[0];
+            parsedRows = [];
+            confirmBtn.disabled = true;
+            preview.classList.add('hidden');
+            if (!f) return;
+            if (typeof XLSX === 'undefined') {
+                Notification.error('مكتبة Excel غير محمّلة.');
+                return;
+            }
+            try {
+                const buf = await f.arrayBuffer();
+                const wb = XLSX.read(buf, { type: 'array' });
+                const sheet = wb.Sheets[wb.SheetNames[0]];
+                const json = XLSX.utils.sheet_to_json(sheet, { defval: '' });
+                parsedRows = Array.isArray(json) ? json : [];
+                preview.innerHTML = `<p>تم قراءة <strong>${parsedRows.length}</strong> صفاً من الورقة «${Utils.escapeHTML(wb.SheetNames[0] || '')}».</p>`;
+                preview.classList.remove('hidden');
+                confirmBtn.disabled = parsedRows.length === 0;
+            } catch (err) {
+                Utils.safeError('استيراد أنواع مخالفات:', err);
+                Notification.error('تعذّر قراءة الملف: ' + (err.message || ''));
+            }
+        });
+        confirmBtn?.addEventListener('click', async () => {
+            if (!parsedRows.length) return;
+            confirmBtn.disabled = true;
+            await this.processViolationTypesImportRows(parsedRows, modal);
+        });
+        modal.addEventListener('click', (ev) => { if (ev.target === modal) modal.remove(); });
+    },
+
+    async processViolationTypesImportRows(rows, modal) {
+        if (typeof ViolationTypesManager === 'undefined') {
+            Notification.error('إدارة الأنواع غير متاحة.');
+            return;
+        }
+        ViolationTypesManager.ensureInitialized();
+        if (!Array.isArray(AppState.appData.violationTypes)) {
+            AppState.appData.violationTypes = [];
+        }
+        const now = new Date().toISOString();
+        let added = 0;
+        let merged = 0;
+        let skipped = 0;
+        for (let i = 0; i < rows.length; i++) {
+            const row = rows[i] || {};
+            const name = String(this._violationTypesImportPick(row, ['اسم_النوع', 'اسم النوع', 'name', 'typename', 'نوع_المخالفة']) || '').trim();
+            if (!name) {
+                skipped++;
+                continue;
+            }
+            const description = String(this._violationTypesImportPick(row, ['الوصف', 'description', 'notes']) || '').trim();
+            const fineRaw = this._violationTypesImportPick(row, ['القيمة_المالية', 'القيمة المالية', 'fineamount', 'fine', 'defaultfine']);
+            const fineAmount = this._parseViolationTypeFineForImport(fineRaw !== '' && fineRaw !== undefined ? fineRaw : 0);
+            const existing = ViolationTypesManager.getTypeByName(name);
+            if (existing) {
+                existing.description = description;
+                existing.fineAmount = fineAmount;
+                existing.updatedAt = now;
+                merged++;
+            } else {
+                AppState.appData.violationTypes.push({
+                    id: Utils.generateId('VTYPE'),
+                    name,
+                    description,
+                    fineAmount,
+                    isDefault: false,
+                    createdAt: now,
+                    updatedAt: now
+                });
+                added++;
+            }
+        }
+        ViolationTypesManager.sortTypes();
+        ViolationTypesManager.ensureViolationsTypeIds();
+        if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
+            try { window.DataManager.save(); } catch (e) { /* ignore */ }
+        }
+        ViolationTypesManager.persist(true);
+        if (modal && modal.parentNode) modal.remove();
+        Notification.success(`تم الاستيراد: ${added} نوع جديد، ${merged} محدّث بالاسم، ${skipped} صف بدون اسم.`);
+        this.refreshViolationTypesList();
+    },
+
     renderViolationTypesList() {
         const types = ViolationTypesManager.getAll();
         if (!types.length) {
@@ -2382,6 +2559,10 @@ const Settings = {
         const addBtn = document.getElementById('add-violation-type-btn');
         if (addBtn) {
             addBtn.onclick = () => this.openViolationTypeModal();
+        }
+        const importBtn = document.getElementById('import-violation-types-btn');
+        if (importBtn) {
+            importBtn.onclick = () => this.showViolationTypesImportModal();
         }
 
         document.querySelectorAll('[data-action="edit-violation-type"]').forEach(btn => {
