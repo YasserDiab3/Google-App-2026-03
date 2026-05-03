@@ -251,6 +251,7 @@ const MODULE_PERMISSIONS_CONFIG = [
     { key: 'action-tracking', label: 'سجل متابعة الإجراءات', icon: 'fa-clipboard-list' },
     { key: 'issue-tracking', label: 'تتبع المشاكل', icon: 'fa-bug', hasDetailedPermissions: true },
     { key: 'change-management', label: 'إدارة التغيرات', icon: 'fa-exchange-alt', hasDetailedPermissions: true },
+    // adminOnly + منح صريح في JSON: يظهر في القائمة لمن ليس مديراً إذا منح المدير issuing-authorities (انظر hasAccess)
     { key: 'issuing-authorities', label: 'المصرح لهم بالتوقيع على تصاريح العمل', icon: 'fa-user-check', parentModule: 'ptw', adminOnly: true }
 ];
 
@@ -1806,15 +1807,29 @@ const Permissions = {
             return true;
         }
 
-        // التحقق من الموديولات المحمية (adminOnly)
+        // التحقق من الموديولات المحمية (adminOnly): مدير فعلي، أو منح صريح في permissions (يتوافق مع شاشة المستخدمين)
         const moduleConfig = MODULE_PERMISSIONS_CONFIG.find(m => m.key === moduleName);
         if (moduleConfig && moduleConfig.adminOnly) {
-            // الموديولات المحمية متاحة لمدير النظام فقط
-            const isAdmin = this.isCurrentUserEffectiveAdmin(user);
-            if (AppState.debugMode && !isAdmin) {
-                Utils.safeLog(`🔒 hasAccess(${moduleName}): موديول محمي - يتطلب صلاحيات مدير`);
+            if (this.isCurrentUserEffectiveAdmin(user)) {
+                return true;
             }
-            return isAdmin;
+            const effectivePermissions = this.getEffectivePermissions(user);
+            if (
+                effectivePermissions &&
+                typeof effectivePermissions === 'object' &&
+                !Array.isArray(effectivePermissions) &&
+                Object.prototype.hasOwnProperty.call(effectivePermissions, moduleName) &&
+                effectivePermissions[moduleName] === true
+            ) {
+                if (AppState.debugMode) {
+                    Utils.safeLog(`✅ hasAccess(${moduleName}): منح صريح على موديول adminOnly`);
+                }
+                return true;
+            }
+            if (AppState.debugMode) {
+                Utils.safeLog(`🔒 hasAccess(${moduleName}): موديول محمي — لا دور مدير ولا صلاحية صريحة`);
+            }
+            return false;
         }
 
         // المدير لديه صلاحيات كاملة
@@ -2753,13 +2768,7 @@ const Permissions = {
      */
     checkBeforeShow(moduleName, suppressMessage = false) {
         if (!this.hasAccess(moduleName)) {
-            // التحقق من إذا كان القسم محمي (adminOnly)
-            const moduleConfig = MODULE_PERMISSIONS_CONFIG.find(m => m.key === moduleName);
-            const isAdminOnly = moduleConfig && moduleConfig.adminOnly;
-
-            const errorMessage = isAdminOnly
-                ? 'هذا القسم متاح لمدير النظام فقط'
-                : 'ليس لديك صلاحية للوصول إلى هذا القسم';
+            const errorMessage = 'ليس لديك صلاحية للوصول إلى هذا القسم';
 
             // عرض الرسالة فقط إذا لم يكن suppressMessage = true (أي عند محاولة الوصول الفعلية)
             if (!suppressMessage) {
