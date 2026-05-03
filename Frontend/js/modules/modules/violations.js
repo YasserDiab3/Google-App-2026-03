@@ -287,6 +287,29 @@ const Violations = {
             violationTypes = AppState.appData.violationTypes || [];
         }
         const typeByName = new Map((violationTypes || []).map(t => [String(t.name || '').trim().toLowerCase(), t]));
+        const uniqueMissingTypeNames = new Set();
+        for (let r = 0; r < rows.length; r++) {
+            const row0 = rows[r] || {};
+            const nm = String(this._violationsImportPick(row0, ['نوع_المخالفة', 'نوع المخالفة', 'violationType']) || '').trim();
+            if (nm && !typeByName.has(nm.toLowerCase())) uniqueMissingTypeNames.add(nm);
+        }
+        if (typeof ViolationTypesManager !== 'undefined' && ViolationTypesManager.ensureInitialized && ViolationTypesManager.addType && ViolationTypesManager.getTypeByName) {
+            try {
+                ViolationTypesManager.ensureInitialized();
+                uniqueMissingTypeNames.forEach((typeName) => {
+                    const lk = typeName.toLowerCase();
+                    try {
+                        const nt = ViolationTypesManager.addType({ name: typeName, description: '', fineAmount: 0 });
+                        typeByName.set(lk, nt);
+                    } catch (addErr) {
+                        const ex = ViolationTypesManager.getTypeByName(typeName);
+                        if (ex) typeByName.set(lk, ex);
+                    }
+                });
+            } catch (batchVtErr) {
+                Utils.safeWarn('استيراد: تعذر إنشاء أنواع مخالفات جديدة من الملف:', batchVtErr);
+            }
+        }
         for (let i = 0; i < rows.length; i++) {
             const row = rows[i] || {};
             try {
@@ -393,6 +416,11 @@ const Violations = {
         GoogleIntegration.autoSave('Violations', AppState.appData.violations).catch(() => {
             Notification.warning('تم الاستيراد محلياً. راجع المزامنة مع الشيت لاحقاً.');
         });
+        if (typeof ViolationTypesManager !== 'undefined' && ViolationTypesManager.ensureViolationsTypeIds) {
+            try {
+                ViolationTypesManager.ensureViolationsTypeIds();
+            } catch (eId) { /* ignore */ }
+        }
         if (modal && modal.parentNode) modal.remove();
         Notification.success(`تم استيراد ${ok} مخالفة${fail ? ` (تخطي ${fail})` : ''}.`);
         if (errors.length && errors.length <= 5) {
@@ -521,10 +549,6 @@ const Violations = {
                         <p class="section-subtitle" style="color: rgba(255,255,255,0.9); font-size: 1rem; margin: 0;">تسجيل ومتابعة مخالفات الموظفين والمقاولين</p>
                     </div>
                     <div class="flex flex-shrink-0 flex-wrap gap-2 justify-center">
-                        <button type="button" id="violations-import-excel-btn" class="btn-primary" style="background: rgba(255,255,255,0.95); color: #166534; border: none; padding: 12px 20px; border-radius: 12px; font-weight: 600; box-shadow: 0 4px 12px rgba(0,0,0,0.15);">
-                            <i class="fas fa-file-excel ml-2"></i>
-                            استيراد Excel
-                        </button>
                         <button type="button" id="add-violation-btn" class="btn-primary" style="background: white; color: #dc2626; border: none; padding: 12px 24px; border-radius: 12px; font-weight: 600; box-shadow: 0 4px 12px rgba(0,0,0,0.15); transition: all 0.3s ease;">
                             <i class="fas fa-plus ml-2"></i>
                             تسجيل مخالفة جديدة
@@ -643,8 +667,21 @@ const Violations = {
                     .map((item) => this.normalizeViolationRecord(item))
                     .filter(Boolean);
             }
+            // لا تستبدل أنواعاً محلية/مستوردة بمصفوفة فارغة من الشيت (استجابة خاطئة أو تأخر) — يمنع الرجوع للافتراضي بعد التحديث
             if (Array.isArray(typesData)) {
-                AppState.appData.violationTypes = typesData;
+                const localTypes = Array.isArray(AppState.appData.violationTypes) ? AppState.appData.violationTypes : [];
+                if (typesData.length > 0) {
+                    AppState.appData.violationTypes = typesData;
+                } else if (localTypes.length === 0) {
+                    AppState.appData.violationTypes = [];
+                }
+                if (typesData.length > 0 || (typesData.length === 0 && localTypes.length === 0)) {
+                    try {
+                        if (!AppState.syncMeta) AppState.syncMeta = { sheets: {}, users: 0, lastSyncTime: 0, userEmail: null };
+                        if (!AppState.syncMeta.sheets) AppState.syncMeta.sheets = {};
+                        AppState.syncMeta.sheets.ViolationTypes = Date.now();
+                    } catch (eMeta) { /* ignore */ }
+                }
             }
 
             try {
@@ -1010,8 +1047,6 @@ const Violations = {
         setTimeout(() => {
             const addBtn = document.getElementById('add-violation-btn');
             if (addBtn) addBtn.addEventListener('click', () => this.showViolationForm());
-            const importBtn = document.getElementById('violations-import-excel-btn');
-            if (importBtn) importBtn.addEventListener('click', () => this.showViolationsImportModal());
             this.bindFilters();
         }, 100);
     },
