@@ -19,6 +19,21 @@ const IssuingAuthorities = {
         contractors: false
     },
 
+    /** مستمعات عامة على document — تُزال قبل إعادة الربط لتجنب التكرار عند كل تحميل/تبويب */
+    _iaDocClickHandler: null,
+    _iaDocChangeHandler: null,
+
+    _iaRemoveGlobalDelegation() {
+        if (this._iaDocClickHandler) {
+            document.removeEventListener('click', this._iaDocClickHandler, true);
+            this._iaDocClickHandler = null;
+        }
+        if (this._iaDocChangeHandler) {
+            document.removeEventListener('change', this._iaDocChangeHandler, true);
+            this._iaDocChangeHandler = null;
+        }
+    },
+
     /** فلترة القائمة (مشابه لتبويب زيارات العيادة) */
     _listFilters: {
         search: '',
@@ -688,11 +703,15 @@ const IssuingAuthorities = {
         const section = document.getElementById('issuing-authorities-section');
         if (!section) return;
 
-        await this._fetchContractorOptions();
+        // رسم الواجهة فوراً مع مؤشر التحميل داخل الجدول — لا ننتظر جلب المقاولين
         section.innerHTML = this._renderShell();
         this._injectStyles();
+        this._bustIssuingAuthoritiesSheetCache();
 
-        await this._fetchData();
+        await Promise.all([
+            this._fetchContractorOptions(),
+            this._fetchData()
+        ]);
         this._renderTable();
         this._attachEvents();
         if (typeof UI !== 'undefined' && typeof UI.addNavigationIconsAfterRender === 'function') {
@@ -1695,6 +1714,8 @@ const IssuingAuthorities = {
         const root = document.getElementById('ia-module-root');
         if (!root) return;
 
+        this._iaRemoveGlobalDelegation();
+
         // زر إضافة
         const addBtn = document.getElementById('ia-add-btn');
         if (addBtn) addBtn.addEventListener('click', () => this._openModal());
@@ -1718,6 +1739,7 @@ const IssuingAuthorities = {
                 if (!section) return;
                 section.innerHTML = this._renderShell();
                 this._injectStyles();
+                this._bustIssuingAuthoritiesSheetCache();
                 await this._fetchData();
                 this._renderTable();
                 this._attachEvents();
@@ -1727,8 +1749,10 @@ const IssuingAuthorities = {
             });
         });
 
-        // أزرار عرض وتعديل وحذف (event delegation)
-        document.addEventListener('click', (e) => {
+        // أزرار عرض وتعديل وحذف (تفويض — داخل قسم الموديول فقط)
+        this._iaDocClickHandler = (e) => {
+            const sec = document.getElementById('issuing-authorities-section');
+            if (!sec || !sec.contains(e.target)) return;
             const viewBtn = e.target.closest('.ia-btn-view');
             if (viewBtn) {
                 const id = viewBtn.getAttribute('data-id');
@@ -1749,7 +1773,8 @@ const IssuingAuthorities = {
                 const name = deleteBtn.getAttribute('data-name');
                 this._confirmDelete(id, name);
             }
-        });
+        };
+        document.addEventListener('click', this._iaDocClickHandler, true);
 
         // Modal controls
         const modalOverlay = document.getElementById('ia-modal-overlay');
@@ -1763,8 +1788,10 @@ const IssuingAuthorities = {
             });
         }
 
-        // Radio visual feedback
-        document.addEventListener('change', (e) => {
+        // Radio visual feedback + نوع الشخص (داخل القسم فقط)
+        this._iaDocChangeHandler = (e) => {
+            const sec = document.getElementById('issuing-authorities-section');
+            if (!sec || !sec.contains(e.target)) return;
             if (e.target.type === 'radio' && e.target.name && e.target.name.startsWith('permit_')) {
                 const group = document.querySelectorAll(`input[name="${e.target.name}"]`);
                 group.forEach(radio => {
@@ -1777,7 +1804,8 @@ const IssuingAuthorities = {
             if (e.target.id === 'ia-f-person-type') {
                 this._togglePersonTypeInputs();
             }
-        });
+        };
+        document.addEventListener('change', this._iaDocChangeHandler, true);
 
         // Delete modal
         document.getElementById('ia-delete-cancel')?.addEventListener('click', () => {
