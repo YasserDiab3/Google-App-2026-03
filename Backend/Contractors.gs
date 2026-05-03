@@ -701,6 +701,11 @@ function getAllContractorApprovalRequests(filters = {}) {
         
         // ✅ معالجة evaluationData للتأكد من تحليلها بشكل صحيح
         data = data.map(function(record) {
+            if (record) {
+                if ((!record.status || String(record.status).trim() === '') && record.Status) {
+                    record.status = String(record.Status).trim();
+                }
+            }
             if (record && record.evaluationData) {
                 // محاولة تحليل evaluationData إذا كانت نصاً
                 var evalData = record.evaluationData;

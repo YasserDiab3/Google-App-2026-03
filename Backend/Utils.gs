@@ -2603,6 +2603,38 @@ function appendToSheet(sheetName, data, spreadsheetId = null) {
 }
 
 /**
+ * يزامن حقول السجل مع أسماء رؤوس الأعمدة الفعلية في الشيت (مثل Status مقابل status).
+ * بدون ذلك يبقى عمود الحالة القديم pending رغم تعيين request.status في الكود.
+ */
+function syncContractorRequestRowForSheetHeaders_(record, headers, sheetName) {
+    if (sheetName !== 'ContractorApprovalRequests' && sheetName !== 'ContractorDeletionRequests') return;
+    if (!record || !headers || !headers.length) return;
+    var fields = ['status', 'approvedAt', 'approvedBy', 'approvedByName', 'rejectedAt', 'rejectedBy', 'rejectedByName', 'rejectionReason', 'updatedAt'];
+    fields.forEach(function (fl) {
+        var val = record[fl];
+        if (val === undefined || val === null || val === '') {
+            for (var k in record) {
+                if (!record.hasOwnProperty(k)) continue;
+                if (String(k).toLowerCase() !== fl) continue;
+                var v = record[k];
+                if (v !== undefined && v !== null && v !== '') {
+                    val = v;
+                    break;
+                }
+            }
+        }
+        if (val === undefined || val === null) return;
+        for (var i = 0; i < headers.length; i++) {
+            var h = headers[i];
+            if (!h) continue;
+            if (String(h).trim().toLowerCase() === fl) {
+                record[h] = val;
+            }
+        }
+    });
+}
+
+/**
  * تحديث صف واحد فقط في الورقة (بدون حذف الصفوف الأخرى)
  * @param {string} sheetName - اسم الورقة
  * @param {string} recordId - معرف السجل (id)
@@ -2693,6 +2725,8 @@ function updateSingleRowInSheet(sheetName, recordId, updateData, spreadsheetId =
         if (!hasAnyValidHeader) {
             return { success: false, message: 'لا توجد رؤوس صالحة في الورقة.' };
         }
+
+        syncContractorRequestRowForSheetHeaders_(record, headers, sheetName);
         
         // معالجة البيانات قبل الكتابة
         const processDataItem = function(item) {
