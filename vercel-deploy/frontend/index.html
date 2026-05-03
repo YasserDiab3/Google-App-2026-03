@@ -9240,7 +9240,7 @@
                    style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://fonts.gstatic.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://unpkg.com https://maps.googleapis.com;
                    font-src 'self' https://fonts.gstatic.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://unpkg.com;
                    img-src 'self' data: blob: https: https://*.googleapis.com https://*.gstatic.com https://*.openstreetmap.org;
-                   connect-src 'self' https://script.google.com https://*.googleusercontent.com https://*.googleapis.com https://maps.googleapis.com https://graph.microsoft.com https://login.microsoftonline.com https://oauth2.googleapis.com https://api.ipify.org https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://vercel.live https://*.vercel.live;
+                   connect-src 'self' https://script.google.com https://*.googleusercontent.com https://*.googleapis.com https://maps.googleapis.com https://graph.microsoft.com https://login.microsoftonline.com https://oauth2.googleapis.com https://api.ipify.org https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://vercel.live https://*.vercel.live https://*.supabase.co;
                    frame-src 'self' https://vercel.live https://*.vercel.live https://*.vercel.app;
                    manifest-src 'self' blob:;
                    base-uri 'self';
@@ -12738,12 +12738,6 @@
         <!-- 5. Events (Event listeners and initialization) -->
         <script src="js/modules/app-events.js" defer></script>
         
-        <!-- Test Module Loading - Debug 503 errors -->
-        <script src="test-module-loading.js" defer></script>
-
-        <!-- Performance Test - اختبار تحسينات الأداء -->
-        <script src="js/performance-test.js" defer></script>
-
         <!-- Login Init - تحميل مباشر -->
         <script src="login-init-fixed.js?v=8" defer></script>
 
