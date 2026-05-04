@@ -5702,12 +5702,61 @@ body.app-active {
 }
 
 /* ===== مراقبة السلوكيات — نموذج تسجيل تصرف ===== */
-.bhm-registration-modal {
-    max-width: 820px;
-    width: calc(100% - 2rem);
+/* أعلى تخصيصاً من .modal-content لاحقاً في الملف (كان max-width: 90vw يتجاوز 820px) */
+.modal-content.bhm-registration-modal {
+    max-width: min(820px, calc(100vw - 2rem));
+    width: 100%;
     border-radius: 20px;
     overflow: hidden;
     box-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.25);
+}
+
+.modal-content.bhm-registration-modal .bhm-modal-body {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
+}
+
+/* مودال المقاول: عرض أضيق، تمرير للوحة، منع تسرب أفقي */
+.modal-overlay.bhmc-contractor-overlay {
+    align-items: flex-start;
+    padding: 0.75rem;
+    overflow-y: auto;
+}
+
+.modal-overlay.bhmc-contractor-overlay .modal-content.bhmc-contractor-dialog {
+    max-width: min(720px, calc(100vw - 1.5rem));
+    max-height: min(92vh, calc(100dvh - 2rem));
+    margin: auto;
+}
+
+.modal-overlay.bhmc-contractor-overlay .behavior-form-wrapper {
+    max-width: 100%;
+    overflow-x: hidden;
+    box-sizing: border-box;
+}
+
+.modal-overlay.bhmc-contractor-overlay .bhm-form-inner {
+    min-width: 0;
+}
+
+/* تفاصيل التصرف (مقاول): عمود واحد ثم صف للتاريخ والتقييم */
+.bhmc-contractor-detail-grid {
+    display: grid;
+    gap: 1rem;
+    grid-template-columns: 1fr;
+}
+
+@media (min-width: 640px) {
+    .bhmc-contractor-detail-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .bhmc-contractor-detail-grid .bhmc-contractor-detail-type {
+        grid-column: 1 / -1;
+    }
 }
 
 .bhm-modal-body {

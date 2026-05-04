@@ -241,7 +241,7 @@ const BehaviorMonitoring = {
                             </h1>
                             <p class="section-subtitle">تسجيل ومتابعة سلوكيات الموظفين والمقاولين</p>
                         </div>
-                        <div class="flex items-center gap-2">
+                        <div class="flex items-center gap-2 flex-wrap justify-end">
                             <button id="behavior-refresh-btn" class="btn-secondary">
                                 <i class="fas fa-sync-alt ml-2"></i>
                                 تحديث
@@ -249,6 +249,10 @@ const BehaviorMonitoring = {
                             <button id="behavior-add-btn" class="btn-primary">
                                 <i class="fas fa-plus ml-2"></i>
                                 تسجيل تصرف جديد
+                            </button>
+                            <button id="behavior-add-contractor-header-btn" type="button" class="btn-secondary">
+                                <i class="fas fa-users-cog ml-2"></i>
+                                تسجيل تصرف مقاول
                             </button>
                         </div>
                     </div>
@@ -1081,6 +1085,11 @@ const BehaviorMonitoring = {
         this._setupTimeoutId = setTimeout(() => {
             const addBtn = document.getElementById('behavior-add-btn');
             if (addBtn) addBtn.addEventListener('click', () => this.showForm(), { passive: true });
+
+            const addContractorHeaderBtn = document.getElementById('behavior-add-contractor-header-btn');
+            if (addContractorHeaderBtn) {
+                addContractorHeaderBtn.addEventListener('click', () => this.showContractorForm(null), { passive: true });
+            }
 
             const refreshBtn = document.getElementById('behavior-refresh-btn');
             if (refreshBtn) refreshBtn.addEventListener('click', () => {
@@ -2202,8 +2211,8 @@ const BehaviorMonitoring = {
                             </div>
                         </div>
                         <div class="bhm-section-body">
-                            <div class="bhm-grid bhm-grid-3">
-                                <div class="bhm-field">
+                            <div class="bhm-grid bhmc-contractor-detail-grid">
+                                <div class="bhm-field bhmc-contractor-detail-type">
                                     <div class="bhm-label-row">
                                         <label for="${ids.behaviorType}" class="bhm-label mb-0">نوع التصرف <span class="bhm-req">*</span></label>
                                         <span class="badge ${this.getBehaviorTypeBadgeClass(data?.behaviorType)} bhm-type-chip" id="${ids.typeBadge}">${Utils.escapeHTML(data?.behaviorType || '—')}</span>
@@ -2499,11 +2508,11 @@ const BehaviorMonitoring = {
             try { await Permissions.ensureFormSettingsState(); } catch (e) { /* ignore */ }
         }
         const modal = document.createElement('div');
-        modal.className = 'modal-overlay';
+        modal.className = 'modal-overlay bhmc-contractor-overlay';
         const uid = `bhmc-modal-${Date.now()}`;
         const presented = data ? this.presentContractorBehavior(data) : null;
         modal.innerHTML = `
-            <div class="modal-content behavior-modal bhm-registration-modal">
+            <div class="modal-content behavior-modal bhm-registration-modal bhmc-contractor-dialog">
                 <div class="bhm-modal-hero">
                     <div class="bhm-modal-hero-text">
                         <p class="bhm-modal-kicker"><i class="fas fa-users-cog ml-2"></i>تصرفات المقاولين</p>
