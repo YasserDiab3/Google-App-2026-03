@@ -482,6 +482,27 @@ const IssuingAuthorities = {
         return role === 'admin' || role === 'administrator';
     },
 
+    /** وصول لشاشة المديول (صلاحية issuing-authorities في JSON / القائمة) */
+    hasIssuingAuthoritiesModuleAccess() {
+        return typeof Permissions !== 'undefined' && typeof Permissions.hasAccess === 'function'
+            && Permissions.hasAccess('issuing-authorities');
+    },
+
+    /**
+     * مدير النظام بالدور فقط (لا يشمل manage-modules ولا صلاحيات JSON الأخرى).
+     * الحذف وتعديل السجلات القائمة يقتصران عليه؛ الإضافة لمن لهم صلاحية المديول.
+     */
+    isStrictSystemAdmin() {
+        const user = AppState && AppState.currentUser;
+        if (!user) return false;
+        const role = user.role == null || user.role === '' ? '' : String(user.role).trim();
+        if (typeof Permissions !== 'undefined' && typeof Permissions.isAdminRole === 'function') {
+            return Permissions.isAdminRole(role);
+        }
+        const low = role.toLowerCase();
+        return low === 'admin' || low === 'administrator';
+    },
+
     /** نفس مصدر قائمة الإدارات المستخدم في تصاريح العمل (PTW). */
     _getDepartmentOptionsLikePTW() {
         try {
@@ -781,8 +802,7 @@ const IssuingAuthorities = {
     },
 
     _getBaseRecordsForView() {
-        const isAdmin = this.isAdmin();
-        if (!isAdmin) return this._data.filter(r => r.isActive !== false);
+        if (!this.isStrictSystemAdmin()) return this._data.filter(r => r.isActive !== false);
         return this._data.slice();
     },
 
@@ -792,7 +812,7 @@ const IssuingAuthorities = {
         const st = String(f.status || '').trim();
         if (st === 'active') {
             list = list.filter(r => r.isActive !== false);
-        } else if (st === 'inactive' && this.isAdmin()) {
+        } else if (st === 'inactive' && this.isStrictSystemAdmin()) {
             list = list.filter(r => r.isActive === false);
         }
         const fac = String(f.factory || '').trim();
@@ -843,12 +863,12 @@ const IssuingAuthorities = {
     _renderFiltersHtml() {
         const f = this._listFilters;
         const esc = (typeof Utils !== 'undefined' && Utils.escapeHTML) ? Utils.escapeHTML : (s) => String(s == null ? '' : s);
-        const isAdmin = this.isAdmin();
+        const isStrictAdmin = this.isStrictSystemAdmin();
         const { factories, departments } = this._collectFilterOptionLists();
         const statusOpts = `
             <option value="" ${!f.status ? 'selected' : ''}>${esc(this.t('module.issuingAuthorities.filter.all', 'الكل'))}</option>
             <option value="active" ${f.status === 'active' ? 'selected' : ''}>${esc(this.t('module.issuingAuthorities.filter.activeOnly', 'نشط فقط'))}</option>
-            ${isAdmin ? `<option value="inactive" ${f.status === 'inactive' ? 'selected' : ''}>${esc(this.t('module.issuingAuthorities.filter.inactiveOnly', 'غير نشط فقط'))}</option>` : ''}`;
+            ${isStrictAdmin ? `<option value="inactive" ${f.status === 'inactive' ? 'selected' : ''}>${esc(this.t('module.issuingAuthorities.filter.inactiveOnly', 'غير نشط فقط'))}</option>` : ''}`;
         const factoryOpts = `<option value="">${esc(this.t('module.issuingAuthorities.filter.allFactories', 'كل المصانع'))}</option>` + factories.map(v =>
             `<option value="${esc(v)}" ${v === f.factory ? 'selected' : ''}>${esc(v)}</option>`
         ).join('');
@@ -1260,7 +1280,7 @@ const IssuingAuthorities = {
     },
 
     _renderShell() {
-        const isAdmin = this.isAdmin();
+        const canAdd = this.hasIssuingAuthoritiesModuleAccess();
         const esc = (typeof Utils !== 'undefined' && Utils.escapeHTML) ? Utils.escapeHTML : (s) => String(s == null ? '' : s);
         const secSub = esc(this._tReplace('module.issuingAuthorities.sectionSubtitle', 'عرض القائمة: {{cat}} — {{tag}}', {
             cat: this._categoryTitle(),
@@ -1291,7 +1311,7 @@ const IssuingAuthorities = {
                         </p>
                     </div>
                     <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
-                        ${isAdmin ? `
+                        ${canAdd ? `
                         <button class="btn-primary" id="ia-add-btn" style="gap:6px;">
                             <i class="fas fa-plus"></i>
                             <span>${esc(this.t('module.issuingAuthorities.btn.addPerson', 'إضافة شخص'))}</span>
@@ -1605,7 +1625,8 @@ const IssuingAuthorities = {
             return;
         }
 
-        const isAdmin = this.isAdmin();
+        const canAdd = this.hasIssuingAuthoritiesModuleAccess();
+        const canEditOrDelete = this.isStrictSystemAdmin();
         const baseCount = this._getBaseRecordsForView().length;
         const records = this._getFilteredRecords();
 
@@ -1630,7 +1651,7 @@ const IssuingAuthorities = {
                 : this.t('module.issuingAuthorities.empty.noRecords', 'لا يوجد سجلات بعد');
             const emptyHint = hasAnyData
                 ? this.t('module.issuingAuthorities.empty.hintFiltered', 'جرّب تعديل البحث أو الفلاتر أعلاه.')
-                : (isAdmin
+                : (canAdd
                     ? this._tReplace('module.issuingAuthorities.empty.hintAdmin', 'انقر على "{{add}}" لإضافة أول سجل في قائمة {{cat}}.', {
                         add: this.t('module.issuingAuthorities.btn.addPerson', 'إضافة شخص'),
                         cat: this._categoryTitle()
@@ -1686,7 +1707,7 @@ const IssuingAuthorities = {
                 <button type="button" class="ia-btn-view" data-id="${esc(rec.id)}" title="${tView}" style="padding:4px 8px;border:none;background:none;cursor:pointer;color:#0d9488;">
                     <i class="fas fa-eye"></i>
                 </button>
-                ${isAdmin ? `
+                ${canEditOrDelete ? `
                 <button type="button" class="ia-btn-edit" data-id="${esc(rec.id)}" title="${tEdit}" style="padding:4px 8px;border:none;background:none;cursor:pointer;color:#2563eb;">
                     <i class="fas fa-edit"></i>
                 </button>
@@ -1988,7 +2009,11 @@ const IssuingAuthorities = {
     },
 
     async _openModal(record, opts) {
-        const readOnly = !!(opts && opts.readOnly);
+        let readOnly = !!(opts && opts.readOnly);
+        // تعديل بيانات سجل قائم: مدير النظام (الدور) فقط؛ غيره يُعرض للقراءة فقط
+        if (record && !readOnly && !this.isStrictSystemAdmin()) {
+            readOnly = true;
+        }
         const modal = document.getElementById('ia-modal-overlay');
         const title = document.getElementById('ia-modal-title');
         const body  = document.getElementById('ia-modal-body');
@@ -2039,6 +2064,14 @@ const IssuingAuthorities = {
 
     async _saveModal() {
         if (this._modalReadOnly) return;
+        if (this._currentEditId && !this.isStrictSystemAdmin()) {
+            this._iaNotify(this.t('module.issuingAuthorities.notify.saveEditRequiresSystemAdmin', 'لا يمكن حفظ تعديل السجل إلا من قبل مدير النظام.'), 'error');
+            return;
+        }
+        if (!this.hasIssuingAuthoritiesModuleAccess()) {
+            this._iaNotify(this.t('module.issuingAuthorities.notify.saveFail', 'فشل الحفظ'), 'error');
+            return;
+        }
         const personType = (document.getElementById('ia-f-person-type')?.value || 'employee').toLowerCase() === 'contractor'
             ? 'contractor'
             : 'employee';
@@ -2169,6 +2202,10 @@ const IssuingAuthorities = {
     },
 
     _confirmDelete(id, name) {
+        if (!this.isStrictSystemAdmin()) {
+            this._iaNotify(this.t('module.issuingAuthorities.notify.deleteRequiresSystemAdmin', 'الحذف متاح لمدير النظام فقط.'), 'error');
+            return;
+        }
         const modal = document.getElementById('ia-delete-modal');
         const msg   = document.getElementById('ia-delete-msg');
         if (!modal || !msg) return;
@@ -2187,6 +2224,10 @@ const IssuingAuthorities = {
     },
 
     async _deleteRecord(id) {
+        if (!this.isStrictSystemAdmin()) {
+            this._iaNotify(this.t('module.issuingAuthorities.notify.deleteRequiresSystemAdmin', 'الحذف متاح لمدير النظام فقط.'), 'error');
+            return;
+        }
         try {
             const userData = AppState && AppState.currentUser ? AppState.currentUser : {};
             const delCategory = this._categoryForWrite(null, id);
