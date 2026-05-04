@@ -55,6 +55,7 @@ const RealtimeSyncManager = {
             
             // موديولات السلامة المتقدمة
             'behaviorMonitoring',   // مراقبة السلوك
+            'contractorBehaviorMonitoring', // تصرفات المقاولين
             'chemicalSafety',       // السلامة الكيميائية
             'dailyObservations',    // الملاحظات اليومية
             
@@ -925,7 +926,7 @@ const RealtimeSyncManager = {
             'violations': ['violations'],
             'contractors': ['contractors', 'approvedContractors'],
             'employees': ['employees', 'externalWorkforceMonthly'],
-            'behavior-monitoring': ['behaviorMonitoring'],
+            'behavior-monitoring': ['behaviorMonitoring', 'contractorBehaviorMonitoring'],
             'chemical-safety': ['chemicalSafety'],
             'daily-observations': ['dailyObservations'],
             'iso': ['isoDocuments'],  // تصحيح: isoDocuments في AppState
@@ -969,6 +970,7 @@ const RealtimeSyncManager = {
             employees: 'Employees',
             externalWorkforceMonthly: 'ExternalWorkforceMonthly',
             behaviorMonitoring: 'BehaviorMonitoring',
+            contractorBehaviorMonitoring: 'ContractorBehaviorMonitoring',
             chemicalSafety: 'ChemicalSafety',
             dailyObservations: 'DailyObservations',
             isoDocuments: 'ISODocuments',
@@ -1032,6 +1034,7 @@ const RealtimeSyncManager = {
             
             // موديولات السلامة المتقدمة
             'behaviorMonitoring': 'BehaviorMonitoring',
+            'contractorBehaviorMonitoring': 'ContractorBehaviorMonitoring',
             'chemicalSafety': 'ChemicalSafety',
             'dailyObservations': 'DailyObservations',
             
@@ -1564,6 +1567,16 @@ const RealtimeSyncManager = {
             'dailyObservations': () => {
                 if (typeof DailyObservations !== 'undefined' && DailyObservations.load) {
                     DailyObservations.load();
+                }
+            },
+            'behaviorMonitoring': () => {
+                if (typeof BehaviorMonitoring !== 'undefined' && BehaviorMonitoring.refreshCurrentTab) {
+                    BehaviorMonitoring.refreshCurrentTab();
+                }
+            },
+            'contractorBehaviorMonitoring': () => {
+                if (typeof BehaviorMonitoring !== 'undefined' && BehaviorMonitoring.refreshCurrentTab) {
+                    BehaviorMonitoring.refreshCurrentTab();
                 }
             },
             'ptw': () => {

@@ -2449,6 +2449,7 @@ const GoogleIntegration = {
                 'Employees': AppState.appData.employees || [],
                 'ExternalWorkforceMonthly': AppState.appData.externalWorkforceMonthly || [],
                 'BehaviorMonitoring': AppState.appData.behaviorMonitoring || [],
+                'ContractorBehaviorMonitoring': AppState.appData.contractorBehaviorMonitoring || [],
                 'ChemicalSafety': AppState.appData.chemicalSafety || [],
                 'DailyObservations': AppState.appData.dailyObservations || [],
                 'DailySafetyCheckList': AppState.appData.dailySafetyCheckList || [],
@@ -2699,6 +2700,7 @@ const GoogleIntegration = {
                 'ContractorApprovalRequests', // ✅ إضافة طلبات اعتماد المقاولين
                 'ContractorDeletionRequests', // ✅ إضافة طلبات حذف المقاولين
                 'BehaviorMonitoring',
+                'ContractorBehaviorMonitoring',
                 'ChemicalSafety',
                 'DailyObservations',
                 'DailySafetyCheckList',
@@ -2780,6 +2782,7 @@ const GoogleIntegration = {
                 'Employees': 'employees',
                 'ExternalWorkforceMonthly': 'externalWorkforceMonthly',
                 'BehaviorMonitoring': 'behaviorMonitoring',
+                'ContractorBehaviorMonitoring': 'contractorBehaviorMonitoring',
                 'ChemicalSafety': 'chemicalSafety',
                 'Chemical_Register': 'chemicalRegister',
                 'DailyObservations': 'dailyObservations',
@@ -2835,7 +2838,7 @@ const GoogleIntegration = {
                 'violations': ['Violations', 'ViolationTypes', 'Blacklist_Register'],
                 'contractors': ['Contractors', 'ApprovedContractors', 'ContractorEvaluations', 'ContractorApprovalRequests', 'ContractorDeletionRequests'], // ✅ إضافة طلبات المقاولين
                 'employees': ['Employees', 'ExternalWorkforceMonthly'],
-                'behavior-monitoring': ['BehaviorMonitoring'],
+                'behavior-monitoring': ['BehaviorMonitoring', 'ContractorBehaviorMonitoring'],
                 'chemical-safety': ['ChemicalSafety', 'Chemical_Register'],
                 'daily-observations': ['DailyObservations'],
                 'iso': ['ISODocuments', 'ISOProcedures', 'ISOForms', 'HSEAudits'],
@@ -2880,7 +2883,7 @@ const GoogleIntegration = {
                 // - training: تسجيل تدريب للمقاولين
                 // - ptw: إضافة مقاولين في تصاريح العمل (teamMembers, authorizedParty)
                 // - violations: تسجيل مخالفات للمقاولين
-                const modulesNeedingContractors = ['clinic', 'training', 'ptw', 'violations'];
+                const modulesNeedingContractors = ['clinic', 'training', 'ptw', 'violations', 'behavior-monitoring'];
                 const needsContractors = modulesNeedingContractors.some(module => accessibleModules.includes(module));
                 
                 if (needsContractors && !accessibleModules.includes('contractors')) {

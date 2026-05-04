@@ -54,6 +54,40 @@ const Violations = {
         };
     },
 
+    /**
+     * القيمة المالية المعروضة: إن كانت 0 أو فارغة في السجل لكن نوع المخالفة له غرامة افتراضية، تُعرض غرامة النوع فوراً (بدون انتظار مزامنة الشيت).
+     */
+    getEffectiveFineAmount(record) {
+        const norm = this.normalizeViolationRecord(record);
+        if (!norm) return 0;
+        const stored = this.parseFineAmount(norm.fineAmount);
+        if (stored > 0) return stored;
+        let types = [];
+        try {
+            if (typeof ViolationTypesManager !== 'undefined' && ViolationTypesManager.ensureInitialized && ViolationTypesManager.getAll) {
+                ViolationTypesManager.ensureInitialized();
+                types = ViolationTypesManager.getAll() || [];
+            }
+        } catch (e) {
+            types = [];
+        }
+        if (!types.length && typeof AppState !== 'undefined' && Array.isArray(AppState?.appData?.violationTypes)) {
+            types = AppState.appData.violationTypes;
+        }
+        const id = String(norm.violationTypeId || '').trim();
+        const name = String(norm.violationType || '').trim().toLowerCase();
+        let typeFine = 0;
+        if (id) {
+            const t = types.find((x) => x && String(x.id) === id);
+            if (t) typeFine = this.parseFineAmount(t.fineAmount);
+        }
+        if (typeFine <= 0 && name) {
+            const t = types.find((x) => x && String(x.name || '').trim().toLowerCase() === name);
+            if (t) typeFine = this.parseFineAmount(t.fineAmount);
+        }
+        return typeFine > 0 ? typeFine : stored;
+    },
+
     _normKeyStr(v) {
         return String(v == null ? '' : v).trim().toLowerCase();
     },
@@ -527,15 +561,26 @@ const Violations = {
             const cacheAge = lastSync ? (Date.now() - parseInt(lastSync, 10)) : Infinity;
             const CACHE_DURATION = 10 * 60 * 1000; // 10 دقائق
             const isStale = cacheAge >= CACHE_DURATION;
-            if ((!hasViolationsData || isStale) && typeof GoogleIntegration !== 'undefined' && GoogleIntegration.readFromSheets) {
+            const canFetch = typeof GoogleIntegration !== 'undefined' && GoogleIntegration.readFromSheets;
+            const isEnabled = AppState?.googleConfig?.appsScript?.enabled && AppState?.googleConfig?.appsScript?.scriptUrl;
+            if (!hasViolationsData && canFetch && isEnabled) {
                 try {
-                    await Promise.race([
-                        this.ensureViolationsCoreDataLoaded({ force: isStale && hasViolationsData }),
-                        new Promise(resolve => setTimeout(resolve, 1200)),
-                    ]);
+                    await this.ensureViolationsCoreDataLoaded({ force: true });
                 } catch (e) {
-                    // تجاهل — سنعرض البيانات المحلية ثم نحدّث في الخلفية
+                    // عرض محلي ثم يكمّل التحديث في الخلفية
                 }
+            } else if (isStale && hasViolationsData && canFetch && isEnabled) {
+                void this.ensureViolationsCoreDataLoaded({ force: true }).then(() => {
+                    try {
+                        const stats = document.getElementById('violations-stats-cards');
+                        if (stats) stats.outerHTML = this.renderAllViolationsStats();
+                        const list = document.getElementById('violations-list');
+                        if (list) list.innerHTML = this.renderViolationsList();
+                        const filters = document.getElementById('violations-filters-container');
+                        if (filters) filters.innerHTML = this.renderFilters();
+                        this.bindFilters();
+                    } catch (e2) { /* ignore */ }
+                });
             }
 
             section.innerHTML = `
@@ -853,7 +898,12 @@ const Violations = {
                 return [];
             }
             const violations = (AppState.appData.violations || [])
-                .map((item) => this.normalizeViolationRecord(item))
+                .map((item) => {
+                    const n = this.normalizeViolationRecord(item);
+                    if (!n) return null;
+                    const eff = this.getEffectiveFineAmount(n);
+                    return eff === n.fineAmount ? n : { ...n, fineAmount: eff };
+                })
                 .filter(Boolean);
             const filters = this.currentFilters || {};
 
@@ -2197,6 +2247,7 @@ const Violations = {
             violationData = violationDataOrId;
         }
         violationData = this.normalizeViolationRecord(violationData);
+        const effectiveFineForForm = violationData ? this.getEffectiveFineAmount(violationData) : 0;
         const isEdit = !!violationData;
         const recordPersonType = String(violationData?.personType || '').trim().toLowerCase();
         const isContractorRecord = recordPersonType === 'contractor' || (!!violationData?.contractorName && !violationData?.employeeName);
@@ -2237,7 +2288,7 @@ const Violations = {
             : type.name === selectedTypeName);
         const legacyTypeOption = !hasSelectedType && selectedTypeName
             ? `
-                <option value="${Utils.escapeHTML(selectedTypeName)}" data-type-id="${Utils.escapeHTML(selectedTypeId)}" data-fine-amount="${Number(violationData?.fineAmount || 0)}" selected>
+                <option value="${Utils.escapeHTML(selectedTypeName)}" data-type-id="${Utils.escapeHTML(selectedTypeId)}" data-fine-amount="${Number(effectiveFineForForm)}" selected>
                     ${Utils.escapeHTML(selectedTypeName)} (غير معرف)
                 </option>
             `
@@ -2351,7 +2402,7 @@ const Violations = {
                                     القيمة المالية (ج.م)
                                 </label>
                                 <input type="number" id="violation-fine-amount" class="form-input" min="0" step="1"
-                                    value="${Number(violationData?.fineAmount || 0)}"
+                                    value="${Number(effectiveFineForForm)}"
                                     placeholder="القيمة المالية">
                                 <p class="text-xs text-gray-500 mt-1">
                                     ${canManagerEditFineAmount ? 'يتم التحديد تلقائياً ويمكنك التعديل لأنك مدير.' : 'يتم التحديد تلقائياً حسب نوع المخالفة، والتعديل متاح للمدير فقط.'}
@@ -2550,7 +2601,7 @@ const Violations = {
             violationTypeSelect.addEventListener('input', () => applyFineAmountFromType({ force: true }));
         }
         if (fineAmountInput && canManagerEditFineAmount && violationData && violationData.fineAmount !== undefined && violationData.fineAmount !== null) {
-            fineAmountInput.value = String(Number(violationData.fineAmount) || 0);
+            fineAmountInput.value = String(Number(effectiveFineForForm));
         } else {
             applyFineAmountFromType({ force: true });
         }
@@ -3124,22 +3175,33 @@ const Violations = {
                     window.DataManager.save();
                 }
 
-                // 2. إغلاق النموذج فوراً بعد الحفظ في الذاكرة
+                // مزامنة الشيت قبل إعادة بناء الواجهة حتى لا تُستبدل القائمة بنسخة قديمة من الخادم
+                let remoteOk = true;
+                try {
+                    if (typeof GoogleIntegration !== 'undefined' && GoogleIntegration.autoSave) {
+                        const saveRes = await GoogleIntegration.autoSave('Violations', AppState.appData.violations);
+                        if (saveRes && saveRes.success === false) remoteOk = false;
+                    }
+                } catch (err) {
+                    remoteOk = false;
+                    if (AppState.debugMode) Utils.safeWarn('خطأ في حفظ Google Sheets:', err);
+                }
+                if (remoteOk) {
+                    try { localStorage.setItem('violations_last_sync', String(Date.now())); } catch (eLs) { /* ignore */ }
+                } else {
+                    Notification.warning('تم الحفظ محلياً لكن فشل الحفظ في Google Sheets');
+                }
+
+                // 2. إغلاق النموذج بعد اكتمال الحفظ البعيد (عند التوفر)
                 modal.remove();
-                
-                // 3. عرض رسالة نجاح فورية
+
+                // 3. عرض رسالة نجاح
                 Notification.success(`تم ${isEdit ? 'تحديث' : 'تسجيل'} المخالفة بنجاح`);
-                
-                // 4. تحديث القائمة فوراً
+
+                // 4. تحديث القائمة والكروت من نفس البيانات المحدثة
                 if (typeof Violations !== 'undefined' && Violations.load) {
                     Violations.load();
                 }
-                
-                // 5. معالجة المهام الخلفية (Google Sheets) في الخلفية
-                GoogleIntegration.autoSave('Violations', AppState.appData.violations).catch(err => {
-                    if (AppState.debugMode) Utils.safeWarn('خطأ في حفظ Google Sheets:', err);
-                    Notification.warning('تم الحفظ محلياً لكن فشل الحفظ في Google Sheets');
-                });
 
             } catch (error) {
                 Utils.safeError('❌ خطأ في حفظ المخالفة:', error);
@@ -3448,6 +3510,10 @@ const Violations = {
                                         ${violation.status || '-'}
                                     </span>
                                 </div>
+                                <div>
+                                    <label class="text-sm font-semibold text-gray-600">القيمة المالية:</label>
+                                    <p class="text-gray-800 font-semibold">${Number(this.getEffectiveFineAmount(violation)).toLocaleString('ar-EG')} ج.م</p>
+                                </div>
                             </div>
                             ${violation.violationDetails ? `
                             <div class="mt-4">
@@ -3553,6 +3619,7 @@ const Violations = {
                     <tr><th>المكان</th><td>${Utils.escapeHTML(violation.violationPlace || '')}</td></tr>
                     <tr><th>الشدة</th><td>${Utils.escapeHTML(violation.severity || '')}</td></tr>
                     <tr><th>الحالة</th><td>${Utils.escapeHTML(violation.status || '')}</td></tr>
+                    <tr><th>القيمة المالية</th><td>${Number(this.getEffectiveFineAmount(violation)).toLocaleString('ar-EG')} ج.م</td></tr>
                     ${violation.violationDetails ? `<tr><th>تفاصيل المخالفة</th><td>${Utils.escapeHTML(violation.violationDetails || '')}</td></tr>` : ''}
                     <tr><th>الإجراء المتخذ</th><td>${Utils.escapeHTML(violation.actionTaken || '')}</td></tr>
                 </table>

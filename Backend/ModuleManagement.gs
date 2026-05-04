@@ -157,7 +157,7 @@ function getSystemModules() {
             name: 'السلامة العامة',
             description: 'إدارة السلامة العامة',
             file: 'Safety.gs',
-            sheets: ['BehaviorMonitoring', 'ChemicalSafety', 'DailyObservations', 'ObservationSites'],
+            sheets: ['BehaviorMonitoring', 'ContractorBehaviorMonitoring', 'ChemicalSafety', 'DailyObservations', 'ObservationSites'],
             version: '1.0.0',
             enabled: true,
             critical: false

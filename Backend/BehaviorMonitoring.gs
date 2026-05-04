@@ -241,3 +241,174 @@ function deleteBehavior(behaviorId) {
     }
 }
 
+// ===== تصرفات المقاولين — ورقة ContractorBehaviorMonitoring (منفصلة عن الموظفين) =====
+
+/**
+ * توحيد مفاتيح صف ورقة تصرفات المقاولين.
+ * @param {Object} row
+ * @returns {Object}
+ */
+function normalizeContractorBehaviorSheetRow_(row) {
+    if (!row || typeof row !== 'object') return row;
+    var out = {};
+    for (var k in row) {
+        if (row.hasOwnProperty(k)) out[k] = row[k];
+    }
+    function first(keys) {
+        for (var i = 0; i < keys.length; i++) {
+            var kk = keys[i];
+            if (!row.hasOwnProperty(kk)) continue;
+            var v = row[kk];
+            if (v !== undefined && v !== null && String(v).trim() !== '') return v;
+        }
+        return null;
+    }
+    function fill(canon, keys) {
+        var v = first(keys);
+        if (v === null) return;
+        if (out[canon] === undefined || out[canon] === null || String(out[canon]).trim() === '') {
+            out[canon] = v;
+        }
+    }
+    fill('isoCode', ['isoCode', 'ISO', 'IsoCode', 'كود ISO']);
+    fill('contractorId', ['contractorId', 'ContractorId', 'معرف المقاول']);
+    fill('contractorName', ['contractorName', 'اسم المقاول', 'ContractorName', 'companyName']);
+    fill('contractorWorker', ['contractorWorker', 'عامل المقاول', 'اسم العامل', 'ContractorWorker']);
+    fill('department', ['department', 'القسم', 'Department', 'contractorDepartment']);
+    fill('job', ['job', 'position', 'الوظيفة', 'المسمى الوظيفي', 'jobTitle', 'Position', 'contractorPosition']);
+    fill('factory', ['factory', 'factoryId', 'Factory', 'FactoryId']);
+    fill('factoryId', ['factoryId', 'factory']);
+    fill('factoryName', ['factoryName', 'اسم المصنع', 'المصنع', 'الموقع', 'موقع العمل', 'siteName', 'Site']);
+    fill('subLocation', ['subLocation', 'subLocationId', 'SubLocation']);
+    fill('subLocationId', ['subLocationId', 'subLocation']);
+    fill('subLocationName', ['subLocationName', 'الموقع الفرعي', 'موقع فرعي', 'المكان', 'SubLocationName']);
+    fill('behaviorType', ['behaviorType', 'نوع التصرف', 'Type']);
+    fill('rating', ['rating', 'التقييم']);
+    fill('description', ['description', 'الوصف', 'ملاحظات', 'Notes', 'Description', 'details']);
+    fill('correctiveAction', ['correctiveAction', 'الإجراء التصحيحي']);
+    fill('correctiveActionDetails', ['correctiveActionDetails', 'تفاصيل الإجراء']);
+    fill('date', ['date', 'Date', 'التاريخ', 'behaviorDate']);
+    fill('photo', ['photo', 'صورة', 'Photo', 'image']);
+    return out;
+}
+
+function addContractorBehaviorToSheet(behaviorData) {
+    try {
+        if (!behaviorData) {
+            return { success: false, message: 'بيانات السجل غير موجودة' };
+        }
+        var sheetName = 'ContractorBehaviorMonitoring';
+        if (!behaviorData.id) {
+            behaviorData.id = generateSequentialId('BHC', sheetName);
+        }
+        if (!behaviorData.createdAt) {
+            behaviorData.createdAt = new Date();
+        }
+        if (!behaviorData.updatedAt) {
+            behaviorData.updatedAt = new Date();
+        }
+        return appendToSheet(sheetName, behaviorData);
+    } catch (error) {
+        Logger.log('Error in addContractorBehaviorToSheet: ' + error.toString());
+        return { success: false, message: 'حدث خطأ أثناء إضافة سجل المقاول: ' + error.toString() };
+    }
+}
+
+function updateContractorBehavior(behaviorId, updateData) {
+    try {
+        if (!behaviorId) {
+            return { success: false, message: 'معرف السجل غير محدد' };
+        }
+        var sheetName = 'ContractorBehaviorMonitoring';
+        var spreadsheetId = getSpreadsheetId();
+        var data = readFromSheet(sheetName, spreadsheetId);
+        var behaviorIndex = data.findIndex(function (b) { return b.id === behaviorId; });
+        if (behaviorIndex === -1) {
+            return { success: false, message: 'السجل غير موجود' };
+        }
+        updateData.updatedAt = new Date();
+        for (var key in updateData) {
+            if (updateData.hasOwnProperty(key)) {
+                data[behaviorIndex][key] = updateData[key];
+            }
+        }
+        return saveToSheet(sheetName, data, spreadsheetId);
+    } catch (error) {
+        Logger.log('Error updating contractor behavior: ' + error.toString());
+        return { success: false, message: 'حدث خطأ أثناء تحديث السجل: ' + error.toString() };
+    }
+}
+
+function getAllContractorBehaviors(filters) {
+    try {
+        filters = filters || {};
+        var sheetName = 'ContractorBehaviorMonitoring';
+        var raw = readFromSheet(sheetName, getSpreadsheetId());
+        var data = (raw || []).map(function (row) { return normalizeContractorBehaviorSheetRow_(row); });
+        if (filters.contractorId) {
+            data = data.filter(function (b) { return b.contractorId === filters.contractorId; });
+        }
+        if (filters.behaviorType) {
+            data = data.filter(function (b) { return b.behaviorType === filters.behaviorType; });
+        }
+        if (filters.startDate) {
+            data = data.filter(function (b) {
+                if (!b.date) return false;
+                return new Date(b.date) >= new Date(filters.startDate);
+            });
+        }
+        if (filters.endDate) {
+            data = data.filter(function (b) {
+                if (!b.date) return false;
+                return new Date(b.date) <= new Date(filters.endDate);
+            });
+        }
+        data.sort(function (a, b) {
+            var dateA = new Date(a.date || a.createdAt || 0);
+            var dateB = new Date(b.date || b.createdAt || 0);
+            return dateB - dateA;
+        });
+        return { success: true, data: data, count: data.length };
+    } catch (error) {
+        Logger.log('Error getting contractor behaviors: ' + error.toString());
+        return { success: false, message: 'حدث خطأ أثناء قراءة السجلات: ' + error.toString(), data: [] };
+    }
+}
+
+function getContractorBehavior(behaviorId) {
+    try {
+        if (!behaviorId) {
+            return { success: false, message: 'معرف السجل غير محدد' };
+        }
+        var sheetName = 'ContractorBehaviorMonitoring';
+        var data = readFromSheet(sheetName, getSpreadsheetId());
+        var behavior = data.find(function (b) { return b.id === behaviorId; });
+        if (!behavior) {
+            return { success: false, message: 'السجل غير موجود' };
+        }
+        return { success: true, data: normalizeContractorBehaviorSheetRow_(behavior) };
+    } catch (error) {
+        Logger.log('Error getting contractor behavior: ' + error.toString());
+        return { success: false, message: 'حدث خطأ أثناء قراءة السجل: ' + error.toString() };
+    }
+}
+
+function deleteContractorBehavior(behaviorId) {
+    try {
+        if (!behaviorId) {
+            return { success: false, message: 'معرف السجل غير محدد' };
+        }
+        var sheetName = 'ContractorBehaviorMonitoring';
+        var spreadsheetId = getSpreadsheetId();
+        var data = readFromSheet(sheetName, spreadsheetId);
+        var filteredData = data.filter(function (b) { return b.id !== behaviorId; });
+        if (filteredData.length === data.length) {
+            return { success: false, message: 'السجل غير موجود' };
+        }
+        return saveToSheet(sheetName, filteredData, spreadsheetId);
+    } catch (error) {
+        Logger.log('Error deleting contractor behavior: ' + error.toString());
+        return { success: false, message: 'حدث خطأ أثناء حذف السجل: ' + error.toString() };
+    }
+}
+

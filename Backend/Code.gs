@@ -1097,6 +1097,21 @@ function doPost(e) {
                 case 'deleteBehavior':
                     result = deleteBehavior(payload.behaviorId || payload.id);
                     break;
+                case 'addContractorBehavior':
+                    result = addContractorBehaviorToSheet(payload);
+                    break;
+                case 'updateContractorBehavior':
+                    result = updateContractorBehavior(payload.behaviorId || payload.id, payload.updateData || payload);
+                    break;
+                case 'getAllContractorBehaviors':
+                    result = getAllContractorBehaviors(payload.filters || {});
+                    break;
+                case 'getContractorBehavior':
+                    result = getContractorBehavior(payload.behaviorId || payload.id);
+                    break;
+                case 'deleteContractorBehavior':
+                    result = deleteContractorBehavior(payload.behaviorId || payload.id);
+                    break;
                 case 'addChemicalSafety':
                     result = addChemicalSafetyToSheet(payload);
                     break;
