@@ -685,7 +685,9 @@ const GoogleIntegration = {
                 'getPeriodicInspectionsData', 'getViolationsData',
                 'getActionTrackingData', 'getBehaviorMonitoringData',
                 'saveOrUpdate', 'getAll', 'import', // إضافة عمليات جديدة
-                'getAllClinicVisits' // سجل التردد كامل (موظفين + مقاولين) — يُفضّل تمرير __timeoutMs من الواجهة
+                'getAllClinicVisits', // سجل التردد كامل (موظفين + مقاولين) — يُفضّل تمرير __timeoutMs من الواجهة
+                // قراءة كاملة لورقة الموظفين (شيت كبير + إقلاع بارد لـ GAS) — لا يُطابق شرط getAll المخصص أعلاه
+                'getAllEmployees'
             ];
             const mediumOperations = [
                 'getData', 'readData', 'loadData', 'fetchData', 'add', 'update'
