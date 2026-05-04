@@ -2023,6 +2023,7 @@ window.Auth = {
                 'ViolationTypes': 'violationTypes',
                 'Blacklist_Register': 'blacklistRegister',
                 'BehaviorMonitoring': 'behaviorMonitoring',
+                'ContractorBehaviorMonitoring': 'contractorBehaviorMonitoring',
                 'ChemicalSafety': 'chemicalSafety',
                 'Chemical_Register': 'chemicalRegister',
                 'DailyObservations': 'dailyObservations',

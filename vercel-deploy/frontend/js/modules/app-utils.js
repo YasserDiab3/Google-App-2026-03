@@ -2859,6 +2859,7 @@ const AppState = {
         contractorApprovalRequests: [],
         employees: [],
         behaviorMonitoring: [],
+        contractorBehaviorMonitoring: [],
         chemicalSafety: [],
         dailyObservations: [],
         observationSites: [],

@@ -4103,6 +4103,8 @@ function getModulePrefix(moduleName) {
         // المراقبة والملاحظات
         'behaviormonitoring': 'BHM',
         'BehaviorMonitoring': 'BHM',
+        'contractorbehaviormonitoring': 'BHC',
+        'ContractorBehaviorMonitoring': 'BHC',
         'chemicalsafety': 'CHS',
         'ChemicalSafety': 'CHS',
         'dailyobservations': 'DOB',

@@ -21,7 +21,7 @@ const BehaviorMonitoring = {
     },
 
     state: {
-        activeTab: 'log', // overview | log | form
+        activeTab: 'log', // overview | log | form | contractors
         filters: {
             search: '',
             behaviorType: '',
@@ -29,7 +29,15 @@ const BehaviorMonitoring = {
             dateFrom: '',
             dateTo: ''
         },
-        sort: 'date_desc' // date_desc | date_asc
+        sort: 'date_desc', // date_desc | date_asc
+        contractorFilters: {
+            search: '',
+            behaviorType: '',
+            rating: '',
+            dateFrom: '',
+            dateTo: ''
+        },
+        contractorSort: 'date_desc'
     },
 
     NEGATIVE_ACTIONS: [
@@ -215,6 +223,9 @@ const BehaviorMonitoring = {
         if (!AppState.appData.behaviorMonitoring) {
             AppState.appData.behaviorMonitoring = [];
         }
+        if (!AppState.appData.contractorBehaviorMonitoring) {
+            AppState.appData.contractorBehaviorMonitoring = [];
+        }
 
         // عرض الواجهة أولاً لتحسين تجربة المستخدم
         try {
@@ -228,7 +239,7 @@ const BehaviorMonitoring = {
                                 <i class="fas fa-eye ml-3"></i>
                                 مراقبة السلوكيات
                             </h1>
-                            <p class="section-subtitle">تسجيل ومتابعة سلوكيات الموظفين</p>
+                            <p class="section-subtitle">تسجيل ومتابعة سلوكيات الموظفين والمقاولين</p>
                         </div>
                         <div class="flex items-center gap-2">
                             <button id="behavior-refresh-btn" class="btn-secondary">
@@ -254,6 +265,9 @@ const BehaviorMonitoring = {
                             </button>
                             <button class="module-tab-btn ${activeTab === 'form' ? 'active' : ''}" data-tab="form" onclick="BehaviorMonitoring.switchTab('form')">
                                 <i class="fas fa-pen-to-square ml-2"></i>تسجيل تصرف
+                            </button>
+                            <button class="module-tab-btn ${activeTab === 'contractors' ? 'active' : ''}" data-tab="contractors" onclick="BehaviorMonitoring.switchTab('contractors')">
+                                <i class="fas fa-users-cog ml-2"></i>تصرفات المقاولين
                             </button>
                         </div>
                     </div>
@@ -332,12 +346,26 @@ const BehaviorMonitoring = {
                 return { success: false, data: [] };
             });
 
+            const contractorResult = await GoogleIntegration.sendRequest({
+                action: 'getAllContractorBehaviors',
+                data: {}
+            }).catch(error => {
+                Utils.safeWarn('⚠️ تعذر تحميل تصرفات المقاولين:', error);
+                return { success: false, data: [] };
+            });
+
             // معالجة نتائج البيانات
             if (behaviorResult && behaviorResult.success && Array.isArray(behaviorResult.data)) {
                 AppState.appData.behaviorMonitoring = behaviorResult.data;
                 Utils.safeLog(`✅ تم تحميل ${behaviorResult.data.length} سجل من Google Sheets`);
-                
-                // تحديث التبويب الحالي بعد تحميل البيانات
+            }
+
+            if (contractorResult && contractorResult.success && Array.isArray(contractorResult.data)) {
+                AppState.appData.contractorBehaviorMonitoring = contractorResult.data;
+                Utils.safeLog(`✅ تم تحميل ${contractorResult.data.length} سجل تصرفات مقاولين`);
+            }
+
+            if ((behaviorResult && behaviorResult.success) || (contractorResult && contractorResult.success)) {
                 this.refreshCurrentTab();
             }
 
@@ -366,6 +394,7 @@ const BehaviorMonitoring = {
     renderTabSkeleton(tab) {
         if (tab === 'overview') return this.renderOverviewTab(true);
         if (tab === 'form') return this.renderFormTab(true);
+        if (tab === 'contractors') return this.renderContractorsTab(true);
         return this.renderLogTab(true);
     },
 
@@ -595,6 +624,12 @@ const BehaviorMonitoring = {
             this.bindCurrentTabEvents();
             return;
         }
+        if (tab === 'contractors') {
+            const content = document.getElementById('behavior-content');
+            if (content) content.innerHTML = this.renderContractorsTab(false);
+            this.bindCurrentTabEvents();
+            return;
+        }
         // log
         const container = document.getElementById('behavior-log-container');
         if (container) container.innerHTML = this.renderLogTab(false);
@@ -619,6 +654,7 @@ const BehaviorMonitoring = {
 
             if (nextTab === 'overview') content.innerHTML = this.renderOverviewTab(false);
             else if (nextTab === 'form') content.innerHTML = this.renderFormTab(false);
+            else if (nextTab === 'contractors') content.innerHTML = this.renderContractorsTab(false);
             else content.innerHTML = this.renderLogTab(false);
 
             this.bindCurrentTabEvents();
@@ -626,6 +662,9 @@ const BehaviorMonitoring = {
             // initial render: try show data quickly
             if (options?.initial && nextTab === 'log') {
                 this.renderLogTable();
+            }
+            if (options?.initial && nextTab === 'contractors') {
+                this.renderContractorLogTable();
             }
         } catch (e) {
             Utils.safeError('❌ خطأ في تبديل تبويب مراقبة السلوكيات:', e);
@@ -994,6 +1033,42 @@ const BehaviorMonitoring = {
                     });
                 }
             }
+            return;
+        }
+
+        if (tab === 'contractors') {
+            const search = document.getElementById('bhmc-filter-search');
+            const type = document.getElementById('bhmc-filter-type');
+            const rating = document.getElementById('bhmc-filter-rating');
+            const from = document.getElementById('bhmc-filter-from');
+            const to = document.getElementById('bhmc-filter-to');
+            const sort = document.getElementById('bhmc-sort');
+            const clearBtn = document.getElementById('bhmc-clear-filters-btn');
+            const exportBtn = document.getElementById('bhmc-export-csv-btn');
+            const addBtn = document.getElementById('behavior-add-contractor-btn');
+
+            const onAnyChange = () => {
+                this.state.contractorFilters = this.state.contractorFilters || {};
+                this.state.contractorFilters.search = (search?.value || '').toString();
+                this.state.contractorFilters.behaviorType = (type?.value || '').toString();
+                this.state.contractorFilters.rating = (rating?.value || '').toString();
+                this.state.contractorFilters.dateFrom = (from?.value || '').toString();
+                this.state.contractorFilters.dateTo = (to?.value || '').toString();
+                this.state.contractorSort = (sort?.value || 'date_desc').toString();
+                this.renderContractorLogTable();
+            };
+
+            search?.addEventListener('input', onAnyChange, { signal });
+            type?.addEventListener('change', onAnyChange, { signal });
+            rating?.addEventListener('change', onAnyChange, { signal });
+            from?.addEventListener('change', onAnyChange, { signal });
+            to?.addEventListener('change', onAnyChange, { signal });
+            sort?.addEventListener('change', onAnyChange, { signal });
+            clearBtn?.addEventListener('click', () => this.clearContractorFilters(), { signal });
+            exportBtn?.addEventListener('click', () => this.exportContractorLogCSV(), { signal });
+            addBtn?.addEventListener('click', () => this.showContractorForm(null), { signal });
+
+            this.renderContractorLogTable();
         }
     },
 
@@ -1744,6 +1819,830 @@ const BehaviorMonitoring = {
 
     async printReport(id) {
         await this.exportPDF(id);
+    },
+
+    // ----- تصرفات المقاولين (ورقة ContractorBehaviorMonitoring) -----
+
+    getContractorBehaviors() {
+        if (!AppState?.appData?.contractorBehaviorMonitoring || !Array.isArray(AppState.appData.contractorBehaviorMonitoring)) return [];
+        return AppState.appData.contractorBehaviorMonitoring.map((b) => this.presentContractorBehavior(b));
+    },
+
+    getRawContractorBehaviorById(id) {
+        const list = AppState?.appData?.contractorBehaviorMonitoring;
+        if (!Array.isArray(list)) return null;
+        return list.find((b) => b && b.id === id) || null;
+    },
+
+    normalizeContractorBehaviorRecord(raw) {
+        if (!raw || typeof raw !== 'object') return raw;
+        const out = { ...raw };
+        const pick = (aliases) => {
+            for (let i = 0; i < aliases.length; i++) {
+                const k = aliases[i];
+                if (!Object.prototype.hasOwnProperty.call(raw, k)) continue;
+                const v = raw[k];
+                if (v !== undefined && v !== null && String(v).trim() !== '') return v;
+            }
+            return undefined;
+        };
+        const setIfEmpty = (canon, aliases) => {
+            const cur = out[canon];
+            if (cur !== undefined && cur !== null && String(cur).trim() !== '') return;
+            const pv = pick(aliases);
+            if (pv !== undefined) out[canon] = pv;
+        };
+        setIfEmpty('isoCode', ['isoCode', 'ISO', 'IsoCode', 'كود ISO']);
+        setIfEmpty('contractorId', ['contractorId', 'ContractorId', 'معرف المقاول']);
+        setIfEmpty('contractorName', ['contractorName', 'اسم المقاول', 'ContractorName']);
+        setIfEmpty('contractorWorker', ['contractorWorker', 'عامل المقاول', 'ContractorWorker']);
+        setIfEmpty('department', ['department', 'القسم', 'Dept']);
+        setIfEmpty('job', ['job', 'position', 'الوظيفة', 'jobTitle']);
+        setIfEmpty('factory', ['factory', 'factoryId', 'Factory']);
+        setIfEmpty('factoryId', ['factoryId', 'factory']);
+        setIfEmpty('factoryName', ['factoryName', 'اسم المصنع', 'المصنع', 'siteName']);
+        setIfEmpty('subLocation', ['subLocation', 'subLocationId']);
+        setIfEmpty('subLocationId', ['subLocationId', 'subLocation']);
+        setIfEmpty('subLocationName', ['subLocationName', 'الموقع الفرعي', 'SubLocationName']);
+        setIfEmpty('behaviorType', ['behaviorType', 'نوع التصرف', 'Type']);
+        setIfEmpty('rating', ['rating', 'التقييم']);
+        setIfEmpty('description', ['description', 'الوصف', 'Notes']);
+        setIfEmpty('correctiveAction', ['correctiveAction', 'الإجراء التصحيحي']);
+        setIfEmpty('correctiveActionDetails', ['correctiveActionDetails', 'تفاصيل الإجراء']);
+        setIfEmpty('date', ['date', 'Date', 'التاريخ', 'behaviorDate']);
+        setIfEmpty('photo', ['photo', 'صورة', 'Photo']);
+        return out;
+    },
+
+    enrichContractorBehaviorRecord(out) {
+        if (!out || typeof out !== 'object') return out;
+        const merged = { ...out };
+        const factoryKey = String(merged.factoryId || merged.factory || '').trim();
+        if (factoryKey && !String(merged.factoryName || '').trim()) {
+            merged.factoryName = this.resolveSiteName(factoryKey);
+        }
+        if (!String(merged.factoryName || '').trim() && String(merged.factory || '').trim()) {
+            merged.factoryName = this.resolveSiteName(merged.factory);
+        }
+        const subKey = String(merged.subLocationId || merged.subLocation || '').trim();
+        if (subKey && !String(merged.subLocationName || '').trim()) {
+            merged.subLocationName = this.resolvePlaceName(subKey, factoryKey || merged.factory);
+        }
+        return merged;
+    },
+
+    presentContractorBehavior(raw) {
+        if (!raw || typeof raw !== 'object') return raw;
+        return this.enrichContractorBehaviorRecord(this.normalizeContractorBehaviorRecord(raw));
+    },
+
+    matchesContractorSearch(behavior, q) {
+        const query = (q || '').toString().trim().toLowerCase();
+        if (!query) return true;
+        const hay = [
+            behavior?.isoCode,
+            behavior?.contractorName,
+            behavior?.contractorWorker,
+            behavior?.department,
+            behavior?.factoryName,
+            behavior?.subLocationName,
+            behavior?.behaviorType,
+            behavior?.rating,
+            behavior?.description
+        ].filter(Boolean).join(' ').toLowerCase();
+        return hay.includes(query);
+    },
+
+    getFilteredContractorBehaviors() {
+        const all = this.getContractorBehaviors();
+        const filters = this.state?.contractorFilters || {};
+        const behaviorType = (filters.behaviorType || '').toString().trim();
+        const rating = (filters.rating || '').toString().trim();
+        const q = (filters.search || '').toString();
+        const from = filters.dateFrom ? this.parseDateSafe(filters.dateFrom) : null;
+        const to = filters.dateTo ? this.parseDateSafe(filters.dateTo) : null;
+        const filtered = all.filter((b) => {
+            if (!this.matchesContractorSearch(b, q)) return false;
+            if (behaviorType && (b?.behaviorType || '') !== behaviorType) return false;
+            if (rating && (b?.rating || '') !== rating) return false;
+            const d = this.parseDateSafe(this.getBehaviorDate(b));
+            if (from && (!d || d < from)) return false;
+            if (to) {
+                const toEnd = new Date(to);
+                toEnd.setHours(23, 59, 59, 999);
+                if (!d || d > toEnd) return false;
+            }
+            return true;
+        });
+        const sort = this.state?.contractorSort || 'date_desc';
+        filtered.sort((a, b) => {
+            const da = this.parseDateSafe(this.getBehaviorDate(a))?.getTime() || 0;
+            const db = this.parseDateSafe(this.getBehaviorDate(b))?.getTime() || 0;
+            return sort === 'date_asc' ? (da - db) : (db - da);
+        });
+        return filtered;
+    },
+
+    clearContractorFilters() {
+        this.state.contractorFilters = { search: '', behaviorType: '', rating: '', dateFrom: '', dateTo: '' };
+        this.state.contractorSort = 'date_desc';
+        this.refreshCurrentTab();
+    },
+
+    renderContractorsTab(isSkeleton = false) {
+        const filters = this.state?.contractorFilters || {};
+        const safe = (v) => Utils.escapeHTML((v ?? '').toString());
+        const countLabel = isSkeleton ? '—' : String(this.getFilteredContractorBehaviors().length);
+        return `
+            <div id="behavior-contractors-container">
+                <div class="content-card behavior-filters-card">
+                    <div class="card-header flex flex-wrap items-center justify-between gap-2">
+                        <h2 class="card-title"><i class="fas fa-users-cog ml-2"></i>سجل تصرفات المقاولين</h2>
+                        <button type="button" id="behavior-add-contractor-btn" class="btn-primary">
+                            <i class="fas fa-plus ml-2"></i>تسجيل تصرف مقاول
+                        </button>
+                    </div>
+                    <div class="card-body">
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-3">
+                            <div class="lg:col-span-2">
+                                <label class="block text-sm font-semibold text-gray-700 mb-2">بحث سريع</label>
+                                <input id="bhmc-filter-search" type="text" class="form-input" placeholder="ISO / مقاول / عامل / وصف" value="${safe(filters.search)}">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-semibold text-gray-700 mb-2">نوع التصرف</label>
+                                <select id="bhmc-filter-type" class="form-input">
+                                    <option value="">الكل</option>
+                                    <option value="إيجابي" ${filters.behaviorType === 'إيجابي' ? 'selected' : ''}>إيجابي</option>
+                                    <option value="سلبي" ${filters.behaviorType === 'سلبي' ? 'selected' : ''}>سلبي</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-semibold text-gray-700 mb-2">التقييم</label>
+                                <select id="bhmc-filter-rating" class="form-input">
+                                    <option value="">الكل</option>
+                                    <option value="ممتاز" ${filters.rating === 'ممتاز' ? 'selected' : ''}>ممتاز</option>
+                                    <option value="جيد" ${filters.rating === 'جيد' ? 'selected' : ''}>جيد</option>
+                                    <option value="مقبول" ${filters.rating === 'مقبول' ? 'selected' : ''}>مقبول</option>
+                                    <option value="ضعيف" ${filters.rating === 'ضعيف' ? 'selected' : ''}>ضعيف</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-semibold text-gray-700 mb-2">من</label>
+                                <input id="bhmc-filter-from" type="date" class="form-input" value="${safe(filters.dateFrom)}">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-semibold text-gray-700 mb-2">إلى</label>
+                                <input id="bhmc-filter-to" type="date" class="form-input" value="${safe(filters.dateTo)}">
+                            </div>
+                        </div>
+                        <div class="flex flex-wrap items-center justify-between gap-2 mt-4">
+                            <div class="text-sm text-gray-600">
+                                <span class="badge badge-secondary" id="bhmc-filter-count">${countLabel}</span>
+                                <span>سجل (بعد الفلترة)</span>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <select id="bhmc-sort" class="form-input" style="max-width: 220px;">
+                                    <option value="date_desc" ${this.state?.contractorSort === 'date_desc' ? 'selected' : ''}>الأحدث أولاً</option>
+                                    <option value="date_asc" ${this.state?.contractorSort === 'date_asc' ? 'selected' : ''}>الأقدم أولاً</option>
+                                </select>
+                                <button id="bhmc-export-csv-btn" class="btn-success">
+                                    <i class="fas fa-file-csv ml-2"></i>تصدير CSV
+                                </button>
+                                <button id="bhmc-clear-filters-btn" class="btn-secondary">
+                                    <i class="fas fa-eraser ml-2"></i>مسح الفلاتر
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="content-card mt-4">
+                    <div class="card-header">
+                        <h2 class="card-title"><i class="fas fa-table ml-2"></i>البيانات</h2>
+                    </div>
+                    <div class="card-body">
+                        <div id="bhmc-log-table-container">
+                            ${isSkeleton ? '<div class="empty-state"><p class="text-gray-500">جاري التحميل...</p></div>' : this.renderContractorLogTableHTML()}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    },
+
+    renderContractorLogTableHTML() {
+        const behaviors = this.getFilteredContractorBehaviors();
+        if (!behaviors.length) {
+            return '<div class="empty-state"><p class="text-gray-500">لا توجد نتائج مطابقة للفلاتر الحالية</p></div>';
+        }
+        return `
+            <div class="table-wrapper" style="overflow-x:auto;">
+                <table class="data-table table-header-purple">
+                    <thead>
+                        <tr>
+                            <th>كود ISO</th>
+                            <th>المقاول</th>
+                            <th>العامل</th>
+                            <th>المصنع</th>
+                            <th>الموقع الفرعي</th>
+                            <th>نوع التصرف</th>
+                            <th>التاريخ</th>
+                            <th>التقييم</th>
+                            <th class="text-center">الإجراءات</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${behaviors.map((b) => `
+                            <tr>
+                                <td>${Utils.escapeHTML(b.isoCode || '')}</td>
+                                <td><span class="font-semibold">${Utils.escapeHTML(b.contractorName || '')}</span></td>
+                                <td>${Utils.escapeHTML(b.contractorWorker || '—')}</td>
+                                <td>${Utils.escapeHTML(b.factoryName || b.factory || '—')}</td>
+                                <td>${Utils.escapeHTML(b.subLocationName || b.subLocation || '—')}</td>
+                                <td><span class="badge ${this.getBehaviorTypeBadgeClass(b.behaviorType)}">${Utils.escapeHTML(b.behaviorType || '—')}</span></td>
+                                <td>${this.getBehaviorDate(b) ? this.formatBehaviorDateDisplay(b) : '—'}</td>
+                                <td><span class="badge ${this.getRatingBadgeClass(b.rating)}">${Utils.escapeHTML(b.rating || '—')}</span></td>
+                                <td class="text-center">
+                                    <div class="flex items-center justify-center gap-2 flex-wrap">
+                                        <button type="button" onclick="BehaviorMonitoring.viewContractorBehavior('${b.id}')" class="btn-icon btn-icon-primary" title="عرض"><i class="fas fa-eye"></i></button>
+                                        <button type="button" onclick="BehaviorMonitoring.editContractorBehavior('${b.id}')" class="btn-icon btn-icon-warning" title="تعديل"><i class="fas fa-edit"></i></button>
+                                        <button type="button" onclick="BehaviorMonitoring.exportContractorPDF('${b.id}')" class="btn-icon btn-icon-success" title="تصدير PDF"><i class="fas fa-file-pdf"></i></button>
+                                        <button type="button" onclick="BehaviorMonitoring.printContractorReport('${b.id}')" class="btn-icon btn-icon-info" title="طباعة"><i class="fas fa-print"></i></button>
+                                    </div>
+                                </td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            </div>
+        `;
+    },
+
+    renderContractorLogTable() {
+        const tableContainer = document.getElementById('bhmc-log-table-container');
+        if (tableContainer) tableContainer.innerHTML = this.renderContractorLogTableHTML();
+        const countEl = document.getElementById('bhmc-filter-count');
+        if (countEl) countEl.textContent = String(this.getFilteredContractorBehaviors().length);
+    },
+
+    exportContractorLogCSV() {
+        const rows = this.getFilteredContractorBehaviors();
+        if (!rows.length) {
+            Notification.info('لا توجد بيانات لتصديرها');
+            return;
+        }
+        const escapeCsv = (v) => {
+            const s = (v ?? '').toString().replace(/\r?\n/g, ' ').trim();
+            if (s.includes('"') || s.includes(',') || s.includes(';')) return `"${s.replace(/"/g, '""')}"`;
+            return s;
+        };
+        const header = ['ISO', 'ContractorName', 'ContractorWorker', 'Department', 'Job', 'Factory', 'SubLocation', 'BehaviorType', 'Date', 'Rating', 'CorrectiveAction', 'CorrectiveActionDetails', 'Description'];
+        const csv = [
+            header.join(','),
+            ...rows.map((b) => [
+                escapeCsv(b.isoCode || ''),
+                escapeCsv(b.contractorName || ''),
+                escapeCsv(b.contractorWorker || ''),
+                escapeCsv(b.department || ''),
+                escapeCsv(b.job || b.position || ''),
+                escapeCsv(b.factoryName || b.factory || ''),
+                escapeCsv(b.subLocationName || b.subLocation || ''),
+                escapeCsv(b.behaviorType || ''),
+                escapeCsv(this.getBehaviorDate(b) ? Utils.formatDateForInput(this.getBehaviorDate(b)) : ''),
+                escapeCsv(b.rating || ''),
+                escapeCsv(b.correctiveAction || ''),
+                escapeCsv(b.correctiveActionDetails || ''),
+                escapeCsv(b.description || '')
+            ].join(','))
+        ].join('\n');
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `ContractorBehaviorMonitoring_${new Date().toISOString().slice(0, 10)}.csv`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
+    },
+
+    getContractorBehaviorFormHTML(data, uid) {
+        const dateValue = data?.date ? new Date(data.date).toISOString().split('T')[0] : new Date().toISOString().split('T')[0];
+        const sites = this.getSiteOptions();
+        const selectedFactory = data?.factory || data?.factoryId || '';
+        const selectedSub = data?.subLocation || data?.subLocationId || '';
+        const resolvedFactoryId = sites.find((s) => s.id === selectedFactory)?.id || sites.find((s) => s.name === selectedFactory)?.id || selectedFactory;
+        const places = this.getPlaceOptions(resolvedFactoryId);
+        const resolvedSubId = places.find((p) => p.id === selectedSub)?.id || places.find((p) => p.name === selectedSub)?.id || selectedSub;
+        const isNegative = (data?.behaviorType || '') === 'سلبي';
+        const existingPhoto = this.processPhoto(data?.photo);
+        const photoDisp = existingPhoto && typeof Utils.resolveDriveAwareImgDisplay === 'function'
+            ? Utils.resolveDriveAwareImgDisplay(existingPhoto)
+            : { canonical: existingPhoto || '', displaySrc: existingPhoto || '', needsProxy: false, proxyFileId: '' };
+        const photoThumbSrc = photoDisp.canonical ? photoDisp.displaySrc : '';
+        const photoThumbProxyAttr = typeof Utils.driveProxyImgAttrs === 'function' ? Utils.driveProxyImgAttrs(photoDisp) : '';
+        const ids = {
+            contractorSelect: `${uid}-contractor-select`,
+            contractorWorker: `${uid}-contractor-worker`,
+            department: `${uid}-cb-department`,
+            job: `${uid}-cb-job`,
+            factory: `${uid}-cb-factory`,
+            subLocation: `${uid}-cb-sublocation`,
+            behaviorType: `${uid}-cb-type`,
+            behaviorDate: `${uid}-cb-date`,
+            behaviorRating: `${uid}-cb-rating`,
+            correctiveAction: `${uid}-cb-corrective`,
+            correctiveActionDetails: `${uid}-cb-corrective-details`,
+            description: `${uid}-cb-description`,
+            photoInput: `${uid}-cb-photo-input`,
+            photoPreview: `${uid}-cb-photo-preview`,
+            photoImg: `${uid}-cb-photo-img`,
+            saveBtn: `${uid}-cb-save-btn`,
+            typeBadge: `${uid}-cb-type-badge`,
+            negativeSection: `${uid}-cb-negative-section`
+        };
+        return `
+            <div class="behavior-form-wrapper bhm-form behavior-form-modal" data-behavior-type="${Utils.escapeHTML(data?.behaviorType || '')}">
+                <form data-contractor-behavior-form="true" data-form-uid="${uid}" class="bhm-form-inner">
+                    <section class="bhm-section">
+                        <div class="bhm-section-head">
+                            <span class="bhm-section-icon"><i class="fas fa-users-cog"></i></span>
+                            <div>
+                                <h4 class="bhm-section-title">بيانات المقاول</h4>
+                                <p class="bhm-section-hint">اختر المقاول ويمكن إضافة اسم العامل</p>
+                            </div>
+                        </div>
+                        <div class="bhm-section-body">
+                            <div class="bhm-grid bhm-grid-2">
+                                <div class="bhm-field">
+                                    <label for="${ids.contractorSelect}" class="bhm-label">المقاول <span class="bhm-req">*</span></label>
+                                    <select id="${ids.contractorSelect}" required class="form-input bhm-input">
+                                        <option value="">-- اختر المقاول --</option>
+                                    </select>
+                                </div>
+                                <div class="bhm-field">
+                                    <label for="${ids.contractorWorker}" class="bhm-label">اسم العامل <span class="bhm-optional">(اختياري)</span></label>
+                                    <input type="text" id="${ids.contractorWorker}" class="form-input bhm-input" value="${Utils.escapeHTML(data?.contractorWorker || '')}" placeholder="عامل تابع للمقاول">
+                                </div>
+                                <div class="bhm-field">
+                                    <label for="${ids.department}" class="bhm-label">القسم</label>
+                                    <input type="text" id="${ids.department}" class="form-input bhm-input" value="${Utils.escapeHTML(data?.department || '')}" placeholder="اختياري">
+                                </div>
+                                <div class="bhm-field">
+                                    <label for="${ids.job}" class="bhm-label">الوظيفة</label>
+                                    <input type="text" id="${ids.job}" class="form-input bhm-input" value="${Utils.escapeHTML(data?.job || data?.position || '')}" placeholder="اختياري">
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+                    <section class="bhm-section">
+                        <div class="bhm-section-head">
+                            <span class="bhm-section-icon bhm-section-icon--violet"><i class="fas fa-clipboard-list"></i></span>
+                            <div>
+                                <h4 class="bhm-section-title">تفاصيل التصرف</h4>
+                            </div>
+                        </div>
+                        <div class="bhm-section-body">
+                            <div class="bhm-grid bhm-grid-3">
+                                <div class="bhm-field">
+                                    <div class="bhm-label-row">
+                                        <label for="${ids.behaviorType}" class="bhm-label mb-0">نوع التصرف <span class="bhm-req">*</span></label>
+                                        <span class="badge ${this.getBehaviorTypeBadgeClass(data?.behaviorType)} bhm-type-chip" id="${ids.typeBadge}">${Utils.escapeHTML(data?.behaviorType || '—')}</span>
+                                    </div>
+                                    <select id="${ids.behaviorType}" required class="form-input bhm-input mt-2">
+                                        <option value="">اختر النوع</option>
+                                        <option value="إيجابي" ${data?.behaviorType === 'إيجابي' ? 'selected' : ''}>إيجابي</option>
+                                        <option value="سلبي" ${data?.behaviorType === 'سلبي' ? 'selected' : ''}>سلبي</option>
+                                    </select>
+                                </div>
+                                <div class="bhm-field">
+                                    <label for="${ids.behaviorDate}" class="bhm-label">التاريخ <span class="bhm-req">*</span></label>
+                                    <input type="date" id="${ids.behaviorDate}" required class="form-input bhm-input" value="${dateValue}">
+                                </div>
+                                <div class="bhm-field">
+                                    <label for="${ids.behaviorRating}" class="bhm-label">التقييم <span class="bhm-req">*</span></label>
+                                    <select id="${ids.behaviorRating}" required class="form-input bhm-input">
+                                        <option value="">اختر التقييم</option>
+                                        <option value="ممتاز" ${data?.rating === 'ممتاز' ? 'selected' : ''}>ممتاز</option>
+                                        <option value="جيد" ${data?.rating === 'جيد' ? 'selected' : ''}>جيد</option>
+                                        <option value="مقبول" ${data?.rating === 'مقبول' ? 'selected' : ''}>مقبول</option>
+                                        <option value="ضعيف" ${data?.rating === 'ضعيف' ? 'selected' : ''}>ضعيف</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+                    <section class="bhm-section">
+                        <div class="bhm-section-head">
+                            <span class="bhm-section-icon bhm-section-icon--teal"><i class="fas fa-map-marked-alt"></i></span>
+                            <div><h4 class="bhm-section-title">الموقع</h4></div>
+                        </div>
+                        <div class="bhm-section-body">
+                            <div class="bhm-grid bhm-grid-2">
+                                <div class="bhm-field">
+                                    <label for="${ids.factory}" class="bhm-label">المصنع <span class="bhm-req">*</span></label>
+                                    <select id="${ids.factory}" required class="form-input bhm-input">
+                                        <option value="">اختر المصنع</option>
+                                        ${sites.map((site) => `
+                                            <option value="${site.id}" ${(resolvedFactoryId === site.id || selectedFactory === site.name) ? 'selected' : ''}>${Utils.escapeHTML(site.name)}</option>
+                                        `).join('')}
+                                    </select>
+                                </div>
+                                <div class="bhm-field">
+                                    <label for="${ids.subLocation}" class="bhm-label">الموقع الفرعي <span class="bhm-req">*</span></label>
+                                    <select id="${ids.subLocation}" required class="form-input bhm-input">
+                                        <option value="">اختر الموقع الفرعي</option>
+                                        ${places.map((place) => `
+                                            <option value="${place.id}" ${(resolvedSubId === place.id || selectedSub === place.name) ? 'selected' : ''}>${Utils.escapeHTML(place.name)}</option>
+                                        `).join('')}
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+                    <section id="${ids.negativeSection}" class="bhm-negative-panel" style="${isNegative ? '' : 'display:none;'}">
+                        <div class="bhm-negative-head">
+                            <span class="bhm-negative-icon"><i class="fas fa-exclamation-triangle"></i></span>
+                            <div><h4 class="bhm-negative-title">إجراء تصحيحي (للتصرف السلبي)</h4></div>
+                        </div>
+                        <div class="bhm-negative-body">
+                            <div class="bhm-grid bhm-grid-2">
+                                <div class="bhm-field">
+                                    <label for="${ids.correctiveAction}" class="bhm-label">الإجراء التصحيحي <span class="bhm-req">*</span></label>
+                                    <select id="${ids.correctiveAction}" class="form-input bhm-input" ${isNegative ? 'required' : ''}>
+                                        <option value="">اختر الإجراء</option>
+                                        ${this.NEGATIVE_ACTIONS.map((a) => `
+                                            <option value="${Utils.escapeHTML(a)}" ${data?.correctiveAction === a ? 'selected' : ''}>${Utils.escapeHTML(a)}</option>
+                                        `).join('')}
+                                    </select>
+                                </div>
+                                <div class="bhm-field">
+                                    <label for="${ids.correctiveActionDetails}" class="bhm-label">تفاصيل إضافية</label>
+                                    <input type="text" id="${ids.correctiveActionDetails}" class="form-input bhm-input" value="${Utils.escapeHTML(data?.correctiveActionDetails || '')}">
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+                    <section class="bhm-section bhm-section--media">
+                        <div class="bhm-section-head">
+                            <span class="bhm-section-icon bhm-section-icon--amber"><i class="fas fa-align-right"></i></span>
+                            <div><h4 class="bhm-section-title">الوصف والمرفقات</h4></div>
+                        </div>
+                        <div class="bhm-section-body">
+                            <div class="bhm-grid bhm-grid-media">
+                                <div class="bhm-field bhm-upload-wrap">
+                                    <label for="${ids.photoInput}" class="bhm-label">صورة</label>
+                                    <input type="file" id="${ids.photoInput}" accept="image/*" class="bhm-file-input">
+                                    <div id="${ids.photoPreview}" class="bhm-photo-preview mt-3 ${data?.photo ? '' : 'hidden'}">
+                                        <img src="${Utils.escapeHTML(photoThumbSrc)}" alt=""${photoThumbProxyAttr} class="bhm-photo-thumb" id="${ids.photoImg}">
+                                        <button type="button" class="bhm-photo-clear" data-action="cb-clear-photo">حذف الصورة</button>
+                                    </div>
+                                </div>
+                                <div class="bhm-field bhm-field-grow">
+                                    <label for="${ids.description}" class="bhm-label">الوصف <span class="bhm-req">*</span></label>
+                                    <textarea id="${ids.description}" required class="form-input bhm-input bhm-textarea" rows="5">${Utils.escapeHTML(data?.description || '')}</textarea>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+                    <div class="bhm-form-footer">
+                        <button type="button" class="btn-secondary bhm-btn-cancel" data-action="cb-cancel-form">إلغاء</button>
+                        <button type="button" id="${ids.saveBtn}" class="btn-primary bhm-btn-save"><i class="fas fa-save ml-2"></i>حفظ</button>
+                    </div>
+                </form>
+            </div>
+        `;
+    },
+
+    bindContractorBehaviorForm({ form, uid, data, modal, signal }) {
+        const sel = document.getElementById(`${uid}-contractor-select`);
+        if (sel && typeof Contractors !== 'undefined' && Contractors.populateContractorSelect) {
+            try {
+                Contractors.populateContractorSelect(sel, {
+                    placeholder: '-- اختر المقاول --',
+                    selectedValue: data?.contractorName || '',
+                    selectedContractorId: data?.contractorId || '',
+                    valueMode: 'name',
+                    showServiceType: true,
+                    includeSuppliers: false,
+                    approvedOnly: false
+                });
+            } catch (e) {
+                Utils.safeWarn('⚠️ تعذر تحميل قائمة المقاولين:', e);
+            }
+        }
+
+        const factoryEl = document.getElementById(`${uid}-cb-factory`);
+        const subEl = document.getElementById(`${uid}-cb-sublocation`);
+        const refreshPlaces = () => {
+            if (!factoryEl || !subEl) return;
+            const places = this.getPlaceOptions(factoryEl.value);
+            const prev = subEl.value;
+            subEl.innerHTML = '<option value="">اختر الموقع الفرعي</option>' +
+                places.map((p) => `<option value="${p.id}">${Utils.escapeHTML(p.name)}</option>`).join('');
+            if (prev && places.some((p) => p.id === prev)) subEl.value = prev;
+        };
+        factoryEl?.addEventListener('change', refreshPlaces, { signal });
+
+        const typeSelect = document.getElementById(`${uid}-cb-type`);
+        const typeBadge = document.getElementById(`${uid}-cb-type-badge`);
+        const negativeSection = document.getElementById(`${uid}-cb-negative-section`);
+        const correctiveActionEl = document.getElementById(`${uid}-cb-corrective`);
+        const applyType = (t) => {
+            const wrapper = form.closest('.behavior-form-wrapper');
+            if (wrapper) wrapper.setAttribute('data-behavior-type', t || '');
+            if (typeBadge) {
+                typeBadge.className = `badge ${this.getBehaviorTypeBadgeClass(t)} bhm-type-chip`;
+                typeBadge.textContent = t || '—';
+            }
+            const isNegative = (t || '') === 'سلبي';
+            if (negativeSection) negativeSection.style.display = isNegative ? '' : 'none';
+            if (correctiveActionEl) {
+                if (isNegative) correctiveActionEl.setAttribute('required', 'required');
+                else correctiveActionEl.removeAttribute('required');
+            }
+        };
+        applyType(typeSelect?.value || data?.behaviorType || '');
+        typeSelect?.addEventListener('change', () => applyType(typeSelect.value), { signal });
+
+        const photoInput = document.getElementById(`${uid}-cb-photo-input`);
+        const photoPreview = document.getElementById(`${uid}-cb-photo-preview`);
+        const photoImg = document.getElementById(`${uid}-cb-photo-img`);
+        if (photoInput && photoPreview && photoImg) {
+            photoInput.addEventListener('change', (e) => {
+                const file = e.target.files?.[0];
+                if (!file) return;
+                if (file.size > 2 * 1024 * 1024) {
+                    Notification.error('حجم الصورة كبير جداً. الحد الأقصى 2MB');
+                    photoInput.value = '';
+                    return;
+                }
+                const reader = new FileReader();
+                reader.onload = (ev) => {
+                    photoImg.src = ev.target.result;
+                    photoPreview.classList.remove('hidden');
+                };
+                reader.readAsDataURL(file);
+            }, { signal });
+        }
+        form.querySelector('[data-action="cb-clear-photo"]')?.addEventListener('click', () => {
+            const inp = document.getElementById(`${uid}-cb-photo-input`);
+            const preview = document.getElementById(`${uid}-cb-photo-preview`);
+            if (inp) inp.value = '';
+            if (preview) preview.classList.add('hidden');
+        }, { signal });
+
+        form.querySelector('[data-action="cb-cancel-form"]')?.addEventListener('click', () => modal?.remove(), { signal });
+
+        document.getElementById(`${uid}-cb-save-btn`)?.addEventListener('click', () => this.handleContractorSubmit({ uid, form, editId: data?.id || null, modal }), { signal });
+    },
+
+    async handleContractorSubmit({ uid, form, editId = null, modal }) {
+        let photoBase64 = editId ? (this.getRawContractorBehaviorById(editId)?.photo || '') : '';
+        const photoInput = document.getElementById(`${uid}-cb-photo-input`);
+        if (photoInput && photoInput.files.length > 0) {
+            const file = photoInput.files[0];
+            if (file.size > 2 * 1024 * 1024) {
+                Notification.error('حجم الصورة كبير جداً. الحد الأقصى 2MB');
+                return;
+            }
+            photoBase64 = await this.convertImageToBase64(file);
+        }
+
+        const contractorSel = document.getElementById(`${uid}-contractor-select`);
+        const opt = contractorSel?.selectedOptions?.[0];
+        const contractorName = (contractorSel?.value || '').trim();
+        const contractorId = (opt?.dataset?.contractorId || '').trim();
+        if (!contractorName) {
+            Notification.error('يرجى اختيار المقاول');
+            return;
+        }
+
+        const behaviorTypeEl = document.getElementById(`${uid}-cb-type`);
+        const behaviorDateEl = document.getElementById(`${uid}-cb-date`);
+        const behaviorRatingEl = document.getElementById(`${uid}-cb-rating`);
+        const behaviorDescriptionEl = document.getElementById(`${uid}-cb-description`);
+        const departmentEl = document.getElementById(`${uid}-cb-department`);
+        const jobEl = document.getElementById(`${uid}-cb-job`);
+        const factoryEl = document.getElementById(`${uid}-cb-factory`);
+        const subEl = document.getElementById(`${uid}-cb-sublocation`);
+        const correctiveActionEl = document.getElementById(`${uid}-cb-corrective`);
+        const correctiveActionDetailsEl = document.getElementById(`${uid}-cb-corrective-details`);
+        const workerEl = document.getElementById(`${uid}-contractor-worker`);
+
+        if (!behaviorTypeEl || !behaviorDateEl || !behaviorRatingEl || !behaviorDescriptionEl || !factoryEl || !subEl) {
+            Notification.error('بعض الحقول المطلوبة غير موجودة. يرجى تحديث الصفحة.');
+            return;
+        }
+
+        const isNegative = (behaviorTypeEl.value || '') === 'سلبي';
+        if (isNegative && (!correctiveActionEl || !correctiveActionEl.value)) {
+            Notification.error('يرجى اختيار الإجراء التصحيحي للتصرف السلبي');
+            return;
+        }
+
+        const list = AppState.appData.contractorBehaviorMonitoring || [];
+        const existing = editId ? this.getRawContractorBehaviorById(editId) : null;
+        const isoFn = typeof generateISOCode === 'function' ? generateISOCode : null;
+        const formData = {
+            id: editId || Utils.generateId('CBHM'),
+            isoCode: (existing && existing.isoCode) ? existing.isoCode : (isoFn ? isoFn('BHC', list) : (`BHC-${Date.now()}`)),
+            contractorId,
+            contractorName,
+            contractorWorker: (workerEl?.value || '').trim(),
+            department: (departmentEl?.value || '').trim(),
+            job: (jobEl?.value || '').trim(),
+            factory: (factoryEl.value || '').trim(),
+            factoryId: factoryEl.value ? String(factoryEl.value).trim() : null,
+            factoryName: this.resolveSiteName(factoryEl.value),
+            subLocation: (subEl.value || '').trim(),
+            subLocationId: subEl.value ? String(subEl.value).trim() : null,
+            subLocationName: this.resolvePlaceName(subEl.value, factoryEl.value),
+            photo: photoBase64,
+            behaviorType: behaviorTypeEl.value,
+            date: new Date(behaviorDateEl.value).toISOString(),
+            rating: behaviorRatingEl.value,
+            correctiveAction: isNegative ? (correctiveActionEl?.value || '') : '',
+            correctiveActionDetails: isNegative ? ((correctiveActionDetailsEl?.value || '').trim()) : '',
+            description: behaviorDescriptionEl.value.trim(),
+            createdAt: editId ? this.getRawContractorBehaviorById(editId)?.createdAt : new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+        };
+
+        Loading.show();
+        try {
+            if (!Array.isArray(AppState.appData.contractorBehaviorMonitoring)) {
+                AppState.appData.contractorBehaviorMonitoring = [];
+            }
+            if (editId) {
+                const index = AppState.appData.contractorBehaviorMonitoring.findIndex((b) => b.id === editId);
+                if (index !== -1) AppState.appData.contractorBehaviorMonitoring[index] = formData;
+                Notification.success('تم تحديث التصرف بنجاح');
+            } else {
+                AppState.appData.contractorBehaviorMonitoring.push(formData);
+                Notification.success('تم تسجيل التصرف بنجاح');
+            }
+            if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
+                window.DataManager.save();
+            }
+            await GoogleIntegration.autoSave('ContractorBehaviorMonitoring', AppState.appData.contractorBehaviorMonitoring);
+            Loading.hide();
+            if (modal) modal.remove();
+            this.refreshCurrentTab();
+        } catch (error) {
+            Loading.hide();
+            Notification.error('حدث خطأ: ' + error.message);
+        }
+    },
+
+    async showContractorForm(data = null) {
+        if (typeof Permissions !== 'undefined' && Permissions.ensureFormSettingsState) {
+            try { await Permissions.ensureFormSettingsState(); } catch (e) { /* ignore */ }
+        }
+        const modal = document.createElement('div');
+        modal.className = 'modal-overlay';
+        const uid = `bhmc-modal-${Date.now()}`;
+        const presented = data ? this.presentContractorBehavior(data) : null;
+        modal.innerHTML = `
+            <div class="modal-content behavior-modal bhm-registration-modal">
+                <div class="bhm-modal-hero">
+                    <div class="bhm-modal-hero-text">
+                        <p class="bhm-modal-kicker"><i class="fas fa-users-cog ml-2"></i>تصرفات المقاولين</p>
+                        <h2 class="bhm-modal-title">${data ? 'تعديل التصرف' : 'تسجيل تصرف مقاول'}</h2>
+                    </div>
+                    <button type="button" class="bhm-modal-close" onclick="this.closest('.modal-overlay').remove()" aria-label="إغلاق"><i class="fas fa-times"></i></button>
+                </div>
+                <div class="modal-body bhm-modal-body">
+                    ${this.getContractorBehaviorFormHTML(presented, uid)}
+                </div>
+            </div>`;
+        document.body.appendChild(modal);
+        if (this._modalAbortController) this._modalAbortController.abort();
+        this._modalAbortController = new AbortController();
+        const signal = this._modalAbortController.signal;
+        const form = modal.querySelector('form[data-contractor-behavior-form="true"]');
+        if (form) this.bindContractorBehaviorForm({ form, uid, data: presented, modal, signal });
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) modal.remove();
+        }, { signal });
+    },
+
+    editContractorBehavior(id) {
+        const raw = this.getRawContractorBehaviorById(id);
+        if (!raw) {
+            Notification.error('التصرف غير موجود');
+            return;
+        }
+        this.showContractorForm(raw);
+    },
+
+    async viewContractorBehavior(id) {
+        const raw = this.getRawContractorBehaviorById(id);
+        if (!raw) {
+            Notification.error('التصرف غير موجود');
+            return;
+        }
+        const b = this.presentContractorBehavior(raw);
+        const esc = (v) => Utils.escapeHTML((v ?? '').toString());
+        const valOrDash = (v) => {
+            const s = (v ?? '').toString().trim();
+            return s ? esc(s) : '<span class="bhm-detail-empty">—</span>';
+        };
+        const dateStr = this.getBehaviorDate(b) ? this.formatBehaviorDateDisplay(b) : '—';
+        const modal = document.createElement('div');
+        modal.className = 'modal-overlay bhm-detail-overlay';
+        modal.innerHTML = `
+            <div class="modal-content behavior-modal bhm-detail-modal" style="max-width: 820px;">
+                <div class="bhm-detail-hero">
+                    <div class="bhm-detail-hero-text">
+                        <p class="bhm-detail-kicker"><i class="fas fa-users-cog ml-2"></i>تصرف مقاول</p>
+                        <h2 class="bhm-detail-title">تفاصيل التصرف</h2>
+                        <p class="bhm-detail-sub">${esc(b.isoCode || '—')} · ${esc(b.contractorName || '')}</p>
+                    </div>
+                    <button type="button" class="bhm-detail-close" onclick="this.closest('.modal-overlay').remove()"><i class="fas fa-times"></i></button>
+                </div>
+                <div class="modal-body bhm-detail-body">
+                    <div class="bhm-detail-grid">
+                        <div class="bhm-detail-field"><span class="bhm-detail-label">كود ISO</span><div class="bhm-detail-value">${valOrDash(b.isoCode)}</div></div>
+                        <div class="bhm-detail-field bhm-detail-field-span2"><span class="bhm-detail-label">المقاول</span><div class="bhm-detail-value bhm-detail-value-strong">${valOrDash(b.contractorName)}</div></div>
+                        <div class="bhm-detail-field"><span class="bhm-detail-label">العامل</span><div class="bhm-detail-value">${valOrDash(b.contractorWorker)}</div></div>
+                        <div class="bhm-detail-field"><span class="bhm-detail-label">القسم</span><div class="bhm-detail-value">${valOrDash(b.department)}</div></div>
+                        <div class="bhm-detail-field"><span class="bhm-detail-label">الوظيفة</span><div class="bhm-detail-value">${valOrDash(b.job)}</div></div>
+                        <div class="bhm-detail-field"><span class="bhm-detail-label">المصنع</span><div class="bhm-detail-value">${valOrDash(b.factoryName || b.factory)}</div></div>
+                        <div class="bhm-detail-field"><span class="bhm-detail-label">الموقع الفرعي</span><div class="bhm-detail-value">${valOrDash(b.subLocationName || b.subLocation)}</div></div>
+                        <div class="bhm-detail-field"><span class="bhm-detail-label">نوع التصرف</span><div class="bhm-detail-value"><span class="badge ${this.getBehaviorTypeBadgeClass(b.behaviorType)}">${esc(b.behaviorType || '—')}</span></div></div>
+                        <div class="bhm-detail-field"><span class="bhm-detail-label">التاريخ</span><div class="bhm-detail-value">${esc(dateStr)}</div></div>
+                        <div class="bhm-detail-field"><span class="bhm-detail-label">التقييم</span><div class="bhm-detail-value"><span class="badge ${this.getRatingBadgeClass(b.rating)}">${esc(b.rating || '—')}</span></div></div>
+                        <div class="bhm-detail-field bhm-detail-field-span2"><span class="bhm-detail-label">الوصف</span><div class="bhm-detail-value">${valOrDash(b.description)}</div></div>
+                    </div>
+                </div>
+                <div class="bhm-detail-footer">
+                    <button type="button" class="btn-primary" onclick="BehaviorMonitoring.editContractorBehavior('${b.id}'); this.closest('.modal-overlay').remove();"><i class="fas fa-pen ml-2"></i>تعديل</button>
+                    <button type="button" class="btn-secondary" onclick="BehaviorMonitoring.printContractorReport('${b.id}')"><i class="fas fa-print ml-2"></i>طباعة</button>
+                    <button type="button" class="btn-secondary" onclick="BehaviorMonitoring.exportContractorPDF('${b.id}')"><i class="fas fa-file-pdf ml-2"></i>PDF</button>
+                    <button type="button" class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">إغلاق</button>
+                </div>
+            </div>`;
+        document.body.appendChild(modal);
+    },
+
+    async exportContractorPDF(id) {
+        const raw = this.getRawContractorBehaviorById(id);
+        if (!raw) {
+            Notification.error('التصرف غير موجود');
+            return;
+        }
+        const behavior = this.presentContractorBehavior(raw);
+        try {
+            Loading.show();
+            const formCode = behavior.isoCode || `BHC-${behavior.id?.substring(0, 8) || 'UNKNOWN'}`;
+            const formTitle = 'تقرير تصرف مقاول';
+            const pdfDate = this.getBehaviorDate(behavior) ? this.formatBehaviorDateDisplay(behavior) : '—';
+            const content = `
+                <table>
+                    <tr><th>كود ISO</th><td>${Utils.escapeHTML(behavior.isoCode || '')}</td></tr>
+                    <tr><th>المقاول</th><td>${Utils.escapeHTML(behavior.contractorName || '')}</td></tr>
+                    <tr><th>العامل</th><td>${Utils.escapeHTML(behavior.contractorWorker || '')}</td></tr>
+                    <tr><th>القسم</th><td>${Utils.escapeHTML(behavior.department || '')}</td></tr>
+                    <tr><th>الوظيفة</th><td>${Utils.escapeHTML(behavior.job || '')}</td></tr>
+                    <tr><th>المصنع</th><td>${Utils.escapeHTML(behavior.factoryName || behavior.factory || '')}</td></tr>
+                    <tr><th>الموقع الفرعي</th><td>${Utils.escapeHTML(behavior.subLocationName || behavior.subLocation || '')}</td></tr>
+                    <tr><th>نوع التصرف</th><td>${Utils.escapeHTML(behavior.behaviorType || '')}</td></tr>
+                    <tr><th>التاريخ</th><td>${Utils.escapeHTML(pdfDate)}</td></tr>
+                    <tr><th>التقييم</th><td>${Utils.escapeHTML(behavior.rating || '')}</td></tr>
+                    ${(behavior.behaviorType === 'سلبي' && (behavior.correctiveAction || behavior.correctiveActionDetails)) ? `
+                        <tr><th>الإجراء التصحيحي</th><td>${Utils.escapeHTML(behavior.correctiveAction || '')}</td></tr>
+                        <tr><th>تفاصيل الإجراء</th><td>${Utils.escapeHTML(behavior.correctiveActionDetails || '')}</td></tr>
+                    ` : ''}
+                    <tr><th colspan="2">الوصف</th></tr>
+                    <tr><td colspan="2">${Utils.escapeHTML(behavior.description || '')}</td></tr>
+                </table>`;
+            const htmlContent = typeof FormHeader !== 'undefined' && FormHeader.generatePDFHTML
+                ? FormHeader.generatePDFHTML(formCode, formTitle, content, false, true, { version: '1.0' }, behavior.createdAt, behavior.updatedAt)
+                : `<html dir="rtl" lang="ar"><head><meta charset="UTF-8"><title>${formTitle}</title></head><body>${content}</body></html>`;
+            const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const printWindow = window.open(url, '_blank');
+            if (printWindow) {
+                printWindow.onload = () => {
+                    setTimeout(() => {
+                        printWindow.print();
+                        setTimeout(() => URL.revokeObjectURL(url), 1000);
+                        Loading.hide();
+                    }, 500);
+                };
+            } else {
+                URL.revokeObjectURL(url);
+                Loading.hide();
+                Notification.error('يرجى السماح بالنوافذ المنبثقة');
+            }
+        } catch (error) {
+            Loading.hide();
+            Notification.error('حدث خطأ في تصدير PDF: ' + error.message);
+        }
+    },
+
+    async printContractorReport(id) {
+        await this.exportContractorPDF(id);
     },
 
     /**

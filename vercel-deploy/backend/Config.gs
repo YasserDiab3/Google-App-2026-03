@@ -55,7 +55,7 @@ function getRequiredSheets() {
     
     const sheets = [
         'Users', 'Incidents', 'NearMiss', 'PTW', 'Training', 'ClinicVisits', 'Medications', 'SickLeave', 'Injuries', 'ClinicContractorInjuries',
-        'ClinicInventory', 'FireEquipment', 'PPE', 'Violations', 'Employees', 'BehaviorMonitoring', // ✅ تم إزالة 'Contractors' 
+        'ClinicInventory', 'FireEquipment', 'PPE', 'Violations', 'Employees', 'BehaviorMonitoring', 'ContractorBehaviorMonitoring', // ✅ تم إزالة 'Contractors' 
         'ChemicalSafety', 'Chemical_Register', 'DailyObservations', 'DailySafetyCheckList', 'ISODocuments', 'ISOProcedures', 'ISOForms', 'DocumentCodes', 'DocumentVersions', 'SOPJHA', 'RiskAssessments', 
         'LegalDocuments', 'HSEAudits', 'HSENonConformities', 'HSECorrectiveActions', 'HSEObjectives', 'HSERiskAssessments', 
         'EnvironmentalAspects', 'EnvironmentalMonitoring', 'Sustainability', 'CarbonFootprint', 'WasteManagement', 
