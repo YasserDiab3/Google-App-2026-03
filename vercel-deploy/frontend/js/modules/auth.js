@@ -1123,53 +1123,43 @@ window.Auth = {
                     AppState._initialDataLoadCompleted = true;
                     AppState._initialDataLoadCompletedAt = Date.now();
 
-                    // ✅ إضافة: تحميل فوري لإعدادات النماذج (المواقع) بعد تحميل البيانات الأساسية
-                    // هذا يضمن توفر المواقع فوراً عند فتح أي موديول يحتاجها
+                    // ✅ إعدادات النماذج (المواقع) — انتظار اكتمالها قبل تحميل بقية الموديولات في الخلفية
+                    // يقلل السباق حيث تُفتح شاشة قبل جاهزية المواقع؛ الأخطاء لا توقف تسجيل الدخول
+                    const runPostLoginCompanySettingsRefresh = async () => {
+                        if (typeof DataManager === 'undefined' || !DataManager.loadCompanySettings) return;
+                        try {
+                            await DataManager.loadCompanySettings(true);
+                            if (AppState.debugMode) {
+                                Utils.safeLog('✅ تم تحميل إعدادات الشركة والشعار بعد إعدادات النماذج');
+                            }
+                        } catch (settingsError) {
+                            Utils.safeWarn('⚠️ فشل تحميل إعدادات الشركة بعد إعدادات النماذج:', settingsError);
+                        }
+                    };
+
                     if (typeof Permissions !== 'undefined' && typeof Permissions.initFormSettingsState === 'function') {
                         try {
-                            Permissions.initFormSettingsState().then(async () => {
-                                if (AppState.debugMode) {
-                                    Utils.safeLog('✅ تم تحميل إعدادات النماذج (المواقع) بعد تسجيل الدخول');
-                                }
-                                
-                                // ✅ إصلاح: تحميل إعدادات الشركة (بما في ذلك الشعار) مباشرة بعد initFormSettingsState
-                                // هذا يضمن تحميل الشعار بشكل تلقائي بعد تسجيل الدخول
-                                // forceReload = true في أول مرة بعد تسجيل الدخول لضمان التحديث
-                                if (typeof DataManager !== 'undefined' && DataManager.loadCompanySettings) {
-                                    try {
-                                        // في أول مرة بعد تسجيل الدخول، نحمل من قاعدة البيانات
-                                        // في المرات القادمة، سيتم استخدام localStorage
-                                        await DataManager.loadCompanySettings(true); // forceReload = true
-                                        if (AppState.debugMode) {
-                                            Utils.safeLog('✅ تم تحميل إعدادات الشركة والشعار بعد تسجيل الدخول');
-                                        }
-                                    } catch (settingsError) {
-                                        Utils.safeWarn('⚠️ فشل تحميل إعدادات الشركة بعد تسجيل الدخول:', settingsError);
-                                    }
-                                }
-                            }).catch((error) => {
-                                Utils.safeWarn('⚠️ فشل تحميل إعدادات النماذج بعد تسجيل الدخول:', error);
-                            });
-                        } catch (error) {
-                            Utils.safeWarn('⚠️ خطأ في تحميل إعدادات النماذج:', error);
-                        }
-                    } else {
-                        // ✅ إصلاح: إذا لم يكن initFormSettingsState متاحاً، نحمّل إعدادات الشركة مباشرة
-                        // forceReload = true في أول مرة بعد تسجيل الدخول
-                        if (typeof DataManager !== 'undefined' && DataManager.loadCompanySettings) {
-                            try {
-                                await DataManager.loadCompanySettings(true); // forceReload = true
-                                if (AppState.debugMode) {
-                                    Utils.safeLog('✅ تم تحميل إعدادات الشركة والشعار بعد تسجيل الدخول');
-                                }
-                            } catch (settingsError) {
-                                Utils.safeWarn('⚠️ فشل تحميل إعدادات الشركة بعد تسجيل الدخول:', settingsError);
+                            await Permissions.initFormSettingsState();
+                            if (AppState.debugMode) {
+                                Utils.safeLog('✅ تم تحميل إعدادات النماذج (المواقع) بعد تسجيل الدخول');
                             }
+                            await runPostLoginCompanySettingsRefresh();
+                        } catch (error) {
+                            Utils.safeWarn('⚠️ فشل تحميل إعدادات النماذج بعد تسجيل الدخول:', error);
+                            await runPostLoginCompanySettingsRefresh();
+                        }
+                    } else if (typeof DataManager !== 'undefined' && DataManager.loadCompanySettings) {
+                        try {
+                            await DataManager.loadCompanySettings(true);
+                            if (AppState.debugMode) {
+                                Utils.safeLog('✅ تم تحميل إعدادات الشركة والشعار بعد تسجيل الدخول (بدون initFormSettingsState)');
+                            }
+                        } catch (settingsError) {
+                            Utils.safeWarn('⚠️ فشل تحميل إعدادات الشركة بعد تسجيل الدخول:', settingsError);
                         }
                     }
 
-                    // ✅ الخطوة 4: تحميل بيانات الموديولات الأخرى بشكل متسلسل حسب الصلاحيات
-                    // هذا يتم في الخلفية بدون تأخير لعملية تسجيل الدخول
+                    // ✅ الخطوة 4: بعد جاهزية إعدادات النماذج — تحميل بيانات الموديولات في الخلفية
                     this.loadModulesDataSequentially().catch(err => {
                         Utils.safeWarn('⚠️ فشل تحميل بيانات الموديولات:', err);
                     });
