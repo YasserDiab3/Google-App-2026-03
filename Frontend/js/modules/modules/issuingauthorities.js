@@ -23,6 +23,12 @@ const IssuingAuthorities = {
     _iaDocClickHandler: null,
     _iaDocChangeHandler: null,
 
+    /** إلغاء مستمعات أزرار المودال/التأكيد عند إعادة ربط الواجهة (منع تسرب مستمعات) */
+    _modalUiAbort: null,
+
+    /** يمنع النقر المتكرر على «حفظ» أثناء طلب الشبكة */
+    _iaSaveModalBusy: false,
+
     _iaRemoveGlobalDelegation() {
         if (this._iaDocClickHandler) {
             document.removeEventListener('click', this._iaDocClickHandler, true);
@@ -31,6 +37,12 @@ const IssuingAuthorities = {
         if (this._iaDocChangeHandler) {
             document.removeEventListener('change', this._iaDocChangeHandler, true);
             this._iaDocChangeHandler = null;
+        }
+        if (this._modalUiAbort) {
+            try {
+                this._modalUiAbort.abort();
+            } catch (e) { /* ignore */ }
+            this._modalUiAbort = null;
         }
     },
 
@@ -1767,6 +1779,7 @@ const IssuingAuthorities = {
         if (!root) return;
 
         this._iaRemoveGlobalDelegation();
+        this._modalUiAbort = new AbortController();
 
         // زر إضافة
         const addBtn = document.getElementById('ia-add-btn');
@@ -1828,16 +1841,17 @@ const IssuingAuthorities = {
         };
         document.addEventListener('click', this._iaDocClickHandler, true);
 
-        // Modal controls
+        // Modal controls (AbortController يزيل المستمعات عند إعادة _attachEvents — لا تكرار)
+        const modalSig = this._modalUiAbort.signal;
         const modalOverlay = document.getElementById('ia-modal-overlay');
-        document.getElementById('ia-modal-close')?.addEventListener('click', () => this._closeModal());
-        document.getElementById('ia-modal-cancel')?.addEventListener('click', () => this._closeModal());
-        document.getElementById('ia-modal-save')?.addEventListener('click', () => this._saveModal());
+        document.getElementById('ia-modal-close')?.addEventListener('click', () => this._closeModal(), { signal: modalSig });
+        document.getElementById('ia-modal-cancel')?.addEventListener('click', () => this._closeModal(), { signal: modalSig });
+        document.getElementById('ia-modal-save')?.addEventListener('click', () => this._saveModal(), { signal: modalSig });
 
         if (modalOverlay) {
             modalOverlay.addEventListener('click', (e) => {
                 if (e.target === modalOverlay) this._closeModal();
-            });
+            }, { signal: modalSig });
         }
 
         // Radio visual feedback + نوع الشخص (داخل القسم فقط)
@@ -1863,7 +1877,7 @@ const IssuingAuthorities = {
         document.getElementById('ia-delete-cancel')?.addEventListener('click', () => {
             const m = document.getElementById('ia-delete-modal');
             if (m) m.style.display = 'none';
-        });
+        }, { signal: modalSig });
 
         this._bindModalFieldEvents();
         this._bindListFilterEvents();
@@ -2145,9 +2159,15 @@ const IssuingAuthorities = {
             payload[pt.key] = checked ? checked.value : 'X';
         });
 
+        if (this._iaSaveModalBusy) return;
+        this._iaSaveModalBusy = true;
+
         const saveBtn = document.getElementById('ia-modal-save');
         const savingHtml = `<i class="fas fa-spinner fa-spin"></i> ${this.t('module.issuingAuthorities.modal.saving', 'جاري الحفظ...')}`;
         if (saveBtn) { saveBtn.disabled = true; saveBtn.innerHTML = savingHtml; }
+
+        const wasEdit = !!this._currentEditId;
+        const SAVE_RPC_MS = 28000;
 
         try {
             let result;
@@ -2155,15 +2175,15 @@ const IssuingAuthorities = {
             const actions = this._actionsForCategory(saveCategory);
             if (this._currentEditId) {
                 payload.id = this._currentEditId;
-                result = await GoogleIntegration.sendRequest({
-                    action: actions.update,
-                    data: payload
-                });
+                result = await this._withTimeout(
+                    GoogleIntegration.sendRequest({ action: actions.update, data: payload }),
+                    SAVE_RPC_MS
+                );
             } else {
-                result = await GoogleIntegration.sendRequest({
-                    action: actions.add,
-                    data: payload
-                });
+                result = await this._withTimeout(
+                    GoogleIntegration.sendRequest({ action: actions.add, data: payload }),
+                    SAVE_RPC_MS
+                );
             }
 
             if (result && result.success) {
@@ -2171,17 +2191,20 @@ const IssuingAuthorities = {
                 this._syncIssuingAuthoritiesCategoryUi();
                 this._closeModal();
                 this._bustIssuingAuthoritiesSheetCache();
-                await this._fetchData();
+                try {
+                    await this._fetchData();
+                } catch (fetchErr) {
+                    this._reportModuleError('IssuingAuthorities._saveModal.fetchAfterSave', fetchErr);
+                }
                 this._renderTable();
                 if (typeof Utils !== 'undefined' && Utils.showNotification) {
                     Utils.showNotification(
-                        this._currentEditId
+                        wasEdit
                             ? this.t('module.issuingAuthorities.notify.updated', 'تم التحديث بنجاح')
                             : this.t('module.issuingAuthorities.notify.added', 'تم الإضافة بنجاح'),
                         'success'
                     );
                 }
-                // إعلام PTW بتغيير البيانات
                 document.dispatchEvent(new CustomEvent('issuingAuthoritiesUpdated', { detail: { data: this._data } }));
             } else {
                 const msg = (result && result.message) || this.t('module.issuingAuthorities.notify.saveFail', 'فشل الحفظ');
@@ -2192,8 +2215,14 @@ const IssuingAuthorities = {
                 }
             }
         } catch (err) {
-            this._reportModuleError('IssuingAuthorities._saveModal', err);
+            const isTimeout = err && (err.message === 'timeout' || String(err.message || '').toLowerCase().includes('timeout'));
+            if (isTimeout) {
+                this._iaNotify(this._getFriendlyErrorMessage('timeout'), 'error');
+            } else {
+                this._reportModuleError('IssuingAuthorities._saveModal', err);
+            }
         } finally {
+            this._iaSaveModalBusy = false;
             if (saveBtn) {
                 saveBtn.disabled = false;
                 saveBtn.innerHTML = `<i class="fas fa-save" style="margin-left:6px;"></i>${this.t('module.issuingAuthorities.modal.save', 'حفظ')}`;
