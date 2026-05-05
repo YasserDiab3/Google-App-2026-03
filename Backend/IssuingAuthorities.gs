@@ -40,6 +40,9 @@ function checkIssuingAuthoritiesPermission(userData) {
         if (typeof permissions === 'string') {
             try { permissions = JSON.parse(permissions); } catch (e) { permissions = {}; }
         }
+        if (permissions['__isAdmin'] === true) {
+            return { hasPermission: true, message: 'صلاحية صحيحة' };
+        }
         if (permissions['admin'] === true ||
             permissions['manage-ptw-authorities'] === true ||
             permissions['issuing-authorities'] === true) {

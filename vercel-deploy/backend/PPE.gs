@@ -676,51 +676,47 @@ function getAllPPETransactions(filters = {}) {
  */
 function getPPEItemsList() {
     try {
-        const stockResult = getAllPPEStockItems();
-        if (!stockResult.success) {
-            return { success: false, message: stockResult.message, data: [] };
-        }
-        
-        // أيضاً جمع الأصناف من جدول PPE الموجود
+        // ✅ نسخة سريعة: لا نحسب أرصدة المخزون ولا نقرأ جميع الحركات
+        // نقرأ أسماء الأصناف مباشرة من PPE_Stock + الأنواع التاريخية من PPE
+        const stockSheet = 'PPE_Stock';
         const ppeSheet = 'PPE';
+        const stockData = readFromSheet(stockSheet, getSpreadsheetId()) || [];
         let ppeData = [];
         try {
-            ppeData = readFromSheet(ppeSheet, getSpreadsheetId());
+            ppeData = readFromSheet(ppeSheet, getSpreadsheetId()) || [];
         } catch (error) {
             Logger.log('Note: Could not read PPE sheet for items list: ' + error.toString());
         }
-        
-        // جمع الأنواع الفريدة من PPE
-        const uniqueTypes = new Set();
-        ppeData.forEach(item => {
-            if (item.equipmentType) {
-                uniqueTypes.add(item.equipmentType);
-            }
-        });
-        
-        // دمج الأصناف من المخزون والأصناف الموجودة
+
         const items = [];
-        stockResult.data.forEach(item => {
+        const seenNames = {};
+
+        stockData.forEach(item => {
+            const itemName = String(item.itemName || '').trim();
+            if (!itemName || seenNames[itemName]) return;
+            seenNames[itemName] = true;
             items.push({
-                itemId: item.itemId,
+                itemId: item.itemId || null,
                 itemCode: item.itemCode || '',
-                itemName: item.itemName || '',
+                itemName: itemName,
                 category: item.category || ''
             });
         });
-        
-        uniqueTypes.forEach(type => {
-            // التحقق من عدم التكرار
-            if (!items.some(item => item.itemName === type)) {
-                items.push({
-                    itemId: null,
-                    itemCode: '',
-                    itemName: type,
-                    category: ''
-                });
-            }
+
+        ppeData.forEach(item => {
+            const type = String(item.equipmentType || '').trim();
+            if (!type || seenNames[type]) return;
+            seenNames[type] = true;
+            items.push({
+                itemId: null,
+                itemCode: '',
+                itemName: type,
+                category: ''
+            });
         });
-        
+
+        // ترتيب سريع بالاسم
+        items.sort((a, b) => String(a.itemName || '').localeCompare(String(b.itemName || ''), 'ar'));
         return { success: true, data: items };
     } catch (error) {
         Logger.log('Error getting PPE items list: ' + error.toString());

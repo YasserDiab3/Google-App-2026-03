@@ -630,11 +630,24 @@ const GoogleIntegration = {
             // (deleteUser، resetUserPassword، initializeSheets، إصلاح رؤوس الجداول) وإلا يُرفض الطلب.
             if (typeof AppState !== 'undefined' && AppState.currentUser) {
                 const cu = AppState.currentUser;
-                payload.userData = {
+                const envelope = {
                     email: String(cu.email || '').trim(),
                     id: cu.id != null && cu.id !== '' ? String(cu.id).trim() : '',
-                    name: String(cu.name || '').trim()
+                    name: String(cu.name || '').trim(),
+                    role: String(cu.role || '').trim()
                 };
+                // مطابقة hasAccess/getEffectivePermissions: الجلسة قد لا تعكس صلاحيات الجدول بعد
+                if (typeof Permissions !== 'undefined' && typeof Permissions.getEffectivePermissions === 'function') {
+                    try {
+                        const eff = Permissions.getEffectivePermissions(cu);
+                        if (eff && typeof eff === 'object') {
+                            envelope.permissions = eff;
+                        }
+                    } catch (_e) { /* ignore */ }
+                } else if (cu.permissions) {
+                    envelope.permissions = cu.permissions;
+                }
+                payload.userData = envelope;
             }
 
             // التحقق من هل هو spreadsheetId

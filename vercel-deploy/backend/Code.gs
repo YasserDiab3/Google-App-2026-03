@@ -147,6 +147,18 @@ function doPost(e) {
         const payload = (typeof sanitizeRequestObject === 'function')
             ? sanitizeRequestObject(rawPayload, 0)
             : rawPayload;
+
+        // دمج هوية الطلب (postData.userData) مع payload.userData: الصلاحيات الفعالة تُرسَل هنا؛
+        // كائن المستخدم داخل payload قد لا يحدّث صلاحيات الجدول فوراً.
+        if (postData.userData && typeof postData.userData === 'object' && payload && typeof payload === 'object' && !Array.isArray(payload)) {
+            const env = postData.userData;
+            const innerUd = payload.userData;
+            if (innerUd && typeof innerUd === 'object') {
+                payload.userData = Object.assign({}, innerUd, env);
+            } else {
+                payload.userData = Object.assign({}, env);
+            }
+        }
         
         // ✅ Debug logging لمعرفة ما يتم استخراجه
         Logger.log('🔍 [CODE.GS] postData.action: ' + JSON.stringify(action));

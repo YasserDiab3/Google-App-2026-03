@@ -10,6 +10,10 @@ const PPE = {
         stockItemsCache: null, // Cache لبيانات المخزون
         stockItemsCacheTime: null, // وقت التخزين المؤقت
         stockCacheExpiry: 5 * 60 * 1000, // انتهاء صلاحية Cache بعد 5 دقائق
+        ppeItemsListCache: null, // Cache لقائمة الأصناف في المنسدلة
+        ppeItemsListCacheTime: null, // وقت تحديث قائمة الأصناف
+        ppeItemsListCacheExpiry: 2 * 60 * 1000, // انتهاء صلاحية القائمة بعد دقيقتين
+        ppeItemsOptionsHTML: '', // HTML options معاد استخدامه عند إضافة صفوف
         lastSyncTime: null, // وقت آخر مزامنة
         /** فلاتر سجل الاستلامات (نفس نمط سجل التردد / المستندات القانونية) */
         filters: {
@@ -1844,8 +1848,13 @@ const PPE = {
                 attachRemoveHandler(newRow);
                 refreshRemoveButtonsVisibility();
 
-                // التأكد من تحميل قائمة الأصناف في الصف الجديد
-                this.loadPPEItemsForDropdown();
+                // تحسين الأداء: استخدام HTML الخيارات المخزن بدل طلب Backend جديد
+                const newSelect = newRow.querySelector('.ppe-equipment-type');
+                if (newSelect && this.state.ppeItemsOptionsHTML) {
+                    newSelect.innerHTML = this.state.ppeItemsOptionsHTML;
+                } else {
+                    this.loadPPEItemsForDropdown();
+                }
 
                 return newRow;
             };
@@ -2186,12 +2195,21 @@ const PPE = {
         if (!equipmentTypeSelect) return;
 
         try {
-            // Load items from backend
+            const now = Date.now();
+            const cacheValid = this.state.ppeItemsListCache &&
+                this.state.ppeItemsListCacheTime &&
+                (now - this.state.ppeItemsListCacheTime) < this.state.ppeItemsListCacheExpiry;
+
+            // Load items from backend (with short TTL cache)
             let items = [];
-            if (typeof GoogleIntegration !== 'undefined' && GoogleIntegration.sendToAppsScript) {
+            if (cacheValid) {
+                items = Array.isArray(this.state.ppeItemsListCache) ? this.state.ppeItemsListCache : [];
+            } else if (typeof GoogleIntegration !== 'undefined' && GoogleIntegration.sendToAppsScript) {
                 const result = await GoogleIntegration.sendToAppsScript('getPPEItemsList', {});
                 if (result && result.success && result.data) {
                     items = result.data;
+                    this.state.ppeItemsListCache = items;
+                    this.state.ppeItemsListCacheTime = now;
                 }
             }
 
@@ -2201,19 +2219,6 @@ const PPE = {
                 const uniqueTypes = [...new Set(ppeList.map(p => p.equipmentType).filter(Boolean))];
                 items = uniqueTypes.map(type => ({ itemName: type, itemCode: '' }));
             }
-
-            // Also add predefined items if not already present
-            const predefinedItems = [
-                'خوذة أمان', 'نظارات وقاية', 'قفازات', 'أحذية أمان',
-                'سترة عاكسة', 'سدادات أذن', 'كمامة', 'بدلة واقية',
-                'حزام أمان', 'معدات حماية تنفسية', 'خوذة', 'نظارات وقاية'
-            ];
-            
-            predefinedItems.forEach(item => {
-                if (!items.some(i => (i.itemName || '').trim() === item.trim())) {
-                    items.push({ itemName: item, itemCode: '' });
-                }
-            });
 
             // Clear and populate dropdown
             equipmentTypeSelect.innerHTML = '<option value="">اختر النوع</option>';
@@ -2234,6 +2239,7 @@ const PPE = {
             });
 
             const optionsHTML = equipmentTypeSelect.innerHTML;
+            this.state.ppeItemsOptionsHTML = optionsHTML;
 
             // مزامنة نفس الخيارات مع جميع قوائم الأنواع في صفوف الأصناف
             const allSelects = document.querySelectorAll('.ppe-equipment-type');
@@ -2245,40 +2251,10 @@ const PPE = {
                     select.value = previousValue;
                 }
             });
-
-            // If no items found, show default options
-            if (items.length === 0) {
-                const defaultOptions = [
-                    { value: 'خوذة', label: 'خوذة' },
-                    { value: 'نظارات وقاية', label: 'نظارات وقاية' },
-                    { value: 'قفازات', label: 'قفازات' },
-                    { value: 'أحذية أمان', label: 'أحذية أمان' },
-                    { value: 'بدلة واقية', label: 'بدلة واقية' },
-                    { value: 'أخرى', label: 'أخرى' }
-                ];
-                
-                defaultOptions.forEach(opt => {
-                    const option = document.createElement('option');
-                    option.value = opt.value;
-                    option.textContent = opt.label;
-                    if (selectedValue === opt.value) {
-                        option.selected = true;
-                    }
-                    equipmentTypeSelect.appendChild(option);
-                });
-            }
         } catch (error) {
             Utils.safeError('خطأ في تحميل قائمة مهمات الوقاية:', error);
-            // Set default options on error
-            equipmentTypeSelect.innerHTML = `
-                <option value="">اختر النوع</option>
-                <option value="خوذة" ${selectedValue === 'خوذة' ? 'selected' : ''}>خوذة</option>
-                <option value="نظارات وقاية" ${selectedValue === 'نظارات وقاية' ? 'selected' : ''}>نظارات وقاية</option>
-                <option value="قفازات" ${selectedValue === 'قفازات' ? 'selected' : ''}>قفازات</option>
-                <option value="أحذية أمان" ${selectedValue === 'أحذية أمان' ? 'selected' : ''}>أحذية أمان</option>
-                <option value="بدلة واقية" ${selectedValue === 'بدلة واقية' ? 'selected' : ''}>بدلة واقية</option>
-                <option value="أخرى" ${selectedValue === 'أخرى' ? 'selected' : ''}>أخرى</option>
-            `;
+            // بدون بنود افتراضية: إن توفر لدينا HTML سابق استخدمه، وإلا أبقِ خيار "اختر النوع" فقط
+            equipmentTypeSelect.innerHTML = this.state.ppeItemsOptionsHTML || '<option value="">اختر النوع</option>';
 
             const optionsHTML = equipmentTypeSelect.innerHTML;
             const allSelects = document.querySelectorAll('.ppe-equipment-type');
