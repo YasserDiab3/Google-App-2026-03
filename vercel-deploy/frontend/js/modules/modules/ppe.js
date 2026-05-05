@@ -1258,32 +1258,80 @@ const PPE = {
         if (!infoEl) return;
         const fmt = (d) => d ? (typeof Utils !== 'undefined' && Utils.formatDate ? Utils.formatDate(d) : new Date(d).toLocaleDateString('ar')) : '-';
 
-        const card = (color, iconClass, title, statValueRows, footerHtml) => {
-            const palettes = {
-                gray:    { bg: 'bg-gray-50',    border: 'border-gray-200',    text: 'text-gray-700',     accent: 'text-gray-600',    title: 'text-gray-700' },
-                blue:    { bg: 'bg-blue-50',    border: 'border-blue-200',    text: 'text-blue-800',     accent: 'text-blue-700',    title: 'text-blue-800' },
-                green:   { bg: 'bg-emerald-50', border: 'border-emerald-200', text: 'text-emerald-800',  accent: 'text-emerald-700', title: 'text-emerald-800' },
-                red:     { bg: 'bg-rose-50',    border: 'border-rose-200',    text: 'text-rose-800',     accent: 'text-rose-700',    title: 'text-rose-800' }
+        const card = (variant, headerIconSolid, title, statValueRows, footerHtml) => {
+            const themes = {
+                gray: {
+                    outer: 'ring-1 ring-slate-200/90 shadow-lg shadow-slate-200/40',
+                    headerBar: 'from-slate-600 via-slate-600 to-slate-700',
+                    headerIconBg: 'bg-white/15 text-white ring-2 ring-white/25',
+                    statTile: 'bg-white/95 border border-slate-100 shadow-sm hover:shadow-md transition-shadow',
+                    iconMuted: 'text-slate-500 bg-slate-100',
+                    label: 'text-slate-500',
+                    value: 'text-slate-900',
+                    footerWrap: 'bg-slate-50/90 border-t border-slate-200/80'
+                },
+                blue: {
+                    outer: 'ring-1 ring-sky-200/90 shadow-lg shadow-sky-100/50',
+                    headerBar: 'from-sky-600 via-sky-500 to-cyan-500',
+                    headerIconBg: 'bg-white/15 text-white ring-2 ring-white/25',
+                    statTile: 'bg-white/95 border border-sky-100/90 shadow-sm',
+                    iconMuted: 'text-sky-600 bg-sky-50',
+                    label: 'text-sky-600/80',
+                    value: 'text-slate-900',
+                    footerWrap: 'bg-sky-50/80 border-t border-sky-100'
+                },
+                green: {
+                    outer: 'ring-1 ring-emerald-200/90 shadow-lg shadow-emerald-100/50',
+                    headerBar: 'from-emerald-600 via-teal-600 to-emerald-500',
+                    headerIconBg: 'bg-white/15 text-white ring-2 ring-white/25',
+                    statTile: 'bg-white/95 border border-emerald-100/90 shadow-sm',
+                    iconMuted: 'text-emerald-600 bg-emerald-50',
+                    label: 'text-emerald-700/75',
+                    value: 'text-slate-900',
+                    footerWrap: 'bg-emerald-50/85 border-t border-emerald-100'
+                },
+                red: {
+                    outer: 'ring-1 ring-rose-200/90 shadow-lg shadow-rose-100/50',
+                    headerBar: 'from-rose-600 via-rose-500 to-red-500',
+                    headerIconBg: 'bg-white/15 text-white ring-2 ring-white/25',
+                    statTile: 'bg-white/95 border border-rose-100/90 shadow-sm',
+                    iconMuted: 'text-rose-600 bg-rose-50',
+                    label: 'text-rose-700/80',
+                    value: 'text-slate-900',
+                    footerWrap: 'bg-rose-50/90 border-t border-rose-100'
+                }
             };
-            const p = palettes[color] || palettes.gray;
-            // تجنب grid + truncate داخل مودال ضيق: يسبب في RTL عرضًا شبه معدوم فيتكدس النص حرفًا تحت حرف
-            const statsHtml = statValueRows.map(s => `
-                <div class="flex items-start gap-3 py-2.5 border-b ${p.border} last:border-b-0">
-                    <i class="${s.icon} shrink-0 w-5 text-center mt-0.5 ${p.accent}"></i>
-                    <div class="flex-1 min-w-0 overflow-visible">
-                        <div class="text-xs font-semibold ${p.accent} leading-snug">${s.label}</div>
-                        <div class="text-sm font-bold ${p.text} leading-snug break-words hyphens-none">${s.value}</div>
-                    </div>
-                </div>
-            `).join('');
+            const t = themes[variant] || themes.gray;
+
+            const statsHtml = statValueRows.length
+                ? `<div class="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3 sm:p-4 bg-gradient-to-b from-white/50 to-slate-50/30">
+                    ${statValueRows.map(s => `
+                        <div class="rounded-xl ${t.statTile} p-3.5 min-w-0">
+                            <div class="flex items-center gap-2.5 mb-2">
+                                <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${t.iconMuted} text-sm">
+                                    <i class="${s.icon}"></i>
+                                </span>
+                                <span class="text-[11px] font-semibold tracking-wide ${t.label} leading-tight">${s.label}</span>
+                            </div>
+                            <p class="text-[15px] sm:text-base font-bold ${t.value} leading-snug break-words hyphens-none pr-1">${s.value}</p>
+                        </div>
+                    `).join('')}
+                </div>`
+                : '';
+
             return `
-                <div class="mt-2 rounded-xl border ${p.border} ${p.bg} ${p.text} overflow-hidden shadow-sm w-full min-w-0">
-                    <div class="flex flex-wrap items-center gap-2 px-3 py-2.5 border-b ${p.border} bg-white/60">
-                        <i class="${iconClass} shrink-0"></i>
-                        <span class="text-sm font-bold ${p.title} leading-tight">${title}</span>
+                <div class="mt-3 w-full min-w-0 overflow-hidden rounded-2xl bg-white ${t.outer}">
+                    <div class="flex items-center gap-3 bg-gradient-to-l ${t.headerBar} px-4 py-3.5 text-white">
+                        <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${t.headerIconBg} text-lg shadow-inner">
+                            <i class="${headerIconSolid}"></i>
+                        </span>
+                        <div class="min-w-0 flex-1">
+                            <p class="text-[10px] font-semibold tracking-wide text-white/75 mb-0.5">استحقاق الاستلام</p>
+                            <h4 class="text-sm sm:text-base font-bold leading-snug text-white drop-shadow-sm">${title}</h4>
+                        </div>
                     </div>
-                    ${statsHtml ? `<div class="px-3 pt-1 pb-2 space-y-0">${statsHtml}</div>` : ''}
-                    ${footerHtml ? `<div class="px-3 py-2.5 border-t ${p.border} bg-white/60 text-xs font-semibold leading-relaxed flex flex-wrap items-center gap-2">${footerHtml}</div>` : ''}
+                    ${statsHtml}
+                    ${footerHtml ? `<div class="${t.footerWrap} px-4 py-3 text-xs sm:text-sm font-medium text-slate-700 leading-relaxed flex flex-wrap items-start gap-2.5">${footerHtml}</div>` : ''}
                 </div>
             `;
         };
@@ -1291,10 +1339,10 @@ const PPE = {
         if (!result || !result.hasInputs) {
             infoEl.innerHTML = card(
                 'gray',
-                'fas fa-info-circle text-blue-500',
-                'حالة استحقاق الاستلام',
+                'fas fa-info-circle',
+                'اختر الموظف ونوع المعدة',
                 [],
-                '<i class="fas fa-mouse-pointer"></i><span class="text-gray-700">اختر كود الموظف ونوع المعدة لعرض تاريخ آخر استلام والمدة المنقضية وحالة الاستحقاق.</span>'
+                '<span class="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-slate-200 text-slate-600 text-xs"><i class="fas fa-lightbulb"></i></span><span>بعد اختيار الكود والصنف تظهر تفاصيل آخر استلام والمدة والاستحقاق.</span>'
             );
             infoEl.classList.remove('hidden');
             infoEl.setAttribute('data-eligible', 'pending');
@@ -1308,10 +1356,10 @@ const PPE = {
             }
             infoEl.innerHTML = card(
                 'blue',
-                'fas fa-info-circle',
-                'حالة استحقاق الاستلام',
+                'fas fa-box-open',
+                'أول استلام لهذا الصنف',
                 stats,
-                '<i class="fas fa-check-circle"></i><span>لا يوجد استلام سابق لهذا الصنف لهذا الموظف. يمكن تسجيل استلام جديد.</span>'
+                '<span class="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-sky-200 text-sky-800 text-xs"><i class="fas fa-check"></i></span><span>لا يوجد استلام سابق لهذا الصنف لهذا الموظف؛ يمكن تسجيل الاستلام.</span>'
             );
             infoEl.setAttribute('data-eligible', '1');
             infoEl.classList.remove('hidden');
@@ -1321,9 +1369,9 @@ const PPE = {
         const elapsedText = this.formatMonthsDays(result.elapsed?.months || 0, result.elapsed?.days || 0);
         const requiredText = result.hasRule ? this.formatMonthsDays(result.ruleMonths, result.ruleDays) : 'بدون قاعدة محددة';
         const stats = [
-            { icon: 'fas fa-history',       label: 'تاريخ آخر استلام', value: fmt(result.lastReceiptDate) },
-            { icon: 'fas fa-hourglass-half', label: 'المدة المنقضية',   value: elapsedText },
-            { icon: 'fas fa-shield-alt',    label: 'الحد الأدنى للصنف', value: requiredText }
+            { icon: 'fas fa-history', label: 'تاريخ آخر استلام', value: fmt(result.lastReceiptDate) },
+            { icon: 'fas fa-hourglass-half', label: 'المدة المنقضية', value: elapsedText },
+            { icon: 'fas fa-shield-alt', label: 'الحد الأدنى للصنف', value: requiredText }
         ];
         if (result.dueDate) {
             stats.push({ icon: 'fas fa-calendar-check', label: 'تاريخ الاستحقاق', value: fmt(result.dueDate) });
@@ -1335,7 +1383,7 @@ const PPE = {
                 'fas fa-check-circle',
                 'الموظف مستحق للاستلام',
                 stats,
-                '<i class="fas fa-check-double"></i><span>الحالة: مسموح بتسجيل استلام جديد.</span>'
+                '<span class="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-emerald-200 text-emerald-800 text-xs"><i class="fas fa-check-double"></i></span><span class="font-semibold text-emerald-900">يمكن تسجيل استلام جديد وفق القاعدة المعتمدة لهذا الصنف.</span>'
             );
             infoEl.setAttribute('data-eligible', '1');
         } else {
@@ -1345,7 +1393,7 @@ const PPE = {
                 'fas fa-ban',
                 'الموظف غير مستحق حالياً',
                 stats,
-                `<i class="fas fa-clock"></i><span>المدة المتبقية حتى الاستحقاق: <b>${remainingText}</b>.</span>`
+                `<span class="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-rose-200 text-rose-800 text-xs"><i class="fas fa-clock"></i></span><span class="font-semibold text-rose-900">المدة المتبقية حتى يصبح الاستلام مسموحاً: <strong class="text-rose-950">${remainingText}</strong>.</span>`
             );
             infoEl.setAttribute('data-eligible', '0');
         }
