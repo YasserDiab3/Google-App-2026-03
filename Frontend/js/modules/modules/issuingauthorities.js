@@ -422,6 +422,23 @@ const IssuingAuthorities = {
             }
         });
 
+        const runDuplicateHint = async () => {
+            const personType = (document.getElementById('ia-f-person-type')?.value || 'employee').toLowerCase() === 'contractor'
+                ? 'contractor'
+                : 'employee';
+            const payload = {
+                personType,
+                employeeCode: (document.getElementById('ia-f-employee-code')?.value || '').trim(),
+                contractorCompanyName: (document.getElementById('ia-f-contractor-name')?.value || '').trim(),
+                name: (document.getElementById('ia-f-name')?.value || '').trim()
+            };
+            await this._validateDuplicateBeforeSave(payload, this._currentEditId, { silent: true });
+        };
+        document.getElementById('ia-f-person-type')?.addEventListener('change', () => { runDuplicateHint(); });
+        document.getElementById('ia-f-employee-code')?.addEventListener('blur', () => { runDuplicateHint(); });
+        document.getElementById('ia-f-contractor-name')?.addEventListener('change', () => { runDuplicateHint(); });
+        document.getElementById('ia-f-name')?.addEventListener('blur', () => { runDuplicateHint(); });
+
         this._installEmployeeCodeLookupLikeClinic();
     },
 
@@ -829,6 +846,95 @@ const IssuingAuthorities = {
         if (typeof Utils !== 'undefined' && Utils.showNotification) {
             const t = type === 'error' ? 'error' : type === 'warning' ? 'warning' : type === 'success' ? 'success' : 'info';
             Utils.showNotification(msg, t);
+        }
+    },
+
+    _normalizeDupValue(value) {
+        return String(value || '').replace(/\s+/g, ' ').trim().toLowerCase();
+    },
+
+    _setFormAlert(message = '', type = 'warning') {
+        const alertEl = document.getElementById('ia-form-alerts');
+        if (!alertEl) return;
+        const msg = String(message || '').trim();
+        if (!msg) {
+            alertEl.style.display = 'none';
+            alertEl.innerHTML = '';
+            return;
+        }
+        const isError = type === 'error';
+        alertEl.style.display = 'block';
+        alertEl.style.border = isError ? '1px solid #fecaca' : '1px solid #fde68a';
+        alertEl.style.background = isError ? '#fef2f2' : '#fffbeb';
+        alertEl.style.color = isError ? '#991b1b' : '#92400e';
+        alertEl.style.padding = '8px 10px';
+        alertEl.style.borderRadius = '8px';
+        alertEl.innerHTML = `<i class="fas ${isError ? 'fa-exclamation-circle' : 'fa-exclamation-triangle'}" style="margin-left:6px;"></i>${(typeof Utils !== 'undefined' && Utils.escapeHTML) ? Utils.escapeHTML(msg) : msg}`;
+    },
+
+    _buildDuplicateMessage(duplicate) {
+        const cat = duplicate?.category === 'contractors'
+            ? this.t('module.issuingAuthorities.cat.contractors', 'المقاولين')
+            : this.t('module.issuingAuthorities.cat.employees', 'الموظفين');
+        const displayName = String(duplicate?.record?.name || '').trim();
+        const suffix = displayName ? ` (${displayName})` : '';
+        return `لا يمكن الإضافة: هذا الشخص موجود مسبقاً في قائمة ${cat}${suffix}.`;
+    },
+
+    async _findDuplicateIssuingAuthority(payload, editId = null) {
+        const personType = payload?.personType === 'contractor' ? 'contractor' : 'employee';
+        const targetCategory = personType === 'contractor' ? 'contractors' : 'employees';
+        const rows = await this._fetchNormalizedRowsForCategory(targetCategory);
+        const normalizedName = this._normalizeDupValue(payload?.name);
+        const normalizedEmpCode = this._normalizeDupValue(payload?.employeeCode);
+        const normalizedContractor = this._normalizeDupValue(payload?.contractorCompanyName);
+        const normalizedEditId = this._normalizeDupValue(editId);
+        const duplicate = rows.find((row) => {
+            const rowId = this._normalizeDupValue(row?.id);
+            if (normalizedEditId && rowId === normalizedEditId) return false;
+            const rowPersonType = String(row?.personType || '').toLowerCase().trim() === 'contractor' ? 'contractor' : 'employee';
+            if (rowPersonType !== personType) return false;
+            if (personType === 'employee') {
+                const rowCode = this._normalizeDupValue(row?.employeeCode);
+                if (normalizedEmpCode && rowCode && normalizedEmpCode === rowCode) return true;
+                const rowName = this._normalizeDupValue(row?.name);
+                return normalizedName && rowName && normalizedName === rowName;
+            }
+            const rowContractor = this._normalizeDupValue(row?.contractorCompanyName);
+            const rowName = this._normalizeDupValue(row?.name);
+            return !!(normalizedContractor && normalizedName && rowContractor === normalizedContractor && rowName === normalizedName);
+        });
+        if (!duplicate) return null;
+        return { category: targetCategory, record: duplicate };
+    },
+
+    async _validateDuplicateBeforeSave(payload, editId = null, { silent = false } = {}) {
+        if (!payload || !payload.name) {
+            this._setFormAlert('');
+            return false;
+        }
+        const personType = payload.personType === 'contractor' ? 'contractor' : 'employee';
+        if (personType === 'employee' && !payload.employeeCode) {
+            this._setFormAlert('');
+            return false;
+        }
+        if (personType === 'contractor' && !payload.contractorCompanyName) {
+            this._setFormAlert('');
+            return false;
+        }
+        try {
+            const duplicate = await this._findDuplicateIssuingAuthority(payload, editId);
+            if (!duplicate) {
+                this._setFormAlert('');
+                return false;
+            }
+            const msg = this._buildDuplicateMessage(duplicate);
+            this._setFormAlert(msg, 'error');
+            if (!silent) this._iaNotify(msg, 'error');
+            return true;
+        } catch (err) {
+            this._reportModuleError('IssuingAuthorities._validateDuplicateBeforeSave', err);
+            return false;
         }
     },
 
@@ -2186,6 +2292,9 @@ const IssuingAuthorities = {
             const checked = document.querySelector(`input[name="permit_${pt.key}"]:checked`);
             payload[pt.key] = checked ? checked.value : 'X';
         });
+
+        const hasDuplicate = await this._validateDuplicateBeforeSave(payload, this._currentEditId, { silent: false });
+        if (hasDuplicate) return;
 
         if (this._iaSaveModalBusy) return;
         this._iaSaveModalBusy = true;

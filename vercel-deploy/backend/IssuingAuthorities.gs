@@ -99,6 +99,29 @@ function _normalizePersonType(personType, fallbackType) {
     return (v === 'contractor') ? 'contractor' : 'employee';
 }
 
+function _normalizeDupText(value) {
+    return String(value || '').replace(/\s+/g, ' ').trim().toLowerCase();
+}
+
+function _findDuplicateIssuingAuthorityRecord(records, recordData) {
+    const personType = _normalizePersonType(recordData.personType, 'employee');
+    const targetName = _normalizeDupText(recordData.name);
+    const targetEmployeeCode = _normalizeDupText(recordData.employeeCode);
+    const targetContractor = _normalizeDupText(recordData.contractorCompanyName);
+    return (records || []).find(function (row) {
+        if (_normalizePersonType(row.personType, 'employee') !== personType) return false;
+        if (personType === 'employee') {
+            const rowCode = _normalizeDupText(row.employeeCode);
+            if (targetEmployeeCode && rowCode && targetEmployeeCode === rowCode) return true;
+            const rowName = _normalizeDupText(row.name);
+            return !!(targetName && rowName && targetName === rowName);
+        }
+        const rowContractor = _normalizeDupText(row.contractorCompanyName);
+        const rowName = _normalizeDupText(row.name);
+        return !!(targetContractor && targetName && rowContractor === targetContractor && rowName === targetName);
+    }) || null;
+}
+
 function _buildIssuingAuthorityRecordData(data, fallbackPersonType, targetSheet) {
     const userRef = (data.userData || data.user || {});
     const personType = _normalizePersonType(data.personType, fallbackPersonType);
@@ -162,6 +185,11 @@ function _addIssuingAuthorityBySheet(data, sheetName, fallbackPersonType) {
         if (!recordData.name) return { success: false, message: 'اسم الشخص مطلوب' };
         if (recordData.personType === 'contractor' && !recordData.contractorCompanyName) {
             return { success: false, message: 'اسم المقاول / الشركة (المورد) مطلوب' };
+        }
+        const existingRows = readFromSheet(sheetName, getSpreadsheetId());
+        const duplicate = _findDuplicateIssuingAuthorityRecord(existingRows, recordData);
+        if (duplicate) {
+            return { success: false, message: 'لا يمكن الإضافة: الشخص موجود مسبقاً في القائمة', errorCode: 'DUPLICATE_ISSUING_AUTHORITY' };
         }
 
         const result = appendToSheet(sheetName, recordData);
