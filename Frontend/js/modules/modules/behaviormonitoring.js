@@ -712,23 +712,43 @@ const BehaviorMonitoring = {
                     <div class="card-body">
                         <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-4 mb-6 behavior-overview-stats">
                             <div class="behavior-stat behavior-stat-total">
-                                <div class="behavior-stat-label">${Utils.escapeHTML(totalLabel)}</div>
+                                <div class="behavior-stat-top-bar"></div>
+                                <div class="behavior-stat-head">
+                                    <div class="behavior-stat-label">${Utils.escapeHTML(totalLabel)}</div>
+                                    <span class="behavior-stat-icon"><i class="fas fa-layer-group"></i></span>
+                                </div>
                                 <div class="behavior-stat-value">${isSkeleton ? '—' : total}</div>
                             </div>
                             <div class="behavior-stat behavior-stat-employees">
-                                <div class="behavior-stat-label">${Utils.escapeHTML(employeeLabel)}</div>
+                                <div class="behavior-stat-top-bar"></div>
+                                <div class="behavior-stat-head">
+                                    <div class="behavior-stat-label">${Utils.escapeHTML(employeeLabel)}</div>
+                                    <span class="behavior-stat-icon"><i class="fas fa-user-tie"></i></span>
+                                </div>
                                 <div class="behavior-stat-value">${isSkeleton ? '—' : employeeCount}</div>
                             </div>
                             <div class="behavior-stat behavior-stat-contractors">
-                                <div class="behavior-stat-label">${Utils.escapeHTML(contractorLabel)}</div>
+                                <div class="behavior-stat-top-bar"></div>
+                                <div class="behavior-stat-head">
+                                    <div class="behavior-stat-label">${Utils.escapeHTML(contractorLabel)}</div>
+                                    <span class="behavior-stat-icon"><i class="fas fa-users-cog"></i></span>
+                                </div>
                                 <div class="behavior-stat-value">${isSkeleton ? '—' : contractorCount}</div>
                             </div>
                             <div class="behavior-stat behavior-stat-negative">
-                                <div class="behavior-stat-label">${Utils.escapeHTML(negLabel)}</div>
+                                <div class="behavior-stat-top-bar"></div>
+                                <div class="behavior-stat-head">
+                                    <div class="behavior-stat-label">${Utils.escapeHTML(negLabel)}</div>
+                                    <span class="behavior-stat-icon"><i class="fas fa-triangle-exclamation"></i></span>
+                                </div>
                                 <div class="behavior-stat-value text-red-700">${isSkeleton ? '—' : negatives}</div>
                             </div>
                             <div class="behavior-stat behavior-stat-positive">
-                                <div class="behavior-stat-label">${Utils.escapeHTML(posLabel)}</div>
+                                <div class="behavior-stat-top-bar"></div>
+                                <div class="behavior-stat-head">
+                                    <div class="behavior-stat-label">${Utils.escapeHTML(posLabel)}</div>
+                                    <span class="behavior-stat-icon"><i class="fas fa-circle-check"></i></span>
+                                </div>
                                 <div class="behavior-stat-value text-green-700">${isSkeleton ? '—' : positives}</div>
                             </div>
                         </div>
