@@ -386,30 +386,30 @@ const Settings = {
                                 </p>
                             </div>
                             <div class="md:col-span-2 border-t pt-4">
-                                <div class="flex flex-wrap items-start justify-between gap-3 mb-4 p-4 rounded-xl bg-gradient-to-br from-teal-50 via-cyan-50/40 to-slate-50 border border-teal-200/60 shadow-sm">
+                                <div class="flex flex-wrap items-start justify-between gap-3 mb-4 p-4 rounded-xl bg-gradient-to-br from-blue-50 via-indigo-50/50 to-cyan-50/40 border border-blue-200/70 shadow-sm">
                                     <div class="flex-1 min-w-0">
-                                        <h3 class="text-sm font-bold text-teal-900 mb-2 flex flex-wrap items-center gap-2">
-                                            <span class="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-teal-600 text-white shadow-md">
+                                        <h3 class="text-sm font-bold text-blue-900 mb-2 flex flex-wrap items-center gap-2">
+                                            <span class="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-blue-600 text-white shadow-md">
                                                 <i class="fas fa-shield-alt text-sm"></i>
                                             </span>
                                             قواعد الحدّ الأدنى بين استلامَين بنفس الموظف (مهمات الوقاية)
                                         </h3>
-                                        <p class="text-xs text-teal-800/85 leading-relaxed max-w-3xl">
+                                        <p class="text-xs text-blue-800/85 leading-relaxed max-w-3xl">
                                             جدّد الجدول لكل <strong class="font-semibold">صنف</strong> عدد <strong class="font-semibold">الشهور</strong> كحدّ أدنى بين استلام واحد والذي بعده. ثم احفظ بـ<strong>«حفظ بيانات الشركة»</strong> لمزامنة الشيت والتطبيق.
                                         </p>
-                                        <p class="text-[11px] text-slate-500 mt-2">
-                                            <i class="fas fa-database ml-1 text-teal-600"></i>
+                                        <p class="text-[11px] text-slate-600 mt-2">
+                                            <i class="fas fa-database ml-1 text-blue-600"></i>
                                             البيانات تُزاد هنا؛ التخزين مع الخادم عند ضغط «حفظ بيانات الشركة» أسفل البطاقة.
                                         </p>
                                     </div>
                                     <div class="flex flex-wrap items-center gap-2.5">
-                                        <button type="button" id="ppe-download-template-btn" class="shrink-0 inline-flex items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 text-sm font-bold px-4 py-2.5 min-h-[42px] shadow-sm hover:shadow-md transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-slate-300">
+                                        <button type="button" id="ppe-download-template-btn" class="shrink-0 inline-flex items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 text-base font-bold px-5 py-3 min-h-[48px] shadow-sm hover:shadow-md transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-slate-300">
                                             <i class="fas fa-file-download"></i> تحميل قالب
                                         </button>
-                                        <button type="button" id="ppe-import-rules-btn" class="shrink-0 inline-flex items-center justify-center gap-2 rounded-xl border border-blue-300 bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold px-4 py-2.5 min-h-[42px] shadow-sm hover:shadow-md transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-300">
+                                        <button type="button" id="ppe-import-rules-btn" class="shrink-0 inline-flex items-center justify-center gap-2 rounded-xl border border-blue-300 bg-blue-600 hover:bg-blue-700 text-white text-base font-bold px-5 py-3 min-h-[48px] shadow-sm hover:shadow-md transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-300">
                                             <i class="fas fa-file-import"></i> استيراد
                                         </button>
-                                        <button type="button" id="ppe-add-rule-btn" class="shrink-0 inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-teal-600 to-cyan-600 hover:from-teal-700 hover:to-cyan-700 text-white text-sm font-bold px-4 py-2.5 min-h-[42px] shadow-md hover:shadow-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-teal-300">
+                                        <button type="button" id="ppe-add-rule-btn" class="shrink-0 inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white text-base font-bold px-5 py-3 min-h-[48px] shadow-md hover:shadow-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-300">
                                             <i class="fas fa-plus"></i> إضافة صف
                                         </button>
                                     </div>
@@ -1616,11 +1616,11 @@ const Settings = {
                 const prevScrollTop = ppeEligibilityRulesContainer.scrollTop || 0;
                 const prevPageY = window.scrollY || window.pageYOffset || 0;
                 const tableShell = (bodyRowsHtml) => `
-                    <div class="rounded-xl overflow-hidden border border-teal-200/70 shadow-md ring-1 ring-teal-900/5 bg-white min-h-[8rem]">
+                    <div class="rounded-xl overflow-hidden border border-blue-200/70 shadow-md ring-1 ring-blue-900/5 bg-white min-h-[8rem]">
                         <div class="overflow-x-auto">
                             <table class="w-full text-sm ppe-eligibility-rules-table table-fixed">
                                 <thead>
-                                    <tr class="bg-gradient-to-l from-teal-700 via-teal-600 to-cyan-600 text-white">
+                                    <tr class="bg-gradient-to-l from-blue-700 via-blue-600 to-indigo-600 text-white">
                                         <th class="px-3 py-3 text-center font-bold w-12 border-b border-white/20">#</th>
                                         <th class="px-3 py-3 text-right font-bold min-w-[12rem] border-b border-white/20">نوع الصنف</th>
                                         <th class="px-3 py-3 text-center font-bold w-40 border-b border-white/20">الحد الأدنى (شهور)</th>
@@ -1653,22 +1653,22 @@ const Settings = {
                     const optionsHtml = buildPpeItemSelectOptions(rule.equipmentType);
                     const monthsVal = Math.max(0, Math.min(120, parseInt(rule.months, 10) || 0));
                     return `
-                    <tr class="ppe-rule-row hover:bg-teal-50/40 transition-colors" data-index="${idx}">
+                    <tr class="ppe-rule-row hover:bg-blue-50/50 transition-colors" data-index="${idx}">
                         <td class="px-3 py-3 text-center text-slate-500 font-semibold">${idx + 1}</td>
                         <td class="px-3 py-3 align-middle min-w-[10rem]">
-                            <select class="form-input ppe-rule-item w-full text-sm border-teal-200/80 focus:ring-teal-500">${optionsHtml}</select>
+                            <select class="form-input ppe-rule-item w-full text-sm border-blue-200/80 focus:ring-blue-500">${optionsHtml}</select>
                         </td>
                         <td class="px-3 py-3 align-middle text-center">
                             <div class="inline-flex items-center justify-center gap-1">
-                                <input type="number" class="form-input ppe-rule-months w-24 text-center text-sm border-teal-200/80 font-bold tabular-nums"
+                                <input type="number" class="form-input ppe-rule-months w-24 text-center text-sm border-blue-200/80 font-bold tabular-nums"
                                     min="1" max="120" step="1" inputmode="numeric" value="${monthsVal || ''}" placeholder="1">
                                 <span class="text-xs text-slate-500 whitespace-nowrap">شهرًا</span>
                             </div>
                         </td>
                         <td class="px-3 py-3 text-center align-middle">
-                            <button type="button" class="ppe-rule-remove inline-flex items-center justify-center gap-1 rounded-lg border border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100 text-xs font-bold px-3 py-2 transition-colors"
+                            <button type="button" class="ppe-rule-remove inline-flex items-center justify-center gap-1.5 rounded-xl border border-red-300 bg-red-600 text-white hover:bg-red-700 text-sm font-extrabold px-4 py-2.5 min-h-[42px] shadow-sm hover:shadow-md transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-red-300"
                                 title="حذف هذا الصف">
-                                <i class="fas fa-trash-alt"></i>
+                                <i class="fas fa-trash-alt"></i> حذف
                             </button>
                         </td>
                     </tr>`;
