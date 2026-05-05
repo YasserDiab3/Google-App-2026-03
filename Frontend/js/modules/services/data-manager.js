@@ -807,10 +807,8 @@ const DataManager = {
                         } else if (AppState.companySettings?.ppeEligibilityRules != null) {
                             ppeEligibilityRules = String(AppState.companySettings.ppeEligibilityRules);
                         }
-                        const ppeMo = parseInt(result.data.ppeEligibilityMonths, 10);
-                        const legacyMonths = Number.isFinite(ppeMo) && ppeMo >= 0 ? Math.min(120, ppeMo) : (AppState.companySettings?.ppeEligibilityMonths ?? 0);
-                        const ppeDy = parseInt(result.data.ppeEligibilityDays, 10);
-                        const legacyDays = Number.isFinite(ppeDy) && ppeDy >= 0 ? Math.min(3650, ppeDy) : (AppState.companySettings?.ppeEligibilityDays ?? 0);
+                        const legacyMonths = 0;
+                        const legacyDays = 0;
 
                         // تحديث AppState بالبيانات من Google Sheets
                         AppState.companySettings = Object.assign({}, AppState.companySettings, {

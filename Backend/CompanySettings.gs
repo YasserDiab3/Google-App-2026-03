@@ -79,7 +79,7 @@ function normalizePPEEligibilityRulesArray_(raw) {
         .filter(function (r) { return !!r; });
 }
 
-function readPPEEligibilityRulesTable_(spreadsheetId) {
+function readPPEEligibilityRulesRowsRaw_(spreadsheetId) {
     try {
         const init = initPPEEligibilityRulesTable_(spreadsheetId);
         if (!init.success || !init.sheet) return [];
@@ -98,6 +98,20 @@ function readPPEEligibilityRulesTable_(spreadsheetId) {
                 if (!header) return;
                 obj[header] = row[idx];
             });
+            out.push(obj);
+        });
+        return out;
+    } catch (e) {
+        Logger.log('readPPEEligibilityRulesRowsRaw_ error: ' + e.toString());
+        return [];
+    }
+}
+
+function readPPEEligibilityRulesTable_(spreadsheetId) {
+    try {
+        const rows = readPPEEligibilityRulesRowsRaw_(spreadsheetId);
+        const out = [];
+        rows.forEach(function (obj) {
             const equipmentType = String(obj.equipmentType || '').trim();
             let months = parseInt(obj.months, 10);
             if (!equipmentType) return;
@@ -123,12 +137,15 @@ function savePPEEligibilityRulesTable_(rulesArray, spreadsheetId, userName, nowI
     const user = userName || 'System';
 
     // التقاط createdAt/createdBy القديم لكل صنف إن وجد
-    const existingRows = readPPEEligibilityRulesTable_(spreadsheetId);
+    const existingRows = readPPEEligibilityRulesRowsRaw_(spreadsheetId);
     const createdMap = {};
     existingRows.forEach(function (r) {
         const key = String(r.equipmentType || '').trim().toLowerCase();
         if (key && !createdMap[key]) {
-            createdMap[key] = { createdAt: now, createdBy: user };
+            createdMap[key] = {
+                createdAt: r.createdAt || now,
+                createdBy: r.createdBy || user
+            };
         }
     });
 
@@ -246,9 +263,6 @@ function initCompanySettingsTable(spreadsheetId = null) {
                 'clinicVisitTypes',
                 'profileTeamsUrl',
                 'profileWhatsAppUrl',
-                'ppeEligibilityMonths',
-                'ppeEligibilityDays',
-                'ppeEligibilityRules',
                 'createdAt',
                 'updatedAt',
                 'createdBy',
@@ -334,17 +348,7 @@ function saveCompanySettingsToSheet(settingsData) {
         const clinicThresholdNum = (clinicThreshold !== undefined && clinicThreshold !== null && clinicThreshold !== '') ? parseInt(clinicThreshold, 10) : 10;
         const clinicMonthlyVisitsAlertThreshold = (isNaN(clinicThresholdNum) || clinicThresholdNum < 1) ? 10 : Math.min(1000, clinicThresholdNum);
 
-        // PPE eligibility (minimum gap since last receipt for the same employee + equipment type)
-        const ppeMonthsRaw = settingsData.ppeEligibilityMonths;
-        const ppeMonthsNum = (ppeMonthsRaw !== undefined && ppeMonthsRaw !== null && ppeMonthsRaw !== '') ? parseInt(ppeMonthsRaw, 10) : 0;
-        const ppeEligibilityMonths = (isNaN(ppeMonthsNum) || ppeMonthsNum < 0) ? 0 : Math.min(120, ppeMonthsNum);
-
-        const ppeDaysRaw = settingsData.ppeEligibilityDays;
-        const ppeDaysNum = (ppeDaysRaw !== undefined && ppeDaysRaw !== null && ppeDaysRaw !== '') ? parseInt(ppeDaysRaw, 10) : 0;
-        const ppeEligibilityDays = (isNaN(ppeDaysNum) || ppeDaysNum < 0) ? 0 : Math.min(3650, ppeDaysNum);
-
-        // ppeEligibilityRules: يتم حفظها فعلياً في جدول منفصل PPE_Eligibility_Rules
-        // ونُبقي هذا الحقل كسلسلة JSON توافقية للواجهة القديمة فقط.
+        // ppeEligibilityRules: يتم حفظها حصريًا في جدول PPE_Eligibility_Rules (جدول مستقل).
         let normalizedPpeRulesArray = [];
         if (settingsData.ppeEligibilityRules !== undefined && settingsData.ppeEligibilityRules !== null) {
             try {
@@ -357,8 +361,6 @@ function saveCompanySettingsToSheet(settingsData) {
             // عند عدم الإرسال من الواجهة الحالية، نحتفظ بالموجود في الجدول المستقل
             normalizedPpeRulesArray = readPPEEligibilityRulesTable_(spreadsheetId);
         }
-        let ppeEligibilityRulesValue = JSON.stringify(normalizedPpeRulesArray);
-
         let settingsToSave = {
             id: 'COMPANY-SETTINGS-1',
             name: settingsData.name || '',
@@ -376,9 +378,6 @@ function saveCompanySettingsToSheet(settingsData) {
             clinicVisitTypes: clinicVisitTypesValue,
             profileTeamsUrl: settingsData.profileTeamsUrl != null ? String(settingsData.profileTeamsUrl) : '',
             profileWhatsAppUrl: settingsData.profileWhatsAppUrl != null ? String(settingsData.profileWhatsAppUrl) : '',
-            ppeEligibilityMonths: ppeEligibilityMonths,
-            ppeEligibilityDays: ppeEligibilityDays,
-            ppeEligibilityRules: ppeEligibilityRulesValue,
             updatedAt: now,
             updatedBy: userName
         };
@@ -398,23 +397,6 @@ function saveCompanySettingsToSheet(settingsData) {
             // لا نمسح أنواع الزيارة إذا لم تُرسل من الواجهة الحالية
             if (settingsData.clinicVisitTypes === undefined && existing.clinicVisitTypes != null && String(existing.clinicVisitTypes).trim() !== '') {
                 settingsToSave.clinicVisitTypes = String(existing.clinicVisitTypes);
-            }
-            // الحفاظ على إعدادات استحقاق PPE إذا لم تُرسل من الواجهة الحالية
-            if (settingsData.ppeEligibilityMonths === undefined && existing.ppeEligibilityMonths != null && existing.ppeEligibilityMonths !== '') {
-                const existingMonths = parseInt(existing.ppeEligibilityMonths, 10);
-                if (!isNaN(existingMonths) && existingMonths >= 0) {
-                    settingsToSave.ppeEligibilityMonths = Math.min(120, existingMonths);
-                }
-            }
-            if (settingsData.ppeEligibilityDays === undefined && existing.ppeEligibilityDays != null && existing.ppeEligibilityDays !== '') {
-                const existingDays = parseInt(existing.ppeEligibilityDays, 10);
-                if (!isNaN(existingDays) && existingDays >= 0) {
-                    settingsToSave.ppeEligibilityDays = Math.min(3650, existingDays);
-                }
-            }
-            // الحفاظ على قيمة JSON التوافقية إذا لم تُرسل من الواجهة الحالية وكان الجدول المستقل فارغاً
-            if (settingsData.ppeEligibilityRules === undefined && normalizedPpeRulesArray.length === 0 && existing.ppeEligibilityRules != null && String(existing.ppeEligibilityRules).trim() !== '') {
-                settingsToSave.ppeEligibilityRules = String(existing.ppeEligibilityRules);
             }
         } else {
             settingsToSave.createdAt = now;
@@ -437,6 +419,9 @@ function saveCompanySettingsToSheet(settingsData) {
             Logger.log('Saving company settings without logo');
         }
         
+        // snapshot الإعدادات القديمة لتفعيل rollback إذا فشل حفظ جدول القواعد
+        const oldCompanySnapshot = (existingSettings && existingSettings.length > 0) ? existingSettings[0] : null;
+
         // حفظ البيانات (استبدال كامل - سيكون هناك سجل واحد فقط)
         const result = saveToSheet(COMPANY_SETTINGS_SHEET, [settingsToSave], spreadsheetId);
         
@@ -444,6 +429,10 @@ function saveCompanySettingsToSheet(settingsData) {
             // حفظ قواعد الاستحقاق في جدول منفصل (أعمدة نصية/رقمية)
             const rulesSave = savePPEEligibilityRulesTable_(normalizedPpeRulesArray, spreadsheetId, userName, now);
             if (!rulesSave.success) {
+                // rollback لبيانات الشركة لمنع الحفظ الجزئي
+                if (oldCompanySnapshot) {
+                    saveToSheet(COMPANY_SETTINGS_SHEET, [oldCompanySnapshot], spreadsheetId);
+                }
                 return { success: false, message: rulesSave.message || 'فشل حفظ جدول قواعد استحقاق PPE' };
             }
             Logger.log('Company settings saved successfully');
@@ -480,8 +469,6 @@ function buildPublicCompanySettingsView_(settingsData) {
         clinicVisitTypes: src.clinicVisitTypes || '',
         profileTeamsUrl: src.profileTeamsUrl || '',
         profileWhatsAppUrl: src.profileWhatsAppUrl || '',
-        ppeEligibilityMonths: src.ppeEligibilityMonths || 0,
-        ppeEligibilityDays: src.ppeEligibilityDays || 0,
         ppeEligibilityRules: src.ppeEligibilityRules || '[]',
         updatedAt: src.updatedAt || ''
     };
@@ -516,6 +503,8 @@ function getCompanySettingsFromSheet(userData) {
             } else if (!settingsData.ppeEligibilityRules) {
                 settingsData.ppeEligibilityRules = '[]';
             }
+            settingsData.ppeEligibilityMonths = 0;
+            settingsData.ppeEligibilityDays = 0;
             // ✅ إصلاح: التحقق من وجود الشعار في البيانات المحملة
             if (settingsData.logo && settingsData.logo.trim() !== '') {
                 Logger.log('Company settings loaded with logo (length: ' + settingsData.logo.length + ' characters)');
@@ -532,6 +521,9 @@ function getCompanySettingsFromSheet(userData) {
             // إرجاع الإعدادات الافتراضية
             Logger.log('No company settings found, returning default settings');
             const defaults = getDefaultCompanySettings();
+            defaults.ppeEligibilityRules = '[]';
+            defaults.ppeEligibilityMonths = 0;
+            defaults.ppeEligibilityDays = 0;
             const permissionCheck = checkCompanySettingsPermission(userData || {});
             if (permissionCheck && permissionCheck.hasPermission) {
                 return { success: true, data: defaults };
