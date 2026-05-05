@@ -212,14 +212,17 @@ function saveCompanySettingsToSheet(settingsData) {
                             const itemName = String(rule.equipmentType || rule.itemName || '').trim();
                             if (!itemName) return null;
                             let months = parseInt(rule.months, 10);
-                            let days = parseInt(rule.days, 10);
+                            let legacyDays = parseInt(rule.days, 10);
                             if (isNaN(months) || months < 0) months = 0;
-                            if (isNaN(days) || days < 0) days = 0;
+                            if (isNaN(legacyDays) || legacyDays < 0) legacyDays = 0;
                             months = Math.min(120, months);
-                            days = Math.min(3650, days);
-                            return { equipmentType: itemName, months: months, days: days };
+                            // ترحيل: قواعد كانت تعتمد الأيام فقط تُقرّب إلى شهر واحد على الأقل
+                            if (months < 1 && legacyDays > 0) {
+                                months = Math.min(120, Math.max(1, Math.ceil(legacyDays / 30)));
+                            }
+                            return { equipmentType: itemName, months: months, days: 0 };
                         })
-                        .filter(function (r) { return r && (r.months + r.days) > 0; });
+                        .filter(function (r) { return r && r.months > 0; });
                     ppeEligibilityRulesValue = JSON.stringify(normalized);
                 }
             } catch (e) {

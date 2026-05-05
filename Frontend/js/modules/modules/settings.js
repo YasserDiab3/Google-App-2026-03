@@ -386,26 +386,27 @@ const Settings = {
                                 </p>
                             </div>
                             <div class="md:col-span-2 border-t pt-4">
-                                <div class="flex items-start justify-between gap-3 mb-3">
-                                    <div>
-                                        <h3 class="text-sm font-bold text-gray-700 mb-1">
-                                            <i class="fas fa-hard-hat ml-2"></i>
-                                            قواعد استحقاق استلام مهمات الوقاية لكل صنف
+                                <div class="flex flex-wrap items-start justify-between gap-3 mb-4 p-4 rounded-xl bg-gradient-to-br from-teal-50 via-cyan-50/40 to-slate-50 border border-teal-200/60 shadow-sm">
+                                    <div class="flex-1 min-w-0">
+                                        <h3 class="text-sm font-bold text-teal-900 mb-2 flex flex-wrap items-center gap-2">
+                                            <span class="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-teal-600 text-white shadow-md">
+                                                <i class="fas fa-shield-alt text-sm"></i>
+                                            </span>
+                                            قواعد الحدّ الأدنى بين استلامَين بنفس الموظف (مهمات الوقاية)
                                         </h3>
-                                        <p class="text-xs text-gray-500">
-                                            <i class="fas fa-info-circle ml-1"></i>
-                                            حدد لكل صنف من مهمات الوقاية الحد الأدنى للمدة بين استلامين متتاليين لنفس الموظف. الأصناف غير المضافة هنا لا يُفرض عليها تحقق.
+                                        <p class="text-xs text-teal-800/85 leading-relaxed max-w-3xl">
+                                            جدّد الجدول لكل <strong class="font-semibold">صنف</strong> عدد <strong class="font-semibold">الشهور</strong> كحدّ أدنى بين استلام واحد والذي بعده. ثم احفظ بـ<strong>«حفظ بيانات الشركة»</strong> لمزامنة الشيت والتطبيق.
+                                        </p>
+                                        <p class="text-[11px] text-slate-500 mt-2">
+                                            <i class="fas fa-database ml-1 text-teal-600"></i>
+                                            البيانات تُزاد هنا؛ التخزين مع الخادم عند ضغط «حفظ بيانات الشركة» أسفل البطاقة.
                                         </p>
                                     </div>
-                                    <button type="button" id="ppe-add-rule-btn" class="btn-secondary text-xs whitespace-nowrap">
-                                        <i class="fas fa-plus ml-1"></i> إضافة قاعدة لصنف
+                                    <button type="button" id="ppe-add-rule-btn" class="shrink-0 inline-flex items-center gap-2 rounded-lg bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold px-4 py-2.5 shadow-md transition-colors">
+                                        <i class="fas fa-plus"></i> إضافة صف
                                     </button>
                                 </div>
-                                <div id="ppe-eligibility-rules-container" class="space-y-2"></div>
-                                <p class="text-xs text-gray-500 mt-2">
-                                    <i class="fas fa-lightbulb ml-1"></i>
-                                    تأكد من أن مجموع (الأشهر + الأيام) لكل قاعدة أكبر من صفر لتُحفظ. اضغط «حفظ بيانات الشركة» لتطبيق التغييرات.
-                                </p>
+                                <div id="ppe-eligibility-rules-container" class="w-full min-w-0"></div>
                             </div>
                             <div class="flex items-center gap-3 pt-2 border-t">
                                 <button type="button" id="save-company-settings-btn" class="btn-primary">
@@ -1559,57 +1560,105 @@ const Settings = {
             };
 
             const parsePpeRules = (raw) => {
+                let parsed = [];
                 if (!raw) return [];
                 try {
-                    if (Array.isArray(raw)) return raw;
+                    let arr = raw;
                     if (typeof raw === 'string') {
-                        const parsed = JSON.parse(raw);
-                        return Array.isArray(parsed) ? parsed : [];
+                        arr = raw.trim() ? JSON.parse(raw) : [];
                     }
+                    if (!Array.isArray(arr)) return [];
+                    parsed = arr.filter(Boolean);
                 } catch (e) {
                     return [];
                 }
-                return [];
+                return parsed.map(function (rule) {
+                    if (!rule || typeof rule !== 'object') return null;
+                    const equipmentType = String(rule.equipmentType || rule.itemName || '').trim();
+                    let months = parseInt(rule.months, 10);
+                    const legacyDays = parseInt(rule.days, 10) || 0;
+                    if (isNaN(months) || months < 0) months = 0;
+                    months = Math.min(120, months);
+                    if (months < 1 && legacyDays > 0) {
+                        months = Math.min(120, Math.max(1, Math.ceil(legacyDays / 30)));
+                    }
+                    if (!equipmentType) return null;
+                    return { equipmentType: equipmentType, months: months, days: 0 };
+                }).filter(Boolean);
+            };
+
+            const buildPpeItemSelectOptions = (selectedValue) => {
+                const sel = (selectedValue || '').trim();
+                const parts = ['<option value="">— اختر الصنف —</option>'];
+                ppeRulesState.items.forEach((item) => {
+                    const v = (item || '').toString();
+                    const esc = Utils.escapeHTML(v);
+                    const isSel = v.trim() === sel ? ' selected' : '';
+                    parts.push(`<option value="${esc}"${isSel}>${esc}</option>`);
+                });
+                return parts.join('');
             };
 
             const renderPpeRulesRows = () => {
                 if (!ppeEligibilityRulesContainer) return;
-                if (!ppeRulesState.rules.length) {
-                    ppeEligibilityRulesContainer.innerHTML = `
-                        <div class="text-center text-xs text-gray-500 bg-gray-50 border border-dashed border-gray-300 rounded-lg py-4">
-                            لا توجد قواعد محددة. اضغط «إضافة قاعدة لصنف» لإضافة قاعدة جديدة.
-                        </div>
-                    `;
-                    return;
-                }
-                const optionsHtml = ['<option value="">اختر الصنف</option>']
-                    .concat(ppeRulesState.items.map(item => `<option value="${Utils.escapeHTML(item)}">${Utils.escapeHTML(item)}</option>`))
-                    .join('');
-                ppeEligibilityRulesContainer.innerHTML = ppeRulesState.rules.map((rule, idx) => `
-                    <div class="ppe-rule-row grid grid-cols-12 gap-2 items-end p-2 bg-white border border-gray-200 rounded-lg" data-index="${idx}">
-                        <div class="col-span-12 md:col-span-6">
-                            <label class="block text-xs font-semibold text-gray-700 mb-1">نوع المعدة</label>
-                            <select class="form-input ppe-rule-item text-sm">
-                                ${optionsHtml.replace(`value="${Utils.escapeHTML(rule.equipmentType || '')}"`, `value="${Utils.escapeHTML(rule.equipmentType || '')}" selected`)}
-                            </select>
-                        </div>
-                        <div class="col-span-5 md:col-span-2">
-                            <label class="block text-xs font-semibold text-gray-700 mb-1">أشهر</label>
-                            <input type="number" class="form-input ppe-rule-months text-sm" min="0" max="120" step="1"
-                                value="${Math.max(0, Math.min(120, parseInt(rule.months, 10) || 0))}">
-                        </div>
-                        <div class="col-span-5 md:col-span-2">
-                            <label class="block text-xs font-semibold text-gray-700 mb-1">أيام</label>
-                            <input type="number" class="form-input ppe-rule-days text-sm" min="0" max="3650" step="1"
-                                value="${Math.max(0, Math.min(3650, parseInt(rule.days, 10) || 0))}">
-                        </div>
-                        <div class="col-span-2 md:col-span-2">
-                            <button type="button" class="btn-secondary ppe-rule-remove text-xs w-full" title="حذف القاعدة">
-                                <i class="fas fa-trash-alt ml-1"></i> حذف
-                            </button>
+                const tableShell = (bodyRowsHtml) => `
+                    <div class="rounded-xl overflow-hidden border border-teal-200/70 shadow-md ring-1 ring-teal-900/5 bg-white">
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-sm ppe-eligibility-rules-table">
+                                <thead>
+                                    <tr class="bg-gradient-to-l from-teal-700 via-teal-600 to-cyan-600 text-white">
+                                        <th class="px-3 py-3 text-center font-bold w-12 border-b border-white/20">#</th>
+                                        <th class="px-3 py-3 text-right font-bold min-w-[12rem] border-b border-white/20">نوع الصنف</th>
+                                        <th class="px-3 py-3 text-center font-bold w-40 border-b border-white/20">الحد الأدنى (شهور)</th>
+                                        <th class="px-3 py-3 text-center font-bold w-28 border-b border-white/20">إزالة</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-slate-100">
+                                    ${bodyRowsHtml}
+                                </tbody>
+                            </table>
                         </div>
                     </div>
-                `).join('');
+                `;
+
+                if (!ppeRulesState.rules.length) {
+                    ppeEligibilityRulesContainer.innerHTML = tableShell(`
+                        <tr>
+                            <td colspan="4" class="px-4 py-10 text-center text-sm text-slate-500 bg-gradient-to-b from-slate-50 to-white">
+                                <i class="fas fa-table text-2xl text-teal-300 mb-2 block"></i>
+                                لا توجد صفوف بعد. اضغط <strong class="text-teal-700">«إضافة صف»</strong> ثم اختر الصنف وعدد الشهور، وبعدها <strong class="text-teal-700">«حفظ بيانات الشركة»</strong>.
+                            </td>
+                        </tr>
+                    `);
+                    return;
+                }
+
+                const rowsHtml = ppeRulesState.rules.map((rule, idx) => {
+                    const optionsHtml = buildPpeItemSelectOptions(rule.equipmentType);
+                    const monthsVal = Math.max(0, Math.min(120, parseInt(rule.months, 10) || 0));
+                    return `
+                    <tr class="ppe-rule-row hover:bg-teal-50/40 transition-colors" data-index="${idx}">
+                        <td class="px-3 py-3 text-center text-slate-500 font-semibold">${idx + 1}</td>
+                        <td class="px-3 py-3 align-middle min-w-[10rem]">
+                            <select class="form-input ppe-rule-item w-full text-sm border-teal-200/80 focus:ring-teal-500">${optionsHtml}</select>
+                        </td>
+                        <td class="px-3 py-3 align-middle text-center">
+                            <div class="inline-flex items-center justify-center gap-1">
+                                <input type="number" class="form-input ppe-rule-months w-24 text-center text-sm border-teal-200/80 font-bold tabular-nums"
+                                    min="1" max="120" step="1" inputmode="numeric" value="${monthsVal || ''}" placeholder="1">
+                                <span class="text-xs text-slate-500 whitespace-nowrap">شهرًا</span>
+                            </div>
+                        </td>
+                        <td class="px-3 py-3 text-center align-middle">
+                            <button type="button" class="ppe-rule-remove inline-flex items-center justify-center gap-1 rounded-lg border border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100 text-xs font-bold px-3 py-2 transition-colors"
+                                title="حذف هذا الصف">
+                                <i class="fas fa-trash-alt"></i>
+                            </button>
+                        </td>
+                    </tr>`;
+                }).join('');
+
+                ppeEligibilityRulesContainer.innerHTML = tableShell(rowsHtml);
 
                 ppeEligibilityRulesContainer.querySelectorAll('.ppe-rule-remove').forEach((btn, idx) => {
                     btn.addEventListener('click', () => {
@@ -1624,19 +1673,16 @@ const Settings = {
                 const rows = Array.from(ppeEligibilityRulesContainer.querySelectorAll('.ppe-rule-row'));
                 const seen = new Set();
                 const out = [];
-                rows.forEach(row => {
+                rows.forEach((row) => {
                     const itemSel = row.querySelector('.ppe-rule-item');
                     const monthsEl = row.querySelector('.ppe-rule-months');
-                    const daysEl = row.querySelector('.ppe-rule-days');
                     const equipmentType = (itemSel?.value || '').trim();
                     if (!equipmentType || seen.has(equipmentType)) return;
                     let months = parseInt(monthsEl?.value, 10);
-                    let days = parseInt(daysEl?.value, 10);
-                    if (isNaN(months) || months < 0) months = 0;
-                    if (isNaN(days) || days < 0) days = 0;
-                    if ((months + days) <= 0) return;
+                    if (isNaN(months) || months < 1) return;
+                    months = Math.min(120, months);
                     seen.add(equipmentType);
-                    out.push({ equipmentType, months: Math.min(120, months), days: Math.min(3650, days) });
+                    out.push({ equipmentType: equipmentType, months: months, days: 0 });
                 });
                 return out;
             };
@@ -1673,7 +1719,7 @@ const Settings = {
 
             if (ppeAddRuleBtn) {
                 ppeAddRuleBtn.addEventListener('click', () => {
-                    ppeRulesState.rules.push({ equipmentType: '', months: 0, days: 0 });
+                    ppeRulesState.rules.push({ equipmentType: '', months: 12, days: 0 });
                     renderPpeRulesRows();
                 });
             }
@@ -1737,6 +1783,23 @@ const Settings = {
 
                     const profileTeamsUrl = profileTeamsUrlInput ? profileTeamsUrlInput.value.trim() : '';
                     const profileWhatsAppUrl = profileWhatsAppUrlInput ? profileWhatsAppUrlInput.value.trim() : '';
+
+                    if (ppeEligibilityRulesContainer) {
+                        const ruleRows = Array.from(ppeEligibilityRulesContainer.querySelectorAll('.ppe-rule-row'));
+                        for (const row of ruleRows) {
+                            const eq = (row.querySelector('.ppe-rule-item')?.value || '').trim();
+                            const moRaw = row.querySelector('.ppe-rule-months')?.value;
+                            const mo = parseInt(moRaw, 10);
+                            if (eq && (isNaN(mo) || mo < 1)) {
+                                Notification.error('يُرجى إدخال عدد شهور صالح (من 1 إلى 120) لكل صنف محدد في جدول استحقاق مهمات الوقاية.');
+                                return;
+                            }
+                            if (!eq && moRaw !== '' && moRaw !== undefined && !isNaN(mo) && mo >= 1) {
+                                Notification.error('يُرجى اختيار نوع الصنف لكل صف فيه عدد شهور في جدول الاستحقاق.');
+                                return;
+                            }
+                        }
+                    }
 
                     const ppeEligibilityRulesArray = collectPpeRulesFromUI();
                     const ppeEligibilityRules = JSON.stringify(ppeEligibilityRulesArray);

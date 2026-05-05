@@ -791,6 +791,27 @@ const DataManager = {
                         }
                         if (!Array.isArray(clinicVisitTypes)) clinicVisitTypes = [];
 
+                        // حقول استحقاق PPE من الشيت (لم تكن تُحدَّث في الواجهة لأغلب التحميلات)
+                        let ppeEligibilityRules = '[]';
+                        if (result.data.hasOwnProperty('ppeEligibilityRules') && result.data.ppeEligibilityRules != null) {
+                            const pr = result.data.ppeEligibilityRules;
+                            if (typeof pr === 'string') {
+                                ppeEligibilityRules = pr.trim() || '[]';
+                            } else if (Array.isArray(pr)) {
+                                try {
+                                    ppeEligibilityRules = JSON.stringify(pr);
+                                } catch (e) {
+                                    ppeEligibilityRules = '[]';
+                                }
+                            }
+                        } else if (AppState.companySettings?.ppeEligibilityRules != null) {
+                            ppeEligibilityRules = String(AppState.companySettings.ppeEligibilityRules);
+                        }
+                        const ppeMo = parseInt(result.data.ppeEligibilityMonths, 10);
+                        const legacyMonths = Number.isFinite(ppeMo) && ppeMo >= 0 ? Math.min(120, ppeMo) : (AppState.companySettings?.ppeEligibilityMonths ?? 0);
+                        const ppeDy = parseInt(result.data.ppeEligibilityDays, 10);
+                        const legacyDays = Number.isFinite(ppeDy) && ppeDy >= 0 ? Math.min(3650, ppeDy) : (AppState.companySettings?.ppeEligibilityDays ?? 0);
+
                         // تحديث AppState بالبيانات من Google Sheets
                         AppState.companySettings = Object.assign({}, AppState.companySettings, {
                             name: result.data.name || AppState.companySettings?.name,
@@ -806,7 +827,10 @@ const DataManager = {
                             clinicMonthlyVisitsAlertThreshold: result.data.clinicMonthlyVisitsAlertThreshold ?? AppState.companySettings?.clinicMonthlyVisitsAlertThreshold ?? 10,
                             clinicVisitTypes: clinicVisitTypes,
                             profileTeamsUrl: String(result.data.profileTeamsUrl ?? AppState.companySettings?.profileTeamsUrl ?? '').trim(),
-                            profileWhatsAppUrl: String(result.data.profileWhatsAppUrl ?? AppState.companySettings?.profileWhatsAppUrl ?? '').trim()
+                            profileWhatsAppUrl: String(result.data.profileWhatsAppUrl ?? AppState.companySettings?.profileWhatsAppUrl ?? '').trim(),
+                            ppeEligibilityRules: ppeEligibilityRules,
+                            ppeEligibilityMonths: legacyMonths,
+                            ppeEligibilityDays: legacyDays
                         });
                         
                         // تحديث شعار الشركة (حتى لو كان فارغاً لمسحه)
