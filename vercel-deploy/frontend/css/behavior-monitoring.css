@@ -46,6 +46,38 @@
     letter-spacing: 0.02em;
 }
 
+.behavior-overview-stats .behavior-stat {
+    position: relative;
+    overflow: hidden;
+}
+
+.behavior-overview-stats .behavior-stat::after {
+    content: '';
+    position: absolute;
+    inset-inline-start: -25%;
+    top: -40%;
+    width: 72px;
+    height: 160%;
+    transform: rotate(20deg);
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.18), rgba(255, 255, 255, 0));
+    pointer-events: none;
+}
+
+.behavior-stat-total {
+    border-color: rgba(59, 130, 246, 0.25);
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.08), rgba(59, 130, 246, 0.02));
+}
+
+.behavior-stat-positive {
+    border-color: rgba(16, 185, 129, 0.28);
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(16, 185, 129, 0.03));
+}
+
+.behavior-stat-negative {
+    border-color: rgba(239, 68, 68, 0.26);
+    background: linear-gradient(135deg, rgba(239, 68, 68, 0.1), rgba(239, 68, 68, 0.03));
+}
+
 /* Form wrapper color accents */
 .behavior-form-wrapper {
     border: 1px solid var(--border-color);

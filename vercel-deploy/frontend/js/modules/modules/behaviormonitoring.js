@@ -21,7 +21,7 @@ const BehaviorMonitoring = {
     },
 
     state: {
-        activeTab: 'log', // overview | log | form | contractors
+        activeTab: 'log', // overview | log | contractors
         filters: {
             search: '',
             behaviorType: '',
@@ -38,6 +38,18 @@ const BehaviorMonitoring = {
             dateTo: ''
         },
         contractorSort: 'date_desc'
+    },
+
+    t(key, fallback) {
+        try {
+            if (typeof AppI18n !== 'undefined' && typeof AppI18n.t === 'function') {
+                return AppI18n.t(key, null, fallback != null ? String(fallback) : '');
+            }
+            if (typeof I18n !== 'undefined' && typeof I18n.t === 'function') {
+                return I18n.t(key, null, fallback != null ? String(fallback) : '');
+            }
+        } catch (e) { /* ignore */ }
+        return fallback != null ? String(fallback) : key;
     },
 
     NEGATIVE_ACTIONS: [
@@ -229,7 +241,9 @@ const BehaviorMonitoring = {
 
         // عرض الواجهة أولاً لتحسين تجربة المستخدم
         try {
-            const activeTab = this.state?.activeTab || 'log';
+            const requestedTab = this.state?.activeTab || 'log';
+            const activeTab = requestedTab === 'form' ? 'log' : requestedTab;
+            this.state.activeTab = activeTab;
 
             section.innerHTML = `
                 <div class="section-header">
@@ -266,9 +280,6 @@ const BehaviorMonitoring = {
                             </button>
                             <button class="module-tab-btn ${activeTab === 'log' ? 'active' : ''}" data-tab="log" onclick="BehaviorMonitoring.switchTab('log')">
                                 <i class="fas fa-list ml-2"></i>سجل التصرفات
-                            </button>
-                            <button class="module-tab-btn ${activeTab === 'form' ? 'active' : ''}" data-tab="form" onclick="BehaviorMonitoring.switchTab('form')">
-                                <i class="fas fa-pen-to-square ml-2"></i>تسجيل تصرف
                             </button>
                             <button class="module-tab-btn ${activeTab === 'contractors' ? 'active' : ''}" data-tab="contractors" onclick="BehaviorMonitoring.switchTab('contractors')">
                                 <i class="fas fa-users-cog ml-2"></i>تصرفات المقاولين
@@ -397,7 +408,6 @@ const BehaviorMonitoring = {
 
     renderTabSkeleton(tab) {
         if (tab === 'overview') return this.renderOverviewTab(true);
-        if (tab === 'form') return this.renderFormTab(true);
         if (tab === 'contractors') return this.renderContractorsTab(true);
         return this.renderLogTab(true);
     },
@@ -622,12 +632,6 @@ const BehaviorMonitoring = {
             this.bindCurrentTabEvents();
             return;
         }
-        if (tab === 'form') {
-            const container = document.getElementById('behavior-form-container');
-            if (container) container.innerHTML = this.renderFormTab(false);
-            this.bindCurrentTabEvents();
-            return;
-        }
         if (tab === 'contractors') {
             const content = document.getElementById('behavior-content');
             if (content) content.innerHTML = this.renderContractorsTab(false);
@@ -642,7 +646,8 @@ const BehaviorMonitoring = {
 
     async switchTab(tab, options = {}) {
         try {
-            const nextTab = tab || 'log';
+            const requestedTab = tab || 'log';
+            const nextTab = requestedTab === 'form' ? 'log' : requestedTab;
             this.state = this.state || {};
             this.state.activeTab = nextTab;
 
@@ -657,7 +662,6 @@ const BehaviorMonitoring = {
             if (!content) return;
 
             if (nextTab === 'overview') content.innerHTML = this.renderOverviewTab(false);
-            else if (nextTab === 'form') content.innerHTML = this.renderFormTab(false);
             else if (nextTab === 'contractors') content.innerHTML = this.renderContractorsTab(false);
             else content.innerHTML = this.renderLogTab(false);
 
@@ -685,36 +689,43 @@ const BehaviorMonitoring = {
             const db = this.parseDateSafe(this.getBehaviorDate(b))?.getTime() || 0;
             return db - da;
         }).slice(0, 5);
+        const heading = this.t('module.behaviorMonitoring.overview.title', 'نظرة عامة');
+        const totalLabel = this.t('module.behaviorMonitoring.overview.total', 'إجمالي السجلات');
+        const posLabel = this.t('module.behaviorMonitoring.overview.positive', 'تصرفات إيجابية');
+        const negLabel = this.t('module.behaviorMonitoring.overview.negative', 'تصرفات سلبية');
+        const recentLabel = this.t('module.behaviorMonitoring.overview.last5', 'آخر 5 تصرفات');
+        const loadingLabel = this.t('common.loading', 'جاري التحميل...');
+        const emptyLabel = this.t('module.behaviorMonitoring.overview.empty', 'لا توجد تصرفات مسجلة');
 
         return `
             <div id="behavior-overview-container">
                 <div class="content-card behavior-overview-card">
                     <div class="card-header">
-                        <h2 class="card-title"><i class="fas fa-chart-line ml-2"></i>نظرة عامة</h2>
+                        <h2 class="card-title"><i class="fas fa-chart-line ml-2"></i>${Utils.escapeHTML(heading)}</h2>
                     </div>
                     <div class="card-body">
-                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                            <div class="behavior-stat">
-                                <div class="behavior-stat-label">إجمالي السجلات</div>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6 behavior-overview-stats">
+                            <div class="behavior-stat behavior-stat-total">
+                                <div class="behavior-stat-label">${Utils.escapeHTML(totalLabel)}</div>
                                 <div class="behavior-stat-value">${isSkeleton ? '—' : total}</div>
                             </div>
-                            <div class="behavior-stat">
-                                <div class="behavior-stat-label">تصرفات إيجابية</div>
+                            <div class="behavior-stat behavior-stat-positive">
+                                <div class="behavior-stat-label">${Utils.escapeHTML(posLabel)}</div>
                                 <div class="behavior-stat-value text-green-700">${isSkeleton ? '—' : positives}</div>
                             </div>
-                            <div class="behavior-stat">
-                                <div class="behavior-stat-label">تصرفات سلبية</div>
+                            <div class="behavior-stat behavior-stat-negative">
+                                <div class="behavior-stat-label">${Utils.escapeHTML(negLabel)}</div>
                                 <div class="behavior-stat-value text-red-700">${isSkeleton ? '—' : negatives}</div>
                             </div>
                         </div>
 
                         <div class="content-card behavior-mini-card">
                             <div class="card-header">
-                                <h3 class="card-title"><i class="fas fa-clock ml-2"></i>آخر 5 تصرفات</h3>
+                                <h3 class="card-title"><i class="fas fa-clock ml-2"></i>${Utils.escapeHTML(recentLabel)}</h3>
                             </div>
                             <div class="card-body">
                                 ${isSkeleton ? `
-                                    <div class="empty-state"><p class="text-gray-500">جاري التحميل...</p></div>
+                                    <div class="empty-state"><p class="text-gray-500">${Utils.escapeHTML(loadingLabel)}</p></div>
                                 ` : (last5.length ? `
                                     <div class="table-wrapper" style="overflow-x:auto;">
                                         <table class="data-table table-header-purple">
@@ -750,7 +761,7 @@ const BehaviorMonitoring = {
                                             </tbody>
                                         </table>
                                     </div>
-                                ` : `<div class="empty-state"><p class="text-gray-500">لا توجد تصرفات مسجلة</p></div>`)}
+                                ` : `<div class="empty-state"><p class="text-gray-500">${Utils.escapeHTML(emptyLabel)}</p></div>`)}
                             </div>
                         </div>
                     </div>
