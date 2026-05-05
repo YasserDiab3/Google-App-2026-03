@@ -277,7 +277,38 @@ function validateCSRFToken(requestToken, options) {
 
         const parsed = JSON.parse(String(cached));
         if (!parsed || !parsed.sessionKey) return false;
-        return String(parsed.sessionKey) === sessionKey;
+
+        const storedSessionKey = String(parsed.sessionKey || '');
+        if (storedSessionKey === sessionKey) {
+            return true;
+        }
+
+        // توافق رجعي: صيغة قديمة كانت action|token|session|user
+        // الصيغة الجديدة: session|user|tokenPrefix
+        const storedParts = storedSessionKey.split('|');
+        const reqParts = String(sessionKey).split('|');
+        if (storedParts.length >= 4 && reqParts.length >= 3) {
+            const legacySession = String(storedParts[2] || '').trim();
+            const legacyUser = String(storedParts[3] || '').trim().toLowerCase();
+            const legacyTokenPrefix = String(storedParts[1] || '').trim().substring(0, 16);
+            const reqSession = String(reqParts[0] || '').trim();
+            const reqUser = String(reqParts[1] || '').trim().toLowerCase();
+            const reqTokenPrefix = String(reqParts[2] || '').trim();
+
+            if (legacySession === reqSession && legacyUser === reqUser && legacyTokenPrefix === reqTokenPrefix) {
+                // ترحيل تلقائي إلى الصيغة الجديدة لتجنب فشل لاحق
+                const migratedPayload = {
+                    sessionKey: sessionKey,
+                    createdAt: parsed.createdAt || new Date().toISOString(),
+                    migratedAt: new Date().toISOString(),
+                    legacySessionKey: storedSessionKey
+                };
+                cache.put(cacheKey, JSON.stringify(migratedPayload), ttlSec);
+                return true;
+            }
+        }
+
+        return false;
     } catch (error) {
         Logger.log('validateCSRFToken session-bind error: ' + error.toString());
         return false;
@@ -319,11 +350,10 @@ function sanitizeRequestObject(input, depth) {
  * تحديد هوية سياقية للطلب (لـ rate-limit و CSRF session binding)
  */
 function buildRequestSessionKey(action, token, sessionId, userHint) {
-    const actionPart = String(action || '').trim().substring(0, 80);
-    const tokenPart = String(token || '').trim().substring(0, 64);
+    const tokenPart = String(token || '').trim().substring(0, 16);
     const sessionPart = String(sessionId || '').trim().substring(0, 120);
     const userPart = String(userHint || '').trim().toLowerCase().substring(0, 120);
-    return [actionPart, tokenPart, sessionPart, userPart].join('|');
+    return [sessionPart, userPart, tokenPart].join('|');
 }
 
 /**
