@@ -14,6 +14,10 @@ const PPE = {
         ppeItemsListCacheTime: null, // وقت تحديث قائمة الأصناف
         ppeItemsListCacheExpiry: 2 * 60 * 1000, // انتهاء صلاحية القائمة بعد دقيقتين
         ppeItemsOptionsHTML: '', // HTML options معاد استخدامه عند إضافة صفوف
+        /** رسالة مختصرة عند تعذّر الجلب وبقاء المعروض من الكاش */
+        stockStaleWarningMsg: '',
+        /** رسالة خطأ صريحة عند عدم وجود أي بيانات مخزونة بعد الفشل (timeout/شبكة) */
+        stockLoadHardErrorMsg: '',
         lastSyncTime: null, // وقت آخر مزامنة
         /** فلاتر سجل الاستلامات (نفس نمط سجل التردد / المستندات القانونية) */
         filters: {
@@ -675,7 +679,6 @@ const PPE = {
                 } else {
                     console.warn('⚠️ خطأ في تحميل محتوى التبويب:', error);
                 }
-                // ✅ استخدام fallback مع البيانات المتوفرة
                 tabContent = this.renderActiveTabContentWithFallback();
             }
 
@@ -1036,26 +1039,28 @@ const PPE = {
             const tabContentContainer = document.getElementById('ppe-tab-content');
             if (tabContentContainer) {
                 try {
-                    // ✅ تحسين: عرض مؤشر تحميل خفيف بدون تغيير المحتوى بالكامل
-                    tabContentContainer.style.opacity = '0.5';
-                    tabContentContainer.style.pointerEvents = 'none';
-                    
-                    // عرض مؤشر التحميل فقط إذا كان التبويب الجديد هو المخزون
+                    // عدم إخفاء المحتوى بالكامل عند فتح المخزون — عرض الكاش فوراً ثم التحديث
                     if (tabName === 'stock-control') {
-                        tabContentContainer.innerHTML = `
-                            <div class="empty-state">
-                                <div style="width: 300px; margin: 0 auto 16px;">
-                                    <div style="width: 100%; height: 6px; background: rgba(59, 130, 246, 0.2); border-radius: 3px; overflow: hidden;">
-                                        <div style="height: 100%; background: linear-gradient(90deg, #3b82f6, #2563eb, #3b82f6); background-size: 200% 100%; border-radius: 3px; animation: loadingProgress 1.5s ease-in-out infinite;"></div>
-                                    </div>
-                                </div>
-                                <p class="text-gray-500 mb-4">${this._t('module.ppe.loading.stockData', 'جاري تحميل بيانات المخزون...')}</p>
-                            </div>
-                        `;
+                        const cached = (this.state.stockItemsCache && this.state.stockItemsCache.length)
+                            ? this.state.stockItemsCache
+                            : (Array.isArray(AppState.appData.ppeStock) && AppState.appData.ppeStock.length
+                                ? AppState.appData.ppeStock
+                                : []);
+                        const syncHint = `<div role="status" class="rounded-lg border border-blue-100 bg-blue-50/90 px-4 py-2 text-sm text-blue-900 flex items-center gap-2">
+                            <i class="fas fa-sync-alt fa-spin text-blue-600"></i>
+                            <span>${Utils.escapeHTML(this._t('module.ppe.stock.syncingHint', 'جاري مزامنة أحدث بيانات المخزون…'))}</span>
+                        </div>`;
+                        tabContentContainer.innerHTML = cached.length > 0
+                            ? this.buildStockControlTabHtmlSync(cached, syncHint)
+                            : `<div class="space-y-4" id="ppe-stock-tab-root">${syncHint}<div class="empty-state py-8"><p class="text-gray-600">${Utils.escapeHTML(this._t('module.ppe.loading.stockData', 'جاري تحميل بيانات المخزون…'))}</p></div></div>`;
+                        tabContentContainer.style.opacity = '1';
+                        tabContentContainer.style.pointerEvents = 'auto';
+                    } else {
+                        tabContentContainer.style.opacity = '0.92';
+                        tabContentContainer.style.pointerEvents = 'none';
                     }
-                    
-                    // تحميل محتوى التبويب الجديد
-                    const newContent = await this.renderActiveTabContent();
+
+                    const newContent = await this.renderActiveTabContent(tabName !== 'stock-control');
                     tabContentContainer.innerHTML = newContent;
                     this.applyModuleI18n(tabContentContainer);
                     if (tabName === 'receipts') {
@@ -3224,11 +3229,43 @@ const PPE = {
 
     // ===== PPE Stock Control Functions =====
 
+    /**
+     * بناء محتوى تبويب المخزون بشكل متزامن (للعرض الفوري من الكاش قبل اكتمال الجلب من الخلفية).
+     * @param {string} [hintHtml] رسالة تنبيه اختيارية (مثل مزامنة خلفية)
+     */
+    buildStockControlTabHtmlSync(stockItems, hintHtml = '') {
+        const items = Array.isArray(stockItems) ? stockItems : [];
+        const lowStockItems = items.filter((item) => {
+            if (!item) return false;
+            const balance = parseFloat(item.balance || 0);
+            const minThreshold = parseFloat(item.minThreshold || 0);
+            return balance < minThreshold;
+        });
+        const hintBlock = hintHtml ? `<div id="ppe-stock-hint-slot" class="mb-4">${hintHtml}</div>` : '';
+        return `
+            <div class="space-y-6" id="ppe-stock-tab-root">
+                ${hintBlock}
+                ${this.renderStockDashboard(items, lowStockItems)}
+                ${this.renderStockTable(items)}
+            </div>
+        `;
+    },
+
     async renderStockControlTab() {
         try {
-            // ✅ تحميل البيانات مباشرة مع معالجة الأخطاء
-        const stockItems = await this.loadStockItems();
-            
+            const stockItems = await this.loadStockItems();
+
+            const staleBanner = this.state.stockStaleWarningMsg
+                ? `<div role="status" class="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 flex items-start gap-2">
+                    <i class="fas fa-info-circle mt-0.5 text-amber-600"></i>
+                    <span>${Utils.escapeHTML(this.state.stockStaleWarningMsg)}</span>
+                   </div>`
+                : '';
+            this.state.stockStaleWarningMsg = '';
+
+            const hardErr = this.state.stockLoadHardErrorMsg;
+            this.state.stockLoadHardErrorMsg = '';
+
             if (!Array.isArray(stockItems)) {
                 Utils.safeWarn('⚠️ stockItems ليست مصفوفة:', stockItems);
                 return `
@@ -3241,18 +3278,32 @@ const PPE = {
                     </div>
                 `;
             }
-            
-        const lowStockItems = stockItems.filter(item => {
-                if (!item) return false;
-            const balance = parseFloat(item.balance || 0);
-            const minThreshold = parseFloat(item.minThreshold || 0);
-            return balance < minThreshold;
-        });
 
-        return `
+            if (stockItems.length === 0 && hardErr) {
+                return `
+                    <div class="empty-state">
+                        <i class="fas fa-plug text-amber-600 text-4xl mb-4"></i>
+                        <p class="text-gray-700 mb-2 font-semibold">${Utils.escapeHTML(hardErr)}</p>
+                        <p class="text-gray-500 text-sm mb-4">${Utils.escapeHTML(this._t('module.ppe.stock.hardErrorHint', 'تحقق من الاتصال ثم اضغط إعادة المحاولة.'))}</p>
+                        <button onclick="PPE.switchTab('stock-control')" class="btn-primary">
+                            <i class="fas fa-redo ml-2"></i>${Utils.escapeHTML(this._t('module.common.retry', 'إعادة المحاولة'))}
+                        </button>
+                    </div>
+                `;
+            }
+
+            const lowStockItems = stockItems.filter(item => {
+                if (!item) return false;
+                const balance = parseFloat(item.balance || 0);
+                const minThreshold = parseFloat(item.minThreshold || 0);
+                return balance < minThreshold;
+            });
+
+            return `
             <div class="space-y-6">
-                ${await this.renderStockDashboard(stockItems, lowStockItems)}
-                ${await this.renderStockTable(stockItems)}
+                ${staleBanner}
+                ${this.renderStockDashboard(stockItems, lowStockItems)}
+                ${this.renderStockTable(stockItems)}
             </div>
         `;
         } catch (error) {
@@ -3269,7 +3320,7 @@ const PPE = {
         }
     },
 
-    async renderStockDashboard(stockItems, lowStockItems) {
+    renderStockDashboard(stockItems, lowStockItems) {
         const t = (k, f) => this._t(k, f);
         const ut = (s) => Utils.escapeHTML(s);
         const totalItems = stockItems.length;
@@ -3345,7 +3396,7 @@ const PPE = {
         `;
     },
 
-    async renderStockTable(stockItems) {
+    renderStockTable(stockItems) {
         const t = (k, f) => this._t(k, f);
         const ut = (s) => Utils.escapeHTML(s);
         if (!stockItems || stockItems.length === 0) {
@@ -3440,75 +3491,114 @@ const PPE = {
         `;
     },
 
+    /** طلب واحد لقائمة المخزون مع مهلة بالمللي ثوانٍ */
+    async _fetchPPEStockRpcOnce(timeoutMs) {
+        const loadPromise = GoogleIntegration.sendToAppsScript('getAllPPEStockItems', { filters: {} });
+        const timeoutPromise = new Promise((_, reject) =>
+            setTimeout(() => reject(new Error(this._t('module.ppe.stock.timeoutRpc', 'انتهت مهلة الخادم عند قراءة المخزون.'))), timeoutMs)
+        );
+        return Promise.race([loadPromise, timeoutPromise]);
+    },
+
+    _localStockFallbackArrays() {
+        const fromCache = this.state.stockItemsCache;
+        const fromApp = Array.isArray(AppState.appData.ppeStock) ? AppState.appData.ppeStock : [];
+        if (fromCache && fromCache.length > 0) return fromCache;
+        if (fromApp.length > 0) return fromApp;
+        return [];
+    },
+
     async loadStockItems(forceRefresh = false) {
         try {
-            // ✅ تحسين الأداء: التحقق من Cache أولاً لتجنب طلبات غير ضرورية
             const now = Date.now();
-            const cacheValid = this.state.stockItemsCache && 
-                              this.state.stockItemsCacheTime && 
-                              (now - this.state.stockItemsCacheTime) < this.state.stockCacheExpiry;
-            
+            const cacheValid = this.state.stockItemsCache &&
+                this.state.stockItemsCacheTime &&
+                (now - this.state.stockItemsCacheTime) < this.state.stockCacheExpiry;
+
             if (!forceRefresh && cacheValid) {
                 Utils.safeLog('✅ استخدام بيانات المخزون من Cache');
-                // ✅ ضمان حفظ البيانات في AppState أيضاً
                 if (this.state.stockItemsCache && !AppState.appData.ppeStock) {
                     AppState.appData.ppeStock = this.state.stockItemsCache;
                 }
                 return this.state.stockItemsCache;
             }
 
-            // ✅ تحسين: محاولة تحميل البيانات من Backend مع timeout
+            const RPC_MS = 30000;
+            const RETRY_PAUSE_MS = 700;
+
             if (typeof GoogleIntegration !== 'undefined' && GoogleIntegration.sendToAppsScript) {
+                this.state.stockLoadHardErrorMsg = '';
                 try {
-                    // ✅ إضافة timeout للطلب (10 ثوان)
-                    const loadPromise = GoogleIntegration.sendToAppsScript('getAllPPEStockItems', { filters: {} });
-                    const timeoutPromise = new Promise((_, reject) => 
-                        setTimeout(() => reject(new Error('Timeout: تحميل البيانات استغرق وقتاً طويلاً')), 30000)
-                    );
-                    
-                    const result = await Promise.race([loadPromise, timeoutPromise]);
-                    
+                    let result = null;
+                    let networkOrTimeoutErr = null;
+                    for (let attempt = 0; attempt < 2; attempt++) {
+                        try {
+                            if (attempt > 0) {
+                                await new Promise((resolve) => setTimeout(resolve, RETRY_PAUSE_MS));
+                            }
+                            result = await this._fetchPPEStockRpcOnce(RPC_MS);
+                            networkOrTimeoutErr = null;
+                            break;
+                        } catch (e) {
+                            networkOrTimeoutErr = e;
+                            result = null;
+                        }
+                    }
+
                     if (result && result.success) {
                         const stockItems = Array.isArray(result.data) ? result.data : [];
-                        
-                        // ✅ حفظ البيانات في AppState للاستخدام لاحقاً
                         if (!AppState.appData.ppeStock) {
                             AppState.appData.ppeStock = [];
                         }
                         AppState.appData.ppeStock = stockItems;
-                        
-                        // ✅ تحديث Cache
                         this.state.stockItemsCache = stockItems;
-                        this.state.stockItemsCacheTime = now;
-                        
-                        // ✅ حفظ البيانات في localStorage للاستخدام لاحقاً
+                        this.state.stockItemsCacheTime = Date.now();
                         if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
                             window.DataManager.save();
                         }
-                        
                         return stockItems;
-                    } else {
-                        // في حالة فشل الطلب، استخدام البيانات المحلية أو Cache
-                        if (this.state.stockItemsCache) {
-                            Utils.safeWarn('⚠️ فشل تحميل أصناف المخزون من Backend، استخدام Cache:', result?.message || 'خطأ غير معروف');
-                            return this.state.stockItemsCache;
+                    }
+
+                    const backendMsg = (result && result.message) ? String(result.message) : '';
+                    const local = this._localStockFallbackArrays();
+                    if (local.length > 0) {
+                        this.state.stockStaleWarningMsg = backendMsg || this._t(
+                            'module.ppe.stock.staleDataNotice',
+                            'تعذّر تحديث المخزون من الخادم؛ يُعرض آخر مخزّن محلياً. يُستحسن إعادة المحاولة بعد قليل.'
+                        );
+                        if (networkOrTimeoutErr) {
+                            Utils.safeWarn('⚠️ فشل مزامنة المخزون بعد إعادة محاولة، عرض الكاش:', networkOrTimeoutErr);
+                        } else if (backendMsg) {
+                            Utils.safeWarn('⚠️ الخادم رفض قراءة المخزون، عرض الكاش:', backendMsg);
                         }
-                        Utils.safeWarn('⚠️ فشل تحميل أصناف المخزون من Backend، استخدام البيانات المحلية:', result?.message || 'خطأ غير معروف');
-                        return AppState.appData.ppeStock || [];
+                        return local;
                     }
-                } catch (backendError) {
-                    // في حالة خطأ في الاتصال أو timeout، استخدام البيانات المحلية أو Cache
-                    if (this.state.stockItemsCache) {
-                        Utils.safeWarn('⚠️ خطأ في الاتصال بـ Backend، استخدام Cache:', backendError);
-                        return this.state.stockItemsCache;
+
+                    let hard = backendMsg ||
+                        (networkOrTimeoutErr && networkOrTimeoutErr.message) ||
+                        this._t('module.ppe.stock.loadFailedUnknown', 'تعذّر تحميل بيانات المخزون.');
+                    if (/Timeout|مهلة/i.test(hard || '')) {
+                        hard = this._t('module.ppe.stock.loadFailedTimeout', 'انتهت مهلة الاتصال عند تحميل المخزون. تحقق من الشبكة وحاول مجدداً.');
                     }
-                    Utils.safeWarn('⚠️ خطأ في الاتصال بـ Backend، استخدام البيانات المحلية:', backendError);
-                    return AppState.appData.ppeStock || [];
+                    this.state.stockLoadHardErrorMsg = hard;
+                    Utils.safeWarn('⚠️ لا توجد أصناف مخزونة محلياً وفشل الجلب من الخادم:', hard);
+                    return [];
+                } catch (outer) {
+                    const local = this._localStockFallbackArrays();
+                    if (local.length > 0) {
+                        this.state.stockStaleWarningMsg = this._t(
+                            'module.ppe.stock.staleDataNotice',
+                            'تعذّر تحديث المخزون من الخادم؛ يُعرض آخر مخزّن محلياً. يُستحسن إعادة المحاولة بعد قليل.'
+                        );
+                        Utils.safeWarn('⚠️ خطأ تحميل المخزون، عرض الكاش:', outer);
+                        return local;
+                    }
+                    this.state.stockLoadHardErrorMsg = String(outer && outer.message ? outer.message : outer);
+                    return [];
                 }
             }
-            // إذا لم يكن GoogleIntegration متاحاً، استخدام البيانات المحلية أو Cache
+
             if (this.state.stockItemsCache) {
-                // ✅ ضمان حفظ البيانات في AppState
                 if (!AppState.appData.ppeStock) {
                     AppState.appData.ppeStock = this.state.stockItemsCache;
                 }
@@ -3517,8 +3607,16 @@ const PPE = {
             return AppState.appData.ppeStock || [];
         } catch (error) {
             Utils.safeError('❌ خطأ في تحميل أصناف المخزون:', error);
-            // في حالة أي خطأ، إرجاع Cache أو بيانات محلية
-            return this.state.stockItemsCache || AppState.appData.ppeStock || [];
+            const fb = this._localStockFallbackArrays();
+            if (fb.length > 0) {
+                this.state.stockStaleWarningMsg = this._t(
+                    'module.ppe.stock.staleDataNotice',
+                    'تعذّر تحديث المخزون من الخادم؛ يُعرض آخر مخزّن محلياً. يُستحسن إعادة المحاولة بعد قليل.'
+                );
+                return fb;
+            }
+            this.state.stockLoadHardErrorMsg = String(error && error.message ? error.message : error);
+            return [];
         }
     },
 

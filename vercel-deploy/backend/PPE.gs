@@ -434,13 +434,15 @@ function addOrUpdatePPEStockItem(stockData) {
 function getAllPPEStockItems(filters = {}) {
     try {
         const sheetName = 'PPE_Stock';
-        // ✅ قراءة مباشرة بدون CacheService لضمان إظهار أحدث بيانات المخزون دائماً
-        // (بعض الحالات قد تحتفظ بقيم قديمة في CacheService فتظهر شاشة فارغة).
-        let data = readSheetRowsNoCache_(sheetName, getSpreadsheetId());
+        const __tStart = Date.now();
+        const __spreadsheetId = getSpreadsheetId();
+        let data = readSheetRowsNoCache_(sheetName, __spreadsheetId);
+        const __readMs = Date.now() - __tStart;
 
         // ✅ تحسين الأداء: لا نعيد حساب الأرصدة من جميع الحركات في كل طلب.
         // جدول PPE_Stock يتم تحديثه لحظياً عند إضافة/تعديل الحركات، لذا نكتفي
         // بتطبيع القيم الرقمية المخزنة مباشرة.
+        const __normStart = Date.now();
         data = data.map(item => {
             const stockIn = parseFloat(item.stock_IN || 0) || 0;
             const stockOut = parseFloat(item.stock_OUT || 0) || 0;
@@ -453,7 +455,8 @@ function getAllPPEStockItems(filters = {}) {
             item.balance = balance;
             return item;
         });
-        
+        const __normalizeMs = Date.now() - __normStart;
+
         // تطبيق الفلاتر
         if (filters.category) {
             data = data.filter(item => item.category === filters.category);
@@ -476,6 +479,9 @@ function getAllPPEStockItems(filters = {}) {
             return nameA.localeCompare(nameB);
         });
         
+        Logger.log('[getAllPPEStockItems] timings ms: readSheet=' + __readMs + ', normalizePostRead=' + __normalizeMs +
+            ', total=' + (Date.now() - __tStart) + ', rows=' + data.length);
+
         return { success: true, data: data, count: data.length };
     } catch (error) {
         Logger.log('Error getting all PPE stock items: ' + error.toString());
@@ -494,7 +500,10 @@ function readSheetRowsNoCache_(sheetName, spreadsheetId) {
         const ss = SpreadsheetApp.openById(finalSpreadsheetId);
         const sheet = ss.getSheetByName(sheetName);
         if (!sheet) return [];
-        const values = sheet.getDataRange().getValues();
+        var lastRow = sheet.getLastRow();
+        var lastCol = sheet.getLastColumn();
+        if (lastRow <= 1 || lastCol === 0) return [];
+        var values = sheet.getRange(1, 1, lastRow, lastCol).getValues();
         if (!values || values.length <= 1) return [];
 
         const headers = values[0].map(function (h) {
