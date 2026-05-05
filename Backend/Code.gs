@@ -277,7 +277,10 @@ function doPost(e) {
             'getAllUserActivityLogs',
             'getUserActivityLogs',
             'getLogStatistics',
-            'getAllAuditLogs'
+            'getAllAuditLogs',
+            // ✅ مهمات الوقاية — قراءة فقط (تجنب فشل ربط CSRF عند تغيّر المستخدم بعد أول طلب)
+            'getAllPPE', 'getPPEMatrix', 'getAllPPEMatrices',
+            'getAllPPEStockItems', 'getAllPPETransactions', 'getPPEItemsList'
         ];
         
         // قائمة بالـ actions الحساسة التي تتطلب CSRF token إلزامي
