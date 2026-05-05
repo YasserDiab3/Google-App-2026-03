@@ -1261,77 +1261,84 @@ const PPE = {
         const card = (variant, headerIconSolid, title, statValueRows, footerHtml) => {
             const themes = {
                 gray: {
-                    outer: 'ring-1 ring-slate-200/90 shadow-lg shadow-slate-200/40',
-                    headerBar: 'from-slate-600 via-slate-600 to-slate-700',
-                    headerIconBg: 'bg-white/15 text-white ring-2 ring-white/25',
-                    statTile: 'bg-white/95 border border-slate-100 shadow-sm hover:shadow-md transition-shadow',
-                    iconMuted: 'text-slate-500 bg-slate-100',
-                    label: 'text-slate-500',
-                    value: 'text-slate-900',
-                    footerWrap: 'bg-slate-50/90 border-t border-slate-200/80'
+                    outer: 'ring-1 ring-slate-200/80 shadow-xl shadow-slate-900/5',
+                    headerBar: 'from-slate-700 via-slate-600 to-slate-700',
+                    headerIconBg: 'bg-white/15 text-white ring-2 ring-white/30 shadow-md',
+                    tileSurface: 'rounded-2xl border border-slate-200/75 bg-gradient-to-br from-white via-slate-50/30 to-white p-[1.1rem] sm:p-5 min-w-0 shadow-sm hover:shadow-md hover:border-slate-300/60 transition-all duration-200',
+                    iconBox: 'flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-slate-100 to-slate-200/80 text-slate-700 text-[15px] shadow-inner ring-1 ring-slate-300/35',
+                    labelClass: 'text-[11px] font-bold tracking-wide text-slate-500',
+                    valueClass: 'text-[1.05rem] sm:text-lg font-extrabold text-slate-900 tracking-tight tabular-nums',
+                    footerWrap: 'bg-gradient-to-b from-slate-50 to-slate-100/80 border-t border-slate-200/90'
                 },
                 blue: {
-                    outer: 'ring-1 ring-sky-200/90 shadow-lg shadow-sky-100/50',
-                    headerBar: 'from-sky-600 via-sky-500 to-cyan-500',
-                    headerIconBg: 'bg-white/15 text-white ring-2 ring-white/25',
-                    statTile: 'bg-white/95 border border-sky-100/90 shadow-sm',
-                    iconMuted: 'text-sky-600 bg-sky-50',
-                    label: 'text-sky-600/80',
-                    value: 'text-slate-900',
-                    footerWrap: 'bg-sky-50/80 border-t border-sky-100'
+                    outer: 'ring-1 ring-sky-200/85 shadow-xl shadow-sky-900/[0.06]',
+                    headerBar: 'from-sky-700 via-sky-500 to-cyan-500',
+                    headerIconBg: 'bg-white/15 text-white ring-2 ring-white/30 shadow-md',
+                    tileSurface: 'rounded-2xl border border-sky-100/90 bg-gradient-to-br from-white via-sky-50/25 to-white p-[1.1rem] sm:p-5 min-w-0 shadow-sm hover:shadow-md hover:border-sky-200/80 transition-all duration-200',
+                    iconBox: 'flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-sky-100 to-cyan-100/70 text-sky-700 text-[15px] shadow-inner ring-1 ring-sky-200/55',
+                    labelClass: 'text-[11px] font-bold tracking-wide text-sky-700/70',
+                    valueClass: 'text-[1.05rem] sm:text-lg font-extrabold text-slate-900 tracking-tight tabular-nums',
+                    footerWrap: 'bg-gradient-to-b from-sky-50/90 to-sky-100/50 border-t border-sky-100'
                 },
                 green: {
-                    outer: 'ring-1 ring-emerald-200/90 shadow-lg shadow-emerald-100/50',
-                    headerBar: 'from-emerald-600 via-teal-600 to-emerald-500',
-                    headerIconBg: 'bg-white/15 text-white ring-2 ring-white/25',
-                    statTile: 'bg-white/95 border border-emerald-100/90 shadow-sm',
-                    iconMuted: 'text-emerald-600 bg-emerald-50',
-                    label: 'text-emerald-700/75',
-                    value: 'text-slate-900',
-                    footerWrap: 'bg-emerald-50/85 border-t border-emerald-100'
+                    outer: 'ring-1 ring-emerald-200/85 shadow-xl shadow-emerald-900/[0.05]',
+                    headerBar: 'from-emerald-700 via-teal-600 to-emerald-500',
+                    headerIconBg: 'bg-white/15 text-white ring-2 ring-white/30 shadow-md',
+                    tileSurface: 'rounded-2xl border border-emerald-100/90 bg-gradient-to-br from-white via-emerald-50/20 to-white p-[1.1rem] sm:p-5 min-w-0 shadow-sm hover:shadow-md hover:border-emerald-200/70 transition-all duration-200',
+                    iconBox: 'flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-100 to-teal-100/80 text-emerald-700 text-[15px] shadow-inner ring-1 ring-emerald-200/55',
+                    labelClass: 'text-[11px] font-bold tracking-wide text-emerald-800/70',
+                    valueClass: 'text-[1.05rem] sm:text-lg font-extrabold text-slate-900 tracking-tight tabular-nums',
+                    footerWrap: 'bg-gradient-to-b from-emerald-50/95 to-teal-50/40 border-t border-emerald-100'
                 },
                 red: {
-                    outer: 'ring-1 ring-rose-200/90 shadow-lg shadow-rose-100/50',
-                    headerBar: 'from-rose-600 via-rose-500 to-red-500',
-                    headerIconBg: 'bg-white/15 text-white ring-2 ring-white/25',
-                    statTile: 'bg-white/95 border border-rose-100/90 shadow-sm',
-                    iconMuted: 'text-rose-600 bg-rose-50',
-                    label: 'text-rose-700/80',
-                    value: 'text-slate-900',
-                    footerWrap: 'bg-rose-50/90 border-t border-rose-100'
+                    outer: 'ring-1 ring-rose-200/85 shadow-xl shadow-rose-900/[0.06]',
+                    headerBar: 'from-rose-700 via-rose-500 to-red-500',
+                    headerIconBg: 'bg-white/15 text-white ring-2 ring-white/30 shadow-md',
+                    tileSurface: 'rounded-2xl border border-rose-100/90 bg-gradient-to-br from-white via-rose-50/25 to-white p-[1.1rem] sm:p-5 min-w-0 shadow-sm hover:shadow-md hover:border-rose-200/75 transition-all duration-200',
+                    iconBox: 'flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-rose-100 to-orange-50 text-rose-700 text-[15px] shadow-inner ring-1 ring-rose-200/55',
+                    labelClass: 'text-[11px] font-bold tracking-wide text-rose-800/75',
+                    valueClass: 'text-[1.05rem] sm:text-lg font-extrabold text-slate-900 tracking-tight tabular-nums',
+                    footerWrap: 'bg-gradient-to-b from-rose-50/95 to-rose-100/35 border-t border-rose-100'
                 }
             };
             const t = themes[variant] || themes.gray;
 
             const statsHtml = statValueRows.length
-                ? `<div class="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3 sm:p-4 bg-gradient-to-b from-white/50 to-slate-50/30">
-                    ${statValueRows.map(s => `
-                        <div class="rounded-xl ${t.statTile} p-3.5 min-w-0">
-                            <div class="flex items-center gap-2.5 mb-2">
-                                <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${t.iconMuted} text-sm">
+                ? `<div class="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-[1.125rem] px-4 py-5 sm:px-6 sm:py-6 bg-gradient-to-b from-slate-100/35 via-white to-white">
+                    ${statValueRows.map((s) => {
+                        const mutedValue = typeof s.value === 'string' && s.value.includes('بدون قاعدة');
+                        const valueCls = mutedValue
+                            ? 'text-[1.05rem] sm:text-lg font-semibold text-slate-600 tracking-tight leading-snug'
+                            : t.valueClass;
+                        return `
+                        <div class="${t.tileSurface}">
+                            <div class="flex items-start gap-4">
+                                <span class="${t.iconBox}">
                                     <i class="${s.icon}"></i>
                                 </span>
-                                <span class="text-[11px] font-semibold tracking-wide ${t.label} leading-tight">${s.label}</span>
+                                <div class="flex-1 min-w-0 space-y-2">
+                                    <div class="${t.labelClass} leading-snug">${s.label}</div>
+                                    <p class="${valueCls} leading-snug break-words hyphens-none">${s.value}</p>
+                                </div>
                             </div>
-                            <p class="text-[15px] sm:text-base font-bold ${t.value} leading-snug break-words hyphens-none pr-1">${s.value}</p>
-                        </div>
-                    `).join('')}
+                        </div>`;
+                    }).join('')}
                 </div>`
                 : '';
 
             return `
                 <div class="mt-3 w-full min-w-0 overflow-hidden rounded-2xl bg-white ${t.outer}">
-                    <div class="flex items-center gap-3 bg-gradient-to-l ${t.headerBar} px-4 py-3.5 text-white">
-                        <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${t.headerIconBg} text-lg shadow-inner">
+                    <div class="flex items-center gap-3.5 bg-gradient-to-l ${t.headerBar} px-5 py-4 text-white shadow-sm">
+                        <span class="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl ${t.headerIconBg} text-lg">
                             <i class="${headerIconSolid}"></i>
                         </span>
                         <div class="min-w-0 flex-1">
-                            <p class="text-[10px] font-semibold tracking-wide text-white/75 mb-0.5">استحقاق الاستلام</p>
-                            <h4 class="text-sm sm:text-base font-bold leading-snug text-white drop-shadow-sm">${title}</h4>
+                            <p class="text-[10px] font-semibold tracking-wide text-white/80 mb-0.5">استحقاق الاستلام</p>
+                            <h4 class="text-[0.9375rem] sm:text-[1.0625rem] font-extrabold leading-snug text-white">${title}</h4>
                         </div>
                     </div>
                     ${statsHtml}
-                    ${footerHtml ? `<div class="${t.footerWrap} px-4 py-3 text-xs sm:text-sm font-medium text-slate-700 leading-relaxed flex flex-wrap items-start gap-2.5">${footerHtml}</div>` : ''}
+                    ${footerHtml ? `<div class="${t.footerWrap} px-5 py-4 text-xs sm:text-[0.9375rem] font-medium text-slate-700 leading-relaxed flex flex-wrap items-start gap-3">${footerHtml}</div>` : ''}
                 </div>
             `;
         };
@@ -1378,12 +1385,15 @@ const PPE = {
         }
 
         if (result.isEligible) {
+            const eligibleFooter = result.hasRule
+                ? '<span class="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-emerald-200/95 text-emerald-900 text-xs shadow-sm"><i class="fas fa-check-double"></i></span><span class="font-semibold text-emerald-950">يمكن تسجيل استلام جديد؛ تم استيفاء المدة الدنيا المعتمدة لهذا الصنف.</span>'
+                : '<span class="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-slate-200 text-slate-700 text-xs shadow-sm"><i class="fas fa-unlock-alt"></i></span><span class="font-semibold text-slate-800">يمكن تسجيل استلام جديد؛ لم تُضف مدة دنيا لهذا الصنف في إعدادات الشركة فيُسمح دون قيد زمني لهذا النوع.</span>';
             infoEl.innerHTML = card(
                 'green',
                 'fas fa-check-circle',
                 'الموظف مستحق للاستلام',
                 stats,
-                '<span class="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-emerald-200 text-emerald-800 text-xs"><i class="fas fa-check-double"></i></span><span class="font-semibold text-emerald-900">يمكن تسجيل استلام جديد وفق القاعدة المعتمدة لهذا الصنف.</span>'
+                eligibleFooter
             );
             infoEl.setAttribute('data-eligible', '1');
         } else {
