@@ -279,7 +279,7 @@ const BehaviorMonitoring = {
                                 <i class="fas fa-chart-pie ml-2"></i>نظرة عامة
                             </button>
                             <button class="module-tab-btn ${activeTab === 'log' ? 'active' : ''}" data-tab="log" onclick="BehaviorMonitoring.switchTab('log')">
-                                <i class="fas fa-list ml-2"></i>سجل التصرفات
+                                <i class="fas fa-list ml-2"></i>تصرفات الموظفين
                             </button>
                             <button class="module-tab-btn ${activeTab === 'contractors' ? 'active' : ''}" data-tab="contractors" onclick="BehaviorMonitoring.switchTab('contractors')">
                                 <i class="fas fa-users-cog ml-2"></i>تصرفات المقاولين
@@ -680,17 +680,23 @@ const BehaviorMonitoring = {
     },
 
     renderOverviewTab(isSkeleton = false) {
-        const behaviors = this.getBehaviors();
-        const total = behaviors.length;
-        const positives = behaviors.filter(b => b?.behaviorType === 'إيجابي').length;
-        const negatives = behaviors.filter(b => b?.behaviorType === 'سلبي').length;
-        const last5 = [...behaviors].sort((a, b) => {
+        const employeeBehaviors = this.getBehaviors();
+        const contractorBehaviors = this.getContractorBehaviors();
+        const allBehaviors = [...employeeBehaviors, ...contractorBehaviors];
+        const total = allBehaviors.length;
+        const employeeCount = employeeBehaviors.length;
+        const contractorCount = contractorBehaviors.length;
+        const positives = allBehaviors.filter(b => b?.behaviorType === 'إيجابي').length;
+        const negatives = allBehaviors.filter(b => b?.behaviorType === 'سلبي').length;
+        const last5 = [...allBehaviors].sort((a, b) => {
             const da = this.parseDateSafe(this.getBehaviorDate(a))?.getTime() || 0;
             const db = this.parseDateSafe(this.getBehaviorDate(b))?.getTime() || 0;
             return db - da;
         }).slice(0, 5);
         const heading = this.t('module.behaviorMonitoring.overview.title', 'نظرة عامة');
         const totalLabel = this.t('module.behaviorMonitoring.overview.total', 'إجمالي السجلات');
+        const employeeLabel = this.t('module.behaviorMonitoring.overview.employees', 'تصرفات الموظفين');
+        const contractorLabel = this.t('module.behaviorMonitoring.overview.contractorsExternal', 'تصرفات المقاولين / شركات خارجية');
         const posLabel = this.t('module.behaviorMonitoring.overview.positive', 'تصرفات إيجابية');
         const negLabel = this.t('module.behaviorMonitoring.overview.negative', 'تصرفات سلبية');
         const recentLabel = this.t('module.behaviorMonitoring.overview.last5', 'آخر 5 تصرفات');
@@ -704,18 +710,26 @@ const BehaviorMonitoring = {
                         <h2 class="card-title"><i class="fas fa-chart-line ml-2"></i>${Utils.escapeHTML(heading)}</h2>
                     </div>
                     <div class="card-body">
-                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6 behavior-overview-stats">
+                        <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-4 mb-6 behavior-overview-stats">
                             <div class="behavior-stat behavior-stat-total">
                                 <div class="behavior-stat-label">${Utils.escapeHTML(totalLabel)}</div>
                                 <div class="behavior-stat-value">${isSkeleton ? '—' : total}</div>
                             </div>
-                            <div class="behavior-stat behavior-stat-positive">
-                                <div class="behavior-stat-label">${Utils.escapeHTML(posLabel)}</div>
-                                <div class="behavior-stat-value text-green-700">${isSkeleton ? '—' : positives}</div>
+                            <div class="behavior-stat behavior-stat-employees">
+                                <div class="behavior-stat-label">${Utils.escapeHTML(employeeLabel)}</div>
+                                <div class="behavior-stat-value">${isSkeleton ? '—' : employeeCount}</div>
+                            </div>
+                            <div class="behavior-stat behavior-stat-contractors">
+                                <div class="behavior-stat-label">${Utils.escapeHTML(contractorLabel)}</div>
+                                <div class="behavior-stat-value">${isSkeleton ? '—' : contractorCount}</div>
                             </div>
                             <div class="behavior-stat behavior-stat-negative">
                                 <div class="behavior-stat-label">${Utils.escapeHTML(negLabel)}</div>
                                 <div class="behavior-stat-value text-red-700">${isSkeleton ? '—' : negatives}</div>
+                            </div>
+                            <div class="behavior-stat behavior-stat-positive">
+                                <div class="behavior-stat-label">${Utils.escapeHTML(posLabel)}</div>
+                                <div class="behavior-stat-value text-green-700">${isSkeleton ? '—' : positives}</div>
                             </div>
                         </div>
 
@@ -732,7 +746,8 @@ const BehaviorMonitoring = {
                                             <thead>
                                                 <tr>
                                                     <th>ISO</th>
-                                                    <th>الموظف</th>
+                                                    <th>الاسم</th>
+                                                    <th>الفئة</th>
                                                     <th>المصنع</th>
                                                     <th>الموقع الفرعي</th>
                                                     <th>نوع التصرف</th>
@@ -745,7 +760,8 @@ const BehaviorMonitoring = {
                                                 ${last5.map(b => `
                                                     <tr>
                                                         <td>${Utils.escapeHTML(b.isoCode || '')}</td>
-                                                        <td>${Utils.escapeHTML(b.employeeName || '')}</td>
+                                                        <td>${Utils.escapeHTML(b.employeeName || b.contractorName || '')}</td>
+                                                        <td>${Utils.escapeHTML(b.contractorName ? 'مقاول/شركة خارجية' : 'موظف')}</td>
                                                         <td>${Utils.escapeHTML(b.factoryName || b.factory || '—')}</td>
                                                         <td>${Utils.escapeHTML(b.subLocationName || b.subLocation || '—')}</td>
                                                         <td><span class="badge ${this.getBehaviorTypeBadgeClass(b.behaviorType)}">${Utils.escapeHTML(b.behaviorType || '—')}</span></td>
@@ -773,15 +789,25 @@ const BehaviorMonitoring = {
     renderLogTab(isSkeleton = false) {
         const filters = this.state?.filters || {};
         const safe = (v) => Utils.escapeHTML((v ?? '').toString());
+        const activeFilterChips = this.renderEmployeeActiveFilterChips();
 
         return `
             <div id="behavior-log-container">
                 <div class="content-card behavior-filters-card">
                     <div class="card-header">
-                        <h2 class="card-title"><i class="fas fa-filter ml-2"></i>سجل التصرفات (بحث/فلترة)</h2>
+                        <h2 class="card-title"><i class="fas fa-filter ml-2"></i>تصرفات الموظفين (بحث/فلترة)</h2>
                     </div>
-                    <div class="card-body">
-                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-3">
+                    <div class="card-body behavior-dynamic-filter-wrap">
+                        <div class="behavior-filter-topbar">
+                            <div class="behavior-filter-topbar-title">
+                                <span class="badge badge-secondary" id="behavior-filter-count">${isSkeleton ? '—' : this.getFilteredBehaviors().length}</span>
+                                <span>سجل بعد الفلترة</span>
+                            </div>
+                            <div id="behavior-active-filter-chips" class="behavior-active-filter-chips">
+                                ${activeFilterChips}
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-3 behavior-filter-grid">
                             <div class="lg:col-span-2">
                                 <label class="block text-sm font-semibold text-gray-700 mb-2">بحث سريع</label>
                                 <div class="relative">
@@ -817,12 +843,8 @@ const BehaviorMonitoring = {
                             </div>
                         </div>
 
-                        <div class="flex flex-wrap items-center justify-between gap-2 mt-4">
-                            <div class="text-sm text-gray-600">
-                                <span class="badge badge-secondary" id="behavior-filter-count">${isSkeleton ? '—' : this.getFilteredBehaviors().length}</span>
-                                <span>سجل (بعد الفلترة)</span>
-                            </div>
-                            <div class="flex items-center gap-2">
+                        <div class="flex flex-wrap items-center justify-end gap-2 mt-4">
+                            <div class="flex items-center gap-2 behavior-filter-actions">
                                 <select id="behavior-sort" class="form-input" style="max-width: 220px;">
                                     <option value="date_desc" ${this.state?.sort === 'date_desc' ? 'selected' : ''}>الأحدث أولاً</option>
                                     <option value="date_asc" ${this.state?.sort === 'date_asc' ? 'selected' : ''}>الأقدم أولاً</option>
@@ -852,6 +874,25 @@ const BehaviorMonitoring = {
                 </div>
             </div>
         `;
+    },
+
+    renderEmployeeActiveFilterChips() {
+        const filters = this.state?.filters || {};
+        const chips = [];
+        const pushChip = (label, value) => {
+            const v = String(value || '').trim();
+            if (!v) return;
+            chips.push(`<span class="behavior-filter-chip"><strong>${Utils.escapeHTML(label)}:</strong> ${Utils.escapeHTML(v)}</span>`);
+        };
+        pushChip('بحث', filters.search);
+        pushChip('النوع', filters.behaviorType);
+        pushChip('التقييم', filters.rating);
+        pushChip('من', filters.dateFrom);
+        pushChip('إلى', filters.dateTo);
+        if (!chips.length) {
+            return `<span class="behavior-filter-chip behavior-filter-chip-muted">لا توجد فلاتر مفعلة</span>`;
+        }
+        return chips.join('');
     },
 
     renderLogTableHTML() {
@@ -916,6 +957,8 @@ const BehaviorMonitoring = {
         if (tableContainer) tableContainer.innerHTML = this.renderLogTableHTML();
         const countEl = document.getElementById('behavior-filter-count');
         if (countEl) countEl.textContent = String(this.getFilteredBehaviors().length);
+        const chipsEl = document.getElementById('behavior-active-filter-chips');
+        if (chipsEl) chipsEl.innerHTML = this.renderEmployeeActiveFilterChips();
     },
 
     clearFilters() {
