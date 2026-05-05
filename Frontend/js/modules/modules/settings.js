@@ -403,13 +403,13 @@ const Settings = {
                                         </p>
                                     </div>
                                     <div class="flex flex-wrap items-center gap-2.5">
-                                        <button type="button" id="ppe-download-template-btn" class="shrink-0 inline-flex items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 text-base font-bold px-5 py-3 min-h-[48px] shadow-sm hover:shadow-md transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-slate-300">
+                                        <button type="button" id="ppe-download-template-btn" class="shrink-0 inline-flex items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 text-base font-extrabold px-5 py-3 min-h-[48px] shadow-sm hover:shadow-md transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-slate-300">
                                             <i class="fas fa-file-download"></i> تحميل قالب
                                         </button>
-                                        <button type="button" id="ppe-import-rules-btn" class="shrink-0 inline-flex items-center justify-center gap-2 rounded-xl border border-blue-300 bg-blue-600 hover:bg-blue-700 text-white text-base font-bold px-5 py-3 min-h-[48px] shadow-sm hover:shadow-md transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-300">
+                                        <button type="button" id="ppe-import-rules-btn" class="shrink-0 inline-flex items-center justify-center gap-2 rounded-xl border border-blue-300 bg-blue-600 hover:bg-blue-700 text-white text-base font-extrabold px-5 py-3 min-h-[48px] shadow-sm hover:shadow-md transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-300">
                                             <i class="fas fa-file-import"></i> استيراد
                                         </button>
-                                        <button type="button" id="ppe-add-rule-btn" class="shrink-0 inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white text-base font-bold px-5 py-3 min-h-[48px] shadow-md hover:shadow-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-300">
+                                        <button type="button" id="ppe-add-rule-btn" class="shrink-0 inline-flex items-center justify-center gap-2 rounded-xl border border-blue-500 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white text-base font-extrabold px-6 py-3 min-h-[50px] shadow-md hover:shadow-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-300">
                                             <i class="fas fa-plus"></i> إضافة صف
                                         </button>
                                     </div>
@@ -418,10 +418,10 @@ const Settings = {
                                 <input type="file" id="ppe-rules-import-file" accept=".csv,.txt,.xlsx,.xls" class="hidden">
                             </div>
                             <div class="flex flex-wrap items-center gap-3 pt-3 mt-1 border-t border-slate-200">
-                                <button type="button" id="save-company-settings-btn" class="inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white text-sm font-bold px-5 py-2.5 min-h-[44px] shadow-md hover:shadow-lg transition-all duration-200">
+                                <button type="button" id="save-company-settings-btn" class="inline-flex items-center justify-center gap-2 rounded-xl border border-blue-500 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white text-base font-extrabold px-6 py-3 min-h-[50px] shadow-md hover:shadow-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-300">
                                     <i class="fas fa-save ml-2"></i>حفظ بيانات الشركة
                                 </button>
-                                <button type="button" id="reset-company-name-btn" class="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 text-sm font-semibold px-4 py-2.5 min-h-[44px] shadow-sm hover:shadow-md transition-all duration-200">
+                                <button type="button" id="reset-company-name-btn" class="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 text-base font-bold px-5 py-3 min-h-[50px] shadow-sm hover:shadow-md transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-slate-300">
                                     <i class="fas fa-undo ml-2"></i>استعادة الاسم الافتراضي
                                 </button>
                             </div>
@@ -452,11 +452,11 @@ const Settings = {
                                             سيتم عرض الشعار في يسار جميع النماذج والصفحات. الحد الأقصى لحجم الصورة: 2MB
                                         </p>
                                         <div class="flex items-center gap-2 mt-2">
-                                            <button type="button" id="upload-logo-btn" class="btn-primary">
+                                            <button type="button" id="upload-logo-btn" class="inline-flex items-center justify-center gap-2 rounded-xl border border-blue-500 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white text-base font-extrabold px-5 py-3 min-h-[48px] shadow-md hover:shadow-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-300">
                                                 <i class="fas fa-upload ml-2"></i>رفع الشعار
                                             </button>
                                             ${AppState.companyLogo ? `
-                                                <button type="button" id="remove-logo-btn" class="btn-secondary">
+                                                <button type="button" id="remove-logo-btn" class="inline-flex items-center justify-center gap-2 rounded-xl border border-red-300 bg-red-600 hover:bg-red-700 text-white text-base font-extrabold px-5 py-3 min-h-[48px] shadow-sm hover:shadow-md transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-red-300">
                                                     <i class="fas fa-trash ml-2"></i>إزالة الشعار
                                                 </button>
                                             ` : ''}
@@ -478,7 +478,7 @@ const Settings = {
                             </p>
                             <div id="post-login-items-list" class="space-y-3"></div>
                             <div class="flex items-center gap-2 pt-2 border-t">
-                                <button type="button" id="post-login-add-item-btn" class="btn-primary">
+                                <button type="button" id="post-login-add-item-btn" class="inline-flex items-center justify-center gap-2 rounded-xl border border-blue-500 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white text-base font-extrabold px-5 py-3 min-h-[48px] shadow-md hover:shadow-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-300">
                                     <i class="fas fa-plus ml-2"></i>إضافة عنصر
                                 </button>
                             </div>
@@ -503,8 +503,8 @@ const Settings = {
                                     <label for="post-login-item-active" class="text-sm text-gray-700">مفعّل (يُعرض للمستخدمين)</label>
                                 </div>
                                 <div class="flex items-center gap-2">
-                                    <button type="button" id="post-login-item-save-btn" class="btn-primary"><i class="fas fa-save ml-2"></i>حفظ</button>
-                                    <button type="button" id="post-login-item-cancel-btn" class="btn-secondary"><i class="fas fa-times ml-2"></i>إلغاء</button>
+                                    <button type="button" id="post-login-item-save-btn" class="inline-flex items-center justify-center gap-2 rounded-xl border border-blue-500 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white text-base font-extrabold px-5 py-2.5 min-h-[44px] shadow-md hover:shadow-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-300"><i class="fas fa-save ml-2"></i>حفظ</button>
+                                    <button type="button" id="post-login-item-cancel-btn" class="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 text-base font-bold px-5 py-2.5 min-h-[44px] shadow-sm hover:shadow-md transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-slate-300"><i class="fas fa-times ml-2"></i>إلغاء</button>
                                 </div>
                             </div>
                         </div>
