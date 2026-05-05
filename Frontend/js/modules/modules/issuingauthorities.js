@@ -343,6 +343,32 @@ const IssuingAuthorities = {
         subEl.innerHTML = this._renderSublocationOptions(factoryEl.value, selectedSublocation);
     },
 
+    async _ensureFormSettingsReady() {
+        if (typeof Permissions !== 'undefined' && typeof Permissions.ensureFormSettingsState === 'function') {
+            try {
+                await Permissions.ensureFormSettingsState();
+            } catch (err) {
+                if (typeof Utils !== 'undefined' && Utils.safeWarn) {
+                    Utils.safeWarn('⚠️ تعذر تهيئة إعدادات النماذج في المصرح لهم:', err);
+                }
+            }
+        }
+    },
+
+    _syncFactoryControls(record = null) {
+        const factoryEl = document.getElementById('ia-f-factory');
+        if (!factoryEl) return;
+        const selectedFactory = String(
+            (record?.factoryId || record?.factory || factoryEl.value || '')
+        ).trim();
+        factoryEl.innerHTML = this._renderFactoryOptions(selectedFactory);
+        if (selectedFactory) factoryEl.value = selectedFactory;
+        const selectedSublocation = String(
+            (record?.sublocationId || record?.sublocation || '')
+        ).trim();
+        this._refreshSublocationOptions(selectedSublocation);
+    },
+
     /**
      * نفس أسلوب نموذج تسجيل زيارة العيادة: استنساخ حقل الكود لإزالة أي معالجات قديمة ثم EmployeeHelper.setupEmployeeCodeSearch.
      */
@@ -740,6 +766,7 @@ const IssuingAuthorities = {
         section.innerHTML = this._renderShell();
         this._injectStyles();
         this._bustIssuingAuthoritiesSheetCache();
+        await this._ensureFormSettingsReady();
 
         await Promise.all([
             this._fetchContractorOptions(),
@@ -2048,12 +2075,13 @@ const IssuingAuthorities = {
                 ? this.t('module.common.close', 'إغلاق')
                 : this.t('module.common.cancel', 'إلغاء');
         }
+        await this._ensureFormSettingsReady();
         await this._fetchContractorOptions();
         body.innerHTML = this._renderForm(record);
         modal.style.display = 'flex';
         this._togglePersonTypeInputs();
         this._bindModalFieldEvents();
-        this._refreshSublocationOptions(String(record?.sublocationId || record?.sublocation || ''));
+        this._syncFactoryControls(record);
 
         // Re-attach radio feedback
         body.querySelectorAll('input[type="radio"]').forEach(radio => {
