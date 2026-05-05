@@ -1757,7 +1757,7 @@ function doPost(e) {
                     result = saveCompanySettingsToSheet(payload);
                     break;
                 case 'getCompanySettings':
-                    result = getCompanySettingsFromSheet();
+                    result = getCompanySettingsFromSheet(payload.userData || payload.user || {});
                     break;
                 case 'initCompanySettingsTable':
                     result = initCompanySettingsTable();

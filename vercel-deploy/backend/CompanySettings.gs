@@ -465,7 +465,29 @@ function saveCompanySettingsToSheet(settingsData) {
 /**
  * الحصول على إعدادات الشركة من Google Sheets
  */
-function getCompanySettingsFromSheet() {
+function buildPublicCompanySettingsView_(settingsData) {
+    const src = settingsData || getDefaultCompanySettings();
+    return {
+        id: src.id || 'COMPANY-SETTINGS-1',
+        name: src.name || '',
+        secondaryName: src.secondaryName || '',
+        nameFontSize: src.nameFontSize || 16,
+        secondaryNameFontSize: src.secondaryNameFontSize || 14,
+        secondaryNameColor: src.secondaryNameColor || '#6B7280',
+        formVersion: src.formVersion || '1.0',
+        logo: src.logo || '',
+        clinicMonthlyVisitsAlertThreshold: src.clinicMonthlyVisitsAlertThreshold || 10,
+        clinicVisitTypes: src.clinicVisitTypes || '',
+        profileTeamsUrl: src.profileTeamsUrl || '',
+        profileWhatsAppUrl: src.profileWhatsAppUrl || '',
+        ppeEligibilityMonths: src.ppeEligibilityMonths || 0,
+        ppeEligibilityDays: src.ppeEligibilityDays || 0,
+        ppeEligibilityRules: src.ppeEligibilityRules || '[]',
+        updatedAt: src.updatedAt || ''
+    };
+}
+
+function getCompanySettingsFromSheet(userData) {
     try {
         const spreadsheetId = getSpreadsheetId();
         
@@ -500,11 +522,21 @@ function getCompanySettingsFromSheet() {
             } else {
                 Logger.log('Company settings loaded without logo');
             }
-            return { success: true, data: settingsData };
+            const permissionCheck = checkCompanySettingsPermission(userData || {});
+            if (permissionCheck && permissionCheck.hasPermission) {
+                return { success: true, data: settingsData };
+            }
+            // للمستخدمين غير الإداريين: إرجاع نسخة عامة بدون بيانات اتصال/تعريف منشئ الإعدادات.
+            return { success: true, data: buildPublicCompanySettingsView_(settingsData) };
         } else {
             // إرجاع الإعدادات الافتراضية
             Logger.log('No company settings found, returning default settings');
-            return { success: true, data: getDefaultCompanySettings() };
+            const defaults = getDefaultCompanySettings();
+            const permissionCheck = checkCompanySettingsPermission(userData || {});
+            if (permissionCheck && permissionCheck.hasPermission) {
+                return { success: true, data: defaults };
+            }
+            return { success: true, data: buildPublicCompanySettingsView_(defaults) };
         }
     } catch (error) {
         Logger.log('Error in getCompanySettingsFromSheet: ' + error.toString());

@@ -402,14 +402,14 @@ const Settings = {
                                             البيانات تُزاد هنا؛ التخزين مع الخادم عند ضغط «حفظ بيانات الشركة» أسفل البطاقة.
                                         </p>
                                     </div>
-                                    <div class="flex flex-wrap items-center gap-2">
-                                        <button type="button" id="ppe-download-template-btn" class="shrink-0 inline-flex items-center gap-2 rounded-lg border border-teal-200 bg-white hover:bg-teal-50 text-teal-700 text-xs font-bold px-3 py-2.5 shadow-sm transition-colors">
+                                    <div class="flex flex-wrap items-center gap-2.5">
+                                        <button type="button" id="ppe-download-template-btn" class="shrink-0 inline-flex items-center justify-center gap-2 rounded-xl border border-teal-200 bg-white hover:bg-teal-50 text-teal-700 text-sm font-bold px-4 py-2.5 min-h-[42px] shadow-sm hover:shadow-md transition-all duration-200">
                                             <i class="fas fa-file-download"></i> تحميل قالب
                                         </button>
-                                        <button type="button" id="ppe-import-rules-btn" class="shrink-0 inline-flex items-center gap-2 rounded-lg border border-blue-200 bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-bold px-3 py-2.5 shadow-sm transition-colors">
+                                        <button type="button" id="ppe-import-rules-btn" class="shrink-0 inline-flex items-center justify-center gap-2 rounded-xl border border-blue-200 bg-blue-50 hover:bg-blue-100 text-blue-700 text-sm font-bold px-4 py-2.5 min-h-[42px] shadow-sm hover:shadow-md transition-all duration-200">
                                             <i class="fas fa-file-import"></i> استيراد
                                         </button>
-                                        <button type="button" id="ppe-add-rule-btn" class="shrink-0 inline-flex items-center gap-2 rounded-lg bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold px-4 py-2.5 shadow-md transition-colors">
+                                        <button type="button" id="ppe-add-rule-btn" class="shrink-0 inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-teal-600 to-cyan-600 hover:from-teal-700 hover:to-cyan-700 text-white text-sm font-bold px-4 py-2.5 min-h-[42px] shadow-md hover:shadow-lg transition-all duration-200">
                                             <i class="fas fa-plus"></i> إضافة صف
                                         </button>
                                     </div>
@@ -417,11 +417,11 @@ const Settings = {
                                 <div id="ppe-eligibility-rules-container" class="w-full min-w-0"></div>
                                 <input type="file" id="ppe-rules-import-file" accept=".csv,.txt,.xlsx,.xls" class="hidden">
                             </div>
-                            <div class="flex items-center gap-3 pt-2 border-t">
-                                <button type="button" id="save-company-settings-btn" class="btn-primary">
+                            <div class="flex flex-wrap items-center gap-3 pt-3 mt-1 border-t border-slate-200">
+                                <button type="button" id="save-company-settings-btn" class="inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white text-sm font-bold px-5 py-2.5 min-h-[44px] shadow-md hover:shadow-lg transition-all duration-200">
                                     <i class="fas fa-save ml-2"></i>حفظ بيانات الشركة
                                 </button>
-                                <button type="button" id="reset-company-name-btn" class="btn-secondary">
+                                <button type="button" id="reset-company-name-btn" class="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 text-sm font-semibold px-4 py-2.5 min-h-[44px] shadow-sm hover:shadow-md transition-all duration-200">
                                     <i class="fas fa-undo ml-2"></i>استعادة الاسم الافتراضي
                                 </button>
                             </div>
