@@ -402,11 +402,20 @@ const Settings = {
                                             البيانات تُزاد هنا؛ التخزين مع الخادم عند ضغط «حفظ بيانات الشركة» أسفل البطاقة.
                                         </p>
                                     </div>
-                                    <button type="button" id="ppe-add-rule-btn" class="shrink-0 inline-flex items-center gap-2 rounded-lg bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold px-4 py-2.5 shadow-md transition-colors">
-                                        <i class="fas fa-plus"></i> إضافة صف
-                                    </button>
+                                    <div class="flex flex-wrap items-center gap-2">
+                                        <button type="button" id="ppe-download-template-btn" class="shrink-0 inline-flex items-center gap-2 rounded-lg border border-teal-200 bg-white hover:bg-teal-50 text-teal-700 text-xs font-bold px-3 py-2.5 shadow-sm transition-colors">
+                                            <i class="fas fa-file-download"></i> تحميل قالب
+                                        </button>
+                                        <button type="button" id="ppe-import-rules-btn" class="shrink-0 inline-flex items-center gap-2 rounded-lg border border-blue-200 bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-bold px-3 py-2.5 shadow-sm transition-colors">
+                                            <i class="fas fa-file-import"></i> استيراد
+                                        </button>
+                                        <button type="button" id="ppe-add-rule-btn" class="shrink-0 inline-flex items-center gap-2 rounded-lg bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold px-4 py-2.5 shadow-md transition-colors">
+                                            <i class="fas fa-plus"></i> إضافة صف
+                                        </button>
+                                    </div>
                                 </div>
                                 <div id="ppe-eligibility-rules-container" class="w-full min-w-0"></div>
+                                <input type="file" id="ppe-rules-import-file" accept=".csv,.txt,.xlsx,.xls" class="hidden">
                             </div>
                             <div class="flex items-center gap-3 pt-2 border-t">
                                 <button type="button" id="save-company-settings-btn" class="btn-primary">
@@ -1551,6 +1560,9 @@ const Settings = {
             const profileWhatsAppUrlInput = document.getElementById('profile-whatsapp-url-input');
             const ppeEligibilityRulesContainer = document.getElementById('ppe-eligibility-rules-container');
             const ppeAddRuleBtn = document.getElementById('ppe-add-rule-btn');
+            const ppeDownloadTemplateBtn = document.getElementById('ppe-download-template-btn');
+            const ppeImportRulesBtn = document.getElementById('ppe-import-rules-btn');
+            const ppeRulesImportFileInput = document.getElementById('ppe-rules-import-file');
             const saveCompanySettingsBtn = document.getElementById('save-company-settings-btn');
 
             // ====== إدارة قواعد استحقاق PPE لكل صنف ======
@@ -1687,6 +1699,67 @@ const Settings = {
                 return out;
             };
 
+            const normalizeImportedRules = (input) => {
+                const out = [];
+                const seen = new Set();
+                (Array.isArray(input) ? input : []).forEach((row) => {
+                    if (!row || typeof row !== 'object') return;
+                    const equipmentType = String(row.equipmentType || row.itemName || row['نوع الصنف'] || row['الصنف'] || '').trim();
+                    let months = parseInt(row.months ?? row['الشهور'] ?? row['months'], 10);
+                    if (!equipmentType || seen.has(equipmentType)) return;
+                    if (isNaN(months) || months < 1) return;
+                    months = Math.min(120, months);
+                    seen.add(equipmentType);
+                    out.push({ equipmentType, months, days: 0 });
+                });
+                return out;
+            };
+
+            const parseRulesFromText = (text) => {
+                const rows = String(text || '').split(/\r?\n/).map((r) => r.trim()).filter(Boolean);
+                if (!rows.length) return [];
+                const dataRows = rows.filter((line, idx) => idx !== 0 || !/الصنف|نوع|months|month|الشهور/i.test(line));
+                const parsed = dataRows.map((line) => {
+                    const sep = line.includes('\t') ? '\t' : ',';
+                    const parts = line.split(sep).map((p) => p.trim()).filter(Boolean);
+                    if (parts.length < 2) return null;
+                    return { equipmentType: parts[0], months: parts[1] };
+                }).filter(Boolean);
+                return normalizeImportedRules(parsed);
+            };
+
+            const importPpeRulesFromFile = async (file) => {
+                if (!file) return;
+                const name = (file.name || '').toLowerCase();
+                let importedRules = [];
+                if (name.endsWith('.xlsx') || name.endsWith('.xls')) {
+                    if (typeof XLSX === 'undefined') {
+                        Notification.error('لا يمكن قراءة Excel حالياً. استخدم CSV أو فعّل مكتبة XLSX.');
+                        return;
+                    }
+                    const buffer = await file.arrayBuffer();
+                    const wb = XLSX.read(buffer, { type: 'array' });
+                    const firstSheet = wb.SheetNames && wb.SheetNames[0];
+                    if (!firstSheet) {
+                        Notification.error('ملف الاستيراد لا يحتوي أوراق بيانات.');
+                        return;
+                    }
+                    const ws = wb.Sheets[firstSheet];
+                    const rows = XLSX.utils.sheet_to_json(ws, { defval: '' });
+                    importedRules = normalizeImportedRules(rows);
+                } else {
+                    const text = await file.text();
+                    importedRules = parseRulesFromText(text);
+                }
+                if (!importedRules.length) {
+                    Notification.warning('لم يتم العثور على صفوف صالحة للاستيراد. تأكد من القالب: الصنف,الشهور');
+                    return;
+                }
+                ppeRulesState.rules = importedRules;
+                renderPpeRulesRows();
+                Notification.success(`تم استيراد ${importedRules.length} قاعدة بنجاح.`);
+            };
+
             const loadPpeItemsForRules = async () => {
                 let items = [];
                 try {
@@ -1721,6 +1794,38 @@ const Settings = {
                 ppeAddRuleBtn.addEventListener('click', () => {
                     ppeRulesState.rules.push({ equipmentType: '', months: 12, days: 0 });
                     renderPpeRulesRows();
+                });
+            }
+            if (ppeDownloadTemplateBtn) {
+                ppeDownloadTemplateBtn.addEventListener('click', () => {
+                    const sampleRows = [
+                        ['الصنف', 'الشهور'],
+                        ['خوذة أمان', '12'],
+                        ['نظارات وقاية', '6']
+                    ];
+                    const csv = '\uFEFF' + sampleRows.map((r) => r.join(',')).join('\n');
+                    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = 'ppe-eligibility-template.csv';
+                    document.body.appendChild(a);
+                    a.click();
+                    a.remove();
+                    URL.revokeObjectURL(url);
+                });
+            }
+            if (ppeImportRulesBtn && ppeRulesImportFileInput) {
+                ppeImportRulesBtn.addEventListener('click', () => ppeRulesImportFileInput.click());
+                ppeRulesImportFileInput.addEventListener('change', async () => {
+                    const file = ppeRulesImportFileInput.files && ppeRulesImportFileInput.files[0];
+                    try {
+                        await importPpeRulesFromFile(file);
+                    } catch (e) {
+                        Notification.error('فشل الاستيراد: ' + (e?.message || 'خطأ غير معروف'));
+                    } finally {
+                        ppeRulesImportFileInput.value = '';
+                    }
                 });
             }
             const resetCompanyNameBtn = document.getElementById('reset-company-name-btn');
