@@ -1231,9 +1231,17 @@ const PPE = {
     renderEligibilityInfo(infoEl, result) {
         if (!infoEl) return;
         if (!result || !result.hasInputs) {
-            infoEl.innerHTML = '';
-            infoEl.classList.add('hidden');
-            infoEl.removeAttribute('data-eligible');
+            const rule = this.getEligibilityRule();
+            const ruleText = rule.hasRule ? this.formatMonthsDays(rule.months, rule.days) : 'لا توجد قاعدة مفعّلة';
+            infoEl.innerHTML = `
+                <div class="mt-2 p-3 rounded-lg border bg-gray-50 border-gray-200 text-gray-700 text-xs flex flex-wrap items-center gap-x-4 gap-y-1">
+                    <span class="flex items-center gap-2"><i class="fas fa-info-circle text-blue-500"></i><b>استحقاق الاستلام:</b></span>
+                    <span>اختر كود الموظف ونوع المعدة لعرض تاريخ آخر استلام والمدة المنقضية وحالة الاستحقاق.</span>
+                    <span class="flex items-center gap-2 text-gray-500"><i class="fas fa-shield-alt"></i><b>الحد الأدنى الحالي:</b> ${ruleText}</span>
+                </div>
+            `;
+            infoEl.classList.remove('hidden');
+            infoEl.setAttribute('data-eligible', 'pending');
             return;
         }
         const fmt = (d) => d ? (typeof Utils !== 'undefined' && Utils.formatDate ? Utils.formatDate(d) : new Date(d).toLocaleDateString('ar')) : '-';
@@ -1799,7 +1807,10 @@ const PPE = {
                 }, 300);
             }
 
+            // عرض البطاقة الإرشادية فوراً، ثم تحديثها بعد تحميل قوائم الأصناف
+            refreshAllEligibilityRows();
             setTimeout(refreshAllEligibilityRows, 300);
+            setTimeout(refreshAllEligibilityRows, 1500);
 
             // Setup form submit handler
             const form = modal.querySelector('#ppe-form');
