@@ -9745,6 +9745,17 @@ const PTW = {
     _extractPermitTypeFields(ptwData) {
         if (!ptwData) return [];
         const types = [];
+        const iaModule = typeof IssuingAuthorities !== 'undefined' ? IssuingAuthorities : null;
+        const mapPt = (pt) => {
+            if (!iaModule || typeof iaModule.mapPermitTypeToField !== 'function' || pt == null) return;
+            const raw = typeof pt === 'string' ? pt : String(pt);
+            let field = iaModule.mapPermitTypeToField(raw.trim());
+            if (!field && /[،,]/.test(raw)) {
+                field = iaModule.mapPermitTypeToField(raw.split(/[،,]/)[0].trim());
+            }
+            if (field && !types.includes(field)) types.push(field);
+        };
+
         if (ptwData.hotWorkDetails && (Array.isArray(ptwData.hotWorkDetails) ? ptwData.hotWorkDetails.length > 0 : true)) {
             types.push('hotWork');
         }
@@ -9760,27 +9771,26 @@ const PTW = {
         if (ptwData.coldWorkType && String(ptwData.coldWorkType).trim()) {
             types.push('coldWork');
         }
-        if (ptwData.excavationLength || ptwData.excavationWidth || ptwData.excavationDepth) {
+        if (ptwData.excavationLength || ptwData.excavationWidth || ptwData.excavationDepth || (ptwData.soilType && String(ptwData.soilType).trim())) {
             types.push('excavation');
         }
-        // حقل permitType/workType قد يحتوي على إشارات للمقاول وخطة الرفع
+        // حقول نصية مجمّعة: نوع التصريح، نوع العمل، أعمال أخرى
         const permitTypeStr = String(ptwData.permitType || ptwData.workType || '').toLowerCase();
-        if (permitTypeStr.includes('مقاول') || permitTypeStr.includes('contractor')) {
+        const otherWorkLower = String(ptwData.otherWorkType || '').toLowerCase();
+        const electricalLower = String(ptwData.electricalWorkType || '').toLowerCase();
+        const combinedHints = `${permitTypeStr} ${otherWorkLower} ${electricalLower}`;
+        if (combinedHints.includes('مقاول') || combinedHints.includes('contractor')) {
             types.push('contractorPTW');
         }
-        if (permitTypeStr.includes('رفع') || permitTypeStr.includes('lifting')) {
+        if (combinedHints.includes('رفع') || combinedHints.includes('lifting') || combinedHints.includes('خطة الرفع') || combinedHints.includes('crane')) {
             types.push('liftingPlan');
         }
-        // إذا لم يُكتشف أي نوع، ننظر في permitType كمصفوفة أو نص
-        if (types.length === 0 && ptwData.permitType) {
-            const ptArr = Array.isArray(ptwData.permitType) ? ptwData.permitType : [ptwData.permitType];
-            const iaModule = typeof IssuingAuthorities !== 'undefined' ? IssuingAuthorities : null;
-            if (iaModule && typeof iaModule.mapPermitTypeToField === 'function') {
-                ptArr.forEach(pt => {
-                    const field = iaModule.mapPermitTypeToField(pt);
-                    if (field && !types.includes(field)) types.push(field);
-                });
-            }
+        if (ptwData.permitType) {
+            const ptArr = Array.isArray(ptwData.permitType) ? ptwData.permitType : String(ptwData.permitType).split(/[،,|]/);
+            ptArr.forEach((p) => mapPt(typeof p === 'string' ? p.trim() : p));
+        }
+        if (types.length === 0 && ptwData.workType && !Array.isArray(ptwData.workType)) {
+            mapPt(ptwData.workType);
         }
         return [...new Set(types)];
     },
@@ -9989,9 +9999,9 @@ const PTW = {
     },
 
     /**
-     * إعداد موافقات إغلاق التصريح (بنفس طريقة القسم السابع)
+     * إعداد موافقات إغلاق التصريح — نفس منطق القسم السابع مع محاولة قائمة المصرح لهم (IA) عند اللزوم
      */
-    prepareClosureApprovalsForForm(ptwData = null) {
+    async prepareClosureApprovalsForForm(ptwData = null) {
         // التصاريح اليدوية تستخدم اعتمادات الإغلاق اليدوية
         if (ptwData && ptwData.isManualEntry === true) {
             return {
@@ -10014,7 +10024,25 @@ const PTW = {
             };
         }
 
-        // استخدام نفس دائرة الاعتمادات للقسم السابع
+        try {
+            const permitTypeFields = this._extractPermitTypeFields(ptwData);
+            if (permitTypeFields.length > 0) {
+                const iaWorkflow = await this._buildIssuingAuthoritiesWorkflow(permitTypeFields);
+                if (iaWorkflow && iaWorkflow.approvals && iaWorkflow.approvals.length > 0) {
+                    const approvals = this.normalizeApprovals(iaWorkflow.approvals);
+                    return {
+                        approvals,
+                        circuitOwnerId: iaWorkflow.circuitOwnerId,
+                        circuitName: iaWorkflow.circuitName,
+                        issuingAuthoritiesSource: true
+                    };
+                }
+            }
+        } catch (iaErr) {
+            if (typeof Utils !== 'undefined') Utils.safeWarn('فشل توليد اعتمادات الإغلاق من IssuingAuthorities، سيتم استخدام ApprovalCircuits:', iaErr);
+        }
+
+        // استخدام نفس دائرة الاعتمادات الافتراضية
         const requesterId = AppState.currentUser?.id || '';
         const generated = ApprovalCircuits.generateApprovalsForUser(requesterId);
         const approvals = this.normalizeApprovals(generated.approvals || []);
@@ -10060,6 +10088,7 @@ const PTW = {
         this.formCircuitOwnerId = approvalPackage.circuitOwnerId || '__default__';
         const circuitName = approvalPackage.circuitName || '';
         this.formCircuitName = circuitName;
+        const closureApprovalPackage = await this.prepareClosureApprovalsForForm(ptwData);
         const statusValue = ptwData?.status || 'قيد المراجعة';
 
         const escapeHTML = (value) => Utils.escapeHTML(value || '');
@@ -10945,8 +10974,6 @@ const PTW = {
                                 })()}
                             ` : `
                                 ${(() => {
-                                    // إعداد موافقات إغلاق التصريح بنفس طريقة القسم السابع
-                                    const closureApprovalPackage = this.prepareClosureApprovalsForForm(ptwData);
                                     const closureApprovals = closureApprovalPackage.approvals || [];
                                     this.formClosureApprovals = closureApprovals.map(approval => Object.assign({}, approval));
                                     this.formClosureCircuitOwnerId = closureApprovalPackage.circuitOwnerId || '__default__';

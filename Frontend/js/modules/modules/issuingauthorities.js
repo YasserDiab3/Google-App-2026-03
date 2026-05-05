@@ -140,6 +140,26 @@ const IssuingAuthorities = {
         return this.t('module.issuingAuthorities.err.generic', 'تعذر تحميل البيانات من الخادم. يرجى إعادة المحاولة.');
     },
 
+    /**
+     * رسالة للمستخدم عند فشل طلب تحوير (إضافة/تعديل/حذف): نعرض رسالة الخادم عند تصنيفها «عامة»
+     * (رسائل أذونات وأخطاء عمليات)، ونعرض الرسالة الودّية عند أخطاء البنية الأساسية.
+     */
+    _userVisibleMutationErrorMessage(rawError) {
+        const rawMessage = String((rawError && rawError.message) || rawError || '').trim();
+        if (!rawMessage) {
+            return this.t('module.issuingAuthorities.err.genericMutation', 'تعذر إكمال العملية على الخادم. يرجى إعادة المحاولة.');
+        }
+        const kind = this._classifyRequestError(rawMessage.toLowerCase());
+        if (kind === 'generic' && /^[\u0600-\u06FF]/.test(rawMessage)) {
+            return rawMessage;
+        }
+        if (kind !== 'generic') {
+            return this._getFriendlyErrorMessage(rawMessage);
+        }
+        if (rawMessage.length > 3 && rawMessage.length < 500) return rawMessage;
+        return this.t('module.issuingAuthorities.err.genericMutation', 'تعذر إكمال العملية على الخادم. يرجى إعادة المحاولة.');
+    },
+
     _reportModuleError(contextLabel, rawError) {
         const rawMessage = String((rawError && rawError.message) || rawError || '');
         if (this._isNoisyExtensionError(rawMessage)) {
@@ -655,6 +675,24 @@ const IssuingAuthorities = {
         if (co && person) return `${co} — ${person}`;
         if (co) return co;
         return person;
+    },
+
+    /** دمج صفوف جدولي الموظفين والمقاولين قبل بناء قائمة المرشّحين لـ PTW. */
+    _dedupeMergedAuthorityRows(rows) {
+        const seen = new Set();
+        const out = [];
+        for (const r of rows || []) {
+            if (!r) continue;
+            const id = String(r.id || '').trim();
+            const email = String(r.email || '').trim().toLowerCase();
+            const name = String(r.name || '').trim().toLowerCase();
+            const co = String(r.contractorCompanyName || '').trim().toLowerCase();
+            const key = id || email || `${co}|${name}` || name;
+            if (!key || seen.has(key)) continue;
+            seen.add(key);
+            out.push(r);
+        }
+        return out;
     },
 
     /**
@@ -1713,7 +1751,11 @@ const IssuingAuthorities = {
         `;
     },
 
-    async _fetchData() {
+    async _fetchData(options = {}) {
+        const preserveOnFailure = !!options.preserveExistingOnFailure;
+        const previousSnap = preserveOnFailure && Array.isArray(this._data)
+            ? this._data.map((r) => Object.assign({}, r))
+            : [];
         this._loading = true;
         try {
             const categoryKey = this._activeCategory === 'contractors' ? 'contractors' : 'employees';
@@ -1747,11 +1789,33 @@ const IssuingAuthorities = {
                 }
             }
             if (!ok) {
-                this._data = [];
-                if (typeof Utils !== 'undefined') Utils.safeWarn(this.t('module.issuingAuthorities.warn.loadFailed', 'تحذير: فشل تحميل بيانات Issuing Authorities'));
+                if (preserveOnFailure && previousSnap.length > 0) {
+                    this._data = previousSnap;
+                    if (typeof Utils !== 'undefined' && Utils.safeWarn) {
+                        Utils.safeWarn(this.t(
+                            'module.issuingAuthorities.warn.refreshFailedKeptGrid',
+                            'تعذر تحديث الجدول من الخادم؛ عُرضت القائمة السابقة. أعد المحاولة أو حدّث الصفحة إن لزم.'
+                        ));
+                    }
+                } else {
+                    this._data = [];
+                }
+                if (typeof Utils !== 'undefined' && Utils.safeWarn && !(preserveOnFailure && previousSnap.length > 0)) {
+                    Utils.safeWarn(this.t('module.issuingAuthorities.warn.loadFailed', 'تحذير: فشل تحميل بيانات Issuing Authorities'));
+                }
             }
         } catch (err) {
-            this._data = [];
+            if (preserveOnFailure && previousSnap.length > 0) {
+                this._data = previousSnap;
+                if (typeof Utils !== 'undefined' && Utils.safeWarn) {
+                    Utils.safeWarn(this.t(
+                        'module.issuingAuthorities.warn.refreshFailedKeptGrid',
+                        'تعذر تحديث الجدول من الخادم؛ عُرضت القائمة السابقة. أعد المحاولة أو حدّث الصفحة إن لزم.'
+                    ));
+                }
+            } else {
+                this._data = [];
+            }
             this._reportModuleError('IssuingAuthorities._fetchData', err);
         }
         this._loading = false;
@@ -2329,7 +2393,7 @@ const IssuingAuthorities = {
                 this._closeModal();
                 this._bustIssuingAuthoritiesSheetCache();
                 try {
-                    await this._fetchData();
+                    await this._fetchData({ preserveExistingOnFailure: true });
                 } catch (fetchErr) {
                     this._reportModuleError('IssuingAuthorities._saveModal.fetchAfterSave', fetchErr);
                 }
@@ -2352,11 +2416,15 @@ const IssuingAuthorities = {
                 }
             }
         } catch (err) {
-            const isTimeout = err && (err.message === 'timeout' || String(err.message || '').toLowerCase().includes('timeout'));
+            const rawMsg = String((err && err.message) || '').toLowerCase();
+            const isTimeout = err && (err.message === 'timeout' || rawMsg.includes('timeout'));
             if (isTimeout) {
                 this._iaNotify(this._getFriendlyErrorMessage('timeout'), 'error');
             } else {
-                this._reportModuleError('IssuingAuthorities._saveModal', err);
+                this._iaNotify(this._userVisibleMutationErrorMessage(err), 'error');
+                if (typeof Utils !== 'undefined') {
+                    Utils.safeWarn('IssuingAuthorities._saveModal', (err && err.message) || err);
+                }
             }
         } finally {
             this._iaSaveModalBusy = false;
@@ -2406,7 +2474,7 @@ const IssuingAuthorities = {
                 this._activeCategory = delCategory;
                 this._syncIssuingAuthoritiesCategoryUi();
                 this._bustIssuingAuthoritiesSheetCache();
-                await this._fetchData();
+                await this._fetchData({ preserveExistingOnFailure: true });
                 this._renderTable();
                 if (typeof Utils !== 'undefined' && Utils.showNotification) {
                     Utils.showNotification(this.t('module.issuingAuthorities.notify.deleted', 'تم حذف السجل بنجاح'), 'success');
@@ -2421,7 +2489,10 @@ const IssuingAuthorities = {
                 }
             }
         } catch (err) {
-            this._reportModuleError('IssuingAuthorities._deleteRecord', err);
+            this._iaNotify(this._userVisibleMutationErrorMessage(err), 'error');
+            if (typeof Utils !== 'undefined') {
+                Utils.safeWarn('IssuingAuthorities._deleteRecord', (err && err.message) || err);
+            }
         }
     },
 
@@ -2437,14 +2508,9 @@ const IssuingAuthorities = {
             const key = String(permitType || '').trim();
             if (!key) return [];
             /** لا نلمس this._activeCategory هنا أبداً (تعارض زمني مع حفظ المستخدم في الواجهة). */
-            let merged = [];
-            if (key === 'contractorPTW') {
-                const emp = await this._fetchNormalizedRowsForCategory('employees');
-                const con = await this._fetchNormalizedRowsForCategory('contractors');
-                merged = emp.concat(con);
-            } else {
-                merged = await this._fetchNormalizedRowsForCategory('employees');
-            }
+            const emp = await this._fetchNormalizedRowsForCategory('employees');
+            const con = await this._fetchNormalizedRowsForCategory('contractors');
+            const merged = this._dedupeMergedAuthorityRows([].concat(emp || [], con || []));
             return (merged || [])
                 .filter(r => r.isActive !== false)
                 .map(r => {

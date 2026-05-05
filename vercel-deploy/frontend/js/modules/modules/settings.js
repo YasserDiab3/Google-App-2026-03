@@ -386,41 +386,25 @@ const Settings = {
                                 </p>
                             </div>
                             <div class="md:col-span-2 border-t pt-4">
-                                <h3 class="text-sm font-bold text-gray-700 mb-3">
-                                    <i class="fas fa-hard-hat ml-2"></i>
-                                    قاعدة استحقاق استلام مهمات الوقاية
-                                </h3>
-                                <p class="text-xs text-gray-500 mb-3">
-                                    <i class="fas fa-info-circle ml-1"></i>
-                                    الحد الأدنى للمدة بين استلامين متتاليين لنفس الموظف ونفس نوع المعدة. عند عدم اكتمال المدة يتم منع الحفظ مع رسالة بالمدة المتبقية.
-                                </p>
-                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div class="flex items-start justify-between gap-3 mb-3">
                                     <div>
-                                        <label for="ppe-eligibility-months-input" class="block text-sm font-semibold text-gray-700 mb-2">
-                                            <i class="fas fa-calendar-alt ml-2"></i>
-                                            عدد الأشهر
-                                        </label>
-                                        <div class="flex items-center gap-3">
-                                            <input type="number" id="ppe-eligibility-months-input" class="form-input" min="0" max="120" step="1"
-                                                placeholder="0" value="${Math.max(0, Math.min(120, parseInt(AppState.companySettings?.ppeEligibilityMonths, 10) || 0))}">
-                                            <span class="text-xs text-gray-500">شهر</span>
-                                        </div>
+                                        <h3 class="text-sm font-bold text-gray-700 mb-1">
+                                            <i class="fas fa-hard-hat ml-2"></i>
+                                            قواعد استحقاق استلام مهمات الوقاية لكل صنف
+                                        </h3>
+                                        <p class="text-xs text-gray-500">
+                                            <i class="fas fa-info-circle ml-1"></i>
+                                            حدد لكل صنف من مهمات الوقاية الحد الأدنى للمدة بين استلامين متتاليين لنفس الموظف. الأصناف غير المضافة هنا لا يُفرض عليها تحقق.
+                                        </p>
                                     </div>
-                                    <div>
-                                        <label for="ppe-eligibility-days-input" class="block text-sm font-semibold text-gray-700 mb-2">
-                                            <i class="fas fa-calendar-day ml-2"></i>
-                                            عدد الأيام
-                                        </label>
-                                        <div class="flex items-center gap-3">
-                                            <input type="number" id="ppe-eligibility-days-input" class="form-input" min="0" max="3650" step="1"
-                                                placeholder="0" value="${Math.max(0, Math.min(3650, parseInt(AppState.companySettings?.ppeEligibilityDays, 10) || 0))}">
-                                            <span class="text-xs text-gray-500">يوم</span>
-                                        </div>
-                                    </div>
+                                    <button type="button" id="ppe-add-rule-btn" class="btn-secondary text-xs whitespace-nowrap">
+                                        <i class="fas fa-plus ml-1"></i> إضافة قاعدة لصنف
+                                    </button>
                                 </div>
+                                <div id="ppe-eligibility-rules-container" class="space-y-2"></div>
                                 <p class="text-xs text-gray-500 mt-2">
                                     <i class="fas fa-lightbulb ml-1"></i>
-                                    اترك القيمتين 0 لإيقاف التحقق والسماح بالاستلام في أي وقت.
+                                    تأكد من أن مجموع (الأشهر + الأيام) لكل قاعدة أكبر من صفر لتُحفظ. اضغط «حفظ بيانات الشركة» لتطبيق التغييرات.
                                 </p>
                             </div>
                             <div class="flex items-center gap-3 pt-2 border-t">
@@ -1564,9 +1548,135 @@ const Settings = {
             const clinicMonthlyVisitsThresholdInput = document.getElementById('clinic-monthly-visits-threshold-input');
             const profileTeamsUrlInput = document.getElementById('profile-teams-url-input');
             const profileWhatsAppUrlInput = document.getElementById('profile-whatsapp-url-input');
-            const ppeEligibilityMonthsInput = document.getElementById('ppe-eligibility-months-input');
-            const ppeEligibilityDaysInput = document.getElementById('ppe-eligibility-days-input');
+            const ppeEligibilityRulesContainer = document.getElementById('ppe-eligibility-rules-container');
+            const ppeAddRuleBtn = document.getElementById('ppe-add-rule-btn');
             const saveCompanySettingsBtn = document.getElementById('save-company-settings-btn');
+
+            // ====== إدارة قواعد استحقاق PPE لكل صنف ======
+            const ppeRulesState = {
+                items: [],
+                rules: []
+            };
+
+            const parsePpeRules = (raw) => {
+                if (!raw) return [];
+                try {
+                    if (Array.isArray(raw)) return raw;
+                    if (typeof raw === 'string') {
+                        const parsed = JSON.parse(raw);
+                        return Array.isArray(parsed) ? parsed : [];
+                    }
+                } catch (e) {
+                    return [];
+                }
+                return [];
+            };
+
+            const renderPpeRulesRows = () => {
+                if (!ppeEligibilityRulesContainer) return;
+                if (!ppeRulesState.rules.length) {
+                    ppeEligibilityRulesContainer.innerHTML = `
+                        <div class="text-center text-xs text-gray-500 bg-gray-50 border border-dashed border-gray-300 rounded-lg py-4">
+                            لا توجد قواعد محددة. اضغط «إضافة قاعدة لصنف» لإضافة قاعدة جديدة.
+                        </div>
+                    `;
+                    return;
+                }
+                const optionsHtml = ['<option value="">اختر الصنف</option>']
+                    .concat(ppeRulesState.items.map(item => `<option value="${Utils.escapeHTML(item)}">${Utils.escapeHTML(item)}</option>`))
+                    .join('');
+                ppeEligibilityRulesContainer.innerHTML = ppeRulesState.rules.map((rule, idx) => `
+                    <div class="ppe-rule-row grid grid-cols-12 gap-2 items-end p-2 bg-white border border-gray-200 rounded-lg" data-index="${idx}">
+                        <div class="col-span-12 md:col-span-6">
+                            <label class="block text-xs font-semibold text-gray-700 mb-1">نوع المعدة</label>
+                            <select class="form-input ppe-rule-item text-sm">
+                                ${optionsHtml.replace(`value="${Utils.escapeHTML(rule.equipmentType || '')}"`, `value="${Utils.escapeHTML(rule.equipmentType || '')}" selected`)}
+                            </select>
+                        </div>
+                        <div class="col-span-5 md:col-span-2">
+                            <label class="block text-xs font-semibold text-gray-700 mb-1">أشهر</label>
+                            <input type="number" class="form-input ppe-rule-months text-sm" min="0" max="120" step="1"
+                                value="${Math.max(0, Math.min(120, parseInt(rule.months, 10) || 0))}">
+                        </div>
+                        <div class="col-span-5 md:col-span-2">
+                            <label class="block text-xs font-semibold text-gray-700 mb-1">أيام</label>
+                            <input type="number" class="form-input ppe-rule-days text-sm" min="0" max="3650" step="1"
+                                value="${Math.max(0, Math.min(3650, parseInt(rule.days, 10) || 0))}">
+                        </div>
+                        <div class="col-span-2 md:col-span-2">
+                            <button type="button" class="btn-secondary ppe-rule-remove text-xs w-full" title="حذف القاعدة">
+                                <i class="fas fa-trash-alt ml-1"></i> حذف
+                            </button>
+                        </div>
+                    </div>
+                `).join('');
+
+                ppeEligibilityRulesContainer.querySelectorAll('.ppe-rule-remove').forEach((btn, idx) => {
+                    btn.addEventListener('click', () => {
+                        ppeRulesState.rules.splice(idx, 1);
+                        renderPpeRulesRows();
+                    });
+                });
+            };
+
+            const collectPpeRulesFromUI = () => {
+                if (!ppeEligibilityRulesContainer) return [];
+                const rows = Array.from(ppeEligibilityRulesContainer.querySelectorAll('.ppe-rule-row'));
+                const seen = new Set();
+                const out = [];
+                rows.forEach(row => {
+                    const itemSel = row.querySelector('.ppe-rule-item');
+                    const monthsEl = row.querySelector('.ppe-rule-months');
+                    const daysEl = row.querySelector('.ppe-rule-days');
+                    const equipmentType = (itemSel?.value || '').trim();
+                    if (!equipmentType || seen.has(equipmentType)) return;
+                    let months = parseInt(monthsEl?.value, 10);
+                    let days = parseInt(daysEl?.value, 10);
+                    if (isNaN(months) || months < 0) months = 0;
+                    if (isNaN(days) || days < 0) days = 0;
+                    if ((months + days) <= 0) return;
+                    seen.add(equipmentType);
+                    out.push({ equipmentType, months: Math.min(120, months), days: Math.min(3650, days) });
+                });
+                return out;
+            };
+
+            const loadPpeItemsForRules = async () => {
+                let items = [];
+                try {
+                    if (typeof GoogleIntegration !== 'undefined' && GoogleIntegration.sendToAppsScript) {
+                        const result = await GoogleIntegration.sendToAppsScript('getPPEItemsList', {});
+                        if (result && result.success && Array.isArray(result.data)) {
+                            items = result.data
+                                .map(it => (it && (it.itemName || it.name) || '').toString().trim())
+                                .filter(Boolean);
+                        }
+                    }
+                } catch (e) {
+                    items = [];
+                }
+                if (!items.length) {
+                    const ppeList = (AppState.appData && AppState.appData.ppe) || [];
+                    items = [...new Set(ppeList.map(p => (p.equipmentType || '').toString().trim()).filter(Boolean))];
+                }
+                if (!items.length) {
+                    items = ['خوذة أمان', 'نظارات وقاية', 'قفازات', 'أحذية أمان', 'سترة عاكسة', 'سدادات أذن', 'كمامة', 'بدلة واقية', 'حزام أمان', 'معدات حماية تنفسية'];
+                }
+                ppeRulesState.items = Array.from(new Set(items)).sort((a, b) => a.localeCompare(b, 'ar'));
+            };
+
+            (async () => {
+                ppeRulesState.rules = parsePpeRules(AppState.companySettings?.ppeEligibilityRules);
+                await loadPpeItemsForRules();
+                renderPpeRulesRows();
+            })();
+
+            if (ppeAddRuleBtn) {
+                ppeAddRuleBtn.addEventListener('click', () => {
+                    ppeRulesState.rules.push({ equipmentType: '', months: 0, days: 0 });
+                    renderPpeRulesRows();
+                });
+            }
             const resetCompanyNameBtn = document.getElementById('reset-company-name-btn');
 
             // مزامنة منتقي الألوان مع حقل النص
@@ -1628,16 +1738,8 @@ const Settings = {
                     const profileTeamsUrl = profileTeamsUrlInput ? profileTeamsUrlInput.value.trim() : '';
                     const profileWhatsAppUrl = profileWhatsAppUrlInput ? profileWhatsAppUrlInput.value.trim() : '';
 
-                    let ppeEligibilityMonths = 0;
-                    if (ppeEligibilityMonthsInput) {
-                        const v = parseInt(ppeEligibilityMonthsInput.value, 10);
-                        if (!isNaN(v) && v >= 0 && v <= 120) ppeEligibilityMonths = v;
-                    }
-                    let ppeEligibilityDays = 0;
-                    if (ppeEligibilityDaysInput) {
-                        const v = parseInt(ppeEligibilityDaysInput.value, 10);
-                        if (!isNaN(v) && v >= 0 && v <= 3650) ppeEligibilityDays = v;
-                    }
+                    const ppeEligibilityRulesArray = collectPpeRulesFromUI();
+                    const ppeEligibilityRules = JSON.stringify(ppeEligibilityRulesArray);
 
                     AppState.companySettings = Object.assign({}, AppState.companySettings, {
                         name: newName,
@@ -1649,8 +1751,7 @@ const Settings = {
                         clinicMonthlyVisitsAlertThreshold,
                         profileTeamsUrl,
                         profileWhatsAppUrl,
-                        ppeEligibilityMonths,
-                        ppeEligibilityDays
+                        ppeEligibilityRules
                     });
                     DataManager.saveCompanySettings();
                     
@@ -1668,8 +1769,7 @@ const Settings = {
                                 clinicMonthlyVisitsAlertThreshold,
                                 profileTeamsUrl,
                                 profileWhatsAppUrl,
-                                ppeEligibilityMonths,
-                                ppeEligibilityDays,
+                                ppeEligibilityRules,
                                 address: AppState.companySettings?.address || '',
                                 phone: AppState.companySettings?.phone || '',
                                 email: AppState.companySettings?.email || '',

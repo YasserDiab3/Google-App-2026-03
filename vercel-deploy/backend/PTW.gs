@@ -12,7 +12,12 @@ function addPTWToSheet(ptwData) {
         if (!ptwData) {
             return { success: false, message: 'بيانات التصريح غير موجودة' };
         }
-        
+
+        const iaReject = validatePtwApproversAgainstIssuingAuthorities_(ptwData);
+        if (iaReject && iaReject.valid === false) {
+            return { success: false, message: iaReject.message || 'فشل التحقق من معتمدي تصريح العمل وفق قائمة المصرّح لهم.' };
+        }
+
         const sheetName = 'PTW';
         
         // إضافة حقول تلقائية
@@ -53,7 +58,13 @@ function updatePTW(ptwId, updateData) {
         if (ptwIndex === -1) {
             return { success: false, message: 'التصريح غير موجود' };
         }
-        
+
+        const merged = Object.assign({}, data[ptwIndex], updateData || {});
+        const iaReject = validatePtwApproversAgainstIssuingAuthorities_(merged);
+        if (iaReject && iaReject.valid === false) {
+            return { success: false, message: iaReject.message || 'فشل التحقق من معتمدي تصريح العمل وفق قائمة المصرّح لهم.' };
+        }
+
         // تحديث البيانات
         updateData.updatedAt = new Date();
         for (var key in updateData) {

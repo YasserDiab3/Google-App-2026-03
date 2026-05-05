@@ -1090,15 +1090,43 @@ const PPE = {
 
     // ====== استحقاق استلام مهمات الوقاية ======
     /**
-     * قراءة الحد الأدنى للاستحقاق (شهور/أيام) من إعدادات الشركة.
+     * تحليل قائمة قواعد الاستحقاق المخزنة في إعدادات الشركة.
      */
-    getEligibilityRule() {
+    parseEligibilityRules(raw) {
+        if (!raw) return [];
+        try {
+            if (Array.isArray(raw)) return raw;
+            if (typeof raw === 'string') {
+                const parsed = JSON.parse(raw);
+                return Array.isArray(parsed) ? parsed : [];
+            }
+        } catch (e) {
+            return [];
+        }
+        return [];
+    },
+
+    /**
+     * قراءة قاعدة الاستحقاق الخاصة بنوع معدة محدد من قائمة القواعد لكل صنف.
+     */
+    getEligibilityRule(equipmentType) {
         const settings = (typeof AppState !== 'undefined' && AppState.companySettings) ? AppState.companySettings : {};
-        const monthsRaw = parseInt(settings.ppeEligibilityMonths, 10);
-        const daysRaw = parseInt(settings.ppeEligibilityDays, 10);
-        const months = (!isNaN(monthsRaw) && monthsRaw >= 0) ? Math.min(120, monthsRaw) : 0;
-        const days = (!isNaN(daysRaw) && daysRaw >= 0) ? Math.min(3650, daysRaw) : 0;
-        return { months, days, hasRule: (months + days) > 0 };
+        const rules = this.parseEligibilityRules(settings.ppeEligibilityRules);
+        const norm = (v) => (v || '').toString().trim().toLowerCase();
+        const target = norm(equipmentType);
+        if (target) {
+            const match = rules.find(r => r && norm(r.equipmentType || r.itemName) === target);
+            if (match) {
+                let months = parseInt(match.months, 10);
+                let days = parseInt(match.days, 10);
+                if (isNaN(months) || months < 0) months = 0;
+                if (isNaN(days) || days < 0) days = 0;
+                months = Math.min(120, months);
+                days = Math.min(3650, days);
+                return { months, days, hasRule: (months + days) > 0, equipmentType: match.equipmentType || match.itemName };
+            }
+        }
+        return { months: 0, days: 0, hasRule: false, equipmentType: equipmentType || null };
     },
 
     /**
@@ -1167,7 +1195,7 @@ const PPE = {
      * حساب نتيجة التحقق من الاستحقاق لاستلام جديد.
      */
     computeEligibility(employeeCode, equipmentType, currentDateValue, options = {}) {
-        const rule = this.getEligibilityRule();
+        const rule = this.getEligibilityRule(equipmentType);
         const result = {
             hasInputs: false,
             hasPrevious: false,
@@ -1228,65 +1256,98 @@ const PPE = {
      */
     renderEligibilityInfo(infoEl, result) {
         if (!infoEl) return;
-        if (!result || !result.hasInputs) {
-            const rule = this.getEligibilityRule();
-            const ruleText = rule.hasRule ? this.formatMonthsDays(rule.months, rule.days) : 'لا توجد قاعدة مفعّلة';
-            infoEl.innerHTML = `
-                <div class="mt-2 p-3 rounded-lg border bg-gray-50 border-gray-200 text-gray-700 text-xs flex flex-wrap items-center gap-x-4 gap-y-1">
-                    <span class="flex items-center gap-2"><i class="fas fa-info-circle text-blue-500"></i><b>استحقاق الاستلام:</b></span>
-                    <span>اختر كود الموظف ونوع المعدة لعرض تاريخ آخر استلام والمدة المنقضية وحالة الاستحقاق.</span>
-                    <span class="flex items-center gap-2 text-gray-500"><i class="fas fa-shield-alt"></i><b>الحد الأدنى الحالي:</b> ${ruleText}</span>
+        const fmt = (d) => d ? (typeof Utils !== 'undefined' && Utils.formatDate ? Utils.formatDate(d) : new Date(d).toLocaleDateString('ar')) : '-';
+
+        const card = (color, iconClass, title, statValueRows, footerHtml) => {
+            const palettes = {
+                gray:    { bg: 'bg-gray-50',    border: 'border-gray-200',    text: 'text-gray-700',     accent: 'text-gray-600',    title: 'text-gray-700' },
+                blue:    { bg: 'bg-blue-50',    border: 'border-blue-200',    text: 'text-blue-800',     accent: 'text-blue-700',    title: 'text-blue-800' },
+                green:   { bg: 'bg-emerald-50', border: 'border-emerald-200', text: 'text-emerald-800',  accent: 'text-emerald-700', title: 'text-emerald-800' },
+                red:     { bg: 'bg-rose-50',    border: 'border-rose-200',    text: 'text-rose-800',     accent: 'text-rose-700',    title: 'text-rose-800' }
+            };
+            const p = palettes[color] || palettes.gray;
+            const statsHtml = statValueRows.map(s => `
+                <div class="flex items-start gap-2 min-w-0">
+                    <i class="${s.icon} mt-1 ${p.accent}"></i>
+                    <div class="min-w-0">
+                        <div class="text-[10px] uppercase tracking-wide ${p.accent} font-semibold">${s.label}</div>
+                        <div class="text-sm font-bold ${p.text} truncate">${s.value}</div>
+                    </div>
+                </div>
+            `).join('');
+            return `
+                <div class="mt-2 rounded-xl border ${p.border} ${p.bg} ${p.text} overflow-hidden shadow-sm">
+                    <div class="flex items-center gap-2 px-3 py-2 border-b ${p.border} bg-white/40">
+                        <i class="${iconClass}"></i>
+                        <span class="text-xs font-bold ${p.title}">${title}</span>
+                    </div>
+                    ${statsHtml ? `<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 px-3 py-3">${statsHtml}</div>` : ''}
+                    ${footerHtml ? `<div class="px-3 py-2 border-t ${p.border} bg-white/40 text-xs font-semibold flex items-center gap-2">${footerHtml}</div>` : ''}
                 </div>
             `;
+        };
+
+        if (!result || !result.hasInputs) {
+            infoEl.innerHTML = card(
+                'gray',
+                'fas fa-info-circle text-blue-500',
+                'حالة استحقاق الاستلام',
+                [],
+                '<i class="fas fa-mouse-pointer"></i><span class="text-gray-700">اختر كود الموظف ونوع المعدة لعرض تاريخ آخر استلام والمدة المنقضية وحالة الاستحقاق.</span>'
+            );
             infoEl.classList.remove('hidden');
             infoEl.setAttribute('data-eligible', 'pending');
             return;
         }
-        const fmt = (d) => d ? (typeof Utils !== 'undefined' && Utils.formatDate ? Utils.formatDate(d) : new Date(d).toLocaleDateString('ar')) : '-';
-        let html = '';
+
         if (!result.hasPrevious) {
-            html = `
-                <div class="mt-2 p-3 rounded-lg border bg-blue-50 border-blue-200 text-blue-800 text-xs flex items-center gap-2">
-                    <i class="fas fa-info-circle"></i>
-                    <span>لا يوجد استلام سابق لهذا الصنف لهذا الموظف. يمكن تسجيل استلام جديد.</span>
-                </div>
-            `;
+            const stats = [];
+            if (result.hasRule) {
+                stats.push({ icon: 'fas fa-shield-alt', label: 'الحد الأدنى للصنف', value: this.formatMonthsDays(result.ruleMonths, result.ruleDays) });
+            }
+            infoEl.innerHTML = card(
+                'blue',
+                'fas fa-info-circle',
+                'حالة استحقاق الاستلام',
+                stats,
+                '<i class="fas fa-check-circle"></i><span>لا يوجد استلام سابق لهذا الصنف لهذا الموظف. يمكن تسجيل استلام جديد.</span>'
+            );
+            infoEl.setAttribute('data-eligible', '1');
+            infoEl.classList.remove('hidden');
+            return;
+        }
+
+        const elapsedText = this.formatMonthsDays(result.elapsed?.months || 0, result.elapsed?.days || 0);
+        const requiredText = result.hasRule ? this.formatMonthsDays(result.ruleMonths, result.ruleDays) : 'بدون قاعدة محددة';
+        const stats = [
+            { icon: 'fas fa-history',       label: 'تاريخ آخر استلام', value: fmt(result.lastReceiptDate) },
+            { icon: 'fas fa-hourglass-half', label: 'المدة المنقضية',   value: elapsedText },
+            { icon: 'fas fa-shield-alt',    label: 'الحد الأدنى للصنف', value: requiredText }
+        ];
+        if (result.dueDate) {
+            stats.push({ icon: 'fas fa-calendar-check', label: 'تاريخ الاستحقاق', value: fmt(result.dueDate) });
+        }
+
+        if (result.isEligible) {
+            infoEl.innerHTML = card(
+                'green',
+                'fas fa-check-circle',
+                'الموظف مستحق للاستلام',
+                stats,
+                '<i class="fas fa-check-double"></i><span>الحالة: مسموح بتسجيل استلام جديد.</span>'
+            );
             infoEl.setAttribute('data-eligible', '1');
         } else {
-            const elapsedText = this.formatMonthsDays(result.elapsed?.months || 0, result.elapsed?.days || 0);
-            const requiredText = result.hasRule ? this.formatMonthsDays(result.ruleMonths, result.ruleDays) : '';
-            if (result.isEligible) {
-                html = `
-                    <div class="mt-2 p-3 rounded-lg border bg-emerald-50 border-emerald-200 text-emerald-800 text-xs">
-                        <div class="flex flex-wrap items-center gap-x-4 gap-y-1">
-                            <span class="flex items-center gap-2"><i class="fas fa-history"></i><b>تاريخ آخر استلام:</b> ${fmt(result.lastReceiptDate)}</span>
-                            <span class="flex items-center gap-2"><i class="fas fa-hourglass-half"></i><b>المدة المنقضية:</b> ${elapsedText}</span>
-                            ${result.hasRule ? `<span class="flex items-center gap-2"><i class="fas fa-shield-alt"></i><b>الحد الأدنى:</b> ${requiredText}</span>` : ''}
-                            <span class="flex items-center gap-2 text-emerald-700"><i class="fas fa-check-circle"></i><b>الحالة:</b> الموظف مستحق للاستلام</span>
-                        </div>
-                    </div>
-                `;
-                infoEl.setAttribute('data-eligible', '1');
-            } else {
-                const remainingText = this.formatMonthsDays(result.remaining?.months || 0, result.remaining?.days || 0);
-                html = `
-                    <div class="mt-2 p-3 rounded-lg border bg-rose-50 border-rose-200 text-rose-800 text-xs">
-                        <div class="flex flex-wrap items-center gap-x-4 gap-y-1">
-                            <span class="flex items-center gap-2"><i class="fas fa-history"></i><b>تاريخ آخر استلام:</b> ${fmt(result.lastReceiptDate)}</span>
-                            <span class="flex items-center gap-2"><i class="fas fa-hourglass-half"></i><b>المدة المنقضية:</b> ${elapsedText}</span>
-                            <span class="flex items-center gap-2"><i class="fas fa-shield-alt"></i><b>الحد الأدنى:</b> ${requiredText}</span>
-                            <span class="flex items-center gap-2"><i class="fas fa-calendar-check"></i><b>تاريخ الاستحقاق:</b> ${fmt(result.dueDate)}</span>
-                        </div>
-                        <div class="mt-2 flex items-center gap-2 font-semibold">
-                            <i class="fas fa-ban"></i>
-                            <span>الموظف غير مستحق حالياً. المدة المتبقية حتى الاستحقاق: ${remainingText}.</span>
-                        </div>
-                    </div>
-                `;
-                infoEl.setAttribute('data-eligible', '0');
-            }
+            const remainingText = this.formatMonthsDays(result.remaining?.months || 0, result.remaining?.days || 0);
+            infoEl.innerHTML = card(
+                'red',
+                'fas fa-ban',
+                'الموظف غير مستحق حالياً',
+                stats,
+                `<i class="fas fa-clock"></i><span>المدة المتبقية حتى الاستحقاق: <b>${remainingText}</b>.</span>`
+            );
+            infoEl.setAttribute('data-eligible', '0');
         }
-        infoEl.innerHTML = html;
         infoEl.classList.remove('hidden');
     },
 
@@ -1930,15 +1991,14 @@ const PPE = {
                     }
 
                     // ===== التحقق من استحقاق الاستلام لكل صنف قبل الحفظ =====
-                    const eligibilityRule = PPE.getEligibilityRule();
-                    if (eligibilityRule.hasRule) {
+                    {
                         const employeeCodeForCheck = employeeCodeEl.value.trim();
                         const receiptDateForCheck = receiptDateEl.value;
                         const excludeIdForCheck = isEdit && ppeData?.id ? ppeData.id : null;
                         const blockingItems = [];
                         equipmentItems.forEach((item, idx) => {
                             const r = PPE.computeEligibility(employeeCodeForCheck, item.equipmentType, receiptDateForCheck, { excludeId: excludeIdForCheck });
-                            if (r.hasPrevious && !r.isEligible) {
+                            if (r.hasRule && r.hasPrevious && !r.isEligible) {
                                 blockingItems.push({ index: idx, item, result: r });
                                 const row = itemRows[idx];
                                 if (row) {

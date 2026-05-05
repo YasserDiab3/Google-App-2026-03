@@ -40,10 +40,12 @@ function checkIssuingAuthoritiesPermission(userData) {
         if (typeof permissions === 'string') {
             try { permissions = JSON.parse(permissions); } catch (e) { permissions = {}; }
         }
-        if (permissions['admin'] === true || permissions['manage-ptw-authorities'] === true) {
+        if (permissions['admin'] === true ||
+            permissions['manage-ptw-authorities'] === true ||
+            permissions['issuing-authorities'] === true) {
             return { hasPermission: true, message: 'صلاحية صحيحة' };
         }
-        return { hasPermission: false, message: 'ليس لديك صلاحية إدارة قائمة المصرح لهم بالتوقيع. هذه العملية للمدير فقط.' };
+        return { hasPermission: false, message: 'ليس لديك صلاحية إدارة قائمة المصرح لهم بالتوقيع. يُشترط دور المدير أو صلاحية إدارة المصرحين (manage-ptw-authorities / issuing-authorities).' };
     } catch (error) {
         Logger.log('Error checking issuing authorities permission: ' + error.toString());
         return { hasPermission: false, message: 'حدث خطأ أثناء التحقق من الصلاحيات' };
@@ -448,6 +450,90 @@ function getEmployeeByCode(employeeCode) {
     } catch (error) {
         Logger.log('Error in getEmployeeByCode: ' + error.toString());
         return { success: false, message: 'حدث خطأ: ' + error.toString() };
+    }
+}
+
+/**
+ * استخراج مفاتيح أنواع التصاريح من كائن PTW (متطابق تقريبيًا مع منطق الواجهة)
+ */
+function extractPtwPermitTypeKeysForIA_(ptw) {
+    if (!ptw) return [];
+    const types = [];
+    const hw = ptw.hotWorkDetails;
+    if (hw && (Array.isArray(hw) ? hw.length > 0 : true)) types.push('hotWork');
+    const cs = ptw.confinedSpaceDetails;
+    if (cs && (Array.isArray(cs) ? cs.length > 0 : true)) types.push('confinedSpace');
+    const hh = ptw.heightWorkDetails;
+    if (hh && (Array.isArray(hh) ? hh.length > 0 : true)) types.push('workAtHeight');
+    if (ptw.lotoApplied === true || ptw.lotoApplied === 'true') types.push('loto');
+    if (ptw.coldWorkType && String(ptw.coldWorkType).trim()) types.push('coldWork');
+    if (ptw.excavationLength || ptw.excavationWidth || ptw.excavationDepth ||
+        (ptw.soilType && String(ptw.soilType).trim())) types.push('excavation');
+
+    let hints = ' ';
+    hints += String(ptw.permitType || '').toLowerCase() + ' ';
+    hints += String(ptw.workType || '').toLowerCase() + ' ';
+    hints += String(ptw.otherWorkType || '').toLowerCase() + ' ';
+    hints += String(ptw.electricalWorkType || '').toLowerCase() + ' ';
+    if (hints.indexOf('مقاول') !== -1 || hints.indexOf('contractor') !== -1) types.push('contractorPTW');
+    const liftHit = hints.indexOf('رفع') !== -1 || hints.indexOf('lifting') !== -1 ||
+        hints.indexOf('خطة الرفع') !== -1 || hints.indexOf('crane') !== -1;
+    if (liftHit) types.push('liftingPlan');
+
+    return [...new Set(types)].filter(Boolean);
+}
+
+/**
+ * عند المصدر قائمة المصرح لهم: التحقق أن كل معتمد مختار موجود في قائمة المصرَّح لهم لنوع التصريح ذي الصلة
+ * (خطوات بوابة HSE تُستثنى — مرشّحها من السلامة لا من IA)
+ */
+function validatePtwApproversAgainstIssuingAuthorities_(mergedPtwPayload) {
+    try {
+        if (!mergedPtwPayload || String(mergedPtwPayload.approvalCircuitOwnerId || '').trim() !== '__issuing_authorities__') {
+            return null;
+        }
+        const approvals = mergedPtwPayload.approvals;
+        if (!Array.isArray(approvals) || approvals.length === 0) return null;
+
+        const permitKeys = extractPtwPermitTypeKeysForIA_(mergedPtwPayload).filter(function (pt) {
+            return Object.prototype.hasOwnProperty.call(PERMIT_TYPE_FIELDS, pt);
+        });
+        if (permitKeys.length === 0) return null;
+
+        const allowedIds = {};
+        permitKeys.forEach(pk => {
+            const rEmp = _getIssuingAuthoritiesForPermitTypeBySheet(pk, ISSUING_AUTHORITIES_SHEET);
+            const rCon = _getIssuingAuthoritiesForPermitTypeBySheet(pk, CONTRACTOR_ISSUING_AUTHORITIES_SHEET);
+            [rEmp, rCon].forEach(function (res) {
+                if (!res || !res.success || !Array.isArray(res.authorities)) return;
+                res.authorities.forEach(function (a) {
+                    if (a && a.id) allowedIds[String(a.id).trim()] = true;
+                });
+            });
+        });
+        if (!Object.keys(allowedIds).length) return null;
+
+        for (var i = 0; i < approvals.length; i++) {
+            var ap = approvals[i];
+            if (!ap || ap.isHseCoApprovalGate === true) continue;
+
+            var isIaStep = !!(ap.issuingAuthoritySource || ap.issuingAuthoritiesSource);
+            if (!isIaStep) continue;
+
+            var id = String(ap.approverId || '').trim();
+            if (!id) continue;
+
+            if (!allowedIds[id]) {
+                return {
+                    valid: false,
+                    message: 'المعتمد المختار لا يُدرَج ضمن قائمة المصرح لهم بالتوقيع لنوع التصاريح المعروض في هذا التصريح.'
+                };
+            }
+        }
+        return null;
+    } catch (e) {
+        Logger.log('validatePtwApproversAgainstIssuingAuthorities_: ' + e.toString());
+        return null;
     }
 }
 

@@ -101,6 +101,7 @@ function initCompanySettingsTable(spreadsheetId = null) {
                 'profileWhatsAppUrl',
                 'ppeEligibilityMonths',
                 'ppeEligibilityDays',
+                'ppeEligibilityRules',
                 'createdAt',
                 'updatedAt',
                 'createdBy',
@@ -195,6 +196,38 @@ function saveCompanySettingsToSheet(settingsData) {
         const ppeDaysNum = (ppeDaysRaw !== undefined && ppeDaysRaw !== null && ppeDaysRaw !== '') ? parseInt(ppeDaysRaw, 10) : 0;
         const ppeEligibilityDays = (isNaN(ppeDaysNum) || ppeDaysNum < 0) ? 0 : Math.min(3650, ppeDaysNum);
 
+        // ppeEligibilityRules: قائمة قواعد لكل صنف (JSON string أو Array)
+        // يتم التحقق من البنية وتطبيع القيم
+        let ppeEligibilityRulesValue = '[]';
+        if (settingsData.ppeEligibilityRules !== undefined && settingsData.ppeEligibilityRules !== null) {
+            try {
+                let parsed = settingsData.ppeEligibilityRules;
+                if (typeof parsed === 'string') {
+                    parsed = parsed.trim() ? JSON.parse(parsed) : [];
+                }
+                if (Array.isArray(parsed)) {
+                    const normalized = parsed
+                        .map(function (rule) {
+                            if (!rule || typeof rule !== 'object') return null;
+                            const itemName = String(rule.equipmentType || rule.itemName || '').trim();
+                            if (!itemName) return null;
+                            let months = parseInt(rule.months, 10);
+                            let days = parseInt(rule.days, 10);
+                            if (isNaN(months) || months < 0) months = 0;
+                            if (isNaN(days) || days < 0) days = 0;
+                            months = Math.min(120, months);
+                            days = Math.min(3650, days);
+                            return { equipmentType: itemName, months: months, days: days };
+                        })
+                        .filter(function (r) { return r && (r.months + r.days) > 0; });
+                    ppeEligibilityRulesValue = JSON.stringify(normalized);
+                }
+            } catch (e) {
+                Logger.log('Warning: Invalid ppeEligibilityRules payload, using empty list. ' + e.toString());
+                ppeEligibilityRulesValue = '[]';
+            }
+        }
+
         let settingsToSave = {
             id: 'COMPANY-SETTINGS-1',
             name: settingsData.name || '',
@@ -214,6 +247,7 @@ function saveCompanySettingsToSheet(settingsData) {
             profileWhatsAppUrl: settingsData.profileWhatsAppUrl != null ? String(settingsData.profileWhatsAppUrl) : '',
             ppeEligibilityMonths: ppeEligibilityMonths,
             ppeEligibilityDays: ppeEligibilityDays,
+            ppeEligibilityRules: ppeEligibilityRulesValue,
             updatedAt: now,
             updatedBy: userName
         };
@@ -246,6 +280,10 @@ function saveCompanySettingsToSheet(settingsData) {
                 if (!isNaN(existingDays) && existingDays >= 0) {
                     settingsToSave.ppeEligibilityDays = Math.min(3650, existingDays);
                 }
+            }
+            // الحفاظ على قائمة قواعد الاستحقاق إذا لم تُرسل من الواجهة الحالية
+            if (settingsData.ppeEligibilityRules === undefined && existing.ppeEligibilityRules != null && String(existing.ppeEligibilityRules).trim() !== '') {
+                settingsToSave.ppeEligibilityRules = String(existing.ppeEligibilityRules);
             }
         } else {
             settingsToSave.createdAt = now;
@@ -359,6 +397,7 @@ function getDefaultCompanySettings() {
         profileWhatsAppUrl: '',
         ppeEligibilityMonths: 0,
         ppeEligibilityDays: 0,
+        ppeEligibilityRules: '[]',
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
         createdBy: 'System',
