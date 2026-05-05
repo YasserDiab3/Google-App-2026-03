@@ -262,7 +262,7 @@ const BehaviorMonitoring = {
                             </button>
                             <button id="behavior-add-btn" class="btn-primary">
                                 <i class="fas fa-plus ml-2"></i>
-                                تسجيل تصرف جديد
+                                تسجيل تصرف موظف
                             </button>
                             <button id="behavior-add-contractor-header-btn" type="button" class="btn-secondary">
                                 <i class="fas fa-users-cog ml-2"></i>
@@ -1542,7 +1542,7 @@ const BehaviorMonitoring = {
                 <div class="bhm-modal-hero">
                     <div class="bhm-modal-hero-text">
                         <p class="bhm-modal-kicker"><i class="fas fa-user-check ml-2"></i>مراقبة السلوكيات</p>
-                        <h2 class="bhm-modal-title">${data ? 'تعديل التصرف' : 'تسجيل تصرف جديد'}</h2>
+                        <h2 class="bhm-modal-title">${data ? 'تعديل التصرف' : 'تسجيل تصرف موظف'}</h2>
                         <p class="bhm-modal-sub">${data ? 'تحديث بيانات التسجيل ثم احفظ.' : 'أدخل بيانات الموظف والموقع ثم وصف التصرف.'}</p>
                     </div>
                     <button type="button" class="bhm-modal-close" onclick="this.closest('.modal-overlay').remove()" aria-label="إغلاق">
