@@ -434,7 +434,9 @@ function addOrUpdatePPEStockItem(stockData) {
 function getAllPPEStockItems(filters = {}) {
     try {
         const sheetName = 'PPE_Stock';
-        let data = readFromSheet(sheetName, getSpreadsheetId());
+        // ✅ قراءة مباشرة بدون Cache لضمان إظهار أحدث بيانات المخزون دائماً
+        // (بعض الحالات قد تحتفظ بقيم قديمة في CacheService فتظهر شاشة فارغة).
+        let data = readSheetRowsNoCache_(sheetName, getSpreadsheetId());
 
         // ✅ تحسين الأداء: لا نعيد حساب الأرصدة من جميع الحركات في كل طلب.
         // جدول PPE_Stock يتم تحديثه لحظياً عند إضافة/تعديل الحركات، لذا نكتفي
@@ -478,6 +480,45 @@ function getAllPPEStockItems(filters = {}) {
     } catch (error) {
         Logger.log('Error getting all PPE stock items: ' + error.toString());
         return { success: false, message: 'حدث خطأ أثناء قراءة المخزون: ' + error.toString(), data: [] };
+    }
+}
+
+/**
+ * قراءة صفوف ورقة مباشرة بدون CacheService
+ * تُستخدم للحالات التي تحتاج بيانات لحظية مثل شاشة مخزون PPE.
+ */
+function readSheetRowsNoCache_(sheetName, spreadsheetId) {
+    try {
+        const finalSpreadsheetId = spreadsheetId || getSpreadsheetId();
+        if (!finalSpreadsheetId || !sheetName) return [];
+        const ss = SpreadsheetApp.openById(finalSpreadsheetId);
+        const sheet = ss.getSheetByName(sheetName);
+        if (!sheet) return [];
+        const values = sheet.getDataRange().getValues();
+        if (!values || values.length <= 1) return [];
+
+        const headers = values[0].map(function (h) {
+            return h === undefined || h === null ? '' : String(h).trim();
+        });
+        if (!headers.some(function (h) { return h; })) return [];
+
+        const rows = values.slice(1);
+        const out = [];
+        rows.forEach(function (row) {
+            const obj = {};
+            let hasAny = false;
+            headers.forEach(function (header, idx) {
+                if (!header) return;
+                const val = row[idx];
+                if (val !== '' && val !== null && val !== undefined) hasAny = true;
+                obj[header] = (val === null || val === undefined) ? '' : val;
+            });
+            if (hasAny) out.push(obj);
+        });
+        return out;
+    } catch (error) {
+        Logger.log('Error in readSheetRowsNoCache_(' + sheetName + '): ' + error.toString());
+        return [];
     }
 }
 
