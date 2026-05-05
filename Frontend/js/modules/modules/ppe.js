@@ -1316,42 +1316,51 @@ const PPE = {
             };
             const t = themes[variant] || themes.gray;
 
-            const statsHtml = statValueRows.length
-                ? `<div class="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-[1.125rem] px-4 py-5 sm:px-6 sm:py-6 bg-gradient-to-b from-slate-100/35 via-white to-white">
+            const statCount = statValueRows.length;
+            let metricsGridCls = 'grid gap-3 md:gap-4 w-full ';
+            if (statCount <= 1) metricsGridCls += 'grid-cols-1';
+            else if (statCount === 2) metricsGridCls += 'grid-cols-1 sm:grid-cols-2';
+            else if (statCount === 3) metricsGridCls += 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3';
+            else metricsGridCls += 'grid-cols-1 sm:grid-cols-2 xl:grid-cols-4';
+
+            const statsHtml = statCount
+                ? `<div class="px-3 py-4 sm:px-6 sm:py-5 bg-gradient-to-br from-slate-50/90 via-white to-white">
+                    <div class="${metricsGridCls}">
                     ${statValueRows.map((s) => {
                         const mutedValue = typeof s.value === 'string' && s.value.includes('بدون قاعدة');
                         const valueCls = mutedValue
-                            ? 'text-[1.05rem] sm:text-lg font-semibold text-slate-600 tracking-tight leading-snug'
+                            ? 'text-base sm:text-[1.0625rem] font-semibold text-slate-600 tracking-tight leading-snug'
                             : t.valueClass;
                         return `
                         <div class="${t.tileSurface}">
-                            <div class="flex items-start gap-4">
-                                <span class="${t.iconBox}">
+                            <div class="flex items-center gap-3 sm:gap-4 text-start h-full">
+                                <span class="${t.iconBox} shrink-0">
                                     <i class="${s.icon}"></i>
                                 </span>
-                                <div class="flex-1 min-w-0 space-y-2">
-                                    <div class="${t.labelClass} leading-snug">${s.label}</div>
+                                <div class="flex-1 min-w-0 flex flex-col gap-1.5 justify-center">
+                                    <div class="${t.labelClass} text-xs sm:text-[11px] leading-snug">${s.label}</div>
                                     <p class="${valueCls} leading-snug break-words hyphens-none">${s.value}</p>
                                 </div>
                             </div>
                         </div>`;
                     }).join('')}
+                    </div>
                 </div>`
                 : '';
 
             return `
-                <div class="mt-3 w-full min-w-0 overflow-hidden rounded-2xl bg-white ${t.outer}">
-                    <div class="flex items-center gap-3.5 bg-gradient-to-l ${t.headerBar} px-5 py-4 text-white shadow-sm">
-                        <span class="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl ${t.headerIconBg} text-lg">
+                <div class="mt-1 w-full min-w-0 overflow-hidden rounded-2xl bg-white ${t.outer}">
+                    <div class="flex items-center gap-4 bg-gradient-to-l ${t.headerBar} px-5 py-4 sm:px-6 text-white shadow-inner">
+                        <span class="flex h-12 w-12 sm:h-14 sm:w-14 shrink-0 items-center justify-center rounded-2xl ${t.headerIconBg} text-lg sm:text-xl">
                             <i class="${headerIconSolid}"></i>
                         </span>
                         <div class="min-w-0 flex-1">
-                            <p class="text-[10px] font-semibold tracking-wide text-white/80 mb-0.5">استحقاق الاستلام</p>
-                            <h4 class="text-[0.9375rem] sm:text-[1.0625rem] font-extrabold leading-snug text-white">${title}</h4>
+                            <p class="text-[11px] font-semibold tracking-wide text-white/85 mb-1">استحقاق الاستلام</p>
+                            <h4 class="text-base sm:text-lg font-extrabold leading-snug text-white break-words">${title}</h4>
                         </div>
                     </div>
                     ${statsHtml}
-                    ${footerHtml ? `<div class="${t.footerWrap} px-5 py-4 text-xs sm:text-[0.9375rem] font-medium text-slate-700 leading-relaxed flex flex-wrap items-start gap-3">${footerHtml}</div>` : ''}
+                    ${footerHtml ? `<div class="${t.footerWrap} px-5 py-4 sm:px-6 text-sm sm:text-[0.9375rem] font-medium text-slate-700 leading-relaxed flex flex-wrap items-center gap-3 w-full">${footerHtml}</div>` : ''}
                 </div>
             `;
         };
@@ -1456,7 +1465,7 @@ const PPE = {
         const stReceived = t('module.ppe.status.received', 'مستلم');
         const stPending = t('module.ppe.status.pending', 'قيد التسليم');
         modal.innerHTML = `
-            <div class="modal-content" style="max-width: 720px; border-radius: 1rem; overflow: hidden;">
+            <div class="modal-content w-[min(100%,56rem)] max-w-[min(96vw,56rem)]" style="border-radius: 1rem; overflow: hidden;">
                 <div class="modal-header" style="background: linear-gradient(135deg, #1d4ed8, #0f766e); color: #ffffff; text-align: center; position: relative; padding: 1rem 1.5rem;">
                     <h2 class="modal-title" style="margin: 0 auto; font-weight: 700; letter-spacing: 0.03em;">
                         ${isEdit ? ut(t('module.ppe.title.editReceipt', 'تعديل استلام')) : ut(t('module.ppe.title.newReceipt', 'تسجيل استلام جديد'))}
@@ -1533,28 +1542,30 @@ const PPE = {
                                         <i class="fas fa-plus ml-1"></i>${ut(t('module.ppe.items.addRow', 'إضافة صنف آخر'))}
                                     </button>
                                 </div>
-                                <div id="ppe-items-container" class="space-y-3">
-                                    <div class="ppe-item-row grid grid-cols-1 md:grid-cols-3 gap-3 items-end">
-                                        <div class="md:col-span-2">
+                                <div id="ppe-items-container" class="space-y-4">
+                                    <div class="ppe-item-row w-full rounded-xl border border-slate-200/90 bg-white shadow-sm ring-1 ring-slate-900/[0.04] overflow-hidden">
+                                        <div class="grid grid-cols-1 lg:grid-cols-[1fr,minmax(7.5rem,9rem)] gap-4 p-4 items-end bg-slate-50/50">
+                                            <div class="min-w-0">
                                             <label class="block text-xs font-semibold text-gray-700 mb-1">${ut(t('module.ppe.label.equipmentType', 'نوع المعدة *'))}</label>
-                                            <select id="ppe-equipment-type" required class="form-input ppe-equipment-type">
+                                            <select id="ppe-equipment-type" required class="form-input ppe-equipment-type w-full">
                                                 <option value="">${ut(t('module.ppe.equip.loading', 'جاري التحميل...'))}</option>
                                             </select>
                                             <p class="text-[11px] text-gray-500 mt-1">
                                                 ${ut(t('module.ppe.hint.fromStock', ''))}
                                             </p>
-                                        </div>
-                                        <div>
-                                            <label class="block text-xs font-semibold text-gray-700 mb-1">${ut(t('module.ppe.label.qty', 'الكمية *'))}</label>
-                                            <div class="flex items-center gap-2">
-                                                <input type="number" id="ppe-quantity" required class="form-input ppe-quantity" min="1"
-                                                    value="${ppeData?.quantity || 1}" placeholder="${ut(t('module.ppe.table.quantity', 'الكمية'))}">
-                                                <button type="button" class="btn-secondary ppe-remove-item hidden text-xs px-3 py-2">
-                                                    <i class="fas fa-trash-alt ml-1"></i>${ut(t('module.ppe.btn.removeRow', 'حذف'))}
-                                                </button>
+                                            </div>
+                                            <div class="min-w-0">
+                                                <label class="block text-xs font-semibold text-gray-700 mb-1">${ut(t('module.ppe.label.qty', 'الكمية *'))}</label>
+                                                <div class="flex flex-col sm:flex-row sm:items-center gap-2">
+                                                    <input type="number" id="ppe-quantity" required class="form-input ppe-quantity w-full min-w-0" min="1"
+                                                        value="${ppeData?.quantity || 1}" placeholder="${ut(t('module.ppe.table.quantity', 'الكمية'))}">
+                                                    <button type="button" class="btn-secondary ppe-remove-item hidden text-xs px-3 py-2 whitespace-nowrap shrink-0">
+                                                        <i class="fas fa-trash-alt ml-1"></i>${ut(t('module.ppe.btn.removeRow', 'حذف'))}
+                                                    </button>
+                                                </div>
                                             </div>
                                         </div>
-                                        <div class="md:col-span-3 ppe-eligibility-info hidden"></div>
+                                        <div class="ppe-eligibility-info hidden border-t border-slate-100 p-4 pt-4 bg-white w-full min-w-0"></div>
                                     </div>
                                 </div>
                                 <p class="text-xs text-gray-500 mt-1">
