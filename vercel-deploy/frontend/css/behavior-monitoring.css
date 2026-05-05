@@ -79,6 +79,19 @@
     overflow: hidden;
 }
 
+.behavior-overview-stats-scroller {
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding-bottom: 0.15rem;
+}
+
+.behavior-overview-stats {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(200px, 1fr));
+    gap: 0.9rem;
+    min-width: 1060px;
+}
+
 .behavior-overview-stats .behavior-stat::after {
     content: '';
     position: absolute;
@@ -92,34 +105,39 @@
 }
 
 .behavior-stat-total {
-    border-color: rgba(59, 130, 246, 0.25);
-    background: linear-gradient(135deg, rgba(59, 130, 246, 0.08), rgba(59, 130, 246, 0.02));
+    border-color: rgba(37, 99, 235, 0.35);
+    background: linear-gradient(140deg, rgba(37, 99, 235, 0.18), rgba(147, 197, 253, 0.12));
 }
 .behavior-stat-total .behavior-stat-top-bar { background: linear-gradient(90deg, #2563eb, #60a5fa); }
+.behavior-stat-total .behavior-stat-icon { color: #1d4ed8; border-color: rgba(59, 130, 246, 0.3); }
 
 .behavior-stat-positive {
-    border-color: rgba(16, 185, 129, 0.28);
-    background: linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(16, 185, 129, 0.03));
+    border-color: rgba(5, 150, 105, 0.34);
+    background: linear-gradient(140deg, rgba(5, 150, 105, 0.16), rgba(110, 231, 183, 0.12));
 }
 .behavior-stat-positive .behavior-stat-top-bar { background: linear-gradient(90deg, #059669, #34d399); }
+.behavior-stat-positive .behavior-stat-icon { color: #047857; border-color: rgba(16, 185, 129, 0.3); }
 
 .behavior-stat-negative {
-    border-color: rgba(239, 68, 68, 0.26);
-    background: linear-gradient(135deg, rgba(239, 68, 68, 0.1), rgba(239, 68, 68, 0.03));
+    border-color: rgba(220, 38, 38, 0.34);
+    background: linear-gradient(140deg, rgba(220, 38, 38, 0.16), rgba(252, 165, 165, 0.12));
 }
 .behavior-stat-negative .behavior-stat-top-bar { background: linear-gradient(90deg, #dc2626, #f87171); }
+.behavior-stat-negative .behavior-stat-icon { color: #b91c1c; border-color: rgba(239, 68, 68, 0.34); }
 
 .behavior-stat-employees {
-    border-color: rgba(99, 102, 241, 0.24);
-    background: linear-gradient(135deg, rgba(99, 102, 241, 0.09), rgba(99, 102, 241, 0.02));
+    border-color: rgba(79, 70, 229, 0.34);
+    background: linear-gradient(140deg, rgba(79, 70, 229, 0.16), rgba(165, 180, 252, 0.12));
 }
 .behavior-stat-employees .behavior-stat-top-bar { background: linear-gradient(90deg, #4f46e5, #818cf8); }
+.behavior-stat-employees .behavior-stat-icon { color: #4338ca; border-color: rgba(99, 102, 241, 0.3); }
 
 .behavior-stat-contractors {
-    border-color: rgba(14, 165, 233, 0.26);
-    background: linear-gradient(135deg, rgba(14, 165, 233, 0.1), rgba(14, 165, 233, 0.03));
+    border-color: rgba(2, 132, 199, 0.35);
+    background: linear-gradient(140deg, rgba(2, 132, 199, 0.16), rgba(125, 211, 252, 0.12));
 }
 .behavior-stat-contractors .behavior-stat-top-bar { background: linear-gradient(90deg, #0284c7, #38bdf8); }
+.behavior-stat-contractors .behavior-stat-icon { color: #0369a1; border-color: rgba(14, 165, 233, 0.32); }
 
 .behavior-dynamic-filter-wrap {
     border-radius: 14px;
