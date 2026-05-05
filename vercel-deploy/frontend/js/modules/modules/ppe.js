@@ -1266,23 +1266,24 @@ const PPE = {
                 red:     { bg: 'bg-rose-50',    border: 'border-rose-200',    text: 'text-rose-800',     accent: 'text-rose-700',    title: 'text-rose-800' }
             };
             const p = palettes[color] || palettes.gray;
+            // تجنب grid + truncate داخل مودال ضيق: يسبب في RTL عرضًا شبه معدوم فيتكدس النص حرفًا تحت حرف
             const statsHtml = statValueRows.map(s => `
-                <div class="flex items-start gap-2 min-w-0">
-                    <i class="${s.icon} mt-1 ${p.accent}"></i>
-                    <div class="min-w-0">
-                        <div class="text-[10px] uppercase tracking-wide ${p.accent} font-semibold">${s.label}</div>
-                        <div class="text-sm font-bold ${p.text} truncate">${s.value}</div>
+                <div class="flex items-start gap-3 py-2.5 border-b ${p.border} last:border-b-0">
+                    <i class="${s.icon} shrink-0 w-5 text-center mt-0.5 ${p.accent}"></i>
+                    <div class="flex-1 min-w-0 overflow-visible">
+                        <div class="text-xs font-semibold ${p.accent} leading-snug">${s.label}</div>
+                        <div class="text-sm font-bold ${p.text} leading-snug break-words hyphens-none">${s.value}</div>
                     </div>
                 </div>
             `).join('');
             return `
-                <div class="mt-2 rounded-xl border ${p.border} ${p.bg} ${p.text} overflow-hidden shadow-sm">
-                    <div class="flex items-center gap-2 px-3 py-2 border-b ${p.border} bg-white/40">
-                        <i class="${iconClass}"></i>
-                        <span class="text-xs font-bold ${p.title}">${title}</span>
+                <div class="mt-2 rounded-xl border ${p.border} ${p.bg} ${p.text} overflow-hidden shadow-sm w-full min-w-0">
+                    <div class="flex flex-wrap items-center gap-2 px-3 py-2.5 border-b ${p.border} bg-white/60">
+                        <i class="${iconClass} shrink-0"></i>
+                        <span class="text-sm font-bold ${p.title} leading-tight">${title}</span>
                     </div>
-                    ${statsHtml ? `<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 px-3 py-3">${statsHtml}</div>` : ''}
-                    ${footerHtml ? `<div class="px-3 py-2 border-t ${p.border} bg-white/40 text-xs font-semibold flex items-center gap-2">${footerHtml}</div>` : ''}
+                    ${statsHtml ? `<div class="px-3 pt-1 pb-2 space-y-0">${statsHtml}</div>` : ''}
+                    ${footerHtml ? `<div class="px-3 py-2.5 border-t ${p.border} bg-white/60 text-xs font-semibold leading-relaxed flex flex-wrap items-center gap-2">${footerHtml}</div>` : ''}
                 </div>
             `;
         };
