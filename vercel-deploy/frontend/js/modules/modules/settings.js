@@ -1727,6 +1727,23 @@ const Settings = {
                 return out;
             };
 
+            // قراءة جميع الصفوف من الواجهة كما هي (حتى الصفوف غير المكتملة)
+            // لاستخدامها قبل إعادة الرسم حتى لا تضيع القيم المدخلة حديثاً.
+            const collectPpeRulesDraftFromUI = () => {
+                if (!ppeEligibilityRulesContainer) return Array.isArray(ppeRulesState.rules) ? [...ppeRulesState.rules] : [];
+                const rows = Array.from(ppeEligibilityRulesContainer.querySelectorAll('.ppe-rule-row'));
+                if (!rows.length) return Array.isArray(ppeRulesState.rules) ? [...ppeRulesState.rules] : [];
+                return rows.map((row) => {
+                    const itemSel = row.querySelector('.ppe-rule-item');
+                    const monthsEl = row.querySelector('.ppe-rule-months');
+                    const equipmentType = (itemSel?.value || '').trim();
+                    let months = parseInt(monthsEl?.value, 10);
+                    if (isNaN(months) || months < 1) months = 12;
+                    months = Math.min(120, months);
+                    return { equipmentType, months, days: 0 };
+                });
+            };
+
             const normalizeImportedRules = (input) => {
                 const out = [];
                 const seen = new Set();
@@ -1820,6 +1837,8 @@ const Settings = {
 
             if (ppeAddRuleBtn) {
                 ppeAddRuleBtn.addEventListener('click', () => {
+                    // مزامنة الحالة من واجهة المستخدم قبل إضافة صف جديد لتجنب تفريغ الصف السابق.
+                    ppeRulesState.rules = collectPpeRulesDraftFromUI();
                     ppeRulesState.rules.push({ equipmentType: '', months: 12, days: 0 });
                     renderPpeRulesRows();
                     // تثبيت تجربة الاستخدام: تركيز مباشر على آخر صف دون قفز بصري.
