@@ -3463,7 +3463,7 @@ const PPE = {
                     // ✅ إضافة timeout للطلب (10 ثوان)
                     const loadPromise = GoogleIntegration.sendToAppsScript('getAllPPEStockItems', { filters: {} });
                     const timeoutPromise = new Promise((_, reject) => 
-                        setTimeout(() => reject(new Error('Timeout: تحميل البيانات استغرق وقتاً طويلاً')), 10000)
+                        setTimeout(() => reject(new Error('Timeout: تحميل البيانات استغرق وقتاً طويلاً')), 30000)
                     );
                     
                     const result = await Promise.race([loadPromise, timeoutPromise]);

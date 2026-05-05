@@ -435,40 +435,20 @@ function getAllPPEStockItems(filters = {}) {
     try {
         const sheetName = 'PPE_Stock';
         let data = readFromSheet(sheetName, getSpreadsheetId());
-        
-        // ✅ تحسين الأداء: قراءة جميع الحركات مرة واحدة فقط قبل الحلقة
-        const allTransactions = readFromSheet('PPE_Transactions', getSpreadsheetId());
-        
-        // إنشاء خريطة للحركات لكل صنف لتسريع البحث
-        const transactionsByItemId = {};
-        allTransactions.forEach(t => {
-            if (!t.itemId) return;
-            if (!transactionsByItemId[t.itemId]) {
-                transactionsByItemId[t.itemId] = [];
-            }
-            transactionsByItemId[t.itemId].push(t);
-        });
-        
-        // تحديث الرصيد لكل صنف من الحركات (باستخدام الخريطة المحضرة)
+
+        // ✅ تحسين الأداء: لا نعيد حساب الأرصدة من جميع الحركات في كل طلب.
+        // جدول PPE_Stock يتم تحديثه لحظياً عند إضافة/تعديل الحركات، لذا نكتفي
+        // بتطبيع القيم الرقمية المخزنة مباشرة.
         data = data.map(item => {
-            const itemId = item.itemId;
-            const itemTransactions = transactionsByItemId[itemId] || [];
-            
-            let stockIn = 0;
-            let stockOut = 0;
-            
-            itemTransactions.forEach(t => {
-                if (t.action === 'IN') {
-                    stockIn += parseFloat(t.quantity || 0);
-                } else if (t.action === 'OUT') {
-                    stockOut += parseFloat(t.quantity || 0);
-                }
-            });
-            
+            const stockIn = parseFloat(item.stock_IN || 0) || 0;
+            const stockOut = parseFloat(item.stock_OUT || 0) || 0;
+            const balance = (item.balance !== undefined && item.balance !== null && item.balance !== '')
+                ? (parseFloat(item.balance) || 0)
+                : (stockIn - stockOut);
+
             item.stock_IN = stockIn;
             item.stock_OUT = stockOut;
-            item.balance = stockIn - stockOut;
-            
+            item.balance = balance;
             return item;
         });
         
