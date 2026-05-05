@@ -403,7 +403,7 @@ const Settings = {
                                         </p>
                                     </div>
                                     <div class="flex flex-wrap items-center gap-2.5">
-                                        <button type="button" id="ppe-download-template-btn" class="shrink-0 inline-flex items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 text-base font-extrabold px-5 py-3 min-h-[48px] shadow-sm hover:shadow-md transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-slate-300">
+                                        <button type="button" id="ppe-download-template-btn" class="shrink-0 inline-flex items-center justify-center gap-2 rounded-xl border border-blue-400 bg-blue-600 hover:bg-blue-700 text-white text-base font-extrabold px-5 py-3 min-h-[48px] shadow-sm hover:shadow-md transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-300">
                                             <i class="fas fa-file-download"></i> تحميل قالب
                                         </button>
                                         <button type="button" id="ppe-import-rules-btn" class="shrink-0 inline-flex items-center justify-center gap-2 rounded-xl border border-blue-300 bg-blue-600 hover:bg-blue-700 text-white text-base font-extrabold px-5 py-3 min-h-[48px] shadow-sm hover:shadow-md transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-300">
@@ -421,7 +421,7 @@ const Settings = {
                                 <button type="button" id="save-company-settings-btn" class="inline-flex items-center justify-center gap-2 rounded-xl border border-blue-500 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white text-base font-extrabold px-6 py-3 min-h-[50px] shadow-md hover:shadow-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-300">
                                     <i class="fas fa-save ml-2"></i>حفظ بيانات الشركة
                                 </button>
-                                <button type="button" id="reset-company-name-btn" class="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 text-base font-bold px-5 py-3 min-h-[50px] shadow-sm hover:shadow-md transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-slate-300">
+                                <button type="button" id="reset-company-name-btn" class="inline-flex items-center justify-center gap-2 rounded-xl border border-blue-400 bg-blue-600 hover:bg-blue-700 text-white text-base font-bold px-5 py-3 min-h-[50px] shadow-sm hover:shadow-md transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-300">
                                     <i class="fas fa-undo ml-2"></i>استعادة الاسم الافتراضي
                                 </button>
                             </div>
@@ -504,7 +504,7 @@ const Settings = {
                                 </div>
                                 <div class="flex items-center gap-2">
                                     <button type="button" id="post-login-item-save-btn" class="inline-flex items-center justify-center gap-2 rounded-xl border border-blue-500 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white text-base font-extrabold px-5 py-2.5 min-h-[44px] shadow-md hover:shadow-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-300"><i class="fas fa-save ml-2"></i>حفظ</button>
-                                    <button type="button" id="post-login-item-cancel-btn" class="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 text-base font-bold px-5 py-2.5 min-h-[44px] shadow-sm hover:shadow-md transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-slate-300"><i class="fas fa-times ml-2"></i>إلغاء</button>
+                                    <button type="button" id="post-login-item-cancel-btn" class="inline-flex items-center justify-center gap-2 rounded-xl border border-blue-400 bg-blue-600 hover:bg-blue-700 text-white text-base font-bold px-5 py-2.5 min-h-[44px] shadow-sm hover:shadow-md transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-300"><i class="fas fa-times ml-2"></i>إلغاء</button>
                                 </div>
                             </div>
                         </div>
@@ -1975,7 +1975,7 @@ const Settings = {
                         } catch (error) {
                             Utils.safeWarn('⚠️ خطأ أثناء مزامنة إعدادات الشركة مع الخادم:', error);
                             backendSyncSucceeded = false;
-                            Notification.error('تعذر حفظ قواعد الاستحقاق في قاعدة البيانات (اتصال/خادم).');
+                            Notification.error('تعذر حفظ قواعد الاستحقاق في قاعدة البيانات (اتصال/خادم): ' + (error?.message || 'يرجى المحاولة مرة أخرى.'));
                         }
                     }
                     if (!backendSyncSucceeded) return;

@@ -42,8 +42,13 @@ function initPPEEligibilityRulesTable_(spreadsheetId) {
         'updatedBy'
     ];
 
-    const firstCell = sheet.getRange(1, 1).getValue();
-    if (!firstCell) {
+    const currentHeader = sheet.getRange(1, 1, 1, headerRow.length).getValues()[0] || [];
+    const hasHeader = String(sheet.getRange(1, 1).getValue() || '').trim() !== '';
+    const needsHeaderRefresh = !hasHeader || headerRow.some(function (h, idx) {
+        return String(currentHeader[idx] || '').trim() !== h;
+    });
+
+    if (needsHeaderRefresh) {
         sheet.getRange(1, 1, 1, headerRow.length).setValues([headerRow]);
         const headerRange = sheet.getRange(1, 1, 1, headerRow.length);
         headerRange.setFontWeight('bold');
@@ -149,8 +154,12 @@ function savePPEEligibilityRulesTable_(rulesArray, spreadsheetId, userName, nowI
         }
     });
 
-    // تنظيف الجدول والإبقاء على الرؤوس
-    sheet.getRange(2, 1, Math.max(0, sheet.getMaxRows() - 1), Math.max(1, sheet.getMaxColumns())).clearContent();
+    // تنظيف الصفوف الحالية فقط (أسرع وأكثر استقراراً من مسح كامل حدود الورقة)
+    const lastRow = sheet.getLastRow();
+    const clearRows = Math.max(0, lastRow - 1);
+    if (clearRows > 0) {
+        sheet.getRange(2, 1, clearRows, 11).clearContent();
+    }
 
     const rows = (Array.isArray(rulesArray) ? rulesArray : []).map(function (rule, idx) {
         const equipmentType = String(rule.equipmentType || '').trim();
