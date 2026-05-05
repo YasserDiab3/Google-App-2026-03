@@ -385,6 +385,44 @@ const Settings = {
                                     إذا تُرك فارغاً، يُستخدم رقم الهاتف من بيانات الموظف لرابط wa.me عندما يكون الرقم صالحاً.
                                 </p>
                             </div>
+                            <div class="md:col-span-2 border-t pt-4">
+                                <h3 class="text-sm font-bold text-gray-700 mb-3">
+                                    <i class="fas fa-hard-hat ml-2"></i>
+                                    قاعدة استحقاق استلام مهمات الوقاية
+                                </h3>
+                                <p class="text-xs text-gray-500 mb-3">
+                                    <i class="fas fa-info-circle ml-1"></i>
+                                    الحد الأدنى للمدة بين استلامين متتاليين لنفس الموظف ونفس نوع المعدة. عند عدم اكتمال المدة يتم منع الحفظ مع رسالة بالمدة المتبقية.
+                                </p>
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div>
+                                        <label for="ppe-eligibility-months-input" class="block text-sm font-semibold text-gray-700 mb-2">
+                                            <i class="fas fa-calendar-alt ml-2"></i>
+                                            عدد الأشهر
+                                        </label>
+                                        <div class="flex items-center gap-3">
+                                            <input type="number" id="ppe-eligibility-months-input" class="form-input" min="0" max="120" step="1"
+                                                placeholder="0" value="${Math.max(0, Math.min(120, parseInt(AppState.companySettings?.ppeEligibilityMonths, 10) || 0))}">
+                                            <span class="text-xs text-gray-500">شهر</span>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label for="ppe-eligibility-days-input" class="block text-sm font-semibold text-gray-700 mb-2">
+                                            <i class="fas fa-calendar-day ml-2"></i>
+                                            عدد الأيام
+                                        </label>
+                                        <div class="flex items-center gap-3">
+                                            <input type="number" id="ppe-eligibility-days-input" class="form-input" min="0" max="3650" step="1"
+                                                placeholder="0" value="${Math.max(0, Math.min(3650, parseInt(AppState.companySettings?.ppeEligibilityDays, 10) || 0))}">
+                                            <span class="text-xs text-gray-500">يوم</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <p class="text-xs text-gray-500 mt-2">
+                                    <i class="fas fa-lightbulb ml-1"></i>
+                                    اترك القيمتين 0 لإيقاف التحقق والسماح بالاستلام في أي وقت.
+                                </p>
+                            </div>
                             <div class="flex items-center gap-3 pt-2 border-t">
                                 <button type="button" id="save-company-settings-btn" class="btn-primary">
                                     <i class="fas fa-save ml-2"></i>حفظ بيانات الشركة
@@ -1526,6 +1564,8 @@ const Settings = {
             const clinicMonthlyVisitsThresholdInput = document.getElementById('clinic-monthly-visits-threshold-input');
             const profileTeamsUrlInput = document.getElementById('profile-teams-url-input');
             const profileWhatsAppUrlInput = document.getElementById('profile-whatsapp-url-input');
+            const ppeEligibilityMonthsInput = document.getElementById('ppe-eligibility-months-input');
+            const ppeEligibilityDaysInput = document.getElementById('ppe-eligibility-days-input');
             const saveCompanySettingsBtn = document.getElementById('save-company-settings-btn');
             const resetCompanyNameBtn = document.getElementById('reset-company-name-btn');
 
@@ -1588,6 +1628,17 @@ const Settings = {
                     const profileTeamsUrl = profileTeamsUrlInput ? profileTeamsUrlInput.value.trim() : '';
                     const profileWhatsAppUrl = profileWhatsAppUrlInput ? profileWhatsAppUrlInput.value.trim() : '';
 
+                    let ppeEligibilityMonths = 0;
+                    if (ppeEligibilityMonthsInput) {
+                        const v = parseInt(ppeEligibilityMonthsInput.value, 10);
+                        if (!isNaN(v) && v >= 0 && v <= 120) ppeEligibilityMonths = v;
+                    }
+                    let ppeEligibilityDays = 0;
+                    if (ppeEligibilityDaysInput) {
+                        const v = parseInt(ppeEligibilityDaysInput.value, 10);
+                        if (!isNaN(v) && v >= 0 && v <= 3650) ppeEligibilityDays = v;
+                    }
+
                     AppState.companySettings = Object.assign({}, AppState.companySettings, {
                         name: newName,
                         secondaryName,
@@ -1597,7 +1648,9 @@ const Settings = {
                         secondaryNameColor,
                         clinicMonthlyVisitsAlertThreshold,
                         profileTeamsUrl,
-                        profileWhatsAppUrl
+                        profileWhatsAppUrl,
+                        ppeEligibilityMonths,
+                        ppeEligibilityDays
                     });
                     DataManager.saveCompanySettings();
                     
@@ -1615,6 +1668,8 @@ const Settings = {
                                 clinicMonthlyVisitsAlertThreshold,
                                 profileTeamsUrl,
                                 profileWhatsAppUrl,
+                                ppeEligibilityMonths,
+                                ppeEligibilityDays,
                                 address: AppState.companySettings?.address || '',
                                 phone: AppState.companySettings?.phone || '',
                                 email: AppState.companySettings?.email || '',

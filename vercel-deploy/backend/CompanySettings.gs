@@ -99,6 +99,8 @@ function initCompanySettingsTable(spreadsheetId = null) {
                 'clinicVisitTypes',
                 'profileTeamsUrl',
                 'profileWhatsAppUrl',
+                'ppeEligibilityMonths',
+                'ppeEligibilityDays',
                 'createdAt',
                 'updatedAt',
                 'createdBy',
@@ -184,6 +186,15 @@ function saveCompanySettingsToSheet(settingsData) {
         const clinicThresholdNum = (clinicThreshold !== undefined && clinicThreshold !== null && clinicThreshold !== '') ? parseInt(clinicThreshold, 10) : 10;
         const clinicMonthlyVisitsAlertThreshold = (isNaN(clinicThresholdNum) || clinicThresholdNum < 1) ? 10 : Math.min(1000, clinicThresholdNum);
 
+        // PPE eligibility (minimum gap since last receipt for the same employee + equipment type)
+        const ppeMonthsRaw = settingsData.ppeEligibilityMonths;
+        const ppeMonthsNum = (ppeMonthsRaw !== undefined && ppeMonthsRaw !== null && ppeMonthsRaw !== '') ? parseInt(ppeMonthsRaw, 10) : 0;
+        const ppeEligibilityMonths = (isNaN(ppeMonthsNum) || ppeMonthsNum < 0) ? 0 : Math.min(120, ppeMonthsNum);
+
+        const ppeDaysRaw = settingsData.ppeEligibilityDays;
+        const ppeDaysNum = (ppeDaysRaw !== undefined && ppeDaysRaw !== null && ppeDaysRaw !== '') ? parseInt(ppeDaysRaw, 10) : 0;
+        const ppeEligibilityDays = (isNaN(ppeDaysNum) || ppeDaysNum < 0) ? 0 : Math.min(3650, ppeDaysNum);
+
         let settingsToSave = {
             id: 'COMPANY-SETTINGS-1',
             name: settingsData.name || '',
@@ -201,6 +212,8 @@ function saveCompanySettingsToSheet(settingsData) {
             clinicVisitTypes: clinicVisitTypesValue,
             profileTeamsUrl: settingsData.profileTeamsUrl != null ? String(settingsData.profileTeamsUrl) : '',
             profileWhatsAppUrl: settingsData.profileWhatsAppUrl != null ? String(settingsData.profileWhatsAppUrl) : '',
+            ppeEligibilityMonths: ppeEligibilityMonths,
+            ppeEligibilityDays: ppeEligibilityDays,
             updatedAt: now,
             updatedBy: userName
         };
@@ -220,6 +233,19 @@ function saveCompanySettingsToSheet(settingsData) {
             // لا نمسح أنواع الزيارة إذا لم تُرسل من الواجهة الحالية
             if (settingsData.clinicVisitTypes === undefined && existing.clinicVisitTypes != null && String(existing.clinicVisitTypes).trim() !== '') {
                 settingsToSave.clinicVisitTypes = String(existing.clinicVisitTypes);
+            }
+            // الحفاظ على إعدادات استحقاق PPE إذا لم تُرسل من الواجهة الحالية
+            if (settingsData.ppeEligibilityMonths === undefined && existing.ppeEligibilityMonths != null && existing.ppeEligibilityMonths !== '') {
+                const existingMonths = parseInt(existing.ppeEligibilityMonths, 10);
+                if (!isNaN(existingMonths) && existingMonths >= 0) {
+                    settingsToSave.ppeEligibilityMonths = Math.min(120, existingMonths);
+                }
+            }
+            if (settingsData.ppeEligibilityDays === undefined && existing.ppeEligibilityDays != null && existing.ppeEligibilityDays !== '') {
+                const existingDays = parseInt(existing.ppeEligibilityDays, 10);
+                if (!isNaN(existingDays) && existingDays >= 0) {
+                    settingsToSave.ppeEligibilityDays = Math.min(3650, existingDays);
+                }
             }
         } else {
             settingsToSave.createdAt = now;
@@ -331,6 +357,8 @@ function getDefaultCompanySettings() {
         clinicVisitTypes: '',
         profileTeamsUrl: '',
         profileWhatsAppUrl: '',
+        ppeEligibilityMonths: 0,
+        ppeEligibilityDays: 0,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
         createdBy: 'System',

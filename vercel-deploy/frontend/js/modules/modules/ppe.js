@@ -1088,6 +1088,200 @@ const PPE = {
         }
     },
 
+    // ====== استحقاق استلام مهمات الوقاية ======
+    /**
+     * قراءة الحد الأدنى للاستحقاق (شهور/أيام) من إعدادات الشركة.
+     */
+    getEligibilityRule() {
+        const settings = (typeof AppState !== 'undefined' && AppState.companySettings) ? AppState.companySettings : {};
+        const monthsRaw = parseInt(settings.ppeEligibilityMonths, 10);
+        const daysRaw = parseInt(settings.ppeEligibilityDays, 10);
+        const months = (!isNaN(monthsRaw) && monthsRaw >= 0) ? Math.min(120, monthsRaw) : 0;
+        const days = (!isNaN(daysRaw) && daysRaw >= 0) ? Math.min(3650, daysRaw) : 0;
+        return { months, days, hasRule: (months + days) > 0 };
+    },
+
+    /**
+     * البحث عن آخر استلام لنفس الموظف ونفس نوع المعدة.
+     */
+    findLastReceiptForEmployeeItem(employeeCode, equipmentType, options = {}) {
+        const code = (employeeCode || '').toString().trim().toLowerCase();
+        const type = (equipmentType || '').toString().trim().toLowerCase();
+        if (!code || !type) return null;
+        const excludeId = options.excludeId || null;
+        const list = (typeof AppState !== 'undefined' && Array.isArray(AppState.appData?.ppe)) ? AppState.appData.ppe : [];
+        let candidate = null;
+        let candidateDate = null;
+        for (const rec of list) {
+            if (!rec) continue;
+            if (excludeId && rec.id === excludeId) continue;
+            const recCode = (rec.employeeCode || rec.employeeNumber || '').toString().trim().toLowerCase();
+            const recType = (rec.equipmentType || '').toString().trim().toLowerCase();
+            if (recCode !== code || recType !== type) continue;
+            const rd = rec.receiptDate ? new Date(rec.receiptDate) : null;
+            if (!rd || isNaN(rd.getTime())) continue;
+            if (!candidateDate || rd > candidateDate) {
+                candidate = rec;
+                candidateDate = rd;
+            }
+        }
+        return candidate;
+    },
+
+    /**
+     * حساب الفرق بالأشهر والأيام بين تاريخين.
+     * يستخدم خوارزمية تقويمية: نحسب الأشهر بطرح الأشهر مع تعديل اليوم،
+     * ثم الأيام المتبقية تُحسب بناءً على التقويم.
+     */
+    diffMonthsAndDays(startDate, endDate) {
+        const start = new Date(startDate);
+        const end = new Date(endDate);
+        if (isNaN(start.getTime()) || isNaN(end.getTime()) || end < start) {
+            return { months: 0, days: 0, totalDays: 0, isNegative: end < start };
+        }
+        let months = (end.getFullYear() - start.getFullYear()) * 12 + (end.getMonth() - start.getMonth());
+        let days = end.getDate() - start.getDate();
+        if (days < 0) {
+            months -= 1;
+            const prevMonth = new Date(end.getFullYear(), end.getMonth(), 0);
+            days += prevMonth.getDate();
+        }
+        if (months < 0) months = 0;
+        const totalDays = Math.floor((end - start) / (1000 * 60 * 60 * 24));
+        return { months, days, totalDays, isNegative: false };
+    },
+
+    /**
+     * إضافة (أشهر + أيام) إلى تاريخ.
+     */
+    addMonthsAndDays(date, months, days) {
+        const d = new Date(date);
+        if (isNaN(d.getTime())) return null;
+        const target = new Date(d.getFullYear(), d.getMonth() + (months || 0), d.getDate());
+        target.setDate(target.getDate() + (days || 0));
+        target.setHours(d.getHours(), d.getMinutes(), d.getSeconds(), d.getMilliseconds());
+        return target;
+    },
+
+    /**
+     * حساب نتيجة التحقق من الاستحقاق لاستلام جديد.
+     */
+    computeEligibility(employeeCode, equipmentType, currentDateValue, options = {}) {
+        const rule = this.getEligibilityRule();
+        const result = {
+            hasInputs: false,
+            hasPrevious: false,
+            hasRule: rule.hasRule,
+            ruleMonths: rule.months,
+            ruleDays: rule.days,
+            lastReceiptDate: null,
+            currentDate: null,
+            elapsed: null,
+            dueDate: null,
+            isEligible: true,
+            remaining: null
+        };
+        if (!employeeCode || !equipmentType) {
+            return result;
+        }
+        result.hasInputs = true;
+        const last = this.findLastReceiptForEmployeeItem(employeeCode, equipmentType, options);
+        if (!last || !last.receiptDate) {
+            return result;
+        }
+        const lastDate = new Date(last.receiptDate);
+        if (isNaN(lastDate.getTime())) return result;
+        result.hasPrevious = true;
+        result.lastReceiptDate = lastDate;
+        const current = currentDateValue ? new Date(currentDateValue) : new Date();
+        if (isNaN(current.getTime())) {
+            result.currentDate = new Date();
+        } else {
+            result.currentDate = current;
+        }
+        result.elapsed = this.diffMonthsAndDays(lastDate, result.currentDate);
+        if (rule.hasRule) {
+            const due = this.addMonthsAndDays(lastDate, rule.months, rule.days);
+            result.dueDate = due;
+            if (due && result.currentDate < due) {
+                result.isEligible = false;
+                result.remaining = this.diffMonthsAndDays(result.currentDate, due);
+            }
+        }
+        return result;
+    },
+
+    /**
+     * تحويل (شهور/أيام) إلى نص عربي مفهوم.
+     */
+    formatMonthsDays(months, days) {
+        const m = parseInt(months, 10) || 0;
+        const d = parseInt(days, 10) || 0;
+        const parts = [];
+        if (m > 0) parts.push(`${m} شهر`);
+        if (d > 0 || (m === 0 && d === 0)) parts.push(`${d} يوم`);
+        return parts.join(' و ');
+    },
+
+    /**
+     * عرض حالة الاستحقاق داخل صف الصنف.
+     */
+    renderEligibilityInfo(infoEl, result) {
+        if (!infoEl) return;
+        if (!result || !result.hasInputs) {
+            infoEl.innerHTML = '';
+            infoEl.classList.add('hidden');
+            infoEl.removeAttribute('data-eligible');
+            return;
+        }
+        const fmt = (d) => d ? (typeof Utils !== 'undefined' && Utils.formatDate ? Utils.formatDate(d) : new Date(d).toLocaleDateString('ar')) : '-';
+        let html = '';
+        if (!result.hasPrevious) {
+            html = `
+                <div class="mt-2 p-3 rounded-lg border bg-blue-50 border-blue-200 text-blue-800 text-xs flex items-center gap-2">
+                    <i class="fas fa-info-circle"></i>
+                    <span>لا يوجد استلام سابق لهذا الصنف لهذا الموظف. يمكن تسجيل استلام جديد.</span>
+                </div>
+            `;
+            infoEl.setAttribute('data-eligible', '1');
+        } else {
+            const elapsedText = this.formatMonthsDays(result.elapsed?.months || 0, result.elapsed?.days || 0);
+            const requiredText = result.hasRule ? this.formatMonthsDays(result.ruleMonths, result.ruleDays) : '';
+            if (result.isEligible) {
+                html = `
+                    <div class="mt-2 p-3 rounded-lg border bg-emerald-50 border-emerald-200 text-emerald-800 text-xs">
+                        <div class="flex flex-wrap items-center gap-x-4 gap-y-1">
+                            <span class="flex items-center gap-2"><i class="fas fa-history"></i><b>تاريخ آخر استلام:</b> ${fmt(result.lastReceiptDate)}</span>
+                            <span class="flex items-center gap-2"><i class="fas fa-hourglass-half"></i><b>المدة المنقضية:</b> ${elapsedText}</span>
+                            ${result.hasRule ? `<span class="flex items-center gap-2"><i class="fas fa-shield-alt"></i><b>الحد الأدنى:</b> ${requiredText}</span>` : ''}
+                            <span class="flex items-center gap-2 text-emerald-700"><i class="fas fa-check-circle"></i><b>الحالة:</b> الموظف مستحق للاستلام</span>
+                        </div>
+                    </div>
+                `;
+                infoEl.setAttribute('data-eligible', '1');
+            } else {
+                const remainingText = this.formatMonthsDays(result.remaining?.months || 0, result.remaining?.days || 0);
+                html = `
+                    <div class="mt-2 p-3 rounded-lg border bg-rose-50 border-rose-200 text-rose-800 text-xs">
+                        <div class="flex flex-wrap items-center gap-x-4 gap-y-1">
+                            <span class="flex items-center gap-2"><i class="fas fa-history"></i><b>تاريخ آخر استلام:</b> ${fmt(result.lastReceiptDate)}</span>
+                            <span class="flex items-center gap-2"><i class="fas fa-hourglass-half"></i><b>المدة المنقضية:</b> ${elapsedText}</span>
+                            <span class="flex items-center gap-2"><i class="fas fa-shield-alt"></i><b>الحد الأدنى:</b> ${requiredText}</span>
+                            <span class="flex items-center gap-2"><i class="fas fa-calendar-check"></i><b>تاريخ الاستحقاق:</b> ${fmt(result.dueDate)}</span>
+                        </div>
+                        <div class="mt-2 flex items-center gap-2 font-semibold">
+                            <i class="fas fa-ban"></i>
+                            <span>الموظف غير مستحق حالياً. المدة المتبقية حتى الاستحقاق: ${remainingText}.</span>
+                        </div>
+                    </div>
+                `;
+                infoEl.setAttribute('data-eligible', '0');
+            }
+        }
+        infoEl.innerHTML = html;
+        infoEl.classList.remove('hidden');
+    },
+
     async showPPEForm(ppeData = null) {
         const isEdit = !!ppeData;
         const modal = document.createElement('div');
@@ -1219,6 +1413,7 @@ const PPE = {
                                                 </button>
                                             </div>
                                         </div>
+                                        <div class="md:col-span-3 ppe-eligibility-info hidden"></div>
                                     </div>
                                 </div>
                                 <p class="text-xs text-gray-500 mt-1">
@@ -1506,6 +1701,13 @@ const PPE = {
                     }
                 }
 
+                const eligibilityEl = newRow.querySelector('.ppe-eligibility-info');
+                if (eligibilityEl) {
+                    eligibilityEl.innerHTML = '';
+                    eligibilityEl.classList.add('hidden');
+                    eligibilityEl.removeAttribute('data-eligible');
+                }
+
                 itemsContainer.appendChild(newRow);
                 attachRemoveHandler(newRow);
                 refreshRemoveButtonsVisibility();
@@ -1535,7 +1737,68 @@ const PPE = {
 
             // Load PPE items list from stock and populate equipment type dropdown
             this.loadPPEItemsForDropdown(ppeData?.equipmentType);
-            
+
+            // ===== استحقاق الاستلام: عرض آخر استلام والمدة وحالة الاستحقاق =====
+            const receiptDateInput = document.getElementById('ppe-receipt-date');
+            const employeeCodeInput = document.getElementById('ppe-employee-code');
+            const excludeEditId = isEdit && ppeData?.id ? ppeData.id : null;
+
+            const refreshAllEligibilityRows = () => {
+                if (!itemsContainer) return;
+                const rows = Array.from(itemsContainer.querySelectorAll('.ppe-item-row'));
+                const employeeCode = (employeeCodeInput?.value || '').trim();
+                const receiptDateValue = (receiptDateInput?.value || '').trim();
+                rows.forEach(row => {
+                    const typeSelect = row.querySelector('.ppe-equipment-type');
+                    const equipmentType = (typeSelect?.value || '').trim();
+                    const infoEl = row.querySelector('.ppe-eligibility-info');
+                    if (!infoEl) return;
+                    const result = PPE.computeEligibility(employeeCode, equipmentType, receiptDateValue, { excludeId: excludeEditId });
+                    PPE.renderEligibilityInfo(infoEl, result);
+                });
+            };
+
+            if (receiptDateInput) {
+                receiptDateInput.addEventListener('change', refreshAllEligibilityRows);
+                receiptDateInput.addEventListener('input', refreshAllEligibilityRows);
+            }
+            if (employeeCodeInput) {
+                employeeCodeInput.addEventListener('change', refreshAllEligibilityRows);
+                employeeCodeInput.addEventListener('blur', refreshAllEligibilityRows);
+            }
+            if (itemsContainer) {
+                itemsContainer.addEventListener('change', (event) => {
+                    if (event.target && event.target.classList && event.target.classList.contains('ppe-equipment-type')) {
+                        refreshAllEligibilityRows();
+                    }
+                });
+            }
+
+            modal._refreshPPEEligibility = refreshAllEligibilityRows;
+
+            if (codeInput) {
+                codeInput.addEventListener('input', refreshAllEligibilityRows);
+                codeInput.addEventListener('change', refreshAllEligibilityRows);
+            }
+
+            // عند اختيار موظف من قائمة البحث، يتم تحديث قيمة الكود برمجياً ولا تُطلق
+            // أحداث input/change تلقائياً، لذا نراقب التغييرات على قيمة الحقل.
+            if (codeInput) {
+                let lastSeenCode = codeInput.value;
+                const codeWatcher = setInterval(() => {
+                    if (!document.body.contains(codeInput)) {
+                        clearInterval(codeWatcher);
+                        return;
+                    }
+                    if (codeInput.value !== lastSeenCode) {
+                        lastSeenCode = codeInput.value;
+                        refreshAllEligibilityRows();
+                    }
+                }, 300);
+            }
+
+            setTimeout(refreshAllEligibilityRows, 300);
+
             // Setup form submit handler
             const form = modal.querySelector('#ppe-form');
             if (form) {
@@ -1653,6 +1916,41 @@ const PPE = {
                             equipmentType: typeValue,
                             quantity: quantityValue
                         });
+                    }
+
+                    // ===== التحقق من استحقاق الاستلام لكل صنف قبل الحفظ =====
+                    const eligibilityRule = PPE.getEligibilityRule();
+                    if (eligibilityRule.hasRule) {
+                        const employeeCodeForCheck = employeeCodeEl.value.trim();
+                        const receiptDateForCheck = receiptDateEl.value;
+                        const excludeIdForCheck = isEdit && ppeData?.id ? ppeData.id : null;
+                        const blockingItems = [];
+                        equipmentItems.forEach((item, idx) => {
+                            const r = PPE.computeEligibility(employeeCodeForCheck, item.equipmentType, receiptDateForCheck, { excludeId: excludeIdForCheck });
+                            if (r.hasPrevious && !r.isEligible) {
+                                blockingItems.push({ index: idx, item, result: r });
+                                const row = itemRows[idx];
+                                if (row) {
+                                    const infoEl = row.querySelector('.ppe-eligibility-info');
+                                    PPE.renderEligibilityInfo(infoEl, r);
+                                }
+                            }
+                        });
+                        if (blockingItems.length > 0) {
+                            const first = blockingItems[0];
+                            const remainingText = PPE.formatMonthsDays(first.result.remaining?.months || 0, first.result.remaining?.days || 0);
+                            const dueText = first.result.dueDate ? (typeof Utils !== 'undefined' && Utils.formatDate ? Utils.formatDate(first.result.dueDate) : new Date(first.result.dueDate).toLocaleDateString('ar')) : '';
+                            const itemNames = blockingItems.map(b => b.item.equipmentType).join('، ');
+                            const message = blockingItems.length === 1
+                                ? PPE._t('module.ppe.notify.notEligible', `لا يمكن تسجيل الاستلام: الموظف غير مستحق لصنف «${first.item.equipmentType}» حالياً. تاريخ الاستحقاق: ${dueText}، المتبقي: ${remainingText}.`)
+                                : PPE._t('module.ppe.notify.notEligibleMulti', `لا يمكن تسجيل الاستلام: الموظف غير مستحق للأصناف التالية حالياً (${itemNames}). أقرب استحقاق بعد: ${remainingText}.`);
+                            Notification.error(message);
+                            if (submitBtn) {
+                                submitBtn.disabled = false;
+                                submitBtn.innerHTML = originalText;
+                            }
+                            return;
+                        }
                     }
 
                     const commonData = {
