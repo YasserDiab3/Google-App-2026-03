@@ -409,7 +409,7 @@ const Settings = {
                                         <button type="button" id="ppe-import-rules-btn" class="shrink-0 inline-flex items-center justify-center gap-2 rounded-xl border border-blue-300 bg-blue-600 hover:bg-blue-700 text-white text-base font-extrabold px-5 py-3 min-h-[48px] shadow-sm hover:shadow-md transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-300">
                                             <i class="fas fa-file-import"></i> استيراد
                                         </button>
-                                        <button type="button" id="ppe-add-rule-btn" class="btn-primary shrink-0 inline-flex items-center justify-center gap-2 rounded-xl border border-blue-500 text-base font-extrabold px-6 py-3 min-h-[50px] shadow-md hover:shadow-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-300">
+                                        <button type="button" id="ppe-add-rule-btn" class="btn-primary inline-flex items-center justify-center gap-2 rounded-xl border border-blue-500 text-base font-extrabold px-6 py-3 min-h-[50px] shadow-md hover:shadow-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-300">
                                             <i class="fas fa-plus"></i> إضافة صف
                                         </button>
                                     </div>
@@ -452,7 +452,7 @@ const Settings = {
                                             سيتم عرض الشعار في يسار جميع النماذج والصفحات. الحد الأقصى لحجم الصورة: 2MB
                                         </p>
                                         <div class="flex items-center gap-2 mt-2">
-                                            <button type="button" id="upload-logo-btn" class="btn-primary inline-flex items-center justify-center gap-2 rounded-xl border border-blue-500 text-base font-extrabold px-5 py-3 min-h-[48px] shadow-md hover:shadow-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-300">
+                                            <button type="button" id="upload-logo-btn" class="btn-primary inline-flex items-center justify-center gap-2 rounded-xl border border-blue-500 text-base font-extrabold px-6 py-3 min-h-[50px] shadow-md hover:shadow-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-300">
                                                 <i class="fas fa-upload ml-2"></i>رفع الشعار
                                             </button>
                                             ${AppState.companyLogo ? `
@@ -478,7 +478,7 @@ const Settings = {
                             </p>
                             <div id="post-login-items-list" class="space-y-3"></div>
                             <div class="flex items-center gap-2 pt-2 border-t">
-                                <button type="button" id="post-login-add-item-btn" class="btn-primary inline-flex items-center justify-center gap-2 rounded-xl border border-blue-500 text-base font-extrabold px-5 py-3 min-h-[48px] shadow-md hover:shadow-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-300">
+                                <button type="button" id="post-login-add-item-btn" class="btn-primary inline-flex items-center justify-center gap-2 rounded-xl border border-blue-500 text-base font-extrabold px-6 py-3 min-h-[50px] shadow-md hover:shadow-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-300">
                                     <i class="fas fa-plus ml-2"></i>إضافة عنصر
                                 </button>
                             </div>
