@@ -1064,6 +1064,21 @@ const GoogleIntegration = {
             // استخدام رسالة الخطأ من الكائن
             const finalErrorMsg = errorMsg || 'خطأ غير معروف';
 
+            // إصلاح ذاتي لأخطاء CSRF: تدوير token + sessionId مرة واحدة ثم إعادة المحاولة
+            const isCsrfValidationError = finalErrorMsg.includes('CSRF_TOKEN_VALIDATION_FAILED') ||
+                finalErrorMsg.includes('فشل التحقق من CSRF token') ||
+                finalErrorMsg.includes('CSRF token مفقود') ||
+                finalErrorMsg.includes('CSRF_TOKEN_MISSING') ||
+                finalErrorMsg.includes('CSRF_TOKEN_INVALID');
+            if (isCsrfValidationError && retryCount < 1) {
+                try {
+                    sessionStorage.removeItem('csrf_token');
+                    sessionStorage.removeItem('client_session_id');
+                    Utils.safeWarn('🔐 تم اكتشاف خطأ CSRF؛ إعادة تهيئة جلسة الأمان وإعادة المحاولة...');
+                } catch (_e) { /* ignore */ }
+                return this._executeRequest(action, data, retryCount + 1);
+            }
+
             // منطق إعادة المحاولة
             const maxRetries = 2;
             if (retryCount < maxRetries) {
