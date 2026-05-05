@@ -1,6 +1,7 @@
 /* ========================================
    Behavior Monitoring Module - UI Enhancements
    تطوير واجهة موديول مراقبة السلوكيات
+   (كروت النظرة العامة بنفس أسلوب قائمة المخالفات)
    ======================================== */
 
 /* Cards */
@@ -16,150 +17,140 @@
     background: linear-gradient(135deg, rgba(147, 51, 234, 0.18), rgba(59, 130, 246, 0.12));
 }
 
-/* Overview stats */
-.behavior-stat {
-    border: 1px solid var(--border-color);
-    border-radius: 16px;
-    padding: 0.9rem 1rem 1rem;
-    background: var(--bg-primary);
-    box-shadow: 0 4px 14px rgba(15, 23, 42, 0.08);
-    transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease, filter 0.2s ease;
-}
-
-.behavior-stat:hover {
-    transform: translateY(-2px);
-    border-color: rgba(99, 102, 241, 0.35);
-    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.14);
-    filter: saturate(1.05);
-}
-
-.behavior-stat-head {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 0.5rem;
-}
-
-.behavior-stat-top-bar {
-    height: 3px;
-    border-radius: 999px;
-    margin-bottom: 0.8rem;
-    background: rgba(99, 102, 241, 0.35);
-}
-
-.behavior-stat-icon {
-    width: 34px;
-    height: 34px;
-    border-radius: 10px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    color: #334155;
-    background: rgba(255, 255, 255, 0.82);
-    border: 1px solid rgba(148, 163, 184, 0.32);
-    flex-shrink: 0;
-}
-
-.behavior-stat-label {
-    font-size: 0.85rem;
-    color: var(--text-secondary);
-    font-weight: 700;
-}
-
-.behavior-stat-value {
-    font-size: 1.75rem;
-    font-weight: 800;
-    margin-top: 0.25rem;
-    color: var(--text-primary);
-    letter-spacing: 0.02em;
-}
-
-.behavior-overview-stats .behavior-stat {
-    position: relative;
-    overflow: hidden;
-}
-
+/* Overview stats — صف واحد (5 كروت)، نفس تدرجات/حدود المخالفات */
 .behavior-overview-stats-scroller {
-    overflow-x: hidden;
+    overflow-x: auto;
     overflow-y: hidden;
-    padding-bottom: 0.15rem;
+    padding-bottom: 0.25rem;
+    -webkit-overflow-scrolling: touch;
 }
 
 .behavior-overview-stats {
     display: flex !important;
     flex-wrap: nowrap !important;
     align-items: stretch;
-    gap: 0.9rem;
+    gap: 1rem;
     width: 100%;
-    min-width: 100% !important;
 }
-
-.behavior-overview-stats .behavior-stat::after {
-    content: '';
-    position: absolute;
-    inset-inline-start: -25%;
-    top: -40%;
-    width: 72px;
-    height: 160%;
-    transform: rotate(20deg);
-    background: linear-gradient(180deg, rgba(255, 255, 255, 0.18), rgba(255, 255, 255, 0));
-    pointer-events: none;
-}
-
-.behavior-stat-total {
-    border-color: rgba(37, 99, 235, 0.35);
-    background: linear-gradient(140deg, rgba(37, 99, 235, 0.18), rgba(147, 197, 253, 0.12));
-}
-.behavior-stat-total .behavior-stat-top-bar { background: linear-gradient(90deg, #2563eb, #60a5fa); }
-.behavior-stat-total .behavior-stat-icon { color: #1d4ed8; border-color: rgba(59, 130, 246, 0.3); }
-.behavior-stat-total .behavior-stat-value { color: #1d4ed8; }
-
-.behavior-stat-positive {
-    border-color: rgba(5, 150, 105, 0.34);
-    background: linear-gradient(140deg, rgba(5, 150, 105, 0.16), rgba(110, 231, 183, 0.12));
-}
-.behavior-stat-positive .behavior-stat-top-bar { background: linear-gradient(90deg, #059669, #34d399); }
-.behavior-stat-positive .behavior-stat-icon { color: #047857; border-color: rgba(16, 185, 129, 0.3); }
-.behavior-stat-positive .behavior-stat-value { color: #047857; }
-
-.behavior-stat-negative {
-    border-color: rgba(220, 38, 38, 0.34);
-    background: linear-gradient(140deg, rgba(220, 38, 38, 0.16), rgba(252, 165, 165, 0.12));
-}
-.behavior-stat-negative .behavior-stat-top-bar { background: linear-gradient(90deg, #dc2626, #f87171); }
-.behavior-stat-negative .behavior-stat-icon { color: #b91c1c; border-color: rgba(239, 68, 68, 0.34); }
-.behavior-stat-negative .behavior-stat-value { color: #b91c1c; }
-
-.behavior-stat-employees {
-    border-color: rgba(79, 70, 229, 0.34);
-    background: linear-gradient(140deg, rgba(79, 70, 229, 0.16), rgba(165, 180, 252, 0.12));
-}
-.behavior-stat-employees .behavior-stat-top-bar { background: linear-gradient(90deg, #4f46e5, #818cf8); }
-.behavior-stat-employees .behavior-stat-icon { color: #4338ca; border-color: rgba(99, 102, 241, 0.3); }
-.behavior-stat-employees .behavior-stat-value { color: #4338ca; }
-
-.behavior-stat-contractors {
-    border-color: rgba(2, 132, 199, 0.35);
-    background: linear-gradient(140deg, rgba(2, 132, 199, 0.16), rgba(125, 211, 252, 0.12));
-}
-.behavior-stat-contractors .behavior-stat-top-bar { background: linear-gradient(90deg, #0284c7, #38bdf8); }
-.behavior-stat-contractors .behavior-stat-icon { color: #0369a1; border-color: rgba(14, 165, 233, 0.32); }
-.behavior-stat-contractors .behavior-stat-value { color: #0369a1; }
 
 .behavior-overview-stats .behavior-stat {
     flex: 1 1 0;
-    width: calc((100% - 3.6rem) / 5);
-    min-width: 0;
+    min-width: 11rem;
+    border-radius: 12px;
+    padding: 1.25rem 1.35rem;
+    box-shadow: 0 4px 14px rgba(15, 23, 42, 0.08);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
-.behavior-stat-label {
-    font-size: 0.82rem;
+.behavior-overview-stats .behavior-stat:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.12);
+}
+
+.behavior-stat-inner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+}
+
+.behavior-stat-caption {
+    margin-bottom: 0.35rem !important;
+    font-size: 0.875rem;
     font-weight: 600;
+    color: #374151;
 }
 
 .behavior-stat-value {
-    font-size: clamp(1.45rem, 1.4vw, 1.95rem);
-    font-weight: 800;
+    margin: 0;
+    font-size: 1.5rem;
+    font-weight: 700;
+    line-height: 1.2;
+    letter-spacing: 0.01em;
+}
+
+.behavior-stat-fa {
+    flex-shrink: 0;
+    font-size: 1.35rem;
+    opacity: 0.95;
+}
+
+/* إجمالي — وردي/أحمر مثل «إجمالي المخالفات» */
+.behavior-stat-total {
+    background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+    border: 1px solid #fca5a5;
+}
+
+.behavior-stat-total .behavior-stat-value {
+    color: #b91c1c;
+}
+
+.behavior-stat-total .behavior-stat-fa {
+    color: #dc2626;
+}
+
+/* موظفين — أزرق مثل «مخالفات الموظفين» */
+.behavior-stat-employees {
+    background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+    border: 1px solid #93c5fd;
+}
+
+.behavior-stat-employees .behavior-stat-value {
+    color: #1d4ed8;
+}
+
+.behavior-stat-employees .behavior-stat-fa {
+    color: #2563eb;
+}
+
+/* مقاولين — خوخي مثل «مخالفات المقاولين» */
+.behavior-stat-contractors {
+    background: linear-gradient(135deg, #ffedd5 0%, #fed7aa 100%);
+    border: 1px solid #fdba74;
+}
+
+.behavior-stat-contractors .behavior-stat-value {
+    color: #c2410c;
+}
+
+.behavior-stat-contractors .behavior-stat-fa {
+    color: #ea580c;
+}
+
+/* سلبي — أحمر أوضح من بطاقة الإجمالي */
+.behavior-stat-negative {
+    background: linear-gradient(135deg, #fecaca 0%, #fca5a5 100%);
+    border: 1px solid #f87171;
+}
+
+.behavior-stat-negative .behavior-stat-value {
+    color: #991b1b;
+}
+
+.behavior-stat-negative .behavior-stat-fa {
+    color: #b91c1c;
+}
+
+/* إيجابي — أخضر مثل «إجمالي القيمة المالية» في المخالفات */
+.behavior-stat-positive {
+    background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%);
+    border: 1px solid #86efac;
+}
+
+.behavior-stat-positive .behavior-stat-value {
+    color: #15803d;
+}
+
+.behavior-stat-positive .behavior-stat-fa {
+    color: #16a34a;
+}
+
+[data-theme="dark"] .behavior-overview-stats .behavior-stat {
+    box-shadow: 0 4px 18px rgba(0, 0, 0, 0.35);
+}
+
+[data-theme="dark"] .behavior-stat-caption {
+    color: rgba(226, 232, 240, 0.88);
 }
 
 .behavior-dynamic-filter-wrap {
@@ -262,5 +253,3 @@
 [data-theme="dark"] .behavior-modal[data-behavior-type="سلبي"] .modal-header {
     background: linear-gradient(135deg, rgba(239, 68, 68, 0.22), rgba(245, 158, 11, 0.14));
 }
-
-

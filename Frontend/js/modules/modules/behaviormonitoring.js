@@ -713,44 +713,49 @@ const BehaviorMonitoring = {
                         <div class="behavior-overview-stats-scroller mb-6">
                             <div class="behavior-overview-stats">
                                 <div class="behavior-stat behavior-stat-total">
-                                    <div class="behavior-stat-top-bar"></div>
-                                    <div class="behavior-stat-head">
-                                        <div class="behavior-stat-label">${Utils.escapeHTML(totalLabel)}</div>
-                                        <span class="behavior-stat-icon"><i class="fas fa-layer-group"></i></span>
+                                    <div class="behavior-stat-inner">
+                                        <div>
+                                            <p class="stat-label behavior-stat-caption">${Utils.escapeHTML(totalLabel)}</p>
+                                            <p class="behavior-stat-value">${isSkeleton ? '—' : total}</p>
+                                        </div>
+                                        <i class="fas fa-layer-group behavior-stat-fa" aria-hidden="true"></i>
                                     </div>
-                                    <div class="behavior-stat-value">${isSkeleton ? '—' : total}</div>
                                 </div>
                                 <div class="behavior-stat behavior-stat-employees">
-                                    <div class="behavior-stat-top-bar"></div>
-                                    <div class="behavior-stat-head">
-                                        <div class="behavior-stat-label">${Utils.escapeHTML(employeeLabel)}</div>
-                                        <span class="behavior-stat-icon"><i class="fas fa-user-tie"></i></span>
+                                    <div class="behavior-stat-inner">
+                                        <div>
+                                            <p class="stat-label behavior-stat-caption">${Utils.escapeHTML(employeeLabel)}</p>
+                                            <p class="behavior-stat-value">${isSkeleton ? '—' : employeeCount}</p>
+                                        </div>
+                                        <i class="fas fa-user-tie behavior-stat-fa" aria-hidden="true"></i>
                                     </div>
-                                    <div class="behavior-stat-value">${isSkeleton ? '—' : employeeCount}</div>
                                 </div>
                                 <div class="behavior-stat behavior-stat-contractors">
-                                    <div class="behavior-stat-top-bar"></div>
-                                    <div class="behavior-stat-head">
-                                        <div class="behavior-stat-label">${Utils.escapeHTML(contractorLabel)}</div>
-                                        <span class="behavior-stat-icon"><i class="fas fa-users-cog"></i></span>
+                                    <div class="behavior-stat-inner">
+                                        <div>
+                                            <p class="stat-label behavior-stat-caption">${Utils.escapeHTML(contractorLabel)}</p>
+                                            <p class="behavior-stat-value">${isSkeleton ? '—' : contractorCount}</p>
+                                        </div>
+                                        <i class="fas fa-users-cog behavior-stat-fa" aria-hidden="true"></i>
                                     </div>
-                                    <div class="behavior-stat-value">${isSkeleton ? '—' : contractorCount}</div>
                                 </div>
                                 <div class="behavior-stat behavior-stat-negative">
-                                    <div class="behavior-stat-top-bar"></div>
-                                    <div class="behavior-stat-head">
-                                        <div class="behavior-stat-label">${Utils.escapeHTML(negLabel)}</div>
-                                        <span class="behavior-stat-icon"><i class="fas fa-triangle-exclamation"></i></span>
+                                    <div class="behavior-stat-inner">
+                                        <div>
+                                            <p class="stat-label behavior-stat-caption">${Utils.escapeHTML(negLabel)}</p>
+                                            <p class="behavior-stat-value">${isSkeleton ? '—' : negatives}</p>
+                                        </div>
+                                        <i class="fas fa-triangle-exclamation behavior-stat-fa" aria-hidden="true"></i>
                                     </div>
-                                    <div class="behavior-stat-value text-red-700">${isSkeleton ? '—' : negatives}</div>
                                 </div>
                                 <div class="behavior-stat behavior-stat-positive">
-                                    <div class="behavior-stat-top-bar"></div>
-                                    <div class="behavior-stat-head">
-                                        <div class="behavior-stat-label">${Utils.escapeHTML(posLabel)}</div>
-                                        <span class="behavior-stat-icon"><i class="fas fa-circle-check"></i></span>
+                                    <div class="behavior-stat-inner">
+                                        <div>
+                                            <p class="stat-label behavior-stat-caption">${Utils.escapeHTML(posLabel)}</p>
+                                            <p class="behavior-stat-value">${isSkeleton ? '—' : positives}</p>
+                                        </div>
+                                        <i class="fas fa-circle-check behavior-stat-fa" aria-hidden="true"></i>
                                     </div>
-                                    <div class="behavior-stat-value text-green-700">${isSkeleton ? '—' : positives}</div>
                                 </div>
                             </div>
                         </div>
