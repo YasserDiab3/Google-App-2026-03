@@ -1624,7 +1624,7 @@ const Settings = {
                                         <th class="px-3 py-3 text-center font-bold w-12 border-b border-white/20">#</th>
                                         <th class="px-3 py-3 text-right font-bold min-w-[12rem] border-b border-white/20">نوع الصنف</th>
                                         <th class="px-3 py-3 text-center font-bold w-40 border-b border-white/20">الحد الأدنى (شهور)</th>
-                                        <th class="px-3 py-3 text-center font-bold w-28 border-b border-white/20">إزالة</th>
+                                        <th class="px-3 py-3 text-center font-bold w-52 border-b border-white/20">إجراءات</th>
                                     </tr>
                                 </thead>
                                 <tbody class="divide-y divide-slate-100">
@@ -1666,10 +1666,16 @@ const Settings = {
                             </div>
                         </td>
                         <td class="px-3 py-3 text-center align-middle">
-                            <button type="button" class="ppe-rule-remove inline-flex items-center justify-center gap-1.5 rounded-xl border border-red-300 bg-red-600 text-white hover:bg-red-700 text-sm font-extrabold px-4 py-2.5 min-h-[42px] shadow-sm hover:shadow-md transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-red-300"
-                                title="حذف هذا الصف">
-                                <i class="fas fa-trash-alt"></i> حذف
-                            </button>
+                            <div class="inline-flex items-center justify-center gap-2 flex-wrap">
+                                <button type="button" class="ppe-rule-edit inline-flex items-center justify-center gap-1.5 rounded-xl border border-blue-300 bg-blue-600 text-white hover:bg-blue-700 text-sm font-extrabold px-4 py-2.5 min-h-[42px] shadow-sm hover:shadow-md transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-300"
+                                    title="تعديل هذا الصف">
+                                    <i class="fas fa-pen"></i> تعديل
+                                </button>
+                                <button type="button" class="ppe-rule-remove inline-flex items-center justify-center gap-1.5 rounded-xl border border-red-300 bg-red-600 text-white hover:bg-red-700 text-sm font-extrabold px-4 py-2.5 min-h-[42px] shadow-sm hover:shadow-md transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-red-300"
+                                    title="حذف هذا الصف">
+                                    <i class="fas fa-trash-alt"></i> حذف
+                                </button>
+                            </div>
                         </td>
                     </tr>`;
                 }).join('');
@@ -1682,6 +1688,22 @@ const Settings = {
                     btn.addEventListener('click', () => {
                         ppeRulesState.rules.splice(idx, 1);
                         renderPpeRulesRows();
+                    });
+                });
+
+                ppeEligibilityRulesContainer.querySelectorAll('.ppe-rule-edit').forEach((btn, idx) => {
+                    btn.addEventListener('click', () => {
+                        const row = ppeEligibilityRulesContainer.querySelector(`.ppe-rule-row[data-index="${idx}"]`);
+                        if (!row) return;
+                        row.classList.add('bg-blue-100', 'ring-1', 'ring-blue-300');
+                        const itemSelect = row.querySelector('.ppe-rule-item');
+                        const monthsInput = row.querySelector('.ppe-rule-months');
+                        if (itemSelect) {
+                            itemSelect.focus();
+                        } else if (monthsInput) {
+                            monthsInput.focus();
+                        }
+                        setTimeout(() => row.classList.remove('bg-blue-100', 'ring-1', 'ring-blue-300'), 1200);
                     });
                 });
             };
