@@ -293,6 +293,8 @@ function doPost(e) {
             'deleteUser', 'resetUserPassword', 'fixUsersSheetHeaders',
             'fixMissingSheetHeaders', 'initializeSheets'
         ];
+        const isDeleteAction = (typeof action === 'string') && action.indexOf('delete') === 0;
+        const actorUserData = (postData && postData.userData) || (payload && payload.userData) || (payload && payload.user) || null;
         
         const isReadOnlyAction = readOnlyActions.includes(action);
         const isSensitiveAction = sensitiveActions.includes(action);
@@ -356,7 +358,7 @@ function doPost(e) {
 
         // ربط العمليات الإدارية الحرجة بهوية مستخدم واضحة (متوافق مع الإنتاج: لا يطبق إلا على قائمة حرجة)
         if (strictAdminActions.includes(action)) {
-            const actor = postData.userData || payload.userData || payload.user || null;
+            const actor = actorUserData;
             const hasActorIdentity = !!(actor && (actor.email || actor.id || actor.name));
             if (!hasActorIdentity) {
                 if (typeof logSecurityEvent === 'function') {
@@ -366,6 +368,37 @@ function doPost(e) {
                     success: false,
                     message: 'رفض أمني: بيانات المستخدم المنفذ مطلوبة لهذه العملية',
                     errorCode: 'ACTOR_IDENTITY_REQUIRED',
+                    action: action
+                })));
+            }
+        }
+
+        // فرض مركزي: أي عملية حذف لا تُسمح إلا لمدير النظام
+        if (isDeleteAction) {
+            const hasActorIdentity = !!(actorUserData && (actorUserData.email || actorUserData.id || actorUserData.name));
+            if (!hasActorIdentity) {
+                if (typeof logSecurityEvent === 'function') {
+                    logSecurityEvent('delete_missing_actor_identity', { action: action, severity: 'high' });
+                }
+                return setCorsHeaders(ContentService.createTextOutput(JSON.stringify({
+                    success: false,
+                    message: 'رفض أمني: بيانات المستخدم المنفذ مطلوبة لعمليات الحذف',
+                    errorCode: 'DELETE_ACTOR_IDENTITY_REQUIRED',
+                    action: action
+                })));
+            }
+            if (typeof checkAdminPermissions !== 'function' || !checkAdminPermissions(actorUserData)) {
+                if (typeof logSecurityEvent === 'function') {
+                    logSecurityEvent('delete_permission_denied', {
+                        action: action,
+                        actor: actorUserData.email || actorUserData.id || actorUserData.name || '',
+                        severity: 'high'
+                    });
+                }
+                return setCorsHeaders(ContentService.createTextOutput(JSON.stringify({
+                    success: false,
+                    message: 'ليس لديك صلاحية الحذف. الحذف متاح لمدير النظام فقط.',
+                    errorCode: 'DELETE_ADMIN_ONLY',
                     action: action
                 })));
             }
@@ -643,7 +676,7 @@ function doPost(e) {
                     result = resetUserPassword(payload.userId || payload.id || payload.email, payload.newPassword);
                     break;
                 case 'deleteUser':
-                    result = deleteUserFromSheet(payload.userId || payload.id);
+                    result = deleteUserFromSheet(payload.userId || payload.id, actorUserData);
                     break;
                 case 'fixUsersSheetHeaders':
                     result = fixUsersSheetHeaders(payload.spreadsheetId || postData.spreadsheetId || getSpreadsheetId());
@@ -728,7 +761,7 @@ function doPost(e) {
                     result = getAllPTWs(payload.filters || {});
                     break;
                 case 'deletePTW':
-                    result = deletePTW(payload.ptwId || payload.id);
+                    result = deletePTW(payload.ptwId || payload.id, actorUserData);
                     break;
                 case 'getPTWAlerts':
                     result = getPTWAlerts();
@@ -1042,7 +1075,7 @@ function doPost(e) {
                     result = getAllApprovedContractors(payload.filters || {});
                     break;
                 case 'deleteApprovedContractor':
-                    result = deleteApprovedContractor(payload.approvedContractorId || payload.id);
+                    result = deleteApprovedContractor(payload.approvedContractorId || payload.id, actorUserData);
                     break;
                 case 'addContractorEvaluation':
                     result = addContractorEvaluationToSheet(payload);
@@ -2485,6 +2518,15 @@ function doPost(e) {
                 hint: 'تحقق من Execution Logs في Google Apps Script لمزيد من التفاصيل'
             };
         }
+
+        // إشعار تدقيقي لعمليات الحذف الناجحة (داخل النظام + بريد إلكتروني)
+        if (isDeleteAction && result && result.success) {
+            try {
+                notifyAdminsOnDeleteAction_(action, payload, actorUserData, result);
+            } catch (notifyErr) {
+                Logger.log('Delete notify warning for action "' + action + '": ' + notifyErr.toString());
+            }
+        }
         
         // ============================================
         // 7. إرجاع النتيجة مع CORS headers
@@ -2517,6 +2559,64 @@ function doPost(e) {
             hint: actionHint || 'تحقق من Execution Logs في Google Apps Script لمزيد من التفاصيل'
         }));
         return setCorsHeaders(errorOutput);
+    }
+}
+
+function notifyAdminsOnDeleteAction_(action, payload, actorUserData, result) {
+    try {
+        const spreadsheetId = getSpreadsheetId();
+        if (!spreadsheetId) return;
+
+        const users = readFromSheet('Users', spreadsheetId);
+        if (!users || !Array.isArray(users) || users.length === 0) return;
+
+        const actorName = (actorUserData && (actorUserData.name || actorUserData.email || actorUserData.id)) || 'مستخدم غير معروف';
+        const actorId = (actorUserData && (actorUserData.email || actorUserData.id || actorUserData.name)) || '';
+        const relatedId = (payload && (payload.id || payload.userId || payload.ptwId || payload.incidentId || payload.recordId || payload.approvedContractorId)) || '';
+        const message = 'تم تنفيذ ' + action + ' بواسطة: ' + actorName + (relatedId ? (' | السجل: ' + relatedId) : '');
+
+        const admins = users.filter(function(u) {
+            if (!u || u.active === false) return false;
+            return (typeof checkAdminPermissions === 'function') ? checkAdminPermissions(u) : false;
+        });
+
+        admins.forEach(function(admin) {
+            const adminUserId = admin.email || admin.id;
+            if (!adminUserId) return;
+
+            if (typeof addNotification === 'function') {
+                addNotification({
+                    userId: adminUserId,
+                    type: 'delete_audit',
+                    priority: 'high',
+                    title: 'تنبيه حذف في النظام',
+                    message: message,
+                    relatedId: relatedId || action,
+                    relatedType: action
+                });
+            }
+
+            if (admin.email) {
+                try {
+                    MailApp.sendEmail({
+                        to: admin.email,
+                        subject: 'تنبيه حذف - نظام HSE',
+                        htmlBody: '<div dir="rtl" style="font-family:Arial,sans-serif;">'
+                            + '<h3 style="margin:0 0 8px;">تنبيه تدقيقي لعملية حذف</h3>'
+                            + '<p style="margin:0 0 6px;"><b>الإجراء:</b> ' + action + '</p>'
+                            + '<p style="margin:0 0 6px;"><b>المنفذ:</b> ' + actorName + '</p>'
+                            + '<p style="margin:0 0 6px;"><b>معرف المنفذ:</b> ' + actorId + '</p>'
+                            + '<p style="margin:0 0 6px;"><b>المعرّف المرتبط:</b> ' + (relatedId || '-') + '</p>'
+                            + '<p style="margin:0;"><b>النتيجة:</b> ' + (result.message || 'تم التنفيذ بنجاح') + '</p>'
+                            + '</div>'
+                    });
+                } catch (mailErr) {
+                    Logger.log('Delete audit email failed for ' + admin.email + ': ' + mailErr.toString());
+                }
+            }
+        });
+    } catch (error) {
+        Logger.log('Error in notifyAdminsOnDeleteAction_: ' + error.toString());
     }
 }
 

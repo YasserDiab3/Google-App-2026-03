@@ -158,8 +158,15 @@ function getAllPTWs(filters = {}) {
 /**
  * حذف تصريح عمل
  */
-function deletePTW(ptwId) {
+function deletePTW(ptwId, userData) {
     try {
+        if (typeof checkAdminPermissions !== 'function' || !checkAdminPermissions(userData || {})) {
+            return {
+                success: false,
+                message: 'ليس لديك صلاحية الحذف. الحذف متاح لمدير النظام فقط.',
+                errorCode: 'DELETE_ADMIN_ONLY'
+            };
+        }
         if (!ptwId) {
             return { success: false, message: 'معرف التصريح غير محدد' };
         }

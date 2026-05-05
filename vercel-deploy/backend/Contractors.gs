@@ -131,8 +131,15 @@ function migrateContractorsToApproved() {
  * حذف مقاول معتمد مباشرة
  * ✅ جديد: يدعم الحذف المتتالية
  */
-function deleteApprovedContractor(approvedContractorId) {
+function deleteApprovedContractor(approvedContractorId, userData) {
     try {
+        if (typeof checkAdminPermissions !== 'function' || !checkAdminPermissions(userData || {})) {
+            return {
+                success: false,
+                message: 'ليس لديك صلاحية الحذف. الحذف متاح لمدير النظام فقط.',
+                errorCode: 'DELETE_ADMIN_ONLY'
+            };
+        }
         if (!approvedContractorId) {
             return { success: false, message: 'معرف المقاول المعتمد غير محدد' };
         }

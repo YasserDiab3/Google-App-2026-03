@@ -381,8 +381,15 @@ function resetUserPassword(userId, newPassword) {
  * @param {string} userId - معرف المستخدم
  * @return {object} - نتيجة العملية
  */
-function deleteUserFromSheet(userId) {
+function deleteUserFromSheet(userId, userData) {
     try {
+        if (typeof checkAdminPermissions !== 'function' || !checkAdminPermissions(userData || {})) {
+            return {
+                success: false,
+                message: 'ليس لديك صلاحية حذف المستخدمين. الحذف متاح لمدير النظام فقط.',
+                errorCode: 'DELETE_ADMIN_ONLY'
+            };
+        }
         if (!userId) {
             return { success: false, message: 'معرف المستخدم غير محدد' };
         }
