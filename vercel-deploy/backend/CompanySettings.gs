@@ -13,6 +13,153 @@
 
 // اسم الجدول
 const COMPANY_SETTINGS_SHEET = 'Company_Settings';
+const PPE_ELIGIBILITY_RULES_SHEET = 'PPE_Eligibility_Rules';
+
+/**
+ * تهيئة جدول قواعد استحقاق مهمات الوقاية (تخزين جدولي وليس JSON).
+ */
+function initPPEEligibilityRulesTable_(spreadsheetId) {
+    const finalSpreadsheetId = spreadsheetId || getSpreadsheetId();
+    if (!finalSpreadsheetId) return { success: false, message: 'معرف Google Sheets غير محدد' };
+
+    const spreadsheet = SpreadsheetApp.openById(finalSpreadsheetId);
+    let sheet = spreadsheet.getSheetByName(PPE_ELIGIBILITY_RULES_SHEET);
+    if (!sheet) {
+        sheet = spreadsheet.insertSheet(PPE_ELIGIBILITY_RULES_SHEET);
+    }
+
+    const headerRow = [
+        'id',
+        'equipmentType',
+        'months',
+        'days',
+        'isActive',
+        'sortOrder',
+        'notes',
+        'createdAt',
+        'updatedAt',
+        'createdBy',
+        'updatedBy'
+    ];
+
+    const firstCell = sheet.getRange(1, 1).getValue();
+    if (!firstCell) {
+        sheet.getRange(1, 1, 1, headerRow.length).setValues([headerRow]);
+        const headerRange = sheet.getRange(1, 1, 1, headerRow.length);
+        headerRange.setFontWeight('bold');
+        headerRange.setBackground('#0F766E');
+        headerRange.setFontColor('#FFFFFF');
+    }
+    return { success: true, sheet: sheet };
+}
+
+function normalizePPEEligibilityRulesArray_(raw) {
+    let parsed = raw;
+    if (typeof parsed === 'string') {
+        parsed = parsed.trim() ? JSON.parse(parsed) : [];
+    }
+    if (!Array.isArray(parsed)) return [];
+
+    return parsed
+        .map(function (rule) {
+            if (!rule || typeof rule !== 'object') return null;
+            const itemName = String(rule.equipmentType || rule.itemName || '').trim();
+            if (!itemName) return null;
+            let months = parseInt(rule.months, 10);
+            let legacyDays = parseInt(rule.days, 10);
+            if (isNaN(months) || months < 0) months = 0;
+            if (isNaN(legacyDays) || legacyDays < 0) legacyDays = 0;
+            months = Math.min(120, months);
+            if (months < 1 && legacyDays > 0) {
+                months = Math.min(120, Math.max(1, Math.ceil(legacyDays / 30)));
+            }
+            if (months < 1) return null;
+            return { equipmentType: itemName, months: months, days: 0 };
+        })
+        .filter(function (r) { return !!r; });
+}
+
+function readPPEEligibilityRulesTable_(spreadsheetId) {
+    try {
+        const init = initPPEEligibilityRulesTable_(spreadsheetId);
+        if (!init.success || !init.sheet) return [];
+        const sheet = init.sheet;
+        const lastRow = sheet.getLastRow();
+        const lastCol = sheet.getLastColumn();
+        if (lastRow <= 1 || lastCol <= 0) return [];
+        const values = sheet.getRange(1, 1, lastRow, lastCol).getValues();
+        if (!values || values.length <= 1) return [];
+        const headers = values[0].map(function (h) { return String(h || '').trim(); });
+        const rows = values.slice(1);
+        const out = [];
+        rows.forEach(function (row) {
+            const obj = {};
+            headers.forEach(function (header, idx) {
+                if (!header) return;
+                obj[header] = row[idx];
+            });
+            const equipmentType = String(obj.equipmentType || '').trim();
+            let months = parseInt(obj.months, 10);
+            if (!equipmentType) return;
+            if (isNaN(months) || months < 1) return;
+            const isActiveRaw = String(obj.isActive == null ? '1' : obj.isActive).toLowerCase().trim();
+            const isActive = !(isActiveRaw === '0' || isActiveRaw === 'false' || isActiveRaw === 'no');
+            if (!isActive) return;
+            out.push({ equipmentType: equipmentType, months: Math.min(120, months), days: 0 });
+        });
+        return out;
+    } catch (e) {
+        Logger.log('readPPEEligibilityRulesTable_ error: ' + e.toString());
+        return [];
+    }
+}
+
+function savePPEEligibilityRulesTable_(rulesArray, spreadsheetId, userName, nowIso) {
+    const init = initPPEEligibilityRulesTable_(spreadsheetId);
+    if (!init.success || !init.sheet) return init;
+
+    const sheet = init.sheet;
+    const now = nowIso || new Date().toISOString();
+    const user = userName || 'System';
+
+    // التقاط createdAt/createdBy القديم لكل صنف إن وجد
+    const existingRows = readPPEEligibilityRulesTable_(spreadsheetId);
+    const createdMap = {};
+    existingRows.forEach(function (r) {
+        const key = String(r.equipmentType || '').trim().toLowerCase();
+        if (key && !createdMap[key]) {
+            createdMap[key] = { createdAt: now, createdBy: user };
+        }
+    });
+
+    // تنظيف الجدول والإبقاء على الرؤوس
+    sheet.getRange(2, 1, Math.max(0, sheet.getMaxRows() - 1), Math.max(1, sheet.getMaxColumns())).clearContent();
+
+    const rows = (Array.isArray(rulesArray) ? rulesArray : []).map(function (rule, idx) {
+        const equipmentType = String(rule.equipmentType || '').trim();
+        const months = Math.min(120, Math.max(1, parseInt(rule.months, 10) || 1));
+        const key = equipmentType.toLowerCase();
+        const existing = createdMap[key] || { createdAt: now, createdBy: user };
+        return [
+            'PPE-RULE-' + (idx + 1),
+            equipmentType,
+            months,
+            0,
+            1,
+            idx + 1,
+            '',
+            existing.createdAt,
+            now,
+            existing.createdBy,
+            user
+        ];
+    });
+
+    if (rows.length > 0) {
+        sheet.getRange(2, 1, rows.length, rows[0].length).setValues(rows);
+    }
+    return { success: true, count: rows.length };
+}
 
 /**
  * التحقق من صلاحيات المستخدم (مدير النظام فقط)
@@ -196,40 +343,21 @@ function saveCompanySettingsToSheet(settingsData) {
         const ppeDaysNum = (ppeDaysRaw !== undefined && ppeDaysRaw !== null && ppeDaysRaw !== '') ? parseInt(ppeDaysRaw, 10) : 0;
         const ppeEligibilityDays = (isNaN(ppeDaysNum) || ppeDaysNum < 0) ? 0 : Math.min(3650, ppeDaysNum);
 
-        // ppeEligibilityRules: قائمة قواعد لكل صنف (JSON string أو Array)
-        // يتم التحقق من البنية وتطبيع القيم
-        let ppeEligibilityRulesValue = '[]';
+        // ppeEligibilityRules: يتم حفظها فعلياً في جدول منفصل PPE_Eligibility_Rules
+        // ونُبقي هذا الحقل كسلسلة JSON توافقية للواجهة القديمة فقط.
+        let normalizedPpeRulesArray = [];
         if (settingsData.ppeEligibilityRules !== undefined && settingsData.ppeEligibilityRules !== null) {
             try {
-                let parsed = settingsData.ppeEligibilityRules;
-                if (typeof parsed === 'string') {
-                    parsed = parsed.trim() ? JSON.parse(parsed) : [];
-                }
-                if (Array.isArray(parsed)) {
-                    const normalized = parsed
-                        .map(function (rule) {
-                            if (!rule || typeof rule !== 'object') return null;
-                            const itemName = String(rule.equipmentType || rule.itemName || '').trim();
-                            if (!itemName) return null;
-                            let months = parseInt(rule.months, 10);
-                            let legacyDays = parseInt(rule.days, 10);
-                            if (isNaN(months) || months < 0) months = 0;
-                            if (isNaN(legacyDays) || legacyDays < 0) legacyDays = 0;
-                            months = Math.min(120, months);
-                            // ترحيل: قواعد كانت تعتمد الأيام فقط تُقرّب إلى شهر واحد على الأقل
-                            if (months < 1 && legacyDays > 0) {
-                                months = Math.min(120, Math.max(1, Math.ceil(legacyDays / 30)));
-                            }
-                            return { equipmentType: itemName, months: months, days: 0 };
-                        })
-                        .filter(function (r) { return r && r.months > 0; });
-                    ppeEligibilityRulesValue = JSON.stringify(normalized);
-                }
+                normalizedPpeRulesArray = normalizePPEEligibilityRulesArray_(settingsData.ppeEligibilityRules);
             } catch (e) {
                 Logger.log('Warning: Invalid ppeEligibilityRules payload, using empty list. ' + e.toString());
-                ppeEligibilityRulesValue = '[]';
+                normalizedPpeRulesArray = [];
             }
+        } else {
+            // عند عدم الإرسال من الواجهة الحالية، نحتفظ بالموجود في الجدول المستقل
+            normalizedPpeRulesArray = readPPEEligibilityRulesTable_(spreadsheetId);
         }
+        let ppeEligibilityRulesValue = JSON.stringify(normalizedPpeRulesArray);
 
         let settingsToSave = {
             id: 'COMPANY-SETTINGS-1',
@@ -284,8 +412,8 @@ function saveCompanySettingsToSheet(settingsData) {
                     settingsToSave.ppeEligibilityDays = Math.min(3650, existingDays);
                 }
             }
-            // الحفاظ على قائمة قواعد الاستحقاق إذا لم تُرسل من الواجهة الحالية
-            if (settingsData.ppeEligibilityRules === undefined && existing.ppeEligibilityRules != null && String(existing.ppeEligibilityRules).trim() !== '') {
+            // الحفاظ على قيمة JSON التوافقية إذا لم تُرسل من الواجهة الحالية وكان الجدول المستقل فارغاً
+            if (settingsData.ppeEligibilityRules === undefined && normalizedPpeRulesArray.length === 0 && existing.ppeEligibilityRules != null && String(existing.ppeEligibilityRules).trim() !== '') {
                 settingsToSave.ppeEligibilityRules = String(existing.ppeEligibilityRules);
             }
         } else {
@@ -313,6 +441,11 @@ function saveCompanySettingsToSheet(settingsData) {
         const result = saveToSheet(COMPANY_SETTINGS_SHEET, [settingsToSave], spreadsheetId);
         
         if (result.success) {
+            // حفظ قواعد الاستحقاق في جدول منفصل (أعمدة نصية/رقمية)
+            const rulesSave = savePPEEligibilityRulesTable_(normalizedPpeRulesArray, spreadsheetId, userName, now);
+            if (!rulesSave.success) {
+                return { success: false, message: rulesSave.message || 'فشل حفظ جدول قواعد استحقاق PPE' };
+            }
             Logger.log('Company settings saved successfully');
             // ✅ إصلاح: التحقق من أن الشعار تم حفظه بشكل صحيح
             if (hasLogo && settingsToSave.logo) {
@@ -355,6 +488,12 @@ function getCompanySettingsFromSheet() {
             const raw = settings[0];
             const defaults = getDefaultCompanySettings();
             const settingsData = Object.assign({}, defaults, raw);
+            const rulesFromTable = readPPEEligibilityRulesTable_(spreadsheetId);
+            if (rulesFromTable.length > 0) {
+                settingsData.ppeEligibilityRules = JSON.stringify(rulesFromTable);
+            } else if (!settingsData.ppeEligibilityRules) {
+                settingsData.ppeEligibilityRules = '[]';
+            }
             // ✅ إصلاح: التحقق من وجود الشعار في البيانات المحملة
             if (settingsData.logo && settingsData.logo.trim() !== '') {
                 Logger.log('Company settings loaded with logo (length: ' + settingsData.logo.length + ' characters)');
