@@ -403,13 +403,13 @@ const Settings = {
                                         </p>
                                     </div>
                                     <div class="flex flex-wrap items-center gap-2.5">
-                                        <button type="button" id="ppe-download-template-btn" class="shrink-0 inline-flex items-center justify-center gap-2 rounded-xl border border-teal-200 bg-white hover:bg-teal-50 text-teal-700 text-sm font-bold px-4 py-2.5 min-h-[42px] shadow-sm hover:shadow-md transition-all duration-200">
+                                        <button type="button" id="ppe-download-template-btn" class="shrink-0 inline-flex items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 text-sm font-bold px-4 py-2.5 min-h-[42px] shadow-sm hover:shadow-md transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-slate-300">
                                             <i class="fas fa-file-download"></i> تحميل قالب
                                         </button>
-                                        <button type="button" id="ppe-import-rules-btn" class="shrink-0 inline-flex items-center justify-center gap-2 rounded-xl border border-blue-200 bg-blue-50 hover:bg-blue-100 text-blue-700 text-sm font-bold px-4 py-2.5 min-h-[42px] shadow-sm hover:shadow-md transition-all duration-200">
+                                        <button type="button" id="ppe-import-rules-btn" class="shrink-0 inline-flex items-center justify-center gap-2 rounded-xl border border-blue-300 bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold px-4 py-2.5 min-h-[42px] shadow-sm hover:shadow-md transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-300">
                                             <i class="fas fa-file-import"></i> استيراد
                                         </button>
-                                        <button type="button" id="ppe-add-rule-btn" class="shrink-0 inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-teal-600 to-cyan-600 hover:from-teal-700 hover:to-cyan-700 text-white text-sm font-bold px-4 py-2.5 min-h-[42px] shadow-md hover:shadow-lg transition-all duration-200">
+                                        <button type="button" id="ppe-add-rule-btn" class="shrink-0 inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-teal-600 to-cyan-600 hover:from-teal-700 hover:to-cyan-700 text-white text-sm font-bold px-4 py-2.5 min-h-[42px] shadow-md hover:shadow-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-teal-300">
                                             <i class="fas fa-plus"></i> إضافة صف
                                         </button>
                                     </div>
@@ -1613,10 +1613,12 @@ const Settings = {
 
             const renderPpeRulesRows = () => {
                 if (!ppeEligibilityRulesContainer) return;
+                const prevScrollTop = ppeEligibilityRulesContainer.scrollTop || 0;
+                const prevPageY = window.scrollY || window.pageYOffset || 0;
                 const tableShell = (bodyRowsHtml) => `
-                    <div class="rounded-xl overflow-hidden border border-teal-200/70 shadow-md ring-1 ring-teal-900/5 bg-white">
+                    <div class="rounded-xl overflow-hidden border border-teal-200/70 shadow-md ring-1 ring-teal-900/5 bg-white min-h-[8rem]">
                         <div class="overflow-x-auto">
-                            <table class="w-full text-sm ppe-eligibility-rules-table">
+                            <table class="w-full text-sm ppe-eligibility-rules-table table-fixed">
                                 <thead>
                                     <tr class="bg-gradient-to-l from-teal-700 via-teal-600 to-cyan-600 text-white">
                                         <th class="px-3 py-3 text-center font-bold w-12 border-b border-white/20">#</th>
@@ -1642,6 +1644,8 @@ const Settings = {
                             </td>
                         </tr>
                     `);
+                    ppeEligibilityRulesContainer.scrollTop = prevScrollTop;
+                    window.scrollTo({ top: prevPageY });
                     return;
                 }
 
@@ -1671,6 +1675,8 @@ const Settings = {
                 }).join('');
 
                 ppeEligibilityRulesContainer.innerHTML = tableShell(rowsHtml);
+                ppeEligibilityRulesContainer.scrollTop = prevScrollTop;
+                window.scrollTo({ top: prevPageY });
 
                 ppeEligibilityRulesContainer.querySelectorAll('.ppe-rule-remove').forEach((btn, idx) => {
                     btn.addEventListener('click', () => {
@@ -1794,6 +1800,13 @@ const Settings = {
                 ppeAddRuleBtn.addEventListener('click', () => {
                     ppeRulesState.rules.push({ equipmentType: '', months: 12, days: 0 });
                     renderPpeRulesRows();
+                    // تثبيت تجربة الاستخدام: تركيز مباشر على آخر صف دون قفز بصري.
+                    const rows = Array.from(ppeEligibilityRulesContainer?.querySelectorAll('.ppe-rule-row') || []);
+                    const lastRow = rows[rows.length - 1];
+                    const lastItem = lastRow ? lastRow.querySelector('.ppe-rule-item') : null;
+                    if (lastItem && typeof lastItem.focus === 'function') {
+                        setTimeout(() => lastItem.focus(), 0);
+                    }
                 });
             }
             if (ppeDownloadTemplateBtn) {
@@ -1924,6 +1937,7 @@ const Settings = {
                     DataManager.saveCompanySettings();
                     
                     // حفظ في الخادم إذا كان متاحاً
+                    let backendSyncSucceeded = true;
                     if (AppState.googleConfig?.appsScript?.enabled && typeof GoogleIntegration !== 'undefined') {
                         try {
                             const userData = AppState.currentUser || {};
@@ -1955,11 +1969,16 @@ const Settings = {
                                 Utils.safeLog('✅ تم حفظ إعدادات الشركة في الخادم بنجاح');
                             } else {
                                 Utils.safeWarn('⚠️ فشل حفظ إعدادات الشركة في الخادم:', result?.message);
+                                backendSyncSucceeded = false;
+                                Notification.error('تعذر حفظ قواعد الاستحقاق في قاعدة البيانات: ' + (result?.message || 'خطأ غير معروف'));
                             }
                         } catch (error) {
                             Utils.safeWarn('⚠️ خطأ أثناء مزامنة إعدادات الشركة مع الخادم:', error);
+                            backendSyncSucceeded = false;
+                            Notification.error('تعذر حفظ قواعد الاستحقاق في قاعدة البيانات (اتصال/خادم).');
                         }
                     }
+                    if (!backendSyncSucceeded) return;
                     
                     if (typeof UI !== 'undefined' && typeof UI.updateCompanyBranding === 'function') {
                         UI.updateCompanyBranding();
