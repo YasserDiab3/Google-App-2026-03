@@ -601,6 +601,44 @@ const PTW = {
         }
     },
 
+    /**
+     * جلب صفوف PTWRegistry من الشيت دون تعديل الحالة المحلية (للتحقق بعد خطأ مزامنة قد يكون «شبحاً»).
+     */
+    async _fetchPtwRegistryRowsNoMutation() {
+        try {
+            if (!GoogleIntegration || typeof GoogleIntegration._isBackendRpcConfigured !== 'function' ||
+                !GoogleIntegration._isBackendRpcConfigured()) {
+                return null;
+            }
+            const spreadsheetId = AppState.googleConfig?.sheets?.spreadsheetId?.trim();
+            if (!spreadsheetId) return null;
+            const result = await GoogleIntegration.sendRequest({
+                action: 'readFromSheet',
+                data: { sheetName: 'PTWRegistry', spreadsheetId }
+            });
+            if (result && result.success && Array.isArray(result.data)) {
+                return result.data;
+            }
+        } catch (e) {
+            Utils.safeWarn('⚠️ تعذر جلب PTWRegistry للتحقق من المزامنة:', e);
+        }
+        return null;
+    },
+
+    _manualPermitRowExistsOnBackend(rows, entry, permitData) {
+        if (!Array.isArray(rows) || rows.length === 0) return false;
+        const paper = String(entry?.paperPermitNumber || permitData?.paperPermitNumber || '').trim();
+        const regPid = String(entry?.permitId || '').trim();
+        const listPid = String(permitData?.id || '').trim();
+        return rows.some((r) => {
+            if (!r || typeof r !== 'object') return false;
+            if (paper && String(r.paperPermitNumber || '').trim() === paper) return true;
+            if (regPid && String(r.permitId || '').trim() === regPid) return true;
+            if (listPid && String(r.permitId || '').trim() === listPid) return true;
+            return false;
+        });
+    },
+
     async syncManualPermitRecordsToBackend(entry, permitData, options = {}) {
         const { isNewRegistryEntry = false, isNewPermit = false } = options;
 
@@ -608,23 +646,50 @@ const PTW = {
             return true;
         }
 
+        const AUDIT_SYNC_KEYS = ['createdBy', 'createdById', 'updatedBy', 'updatedById'];
+
         const sendSheetRecord = async (sheetName, record, appendMode = false) => {
-            const payload = {
-                sheetName,
-                data: (typeof GoogleIntegration.prepareSheetPayload === 'function')
-                    ? GoogleIntegration.prepareSheetPayload(sheetName, record)
-                    : record
+            const spreadsheetId = AppState.googleConfig?.sheets?.spreadsheetId?.trim();
+
+            const buildPayload = (rec) => {
+                const payload = {
+                    sheetName,
+                    data: (typeof GoogleIntegration.prepareSheetPayload === 'function')
+                        ? GoogleIntegration.prepareSheetPayload(sheetName, rec)
+                        : rec
+                };
+                if (spreadsheetId) {
+                    payload.spreadsheetId = spreadsheetId;
+                }
+                return payload;
             };
 
-            const spreadsheetId = AppState.googleConfig?.sheets?.spreadsheetId?.trim();
-            if (spreadsheetId) {
-                payload.spreadsheetId = spreadsheetId;
-            }
-
-            return GoogleIntegration.sendToAppsScript(
+            const invoke = (rec) => GoogleIntegration.sendToAppsScript(
                 appendMode ? 'appendToSheet' : 'saveToSheet',
-                payload
+                buildPayload(rec)
             );
+
+            const stripAuditCopy = (rec) => {
+                const base = (typeof GoogleIntegration.prepareSheetPayload === 'function')
+                    ? GoogleIntegration.prepareSheetPayload(sheetName, rec)
+                    : { ...rec };
+                const slim = { ...base };
+                AUDIT_SYNC_KEYS.forEach((k) => { delete slim[k]; });
+                return slim;
+            };
+
+            try {
+                return await invoke(record);
+            } catch (err) {
+                const msg = String(err?.message || '');
+                const looksPayloadReject = /حقل غير مسموح|PAYLOAD_VALIDATION_FAILED/i.test(msg);
+                if (!looksPayloadReject) throw err;
+                try {
+                    return await invoke(stripAuditCopy(record));
+                } catch (_retryErr) {
+                    throw err;
+                }
+            }
         };
 
         try {
@@ -8805,9 +8870,26 @@ const PTW = {
                         isNewPermit: isNewPermit
                     });
                 })
-                .catch((syncError) => {
+                .catch(async (syncError) => {
                     Utils.safeError('خطأ في مزامنة التصريح اليدوي:', syncError);
                     const msg = syncError && syncError.message ? String(syncError.message) : '';
+                    // إن كان الخادم يعيد خطأ تحقق قديماً بينما السجل موجود فعلاً في الشيت، لا نُضلّل المستخدم بتحذير فشل.
+                    if (/حقل غير مسموح|PAYLOAD_VALIDATION_FAILED/i.test(msg) && entry && permitData) {
+                        try {
+                            const rows = await this._fetchPtwRegistryRowsNoMutation();
+                            if (this._manualPermitRowExistsOnBackend(rows, entry, permitData)) {
+                                Notification.success(
+                                    this._t(
+                                        'module.ptw.notify.manualCloudOkVerified',
+                                        'تم حفظ التصريح ومزامنته مع السحابة بنجاح.'
+                                    )
+                                );
+                                return;
+                            }
+                        } catch (verifyErr) {
+                            Utils.safeWarn('⚠️ تعذر التحقق من وجود السجل في PTWRegistry:', verifyErr);
+                        }
+                    }
                     Notification.warning(
                         'تم الحفظ محلياً. فشلت مزامنة السحابة (تحقق من ورقة PTW و PTWRegistry): ' +
                         (msg || 'خطأ غير معروف') +
