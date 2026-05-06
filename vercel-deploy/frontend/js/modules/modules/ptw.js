@@ -800,6 +800,16 @@ const PTW = {
         }
     },
 
+    getCurrentUserActor() {
+        const user = AppState?.currentUser || {};
+        return {
+            id: String(user.id || '').trim(),
+            name: String(user.name || user.displayName || user.email || 'مستخدم').trim(),
+            email: String(user.email || '').trim(),
+            role: String(user.role || '').trim()
+        };
+    },
+
     isUsableDurationText(value) {
         const text = String(value || '').trim();
         if (!text) return false;
@@ -8524,6 +8534,7 @@ const PTW = {
             const sequentialNumber = entryId
                 ? formData.sequentialNumber
                 : (displayedSeq > 0 ? displayedSeq : this.generateRegistrySequentialNumber());
+            const currentActor = this.getCurrentUserActor();
 
             // تخزين الموقع الأساسي فقط بدون دمج الموقع الفرعي (تطبيع النموذج)
             const normalizedLocation = String(formData.location || '').trim();
@@ -8601,6 +8612,10 @@ const PTW = {
                 skipApprovalFlow: true,
                 approvalCircuitOwnerId: '__manual__',
                 approvalCircuitName: 'Manual Entry',
+                createdBy: currentActor.name,
+                createdById: currentActor.id,
+                updatedBy: currentActor.name,
+                updatedById: currentActor.id,
                 updatedAt: new Date().toISOString()
             };
 
@@ -8619,6 +8634,8 @@ const PTW = {
                     ...fullEntryData,
                     id: existingEntry.id,
                     permitId: existingEntry.permitId || this.generateTemporaryId('PTW'),
+                    createdBy: existingEntry.createdBy || fullEntryData.createdBy || currentActor.name,
+                    createdById: existingEntry.createdById || fullEntryData.createdById || currentActor.id,
                     createdAt: existingEntry.createdAt
                 };
             } else {
@@ -8672,6 +8689,10 @@ const PTW = {
                 updatedAt: entry.updatedAt,
                 skipApprovalFlow: true, // تخطي دائرة الاعتمادات
                 isManualEntry: true, // علامة التصريح اليدوي
+                createdBy: entry.createdBy || this.getCurrentUserActor().name,
+                createdById: entry.createdById || this.getCurrentUserActor().id,
+                updatedBy: entry.updatedBy || this.getCurrentUserActor().name,
+                updatedById: entry.updatedById || this.getCurrentUserActor().id,
                 // حفظ جميع بيانات النموذج اليدوي للتعديل لاحقاً
                 teamMembers: entry.teamMembers || [],
                 teamMembersText: entry.teamMembersText || '',
@@ -8767,34 +8788,32 @@ const PTW = {
 
             const isNewEntry = !entryId;
             const isNewPermit = existingPermitIndex === -1;
+            Notification.success(
+                entryId
+                    ? 'تم تحديث التصريح بنجاح'
+                    : 'تم تسجيل التصريح بنجاح'
+            );
 
-            if (typeof Notification !== 'undefined' && Notification.info) {
-                Notification.info(this._t('module.ptw.notify.syncPtw', 'جاري المزامنة مع PTWRegistry و PTW…'));
-            }
-
-            try {
-                await this.saveRegistryData({ skipSync: true });
-                if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
-                    await Promise.resolve(window.DataManager.save());
-                }
-                await this.syncManualPermitRecordsToBackend(entry, permitData, {
-                    isNewRegistryEntry: isNewEntry,
-                    isNewPermit: isNewPermit
+            Promise.resolve()
+                .then(async () => {
+                    await this.saveRegistryData({ skipSync: true });
+                    if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
+                        await Promise.resolve(window.DataManager.save());
+                    }
+                    await this.syncManualPermitRecordsToBackend(entry, permitData, {
+                        isNewRegistryEntry: isNewEntry,
+                        isNewPermit: isNewPermit
+                    });
+                })
+                .catch((syncError) => {
+                    Utils.safeError('خطأ في مزامنة التصريح اليدوي:', syncError);
+                    const msg = syncError && syncError.message ? String(syncError.message) : '';
+                    Notification.warning(
+                        'تم الحفظ محلياً. فشلت مزامنة السحابة (تحقق من ورقة PTW و PTWRegistry): ' +
+                        (msg || 'خطأ غير معروف') +
+                        ' — يمكن إعادة المحاولة من المزامنة لاحقاً.'
+                    );
                 });
-                Notification.success(
-                    entryId
-                        ? 'تم تحديث التصريح بنجاح وتمت مزامنته مع السحابة (PTWRegistry + PTW)'
-                        : 'تم إضافة التصريح اليدوي بنجاح وتمت مزامنته مع السحابة (PTWRegistry + PTW)'
-                );
-            } catch (syncError) {
-                Utils.safeError('خطأ في مزامنة التصريح اليدوي:', syncError);
-                const msg = syncError && syncError.message ? String(syncError.message) : '';
-                Notification.warning(
-                    'تم الحفظ محلياً. فشلت مزامنة السحابة (تحقق من ورقة PTW و PTWRegistry): ' +
-                    (msg || 'خطأ غير معروف') +
-                    ' — يمكن إعادة المحاولة من المزامنة لاحقاً.'
-                );
-            }
         } catch (error) {
             Utils.safeError('خطأ في حفظ التصريح اليدوي:', error);
             Notification.error(this._t('module.ptw.notify.savePermitErr', 'حدث خطأ أثناء حفظ التصريح: ') + (error.message || this._t('module.ptw.notify.unknownError', 'خطأ غير معروف')));

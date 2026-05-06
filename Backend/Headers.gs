@@ -17,7 +17,7 @@ function getDefaultHeaders(sheetName) {
         // ✅ سجل الحوادث (الإدخال اليدوي) - Registry
         'IncidentsRegistry': ['id', 'sequentialNumber', 'incidentId', 'incidentType', 'factory', 'incidentLocation', 'incidentDate', 'incidentDay', 'incidentTime', 'shift', 'employeeAffiliation', 'employeeCode', 'employeeName', 'employeeJob', 'employeeDepartment', 'incidentDetails', 'incidentDetailsBrief', 'injuryDescription', 'injuredPart', 'losses', 'equipmentCause', 'actionsTaken', 'leaveStartDate', 'returnToWorkDate', 'totalLeaveDays', 'treatingDoctor', 'status', 'createdAt', 'updatedAt'],
         'NearMiss': ['id', 'type', 'date', 'observerName', 'phone', 'location', 'department', 'description', 'correctiveProposed', 'correctiveDescription', 'attachments', 'status', 'reportedBy', 'createdAt', 'updatedAt'],
-        'PTW': ['id', 'workType', 'workDescription', 'location', 'department', 'startDate', 'endDate', 'responsible', 'status', 'approvals', 'requiredPPE', 'riskAssessment', 'riskNotes', 'approvalCircuitOwnerId', 'approvalCircuitName', 'skipApprovalFlow', 'createdAt', 'updatedAt'],
+        'PTW': ['id', 'workType', 'workDescription', 'location', 'department', 'startDate', 'endDate', 'responsible', 'status', 'approvals', 'requiredPPE', 'riskAssessment', 'riskNotes', 'approvalCircuitOwnerId', 'approvalCircuitName', 'skipApprovalFlow', 'createdBy', 'createdById', 'updatedBy', 'updatedById', 'createdAt', 'updatedAt'],
         // ✅ سجل حصر التصاريح (الإدخال اليدوي) - PTW Registry (جميع القيم تخزن كنص أو رقم فقط، لا JSON)
         'PTWRegistry': [
             'id', 'sequentialNumber', 'permitId', 'openDate', 'permitType', 'permitTypeDisplay', 'requestingParty', 'locationId', 'location', 'sublocationId', 'sublocation',
@@ -28,7 +28,7 @@ function getDefaultHeaders(sheetName) {
             'preStartChecklist', 'lotoApplied', 'governmentPermits', 'riskAssessmentAttached', 'gasTesting', 'mocRequest',
             'ppeNotes', 'requiredPPE', 'riskLikelihood', 'riskConsequence', 'riskScore', 'riskLevel', 'riskNotes',
             'manualApprovalsText', 'manualClosureApprovalsText', 'closureDate', 'closureReason', 'isManualEntry',
-            'approvalCircuitOwnerId', 'approvalCircuitName', 'skipApprovalFlow',
+            'approvalCircuitOwnerId', 'approvalCircuitName', 'skipApprovalFlow', 'createdBy', 'createdById', 'updatedBy', 'updatedById',
             'createdAt', 'updatedAt'
         ],
         // Hybrid ID migration map for PTWRegistry IDs

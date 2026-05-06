@@ -69,7 +69,8 @@ const GoogleIntegration = {
             const allowedFields = [
                 'id', 'workType', 'workDescription', 'location', 'department', 'startDate', 'endDate',
                 'responsible', 'status', 'approvals', 'requiredPPE', 'riskAssessment', 'riskNotes',
-                'approvalCircuitOwnerId', 'approvalCircuitName', 'skipApprovalFlow', 'createdAt', 'updatedAt'
+                'approvalCircuitOwnerId', 'approvalCircuitName', 'skipApprovalFlow',
+                'createdBy', 'createdById', 'updatedBy', 'updatedById', 'createdAt', 'updatedAt'
             ];
             const sanitized = {};
             allowedFields.forEach((field) => {
@@ -95,7 +96,7 @@ const GoogleIntegration = {
                 'requiredPPE', 'riskLikelihood', 'riskConsequence', 'riskScore', 'riskLevel',
                 'riskNotes', 'manualApprovalsText', 'manualClosureApprovalsText', 'closureDate',
                 'closureReason', 'isManualEntry', 'approvalCircuitOwnerId', 'approvalCircuitName',
-                'skipApprovalFlow', 'createdAt', 'updatedAt'
+                'skipApprovalFlow', 'createdBy', 'createdById', 'updatedBy', 'updatedById', 'createdAt', 'updatedAt'
             ];
             const sanitized = {};
             allowedFields.forEach((field) => {
