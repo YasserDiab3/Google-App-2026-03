@@ -383,6 +383,58 @@ function checkRateLimit(limitKey, limit, windowSec) {
 }
 
 /**
+ * يقلّص كائن/صفوف البيانات إلى حقول الرؤوس الافتراضية للورقة فقط، مع مطابقة غير حسّاسة لحالة الأحرف.
+ * يزيل الحقول غير المعرفة في getDefaultHeaders (مثل locationEntries أو أسماء legacy) فيتجنّب فشل المزامنة
+ * عندما تكون نسخة Web App قديمة جزئياً أو يحتوي الطابور المحلي على مفاتيح زائدة.
+ */
+function clampPayloadToDefaultHeaders(sheetName, data) {
+    var safeSheetName = String(sheetName || '').trim();
+    if (!safeSheetName || data === null || data === undefined) {
+        return data;
+    }
+    var headers = typeof getDefaultHeaders === 'function' ? (getDefaultHeaders(safeSheetName) || []) : [];
+    if (!headers.length) {
+        return data;
+    }
+    var canonByLower = {};
+    for (var hi = 0; hi < headers.length; hi++) {
+        var hn = String(headers[hi]);
+        canonByLower[hn.toLowerCase()] = hn;
+    }
+    function clampRow(row) {
+        if (!row || typeof row !== 'object' || Array.isArray(row)) {
+            return row;
+        }
+        var out = {};
+        var keys = Object.keys(row);
+        var dropped = [];
+        for (var ki = 0; ki < keys.length; ki++) {
+            var key = keys[ki];
+            var lk = String(key).replace(/^\uFEFF/, '').trim().toLowerCase();
+            var canon = canonByLower[lk];
+            if (canon) {
+                out[canon] = row[key];
+            } else {
+                dropped.push(String(key));
+            }
+        }
+        if (dropped.length && (safeSheetName === 'PTWRegistry' || safeSheetName === 'PTW')) {
+            Logger.log('clampPayloadToDefaultHeaders dropped keys sheet=' + safeSheetName + ': ' +
+                dropped.slice(0, 20).join(', ') + (dropped.length > 20 ? ' ...' : ''));
+        }
+        return out;
+    }
+    if (Array.isArray(data)) {
+        var arrOut = [];
+        for (var ai = 0; ai < data.length; ai++) {
+            arrOut.push(clampRow(data[ai]));
+        }
+        return arrOut;
+    }
+    return clampRow(data);
+}
+
+/**
  * فحص عام سريع للبيانات الواردة قبل الكتابة
  */
 function validatePayloadForSheetWrite(sheetName, data) {

@@ -28,7 +28,7 @@
  */
 function doPost(e) {
     // بصمة نسخة واضحة لتأكيد أن الطلب وصل للنسخة الصحيحة
-    var BUILD_TAG = 'HSE_WEBAPP_BUILD_2026-01-29_v115';
+    var BUILD_TAG = 'HSE_WEBAPP_BUILD_2026-05-07_payload_clamp_v116';
     Logger.log('🚀 [DOPOST] ===== doPost تم استدعاؤها =====');
     Logger.log('🏷️ [DOPOST] BUILD_TAG: ' + BUILD_TAG);
     Logger.log('🚀 [DOPOST] الوقت: ' + new Date().toISOString());
@@ -415,6 +415,9 @@ function doPost(e) {
                 // العمليات الأساسية (Google Sheets)
                 // ============================================
                 case 'saveToSheet':
+                    if (payload && payload.sheetName != null && payload.data !== undefined && typeof clampPayloadToDefaultHeaders === 'function') {
+                        payload.data = clampPayloadToDefaultHeaders(payload.sheetName, payload.data);
+                    }
                     if (typeof validatePayloadForSheetWrite === 'function') {
                         const vr = validatePayloadForSheetWrite(payload.sheetName, payload.data);
                         if (!vr.valid) {
@@ -454,6 +457,9 @@ function doPost(e) {
                     break;
                     
                 case 'appendToSheet':
+                    if (payload && payload.sheetName != null && payload.data !== undefined && typeof clampPayloadToDefaultHeaders === 'function') {
+                        payload.data = clampPayloadToDefaultHeaders(payload.sheetName, payload.data);
+                    }
                     if (typeof validatePayloadForSheetWrite === 'function') {
                         const vr = validatePayloadForSheetWrite(payload.sheetName, payload.data);
                         if (!vr.valid) {
