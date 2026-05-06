@@ -64,6 +64,32 @@ const GoogleIntegration = {
     },
 
     prepareSheetPayload(sheetName, data) {
+        const sanitizePTW = (row) => {
+            if (!row || typeof row !== 'object' || Array.isArray(row)) return row;
+            const allowedFields = [
+                'id', 'workType', 'workDescription', 'location', 'department', 'startDate', 'endDate',
+                'responsible', 'status', 'approvals', 'requiredPPE', 'riskAssessment', 'riskNotes',
+                'approvalCircuitOwnerId', 'approvalCircuitName', 'skipApprovalFlow', 'createdAt', 'updatedAt'
+            ];
+            const sanitized = {};
+            allowedFields.forEach((field) => {
+                if (Object.prototype.hasOwnProperty.call(row, field)) {
+                    sanitized[field] = row[field];
+                }
+            });
+            return sanitized;
+        };
+
+        if (sheetName === 'PTW') {
+            if (Array.isArray(data)) {
+                return data.map((item) => sanitizePTW(item));
+            }
+            if (data && typeof data === 'object') {
+                return sanitizePTW(data);
+            }
+            return data;
+        }
+
         if (sheetName !== 'Users') {
             return data;
         }

@@ -1053,6 +1053,35 @@ const PTW = {
         return maxSeq + 1;
     },
 
+    getPermitDisplayNumber(record = null) {
+        if (!record || typeof record !== 'object') return '—';
+        const normalizeNumeric = (value) => {
+            if (value == null || String(value).trim() === '') return '';
+            const parsed = parseInt(String(value).replace(/^0+(?=\d)/, ''), 10);
+            return Number.isNaN(parsed) || parsed <= 0 ? '' : String(parsed);
+        };
+        const extractByPrefix = (value, prefix) => {
+            const m = String(value || '').match(new RegExp(`^${prefix}_(\\d+)$`, 'i'));
+            if (!m) return '';
+            const parsed = parseInt(m[1], 10);
+            return Number.isNaN(parsed) || parsed <= 0 ? '' : String(parsed);
+        };
+
+        const seq = normalizeNumeric(record.sequentialNumber);
+        if (seq) return seq;
+
+        const permitIdNum = extractByPrefix(record.permitId, 'PTW');
+        if (permitIdNum) return permitIdNum;
+
+        const idNum = extractByPrefix(record.id, 'PTW');
+        if (idNum) return idNum;
+
+        const paperPermit = String(record.paperPermitNumber || '').trim();
+        if (paperPermit) return paperPermit;
+
+        return '—';
+    },
+
     /**
      * إنشاء سجل جديد من تصريح
      */
@@ -2399,10 +2428,7 @@ const PTW = {
                 : (this.isUsableDurationText(entry.totalTime) ? entry.totalTime : t('module.ptw.common.notSpecified', 'غير محدد'));
             const statusText = this.statusLabel(entry.status);
 
-            const seqRaw = entry.sequentialNumber;
-            const seqDisplay = (seqRaw != null && String(seqRaw).trim() !== '' && !Number.isNaN(parseInt(String(seqRaw), 10)))
-                ? String(parseInt(String(seqRaw).replace(/^0+(?=\d)/, ''), 10))
-                : (String(entry.paperPermitNumber || '').trim() ? `(${String(entry.paperPermitNumber).trim()})` : '—');
+            const seqDisplay = this.getPermitDisplayNumber(entry);
 
             tableHTML += `
                 <tr data-registry-id="${entry.id}">
@@ -5132,7 +5158,7 @@ const PTW = {
                     <div style="flex: 1;">
                         <h2 class="modal-title flex items-center gap-2" style="color: #000000; font-size: 1.5rem; font-weight: 700; margin: 0;">
                             <i class="fas fa-file-alt" style="color: #2563eb;"></i>
-                            تفاصيل التصريح #${registryEntry?.sequentialNumber || item.id?.substring(0, 8)}
+                            تفاصيل التصريح #${this.getPermitDisplayNumber(registryEntry || item)}
                         </h2>
                         <p class="text-sm mt-2" style="color: #6b7280;">
                             <i class="fas fa-calendar-alt ml-1"></i>
@@ -5294,7 +5320,7 @@ const PTW = {
                     <div style="flex: 1;">
                         <h2 class="modal-title flex items-center gap-2" style="color: #000000; font-size: 1.5rem; font-weight: 700; margin: 0;">
                             <i class="fas fa-file-alt" style="color: #2563eb;"></i>
-                            تفاصيل التصريح اليدوي #${entry.sequentialNumber}
+                            تفاصيل التصريح اليدوي #${this.getPermitDisplayNumber(entry)}
                         </h2>
                         <p class="text-sm mt-2" style="color: #6b7280;">
                             <i class="fas fa-calendar-alt ml-1"></i>
@@ -6289,7 +6315,7 @@ const PTW = {
         const htmlContent = typeof FormHeader !== 'undefined' && typeof FormHeader.generatePDFHTML === 'function'
             ? FormHeader.generatePDFHTML(
                 formCode,
-                `تصريح عمل #${registryEntry?.sequentialNumber || item.id?.substring(0, 8)}`,
+                `تصريح عمل #${this.getPermitDisplayNumber(registryEntry || item)}`,
                 content,
                 false,
                 false, // إزالة QR code
@@ -6297,7 +6323,7 @@ const PTW = {
                     version: item.version || '1.0',
                     releaseDate: item.startDate || item.createdAt,
                     revisionDate: item.updatedAt || item.endDate || item.startDate,
-                    'رقم التصريح': registryEntry?.sequentialNumber || item.id?.substring(0, 8)
+                    'رقم التصريح': this.getPermitDisplayNumber(registryEntry || item)
                 },
                 item.createdAt || item.startDate,
                 item.updatedAt || item.endDate || item.createdAt
@@ -11868,17 +11894,12 @@ const PTW = {
 
                     AppState.appData.ptw[index] = formData;
 
-                    // كشف إغلاق التصريح
-                    if (wasOpen && nowClosed) {
-                        Notification.success(this._t('module.ptw.notify.closeOk', 'تم إغلاق التصريح بنجاح'));
-                    } else {
-                        Notification.success(this._t('module.ptw.notify.permUpdateOk', 'تم تحديث التصريح بنجاح'));
-                    }
+                    // كشف إغلاق التصريح (يستخدم لاحقاً في رسالة ما بعد المزامنة)
+                    formData._wasClosedTransition = !!(wasOpen && nowClosed);
                 }
             } else {
                 AppState.appData.ptw.push(formData);
                 this.notifyPermitCreated(formData);
-                Notification.success(this._t('module.ptw.notify.permAddOk', 'تم إضافة التصريح بنجاح'));
             }
 
             // التأكد من حفظ بيانات السجل في AppState قبل حفظ DataManager
@@ -11898,6 +11919,7 @@ const PTW = {
                 submitBtn.disabled = false;
                 submitBtn.innerHTML = originalText;
             }
+            Notification.info(this._t('module.ptw.notify.localSavedSyncing', 'تم حفظ البيانات محلياً، جارٍ مزامنتها مع السحابة...'));
 
             // 4. معالجة المهام الخلفية في الخلفية (بدون انتظار)
             // استخدام Promise.allSettled لمنع فشل أحد المهام من إيقاف الأخرى
@@ -11909,32 +11931,47 @@ const PTW = {
                     } else {
                         Utils.safeWarn('⚠️ DataManager غير متاح - لم يتم حفظ البيانات');
                     }
-                }).catch(error => {
-                    Utils.safeError('خطأ في حفظ البيانات محلياً:', error);
-                    return { success: false, error };
                 }),
                 // تحديث السجل
                 this.currentEditId
-                    ? this.updateRegistryEntry(formData).catch(error => {
-                        Utils.safeError('خطأ في تحديث السجل:', error);
-                        return { success: false, error };
-                    })
-                    : this.addToRegistry(formData).catch(error => {
-                        Utils.safeError('خطأ في إضافة السجل:', error);
-                        return { success: false, error };
-                    }),
+                    ? this.updateRegistryEntry(formData)
+                    : this.addToRegistry(formData),
                 // حفظ في Google Sheets
-                GoogleIntegration.autoSave('PTW', AppState.appData.ptw).catch(error => {
-                    Utils.safeError('خطأ في حفظ Google Sheets:', error);
-                    return { success: false, error };
-                })
+                GoogleIntegration.autoSave('PTW', AppState.appData.ptw)
             ]).then((results) => {
-                // التحقق من نجاح المهام الخلفية
-                const allSucceeded = results.every(r => r.status === 'fulfilled');
-                if (!allSucceeded) {
-                    Utils.safeWarn('⚠️ بعض المهام الخلفية فشلت، لكن البيانات تم حفظها محلياً');
+                const localSaveFailed = results[0]?.status === 'rejected';
+                const registrySaveFailed = results[1]?.status === 'rejected';
+                const cloudTask = results[2];
+                const cloudResult = cloudTask?.status === 'fulfilled' ? cloudTask.value : null;
+                const cloudSuccess = !!(cloudResult && cloudResult.success === true);
+
+                if (localSaveFailed) {
+                    Utils.safeError('خطأ في حفظ البيانات محلياً:', results[0]?.reason);
                 }
-                
+                if (registrySaveFailed) {
+                    Utils.safeError('خطأ في تحديث سجل التصاريح:', results[1]?.reason);
+                }
+
+                if (cloudSuccess) {
+                    if (this.currentEditId) {
+                        if (formData._wasClosedTransition) {
+                            Notification.success(this._t('module.ptw.notify.closeOk', 'تم إغلاق التصريح بنجاح'));
+                        } else {
+                            Notification.success(this._t('module.ptw.notify.permUpdateOk', 'تم تحديث التصريح بنجاح'));
+                        }
+                    } else {
+                        Notification.success(this._t('module.ptw.notify.permAddOk', 'تم إضافة التصريح بنجاح'));
+                    }
+                } else {
+                    const fallbackError = cloudTask?.status === 'rejected'
+                        ? (cloudTask.reason?.message || String(cloudTask.reason || ''))
+                        : (cloudResult?.message || '');
+                    Notification.warning(
+                        this._t('module.ptw.notify.cloudSyncFailed', 'تم الحفظ محلياً، لكن فشلت مزامنة السحابة: ') +
+                        (fallbackError || this._t('module.ptw.notify.unknownError', 'خطأ غير معروف'))
+                    );
+                }
+
                 this.triggerNotificationsUpdate();
                 this.updateKPIs(); // تحديث KPIs بعد الحفظ
 
