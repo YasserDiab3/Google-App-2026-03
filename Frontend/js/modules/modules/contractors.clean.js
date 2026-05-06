@@ -11560,6 +11560,53 @@ const Contractors = {
             if (score >= 60) return 'text-yellow-600 bg-yellow-100';
             return 'text-red-600 bg-red-100';
         };
+        const violationTypeOptions = Array.from(
+            new Set(
+                (violations || [])
+                    .map(v => String(v?.violationType || '').trim())
+                    .filter(Boolean)
+            )
+        );
+        const severityOptions = Array.from(
+            new Set(
+                (violations || [])
+                    .map(v => String(v?.severity || '').trim())
+                    .filter(Boolean)
+            )
+        );
+        const renderViolationRows = (records) => {
+            if (!Array.isArray(records) || records.length === 0) {
+                return `
+                    <tr>
+                        <td colspan="4" class="px-6 py-6 text-center text-gray-500">لا توجد نتائج مطابقة للفلاتر</td>
+                    </tr>
+                `;
+            }
+            return records.map((v, index) => {
+                const severity = (v.severity || '').toString().trim();
+                const status = (v.status || '').toString().trim();
+                const severityClass = severity === 'عالية' || severity === 'high' || severity === 'حرجة'
+                    ? 'badge-danger'
+                    : severity === 'متوسطة' || severity === 'medium'
+                    ? 'badge-warning'
+                    : 'badge-info';
+                const statusClass = status === 'محلول' || status === 'resolved' || status === 'تم الحل'
+                    ? 'badge-success'
+                    : 'badge-warning';
+                return `
+                    <tr class="hover:bg-gray-50 transition-colors ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}">
+                        <td class="px-6 py-4 text-gray-700">${v.violationDate ? Utils.formatDate(v.violationDate) : '-'}</td>
+                        <td class="px-6 py-4 text-gray-800 font-medium">${Utils.escapeHTML(v.violationType || '-')}</td>
+                        <td class="px-6 py-4 text-center">
+                            <span class="badge ${severityClass} text-sm font-bold px-3 py-1">${v.severity || '-'}</span>
+                        </td>
+                        <td class="px-6 py-4 text-center">
+                            <span class="badge ${statusClass} text-sm font-bold px-3 py-1">${v.status || '-'}</span>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        };
 
         const modal = document.createElement('div');
         modal.className = 'modal-overlay';
@@ -11678,10 +11725,40 @@ const Contractors = {
                     ${violations.length > 0 ? `
                         <div class="border-2 border-gray-200 rounded-xl overflow-hidden shadow-md">
                             <div class="bg-gradient-to-r from-red-50 to-red-100 border-b-2 border-red-200 p-4">
-                                <h3 class="text-lg font-bold text-red-800 flex items-center">
+                                    <h3 class="text-lg font-bold text-red-800 flex items-center">
                                     <i class="fas fa-exclamation-triangle ml-2"></i>
-                                    المخالفات (${violations.length})
+                                        المخالفات (<span id="contractor-violations-count">${violations.length}</span>)
                                 </h3>
+                            </div>
+                            <div class="p-4 bg-gray-50 border-b border-gray-200">
+                                <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3">
+                                    <div>
+                                        <label class="block text-sm font-semibold text-gray-700 mb-2">البحث</label>
+                                        <input type="text" id="contractor-violations-search" class="form-input" placeholder="ابحث في كل تفاصيل الجدول...">
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-semibold text-gray-700 mb-2">نوع الشخص</label>
+                                        <select id="contractor-violations-person-type" class="form-input">
+                                            <option value="">الكل</option>
+                                            <option value="employee">موظف</option>
+                                            <option value="contractor">مقاول / شركة خارجية</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-semibold text-gray-700 mb-2">نوع المخالفة</label>
+                                        <select id="contractor-violations-type" class="form-input">
+                                            <option value="">جميع الأنواع</option>
+                                            ${violationTypeOptions.map(type => `<option value="${Utils.escapeHTML(type)}">${Utils.escapeHTML(type)}</option>`).join('')}
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-semibold text-gray-700 mb-2">الدرجة</label>
+                                        <select id="contractor-violations-severity" class="form-input">
+                                            <option value="">جميع الدرجات</option>
+                                            ${severityOptions.map(level => `<option value="${Utils.escapeHTML(level)}">${Utils.escapeHTML(level)}</option>`).join('')}
+                                        </select>
+                                    </div>
+                                </div>
                             </div>
                             <div class="overflow-x-auto">
                                 <table class="data-table w-full">
@@ -11693,32 +11770,8 @@ const Contractors = {
                                             <th class="px-6 py-3 text-center font-bold text-gray-700">الحالة</th>
                                         </tr>
                                     </thead>
-                                    <tbody class="divide-y divide-gray-100">
-                                        ${violations.map((v, index) => {
-                                            const severity = (v.severity || '').toString().trim();
-                                            const status = (v.status || '').toString().trim();
-                                            const severityClass = severity === 'عالية' || severity === 'high' || severity === 'حرجة' 
-                                                ? 'badge-danger' 
-                                                : severity === 'متوسطة' || severity === 'medium' 
-                                                ? 'badge-warning' 
-                                                : 'badge-info';
-                                            const statusClass = status === 'محلول' || status === 'resolved' || status === 'تم الحل'
-                                                ? 'badge-success'
-                                                : 'badge-warning';
-                                            
-                                            return `
-                                            <tr class="hover:bg-gray-50 transition-colors ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}">
-                                                <td class="px-6 py-4 text-gray-700">${v.violationDate ? Utils.formatDate(v.violationDate) : '-'}</td>
-                                                <td class="px-6 py-4 text-gray-800 font-medium">${Utils.escapeHTML(v.violationType || '-')}</td>
-                                                <td class="px-6 py-4 text-center">
-                                                    <span class="badge ${severityClass} text-sm font-bold px-3 py-1">${v.severity || '-'}</span>
-                                                </td>
-                                                <td class="px-6 py-4 text-center">
-                                                    <span class="badge ${statusClass} text-sm font-bold px-3 py-1">${v.status || '-'}</span>
-                                                </td>
-                                            </tr>
-                                        `;
-                                        }).join('')}
+                                    <tbody id="contractor-violations-tbody" class="divide-y divide-gray-100">
+                                        ${renderViolationRows(violations)}
                                     </tbody>
                                 </table>
                             </div>
@@ -11734,6 +11787,48 @@ const Contractors = {
             </div>
         `;
         document.body.appendChild(modal);
+        if (violations.length > 0) {
+            const searchInput = modal.querySelector('#contractor-violations-search');
+            const personTypeSelect = modal.querySelector('#contractor-violations-person-type');
+            const typeSelect = modal.querySelector('#contractor-violations-type');
+            const severitySelect = modal.querySelector('#contractor-violations-severity');
+            const tbody = modal.querySelector('#contractor-violations-tbody');
+            const countEl = modal.querySelector('#contractor-violations-count');
+            const normalize = (val) => String(val || '').trim().toLowerCase();
+            const resolvePersonType = (record) => {
+                const raw = normalize(record?.personType);
+                if (raw) return raw;
+                return record?.contractorName ? 'contractor' : 'employee';
+            };
+            const toSearchableText = (record) => {
+                if (!record || typeof record !== 'object') return '';
+                return Object.values(record).map(value => String(value || '')).join(' ').toLowerCase();
+            };
+            const applyViolationFilters = () => {
+                const q = normalize(searchInput?.value);
+                const personType = normalize(personTypeSelect?.value);
+                const violationType = normalize(typeSelect?.value);
+                const severity = normalize(severitySelect?.value);
+                const filtered = violations.filter((record) => {
+                    if (personType) {
+                        const resolvedType = resolvePersonType(record);
+                        if (personType === 'contractor' && !(resolvedType === 'contractor' || resolvedType === 'supplier' || resolvedType === 'external')) return false;
+                        if (personType === 'employee' && resolvedType !== 'employee') return false;
+                    }
+                    if (violationType && normalize(record?.violationType) !== violationType) return false;
+                    if (severity && normalize(record?.severity) !== severity) return false;
+                    if (q && !toSearchableText(record).includes(q)) return false;
+                    return true;
+                });
+                if (tbody) tbody.innerHTML = renderViolationRows(filtered);
+                if (countEl) countEl.textContent = String(filtered.length);
+            };
+            [searchInput, personTypeSelect, typeSelect, severitySelect].forEach(el => {
+                if (!el) return;
+                const eventName = el.tagName === 'SELECT' ? 'change' : 'input';
+                el.addEventListener(eventName, applyViolationFilters);
+            });
+        }
         modal.addEventListener('click', (e) => {
             if (e.target === modal) modal.remove();
         });
