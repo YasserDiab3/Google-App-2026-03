@@ -84,11 +84,22 @@ const GoogleIntegration = {
         const sanitizePTWRegistry = (row) => {
             if (!row || typeof row !== 'object' || Array.isArray(row)) return row;
             const normalizedRow = { ...row };
-            // توافق رجعي: بعض عناصر الـ queue القديمة قد تحتوي مفاتيح lowercase
-            if (!normalizedRow.createdBy && normalizedRow.createdby) normalizedRow.createdBy = normalizedRow.createdby;
-            if (!normalizedRow.createdById && normalizedRow.createdbyid) normalizedRow.createdById = normalizedRow.createdbyid;
-            if (!normalizedRow.updatedBy && normalizedRow.updatedby) normalizedRow.updatedBy = normalizedRow.updatedby;
-            if (!normalizedRow.updatedById && normalizedRow.updatedbyid) normalizedRow.updatedById = normalizedRow.updatedbyid;
+            // توافق رجعي: تطبيع case-insensitive لمفاتيح الكاتب/المحدّث من queue قديم
+            const normalizeLegacyAlias = (targetKey, aliases) => {
+                if (normalizedRow[targetKey]) return;
+                const keys = Object.keys(normalizedRow);
+                for (const key of keys) {
+                    const lowered = String(key || '').toLowerCase();
+                    if (aliases.includes(lowered)) {
+                        normalizedRow[targetKey] = normalizedRow[key];
+                        break;
+                    }
+                }
+            };
+            normalizeLegacyAlias('createdBy', ['createdby']);
+            normalizeLegacyAlias('createdById', ['createdbyid']);
+            normalizeLegacyAlias('updatedBy', ['updatedby']);
+            normalizeLegacyAlias('updatedById', ['updatedbyid']);
             const allowedFields = [
                 'id', 'sequentialNumber', 'permitId', 'openDate', 'permitType', 'permitTypeDisplay',
                 'requestingParty', 'locationId', 'location', 'sublocationId', 'sublocation',

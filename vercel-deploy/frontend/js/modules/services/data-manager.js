@@ -95,7 +95,18 @@ const DataManager = {
         try {
             const saved = localStorage.getItem('hse_pending_sync_queue');
             if (saved) {
-                this._pendingSyncQueue = JSON.parse(saved);
+                const parsed = JSON.parse(saved);
+                const rawQueue = Array.isArray(parsed) ? parsed : [];
+                // ترحيل متوافق: تطبيع payloads القديمة عند التحميل قبل أي retry
+                this._pendingSyncQueue = rawQueue.map((item) => {
+                    if (!item || typeof item !== 'object') return item;
+                    const sheetName = item.sheetName;
+                    const normalizedData = (typeof GoogleIntegration !== 'undefined' && typeof GoogleIntegration.prepareSheetPayload === 'function')
+                        ? GoogleIntegration.prepareSheetPayload(sheetName, item.data)
+                        : item.data;
+                    return { ...item, data: normalizedData };
+                });
+                this.savePendingSyncQueue();
             } else {
                 this._pendingSyncQueue = [];
             }
@@ -241,6 +252,10 @@ const DataManager = {
                 if (!errorMsg.includes('معرف Google Sheets غير محدد') && !errorMsg.includes('Google Sheets غير مفعّل')) {
                     results.errors.push(`${item.sheetName}: ${errorMsg}`);
                     Utils.safeWarn(`⚠️ فشلت مزامنة ${item.sheetName}:`, errorMsg);
+                    const rejectedFieldMatch = String(errorMsg).match(/حقل غير مسموح في البيانات:\s*([^\s(]+)/i);
+                    if (rejectedFieldMatch && rejectedFieldMatch[1]) {
+                        Utils.safeWarn(`⚠️ تم رفض حقل في queue (${item.sheetName}): ${rejectedFieldMatch[1]}`);
+                    }
                 }
             }
         }
