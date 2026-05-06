@@ -133,9 +133,13 @@ const DataManager = {
             item => item.sheetName === sheetName
         );
 
+        const normalizedData = (typeof GoogleIntegration !== 'undefined' && typeof GoogleIntegration.prepareSheetPayload === 'function')
+            ? GoogleIntegration.prepareSheetPayload(sheetName, data)
+            : data;
+
         const pendingItem = {
             sheetName,
-            data: JSON.parse(Utils.safeStringify(data)), // نسخ عميق
+            data: JSON.parse(Utils.safeStringify(normalizedData)), // نسخ عميق
             timestamp: timestamp || new Date().toISOString(),
             retryCount: existingIndex >= 0 ? this._pendingSyncQueue[existingIndex].retryCount || 0 : 0
         };
@@ -208,11 +212,14 @@ const DataManager = {
             try {
                 // زيادة عداد المحاولات
                 item.retryCount = (item.retryCount || 0) + 1;
+                const preparedData = (typeof GoogleIntegration !== 'undefined' && typeof GoogleIntegration.prepareSheetPayload === 'function')
+                    ? GoogleIntegration.prepareSheetPayload(item.sheetName, item.data)
+                    : item.data;
                 
                 // محاولة المزامنة
                 await GoogleIntegration.sendToAppsScript('saveToSheet', {
                     sheetName: item.sheetName,
-                    data: item.data,
+                    data: preparedData,
                     spreadsheetId: spreadsheetId
                 });
                 
