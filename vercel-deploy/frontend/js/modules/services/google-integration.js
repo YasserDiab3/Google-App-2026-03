@@ -80,12 +80,48 @@ const GoogleIntegration = {
             return sanitized;
         };
 
+        const sanitizePTWRegistry = (row) => {
+            if (!row || typeof row !== 'object' || Array.isArray(row)) return row;
+            const allowedFields = [
+                'id', 'sequentialNumber', 'permitId', 'openDate', 'permitType', 'permitTypeDisplay',
+                'requestingParty', 'locationId', 'location', 'sublocationId', 'sublocation',
+                'timeFrom', 'timeTo', 'totalTime', 'authorizedParty', 'workDescription',
+                'supervisor1', 'supervisor2', 'status', 'paperPermitNumber', 'equipment', 'tools',
+                'toolsList', 'teamMembersText', 'hotWorkDetails', 'hotWorkOther',
+                'confinedSpaceDetails', 'confinedSpaceOther', 'heightWorkDetails', 'heightWorkOther',
+                'electricalWorkType', 'coldWorkType', 'otherWorkType', 'excavationLength',
+                'excavationWidth', 'excavationDepth', 'soilType', 'preStartChecklist', 'lotoApplied',
+                'governmentPermits', 'riskAssessmentAttached', 'gasTesting', 'mocRequest', 'ppeNotes',
+                'requiredPPE', 'riskLikelihood', 'riskConsequence', 'riskScore', 'riskLevel',
+                'riskNotes', 'manualApprovalsText', 'manualClosureApprovalsText', 'closureDate',
+                'closureReason', 'isManualEntry', 'approvalCircuitOwnerId', 'approvalCircuitName',
+                'skipApprovalFlow', 'createdAt', 'updatedAt'
+            ];
+            const sanitized = {};
+            allowedFields.forEach((field) => {
+                if (Object.prototype.hasOwnProperty.call(row, field)) {
+                    sanitized[field] = row[field];
+                }
+            });
+            return sanitized;
+        };
+
         if (sheetName === 'PTW') {
             if (Array.isArray(data)) {
                 return data.map((item) => sanitizePTW(item));
             }
             if (data && typeof data === 'object') {
                 return sanitizePTW(data);
+            }
+            return data;
+        }
+
+        if (sheetName === 'PTWRegistry') {
+            if (Array.isArray(data)) {
+                return data.map((item) => sanitizePTWRegistry(item));
+            }
+            if (data && typeof data === 'object') {
+                return sanitizePTWRegistry(data);
             }
             return data;
         }

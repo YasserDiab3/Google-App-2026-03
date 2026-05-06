@@ -547,10 +547,7 @@ const PTW = {
         try {
             // تحميل من AppState أولاً (الأحدث)
             if (AppState.appData && AppState.appData.ptwRegistry && Array.isArray(AppState.appData.ptwRegistry)) {
-                this.registryData = this.normalizeRegistryCollection(AppState.appData.ptwRegistry);
-                // Persist deduplicated version back to AppState and localStorage
-                AppState.appData.ptwRegistry = [...this.registryData];
-                try { localStorage.setItem('hse_ptw_registry', Utils.safeStringify(this.registryData)); } catch (_) {}
+                this.setPtwRegistryState(AppState.appData.ptwRegistry, 'AppState.ptwRegistry');
                 Utils.safeLog(`✅ تم تحميل ${this.registryData.length} سجل من AppState`);
                 // لا نقوم بالمزامنة عند التحميل من AppState - ننتظر تحميل Backend
                 return;
@@ -559,13 +556,7 @@ const PTW = {
             const savedData = localStorage.getItem('hse_ptw_registry');
             if (savedData) {
                 try {
-                    this.registryData = this.normalizeRegistryCollection(JSON.parse(savedData));
-                    if (!Array.isArray(this.registryData)) {
-                        this.registryData = [];
-                    }
-                    // تحديث AppState بالبيانات المحملة
-                    if (!AppState.appData) AppState.appData = {};
-                    AppState.appData.ptwRegistry = [...this.registryData];
+                    this.setPtwRegistryState(JSON.parse(savedData), 'localStorage.hse_ptw_registry');
                     Utils.safeLog(`✅ تم تحميل ${this.registryData.length} سجل من localStorage`);
                     // لا نقوم بالمزامنة عند التحميل من localStorage - ننتظر تحميل Backend
                 } catch (parseError) {
@@ -594,12 +585,7 @@ const PTW = {
     async saveRegistryData(options = {}) {
         try {
             const { skipSync = false } = options;
-            this.registryData = this.normalizeRegistryCollection(this.registryData);
-            
-            if (!AppState.appData) AppState.appData = {};
-            // التأكد من أن البيانات محفوظة في AppState قبل حفظ DataManager
-            AppState.appData.ptwRegistry = Array.isArray(this.registryData) ? [...this.registryData] : [];
-            localStorage.setItem('hse_ptw_registry', Utils.safeStringify(this.registryData));
+            this.setPtwRegistryState(this.registryData, 'saveRegistryData');
 
             // تحديث عرض السجل إذا كان مرئياً
             this.refreshRegistryViewIfVisible();
@@ -938,6 +924,45 @@ const PTW = {
         return [...byRegistryId.values(), ...seqMap.values(), ...noSeqEntries];
     },
 
+    isLikelyUsersRecord(record) {
+        if (!record || typeof record !== 'object') return false;
+        const hasIdentity = !!String(record.email || '').trim();
+        const hasUsersFields = ['password', 'passwordHash', 'role', 'permissions']
+            .some((k) => Object.prototype.hasOwnProperty.call(record, k));
+        return hasIdentity && hasUsersFields;
+    },
+
+    isValidPtwRegistryRecord(record) {
+        if (!record || typeof record !== 'object' || Array.isArray(record)) return false;
+        if (this.isLikelyUsersRecord(record)) return false;
+
+        const identityKeys = ['id', 'permitId', 'sequentialNumber', 'paperPermitNumber'];
+        const hasIdentity = identityKeys.some((k) => String(record[k] ?? '').trim() !== '');
+        if (!hasIdentity) return false;
+
+        const ptwHints = ['workDescription', 'location', 'timeFrom', 'openDate', 'permitType', 'status', 'authorizedParty'];
+        const hasPtwHints = ptwHints.some((k) => Object.prototype.hasOwnProperty.call(record, k));
+        return hasPtwHints || hasIdentity;
+    },
+
+    sanitizePtwRegistryDataset(dataset, source = 'unknown') {
+        if (!Array.isArray(dataset)) return [];
+        const filtered = dataset.filter((entry) => this.isValidPtwRegistryRecord(entry));
+        if (filtered.length !== dataset.length) {
+            Utils.safeWarn(`⚠️ تم رفض ${dataset.length - filtered.length} سجل غير صالح من ${source} لبيانات PTWRegistry`);
+        }
+        return this.normalizeRegistryCollection(filtered);
+    },
+
+    setPtwRegistryState(dataset, source = 'unknown') {
+        const sanitized = this.sanitizePtwRegistryDataset(dataset, source);
+        this.registryData = sanitized;
+        if (!AppState.appData) AppState.appData = {};
+        AppState.appData.ptwRegistry = [...sanitized];
+        try { localStorage.setItem('hse_ptw_registry', Utils.safeStringify(sanitized)); } catch (_) {}
+        return sanitized;
+    },
+
     normalizePermitStatus(status) {
         const t = String(status || '').trim();
         if (!t) return 'مغلق';
@@ -987,8 +1012,14 @@ const PTW = {
 
     getRegistryPermitsForMetrics() {
         // قبل تهيئة الموديول يبقى registryData فارغاً بينما لوحة التحكم قد تملأ AppState.ptwRegistry (جلب مجمع)
-        const localReg = Array.isArray(this.registryData) ? this.registryData : [];
-        const stateReg = Array.isArray(AppState?.appData?.ptwRegistry) ? AppState.appData.ptwRegistry : [];
+        const localReg = this.sanitizePtwRegistryDataset(
+            Array.isArray(this.registryData) ? this.registryData : [],
+            'metrics.registryData'
+        );
+        const stateReg = this.sanitizePtwRegistryDataset(
+            Array.isArray(AppState?.appData?.ptwRegistry) ? AppState.appData.ptwRegistry : [],
+            'metrics.AppState.ptwRegistry'
+        );
         const raw = localReg.length > 0 ? localReg : stateReg;
         return raw.map((registryEntry) => ({
             id: registryEntry.permitId || registryEntry.id,
@@ -1448,10 +1479,7 @@ const PTW = {
                 if (result && result.success && Array.isArray(result.data)) {
                     // إذا كانت البيانات فارغة في Backend، تنظيف البيانات المحلية
                     if (result.data.length === 0) {
-                        this.registryData = [];
-                        if (!AppState.appData) AppState.appData = {};
-                        AppState.appData.ptwRegistry = [];
-                        localStorage.setItem('hse_ptw_registry', Utils.safeStringify([]));
+                        this.setPtwRegistryState([], 'backend.PTWRegistry.empty');
                         if (AppState.debugMode) {
                             Utils.safeLog('✅ تم تنظيف البيانات المحلية - الجدول فارغ في Backend');
                         }
@@ -1459,10 +1487,7 @@ const PTW = {
                     }
                     
                     // إذا كانت هناك بيانات في Backend، استخدامها
-                    this.registryData = this.normalizeRegistryCollection(result.data);
-                    if (!AppState.appData) AppState.appData = {};
-                    AppState.appData.ptwRegistry = [...this.registryData];
-                    localStorage.setItem('hse_ptw_registry', Utils.safeStringify(this.registryData));
+                    this.setPtwRegistryState(result.data, 'backend.PTWRegistry.readFromSheet');
                     if (AppState.debugMode) {
                         Utils.safeLog(`✅ تم تحميل ${this.registryData.length} سجل من Backend`);
                     }
@@ -11903,12 +11928,7 @@ const PTW = {
             }
 
             // التأكد من حفظ بيانات السجل في AppState قبل حفظ DataManager
-            if (!AppState.appData.ptwRegistry) {
-                AppState.appData.ptwRegistry = Array.isArray(this.registryData) ? [...this.registryData] : [];
-            } else {
-                // تحديث AppState بالبيانات الحالية
-                AppState.appData.ptwRegistry = Array.isArray(this.registryData) ? [...this.registryData] : AppState.appData.ptwRegistry;
-            }
+            this.setPtwRegistryState(this.registryData, 'handleSubmit.preBackground');
 
             // 2. إغلاق النموذج فوراً بعد الحفظ في الذاكرة (قبل المزامنة)
             this.showList();
