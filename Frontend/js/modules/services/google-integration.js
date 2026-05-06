@@ -83,6 +83,12 @@ const GoogleIntegration = {
 
         const sanitizePTWRegistry = (row) => {
             if (!row || typeof row !== 'object' || Array.isArray(row)) return row;
+            const normalizedRow = { ...row };
+            // توافق رجعي: بعض عناصر الـ queue القديمة قد تحتوي مفاتيح lowercase
+            if (!normalizedRow.createdBy && normalizedRow.createdby) normalizedRow.createdBy = normalizedRow.createdby;
+            if (!normalizedRow.createdById && normalizedRow.createdbyid) normalizedRow.createdById = normalizedRow.createdbyid;
+            if (!normalizedRow.updatedBy && normalizedRow.updatedby) normalizedRow.updatedBy = normalizedRow.updatedby;
+            if (!normalizedRow.updatedById && normalizedRow.updatedbyid) normalizedRow.updatedById = normalizedRow.updatedbyid;
             const allowedFields = [
                 'id', 'sequentialNumber', 'permitId', 'openDate', 'permitType', 'permitTypeDisplay',
                 'requestingParty', 'locationId', 'location', 'sublocationId', 'sublocation',
@@ -100,8 +106,8 @@ const GoogleIntegration = {
             ];
             const sanitized = {};
             allowedFields.forEach((field) => {
-                if (Object.prototype.hasOwnProperty.call(row, field)) {
-                    sanitized[field] = row[field];
+                if (Object.prototype.hasOwnProperty.call(normalizedRow, field)) {
+                    sanitized[field] = normalizedRow[field];
                 }
             });
             return sanitized;
