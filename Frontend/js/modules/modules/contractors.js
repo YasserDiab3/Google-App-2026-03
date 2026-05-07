@@ -9684,6 +9684,37 @@ const Contractors = {
             request.approvedByName = AppState.currentUser?.name || '';
             request.updatedAt = new Date().toISOString();
 
+            // تنظيف الطلبات المكررة محلياً: قد توجد نسخة/نسخ pending لنفس الطلب (مثلاً من حفظ محلي قديم)
+            // فنقوم باعتبارها معتمدة أيضاً حتى لا تبقى ظاهرة في "طلبات قيد المراجعة".
+            const normalizeKey = (v) => String(v || '').trim().toLowerCase();
+            const reqTypeKey = normalizeKey(request.requestType);
+            const companyKey = normalizeKey(request.companyName || request.entityName);
+            const serviceKey = normalizeKey(request.serviceType);
+            const licenseKey = normalizeKey(request.licenseNumber);
+
+            (AppState.appData.contractorApprovalRequests || []).forEach((r) => {
+                if (!r || r === request) return;
+                const isPending = r.status === 'pending' || r.status === 'under_review';
+                if (!isPending) return;
+                const sameType = normalizeKey(r.requestType) === reqTypeKey;
+                if (!sameType) return;
+
+                const rCompanyKey = normalizeKey(r.companyName || r.entityName);
+                const rServiceKey = normalizeKey(r.serviceType);
+                const rLicenseKey = normalizeKey(r.licenseNumber);
+                const sameCompany = companyKey && rCompanyKey && companyKey === rCompanyKey;
+                const sameLicense = licenseKey && rLicenseKey && licenseKey === rLicenseKey;
+                const sameService = !serviceKey || !rServiceKey || serviceKey === rServiceKey;
+
+                if ((sameCompany || sameLicense) && sameService) {
+                    r.status = 'approved';
+                    r.approvedAt = request.approvedAt;
+                    r.approvedBy = request.approvedBy;
+                    r.approvedByName = request.approvedByName;
+                    r.updatedAt = request.updatedAt;
+                }
+            });
+
             // تحديث البيانات المحلية بناءً على رد الخادم
             if (backendResult.approvedEntity) {
                 this.ensureApprovedSetup();
