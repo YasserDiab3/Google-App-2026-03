@@ -2149,6 +2149,10 @@ const PPE = {
                     };
 
                     try {
+                        const previousPpeSnapshot = Array.isArray(AppState.appData.ppe) ? [...AppState.appData.ppe] : [];
+                        let recordsForServer = [];
+                        let updatedRecordForServer = null;
+
                         // 1. حفظ البيانات فوراً في الذاكرة
                         if (isEdit) {
                             const index = AppState.appData.ppe.findIndex(p => p.id === ppeData.id);
@@ -2164,6 +2168,7 @@ const PPE = {
                                     updatedAt: new Date().toISOString()
                                 };
                                 AppState.appData.ppe[index] = updatedRecord;
+                                updatedRecordForServer = updatedRecord;
                             }
                         } else {
                             const existingPPEData = AppState.appData.ppe || [];
@@ -2183,6 +2188,30 @@ const PPE = {
                                 newItems.push(record);
                                 AppState.appData.ppe.push(record);
                             });
+                            recordsForServer = newItems;
+                        }
+
+                        // 1.1 حفظ إلزامي في الخادم قبل إعلان النجاح
+                        if (AppState.googleConfig?.appsScript?.enabled && typeof GoogleIntegration !== 'undefined' && GoogleIntegration.sendToAppsScript) {
+                            if (isEdit) {
+                                if (!updatedRecordForServer) {
+                                    throw new Error('تعذر تجهيز بيانات التعديل للحفظ في الخادم.');
+                                }
+                                const serverResult = await GoogleIntegration.sendToAppsScript('updatePPE', {
+                                    ppeId: updatedRecordForServer.id,
+                                    updateData: updatedRecordForServer
+                                });
+                                if (!serverResult || serverResult.success !== true) {
+                                    throw new Error(serverResult?.message || 'فشل حفظ تعديل الاستلام في قاعدة البيانات.');
+                                }
+                            } else {
+                                for (const rec of recordsForServer) {
+                                    const serverResult = await GoogleIntegration.sendToAppsScript('addPPE', rec);
+                                    if (!serverResult || serverResult.success !== true) {
+                                        throw new Error(serverResult?.message || 'فشل حفظ الاستلام في قاعدة البيانات.');
+                                    }
+                                }
+                            }
                         }
                         
                         // حفظ البيانات باستخدام window.DataManager
@@ -2214,6 +2243,13 @@ const PPE = {
                             Utils.safeError('خطأ في حفظ Google Sheets:', error);
                         });
                     } catch (error) {
+                        // rollback عند فشل الحفظ بالخادم لمنع نجاح وهمي في الواجهة
+                        if (typeof previousPpeSnapshot !== 'undefined') {
+                            AppState.appData.ppe = previousPpeSnapshot;
+                            if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
+                                window.DataManager.save();
+                            }
+                        }
                         Notification.error(PPE._t('module.ppe.notify.saveRuntimeError', 'حدث خطأ أثناء الحفظ') + ': ' + (error.message || error));
                         
                         // استعادة الزر في حالة الخطأ
