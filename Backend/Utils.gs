@@ -1810,10 +1810,8 @@ function saveToSheet(sheetName, data, spreadsheetId = null) {
             }
         }
 
-        // ✅ مسح الcache بعد الحفظ لضمان قراءة البيانات المحدثة
-        const cache = CacheService.getScriptCache();
-        const cacheKey = 'hse_read_' + sheetName + '_v1';
-        cache.remove(cacheKey);
+        // ✅ مسح الcache بعد الحفظ لضمان قراءة البيانات المحدثة (يشمل batch_*)
+        invalidateHseSheetCaches_(sheetName);
 
         const saveResult = { success: true, message: 'تم حفظ البيانات بنجاح' };
         if (sheetName === 'PTWRegistry' && resolvedPTWRegistryForResponse) {
@@ -2663,10 +2661,9 @@ function appendToSheet(sheetName, data, spreadsheetId = null) {
 
         return withResolvedPTWRegistry_(sheetName, { success: true, message: 'تم إضافة البيانات بنجاح' }, resolvedPTWRegistryForAppend);
         } finally {
-            // ✅ إبطال CacheService لقراءة الورقة — وإلا تبقى readFromSheet تعيد JSON قديماً دون الصف المضاف (مثل PTWIssuingAuthorities)
+            // ✅ إبطال CacheService لقراءة الورقة ونسخة batch (مثل PTWIssuingAuthorities)
             try {
-                const _readCache = CacheService.getScriptCache();
-                _readCache.remove('hse_read_' + sheetName + '_v1');
+                invalidateHseSheetCaches_(sheetName);
             } catch (_cacheInvEx) {
                 Logger.log('appendToSheet cache invalidate: ' + _cacheInvEx.toString());
             }
@@ -2872,10 +2869,8 @@ function updateSingleRowInSheet(sheetName, recordId, updateData, spreadsheetId =
         try {
             sheet.getRange(targetRowIndex, 1, 1, headers.length).setValues([rowValues]);
             
-            // ✅ مسح الcache بعد التحديث لضمان قراءة البيانات المحدثة
-            const cache = CacheService.getScriptCache();
-            const cacheKey = 'hse_read_' + sheetName + '_v1';
-            cache.remove(cacheKey);
+            // ✅ مسح الcache بعد التحديث (يشمل batch_*)
+            invalidateHseSheetCaches_(sheetName);
             
             Logger.log('✅ Successfully updated single row at row ' + targetRowIndex + ' in sheet ' + sheetName + ' and cleared cache');
             return { success: true, message: 'تم تحديث السجل بنجاح' };
@@ -2887,6 +2882,21 @@ function updateSingleRowInSheet(sheetName, recordId, updateData, spreadsheetId =
     } catch (error) {
         Logger.log('Error in updateSingleRowInSheet: ' + error.toString());
         return { success: false, message: 'حدث خطأ أثناء تحديث السجل: ' + error.toString() };
+    }
+}
+
+/**
+ * إبطال كاش قراءة الورقة ونسخة batchReadSheets لنفس الاسم (توحيد الإبطال بعد الكتابة).
+ */
+function invalidateHseSheetCaches_(sheetName) {
+    try {
+        const sn = String(sheetName || '').trim();
+        if (!sn) return;
+        const cache = CacheService.getScriptCache();
+        cache.remove('hse_read_' + sn + '_v1');
+        cache.remove('batch_' + sn + '_v1');
+    } catch (e) {
+        Logger.log('invalidateHseSheetCaches_: ' + e.toString());
     }
 }
 
@@ -3229,10 +3239,8 @@ function deleteRowById(sheetName, recordId, spreadsheetId = null) {
         sheet.deleteRow(targetRow);
         SpreadsheetApp.flush();
         
-        // ✅ مسح الcache بعد الحذف لضمان قراءة البيانات المحدثة
-        const cache = CacheService.getScriptCache();
-        const cacheKey = 'hse_read_' + sheetName + '_v1';
-        cache.remove(cacheKey);
+        // ✅ مسح الcache بعد الحذف (يشمل batch_*)
+        invalidateHseSheetCaches_(sheetName);
         
         return { success: true, message: 'تم حذف السجل بنجاح', rowNumber: targetRow };
     } catch (e) {
@@ -3286,10 +3294,8 @@ function deleteRowByField(sheetName, fieldName, fieldValue, spreadsheetId = null
         sheet.deleteRow(targetRow);
         SpreadsheetApp.flush();
         
-        // ✅ مسح الcache بعد الحذف لضمان قراءة البيانات المحدثة
-        const cache = CacheService.getScriptCache();
-        const cacheKey = 'hse_read_' + sheetName + '_v1';
-        cache.remove(cacheKey);
+        // ✅ مسح الcache بعد الحذف (يشمل batch_*)
+        invalidateHseSheetCaches_(sheetName);
         
         return { success: true, message: 'تم حذف السجل بنجاح', rowNumber: targetRow };
     } catch (e) {

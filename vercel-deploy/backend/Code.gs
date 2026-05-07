@@ -371,6 +371,17 @@ function doPost(e) {
                     action: action
                 })));
             }
+            if (typeof checkAdminPermissionsAuthoritative === 'function' && !checkAdminPermissionsAuthoritative(actor)) {
+                if (typeof logSecurityEvent === 'function') {
+                    logSecurityEvent('strict_admin_denied', { action: action, actor: actor.email || actor.id || '', severity: 'high' });
+                }
+                return setCorsHeaders(ContentService.createTextOutput(JSON.stringify({
+                    success: false,
+                    message: 'ليس لديك صلاحية لتنفيذ هذه العملية الإدارية.',
+                    errorCode: 'STRICT_ADMIN_DENIED',
+                    action: action
+                })));
+            }
         }
 
         // فرض مركزي: أي عملية حذف لا تُسمح إلا لمدير النظام
@@ -387,7 +398,10 @@ function doPost(e) {
                     action: action
                 })));
             }
-            if (typeof checkAdminPermissions !== 'function' || !checkAdminPermissions(actorUserData)) {
+            var adminOk = (typeof checkAdminPermissionsAuthoritative === 'function')
+                ? checkAdminPermissionsAuthoritative(actorUserData)
+                : (typeof checkAdminPermissions === 'function' && checkAdminPermissions(actorUserData));
+            if (!adminOk) {
                 if (typeof logSecurityEvent === 'function') {
                     logSecurityEvent('delete_permission_denied', {
                         action: action,
@@ -428,10 +442,11 @@ function doPost(e) {
                             break;
                         }
                     }
-                    // البحث عن spreadsheetId في عدة أماكن
-                    let spreadsheetId = payload.spreadsheetId || 
-                                      postData.spreadsheetId || 
-                                      getSpreadsheetId();
+                    // المعرف الرسمي من الخادم أولاً (Script Properties / Config) ثم العميل للتطوير فقط
+                    let spreadsheetId = getSpreadsheetId();
+                    if (!spreadsheetId || String(spreadsheetId).trim() === '') {
+                        spreadsheetId = payload.spreadsheetId || postData.spreadsheetId || '';
+                    }
                     
                     // تنظيف spreadsheetId
                     if (spreadsheetId && typeof spreadsheetId === 'string') {

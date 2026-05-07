@@ -371,6 +371,26 @@ function checkAdminPermissions(userData) {
 }
 
 /**
+ * تحقق إداري مع الأولوية لسجل Users في الشيت إن وُجد (يقلل الثقة بالبيانات القادمة من العميل فقط).
+ */
+function checkAdminPermissionsAuthoritative(userData) {
+    try {
+        if (!userData) return false;
+        var email = String(userData.email || '').trim().toLowerCase();
+        if (email && typeof getUserRecordFromUsersSheetByEmail_ === 'function') {
+            var sheetUser = getUserRecordFromUsersSheetByEmail_(email);
+            if (sheetUser) {
+                return checkAdminPermissions(sheetUser);
+            }
+        }
+        return checkAdminPermissions(userData);
+    } catch (error) {
+        Logger.log('checkAdminPermissionsAuthoritative: ' + error.toString());
+        return checkAdminPermissions(userData);
+    }
+}
+
+/**
  * ============================================
  * تحديث موديول
  * ============================================

@@ -473,3 +473,26 @@ function deleteUserFromSheet(userId, userData) {
     }
 }
 
+/**
+ * جلب سجل مستخدم من ورقة Users للتحقق من الصلاحيات من المصدر الرسمي (مع كاش readFromSheet).
+ * @param {string} email
+ * @return {Object|null}
+ */
+function getUserRecordFromUsersSheetByEmail_(email) {
+    try {
+        var e = String(email || '').trim().toLowerCase();
+        if (!e) return null;
+        var spreadsheetId = getSpreadsheetId();
+        var users = readFromSheet('Users', spreadsheetId);
+        if (!users || !Array.isArray(users)) return null;
+        for (var i = 0; i < users.length; i++) {
+            var u = users[i];
+            if (u && String(u.email || '').trim().toLowerCase() === e) return u;
+        }
+        return null;
+    } catch (err) {
+        Logger.log('getUserRecordFromUsersSheetByEmail_: ' + err.toString());
+        return null;
+    }
+}
+

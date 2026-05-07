@@ -14,13 +14,30 @@
 // ملاحظة: تم نقل القيمة إلى دالة getRequiredSheets() لتجنب مشاكل التكرار
 
 /**
+ * قراءة خاصية من Script Properties (Project Settings → Script properties)
+ */
+function getScriptProperty_(key) {
+    try {
+        var raw = PropertiesService.getScriptProperties().getProperty(String(key || ''));
+        return raw ? String(raw).trim() : '';
+    } catch (e) {
+        Logger.log('getScriptProperty_ error: ' + e.toString());
+        return '';
+    }
+}
+
+/**
  * الحصول على معرف جدول البيانات
- * 
- * لتحديث المعرف: قم بتغيير القيمة في return أدناه
+ *
+ * الأولوية: Script Property `HSE_SPREADSHEET_ID` ثم القيمة الاحتياطية أدناه (تطوير/ترحيل).
  */
 function getSpreadsheetId() {
-    // قم بتحديث هذا المعرف بمعرف جدول Google Sheets الخاص بك
-    // يمكنك الحصول على المعرف من رابط الجدول: 
+    var fromProps = getScriptProperty_('HSE_SPREADSHEET_ID');
+    if (fromProps) {
+        return fromProps;
+    }
+    // احتياطي عند عدم ضبط الخاصية في المشروع (يُفضّل تعبئة HSE_SPREADSHEET_ID في الإنتاج)
+    // يمكنك الحصول على المعرف من رابط الجدول:
     // https://docs.google.com/spreadsheets/d/YOUR_ID_HERE/edit
     const spreadsheetId = '1EanavJ2OodOmq8b1GagSj8baa-KF-o4mVme_Jlwmgxc';
     

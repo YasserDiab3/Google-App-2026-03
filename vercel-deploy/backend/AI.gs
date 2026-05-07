@@ -953,8 +953,27 @@ function getUserSpecificRecommendations(userId, context) {
  * ============================================
  */
 
-const GEMINI_API_KEY = 'AIzaSyAD7S2HF5RwKFlp0Ijags9a7c9o57Z3o2Y';
-const GEMINI_MODEL = 'gemini-1.5-flash';
+/**
+ * مفتاح Gemini من Script Properties — لا يُخزَّن في الكود.
+ * المفاتيح: GEMINI_API_KEY إلزامي في الإنتاج؛ GEMINI_MODEL اختياري (افتراضي gemini-1.5-flash)
+ */
+function getGeminiApiKey_() {
+    try {
+        var k = PropertiesService.getScriptProperties().getProperty('GEMINI_API_KEY');
+        return k ? String(k).trim() : '';
+    } catch (e) {
+        Logger.log('getGeminiApiKey_: ' + e.toString());
+        return '';
+    }
+}
+
+function getGeminiModel_() {
+    try {
+        var m = PropertiesService.getScriptProperties().getProperty('GEMINI_MODEL');
+        if (m && String(m).trim()) return String(m).trim();
+    } catch (e) { /* ignore */ }
+    return 'gemini-1.5-flash';
+}
 
 // Cache للإحصاءات لتجنب إعادة قراءة الشيتات في كل طلب
 var _hseStatsCache = null;
@@ -969,6 +988,13 @@ var HSE_STATS_CACHE_TTL = 5 * 60 * 1000; // 5 دقائق
  */
 function askGeminiWithHSEContext(question, context) {
   try {
+    var GEMINI_API_KEY = getGeminiApiKey_();
+    var GEMINI_MODEL = getGeminiModel_();
+    if (!GEMINI_API_KEY) {
+      Logger.log('Gemini: GEMINI_API_KEY غير مضبوط في Script Properties — أضف المفتاح في إعدادات المشروع.');
+      return null;
+    }
+
     // استخدام البيانات المُمررة أولاً، وإذا لم تتوفر نجلب من Cache أو الشيتات
     var hseStats = context.localStats || buildHSEStatsForGemini();
 
