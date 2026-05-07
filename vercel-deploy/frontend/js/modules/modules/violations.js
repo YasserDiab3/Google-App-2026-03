@@ -981,11 +981,11 @@ const Violations = {
         `).join('');
 
         return `
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
-                <div>
+            <div class="grid grid-cols-1 md:grid-cols-6 gap-3">
+                <div class="md:min-w-0">
                     <label class="block text-sm font-semibold text-gray-700 mb-2">بحث</label>
                     <div class="relative">
-                        <input type="text" id="violations-filter-search" class="form-input pr-10 border-2 border-indigo-200 bg-white shadow-sm focus:border-indigo-400 focus:ring-2 focus:ring-indigo-300" placeholder="بحث بالاسم، الكود، نوع المخالفة..." value="${Utils.escapeHTML(filters.search || '')}">
+                        <input type="text" id="violations-filter-search" class="form-input pr-10 text-sm border-2 border-indigo-200 bg-white shadow-sm focus:border-indigo-400 focus:ring-2 focus:ring-indigo-300" style="max-width: 210px;" placeholder="بحث..." value="${Utils.escapeHTML(filters.search || '')}">
                         <i class="fas fa-search absolute right-3 top-1/2 -translate-y-1/2 text-indigo-500 pointer-events-none"></i>
                     </div>
                 </div>
@@ -1022,7 +1022,7 @@ const Violations = {
                         <option value="غير محلول" ${filters.status === 'غير محلول' ? 'selected' : ''}>غير محلول</option>
                     </select>
                 </div>
-                <div class="md:col-span-2 lg:col-span-1 flex items-end">
+                <div class="md:col-span-1 flex items-end">
                     <button type="button" id="violations-filter-reset" class="btn-secondary">
                         <i class="fas fa-undo ml-2"></i>إعادة تعيين التصفية
                     </button>
