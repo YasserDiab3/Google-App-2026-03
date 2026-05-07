@@ -532,8 +532,9 @@ const PPE = {
      * ✅ تحديث التبويب النشط فقط دون إعادة تحميل الموديول بالكامل
      * يُستخدم بعد المزامنة لتحديث البيانات مباشرة
      */
-    async refreshActiveTab() {
+    async refreshActiveTab(options = {}) {
         try {
+            const skipRemote = !!options.skipRemote;
             // ✅ مسح Cache لضمان تحميل البيانات الجديدة
             this.clearCache();
             
@@ -548,6 +549,9 @@ const PPE = {
                 if (this.state.activeTab === 'stock-control') {
                     await this.loadStockItems(true); // forceRefresh = true
                 } else {
+                    if (skipRemote) {
+                        // تحديث محلي فقط (يُستخدم مباشرة بعد الحفظ المحلي لتجنب فقدان السجل الجديد مؤقتاً)
+                    } else {
                     // تحميل بيانات الاستلامات
                     if (typeof GoogleIntegration !== 'undefined' && GoogleIntegration.sendToAppsScript) {
                         try {
@@ -562,6 +566,7 @@ const PPE = {
                         } catch (error) {
                             Utils.safeWarn('⚠️ خطأ في تحميل بيانات الاستلامات:', error);
                         }
+                    }
                     }
                 }
             } catch (error) {
@@ -2202,7 +2207,7 @@ const PPE = {
                         }
                         
                         // 5. ✅ تحديث التبويب النشط فقط (أسرع من إعادة تحميل كامل)
-                        this.refreshActiveTab();
+                        this.refreshActiveTab({ skipRemote: true });
                         
                         // 6. معالجة المهام الخلفية (Google Sheets) في الخلفية
                         GoogleIntegration.autoSave('PPE', AppState.appData.ppe).catch(error => {
