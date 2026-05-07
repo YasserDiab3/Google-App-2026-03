@@ -9237,6 +9237,32 @@
     <body class="font-cairo bg-gray-50" data-theme="light">
         <!-- رابط تخطي للمحتوى الرئيسي (إمكانية الوصول) -->
         <a href="#main-content" class="skip-link">تخطي إلى المحتوى الرئيسي</a>
+        <div
+            id="hse-offline-banner"
+            role="status"
+            aria-live="polite"
+            style="display: none; position: fixed; top: 0; left: 0; right: 0; z-index: 99999; background: #b45309; color: #fff; text-align: center; padding: 8px 12px; font-size: 14px;"
+        >
+            لا يوجد اتصال بالإنترنت — العرض من الكاش فقط؛ الإنشاء والتعديل يحتاجان اتصالاً.
+        </div>
+        <script>
+            (function () {
+                function syncOfflineBanner() {
+                    try {
+                        var el = document.getElementById("hse-offline-banner");
+                        if (!el) return;
+                        el.style.display = navigator.onLine ? "none" : "block";
+                    } catch (e) {}
+                }
+                window.addEventListener("online", syncOfflineBanner);
+                window.addEventListener("offline", syncOfflineBanner);
+                if (document.readyState === "loading") {
+                    document.addEventListener("DOMContentLoaded", syncOfflineBanner);
+                } else {
+                    syncOfflineBanner();
+                }
+            })();
+        </script>
         <!-- ⚡ Additional Protection at Body Start ⚡ -->
         <script>
             // قمع إضافي في بداية body
@@ -12661,6 +12687,7 @@
         ></script>
         <script src="js/modules/services/workflow.js" defer></script>
         <script src="js/modules/services/google-integration.js?v=20260506-createdby-fix2" defer></script>
+        <script src="js/modules/services/data-repository.js" defer></script>
         <script src="js/modules/services/smart-cache.js" defer></script>
         <script src="js/modules/services/connection-monitor.js" defer></script>
         <script src="js/modules/services/ai-assistant.js" defer></script>
@@ -12813,7 +12840,7 @@
                     }
 
                     // مطابقة CACHE_VERSION في service-worker.js — تسريع جلب سكربت SW بعد النشر (تجاوز كاش الشبكة/الوسيط)
-                    const __SW_REGISTER_QUERY = "v=hse-app-v1.0.18-20260501";
+                    const __SW_REGISTER_QUERY = "v=hse-app-v1.0.19-20260507";
                     const swUrl =
                         swPath +
                         (swPath.includes("?") ? "&" : "?") +
@@ -12890,7 +12917,8 @@
                                             "function"
                                     ) {
                                         window.Notification.info(
-                                            "تم العثور على تحديث جديد... جاري التفعيل الآن.",
+                                            "يتوفر إصدار جديد من التطبيق — جاري التحديث تلقائياً. إذا لم تُحدَّث الصفحة، أعد التحميل يدوياً (F5).",
+                                            { duration: 12000 },
                                         );
                                     }
 

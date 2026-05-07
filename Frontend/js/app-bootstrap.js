@@ -464,6 +464,7 @@
             } else {
                 this.updateLoader(95, 'جاهز للاستخدام');
             }
+            log('ℹ️ تحميل تدريجي: الموديولات الثقيلة (مثل PTW/التدريب/العيادة) تُحمَّل لاحقاً عبر modules-loader حسب الترتيب المحسَّن.');
             
             this.endPhase(this.phases.MODULES);
         },

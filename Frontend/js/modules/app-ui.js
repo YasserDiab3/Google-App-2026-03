@@ -3121,7 +3121,7 @@ window.UI = {
         // تحديث حالة زر المزامنة بشكل دوري (حالة الاتصال يتم تحديثها تلقائياً عبر startAutoRefreshConnectionStatus)
         setInterval(() => {
             this.updateSyncButtonStatus();
-        }, 3000); // كل 3 ثوان للتحديث الأسرع
+        }, 15000); // كل 15 ثانية — أقل ضغطاً على الواجهة والخلفية
 
         // إظهار شعار الشركة في الهيدر
         this.updateCompanyLogoHeader();
@@ -9509,7 +9509,7 @@ window.UI = {
 
     // متغير لتخزين معرف التحديث التلقائي لحالة الاتصال
     connectionStatusInterval: null,
-    connectionStatusRefreshInterval: 5000, // تحديث كل 5 ثوان
+    connectionStatusRefreshInterval: 15000, // تحديث كل 15 ثانية — تقليل طلبات الخلفية
 
     /**
      * تهيئة زر حالة الاتصال للمستخدم

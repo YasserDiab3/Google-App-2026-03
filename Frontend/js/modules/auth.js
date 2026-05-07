@@ -49,6 +49,47 @@ window.Auth = {
         } catch (e) { /* ignore */ }
     },
 
+    /** أقصى عمر للجلسة منذ loginTime */
+    SESSION_ABSOLUTE_MS: 24 * 60 * 60 * 1000,
+    /** انتهاء عند الخمول بناءً على آخر نشاط */
+    SESSION_IDLE_MS: 12 * 60 * 60 * 1000,
+
+    _touchSessionActivity() {
+        try {
+            sessionStorage.setItem('hse_session_last_activity_ms', String(Date.now()));
+        } catch (e) { /* ignore */ }
+    },
+
+    _isSessionExpiredForRestore(sessionUser) {
+        if (!sessionUser || !sessionUser.loginTime) return false;
+        const t = new Date(sessionUser.loginTime).getTime();
+        if (Number.isNaN(t)) return false;
+        if (Date.now() - t > this.SESSION_ABSOLUTE_MS) return true;
+        const last = parseInt(sessionStorage.getItem('hse_session_last_activity_ms') || '0', 10);
+        if (last > 0 && (Date.now() - last) > this.SESSION_IDLE_MS) return true;
+        return false;
+    },
+
+    _clearStoredSession() {
+        try {
+            sessionStorage.removeItem('hse_current_session');
+            sessionStorage.removeItem('hse_session_id');
+            sessionStorage.removeItem('hse_session_last_activity_ms');
+            localStorage.removeItem('hse_remember_user');
+        } catch (e) { /* ignore */ }
+        try { AppState.isPageRefresh = false; } catch (e2) { /* ignore */ }
+    },
+
+    /** إزالة passwordHash من كائن المستخدم في الذاكرة بعد المصادقة */
+    _sanitizeCurrentUserSecrets() {
+        try {
+            if (AppState.currentUser && typeof AppState.currentUser === 'object') {
+                delete AppState.currentUser.passwordHash;
+                AppState.currentUser.password = '***';
+            }
+        } catch (e) { /* ignore */ }
+    },
+
     /**
      * رسالة خطأ تسجيل الدخول: إن كان الخادم غير متاح (503 / بدون اتصال) نعرض رسالة اتصال، وإلا رسالة بيانات خاطئة.
      */
@@ -773,13 +814,13 @@ window.Auth = {
             department: user.department || '',
             permissions: userPermissions,
             id: fullUserData?.id || user.id,
-            passwordHash: hashedStored,
             passwordChanged: fullUserData?.passwordChanged ?? false,
             forcePasswordChange: fullUserData?.forcePasswordChange === true,
             isBootstrap: isBootstrap,
             loginTime: loginTime,
             photo: fullUserData?.photo || user?.photo || '' // ✅ إظهار صورة المستخدم بعد الدخول مباشرة
         };
+        this._sanitizeCurrentUserSecrets();
 
         console.log('✅ [AUTH] AppState.currentUser.name النهائي:', AppState.currentUser.name);
         Utils.safeLog('✅ تسجيل الدخول ناجح:', AppState.currentUser);
@@ -846,6 +887,7 @@ window.Auth = {
             sessionStorage.setItem('hse_session_id', currentSessionId);
         }
         AppState.currentUser.sessionId = currentSessionId;
+        this._touchSessionActivity();
 
         if (typeof UserActivityLog !== 'undefined') {
             UserActivityLog.log('login', 'Authentication', null, {
@@ -983,6 +1025,7 @@ window.Auth = {
         };
 
         sessionStorage.setItem('hse_current_session', JSON.stringify(safeUserData));
+        this._touchSessionActivity();
         Utils.safeLog('💾 تم حفظ الجلسة في sessionStorage');
 
         // إذا اختار "تذكرني"، نحفظ في localStorage أيضاً
@@ -1355,6 +1398,11 @@ window.Auth = {
                     const user = JSON.parse(sessionData);
                     // التحقق من أن البيانات صحيحة وأن المستخدم ما زال موجوداً
                     if (user && user.email) {
+                        if (this._isSessionExpiredForRestore(user)) {
+                            Utils.safeWarn('⚠️ انتهت صلاحية الجلسة (الحد الأقصى أو الخمول)');
+                            this._clearStoredSession();
+                            return false;
+                        }
                         // استعادة hse_session_id من بيانات الجلسة إن فُقد (بعد إعادة تحميل في نفس التبويب)
                         let currentSessionId = sessionStorage.getItem('hse_session_id');
                         if (!currentSessionId && user.sessionId) {
@@ -1412,10 +1460,10 @@ window.Auth = {
                                 ...user,
                                 ...foundUser,
                                 name: mergedName,
-                                passwordHash: foundUser.passwordHash || user.passwordHash,
                                 password: '***', // إخفاء كلمة المرور
                                 loginTime: user.loginTime || AppState.currentUser?.loginTime // الحفاظ على وقت تسجيل الدخول
                             };
+                            this._sanitizeCurrentUserSecrets();
                             
                             console.log('✅ [AUTH] AppState.currentUser.name بعد الاستعادة (sessionStorage):', AppState.currentUser.name);
                             
@@ -1458,11 +1506,11 @@ window.Auth = {
                                             ...user, // الحفاظ على بيانات الجلسة الأصلية
                                             ...dbUser, // دمج بيانات قاعدة البيانات
                                             name: mergedName,
-                                            passwordHash: dbUser.passwordHash || user.passwordHash,
                                             password: '***',
                                             loginTime: user.loginTime || AppState.currentUser?.loginTime, // الحفاظ على وقت تسجيل الدخول
                                             id: dbUser.id || user.id || AppState.currentUser?.id // الحفاظ على ID
                                         };
+                                        this._sanitizeCurrentUserSecrets();
                                         
                                         console.log('✅ [AUTH] AppState.currentUser.name بعد التحديث التلقائي (sessionStorage):', AppState.currentUser.name);
                                         
@@ -1506,6 +1554,7 @@ window.Auth = {
                             photo: AppState.currentUser.photo || ''
                         };
                         sessionStorage.setItem('hse_current_session', JSON.stringify(safeUserData));
+                        this._touchSessionActivity();
                         Utils.safeLog('✅ تم استعادة الجلسة من sessionStorage - المستخدم مسجل دخول');
                         return true;
                     }
@@ -1528,6 +1577,11 @@ window.Auth = {
                     const user = JSON.parse(remembered);
                     // التحقق من صحة البيانات وأن المستخدم ما زال موجوداً
                     if (user && user.email) {
+                        if (this._isSessionExpiredForRestore(user)) {
+                            Utils.safeWarn('⚠️ انتهت صلاحية الجلسة المحفوظة (تذكرني)');
+                            this._clearStoredSession();
+                            return false;
+                        }
                         let currentSessionId = sessionStorage.getItem('hse_session_id');
                         if (!currentSessionId && user.sessionId) {
                             try {
@@ -1580,10 +1634,10 @@ window.Auth = {
                                 ...user,
                                 ...foundUser,
                                 name: mergedName, // ✅ استخدام mergedName
-                                passwordHash: foundUser.passwordHash || user.passwordHash,
                                 password: '***', // إخفاء كلمة المرور
                                 loginTime: user.loginTime || AppState.currentUser?.loginTime // الحفاظ على وقت تسجيل الدخول
                             };
+                            this._sanitizeCurrentUserSecrets();
                             
                             console.log('✅ [AUTH] AppState.currentUser.name بعد الاستعادة (localStorage):', AppState.currentUser.name);
                             
@@ -1626,11 +1680,11 @@ window.Auth = {
                                             ...user, // الحفاظ على بيانات الجلسة الأصلية
                                             ...dbUser, // دمج بيانات قاعدة البيانات
                                             name: mergedName,
-                                            passwordHash: dbUser.passwordHash || user.passwordHash,
                                             password: '***',
                                             loginTime: user.loginTime || AppState.currentUser?.loginTime, // الحفاظ على وقت تسجيل الدخول
                                             id: dbUser.id || user.id || AppState.currentUser?.id // الحفاظ على ID
                                         };
+                                        this._sanitizeCurrentUserSecrets();
                                         
                                         console.log('✅ [AUTH] AppState.currentUser.name بعد التحديث التلقائي (localStorage):', AppState.currentUser.name);
                                         
@@ -1667,6 +1721,7 @@ window.Auth = {
                             photo: AppState.currentUser.photo || ''
                         };
                         sessionStorage.setItem('hse_current_session', JSON.stringify(safeUserData));
+                        this._touchSessionActivity();
                         Utils.safeLog('✅ تم استعادة الجلسة من localStorage - المستخدم مسجل دخول');
                         return true;
                     }
@@ -1783,6 +1838,7 @@ window.Auth = {
                 id: dbUser.id || AppState.currentUser.id, // الحفاظ على ID
                 loginTime: AppState.currentUser.loginTime // الحفاظ على وقت تسجيل الدخول
             };
+            this._sanitizeCurrentUserSecrets();
             
             console.log('✅ [AUTH] AppState.currentUser.name بعد التحديث:', AppState.currentUser.name);
 
@@ -1834,6 +1890,7 @@ window.Auth = {
                 Utils.safeLog('✅ تم تحديث القائمة الجانبية حسب الصلاحيات الجديدة');
             }
 
+            this._touchSessionActivity();
             AppState._sessionUpdateInProgress = false;
             return true;
         } catch (error) {
@@ -1894,9 +1951,9 @@ window.Auth = {
         user.updatedAt = new Date().toISOString();
 
         if (AppState.currentUser && AppState.currentUser.email === email) {
-            AppState.currentUser.passwordHash = newHash;
             AppState.currentUser.passwordChanged = true;
             AppState.currentUser.forcePasswordChange = false;
+            this._sanitizeCurrentUserSecrets();
         }
 
         // حظ ي قاعدة البيانات
@@ -2251,9 +2308,9 @@ window.Auth = {
 
         // تحديث المستخدم الحالي إذا كان هو نفسه
         if (AppState.currentUser && AppState.currentUser.email && AppState.currentUser.email.toLowerCase().trim() === email) {
-            AppState.currentUser.passwordHash = hashedTemp;
             AppState.currentUser.passwordChanged = false;
             AppState.currentUser.forcePasswordChange = true;
+            this._sanitizeCurrentUserSecrets();
         }
 
         // حفظ تلقائياً في Google Sheets

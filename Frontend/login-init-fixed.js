@@ -37,7 +37,8 @@ var log = function() { try { console.log.apply(console, arguments); } catch(e) {
         function getDefaultGoogleConfig() {
             return {
                 appsScript: { enabled: true, scriptUrl: 'https://script.google.com/macros/s/AKfycbx2dCdy7o7cOUSJCiA05OEyOYB5e5e79DgV5WKVqv8fhmOnNKQjZrvI9j8jxFXtT16m/exec' },
-                sheets: { enabled: true, spreadsheetId: '1EanavJ2OodOmq8b1GagSj8baa-KF-o4mVme_Jlwmgxc', apiKey: '' },
+                // معرّف الجدول يُعرَّف في Script Properties بالخادم؛ يُكمَّل محلياً من إعدادات المزامنة عند الحاجة
+                sheets: { enabled: false, spreadsheetId: '', apiKey: '' },
                 maps: { enabled: false, apiKey: '' }
             };
         }

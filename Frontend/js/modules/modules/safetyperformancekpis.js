@@ -1302,7 +1302,7 @@ const SafetyPerformanceKPIs = {
             if (!document.getElementById('spk-scorecard-table-container')) return;
             const signature = this.getScorecardSignature();
             if (signature !== this._lastScorecardSignature) this.renderScorecardTable();
-        }, 3000);
+        }, 15000);
     },
 
     isEmployeeInactiveRecord(employee = {}) {

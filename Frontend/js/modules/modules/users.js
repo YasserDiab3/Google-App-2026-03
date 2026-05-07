@@ -11,7 +11,7 @@ const Users = {
     currentView: 'list', // list, form, edit
     currentEditId: null,
     autoRefreshInterval: null, // لتخزين معرف التحديث التلقائي
-    refreshInterval: 5000, // تحديث كل 5 ثوان
+    refreshInterval: 15000, // تحديث كل 15 ثانية — تقليل الضغط على الخلفية
     sectionChangeHandler: null, // لتخزين معالج حدث تغيير القسم
     _getI18nCore() {
         return (window.AppI18n && typeof window.AppI18n.t === 'function')

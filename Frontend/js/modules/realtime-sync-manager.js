@@ -90,8 +90,8 @@ const RealtimeSyncManager = {
         // الحد الأدنى للوقت بين مزامنتين للموديول نفسه (5 ثوانٍ) - تحسين من 10 ثوانٍ لتسريع المزامنة
         minSyncInterval: 5000,
 
-        // ✅ “فوري” بين الأجهزة: فحص مؤشر تحديثات Users كل 3 ثوانٍ (طلب خفيف جداً)
-        usersMetaPollInterval: 3000
+        // فحص مؤشر تحديثات Users — تقليل الضغط على حصة Apps Script (كان 3 ثوانٍ)
+        usersMetaPollInterval: 20000
     },
 
     // حالة النظام
@@ -167,7 +167,7 @@ const RealtimeSyncManager = {
                 return;
             }
 
-            const pollEvery = Math.max(1500, Number(this.config.usersMetaPollInterval) || 3000);
+            const pollEvery = Math.max(5000, Number(this.config.usersMetaPollInterval) || 20000);
             const poll = async () => {
                 try {
                     if (!AppState?.currentUser?.email) return;

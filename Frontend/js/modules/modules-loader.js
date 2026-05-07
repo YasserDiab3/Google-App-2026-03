@@ -15,11 +15,8 @@ const MODULES_TO_LOAD = [
     'users',
     'incidents',
     'nearmiss',
-    'ptw',
-    'training',
     'reports',
     'settings',
-    'clinic',
     'fireequipment',
     'ppe',
     'periodicinspections',
@@ -47,7 +44,11 @@ const MODULES_TO_LOAD = [
     'issuetracking',
     'changemanagement',
     'apptester',
-    'issuingauthorities'
+    'issuingauthorities',
+    // ثقيل الحجم — يُحمَّل بعد الأساسيات لتسريع أول عرض
+    'ptw',
+    'training',
+    'clinic'
 ];
 
 /** عدد إعادة المحاولات عند 503 أو فشل التحميل */
