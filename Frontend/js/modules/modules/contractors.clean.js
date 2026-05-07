@@ -11734,7 +11734,10 @@ const Contractors = {
                                 <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3">
                                     <div>
                                         <label class="block text-sm font-semibold text-gray-700 mb-2">البحث</label>
-                                        <input type="text" id="contractor-violations-search" class="form-input" placeholder="ابحث في كل تفاصيل الجدول...">
+                                        <div class="relative">
+                                            <input type="text" id="contractor-violations-search" class="form-input pr-10 border-2 border-indigo-200 bg-white shadow-sm focus:border-indigo-400 focus:ring-2 focus:ring-indigo-300" placeholder="ابحث في كل تفاصيل الجدول...">
+                                            <i class="fas fa-search absolute right-3 top-1/2 -translate-y-1/2 text-indigo-500 pointer-events-none"></i>
+                                        </div>
                                     </div>
                                     <div>
                                         <label class="block text-sm font-semibold text-gray-700 mb-2">نوع الشخص</label>
