@@ -5,6 +5,7 @@
 // ===== Violations Module (مخالفات الموظفين والمقاولين) =====
 const Violations = {
     currentFilters: {
+        search: '',
         personType: '',
         violationType: '',
         severity: '',
@@ -889,7 +890,7 @@ const Violations = {
 
     hasActiveFilters() {
         const filters = this.currentFilters || {};
-        return !!(filters.personType || filters.violationType || filters.severity || filters.status);
+        return !!(filters.search || filters.personType || filters.violationType || filters.severity || filters.status);
     },
 
     getFilteredViolations() {
@@ -906,7 +907,7 @@ const Violations = {
                 })
                 .filter(Boolean);
             const filters = this.currentFilters || {};
-
+            const searchFilter = String(filters.search || '').trim().toLowerCase();
             const personFilter = filters.personType || '';
             const typeFilter = (filters.violationType || '').toLowerCase();
             const severityFilter = filters.severity || '';
@@ -925,6 +926,20 @@ const Violations = {
 
                 if (severityFilter && (violation.severity || '') !== severityFilter) return false;
                 if (statusFilter && (violation.status || '') !== statusFilter) return false;
+                if (searchFilter) {
+                    const searchableText = [
+                        violation.employeeName,
+                        violation.contractorName,
+                        violation.employeeId,
+                        violation.violationType,
+                        violation.location,
+                        violation.status,
+                        violation.severity,
+                        violation.violatorCode,
+                        violation.notes
+                    ].map((value) => String(value || '').toLowerCase()).join(' ');
+                    if (!searchableText.includes(searchFilter)) return false;
+                }
 
                 return true;
             });
@@ -966,7 +981,14 @@ const Violations = {
         `).join('');
 
         return `
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">بحث</label>
+                    <div class="relative">
+                        <input type="text" id="violations-filter-search" class="form-input pr-10 border-2 border-indigo-200 bg-white shadow-sm focus:border-indigo-400 focus:ring-2 focus:ring-indigo-300" placeholder="بحث بالاسم، الكود، نوع المخالفة..." value="${Utils.escapeHTML(filters.search || '')}">
+                        <i class="fas fa-search absolute right-3 top-1/2 -translate-y-1/2 text-indigo-500 pointer-events-none"></i>
+                    </div>
+                </div>
                 <div>
                     <label class="block text-sm font-semibold text-gray-700 mb-2">نوع الشخص</label>
                     <select id="violations-filter-person" class="form-input">
@@ -1000,7 +1022,7 @@ const Violations = {
                         <option value="غير محلول" ${filters.status === 'غير محلول' ? 'selected' : ''}>غير محلول</option>
                     </select>
                 </div>
-                <div class="md:col-span-2 lg:col-span-4 flex items-end">
+                <div class="md:col-span-2 lg:col-span-5 flex items-end">
                     <button type="button" id="violations-filter-reset" class="btn-secondary">
                         <i class="fas fa-undo ml-2"></i>إعادة تعيين التصفية
                     </button>
@@ -1010,11 +1032,20 @@ const Violations = {
     },
 
     bindFilters() {
+        const searchInput = document.getElementById('violations-filter-search');
         const personSelect = document.getElementById('violations-filter-person');
         const typeSelect = document.getElementById('violations-filter-type');
         const severitySelect = document.getElementById('violations-filter-severity');
         const statusSelect = document.getElementById('violations-filter-status');
         const resetBtn = document.getElementById('violations-filter-reset');
+
+        if (searchInput) {
+            searchInput.value = this.currentFilters.search || '';
+            searchInput.oninput = () => {
+                this.currentFilters.search = searchInput.value || '';
+                this.refreshViolationsView();
+            };
+        }
 
         if (personSelect) {
             personSelect.value = this.currentFilters.personType || '';
@@ -1051,6 +1082,7 @@ const Violations = {
         if (resetBtn) {
             resetBtn.onclick = () => {
                 this.currentFilters = {
+                    search: '',
                     personType: '',
                     violationType: '',
                     severity: '',
