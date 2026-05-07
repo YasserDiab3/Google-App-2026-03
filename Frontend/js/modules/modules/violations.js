@@ -981,7 +981,7 @@ const Violations = {
         `).join('');
 
         return `
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
                 <div>
                     <label class="block text-sm font-semibold text-gray-700 mb-2">بحث</label>
                     <div class="relative">
@@ -1022,7 +1022,7 @@ const Violations = {
                         <option value="غير محلول" ${filters.status === 'غير محلول' ? 'selected' : ''}>غير محلول</option>
                     </select>
                 </div>
-                <div class="md:col-span-2 lg:col-span-5 flex items-end">
+                <div class="md:col-span-2 lg:col-span-1 flex items-end">
                     <button type="button" id="violations-filter-reset" class="btn-secondary">
                         <i class="fas fa-undo ml-2"></i>إعادة تعيين التصفية
                     </button>
