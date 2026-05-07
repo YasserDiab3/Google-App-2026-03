@@ -927,17 +927,9 @@ const Violations = {
                 if (severityFilter && (violation.severity || '') !== severityFilter) return false;
                 if (statusFilter && (violation.status || '') !== statusFilter) return false;
                 if (searchFilter) {
-                    const searchableText = [
-                        violation.employeeName,
-                        violation.contractorName,
-                        violation.employeeId,
-                        violation.violationType,
-                        violation.location,
-                        violation.status,
-                        violation.severity,
-                        violation.violatorCode,
-                        violation.notes
-                    ].map((value) => String(value || '').toLowerCase()).join(' ');
+                    const searchableText = Object.values(violation || {})
+                        .map((value) => String(value == null ? '' : value).toLowerCase())
+                        .join(' ');
                     if (!searchableText.includes(searchFilter)) return false;
                 }
 
@@ -1046,7 +1038,8 @@ const Violations = {
             searchInput.value = this.currentFilters.search || '';
             searchInput.oninput = () => {
                 this.currentFilters.search = searchInput.value || '';
-                this.refreshViolationsView();
+                // لا نعيد رسم الفلاتر أثناء الكتابة حتى لا يفقد الحقل التركيز.
+                this.refreshViolationsView({ skipFilterRerender: true });
             };
         }
 
@@ -1096,7 +1089,8 @@ const Violations = {
         }
     },
 
-    refreshViolationsView() {
+    refreshViolationsView(options = {}) {
+        const skipFilterRerender = !!options.skipFilterRerender;
         const listContainer = document.getElementById('violations-list');
         if (listContainer) {
             // Check which tab is active
@@ -1120,12 +1114,14 @@ const Violations = {
             statsContainer.outerHTML = this.renderAllViolationsStats();
         }
         const filtersContainer = document.getElementById('violations-filters-container');
-        if (filtersContainer) {
+        if (filtersContainer && !skipFilterRerender) {
             const activeTab = document.querySelector('.tab-btn.active')?.dataset.tab || 'all';
             const defaultPersonType = activeTab === 'employees' ? 'employee' : activeTab === 'contractors' ? 'contractor' : '';
             filtersContainer.innerHTML = this.renderFilters(defaultPersonType);
         }
-        this.bindFilters();
+        if (!skipFilterRerender) {
+            this.bindFilters();
+        }
     },
 
     setupEventListeners() {
