@@ -981,51 +981,54 @@ const Violations = {
         `).join('');
 
         return `
-            <div class="grid grid-cols-1 md:grid-cols-6 gap-3">
-                <div class="md:min-w-0">
-                    <label class="block text-sm font-semibold text-gray-700 mb-2">بحث</label>
-                    <div class="relative">
-                        <input type="text" id="violations-filter-search" class="form-input pr-10 text-sm border-2 border-indigo-200 bg-white shadow-sm focus:border-indigo-400 focus:ring-2 focus:ring-indigo-300" style="max-width: 210px;" placeholder="بحث..." value="${Utils.escapeHTML(filters.search || '')}">
-                        <i class="fas fa-search absolute right-3 top-1/2 -translate-y-1/2 text-indigo-500 pointer-events-none"></i>
+            <div style="background: linear-gradient(135deg, #f8fafc 0%, #eef2ff 100%); padding: 14px 16px; border: 1px solid #e2e8f0; border-radius: 12px;">
+                <div style="display:grid; grid-template-columns: minmax(170px, 0.9fr) repeat(4, minmax(140px, 1fr)) minmax(150px, 0.9fr); gap: 10px; align-items:end;">
+                    <div style="display:flex; flex-direction:column; gap:6px;">
+                        <label for="violations-filter-search" style="font-size:12px; font-weight:700; color:#4a5568;">بحث</label>
+                        <div class="relative">
+                            <input type="text" id="violations-filter-search" class="form-input pr-10" style="width:100%; font-size:13px; border:1px solid #d1d5db; border-radius:8px;" placeholder="بحث..." value="${Utils.escapeHTML(filters.search || '')}">
+                            <i class="fas fa-search absolute right-3 top-1/2 -translate-y-1/2 text-indigo-500 pointer-events-none"></i>
+                        </div>
                     </div>
-                </div>
-                <div>
-                    <label class="block text-sm font-semibold text-gray-700 mb-2">نوع الشخص</label>
-                    <select id="violations-filter-person" class="form-input">
-                        <option value="" ${filters.personType === '' ? 'selected' : ''}>جميع الأشخاص</option>
-                        <option value="employee" ${filters.personType === 'employee' ? 'selected' : ''}>الموظفون</option>
-                        <option value="contractor" ${filters.personType === 'contractor' ? 'selected' : ''}>المقاولون</option>
-                    </select>
-                </div>
-                <div>
-                    <label class="block text-sm font-semibold text-gray-700 mb-2">نوع المخالفة</label>
-                    <select id="violations-filter-type" class="form-input">
-                        <option value="" ${filters.violationType === '' ? 'selected' : ''}>جميع الأنواع</option>
-                        ${typeOptions}
-                    </select>
-                </div>
-                <div>
-                    <label class="block text-sm font-semibold text-gray-700 mb-2">الشدة</label>
-                    <select id="violations-filter-severity" class="form-input">
-                        <option value="" ${filters.severity === '' ? 'selected' : ''}>جميع الدرجات</option>
-                        <option value="عالية" ${filters.severity === 'عالية' ? 'selected' : ''}>عالية</option>
-                        <option value="متوسطة" ${filters.severity === 'متوسطة' ? 'selected' : ''}>متوسطة</option>
-                        <option value="منخضة" ${filters.severity === 'منخضة' ? 'selected' : ''}>منخضة</option>
-                    </select>
-                </div>
-                <div>
-                    <label class="block text-sm font-semibold text-gray-700 mb-2">الحالة</label>
-                    <select id="violations-filter-status" class="form-input">
-                        <option value="" ${filters.status === '' ? 'selected' : ''}>جميع الحالات</option>
-                        <option value="قيد المراجعة" ${filters.status === 'قيد المراجعة' ? 'selected' : ''}>قيد المراجعة</option>
-                        <option value="محلول" ${filters.status === 'محلول' ? 'selected' : ''}>محلول</option>
-                        <option value="غير محلول" ${filters.status === 'غير محلول' ? 'selected' : ''}>غير محلول</option>
-                    </select>
-                </div>
-                <div class="md:col-span-1 flex items-end">
-                    <button type="button" id="violations-filter-reset" class="btn-secondary">
-                        <i class="fas fa-undo ml-2"></i>إعادة تعيين التصفية
-                    </button>
+                    <div style="display:flex; flex-direction:column; gap:6px;">
+                        <label for="violations-filter-person" style="font-size:12px; font-weight:700; color:#4a5568;">نوع الشخص</label>
+                        <select id="violations-filter-person" class="form-input" style="width:100%; font-size:13px; border:1px solid #d1d5db; border-radius:8px;">
+                            <option value="" ${filters.personType === '' ? 'selected' : ''}>جميع الأشخاص</option>
+                            <option value="employee" ${filters.personType === 'employee' ? 'selected' : ''}>الموظفون</option>
+                            <option value="contractor" ${filters.personType === 'contractor' ? 'selected' : ''}>المقاولون</option>
+                        </select>
+                    </div>
+                    <div style="display:flex; flex-direction:column; gap:6px;">
+                        <label for="violations-filter-type" style="font-size:12px; font-weight:700; color:#4a5568;">نوع المخالفة</label>
+                        <select id="violations-filter-type" class="form-input" style="width:100%; font-size:13px; border:1px solid #d1d5db; border-radius:8px;">
+                            <option value="" ${filters.violationType === '' ? 'selected' : ''}>جميع الأنواع</option>
+                            ${typeOptions}
+                        </select>
+                    </div>
+                    <div style="display:flex; flex-direction:column; gap:6px;">
+                        <label for="violations-filter-severity" style="font-size:12px; font-weight:700; color:#4a5568;">الشدة</label>
+                        <select id="violations-filter-severity" class="form-input" style="width:100%; font-size:13px; border:1px solid #d1d5db; border-radius:8px;">
+                            <option value="" ${filters.severity === '' ? 'selected' : ''}>جميع الدرجات</option>
+                            <option value="عالية" ${filters.severity === 'عالية' ? 'selected' : ''}>عالية</option>
+                            <option value="متوسطة" ${filters.severity === 'متوسطة' ? 'selected' : ''}>متوسطة</option>
+                            <option value="منخضة" ${filters.severity === 'منخضة' ? 'selected' : ''}>منخضة</option>
+                        </select>
+                    </div>
+                    <div style="display:flex; flex-direction:column; gap:6px;">
+                        <label for="violations-filter-status" style="font-size:12px; font-weight:700; color:#4a5568;">الحالة</label>
+                        <select id="violations-filter-status" class="form-input" style="width:100%; font-size:13px; border:1px solid #d1d5db; border-radius:8px;">
+                            <option value="" ${filters.status === '' ? 'selected' : ''}>جميع الحالات</option>
+                            <option value="قيد المراجعة" ${filters.status === 'قيد المراجعة' ? 'selected' : ''}>قيد المراجعة</option>
+                            <option value="محلول" ${filters.status === 'محلول' ? 'selected' : ''}>محلول</option>
+                            <option value="غير محلول" ${filters.status === 'غير محلول' ? 'selected' : ''}>غير محلول</option>
+                        </select>
+                    </div>
+                    <div style="display:flex; flex-direction:column; gap:6px;">
+                        <label style="font-size:12px; font-weight:700; color:#4a5568;">&nbsp;</label>
+                        <button type="button" id="violations-filter-reset" style="width:100%; height:42px; border:none; border-radius:8px; background:linear-gradient(135deg,#667eea 0%,#764ba2 100%); color:#fff; font-size:13px; font-weight:700; cursor:pointer;">
+                            <i class="fas fa-undo ml-2"></i>إعادة التعيين
+                        </button>
+                    </div>
                 </div>
             </div>
         `;
