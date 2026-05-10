@@ -3933,7 +3933,6 @@ const PPE = {
                 exportBtn: 'ppe-receipts-export-excel-btn',
                 tplBtn: 'ppe-receipts-template-btn',
                 importBtn: 'ppe-receipts-import-btn',
-                importInput: 'ppe-receipts-import-input',
                 exportTitleKey: 'module.ppe.excel.exportReceiptsTitle',
                 exportTitleFb: 'تصدير سجل الاستلامات إلى Excel',
                 tplTitleKey: 'module.ppe.excel.downloadTemplateReceiptsTitle',
@@ -3945,7 +3944,6 @@ const PPE = {
                 exportBtn: 'ppe-stock-export-excel-btn',
                 tplBtn: 'ppe-stock-template-btn',
                 importBtn: 'ppe-stock-import-btn',
-                importInput: 'ppe-stock-import-input',
                 exportTitleKey: 'module.ppe.excel.exportStockTitle',
                 exportTitleFb: 'تصدير المخزون إلى Excel',
                 tplTitleKey: 'module.ppe.excel.downloadTemplateStockTitle',
@@ -3961,7 +3959,6 @@ const PPE = {
                 <button id="${ids.tplBtn}" type="button" class="btn-secondary" title="${ut(t(ids.tplTitleKey, ids.tplTitleFb))}">
                     <i class="fas fa-download ml-2"></i>${ut(t('module.ppe.excel.downloadTemplateBtn', 'تحميل القالب'))}
                 </button>
-                <input type="file" id="${ids.importInput}" accept=".xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel" tabindex="-1" aria-hidden="true" style="position:absolute;width:1px;height:1px;opacity:0;left:-9999px;">
                 <button id="${ids.importBtn}" type="button" class="btn-secondary" title="${ut(t(ids.importTitleKey, ids.importTitleFb))}">
                     <i class="fas fa-file-import ml-2"></i>${ut(t('module.ppe.excel.importBtn', 'استيراد من القالب'))}
                 </button>
@@ -3969,26 +3966,256 @@ const PPE = {
         `;
     },
 
+    /** نموذج استيراد سجل الاستلامات (مثل قاعدة بيانات الموظفين): قالب + ملف + معاينة + تأكيد */
+    showPpeReceiptsImportModal() {
+        if (!this._isPpeAdminUser()) return;
+        if (typeof XLSX === 'undefined') {
+            Notification.error(this._t('module.ppe.notify.xlsxMissing', 'مكتبة SheetJS غير محمّلة. يرجى تحديث الصفحة'));
+            return;
+        }
+        try {
+            document.getElementById('ppe-receipts-import-modal')?.remove();
+        } catch (e) { /* ignore */ }
+
+        const t = (k, f) => this._t(k, f);
+        const ut = (s) => Utils.escapeHTML(s);
+        const defs = this._ppeReceiptExcelFieldDefs();
+        const colsList = defs.map((d) => `<li><strong>${ut(d.ar)}</strong> — <span class="font-mono text-xs">${ut(d.en)}</span></li>`).join('');
+
+        const modal = document.createElement('div');
+        modal.className = 'modal-overlay';
+        modal.id = 'ppe-receipts-import-modal';
+        modal.innerHTML = `
+            <div class="modal-content" style="max-width: 800px;">
+                <div class="modal-header">
+                    <h2 class="modal-title"><i class="fas fa-file-excel ml-2 text-green-600"></i>${ut(t('module.ppe.excel.importModalReceiptsTitle', 'استيراد سجل الاستلامات من Excel'))}</h2>
+                    <button type="button" class="modal-close" onclick="this.closest('.modal-overlay').remove()" aria-label="${ut(t('module.common.close', 'إغلاق'))}">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="modal-body space-y-4">
+                    <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                        <p class="text-sm text-blue-900 font-semibold mb-2"><i class="fas fa-info-circle ml-2"></i>${ut(t('module.ppe.excel.importModalIntro', 'حمّل القالب أو اتبع الأعمدة التالية ثم ارفع الملف. السجلات المكررة تُتجاوَز مع تنبيه.'))}</p>
+                        <button type="button" id="ppe-receipts-modal-download-template" class="btn-secondary btn-sm mb-3">
+                            <i class="fas fa-file-download ml-2"></i>${ut(t('module.ppe.excel.downloadTemplateBtn', 'تحميل القالب'))}
+                        </button>
+                        <p class="text-sm text-blue-800 mb-2">${ut(t('module.ppe.excel.importModalColumns', 'الأعمدة المتوقعة في الصف الأول:'))}</p>
+                        <ul class="text-sm text-blue-800 list-disc mr-6 space-y-1">${colsList}</ul>
+                    </div>
+                    <div>
+                        <label for="ppe-receipts-modal-file" class="block text-sm font-semibold text-gray-700 mb-2">
+                            <i class="fas fa-file-excel ml-2"></i>${ut(t('module.ppe.excel.chooseExcelFile', 'اختر ملف Excel (.xlsx أو .xls)'))}
+                        </label>
+                        <input type="file" id="ppe-receipts-modal-file" accept=".xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel" class="form-input">
+                    </div>
+                    <div id="ppe-receipts-import-preview" class="hidden">
+                        <h3 class="text-sm font-semibold text-gray-800 mb-2">${ut(t('module.ppe.excel.previewTitle', 'معاينة (أول 5 صفوف بيانات):'))}</h3>
+                        <div class="max-h-60 overflow-auto border rounded bg-white">
+                            <table class="data-table text-xs">
+                                <thead id="ppe-receipts-preview-head"></thead>
+                                <tbody id="ppe-receipts-preview-body"></tbody>
+                            </table>
+                        </div>
+                        <p id="ppe-receipts-preview-count" class="text-sm text-gray-600 mt-2"></p>
+                    </div>
+                </div>
+                <div class="modal-footer flex justify-end gap-2">
+                    <button type="button" class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">${ut(t('module.common.cancel', 'إلغاء'))}</button>
+                    <button type="button" id="ppe-receipts-import-confirm" class="btn-primary" disabled>
+                        <i class="fas fa-check ml-2"></i>${ut(t('module.ppe.excel.confirmImport', 'تأكيد الاستيراد'))}
+                    </button>
+                </div>
+            </div>`;
+        document.body.appendChild(modal);
+        this.applyModuleI18n(modal);
+
+        const fileInput = modal.querySelector('#ppe-receipts-modal-file');
+        const dlTpl = modal.querySelector('#ppe-receipts-modal-download-template');
+        const previewWrap = modal.querySelector('#ppe-receipts-import-preview');
+        const previewHead = modal.querySelector('#ppe-receipts-preview-head');
+        const previewBody = modal.querySelector('#ppe-receipts-preview-body');
+        const previewCount = modal.querySelector('#ppe-receipts-preview-count');
+        const confirmBtn = modal.querySelector('#ppe-receipts-import-confirm');
+        let selectedFile = null;
+
+        if (dlTpl) {
+            dlTpl.onclick = () => this.downloadReceiptsExcelTemplate();
+        }
+
+        fileInput.addEventListener('change', async (e) => {
+            const file = e.target.files && e.target.files[0];
+            selectedFile = file || null;
+            confirmBtn.disabled = !selectedFile;
+            if (!file) {
+                previewWrap.classList.add('hidden');
+                return;
+            }
+            try {
+                const buf = await file.arrayBuffer();
+                const wb = XLSX.read(buf, { type: 'array', cellDates: true });
+                const aoa = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { header: 1, defval: '', raw: false });
+                if (!aoa || aoa.length < 2) {
+                    previewWrap.classList.add('hidden');
+                    Notification.warning(this._t('module.ppe.excel.importEmpty', 'الملف فارغ أو لا يحتوي صف بيانات بعد الرؤوس'));
+                    return;
+                }
+                const headers = (aoa[0] || []).map((h) => String(h || '').trim());
+                previewHead.innerHTML = `<tr>${headers.map((h) => `<th>${ut(h)}</th>`).join('')}</tr>`;
+                previewBody.innerHTML = aoa.slice(1, 6).map((row) =>
+                    `<tr>${headers.map((_, i) => `<td>${ut(String(row[i] ?? ''))}</td>`).join('')}</tr>`
+                ).join('');
+                const dataRows = Math.max(0, aoa.length - 1);
+                previewCount.textContent = `${this._t('module.ppe.excel.previewRowCount', 'عدد صفوف البيانات')}: ${dataRows}`;
+                previewWrap.classList.remove('hidden');
+            } catch (err) {
+                Utils.safeError('ppe receipts import preview', err);
+                previewWrap.classList.add('hidden');
+                Notification.error(this._t('module.ppe.excel.previewErr', 'تعذّر قراءة الملف للمعاينة'));
+            }
+        });
+
+        confirmBtn.addEventListener('click', async () => {
+            if (!selectedFile) return;
+            modal.remove();
+            await this.importReceiptsExcel(selectedFile);
+        });
+
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) modal.remove();
+        });
+    },
+
+    /** نموذج استيراد أصناف المخزون */
+    showPpeStockImportModal() {
+        if (!this._isPpeAdminUser()) return;
+        if (typeof XLSX === 'undefined') {
+            Notification.error(this._t('module.ppe.notify.xlsxMissing', 'مكتبة SheetJS غير محمّلة. يرجى تحديث الصفحة'));
+            return;
+        }
+        try {
+            document.getElementById('ppe-stock-import-modal')?.remove();
+        } catch (e) { /* ignore */ }
+
+        const t = (k, f) => this._t(k, f);
+        const ut = (s) => Utils.escapeHTML(s);
+        const defs = this._ppeStockExcelFieldDefs().filter((d) => !['stock_IN', 'stock_OUT', 'balance'].includes(d.key));
+        const colsList = defs.map((d) => `<li><strong>${ut(d.ar)}</strong> — <span class="font-mono text-xs">${ut(d.en)}</span></li>`).join('');
+
+        const modal = document.createElement('div');
+        modal.className = 'modal-overlay';
+        modal.id = 'ppe-stock-import-modal';
+        modal.innerHTML = `
+            <div class="modal-content" style="max-width: 800px;">
+                <div class="modal-header">
+                    <h2 class="modal-title"><i class="fas fa-file-excel ml-2 text-green-600"></i>${ut(t('module.ppe.excel.importModalStockTitle', 'استيراد أصناف المخزون من Excel'))}</h2>
+                    <button type="button" class="modal-close" onclick="this.closest('.modal-overlay').remove()" aria-label="${ut(t('module.common.close', 'إغلاق'))}">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="modal-body space-y-4">
+                    <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                        <p class="text-sm text-blue-900 font-semibold mb-2"><i class="fas fa-info-circle ml-2"></i>${ut(t('module.ppe.excel.importStockIntro', 'حمّل القالب ثم عبّئ الأصناف الجديدة فقط. الأصناف الموجودة (كود أو اسم أو معرف) لن تُستبدل وتُعرَض في قائمة المكررات.'))}</p>
+                        <button type="button" id="ppe-stock-modal-download-template" class="btn-secondary btn-sm mb-3">
+                            <i class="fas fa-file-download ml-2"></i>${ut(t('module.ppe.excel.downloadTemplateBtn', 'تحميل القالب'))}
+                        </button>
+                        <p class="text-sm text-blue-800 mb-2">${ut(t('module.ppe.excel.importModalColumnsStock', 'أعمدة القالب (صف الرؤوس):'))}</p>
+                        <ul class="text-sm text-blue-800 list-disc mr-6 space-y-1">${colsList}</ul>
+                    </div>
+                    <div>
+                        <label for="ppe-stock-modal-file" class="block text-sm font-semibold text-gray-700 mb-2">
+                            <i class="fas fa-file-excel ml-2"></i>${ut(t('module.ppe.excel.chooseExcelFile', 'اختر ملف Excel (.xlsx أو .xls)'))}
+                        </label>
+                        <input type="file" id="ppe-stock-modal-file" accept=".xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel" class="form-input">
+                    </div>
+                    <div id="ppe-stock-import-preview" class="hidden">
+                        <h3 class="text-sm font-semibold text-gray-800 mb-2">${ut(t('module.ppe.excel.previewTitle', 'معاينة (أول 5 صفوف بيانات):'))}</h3>
+                        <div class="max-h-60 overflow-auto border rounded bg-white">
+                            <table class="data-table text-xs">
+                                <thead id="ppe-stock-preview-head"></thead>
+                                <tbody id="ppe-stock-preview-body"></tbody>
+                            </table>
+                        </div>
+                        <p id="ppe-stock-preview-count" class="text-sm text-gray-600 mt-2"></p>
+                    </div>
+                </div>
+                <div class="modal-footer flex justify-end gap-2">
+                    <button type="button" class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">${ut(t('module.common.cancel', 'إلغاء'))}</button>
+                    <button type="button" id="ppe-stock-import-confirm" class="btn-primary" disabled>
+                        <i class="fas fa-check ml-2"></i>${ut(t('module.ppe.excel.confirmImport', 'تأكيد الاستيراد'))}
+                    </button>
+                </div>
+            </div>`;
+        document.body.appendChild(modal);
+        this.applyModuleI18n(modal);
+
+        const fileInput = modal.querySelector('#ppe-stock-modal-file');
+        const dlTpl = modal.querySelector('#ppe-stock-modal-download-template');
+        const previewWrap = modal.querySelector('#ppe-stock-import-preview');
+        const previewHead = modal.querySelector('#ppe-stock-preview-head');
+        const previewBody = modal.querySelector('#ppe-stock-preview-body');
+        const previewCount = modal.querySelector('#ppe-stock-preview-count');
+        const confirmBtn = modal.querySelector('#ppe-stock-import-confirm');
+        let selectedFile = null;
+
+        if (dlTpl) {
+            dlTpl.onclick = () => this.downloadStockExcelTemplate();
+        }
+
+        fileInput.addEventListener('change', async (e) => {
+            const file = e.target.files && e.target.files[0];
+            selectedFile = file || null;
+            confirmBtn.disabled = !selectedFile;
+            if (!file) {
+                previewWrap.classList.add('hidden');
+                return;
+            }
+            try {
+                const buf = await file.arrayBuffer();
+                const wb = XLSX.read(buf, { type: 'array', cellDates: true });
+                const aoa = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { header: 1, defval: '', raw: false });
+                if (!aoa || aoa.length < 2) {
+                    previewWrap.classList.add('hidden');
+                    Notification.warning(this._t('module.ppe.excel.importEmpty', 'الملف فارغ أو لا يحتوي صف بيانات بعد الرؤوس'));
+                    return;
+                }
+                const headers = (aoa[0] || []).map((h) => String(h || '').trim());
+                previewHead.innerHTML = `<tr>${headers.map((h) => `<th>${ut(h)}</th>`).join('')}</tr>`;
+                previewBody.innerHTML = aoa.slice(1, 6).map((row) =>
+                    `<tr>${headers.map((_, i) => `<td>${ut(String(row[i] ?? ''))}</td>`).join('')}</tr>`
+                ).join('');
+                const dataRows = Math.max(0, aoa.length - 1);
+                previewCount.textContent = `${this._t('module.ppe.excel.previewRowCount', 'عدد صفوف البيانات')}: ${dataRows}`;
+                previewWrap.classList.remove('hidden');
+            } catch (err) {
+                Utils.safeError('ppe stock import preview', err);
+                previewWrap.classList.add('hidden');
+                Notification.error(this._t('module.ppe.excel.previewErr', 'تعذّر قراءة الملف للمعاينة'));
+            }
+        });
+
+        confirmBtn.addEventListener('click', async () => {
+            if (!selectedFile) return;
+            modal.remove();
+            await this.importStockExcel(selectedFile);
+        });
+
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) modal.remove();
+        });
+    },
+
     _bindPpeReceiptExcelToolbar() {
         const exportBtn = document.getElementById('ppe-receipts-export-excel-btn');
         const tplBtn = document.getElementById('ppe-receipts-template-btn');
         const importBtn = document.getElementById('ppe-receipts-import-btn');
-        const importInput = document.getElementById('ppe-receipts-import-input');
         if (exportBtn) {
             exportBtn.onclick = () => this.exportReceiptsExcel();
         }
         if (tplBtn) {
             tplBtn.onclick = () => this.downloadReceiptsExcelTemplate();
         }
-        if (importBtn && importInput) {
-            importBtn.onclick = () => importInput.click();
-        }
-        if (importInput) {
-            importInput.onchange = (e) => {
-                const f = e.target.files && e.target.files[0];
-                e.target.value = '';
-                if (f) this.importReceiptsExcel(f);
-            };
+        if (importBtn) {
+            importBtn.onclick = () => this.showPpeReceiptsImportModal();
         }
     },
 
@@ -3996,22 +4223,14 @@ const PPE = {
         const exportBtn = document.getElementById('ppe-stock-export-excel-btn');
         const tplBtn = document.getElementById('ppe-stock-template-btn');
         const importBtn = document.getElementById('ppe-stock-import-btn');
-        const importInput = document.getElementById('ppe-stock-import-input');
         if (exportBtn) {
             exportBtn.onclick = () => this.exportStockExcel();
         }
         if (tplBtn) {
             tplBtn.onclick = () => this.downloadStockExcelTemplate();
         }
-        if (importBtn && importInput) {
-            importBtn.onclick = () => importInput.click();
-        }
-        if (importInput) {
-            importInput.onchange = (e) => {
-                const f = e.target.files && e.target.files[0];
-                e.target.value = '';
-                if (f) this.importStockExcel(f);
-            };
+        if (importBtn) {
+            importBtn.onclick = () => this.showPpeStockImportModal();
         }
     },
 

@@ -95,27 +95,80 @@ const Sustainability = {
     renderAdminImportExportToolbarHtml() {
         if (!this.isSystemAdmin()) return '';
         return `
-            <div class="relative inline-flex flex-wrap items-center gap-2 sustainability-admin-tools mr-2 md:mr-3" id="sustainability-admin-tools-wrap">
-                <input type="file" id="sustainability-excel-file-input" accept=".xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel" class="hidden" tabindex="-1" aria-hidden="true">
-                <div class="relative">
-                    <button type="button" class="btn btn-secondary sustainability-excel-menu-btn" id="sustainability-excel-menu-btn" title="استيراد من Excel وقالب">
-                        <i class="fas fa-file-excel ml-2"></i>استيراد من Excel
-                        <i class="fas fa-caret-down mr-1 text-xs opacity-80"></i>
-                    </button>
-                    <div id="sustainability-excel-dropdown" class="hidden absolute z-[200] mt-1 min-w-[14rem] rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 shadow-lg py-1 end-0">
-                        <button type="button" id="sustainability-download-template-btn" class="w-full text-right px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2 border-b border-gray-100 dark:border-gray-700">
-                            <i class="fas fa-download text-green-600"></i><span>تحميل قالب الاستيراد</span>
-                        </button>
-                        <button type="button" id="sustainability-pick-excel-btn" class="w-full text-right px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2">
-                            <i class="fas fa-folder-open text-blue-600"></i><span>اختيار ملف Excel للاستيراد</span>
-                        </button>
-                    </div>
-                </div>
+            <div class="inline-flex flex-wrap items-center gap-2 sustainability-admin-tools mr-2 md:mr-3" id="sustainability-admin-tools-wrap">
+                <button type="button" class="btn btn-secondary" id="sustainability-excel-import-open-btn" title="استيراد من Excel">
+                    <i class="fas fa-file-excel ml-2"></i>استيراد من Excel
+                </button>
                 <button type="button" class="btn btn-secondary" id="sustainability-export-pdf-btn" title="تصدير تقرير PDF">
                     <i class="fas fa-file-pdf ml-2"></i>تصدير PDF
                 </button>
             </div>
         `;
+    },
+
+    /**
+     * نموذج (modal) لاستيراد Excel مع تحميل القالب واختيار الملف.
+     */
+    showExcelImportModal() {
+        if (!this.isSystemAdmin()) return;
+        try {
+            document.getElementById('sustainability-excel-import-modal')?.remove();
+        } catch (e) { /* ignore */ }
+
+        const modal = document.createElement('div');
+        modal.className = 'modal-overlay';
+        modal.id = 'sustainability-excel-import-modal';
+        modal.innerHTML = `
+            <div class="modal-content" style="max-width: 480px;">
+                <div class="modal-header">
+                    <h2 class="modal-title"><i class="fas fa-file-excel ml-2 text-green-600"></i>استيراد من Excel</h2>
+                    <button type="button" class="modal-close sustainability-excel-modal-close" aria-label="إغلاق"><i class="fas fa-times"></i></button>
+                </div>
+                <div class="modal-body space-y-4">
+                    <p class="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
+                        حمّل القالب أولاً، عبّئ الصفوف وفق الأعمدة، ثم اختر الملف بصيغة .xlsx أو .xls. الأنواع المسموحة في عمود نوع_الموارد: <strong>water</strong> أو <strong>electricity</strong> أو <strong>gas</strong> (أو المكافئ بالعربية).
+                    </p>
+                    <input type="file" id="sustainability-modal-excel-file-input" accept=".xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel" class="hidden" tabindex="-1" aria-hidden="true">
+                    <div class="flex flex-col sm:flex-row gap-2 flex-wrap">
+                        <button type="button" id="sustainability-modal-download-template" class="btn-secondary flex-1 min-w-[10rem]">
+                            <i class="fas fa-download ml-2"></i>تحميل قالب الاستيراد
+                        </button>
+                        <button type="button" id="sustainability-modal-pick-file" class="btn-primary flex-1 min-w-[10rem]">
+                            <i class="fas fa-folder-open ml-2"></i>اختيار ملف Excel
+                        </button>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn-secondary sustainability-excel-modal-close">إغلاق</button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+
+        const close = () => {
+            try { modal.remove(); } catch (e) { /* ignore */ }
+        };
+        modal.querySelectorAll('.sustainability-excel-modal-close').forEach((el) => el.addEventListener('click', close));
+        modal.addEventListener('click', (e) => { if (e.target === modal) close(); });
+
+        const fileInput = modal.querySelector('#sustainability-modal-excel-file-input');
+        modal.querySelector('#sustainability-modal-download-template').addEventListener('click', () => this.downloadExcelImportTemplate());
+        modal.querySelector('#sustainability-modal-pick-file').addEventListener('click', () => fileInput?.click());
+
+        if (fileInput) {
+            fileInput.addEventListener('change', async () => {
+                const f = fileInput.files && fileInput.files[0];
+                fileInput.value = '';
+                if (!f) return;
+                close();
+                if (typeof Loading !== 'undefined') Loading.show('جاري استيراد Excel...');
+                try {
+                    await this.importResourceConsumptionFromExcelFile(f);
+                } finally {
+                    if (typeof Loading !== 'undefined') Loading.hide();
+                }
+            });
+        }
     },
 
     async ensureSheetJS() {
@@ -323,6 +376,8 @@ const Sustainability = {
             if (typeof Notification !== 'undefined') Notification.error('غير مصرّح');
             return;
         }
+        if (Sustainability._pdfExportInProgress) return;
+        Sustainability._pdfExportInProgress = true;
         try {
             if (typeof Loading !== 'undefined') Loading.show('جاري تجهيز PDF...');
             const esc = (s) => (typeof Utils !== 'undefined' && Utils.escapeHTML ? Utils.escapeHTML(String(s == null ? '' : s)) : String(s == null ? '' : s));
@@ -382,19 +437,30 @@ ${body}
 
             const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
             const url = URL.createObjectURL(blob);
-            const printWindow = window.open(url, '_blank');
+            const winName = 'hse_sustainability_pdf_export';
+            const printWindow = window.open(url, winName);
+            let printed = false;
+            const finishPrint = () => {
+                if (printed || !printWindow || printWindow.closed) return;
+                printed = true;
+                try {
+                    printWindow.focus();
+                    printWindow.print();
+                } catch (e) { /* ignore */ }
+                setTimeout(() => {
+                    try { URL.revokeObjectURL(url); } catch (e2) { /* ignore */ }
+                    if (typeof Loading !== 'undefined') Loading.hide();
+                    if (typeof Notification !== 'undefined') Notification.success('استخدم «حفظ كـ PDF» من نافذة الطباعة إن لزم');
+                }, 400);
+            };
+
             if (printWindow) {
-                printWindow.onload = () => {
-                    setTimeout(() => {
-                        printWindow.print();
-                        setTimeout(() => {
-                            URL.revokeObjectURL(url);
-                            if (typeof Loading !== 'undefined') Loading.hide();
-                            if (typeof Notification !== 'undefined') Notification.success('استخدم «حفظ كـ PDF» من نافذة الطباعة إن لزم');
-                        }, 600);
-                    }, 400);
-                };
+                printWindow.onload = () => finishPrint();
+                setTimeout(() => {
+                    if (!printed && printWindow.document && printWindow.document.readyState === 'complete') finishPrint();
+                }, 500);
             } else {
+                try { URL.revokeObjectURL(url); } catch (e3) { /* ignore */ }
                 if (typeof Loading !== 'undefined') Loading.hide();
                 if (typeof Notification !== 'undefined') Notification.error('يرجى السماح بالنوافذ المنبثقة لعرض PDF');
             }
@@ -402,69 +468,29 @@ ${body}
             if (typeof Loading !== 'undefined') Loading.hide();
             Utils.safeError('خطأ تصدير PDF الاستدامة:', error);
             if (typeof Notification !== 'undefined') Notification.error('فشل تصدير PDF: ' + (error.message || ''));
+        } finally {
+            setTimeout(() => { Sustainability._pdfExportInProgress = false; }, 1200);
         }
     },
 
     bindAdminImportExportToolbar() {
         if (!this.isSystemAdmin()) return;
-
-        const menuBtn = document.getElementById('sustainability-excel-menu-btn');
-        const dropdown = document.getElementById('sustainability-excel-dropdown');
-        const tplBtn = document.getElementById('sustainability-download-template-btn');
-        const pickBtn = document.getElementById('sustainability-pick-excel-btn');
-        const fileInput = document.getElementById('sustainability-excel-file-input');
-        const pdfBtn = document.getElementById('sustainability-export-pdf-btn');
-
-        const closeMenu = () => { if (dropdown) dropdown.classList.add('hidden'); };
-        const toggleMenu = () => { if (dropdown) dropdown.classList.toggle('hidden'); };
-
-        if (!Sustainability._excelMenuOutsideCloseBound) {
-            Sustainability._excelMenuOutsideCloseBound = true;
-            document.addEventListener('mousedown', (ev) => {
-                const wrap = document.getElementById('sustainability-admin-tools-wrap');
-                if (!wrap || wrap.contains(ev.target)) return;
-                const dd = document.getElementById('sustainability-excel-dropdown');
-                if (dd) dd.classList.add('hidden');
-            });
-        }
-
-        if (menuBtn && dropdown) {
-            menuBtn.addEventListener('click', (ev) => {
-                ev.stopPropagation();
-                toggleMenu();
-            });
-            dropdown.addEventListener('click', (ev) => ev.stopPropagation());
-        }
-        if (tplBtn) {
-            tplBtn.addEventListener('click', (ev) => {
-                ev.stopPropagation();
-                closeMenu();
-                this.downloadExcelImportTemplate();
-            });
-        }
-        if (pickBtn && fileInput) {
-            pickBtn.addEventListener('click', (ev) => {
-                ev.stopPropagation();
-                closeMenu();
-                fileInput.click();
-            });
-        }
-        if (fileInput) {
-            fileInput.addEventListener('change', async () => {
-                const f = fileInput.files && fileInput.files[0];
-                fileInput.value = '';
-                if (!f) return;
-                if (typeof Loading !== 'undefined') Loading.show('جاري استيراد Excel...');
-                try {
-                    await this.importResourceConsumptionFromExcelFile(f);
-                } finally {
-                    if (typeof Loading !== 'undefined') Loading.hide();
-                }
-            });
-        }
-        if (pdfBtn) {
-            pdfBtn.addEventListener('click', () => this.exportSustainabilityPdfReport());
-        }
+        // مستمع واحد على المستند لتجنّب تكرار الربط عند كل Sustainability.load() (كان يفتح عدة نوافذ PDF)
+        if (Sustainability._adminToolbarDocDelegateBound) return;
+        Sustainability._adminToolbarDocDelegateBound = true;
+        document.addEventListener('click', (ev) => {
+            const excelBtn = ev.target.closest && ev.target.closest('#sustainability-excel-import-open-btn');
+            if (excelBtn) {
+                ev.preventDefault();
+                Sustainability.showExcelImportModal();
+                return;
+            }
+            const pdfBtn = ev.target.closest && ev.target.closest('#sustainability-export-pdf-btn');
+            if (pdfBtn) {
+                ev.preventDefault();
+                Sustainability.exportSustainabilityPdfReport();
+            }
+        });
     },
 
     /**
