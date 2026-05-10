@@ -13,6 +13,8 @@
 const Sustainability = {
     currentTab: 'dashboard',
     currentWasteSubTab: 'regular',
+    /** سنة العرض لتصفية لوحة التحليل وسجلات المياه/الكهرباء/الغاز (مثل مؤشرات السلامة والعمالة الخارجية) */
+    dashboardYear: new Date().getFullYear(),
     settings: {
         consumptionLimits: {
             water: 10000,      // م³ شهرياً
@@ -74,6 +76,119 @@ const Sustainability = {
 
     canManageSettings() {
         return this.hasFullSustainabilityManage();
+    },
+
+    /**
+     * السنوات المتاحة في القائمة (من البيانات + نطاق حول السنة الحالية)
+     */
+    getSustainabilityYearOptions() {
+        const ySet = new Set();
+        const cur = new Date().getFullYear();
+        for (let d = -3; d <= 1; d++) ySet.add(cur + d);
+        ['water', 'electricity', 'gas'].forEach((k) => {
+            (AppState.appData.resourceConsumption?.[k] || []).forEach((r) => {
+                const dt = new Date(r?.date);
+                if (!Number.isNaN(dt.getTime())) {
+                    const ty = dt.getFullYear();
+                    if (ty > 2000 && ty < 2100) ySet.add(ty);
+                }
+            });
+        });
+        return Array.from(ySet).sort((a, b) => b - a);
+    },
+
+    ensureDashboardYearInRange() {
+        const years = this.getSustainabilityYearOptions();
+        if (!years.length) {
+            this.dashboardYear = new Date().getFullYear();
+            return;
+        }
+        if (!years.includes(this.dashboardYear)) {
+            this.dashboardYear = years.includes(new Date().getFullYear())
+                ? new Date().getFullYear()
+                : years[0];
+        }
+    },
+
+    filterResourceRowsByYear(records, year) {
+        const y = Number(year);
+        if (!Number.isFinite(y)) return records || [];
+        return (records || []).filter((r) => {
+            const dt = new Date(r?.date);
+            return !Number.isNaN(dt.getTime()) && dt.getFullYear() === y;
+        });
+    },
+
+    /** بيانات الاستهلاك المصفّاة حسب سنة العرض الحالية */
+    getViewFilteredConsumption() {
+        const rc = AppState.appData.resourceConsumption || { water: [], electricity: [], gas: [] };
+        const year = Number(this.dashboardYear) || new Date().getFullYear();
+        return {
+            year,
+            water: this.filterResourceRowsByYear(rc.water, year),
+            electricity: this.filterResourceRowsByYear(rc.electricity, year),
+            gas: this.filterResourceRowsByYear(rc.gas, year)
+        };
+    },
+
+    renderYearFilterToolbarHtml() {
+        const show =
+            this.canRegisterResourceConsumption() &&
+            ['dashboard', 'water', 'electricity', 'gas'].includes(this.currentTab);
+        if (!show) return '';
+        this.ensureDashboardYearInRange();
+        const years = this.getSustainabilityYearOptions();
+        const opts = years
+            .map((y) => `<option value="${y}" ${y === this.dashboardYear ? 'selected' : ''}>${y}</option>`)
+            .join('');
+        return `
+            <div id="sustainability-year-toolbar-wrap" class="mt-4 mb-2">
+                <div class="rounded-2xl border border-emerald-200/80 dark:border-emerald-800/60 bg-gradient-to-l from-emerald-50/90 via-white to-white dark:from-emerald-950/40 dark:via-gray-900 dark:to-gray-900 shadow-sm">
+                    <div class="flex flex-wrap items-center justify-between gap-4 px-4 py-3">
+                        <div class="flex items-start gap-3 min-w-0 flex-1">
+                            <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-600 text-white shadow-md">
+                                <i class="fas fa-calendar-alt" aria-hidden="true"></i>
+                            </div>
+                            <div class="min-w-0">
+                                <div class="text-sm font-bold text-gray-900 dark:text-gray-100">تصفية حسب السنة</div>
+                                <p class="text-xs text-gray-600 dark:text-gray-400 mt-0.5 leading-relaxed">
+                                    عرض مؤشرات لوحة التحليل، الرسوم البيانية، وأكثر المواقع استهلاكاً والجداول للسنة المحددة — بنفس أسلوب لوحة مؤشرات السلامة والعمالة الخارجية.
+                                </p>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-3 shrink-0">
+                            <label for="sustainability-dashboard-year" class="text-sm font-semibold text-gray-700 dark:text-gray-200 whitespace-nowrap">السنة</label>
+                            <select id="sustainability-dashboard-year" class="form-input !w-auto min-w-[132px] rounded-xl border-gray-200 dark:border-gray-600 shadow-sm focus:ring-emerald-500 focus:border-emerald-500" title="اختر سنة العرض">
+                                ${opts}
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    },
+
+    /**
+     * تحديث الواجهة بعد تغيير سنة العرض دون إعادة تحميل الشيت.
+     */
+    refreshConsumptionYearView() {
+        this.ensureDashboardYearInRange();
+        const qs = document.getElementById('sustainability-quick-stats');
+        if (qs) qs.innerHTML = this.renderQuickStats();
+        const sel = document.getElementById('sustainability-dashboard-year');
+        if (sel && String(sel.value) !== String(this.dashboardYear)) {
+            sel.value = String(this.dashboardYear);
+        }
+        const contentArea = document.getElementById('sustainability-content');
+        if (!contentArea || !document.getElementById('sustainability-section')) return;
+        Promise.resolve(this.renderContent())
+            .then((html) => {
+                contentArea.innerHTML = html;
+                if (this.currentTab === 'dashboard') {
+                    setTimeout(() => this.renderCharts(), 280);
+                }
+            })
+            .catch((e) => Utils.safeWarn('⚠️ تعذر تحديث عرض السنة:', e));
     },
 
     /**
@@ -418,7 +533,9 @@ const Sustainability = {
                     return String(iso || '');
                 }
             };
-            const rc = AppState.appData.resourceConsumption || {};
+            const fv = this.getViewFilteredConsumption();
+            const rc = { water: fv.water, electricity: fv.electricity, gas: fv.gas };
+            const pdfYear = fv.year;
             const types = [
                 { key: 'water', label: 'المياه' },
                 { key: 'electricity', label: 'الكهرباء' },
@@ -427,7 +544,7 @@ const Sustainability = {
             let body = '';
             types.forEach(({ key, label }) => {
                 const arr = Array.isArray(rc[key]) ? rc[key] : [];
-                body += `<h2 style="margin-top:1.2em;font-size:14px;border-bottom:1px solid #ccc;padding-bottom:4px;">سجلات استهلاك — ${esc(label)} (${arr.length})</h2>`;
+                body += `<h2 style="margin-top:1.2em;font-size:14px;border-bottom:1px solid #ccc;padding-bottom:4px;">سجلات استهلاك — ${esc(label)} — سنة ${pdfYear} (${arr.length})</h2>`;
                 body += '<table style="width:100%;border-collapse:collapse;font-size:11px;margin-bottom:8px;"><thead><tr style="background:#f3f4f6;">';
                 ['الرقم', 'التاريخ', 'الموقع', 'البداية', 'النهاية', 'الإجمالي', 'الوحدة', 'القسم'].forEach((h) => {
                     body += `<th style="border:1px solid #ddd;padding:6px;text-align:right;">${esc(h)}</th>`;
@@ -452,7 +569,7 @@ const Sustainability = {
                 body += `<h2 style="margin-top:1em;font-size:14px;">ملخص المخلفات</h2><p style="font-size:12px;">سجلات عادية: ${rw} | خطرة: ${hw} | مبيعات: ${sl}</p>`;
             }
 
-            const title = 'تقرير الاستدامة البيئية — استهلاك الموارد';
+            const title = `تقرير الاستدامة البيئية — استهلاك الموارد (${pdfYear})`;
             const htmlContent = `<!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="UTF-8">
 <style>
 body{font-family:Tahoma,Arial,sans-serif;padding:16px;color:#111;}
@@ -461,7 +578,7 @@ table{font-family:inherit;}
 @media print { body { padding: 0; } }
 </style><title>${esc(title)}</title></head><body>
 <h1>${esc(title)}</h1>
-<p style="font-size:12px;color:#444;margin-bottom:16px;">تاريخ التصدير: ${esc(new Date().toLocaleString('ar-SA'))}</p>
+<p style="font-size:12px;color:#444;margin-bottom:16px;">سنة التقرير: <strong>${pdfYear}</strong> — تاريخ التصدير: ${esc(new Date().toLocaleString('ar-SA'))}</p>
 ${body}
 </body></html>`;
 
@@ -683,6 +800,8 @@ ${body}
                     <p class="section-subtitle">إدارة ومتابعة استهلاك الموارد البيئية (مياه، كهرباء، غاز طبيعي)</p>
                 </div>
                 
+                ${this.renderYearFilterToolbarHtml()}
+                
                 <!-- لوحة المؤشرات السريعة -->
                 <div id="sustainability-quick-stats" class="mt-6 grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
                     ${this.renderQuickStats()}
@@ -815,12 +934,9 @@ ${body}
                 </div>
             `;
         }
-        const waterData = AppState.appData.resourceConsumption?.water || [];
-        const electricityData = AppState.appData.resourceConsumption?.electricity || [];
-        const gasData = AppState.appData.resourceConsumption?.gas || [];
+        const { water: waterData, electricity: electricityData, gas: gasData, year: viewYear } = this.getViewFilteredConsumption();
 
-        // استخدم آخر شهر متاح في البيانات بدلاً من الشهر الحالي فقط،
-        // حتى لا تظهر الكروت بصفر عند عدم وجود إدخالات للشهر الجاري.
+        // استخدم آخر شهر متاح في البيانات المصفّاة للسنة المعروضة
         const waterLatest = this.getLatestMonthlyConsumption(waterData);
         const electricityLatest = this.getLatestMonthlyConsumption(electricityData);
         const gasLatest = this.getLatestMonthlyConsumption(gasData);
@@ -842,6 +958,7 @@ ${body}
                 <div class="text-xs mt-1 ${waterTrend === 'up' ? 'text-red-600' : waterTrend === 'down' ? 'text-green-600' : 'text-gray-500'}">
                     ${waterTrend === 'up' ? '↑' : waterTrend === 'down' ? '↓' : '→'} ${this.getTrendText(waterTrend)}
                 </div>
+                <div class="text-[11px] text-gray-500 dark:text-gray-400 mt-2 font-medium">سنة ${viewYear}</div>
             </div>
             <div class="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4 text-center hover:shadow-md transition-shadow">
                 <div class="text-3xl font-bold text-yellow-600 dark:text-yellow-400 mb-2">${electricityThisMonth.toFixed(2)}</div>
@@ -851,6 +968,7 @@ ${body}
                 <div class="text-xs mt-1 ${electricityTrend === 'up' ? 'text-red-600' : electricityTrend === 'down' ? 'text-green-600' : 'text-gray-500'}">
                     ${electricityTrend === 'up' ? '↑' : electricityTrend === 'down' ? '↓' : '→'} ${this.getTrendText(electricityTrend)}
                 </div>
+                <div class="text-[11px] text-gray-500 dark:text-gray-400 mt-2 font-medium">سنة ${viewYear}</div>
             </div>
             <div class="bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-lg p-4 text-center hover:shadow-md transition-shadow">
                 <div class="text-3xl font-bold text-orange-600 dark:text-orange-400 mb-2">${gasThisMonth.toFixed(2)}</div>
@@ -860,6 +978,7 @@ ${body}
                 <div class="text-xs mt-1 ${gasTrend === 'up' ? 'text-red-600' : gasTrend === 'down' ? 'text-green-600' : 'text-gray-500'}">
                     ${gasTrend === 'up' ? '↑' : gasTrend === 'down' ? '↓' : '→'} ${this.getTrendText(gasTrend)}
                 </div>
+                <div class="text-[11px] text-gray-500 dark:text-gray-400 mt-2 font-medium">سنة ${viewYear}</div>
             </div>
             <div class="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4 text-center hover:shadow-md transition-shadow cursor-pointer" onclick="Sustainability.currentTab='dashboard'; Sustainability.load();">
                 <div class="text-3xl font-bold text-green-600 dark:text-green-400 mb-2">
@@ -868,6 +987,7 @@ ${body}
                 <div class="text-sm text-gray-700 dark:text-gray-300 font-semibold">
                     <i class="fas fa-exclamation-triangle ml-1"></i>تنبيهات
                 </div>
+                <div class="text-[11px] text-gray-500 dark:text-gray-400 mt-2 font-medium">سنة ${viewYear}</div>
             </div>
         `;
     },
@@ -877,6 +997,19 @@ ${body}
      */
     setupEventListeners() {
         setTimeout(() => {
+            if (!this._sustainabilityYearFilterDelegateBound) {
+                this._sustainabilityYearFilterDelegateBound = true;
+                document.addEventListener('change', (ev) => {
+                    const t = ev.target;
+                    if (!t || t.id !== 'sustainability-dashboard-year') return;
+                    if (typeof AppState !== 'undefined' && AppState.currentSection !== 'sustainability') return;
+                    const v = Number(t.value);
+                    if (!Number.isFinite(v) || v < 1990 || v > 2100) return;
+                    this.dashboardYear = v;
+                    this.refreshConsumptionYearView();
+                });
+            }
+
             const tabs = document.querySelectorAll('#sustainability-section .tab-btn');
             tabs.forEach(tab => {
                 tab.addEventListener('click', () => {
@@ -1001,15 +1134,19 @@ ${body}
      * عرض لوحة التحليل
      */
     async renderDashboard() {
-        const waterData = AppState.appData.resourceConsumption?.water || [];
-        const electricityData = AppState.appData.resourceConsumption?.electricity || [];
-        const gasData = AppState.appData.resourceConsumption?.gas || [];
-
         const analytics = this.calculateAnalytics();
         const alerts = this.getActiveAlerts();
+        const yLabel = this.dashboardYear || new Date().getFullYear();
 
         return `
             <div class="space-y-6">
+                <div class="flex flex-wrap items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+                    <span class="inline-flex items-center gap-2 rounded-full bg-emerald-100/80 dark:bg-emerald-900/30 px-3 py-1 font-semibold text-emerald-800 dark:text-emerald-200 border border-emerald-200/70 dark:border-emerald-700">
+                        <i class="fas fa-filter text-emerald-600 dark:text-emerald-400" aria-hidden="true"></i>
+                        عرض بيانات سنة <strong class="mx-1">${yLabel}</strong>
+                    </span>
+                    <span class="text-xs opacity-90">جميع الإجماليات والرسوم أدناه مخصّصة لهذه السنة.</span>
+                </div>
                 <!-- التنبيهات النشطة -->
                 ${alerts.length > 0 ? `
                 <div class="content-card border-l-4 border-red-500">
@@ -1115,7 +1252,7 @@ ${body}
                         <div class="card-header">
                             <h2 class="card-title">
                                 <i class="fas fa-chart-bar ml-2"></i>
-                                مقارنة شهرية - المياه
+                                مقارنة شهرية - المياه (${yLabel})
                             </h2>
                         </div>
                         <div class="card-body">
@@ -1128,7 +1265,7 @@ ${body}
                         <div class="card-header">
                             <h2 class="card-title">
                                 <i class="fas fa-chart-bar ml-2"></i>
-                                مقارنة شهرية - الكهرباء
+                                مقارنة شهرية - الكهرباء (${yLabel})
                             </h2>
                         </div>
                         <div class="card-body">
@@ -1141,7 +1278,7 @@ ${body}
                         <div class="card-header">
                             <h2 class="card-title">
                                 <i class="fas fa-chart-bar ml-2"></i>
-                                مقارنة شهرية - الغاز
+                                مقارنة شهرية - الغاز (${yLabel})
                             </h2>
                         </div>
                         <div class="card-body">
@@ -1154,7 +1291,7 @@ ${body}
                         <div class="card-header">
                             <h2 class="card-title">
                                 <i class="fas fa-chart-pie ml-2"></i>
-                                توزيع الاستهلاك حسب المصدر
+                                توزيع الاستهلاك حسب المصدر (${yLabel})
                             </h2>
                         </div>
                         <div class="card-body">
@@ -1172,18 +1309,25 @@ ${body}
      * عرض سجل استهلاك الموارد
      */
     async renderResourceRegister(type, name, icon, color) {
-        const data = AppState.appData.resourceConsumption?.[type] || [];
+        const full = AppState.appData.resourceConsumption?.[type] || [];
+        const viewY = Number(this.dashboardYear) || new Date().getFullYear();
+        const data = this.filterResourceRowsByYear(full, viewY);
         const hasAlerts = data.some(record => record.hasAlert);
 
         return `
             <div class="space-y-4">
                 <div class="content-card">
                     <div class="card-header">
-                        <div class="flex items-center justify-between">
+                        <div class="flex items-center justify-between flex-wrap gap-3">
+                            <div>
                             <h2 class="card-title">
                                 <i class="fas fa-${icon} text-${color}-500 ml-2"></i>
                                 سجل استهلاك ${name}
                             </h2>
+                            <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                                عرض السجلات الخاصة بسنة <strong>${viewY}</strong> — غيّر السنة من شريط التصفية أعلى الصفحة لعرض أعوام أخرى.
+                            </p>
+                            </div>
                             ${this.canRegisterResourceConsumption() ? `
                             <button class="btn-primary" onclick="Sustainability.showResourceForm('${type}')">
                                 <i class="fas fa-plus ml-2"></i>
@@ -1196,7 +1340,7 @@ ${body}
                         ${data.length === 0 ? `
                             <div class="empty-state">
                                 <i class="fas fa-${icon} text-4xl text-${color}-400 mb-4"></i>
-                                <p class="text-gray-500">لا توجد سجلات لاستهلاك ${name}. ابدأ بإضافة سجلات جديدة.</p>
+                                <p class="text-gray-500">لا توجد سجلات لاستهلاك ${name} ضمن سنة <strong>${viewY}</strong>. جرّب اختيار سنة أخرى من شريط التصفية أو أضف سجلاً جديداً.</p>
                             </div>
                         ` : `
                             <div class="overflow-x-auto">
@@ -1984,6 +2128,26 @@ ${body}
             .reduce((sum, record) => sum + (parseFloat(record.totalConsumption) || 0), 0);
     },
 
+    /**
+     * اتجاه الاستهلاك ضمن نفس سنة البيانات المعروضة (آخر شهر له بيانات مقارنة بالشهر السابق في نفس السنة)
+     */
+    getTrendForYearScopedData(data) {
+        if (!data || data.length < 2) return 'stable';
+        const latest = this.getLatestMonthContext(data);
+        if (!latest) return 'stable';
+        const cm = latest.month;
+        const cy = latest.year;
+        const pm = cm === 0 ? 11 : cm - 1;
+        const py = cy;
+        const current = this.getMonthlyConsumption(data, cm, cy);
+        const previous = this.getMonthlyConsumption(data, pm, py);
+        if (previous === 0) return 'stable';
+        const change = ((current - previous) / previous) * 100;
+        if (change > 5) return 'up';
+        if (change < -5) return 'down';
+        return 'stable';
+    },
+
     getLatestMonthContext(data = []) {
         const validDates = (data || [])
             .map((record) => new Date(record?.date))
@@ -2047,31 +2211,20 @@ ${body}
      * حساب التحليلات
      */
     calculateAnalytics() {
-        const waterData = AppState.appData.resourceConsumption?.water || [];
-        const electricityData = AppState.appData.resourceConsumption?.electricity || [];
-        const gasData = AppState.appData.resourceConsumption?.gas || [];
+        const { water: waterData, electricity: electricityData, gas: gasData } = this.getViewFilteredConsumption();
 
-        const now = new Date();
-        const currentMonth = now.getMonth();
-        const currentYear = now.getFullYear();
-        const lastMonth = currentMonth === 0 ? 11 : currentMonth - 1;
-        const lastMonthYear = currentMonth === 0 ? currentYear - 1 : currentYear;
-
-        const calculate = (data, type) => {
+        const calculate = (data) => {
             const total = data.reduce((sum, r) => sum + (parseFloat(r.totalConsumption) || 0), 0);
-            const current = this.getMonthlyConsumption(data, currentMonth, currentYear);
-            const previous = this.getMonthlyConsumption(data, lastMonth, lastMonthYear);
             const average = data.length > 0 ? total / data.length : 0;
-            const trend = this.getTrend(data, type);
+            const trend = this.getTrendForYearScopedData(data);
             const trendText = this.getTrendText(trend);
-
-            return { total, current, previous, average, trend, trendText };
+            return { total, current: 0, previous: 0, average, trend, trendText };
         };
 
         return {
-            water: calculate(waterData, 'water'),
-            electricity: calculate(electricityData, 'electricity'),
-            gas: calculate(gasData, 'gas')
+            water: calculate(waterData),
+            electricity: calculate(electricityData),
+            gas: calculate(gasData)
         };
     },
 
@@ -2096,13 +2249,11 @@ ${body}
      */
     getActiveAlerts() {
         const alerts = [];
-        const waterData = AppState.appData.resourceConsumption?.water || [];
-        const electricityData = AppState.appData.resourceConsumption?.electricity || [];
-        const gasData = AppState.appData.resourceConsumption?.gas || [];
+        const { water: waterData, electricity: electricityData, gas: gasData, year: viewYear } = this.getViewFilteredConsumption();
 
         const checkAlerts = (data, type, name, icon) => {
             const latest = this.getLatestMonthContext(data);
-            if (!latest) return;
+            if (!latest || latest.year !== viewYear) return;
             const monthlyData = data.filter(r => {
                 const recordDate = new Date(r.date);
                 return recordDate.getMonth() === latest.month && recordDate.getFullYear() === latest.year;
@@ -2200,8 +2351,9 @@ ${body}
             canvas.chart.destroy();
         }
 
-        const data = AppState.appData.resourceConsumption?.[type] || [];
-        const monthlyData = this.getMonthlyData(data);
+        const fv = this.getViewFilteredConsumption();
+        const data = fv[type] || [];
+        const monthlyData = this.getMonthlyDataForYear(data, fv.year);
 
         const ctx = canvas.getContext('2d');
         canvas.chart = new Chart(ctx, {
@@ -2209,7 +2361,7 @@ ${body}
             data: {
                 labels: monthlyData.map(d => d.month),
                 datasets: [{
-                    label: `استهلاك ${name}`,
+                    label: `استهلاك ${name} (${fv.year})`,
                     data: monthlyData.map(d => d.total),
                     backgroundColor: color,
                     borderColor: color.replace('0.8', '1'),
@@ -2277,6 +2429,26 @@ ${body}
             .map(([key, value]) => value);
     },
 
+    /** سلسلة شهرية ضمن سنة واحدة (للرسوم عند تصفية السنة) */
+    getMonthlyDataForYear(data, year) {
+        const y = Number(year);
+        if (!Number.isFinite(y)) return [];
+        const monthlyMap = {};
+        (data || []).forEach((record) => {
+            const date = new Date(record.date);
+            if (Number.isNaN(date.getTime()) || date.getFullYear() !== y) return;
+            const monthKey = `${y}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+            const monthLabel = this.getMonthYear(date);
+            if (!monthlyMap[monthKey]) {
+                monthlyMap[monthKey] = { month: monthLabel, total: 0 };
+            }
+            monthlyMap[monthKey].total += parseFloat(record.totalConsumption) || 0;
+        });
+        return Object.entries(monthlyMap)
+            .sort((a, b) => a[0].localeCompare(b[0]))
+            .map(([, value]) => value);
+    },
+
     /**
      * رسم توزيع المصادر
      */
@@ -2288,9 +2460,7 @@ ${body}
             canvas.chart.destroy();
         }
 
-        const waterData = AppState.appData.resourceConsumption?.water || [];
-        const electricityData = AppState.appData.resourceConsumption?.electricity || [];
-        const gasData = AppState.appData.resourceConsumption?.gas || [];
+        const { water: waterData, electricity: electricityData, gas: gasData } = this.getViewFilteredConsumption();
 
         const waterTotal = waterData.reduce((sum, r) => sum + (parseFloat(r.totalConsumption) || 0), 0);
         const electricityTotal = electricityData.reduce((sum, r) => sum + (parseFloat(r.totalConsumption) || 0), 0);
@@ -2914,9 +3084,7 @@ ${body}
      * عرض أكثر المواقع استهلاكاً
      */
     renderTopConsumingLocations() {
-        const waterData = AppState.appData.resourceConsumption?.water || [];
-        const electricityData = AppState.appData.resourceConsumption?.electricity || [];
-        const gasData = AppState.appData.resourceConsumption?.gas || [];
+        const { water: waterData, electricity: electricityData, gas: gasData, year: viewYear } = this.getViewFilteredConsumption();
 
         const locationStats = {};
 
@@ -2941,7 +3109,7 @@ ${body}
             .slice(0, 5);
 
         if (sorted.length === 0) {
-            return '<p class="text-gray-500 text-center py-4">لا توجد بيانات للعرض</p>';
+            return `<p class="text-gray-500 text-center py-4">لا توجد بيانات مواقع لسنة <strong>${viewYear}</strong></p>`;
         }
 
         return `
