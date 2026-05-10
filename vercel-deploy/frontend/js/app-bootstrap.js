@@ -301,24 +301,15 @@
                         await this.loadSharedDataFallback();
                     }
 
-                    // ✅ إضافة: تحميل فوري لإعدادات النماذج (المواقع) بعد تحميل البيانات المحلية
-                    // هذا يضمن توفر المواقع فوراً عند فتح أي موديول يحتاجها
+                    // ✅ إعدادات النماذج (المواقع / المصانع / الأماكن الفرعية) — انتظار ساري حتى لا تُفتح الواجهة قبل جاهزية القائمة
                     if (typeof Permissions !== 'undefined' && typeof Permissions.initFormSettingsState === 'function') {
                         try {
-                            // تحميل إعدادات النماذج بشكل غير متزامن (لا ننتظرها)
-                            Permissions.initFormSettingsState().then(() => {
-                                if (AppState.debugMode) {
-                                    log('✅ تم تحميل إعدادات النماذج (المواقع) مسبقاً');
-                                }
-                            }).catch((error) => {
-                                if (AppState.debugMode) {
-                                    console.warn('⚠️ فشل تحميل إعدادات النماذج مسبقاً:', error);
-                                }
-                            });
-                        } catch (error) {
+                            await Permissions.initFormSettingsState();
                             if (AppState.debugMode) {
-                                console.warn('⚠️ خطأ في تحميل إعدادات النماذج:', error);
+                                log('✅ تم تحميل إعدادات النماذج (المواقع) مع بدء التطبيق');
                             }
+                        } catch (error) {
+                            console.warn('⚠️ فشل تحميل إعدادات النماذج مع بدء التطبيق:', error);
                         }
                     }
                 } catch (error) {

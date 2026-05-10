@@ -1079,6 +1079,18 @@ window.Auth = {
                     }
                 }
 
+                // ✅ المواقع والمصانع والأماكن الفرعية — فوراً لجميع المستخدمين (قبل جلب الجداول الثقيلة) لتقليل السباق والتأخير
+                if (typeof Permissions !== 'undefined' && typeof Permissions.initFormSettingsState === 'function') {
+                    try {
+                        await Permissions.initFormSettingsState();
+                        if (AppState.debugMode) {
+                            Utils.safeLog('✅ تم تهيئة مواقع النماذج مبكراً بعد الدخول');
+                        }
+                    } catch (formEarlyErr) {
+                        Utils.safeWarn('⚠️ فشل تهيئة مواقع النماذج المبكرة بعد الدخول:', formEarlyErr);
+                    }
+                }
+
                 // ✅ الخطوة 2: تحميل البيانات الأساسية بشكل متسلسل (مهم جداً)
                 if (typeof Utils !== 'undefined' && typeof Utils.hasCloudBackendSync === 'function' && Utils.hasCloudBackendSync() && typeof GoogleIntegration !== 'undefined') {
                     const prioritySheets = ['Users', 'Employees', 'ExternalWorkforceMonthly', 'Contractors', 'ApprovedContractors'];
@@ -1155,48 +1167,14 @@ window.Auth = {
                     AppState._initialDataLoadCompleted = true;
                     AppState._initialDataLoadCompletedAt = Date.now();
 
-                    // ✅ إعدادات النماذج (المواقع) — انتظار اكتمالها قبل تحميل بقية الموديولات في الخلفية
-                    // يقلل السباق حيث تُفتح شاشة قبل جاهزية المواقع؛ الأخطاء لا توقف تسجيل الدخول
-                    const runPostLoginCompanySettingsRefresh = async () => {
-                        if (typeof DataManager === 'undefined' || !DataManager.loadCompanySettings) return;
-                        try {
-                            await DataManager.loadCompanySettings(true);
-                            if (AppState.debugMode) {
-                                Utils.safeLog('✅ تم تحميل إعدادات الشركة والشعار بعد إعدادات النماذج');
-                            }
-                        } catch (settingsError) {
-                            Utils.safeWarn('⚠️ فشل تحميل إعدادات الشركة بعد إعدادات النماذج:', settingsError);
-                        }
-                    };
-
-                    if (typeof Permissions !== 'undefined' && typeof Permissions.initFormSettingsState === 'function') {
-                        try {
-                            await Permissions.initFormSettingsState();
-                            if (AppState.debugMode) {
-                                Utils.safeLog('✅ تم تحميل إعدادات النماذج (المواقع) بعد تسجيل الدخول');
-                            }
-                            await runPostLoginCompanySettingsRefresh();
-                        } catch (error) {
-                            Utils.safeWarn('⚠️ فشل تحميل إعدادات النماذج بعد تسجيل الدخول:', error);
-                            await runPostLoginCompanySettingsRefresh();
-                        }
-                    } else if (typeof DataManager !== 'undefined' && DataManager.loadCompanySettings) {
-                        try {
-                            await DataManager.loadCompanySettings(true);
-                            if (AppState.debugMode) {
-                                Utils.safeLog('✅ تم تحميل إعدادات الشركة والشعار بعد تسجيل الدخول (بدون initFormSettingsState)');
-                            }
-                        } catch (settingsError) {
-                            Utils.safeWarn('⚠️ فشل تحميل إعدادات الشركة بعد تسجيل الدخول:', settingsError);
-                        }
-                    }
-
-                    // ✅ الخطوة 4: بعد جاهزية إعدادات النماذج — تحميل بيانات الموديولات في الخلفية
+                    // ✅ الخطوة 4: تحميل بيانات الموديولات في الخلفية (مواقع النماذج سبق تهيئتها بعد البيانات المحلية)
                     this.loadModulesDataSequentially().catch(err => {
                         Utils.safeWarn('⚠️ فشل تحميل بيانات الموديولات:', err);
                     });
                 } else {
                     Utils.safeLog('ℹ️ الخادم الخلفي غير مُهيأ للمزامنة - استخدام البيانات المحلية فقط');
+                    AppState._initialDataLoadCompleted = true;
+                    AppState._initialDataLoadCompletedAt = Date.now();
                 }
             } catch (err) {
                 Utils.safeError('❌ خطأ عام في تحميل البيانات:', err);
@@ -1216,6 +1194,13 @@ window.Auth = {
                             Notification.error('تعذر تحميل البيانات. يرجى تحديث الصفحة والمحاولة مرة أخرى.', 8000);
                         }
                     }
+                }
+                try {
+                    if (typeof Permissions !== 'undefined' && typeof Permissions.initFormSettingsState === 'function') {
+                        await Permissions.initFormSettingsState();
+                    }
+                } catch (formCatchErr) {
+                    Utils.safeWarn('⚠️ فشل تهيئة مواقع النماذج بعد الخطأ العام:', formCatchErr);
                 }
             } finally {
                 AppState._initialDataLoadInProgress = false;

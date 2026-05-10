@@ -198,7 +198,7 @@ const Sustainability = {
             if (!section || !section.isConnected) return;
             if (!String(section.innerHTML || '').trim()) return;
             this.load();
-        }, 120);
+        }, 40);
     },
 
     /**

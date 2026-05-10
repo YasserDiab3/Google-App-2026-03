@@ -169,11 +169,17 @@ const Settings = {
             const isAdmin = this.isCurrentUserAdmin();
 
             if (typeof Permissions !== 'undefined') {
-                // إعادة تعيين حالة إعدادات النماذج لإعادة تهيئة الأحداث
-                Permissions.formSettingsState = null;
+                // إعادة ربط أحداث إعدادات النماذج فقط — لا نُصفّر المواقع قبل اكتمال إعادة التحميل (تجنّب فراغ مؤقت)
                 Permissions.formSettingsEventsBound = false;
-                if (isAdmin && typeof Permissions.initFormSettingsState === 'function') {
-                    Permissions.initFormSettingsState();
+                // قراءة المواقع من الشيت/المحلي لجميع المستخدمين — حفظ التعديل يبقى محصوراً بالمدير في الواجهة والخادم
+                if (typeof Permissions.initFormSettingsState === 'function') {
+                    try {
+                        await Permissions.initFormSettingsState();
+                    } catch (e) {
+                        if (typeof Utils !== 'undefined' && Utils.safeWarn) {
+                            Utils.safeWarn('⚠️ تعذر تهيئة إعدادات النماذج (المواقع) من صفحة الإعدادات:', e);
+                        }
+                    }
                 }
             }
 
