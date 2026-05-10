@@ -225,17 +225,230 @@
 }
 
 /* كروت KPI داخل لوحة التحكم: ارتفاع مرن حتى لا يحدث قصّ أو تداخل عند صلاحيات جزئية */
-#dashboard-section .kpi-grid > .kpi-card:not(.kpi-card--permits) {
-    min-height: 132px;
+/* لا تمتد الكروت لارتفاع صف كامل — يمنع صفوفاً غير متساوية بصرياً */
+#dashboard-section .kpi-grid > .kpi-card {
     height: auto;
+    align-self: start;
+}
+
+#dashboard-section .kpi-grid > .kpi-card:not(.kpi-card--permits) {
+    min-height: 118px;
     max-height: none;
 }
 
 #dashboard-section .kpi-grid > .kpi-card.kpi-card--permits {
-    min-height: 188px;
-    height: auto;
+    min-height: 118px;
     max-height: none;
-    align-items: flex-start;
+    align-items: center;
+}
+
+/* عناوين عربية بدون تحويل لأحرف كبيرة (أوضح وأقل قصّ) */
+#dashboard-section .kpi-grid > .kpi-card .kpi-label {
+    text-transform: none;
+    letter-spacing: normal;
+    overflow-wrap: anywhere;
+    hyphens: auto;
+}
+
+/* تصاريح العمل — ثلاثية أفقية بنفس كثافة باقي الكروت */
+.kpi-content--permits .kpi-label {
+    margin-bottom: 0.35rem;
+    font-size: 0.8125rem;
+    font-weight: 700;
+    color: var(--ent-text-body);
+}
+
+.kpi-permits-strip {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.5rem;
+    width: 100%;
+}
+
+.kpi-permit-cell {
+    text-align: center;
+    padding: 0.45rem 0.25rem;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--ent-border);
+    background: var(--ent-bg-page);
+    min-width: 0;
+}
+
+.kpi-permit-cell--open {
+    border-color: var(--status-blue-border);
+    background: var(--status-blue-bg);
+}
+
+.kpi-permit-cell--closed {
+    border-color: var(--status-green-border);
+    background: var(--status-green-bg);
+}
+
+.kpi-permit-cell--total {
+    border-color: #c7d2fe;
+    background: #eef2ff;
+}
+
+.kpi-permit-cell__label {
+    display: block;
+    font-size: 0.65rem;
+    font-weight: 600;
+    color: var(--ent-text-muted);
+    margin-bottom: 0.15rem;
+    line-height: 1.2;
+}
+
+.kpi-permit-cell__value {
+    font-size: 1.25rem !important;
+    font-weight: 800 !important;
+    margin: 0 !important;
+    line-height: 1.15 !important;
+}
+
+.kpi-permit-cell--open .kpi-permit-cell__value {
+    color: var(--status-blue-text);
+}
+
+.kpi-permit-cell--closed .kpi-permit-cell__value {
+    color: var(--status-green-text);
+}
+
+.kpi-permit-cell--total .kpi-permit-cell__value {
+    color: #4338ca;
+}
+
+/* مخططات التوجّه اليومية — مقروءة ومناسبة للأعمال */
+.dash-chart-container--trend {
+    min-height: 220px;
+    height: auto;
+    position: relative;
+    padding: 0.25rem 0;
+}
+
+.dash-trend-chart {
+    font-size: 0.8125rem;
+    color: var(--ent-text-body);
+}
+
+.dash-trend-summary {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding-bottom: 0.5rem;
+    margin-bottom: 0.35rem;
+    border-bottom: 1px solid var(--ent-border);
+}
+
+.dash-trend-summary__label {
+    font-weight: 600;
+    color: var(--ent-text-muted);
+}
+
+.dash-trend-summary__value {
+    font-size: 1.35rem;
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+    color: var(--ent-accent);
+}
+
+.dash-trend-hint {
+    margin: 0 0 0.65rem;
+    font-size: 0.72rem;
+    line-height: 1.45;
+    color: var(--ent-text-muted);
+}
+
+.dash-trend-rows {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+}
+
+.dash-trend-row {
+    display: grid;
+    grid-template-columns: minmax(4.5rem, 26%) 1fr minmax(2rem, 3rem);
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.dash-trend-date {
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: var(--ent-text-muted);
+    line-height: 1.25;
+    text-align: right;
+}
+
+.dash-trend-track {
+    height: 10px;
+    background: var(--ent-border);
+    border-radius: 6px;
+    overflow: hidden;
+    direction: ltr;
+}
+
+.dash-trend-fill {
+    height: 100%;
+    border-radius: 6px;
+    background: linear-gradient(90deg, #3b82f6 0%, #2563eb 100%);
+    transition: width 0.35s ease;
+    min-width: 0;
+}
+
+.dash-trend-count {
+    font-weight: 800;
+    font-size: 0.8rem;
+    font-variant-numeric: tabular-nums;
+    text-align: left;
+    color: var(--ent-text-head);
+}
+
+.dash-trend-empty {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 160px;
+}
+
+.dash-trend-empty__text {
+    margin: 0;
+    color: var(--ent-text-muted);
+    font-size: 0.875rem;
+}
+
+[data-theme="dark"] .kpi-permit-cell {
+    background: rgba(255, 255, 255, 0.04);
+}
+
+[data-theme="dark"] .kpi-permit-cell--total {
+    background: rgba(99, 102, 241, 0.12);
+}
+
+[data-theme="dark"] .dash-trend-fill {
+    background: linear-gradient(90deg, #60a5fa 0%, #3b82f6 100%);
+}
+
+.dash-trend-chart--training .dash-trend-fill {
+    background: linear-gradient(90deg, #a855f7 0%, #7c3aed 100%);
+}
+
+[data-theme="dark"] .dash-trend-chart--training .dash-trend-fill {
+    background: linear-gradient(90deg, #c084fc 0%, #a855f7 100%);
+}
+
+@media (max-width: 380px) {
+    .dash-trend-row {
+        grid-template-columns: minmax(3.5rem, 30%) 1fr minmax(1.75rem, 2.5rem);
+        gap: 0.35rem;
+    }
+
+    .dash-trend-date {
+        font-size: 0.65rem;
+    }
 }
 
 /* Ensure icons are identical size */

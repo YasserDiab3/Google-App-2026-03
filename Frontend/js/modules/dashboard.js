@@ -4028,6 +4028,15 @@ const Dashboard = {
         const ptwByDate = {};
         const trainingByDate = {};
 
+        const toLocalDateKey = (raw) => {
+            const x = new Date(raw);
+            if (isNaN(x.getTime())) return null;
+            const y = x.getFullYear();
+            const m = String(x.getMonth() + 1).padStart(2, '0');
+            const d = String(x.getDate()).padStart(2, '0');
+            return `${y}-${m}-${d}`;
+        };
+
         if (showIncidents) {
             const incidentsData = (data.incidents || []).filter(i => new Date(i.createdAt || i.date) >= last30Days);
             incidentsData.forEach(i => {
@@ -4037,18 +4046,24 @@ const Dashboard = {
         }
 
         if (showPtw) {
-            const ptwData = (data.ptw || []).filter(p => new Date(p.createdAt || p.startDate) >= last30Days);
+            const ptwData = (data.ptw || []).filter(p => {
+                const t = new Date(p.createdAt || p.startDate);
+                return !isNaN(t.getTime()) && t >= last30Days;
+            });
             ptwData.forEach(p => {
-                const date = new Date(p.createdAt || p.startDate).toLocaleDateString('ar-SA');
-                ptwByDate[date] = (ptwByDate[date] || 0) + 1;
+                const k = toLocalDateKey(p.createdAt || p.startDate);
+                if (k) ptwByDate[k] = (ptwByDate[k] || 0) + 1;
             });
         }
 
         if (showTraining) {
-            const trainingData = (data.training || []).filter(t => new Date(t.createdAt || t.startDate) >= last30Days);
+            const trainingData = (data.training || []).filter(t => {
+                const d = new Date(t.createdAt || t.startDate);
+                return !isNaN(d.getTime()) && d >= last30Days;
+            });
             trainingData.forEach(t => {
-                const date = new Date(t.createdAt || t.startDate).toLocaleDateString('ar-SA');
-                trainingByDate[date] = (trainingByDate[date] || 0) + 1;
+                const k = toLocalDateKey(t.createdAt || t.startDate);
+                if (k) trainingByDate[k] = (trainingByDate[k] || 0) + 1;
             });
         }
 
@@ -4097,8 +4112,8 @@ const Dashboard = {
                         </h2>
                     </div>
                     <div class="card-body">
-                        <div class="chart-container" style="height: 250px; position: relative;">
-                            ${this.renderBarChart(ptwByDate, 'تصاريح العمل')}
+                        <div class="chart-container dash-chart-container--trend">
+                            ${this.renderTrendBarList(ptwByDate, 'تصريحاً مسجلاً', 'ptw')}
                         </div>
                     </div>
                 </div>`);
@@ -4113,8 +4128,8 @@ const Dashboard = {
                         </h2>
                     </div>
                     <div class="card-body">
-                        <div class="chart-container" style="height: 250px; position: relative;">
-                            ${this.renderBarChart(trainingByDate, 'برامج التدريب')}
+                        <div class="chart-container dash-chart-container--trend">
+                            ${this.renderTrendBarList(trainingByDate, 'نشاطاً تدريبياً', 'training')}
                         </div>
                     </div>
                 </div>`);
@@ -4148,7 +4163,7 @@ const Dashboard = {
             }
         });
 
-        const total = severityCount['عالي'] + severityCount['متوسط'] + severityCount['منخض'];
+        const total = severityCount['عالي'] + severityCount['متوسط'] + severityCount['منخفض'];
         if (total === 0) {
             return '<div class="empty-state"><p class="text-gray-500">لا توجد بيانات</p></div>';
         }
@@ -4190,30 +4205,57 @@ const Dashboard = {
         `;
     },
 
-    renderBarChart(dataByDate, title) {
-        const dates = Object.keys(dataByDate).sort();
-        if (dates.length === 0) {
-            return '<div class="empty-state"><p class="text-gray-500">لا توجد بيانات</p></div>';
+    /**
+     * مخطط يومي واضح: تاريخ مقروء + شريط نسبي + الرقم الفعلي (آخر 14 يوماً ببيانات ضمن النافذة).
+     * المفاتيح متوقعة بصيغة YYYY-MM-DD لفرز زمني صحيح.
+     */
+    renderTrendBarList(dataByDateIso, unitPhrase, variant = 'ptw') {
+        const keys = Object.keys(dataByDateIso || {}).sort();
+        if (keys.length === 0) {
+            return '<div class="dash-trend-empty"><p class="dash-trend-empty__text">لا توجد بيانات في آخر 30 يوماً</p></div>';
         }
 
-        const maxValue = Math.max(...Object.values(dataByDate), 1);
+        const windowKeys = keys.slice(-14);
+        const values = windowKeys.map((k) => dataByDateIso[k] || 0);
+        const total = values.reduce((a, b) => a + b, 0);
+        const maxValue = Math.max(...values, 1);
+
+        const formatTrendDayLabel = (isoKey) => {
+            const parts = isoKey.split('-').map(Number);
+            if (parts.length !== 3 || parts.some((n) => !n)) return isoKey;
+            const dt = new Date(parts[0], parts[1] - 1, parts[2]);
+            return dt.toLocaleDateString('ar-SA', {
+                weekday: 'short',
+                month: 'numeric',
+                day: 'numeric'
+            });
+        };
+
+        const rows = windowKeys.map((isoKey) => {
+            const value = dataByDateIso[isoKey] || 0;
+            const pct = Math.round((value / maxValue) * 100);
+            const label = formatTrendDayLabel(isoKey);
+            return `
+                <li class="dash-trend-row">
+                    <span class="dash-trend-date">${label}</span>
+                    <div class="dash-trend-track" role="presentation">
+                        <div class="dash-trend-fill" style="width: ${pct}%"></div>
+                    </div>
+                    <span class="dash-trend-count" dir="ltr" title="${unitPhrase}">${value}</span>
+                </li>`;
+        }).join('');
+
+        const variantClass = variant === 'training' ? ' dash-trend-chart--training' : ' dash-trend-chart--ptw';
 
         return `
-            <div class="space-y-2" style="height: 100%; display: flex; flex-direction: column; justify-content: flex-end;">
-                ${dates.slice(-7).map(date => {
-            const value = dataByDate[date] || 0;
-            const percent = (value / maxValue) * 100;
-            return `
-                        <div class="flex items-end gap-2" style="height: 100%;">
-                            <div class="flex-1 bg-gray-200 rounded-t" style="position: relative; height: 100%;">
-                                <div class="bg-blue-500 rounded-t transition-all duration-500 hover:bg-blue-600" style="width: 100%; height: ${percent}%; position: absolute; bottom: 0;" title="${date}: ${value}"></div>
-                            </div>
-                            <span class="text-xs text-gray-600" style="writing-mode: vertical-rl; text-orientation: mixed;">${date.substring(0, 5)}</span>
-                        </div>
-                    `;
-        }).join('')}
-            </div>
-        `;
+            <div class="dash-trend-chart${variantClass}" dir="rtl">
+                <div class="dash-trend-summary">
+                    <span class="dash-trend-summary__label">مجموع الأيام المعروضة</span>
+                    <strong class="dash-trend-summary__value" dir="ltr">${total}</strong>
+                </div>
+                <p class="dash-trend-hint">كل صف يمثل يوماً واحداً: الطول النسبي مقارنة بأعلى يوم في هذه الفترة، والرقم يمثل ${unitPhrase} في ذلك اليوم.</p>
+                <ul class="dash-trend-rows">${rows}</ul>
+            </div>`;
     },
 
     renderSimpleCharts() {
