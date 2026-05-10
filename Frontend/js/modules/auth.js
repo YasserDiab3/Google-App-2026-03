@@ -103,6 +103,138 @@ window.Auth = {
     },
 
     /**
+     * تطبيع passwordHash القادم من الشيت (قد يكون نصاً أو كائناً من Google Sheets).
+     */
+    _normalizeStoredPasswordHash(raw) {
+        if (raw == null || raw === '') return '';
+        if (typeof raw === 'object' && raw !== null) {
+            if (raw.value != null) return String(raw.value).trim();
+            const values = Object.values(raw);
+            if (values.length === 1 && typeof values[0] === 'string') return String(values[0]).trim();
+            return String(raw).trim();
+        }
+        return String(raw).trim();
+    },
+
+    /**
+     * التحقق من تفعيل الحساب وجلسة المتزامن وبناء كائن المستخدم للجلسة (قبل التحقق من كلمة المرور).
+     * @returns {{ success: true, user: object } | { success: false, message: string }}
+     */
+    _prepareLoginSessionUser(foundUser, email) {
+        try {
+            if (!foundUser || !email) {
+                return { success: false, message: 'بيانات المستخدم غير كاملة' };
+            }
+
+            if (foundUser.active === false || foundUser.active === 'false') {
+                return { success: false, message: 'هذا الحساب غير مفعّل. يرجى الاتصال بالمدير' };
+            }
+
+            const hashNorm = this._normalizeStoredPasswordHash(foundUser.passwordHash);
+            if (!hashNorm || hashNorm === '***') {
+                return { success: false, message: 'يجب تحديث كلمة المرور. يرجى الاتصال بالمدير لإعادة تعيين كلمة المرور.' };
+            }
+            foundUser.passwordHash = hashNorm;
+
+            const generateSessionId = () => {
+                const timestamp = Date.now();
+                const random = Math.random().toString(36).substring(2, 15);
+                const userAgent = navigator.userAgent.substring(0, 50);
+                const userAgentHash = userAgent.split('').reduce((acc, char) => {
+                    return ((acc << 5) - acc) + char.charCodeAt(0);
+                }, 0).toString(36);
+                return `SESS_${timestamp}_${random}_${userAgentHash}`;
+            };
+
+            let currentSessionId = sessionStorage.getItem('hse_session_id');
+            if (!currentSessionId) {
+                currentSessionId = generateSessionId();
+                sessionStorage.setItem('hse_session_id', currentSessionId);
+            }
+
+            let hasActiveSession = false;
+            try {
+                const currentSession = sessionStorage.getItem('hse_current_session');
+                if (currentSession) {
+                    const currentSessionData = JSON.parse(currentSession);
+                    if (currentSessionData && currentSessionData.email && currentSessionData.email.toLowerCase() === email) {
+                        if (currentSessionData.loginTime) {
+                            const loginTime = new Date(currentSessionData.loginTime);
+                            const now = new Date();
+                            const sessionAge = now - loginTime;
+                            const maxSessionAge = 24 * 60 * 60 * 1000;
+                            if (sessionAge < maxSessionAge && currentSessionData.sessionId === currentSessionId) {
+                                hasActiveSession = true;
+                            }
+                        } else if (currentSessionData.sessionId === currentSessionId) {
+                            hasActiveSession = true;
+                        }
+                    }
+                }
+            } catch (e) {
+                Utils.safeWarn('⚠️ خطأ في التحقق من الجلسة الحالية:', e);
+            }
+
+            if (foundUser.isOnline === true && foundUser.activeSessionId) {
+                if (foundUser.activeSessionId !== currentSessionId && !hasActiveSession) {
+                    return {
+                        success: false,
+                        message: '⚠️ هذا الحساب متصل بالفعل من جهاز آخر.\n\nيرجى تسجيل الخروج من الجهاز الآخر أولاً، أو انتظار انتهاء الجلسة (24 ساعة).\n\nلا يمكن تسجيل الدخول من أكثر من جهاز في نفس الوقت.'
+                    };
+                }
+            }
+
+            let extractedName = foundUser.name;
+            if (typeof foundUser.name === 'object' && foundUser.name !== null) {
+                if (foundUser.name.value) {
+                    extractedName = String(foundUser.name.value).trim();
+                } else {
+                    const values = Object.values(foundUser.name);
+                    if (values.length === 1 && typeof values[0] === 'string') {
+                        extractedName = String(values[0]).trim();
+                    } else {
+                        extractedName = String(foundUser.name).trim();
+                    }
+                }
+            } else if (typeof foundUser.name === 'string') {
+                extractedName = foundUser.name.trim();
+            }
+
+            const user = {
+                name: extractedName || 'مستخدم',
+                password: foundUser.password || '***',
+                passwordHash: foundUser.passwordHash || '',
+                role: foundUser.role || 'user',
+                department: foundUser.department || '',
+                factory: foundUser.factory || foundUser.factoryId || foundUser.plant || foundUser.siteId || foundUser.site || foundUser.location || '',
+                factoryId: foundUser.factoryId || foundUser.factory || foundUser.plantId || foundUser.siteId || '',
+                factoryName: foundUser.factoryName || foundUser.plantName || foundUser.siteName || foundUser.locationName || '',
+                subLocation: foundUser.subLocation || foundUser.subLocationId || foundUser.subSite || foundUser.subsite || foundUser.placeId || foundUser.place || foundUser.branch || '',
+                subLocationId: foundUser.subLocationId || foundUser.placeId || foundUser.subLocation || '',
+                subLocationName: foundUser.subLocationName || foundUser.placeName || foundUser.subSiteName || foundUser.subsiteName || '',
+                branch: foundUser.branch || foundUser.branchName || '',
+                permissions: foundUser.permissions || {},
+                id: foundUser.id,
+                email: foundUser.email,
+                photo: foundUser.photo || ''
+            };
+
+            Utils.safeLog('📋 بيانات المستخدم المحضرة:', {
+                email: user.email,
+                name: user.name,
+                role: user.role,
+                hasPasswordHash: !!user.passwordHash && user.passwordHash !== '***',
+                passwordHashLength: user.passwordHash?.length || 0
+            });
+
+            return { success: true, user };
+        } catch (err) {
+            Utils.safeError('❌ _prepareLoginSessionUser:', err);
+            return { success: false, message: 'حدث خطأ أثناء تجهيز الجلسة. يرجى المحاولة لاحقاً أو التواصل مع الدعم.' };
+        }
+    },
+
+    /**
      * يتم استدعاؤها بعد نجاح مزامنة Users.
      * إذا تم جلب مستخدمين حقيقيين (غير @hse.local)، نعطّل حساب الـ bootstrap نهائياً.
      */
@@ -208,7 +340,7 @@ window.Auth = {
         } else if (canSyncUsers) {
             Utils.safeLog('🔄 لا توجد بيانات محلية - مزامنة Users من Google Sheets قبل تسجيل الدخول...');
             try {
-                const timeoutMs = 1200; // مهلة قصيرة جداً لتسجيل دخول أسرع
+                const timeoutMs = 4500; // مهلة كافية لجلب Users الجدد من الشيت قبل التحقق من الحساب
                 const timeoutPromise = new Promise(resolve => setTimeout(() => resolve(false), timeoutMs));
                 const syncOk = await Promise.race([GoogleIntegration.syncUsers(true), timeoutPromise]);
                 if (syncOk) {
@@ -363,161 +495,7 @@ window.Auth = {
             }
         }
 
-        // إذا لم يتم العثور عليه في المستخدمين الثابتين، نستخدم المستخدم من قاعدة البيانات
-        if (!user && foundUser) {
-            Utils.safeLog('✅ تم العثور على المستخدم في قاعدة البيانات');
-            // التحقق من حالة الحساب (إذا كانت active غير محددة أو true، نعتبرها معّلة)
-            if (foundUser.active === false || foundUser.active === 'false') {
-                Utils.safeWarn('⚠️ الحساب غير معّل');
-                const errorMessage = 'هذا الحساب غير مفعّل. يرجى الاتصال بالمدير';
-                Notification.error(errorMessage);
-                return { success: false, message: errorMessage };
-            }
-
-            // التحقق من وجود passwordHash
-            if (!foundUser.passwordHash || foundUser.passwordHash.trim() === '' || foundUser.passwordHash === '***') {
-                Utils.safeWarn('⚠️ المستخدم موجود لكن لا يملك passwordHash صحيح');
-                const errorMessage = 'يجب تحديث كلمة المرور. يرجى الاتصال بالمدير لإعادة تعيين كلمة المرور.';
-                Notification.error(errorMessage);
-                return { success: false, message: errorMessage };
-            }
-
-            // ===== التحقق من تسجيل الدخول المتزامن =====
-            // منع تسجيل الدخول من جهاز آخر إذا كان المستخدم متصل بالفعل
-            // توليد معرف جلسة فريد لهذا المتصفح/الجهاز
-            const generateSessionId = () => {
-                // إنشاء معرف فريد يجمع بين timestamp و random string و user agent hash
-                const timestamp = Date.now();
-                const random = Math.random().toString(36).substring(2, 15);
-                const userAgent = navigator.userAgent.substring(0, 50);
-                const userAgentHash = userAgent.split('').reduce((acc, char) => {
-                    return ((acc << 5) - acc) + char.charCodeAt(0);
-                }, 0).toString(36);
-                return `SESS_${timestamp}_${random}_${userAgentHash}`;
-            };
-
-            // الحصول على معرف الجلسة الحالي من sessionStorage أو إنشاء واحد جديد
-            let currentSessionId = sessionStorage.getItem('hse_session_id');
-            if (!currentSessionId) {
-                currentSessionId = generateSessionId();
-                sessionStorage.setItem('hse_session_id', currentSessionId);
-            }
-
-            // لا ننتظر مزامنة الشبكة هنا: كانت تسبب 3–10 ثوانٍ قبل التحقق من كلمة المرور.
-            // التحقق من الجلسة يعتمد على البيانات المحلية؛ بعد نجاح كلمة المرور يمكن مزامنة الخلفية (انظر بعد التحقق).
-
-            // التحقق من وجود جلسة نشطة في المتصفح الحالي
-            let hasActiveSession = false;
-            let currentSessionData = null;
-            try {
-                const currentSession = sessionStorage.getItem('hse_current_session');
-                if (currentSession) {
-                    currentSessionData = JSON.parse(currentSession);
-                    // إذا كانت الجلسة الحالية لنفس المستخدم، نتحقق من صحة الجلسة
-                    if (currentSessionData && currentSessionData.email && currentSessionData.email.toLowerCase() === email) {
-                        // التحقق من أن الجلسة غير منتهية (إذا كان هناك loginTime)
-                        if (currentSessionData.loginTime) {
-                            const loginTime = new Date(currentSessionData.loginTime);
-                            const now = new Date();
-                            const sessionAge = now - loginTime;
-                            const maxSessionAge = 24 * 60 * 60 * 1000; // 24 ساعة
-                            
-                            if (sessionAge < maxSessionAge) {
-                                // التحقق من أن معرف الجلسة يطابق
-                                if (currentSessionData.sessionId === currentSessionId) {
-                                    hasActiveSession = true;
-                                    Utils.safeLog('✅ المستخدم متصل بالفعل من نفس المتصفح - السماح بتسجيل الدخول');
-                                } else {
-                                    Utils.safeLog('⚠️ معرف الجلسة غير متطابق - سيتم إنشاء جلسة جديدة');
-                                }
-                            } else {
-                                Utils.safeLog('⚠️ الجلسة منتهية الصلاحية - سيتم السماح بتسجيل الدخول');
-                                // الجلسة منتهية، نسمح بتسجيل الدخول ولكن نحدث isOnline
-                            }
-                        } else {
-                            // لا يوجد loginTime، نعتبرها جلسة نشطة إذا كان sessionId يطابق
-                            if (currentSessionData.sessionId === currentSessionId) {
-                                hasActiveSession = true;
-                                Utils.safeLog('✅ المستخدم متصل بالفعل من نفس المتصفح - السماح بتسجيل الدخول');
-                            }
-                        }
-                    }
-                }
-            } catch (e) {
-                Utils.safeWarn('⚠️ خطأ في التحقق من الجلسة الحالية:', e);
-            }
-
-            // التحقق من وجود جلسة نشطة من جهاز آخر
-            if (foundUser.isOnline === true && foundUser.activeSessionId) {
-                // إذا كان هناك معرف جلسة نشط ولا يطابق الجلسة الحالية
-                if (foundUser.activeSessionId !== currentSessionId && !hasActiveSession) {
-                    Utils.safeWarn('⚠️ المستخدم متصل بالفعل من جهاز آخر', {
-                        activeSessionId: foundUser.activeSessionId,
-                        currentSessionId: currentSessionId
-                    });
-                    const errorMessage = '⚠️ هذا الحساب متصل بالفعل من جهاز آخر.\n\nيرجى تسجيل الخروج من الجهاز الآخر أولاً، أو انتظار انتهاء الجلسة (24 ساعة).\n\nلا يمكن تسجيل الدخول من أكثر من جهاز في نفس الوقت.';
-                    Notification.error(errorMessage);
-                    return { success: false, message: errorMessage };
-                }
-            }
-
-            // ✅ تشخيص: عرض قيمة name الأصلية من foundUser
-            console.log('🔍 [AUTH] foundUser.name الأصلي:', {
-                value: foundUser.name,
-                type: typeof foundUser.name,
-                isObject: typeof foundUser.name === 'object',
-                stringified: JSON.stringify(foundUser.name)
-            });
-
-            // ✅ تطبيع name إذا كان object
-            let extractedName = foundUser.name;
-            if (typeof foundUser.name === 'object' && foundUser.name !== null) {
-                if (foundUser.name.value) {
-                    extractedName = String(foundUser.name.value).trim();
-                } else {
-                    const values = Object.values(foundUser.name);
-                    if (values.length === 1 && typeof values[0] === 'string') {
-                        extractedName = String(values[0]).trim();
-                    } else {
-                        extractedName = String(foundUser.name).trim();
-                    }
-                }
-                console.log('✅ [AUTH] تم استخراج name من object:', extractedName);
-            } else if (typeof foundUser.name === 'string') {
-                extractedName = foundUser.name.trim();
-            }
-
-            user = {
-                name: extractedName || 'مستخدم',
-                password: foundUser.password || '***',
-                passwordHash: foundUser.passwordHash || '',
-                role: foundUser.role || 'user',
-                department: foundUser.department || '',
-                // ✅ حقول المصنع/الموقع الفرعي (اختيارية) لدعم الظهور بعد التحميل
-                // نلتقط أكبر قدر من المسميات المحتملة من Sheet Users بدون فرض سكيمة واحدة
-                factory: foundUser.factory || foundUser.factoryId || foundUser.plant || foundUser.siteId || foundUser.site || foundUser.location || '',
-                factoryId: foundUser.factoryId || foundUser.factory || foundUser.plantId || foundUser.siteId || '',
-                factoryName: foundUser.factoryName || foundUser.plantName || foundUser.siteName || foundUser.locationName || '',
-                subLocation: foundUser.subLocation || foundUser.subLocationId || foundUser.subSite || foundUser.subsite || foundUser.placeId || foundUser.place || foundUser.branch || '',
-                subLocationId: foundUser.subLocationId || foundUser.placeId || foundUser.subLocation || '',
-                subLocationName: foundUser.subLocationName || foundUser.placeName || foundUser.subSiteName || foundUser.subsiteName || '',
-                branch: foundUser.branch || foundUser.branchName || '',
-                permissions: foundUser.permissions || {},
-                id: foundUser.id,
-                email: foundUser.email,
-                photo: foundUser.photo || ''
-            };
-
-            console.log('✅ [AUTH] user.name النهائي:', user.name);
-
-            Utils.safeLog('📋 بيانات المستخدم المحضرة:', {
-                email: user.email,
-                name: user.name,
-                role: user.role,
-                hasPasswordHash: !!user.passwordHash && user.passwordHash !== '***',
-                passwordHashLength: user.passwordHash?.length || 0
-            });
-        } else if (!user && !foundUser) {
+        if (!user && !foundUser) {
             // ⚠️ إنتاج: لا ننشئ حسابات افتراضية أو كلمات مرور داخل الكود.
             // إذا كانت قاعدة البيانات فارغة، نطلب إعداد المستخدمين عبر Google Sheets/المدير.
             if (users.length === 0) {
@@ -573,6 +551,17 @@ window.Auth = {
                 Notification.error(errorMessage);
                 return { success: false, message: errorMessage };
             }
+        }
+
+        // بناء كائن الجلسة بعد كل مسارات تعيين foundUser (يشمل إعادة المزامنة عند فراغ جدول Users محلياً)
+        if (!user && foundUser) {
+            Utils.safeLog('✅ تم العثور على المستخدم في قاعدة البيانات');
+            const prep = this._prepareLoginSessionUser(foundUser, email);
+            if (!prep.success) {
+                Notification.error(prep.message);
+                return { success: false, message: prep.message };
+            }
+            user = prep.user;
         }
 
         // التحقق من وجود المستخدم
