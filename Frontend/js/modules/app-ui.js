@@ -3225,6 +3225,15 @@ window.UI = {
                     }
                 }
 
+                // ✅ المواقع/المصانع/الأماكن الفرعية: مسار استعادة الجلسة وإعادة التحميل لا يمرّ بـ Auth.login — إعادة تهيئة صريحة هنا
+                if (typeof Permissions !== 'undefined' && typeof Permissions.initFormSettingsState === 'function') {
+                    try {
+                        await Permissions.initFormSettingsState();
+                    } catch (fsErr) {
+                        Utils.safeWarn('⚠️ فشل تهيئة مواقع النماذج بعد عرض التطبيق:', fsErr);
+                    }
+                }
+
                 // تم توحيد التحميل الأولي والمزامنة الأولى داخل _continueMainAppSetup
 
                 // تحديث جميع البيانات المرئية (يتضمن تحميل Dashboard مرة واحدة عند sectionToShow === 'dashboard')

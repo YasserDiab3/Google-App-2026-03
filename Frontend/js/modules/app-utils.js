@@ -450,7 +450,10 @@ const Permissions = {
         // ✅ ضمان وجود AppState.appData لتفادي أخطاء عند التعيين لاحقاً
         if (typeof AppState === 'undefined') return this.getFormSettingsState();
         if (!AppState.appData) AppState.appData = {};
-        const hasRemoteSettingsApi = (
+        // لا نحاول جلب الشيت إلا عند تفعيل رابط Web App — وإلا نعتمد فوراً على المحلي/DEFAULT_SITES (أسرع وأقل أخطاء)
+        const cloudReady = typeof Utils !== 'undefined' && typeof Utils.hasCloudBackendSync === 'function' && Utils.hasCloudBackendSync();
+        const hasRemoteSettingsApi = !!(
+            cloudReady &&
             typeof GoogleIntegration !== 'undefined' &&
             typeof GoogleIntegration.sendToAppsScript === 'function'
         );
