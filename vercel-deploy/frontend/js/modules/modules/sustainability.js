@@ -289,6 +289,8 @@ const Sustainability = {
         let ok = 0;
         let skipped = 0;
         const errs = [];
+        /** لتصفية الدُفعة من الذاكرة إذا فشل الحفظ في الشيت */
+        const importedIdsByType = { water: [], electricity: [], gas: [] };
 
         rows.forEach((rawRow, idx) => {
             const row = this._normalizeExcelRowKeys(rawRow);
@@ -351,23 +353,51 @@ const Sustainability = {
                 updatedBy: AppState.currentUser?.email || AppState.currentUser?.name || 'System'
             };
             AppState.appData.resourceConsumption[type].push(formData);
+            importedIdsByType[type].push(formData.id);
             ok++;
         });
+
+        if (ok === 0) {
+            if (typeof Notification !== 'undefined') {
+                Notification.warning('لم يُستورد أي صف صالح.' + (skipped ? ` تخطّي ${skipped} صفًا.` : ''));
+                if (errs.length && errs.length <= 8) errs.forEach((m) => Notification.warning(m));
+                else if (errs.length > 8) Notification.warning('راجع القالب والبيانات.');
+            }
+            return;
+        }
 
         if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
             window.DataManager.save();
         }
-        try {
-            await this.saveResourceConsumptionToSheets();
-        } catch (e) {
-            Utils.safeWarn('⚠️ تعذر المزامنة مع الشيت بعد الاستيراد:', e);
+
+        const saveResult = await this.saveResourceConsumptionToSheets();
+        if (!saveResult.success) {
+            ['water', 'electricity', 'gas'].forEach((t) => {
+                const drop = new Set(importedIdsByType[t] || []);
+                if (!drop.size || !Array.isArray(AppState.appData.resourceConsumption[t])) return;
+                AppState.appData.resourceConsumption[t] = AppState.appData.resourceConsumption[t].filter((r) => !drop.has(r.id));
+            });
+            if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
+                window.DataManager.save();
+            }
+            if (typeof Notification !== 'undefined') {
+                Notification.error(
+                    'فشل حفظ الاستيراد في الخادم — لم تُسجَّل البيانات في قاعدة الشيت. ' +
+                        (saveResult.message || saveResult.error || '')
+                );
+                if (errs.length && errs.length <= 8) errs.forEach((m) => Notification.warning(m));
+            }
+            await this.loadResourceConsumptionFromSheets().catch(() => {});
+            this.load();
+            return;
         }
 
         if (typeof Notification !== 'undefined') {
-            Notification.success(`تم استيراد ${ok} سجلًا${skipped ? ` — تخطّي ${skipped}` : ''}`);
+            Notification.success(`تم استيراد ${ok} سجلًا وحفظها في الخادم${skipped ? ` — تخطّي ${skipped}` : ''}`);
             if (errs.length && errs.length <= 8) errs.forEach((m) => Notification.warning(m));
             else if (errs.length > 8) Notification.warning('بعض الصفوف لم تُستورد — راجع القالب والبيانات.');
         }
+        await this.loadResourceConsumptionFromSheets().catch(() => {});
         this.load();
     },
 
@@ -1526,32 +1556,55 @@ ${body}
 
         Loading.show();
         try {
+            let previousRecord = null;
+            let previousIndex = -1;
+            if (recordId) {
+                previousIndex = AppState.appData.resourceConsumption[type].findIndex((r) => r.id === recordId);
+                if (previousIndex !== -1) {
+                    try {
+                        previousRecord = JSON.parse(JSON.stringify(AppState.appData.resourceConsumption[type][previousIndex]));
+                    } catch (e) {
+                        previousRecord = null;
+                    }
+                }
+            }
+
             if (recordId) {
                 const index = AppState.appData.resourceConsumption[type].findIndex(r => r.id === recordId);
                 if (index !== -1) {
                     AppState.appData.resourceConsumption[type][index] = formData;
-                    Notification.success('تم تحديث السجل بنجاح');
                 }
             } else {
                 AppState.appData.resourceConsumption[type].push(formData);
-                Notification.success('تم إضافة السجل بنجاح');
             }
 
-            // حفظ البيانات
             if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
                 window.DataManager.save();
             } else {
                 Utils.safeWarn('⚠️ DataManager غير متاح - لم يتم حفظ البيانات');
             }
 
-            // حفظ في الجداول المنفصلة
-            await this.saveResourceConsumptionToSheets();
+            const saveResult = await this.saveResourceConsumptionToSheets();
 
             Loading.hide();
+
+            if (!saveResult.success) {
+                if (recordId && previousRecord !== null && previousIndex !== -1) {
+                    AppState.appData.resourceConsumption[type][previousIndex] = previousRecord;
+                } else if (!recordId) {
+                    AppState.appData.resourceConsumption[type] = AppState.appData.resourceConsumption[type].filter((r) => r.id !== formData.id);
+                }
+                if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
+                    window.DataManager.save();
+                }
+                Notification.error('فشل الحفظ في الخادم — لم يُحدَّث السجل في الشيت: ' + (saveResult.message || saveResult.error || ''));
+                return;
+            }
+
+            Notification.success(recordId ? 'تم تحديث السجل بنجاح' : 'تم إضافة السجل بنجاح');
             modal.remove();
             this.load();
 
-            // إظهار تنبيه إذا كان هناك تحذير
             if (hasAlert) {
                 Notification.warning(`تنبيه: استهلاك ${this.getTypeName(type)} تجاوز الحد المسموح`);
             }
@@ -1667,14 +1720,25 @@ ${body}
 
         Loading.show();
         try {
+            const snapshot = Array.isArray(AppState.appData.resourceConsumption[type])
+                ? [...AppState.appData.resourceConsumption[type]]
+                : [];
+
             AppState.appData.resourceConsumption[type] = AppState.appData.resourceConsumption[type].filter(r => r.id !== recordId);
 
             if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
                 window.DataManager.save();
             }
 
-            // حفظ في الجداول المنفصلة
-            await this.saveResourceConsumptionToSheets();
+            const saveResult = await this.saveResourceConsumptionToSheets();
+            if (!saveResult.success) {
+                AppState.appData.resourceConsumption[type] = snapshot;
+                if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
+                    window.DataManager.save();
+                }
+                Notification.error('فشل حذف السجل في الخادم: ' + (saveResult.message || saveResult.error || ''));
+                return;
+            }
             Notification.success('تم حذف السجل بنجاح');
             this.load();
         } catch (error) {
@@ -4292,20 +4356,36 @@ ${body}
             gas: []
         };
 
+        const tasks = [
+            { sheetName: 'WaterManagement_Records', rows: resourceData.water || [] },
+            { sheetName: 'GasManagement_Records', rows: resourceData.gas || [] },
+            { sheetName: 'ElectricityManagement_Records', rows: resourceData.electricity || [] }
+        ];
+
         try {
-            // حفظ سجلات المياه
-            await GoogleIntegration.autoSave('WaterManagement_Records', resourceData.water || []);
+            const results = [];
+            for (const { sheetName, rows } of tasks) {
+                const res = await GoogleIntegration.autoSave(sheetName, rows, { silent: true });
+                results.push({
+                    sheetName,
+                    success: !!(res && res.success),
+                    message: res && (res.message || '')
+                });
+            }
 
-            // حفظ سجلات الغاز
-            await GoogleIntegration.autoSave('GasManagement_Records', resourceData.gas || []);
+            const failed = results.filter((r) => !r.success);
+            if (failed.length === 0) {
+                return { success: true, results };
+            }
 
-            // حفظ سجلات الكهرباء
-            await GoogleIntegration.autoSave('ElectricityManagement_Records', resourceData.electricity || []);
-
-            return { success: true };
+            const msg = failed
+                .map((f) => `${f.sheetName}: ${f.message || 'فشل الحفظ'}`)
+                .join(' — ');
+            Utils.safeWarn('⚠️ حفظ استهلاك الموارد لم يكتمل:', msg);
+            return { success: false, results, message: msg };
         } catch (error) {
             Utils.safeError('❌ خطأ في حفظ بيانات استهلاك الموارد:', error);
-            return { success: false, error: error.message };
+            return { success: false, error: error.message, results: [] };
         }
     },
 
