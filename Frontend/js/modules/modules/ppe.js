@@ -27,6 +27,15 @@ const PPE = {
                 status: '',
                 dateFrom: '',
                 dateTo: ''
+            },
+            // فلاتر جدول المخزون (نفس نمط فلاتر سجل الاستلامات)
+            stock: {
+                search: '',
+                category: '',
+                supplier: '',
+                status: '', // '', 'available', 'low'
+                dateFrom: '',
+                dateTo: ''
             }
         }
     },
@@ -146,6 +155,138 @@ const PPE = {
             dateFrom: '',
             dateTo: ''
         };
+    },
+
+    // ====== فلاتر جدول المخزون (نفس نمط فلاتر الاستلامات) ======
+
+    /** تطبيق الفلاتر على قائمة الأصناف */
+    getFilteredStockItems(stockItems) {
+        const list = Array.isArray(stockItems) ? stockItems : [];
+        const f = (this.state.filters && this.state.filters.stock) || {};
+        const search = (f.search || '').trim().toLowerCase();
+        const category = f.category || '';
+        const supplier = f.supplier || '';
+        const status = f.status || '';
+        const from = f.dateFrom ? new Date(f.dateFrom + 'T00:00:00') : null;
+        const to = f.dateTo ? new Date(f.dateTo + 'T23:59:59.999') : null;
+        if (from && isNaN(from.getTime())) return list;
+        if (to && isNaN(to.getTime())) return list;
+
+        return list.filter((item) => {
+            if (!item) return false;
+            if (category && String(item.category || '') !== category) return false;
+            if (supplier && String(item.supplier || '') !== supplier) return false;
+            if (status) {
+                const balance = parseFloat(item.balance || 0);
+                const minThreshold = parseFloat(item.minThreshold || 0);
+                const isLow = balance < minThreshold;
+                if (status === 'low' && !isLow) return false;
+                if (status === 'available' && isLow) return false;
+            }
+            if (from || to) {
+                if (!item.lastUpdate) return false;
+                const rd = new Date(item.lastUpdate);
+                if (isNaN(rd.getTime())) return false;
+                if (from && rd < from) return false;
+                if (to && rd > to) return false;
+            }
+            if (search) {
+                const hay = [
+                    item.itemCode, item.itemName, item.category, item.supplier
+                ].map((x) => String(x || '').toLowerCase()).join(' | ');
+                if (!hay.includes(search)) return false;
+            }
+            return true;
+        });
+    },
+
+    hasActiveStockFilters() {
+        const f = (this.state.filters && this.state.filters.stock) || {};
+        return !!(f.search || f.category || f.supplier || f.status || f.dateFrom || f.dateTo);
+    },
+
+    resetStockFilters() {
+        if (!this.state.filters) this.state.filters = {};
+        this.state.filters.stock = {
+            search: '',
+            category: '',
+            supplier: '',
+            status: '',
+            dateFrom: '',
+            dateTo: ''
+        };
+    },
+
+    /** بناء صف فلاتر جدول المخزون (نفس نمط ppe-visits-filters-row) */
+    buildStockFilterRow(stockItems) {
+        const t = (k, f) => this._t(k, f);
+        const esc = (v) => Utils.escapeHTML(v);
+        this.ensurePpeFilterStyles();
+        const items = Array.isArray(stockItems) ? stockItems : [];
+        const filters = (this.state.filters && this.state.filters.stock) || {};
+        const filtered = this.getFilteredStockItems(items);
+        const isRTL = typeof document !== 'undefined'
+            && (document.documentElement.getAttribute('dir') === 'rtl'
+                || (window.AppI18n && window.AppI18n.getCurrentLang && window.AppI18n.getCurrentLang() === 'ar'));
+
+        const uniqueCategories = [...new Set(items.map(it => it && it.category).filter(Boolean))].sort();
+        const uniqueSuppliers = [...new Set(items.map(it => it && it.supplier).filter(Boolean))].sort();
+
+        return `
+            <div class="ppe-visits-filters-row visits-filters-row" style="background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%); padding: 16px 20px; margin: 0 0 14px 0; width: 100%; direction: ${isRTL ? 'rtl' : 'ltr'}; border-radius: 10px;">
+                <div class="filters-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; align-items: end;">
+                    <div class="filter-field" style="min-width: 180px;">
+                        <label class="filter-label" for="ppe-stock-search">
+                            <i class="fas fa-search ml-1"></i>${esc(t('module.ppe.filter.search', 'بحث'))}
+                        </label>
+                        <input type="text" id="ppe-stock-search" class="form-input pr-10 filter-input" placeholder="${esc(t('module.ppe.stock.filter.searchPlaceholder', 'كود/اسم/فئة/مورد'))}" value="${esc(filters.search || '')}">
+                    </div>
+                    <div class="filter-field" style="min-width: 160px;">
+                        <label class="filter-label" for="ppe-stock-filter-category">
+                            <i class="fas fa-tags ml-1"></i>${esc(t('module.ppe.stock.category', 'الفئة'))}
+                            ${filters.category ? `<span class="filter-count-badge" title="${esc(t('module.ppe.filter.badgeCount', ''))}">${filtered.length}</span>` : ''}
+                        </label>
+                        <select id="ppe-stock-filter-category" class="form-input filter-input">
+                            <option value="">${esc(t('module.common.all', 'الكل'))}</option>
+                            ${uniqueCategories.map((c) => `<option value="${esc(c)}" ${filters.category === c ? 'selected' : ''}>${esc(c)}</option>`).join('')}
+                        </select>
+                    </div>
+                    <div class="filter-field" style="min-width: 160px;">
+                        <label class="filter-label" for="ppe-stock-filter-supplier">
+                            <i class="fas fa-truck ml-1"></i>${esc(t('module.ppe.stock.supplier', 'المورد'))}
+                            ${filters.supplier ? `<span class="filter-count-badge" title="${esc(t('module.ppe.filter.badgeCount', ''))}">${filtered.length}</span>` : ''}
+                        </label>
+                        <select id="ppe-stock-filter-supplier" class="form-input filter-input">
+                            <option value="">${esc(t('module.common.all', 'الكل'))}</option>
+                            ${uniqueSuppliers.map((s) => `<option value="${esc(s)}" ${filters.supplier === s ? 'selected' : ''}>${esc(s)}</option>`).join('')}
+                        </select>
+                    </div>
+                    <div class="filter-field" style="min-width: 160px;">
+                        <label class="filter-label" for="ppe-stock-filter-status">
+                            <i class="fas fa-signal ml-1"></i>${esc(t('module.ppe.table.status', 'الحالة'))}
+                            ${filters.status ? `<span class="filter-count-badge" title="${esc(t('module.ppe.filter.badgeCount', ''))}">${filtered.length}</span>` : ''}
+                        </label>
+                        <select id="ppe-stock-filter-status" class="form-input filter-input">
+                            <option value="">${esc(t('module.common.all', 'الكل'))}</option>
+                            <option value="available" ${filters.status === 'available' ? 'selected' : ''}>${esc(t('module.ppe.status.available', 'متوفر'))}</option>
+                            <option value="low" ${filters.status === 'low' ? 'selected' : ''}>${esc(t('module.ppe.status.lowStock', 'مخزون منخفض'))}</option>
+                        </select>
+                    </div>
+                    <div class="filter-field">
+                        <label class="filter-label" for="ppe-stock-date-from"><i class="fas fa-calendar-alt ml-1"></i>${esc(t('module.ppe.stock.filter.dateFrom', 'من تاريخ آخر تحديث'))}</label>
+                        <input type="date" id="ppe-stock-date-from" class="form-input filter-input" value="${esc(filters.dateFrom || '')}">
+                    </div>
+                    <div class="filter-field">
+                        <label class="filter-label" for="ppe-stock-date-to"><i class="fas fa-calendar-check ml-1"></i>${esc(t('module.ppe.stock.filter.dateTo', 'إلى تاريخ آخر تحديث'))}</label>
+                        <input type="date" id="ppe-stock-date-to" class="form-input filter-input" value="${esc(filters.dateTo || '')}">
+                    </div>
+                    <div class="filter-field" style="min-width: 170px;">
+                        <button type="button" id="ppe-stock-reset-filters" class="filter-reset-btn" title="${esc(t('module.ppe.filter.resetTitle', ''))}">
+                            <i class="fas fa-rotate-left ml-1"></i>${esc(t('module.ppe.filter.reset', 'إعادة تعيين الفلاتر'))}
+                        </button>
+                    </div>
+                </div>
+            </div>`;
     },
 
     /**
@@ -586,6 +727,9 @@ const PPE = {
                 if (this.state.activeTab === 'receipts') {
                     this.ensurePpeFilterStyles();
                     this.bindReceiptsFilters();
+                } else if (this.state.activeTab === 'stock-control') {
+                    this.ensurePpeFilterStyles();
+                    this.bindStockFilters();
                 }
                 Utils.safeLog('✅ PPE: تم تحديث التبويب النشط بنجاح');
             } catch (error) {
@@ -760,6 +904,8 @@ const PPE = {
                 this.applyModuleI18n(section);
                 if (this.state.activeTab === 'receipts') {
                     this.bindReceiptsFilters();
+                } else if (this.state.activeTab === 'stock-control') {
+                    this.bindStockFilters();
                 }
             } catch (error) {
                 Utils.safeWarn('⚠️ خطأ في setupEventListeners:', error);
@@ -1060,6 +1206,10 @@ const PPE = {
                             : `<div class="space-y-4" id="ppe-stock-tab-root">${syncHint}<div class="empty-state py-8"><p class="text-gray-600">${Utils.escapeHTML(this._t('module.ppe.loading.stockData', 'جاري تحميل بيانات المخزون…'))}</p></div></div>`;
                         tabContentContainer.style.opacity = '1';
                         tabContentContainer.style.pointerEvents = 'auto';
+                        if (cached.length > 0) {
+                            this.ensurePpeFilterStyles();
+                            this.bindStockFilters();
+                        }
                     } else {
                         tabContentContainer.style.opacity = '0.92';
                         tabContentContainer.style.pointerEvents = 'none';
@@ -1071,6 +1221,9 @@ const PPE = {
                     if (tabName === 'receipts') {
                         this.ensurePpeFilterStyles();
                         this.bindReceiptsFilters();
+                    } else if (tabName === 'stock-control') {
+                        this.ensurePpeFilterStyles();
+                        this.bindStockFilters();
                     }
                     Utils.safeLog(`✅ PPE: تم التبديل إلى تبويب ${tabName}`);
                 } catch (error) {
@@ -3468,24 +3621,54 @@ const PPE = {
     renderStockTable(stockItems) {
         const t = (k, f) => this._t(k, f);
         const ut = (s) => Utils.escapeHTML(s);
-        if (!stockItems || stockItems.length === 0) {
+        const items = Array.isArray(stockItems) ? stockItems : [];
+        if (items.length === 0) {
             return `
-                <div class="empty-state">
-                    <i class="fas fa-box-open text-4xl text-gray-300 mb-4"></i>
-                    <p class="text-gray-500">${ut(t('module.ppe.empty.noStock', 'لا توجد أصناف في المخزون'))}</p>
-                    <button onclick="PPE.showStockItemForm()" class="btn-primary mt-4">
-                        <i class="fas fa-plus ml-2"></i>${ut(t('module.ppe.btn.addStockItem', 'إضافة صنف جديد'))}
-                    </button>
+                <div id="ppe-stock-table-card" class="content-card">
+                    <div class="card-body">
+                        <div class="empty-state">
+                            <i class="fas fa-box-open text-4xl text-gray-300 mb-4"></i>
+                            <p class="text-gray-500">${ut(t('module.ppe.empty.noStock', 'لا توجد أصناف في المخزون'))}</p>
+                            <button onclick="PPE.showStockItemForm()" class="btn-primary mt-4">
+                                <i class="fas fa-plus ml-2"></i>${ut(t('module.ppe.btn.addStockItem', 'إضافة صنف جديد'))}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        const filterRow = this.buildStockFilterRow(items);
+        const filtered = this.getFilteredStockItems(items);
+        const hasFilters = this.hasActiveStockFilters();
+
+        if (filtered.length === 0 && hasFilters) {
+            return `
+                <div id="ppe-stock-table-card" class="content-card">
+                    <div class="card-header">
+                        <h3 class="card-title"><i class="fas fa-list ml-2"></i>${ut(t('module.ppe.stock.tableTitle', 'جدول المخزون'))}</h3>
+                    </div>
+                    <div class="card-body">
+                        ${filterRow}
+                        <div class="empty-state">
+                            <i class="fas fa-filter text-4xl text-gray-300 mb-4"></i>
+                            <p class="text-gray-500 mb-2">${ut(t('module.ppe.filter.noMatch', 'لا توجد نتائج مطابقة'))}</p>
+                            <button type="button" id="ppe-stock-clear-empty-filters" class="btn-secondary mt-2">
+                                <i class="fas fa-undo-alt ml-2"></i>${ut(t('module.ppe.filter.clearEmpty', 'مسح الفلاتر'))}
+                            </button>
+                        </div>
+                    </div>
                 </div>
             `;
         }
 
         return `
-            <div class="content-card">
+            <div id="ppe-stock-table-card" class="content-card">
                 <div class="card-header">
                     <h3 class="card-title"><i class="fas fa-list ml-2"></i>${ut(t('module.ppe.stock.tableTitle', 'جدول المخزون'))}</h3>
                 </div>
                 <div class="card-body">
+                    ${filterRow}
                     <div class="table-wrapper" style="overflow-x: auto;">
                         <table class="data-table">
                             <thead>
@@ -3504,7 +3687,7 @@ const PPE = {
                                 </tr>
                             </thead>
                             <tbody>
-                                ${stockItems.map(item => {
+                                ${filtered.map(item => {
                                     const balance = parseFloat(item.balance || 0);
                                     const minThreshold = parseFloat(item.minThreshold || 0);
                                     const isLowStock = balance < minThreshold;
@@ -3558,6 +3741,106 @@ const PPE = {
                 </div>
             </div>
         `;
+    },
+
+    /** الحصول على بيانات المخزون الحالية للعرض الجزئي (cache → AppState) */
+    _getCurrentStockItems() {
+        if (this.state.stockItemsCache && Array.isArray(this.state.stockItemsCache) && this.state.stockItemsCache.length) {
+            return this.state.stockItemsCache;
+        }
+        if (Array.isArray(AppState.appData.ppeStock)) {
+            return AppState.appData.ppeStock;
+        }
+        return [];
+    },
+
+    /** إعادة رسم بطاقة جدول المخزون فقط (دون لمس لوحة الإحصائيات) */
+    refreshStockListUI() {
+        const card = document.getElementById('ppe-stock-table-card');
+        if (!card) return;
+        const items = this._getCurrentStockItems();
+        const html = this.renderStockTable(items);
+        const wrap = document.createElement('div');
+        wrap.innerHTML = html.trim();
+        const newCard = wrap.firstElementChild;
+        if (!newCard) return;
+        card.replaceWith(newCard);
+        this.applyModuleI18n(newCard);
+        this.bindStockFilters();
+    },
+
+    _stockFilterTimer: null,
+
+    bindStockFilters() {
+        if (this.state.activeTab !== 'stock-control') return;
+        if (!this.state.filters) this.state.filters = {};
+        if (!this.state.filters.stock) this.resetStockFilters();
+
+        const run = (fn) => {
+            if (typeof requestAnimationFrame === 'function') {
+                requestAnimationFrame(fn);
+            } else {
+                setTimeout(fn, 0);
+            }
+        };
+
+        const search = document.getElementById('ppe-stock-search');
+        if (search) {
+            search.addEventListener('input', (e) => {
+                this.state.filters.stock.search = (e.target && e.target.value) || '';
+                clearTimeout(this._stockFilterTimer);
+                this._stockFilterTimer = setTimeout(() => run(() => this.refreshStockListUI()), 220);
+            });
+        }
+        const categoryEl = document.getElementById('ppe-stock-filter-category');
+        if (categoryEl) {
+            categoryEl.addEventListener('change', (e) => {
+                this.state.filters.stock.category = (e.target && e.target.value) || '';
+                this.refreshStockListUI();
+            });
+        }
+        const supplierEl = document.getElementById('ppe-stock-filter-supplier');
+        if (supplierEl) {
+            supplierEl.addEventListener('change', (e) => {
+                this.state.filters.stock.supplier = (e.target && e.target.value) || '';
+                this.refreshStockListUI();
+            });
+        }
+        const statusEl = document.getElementById('ppe-stock-filter-status');
+        if (statusEl) {
+            statusEl.addEventListener('change', (e) => {
+                this.state.filters.stock.status = (e.target && e.target.value) || '';
+                this.refreshStockListUI();
+            });
+        }
+        const fromEl = document.getElementById('ppe-stock-date-from');
+        if (fromEl) {
+            fromEl.addEventListener('change', (e) => {
+                this.state.filters.stock.dateFrom = (e.target && e.target.value) || '';
+                this.refreshStockListUI();
+            });
+        }
+        const toEl = document.getElementById('ppe-stock-date-to');
+        if (toEl) {
+            toEl.addEventListener('change', (e) => {
+                this.state.filters.stock.dateTo = (e.target && e.target.value) || '';
+                this.refreshStockListUI();
+            });
+        }
+        const resetEl = document.getElementById('ppe-stock-reset-filters');
+        if (resetEl) {
+            resetEl.addEventListener('click', () => {
+                this.resetStockFilters();
+                this.refreshStockListUI();
+            });
+        }
+        const clearEmpty = document.getElementById('ppe-stock-clear-empty-filters');
+        if (clearEmpty) {
+            clearEmpty.addEventListener('click', () => {
+                this.resetStockFilters();
+                this.refreshStockListUI();
+            });
+        }
     },
 
     /** طلب واحد لقائمة المخزون مع مهلة بالمللي ثوانٍ */
