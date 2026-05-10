@@ -412,14 +412,73 @@ function addOrUpdatePPEStockItem(stockData) {
             // حساب الرصيد التلقائي من الحركات
             stockData.balance = calculateStockBalance(stockData.itemId);
             
-            // تحديث البيانات
+            // ✅ دمج التحديثات داخل السجل الحالي مع الإبقاء على الحقول غير الواردة
+            const existing = data[itemIndex] || {};
             for (var key in stockData) {
                 if (stockData.hasOwnProperty(key) && key !== 'itemId') {
-                    data[itemIndex][key] = stockData[key];
+                    existing[key] = stockData[key];
                 }
             }
+            existing.itemId = stockData.itemId;
             
-            return saveToSheet(sheetName, data, spreadsheetId);
+            // ✅ تحديث صف واحد فقط مطابق لـ itemId مباشرة على الورقة
+            // (تجنب استدعاء saveToSheet الذي يستخدم upsert بحسب عمود "id" فقط
+            //  فيُسبّب تكرار جميع الأصناف عند الحفظ — ورقة PPE_Stock تستخدم itemId)
+            try {
+                const spreadsheet = SpreadsheetApp.openById(spreadsheetId);
+                const sheet = spreadsheet.getSheetByName(sheetName);
+                if (!sheet) {
+                    return { success: false, message: 'ورقة المخزون غير موجودة: ' + sheetName };
+                }
+
+                // التأكد من تحديث رؤوس الورقة لتشمل أي مفاتيح جديدة في السجل
+                ensureSheetHeaders(sheet, sheetName, existing);
+
+                const lastCol = sheet.getLastColumn();
+                const headerRow = sheet.getRange(1, 1, 1, lastCol).getValues()[0]
+                    .map(function (h) { return (h === null || h === undefined) ? '' : String(h).trim(); });
+
+                const itemIdCol = headerRow.indexOf('itemId');
+                if (itemIdCol < 0) {
+                    return { success: false, message: 'عمود itemId غير موجود في ورقة المخزون.' };
+                }
+
+                const dataRange = sheet.getDataRange();
+                const allRows = dataRange ? dataRange.getValues() : [];
+                let targetRow = -1;
+                const wantedId = String(stockData.itemId).trim();
+                for (var r = 1; r < allRows.length; r++) {
+                    const cellVal = allRows[r][itemIdCol];
+                    if (cellVal !== null && cellVal !== undefined && String(cellVal).trim() === wantedId) {
+                        targetRow = r + 1; // sheet row (1-indexed)
+                        break;
+                    }
+                }
+
+                if (targetRow === -1) {
+                    return { success: false, message: 'لم يتم العثور على الصنف في ورقة المخزون.' };
+                }
+
+                const rowValues = headerRow.map(function (h) {
+                    if (!h) return '';
+                    if (typeof toSheetCellValue_ === 'function') {
+                        return toSheetCellValue_(h, existing[h], sheetName);
+                    }
+                    return existing[h] !== undefined ? existing[h] : '';
+                });
+
+                sheet.getRange(targetRow, 1, 1, headerRow.length).setValues([rowValues]);
+                SpreadsheetApp.flush();
+
+                if (typeof invalidateHseSheetCaches_ === 'function') {
+                    try { invalidateHseSheetCaches_(sheetName); } catch (e) { /* ignore */ }
+                }
+
+                return { success: true, message: 'تم تحديث الصنف بنجاح' };
+            } catch (writeErr) {
+                Logger.log('Error updating single PPE_Stock row: ' + writeErr.toString());
+                return { success: false, message: 'فشل تحديث صف الصنف: ' + writeErr.toString() };
+            }
         }
     } catch (error) {
         Logger.log('Error in addOrUpdatePPEStockItem: ' + error.toString());
