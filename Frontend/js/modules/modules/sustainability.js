@@ -77,37 +77,86 @@ const Sustainability = {
     },
 
     /**
+     * مصفوفة المواقع الخام (مع الأماكن الفرعية) بنفس ترتيب الأولوية المستخدم في إعدادات النماذج.
+     * مهم: لا نعتمد على formSettingsState.sites إن كانت مصفوفة فارغة — وإلا تُحجب البيانات من observationSites أو الافتراضيات.
+     */
+    _resolveSitesFromHierarchy() {
+        try {
+            if (typeof Permissions !== 'undefined' && Permissions.formSettingsState &&
+                Array.isArray(Permissions.formSettingsState.sites) &&
+                Permissions.formSettingsState.sites.length > 0) {
+                return Permissions.formSettingsState.sites;
+            }
+            if (typeof AppState !== 'undefined' && Array.isArray(AppState.appData?.observationSites) &&
+                AppState.appData.observationSites.length > 0) {
+                return AppState.appData.observationSites;
+            }
+            if (typeof DailyObservations !== 'undefined' && Array.isArray(DailyObservations.DEFAULT_SITES)) {
+                return DailyObservations.DEFAULT_SITES;
+            }
+        } catch (e) { /* ignore */ }
+        return [];
+    },
+
+    /**
      * الحصول على قائمة المواقع من الإعدادات
      */
     getSiteOptions() {
         try {
-            // محاولة الحصول من Permissions.formSettingsState
-            if (typeof Permissions !== 'undefined' && Permissions.formSettingsState && Permissions.formSettingsState.sites) {
-                return Permissions.formSettingsState.sites.map(site => ({
-                    id: site.id,
-                    name: site.name
-                }));
-            }
-
-            // محاولة الحصول من AppState.appData.observationSites
-            if (Array.isArray(AppState.appData?.observationSites) && AppState.appData.observationSites.length > 0) {
-                return AppState.appData.observationSites.map(site => ({
-                    id: site.id || site.siteId || Utils.generateId('SITE'),
-                    name: site.name || site.title || site.label || 'موقع غير محدد'
-                }));
-            }
-
-            // محاولة الحصول من DailyObservations
-            if (typeof DailyObservations !== 'undefined' && Array.isArray(DailyObservations.DEFAULT_SITES)) {
-                return DailyObservations.DEFAULT_SITES.map((site, index) => ({
-                    id: site.id || site.siteId || Utils.generateId('SITE'),
-                    name: site.name || site.title || site.label || `موقع ${index + 1}`
-                }));
-            }
-
-            return [];
+            const sites = this._resolveSitesFromHierarchy();
+            return sites.map((site, index) => ({
+                id: site.id || site.siteId || Utils.generateId('SITE'),
+                name: site.name || site.title || site.label || `موقع ${index + 1}`
+            }));
         } catch (error) {
             Utils.safeWarn('⚠️ خطأ في الحصول على قائمة المواقع:', error);
+            return [];
+        }
+    },
+
+    /**
+     * خيارات حقل «الموقع / المصنع»: المصنع + الأماكن الفرعية (صيغة موحّدة للقيمة المحفوظة).
+     */
+    getResourceLocationDropdownOptions() {
+        try {
+            const sites = this._resolveSitesFromHierarchy();
+            const opts = [];
+            const seen = new Set();
+            const pushOpt = (value, label) => {
+                const v = String(value == null ? '' : value).trim();
+                if (!v || seen.has(v)) return;
+                seen.add(v);
+                const lb = String(label == null ? v : label).trim() || v;
+                opts.push({ value: v, label: lb });
+            };
+            sites.forEach((site, index) => {
+                const siteName = String(site?.name || site?.title || site?.label || '').trim() || `موقع ${index + 1}`;
+                let placesSource = [];
+                if (Array.isArray(site?.places) && site.places.length > 0) placesSource = site.places;
+                else if (Array.isArray(site?.locations) && site.locations.length > 0) placesSource = site.locations;
+                else if (Array.isArray(site?.children) && site.children.length > 0) placesSource = site.children;
+                else if (Array.isArray(site?.areas) && site.areas.length > 0) placesSource = site.areas;
+
+                if (!placesSource.length) {
+                    pushOpt(siteName, siteName);
+                    return;
+                }
+                pushOpt(siteName, siteName);
+                placesSource.forEach((place) => {
+                    let pName = '';
+                    if (typeof place === 'object' && place !== null) {
+                        pName = String(place.name || place.placeName || place.title || place.label || place.locationName || '').trim();
+                    } else {
+                        pName = String(place || '').trim();
+                    }
+                    if (!pName) return;
+                    const composite = `${siteName} — ${pName}`;
+                    pushOpt(composite, composite);
+                });
+            });
+            return opts;
+        } catch (error) {
+            Utils.safeWarn('⚠️ خطأ في بناء قائمة الموقع/المصنع:', error);
             return [];
         }
     },
@@ -118,8 +167,6 @@ const Sustainability = {
     async ensureObservationSitesForForms() {
         try {
             if (this.getSiteOptions().length > 0) return;
-            const remote = typeof Utils !== 'undefined' && typeof Utils.hasCloudBackendSync === 'function' && Utils.hasCloudBackendSync();
-            if (!remote) return;
             if (typeof Permissions !== 'undefined' && typeof Permissions.ensureFormSettingsState === 'function') {
                 await Permissions.ensureFormSettingsState(true);
             }
@@ -898,9 +945,9 @@ const Sustainability = {
                             </label>
                             <select id="resource-location-${type}" required class="form-input">
                                 <option value="">-- اختر الموقع / المصنع --</option>
-                                ${this.getSiteOptions().map(site => `
-                                    <option value="${Utils.escapeHTML(site.name)}" ${record?.location === site.name ? 'selected' : ''}>
-                                        ${Utils.escapeHTML(site.name)}
+                                ${this.getResourceLocationDropdownOptions().map(opt => `
+                                    <option value="${Utils.escapeHTML(opt.value)}" ${record?.location === opt.value ? 'selected' : ''}>
+                                        ${Utils.escapeHTML(opt.label)}
                                     </option>
                                 `).join('')}
                             </select>
@@ -2531,9 +2578,9 @@ const Sustainability = {
                                 </label>
                                 <select id="regular-waste-location" required class="form-input">
                                     <option value="">-- اختر الموقع --</option>
-                                    ${this.getSiteOptions().map(site => `
-                                        <option value="${Utils.escapeHTML(site.name)}" ${record?.location === site.name ? 'selected' : ''}>
-                                            ${Utils.escapeHTML(site.name)}
+                                    ${this.getResourceLocationDropdownOptions().map(opt => `
+                                        <option value="${Utils.escapeHTML(opt.value)}" ${record?.location === opt.value ? 'selected' : ''}>
+                                            ${Utils.escapeHTML(opt.label)}
                                         </option>
                                     `).join('')}
                                 </select>
@@ -2742,9 +2789,9 @@ const Sustainability = {
                                 </label>
                                 <select id="sale-location" required class="form-input">
                                     <option value="">-- اختر الموقع --</option>
-                                    ${this.getSiteOptions().map(site => `
-                                        <option value="${Utils.escapeHTML(site.name)}" ${sale?.location === site.name ? 'selected' : ''}>
-                                            ${Utils.escapeHTML(site.name)}
+                                    ${this.getResourceLocationDropdownOptions().map(opt => `
+                                        <option value="${Utils.escapeHTML(opt.value)}" ${sale?.location === opt.value ? 'selected' : ''}>
+                                            ${Utils.escapeHTML(opt.label)}
                                         </option>
                                     `).join('')}
                                 </select>
@@ -3001,9 +3048,9 @@ const Sustainability = {
                                 </label>
                                 <select id="hazardous-waste-location" required class="form-input">
                                     <option value="">-- اختر الموقع --</option>
-                                    ${this.getSiteOptions().map(site => `
-                                        <option value="${Utils.escapeHTML(site.name)}" ${record?.location === site.name ? 'selected' : ''}>
-                                            ${Utils.escapeHTML(site.name)}
+                                    ${this.getResourceLocationDropdownOptions().map(opt => `
+                                        <option value="${Utils.escapeHTML(opt.value)}" ${record?.location === opt.value ? 'selected' : ''}>
+                                            ${Utils.escapeHTML(opt.label)}
                                         </option>
                                     `).join('')}
                                 </select>
