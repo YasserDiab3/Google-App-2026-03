@@ -267,15 +267,15 @@
     letter-spacing: 0.5px;
 }
 
-/* Force TRIR/FA/TIR/LTI code badges to match value size */
+/* شارات TRIR/FA/TIR/LTI — متوافقة مع لوحة التحكم (حجم أوضح) */
 .content-card.safety-metrics-section .metric-card-frame .metric-short-code {
-    font-size: 2rem !important;
+    font-size: clamp(1.125rem, 1.25vw + 0.85rem, 1.5rem) !important;
     font-weight: 900 !important;
-    line-height: 1 !important;
-    min-width: 3.4rem !important;
+    line-height: 1.15 !important;
+    min-width: 2.6rem !important;
     text-align: center;
-    padding: 0.2rem 0.45rem !important;
-    letter-spacing: 0.03em !important;
+    padding: 0.45rem 0.8rem !important;
+    letter-spacing: 0.12em !important;
 }
 
 /* ===== القيمة (الرقم) - كبيرة في الوسط ===== */

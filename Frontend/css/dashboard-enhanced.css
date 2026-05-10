@@ -849,15 +849,16 @@
     align-items: center;
 }
 
-/* شارة الاختصار TRIR / FA / TIR / LTI: نفس الحجم الحالي مع بولد قوي (900) */
+/* شارة الاختصار TRIR / FA / TIR / LTI: خط أوضح وأكبر مع بولد 900 */
 #dashboard-section .safety-metrics-section .metric-short-code {
-    font-size: 0.6875rem !important;
+    font-size: clamp(1.125rem, 1.25vw + 0.85rem, 1.5rem) !important;
     font-weight: 900 !important;
-    letter-spacing: 0.1em;
-    line-height: 1.2 !important;
-    padding: 0.4rem 0.65rem !important;
+    letter-spacing: 0.12em;
+    line-height: 1.15 !important;
+    padding: 0.45rem 0.8rem !important;
     border-radius: 8px;
-    min-width: 0 !important;
+    min-width: 2.6rem !important;
+    text-align: center;
 }
 
 /* أيقونة في بلاطة دائرية */
