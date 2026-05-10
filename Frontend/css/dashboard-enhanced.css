@@ -151,10 +151,24 @@
     box-sizing: border-box;
 }
 
-/* شبكة KPI: أعمدة متجاوبة بدون فراغات جانبية عند إخفاء كروت حسب الصلاحيات */
+/* شبكة KPI: حد أدنى أوعر للقراءة؛ لا نفرض صفاً واحداً ضيقاً بخمس كروت */
 #dashboard-section .kpi-grid {
-    grid-template-columns: repeat(auto-fill, minmax(min(100%, 268px), 1fr));
-    grid-auto-flow: row dense;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr));
+    grid-auto-flow: row;
+    gap: 1.35rem;
+}
+
+@media (min-width: 900px) {
+    /* بطاقة التصاريح تحتاج عرضاً مضاعفاً لثلاثية الأرقام بدون تكدس */
+    #dashboard-section .kpi-grid > .kpi-card.kpi-card--permits {
+        grid-column: span 2;
+    }
+}
+
+@media (max-width: 899px) {
+    #dashboard-section .kpi-grid > .kpi-card.kpi-card--permits {
+        grid-column: span 1;
+    }
 }
 
 /* Ensure grid items fill available space equally */
@@ -246,8 +260,11 @@
 #dashboard-section .kpi-grid > .kpi-card .kpi-label {
     text-transform: none;
     letter-spacing: normal;
-    overflow-wrap: anywhere;
-    hyphens: auto;
+    overflow-wrap: break-word;
+    hyphens: manual;
+    white-space: normal;
+    overflow: visible;
+    text-overflow: unset;
 }
 
 /* تصاريح العمل — ثلاثية أفقية بنفس كثافة باقي الكروت */
@@ -259,19 +276,22 @@
 }
 
 .kpi-permits-strip {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    display: flex;
+    flex-wrap: wrap;
     gap: 0.5rem;
     width: 100%;
 }
 
 .kpi-permit-cell {
     text-align: center;
-    padding: 0.45rem 0.25rem;
+    padding: 0.5rem 0.35rem;
     border-radius: var(--radius-md);
     border: 1px solid var(--ent-border);
     background: var(--ent-bg-page);
-    min-width: 0;
+    flex: 1 1 6.25rem;
+    min-width: 5.75rem;
+    max-width: 100%;
+    box-sizing: border-box;
 }
 
 .kpi-permit-cell--open {
@@ -291,11 +311,14 @@
 
 .kpi-permit-cell__label {
     display: block;
-    font-size: 0.65rem;
+    font-size: 0.7rem;
     font-weight: 600;
     color: var(--ent-text-muted);
-    margin-bottom: 0.15rem;
-    line-height: 1.2;
+    margin-bottom: 0.2rem;
+    line-height: 1.35;
+    white-space: normal;
+    overflow-wrap: break-word;
+    word-break: normal;
 }
 
 .kpi-permit-cell__value {
@@ -463,22 +486,30 @@
 /* Ensure labels are identical */
 .kpi-grid>.kpi-card .kpi-label {
     font-size: 0.875rem;
-    line-height: 1.3;
-    min-height: 1.3em;
+    line-height: 1.35;
+    min-height: 0;
 }
 
-/* Ensure values are identical */
+/* قيم KPI: لا يُقسّم الرقم الكبير على سطرين؛ يتكيّف حجم الخط قليلاً مع العرض */
+#dashboard-section .kpi-grid > .kpi-card .kpi-value {
+    white-space: nowrap;
+    font-size: clamp(1.05rem, 2.2vw + 0.65rem, 1.875rem);
+    line-height: 1.15;
+    min-height: 0;
+}
+
+/* Ensure values share baseline line-height خارج لوحة التحكم */
 .kpi-grid>.kpi-card .kpi-value {
-    font-size: 1.875rem;
-    line-height: 1.1;
-    min-height: 1.1em;
+    line-height: 1.15;
 }
 
 /* Ensure descriptions are identical */
 .kpi-grid>.kpi-card .kpi-description {
     font-size: 0.8rem;
-    line-height: 1.2;
-    min-height: 1.2em;
+    line-height: 1.35;
+    min-height: 0;
+    white-space: normal;
+    overflow-wrap: break-word;
 }
 
 /* Ensure content area is distributed evenly */
@@ -1557,6 +1588,12 @@
         flex-direction: column;
         align-items: flex-start;
         gap: 0.5rem;
+    }
+
+    /* لوحة التحكم: عمود واحد بعرض كامل (يتقدّم على شبكة auto-fill) */
+    #dashboard-section .kpi-grid {
+        grid-template-columns: 1fr;
+        gap: 1rem;
     }
 
     .kpi-grid,

@@ -608,8 +608,14 @@
 
 /* ===== لوحة التحكم — شبكة متجاوبة ورسوم بعرض كامل (يتغلب على تعارضات أقدم) ===== */
 #dashboard-section .kpi-grid {
-    grid-template-columns: repeat(auto-fill, minmax(min(100%, 268px), 1fr));
-    gap: 1.25rem;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr));
+    gap: 1.35rem;
+}
+
+@media (max-width: 768px) {
+    #dashboard-section .kpi-grid {
+        grid-template-columns: 1fr;
+    }
 }
 
 #dashboard-section > .content-grid {
