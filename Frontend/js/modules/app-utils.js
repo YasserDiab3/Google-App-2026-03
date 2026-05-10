@@ -2776,6 +2776,17 @@ const Permissions = {
         if (AppState.debugMode) {
             Utils.safeLog(`✅ تم تحديث القائمة: ${visibleCount} عنصر مرئي من ${navItems.length} عنصر`);
         }
+
+        // إعادة تطبيق إخفاء أجزاء لوحة التحكم بعد تحديث الصلاحيات (مزامنة/جلسة)
+        if (typeof Dashboard !== 'undefined' && typeof Dashboard.applyDashboardLayoutPermissions === 'function') {
+            try {
+                Dashboard.applyDashboardLayoutPermissions();
+            } catch (dashPermErr) {
+                if (typeof Utils !== 'undefined' && Utils.safeWarn) {
+                    Utils.safeWarn('⚠️ تعذر تطبيق صلاحيات تخطيط لوحة التحكم:', dashPermErr);
+                }
+            }
+        }
     },
 
     /**

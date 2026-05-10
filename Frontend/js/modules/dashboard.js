@@ -43,8 +43,24 @@ const Dashboard = {
     reportsStatisticsMetricVisible(statId) {
         if (statId === 'total-reports') return this.anyReportsStatisticVisibleForDashboard();
         const mod = this.getModuleNameFromStatId(statId);
-        if (!mod) return true;
+        if (!mod) return false;
         return this.dashboardCan(mod);
+    },
+
+    _setDashboardElVisibility(el, allowed) {
+        if (!el) return;
+        if (allowed) {
+            el.removeAttribute('hidden');
+            el.style.removeProperty('display');
+        } else {
+            el.setAttribute('hidden', '');
+            try {
+                el.style.setProperty('display', 'none', 'important');
+            } catch (e) {
+                el.style.display = 'none';
+            }
+        }
+        el.setAttribute('aria-hidden', allowed ? 'false' : 'true');
     },
 
     applyDashboardLayoutPermissions() {
@@ -53,15 +69,14 @@ const Dashboard = {
         root.querySelectorAll('[data-dash-scope]').forEach((el) => {
             const raw = el.getAttribute('data-dash-scope') || '';
             const keys = raw.split(',').map((s) => s.trim()).filter(Boolean);
-            const allowed = keys.length === 0 || keys.some((k) => this.dashboardCan(k));
-            el.hidden = !allowed;
-            el.setAttribute('aria-hidden', allowed ? 'false' : 'true');
+            // بدون مفاتيح صريحة: لا تعرض (لا افتراضي بعرض كل شيء)
+            const allowed = keys.length > 0 && keys.some((k) => this.dashboardCan(k));
+            this._setDashboardElVisibility(el, allowed);
         });
         root.querySelectorAll('.reports-statistics-section .metric-card-frame[data-stat-id]').forEach((card) => {
             const statId = card.getAttribute('data-stat-id');
-            const allowed = statId ? this.reportsStatisticsMetricVisible(statId) : true;
-            card.hidden = !allowed;
-            card.setAttribute('aria-hidden', allowed ? 'false' : 'true');
+            const allowed = statId ? this.reportsStatisticsMetricVisible(statId) : false;
+            this._setDashboardElVisibility(card, allowed);
         });
     },
 
