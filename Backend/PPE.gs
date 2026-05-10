@@ -573,37 +573,31 @@ function addPPETransaction(transactionData) {
         const result = appendToSheet(sheetName, transactionData);
         
         if (result.success) {
-            // تحديث الرصيد في جدول المخزون
-            const stockSheet = 'PPE_Stock';
+            // تحديث الصنف المستهدف فقط (itemId) لتجنب تكرار جميع صفوف المخزون.
             const spreadsheetId = getSpreadsheetId();
-            let stockData = readFromSheet(stockSheet, spreadsheetId);
-            
-            const stockItemIndex = stockData.findIndex(item => item.itemId === transactionData.itemId);
-            if (stockItemIndex !== -1) {
-                // تحديث الرصيد تلقائياً
-                stockData[stockItemIndex].balance = calculateStockBalance(transactionData.itemId);
-                stockData[stockItemIndex].lastUpdate = new Date();
-                stockData[stockItemIndex].updatedAt = new Date();
-                
-                // تحديث الوارد والمنصرف
-                const transactions = readFromSheet('PPE_Transactions', spreadsheetId);
-                const itemTransactions = transactions.filter(t => t.itemId === transactionData.itemId);
-                
-                let stockIn = 0;
-                let stockOut = 0;
-                
-                itemTransactions.forEach(t => {
-                    if (t.action === 'IN') {
-                        stockIn += parseFloat(t.quantity || 0);
-                    } else if (t.action === 'OUT') {
-                        stockOut += parseFloat(t.quantity || 0);
-                    }
-                });
-                
-                stockData[stockItemIndex].stock_IN = stockIn;
-                stockData[stockItemIndex].stock_OUT = stockOut;
-                
-                saveToSheet(stockSheet, stockData, spreadsheetId);
+            const transactions = readFromSheet('PPE_Transactions', spreadsheetId);
+            const itemTransactions = transactions.filter(t => t.itemId === transactionData.itemId);
+
+            let stockIn = 0;
+            let stockOut = 0;
+            itemTransactions.forEach(t => {
+                if (t.action === 'IN') {
+                    stockIn += parseFloat(t.quantity || 0);
+                } else if (t.action === 'OUT') {
+                    stockOut += parseFloat(t.quantity || 0);
+                }
+            });
+
+            const updateRes = updatePPEStockByItemId_(transactionData.itemId, {
+                stock_IN: stockIn,
+                stock_OUT: stockOut,
+                balance: stockIn - stockOut,
+                lastUpdate: new Date(),
+                updatedAt: new Date()
+            }, spreadsheetId);
+
+            if (!updateRes || !updateRes.success) {
+                Logger.log('addPPETransaction: failed to update PPE_Stock for itemId=' + transactionData.itemId + ' => ' + (updateRes && updateRes.message ? updateRes.message : 'unknown'));
             }
         }
         
@@ -611,6 +605,66 @@ function addPPETransaction(transactionData) {
     } catch (error) {
         Logger.log('Error in addPPETransaction: ' + error.toString());
         return { success: false, message: 'حدث خطأ أثناء إضافة الحركة: ' + error.toString() };
+    }
+}
+
+/**
+ * تحديث صف واحد في PPE_Stock عبر itemId (بدون إعادة حفظ كل البيانات).
+ */
+function updatePPEStockByItemId_(itemId, patch, spreadsheetId) {
+    try {
+        const targetItemId = String(itemId || '').trim();
+        if (!targetItemId) {
+            return { success: false, message: 'itemId غير صالح للتحديث' };
+        }
+        const ssId = spreadsheetId || getSpreadsheetId();
+        const spreadsheet = SpreadsheetApp.openById(ssId);
+        const sheet = spreadsheet.getSheetByName('PPE_Stock');
+        if (!sheet) {
+            return { success: false, message: 'ورقة PPE_Stock غير موجودة' };
+        }
+
+        const lastRow = sheet.getLastRow();
+        const lastCol = sheet.getLastColumn();
+        if (lastRow < 2 || lastCol < 1) {
+            return { success: false, message: 'لا توجد بيانات في PPE_Stock' };
+        }
+
+        const headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0].map(h => String(h || '').trim());
+        const itemIdColIndex = headers.indexOf('itemId');
+        if (itemIdColIndex === -1) {
+            return { success: false, message: 'عمود itemId غير موجود في PPE_Stock' };
+        }
+
+        const idValues = sheet.getRange(2, itemIdColIndex + 1, lastRow - 1, 1).getValues();
+        let targetRow = -1;
+        for (let i = 0; i < idValues.length; i++) {
+            if (String(idValues[i][0] || '').trim() === targetItemId) {
+                targetRow = i + 2;
+                break;
+            }
+        }
+        if (targetRow === -1) {
+            return { success: false, message: 'الصنف غير موجود في PPE_Stock: ' + targetItemId };
+        }
+
+        const currentRow = sheet.getRange(targetRow, 1, 1, lastCol).getValues()[0];
+        Object.keys(patch || {}).forEach((key) => {
+            const col = headers.indexOf(key);
+            if (col !== -1) {
+                currentRow[col] = patch[key];
+            }
+        });
+        sheet.getRange(targetRow, 1, 1, lastCol).setValues([currentRow]);
+        SpreadsheetApp.flush();
+
+        if (typeof invalidateHseSheetCaches_ === 'function') {
+            invalidateHseSheetCaches_('PPE_Stock');
+        }
+        return { success: true };
+    } catch (error) {
+        Logger.log('updatePPEStockByItemId_: ' + error.toString());
+        return { success: false, message: error.toString() };
     }
 }
 
