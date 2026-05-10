@@ -115,53 +115,6 @@ const Sustainability = {
     },
 
     /**
-     * خيارات حقل «الموقع / المصنع»: المصنع + الأماكن الفرعية (صيغة موحّدة للقيمة المحفوظة).
-     */
-    getResourceLocationDropdownOptions() {
-        try {
-            const sites = this._resolveSitesFromHierarchy();
-            const opts = [];
-            const seen = new Set();
-            const pushOpt = (value, label) => {
-                const v = String(value == null ? '' : value).trim();
-                if (!v || seen.has(v)) return;
-                seen.add(v);
-                const lb = String(label == null ? v : label).trim() || v;
-                opts.push({ value: v, label: lb });
-            };
-            sites.forEach((site, index) => {
-                const siteName = String(site?.name || site?.title || site?.label || '').trim() || `موقع ${index + 1}`;
-                let placesSource = [];
-                if (Array.isArray(site?.places) && site.places.length > 0) placesSource = site.places;
-                else if (Array.isArray(site?.locations) && site.locations.length > 0) placesSource = site.locations;
-                else if (Array.isArray(site?.children) && site.children.length > 0) placesSource = site.children;
-                else if (Array.isArray(site?.areas) && site.areas.length > 0) placesSource = site.areas;
-
-                if (!placesSource.length) {
-                    pushOpt(siteName, siteName);
-                    return;
-                }
-                pushOpt(siteName, siteName);
-                placesSource.forEach((place) => {
-                    let pName = '';
-                    if (typeof place === 'object' && place !== null) {
-                        pName = String(place.name || place.placeName || place.title || place.label || place.locationName || '').trim();
-                    } else {
-                        pName = String(place || '').trim();
-                    }
-                    if (!pName) return;
-                    const composite = `${siteName} — ${pName}`;
-                    pushOpt(composite, composite);
-                });
-            });
-            return opts;
-        } catch (error) {
-            Utils.safeWarn('⚠️ خطأ في بناء قائمة الموقع/المصنع:', error);
-            return [];
-        }
-    },
-
-    /**
      * جلب مواقع المصنع من الخادم عند الحاجة (قبل إظهار نماذج تتطلب الموقع *).
      */
     async ensureObservationSitesForForms() {
@@ -945,9 +898,9 @@ const Sustainability = {
                             </label>
                             <select id="resource-location-${type}" required class="form-input">
                                 <option value="">-- اختر الموقع / المصنع --</option>
-                                ${this.getResourceLocationDropdownOptions().map(opt => `
-                                    <option value="${Utils.escapeHTML(opt.value)}" ${record?.location === opt.value ? 'selected' : ''}>
-                                        ${Utils.escapeHTML(opt.label)}
+                                ${this.getSiteOptions().map(site => `
+                                    <option value="${Utils.escapeHTML(site.name)}" ${record?.location === site.name ? 'selected' : ''}>
+                                        ${Utils.escapeHTML(site.name)}
                                     </option>
                                 `).join('')}
                             </select>
@@ -2578,9 +2531,9 @@ const Sustainability = {
                                 </label>
                                 <select id="regular-waste-location" required class="form-input">
                                     <option value="">-- اختر الموقع --</option>
-                                    ${this.getResourceLocationDropdownOptions().map(opt => `
-                                        <option value="${Utils.escapeHTML(opt.value)}" ${record?.location === opt.value ? 'selected' : ''}>
-                                            ${Utils.escapeHTML(opt.label)}
+                                    ${this.getSiteOptions().map(site => `
+                                        <option value="${Utils.escapeHTML(site.name)}" ${record?.location === site.name ? 'selected' : ''}>
+                                            ${Utils.escapeHTML(site.name)}
                                         </option>
                                     `).join('')}
                                 </select>
@@ -2789,9 +2742,9 @@ const Sustainability = {
                                 </label>
                                 <select id="sale-location" required class="form-input">
                                     <option value="">-- اختر الموقع --</option>
-                                    ${this.getResourceLocationDropdownOptions().map(opt => `
-                                        <option value="${Utils.escapeHTML(opt.value)}" ${sale?.location === opt.value ? 'selected' : ''}>
-                                            ${Utils.escapeHTML(opt.label)}
+                                    ${this.getSiteOptions().map(site => `
+                                        <option value="${Utils.escapeHTML(site.name)}" ${sale?.location === site.name ? 'selected' : ''}>
+                                            ${Utils.escapeHTML(site.name)}
                                         </option>
                                     `).join('')}
                                 </select>
@@ -3048,9 +3001,9 @@ const Sustainability = {
                                 </label>
                                 <select id="hazardous-waste-location" required class="form-input">
                                     <option value="">-- اختر الموقع --</option>
-                                    ${this.getResourceLocationDropdownOptions().map(opt => `
-                                        <option value="${Utils.escapeHTML(opt.value)}" ${record?.location === opt.value ? 'selected' : ''}>
-                                            ${Utils.escapeHTML(opt.label)}
+                                    ${this.getSiteOptions().map(site => `
+                                        <option value="${Utils.escapeHTML(site.name)}" ${record?.location === site.name ? 'selected' : ''}>
+                                            ${Utils.escapeHTML(site.name)}
                                         </option>
                                     `).join('')}
                                 </select>
