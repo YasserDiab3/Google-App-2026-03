@@ -367,7 +367,7 @@ const PPE = {
         ` : '';
 
         if (filtered.length === 0) {
-            return filterRow + noMatchBlock;
+            return this._buildExcelToolbarHtml('receipts') + filterRow + noMatchBlock;
         }
 
         const viewTitle = t('module.common.view', 'عرض');
@@ -427,7 +427,7 @@ const PPE = {
             </table>
         `;
 
-        return filterRow + table;
+        return this._buildExcelToolbarHtml('receipts') + filterRow + table;
     },
 
     _receiptsFilterTimer: null,
@@ -856,19 +856,6 @@ const PPE = {
                                 <i class="fas fa-table ml-2"></i>
                                 ${ut(t('module.ppe.btn.matrix', 'مصفوفة مهمات الوقاية'))}
                             </button>
-                            <button id="ppe-receipts-export-excel-btn" type="button" class="btn-secondary" title="${ut(t('module.ppe.excel.exportReceiptsTitle', 'تصدير سجل الاستلامات إلى Excel'))}">
-                                <i class="fas fa-file-excel ml-2"></i>
-                                ${ut(t('module.ppe.excel.exportBtn', 'تصدير Excel'))}
-                            </button>
-                            <button id="ppe-receipts-template-btn" type="button" class="btn-secondary" title="${ut(t('module.ppe.excel.downloadTemplateReceiptsTitle', 'تنزيل قالب Excel فارغ'))}">
-                                <i class="fas fa-download ml-2"></i>
-                                ${ut(t('module.ppe.excel.downloadTemplateBtn', 'تحميل القالب'))}
-                            </button>
-                            <input type="file" id="ppe-receipts-import-input" accept=".xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel" tabindex="-1" aria-hidden="true" style="position:absolute;width:1px;height:1px;opacity:0;left:-9999px;">
-                            <button id="ppe-receipts-import-btn" type="button" class="btn-secondary" title="${ut(t('module.ppe.excel.importReceiptsTitle', 'استيراد صفوف من ملف يطابق القالب'))}">
-                                <i class="fas fa-file-import ml-2"></i>
-                                ${ut(t('module.ppe.excel.importBtn', 'استيراد من القالب'))}
-                            </button>
                             <button id="add-ppe-btn" class="btn-primary">
                                 <i class="fas fa-plus ml-2"></i>
                                 ${ut(t('module.ppe.btn.newReceipt', 'تسجيل استلام جديد'))}
@@ -878,19 +865,6 @@ const PPE = {
                                 ${ut(t('module.ppe.btn.refresh', 'تحديث'))}
                             </button>
                         ` : `
-                            <button id="ppe-stock-export-excel-btn" type="button" class="btn-secondary" title="${ut(t('module.ppe.excel.exportStockTitle', 'تصدير المخزون إلى Excel'))}">
-                                <i class="fas fa-file-excel ml-2"></i>
-                                ${ut(t('module.ppe.excel.exportBtn', 'تصدير Excel'))}
-                            </button>
-                            <button id="ppe-stock-template-btn" type="button" class="btn-secondary" title="${ut(t('module.ppe.excel.downloadTemplateStockTitle', 'تنزيل قالب Excel للأصناف'))}">
-                                <i class="fas fa-download ml-2"></i>
-                                ${ut(t('module.ppe.excel.downloadTemplateBtn', 'تحميل القالب'))}
-                            </button>
-                            <input type="file" id="ppe-stock-import-input" accept=".xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel" tabindex="-1" aria-hidden="true" style="position:absolute;width:1px;height:1px;opacity:0;left:-9999px;">
-                            <button id="ppe-stock-import-btn" type="button" class="btn-secondary" title="${ut(t('module.ppe.excel.importStockTitle', 'استيراد أصناف من ملف يطابق القالب'))}">
-                                <i class="fas fa-file-import ml-2"></i>
-                                ${ut(t('module.ppe.excel.importBtn', 'استيراد من القالب'))}
-                            </button>
                             <button id="add-stock-item-btn" class="btn-primary">
                                 <i class="fas fa-plus ml-2"></i>
                                 ${ut(t('module.ppe.btn.addStockItem', 'إضافة صنف جديد'))}
@@ -1136,19 +1110,6 @@ const PPE = {
                     <i class="fas fa-table ml-2"></i>
                     ${ut(t('module.ppe.btn.matrix', 'مصفوفة مهمات الوقاية'))}
                 </button>
-                <button id="ppe-receipts-export-excel-btn" type="button" class="btn-secondary" title="${ut(t('module.ppe.excel.exportReceiptsTitle', 'تصدير سجل الاستلامات إلى Excel'))}">
-                    <i class="fas fa-file-excel ml-2"></i>
-                    ${ut(t('module.ppe.excel.exportBtn', 'تصدير Excel'))}
-                </button>
-                <button id="ppe-receipts-template-btn" type="button" class="btn-secondary" title="${ut(t('module.ppe.excel.downloadTemplateReceiptsTitle', 'تنزيل قالب Excel فارغ'))}">
-                    <i class="fas fa-download ml-2"></i>
-                    ${ut(t('module.ppe.excel.downloadTemplateBtn', 'تحميل القالب'))}
-                </button>
-                <input type="file" id="ppe-receipts-import-input" accept=".xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel" tabindex="-1" aria-hidden="true" style="position:absolute;width:1px;height:1px;opacity:0;left:-9999px;">
-                <button id="ppe-receipts-import-btn" type="button" class="btn-secondary" title="${ut(t('module.ppe.excel.importReceiptsTitle', 'استيراد صفوف من ملف يطابق القالب'))}">
-                    <i class="fas fa-file-import ml-2"></i>
-                    ${ut(t('module.ppe.excel.importBtn', 'استيراد من القالب'))}
-                </button>
                 <button id="add-ppe-btn" class="btn-primary">
                     <i class="fas fa-plus ml-2"></i>
                     ${ut(t('module.ppe.btn.newReceipt', 'تسجيل استلام جديد'))}
@@ -1160,19 +1121,6 @@ const PPE = {
             `;
         } else {
             headerButtonsContainer.innerHTML = `
-                <button id="ppe-stock-export-excel-btn" type="button" class="btn-secondary" title="${ut(t('module.ppe.excel.exportStockTitle', 'تصدير المخزون إلى Excel'))}">
-                    <i class="fas fa-file-excel ml-2"></i>
-                    ${ut(t('module.ppe.excel.exportBtn', 'تصدير Excel'))}
-                </button>
-                <button id="ppe-stock-template-btn" type="button" class="btn-secondary" title="${ut(t('module.ppe.excel.downloadTemplateStockTitle', 'تنزيل قالب Excel للأصناف'))}">
-                    <i class="fas fa-download ml-2"></i>
-                    ${ut(t('module.ppe.excel.downloadTemplateBtn', 'تحميل القالب'))}
-                </button>
-                <input type="file" id="ppe-stock-import-input" accept=".xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel" tabindex="-1" aria-hidden="true" style="position:absolute;width:1px;height:1px;opacity:0;left:-9999px;">
-                <button id="ppe-stock-import-btn" type="button" class="btn-secondary" title="${ut(t('module.ppe.excel.importStockTitle', 'استيراد أصناف من ملف يطابق القالب'))}">
-                    <i class="fas fa-file-import ml-2"></i>
-                    ${ut(t('module.ppe.excel.importBtn', 'استيراد من القالب'))}
-                </button>
                 <button id="add-stock-item-btn" class="btn-primary">
                     <i class="fas fa-plus ml-2"></i>
                     ${ut(t('module.ppe.btn.addStockItem', 'إضافة صنف جديد'))}
@@ -3787,6 +3735,69 @@ const PPE = {
         }
     },
 
+    /** التحقق من أن المستخدم الحالي مدير نظام (لإظهار أدوات Excel) */
+    _isPpeAdminUser() {
+        try {
+            if (typeof Permissions !== 'undefined' && typeof Permissions.isCurrentUserEffectiveAdmin === 'function') {
+                return !!Permissions.isCurrentUserEffectiveAdmin();
+            }
+        } catch (e) { /* ignore */ }
+        const user = (typeof AppState !== 'undefined' && AppState) ? AppState.currentUser : null;
+        if (!user) return false;
+        const role = String(user.role || '').toLowerCase();
+        if (role === 'admin' || role === 'system_admin') return true;
+        if (user.role === 'مدير النظام') return true;
+        const perms = user.permissions || {};
+        return !!(perms.admin === true || perms['manage-modules'] === true);
+    },
+
+    /** بناء شريط أزرار Excel (تصدير/قالب/استيراد) — يظهر فقط لمدير النظام */
+    _buildExcelToolbarHtml(scope) {
+        if (!this._isPpeAdminUser()) return '';
+        const t = (k, f) => this._t(k, f);
+        const ut = (s) => Utils.escapeHTML(s);
+        const isReceipts = scope === 'receipts';
+        const ids = isReceipts
+            ? {
+                exportBtn: 'ppe-receipts-export-excel-btn',
+                tplBtn: 'ppe-receipts-template-btn',
+                importBtn: 'ppe-receipts-import-btn',
+                importInput: 'ppe-receipts-import-input',
+                exportTitleKey: 'module.ppe.excel.exportReceiptsTitle',
+                exportTitleFb: 'تصدير سجل الاستلامات إلى Excel',
+                tplTitleKey: 'module.ppe.excel.downloadTemplateReceiptsTitle',
+                tplTitleFb: 'تنزيل قالب Excel فارغ',
+                importTitleKey: 'module.ppe.excel.importReceiptsTitle',
+                importTitleFb: 'استيراد صفوف من ملف يطابق القالب'
+            }
+            : {
+                exportBtn: 'ppe-stock-export-excel-btn',
+                tplBtn: 'ppe-stock-template-btn',
+                importBtn: 'ppe-stock-import-btn',
+                importInput: 'ppe-stock-import-input',
+                exportTitleKey: 'module.ppe.excel.exportStockTitle',
+                exportTitleFb: 'تصدير المخزون إلى Excel',
+                tplTitleKey: 'module.ppe.excel.downloadTemplateStockTitle',
+                tplTitleFb: 'تنزيل قالب Excel للأصناف',
+                importTitleKey: 'module.ppe.excel.importStockTitle',
+                importTitleFb: 'استيراد أصناف من ملف يطابق القالب'
+            };
+        return `
+            <div class="ppe-excel-toolbar flex flex-wrap items-center justify-end gap-2 mb-3">
+                <button id="${ids.exportBtn}" type="button" class="btn-secondary" title="${ut(t(ids.exportTitleKey, ids.exportTitleFb))}">
+                    <i class="fas fa-file-excel ml-2"></i>${ut(t('module.ppe.excel.exportBtn', 'تصدير Excel'))}
+                </button>
+                <button id="${ids.tplBtn}" type="button" class="btn-secondary" title="${ut(t(ids.tplTitleKey, ids.tplTitleFb))}">
+                    <i class="fas fa-download ml-2"></i>${ut(t('module.ppe.excel.downloadTemplateBtn', 'تحميل القالب'))}
+                </button>
+                <input type="file" id="${ids.importInput}" accept=".xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel" tabindex="-1" aria-hidden="true" style="position:absolute;width:1px;height:1px;opacity:0;left:-9999px;">
+                <button id="${ids.importBtn}" type="button" class="btn-secondary" title="${ut(t(ids.importTitleKey, ids.importTitleFb))}">
+                    <i class="fas fa-file-import ml-2"></i>${ut(t('module.ppe.excel.importBtn', 'استيراد من القالب'))}
+                </button>
+            </div>
+        `;
+    },
+
     _bindPpeReceiptExcelToolbar() {
         const exportBtn = document.getElementById('ppe-receipts-export-excel-btn');
         const tplBtn = document.getElementById('ppe-receipts-template-btn');
@@ -4044,10 +4055,12 @@ const PPE = {
         const t = (k, f) => this._t(k, f);
         const ut = (s) => Utils.escapeHTML(s);
         const items = Array.isArray(stockItems) ? stockItems : [];
+        const excelToolbar = this._buildExcelToolbarHtml('stock');
         if (items.length === 0) {
             return `
                 <div id="ppe-stock-table-card" class="content-card">
                     <div class="card-body">
+                        ${excelToolbar}
                         <div class="empty-state">
                             <i class="fas fa-box-open text-4xl text-gray-300 mb-4"></i>
                             <p class="text-gray-500">${ut(t('module.ppe.empty.noStock', 'لا توجد أصناف في المخزون'))}</p>
@@ -4071,6 +4084,7 @@ const PPE = {
                         <h3 class="card-title"><i class="fas fa-list ml-2"></i>${ut(t('module.ppe.stock.tableTitle', 'جدول المخزون'))}</h3>
                     </div>
                     <div class="card-body">
+                        ${excelToolbar}
                         ${filterRow}
                         <div class="empty-state">
                             <i class="fas fa-filter text-4xl text-gray-300 mb-4"></i>
@@ -4090,6 +4104,7 @@ const PPE = {
                     <h3 class="card-title"><i class="fas fa-list ml-2"></i>${ut(t('module.ppe.stock.tableTitle', 'جدول المخزون'))}</h3>
                 </div>
                 <div class="card-body">
+                    ${excelToolbar}
                     ${filterRow}
                     <div class="table-wrapper" style="overflow-x: auto;">
                         <table class="data-table">
