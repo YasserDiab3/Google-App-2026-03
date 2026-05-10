@@ -3552,8 +3552,16 @@ const PPE = {
             }
             const headerRow = (aoa[0] || []).map((c) => String(c || '').trim());
             const colToKey = headerRow.map((h) => alias[h] || alias[String(h || '').trim().toLowerCase()] || '');
+
+            // ✅ تحميل البيانات الحالية لاكتشاف التكرار قبل الإرسال
+            const existingList = Array.isArray(AppState.appData.ppe) ? AppState.appData.ppe : [];
+            const existingIds = new Set(existingList
+                .map((r) => String((r && (r.id || r.receiptNumber)) || '').trim())
+                .filter(Boolean));
+
             let ok = 0;
             let fail = 0;
+            const duplicates = []; // {row, id, label}
             for (let r = 1; r < aoa.length; r++) {
                 const row = aoa[r];
                 if (!row || !row.some((c) => String(c || '').trim() !== '')) continue;
@@ -3578,20 +3586,27 @@ const PPE = {
                 }
                 if (!obj.quantity && obj.quantity !== 0) obj.quantity = 1;
                 if (!obj.status) obj.status = 'مستلم';
+
+                // ✅ منع التحديث: إذا كان معرف السجل أو رقم الإيصال موجوداً، اعتبره مكرراً وتجاهله
+                const candidateId = String(obj.id || obj.receiptNumber || '').trim();
+                if (candidateId && existingIds.has(candidateId)) {
+                    duplicates.push({
+                        row: r + 1,
+                        id: candidateId,
+                        label: `${obj.employeeName} — ${obj.equipmentType}`
+                    });
+                    continue;
+                }
+
                 try {
-                    if (obj.id) {
-                        const id = String(obj.id).trim();
-                        const updateData = { ...obj };
-                        delete updateData.id;
-                        const res = await GoogleIntegration.sendToAppsScript('updatePPE', { ppeId: id, updateData });
-                        if (res && res.success) ok++;
-                        else fail++;
+                    const payload = { ...obj };
+                    delete payload.id; // الإضافة فقط
+                    const res = await GoogleIntegration.sendToAppsScript('addPPE', payload);
+                    if (res && res.success) {
+                        ok++;
+                        if (candidateId) existingIds.add(candidateId);
                     } else {
-                        const payload = { ...obj };
-                        delete payload.id;
-                        const res = await GoogleIntegration.sendToAppsScript('addPPE', payload);
-                        if (res && res.success) ok++;
-                        else fail++;
+                        fail++;
                     }
                 } catch (e) {
                     fail++;
@@ -3601,7 +3616,12 @@ const PPE = {
             Loading.hide();
             this.clearCache();
             await this.refreshActiveTab();
-            Notification.success(this._t('module.ppe.excel.importReceiptsSummary', 'اكتمل الاستيراد') + `: ${ok} ${this._t('module.ppe.excel.ok', 'نجاح')}، ${fail} ${this._t('module.ppe.excel.fail', 'تخطي/فشل')}.`);
+            this._reportImportSummary({
+                scope: 'receipts',
+                ok,
+                fail,
+                duplicates
+            });
         } catch (error) {
             Loading.hide();
             Utils.safeError('importReceiptsExcel', error);
@@ -3684,8 +3704,30 @@ const PPE = {
             }
             const headerRow = (aoa[0] || []).map((c) => String(c || '').trim());
             const colToKey = headerRow.map((h) => alias[h] || alias[String(h || '').trim().toLowerCase()] || '');
+
+            // ✅ تحميل البيانات الحالية لاكتشاف التكرار قبل الإرسال — حتى لا تُكتب الأصناف الموجودة
+            let existingItems = this._getCurrentStockItems();
+            if (!Array.isArray(existingItems) || existingItems.length === 0) {
+                try {
+                    existingItems = await this.loadStockItems(true);
+                } catch (e) {
+                    existingItems = this._getCurrentStockItems() || [];
+                }
+            }
+            const norm = (v) => String(v == null ? '' : v).trim().toLowerCase();
+            const existingByCode = new Set();
+            const existingByName = new Set();
+            const existingByItemId = new Set();
+            (existingItems || []).forEach((it) => {
+                if (!it) return;
+                if (it.itemCode) existingByCode.add(norm(it.itemCode));
+                if (it.itemName) existingByName.add(norm(it.itemName));
+                if (it.itemId) existingByItemId.add(String(it.itemId).trim());
+            });
+
             let ok = 0;
             let fail = 0;
+            const duplicates = []; // {row, code, name, reason}
             for (let r = 1; r < aoa.length; r++) {
                 const row = aoa[r];
                 if (!row || !row.some((c) => String(c || '').trim() !== '')) continue;
@@ -3703,6 +3745,25 @@ const PPE = {
                     fail++;
                     continue;
                 }
+
+                // ✅ منع التحديث: يُتخطّى الصنف إذا تطابق itemId أو itemCode أو itemName مع موجود
+                const codeKey = norm(obj.itemCode);
+                const nameKey = norm(obj.itemName);
+                const iidRaw = obj.itemId && String(obj.itemId).trim();
+                let dupReason = '';
+                if (iidRaw && existingByItemId.has(iidRaw)) dupReason = 'itemId';
+                else if (existingByCode.has(codeKey)) dupReason = 'itemCode';
+                else if (existingByName.has(nameKey)) dupReason = 'itemName';
+                if (dupReason) {
+                    duplicates.push({
+                        row: r + 1,
+                        code: obj.itemCode,
+                        name: obj.itemName,
+                        reason: dupReason
+                    });
+                    continue;
+                }
+
                 const stockData = {
                     itemCode: obj.itemCode,
                     itemName: obj.itemName,
@@ -3710,15 +3771,30 @@ const PPE = {
                     minThreshold: obj.minThreshold !== undefined ? obj.minThreshold : 0,
                     supplier: obj.supplier || ''
                 };
-                const iid = obj.itemId && String(obj.itemId).trim();
-                if (iid) stockData.itemId = iid;
+                // لا نمرّر itemId قادماً من الملف لتجنّب أي تطابق غير مقصود؛ يولِّده الباك‑إند للسجل الجديد.
                 if (obj.stock_IN !== undefined) stockData.stock_IN = obj.stock_IN;
                 if (obj.stock_OUT !== undefined) stockData.stock_OUT = obj.stock_OUT;
                 if (obj.balance !== undefined) stockData.balance = obj.balance;
                 try {
                     const res = await GoogleIntegration.sendToAppsScript('addOrUpdatePPEStockItem', stockData);
-                    if (res && res.success) ok++;
-                    else fail++;
+                    if (res && res.success) {
+                        ok++;
+                        existingByCode.add(codeKey);
+                        existingByName.add(nameKey);
+                    } else {
+                        // الباك‑إند يرفض المكرّر برسالة «كود الصنف موجود بالفعل…» — اعدّه ضمن المكررات
+                        const msg = res && res.message ? String(res.message) : '';
+                        if (/موجود|exists/i.test(msg)) {
+                            duplicates.push({
+                                row: r + 1,
+                                code: obj.itemCode,
+                                name: obj.itemName,
+                                reason: 'backend'
+                            });
+                        } else {
+                            fail++;
+                        }
+                    }
                 } catch (e) {
                     fail++;
                     Utils.safeWarn('صف مخزون فشل:', e);
@@ -3727,12 +3803,107 @@ const PPE = {
             Loading.hide();
             this.clearCache();
             await this.refreshActiveTab();
-            Notification.success(this._t('module.ppe.excel.importStockSummary', 'اكتمل استيراد المخزون') + `: ${ok} ${this._t('module.ppe.excel.ok', 'نجاح')}، ${fail} ${this._t('module.ppe.excel.fail', 'تخطي/فشل')}.`);
+            this._reportImportSummary({
+                scope: 'stock',
+                ok,
+                fail,
+                duplicates
+            });
         } catch (error) {
             Loading.hide();
             Utils.safeError('importStockExcel', error);
             Notification.error(this._t('module.ppe.excel.importErr', 'فشل الاستيراد') + ': ' + (error.message || error));
         }
+    },
+
+    /** تنبيه ملخّص بعد الاستيراد + Modal بقائمة المكررات */
+    _reportImportSummary({ scope, ok, fail, duplicates }) {
+        const t = (k, f) => this._t(k, f);
+        const dupCount = (duplicates && duplicates.length) || 0;
+        const baseMsg = scope === 'receipts'
+            ? this._t('module.ppe.excel.importReceiptsSummary', 'اكتمل الاستيراد')
+            : this._t('module.ppe.excel.importStockSummary', 'اكتمل استيراد المخزون');
+        const summary = `${baseMsg}: ${ok} ${this._t('module.ppe.excel.ok', 'نجاح')}، ${dupCount} ${this._t('module.ppe.excel.duplicates', 'مكرّر (تم تجاوزه)')}، ${fail} ${this._t('module.ppe.excel.fail', 'تخطي/فشل')}.`;
+
+        if (dupCount > 0) {
+            try { Notification.warning(summary); } catch (e) { /* ignore */ }
+            this._showDuplicatesModal(scope, duplicates);
+        } else if (ok > 0) {
+            try { Notification.success(summary); } catch (e) { /* ignore */ }
+        } else {
+            try { Notification.warning(summary); } catch (e) { /* ignore */ }
+        }
+    },
+
+    _showDuplicatesModal(scope, duplicates) {
+        const t = (k, f) => this._t(k, f);
+        const ut = (s) => Utils.escapeHTML(s);
+        const isReceipts = scope === 'receipts';
+        const title = isReceipts
+            ? t('module.ppe.excel.duplicatesReceiptsTitle', 'بنود مكرّرة في سجل الاستلامات (لم تُستورد)')
+            : t('module.ppe.excel.duplicatesStockTitle', 'أصناف مكرّرة في المخزون (لم تُستورد)');
+        const reasonText = (reason) => {
+            if (reason === 'itemCode') return t('module.ppe.excel.dupReasonCode', 'كود الصنف موجود بالفعل');
+            if (reason === 'itemName') return t('module.ppe.excel.dupReasonName', 'اسم الصنف موجود بالفعل');
+            if (reason === 'itemId') return t('module.ppe.excel.dupReasonId', 'معرف الصنف موجود بالفعل');
+            if (reason === 'backend') return t('module.ppe.excel.dupReasonBackend', 'موجود بالفعل (تم رفضه من الخادم)');
+            return t('module.ppe.excel.dupReasonGeneric', 'موجود بالفعل');
+        };
+
+        const rowsHtml = (duplicates || []).map((d) => {
+            if (isReceipts) {
+                return `<tr>
+                    <td>${ut(d.row)}</td>
+                    <td>${ut(d.id || '')}</td>
+                    <td>${ut(d.label || '')}</td>
+                </tr>`;
+            }
+            return `<tr>
+                <td>${ut(d.row)}</td>
+                <td class="font-mono font-semibold">${ut(d.code || '')}</td>
+                <td>${ut(d.name || '')}</td>
+                <td>${ut(reasonText(d.reason))}</td>
+            </tr>`;
+        }).join('');
+
+        const headHtml = isReceipts
+            ? `<tr><th>${ut(t('module.ppe.excel.dupCol.row', 'الصف'))}</th><th>${ut(t('module.ppe.excel.dupCol.idOrReceipt', 'المعرف/رقم الإيصال'))}</th><th>${ut(t('module.ppe.excel.dupCol.summary', 'الموظف — نوع المعدة'))}</th></tr>`
+            : `<tr><th>${ut(t('module.ppe.excel.dupCol.row', 'الصف'))}</th><th>${ut(t('module.ppe.excel.dupCol.code', 'الكود'))}</th><th>${ut(t('module.ppe.excel.dupCol.name', 'اسم الصنف'))}</th><th>${ut(t('module.ppe.excel.dupCol.reason', 'السبب'))}</th></tr>`;
+
+        const modal = document.createElement('div');
+        modal.className = 'modal-overlay';
+        modal.innerHTML = `
+            <div class="modal-content" style="max-width: 760px;">
+                <div class="modal-header">
+                    <h2 class="modal-title">
+                        <i class="fas fa-exclamation-triangle text-amber-500 ml-2"></i>${ut(title)}
+                    </h2>
+                    <button class="modal-close" onclick="this.closest('.modal-overlay').remove()">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <p class="text-sm text-gray-600 mb-3">
+                        ${ut(t('module.ppe.excel.dupHint', 'لم يتم تعديل أي صنف موجود؛ تم تجاوز البنود التالية فقط.'))}
+                    </p>
+                    <div class="table-wrapper" style="max-height: 380px; overflow:auto;">
+                        <table class="data-table">
+                            <thead>${headHtml}</thead>
+                            <tbody>${rowsHtml}</tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">
+                        ${ut(t('module.common.close', 'إغلاق'))}
+                    </button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) modal.remove();
+        });
     },
 
     /** التحقق من أن المستخدم الحالي مدير نظام (لإظهار أدوات Excel) */
