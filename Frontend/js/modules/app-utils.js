@@ -214,6 +214,21 @@ const MODULE_DETAILED_PERMISSIONS = {
             { key: 'analytics', label: 'التحليل', icon: 'fa-chart-line' },
             { key: 'approval-requests', label: 'طلبات الموافقة', icon: 'fa-check-circle' }
         ]
+    },
+    'sustainability': {
+        label: 'صلاحيات مديول الاستدامة البيئية',
+        permissions: [
+            {
+                key: 'consumption-register',
+                label: 'تسجيل استهلاك المياه والكهرباء والغاز (إضافة فقط)',
+                icon: 'fa-tint'
+            },
+            {
+                key: 'full-manage',
+                label: 'إدارة كاملة للاستدامة (المخلفات، الإعدادات، تعديل/حذف السجلات)',
+                icon: 'fa-leaf'
+            }
+        ]
     }
 };
 
@@ -240,7 +255,7 @@ const MODULE_PERMISSIONS_CONFIG = [
     { key: 'risk-assessment', label: 'تقييم المخاطر', icon: 'fa-balance-scale' },
     { key: 'sop-jha', label: 'إجراءات العمل والتقييمات', icon: 'fa-tasks' },
     { key: 'legal-documents', label: 'الوثائق القانونية', icon: 'fa-file-contract' },
-    { key: 'sustainability', label: 'الاستدامة', icon: 'fa-leaf' },
+    { key: 'sustainability', label: 'الاستدامة', icon: 'fa-leaf', hasDetailedPermissions: true },
     { key: 'safety-budget', label: 'ميزانية السلامة وتتبع الإنفاق', icon: 'fa-wallet' },
     { key: 'ai-assistant', label: 'المساعد الذكي', icon: 'fa-robot' },
     { key: 'safety-performance-kpis', label: 'مؤشرات الأداء لإدارة السلامة', icon: 'fa-gauge-high', hasDetailedPermissions: true },

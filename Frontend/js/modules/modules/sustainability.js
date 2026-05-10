@@ -23,29 +23,57 @@ const Sustainability = {
     },
 
     /**
-     * التحقق من صلاحيات المستخدم
+     * إدارة كاملة للاستدامة: مخلفات، إعدادات، تعديل/حذف سجلات الموارد
      */
-    isAdmin() {
+    hasFullSustainabilityManage() {
         if (typeof AppState === 'undefined' || !AppState.currentUser) return false;
         const user = AppState.currentUser;
         if (user.role === 'admin' || user.role === 'مدير النظام') return true;
         if (typeof Permissions !== 'undefined') {
+            if (Permissions.isCurrentUserEffectiveAdmin(user)) return true;
             const perms = Permissions.getEffectivePermissions(user);
-            return perms.__isAdmin || perms['sustainability-manage'] === true || perms['admin'] === true;
+            if (perms.__isAdmin || perms['admin'] === true) return true;
+            if (perms['sustainability-manage'] === true) return true;
+            const allowed = Permissions.getAllowedDetailedPermissions('sustainability');
+            return Array.isArray(allowed) && allowed.includes('full-manage');
         }
         return false;
     },
 
+    /**
+     * إضافة سجلات استهلاك المياه/الكهرباء/الغاز وعرض لوحة التحليل والسجلات
+     */
+    canRegisterResourceConsumption() {
+        if (typeof AppState === 'undefined' || !AppState.currentUser) return false;
+        if (typeof Permissions !== 'undefined' && !Permissions.hasAccess('sustainability')) return false;
+        if (this.hasFullSustainabilityManage()) return true;
+        if (typeof Permissions !== 'undefined') {
+            const allowed = Permissions.getAllowedDetailedPermissions('sustainability');
+            return Array.isArray(allowed) && allowed.includes('consumption-register');
+        }
+        return false;
+    },
+
+    /** توافقاً مع الخطة — عرض واجهة استهلاك الموارد */
+    canViewSustainabilityConsumptionUi() {
+        return this.canRegisterResourceConsumption();
+    },
+
+    /** مدير المديول (إدارة كاملة) — توافق مع الكود السابق */
+    isAdmin() {
+        return this.hasFullSustainabilityManage();
+    },
+
     canEdit() {
-        return this.isAdmin();
+        return this.hasFullSustainabilityManage();
     },
 
     canDelete() {
-        return this.isAdmin();
+        return this.hasFullSustainabilityManage();
     },
 
     canManageSettings() {
-        return this.isAdmin();
+        return this.hasFullSustainabilityManage();
     },
 
     /**
@@ -111,6 +139,13 @@ const Sustainability = {
         // تحميل الإعدادات المحفوظة
         this.loadSettings();
 
+        if (!this.hasFullSustainabilityManage() && (this.currentTab === 'waste-management' || this.currentTab === 'settings')) {
+            this.currentTab = 'dashboard';
+        }
+        if (!this.canRegisterResourceConsumption() && ['dashboard', 'water', 'electricity', 'gas'].includes(this.currentTab)) {
+            this.currentTab = 'dashboard';
+        }
+
         // تهيئة بنية البيانات إذا لم تكن موجودة
         if (!AppState.appData.resourceConsumption) {
             AppState.appData.resourceConsumption = {
@@ -157,7 +192,8 @@ const Sustainability = {
 
                 <!-- التبويبات -->
                 <div class="mt-6">
-                    <div class="flex gap-2 mb-6 border-b overflow-x-auto">
+                    <div class="flex gap-2 mb-6 border-b overflow-x-auto items-center flex-wrap">
+                        ${this.canRegisterResourceConsumption() ? `
                         <button class="tab-btn ${this.currentTab === 'dashboard' ? 'active' : ''}" data-tab="dashboard">
                             <i class="fas fa-chart-line ml-2"></i>لوحة التحليل
                         </button>
@@ -170,10 +206,13 @@ const Sustainability = {
                         <button class="tab-btn ${this.currentTab === 'gas' ? 'active' : ''}" data-tab="gas">
                             <i class="fas fa-fire ml-2"></i>استهلاك الغاز الطبيعي
                         </button>
+                        ` : `
+                        <span class="text-sm text-gray-500 dark:text-gray-400 px-2 py-2">لا توجد صلاحية لعرض لوحة التحليل وسجلات الاستهلاك. يطلب مدير النظام منح «تسجيل استهلاك الموارد» أو «إدارة كاملة» من الصلاحيات التفصيلية للاستدامة.</span>
+                        `}
+                        ${this.hasFullSustainabilityManage() ? `
                         <button class="tab-btn ${this.currentTab === 'waste-management' ? 'active' : ''}" data-tab="waste-management">
                             <i class="fas fa-recycle ml-2"></i>إدارة المخلفات
                         </button>
-                        ${this.isAdmin() ? `
                         <button class="tab-btn ${this.currentTab === 'settings' ? 'active' : ''}" data-tab="settings">
                             <i class="fas fa-cog ml-2"></i>الإعدادات
                         </button>
@@ -270,6 +309,13 @@ const Sustainability = {
      * عرض المؤشرات السريعة
      */
     renderQuickStats() {
+        if (!this.canRegisterResourceConsumption()) {
+            return `
+                <div class="md:col-span-4 rounded-lg border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20 p-4 text-center text-sm text-gray-700 dark:text-gray-300">
+                    لا توجد صلاحية لعرض ملخص الاستهلاك. اطلب من مدير النظام منح صلاحية مناسبة ضمن «الاستدامة» (التفاصيل).
+                </div>
+            `;
+        }
         const waterData = AppState.appData.resourceConsumption?.water || [];
         const electricityData = AppState.appData.resourceConsumption?.electricity || [];
         const gasData = AppState.appData.resourceConsumption?.gas || [];
@@ -335,7 +381,16 @@ const Sustainability = {
             const tabs = document.querySelectorAll('#sustainability-section .tab-btn');
             tabs.forEach(tab => {
                 tab.addEventListener('click', () => {
-                    this.currentTab = tab.getAttribute('data-tab');
+                    const nextTab = tab.getAttribute('data-tab');
+                    if ((nextTab === 'waste-management' || nextTab === 'settings') && !this.hasFullSustainabilityManage()) {
+                        if (typeof Notification !== 'undefined') Notification.error('ليس لديك صلاحية الوصول إلى هذا القسم');
+                        return;
+                    }
+                    if ((nextTab === 'dashboard' || nextTab === 'water' || nextTab === 'electricity' || nextTab === 'gas') && !this.canRegisterResourceConsumption()) {
+                        if (typeof Notification !== 'undefined') Notification.error('ليس لديك صلاحية عرض سجلات الاستهلاك');
+                        return;
+                    }
+                    this.currentTab = nextTab;
                     this.load();
                 });
             });
@@ -380,6 +435,17 @@ const Sustainability = {
         let content = '';
         switch (this.currentTab) {
             case 'dashboard':
+                if (!this.canRegisterResourceConsumption()) {
+                    return `
+                        <div class="content-card">
+                            <div class="card-body">
+                                <div class="empty-state">
+                                    <p class="text-gray-600 dark:text-gray-400">لا توجد صلاحية لعرض لوحة التحليل. يطلب مدير النظام منح «تسجيل استهلاك الموارد» أو «إدارة كاملة» ضمن صلاحيات الاستدامة التفصيلية.</p>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }
                 content = await this.renderDashboard();
                 // رسم الرسوم البيانية بعد تحميل المحتوى
                 setTimeout(() => {
@@ -387,16 +453,42 @@ const Sustainability = {
                 }, 300);
                 return content;
             case 'water':
+                if (!this.canRegisterResourceConsumption()) {
+                    return '<div class="content-card"><div class="card-body"><p class="text-gray-500">لا توجد صلاحية لعرض هذا القسم.</p></div></div>';
+                }
                 return await this.renderResourceRegister('water', 'مياه', 'tint', 'blue');
             case 'electricity':
+                if (!this.canRegisterResourceConsumption()) {
+                    return '<div class="content-card"><div class="card-body"><p class="text-gray-500">لا توجد صلاحية لعرض هذا القسم.</p></div></div>';
+                }
                 return await this.renderResourceRegister('electricity', 'كهرباء', 'bolt', 'yellow');
             case 'gas':
+                if (!this.canRegisterResourceConsumption()) {
+                    return '<div class="content-card"><div class="card-body"><p class="text-gray-500">لا توجد صلاحية لعرض هذا القسم.</p></div></div>';
+                }
                 return await this.renderResourceRegister('gas', 'غاز طبيعي', 'fire', 'orange');
             case 'waste-management':
+                if (!this.hasFullSustainabilityManage()) {
+                    return '<div class="content-card"><div class="card-body"><p class="text-gray-500">ليس لديك صلاحية إدارة المخلفات.</p></div></div>';
+                }
                 return await this.renderWasteManagement();
             case 'settings':
+                if (!this.hasFullSustainabilityManage()) {
+                    return '<div class="content-card"><div class="card-body"><p class="text-gray-500">ليس لديك صلاحية الإعدادات.</p></div></div>';
+                }
                 return await this.renderSettings();
             default:
+                if (!this.canRegisterResourceConsumption()) {
+                    return `
+                        <div class="content-card">
+                            <div class="card-body">
+                                <div class="empty-state">
+                                    <p class="text-gray-600 dark:text-gray-400">لا توجد صلاحية لعرض هذا المحتوى.</p>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }
                 content = await this.renderDashboard();
                 setTimeout(() => {
                     this.renderCharts();
@@ -592,10 +684,12 @@ const Sustainability = {
                                 <i class="fas fa-${icon} text-${color}-500 ml-2"></i>
                                 سجل استهلاك ${name}
                             </h2>
+                            ${this.canRegisterResourceConsumption() ? `
                             <button class="btn-primary" onclick="Sustainability.showResourceForm('${type}')">
                                 <i class="fas fa-plus ml-2"></i>
                                 إضافة سجل جديد
                             </button>
+                            ` : ''}
                         </div>
                     </div>
                     <div class="card-body">
@@ -683,6 +777,14 @@ const Sustainability = {
      * عرض نموذج إضافة/تعديل سجل
      */
     showResourceForm(type, recordId = null) {
+        if (recordId && !this.hasFullSustainabilityManage()) {
+            if (typeof Notification !== 'undefined') Notification.error('ليس لديك صلاحية تعديل أو حذف السجلات');
+            return;
+        }
+        if (!recordId && !this.canRegisterResourceConsumption()) {
+            if (typeof Notification !== 'undefined') Notification.error('ليس لديك صلاحية إضافة سجلات الاستهلاك');
+            return;
+        }
         const record = recordId 
             ? (AppState.appData.resourceConsumption?.[type] || []).find(r => r.id === recordId)
             : null;
@@ -869,6 +971,15 @@ const Sustainability = {
      * معالجة حفظ السجل
      */
     async handleResourceSubmit(type, recordId, modal) {
+        if (recordId && !this.hasFullSustainabilityManage()) {
+            if (typeof Notification !== 'undefined') Notification.error('ليس لديك صلاحية تعديل السجلات');
+            return;
+        }
+        if (!recordId && !this.canRegisterResourceConsumption()) {
+            if (typeof Notification !== 'undefined') Notification.error('ليس لديك صلاحية إضافة سجلات الاستهلاك');
+            return;
+        }
+
         const form = document.getElementById(`resource-form-${type}`);
         if (!form.checkValidity()) {
             form.reportValidity();
