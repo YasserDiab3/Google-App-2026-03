@@ -607,7 +607,7 @@ const Training = {
             } else if (active === 'attendance') {
                 this.loadAttendanceRegistry();
             } else if (active === 'analysis') {
-                this.updateTrainingAnalysisResults();
+                this.refreshAnalysisTabContent();
             }
 
             this._trainingBackendFetchOk = true;
@@ -757,6 +757,21 @@ const Training = {
             if (training.status === 'مخطط' || (startDate && startDate >= now)) upcomingCount += 1;
         });
         return { totalTrainings: list.length, upcomingTrainings: upcomingCount, completedTrainings: completedCount, totalParticipants };
+    },
+
+    /** تحديث أرقام كروت KPI أعلى تبويب برامج التدريب بعد جلب البيانات (كانت تُرسم مرة في HTML ثم لا تتغير). */
+    refreshProgramsTabKpiCards() {
+        const stats = this.getStats();
+        const ids = [
+            ['training-programs-kpi-total', stats.totalTrainings],
+            ['training-programs-kpi-upcoming', stats.upcomingTrainings],
+            ['training-programs-kpi-completed', stats.completedTrainings],
+            ['training-programs-kpi-participants', stats.totalParticipants]
+        ];
+        ids.forEach(([id, val]) => {
+            const el = document.getElementById(id);
+            if (el) el.textContent = String(val);
+        });
     },
 
     getContractorTrainingStats(monthFilter = '') {
@@ -2543,7 +2558,7 @@ const Training = {
                             </div>
                             <div>
                                 <p class="text-sm text-gray-500">إجمالي البرامج</p>
-                                <p class="text-2xl font-bold text-gray-900">${stats.totalTrainings}</p>
+                                <p id="training-programs-kpi-total" class="text-2xl font-bold text-gray-900">${stats.totalTrainings}</p>
                             </div>
                         </div>
                     </div>
@@ -2554,7 +2569,7 @@ const Training = {
                             </div>
                             <div>
                                 <p class="text-sm text-gray-500">برامج قادمة</p>
-                                <p class="text-2xl font-bold text-gray-900">${stats.upcomingTrainings}</p>
+                                <p id="training-programs-kpi-upcoming" class="text-2xl font-bold text-gray-900">${stats.upcomingTrainings}</p>
                             </div>
                         </div>
                     </div>
@@ -2565,7 +2580,7 @@ const Training = {
                             </div>
                             <div>
                                 <p class="text-sm text-gray-500">برامج مكتملة</p>
-                                <p class="text-2xl font-bold text-gray-900">${stats.completedTrainings}</p>
+                                <p id="training-programs-kpi-completed" class="text-2xl font-bold text-gray-900">${stats.completedTrainings}</p>
                             </div>
                         </div>
                     </div>
@@ -2576,7 +2591,7 @@ const Training = {
                             </div>
                             <div>
                                 <p class="text-sm text-gray-500">إجمالي المشاركين</p>
-                                <p class="text-2xl font-bold text-gray-900">${stats.totalParticipants}</p>
+                                <p id="training-programs-kpi-participants" class="text-2xl font-bold text-gray-900">${stats.totalParticipants}</p>
                             </div>
                         </div>
                     </div>
@@ -2857,6 +2872,7 @@ const Training = {
         this.ensureData();
         const container = document.getElementById('training-table-container');
         if (!container) return;
+        this.refreshProgramsTabKpiCards();
         const items = AppState.appData.training || [];
 
         if (items.length === 0) {
