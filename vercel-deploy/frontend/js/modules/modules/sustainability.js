@@ -544,21 +544,21 @@ const Sustainability = {
             let body = '';
             types.forEach(({ key, label }) => {
                 const arr = Array.isArray(rc[key]) ? rc[key] : [];
-                body += `<h2 style="margin-top:1.2em;font-size:14px;border-bottom:1px solid #ccc;padding-bottom:4px;">سجلات استهلاك — ${esc(label)} — سنة ${pdfYear} (${arr.length})</h2>`;
-                body += '<table style="width:100%;border-collapse:collapse;font-size:11px;margin-bottom:8px;"><thead><tr style="background:#f3f4f6;">';
+                body += `<h2 style="margin-top:1.25em;margin-bottom:10px;font-size:15px;font-weight:700;color:#0f172a;border-bottom:2px solid #003865;padding-bottom:8px;">سجلات استهلاك — ${esc(label)} — سنة ${pdfYear} <span style="color:#64748b;font-weight:600;">(${arr.length})</span></h2>`;
+                body += '<table class="report-table" style="width:100%;font-size:12px;margin-bottom:14px;"><thead><tr>';
                 ['الرقم', 'التاريخ', 'الموقع', 'البداية', 'النهاية', 'الإجمالي', 'الوحدة', 'القسم'].forEach((h) => {
-                    body += `<th style="border:1px solid #ddd;padding:6px;text-align:right;">${esc(h)}</th>`;
+                    body += `<th style="padding:8px;text-align:right;">${esc(h)}</th>`;
                 });
                 body += '</tr></thead><tbody>';
                 arr.slice().sort((a, b) => new Date(b.date) - new Date(a.date)).slice(0, 500).forEach((r) => {
                     body += '<tr>';
                     [r.serialNumber || r.id, fmtDate(r.date), r.location, r.startReading, r.endReading, r.totalConsumption, r.unit, r.department || '-'].forEach((c) => {
-                        body += `<td style="border:1px solid #eee;padding:4px;text-align:right;">${esc(c)}</td>`;
+                        body += `<td style="padding:6px;text-align:right;">${esc(c)}</td>`;
                     });
                     body += '</tr>';
                 });
                 body += '</tbody></table>';
-                if (arr.length > 500) body += `<p style="font-size:10px;color:#666;">عرض أحدث 500 سجل لكل نوع.</p>`;
+                if (arr.length > 500) body += `<p style="font-size:11px;color:#64748b;margin-bottom:12px;">عرض أحدث 500 سجل لكل نوع ضمن التصدير.</p>`;
             });
 
             const waste = AppState.appData.wasteManagement;
@@ -566,11 +566,50 @@ const Sustainability = {
                 const rw = (waste.regularWasteRecords || []).length;
                 const hw = (waste.hazardousWasteRecords || []).length;
                 const sl = (waste.regularWasteSales || []).length;
-                body += `<h2 style="margin-top:1em;font-size:14px;">ملخص المخلفات</h2><p style="font-size:12px;">سجلات عادية: ${rw} | خطرة: ${hw} | مبيعات: ${sl}</p>`;
+                body += `<h2 style="margin-top:1.25em;margin-bottom:10px;font-size:15px;font-weight:700;color:#0f172a;border-bottom:2px solid #003865;padding-bottom:8px;">ملخص المخلفات</h2>`;
+                body += `<p style="font-size:13px;line-height:1.7;color:#334155;">سجلات عادية: <strong>${rw}</strong> | خطرة: <strong>${hw}</strong> | مبيعات: <strong>${sl}</strong></p>`;
             }
 
             const title = `تقرير الاستدامة البيئية — استهلاك الموارد (${pdfYear})`;
-            const htmlContent = `<!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="UTF-8">
+            const exportTs = new Date();
+            let exportTsStr = '';
+            try {
+                exportTsStr = typeof Utils !== 'undefined' && Utils.formatDateTime
+                    ? Utils.formatDateTime(exportTs, 'ar-EG')
+                    : exportTs.toLocaleString('ar-SA');
+            } catch (e) {
+                exportTsStr = exportTs.toLocaleString('ar-SA');
+            }
+
+            const innerContent = `
+                <div style="margin-bottom:18px;padding:14px 16px;border-radius:14px;background:linear-gradient(135deg,rgba(16,185,129,0.14),rgba(5,150,105,0.06));border:1px solid rgba(16,185,129,0.3);">
+                    <p style="margin:0;font-size:13px;line-height:1.85;color:#0f172a;">
+                        يتضمن هذا المستند سجلات استهلاك الموارد البيئية (مياه، كهرباء، غاز طبيعي) للسنة <strong>${esc(String(pdfYear))}</strong>
+                        ${this.hasFullSustainabilityManage() ? ' مع ملخص إحصائي لإدارة المخلفات.' : '.'}
+                        استخدم «طباعة» ثم «حفظ كـ PDF» من المتصفح عند الحاجة.
+                    </p>
+                </div>
+                ${body}`;
+
+            let htmlContent;
+            if (typeof PDFTemplates !== 'undefined' && PDFTemplates.buildDocument) {
+                htmlContent = PDFTemplates.buildDocument({
+                    title,
+                    formCode: 'SUST-ENV-RC',
+                    content: innerContent,
+                    createdAt: exportTs,
+                    updatedAt: exportTs,
+                    meta: {
+                        'سنة التقرير': String(pdfYear),
+                        'تاريخ التصدير': exportTsStr,
+                        'مصدر التقرير': 'مديول الاستدامة البيئية'
+                    },
+                    includeQRCode: true,
+                    qrData: `HSE Sustainability | ResourceConsumption | Year:${pdfYear} | ${exportTs.toISOString()}`
+                });
+            } else {
+                Utils.safeWarn('PDFTemplates غير متاح — تصدير PDF بقالب مبسّط');
+                htmlContent = `<!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="UTF-8">
 <style>
 body{font-family:Tahoma,Arial,sans-serif;padding:16px;color:#111;}
 h1{font-size:18px;margin:0 0 12px;}
@@ -578,9 +617,10 @@ table{font-family:inherit;}
 @media print { body { padding: 0; } }
 </style><title>${esc(title)}</title></head><body>
 <h1>${esc(title)}</h1>
-<p style="font-size:12px;color:#444;margin-bottom:16px;">سنة التقرير: <strong>${pdfYear}</strong> — تاريخ التصدير: ${esc(new Date().toLocaleString('ar-SA'))}</p>
-${body}
+<p style="font-size:12px;color:#444;margin-bottom:16px;">سنة التقرير: <strong>${pdfYear}</strong> — تاريخ التصدير: ${esc(exportTsStr)}</p>
+${innerContent}
 </body></html>`;
+            }
 
             const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
             const url = URL.createObjectURL(blob);
