@@ -717,7 +717,7 @@ const Permissions = {
                 window.dispatchEvent(new CustomEvent('formSettingsUpdated', {
                     detail: { sites: clonedSites, observationSites: AppState.appData.observationSites }
                 }));
-                var names = ['Training', 'Clinic', 'PTW', 'Incidents', 'Violations', 'FireEquipment', 'PeriodicInspections', 'BehaviorMonitoring'];
+                var names = ['Training', 'Clinic', 'PTW', 'Incidents', 'Violations', 'FireEquipment', 'PeriodicInspections', 'BehaviorMonitoring', 'Sustainability'];
                 for (var i = 0; i < names.length; i++) {
                     try {
                         var M = window[names[i]];
@@ -7699,7 +7699,7 @@ if (typeof window !== 'undefined') {
     // استدعاء تلقائي لتحديث قوائم المصنع/الموقع في جميع الموديولات عند اكتمال تحميل إعدادات النماذج
     (function () {
         function refreshAllSiteDropdowns() {
-            var names = ['Training', 'Clinic', 'PTW', 'Incidents', 'Violations', 'FireEquipment', 'PeriodicInspections', 'BehaviorMonitoring'];
+            var names = ['Training', 'Clinic', 'PTW', 'Incidents', 'Violations', 'FireEquipment', 'PeriodicInspections', 'BehaviorMonitoring', 'Sustainability'];
             for (var i = 0; i < names.length; i++) {
                 try {
                     var M = window[names[i]];

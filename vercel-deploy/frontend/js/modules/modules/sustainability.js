@@ -113,6 +113,48 @@ const Sustainability = {
     },
 
     /**
+     * جلب مواقع المصنع من الخادم عند الحاجة (قبل إظهار نماذج تتطلب الموقع *).
+     */
+    async ensureObservationSitesForForms() {
+        try {
+            if (this.getSiteOptions().length > 0) return;
+            const remote = typeof Utils !== 'undefined' && typeof Utils.hasCloudBackendSync === 'function' && Utils.hasCloudBackendSync();
+            if (!remote) return;
+            if (typeof Permissions !== 'undefined' && typeof Permissions.ensureFormSettingsState === 'function') {
+                await Permissions.ensureFormSettingsState(true);
+            }
+        } catch (e) {
+            if (typeof Utils !== 'undefined' && Utils.safeWarn) {
+                Utils.safeWarn('⚠️ تعذر جلب قائمة المواقع للاستدامة:', e);
+            }
+        }
+    },
+
+    /**
+     * تحديث واجهة الاستدامة بعد تحميل إعدادات النماذج (نفس نمط المديولات الأخرى).
+     */
+    refreshSiteDropdowns() {
+        try {
+            const section = document.getElementById('sustainability-section');
+            if (!section || !String(section.innerHTML || '').trim()) return;
+            this.load();
+        } catch (e) { /* ignore */ }
+    },
+
+    _onFormSettingsUpdatedForSustainability() {
+        if (this._formSettingsReloadTimer) {
+            clearTimeout(this._formSettingsReloadTimer);
+        }
+        this._formSettingsReloadTimer = setTimeout(() => {
+            this._formSettingsReloadTimer = null;
+            const section = document.getElementById('sustainability-section');
+            if (!section || !section.isConnected) return;
+            if (!String(section.innerHTML || '').trim()) return;
+            this.load();
+        }, 120);
+    },
+
+    /**
      * تحميل المديول
      */
     async load() {
@@ -122,6 +164,13 @@ const Sustainability = {
                 this.load();
             });
             this._languageChangeListenerAdded = true;
+        }
+
+        if (!this._formSettingsSitesListenerAdded) {
+            if (typeof window !== 'undefined' && window.addEventListener) {
+                window.addEventListener('formSettingsUpdated', () => this._onFormSettingsUpdatedForSustainability());
+            }
+            this._formSettingsSitesListenerAdded = true;
         }
 
         const section = document.getElementById('sustainability-section');
@@ -135,6 +184,8 @@ const Sustainability = {
             }
             return;
         }
+
+        await this.ensureObservationSitesForForms();
 
         // تحميل الإعدادات المحفوظة
         this.loadSettings();
