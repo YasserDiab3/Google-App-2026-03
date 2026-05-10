@@ -9042,7 +9042,7 @@
         <link rel="stylesheet" href="css/components.css" />
 
         <!-- Enhanced Dashboard CSS -->
-        <link rel="stylesheet" href="css/dashboard-enhanced.css?v=20260211-safety-metrics-ui" />
+        <link rel="stylesheet" href="css/dashboard-enhanced.css?v=20260211-workhours-bold-codes" />
 
         <!-- Dashboard Layout CSS -->
         <link rel="stylesheet" href="css/dashboard-layout.css?v=20260211-safety-metrics-ui" />
@@ -10877,11 +10877,55 @@
                                     >
                                         0
                                     </p>
+                                    <div
+                                        class="kpi-incidents-breakdown"
+                                        id="dash-incidents-breakdown"
+                                        aria-label="تفصيل الحوادث حسب السنة"
+                                    >
+                                        <p
+                                            class="kpi-incidents-breakdown__line"
+                                            id="dash-incidents-line-current"
+                                        >
+                                            <span
+                                                id="dash-incidents-label-current"
+                                            ></span>
+                                            <span
+                                                class="kpi-incidents-breakdown__num"
+                                                dir="ltr"
+                                                id="dash-incidents-num-current"
+                                                >0</span>
+                                        </p>
+                                        <p
+                                            class="kpi-incidents-breakdown__line"
+                                            id="dash-incidents-line-prior"
+                                        >
+                                            <span
+                                                id="dash-incidents-label-prior"
+                                                >حوادث الأعوام السابقة:</span>
+                                            <span
+                                                class="kpi-incidents-breakdown__num"
+                                                dir="ltr"
+                                                id="dash-incidents-num-prior"
+                                                >0</span>
+                                        </p>
+                                        <p
+                                            class="kpi-incidents-breakdown__line"
+                                            id="dash-incidents-line-unknown"
+                                        >
+                                            <span
+                                                id="dash-incidents-label-unknown"
+                                                >بدون سنة صالحة / عام غير محدد (0000):</span>
+                                            <span
+                                                class="kpi-incidents-breakdown__num"
+                                                dir="ltr"
+                                                id="dash-incidents-num-unknown"
+                                                >0</span>
+                                        </p>
+                                    </div>
                                     <p class="kpi-description">
                                         <span
                                             data-i18n="dash.registeredInSystem"
-                                            >إجمالي الحوادث</span
-                                        >
+                                            >إجمالي الحوادث المسجلة في النظام</span>
                                     </p>
                                 </div>
                             </div>

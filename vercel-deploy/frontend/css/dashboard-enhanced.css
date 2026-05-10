@@ -218,7 +218,10 @@
 #days-without-injury,
 #dash-kpi-training-programs,
 #dash-kpi-clinic-visits-total,
-#dash-kpi-employees-active-count {
+#dash-kpi-employees-active-count,
+#dash-incidents-num-current,
+#dash-incidents-num-prior,
+#dash-incidents-num-unknown {
     direction: ltr !important;
     text-align: left !important;
     unicode-bidi: embed !important;
@@ -265,6 +268,41 @@
     white-space: normal;
     overflow: visible;
     text-overflow: unset;
+}
+
+/* تفصيل الحوادث (حالية / سابقة / بدون سنة) — خط موحّد صغير تحت الإجمالي */
+#dashboard-section .kpi-incidents-breakdown {
+    margin-top: 0.35rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.22rem;
+    width: 100%;
+    min-width: 0;
+}
+
+#dashboard-section .kpi-incidents-breakdown__line {
+    margin: 0;
+    padding: 0;
+    font-size: 0.7rem;
+    line-height: 1.38;
+    font-weight: 500;
+    color: var(--ent-text-muted);
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.2rem 0.45rem;
+}
+
+#dashboard-section .kpi-incidents-breakdown__line .kpi-incidents-breakdown__num {
+    font-weight: 700;
+    font-size: 0.7rem;
+    line-height: 1.38;
+    color: var(--ent-text-body);
+    font-variant-numeric: tabular-nums;
+}
+
+[data-theme="dark"] #dashboard-section .kpi-incidents-breakdown__line .kpi-incidents-breakdown__num {
+    color: var(--ent-text-head);
 }
 
 /* تصاريح العمل — ثلاثية أفقية بنفس كثافة باقي الكروت */
@@ -812,10 +850,10 @@
     align-items: center;
 }
 
-/* شارة الاختصار: حجم مهني يتوازن مع العنوان */
+/* شارة الاختصار TRIR / FA / TIR / LTI: نفس الحجم الحالي مع بولد قوي (900) */
 #dashboard-section .safety-metrics-section .metric-short-code {
     font-size: 0.6875rem !important;
-    font-weight: 800 !important;
+    font-weight: 900 !important;
     letter-spacing: 0.1em;
     line-height: 1.2 !important;
     padding: 0.4rem 0.65rem !important;
