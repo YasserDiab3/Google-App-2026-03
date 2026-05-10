@@ -77,6 +77,397 @@ const Sustainability = {
     },
 
     /**
+     * مدير النظام فقط (لا يشمل صلاحية sustainability-manage أو full-manage لوحدها).
+     */
+    isSystemAdmin() {
+        if (typeof AppState === 'undefined' || !AppState.currentUser) return false;
+        const user = AppState.currentUser;
+        const role = String(user.role || '').trim().toLowerCase();
+        if (role === 'admin' || user.role === 'مدير النظام') return true;
+        if (typeof Permissions !== 'undefined') {
+            if (Permissions.isCurrentUserEffectiveAdmin(user)) return true;
+            const perms = Permissions.getEffectivePermissions(user);
+            if (perms && (perms.__isAdmin === true || perms.admin === true)) return true;
+        }
+        return false;
+    },
+
+    renderAdminImportExportToolbarHtml() {
+        if (!this.isSystemAdmin()) return '';
+        return `
+            <div class="relative inline-flex flex-wrap items-center gap-2 sustainability-admin-tools mr-2 md:mr-3" id="sustainability-admin-tools-wrap">
+                <input type="file" id="sustainability-excel-file-input" accept=".xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel" class="hidden" tabindex="-1" aria-hidden="true">
+                <div class="relative">
+                    <button type="button" class="btn btn-secondary sustainability-excel-menu-btn" id="sustainability-excel-menu-btn" title="استيراد من Excel وقالب">
+                        <i class="fas fa-file-excel ml-2"></i>استيراد من Excel
+                        <i class="fas fa-caret-down mr-1 text-xs opacity-80"></i>
+                    </button>
+                    <div id="sustainability-excel-dropdown" class="hidden absolute z-[200] mt-1 min-w-[14rem] rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 shadow-lg py-1 end-0">
+                        <button type="button" id="sustainability-download-template-btn" class="w-full text-right px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2 border-b border-gray-100 dark:border-gray-700">
+                            <i class="fas fa-download text-green-600"></i><span>تحميل قالب الاستيراد</span>
+                        </button>
+                        <button type="button" id="sustainability-pick-excel-btn" class="w-full text-right px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2">
+                            <i class="fas fa-folder-open text-blue-600"></i><span>اختيار ملف Excel للاستيراد</span>
+                        </button>
+                    </div>
+                </div>
+                <button type="button" class="btn btn-secondary" id="sustainability-export-pdf-btn" title="تصدير تقرير PDF">
+                    <i class="fas fa-file-pdf ml-2"></i>تصدير PDF
+                </button>
+            </div>
+        `;
+    },
+
+    async ensureSheetJS() {
+        if (typeof XLSX !== 'undefined') return;
+        if (this._sheetJsPromise) {
+            await this._sheetJsPromise;
+            return;
+        }
+        this._sheetJsPromise = new Promise((resolve, reject) => {
+            const script = document.createElement('script');
+            script.src = 'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js';
+            script.onload = () => resolve();
+            script.onerror = () => {
+                const s2 = document.createElement('script');
+                s2.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+                s2.onload = () => resolve();
+                s2.onerror = () => {
+                    this._sheetJsPromise = null;
+                    reject(new Error('فشل تحميل مكتبة Excel'));
+                };
+                document.head.appendChild(s2);
+            };
+            document.head.appendChild(script);
+        });
+        await this._sheetJsPromise;
+    },
+
+    downloadExcelImportTemplate() {
+        this.ensureSheetJS().then(() => {
+            const headers = [
+                'نوع_الموارد',
+                'التاريخ',
+                'الموقع_المصنع',
+                'المصدر',
+                'قراءة_البداية',
+                'قراءة_النهاية',
+                'وحدة_القياس',
+                'القسم',
+                'ملاحظات'
+            ];
+            const example = {
+                نوع_الموارد: 'water',
+                التاريخ: new Date().toISOString().slice(0, 10),
+                الموقع_المصنع: 'اسم المصنع أو الموقع كما في الإعدادات',
+                المصدر: 'مياه',
+                قراءة_البداية: 0,
+                قراءة_النهاية: 100,
+                وحدة_القياس: 'م³',
+                القسم: '',
+                ملاحظات: 'أدخل water أو electricity أو gas في عمود نوع_الموارد'
+            };
+            const wb = XLSX.utils.book_new();
+            const ws = XLSX.utils.json_to_sheet([example], { header: headers });
+            XLSX.utils.book_append_sheet(wb, ws, 'الاستيراد');
+            XLSX.writeFile(wb, `قالب_استيراد_الاستدامة_${new Date().toISOString().slice(0, 10)}.xlsx`);
+            if (typeof Notification !== 'undefined') Notification.success('تم تنزيل القالب');
+        }).catch((e) => {
+            Utils.safeWarn('⚠️ تعذر تحميل مكتبة Excel:', e);
+            if (typeof Notification !== 'undefined') Notification.error('تعذر تحميل مكتبة Excel للقالب');
+        });
+    },
+
+    _parseResourceTypeFromExcelCell(val) {
+        const v = String(val == null ? '' : val).trim().toLowerCase();
+        if (!v) return null;
+        if (['water', 'w', 'مياه', 'water_management'].includes(v)) return 'water';
+        if (['electricity', 'electric', 'e', 'elc', 'كهرباء'].includes(v)) return 'electricity';
+        if (['gas', 'g', 'غاز', 'غاز طبيعي', 'natural gas', 'natural_gas'].includes(v)) return 'gas';
+        return null;
+    },
+
+    _normalizeExcelRowKeys(row) {
+        const out = {};
+        const aliases = {
+            نوع_الموارد: 'type', resource_type: 'type', نوع: 'type', type: 'type',
+            التاريخ: 'date', date: 'date',
+            الموقع_المصنع: 'location', location: 'location', موقع: 'location', المصنع: 'location',
+            المصدر: 'source', source: 'source',
+            قراءة_البداية: 'startReading', start_reading: 'startReading', بداية: 'startReading',
+            قراءة_النهاية: 'endReading', end_reading: 'endReading', نهاية: 'endReading',
+            إجمالي_الاستهلاك: 'totalConsumption', total: 'totalConsumption',
+            وحدة_القياس: 'unit', unit: 'unit',
+            القسم: 'department', department: 'department', جهة: 'department',
+            ملاحظات: 'notes', notes: 'notes'
+        };
+        Object.keys(row || {}).forEach((k) => {
+            const raw = String(k || '').trim();
+            const nk = aliases[raw] || aliases[raw.replace(/\s+/g, '_')] || raw;
+            out[nk] = row[k];
+        });
+        return out;
+    },
+
+    async importResourceConsumptionFromExcelFile(file) {
+        if (!this.isSystemAdmin()) {
+            if (typeof Notification !== 'undefined') Notification.error('غير مصرّح');
+            return;
+        }
+        if (!file) return;
+        await this.ensureSheetJS();
+        const buf = await file.arrayBuffer();
+        const workbook = XLSX.read(buf, { type: 'array' });
+        const sheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[sheetName];
+        const rows = XLSX.utils.sheet_to_json(worksheet, { defval: '' });
+        if (!rows.length) {
+            if (typeof Notification !== 'undefined') Notification.warning('الملف فارغ أو لا يحتوي صفوفاً');
+            return;
+        }
+
+        if (!AppState.appData.resourceConsumption) {
+            AppState.appData.resourceConsumption = { water: [], electricity: [], gas: [] };
+        }
+        ['water', 'electricity', 'gas'].forEach((t) => {
+            if (!Array.isArray(AppState.appData.resourceConsumption[t])) AppState.appData.resourceConsumption[t] = [];
+        });
+
+        let ok = 0;
+        let skipped = 0;
+        const errs = [];
+
+        rows.forEach((rawRow, idx) => {
+            const row = this._normalizeExcelRowKeys(rawRow);
+            const type = this._parseResourceTypeFromExcelCell(row.type);
+            const dateStr = row.date != null && row.date !== '' ? String(row.date).trim() : '';
+            const location = row.location != null ? String(row.location).trim() : '';
+            if (!type || !dateStr || !location) {
+                skipped++;
+                errs.push(`صف ${idx + 2}: نقص في النوع أو التاريخ أو الموقع`);
+                return;
+            }
+            let d = new Date(dateStr);
+            if (isNaN(d.getTime())) {
+                skipped++;
+                errs.push(`صف ${idx + 2}: تاريخ غير صالح`);
+                return;
+            }
+            const startReading = parseFloat(row.startReading);
+            const endReading = parseFloat(row.endReading);
+            if (!Number.isFinite(startReading) || !Number.isFinite(endReading)) {
+                skipped++;
+                errs.push(`صف ${idx + 2}: قراءات غير رقمية`);
+                return;
+            }
+            if (endReading < startReading) {
+                skipped++;
+                errs.push(`صف ${idx + 2}: قراءة النهاية أقل من البداية`);
+                return;
+            }
+            let totalConsumption = parseFloat(row.totalConsumption);
+            if (!Number.isFinite(totalConsumption)) totalConsumption = endReading - startReading;
+
+            const unit = String(row.unit || this.getDefaultUnit(type)).trim() || this.getDefaultUnit(type);
+            const source = String(row.source || this.getTypeName(type)).trim() || this.getTypeName(type);
+            const department = row.department != null ? String(row.department).trim() : '';
+            const notes = row.notes != null ? String(row.notes).trim() : '';
+            const monthYear = this.getMonthYear(d);
+
+            const id = Utils.generateId(type.toUpperCase().substring(0, 3));
+            const serialNumber = this.generateSerialNumber(type);
+            const hasAlert = this.checkConsumptionAlert(type, totalConsumption, monthYear);
+
+            const formData = {
+                id,
+                serialNumber,
+                date: d.toISOString(),
+                monthYear,
+                location,
+                source,
+                startReading,
+                endReading,
+                totalConsumption,
+                unit,
+                department,
+                notes,
+                hasAlert,
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString(),
+                createdBy: AppState.currentUser?.email || AppState.currentUser?.name || 'System',
+                updatedBy: AppState.currentUser?.email || AppState.currentUser?.name || 'System'
+            };
+            AppState.appData.resourceConsumption[type].push(formData);
+            ok++;
+        });
+
+        if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
+            window.DataManager.save();
+        }
+        try {
+            await this.saveResourceConsumptionToSheets();
+        } catch (e) {
+            Utils.safeWarn('⚠️ تعذر المزامنة مع الشيت بعد الاستيراد:', e);
+        }
+
+        if (typeof Notification !== 'undefined') {
+            Notification.success(`تم استيراد ${ok} سجلًا${skipped ? ` — تخطّي ${skipped}` : ''}`);
+            if (errs.length && errs.length <= 8) errs.forEach((m) => Notification.warning(m));
+            else if (errs.length > 8) Notification.warning('بعض الصفوف لم تُستورد — راجع القالب والبيانات.');
+        }
+        this.load();
+    },
+
+    exportSustainabilityPdfReport() {
+        if (!this.isSystemAdmin()) {
+            if (typeof Notification !== 'undefined') Notification.error('غير مصرّح');
+            return;
+        }
+        try {
+            if (typeof Loading !== 'undefined') Loading.show('جاري تجهيز PDF...');
+            const esc = (s) => (typeof Utils !== 'undefined' && Utils.escapeHTML ? Utils.escapeHTML(String(s == null ? '' : s)) : String(s == null ? '' : s));
+            const fmtDate = (iso) => {
+                try {
+                    return Utils.formatDate ? Utils.formatDate(iso) : String(iso || '');
+                } catch (e) {
+                    return String(iso || '');
+                }
+            };
+            const rc = AppState.appData.resourceConsumption || {};
+            const types = [
+                { key: 'water', label: 'المياه' },
+                { key: 'electricity', label: 'الكهرباء' },
+                { key: 'gas', label: 'الغاز الطبيعي' }
+            ];
+            let body = '';
+            types.forEach(({ key, label }) => {
+                const arr = Array.isArray(rc[key]) ? rc[key] : [];
+                body += `<h2 style="margin-top:1.2em;font-size:14px;border-bottom:1px solid #ccc;padding-bottom:4px;">سجلات استهلاك — ${esc(label)} (${arr.length})</h2>`;
+                body += '<table style="width:100%;border-collapse:collapse;font-size:11px;margin-bottom:8px;"><thead><tr style="background:#f3f4f6;">';
+                ['الرقم', 'التاريخ', 'الموقع', 'البداية', 'النهاية', 'الإجمالي', 'الوحدة', 'القسم'].forEach((h) => {
+                    body += `<th style="border:1px solid #ddd;padding:6px;text-align:right;">${esc(h)}</th>`;
+                });
+                body += '</tr></thead><tbody>';
+                arr.slice().sort((a, b) => new Date(b.date) - new Date(a.date)).slice(0, 500).forEach((r) => {
+                    body += '<tr>';
+                    [r.serialNumber || r.id, fmtDate(r.date), r.location, r.startReading, r.endReading, r.totalConsumption, r.unit, r.department || '-'].forEach((c) => {
+                        body += `<td style="border:1px solid #eee;padding:4px;text-align:right;">${esc(c)}</td>`;
+                    });
+                    body += '</tr>';
+                });
+                body += '</tbody></table>';
+                if (arr.length > 500) body += `<p style="font-size:10px;color:#666;">عرض أحدث 500 سجل لكل نوع.</p>`;
+            });
+
+            const waste = AppState.appData.wasteManagement;
+            if (waste && this.hasFullSustainabilityManage()) {
+                const rw = (waste.regularWasteRecords || []).length;
+                const hw = (waste.hazardousWasteRecords || []).length;
+                const sl = (waste.regularWasteSales || []).length;
+                body += `<h2 style="margin-top:1em;font-size:14px;">ملخص المخلفات</h2><p style="font-size:12px;">سجلات عادية: ${rw} | خطرة: ${hw} | مبيعات: ${sl}</p>`;
+            }
+
+            const title = 'تقرير الاستدامة البيئية — استهلاك الموارد';
+            const htmlContent = `<!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="UTF-8">
+<style>
+body{font-family:Tahoma,Arial,sans-serif;padding:16px;color:#111;}
+h1{font-size:18px;margin:0 0 12px;}
+table{font-family:inherit;}
+@media print { body { padding: 0; } }
+</style><title>${esc(title)}</title></head><body>
+<h1>${esc(title)}</h1>
+<p style="font-size:12px;color:#444;margin-bottom:16px;">تاريخ التصدير: ${esc(new Date().toLocaleString('ar-SA'))}</p>
+${body}
+</body></html>`;
+
+            const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const printWindow = window.open(url, '_blank');
+            if (printWindow) {
+                printWindow.onload = () => {
+                    setTimeout(() => {
+                        printWindow.print();
+                        setTimeout(() => {
+                            URL.revokeObjectURL(url);
+                            if (typeof Loading !== 'undefined') Loading.hide();
+                            if (typeof Notification !== 'undefined') Notification.success('استخدم «حفظ كـ PDF» من نافذة الطباعة إن لزم');
+                        }, 600);
+                    }, 400);
+                };
+            } else {
+                if (typeof Loading !== 'undefined') Loading.hide();
+                if (typeof Notification !== 'undefined') Notification.error('يرجى السماح بالنوافذ المنبثقة لعرض PDF');
+            }
+        } catch (error) {
+            if (typeof Loading !== 'undefined') Loading.hide();
+            Utils.safeError('خطأ تصدير PDF الاستدامة:', error);
+            if (typeof Notification !== 'undefined') Notification.error('فشل تصدير PDF: ' + (error.message || ''));
+        }
+    },
+
+    bindAdminImportExportToolbar() {
+        if (!this.isSystemAdmin()) return;
+
+        const menuBtn = document.getElementById('sustainability-excel-menu-btn');
+        const dropdown = document.getElementById('sustainability-excel-dropdown');
+        const tplBtn = document.getElementById('sustainability-download-template-btn');
+        const pickBtn = document.getElementById('sustainability-pick-excel-btn');
+        const fileInput = document.getElementById('sustainability-excel-file-input');
+        const pdfBtn = document.getElementById('sustainability-export-pdf-btn');
+
+        const closeMenu = () => { if (dropdown) dropdown.classList.add('hidden'); };
+        const toggleMenu = () => { if (dropdown) dropdown.classList.toggle('hidden'); };
+
+        if (!Sustainability._excelMenuOutsideCloseBound) {
+            Sustainability._excelMenuOutsideCloseBound = true;
+            document.addEventListener('mousedown', (ev) => {
+                const wrap = document.getElementById('sustainability-admin-tools-wrap');
+                if (!wrap || wrap.contains(ev.target)) return;
+                const dd = document.getElementById('sustainability-excel-dropdown');
+                if (dd) dd.classList.add('hidden');
+            });
+        }
+
+        if (menuBtn && dropdown) {
+            menuBtn.addEventListener('click', (ev) => {
+                ev.stopPropagation();
+                toggleMenu();
+            });
+            dropdown.addEventListener('click', (ev) => ev.stopPropagation());
+        }
+        if (tplBtn) {
+            tplBtn.addEventListener('click', (ev) => {
+                ev.stopPropagation();
+                closeMenu();
+                this.downloadExcelImportTemplate();
+            });
+        }
+        if (pickBtn && fileInput) {
+            pickBtn.addEventListener('click', (ev) => {
+                ev.stopPropagation();
+                closeMenu();
+                fileInput.click();
+            });
+        }
+        if (fileInput) {
+            fileInput.addEventListener('change', async () => {
+                const f = fileInput.files && fileInput.files[0];
+                fileInput.value = '';
+                if (!f) return;
+                if (typeof Loading !== 'undefined') Loading.show('جاري استيراد Excel...');
+                try {
+                    await this.importResourceConsumptionFromExcelFile(f);
+                } finally {
+                    if (typeof Loading !== 'undefined') Loading.hide();
+                }
+            });
+        }
+        if (pdfBtn) {
+            pdfBtn.addEventListener('click', () => this.exportSustainabilityPdfReport());
+        }
+    },
+
+    /**
      * مصفوفة المواقع الخام (مع الأماكن الفرعية) بنفس ترتيب الأولوية المستخدم في إعدادات النماذج.
      * مهم: لا نعتمد على formSettingsState.sites إن كانت مصفوفة فارغة — وإلا تُحجب البيانات من observationSites أو الافتراضيات.
      */
@@ -268,6 +659,7 @@ const Sustainability = {
                             <i class="fas fa-cog ml-2"></i>الإعدادات
                         </button>
                         ` : ''}
+                        ${this.renderAdminImportExportToolbarHtml()}
                         <button type="button" class="btn btn-secondary sustainability-refresh-btn ml-4" id="sustainability-refresh-btn" data-action="refresh" title="تحديث البيانات من المصدر">
                             <i class="fas fa-sync-alt ml-2"></i>تحديث
                         </button>
@@ -449,6 +841,7 @@ const Sustainability = {
             if (refreshBtn) {
                 refreshBtn.addEventListener('click', () => this.handleRefresh());
             }
+            this.bindAdminImportExportToolbar();
         }, 100);
     },
 
