@@ -3090,12 +3090,10 @@ const Dashboard = {
             const currentYear = new Date().getFullYear();
             let incidentsCurrentYearCount = 0;
             let incidentsPriorYearsCount = 0;
-            let incidentsUnknownYearCount = 0;
             allIncidentRecords.forEach((r) => {
                 const cat = this._classifyIncidentYearForDashboard(r, currentYear);
                 if (cat === 'current') incidentsCurrentYearCount += 1;
                 else if (cat === 'prior') incidentsPriorYearsCount += 1;
-                else incidentsUnknownYearCount += 1;
             });
             const activeUsersCount = users.filter(u => u && u.active !== false).length;
 
@@ -3150,7 +3148,6 @@ const Dashboard = {
                         const lblCur = document.getElementById('dash-incidents-label-current');
                         const numCur = document.getElementById('dash-incidents-num-current');
                         const numPrior = document.getElementById('dash-incidents-num-prior');
-                        const numUnknown = document.getElementById('dash-incidents-num-unknown');
                         if (lblCur) {
                             lblCur.textContent = `حوادث العام الحالي (${currentYear}):`;
                         }
@@ -3161,10 +3158,6 @@ const Dashboard = {
                         if (numPrior) {
                             numPrior.textContent = self.formatNumber(incidentsPriorYearsCount);
                             self.applyEnglishNumberFormat(numPrior);
-                        }
-                        if (numUnknown) {
-                            numUnknown.textContent = self.formatNumber(incidentsUnknownYearCount);
-                            self.applyEnglishNumberFormat(numUnknown);
                         }
                     }
                     if (self.dashboardCan('users')) {

@@ -220,8 +220,7 @@
 #dash-kpi-clinic-visits-total,
 #dash-kpi-employees-active-count,
 #dash-incidents-num-current,
-#dash-incidents-num-prior,
-#dash-incidents-num-unknown {
+#dash-incidents-num-prior {
     direction: ltr !important;
     text-align: left !important;
     unicode-bidi: embed !important;
