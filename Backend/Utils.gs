@@ -1807,14 +1807,25 @@ function saveToSheet(sheetName, data, spreadsheetId = null) {
             const processedData = processDataItem(data);
             const recordId = processedData.id ? String(processedData.id).trim() : '';
             if (recordId) {
-                // Upsert single record by id
-                const upd = updateSingleRowInSheet(sheetName, recordId, processedData, spreadsheetId);
-                if (!upd || !upd.success) {
-                    // If not found, append
-                    const lastCol = sheet.getLastColumn();
-                    const headerRow = sheet.getRange(1, 1, 1, lastCol).getValues()[0].map(h => (h === null || h === undefined) ? '' : String(h).trim());
-                    const rowValues = headerRow.map(h => (h ? toSheetCellValue_(h, processedData[h], sheetName) : ''));
-                    sheet.appendRow(rowValues);
+                // ✅ PTW: تجنّب updateSingleRowInSheet الذي يقرأ الورقة كاملاً عبر readFromSheet — مسار يدوي بطيء جداً مع آلاف الصفوف ويسبب مهلة العميل قبل إكمال الكتابة.
+                if (sheetName === 'PTW') {
+                    const existingRowNum = findSheetRowNumberByIdColumn_(sheet, recordId);
+                    if (existingRowNum) {
+                        mergeUpdateExistingSheetRow_(sheet, sheetName, existingRowNum, processedData);
+                    } else {
+                        const lastColPTW = sheet.getLastColumn();
+                        const headerRowPTW = sheet.getRange(1, 1, 1, lastColPTW).getValues()[0].map(h => (h === null || h === undefined) ? '' : String(h).trim());
+                        const rowValuesPTW = headerRowPTW.map(h => (h ? toSheetCellValue_(h, processedData[h], sheetName) : ''));
+                        sheet.appendRow(rowValuesPTW);
+                    }
+                } else {
+                    const upd = updateSingleRowInSheet(sheetName, recordId, processedData, spreadsheetId);
+                    if (!upd || !upd.success) {
+                        const lastCol = sheet.getLastColumn();
+                        const headerRow = sheet.getRange(1, 1, 1, lastCol).getValues()[0].map(h => (h === null || h === undefined) ? '' : String(h).trim());
+                        const rowValues = headerRow.map(h => (h ? toSheetCellValue_(h, processedData[h], sheetName) : ''));
+                        sheet.appendRow(rowValues);
+                    }
                 }
             } else {
                 // No id => append as new row
@@ -2341,28 +2352,52 @@ function appendToSheet(sheetName, data, spreadsheetId = null) {
             if (recordId) {
                 // قراءة البيانات الموجودة للتحقق من التكرار
                 try {
-                    const existingData = readFromSheet(sheetName, spreadsheetId);
-                    if (Array.isArray(existingData) && existingData.length > 0) {
-                        const duplicate = existingData.find(item => {
-                            if (!item || !item.id) return false;
-                            return String(item.id).trim() === recordId;
-                        });
-                        
-                        if (duplicate) {
-                            Logger.log('⚠️ Duplicate record found in appendToSheet: id=' + recordId + ', sheetName=' + sheetName);
+                    if (sheetName === 'PTW') {
+                        var dupRowAppend = findSheetRowNumberByIdColumn_(sheet, recordId);
+                        if (dupRowAppend) {
+                            Logger.log('⚠️ Duplicate record found in appendToSheet (PTW id scan): id=' + recordId);
                             Logger.log('⚠️ Updating existing record instead of adding duplicate');
-                            
-                            // تحديث السجل الموجود بدلاً من إضافة مكرر
-                            const updateResult = updateSingleRowInSheet(sheetName, recordId, processedData, spreadsheetId);
-                            if (updateResult && updateResult.success) {
-                                return withResolvedPTWRegistry_(sheetName, { 
-                                    success: true, 
+                            var mergedDup = mergeUpdateExistingSheetRow_(sheet, sheetName, dupRowAppend, processedData);
+                            if (mergedDup) {
+                                return withResolvedPTWRegistry_(sheetName, {
+                                    success: true,
                                     message: 'تم تحديث السجل الموجود بدلاً من إضافة مكرر',
                                     isDuplicate: true,
-                                    rowNumber: updateResult.rowNumber || null
+                                    rowNumber: dupRowAppend
                                 }, resolvedPTWRegistryForAppend);
-                            } else {
-                                // إذا فشل التحديث، نتابع الإضافة (قد يكون هناك خطأ في updateSingleRowInSheet)
+                            }
+                            var updateResultPTW = updateSingleRowInSheet(sheetName, recordId, processedData, spreadsheetId);
+                            if (updateResultPTW && updateResultPTW.success) {
+                                return withResolvedPTWRegistry_(sheetName, {
+                                    success: true,
+                                    message: 'تم تحديث السجل الموجود بدلاً من إضافة مكرر',
+                                    isDuplicate: true,
+                                    rowNumber: updateResultPTW.rowNumber || null
+                                }, resolvedPTWRegistryForAppend);
+                            }
+                            Logger.log('⚠️ Failed to update existing PTW record after fast merge, proceeding with append');
+                        }
+                    } else {
+                        const existingData = readFromSheet(sheetName, spreadsheetId);
+                        if (Array.isArray(existingData) && existingData.length > 0) {
+                            const duplicate = existingData.find(item => {
+                                if (!item || !item.id) return false;
+                                return String(item.id).trim() === recordId;
+                            });
+
+                            if (duplicate) {
+                                Logger.log('⚠️ Duplicate record found in appendToSheet: id=' + recordId + ', sheetName=' + sheetName);
+                                Logger.log('⚠️ Updating existing record instead of adding duplicate');
+
+                                const updateResult = updateSingleRowInSheet(sheetName, recordId, processedData, spreadsheetId);
+                                if (updateResult && updateResult.success) {
+                                    return withResolvedPTWRegistry_(sheetName, {
+                                        success: true,
+                                        message: 'تم تحديث السجل الموجود بدلاً من إضافة مكرر',
+                                        isDuplicate: true,
+                                        rowNumber: updateResult.rowNumber || null
+                                    }, resolvedPTWRegistryForAppend);
+                                }
                                 Logger.log('⚠️ Failed to update existing record, proceeding with append');
                             }
                         }
@@ -2726,6 +2761,63 @@ function syncContractorRequestRowForSheetHeaders_(record, headers, sheetName) {
             }
         }
     });
+}
+
+/**
+ * العثور على رقم صف البيانات (≥2) عبر عمود id فقط — أسرع بكثير من readFromSheet على ورقة PTW الكبيرة.
+ */
+function findSheetRowNumberByIdColumn_(sheet, recordId) {
+    var rid = String(recordId || '').trim();
+    if (!rid || !sheet) return null;
+    try {
+        var lastCol = sheet.getLastColumn();
+        if (lastCol < 1) return null;
+        var headerRow = sheet.getRange(1, 1, 1, lastCol).getValues()[0];
+        var headers = headerRow.map(function(h) {
+            return (h === null || h === undefined) ? '' : String(h).trim();
+        });
+        var idCol = headers.indexOf('id');
+        if (idCol < 0) return null;
+        var lastRow = sheet.getLastRow();
+        if (lastRow < 2) return null;
+        var colValues = sheet.getRange(2, idCol + 1, lastRow, idCol + 1).getValues();
+        for (var i = 0; i < colValues.length; i++) {
+            if (String(colValues[i][0] || '').trim() === rid) {
+                return i + 2;
+            }
+        }
+    } catch (e) {
+        Logger.log('findSheetRowNumberByIdColumn_ failed: ' + e.toString());
+    }
+    return null;
+}
+
+/**
+ * دمج حقول processedItem في صف موجود (تحديث جزئي بالحقول المرسلة فقط).
+ */
+function mergeUpdateExistingSheetRow_(sheet, sheetName, rowNum, processedItem) {
+    if (!sheet || !rowNum || rowNum < 2 || !processedItem || typeof processedItem !== 'object') {
+        return false;
+    }
+    try {
+        var lastCol = sheet.getLastColumn();
+        if (lastCol < 1) return false;
+        var headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0].map(function(h) {
+            return (h === null || h === undefined) ? '' : String(h).trim();
+        });
+        var rowVals = sheet.getRange(rowNum, 1, rowNum, headers.length).getValues()[0];
+        headers.forEach(function(h, idx) {
+            if (!h) return;
+            if (Object.prototype.hasOwnProperty.call(processedItem, h)) {
+                rowVals[idx] = toSheetCellValue_(h, processedItem[h], sheetName);
+            }
+        });
+        sheet.getRange(rowNum, 1, rowNum, headers.length).setValues([rowVals]);
+        return true;
+    } catch (e) {
+        Logger.log('mergeUpdateExistingSheetRow_ failed: ' + e.toString());
+        return false;
+    }
 }
 
 /**

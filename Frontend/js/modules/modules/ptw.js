@@ -647,6 +647,8 @@ const PTW = {
         }
 
         const AUDIT_SYNC_KEYS = ['createdBy', 'createdById', 'updatedBy', 'updatedById'];
+        // مهلة أطول لمسار التصريح اليدوي (طلبان متتابعان + ورقة PTW كبيرة كانت تتجاوز 40s على الخادم)
+        const MANUAL_SYNC_TIMEOUT_MS = 120000;
 
         const sendSheetRecord = async (sheetName, record, appendMode = false) => {
             const spreadsheetId = AppState.googleConfig?.sheets?.spreadsheetId?.trim();
@@ -656,7 +658,8 @@ const PTW = {
                     sheetName,
                     data: (typeof GoogleIntegration.prepareSheetPayload === 'function')
                         ? GoogleIntegration.prepareSheetPayload(sheetName, rec)
-                        : rec
+                        : rec,
+                    __timeoutMs: MANUAL_SYNC_TIMEOUT_MS
                 };
                 if (spreadsheetId) {
                     payload.spreadsheetId = spreadsheetId;
@@ -664,10 +667,29 @@ const PTW = {
                 return payload;
             };
 
-            const invoke = (rec) => GoogleIntegration.sendToAppsScript(
+            const invokeOnce = (rec) => GoogleIntegration.sendToAppsScript(
                 appendMode ? 'appendToSheet' : 'saveToSheet',
                 buildPayload(rec)
             );
+
+            const invokeWithTimeoutRetry = async (rec) => {
+                const maxAttempts = 2;
+                let lastErr;
+                for (let attempt = 0; attempt < maxAttempts; attempt++) {
+                    try {
+                        return await invokeOnce(rec);
+                    } catch (err) {
+                        lastErr = err;
+                        const m = String(err?.message || '');
+                        const isTimeout = /مهلة|timeout|abort|انتهت مهلة|AbortError|فقدان الاتصال/i.test(m);
+                        if (!isTimeout || attempt === maxAttempts - 1) {
+                            throw err;
+                        }
+                        await new Promise((resolve) => setTimeout(resolve, 2000));
+                    }
+                }
+                throw lastErr;
+            };
 
             const stripAuditCopy = (rec) => {
                 const base = (typeof GoogleIntegration.prepareSheetPayload === 'function')
@@ -679,13 +701,13 @@ const PTW = {
             };
 
             try {
-                return await invoke(record);
+                return await invokeWithTimeoutRetry(record);
             } catch (err) {
                 const msg = String(err?.message || '');
                 const looksPayloadReject = /حقل غير مسموح|PAYLOAD_VALIDATION_FAILED/i.test(msg);
                 if (!looksPayloadReject) throw err;
                 try {
-                    return await invoke(stripAuditCopy(record));
+                    return await invokeWithTimeoutRetry(stripAuditCopy(record));
                 } catch (_retryErr) {
                     throw err;
                 }
