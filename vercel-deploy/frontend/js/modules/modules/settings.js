@@ -840,6 +840,10 @@ const Settings = {
                             <div class="card-header flex items-center justify-between flex-wrap gap-2">
                                 <h2 class="card-title"><i class="fas fa-tags ml-2"></i>إدارة أنواع المخالفات</h2>
                                 <div class="flex flex-wrap gap-2 items-center">
+                                    <button type="button" id="export-violation-types-btn" class="btn-secondary" title="تصدير القائمة إلى ملف Excel">
+                                        <i class="fas fa-file-export ml-2 text-green-700"></i>
+                                        تصدير إلى Excel
+                                    </button>
                                     <button type="button" id="import-violation-types-btn" class="btn-secondary">
                                         <i class="fas fa-file-excel ml-2 text-green-700"></i>
                                         استيراد من Excel
@@ -2873,6 +2877,42 @@ const Settings = {
         XLSX.writeFile(wb, `قالب_استيراد_أنواع_المخالفات_${new Date().toISOString().slice(0, 10)}.xlsx`);
     },
 
+    exportViolationTypesToExcel() {
+        if (typeof XLSX === 'undefined') {
+            Notification.error('مكتبة Excel غير محمّلة. حدّث الصفحة وحاول مرة أخرى.');
+            return;
+        }
+        if (typeof ViolationTypesManager === 'undefined') {
+            Notification.error('إدارة أنواع المخالفات غير متاحة حالياً.');
+            return;
+        }
+        ViolationTypesManager.ensureInitialized();
+        const types = ViolationTypesManager.getAll();
+        if (!types.length) {
+            Notification.info('لا توجد أنواع مخالفات لتصديرها.');
+            return;
+        }
+        const headers = ['اسم_النوع', 'الوصف', 'القيمة_المالية', 'الحالة', 'عدد_السجلات'];
+        const rows = types.map((type) => {
+            const usage = ViolationTypesManager.countUsage(type);
+            const fine = Number(type.fineAmount || 0);
+            return [
+                type.name || '',
+                type.description || '',
+                Number.isFinite(fine) ? fine : 0,
+                type.isDefault ? 'افتراضي' : 'مخصص',
+                usage
+            ];
+        });
+        const wb = XLSX.utils.book_new();
+        const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
+        ws['!cols'] = [{ wch: 42 }, { wch: 55 }, { wch: 16 }, { wch: 12 }, { wch: 14 }];
+        XLSX.utils.book_append_sheet(wb, ws, 'أنواع_المخالفات');
+        const stamp = new Date().toISOString().slice(0, 10);
+        XLSX.writeFile(wb, `أنواع_المخالفات_${stamp}.xlsx`);
+        Notification.success(`تم تصدير ${types.length} نوعاً إلى Excel.`);
+    },
+
     showViolationTypesImportModal() {
         if (typeof ViolationTypesManager === 'undefined') {
             Notification.error('إدارة أنواع المخالفات غير متاحة حالياً.');
@@ -3068,6 +3108,10 @@ const Settings = {
         const importBtn = document.getElementById('import-violation-types-btn');
         if (importBtn) {
             importBtn.onclick = () => this.showViolationTypesImportModal();
+        }
+        const exportBtn = document.getElementById('export-violation-types-btn');
+        if (exportBtn) {
+            exportBtn.onclick = () => this.exportViolationTypesToExcel();
         }
 
         document.querySelectorAll('[data-action="edit-violation-type"]').forEach(btn => {
