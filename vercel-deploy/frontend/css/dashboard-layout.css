@@ -661,6 +661,7 @@
     }
 }
 
+/* auto-fit يطوي المسارات الفارغة — يملأ العرض عكس auto-fill في اتجاه RTL */
 #dashboard-section .metrics-grid-container {
-    grid-template-columns: repeat(auto-fill, minmax(min(100%, 220px), 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr));
 }

@@ -747,6 +747,165 @@
     clear: both;
 }
 
+/* ===== مؤشرات السلامة المهنية (TRIR / FA / TIR / LTI): توزيع على كامل العرض + بطاقات أوضح ===== */
+#dashboard-section .safety-metrics-section .metrics-grid-container {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 1.35rem;
+    width: 100%;
+    max-width: 100%;
+    justify-items: stretch;
+    align-items: stretch;
+}
+
+@media (max-width: 1100px) {
+    #dashboard-section .safety-metrics-section .metrics-grid-container {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 540px) {
+    #dashboard-section .safety-metrics-section .metrics-grid-container {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}
+
+#dashboard-section .safety-metrics-section .metric-card-frame {
+    min-height: 0;
+    padding: 1.35rem 1.45rem;
+    border-radius: 14px;
+    box-shadow: 0 2px 16px rgba(15, 23, 42, 0.06);
+    border: 1px solid var(--ent-border);
+    background: var(--ent-bg-card);
+    transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+#dashboard-section .safety-metrics-section .metric-card-frame:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 12px 32px rgba(15, 23, 42, 0.1);
+    border-color: var(--ent-border-hover);
+}
+
+#dashboard-section .safety-metrics-section .metric-card-frame.kpi-purple {
+    border-top: 3px solid #9333ea;
+}
+
+#dashboard-section .safety-metrics-section .metric-card-frame.kpi-info {
+    border-top: 3px solid #2563eb;
+}
+
+#dashboard-section .safety-metrics-section .metric-card-frame.kpi-warning {
+    border-top: 3px solid #ea580c;
+}
+
+#dashboard-section .safety-metrics-section .metric-card-frame.kpi-danger {
+    border-top: 3px solid #dc2626;
+}
+
+#dashboard-section .safety-metrics-section .metric-card-frame > div {
+    gap: 0.5rem;
+}
+
+#dashboard-section .safety-metrics-section .metric-card-frame .flex.items-center.justify-between {
+    margin-bottom: 0.35rem;
+    min-height: 2.75rem;
+    align-items: center;
+}
+
+/* شارة الاختصار: حجم مهني يتوازن مع العنوان */
+#dashboard-section .safety-metrics-section .metric-short-code {
+    font-size: 0.6875rem !important;
+    font-weight: 800 !important;
+    letter-spacing: 0.1em;
+    line-height: 1.2 !important;
+    padding: 0.4rem 0.65rem !important;
+    border-radius: 8px;
+    min-width: 0 !important;
+}
+
+/* أيقونة في بلاطة دائرية */
+#dashboard-section .safety-metrics-section .metric-card-frame .flex.items-center > div.text-2xl {
+    width: 2.65rem;
+    height: 2.65rem;
+    min-width: 2.65rem;
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+    border-radius: 12px;
+    font-size: 1.2rem !important;
+}
+
+#dashboard-section .safety-metrics-section .metric-card-frame.kpi-purple .flex.items-center > div.text-2xl {
+    background: rgba(147, 51, 234, 0.12);
+    color: #7e22ce !important;
+}
+
+#dashboard-section .safety-metrics-section .metric-card-frame.kpi-info .flex.items-center > div.text-2xl {
+    background: rgba(37, 99, 235, 0.12);
+    color: #1d4ed8 !important;
+}
+
+#dashboard-section .safety-metrics-section .metric-card-frame.kpi-warning .flex.items-center > div.text-2xl {
+    background: rgba(234, 88, 12, 0.12);
+    color: #c2410c !important;
+}
+
+#dashboard-section .safety-metrics-section .metric-card-frame.kpi-danger .flex.items-center > div.text-2xl {
+    background: rgba(220, 38, 38, 0.12);
+    color: #b91c1c !important;
+}
+
+#dashboard-section .safety-metrics-section .metric-card-frame h3 {
+    font-size: 0.9375rem;
+    font-weight: 700;
+    color: var(--ent-text-head);
+    line-height: 1.45;
+    margin: 0.25rem 0 0;
+}
+
+#dashboard-section .safety-metrics-section .metric-card-frame p[id$="-value"] {
+    font-size: 2.125rem;
+    font-weight: 800;
+    margin: 0.2rem 0 0.35rem;
+    line-height: 1.05;
+}
+
+#dashboard-section .safety-metrics-section .metric-card-frame p.text-xs.text-gray-600 {
+    font-size: 0.8125rem !important;
+    line-height: 1.45 !important;
+    color: var(--ent-text-muted) !important;
+    margin-top: 0.15rem !important;
+}
+
+/* شريط الملاحظة السفلي */
+#dashboard-section .safety-metrics-section .safety-metrics-note {
+    margin-top: 1.25rem;
+    padding: 0.85rem 1.1rem;
+    border-radius: 12px;
+    border: 1px solid rgba(37, 99, 235, 0.18);
+    background: linear-gradient(135deg, rgba(239, 246, 255, 0.95) 0%, rgba(219, 234, 254, 0.55) 100%);
+}
+
+#dashboard-section .safety-metrics-section .safety-metrics-note p {
+    margin: 0;
+    font-size: 0.8125rem !important;
+    line-height: 1.5 !important;
+    color: var(--ent-text-body);
+}
+
+[data-theme="dark"] #dashboard-section .safety-metrics-section .metric-card-frame {
+    box-shadow: 0 2px 18px rgba(0, 0, 0, 0.35);
+}
+
+[data-theme="dark"] #dashboard-section .safety-metrics-section .safety-metrics-note {
+    border-color: rgba(96, 165, 250, 0.35);
+    background: linear-gradient(135deg, rgba(30, 58, 138, 0.35) 0%, rgba(30, 41, 59, 0.65) 100%);
+}
+
+[data-theme="dark"] #dashboard-section .safety-metrics-section .safety-metrics-note p {
+    color: var(--ent-text-body);
+}
+
 /* التقارير والإحصائيات - بدون مسافة سفلية */
 .reports-statistics-section {
     width: 100%;
