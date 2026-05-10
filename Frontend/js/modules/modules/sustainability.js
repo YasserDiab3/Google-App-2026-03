@@ -799,6 +799,15 @@ const Sustainability = {
         const dateValue = record?.date ? new Date(record.date).toISOString().slice(0, 10) : new Date().toISOString().slice(0, 10);
         const monthYearValue = record?.monthYear || this.getMonthYear(new Date());
 
+        const isEdit = !!recordId;
+        const initialLocTrim = record?.location != null ? String(record.location).trim() : '';
+        const prevRecInitial = isEdit ? null : this.getPreviousConsumptionRecord(type, initialLocTrim);
+        const useAutoStart = !isEdit && prevRecInitial != null;
+        const defaultStartStr = isEdit
+            ? (record?.startReading != null && record.startReading !== '' ? String(record.startReading) : '')
+            : (useAutoStart ? String(parseFloat(prevRecInitial.endReading) || 0) : '');
+        const defaultEndStr = record?.endReading != null && record.endReading !== '' ? String(record.endReading) : '';
+
         const modal = document.createElement('div');
         modal.className = 'modal-overlay';
         modal.innerHTML = `
@@ -856,23 +865,25 @@ const Sustainability = {
                         </div>
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
-                                <label for="resource-start-${type}" class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                                    قراءة البداية <span class="text-red-500">*</span>
+                                <label id="resource-start-label-${type}" for="resource-start-${type}" class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                                    قراءة البداية ${useAutoStart ? '' : '<span class="text-red-500">*</span>'}
                                 </label>
-                                <input type="number" id="resource-start-${type}" required step="0.01"
-                                       class="form-input" 
-                                       value="${record?.startReading || ''}"
+                                <p id="resource-start-help-${type}" class="text-xs text-gray-500 dark:text-gray-400 mb-1 ${useAutoStart ? '' : 'hidden'}">${useAutoStart ? 'مُستخرجة تلقائياً من قراءة نهاية آخر سجل لهذا الموقع.' : ''}</p>
+                                <input type="number" id="resource-start-${type}" ${useAutoStart ? 'readonly' : 'required'} step="0.01"
+                                       class="form-input ${useAutoStart ? 'bg-gray-100 dark:bg-gray-800' : ''}" 
+                                       value="${typeof Utils !== 'undefined' && Utils.escapeHTML ? Utils.escapeHTML(defaultStartStr) : defaultStartStr}"
                                        placeholder="0.00"
                                        onchange="Sustainability.calculateConsumption('${type}')">
                             </div>
                             <div>
-                                <label for="resource-end-${type}" class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                                    قراءة النهاية <span class="text-red-500">*</span>
+                                <label id="resource-end-label-${type}" for="resource-end-${type}" class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                                    ${useAutoStart ? 'القراءة الحالية (قراءة العداد)' : 'قراءة النهاية'} <span class="text-red-500">*</span>
                                 </label>
                                 <input type="number" id="resource-end-${type}" required step="0.01"
                                        class="form-input" 
-                                       value="${record?.endReading || ''}"
+                                       value="${typeof Utils !== 'undefined' && Utils.escapeHTML ? Utils.escapeHTML(defaultEndStr) : defaultEndStr}"
                                        placeholder="0.00"
+                                       oninput="Sustainability.calculateConsumption('${type}')"
                                        onchange="Sustainability.calculateConsumption('${type}')">
                             </div>
                         </div>
@@ -930,6 +941,16 @@ const Sustainability = {
 
         const saveBtn = modal.querySelector(`#save-resource-btn-${type}`);
         saveBtn.addEventListener('click', () => this.handleResourceSubmit(type, recordId, modal));
+
+        if (!recordId) {
+            const locSel = document.getElementById(`resource-location-${type}`);
+            if (locSel) {
+                locSel.addEventListener('change', () => this.applyResourceStartFromPreviousChain(type, recordId));
+            }
+            this.applyResourceStartFromPreviousChain(type, recordId);
+        } else {
+            this.calculateConsumption(type);
+        }
 
         modal.addEventListener('click', (e) => {
             if (e.target === modal) modal.remove();
@@ -1341,6 +1362,65 @@ const Sustainability = {
             gas: 'الغاز الطبيعي'
         };
         return names[type] || type;
+    },
+
+    /**
+     * سجلات استهلاك النوع مرتبة من الأحدث إلى الأقدم
+     */
+    getConsumptionRecordsSortedDesc(type) {
+        const arr = [...(AppState.appData.resourceConsumption?.[type] || [])];
+        return arr.sort((a, b) => new Date(b.date) - new Date(a.date));
+    },
+
+    /**
+     * آخر سجل لنفس الموقع بعد اختياره (لا يُستخدم قبل اختيار الموقع لتجنب خلط العدادات).
+     */
+    getPreviousConsumptionRecord(type, locationFilter) {
+        const sorted = this.getConsumptionRecordsSortedDesc(type);
+        if (!sorted.length) return null;
+        if (locationFilter == null || String(locationFilter).trim() === '') return null;
+        const loc = String(locationFilter).trim();
+        return sorted.find(r => String(r.location || '').trim() === loc) || null;
+    },
+
+    /**
+     * تحديث قراءة البداية من السجل السابق عند الإضافة (بعد أول تسجيل لكل موقع/نوع)
+     */
+    applyResourceStartFromPreviousChain(type, recordId) {
+        if (recordId) return;
+        const locSel = document.getElementById(`resource-location-${type}`);
+        const startEl = document.getElementById(`resource-start-${type}`);
+        if (!startEl) return;
+        const loc = (locSel?.value || '').trim();
+        const prev = this.getPreviousConsumptionRecord(type, loc);
+        const helpEl = document.getElementById(`resource-start-help-${type}`);
+        const startLab = document.getElementById(`resource-start-label-${type}`);
+        const endLab = document.getElementById(`resource-end-label-${type}`);
+        if (prev != null) {
+            const endVal = parseFloat(prev.endReading);
+            startEl.value = Number.isFinite(endVal) ? endVal.toFixed(2) : '';
+            startEl.readOnly = true;
+            startEl.classList.add('bg-gray-100', 'dark:bg-gray-800');
+            startEl.removeAttribute('required');
+            if (helpEl) {
+                helpEl.textContent = 'مُستخرجة تلقائياً من قراءة نهاية آخر سجل لهذا الموقع.';
+                helpEl.classList.remove('hidden');
+            }
+            if (startLab) startLab.innerHTML = 'قراءة البداية ';
+            if (endLab) endLab.innerHTML = 'القراءة الحالية (قراءة العداد) <span class="text-red-500">*</span>';
+        } else {
+            startEl.value = '';
+            startEl.readOnly = false;
+            startEl.classList.remove('bg-gray-100', 'dark:bg-gray-800');
+            startEl.setAttribute('required', 'required');
+            if (helpEl) {
+                helpEl.textContent = '';
+                helpEl.classList.add('hidden');
+            }
+            if (startLab) startLab.innerHTML = 'قراءة البداية <span class="text-red-500">*</span>';
+            if (endLab) endLab.innerHTML = 'قراءة النهاية <span class="text-red-500">*</span>';
+        }
+        this.calculateConsumption(type);
     },
 
     /**
