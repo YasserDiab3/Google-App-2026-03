@@ -1325,5 +1325,57 @@ select.form-select option {
     border-radius: 9999px;
 }
 
+/* ===== جدول إدارة أنواع المخالفات (إعدادات النظام): منع تداخل النص بين الأعمدة ===== */
+#violation-types-management .data-table {
+    table-layout: fixed;
+    width: 100%;
+}
+
+#violation-types-management .data-table th,
+#violation-types-management .data-table td {
+    vertical-align: top;
+    white-space: normal;
+    word-break: break-word;
+    overflow-wrap: anywhere;
+    max-width: none;
+}
+
+#violation-types-management .data-table th:nth-child(1),
+#violation-types-management .data-table td:nth-child(1) {
+    width: 20%;
+}
+
+#violation-types-management .data-table th:nth-child(2),
+#violation-types-management .data-table td:nth-child(2) {
+    width: 34%;
+}
+
+#violation-types-management .data-table th:nth-child(3),
+#violation-types-management .data-table td:nth-child(3) {
+    width: 12%;
+}
+
+#violation-types-management .data-table th:nth-child(4),
+#violation-types-management .data-table td:nth-child(4) {
+    width: 12%;
+}
+
+#violation-types-management .data-table th:nth-child(5),
+#violation-types-management .data-table td:nth-child(5) {
+    width: 10%;
+}
+
+#violation-types-management .data-table th:nth-child(6),
+#violation-types-management .data-table td:nth-child(6) {
+    width: 12%;
+    white-space: nowrap;
+    text-align: center;
+}
+
+#violation-types-management .data-table td:nth-child(3),
+#violation-types-management .data-table td:nth-child(5) {
+    white-space: nowrap;
+}
+
 /* ===== End of UI/UX Enhancements ===== */
 
