@@ -17,6 +17,54 @@ const Dashboard = {
         return fallback || key;
     },
 
+    /** صلاحية عرض جزء من لوحة التحكم مرتبط بمفتاح موديول في MODULE_PERMISSIONS_CONFIG */
+    dashboardCan(moduleKey) {
+        if (!moduleKey) return false;
+        if (typeof Permissions !== 'undefined' && typeof Permissions.isCurrentUserEffectiveAdmin === 'function') {
+            if (Permissions.isCurrentUserEffectiveAdmin()) return true;
+        }
+        if (typeof Permissions !== 'undefined' && typeof Permissions.hasAccess === 'function') {
+            return Permissions.hasAccess(moduleKey);
+        }
+        return false;
+    },
+
+    _dashboardReportStatIdsForTotal() {
+        return ['incidents', 'nearmiss', 'periodic-inspections', 'training', 'violations', 'contractors', 'ptw', 'iso', 'electricity-consumption', 'water-consumption', 'gas-consumption'];
+    },
+
+    anyReportsStatisticVisibleForDashboard() {
+        return this._dashboardReportStatIdsForTotal().some((statId) => {
+            const mod = this.getModuleNameFromStatId(statId);
+            return mod && this.dashboardCan(mod);
+        });
+    },
+
+    reportsStatisticsMetricVisible(statId) {
+        if (statId === 'total-reports') return this.anyReportsStatisticVisibleForDashboard();
+        const mod = this.getModuleNameFromStatId(statId);
+        if (!mod) return true;
+        return this.dashboardCan(mod);
+    },
+
+    applyDashboardLayoutPermissions() {
+        const root = document.getElementById('dashboard-section');
+        if (!root) return;
+        root.querySelectorAll('[data-dash-scope]').forEach((el) => {
+            const raw = el.getAttribute('data-dash-scope') || '';
+            const keys = raw.split(',').map((s) => s.trim()).filter(Boolean);
+            const allowed = keys.length === 0 || keys.some((k) => this.dashboardCan(k));
+            el.hidden = !allowed;
+            el.setAttribute('aria-hidden', allowed ? 'false' : 'true');
+        });
+        root.querySelectorAll('.reports-statistics-section .metric-card-frame[data-stat-id]').forEach((card) => {
+            const statId = card.getAttribute('data-stat-id');
+            const allowed = statId ? this.reportsStatisticsMetricVisible(statId) : true;
+            card.hidden = !allowed;
+            card.setAttribute('aria-hidden', allowed ? 'false' : 'true');
+        });
+    },
+
     normalizePTWStatus(status) {
         if (window.PTW && typeof window.PTW.normalizePermitStatus === 'function') {
             return window.PTW.normalizePermitStatus(status);
@@ -84,8 +132,14 @@ const Dashboard = {
         this.loadRecentActivities();
         this.loadUserTasksWidget();
         this.loadEmployeeReportWidget();
+        try {
+            this.loadCharts();
+        } catch (chartErr) {
+            if (typeof Utils !== 'undefined' && Utils.safeWarn) Utils.safeWarn('⚠️ تعذر تحميل رسوم لوحة التحكم:', chartErr);
+        }
+        this.applyDashboardLayoutPermissions();
         // بيانات المياه/الكهرباء/الغاز تُقرأ من أوراق منفصلة؛ بدء التحميل مبكراً يحدّ من بطء كروت الاستهلاك في لوحة التحكم
-        if (typeof Sustainability !== 'undefined' && typeof Sustainability.loadResourceConsumptionFromSheets === 'function') {
+        if (this.dashboardCan('sustainability') && typeof Sustainability !== 'undefined' && typeof Sustainability.loadResourceConsumptionFromSheets === 'function') {
             void Sustainability.loadResourceConsumptionFromSheets().catch(() => {});
         }
         const i18nCore = (window.AppI18n && typeof window.AppI18n.applyI18n === 'function')
@@ -444,26 +498,21 @@ const Dashboard = {
                 return;
             }
 
-            const can = (moduleKey) => {
-                if (typeof Permissions === 'undefined' || typeof Permissions.hasAccess !== 'function') return true;
-                return Permissions.hasAccess(moduleKey);
-            };
-
             const tuples = [];
-            if (can('violations')) tuples.push(['Violations', 'violations']);
-            if (can('training')) tuples.push(['Training', 'training']);
-            if (can('ppe')) tuples.push(['PPE', 'ppe']);
-            if (can('behavior-monitoring')) tuples.push(['BehaviorMonitoring', 'behaviorMonitoring']);
-            if (can('clinic')) {
+            if (this.dashboardCan('violations')) tuples.push(['Violations', 'violations']);
+            if (this.dashboardCan('training')) tuples.push(['Training', 'training']);
+            if (this.dashboardCan('ppe')) tuples.push(['PPE', 'ppe']);
+            if (this.dashboardCan('behavior-monitoring')) tuples.push(['BehaviorMonitoring', 'behaviorMonitoring']);
+            if (this.dashboardCan('clinic')) {
                 tuples.push(['SickLeave', 'sickLeave']);
                 tuples.push(['Medications', 'medications']);
                 tuples.push(['ClinicInventory', 'clinicInventory']);
             }
-            if (can('incidents')) {
+            if (this.dashboardCan('incidents')) {
                 tuples.push(['Incidents', 'incidents']);
                 tuples.push(['IncidentsRegistry', 'incidentsRegistry']);
             }
-            if (can('ptw')) {
+            if (this.dashboardCan('ptw')) {
                 tuples.push(['PTW', 'ptw']);
                 tuples.push(['PTWRegistry', 'ptwRegistry']);
             }
@@ -507,9 +556,12 @@ const Dashboard = {
         const container = document.getElementById('dashboard-reports-widget');
         if (!container) {
             try {
+                const prefetchClinic = this.dashboardCan('clinic')
+                    ? this.prefetchClinicVisitsForDashboard({ forceRefresh })
+                    : Promise.resolve();
                 await Promise.all([
                     this.prefetchReportStatsSheetsForDashboard({ forceRefresh }),
-                    this.prefetchClinicVisitsForDashboard({ forceRefresh })
+                    prefetchClinic
                 ]);
                 this.updateKPIs();
                 this.updateStats();
@@ -541,14 +593,19 @@ const Dashboard = {
             const dataForRender = AppState.appData;
 
             // إحصائيات الكروت: جلب من الخلفية بالتوازي مع سجل التردد (دون الاعتماد على فتح الموديولات)
+            const prefetchClinic = this.dashboardCan('clinic')
+                ? this.prefetchClinicVisitsForDashboard({ forceRefresh })
+                : Promise.resolve();
             await Promise.all([
                 this.prefetchReportStatsSheetsForDashboard({ forceRefresh }),
-                this.prefetchClinicVisitsForDashboard({ forceRefresh })
+                prefetchClinic
             ]);
 
             // حساب الإحصائيات بشكل تدريجي
             const stats = await this.calculateStatsAsync(AppState.appData || dataForRender);
-            const expiringMedications = await this.getExpiringMedicationsAsync(dataForRender);
+            const expiringMedications = this.dashboardCan('clinic')
+                ? await this.getExpiringMedicationsAsync(dataForRender)
+                : [];
 
             // عرض الكارت مع البيانات
             container.innerHTML = this.renderReportsWidget(stats, expiringMedications);
@@ -558,6 +615,7 @@ const Dashboard = {
 
             // إعداد مستمعي الأحداث
             this.setupReportsWidgetEvents(container);
+            this.applyDashboardLayoutPermissions();
 
             // تحديث كروت تصاريح العمل ومؤشرات KPI الأخرى بعد جلب PTW/PTWRegistry (كانت تُحدَّث قبل الجلب المبكر)
             try {
@@ -678,9 +736,7 @@ const Dashboard = {
         const forceRefresh = opts && opts.forceRefresh === true;
         try {
             if (!AppState || !AppState.appData) return;
-            if (typeof Permissions !== 'undefined' && typeof Permissions.hasAccess === 'function') {
-                if (!Permissions.hasAccess('clinic')) return;
-            }
+            if (!this.dashboardCan('clinic')) return;
             if (typeof Clinic === 'undefined' || typeof Clinic.loadVisitsDataFromBackend !== 'function') return;
             if (typeof GoogleIntegration === 'undefined' || typeof GoogleIntegration.sendRequest !== 'function') return;
 
@@ -772,6 +828,93 @@ const Dashboard = {
     renderReportsWidget(stats, expiringMedications) {
         const today = new Date();
 
+        const statCardSpecs = [
+            { id: 'violations', key: 'violations', labelKey: 'dash.violations', labelFb: 'المخالفات', icon: 'fa-ban', color: 'yellow', module: 'violations' },
+            { id: 'sickLeave', key: 'sickLeave', labelKey: 'dash.sickLeaves', labelFb: 'الإجازات المرضية', icon: 'fa-calendar-times', color: 'blue', module: 'clinic' },
+            { id: 'training', key: 'training', labelKey: 'dash.trainingPrograms', labelFb: 'برامج التدريب', icon: 'fa-graduation-cap', color: 'green', module: 'training' },
+            { id: 'ppe', key: 'ppe', labelKey: 'dash.ppeEquipment', labelFb: 'مهمات الوقاية', icon: 'fa-hard-hat', color: 'orange', module: 'ppe' },
+            { id: 'behaviorMonitoring', key: 'behaviorMonitoring', labelKey: 'dash.behaviorMonitoring', labelFb: 'مراقبة السلوكيات', icon: 'fa-user-check', color: 'purple', module: 'behavior-monitoring' },
+            { id: 'clinicVisits', key: 'clinicVisits', labelKey: 'dash.clinicVisits', labelFb: 'التردد على العيادة', icon: 'fa-hospital', color: 'pink', module: 'clinic' },
+            { id: 'incidents', key: 'incidents', labelKey: 'dash.incidents', labelFb: 'الحوادث', icon: 'fa-exclamation-triangle', color: 'red', module: 'incidents' }
+        ];
+
+        let delay = 0;
+        const statCardsHtml = statCardSpecs
+            .filter((spec) => this.dashboardCan(spec.module))
+            .map((spec) => {
+                const val = typeof stats[spec.key] === 'number' ? stats[spec.key] : 0;
+                const card = this.renderStatCard(spec.id, val, this.t(spec.labelKey, spec.labelFb), spec.icon, spec.color, delay);
+                delay += 100;
+                return card;
+            })
+            .join('');
+
+        const exportIncidents = this.dashboardCan('incidents');
+        const exportTraining = this.dashboardCan('training');
+        const exportFull = typeof Permissions !== 'undefined' && typeof Permissions.isCurrentUserEffectiveAdmin === 'function'
+            ? Permissions.isCurrentUserEffectiveAdmin()
+            : false;
+
+        const exportButtonsHtml = [
+            exportIncidents ? `
+                            <button class="report-export-btn report-export-btn-incidents" data-report-type="incidents">
+                                <div class="btn-content">
+                                    <div class="btn-icon-wrapper">
+                                        <i class="fas fa-file-pdf"></i>
+                                    </div>
+                                    <span class="btn-label">${this.t('dash.incidentsReport', 'تقرير الحوادث')}</span>
+                                </div>
+                                <span class="btn-description">${this.t('dash.incidentsReportDesc', 'تصدير تقرير شامل عن الحوادث')}</span>
+                            </button>` : '',
+            exportTraining ? `
+                            <button class="report-export-btn report-export-btn-training" data-report-type="training">
+                                <div class="btn-content">
+                                    <div class="btn-icon-wrapper">
+                                        <i class="fas fa-file-pdf"></i>
+                                    </div>
+                                    <span class="btn-label">${this.t('dash.trainingReport', 'تقرير التدريب')}</span>
+                                </div>
+                                <span class="btn-description">${this.t('dash.trainingReportDesc', 'تصدير تقرير عن برامج التدريب')}</span>
+                            </button>` : '',
+            exportFull ? `
+                            <button class="report-export-btn report-export-btn-full" data-report-type="full">
+                                <div class="btn-content">
+                                    <div class="btn-icon-wrapper">
+                                        <i class="fas fa-file-pdf"></i>
+                                    </div>
+                                    <span class="btn-label">${this.t('dash.fullReport', 'تقرير شامل')}</span>
+                                </div>
+                                <span class="btn-description">${this.t('dash.fullReportDesc', 'تصدير تقرير شامل لجميع البيانات')}</span>
+                            </button>` : ''
+        ].join('');
+
+        const statsSectionInner = statCardsHtml.trim()
+            ? `<div class="stats-cards-grid" id="reports-stats-grid">${statCardsHtml}</div>`
+            : `<p class="text-gray-500 text-sm px-2">${this.t('dash.noStatsForPermissions', 'لا توجد إحصائيات سريعة مطابقة لصلاحياتك الحالية.')}</p>`;
+
+        const exportSectionHtml = exportButtonsHtml.trim()
+            ? `
+                    <div class="reports-actions-section">
+                        <div class="section-header-row">
+                            <h3>
+                                <i class="fas fa-file-export"></i>
+                                <span>${this.t('dash.exportReports', 'تصدير التقارير')}</span>
+                            </h3>
+                            <span class="info-text">
+                                <i class="fas fa-info-circle"></i>
+                                ${this.t('dash.exportReportsPdfHint', 'يمكنك تصدير التقارير بصيغة PDF')}
+                            </span>
+                        </div>
+                        <div class="reports-export-grid">
+                            ${exportButtonsHtml}
+                        </div>
+                    </div>`
+            : '';
+
+        const medicationsHtml = this.dashboardCan('clinic')
+            ? this.renderMedicationsAlerts(expiringMedications, today)
+            : '';
+
         return `
             <div class="reports-widget-card">
                 
@@ -805,62 +948,13 @@ const Dashboard = {
                                 <span>${this.t('dash.quickStats', 'الإحصائيات السريعة')}</span>
                             </h3>
                         </div>
-                        <div class="stats-cards-grid" id="reports-stats-grid">
-                            ${this.renderStatCard('violations', stats.violations, this.t('dash.violations', 'المخالفات'), 'fa-ban', 'yellow', 0)}
-                            ${this.renderStatCard('sickLeave', stats.sickLeave, this.t('dash.sickLeaves', 'الإجازات المرضية'), 'fa-calendar-times', 'blue', 100)}
-                            ${this.renderStatCard('training', stats.training, this.t('dash.trainingPrograms', 'برامج التدريب'), 'fa-graduation-cap', 'green', 200)}
-                            ${this.renderStatCard('ppe', stats.ppe, this.t('dash.ppeEquipment', 'مهمات الوقاية'), 'fa-hard-hat', 'orange', 300)}
-                            ${this.renderStatCard('behaviorMonitoring', stats.behaviorMonitoring, this.t('dash.behaviorMonitoring', 'مراقبة السلوكيات'), 'fa-user-check', 'purple', 400)}
-                            ${this.renderStatCard('clinicVisits', stats.clinicVisits, this.t('dash.clinicVisits', 'التردد على العيادة'), 'fa-hospital', 'pink', 500)}
-                            ${this.renderStatCard('incidents', stats.incidents, this.t('dash.incidents', 'الحوادث'), 'fa-exclamation-triangle', 'red', 600)}
-                        </div>
+                        ${statsSectionInner}
                     </div>
                     
-                    <!-- قسم أزرار التصدير -->
-                    <div class="reports-actions-section">
-                        <div class="section-header-row">
-                            <h3>
-                                <i class="fas fa-file-export"></i>
-                                <span>${this.t('dash.exportReports', 'تصدير التقارير')}</span>
-                            </h3>
-                            <span class="info-text">
-                                <i class="fas fa-info-circle"></i>
-                                ${this.t('dash.exportReportsPdfHint', 'يمكنك تصدير التقارير بصيغة PDF')}
-                            </span>
-                        </div>
-                        <div class="reports-export-grid">
-                            <button class="report-export-btn report-export-btn-incidents" data-report-type="incidents">
-                                <div class="btn-content">
-                                    <div class="btn-icon-wrapper">
-                                        <i class="fas fa-file-pdf"></i>
-                                    </div>
-                                    <span class="btn-label">${this.t('dash.incidentsReport', 'تقرير الحوادث')}</span>
-                                </div>
-                                <span class="btn-description">${this.t('dash.incidentsReportDesc', 'تصدير تقرير شامل عن الحوادث')}</span>
-                            </button>
-                            <button class="report-export-btn report-export-btn-training" data-report-type="training">
-                                <div class="btn-content">
-                                    <div class="btn-icon-wrapper">
-                                        <i class="fas fa-file-pdf"></i>
-                                    </div>
-                                    <span class="btn-label">${this.t('dash.trainingReport', 'تقرير التدريب')}</span>
-                                </div>
-                                <span class="btn-description">${this.t('dash.trainingReportDesc', 'تصدير تقرير عن برامج التدريب')}</span>
-                            </button>
-                            <button class="report-export-btn report-export-btn-full" data-report-type="full">
-                                <div class="btn-content">
-                                    <div class="btn-icon-wrapper">
-                                        <i class="fas fa-file-pdf"></i>
-                                    </div>
-                                    <span class="btn-label">${this.t('dash.fullReport', 'تقرير شامل')}</span>
-                                </div>
-                                <span class="btn-description">${this.t('dash.fullReportDesc', 'تصدير تقرير شامل لجميع البيانات')}</span>
-                            </button>
-                        </div>
-                    </div>
+                    ${exportSectionHtml}
                     
                     <!-- تنبيهات الأدوية -->
-                    ${this.renderMedicationsAlerts(expiringMedications, today)}
+                    ${medicationsHtml}
                 </div>
             </div>
 
@@ -1276,16 +1370,22 @@ const Dashboard = {
         const container = document.getElementById('employee-report-widget');
         if (!container) return;
 
-        container.innerHTML = `
-            <div class="content-card">
-                <div class="card-header">
-                    <h2 class="card-title">
-                        <i class="fas fa-user-search ml-2"></i>
-                        ${this.t('dash.queryComprehensiveReport', 'الاستعلام - تقرير شامل (موظف / مقاول)')}
-                    </h2>
-                </div>
-                <div class="card-body">
-                    <div class="mb-4" style="display: flex; flex-wrap: wrap; align-items: flex-end; gap: 1.25rem 3rem;">
+        const canEmp = this.dashboardCan('employees');
+        const canCon = this.dashboardCan('contractors');
+        if (!canEmp && !canCon) {
+            container.innerHTML = '';
+            container.hidden = true;
+            return;
+        }
+        container.hidden = false;
+
+        const headerTitle = (canEmp && canCon)
+            ? this.t('dash.queryComprehensiveReport', 'الاستعلام - تقرير شامل (موظف / مقاول)')
+            : canEmp
+                ? this.t('dash.queryEmployeeReport', 'الاستعلام - تقرير موظف')
+                : this.t('dash.queryContractorReport', 'الاستعلام - تقرير مقاول');
+
+        const employeeBlock = canEmp ? `
                         <div class="dashboard-query-block dashboard-query-employee" style="flex: 0 0 auto; min-width: 260px; display: flex; align-items: flex-end; gap: 0.75rem; padding: 1.25rem 1.5rem; border-radius: 12px; background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%); border: 1px solid #93c5fd; box-shadow: 0 1px 3px rgba(59, 130, 246, 0.12);">
                             <div style="flex: 1; min-width: 0;">
                                 <label class="block text-sm font-semibold mb-2" style="color: #1e40af;">
@@ -1306,7 +1406,9 @@ const Dashboard = {
                                     <i class="fas fa-file-pdf ml-2"></i>تصدير PDF
                                 </button>
                             </div>
-                        </div>
+                        </div>` : '';
+
+        const contractorBlock = canCon ? `
                         <div class="dashboard-query-block dashboard-query-contractor" style="flex: 0 0 auto; min-width: 260px; display: flex; align-items: flex-end; gap: 0.75rem; padding: 1.25rem 1.5rem; border-radius: 12px; background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%); border: 1px solid #fcd34d; box-shadow: 0 1px 3px rgba(245, 158, 11, 0.12);">
                             <div style="flex: 1; min-width: 0;">
                                 <label class="block text-sm font-semibold mb-2" style="color: #b45309;">
@@ -1327,7 +1429,20 @@ const Dashboard = {
                                     <i class="fas fa-file-pdf ml-2"></i>تصدير PDF
                                 </button>
                             </div>
-                        </div>
+                        </div>` : '';
+
+        container.innerHTML = `
+            <div class="content-card">
+                <div class="card-header">
+                    <h2 class="card-title">
+                        <i class="fas fa-user-search ml-2"></i>
+                        ${headerTitle}
+                    </h2>
+                </div>
+                <div class="card-body">
+                    <div class="mb-4" style="display: flex; flex-wrap: wrap; align-items: flex-end; gap: 1.25rem 3rem;">
+                        ${employeeBlock}
+                        ${contractorBlock}
                     </div>
                     <div id="employee-report-content" class="hidden">
                         <div id="employee-report-data"></div>
@@ -1339,74 +1454,78 @@ const Dashboard = {
             </div>
         `;
 
-        const searchBtn = document.getElementById('search-employee-btn');
-        const exportBtn = document.getElementById('export-employee-report-btn');
-        const searchInput = document.getElementById('employee-code-search');
+        if (canEmp) {
+            const searchBtn = document.getElementById('search-employee-btn');
+            const exportBtn = document.getElementById('export-employee-report-btn');
+            const searchInput = document.getElementById('employee-code-search');
 
-        if (searchBtn) {
-            searchBtn.addEventListener('click', async () => {
-                const code = searchInput?.value.trim();
-                if (code) {
-                    await this.generateEmployeeReport(code);
-                } else {
-                    Notification.warning('يرجى إدخال الكود الوظيفي');
-                }
-            });
-        }
-
-        if (searchInput) {
-            searchInput.addEventListener('keypress', async (e) => {
-                if (e.key === 'Enter') {
-                    const code = searchInput.value.trim();
+            if (searchBtn) {
+                searchBtn.addEventListener('click', async () => {
+                    const code = searchInput?.value.trim();
                     if (code) {
                         await this.generateEmployeeReport(code);
+                    } else {
+                        Notification.warning('يرجى إدخال الكود الوظيفي');
                     }
-                }
-            });
+                });
+            }
+
+            if (searchInput) {
+                searchInput.addEventListener('keypress', async (e) => {
+                    if (e.key === 'Enter') {
+                        const code = searchInput.value.trim();
+                        if (code) {
+                            await this.generateEmployeeReport(code);
+                        }
+                    }
+                });
+            }
+
+            if (exportBtn) {
+                exportBtn.addEventListener('click', () => {
+                    const code = searchInput?.value.trim();
+                    if (code) {
+                        this.exportEmployeeReportPDF(code);
+                    }
+                });
+            }
         }
 
-        if (exportBtn) {
-            exportBtn.addEventListener('click', () => {
-                const code = searchInput?.value.trim();
-                if (code) {
-                    this.exportEmployeeReportPDF(code);
-                }
-            });
-        }
+        if (canCon) {
+            const contractorSearchBtn = document.getElementById('search-contractor-btn');
+            const contractorExportBtn = document.getElementById('export-contractor-report-btn');
+            const contractorSearchInput = document.getElementById('contractor-code-search');
 
-        const contractorSearchBtn = document.getElementById('search-contractor-btn');
-        const contractorExportBtn = document.getElementById('export-contractor-report-btn');
-        const contractorSearchInput = document.getElementById('contractor-code-search');
-
-        if (contractorSearchBtn) {
-            contractorSearchBtn.addEventListener('click', async () => {
-                const code = contractorSearchInput?.value.trim();
-                if (code) {
-                    await this.generateContractorReport(code);
-                } else {
-                    Notification.warning('يرجى إدخال كود المقاول أو اسم الشركة');
-                }
-            });
-        }
-
-        if (contractorSearchInput) {
-            contractorSearchInput.addEventListener('keypress', async (e) => {
-                if (e.key === 'Enter') {
-                    const code = contractorSearchInput.value.trim();
+            if (contractorSearchBtn) {
+                contractorSearchBtn.addEventListener('click', async () => {
+                    const code = contractorSearchInput?.value.trim();
                     if (code) {
                         await this.generateContractorReport(code);
+                    } else {
+                        Notification.warning('يرجى إدخال كود المقاول أو اسم الشركة');
                     }
-                }
-            });
-        }
+                });
+            }
 
-        if (contractorExportBtn) {
-            contractorExportBtn.addEventListener('click', () => {
-                const code = contractorSearchInput?.value.trim();
-                if (code) {
-                    this.exportContractorReportPDF(code);
-                }
-            });
+            if (contractorSearchInput) {
+                contractorSearchInput.addEventListener('keypress', async (e) => {
+                    if (e.key === 'Enter') {
+                        const code = contractorSearchInput.value.trim();
+                        if (code) {
+                            await this.generateContractorReport(code);
+                        }
+                    }
+                });
+            }
+
+            if (contractorExportBtn) {
+                contractorExportBtn.addEventListener('click', () => {
+                    const code = contractorSearchInput?.value.trim();
+                    if (code) {
+                        this.exportContractorReportPDF(code);
+                    }
+                });
+            }
         }
     },
 
@@ -2828,10 +2947,14 @@ const Dashboard = {
             const closedPTWCount = ptwDataset.filter(p => this.isPTWClosedStatus(p?.status)).length;
             const totalPTWCount = ptwDataset.length;
 
-            const totalItems = incidents.length + nearmiss.length;
-            const resolvedIncidents = incidents.filter(i => i && (i.status === 'مغلق' || i.status === 'محلول')).length;
-            const resolvedNearMiss = nearmiss.filter(n => n && (n.correctiveProposed === false || n.status === 'مغلق' || n.status === 'محلول')).length;
-            const complianceRate = totalItems > 0 ? Math.round(((resolvedIncidents + resolvedNearMiss) / totalItems) * 100) : 100;
+            const canIncDash = this.dashboardCan('incidents');
+            const canNearDash = this.dashboardCan('nearmiss');
+            const incidentsForCompliance = canIncDash ? incidents : [];
+            const nearmissForCompliance = canNearDash ? nearmiss : [];
+            const totalItems = incidentsForCompliance.length + nearmissForCompliance.length;
+            const resolvedIncidents = incidentsForCompliance.filter(i => i && (i.status === 'مغلق' || i.status === 'محلول')).length;
+            const resolvedNearMiss = nearmissForCompliance.filter(n => n && (n.correctiveProposed === false || n.status === 'مغلق' || n.status === 'محلول')).length;
+            const complianceRate = totalItems > 0 ? Math.round(((resolvedIncidents + resolvedNearMiss) / totalItems) * 100) : (canIncDash || canNearDash ? 100 : 0);
             const complianceClass = complianceRate >= 90 ? 'kpi-value text-green-600' : complianceRate >= 70 ? 'kpi-value text-yellow-600' : 'kpi-value text-red-600';
 
             const totalEmployees = employees.filter(e => e && e.active !== false).length || 200;
@@ -2839,22 +2962,24 @@ const Dashboard = {
             const savedTotalHours = localStorage.getItem('hse_total_work_hours');
             const actualTotalHours = savedTotalHours ? parseFloat(savedTotalHours) : totalWorkHours;
 
-            let allRecords = registryData && registryData.length > 0
-                ? registryData.filter(r => r && r.incidentDate)
-                : incidents.filter(i => i && (i.incidentDate || i.date || i.createdAt));
             let daysWithoutInjuryText = 'N/A';
-            if (allRecords.length > 0) {
-                const sortedRecords = allRecords.slice().sort((a, b) => {
-                    const dateA = new Date(a.incidentDate || a.date || a.createdAt);
-                    const dateB = new Date(b.incidentDate || b.date || b.createdAt);
-                    return dateB - dateA;
-                });
-                const lastIncidentDate = new Date(sortedRecords[0].incidentDate || sortedRecords[0].date || sortedRecords[0].createdAt);
-                const today = new Date();
-                today.setHours(0, 0, 0, 0);
-                lastIncidentDate.setHours(0, 0, 0, 0);
-                const daysDiff = Math.floor((today - lastIncidentDate) / (1000 * 60 * 60 * 24));
-                daysWithoutInjuryText = daysDiff >= 0 ? this.formatNumber(daysDiff) : '0';
+            if (canIncDash) {
+                let allRecords = registryData && registryData.length > 0
+                    ? registryData.filter(r => r && r.incidentDate)
+                    : incidents.filter(i => i && (i.incidentDate || i.date || i.createdAt));
+                if (allRecords.length > 0) {
+                    const sortedRecords = allRecords.slice().sort((a, b) => {
+                        const dateA = new Date(a.incidentDate || a.date || a.createdAt);
+                        const dateB = new Date(b.incidentDate || b.date || b.createdAt);
+                        return dateB - dateA;
+                    });
+                    const lastIncidentDate = new Date(sortedRecords[0].incidentDate || sortedRecords[0].date || sortedRecords[0].createdAt);
+                    const today = new Date();
+                    today.setHours(0, 0, 0, 0);
+                    lastIncidentDate.setHours(0, 0, 0, 0);
+                    const daysDiff = Math.floor((today - lastIncidentDate) / (1000 * 60 * 60 * 24));
+                    daysWithoutInjuryText = daysDiff >= 0 ? this.formatNumber(daysDiff) : '0';
+                }
             }
 
             const reportsUpdates = this.getReportsStatisticsUpdates();
@@ -2863,52 +2988,66 @@ const Dashboard = {
             // تنفيذ التحديثات بشكل متزامن في نفس الـ tick لتفادي وميض: تأجيلها إلى rAF يعرض إطاراً بقيم ابتدائية ثم إطاراً محدثاً.
             (function applyAllKPIsSync() {
                 try {
-                    const totalIncidentsEl = document.getElementById('total-incidents');
-                    if (totalIncidentsEl) {
-                        totalIncidentsEl.textContent = self.formatNumber(totalIncidentsCount);
-                        self.applyEnglishNumberFormat(totalIncidentsEl);
+                    if (self.dashboardCan('incidents')) {
+                        const totalIncidentsEl = document.getElementById('total-incidents');
+                        if (totalIncidentsEl) {
+                            totalIncidentsEl.textContent = self.formatNumber(totalIncidentsCount);
+                            self.applyEnglishNumberFormat(totalIncidentsEl);
+                        }
                     }
-                    const activeUsersEl = document.getElementById('active-users');
-                    if (activeUsersEl) {
-                        activeUsersEl.textContent = self.formatNumber(activeUsersCount);
-                        self.applyEnglishNumberFormat(activeUsersEl);
+                    if (self.dashboardCan('users')) {
+                        const activeUsersEl = document.getElementById('active-users');
+                        if (activeUsersEl) {
+                            activeUsersEl.textContent = self.formatNumber(activeUsersCount);
+                            self.applyEnglishNumberFormat(activeUsersEl);
+                        }
                     }
-                    const openPTWCountEl = document.getElementById('open-ptw-count');
-                    if (openPTWCountEl) {
-                        openPTWCountEl.textContent = self.formatNumber(openPTWCount);
-                        self.applyEnglishNumberFormat(openPTWCountEl);
+                    if (self.dashboardCan('ptw')) {
+                        const openPTWCountEl = document.getElementById('open-ptw-count');
+                        if (openPTWCountEl) {
+                            openPTWCountEl.textContent = self.formatNumber(openPTWCount);
+                            self.applyEnglishNumberFormat(openPTWCountEl);
+                        }
+                        const closedPTWCountEl = document.getElementById('closed-ptw-count');
+                        if (closedPTWCountEl) {
+                            closedPTWCountEl.textContent = self.formatNumber(closedPTWCount);
+                            self.applyEnglishNumberFormat(closedPTWCountEl);
+                        }
+                        const totalPTWCountEl = document.getElementById('total-ptw-count');
+                        if (totalPTWCountEl) {
+                            totalPTWCountEl.textContent = self.formatNumber(totalPTWCount);
+                            self.applyEnglishNumberFormat(totalPTWCountEl);
+                        }
+                        const activePTWEl = document.getElementById('active-ptw');
+                        if (activePTWEl) {
+                            activePTWEl.textContent = self.formatNumber(openPTWCount);
+                            self.applyEnglishNumberFormat(activePTWEl);
+                        }
                     }
-                    const closedPTWCountEl = document.getElementById('closed-ptw-count');
-                    if (closedPTWCountEl) {
-                        closedPTWCountEl.textContent = self.formatNumber(closedPTWCount);
-                        self.applyEnglishNumberFormat(closedPTWCountEl);
+                    if (canIncDash || canNearDash) {
+                        const complianceRateEl = document.getElementById('compliance-rate');
+                        if (complianceRateEl) {
+                            complianceRateEl.textContent = complianceRate + '%';
+                            complianceRateEl.className = complianceClass;
+                        }
                     }
-                    const totalPTWCountEl = document.getElementById('total-ptw-count');
-                    if (totalPTWCountEl) {
-                        totalPTWCountEl.textContent = self.formatNumber(totalPTWCount);
-                        self.applyEnglishNumberFormat(totalPTWCountEl);
+                    if (self.dashboardCan('employees')) {
+                        const totalWorkHoursEl = document.getElementById('total-work-hours');
+                        if (totalWorkHoursEl) {
+                            totalWorkHoursEl.textContent = self.formatNumber(actualTotalHours);
+                            self.applyEnglishNumberFormat(totalWorkHoursEl);
+                        }
                     }
-                    const activePTWEl = document.getElementById('active-ptw');
-                    if (activePTWEl) {
-                        activePTWEl.textContent = self.formatNumber(openPTWCount);
-                        self.applyEnglishNumberFormat(activePTWEl);
+                    if (canIncDash) {
+                        const daysWithoutInjuryEl = document.getElementById('days-without-injury');
+                        if (daysWithoutInjuryEl) {
+                            daysWithoutInjuryEl.textContent = daysWithoutInjuryText;
+                            self.applyEnglishNumberFormat(daysWithoutInjuryEl);
+                        }
                     }
-                    const complianceRateEl = document.getElementById('compliance-rate');
-                    if (complianceRateEl) {
-                        complianceRateEl.textContent = complianceRate + '%';
-                        complianceRateEl.className = complianceClass;
+                    if (self.dashboardCan('incidents')) {
+                        self.calculateSafetyMetrics(incidents, employees, registryData);
                     }
-                    const totalWorkHoursEl = document.getElementById('total-work-hours');
-                    if (totalWorkHoursEl) {
-                        totalWorkHoursEl.textContent = self.formatNumber(actualTotalHours);
-                        self.applyEnglishNumberFormat(totalWorkHoursEl);
-                    }
-                    const daysWithoutInjuryEl = document.getElementById('days-without-injury');
-                    if (daysWithoutInjuryEl) {
-                        daysWithoutInjuryEl.textContent = daysWithoutInjuryText;
-                        self.applyEnglishNumberFormat(daysWithoutInjuryEl);
-                    }
-                    self.calculateSafetyMetrics(incidents, employees, registryData);
                     if (reportsUpdates && reportsUpdates.length) {
                         self.applyReportsStatisticsUpdates(reportsUpdates);
                     }
@@ -2930,6 +3069,7 @@ const Dashboard = {
      */
     calculateSafetyMetrics(incidents, employees, registryData = null) {
         try {
+            if (!this.dashboardCan('incidents')) return;
             // التحقق من صحة المدخلات
             if (!Array.isArray(incidents)) incidents = [];
             if (!Array.isArray(employees)) employees = [];
@@ -3039,37 +3179,127 @@ const Dashboard = {
             }
 
             const activities = [];
+            const ad = AppState.appData;
 
-            // جمع الأنشطة من جميع المصادر
-            const incidents = Array.isArray(AppState.appData.incidents) ? AppState.appData.incidents : [];
-            incidents.forEach(incident => {
-                if (!incident) return;
+            if (this.dashboardCan('incidents')) {
+                const incidents = Array.isArray(ad.incidents) ? ad.incidents : [];
+                incidents.forEach((incident) => {
+                    if (!incident) return;
+                    try {
+                        const incidentDate = incident.createdAt || incident.date;
+                        if (!incidentDate) return;
+                        const dateObj = new Date(incidentDate);
+                        if (isNaN(dateObj.getTime())) return;
+                        const incidentType = incident.incidentType || incident.title || incident.type || 'حادث';
+                        activities.push({
+                            type: 'incident',
+                            title: `تم تسجيل حادث: ${incidentType}`,
+                            date: dateObj,
+                            time: this.getTimeAgo(incidentDate),
+                            icon: 'fa-exclamation-triangle',
+                            color: 'text-red-500'
+                        });
+                    } catch (e) {
+                        Utils.safeWarn('⚠️ خطأ في معالجة حادث:', e);
+                    }
+                });
+            }
 
-                try {
-                    // الحصول على تاريخ الحادث (createdAt أو date)
-                    const incidentDate = incident.createdAt || incident.date;
-                    if (!incidentDate) return; // تخطي الحوادث بدون تاريخ
+            if (this.dashboardCan('nearmiss')) {
+                const nearmiss = Array.isArray(ad.nearmiss) ? ad.nearmiss : [];
+                nearmiss.forEach((nm) => {
+                    if (!nm) return;
+                    try {
+                        const d = nm.createdAt || nm.date || nm.reportDate;
+                        if (!d) return;
+                        const dateObj = new Date(d);
+                        if (isNaN(dateObj.getTime())) return;
+                        const title = nm.title || nm.description || nm.type || 'حادث وشيك';
+                        activities.push({
+                            type: 'nearmiss',
+                            title: `حادث وشيك: ${title}`,
+                            date: dateObj,
+                            time: this.getTimeAgo(d),
+                            icon: 'fa-triangle-exclamation',
+                            color: 'text-orange-500'
+                        });
+                    } catch (e) {
+                        Utils.safeWarn('⚠️ خطأ في معالجة حادث وشيك:', e);
+                    }
+                });
+            }
 
-                    // التحقق من صحة التاريخ
-                    const dateObj = new Date(incidentDate);
-                    if (isNaN(dateObj.getTime())) return; // تخطي التواريخ غير الصحيحة
+            if (this.dashboardCan('ptw')) {
+                const ptwList = this.getUnifiedPTWDataset(ad);
+                ptwList.forEach((p) => {
+                    if (!p) return;
+                    try {
+                        const d = p.createdAt || p.startDate || p.issueDate;
+                        if (!d) return;
+                        const dateObj = new Date(d);
+                        if (isNaN(dateObj.getTime())) return;
+                        const label = p.permitNumber || p.workDescription || p.location || 'تصريح عمل';
+                        activities.push({
+                            type: 'ptw',
+                            title: `تصريح عمل: ${label}`,
+                            date: dateObj,
+                            time: this.getTimeAgo(d),
+                            icon: 'fa-id-card',
+                            color: 'text-blue-500'
+                        });
+                    } catch (e) {
+                        Utils.safeWarn('⚠️ خطأ في معالجة تصريح:', e);
+                    }
+                });
+            }
 
-                    // الحصول على نوع أو عنوان الحادث
-                    const incidentType = incident.incidentType || incident.title || incident.type || 'حادث';
+            if (this.dashboardCan('training')) {
+                const training = Array.isArray(ad.training) ? ad.training : [];
+                training.forEach((t) => {
+                    if (!t) return;
+                    try {
+                        const d = t.createdAt || t.startDate || t.date;
+                        if (!d) return;
+                        const dateObj = new Date(d);
+                        if (isNaN(dateObj.getTime())) return;
+                        const name = t.programName || t.courseName || t.title || 'برنامج تدريبي';
+                        activities.push({
+                            type: 'training',
+                            title: `تدريب: ${name}`,
+                            date: dateObj,
+                            time: this.getTimeAgo(d),
+                            icon: 'fa-graduation-cap',
+                            color: 'text-green-500'
+                        });
+                    } catch (e) {
+                        Utils.safeWarn('⚠️ خطأ في معالجة تدريب:', e);
+                    }
+                });
+            }
 
-                    activities.push({
-                        type: 'incident',
-                        title: `تم تسجيل حادث: ${incidentType}`,
-                        date: dateObj, // حفظ التاريخ الفعلي للترتيب
-                        time: this.getTimeAgo(incidentDate),
-                        icon: 'fa-exclamation-triangle',
-                        color: 'text-red-500'
-                    });
-                } catch (e) {
-                    // تجاهل الأخطاء في معالجة حادث واحد والمتابعة
-                    Utils.safeWarn('⚠️ خطأ في معالجة حادث:', e);
-                }
-            });
+            if (this.dashboardCan('violations')) {
+                const violations = Array.isArray(ad.violations) ? ad.violations : [];
+                violations.forEach((v) => {
+                    if (!v) return;
+                    try {
+                        const d = v.createdAt || v.date || v.violationDate;
+                        if (!d) return;
+                        const dateObj = new Date(d);
+                        if (isNaN(dateObj.getTime())) return;
+                        const desc = v.description || v.type || v.category || 'مخالفة';
+                        activities.push({
+                            type: 'violation',
+                            title: `مخالفة: ${desc}`,
+                            date: dateObj,
+                            time: this.getTimeAgo(d),
+                            icon: 'fa-ban',
+                            color: 'text-pink-500'
+                        });
+                    } catch (e) {
+                        Utils.safeWarn('⚠️ خطأ في معالجة مخالفة:', e);
+                    }
+                });
+            }
 
             // ترتيب الأنشطة حسب التاريخ الفعلي (الأحدث أولاً)
             activities.sort((a, b) => {
@@ -3117,6 +3347,16 @@ const Dashboard = {
     async loadUserTasksWidget() {
         const container = document.getElementById('user-tasks-widget');
         if (!container) return;
+
+        if (!this.dashboardCan('user-tasks')) {
+            container.innerHTML = `
+                <div class="empty-state">
+                    <i class="fas fa-lock text-4xl text-gray-300 mb-4"></i>
+                    <p class="text-gray-500">${this.t('dash.noPermissionTasks', 'لا توجد صلاحية لعرض مهام المستخدمين.')}</p>
+                </div>
+            `;
+            return;
+        }
 
         // الحصول على المستخدم الحالي
         const currentUser = AppState.currentUser;
@@ -3352,23 +3592,29 @@ const Dashboard = {
             const training = Array.isArray(data.training) ? data.training : [];
 
             // حساب الإحصائيات الأسبوعية مع معالجة الأخطاء
-            const weekIncidents = incidents.filter(i => {
-                if (!i || !i.createdAt) return false;
-                try {
-                    const incidentDate = new Date(i.createdAt);
-                    return !isNaN(incidentDate.getTime()) && incidentDate > weekAgo;
-                } catch (e) {
-                    return false;
-                }
-            }).length;
+            const weekIncidents = this.dashboardCan('incidents')
+                ? incidents.filter(i => {
+                    if (!i || !i.createdAt) return false;
+                    try {
+                        const incidentDate = new Date(i.createdAt);
+                        return !isNaN(incidentDate.getTime()) && incidentDate > weekAgo;
+                    } catch (e) {
+                        return false;
+                    }
+                }).length
+                : 0;
 
-            const openPTW = ptwDataset.filter(p => !this.isPTWClosedStatus(p?.status)).length;
+            const openPTW = this.dashboardCan('ptw')
+                ? ptwDataset.filter(p => !this.isPTWClosedStatus(p?.status)).length
+                : 0;
 
-            const completedTraining = training.filter(t => {
-                if (!t || !t.status) return false;
-                const status = String(t.status).toLowerCase();
-                return status === 'مكتمل' || status === 'منتهي' || status === 'completed' || status === 'finished';
-            }).length;
+            const completedTraining = this.dashboardCan('training')
+                ? training.filter(t => {
+                    if (!t || !t.status) return false;
+                    const status = String(t.status).toLowerCase();
+                    return status === 'مكتمل' || status === 'منتهي' || status === 'completed' || status === 'finished';
+                }).length
+                : 0;
 
             // تحديث العناصر مع التحقق من وجودها وتطبيق تنسيق الأرقام الإنجليزية
             const weekIncidentsEl = document.getElementById('week-incidents');
@@ -3377,24 +3623,24 @@ const Dashboard = {
             const daysWithoutIncidentEl = document.getElementById('days-without-incident');
 
             // تحديث الأرقام مع تنسيق إنجليزي
-            if (weekIncidentsEl) {
+            if (this.dashboardCan('incidents') && weekIncidentsEl) {
                 weekIncidentsEl.textContent = this.formatNumber(weekIncidents);
                 this.applyEnglishNumberFormat(weekIncidentsEl);
             }
-            if (openPTWEl) {
+            if (this.dashboardCan('ptw') && openPTWEl) {
                 openPTWEl.textContent = this.formatNumber(openPTW);
                 this.applyEnglishNumberFormat(openPTWEl);
             }
-            if (completedTrainingEl) {
+            if (this.dashboardCan('training') && completedTrainingEl) {
                 completedTrainingEl.textContent = this.formatNumber(completedTraining);
                 this.applyEnglishNumberFormat(completedTrainingEl);
             }
-            
+
             // تحديث أيام بدون حوادث
-            if (daysWithoutIncidentEl) {
-                const incidents = Array.isArray(data.incidents) ? data.incidents : [];
+            if (this.dashboardCan('incidents') && daysWithoutIncidentEl) {
+                const incidentsLocal = Array.isArray(data.incidents) ? data.incidents : [];
                 const registryData = Array.isArray(data.incidentsRegistry) ? data.incidentsRegistry : [];
-                const allIncidents = registryData.length > 0 ? registryData : incidents;
+                const allIncidents = registryData.length > 0 ? registryData : incidentsLocal;
                 
                 if (allIncidents.length > 0) {
                     const sortedIncidents = allIncidents
@@ -3439,35 +3685,63 @@ const Dashboard = {
             const ptwCount = ptwDataset.length;
             const audits = Array.isArray(data.audits) ? data.audits : [];
 
-            const totalReports = incidents.length + nearmiss.length + inspections.length +
-                               training.length + violations.length + ptwCount + audits.length;
+            let totalReports = 0;
+            const rows = [];
+
+            if (this.dashboardCan('incidents')) {
+                totalReports += incidents.length;
+                rows.push(['incident-reports-value', incidents.length, 'report']);
+            }
+            if (this.dashboardCan('nearmiss')) {
+                totalReports += nearmiss.length;
+                rows.push(['nearmiss-reports-value', nearmiss.length, 'report']);
+            }
+            if (this.dashboardCan('periodic-inspections')) {
+                totalReports += inspections.length;
+                rows.push(['inspections-reports-value', inspections.length, 'report']);
+            }
+            if (this.dashboardCan('training')) {
+                totalReports += training.length;
+                rows.push(['training-sessions-value', training.length, 'report']);
+            }
+            if (this.dashboardCan('violations')) {
+                totalReports += violations.length;
+                rows.push(['violations-value', violations.length, 'report']);
+            }
+            if (this.dashboardCan('contractors')) {
+                const approvedContractors = Array.isArray(data.approvedContractors) ? data.approvedContractors : [];
+                rows.push(['approved-contractors-value', this.getUniqueApprovedContractorsCount(approvedContractors), 'report']);
+            }
+            if (this.dashboardCan('ptw')) {
+                totalReports += ptwCount;
+                rows.push(['ptw-reports-value', ptwCount, 'report']);
+            }
+            if (this.dashboardCan('iso')) {
+                totalReports += audits.length;
+                rows.push(['audits-value', audits.length, 'report']);
+            }
+
+            if (this.anyReportsStatisticVisibleForDashboard()) {
+                rows.unshift(['total-reports-value', totalReports, 'report']);
+            }
 
             const resourceConsumption = data.resourceConsumption || {};
             const electricityData = Array.isArray(resourceConsumption.electricity) ? resourceConsumption.electricity : [];
             const waterData = Array.isArray(resourceConsumption.water) ? resourceConsumption.water : [];
             const gasData = Array.isArray(resourceConsumption.gas) ? resourceConsumption.gas : [];
 
-            const electricityTotal = electricityData.reduce((sum, record) => sum + (parseFloat(record.totalConsumption) || 0), 0);
-            const waterTotal = waterData.reduce((sum, record) => sum + (parseFloat(record.totalConsumption) || 0), 0);
-            const gasTotal = gasData.reduce((sum, record) => sum + (parseFloat(record.totalConsumption) || 0), 0);
+            if (this.dashboardCan('sustainability')) {
+                const electricityTotal = electricityData.reduce((sum, record) => sum + (parseFloat(record.totalConsumption) || 0), 0);
+                const waterTotal = waterData.reduce((sum, record) => sum + (parseFloat(record.totalConsumption) || 0), 0);
+                const gasTotal = gasData.reduce((sum, record) => sum + (parseFloat(record.totalConsumption) || 0), 0);
+                rows.push(
+                    ['electricity-consumption-value', electricityTotal, 'consumption'],
+                    ['water-consumption-value', waterTotal, 'consumption'],
+                    ['gas-consumption-value', gasTotal, 'consumption']
+                );
+            }
 
-            const approvedContractors = Array.isArray(data.approvedContractors) ? data.approvedContractors : [];
-            const approvedContractorsCount = this.getUniqueApprovedContractorsCount(approvedContractors);
-
-            return [
-                ['total-reports-value', totalReports, 'report'],
-                ['incident-reports-value', incidents.length, 'report'],
-                ['nearmiss-reports-value', nearmiss.length, 'report'],
-                ['inspections-reports-value', inspections.length, 'report'],
-                ['training-sessions-value', training.length, 'report'],
-                ['violations-value', violations.length, 'report'],
-                ['approved-contractors-value', approvedContractorsCount, 'report'],
-                ['ptw-reports-value', ptwCount, 'report'],
-                ['audits-value', audits.length, 'report'],
-                ['electricity-consumption-value', electricityTotal, 'consumption'],
-                ['water-consumption-value', waterTotal, 'consumption'],
-                ['gas-consumption-value', gasTotal, 'consumption']
-            ];
+            return rows;
         } catch (error) {
             Utils.safeWarn('⚠️ خطأ في حساب تحديثات التقارير والإحصائيات:', error);
             return null;
@@ -3685,50 +3959,64 @@ const Dashboard = {
      * تحميل الرسوم البيانية التفاعلية
      */
     loadCharts() {
-        const container = document.getElementById('dashboard-charts');
+        let container = document.getElementById('dashboard-charts');
         if (!container) {
-            // إنشاء قسم الرسوم البيانية إذا لم يكن موجوداً
             const dashboardSection = document.getElementById('dashboard-section');
             if (dashboardSection) {
                 const chartsDiv = document.createElement('div');
                 chartsDiv.id = 'dashboard-charts';
                 chartsDiv.className = 'mt-6';
                 dashboardSection.appendChild(chartsDiv);
+                container = chartsDiv;
             } else {
                 return;
             }
         }
 
-        const data = AppState.appData;
+        const showIncidents = this.dashboardCan('incidents');
+        const showPtw = this.dashboardCan('ptw');
+        const showTraining = this.dashboardCan('training');
+        if (!showIncidents && !showPtw && !showTraining) {
+            container.innerHTML = '';
+            return;
+        }
+
+        const data = AppState.appData || {};
         const now = new Date();
         const last30Days = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
 
-        // بيانات الرسوم البيانية
-        const incidentsData = (data.incidents || []).filter(i => new Date(i.createdAt || i.date) >= last30Days);
-        const ptwData = (data.ptw || []).filter(p => new Date(p.createdAt || p.startDate) >= last30Days);
-        const trainingData = (data.training || []).filter(t => new Date(t.createdAt || t.startDate) >= last30Days);
-
-        // تجميع البيانات حسب التاريخ
         const incidentsByDate = {};
         const ptwByDate = {};
         const trainingByDate = {};
 
-        incidentsData.forEach(i => {
-            const date = new Date(i.createdAt || i.date).toLocaleDateString('ar-SA');
-            incidentsByDate[date] = (incidentsByDate[date] || 0) + 1;
-        });
+        if (showIncidents) {
+            const incidentsData = (data.incidents || []).filter(i => new Date(i.createdAt || i.date) >= last30Days);
+            incidentsData.forEach(i => {
+                const date = new Date(i.createdAt || i.date).toLocaleDateString('ar-SA');
+                incidentsByDate[date] = (incidentsByDate[date] || 0) + 1;
+            });
+        }
 
-        ptwData.forEach(p => {
-            const date = new Date(p.createdAt || p.startDate).toLocaleDateString('ar-SA');
-            ptwByDate[date] = (ptwByDate[date] || 0) + 1;
-        });
+        if (showPtw) {
+            const ptwData = (data.ptw || []).filter(p => new Date(p.createdAt || p.startDate) >= last30Days);
+            ptwData.forEach(p => {
+                const date = new Date(p.createdAt || p.startDate).toLocaleDateString('ar-SA');
+                ptwByDate[date] = (ptwByDate[date] || 0) + 1;
+            });
+        }
 
-        trainingData.forEach(t => {
-            const date = new Date(t.createdAt || t.startDate).toLocaleDateString('ar-SA');
-            trainingByDate[date] = (trainingByDate[date] || 0) + 1;
-        });
+        if (showTraining) {
+            const trainingData = (data.training || []).filter(t => new Date(t.createdAt || t.startDate) >= last30Days);
+            trainingData.forEach(t => {
+                const date = new Date(t.createdAt || t.startDate).toLocaleDateString('ar-SA');
+                trainingByDate[date] = (trainingByDate[date] || 0) + 1;
+            });
+        }
 
-        const chartsHTML = `
+        const sections = [];
+
+        if (showIncidents) {
+            sections.push(`
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
                 <div class="content-card">
                     <div class="card-header">
@@ -3756,8 +4044,12 @@ const Dashboard = {
                         </div>
                     </div>
                 </div>
-            </div>
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            </div>`);
+        }
+
+        const row2 = [];
+        if (showPtw) {
+            row2.push(`
                 <div class="content-card">
                     <div class="card-header">
                         <h2 class="card-title">
@@ -3770,7 +4062,10 @@ const Dashboard = {
                             ${this.renderBarChart(ptwByDate, 'تصاريح العمل')}
                         </div>
                     </div>
-                </div>
+                </div>`);
+        }
+        if (showTraining) {
+            row2.push(`
                 <div class="content-card">
                     <div class="card-header">
                         <h2 class="card-title">
@@ -3783,13 +4078,14 @@ const Dashboard = {
                             ${this.renderBarChart(trainingByDate, 'برامج التدريب')}
                         </div>
                     </div>
-                </div>
-            </div>
-        `;
+                </div>`);
+        }
+        if (row2.length > 0) {
+            sections.push(`<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">${row2.join('')}</div>`);
+        }
 
-        container.innerHTML = chartsHTML;
+        container.innerHTML = sections.join('');
 
-        // إنشاء رسم بياني تاعلي بسيط باستخدام CSS
         setTimeout(() => {
             this.renderSimpleCharts();
         }, 100);
@@ -3886,15 +4182,6 @@ const Dashboard = {
         if (typeof Utils !== 'undefined' && Utils.safeLog) {
             Utils.safeLog('الرسوم البيانية جاهزة');
         }
-    },
-
-    /**
-     * تحديث بيانات الحوادث في Dashboard
-     * يتم استدعاؤها عند إضافة/تحديث/حذف حادث
-     */
-    refreshIncidents() {
-        // تحديث KPIs التي تعتمد على بيانات الحوادث والسجل
-        this.updateKPIs();
     }
 };
 // تصدير Dashboard للتوافق مع الكود القديم

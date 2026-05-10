@@ -10859,7 +10859,7 @@
                             role="group"
                             aria-label="مؤشرات الأداء الرئيسية"
                         >
-                            <div class="kpi-card kpi-danger" role="article">
+                            <div class="kpi-card kpi-danger" role="article" data-dash-scope="incidents">
                                 <div class="kpi-icon" aria-hidden="true">
                                     <i class="fas fa-exclamation-triangle"></i>
                                 </div>
@@ -10886,7 +10886,7 @@
                                 </div>
                             </div>
 
-                            <div class="kpi-card kpi-success" role="article">
+                            <div class="kpi-card kpi-success" role="article" data-dash-scope="users">
                                 <div class="kpi-icon" aria-hidden="true">
                                     <i class="fas fa-users"></i>
                                 </div>
@@ -10916,6 +10916,7 @@
                             <div
                                 class="kpi-card kpi-info"
                                 role="article"
+                                data-dash-scope="ptw"
                                 style="grid-column: span 2; min-height: 180px"
                             >
                                 <div class="kpi-icon" aria-hidden="true">
@@ -11073,7 +11074,7 @@
                                 </div>
                             </div>
 
-                            <div class="kpi-card kpi-primary" role="article">
+                            <div class="kpi-card kpi-primary" role="article" data-dash-scope="incidents,nearmiss">
                                 <div class="kpi-icon" aria-hidden="true">
                                     <i class="fas fa-check-circle"></i>
                                 </div>
@@ -11100,7 +11101,7 @@
                                 </div>
                             </div>
 
-                            <div class="kpi-card kpi-purple" role="article">
+                            <div class="kpi-card kpi-purple" role="article" data-dash-scope="employees">
                                 <div class="kpi-icon" aria-hidden="true">
                                     <i class="fas fa-clock"></i>
                                 </div>
@@ -11127,7 +11128,7 @@
                                 </div>
                             </div>
 
-                            <div class="kpi-card kpi-success" role="article">
+                            <div class="kpi-card kpi-success" role="article" data-dash-scope="incidents">
                                 <div class="kpi-icon" aria-hidden="true">
                                     <i class="fas fa-calendar-times"></i>
                                 </div>
@@ -11157,7 +11158,7 @@
                         <!-- End of KPI Grid -->
 
                         <!-- Safety Metrics -->
-                        <div class="content-card safety-metrics-section">
+                        <div class="content-card safety-metrics-section" data-dash-scope="incidents">
                             <div class="card-header">
                                 <h2 class="card-title">
                                     <i class="fas fa-chart-line ml-2"></i>
@@ -11359,7 +11360,7 @@
                             <div class="card-body">
                                 <div class="metrics-grid-container">
                                     <!-- Total Reports -->
-                                    <div class="metric-card-frame kpi-indigo">
+                                    <div class="metric-card-frame kpi-indigo" data-stat-id="total-reports">
                                         <div>
                                             <div
                                                 class="flex items-center justify-between mb-2 w-full"
@@ -11967,10 +11968,10 @@
                         <div class="content-card additional-reports-section">
                             <div class="card-body" style="padding: 0">
                                 <!-- Employee Report Widget -->
-                                <div id="employee-report-widget"></div>
+                                <div id="employee-report-widget" data-dash-scope="employees,contractors"></div>
 
                                 <!-- Charts Section -->
-                                <div id="dashboard-charts"></div>
+                                <div id="dashboard-charts" data-dash-scope="incidents,ptw,training"></div>
 
                                 <!-- Reports Widget -->
                                 <div id="dashboard-reports-widget"></div>
@@ -11980,7 +11981,7 @@
 
                         <!-- Content Grid - Recent Activity, Tasks, Quick Stats -->
                         <div class="content-grid">
-                            <div class="content-card">
+                            <div class="content-card" data-dash-scope="incidents,nearmiss,ptw,training,violations">
                                 <div class="card-header">
                                     <h2 class="card-title">
                                         <i class="fas fa-clock ml-2"></i>
@@ -12004,7 +12005,7 @@
                                 </div>
                             </div>
 
-                            <div class="content-card">
+                            <div class="content-card" data-dash-scope="user-tasks">
                                 <div class="card-header">
                                     <h2 class="card-title">
                                         <i class="fas fa-tasks ml-2"></i>
@@ -12036,7 +12037,7 @@
                                 </div>
                             </div>
 
-                            <div class="content-card">
+                            <div class="content-card" data-dash-scope="incidents,ptw,training">
                                 <div class="card-header">
                                     <h2 class="card-title">
                                         <i class="fas fa-chart-line ml-2"></i>
@@ -12045,7 +12046,7 @@
                                 </div>
                                 <div class="card-body">
                                     <div class="stats-grid">
-                                        <div class="stat-item">
+                                        <div class="stat-item" data-dash-scope="incidents">
                                             <span class="stat-label" data-i18n="dash.thisWeekIncidents"
                                                 >حوادث هذا الأسبوع</span>
                                             <span
@@ -12054,7 +12055,7 @@
                                                 >0</span
                                             >
                                         </div>
-                                        <div class="stat-item">
+                                        <div class="stat-item" data-dash-scope="ptw">
                                             <span class="stat-label" data-i18n="dash.openPermits"
                                                 >تصاريح مفتوحة</span>
                                             <span
@@ -12063,7 +12064,7 @@
                                                 >0</span
                                             >
                                         </div>
-                                        <div class="stat-item">
+                                        <div class="stat-item" data-dash-scope="training">
                                             <span class="stat-label" data-i18n="dash.completedTrainings"
                                                 >تدريبات مكتملة</span>
                                             <span
@@ -12072,7 +12073,7 @@
                                                 >0</span
                                             >
                                         </div>
-                                        <div class="stat-item">
+                                        <div class="stat-item" data-dash-scope="incidents">
                                             <span class="stat-label" data-i18n="dash.daysWithoutIncidents"
                                                 >أيام بدون حوادث</span>
                                             <span
