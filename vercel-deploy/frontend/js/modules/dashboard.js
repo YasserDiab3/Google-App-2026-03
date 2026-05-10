@@ -2952,42 +2952,88 @@ const Dashboard = {
     },
 
     /**
-     * إجمالي ساعات العمل المعروض في لوحة التحكم ومؤشرات FA/TRIR:
-     * أولوية لـ localStorage `hse_total_work_hours` إن وُجد ورقمًا صالحًا؛ وإلا تقدير من الموظفين النشطين.
+     * هل يُضمَّن تقدير عمالة المقاولين (من حقول رقمية في سجل المقاول المعتمد) في إجمالي الساعات وTIR؟
      */
-    getDashboardTotalWorkHours(employees) {
-        const rawSaved = localStorage.getItem('hse_total_work_hours');
+    workHoursIncludeContractors() {
+        const v = typeof localStorage !== 'undefined' ? localStorage.getItem('hse_work_hours_include_contractors') : null;
+        if (v === null || String(v).trim() === '') return true;
+        return v !== '0' && String(v).toLowerCase() !== 'false' && String(v).toLowerCase() !== 'no';
+    },
+
+    /**
+     * إجمالي ساعات العمل المعروض في لوحة التحكم ومؤشرات FA/TRIR:
+     * أولوية لـ localStorage `hse_total_work_hours` إن وُجد ورقمًا صالحًا؛ وإلا تقدير من الموظفين النشطين (+ عمالة مقاولين عند التفعيل والبيانات).
+     */
+    getDashboardTotalWorkHours(appData) {
+        const rawSaved = typeof localStorage !== 'undefined' ? localStorage.getItem('hse_total_work_hours') : null;
         if (rawSaved != null && String(rawSaved).trim() !== '') {
             const parsed = parseFloat(String(rawSaved).replace(/,/g, ''));
             if (Number.isFinite(parsed) && parsed > 0) return parsed;
         }
-        return this._computeEstimatedAnnualWorkHoursTotal(employees);
+        const data = appData && typeof appData === 'object' ? appData : {};
+        const employees = Array.isArray(data.employees) ? data.employees : [];
+        const contractors = Array.isArray(data.approvedContractors) ? data.approvedContractors : [];
+        return this._computeEstimatedAnnualWorkHoursTotal(employees, contractors);
+    },
+
+    _parseNumWorkHours(v) {
+        if (v === undefined || v === null || v === '') return NaN;
+        const x = parseFloat(String(v).replace(/,/g, ''));
+        return Number.isFinite(x) ? x : NaN;
+    },
+
+    /** ساعات العمل السنوية الافتراضية لكل فرد (موظف أو عامل مقاول) من الإعدادات المحفوظة */
+    _getDashboardDefaultAnnualHoursPerCapita() {
+        const hpd = this._parseNumWorkHours(typeof localStorage !== 'undefined' ? localStorage.getItem('hse_hours_per_day') : null);
+        const dpm = this._parseNumWorkHours(typeof localStorage !== 'undefined' ? localStorage.getItem('hse_work_days_per_month') : null);
+        const mo = this._parseNumWorkHours(typeof localStorage !== 'undefined' ? localStorage.getItem('hse_work_months_per_year') : null);
+        const hoursPerDay = !isNaN(hpd) && hpd > 0 ? hpd : 8;
+        const workDaysPerMonth = !isNaN(dpm) && dpm > 0 ? dpm : 22;
+        const monthsPerYear = !isNaN(mo) && mo > 0 ? mo : 12;
+        return hoursPerDay * workDaysPerMonth * monthsPerYear;
     },
 
     /**
-     * تقدير إجمالي الساعات السنوية: جمع حقول صريحة إن وُجدت لكل موظف، وإلا القيمة الافتراضية لكل موظف.
-     * يمكن ضبط الافتراضي عبر localStorage: hse_hours_per_day، hse_work_days_per_month، hse_work_months_per_year.
+     * جمع أعداد العمالة من سجلات المقاولين المعتمدين إن وُجدت حقول رقمية (وإلا 0 للسجل).
      */
-    _computeEstimatedAnnualWorkHoursTotal(employees) {
+    _sumContractorWorkforceHeadcount(approvedContractors) {
+        if (!this.workHoursIncludeContractors()) return 0;
+        if (!Array.isArray(approvedContractors) || approvedContractors.length === 0) return 0;
+        const keys = ['workerCount', 'workersCount', 'laborCount', 'manpower', 'employeesCount', 'totalWorkers', 'averageWorkers', 'contractorWorkers', 'numberOfWorkers', 'expectedWorkers', 'workforceCount'];
+        let sum = 0;
+        approvedContractors.forEach((rec) => {
+            if (!rec || typeof rec !== 'object') return;
+            if (rec.active === false || rec.deactivated === true) return;
+            let found = NaN;
+            for (let i = 0; i < keys.length; i++) {
+                const x = this._parseNumWorkHours(rec[keys[i]]);
+                if (!isNaN(x) && x > 0) {
+                    found = x;
+                    break;
+                }
+            }
+            if (!isNaN(found)) sum += Math.round(found);
+        });
+        return sum;
+    },
+
+    /**
+     * تقدير إجمالي الساعات السنوية: موظفون نشطون (+ حقول سنوية صريحة إن وُجدت) + عمالة مقاولين × نفس معادلة الساعات الافتراضية لكل فرد.
+     */
+    _computeEstimatedAnnualWorkHoursTotal(employees, approvedContractors) {
         const list = Array.isArray(employees) ? employees.filter((e) => e && e.active !== false) : [];
         const n = list.length;
-        if (n === 0) return 0;
-
-        const parseNum = (v) => {
-            if (v === undefined || v === null || v === '') return NaN;
-            const x = parseFloat(String(v).replace(/,/g, ''));
-            return Number.isFinite(x) ? x : NaN;
-        };
+        const defaultAnnualPerCapita = this._getDashboardDefaultAnnualHoursPerCapita();
 
         const annualFromEmployee = (e) => {
             const annualKeys = ['annualWorkHours', 'yearlyWorkHours', 'workHoursYear', 'annualHours', 'estimatedAnnualHours', 'totalAnnualHours'];
             for (let i = 0; i < annualKeys.length; i++) {
-                const x = parseNum(e[annualKeys[i]]);
+                const x = this._parseNumWorkHours(e[annualKeys[i]]);
                 if (!isNaN(x) && x > 0) return x;
             }
-            const monthly = parseNum(e.monthlyHours ?? e.monthlyWorkHours ?? e.workHoursMonth);
+            const monthly = this._parseNumWorkHours(e.monthlyHours ?? e.monthlyWorkHours ?? e.workHoursMonth);
             if (!isNaN(monthly) && monthly > 0) return monthly * 12;
-            const weekly = parseNum(e.weeklyHours ?? e.hoursPerWeek ?? e.workHoursWeek);
+            const weekly = this._parseNumWorkHours(e.weeklyHours ?? e.hoursPerWeek ?? e.workHoursWeek);
             if (!isNaN(weekly) && weekly > 0) return weekly * 52;
             return null;
         };
@@ -3002,16 +3048,16 @@ const Dashboard = {
             }
         });
 
-        const hpd = parseNum(localStorage.getItem('hse_hours_per_day'));
-        const dpm = parseNum(localStorage.getItem('hse_work_days_per_month'));
-        const mo = parseNum(localStorage.getItem('hse_work_months_per_year'));
-        const hoursPerDay = !isNaN(hpd) && hpd > 0 ? hpd : 8;
-        const workDaysPerMonth = !isNaN(dpm) && dpm > 0 ? dpm : 22;
-        const monthsPerYear = !isNaN(mo) && mo > 0 ? mo : 12;
-        const defaultAnnualPerEmployee = hoursPerDay * workDaysPerMonth * monthsPerYear;
+        let employeeHoursPart = 0;
+        if (n > 0) {
+            if (withExplicit === 0) employeeHoursPart = n * defaultAnnualPerCapita;
+            else employeeHoursPart = sumExplicit + (n - withExplicit) * defaultAnnualPerCapita;
+        }
 
-        if (withExplicit === 0) return Math.round(n * defaultAnnualPerEmployee);
-        return Math.round(sumExplicit + (n - withExplicit) * defaultAnnualPerEmployee);
+        const contractorSlots = this._sumContractorWorkforceHeadcount(approvedContractors);
+        const contractorHoursPart = contractorSlots * defaultAnnualPerCapita;
+
+        return Math.round(employeeHoursPart + contractorHoursPart);
     },
 
     /**
@@ -3067,10 +3113,7 @@ const Dashboard = {
             const complianceRate = totalItems > 0 ? Math.round(((resolvedIncidents + resolvedNearMiss) / totalItems) * 100) : (canIncDash || canNearDash ? 100 : 0);
             const complianceClass = complianceRate >= 90 ? 'kpi-value text-green-600' : complianceRate >= 70 ? 'kpi-value text-yellow-600' : 'kpi-value text-red-600';
 
-            const totalEmployees = employees.filter(e => e && e.active !== false).length || 200;
-            const totalWorkHours = totalEmployees * 8 * 22 * 12;
-            const savedTotalHours = localStorage.getItem('hse_total_work_hours');
-            const actualTotalHours = savedTotalHours ? parseFloat(savedTotalHours) : totalWorkHours;
+            const actualTotalHours = this.getDashboardTotalWorkHours(data);
 
             let daysWithoutInjuryText = 'N/A';
             if (canIncDash) {
@@ -3196,7 +3239,7 @@ const Dashboard = {
                         }
                     }
                     if (self.dashboardCan('incidents')) {
-                        self.calculateSafetyMetrics(incidents, employees, registryData);
+                        self.calculateSafetyMetrics(incidents, employees, registryData, data);
                     }
                     if (reportsUpdates && reportsUpdates.length) {
                         self.applyReportsStatisticsUpdates(reportsUpdates);
@@ -3217,7 +3260,7 @@ const Dashboard = {
      * LTI, TIR, FA, TRIR
      * يستخدم سجل الحوادث للحصول على دقة أعلى في الحسابات
      */
-    calculateSafetyMetrics(incidents, employees, registryData = null) {
+    calculateSafetyMetrics(incidents, employees, registryData = null, appData = null) {
         try {
             if (!this.dashboardCan('incidents')) return;
             // التحقق من صحة المدخلات
@@ -3225,11 +3268,15 @@ const Dashboard = {
             if (!Array.isArray(employees)) employees = [];
             if (!Array.isArray(registryData)) registryData = [];
 
-            // إجمالي ساعات العمل (يمكن تحديثه من الإعدادات)
-            // افتراضياً: 200 موظف × 8 ساعات × 22 يوم عمل × 12 شهر = 4,224,000 ساعة سنوياً
-            // أو يمكن حسابها بناءً على عدد الموظفين العلي
+            const dataBundle = appData && typeof appData === 'object'
+                ? appData
+                : (typeof AppState !== 'undefined' && AppState.appData ? AppState.appData : {});
+            const approvedContractors = Array.isArray(dataBundle.approvedContractors) ? dataBundle.approvedContractors : [];
+
             const totalEmployees = employees.filter((e) => e && e.active !== false).length;
-            const actualTotalHours = this.getDashboardTotalWorkHours(employees);
+            const contractorWorkforce = this._sumContractorWorkforceHeadcount(approvedContractors);
+            const workforceForTir = totalEmployees + contractorWorkforce;
+            const actualTotalHours = this.getDashboardTotalWorkHours(dataBundle);
 
             if (!Number.isFinite(actualTotalHours) || actualTotalHours < 0) {
                 Utils.safeWarn('⚠️ إجمالي ساعات العمل غير صحيح:', actualTotalHours);
@@ -3254,7 +3301,7 @@ const Dashboard = {
             const totalIncidentsCount = (registryData && registryData.length > 0)
                 ? registryData.length
                 : incidents.length;
-            const tir = totalEmployees > 0 ? ((totalIncidentsCount / totalEmployees) * 100).toFixed(2) : '0.00';
+            const tir = workforceForTir > 0 ? ((totalIncidentsCount / workforceForTir) * 100).toFixed(2) : '0.00';
             const hoursForRates = actualTotalHours > 0 ? actualTotalHours : 0;
             const fa = hoursForRates > 0 ? ((totalIncidentsCount * 1000000) / hoursForRates).toFixed(2) : '0.00';
             const trir = hoursForRates > 0 ? ((totalIncidentsCount * 200000) / hoursForRates).toFixed(2) : '0.00';
@@ -3285,7 +3332,9 @@ const Dashboard = {
                     FA: fa,
                     TRIR: trir,
                     totalWorkHours: actualTotalHours,
-                    totalEmployees: totalEmployees,
+                    totalEmployees,
+                    contractorWorkforceForHours: contractorWorkforce,
+                    workforceForTir,
                     totalIncidents: totalIncidentsCount,
                     usingRegistry: (registryData && registryData.length > 0)
                 });

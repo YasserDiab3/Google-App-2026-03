@@ -666,6 +666,47 @@ const Settings = {
                                 </div>
                             </div>
                         </div>
+
+                        <div class="content-card mt-6">
+                            <div class="card-header">
+                                <h2 class="card-title"><i class="fas fa-clock ml-2"></i>حساب إجمالي ساعات العمل — لوحة التحكم</h2>
+                            </div>
+                            <div class="card-body space-y-4">
+                                <p class="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
+                                    يُستخدم لكارت <strong>عدد ساعات العمل</strong> ومؤشّري <strong>FA</strong> و<strong>TRIR</strong>، وحقل <strong>TIR</strong> (لكل 100 عامل/workforce).
+                                    إن لم يُملأ «إجمالي الساعات اليدوي» يُقدَّر الإجمالي من: موظفون نشطون × (ساعات/يوم × أيام/شهر × أشهر/سنة) مع إضافة عمالة المقاولين إن فُعّل الخيار ووُجدت أعداد في سجل المقاول المعتمد.
+                                </p>
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div class="md:col-span-2">
+                                        <label class="block text-sm font-semibold text-gray-700 mb-2" for="wh-total-override">إجمالي ساعات العمل (يدوي — يتجاوز التقدير)</label>
+                                        <input type="text" id="wh-total-override" class="form-input" placeholder="اتركه فارغاً لاستخدام التقدير التلقائي" inputmode="decimal" autocomplete="off" />
+                                        <p class="text-xs text-gray-500 mt-1">يُحفظ في التخزين المحلي تحت المفتاح <code class="text-xs">hse_total_work_hours</code>. فارغ = حذف اليدوي.</p>
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-semibold text-gray-700 mb-2" for="wh-hours-per-day">ساعات العمل يومياً</label>
+                                        <input type="number" id="wh-hours-per-day" class="form-input" min="1" max="24" step="0.25" placeholder="8" />
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-semibold text-gray-700 mb-2" for="wh-days-per-month">أيام العمل في الشهر</label>
+                                        <input type="number" id="wh-days-per-month" class="form-input" min="1" max="31" step="1" placeholder="22" />
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-semibold text-gray-700 mb-2" for="wh-months-per-year">عدد الأشهر في السنة (للتقدير)</label>
+                                        <input type="number" id="wh-months-per-year" class="form-input" min="1" max="12" step="1" placeholder="12" />
+                                    </div>
+                                    <div class="flex items-center pt-6">
+                                        <input type="checkbox" id="wh-include-contractors" class="form-checkbox h-5 w-5" />
+                                        <label for="wh-include-contractors" class="mr-2 text-sm font-medium text-gray-800">إضافة عمالة المقاولين المعتمدين (من حقول رقمية في السجل إن وُجدت)</label>
+                                    </div>
+                                </div>
+                                <p class="text-xs text-gray-500">
+                                    المفاتيح: <code>hse_hours_per_day</code>، <code>hse_work_days_per_month</code>، <code>hse_work_months_per_year</code>، <code>hse_work_hours_include_contractors</code>.
+                                </p>
+                                <button type="button" id="save-work-hours-settings-btn" class="btn-primary">
+                                    <i class="fas fa-save ml-2"></i>حفظ إعدادات ساعات العمل
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 </div>
                 
@@ -1551,6 +1592,81 @@ const Settings = {
             Utils.safeWarn('⚠️ DataManager غير متاح - لم يتم حفظ البيانات');
         }
                     Notification.success('تم حفظ إعدادات التاريخ بنجاح');
+                });
+            }
+
+            // إعدادات ساعات العمل — لوحة التحكم (تُخزَّن في localStorage)
+            const whTotalEl = document.getElementById('wh-total-override');
+            const whDayEl = document.getElementById('wh-hours-per-day');
+            const whDpmEl = document.getElementById('wh-days-per-month');
+            const whMoEl = document.getElementById('wh-months-per-year');
+            const whIncEl = document.getElementById('wh-include-contractors');
+            const saveWorkHoursBtn = document.getElementById('save-work-hours-settings-btn');
+
+            const fillWorkHoursSettingsInputs = () => {
+                try {
+                    if (whTotalEl) whTotalEl.value = localStorage.getItem('hse_total_work_hours') || '';
+                    if (whDayEl) whDayEl.value = localStorage.getItem('hse_hours_per_day') || '';
+                    if (whDpmEl) whDpmEl.value = localStorage.getItem('hse_work_days_per_month') || '';
+                    if (whMoEl) whMoEl.value = localStorage.getItem('hse_work_months_per_year') || '';
+                    if (whIncEl) {
+                        const v = localStorage.getItem('hse_work_hours_include_contractors');
+                        if (v === null || String(v).trim() === '') {
+                            whIncEl.checked = true;
+                        } else {
+                            whIncEl.checked = v !== '0' && String(v).toLowerCase() !== 'false' && String(v).toLowerCase() !== 'no';
+                        }
+                    }
+                } catch (e) {
+                    if (typeof Utils !== 'undefined' && Utils.safeWarn) Utils.safeWarn('⚠️ تعبئة حقول ساعات العمل:', e);
+                }
+            };
+            fillWorkHoursSettingsInputs();
+
+            if (saveWorkHoursBtn) {
+                saveWorkHoursBtn.addEventListener('click', () => {
+                    try {
+                        const totRaw = whTotalEl && String(whTotalEl.value).trim();
+                        if (!totRaw) {
+                            localStorage.removeItem('hse_total_work_hours');
+                        } else {
+                            const n = parseFloat(totRaw.replace(/,/g, ''));
+                            if (Number.isFinite(n) && n > 0) {
+                                localStorage.setItem('hse_total_work_hours', String(n));
+                            } else {
+                                localStorage.removeItem('hse_total_work_hours');
+                            }
+                        }
+
+                        const savePositiveOpt = (key, el) => {
+                            if (!el) return;
+                            const raw = String(el.value).trim();
+                            if (raw === '') {
+                                localStorage.removeItem(key);
+                                return;
+                            }
+                            const num = parseFloat(raw.replace(/,/g, ''));
+                            if (Number.isFinite(num) && num > 0) {
+                                localStorage.setItem(key, String(num));
+                            } else {
+                                localStorage.removeItem(key);
+                            }
+                        };
+
+                        savePositiveOpt('hse_hours_per_day', whDayEl);
+                        savePositiveOpt('hse_work_days_per_month', whDpmEl);
+                        savePositiveOpt('hse_work_months_per_year', whMoEl);
+
+                        localStorage.setItem('hse_work_hours_include_contractors', whIncEl && whIncEl.checked ? '1' : '0');
+
+                        if (typeof Dashboard !== 'undefined' && typeof Dashboard.updateKPIs === 'function') {
+                            Dashboard.updateKPIs();
+                        }
+                        Notification.success('تم حفظ إعدادات ساعات العمل وتحديث لوحة التحكم');
+                    } catch (err) {
+                        if (typeof Utils !== 'undefined' && Utils.safeWarn) Utils.safeWarn('⚠️ حفظ إعدادات ساعات العمل:', err);
+                        Notification.error('تعذر حفظ إعدادات ساعات العمل');
+                    }
                 });
             }
 
