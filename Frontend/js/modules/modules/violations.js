@@ -1318,7 +1318,7 @@ const Violations = {
                                     <button onclick="Violations.viewViolation('${violation.id}')" class="btn-icon btn-icon-primary" title="عرض">
                                         <i class="fas fa-eye"></i>
                                     </button>
-                                    <button onclick="Violations.showViolationForm(${JSON.stringify(violation).replace(/"/g, '&quot;')})" class="btn-icon btn-icon-warning" title="تعديل">
+                                    <button onclick="Violations.showViolationForm('${violation.id}')" class="btn-icon btn-icon-warning" title="تعديل">
                                         <i class="fas fa-edit"></i>
                                     </button>
                                     <button onclick="Violations.deleteViolation('${violation.id}')" class="btn-icon btn-icon-danger" title="حذف">
@@ -1377,7 +1377,7 @@ const Violations = {
                                     <button onclick="Violations.viewViolation('${violation.id}')" class="btn-icon btn-icon-primary" title="عرض">
                                         <i class="fas fa-eye"></i>
                                     </button>
-                                    <button onclick="Violations.showViolationForm(${JSON.stringify(violation).replace(/"/g, '&quot;')})" class="btn-icon btn-icon-warning" title="تعديل">
+                                    <button onclick="Violations.showViolationForm('${violation.id}')" class="btn-icon btn-icon-warning" title="تعديل">
                                         <i class="fas fa-edit"></i>
                                     </button>
                                     <button onclick="Violations.deleteViolation('${violation.id}')" class="btn-icon btn-icon-danger" title="حذف">
@@ -3437,8 +3437,14 @@ const Violations = {
     },
 
     async viewViolation(id) {
-        const violation = AppState.appData.violations.find(v => v.id === id);
-        if (!violation) return;
+        const raw = AppState.appData?.violations?.find(v => v.id === id);
+        if (!raw) {
+            if (typeof Notification !== 'undefined') Notification.error('المخالفة غير موجودة');
+            return;
+        }
+        const violation = this.normalizeViolationRecord(raw) || raw;
+        const qSev = String(violation.severity || '').trim();
+        const qStat = String(violation.status || '').trim();
 
         const modal = document.createElement('div');
         modal.className = 'modal-overlay';
@@ -3583,20 +3589,64 @@ const Violations = {
                                  onerror="this.onerror=null; this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22400%22 height=%22200%22%3E%3Crect fill=%22%23f0f0f0%22 width=%22400%22 height=%22200%22/%3E%3Ctext fill=%22%23999%22 font-family=%22sans-serif%22 font-size=%2216%22 x=%2250%25%22 y=%2250%25%22 text-anchor=%22middle%22 dy=%22.3em%22%3Eلا توجد صورة%3C/text%3E%3C/svg%3E';">
                         </div>
                         `;})()}
+
+                        <div class="violation-view-quick-edit" style="border: 2px dashed #cbd5e1; border-radius: 12px; padding: 16px; margin-top: 8px; background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);">
+                            <h4 style="font-weight: 700; color: #334155; margin: 0 0 12px 0; display: flex; align-items: center; gap: 8px; font-size: 1rem;">
+                                <i class="fas fa-pen-to-square text-indigo-600"></i>
+                                تعديل من هذه الشاشة
+                            </h4>
+                            <p style="font-size: 0.8rem; color: #64748b; margin: 0 0 12px 0;">يمكنك تحديث الشدة والحالة والنصوص أدناه ثم الحفظ دون فتح النموذج الكامل.</p>
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
+                                <div>
+                                    <label for="violation-view-q-severity" class="block text-sm font-semibold text-gray-700 mb-1">الشدة</label>
+                                    <select id="violation-view-q-severity" class="form-input" style="width:100%;">
+                                        <option value="عالية" ${qSev === 'عالية' ? 'selected' : ''}>عالية</option>
+                                        <option value="متوسطة" ${qSev === 'متوسطة' ? 'selected' : ''}>متوسطة</option>
+                                        <option value="منخضة" ${qSev === 'منخضة' || qSev === 'منخفضة' ? 'selected' : ''}>منخضة</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label for="violation-view-q-status" class="block text-sm font-semibold text-gray-700 mb-1">الحالة</label>
+                                    <select id="violation-view-q-status" class="form-input" style="width:100%;">
+                                        <option value="قيد المراجعة" ${qStat === 'قيد المراجعة' ? 'selected' : ''}>قيد المراجعة</option>
+                                        <option value="محلول" ${qStat === 'محلول' ? 'selected' : ''}>محلول</option>
+                                        <option value="غير محلول" ${qStat === 'غير محلول' ? 'selected' : ''}>غير محلول</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <label for="violation-view-q-details" class="block text-sm font-semibold text-gray-700 mb-1">تفاصيل المخالفة</label>
+                                <textarea id="violation-view-q-details" class="form-input" rows="3" style="width:100%; resize: vertical;">${Utils.escapeHTML(violation.violationDetails || '')}</textarea>
+                            </div>
+                            <div class="mb-3">
+                                <label for="violation-view-q-action" class="block text-sm font-semibold text-gray-700 mb-1">الإجراء المتخذ</label>
+                                <textarea id="violation-view-q-action" class="form-input" rows="3" style="width:100%; resize: vertical;">${Utils.escapeHTML(violation.actionTaken || '')}</textarea>
+                            </div>
+                            <button type="button" id="violation-view-quick-save" class="btn-primary" style="width: 100%; justify-content: center; display: inline-flex; align-items: center; gap: 8px;">
+                                <i class="fas fa-save"></i>
+                                حفظ التعديلات السريعة
+                            </button>
+                        </div>
                     </div>
                 </div>
-                <div class="modal-footer" style="background: #f8fafc; padding: 16px 24px; display: flex; gap: 12px; justify-content: flex-end;">
-                    <button class="btn-secondary" onclick="this.closest('.modal-overlay').remove()" style="padding: 10px 20px; border-radius: 10px;">إغلاق</button>
-                    <button class="btn-primary" onclick="Violations.exportPDF('${violation.id}'); this.closest('.modal-overlay').remove();" style="background: linear-gradient(135deg, #10b981, #059669); padding: 10px 20px; border-radius: 10px;">
+                <div class="modal-footer violation-view-actions-footer" style="background: #f8fafc; padding: 16px 24px; display: flex; flex-wrap: wrap; gap: 10px; justify-content: flex-end;">
+                    <button type="button" class="btn-secondary" onclick="this.closest('.modal-overlay').remove()" style="padding: 10px 18px; border-radius: 10px;">إغلاق</button>
+                    <button type="button" class="btn-primary" onclick="Violations.printViolationProfessional('${violation.id}')" style="background: linear-gradient(135deg, #0f766e, #0d9488); padding: 10px 18px; border-radius: 10px;">
+                        <i class="fas fa-print ml-2"></i>طباعة منسّقة
+                    </button>
+                    <button type="button" class="btn-primary" onclick="Violations.exportPDF('${violation.id}')" style="background: linear-gradient(135deg, #10b981, #059669); padding: 10px 18px; border-radius: 10px;">
                         <i class="fas fa-file-pdf ml-2"></i>تصدير PDF
                     </button>
-                    <button class="btn-primary" onclick="Violations.showViolationForm('${violation.id}'); this.closest('.modal-overlay').remove();" style="background: linear-gradient(135deg, #8b5cf6, #7c3aed); padding: 10px 20px; border-radius: 10px;">
-                        <i class="fas fa-edit ml-2"></i>تعديل
+                    <button type="button" class="btn-primary" onclick="Violations.showViolationForm('${violation.id}'); this.closest('.modal-overlay').remove();" style="background: linear-gradient(135deg, #8b5cf6, #7c3aed); padding: 10px 18px; border-radius: 10px;">
+                        <i class="fas fa-sliders-h ml-2"></i>تعديل كامل (جميع الحقول)
                     </button>
                 </div>
             </div>
         `;
         document.body.appendChild(modal);
+        modal.querySelector('#violation-view-quick-save')?.addEventListener('click', async () => {
+            await this.saveViolationQuickEditsFromView(violation.id, modal);
+        });
         if (typeof Utils.hydrateDriveProxyImages === 'function') {
             Utils.hydrateDriveProxyImages(modal, {
                 onFetchFail: (img) => {
@@ -3612,52 +3662,96 @@ const Violations = {
         });
     },
 
-    async exportPDF(id) {
-        const violation = AppState.appData.violations.find(v => v.id === id);
-        if (!violation) {
-            Notification.error('المخالفة غير موجودة');
+    async saveViolationQuickEditsFromView(id, viewModal) {
+        const severity = viewModal.querySelector('#violation-view-q-severity')?.value?.trim() || '';
+        const status = viewModal.querySelector('#violation-view-q-status')?.value?.trim() || '';
+        const violationDetails = viewModal.querySelector('#violation-view-q-details')?.value?.trim() || '';
+        const actionTaken = viewModal.querySelector('#violation-view-q-action')?.value?.trim() || '';
+        const saveBtn = viewModal.querySelector('#violation-view-quick-save');
+        if (!AppState.appData?.violations) {
+            Notification.error('لا توجد بيانات مخالفات.');
             return;
         }
-
+        const idx = AppState.appData.violations.findIndex(v => v.id === id);
+        if (idx === -1) {
+            Notification.error('تعذّر العثور على المخالفة.');
+            return;
+        }
+        const prevHtml = saveBtn?.innerHTML;
+        if (saveBtn) {
+            saveBtn.disabled = true;
+            saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin ml-2"></i> جاري الحفظ...';
+        }
         try {
-            Loading.show();
+            AppState.appData.violations[idx] = {
+                ...AppState.appData.violations[idx],
+                severity,
+                status,
+                violationDetails,
+                actionTaken,
+                updatedAt: new Date().toISOString()
+            };
+            if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
+                window.DataManager.save();
+            }
+            let remoteOk = true;
+            try {
+                if (typeof GoogleIntegration !== 'undefined' && GoogleIntegration.autoSave) {
+                    const saveRes = await GoogleIntegration.autoSave('Violations', AppState.appData.violations);
+                    if (saveRes && saveRes.success === false) remoteOk = false;
+                }
+            } catch (err) {
+                remoteOk = false;
+                if (AppState.debugMode) Utils.safeWarn('خطأ في حفظ Google Sheets:', err);
+            }
+            if (!remoteOk) {
+                Notification.warning('تم الحفظ محلياً لكن فشل الحفظ في Google Sheets');
+            } else {
+                try { localStorage.setItem('violations_last_sync', String(Date.now())); } catch (eLs) { /* ignore */ }
+            }
+            Notification.success('تم حفظ التعديلات السريعة بنجاح');
+            viewModal.remove();
+            this.viewViolation(id);
+            if (typeof this.load === 'function') {
+                try { await this.load(); } catch (e) { /* ignore */ }
+            }
+        } catch (error) {
+            Utils.safeError('خطأ في الحفظ السريع للمخالفة:', error);
+            Notification.error('فشل الحفظ: ' + (error.message || String(error)));
+            if (saveBtn) {
+                saveBtn.disabled = false;
+                saveBtn.innerHTML = prevHtml || '<i class="fas fa-save ml-2"></i> حفظ التعديلات السريعة';
+            }
+        }
+    },
 
-            const companyLogo = (typeof AppState !== 'undefined' && AppState.companyLogo) ? AppState.companyLogo : '';
-            const companySettings = (typeof AppState !== 'undefined' && AppState.companySettings)
-                ? AppState.companySettings
-                : { name: DEFAULT_COMPANY_NAME, address: '', phone: '', email: '' };
-            const qrCodeData = `${window.location.origin}/violation/${violation.id}`;
-            const qrCode = typeof QRCode !== 'undefined' ? QRCode.generate(qrCodeData, 100) : null;
-            const formCode = violation.isoCode || `VIOL-${violation.id?.substring(0, 8) || 'UNKNOWN'}`;
-
-            const htmlContent = FormHeader.generatePDFHTML(
-                formCode,
-                'تقرير مخالفة',
-                `
+    _buildViolationReportTableHtml(violation) {
+        const v = this.normalizeViolationRecord(violation) || violation;
+        return `
                 <table>
-                    <tr><th>كود ISO</th><td>${Utils.escapeHTML(violation.isoCode || '')}</td></tr>
-                    <tr><th>اسم المخالف</th><td>${Utils.escapeHTML((violation.contractorName || violation.personType === 'contractor') ? (violation.contractorWorker || violation.employeeName || violation.contractorName || '') : (violation.employeeName || ''))}</td></tr>
-                    ${(violation.contractorName || violation.personType === 'contractor') ? `
-                    ${violation.contractorPosition ? `<tr><th>الوظيفة</th><td>${Utils.escapeHTML(violation.contractorPosition || '')}</td></tr>` : ''}
-                    <tr><th>اسم المقاول</th><td>${Utils.escapeHTML(violation.contractorName || '')}</td></tr>
-                    ${violation.contractorDepartment ? `<tr><th>الإدارة</th><td>${Utils.escapeHTML(violation.contractorDepartment || '')}</td></tr>` : ''}
+                    <tr><th>كود ISO</th><td>${Utils.escapeHTML(v.isoCode || '')}</td></tr>
+                    <tr><th>اسم المخالف</th><td>${Utils.escapeHTML((v.contractorName || v.personType === 'contractor') ? (v.contractorWorker || v.employeeName || v.contractorName || '') : (v.employeeName || ''))}</td></tr>
+                    ${(v.contractorName || v.personType === 'contractor') ? `
+                    ${v.contractorPosition ? `<tr><th>الوظيفة</th><td>${Utils.escapeHTML(v.contractorPosition || '')}</td></tr>` : ''}
+                    <tr><th>اسم المقاول</th><td>${Utils.escapeHTML(v.contractorName || '')}</td></tr>
+                    ${v.contractorDepartment ? `<tr><th>الإدارة</th><td>${Utils.escapeHTML(v.contractorDepartment || '')}</td></tr>` : ''}
                     ` : `
-                    ${violation.employeeCode ? `<tr><th>الكود الوظيفي</th><td>${Utils.escapeHTML(violation.employeeCode || violation.employeeNumber || '')}</td></tr>` : ''}
-                    ${violation.employeePosition ? `<tr><th>الوظيفة</th><td>${Utils.escapeHTML(violation.employeePosition || '')}</td></tr>` : ''}
-                    ${violation.employeeDepartment ? `<tr><th>الإدارة</th><td>${Utils.escapeHTML(violation.employeeDepartment || '')}</td></tr>` : ''}
+                    ${v.employeeCode ? `<tr><th>الكود الوظيفي</th><td>${Utils.escapeHTML(v.employeeCode || v.employeeNumber || '')}</td></tr>` : ''}
+                    ${v.employeePosition ? `<tr><th>الوظيفة</th><td>${Utils.escapeHTML(v.employeePosition || '')}</td></tr>` : ''}
+                    ${v.employeeDepartment ? `<tr><th>الإدارة</th><td>${Utils.escapeHTML(v.employeeDepartment || '')}</td></tr>` : ''}
                     `}
-                    <tr><th>نوع المخالفة</th><td>${Utils.escapeHTML(violation.violationType || '')}</td></tr>
-                    <tr><th>تاريخ المخالفة</th><td>${violation.violationDate ? Utils.formatDate(violation.violationDate) : '-'}</td></tr>
-                    <tr><th>الموقع</th><td>${Utils.escapeHTML(violation.violationLocation || '')}</td></tr>
-                    <tr><th>المكان</th><td>${Utils.escapeHTML(violation.violationPlace || '')}</td></tr>
-                    <tr><th>الشدة</th><td>${Utils.escapeHTML(violation.severity || '')}</td></tr>
-                    <tr><th>الحالة</th><td>${Utils.escapeHTML(violation.status || '')}</td></tr>
-                    <tr><th>القيمة المالية</th><td>${Number(this.getEffectiveFineAmount(violation)).toLocaleString('ar-EG')} ج.م</td></tr>
-                    ${violation.violationDetails ? `<tr><th>تفاصيل المخالفة</th><td>${Utils.escapeHTML(violation.violationDetails || '')}</td></tr>` : ''}
-                    <tr><th>الإجراء المتخذ</th><td>${Utils.escapeHTML(violation.actionTaken || '')}</td></tr>
+                    <tr><th>نوع المخالفة</th><td>${Utils.escapeHTML(v.violationType || '')}</td></tr>
+                    <tr><th>تاريخ المخالفة</th><td>${v.violationDate ? Utils.formatDate(v.violationDate) : '-'}</td></tr>
+                    <tr><th>الموقع</th><td>${Utils.escapeHTML(v.violationLocation || '')}</td></tr>
+                    <tr><th>المكان</th><td>${Utils.escapeHTML(v.violationPlace || '')}</td></tr>
+                    <tr><th>الشدة</th><td>${Utils.escapeHTML(v.severity || '')}</td></tr>
+                    <tr><th>الحالة</th><td>${Utils.escapeHTML(v.status || '')}</td></tr>
+                    <tr><th>القيمة المالية</th><td>${Number(this.getEffectiveFineAmount(v)).toLocaleString('ar-EG')} ج.م</td></tr>
+                    ${v.violationDetails ? `<tr><th>تفاصيل المخالفة</th><td>${Utils.escapeHTML(v.violationDetails || '')}</td></tr>` : ''}
+                    <tr><th>الإجراء المتخذ</th><td>${Utils.escapeHTML(v.actionTaken || '')}</td></tr>
                 </table>
                 ${(() => {
-                    const photoUrl = this.processPhoto(violation.photo);
+                    const photoUrl = this.processPhoto(v.photo);
                     return photoUrl ? `
                     <div class="section-title">صورة المخالفة:</div>
                     <div style="text-align: center; margin: 20px 0;">
@@ -3665,87 +3759,129 @@ const Violations = {
                              onerror="this.onerror=null; this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22400%22 height=%22300%22%3E%3Crect fill=%22%23f0f0f0%22 width=%22400%22 height=%22300%22/%3E%3Ctext fill=%22%23999%22 font-family=%22sans-serif%22 font-size=%2216%22 x=%2250%25%22 y=%2250%25%22 text-anchor=%22middle%22 dy=%22.3em%22%3Eلا توجد صورة%3C/text%3E%3C/svg%3E';">
                     </div>
                 ` : '';})()}
-                `,
-                false, // لا QR في الرأس
-                true,  // QR في الوتر
-                { version: '1.0' },
-                violation.createdAt,
-                violation.updatedAt
-            );
+                `;
+    },
 
-            const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
-            const url = URL.createObjectURL(blob);
-            const printWindow = window.open(url, '_blank');
-            if (printWindow) {
-                printWindow.onload = () => {
-                    // Wait for images to load before printing
+    _generateViolationPrintDocumentHtml(violation, documentTitle) {
+        const v = this.normalizeViolationRecord(violation) || violation;
+        const inner = this._buildViolationReportTableHtml(v);
+        const formCode = v.isoCode || `VIOL-${v.id?.substring(0, 8) || 'UNKNOWN'}`;
+        if (typeof FormHeader !== 'undefined' && typeof FormHeader.generatePDFHTML === 'function') {
+            return FormHeader.generatePDFHTML(
+                formCode,
+                documentTitle,
+                inner,
+                false,
+                true,
+                { version: '1.0' },
+                v.createdAt,
+                v.updatedAt
+            );
+        }
+        const companyName = (typeof AppState !== 'undefined' && AppState.companySettings?.name)
+            ? Utils.escapeHTML(AppState.companySettings.name)
+            : '';
+        return `<!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="utf-8"><title>${Utils.escapeHTML(documentTitle)}</title>
+<style>
+body{font-family:'Segoe UI',Tahoma,sans-serif;padding:24px;color:#111;} h1{font-size:1.25rem;margin:0 0 8px;} .co{color:#475569;font-size:0.9rem;margin-bottom:20px;}
+table{border-collapse:collapse;width:100%;} th,td{border:1px solid #e2e8f0;padding:10px 12px;text-align:right;font-size:0.95rem;} th{background:#f1f5f9;width:30%;color:#334155;}
+</style></head><body>
+<h1>${Utils.escapeHTML(documentTitle)}</h1>
+${companyName ? `<div class="co">${companyName}</div>` : ''}
+${inner}
+</body></html>`;
+    },
+
+    async _completeViolationReportPrint(htmlContent) {
+        const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const printWindow = window.open(url, '_blank');
+        if (!printWindow) {
+            URL.revokeObjectURL(url);
+            throw new Error('popup_blocked');
+        }
+        await new Promise((resolve, reject) => {
+            printWindow.onload = () => {
+                try {
                     const images = printWindow.document.querySelectorAll('img');
                     let imagesLoaded = 0;
                     const totalImages = images.length;
-
-                    if (totalImages === 0) {
-                        // No images, print immediately
+                    let done = false;
+                    const finish = () => {
+                        if (done) return;
+                        done = true;
                         setTimeout(() => {
                             printWindow.print();
-                            setTimeout(() => {
-                                URL.revokeObjectURL(url);
-                            }, 1000);
-                            Loading.hide();
+                            setTimeout(() => URL.revokeObjectURL(url), 1000);
+                            resolve();
                         }, 300);
-                    } else {
-                        // Wait for all images to load
-                        const checkAllImagesLoaded = () => {
-                            if (imagesLoaded >= totalImages) {
-                                setTimeout(() => {
-                                    printWindow.print();
-                                    setTimeout(() => {
-                                        URL.revokeObjectURL(url);
-                                    }, 1000);
-                                    Loading.hide();
-                                }, 300);
-                            }
-                        };
-
-                        images.forEach(img => {
-                            if (img.complete) {
-                                // Image already loaded
-                                imagesLoaded++;
-                                checkAllImagesLoaded();
-                            } else {
-                                // Wait for image to load
-                                img.onload = () => {
-                                    imagesLoaded++;
-                                    checkAllImagesLoaded();
-                                };
-                                img.onerror = () => {
-                                    // Image failed to load, still proceed
-                                    imagesLoaded++;
-                                    checkAllImagesLoaded();
-                                };
-                            }
-                        });
-
-                        // Fallback: print after 3 seconds even if not all images loaded
-                        setTimeout(() => {
-                            if (imagesLoaded < totalImages) {
-                                printWindow.print();
-                                setTimeout(() => {
-                                    URL.revokeObjectURL(url);
-                                }, 1000);
-                                Loading.hide();
-                            }
-                        }, 3000);
+                    };
+                    if (totalImages === 0) {
+                        finish();
+                        return;
                     }
-                };
-            } else {
-                URL.revokeObjectURL(url);
-                Loading.hide();
-                Notification.error('يرجى السماح بنوافذ منبثقة للطباعة');
-            }
+                    const checkAllImagesLoaded = () => {
+                        if (imagesLoaded >= totalImages) finish();
+                    };
+                    images.forEach(img => {
+                        if (img.complete) {
+                            imagesLoaded++;
+                            checkAllImagesLoaded();
+                        } else {
+                            img.onload = () => { imagesLoaded++; checkAllImagesLoaded(); };
+                            img.onerror = () => { imagesLoaded++; checkAllImagesLoaded(); };
+                        }
+                    });
+                    setTimeout(() => finish(), 3500);
+                } catch (e) {
+                    reject(e);
+                }
+            };
+        });
+    },
+
+    async printViolationProfessional(id) {
+        const violation = AppState.appData?.violations?.find(v => v.id === id);
+        if (!violation) {
+            Notification.error('المخالفة غير موجودة');
+            return;
+        }
+        try {
+            Loading.show();
+            const htmlContent = this._generateViolationPrintDocumentHtml(violation, 'بطاقة مخالفة — نسخة طباعة');
+            await this._completeViolationReportPrint(htmlContent);
         } catch (error) {
+            if (error && error.message === 'popup_blocked') {
+                Notification.error('يرجى السماح بنوافذ منبثقة للطباعة');
+            } else {
+                Utils.safeError('خطأ في الطباعة:', error);
+                Notification.error('فشل فتح نافذة الطباعة: ' + (error.message || ''));
+            }
+        } finally {
             Loading.hide();
-            Utils.safeError('خطأ في تصدير PDF:', error);
-            Notification.error('فشل في تصدير PDF: ' + error.message);
+        }
+    },
+
+    async exportPDF(id) {
+        const violation = AppState.appData?.violations?.find(v => v.id === id);
+        if (!violation) {
+            Notification.error('المخالفة غير موجودة');
+            return;
+        }
+
+        try {
+            Loading.show();
+            const htmlContent = this._generateViolationPrintDocumentHtml(violation, 'تقرير مخالفة');
+            await this._completeViolationReportPrint(htmlContent);
+        } catch (error) {
+            if (error && error.message === 'popup_blocked') {
+                Notification.error('يرجى السماح بنوافذ منبثقة للطباعة');
+            } else {
+                Utils.safeError('خطأ في تصدير PDF:', error);
+                Notification.error('فشل في تصدير PDF: ' + (error.message || ''));
+            }
+        } finally {
+            Loading.hide();
         }
     },
 
