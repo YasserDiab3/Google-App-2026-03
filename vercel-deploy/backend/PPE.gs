@@ -312,6 +312,27 @@ function calculateStockBalance(itemId) {
 }
 
 /**
+ * تطبيع معرف الصنف للمقارنة بين الشيت (رقم/نص) والواجهة (نص).
+ */
+function normalizePPEStockItemId_(id) {
+    return String(id == null ? '' : id).trim();
+}
+
+/**
+ * البحث عن فهرس الصنف في نتيجة readFromSheet بمطابقة آمنة لـ itemId.
+ */
+function findPPEStockIndexByItemId_(rows, itemId) {
+    var want = normalizePPEStockItemId_(itemId);
+    if (!want) return -1;
+    for (var i = 0; i < rows.length; i++) {
+        var row = rows[i];
+        if (!row) continue;
+        if (normalizePPEStockItemId_(row.itemId) === want) return i;
+    }
+    return -1;
+}
+
+/**
  * إضافة/تحديث صنف في المخزون
  */
 function addOrUpdatePPEStockItem(stockData) {
@@ -324,8 +345,8 @@ function addOrUpdatePPEStockItem(stockData) {
         const spreadsheetId = getSpreadsheetId();
         let data = readFromSheet(sheetName, spreadsheetId);
         
-        // التحقق من وجود الصنف
-        const itemIndex = data.findIndex(item => item.itemId === stockData.itemId);
+        // التحقق من وجود الصنف (مقارنة آمنة — تجنب اعتبار التعديل «إضافة» بسبب اختلاف نوع itemId)
+        const itemIndex = findPPEStockIndexByItemId_(data, stockData.itemId);
         
         if (itemIndex === -1) {
             // إضافة جديد
@@ -419,66 +440,28 @@ function addOrUpdatePPEStockItem(stockData) {
                     existing[key] = stockData[key];
                 }
             }
-            existing.itemId = stockData.itemId;
+            existing.itemId = normalizePPEStockItemId_(stockData.itemId);
             
-            // ✅ تحديث صف واحد فقط مطابق لـ itemId مباشرة على الورقة
-            // (تجنب استدعاء saveToSheet الذي يستخدم upsert بحسب عمود "id" فقط
-            //  فيُسبّب تكرار جميع الأصناف عند الحفظ — ورقة PPE_Stock تستخدم itemId)
             try {
-                const spreadsheet = SpreadsheetApp.openById(spreadsheetId);
-                const sheet = spreadsheet.getSheetByName(sheetName);
-                if (!sheet) {
-                    return { success: false, message: 'ورقة المخزون غير موجودة: ' + sheetName };
+                var ssHdr = SpreadsheetApp.openById(spreadsheetId);
+                var shHdr = ssHdr.getSheetByName(sheetName);
+                if (shHdr) {
+                    ensureSheetHeaders(shHdr, sheetName, existing);
                 }
-
-                // التأكد من تحديث رؤوس الورقة لتشمل أي مفاتيح جديدة في السجل
-                ensureSheetHeaders(sheet, sheetName, existing);
-
-                const lastCol = sheet.getLastColumn();
-                const headerRow = sheet.getRange(1, 1, 1, lastCol).getValues()[0]
-                    .map(function (h) { return (h === null || h === undefined) ? '' : String(h).trim(); });
-
-                const itemIdCol = headerRow.indexOf('itemId');
-                if (itemIdCol < 0) {
-                    return { success: false, message: 'عمود itemId غير موجود في ورقة المخزون.' };
-                }
-
-                const dataRange = sheet.getDataRange();
-                const allRows = dataRange ? dataRange.getValues() : [];
-                let targetRow = -1;
-                const wantedId = String(stockData.itemId).trim();
-                for (var r = 1; r < allRows.length; r++) {
-                    const cellVal = allRows[r][itemIdCol];
-                    if (cellVal !== null && cellVal !== undefined && String(cellVal).trim() === wantedId) {
-                        targetRow = r + 1; // sheet row (1-indexed)
-                        break;
-                    }
-                }
-
-                if (targetRow === -1) {
-                    return { success: false, message: 'لم يتم العثور على الصنف في ورقة المخزون.' };
-                }
-
-                const rowValues = headerRow.map(function (h) {
-                    if (!h) return '';
-                    if (typeof toSheetCellValue_ === 'function') {
-                        return toSheetCellValue_(h, existing[h], sheetName);
-                    }
-                    return existing[h] !== undefined ? existing[h] : '';
-                });
-
-                sheet.getRange(targetRow, 1, 1, headerRow.length).setValues([rowValues]);
-                SpreadsheetApp.flush();
-
-                if (typeof invalidateHseSheetCaches_ === 'function') {
-                    try { invalidateHseSheetCaches_(sheetName); } catch (e) { /* ignore */ }
-                }
-
-                return { success: true, message: 'تم تحديث الصنف بنجاح' };
-            } catch (writeErr) {
-                Logger.log('Error updating single PPE_Stock row: ' + writeErr.toString());
-                return { success: false, message: 'فشل تحديث صف الصنف: ' + writeErr.toString() };
+            } catch (hdrErr) {
+                Logger.log('ensureSheetHeaders(PPE_Stock) قبل التحديث: ' + hdrErr.toString());
             }
+            
+            // ✅ تحديث صف واحد عبر الدالة المشتركة (دمج كامل الحقول ثم كتابة الصف)
+            // لا نستخدم saveToSheet(مصفوفة كاملة) لأن upsert الافتراضي يعتمد عمود "id" وليس itemId.
+            var updRes = updatePPEStockByItemId_(existing.itemId, existing, spreadsheetId);
+            if (updRes && updRes.success) {
+                return { success: true, message: 'تم تحديث الصنف بنجاح' };
+            }
+            return {
+                success: false,
+                message: (updRes && updRes.message) ? updRes.message : 'فشل تحديث الصنف في ورقة المخزون'
+            };
         }
     } catch (error) {
         Logger.log('Error in addOrUpdatePPEStockItem: ' + error.toString());
@@ -695,7 +678,7 @@ function updatePPEStockByItemId_(itemId, patch, spreadsheetId) {
             return { success: false, message: 'عمود itemId غير موجود في PPE_Stock' };
         }
 
-        const idValues = sheet.getRange(2, itemIdColIndex + 1, lastRow - 1, 1).getValues();
+        const idValues = sheet.getRange(2, itemIdColIndex + 1, lastRow, itemIdColIndex + 1).getValues();
         let targetRow = -1;
         for (let i = 0; i < idValues.length; i++) {
             if (String(idValues[i][0] || '').trim() === targetItemId) {

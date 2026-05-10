@@ -1749,12 +1749,20 @@ function saveToSheet(sheetName, data, spreadsheetId = null) {
             const lastCol = sheet.getLastColumn();
             const headerRow = sheet.getRange(1, 1, 1, lastCol).getValues()[0].map(h => (h === null || h === undefined) ? '' : String(h).trim());
             const idCol = headerRow.indexOf('id');
+            // ✅ PPE_Stock يستخدم itemId وليس id — بدون هذا كل الصفوف تُضاف كصفوف جديدة إذا استُدعي saveToSheet بمصفوفة كاملة
+            let keyCol = idCol;
+            if (sheetName === 'PPE_Stock') {
+                const itemIdCol = headerRow.indexOf('itemId');
+                if (itemIdCol >= 0) {
+                    keyCol = itemIdCol;
+                }
+            }
             const dataRange = sheet.getDataRange();
             const values = dataRange ? dataRange.getValues() : [];
             const idToRow = {};
-            if (idCol >= 0 && values.length > 1) {
+            if (keyCol >= 0 && values.length > 1) {
                 for (let r = 1; r < values.length; r++) {
-                    const rid = values[r][idCol];
+                    const rid = values[r][keyCol];
                     if (rid !== null && rid !== undefined && String(rid).trim() !== '') {
                         idToRow[String(rid).trim()] = r + 1; // sheet row
                     }
@@ -1764,7 +1772,14 @@ function saveToSheet(sheetName, data, spreadsheetId = null) {
             data.forEach((item) => {
                 if (!item || typeof item !== 'object') return;
                 const processedItem = processDataItem(item);
-                const recordId = processedItem.id ? String(processedItem.id).trim() : '';
+                let recordId = '';
+                if (sheetName === 'PPE_Stock') {
+                    if (processedItem.itemId !== null && processedItem.itemId !== undefined && String(processedItem.itemId).trim() !== '') {
+                        recordId = String(processedItem.itemId).trim();
+                    }
+                } else if (processedItem.id) {
+                    recordId = String(processedItem.id).trim();
+                }
                 const existingRow = recordId && idToRow[recordId] ? idToRow[recordId] : null;
 
                 if (existingRow) {

@@ -727,9 +727,11 @@ const PPE = {
                 if (this.state.activeTab === 'receipts') {
                     this.ensurePpeFilterStyles();
                     this.bindReceiptsFilters();
+                    this._bindPpeReceiptExcelToolbar();
                 } else if (this.state.activeTab === 'stock-control') {
                     this.ensurePpeFilterStyles();
                     this.bindStockFilters();
+                    this._bindPpeStockExcelToolbar();
                 }
                 Utils.safeLog('✅ PPE: تم تحديث التبويب النشط بنجاح');
             } catch (error) {
@@ -854,6 +856,19 @@ const PPE = {
                                 <i class="fas fa-table ml-2"></i>
                                 ${ut(t('module.ppe.btn.matrix', 'مصفوفة مهمات الوقاية'))}
                             </button>
+                            <button id="ppe-receipts-export-excel-btn" type="button" class="btn-secondary" title="${ut(t('module.ppe.excel.exportReceiptsTitle', 'تصدير سجل الاستلامات إلى Excel'))}">
+                                <i class="fas fa-file-excel ml-2"></i>
+                                ${ut(t('module.ppe.excel.exportBtn', 'تصدير Excel'))}
+                            </button>
+                            <button id="ppe-receipts-template-btn" type="button" class="btn-secondary" title="${ut(t('module.ppe.excel.downloadTemplateReceiptsTitle', 'تنزيل قالب Excel فارغ'))}">
+                                <i class="fas fa-download ml-2"></i>
+                                ${ut(t('module.ppe.excel.downloadTemplateBtn', 'تحميل القالب'))}
+                            </button>
+                            <input type="file" id="ppe-receipts-import-input" accept=".xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel" tabindex="-1" aria-hidden="true" style="position:absolute;width:1px;height:1px;opacity:0;left:-9999px;">
+                            <button id="ppe-receipts-import-btn" type="button" class="btn-secondary" title="${ut(t('module.ppe.excel.importReceiptsTitle', 'استيراد صفوف من ملف يطابق القالب'))}">
+                                <i class="fas fa-file-import ml-2"></i>
+                                ${ut(t('module.ppe.excel.importBtn', 'استيراد من القالب'))}
+                            </button>
                             <button id="add-ppe-btn" class="btn-primary">
                                 <i class="fas fa-plus ml-2"></i>
                                 ${ut(t('module.ppe.btn.newReceipt', 'تسجيل استلام جديد'))}
@@ -863,6 +878,19 @@ const PPE = {
                                 ${ut(t('module.ppe.btn.refresh', 'تحديث'))}
                             </button>
                         ` : `
+                            <button id="ppe-stock-export-excel-btn" type="button" class="btn-secondary" title="${ut(t('module.ppe.excel.exportStockTitle', 'تصدير المخزون إلى Excel'))}">
+                                <i class="fas fa-file-excel ml-2"></i>
+                                ${ut(t('module.ppe.excel.exportBtn', 'تصدير Excel'))}
+                            </button>
+                            <button id="ppe-stock-template-btn" type="button" class="btn-secondary" title="${ut(t('module.ppe.excel.downloadTemplateStockTitle', 'تنزيل قالب Excel للأصناف'))}">
+                                <i class="fas fa-download ml-2"></i>
+                                ${ut(t('module.ppe.excel.downloadTemplateBtn', 'تحميل القالب'))}
+                            </button>
+                            <input type="file" id="ppe-stock-import-input" accept=".xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel" tabindex="-1" aria-hidden="true" style="position:absolute;width:1px;height:1px;opacity:0;left:-9999px;">
+                            <button id="ppe-stock-import-btn" type="button" class="btn-secondary" title="${ut(t('module.ppe.excel.importStockTitle', 'استيراد أصناف من ملف يطابق القالب'))}">
+                                <i class="fas fa-file-import ml-2"></i>
+                                ${ut(t('module.ppe.excel.importBtn', 'استيراد من القالب'))}
+                            </button>
                             <button id="add-stock-item-btn" class="btn-primary">
                                 <i class="fas fa-plus ml-2"></i>
                                 ${ut(t('module.ppe.btn.addStockItem', 'إضافة صنف جديد'))}
@@ -904,8 +932,10 @@ const PPE = {
                 this.applyModuleI18n(section);
                 if (this.state.activeTab === 'receipts') {
                     this.bindReceiptsFilters();
+                    this._bindPpeReceiptExcelToolbar();
                 } else if (this.state.activeTab === 'stock-control') {
                     this.bindStockFilters();
+                    this._bindPpeStockExcelToolbar();
                 }
             } catch (error) {
                 Utils.safeWarn('⚠️ خطأ في setupEventListeners:', error);
@@ -1067,6 +1097,9 @@ const PPE = {
                 addTransactionBtn.addEventListener('click', handler);
                 this.state.eventListeners.set(addTransactionBtn, { event: 'click', handler });
             }
+
+            this._bindPpeReceiptExcelToolbar();
+            this._bindPpeStockExcelToolbar();
         }, 100);
     },
 
@@ -1103,6 +1136,19 @@ const PPE = {
                     <i class="fas fa-table ml-2"></i>
                     ${ut(t('module.ppe.btn.matrix', 'مصفوفة مهمات الوقاية'))}
                 </button>
+                <button id="ppe-receipts-export-excel-btn" type="button" class="btn-secondary" title="${ut(t('module.ppe.excel.exportReceiptsTitle', 'تصدير سجل الاستلامات إلى Excel'))}">
+                    <i class="fas fa-file-excel ml-2"></i>
+                    ${ut(t('module.ppe.excel.exportBtn', 'تصدير Excel'))}
+                </button>
+                <button id="ppe-receipts-template-btn" type="button" class="btn-secondary" title="${ut(t('module.ppe.excel.downloadTemplateReceiptsTitle', 'تنزيل قالب Excel فارغ'))}">
+                    <i class="fas fa-download ml-2"></i>
+                    ${ut(t('module.ppe.excel.downloadTemplateBtn', 'تحميل القالب'))}
+                </button>
+                <input type="file" id="ppe-receipts-import-input" accept=".xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel" tabindex="-1" aria-hidden="true" style="position:absolute;width:1px;height:1px;opacity:0;left:-9999px;">
+                <button id="ppe-receipts-import-btn" type="button" class="btn-secondary" title="${ut(t('module.ppe.excel.importReceiptsTitle', 'استيراد صفوف من ملف يطابق القالب'))}">
+                    <i class="fas fa-file-import ml-2"></i>
+                    ${ut(t('module.ppe.excel.importBtn', 'استيراد من القالب'))}
+                </button>
                 <button id="add-ppe-btn" class="btn-primary">
                     <i class="fas fa-plus ml-2"></i>
                     ${ut(t('module.ppe.btn.newReceipt', 'تسجيل استلام جديد'))}
@@ -1114,6 +1160,19 @@ const PPE = {
             `;
         } else {
             headerButtonsContainer.innerHTML = `
+                <button id="ppe-stock-export-excel-btn" type="button" class="btn-secondary" title="${ut(t('module.ppe.excel.exportStockTitle', 'تصدير المخزون إلى Excel'))}">
+                    <i class="fas fa-file-excel ml-2"></i>
+                    ${ut(t('module.ppe.excel.exportBtn', 'تصدير Excel'))}
+                </button>
+                <button id="ppe-stock-template-btn" type="button" class="btn-secondary" title="${ut(t('module.ppe.excel.downloadTemplateStockTitle', 'تنزيل قالب Excel للأصناف'))}">
+                    <i class="fas fa-download ml-2"></i>
+                    ${ut(t('module.ppe.excel.downloadTemplateBtn', 'تحميل القالب'))}
+                </button>
+                <input type="file" id="ppe-stock-import-input" accept=".xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel" tabindex="-1" aria-hidden="true" style="position:absolute;width:1px;height:1px;opacity:0;left:-9999px;">
+                <button id="ppe-stock-import-btn" type="button" class="btn-secondary" title="${ut(t('module.ppe.excel.importStockTitle', 'استيراد أصناف من ملف يطابق القالب'))}">
+                    <i class="fas fa-file-import ml-2"></i>
+                    ${ut(t('module.ppe.excel.importBtn', 'استيراد من القالب'))}
+                </button>
                 <button id="add-stock-item-btn" class="btn-primary">
                     <i class="fas fa-plus ml-2"></i>
                     ${ut(t('module.ppe.btn.addStockItem', 'إضافة صنف جديد'))}
@@ -1158,6 +1217,9 @@ const PPE = {
             addTransactionBtn.addEventListener('click', handler);
             this.state.eventListeners.set(addTransactionBtn, { event: 'click', handler });
         }
+
+        this._bindPpeReceiptExcelToolbar();
+        this._bindPpeStockExcelToolbar();
     },
 
     async switchTab(tabName) {
@@ -1209,6 +1271,7 @@ const PPE = {
                         if (cached.length > 0) {
                             this.ensurePpeFilterStyles();
                             this.bindStockFilters();
+                            this._bindPpeStockExcelToolbar();
                         }
                     } else {
                         tabContentContainer.style.opacity = '0.92';
@@ -1221,9 +1284,11 @@ const PPE = {
                     if (tabName === 'receipts') {
                         this.ensurePpeFilterStyles();
                         this.bindReceiptsFilters();
+                        this._bindPpeReceiptExcelToolbar();
                     } else if (tabName === 'stock-control') {
                         this.ensurePpeFilterStyles();
                         this.bindStockFilters();
+                        this._bindPpeStockExcelToolbar();
                     }
                     Utils.safeLog(`✅ PPE: تم التبديل إلى تبويب ${tabName}`);
                 } catch (error) {
@@ -3409,6 +3474,363 @@ const PPE = {
         modal.addEventListener('click', (e) => {
             if (e.target === modal) modal.remove();
         });
+    },
+
+    /** رؤوس قالب/تصدير سجل الاستلامات (عربي ↔ مفتاح الحقل) */
+    _ppeReceiptExcelFieldDefs() {
+        return [
+            { key: 'id', ar: 'معرف السجل', en: 'id' },
+            { key: 'receiptNumber', ar: 'رقم الإيصال', en: 'receiptNumber' },
+            { key: 'employeeName', ar: 'اسم الموظف', en: 'employeeName' },
+            { key: 'employeeCode', ar: 'الكود الوظيفي', en: 'employeeCode' },
+            { key: 'employeeDepartment', ar: 'القسم', en: 'employeeDepartment' },
+            { key: 'equipmentType', ar: 'نوع المعدة', en: 'equipmentType' },
+            { key: 'quantity', ar: 'الكمية', en: 'quantity' },
+            { key: 'receiptDate', ar: 'تاريخ الاستلام', en: 'receiptDate' },
+            { key: 'status', ar: 'الحالة', en: 'status' }
+        ];
+    },
+
+    /** رؤوس قالب/تصدير المخزون */
+    _ppeStockExcelFieldDefs() {
+        return [
+            { key: 'itemId', ar: 'معرف الصنف', en: 'itemId' },
+            { key: 'itemCode', ar: 'كود الصنف', en: 'itemCode' },
+            { key: 'itemName', ar: 'اسم الصنف', en: 'itemName' },
+            { key: 'category', ar: 'الفئة', en: 'category' },
+            { key: 'stock_IN', ar: 'الوارد', en: 'stock_IN' },
+            { key: 'stock_OUT', ar: 'المنصرف', en: 'stock_OUT' },
+            { key: 'balance', ar: 'الرصيد', en: 'balance' },
+            { key: 'minThreshold', ar: 'حد إعادة الطلب', en: 'minThreshold' },
+            { key: 'supplier', ar: 'المورد', en: 'supplier' }
+        ];
+    },
+
+    _ppeBuildHeaderAliasMap(defs) {
+        const m = {};
+        defs.forEach((d) => {
+            m[String(d.ar || '').trim()] = d.key;
+            m[String(d.en || '').trim().toLowerCase()] = d.key;
+        });
+        return m;
+    },
+
+    _ppeFormatCellForExcel(val) {
+        if (val === null || val === undefined) return '';
+        if (val instanceof Date) {
+            const y = val.getFullYear();
+            const mo = String(val.getMonth() + 1).padStart(2, '0');
+            const da = String(val.getDate()).padStart(2, '0');
+            return `${y}-${mo}-${da}`;
+        }
+        if (typeof val === 'object' && val !== null && typeof val.toISOString === 'function') {
+            try {
+                const d = new Date(val);
+                if (!isNaN(d.getTime())) return this._ppeFormatCellForExcel(d);
+            } catch (e) { /* ignore */ }
+        }
+        return val;
+    },
+
+    async exportReceiptsExcel() {
+        try {
+            if (typeof XLSX === 'undefined') {
+                Notification.error(this._t('module.ppe.notify.xlsxMissing', 'مكتبة SheetJS غير محمّلة. يرجى تحديث الصفحة'));
+                return;
+            }
+            Loading.show(this._t('module.ppe.excel.exportingReceipts', 'جاري تصدير سجل الاستلامات…'));
+            const defs = this._ppeReceiptExcelFieldDefs();
+            const list = this.getFilteredPpeReceipts(AppState.appData.ppe || []);
+            const rows = list.map((item) => {
+                const o = {};
+                defs.forEach((d) => {
+                    let v = item[d.key];
+                    if (d.key === 'receiptDate') v = this._ppeFormatCellForExcel(v || item.receiptDate);
+                    else if (d.key === 'quantity') v = v !== undefined && v !== null ? Number(v) : '';
+                    o[d.ar] = v !== undefined && v !== null ? v : '';
+                });
+                return o;
+            });
+            const ws = XLSX.utils.json_to_sheet(rows.length ? rows : [defs.reduce((acc, d) => { acc[d.ar] = ''; return acc; }, {})]);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, this._t('module.ppe.excel.sheetReceipts', 'سجل الاستلامات'));
+            const dateStr = new Date().toISOString().slice(0, 10);
+            XLSX.writeFile(wb, `PPE_استلامات_${dateStr}.xlsx`);
+            Loading.hide();
+            Notification.success(this._t('module.ppe.excel.exportReceiptsOk', 'تم تصدير Excel لسجل الاستلامات'));
+        } catch (error) {
+            Loading.hide();
+            Utils.safeError('exportReceiptsExcel', error);
+            Notification.error(this._t('module.ppe.excel.exportErr', 'فشل التصدير') + ': ' + (error.message || error));
+        }
+    },
+
+    downloadReceiptsExcelTemplate() {
+        try {
+            if (typeof XLSX === 'undefined') {
+                Notification.error(this._t('module.ppe.notify.xlsxMissing', 'مكتبة SheetJS غير محمّلة. يرجى تحديث الصفحة'));
+                return;
+            }
+            const defs = this._ppeReceiptExcelFieldDefs();
+            const headerRow = defs.map((d) => d.ar);
+            const ws = XLSX.utils.aoa_to_sheet([headerRow]);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, this._t('module.ppe.excel.sheetReceipts', 'سجل الاستلامات'));
+            XLSX.writeFile(wb, `PPE_قالب_استلامات_${new Date().toISOString().slice(0, 10)}.xlsx`);
+            Notification.success(this._t('module.ppe.excel.templateDownloadOk', 'تم تنزيل القالب'));
+        } catch (error) {
+            Notification.error(this._t('module.ppe.excel.templateErr', 'فشل تنزيل القالب') + ': ' + error.message);
+        }
+    },
+
+    async importReceiptsExcel(file) {
+        if (!file) return;
+        if (typeof XLSX === 'undefined') {
+            Notification.error(this._t('module.ppe.notify.xlsxMissing', 'مكتبة SheetJS غير محمّلة. يرجى تحديث الصفحة'));
+            return;
+        }
+        const defs = this._ppeReceiptExcelFieldDefs();
+        const alias = this._ppeBuildHeaderAliasMap(defs);
+        try {
+            Loading.show(this._t('module.ppe.excel.importingReceipts', 'جاري استيراد الاستلامات…'));
+            const buf = await file.arrayBuffer();
+            const wb = XLSX.read(buf, { type: 'array', cellDates: true });
+            const ws = wb.Sheets[wb.SheetNames[0]];
+            const aoa = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '', raw: false });
+            if (!aoa || aoa.length < 2) {
+                Loading.hide();
+                Notification.warning(this._t('module.ppe.excel.importEmpty', 'الملف فارغ أو لا يحتوي صف بيانات بعد الرؤوس'));
+                return;
+            }
+            const headerRow = (aoa[0] || []).map((c) => String(c || '').trim());
+            const colToKey = headerRow.map((h) => alias[h] || alias[String(h || '').trim().toLowerCase()] || '');
+            let ok = 0;
+            let fail = 0;
+            for (let r = 1; r < aoa.length; r++) {
+                const row = aoa[r];
+                if (!row || !row.some((c) => String(c || '').trim() !== '')) continue;
+                const obj = {};
+                colToKey.forEach((key, i) => {
+                    if (!key) return;
+                    let v = row[i];
+                    if (v instanceof Date) {
+                        obj[key] = v.toISOString();
+                    } else if (key === 'quantity') {
+                        obj[key] = parseFloat(String(v).replace(/,/g, '')) || 0;
+                    } else if (key === 'receiptDate' && v !== '' && v !== null && v !== undefined) {
+                        const d = v instanceof Date ? v : new Date(v);
+                        obj[key] = !isNaN(d.getTime()) ? d.toISOString() : String(v);
+                    } else {
+                        obj[key] = v !== undefined && v !== null ? String(v).trim() : '';
+                    }
+                });
+                if (!obj.equipmentType || !obj.employeeName) {
+                    fail++;
+                    continue;
+                }
+                if (!obj.quantity && obj.quantity !== 0) obj.quantity = 1;
+                if (!obj.status) obj.status = 'مستلم';
+                try {
+                    if (obj.id) {
+                        const id = String(obj.id).trim();
+                        const updateData = { ...obj };
+                        delete updateData.id;
+                        const res = await GoogleIntegration.sendToAppsScript('updatePPE', { ppeId: id, updateData });
+                        if (res && res.success) ok++;
+                        else fail++;
+                    } else {
+                        const payload = { ...obj };
+                        delete payload.id;
+                        const res = await GoogleIntegration.sendToAppsScript('addPPE', payload);
+                        if (res && res.success) ok++;
+                        else fail++;
+                    }
+                } catch (e) {
+                    fail++;
+                    Utils.safeWarn('صف استلام فشل:', e);
+                }
+            }
+            Loading.hide();
+            this.clearCache();
+            await this.refreshActiveTab();
+            Notification.success(this._t('module.ppe.excel.importReceiptsSummary', 'اكتمل الاستيراد') + `: ${ok} ${this._t('module.ppe.excel.ok', 'نجاح')}، ${fail} ${this._t('module.ppe.excel.fail', 'تخطي/فشل')}.`);
+        } catch (error) {
+            Loading.hide();
+            Utils.safeError('importReceiptsExcel', error);
+            Notification.error(this._t('module.ppe.excel.importErr', 'فشل الاستيراد') + ': ' + (error.message || error));
+        }
+    },
+
+    async exportStockExcel() {
+        try {
+            if (typeof XLSX === 'undefined') {
+                Notification.error(this._t('module.ppe.notify.xlsxMissing', 'مكتبة SheetJS غير محمّلة. يرجى تحديث الصفحة'));
+                return;
+            }
+            Loading.show(this._t('module.ppe.excel.exportingStock', 'جاري تصدير المخزون…'));
+            const defs = this._ppeStockExcelFieldDefs();
+            const list = this.getFilteredStockItems(this._getCurrentStockItems());
+            const rows = list.map((item) => {
+                const o = {};
+                defs.forEach((d) => {
+                    let v = item[d.key];
+                    if (d.key === 'lastUpdate') v = this._ppeFormatCellForExcel(v);
+                    else if (['stock_IN', 'stock_OUT', 'balance', 'minThreshold'].includes(d.key)) {
+                        v = v !== undefined && v !== null && v !== '' ? Number(v) : '';
+                    }
+                    o[d.ar] = v !== undefined && v !== null ? v : '';
+                });
+                return o;
+            });
+            const ws = XLSX.utils.json_to_sheet(rows.length ? rows : [defs.reduce((acc, d) => { acc[d.ar] = ''; return acc; }, {})]);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, this._t('module.ppe.excel.sheetStock', 'مخزون مهمات الوقاية'));
+            XLSX.writeFile(wb, `PPE_مخزون_${new Date().toISOString().slice(0, 10)}.xlsx`);
+            Loading.hide();
+            Notification.success(this._t('module.ppe.excel.exportStockOk', 'تم تصدير Excel للمخزون'));
+        } catch (error) {
+            Loading.hide();
+            Utils.safeError('exportStockExcel', error);
+            Notification.error(this._t('module.ppe.excel.exportErr', 'فشل التصدير') + ': ' + (error.message || error));
+        }
+    },
+
+    downloadStockExcelTemplate() {
+        try {
+            if (typeof XLSX === 'undefined') {
+                Notification.error(this._t('module.ppe.notify.xlsxMissing', 'مكتبة SheetJS غير محمّلة. يرجى تحديث الصفحة'));
+                return;
+            }
+            const defs = this._ppeStockExcelFieldDefs().filter((d) =>
+                !['stock_IN', 'stock_OUT', 'balance'].includes(d.key)
+            );
+            const headerRow = defs.map((d) => d.ar);
+            const ws = XLSX.utils.aoa_to_sheet([headerRow]);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, this._t('module.ppe.excel.sheetStock', 'مخزون مهمات الوقاية'));
+            XLSX.writeFile(wb, `PPE_قالب_مخزون_${new Date().toISOString().slice(0, 10)}.xlsx`);
+            Notification.success(this._t('module.ppe.excel.templateDownloadOk', 'تم تنزيل القالب'));
+        } catch (error) {
+            Notification.error(this._t('module.ppe.excel.templateErr', 'فشل تنزيل القالب') + ': ' + error.message);
+        }
+    },
+
+    async importStockExcel(file) {
+        if (!file) return;
+        if (typeof XLSX === 'undefined') {
+            Notification.error(this._t('module.ppe.notify.xlsxMissing', 'مكتبة SheetJS غير محمّلة. يرجى تحديث الصفحة'));
+            return;
+        }
+        const defs = this._ppeStockExcelFieldDefs();
+        const alias = this._ppeBuildHeaderAliasMap(defs);
+        try {
+            Loading.show(this._t('module.ppe.excel.importingStock', 'جاري استيراد المخزون…'));
+            const buf = await file.arrayBuffer();
+            const wb = XLSX.read(buf, { type: 'array', cellDates: true });
+            const ws = wb.Sheets[wb.SheetNames[0]];
+            const aoa = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '', raw: false });
+            if (!aoa || aoa.length < 2) {
+                Loading.hide();
+                Notification.warning(this._t('module.ppe.excel.importEmpty', 'الملف فارغ أو لا يحتوي صف بيانات بعد الرؤوس'));
+                return;
+            }
+            const headerRow = (aoa[0] || []).map((c) => String(c || '').trim());
+            const colToKey = headerRow.map((h) => alias[h] || alias[String(h || '').trim().toLowerCase()] || '');
+            let ok = 0;
+            let fail = 0;
+            for (let r = 1; r < aoa.length; r++) {
+                const row = aoa[r];
+                if (!row || !row.some((c) => String(c || '').trim() !== '')) continue;
+                const obj = {};
+                colToKey.forEach((key, i) => {
+                    if (!key) return;
+                    let v = row[i];
+                    if (['stock_IN', 'stock_OUT', 'balance', 'minThreshold'].includes(key)) {
+                        obj[key] = parseFloat(String(v).replace(/,/g, '')) || 0;
+                    } else {
+                        obj[key] = v !== undefined && v !== null ? String(v).trim() : '';
+                    }
+                });
+                if (!obj.itemCode || !obj.itemName) {
+                    fail++;
+                    continue;
+                }
+                const stockData = {
+                    itemCode: obj.itemCode,
+                    itemName: obj.itemName,
+                    category: obj.category || '',
+                    minThreshold: obj.minThreshold !== undefined ? obj.minThreshold : 0,
+                    supplier: obj.supplier || ''
+                };
+                const iid = obj.itemId && String(obj.itemId).trim();
+                if (iid) stockData.itemId = iid;
+                if (obj.stock_IN !== undefined) stockData.stock_IN = obj.stock_IN;
+                if (obj.stock_OUT !== undefined) stockData.stock_OUT = obj.stock_OUT;
+                if (obj.balance !== undefined) stockData.balance = obj.balance;
+                try {
+                    const res = await GoogleIntegration.sendToAppsScript('addOrUpdatePPEStockItem', stockData);
+                    if (res && res.success) ok++;
+                    else fail++;
+                } catch (e) {
+                    fail++;
+                    Utils.safeWarn('صف مخزون فشل:', e);
+                }
+            }
+            Loading.hide();
+            this.clearCache();
+            await this.refreshActiveTab();
+            Notification.success(this._t('module.ppe.excel.importStockSummary', 'اكتمل استيراد المخزون') + `: ${ok} ${this._t('module.ppe.excel.ok', 'نجاح')}، ${fail} ${this._t('module.ppe.excel.fail', 'تخطي/فشل')}.`);
+        } catch (error) {
+            Loading.hide();
+            Utils.safeError('importStockExcel', error);
+            Notification.error(this._t('module.ppe.excel.importErr', 'فشل الاستيراد') + ': ' + (error.message || error));
+        }
+    },
+
+    _bindPpeReceiptExcelToolbar() {
+        const exportBtn = document.getElementById('ppe-receipts-export-excel-btn');
+        const tplBtn = document.getElementById('ppe-receipts-template-btn');
+        const importBtn = document.getElementById('ppe-receipts-import-btn');
+        const importInput = document.getElementById('ppe-receipts-import-input');
+        if (exportBtn) {
+            exportBtn.onclick = () => this.exportReceiptsExcel();
+        }
+        if (tplBtn) {
+            tplBtn.onclick = () => this.downloadReceiptsExcelTemplate();
+        }
+        if (importBtn && importInput) {
+            importBtn.onclick = () => importInput.click();
+        }
+        if (importInput) {
+            importInput.onchange = (e) => {
+                const f = e.target.files && e.target.files[0];
+                e.target.value = '';
+                if (f) this.importReceiptsExcel(f);
+            };
+        }
+    },
+
+    _bindPpeStockExcelToolbar() {
+        const exportBtn = document.getElementById('ppe-stock-export-excel-btn');
+        const tplBtn = document.getElementById('ppe-stock-template-btn');
+        const importBtn = document.getElementById('ppe-stock-import-btn');
+        const importInput = document.getElementById('ppe-stock-import-input');
+        if (exportBtn) {
+            exportBtn.onclick = () => this.exportStockExcel();
+        }
+        if (tplBtn) {
+            tplBtn.onclick = () => this.downloadStockExcelTemplate();
+        }
+        if (importBtn && importInput) {
+            importBtn.onclick = () => importInput.click();
+        }
+        if (importInput) {
+            importInput.onchange = (e) => {
+                const f = e.target.files && e.target.files[0];
+                e.target.value = '';
+                if (f) this.importStockExcel(f);
+            };
+        }
     },
 
     async exportPPEMatrix() {
