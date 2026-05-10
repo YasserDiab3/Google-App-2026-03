@@ -2885,6 +2885,12 @@ const AppState = {
         wasteManagement: [], // إدارة النايات
         energyEfficiency: [], // كاءة الطاقة
         waterManagement: [], // إدارة المياه
+        /** سجلات استهلاك المياه/الكهرباء/الغاز — تُحدَّث أيضاً من أوراق *_Records عند المزامنة */
+        resourceConsumption: {
+            water: [],
+            electricity: [],
+            gas: []
+        },
         recyclingPrograms: [], // برامج إعادة التدوير
         safetyTeamMembers: [], // أعضاء فريق السلامة
         safetyOrganizationalStructure: [], // الهيكل الوظيفي لفريق السلامة

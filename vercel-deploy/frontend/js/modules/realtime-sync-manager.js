@@ -950,6 +950,9 @@ const RealtimeSyncManager = {
 
     getModuleForSheetName(sheetName) {
         const normalized = String(sheetName || '').trim().toLowerCase();
+        if (normalized === 'watermanagement_records' || normalized === 'electricitymanagement_records' || normalized === 'gasmanagement_records') {
+            return 'sustainability';
+        }
         const moduleToSheetMap = {
             users: 'Users',
             medications: 'Medications',

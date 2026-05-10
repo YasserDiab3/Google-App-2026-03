@@ -2673,6 +2673,87 @@ const GoogleIntegration = {
     },
 
     /**
+     * أوراق سجلات استهلاك الموارد (مياه / كهرباء / غاز) — تُخزَّن في AppState.appData.resourceConsumption وليس كمفتاح مستقل في appData.
+     */
+    getResourceConsumptionRecordSlot(sheetName) {
+        const RECORD_SLOTS = {
+            'WaterManagement_Records': 'water',
+            'ElectricityManagement_Records': 'electricity',
+            'GasManagement_Records': 'gas'
+        };
+        return RECORD_SLOTS[sheetName] || null;
+    },
+
+    /**
+     * دمج نتيجة قراءة ورقة سجلات الاستهلاك أثناء المزامنة (syncData / SyncImprovements).
+     * @returns {{ handled: boolean, syncedRecords: number, failed: boolean } | null} null إذا لم تكن الورقة من نوع سجلات الاستهلاك
+     */
+    applyResourceConsumptionSheetSyncResult(sheetName, payload) {
+        const slot = this.getResourceConsumptionRecordSlot(sheetName);
+        if (!slot) return null;
+
+        const { data, error, success } = payload || {};
+
+        if (!AppState.appData) {
+            return { handled: true, syncedRecords: 0, failed: true };
+        }
+
+        if (!AppState.appData.resourceConsumption) {
+            AppState.appData.resourceConsumption = {
+                water: [],
+                electricity: [],
+                gas: []
+            };
+        }
+
+        if (!AppState.syncMeta) {
+            AppState.syncMeta = { sheets: {}, lastSyncTime: 0, userEmail: null };
+        }
+        if (!AppState.syncMeta.sheets) {
+            AppState.syncMeta.sheets = {};
+        }
+
+        if (!success || error) {
+            return { handled: true, syncedRecords: 0, failed: true };
+        }
+
+        if (!Array.isArray(data)) {
+            return { handled: true, syncedRecords: 0, failed: true };
+        }
+
+        const normalizeRow = (row) => {
+            try {
+                if (typeof Sustainability !== 'undefined' && typeof Sustainability.normalizeResourceConsumptionRecord === 'function') {
+                    return Sustainability.normalizeResourceConsumptionRecord(row);
+                }
+            } catch (_e) { /* ignore */ }
+            return row && typeof row === 'object' ? row : null;
+        };
+
+        const normalized = data.map(normalizeRow).filter(Boolean);
+
+        const oldData = Array.isArray(AppState.appData.resourceConsumption[slot])
+            ? AppState.appData.resourceConsumption[slot]
+            : [];
+
+        const shouldKeepOld = normalized.length === 0 && oldData.length > 0;
+        const effectiveData = shouldKeepOld ? oldData : normalized;
+
+        if (!shouldKeepOld) {
+            AppState.appData.resourceConsumption[slot] = normalized;
+        }
+
+        AppState.syncMeta.sheets[sheetName] = Date.now();
+        AppState.syncMeta.lastSyncTime = Date.now();
+
+        return {
+            handled: true,
+            syncedRecords: effectiveData.length,
+            failed: false
+        };
+    },
+
+    /**
      * تحديد الأوراق غير المكتملة (التي لم يتم تحميلها أو فشل تحميلها)
      * @returns {Array|null} قائمة بالأوراق غير المكتملة أو null لتحميل الكل
      */
@@ -2699,6 +2780,21 @@ const GoogleIntegration = {
             
             // التحقق من كل ورقة
             allSheets.forEach(sheetName => {
+                const rcSlot = this.getResourceConsumptionRecordSlot(sheetName);
+                if (rcSlot) {
+                    const lastSync = AppState.syncMeta.sheets[sheetName] || 0;
+                    const isExpired = lastSync > 0 && (currentTime - lastSync) > syncTimeout;
+                    const arr = AppState.appData && AppState.appData.resourceConsumption
+                        ? AppState.appData.resourceConsumption[rcSlot]
+                        : null;
+                    const hasStructure = Array.isArray(arr);
+                    const attempted = lastSync > 0;
+                    if (!attempted || isExpired || !hasStructure) {
+                        incompleteSheets.push(sheetName);
+                    }
+                    return;
+                }
+
                 const lastSync = AppState.syncMeta.sheets[sheetName] || 0;
                 const isExpired = lastSync > 0 && (currentTime - lastSync) > syncTimeout;
                 const key = sheetMapping[sheetName];
@@ -2832,6 +2928,9 @@ const GoogleIntegration = {
                 'WasteManagement',
                 'EnergyEfficiency',
                 'WaterManagement',
+                'WaterManagement_Records',
+                'GasManagement_Records',
+                'ElectricityManagement_Records',
                 'RecyclingPrograms',
                 'EmergencyAlerts',
                 'EmergencyPlans',
@@ -2955,7 +3054,7 @@ const GoogleIntegration = {
                 'sop-jha': ['SOPJHA'],
                 'risk-assessment': ['RiskAssessments', 'HSERiskAssessments'],
                 'legal-documents': ['LegalDocuments'],
-                'sustainability': ['Sustainability', 'EnvironmentalAspects', 'EnvironmentalMonitoring', 'CarbonFootprint', 'WasteManagement', 'EnergyEfficiency', 'WaterManagement', 'RecyclingPrograms'],
+                'sustainability': ['Sustainability', 'EnvironmentalAspects', 'EnvironmentalMonitoring', 'CarbonFootprint', 'WasteManagement', 'EnergyEfficiency', 'WaterManagement', 'WaterManagement_Records', 'GasManagement_Records', 'ElectricityManagement_Records', 'RecyclingPrograms'],
                 'emergency': ['EmergencyAlerts', 'EmergencyPlans', 'EmergencyPlansUpdates'],
                 'safety-budget': ['SafetyBudgets', 'SafetyBudgetTransactions', 'SafetyBudgetPurchaseOrders'],
                 'safety-performance-kpis': ['SafetyPerformanceKPIs', 'SafetyTeamKPIs'],
@@ -3268,6 +3367,22 @@ const GoogleIntegration = {
             results.forEach((result, index) => {
                 // النتائج الآن في format موحد: { sheetName, data, error, success }
                 const { sheetName, data, error, success } = result;
+
+                const rcMerge = this.applyResourceConsumptionSheetSyncResult(sheetName, { data, error, success });
+                if (rcMerge && rcMerge.handled) {
+                    if (rcMerge.failed) {
+                        if (!failedSheets.includes(sheetName)) {
+                            failedSheets.push(sheetName);
+                        }
+                        if (shouldLog) {
+                            Utils.safeWarn(`⚠️ فشل استرجاع بيانات الورقة ${sheetName}:`, error || 'خطأ غير معروف');
+                        }
+                    } else if (rcMerge.syncedRecords > 0) {
+                        syncedCount++;
+                    }
+                    return;
+                }
+
                 const key = sheetMapping[sheetName];
 
                 if (!key) {
@@ -3366,6 +3481,12 @@ const GoogleIntegration = {
             PeriodicInspectionStore.ensureInitialized();
 
             DataManager.save();
+
+            try {
+                if (typeof Dashboard !== 'undefined' && typeof Dashboard.updateReportsStatistics === 'function') {
+                    Dashboard.updateReportsStatistics();
+                }
+            } catch (_dashRc) { /* ignore */ }
 
             // ✅ إضافة: إرسال حدث لإعلام الموديولات باكتمال المزامنة
             // نرسل الحدث بعد حفظ البيانات للتأكد من تحديث الموديولات بالبيانات الجديدة

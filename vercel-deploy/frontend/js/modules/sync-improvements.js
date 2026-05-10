@@ -191,6 +191,26 @@
                     error = result.reason?.message || result.reason || 'خطأ غير معروف';
                     success = false;
                 }
+
+                const rcMerge = typeof GoogleIntegration !== 'undefined' && typeof GoogleIntegration.applyResourceConsumptionSheetSyncResult === 'function'
+                    ? GoogleIntegration.applyResourceConsumptionSheetSyncResult(sheetName, { data, error, success })
+                    : null;
+                if (rcMerge && rcMerge.handled) {
+                    if (rcMerge.failed) {
+                        failedInBatch.push(sheetName);
+                        if (shouldLog) {
+                            Utils.safeWarn(`⚠ فشل تحميل ${sheetName}:`, error?.message || error);
+                        }
+                    } else if (rcMerge.syncedRecords > 0) {
+                        syncedInBatch++;
+                        if (shouldLog) {
+                            Utils.safeLog(`✅ تم تحميل ${rcMerge.syncedRecords} سجل من ${sheetName}`);
+                        }
+                    } else if (shouldLog) {
+                        Utils.safeLog(`✅ ${sheetName} فارغة (تم التخطي بشكل آمن)`);
+                    }
+                    return;
+                }
                 
                 const key = sheetMapping[sheetName];
                 
@@ -312,7 +332,8 @@
                             'LegalDocuments', 'HSEAudits', 'HSENonConformities', 'HSECorrectiveActions',
                             'HSEObjectives', 'HSERiskAssessments', 'EnvironmentalAspects', 'EnvironmentalMonitoring',
                             'Sustainability', 'CarbonFootprint', 'WasteManagement', 'EnergyEfficiency',
-                            'WaterManagement', 'RecyclingPrograms', 'EmergencyAlerts', 'EmergencyPlans', 'EmergencyPlansUpdates',
+                            'WaterManagement', 'WaterManagement_Records', 'GasManagement_Records', 'ElectricityManagement_Records',
+                            'RecyclingPrograms', 'EmergencyAlerts', 'EmergencyPlans', 'EmergencyPlansUpdates',
                             'SafetyTeamMembers', 'SafetyOrganizationalStructure', 'SafetyJobDescriptions',
                             'SafetyTeamKPIs', 'SafetyTeamAttendance', 'SafetyTeamLeaves', 'SafetyTeamTasks',
                             'SafetyBudgets', 'SafetyBudgetTransactions', 'SafetyPerformanceKPIs',
@@ -385,7 +406,7 @@
                                 'iso': ['ISODocuments', 'ISOProcedures', 'ISOForms', 'HSEAudits'],
                                 'sop-jha': ['SOPJHA'], 'risk-assessment': ['RiskAssessments', 'HSERiskAssessments'],
                                 'legal-documents': ['LegalDocuments'],
-                                'sustainability': ['Sustainability', 'EnvironmentalAspects', 'EnvironmentalMonitoring', 'CarbonFootprint', 'WasteManagement', 'EnergyEfficiency', 'WaterManagement', 'RecyclingPrograms'],
+                                'sustainability': ['Sustainability', 'EnvironmentalAspects', 'EnvironmentalMonitoring', 'CarbonFootprint', 'WasteManagement', 'EnergyEfficiency', 'WaterManagement', 'WaterManagement_Records', 'GasManagement_Records', 'ElectricityManagement_Records', 'RecyclingPrograms'],
                                 'emergency': ['EmergencyAlerts', 'EmergencyPlans', 'EmergencyPlansUpdates'],
                                 'safety-budget': ['SafetyBudgets', 'SafetyBudgetTransactions'],
                                 'safety-performance-kpis': ['SafetyPerformanceKPIs', 'SafetyTeamKPIs'],
@@ -540,6 +561,12 @@
                                 setTimeout(resolve, 300);
                             });
                         }
+
+                        try {
+                            if (typeof Dashboard !== 'undefined' && typeof Dashboard.updateReportsStatistics === 'function') {
+                                Dashboard.updateReportsStatistics();
+                            }
+                        } catch (_dashRc) { /* ignore */ }
                         
                         // إرسال حدث لإعلام الوحدات بتحديث الواجهة
                         if (typeof window !== 'undefined') {
