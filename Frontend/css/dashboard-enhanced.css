@@ -145,10 +145,16 @@
     grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
     gap: 1.25rem;
     margin-bottom: 2rem;
-    grid-auto-flow: dense;
+    grid-auto-flow: row;
     width: 100%;
     max-width: 100%;
     box-sizing: border-box;
+}
+
+/* شبكة KPI: أعمدة متجاوبة بدون فراغات جانبية عند إخفاء كروت حسب الصلاحيات */
+#dashboard-section .kpi-grid {
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 268px), 1fr));
+    grid-auto-flow: row dense;
 }
 
 /* Ensure grid items fill available space equally */
@@ -195,7 +201,10 @@
 #active-ptw,
 #compliance-rate,
 #total-work-hours,
-#days-without-injury {
+#days-without-injury,
+#dash-kpi-training-programs,
+#dash-kpi-clinic-visits-total,
+#dash-kpi-employees-active-count {
     direction: ltr !important;
     text-align: left !important;
     unicode-bidi: embed !important;
@@ -215,11 +224,18 @@
     margin-bottom: 0;
 }
 
-/* Force all KPI cards to have identical dimensions */
-.kpi-grid>.kpi-card {
-    min-height: 140px;
-    max-height: 140px;
-    height: 140px;
+/* كروت KPI داخل لوحة التحكم: ارتفاع مرن حتى لا يحدث قصّ أو تداخل عند صلاحيات جزئية */
+#dashboard-section .kpi-grid > .kpi-card:not(.kpi-card--permits) {
+    min-height: 132px;
+    height: auto;
+    max-height: none;
+}
+
+#dashboard-section .kpi-grid > .kpi-card.kpi-card--permits {
+    min-height: 188px;
+    height: auto;
+    max-height: none;
+    align-items: flex-start;
 }
 
 /* Ensure icons are identical size */

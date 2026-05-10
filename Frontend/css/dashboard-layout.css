@@ -605,3 +605,56 @@
         display: none;
     }
 }
+
+/* ===== لوحة التحكم — شبكة متجاوبة ورسوم بعرض كامل (يتغلب على تعارضات أقدم) ===== */
+#dashboard-section .kpi-grid {
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 268px), 1fr));
+    gap: 1.25rem;
+}
+
+#dashboard-section > .content-grid {
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+}
+
+#dashboard-charts.dashboard-charts-root {
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+    margin-top: 0.5rem;
+}
+
+#dashboard-charts .dashboard-charts-grid-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr));
+    gap: 1.25rem;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+    margin-bottom: 1.25rem;
+}
+
+#dashboard-charts .dashboard-charts-grid-row:last-child {
+    margin-bottom: 0;
+}
+
+#dashboard-charts .dashboard-charts-grid-row > .content-card {
+    min-width: 0;
+    width: 100%;
+}
+
+@media (max-width: 480px) {
+    #dashboard-section .kpi-grid {
+        grid-template-columns: 1fr;
+    }
+
+    #dashboard-charts .dashboard-charts-grid-row {
+        grid-template-columns: 1fr;
+    }
+}
+
+#dashboard-section .metrics-grid-container {
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 220px), 1fr));
+}

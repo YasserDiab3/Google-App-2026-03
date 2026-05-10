@@ -9042,10 +9042,10 @@
         <link rel="stylesheet" href="css/components.css" />
 
         <!-- Enhanced Dashboard CSS -->
-        <link rel="stylesheet" href="css/dashboard-enhanced.css" />
+        <link rel="stylesheet" href="css/dashboard-enhanced.css?v=20260211-dash-layout" />
 
         <!-- Dashboard Layout CSS -->
-        <link rel="stylesheet" href="css/dashboard-layout.css" />
+        <link rel="stylesheet" href="css/dashboard-layout.css?v=20260211-dash-layout" />
 
         <!-- Safety Metrics Card CSS -->
         <link rel="stylesheet" href="css/safety-metrics-card.css" />
@@ -10914,10 +10914,9 @@
                             </div>
 
                             <div
-                                class="kpi-card kpi-info"
+                                class="kpi-card kpi-info kpi-card--permits"
                                 role="article"
                                 data-dash-scope="ptw"
-                                style="grid-column: span 2; min-height: 180px"
                             >
                                 <div class="kpi-icon" aria-hidden="true">
                                     <i class="fas fa-file-alt"></i>
@@ -11071,6 +11070,69 @@
                                             </p>
                                         </div>
                                     </div>
+                                </div>
+                            </div>
+
+                            <div class="kpi-card kpi-warning" role="article" data-dash-scope="training">
+                                <div class="kpi-icon" aria-hidden="true">
+                                    <i class="fas fa-graduation-cap"></i>
+                                </div>
+                                <div class="kpi-content">
+                                    <h3 class="kpi-label">
+                                        برامج التدريب
+                                    </h3>
+                                    <p
+                                        class="kpi-value"
+                                        id="dash-kpi-training-programs"
+                                        aria-live="polite"
+                                    >
+                                        0
+                                    </p>
+                                    <p class="kpi-description">
+                                        إجمالي البرامج المسجلة في النظام
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div class="kpi-card kpi-success" role="article" data-dash-scope="clinic">
+                                <div class="kpi-icon" aria-hidden="true">
+                                    <i class="fas fa-hospital"></i>
+                                </div>
+                                <div class="kpi-content">
+                                    <h3 class="kpi-label">
+                                        التردد على العيادة
+                                    </h3>
+                                    <p
+                                        class="kpi-value"
+                                        id="dash-kpi-clinic-visits-total"
+                                        aria-live="polite"
+                                    >
+                                        0
+                                    </p>
+                                    <p class="kpi-description">
+                                        إجمالي الزيارات المسجلة
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div class="kpi-card kpi-info" role="article" data-dash-scope="employees">
+                                <div class="kpi-icon" aria-hidden="true">
+                                    <i class="fas fa-user-friends"></i>
+                                </div>
+                                <div class="kpi-content">
+                                    <h3 class="kpi-label">
+                                        الموظفون النشطون
+                                    </h3>
+                                    <p
+                                        class="kpi-value"
+                                        id="dash-kpi-employees-active-count"
+                                        aria-live="polite"
+                                    >
+                                        0
+                                    </p>
+                                    <p class="kpi-description">
+                                        من قاعدة بيانات الموظفين
+                                    </p>
                                 </div>
                             </div>
 

@@ -3052,6 +3052,27 @@ const Dashboard = {
                             totalWorkHoursEl.textContent = self.formatNumber(actualTotalHours);
                             self.applyEnglishNumberFormat(totalWorkHoursEl);
                         }
+                        const empCountDashEl = document.getElementById('dash-kpi-employees-active-count');
+                        if (empCountDashEl) {
+                            const empActiveOnly = employees.filter(e => e && e.active !== false).length;
+                            empCountDashEl.textContent = self.formatNumber(empActiveOnly);
+                            self.applyEnglishNumberFormat(empCountDashEl);
+                        }
+                    }
+                    if (self.dashboardCan('training')) {
+                        const trainingProgDashEl = document.getElementById('dash-kpi-training-programs');
+                        if (trainingProgDashEl) {
+                            const tr = Array.isArray(data.training) ? data.training : [];
+                            trainingProgDashEl.textContent = self.formatNumber(tr.length);
+                            self.applyEnglishNumberFormat(trainingProgDashEl);
+                        }
+                    }
+                    if (self.dashboardCan('clinic')) {
+                        const clinicDashEl = document.getElementById('dash-kpi-clinic-visits-total');
+                        if (clinicDashEl) {
+                            clinicDashEl.textContent = self.formatNumber(self.getClinicVisitsTotalCount(data));
+                            self.applyEnglishNumberFormat(clinicDashEl);
+                        }
                     }
                     if (canIncDash) {
                         const daysWithoutInjuryEl = document.getElementById('days-without-injury');
@@ -3993,8 +4014,11 @@ const Dashboard = {
         const showTraining = this.dashboardCan('training');
         if (!showIncidents && !showPtw && !showTraining) {
             container.innerHTML = '';
+            container.classList.remove('dashboard-charts-root');
             return;
         }
+
+        container.classList.add('dashboard-charts-root');
 
         const data = AppState.appData || {};
         const now = new Date();
@@ -4032,7 +4056,7 @@ const Dashboard = {
 
         if (showIncidents) {
             sections.push(`
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+            <div class="dashboard-charts-grid-row">
                 <div class="content-card">
                     <div class="card-header">
                         <h2 class="card-title">
@@ -4096,7 +4120,7 @@ const Dashboard = {
                 </div>`);
         }
         if (row2.length > 0) {
-            sections.push(`<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">${row2.join('')}</div>`);
+            sections.push(`<div class="dashboard-charts-grid-row">${row2.join('')}</div>`);
         }
 
         container.innerHTML = sections.join('');
