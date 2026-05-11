@@ -55,6 +55,11 @@ const Violations = {
         };
     },
 
+    /** معرّف آمن لاستخدامه داخل onclick (يفادي كسر السلسلة عند وجود علامات اقتباس أو شرطة مائلة) */
+    _escapeIdForHandler(id) {
+        return JSON.stringify(id == null ? '' : String(id));
+    },
+
     /**
      * القيمة المالية المعروضة: إن كانت 0 أو فارغة في السجل لكن نوع المخالفة له غرامة افتراضية، تُعرض غرامة النوع فوراً (بدون انتظار مزامنة الشيت).
      */
@@ -808,16 +813,16 @@ const Violations = {
                                     </td>
                                     <td style="padding: 14px 12px; text-align: center; border-bottom: 1px solid #fecaca;">
                                         <div style="display: flex; align-items: center; justify-content: center; gap: 8px;">
-                                            <button onclick="Violations.viewViolation('${violation.id}')" style="width: 36px; height: 36px; border-radius: 8px; border: none; background: linear-gradient(135deg, #3b82f6, #2563eb); color: white; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s ease; box-shadow: 0 2px 6px rgba(59,130,246,0.3);" title="عرض التفاصيل">
+                                            <button type="button" onclick='Violations.viewViolation(${this._escapeIdForHandler(violation.id)})' style="width: 36px; height: 36px; border-radius: 8px; border: none; background: linear-gradient(135deg, #3b82f6, #2563eb); color: white; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s ease; box-shadow: 0 2px 6px rgba(59,130,246,0.3);" title="عرض التفاصيل">
                                                 <i class="fas fa-eye"></i>
                                             </button>
-                                            <button onclick="Violations.showViolationForm('${violation.id}')" style="width: 36px; height: 36px; border-radius: 8px; border: none; background: linear-gradient(135deg, #8b5cf6, #7c3aed); color: white; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s ease; box-shadow: 0 2px 6px rgba(139,92,246,0.3);" title="تعديل">
+                                            <button type="button" onclick='Violations.showViolationForm(${this._escapeIdForHandler(violation.id)})' style="width: 36px; height: 36px; border-radius: 8px; border: none; background: linear-gradient(135deg, #8b5cf6, #7c3aed); color: white; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s ease; box-shadow: 0 2px 6px rgba(139,92,246,0.3);" title="تعديل">
                                                 <i class="fas fa-edit"></i>
                                             </button>
-                                            <button onclick="Violations.exportPDF('${violation.id}')" style="width: 36px; height: 36px; border-radius: 8px; border: none; background: linear-gradient(135deg, #10b981, #059669); color: white; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s ease; box-shadow: 0 2px 6px rgba(16,185,129,0.3);" title="تصدير PDF">
+                                            <button type="button" onclick='Violations.exportPDF(${this._escapeIdForHandler(violation.id)})' style="width: 36px; height: 36px; border-radius: 8px; border: none; background: linear-gradient(135deg, #10b981, #059669); color: white; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s ease; box-shadow: 0 2px 6px rgba(16,185,129,0.3);" title="تصدير PDF">
                                                 <i class="fas fa-file-pdf"></i>
                                             </button>
-                                            <button onclick="Violations.deleteViolation('${violation.id}')" style="width: 36px; height: 36px; border-radius: 8px; border: none; background: linear-gradient(135deg, #ef4444, #dc2626); color: white; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s ease; box-shadow: 0 2px 6px rgba(239,68,68,0.3);" title="حذف">
+                                            <button type="button" onclick='Violations.deleteViolation(${this._escapeIdForHandler(violation.id)})' style="width: 36px; height: 36px; border-radius: 8px; border: none; background: linear-gradient(135deg, #ef4444, #dc2626); color: white; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s ease; box-shadow: 0 2px 6px rgba(239,68,68,0.3);" title="حذف">
                                                 <i class="fas fa-trash"></i>
                                             </button>
                                         </div>
@@ -1315,13 +1320,13 @@ const Violations = {
                             </td>
                             <td>
                                 <div class="flex items-center gap-2">
-                                    <button onclick="Violations.viewViolation('${violation.id}')" class="btn-icon btn-icon-primary" title="عرض">
+                                    <button type="button" onclick='Violations.viewViolation(${this._escapeIdForHandler(violation.id)})' class="btn-icon btn-icon-primary" title="عرض">
                                         <i class="fas fa-eye"></i>
                                     </button>
-                                    <button onclick="Violations.showViolationForm('${violation.id}')" class="btn-icon btn-icon-warning" title="تعديل">
+                                    <button type="button" onclick='Violations.showViolationForm(${this._escapeIdForHandler(violation.id)})' class="btn-icon btn-icon-warning" title="تعديل">
                                         <i class="fas fa-edit"></i>
                                     </button>
-                                    <button onclick="Violations.deleteViolation('${violation.id}')" class="btn-icon btn-icon-danger" title="حذف">
+                                    <button type="button" onclick='Violations.deleteViolation(${this._escapeIdForHandler(violation.id)})' class="btn-icon btn-icon-danger" title="حذف">
                                         <i class="fas fa-trash"></i>
                                     </button>
                                 </div>
@@ -1374,13 +1379,13 @@ const Violations = {
                             </td>
                             <td>
                                 <div class="flex items-center gap-2">
-                                    <button onclick="Violations.viewViolation('${violation.id}')" class="btn-icon btn-icon-primary" title="عرض">
+                                    <button type="button" onclick='Violations.viewViolation(${this._escapeIdForHandler(violation.id)})' class="btn-icon btn-icon-primary" title="عرض">
                                         <i class="fas fa-eye"></i>
                                     </button>
-                                    <button onclick="Violations.showViolationForm('${violation.id}')" class="btn-icon btn-icon-warning" title="تعديل">
+                                    <button type="button" onclick='Violations.showViolationForm(${this._escapeIdForHandler(violation.id)})' class="btn-icon btn-icon-warning" title="تعديل">
                                         <i class="fas fa-edit"></i>
                                     </button>
-                                    <button onclick="Violations.deleteViolation('${violation.id}')" class="btn-icon btn-icon-danger" title="حذف">
+                                    <button type="button" onclick='Violations.deleteViolation(${this._escapeIdForHandler(violation.id)})' class="btn-icon btn-icon-danger" title="حذف">
                                         <i class="fas fa-trash"></i>
                                     </button>
                                 </div>
@@ -3631,13 +3636,13 @@ const Violations = {
                 </div>
                 <div class="modal-footer violation-view-actions-footer" style="background: #f8fafc; padding: 16px 24px; display: flex; flex-wrap: wrap; gap: 10px; justify-content: flex-end;">
                     <button type="button" class="btn-secondary" onclick="this.closest('.modal-overlay').remove()" style="padding: 10px 18px; border-radius: 10px;">إغلاق</button>
-                    <button type="button" class="btn-primary" onclick="Violations.printViolationProfessional('${violation.id}')" style="background: linear-gradient(135deg, #0f766e, #0d9488); padding: 10px 18px; border-radius: 10px;">
+                    <button type="button" class="btn-primary" onclick='Violations.printViolationProfessional(${this._escapeIdForHandler(violation.id)})' style="background: linear-gradient(135deg, #0f766e, #0d9488); padding: 10px 18px; border-radius: 10px;">
                         <i class="fas fa-print ml-2"></i>طباعة منسّقة
                     </button>
-                    <button type="button" class="btn-primary" onclick="Violations.exportPDF('${violation.id}')" style="background: linear-gradient(135deg, #10b981, #059669); padding: 10px 18px; border-radius: 10px;">
+                    <button type="button" class="btn-primary" onclick='Violations.exportPDF(${this._escapeIdForHandler(violation.id)})' style="background: linear-gradient(135deg, #10b981, #059669); padding: 10px 18px; border-radius: 10px;">
                         <i class="fas fa-file-pdf ml-2"></i>تصدير PDF
                     </button>
-                    <button type="button" class="btn-primary" onclick="Violations.showViolationForm('${violation.id}'); this.closest('.modal-overlay').remove();" style="background: linear-gradient(135deg, #8b5cf6, #7c3aed); padding: 10px 18px; border-radius: 10px;">
+                    <button type="button" class="btn-primary" onclick='Violations.showViolationForm(${this._escapeIdForHandler(violation.id)}); this.closest(".modal-overlay").remove();' style="background: linear-gradient(135deg, #8b5cf6, #7c3aed); padding: 10px 18px; border-radius: 10px;">
                         <i class="fas fa-sliders-h ml-2"></i>تعديل كامل (جميع الحقول)
                     </button>
                 </div>
@@ -3711,9 +3716,21 @@ const Violations = {
             }
             Notification.success('تم حفظ التعديلات السريعة بنجاح');
             viewModal.remove();
-            this.viewViolation(id);
-            if (typeof this.load === 'function') {
-                try { await this.load(); } catch (e) { /* ignore */ }
+            await this.viewViolation(id);
+            try {
+                const activeTab = document.querySelector('#violations-section .tabs-container .tab-btn.active')?.dataset?.tab || 'all';
+                const listEl = document.getElementById('violations-list');
+                if (listEl) {
+                    if (activeTab === 'all') listEl.innerHTML = this.renderViolationsList();
+                    else if (activeTab === 'employees') listEl.innerHTML = this.renderEmployeeViolationsList();
+                    else if (activeTab === 'contractors') listEl.innerHTML = this.renderContractorViolationsList();
+                }
+                if (activeTab === 'all') {
+                    const statsEl = document.getElementById('violations-stats-cards');
+                    if (statsEl) statsEl.outerHTML = this.renderAllViolationsStats();
+                }
+            } catch (re) {
+                if (typeof Utils !== 'undefined' && Utils.safeWarn) Utils.safeWarn('تحديث قائمة المخالفات بعد الحفظ السريع:', re);
             }
         } catch (error) {
             Utils.safeError('خطأ في الحفظ السريع للمخالفة:', error);
