@@ -3082,6 +3082,9 @@ const Settings = {
                                         <td class="align-top">${usage}</td>
                                         <td class="align-top">
                                             <div class="flex items-center gap-2">
+                                                <button class="btn-icon btn-icon-primary" data-action="view-violation-type" data-type-id="${type.id}" title="عرض">
+                                                    <i class="fas fa-eye"></i>
+                                                </button>
                                                 <button class="btn-icon btn-icon-info" data-action="edit-violation-type" data-type-id="${type.id}" title="تعديل">
                                                     <i class="fas fa-edit"></i>
                                                 </button>
@@ -3114,6 +3117,13 @@ const Settings = {
             exportBtn.onclick = () => this.exportViolationTypesToExcel();
         }
 
+        document.querySelectorAll('[data-action="view-violation-type"]').forEach(btn => {
+            btn.onclick = (event) => {
+                const typeId = event.currentTarget.getAttribute('data-type-id');
+                this.viewViolationType(typeId);
+            };
+        });
+
         document.querySelectorAll('[data-action="edit-violation-type"]').forEach(btn => {
             btn.onclick = (event) => {
                 const typeId = event.currentTarget.getAttribute('data-type-id');
@@ -3134,6 +3144,49 @@ const Settings = {
         if (!container) return;
         container.innerHTML = this.renderViolationTypesList();
         this.bindViolationTypesEvents();
+    },
+
+    viewViolationType(typeId) {
+        try {
+            if (!typeId || typeof ViolationTypesManager === 'undefined') return;
+            ViolationTypesManager.ensureInitialized?.();
+            const type = ViolationTypesManager.getTypeById(typeId);
+            if (!type || !type.name) {
+                Notification.error('تعذر العثور على نوع المخالفة المحدد');
+                return;
+            }
+
+            if (typeof UI !== 'undefined' && typeof UI.showSection === 'function') {
+                UI.showSection('violations');
+            }
+
+            const applyFilter = () => {
+                if (typeof Violations === 'undefined') return false;
+                if (!Violations.currentFilters) {
+                    Violations.currentFilters = { search: '', personType: '', violationType: '', severity: '', status: '' };
+                }
+                Violations.currentFilters.violationType = type.name;
+
+                if (typeof Violations.switchTab === 'function') {
+                    Violations.switchTab('all');
+                } else if (typeof Violations.refreshViolationsView === 'function') {
+                    Violations.refreshViolationsView();
+                } else if (typeof Violations.refreshModule === 'function') {
+                    Violations.refreshModule();
+                }
+                return true;
+            };
+
+            if (!applyFilter()) {
+                setTimeout(() => {
+                    if (!applyFilter()) {
+                        setTimeout(() => applyFilter(), 600);
+                    }
+                }, 250);
+            }
+        } catch (e) {
+            Notification.error('حدث خطأ أثناء فتح قائمة المخالفات');
+        }
     },
 
     openViolationTypeModal(typeId = null) {
