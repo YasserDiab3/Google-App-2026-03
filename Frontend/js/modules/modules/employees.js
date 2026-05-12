@@ -4318,19 +4318,19 @@ const Employees = {
                 }
             });
             
-            // ✅ تنفيذ المزامنة مع Backend في الخلفية لتجنب عدم استجابة النظام (Unresponsiveness)
-            Promise.allSettled([
-                GoogleIntegration.autoSave('Employees', AppState.appData.employees),
-                (async () => {
-                    if (AppState.googleConfig?.appsScript?.enabled) {
-                        try {
-                            await GoogleIntegration.sendToAppsScript('deactivateEmployee', { employeeId: id });
-                        } catch (error) {
-                            Utils.safeWarn('⚠️ فشل إلغاء تفعيل الموظف من Google Sheets، سيتم المحاولة لاحقاً:', error);
+            // ✅ تنفيذ المزامنة مع Backend في الخلفية لتجنب عدم استجابة النظام
+            // نستخدم sendToAppsScript فقط (بدون autoSave) لتحديث صف واحد بدلاً من رفع كل السجلات
+            if (AppState.googleConfig?.appsScript?.enabled) {
+                GoogleIntegration.sendToAppsScript('deactivateEmployee', { employeeId: id })
+                    .then(res => {
+                        if (!res || !res.success) {
+                            Utils.safeWarn('⚠️ فشل إلغاء تفعيل الموظف من Google Sheets:', res?.message);
+                        } else {
+                            Utils.safeLog('✅ تم إلغاء التفعيل في قاعدة البيانات بنجاح');
                         }
-                    }
-                })()
-            ]).catch(err => Utils.safeWarn('خطأ في مزامنة إلغاء التفعيل في الخلفية:', err));
+                    })
+                    .catch(err => Utils.safeWarn('خطأ في مزامنة إلغاء التفعيل في الخلفية:', err));
+            }
         } catch (error) {
             Loading.hide();
             Notification.error('حدث خطأ: ' + error.message);
@@ -4387,19 +4387,19 @@ const Employees = {
                 }
             });
             
-            // ✅ تنفيذ المزامنة مع Backend في الخلفية لتجنب عدم استجابة النظام (Unresponsiveness)
-            Promise.allSettled([
-                GoogleIntegration.autoSave('Employees', AppState.appData.employees),
-                (async () => {
-                    if (AppState.googleConfig?.appsScript?.enabled) {
-                        try {
-                            await GoogleIntegration.sendToAppsScript('deleteEmployee', { employeeId: id });
-                        } catch (error) {
-                            Utils.safeWarn('⚠️ فشل الحذف من Google Sheets، سيتم المحاولة لاحقاً:', error);
+            // ✅ تنفيذ المزامنة مع Backend في الخلفية لتجنب عدم استجابة النظام
+            // نستخدم sendToAppsScript فقط للحذف الدقيق والسريع
+            if (AppState.googleConfig?.appsScript?.enabled) {
+                GoogleIntegration.sendToAppsScript('deleteEmployee', { employeeId: id })
+                    .then(res => {
+                        if (!res || !res.success) {
+                            Utils.safeWarn('⚠️ فشل الحذف من Google Sheets:', res?.message);
+                        } else {
+                            Utils.safeLog('✅ تم الحذف من قاعدة البيانات بنجاح');
                         }
-                    }
-                })()
-            ]).catch(err => Utils.safeWarn('خطأ في مزامنة الحذف في الخلفية:', err));
+                    })
+                    .catch(err => Utils.safeWarn('خطأ في مزامنة الحذف في الخلفية:', err));
+            }
         } catch (error) {
             Loading.hide();
             Notification.error('حدث خطأ: ' + error.message);
