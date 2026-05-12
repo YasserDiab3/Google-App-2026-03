@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Sustainability Module - Environmental Resource Management
  * مديول الاستدامة البيئية - إدارة استهلاك الموارد
  * 
@@ -1956,23 +1956,8 @@ ${innerContent}
                 Utils.safeWarn('⚠️ DataManager غير متاح - لم يتم حفظ البيانات');
             }
 
-            const saveResult = await this.saveResourceConsumptionToSheets();
 
-            Loading.hide();
-
-            if (!saveResult.success) {
-                if (recordId && previousRecord !== null && previousIndex !== -1) {
-                    AppState.appData.resourceConsumption[type][previousIndex] = previousRecord;
-                } else if (!recordId) {
-                    AppState.appData.resourceConsumption[type] = AppState.appData.resourceConsumption[type].filter((r) => r.id !== formData.id);
-                }
-                if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
-                    window.DataManager.save();
-                }
-                Notification.error('فشل الحفظ في الخادم — لم يُحدَّث السجل في الشيت: ' + (saveResult.message || saveResult.error || ''));
-                return;
-            }
-
+            // ✅ 1) إغلاق المودال فوراً (قبل المزامنة مع الشيت)
             Notification.success(recordId ? 'تم تحديث السجل بنجاح' : 'تم إضافة السجل بنجاح');
             if (typeof closeModal === 'function') {
                 closeModal();
@@ -1980,11 +1965,30 @@ ${innerContent}
                 try { modal.remove(); } catch (e) { /* ignore */ }
             }
 
-            // ✅ تحديث فوري لأرقام الكروت الإجمالية في الـ Dashboard (قبل إعادة التحميل الكاملة)
+            // ✅ 2) تحديث فوري للكروت
             this._refreshDashboardTotals();
-
-            // إعادة تحميل التبويب الحالي
             this.load();
+
+            // ✅ 3) المزامنة مع Google Sheets في الخلفية
+            this.saveResourceConsumptionToSheets().then(saveResult => {
+                if (!saveResult.success) {
+                    // rollback إذا فشل الحفظ
+                    if (recordId && previousRecord !== null && previousIndex !== -1) {
+                        AppState.appData.resourceConsumption[type][previousIndex] = previousRecord;
+                    } else if (!recordId) {
+                        AppState.appData.resourceConsumption[type] =
+                            AppState.appData.resourceConsumption[type].filter(r => r.id !== formData.id);
+                    }
+                    if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
+                        window.DataManager.save();
+                    }
+                    Notification.error('⚠️ فشل المزامنة مع الشيت: ' + (saveResult.message || saveResult.error || ''));
+                    this._refreshDashboardTotals();
+                    this.load();
+                }
+            }).catch(err => {
+                Utils.safeError('خطأ في المزامنة مع الشيت:', err);
+            });
 
             if (hasAlert) {
                 Notification.warning(`تنبيه: استهلاك ${this.getTypeName(type)} تجاوز الحد المسموح`);
@@ -4670,6 +4674,7 @@ ${innerContent}
 
     normalizeResourceConsumptionRecord(record) {
         if (!record || typeof record !== 'object') return null;
+
         const pick = (...keys) => {
             for (const key of keys) {
                 if (record[key] !== undefined && record[key] !== null && String(record[key]).trim() !== '') {
@@ -4679,38 +4684,56 @@ ${innerContent}
             return '';
         };
 
+        // تحويل قيمة hasAlert من string إلى boolean — هذا سبب ظهور "false" كنص في الجدول
+        const parseBool = (val) => {
+            if (typeof val === 'boolean') return val;
+            const s = String(val || '').trim().toLowerCase();
+            return s === 'true' || s === '1' || s === 'yes' || s === 'TRUE';
+        };
+
         const parsedDate = (() => {
             const rawDate = pick('date', 'Date', 'التاريخ', 'recordDate');
             const d = new Date(rawDate || new Date());
             return Number.isNaN(d.getTime()) ? new Date() : d;
         })();
 
-        const totalConsumption = parseFloat(
-            pick(
-                'totalConsumption',
-                'total',
-                'consumption',
-                'quantity',
-                'Total Consumption',
-                'إجمالي الاستهلاك',
-                'الاستهلاك'
-            )
-        ) || 0;
+        const startReading = parseFloat(
+            pick('startReading', 'start_reading', 'بداية', 'StartReading', 'قراءة البداية')
+        );
+        const endReading = parseFloat(
+            pick('endReading', 'end_reading', 'نهاية', 'EndReading', 'قراءة النهاية')
+        );
+
+        // حساب الإجمالي: من الشيت أو فرق القراءتين
+        let totalConsumption = parseFloat(
+            pick('totalConsumption', 'total', 'Total Consumption', 'إجمالي الاستهلاك', 'الاستهلاك')
+        );
+        if (!Number.isFinite(totalConsumption)) {
+            totalConsumption = (Number.isFinite(endReading) && Number.isFinite(startReading))
+                ? Math.max(0, endReading - startReading)
+                : 0;
+        }
+
+        const monthYearRaw = pick('monthYear', 'month', 'Month/Year', 'الشهر / السنة', 'الشهر/السنة');
 
         return {
-            ...record,
-            id: String(pick('id', 'ID', 'recordId') || Utils.generateId('RES')),
-            serialNumber: String(pick('serialNumber', 'serial', 'Serial Number', 'الرقم التسلسلي') || ''),
-            date: parsedDate.toISOString(),
-            monthYear: String(pick('monthYear', 'month', 'Month/Year', 'الشهر / السنة') || this.getMonthYear(parsedDate)),
-            location: String(pick('location', 'site', 'locationName', 'الموقع') || ''),
-            quantity: parseFloat(pick('quantity', 'Quantity', 'الكمية')) || 0,
+            id:              String(pick('id', 'ID', 'recordId') || Utils.generateId('RES')),
+            serialNumber:    String(pick('serialNumber', 'serial', 'Serial Number', 'الرقم التسلسلي') || ''),
+            date:            parsedDate.toISOString(),
+            monthYear:       String(monthYearRaw || this.getMonthYear(parsedDate)),
+            location:        String(pick('location', 'site', 'locationName', 'الموقع', 'المصنع') || ''),
+            source:          String(pick('source', 'المصدر', 'Source') || ''),
+            startReading:    Number.isFinite(startReading) ? startReading : 0,
+            endReading:      Number.isFinite(endReading) ? endReading : 0,
             totalConsumption: totalConsumption,
-            notes: String(pick('notes', 'Notes', 'ملاحظات') || ''),
-            createdAt: String(pick('createdAt', 'Created At', 'تاريخ الإنشاء') || parsedDate.toISOString()),
-            updatedAt: new Date().toISOString(),
-            createdBy: String(pick('createdBy', 'created_by', 'المنشئ') || ''),
-            updatedBy: String(pick('updatedBy', 'updated_by', 'المعدل') || '')
+            unit:            String(pick('unit', 'وحدة القياس', 'Unit') || ''),
+            department:      String(pick('department', 'الجهة', 'القسم', 'Department') || ''),
+            notes:           String(pick('notes', 'Notes', 'ملاحظات') || ''),
+            hasAlert:        parseBool(pick('hasAlert', 'has_alert', 'HasAlert', 'تنبيه')),
+            createdAt:       String(pick('createdAt', 'Created At', 'تاريخ الإنشاء') || parsedDate.toISOString()),
+            updatedAt:       new Date().toISOString(),
+            createdBy:       String(pick('createdBy', 'created_by', 'المنشئ') || ''),
+            updatedBy:       String(pick('updatedBy', 'updated_by', 'المعدل') || '')
         };
     },
 
