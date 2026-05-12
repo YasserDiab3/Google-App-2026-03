@@ -1407,16 +1407,36 @@ ${innerContent}
                                 <p class="text-gray-500">لا توجد سجلات لاستهلاك ${name} ضمن سنة <strong>${viewY}</strong>. جرّب اختيار سنة أخرى من شريط التصفية أو أضف سجلاً جديداً.</p>
                             </div>
                         ` : `
-                            <div class="mb-4 flex items-center justify-between">
-                                <div class="relative w-full max-w-md">
-                                    <span class="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400">
-                                        <i class="fas fa-search"></i>
-                                    </span>
-                                    <input type="text" 
-                                        id="search-filter-${type}" 
-                                        class="form-input w-full pr-10" 
-                                        placeholder="بحث في السجلات (الموقع، المصدر، الجهة، التاريخ...)" 
-                                        oninput="Sustainability.filterResourceTable('${type}')">
+                            <div class="filters-row" style="background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%); padding: 16px 20px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #e2e8f0;">
+                                <div class="filters-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; align-items: end;">
+                                    <div class="filter-field" style="min-width: 180px;">
+                                        <label class="filter-label text-sm text-gray-600 mb-1 block font-medium">
+                                            <i class="fas fa-search ml-1 text-gray-400"></i> بحث شامل
+                                        </label>
+                                        <div class="relative">
+                                            <input type="text" id="search-filter-${type}" class="form-input w-full pr-10" placeholder="بحث في السجلات..." oninput="Sustainability.filterResourceTable('${type}')">
+                                            <i class="fas fa-search absolute top-3 right-3 text-gray-400"></i>
+                                        </div>
+                                    </div>
+                                    <div class="filter-field" style="min-width: 160px;">
+                                        <label class="filter-label text-sm text-gray-600 mb-1 block font-medium">
+                                            <i class="fas fa-industry ml-1 text-gray-400"></i> الموقع / المصنع
+                                        </label>
+                                        <select id="factory-filter-${type}" class="form-input w-full" onchange="Sustainability.filterResourceTable('${type}')">
+                                            <option value="">الكل</option>
+                                            ${[...new Set(data.map(r => r.location).filter(Boolean))].map(loc => `<option value="${Utils.escapeHTML(loc)}">${Utils.escapeHTML(loc)}</option>`).join('')}
+                                        </select>
+                                    </div>
+                                    <div class="filter-field" style="min-width: 160px;">
+                                        <label class="filter-label text-sm text-gray-600 mb-1 block font-medium">
+                                            <i class="fas fa-exclamation-triangle ml-1 text-gray-400"></i> الحالة
+                                        </label>
+                                        <select id="status-filter-${type}" class="form-input w-full" onchange="Sustainability.filterResourceTable('${type}')">
+                                            <option value="">الكل</option>
+                                            <option value="alert">تنبيه</option>
+                                            <option value="normal">طبيعي</option>
+                                        </select>
+                                    </div>
                                 </div>
                             </div>
                             <div class="overflow-x-auto">
@@ -1496,12 +1516,17 @@ ${innerContent}
     },
 
     /**
-     * فلتر ديناميكي للبحث في السجلات المعروضة في الجدول
+     * فلتر ديناميكي للبحث في السجلات المعروضة في الجدول بناء على معايير متعددة
      */
     filterResourceTable(type) {
-        const input = document.getElementById(`search-filter-${type}`);
-        if (!input) return;
-        const filter = input.value.toLowerCase();
+        const searchInput = document.getElementById(`search-filter-${type}`);
+        const factoryInput = document.getElementById(`factory-filter-${type}`);
+        const statusInput = document.getElementById(`status-filter-${type}`);
+        
+        const searchVal = searchInput ? searchInput.value.toLowerCase() : '';
+        const factoryVal = factoryInput ? factoryInput.value.toLowerCase() : '';
+        const statusVal = statusInput ? statusInput.value : '';
+
         const table = document.getElementById(`table-${type}`);
         if (!table) return;
         
@@ -1511,8 +1536,24 @@ ${innerContent}
         const rows = tbody.getElementsByTagName('tr');
         for (let i = 0; i < rows.length; i++) {
             const row = rows[i];
+            
+            // قراءة الخلايا
             const textContent = row.textContent.toLowerCase();
-            if (textContent.indexOf(filter) > -1) {
+            const locationCell = row.cells[3] ? row.cells[3].textContent.toLowerCase() : '';
+            const statusCell = row.cells[10] ? row.cells[10].textContent.trim() : '';
+
+            // الفحص
+            let matchesSearch = textContent.includes(searchVal);
+            let matchesFactory = factoryVal === '' || locationCell.includes(factoryVal);
+            
+            let matchesStatus = true;
+            if (statusVal === 'alert') {
+                matchesStatus = statusCell.includes('تنبيه');
+            } else if (statusVal === 'normal') {
+                matchesStatus = statusCell.includes('طبيعي');
+            }
+
+            if (matchesSearch && matchesFactory && matchesStatus) {
                 row.style.display = '';
             } else {
                 row.style.display = 'none';
