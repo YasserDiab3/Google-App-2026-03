@@ -3645,17 +3645,10 @@ const GoogleIntegration = {
             return { success: false, shouldDefer: true, message: 'الخادم الخلفي غير مفعّل' };
         }
 
-        // التحقق من spreadsheetId
+        // التحقق من spreadsheetId — إذا كان غير محدد في الـ Frontend نتركه للـ Backend
+        // الـ Backend يملك معرّفه الخاص في دالة getSpreadsheetId() في Config.gs
         const spreadsheetId = AppState.googleConfig.sheets?.spreadsheetId?.trim();
-        if (!spreadsheetId || spreadsheetId === '' || spreadsheetId === 'YOUR_SPREADSHEET_ID_HERE') {
-            if (!silent) {
-                Utils.safeWarn('معرف Google Sheets غير محدد - سيتم حفظ البيانات محلياً');
-            }
-            if (typeof DataManager !== 'undefined' && DataManager.addToPendingSync) {
-                DataManager.addToPendingSync(sheetName, data);
-            }
-            return { success: false, shouldDefer: true, message: 'معرف Google Sheets غير محدد' };
-        }
+        const hasLocalSpreadsheetId = spreadsheetId && spreadsheetId !== '' && spreadsheetId !== 'YOUR_SPREADSHEET_ID_HERE';
 
         const preparedData = this.prepareSheetPayload(sheetName, data);
 
@@ -3665,13 +3658,18 @@ const GoogleIntegration = {
 
             for (let attempt = 1; attempt <= retryCount; attempt++) {
                 try {
+                    // بناء payload الطلب — نمرر spreadsheetId فقط إذا كان محددًا في الـ Frontend
+                    // إذا لم يكن محددًا، يستخدم الـ Backend قيمته الخاصة من getSpreadsheetId() في Config.gs
+                    const requestData = {
+                        sheetName: sheetName,
+                        data: preparedData
+                    };
+                    if (hasLocalSpreadsheetId) {
+                        requestData.spreadsheetId = spreadsheetId;
+                    }
                     const result = await this.sendRequest({
                         action: 'saveToSheet',
-                        data: {
-                            sheetName: sheetName,
-                            data: preparedData,
-                            spreadsheetId: spreadsheetId
-                        }
+                        data: requestData
                     });
 
                     if (result && result.success) {
