@@ -6649,7 +6649,12 @@ const Training = {
                 }
 
                 const trainingId = Utils.generateId('TRAINING');
-                const isoDate = new Date(dateValue).toISOString();
+                
+                let isoDate = new Date().toISOString();
+                if (dateValue) {
+                    const d = new Date(dateValue);
+                    if (!isNaN(d.getTime())) isoDate = d.toISOString();
+                }
 
                 const participantEntry = {
                     name: employee.name || '',
