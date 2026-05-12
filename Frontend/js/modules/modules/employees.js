@@ -4284,37 +4284,28 @@ const Employees = {
                 AppState.appData.employees[employeeIndex].updatedAt = new Date().toISOString();
             }
 
-            // حفظ البيانات باستخدام window.DataManager
-            if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
-                window.DataManager.save();
-            } else {
-                Utils.safeWarn('⚠️ DataManager غير متاح - لم يتم حفظ البيانات');
-            }
-            
-            // حفظ تلقائي في Google Sheets
-            await GoogleIntegration.autoSave('Employees', AppState.appData.employees);
-            
-            // ✅ محاولة استخدام deactivateEmployee من Backend إذا كان متاحاً
-            if (AppState.googleConfig.appsScript.enabled) {
-                try {
-                    await GoogleIntegration.sendToAppsScript('deactivateEmployee', { employeeId: id });
-                } catch (error) {
-                    Utils.safeWarn('⚠️ فشل إلغاء تفعيل الموظف من Google Sheets، سيتم المحاولة لاحقاً:', error);
+            // حفظ البيانات باستخدام window.DataManager (بشكل غير متزامن لتجنب تجميد الواجهة)
+            setTimeout(() => {
+                if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
+                    window.DataManager.save();
+                } else {
+                    Utils.safeWarn('⚠️ DataManager غير متاح - لم يتم حفظ البيانات');
                 }
-            }
+            }, 50);
             
             // تحديث Cache
             this.cache.data = AppState.appData.employees;
             this.cache.lastLoad = Date.now();
             this.cache.lastUpdate = Date.now();
             
+            // ✅ الاستجابة الفورية للمستخدم: إغلاق التحميل وإظهار النجاح قبل المزامنة
             Loading.hide();
             Notification.success('تم إلغاء تفعيل الموظف بنجاح');
             
             // تحديث الكروت الإحصائية
             this.renderStatsCards();
             
-            // ✅ تطبيق جميع الفلاتر بعد إلغاء التفعيل
+            // تطبيق جميع الفلاتر بعد إلغاء التفعيل
             const showInactive = document.getElementById('show-inactive-employees')?.checked || false;
             this.loadEmployeesList(showInactive);
             requestAnimationFrame(async () => {
@@ -4326,6 +4317,20 @@ const Employees = {
                     }
                 }
             });
+            
+            // ✅ تنفيذ المزامنة مع Backend في الخلفية لتجنب عدم استجابة النظام (Unresponsiveness)
+            Promise.allSettled([
+                GoogleIntegration.autoSave('Employees', AppState.appData.employees),
+                (async () => {
+                    if (AppState.googleConfig?.appsScript?.enabled) {
+                        try {
+                            await GoogleIntegration.sendToAppsScript('deactivateEmployee', { employeeId: id });
+                        } catch (error) {
+                            Utils.safeWarn('⚠️ فشل إلغاء تفعيل الموظف من Google Sheets، سيتم المحاولة لاحقاً:', error);
+                        }
+                    }
+                })()
+            ]).catch(err => Utils.safeWarn('خطأ في مزامنة إلغاء التفعيل في الخلفية:', err));
         } catch (error) {
             Loading.hide();
             Notification.error('حدث خطأ: ' + error.message);
@@ -4348,20 +4353,21 @@ const Employees = {
         Loading.show();
         try {
             AppState.appData.employees = (AppState.appData.employees || []).filter(e => e.id !== id);
-            // حفظ البيانات باستخدام window.DataManager
-        if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
-            window.DataManager.save();
-        } else {
-            Utils.safeWarn('⚠️ DataManager غير متاح - لم يتم حفظ البيانات');
-        }
-            // حفظ تلقائي في Google Sheets
-            await GoogleIntegration.autoSave('Employees', AppState.appData.employees);
+            // حفظ البيانات باستخدام window.DataManager (بشكل غير متزامن لتجنب تجميد الواجهة)
+            setTimeout(() => {
+                if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
+                    window.DataManager.save();
+                } else {
+                    Utils.safeWarn('⚠️ DataManager غير متاح - لم يتم حفظ البيانات');
+                }
+            }, 50);
             
             // تحديث Cache
             this.cache.data = AppState.appData.employees;
             this.cache.lastLoad = Date.now();
             this.cache.lastUpdate = Date.now();
             
+            // ✅ الاستجابة الفورية للمستخدم: إغلاق التحميل وإظهار النجاح قبل المزامنة
             Loading.hide();
             Notification.success('تم حذف الموظف بنجاح');
             
@@ -4380,6 +4386,20 @@ const Employees = {
                     }
                 }
             });
+            
+            // ✅ تنفيذ المزامنة مع Backend في الخلفية لتجنب عدم استجابة النظام (Unresponsiveness)
+            Promise.allSettled([
+                GoogleIntegration.autoSave('Employees', AppState.appData.employees),
+                (async () => {
+                    if (AppState.googleConfig?.appsScript?.enabled) {
+                        try {
+                            await GoogleIntegration.sendToAppsScript('deleteEmployee', { employeeId: id });
+                        } catch (error) {
+                            Utils.safeWarn('⚠️ فشل الحذف من Google Sheets، سيتم المحاولة لاحقاً:', error);
+                        }
+                    }
+                })()
+            ]).catch(err => Utils.safeWarn('خطأ في مزامنة الحذف في الخلفية:', err));
         } catch (error) {
             Loading.hide();
             Notification.error('حدث خطأ: ' + error.message);
