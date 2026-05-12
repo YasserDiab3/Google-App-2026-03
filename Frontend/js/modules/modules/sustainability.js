@@ -1171,6 +1171,30 @@ ${innerContent}
     },
 
     /**
+     * تحديث فوري لأرقام الإجماليات في الكروت دون إعادة رسم كاملة
+     */
+    _refreshDashboardTotals() {
+        try {
+            const analytics = this.calculateAnalytics();
+            // كروت الـ dashboard — نبحث عن العناصر الموجودة ونحدثها مباشرة
+            const types = [
+                { key: 'water',       selector: '.text-blue-600,.text-blue-400',   total: analytics.water.total },
+                { key: 'electricity', selector: '.text-yellow-600,.text-yellow-400', total: analytics.electricity.total },
+                { key: 'gas',         selector: '.text-orange-600,.text-orange-400', total: analytics.gas.total }
+            ];
+            // تحديث مباشر للأرقام في الـ DOM
+            const waterEls      = document.querySelectorAll('.text-3xl.font-bold.text-blue-600, .text-3xl.font-bold.text-blue-400');
+            const electricityEls= document.querySelectorAll('.text-3xl.font-bold.text-yellow-600, .text-3xl.font-bold.text-yellow-400');
+            const gasEls        = document.querySelectorAll('.text-3xl.font-bold.text-orange-600, .text-3xl.font-bold.text-orange-400');
+            waterEls.forEach(el       => { el.textContent = analytics.water.total.toFixed(2); });
+            electricityEls.forEach(el => { el.textContent = analytics.electricity.total.toFixed(2); });
+            gasEls.forEach(el         => { el.textContent = analytics.gas.total.toFixed(2); });
+        } catch (e) {
+            /* تجاهل أخطاء التحديث الفوري - سيتم تحديثه بـ load() */
+        }
+    },
+
+    /**
      * عرض لوحة التحليل
      */
     async renderDashboard() {
@@ -1771,23 +1795,59 @@ ${innerContent}
     },
 
     /**
-     * حساب الاستهلاك تلقائياً
+     * حساب الاستهلاك تلقائياً مع تحقق لحظي من القيم
      */
     calculateConsumption(type) {
         const startInput = document.getElementById(`resource-start-${type}`);
-        const endInput = document.getElementById(`resource-end-${type}`);
+        const endInput   = document.getElementById(`resource-end-${type}`);
         const totalInput = document.getElementById(`resource-total-${type}`);
+        if (!startInput || !endInput || !totalInput) return;
 
-        if (startInput && endInput && totalInput) {
-            const start = parseFloat(startInput.value) || 0;
-            const end = parseFloat(endInput.value) || 0;
-            const total = Math.max(0, end - start);
-            totalInput.value = total.toFixed(2);
+        const start = parseFloat(startInput.value);
+        const end   = parseFloat(endInput.value);
+
+        // تحقق: القراءة الجديدة لا تقل عن القراءة الحالية
+        const isStartValid = !isNaN(start) && start >= 0;
+        const isEndValid   = !isNaN(end)   && end   >= 0;
+        const isOrderValid = isEndValid && isStartValid ? end >= start : true;
+
+        // تلوين حدود الحقول لحظياً
+        const okStyle   = '1.5px solid #d1d5db';
+        const errStyle  = '2px solid #ef4444';
+        endInput.style.border = (isEndValid && !isOrderValid) ? errStyle : okStyle;
+
+        // عرض رسالة تحذير تحت حقل النهاية
+        let warnEl = document.getElementById(`resource-end-warn-${type}`);
+        if (!isOrderValid && isEndValid && isStartValid) {
+            if (!warnEl) {
+                warnEl = document.createElement('p');
+                warnEl.id = `resource-end-warn-${type}`;
+                warnEl.style.cssText = 'color:#ef4444;font-size:11px;margin:3px 0 0;';
+                endInput.parentElement.insertAdjacentElement('afterend', warnEl);
+            }
+            warnEl.textContent = '⚠️ القراءة الجديدة أقل من قراءة البداية!';
+        } else if (warnEl) {
+            warnEl.remove();
+        }
+
+        // حساب الإجمالي
+        if (isStartValid && isEndValid && isOrderValid) {
+            totalInput.value = Math.max(0, end - start).toFixed(2);
+            totalInput.style.color = '#111827';
+            totalInput.style.background = '#e5e7eb';
+        } else if (!isOrderValid) {
+            totalInput.value = '0.00';
+            totalInput.style.color = '#ef4444';
+            totalInput.style.background = '#fee2e2';
+        } else {
+            totalInput.value = '';
+            totalInput.style.color = '#111827';
+            totalInput.style.background = '#e5e7eb';
         }
     },
 
     /**
-     * معالجة حفظ السجل
+     * معالجة حفظ السجل — مع تحقق شامل من القيم
      */
     async handleResourceSubmit(type, recordId, modal, closeModal) {
         if (recordId && !this.hasFullSustainabilityManage()) {
@@ -1799,28 +1859,42 @@ ${innerContent}
             return;
         }
 
-        const form = document.getElementById(`resource-form-${type}`);
-        if (!form.checkValidity()) {
-            form.reportValidity();
+        // ===== جمع القيم =====
+        const dateVal   = document.getElementById(`resource-date-${type}`)?.value;
+        const monthYear = document.getElementById(`resource-month-year-${type}`)?.value?.trim();
+        const location  = document.getElementById(`resource-location-${type}`)?.value?.trim();
+        const source    = document.getElementById(`resource-source-${type}`)?.value?.trim();
+        const startRaw  = document.getElementById(`resource-start-${type}`)?.value;
+        const endRaw    = document.getElementById(`resource-end-${type}`)?.value;
+        const totalRaw  = document.getElementById(`resource-total-${type}`)?.value;
+        const unit      = document.getElementById(`resource-unit-${type}`)?.value?.trim() || this.getDefaultUnit(type);
+        const department= document.getElementById(`resource-department-${type}`)?.value?.trim() || '';
+        const notes     = document.getElementById(`resource-notes-${type}`)?.value?.trim() || '';
+
+        const startReading    = parseFloat(startRaw);
+        const endReading      = parseFloat(endRaw);
+        const totalConsumption= parseFloat(totalRaw);
+
+        // ===== قواعد التحقق =====
+        const errors = [];
+
+        if (!dateVal)                               errors.push('يرجى تحديد التاريخ');
+        if (!location)                              errors.push('يرجى اختيار الموقع / المصنع');
+        if (startRaw === '' || isNaN(startReading)) errors.push('قراءة البداية مطلوبة');
+        if (endRaw   === '' || isNaN(endReading))   errors.push('قراءة النهاية / القراءة الحالية مطلوبة');
+        if (!isNaN(startReading) && startReading < 0) errors.push('قراءة البداية لا يمكن أن تكون سالبة');
+        if (!isNaN(endReading)   && endReading   < 0) errors.push('القراءة الحالية لا يمكن أن تكون سالبة');
+        if (!isNaN(startReading) && !isNaN(endReading) && endReading < startReading)
+            errors.push(`القراءة الجديدة (${endReading}) أقل من قراءة البداية (${startReading}) — يرجى مراجعة العداد`);
+        if (isNaN(totalConsumption) || totalConsumption < 0)
+            errors.push('إجمالي الاستهلاك غير صحيح — تأكد من قراءة البداية والنهاية');
+
+        if (errors.length > 0) {
+            Notification.error(errors[0]);
             return;
         }
 
-        const date = new Date(document.getElementById(`resource-date-${type}`).value);
-        const monthYear = document.getElementById(`resource-month-year-${type}`).value;
-        const location = document.getElementById(`resource-location-${type}`).value.trim();
-        const source = document.getElementById(`resource-source-${type}`).value.trim();
-        const startReading = parseFloat(document.getElementById(`resource-start-${type}`).value);
-        const endReading = parseFloat(document.getElementById(`resource-end-${type}`).value);
-        const totalConsumption = parseFloat(document.getElementById(`resource-total-${type}`).value);
-        const unit = document.getElementById(`resource-unit-${type}`).value.trim();
-        const department = document.getElementById(`resource-department-${type}`).value.trim();
-        const notes = document.getElementById(`resource-notes-${type}`).value.trim();
-
-        // التحقق من صحة البيانات
-        if (endReading < startReading) {
-            Notification.error('قراءة النهاية يجب أن تكون أكبر من قراءة البداية');
-            return;
-        }
+        const date = new Date(dateVal);
 
         // التحقق من التنبيهات
         const hasAlert = this.checkConsumptionAlert(type, totalConsumption, monthYear);
@@ -1905,6 +1979,11 @@ ${innerContent}
             } else {
                 try { modal.remove(); } catch (e) { /* ignore */ }
             }
+
+            // ✅ تحديث فوري لأرقام الكروت الإجمالية في الـ Dashboard (قبل إعادة التحميل الكاملة)
+            this._refreshDashboardTotals();
+
+            // إعادة تحميل التبويب الحالي
             this.load();
 
             if (hasAlert) {
