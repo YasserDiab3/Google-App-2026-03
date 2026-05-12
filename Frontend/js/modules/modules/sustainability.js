@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Sustainability Module - Environmental Resource Management
  * مديول الاستدامة البيئية - إدارة استهلاك الموارد
  * 
@@ -1415,6 +1415,7 @@ ${innerContent}
                                             <th>التاريخ</th>
                                             <th>الشهر / السنة</th>
                                             <th>الموقع / المصنع</th>
+                                            <th>المصدر</th>
                                             <th>قراءة البداية</th>
                                             <th>قراءة النهاية</th>
                                             <th>إجمالي الاستهلاك</th>
@@ -1433,6 +1434,7 @@ ${innerContent}
                                                     <td>${Utils.formatDate(record.date)}</td>
                                                     <td>${record.monthYear || this.getMonthYear(record.date)}</td>
                                                     <td>${Utils.escapeHTML(record.location || '')}</td>
+                                                    <td>${Utils.escapeHTML(record.source || '')}</td>
                                                     <td>${parseFloat(record.startReading || 0).toFixed(2)}</td>
                                                     <td>${parseFloat(record.endReading || 0).toFixed(2)}</td>
                                                     <td class="font-semibold">${parseFloat(record.totalConsumption || 0).toFixed(2)}</td>
@@ -1965,7 +1967,8 @@ ${innerContent}
                 try { modal.remove(); } catch (e) { /* ignore */ }
             }
 
-            // ✅ 2) تحديث فوري للكروت
+            // ✅ 2) تحديث فوري للكروت ومسح الكاش المخبأ لجلب البيانات الفعلية من الشيت
+            this._resourceConsumptionFetchPromise = null;
             this._refreshDashboardTotals();
             this.load();
 
