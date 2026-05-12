@@ -1407,8 +1407,20 @@ ${innerContent}
                                 <p class="text-gray-500">لا توجد سجلات لاستهلاك ${name} ضمن سنة <strong>${viewY}</strong>. جرّب اختيار سنة أخرى من شريط التصفية أو أضف سجلاً جديداً.</p>
                             </div>
                         ` : `
+                            <div class="mb-4 flex items-center justify-between">
+                                <div class="relative w-full max-w-md">
+                                    <span class="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400">
+                                        <i class="fas fa-search"></i>
+                                    </span>
+                                    <input type="text" 
+                                        id="search-filter-${type}" 
+                                        class="form-input w-full pr-10" 
+                                        placeholder="بحث في السجلات (الموقع، المصدر، الجهة، التاريخ...)" 
+                                        oninput="Sustainability.filterResourceTable('${type}')">
+                                </div>
+                            </div>
                             <div class="overflow-x-auto">
-                                <table class="data-table">
+                                <table class="data-table" id="table-${type}">
                                     <thead>
                                         <tr>
                                             <th>#</th>
@@ -1481,6 +1493,31 @@ ${innerContent}
                 </div>
             </div>
         `;
+    },
+
+    /**
+     * فلتر ديناميكي للبحث في السجلات المعروضة في الجدول
+     */
+    filterResourceTable(type) {
+        const input = document.getElementById(`search-filter-${type}`);
+        if (!input) return;
+        const filter = input.value.toLowerCase();
+        const table = document.getElementById(`table-${type}`);
+        if (!table) return;
+        
+        const tbody = table.getElementsByTagName('tbody')[0];
+        if (!tbody) return;
+        
+        const rows = tbody.getElementsByTagName('tr');
+        for (let i = 0; i < rows.length; i++) {
+            const row = rows[i];
+            const textContent = row.textContent.toLowerCase();
+            if (textContent.indexOf(filter) > -1) {
+                row.style.display = '';
+            } else {
+                row.style.display = 'none';
+            }
+        }
     },
 
     /**
