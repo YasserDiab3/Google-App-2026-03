@@ -8460,14 +8460,7 @@ const Training = {
                 Notification.success('تم إضافة البرنامج التدريبي بنجاح');
             }
 
-            // حفظ البيانات باستخدام window.DataManager
-            if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
-                window.DataManager.save();
-            } else {
-                Utils.safeWarn('⚠️ DataManager غير متاح - لم يتم حفظ البيانات');
-            }
-
-            // 2. إغلاق النموذج فوراً بعد الحفظ في الذاكرة
+            // 2. إغلاق النموذج فوراً بعد الحفظ في الذاكرة (الأولوية لسرعة استجابة الواجهة)
             this.showList();
             
             // 3. استعادة الزر بعد النجاح
@@ -8475,6 +8468,16 @@ const Training = {
                 submitBtn.disabled = false;
                 submitBtn.innerHTML = originalText;
             }
+            
+            // استخدام setTimeout لضمان عدم تأخير إغلاق النموذج بسبب الحجم الكبير للبيانات
+            setTimeout(() => {
+                // حفظ البيانات باستخدام window.DataManager
+                if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
+                    window.DataManager.save();
+                } else {
+                    Utils.safeWarn('⚠️ DataManager غير متاح - لم يتم حفظ البيانات');
+                }
+            }, 50);
             
             // 4. معالجة المهام الخلفية في الخلفية
             Promise.allSettled([
