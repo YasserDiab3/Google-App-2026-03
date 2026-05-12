@@ -3965,7 +3965,7 @@ const Training = {
 
         // ✅ مصدر موحّد: جميع التدريب يعتمد على Contractors.getContractorOptionsForModules
         if (typeof Contractors !== 'undefined' && typeof Contractors.getContractorOptionsForModules === 'function') {
-            return Contractors.getContractorOptionsForModules({ includeSuppliers: false });
+            return Contractors.getContractorOptionsForModules({ includeSuppliers: true });
         }
 
         // بديل أخير: في حال عدم تحميل Contractors، نرجع قائمة نظيفة من AppState
