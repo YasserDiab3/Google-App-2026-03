@@ -4741,8 +4741,11 @@ const Training = {
                 const places = this.getPlaceOptions(locationId);
                 const selectedPlace = places.find(p => p.id === placeId || String(p.id) === String(placeId));
 
-                const location = selectedSite ? selectedSite.name : '';
-                const subLocation = selectedPlace ? selectedPlace.name : '';
+                const locationSelectEl = modal.querySelector('#contractor-training-location');
+                const placeSelectEl = modal.querySelector('#contractor-training-sub-location');
+
+                const location = selectedSite ? selectedSite.name : (locationSelectEl?.options[locationSelectEl.selectedIndex]?.text || '');
+                const subLocation = selectedPlace ? selectedPlace.name : (placeSelectEl?.options[placeSelectEl.selectedIndex]?.text || '');
                 const notes = modal.querySelector('#contractor-training-notes')?.value.trim();
 
                 const normalizedContractorId = String(contractorId ?? '').trim();
@@ -4780,10 +4783,16 @@ const Training = {
                     }
                 }
                 
+                let safeDate = new Date().toISOString();
+                if (dateValue) {
+                    const d = new Date(dateValue);
+                    if (!isNaN(d.getTime())) safeDate = d.toISOString();
+                }
+
                 const recordId = existing?.id || Utils.generateSequentialId('CTR', AppState.appData?.contractorTrainings || []);
                 const entry = {
                     id: recordId,
-                    date: new Date(dateValue).toISOString(),
+                    date: safeDate,
                     topic: topicValue,
                     trainer: trainerValue,
                     contractorId: normalizedContractorId,
@@ -8402,20 +8411,30 @@ const Training = {
         const places = this.getPlaceOptions(factoryEl.value);
         const selectedPlace = places.find(p => p.id === locationEl.value);
         
+        const getFallbackText = (el) => el && el.options && el.selectedIndex >= 0 ? el.options[el.selectedIndex].text : '';
+        
+        let validStartDate = new Date().toISOString();
+        if (startDateEl.value) {
+            const d = new Date(startDateEl.value);
+            if (!isNaN(d.getTime())) {
+                validStartDate = d.toISOString();
+            }
+        }
+
         const formData = {
             id: trainingId,
             name: nameEl.value.trim(),
             trainer: trainerEl.value.trim(),
             trainingType: typeEl.value || 'داخلي', // نوع التدريب (داخلي/خارجي)
-            date: document.getElementById('training-date')?.value || startDateEl.value,
+            date: document.getElementById('training-date')?.value || startDateEl.value || validStartDate.split('T')[0],
             factory: factoryEl.value,
-            factoryName: selectedFactory ? selectedFactory.name : '',
+            factoryName: selectedFactory ? selectedFactory.name : getFallbackText(factoryEl),
             location: locationEl.value,
-            locationName: selectedPlace ? selectedPlace.name : '',
+            locationName: selectedPlace ? selectedPlace.name : getFallbackText(locationEl),
             startTime: this.cleanTime(startTime) || '',
             endTime: this.cleanTime(endTime) || '',
             hours: trainingHours > 0 ? trainingHours.toFixed(2) : '',
-            startDate: new Date(startDateEl.value).toISOString(),
+            startDate: validStartDate,
             participants: participants,
             participantsCount: participants.length || parseInt(document.getElementById('training-participants')?.value) || 0,
             status: statusEl.value || 'مخطط',
