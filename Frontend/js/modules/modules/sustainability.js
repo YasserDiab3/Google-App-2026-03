@@ -1474,9 +1474,9 @@ ${innerContent}
             : null;
 
         const typeNames = {
-            water: { name: 'مياه', icon: 'tint', color: 'blue' },
-            electricity: { name: 'كهرباء', icon: 'bolt', color: 'yellow' },
-            gas: { name: 'غاز طبيعي', icon: 'fire', color: 'orange' }
+            water:       { name: 'مياه',       icon: 'tint',  color: 'blue',   gradient: 'from-blue-600 to-cyan-500',   bg: 'bg-blue-50 dark:bg-blue-900/20',   border: 'border-blue-200 dark:border-blue-700',   badge: 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300' },
+            electricity: { name: 'كهرباء',     icon: 'bolt',  color: 'yellow', gradient: 'from-yellow-500 to-amber-400', bg: 'bg-yellow-50 dark:bg-yellow-900/20', border: 'border-yellow-200 dark:border-yellow-700', badge: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300' },
+            gas:         { name: 'غاز طبيعي', icon: 'fire',  color: 'orange', gradient: 'from-orange-600 to-red-500',  bg: 'bg-orange-50 dark:bg-orange-900/20', border: 'border-orange-200 dark:border-orange-700', badge: 'bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-300' }
         };
 
         const typeInfo = typeNames[type] || typeNames.water;
@@ -1492,139 +1492,218 @@ ${innerContent}
             : (useAutoStart ? String(parseFloat(prevRecInitial.endReading) || 0) : '');
         const defaultEndStr = record?.endReading != null && record.endReading !== '' ? String(record.endReading) : '';
 
+        // إزالة أي مودال سابق لنفس النوع
+        const existingModal = document.getElementById(`resource-modal-${type}`);
+        if (existingModal) existingModal.remove();
+
         const modal = document.createElement('div');
+        modal.id = `resource-modal-${type}`;
         modal.className = 'modal-overlay';
+        modal.style.cssText = 'display:flex;align-items:center;justify-content:center;z-index:9999;';
         modal.innerHTML = `
-            <div class="modal-content" style="max-width: 700px;">
-                <div class="modal-header">
-                    <h2 class="modal-title">
-                        <i class="fas fa-${typeInfo.icon} text-${typeInfo.color}-500 ml-2"></i>
-                        ${record ? 'تعديل' : 'إضافة'} سجل استهلاك ${typeInfo.name}
-                    </h2>
-                    <button class="modal-close" onclick="this.closest('.modal-overlay').remove()">
-                        <i class="fas fa-times"></i>
-                    </button>
+            <div class="modal-content" style="max-width:680px;width:95%;border-radius:16px;overflow:hidden;box-shadow:0 25px 60px rgba(0,0,0,0.3);border:none;">
+                <!-- Header with gradient -->
+                <div class="bg-gradient-to-r ${typeInfo.gradient} p-5" style="position:relative;">
+                    <div style="display:flex;align-items:center;justify-content:space-between;">
+                        <div style="display:flex;align-items:center;gap:12px;">
+                            <div style="width:44px;height:44px;border-radius:12px;background:rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px);">
+                                <i class="fas fa-${typeInfo.icon}" style="font-size:20px;color:#fff;"></i>
+                            </div>
+                            <div>
+                                <h2 style="color:#fff;font-size:18px;font-weight:700;margin:0;">
+                                    ${record ? 'تعديل' : 'تسجيل'} استهلاك ${typeInfo.name}
+                                </h2>
+                                <p style="color:rgba(255,255,255,0.8);font-size:12px;margin:2px 0 0;">
+                                    ${record ? 'تحديث بيانات السجل الحالي' : 'إضافة سجل قراءة جديد'}
+                                </p>
+                            </div>
+                        </div>
+                        <button id="close-resource-modal-${type}" style="width:36px;height:36px;border-radius:50%;background:rgba(255,255,255,0.2);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background 0.2s;" 
+                            onmouseover="this.style.background='rgba(255,255,255,0.35)'"
+                            onmouseout="this.style.background='rgba(255,255,255,0.2)'">
+                            <i class="fas fa-times" style="color:#fff;font-size:16px;"></i>
+                        </button>
+                    </div>
                 </div>
-                <div class="modal-body">
-                    <form id="resource-form-${type}" class="space-y-4">
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div>
-                                <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                                    التاريخ <span class="text-red-500">*</span>
-                                </label>
-                                <input type="date" id="resource-date-${type}" required 
-                                       class="form-input" value="${dateValue}"
-                                       onchange="Sustainability.updateMonthYear('${type}')">
+
+                <!-- Body -->
+                <div class="modal-body" style="padding:24px;background:var(--bg-primary,#fff);max-height:70vh;overflow-y:auto;">
+                    <form id="resource-form-${type}" novalidate>
+
+                        <!-- Section: التاريخ والشهر -->
+                        <div class="${typeInfo.bg} rounded-xl p-4 mb-4 border ${typeInfo.border}">
+                            <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
+                                <span class="rounded-lg px-2 py-1 text-xs font-bold ${typeInfo.badge}">
+                                    <i class="fas fa-calendar-alt ml-1"></i>التاريخ
+                                </span>
                             </div>
-                            <div>
-                                <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                                    الشهر / السنة <span class="text-red-500">*</span>
-                                </label>
-                                <input type="text" id="resource-month-year-${type}" required 
-                                       class="form-input" value="${monthYearValue}" 
-                                       placeholder="مثال: يناير 2024" readonly>
+                            <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+                                <div>
+                                    <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">
+                                        التاريخ <span style="color:#ef4444;">*</span>
+                                    </label>
+                                    <input type="date" id="resource-date-${type}" required
+                                           class="form-input" value="${dateValue}"
+                                           onchange="Sustainability.updateMonthYear('${type}')">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">
+                                        الشهر / السنة
+                                    </label>
+                                    <input type="text" id="resource-month-year-${type}"
+                                           class="form-input" value="${monthYearValue}"
+                                           style="background:var(--bg-secondary,#f3f4f6);" readonly>
+                                </div>
                             </div>
                         </div>
+
+                        <!-- Section: الموقع والجهة -->
+                        <div class="${typeInfo.bg} rounded-xl p-4 mb-4 border ${typeInfo.border}">
+                            <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
+                                <span class="rounded-lg px-2 py-1 text-xs font-bold ${typeInfo.badge}">
+                                    <i class="fas fa-map-marker-alt ml-1"></i>الموقع
+                                </span>
+                            </div>
+                            <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+                                <div>
+                                    <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">
+                                        الموقع / المصنع <span style="color:#ef4444;">*</span>
+                                    </label>
+                                    <select id="resource-location-${type}" required class="form-input">
+                                        <option value="">-- اختر الموقع --</option>
+                                        ${this.getSiteOptions().map(site => `
+                                            <option value="${Utils.escapeHTML(site.name)}" ${record?.location === site.name ? 'selected' : ''}>
+                                                ${Utils.escapeHTML(site.name)}
+                                            </option>
+                                        `).join('')}
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">
+                                        الجهة / القسم
+                                    </label>
+                                    <input type="text" id="resource-department-${type}"
+                                           class="form-input"
+                                           value="${Utils.escapeHTML(record?.department || '')}"
+                                           placeholder="اختياري">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Section: قراءات العداد -->
+                        <div class="${typeInfo.bg} rounded-xl p-4 mb-4 border ${typeInfo.border}">
+                            <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
+                                <span class="rounded-lg px-2 py-1 text-xs font-bold ${typeInfo.badge}">
+                                    <i class="fas fa-tachometer-alt ml-1"></i>قراءات العداد
+                                </span>
+                            </div>
+
+                            <!-- المصدر (مخفي / readonly) -->
+                            <input type="hidden" id="resource-source-${type}" value="${Utils.escapeHTML(record?.source || typeInfo.name)}">
+
+                            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;">
+                                <!-- قراءة البداية -->
+                                <div>
+                                    <label id="resource-start-label-${type}" class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">
+                                        قراءة البداية ${useAutoStart ? '' : '<span style="color:#ef4444;">*</span>'}
+                                    </label>
+                                    ${useAutoStart ? `<p id="resource-start-help-${type}" class="text-xs text-blue-500 dark:text-blue-400 mb-1">
+                                        <i class="fas fa-info-circle ml-1"></i>من آخر سجل للموقع
+                                    </p>` : `<p id="resource-start-help-${type}" class="text-xs text-gray-500 mb-1 hidden"></p>`}
+                                    <div style="position:relative;">
+                                        <input type="number" id="resource-start-${type}" ${useAutoStart ? 'readonly' : 'required'} step="0.01"
+                                               class="form-input"
+                                               style="${useAutoStart ? 'background:var(--bg-secondary,#f3f4f6);padding-left:48px;' : 'padding-left:48px;'}"
+                                               value="${typeof Utils !== 'undefined' && Utils.escapeHTML ? Utils.escapeHTML(defaultStartStr) : defaultStartStr}"
+                                               placeholder="0.00"
+                                               onchange="Sustainability.calculateConsumption('${type}')">
+                                        <span style="position:absolute;left:12px;top:50%;transform:translateY(-50%);font-size:11px;color:#6b7280;font-weight:600;">${this.getDefaultUnit(type)}</span>
+                                    </div>
+                                </div>
+
+                                <!-- قراءة النهاية -->
+                                <div>
+                                    <label id="resource-end-label-${type}" class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">
+                                        ${useAutoStart ? 'القراءة الحالية' : 'قراءة النهاية'} <span style="color:#ef4444;">*</span>
+                                    </label>
+                                    <p class="text-xs text-gray-400 mb-1" style="min-height:16px;"></p>
+                                    <div style="position:relative;">
+                                        <input type="number" id="resource-end-${type}" required step="0.01"
+                                               class="form-input"
+                                               style="padding-left:48px;"
+                                               value="${typeof Utils !== 'undefined' && Utils.escapeHTML ? Utils.escapeHTML(defaultEndStr) : defaultEndStr}"
+                                               placeholder="0.00"
+                                               oninput="Sustainability.calculateConsumption('${type}')"
+                                               onchange="Sustainability.calculateConsumption('${type}')">
+                                        <span style="position:absolute;left:12px;top:50%;transform:translateY(-50%);font-size:11px;color:#6b7280;font-weight:600;">${this.getDefaultUnit(type)}</span>
+                                    </div>
+                                </div>
+
+                                <!-- إجمالي الاستهلاك -->
+                                <div>
+                                    <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">
+                                        الاستهلاك الإجمالي
+                                    </label>
+                                    <p class="text-xs text-gray-400 mb-1" style="min-height:16px;"></p>
+                                    <div style="position:relative;">
+                                        <input type="number" id="resource-total-${type}" step="0.01" readonly
+                                               class="form-input font-bold"
+                                               style="background:var(--bg-secondary,#f3f4f6);padding-left:48px;color:var(--text-primary);"
+                                               value="${record?.totalConsumption || ''}"
+                                               placeholder="تلقائي">
+                                        <span style="position:absolute;left:12px;top:50%;transform:translateY(-50%);font-size:11px;color:#6b7280;font-weight:600;">${this.getDefaultUnit(type)}</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- وحدة القياس readonly مخفية -->
+                            <input type="hidden" id="resource-unit-${type}" value="${Utils.escapeHTML(record?.unit || this.getDefaultUnit(type))}">
+                        </div>
+
+                        <!-- Section: ملاحظات -->
                         <div>
-                            <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                                الموقع / المصنع <span class="text-red-500">*</span>
+                            <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">
+                                <i class="fas fa-sticky-note ml-1 text-gray-400"></i>ملاحظات <span class="text-xs text-gray-400 font-normal">(اختياري)</span>
                             </label>
-                            <select id="resource-location-${type}" required class="form-input">
-                                <option value="">-- اختر الموقع / المصنع --</option>
-                                ${this.getSiteOptions().map(site => `
-                                    <option value="${Utils.escapeHTML(site.name)}" ${record?.location === site.name ? 'selected' : ''}>
-                                        ${Utils.escapeHTML(site.name)}
-                                    </option>
-                                `).join('')}
-                            </select>
+                            <textarea id="resource-notes-${type}"
+                                      class="form-input" rows="2"
+                                      placeholder="أي ملاحظات إضافية...">${Utils.escapeHTML(record?.notes || '')}</textarea>
                         </div>
-                        <div>
-                            <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                                المصدر <span class="text-red-500">*</span>
-                            </label>
-                            <input type="text" id="resource-source-${type}" required 
-                                   class="form-input" 
-                                   value="${Utils.escapeHTML(record?.source || typeInfo.name)}"
-                                   placeholder="المصدر" readonly>
-                        </div>
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div>
-                                <label id="resource-start-label-${type}" for="resource-start-${type}" class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                                    قراءة البداية ${useAutoStart ? '' : '<span class="text-red-500">*</span>'}
-                                </label>
-                                <p id="resource-start-help-${type}" class="text-xs text-gray-500 dark:text-gray-400 mb-1 ${useAutoStart ? '' : 'hidden'}">${useAutoStart ? 'مُستخرجة تلقائياً من قراءة نهاية آخر سجل لهذا الموقع.' : ''}</p>
-                                <input type="number" id="resource-start-${type}" ${useAutoStart ? 'readonly' : 'required'} step="0.01"
-                                       class="form-input ${useAutoStart ? 'bg-gray-100 dark:bg-gray-800' : ''}" 
-                                       value="${typeof Utils !== 'undefined' && Utils.escapeHTML ? Utils.escapeHTML(defaultStartStr) : defaultStartStr}"
-                                       placeholder="0.00"
-                                       onchange="Sustainability.calculateConsumption('${type}')">
-                            </div>
-                            <div>
-                                <label id="resource-end-label-${type}" for="resource-end-${type}" class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                                    ${useAutoStart ? 'القراءة الحالية (قراءة العداد)' : 'قراءة النهاية'} <span class="text-red-500">*</span>
-                                </label>
-                                <input type="number" id="resource-end-${type}" required step="0.01"
-                                       class="form-input" 
-                                       value="${typeof Utils !== 'undefined' && Utils.escapeHTML ? Utils.escapeHTML(defaultEndStr) : defaultEndStr}"
-                                       placeholder="0.00"
-                                       oninput="Sustainability.calculateConsumption('${type}')"
-                                       onchange="Sustainability.calculateConsumption('${type}')">
-                            </div>
-                        </div>
-                        <div>
-                            <label for="resource-total-${type}" class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                                إجمالي الاستهلاك <span class="text-red-500">*</span>
-                            </label>
-                            <input type="number" id="resource-total-${type}" required step="0.01"
-                                   class="form-input font-semibold" 
-                                   value="${record?.totalConsumption || ''}"
-                                   placeholder="سيتم حسابه تلقائياً" readonly>
-                        </div>
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div>
-                                <label for="resource-unit-${type}" class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                                    وحدة القياس <span class="text-red-500">*</span>
-                                </label>
-                                <input type="text" id="resource-unit-${type}" required 
-                                       class="form-input" 
-                                       value="${Utils.escapeHTML(record?.unit || this.getDefaultUnit(type))}"
-                                       placeholder="${this.getDefaultUnit(type)}" readonly>
-                            </div>
-                            <div>
-                                <label for="resource-department-${type}" class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                                    الجهة / القسم
-                                </label>
-                                <input type="text" id="resource-department-${type}" 
-                                       class="form-input" 
-                                       value="${Utils.escapeHTML(record?.department || '')}"
-                                       placeholder="أدخل القسم أو الجهة">
-                            </div>
-                        </div>
-                        <div>
-                            <label for="resource-notes-${type}" class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                                ملاحظات
-                            </label>
-                            <textarea id="resource-notes-${type}" 
-                                      class="form-input" rows="3"
-                                      placeholder="ملاحظات إضافية">${Utils.escapeHTML(record?.notes || '')}</textarea>
-                        </div>
+
                     </form>
                 </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">
-                        إلغاء
+
+                <!-- Footer -->
+                <div style="display:flex;align-items:center;justify-content:flex-end;gap:12px;padding:16px 24px;background:var(--bg-secondary,#f9fafb);border-top:1px solid var(--border-color,#e5e7eb);">
+                    <button type="button" id="cancel-resource-btn-${type}" class="btn-secondary" style="min-width:100px;">
+                        <i class="fas fa-times ml-2"></i>إلغاء
                     </button>
-                    <button type="button" id="save-resource-btn-${type}" class="btn-primary">
+                    <button type="button" id="save-resource-btn-${type}" class="btn-primary" style="min-width:140px;background:linear-gradient(135deg, var(--tw-gradient-from), var(--tw-gradient-to));" 
+                            class="bg-gradient-to-r ${typeInfo.gradient}">
                         <i class="fas fa-save ml-2"></i>
-                        حفظ
+                        ${record ? 'حفظ التعديلات' : 'إضافة السجل'}
                     </button>
                 </div>
             </div>
         `;
         document.body.appendChild(modal);
 
+        // ربط زر الإغلاق
+        const closeBtn = modal.querySelector(`#close-resource-modal-${type}`);
+        const cancelBtn = modal.querySelector(`#cancel-resource-btn-${type}`);
         const saveBtn = modal.querySelector(`#save-resource-btn-${type}`);
-        saveBtn.addEventListener('click', () => this.handleResourceSubmit(type, recordId, modal));
+
+        const closeModal = () => {
+            modal.style.opacity = '0';
+            modal.style.transition = 'opacity 0.15s ease';
+            setTimeout(() => { try { modal.remove(); } catch (e) { /* ignore */ } }, 150);
+        };
+
+        closeBtn.addEventListener('click', closeModal);
+        cancelBtn.addEventListener('click', closeModal);
+        modal.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
+
+        saveBtn.addEventListener('click', () => this.handleResourceSubmit(type, recordId, modal, closeModal));
 
         if (!recordId) {
             const locSel = document.getElementById(`resource-location-${type}`);
@@ -1635,11 +1714,8 @@ ${innerContent}
         } else {
             this.calculateConsumption(type);
         }
-
-        modal.addEventListener('click', (e) => {
-            if (e.target === modal) modal.remove();
-        });
     },
+
 
     /**
      * تحديث الشهر/السنة تلقائياً
@@ -1675,7 +1751,7 @@ ${innerContent}
     /**
      * معالجة حفظ السجل
      */
-    async handleResourceSubmit(type, recordId, modal) {
+    async handleResourceSubmit(type, recordId, modal, closeModal) {
         if (recordId && !this.hasFullSustainabilityManage()) {
             if (typeof Notification !== 'undefined') Notification.error('ليس لديك صلاحية تعديل السجلات');
             return;
@@ -1786,7 +1862,11 @@ ${innerContent}
             }
 
             Notification.success(recordId ? 'تم تحديث السجل بنجاح' : 'تم إضافة السجل بنجاح');
-            modal.remove();
+            if (typeof closeModal === 'function') {
+                closeModal();
+            } else {
+                try { modal.remove(); } catch (e) { /* ignore */ }
+            }
             this.load();
 
             if (hasAlert) {
