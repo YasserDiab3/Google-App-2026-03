@@ -754,9 +754,6 @@ function getAllClinicVisits(filters = {}) {
             }
             v.medications = medsArray;
             
-            return v;
-        });
-            
             // ✅ التأكد من وجود createdBy و updatedBy (للبيانات القديمة)
             if (!v.createdBy) {
                 v.createdBy = null;
