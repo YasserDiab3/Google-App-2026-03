@@ -5944,23 +5944,43 @@ const Clinic = {
         const server = Array.isArray(serverVisits) ? serverVisits : [];
         const local = Array.isArray(previousLocal) ? previousLocal : [];
         const seen = new Set();
+        
+        // سجل المعرفات من الخادم
         server.forEach((v) => {
             if (v && v.id != null && String(v.id).trim() !== '') {
                 seen.add(String(v.id));
             }
         });
+
         const extras = [];
         local.forEach((v) => {
             if (!v || v.id == null || String(v.id).trim() === '') return;
             const id = String(v.id);
+            
+            // ✅ إذا لم يكن السجل المحلي موجوداً في الخادم، نحتفظ به (سجل لم يتم مزامنته بعد أو كاش قديم)
             if (!seen.has(id)) {
-                seen.add(id);
-                extras.push(v);
+                // محاولة البحث عن بديل (نفس الشخص والوقت) لتجنب التكرار إذا تغير الـ ID
+                const isDuplicate = server.some(sv => {
+                    return sv.personType === v.personType && 
+                           sv.visitDate === v.visitDate && 
+                           (sv.employeeId === v.employeeId || sv.contractorWorkerName === v.contractorWorkerName);
+                });
+                
+                if (!isDuplicate) {
+                    seen.add(id);
+                    extras.push(v);
+                }
             }
         });
+
         if (extras.length === 0) {
             return server.slice();
         }
+        
+        if (AppState.debugMode && extras.length > 0) {
+            Utils.safeLog(`📝 [CLINIC] دمج ${extras.length} سجلات محلية غير موجودة في رد الخادم (قد يكون كاش قديم)`);
+        }
+
         const merged = server.concat(extras);
         merged.sort((a, b) => {
             const dateA = new Date(a.visitDate || a.createdAt || 0).getTime();
@@ -6334,19 +6354,39 @@ const Clinic = {
      * لا يُستخدم await هنا — getAllClinicVisits قد يستغرق دقائق وكان يُبقي زر «جاري الحفظ...» والمودال معلقين.
      */
     refreshClinicVisitsFromServerAfterSave() {
+        if (AppState.debugMode) {
+            Utils.safeLog('🔄 [CLINIC] تحديث البيانات من الخادم بعد الحفظ...');
+        }
+        
         this.loadVisitsDataFromBackend()
             .then(() => {
+                // ✅ تحديث الإحصائيات والأرقام فوراً بعد المزامنة
+                try {
+                    this.updateClinicAnalysisResults();
+                    this.calculateClinicCardValues();
+                    
+                    // إطلاق حدث لتحديث أي واجهات أخرى معتمدة على الأرقام
+                    document.dispatchEvent(new CustomEvent('clinic-data-refreshed'));
+                } catch (err) {
+                    Utils.safeWarn('⚠️ فشل تحديث إحصائيات العيادة بعد المزامنة:', err);
+                }
+
                 if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
                     try {
                         window.DataManager.save();
                     } catch (e) { /* ignore */ }
                 }
-                if (this.state && this.state.activeTab === 'visits') {
-                    const p = document.querySelector('.clinic-tab-panel[data-tab-panel="visits"]');
+                
+                if (this.state && (this.state.activeTab === 'visits' || this.state.activeTab === 'dashboard')) {
+                    const p = document.querySelector('.clinic-tab-panel[data-tab-panel="' + this.state.activeTab + '"]');
                     if (p) {
                         try {
                             this.ensureData();
-                            this.renderVisitsTabContent(p);
+                            if (this.state.activeTab === 'visits') {
+                                this.renderVisitsTabContent(p);
+                            } else {
+                                this.renderDashboardTab();
+                            }
                         } catch (e) { /* ignore */ }
                     }
                 }
@@ -10288,6 +10328,14 @@ const Clinic = {
                     AppState.appData.medications = medications;
                     AppState.appData.clinicMedications = medications;
                     AppState.appData.clinicInventory = medications;
+                }
+
+                // ✅ تحديث الإحصائيات والأرقام فوراً (Optimistic UI)
+                try {
+                    this.updateClinicAnalysisResults();
+                    this.calculateClinicCardValues();
+                } catch (e) {
+                    Utils.safeWarn('⚠️ فشل تحديث إحصائيات العيادة محلياً:', e);
                 }
 
                 // حفظ البيانات محلياً

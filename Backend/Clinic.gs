@@ -535,6 +535,11 @@ function upsertClinicVisit_(targetSheetName, normalizedVisit) {
                     // تحديث الصف مباشرة
                     sheet.getRange(rowIndex, 1, 1, rowData.length).setValues([rowData]);
                     
+                    // ✅ مسح الcache لضمان قراءة البيانات المحدثة
+                    if (typeof invalidateHseSheetCaches === 'function') {
+                        invalidateHseSheetCaches(sheetName);
+                    }
+                    
                     return {
                         success: true,
                         message: 'تم تحديث الزيارة',
@@ -647,6 +652,11 @@ function updateClinicVisit(visitId, updateData) {
 
             // تحديث الصف مباشرة
             sheet.getRange(rowIndex, 1, 1, rowData.length).setValues([rowData]);
+
+            // ✅ مسح الcache لضمان قراءة البيانات المحدثة
+            if (typeof invalidateHseSheetCaches === 'function') {
+                invalidateHseSheetCaches(sheetName);
+            }
 
             Logger.log('✅ [BACKEND] updateClinicVisit: تم تحديث الزيارة ' + visitId + ' في ' + sheetName + ' (row=' + rowIndex + ')');
 
