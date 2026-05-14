@@ -1,7 +1,7 @@
 /**
  * ActionHandlers Registry
  */
-const ActionHandlers = {
+var ActionHandlers = {
     'saveToSheet': function(payload, postData, action, actorUserData, spreadsheetId) {
         var result = { success: false, message: '' };
         if (payload && payload.sheetName != null && payload.data !== undefined && typeof clampPayloadToDefaultHeaders === 'function') {
@@ -241,7 +241,7 @@ const ActionHandlers = {
     },
     'PTW_MAP_COORDINATES': function(payload, postData, action, actorUserData, spreadsheetId) {
         var result = { success: false, message: '' };
-
+        result = saveMapCoordinates(payload);
         return result;
     },
     'saveMapCoordinates': function(payload, postData, action, actorUserData, spreadsheetId) {
@@ -258,7 +258,7 @@ const ActionHandlers = {
     },
     'PTW_DEFAULT_COORDINATES': function(payload, postData, action, actorUserData, spreadsheetId) {
         var result = { success: false, message: '' };
-
+        result = getMapCoordinates();
         return result;
     },
     'saveDefaultCoordinates': function(payload, postData, action, actorUserData, spreadsheetId) {
@@ -618,235 +618,39 @@ const ActionHandlers = {
                 // ============================================
         return result;
     },
-    'addClinicVisit': function(payload, postData, action, actorUserData, spreadsheetId) {
-        var result = { success: false, message: '' };
-        Logger.log('🚀 [CODE.GS] ===== addClinicVisit action تم استدعاؤها =====');
-                    Logger.log('🚀 [CODE.GS] الوقت: ' + new Date().toISOString());
-                    Logger.log('🏷️ [CODE.GS] BUILD_TAG: ' + BUILD_TAG);
-                    Logger.log('🚀 [CODE.GS] postData keys: ' + Object.keys(postData || {}).join(', '));
-                    Logger.log('🚀 [CODE.GS] postData.data exists: ' + !!postData.data);
-                    Logger.log('🚀 [CODE.GS] postData.data type: ' + typeof postData.data);
-                    Logger.log('🚀 [CODE.GS] payload type: ' + typeof payload);
-                    Logger.log('🚀 [CODE.GS] payload is null: ' + (payload === null));
-                    Logger.log('🚀 [CODE.GS] payload is undefined: ' + (payload === undefined));
-                    Logger.log('🚀 [CODE.GS] payload keys: ' + (payload ? Object.keys(payload).join(', ') : 'N/A'));
-                    Logger.log('🚀 [CODE.GS] payload.createdBy: ' + JSON.stringify(payload?.createdBy));
-                    Logger.log('🚀 [CODE.GS] payload.email: ' + JSON.stringify(payload?.email));
-                    Logger.log('🚀 [CODE.GS] payload.id: ' + JSON.stringify(payload?.id));
-                    Logger.log('🚀 [CODE.GS] payload.employeeName: ' + JSON.stringify(payload?.employeeName));
 
-                    // ✅ إصلاح جذري: محاولة استخدام postData.data مباشرة إذا كان payload فارغاً
-                    let visitDataToUse = payload;
-                    if (!visitDataToUse || typeof visitDataToUse !== 'object' || Object.keys(visitDataToUse).length === 0) {
-                        Logger.log('⚠️ [CODE.GS] payload فارغ، محاولة استخدام postData.data مباشرة');
-                        visitDataToUse = postData.data;
-                    }
 
-                    // ✅ محاولة أخرى: إذا كان postData يحتوي على البيانات مباشرة (بدون data)
-                    if (!visitDataToUse || typeof visitDataToUse !== 'object' || Object.keys(visitDataToUse).length === 0) {
-                        Logger.log('⚠️ [CODE.GS] postData.data فارغ، محاولة استخدام postData مباشرة (بدون action)');
-                        const postDataCopy = {};
-                        for (var key in postData) {
-                            if (postData.hasOwnProperty(key) && key !== 'action' && key !== 'csrfToken' && key !== 'skipCSRFCheck' && key !== 'skipCSRF') {
-                                postDataCopy[key] = postData[key];
-                            }
-                        }
-                        if (Object.keys(postDataCopy).length > 0) {
-                            visitDataToUse = postDataCopy;
-                            Logger.log('✅ [CODE.GS] تم استخدام postData مباشرة، عدد الحقول: ' + Object.keys(visitDataToUse).length);
-                        }
-                    }
 
-                    // ✅ التحقق النهائي
-                    if (!visitDataToUse || typeof visitDataToUse !== 'object' || Object.keys(visitDataToUse).length === 0) {
-                        Logger.log('❌ [CODE.GS] لا يمكن العثور على بيانات الزيارة!');
-                        Logger.log('❌ [CODE.GS] postData كامل: ' + JSON.stringify(postData).substring(0, 500));
-                        result = { success: false, message: 'بيانات الزيارة غير موجودة أو غير صحيحة' };
-                    } else {
-                        Logger.log('✅ [CODE.GS] تم العثور على بيانات الزيارة، عدد الحقول: ' + Object.keys(visitDataToUse).length);
-                        result = addClinicVisitToSheet(visitDataToUse);
-                        // إضافة بصمة نسخة في النتيجة لتسهيل التتبع من الواجهة
-                        try {
-                            if (result && typeof result === 'object') {
-                                result._buildTag = BUILD_TAG;
-                            }
-                        } catch (e) {}
-                        Logger.log('✅ [CODE.GS] addClinicVisitToSheet اكتملت. النتيجة: ' + JSON.stringify(result));
-                    }
-                    Logger.log('🚀 [CODE.GS] ===== addClinicVisit action اكتملت =====');
-        return result;
-    },
-    'updateClinicVisit': function(payload, postData, action, actorUserData, spreadsheetId) {
-        var result = { success: false, message: '' };
-        result = updateClinicVisit(payload.visitId || payload.id, payload.updateData || payload);
-        return result;
-    },
-    'getAllClinicVisits': function(payload, postData, action, actorUserData, spreadsheetId) {
-        var result = { success: false, message: '' };
-        result = getAllClinicVisits(payload.filters || {});
-        return result;
-    },
-    'addMedication': function(payload, postData, action, actorUserData, spreadsheetId) {
-        var result = { success: false, message: '' };
-        result = addMedicationToSheet(payload);
-        return result;
-    },
-    'updateMedication': function(payload, postData, action, actorUserData, spreadsheetId) {
-        var result = { success: false, message: '' };
-        result = updateMedication(payload.medicationId || payload.id, payload.updateData || payload);
-        return result;
-    },
-    'deleteMedication': function(payload, postData, action, actorUserData, spreadsheetId) {
-        var result = { success: false, message: '' };
-        result = deleteMedication(payload.medicationId || payload.id);
-        return result;
-    },
-    'getAllMedications': function(payload, postData, action, actorUserData, spreadsheetId) {
-        var result = { success: false, message: '' };
-        result = getAllMedications(payload.filters || {});
-        return result;
-    },
-    'getMedicationAlerts': function(payload, postData, action, actorUserData, spreadsheetId) {
-        var result = { success: false, message: '' };
-        result = getMedicationAlerts();
-        return result;
-    },
-    'addSickLeave': function(payload, postData, action, actorUserData, spreadsheetId) {
-        var result = { success: false, message: '' };
-        result = addSickLeaveToSheet(payload);
-        return result;
-    },
-    'updateSickLeave': function(payload, postData, action, actorUserData, spreadsheetId) {
-        var result = { success: false, message: '' };
-        result = updateSickLeave(payload.leaveId || payload.id, payload.updateData || payload);
-        return result;
-    },
-    'getAllSickLeaves': function(payload, postData, action, actorUserData, spreadsheetId) {
-        var result = { success: false, message: '' };
-        result = getAllSickLeaves(payload.filters || {});
-        return result;
-    },
-    'addInjury': function(payload, postData, action, actorUserData, spreadsheetId) {
-        var result = { success: false, message: '' };
-        result = addInjuryToSheet(payload);
-        return result;
-    },
-    'updateInjury': function(payload, postData, action, actorUserData, spreadsheetId) {
-        var result = { success: false, message: '' };
-        result = updateInjury(payload.injuryId || payload.id, payload.updateData || payload);
-        return result;
-    },
-    'getAllInjuries': function(payload, postData, action, actorUserData, spreadsheetId) {
-        var result = { success: false, message: '' };
-        result = getAllInjuries(payload.filters || {});
-        return result;
-    },
-    'addClinicInventory': function(payload, postData, action, actorUserData, spreadsheetId) {
-        var result = { success: false, message: '' };
-        result = addClinicInventoryToSheet(payload);
-        return result;
-    },
-    'updateClinicInventory': function(payload, postData, action, actorUserData, spreadsheetId) {
-        var result = { success: false, message: '' };
-        result = updateClinicInventory(payload.inventoryId || payload.id, payload.updateData || payload);
-        return result;
-    },
-    'getAllClinicInventory': function(payload, postData, action, actorUserData, spreadsheetId) {
-        var result = { success: false, message: '' };
-        result = getAllClinicInventory(payload.filters || {});
-        return result;
-    },
-    'addMedicationDeletionRequest': function(payload, postData, action, actorUserData, spreadsheetId) {
-        var result = { success: false, message: '' };
-        result = addMedicationDeletionRequest(payload);
-        return result;
-    },
-    'updateMedicationDeletionRequest': function(payload, postData, action, actorUserData, spreadsheetId) {
-        var result = { success: false, message: '' };
-        result = updateMedicationDeletionRequest(payload.requestId || payload.id, payload.updateData || payload);
-        return result;
-    },
-    'getAllMedicationDeletionRequests': function(payload, postData, action, actorUserData, spreadsheetId) {
-        var result = { success: false, message: '' };
-        result = getAllMedicationDeletionRequests(payload.filters || {});
-        return result;
-    },
-    'approveMedicationDeletion': function(payload, postData, action, actorUserData, spreadsheetId) {
-        var result = { success: false, message: '' };
-        result = approveMedicationDeletion(payload.requestId || payload.id, payload.approverData || payload.approver);
-        return result;
-    },
-    'rejectMedicationDeletion': function(payload, postData, action, actorUserData, spreadsheetId) {
-        var result = { success: false, message: '' };
-        result = rejectMedicationDeletion(payload.requestId || payload.id, payload.rejectorData || payload.rejector, payload.reason);
-        return result;
-    },
-    'addSupplyRequest': function(payload, postData, action, actorUserData, spreadsheetId) {
-        var result = { success: false, message: '' };
-        result = addSupplyRequest(payload);
-        return result;
-    },
-    'updateSupplyRequest': function(payload, postData, action, actorUserData, spreadsheetId) {
-        var result = { success: false, message: '' };
-        result = updateSupplyRequest(payload.requestId || payload.id, payload.updateData || payload);
-        return result;
-    },
-    'getAllSupplyRequests': function(payload, postData, action, actorUserData, spreadsheetId) {
-        var result = { success: false, message: '' };
-        result = getAllSupplyRequests(payload.filters || {});
-        return result;
-    },
-    'approveSupplyRequest': function(payload, postData, action, actorUserData, spreadsheetId) {
-        var result = { success: false, message: '' };
-        result = approveSupplyRequest(payload.requestId || payload.id, payload.approverData || payload.approver);
-        return result;
-    },
-    'rejectSupplyRequest': function(payload, postData, action, actorUserData, spreadsheetId) {
-        var result = { success: false, message: '' };
-        result = rejectSupplyRequest(payload.requestId || payload.id, payload.rejectorData || payload.rejector, payload.reason);
-        return result;
-    },
-    'addClinicVisitDeletionRequest': function(payload, postData, action, actorUserData, spreadsheetId) {
-        var result = { success: false, message: '' };
-        result = addClinicVisitDeletionRequest(payload);
-        return result;
-    },
-    'updateClinicVisitDeletionRequest': function(payload, postData, action, actorUserData, spreadsheetId) {
-        var result = { success: false, message: '' };
-        result = updateClinicVisitDeletionRequest(payload.requestId || payload.id, payload.updateData || payload);
-        return result;
-    },
-    'getAllClinicVisitDeletionRequests': function(payload, postData, action, actorUserData, spreadsheetId) {
-        var result = { success: false, message: '' };
-        result = getAllClinicVisitDeletionRequests(payload.filters || {});
-        return result;
-    },
-    'approveClinicVisitDeletion': function(payload, postData, action, actorUserData, spreadsheetId) {
-        var result = { success: false, message: '' };
-        result = approveClinicVisitDeletion(payload.requestId || payload.id, payload.approverData || payload.approver);
-        return result;
-    },
-    'rejectClinicVisitDeletion': function(payload, postData, action, actorUserData, spreadsheetId) {
-        var result = { success: false, message: '' };
-        result = rejectClinicVisitDeletion(payload.requestId || payload.id, payload.rejectorData || payload.rejector, payload.reason);
-        return result;
-    },
-    'deleteClinicVisit': function(payload, postData, action, actorUserData, spreadsheetId) {
-        var result = { success: false, message: '' };
-        result = deleteClinicVisit(payload.visitId || payload.id);
-                    // // break;
 
-                // ============================================
-                // المقاولين والموظفين (Contractors & Employees)
-                // ============================================
-                // ✅ تم إزالة case // 'addContractor' - نعتمد الآن فقط على ApprovedContractors
-                // ✅ تم إزالة حالات Contractors - نعتمد الآن فقط على ApprovedContractors
-                // case 'updateContractor': // - تم الإزالة
-                // case 'getContractor': // - تم الإزالة
-                // case 'getAllContractors': // - تم الإزالة
-                // case 'deleteContractor': // - تم الإزالة
-        return result;
-    },
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
     'addEmployee': function(payload, postData, action, actorUserData, spreadsheetId) {
         var result = { success: false, message: '' };
         result = addEmployeeToSheet(payload);
@@ -1735,7 +1539,7 @@ const ActionHandlers = {
     },
     'addBudget': function(payload, postData, action, actorUserData, spreadsheetId) {
         var result = { success: false, message: '' };
-
+        result = addBudgetToSheet(payload);
         return result;
     },
     'addSafetyBudget': function(payload, postData, action, actorUserData, spreadsheetId) {
@@ -2980,7 +2784,21 @@ const ActionHandlers = {
     },
     'importBackup': function(payload, postData, action, actorUserData, spreadsheetId) {
         var result = { success: false, message: '' };
-
+        if (payload && !payload.userData && !payload.user) {
+                        payload.userData = payload.userData || payload.user || {
+                            role: payload.role || '',
+                            permissions: payload.permissions || {},
+                            name: payload.name || '',
+                            email: payload.email || '',
+                            id: payload.userId || payload.id
+                        };
+                    }
+                    // يقبل fileId أو fileUrl أو أي نص يحتوي ID
+                    result = importBackupFromFile(
+                        payload.fileId || payload.fileUrl || payload.file || payload.driveFileId,
+                        payload.userData || payload.user,
+                        payload.options || {}
+                    );
         return result;
     },
     'importBackupFromFile': function(payload, postData, action, actorUserData, spreadsheetId) {
@@ -3005,38 +2823,46 @@ const ActionHandlers = {
     'testBackupSystem': function(payload, postData, action, actorUserData, spreadsheetId) {
         var result = { success: false, message: '' };
         result = testBackupSystem();
-                    // // break;
 
-                // ============================================
-                // Action غير معترف به
-                // ============================================
-                 // default:
-                    Logger.log('Action not recognized: "' + action + '" (type: ' + typeof action + ', length: ' + (action ? action.length : 0) + ')');
-
-                    const safetyHealthActions = [
-                        'getSafetyTeamMembers', 'getSafetyTeamMember', 'addSafetyTeamMember', 'updateSafetyTeamMember',
-                        'getOrganizationalStructure', 'saveOrganizationalStructure',
-                        'getJobDescription', 'saveJobDescription',
-                        'getSafetyTeamKPIs', 'getSafetyHealthManagementSettings', 'saveSafetyHealthManagementSettings',
-                        'updateLeaveTypes', 'updateAttendanceStatuses', 'updateKPITargets',
-                        'addCustomKPI', 'updateCustomKPI', 'deleteCustomKPI', 'calculateAllCustomKPIs',
-                        'calculateSafetyTeamKPIs', 'generateSafetyTeamPerformanceReport', 'updateSafetyTeamKPI'
-                    ];
-
-                    const isSafetyHealthAction = safetyHealthActions.includes(action);
-
-                    result = {
-                        success: false,
-                        message: 'الـ action "' + action + '" غير معترف به. يرجى التأكد من إضافة جميع الملفات المطلوبة إلى مشروع Google Apps Script وإعادة نشر Web App.',
-                        errorCode: 'ACTION_NOT_RECOGNIZED',
-                        action: action,
-                        actionType: typeof action,
-                        actionLength: action ? action.length : 0,
-                        hint: isSafetyHealthAction
-                            ? 'هذا الـ action يتطلب ملف SafetyHealthManagement.gs. تأكد من إضافة الملف وإعادة نشر Web App.'
-                            : 'تأكد من أن جميع الملفات المطلوبة موجودة في المشروع وأن جميع الدوال معرّفة بشكل صحيح',
-                        recognizedActions: isSafetyHealthAction ? safetyHealthActions : undefined
-                    };
         return result;
     },
 };
+
+
+/**
+ * دالة مساعدة لمعالجة الحالات غير المعروفة
+ */
+function handleUnrecognizedAction(action) {
+    Logger.log('Action not recognized: "' + action + '" (type: ' + typeof action + ', length: ' + (action ? action.length : 0) + ')');
+
+    const safetyHealthActions = [
+        'getSafetyTeamMembers', 'getSafetyTeamMember', 'addSafetyTeamMember', 'updateSafetyTeamMember',
+        'getOrganizationalStructure', 'saveOrganizationalStructure',
+        'getJobDescription', 'saveJobDescription',
+        'getSafetyTeamKPIs', 'getSafetyHealthManagementSettings', 'saveSafetyHealthManagementSettings',
+        'updateLeaveTypes', 'updateAttendanceStatuses', 'updateKPITargets',
+        'addCustomKPI', 'updateCustomKPI', 'deleteCustomKPI', 'calculateAllCustomKPIs',
+        'calculateSafetyTeamKPIs', 'generateSafetyTeamPerformanceReport', 'updateSafetyTeamKPI'
+    ];
+
+    const isSafetyHealthAction = safetyHealthActions.includes(action);
+
+    return {
+        success: false,
+        message: 'الـ action "' + action + '" غير معترف به. يرجى التأكد من إضافة جميع الملفات المطلوبة إلى مشروع Google Apps Script وإعادة نشر Web App.',
+        errorCode: 'ACTION_NOT_RECOGNIZED',
+        action: action,
+        actionType: typeof action,
+        actionLength: action ? action.length : 0,
+        hint: isSafetyHealthAction
+            ? 'هذا الـ action يتطلب ملف SafetyHealthManagement.gs. تأكد من إضافة الملف وإعادة نشر Web App.'
+            : 'تأكد من أن جميع الملفات المطلوبة موجودة في المشروع وأن جميع الدوال معرّفة بشكل صحيح',
+        recognizedActions: isSafetyHealthAction ? safetyHealthActions : undefined
+    };
+}
+
+// ✅ دمج معالجات العيادة من ClinicHandlers.gs
+if (typeof ClinicHandlers !== 'undefined') {
+    Object.assign(ActionHandlers, ClinicHandlers);
+    Logger.log('✅ [ActionHandlers] تم دمج ' + Object.keys(ClinicHandlers).length + ' من معالجات العيادة.');
+}

@@ -454,9 +454,21 @@ function addClinicVisitToSheet(visitData) {
             return result;
         }
         
-        // ✅ ملاحظة: خصم الأدوية تم تعطيله من عملية الحفظ لتجنب timeout
-        // يتم الخصم بشكل منفصل عبر دالة processPendingMedicationDeductions()
-        // أو يمكن تشغيله يدوياً من لوحة التحكم
+        // ✅ خصم الأدوية من المخزون تلقائياً
+        if (visitData.medications && Array.isArray(visitData.medications) && visitData.medications.length > 0) {
+            try {
+                Logger.log('💊 [BACKEND] محاولة خصم الأدوية تلقائياً: ' + visitData.medications.length);
+                const deductResult = deductMedicationsFromInventory_(visitData.medications, normalized.id, normalized.createdBy);
+                if (deductResult && deductResult.success) {
+                    Logger.log('✅ [BACKEND] تم خصم الأدوية بنجاح');
+                } else {
+                    Logger.log('⚠️ [BACKEND] فشل خصم الأدوية تلقائياً: ' + (deductResult ? deductResult.message : 'خطأ غير معروف'));
+                }
+            } catch (deductError) {
+                Logger.log('❌ [BACKEND] خطأ أثناء خصم الأدوية: ' + deductError.toString());
+                // لا نوقف العملية إذا فشل الخصم لضمان حفظ الزيارة
+            }
+        }
         
         var merged = (result && typeof result === 'object') ? result : { success: true };
         merged.success = true;
@@ -465,11 +477,9 @@ function addClinicVisitToSheet(visitData) {
         if (!merged.message) {
             merged.message = 'تم تسجيل الزيارة';
         }
-        // إضافة معلومات الأدوية
+        // إضافة معلومات الأدوية للرد
         if (visitData.medications && Array.isArray(visitData.medications) && visitData.medications.length > 0) {
             merged.medicationsCount = visitData.medications.length;
-            merged.message += ' - تنبيه: يرجى خصم الأدوية يدوياً من المخزون';
-            merged.pendingDeduction = true;
         }
         return merged;
     } catch (error) {

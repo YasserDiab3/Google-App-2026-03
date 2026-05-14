@@ -8382,7 +8382,8 @@ const Clinic = {
                 selectedValue: currentValue,
                 valueMode: 'name',
                 showServiceType: true,
-                includeSuppliers: false
+                includeSuppliers: true,
+                approvedOnly: false
             });
         }
 
