@@ -707,11 +707,11 @@ function getAllClinicVisits(filters = {}) {
         }
 
         const employeeData = (readFromSheet('ClinicVisits', spreadsheetId) || []).map(v => {
-            if (v && typeof v === 'object') v.personType = 'employee';
+            if (v && typeof v === 'object') v._tempSourceType = 'employee';
             return v;
         });
         const contractorData = (readFromSheet('ClinicContractorVisits', spreadsheetId) || []).map(v => {
-            if (v && typeof v === 'object') v.personType = 'contractor';
+            if (v && typeof v === 'object') v._tempSourceType = 'contractor';
             return v;
         });
         let data = employeeData.concat(contractorData);
@@ -720,17 +720,26 @@ function getAllClinicVisits(filters = {}) {
         data = data.map((v, index) => {
             if (!v || typeof v !== 'object') return v;
 
+            // 1. ضمان وجود ID ثابت إذا كان مفقوداً
             if (!v.id) {
-                // توليد معرف ثابت بناءً على محتوى الصف لتجنب التغير عند كل تحميل
-                const name = (v.employeeName || v.contractorName || v.employeeCode || '').toString().trim();
-                const date = (v.visitDate || v.createdAt || '').toString().trim();
-                const seed = name + '_' + date + '_' + index;
-                v.id = 'STB_' + Utilities.base64Encode(Utilities.computeDigest(Utilities.DigestAlgorithm.MD5, seed)).substring(0, 8);
+                // توليد معرف ثابت بناءً على محتوى الصف فقط (بدون index) لتجنب التغير عند إضافة صفوف
+                const namePart = (v.employeeName || v.contractorName || v.employeeCode || v.contractorWorkerName || '').toString().trim();
+                const datePart = (v.visitDate || v.createdAt || '').toString().trim();
+                const reasonPart = (v.reason || v.diagnosis || '').toString().trim();
+                // نستخدم أول 12 حرف من الـ hash لضمان فرادة كافية
+                const seed = namePart + '|' + datePart + '|' + reasonPart;
+                v.id = 'STB_' + Utilities.base64Encode(Utilities.computeDigest(Utilities.DigestAlgorithm.MD5, seed))
+                                .replace(/[^a-zA-Z0-9]/g, '').substring(0, 12);
             }
             
-            // 2. توحيد نوع الشخص (lowercase)
-            const rawType = String(v.personType || 'employee').toLowerCase().trim();
-            if (rawType.includes('contractor') || rawType.includes('مقاول') || rawType.includes('external') || rawType.includes('خارجي')) {
+            // 2. توحيد نوع الشخص (lowercase) - الأولوية للقيم الموجودة فعلياً في الشيت
+            let currentType = String(v.personType || '').toLowerCase().trim();
+            if (!currentType) {
+                // إذا كان فارغاً، نستخدم النوع الافتراضي بناءً على الشيت المصدر (تم تعيينه في readFromSheet أعلاه)
+                currentType = v._tempSourceType || 'employee';
+            }
+            
+            if (currentType.includes('contractor') || currentType.includes('مقاول') || currentType.includes('external') || currentType.includes('خارجي')) {
                 v.personType = 'contractor';
             } else {
                 v.personType = 'employee';
@@ -2041,9 +2050,28 @@ function getAllInjuries(filters = {}) {
             Logger.log('Warning ensuring injuries sheets headers: ' + e.toString());
         }
 
-        const employeeData = readFromSheet('Injuries', spreadsheetId) || [];
-        const contractorData = readFromSheet('ClinicContractorInjuries', spreadsheetId) || [];
+        const employeeData = (readFromSheet('Injuries', spreadsheetId) || []).map(v => {
+            if (v && typeof v === 'object') v.personType = v.personType || 'employee';
+            return v;
+        });
+        const contractorData = (readFromSheet('ClinicContractorInjuries', spreadsheetId) || []).map(v => {
+            if (v && typeof v === 'object') v.personType = v.personType || 'contractor';
+            return v;
+        });
         let data = employeeData.concat(contractorData);
+
+        // ✅ تطبيع البيانات
+        data = data.map(v => {
+            if (!v || typeof v !== 'object') return v;
+            
+            const rawType = String(v.personType || '').toLowerCase().trim();
+            if (rawType.includes('contractor') || rawType.includes('مقاول') || rawType.includes('external') || rawType.includes('خارجي')) {
+                v.personType = 'contractor';
+            } else {
+                v.personType = 'employee';
+            }
+            return v;
+        });
         
         // تطبيق الفلاتر
         if (filters.employeeCode) {

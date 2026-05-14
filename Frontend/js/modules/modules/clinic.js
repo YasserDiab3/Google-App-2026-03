@@ -17,6 +17,31 @@ const Clinic = {
         medicationAlertsNotified: new Set(),
         initialized: false
     },
+    
+    _clinicVisitsLoadPromise: null,
+    _visitsBackendFetchOk: false,
+
+    /**
+     * ✅ تحويل المعرف (ID أو Email) إلى اسم المستخدم الكامل
+     */
+    getUserDisplayName(identifier) {
+        if (!identifier) return '-';
+        const search = String(identifier).toLowerCase().trim();
+        if (search === 'system' || search === 'النظام' || search === 'admin') return 'النظام';
+
+        // البحث في قائمة المستخدمين المحملة في AppState
+        if (AppState && AppState.appData && Array.isArray(AppState.appData.users)) {
+            const user = AppState.appData.users.find(u => 
+                String(u.email || '').toLowerCase().trim() === search ||
+                String(u.id || '').toLowerCase().trim() === search ||
+                String(u.name || '').toLowerCase().trim() === search
+            );
+            if (user && user.name) return user.name;
+        }
+
+        // إذا لم نجد الاسم، نرجع المعرف الأصلي
+        return identifier;
+    },
 
     /**
      * معالجة روابط المرفقات (تحويل روابط Google Drive القديمة)
@@ -1689,7 +1714,7 @@ const Clinic = {
                     </div>
 
                     <div class="text-sm text-gray-500 border-t border-gray-200 pt-3">
-                        ${record.createdBy?.name ? `<span class="font-medium">تم التسجيل بواسطة:</span> ${Utils.escapeHTML(record.createdBy.name)}` : ''}
+                        <span class="font-medium">تم التسجيل بواسطة:</span> ${Utils.escapeHTML(this.getUserDisplayName(record.createdBy))}
                         ${record.createdAt ? `<span class="ml-2">بتاريخ ${this.formatDate(record.createdAt, true)}</span>` : ''}
                     </div>
                 </div>
@@ -2612,6 +2637,7 @@ const Clinic = {
                     <td class="text-center font-semibold">${quantityAdded}</td>
                     <td class="text-center font-semibold text-blue-600">${dispensed}</td>
                     <td class="text-center font-semibold">${remainingQuantity}</td>
+                    <td>${Utils.escapeHTML(this.getUserDisplayName(item.createdBy))}</td>
                     <td class="text-center">
                         <div class="flex items-center justify-center gap-2">
                             ${actionButtons}
@@ -2637,6 +2663,7 @@ const Clinic = {
                                 <th class="text-center">الكمية</th>
                                 <th class="text-center">المنصرف</th>
                                 <th class="text-center">الرصيد</th>
+                                <th>بواسطة</th>
                                 <th class="text-center">الإجراءات</th>
                             </tr>
                         </thead>
@@ -4132,6 +4159,7 @@ const Clinic = {
                     <td>
                         <span class="badge ${this.getInjuryStatusBadgeClass(status)}">${Utils.escapeHTML(status)}</span>
                     </td>
+                    <td>${Utils.escapeHTML(this.getUserDisplayName(item.createdBy))}</td>
                     <td class="text-center">${attachmentsCount}</td>
                     <td class="text-center">
                         <div class="flex items-center justify-center gap-2">
@@ -4162,6 +4190,7 @@ const Clinic = {
                                 <th>نوع الإصابة</th>
                                 <th>مكان الإصابة (بالجسم)</th>
                                 <th>الحالة</th>
+                                <th>بواسطة</th>
                                 <th>عدد المرفقات</th>
                                 <th class="text-center">الإجراءات</th>
                             </tr>
@@ -6782,32 +6811,8 @@ const Clinic = {
                     }, 0)
                     : 0;
 
-                // ✅ عرض createdBy (تم التسجيل بواسطة) - منطق مبسط
-                let createdByDisplay = 'غير محدد';
-                try {
-                    // أولاً: إذا كان createdBy موجود ومليء
-                    if (visit.createdBy) {
-                        const createdByValue = typeof visit.createdBy === 'object' 
-                            ? (visit.createdBy.name || '') 
-                            : String(visit.createdBy).trim();
-                        
-                        if (createdByValue && createdByValue !== 'مستخدم' && createdByValue !== 'النظام') {
-                            createdByDisplay = Utils.escapeHTML(createdByValue);
-                        }
-                    }
-                    
-                    // ثانياً: إذا لم نجد اسم صحيح، نبحث في قاعدة البيانات
-                    if (createdByDisplay === 'غير محدد' && visit.email) {
-                        const users = AppState.appData.users || [];
-                        const visitEmail = (visit.email || '').toString().toLowerCase().trim();
-                        const dbUser = users.find(u => (u.email || '').toString().toLowerCase().trim() === visitEmail);
-                        if (dbUser && dbUser.name) {
-                            createdByDisplay = Utils.escapeHTML(dbUser.name);
-                        }
-                    }
-                } catch (error) {
-                    createdByDisplay = 'غير محدد';
-                }
+                // ✅ عرض createdBy (تم التسجيل بواسطة)
+                const createdByDisplay = Utils.escapeHTML(this.getUserDisplayName(visit.createdBy));
 
                 // استخدام isRTL من بداية الدالة (تم الحصول عليه في السطر 5010)
                 const textAlign = isRTL ? 'right' : 'left';
