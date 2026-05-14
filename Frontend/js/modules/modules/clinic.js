@@ -1133,7 +1133,20 @@ const Clinic = {
                 value = records.filter(r => {
                     const v = this.getClinicAnalysisValue(ds, field, r);
                     if (!fieldValue) return v && v !== 'غير محدد';
-                    return v === fieldValue;
+                    
+                    // مقارنة غير حساسة لحالة الأحرف
+                    const vLower = String(v || '').toLowerCase().trim();
+                    const fLower = String(fieldValue || '').toLowerCase().trim();
+                    
+                    if (vLower === fLower) return true;
+                    
+                    // دعم التوافق بين المصطلحات العربية والإنجليزية لنوع الشخص
+                    if (field === 'personType') {
+                        if (fLower === 'employee' || fLower === 'موظف') return vLower === 'موظف';
+                        if (fLower === 'contractor' || fLower === 'مقاول' || fLower === 'external') return vLower === 'مقاول';
+                    }
+                    
+                    return vLower === fLower;
                 }).length;
             }
 
@@ -4893,9 +4906,9 @@ const Clinic = {
             const reason = visit.reason || visit.diagnosis || 'غير محدد';
             visitAnalysis.byReason[reason] = (visitAnalysis.byReason[reason] || 0) + 1;
 
-            const personType = visit.personType === 'contractor' ? 'مقاول' :
-                visit.personType === 'external' ? 'خارجي' : 'موظف';
-            visitAnalysis.byPersonType[personType] = (visitAnalysis.byPersonType[personType] || 0) + 1;
+            const pType = String(visit.personType || '').toLowerCase().trim();
+            const personTypeLabel = (pType === 'contractor' || pType === 'external') ? 'مقاول' : 'موظف';
+            visitAnalysis.byPersonType[personTypeLabel] = (visitAnalysis.byPersonType[personTypeLabel] || 0) + 1;
 
             const dept = visit.employeeDepartment || visit.department || 'غير محدد';
             visitAnalysis.byDepartment[dept] = (visitAnalysis.byDepartment[dept] || 0) + 1;
@@ -6446,29 +6459,13 @@ const Clinic = {
             // ✅ فلترة الزيارات حسب النوع مع التأكد من وجود personType
             const employeeVisits = allVisits.filter(v => {
                 if (!v || typeof v !== 'object') return false;
-                // التأكد من وجود personType
-                if (!v.personType) {
-                    // محاولة تحديد النوع من الحقول المتوفرة
-                    if (v.contractorName || v.contractorWorkerName || v.externalName) {
-                        v.personType = 'contractor';
-                    } else {
-                        v.personType = 'employee';
-                    }
-                }
-                return v.personType === 'employee' || !v.personType;
+                const type = String(v.personType || '').toLowerCase().trim();
+                return type === 'employee' || type === '';
             });
             const contractorVisits = allVisits.filter(v => {
                 if (!v || typeof v !== 'object') return false;
-                // التأكد من وجود personType
-                if (!v.personType) {
-                    // محاولة تحديد النوع من الحقول المتوفرة
-                    if (v.contractorName || v.contractorWorkerName || v.externalName) {
-                        v.personType = 'contractor';
-                    } else {
-                        v.personType = 'employee';
-                    }
-                }
-                return v.personType === 'contractor';
+                const type = String(v.personType || '').toLowerCase().trim();
+                return type === 'contractor';
             });
 
             const baseVisits = activeVisitType === 'employees' ? employeeVisits : contractorVisits;
@@ -7978,19 +7975,21 @@ const Clinic = {
         let visitsChanged = false;
         data.clinicVisits = data.clinicVisits.map((visit) => {
             if (!visit || typeof visit !== 'object') return visit;
-            
-            // توحيد النوع: النظام يدعم موظف/مقاول فقط
-            if (String(visit.personType || '').toLowerCase().trim() === 'external') {
-                visit.personType = 'contractor';
-                visitsChanged = true;
-            }
-            // التأكد من وجود personType
-            if (!visit.personType) {
-                if (visit.contractorName || visit.contractorWorkerName || visit.externalName) {
-                    visit.personType = 'contractor';
+
+            // توحيد النوع إلى حروف صغيرة
+            let type = String(visit.personType || '').toLowerCase().trim();
+            if (type === 'external' || type === 'خارجي' || type === 'مقاول' || type === 'contractor') {
+                type = 'contractor';
+            } else if (type === 'موظف' || type === 'staff' || type === 'employee' || !type) {
+                if (visit.contractorName || visit.contractorWorkerName) {
+                    type = 'contractor';
                 } else {
-                    visit.personType = 'employee';
+                    type = 'employee';
                 }
+            }
+            
+            if (visit.personType !== type) {
+                visit.personType = type;
                 visitsChanged = true;
             }
             
