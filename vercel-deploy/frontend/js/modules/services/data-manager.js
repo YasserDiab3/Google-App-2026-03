@@ -6,10 +6,11 @@
 const DataManager = {
     _pendingSyncQueue: null,
     /** حد آمن لحجم بيانات التطبيق في localStorage (المتصفحات غالباً ~5MB للمجال كاملاً) */
-    SAFE_APP_DATA_BYTES: 4 * 1024 * 1024,
+    SAFE_APP_DATA_BYTES: 6 * 1024 * 1024,
     /** أقصى عدد عناصر للمصفوفات الكبيرة في النسخة المخففة */
     MAX_ITEMS_PER_ARRAY_IN_LIGHT: 400,
     _lastLightSaveNotification: 0,
+    _hasShownLargeDataWarning: false,
 
     /**
      * تقدير حجم استخدام localStorage بالبايتات (للتشخيص فقط)
@@ -509,7 +510,8 @@ const DataManager = {
                         Utils.safeWarn('⚠️ فشل حفظ النسخة المخففة:', e);
                     }
                 }
-                if (serialized.length > 10 * 1024 * 1024) {
+                if (serialized.length > 10 * 1024 * 1024 && !this._hasShownLargeDataWarning) {
+                    this._hasShownLargeDataWarning = true;
                     Utils.safeWarn('⚠️ حجم البيانات كبير جداً - قد يفشل الحفظ في localStorage');
                     if (typeof Notification !== 'undefined' && Notification.warning) {
                         Notification.warning('حجم البيانات كبير جداً. سيتم حفظ البيانات تلقائياً في Google Sheets عند المزامنة.');
@@ -532,8 +534,11 @@ const DataManager = {
             Utils.safeError('❌ خطأ في حفظ البيانات المحلية:', error.name || error.code, error.message);
             
             if (isStackOverflow) {
-                if (typeof Notification !== 'undefined' && Notification.warning) {
-                    Notification.warning('حجم البيانات كبير جداً. سيتم حفظ البيانات تلقائياً في Google Sheets عند المزامنة.');
+                if (!this._hasShownLargeDataWarning) {
+                    this._hasShownLargeDataWarning = true;
+                    if (typeof Notification !== 'undefined' && Notification.warning) {
+                        Notification.warning('حجم البيانات كبير جداً. سيتم حفظ البيانات تلقائياً في Google Sheets عند المزامنة.');
+                    }
                 }
                 return false;
             }

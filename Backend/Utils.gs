@@ -3263,20 +3263,32 @@ function readFromSheet(sheetName, spreadsheetId = null) {
                 return;
             }
             
-            const recordId = String(obj.id).trim();
-            if (recordId === '') {
-                // إذا كان id فارغاً، نضيفه كما هو
+            const recordId = String(obj.id || '').trim();
+            if (!recordId) {
                 uniqueObjects.push(obj);
                 return;
             }
             
+            // في حالة وجود ID مكرر، نتحقق مما إذا كان المحتوى متطابقاً تماماً
+            // إذا كان مختلفاً، فقد يكون خطأ في توليد الـ ID ونريد الاحتفاظ بكلا السجلين لضمان عدم فقدان البيانات
             if (seenIds.has(recordId)) {
-                // ✅ تكرار موجود - نستبدل السجل القديم بالسجل الجديد (الأحدث)
                 const oldIndex = seenIds.get(recordId);
-                uniqueObjects[oldIndex] = obj; // استبدال السجل القديم
-                Logger.log('⚠️ Duplicate record found in readFromSheet: id=' + recordId + ', sheetName=' + sheetName + ', keeping latest record');
+                const oldObj = uniqueObjects[oldIndex];
+
+                // مقارنة بسيطة للمحتوى (بدون ID)
+                const oldStr = JSON.stringify({...oldObj, id: ''});
+                const newStr = JSON.stringify({...obj, id: ''});
+
+                if (oldStr === newStr) {
+                    // تكرار حقيقي، نتجاهله
+                    return;
+                } else {
+                    // ID مكرر لكن البيانات مختلفة! نحتفظ بهما ونضيف لاحقة للـ ID لتمييزهما
+                    obj.id = recordId + '_dup_' + index;
+                    uniqueObjects.push(obj);
+                    Logger.log('⚠️ Duplicate ID with different data found in ' + sheetName + ': ' + recordId + '. Kept both.');
+                }
             } else {
-                // ✅ سجل جديد - نضيفه
                 seenIds.set(recordId, uniqueObjects.length);
                 uniqueObjects.push(obj);
             }
@@ -3286,17 +3298,7 @@ function readFromSheet(sheetName, spreadsheetId = null) {
             Logger.log('⚠️ Removed ' + (allObjects.length - uniqueObjects.length) + ' duplicate records from ' + sheetName);
         }
 
-        // ✅ حماية أمنية: تصفية البيانات الحساسة قبل الكاش والإرسال
-        if (sheetName === 'Users' && uniqueObjects.length > 0) {
-            uniqueObjects.forEach(user => {
-                if (user) {
-                    delete user.passwordHash;
-                    delete user.password;
-                    delete user.token; // تأمين إضافي
-                }
-            });
-            Logger.log('🔒 [SECURITY] تم حماية بيانات المستخدمين وتشفير الحقول الحساسة');
-        }
+
 
         // ✅ CacheService: Save to cache before returning (2 minutes TTL)
         // Only cache sheets with reasonable size (< 500KB)

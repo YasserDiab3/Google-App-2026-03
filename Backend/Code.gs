@@ -250,7 +250,7 @@ function doPost(e) {
 
         // قائمة بالـ actions التي لا تتطلب CSRF token (عمليات قراءة فقط)
         const readOnlyActions = [
-            'readFromSheet', 'getData',
+            'login', 'readFromSheet', 'getData',
             'batchReadSheets', // ✅ Batch read - read only
             'getSafetyTeamMembers', 'getSafetyTeamMember', 'getOrganizationalStructure',
             'getJobDescription', 'getSafetyTeamKPIs', 'getSafetyHealthManagementSettings',

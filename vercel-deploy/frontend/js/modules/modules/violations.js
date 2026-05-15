@@ -2139,7 +2139,7 @@ const Violations = {
                 selectedContractorId,
                 valueMode: 'name', // نموذج المخالفة يحفظ الاسم + contractorId في dataset
                 showServiceType: true,
-                includeSuppliers: false,
+                includeSuppliers: true,
                 approvedOnly: false // ✅ إصلاح: تضمين جميع المقاولين (بما فيهم غير المعتمدين)
             });
             return;

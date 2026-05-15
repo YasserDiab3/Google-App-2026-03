@@ -2413,7 +2413,7 @@ const BehaviorMonitoring = {
                     selectedContractorId: data?.contractorId || '',
                     valueMode: 'name',
                     showServiceType: true,
-                    includeSuppliers: false,
+                    includeSuppliers: true,
                     approvedOnly: false
                 });
             } catch (e) {

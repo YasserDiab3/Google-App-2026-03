@@ -1171,6 +1171,30 @@ ${innerContent}
     },
 
     /**
+     * تحديث فوري لأرقام الإجماليات في الكروت دون إعادة رسم كاملة
+     */
+    _refreshDashboardTotals() {
+        try {
+            const analytics = this.calculateAnalytics();
+            // كروت الـ dashboard — نبحث عن العناصر الموجودة ونحدثها مباشرة
+            const types = [
+                { key: 'water',       selector: '.text-blue-600,.text-blue-400',   total: analytics.water.total },
+                { key: 'electricity', selector: '.text-yellow-600,.text-yellow-400', total: analytics.electricity.total },
+                { key: 'gas',         selector: '.text-orange-600,.text-orange-400', total: analytics.gas.total }
+            ];
+            // تحديث مباشر للأرقام في الـ DOM
+            const waterEls      = document.querySelectorAll('.text-3xl.font-bold.text-blue-600, .text-3xl.font-bold.text-blue-400');
+            const electricityEls= document.querySelectorAll('.text-3xl.font-bold.text-yellow-600, .text-3xl.font-bold.text-yellow-400');
+            const gasEls        = document.querySelectorAll('.text-3xl.font-bold.text-orange-600, .text-3xl.font-bold.text-orange-400');
+            waterEls.forEach(el       => { el.textContent = analytics.water.total.toFixed(2); });
+            electricityEls.forEach(el => { el.textContent = analytics.electricity.total.toFixed(2); });
+            gasEls.forEach(el         => { el.textContent = analytics.gas.total.toFixed(2); });
+        } catch (e) {
+            /* تجاهل أخطاء التحديث الفوري - سيتم تحديثه بـ load() */
+        }
+    },
+
+    /**
      * عرض لوحة التحليل
      */
     async renderDashboard() {
@@ -1383,14 +1407,47 @@ ${innerContent}
                                 <p class="text-gray-500">لا توجد سجلات لاستهلاك ${name} ضمن سنة <strong>${viewY}</strong>. جرّب اختيار سنة أخرى من شريط التصفية أو أضف سجلاً جديداً.</p>
                             </div>
                         ` : `
+                            <div class="filters-row" style="background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%); padding: 16px 20px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #e2e8f0;">
+                                <div class="filters-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; align-items: end;">
+                                    <div class="filter-field" style="min-width: 180px;">
+                                        <label class="filter-label text-sm text-gray-600 mb-1 block font-medium">
+                                            <i class="fas fa-search ml-1 text-gray-400"></i> بحث شامل
+                                        </label>
+                                        <div class="relative">
+                                            <input type="text" id="search-filter-${type}" class="form-input w-full pr-10" placeholder="بحث في السجلات..." oninput="Sustainability.filterResourceTable('${type}')">
+                                            <i class="fas fa-search absolute top-3 right-3 text-gray-400"></i>
+                                        </div>
+                                    </div>
+                                    <div class="filter-field" style="min-width: 160px;">
+                                        <label class="filter-label text-sm text-gray-600 mb-1 block font-medium">
+                                            <i class="fas fa-industry ml-1 text-gray-400"></i> الموقع / المصنع
+                                        </label>
+                                        <select id="factory-filter-${type}" class="form-input w-full" onchange="Sustainability.filterResourceTable('${type}')">
+                                            <option value="">الكل</option>
+                                            ${[...new Set(data.map(r => r.location).filter(Boolean))].map(loc => `<option value="${Utils.escapeHTML(loc)}">${Utils.escapeHTML(loc)}</option>`).join('')}
+                                        </select>
+                                    </div>
+                                    <div class="filter-field" style="min-width: 160px;">
+                                        <label class="filter-label text-sm text-gray-600 mb-1 block font-medium">
+                                            <i class="fas fa-exclamation-triangle ml-1 text-gray-400"></i> الحالة
+                                        </label>
+                                        <select id="status-filter-${type}" class="form-input w-full" onchange="Sustainability.filterResourceTable('${type}')">
+                                            <option value="">الكل</option>
+                                            <option value="alert">تنبيه</option>
+                                            <option value="normal">طبيعي</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
                             <div class="overflow-x-auto">
-                                <table class="data-table">
+                                <table class="data-table" id="table-${type}">
                                     <thead>
                                         <tr>
                                             <th>#</th>
                                             <th>التاريخ</th>
                                             <th>الشهر / السنة</th>
                                             <th>الموقع / المصنع</th>
+                                            <th>المصدر</th>
                                             <th>قراءة البداية</th>
                                             <th>قراءة النهاية</th>
                                             <th>إجمالي الاستهلاك</th>
@@ -1409,6 +1466,7 @@ ${innerContent}
                                                     <td>${Utils.formatDate(record.date)}</td>
                                                     <td>${record.monthYear || this.getMonthYear(record.date)}</td>
                                                     <td>${Utils.escapeHTML(record.location || '')}</td>
+                                                    <td>${Utils.escapeHTML(record.source || '')}</td>
                                                     <td>${parseFloat(record.startReading || 0).toFixed(2)}</td>
                                                     <td>${parseFloat(record.endReading || 0).toFixed(2)}</td>
                                                     <td class="font-semibold">${parseFloat(record.totalConsumption || 0).toFixed(2)}</td>
@@ -1458,6 +1516,52 @@ ${innerContent}
     },
 
     /**
+     * فلتر ديناميكي للبحث في السجلات المعروضة في الجدول بناء على معايير متعددة
+     */
+    filterResourceTable(type) {
+        const searchInput = document.getElementById(`search-filter-${type}`);
+        const factoryInput = document.getElementById(`factory-filter-${type}`);
+        const statusInput = document.getElementById(`status-filter-${type}`);
+
+        const searchVal = searchInput ? searchInput.value.toLowerCase() : '';
+        const factoryVal = factoryInput ? factoryInput.value.toLowerCase() : '';
+        const statusVal = statusInput ? statusInput.value : '';
+
+        const table = document.getElementById(`table-${type}`);
+        if (!table) return;
+
+        const tbody = table.getElementsByTagName('tbody')[0];
+        if (!tbody) return;
+
+        const rows = tbody.getElementsByTagName('tr');
+        for (let i = 0; i < rows.length; i++) {
+            const row = rows[i];
+
+            // قراءة الخلايا
+            const textContent = row.textContent.toLowerCase();
+            const locationCell = row.cells[3] ? row.cells[3].textContent.toLowerCase() : '';
+            const statusCell = row.cells[10] ? row.cells[10].textContent.trim() : '';
+
+            // الفحص
+            let matchesSearch = textContent.includes(searchVal);
+            let matchesFactory = factoryVal === '' || locationCell.includes(factoryVal);
+
+            let matchesStatus = true;
+            if (statusVal === 'alert') {
+                matchesStatus = statusCell.includes('تنبيه');
+            } else if (statusVal === 'normal') {
+                matchesStatus = statusCell.includes('طبيعي');
+            }
+
+            if (matchesSearch && matchesFactory && matchesStatus) {
+                row.style.display = '';
+            } else {
+                row.style.display = 'none';
+            }
+        }
+    },
+
+    /**
      * عرض نموذج إضافة/تعديل سجل
      */
     showResourceForm(type, recordId = null) {
@@ -1469,19 +1573,39 @@ ${innerContent}
             if (typeof Notification !== 'undefined') Notification.error('ليس لديك صلاحية إضافة سجلات الاستهلاك');
             return;
         }
-        const record = recordId 
+        const record = recordId
             ? (AppState.appData.resourceConsumption?.[type] || []).find(r => r.id === recordId)
             : null;
 
-        const typeNames = {
-            water: { name: 'مياه', icon: 'tint', color: 'blue' },
-            electricity: { name: 'كهرباء', icon: 'bolt', color: 'yellow' },
-            gas: { name: 'غاز طبيعي', icon: 'fire', color: 'orange' }
+        // ألوان مخصصة لكل نوع — inline styles بالكامل (بدون Tailwind)
+        const typeConfig = {
+            water: {
+                name: 'مياه', icon: 'tint',
+                grad: 'linear-gradient(135deg,#1d4ed8 0%,#0891b2 100%)',
+                sectionBg: '#eff6ff', sectionBorder: '#bfdbfe',
+                badgeBg: '#dbeafe', badgeColor: '#1e40af',
+                saveBg: 'linear-gradient(135deg,#2563eb 0%,#0891b2 100%)'
+            },
+            electricity: {
+                name: 'كهرباء', icon: 'bolt',
+                grad: 'linear-gradient(135deg,#d97706 0%,#f59e0b 100%)',
+                sectionBg: '#fffbeb', sectionBorder: '#fde68a',
+                badgeBg: '#fef3c7', badgeColor: '#92400e',
+                saveBg: 'linear-gradient(135deg,#d97706 0%,#f59e0b 100%)'
+            },
+            gas: {
+                name: 'غاز طبيعي', icon: 'fire',
+                grad: 'linear-gradient(135deg,#c2410c 0%,#ef4444 100%)',
+                sectionBg: '#fff7ed', sectionBorder: '#fed7aa',
+                badgeBg: '#ffedd5', badgeColor: '#9a3412',
+                saveBg: 'linear-gradient(135deg,#c2410c 0%,#ef4444 100%)'
+            }
         };
+        const cfg = typeConfig[type] || typeConfig.water;
 
-        const typeInfo = typeNames[type] || typeNames.water;
         const dateValue = record?.date ? new Date(record.date).toISOString().slice(0, 10) : new Date().toISOString().slice(0, 10);
         const monthYearValue = record?.monthYear || this.getMonthYear(new Date());
+        const unit = record?.unit || this.getDefaultUnit(type);
 
         const isEdit = !!recordId;
         const initialLocTrim = record?.location != null ? String(record.location).trim() : '';
@@ -1492,153 +1616,247 @@ ${innerContent}
             : (useAutoStart ? String(parseFloat(prevRecInitial.endReading) || 0) : '');
         const defaultEndStr = record?.endReading != null && record.endReading !== '' ? String(record.endReading) : '';
 
+        // إزالة أي مودال سابق
+        const existing = document.getElementById(`resource-modal-${type}`);
+        if (existing) existing.remove();
+
         const modal = document.createElement('div');
+        modal.id = `resource-modal-${type}`;
         modal.className = 'modal-overlay';
+
+        // ============ HTML ============
         modal.innerHTML = `
-            <div class="modal-content" style="max-width: 700px;">
-                <div class="modal-header">
-                    <h2 class="modal-title">
-                        <i class="fas fa-${typeInfo.icon} text-${typeInfo.color}-500 ml-2"></i>
-                        ${record ? 'تعديل' : 'إضافة'} سجل استهلاك ${typeInfo.name}
-                    </h2>
-                    <button class="modal-close" onclick="this.closest('.modal-overlay').remove()">
-                        <i class="fas fa-times"></i>
-                    </button>
-                </div>
-                <div class="modal-body">
-                    <form id="resource-form-${type}" class="space-y-4">
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div>
-                                <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                                    التاريخ <span class="text-red-500">*</span>
-                                </label>
-                                <input type="date" id="resource-date-${type}" required 
-                                       class="form-input" value="${dateValue}"
-                                       onchange="Sustainability.updateMonthYear('${type}')">
-                            </div>
-                            <div>
-                                <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                                    الشهر / السنة <span class="text-red-500">*</span>
-                                </label>
-                                <input type="text" id="resource-month-year-${type}" required 
-                                       class="form-input" value="${monthYearValue}" 
-                                       placeholder="مثال: يناير 2024" readonly>
-                            </div>
-                        </div>
-                        <div>
-                            <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                                الموقع / المصنع <span class="text-red-500">*</span>
-                            </label>
-                            <select id="resource-location-${type}" required class="form-input">
-                                <option value="">-- اختر الموقع / المصنع --</option>
-                                ${this.getSiteOptions().map(site => `
-                                    <option value="${Utils.escapeHTML(site.name)}" ${record?.location === site.name ? 'selected' : ''}>
-                                        ${Utils.escapeHTML(site.name)}
-                                    </option>
-                                `).join('')}
-                            </select>
-                        </div>
-                        <div>
-                            <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                                المصدر <span class="text-red-500">*</span>
-                            </label>
-                            <input type="text" id="resource-source-${type}" required 
-                                   class="form-input" 
-                                   value="${Utils.escapeHTML(record?.source || typeInfo.name)}"
-                                   placeholder="المصدر" readonly>
-                        </div>
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div>
-                                <label id="resource-start-label-${type}" for="resource-start-${type}" class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                                    قراءة البداية ${useAutoStart ? '' : '<span class="text-red-500">*</span>'}
-                                </label>
-                                <p id="resource-start-help-${type}" class="text-xs text-gray-500 dark:text-gray-400 mb-1 ${useAutoStart ? '' : 'hidden'}">${useAutoStart ? 'مُستخرجة تلقائياً من قراءة نهاية آخر سجل لهذا الموقع.' : ''}</p>
-                                <input type="number" id="resource-start-${type}" ${useAutoStart ? 'readonly' : 'required'} step="0.01"
-                                       class="form-input ${useAutoStart ? 'bg-gray-100 dark:bg-gray-800' : ''}" 
-                                       value="${typeof Utils !== 'undefined' && Utils.escapeHTML ? Utils.escapeHTML(defaultStartStr) : defaultStartStr}"
-                                       placeholder="0.00"
-                                       onchange="Sustainability.calculateConsumption('${type}')">
-                            </div>
-                            <div>
-                                <label id="resource-end-label-${type}" for="resource-end-${type}" class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                                    ${useAutoStart ? 'القراءة الحالية (قراءة العداد)' : 'قراءة النهاية'} <span class="text-red-500">*</span>
-                                </label>
-                                <input type="number" id="resource-end-${type}" required step="0.01"
-                                       class="form-input" 
-                                       value="${typeof Utils !== 'undefined' && Utils.escapeHTML ? Utils.escapeHTML(defaultEndStr) : defaultEndStr}"
-                                       placeholder="0.00"
-                                       oninput="Sustainability.calculateConsumption('${type}')"
-                                       onchange="Sustainability.calculateConsumption('${type}')">
-                            </div>
-                        </div>
-                        <div>
-                            <label for="resource-total-${type}" class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                                إجمالي الاستهلاك <span class="text-red-500">*</span>
-                            </label>
-                            <input type="number" id="resource-total-${type}" required step="0.01"
-                                   class="form-input font-semibold" 
-                                   value="${record?.totalConsumption || ''}"
-                                   placeholder="سيتم حسابه تلقائياً" readonly>
-                        </div>
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div>
-                                <label for="resource-unit-${type}" class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                                    وحدة القياس <span class="text-red-500">*</span>
-                                </label>
-                                <input type="text" id="resource-unit-${type}" required 
-                                       class="form-input" 
-                                       value="${Utils.escapeHTML(record?.unit || this.getDefaultUnit(type))}"
-                                       placeholder="${this.getDefaultUnit(type)}" readonly>
-                            </div>
-                            <div>
-                                <label for="resource-department-${type}" class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                                    الجهة / القسم
-                                </label>
-                                <input type="text" id="resource-department-${type}" 
-                                       class="form-input" 
-                                       value="${Utils.escapeHTML(record?.department || '')}"
-                                       placeholder="أدخل القسم أو الجهة">
-                            </div>
-                        </div>
-                        <div>
-                            <label for="resource-notes-${type}" class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                                ملاحظات
-                            </label>
-                            <textarea id="resource-notes-${type}" 
-                                      class="form-input" rows="3"
-                                      placeholder="ملاحظات إضافية">${Utils.escapeHTML(record?.notes || '')}</textarea>
-                        </div>
-                    </form>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">
-                        إلغاء
-                    </button>
-                    <button type="button" id="save-resource-btn-${type}" class="btn-primary">
-                        <i class="fas fa-save ml-2"></i>
-                        حفظ
-                    </button>
-                </div>
+<div style="background:#fff;width:95%;max-width:680px;border-radius:18px;overflow:hidden;
+            box-shadow:0 30px 80px rgba(0,0,0,0.35);position:relative;">
+
+  <!-- ======== HEADER ======== -->
+  <div style="background:${cfg.grad};padding:20px 24px;text-align:center;position:relative;">
+    <!-- زر الإغلاق -->
+    <button id="close-res-${type}"
+            style="position:absolute;top:14px;left:14px;width:34px;height:34px;border-radius:50%;
+                   background:rgba(255,255,255,0.25);border:none;cursor:pointer;
+                   display:flex;align-items:center;justify-content:center;transition:background .2s;"
+            onmouseover="this.style.background='rgba(255,255,255,0.4)'"
+            onmouseout="this.style.background='rgba(255,255,255,0.25)'">
+      <i class="fas fa-times" style="color:#fff;font-size:15px;"></i>
+    </button>
+    <!-- الأيقون -->
+    <div style="width:56px;height:56px;border-radius:16px;background:rgba(255,255,255,0.22);
+                display:flex;align-items:center;justify-content:center;margin:0 auto 12px;">
+      <i class="fas fa-${cfg.icon}" style="font-size:26px;color:#fff;"></i>
+    </div>
+    <!-- العنوان -->
+    <h2 style="color:#fff;font-size:20px;font-weight:800;margin:0 0 4px;letter-spacing:0.3px;">
+      ${record ? 'تعديل سجل' : 'تسجيل استهلاك'} ${cfg.name}
+    </h2>
+    <p style="color:rgba(255,255,255,0.82);font-size:13px;margin:0;">
+      ${record ? 'قم بتحديث بيانات هذا السجل' : 'أدخل قراءات العداد للفترة الجديدة'}
+    </p>
+  </div>
+
+  <!-- ======== BODY ======== -->
+  <div style="padding:24px;background:#f8fafc;max-height:65vh;overflow-y:auto;">
+    <form id="resource-form-${type}" novalidate>
+
+      <!-- القسم 1: التاريخ والموقع -->
+      <div style="background:${cfg.sectionBg};border:1.5px solid ${cfg.sectionBorder};
+                  border-radius:12px;padding:16px;margin-bottom:16px;">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;">
+          <span style="background:${cfg.badgeBg};color:${cfg.badgeColor};font-size:12px;
+                       font-weight:700;padding:4px 10px;border-radius:8px;">
+            <i class="fas fa-calendar-alt" style="margin-left:5px;"></i>التاريخ والموقع
+          </span>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+          <!-- التاريخ -->
+          <div>
+            <label style="display:block;font-size:13px;font-weight:700;color:#374151;margin-bottom:6px;">
+              التاريخ <span style="color:#ef4444;">*</span>
+            </label>
+            <input type="date" id="resource-date-${type}" required class="form-input"
+                   value="${dateValue}"
+                   onchange="Sustainability.updateMonthYear('${type}')"
+                   style="width:100%;box-sizing:border-box;">
+          </div>
+          <!-- الشهر / السنة -->
+          <div>
+            <label style="display:block;font-size:13px;font-weight:700;color:#374151;margin-bottom:6px;">
+              الشهر / السنة
+            </label>
+            <input type="text" id="resource-month-year-${type}" class="form-input"
+                   value="${monthYearValue}" readonly
+                   style="width:100%;box-sizing:border-box;background:#e5e7eb;color:#6b7280;">
+          </div>
+          <!-- الموقع -->
+          <div>
+            <label style="display:block;font-size:13px;font-weight:700;color:#374151;margin-bottom:6px;">
+              الموقع / المصنع <span style="color:#ef4444;">*</span>
+            </label>
+            <select id="resource-location-${type}" required class="form-input"
+                    style="width:100%;box-sizing:border-box;">
+              <option value="">-- اختر الموقع --</option>
+              ${this.getSiteOptions().map(s => `
+                <option value="${Utils.escapeHTML(s.name)}" ${record?.location === s.name ? 'selected' : ''}>
+                  ${Utils.escapeHTML(s.name)}
+                </option>`).join('')}
+            </select>
+          </div>
+          <!-- القسم -->
+          <div>
+            <label style="display:block;font-size:13px;font-weight:700;color:#374151;margin-bottom:6px;">
+              الجهة / القسم
+            </label>
+            <input type="text" id="resource-department-${type}" class="form-input"
+                   value="${Utils.escapeHTML(record?.department || '')}"
+                   placeholder="اختياري"
+                   style="width:100%;box-sizing:border-box;">
+          </div>
+        </div>
+      </div>
+
+      <!-- القسم 2: قراءات العداد (3 حقول في صف واحد متساوي) -->
+      <div style="background:${cfg.sectionBg};border:1.5px solid ${cfg.sectionBorder};
+                  border-radius:12px;padding:16px;margin-bottom:16px;">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;">
+          <span style="background:${cfg.badgeBg};color:${cfg.badgeColor};font-size:12px;
+                       font-weight:700;padding:4px 10px;border-radius:8px;">
+            <i class="fas fa-tachometer-alt" style="margin-left:5px;"></i>قراءات العداد
+          </span>
+        </div>
+
+        <input type="hidden" id="resource-source-${type}"  value="${Utils.escapeHTML(record?.source || cfg.name)}">
+        <input type="hidden" id="resource-unit-${type}"    value="${Utils.escapeHTML(unit)}">
+
+        <!-- الحقول الثلاثة في صف واحد -->
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;align-items:start;">
+
+          <!-- قراءة البداية -->
+          <div>
+            <label id="resource-start-label-${type}"
+                   style="display:block;font-size:12px;font-weight:700;color:#374151;margin-bottom:4px;min-height:20px;">
+              قراءة البداية ${useAutoStart ? '' : '<span style="color:#ef4444;">*</span>'}
+            </label>
+            <p id="resource-start-help-${type}"
+               style="font-size:11px;color:#6366f1;margin:0 0 4px;min-height:16px;${useAutoStart ? '' : 'display:none;'}">
+              ${useAutoStart ? '<i class="fas fa-link" style="margin-left:3px;"></i>من آخر سجل' : ''}
+            </p>
+            <div style="position:relative;">
+              <input type="number" id="resource-start-${type}" step="0.01"
+                     ${useAutoStart ? 'readonly' : 'required'}
+                     class="form-input"
+                     value="${Utils.escapeHTML(defaultStartStr)}"
+                     placeholder="0.00"
+                     onchange="Sustainability.calculateConsumption('${type}')"
+                     style="width:100%;box-sizing:border-box;padding-left:40px;
+                            ${useAutoStart ? 'background:#e5e7eb;' : ''}">
+              <span style="position:absolute;left:10px;top:50%;transform:translateY(-50%);
+                           font-size:11px;font-weight:700;color:#9ca3af;">${unit}</span>
             </div>
-        `;
+          </div>
+
+          <!-- قراءة النهاية -->
+          <div>
+            <label id="resource-end-label-${type}"
+                   style="display:block;font-size:12px;font-weight:700;color:#374151;margin-bottom:4px;min-height:20px;">
+              ${useAutoStart ? 'القراءة الحالية' : 'قراءة النهاية'}
+              <span style="color:#ef4444;">*</span>
+            </label>
+            <p style="font-size:11px;color:transparent;margin:0 0 4px;min-height:16px;">-</p>
+            <div style="position:relative;">
+              <input type="number" id="resource-end-${type}" step="0.01" required
+                     class="form-input"
+                     value="${Utils.escapeHTML(defaultEndStr)}"
+                     placeholder="0.00"
+                     oninput="Sustainability.calculateConsumption('${type}')"
+                     onchange="Sustainability.calculateConsumption('${type}')"
+                     style="width:100%;box-sizing:border-box;padding-left:40px;">
+              <span style="position:absolute;left:10px;top:50%;transform:translateY(-50%);
+                           font-size:11px;font-weight:700;color:#9ca3af;">${unit}</span>
+            </div>
+          </div>
+
+          <!-- الاستهلاك الإجمالي -->
+          <div>
+            <label style="display:block;font-size:12px;font-weight:700;color:#374151;margin-bottom:4px;min-height:20px;">
+              الإجمالي <span style="font-size:10px;font-weight:400;color:#9ca3af;">(تلقائي)</span>
+            </label>
+            <p style="font-size:11px;color:transparent;margin:0 0 4px;min-height:16px;">-</p>
+            <div style="position:relative;">
+              <input type="number" id="resource-total-${type}" step="0.01" readonly
+                     class="form-input"
+                     value="${record?.totalConsumption || ''}"
+                     placeholder="—"
+                     style="width:100%;box-sizing:border-box;padding-left:40px;
+                            background:#e5e7eb;font-weight:800;color:#111827;">
+              <span style="position:absolute;left:10px;top:50%;transform:translateY(-50%);
+                           font-size:11px;font-weight:700;color:#9ca3af;">${unit}</span>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- القسم 3: ملاحظات -->
+      <div>
+        <label style="display:block;font-size:13px;font-weight:700;color:#374151;margin-bottom:6px;">
+          <i class="fas fa-sticky-note" style="margin-left:6px;color:#9ca3af;"></i>
+          ملاحظات <span style="font-size:11px;font-weight:400;color:#9ca3af;">(اختياري)</span>
+        </label>
+        <textarea id="resource-notes-${type}" class="form-input" rows="2"
+                  placeholder="أي ملاحظات إضافية..."
+                  style="width:100%;box-sizing:border-box;">${Utils.escapeHTML(record?.notes || '')}</textarea>
+      </div>
+
+    </form>
+  </div>
+
+  <!-- ======== FOOTER ======== -->
+  <div style="padding:16px 24px;background:#fff;border-top:1.5px solid #e5e7eb;
+              display:flex;align-items:center;justify-content:center;gap:12px;">
+    <button id="cancel-res-${type}"
+            style="min-width:130px;padding:10px 20px;border-radius:10px;border:1.5px solid #d1d5db;
+                   background:#fff;color:#374151;font-size:14px;font-weight:600;cursor:pointer;
+                   display:flex;align-items:center;justify-content:center;gap:8px;transition:background .2s;"
+            onmouseover="this.style.background='#f3f4f6'"
+            onmouseout="this.style.background='#fff'">
+      <i class="fas fa-ban" style="color:#6b7280;font-size:13px;"></i>
+      إلغاء
+    </button>
+    <button id="save-res-${type}"
+            style="min-width:160px;padding:10px 20px;border-radius:10px;border:none;
+                   background:${cfg.saveBg};color:#fff;font-size:14px;font-weight:700;cursor:pointer;
+                   display:flex;align-items:center;justify-content:center;gap:8px;
+                   box-shadow:0 4px 14px rgba(0,0,0,0.18);transition:opacity .2s;"
+            onmouseover="this.style.opacity='0.92'"
+            onmouseout="this.style.opacity='1'">
+      <i class="fas fa-${record ? 'check-circle' : 'plus-circle'}" style="font-size:15px;"></i>
+      ${record ? 'حفظ التعديلات' : 'إضافة السجل'}
+    </button>
+  </div>
+
+</div>`;
+
         document.body.appendChild(modal);
 
-        const saveBtn = modal.querySelector(`#save-resource-btn-${type}`);
-        saveBtn.addEventListener('click', () => this.handleResourceSubmit(type, recordId, modal));
+        const closeModal = () => {
+            modal.style.opacity = '0';
+            modal.style.transition = 'opacity 0.15s ease';
+            setTimeout(() => { try { modal.remove(); } catch (_) {} }, 160);
+        };
+
+        modal.querySelector(`#close-res-${type}`).addEventListener('click', closeModal);
+        modal.querySelector(`#cancel-res-${type}`).addEventListener('click', closeModal);
+        modal.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
+        modal.querySelector(`#save-res-${type}`).addEventListener('click',
+            () => this.handleResourceSubmit(type, recordId, modal, closeModal));
 
         if (!recordId) {
             const locSel = document.getElementById(`resource-location-${type}`);
-            if (locSel) {
-                locSel.addEventListener('change', () => this.applyResourceStartFromPreviousChain(type, recordId));
-            }
+            if (locSel) locSel.addEventListener('change', () => this.applyResourceStartFromPreviousChain(type, recordId));
             this.applyResourceStartFromPreviousChain(type, recordId);
         } else {
             this.calculateConsumption(type);
         }
-
-        modal.addEventListener('click', (e) => {
-            if (e.target === modal) modal.remove();
-        });
     },
 
     /**
@@ -1657,25 +1875,61 @@ ${innerContent}
     },
 
     /**
-     * حساب الاستهلاك تلقائياً
+     * حساب الاستهلاك تلقائياً مع تحقق لحظي من القيم
      */
     calculateConsumption(type) {
         const startInput = document.getElementById(`resource-start-${type}`);
-        const endInput = document.getElementById(`resource-end-${type}`);
+        const endInput   = document.getElementById(`resource-end-${type}`);
         const totalInput = document.getElementById(`resource-total-${type}`);
+        if (!startInput || !endInput || !totalInput) return;
 
-        if (startInput && endInput && totalInput) {
-            const start = parseFloat(startInput.value) || 0;
-            const end = parseFloat(endInput.value) || 0;
-            const total = Math.max(0, end - start);
-            totalInput.value = total.toFixed(2);
+        const start = parseFloat(startInput.value);
+        const end   = parseFloat(endInput.value);
+
+        // تحقق: القراءة الجديدة لا تقل عن القراءة الحالية
+        const isStartValid = !isNaN(start) && start >= 0;
+        const isEndValid   = !isNaN(end)   && end   >= 0;
+        const isOrderValid = isEndValid && isStartValid ? end >= start : true;
+
+        // تلوين حدود الحقول لحظياً
+        const okStyle   = '1.5px solid #d1d5db';
+        const errStyle  = '2px solid #ef4444';
+        endInput.style.border = (isEndValid && !isOrderValid) ? errStyle : okStyle;
+
+        // عرض رسالة تحذير تحت حقل النهاية
+        let warnEl = document.getElementById(`resource-end-warn-${type}`);
+        if (!isOrderValid && isEndValid && isStartValid) {
+            if (!warnEl) {
+                warnEl = document.createElement('p');
+                warnEl.id = `resource-end-warn-${type}`;
+                warnEl.style.cssText = 'color:#ef4444;font-size:11px;margin:3px 0 0;';
+                endInput.parentElement.insertAdjacentElement('afterend', warnEl);
+            }
+            warnEl.textContent = '⚠️ القراءة الجديدة أقل من قراءة البداية!';
+        } else if (warnEl) {
+            warnEl.remove();
+        }
+
+        // حساب الإجمالي
+        if (isStartValid && isEndValid && isOrderValid) {
+            totalInput.value = Math.max(0, end - start).toFixed(2);
+            totalInput.style.color = '#111827';
+            totalInput.style.background = '#e5e7eb';
+        } else if (!isOrderValid) {
+            totalInput.value = '0.00';
+            totalInput.style.color = '#ef4444';
+            totalInput.style.background = '#fee2e2';
+        } else {
+            totalInput.value = '';
+            totalInput.style.color = '#111827';
+            totalInput.style.background = '#e5e7eb';
         }
     },
 
     /**
-     * معالجة حفظ السجل
+     * معالجة حفظ السجل — مع تحقق شامل من القيم
      */
-    async handleResourceSubmit(type, recordId, modal) {
+    async handleResourceSubmit(type, recordId, modal, closeModal) {
         if (recordId && !this.hasFullSustainabilityManage()) {
             if (typeof Notification !== 'undefined') Notification.error('ليس لديك صلاحية تعديل السجلات');
             return;
@@ -1685,28 +1939,42 @@ ${innerContent}
             return;
         }
 
-        const form = document.getElementById(`resource-form-${type}`);
-        if (!form.checkValidity()) {
-            form.reportValidity();
+        // ===== جمع القيم =====
+        const dateVal   = document.getElementById(`resource-date-${type}`)?.value;
+        const monthYear = document.getElementById(`resource-month-year-${type}`)?.value?.trim();
+        const location  = document.getElementById(`resource-location-${type}`)?.value?.trim();
+        const source    = document.getElementById(`resource-source-${type}`)?.value?.trim();
+        const startRaw  = document.getElementById(`resource-start-${type}`)?.value;
+        const endRaw    = document.getElementById(`resource-end-${type}`)?.value;
+        const totalRaw  = document.getElementById(`resource-total-${type}`)?.value;
+        const unit      = document.getElementById(`resource-unit-${type}`)?.value?.trim() || this.getDefaultUnit(type);
+        const department= document.getElementById(`resource-department-${type}`)?.value?.trim() || '';
+        const notes     = document.getElementById(`resource-notes-${type}`)?.value?.trim() || '';
+
+        const startReading    = parseFloat(startRaw);
+        const endReading      = parseFloat(endRaw);
+        const totalConsumption= parseFloat(totalRaw);
+
+        // ===== قواعد التحقق =====
+        const errors = [];
+
+        if (!dateVal)                               errors.push('يرجى تحديد التاريخ');
+        if (!location)                              errors.push('يرجى اختيار الموقع / المصنع');
+        if (startRaw === '' || isNaN(startReading)) errors.push('قراءة البداية مطلوبة');
+        if (endRaw   === '' || isNaN(endReading))   errors.push('قراءة النهاية / القراءة الحالية مطلوبة');
+        if (!isNaN(startReading) && startReading < 0) errors.push('قراءة البداية لا يمكن أن تكون سالبة');
+        if (!isNaN(endReading)   && endReading   < 0) errors.push('القراءة الحالية لا يمكن أن تكون سالبة');
+        if (!isNaN(startReading) && !isNaN(endReading) && endReading < startReading)
+            errors.push(`القراءة الجديدة (${endReading}) أقل من قراءة البداية (${startReading}) — يرجى مراجعة العداد`);
+        if (isNaN(totalConsumption) || totalConsumption < 0)
+            errors.push('إجمالي الاستهلاك غير صحيح — تأكد من قراءة البداية والنهاية');
+
+        if (errors.length > 0) {
+            Notification.error(errors[0]);
             return;
         }
 
-        const date = new Date(document.getElementById(`resource-date-${type}`).value);
-        const monthYear = document.getElementById(`resource-month-year-${type}`).value;
-        const location = document.getElementById(`resource-location-${type}`).value.trim();
-        const source = document.getElementById(`resource-source-${type}`).value.trim();
-        const startReading = parseFloat(document.getElementById(`resource-start-${type}`).value);
-        const endReading = parseFloat(document.getElementById(`resource-end-${type}`).value);
-        const totalConsumption = parseFloat(document.getElementById(`resource-total-${type}`).value);
-        const unit = document.getElementById(`resource-unit-${type}`).value.trim();
-        const department = document.getElementById(`resource-department-${type}`).value.trim();
-        const notes = document.getElementById(`resource-notes-${type}`).value.trim();
-
-        // التحقق من صحة البيانات
-        if (endReading < startReading) {
-            Notification.error('قراءة النهاية يجب أن تكون أكبر من قراءة البداية');
-            return;
-        }
+        const date = new Date(dateVal);
 
         // التحقق من التنبيهات
         const hasAlert = this.checkConsumptionAlert(type, totalConsumption, monthYear);
@@ -1768,26 +2036,40 @@ ${innerContent}
                 Utils.safeWarn('⚠️ DataManager غير متاح - لم يتم حفظ البيانات');
             }
 
-            const saveResult = await this.saveResourceConsumptionToSheets();
 
-            Loading.hide();
-
-            if (!saveResult.success) {
-                if (recordId && previousRecord !== null && previousIndex !== -1) {
-                    AppState.appData.resourceConsumption[type][previousIndex] = previousRecord;
-                } else if (!recordId) {
-                    AppState.appData.resourceConsumption[type] = AppState.appData.resourceConsumption[type].filter((r) => r.id !== formData.id);
-                }
-                if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
-                    window.DataManager.save();
-                }
-                Notification.error('فشل الحفظ في الخادم — لم يُحدَّث السجل في الشيت: ' + (saveResult.message || saveResult.error || ''));
-                return;
+            // ✅ 1) إغلاق المودال فوراً (قبل المزامنة مع الشيت)
+            Notification.success(recordId ? 'تم تحديث السجل بنجاح' : 'تم إضافة السجل بنجاح');
+            if (typeof closeModal === 'function') {
+                closeModal();
+            } else {
+                try { modal.remove(); } catch (e) { /* ignore */ }
             }
 
-            Notification.success(recordId ? 'تم تحديث السجل بنجاح' : 'تم إضافة السجل بنجاح');
-            modal.remove();
+            // ✅ 2) تحديث فوري للكروت ومسح الكاش المخبأ لجلب البيانات الفعلية من الشيت
+            this._resourceConsumptionFetchPromise = null;
+            this._refreshDashboardTotals();
             this.load();
+
+            // ✅ 3) المزامنة مع Google Sheets في الخلفية
+            this.saveResourceConsumptionToSheets().then(saveResult => {
+                if (!saveResult.success) {
+                    // rollback إذا فشل الحفظ
+                    if (recordId && previousRecord !== null && previousIndex !== -1) {
+                        AppState.appData.resourceConsumption[type][previousIndex] = previousRecord;
+                    } else if (!recordId) {
+                        AppState.appData.resourceConsumption[type] =
+                            AppState.appData.resourceConsumption[type].filter(r => r.id !== formData.id);
+                    }
+                    if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
+                        window.DataManager.save();
+                    }
+                    Notification.error('⚠️ فشل المزامنة مع الشيت: ' + (saveResult.message || saveResult.error || ''));
+                    this._refreshDashboardTotals();
+                    this.load();
+                }
+            }).catch(err => {
+                Utils.safeError('خطأ في المزامنة مع الشيت:', err);
+            });
 
             if (hasAlert) {
                 Notification.warning(`تنبيه: استهلاك ${this.getTypeName(type)} تجاوز الحد المسموح`);
@@ -4473,6 +4755,7 @@ ${innerContent}
 
     normalizeResourceConsumptionRecord(record) {
         if (!record || typeof record !== 'object') return null;
+
         const pick = (...keys) => {
             for (const key of keys) {
                 if (record[key] !== undefined && record[key] !== null && String(record[key]).trim() !== '') {
@@ -4482,38 +4765,56 @@ ${innerContent}
             return '';
         };
 
+        // تحويل قيمة hasAlert من string إلى boolean — هذا سبب ظهور "false" كنص في الجدول
+        const parseBool = (val) => {
+            if (typeof val === 'boolean') return val;
+            const s = String(val || '').trim().toLowerCase();
+            return s === 'true' || s === '1' || s === 'yes' || s === 'TRUE';
+        };
+
         const parsedDate = (() => {
             const rawDate = pick('date', 'Date', 'التاريخ', 'recordDate');
             const d = new Date(rawDate || new Date());
             return Number.isNaN(d.getTime()) ? new Date() : d;
         })();
 
-        const totalConsumption = parseFloat(
-            pick(
-                'totalConsumption',
-                'total',
-                'consumption',
-                'quantity',
-                'Total Consumption',
-                'إجمالي الاستهلاك',
-                'الاستهلاك'
-            )
-        ) || 0;
+        const startReading = parseFloat(
+            pick('startReading', 'start_reading', 'بداية', 'StartReading', 'قراءة البداية')
+        );
+        const endReading = parseFloat(
+            pick('endReading', 'end_reading', 'نهاية', 'EndReading', 'قراءة النهاية')
+        );
+
+        // حساب الإجمالي: من الشيت أو فرق القراءتين
+        let totalConsumption = parseFloat(
+            pick('totalConsumption', 'total', 'Total Consumption', 'إجمالي الاستهلاك', 'الاستهلاك')
+        );
+        if (!Number.isFinite(totalConsumption)) {
+            totalConsumption = (Number.isFinite(endReading) && Number.isFinite(startReading))
+                ? Math.max(0, endReading - startReading)
+                : 0;
+        }
+
+        const monthYearRaw = pick('monthYear', 'month', 'Month/Year', 'الشهر / السنة', 'الشهر/السنة');
 
         return {
-            ...record,
-            id: String(pick('id', 'ID', 'recordId') || Utils.generateId('RES')),
-            serialNumber: String(pick('serialNumber', 'serial', 'Serial Number', 'الرقم التسلسلي') || ''),
-            date: parsedDate.toISOString(),
-            monthYear: String(pick('monthYear', 'month', 'Month/Year', 'الشهر / السنة') || this.getMonthYear(parsedDate)),
-            location: String(pick('location', 'site', 'locationName', 'الموقع') || ''),
-            quantity: parseFloat(pick('quantity', 'Quantity', 'الكمية')) || 0,
+            id:              String(pick('id', 'ID', 'recordId') || Utils.generateId('RES')),
+            serialNumber:    String(pick('serialNumber', 'serial', 'Serial Number', 'الرقم التسلسلي') || ''),
+            date:            parsedDate.toISOString(),
+            monthYear:       String(monthYearRaw || this.getMonthYear(parsedDate)),
+            location:        String(pick('location', 'site', 'locationName', 'الموقع', 'المصنع') || ''),
+            source:          String(pick('source', 'المصدر', 'Source') || ''),
+            startReading:    Number.isFinite(startReading) ? startReading : 0,
+            endReading:      Number.isFinite(endReading) ? endReading : 0,
             totalConsumption: totalConsumption,
-            notes: String(pick('notes', 'Notes', 'ملاحظات') || ''),
-            createdAt: String(pick('createdAt', 'Created At', 'تاريخ الإنشاء') || parsedDate.toISOString()),
-            updatedAt: new Date().toISOString(),
-            createdBy: String(pick('createdBy', 'created_by', 'المنشئ') || ''),
-            updatedBy: String(pick('updatedBy', 'updated_by', 'المعدل') || '')
+            unit:            String(pick('unit', 'وحدة القياس', 'Unit') || ''),
+            department:      String(pick('department', 'الجهة', 'القسم', 'Department') || ''),
+            notes:           String(pick('notes', 'Notes', 'ملاحظات') || ''),
+            hasAlert:        parseBool(pick('hasAlert', 'has_alert', 'HasAlert', 'تنبيه')),
+            createdAt:       String(pick('createdAt', 'Created At', 'تاريخ الإنشاء') || parsedDate.toISOString()),
+            updatedAt:       new Date().toISOString(),
+            createdBy:       String(pick('createdBy', 'created_by', 'المنشئ') || ''),
+            updatedBy:       String(pick('updatedBy', 'updated_by', 'المعدل') || '')
         };
     },
 

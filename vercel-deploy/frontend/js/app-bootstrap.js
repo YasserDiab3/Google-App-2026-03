@@ -891,48 +891,81 @@
                     return;
                 }
 
-                log(`🎯 جلب ${staleTypes.length} نوع بيانات قديمة من الخادم: [${staleTypes.join(', ')}]`);
+                log(`🎯 جلب ${staleTypes.length} نوع بيانات قديمة من الخادم باستخدام Batch Read: [${staleTypes.join(', ')}]`);
 
-                // تحميل البيانات القديمة فقط بشكل متوازي
-                const dataPromises = staleTypes.map(dataType => {
-                    const action = this.getActionForDataType(dataType);
-                    const sheetName = this.getSheetNameForDataType(dataType);
-                    // readFromSheet يتطلب sheetName إجبارياً في الـ payload
-                    const requestData = sheetName ? { sheetName } : {};
-                    return GoogleIntegration.sendRequest({
-                        action,
-                        data: requestData
-                    }).then(result => ({
-                        type: dataType,
-                        result
-                    })).catch(error => ({
-                        type: dataType,
-                        error
-                    }));
-                });
-
-                const results = await Promise.all(dataPromises);
-
-                // حفظ النتائج في AppState وتحديث syncMeta
-                let fetchedCount = 0;
-                results.forEach(({ type, result, error }) => {
-                    if (result && result.success && Array.isArray(result.data)) {
-                        AppState.appData[type] = result.data;
-                        fetchedCount++;
-                        log(`✅ تم جلب ${result.data.length} سجل لـ ${type}`);
-
-                        // ✅ تحديث syncMeta.sheets بوقت الجلب الفعلي من الخادم
-                        const sheetKey = this._getSyncMetaSheetKey(type);
-                        if (sheetKey) {
-                            if (!AppState.syncMeta) AppState.syncMeta = { sheets: {} };
-                            if (!AppState.syncMeta.sheets) AppState.syncMeta.sheets = {};
-                            AppState.syncMeta.sheets[sheetKey] = Date.now();
-                            AppState.syncMeta.lastSyncTime = Date.now();
-                        }
-                    } else if (error) {
-                        log(`⚠️ فشل جلب ${type}:`, error.message);
+                // تجميع أسماء الأوراق الفريدة المطلوب جلبها
+                const sheetToDataTypeMap = {};
+                staleTypes.forEach(dt => {
+                    const sheetName = this._getSyncMetaSheetKey(dt);
+                    if (sheetName) {
+                        if (!sheetToDataTypeMap[sheetName]) sheetToDataTypeMap[sheetName] = [];
+                        sheetToDataTypeMap[sheetName].push(dt);
                     }
                 });
+
+                const sheetNames = Object.keys(sheetToDataTypeMap);
+                let fetchedCount = 0;
+                const fetchedKeys = [];
+
+                try {
+                    const batchResult = await GoogleIntegration.batchReadFromSheets(sheetNames, {
+                        timeout: 30000
+                    });
+
+                    if (batchResult && batchResult.data) {
+                        sheetNames.forEach(sheetName => {
+                            const data = batchResult.data[sheetName];
+                            if (Array.isArray(data)) {
+                                // توزيع البيانات على أنواع البيانات المرتبطة بهذه الورقة
+                                const targetDataTypes = sheetToDataTypeMap[sheetName];
+                                targetDataTypes.forEach(type => {
+                                    AppState.appData[type] = data;
+                                    fetchedKeys.push(type);
+                                });
+
+                                fetchedCount++;
+                                log(`✅ تم جلب ${data.length} سجل لـ ${sheetName}`);
+
+                                // ✅ تحديث syncMeta.sheets بوقت الجلب الفعلي من الخادم
+                                if (!AppState.syncMeta) AppState.syncMeta = { sheets: {} };
+                                if (!AppState.syncMeta.sheets) AppState.syncMeta.sheets = {};
+                                AppState.syncMeta.sheets[sheetName] = Date.now();
+                                AppState.syncMeta.lastSyncTime = Date.now();
+                            } else {
+                                log(`⚠️ فشل جلب بيانات الورقة: ${sheetName}`);
+                            }
+                        });
+                    }
+                } catch (batchError) {
+                    log('⚠️ فشل التحميل المجمع، جاري المحاولة بشكل منفرد:', batchError.message);
+                    // Fallback للتحميل المنفرد في حالة فشل الـ batch بالكامل
+                    for (const dataType of staleTypes) {
+                        try {
+                            const action = this.getActionForDataType(dataType);
+                            const sheetName = this.getSheetNameForDataType(dataType);
+                            const result = await GoogleIntegration.sendRequest({
+                                action,
+                                data: sheetName ? { sheetName } : {}
+                            });
+
+                            if (result && result.success && Array.isArray(result.data)) {
+                                AppState.appData[dataType] = result.data;
+                                fetchedCount++;
+                                fetchedKeys.push(dataType);
+
+                                const sheetKey = this._getSyncMetaSheetKey(dataType);
+                                if (sheetKey) {
+                                    if (!AppState.syncMeta) AppState.syncMeta = { sheets: {} };
+                                    if (!AppState.syncMeta.sheets) AppState.syncMeta.sheets = {};
+                                    AppState.syncMeta.sheets[sheetKey] = Date.now();
+                                    AppState.syncMeta.lastSyncTime = Date.now();
+                                }
+                            }
+                        } catch (singleError) {
+                            log(`⚠️ فشل جلب ${dataType} (fallback):`, singleError.message);
+                        }
+                    }
+                }
 
                 // حفظ syncMeta المحدَّث في localStorage فوراً + تسجيل timestamps الجلب
                 if (fetchedCount > 0) {
@@ -1110,36 +1143,42 @@
                     return;
                 }
 
-                log('🔄 تحميل البيانات المشتركة (fallback)');
+                log('🔄 تحميل البيانات المشتركة (fallback) باستخدام Batch Read');
 
-                // تحميل البيانات الأساسية فقط (القديمة منها)
-                const basicDataPromises = [
-                    contractorsFresh ? Promise.resolve(null) : GoogleIntegration.sendRequest({ action: 'getAllApprovedContractors', data: {} }).catch(() => null),
-                    employeesFresh   ? Promise.resolve(null) : GoogleIntegration.sendRequest({ action: 'getAllEmployees', data: {} }).catch(() => null)
-                ];
+                const fallbackSheets = [];
+                if (!contractorsFresh) fallbackSheets.push('ApprovedContractors');
+                if (!employeesFresh) fallbackSheets.push('Employees');
 
-                const results = await Promise.all(basicDataPromises);
+                if (fallbackSheets.length === 0) return;
+
                 const fetchedFallbackKeys = [];
+                try {
+                    const batchResult = await GoogleIntegration.batchReadFromSheets(fallbackSheets);
 
-                if (results[0]?.success && Array.isArray(results[0].data)) {
-                    AppState.appData.approvedContractors = results[0].data;
-                    AppState.appData.contractors = results[0].data;
-                    fetchedFallbackKeys.push('approvedContractors', 'contractors');
-                    // تحديث syncMeta
-                    if (!AppState.syncMeta) AppState.syncMeta = { sheets: {} };
-                    if (!AppState.syncMeta.sheets) AppState.syncMeta.sheets = {};
-                    AppState.syncMeta.sheets['ApprovedContractors'] = Date.now();
-                    log(`✅ تم تحميل ${results[0].data.length} مقاول`);
-                }
+                    if (batchResult && batchResult.data) {
+                        if (batchResult.data['ApprovedContractors']) {
+                            const data = batchResult.data['ApprovedContractors'];
+                            AppState.appData.approvedContractors = data;
+                            AppState.appData.contractors = data;
+                            fetchedFallbackKeys.push('approvedContractors', 'contractors');
+                            if (!AppState.syncMeta) AppState.syncMeta = { sheets: {} };
+                            if (!AppState.syncMeta.sheets) AppState.syncMeta.sheets = {};
+                            AppState.syncMeta.sheets['ApprovedContractors'] = Date.now();
+                            log(`✅ تم تحميل ${data.length} مقاول (fallback)`);
+                        }
 
-                if (results[1]?.success && Array.isArray(results[1].data)) {
-                    AppState.appData.employees = results[1].data;
-                    fetchedFallbackKeys.push('employees');
-                    // تحديث syncMeta
-                    if (!AppState.syncMeta) AppState.syncMeta = { sheets: {} };
-                    if (!AppState.syncMeta.sheets) AppState.syncMeta.sheets = {};
-                    AppState.syncMeta.sheets['Employees'] = Date.now();
-                    log(`✅ تم تحميل ${results[1].data.length} موظف`);
+                        if (batchResult.data['Employees']) {
+                            const data = batchResult.data['Employees'];
+                            AppState.appData.employees = data;
+                            fetchedFallbackKeys.push('employees');
+                            if (!AppState.syncMeta) AppState.syncMeta = { sheets: {} };
+                            if (!AppState.syncMeta.sheets) AppState.syncMeta.sheets = {};
+                            AppState.syncMeta.sheets['Employees'] = Date.now();
+                            log(`✅ تم تحميل ${data.length} موظف (fallback)`);
+                        }
+                    }
+                } catch (err) {
+                    log('⚠️ فشل جلب البيانات المشتركة (fallback batch):', err.message);
                 }
 
                 // حفظ syncMeta وتسجيل timestamps الجلب

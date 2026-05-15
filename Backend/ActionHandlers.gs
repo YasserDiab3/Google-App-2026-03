@@ -364,6 +364,13 @@ var ActionHandlers = {
         })();
         return result;
     },
+    'login': function(payload, postData, action, actorUserData, spreadsheetId) {
+        var result = { success: false, message: '' };
+        (function() {
+            result = loginUser(payload.email, payload.password);
+        })();
+        return result;
+    },
     'addUser': function(payload, postData, action, actorUserData, spreadsheetId) {
         var result = { success: false, message: '' };
         (function() {

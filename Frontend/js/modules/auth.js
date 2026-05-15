@@ -415,147 +415,81 @@ window.Auth = {
         // جميع المستخدمين يجب أن يكونوا من قاعدة البيانات قط
         let user = null; // تم إزالة validUsers لأسباب أمنية
 
-        // البحث ي قاعدة بيانات المستخدمين من Google Sheets
-        let foundUser = null;
-        let users = AppState.appData.users || [];
+        // 🔒 التحقق عبر الخادم (Server-side Authentication)
+        let loginResult = null;
+        let loginMethod = 'local';
 
-        // ✅ Bootstrap: إذا لم يوجد أي مستخدمين بعد، نسمح بحساب bootstrap (مرة واحدة فقط حتى نجاح المزامنة)
-        if (Array.isArray(users) && users.length === 0 && !this.isBootstrapDisabled() && this.isBootstrapEmail(email)) {
-            const bootstrapUser = {
-                id: 'BOOTSTRAP_ADMIN',
-                name: 'مدير النظام (تهيئة أول مرة)',
-                email: this.bootstrap.email,
-                role: 'admin',
-                department: 'إدارة النظام',
-                active: true,
-                password: '***',
-                passwordHash: this.bootstrap.passwordHash,
-                permissions: {},
-                createdAt: new Date().toISOString()
-            };
-            users = [bootstrapUser]; // لا نحفظه في AppState.appData.users (جلسة مؤقتة فقط)
-            foundUser = bootstrapUser;
-        }
+        if (canSyncUsers && typeof GoogleIntegration !== 'undefined') {
+            try {
+                Utils.safeLog('🔒 محاولة تسجيل الدخول عبر الخادم...');
+                loginResult = await GoogleIntegration.sendRequest({
+                    action: 'login',
+                    data: { email, password }
+                });
 
-        // معالجة البيانات إذا كانت تحتوي على JSON strings (من Google Sheets)
-        if (users.length > 0) {
-            users = users.map(u => {
-                // ✅ لا تُسقط الصلاحيات إلى {} عند فشل JSON.parse
-                // بعض البيانات قد تصل بصيغ غير JSON قياسية من Google Sheets
-                if (typeof u.permissions === 'string' && u.permissions.trim() !== '') {
-                    const normalizedPermissions = (typeof Permissions !== 'undefined' && typeof Permissions.normalizePermissions === 'function')
-                        ? Permissions.normalizePermissions(u.permissions)
-                        : null;
-                    if (normalizedPermissions && typeof normalizedPermissions === 'object' && !Array.isArray(normalizedPermissions)) {
-                        u.permissions = normalizedPermissions;
-                    } else {
-                        Utils.safeWarn('⚠ تعذر تطبيع permissions بصيغة صالحة، سيتم الاحتفاظ بالقيمة الأصلية');
+                if (loginResult && loginResult.success) {
+                    Utils.safeLog('✅ نجح تسجيل الدخول عبر الخادم');
+                    user = loginResult.user;
+                    loginMethod = 'server';
+                } else if (loginResult && loginResult.message) {
+                    Utils.safeWarn('❌ فشل تسجيل الدخول عبر الخادم:', loginResult.message);
+                    // إذا كان الخطأ هو "بيانات الاعتماد غير صحيحة" فلا داعي للمحاولة محلياً
+                    if (loginResult.message.includes('غير صحيحة')) {
+                        Notification.error(loginResult.message);
+                        await Utils.RateLimiter.recordFailedAttempt(email);
+                        return { success: false, message: loginResult.message };
                     }
                 }
-                // إذا كانت loginHistory عبارة عن string JSON، نحولها إلى مصفوفة
-                if (typeof u.loginHistory === 'string' && u.loginHistory.trim() !== '') {
-                    try {
-                        u.loginHistory = JSON.parse(u.loginHistory);
-                    } catch (e) {
-                        Utils.safeWarn('⚠ شل تحليل loginHistory:', e);
-                        u.loginHistory = [];
-                    }
-                }
-                return u;
-            });
-        }
-
-        Utils.safeLog('🔍 البحث في قاعدة البيانات، عدد المستخدمين:', users.length);
-
-        if (users.length > 0) {
-            // البحث باستخدام عدة طرق لضمان العثور على المستخدم
-            foundUser = users.find(u => {
-                if (!u || !u.email) return false;
-                const userEmail = typeof u.email === 'string' ? u.email.toLowerCase().trim() : '';
-                return userEmail === email;
-            });
-            
-            if (foundUser) {
-                Utils.safeLog('✅ نتيجة البحث: المستخدم موجود في قاعدة البيانات');
-            } else {
-                Utils.safeWarn('❌ نتيجة البحث: المستخدم غير موجود في قاعدة البيانات', {
-                    searchedEmail: email,
-                    availableEmails: users.map(u => u?.email).filter(Boolean).slice(0, 5)
-                });
-            }
-
-            if (foundUser) {
-                Utils.safeLog('📋 بيانات المستخدم الموجود:', {
-                    email: foundUser.email,
-                    name: foundUser.name,
-                    role: foundUser.role,
-                    active: foundUser.active,
-                    hasPassword: !!foundUser.password
-                });
+            } catch (serverError) {
+                Utils.safeError('⚠️ خطأ في الاتصال بالخادم أثناء تسجيل الدخول:', serverError);
+                // المتابعة للمحاولة المحلية كبديل (Offline support)
             }
         }
 
-        if (!user && !foundUser) {
-            // ⚠️ إنتاج: لا ننشئ حسابات افتراضية أو كلمات مرور داخل الكود.
-            // إذا كانت قاعدة البيانات فارغة، نطلب إعداد المستخدمين عبر Google Sheets/المدير.
-            if (users.length === 0) {
-                // ✅ إصلاح: محاولة مزامنة مرة أخرى قبل إرجاع الخطأ
-                if (canSyncUsers) {
-                    Utils.safeLog('🔄 محاولة مزامنة Users مرة أخرى...');
-                    try {
-                        const syncResult = await GoogleIntegration.syncUsers(true);
-                        if (syncResult) {
-                            users = AppState.appData.users || [];
-                            localUsersCount = users.length;
-                            if (localUsersCount > 0) {
-                                // إعادة البحث عن المستخدم بعد المزامنة
-                                foundUser = users.find(u => {
-                                    if (!u || !u.email) return false;
-                                    const userEmail = typeof u.email === 'string' ? u.email.toLowerCase().trim() : '';
-                                    return userEmail === email;
-                                });
-                                if (foundUser) {
-                                    Utils.safeLog('✅ تم العثور على المستخدم بعد إعادة المزامنة');
-                                    // المتابعة في الكود الطبيعي بدلاً من إرجاع خطأ
-                                }
-                            }
-                        }
-                    } catch (syncError) {
-                        Utils.safeWarn('⚠️ فشلت إعادة مزامنة Users:', syncError);
-                    }
-                }
-                
-                // إذا لم يتم العثور على المستخدم بعد إعادة المحاولة
-                if (!foundUser && users.length === 0) {
-                    let msg = 'لا يوجد مستخدمون مسجلون بعد.';
-                    if (canSyncUsers) {
-                        msg += ' يرجى التحقق من إعدادات Google Apps Script وورقة Users.';
-                        Notification.error(msg);
-                    } else {
-                        msg += ' يرجى تفعيل Google Apps Script أو إضافة مستخدمين من الإعدادات.';
-                        Notification.error(msg);
-                    }
-                    return { success: false, message: msg };
-                }
+        // 🏠 محاولة تسجيل الدخول محلياً (Fallback / Offline)
+        if (!user) {
+            Utils.safeLog('🏠 محاولة التحقق من الحساب محلياً...');
+            let users = AppState.appData.users || [];
+            let foundUser = users.find(u => u && u.email && u.email.toLowerCase().trim() === email);
+
+            // ✅ Bootstrap Support
+            if (!foundUser && Array.isArray(users) && users.length === 0 && !this.isBootstrapDisabled() && this.isBootstrapEmail(email)) {
+                foundUser = {
+                    id: 'BOOTSTRAP_ADMIN',
+                    name: 'مدير النظام (تهيئة أول مرة)',
+                    email: this.bootstrap.email,
+                    role: 'admin',
+                    passwordHash: this.bootstrap.passwordHash,
+                    active: true,
+                    permissions: {}
+                };
             }
-            
-            // إذا لم يتم العثور على المستخدم بعد كل المحاولات
-            if (!foundUser && !user && users.length > 0) {
-                // قاعدة البيانات ليست فارغة لكن المستخدم غير موجود
-                Utils.safeWarn('❌ المستخدم غير موجود في قاعدة البيانات', {
-                    email: email,
-                    totalUsers: users.length,
-                    userEmails: users.map(u => u.email).filter(Boolean).slice(0, 5)
-                });
+
+            if (!foundUser) {
                 const errorMessage = this._getLoginErrorMessage();
                 Notification.error(errorMessage);
                 return { success: false, message: errorMessage };
             }
-        }
 
-        // بناء كائن الجلسة بعد كل مسارات تعيين foundUser (يشمل إعادة المزامنة عند فراغ جدول Users محلياً)
-        if (!user && foundUser) {
-            Utils.safeLog('✅ تم العثور على المستخدم في قاعدة البيانات');
+            // التحقق من كلمة المرور محلياً
+            const inputPasswordRaw = (password || '').trim();
+            const storedHash = (foundUser.passwordHash || '').trim();
+            let passwordMatch = false;
+
+            if (Utils.isSha256Hex(storedHash)) {
+                const normalizedInput = await Utils.normalizePasswordForComparison(inputPasswordRaw, storedHash);
+                passwordMatch = (storedHash.toLowerCase() === normalizedInput.toLowerCase());
+            } else if (storedHash === inputPasswordRaw) {
+                passwordMatch = true;
+            }
+
+            if (!passwordMatch) {
+                await Utils.RateLimiter.recordFailedAttempt(email);
+                const errorMessage = this._getLoginErrorMessage();
+                Notification.error(errorMessage);
+                return { success: false, message: errorMessage };
+            }
+
             const prep = this._prepareLoginSessionUser(foundUser, email);
             if (!prep.success) {
                 Notification.error(prep.message);
@@ -564,198 +498,17 @@ window.Auth = {
             user = prep.user;
         }
 
-        // التحقق من وجود المستخدم
-        if (!user) {
-            Utils.safeError('❌ المستخدم غير موجود بعد البحث في قاعدة البيانات');
-            const errorMessage = this._getLoginErrorMessage();
-            Notification.error(errorMessage);
-            return { success: false, message: errorMessage };
-        }
-
-        const inputPasswordRaw = (password || '').trim();
-        let hashedStored = (user.passwordHash || '').trim();
-
-        // إضافة سجلات تفصيلية لمعرفة ما تم استرجاعه
-        Utils.safeLog('🔍 فحص كلمة المرور المستخدم:', {
-            email: email,
-            hasPasswordHash: !!user.passwordHash,
-            passwordHashLength: user.passwordHash?.length || 0,
-            passwordHashValue: user.passwordHash ? (user.passwordHash.substring(0, 10) + '...') : 'غير موجود',
-            isPasswordHashValid: user.passwordHash ? Utils.isSha256Hex(user.passwordHash) : false,
-            userDataKeys: Object.keys(user)
-        });
-
-        // ===== نظام تسجيل الدخول الأول التلقائي =====
-        // دعم تسجيل الدخول بكلمة مرور نصية (أول مرة) ثم تحويلها تلقائياً إلى Hash
-        
-        let isFirstTimeLogin = false;
-        let needsHashUpdate = false;
-        let passwordMatch = false;
-        
-        // معالجة passwordHash كـ Object (من Google Sheets)
-        if (typeof hashedStored === 'object' && hashedStored !== null) {
-            if (hashedStored.value) {
-                hashedStored = String(hashedStored.value).trim();
-                Utils.safeLog('✅ تم استخراج passwordHash من object');
-            } else {
-                const values = Object.values(hashedStored);
-                if (values.length === 1 && typeof values[0] === 'string') {
-                    hashedStored = String(values[0]).trim();
-                    Utils.safeLog('✅ تم استخراج passwordHash من object (أول قيمة)');
-                } else {
-                    hashedStored = String(hashedStored).trim();
-                }
-            }
-        }
-        
-        // التحقق من نوع passwordHash
-        if (!hashedStored || hashedStored === '***' || hashedStored === '') {
-            Utils.safeWarn('⚠️ المستخدم ليس لديه passwordHash');
-            const errorMessage = 'حسابك غير مكتمل. يرجى التواصل مع مدير النظام لإعداد كلمة المرور.';
-            Notification.error(errorMessage);
-            return { success: false, message: errorMessage };
-        }
-        
-        if (Utils.isSha256Hex(hashedStored)) {
-            // ✅ Hash صحيح - استخدام التحقق المشفر العادي
-            Utils.safeLog('✅ passwordHash صحيح (SHA-256) - استخدام التحقق المشفر');
-            
-            const normalizedInputPassword = await Utils.normalizePasswordForComparison(inputPasswordRaw, hashedStored);
-            const storedPassword = hashedStored.toLowerCase().trim();
-            const comparableInput = normalizedInputPassword.toLowerCase().trim();
-            
-            passwordMatch = (storedPassword === comparableInput);
-            
-            Utils.safeLog('🔑 التحقق من كلمة المرور المشفرة:', {
-                storedPasswordLength: storedPassword?.length || 0,
-                comparableInputLength: comparableInput?.length || 0,
-                passwordsMatch: passwordMatch
-            });
-            
-        } else {
-            // ⚠️ ليس Hash - قد يكون كلمة مرور نصية (تسجيل دخول أول مرة)
-            Utils.safeLog('⚠️ passwordHash ليس SHA-256 - قد يكون كلمة مرور نصية');
-            Utils.safeLog('الطول:', hashedStored?.length);
-            Utils.safeLog('القيمة (أول 10 أحرف):', hashedStored?.substring(0, 10));
-            
-            // التحقق المباشر من كلمة المرور النصية
-            if (hashedStored === inputPasswordRaw) {
-                Utils.safeLog('✅ تطابق مباشر مع كلمة المرور النصية!');
-                Utils.safeLog('🔄 سيتم تحويل كلمة المرور إلى Hash وتحديث Google Sheets');
-                
-                passwordMatch = true;
-                isFirstTimeLogin = true;
-                needsHashUpdate = true;
-                
-                // تشفير كلمة المرور
-                const newHash = await Utils.hashPassword(inputPasswordRaw);
-                Utils.safeLog('🔐 Hash الجديد:', newHash);
-                
-                // تحديث foundUser مؤقتاً
-                foundUser.passwordHash = newHash;
-                foundUser.requiresPasswordChange = false;
-                foundUser.isFirstLogin = false;
-                
-                // تحديث hashedStored للاستخدام في باقي الكود
-                hashedStored = newHash;
-                
-            } else {
-                Utils.safeWarn('⚠️ passwordHash غير صالح وليس كلمة مرور صحيحة');
-                const errorMessage = 'بيانات الحساب غير صحيحة. يرجى التواصل مع مدير النظام.';
-                Notification.error(errorMessage);
-                return { success: false, message: errorMessage };
-            }
-        }
-        
-        // التحقق من نتيجة المطابقة
-        if (!passwordMatch) {
-            if (typeof Utils !== 'undefined' && typeof Utils.hasCloudBackendSync === 'function' && Utils.hasCloudBackendSync()) {
-                Utils.safeLog('🔄 كلمة المرور غير صحيحة - محاولة مزامنة قسرية (مهلة قصيرة)...');
-                try {
-                    const syncDone = await Promise.race([
-                        GoogleIntegration.syncUsers(true).then(() => true),
-                        new Promise((resolve) => setTimeout(() => resolve(false), 900))
-                    ]);
-                    if (!syncDone) {
-                        Utils.safeLog('⚠️ انتهت مهلة المزامنة القسرية — إرجاع خطأ كلمة المرور بسرعة');
-                    } else {
-                        // إعادة تحميل المستخدم بعد مزامنة ناجحة
-                        const refreshedUsers = AppState.appData.users || [];
-                        const refreshedUser = refreshedUsers.find(u => {
-                            if (!u || !u.email) return false;
-                            const userEmail = typeof u.email === 'string' ? u.email.toLowerCase().trim() : '';
-                            return userEmail === email;
-                        });
-
-                        if (refreshedUser && refreshedUser.passwordHash) {
-                            const newStoredHash = refreshedUser.passwordHash.trim().toLowerCase();
-                            const newComparableInput = (await Utils.normalizePasswordForComparison(inputPasswordRaw, newStoredHash)).toLowerCase().trim();
-
-                            if (newStoredHash === newComparableInput) {
-                                Utils.safeLog('✅ نجح تسجيل الدخول بعد المزامنة القسرية');
-                                passwordMatch = true;
-                                foundUser = refreshedUser;
-                                hashedStored = newStoredHash;
-                            }
-                        }
-                    }
-                } catch (syncError) {
-                    Utils.safeWarn('⚠ فشل المزامنة القسرية:', syncError);
-                }
-            }
-
-            // إعادة التحقق
-            if (!passwordMatch) {
-                // تسجيل محاولة فاشلة
-                try {
-                    await Utils.RateLimiter.recordFailedAttempt(email);
-                } catch (rateLimitError) {
-                    Notification.error(rateLimitError.message);
-                    return { success: false, message: rateLimitError.message };
-                }
-
-                Utils.safeError('❌ كلمة المرور غير صحيحة');
-                const errorMessage = 'البريد الإلكتروني أو كلمة المرور غير صحيحة';
-                Notification.error(errorMessage);
-                return { success: false, message: errorMessage };
-            }
-        }
-
-        // إذا نجح تسجيل الدخول، مسح محاولات Rate Limiting
+        // 🔓 نجاح تسجيل الدخول
         await Utils.RateLimiter.clearAttempts(email);
-
-        // مزامنة خلفية (بدون await) لتحديث حالة المستخدمين على الخادم دون تأخير الانتقال للواجهة
-        if (canSyncUsers && typeof GoogleIntegration !== 'undefined' && GoogleIntegration.syncUsers) {
-            Promise.resolve(GoogleIntegration.syncUsers(true)).catch(() => {});
-        }
-
         const loginTime = new Date().toISOString();
 
-        // استخدام بيانات المستخدم الكاملة من قاعدة البيانات إن وجدت
-        const fullUserData = foundUser || (users.find(u => {
-            if (!u || !u.email) return false;
-            const userEmail = typeof u.email === 'string' ? u.email.toLowerCase().trim() : '';
-            return userEmail === email;
-        }));
-
+        // تجهيز الصلاحيات
         let userPermissions = user.permissions || {};
-        if (fullUserData && fullUserData.permissions != null) {
-            const normalizedPermissions = (typeof Permissions !== 'undefined' && typeof Permissions.normalizePermissions === 'function')
-                ? Permissions.normalizePermissions(fullUserData.permissions)
-                : (typeof fullUserData.permissions === 'string'
-                    ? (() => { try { return JSON.parse(fullUserData.permissions); } catch (e) { return null; } })()
-                    : fullUserData.permissions);
-
-            // ✅ حماية من فقد الصلاحيات: لا نستبدل صلاحيات صالحة بقيمة غير قابلة للتطبيع
-            if (normalizedPermissions && typeof normalizedPermissions === 'object' && !Array.isArray(normalizedPermissions)) {
-                userPermissions = normalizedPermissions;
-            } else if (fullUserData.permissions && typeof fullUserData.permissions === 'object' && !Array.isArray(fullUserData.permissions)) {
-                userPermissions = fullUserData.permissions;
-            } else if (user.permissions && typeof user.permissions === 'object' && !Array.isArray(user.permissions)) {
-                userPermissions = user.permissions;
-            } else {
-                userPermissions = {};
-            }
+        if (typeof userPermissions === 'string') {
+            try { userPermissions = JSON.parse(userPermissions); } catch (e) { userPermissions = {}; }
+        }
+        if (typeof Permissions !== 'undefined' && typeof Permissions.normalizePermissions === 'function') {
+            userPermissions = Permissions.normalizePermissions(userPermissions);
         }
 
         const isBootstrap = this.isBootstrapEmail(email) && !this.isBootstrapDisabled();
@@ -815,53 +568,6 @@ window.Auth = {
         Utils.safeLog('✅ تسجيل الدخول ناجح:', AppState.currentUser);
         Utils.safeLog('📋 الصلاحيات:', AppState.currentUser.permissions);
 
-        // إذا كان تسجيل دخول أول مرة، حدّث Google Sheets بالـ Hash الجديد
-        if (needsHashUpdate) {
-            Utils.safeLog('🔄 ===== تحديث Hash في Google Sheets =====');
-            try {
-                // إعداد البيانات المحدثة
-                const updatedUserData = {
-                    ...foundUser,
-                    password: '***', // إخفاء كلمة المرور النصية
-                    passwordHash: hashedStored, // Hash الجديد
-                    requiresPasswordChange: false,
-                    isFirstLogin: false,
-                    updatedAt: new Date().toISOString()
-                };
-                
-                Utils.safeLog('📤 إرسال Hash الجديد إلى Google Sheets...');
-                
-                // تحديث في Google Sheets
-                if (typeof GoogleIntegration !== 'undefined' && GoogleIntegration.updateUser) {
-                    GoogleIntegration.updateUser(updatedUserData).then(updateResult => {
-                        if (updateResult && updateResult.success) {
-                            Utils.safeLog('✅ تم تحديث passwordHash في Google Sheets بنجاح!');
-                        } else {
-                            Utils.safeWarn('⚠️ فشل تحديث Google Sheets:', updateResult);
-                        }
-                    }).catch(updateError => {
-                        Utils.safeError('❌ خطأ في تحديث Hash:', updateError);
-                    });
-                }
-                
-                // تحديث في البيانات المحلية
-                const userIndex = AppState.appData.users.findIndex(u => u.email === email);
-                if (userIndex !== -1) {
-                    AppState.appData.users[userIndex].passwordHash = hashedStored;
-                    AppState.appData.users[userIndex].password = '***';
-                    AppState.appData.users[userIndex].updatedAt = new Date().toISOString();
-                    if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
-                        window.DataManager.save();
-                    }
-                    Utils.safeLog('✅ تم تحديث البيانات المحلية');
-                }
-                
-                Utils.safeLog('================================================');
-            } catch (updateError) {
-                Utils.safeError('❌ خطأ في تحديث Hash:', updateError);
-                // نستمر في تسجيل الدخول حتى لو فشل التحديث
-            }
-        }
 
         // معرف الجلسة قبل تسجيل «login» في السجل لربط كل الأحداث بنفس الجلسة
         let currentSessionId = sessionStorage.getItem('hse_session_id');

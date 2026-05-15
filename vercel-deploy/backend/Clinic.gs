@@ -736,7 +736,7 @@ function getAllClinicVisits(filters = {}) {
                 const reasonPart = (v.reason || v.diagnosis || '').toString().trim();
                 // نستخدم أول 12 حرف من الـ hash لضمان فرادة كافية
                 const seed = namePart + '|' + datePart + '|' + reasonPart;
-                v.id = 'STB_' + Utilities.base64Encode(Utilities.computeDigest(Utilities.DigestAlgorithm.MD5, seed))
+                v.id = 'STB_' + index + '_' + Utilities.base64Encode(Utilities.computeDigest(Utilities.DigestAlgorithm.MD5, seed))
                                 .replace(/[^a-zA-Z0-9]/g, '').substring(0, 12);
             }
             
