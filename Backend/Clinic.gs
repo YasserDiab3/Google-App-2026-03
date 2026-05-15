@@ -454,10 +454,10 @@ function addClinicVisitToSheet(visitData) {
             return result;
         }
         
-        // ✅ خصم الأدوية من المخزون تلقائياً
+        // ✅ تفعيل خصم الأدوية تلقائياً عند تسجيل الزيارة
         if (visitData.medications && Array.isArray(visitData.medications) && visitData.medications.length > 0) {
             try {
-                Logger.log('💊 [BACKEND] محاولة خصم الأدوية تلقائياً: ' + visitData.medications.length);
+                Logger.log('💊 [BACKEND] محاولة خصم الأدوية تلقائياً لزيارة: ' + normalized.id);
                 const deductResult = deductMedicationsFromInventory_(visitData.medications, normalized.id, normalized.createdBy);
                 if (deductResult && deductResult.success) {
                     Logger.log('✅ [BACKEND] تم خصم الأدوية بنجاح');
@@ -465,8 +465,7 @@ function addClinicVisitToSheet(visitData) {
                     Logger.log('⚠️ [BACKEND] فشل خصم الأدوية تلقائياً: ' + (deductResult ? deductResult.message : 'خطأ غير معروف'));
                 }
             } catch (deductError) {
-                Logger.log('❌ [BACKEND] خطأ أثناء خصم الأدوية: ' + deductError.toString());
-                // لا نوقف العملية إذا فشل الخصم لضمان حفظ الزيارة
+                Logger.log('❌ [BACKEND] خطأ تقني في خصم الأدوية: ' + deductError.toString());
             }
         }
         
@@ -477,7 +476,6 @@ function addClinicVisitToSheet(visitData) {
         if (!merged.message) {
             merged.message = 'تم تسجيل الزيارة';
         }
-        // إضافة معلومات الأدوية للرد
         if (visitData.medications && Array.isArray(visitData.medications) && visitData.medications.length > 0) {
             merged.medicationsCount = visitData.medications.length;
         }
@@ -500,63 +498,79 @@ function upsertClinicVisit_(targetSheetName, normalizedVisit) {
     try {
         const spreadsheetId = getSpreadsheetId();
         const ss = SpreadsheetApp.openById(spreadsheetId);
-        const id = (normalizedVisit && normalizedVisit.id) ? String(normalizedVisit.id) : '';
+        const id = (normalizedVisit && normalizedVisit.id) ? String(normalizedVisit.id).trim() : '';
         
         if (!id) {
             // fallback: append بدون id (نادر جداً)
-            Logger.log('⚠️ [BACKEND] upsertClinicVisit_: لا يوجد id - append مباشرة');
+            Logger.log('⚠️ [BACKEND] upsertClinicVisit_: لا يوجد id - سيتم الإضافة مباشرة');
             return appendToSheet(targetSheetName, normalizedVisit);
         }
 
-        const candidates = ['ClinicVisits', 'ClinicContractorVisits'];
+        // ✅ تحديد الأوراق للبحث: نبدأ بالورقة المستهدفة (targetSheetName) ثم الورقة الأخرى
+        const otherSheetName = targetSheetName === 'ClinicVisits' ? 'ClinicContractorVisits' : 'ClinicVisits';
+        const candidates = [targetSheetName, otherSheetName];
         
-        // 1) ابحث عن الزيارة في أي شيت باستخدام بحث سريع
+        let targetSheet = null;
+        let targetRowIndex = -1;
+
+        // 1) ابحث عن الزيارة في الأوراق المرشحة
         for (var i = 0; i < candidates.length; i++) {
-            const sheetName = candidates[i];
-            const sheet = ss.getSheetByName(sheetName);
+            const sName = candidates[i];
+            const sheet = ss.getSheetByName(sName);
             if (!sheet) continue;
             
-            // بحث سريع في العمود id فقط
             const lastRow = sheet.getLastRow();
             if (lastRow < 2) continue;
             
-            // قراءة عمود id فقط (أسرع بكثير)
+            // قراءة عمود id فقط (أسرع)
             const idColumn = sheet.getRange(2, 1, lastRow - 1, 1).getValues();
             
             for (var r = 0; r < idColumn.length; r++) {
-                if (idColumn[r][0] && String(idColumn[r][0]) === id) {
-                    const rowIndex = r + 2; // +2 لأن الصفوف تبدأ من 1 وهناك header
-                    Logger.log('✅ [BACKEND] upsertClinicVisit_: تم العثور على id موجود في: ' + sheetName + ' (row=' + rowIndex + ') - سيتم التحديث');
-                    
-                    // ✅ تحديث الصف مباشرة - قراءة الرؤوس مرة واحدة فقط
-                    const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
-                    const rowData = [];
-                    
-                    // تحويل normalizedVisit إلى array بناءً على الرؤوس
-                    for (var h = 0; h < headers.length; h++) {
-                        const headerName = headers[h] ? String(headers[h]).trim() : '';
-                        if (headerName && normalizedVisit.hasOwnProperty(headerName)) {
-                            rowData.push(normalizedVisit[headerName]);
-                        } else {
-                            rowData.push('');
-                        }
-                    }
-                    
-                    // تحديث الصف مباشرة
-                    sheet.getRange(rowIndex, 1, 1, rowData.length).setValues([rowData]);
-                    
-                    return {
-                        success: true,
-                        message: 'تم تحديث الزيارة',
-                        rowNumber: rowIndex,
-                        sheetName: sheetName,
-                        updated: true
-                    };
+                if (idColumn[r][0] && String(idColumn[r][0]).trim() === id) {
+                    targetSheet = sheet;
+                    targetRowIndex = r + 2; // +2 لأن الصفوف تبدأ من 1 وهناك header والـ loop تبدأ من index 0 (الصف 2)
+                    break;
                 }
             }
+            if (targetRowIndex !== -1) break;
         }
 
-        // 2) غير موجود: إضافة جديدة في الشيت الهدف فقط
+        if (targetRowIndex !== -1 && targetSheet) {
+            const currentSheetName = targetSheet.getName();
+            Logger.log('✅ [BACKEND] upsertClinicVisit_: تم العثور على id موجود في: ' + currentSheetName + ' (row=' + targetRowIndex + ') - سيتم التحديث');
+
+            // ✅ تحديث الصف مباشرة
+            const headers = targetSheet.getRange(1, 1, 1, targetSheet.getLastColumn()).getValues()[0];
+            const rowData = [];
+
+            // تحويل normalizedVisit إلى array بناءً على الرؤوس
+            for (var h = 0; h < headers.length; h++) {
+                const headerName = headers[h] ? String(headers[h]).trim() : '';
+                if (headerName && normalizedVisit.hasOwnProperty(headerName)) {
+                    rowData.push(normalizedVisit[headerName]);
+                } else {
+                    rowData.push('');
+                }
+            }
+
+            targetSheet.getRange(targetRowIndex, 1, 1, rowData.length).setValues([rowData]);
+
+            // ✅ مسح الcache لضمان قراءة البيانات المحدثة
+            if (typeof invalidateHseSheetCaches === 'function') {
+                invalidateHseSheetCaches(currentSheetName);
+            }
+
+            return {
+                success: true,
+                message: 'تم تحديث الزيارة بنجاح',
+                id: id,
+                rowNumber: targetRowIndex,
+                sheetName: currentSheetName,
+                updated: true
+            };
+        }
+
+        // 2) غير موجود: إضافة جديدة في الشيت الهدف (targetSheetName)
         Logger.log('✅ [BACKEND] upsertClinicVisit_: id غير موجود في أي شيت - سيتم الإضافة في: ' + targetSheetName);
         const appendResult = appendToSheet(targetSheetName, normalizedVisit);
         appendResult.inserted = true;
@@ -566,8 +580,7 @@ function upsertClinicVisit_(targetSheetName, normalizedVisit) {
         Logger.log('❌ [BACKEND] upsertClinicVisit_ error: ' + error.toString());
         return {
             success: false,
-            message: 'خطأ في upsertClinicVisit_: ' + error.toString(),
-            error: error.toString()
+            message: 'خطأ في تحديث/إضافة الزيارة: ' + error.toString()
         };
     }
 }
@@ -658,6 +671,11 @@ function updateClinicVisit(visitId, updateData) {
             // تحديث الصف مباشرة
             sheet.getRange(rowIndex, 1, 1, rowData.length).setValues([rowData]);
 
+            // ✅ مسح الcache لضمان قراءة البيانات المحدثة
+            if (typeof invalidateHseSheetCaches === 'function') {
+                invalidateHseSheetCaches(sheetName);
+            }
+
             Logger.log('✅ [BACKEND] updateClinicVisit: تم تحديث الزيارة ' + visitId + ' في ' + sheetName + ' (row=' + rowIndex + ')');
 
             return {
@@ -696,40 +714,67 @@ function getAllClinicVisits(filters = {}) {
             Logger.log('Warning ensuring clinic sheets headers: ' + e.toString());
         }
 
-        const employeeData = readFromSheet('ClinicVisits', spreadsheetId) || [];
-        const contractorData = readFromSheet('ClinicContractorVisits', spreadsheetId) || [];
+        const employeeData = (readFromSheet('ClinicVisits', spreadsheetId) || []).map(v => {
+            if (v && typeof v === 'object') v._tempSourceType = 'employee';
+            return v;
+        });
+        const contractorData = (readFromSheet('ClinicContractorVisits', spreadsheetId) || []).map(v => {
+            if (v && typeof v === 'object') v._tempSourceType = 'contractor';
+            return v;
+        });
         let data = employeeData.concat(contractorData);
 
-        // ✅ إعادة بناء medications في الـ API response فقط (بدون تخزين JSON في الشيت)
-        data = data.map(v => {
+        // ✅ تطبيع البيانات وضمان وجود معرفات فريدة
+        data = data.map((v, index) => {
             if (!v || typeof v !== 'object') return v;
+
+            // 1. ضمان وجود ID ثابت إذا كان مفقوداً
+            if (!v.id) {
+                // توليد معرف ثابت بناءً على محتوى الصف فقط (بدون index) لتجنب التغير عند إضافة صفوف
+                const namePart = (v.employeeName || v.contractorName || v.employeeCode || v.contractorWorkerName || '').toString().trim();
+                const datePart = (v.visitDate || v.createdAt || '').toString().trim();
+                const reasonPart = (v.reason || v.diagnosis || '').toString().trim();
+                // نستخدم أول 12 حرف من الـ hash لضمان فرادة كافية
+                const seed = namePart + '|' + datePart + '|' + reasonPart;
+                v.id = 'STB_' + Utilities.base64Encode(Utilities.computeDigest(Utilities.DigestAlgorithm.MD5, seed))
+                                .replace(/[^a-zA-Z0-9]/g, '').substring(0, 12);
+            }
             
-            // التحقق من medications بشكل شامل
-            let medsArray = [];
-            
-            // إذا كانت medications موجودة وليست فارغة
-            if (v.medications) {
-                if (Array.isArray(v.medications) && v.medications.length > 0) {
-                    medsArray = v.medications;
-                } else if (typeof v.medications === 'string' && v.medications.trim()) {
-                    // محاولة parse JSON
-                    try {
-                        const parsed = JSON.parse(v.medications);
-                        if (Array.isArray(parsed) && parsed.length > 0) {
-                            medsArray = parsed;
-                        }
-                    } catch (e) {
-                        // ليس JSON، سنستخدم medicationsDispensed بدلاً منه
-                    }
+            // 2. توحيد نوع الشخص (lowercase) - الأولوية للقيم الموجودة فعلياً في الشيت
+            let currentType = String(v.personType || '').toLowerCase().trim();
+            if (!currentType) {
+                // إذا كان فارغاً، نستخدم النوع الافتراضي بناءً على الشيت المصدر (تم تعيينه في readFromSheet أعلاه)
+                currentType = v._tempSourceType || 'employee';
+            }
+
+            if (currentType.includes('contractor') || currentType.includes('مقاول') || currentType.includes('external') || currentType.includes('خارجي')) {
+                v.personType = 'contractor';
+            } else if (currentType.includes('employee') || currentType.includes('موظف')) {
+                v.personType = 'employee';
+            } else {
+                if (v.contractorName || v.contractorWorkerName || v.externalName) {
+                    v.personType = 'contractor';
+                } else {
+                    v.personType = 'employee';
                 }
             }
             
-            // إذا كانت medications فارغة أو غير صالحة، نحاول من medicationsDispensed
+            // 3. إعادة بناء medications بشكل شامل
+            let medsArray = [];
+            if (v.medications) {
+                if (Array.isArray(v.medications)) {
+                    medsArray = v.medications;
+                } else if (typeof v.medications === 'string' && v.medications.trim()) {
+                    try {
+                        const parsed = JSON.parse(v.medications);
+                        if (Array.isArray(parsed)) medsArray = parsed;
+                    } catch (e) {}
+                }
+            }
+            
             if (medsArray.length === 0 && v.medicationsDispensed) {
                 medsArray = parseDispensedMedicationsText_(v.medicationsDispensed);
             }
-            
-            // تعيين medications النهائي
             v.medications = medsArray;
             
             // ✅ التأكد من وجود createdBy و updatedBy (للبيانات القديمة)
@@ -2019,9 +2064,28 @@ function getAllInjuries(filters = {}) {
             Logger.log('Warning ensuring injuries sheets headers: ' + e.toString());
         }
 
-        const employeeData = readFromSheet('Injuries', spreadsheetId) || [];
-        const contractorData = readFromSheet('ClinicContractorInjuries', spreadsheetId) || [];
+        const employeeData = (readFromSheet('Injuries', spreadsheetId) || []).map(v => {
+            if (v && typeof v === 'object') v.personType = v.personType || 'employee';
+            return v;
+        });
+        const contractorData = (readFromSheet('ClinicContractorInjuries', spreadsheetId) || []).map(v => {
+            if (v && typeof v === 'object') v.personType = v.personType || 'contractor';
+            return v;
+        });
         let data = employeeData.concat(contractorData);
+
+        // ✅ تطبيع البيانات
+        data = data.map(v => {
+            if (!v || typeof v !== 'object') return v;
+
+            const rawType = String(v.personType || '').toLowerCase().trim();
+            if (rawType.includes('contractor') || rawType.includes('مقاول') || rawType.includes('external') || rawType.includes('خارجي')) {
+                v.personType = 'contractor';
+            } else {
+                v.personType = 'employee';
+            }
+            return v;
+        });
         
         // تطبيق الفلاتر
         if (filters.employeeCode) {

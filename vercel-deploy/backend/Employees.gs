@@ -265,19 +265,15 @@ function deactivateEmployee(employeeId) {
             };
         }
         
-        const data = readFromSheet(sheetName, spreadsheetId);
-        const employeeIndex = data.findIndex(e => e.id === employeeId);
+        // ✅ استخدام updateSingleRowInSheet بدلاً من قراءة وكتابة الشيت بالكامل
+        const updateData = {
+            status: 'inactive',
+            resignationDate: Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyy-MM-dd'),
+            updatedAt: new Date().toISOString()
+        };
         
-        if (employeeIndex === -1) {
-            return { success: false, message: 'الموظف غير موجود' };
-        }
+        const result = updateSingleRowInSheet(sheetName, employeeId, updateData, spreadsheetId);
         
-        // ✅ تحديث حالة الموظف بدلاً من الحذف
-        data[employeeIndex].status = 'inactive';
-        data[employeeIndex].resignationDate = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyy-MM-dd');
-        data[employeeIndex].updatedAt = new Date().toISOString();
-        
-        const result = saveToSheet(sheetName, data, spreadsheetId);
         // كسر كاش الموظفين بعد التحديث
         if (result && result.success) {
             _bumpEmployeesCacheVersion_();
@@ -311,14 +307,9 @@ function deleteEmployee(employeeId) {
             };
         }
         
-        const data = readFromSheet(sheetName, spreadsheetId);
-        const filteredData = data.filter(e => e.id !== employeeId);
+        // ✅ استخدام deleteRowById لحذف صف واحد بسرعة
+        const result = deleteRowById(sheetName, employeeId, spreadsheetId);
         
-        if (filteredData.length === data.length) {
-            return { success: false, message: 'الموظف غير موجود' };
-        }
-        
-        const result = saveToSheet(sheetName, filteredData, spreadsheetId);
         // كسر كاش الموظفين بعد الحذف
         if (result && result.success) {
             _bumpEmployeesCacheVersion_();
