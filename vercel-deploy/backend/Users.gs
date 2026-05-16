@@ -483,7 +483,8 @@ function getUserRecordFromUsersSheetByEmail_(email) {
         var e = String(email || '').trim().toLowerCase();
         if (!e) return null;
         var spreadsheetId = getSpreadsheetId();
-        var users = readFromSheet('Users', spreadsheetId);
+        // Skip security filter to get passwordHash for authentication
+        var users = readFromSheet('Users', spreadsheetId, true);
         if (!users || !Array.isArray(users)) return null;
         for (var i = 0; i < users.length; i++) {
             var u = users[i];

@@ -3013,16 +3013,16 @@ function invalidateHseSheetCaches(sheetName) {
 /**
  * قراءة بيانات من ورقة
  */
-function readFromSheet(sheetName, spreadsheetId = null) {
+function readFromSheet(sheetName, spreadsheetId = null, skipSecurityFilter = false) {
     try {
         // ✅ CacheService: Check cache first for frequently-read sheets
         const cache = CacheService.getScriptCache();
-        const cacheKey = 'hse_read_' + sheetName + '_v1';
+        const cacheKey = 'hse_read_' + sheetName + (skipSecurityFilter ? '_raw' : '_v1');
         const cached = cache.get(cacheKey);
         
         if (cached) {
             try {
-                Logger.log('Cache HIT for readFromSheet: ' + sheetName);
+                Logger.log('Cache HIT for readFromSheet: ' + sheetName + (skipSecurityFilter ? ' (RAW)' : ''));
                 return JSON.parse(cached);
             } catch (parseError) {
                 Logger.log('Cache parse error for ' + sheetName + ': ' + parseError.toString());
@@ -3298,7 +3298,17 @@ function readFromSheet(sheetName, spreadsheetId = null) {
             Logger.log('⚠️ Removed ' + (allObjects.length - uniqueObjects.length) + ' duplicate records from ' + sheetName);
         }
 
-
+        // ✅ Security: Filter out sensitive fields for Users sheet
+        if (!skipSecurityFilter && (sheetName === 'Users' || sheetName === 'users_db')) {
+            const sensitiveFields = ['password', 'passwordHash', 'token', 'loginHistory', 'csrfToken', 'sessionToken'];
+            uniqueObjects.forEach(obj => {
+                sensitiveFields.forEach(field => {
+                    if (obj.hasOwnProperty(field)) {
+                        obj[field] = '***';
+                    }
+                });
+            });
+        }
 
         // ✅ CacheService: Save to cache before returning (2 minutes TTL)
         // Only cache sheets with reasonable size (< 500KB)
