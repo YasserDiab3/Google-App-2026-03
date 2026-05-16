@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Contractors Module
  * تم استخراجه من app-modules.js
  */
@@ -1002,7 +1002,7 @@ const Contractors = {
         }
 
         const status = (record.status || '').toString().toLowerCase().trim();
-        const approvedStatuses = ['approved', 'معتمد', 'نشط', 'active', ''];
+        const approvedStatuses = ['approved', 'معتمد', 'نشط', 'active', 'مفعل', 'مفعّل', ''];
 
         if (record.status && !approvedStatuses.includes(status)) {
             return false;
@@ -1054,7 +1054,7 @@ const Contractors = {
         
         // فحص الحالة - تحديث للقيم المقبولة
         const status = (approved.status || '').toString().toLowerCase().trim();
-        const approvedStatuses = ['approved', 'معتمد', 'نشط', 'active', ''];
+        const approvedStatuses = ['approved', 'معتمد', 'نشط', 'active', 'مفعل', 'مفعّل', ''];
         const isApproved = approvedStatuses.includes(status);
         console.log(`📊 الحالة (status): "${approved.status}"`, isApproved ? '✅ معتمد' : '❌ غير معتمد');
         
@@ -1162,7 +1162,7 @@ const Contractors = {
                 
                 if (!isActive) {
                     const statusLower = status.toLowerCase().trim();
-                    const approvedStatuses = ['approved', 'معتمد', 'نشط', 'active', ''];
+                    const approvedStatuses = ['approved', 'معتمد', 'نشط', 'active', 'مفعل', 'مفعّل', ''];
                     if (!approvedStatuses.includes(statusLower)) {
                         reason = `حالة غير معتمدة: "${status}"`;
                         results.reasons.statusNotApproved.push({ name, code, status });
@@ -2272,7 +2272,7 @@ const Contractors = {
      * @returns {Array<{id:string,name:string,serviceType:string,licenseNumber:string,code:string,entityType:string,approvedEntityId:string|null}>}
      */
     getContractorOptionsForModules(options = {}) {
-        const includeSuppliers = options.includeSuppliers === true;
+        const includeSuppliers = options.includeSuppliers !== false; // ✅ افتراضي: true لتضمين الموردين
         const approvedOnly = options.approvedOnly !== false; // ✅ افتراضي: المقاولين/الموردين المعتمدين فقط
         const list = this.getAllContractorsForModules() || [];
 
@@ -2315,7 +2315,7 @@ const Contractors = {
         const selectedContractorId = (options.selectedContractorId || '').toString();
         const valueMode = options.valueMode === 'id' ? 'id' : 'name';
         const showServiceType = options.showServiceType !== false;
-        const includeSuppliers = options.includeSuppliers === true;
+        const includeSuppliers = options.includeSuppliers !== false; // ✅ افتراضي: true لتضمين الموردين
         const approvedOnly = options.approvedOnly !== false; // ✅ افتراضي: true للحفاظ على التوافق
 
         const contractors = this.getContractorOptionsForModules({ includeSuppliers, approvedOnly });

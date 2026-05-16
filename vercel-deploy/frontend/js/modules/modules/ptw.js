@@ -647,6 +647,7 @@ const PTW = {
         }
 
         const AUDIT_SYNC_KEYS = ['createdBy', 'createdById', 'updatedBy', 'updatedById'];
+        // مهلة أطول لمسار التصريح اليدوي (طلبان متتابعان + ورقة PTW كبيرة كانت تتجاوز 40s على الخادم)
         const MANUAL_SYNC_TIMEOUT_MS = 120000;
 
         const sendSheetRecord = async (sheetName, record, appendMode = false) => {

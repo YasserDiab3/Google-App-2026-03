@@ -3167,6 +3167,7 @@ const Settings = {
                 }
                 Violations.currentFilters.violationType = type.name;
 
+                // نضمن الدخول على تبويب "الكل" حتى تظهر الفلاتر والقائمة
                 if (typeof Violations.switchTab === 'function') {
                     Violations.switchTab('all');
                 } else if (typeof Violations.refreshViolationsView === 'function') {
@@ -3177,6 +3178,7 @@ const Settings = {
                 return true;
             };
 
+            // محاولة سريعة، ثم إعادة محاولة قصيرة لو لسه القسم/الموديول ما اتجهزش
             if (!applyFilter()) {
                 setTimeout(() => {
                     if (!applyFilter()) {
