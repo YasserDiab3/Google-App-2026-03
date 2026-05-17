@@ -7058,6 +7058,10 @@ const Clinic = {
                         <i class="fas fa-sync-alt ${iconMarginClass}"></i>
                         ${t('btn.refresh')}
                     </button>
+                    <button type="button" onclick="const b=this;b.disabled=true;b.innerHTML='جاري الترحيل...';GoogleIntegration.sendRequest({action:'migrateContractorVisits'}).then(r=>{alert(r.message);location.reload()}).catch(e=>{alert('خطأ:'+e);b.disabled=false;b.innerHTML='ترحيل المقاولين'})" class="btn-primary" style="background-color: #d97706; color: white;">
+                        <i class="fas fa-broom ${iconMarginClass}"></i>
+                        ترحيل المقاولين
+                    </button>
                     <button type="button" id="visits-export-excel-btn" class="btn-success">
                         <i class="fas fa-file-excel ${iconMarginClass}"></i>
                         ${t('btn.exportExcel')}
