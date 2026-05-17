@@ -798,6 +798,58 @@ function migrateContractorVisits() {
 }
 
 /**
+ * أداة تشخيصية لمعرفة سبب عدم مسح الصفوف
+ */
+function debugMigration() {
+    try {
+        const spreadsheetId = getSpreadsheetId();
+        const ss = SpreadsheetApp.openById(spreadsheetId);
+        const empSheet = ss.getSheetByName('ClinicVisits');
+        if (!empSheet) return { success: false, message: 'جدول ClinicVisits غير موجود' };
+        
+        const lastRowBefore = empSheet.getLastRow();
+        const data = empSheet.getRange(2, 1, lastRowBefore - 1, empSheet.getLastColumn()).getValues();
+        
+        // محاكاة حذف أول صف مقاول
+        const headers = empSheet.getRange(1, 1, 1, empSheet.getLastColumn()).getValues()[0];
+        let targetRow = -1;
+        let targetData = null;
+        
+        for (let i = 0; i < data.length; i++) {
+            const rowData = {};
+            headers.forEach((h, idx) => {
+                if (h) rowData[String(h).trim()] = data[i][idx];
+            });
+            let personType = String(rowData.personType || '').toLowerCase().trim();
+            const isContractor = personType.includes('contractor') || personType.includes('مقاول') || personType.includes('external') || personType.includes('خارجي') || rowData.contractorName || rowData.contractorWorkerName || rowData.externalName;
+            
+            if (isContractor) {
+                targetRow = i + 2;
+                targetData = rowData;
+                break;
+            }
+        }
+        
+        if (targetRow === -1) {
+            return { success: true, message: 'لم يتم العثور على أي مقاولين في جدول الموظفين.' };
+        }
+        
+        // محاولة حذف الصف
+        empSheet.deleteRow(targetRow);
+        SpreadsheetApp.flush(); // إجبار التغييرات على الحفظ فوراً
+        
+        const lastRowAfter = empSheet.getLastRow();
+        
+        return {
+            success: true,
+            message: `تشخيص: الصف المستهدف للجرينة كان ${targetRow} (الاسم: ${targetData.name || targetData.contractorWorkerName}). الصفوف قبل: ${lastRowBefore}، الصفوف بعد: ${lastRowAfter}. نجح الحذف: ${lastRowBefore !== lastRowAfter}`
+        };
+    } catch (e) {
+        return { success: false, message: 'خطأ تشخيصي: ' + e.toString() };
+    }
+}
+
+/**
  * الحصول على جميع زيارات العيادة
 
  */

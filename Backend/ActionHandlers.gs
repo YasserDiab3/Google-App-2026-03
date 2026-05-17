@@ -1096,6 +1096,13 @@ var ActionHandlers = {
         })();
         return result;
     },
+    'debugMigration': function(payload, postData, action, actorUserData, spreadsheetId) {
+        var result = { success: false, message: '' };
+        (function() {
+            result = debugMigration();
+        })();
+        return result;
+    },
     'getAllClinicVisits': function(payload, postData, action, actorUserData, spreadsheetId) {
         var result = { success: false, message: '' };
         (function() {
