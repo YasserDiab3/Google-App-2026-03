@@ -17,7 +17,7 @@ const Clinic = {
         medicationAlertsNotified: new Set(),
         initialized: false
     },
-    
+
     _clinicVisitsLoadPromise: null,
     _visitsBackendFetchOk: false,
 
@@ -26,12 +26,24 @@ const Clinic = {
      */
     getUserDisplayName(identifier) {
         if (!identifier) return '-';
+
+        // ✅ إصلاح: إذا كان identifier كائناً (object) مثل { name, id, email }
+        if (typeof identifier === 'object' && identifier !== null) {
+            if (identifier.name && typeof identifier.name === 'string' && identifier.name.trim()) {
+                return identifier.name.trim();
+            }
+            // fallback: نبحث بالـ email أو id
+            identifier = identifier.email || identifier.id || '';
+            if (!identifier) return '-';
+        }
+
         const search = String(identifier).toLowerCase().trim();
+        if (!search) return '-';
         if (search === 'system' || search === 'النظام' || search === 'admin') return 'النظام';
 
         // البحث في قائمة المستخدمين المحملة في AppState
         if (AppState && AppState.appData && Array.isArray(AppState.appData.users)) {
-            const user = AppState.appData.users.find(u => 
+            const user = AppState.appData.users.find(u =>
                 String(u.email || '').toLowerCase().trim() === search ||
                 String(u.id || '').toLowerCase().trim() === search ||
                 String(u.name || '').toLowerCase().trim() === search
@@ -40,8 +52,9 @@ const Clinic = {
         }
 
         // إذا لم نجد الاسم، نرجع المعرف الأصلي
-        return identifier;
+        return String(identifier);
     },
+
 
     /**
      * معالجة روابط المرفقات (تحويل روابط Google Drive القديمة)
@@ -1120,12 +1133,24 @@ const Clinic = {
         try { cards = JSON.parse(localStorage.getItem(keys.cards) || '[]') || []; } catch (e) { cards = []; }
         const enabledCards = (Array.isArray(cards) ? cards : []).filter(c => c.enabled);
 
-        // Precompute base metrics
-        this.ensureData();
-        const visits = Array.isArray(AppState.appData.clinicVisits) ? AppState.appData.clinicVisits : [];
-        const meds = (Array.isArray(AppState.appData.clinicMedications) ? AppState.appData.clinicMedications : []).map(m => this.normalizeMedicationRecord(m));
+        // ✅ إصلاح عدد الزيارات: نجمع clinicVisits + employeeVisits + contractorVisits لتطابق قاعدة البيانات
+        const clinicVisits = Array.isArray(AppState.appData.clinicVisits) ? AppState.appData.clinicVisits : [];
+        const employeeVisits = Array.isArray(AppState.appData.employeeVisits) ? AppState.appData.employeeVisits : [];
+        const contractorVisits = Array.isArray(AppState.appData.contractorVisits) ? AppState.appData.contractorVisits : [];
+
+        // دمج الزيارات مع إزالة التكرار بالـ id
+        const allVisitIds = new Set();
+        const visits = [];
+        [...clinicVisits, ...employeeVisits, ...contractorVisits].forEach(v => {
+            if (!v) return;
+            const vid = String(v.id || '').trim();
+            if (vid && allVisitIds.has(vid)) return;
+            if (vid) allVisitIds.add(vid);
+            visits.push(v);
+        });
 
         const totalVisits = visits.length;
+
         const totalDispensedQty = visits.reduce((sum, v) => {
             const arr = this.normalizeVisitMedications(v.medications);
             return sum + arr.reduce((s, m) => s + (parseInt(m.quantity, 10) || 0), 0);
@@ -1158,19 +1183,19 @@ const Clinic = {
                 value = records.filter(r => {
                     const v = this.getClinicAnalysisValue(ds, field, r);
                     if (!fieldValue) return v && v !== 'غير محدد';
-                    
+
                     // مقارنة غير حساسة لحالة الأحرف
                     const vLower = String(v || '').toLowerCase().trim();
                     const fLower = String(fieldValue || '').toLowerCase().trim();
-                    
+
                     if (vLower === fLower) return true;
-                    
+
                     // دعم التوافق بين المصطلحات العربية والإنجليزية لنوع الشخص
                     if (field === 'personType') {
                         if (fLower === 'employee' || fLower === 'موظف') return vLower === 'موظف';
                         if (fLower === 'contractor' || fLower === 'مقاول' || fLower === 'external') return vLower === 'مقاول';
                     }
-                    
+
                     return vLower === fLower;
                 }).length;
             }
@@ -5986,7 +6011,7 @@ const Clinic = {
         const server = Array.isArray(serverVisits) ? serverVisits : [];
         const local = Array.isArray(previousLocal) ? previousLocal : [];
         const seen = new Set();
-        
+
         // سجل المعرفات من الخادم
         server.forEach((v) => {
             if (v && v.id != null && String(v.id).trim() !== '') {
@@ -5998,16 +6023,16 @@ const Clinic = {
         local.forEach((v) => {
             if (!v || v.id == null || String(v.id).trim() === '') return;
             const id = String(v.id);
-            
+
             // ✅ إذا لم يكن السجل المحلي موجوداً في الخادم، نحتفظ به (سجل لم يتم مزامنته بعد أو كاش قديم)
             if (!seen.has(id)) {
                 // محاولة البحث عن بديل (نفس الشخص والوقت) لتجنب التكرار إذا تغير الـ ID
                 const isDuplicate = server.some(sv => {
-                    return sv.personType === v.personType && 
-                           sv.visitDate === v.visitDate && 
+                    return sv.personType === v.personType &&
+                           sv.visitDate === v.visitDate &&
                            (sv.employeeId === v.employeeId || sv.contractorWorkerName === v.contractorWorkerName);
                 });
-                
+
                 if (!isDuplicate) {
                     seen.add(id);
                     extras.push(v);
@@ -6018,7 +6043,7 @@ const Clinic = {
         if (extras.length === 0) {
             return server.slice();
         }
-        
+
         if (AppState.debugMode && extras.length > 0) {
             Utils.safeLog(`📝 [CLINIC] دمج ${extras.length} سجلات محلية غير موجودة في رد الخادم (قد يكون كاش قديم)`);
         }
@@ -6399,14 +6424,14 @@ const Clinic = {
         if (AppState.debugMode) {
             Utils.safeLog('🔄 [CLINIC] تحديث البيانات من الخادم بعد الحفظ...');
         }
-        
+
         this.loadVisitsDataFromBackend()
             .then(() => {
                 // ✅ تحديث الإحصائيات والأرقام فوراً بعد المزامنة
                 try {
                     this.updateClinicAnalysisResults();
                     this.calculateClinicCardValues();
-                    
+
                     // إطلاق حدث لتحديث أي واجهات أخرى معتمدة على الأرقام
                     document.dispatchEvent(new CustomEvent('clinic-data-refreshed'));
                 } catch (err) {
@@ -6418,7 +6443,7 @@ const Clinic = {
                         window.DataManager.save();
                     } catch (e) { /* ignore */ }
                 }
-                
+
                 if (this.state && (this.state.activeTab === 'visits' || this.state.activeTab === 'dashboard')) {
                     const p = document.querySelector('.clinic-tab-panel[data-tab-panel="' + this.state.activeTab + '"]');
                     if (p) {
@@ -6489,12 +6514,12 @@ const Clinic = {
             const employeeVisits = allVisits.filter(v => {
                 if (!v || typeof v !== 'object') return false;
                 const type = String(v.personType || '').toLowerCase().trim();
-                return type === 'employee' || type === '';
+                return type === 'employee' || type === '' || (!type && !v.contractorName && !v.externalName);
             });
             const contractorVisits = allVisits.filter(v => {
                 if (!v || typeof v !== 'object') return false;
                 const type = String(v.personType || '').toLowerCase().trim();
-                return type === 'contractor';
+                return type === 'contractor' || type === 'external' || (v.contractorName || v.externalName);
             });
 
             const baseVisits = activeVisitType === 'employees' ? employeeVisits : contractorVisits;
@@ -7992,7 +8017,7 @@ const Clinic = {
                     type = 'employee';
                 }
             }
-            
+
             if (visit.personType !== type) {
                 visit.personType = type;
                 visitsChanged = true;

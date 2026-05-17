@@ -4783,10 +4783,22 @@ const Training = {
                     }
                 }
                 
+                // ✅ إصلاح مشكلة timezone: new Date('YYYY-MM-DD') يفسّر كـ UTC فيطرح التوقيت المحلي
+                // الحل: نبني التاريخ بصيغة ISO مع الوقت الصريح (منتصف اليوم) لتجنب تغيير التاريخ
                 let safeDate = new Date().toISOString();
                 if (dateValue) {
-                    const d = new Date(dateValue);
-                    if (!isNaN(d.getTime())) safeDate = d.toISOString();
+                    // dateValue = 'YYYY-MM-DD' من حقل input[type="date"]
+                    const parts = dateValue.split('-');
+                    if (parts.length === 3) {
+                        const year = parseInt(parts[0], 10);
+                        const month = parseInt(parts[1], 10) - 1;
+                        const day = parseInt(parts[2], 10);
+                        const d = new Date(year, month, day, 12, 0, 0); // منتصف اليوم (تجنب timezone shift)
+                        if (!isNaN(d.getTime())) safeDate = d.toISOString();
+                    } else {
+                        const d = new Date(dateValue);
+                        if (!isNaN(d.getTime())) safeDate = d.toISOString();
+                    }
                 }
 
                 const recordId = existing?.id || Utils.generateSequentialId('CTR', AppState.appData?.contractorTrainings || []);
@@ -6649,11 +6661,21 @@ const Training = {
                 }
 
                 const trainingId = Utils.generateId('TRAINING');
-                
+
+                // ✅ إصلاح مشكلة timezone: بناء التاريخ بصيغة محلية منتصف اليوم
                 let isoDate = new Date().toISOString();
                 if (dateValue) {
-                    const d = new Date(dateValue);
-                    if (!isNaN(d.getTime())) isoDate = d.toISOString();
+                    const parts = dateValue.split('-');
+                    if (parts.length === 3) {
+                        const year = parseInt(parts[0], 10);
+                        const month = parseInt(parts[1], 10) - 1;
+                        const day = parseInt(parts[2], 10);
+                        const d = new Date(year, month, day, 12, 0, 0);
+                        if (!isNaN(d.getTime())) isoDate = d.toISOString();
+                    } else {
+                        const d = new Date(dateValue);
+                        if (!isNaN(d.getTime())) isoDate = d.toISOString();
+                    }
                 }
 
                 const participantEntry = {
@@ -8417,7 +8439,7 @@ const Training = {
         const selectedPlace = places.find(p => p.id === locationEl.value);
         
         const getFallbackText = (el) => el && el.options && el.selectedIndex >= 0 ? el.options[el.selectedIndex].text : '';
-        
+
         let validStartDate = new Date().toISOString();
         if (startDateEl.value) {
             const d = new Date(startDateEl.value);
@@ -8478,7 +8500,7 @@ const Training = {
                     Utils.safeWarn('⚠️ DataManager غير متاح - لم يتم حفظ البيانات');
                 }
             }, 50);
-            
+
             // 4. معالجة المهام الخلفية في الخلفية
             Promise.allSettled([
                 // مزامنة مصفوفة التدريب
@@ -9403,6 +9425,15 @@ const Training = {
                 if (record.employeeCode) {
                     uniqueEmployees.add(record.employeeCode);
                 }
+                // ✅ إصلاح: أيضاً من participants في برامج التدريب
+            });
+            trainings.forEach(training => {
+                if (Array.isArray(training.participants)) {
+                    training.participants.forEach(p => {
+                        const code = p.employeeCode || p.code || p.employeeNumber || '';
+                        if (code) uniqueEmployees.add(code);
+                    });
+                }
             });
             
             const attendanceHours = trainingAttendance.reduce((sum, r) => {
@@ -9410,16 +9441,25 @@ const Training = {
                 return sum + (Number.isFinite(hours) ? hours : 0);
             }, 0);
             
-            const totalTrainingHours = attendanceHours + contractorStats.totalHours;
+            const programHours = trainings.reduce((sum, t) => {
+                const hours = parseFloat(t.hours || t.totalHours || 0);
+                return sum + (Number.isFinite(hours) ? hours : 0);
+            }, 0);
+            
+            const totalTrainingHours = attendanceHours + contractorStats.totalHours + programHours;
+            
+            // ✅ إصلاح: totalTrainings يشمل برامج التدريب + التدريبات السريعة (trainingAttendance)
+            const totalTrainings = stats.totalTrainings + trainingAttendance.length;
             
             return {
-                totalTrainings: stats.totalTrainings || 0,
+                totalTrainings,
                 completedTrainings: stats.completedTrainings || 0,
-                totalParticipants: stats.totalParticipants || 0,
+                totalParticipants: (stats.totalParticipants || 0) + trainingAttendance.length,
                 contractorTrainings: contractorStats.total || 0,
                 totalTrainingHours: Number.isFinite(totalTrainingHours) ? totalTrainingHours.toFixed(2) : '0.00',
                 uniqueEmployees: uniqueEmployees.size || 0
             };
+
         } catch (error) {
             Utils.safeError('خطأ في حساب مقاييس التدريب:', error);
             // إرجاع قيم افتراضية في حالة الخطأ

@@ -26,7 +26,19 @@ const Clinic = {
      */
     getUserDisplayName(identifier) {
         if (!identifier) return '-';
+
+        // ✅ إصلاح: إذا كان identifier كائناً (object) مثل { name, id, email }
+        if (typeof identifier === 'object' && identifier !== null) {
+            if (identifier.name && typeof identifier.name === 'string' && identifier.name.trim()) {
+                return identifier.name.trim();
+            }
+            // fallback: نبحث بالـ email أو id
+            identifier = identifier.email || identifier.id || '';
+            if (!identifier) return '-';
+        }
+
         const search = String(identifier).toLowerCase().trim();
+        if (!search) return '-';
         if (search === 'system' || search === 'النظام' || search === 'admin') return 'النظام';
 
         // البحث في قائمة المستخدمين المحملة في AppState
@@ -40,8 +52,9 @@ const Clinic = {
         }
 
         // إذا لم نجد الاسم، نرجع المعرف الأصلي
-        return identifier;
+        return String(identifier);
     },
+
 
     /**
      * معالجة روابط المرفقات (تحويل روابط Google Drive القديمة)
@@ -1120,12 +1133,24 @@ const Clinic = {
         try { cards = JSON.parse(localStorage.getItem(keys.cards) || '[]') || []; } catch (e) { cards = []; }
         const enabledCards = (Array.isArray(cards) ? cards : []).filter(c => c.enabled);
 
-        // Precompute base metrics
-        this.ensureData();
-        const visits = Array.isArray(AppState.appData.clinicVisits) ? AppState.appData.clinicVisits : [];
-        const meds = (Array.isArray(AppState.appData.clinicMedications) ? AppState.appData.clinicMedications : []).map(m => this.normalizeMedicationRecord(m));
+        // ✅ إصلاح عدد الزيارات: نجمع clinicVisits + employeeVisits + contractorVisits لتطابق قاعدة البيانات
+        const clinicVisits = Array.isArray(AppState.appData.clinicVisits) ? AppState.appData.clinicVisits : [];
+        const employeeVisits = Array.isArray(AppState.appData.employeeVisits) ? AppState.appData.employeeVisits : [];
+        const contractorVisits = Array.isArray(AppState.appData.contractorVisits) ? AppState.appData.contractorVisits : [];
+
+        // دمج الزيارات مع إزالة التكرار بالـ id
+        const allVisitIds = new Set();
+        const visits = [];
+        [...clinicVisits, ...employeeVisits, ...contractorVisits].forEach(v => {
+            if (!v) return;
+            const vid = String(v.id || '').trim();
+            if (vid && allVisitIds.has(vid)) return;
+            if (vid) allVisitIds.add(vid);
+            visits.push(v);
+        });
 
         const totalVisits = visits.length;
+
         const totalDispensedQty = visits.reduce((sum, v) => {
             const arr = this.normalizeVisitMedications(v.medications);
             return sum + arr.reduce((s, m) => s + (parseInt(m.quantity, 10) || 0), 0);
