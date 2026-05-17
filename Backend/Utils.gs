@@ -3128,10 +3128,13 @@ function readFromSheet(sheetName, spreadsheetId = null) {
                             if (Object.prototype.toString.call(processedValue) === '[object Date]' && !isNaN(processedValue.getTime())) {
                                 // للحقول التي تحتاج وقت (visitDate, exitDate, checkIn, checkOut, etc.)
                                 const timeFields = ['visitDate', 'exitDate', 'checkIn', 'checkOut', 'injuryDate', 'startDate', 'endDate', 'timeFrom', 'timeTo', 'closureTime', 'investigationDateTime', 'incidentDateTime', 'date'];
-                                const timeOnlyFields = ['fromTime', 'toTime', 'startTime', 'endTime'];
+                                const timeOnlyFields = ['fromTime', 'toTime', 'startTime', 'endTime', 'timeFrom', 'timeTo'];
                                 if (timeOnlyFields.includes(cleanHeader)) {
                                     // من الساعة / إلى الساعة (تدريب الموظفين والمقاولين): تخزين بصيغة HH:mm فقط
-                                    processedValue = Utilities.formatDate(processedValue, Session.getScriptTimeZone(), 'HH:mm');
+                                    // لتجنب انزياح التوقيت التاريخي (مثل فرق الدقيقة في عام 1899)، نستخرج الساعات والدقائق مباشرة
+                                    const hrs = String(processedValue.getHours()).padStart(2, '0');
+                                    const mins = String(processedValue.getMinutes()).padStart(2, '0');
+                                    processedValue = hrs + ':' + mins;
                                 } else if (shouldPreserveSheetDateTimeAsText_(sheetName, cleanHeader)) {
                                     processedValue = normalizeSheetDateTimeText_(processedValue, Session.getScriptTimeZone());
                                 } else if (timeFields.includes(cleanHeader)) {

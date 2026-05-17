@@ -4320,6 +4320,7 @@ const Training = {
             : '';
         // ✅ إصلاح: تطبيع contractorId للمقارنة الصحيحة
         const existingContractorId = existing?.contractorId ? String(existing.contractorId).trim() : '';
+        const existingContractorName = existing?.contractorName ? String(existing.contractorName).trim() : '';
 
         const modal = document.createElement('div');
         modal.className = 'modal-overlay';
@@ -4386,11 +4387,19 @@ const Training = {
                                     </label>
                                     <select id="contractor-training-contractor" class="form-input" required ${hasContractors ? '' : 'disabled'} style="border: 2px solid #e0e7ff; border-radius: 10px; transition: all 0.3s; padding: 10px 12px;" onfocus="this.style.borderColor='#667eea'; this.style.boxShadow='0 0 0 3px rgba(102,126,234,0.15)'" onblur="this.style.borderColor='#e0e7ff'; this.style.boxShadow='none'">
                                         <option value="">اختر المقاول</option>
-                                        ${contractors.map(contractor => `
-                                            <option value="${Utils.escapeHTML(String(contractor?.id ?? '').trim())}" ${existingContractorId && String(contractor?.id ?? '').trim() === existingContractorId ? 'selected' : ''}>
-                                                ${Utils.escapeHTML(contractor.name || 'بدون اسم')}
-                                            </option>
-                                        `).join('')}
+                                        ${contractors.map(contractor => {
+                                            const contractorIdStr = String(contractor?.id ?? '').trim();
+                                            const contractorNameStr = String(contractor?.name ?? '').trim();
+                                            // ✅ مطابقة ذكية: نطابق بالمعرف أو بالاسم لضمان الاختيار الصحيح حتى مع اختلاف نوع الحقل تاريخياً
+                                            const isSelected = (existingContractorId && contractorIdStr === existingContractorId) ||
+                                                               (existingContractorName && contractorNameStr === existingContractorName) ||
+                                                               (existingContractorId && contractorNameStr === existingContractorId);
+                                            return `
+                                                <option value="${Utils.escapeHTML(contractorIdStr)}" ${isSelected ? 'selected' : ''}>
+                                                    ${Utils.escapeHTML(contractor.name || 'بدون اسم')}
+                                                </option>
+                                            `;
+                                        }).join('')}
                                     </select>
                                 </div>
                             </div>
@@ -11943,48 +11952,24 @@ const Training = {
      */
     cleanTime(timeValue) {
         if (!timeValue) return '';
-        
-        // تحويل إلى سلسلة نصية إذا لم تكن كذلك
+
+        // تحويل إلى سلسلة نصية
         const timeStr = String(timeValue).trim();
         if (!timeStr) return '';
-        
-        // إذا كان ISO date كامل (مثل "1899-12-30T14:24:51.000Z" أو "2024-01-01T14:30:00")
+
+        // ✅ إصلاح: إذا كان ISO date (تحتوي على T) — نستخرج الوقت بالـ regex مباشرة
+        // هذا أقوى وأصح من Date.getUTCHours الذي يعطي +1 دقيقة بسبب milliseconds مخزنة
         if (timeStr.includes('T')) {
-            try {
-                // محاولة استخراج الوقت مباشرة من السلسلة أولاً (أكثر موثوقية)
-                const timeMatch = timeStr.match(/T(\d{1,2}):(\d{2})(?::\d{2})?(?:\.\d+)?(?:Z)?/);
-                if (timeMatch) {
-                    const hours = parseInt(timeMatch[1], 10);
-                    const minutes = parseInt(timeMatch[2], 10);
-                    if (!isNaN(hours) && !isNaN(minutes) && hours >= 0 && hours < 24 && minutes >= 0 && minutes < 60) {
-                        return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
-                    }
-                }
-                
-                // محاولة استخدام Date object كحل بديل
-                const date = new Date(timeStr);
-                // التحقق من أن التاريخ صحيح
-                if (!isNaN(date.getTime())) {
-                    const hours = date.getUTCHours();
-                    const minutes = date.getUTCMinutes();
-                    // التحقق من أن القيم صحيحة وليست NaN
-                    if (!isNaN(hours) && !isNaN(minutes) && hours >= 0 && hours < 24 && minutes >= 0 && minutes < 60) {
-                        return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
-                    }
-                }
-            } catch (e) {
-                // محاولة استخراج الوقت مباشرة من السلسلة في حالة الخطأ
-                const timeMatch = timeStr.match(/T(\d{1,2}):(\d{2})/);
-                if (timeMatch) {
-                    const hours = parseInt(timeMatch[1], 10);
-                    const minutes = parseInt(timeMatch[2], 10);
-                    if (!isNaN(hours) && !isNaN(minutes) && hours >= 0 && hours < 24 && minutes >= 0 && minutes < 60) {
-                        return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
-                    }
+            const timeMatch = timeStr.match(/T(\d{1,2}):(\d{2})(?::\d{2})?/);
+            if (timeMatch) {
+                const hours = parseInt(timeMatch[1], 10);
+                const minutes = parseInt(timeMatch[2], 10);
+                if (!isNaN(hours) && !isNaN(minutes) && hours >= 0 && hours < 24 && minutes >= 0 && minutes < 60) {
+                    return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
                 }
             }
         }
-        
+
         // إذا كان بالفعل بتنسيق HH:MM أو H:MM
         const timeFormatMatch = timeStr.match(/^(\d{1,2}):(\d{2})(?::\d{2})?$/);
         if (timeFormatMatch) {
@@ -11994,8 +11979,8 @@ const Training = {
                 return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
             }
         }
-        
-        // محاولة استخراج الوقت من أي تنسيق آخر (مثل "14:30:00" أو "14.30")
+
+        // محاولة استخراج الوقت من أي تنسيق آخر
         const alternativeMatch = timeStr.match(/(\d{1,2})[:.](\d{2})/);
         if (alternativeMatch) {
             const hours = parseInt(alternativeMatch[1], 10);
@@ -12004,7 +11989,7 @@ const Training = {
                 return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
             }
         }
-        
+
         return '';
     },
     
