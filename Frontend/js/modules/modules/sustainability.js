@@ -4577,71 +4577,43 @@ ${innerContent}
             const spreadsheetId = AppState.googleConfig?.sheets?.spreadsheetId;
             if (!spreadsheetId) return;
 
-            // تحميل أنواع المخلفات العادية
-            try {
-                const typesResult = await GoogleIntegration.sendRequest({
-                    action: 'readFromSheet',
-                    data: {
-                        sheetName: 'WasteManagement_RegularWasteTypes',
-                        spreadsheetId: spreadsheetId
-                    }
-                });
-                if (typesResult && typesResult.success && Array.isArray(typesResult.data)) {
-                    const types = typesResult.data.map(item => item.name).filter(Boolean);
+            // استخدام طلب واحد لجلب كافة جداول إدارة المخلفات (أسرع بكثير)
+            const result = await GoogleIntegration.sendRequest({
+                action: 'batchReadSheets',
+                data: {
+                    sheetNames: [
+                        'WasteManagement_RegularWasteTypes',
+                        'WasteManagement_RegularWasteRecords',
+                        'WasteManagement_RegularWasteSales',
+                        'WasteManagement_HazardousWasteRecords'
+                    ],
+                    spreadsheetId: spreadsheetId
+                }
+            });
+
+            if (result && result.success && result.data) {
+                const batchData = result.data;
+                
+                if (batchData['WasteManagement_RegularWasteTypes']) {
+                    const types = batchData['WasteManagement_RegularWasteTypes'].map(item => item.name).filter(Boolean);
                     if (types.length > 0) {
                         AppState.appData.wasteManagement.regularWasteTypes = types;
                     }
                 }
-            } catch (error) {
-                Utils.safeWarn('⚠️ تعذر تحميل أنواع المخلفات:', error);
-            }
-
-            // تحميل سجلات المخلفات العادية
-            try {
-                const recordsResult = await GoogleIntegration.sendRequest({
-                    action: 'readFromSheet',
-                    data: {
-                        sheetName: 'WasteManagement_RegularWasteRecords',
-                        spreadsheetId: spreadsheetId
-                    }
-                });
-                if (recordsResult && recordsResult.success && Array.isArray(recordsResult.data)) {
-                    AppState.appData.wasteManagement.regularWasteRecords = recordsResult.data;
+                
+                if (batchData['WasteManagement_RegularWasteRecords']) {
+                    AppState.appData.wasteManagement.regularWasteRecords = batchData['WasteManagement_RegularWasteRecords'];
                 }
-            } catch (error) {
-                Utils.safeWarn('⚠️ تعذر تحميل سجلات المخلفات العادية:', error);
-            }
-
-            // تحميل عمليات بيع المخلفات العادية
-            try {
-                const salesResult = await GoogleIntegration.sendRequest({
-                    action: 'readFromSheet',
-                    data: {
-                        sheetName: 'WasteManagement_RegularWasteSales',
-                        spreadsheetId: spreadsheetId
-                    }
-                });
-                if (salesResult && salesResult.success && Array.isArray(salesResult.data)) {
-                    AppState.appData.wasteManagement.regularWasteSales = salesResult.data;
+                
+                if (batchData['WasteManagement_RegularWasteSales']) {
+                    AppState.appData.wasteManagement.regularWasteSales = batchData['WasteManagement_RegularWasteSales'];
                 }
-            } catch (error) {
-                Utils.safeWarn('⚠️ تعذر تحميل عمليات بيع المخلفات:', error);
-            }
-
-            // تحميل سجلات المخلفات الخطرة
-            try {
-                const hazardousResult = await GoogleIntegration.sendRequest({
-                    action: 'readFromSheet',
-                    data: {
-                        sheetName: 'WasteManagement_HazardousWasteRecords',
-                        spreadsheetId: spreadsheetId
-                    }
-                });
-                if (hazardousResult && hazardousResult.success && Array.isArray(hazardousResult.data)) {
-                    AppState.appData.wasteManagement.hazardousWasteRecords = hazardousResult.data;
+                
+                if (batchData['WasteManagement_HazardousWasteRecords']) {
+                    AppState.appData.wasteManagement.hazardousWasteRecords = batchData['WasteManagement_HazardousWasteRecords'];
                 }
-            } catch (error) {
-                Utils.safeWarn('⚠️ تعذر تحميل سجلات المخلفات الخطرة:', error);
+            } else {
+                Utils.safeWarn('⚠️ فشل في تحميل جداول إدارة المخلفات أو لا توجد استجابة صالحة', result);
             }
 
             // حفظ البيانات المحلية
@@ -4690,30 +4662,33 @@ ${innerContent}
 
                 const normalizeList = (list = []) => (Array.isArray(list) ? list : []).map((row) => this.normalizeResourceConsumptionRecord(row)).filter(Boolean);
 
-                const readSheet = async (sheetName) => {
-                    try {
-                        const result = await GoogleIntegration.sendRequest({
-                            action: 'readFromSheet',
-                            data: { sheetName, spreadsheetId }
-                        });
-                        if (result && result.success && Array.isArray(result.data)) {
-                            return normalizeList(result.data);
-                        }
-                    } catch (error) {
-                        Utils.safeWarn(`⚠️ تعذر تحميل ${sheetName}:`, error);
+                // استخدام batchReadSheets بدلاً من إرسال 3 طلبات متزامنة قد تسبب تأخيراً أو اختناقاً في الخادم
+                const result = await GoogleIntegration.sendRequest({
+                    action: 'batchReadSheets',
+                    data: {
+                        sheetNames: [
+                            'WaterManagement_Records',
+                            'GasManagement_Records',
+                            'ElectricityManagement_Records'
+                        ],
+                        spreadsheetId: spreadsheetId
                     }
-                    return undefined;
-                };
+                });
 
-                const [waterList, gasList, electricityList] = await Promise.all([
-                    readSheet('WaterManagement_Records'),
-                    readSheet('GasManagement_Records'),
-                    readSheet('ElectricityManagement_Records')
-                ]);
-
-                if (waterList !== undefined) AppState.appData.resourceConsumption.water = waterList;
-                if (gasList !== undefined) AppState.appData.resourceConsumption.gas = gasList;
-                if (electricityList !== undefined) AppState.appData.resourceConsumption.electricity = electricityList;
+                if (result && result.success && result.data) {
+                    const batchData = result.data;
+                    if (batchData['WaterManagement_Records']) {
+                        AppState.appData.resourceConsumption.water = normalizeList(batchData['WaterManagement_Records']);
+                    }
+                    if (batchData['GasManagement_Records']) {
+                        AppState.appData.resourceConsumption.gas = normalizeList(batchData['GasManagement_Records']);
+                    }
+                    if (batchData['ElectricityManagement_Records']) {
+                        AppState.appData.resourceConsumption.electricity = normalizeList(batchData['ElectricityManagement_Records']);
+                    }
+                } else {
+                    Utils.safeWarn('⚠️ فشل في تحميل بيانات الموارد باستخدام batchReadSheets', result);
+                }
 
                 if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
                     window.DataManager.save();
