@@ -916,7 +916,7 @@ const RealtimeSyncManager = {
     getModulesForSection(section) {
         const sectionModulesMap = {
             'users': ['users'],
-            'clinic': ['medications', 'clinicVisits', 'sickLeave', 'injuries', 'clinicInventory'],
+            'clinic': ['medications', 'clinicVisits', 'clinicContractorVisits', 'sickLeave', 'injuries', 'clinicContractorInjuries', 'clinicInventory'],
             'incidents': ['incidents'],
             'near-miss': ['nearmiss'],  // تصحيح: nearmiss في AppState
             'ptw': ['ptw'],
@@ -957,8 +957,10 @@ const RealtimeSyncManager = {
             users: 'Users',
             medications: 'Medications',
             clinicVisits: 'ClinicVisits',
+            clinicContractorVisits: 'ClinicContractorVisits',
             sickLeave: 'SickLeave',
             injuries: 'Injuries',
+            clinicContractorInjuries: 'ClinicContractorInjuries',
             clinicInventory: 'ClinicInventory',
             incidents: 'Incidents',
             nearmiss: 'NearMiss',
@@ -1017,8 +1019,10 @@ const RealtimeSyncManager = {
             // موديولات العيادة الطبية
             'medications': 'Medications',
             'clinicVisits': 'ClinicVisits',
+            'clinicContractorVisits': 'ClinicContractorVisits',
             'sickLeave': 'SickLeave',
             'injuries': 'Injuries',
+            'clinicContractorInjuries': 'ClinicContractorInjuries',
             'clinicInventory': 'ClinicInventory',
             
             // موديولات السلامة الأساسية

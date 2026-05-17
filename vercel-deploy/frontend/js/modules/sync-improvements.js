@@ -352,8 +352,10 @@
                         }
                         const sheetMapping = {
                             'Users': 'users', 'Incidents': 'incidents', 'NearMiss': 'nearmiss',
-                            'PTW': 'ptw', 'Training': 'training', 'ClinicVisits': 'clinicVisits',
-                            'Medications': 'medications', 'SickLeave': 'sickLeave', 'Injuries': 'injuries',
+                            'PTW': 'ptw', 'Training': 'training',
+                            'ClinicVisits': 'clinicVisits', 'ClinicContractorVisits': 'clinicContractorVisits',
+                            'Medications': 'medications', 'SickLeave': 'sickLeave',
+                            'Injuries': 'injuries', 'ClinicContractorInjuries': 'clinicContractorInjuries',
                             'ClinicInventory': 'clinicInventory', 'FireEquipment': 'fireEquipment',
                             'FireEquipmentAssets': 'fireEquipmentAssets', 'FireEquipmentInspections': 'fireEquipmentInspections',
                             'PeriodicInspectionCategories': 'periodicInspectionCategories',
