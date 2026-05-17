@@ -138,8 +138,15 @@ function getAllTrainings(filters = {}) {
 /**
  * حذف تدريب
  */
-function deleteTraining(trainingId) {
+function deleteTraining(trainingId, userData) {
     try {
+        if (typeof checkAdminPermissions !== 'function' || !checkAdminPermissions(userData || {})) {
+            return {
+                success: false,
+                message: 'ليس لديك صلاحية الحذف. الحذف متاح لمدير النظام فقط.',
+                errorCode: 'DELETE_ADMIN_ONLY'
+            };
+        }
         if (!trainingId) {
             return { success: false, message: 'معرف التدريب غير محدد' };
         }
@@ -523,8 +530,15 @@ function getAllTrainingAttendance(filters = {}) {
 /**
  * حذف سجل حضور تدريب
  */
-function deleteTrainingAttendance(attendanceId) {
+function deleteTrainingAttendance(attendanceId, userData) {
     try {
+        if (typeof checkAdminPermissions !== 'function' || !checkAdminPermissions(userData || {})) {
+            return {
+                success: false,
+                message: 'ليس لديك صلاحية الحذف. الحذف متاح لمدير النظام فقط.',
+                errorCode: 'DELETE_ADMIN_ONLY'
+            };
+        }
         if (!attendanceId) {
             return { success: false, message: 'معرف سجل الحضور غير محدد' };
         }

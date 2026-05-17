@@ -26,7 +26,19 @@ const Clinic = {
      */
     getUserDisplayName(identifier) {
         if (!identifier) return '-';
+
+        // ✅ إصلاح: إذا كان identifier كائناً (object) مثل { name, id, email }
+        if (typeof identifier === 'object' && identifier !== null) {
+            if (identifier.name && typeof identifier.name === 'string' && identifier.name.trim()) {
+                return identifier.name.trim();
+            }
+            // fallback: نبحث بالـ email أو id
+            identifier = identifier.email || identifier.id || '';
+            if (!identifier) return '-';
+        }
+
         const search = String(identifier).toLowerCase().trim();
+        if (!search) return '-';
         if (search === 'system' || search === 'النظام' || search === 'admin') return 'النظام';
 
         // البحث في قائمة المستخدمين المحملة في AppState
@@ -40,9 +52,8 @@ const Clinic = {
         }
 
         // إذا لم نجد الاسم، نرجع المعرف الأصلي
-        return identifier;
+        return String(identifier);
     },
-
     /**
      * معالجة روابط المرفقات (تحويل روابط Google Drive القديمة)
      */
@@ -1120,12 +1131,24 @@ const Clinic = {
         try { cards = JSON.parse(localStorage.getItem(keys.cards) || '[]') || []; } catch (e) { cards = []; }
         const enabledCards = (Array.isArray(cards) ? cards : []).filter(c => c.enabled);
 
-        // Precompute base metrics
-        this.ensureData();
-        const visits = Array.isArray(AppState.appData.clinicVisits) ? AppState.appData.clinicVisits : [];
-        const meds = (Array.isArray(AppState.appData.clinicMedications) ? AppState.appData.clinicMedications : []).map(m => this.normalizeMedicationRecord(m));
+        // ✅ إصلاح عدد الزيارات: نجمع clinicVisits + employeeVisits + contractorVisits لتطابق قاعدة البيانات
+        const clinicVisits = Array.isArray(AppState.appData.clinicVisits) ? AppState.appData.clinicVisits : [];
+        const employeeVisits = Array.isArray(AppState.appData.employeeVisits) ? AppState.appData.employeeVisits : [];
+        const contractorVisits = Array.isArray(AppState.appData.contractorVisits) ? AppState.appData.contractorVisits : [];
+
+        // دمج الزيارات مع إزالة التكرار بالـ id
+        const allVisitIds = new Set();
+        const visits = [];
+        [...clinicVisits, ...employeeVisits, ...contractorVisits].forEach(v => {
+            if (!v) return;
+            const vid = String(v.id || '').trim();
+            if (vid && allVisitIds.has(vid)) return;
+            if (vid) allVisitIds.add(vid);
+            visits.push(v);
+        });
 
         const totalVisits = visits.length;
+
         const totalDispensedQty = visits.reduce((sum, v) => {
             const arr = this.normalizeVisitMedications(v.medications);
             return sum + arr.reduce((s, m) => s + (parseInt(m.quantity, 10) || 0), 0);
@@ -1880,7 +1903,9 @@ const Clinic = {
             ? { id: record.createdById || '', name: record.createdBy.trim() }
             : (record.createdBy || this.getCurrentUserSummary(record.createdBy));
         const createdById = record.createdById || createdBy?.id || AppState.currentUser?.id || '';
-        const updatedBy = record.updatedBy || this.getCurrentUserSummary(record.updatedBy);
+        const updatedBy = (typeof record.updatedBy === 'string' && record.updatedBy.trim() !== '')
+            ? { id: '', name: record.updatedBy.trim() }
+            : (record.updatedBy || this.getCurrentUserSummary(record.updatedBy));
         const notes = record.notes || record.description || '';
         const usage = record.usage || '';
         const statusInfo = this.calculateMedicationStatus({ expiryDate });
@@ -2232,16 +2257,22 @@ const Clinic = {
 
     getFilteredMedications() {
         const filters = this.state.filters.medications || {};
-        const searchTerm = (filters.search || '').toLowerCase();
+        const searchTerm = (filters.search || '').toLowerCase().trim();
         const fromDate = filters.dateFrom ? new Date(filters.dateFrom) : null;
         const toDate = filters.dateTo ? new Date(filters.dateTo) : null;
         const statusFilter = filters.status || 'all';
 
-        return this.getMedications().filter((item) => {
-            const matchesSearch = !searchTerm
-                || (item.name && item.name.toLowerCase().includes(searchTerm))
-                || (item.type && item.type.toLowerCase().includes(searchTerm))
-                || (item.location && item.location.toLowerCase().includes(searchTerm));
+        return this.getMedications().map(item => this.normalizeMedicationRecord(item)).filter((item) => {
+            const searchStr = [
+                item.name,
+                item.type,
+                item.location,
+                item.usage,
+                item.notes,
+                this.getUserDisplayName(item.createdBy)
+            ].map(v => String(v || '').toLowerCase()).join(' ');
+
+            const matchesSearch = !searchTerm || searchStr.includes(searchTerm);
 
             if (!matchesSearch) return false;
 
@@ -2583,6 +2614,15 @@ const Clinic = {
         const panel = document.querySelector('.clinic-tab-panel[data-tab-panel="medications"]');
         if (!panel) return;
 
+        // ✅ حفظ موضع التركيز ومؤشر الكتابة لمنع فقدان التركيز عند الكتابة والفلترة الديناميكية
+        const activeElementId = document.activeElement ? document.activeElement.id : null;
+        let selectionStart = 0;
+        let selectionEnd = 0;
+        if (activeElementId === 'medications-search') {
+            selectionStart = document.activeElement.selectionStart;
+            selectionEnd = document.activeElement.selectionEnd;
+        }
+
         const filters = this.state.filters.medications || {};
         const medications = this.getFilteredMedications();
         
@@ -2676,22 +2716,14 @@ const Clinic = {
             : this.renderEmptyState('لا توجد أدوية مسجلة في السجل.');
 
         panel.innerHTML = `
-            <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
-                <div class="flex flex-wrap items-center gap-2">
-                    <div class="relative">
-                        <input type="text" id="medications-search" class="form-input pr-10" placeholder="بحث بالاسم أو النوع" value="${Utils.escapeHTML(filters.search || '')}">
-                        <i class="fas fa-search absolute top-3 right-3 text-gray-400"></i>
-                    </div>
-                    <select id="medications-status" class="form-input">
-                        <option value="all" ${filters.status === 'all' ? 'selected' : ''}>جميع الحالات</option>
-                        <option value="ساري" ${filters.status === 'ساري' ? 'selected' : ''}>ساري</option>
-                        <option value="قريب الانتهاء" ${filters.status === 'قريب الانتهاء' ? 'selected' : ''}>قريب الانتهاء</option>
-                        <option value="منتهي" ${filters.status === 'منتهي' ? 'selected' : ''}>منتهي</option>
-                    </select>
-                    <input type="date" id="medications-date-from" class="form-input" value="${filters.dateFrom || ''}" title="من تاريخ الشراء">
-                    <input type="date" id="medications-date-to" class="form-input" value="${filters.dateTo || ''}" title="إلى تاريخ الشراء">
-                </div>
+            <!-- ترويسة سجل الأدوية على غرار سجل التردد -->
+            <div class="flex flex-wrap items-center justify-between gap-3 mb-4" style="direction: rtl;">
                 <div class="flex items-center gap-2">
+                    <h3 class="text-lg font-semibold" style="text-align: right; color: #1e293b;">
+                        <i class="fas fa-pills ml-2 text-green-600"></i>سجل الأدوية والمستلزمات الطبية
+                    </h3>
+                </div>
+                <div class="flex gap-2">
                     <button type="button" class="btn-secondary" id="medications-export-pdf-btn">
                         <i class="fas fa-file-pdf ml-2"></i>تصدير PDF
                     </button>
@@ -2705,11 +2737,73 @@ const Clinic = {
                     ` : ''}
                 </div>
             </div>
+
+            <!-- الفلاتر في صف واحد احترافي (مشابه لسجل التردد للموظفين) -->
+            <div class="visits-filters-row" style="background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%); padding: 16px 20px; margin: 0 -20px 15px -20px; width: calc(100% + 40px); direction: rtl;">
+                <div class="filters-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; align-items: end;">
+                    <!-- حقل البحث -->
+                    <div class="filter-field" style="min-width: 180px;">
+                        <label for="medications-search" class="filter-label" style="text-align: right;">
+                            <i class="fas fa-search ml-1 text-gray-500"></i>بحث بالاسم أو النوع
+                        </label>
+                        <input type="text" id="medications-search" class="filter-input" placeholder="اكتب اسم الدواء أو نوعه..." value="${Utils.escapeHTML(filters.search || '')}" style="width: 100%; text-align: right; direction: rtl;">
+                    </div>
+                    
+                    <!-- فلتر الحالة -->
+                    <div class="filter-field" style="min-width: 160px;">
+                        <label for="medications-status" class="filter-label" style="text-align: right;">
+                            <i class="fas fa-info-circle ml-1 text-gray-500"></i>حالة الصلاحية
+                            ${filters.status && filters.status !== 'all' ? `<span class="filter-count-badge" style="background-color: #10b981; color: white; border-radius: 9999px; padding: 2px 6px; font-size: 0.75rem; margin-right: 6px;">${medications.length}</span>` : ''}
+                        </label>
+                        <select id="medications-status" class="filter-input" style="width: 100%; direction: rtl;">
+                            <option value="all" ${filters.status === 'all' ? 'selected' : ''}>جميع الحالات</option>
+                            <option value="ساري" ${filters.status === 'ساري' ? 'selected' : ''}>ساري</option>
+                            <option value="قريب الانتهاء" ${filters.status === 'قريب الانتهاء' ? 'selected' : ''}>قريب الانتهاء</option>
+                            <option value="منتهي" ${filters.status === 'منتهي' ? 'selected' : ''}>منتهي</option>
+                        </select>
+                    </div>
+                    
+                    <!-- فلتر من تاريخ الشراء -->
+                    <div class="filter-field" style="min-width: 160px;">
+                        <label for="medications-date-from" class="filter-label" style="text-align: right;">
+                            <i class="fas fa-calendar-alt ml-1 text-gray-500"></i>من تاريخ الشراء
+                        </label>
+                        <input type="date" id="medications-date-from" class="filter-input" value="${filters.dateFrom || ''}" title="من تاريخ الشراء" style="width: 100%; direction: rtl;">
+                    </div>
+                    
+                    <!-- فلتر إلى تاريخ الشراء -->
+                    <div class="filter-field" style="min-width: 160px;">
+                        <label for="medications-date-to" class="filter-label" style="text-align: right;">
+                            <i class="fas fa-calendar-alt ml-1 text-gray-500"></i>إلى تاريخ الشراء
+                        </label>
+                        <input type="date" id="medications-date-to" class="filter-input" value="${filters.dateTo || ''}" title="إلى تاريخ الشراء" style="width: 100%; direction: rtl;">
+                    </div>
+                    
+                    <!-- زر إعادة التعيين -->
+                    <div class="filter-field" style="min-width: 140px;">
+                        <button id="medications-reset-filters" class="filter-reset-btn" style="width: 100%;">
+                            <i class="fas fa-redo ml-1"></i>إعادة تعيين
+                        </button>
+                    </div>
+                </div>
+            </div>
             ${tableHtml}
         `;
         this.applyModuleI18n(panel);
 
         this.bindMedicationsTabEvents(panel);
+
+        // ✅ استعادة التركيز وموضع مؤشر الكتابة لتجربة مستخدم سلسة بدون اهتزاز
+        if (activeElementId) {
+            const activeEl = panel.querySelector(`#${activeElementId}`);
+            if (activeEl) {
+                activeEl.focus();
+                if (activeElementId === 'medications-search') {
+                    activeEl.selectionStart = selectionStart;
+                    activeEl.selectionEnd = selectionEnd;
+                }
+            }
+        }
         
         // إضافة مستمعي التمرير للجدول
         setTimeout(() => {
@@ -2725,35 +2819,52 @@ const Clinic = {
         const statusSelect = panel.querySelector('#medications-status');
         const dateFromInput = panel.querySelector('#medications-date-from');
         const dateToInput = panel.querySelector('#medications-date-to');
+        const resetFiltersBtn = panel.querySelector('#medications-reset-filters');
         const addBtn = panel.querySelector('#medications-add-btn');
         const exportPdfBtn = panel.querySelector('#medications-export-pdf-btn');
         const exportExcelBtn = panel.querySelector('#medications-export-excel-btn');
 
         if (searchInput) {
             searchInput.addEventListener('input', (event) => {
-                this.state.filters.medications.search = event.target.value.trim();
-                this.renderMedicationsTab();
+                this.state.filters = this.state.filters || {};
+                this.state.filters.medications = this.state.filters.medications || {};
+                this.state.filters.medications.search = event.target.value;
+                this.scheduleMedicationsTabRender(150);
             });
         }
 
         if (statusSelect) {
             statusSelect.addEventListener('change', (event) => {
+                this.state.filters = this.state.filters || {};
+                this.state.filters.medications = this.state.filters.medications || {};
                 this.state.filters.medications.status = event.target.value;
-                this.renderMedicationsTab();
+                this.scheduleMedicationsTabRender(50);
             });
         }
 
         if (dateFromInput) {
             dateFromInput.addEventListener('change', (event) => {
+                this.state.filters = this.state.filters || {};
+                this.state.filters.medications = this.state.filters.medications || {};
                 this.state.filters.medications.dateFrom = event.target.value;
-                this.renderMedicationsTab();
+                this.scheduleMedicationsTabRender(50);
             });
         }
 
         if (dateToInput) {
             dateToInput.addEventListener('change', (event) => {
+                this.state.filters = this.state.filters || {};
+                this.state.filters.medications = this.state.filters.medications || {};
                 this.state.filters.medications.dateTo = event.target.value;
-                this.renderMedicationsTab();
+                this.scheduleMedicationsTabRender(50);
+            });
+        }
+
+        if (resetFiltersBtn) {
+            resetFiltersBtn.addEventListener('click', () => {
+                this.state.filters = this.state.filters || {};
+                this.state.filters.medications = { search: '', status: 'all', dateFrom: '', dateTo: '' };
+                this.scheduleMedicationsTabRender(0);
             });
         }
 
@@ -2853,9 +2964,19 @@ const Clinic = {
                             <p class="text-gray-800 whitespace-pre-line">${Utils.escapeHTML(record.notes || '')}</p>
                         </div>
                     ` : ''}
-                    <div class="text-sm text-gray-500 border-t pt-3">
-                        ${record.createdBy?.name ? `تم التسجيل بواسطة: ${Utils.escapeHTML(record.createdBy.name)}` : ''}
-                        ${record.createdAt ? `<span class="ml-2">بتاريخ ${this.formatDate(record.createdAt, true)}</span>` : ''}
+                    <div class="text-sm text-gray-500 border-t pt-3 flex flex-wrap justify-between items-center gap-2" style="direction: rtl;">
+                        <div>
+                            <span class="font-semibold">تم التسجيل بواسطة:</span>
+                            <span>${Utils.escapeHTML(record.createdBy?.name || 'غير محدد')}</span>
+                            ${record.createdAt ? `<span class="text-xs text-gray-400 mr-2">(${this.formatDate(record.createdAt, true)})</span>` : ''}
+                        </div>
+                        ${record.updatedBy && record.updatedBy.name && record.updatedBy.name !== 'النظام' ? `
+                        <div>
+                            <span class="font-semibold">آخر تحديث بواسطة:</span>
+                            <span>${Utils.escapeHTML(record.updatedBy.name)}</span>
+                            ${record.updatedAt ? `<span class="text-xs text-gray-400 mr-2">(${this.formatDate(record.updatedAt, true)})</span>` : ''}
+                        </div>
+                        ` : ''}
                     </div>
                 </div>
                 <div class="modal-footer form-actions-centered">
@@ -5923,6 +6044,20 @@ const Clinic = {
         this._visitsRenderTimer = setTimeout(doRender, Math.max(0, delayMs));
     },
 
+    scheduleMedicationsTabRender(delayMs = 0) {
+        if (this._medicationsRenderTimer) {
+            clearTimeout(this._medicationsRenderTimer);
+            this._medicationsRenderTimer = null;
+        }
+        const doRender = () => {
+            this._medicationsRenderTimer = null;
+            requestAnimationFrame(() => {
+                this.renderMedicationsTab();
+            });
+        };
+        this._medicationsRenderTimer = setTimeout(doRender, Math.max(0, delayMs));
+    },
+
     async renderVisitsTab(forceReload = false) {
         try {
             const panel = document.querySelector('.clinic-tab-panel[data-tab-panel="visits"]');
@@ -6069,12 +6204,16 @@ const Clinic = {
     shouldFetchClinicVisitsFromBackend(opts = {}) {
         if (opts && opts.forceRefresh === true) return true;
         if (typeof AppState === 'undefined' || !AppState || !AppState.appData) return true;
+        
+        // إذا تم التحميل بنجاح من الباكيند في هذه الجلسة، فلا داعي لإعادة الطلب مطلقاً إلا بـ forceRefresh
+        if (this._visitsBackendFetchOk === true) return false;
+        
         const hasLocalData = Array.isArray(AppState.appData.clinicVisits) && AppState.appData.clinicVisits.length > 0;
         const lastSync = localStorage.getItem('clinic_last_sync');
         const cacheAge = lastSync ? (Date.now() - parseInt(lastSync, 10)) : Infinity;
         const CACHE_DURATION = 10 * 60 * 1000;
         const isDataStale = !Number.isFinite(cacheAge) || cacheAge >= CACHE_DURATION;
-        return !hasLocalData || isDataStale || this._visitsBackendFetchOk !== true;
+        return !hasLocalData || isDataStale;
     },
 
     /**
@@ -6483,7 +6622,13 @@ const Clinic = {
             // ✅ التأكد من تطبيع البيانات قبل العرض
             this.ensureData();
             
-            const allVisits = (AppState.appData.clinicVisits || []).slice().reverse();
+            // ✅ فرز الزيارات ليكون الأحدث في الأعلى دائماً والاقدم بالأسفل بشكل تنازلي دقيق
+            const allVisits = (AppState.appData.clinicVisits || []).slice();
+            allVisits.sort((a, b) => {
+                const dateA = new Date(a.visitDate || a.createdAt || 0).getTime();
+                const dateB = new Date(b.visitDate || b.createdAt || 0).getTime();
+                return dateB - dateA;
+            });
 
             // ✅ فلترة الزيارات حسب النوع مع التأكد من وجود personType
             const employeeVisits = allVisits.filter(v => {
@@ -7520,7 +7665,7 @@ const Clinic = {
                 // حفظ موضع المؤشر لاستعادته بعد إعادة الرسم
                 this.state._searchCursorPosition = cursorPosition;
                 this.state._shouldFocusSearch = true;
-                this.renderVisitsTab();
+                this.scheduleVisitsTabRender(false, 150);
             });
         }
         

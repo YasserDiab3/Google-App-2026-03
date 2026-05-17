@@ -1,4 +1,4 @@
-﻿/**
+/**
  * PPE Module
  * ØªÙ… Ø§Ø³ØªØ®Ø±Ø§Ø¬Ù‡ Ù…Ù† app-modules.js
  */
@@ -397,7 +397,10 @@ const PPE = {
                             <td class="font-mono font-semibold">${esc(item.receiptNumber || item.id || '')}</td>
                             <td>${esc(item.employeeName || '')}</td>
                             <td>${esc(item.employeeCode || item.employeeNumber || '')}</td>
-                            <td>${esc(item.equipmentType || '')}</td>
+                            <td>
+                                ${esc(item.equipmentType || '')}
+                                ${item.shoeSize ? `<span class="block text-[11px] text-blue-600 font-semibold mt-0.5"><i class="fas fa-shoe-prints ml-1 text-[10px]"></i>مقاس: ${esc(item.shoeSize)}</span>` : ''}
+                            </td>
                             <td>${item.quantity || 0}</td>
                             <td>${item.receiptDate ? Utils.formatDate(item.receiptDate) : '-'}</td>
                             <td>
@@ -1636,12 +1639,12 @@ const PPE = {
         const stReceived = t('module.ppe.status.received', 'مستلم');
         const stPending = t('module.ppe.status.pending', 'قيد التسليم');
         modal.innerHTML = `
-            <div class="modal-content w-[min(100%,48rem)] max-w-[min(94vw,48rem)]" style="border-radius: 1rem; overflow: hidden;">
-                <div class="modal-header" style="background: linear-gradient(135deg, #1d4ed8, #0f766e); color: #ffffff; text-align: center; position: relative; padding: 1rem 1.5rem;">
+            <div class="modal-content w-[min(100%,52rem)] max-w-[min(94vw,52rem)]" style="border-radius: 1rem; overflow: hidden; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);">
+                <div class="modal-header" style="background: linear-gradient(135deg, #2563eb, #0d9488); color: #ffffff; text-align: center; position: relative; padding: 1.25rem 1.5rem;">
                     <h2 class="modal-title" style="margin: 0 auto; font-weight: 700; letter-spacing: 0.03em;">
                         ${isEdit ? ut(t('module.ppe.title.editReceipt', 'تعديل استلام')) : ut(t('module.ppe.title.newReceipt', 'تسجيل استلام جديد'))}
                     </h2>
-                    <button class="modal-close" onclick="this.closest('.modal-overlay').remove()" style="position: absolute; left: 1rem; top: 50%; transform: translateY(-50%); color: #ffffff;">
+                    <button class="modal-close" onclick="this.closest('.modal-overlay').remove()" style="position: absolute; left: 1rem; top: 50%; transform: translateY(-50%); color: #ffffff; background: rgba(255,255,255,0.15); border: none; width: 2rem; height: 2rem; border-radius: 50%; display: flex; items-center: center; justify-content: center; transition: all 0.2s;">
                         <i class="fas fa-times"></i>
                     </button>
                 </div>
@@ -1686,27 +1689,36 @@ const PPE = {
                         <input type="hidden" id="ppe-employee-branch" value="${Utils.escapeHTML(employeeInfo.branch)}">
                         <input type="hidden" id="ppe-employee-location" value="${Utils.escapeHTML(employeeInfo.location)}">
 
-                        <div class="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                        <div class="rounded-xl border border-blue-100 bg-blue-50/30 p-4 shadow-sm">
                             <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm">
-                            <div>
-                                    <p class="text-gray-500 mb-1">${ut(t('module.ppe.label.name', 'الاسم'))}</p>
-                                    <p id="ppe-employee-info-name" class="font-semibold text-gray-800">${formatInfo(employeeInfo.name)}</p>
-                            </div>
-                                <div>
-                                    <p class="text-gray-500 mb-1">${ut(t('module.ppe.label.department', 'القسم'))}</p>
-                                    <p id="ppe-employee-info-department" class="font-semibold text-gray-800">${formatInfo(employeeInfo.department)}</p>
+                                <div class="bg-white/90 p-3 rounded-lg border border-blue-50/50 shadow-sm flex items-center gap-3">
+                                    <span class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-blue-100 text-blue-600"><i class="fas fa-signature text-sm"></i></span>
+                                    <div class="min-w-0">
+                                        <p class="text-[11px] font-bold text-blue-700/70 mb-0.5">${ut(t('module.ppe.label.name', 'الاسم'))}</p>
+                                        <p id="ppe-employee-info-name" class="font-extrabold text-slate-800 truncate">${formatInfo(employeeInfo.name)}</p>
+                                    </div>
                                 </div>
-                                <div>
-                                    <p class="text-gray-500 mb-1">${ut(t('module.ppe.label.position', 'المنصب'))}</p>
-                                    <p id="ppe-employee-info-position" class="font-semibold text-gray-800">${formatInfo(employeeInfo.position)}</p>
+                                <div class="bg-white/90 p-3 rounded-lg border border-blue-50/50 shadow-sm flex items-center gap-3">
+                                    <span class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-cyan-100 text-cyan-600"><i class="fas fa-building text-sm"></i></span>
+                                    <div class="min-w-0">
+                                        <p class="text-[11px] font-bold text-cyan-700/70 mb-0.5">${ut(t('module.ppe.label.department', 'القسم'))}</p>
+                                        <p id="ppe-employee-info-department" class="font-extrabold text-slate-800 truncate">${formatInfo(employeeInfo.department)}</p>
+                                    </div>
+                                </div>
+                                <div class="bg-white/90 p-3 rounded-lg border border-blue-50/50 shadow-sm flex items-center gap-3">
+                                    <span class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-indigo-100 text-indigo-600"><i class="fas fa-briefcase text-sm"></i></span>
+                                    <div class="min-w-0">
+                                        <p class="text-[11px] font-bold text-indigo-700/70 mb-0.5">${ut(t('module.ppe.label.position', 'المنصب'))}</p>
+                                        <p id="ppe-employee-info-position" class="font-extrabold text-slate-800 truncate">${formatInfo(employeeInfo.position)}</p>
+                                    </div>
                                 </div>
                             </div>
-                            <div class="text-xs text-gray-500 flex flex-wrap gap-4 mt-3">
-                                <span id="ppe-employee-info-branch" class="${employeeInfo.branch ? '' : 'hidden'}">
-                                    ${employeeInfo.branch ? `${ut(t('module.ppe.label.branch', 'الفرع'))}: ${Utils.escapeHTML(employeeInfo.branch)}` : ''}
+                            <div class="text-xs text-slate-500 flex flex-wrap gap-4 mt-3 px-1">
+                                <span id="ppe-employee-info-branch" class="${employeeInfo.branch ? '' : 'hidden'} bg-slate-100 px-2 py-1 rounded-md font-medium">
+                                    ${employeeInfo.branch ? `<i class="fas fa-code-branch text-slate-400 ml-1"></i>${ut(t('module.ppe.label.branch', 'الفرع'))}: ${Utils.escapeHTML(employeeInfo.branch)}` : ''}
                                 </span>
-                                <span id="ppe-employee-info-location" class="${employeeInfo.location ? '' : 'hidden'}">
-                                    ${employeeInfo.location ? `${ut(t('module.ppe.label.location', 'الموقع'))}: ${Utils.escapeHTML(employeeInfo.location)}` : ''}
+                                <span id="ppe-employee-info-location" class="${employeeInfo.location ? '' : 'hidden'} bg-slate-100 px-2 py-1 rounded-md font-medium">
+                                    ${employeeInfo.location ? `<i class="fas fa-map-marker-alt text-slate-400 ml-1"></i>${ut(t('module.ppe.label.location', 'الموقع'))}: ${Utils.escapeHTML(employeeInfo.location)}` : ''}
                                 </span>
                             </div>
                         </div>
@@ -1726,23 +1738,46 @@ const PPE = {
                                 </div>
                                 <div id="ppe-items-container" class="space-y-4">
                                     <div class="ppe-item-row w-full rounded-xl border border-slate-200/90 bg-white shadow-sm ring-1 ring-slate-900/[0.04] overflow-hidden">
-                                        <div class="grid grid-cols-1 lg:grid-cols-[1fr,minmax(7.5rem,9rem)] gap-4 p-4 items-end bg-slate-50/50">
+                                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 items-end bg-slate-50/50">
                                             <div class="min-w-0">
-                                            <label class="block text-xs font-semibold text-gray-700 mb-1">${ut(t('module.ppe.label.equipmentType', 'نوع المعدة *'))}</label>
-                                            <select id="ppe-equipment-type" required class="form-input ppe-equipment-type w-full">
-                                                <option value="">${ut(t('module.ppe.equip.loading', 'جاري التحميل...'))}</option>
-                                            </select>
-                                            <p class="text-[11px] text-gray-500 mt-1">
-                                                ${ut(t('module.ppe.hint.fromStock', ''))}
-                                            </p>
+                                                <label class="block text-xs font-semibold text-gray-700 mb-1">
+                                                    <i class="fas fa-shield-alt text-emerald-600 ml-1"></i>${ut(t('module.ppe.label.equipmentType', 'نوع المعدة *'))}
+                                                </label>
+                                                <select id="ppe-equipment-type" required class="form-input ppe-equipment-type w-full border-slate-200 focus:border-emerald-500 focus:ring-emerald-500 rounded-lg">
+                                                    <option value="">${ut(t('module.ppe.equip.loading', 'جاري التحميل...'))}</option>
+                                                </select>
+                                                <p class="text-[11px] text-gray-400 mt-1">
+                                                    ${ut(t('module.ppe.hint.fromStock', ''))}
+                                                </p>
                                             </div>
                                             <div class="min-w-0">
-                                                <label class="block text-xs font-semibold text-gray-700 mb-1">${ut(t('module.ppe.label.qty', 'الكمية *'))}</label>
-                                                <div class="flex flex-col sm:flex-row sm:items-center gap-2">
-                                                    <input type="number" id="ppe-quantity" required class="form-input ppe-quantity w-full min-w-0" min="1"
+                                                <label class="block text-xs font-semibold text-gray-700 mb-1">
+                                                    <i class="fas fa-shoe-prints text-blue-600 ml-1"></i>مقاس الحذاء (اختياري)
+                                                </label>
+                                                <select class="form-input ppe-shoe-size w-full border-slate-200 focus:border-blue-500 focus:ring-blue-500 rounded-lg">
+                                                    <option value="">اختر المقاس...</option>
+                                                    <option value="38" ${ppeData?.shoeSize === '38' || ppeData?.shoeSize === 38 ? 'selected' : ''}>38</option>
+                                                    <option value="39" ${ppeData?.shoeSize === '39' || ppeData?.shoeSize === 39 ? 'selected' : ''}>39</option>
+                                                    <option value="40" ${ppeData?.shoeSize === '40' || ppeData?.shoeSize === 40 ? 'selected' : ''}>40</option>
+                                                    <option value="41" ${ppeData?.shoeSize === '41' || ppeData?.shoeSize === 41 ? 'selected' : ''}>41</option>
+                                                    <option value="42" ${ppeData?.shoeSize === '42' || ppeData?.shoeSize === 42 ? 'selected' : ''}>42</option>
+                                                    <option value="43" ${ppeData?.shoeSize === '43' || ppeData?.shoeSize === 43 ? 'selected' : ''}>43</option>
+                                                    <option value="44" ${ppeData?.shoeSize === '44' || ppeData?.shoeSize === 44 ? 'selected' : ''}>44</option>
+                                                    <option value="45" ${ppeData?.shoeSize === '45' || ppeData?.shoeSize === 45 ? 'selected' : ''}>45</option>
+                                                    <option value="46" ${ppeData?.shoeSize === '46' || ppeData?.shoeSize === 46 ? 'selected' : ''}>46</option>
+                                                    <option value="47" ${ppeData?.shoeSize === '47' || ppeData?.shoeSize === 47 ? 'selected' : ''}>47</option>
+                                                    <option value="48" ${ppeData?.shoeSize === '48' || ppeData?.shoeSize === 48 ? 'selected' : ''}>48</option>
+                                                </select>
+                                            </div>
+                                            <div class="min-w-0">
+                                                <label class="block text-xs font-semibold text-gray-700 mb-1">
+                                                    <i class="fas fa-sort-numeric-up text-amber-600 ml-1"></i>${ut(t('module.ppe.label.qty', 'الكمية *'))}
+                                                </label>
+                                                <div class="flex items-center gap-2">
+                                                    <input type="number" id="ppe-quantity" required class="form-input ppe-quantity w-full border-slate-200 focus:border-amber-500 focus:ring-amber-500 rounded-lg min-w-0" min="1"
                                                         value="${ppeData?.quantity || 1}" placeholder="${ut(t('module.ppe.table.quantity', 'الكمية'))}">
-                                                    <button type="button" class="btn-secondary ppe-remove-item hidden text-xs px-3 py-2 whitespace-nowrap shrink-0">
-                                                        <i class="fas fa-trash-alt ml-1"></i>${ut(t('module.ppe.btn.removeRow', 'حذف'))}
+                                                    <button type="button" class="btn-secondary ppe-remove-item hidden text-xs px-3 py-2 whitespace-nowrap shrink-0 rounded-lg border-rose-200 text-rose-600 hover:bg-rose-50">
+                                                        <i class="fas fa-trash-alt"></i>
                                                     </button>
                                                 </div>
                                             </div>
@@ -1819,19 +1854,19 @@ const PPE = {
                 if (infoPosition) infoPosition.textContent = info.position || '—';
                 if (infoBranch) {
                     if (info.branch) {
-                        infoBranch.textContent = `${Lb('module.ppe.label.branch', 'الفرع')}: ${info.branch}`;
+                        infoBranch.innerHTML = `<i class="fas fa-code-branch text-slate-400 ml-1"></i>${Lb('module.ppe.label.branch', 'الفرع')}: ${Utils.escapeHTML(info.branch)}`;
                         infoBranch.classList.remove('hidden');
                     } else {
-                        infoBranch.textContent = '';
+                        infoBranch.innerHTML = '';
                         infoBranch.classList.add('hidden');
                     }
                 }
                 if (infoLocation) {
                     if (info.location) {
-                        infoLocation.textContent = `${Lb('module.ppe.label.location', 'الموقع')}: ${info.location}`;
+                        infoLocation.innerHTML = `<i class="fas fa-map-marker-alt text-slate-400 ml-1"></i>${Lb('module.ppe.label.location', 'الموقع')}: ${Utils.escapeHTML(info.location)}`;
                         infoLocation.classList.remove('hidden');
                     } else {
-                        infoLocation.textContent = '';
+                        infoLocation.innerHTML = '';
                         infoLocation.classList.add('hidden');
                     }
                 }
@@ -2041,6 +2076,11 @@ const PPE = {
                     }
                 }
 
+                const shoeSizeEl = newRow.querySelector('.ppe-shoe-size');
+                if (shoeSizeEl) {
+                    shoeSizeEl.value = '';
+                }
+
                 const eligibilityEl = newRow.querySelector('.ppe-eligibility-info');
                 if (eligibilityEl) {
                     eligibilityEl.innerHTML = '';
@@ -2229,6 +2269,7 @@ const PPE = {
                     for (const row of itemRows) {
                         const typeSelect = row.querySelector('.ppe-equipment-type');
                         const quantityInput = row.querySelector('.ppe-quantity');
+                        const shoeSizeSelect = row.querySelector('.ppe-shoe-size');
 
                         if (!typeSelect || !quantityInput) {
                             Notification.error(PPE._t('module.ppe.notify.rowsIncomplete', 'بعض صفوف الأصناف غير مكتملة. يرجى التأكد من أن كل صف يحتوي على نوع وكمية.'));
@@ -2241,6 +2282,7 @@ const PPE = {
 
                         const typeValue = (typeSelect.value || '').trim();
                         const quantityValue = parseInt(quantityInput.value, 10) || 0;
+                        const shoeSizeValue = shoeSizeSelect ? (shoeSizeSelect.value || '').trim() : '';
 
                         if (!typeValue) {
                             Notification.error(PPE._t('module.ppe.notify.selectEquipmentEachRow', 'يرجى اختيار نوع المعدة لكل صف قبل الحفظ.'));
@@ -2262,7 +2304,8 @@ const PPE = {
 
                         equipmentItems.push({
                             equipmentType: typeValue,
-                            quantity: quantityValue
+                            quantity: quantityValue,
+                            shoeSize: shoeSizeValue
                         });
                     }
 
@@ -2323,13 +2366,14 @@ const PPE = {
                         if (isEdit) {
                             const index = AppState.appData.ppe.findIndex(p => p.id === ppeData.id);
                             if (index !== -1) {
-                                const firstItem = equipmentItems[0] || { equipmentType: '', quantity: 0 };
+                                const firstItem = equipmentItems[0] || { equipmentType: '', quantity: 0, shoeSize: '' };
                                 const existing = AppState.appData.ppe[index] || {};
                                 const updatedRecord = {
                                     ...existing,
                                     ...commonData,
                                     equipmentType: firstItem.equipmentType,
                                     quantity: firstItem.quantity,
+                                    shoeSize: firstItem.shoeSize,
                                     createdAt: existing.createdAt || ppeData?.createdAt || new Date().toISOString(),
                                     updatedAt: new Date().toISOString()
                                 };
@@ -2348,6 +2392,7 @@ const PPE = {
                                     ...commonData,
                                     equipmentType: item.equipmentType,
                                     quantity: item.quantity,
+                                    shoeSize: item.shoeSize,
                                     createdAt: new Date().toISOString(),
                                     updatedAt: new Date().toISOString()
                                 };
@@ -2566,6 +2611,12 @@ const PPE = {
                                 <label class="text-sm font-semibold text-gray-600">${ut(t('module.ppe.table.quantity', 'الكمية'))}:</label>
                                 <p class="text-gray-800">${item.quantity || 0}</p>
                             </div>
+                            ${item.shoeSize ? `
+                            <div>
+                                <label class="text-sm font-semibold text-gray-600">مقاس الحذاء:</label>
+                                <p class="text-gray-800 font-bold"><i class="fas fa-shoe-prints text-blue-600 ml-1"></i>${Utils.escapeHTML(item.shoeSize)}</p>
+                            </div>
+                            ` : ''}
                             <div>
                                 <label class="text-sm font-semibold text-gray-600">${ut(t('module.ppe.table.receiptDate', 'تاريخ الاستلام'))}:</label>
                                 <p class="text-gray-800">${item.receiptDate ? Utils.formatDate(item.receiptDate) : '-'}</p>

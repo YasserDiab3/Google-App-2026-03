@@ -3128,10 +3128,13 @@ function readFromSheet(sheetName, spreadsheetId = null, skipSecurityFilter = fal
                             if (Object.prototype.toString.call(processedValue) === '[object Date]' && !isNaN(processedValue.getTime())) {
                                 // للحقول التي تحتاج وقت (visitDate, exitDate, checkIn, checkOut, etc.)
                                 const timeFields = ['visitDate', 'exitDate', 'checkIn', 'checkOut', 'injuryDate', 'startDate', 'endDate', 'timeFrom', 'timeTo', 'closureTime', 'investigationDateTime', 'incidentDateTime', 'date'];
-                                const timeOnlyFields = ['fromTime', 'toTime', 'startTime', 'endTime'];
+                                const timeOnlyFields = ['fromTime', 'toTime', 'startTime', 'endTime', 'timeFrom', 'timeTo'];
                                 if (timeOnlyFields.includes(cleanHeader)) {
                                     // من الساعة / إلى الساعة (تدريب الموظفين والمقاولين): تخزين بصيغة HH:mm فقط
-                                    processedValue = Utilities.formatDate(processedValue, Session.getScriptTimeZone(), 'HH:mm');
+                                    // لتجنب انزياح التوقيت التاريخي (مثل فرق الدقيقة في عام 1899)، نستخرج الساعات والدقائق مباشرة
+                                    const hrs = String(processedValue.getHours()).padStart(2, '0');
+                                    const mins = String(processedValue.getMinutes()).padStart(2, '0');
+                                    processedValue = hrs + ':' + mins;
                                 } else if (shouldPreserveSheetDateTimeAsText_(sheetName, cleanHeader)) {
                                     processedValue = normalizeSheetDateTimeText_(processedValue, Session.getScriptTimeZone());
                                 } else if (timeFields.includes(cleanHeader)) {
@@ -3258,7 +3261,7 @@ function readFromSheet(sheetName, spreadsheetId = null, skipSecurityFilter = fal
         
         allObjects.forEach((obj, index) => {
             if (!obj || !obj.id) {
-                // إذا لم يكن هناك id، نضيفه كما هو (قد يكون سجل جديد بدون id بعد)
+                // إذا لم يكن هناك id، نضيفه كما هو
                 uniqueObjects.push(obj);
                 return;
             }
@@ -3275,18 +3278,18 @@ function readFromSheet(sheetName, spreadsheetId = null, skipSecurityFilter = fal
                 const oldIndex = seenIds.get(recordId);
                 const oldObj = uniqueObjects[oldIndex];
 
-                // مقارنة بسيطة للمحتوى (بدون ID)
+                // مقارنة المحتوى (بدون ID) لتحديد هل هو تكرار حقيقي أم ID مكرر لبيانات مختلفة
                 const oldStr = JSON.stringify({...oldObj, id: ''});
                 const newStr = JSON.stringify({...obj, id: ''});
 
                 if (oldStr === newStr) {
-                    // تكرار حقيقي، نتجاهله
+                    // تكرار حقيقي للبيانات — نتجاهله
                     return;
                 } else {
-                    // ID مكرر لكن البيانات مختلفة! نحتفظ بهما ونضيف لاحقة للـ ID لتمييزهما
+                    // ID مكرر لكن البيانات مختلفة — نحتفظ بكليهما لعدم فقدان البيانات
                     obj.id = recordId + '_dup_' + index;
                     uniqueObjects.push(obj);
-                    Logger.log('⚠️ Duplicate ID with different data found in ' + sheetName + ': ' + recordId + '. Kept both.');
+                    Logger.log('⚠️ Duplicate ID with different data in ' + sheetName + ': ' + recordId + '. Kept both.');
                 }
             } else {
                 seenIds.set(recordId, uniqueObjects.length);

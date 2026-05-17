@@ -499,6 +499,7 @@ function getUserRecordFromUsersSheetByEmail_(email) {
 
 /**
  * المصادقة على المستخدم في جانب الخادم (Server-side Authentication)
+ * دالة جديدة من Jules — تتحقق من المستخدم في الـ Backend مباشرةً
  * @param {string} email
  * @param {string} password
  * @return {object} { success: boolean, message: string, user?: object }
@@ -546,7 +547,11 @@ function loginUser(email, password) {
         }
 
         // تسجيل وقت الدخول
-        updateUserInSheet(user.id, { lastLogin: new Date().toISOString() });
+        try {
+            updateUserInSheet(user.id, { lastLogin: new Date().toISOString() });
+        } catch (loginTimeError) {
+            Logger.log('Warning: Could not update lastLogin: ' + loginTimeError.toString());
+        }
 
         // تجهيز كائن المستخدم للإرجاع (بدون بيانات حساسة)
         const safeUser = {};

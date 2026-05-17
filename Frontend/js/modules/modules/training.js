@@ -4320,6 +4320,7 @@ const Training = {
             : '';
         // ✅ إصلاح: تطبيع contractorId للمقارنة الصحيحة
         const existingContractorId = existing?.contractorId ? String(existing.contractorId).trim() : '';
+        const existingContractorName = existing?.contractorName ? String(existing.contractorName).trim() : '';
 
         const modal = document.createElement('div');
         modal.className = 'modal-overlay';
@@ -4386,11 +4387,19 @@ const Training = {
                                     </label>
                                     <select id="contractor-training-contractor" class="form-input" required ${hasContractors ? '' : 'disabled'} style="border: 2px solid #e0e7ff; border-radius: 10px; transition: all 0.3s; padding: 10px 12px;" onfocus="this.style.borderColor='#667eea'; this.style.boxShadow='0 0 0 3px rgba(102,126,234,0.15)'" onblur="this.style.borderColor='#e0e7ff'; this.style.boxShadow='none'">
                                         <option value="">اختر المقاول</option>
-                                        ${contractors.map(contractor => `
-                                            <option value="${Utils.escapeHTML(String(contractor?.id ?? '').trim())}" ${existingContractorId && String(contractor?.id ?? '').trim() === existingContractorId ? 'selected' : ''}>
-                                                ${Utils.escapeHTML(contractor.name || 'بدون اسم')}
-                                            </option>
-                                        `).join('')}
+                                        ${contractors.map(contractor => {
+                                            const contractorIdStr = String(contractor?.id ?? '').trim();
+                                            const contractorNameStr = String(contractor?.name ?? '').trim();
+                                            // ✅ مطابقة ذكية: نطابق بالمعرف أو بالاسم لضمان الاختيار الصحيح حتى مع اختلاف نوع الحقل تاريخياً
+                                            const isSelected = (existingContractorId && contractorIdStr === existingContractorId) ||
+                                                               (existingContractorName && contractorNameStr === existingContractorName) ||
+                                                               (existingContractorId && contractorNameStr === existingContractorId);
+                                            return `
+                                                <option value="${Utils.escapeHTML(contractorIdStr)}" ${isSelected ? 'selected' : ''}>
+                                                    ${Utils.escapeHTML(contractor.name || 'بدون اسم')}
+                                                </option>
+                                            `;
+                                        }).join('')}
                                     </select>
                                 </div>
                             </div>
@@ -4783,10 +4792,22 @@ const Training = {
                     }
                 }
                 
+                // ✅ إصلاح مشكلة timezone: new Date('YYYY-MM-DD') يفسّر كـ UTC فيطرح التوقيت المحلي
+                // الحل: نبني التاريخ بصيغة ISO مع الوقت الصريح (منتصف اليوم) لتجنب تغيير التاريخ
                 let safeDate = new Date().toISOString();
                 if (dateValue) {
-                    const d = new Date(dateValue);
-                    if (!isNaN(d.getTime())) safeDate = d.toISOString();
+                    // dateValue = 'YYYY-MM-DD' من حقل input[type="date"]
+                    const parts = dateValue.split('-');
+                    if (parts.length === 3) {
+                        const year = parseInt(parts[0], 10);
+                        const month = parseInt(parts[1], 10) - 1;
+                        const day = parseInt(parts[2], 10);
+                        const d = new Date(year, month, day, 12, 0, 0); // منتصف اليوم (تجنب timezone shift)
+                        if (!isNaN(d.getTime())) safeDate = d.toISOString();
+                    } else {
+                        const d = new Date(dateValue);
+                        if (!isNaN(d.getTime())) safeDate = d.toISOString();
+                    }
                 }
 
                 const recordId = existing?.id || Utils.generateSequentialId('CTR', AppState.appData?.contractorTrainings || []);
@@ -4993,6 +5014,10 @@ const Training = {
     },
 
     async deleteContractorTraining(trainingId) {
+        if (!this.isCurrentUserAdminOrManager()) {
+            Notification.error('صلاحية الحذف غير متاحة للمستخدم. الحذف يتم بطلب للمدير فقط.');
+            return;
+        }
         this.ensureData();
         const records = AppState.appData.contractorTrainings || [];
         const training = records.find(r => r.id === trainingId);
@@ -6389,6 +6414,12 @@ const Training = {
         return (AppState.currentUser?.role || '').toLowerCase() === 'admin';
     },
 
+    isCurrentUserAdminOrManager() {
+        if (this.isCurrentUserAdmin()) return true;
+        const role = (AppState.currentUser?.role || '').toString().trim().toLowerCase();
+        return ['admin', 'system_admin', 'manager', 'مدير', 'مدير النظام', 'system-manager', 'safety_officer'].some(r => role.includes(r));
+    },
+
     getAnnualPlan(year, { createIfMissing = false } = {}) {
         this.ensureData();
         if (!Array.isArray(AppState.appData.annualTrainingPlans)) {
@@ -6649,11 +6680,21 @@ const Training = {
                 }
 
                 const trainingId = Utils.generateId('TRAINING');
-                
+
+                // ✅ إصلاح مشكلة timezone: بناء التاريخ بصيغة محلية منتصف اليوم
                 let isoDate = new Date().toISOString();
                 if (dateValue) {
-                    const d = new Date(dateValue);
-                    if (!isNaN(d.getTime())) isoDate = d.toISOString();
+                    const parts = dateValue.split('-');
+                    if (parts.length === 3) {
+                        const year = parseInt(parts[0], 10);
+                        const month = parseInt(parts[1], 10) - 1;
+                        const day = parseInt(parts[2], 10);
+                        const d = new Date(year, month, day, 12, 0, 0);
+                        if (!isNaN(d.getTime())) isoDate = d.toISOString();
+                    } else {
+                        const d = new Date(dateValue);
+                        if (!isNaN(d.getTime())) isoDate = d.toISOString();
+                    }
                 }
 
                 const participantEntry = {
@@ -8417,7 +8458,7 @@ const Training = {
         const selectedPlace = places.find(p => p.id === locationEl.value);
         
         const getFallbackText = (el) => el && el.options && el.selectedIndex >= 0 ? el.options[el.selectedIndex].text : '';
-        
+
         let validStartDate = new Date().toISOString();
         if (startDateEl.value) {
             const d = new Date(startDateEl.value);
@@ -8478,7 +8519,7 @@ const Training = {
                     Utils.safeWarn('⚠️ DataManager غير متاح - لم يتم حفظ البيانات');
                 }
             }, 50);
-            
+
             // 4. معالجة المهام الخلفية في الخلفية
             Promise.allSettled([
                 // مزامنة مصفوفة التدريب
@@ -8513,6 +8554,10 @@ const Training = {
     },
 
     async deleteTraining(id) {
+        if (!this.isCurrentUserAdminOrManager()) {
+            Notification.error('صلاحية الحذف غير متاحة للمستخدم. الحذف يتم بطلب للمدير فقط.');
+            return;
+        }
         if (!confirm('هل أنت متأكد من حذف هذا البرنامج؟\n\nهذه العملية لا يمكن التراجع عنها.')) return;
         Loading.show();
         try {
@@ -9403,6 +9448,15 @@ const Training = {
                 if (record.employeeCode) {
                     uniqueEmployees.add(record.employeeCode);
                 }
+                // ✅ إصلاح: أيضاً من participants في برامج التدريب
+            });
+            trainings.forEach(training => {
+                if (Array.isArray(training.participants)) {
+                    training.participants.forEach(p => {
+                        const code = p.employeeCode || p.code || p.employeeNumber || '';
+                        if (code) uniqueEmployees.add(code);
+                    });
+                }
             });
             
             const attendanceHours = trainingAttendance.reduce((sum, r) => {
@@ -9410,16 +9464,25 @@ const Training = {
                 return sum + (Number.isFinite(hours) ? hours : 0);
             }, 0);
             
-            const totalTrainingHours = attendanceHours + contractorStats.totalHours;
+            const programHours = trainings.reduce((sum, t) => {
+                const hours = parseFloat(t.hours || t.totalHours || 0);
+                return sum + (Number.isFinite(hours) ? hours : 0);
+            }, 0);
+            
+            const totalTrainingHours = attendanceHours + contractorStats.totalHours + programHours;
+            
+            // ✅ إصلاح: totalTrainings يشمل برامج التدريب + التدريبات السريعة (trainingAttendance)
+            const totalTrainings = stats.totalTrainings + trainingAttendance.length;
             
             return {
-                totalTrainings: stats.totalTrainings || 0,
+                totalTrainings,
                 completedTrainings: stats.completedTrainings || 0,
-                totalParticipants: stats.totalParticipants || 0,
+                totalParticipants: (stats.totalParticipants || 0) + trainingAttendance.length,
                 contractorTrainings: contractorStats.total || 0,
                 totalTrainingHours: Number.isFinite(totalTrainingHours) ? totalTrainingHours.toFixed(2) : '0.00',
                 uniqueEmployees: uniqueEmployees.size || 0
             };
+
         } catch (error) {
             Utils.safeError('خطأ في حساب مقاييس التدريب:', error);
             // إرجاع قيم افتراضية في حالة الخطأ
@@ -11903,48 +11966,24 @@ const Training = {
      */
     cleanTime(timeValue) {
         if (!timeValue) return '';
-        
-        // تحويل إلى سلسلة نصية إذا لم تكن كذلك
+
+        // تحويل إلى سلسلة نصية
         const timeStr = String(timeValue).trim();
         if (!timeStr) return '';
-        
-        // إذا كان ISO date كامل (مثل "1899-12-30T14:24:51.000Z" أو "2024-01-01T14:30:00")
+
+        // ✅ إصلاح: إذا كان ISO date (تحتوي على T) — نستخرج الوقت بالـ regex مباشرة
+        // هذا أقوى وأصح من Date.getUTCHours الذي يعطي +1 دقيقة بسبب milliseconds مخزنة
         if (timeStr.includes('T')) {
-            try {
-                // محاولة استخراج الوقت مباشرة من السلسلة أولاً (أكثر موثوقية)
-                const timeMatch = timeStr.match(/T(\d{1,2}):(\d{2})(?::\d{2})?(?:\.\d+)?(?:Z)?/);
-                if (timeMatch) {
-                    const hours = parseInt(timeMatch[1], 10);
-                    const minutes = parseInt(timeMatch[2], 10);
-                    if (!isNaN(hours) && !isNaN(minutes) && hours >= 0 && hours < 24 && minutes >= 0 && minutes < 60) {
-                        return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
-                    }
-                }
-                
-                // محاولة استخدام Date object كحل بديل
-                const date = new Date(timeStr);
-                // التحقق من أن التاريخ صحيح
-                if (!isNaN(date.getTime())) {
-                    const hours = date.getUTCHours();
-                    const minutes = date.getUTCMinutes();
-                    // التحقق من أن القيم صحيحة وليست NaN
-                    if (!isNaN(hours) && !isNaN(minutes) && hours >= 0 && hours < 24 && minutes >= 0 && minutes < 60) {
-                        return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
-                    }
-                }
-            } catch (e) {
-                // محاولة استخراج الوقت مباشرة من السلسلة في حالة الخطأ
-                const timeMatch = timeStr.match(/T(\d{1,2}):(\d{2})/);
-                if (timeMatch) {
-                    const hours = parseInt(timeMatch[1], 10);
-                    const minutes = parseInt(timeMatch[2], 10);
-                    if (!isNaN(hours) && !isNaN(minutes) && hours >= 0 && hours < 24 && minutes >= 0 && minutes < 60) {
-                        return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
-                    }
+            const timeMatch = timeStr.match(/T(\d{1,2}):(\d{2})(?::\d{2})?/);
+            if (timeMatch) {
+                const hours = parseInt(timeMatch[1], 10);
+                const minutes = parseInt(timeMatch[2], 10);
+                if (!isNaN(hours) && !isNaN(minutes) && hours >= 0 && hours < 24 && minutes >= 0 && minutes < 60) {
+                    return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
                 }
             }
         }
-        
+
         // إذا كان بالفعل بتنسيق HH:MM أو H:MM
         const timeFormatMatch = timeStr.match(/^(\d{1,2}):(\d{2})(?::\d{2})?$/);
         if (timeFormatMatch) {
@@ -11954,8 +11993,8 @@ const Training = {
                 return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
             }
         }
-        
-        // محاولة استخراج الوقت من أي تنسيق آخر (مثل "14:30:00" أو "14.30")
+
+        // محاولة استخراج الوقت من أي تنسيق آخر
         const alternativeMatch = timeStr.match(/(\d{1,2})[:.](\d{2})/);
         if (alternativeMatch) {
             const hours = parseInt(alternativeMatch[1], 10);
@@ -11964,7 +12003,7 @@ const Training = {
                 return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
             }
         }
-        
+
         return '';
     },
     
@@ -13198,6 +13237,10 @@ const Training = {
      * حذف سجل تدريب
      */
     async deleteAttendanceRecord(recordId) {
+        if (!this.isCurrentUserAdminOrManager()) {
+            Notification.error('صلاحية الحذف غير متاحة للمستخدم. الحذف يتم بطلب للمدير فقط.');
+            return;
+        }
         if (!confirm('هل أنت متأكد من حذف هذا السجل؟')) {
             return;
         }
