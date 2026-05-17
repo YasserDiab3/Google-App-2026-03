@@ -693,6 +693,12 @@ function doPost(e) {
                 case 'getUsersMeta':
                     result = getUsersMeta();
                     break;
+                case 'loginUser':
+                    // ✅ Server-side authentication (Jules feature)
+                    result = (typeof loginUser === 'function')
+                        ? loginUser(payload.email, payload.password)
+                        : { success: false, message: 'loginUser function not available' };
+                    break;
                 case 'resetUserPassword':
                     result = resetUserPassword(payload.userId || payload.id || payload.email, payload.newPassword);
                     break;

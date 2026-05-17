@@ -454,9 +454,20 @@ function addClinicVisitToSheet(visitData) {
             return result;
         }
         
-        // ✅ ملاحظة: خصم الأدوية تم تعطيله من عملية الحفظ لتجنب timeout
-        // يتم الخصم بشكل منفصل عبر دالة processPendingMedicationDeductions()
-        // أو يمكن تشغيله يدوياً من لوحة التحكم
+        // ✅ تفعيل خصم الأدوية تلقائياً عند تسجيل الزيارة
+        if (visitData.medications && Array.isArray(visitData.medications) && visitData.medications.length > 0) {
+            try {
+                Logger.log('💊 [BACKEND] محاولة خصم الأدوية تلقائياً لزيارة: ' + normalized.id);
+                const deductResult = deductMedicationsFromInventory_(visitData.medications, normalized.id, normalized.createdBy);
+                if (deductResult && deductResult.success) {
+                    Logger.log('✅ [BACKEND] تم خصم الأدوية بنجاح');
+                } else {
+                    Logger.log('⚠️ [BACKEND] فشل خصم الأدوية تلقائياً: ' + (deductResult ? deductResult.message : 'خطأ غير معروف'));
+                }
+            } catch (deductError) {
+                Logger.log('❌ [BACKEND] خطأ تقني في خصم الأدوية: ' + deductError.toString());
+            }
+        }
         
         var merged = (result && typeof result === 'object') ? result : { success: true };
         merged.success = true;
@@ -465,11 +476,8 @@ function addClinicVisitToSheet(visitData) {
         if (!merged.message) {
             merged.message = 'تم تسجيل الزيارة';
         }
-        // إضافة معلومات الأدوية
         if (visitData.medications && Array.isArray(visitData.medications) && visitData.medications.length > 0) {
             merged.medicationsCount = visitData.medications.length;
-            merged.message += ' - تنبيه: يرجى خصم الأدوية يدوياً من المخزون';
-            merged.pendingDeduction = true;
         }
         return merged;
     } catch (error) {
@@ -530,11 +538,11 @@ function upsertClinicVisit_(targetSheetName, normalizedVisit) {
         if (targetRowIndex !== -1 && targetSheet) {
             const currentSheetName = targetSheet.getName();
             Logger.log('✅ [BACKEND] upsertClinicVisit_: تم العثور على id موجود في: ' + currentSheetName + ' (row=' + targetRowIndex + ') - سيتم التحديث');
-            
+
             // ✅ تحديث الصف مباشرة
             const headers = targetSheet.getRange(1, 1, 1, targetSheet.getLastColumn()).getValues()[0];
             const rowData = [];
-            
+
             // تحويل normalizedVisit إلى array بناءً على الرؤوس
             for (var h = 0; h < headers.length; h++) {
                 const headerName = headers[h] ? String(headers[h]).trim() : '';
@@ -544,14 +552,14 @@ function upsertClinicVisit_(targetSheetName, normalizedVisit) {
                     rowData.push('');
                 }
             }
-            
+
             targetSheet.getRange(targetRowIndex, 1, 1, rowData.length).setValues([rowData]);
-            
+
             // ✅ مسح الcache لضمان قراءة البيانات المحدثة
             if (typeof invalidateHseSheetCaches === 'function') {
                 invalidateHseSheetCaches(currentSheetName);
             }
-            
+
             return {
                 success: true,
                 message: 'تم تحديث الزيارة بنجاح',
@@ -728,7 +736,7 @@ function getAllClinicVisits(filters = {}) {
                 const reasonPart = (v.reason || v.diagnosis || '').toString().trim();
                 // نستخدم أول 12 حرف من الـ hash لضمان فرادة كافية
                 const seed = namePart + '|' + datePart + '|' + reasonPart;
-                v.id = 'STB_' + Utilities.base64Encode(Utilities.computeDigest(Utilities.DigestAlgorithm.MD5, seed))
+                v.id = 'STB_' + index + '_' + Utilities.base64Encode(Utilities.computeDigest(Utilities.DigestAlgorithm.MD5, seed))
                                 .replace(/[^a-zA-Z0-9]/g, '').substring(0, 12);
             }
             
@@ -738,11 +746,17 @@ function getAllClinicVisits(filters = {}) {
                 // إذا كان فارغاً، نستخدم النوع الافتراضي بناءً على الشيت المصدر (تم تعيينه في readFromSheet أعلاه)
                 currentType = v._tempSourceType || 'employee';
             }
-            
+
             if (currentType.includes('contractor') || currentType.includes('مقاول') || currentType.includes('external') || currentType.includes('خارجي')) {
                 v.personType = 'contractor';
-            } else {
+            } else if (currentType.includes('employee') || currentType.includes('موظف')) {
                 v.personType = 'employee';
+            } else {
+                if (v.contractorName || v.contractorWorkerName || v.externalName) {
+                    v.personType = 'contractor';
+                } else {
+                    v.personType = 'employee';
+                }
             }
             
             // 3. إعادة بناء medications بشكل شامل
@@ -2063,7 +2077,7 @@ function getAllInjuries(filters = {}) {
         // ✅ تطبيع البيانات
         data = data.map(v => {
             if (!v || typeof v !== 'object') return v;
-            
+
             const rawType = String(v.personType || '').toLowerCase().trim();
             if (rawType.includes('contractor') || rawType.includes('مقاول') || rawType.includes('external') || rawType.includes('خارجي')) {
                 v.personType = 'contractor';

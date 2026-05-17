@@ -3258,25 +3258,35 @@ function readFromSheet(sheetName, spreadsheetId = null) {
         
         allObjects.forEach((obj, index) => {
             if (!obj || !obj.id) {
-                // إذا لم يكن هناك id، نضيفه كما هو (قد يكون سجل جديد بدون id بعد)
+                // إذا لم يكن هناك id، نضيفه كما هو
                 uniqueObjects.push(obj);
                 return;
             }
             
-            const recordId = String(obj.id).trim();
-            if (recordId === '') {
-                // إذا كان id فارغاً، نضيفه كما هو
+            const recordId = String(obj.id || '').trim();
+            if (!recordId) {
                 uniqueObjects.push(obj);
                 return;
             }
             
             if (seenIds.has(recordId)) {
-                // ✅ تكرار موجود - نستبدل السجل القديم بالسجل الجديد (الأحدث)
                 const oldIndex = seenIds.get(recordId);
-                uniqueObjects[oldIndex] = obj; // استبدال السجل القديم
-                Logger.log('⚠️ Duplicate record found in readFromSheet: id=' + recordId + ', sheetName=' + sheetName + ', keeping latest record');
+                const oldObj = uniqueObjects[oldIndex];
+
+                // مقارنة المحتوى (بدون ID) لتحديد هل هو تكرار حقيقي أم ID مكرر لبيانات مختلفة
+                const oldStr = JSON.stringify({...oldObj, id: ''});
+                const newStr = JSON.stringify({...obj, id: ''});
+
+                if (oldStr === newStr) {
+                    // تكرار حقيقي للبيانات — نتجاهله
+                    return;
+                } else {
+                    // ID مكرر لكن البيانات مختلفة — نحتفظ بكليهما لعدم فقدان البيانات
+                    obj.id = recordId + '_dup_' + index;
+                    uniqueObjects.push(obj);
+                    Logger.log('⚠️ Duplicate ID with different data in ' + sheetName + ': ' + recordId + '. Kept both.');
+                }
             } else {
-                // ✅ سجل جديد - نضيفه
                 seenIds.set(recordId, uniqueObjects.length);
                 uniqueObjects.push(obj);
             }

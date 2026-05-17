@@ -496,3 +496,80 @@ function getUserRecordFromUsersSheetByEmail_(email) {
     }
 }
 
+/**
+ * المصادقة على المستخدم في جانب الخادم (Server-side Authentication)
+ * دالة جديدة من Jules — تتحقق من المستخدم في الـ Backend مباشرةً
+ * @param {string} email
+ * @param {string} password
+ * @return {object} { success: boolean, message: string, user?: object }
+ */
+function loginUser(email, password) {
+    try {
+        const e = String(email || '').trim().toLowerCase();
+        const p = String(password || '').trim();
+
+        if (!e || !p) {
+            return { success: false, message: 'البريد الإلكتروني وكلمة المرور مطلوبان' };
+        }
+
+        const user = getUserRecordFromUsersSheetByEmail_(e);
+        if (!user) {
+            return { success: false, message: 'بيانات الاعتماد غير صحيحة' };
+        }
+
+        if (user.active === false || user.active === 'false' || user.active === 'inactive') {
+            return { success: false, message: 'هذا الحساب معطل. يرجى التواصل مع المدير.' };
+        }
+
+        let passwordMatch = false;
+        let needsHashUpdate = false;
+        const storedHash = String(user.passwordHash || '').trim();
+
+        if (isSha256Hash(storedHash)) {
+            const inputHash = hashPassword(p);
+            passwordMatch = (inputHash.toLowerCase() === storedHash.toLowerCase());
+        } else if (storedHash === p) {
+            // تسجيل دخول أول مرة بكلمة مرور نصية
+            passwordMatch = true;
+            needsHashUpdate = true;
+        }
+
+        if (!passwordMatch) {
+            return { success: false, message: 'بيانات الاعتماد غير صحيحة' };
+        }
+
+        if (needsHashUpdate) {
+            const newHash = hashPassword(p);
+            updateUserInSheet(user.id, { passwordHash: newHash, password: '***' });
+        }
+
+        try {
+            updateUserInSheet(user.id, { lastLogin: new Date().toISOString() });
+        } catch (loginTimeError) {
+            Logger.log('Warning: Could not update lastLogin: ' + loginTimeError.toString());
+        }
+
+        // إرجاع بيانات المستخدم بدون حقول حساسة
+        const safeUser = {};
+        const sensitiveFields = ['password', 'passwordHash', 'token', 'loginHistory'];
+        for (var key in user) {
+            if (user.hasOwnProperty(key) && !sensitiveFields.includes(key)) {
+                safeUser[key] = user[key];
+            }
+        }
+
+        if (typeof safeUser.permissions === 'string') {
+            try {
+                safeUser.permissions = JSON.parse(safeUser.permissions);
+            } catch (ex) {
+                safeUser.permissions = {};
+            }
+        }
+
+        return { success: true, message: 'تم تسجيل الدخول بنجاح', user: safeUser };
+
+    } catch (error) {
+        Logger.log('Error in loginUser: ' + error.toString());
+        return { success: false, message: 'حدث خطأ في الخادم أثناء تسجيل الدخول' };
+    }
+}

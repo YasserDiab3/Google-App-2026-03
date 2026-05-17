@@ -1744,6 +1744,9 @@ function saveToSheet(sheetName, data, spreadsheetId = null) {
         // ✅ IMPORTANT: Do NOT clear rows here.
         // We preserve existing sheet data and only upsert/update what we receive.
 
+        // ✅ مسح الcache بعد الاستيراد/الحفظ لضمان قراءة البيانات المحدثة
+        invalidateHseSheetCaches(sheetName);
+
         // تحضير البيانات للكتابة (UPSERT: update existing rows by id, append new ones)
         if (Array.isArray(data) && data.length > 0) {
             const lastCol = sheet.getLastColumn();
@@ -1837,7 +1840,7 @@ function saveToSheet(sheetName, data, spreadsheetId = null) {
         }
 
         // ✅ مسح الcache بعد الحفظ لضمان قراءة البيانات المحدثة (يشمل batch_*)
-        invalidateHseSheetCaches_(sheetName);
+        invalidateHseSheetCaches(sheetName);
 
         const saveResult = { success: true, message: 'تم حفظ البيانات بنجاح' };
         if (sheetName === 'PTWRegistry' && resolvedPTWRegistryForResponse) {
@@ -2713,7 +2716,7 @@ function appendToSheet(sheetName, data, spreadsheetId = null) {
         } finally {
             // ✅ إبطال CacheService لقراءة الورقة ونسخة batch (مثل PTWIssuingAuthorities)
             try {
-                invalidateHseSheetCaches_(sheetName);
+                invalidateHseSheetCaches(sheetName);
             } catch (_cacheInvEx) {
                 Logger.log('appendToSheet cache invalidate: ' + _cacheInvEx.toString());
             }
@@ -2977,7 +2980,7 @@ function updateSingleRowInSheet(sheetName, recordId, updateData, spreadsheetId =
             sheet.getRange(targetRowIndex, 1, 1, headers.length).setValues([rowValues]);
             
             // ✅ مسح الcache بعد التحديث (يشمل batch_*)
-            invalidateHseSheetCaches_(sheetName);
+            invalidateHseSheetCaches(sheetName);
             
             Logger.log('✅ Successfully updated single row at row ' + targetRowIndex + ' in sheet ' + sheetName + ' and cleared cache');
             return { success: true, message: 'تم تحديث السجل بنجاح' };
@@ -2995,7 +2998,7 @@ function updateSingleRowInSheet(sheetName, recordId, updateData, spreadsheetId =
 /**
  * إبطال كاش قراءة الورقة ونسخة batchReadSheets لنفس الاسم (توحيد الإبطال بعد الكتابة).
  */
-function invalidateHseSheetCaches_(sheetName) {
+function invalidateHseSheetCaches(sheetName) {
     try {
         const sn = String(sheetName || '').trim();
         if (!sn) return;
@@ -3003,7 +3006,7 @@ function invalidateHseSheetCaches_(sheetName) {
         cache.remove('hse_read_' + sn + '_v1');
         cache.remove('batch_' + sn + '_v1');
     } catch (e) {
-        Logger.log('invalidateHseSheetCaches_: ' + e.toString());
+        Logger.log('invalidateHseSheetCaches: ' + e.toString());
     }
 }
 
@@ -3255,25 +3258,35 @@ function readFromSheet(sheetName, spreadsheetId = null) {
         
         allObjects.forEach((obj, index) => {
             if (!obj || !obj.id) {
-                // إذا لم يكن هناك id، نضيفه كما هو (قد يكون سجل جديد بدون id بعد)
+                // إذا لم يكن هناك id، نضيفه كما هو
                 uniqueObjects.push(obj);
                 return;
             }
             
-            const recordId = String(obj.id).trim();
-            if (recordId === '') {
-                // إذا كان id فارغاً، نضيفه كما هو
+            const recordId = String(obj.id || '').trim();
+            if (!recordId) {
                 uniqueObjects.push(obj);
                 return;
             }
             
             if (seenIds.has(recordId)) {
-                // ✅ تكرار موجود - نستبدل السجل القديم بالسجل الجديد (الأحدث)
                 const oldIndex = seenIds.get(recordId);
-                uniqueObjects[oldIndex] = obj; // استبدال السجل القديم
-                Logger.log('⚠️ Duplicate record found in readFromSheet: id=' + recordId + ', sheetName=' + sheetName + ', keeping latest record');
+                const oldObj = uniqueObjects[oldIndex];
+
+                // مقارنة المحتوى (بدون ID) لتحديد هل هو تكرار حقيقي أم ID مكرر لبيانات مختلفة
+                const oldStr = JSON.stringify({...oldObj, id: ''});
+                const newStr = JSON.stringify({...obj, id: ''});
+
+                if (oldStr === newStr) {
+                    // تكرار حقيقي للبيانات — نتجاهله
+                    return;
+                } else {
+                    // ID مكرر لكن البيانات مختلفة — نحتفظ بكليهما لعدم فقدان البيانات
+                    obj.id = recordId + '_dup_' + index;
+                    uniqueObjects.push(obj);
+                    Logger.log('⚠️ Duplicate ID with different data in ' + sheetName + ': ' + recordId + '. Kept both.');
+                }
             } else {
-                // ✅ سجل جديد - نضيفه
                 seenIds.set(recordId, uniqueObjects.length);
                 uniqueObjects.push(obj);
             }
@@ -3347,7 +3360,7 @@ function deleteRowById(sheetName, recordId, spreadsheetId = null) {
         SpreadsheetApp.flush();
         
         // ✅ مسح الcache بعد الحذف (يشمل batch_*)
-        invalidateHseSheetCaches_(sheetName);
+        invalidateHseSheetCaches(sheetName);
         
         return { success: true, message: 'تم حذف السجل بنجاح', rowNumber: targetRow };
     } catch (e) {
@@ -3402,7 +3415,7 @@ function deleteRowByField(sheetName, fieldName, fieldValue, spreadsheetId = null
         SpreadsheetApp.flush();
         
         // ✅ مسح الcache بعد الحذف (يشمل batch_*)
-        invalidateHseSheetCaches_(sheetName);
+        invalidateHseSheetCaches(sheetName);
         
         return { success: true, message: 'تم حذف السجل بنجاح', rowNumber: targetRow };
     } catch (e) {
