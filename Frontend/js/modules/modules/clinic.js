@@ -2716,22 +2716,14 @@ const Clinic = {
             : this.renderEmptyState('لا توجد أدوية مسجلة في السجل.');
 
         panel.innerHTML = `
-            <div class="flex flex-wrap items-center justify-between gap-3 mb-4" style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 12px; direction: rtl;">
-                <div class="flex flex-wrap items-center gap-2" style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px; flex-direction: row !important;">
-                    <div class="relative" style="position: relative; display: inline-block; min-width: 200px;">
-                        <input type="text" id="medications-search" class="form-input pr-10" style="width: 100% !important; display: inline-block;" placeholder="بحث بالاسم أو النوع" value="${Utils.escapeHTML(filters.search || '')}">
-                        <i class="fas fa-search absolute top-3 right-3 text-gray-400" style="position: absolute; top: 50%; transform: translateY(-50%); right: 10px;"></i>
-                    </div>
-                    <select id="medications-status" class="form-input" style="width: auto !important; min-width: 130px; display: inline-block;">
-                        <option value="all" ${filters.status === 'all' ? 'selected' : ''}>جميع الحالات</option>
-                        <option value="ساري" ${filters.status === 'ساري' ? 'selected' : ''}>ساري</option>
-                        <option value="قريب الانتهاء" ${filters.status === 'قريب الانتهاء' ? 'selected' : ''}>قريب الانتهاء</option>
-                        <option value="منتهي" ${filters.status === 'منتهي' ? 'selected' : ''}>منتهي</option>
-                    </select>
-                    <input type="date" id="medications-date-from" class="form-input" style="width: auto !important; min-width: 130px; display: inline-block;" value="${filters.dateFrom || ''}" title="من تاريخ الشراء">
-                    <input type="date" id="medications-date-to" class="form-input" style="width: auto !important; min-width: 130px; display: inline-block;" value="${filters.dateTo || ''}" title="إلى تاريخ الشراء">
-                </div>
+            <!-- ترويسة سجل الأدوية على غرار سجل التردد -->
+            <div class="flex flex-wrap items-center justify-between gap-3 mb-4" style="direction: rtl;">
                 <div class="flex items-center gap-2">
+                    <h3 class="text-lg font-semibold" style="text-align: right; color: #1e293b;">
+                        <i class="fas fa-pills ml-2 text-green-600"></i>سجل الأدوية والمستلزمات الطبية
+                    </h3>
+                </div>
+                <div class="flex gap-2">
                     <button type="button" class="btn-secondary" id="medications-export-pdf-btn">
                         <i class="fas fa-file-pdf ml-2"></i>تصدير PDF
                     </button>
@@ -2743,6 +2735,56 @@ const Clinic = {
                         <i class="fas fa-plus ml-2"></i>إضافة جديد
                     </button>
                     ` : ''}
+                </div>
+            </div>
+
+            <!-- الفلاتر في صف واحد احترافي (مشابه لسجل التردد للموظفين) -->
+            <div class="visits-filters-row" style="background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%); padding: 16px 20px; margin: 0 -20px 15px -20px; width: calc(100% + 40px); direction: rtl;">
+                <div class="filters-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; align-items: end;">
+                    <!-- حقل البحث -->
+                    <div class="filter-field" style="min-width: 180px;">
+                        <label for="medications-search" class="filter-label" style="text-align: right;">
+                            <i class="fas fa-search ml-1 text-gray-500"></i>بحث بالاسم أو النوع
+                        </label>
+                        <input type="text" id="medications-search" class="filter-input" placeholder="اكتب اسم الدواء أو نوعه..." value="${Utils.escapeHTML(filters.search || '')}" style="width: 100%; text-align: right; direction: rtl;">
+                    </div>
+                    
+                    <!-- فلتر الحالة -->
+                    <div class="filter-field" style="min-width: 160px;">
+                        <label for="medications-status" class="filter-label" style="text-align: right;">
+                            <i class="fas fa-info-circle ml-1 text-gray-500"></i>حالة الصلاحية
+                            ${filters.status && filters.status !== 'all' ? `<span class="filter-count-badge" style="background-color: #10b981; color: white; border-radius: 9999px; padding: 2px 6px; font-size: 0.75rem; margin-right: 6px;">${medications.length}</span>` : ''}
+                        </label>
+                        <select id="medications-status" class="filter-input" style="width: 100%; direction: rtl;">
+                            <option value="all" ${filters.status === 'all' ? 'selected' : ''}>جميع الحالات</option>
+                            <option value="ساري" ${filters.status === 'ساري' ? 'selected' : ''}>ساري</option>
+                            <option value="قريب الانتهاء" ${filters.status === 'قريب الانتهاء' ? 'selected' : ''}>قريب الانتهاء</option>
+                            <option value="منتهي" ${filters.status === 'منتهي' ? 'selected' : ''}>منتهي</option>
+                        </select>
+                    </div>
+                    
+                    <!-- فلتر من تاريخ الشراء -->
+                    <div class="filter-field" style="min-width: 160px;">
+                        <label for="medications-date-from" class="filter-label" style="text-align: right;">
+                            <i class="fas fa-calendar-alt ml-1 text-gray-500"></i>من تاريخ الشراء
+                        </label>
+                        <input type="date" id="medications-date-from" class="filter-input" value="${filters.dateFrom || ''}" title="من تاريخ الشراء" style="width: 100%; direction: rtl;">
+                    </div>
+                    
+                    <!-- فلتر إلى تاريخ الشراء -->
+                    <div class="filter-field" style="min-width: 160px;">
+                        <label for="medications-date-to" class="filter-label" style="text-align: right;">
+                            <i class="fas fa-calendar-alt ml-1 text-gray-500"></i>إلى تاريخ الشراء
+                        </label>
+                        <input type="date" id="medications-date-to" class="filter-input" value="${filters.dateTo || ''}" title="إلى تاريخ الشراء" style="width: 100%; direction: rtl;">
+                    </div>
+                    
+                    <!-- زر إعادة التعيين -->
+                    <div class="filter-field" style="min-width: 140px;">
+                        <button id="medications-reset-filters" class="filter-reset-btn" style="width: 100%;">
+                            <i class="fas fa-redo ml-1"></i>إعادة تعيين
+                        </button>
+                    </div>
                 </div>
             </div>
             ${tableHtml}
@@ -2777,35 +2819,52 @@ const Clinic = {
         const statusSelect = panel.querySelector('#medications-status');
         const dateFromInput = panel.querySelector('#medications-date-from');
         const dateToInput = panel.querySelector('#medications-date-to');
+        const resetFiltersBtn = panel.querySelector('#medications-reset-filters');
         const addBtn = panel.querySelector('#medications-add-btn');
         const exportPdfBtn = panel.querySelector('#medications-export-pdf-btn');
         const exportExcelBtn = panel.querySelector('#medications-export-excel-btn');
 
         if (searchInput) {
             searchInput.addEventListener('input', (event) => {
+                this.state.filters = this.state.filters || {};
+                this.state.filters.medications = this.state.filters.medications || {};
                 this.state.filters.medications.search = event.target.value;
-                this.renderMedicationsTab();
+                this.scheduleMedicationsTabRender(150);
             });
         }
 
         if (statusSelect) {
             statusSelect.addEventListener('change', (event) => {
+                this.state.filters = this.state.filters || {};
+                this.state.filters.medications = this.state.filters.medications || {};
                 this.state.filters.medications.status = event.target.value;
-                this.renderMedicationsTab();
+                this.scheduleMedicationsTabRender(50);
             });
         }
 
         if (dateFromInput) {
             dateFromInput.addEventListener('change', (event) => {
+                this.state.filters = this.state.filters || {};
+                this.state.filters.medications = this.state.filters.medications || {};
                 this.state.filters.medications.dateFrom = event.target.value;
-                this.renderMedicationsTab();
+                this.scheduleMedicationsTabRender(50);
             });
         }
 
         if (dateToInput) {
             dateToInput.addEventListener('change', (event) => {
+                this.state.filters = this.state.filters || {};
+                this.state.filters.medications = this.state.filters.medications || {};
                 this.state.filters.medications.dateTo = event.target.value;
-                this.renderMedicationsTab();
+                this.scheduleMedicationsTabRender(50);
+            });
+        }
+
+        if (resetFiltersBtn) {
+            resetFiltersBtn.addEventListener('click', () => {
+                this.state.filters = this.state.filters || {};
+                this.state.filters.medications = { search: '', status: 'all', dateFrom: '', dateTo: '' };
+                this.scheduleMedicationsTabRender(0);
             });
         }
 
@@ -5973,6 +6032,20 @@ const Clinic = {
         };
         // setTimeout(0) بدل requestIdleCallback لتفادي تأخير يصل إلى ~1.2 ثانية
         this._visitsRenderTimer = setTimeout(doRender, Math.max(0, delayMs));
+    },
+
+    scheduleMedicationsTabRender(delayMs = 0) {
+        if (this._medicationsRenderTimer) {
+            clearTimeout(this._medicationsRenderTimer);
+            this._medicationsRenderTimer = null;
+        }
+        const doRender = () => {
+            this._medicationsRenderTimer = null;
+            requestAnimationFrame(() => {
+                this.renderMedicationsTab();
+            });
+        };
+        this._medicationsRenderTimer = setTimeout(doRender, Math.max(0, delayMs));
     },
 
     async renderVisitsTab(forceReload = false) {
