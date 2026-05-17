@@ -1,4 +1,4 @@
-﻿/**
+/**
  * PPE Module
  * ØªÙ… Ø§Ø³ØªØ®Ø±Ø§Ø¬Ù‡ Ù…Ù† app-modules.js
  */
@@ -397,7 +397,10 @@ const PPE = {
                             <td class="font-mono font-semibold">${esc(item.receiptNumber || item.id || '')}</td>
                             <td>${esc(item.employeeName || '')}</td>
                             <td>${esc(item.employeeCode || item.employeeNumber || '')}</td>
-                            <td>${esc(item.equipmentType || '')}</td>
+                            <td>
+                                ${esc(item.equipmentType || '')}
+                                ${item.shoeSize ? `<span class="block text-[11px] text-blue-600 font-semibold mt-0.5"><i class="fas fa-shoe-prints ml-1 text-[10px]"></i>مقاس: ${esc(item.shoeSize)}</span>` : ''}
+                            </td>
                             <td>${item.quantity || 0}</td>
                             <td>${item.receiptDate ? Utils.formatDate(item.receiptDate) : '-'}</td>
                             <td>
@@ -1726,23 +1729,46 @@ const PPE = {
                                 </div>
                                 <div id="ppe-items-container" class="space-y-4">
                                     <div class="ppe-item-row w-full rounded-xl border border-slate-200/90 bg-white shadow-sm ring-1 ring-slate-900/[0.04] overflow-hidden">
-                                        <div class="grid grid-cols-1 lg:grid-cols-[1fr,minmax(7.5rem,9rem)] gap-4 p-4 items-end bg-slate-50/50">
+                                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 items-end bg-slate-50/50">
                                             <div class="min-w-0">
-                                            <label class="block text-xs font-semibold text-gray-700 mb-1">${ut(t('module.ppe.label.equipmentType', 'نوع المعدة *'))}</label>
-                                            <select id="ppe-equipment-type" required class="form-input ppe-equipment-type w-full">
-                                                <option value="">${ut(t('module.ppe.equip.loading', 'جاري التحميل...'))}</option>
-                                            </select>
-                                            <p class="text-[11px] text-gray-500 mt-1">
-                                                ${ut(t('module.ppe.hint.fromStock', ''))}
-                                            </p>
+                                                <label class="block text-xs font-semibold text-gray-700 mb-1">
+                                                    <i class="fas fa-shield-alt text-emerald-600 ml-1"></i>${ut(t('module.ppe.label.equipmentType', 'نوع المعدة *'))}
+                                                </label>
+                                                <select id="ppe-equipment-type" required class="form-input ppe-equipment-type w-full border-slate-200 focus:border-emerald-500 focus:ring-emerald-500 rounded-lg">
+                                                    <option value="">${ut(t('module.ppe.equip.loading', 'جاري التحميل...'))}</option>
+                                                </select>
+                                                <p class="text-[11px] text-gray-400 mt-1">
+                                                    ${ut(t('module.ppe.hint.fromStock', ''))}
+                                                </p>
                                             </div>
                                             <div class="min-w-0">
-                                                <label class="block text-xs font-semibold text-gray-700 mb-1">${ut(t('module.ppe.label.qty', 'الكمية *'))}</label>
-                                                <div class="flex flex-col sm:flex-row sm:items-center gap-2">
-                                                    <input type="number" id="ppe-quantity" required class="form-input ppe-quantity w-full min-w-0" min="1"
+                                                <label class="block text-xs font-semibold text-gray-700 mb-1">
+                                                    <i class="fas fa-shoe-prints text-blue-600 ml-1"></i>مقاس الحذاء (اختياري)
+                                                </label>
+                                                <select class="form-input ppe-shoe-size w-full border-slate-200 focus:border-blue-500 focus:ring-blue-500 rounded-lg">
+                                                    <option value="">اختر المقاس...</option>
+                                                    <option value="38" ${ppeData?.shoeSize === '38' || ppeData?.shoeSize === 38 ? 'selected' : ''}>38</option>
+                                                    <option value="39" ${ppeData?.shoeSize === '39' || ppeData?.shoeSize === 39 ? 'selected' : ''}>39</option>
+                                                    <option value="40" ${ppeData?.shoeSize === '40' || ppeData?.shoeSize === 40 ? 'selected' : ''}>40</option>
+                                                    <option value="41" ${ppeData?.shoeSize === '41' || ppeData?.shoeSize === 41 ? 'selected' : ''}>41</option>
+                                                    <option value="42" ${ppeData?.shoeSize === '42' || ppeData?.shoeSize === 42 ? 'selected' : ''}>42</option>
+                                                    <option value="43" ${ppeData?.shoeSize === '43' || ppeData?.shoeSize === 43 ? 'selected' : ''}>43</option>
+                                                    <option value="44" ${ppeData?.shoeSize === '44' || ppeData?.shoeSize === 44 ? 'selected' : ''}>44</option>
+                                                    <option value="45" ${ppeData?.shoeSize === '45' || ppeData?.shoeSize === 45 ? 'selected' : ''}>45</option>
+                                                    <option value="46" ${ppeData?.shoeSize === '46' || ppeData?.shoeSize === 46 ? 'selected' : ''}>46</option>
+                                                    <option value="47" ${ppeData?.shoeSize === '47' || ppeData?.shoeSize === 47 ? 'selected' : ''}>47</option>
+                                                    <option value="48" ${ppeData?.shoeSize === '48' || ppeData?.shoeSize === 48 ? 'selected' : ''}>48</option>
+                                                </select>
+                                            </div>
+                                            <div class="min-w-0">
+                                                <label class="block text-xs font-semibold text-gray-700 mb-1">
+                                                    <i class="fas fa-sort-numeric-up text-amber-600 ml-1"></i>${ut(t('module.ppe.label.qty', 'الكمية *'))}
+                                                </label>
+                                                <div class="flex items-center gap-2">
+                                                    <input type="number" id="ppe-quantity" required class="form-input ppe-quantity w-full border-slate-200 focus:border-amber-500 focus:ring-amber-500 rounded-lg min-w-0" min="1"
                                                         value="${ppeData?.quantity || 1}" placeholder="${ut(t('module.ppe.table.quantity', 'الكمية'))}">
-                                                    <button type="button" class="btn-secondary ppe-remove-item hidden text-xs px-3 py-2 whitespace-nowrap shrink-0">
-                                                        <i class="fas fa-trash-alt ml-1"></i>${ut(t('module.ppe.btn.removeRow', 'حذف'))}
+                                                    <button type="button" class="btn-secondary ppe-remove-item hidden text-xs px-3 py-2 whitespace-nowrap shrink-0 rounded-lg border-rose-200 text-rose-600 hover:bg-rose-50">
+                                                        <i class="fas fa-trash-alt"></i>
                                                     </button>
                                                 </div>
                                             </div>
@@ -2041,6 +2067,11 @@ const PPE = {
                     }
                 }
 
+                const shoeSizeEl = newRow.querySelector('.ppe-shoe-size');
+                if (shoeSizeEl) {
+                    shoeSizeEl.value = '';
+                }
+
                 const eligibilityEl = newRow.querySelector('.ppe-eligibility-info');
                 if (eligibilityEl) {
                     eligibilityEl.innerHTML = '';
@@ -2229,6 +2260,7 @@ const PPE = {
                     for (const row of itemRows) {
                         const typeSelect = row.querySelector('.ppe-equipment-type');
                         const quantityInput = row.querySelector('.ppe-quantity');
+                        const shoeSizeSelect = row.querySelector('.ppe-shoe-size');
 
                         if (!typeSelect || !quantityInput) {
                             Notification.error(PPE._t('module.ppe.notify.rowsIncomplete', 'بعض صفوف الأصناف غير مكتملة. يرجى التأكد من أن كل صف يحتوي على نوع وكمية.'));
@@ -2241,6 +2273,7 @@ const PPE = {
 
                         const typeValue = (typeSelect.value || '').trim();
                         const quantityValue = parseInt(quantityInput.value, 10) || 0;
+                        const shoeSizeValue = shoeSizeSelect ? (shoeSizeSelect.value || '').trim() : '';
 
                         if (!typeValue) {
                             Notification.error(PPE._t('module.ppe.notify.selectEquipmentEachRow', 'يرجى اختيار نوع المعدة لكل صف قبل الحفظ.'));
@@ -2262,7 +2295,8 @@ const PPE = {
 
                         equipmentItems.push({
                             equipmentType: typeValue,
-                            quantity: quantityValue
+                            quantity: quantityValue,
+                            shoeSize: shoeSizeValue
                         });
                     }
 
@@ -2323,13 +2357,14 @@ const PPE = {
                         if (isEdit) {
                             const index = AppState.appData.ppe.findIndex(p => p.id === ppeData.id);
                             if (index !== -1) {
-                                const firstItem = equipmentItems[0] || { equipmentType: '', quantity: 0 };
+                                const firstItem = equipmentItems[0] || { equipmentType: '', quantity: 0, shoeSize: '' };
                                 const existing = AppState.appData.ppe[index] || {};
                                 const updatedRecord = {
                                     ...existing,
                                     ...commonData,
                                     equipmentType: firstItem.equipmentType,
                                     quantity: firstItem.quantity,
+                                    shoeSize: firstItem.shoeSize,
                                     createdAt: existing.createdAt || ppeData?.createdAt || new Date().toISOString(),
                                     updatedAt: new Date().toISOString()
                                 };
@@ -2348,6 +2383,7 @@ const PPE = {
                                     ...commonData,
                                     equipmentType: item.equipmentType,
                                     quantity: item.quantity,
+                                    shoeSize: item.shoeSize,
                                     createdAt: new Date().toISOString(),
                                     updatedAt: new Date().toISOString()
                                 };
@@ -2566,6 +2602,12 @@ const PPE = {
                                 <label class="text-sm font-semibold text-gray-600">${ut(t('module.ppe.table.quantity', 'الكمية'))}:</label>
                                 <p class="text-gray-800">${item.quantity || 0}</p>
                             </div>
+                            ${item.shoeSize ? `
+                            <div>
+                                <label class="text-sm font-semibold text-gray-600">مقاس الحذاء:</label>
+                                <p class="text-gray-800 font-bold"><i class="fas fa-shoe-prints text-blue-600 ml-1"></i>${Utils.escapeHTML(item.shoeSize)}</p>
+                            </div>
+                            ` : ''}
                             <div>
                                 <label class="text-sm font-semibold text-gray-600">${ut(t('module.ppe.table.receiptDate', 'تاريخ الاستلام'))}:</label>
                                 <p class="text-gray-800">${item.receiptDate ? Utils.formatDate(item.receiptDate) : '-'}</p>
