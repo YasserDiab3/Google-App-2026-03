@@ -2257,16 +2257,22 @@ const Clinic = {
 
     getFilteredMedications() {
         const filters = this.state.filters.medications || {};
-        const searchTerm = (filters.search || '').toLowerCase();
+        const searchTerm = (filters.search || '').toLowerCase().trim();
         const fromDate = filters.dateFrom ? new Date(filters.dateFrom) : null;
         const toDate = filters.dateTo ? new Date(filters.dateTo) : null;
         const statusFilter = filters.status || 'all';
 
-        return this.getMedications().filter((item) => {
-            const matchesSearch = !searchTerm
-                || (item.name && item.name.toLowerCase().includes(searchTerm))
-                || (item.type && item.type.toLowerCase().includes(searchTerm))
-                || (item.location && item.location.toLowerCase().includes(searchTerm));
+        return this.getMedications().map(item => this.normalizeMedicationRecord(item)).filter((item) => {
+            const searchStr = [
+                item.name,
+                item.type,
+                item.location,
+                item.usage,
+                item.notes,
+                this.getUserDisplayName(item.createdBy)
+            ].map(v => String(v || '').toLowerCase()).join(' ');
+
+            const matchesSearch = !searchTerm || searchStr.includes(searchTerm);
 
             if (!matchesSearch) return false;
 
@@ -2608,6 +2614,15 @@ const Clinic = {
         const panel = document.querySelector('.clinic-tab-panel[data-tab-panel="medications"]');
         if (!panel) return;
 
+        // ✅ حفظ موضع التركيز ومؤشر الكتابة لمنع فقدان التركيز عند الكتابة والفلترة الديناميكية
+        const activeElementId = document.activeElement ? document.activeElement.id : null;
+        let selectionStart = 0;
+        let selectionEnd = 0;
+        if (activeElementId === 'medications-search') {
+            selectionStart = document.activeElement.selectionStart;
+            selectionEnd = document.activeElement.selectionEnd;
+        }
+
         const filters = this.state.filters.medications || {};
         const medications = this.getFilteredMedications();
         
@@ -2735,6 +2750,18 @@ const Clinic = {
         this.applyModuleI18n(panel);
 
         this.bindMedicationsTabEvents(panel);
+
+        // ✅ استعادة التركيز وموضع مؤشر الكتابة لتجربة مستخدم سلسة بدون اهتزاز
+        if (activeElementId) {
+            const activeEl = panel.querySelector(`#${activeElementId}`);
+            if (activeEl) {
+                activeEl.focus();
+                if (activeElementId === 'medications-search') {
+                    activeEl.selectionStart = selectionStart;
+                    activeEl.selectionEnd = selectionEnd;
+                }
+            }
+        }
         
         // إضافة مستمعي التمرير للجدول
         setTimeout(() => {
@@ -2756,7 +2783,7 @@ const Clinic = {
 
         if (searchInput) {
             searchInput.addEventListener('input', (event) => {
-                this.state.filters.medications.search = event.target.value.trim();
+                this.state.filters.medications.search = event.target.value;
                 this.renderMedicationsTab();
             });
         }
