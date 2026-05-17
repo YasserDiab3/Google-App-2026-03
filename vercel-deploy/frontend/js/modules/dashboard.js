@@ -3208,6 +3208,31 @@ const Dashboard = {
                             empCountDashEl.textContent = self.formatNumber(empActiveOnly);
                             self.applyEnglishNumberFormat(empCountDashEl);
                         }
+                        
+                        // Update active contractor count separately
+                        const contCountDashEl = document.getElementById('dash-kpi-contractors-active-count');
+                        if (contCountDashEl) {
+                            const approvedContractors = Array.isArray(data.approvedContractors) ? data.approvedContractors : [];
+                            const keys = ['workerCount', 'workersCount', 'laborCount', 'manpower', 'employeesCount', 'totalWorkers', 'averageWorkers', 'contractorWorkers', 'numberOfWorkers', 'expectedWorkers', 'workforceCount'];
+                            let contractorWorkforceCount = 0;
+                            approvedContractors.forEach((rec) => {
+                                if (!rec || typeof rec !== 'object') return;
+                                if (rec.active === false || rec.deactivated === true || rec.isActive === 'inactive' || rec.isActive === false || rec.isActive === 'false' || rec.isActive === 'FALSE') return;
+                                let found = NaN;
+                                for (let i = 0; i < keys.length; i++) {
+                                    const x = parseFloat(String(rec[keys[i]]).replace(/,/g, ''));
+                                    if (Number.isFinite(x) && x > 0) {
+                                        found = x;
+                                        break;
+                                    }
+                                }
+                                if (!isNaN(found)) {
+                                    contractorWorkforceCount += Math.round(found);
+                                }
+                            });
+                            contCountDashEl.textContent = self.formatNumber(contractorWorkforceCount);
+                            self.applyEnglishNumberFormat(contCountDashEl);
+                        }
                     }
                     if (self.dashboardCan('training')) {
                         const trainingProgDashEl = document.getElementById('dash-kpi-training-programs');

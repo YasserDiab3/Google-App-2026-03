@@ -1905,7 +1905,9 @@ const Clinic = {
             ? { id: record.createdById || '', name: record.createdBy.trim() }
             : (record.createdBy || this.getCurrentUserSummary(record.createdBy));
         const createdById = record.createdById || createdBy?.id || AppState.currentUser?.id || '';
-        const updatedBy = record.updatedBy || this.getCurrentUserSummary(record.updatedBy);
+        const updatedBy = (typeof record.updatedBy === 'string' && record.updatedBy.trim() !== '')
+            ? { id: '', name: record.updatedBy.trim() }
+            : (record.updatedBy || this.getCurrentUserSummary(record.updatedBy));
         const notes = record.notes || record.description || '';
         const usage = record.usage || '';
         const statusInfo = this.calculateMedicationStatus({ expiryDate });
@@ -2964,9 +2966,19 @@ const Clinic = {
                             <p class="text-gray-800 whitespace-pre-line">${Utils.escapeHTML(record.notes || '')}</p>
                         </div>
                     ` : ''}
-                    <div class="text-sm text-gray-500 border-t pt-3">
-                        ${record.createdBy?.name ? `تم التسجيل بواسطة: ${Utils.escapeHTML(record.createdBy.name)}` : ''}
-                        ${record.createdAt ? `<span class="ml-2">بتاريخ ${this.formatDate(record.createdAt, true)}</span>` : ''}
+                    <div class="text-sm text-gray-500 border-t pt-3 flex flex-wrap justify-between items-center gap-2" style="direction: rtl;">
+                        <div>
+                            <span class="font-semibold">تم التسجيل بواسطة:</span>
+                            <span>${Utils.escapeHTML(record.createdBy?.name || 'غير محدد')}</span>
+                            ${record.createdAt ? `<span class="text-xs text-gray-400 mr-2">(${this.formatDate(record.createdAt, true)})</span>` : ''}
+                        </div>
+                        ${record.updatedBy && record.updatedBy.name && record.updatedBy.name !== 'النظام' ? `
+                        <div>
+                            <span class="font-semibold">آخر تحديث بواسطة:</span>
+                            <span>${Utils.escapeHTML(record.updatedBy.name)}</span>
+                            ${record.updatedAt ? `<span class="text-xs text-gray-400 mr-2">(${this.formatDate(record.updatedAt, true)})</span>` : ''}
+                        </div>
+                        ` : ''}
                     </div>
                 </div>
                 <div class="modal-footer form-actions-centered">
