@@ -695,7 +695,86 @@ function updateClinicVisit(visitId, updateData) {
 }
 
 /**
+ * أداة صيانة: نقل زيارات المقاولين من جدول الموظفين (القديم) إلى جدول المقاولين (الجديد)
+ * وحذفها من جدول الموظفين لترتيب وتنظيف قاعدة البيانات
+ */
+function migrateContractorVisits() {
+    try {
+        const spreadsheetId = getSpreadsheetId();
+        const ss = SpreadsheetApp.openById(spreadsheetId);
+        
+        const empSheet = ss.getSheetByName('ClinicVisits');
+        const conSheet = ss.getSheetByName('ClinicContractorVisits');
+        
+        if (!empSheet || !conSheet) {
+            return { success: false, message: 'الجداول غير موجودة' };
+        }
+        
+        const lastRow = empSheet.getLastRow();
+        if (lastRow < 2) {
+            return { success: true, message: 'لا توجد بيانات لترحيلها', migratedCount: 0 };
+        }
+        
+        const headers = empSheet.getRange(1, 1, 1, empSheet.getLastColumn()).getValues()[0];
+        const data = empSheet.getRange(2, 1, lastRow - 1, empSheet.getLastColumn()).getValues();
+        
+        const rowsToDelete = [];
+        const rowsToMigrate = [];
+        
+        for (let i = 0; i < data.length; i++) {
+            const rowData = {};
+            headers.forEach((h, idx) => {
+                if (h) rowData[String(h).trim()] = data[i][idx];
+            });
+            
+            // تحقق مما إذا كانت الزيارة للمقاولين بأي شكل من الأشكال
+            let personType = String(rowData.personType || '').toLowerCase().trim();
+            const isContractor = personType.includes('contractor') || personType.includes('مقاول') || personType.includes('external') || personType.includes('خارجي') || rowData.contractorName || rowData.contractorWorkerName || rowData.externalName;
+            
+            if (isContractor) {
+                // التأكد من وجود ID لتجنب مشكلة الـ ID المؤقت STB_
+                if (!rowData.id) {
+                    rowData.id = generateSequentialId('VISIT', 'ClinicContractorVisits') || ('VISIT_' + Date.now() + Math.floor(Math.random() * 1000));
+                }
+                
+                rowData.personType = 'contractor';
+                
+                rowsToMigrate.push(rowData);
+                // رقم الصف الفعلي في جوجل شيت هو i + 2
+                rowsToDelete.push(i + 2);
+            }
+        }
+        
+        if (rowsToMigrate.length === 0) {
+            return { success: true, message: 'لا توجد زيارات مقاولين في جدول الموظفين. قاعدة البيانات نظيفة.', migratedCount: 0 };
+        }
+        
+        // إضافة السجلات لجدول المقاولين
+        for (let j = 0; j < rowsToMigrate.length; j++) {
+            // نستخدم appendToSheet لضمان حفظها كـ صف جديد
+            appendToSheet('ClinicContractorVisits', rowsToMigrate[j], spreadsheetId);
+        }
+        
+        // مسح الصفوف من جدول الموظفين (يجب المسح من الأسفل للأعلى لتجنب انزلاق أرقام الصفوف)
+        rowsToDelete.sort((a, b) => b - a);
+        for (let k = 0; k < rowsToDelete.length; k++) {
+            empSheet.deleteRow(rowsToDelete[k]);
+        }
+        
+        // مسح الكاش لإجبار النظام على القراءة من الشيت
+        invalidateHseSheetCaches('ClinicVisits');
+        invalidateHseSheetCaches('ClinicContractorVisits');
+        
+        return { success: true, message: `تم بنجاح ترحيل عدد ${rowsToMigrate.length} زيارة مقاول إلى الجدول الصحيح وتنظيف جدول الموظفين.`, migratedCount: rowsToMigrate.length };
+    } catch (error) {
+        Logger.log('❌ [BACKEND] Error migrating contractor visits: ' + error.toString());
+        return { success: false, message: 'حدث خطأ أثناء الترحيل: ' + error.toString() };
+    }
+}
+
+/**
  * الحصول على جميع زيارات العيادة
+
  */
 function getAllClinicVisits(filters = {}) {
     try {

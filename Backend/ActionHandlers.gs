@@ -1089,6 +1089,13 @@ var ActionHandlers = {
         })();
         return result;
     },
+    'migrateContractorVisits': function(payload, postData, action, actorUserData, spreadsheetId) {
+        var result = { success: false, message: '' };
+        (function() {
+            result = migrateContractorVisits();
+        })();
+        return result;
+    },
     'getAllClinicVisits': function(payload, postData, action, actorUserData, spreadsheetId) {
         var result = { success: false, message: '' };
         (function() {
