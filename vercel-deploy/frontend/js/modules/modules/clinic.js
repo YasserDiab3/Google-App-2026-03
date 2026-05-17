@@ -6121,12 +6121,16 @@ const Clinic = {
     shouldFetchClinicVisitsFromBackend(opts = {}) {
         if (opts && opts.forceRefresh === true) return true;
         if (typeof AppState === 'undefined' || !AppState || !AppState.appData) return true;
+        
+        // إذا تم التحميل بنجاح من الباكيند في هذه الجلسة، فلا داعي لإعادة الطلب مطلقاً إلا بـ forceRefresh
+        if (this._visitsBackendFetchOk === true) return false;
+        
         const hasLocalData = Array.isArray(AppState.appData.clinicVisits) && AppState.appData.clinicVisits.length > 0;
         const lastSync = localStorage.getItem('clinic_last_sync');
         const cacheAge = lastSync ? (Date.now() - parseInt(lastSync, 10)) : Infinity;
         const CACHE_DURATION = 10 * 60 * 1000;
         const isDataStale = !Number.isFinite(cacheAge) || cacheAge >= CACHE_DURATION;
-        return !hasLocalData || isDataStale || this._visitsBackendFetchOk !== true;
+        return !hasLocalData || isDataStale;
     },
 
     /**
@@ -7578,7 +7582,7 @@ const Clinic = {
                 // حفظ موضع المؤشر لاستعادته بعد إعادة الرسم
                 this.state._searchCursorPosition = cursorPosition;
                 this.state._shouldFocusSearch = true;
-                this.renderVisitsTab();
+                this.scheduleVisitsTabRender(false, 150);
             });
         }
         
