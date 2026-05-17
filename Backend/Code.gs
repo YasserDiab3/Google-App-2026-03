@@ -855,7 +855,7 @@ function doPost(e) {
                     result = getAllTrainings(payload.filters || {});
                     break;
                 case 'deleteTraining':
-                    result = deleteTraining(payload.trainingId || payload.id);
+                    result = deleteTraining(payload.trainingId || payload.id, actorUserData);
                     break;
                 case 'getTrainingStatistics':
                     result = getTrainingStatistics(payload.filters || {});

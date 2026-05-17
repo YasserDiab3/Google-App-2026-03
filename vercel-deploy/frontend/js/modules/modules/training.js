@@ -5014,6 +5014,10 @@ const Training = {
     },
 
     async deleteContractorTraining(trainingId) {
+        if (!this.isCurrentUserAdminOrManager()) {
+            Notification.error('صلاحية الحذف غير متاحة للمستخدم. الحذف يتم بطلب للمدير فقط.');
+            return;
+        }
         this.ensureData();
         const records = AppState.appData.contractorTrainings || [];
         const training = records.find(r => r.id === trainingId);
@@ -6408,6 +6412,12 @@ const Training = {
             return Permissions.isCurrentUserAdmin();
         }
         return (AppState.currentUser?.role || '').toLowerCase() === 'admin';
+    },
+
+    isCurrentUserAdminOrManager() {
+        if (this.isCurrentUserAdmin()) return true;
+        const role = (AppState.currentUser?.role || '').toString().trim().toLowerCase();
+        return ['admin', 'system_admin', 'manager', 'مدير', 'مدير النظام', 'system-manager', 'safety_officer'].some(r => role.includes(r));
     },
 
     getAnnualPlan(year, { createIfMissing = false } = {}) {
@@ -8544,6 +8554,10 @@ const Training = {
     },
 
     async deleteTraining(id) {
+        if (!this.isCurrentUserAdminOrManager()) {
+            Notification.error('صلاحية الحذف غير متاحة للمستخدم. الحذف يتم بطلب للمدير فقط.');
+            return;
+        }
         if (!confirm('هل أنت متأكد من حذف هذا البرنامج؟\n\nهذه العملية لا يمكن التراجع عنها.')) return;
         Loading.show();
         try {
@@ -13223,6 +13237,10 @@ const Training = {
      * حذف سجل تدريب
      */
     async deleteAttendanceRecord(recordId) {
+        if (!this.isCurrentUserAdminOrManager()) {
+            Notification.error('صلاحية الحذف غير متاحة للمستخدم. الحذف يتم بطلب للمدير فقط.');
+            return;
+        }
         if (!confirm('هل أنت متأكد من حذف هذا السجل؟')) {
             return;
         }
