@@ -710,6 +710,10 @@ function migrateContractorVisits() {
             return { success: false, message: 'الجداول غير موجودة' };
         }
         
+        // 1. جلب معرفات المقاولين الموجودة بالفعل لمنع التكرار
+        const existingConData = readFromSheet('ClinicContractorVisits', spreadsheetId) || [];
+        const existingIds = new Set(existingConData.map(r => String(r.id || '').trim()).filter(id => id));
+        
         const lastRow = empSheet.getLastRow();
         if (lastRow < 2) {
             return { success: true, message: 'لا توجد بيانات لترحيلها', migratedCount: 0 };
@@ -718,8 +722,8 @@ function migrateContractorVisits() {
         const headers = empSheet.getRange(1, 1, 1, empSheet.getLastColumn()).getValues()[0];
         const data = empSheet.getRange(2, 1, lastRow - 1, empSheet.getLastColumn()).getValues();
         
-        const rowsToDelete = [];
-        const rowsToMigrate = [];
+        let rowsToDelete = [];
+        let rowsToMigrate = [];
         
         for (let i = 0; i < data.length; i++) {
             const rowData = {};
@@ -732,11 +736,9 @@ function migrateContractorVisits() {
             const isContractor = personType.includes('contractor') || personType.includes('مقاول') || personType.includes('external') || personType.includes('خارجي') || rowData.contractorName || rowData.contractorWorkerName || rowData.externalName;
             
             if (isContractor) {
-                // التأكد من وجود ID لتجنب مشكلة الـ ID المؤقت STB_
                 if (!rowData.id) {
-                    rowData.id = generateSequentialId('VISIT', 'ClinicContractorVisits') || ('VISIT_' + Date.now() + Math.floor(Math.random() * 1000));
+                    rowData.id = ('VISIT_' + Date.now() + Math.floor(Math.random() * 1000));
                 }
-                
                 rowData.personType = 'contractor';
                 
                 rowsToMigrate.push(rowData);
@@ -746,16 +748,32 @@ function migrateContractorVisits() {
         }
         
         if (rowsToMigrate.length === 0) {
-            return { success: true, message: 'لا توجد زيارات مقاولين في جدول الموظفين. قاعدة البيانات نظيفة.', migratedCount: 0 };
+            return { success: true, message: 'لا توجد زيارات مقاولين في جدول الموظفين. قاعدة البيانات نظيفة تماماً.', migratedCount: 0 };
         }
         
-        // إضافة السجلات لجدول المقاولين
+        // 2. حماية من مهلة التنفيذ (Timeout): معالجة 20 صف كحد أقصى في كل ضغطة
+        const BATCH_SIZE = 20;
+        const totalFound = rowsToMigrate.length;
+        const isPartial = totalFound > BATCH_SIZE;
+        
+        if (isPartial) {
+            rowsToMigrate = rowsToMigrate.slice(0, BATCH_SIZE);
+            rowsToDelete = rowsToDelete.slice(0, BATCH_SIZE);
+        }
+        
+        let appendedCount = 0;
+        
+        // 3. إضافة السجلات لجدول المقاولين (إذا لم تكن موجودة بالفعل)
         for (let j = 0; j < rowsToMigrate.length; j++) {
-            // نستخدم appendToSheet لضمان حفظها كـ صف جديد
-            appendToSheet('ClinicContractorVisits', rowsToMigrate[j], spreadsheetId);
+            const rowId = String(rowsToMigrate[j].id).trim();
+            if (!existingIds.has(rowId)) {
+                appendToSheet('ClinicContractorVisits', rowsToMigrate[j], spreadsheetId);
+                existingIds.add(rowId);
+                appendedCount++;
+            }
         }
         
-        // مسح الصفوف من جدول الموظفين (يجب المسح من الأسفل للأعلى لتجنب انزلاق أرقام الصفوف)
+        // 4. مسح الصفوف من جدول الموظفين (يجب المسح من الأسفل للأعلى لتجنب انزلاق أرقام الصفوف)
         rowsToDelete.sort((a, b) => b - a);
         for (let k = 0; k < rowsToDelete.length; k++) {
             empSheet.deleteRow(rowsToDelete[k]);
@@ -765,7 +783,14 @@ function migrateContractorVisits() {
         invalidateHseSheetCaches('ClinicVisits');
         invalidateHseSheetCaches('ClinicContractorVisits');
         
-        return { success: true, message: `تم بنجاح ترحيل عدد ${rowsToMigrate.length} زيارة مقاول إلى الجدول الصحيح وتنظيف جدول الموظفين.`, migratedCount: rowsToMigrate.length };
+        let msg = `تم بنجاح معالجة ${rowsToDelete.length} سجل (تم نقل ${appendedCount} وحذف المكرر).`;
+        if (isPartial) {
+            msg += `\n⚠️ يتبقى حوالي ${totalFound - BATCH_SIZE} سجل. يرجى الضغط مرة أخرى لاستكمال النقل.`;
+        } else {
+            msg += `\n✅ اكتملت العملية تماماً وقاعدة البيانات نظيفة.`;
+        }
+        
+        return { success: true, message: msg, migratedCount: rowsToDelete.length, isPartial: isPartial };
     } catch (error) {
         Logger.log('❌ [BACKEND] Error migrating contractor visits: ' + error.toString());
         return { success: false, message: 'حدث خطأ أثناء الترحيل: ' + error.toString() };
