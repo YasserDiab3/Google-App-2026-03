@@ -1639,12 +1639,12 @@ const PPE = {
         const stReceived = t('module.ppe.status.received', 'مستلم');
         const stPending = t('module.ppe.status.pending', 'قيد التسليم');
         modal.innerHTML = `
-            <div class="modal-content w-[min(100%,48rem)] max-w-[min(94vw,48rem)]" style="border-radius: 1rem; overflow: hidden;">
-                <div class="modal-header" style="background: linear-gradient(135deg, #1d4ed8, #0f766e); color: #ffffff; text-align: center; position: relative; padding: 1rem 1.5rem;">
+            <div class="modal-content w-[min(100%,52rem)] max-w-[min(94vw,52rem)]" style="border-radius: 1rem; overflow: hidden; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);">
+                <div class="modal-header" style="background: linear-gradient(135deg, #2563eb, #0d9488); color: #ffffff; text-align: center; position: relative; padding: 1.25rem 1.5rem;">
                     <h2 class="modal-title" style="margin: 0 auto; font-weight: 700; letter-spacing: 0.03em;">
                         ${isEdit ? ut(t('module.ppe.title.editReceipt', 'تعديل استلام')) : ut(t('module.ppe.title.newReceipt', 'تسجيل استلام جديد'))}
                     </h2>
-                    <button class="modal-close" onclick="this.closest('.modal-overlay').remove()" style="position: absolute; left: 1rem; top: 50%; transform: translateY(-50%); color: #ffffff;">
+                    <button class="modal-close" onclick="this.closest('.modal-overlay').remove()" style="position: absolute; left: 1rem; top: 50%; transform: translateY(-50%); color: #ffffff; background: rgba(255,255,255,0.15); border: none; width: 2rem; height: 2rem; border-radius: 50%; display: flex; items-center: center; justify-content: center; transition: all 0.2s;">
                         <i class="fas fa-times"></i>
                     </button>
                 </div>
@@ -1689,27 +1689,36 @@ const PPE = {
                         <input type="hidden" id="ppe-employee-branch" value="${Utils.escapeHTML(employeeInfo.branch)}">
                         <input type="hidden" id="ppe-employee-location" value="${Utils.escapeHTML(employeeInfo.location)}">
 
-                        <div class="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                        <div class="rounded-xl border border-blue-100 bg-blue-50/30 p-4 shadow-sm">
                             <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm">
-                            <div>
-                                    <p class="text-gray-500 mb-1">${ut(t('module.ppe.label.name', 'الاسم'))}</p>
-                                    <p id="ppe-employee-info-name" class="font-semibold text-gray-800">${formatInfo(employeeInfo.name)}</p>
-                            </div>
-                                <div>
-                                    <p class="text-gray-500 mb-1">${ut(t('module.ppe.label.department', 'القسم'))}</p>
-                                    <p id="ppe-employee-info-department" class="font-semibold text-gray-800">${formatInfo(employeeInfo.department)}</p>
+                                <div class="bg-white/90 p-3 rounded-lg border border-blue-50/50 shadow-sm flex items-center gap-3">
+                                    <span class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-blue-100 text-blue-600"><i class="fas fa-signature text-sm"></i></span>
+                                    <div class="min-w-0">
+                                        <p class="text-[11px] font-bold text-blue-700/70 mb-0.5">${ut(t('module.ppe.label.name', 'الاسم'))}</p>
+                                        <p id="ppe-employee-info-name" class="font-extrabold text-slate-800 truncate">${formatInfo(employeeInfo.name)}</p>
+                                    </div>
                                 </div>
-                                <div>
-                                    <p class="text-gray-500 mb-1">${ut(t('module.ppe.label.position', 'المنصب'))}</p>
-                                    <p id="ppe-employee-info-position" class="font-semibold text-gray-800">${formatInfo(employeeInfo.position)}</p>
+                                <div class="bg-white/90 p-3 rounded-lg border border-blue-50/50 shadow-sm flex items-center gap-3">
+                                    <span class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-cyan-100 text-cyan-600"><i class="fas fa-building text-sm"></i></span>
+                                    <div class="min-w-0">
+                                        <p class="text-[11px] font-bold text-cyan-700/70 mb-0.5">${ut(t('module.ppe.label.department', 'القسم'))}</p>
+                                        <p id="ppe-employee-info-department" class="font-extrabold text-slate-800 truncate">${formatInfo(employeeInfo.department)}</p>
+                                    </div>
+                                </div>
+                                <div class="bg-white/90 p-3 rounded-lg border border-blue-50/50 shadow-sm flex items-center gap-3">
+                                    <span class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-indigo-100 text-indigo-600"><i class="fas fa-briefcase text-sm"></i></span>
+                                    <div class="min-w-0">
+                                        <p class="text-[11px] font-bold text-indigo-700/70 mb-0.5">${ut(t('module.ppe.label.position', 'المنصب'))}</p>
+                                        <p id="ppe-employee-info-position" class="font-extrabold text-slate-800 truncate">${formatInfo(employeeInfo.position)}</p>
+                                    </div>
                                 </div>
                             </div>
-                            <div class="text-xs text-gray-500 flex flex-wrap gap-4 mt-3">
-                                <span id="ppe-employee-info-branch" class="${employeeInfo.branch ? '' : 'hidden'}">
-                                    ${employeeInfo.branch ? `${ut(t('module.ppe.label.branch', 'الفرع'))}: ${Utils.escapeHTML(employeeInfo.branch)}` : ''}
+                            <div class="text-xs text-slate-500 flex flex-wrap gap-4 mt-3 px-1">
+                                <span id="ppe-employee-info-branch" class="${employeeInfo.branch ? '' : 'hidden'} bg-slate-100 px-2 py-1 rounded-md font-medium">
+                                    ${employeeInfo.branch ? `<i class="fas fa-code-branch text-slate-400 ml-1"></i>${ut(t('module.ppe.label.branch', 'الفرع'))}: ${Utils.escapeHTML(employeeInfo.branch)}` : ''}
                                 </span>
-                                <span id="ppe-employee-info-location" class="${employeeInfo.location ? '' : 'hidden'}">
-                                    ${employeeInfo.location ? `${ut(t('module.ppe.label.location', 'الموقع'))}: ${Utils.escapeHTML(employeeInfo.location)}` : ''}
+                                <span id="ppe-employee-info-location" class="${employeeInfo.location ? '' : 'hidden'} bg-slate-100 px-2 py-1 rounded-md font-medium">
+                                    ${employeeInfo.location ? `<i class="fas fa-map-marker-alt text-slate-400 ml-1"></i>${ut(t('module.ppe.label.location', 'الموقع'))}: ${Utils.escapeHTML(employeeInfo.location)}` : ''}
                                 </span>
                             </div>
                         </div>
@@ -1845,19 +1854,19 @@ const PPE = {
                 if (infoPosition) infoPosition.textContent = info.position || '—';
                 if (infoBranch) {
                     if (info.branch) {
-                        infoBranch.textContent = `${Lb('module.ppe.label.branch', 'الفرع')}: ${info.branch}`;
+                        infoBranch.innerHTML = `<i class="fas fa-code-branch text-slate-400 ml-1"></i>${Lb('module.ppe.label.branch', 'الفرع')}: ${Utils.escapeHTML(info.branch)}`;
                         infoBranch.classList.remove('hidden');
                     } else {
-                        infoBranch.textContent = '';
+                        infoBranch.innerHTML = '';
                         infoBranch.classList.add('hidden');
                     }
                 }
                 if (infoLocation) {
                     if (info.location) {
-                        infoLocation.textContent = `${Lb('module.ppe.label.location', 'الموقع')}: ${info.location}`;
+                        infoLocation.innerHTML = `<i class="fas fa-map-marker-alt text-slate-400 ml-1"></i>${Lb('module.ppe.label.location', 'الموقع')}: ${Utils.escapeHTML(info.location)}`;
                         infoLocation.classList.remove('hidden');
                     } else {
-                        infoLocation.textContent = '';
+                        infoLocation.innerHTML = '';
                         infoLocation.classList.add('hidden');
                     }
                 }
