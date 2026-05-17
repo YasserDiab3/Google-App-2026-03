@@ -751,8 +751,8 @@ function migrateContractorVisits() {
             return { success: true, message: 'لا توجد زيارات مقاولين في جدول الموظفين. قاعدة البيانات نظيفة تماماً.', migratedCount: 0 };
         }
         
-        // 2. حماية من مهلة التنفيذ (Timeout): معالجة 20 صف كحد أقصى في كل ضغطة
-        const BATCH_SIZE = 20;
+        // 2. حماية من مهلة التنفيذ (Timeout): معالجة 5 صف كحد أقصى لتجنب أي مشاكل بالاتصال
+        const BATCH_SIZE = 5;
         const totalFound = rowsToMigrate.length;
         const isPartial = totalFound > BATCH_SIZE;
         
