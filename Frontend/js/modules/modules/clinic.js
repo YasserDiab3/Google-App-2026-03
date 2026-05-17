@@ -2716,20 +2716,20 @@ const Clinic = {
             : this.renderEmptyState('لا توجد أدوية مسجلة في السجل.');
 
         panel.innerHTML = `
-            <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
-                <div class="flex flex-wrap items-center gap-2">
-                    <div class="relative">
-                        <input type="text" id="medications-search" class="form-input pr-10" placeholder="بحث بالاسم أو النوع" value="${Utils.escapeHTML(filters.search || '')}">
-                        <i class="fas fa-search absolute top-3 right-3 text-gray-400"></i>
+            <div class="flex flex-wrap items-center justify-between gap-3 mb-4" style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 12px; direction: rtl;">
+                <div class="flex flex-wrap items-center gap-2" style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px; flex-direction: row !important;">
+                    <div class="relative" style="position: relative; display: inline-block; min-width: 200px;">
+                        <input type="text" id="medications-search" class="form-input pr-10" style="width: 100% !important; display: inline-block;" placeholder="بحث بالاسم أو النوع" value="${Utils.escapeHTML(filters.search || '')}">
+                        <i class="fas fa-search absolute top-3 right-3 text-gray-400" style="position: absolute; top: 50%; transform: translateY(-50%); right: 10px;"></i>
                     </div>
-                    <select id="medications-status" class="form-input">
+                    <select id="medications-status" class="form-input" style="width: auto !important; min-width: 130px; display: inline-block;">
                         <option value="all" ${filters.status === 'all' ? 'selected' : ''}>جميع الحالات</option>
                         <option value="ساري" ${filters.status === 'ساري' ? 'selected' : ''}>ساري</option>
                         <option value="قريب الانتهاء" ${filters.status === 'قريب الانتهاء' ? 'selected' : ''}>قريب الانتهاء</option>
                         <option value="منتهي" ${filters.status === 'منتهي' ? 'selected' : ''}>منتهي</option>
                     </select>
-                    <input type="date" id="medications-date-from" class="form-input" value="${filters.dateFrom || ''}" title="من تاريخ الشراء">
-                    <input type="date" id="medications-date-to" class="form-input" value="${filters.dateTo || ''}" title="إلى تاريخ الشراء">
+                    <input type="date" id="medications-date-from" class="form-input" style="width: auto !important; min-width: 130px; display: inline-block;" value="${filters.dateFrom || ''}" title="من تاريخ الشراء">
+                    <input type="date" id="medications-date-to" class="form-input" style="width: auto !important; min-width: 130px; display: inline-block;" value="${filters.dateTo || ''}" title="إلى تاريخ الشراء">
                 </div>
                 <div class="flex items-center gap-2">
                     <button type="button" class="btn-secondary" id="medications-export-pdf-btn">
@@ -6535,7 +6535,13 @@ const Clinic = {
             // ✅ التأكد من تطبيع البيانات قبل العرض
             this.ensureData();
             
-            const allVisits = (AppState.appData.clinicVisits || []).slice().reverse();
+            // ✅ فرز الزيارات ليكون الأحدث في الأعلى دائماً والاقدم بالأسفل بشكل تنازلي دقيق
+            const allVisits = (AppState.appData.clinicVisits || []).slice();
+            allVisits.sort((a, b) => {
+                const dateA = new Date(a.visitDate || a.createdAt || 0).getTime();
+                const dateB = new Date(b.visitDate || b.createdAt || 0).getTime();
+                return dateB - dateA;
+            });
 
             // ✅ فلترة الزيارات حسب النوع مع التأكد من وجود personType
             const employeeVisits = allVisits.filter(v => {
