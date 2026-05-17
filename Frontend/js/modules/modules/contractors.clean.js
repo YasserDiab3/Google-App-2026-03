@@ -11364,8 +11364,8 @@ const Contractors = {
                     if (needPTW) syncSheets.push('PTW', 'PTWRegistry');
                     if (needViol) syncSheets.push('Violations');
                     if (needEval) syncSheets.push('ContractorEvaluations');
-                    if (needClinic) syncSheets.push('ClinicVisits');
-                    if (needInj) syncSheets.push('Injuries');
+                    if (needClinic) syncSheets.push('ClinicVisits', 'ClinicContractorVisits');
+                    if (needInj) syncSheets.push('Injuries', 'ClinicContractorInjuries');
                     if (syncSheets.length && typeof GoogleIntegration.syncData === 'function') {
                         await GoogleIntegration.syncData({ sheets: [...new Set(syncSheets)], silent: true, showLoader: false, notifyOnSuccess: false, notifyOnError: false });
                     }
@@ -11398,10 +11398,14 @@ const Contractors = {
                     if (needClinic && typeof GoogleIntegration.readFromSheets === 'function') {
                         const cv = await GoogleIntegration.readFromSheets('ClinicVisits');
                         if (Array.isArray(cv)) AppState.appData.clinicVisits = cv;
+                        const ccv = await GoogleIntegration.readFromSheets('ClinicContractorVisits');
+                        if (Array.isArray(ccv)) AppState.appData.clinicContractorVisits = ccv;
                     }
                     if (needInj && typeof GoogleIntegration.readFromSheets === 'function') {
                         const inj = await GoogleIntegration.readFromSheets('Injuries');
                         if (Array.isArray(inj)) AppState.appData.injuries = inj;
+                        const cinj = await GoogleIntegration.readFromSheets('ClinicContractorInjuries');
+                        if (Array.isArray(cinj)) AppState.appData.clinicContractorInjuries = cinj;
                     }
                 } catch (e) {
                     if (typeof Utils !== 'undefined' && Utils.safeWarn) Utils.safeWarn('تعذر تحميل بعض بيانات التحليل:', e);
