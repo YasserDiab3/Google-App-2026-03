@@ -512,6 +512,9 @@ window.Auth = {
         }
 
         const isBootstrap = this.isBootstrapEmail(email) && !this.isBootstrapDisabled();
+        
+        const allUsersList = AppState.appData.users || [];
+        const fullUserData = allUsersList.find(u => u && u.email && u.email.toLowerCase() === email) || user || {};
 
         // ✅ الحل الجذري: التأكد من وجود name صحيح
         // إذا كان user.name فارغًا، نستخدم email كبديل
