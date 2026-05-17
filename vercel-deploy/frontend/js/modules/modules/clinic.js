@@ -1154,6 +1154,10 @@ const Clinic = {
             return sum + arr.reduce((s, m) => s + (parseInt(m.quantity, 10) || 0), 0);
         }, 0);
 
+        const meds = Array.isArray(AppState.appData.clinicMedications)
+            ? AppState.appData.clinicMedications
+            : (Array.isArray(AppState.appData.clinicInventory) ? AppState.appData.clinicInventory : []);
+
         const expiredMedications = meds.filter(m => (m.status || '') === 'منتهي').length;
         const lowStockMedications = meds.filter(m => (m.remainingQuantity ?? 0) <= 10 && (m.remainingQuantity ?? 0) > 0).length;
         const totalMedications = meds.length;
