@@ -1238,7 +1238,7 @@ function deductMedicationsFromInventoryAsync_(medications, visitId, dispensedBy)
                 const rowIndex = medIndex + 2;
                 
                 try {
-                    const updateResult = updateSingleRowInSheet(sheetName, medData, rowIndex, spreadsheetId);
+                    const updateResult = updateSingleRowInSheet(sheetName, medData.id, medData, spreadsheetId);
                     if (updateResult && updateResult.success) {
                         Logger.log('✅ [ASYNC-DEDUCT] تم حفظ ' + medName + ' في الصف ' + rowIndex);
                     }
@@ -1433,7 +1433,7 @@ function deductMedicationsFromInventory_(medications, visitId, dispensedBy) {
                 
                 try {
                     // ✅ استخدام updateSingleRowInSheet لتحديث صف محدد
-                    const updateResult = updateSingleRowInSheet(sheetName, medData, rowIndex, spreadsheetId);
+                    const updateResult = updateSingleRowInSheet(sheetName, medData.id, medData, spreadsheetId);
                     
                     if (updateResult && updateResult.success) {
                         saveSuccessCount++;
