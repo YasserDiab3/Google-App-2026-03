@@ -6144,12 +6144,23 @@ const Clinic = {
                 const isDuplicate = server.some(sv => {
                     return sv.personType === v.personType &&
                            sv.visitDate === v.visitDate &&
-                           (sv.employeeId === v.employeeId || sv.contractorWorkerName === v.contractorWorkerName);
+                           (sv.employeeId === v.employeeId || sv.contractorWorkerName === v.contractorWorkerName || sv.employeeName === v.employeeName);
                 });
 
                 if (!isDuplicate) {
-                    seen.add(id);
-                    extras.push(v);
+                    // ✅ المشكلة: السجلات التي تُحذف من الخادم تبقى هنا للأبد بسبب الدمج!
+                    // ✅ الحل: نحتفظ بالسجلات المحلية الإضافية فقط إذا كانت حديثة جداً (أقل من 2 ساعة)
+                    // على افتراض أنها أُضيفت أوفلاين ولم تُرفع بعد. أما السجلات القديمة المحذوفة من الخادم فنتخلص منها.
+                    const recordTime = new Date(v.createdAt || v.visitDate).getTime();
+                    const now = new Date().getTime();
+                    if (!isNaN(recordTime) && (now - recordTime) < (2 * 60 * 60 * 1000)) { // ساعتين
+                        seen.add(id);
+                        extras.push(v);
+                    } else if (isNaN(recordTime)) {
+                        // إذا لم يكن هناك تاريخ، نحتفظ به لتجنب فقدان البيانات
+                        seen.add(id);
+                        extras.push(v);
+                    }
                 }
             }
         });
