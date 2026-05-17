@@ -531,6 +531,11 @@ const Dashboard = {
                 tuples.push(['PTW', 'ptw']);
                 tuples.push(['PTWRegistry', 'ptwRegistry']);
             }
+            if (this.dashboardCan('employees')) {
+                tuples.push(['Employees', 'employees']);
+                tuples.push(['ExternalWorkforceMonthly', 'externalWorkforceMonthly']);
+                tuples.push(['ApprovedContractors', 'approvedContractors']);
+            }
 
             const sheetNames = [];
             tuples.forEach(([sheet]) => {
@@ -2994,16 +2999,56 @@ const Dashboard = {
     },
 
     /**
-     * جمع أعداد العمالة من سجلات المقاولين المعتمدين إن وُجدت حقول رقمية (وإلا 0 للسجل).
+     * تحديد إذا كان الموظف غير نشط (مستقيل)
+     * يدعم: status = 'inactive' أو 'غير نشط' أو وجود تاريخ استقالة
      */
-    _sumContractorWorkforceHeadcount(approvedContractors) {
+    _isEmployeeInactive(employee) {
+        if (!employee) return false;
+        const status = (employee.status != null && employee.status !== '') ? String(employee.status).trim() : '';
+        const resignationDate = (employee.resignationDate != null && employee.resignationDate !== '') ? String(employee.resignationDate).trim() : '';
+        if (resignationDate) return true;
+        if (status === 'inactive' || status.toLowerCase() === 'inactive') return true;
+        if (status === 'غير نشط') return true;
+        return false;
+    },
+
+    /**
+     * جمع أعداد العمالة من سجلات المقاولين المعتمدين أو جدول العمالة الخارجية الشهري
+     */
+    _sumContractorWorkforceHeadcount(approvedContractors, appData) {
         if (!this.workHoursIncludeContractors()) return 0;
+
+        const data = appData && typeof appData === 'object'
+            ? appData
+            : (typeof AppState !== 'undefined' && AppState.appData ? AppState.appData : {});
+
+        const externalWorkforce = Array.isArray(data.externalWorkforceMonthly) ? data.externalWorkforceMonthly : [];
+        const currentYear = new Date().getFullYear();
+        const monthKeys = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
+        const currentMonthKey = monthKeys[new Date().getMonth()];
+
+        // 1. محاولة الجمع من جدول العمالة الخارجية الشهري للمقاولين المعتمدين للسنة الحالية والشهر الحالي أولاً
+        const activeYearRecords = externalWorkforce.filter(r => r && Number(r.year) === currentYear);
+        if (activeYearRecords.length > 0) {
+            let monthlySum = 0;
+            activeYearRecords.forEach(r => {
+                const val = parseFloat(r[currentMonthKey]);
+                if (Number.isFinite(val) && val > 0) {
+                    monthlySum += Math.round(val);
+                }
+            });
+            if (monthlySum > 0) {
+                return monthlySum;
+            }
+        }
+
+        // 2. كبديل: استخدام الأرقام الافتراضية/الثابتة من المقاولين المعتمدين
         if (!Array.isArray(approvedContractors) || approvedContractors.length === 0) return 0;
         const keys = ['workerCount', 'workersCount', 'laborCount', 'manpower', 'employeesCount', 'totalWorkers', 'averageWorkers', 'contractorWorkers', 'numberOfWorkers', 'expectedWorkers', 'workforceCount'];
         let sum = 0;
         approvedContractors.forEach((rec) => {
             if (!rec || typeof rec !== 'object') return;
-            if (rec.active === false || rec.deactivated === true) return;
+            if (rec.active === false || rec.deactivated === true || rec.isActive === 'inactive' || rec.isActive === false || rec.isActive === 'false' || rec.isActive === 'FALSE') return;
             let found = NaN;
             for (let i = 0; i < keys.length; i++) {
                 const x = this._parseNumWorkHours(rec[keys[i]]);
@@ -3021,7 +3066,7 @@ const Dashboard = {
      * تقدير إجمالي الساعات السنوية: موظفون نشطون (+ حقول سنوية صريحة إن وُجدت) + عمالة مقاولين × نفس معادلة الساعات الافتراضية لكل فرد.
      */
     _computeEstimatedAnnualWorkHoursTotal(employees, approvedContractors) {
-        const list = Array.isArray(employees) ? employees.filter((e) => e && e.active !== false) : [];
+        const list = Array.isArray(employees) ? employees.filter((e) => e && !this._isEmployeeInactive(e)) : [];
         const n = list.length;
         const defaultAnnualPerCapita = this._getDashboardDefaultAnnualHoursPerCapita();
 
@@ -3054,7 +3099,7 @@ const Dashboard = {
             else employeeHoursPart = sumExplicit + (n - withExplicit) * defaultAnnualPerCapita;
         }
 
-        const contractorSlots = this._sumContractorWorkforceHeadcount(approvedContractors);
+        const contractorSlots = this._sumContractorWorkforceHeadcount(approvedContractors, AppState.appData);
         const contractorHoursPart = contractorSlots * defaultAnnualPerCapita;
 
         return Math.round(employeeHoursPart + contractorHoursPart);
@@ -3204,7 +3249,7 @@ const Dashboard = {
                         }
                         const empCountDashEl = document.getElementById('dash-kpi-employees-active-count');
                         if (empCountDashEl) {
-                            const empActiveOnly = employees.filter(e => e && e.active !== false).length;
+                            const empActiveOnly = employees.filter(e => e && !self._isEmployeeInactive(e)).length;
                             empCountDashEl.textContent = self.formatNumber(empActiveOnly);
                             self.applyEnglishNumberFormat(empCountDashEl);
                         }
@@ -3213,23 +3258,7 @@ const Dashboard = {
                         const contCountDashEl = document.getElementById('dash-kpi-contractors-active-count');
                         if (contCountDashEl) {
                             const approvedContractors = Array.isArray(data.approvedContractors) ? data.approvedContractors : [];
-                            const keys = ['workerCount', 'workersCount', 'laborCount', 'manpower', 'employeesCount', 'totalWorkers', 'averageWorkers', 'contractorWorkers', 'numberOfWorkers', 'expectedWorkers', 'workforceCount'];
-                            let contractorWorkforceCount = 0;
-                            approvedContractors.forEach((rec) => {
-                                if (!rec || typeof rec !== 'object') return;
-                                if (rec.active === false || rec.deactivated === true || rec.isActive === 'inactive' || rec.isActive === false || rec.isActive === 'false' || rec.isActive === 'FALSE') return;
-                                let found = NaN;
-                                for (let i = 0; i < keys.length; i++) {
-                                    const x = parseFloat(String(rec[keys[i]]).replace(/,/g, ''));
-                                    if (Number.isFinite(x) && x > 0) {
-                                        found = x;
-                                        break;
-                                    }
-                                }
-                                if (!isNaN(found)) {
-                                    contractorWorkforceCount += Math.round(found);
-                                }
-                            });
+                            const contractorWorkforceCount = self._sumContractorWorkforceHeadcount(approvedContractors, data);
                             contCountDashEl.textContent = self.formatNumber(contractorWorkforceCount);
                             self.applyEnglishNumberFormat(contCountDashEl);
                         }
@@ -3291,8 +3320,8 @@ const Dashboard = {
                 : (typeof AppState !== 'undefined' && AppState.appData ? AppState.appData : {});
             const approvedContractors = Array.isArray(dataBundle.approvedContractors) ? dataBundle.approvedContractors : [];
 
-            const totalEmployees = employees.filter((e) => e && e.active !== false).length;
-            const contractorWorkforce = this._sumContractorWorkforceHeadcount(approvedContractors);
+            const totalEmployees = employees.filter((e) => e && !this._isEmployeeInactive(e)).length;
+            const contractorWorkforce = this._sumContractorWorkforceHeadcount(approvedContractors, dataBundle);
             const workforceForTir = totalEmployees + contractorWorkforce;
             const actualTotalHours = this.getDashboardTotalWorkHours(dataBundle);
 
