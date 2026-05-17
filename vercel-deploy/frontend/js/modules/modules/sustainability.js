@@ -1522,21 +1522,21 @@ ${innerContent}
         const searchInput = document.getElementById(`search-filter-${type}`);
         const factoryInput = document.getElementById(`factory-filter-${type}`);
         const statusInput = document.getElementById(`status-filter-${type}`);
-
+        
         const searchVal = searchInput ? searchInput.value.toLowerCase() : '';
         const factoryVal = factoryInput ? factoryInput.value.toLowerCase() : '';
         const statusVal = statusInput ? statusInput.value : '';
 
         const table = document.getElementById(`table-${type}`);
         if (!table) return;
-
+        
         const tbody = table.getElementsByTagName('tbody')[0];
         if (!tbody) return;
-
+        
         const rows = tbody.getElementsByTagName('tr');
         for (let i = 0; i < rows.length; i++) {
             const row = rows[i];
-
+            
             // قراءة الخلايا
             const textContent = row.textContent.toLowerCase();
             const locationCell = row.cells[3] ? row.cells[3].textContent.toLowerCase() : '';
@@ -1545,7 +1545,7 @@ ${innerContent}
             // الفحص
             let matchesSearch = textContent.includes(searchVal);
             let matchesFactory = factoryVal === '' || locationCell.includes(factoryVal);
-
+            
             let matchesStatus = true;
             if (statusVal === 'alert') {
                 matchesStatus = statusCell.includes('تنبيه');

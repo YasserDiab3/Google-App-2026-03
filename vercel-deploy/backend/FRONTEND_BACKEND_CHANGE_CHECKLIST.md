@@ -69,3 +69,4 @@
 - تشغيل Fresh (مسح localStorage) ثم Login ثم Sync.
 - تعديل/حفظ عنصر ثم Refresh والتأكد أنه يرجع من Sheets.
 - تجربة Offline تعديل ثم Online والتأكد أن pending sync يفلَش بدون فقد.
+

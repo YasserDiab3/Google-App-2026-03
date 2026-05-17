@@ -198,7 +198,7 @@ function updateUserInSheet(userId, updateData) {
             return { success: false, message: 'الورقة غير موجودة' };
         }
         
-        const data = readFromSheet(sheetName, spreadsheetId);
+        const data = readFromSheet(sheetName, spreadsheetId, true);
         let userIndex = -1;
         const userIdStr = String(userId || '').trim().toLowerCase();
         for (let i = 0; i < data.length; i++) {
@@ -316,7 +316,7 @@ function resetUserPassword(userId, newPassword) {
             return { success: false, message: 'الورقة غير موجودة' };
         }
         
-        const data = readFromSheet(sheetName, spreadsheetId);
+        const data = readFromSheet(sheetName, spreadsheetId, true);
         let userIndex = -1;
         
         // البحث عن المستخدم بالـ ID أو البريد الإلكتروني
@@ -413,7 +413,7 @@ function deleteUserFromSheet(userId, userData) {
         }
         
         // قراءة البيانات الحالية
-        const data = readFromSheet(sheetName, spreadsheetId);
+        const data = readFromSheet(sheetName, spreadsheetId, true);
         
         if (!data || !Array.isArray(data)) {
             return { success: false, message: 'فشل قراءة بيانات المستخدمين' };

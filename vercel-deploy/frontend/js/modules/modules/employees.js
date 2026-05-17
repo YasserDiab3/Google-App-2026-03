@@ -4317,7 +4317,7 @@ const Employees = {
                     }
                 }
             });
-
+            
             // ✅ تنفيذ المزامنة مع Backend في الخلفية لتجنب عدم استجابة النظام
             // نستخدم sendToAppsScript فقط (بدون autoSave) لتحديث صف واحد بدلاً من رفع كل السجلات
             if (AppState.googleConfig?.appsScript?.enabled) {
@@ -4386,7 +4386,7 @@ const Employees = {
                     }
                 }
             });
-
+            
             // ✅ تنفيذ المزامنة مع Backend في الخلفية لتجنب عدم استجابة النظام
             // نستخدم sendToAppsScript فقط للحذف الدقيق والسريع
             if (AppState.googleConfig?.appsScript?.enabled) {

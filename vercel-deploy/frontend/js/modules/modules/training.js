@@ -6649,7 +6649,7 @@ const Training = {
                 }
 
                 const trainingId = Utils.generateId('TRAINING');
-
+                
                 let isoDate = new Date().toISOString();
                 if (dateValue) {
                     const d = new Date(dateValue);
@@ -8417,7 +8417,7 @@ const Training = {
         const selectedPlace = places.find(p => p.id === locationEl.value);
         
         const getFallbackText = (el) => el && el.options && el.selectedIndex >= 0 ? el.options[el.selectedIndex].text : '';
-
+        
         let validStartDate = new Date().toISOString();
         if (startDateEl.value) {
             const d = new Date(startDateEl.value);
@@ -8478,7 +8478,7 @@ const Training = {
                     Utils.safeWarn('⚠️ DataManager غير متاح - لم يتم حفظ البيانات');
                 }
             }, 50);
-
+            
             // 4. معالجة المهام الخلفية في الخلفية
             Promise.allSettled([
                 // مزامنة مصفوفة التدريب
