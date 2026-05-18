@@ -5821,7 +5821,8 @@ const PTW = {
         const formatDate = (dateStr) => {
             if (!dateStr) return '-';
             try {
-                const date = new Date(dateStr);
+                const date = this.parseDateTimeValue(dateStr);
+                if (!date || isNaN(date.getTime())) return dateStr || '-';
                 return date.toLocaleDateString('ar-SA', { year: 'numeric', month: 'long', day: 'numeric' });
             } catch {
                 return dateStr;
@@ -5831,7 +5832,8 @@ const PTW = {
         const formatDateTime = (dateStr) => {
             if (!dateStr) return '-';
             try {
-                const date = new Date(dateStr);
+                const date = this.parseDateTimeValue(dateStr);
+                if (!date || isNaN(date.getTime())) return dateStr || '-';
                 return date.toLocaleString('ar-SA', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' });
             } catch {
                 return dateStr;
@@ -9112,7 +9114,8 @@ const PTW = {
             const formatDate = (dateString) => {
                 if (!dateString) return '-';
                 try {
-                    const date = new Date(dateString);
+                    const date = this.parseDateTimeValue(dateString);
+                    if (!date || isNaN(date.getTime())) return dateString || '-';
                     return date.toLocaleDateString('ar-EG');
                 } catch (e) {
                     return dateString || '-';
@@ -9122,7 +9125,8 @@ const PTW = {
             const formatDateTime = (dateString) => {
                 if (!dateString) return '-';
                 try {
-                    const date = new Date(dateString);
+                    const date = this.parseDateTimeValue(dateString);
+                    if (!date || isNaN(date.getTime())) return dateString || '-';
                     return date.toLocaleString('ar-EG');
                 } catch (e) {
                     return dateString || '-';
@@ -14663,7 +14667,7 @@ const PTW = {
         const alignMain = isRtl ? 'right' : 'left';
         try {
             Loading.show(t('module.ptw.pdf.exportLoading', 'جاري تصدير التقرير PDF...'));
-            const formatDate = (d) => { if (!d) return '-'; try { return new Date(d).toLocaleDateString(_dateLoc); } catch (e) { return String(d); } };
+            const formatDate = (d) => { if (!d) return '-'; try { const date = this.parseDateTimeValue(d); if (!date || isNaN(date.getTime())) return String(d); return date.toLocaleDateString(_dateLoc); } catch (e) { return String(d); } };
             const sep = this._t('module.ptw.common.listSep', '، ');
             const workTypeStr = (p) => Array.isArray(p.workType) ? (p.workType || []).join(sep) : (p.workType || '-');
             const dateFromEl = document.getElementById('ptw-analysis-date-from');
