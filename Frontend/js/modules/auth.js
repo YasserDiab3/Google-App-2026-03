@@ -126,13 +126,14 @@ window.Auth = {
                 return { success: false, message: 'بيانات المستخدم غير كاملة' };
             }
 
-            if (foundUser.active === false || foundUser.active === 'false') {
+            if (foundUser.active === false || foundUser.active === 'false' || foundUser.active === 'inactive') {
                 return { success: false, message: 'هذا الحساب غير مفعّل. يرجى الاتصال بالمدير' };
             }
 
             const hashNorm = this._normalizeStoredPasswordHash(foundUser.passwordHash);
             if (!hashNorm || hashNorm === '***') {
-                return { success: false, message: 'يجب تحديث كلمة المرور. يرجى الاتصال بالمدير لإعادة تعيين كلمة المرور.' };
+                Utils.safeError('❌ [AUTH] passwordHash مفقود أو غير صالح للمستخدم:', foundUser.email);
+                return { success: false, message: 'كلمة المرور غير مضبوطة لهذا الحساب. يرجى التواصل مع مدير النظام لإعادة تعيينها.' };
             }
             foundUser.passwordHash = hashNorm;
 
@@ -177,10 +178,19 @@ window.Auth = {
 
             if (foundUser.isOnline === true && foundUser.activeSessionId) {
                 if (foundUser.activeSessionId !== currentSessionId && !hasActiveSession) {
-                    return {
-                        success: false,
-                        message: '⚠️ هذا الحساب متصل بالفعل من جهاز آخر.\n\nيرجى تسجيل الخروج من الجهاز الآخر أولاً، أو انتظار انتهاء الجلسة (24 ساعة).\n\nلا يمكن تسجيل الدخول من أكثر من جهاز في نفس الوقت.'
-                    };
+                    // التحقق من عمر الجلسة المخزنة — إذا مضى أكثر من 24 ساعة نتجاوز الحجب
+                    // (يحدث هذا بعد انهيار المتصفح أو انقطاع الشبكة بدون logout صريح)
+                    const lastActivity = parseInt(sessionStorage.getItem('hse_session_last_activity_ms') || '0', 10);
+                    const staleThresholdMs = 24 * 60 * 60 * 1000;
+                    const sessionIsStale = lastActivity === 0 || (Date.now() - lastActivity > staleThresholdMs);
+                    if (!sessionIsStale) {
+                        return {
+                            success: false,
+                            message: '⚠️ هذا الحساب متصل بالفعل من جهاز آخر.\n\nيرجى تسجيل الخروج من الجهاز الآخر أولاً، أو انتظار انتهاء الجلسة تلقائياً.\n\nلا يمكن تسجيل الدخول من أكثر من جهاز في نفس الوقت.'
+                        };
+                    }
+                    // الجلسة القديمة منتهية الصلاحية — نتجاوز الحجب ونسمح بالدخول
+                    Utils.safeWarn('⚠️ جلسة قديمة منتهية الصلاحية — السماح بالدخول وإعادة تعيين isOnline');
                 }
             }
 
@@ -433,12 +443,17 @@ window.Auth = {
                     loginMethod = 'server';
                 } else if (loginResult && loginResult.message) {
                     Utils.safeWarn('❌ فشل تسجيل الدخول عبر الخادم:', loginResult.message);
-                    // إذا كان الخطأ هو "بيانات الاعتماد غير صحيحة" فلا داعي للمحاولة محلياً
-                    if (loginResult.message.includes('غير صحيحة')) {
+                    // إذا كان الخطأ صريحاً من الخادم (معطل أو خطأ إداري) نوقف فوراً
+                    // لكن "غير صحيحة" وحدها لا تكفي لمنع الـ Fallback المحلي في حال عدم التزامن
+                    const isHardServerError = loginResult.message.includes('معطل') ||
+                        loginResult.message.includes('disabled') ||
+                        loginResult.errorCode === 'ACCOUNT_DISABLED';
+                    if (isHardServerError) {
                         Notification.error(loginResult.message);
                         await Utils.RateLimiter.recordFailedAttempt(email);
                         return { success: false, message: loginResult.message };
                     }
+                    // أخطاء "غير صحيحة" تسمح بالمحاولة المحلية كـ Fallback
                 }
             } catch (serverError) {
                 Utils.safeError('⚠️ خطأ في الاتصال بالخادم أثناء تسجيل الدخول:', serverError);
@@ -450,6 +465,15 @@ window.Auth = {
         if (!user) {
             Utils.safeLog('🏠 محاولة التحقق من الحساب محلياً...');
             let users = AppState.appData.users || [];
+            // إعادة تعيين isOnline في الكاش المحلي قبل الفحص لتجنب الحجب بسبب جلسة سابقة منتهية
+            const localUserIdx = users.findIndex(u => u && u.email && u.email.toLowerCase().trim() === email);
+            if (localUserIdx !== -1 && users[localUserIdx].isOnline === true) {
+                const lastActivity = parseInt(sessionStorage.getItem('hse_session_last_activity_ms') || '0', 10);
+                if (lastActivity === 0 || Date.now() - lastActivity > 24 * 60 * 60 * 1000) {
+                    users[localUserIdx].isOnline = false;
+                    users[localUserIdx].activeSessionId = null;
+                }
+            }
             let foundUser = users.find(u => u && u.email && u.email.toLowerCase().trim() === email);
 
             // ✅ Bootstrap Support

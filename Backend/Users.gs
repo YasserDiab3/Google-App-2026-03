@@ -546,9 +546,13 @@ function loginUser(email, password) {
             updateUserInSheet(user.id, { passwordHash: newHash, password: '***' });
         }
 
-        // تسجيل وقت الدخول
+        // تسجيل وقت الدخول وإعادة تعيين حالة الجلسة السابقة
         try {
-            updateUserInSheet(user.id, { lastLogin: new Date().toISOString() });
+            updateUserInSheet(user.id, {
+                lastLogin: new Date().toISOString(),
+                isOnline: false,
+                activeSessionId: null
+            });
         } catch (loginTimeError) {
             Logger.log('Warning: Could not update lastLogin: ' + loginTimeError.toString());
         }
