@@ -547,7 +547,18 @@ window.Auth = {
             usersList[userIndex].lastLogin = loginTime;
             usersList[userIndex].isOnline = true;
             usersList[userIndex].activeSessionId = currentSessionId; // حفظ معرف الجلسة
-            usersList[userIndex].loginHistory = usersList[userIndex].loginHistory || [];
+            let history = usersList[userIndex].loginHistory;
+            if (typeof history === 'string') {
+                try {
+                    history = JSON.parse(history);
+                } catch (e) {
+                    history = [];
+                }
+            }
+            if (!Array.isArray(history)) {
+                history = [];
+            }
+            usersList[userIndex].loginHistory = history;
             usersList[userIndex].loginHistory.push({
                 time: loginTime,
                 ip: 'N/A',
