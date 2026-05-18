@@ -835,14 +835,24 @@ function debugMigration() {
         }
         
         // محاولة حذف الصف
+        const valBefore = empSheet.getRange(targetRow, 1, 1, empSheet.getLastColumn()).getValues()[0];
+        
         empSheet.deleteRow(targetRow);
         SpreadsheetApp.flush(); // إجبار التغييرات على الحفظ فوراً
         
+        const valAfter = empSheet.getRange(targetRow, 1, 1, empSheet.getLastColumn()).getValues()[0];
         const lastRowAfter = empSheet.getLastRow();
+        
+        const isDifferent = JSON.stringify(valBefore) !== JSON.stringify(valAfter);
         
         return {
             success: true,
-            message: `تشخيص: الصف المستهدف للجرينة كان ${targetRow} (الاسم: ${targetData.name || targetData.contractorWorkerName}). الصفوف قبل: ${lastRowBefore}، الصفوف بعد: ${lastRowAfter}. نجح الحذف: ${lastRowBefore !== lastRowAfter}`
+            message: `تشخيص دقيق:\n` +
+                     `- الصف المستهدف: ${targetRow}\n` +
+                     `- الاسم قبل: ${targetData.name || targetData.contractorWorkerName || valBefore[2]}\n` +
+                     `- الاسم في نفس الصف بعد الحذف: ${valAfter[2]}\n` +
+                     `- هل تغير محتوى الصف؟ ${isDifferent ? 'نعم (تم الحذف بنجاح وتزحزحت الصفوف)' : 'لا (فشل الحذف وظل نفس الصف!)'}\n` +
+                     `- الصفوف قبل: ${lastRowBefore} | بعد: ${lastRowAfter}`
         };
     } catch (e) {
         return { success: false, message: 'خطأ تشخيصي: ' + e.toString() };
