@@ -294,7 +294,7 @@ function doPost(e) {
         const sensitiveActions = [
             'saveToSheet', 'appendToSheet', 'deleteFromSheet', 'updateUserInSheet',
             'addUserToSheet', 'addUser', 'deleteUser', 'updateUser', 'changePassword',
-            'deleteFromSheet', 'updateSheetData', 'login'
+            'deleteFromSheet', 'updateSheetData'
         ];
         const strictAdminActions = [
             'addUser', 'deleteUser', 'resetUserPassword', 'fixUsersSheetHeaders',

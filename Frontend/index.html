@@ -1476,13 +1476,7 @@
                 }
 
                 try {
-                    if (!window.__ultraSuppressorLogged) {
-                        window.__ultraSuppressorLogged = true;
-                        console.log(
-                            "%c✅ ULTRA-AGGRESSIVE Error Suppressor Active (3 Layers)",
-                            "color: green; font-weight: bold; font-size: 14px;",
-                        );
-                    }
+                    window.__ultraSuppressorLogged = true;
                 } catch (e) { /* ignore */ }
             })();
         </script>
@@ -13570,12 +13564,6 @@
                     } catch (e) {}
                 }
 
-                if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || window.location.search.includes('dev=true')) {
-                    console.log(
-                        "%c✅ Chrome-Specific Error Suppressor Active (Final Layer)",
-                        "color: #4285f4; font-weight: bold; font-size: 14px;",
-                    );
-                }
             })();
         </script>
     </body>
