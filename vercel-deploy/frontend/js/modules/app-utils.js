@@ -4145,8 +4145,33 @@ const Utils = {
         const useLocale = locale || (dateFormat === 'hijri' ? 'ar-SA-u-ca-islamic' : 'en-GB');
 
         try {
-            const d = new Date(date);
-            if (isNaN(d.getTime())) return '-';
+            let d;
+            if (date instanceof Date) {
+                if (isNaN(date.getTime())) return '-';
+                d = date;
+            } else {
+                let dateStr = String(date).trim();
+                const dmyMatch = dateStr.match(/^(\d{1,2})[/\-](\d{1,2})[/\-](\d{4})(?:[T ](\d{1,2}):(\d{2})(?::(\d{2}))?)?$/);
+                if (dmyMatch) {
+                    const [, day, month, year, hours, minutes, seconds] = dmyMatch;
+                    d = new Date(
+                        Number(year),
+                        Number(month) - 1,
+                        Number(day),
+                        Number(hours || 0),
+                        Number(minutes || 0),
+                        Number(seconds || 0),
+                        0
+                    );
+                } else if (dateStr.includes('T') && (dateStr.includes('Z') || dateStr.includes('+') || dateStr.match(/-\d{2}:\d{2}$/))) {
+                    d = new Date(dateStr);
+                } else if (dateStr.length === 10 && dateStr.match(/^\d{4}-\d{2}-\d{2}$/)) {
+                    d = new Date(dateStr + 'T00:00:00');
+                } else {
+                    d = new Date(dateStr);
+                }
+                if (isNaN(d.getTime())) return '-';
+            }
 
             return d.toLocaleDateString(useLocale, {
                 year: 'numeric',
@@ -4182,8 +4207,21 @@ const Utils = {
                 // معالجة strings
                 let dateStr = String(date).trim();
                 
+                const dmyMatch = dateStr.match(/^(\d{1,2})[/\-](\d{1,2})[/\-](\d{4})(?:[T ](\d{1,2}):(\d{2})(?::(\d{2}))?)?$/);
+                if (dmyMatch) {
+                    const [, day, month, year, hours, minutes, seconds] = dmyMatch;
+                    d = new Date(
+                        Number(year),
+                        Number(month) - 1,
+                        Number(day),
+                        Number(hours || 0),
+                        Number(minutes || 0),
+                        Number(seconds || 0),
+                        0
+                    );
+                }
                 // إذا كانت بصيغة ISO كاملة (تحتوي على T و Z أو +)
-                if (dateStr.includes('T') && (dateStr.includes('Z') || dateStr.includes('+') || dateStr.match(/-\d{2}:\d{2}$/))) {
+                else if (dateStr.includes('T') && (dateStr.includes('Z') || dateStr.includes('+') || dateStr.match(/-\d{2}:\d{2}$/))) {
                     d = new Date(dateStr);
                 }
                 // إذا كانت بصيغة yyyy-MM-dd فقط (10 أحرف)، نضيف وقت افتراضي

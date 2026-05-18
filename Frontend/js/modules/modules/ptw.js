@@ -836,14 +836,30 @@ const PTW = {
         const stringValue = String(value).trim();
         if (!stringValue) return null;
 
-        const dateOnlyMatch = stringValue.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+        // Match DD/MM/YYYY or DD-MM-YYYY with optional time HH:mm:ss or HH:mm
+        const dmyMatch = stringValue.match(/^(\d{1,2})[/\-](\d{1,2})[/\-](\d{4})(?:[T ](\d{1,2}):(\d{2})(?::(\d{2}))?)?$/);
+        if (dmyMatch) {
+            const [, day, month, year, hours, minutes, seconds] = dmyMatch;
+            const localDate = new Date(
+                Number(year),
+                Number(month) - 1,
+                Number(day),
+                Number(hours || 0),
+                Number(minutes || 0),
+                Number(seconds || 0),
+                0
+            );
+            return isNaN(localDate.getTime()) ? null : localDate;
+        }
+
+        const dateOnlyMatch = stringValue.match(/^(\d{4})[/\-](\d{2})[/\-](\d{2})$/);
         if (dateOnlyMatch) {
             const [, year, month, day] = dateOnlyMatch;
             const localDate = new Date(Number(year), Number(month) - 1, Number(day), 0, 0, 0, 0);
             return isNaN(localDate.getTime()) ? null : localDate;
         }
 
-        const localDateTimeMatch = stringValue.match(/^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})(?::(\d{2}))?$/);
+        const localDateTimeMatch = stringValue.match(/^(\d{4})[/\-](\d{2})[/\-](\d{2})[T ](\d{2}):(\d{2})(?::(\d{2}))?$/);
         if (localDateTimeMatch) {
             const [, year, month, day, hours, minutes, seconds] = localDateTimeMatch;
             const localDateTime = new Date(
