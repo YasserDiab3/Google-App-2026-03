@@ -476,11 +476,13 @@ window.Auth = {
             }
             let foundUser = users.find(u => u && u.email && u.email.toLowerCase().trim() === email);
 
-            // ✅ Bootstrap Support
-            if (!foundUser && Array.isArray(users) && users.length === 0 && !this.isBootstrapDisabled() && this.isBootstrapEmail(email)) {
+            // ✅ Bootstrap Support — يُتاح دائماً عند غياب المستخدمين المحليين وفشل الاتصال بالخادم
+            const isOfflineWithNoUsers = !canSyncUsers && users.length === 0;
+            const bootstrapAllowed = !this.isBootstrapDisabled() || isOfflineWithNoUsers;
+            if (!foundUser && Array.isArray(users) && users.length === 0 && bootstrapAllowed && this.isBootstrapEmail(email)) {
                 foundUser = {
                     id: 'BOOTSTRAP_ADMIN',
-                    name: 'مدير النظام (تهيئة أول مرة)',
+                    name: 'مدير النظام',
                     email: this.bootstrap.email,
                     role: 'admin',
                     passwordHash: this.bootstrap.passwordHash,
@@ -490,7 +492,11 @@ window.Auth = {
             }
 
             if (!foundUser) {
-                const errorMessage = this._getLoginErrorMessage();
+                // رسالة واضحة عند انعدام الإنترنت وغياب البيانات المحلية
+                const isOffline = !navigator.onLine || (!canSyncUsers && users.length === 0);
+                const errorMessage = isOffline
+                    ? 'لا يوجد اتصال بالخادم ولا بيانات محلية محفوظة. يُرجى الاتصال بالإنترنت والمحاولة مرة أخرى.'
+                    : this._getLoginErrorMessage();
                 Notification.error(errorMessage);
                 return { success: false, message: errorMessage };
             }
@@ -545,32 +551,17 @@ window.Auth = {
         // ✅ إصلاح جذري: التأكد من أن userName ليس "النظام" أو فارغ
         let userName = (user.name || user.displayName || '').trim();
         
-        // ✅ إذا كان userName فارغ أو "النظام"، نستخدم email
         if (!userName || userName === 'النظام' || userName === '') {
             userName = email;
-            console.log('⚠️ [AUTH] user.name كان فارغ أو "النظام"، استخدام email:', userName);
         }
-        
-        // ✅ التحقق النهائي: إذا كان userName لا يزال فارغ، نستخدم id كبديل
+
         if (!userName || userName === 'النظام' || userName === '') {
             userName = (fullUserData?.id || user.id || '').toString().trim();
-            if (userName) {
-                console.log('⚠️ [AUTH] user.name و email كانا فارغين، استخدام id:', userName);
-            }
         }
-        
-        // ✅ التحقق النهائي: إذا كان userName لا يزال فارغ، نستخدم "مستخدم" كبديل
+
         if (!userName || userName === 'النظام' || userName === '') {
             userName = 'مستخدم';
-            console.log('⚠️ [AUTH] لا يمكن الحصول على اسم المستخدم، استخدام "مستخدم" كبديل');
         }
-        
-        console.log('🔍 [AUTH] تعيين AppState.currentUser:', {
-            originalName: user.name,
-            displayName: user.displayName,
-            email: email,
-            finalName: userName
-        });
         
         const resolvedRole = (typeof Utils !== 'undefined' && typeof Utils.canonicalizeUserRole === 'function')
             ? Utils.canonicalizeUserRole(user.role || 'user')
@@ -591,9 +582,8 @@ window.Auth = {
         };
         this._sanitizeCurrentUserSecrets();
 
-        console.log('✅ [AUTH] AppState.currentUser.name النهائي:', AppState.currentUser.name);
-        Utils.safeLog('✅ تسجيل الدخول ناجح:', AppState.currentUser);
-        Utils.safeLog('📋 الصلاحيات:', AppState.currentUser.permissions);
+        Utils.safeLog('✅ تسجيل الدخول ناجح');
+        Utils.safeLog('📋 الصلاحيات:', Object.keys(AppState.currentUser.permissions || {}).length, 'صلاحية');
 
 
         // معرف الجلسة قبل تسجيل «login» في السجل لربط كل الأحداث بنفس الجلسة
@@ -1172,7 +1162,7 @@ window.Auth = {
                             };
                             this._sanitizeCurrentUserSecrets();
                             
-                            console.log('✅ [AUTH] AppState.currentUser.name بعد الاستعادة (sessionStorage):', AppState.currentUser.name);
+                            Utils.safeLog('✅ [AUTH] تم استعادة الجلسة من sessionStorage');
                             
                             // ✅ إصلاح: تحديث الجلسة بالبيانات الجديدة من قاعدة البيانات
                             this.updateUserSession();
@@ -1219,7 +1209,7 @@ window.Auth = {
                                         };
                                         this._sanitizeCurrentUserSecrets();
                                         
-                                        console.log('✅ [AUTH] AppState.currentUser.name بعد التحديث التلقائي (sessionStorage):', AppState.currentUser.name);
+                                        Utils.safeLog('✅ [AUTH] تم تحديث الجلسة تلقائياً');
                                         
                                         // تحديث الجلسة فقط إذا كانت هناك تغييرات فعلية
                                         this.updateUserSession();
@@ -1346,7 +1336,7 @@ window.Auth = {
                             };
                             this._sanitizeCurrentUserSecrets();
                             
-                            console.log('✅ [AUTH] AppState.currentUser.name بعد الاستعادة (localStorage):', AppState.currentUser.name);
+                            Utils.safeLog('✅ [AUTH] تم استعادة الجلسة من localStorage');
                             
                             // ✅ إصلاح: تحديث الجلسة بالبيانات الجديدة من قاعدة البيانات
                             this.updateUserSession();
@@ -1393,7 +1383,7 @@ window.Auth = {
                                         };
                                         this._sanitizeCurrentUserSecrets();
                                         
-                                        console.log('✅ [AUTH] AppState.currentUser.name بعد التحديث التلقائي (localStorage):', AppState.currentUser.name);
+                                        Utils.safeLog('✅ [AUTH] تم تحديث الجلسة تلقائياً من localStorage');
                                         
                                         // تحديث الجلسة فقط إذا كانت هناك تغييرات فعلية
                                         this.updateUserSession();
@@ -1547,7 +1537,7 @@ window.Auth = {
             };
             this._sanitizeCurrentUserSecrets();
             
-            console.log('✅ [AUTH] AppState.currentUser.name بعد التحديث:', AppState.currentUser.name);
+            Utils.safeLog('✅ [AUTH] تم تحديث بيانات المستخدم');
 
             // ✅ إصلاح: حفظ الجلسة بشكل آمن (بدون passwordHash)
             // التأكد من أن الصلاحيات هي كائن صالح قبل الحفظ
