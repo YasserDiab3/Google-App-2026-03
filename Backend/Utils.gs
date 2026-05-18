@@ -1791,6 +1791,14 @@ function saveToSheet(sheetName, data, spreadsheetId = null) {
                     headerRow.forEach((h, idx) => {
                         if (!h) return;
                         if (processedItem.hasOwnProperty(h)) {
+                            // ✅ حماية ورقة Users: لا نكتب passwordHash إلا إذا كان SHA-256 صالحاً
+                            // يمنع مسح الهاش عند autoSave أو أي مزامنة ترسل '***' من الـ frontend
+                            if (sheetName === 'Users' && h === 'passwordHash') {
+                                const newHash = String(processedItem[h] || '').trim();
+                                if (!newHash || newHash === '***' || !isSha256Hash(newHash)) {
+                                    return; // الاحتفاظ بالقيمة الحالية في الشيت
+                                }
+                            }
                             rowVals[idx] = toSheetCellValue_(h, processedItem[h], sheetName);
                         }
                     });
@@ -1799,6 +1807,13 @@ function saveToSheet(sheetName, data, spreadsheetId = null) {
                     // Append new row
                     const rowValues = headerRow.map(h => {
                         if (!h) return '';
+                        // ✅ حماية ورقة Users: لا نكتب passwordHash غير صالح حتى للصفوف الجديدة
+                        if (sheetName === 'Users' && h === 'passwordHash') {
+                            const newHash = String(processedItem[h] || '').trim();
+                            if (!newHash || newHash === '***' || !isSha256Hash(newHash)) {
+                                return '';
+                            }
+                        }
                         return toSheetCellValue_(h, processedItem[h], sheetName);
                     });
                     sheet.appendRow(rowValues);
@@ -2863,7 +2878,8 @@ function updateSingleRowInSheet(sheetName, recordId, updateData, spreadsheetId =
         }
         
         // قراءة جميع البيانات للعثور على السجل
-        const allData = readFromSheet(sheetName, spreadsheetId);
+        // ✅ skipSecurityFilter=true: يمنع استبدال passwordHash بـ '***' ثم إعادة كتابته
+        const allData = readFromSheet(sheetName, spreadsheetId, true);
         const recordIndex = allData.findIndex(r => r && r.id === recordId);
         
         if (recordIndex === -1) {
@@ -2941,6 +2957,14 @@ function updateSingleRowInSheet(sheetName, recordId, updateData, spreadsheetId =
         // إعداد قيم الصف حسب ترتيب الأعمدة الحقيقي
         const rowValues = headers.map(h => {
             if (!h) return '';
+            // ✅ حماية ورقة Users: لا نكتب passwordHash إلا إذا كان SHA-256 صالحاً
+            if (sheetName === 'Users' && h === 'passwordHash') {
+                const newHash = String(processedRecord[h] || '').trim();
+                if (!newHash || newHash === '***' || !isSha256Hash(newHash)) {
+                    // الاحتفاظ بالقيمة الموجودة في الشيت (لا نكتب فوقها)
+                    return toSheetCellValue_(h, allData[recordIndex][h] || '', sheetName);
+                }
+            }
             return toSheetCellValue_(h, processedRecord[h], sheetName);
         });
         
