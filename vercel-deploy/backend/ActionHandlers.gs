@@ -374,10 +374,20 @@ var ActionHandlers = {
     'addUser': function(payload, postData, action, actorUserData, spreadsheetId) {
         var result = { success: false, message: '' };
         (function() {
-
-                    result = addUserToSheet(payload);
-                    return;
-
+            // فحص صلاحيات Admin — إضافة مستخدمين محجوزة للمديرين فقط
+            var actor = actorUserData || (postData && postData.userData);
+            if (!actor || !actor.email) {
+                result = { success: false, message: 'مطلوب تسجيل الدخول لتنفيذ هذه العملية.', errorCode: 'AUTH_REQUIRED' };
+                return;
+            }
+            if (typeof checkAdminPermissionsAuthoritative === 'function' && !checkAdminPermissionsAuthoritative(actor)) {
+                if (typeof logSecurityEvent === 'function') {
+                    logSecurityEvent('addUser_unauthorized', { actor: actor.email || '', severity: 'high' });
+                }
+                result = { success: false, message: 'ليس لديك صلاحية لإضافة مستخدمين.', errorCode: 'ADMIN_REQUIRED' };
+                return;
+            }
+            result = addUserToSheet(payload);
         })();
         return result;
     },
@@ -1086,6 +1096,20 @@ var ActionHandlers = {
                     result = updateClinicVisit(payload.visitId || payload.id, payload.updateData || payload);
                     return;
 
+        })();
+        return result;
+    },
+    'migrateContractorVisits': function(payload, postData, action, actorUserData, spreadsheetId) {
+        var result = { success: false, message: '' };
+        (function() {
+            result = migrateContractorVisits();
+        })();
+        return result;
+    },
+    'debugMigration': function(payload, postData, action, actorUserData, spreadsheetId) {
+        var result = { success: false, message: '' };
+        (function() {
+            result = debugMigration();
         })();
         return result;
     },

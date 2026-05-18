@@ -3,9 +3,6 @@
  * تم استخراجه من app-modules.js
  */
 
-// 🔥 DEBUG: Verify this file is executing
-console.log('🔥 users.js IS EXECUTING - Line 6');
-
 // ===== Users Module =====
 const Users = {
     currentView: 'list', // list, form, edit
@@ -1214,7 +1211,9 @@ const Users = {
             ? AppState.appData.users.find(u => u.id === this.currentEditId)
             : null;
 
-        let passwordHashToStore = previousUser?.passwordHash || '';
+        // الهاش الصالح فقط هو SHA-256 بطول 64 — '***' و '' ليست هاش حقيقي
+        const _isValidHash = (h) => !!(h && h !== '***' && typeof Utils !== 'undefined' && Utils.isSha256Hex && Utils.isSha256Hex(h));
+        let passwordHashToStore = _isValidHash(previousUser?.passwordHash) ? previousUser.passwordHash : '';
         let forcePasswordChange = previousUser?.forcePasswordChange ?? false;
         let passwordChangedFlag = previousUser?.passwordChanged ?? false;
 
@@ -1222,7 +1221,6 @@ const Users = {
             if (!passwordUpdated) {
                 Loading.hide();
                 Notification.error('يرجى إدخال كلمة المرور');
-                // استعادة الزر عند الخطأ
                 if (submitBtn) {
                     submitBtn.disabled = false;
                     submitBtn.innerHTML = originalText;
@@ -1232,7 +1230,6 @@ const Users = {
             if (trimmedPasswordInput.length < 6) {
                 Loading.hide();
                 Notification.error('يجب أن تتكون كلمة المرور من 6 أحرف على الأقل');
-                // استعادة الزر عند الخطأ
                 if (submitBtn) {
                     submitBtn.disabled = false;
                     submitBtn.innerHTML = originalText;
@@ -1246,7 +1243,6 @@ const Users = {
             if (trimmedPasswordInput.length < 6) {
                 Loading.hide();
                 Notification.error('يجب أن تتكون كلمة المرور من 6 أحرف على الأقل');
-                // استعادة الزر عند الخطأ
                 if (submitBtn) {
                     submitBtn.disabled = false;
                     submitBtn.innerHTML = originalText;
@@ -1256,19 +1252,18 @@ const Users = {
             passwordHashToStore = await Utils.hashPassword(trimmedPasswordInput);
             forcePasswordChange = true;
             passwordChangedFlag = false;
-        } else if (!passwordHashToStore) {
-            Loading.hide();
-            Notification.error('لا توجد كلمة مرور محفوظة لهذا المستخدم. يرجى إدخال كلمة مرور جديدة.');
-            // استعادة الزر عند الخطأ
-            if (submitBtn) {
-                submitBtn.disabled = false;
-                submitBtn.innerHTML = originalText;
-            }
-            return;
         }
+        // ملاحظة: إذا لم يتم تغيير كلمة المرور ولم يكن هناك هاش محلي صالح،
+        // لا نُوقف الحفظ — الـ backend يحتفظ بالهاش الموجود في الشيت.
 
         formData.password = '***';
-        formData.passwordHash = passwordHashToStore;
+        // إرسال passwordHash فقط إذا كان هناك هاش صالح (تم تغيير كلمة المرور أو كان محفوظاً محلياً)
+        // عدم الإرسال = الـ backend يحتفظ بالهاش الحالي في Google Sheets تلقائياً
+        if (passwordHashToStore) {
+            formData.passwordHash = passwordHashToStore;
+        } else {
+            delete formData.passwordHash;
+        }
         formData.forcePasswordChange = forcePasswordChange;
         formData.passwordChanged = passwordChangedFlag;
 
@@ -2309,33 +2304,21 @@ const Users = {
 };
 
 // ===== Export module to global scope =====
-// تصدير الموديول إلى window فوراً لضمان توافره
-console.log('🔥 users.js EXPORT SECTION STARTING');
 (function () {
     'use strict';
     try {
         if (typeof window !== 'undefined' && typeof Users !== 'undefined') {
             window.Users = Users;
-            console.log('✅ users.js: window.Users SET SUCCESSFULLY');
-            
-            // إشعار عند تحميل الموديول بنجاح
-            if (typeof AppState !== 'undefined' && AppState.debugMode && typeof Utils !== 'undefined' && Utils.safeLog) {
-                Utils.safeLog('✅ Users module loaded and available on window.Users');
-            }
         } else {
-            console.error('❌ users.js EXPORT FAILED: window or Users undefined');
-            console.log('   typeof window:', typeof window);
-            console.log('   typeof Users:', typeof Users);
+            if (typeof Utils !== 'undefined' && Utils.safeError) {
+                Utils.safeError('❌ users.js: فشل التصدير');
+            }
         }
     } catch (error) {
-        console.error('❌ خطأ في تصدير Users:', error);
-        // محاولة التصدير مرة أخرى حتى في حالة الخطأ
         if (typeof window !== 'undefined' && typeof Users !== 'undefined') {
             try {
                 window.Users = Users;
-            } catch (e) {
-                console.error('❌ فشل تصدير Users:', e);
-            }
+            } catch (e) { /* ignore */ }
         }
     }
 })();

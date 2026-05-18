@@ -86,7 +86,7 @@ function getUsersMeta() {
         };
     } catch (error) {
         Logger.log('Error getUsersMeta: ' + error.toString());
-        return { success: false, message: 'Failed to get users meta: ' + error.toString() };
+        return { success: false, message: 'حدث خطأ في جلب بيانات المستخدمين.' };
     }
 }
 
@@ -104,6 +104,14 @@ function addUserToSheet(userData) {
         }
     }
     
+    // ✅ حماية: '***' هي قيمة sentinel — لا نحسب hash لها أبداً
+    if (processedData.passwordHash === '***') {
+        processedData.passwordHash = '';
+    }
+    if (processedData.password === '***') {
+        processedData.password = '';
+    }
+
     // التحقق من وجود كلمة مرور وتشفيرها إذا لزم الأمر
     if (processedData.password && typeof processedData.password === 'string' && processedData.password.trim() !== '') {
         // إذا كانت كلمة المرور غير مشفرة، قم بتشفيرها
@@ -117,15 +125,12 @@ function addUserToSheet(userData) {
             processedData.password = '***';
         }
     } else if (processedData.passwordHash && typeof processedData.passwordHash === 'string') {
-        // إذا كان passwordHash موجوداً، تأكد من أنه مشفر
+        // إذا كان passwordHash موجوداً وصالحاً، تأكد من أنه مشفر
         if (!isSha256Hash(processedData.passwordHash)) {
-            // إذا كان passwordHash غير مشفر، قم بتشفيره
-            processedData.passwordHash = hashPassword(processedData.passwordHash);
+            // هاش غير صالح — لا نحفظه
+            processedData.passwordHash = '';
         }
-        // تعيين password كقيمة مخفية
-        if (!processedData.password || processedData.password === '') {
-            processedData.password = '***';
-        }
+        processedData.password = '***';
     } else {
         // لا توجد كلمة مرور - تعيين قيم افتراضية
         processedData.password = '***';
@@ -223,8 +228,16 @@ function updateUserInSheet(userId, updateData) {
             }
         }
         
+        // ✅ حماية: '***' هي قيمة sentinel تعني "لا تغيّر كلمة المرور" — لا نحسب hash لها أبداً
+        if (processedUpdate.passwordHash === '***') {
+            delete processedUpdate.passwordHash;
+        }
+        if (processedUpdate.password === '***' || processedUpdate.password === '') {
+            delete processedUpdate.password;
+        }
+
         // إذا تم تحديث كلمة المرور، قم بتشفيرها
-        if (processedUpdate.password && typeof processedUpdate.password === 'string' && processedUpdate.password.trim() !== '' && processedUpdate.password !== '***') {
+        if (processedUpdate.password && typeof processedUpdate.password === 'string' && processedUpdate.password.trim() !== '') {
             // إذا كانت كلمة المرور غير مشفرة، قم بتشفيرها
             if (!isSha256Hash(processedUpdate.password)) {
                 processedUpdate.passwordHash = hashPassword(processedUpdate.password);
@@ -234,22 +247,16 @@ function updateUserInSheet(userId, updateData) {
             // حفظ password كقيمة مخفية للأمان
             processedUpdate.password = '***';
         } else if (processedUpdate.passwordHash && typeof processedUpdate.passwordHash === 'string') {
-            // إذا كان passwordHash موجوداً، تأكد من أنه مشفر
+            // إذا كان passwordHash موجوداً وصالحاً، تأكد من أنه مشفر
             if (!isSha256Hash(processedUpdate.passwordHash)) {
-                processedUpdate.passwordHash = hashPassword(processedUpdate.passwordHash);
-            }
-            // تعيين password كقيمة مخفية إذا لم يكن موجوداً
-            if (!processedUpdate.password || processedUpdate.password === '') {
-                processedUpdate.password = '***';
-            }
-        } else {
-            // إذا لم يتم تحديث كلمة المرور، احتفظ بالقيم الحالية
-            if (!processedUpdate.password) {
-                processedUpdate.password = data[userIndex].password || '***';
-            }
-            if (!processedUpdate.passwordHash) {
+                // هاش غير صالح — تجاهله واحتفظ بالموجود في الشيت
                 processedUpdate.passwordHash = data[userIndex].passwordHash || '';
             }
+            processedUpdate.password = '***';
+        } else {
+            // لم يُرسل passwordHash أو password — احتفظ بالقيم الحالية من الشيت
+            processedUpdate.password = data[userIndex].password || '***';
+            processedUpdate.passwordHash = data[userIndex].passwordHash || '';
         }
         
         // ✅ حماية من فقد الصلاحيات:
@@ -295,7 +302,7 @@ function updateUserInSheet(userId, updateData) {
         return saveRes;
     } catch (error) {
         Logger.log('Error updating user: ' + error.toString());
-        return { success: false, message: 'حدث خطأ أثناء التحديث: ' + error.toString() };
+        return { success: false, message: 'حدث خطأ أثناء التحديث.' };
     }
 }
 
@@ -372,7 +379,7 @@ function resetUserPassword(userId, newPassword) {
         }
     } catch (error) {
         Logger.log('Error resetting user password: ' + error.toString());
-        return { success: false, message: 'حدث خطأ أثناء إعادة تعيين كلمة المرور: ' + error.toString() };
+        return { success: false, message: 'حدث خطأ أثناء إعادة تعيين كلمة المرور.' };
     }
 }
 
@@ -468,7 +475,7 @@ function deleteUserFromSheet(userId, userData) {
         Logger.log('Error stack: ' + (error.stack || 'No stack trace'));
         return { 
             success: false, 
-            message: 'حدث خطأ أثناء حذف المستخدم: ' + error.toString() 
+            message: 'حدث خطأ أثناء حذف المستخدم.' 
         };
     }
 }
@@ -495,6 +502,52 @@ function getUserRecordFromUsersSheetByEmail_(email) {
         Logger.log('getUserRecordFromUsersSheetByEmail_: ' + err.toString());
         return null;
     }
+}
+
+/**
+ * تحديث سريع لحقول تسجيل الدخول دون قراءة الشيت كاملاً.
+ * يستخدم getValues على عمود ID فقط لإيجاد الصف ثم setValue للخلايا المستهدفة.
+ * @param {string} userId
+ * @param {{lastLogin?:string,isOnline?:boolean,activeSessionId?:string}} fields
+ */
+function _fastTouchUserLoginFields_(userId, fields) {
+    if (!userId || !fields) return;
+    const spreadsheetId = getSpreadsheetId();
+    if (!spreadsheetId) return;
+    const ss = SpreadsheetApp.openById(spreadsheetId);
+    const sheet = ss.getSheetByName('Users');
+    if (!sheet) return;
+
+    const lastRow = sheet.getLastRow();
+    const lastCol = sheet.getLastColumn();
+    if (lastRow < 2 || lastCol < 1) return;
+
+    const headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0].map(h => String(h || '').trim());
+    const idCol = headers.indexOf('id');
+    if (idCol === -1) return;
+
+    const ids = sheet.getRange(2, idCol + 1, lastRow - 1, 1).getValues();
+    const target = String(userId).trim();
+    let rowIndex = -1;
+    for (let i = 0; i < ids.length; i++) {
+        if (String(ids[i][0] || '').trim() === target) { rowIndex = i + 2; break; }
+    }
+    if (rowIndex === -1) return;
+
+    const cellWrites = [];
+    if ('lastLogin' in fields) {
+        const c = headers.indexOf('lastLogin');
+        if (c !== -1) cellWrites.push([rowIndex, c + 1, fields.lastLogin]);
+    }
+    if ('isOnline' in fields) {
+        const c = headers.indexOf('isOnline');
+        if (c !== -1) cellWrites.push([rowIndex, c + 1, fields.isOnline]);
+    }
+    if ('activeSessionId' in fields) {
+        const c = headers.indexOf('activeSessionId');
+        if (c !== -1) cellWrites.push([rowIndex, c + 1, fields.activeSessionId]);
+    }
+    cellWrites.forEach(w => sheet.getRange(w[0], w[1]).setValue(w[2]));
 }
 
 /**
@@ -546,9 +599,13 @@ function loginUser(email, password) {
             updateUserInSheet(user.id, { passwordHash: newHash, password: '***' });
         }
 
-        // تسجيل وقت الدخول
+        // تسجيل وقت الدخول — مسار سريع (تحديث خلايا مستهدفة فقط بدون قراءة الشيت كاملاً)
         try {
-            updateUserInSheet(user.id, { lastLogin: new Date().toISOString() });
+            _fastTouchUserLoginFields_(user.id, {
+                lastLogin: new Date().toISOString(),
+                isOnline: false,
+                activeSessionId: ''
+            });
         } catch (loginTimeError) {
             Logger.log('Warning: Could not update lastLogin: ' + loginTimeError.toString());
         }

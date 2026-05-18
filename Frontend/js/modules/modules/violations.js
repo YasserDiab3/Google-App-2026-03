@@ -95,7 +95,21 @@ const Violations = {
     },
 
     _normKeyStr(v) {
-        return String(v == null ? '' : v).trim().toLowerCase();
+        if (v == null) return '';
+        let str = String(v).trim().toLowerCase();
+        // إزالة الحركات (التشكيل)
+        str = str.replace(/[\u064B-\u065F\u0670]/g, '');
+        // توحيد الألف (أ، إ، آ) إلى ألف عادية (ا)
+        str = str.replace(/[أإآ]/g, 'ا');
+        // توحيد التاء المربوطة (ة) إلى هاء (ه)
+        str = str.replace(/ة/g, 'ه');
+        // توحيد الياء والألف المقصورة (ى) إلى ياء عادية (ي)
+        str = str.replace(/[ى]/g, 'ي');
+        // إزالة المسافات المتعددة
+        str = str.replace(/\s+/g, ' ');
+        // إزالة الرموز وعلامات الترقيم التي قد تختلف
+        str = str.replace(/[^\w\s\u0600-\u06FF]/g, '');
+        return str.trim();
     },
 
     sameViolationPersonForSequence(draft, existing) {

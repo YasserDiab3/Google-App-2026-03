@@ -126,24 +126,23 @@ window.Auth = {
                 return { success: false, message: 'بيانات المستخدم غير كاملة' };
             }
 
-            if (foundUser.active === false || foundUser.active === 'false') {
+            if (foundUser.active === false || foundUser.active === 'false' || foundUser.active === 'inactive') {
                 return { success: false, message: 'هذا الحساب غير مفعّل. يرجى الاتصال بالمدير' };
             }
 
             const hashNorm = this._normalizeStoredPasswordHash(foundUser.passwordHash);
             if (!hashNorm || hashNorm === '***') {
-                return { success: false, message: 'يجب تحديث كلمة المرور. يرجى الاتصال بالمدير لإعادة تعيين كلمة المرور.' };
+                Utils.safeError('❌ [AUTH] passwordHash مفقود أو غير صالح للمستخدم:', foundUser.email);
+                return { success: false, message: 'كلمة المرور غير مضبوطة لهذا الحساب. يرجى التواصل مع مدير النظام لإعادة تعيينها.' };
             }
             foundUser.passwordHash = hashNorm;
 
             const generateSessionId = () => {
-                const timestamp = Date.now();
-                const random = Math.random().toString(36).substring(2, 15);
-                const userAgent = navigator.userAgent.substring(0, 50);
-                const userAgentHash = userAgent.split('').reduce((acc, char) => {
-                    return ((acc << 5) - acc) + char.charCodeAt(0);
-                }, 0).toString(36);
-                return `SESS_${timestamp}_${random}_${userAgentHash}`;
+                const timestamp = Date.now().toString(36);
+                const arr = new Uint8Array(16);
+                crypto.getRandomValues(arr);
+                const random = Array.from(arr).map(b => b.toString(16).padStart(2, '0')).join('');
+                return `SESS_${timestamp}_${random}`;
             };
 
             let currentSessionId = sessionStorage.getItem('hse_session_id');
@@ -177,10 +176,19 @@ window.Auth = {
 
             if (foundUser.isOnline === true && foundUser.activeSessionId) {
                 if (foundUser.activeSessionId !== currentSessionId && !hasActiveSession) {
-                    return {
-                        success: false,
-                        message: '⚠️ هذا الحساب متصل بالفعل من جهاز آخر.\n\nيرجى تسجيل الخروج من الجهاز الآخر أولاً، أو انتظار انتهاء الجلسة (24 ساعة).\n\nلا يمكن تسجيل الدخول من أكثر من جهاز في نفس الوقت.'
-                    };
+                    // التحقق من عمر الجلسة المخزنة — إذا مضى أكثر من 24 ساعة نتجاوز الحجب
+                    // (يحدث هذا بعد انهيار المتصفح أو انقطاع الشبكة بدون logout صريح)
+                    const lastActivity = parseInt(sessionStorage.getItem('hse_session_last_activity_ms') || '0', 10);
+                    const staleThresholdMs = 24 * 60 * 60 * 1000;
+                    const sessionIsStale = lastActivity === 0 || (Date.now() - lastActivity > staleThresholdMs);
+                    if (!sessionIsStale) {
+                        return {
+                            success: false,
+                            message: '⚠️ هذا الحساب متصل بالفعل من جهاز آخر.\n\nيرجى تسجيل الخروج من الجهاز الآخر أولاً، أو انتظار انتهاء الجلسة تلقائياً.\n\nلا يمكن تسجيل الدخول من أكثر من جهاز في نفس الوقت.'
+                        };
+                    }
+                    // الجلسة القديمة منتهية الصلاحية — نتجاوز الحجب ونسمح بالدخول
+                    Utils.safeWarn('⚠️ جلسة قديمة منتهية الصلاحية — السماح بالدخول وإعادة تعيين isOnline');
                 }
             }
 
@@ -397,13 +405,27 @@ window.Auth = {
         if (!user) {
             Utils.safeLog('🏠 محاولة التحقق من الحساب محلياً...');
             let users = AppState.appData.users || [];
+            // إعادة تعيين isOnline في الكاش المحلي قبل الفحص لتجنب الحجب بسبب جلسة سابقة منتهية
+            const localUserIdx = users.findIndex(u => u && u.email && u.email.toLowerCase().trim() === email);
+            if (localUserIdx !== -1 && users[localUserIdx].isOnline === true) {
+                const lastActivity = parseInt(sessionStorage.getItem('hse_session_last_activity_ms') || '0', 10);
+                if (lastActivity === 0 || Date.now() - lastActivity > 24 * 60 * 60 * 1000) {
+                    users[localUserIdx].isOnline = false;
+                    users[localUserIdx].activeSessionId = null;
+                }
+            }
             foundUser = users.find(u => u && u.email && u.email.toLowerCase().trim() === email);
 
-            // ✅ Bootstrap Support
-            if (!foundUser && Array.isArray(users) && users.length === 0 && !this.isBootstrapDisabled() && this.isBootstrapEmail(email)) {
+            // ✅ Bootstrap Support — حساب الطوارئ للدخول الأول أو عند تعذر الاتصال
+            // يُتاح دائماً لـ admin@hse.local إذا لم يكن مُعطَّلاً (أو عند انعدام الإنترنت والبيانات)
+            const isOfflineWithNoUsers = !canSyncUsers && users.length === 0;
+            const bootstrapAllowed = !this.isBootstrapDisabled() || isOfflineWithNoUsers;
+            // Bootstrap Admin يعمل حتى لو فيه مستخدمون آخرون في الـ cache
+            // (لأن admin@hse.local هو حساب طوارئ وليس حساباً عادياً)
+            if (!foundUser && bootstrapAllowed && this.isBootstrapEmail(email)) {
                 foundUser = {
                     id: 'BOOTSTRAP_ADMIN',
-                    name: 'مدير النظام (تهيئة أول مرة)',
+                    name: 'مدير النظام',
                     email: this.bootstrap.email,
                     role: 'admin',
                     passwordHash: this.bootstrap.passwordHash,
@@ -413,7 +435,11 @@ window.Auth = {
             }
 
             if (!foundUser) {
-                const errorMessage = this._getLoginErrorMessage();
+                // رسالة واضحة عند انعدام الإنترنت وغياب البيانات المحلية
+                const isOffline = !navigator.onLine || (!canSyncUsers && users.length === 0);
+                const errorMessage = isOffline
+                    ? 'لا يوجد اتصال بالخادم ولا بيانات محلية محفوظة. يُرجى الاتصال بالإنترنت والمحاولة مرة أخرى.'
+                    : this._getLoginErrorMessage();
                 Notification.error(errorMessage);
                 return { success: false, message: errorMessage };
             }
@@ -431,8 +457,12 @@ window.Auth = {
             }
 
             if (!passwordMatch) {
-                await Utils.RateLimiter.recordFailedAttempt(email);
-                const errorMessage = this._getLoginErrorMessage();
+                let errorMessage = this._getLoginErrorMessage();
+                try {
+                    await Utils.RateLimiter.recordFailedAttempt(email);
+                } catch (rateLimitErr) {
+                    errorMessage = rateLimitErr.message || errorMessage;
+                }
                 Notification.error(errorMessage);
                 return { success: false, message: errorMessage };
             }
@@ -468,32 +498,17 @@ window.Auth = {
         // ✅ إصلاح جذري: التأكد من أن userName ليس "النظام" أو فارغ
         let userName = (user.name || user.displayName || '').trim();
         
-        // ✅ إذا كان userName فارغ أو "النظام"، نستخدم email
         if (!userName || userName === 'النظام' || userName === '') {
             userName = email;
-            console.log('⚠️ [AUTH] user.name كان فارغ أو "النظام"، استخدام email:', userName);
         }
-        
-        // ✅ التحقق النهائي: إذا كان userName لا يزال فارغ، نستخدم id كبديل
+
         if (!userName || userName === 'النظام' || userName === '') {
             userName = (fullUserData?.id || user.id || '').toString().trim();
-            if (userName) {
-                console.log('⚠️ [AUTH] user.name و email كانا فارغين، استخدام id:', userName);
-            }
         }
-        
-        // ✅ التحقق النهائي: إذا كان userName لا يزال فارغ، نستخدم "مستخدم" كبديل
+
         if (!userName || userName === 'النظام' || userName === '') {
             userName = 'مستخدم';
-            console.log('⚠️ [AUTH] لا يمكن الحصول على اسم المستخدم، استخدام "مستخدم" كبديل');
         }
-        
-        console.log('🔍 [AUTH] تعيين AppState.currentUser:', {
-            originalName: user.name,
-            displayName: user.displayName,
-            email: email,
-            finalName: userName
-        });
         
         const resolvedRole = (typeof Utils !== 'undefined' && typeof Utils.canonicalizeUserRole === 'function')
             ? Utils.canonicalizeUserRole(user.role || 'user')
@@ -514,21 +529,16 @@ window.Auth = {
         };
         this._sanitizeCurrentUserSecrets();
 
-        console.log('✅ [AUTH] AppState.currentUser.name النهائي:', AppState.currentUser.name);
-        Utils.safeLog('✅ تسجيل الدخول ناجح:', AppState.currentUser);
-        Utils.safeLog('📋 الصلاحيات:', AppState.currentUser.permissions);
+        Utils.safeLog('✅ تسجيل الدخول ناجح');
+        Utils.safeLog('📋 الصلاحيات:', Object.keys(AppState.currentUser.permissions || {}).length, 'صلاحية');
 
 
         // معرف الجلسة قبل تسجيل «login» في السجل لربط كل الأحداث بنفس الجلسة
         let currentSessionId = sessionStorage.getItem('hse_session_id');
         if (!currentSessionId) {
-            const timestamp = Date.now();
-            const random = Math.random().toString(36).substring(2, 15);
-            const userAgent = navigator.userAgent.substring(0, 50);
-            const userAgentHash = userAgent.split('').reduce((acc, char) => {
-                return ((acc << 5) - acc) + char.charCodeAt(0);
-            }, 0).toString(36);
-            currentSessionId = `SESS_${timestamp}_${random}_${userAgentHash}`;
+            const _arr = new Uint8Array(16);
+            crypto.getRandomValues(_arr);
+            currentSessionId = `SESS_${Date.now().toString(36)}_${Array.from(_arr).map(b => b.toString(16).padStart(2,'0')).join('')}`;
             sessionStorage.setItem('hse_session_id', currentSessionId);
         }
         AppState.currentUser.sessionId = currentSessionId;
@@ -583,32 +593,10 @@ window.Auth = {
             if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
                 window.DataManager.save();
             }
-            
-            if (typeof GoogleIntegration !== 'undefined' && GoogleIntegration.sendToAppsScript &&
-                typeof Utils !== 'undefined' && typeof Utils.hasCloudBackendSync === 'function' && Utils.hasCloudBackendSync()) {
-                const userId = usersList[userIndex].id;
-                const updateData = {
-                    lastLogin: loginTime,
-                    isOnline: true,
-                    activeSessionId: currentSessionId, // إرسال معرف الجلسة إلى Google Sheets
-                    loginHistory: usersList[userIndex].loginHistory
-                };
-                
-                GoogleIntegration.sendToAppsScript('updateUser', {
-                    userId: userId,
-                    updateData: updateData
-                }).then(updateResult => {
-                    if (updateResult && updateResult.success) {
-                        Utils.safeLog('✅ تم مزامنة lastLogin و activeSessionId مع الخادم بنجاح');
-                    } else {
-                        Utils.safeWarn('⚠️ فشل مزامنة lastLogin مع الخادم:', updateResult?.message);
-                    }
-                }).catch(updateError => {
-                    Utils.safeWarn('⚠️ خطأ في مزامنة lastLogin مع الخادم:', updateError);
-                    // لا نوقف تسجيل الدخول حتى لو فشلت المزامنة
-                });
-            }
-            
+
+            // ✅ ملاحظة أداء: الخادم (loginUser) يحدّث lastLogin/isOnline مباشرةً عبر
+            // مسار سريع (_fastTouchUserLoginFields_)، لذا لا نحتاج لطلب updateUser ثانٍ من العميل.
+
             // تحديث جدول المستخدمين فوراً إذا كان مفتوحاً
             if (typeof Users !== 'undefined' && typeof Users.updateUserStatus === 'function') {
                 setTimeout(() => {
@@ -769,8 +757,9 @@ window.Auth = {
                         'ApprovedContractors': 'approvedContractors'
                     };
 
-                    // تحميل شبه متوازي للبيانات الأساسية (عاملان) لتقليل زمن الانتظار بدون ضغط زائد
-                    const workerCount = 2;
+                    // ✅ تحميل متوازٍ كامل للبيانات الأساسية لتقليل زمن الانتظار
+                    // (5 عمّال = طلب موازٍ واحد لكل شيت — Apps Script يتعامل مع طلبات متوازية).
+                    const workerCount = prioritySheets.length;
                     let cursor = 0;
                     const loadPrioritySheet = async (sheetName) => {
                         try {
@@ -804,17 +793,15 @@ window.Auth = {
                             await loadPrioritySheet(sheetName);
                         }
                     });
-                    await Promise.allSettled(workers);
 
-                    // ✅ تحميل إعدادات الشركة (بما فيها سياسة ما بعد الدخول) مع نفس تدفق بيانات المستخدمين لظهورها مباشرة بعد التسجيل
-                    if (typeof DataManager !== 'undefined' && DataManager.loadCompanySettings) {
-                        try {
-                            await DataManager.loadCompanySettings(true);
-                            if (AppState.debugMode) Utils.safeLog('✅ تم تحميل إعدادات الشركة مع بيانات المستخدم');
-                        } catch (settingsErr) {
-                            Utils.safeWarn('⚠️ فشل تحميل إعدادات الشركة مع بيانات المستخدم:', settingsErr);
-                        }
-                    }
+                    // ✅ تحميل إعدادات الشركة بالتوازي مع شيتات الأولوية (بدلاً من بعدها)
+                    const companySettingsPromise = (typeof DataManager !== 'undefined' && DataManager.loadCompanySettings)
+                        ? DataManager.loadCompanySettings(true).catch(settingsErr => {
+                            Utils.safeWarn('⚠️ فشل تحميل إعدادات الشركة:', settingsErr);
+                        })
+                        : Promise.resolve();
+
+                    await Promise.allSettled([...workers, companySettingsPromise]);
 
                     // ✅ الخطوة 3: تحديث الجلسة والقائمة بعد تحميل بيانات المستخدمين
                     // هذا مهم جداً لضمان تحديث الصلاحيات والقائمة الجانبية
@@ -900,6 +887,11 @@ window.Auth = {
             window.UI.stopBackgroundSync();
         }
 
+        // ✅ تنظيف كامل لـ RealtimeSyncManager (intervals + BroadcastChannel + polling)
+        if (typeof window.RealtimeSyncManager !== 'undefined' && typeof window.RealtimeSyncManager.cleanup === 'function') {
+            try { window.RealtimeSyncManager.cleanup(); } catch (_e) { /* ignore */ }
+        }
+
         // إيقاف نظام عدم النشاط
         if (typeof InactivityManager !== 'undefined') {
             InactivityManager.stop();
@@ -933,10 +925,10 @@ window.Auth = {
                 users[userIndex].activeSessionId = null; // مسح معرف الجلسة عند تسجيل الخروج
                 AppState.appData.users = users;
                 
-                if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
-                    window.DataManager.save();
+                if (typeof window.DataManager !== 'undefined' && window.DataManager.saveImmediate) {
+                    window.DataManager.saveImmediate();
                 }
-                
+
                 if (typeof GoogleIntegration !== 'undefined' && GoogleIntegration.sendToAppsScript &&
                     typeof Utils !== 'undefined' && typeof Utils.hasCloudBackendSync === 'function' && Utils.hasCloudBackendSync()) {
                     const userId = users[userIndex].id;
@@ -1106,7 +1098,7 @@ window.Auth = {
                             };
                             this._sanitizeCurrentUserSecrets();
                             
-                            console.log('✅ [AUTH] AppState.currentUser.name بعد الاستعادة (sessionStorage):', AppState.currentUser.name);
+                            Utils.safeLog('✅ [AUTH] تم استعادة الجلسة من sessionStorage');
                             
                             // ✅ إصلاح: تحديث الجلسة بالبيانات الجديدة من قاعدة البيانات
                             this.updateUserSession();
@@ -1153,7 +1145,7 @@ window.Auth = {
                                         };
                                         this._sanitizeCurrentUserSecrets();
                                         
-                                        console.log('✅ [AUTH] AppState.currentUser.name بعد التحديث التلقائي (sessionStorage):', AppState.currentUser.name);
+                                        Utils.safeLog('✅ [AUTH] تم تحديث الجلسة تلقائياً');
                                         
                                         // تحديث الجلسة فقط إذا كانت هناك تغييرات فعلية
                                         this.updateUserSession();
@@ -1280,7 +1272,7 @@ window.Auth = {
                             };
                             this._sanitizeCurrentUserSecrets();
                             
-                            console.log('✅ [AUTH] AppState.currentUser.name بعد الاستعادة (localStorage):', AppState.currentUser.name);
+                            Utils.safeLog('✅ [AUTH] تم استعادة الجلسة من localStorage');
                             
                             // ✅ إصلاح: تحديث الجلسة بالبيانات الجديدة من قاعدة البيانات
                             this.updateUserSession();
@@ -1327,7 +1319,7 @@ window.Auth = {
                                         };
                                         this._sanitizeCurrentUserSecrets();
                                         
-                                        console.log('✅ [AUTH] AppState.currentUser.name بعد التحديث التلقائي (localStorage):', AppState.currentUser.name);
+                                        Utils.safeLog('✅ [AUTH] تم تحديث الجلسة تلقائياً من localStorage');
                                         
                                         // تحديث الجلسة فقط إذا كانت هناك تغييرات فعلية
                                         this.updateUserSession();
@@ -1481,7 +1473,7 @@ window.Auth = {
             };
             this._sanitizeCurrentUserSecrets();
             
-            console.log('✅ [AUTH] AppState.currentUser.name بعد التحديث:', AppState.currentUser.name);
+            Utils.safeLog('✅ [AUTH] تم تحديث بيانات المستخدم');
 
             // ✅ إصلاح: حفظ الجلسة بشكل آمن (بدون passwordHash)
             // التأكد من أن الصلاحيات هي كائن صالح قبل الحفظ
@@ -1926,9 +1918,10 @@ window.Auth = {
         let tempPassword = newPassword;
         if (!tempPassword) {
             // إنشاء كلمة مرور مؤقتة قوية
-            const randomPart = Math.random().toString(36).substring(2, 10);
-            const timestamp = Date.now().toString(36).substring(5, 9);
-            tempPassword = 'Temp' + randomPart + timestamp + '!';
+            const _tArr = new Uint8Array(6);
+            crypto.getRandomValues(_tArr);
+            const randomPart = Array.from(_tArr).map(b => b.toString(16).padStart(2,'0')).join('');
+            tempPassword = 'Tmp@' + randomPart + '!';
         }
 
         // تحديث كلمة المرور

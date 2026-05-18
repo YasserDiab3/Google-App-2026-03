@@ -3272,6 +3272,24 @@ const Clinic = {
         return (this.DEFAULT_VISIT_TYPES || []).slice();
     },
 
+    normalizeArabicText(text) {
+        if (text == null) return '';
+        let str = String(text).trim().toLowerCase();
+        // إزالة الحركات (التشكيل)
+        str = str.replace(/[\u064B-\u065F\u0670]/g, '');
+        // توحيد الألف (أ، إ، آ) إلى ألف عادية (ا)
+        str = str.replace(/[أإآ]/g, 'ا');
+        // توحيد التاء المربوطة (ة) إلى هاء (ه)
+        str = str.replace(/ة/g, 'ه');
+        // توحيد الياء والألف المقصورة (ى) إلى ياء عادية (ي)
+        str = str.replace(/[ى]/g, 'ي');
+        // إزالة المسافات المتعددة
+        str = str.replace(/\s+/g, ' ');
+        // إزالة الرموز وعلامات الترقيم التي قد تختلف
+        str = str.replace(/[^\w\s\u0600-\u06FF]/g, '');
+        return str.trim();
+    },
+
     /**
      * عد زيارات شخص معين (موظف أو مقاول) في الشهر الذي تنتمي إليه زيارة معينة
      * @param {Object} visitData - بيانات زيارة تحتوي على personType و visitDate ومعرفات الشخص
@@ -3305,31 +3323,34 @@ const Clinic = {
                 return d.getFullYear() === year && d.getMonth() === month;
             };
 
-            const personType = (visitData.personType || 'employee').toString().toLowerCase();
+            const rawPersonType = (visitData.personType || 'employee').toString().toLowerCase();
+            const isTargetContractor = rawPersonType === 'contractor' || rawPersonType === 'external' || rawPersonType.includes('مقاول') || rawPersonType.includes('خار');
 
-            if (personType === 'employee') {
+            if (!isTargetContractor) {
                 const code = String(visitData.employeeCode || visitData.employeeNumber || '').trim();
                 if (!code) return 0;
                 return allVisits.filter(v => {
                     if (!isSameMonth(v)) return false;
                     const t = (v.personType || '').toString().toLowerCase();
-                    if (t !== 'employee' && t !== '') return false;
+                    const isEmp = t === 'employee' || t === '' || t.includes('موظ');
+                    if (!isEmp) return false;
                     const c = String(v.employeeCode || v.employeeNumber || '').trim();
                     return c === code;
                 }).length;
             }
 
             // contractor أو external
-            const name = String(visitData.contractorName || visitData.externalName || '').trim();
-            const worker = String(visitData.contractorWorkerName || '').trim();
-            if (!name && !worker) return 0;
+            const nameNorm = this.normalizeArabicText(visitData.contractorName || visitData.externalName);
+            const workerNorm = this.normalizeArabicText(visitData.contractorWorkerName);
+            if (!nameNorm && !workerNorm) return 0;
             return allVisits.filter(v => {
                 if (!isSameMonth(v)) return false;
                 const t = (v.personType || '').toString().toLowerCase();
-                if (t !== 'contractor' && t !== 'external') return false;
-                const n = String(v.contractorName || v.externalName || '').trim();
-                const w = String(v.contractorWorkerName || '').trim();
-                return n === name && w === worker;
+                const isCon = t === 'contractor' || t === 'external' || t.includes('مقاول') || t.includes('خار');
+                if (!isCon) return false;
+                const nNorm = this.normalizeArabicText(v.contractorName || v.externalName);
+                const wNorm = this.normalizeArabicText(v.contractorWorkerName);
+                return nNorm === nameNorm && wNorm === workerNorm;
             }).length;
         } catch (e) {
             Utils.safeWarn('getMonthlyVisitCountForPerson:', e);
@@ -6151,14 +6172,42 @@ const Clinic = {
             if (!seen.has(id)) {
                 // محاولة البحث عن بديل (نفس الشخص والوقت) لتجنب التكرار إذا تغير الـ ID
                 const isDuplicate = server.some(sv => {
-                    return sv.personType === v.personType &&
-                           sv.visitDate === v.visitDate &&
-                           (sv.employeeId === v.employeeId || sv.contractorWorkerName === v.contractorWorkerName);
+                    if (sv.personType !== v.personType) return false;
+                    if (sv.visitDate !== v.visitDate) return false;
+                    
+                    if (sv.personType === 'employee') {
+                        const svCode = String(sv.employeeCode || sv.employeeNumber || '').trim();
+                        const vCode = String(v.employeeCode || v.employeeNumber || '').trim();
+                        if (svCode && vCode && svCode === vCode) return true;
+                        
+                        const svName = Clinic.normalizeArabicText(sv.employeeName);
+                        const vName = Clinic.normalizeArabicText(v.employeeName);
+                        return !!svName && svName === vName;
+                    } else {
+                        // contractor or external
+                        const svCName = Clinic.normalizeArabicText(sv.contractorName || sv.externalName);
+                        const vCName = Clinic.normalizeArabicText(v.contractorName || v.externalName);
+                        const svWName = Clinic.normalizeArabicText(sv.contractorWorkerName);
+                        const vWName = Clinic.normalizeArabicText(v.contractorWorkerName);
+                        
+                        return svCName === vCName && svWName === vWName;
+                    }
                 });
 
                 if (!isDuplicate) {
-                    seen.add(id);
-                    extras.push(v);
+                    // ✅ المشكلة: السجلات التي تُحذف من الخادم تبقى هنا للأبد بسبب الدمج!
+                    // ✅ الحل: نحتفظ بالسجلات المحلية الإضافية فقط إذا كانت حديثة جداً (أقل من 2 ساعة)
+                    // على افتراض أنها أُضيفت أوفلاين ولم تُرفع بعد. أما السجلات القديمة المحذوفة من الخادم فنتخلص منها.
+                    const recordTime = new Date(v.createdAt || v.visitDate).getTime();
+                    const now = new Date().getTime();
+                    if (!isNaN(recordTime) && (now - recordTime) < (2 * 60 * 60 * 1000)) { // ساعتين
+                        seen.add(id);
+                        extras.push(v);
+                    } else if (isNaN(recordTime)) {
+                        // إذا لم يكن هناك تاريخ، نحتفظ به لتجنب فقدان البيانات
+                        seen.add(id);
+                        extras.push(v);
+                    }
                 }
             }
         });
@@ -7056,6 +7105,12 @@ const Clinic = {
                         <i class="fas fa-sync-alt ${iconMarginClass}"></i>
                         ${t('btn.refresh')}
                     </button>
+                    ${(typeof Permissions !== 'undefined' && Permissions.isAdmin && Permissions.isAdmin()) ? `
+                    <button type="button" onclick="const b=this;b.disabled=true;b.innerHTML='جاري الترحيل...';GoogleIntegration.sendRequest({action:'migrateContractorVisits'}).then(r=>{alert(r.message);location.reload()}).catch(e=>{alert('خطأ:'+e);b.disabled=false;b.innerHTML='ترحيل المقاولين'})" class="btn-primary" style="background-color: #d97706; color: white;">
+                        <i class="fas fa-broom ${iconMarginClass}"></i>
+                        ترحيل المقاولين
+                    </button>
+                    ` : ''}
                     <button type="button" id="visits-export-excel-btn" class="btn-success">
                         <i class="fas fa-file-excel ${iconMarginClass}"></i>
                         ${t('btn.exportExcel')}

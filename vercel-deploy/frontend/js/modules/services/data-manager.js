@@ -471,11 +471,34 @@ const DataManager = {
     },
 
     /**
-     * حفظ البيانات المحلية في localStorage
+     * حفظ البيانات المحلية في localStorage (مع debounce 300ms لتجنب الكتابات المتوازية)
+     */
+    save() {
+        if (this._saveDebounceTimer) {
+            clearTimeout(this._saveDebounceTimer);
+        }
+        this._saveDebounceTimer = setTimeout(() => {
+            this._saveDebounceTimer = null;
+            this._saveImmediate();
+        }, 300);
+        return true;
+    },
+
+    /** حفظ فوري بدون debounce — استخدمه عند تسجيل الخروج أو العمليات الحرجة */
+    saveImmediate() {
+        if (this._saveDebounceTimer) {
+            clearTimeout(this._saveDebounceTimer);
+            this._saveDebounceTimer = null;
+        }
+        return this._saveImmediate();
+    },
+
+    /**
+     * التنفيذ الفعلي للحفظ — لا تستدعِه مباشرة، استخدم save() أو saveImmediate()
      * ملاحظة مهمة: حفظ البيانات المحلية فقط - لا يتم المزامنة مع Google Sheets هنا
      * يتم المزامنة تلقائياً باستخدام GoogleIntegration.autoSave() عند إضافة أو تعديل البيانات في Google Sheets
      */
-    save() {
+    _saveImmediate() {
         try {
             // ✅ حماية: التأكد من وجود AppState.appData قبل الحفظ
             if (!AppState || !AppState.appData) {

@@ -13,6 +13,73 @@
                 } catch (e) {}
             })();
         </script>
+        <!-- ✅ قامع الكونسول في الإنتاج — يُسكت جميع المخرجات خارج بيئة التطوير -->
+        <script>
+            (function () {
+                try {
+                    if (window.__HSE_DEBUG_CONSOLE) return;
+                    var isProd = window.location.hostname !== 'localhost' &&
+                        !window.location.hostname.includes('127.0.0.1') &&
+                        !window.location.hostname.includes('192.168.') &&
+                        window.location.hostname !== '';
+                    if (!isProd) return;
+
+                    // أنماط يجب تجاهلها دائماً (أخطاء إضافات المتصفح)
+                    var _suppressPatterns = [
+                        'runtime.lasterror', 'receiving end does not exist',
+                        'could not establish connection', 'message port closed',
+                        'data-extractor', 'extension', 'uploadmanager',
+                        'sourcemap', '.map', 'frame-ancestors'
+                    ];
+                    function _shouldSuppress(args) {
+                        for (var i = 0; i < args.length; i++) {
+                            var t = args[i] == null ? '' :
+                                typeof args[i] === 'string' ? args[i] :
+                                (args[i].message || args[i].stack || String(args[i]));
+                            t = t.toLowerCase();
+                            for (var j = 0; j < _suppressPatterns.length; j++) {
+                                if (t.indexOf(_suppressPatterns[j]) !== -1) return true;
+                            }
+                        }
+                        return false;
+                    }
+
+                    // إسكات كامل لـ log / warn / info / debug في الإنتاج
+                    var noop = function () {};
+                    console.log   = noop;
+                    console.warn  = noop;
+                    console.info  = noop;
+                    console.debug = noop;
+
+                    // تصفية console.error — فقط أخطاء غير إضافات المتصفح
+                    var _origError = console.error;
+                    console.error = function () {
+                        if (_shouldSuppress(Array.prototype.slice.call(arguments))) return;
+                        _origError.apply(console, arguments);
+                    };
+
+                    // اعتراض window.onerror لقمع أخطاء الإضافات
+                    var _prevOnError = window.onerror;
+                    window.onerror = function (msg, src, line, col, err) {
+                        var m = String(msg || '').toLowerCase();
+                        var s = String(src || '').toLowerCase();
+                        if (_suppressPatterns.some(function(p){ return m.indexOf(p) !== -1 || s.indexOf(p) !== -1; }))
+                            return true; // منع ظهور الخطأ
+                        if (_prevOnError) return _prevOnError.apply(this, arguments);
+                    };
+
+                    // اعتراض unhandledrejection
+                    window.addEventListener('unhandledrejection', function (e) {
+                        try {
+                            var msg = String((e.reason && (e.reason.message || e.reason)) || '').toLowerCase();
+                            if (_suppressPatterns.some(function(p){ return msg.indexOf(p) !== -1; }))
+                                e.preventDefault();
+                        } catch (_) {}
+                    }, true);
+
+                } catch (e) {}
+            })();
+        </script>
         <!-- إزالة قفل الواجهة يدوياً من Console: اكتب HSE_clearUiLock() (بحروف كما هي) -->
         <script>
             (function () {
@@ -1409,13 +1476,7 @@
                 }
 
                 try {
-                    if (!window.__ultraSuppressorLogged) {
-                        window.__ultraSuppressorLogged = true;
-                        console.log(
-                            "%c✅ ULTRA-AGGRESSIVE Error Suppressor Active (3 Layers)",
-                            "color: green; font-weight: bold; font-size: 14px;",
-                        );
-                    }
+                    window.__ultraSuppressorLogged = true;
                 } catch (e) { /* ignore */ }
             })();
         </script>
@@ -13503,12 +13564,6 @@
                     } catch (e) {}
                 }
 
-                if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || window.location.search.includes('dev=true')) {
-                    console.log(
-                        "%c✅ Chrome-Specific Error Suppressor Active (Final Layer)",
-                        "color: #4285f4; font-weight: bold; font-size: 14px;",
-                    );
-                }
             })();
         </script>
     </body>

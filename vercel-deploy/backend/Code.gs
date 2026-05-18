@@ -148,16 +148,23 @@ function doPost(e) {
             ? sanitizeRequestObject(rawPayload, 0)
             : rawPayload;
 
-        // دمج هوية الطلب (postData.userData) مع payload.userData: الصلاحيات الفعالة تُرسَل هنا؛
-        // كائن المستخدم داخل payload قد لا يحدّث صلاحيات الجدول فوراً.
+        // دمج هوية الطلب (postData.userData) مع payload.userData مع حماية من prototype pollution
         if (postData.userData && typeof postData.userData === 'object' && payload && typeof payload === 'object' && !Array.isArray(payload)) {
-            const env = postData.userData;
-            const innerUd = payload.userData;
-            if (innerUd && typeof innerUd === 'object') {
-                payload.userData = Object.assign({}, innerUd, env);
-            } else {
-                payload.userData = Object.assign({}, env);
-            }
+            const _safePickUserData = function(src) {
+                if (!src || typeof src !== 'object') return {};
+                const allowed = ['email', 'id', 'name', 'role', 'permissions'];
+                const out = {};
+                for (var i = 0; i < allowed.length; i++) {
+                    const k = allowed[i];
+                    if (Object.prototype.hasOwnProperty.call(src, k) && k !== '__proto__' && k !== 'constructor' && k !== 'prototype') {
+                        out[k] = src[k];
+                    }
+                }
+                return out;
+            };
+            const env = _safePickUserData(postData.userData);
+            const innerUd = _safePickUserData(payload.userData);
+            payload.userData = Object.assign({}, innerUd, env);
         }
 
         // ✅ Debug logging لمعرفة ما يتم استخراجه
@@ -286,11 +293,11 @@ function doPost(e) {
         // قائمة بالـ actions الحساسة التي تتطلب CSRF token إلزامي
         const sensitiveActions = [
             'saveToSheet', 'appendToSheet', 'deleteFromSheet', 'updateUserInSheet',
-            'addUserToSheet', 'deleteUser', 'updateUser', 'changePassword',
-            'saveToSheet', 'deleteFromSheet', 'updateSheetData'
+            'addUserToSheet', 'addUser', 'deleteUser', 'updateUser', 'changePassword',
+            'deleteFromSheet', 'updateSheetData'
         ];
         const strictAdminActions = [
-            'deleteUser', 'resetUserPassword', 'fixUsersSheetHeaders',
+            'addUser', 'deleteUser', 'resetUserPassword', 'fixUsersSheetHeaders',
             'fixMissingSheetHeaders', 'initializeSheets'
         ];
         const isDeleteAction = (typeof action === 'string') && action.indexOf('delete') === 0;
@@ -299,8 +306,12 @@ function doPost(e) {
         const isReadOnlyAction = readOnlyActions.includes(action);
         const isSensitiveAction = sensitiveActions.includes(action);
 
-        // التحقق من CSRF Token - إلزامي للعمليات الحساسة
-        if (isSensitiveAction || (!isReadOnlyAction && action !== 'addUser' && action !== 'initializeSheets')) {
+        // العمليات المعفاة من CSRF (pre-authentication — لا يمكن أن تملك CSRF token صالح)
+        const csrfExemptActions = ['login', 'initializeSheets'];
+        const isCsrfExempt = csrfExemptActions.includes(action);
+
+        // التحقق من CSRF Token - إلزامي لجميع العمليات غير القراءة
+        if (!isCsrfExempt && (isSensitiveAction || !isReadOnlyAction)) {
             if (!requestToken || requestToken.length < 32) {
                 Logger.log('Security: CSRF token missing or too short for action: ' + action);
                 const errorOutput = ContentService.createTextOutput(JSON.stringify({
@@ -461,28 +472,12 @@ function doPost(e) {
         return setCorsHeaders(output);
 
     } catch (error) {
-        // معالجة الأخطاء العامة
         Logger.log('Error in doPost: ' + error.toString());
         Logger.log('Error stack: ' + (error.stack || 'No stack trace'));
-
-        let errorMessage = error.toString();
-        let actionHint = '';
-
-        try {
-            if (error.toString().includes('JSON') || error.toString().includes('parse')) {
-                errorMessage = 'خطأ في تحليل البيانات المرسلة. يرجى التحقق من تنسيق الطلب.';
-                actionHint = 'تحقق من أن الطلب يتم إرساله بتنسيق JSON صحيح';
-            }
-        } catch (e) {
-            // تجاهل الأخطاء في معالجة الخطأ
-        }
-
         const errorOutput = ContentService.createTextOutput(JSON.stringify({
             success: false,
-            message: errorMessage,
-            errorCode: 'INTERNAL_ERROR',
-            errorType: error.name || 'Unknown',
-            hint: actionHint || 'تحقق من Execution Logs في Google Apps Script لمزيد من التفاصيل'
+            message: 'حدث خطأ داخلي في الخادم. يرجى المحاولة لاحقاً.',
+            errorCode: 'INTERNAL_ERROR'
         }));
         return setCorsHeaders(errorOutput);
     }
@@ -845,7 +840,7 @@ function doGet(e) {
         Logger.log('Error in doGet: ' + error.toString());
         const errorOutput = ContentService.createTextOutput(JSON.stringify({
             success: false,
-            message: 'Error in doGet: ' + error.toString()
+            message: 'حدث خطأ داخلي في الخادم.'
         }));
         return setCorsHeaders(errorOutput);
     }

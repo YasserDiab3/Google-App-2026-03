@@ -695,7 +695,286 @@ function updateClinicVisit(visitId, updateData) {
 }
 
 /**
+ * أداة صيانة: نقل زيارات المقاولين من جدول الموظفين (القديم) إلى جدول المقاولين (الجديد)
+ * وحذفها من جدول الموظفين لترتيب وتنظيف قاعدة البيانات
+ */
+function migrateContractorVisits() {
+    try {
+        const spreadsheetId = getSpreadsheetId();
+        const ss = SpreadsheetApp.openById(spreadsheetId);
+        
+        const empSheet = ss.getSheetByName('ClinicVisits');
+        const conSheet = ss.getSheetByName('ClinicContractorVisits');
+        
+        if (!empSheet || !conSheet) {
+            return { success: false, message: 'الجداول غير موجودة' };
+        }
+        
+        // 1. جلب معرفات المقاولين الموجودة بالفعل في الجدول الجديد لمنع التكرار
+        const existingConData = readFromSheet('ClinicContractorVisits', spreadsheetId) || [];
+        const existingIds = new Set(existingConData.map(r => String(r.id || '').trim()).filter(id => id));
+        
+        const lastRow = empSheet.getLastRow();
+        if (lastRow < 2) {
+            return { success: true, message: 'لا توجد بيانات لترحيلها', migratedCount: 0 };
+        }
+        
+        const headers = empSheet.getRange(1, 1, 1, empSheet.getLastColumn()).getValues()[0];
+        const data = empSheet.getRange(2, 1, lastRow - 1, empSheet.getLastColumn()).getValues();
+        
+        const employeesToKeep = [];
+        const rowsToMigrate = [];
+        
+        for (let i = 0; i < data.length; i++) {
+            const rowData = {};
+            headers.forEach((h, idx) => {
+                if (h) rowData[String(h).trim()] = data[i][idx];
+            });
+            
+            // تحقق مما إذا كانت الزيارة للمقاولين
+            let personType = String(rowData.personType || '').toLowerCase().trim();
+            const isContractor = personType.includes('contractor') || personType.includes('مقاول') || personType.includes('external') || personType.includes('خارجي') || rowData.contractorName || rowData.contractorWorkerName || rowData.externalName;
+            
+            if (isContractor) {
+                if (!rowData.id) {
+                    rowData.id = ('VISIT_' + Date.now() + Math.floor(Math.random() * 1000));
+                }
+                rowData.personType = 'contractor';
+                rowsToMigrate.push(rowData);
+            } else {
+                // نحتفظ بصفوف الموظفين لإعادة كتابتها لاحقاً
+                employeesToKeep.push(data[i]);
+            }
+        }
+        
+        const totalToMigrate = rowsToMigrate.length;
+        if (totalToMigrate === 0) {
+            return { success: true, message: 'لا توجد زيارات مقاولين في جدول الموظفين. قاعدة البيانات نظيفة تماماً.', migratedCount: 0 };
+        }
+        
+        // 2. إضافة السجلات لجدول المقاولين دفعة واحدة (إذا لم تكن مضافة مسبقاً)
+        let appendedCount = 0;
+        for (let j = 0; j < rowsToMigrate.length; j++) {
+            const rowId = String(rowsToMigrate[j].id).trim();
+            if (!existingIds.has(rowId)) {
+                appendToSheet('ClinicContractorVisits', rowsToMigrate[j], spreadsheetId);
+                existingIds.add(rowId);
+                appendedCount++;
+            }
+        }
+        
+        // 3. الطريقة فائقة السرعة: مسح قيم جدول الموظفين بالكامل وإعادة كتابة صفوف الموظفين فقط
+        // هذا يتم في أقل من ثانية واحدة ويتجنب تماماً مهلة الاتصال (Timeout)
+        empSheet.getRange(2, 1, lastRow - 1, empSheet.getLastColumn()).clearContent();
+        
+        if (employeesToKeep.length > 0) {
+            empSheet.getRange(2, 1, employeesToKeep.length, empSheet.getLastColumn()).setValues(employeesToKeep);
+        }
+        
+        // إذا كان الجدول القديم يحتوي على صفوف فارغة زائدة في الأسفل بعد الترحيل، نقوم بحذفها
+        const currentLastRow = empSheet.getLastRow();
+        const expectedLastRow = employeesToKeep.length + 1;
+        if (currentLastRow > expectedLastRow) {
+            empSheet.deleteRows(expectedLastRow + 1, currentLastRow - expectedLastRow);
+        }
+        
+        // مسح الكاش لإجبار النظام على القراءة من الشيت
+        invalidateHseSheetCaches('ClinicVisits');
+        invalidateHseSheetCaches('ClinicContractorVisits');
+        SpreadsheetApp.flush();
+        
+        return { 
+            success: true, 
+            message: `🎉 اكتملت العملية تماماً بنجاح فائق!\n` +
+                     `- تم معالجة وترحيل: ${totalToMigrate} سجل مقاول بنجاح.\n` +
+                     `- تم إضافة: ${appendedCount} سجل جديد إلى جدول المقاولين الجديد.\n` +
+                     `- تم تنظيف جدول الموظفين تماماً وبسرعة فائقة.`, 
+            migratedCount: totalToMigrate 
+        };
+    } catch (error) {
+        Logger.log('❌ [BACKEND] Error migrating contractor visits: ' + error.toString());
+        return { success: false, message: 'حدث خطأ أثناء الترحيل: ' + error.toString() };
+    }
+}
+
+/**
+ * أداة تشخيصية لمعرفة سبب عدم مسح الصفوف
+ */
+function debugMigration() {
+    try {
+        const spreadsheetId = getSpreadsheetId();
+        const ss = SpreadsheetApp.openById(spreadsheetId);
+        const empSheet = ss.getSheetByName('ClinicVisits');
+        if (!empSheet) return { success: false, message: 'جدول ClinicVisits غير موجود' };
+        
+        const lastRowBefore = empSheet.getLastRow();
+        const data = empSheet.getRange(2, 1, lastRowBefore - 1, empSheet.getLastColumn()).getValues();
+        
+        // محاكاة حذف أول صف مقاول
+        const headers = empSheet.getRange(1, 1, 1, empSheet.getLastColumn()).getValues()[0];
+        let targetRow = -1;
+        let targetData = null;
+        
+        for (let i = 0; i < data.length; i++) {
+            const rowData = {};
+            headers.forEach((h, idx) => {
+                if (h) rowData[String(h).trim()] = data[i][idx];
+            });
+            let personType = String(rowData.personType || '').toLowerCase().trim();
+            const isContractor = personType.includes('contractor') || personType.includes('مقاول') || personType.includes('external') || personType.includes('خارجي') || rowData.contractorName || rowData.contractorWorkerName || rowData.externalName;
+            
+            if (isContractor) {
+                targetRow = i + 2;
+                targetData = rowData;
+                break;
+            }
+        }
+        
+        if (targetRow === -1) {
+            return { success: true, message: 'لم يتم العثور على أي مقاولين في جدول الموظفين.' };
+        }
+        
+        // محاولة حذف الصف
+        const valBefore = empSheet.getRange(targetRow, 1, 1, empSheet.getLastColumn()).getValues()[0];
+        
+        empSheet.deleteRow(targetRow);
+        SpreadsheetApp.flush(); // إجبار التغييرات على الحفظ فوراً
+        
+        const valAfter = empSheet.getRange(targetRow, 1, 1, empSheet.getLastColumn()).getValues()[0];
+        const lastRowAfter = empSheet.getLastRow();
+        
+        const isDifferent = JSON.stringify(valBefore) !== JSON.stringify(valAfter);
+        
+        return {
+            success: true,
+            message: `تشخيص دقيق:\n` +
+                     `- الصف المستهدف: ${targetRow}\n` +
+                     `- الاسم قبل: ${targetData.name || targetData.contractorWorkerName || valBefore[2]}\n` +
+                     `- الاسم في نفس الصف بعد الحذف: ${valAfter[2]}\n` +
+                     `- هل تغير محتوى الصف؟ ${isDifferent ? 'نعم (تم الحذف بنجاح وتزحزحت الصفوف)' : 'لا (فشل الحذف وظل نفس الصف!)'}\n` +
+                     `- الصفوف قبل: ${lastRowBefore} | بعد: ${lastRowAfter}`
+        };
+    } catch (e) {
+        return { success: false, message: 'خطأ تشخيصي: ' + e.toString() };
+    }
+}
+
+/**
+ * ✅ دالة هجرة يدوية: تنقل سجلات المقاولين القديمة من ClinicVisits إلى ClinicContractorVisits.
+ *
+ * تُستدعى يدوياً من محرر Apps Script (Run → migrateLegacyContractorVisits_).
+ * آمنة: تعمل بـ dry-run افتراضياً وتطبع تقريراً قبل الكتابة.
+ *
+ * @param {boolean} apply  مرر true لتنفيذ الهجرة فعلياً. الافتراضي false (تقرير فقط).
+ * @return {object} ملخص (totalScanned, contractorsFound, migrated, errors)
+ */
+function migrateLegacyContractorVisits_(apply) {
+    const dryRun = (apply !== true);
+    const summary = { totalScanned: 0, contractorsFound: 0, migrated: 0, errors: [] };
+    try {
+        const spreadsheetId = getSpreadsheetId();
+        if (!spreadsheetId) throw new Error('No spreadsheetId');
+        const ss = SpreadsheetApp.openById(spreadsheetId);
+        const srcSheet = ss.getSheetByName('ClinicVisits');
+        if (!srcSheet) throw new Error('ClinicVisits sheet not found');
+
+        // التأكد من وجود ورقة الوجهة بهيكلها الصحيح
+        createSheetWithHeaders(ss, 'ClinicContractorVisits', {});
+        ensureSheetHeaders(ss.getSheetByName('ClinicContractorVisits'), 'ClinicContractorVisits', {});
+        const dstSheet = ss.getSheetByName('ClinicContractorVisits');
+
+        const srcLastRow = srcSheet.getLastRow();
+        const srcLastCol = srcSheet.getLastColumn();
+        if (srcLastRow < 2) {
+            Logger.log('migrateLegacyContractorVisits_: ClinicVisits is empty');
+            return summary;
+        }
+
+        const srcRange = srcSheet.getRange(1, 1, srcLastRow, srcLastCol);
+        const srcValues = srcRange.getValues();
+        const srcHeaders = srcValues[0].map(h => String(h || '').trim());
+        const dstHeaders = dstSheet.getRange(1, 1, 1, dstSheet.getLastColumn()).getValues()[0].map(h => String(h || '').trim());
+
+        const idxPersonType = srcHeaders.indexOf('personType');
+        const idxContractorName = srcHeaders.indexOf('contractorName');
+        const idxContractorWorker = srcHeaders.indexOf('contractorWorkerName');
+        const idxExternalName = srcHeaders.indexOf('externalName');
+
+        const rowsToMigrate = []; // [{srcRowIndex (1-based), rowObj}]
+        for (let r = 1; r < srcValues.length; r++) {
+            summary.totalScanned++;
+            const row = srcValues[r];
+            const pt = String(row[idxPersonType] !== undefined ? row[idxPersonType] : '').toLowerCase().trim();
+            const hasContractorField =
+                (idxContractorName !== -1 && row[idxContractorName]) ||
+                (idxContractorWorker !== -1 && row[idxContractorWorker]) ||
+                (idxExternalName !== -1 && row[idxExternalName]);
+            const isContractor = pt.indexOf('contractor') !== -1 || pt.indexOf('مقاول') !== -1
+                || pt.indexOf('external') !== -1 || pt.indexOf('خارجي') !== -1
+                || (!!hasContractorField && !pt.indexOf('employee') && !pt.indexOf('موظف'));
+            if (!isContractor) continue;
+            summary.contractorsFound++;
+            const rowObj = {};
+            srcHeaders.forEach((h, i) => { if (h) rowObj[h] = row[i]; });
+            rowObj.personType = 'contractor';
+            rowsToMigrate.push({ srcRow: r + 1, obj: rowObj });
+        }
+
+        Logger.log('migrateLegacyContractorVisits_: scanned=' + summary.totalScanned
+            + ', contractorsFound=' + summary.contractorsFound
+            + ', mode=' + (dryRun ? 'DRY-RUN' : 'APPLY'));
+
+        if (dryRun) {
+            rowsToMigrate.slice(0, 5).forEach((m, i) => {
+                Logger.log('  sample[' + i + '] row=' + m.srcRow + ' name=' + (m.obj.contractorName || m.obj.contractorWorkerName || m.obj.externalName || ''));
+            });
+            return summary;
+        }
+
+        // كتابة السجلات إلى ClinicContractorVisits مع مطابقة ترتيب الأعمدة
+        if (rowsToMigrate.length > 0) {
+            const appendRows = rowsToMigrate.map(m => dstHeaders.map(h => h && m.obj.hasOwnProperty(h) ? m.obj[h] : ''));
+            const startRow = dstSheet.getLastRow() + 1;
+            dstSheet.getRange(startRow, 1, appendRows.length, dstHeaders.length).setValues(appendRows);
+            summary.migrated = appendRows.length;
+
+            // حذف الصفوف الأصلية من ClinicVisits (من الأسفل للأعلى لتجنّب اختلال الفهارس)
+            const srcRowsToDelete = rowsToMigrate.map(m => m.srcRow).sort((a, b) => b - a);
+            srcRowsToDelete.forEach(r => {
+                try { srcSheet.deleteRow(r); }
+                catch (delErr) { summary.errors.push('deleteRow ' + r + ': ' + delErr.toString()); }
+            });
+
+            // إبطال الكاش
+            try {
+                const cache = CacheService.getScriptCache();
+                cache.remove('hse_read_ClinicVisits_v1');
+                cache.remove('hse_read_ClinicVisits_raw');
+                cache.remove('hse_read_ClinicContractorVisits_v1');
+                cache.remove('hse_read_ClinicContractorVisits_raw');
+            } catch (cacheErr) { /* ignore */ }
+        }
+
+        Logger.log('migrateLegacyContractorVisits_ DONE: migrated=' + summary.migrated + ', errors=' + summary.errors.length);
+        return summary;
+    } catch (err) {
+        summary.errors.push(err.toString());
+        Logger.log('migrateLegacyContractorVisits_ ERROR: ' + err.toString());
+        return summary;
+    }
+}
+
+/**
+ * مغلِّفات سهلة الاستدعاء من المحرر:
+ * - dryRunMigrateContractorVisits: يطبع تقريراً بدون أي كتابة
+ * - applyMigrateContractorVisits: ينفّذ الهجرة فعلياً
+ */
+function dryRunMigrateContractorVisits() { return migrateLegacyContractorVisits_(false); }
+function applyMigrateContractorVisits() { return migrateLegacyContractorVisits_(true); }
+
+/**
  * الحصول على جميع زيارات العيادة
+
  */
 function getAllClinicVisits(filters = {}) {
     try {
@@ -714,14 +993,31 @@ function getAllClinicVisits(filters = {}) {
             Logger.log('Warning ensuring clinic sheets headers: ' + e.toString());
         }
 
-        const employeeData = (readFromSheet('ClinicVisits', spreadsheetId) || []).map(v => {
-            if (v && typeof v === 'object') v._tempSourceType = 'employee';
-            return v;
-        });
-        const contractorData = (readFromSheet('ClinicContractorVisits', spreadsheetId) || []).map(v => {
-            if (v && typeof v === 'object') v._tempSourceType = 'contractor';
-            return v;
-        });
+        // ✅ تشخيص: قراءة آمنة لكل ورقة على حدة + تسجيل العدد للتأكد من اكتمال تحميل المقاولين
+        let employeeData = [];
+        try {
+            const empRaw = readFromSheet('ClinicVisits', spreadsheetId) || [];
+            employeeData = empRaw.map(v => {
+                if (v && typeof v === 'object') v._tempSourceType = 'employee';
+                return v;
+            });
+            Logger.log('getAllClinicVisits: ClinicVisits rows = ' + employeeData.length);
+        } catch (empErr) {
+            Logger.log('getAllClinicVisits: ERROR reading ClinicVisits: ' + empErr.toString());
+        }
+
+        let contractorData = [];
+        try {
+            const conRaw = readFromSheet('ClinicContractorVisits', spreadsheetId) || [];
+            contractorData = conRaw.map(v => {
+                if (v && typeof v === 'object') v._tempSourceType = 'contractor';
+                return v;
+            });
+            Logger.log('getAllClinicVisits: ClinicContractorVisits rows = ' + contractorData.length);
+        } catch (conErr) {
+            Logger.log('getAllClinicVisits: ERROR reading ClinicContractorVisits: ' + conErr.toString());
+        }
+
         let data = employeeData.concat(contractorData);
 
         // ✅ تطبيع البيانات وضمان وجود معرفات فريدة
@@ -740,23 +1036,24 @@ function getAllClinicVisits(filters = {}) {
                                 .replace(/[^a-zA-Z0-9]/g, '').substring(0, 12);
             }
             
-            // 2. توحيد نوع الشخص (lowercase) - الأولوية للقيم الموجودة فعلياً في الشيت
-            let currentType = String(v.personType || '').toLowerCase().trim();
-            if (!currentType) {
-                // إذا كان فارغاً، نستخدم النوع الافتراضي بناءً على الشيت المصدر (تم تعيينه في readFromSheet أعلاه)
-                currentType = v._tempSourceType || 'employee';
-            }
+            // 2. توحيد نوع الشخص — أولويات الكشف (الأقوى أولاً):
+            //    (أ) personType صريح في الصف
+            //    (ب) وجود أي حقل خاص بالمقاول/الخارجي في الصف (هذه قرينة أقوى من شيت المصدر،
+            //        لأن السجلات القديمة قد تكون في ClinicVisits قبل فصل الجداول)
+            //    (ج) شيت المصدر (_tempSourceType) كاحتياطٍ أخير
+            const explicitType = String(v.personType || '').toLowerCase().trim();
+            const hasContractorFields = !!(v.contractorName || v.contractorWorkerName || v.externalName);
 
-            if (currentType.includes('contractor') || currentType.includes('مقاول') || currentType.includes('external') || currentType.includes('خارجي')) {
+            if (explicitType.includes('contractor') || explicitType.includes('مقاول') || explicitType.includes('external') || explicitType.includes('خارجي')) {
                 v.personType = 'contractor';
-            } else if (currentType.includes('employee') || currentType.includes('موظف')) {
+            } else if (hasContractorFields) {
+                // ✅ إصلاح: سجل قديم في ClinicVisits بدون personType لكن يحمل اسم مقاول/عامل خارجي → مقاول
+                v.personType = 'contractor';
+            } else if (explicitType.includes('employee') || explicitType.includes('موظف')) {
                 v.personType = 'employee';
             } else {
-                if (v.contractorName || v.contractorWorkerName || v.externalName) {
-                    v.personType = 'contractor';
-                } else {
-                    v.personType = 'employee';
-                }
+                // لا تلميح صريح ولا حقول مقاول → استخدم الشيت المصدر
+                v.personType = (v._tempSourceType === 'contractor') ? 'contractor' : 'employee';
             }
             
             // 3. إعادة بناء medications بشكل شامل
