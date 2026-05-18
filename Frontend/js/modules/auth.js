@@ -745,8 +745,9 @@ window.Auth = {
                         'ApprovedContractors': 'approvedContractors'
                     };
 
-                    // تحميل شبه متوازي للبيانات الأساسية (عاملان) لتقليل زمن الانتظار بدون ضغط زائد
-                    const workerCount = 2;
+                    // ✅ تحميل متوازٍ كامل للبيانات الأساسية لتقليل زمن الانتظار
+                    // (5 عمّال = طلب موازٍ واحد لكل شيت — Apps Script يتعامل مع طلبات متوازية).
+                    const workerCount = prioritySheets.length;
                     let cursor = 0;
                     const loadPrioritySheet = async (sheetName) => {
                         try {
@@ -780,17 +781,15 @@ window.Auth = {
                             await loadPrioritySheet(sheetName);
                         }
                     });
-                    await Promise.allSettled(workers);
 
-                    // ✅ تحميل إعدادات الشركة (بما فيها سياسة ما بعد الدخول) مع نفس تدفق بيانات المستخدمين لظهورها مباشرة بعد التسجيل
-                    if (typeof DataManager !== 'undefined' && DataManager.loadCompanySettings) {
-                        try {
-                            await DataManager.loadCompanySettings(true);
-                            if (AppState.debugMode) Utils.safeLog('✅ تم تحميل إعدادات الشركة مع بيانات المستخدم');
-                        } catch (settingsErr) {
-                            Utils.safeWarn('⚠️ فشل تحميل إعدادات الشركة مع بيانات المستخدم:', settingsErr);
-                        }
-                    }
+                    // ✅ تحميل إعدادات الشركة بالتوازي مع شيتات الأولوية (بدلاً من بعدها)
+                    const companySettingsPromise = (typeof DataManager !== 'undefined' && DataManager.loadCompanySettings)
+                        ? DataManager.loadCompanySettings(true).catch(settingsErr => {
+                            Utils.safeWarn('⚠️ فشل تحميل إعدادات الشركة:', settingsErr);
+                        })
+                        : Promise.resolve();
+
+                    await Promise.allSettled([...workers, companySettingsPromise]);
 
                     // ✅ الخطوة 3: تحديث الجلسة والقائمة بعد تحميل بيانات المستخدمين
                     // هذا مهم جداً لضمان تحديث الصلاحيات والقائمة الجانبية

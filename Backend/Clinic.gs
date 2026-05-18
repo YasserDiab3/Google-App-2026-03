@@ -880,14 +880,31 @@ function getAllClinicVisits(filters = {}) {
             Logger.log('Warning ensuring clinic sheets headers: ' + e.toString());
         }
 
-        const employeeData = (readFromSheet('ClinicVisits', spreadsheetId) || []).map(v => {
-            if (v && typeof v === 'object') v._tempSourceType = 'employee';
-            return v;
-        });
-        const contractorData = (readFromSheet('ClinicContractorVisits', spreadsheetId) || []).map(v => {
-            if (v && typeof v === 'object') v._tempSourceType = 'contractor';
-            return v;
-        });
+        // ✅ تشخيص: قراءة آمنة لكل ورقة على حدة + تسجيل العدد للتأكد من اكتمال تحميل المقاولين
+        let employeeData = [];
+        try {
+            const empRaw = readFromSheet('ClinicVisits', spreadsheetId) || [];
+            employeeData = empRaw.map(v => {
+                if (v && typeof v === 'object') v._tempSourceType = 'employee';
+                return v;
+            });
+            Logger.log('getAllClinicVisits: ClinicVisits rows = ' + employeeData.length);
+        } catch (empErr) {
+            Logger.log('getAllClinicVisits: ERROR reading ClinicVisits: ' + empErr.toString());
+        }
+
+        let contractorData = [];
+        try {
+            const conRaw = readFromSheet('ClinicContractorVisits', spreadsheetId) || [];
+            contractorData = conRaw.map(v => {
+                if (v && typeof v === 'object') v._tempSourceType = 'contractor';
+                return v;
+            });
+            Logger.log('getAllClinicVisits: ClinicContractorVisits rows = ' + contractorData.length);
+        } catch (conErr) {
+            Logger.log('getAllClinicVisits: ERROR reading ClinicContractorVisits: ' + conErr.toString());
+        }
+
         let data = employeeData.concat(contractorData);
 
         // ✅ تطبيع البيانات وضمان وجود معرفات فريدة
