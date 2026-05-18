@@ -10660,7 +10660,7 @@ const PTW = {
                     border-radius: 0 !important;
                 }
             </style>
-            <div class="content-card bg-gray-50 border-none shadow-none ptw-paper-theme">
+            <div class="content-card bg-gray-50 border-none shadow-none">
                 ${this.renderPermitSystemHeader()}
                 <div class="card-header bg-white shadow-sm rounded-xl border border-gray-100 mb-6 p-4 flex items-center justify-between ptw-form-header-centered" style="background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%); color: white;">
                     <h2 class="card-title text-xl" style="color: white; font-weight: 700;">
