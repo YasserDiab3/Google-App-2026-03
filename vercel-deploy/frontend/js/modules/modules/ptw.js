@@ -7192,6 +7192,39 @@ const PTW = {
                         grid-template-columns: repeat(3, minmax(0, 1fr));
                     }
                 }
+
+                /* أنماط أزرار حالة إغلاق التصريح اليدوي */
+                .manual-status-btn {
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    gap: 12px;
+                    padding: 16px 20px;
+                    border-radius: 12px;
+                    border: 2px solid #cbd5e1;
+                    background: #ffffff;
+                    cursor: pointer;
+                    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+                    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+                    position: relative;
+                    overflow: hidden;
+                    font-weight: 700;
+                    font-size: 0.95rem;
+                }
+                .manual-status-btn:hover {
+                    transform: translateY(-2px);
+                    box-shadow: 0 8px 12px -3px rgba(0, 0, 0, 0.1);
+                }
+                .manual-status-btn input[type="radio"] {
+                    display: none !important;
+                }
+                .manual-status-btn i {
+                    font-size: 1.25rem;
+                    transition: all 0.2s ease;
+                }
+                .manual-status-btn.btn-completed:hover { border-color: #10b981; background: #f0fdf4; }
+                .manual-status-btn.btn-incomplete:hover { border-color: #f59e0b; background: #fffbeb; }
+                .manual-status-btn.btn-forced:hover { border-color: #ef4444; background: #fef2f2; }
             </style>
             <div class="modal-content ptw-manual-permit-modal" style="max-width: min(1720px, 99vw); width: 99%; max-height: 95vh; overflow-y: auto; padding: 0; border-radius: 16px; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);">
                 <!-- رأس النموذج -->
@@ -7611,7 +7644,11 @@ const PTW = {
                                             <td class="p-1 border border-gray-800"><input type="text" class="form-input text-sm w-full manual-approval-name" data-role="مسئول الجهة الطالبة" placeholder="الاسم" value="${Utils.escapeHTML((existingEntry?.manualApprovals || []).find(a => a.role === 'مسئول الجهة الطالبة')?.name || '')}"></td>
                                             <td class="p-1 border border-gray-800"><input type="text" class="form-input text-sm w-full manual-approval-name" data-role="مدير منطقة الأعمال" placeholder="الاسم" value="${Utils.escapeHTML((existingEntry?.manualApprovals || []).find(a => a.role === 'مدير منطقة الأعمال')?.name || '')}"></td>
                                             <td class="p-1 border border-gray-800"><input type="text" class="form-input text-sm w-full manual-approval-name" data-role="مدير / مهندس الصيانة" placeholder="الاسم" value="${Utils.escapeHTML((existingEntry?.manualApprovals || []).find(a => a.role === 'مدير / مهندس الصيانة')?.name || '')}"></td>
-                                            <td class="p-1 border border-gray-800"><input type="text" class="form-input text-sm w-full manual-approval-name" data-role="مسئول السلامة والصحة المهنية" placeholder="الاسم" value="${Utils.escapeHTML((existingEntry?.manualApprovals || []).find(a => a.role === 'مسئول السلامة والصحة المهنية')?.name || '')}"></td>
+                                            <td class="p-1 border border-gray-800">
+                                                <select class="form-input text-sm w-full manual-approval-name border-0 focus:ring-0" data-role="مسئول السلامة والصحة المهنية" style="background: transparent; padding: 4px 6px;">
+                                                    ${buildManualSupervisorOptions('اختر مسئول السلامة', (existingEntry?.manualApprovals || []).find(a => a.role === 'مسئول السلامة والصحة المهنية')?.name || '')}
+                                                </select>
+                                            </td>
                                         </tr>
                                         <tr class="manual-approval-row" style="border: 1px solid #000;">
                                             <td class="p-1 border border-gray-800 text-center bg-gray-50 font-medium text-sm">التوقيع</td>
@@ -7635,15 +7672,19 @@ const PTW = {
                                     <i class="fas fa-check-circle text-green-600 mr-2"></i>
                                 </p>
                             </div>
-                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-4">
                                 ${statusOptions.map((status, idx) => {
-            const statusStyles = { 'اكتمل العمل بشكل آمن': { icon: 'fa-check-circle', color: '#4caf50', bg: '#e8f5e9' }, 'لم يكتمل العمل': { icon: 'fa-pause-circle', color: '#ff9800', bg: '#fff3e0' }, 'إغلاق جبري': { icon: 'fa-exclamation-circle', color: '#f44336', bg: '#ffebee' } };
+            const statusStyles = { 
+                'اكتمل العمل بشكل آمن': { icon: 'fa-check-circle', color: '#10b981', hoverBg: '#f0fdf4', border: '#10b981', class: 'btn-completed', gradient: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', shadow: 'rgba(16, 185, 129, 0.25)' }, 
+                'لم يكتمل العمل': { icon: 'fa-pause-circle', color: '#f59e0b', hoverBg: '#fffbeb', border: '#f59e0b', class: 'btn-incomplete', gradient: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)', shadow: 'rgba(245, 158, 11, 0.25)' }, 
+                'إغلاق جبري': { icon: 'fa-exclamation-circle', color: '#ef4444', hoverBg: '#fef2f2', border: '#ef4444', class: 'btn-forced', gradient: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)', shadow: 'rgba(239, 68, 68, 0.25)' } 
+            };
             const style = statusStyles[status];
             const isSelected = effectiveManualStatus === status;
-            return `<label class="flex items-center space-x-2 space-x-reverse cursor-pointer p-3 rounded-lg border border-gray-200 hover:bg-opacity-80 transition-all" style="background: ${isSelected ? style.bg : 'white'}; border-color: ${isSelected ? style.color : '#e5e7eb'};">
-                                    <input type="radio" name="manual-permit-status-radio" value="${Utils.escapeHTML(status)}" class="form-radio h-5 w-5" style="accent-color: ${style.color};" ${isSelected ? 'checked' : ''} onchange="document.getElementById('manual-permit-status').value = this.value;">
-                                    <i class="fas ${style.icon}" style="color: ${style.color};"></i>
-                                    <span class="font-medium text-gray-700">${Utils.escapeHTML(status)}</span>
+            return `<label class="manual-status-btn ${style.class} ${isSelected ? 'selected' : ''}" style="${isSelected ? `background: ${style.gradient} !important; border-color: ${style.color} !important; color: #ffffff !important; box-shadow: 0 8px 20px -4px ${style.shadow} !important;` : ''}">
+                                    <input type="radio" name="manual-permit-status-radio" value="${Utils.escapeHTML(status)}" class="form-radio h-5 w-5 hidden" ${isSelected ? 'checked' : ''} onchange="PTW.updateManualStatusBtnSelection(this);">
+                                    <i class="fas ${style.icon}" style="${isSelected ? 'color: #ffffff !important;' : `color: ${style.color};`}"></i>
+                                    <span class="font-bold">${Utils.escapeHTML(status)}</span>
                                 </label>`;
         }).join('')}
                             </div>
@@ -7680,7 +7721,11 @@ const PTW = {
                                             <td class="p-1 border border-gray-800 text-center bg-gray-50 font-medium text-sm">الاسم</td>
                                             <td class="p-1 border border-gray-800"><input type="text" class="form-input text-sm w-full manual-closure-approval-name" data-role="مسؤول الجهة الطالبة" placeholder="الاسم" value="${Utils.escapeHTML((existingEntry?.manualClosureApprovals || []).find(a => a.role === 'مسؤول الجهة الطالبة')?.name || '')}"></td>
                                             <td class="p-1 border border-gray-800"><input type="text" class="form-input text-sm w-full manual-closure-approval-name" data-role="مدير منطقة الأعمال" placeholder="الاسم" value="${Utils.escapeHTML((existingEntry?.manualClosureApprovals || []).find(a => a.role === 'مدير منطقة الأعمال')?.name || '')}"></td>
-                                            <td class="p-1 border border-gray-800"><input type="text" class="form-input text-sm w-full manual-closure-approval-name" data-role="مسؤول السلامة والصحة المهنية" placeholder="الاسم" value="${Utils.escapeHTML((existingEntry?.manualClosureApprovals || []).find(a => a.role === 'مسؤول السلامة والصحة المهنية')?.name || '')}"></td>
+                                            <td class="p-1 border border-gray-800">
+                                                <select class="form-input text-sm w-full manual-closure-approval-name border-0 focus:ring-0" data-role="مسؤول السلامة والصحة المهنية" style="background: transparent; padding: 4px 6px;">
+                                                    ${buildManualSupervisorOptions('اختر مسئول السلامة', (existingEntry?.manualClosureApprovals || []).find(a => a.role === 'مسؤول السلامة والصحة المهنية')?.name || '')}
+                                                </select>
+                                            </td>
                                             <td class="p-1 border border-gray-800"><input type="text" class="form-input text-sm w-full manual-closure-approval-name" data-role="مدير السلامة والصحة المهنية" placeholder="الاسم" value="${Utils.escapeHTML((existingEntry?.manualClosureApprovals || []).find(a => a.role === 'مدير السلامة والصحة المهنية')?.name || '')}"></td>
                                         </tr>
                                         <tr class="manual-closure-approval-row" style="border: 1px solid #000;">
@@ -8059,6 +8104,26 @@ const PTW = {
         attachAutoCopyToApprovals('#manual-approvals-list', '.manual-approval-name', '.manual-approval-sig');
         attachAutoCopyToApprovals('#manual-closure-approvals-list', '.manual-closure-approval-name', '.manual-closure-approval-sig');
 
+        // مزامنة مسئول السلامة والصحة المهنية بين القسم السابع والتاسع (ربط الحقلين)
+        const safety7Select = modal.querySelector('#manual-approvals-list select[data-role="مسئول السلامة والصحة المهنية"]');
+        const safety9Select = modal.querySelector('#manual-closure-approvals-list select[data-role="مسؤول السلامة والصحة المهنية"]');
+        if (safety7Select && safety9Select) {
+            safety7Select.addEventListener('change', () => {
+                if (safety9Select.value !== safety7Select.value) {
+                    safety9Select.value = safety7Select.value;
+                    safety9Select.dispatchEvent(new Event('input', { bubbles: true }));
+                    safety9Select.dispatchEvent(new Event('change', { bubbles: true }));
+                }
+            });
+            safety9Select.addEventListener('change', () => {
+                if (safety7Select.value !== safety9Select.value) {
+                    safety7Select.value = safety9Select.value;
+                    safety7Select.dispatchEvent(new Event('input', { bubbles: true }));
+                    safety7Select.dispatchEvent(new Event('change', { bubbles: true }));
+                }
+            });
+        }
+
         // القائمة الأساسية ثابتة يمين؛ عند الاختيار من القائمة تفتح اللوحة بالعرض بجانبها
         const panel = modal.querySelector('#manual-work-type-panel');
         const panelPlaceholder = modal.querySelector('#manual-work-type-panel-placeholder');
@@ -8141,7 +8206,7 @@ const PTW = {
         }
         renderSelectedTypes();
 
-        // التحقق من اختيار حالة التصريح
+        // التحقق من اختيار حالة التصريح وتطبيق التنسيق الفاخر
         const statusRadios = modal.querySelectorAll('input[name="manual-permit-status-radio"]');
         const statusHiddenInput = modal.querySelector('#manual-permit-status');
         
@@ -8150,21 +8215,14 @@ const PTW = {
             statusRadios.forEach(radio => {
                 if (radio.value === existingEntry.status) {
                     radio.checked = true;
-                    statusHiddenInput.value = radio.value;
-                    // تحديث تنسيق البطاقة
-                    const label = radio.closest('label');
-                    if (label) {
-                        const statusStyles = {
-                            'اكتمل العمل بشكل آمن': { color: '#4caf50', bg: '#e8f5e9' },
-                            'لم يكتمل العمل': { color: '#ff9800', bg: '#fff3e0' },
-                            'إغلاق جبري': { color: '#f44336', bg: '#ffebee' }
-                        };
-                        const style = statusStyles[radio.value];
-                        if (style) {
-                            label.style.borderColor = style.color;
-                            label.style.background = style.bg;
-                        }
-                    }
+                    PTW.updateManualStatusBtnSelection(radio);
+                }
+            });
+        } else {
+            statusRadios.forEach(radio => {
+                if (radio.value === 'اكتمل العمل بشكل آمن') {
+                    radio.checked = true;
+                    PTW.updateManualStatusBtnSelection(radio);
                 }
             });
         }
@@ -12171,6 +12229,56 @@ const PTW = {
         } else {
             const input = row.querySelector('.ptw-team-member-name');
             if (input) input.value = '';
+        }
+    },
+
+    updateManualStatusBtnSelection(radio) {
+        if (!radio) return;
+        const modal = radio.closest('.modal-overlay') || document.body;
+        
+        // Update the hidden input value
+        const statusHiddenInput = modal.querySelector('#manual-permit-status');
+        if (statusHiddenInput) {
+            statusHiddenInput.value = radio.value;
+        }
+
+        // Remove selected class from all labels in this status group
+        const labels = modal.querySelectorAll('.manual-status-btn');
+        labels.forEach(lbl => {
+            lbl.classList.remove('selected');
+            lbl.style.background = '';
+            lbl.style.borderColor = '';
+            lbl.style.color = '';
+            lbl.style.boxShadow = '';
+            const icon = lbl.querySelector('i');
+            if (icon) {
+                icon.style.color = '';
+            }
+        });
+
+        // Add selected class and style to the selected radio's parent label
+        const selectedLabel = radio.closest('label');
+        if (selectedLabel) {
+            selectedLabel.classList.add('selected');
+            
+            // Apply rich style matching the action
+            const statusStyles = {
+                'اكتمل العمل بشكل آمن': { color: '#10b981', gradient: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', shadow: 'rgba(16, 185, 129, 0.25)' },
+                'لم يكتمل العمل': { color: '#f59e0b', gradient: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)', shadow: 'rgba(245, 158, 11, 0.25)' },
+                'إغلاق جبري': { color: '#ef4444', gradient: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)', shadow: 'rgba(239, 68, 68, 0.25)' }
+            };
+            const style = statusStyles[radio.value];
+            if (style) {
+                selectedLabel.style.setProperty('background', `${style.gradient}`, 'important');
+                selectedLabel.style.setProperty('border-color', `${style.color}`, 'important');
+                selectedLabel.style.setProperty('color', '#ffffff', 'important');
+                selectedLabel.style.setProperty('box-shadow', `0 8px 20px -4px ${style.shadow}`, 'important');
+                
+                const icon = selectedLabel.querySelector('i');
+                if (icon) {
+                    icon.style.setProperty('color', '#ffffff', 'important');
+                }
+            }
         }
     },
 
