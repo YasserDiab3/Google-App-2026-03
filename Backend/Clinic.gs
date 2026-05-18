@@ -860,6 +860,119 @@ function debugMigration() {
 }
 
 /**
+ * ✅ دالة هجرة يدوية: تنقل سجلات المقاولين القديمة من ClinicVisits إلى ClinicContractorVisits.
+ *
+ * تُستدعى يدوياً من محرر Apps Script (Run → migrateLegacyContractorVisits_).
+ * آمنة: تعمل بـ dry-run افتراضياً وتطبع تقريراً قبل الكتابة.
+ *
+ * @param {boolean} apply  مرر true لتنفيذ الهجرة فعلياً. الافتراضي false (تقرير فقط).
+ * @return {object} ملخص (totalScanned, contractorsFound, migrated, errors)
+ */
+function migrateLegacyContractorVisits_(apply) {
+    const dryRun = (apply !== true);
+    const summary = { totalScanned: 0, contractorsFound: 0, migrated: 0, errors: [] };
+    try {
+        const spreadsheetId = getSpreadsheetId();
+        if (!spreadsheetId) throw new Error('No spreadsheetId');
+        const ss = SpreadsheetApp.openById(spreadsheetId);
+        const srcSheet = ss.getSheetByName('ClinicVisits');
+        if (!srcSheet) throw new Error('ClinicVisits sheet not found');
+
+        // التأكد من وجود ورقة الوجهة بهيكلها الصحيح
+        createSheetWithHeaders(ss, 'ClinicContractorVisits', {});
+        ensureSheetHeaders(ss.getSheetByName('ClinicContractorVisits'), 'ClinicContractorVisits', {});
+        const dstSheet = ss.getSheetByName('ClinicContractorVisits');
+
+        const srcLastRow = srcSheet.getLastRow();
+        const srcLastCol = srcSheet.getLastColumn();
+        if (srcLastRow < 2) {
+            Logger.log('migrateLegacyContractorVisits_: ClinicVisits is empty');
+            return summary;
+        }
+
+        const srcRange = srcSheet.getRange(1, 1, srcLastRow, srcLastCol);
+        const srcValues = srcRange.getValues();
+        const srcHeaders = srcValues[0].map(h => String(h || '').trim());
+        const dstHeaders = dstSheet.getRange(1, 1, 1, dstSheet.getLastColumn()).getValues()[0].map(h => String(h || '').trim());
+
+        const idxPersonType = srcHeaders.indexOf('personType');
+        const idxContractorName = srcHeaders.indexOf('contractorName');
+        const idxContractorWorker = srcHeaders.indexOf('contractorWorkerName');
+        const idxExternalName = srcHeaders.indexOf('externalName');
+
+        const rowsToMigrate = []; // [{srcRowIndex (1-based), rowObj}]
+        for (let r = 1; r < srcValues.length; r++) {
+            summary.totalScanned++;
+            const row = srcValues[r];
+            const pt = String(row[idxPersonType] !== undefined ? row[idxPersonType] : '').toLowerCase().trim();
+            const hasContractorField =
+                (idxContractorName !== -1 && row[idxContractorName]) ||
+                (idxContractorWorker !== -1 && row[idxContractorWorker]) ||
+                (idxExternalName !== -1 && row[idxExternalName]);
+            const isContractor = pt.indexOf('contractor') !== -1 || pt.indexOf('مقاول') !== -1
+                || pt.indexOf('external') !== -1 || pt.indexOf('خارجي') !== -1
+                || (!!hasContractorField && !pt.indexOf('employee') && !pt.indexOf('موظف'));
+            if (!isContractor) continue;
+            summary.contractorsFound++;
+            const rowObj = {};
+            srcHeaders.forEach((h, i) => { if (h) rowObj[h] = row[i]; });
+            rowObj.personType = 'contractor';
+            rowsToMigrate.push({ srcRow: r + 1, obj: rowObj });
+        }
+
+        Logger.log('migrateLegacyContractorVisits_: scanned=' + summary.totalScanned
+            + ', contractorsFound=' + summary.contractorsFound
+            + ', mode=' + (dryRun ? 'DRY-RUN' : 'APPLY'));
+
+        if (dryRun) {
+            rowsToMigrate.slice(0, 5).forEach((m, i) => {
+                Logger.log('  sample[' + i + '] row=' + m.srcRow + ' name=' + (m.obj.contractorName || m.obj.contractorWorkerName || m.obj.externalName || ''));
+            });
+            return summary;
+        }
+
+        // كتابة السجلات إلى ClinicContractorVisits مع مطابقة ترتيب الأعمدة
+        if (rowsToMigrate.length > 0) {
+            const appendRows = rowsToMigrate.map(m => dstHeaders.map(h => h && m.obj.hasOwnProperty(h) ? m.obj[h] : ''));
+            const startRow = dstSheet.getLastRow() + 1;
+            dstSheet.getRange(startRow, 1, appendRows.length, dstHeaders.length).setValues(appendRows);
+            summary.migrated = appendRows.length;
+
+            // حذف الصفوف الأصلية من ClinicVisits (من الأسفل للأعلى لتجنّب اختلال الفهارس)
+            const srcRowsToDelete = rowsToMigrate.map(m => m.srcRow).sort((a, b) => b - a);
+            srcRowsToDelete.forEach(r => {
+                try { srcSheet.deleteRow(r); }
+                catch (delErr) { summary.errors.push('deleteRow ' + r + ': ' + delErr.toString()); }
+            });
+
+            // إبطال الكاش
+            try {
+                const cache = CacheService.getScriptCache();
+                cache.remove('hse_read_ClinicVisits_v1');
+                cache.remove('hse_read_ClinicVisits_raw');
+                cache.remove('hse_read_ClinicContractorVisits_v1');
+                cache.remove('hse_read_ClinicContractorVisits_raw');
+            } catch (cacheErr) { /* ignore */ }
+        }
+
+        Logger.log('migrateLegacyContractorVisits_ DONE: migrated=' + summary.migrated + ', errors=' + summary.errors.length);
+        return summary;
+    } catch (err) {
+        summary.errors.push(err.toString());
+        Logger.log('migrateLegacyContractorVisits_ ERROR: ' + err.toString());
+        return summary;
+    }
+}
+
+/**
+ * مغلِّفات سهلة الاستدعاء من المحرر:
+ * - dryRunMigrateContractorVisits: يطبع تقريراً بدون أي كتابة
+ * - applyMigrateContractorVisits: ينفّذ الهجرة فعلياً
+ */
+function dryRunMigrateContractorVisits() { return migrateLegacyContractorVisits_(false); }
+function applyMigrateContractorVisits() { return migrateLegacyContractorVisits_(true); }
+
+/**
  * الحصول على جميع زيارات العيادة
 
  */
@@ -923,23 +1036,24 @@ function getAllClinicVisits(filters = {}) {
                                 .replace(/[^a-zA-Z0-9]/g, '').substring(0, 12);
             }
             
-            // 2. توحيد نوع الشخص (lowercase) - الأولوية للقيم الموجودة فعلياً في الشيت
-            let currentType = String(v.personType || '').toLowerCase().trim();
-            if (!currentType) {
-                // إذا كان فارغاً، نستخدم النوع الافتراضي بناءً على الشيت المصدر (تم تعيينه في readFromSheet أعلاه)
-                currentType = v._tempSourceType || 'employee';
-            }
+            // 2. توحيد نوع الشخص — أولويات الكشف (الأقوى أولاً):
+            //    (أ) personType صريح في الصف
+            //    (ب) وجود أي حقل خاص بالمقاول/الخارجي في الصف (هذه قرينة أقوى من شيت المصدر،
+            //        لأن السجلات القديمة قد تكون في ClinicVisits قبل فصل الجداول)
+            //    (ج) شيت المصدر (_tempSourceType) كاحتياطٍ أخير
+            const explicitType = String(v.personType || '').toLowerCase().trim();
+            const hasContractorFields = !!(v.contractorName || v.contractorWorkerName || v.externalName);
 
-            if (currentType.includes('contractor') || currentType.includes('مقاول') || currentType.includes('external') || currentType.includes('خارجي')) {
+            if (explicitType.includes('contractor') || explicitType.includes('مقاول') || explicitType.includes('external') || explicitType.includes('خارجي')) {
                 v.personType = 'contractor';
-            } else if (currentType.includes('employee') || currentType.includes('موظف')) {
+            } else if (hasContractorFields) {
+                // ✅ إصلاح: سجل قديم في ClinicVisits بدون personType لكن يحمل اسم مقاول/عامل خارجي → مقاول
+                v.personType = 'contractor';
+            } else if (explicitType.includes('employee') || explicitType.includes('موظف')) {
                 v.personType = 'employee';
             } else {
-                if (v.contractorName || v.contractorWorkerName || v.externalName) {
-                    v.personType = 'contractor';
-                } else {
-                    v.personType = 'employee';
-                }
+                // لا تلميح صريح ولا حقول مقاول → استخدم الشيت المصدر
+                v.personType = (v._tempSourceType === 'contractor') ? 'contractor' : 'employee';
             }
             
             // 3. إعادة بناء medications بشكل شامل
