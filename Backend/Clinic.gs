@@ -710,7 +710,7 @@ function migrateContractorVisits() {
             return { success: false, message: 'الجداول غير موجودة' };
         }
         
-        // 1. جلب معرفات المقاولين الموجودة بالفعل لمنع التكرار
+        // 1. جلب معرفات المقاولين الموجودة بالفعل في الجدول الجديد لمنع التكرار
         const existingConData = readFromSheet('ClinicContractorVisits', spreadsheetId) || [];
         const existingIds = new Set(existingConData.map(r => String(r.id || '').trim()).filter(id => id));
         
@@ -722,8 +722,8 @@ function migrateContractorVisits() {
         const headers = empSheet.getRange(1, 1, 1, empSheet.getLastColumn()).getValues()[0];
         const data = empSheet.getRange(2, 1, lastRow - 1, empSheet.getLastColumn()).getValues();
         
-        let rowsToDelete = [];
-        let rowsToMigrate = [];
+        const employeesToKeep = [];
+        const rowsToMigrate = [];
         
         for (let i = 0; i < data.length; i++) {
             const rowData = {};
@@ -731,7 +731,7 @@ function migrateContractorVisits() {
                 if (h) rowData[String(h).trim()] = data[i][idx];
             });
             
-            // تحقق مما إذا كانت الزيارة للمقاولين بأي شكل من الأشكال
+            // تحقق مما إذا كانت الزيارة للمقاولين
             let personType = String(rowData.personType || '').toLowerCase().trim();
             const isContractor = personType.includes('contractor') || personType.includes('مقاول') || personType.includes('external') || personType.includes('خارجي') || rowData.contractorName || rowData.contractorWorkerName || rowData.externalName;
             
@@ -740,30 +740,20 @@ function migrateContractorVisits() {
                     rowData.id = ('VISIT_' + Date.now() + Math.floor(Math.random() * 1000));
                 }
                 rowData.personType = 'contractor';
-                
                 rowsToMigrate.push(rowData);
-                // رقم الصف الفعلي في جوجل شيت هو i + 2
-                rowsToDelete.push(i + 2);
+            } else {
+                // نحتفظ بصفوف الموظفين لإعادة كتابتها لاحقاً
+                employeesToKeep.push(data[i]);
             }
         }
         
-        if (rowsToMigrate.length === 0) {
+        const totalToMigrate = rowsToMigrate.length;
+        if (totalToMigrate === 0) {
             return { success: true, message: 'لا توجد زيارات مقاولين في جدول الموظفين. قاعدة البيانات نظيفة تماماً.', migratedCount: 0 };
         }
         
-        // 2. حماية من مهلة التنفيذ (Timeout): معالجة 5 صف كحد أقصى لتجنب أي مشاكل بالاتصال
-        const BATCH_SIZE = 5;
-        const totalFound = rowsToMigrate.length;
-        const isPartial = totalFound > BATCH_SIZE;
-        
-        if (isPartial) {
-            rowsToMigrate = rowsToMigrate.slice(0, BATCH_SIZE);
-            rowsToDelete = rowsToDelete.slice(0, BATCH_SIZE);
-        }
-        
+        // 2. إضافة السجلات لجدول المقاولين دفعة واحدة (إذا لم تكن مضافة مسبقاً)
         let appendedCount = 0;
-        
-        // 3. إضافة السجلات لجدول المقاولين (إذا لم تكن موجودة بالفعل)
         for (let j = 0; j < rowsToMigrate.length; j++) {
             const rowId = String(rowsToMigrate[j].id).trim();
             if (!existingIds.has(rowId)) {
@@ -773,24 +763,34 @@ function migrateContractorVisits() {
             }
         }
         
-        // 4. مسح الصفوف من جدول الموظفين (يجب المسح من الأسفل للأعلى لتجنب انزلاق أرقام الصفوف)
-        rowsToDelete.sort((a, b) => b - a);
-        for (let k = 0; k < rowsToDelete.length; k++) {
-            empSheet.deleteRow(rowsToDelete[k]);
+        // 3. الطريقة فائقة السرعة: مسح قيم جدول الموظفين بالكامل وإعادة كتابة صفوف الموظفين فقط
+        // هذا يتم في أقل من ثانية واحدة ويتجنب تماماً مهلة الاتصال (Timeout)
+        empSheet.getRange(2, 1, lastRow - 1, empSheet.getLastColumn()).clearContent();
+        
+        if (employeesToKeep.length > 0) {
+            empSheet.getRange(2, 1, employeesToKeep.length, empSheet.getLastColumn()).setValues(employeesToKeep);
+        }
+        
+        // إذا كان الجدول القديم يحتوي على صفوف فارغة زائدة في الأسفل بعد الترحيل، نقوم بحذفها
+        const currentLastRow = empSheet.getLastRow();
+        const expectedLastRow = employeesToKeep.length + 1;
+        if (currentLastRow > expectedLastRow) {
+            empSheet.deleteRows(expectedLastRow + 1, currentLastRow - expectedLastRow);
         }
         
         // مسح الكاش لإجبار النظام على القراءة من الشيت
         invalidateHseSheetCaches('ClinicVisits');
         invalidateHseSheetCaches('ClinicContractorVisits');
+        SpreadsheetApp.flush();
         
-        let msg = `تم بنجاح معالجة ${rowsToDelete.length} سجل (تم نقل ${appendedCount} وحذف المكرر).`;
-        if (isPartial) {
-            msg += `\n⚠️ يتبقى حوالي ${totalFound - BATCH_SIZE} سجل. يرجى الضغط مرة أخرى لاستكمال النقل.`;
-        } else {
-            msg += `\n✅ اكتملت العملية تماماً وقاعدة البيانات نظيفة.`;
-        }
-        
-        return { success: true, message: msg, migratedCount: rowsToDelete.length, isPartial: isPartial };
+        return { 
+            success: true, 
+            message: `🎉 اكتملت العملية تماماً بنجاح فائق!\n` +
+                     `- تم معالجة وترحيل: ${totalToMigrate} سجل مقاول بنجاح.\n` +
+                     `- تم إضافة: ${appendedCount} سجل جديد إلى جدول المقاولين الجديد.\n` +
+                     `- تم تنظيف جدول الموظفين تماماً وبسرعة فائقة.`, 
+            migratedCount: totalToMigrate 
+        };
     } catch (error) {
         Logger.log('❌ [BACKEND] Error migrating contractor visits: ' + error.toString());
         return { success: false, message: 'حدث خطأ أثناء الترحيل: ' + error.toString() };
