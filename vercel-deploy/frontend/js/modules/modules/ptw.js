@@ -8120,25 +8120,8 @@ const PTW = {
         attachAutoCopyToApprovals('#manual-approvals-list', '.manual-approval-name', '.manual-approval-sig');
         attachAutoCopyToApprovals('#manual-closure-approvals-list', '.manual-closure-approval-name', '.manual-closure-approval-sig');
 
-        // مزامنة مسئول السلامة والصحة المهنية بين القسم السابع والتاسع (ربط الحقلين)
-        const safety7Select = modal.querySelector('#manual-approvals-list select[data-role="مسئول السلامة والصحة المهنية"]');
-        const safety9Select = modal.querySelector('#manual-closure-approvals-list select[data-role="مسؤول السلامة والصحة المهنية"]');
-        if (safety7Select && safety9Select) {
-            safety7Select.addEventListener('change', () => {
-                if (safety9Select.value !== safety7Select.value) {
-                    safety9Select.value = safety7Select.value;
-                    safety9Select.dispatchEvent(new Event('input', { bubbles: true }));
-                    safety9Select.dispatchEvent(new Event('change', { bubbles: true }));
-                }
-            });
-            safety9Select.addEventListener('change', () => {
-                if (safety7Select.value !== safety9Select.value) {
-                    safety7Select.value = safety9Select.value;
-                    safety7Select.dispatchEvent(new Event('input', { bubbles: true }));
-                    safety7Select.dispatchEvent(new Event('change', { bubbles: true }));
-                }
-            });
-        }
+        // تم إلغاء مزامنة مسئول السلامة والصحة المهنية بين القسم السابع والتاسع تلبيةً لطلب المستخدم
+        // لأن الشخص الذي يفتح التصريح قد يختلف عن الشخص الذي يغلق التصريح من فريق السلامة
 
         // القائمة الأساسية ثابتة يمين؛ عند الاختيار من القائمة تفتح اللوحة بالعرض بجانبها
         const panel = modal.querySelector('#manual-work-type-panel');
