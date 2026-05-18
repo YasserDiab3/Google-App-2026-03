@@ -3027,8 +3027,8 @@ function invalidateHseSheetCaches(sheetName) {
         const sn = String(sheetName || '').trim();
         if (!sn) return;
         const cache = CacheService.getScriptCache();
-        cache.remove('hse_read_' + sn + '_v1');
-        cache.remove('batch_' + sn + '_v1');
+        cache.remove('hse_read_' + sn + '_v2');
+        cache.remove('batch_' + sn + '_v2');
     } catch (e) {
         Logger.log('invalidateHseSheetCaches: ' + e.toString());
     }
@@ -3041,7 +3041,7 @@ function readFromSheet(sheetName, spreadsheetId = null, skipSecurityFilter = fal
     try {
         // ✅ CacheService: Check cache first for frequently-read sheets
         const cache = CacheService.getScriptCache();
-        const cacheKey = 'hse_read_' + sheetName + (skipSecurityFilter ? '_raw' : '_v1');
+        const cacheKey = 'hse_read_' + sheetName + (skipSecurityFilter ? '_raw' : '_v2');
         const cached = cache.get(cacheKey);
         
         if (cached) {
@@ -3122,6 +3122,8 @@ function readFromSheet(sheetName, spreadsheetId = null, skipSecurityFilter = fal
         
         const rows = data.slice(1);
 
+        const sheetTz = spreadsheet ? spreadsheet.getSpreadsheetTimeZone() : Session.getScriptTimeZone();
+
         // ✅ إصلاح: إزالة التكرار عند القراءة (في حالة وجود تكرار في الورقة نفسها)
         // تحويل الصفوف إلى كائنات
         const allObjects = rows.map((row, rowIndex) => {
@@ -3153,20 +3155,24 @@ function readFromSheet(sheetName, spreadsheetId = null, skipSecurityFilter = fal
                                 // للحقول التي تحتاج وقت (visitDate, exitDate, checkIn, checkOut, etc.)
                                 const timeFields = ['visitDate', 'exitDate', 'checkIn', 'checkOut', 'injuryDate', 'startDate', 'endDate', 'timeFrom', 'timeTo', 'closureTime', 'investigationDateTime', 'incidentDateTime', 'date'];
                                 const timeOnlyFields = ['fromTime', 'toTime', 'startTime', 'endTime', 'timeFrom', 'timeTo'];
-                                if (timeOnlyFields.includes(cleanHeader)) {
+                                if (shouldPreserveSheetDateTimeAsText_(sheetName, cleanHeader)) {
+                                    processedValue = normalizeSheetDateTimeText_(processedValue, sheetTz);
+                                } else if (timeOnlyFields.includes(cleanHeader)) {
                                     // من الساعة / إلى الساعة (تدريب الموظفين والمقاولين): تخزين بصيغة HH:mm فقط
-                                    // لتجنب انزياح التوقيت التاريخي (مثل فرق الدقيقة في عام 1899)، نستخرج الساعات والدقائق مباشرة
-                                    const hrs = String(processedValue.getHours()).padStart(2, '0');
-                                    const mins = String(processedValue.getMinutes()).padStart(2, '0');
-                                    processedValue = hrs + ':' + mins;
-                                } else if (shouldPreserveSheetDateTimeAsText_(sheetName, cleanHeader)) {
-                                    processedValue = normalizeSheetDateTimeText_(processedValue, Session.getScriptTimeZone());
+                                    // لتجنب انزياح التوقيت التاريخي (مثل فرق الدقيقة في عام 1899)، نستخرج الساعات والدقائق مباشرة باستخدام المنطقة الزمنية للسكريبت لتفادي فروق التوقيت
+                                    try {
+                                        processedValue = Utilities.formatDate(processedValue, Session.getScriptTimeZone(), 'HH:mm');
+                                    } catch (err) {
+                                        const hrs = String(processedValue.getHours()).padStart(2, '0');
+                                        const mins = String(processedValue.getMinutes()).padStart(2, '0');
+                                        processedValue = hrs + ':' + mins;
+                                    }
                                 } else if (timeFields.includes(cleanHeader)) {
                                     // تحويل إلى ISO string كامل مع الوقت
                                     processedValue = processedValue.toISOString();
                                 } else {
                                     // للحقول الأخرى (تاريخ فقط بدون وقت)، نستخدم yyyy-MM-dd
-                                    processedValue = Utilities.formatDate(processedValue, Session.getScriptTimeZone(), 'yyyy-MM-dd');
+                                    processedValue = Utilities.formatDate(processedValue, sheetTz, 'yyyy-MM-dd');
                                 }
                             }
                         } catch (eDate) {

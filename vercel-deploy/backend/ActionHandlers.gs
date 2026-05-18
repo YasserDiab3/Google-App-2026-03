@@ -183,7 +183,7 @@ var ActionHandlers = {
                                     try {
                                         // ✅ Use CacheService for frequently-read sheets
                                         const cache = CacheService.getScriptCache();
-                                        const cacheKey = 'batch_' + sheetName + '_v1';
+                                        const cacheKey = 'batch_' + sheetName + '_v2';
                                         const cached = cache.get(cacheKey);
 
                                         if (cached) {
