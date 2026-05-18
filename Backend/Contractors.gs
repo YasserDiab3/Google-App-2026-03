@@ -1615,7 +1615,8 @@ function _cabSickLeaveBelongs_(record, idSet, nameSets) {
 }
 
 function _cabClinicBelongs_(record, idSet, nameSets) {
-    if (!record || !_cabHasContractorAffinity_(record)) return false;
+    if (!record) return false;
+    if (record._isContractorSheet !== true && !_cabHasContractorAffinity_(record)) return false;
     if (_cabRecordMatchesContractor_(record, idSet, nameSets)) return true;
     if (_cabHasExplicitContractorIds_(record)) return false;
     return _cabMatchRecordFieldsByName_(record, ['contractorName', 'companyName', 'company', 'contractorCompany', 'externalName', 'contractorWorkerName', 'contractorWorker', 'personName'], nameSets);
@@ -1623,8 +1624,10 @@ function _cabClinicBelongs_(record, idSet, nameSets) {
 
 function _cabInjuryBelongs_(record, idSet, nameSets) {
     if (!record) return false;
-    var personType = _cabNormStr_(record.personType);
-    if (personType && personType !== 'contractor' && personType !== 'مقاول') return false;
+    if (record._isContractorSheet !== true) {
+        var personType = _cabNormStr_(record.personType);
+        if (personType && personType !== 'contractor' && personType !== 'مقاول') return false;
+    }
     if (_cabRecordMatchesContractor_(record, idSet, nameSets)) return true;
     if (_cabHasExplicitContractorIds_(record)) return false;
     return _cabMatchRecordFieldsByName_(record, ['personName', 'contractorName'], nameSets);
@@ -1822,21 +1825,45 @@ function getContractorDetailedAnalytics(payload) {
         sickLeaveList = _cabDeduplicateRecords_(sickLeaveList, ['id', 'linkedRegistryId'], ['contractorName', 'externalName', 'startDate', 'endDate', 'reason']);
 
         var clinicList = [];
-        var clinicSources = clinicVisits.concat(clinicContractorVisits);
         var n;
-        for (n = 0; n < clinicSources.length; n++) {
-            if (_cabClinicBelongs_(clinicSources[n], idSet, nameSets)) {
-                clinicList.push(clinicSources[n]);
+        for (n = 0; n < clinicVisits.length; n++) {
+            var rec = clinicVisits[n];
+            if (rec) {
+                rec._isContractorSheet = false;
+                if (_cabClinicBelongs_(rec, idSet, nameSets)) {
+                    clinicList.push(rec);
+                }
+            }
+        }
+        for (n = 0; n < clinicContractorVisits.length; n++) {
+            var rec = clinicContractorVisits[n];
+            if (rec) {
+                rec._isContractorSheet = true;
+                if (_cabClinicBelongs_(rec, idSet, nameSets)) {
+                    clinicList.push(rec);
+                }
             }
         }
         clinicList = _cabDeduplicateRecords_(clinicList, ['id'], ['contractorName', 'externalName', 'contractorWorkerName', 'visitDate', 'reason']);
 
         var injuryList = [];
         var p;
-        var injurySources = injuries.concat(contractorInjuries);
-        for (p = 0; p < injurySources.length; p++) {
-            if (_cabInjuryBelongs_(injurySources[p], idSet, nameSets)) {
-                injuryList.push(injurySources[p]);
+        for (p = 0; p < injuries.length; p++) {
+            var rec = injuries[p];
+            if (rec) {
+                rec._isContractorSheet = false;
+                if (_cabInjuryBelongs_(rec, idSet, nameSets)) {
+                    injuryList.push(rec);
+                }
+            }
+        }
+        for (p = 0; p < contractorInjuries.length; p++) {
+            var rec = contractorInjuries[p];
+            if (rec) {
+                rec._isContractorSheet = true;
+                if (_cabInjuryBelongs_(rec, idSet, nameSets)) {
+                    injuryList.push(rec);
+                }
             }
         }
         injuryList = _cabDeduplicateRecords_(injuryList, ['id'], ['personName', 'injuryDate', 'injuryType', 'injuryLocation']);

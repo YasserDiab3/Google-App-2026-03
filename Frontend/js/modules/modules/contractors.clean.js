@@ -11348,86 +11348,7 @@ const Contractors = {
         }
         contractor = this.prepareContractorForAnalytics(contractor);
         const analyticsLookupKey = this.getPreferredContractorAnalyticsKey(contractor, contractorId || contractorName);
-        if (typeof GoogleIntegration !== 'undefined' && GoogleIntegration.sendRequest && AppState.googleConfig?.appsScript?.enabled) {
-            const needCT = !AppState.appData.contractorTrainings?.length;
-            const needT = !AppState.appData.training?.length;
-            const needPTW = (!AppState.appData.ptw || !AppState.appData.ptw.length) && (!AppState.appData.ptwRegistry || !AppState.appData.ptwRegistry.length);
-            const needViol = !AppState.appData.violations?.length;
-            const needEval = !AppState.appData.contractorEvaluations?.length;
-            const needClinic = !AppState.appData.clinicVisits?.length;
-            const needInj = !AppState.appData.injuries?.length;
-            if (needCT || needT || needPTW || needViol || needEval || needClinic || needInj) {
-                try {
-                    const syncSheets = [];
-                    if (needCT) syncSheets.push('ContractorTrainings');
-                    if (needT) syncSheets.push('Training');
-                    if (needPTW) syncSheets.push('PTW', 'PTWRegistry');
-                    if (needViol) syncSheets.push('Violations');
-                    if (needEval) syncSheets.push('ContractorEvaluations');
-                    if (needClinic) syncSheets.push('ClinicVisits', 'ClinicContractorVisits');
-                    if (needInj) syncSheets.push('Injuries', 'ClinicContractorInjuries');
-                    if (syncSheets.length && typeof GoogleIntegration.syncData === 'function') {
-                        await GoogleIntegration.syncData({ sheets: [...new Set(syncSheets)], silent: true, showLoader: false, notifyOnSuccess: false, notifyOnError: false });
-                    }
-                    if (needCT && !AppState.appData.contractorTrainings?.length) {
-                        const ctRes = await GoogleIntegration.sendRequest({ action: 'getAllContractorTrainings', data: {} });
-                        if (ctRes && ctRes.success && Array.isArray(ctRes.data)) AppState.appData.contractorTrainings = ctRes.data;
-                    }
-                    if (needT && !AppState.appData.training?.length) {
-                        const tRes = await GoogleIntegration.sendRequest({ action: 'getAllTrainings', data: {} });
-                        if (tRes && tRes.success && Array.isArray(tRes.data)) AppState.appData.training = tRes.data;
-                    }
-                    if (needPTW) {
-                        if (!AppState.appData.ptw?.length) {
-                            const ptwRes = await GoogleIntegration.sendRequest({ action: 'getAllPTWs', data: {} });
-                            if (ptwRes && ptwRes.success && Array.isArray(ptwRes.data)) AppState.appData.ptw = ptwRes.data;
-                        }
-                        if (!AppState.appData.ptwRegistry?.length) {
-                            const regRes = await GoogleIntegration.sendRequest({ action: 'readFromSheet', data: { sheetName: 'PTWRegistry' } });
-                            if (regRes && regRes.success && Array.isArray(regRes.data)) AppState.appData.ptwRegistry = regRes.data;
-                        }
-                    }
-                    if (needViol && typeof GoogleIntegration.readFromSheets === 'function') {
-                        const v = await GoogleIntegration.readFromSheets('Violations');
-                        if (Array.isArray(v)) AppState.appData.violations = v;
-                    }
-                    if (needEval && typeof GoogleIntegration.readFromSheets === 'function') {
-                        const ev = await GoogleIntegration.readFromSheets('ContractorEvaluations');
-                        if (Array.isArray(ev)) AppState.appData.contractorEvaluations = ev;
-                    }
-                    if (needClinic && typeof GoogleIntegration.readFromSheets === 'function') {
-                        const cv = await GoogleIntegration.readFromSheets('ClinicVisits');
-                        if (Array.isArray(cv)) AppState.appData.clinicVisits = cv;
-                        const ccv = await GoogleIntegration.readFromSheets('ClinicContractorVisits');
-                        if (Array.isArray(ccv)) AppState.appData.clinicContractorVisits = ccv;
-                    }
-                    if (needInj && typeof GoogleIntegration.readFromSheets === 'function') {
-                        const inj = await GoogleIntegration.readFromSheets('Injuries');
-                        if (Array.isArray(inj)) AppState.appData.injuries = inj;
-                        const cinj = await GoogleIntegration.readFromSheets('ClinicContractorInjuries');
-                        if (Array.isArray(cinj)) AppState.appData.clinicContractorInjuries = cinj;
-                    }
-                } catch (e) {
-                    if (typeof Utils !== 'undefined' && Utils.safeWarn) Utils.safeWarn('تعذر تحميل بعض بيانات التحليل:', e);
-                }
-            }
-        }
-        let serverDetailedAnalytics = null;
-        if (typeof GoogleIntegration !== 'undefined' && GoogleIntegration.sendRequest && AppState.googleConfig?.appsScript?.enabled) {
-            try {
-                const analyticsRes = await GoogleIntegration.sendRequest({
-                    action: 'getContractorDetailedAnalytics',
-                    data: { contractor, contractorId: analyticsLookupKey }
-                });
-                if (analyticsRes && analyticsRes.success && analyticsRes.data) {
-                    serverDetailedAnalytics = analyticsRes.data;
-                }
-            } catch (e) {
-                if (typeof Utils !== 'undefined' && Utils.safeWarn) {
-                    Utils.safeWarn('تعذر جلب تحليل المقاول من الخادم؛ يُستخدم التصفية المحلية:', e);
-                }
-            }
-        }
+
         const contractorDisplayName = (contractor.name || contractor.companyName || '').trim();
         const ctx = this.buildContractorAnalyticsMatchers(contractor, analyticsLookupKey);
         const matchesContractor = ctx.matchesContractor;
@@ -11439,59 +11360,48 @@ const Contractors = {
             return ctx.matchFieldsByName([req, auth, resp]);
         };
 
-        let evaluations;
-        let violations;
-        let avgScore = 0;
-        let highViolations = 0;
-        let resolvedViolations = 0;
-        let resolutionRate = 100;
+        const calculateStats = (customViolations, customEvaluations) => {
+            let evals = customEvaluations || (AppState.appData.contractorEvaluations || []).filter(ctx.evaluationBelongsToContractor);
+            let viols = customViolations || (AppState.appData.violations || []).filter(ctx.violationBelongsToContractor);
 
-        if (serverDetailedAnalytics) {
-            evaluations = serverDetailedAnalytics.evaluations;
-            violations = serverDetailedAnalytics.violations;
-            avgScore = typeof serverDetailedAnalytics.avgScore === 'number' ? serverDetailedAnalytics.avgScore : 0;
-            highViolations = typeof serverDetailedAnalytics.highViolations === 'number'
-                ? serverDetailedAnalytics.highViolations
-                : violations.filter(v => {
-                    const severity = (v.severity || '').toString().trim();
-                    return severity === 'عالية' || severity === 'high' || severity === 'حرجة';
-                }).length;
-            resolvedViolations = typeof serverDetailedAnalytics.resolvedViolations === 'number'
-                ? serverDetailedAnalytics.resolvedViolations
-                : violations.filter(v => {
-                    const status = (v.status || '').toString().trim();
-                    return status === 'محلول' || status === 'resolved' || status === 'تم الحل';
-                }).length;
-            resolutionRate = typeof serverDetailedAnalytics.resolutionRate === 'number'
-                ? serverDetailedAnalytics.resolutionRate
-                : (violations.length > 0 ? Math.round((resolvedViolations / violations.length) * 100) : 100);
-        } else {
-            evaluations = (AppState.appData.contractorEvaluations || []).filter(ctx.evaluationBelongsToContractor);
-            violations = (AppState.appData.violations || []).filter(ctx.violationBelongsToContractor);
-            if (evaluations.length > 0) {
-                const validScores = evaluations
+            let score = 0;
+            if (evals.length > 0) {
+                const validScores = evals
                     .map(e => parseFloat(e.finalScore) || parseFloat(e.score) || 0)
-                    .filter(score => !isNaN(score) && score >= 0 && score <= 100);
+                    .filter(s => !isNaN(s) && s >= 0 && s <= 100);
                 if (validScores.length > 0) {
-                    const sum = validScores.reduce((acc, score) => acc + score, 0);
-                    avgScore = Math.round((sum / validScores.length) * 100) / 100;
+                    const sum = validScores.reduce((acc, s) => acc + s, 0);
+                    score = Math.round((sum / validScores.length) * 100) / 100;
                 }
             }
-            highViolations = violations.filter(v => {
+
+            const high = viols.filter(v => {
                 const severity = (v.severity || '').toString().trim();
                 return severity === 'عالية' || severity === 'high' || severity === 'حرجة';
             }).length;
-            resolvedViolations = violations.filter(v => {
+
+            const resolved = viols.filter(v => {
                 const status = (v.status || '').toString().trim();
                 return status === 'محلول' || status === 'resolved' || status === 'تم الحل';
             }).length;
-            resolutionRate = violations.length > 0
-                ? Math.round((resolvedViolations / violations.length) * 100)
-                : 100;
-        }
 
-        const uniqueEvalIds = new Set(evaluations.map(e => e.id || e.evaluationId).filter(Boolean));
-        const evaluationsCountDisplay = uniqueEvalIds.size > 0 ? uniqueEvalIds.size : evaluations.length;
+            const rate = viols.length > 0 ? Math.round((resolved / viols.length) * 100) : 100;
+
+            const uniqueEvalIds = new Set(evals.map(e => e.id || e.evaluationId).filter(Boolean));
+            const evCount = uniqueEvalIds.size > 0 ? uniqueEvalIds.size : evals.length;
+
+            return {
+                evaluations: evals,
+                violations: viols,
+                evaluationsCountDisplay: evCount,
+                avgScore: score,
+                highViolations: high,
+                resolvedViolations: resolved,
+                resolutionRate: rate
+            };
+        };
+
+        let stats = calculateStats();
 
         const trainingList = AppState.appData.training || [];
         const trainingFromMain = trainingList.filter(t => {
@@ -11559,34 +11469,12 @@ const Contractors = {
         }).length;
         let sickLeaveCount = (AppState.appData.sickLeave || []).filter(s => (s.personType === 'contractor' || s.contractorName) && matchesContractor(s)).length;
 
-        if (serverDetailedAnalytics) {
-            if (typeof serverDetailedAnalytics.trainingsCount === 'number') trainingsCount = serverDetailedAnalytics.trainingsCount;
-            if (typeof serverDetailedAnalytics.ptwCount === 'number') permitsCount = serverDetailedAnalytics.ptwCount;
-            if (typeof serverDetailedAnalytics.clinicVisitsCount === 'number') clinicVisitsCount = serverDetailedAnalytics.clinicVisitsCount;
-            if (typeof serverDetailedAnalytics.injuriesCount === 'number') injuriesCount = serverDetailedAnalytics.injuriesCount;
-            if (typeof serverDetailedAnalytics.incidentsCount === 'number') incidentsCount = serverDetailedAnalytics.incidentsCount;
-            if (typeof serverDetailedAnalytics.sickLeaveCount === 'number') sickLeaveCount = serverDetailedAnalytics.sickLeaveCount;
-        }
-
         const getScoreColor = (score) => {
             if (score >= 80) return 'text-green-600 bg-green-100';
             if (score >= 60) return 'text-yellow-600 bg-yellow-100';
             return 'text-red-600 bg-red-100';
         };
-        const violationTypeOptions = Array.from(
-            new Set(
-                (violations || [])
-                    .map(v => String(v?.violationType || '').trim())
-                    .filter(Boolean)
-            )
-        );
-        const severityOptions = Array.from(
-            new Set(
-                (violations || [])
-                    .map(v => String(v?.severity || '').trim())
-                    .filter(Boolean)
-            )
-        );
+
         const renderViolationRows = (records) => {
             if (!Array.isArray(records) || records.length === 0) {
                 return `
@@ -11606,6 +11494,7 @@ const Contractors = {
                 const statusClass = status === 'محلول' || status === 'resolved' || status === 'تم الحل'
                     ? 'badge-success'
                     : 'badge-warning';
+
                 return `
                     <tr class="hover:bg-gray-50 transition-colors ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}">
                         <td class="px-6 py-4 text-gray-700">${v.violationDate ? Utils.formatDate(v.violationDate) : '-'}</td>
@@ -11621,23 +11510,106 @@ const Contractors = {
             }).join('');
         };
 
+        const renderViolationsContainer = (records, vTypes, severities) => {
+            if (!Array.isArray(records) || records.length === 0) {
+                return `
+                    <div class="bg-green-50 border-2 border-green-200 rounded-xl p-8 text-center">
+                        <i class="fas fa-check-circle text-5xl text-green-500 mb-4"></i>
+                        <p class="text-lg font-semibold text-green-700">لا توجد مخالفات مسجلة</p>
+                        <p class="text-sm text-green-600 mt-2">هذا المقاول يلتزم بجميع المعايير</p>
+                    </div>
+                `;
+            }
+            return `
+                <div class="border-2 border-gray-200 rounded-xl overflow-hidden shadow-md">
+                    <div class="bg-gradient-to-r from-red-50 to-red-100 border-b-2 border-red-200 p-4">
+                        <div class="flex items-center justify-between gap-3 flex-wrap">
+                            <h3 class="text-lg font-bold text-red-800 flex items-center">
+                                <i class="fas fa-exclamation-triangle ml-2"></i>
+                                المخالفات (<span id="contractor-violations-count">${records.length}</span>)
+                            </h3>
+                            <button type="button" class="btn-primary" style="background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%); border-color: #b91c1c;" onclick="Contractors.exportContractorViolationsReport('${encodeURIComponent(String(analyticsLookupKey || contractor.id || contractor.contractorId || ''))}', '${encodeURIComponent(String(contractorDisplayName || contractor.name || contractor.companyName || ''))}')">
+                                <i class="fas fa-file-pdf ml-2"></i>تصدير تقرير المخالفات
+                            </button>
+                        </div>
+                    </div>
+                    <div class="p-4 bg-gray-50 border-b border-gray-200">
+                        <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3">
+                            <div>
+                                <label class="block text-sm font-semibold text-gray-700 mb-2">البحث</label>
+                                <div class="relative">
+                                    <input type="text" id="contractor-violations-search" class="form-input pr-10 border-2 border-indigo-200 bg-white shadow-sm focus:border-indigo-400 focus:ring-2 focus:ring-indigo-300" placeholder="ابحث في كل تفاصيل الجدول...">
+                                    <i class="fas fa-search absolute right-3 top-1/2 -translate-y-1/2 text-indigo-500 pointer-events-none"></i>
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-semibold text-gray-700 mb-2">نوع الشخص</label>
+                                <select id="contractor-violations-person-type" class="form-input">
+                                    <option value="">الكل</option>
+                                    <option value="employee">موظف</option>
+                                    <option value="contractor">مقاول / شركة خارجية</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-semibold text-gray-700 mb-2">نوع المخالفة</label>
+                                <select id="contractor-violations-type" class="form-input">
+                                    <option value="">جميع الأنواع</option>
+                                    ${vTypes.map(t => `<option value="${Utils.escapeHTML(t)}">${Utils.escapeHTML(t)}</option>`).join('')}
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-semibold text-gray-700 mb-2">الدرجة</label>
+                                <select id="contractor-violations-severity" class="form-input">
+                                    <option value="">جميع الدرجات</option>
+                                    ${severities.map(lvl => `<option value="${Utils.escapeHTML(lvl)}">${Utils.escapeHTML(lvl)}</option>`).join('')}
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="data-table w-full">
+                            <thead class="bg-gray-100">
+                                <tr>
+                                    <th class="px-6 py-3 text-right font-bold text-gray-700">التاريخ</th>
+                                    <th class="px-6 py-3 text-right font-bold text-gray-700">نوع المخالفة</th>
+                                    <th class="px-6 py-3 text-center font-bold text-gray-700">الشدة</th>
+                                    <th class="px-6 py-3 text-center font-bold text-gray-700">الحالة</th>
+                                </tr>
+                            </thead>
+                            <tbody id="contractor-violations-tbody" class="divide-y divide-gray-100">
+                                ${renderViolationRows(records)}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            `;
+        };
+
         const modal = document.createElement('div');
         modal.className = 'modal-overlay';
         modal.innerHTML = `
             <div class="modal-content" style="max-width: 1000px; max-height: 90vh; overflow-y: auto;">
                 <div class="modal-header bg-gradient-to-r from-indigo-600 to-purple-600 text-white">
-                    <div class="flex items-center">
-                        <div class="w-12 h-12 bg-white bg-opacity-20 rounded-full flex items-center justify-center ml-3">
-                            <i class="fas fa-chart-bar text-xl"></i>
+                    <div class="flex items-center justify-between w-full">
+                        <div class="flex items-center">
+                            <div class="w-12 h-12 bg-white bg-opacity-20 rounded-full flex items-center justify-center ml-3">
+                                <i class="fas fa-chart-bar text-xl"></i>
+                            </div>
+                            <div>
+                                <h2 class="modal-title text-xl font-bold flex items-center">
+                                    تحليل مفصل: ${Utils.escapeHTML(contractorDisplayName || contractor.name || contractor.companyName || '')}
+                                    <span id="live-loader-indicator" class="mr-3 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800 animate-pulse">
+                                        <i class="fas fa-sync fa-spin ml-1 text-xs"></i>
+                                        جاري تحديث البيانات...
+                                    </span>
+                                </h2>
+                                <p class="text-sm text-indigo-100 mt-1">${Utils.escapeHTML(contractor.serviceType || contractor.entityType || '')}</p>
+                            </div>
                         </div>
-                        <div>
-                            <h2 class="modal-title text-xl font-bold">تحليل مفصل: ${Utils.escapeHTML(contractorDisplayName || contractor.name || contractor.companyName || '')}</h2>
-                            <p class="text-sm text-indigo-100 mt-1">${Utils.escapeHTML(contractor.serviceType || contractor.entityType || '')}</p>
-                        </div>
+                        <button class="modal-close bg-white bg-opacity-20 hover:bg-opacity-30 rounded-full p-2 transition-colors" onclick="this.closest('.modal-overlay').remove()">
+                            <i class="fas fa-times"></i>
+                        </button>
                     </div>
-                    <button class="modal-close bg-white bg-opacity-20 hover:bg-opacity-30 rounded-full p-2 transition-colors" onclick="this.closest('.modal-overlay').remove()">
-                        <i class="fas fa-times"></i>
-                    </button>
                 </div>
                 <div class="modal-body p-6">
                     <!-- بطاقات الإحصائيات الرئيسية -->
@@ -11647,28 +11619,28 @@ const Contractors = {
                                 <i class="fas fa-clipboard-check text-3xl text-blue-500"></i>
                             </div>
                             <p class="text-sm text-gray-600 mb-1">عدد التقييمات</p>
-                            <p class="text-3xl font-bold text-blue-700">${evaluationsCountDisplay}</p>
+                            <p class="text-3xl font-bold text-blue-700" id="evals-count-val">${stats.evaluationsCountDisplay}</p>
                         </div>
                         <div class="bg-gradient-to-br from-red-50 to-red-100 border-2 border-red-300 rounded-xl p-5 shadow-md">
                             <div class="flex items-center justify-between mb-2">
                                 <i class="fas fa-exclamation-triangle text-3xl text-red-500"></i>
                             </div>
                             <p class="text-sm text-gray-600 mb-1">عدد المخالفات</p>
-                            <p class="text-3xl font-bold text-red-700">${violations.length}</p>
+                            <p class="text-3xl font-bold text-red-700" id="viols-count-val">${stats.violations.length}</p>
                         </div>
                         <div class="bg-gradient-to-br from-yellow-50 to-yellow-100 border-2 border-yellow-300 rounded-xl p-5 shadow-md">
                             <div class="flex items-center justify-between mb-2">
                                 <i class="fas fa-star text-3xl text-yellow-500"></i>
                             </div>
                             <p class="text-sm text-gray-600 mb-1">متوسط التقييم</p>
-                            <p class="text-3xl font-bold ${getScoreColor(avgScore).split(' ')[0]}">${avgScore}%</p>
+                            <p class="text-3xl font-bold ${getScoreColor(stats.avgScore).split(' ')[0]}" id="avg-score-val">${stats.avgScore}%</p>
                         </div>
                         <div class="bg-gradient-to-br from-green-50 to-green-100 border-2 border-green-300 rounded-xl p-5 shadow-md">
                             <div class="flex items-center justify-between mb-2">
                                 <i class="fas fa-check-double text-3xl text-green-500"></i>
                             </div>
                             <p class="text-sm text-gray-600 mb-1">معدل حل المخالفات</p>
-                            <p class="text-3xl font-bold text-green-700">${resolutionRate}%</p>
+                            <p class="text-3xl font-bold text-green-700" id="res-rate-val">${stats.resolutionRate}%</p>
                         </div>
                     </div>
 
@@ -11676,15 +11648,15 @@ const Contractors = {
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
                         <div class="bg-gray-50 border-2 border-gray-200 rounded-xl p-4">
                             <p class="text-sm text-gray-600 mb-2">مخالفات عالية الخطورة</p>
-                            <p class="text-2xl font-bold text-red-600">${highViolations}</p>
+                            <p class="text-2xl font-bold text-red-600" id="high-viols-val">${stats.highViolations}</p>
                         </div>
                         <div class="bg-gray-50 border-2 border-gray-200 rounded-xl p-4">
                             <p class="text-sm text-gray-600 mb-2">مخالفات محلولة</p>
-                            <p class="text-2xl font-bold text-green-600">${resolvedViolations}</p>
+                            <p class="text-2xl font-bold text-green-600" id="resolved-viols-val">${stats.resolvedViolations}</p>
                         </div>
                         <div class="bg-gray-50 border-2 border-gray-200 rounded-xl p-4">
                             <p class="text-sm text-gray-600 mb-2">مخالفات قيد المعالجة</p>
-                            <p class="text-2xl font-bold text-orange-600">${violations.length - resolvedViolations}</p>
+                            <p class="text-2xl font-bold text-orange-600" id="pending-viols-val">${stats.violations.length - stats.resolvedViolations}</p>
                         </div>
                     </div>
 
@@ -11695,121 +11667,67 @@ const Contractors = {
                                 <i class="fas fa-graduation-cap text-2xl text-teal-600"></i>
                             </div>
                             <p class="text-sm text-gray-600 mb-1">عدد التدريبات</p>
-                            <p class="text-2xl font-bold text-teal-700">${trainingsCount}</p>
+                            <p class="text-2xl font-bold text-teal-700" id="trainings-count-val">${trainingsCount}</p>
                         </div>
                         <div class="bg-gradient-to-br from-cyan-50 to-cyan-100 border-2 border-cyan-200 rounded-xl p-4 shadow-sm">
                             <div class="flex items-center justify-between mb-2">
                                 <i class="fas fa-file-signature text-2xl text-cyan-600"></i>
                             </div>
                             <p class="text-sm text-gray-600 mb-1">عدد التصاريح</p>
-                            <p class="text-2xl font-bold text-cyan-700">${permitsCount}</p>
+                            <p class="text-2xl font-bold text-cyan-700" id="permits-count-val">${permitsCount}</p>
                         </div>
                         <div class="bg-gradient-to-br from-violet-50 to-violet-100 border-2 border-violet-200 rounded-xl p-4 shadow-sm">
                             <div class="flex items-center justify-between mb-2">
                                 <i class="fas fa-stethoscope text-2xl text-violet-600"></i>
                             </div>
                             <p class="text-sm text-gray-600 mb-1">التردد على العيادة</p>
-                            <p class="text-2xl font-bold text-violet-700">${clinicVisitsCount}</p>
+                            <p class="text-2xl font-bold text-violet-700" id="clinic-visits-count-val">${clinicVisitsCount}</p>
                         </div>
                         <div class="bg-gradient-to-br from-amber-50 to-amber-100 border-2 border-amber-200 rounded-xl p-4 shadow-sm">
                             <div class="flex items-center justify-between mb-2">
                                 <i class="fas fa-band-aid text-2xl text-amber-600"></i>
                             </div>
                             <p class="text-sm text-gray-600 mb-1">الإصابات</p>
-                            <p class="text-2xl font-bold text-amber-700">${injuriesCount}</p>
+                            <p class="text-2xl font-bold text-amber-700" id="injuries-count-val">${injuriesCount}</p>
                         </div>
                         <div class="bg-gradient-to-br from-orange-50 to-orange-100 border-2 border-orange-200 rounded-xl p-4 shadow-sm">
                             <div class="flex items-center justify-between mb-2">
                                 <i class="fas fa-exclamation-circle text-2xl text-orange-600"></i>
                             </div>
                             <p class="text-sm text-gray-600 mb-1">الحوادث</p>
-                            <p class="text-2xl font-bold text-orange-700">${incidentsCount}</p>
+                            <p class="text-2xl font-bold text-orange-700" id="incidents-count-val">${incidentsCount}</p>
                         </div>
                         <div class="bg-gradient-to-br from-blue-50 to-blue-100 border-2 border-blue-200 rounded-xl p-4 shadow-sm">
                             <div class="flex items-center justify-between mb-2">
                                 <i class="fas fa-notes-medical text-2xl text-blue-600"></i>
                             </div>
                             <p class="text-sm text-gray-600 mb-1">الإجازات المرضية</p>
-                            <p class="text-2xl font-bold text-blue-700">${sickLeaveCount}</p>
+                            <p class="text-2xl font-bold text-blue-700" id="sick-leave-count-val">${sickLeaveCount}</p>
                         </div>
                     </div>
 
-                    <!-- جدول المخالفات -->
-                    ${violations.length > 0 ? `
-                        <div class="border-2 border-gray-200 rounded-xl overflow-hidden shadow-md">
-                            <div class="bg-gradient-to-r from-red-50 to-red-100 border-b-2 border-red-200 p-4">
-                                    <h3 class="text-lg font-bold text-red-800 flex items-center">
-                                    <i class="fas fa-exclamation-triangle ml-2"></i>
-                                        المخالفات (<span id="contractor-violations-count">${violations.length}</span>)
-                                </h3>
-                            </div>
-                            <div class="p-4 bg-gray-50 border-b border-gray-200">
-                                <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3">
-                                    <div>
-                                        <label class="block text-sm font-semibold text-gray-700 mb-2">البحث</label>
-                                        <div class="relative">
-                                            <input type="text" id="contractor-violations-search" class="form-input pr-10 border-2 border-indigo-200 bg-white shadow-sm focus:border-indigo-400 focus:ring-2 focus:ring-indigo-300" placeholder="ابحث في كل تفاصيل الجدول...">
-                                            <i class="fas fa-search absolute right-3 top-1/2 -translate-y-1/2 text-indigo-500 pointer-events-none"></i>
-                                        </div>
-                                    </div>
-                                    <div>
-                                        <label class="block text-sm font-semibold text-gray-700 mb-2">نوع الشخص</label>
-                                        <select id="contractor-violations-person-type" class="form-input">
-                                            <option value="">الكل</option>
-                                            <option value="employee">موظف</option>
-                                            <option value="contractor">مقاول / شركة خارجية</option>
-                                        </select>
-                                    </div>
-                                    <div>
-                                        <label class="block text-sm font-semibold text-gray-700 mb-2">نوع المخالفة</label>
-                                        <select id="contractor-violations-type" class="form-input">
-                                            <option value="">جميع الأنواع</option>
-                                            ${violationTypeOptions.map(type => `<option value="${Utils.escapeHTML(type)}">${Utils.escapeHTML(type)}</option>`).join('')}
-                                        </select>
-                                    </div>
-                                    <div>
-                                        <label class="block text-sm font-semibold text-gray-700 mb-2">الدرجة</label>
-                                        <select id="contractor-violations-severity" class="form-input">
-                                            <option value="">جميع الدرجات</option>
-                                            ${severityOptions.map(level => `<option value="${Utils.escapeHTML(level)}">${Utils.escapeHTML(level)}</option>`).join('')}
-                                        </select>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="overflow-x-auto">
-                                <table class="data-table w-full">
-                                    <thead class="bg-gray-100">
-                                        <tr>
-                                            <th class="px-6 py-3 text-right font-bold text-gray-700">التاريخ</th>
-                                            <th class="px-6 py-3 text-right font-bold text-gray-700">نوع المخالفة</th>
-                                            <th class="px-6 py-3 text-center font-bold text-gray-700">الشدة</th>
-                                            <th class="px-6 py-3 text-center font-bold text-gray-700">الحالة</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="contractor-violations-tbody" class="divide-y divide-gray-100">
-                                        ${renderViolationRows(violations)}
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                    ` : `
-                        <div class="bg-green-50 border-2 border-green-200 rounded-xl p-8 text-center">
-                            <i class="fas fa-check-circle text-5xl text-green-500 mb-4"></i>
-                            <p class="text-lg font-semibold text-green-700">لا توجد مخالفات مسجلة</p>
-                            <p class="text-sm text-green-600 mt-2">هذا المقاول يلتزم بجميع المعايير</p>
-                        </div>
-                    `}
+                    <!-- حاوية المخالفات -->
+                    <div id="violations-container-placeholder">
+                        ${renderViolationsContainer(
+                            stats.violations,
+                            Array.from(new Set(stats.violations.map(v => String(v?.violationType || '').trim()).filter(Boolean))),
+                            Array.from(new Set(stats.violations.map(v => String(v?.severity || '').trim()).filter(Boolean)))
+                        )}
+                    </div>
                 </div>
             </div>
         `;
         document.body.appendChild(modal);
-        if (violations.length > 0) {
+
+        const bindViolationListeners = (currentViolations) => {
             const searchInput = modal.querySelector('#contractor-violations-search');
             const personTypeSelect = modal.querySelector('#contractor-violations-person-type');
             const typeSelect = modal.querySelector('#contractor-violations-type');
             const severitySelect = modal.querySelector('#contractor-violations-severity');
             const tbody = modal.querySelector('#contractor-violations-tbody');
             const countEl = modal.querySelector('#contractor-violations-count');
+            if (!tbody) return;
+
             const normalize = (val) => String(val || '').trim().toLowerCase();
             const resolvePersonType = (record) => {
                 const raw = normalize(record?.personType);
@@ -11825,7 +11743,7 @@ const Contractors = {
                 const personType = normalize(personTypeSelect?.value);
                 const violationType = normalize(typeSelect?.value);
                 const severity = normalize(severitySelect?.value);
-                const filtered = violations.filter((record) => {
+                const filtered = currentViolations.filter((record) => {
                     if (personType) {
                         const resolvedType = resolvePersonType(record);
                         if (personType === 'contractor' && !(resolvedType === 'contractor' || resolvedType === 'supplier' || resolvedType === 'external')) return false;
@@ -11844,10 +11762,138 @@ const Contractors = {
                 const eventName = el.tagName === 'SELECT' ? 'change' : 'input';
                 el.addEventListener(eventName, applyViolationFilters);
             });
+        };
+
+        if (stats.violations.length > 0) {
+            bindViolationListeners(stats.violations);
         }
+
         modal.addEventListener('click', (e) => {
             if (e.target === modal) modal.remove();
         });
+
+        (async () => {
+            try {
+                if (typeof GoogleIntegration !== 'undefined' && GoogleIntegration.syncData && AppState.googleConfig?.appsScript?.enabled) {
+                    const needCT = !AppState.appData.contractorTrainings?.length;
+                    const needT = !AppState.appData.training?.length;
+                    const needPTW = (!AppState.appData.ptw || !AppState.appData.ptw.length) && (!AppState.appData.ptwRegistry || !AppState.appData.ptwRegistry.length);
+                    const needViol = !AppState.appData.violations?.length;
+                    const needEval = !AppState.appData.contractorEvaluations?.length;
+                    const needClinic = !AppState.appData.clinicVisits?.length;
+                    const needInj = !AppState.appData.injuries?.length;
+                    if (needCT || needT || needPTW || needViol || needEval || needClinic || needInj) {
+                        const syncSheets = [];
+                        if (needCT) syncSheets.push('ContractorTrainings');
+                        if (needT) syncSheets.push('Training');
+                        if (needPTW) syncSheets.push('PTW', 'PTWRegistry');
+                        if (needViol) syncSheets.push('Violations');
+                        if (needEval) syncSheets.push('ContractorEvaluations');
+                        if (needClinic) syncSheets.push('ClinicVisits', 'ClinicContractorVisits');
+                        if (needInj) syncSheets.push('Injuries', 'ClinicContractorInjuries');
+                        if (syncSheets.length) {
+                            GoogleIntegration.syncData({
+                                sheets: [...new Set(syncSheets)],
+                                silent: true,
+                                showLoader: false,
+                                notifyOnSuccess: false,
+                                notifyOnError: false
+                            }).catch(e => {
+                                if (typeof Utils !== 'undefined' && Utils.safeWarn) Utils.safeWarn('خلفية المزامنة الهادئة فشلت:', e);
+                            });
+                        }
+                    }
+                }
+
+                let serverDetailedAnalytics = null;
+                if (typeof GoogleIntegration !== 'undefined' && GoogleIntegration.sendRequest && AppState.googleConfig?.appsScript?.enabled) {
+                    const analyticsRes = await GoogleIntegration.sendRequest({
+                        action: 'getContractorDetailedAnalytics',
+                        data: { contractor, contractorId: analyticsLookupKey }
+                    });
+                    if (analyticsRes && analyticsRes.success && analyticsRes.data) {
+                        serverDetailedAnalytics = analyticsRes.data;
+                    }
+                }
+
+                if (serverDetailedAnalytics) {
+                    const newStats = calculateStats(serverDetailedAnalytics.violations, serverDetailedAnalytics.evaluations);
+                    
+                    if (typeof serverDetailedAnalytics.avgScore === 'number') newStats.avgScore = serverDetailedAnalytics.avgScore;
+                    if (typeof serverDetailedAnalytics.highViolations === 'number') newStats.highViolations = serverDetailedAnalytics.highViolations;
+                    if (typeof serverDetailedAnalytics.resolvedViolations === 'number') newStats.resolvedViolations = serverDetailedAnalytics.resolvedViolations;
+                    if (typeof serverDetailedAnalytics.resolutionRate === 'number') newStats.resolutionRate = serverDetailedAnalytics.resolutionRate;
+
+                    if (typeof serverDetailedAnalytics.trainingsCount === 'number') trainingsCount = serverDetailedAnalytics.trainingsCount;
+                    if (typeof serverDetailedAnalytics.ptwCount === 'number') permitsCount = serverDetailedAnalytics.ptwCount;
+                    if (typeof serverDetailedAnalytics.clinicVisitsCount === 'number') clinicVisitsCount = serverDetailedAnalytics.clinicVisitsCount;
+                    if (typeof serverDetailedAnalytics.injuriesCount === 'number') injuriesCount = serverDetailedAnalytics.injuriesCount;
+                    if (typeof serverDetailedAnalytics.incidentsCount === 'number') incidentsCount = serverDetailedAnalytics.incidentsCount;
+                    if (typeof serverDetailedAnalytics.sickLeaveCount === 'number') sickLeaveCount = serverDetailedAnalytics.sickLeaveCount;
+
+                    const evVal = modal.querySelector('#evals-count-val');
+                    if (evVal) evVal.textContent = newStats.evaluationsCountDisplay;
+
+                    const viVal = modal.querySelector('#viols-count-val');
+                    if (viVal) viVal.textContent = newStats.violations.length;
+
+                    const avgVal = modal.querySelector('#avg-score-val');
+                    if (avgVal) {
+                        avgVal.textContent = `${newStats.avgScore}%`;
+                        avgVal.className = `text-3xl font-bold ${getScoreColor(newStats.avgScore).split(' ')[0]}`;
+                    }
+
+                    const resVal = modal.querySelector('#res-rate-val');
+                    if (resVal) resVal.textContent = `${newStats.resolutionRate}%`;
+
+                    const hviVal = modal.querySelector('#high-viols-val');
+                    if (hviVal) hviVal.textContent = newStats.highViolations;
+
+                    const rviVal = modal.querySelector('#resolved-viols-val');
+                    if (rviVal) rviVal.textContent = newStats.resolvedViolations;
+
+                    const pviVal = modal.querySelector('#pending-viols-val');
+                    if (pviVal) pviVal.textContent = newStats.violations.length - newStats.resolvedViolations;
+
+                    const trVal = modal.querySelector('#trainings-count-val');
+                    if (trVal) trVal.textContent = trainingsCount;
+
+                    const peVal = modal.querySelector('#permits-count-val');
+                    if (peVal) peVal.textContent = permitsCount;
+
+                    const clVal = modal.querySelector('#clinic-visits-count-val');
+                    if (clVal) clVal.textContent = clinicVisitsCount;
+
+                    const inVal = modal.querySelector('#injuries-count-val');
+                    if (inVal) inVal.textContent = injuriesCount;
+
+                    const incVal = modal.querySelector('#incidents-count-val');
+                    if (incVal) incVal.textContent = incidentsCount;
+
+                    const skVal = modal.querySelector('#sick-leave-count-val');
+                    if (skVal) skVal.textContent = sickLeaveCount;
+
+                    const placeholder = modal.querySelector('#violations-container-placeholder');
+                    if (placeholder) {
+                        const newTypes = Array.from(new Set(newStats.violations.map(v => String(v?.violationType || '').trim()).filter(Boolean)));
+                        const newSeverities = Array.from(new Set(newStats.violations.map(v => String(v?.severity || '').trim()).filter(Boolean)));
+                        placeholder.innerHTML = renderViolationsContainer(newStats.violations, newTypes, newSeverities);
+                        bindViolationListeners(newStats.violations);
+                    }
+                }
+            } catch (err) {
+                if (typeof Utils !== 'undefined' && Utils.safeWarn) {
+                    Utils.safeWarn('تعذر تحديث تحليل المقاول بالكامل من الخادم:', err);
+                }
+            } finally {
+                const loader = modal.querySelector('#live-loader-indicator');
+                if (loader) {
+                    loader.style.transition = 'opacity 0.5s';
+                    loader.style.opacity = '0';
+                    setTimeout(() => loader.remove(), 500);
+                }
+            }
+        })();
     },
 
     /**
