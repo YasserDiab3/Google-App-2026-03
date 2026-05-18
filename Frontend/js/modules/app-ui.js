@@ -2832,7 +2832,8 @@ window.UI = {
                 const pol = document.getElementById('hse-post-login-overlay');
                 const main = document.getElementById('main-app');
                 const bodyLocked = document.body.classList.contains('hse-post-login-overlay-active');
-                const mainVisible = main && (main.style.display === 'flex' || (main.style.display !== 'none' && main.offsetParent !== null));
+                // ✅ تحسين أداء فائق: استخدام الـ inline display والـ dataset بدلاً من offsetParent و getComputedStyle لمنع الـ Forced Reflow الدوري
+                const mainVisible = main && (main.style.display === 'flex' || main.style.display === 'block');
                 if (bodyLocked && !pol && mainVisible) {
                     this.clearPostLoginOverlayLock();
                     if (typeof Utils !== 'undefined' && Utils.safeWarn) {
@@ -2840,7 +2841,7 @@ window.UI = {
                     }
                 }
                 const lo = document.getElementById('loading-overlay');
-                const overlayVisible = lo && window.getComputedStyle(lo).display !== 'none' && window.getComputedStyle(lo).visibility !== 'hidden';
+                const overlayVisible = lo && (lo.dataset.loadingVisible === '1' || (lo.style.display !== 'none' && lo.style.display !== ''));
                 if (overlayVisible && mainVisible && typeof window._hseLoadingSince !== 'number') {
                     this.cleanupStaleStartupLayers();
                 } else if (overlayVisible && typeof window._hseLoadingSince === 'number' && (Date.now() - window._hseLoadingSince > 120000)) {
@@ -8077,9 +8078,8 @@ window.UI = {
                     try {
                         const dropdown = document.getElementById(dropdownId);
                         if (dropdown) {
-                            const computedStyle = window.getComputedStyle(dropdown);
-                            const isVisible = dropdown.style.display === 'flex' ||
-                                (computedStyle.display === 'flex' && computedStyle.visibility !== 'hidden' && computedStyle.opacity !== '0');
+                            // ✅ تحسين أداء فائق: فحص سريع للغاية للـ inline style أولاً لتجنب استدعاء getComputedStyle المكلف في كل نقرة على الشاشة
+                            const isVisible = dropdown.style.display === 'flex';
                             
                             if (isVisible && e && e.target) {
                                 // ✅ إصلاح: استخدام selector يشمل جميع أزرار الإشعارات
