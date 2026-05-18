@@ -447,9 +447,14 @@ window.Auth = {
                         loginResult.message.includes('disabled') ||
                         loginResult.errorCode === 'ACCOUNT_DISABLED';
                     if (isHardServerError) {
-                        Notification.error(loginResult.message);
-                        await Utils.RateLimiter.recordFailedAttempt(email);
-                        return { success: false, message: loginResult.message };
+                        let hardErrMsg = loginResult.message;
+                        try {
+                            await Utils.RateLimiter.recordFailedAttempt(email);
+                        } catch (rateLimitErr) {
+                            hardErrMsg = rateLimitErr.message || hardErrMsg;
+                        }
+                        Notification.error(hardErrMsg);
+                        return { success: false, message: hardErrMsg };
                     }
                     // أخطاء "غير صحيحة" تسمح بالمحاولة المحلية كـ Fallback
                 }
