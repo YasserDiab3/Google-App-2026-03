@@ -104,6 +104,14 @@ function addUserToSheet(userData) {
         }
     }
     
+    // ✅ حماية: '***' هي قيمة sentinel — لا نحسب hash لها أبداً
+    if (processedData.passwordHash === '***') {
+        processedData.passwordHash = '';
+    }
+    if (processedData.password === '***') {
+        processedData.password = '';
+    }
+
     // التحقق من وجود كلمة مرور وتشفيرها إذا لزم الأمر
     if (processedData.password && typeof processedData.password === 'string' && processedData.password.trim() !== '') {
         // إذا كانت كلمة المرور غير مشفرة، قم بتشفيرها
@@ -117,15 +125,12 @@ function addUserToSheet(userData) {
             processedData.password = '***';
         }
     } else if (processedData.passwordHash && typeof processedData.passwordHash === 'string') {
-        // إذا كان passwordHash موجوداً، تأكد من أنه مشفر
+        // إذا كان passwordHash موجوداً وصالحاً، تأكد من أنه مشفر
         if (!isSha256Hash(processedData.passwordHash)) {
-            // إذا كان passwordHash غير مشفر، قم بتشفيره
-            processedData.passwordHash = hashPassword(processedData.passwordHash);
+            // هاش غير صالح — لا نحفظه
+            processedData.passwordHash = '';
         }
-        // تعيين password كقيمة مخفية
-        if (!processedData.password || processedData.password === '') {
-            processedData.password = '***';
-        }
+        processedData.password = '***';
     } else {
         // لا توجد كلمة مرور - تعيين قيم افتراضية
         processedData.password = '***';
@@ -223,8 +228,16 @@ function updateUserInSheet(userId, updateData) {
             }
         }
         
+        // ✅ حماية: '***' هي قيمة sentinel تعني "لا تغيّر كلمة المرور" — لا نحسب hash لها أبداً
+        if (processedUpdate.passwordHash === '***') {
+            delete processedUpdate.passwordHash;
+        }
+        if (processedUpdate.password === '***' || processedUpdate.password === '') {
+            delete processedUpdate.password;
+        }
+
         // إذا تم تحديث كلمة المرور، قم بتشفيرها
-        if (processedUpdate.password && typeof processedUpdate.password === 'string' && processedUpdate.password.trim() !== '' && processedUpdate.password !== '***') {
+        if (processedUpdate.password && typeof processedUpdate.password === 'string' && processedUpdate.password.trim() !== '') {
             // إذا كانت كلمة المرور غير مشفرة، قم بتشفيرها
             if (!isSha256Hash(processedUpdate.password)) {
                 processedUpdate.passwordHash = hashPassword(processedUpdate.password);
@@ -234,22 +247,16 @@ function updateUserInSheet(userId, updateData) {
             // حفظ password كقيمة مخفية للأمان
             processedUpdate.password = '***';
         } else if (processedUpdate.passwordHash && typeof processedUpdate.passwordHash === 'string') {
-            // إذا كان passwordHash موجوداً، تأكد من أنه مشفر
+            // إذا كان passwordHash موجوداً وصالحاً، تأكد من أنه مشفر
             if (!isSha256Hash(processedUpdate.passwordHash)) {
-                processedUpdate.passwordHash = hashPassword(processedUpdate.passwordHash);
-            }
-            // تعيين password كقيمة مخفية إذا لم يكن موجوداً
-            if (!processedUpdate.password || processedUpdate.password === '') {
-                processedUpdate.password = '***';
-            }
-        } else {
-            // إذا لم يتم تحديث كلمة المرور، احتفظ بالقيم الحالية
-            if (!processedUpdate.password) {
-                processedUpdate.password = data[userIndex].password || '***';
-            }
-            if (!processedUpdate.passwordHash) {
+                // هاش غير صالح — تجاهله واحتفظ بالموجود في الشيت
                 processedUpdate.passwordHash = data[userIndex].passwordHash || '';
             }
+            processedUpdate.password = '***';
+        } else {
+            // لم يُرسل passwordHash أو password — احتفظ بالقيم الحالية من الشيت
+            processedUpdate.password = data[userIndex].password || '***';
+            processedUpdate.passwordHash = data[userIndex].passwordHash || '';
         }
         
         // ✅ حماية من فقد الصلاحيات:
