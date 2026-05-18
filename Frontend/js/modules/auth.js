@@ -138,13 +138,11 @@ window.Auth = {
             foundUser.passwordHash = hashNorm;
 
             const generateSessionId = () => {
-                const timestamp = Date.now();
-                const random = Math.random().toString(36).substring(2, 15);
-                const userAgent = navigator.userAgent.substring(0, 50);
-                const userAgentHash = userAgent.split('').reduce((acc, char) => {
-                    return ((acc << 5) - acc) + char.charCodeAt(0);
-                }, 0).toString(36);
-                return `SESS_${timestamp}_${random}_${userAgentHash}`;
+                const timestamp = Date.now().toString(36);
+                const arr = new Uint8Array(16);
+                crypto.getRandomValues(arr);
+                const random = Array.from(arr).map(b => b.toString(16).padStart(2, '0')).join('');
+                return `SESS_${timestamp}_${random}`;
             };
 
             let currentSessionId = sessionStorage.getItem('hse_session_id');
@@ -589,13 +587,9 @@ window.Auth = {
         // معرف الجلسة قبل تسجيل «login» في السجل لربط كل الأحداث بنفس الجلسة
         let currentSessionId = sessionStorage.getItem('hse_session_id');
         if (!currentSessionId) {
-            const timestamp = Date.now();
-            const random = Math.random().toString(36).substring(2, 15);
-            const userAgent = navigator.userAgent.substring(0, 50);
-            const userAgentHash = userAgent.split('').reduce((acc, char) => {
-                return ((acc << 5) - acc) + char.charCodeAt(0);
-            }, 0).toString(36);
-            currentSessionId = `SESS_${timestamp}_${random}_${userAgentHash}`;
+            const _arr = new Uint8Array(16);
+            crypto.getRandomValues(_arr);
+            currentSessionId = `SESS_${Date.now().toString(36)}_${Array.from(_arr).map(b => b.toString(16).padStart(2,'0')).join('')}`;
             sessionStorage.setItem('hse_session_id', currentSessionId);
         }
         AppState.currentUser.sessionId = currentSessionId;
@@ -956,6 +950,11 @@ window.Auth = {
             window.UI.stopBackgroundSync();
         }
 
+        // ✅ تنظيف كامل لـ RealtimeSyncManager (intervals + BroadcastChannel + polling)
+        if (typeof window.RealtimeSyncManager !== 'undefined' && typeof window.RealtimeSyncManager.cleanup === 'function') {
+            try { window.RealtimeSyncManager.cleanup(); } catch (_e) { /* ignore */ }
+        }
+
         // إيقاف نظام عدم النشاط
         if (typeof InactivityManager !== 'undefined') {
             InactivityManager.stop();
@@ -989,10 +988,10 @@ window.Auth = {
                 users[userIndex].activeSessionId = null; // مسح معرف الجلسة عند تسجيل الخروج
                 AppState.appData.users = users;
                 
-                if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
-                    window.DataManager.save();
+                if (typeof window.DataManager !== 'undefined' && window.DataManager.saveImmediate) {
+                    window.DataManager.saveImmediate();
                 }
-                
+
                 if (typeof GoogleIntegration !== 'undefined' && GoogleIntegration.sendToAppsScript &&
                     typeof Utils !== 'undefined' && typeof Utils.hasCloudBackendSync === 'function' && Utils.hasCloudBackendSync()) {
                     const userId = users[userIndex].id;
@@ -1982,9 +1981,10 @@ window.Auth = {
         let tempPassword = newPassword;
         if (!tempPassword) {
             // إنشاء كلمة مرور مؤقتة قوية
-            const randomPart = Math.random().toString(36).substring(2, 10);
-            const timestamp = Date.now().toString(36).substring(5, 9);
-            tempPassword = 'Temp' + randomPart + timestamp + '!';
+            const _tArr = new Uint8Array(6);
+            crypto.getRandomValues(_tArr);
+            const randomPart = Array.from(_tArr).map(b => b.toString(16).padStart(2,'0')).join('');
+            tempPassword = 'Tmp@' + randomPart + '!';
         }
 
         // تحديث كلمة المرور

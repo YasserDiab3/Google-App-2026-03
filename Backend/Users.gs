@@ -86,7 +86,7 @@ function getUsersMeta() {
         };
     } catch (error) {
         Logger.log('Error getUsersMeta: ' + error.toString());
-        return { success: false, message: 'Failed to get users meta: ' + error.toString() };
+        return { success: false, message: 'حدث خطأ في جلب بيانات المستخدمين.' };
     }
 }
 
@@ -295,7 +295,7 @@ function updateUserInSheet(userId, updateData) {
         return saveRes;
     } catch (error) {
         Logger.log('Error updating user: ' + error.toString());
-        return { success: false, message: 'حدث خطأ أثناء التحديث: ' + error.toString() };
+        return { success: false, message: 'حدث خطأ أثناء التحديث.' };
     }
 }
 
@@ -372,7 +372,7 @@ function resetUserPassword(userId, newPassword) {
         }
     } catch (error) {
         Logger.log('Error resetting user password: ' + error.toString());
-        return { success: false, message: 'حدث خطأ أثناء إعادة تعيين كلمة المرور: ' + error.toString() };
+        return { success: false, message: 'حدث خطأ أثناء إعادة تعيين كلمة المرور.' };
     }
 }
 
@@ -468,7 +468,7 @@ function deleteUserFromSheet(userId, userData) {
         Logger.log('Error stack: ' + (error.stack || 'No stack trace'));
         return { 
             success: false, 
-            message: 'حدث خطأ أثناء حذف المستخدم: ' + error.toString() 
+            message: 'حدث خطأ أثناء حذف المستخدم.' 
         };
     }
 }

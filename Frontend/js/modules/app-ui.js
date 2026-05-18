@@ -494,10 +494,10 @@ window.UI = {
                                 <td>${plan.lastTested ? Utils.formatDate(plan.lastTested) : '<span class="text-xs text-gray-400">لم يتم الاختبار</span>'}</td>
                                 <td>
                                     <div class="flex gap-2">
-                                        <button class="btn-icon btn-icon-info" title="عرض التفاصيل" onclick="Emergency.viewPlan('${plan.id}')">
+                                        <button class="btn-icon btn-icon-info" title="عرض التفاصيل" data-plan-id="${Utils.escapeHTML(plan.id)}" data-action="view-plan">
                                             <i class="fas fa-eye"></i>
                                         </button>
-                                        <button class="btn-icon btn-icon-primary" title="تعديل" onclick="Emergency.showPlanForm(${JSON.stringify(plan).replace(/"/g, '&quot;')})">
+                                        <button class="btn-icon btn-icon-primary" title="تعديل" data-plan-id="${Utils.escapeHTML(plan.id)}" data-action="edit-plan">
                                             <i class="fas fa-edit"></i>
                                         </button>
                                     </div>
@@ -508,6 +508,20 @@ window.UI = {
                 </table>
             </div>
         `;
+        // delegate listener آمن بدلاً من onclick attributes
+        container.addEventListener('click', function _planDelegate(e) {
+            const btn = e.target.closest('[data-action]');
+            if (!btn) return;
+            const planId = btn.dataset.planId;
+            const act = btn.dataset.action;
+            if (act === 'view-plan') {
+                if (typeof Emergency !== 'undefined' && Emergency.viewPlan) Emergency.viewPlan(planId);
+            } else if (act === 'edit-plan') {
+                const planData = (typeof Emergency !== 'undefined' && Emergency.getPlans ? Emergency.getPlans() : [])
+                    .find(function(p){ return p.id === planId; });
+                if (planData && typeof Emergency !== 'undefined' && Emergency.showPlanForm) Emergency.showPlanForm(planData);
+            }
+        }, { once: false });
     },
 
     buildTimelineEntry(type, alert, description) {
@@ -1108,7 +1122,7 @@ window.UI = {
                 </div>
                 <div class="modal-footer flex justify-end gap-2">
                     <button class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">إغلاق</button>
-                    <button class="btn-primary" onclick="Emergency.showPlanForm(${JSON.stringify(plan).replace(/"/g, '&quot;')}); this.closest('.modal-overlay').remove();">
+                    <button class="btn-primary" data-plan-id="${Utils.escapeHTML(plan.id)}" data-action="edit-plan-modal">
                         <i class="fas fa-edit ml-2"></i>تعديل
                     </button>
                 </div>
@@ -1724,7 +1738,7 @@ window.UI = {
                 </div>
                 <div class="modal-footer flex justify-end gap-2">
                     <button class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">إغلاق</button>
-                    <button class="btn-primary" onclick="Emergency.showPlanForm(${JSON.stringify(plan).replace(/"/g, '&quot;')}); this.closest('.modal-overlay').remove();">
+                    <button class="btn-primary" data-plan-id="${Utils.escapeHTML(plan.id)}" data-action="edit-plan-modal">
                         <i class="fas fa-edit ml-2"></i>تعديل
                     </button>
                 </div>
