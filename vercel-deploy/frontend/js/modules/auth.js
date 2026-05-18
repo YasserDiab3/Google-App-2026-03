@@ -329,87 +329,23 @@ window.Auth = {
             return { success: false, message: errorMessage };
         }
 
-        // استخدام البيانات المحلية أولاً لتسريع تسجيل الدخول
-        // ⚠️ مهم: في أول تشغيل (users=0) يجب أن ننتظر مزامنة Users قبل محاولة التحقق من الحساب
+        // ✅ تحسين الأداء: لا نقوم بمزامنة Users قبل تسجيل الدخول.
+        // الخادم هو مصدر الحقيقة للمصادقة — تجنّب cold-start مزدوج.
+        // البيانات المحلية تُستخدم كـ fallback فقط إذا فشل الخادم.
         let localUsersCount = Array.isArray(AppState.appData.users) ? AppState.appData.users.length : 0;
         const canSyncUsers = !!(typeof Utils !== 'undefined' && typeof Utils.hasCloudBackendSync === 'function' && Utils.hasCloudBackendSync() &&
             typeof GoogleIntegration !== 'undefined' &&
             typeof GoogleIntegration.syncUsers === 'function');
 
-        if (localUsersCount > 0) {
-            Utils.safeLog(`📊 استخدام ${localUsersCount} مستخدم محلي - تسجيل دخول سريع`);
-        } else if (canSyncUsers) {
-            Utils.safeLog('🔄 لا توجد بيانات محلية - مزامنة Users من Google Sheets قبل تسجيل الدخول...');
+        // تحميل سريع للبيانات المحلية فقط (بدون شبكة) لضمان توفّر fallback إذا فشل الخادم
+        if (localUsersCount === 0 && typeof window.DataManager !== 'undefined' && window.DataManager.load) {
             try {
-                const timeoutMs = 4500; // مهلة كافية لجلب Users الجدد من الشيت قبل التحقق من الحساب
-                const timeoutPromise = new Promise(resolve => setTimeout(() => resolve(false), timeoutMs));
-                const syncOk = await Promise.race([GoogleIntegration.syncUsers(true), timeoutPromise]);
-                if (syncOk) {
-                    Utils.safeLog('✅ تم تحديث قائمة المستخدمين من Google Sheets');
-                } else {
-                    Utils.safeWarn('⚠️ تعذر مزامنة Users في الوقت المحدد - سيتم المتابعة بالبيانات المحلية');
-                    // ✅ إصلاح: محاولة تحميل البيانات المحلية إذا فشلت المزامنة
-                    if (typeof window.DataManager !== 'undefined' && window.DataManager.load) {
-                        try {
-                            await Promise.race([
-                                window.DataManager.load(),
-                                new Promise(resolve => setTimeout(resolve, 500))
-                            ]);
-                            localUsersCount = Array.isArray(AppState.appData.users) ? AppState.appData.users.length : 0;
-                            if (localUsersCount > 0) {
-                                Utils.safeLog(`✅ تم تحميل ${localUsersCount} مستخدم من البيانات المحلية`);
-                            }
-                        } catch (loadError) {
-                            Utils.safeWarn('⚠️ فشل تحميل البيانات المحلية:', loadError);
-                        }
-                    }
-                }
-            } catch (error) {
-                const errorMsg = error?.message || '';
-                const errorStr = errorMsg.toLowerCase();
-                const isNormalError = errorMsg.includes('معرف Google Sheets غير محدد') ||
-                    errorMsg.includes('غير متاح') ||
-                    errorMsg.includes('not available') ||
-                    errorStr.includes('google apps script غير مفعل');
-                
-                if (!isNormalError) {
-                    Utils.safeWarn('⚠️ فشل مزامنة Users من Google Sheets:', error);
-                    // ✅ إصلاح: محاولة تحميل البيانات المحلية عند الفشل
-                    if (typeof window.DataManager !== 'undefined' && window.DataManager.load) {
-                        try {
-                            await Promise.race([
-                                window.DataManager.load(),
-                                new Promise(resolve => setTimeout(resolve, 500))
-                            ]);
-                            localUsersCount = Array.isArray(AppState.appData.users) ? AppState.appData.users.length : 0;
-                            if (localUsersCount > 0) {
-                                Utils.safeLog(`✅ تم تحميل ${localUsersCount} مستخدم من البيانات المحلية بعد فشل المزامنة`);
-                            }
-                        } catch (loadError) {
-                            Utils.safeWarn('⚠️ فشل تحميل البيانات المحلية:', loadError);
-                        }
-                    }
-                }
-            }
-            // تحديث العداد بعد محاولة المزامنة
-            localUsersCount = Array.isArray(AppState.appData.users) ? AppState.appData.users.length : 0;
-        } else {
-            Utils.safeLog(`📊 الخادم الخلفي غير جاهز للمزامنة - استخدام ${localUsersCount} مستخدم محلي`);
-            // ✅ إصلاح: محاولة تحميل البيانات المحلية إذا كانت متاحة
-            if (localUsersCount === 0 && typeof window.DataManager !== 'undefined' && window.DataManager.load) {
-                try {
-                    await Promise.race([
-                        window.DataManager.load(),
-                        new Promise(resolve => setTimeout(resolve, 500))
-                    ]);
-                    localUsersCount = Array.isArray(AppState.appData.users) ? AppState.appData.users.length : 0;
-                    if (localUsersCount > 0) {
-                        Utils.safeLog(`✅ تم تحميل ${localUsersCount} مستخدم من البيانات المحلية`);
-                    }
-                } catch (loadError) {
-                    Utils.safeWarn('⚠️ فشل تحميل البيانات المحلية:', loadError);
-                }
-            }
+                await Promise.race([
+                    window.DataManager.load(),
+                    new Promise(resolve => setTimeout(resolve, 400))
+                ]);
+                localUsersCount = Array.isArray(AppState.appData.users) ? AppState.appData.users.length : 0;
+            } catch (_e) { /* تجاهل: سنعتمد على الخادم */ }
         }
 
         // ملاحظة: تم إزالة المستخدمين الثابتين لأسباب أمنية
@@ -434,12 +370,22 @@ window.Auth = {
                     loginMethod = 'server';
                 } else if (loginResult && loginResult.message) {
                     Utils.safeWarn('❌ فشل تسجيل الدخول عبر الخادم:', loginResult.message);
-                    // إذا كان الخطأ هو "بيانات الاعتماد غير صحيحة" فلا داعي للمحاولة محلياً
-                    if (loginResult.message.includes('غير صحيحة')) {
-                        Notification.error(loginResult.message);
-                        await Utils.RateLimiter.recordFailedAttempt(email);
-                        return { success: false, message: loginResult.message };
+                    // إذا كان الخطأ صريحاً من الخادم (معطل أو خطأ إداري) نوقف فوراً
+                    // لكن "غير صحيحة" وحدها لا تكفي لمنع الـ Fallback المحلي في حال عدم التزامن
+                    const isHardServerError = loginResult.message.includes('معطل') ||
+                        loginResult.message.includes('disabled') ||
+                        loginResult.errorCode === 'ACCOUNT_DISABLED';
+                    if (isHardServerError) {
+                        let hardErrMsg = loginResult.message;
+                        try {
+                            await Utils.RateLimiter.recordFailedAttempt(email);
+                        } catch (rateLimitErr) {
+                            hardErrMsg = rateLimitErr.message || hardErrMsg;
+                        }
+                        Notification.error(hardErrMsg);
+                        return { success: false, message: hardErrMsg };
                     }
+                    // أخطاء "غير صحيحة" تسمح بالمحاولة المحلية كـ Fallback
                 }
             } catch (serverError) {
                 Utils.safeError('⚠️ خطأ في الاتصال بالخادم أثناء تسجيل الدخول:', serverError);
