@@ -306,8 +306,12 @@ function doPost(e) {
         const isReadOnlyAction = readOnlyActions.includes(action);
         const isSensitiveAction = sensitiveActions.includes(action);
 
+        // العمليات المعفاة من CSRF (pre-authentication — لا يمكن أن تملك CSRF token صالح)
+        const csrfExemptActions = ['login', 'initializeSheets'];
+        const isCsrfExempt = csrfExemptActions.includes(action);
+
         // التحقق من CSRF Token - إلزامي لجميع العمليات غير القراءة
-        if (isSensitiveAction || (!isReadOnlyAction && action !== 'initializeSheets')) {
+        if (!isCsrfExempt && (isSensitiveAction || !isReadOnlyAction)) {
             if (!requestToken || requestToken.length < 32) {
                 Logger.log('Security: CSRF token missing or too short for action: ' + action);
                 const errorOutput = ContentService.createTextOutput(JSON.stringify({
