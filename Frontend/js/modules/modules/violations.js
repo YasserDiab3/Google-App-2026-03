@@ -3110,23 +3110,6 @@ const Violations = {
                     }
                 }
 
-                // رفع الصورة إلى Google Drive
-                if (photo && photo.startsWith('data:')) {
-                    try {
-                        const uploadResult = await GoogleIntegration.uploadFileToDrive?.(
-                            photo,
-                            `violation_${violationData?.id || Utils.generateId('VIOLATION')}_${Date.now()}.jpg`,
-                            'image/jpeg',
-                            'Violations'
-                        );
-                        if (uploadResult?.success) {
-                            photo = uploadResult.directLink || uploadResult.shareableLink || photo;
-                        }
-                    } catch (err) {
-                        if (AppState.debugMode) Utils.safeWarn('خطأ في رفع الصورة:', err);
-                    }
-                }
-
                 // إنشاء كائن البيانات
                 const violationTypeOption = violationTypeSelect?.selectedOptions?.[0];
                 const violationTypeId = violationTypeOption?.getAttribute('data-type-id') || '';
@@ -3213,33 +3196,77 @@ const Violations = {
                     window.DataManager.save();
                 }
 
-                // مزامنة الشيت قبل إعادة بناء الواجهة حتى لا تُستبدل القائمة بنسخة قديمة من الخادم
-                let remoteOk = true;
-                try {
-                    if (typeof GoogleIntegration !== 'undefined' && GoogleIntegration.autoSave) {
-                        const saveRes = await GoogleIntegration.autoSave('Violations', AppState.appData.violations);
-                        if (saveRes && saveRes.success === false) remoteOk = false;
-                    }
-                } catch (err) {
-                    remoteOk = false;
-                    if (AppState.debugMode) Utils.safeWarn('خطأ في حفظ Google Sheets:', err);
-                }
-                if (remoteOk) {
-                    try { localStorage.setItem('violations_last_sync', String(Date.now())); } catch (eLs) { /* ignore */ }
-                } else {
-                    Notification.warning('تم الحفظ محلياً لكن فشل الحفظ في Google Sheets');
-                }
-
-                // 2. إغلاق النموذج بعد اكتمال الحفظ البعيد (عند التوفر)
+                // 2. إغلاق النموذج بشكل مباشر وسريع جداً بدون أي تأخير
                 modal.remove();
 
-                // 3. عرض رسالة نجاح
-                Notification.success(`تم ${isEdit ? 'تحديث' : 'تسجيل'} المخالفة بنجاح`);
+                // 3. عرض رسالة نجاح فورية (محلية أولاً مع إشارة جاري المزامنة)
+                Notification.success(`تم ${isEdit ? 'تحديث' : 'تسجيل'} المخالفة بنجاح وجاري المزامنة في الخلفية...`);
 
-                // 4. تحديث القائمة والكروت من نفس البيانات المحدثة
+                // 4. تحديث القائمة والكروت فورا لتظهر البيانات المحدثة محليا أمام المستخدم
                 if (typeof Violations !== 'undefined' && Violations.load) {
                     Violations.load();
                 }
+
+                // 5. المزامنة والرفع في الخلفية دون تعطيل واجهة المستخدم
+                const performBackgroundSync = async (localPhoto) => {
+                    let finalPhoto = localPhoto;
+                    let hasUpdatedPhoto = false;
+
+                    // رفع الصورة إلى Google Drive في الخلفية إذا كانت base64
+                    if (localPhoto && localPhoto.startsWith('data:')) {
+                        try {
+                            const uploadResult = await GoogleIntegration.uploadFileToDrive?.(
+                                localPhoto,
+                                `violation_${formData.id}_${Date.now()}.jpg`,
+                                'image/jpeg',
+                                'Violations'
+                            );
+                            if (uploadResult?.success) {
+                                finalPhoto = uploadResult.directLink || uploadResult.shareableLink || localPhoto;
+                                hasUpdatedPhoto = true;
+                            }
+                        } catch (err) {
+                            if (AppState.debugMode) Utils.safeWarn('خطأ في رفع الصورة في الخلفية:', err);
+                        }
+                    }
+
+                    // إذا تم تحديث الصورة البعيدة، نحدث السجل المحلي
+                    if (hasUpdatedPhoto) {
+                        const currentViolations = AppState.appData.violations || [];
+                        const index = currentViolations.findIndex(v => v.id === formData.id);
+                        if (index !== -1) {
+                            currentViolations[index].photo = finalPhoto;
+                            formData.photo = finalPhoto;
+                            if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
+                                window.DataManager.save();
+                            }
+                            // إعادة تحميل خفيفة لتحديث صورة الكارت إذا كانت معروضة
+                            if (typeof Violations !== 'undefined' && Violations.load) {
+                                Violations.load();
+                            }
+                        }
+                    }
+
+                    // المزامنة مع Google Sheets في الخلفية
+                    try {
+                        if (typeof GoogleIntegration !== 'undefined' && GoogleIntegration.autoSave) {
+                            const saveRes = await GoogleIntegration.autoSave('Violations', AppState.appData.violations);
+                            if (saveRes && saveRes.success !== false) {
+                                try { localStorage.setItem('violations_last_sync', String(Date.now())); } catch (eLs) { /* ignore */ }
+                                if (AppState.debugMode) Utils.safeLog('Background autoSave succeeded');
+                            } else {
+                                if (AppState.debugMode) Utils.safeWarn('Background autoSave returned failure');
+                            }
+                        }
+                    } catch (err) {
+                        if (AppState.debugMode) Utils.safeWarn('خطأ في حفظ Google Sheets في الخلفية:', err);
+                    }
+                };
+
+                // إطلاق المهمة في الخلفية دون await
+                performBackgroundSync(photo).catch(err => {
+                    Utils.safeError('خطأ غير متوقع في مزامنة الخلفية للمخالفة:', err);
+                });
 
             } catch (error) {
                 Utils.safeError('❌ خطأ في حفظ المخالفة:', error);
