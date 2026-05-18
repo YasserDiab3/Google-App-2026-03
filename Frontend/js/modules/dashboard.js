@@ -3066,6 +3066,22 @@ const Dashboard = {
             }
             if (!isNaN(found)) sum += Math.round(found);
         });
+
+        // تعديل ذكي: إذا كانت قيمة العمالة المسجلة في المقاولين صفراً لعدم وجود الحقول في الهيكل الحالي
+        // نقوم بإرجاع عدد المقاولين المعتمدين والنشطين أنفسهم بدلاً من 0
+        if (sum === 0) {
+            const activeContractors = approvedContractors.filter(rec => 
+                rec && 
+                rec.active !== false && 
+                rec.deactivated !== true && 
+                rec.isActive !== 'inactive' && 
+                rec.isActive !== false && 
+                rec.isActive !== 'false' && 
+                rec.isActive !== 'FALSE'
+            );
+            return activeContractors.length;
+        }
+
         return sum;
     },
 
