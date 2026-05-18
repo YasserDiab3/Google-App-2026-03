@@ -474,10 +474,13 @@ window.Auth = {
             }
             let foundUser = users.find(u => u && u.email && u.email.toLowerCase().trim() === email);
 
-            // ✅ Bootstrap Support — يُتاح دائماً عند غياب المستخدمين المحليين وفشل الاتصال بالخادم
+            // ✅ Bootstrap Support — حساب الطوارئ للدخول الأول أو عند تعذر الاتصال
+            // يُتاح دائماً لـ admin@hse.local إذا لم يكن مُعطَّلاً (أو عند انعدام الإنترنت والبيانات)
             const isOfflineWithNoUsers = !canSyncUsers && users.length === 0;
             const bootstrapAllowed = !this.isBootstrapDisabled() || isOfflineWithNoUsers;
-            if (!foundUser && Array.isArray(users) && users.length === 0 && bootstrapAllowed && this.isBootstrapEmail(email)) {
+            // Bootstrap Admin يعمل حتى لو فيه مستخدمون آخرون في الـ cache
+            // (لأن admin@hse.local هو حساب طوارئ وليس حساباً عادياً)
+            if (!foundUser && bootstrapAllowed && this.isBootstrapEmail(email)) {
                 foundUser = {
                     id: 'BOOTSTRAP_ADMIN',
                     name: 'مدير النظام',
@@ -512,8 +515,12 @@ window.Auth = {
             }
 
             if (!passwordMatch) {
-                await Utils.RateLimiter.recordFailedAttempt(email);
-                const errorMessage = this._getLoginErrorMessage();
+                let errorMessage = this._getLoginErrorMessage();
+                try {
+                    await Utils.RateLimiter.recordFailedAttempt(email);
+                } catch (rateLimitErr) {
+                    errorMessage = rateLimitErr.message || errorMessage;
+                }
                 Notification.error(errorMessage);
                 return { success: false, message: errorMessage };
             }

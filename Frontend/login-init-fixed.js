@@ -1,8 +1,12 @@
-console.log('🟢 login-init-fixed.js loaded successfully!');
-
 // دالة log في النطاق العام — تُغطَّى داخل الـ IIFE بنسخة أكثر تفصيلاً
 // ضرورية لـ handleLogin والدوال الخارج عن الـ IIFE
-var log = function() { try { console.log.apply(console, arguments); } catch(e) {} };
+var log = function() {
+    try {
+        if (window.Utils && typeof window.Utils.safeLog === 'function') {
+            window.Utils.safeLog.apply(window.Utils, arguments);
+        }
+    } catch(e) {}
+};
 
 // ===== تهيئة مباشرة لشاشة تسجيل الدخول - نسخة محسنة ومحلولة =====
 
@@ -1008,9 +1012,9 @@ function checkDependencies() {
     }
     
     function setupLoginForm() {
-        console.log('🚀 setupLoginForm called!');
+        log('🚀 setupLoginForm called!');
         const loginForm = document.getElementById('login-form');
-        console.log('🔍 Login form found:', loginForm);
+        log('🔍 Login form found:', loginForm);
         
         if (!loginForm) {
             console.error('❌ Login form not found!');
