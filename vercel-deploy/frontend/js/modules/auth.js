@@ -282,6 +282,7 @@ window.Auth = {
      * تسجيل الدخول
      */
     async login(email, password, remember = false) {
+        let foundUser = null; // ✅ تعريفه في النطاق الخارجي لتجنب ReferenceError
         // التحقق من وجود DataManager قبل البدء
         if (typeof window.DataManager === 'undefined') {
             Utils.safeError('❌ خطأ فادح: DataManager غير محمل');
@@ -450,7 +451,7 @@ window.Auth = {
         if (!user) {
             Utils.safeLog('🏠 محاولة التحقق من الحساب محلياً...');
             let users = AppState.appData.users || [];
-            let foundUser = users.find(u => u && u.email && u.email.toLowerCase().trim() === email);
+            foundUser = users.find(u => u && u.email && u.email.toLowerCase().trim() === email);
 
             // ✅ Bootstrap Support
             if (!foundUser && Array.isArray(users) && users.length === 0 && !this.isBootstrapDisabled() && this.isBootstrapEmail(email)) {

@@ -290,6 +290,7 @@ window.Auth = {
      * تسجيل الدخول
      */
     async login(email, password, remember = false) {
+        let foundUser = null; // ✅ تعريفه في النطاق الخارجي لتجنب ReferenceError
         // التحقق من وجود DataManager قبل البدء
         if (typeof window.DataManager === 'undefined') {
             Utils.safeError('❌ خطأ فادح: DataManager غير محمل');
@@ -413,7 +414,7 @@ window.Auth = {
                     users[localUserIdx].activeSessionId = null;
                 }
             }
-            let foundUser = users.find(u => u && u.email && u.email.toLowerCase().trim() === email);
+            foundUser = users.find(u => u && u.email && u.email.toLowerCase().trim() === email);
 
             // ✅ Bootstrap Support — حساب الطوارئ للدخول الأول أو عند تعذر الاتصال
             // يُتاح دائماً لـ admin@hse.local إذا لم يكن مُعطَّلاً (أو عند انعدام الإنترنت والبيانات)
