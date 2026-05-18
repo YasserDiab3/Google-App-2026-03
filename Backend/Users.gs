@@ -505,6 +505,52 @@ function getUserRecordFromUsersSheetByEmail_(email) {
 }
 
 /**
+ * تحديث سريع لحقول تسجيل الدخول دون قراءة الشيت كاملاً.
+ * يستخدم getValues على عمود ID فقط لإيجاد الصف ثم setValue للخلايا المستهدفة.
+ * @param {string} userId
+ * @param {{lastLogin?:string,isOnline?:boolean,activeSessionId?:string}} fields
+ */
+function _fastTouchUserLoginFields_(userId, fields) {
+    if (!userId || !fields) return;
+    const spreadsheetId = getSpreadsheetId();
+    if (!spreadsheetId) return;
+    const ss = SpreadsheetApp.openById(spreadsheetId);
+    const sheet = ss.getSheetByName('Users');
+    if (!sheet) return;
+
+    const lastRow = sheet.getLastRow();
+    const lastCol = sheet.getLastColumn();
+    if (lastRow < 2 || lastCol < 1) return;
+
+    const headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0].map(h => String(h || '').trim());
+    const idCol = headers.indexOf('id');
+    if (idCol === -1) return;
+
+    const ids = sheet.getRange(2, idCol + 1, lastRow - 1, 1).getValues();
+    const target = String(userId).trim();
+    let rowIndex = -1;
+    for (let i = 0; i < ids.length; i++) {
+        if (String(ids[i][0] || '').trim() === target) { rowIndex = i + 2; break; }
+    }
+    if (rowIndex === -1) return;
+
+    const cellWrites = [];
+    if ('lastLogin' in fields) {
+        const c = headers.indexOf('lastLogin');
+        if (c !== -1) cellWrites.push([rowIndex, c + 1, fields.lastLogin]);
+    }
+    if ('isOnline' in fields) {
+        const c = headers.indexOf('isOnline');
+        if (c !== -1) cellWrites.push([rowIndex, c + 1, fields.isOnline]);
+    }
+    if ('activeSessionId' in fields) {
+        const c = headers.indexOf('activeSessionId');
+        if (c !== -1) cellWrites.push([rowIndex, c + 1, fields.activeSessionId]);
+    }
+    cellWrites.forEach(w => sheet.getRange(w[0], w[1]).setValue(w[2]));
+}
+
+/**
  * المصادقة على المستخدم في جانب الخادم (Server-side Authentication)
  * دالة جديدة من Jules — تتحقق من المستخدم في الـ Backend مباشرةً
  * @param {string} email
@@ -553,12 +599,12 @@ function loginUser(email, password) {
             updateUserInSheet(user.id, { passwordHash: newHash, password: '***' });
         }
 
-        // تسجيل وقت الدخول وإعادة تعيين حالة الجلسة السابقة
+        // تسجيل وقت الدخول — مسار سريع (تحديث خلايا مستهدفة فقط بدون قراءة الشيت كاملاً)
         try {
-            updateUserInSheet(user.id, {
+            _fastTouchUserLoginFields_(user.id, {
                 lastLogin: new Date().toISOString(),
                 isOnline: false,
-                activeSessionId: null
+                activeSessionId: ''
             });
         } catch (loginTimeError) {
             Logger.log('Warning: Could not update lastLogin: ' + loginTimeError.toString());
