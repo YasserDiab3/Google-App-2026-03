@@ -3285,9 +3285,18 @@ const Clinic = {
             const year = visitDate.getFullYear();
             const month = visitDate.getMonth();
 
-            const allVisits = (AppState.appData.clinicVisits || []).concat(
+            const rawClinicSources = (AppState.appData.clinicVisits || []).concat(
                 Array.isArray(AppState.appData.clinicContractorVisits) ? AppState.appData.clinicContractorVisits : []
             );
+            const seenClinicIds = new Set();
+            const allVisits = rawClinicSources.filter(c => {
+                if (!c) return false;
+                const id = String(c.id || '').trim();
+                if (!id) return true;
+                if (seenClinicIds.has(id)) return false;
+                seenClinicIds.add(id);
+                return true;
+            });
 
             const isSameMonth = (v) => {
                 if (!v || !v.visitDate) return false;

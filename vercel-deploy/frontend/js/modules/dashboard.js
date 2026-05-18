@@ -2397,7 +2397,16 @@ const Dashboard = {
         const sickLeave = Array.isArray(serverDetailedAnalytics?.sickLeave)
             ? serverDetailedAnalytics.sickLeave
             : (data.sickLeave || []).filter(s => (s.personType === 'contractor' || s.contractorName) && matchesContractor(s));
-        const clinicSources = (data.clinicVisits || []).concat(Array.isArray(data.clinicContractorVisits) ? data.clinicContractorVisits : []);
+        const rawClinicSources = (data.clinicVisits || []).concat(Array.isArray(data.clinicContractorVisits) ? data.clinicContractorVisits : []);
+        const seenClinicIds = new Set();
+        const clinicSources = rawClinicSources.filter(c => {
+            if (!c) return false;
+            const id = String(c.id || '').trim();
+            if (!id) return true;
+            if (seenClinicIds.has(id)) return false;
+            seenClinicIds.add(id);
+            return true;
+        });
         const clinicVisits = Array.isArray(serverDetailedAnalytics?.clinicVisits)
             ? serverDetailedAnalytics.clinicVisits
             : clinicSources.filter(c => (c.personType === 'contractor' || c.personType === 'external' || c.contractorName) && matchesContractor(c));

@@ -11599,7 +11599,16 @@ const Contractors = {
         const ptwAll = (AppState.appData.ptw || []).concat(Array.isArray(AppState.appData.ptwRegistry) ? AppState.appData.ptwRegistry : []);
         let permitsCount = ptwAll.filter(matchesPtwContractor).length;
 
-        const clinicSources = (AppState.appData.clinicVisits || []).concat(Array.isArray(AppState.appData.clinicContractorVisits) ? AppState.appData.clinicContractorVisits : []);
+        const rawClinicSources = (AppState.appData.clinicVisits || []).concat(Array.isArray(AppState.appData.clinicContractorVisits) ? AppState.appData.clinicContractorVisits : []);
+        const seenClinicIds = new Set();
+        const clinicSources = rawClinicSources.filter(c => {
+            if (!c) return false;
+            const id = String(c.id || '').trim();
+            if (!id) return true;
+            if (seenClinicIds.has(id)) return false;
+            seenClinicIds.add(id);
+            return true;
+        });
         let clinicVisitsCount = clinicSources.filter(c => (c.personType === 'contractor' || c.personType === 'external' || c.contractorName) && matchesContractor(c)).length;
 
         const injuriesAll = AppState.appData.injuries || [];
