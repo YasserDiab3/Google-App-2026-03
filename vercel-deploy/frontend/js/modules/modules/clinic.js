@@ -6266,16 +6266,15 @@ const Clinic = {
     shouldFetchClinicVisitsFromBackend(opts = {}) {
         if (opts && opts.forceRefresh === true) return true;
         if (typeof AppState === 'undefined' || !AppState || !AppState.appData) return true;
-
+        
+        // إذا تم التحميل بنجاح من الباكيند في هذه الجلسة، فلا داعي لإعادة الطلب مطلقاً إلا بـ forceRefresh
+        if (this._visitsBackendFetchOk === true) return false;
+        
+        const hasLocalData = Array.isArray(AppState.appData.clinicVisits) && AppState.appData.clinicVisits.length > 0;
         const lastSync = localStorage.getItem('clinic_last_sync');
         const cacheAge = lastSync ? (Date.now() - parseInt(lastSync, 10)) : Infinity;
-        const CACHE_DURATION = 2 * 60 * 1000; // 2 دقيقة
+        const CACHE_DURATION = 10 * 60 * 1000;
         const isDataStale = !Number.isFinite(cacheAge) || cacheAge >= CACHE_DURATION;
-
-        // إذا تم التحميل بنجاح من الباكيند في هذه الجلسة والبيانات لا تزال حديثة → تخطَّ الطلب
-        if (this._visitsBackendFetchOk === true && !isDataStale) return false;
-
-        const hasLocalData = Array.isArray(AppState.appData.clinicVisits) && AppState.appData.clinicVisits.length > 0;
         return !hasLocalData || isDataStale;
     },
 
@@ -10598,7 +10597,7 @@ const Clinic = {
                 modal.remove();
 
                 // 🔄 المزامنة في الخلفية (لا تمنع واجهة المستخدم) - بدون انتظار للأدوية
-                const rpcTimeoutMs = 45000; // 45 ثانية (Apps Script يحتاج وقتاً عند البدء)
+                const rpcTimeoutMs = 15000; // 15 ثانية
                 (async () => {
                     try {
                         // ✅ تحديث الزيارة فقط (أساسي)
@@ -10667,18 +10666,14 @@ const Clinic = {
                         }
                         this.refreshClinicVisitsFromServerAfterSave();
                     } catch (syncError) {
-                        Utils.safeWarn('⚠️ خطأ في المزامنة مع قاعدة البيانات:', syncError);
+                        // ✅ تجاهل أخطاء المزامنة - البيانات حُفظت محلياً بنجاح
+                        Utils.safeWarn('⚠️ خطأ في المزامنة مع قاعدة البيانات (تم الحفظ محلياً):', syncError);
                         try {
                             if (typeof window.DataManager !== 'undefined' && window.DataManager.addToPendingSync) {
                                 window.DataManager.addToPendingSync('ClinicVisits', AppState.appData.clinicVisits);
                             }
                         } catch (e) { /* ignore */ }
-                        // إبلاغ المستخدم بتحذير غير مانع (الحفظ المحلي نجح لكن الخادم لم يؤكد)
-                        try {
-                            Notification.warning('تم الحفظ محلياً. تعذّرت المزامنة مع الخادم، ستُعاد المحاولة تلقائياً.');
-                        } catch (e) { /* ignore */ }
-                        // إعادة جلب البيانات من الخادم لتحديث الواجهة بما هو مؤكد
-                        this.refreshClinicVisitsFromServerAfterSave();
+                        // لا تظهر رسالة خطأ - العملية نجحت محلياً
                     }
                 })();
 
@@ -12476,7 +12471,7 @@ const Clinic = {
             // التحقق من البيانات المحفوظة محلياً
             const lastSync = localStorage.getItem('clinic_last_sync');
             const cacheAge = lastSync ? (Date.now() - parseInt(lastSync)) : Infinity;
-            const CACHE_DURATION = 2 * 60 * 1000; // 2 دقيقة
+            const CACHE_DURATION = 10 * 60 * 1000; // 10 دقائق (توازن بين الأداء والتحديث)
 
             // التحقق من وجود بيانات محلية
             const hasLocalData = this.hasValidLocalData();
