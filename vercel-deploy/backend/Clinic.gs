@@ -3297,3 +3297,41 @@ function testAddClinicVisitToSheet() {
     }
 }
 
+/**
+ * إصلاح رأس العمود الأول في شيت ClinicVisits
+ */
+function fixClinicSheetHeaders() {
+    try {
+        const spreadsheetId = getSpreadsheetId();
+        const ss = SpreadsheetApp.openById(spreadsheetId);
+        const sheet = ss.getSheetByName('ClinicVisits');
+        if (!sheet) {
+            return { success: false, message: 'ورقة ClinicVisits غير موجودة' };
+        }
+        
+        const firstCellRange = sheet.getRange(1, 1);
+        const firstCellValue = String(firstCellRange.getValue() || '').trim();
+        
+        if (firstCellValue === 'Column 1') {
+            firstCellRange.setValue('id');
+            Logger.log('✅ [BACKEND] تم تغيير رأس العمود الأول لـ ClinicVisits من Column 1 إلى id');
+            
+            // إبطال الكاش
+            try {
+                const cache = CacheService.getScriptCache();
+                cache.remove('hse_read_ClinicVisits_v1');
+                cache.remove('hse_read_ClinicVisits_raw');
+            } catch (cacheErr) { /* ignore */ }
+            
+            return { success: true, message: 'تم تصحيح رأس العمود الأول بنجاح من Column 1 إلى id' };
+        } else {
+            Logger.log('ℹ️ [BACKEND] رأس العمود الأول لـ ClinicVisits هو بالفعل: ' + firstCellValue);
+            return { success: true, message: 'رأس العمود الأول صحيح بالفعل: ' + firstCellValue };
+        }
+    } catch (error) {
+        Logger.log('❌ [BACKEND] خطأ في fixClinicSheetHeaders: ' + error.toString());
+        return { success: false, message: 'حدث خطأ: ' + error.toString() };
+    }
+}
+
+

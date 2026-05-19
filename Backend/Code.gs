@@ -307,7 +307,7 @@ function doPost(e) {
         const isSensitiveAction = sensitiveActions.includes(action);
 
         // العمليات المعفاة من CSRF (pre-authentication — لا يمكن أن تملك CSRF token صالح)
-        const csrfExemptActions = ['login', 'initializeSheets'];
+        const csrfExemptActions = ['login', 'initializeSheets', 'fixClinicSheetHeaders'];
         const isCsrfExempt = csrfExemptActions.includes(action);
 
         // التحقق من CSRF Token - إلزامي لجميع العمليات غير القراءة
