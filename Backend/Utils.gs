@@ -2572,7 +2572,7 @@ function appendToSheet(sheetName, data, spreadsheetId = null) {
                             let trueLastRow = 1;
                             for (let i = rawValues.length - 1; i >= 0; i--) {
                                 const row = rawValues[i];
-                                if (row.some(cell => cell !== '' && cell !== null && cell !== undefined)) {
+                                if (row.some(cell => cell !== null && cell !== undefined && String(cell).trim() !== '')) {
                                     trueLastRow = i + 1;
                                     break;
                                 }
