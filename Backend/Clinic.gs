@@ -3208,6 +3208,79 @@ function rejectSupplyRequest(requestId, rejectorData, reason) {
 }
 
 /**
+ * إضافة زيارة عيادة إلى الورقة المناسبة (المقاولين أو الموظفين)
+ * @param {Object} visit - كائن بيانات الزيارة المستخرجة من الطلب
+ * @returns {Object} نتيجة العملية { success: boolean, message: string, id?: string }
+ */
+function addClinicVisitToSheet(visit) {
+  try {
+    // تحديد نوع الشخص بشكل غير حساس لحالة الأحرف
+    const personTypeRaw = (visit.personType || '').toString().toLowerCase();
+    const isContractor = personTypeRaw === 'contractor' || personTypeRaw === 'مقاول';
+
+    // اختيار اسم الورقة بناءً على النوع
+    const sheetName = isContractor ? 'ClinicContractorVisits' : 'ClinicEmployeeVisits';
+
+    // بناء الصف مع الحقول المشتركة أولاً
+    const row = {};
+    row.id = visit.id || generateSequentialId(isContractor ? 'CVC' : 'CVE', sheetName);
+    row.personType = isContractor ? 'contractor' : 'employee';
+    row.visitDate = visit.visitDate || new Date().toISOString();
+    row.exitDate = visit.exitDate || '';
+    row.reason = visit.reason || '';
+    row.diagnosis = visit.diagnosis || '';
+    row.treatment = visit.treatment || '';
+    row.createdAt = visit.createdAt || new Date().toISOString();
+    row.updatedAt = visit.updatedAt || new Date().toISOString();
+    // حفظ اسم من أضاف الزيارة
+    if (visit.createdBy) {
+      row.createdBy = typeof visit.createdBy === 'object' ? (visit.createdBy.name || visit.createdBy.email || 'System') : visit.createdBy;
+    } else {
+      row.createdBy = 'System';
+    }
+    row.updatedBy = visit.updatedBy || row.createdBy;
+    row.visitType = visit.visitType || '';
+
+    // الحقول الخاصة بالمقاولين
+    if (isContractor) {
+      row.contractorName = visit.contractorName || '';
+      row.contractorWorkerName = visit.contractorWorkerName || '';
+      row.contractorPosition = visit.contractorPosition || '';
+      row.externalName = visit.externalName || '';
+      row.factory = visit.factory || '';
+      row.factoryName = visit.factoryName || '';
+      row.workArea = visit.workArea || '';
+      row.medicationsDispensed = visit.medicationsDispensed || '';
+      row.medicationsDispensedQty = visit.medicationsDispensedQty || '';
+    } else {
+      // الحقول الخاصة بالموظفين
+      row.employeeName = visit.employeeName || '';
+      row.employeeCode = visit.employeeCode || '';
+      row.employeeNumber = visit.employeeNumber || '';
+      row.employeePosition = visit.employeePosition || '';
+      row.employeeDepartment = visit.employeeDepartment || '';
+      row.employeeLocation = visit.employeeLocation || '';
+      row.workArea = visit.workArea || '';
+      row.factory = visit.factory || '';
+      row.factoryName = visit.factoryName || '';
+      row.medicationsDispensed = visit.medicationsDispensed || '';
+      row.medicationsDispensedQty = visit.medicationsDispensedQty || '';
+    }
+
+    // إلحاق الصف في الورقة
+    const result = appendToSheet(sheetName, row);
+    if (result && result.success) {
+      return { success: true, message: 'تم تسجيل زيارة بنجاح', id: row.id };
+    }
+    return { success: false, message: result?.message || 'فشل تسجيل الزيارة' };
+  } catch (e) {
+    Logger.log('❌ خطأ في addClinicVisitToSheet: ' + e.toString());
+    return { success: false, message: 'استثناء: ' + e.toString() };
+  }
+}
+
+
+/**
  * ✅ دالة اختبار لـ addClinicVisitToSheet
  * هذه الدالة يمكن استدعاؤها من المحرر لاختبار addClinicVisitToSheet بشكل صحيح
  * 
