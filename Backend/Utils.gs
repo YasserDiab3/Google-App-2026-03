@@ -1897,6 +1897,11 @@ function appendToSheet(sheetName, data, spreadsheetId = null) {
             return { success: false, message: 'لا توجد بيانات للإضافة.' };
         }
         
+        // ✅ إبطال الكاش في البداية لضمان أن جميع القراءات اللاحقة دقيقة 100%
+        try {
+            invalidateHseSheetCaches(sheetName);
+        } catch(e) {}
+        
         // فتح الجدول
         let spreadsheet;
         try {
