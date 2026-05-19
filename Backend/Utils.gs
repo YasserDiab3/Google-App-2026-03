@@ -2530,6 +2530,9 @@ function appendToSheet(sheetName, data, spreadsheetId = null) {
                 // ✅ حفظ البيانات مباشرة لضمان أن readFromSheet() يقرأ البيانات المحدثة
                 SpreadsheetApp.flush();
                 
+                // ✅ إبطال الكاش قبل قراءة البيانات للتحقق
+                invalidateHseSheetCaches(sheetName);
+                
                 // ✅ التحقق من الصف المضاف - استخدام طريقة موثوقة
                 let verifyLastRow = lastRowBefore;
                 try {
@@ -2679,6 +2682,9 @@ function appendToSheet(sheetName, data, spreadsheetId = null) {
                     
                     // ✅ حفظ البيانات مباشرة لضمان أن readFromSheet() يقرأ البيانات المحدثة
                     SpreadsheetApp.flush();
+                    
+                    // ✅ إبطال الكاش قبل قراءة البيانات للتحقق
+                    invalidateHseSheetCaches(sheetName);
                     
                     // ✅ التحقق من أن الصف تم إضافته بشكل صحيح
                     // ملاحظة: readFromSheet() قد يُرجع عدداً أقل عند وجود صفوف شبه فارغة/منسقة،
@@ -3028,6 +3034,7 @@ function invalidateHseSheetCaches(sheetName) {
         if (!sn) return;
         const cache = CacheService.getScriptCache();
         cache.remove('hse_read_' + sn + '_v2');
+        cache.remove('hse_read_' + sn + '_raw');
         cache.remove('batch_' + sn + '_v2');
     } catch (e) {
         Logger.log('invalidateHseSheetCaches: ' + e.toString());
