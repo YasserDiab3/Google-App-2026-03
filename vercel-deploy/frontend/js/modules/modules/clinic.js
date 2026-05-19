@@ -8189,8 +8189,24 @@ const Clinic = {
         if (!Array.isArray(data.injuries)) data.injuries = [];
         if (!Array.isArray(data.clinicSupplyRequests)) data.clinicSupplyRequests = [];
 
-        // ✅ تطبيع بيانات الزيارات لضمان صحة بيانات الأدوية
+        // ✅ حماية حاسمة: دمج زيارات المقاولين من clinicContractorVisits إلى clinicVisits لمنع اختفائها عند إعادة تحميل الصفحة
         let visitsChanged = false;
+        if (Array.isArray(data.clinicContractorVisits) && data.clinicContractorVisits.length > 0) {
+            const existingIds = new Set(data.clinicVisits.map(v => v && v.id).filter(Boolean));
+            let mergedCount = 0;
+            data.clinicContractorVisits.forEach(v => {
+                if (v && v.id && !existingIds.has(v.id)) {
+                    v.personType = 'contractor';
+                    data.clinicVisits.push(v);
+                    existingIds.add(v.id);
+                    visitsChanged = true;
+                    mergedCount++;
+                }
+            });
+            if (mergedCount > 0 && AppState.debugMode) {
+                Utils.safeLog(`🔗 [CLINIC] تم دمج ${mergedCount} زيارة مقاول تلقائياً في ensureData`);
+            }
+        }
         data.clinicVisits = data.clinicVisits.map((visit) => {
             if (!visit || typeof visit !== 'object') return visit;
 
