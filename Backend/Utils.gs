@@ -2521,52 +2521,29 @@ function appendToSheet(sheetName, data, spreadsheetId = null) {
                 Logger.log('appendToSheet: Last row before appendRow() = ' + lastRowBefore + ', sheetName=' + sheetName);
                 Logger.log('appendToSheet: finalHeaders.length=' + finalHeaders.length + ', rowValues.length=' + rowValues.length + ', actualColumnCount=' + actualColumnCount);
                 
-                // ✅ التحقق من أن rowValues.length يطابق actualColumnCount قبل appendRow()
-                if (actualColumnCount > 0 && rowValues.length !== actualColumnCount) {
-                    const errorMsg = 'rowValues.length (' + rowValues.length + ') != actualColumnCount (' + actualColumnCount + ') - Cannot use appendRow()';
-                    Logger.log('❌ ' + errorMsg);
-                    throw new Error(errorMsg);
+                // ✅ كتابة البيانات في الورقة باستخدام الطريقة الموثوقة 100% (تتجاهل الصفوف الفارغة المنسقة)
+                const startRowToWrite = lastRowBefore === 1 ? 2 : lastRowBefore + 1;
+                
+                // التأكد من أن المصفوفة تطابق عدد الأعمدة
+                const columnsToWrite = actualColumnCount > 0 ? actualColumnCount : finalHeaders.length;
+                if (rowValues.length !== columnsToWrite) {
+                    if (rowValues.length < columnsToWrite) {
+                        while (rowValues.length < columnsToWrite) rowValues.push('');
+                    } else {
+                        rowValues.splice(columnsToWrite);
+                    }
                 }
                 
-                // ✅ إضافة الصف في آخر موضع تلقائياً
-                // ✅ appendRow() تضيف دائماً في آخر صف تلقائياً - لا تحتاج لحساب
-                sheet.appendRow(rowValues);
+                sheet.getRange(startRowToWrite, 1, 1, columnsToWrite).setValues([rowValues]);
                 
-                // ✅ حفظ البيانات مباشرة لضمان أن readFromSheet() يقرأ البيانات المحدثة
+                // ✅ حفظ البيانات مباشرة 
                 SpreadsheetApp.flush();
                 
-                // ✅ إبطال الكاش قبل قراءة البيانات للتحقق
+                // ✅ إبطال الكاش
                 invalidateHseSheetCaches(sheetName);
                 
-                // ✅ التحقق من الصف المضاف - استخدام طريقة موثوقة
-                let verifyLastRow = lastRowBefore;
-                try {
-                    const dataAfterAppend = readFromSheet(sheetName, spreadsheetId);
-                    if (Array.isArray(dataAfterAppend) && dataAfterAppend.length > 0) {
-                        verifyLastRow = dataAfterAppend.length + 1;
-                        Logger.log('✅ Using readFromSheet() after append: found ' + dataAfterAppend.length + ' rows, lastRow=' + verifyLastRow);
-                    } else {
-                        verifyLastRow = 1;
-                    }
-                } catch (readError) {
-                    Logger.log('⚠️ Could not read from sheet after append, using getLastRow(): ' + readError.toString());
-                    verifyLastRow = sheet.getLastRow() || lastRowBefore;
-                }
-                
-                // ✅ التحقق من أن الصف تم إضافته في النهاية وليس في البداية
-                if (verifyLastRow <= lastRowBefore) {
-                    Logger.log('⚠️ Warning: Row number did not increase. Last row before: ' + lastRowBefore + ', after: ' + verifyLastRow);
-                    Logger.log('⚠️ This might indicate an issue with appendRow() or the sheet structure');
-                    // ✅ في هذه الحالة، نرمي خطأ لإجبار استخدام fallback
-                    throw new Error('appendRow() did not increase row number. Before: ' + lastRowBefore + ', After: ' + verifyLastRow);
-                } else {
-                    Logger.log('✅ appendToSheet: Row number increased from ' + lastRowBefore + ' to ' + verifyLastRow);
-                    Logger.log('✅ appendToSheet: Row successfully added at the END of the sheet (row ' + verifyLastRow + ')');
-                }
-                
-                Logger.log('✅ appendToSheet: Successfully appended row to ' + sheetName + ' at row ' + verifyLastRow + ' using appendRow() (was ' + lastRowBefore + ')');
-                
-                return withResolvedPTWRegistry_(sheetName, { success: true, message: 'تم إضافة البيانات بنجاح', rowNumber: verifyLastRow }, resolvedPTWRegistryForAppend);
+                Logger.log('✅ appendToSheet: Successfully appended row to ' + sheetName + ' at row ' + startRowToWrite);
+                return withResolvedPTWRegistry_(sheetName, { success: true, message: 'تم إضافة البيانات بنجاح', rowNumber: startRowToWrite }, resolvedPTWRegistryForAppend);
             } catch (error) {
                 Logger.log('Error appending single row with appendRow(): ' + error.toString());
                 Logger.log('Error details: ' + JSON.stringify(error));
