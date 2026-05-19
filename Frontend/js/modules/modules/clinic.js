@@ -8181,10 +8181,21 @@ const Clinic = {
         const data = AppState.appData;
 
         if (!Array.isArray(data.clinicVisits)) data.clinicVisits = [];
+        
+        // ✅ حماية حاسمة: مزامنة وتطبيع كتل الأدوية الثلاث (medications, clinicMedications, clinicInventory)
+        // لمنع حدوث التبويب الفارغ عند التهيئة الأولى أو بعد مشكلة تجاوز حجم localStorage الكاش
+        if (!Array.isArray(data.medications)) data.medications = [];
+        if (!Array.isArray(data.clinicMedications)) data.clinicMedications = [];
         if (!Array.isArray(data.clinicInventory)) data.clinicInventory = [];
-        if (!Array.isArray(data.clinicMedications)) {
-            data.clinicMedications = Array.isArray(data.clinicInventory) ? data.clinicInventory : [];
-        }
+
+        const bestMedicationsSource = (data.medications.length > 0) ? data.medications : 
+                                      (data.clinicMedications.length > 0) ? data.clinicMedications : 
+                                      (data.clinicInventory.length > 0) ? data.clinicInventory : [];
+        
+        if (data.medications.length === 0 && bestMedicationsSource.length > 0) data.medications = [...bestMedicationsSource];
+        if (data.clinicMedications.length === 0 && bestMedicationsSource.length > 0) data.clinicMedications = [...bestMedicationsSource];
+        if (data.clinicInventory.length === 0 && bestMedicationsSource.length > 0) data.clinicInventory = [...bestMedicationsSource];
+
         if (!Array.isArray(data.sickLeave)) data.sickLeave = [];
         if (!Array.isArray(data.injuries)) data.injuries = [];
         if (!Array.isArray(data.clinicSupplyRequests)) data.clinicSupplyRequests = [];
@@ -12558,7 +12569,8 @@ const Clinic = {
      */
     async syncDataFromServer() {
         const promises = [];
-        const REQUEST_TIMEOUT = 8000; // 8 ثوان لمعظم الطلبات الخفيفة
+        // ✅ زيادة مهلة الطلبات الخفيفة من 8 ثوانٍ إلى 45 ثانية لتفادي مشاكل الـ Cold Starts لـ Google Apps Script
+        const REQUEST_TIMEOUT = 45000; 
         /** سجل التردد (الموظفين + المقاولين) قد يكون كبيراً — مهلة كافية لإكمال getAllClinicVisits */
         const CLINIC_VISITS_REQUEST_TIMEOUT = 120000;
 
