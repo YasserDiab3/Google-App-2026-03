@@ -6269,7 +6269,7 @@ const Clinic = {
 
         const lastSync = localStorage.getItem('clinic_last_sync');
         const cacheAge = lastSync ? (Date.now() - parseInt(lastSync, 10)) : Infinity;
-        const CACHE_DURATION = 10 * 60 * 1000;
+        const CACHE_DURATION = 2 * 60 * 1000; // 2 دقيقة
         const isDataStale = !Number.isFinite(cacheAge) || cacheAge >= CACHE_DURATION;
 
         // إذا تم التحميل بنجاح من الباكيند في هذه الجلسة والبيانات لا تزال حديثة → تخطَّ الطلب
@@ -12476,7 +12476,7 @@ const Clinic = {
             // التحقق من البيانات المحفوظة محلياً
             const lastSync = localStorage.getItem('clinic_last_sync');
             const cacheAge = lastSync ? (Date.now() - parseInt(lastSync)) : Infinity;
-            const CACHE_DURATION = 10 * 60 * 1000; // 10 دقائق (توازن بين الأداء والتحديث)
+            const CACHE_DURATION = 2 * 60 * 1000; // 2 دقيقة
 
             // التحقق من وجود بيانات محلية
             const hasLocalData = this.hasValidLocalData();
