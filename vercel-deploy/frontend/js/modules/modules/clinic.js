@@ -6233,7 +6233,10 @@ const Clinic = {
      * يجب أن يعيد الخادم success: true بعد كتابة الشيت؛ وإلا نعتبر الحفظ فاشلاً (لا نعتمد على ردود ناقصة).
      */
     assertClinicVisitRpcResult(result) {
+        // 🔍 DEBUG: تسجيل الرد الكامل من الخادم لتشخيص المشكلة
+        try { console.log('🔍 [DEBUG] assertClinicVisitRpcResult received:', JSON.stringify(result), 'typeof:', typeof result, 'keys:', result ? Object.keys(result) : 'N/A'); } catch (e) { console.log('🔍 [DEBUG] raw result:', result); }
         if (!result || result.success !== true) {
+            console.error('🔍 [DEBUG] assertClinicVisitRpcResult FAILED - success value:', result?.success, 'full result:', result);
             throw new Error(
                 (result && result.message)
                     ? result.message
