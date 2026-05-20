@@ -40,7 +40,7 @@ var log = function() {
 
         function getDefaultGoogleConfig() {
             return {
-                appsScript: { enabled: true, scriptUrl: 'https://script.google.com/macros/s/AKfycbx2dCdy7o7cOUSJCiA05OEyOYB5e5e79DgV5WKVqv8fhmOnNKQjZrvI9j8jxFXtT16m/exec' },
+                appsScript: { enabled: true, scriptUrl: 'https://script.google.com/macros/s/AKfycbxkqiYDwVdSUhzi-DOGZO8bBJMORw78FzLhUzRYwSfGldDqvlXerdajhd7byDeuvsP0/exec' },
                 // معرّف الجدول يُعرَّف في Script Properties بالخادم؛ يُكمَّل محلياً من إعدادات المزامنة عند الحاجة
                 sheets: { enabled: false, spreadsheetId: '', apiKey: '' },
                 maps: { enabled: false, apiKey: '' }
