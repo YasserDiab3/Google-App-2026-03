@@ -599,6 +599,15 @@ function ensureSheetHeaders(sheet, sheetName, data) {
             }
         }
         
+        // ✅ إصلاح خاص لشيتات العيادة: إذا كان العمود الأول "Column 1" → نغيّره إلى "id"
+        // هذا يمنع إضافة عمود id مكرر في النهاية ويضمن أن البيانات تُكتب في العمود الصحيح
+        if ((sheetName === 'ClinicVisits' || sheetName === 'ClinicContractorVisits') &&
+            existingHeaders.length > 0 &&
+            String(existingHeaders[0] || '').trim() === 'Column 1') {
+            existingHeaders[0] = 'id';
+            Logger.log('ensureSheetHeaders: fixed Column 1 → id for ' + sheetName);
+        }
+
         // ✅ التحقق من الحاجة للتحديث
         // مهم جداً: لا نغيّر ترتيب الرؤوس الموجودة لورقة Employees تلقائياً
         // لأن تغيير ترتيب الهيدر فقط بدون إعادة ترتيب الأعمدة/البيانات يسبب "تزحلق" القيم (خصوصاً التواريخ)

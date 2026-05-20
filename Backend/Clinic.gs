@@ -3298,36 +3298,108 @@ function testAddClinicVisitToSheet() {
 }
 
 /**
- * إصلاح رأس العمود الأول في شيت ClinicVisits
+ * إصلاح رؤوس الأعمدة في شيتات العيادة (ClinicVisits و ClinicContractorVisits)
+ * يصحح:
+ * 1. إذا كان رأس العمود الأول "Column 1" → يغيّره إلى "id"
+ * 2. إذا وُجد عمود "id" مكرر في نهاية الهيدر (بسبب خطأ ensureSheetHeaders) → يحذفه
+ * 3. يضمن أن ترتيب الهيدر مطابق للافتراضي (للشيتات الجديدة فقط)
  */
 function fixClinicSheetHeaders() {
     try {
         const spreadsheetId = getSpreadsheetId();
         const ss = SpreadsheetApp.openById(spreadsheetId);
-        const sheet = ss.getSheetByName('ClinicVisits');
-        if (!sheet) {
-            return { success: false, message: 'ورقة ClinicVisits غير موجودة' };
+
+        const sheetsToFix = ['ClinicVisits', 'ClinicContractorVisits'];
+        const results = [];
+
+        for (var s = 0; s < sheetsToFix.length; s++) {
+            const sheetName = sheetsToFix[s];
+            const sheet = ss.getSheetByName(sheetName);
+
+            if (!sheet) {
+                results.push(sheetName + ': غير موجودة');
+                continue;
+            }
+
+            const lastCol = sheet.getLastColumn();
+            if (lastCol === 0) {
+                results.push(sheetName + ': فارغة');
+                continue;
+            }
+
+            const headerRow = sheet.getRange(1, 1, 1, lastCol).getValues()[0];
+            let changed = false;
+
+            // 1. إصلاح "Column 1" → "id" في الموضع الأول
+            if (String(headerRow[0] || '').trim() === 'Column 1') {
+                headerRow[0] = 'id';
+                changed = true;
+                Logger.log('✅ [fixClinicSheetHeaders] ' + sheetName + ': Column 1 → id في العمود الأول');
+            }
+
+            // 2. إزالة أعمدة "id" المكررة (في نهاية الهيدر بعد الموضع 0)
+            // هذا ناتج عن ensureSheetHeaders الذي كان يضيف id في النهاية بدلاً من إصلاح Column 1
+            for (var i = lastCol - 1; i >= 1; i--) {
+                if (String(headerRow[i] || '').trim() === 'id') {
+                    // التحقق: هل البيانات في هذا العمود فارغة في كل الصفوف؟
+                    const lastDataRow = sheet.getLastRow();
+                    let colIsEmpty = true;
+                    if (lastDataRow > 1) {
+                        const colValues = sheet.getRange(2, i + 1, lastDataRow - 1, 1).getValues();
+                        colIsEmpty = colValues.every(function(r) { return !r[0] || String(r[0]).trim() === ''; });
+                    }
+                    if (colIsEmpty) {
+                        // عمود id مكرر وفارغ - نحذفه
+                        sheet.deleteColumn(i + 1);
+                        headerRow.splice(i, 1);
+                        changed = true;
+                        Logger.log('✅ [fixClinicSheetHeaders] ' + sheetName + ': حذف عمود id المكرر في الموضع ' + (i + 1));
+                    } else {
+                        // عمود id في نهاية الشيت لكن فيه بيانات - نحرك البيانات إلى عمود A ثم نحذف العمود
+                        Logger.log('⚠️ [fixClinicSheetHeaders] ' + sheetName + ': عمود id في الموضع ' + (i + 1) + ' يحتوي على بيانات - نقل إلى عمود A');
+                        const lastDataRow2 = sheet.getLastRow();
+                        if (lastDataRow2 > 1) {
+                            const idValues = sheet.getRange(2, i + 1, lastDataRow2 - 1, 1).getValues();
+                            const colAValues = sheet.getRange(2, 1, lastDataRow2 - 1, 1).getValues();
+                            // نقل إلى عمود A فقط إذا كان عمود A فارغاً
+                            const colAIsEmpty = colAValues.every(function(r) { return !r[0] || String(r[0]).trim() === ''; });
+                            if (colAIsEmpty) {
+                                sheet.getRange(2, 1, lastDataRow2 - 1, 1).setValues(idValues);
+                                sheet.deleteColumn(i + 1);
+                                headerRow.splice(i, 1);
+                                changed = true;
+                                Logger.log('✅ [fixClinicSheetHeaders] ' + sheetName + ': تم نقل بيانات id من عمود ' + (i + 1) + ' إلى عمود A وحذف العمود المكرر');
+                            }
+                        }
+                    }
+                }
+            }
+
+            if (changed) {
+                // كتابة الهيدر المُصحَّح
+                const newLastCol = sheet.getLastColumn();
+                if (newLastCol > 0) {
+                    sheet.getRange(1, 1, 1, newLastCol).setValues([headerRow.slice(0, newLastCol)]);
+                }
+                // إبطال الكاش
+                try {
+                    const cache = CacheService.getScriptCache();
+                    cache.remove('hse_read_' + sheetName + '_v1');
+                    cache.remove('hse_read_' + sheetName + '_raw');
+                } catch (cacheErr) { /* ignore */ }
+                SpreadsheetApp.flush();
+                results.push(sheetName + ': ✅ تم الإصلاح');
+            } else {
+                results.push(sheetName + ': ✅ الهيدر صحيح بالفعل');
+            }
+
+            Logger.log('✅ [fixClinicSheetHeaders] ' + sheetName + ': الهيدر الحالي = ' + headerRow.slice(0, Math.min(5, headerRow.length)).join(', ') + '...');
         }
-        
-        const firstCellRange = sheet.getRange(1, 1);
-        const firstCellValue = String(firstCellRange.getValue() || '').trim();
-        
-        if (firstCellValue === 'Column 1') {
-            firstCellRange.setValue('id');
-            Logger.log('✅ [BACKEND] تم تغيير رأس العمود الأول لـ ClinicVisits من Column 1 إلى id');
-            
-            // إبطال الكاش
-            try {
-                const cache = CacheService.getScriptCache();
-                cache.remove('hse_read_ClinicVisits_v1');
-                cache.remove('hse_read_ClinicVisits_raw');
-            } catch (cacheErr) { /* ignore */ }
-            
-            return { success: true, message: 'تم تصحيح رأس العمود الأول بنجاح من Column 1 إلى id' };
-        } else {
-            Logger.log('ℹ️ [BACKEND] رأس العمود الأول لـ ClinicVisits هو بالفعل: ' + firstCellValue);
-            return { success: true, message: 'رأس العمود الأول صحيح بالفعل: ' + firstCellValue };
-        }
+
+        const summary = results.join(' | ');
+        Logger.log('✅ [fixClinicSheetHeaders] اكتمل: ' + summary);
+        return { success: true, message: summary };
+
     } catch (error) {
         Logger.log('❌ [BACKEND] خطأ في fixClinicSheetHeaders: ' + error.toString());
         return { success: false, message: 'حدث خطأ: ' + error.toString() };
