@@ -10608,7 +10608,7 @@ const Clinic = {
                 modal.remove();
 
                 // 🔄 المزامنة في الخلفية (لا تمنع واجهة المستخدم) - بدون انتظار للأدوية
-                const rpcTimeoutMs = 15000; // 15 ثانية
+                const rpcTimeoutMs = 60000; // 60 ثانية (يكفي Apps Script Cold Start)
                 (async () => {
                     try {
                         // ✅ تحديث الزيارة فقط (أساسي)
@@ -10677,14 +10677,15 @@ const Clinic = {
                         }
                         this.refreshClinicVisitsFromServerAfterSave();
                     } catch (syncError) {
-                        // ✅ تجاهل أخطاء المزامنة - البيانات حُفظت محلياً بنجاح
-                        Utils.safeWarn('⚠️ خطأ في المزامنة مع قاعدة البيانات (تم الحفظ محلياً):', syncError);
+                        Utils.safeWarn('⚠️ فشل حفظ الزيارة في قاعدة البيانات:', syncError);
                         try {
                             if (typeof window.DataManager !== 'undefined' && window.DataManager.addToPendingSync) {
                                 window.DataManager.addToPendingSync('ClinicVisits', AppState.appData.clinicVisits);
                             }
                         } catch (e) { /* ignore */ }
-                        // لا تظهر رسالة خطأ - العملية نجحت محلياً
+                        try {
+                            Notification.warning('⚠️ تعذّر حفظ الزيارة في قاعدة البيانات. تحقق من الاتصال وإعادة التسجيل.');
+                        } catch (e) { /* ignore */ }
                     }
                 })();
 

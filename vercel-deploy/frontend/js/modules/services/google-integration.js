@@ -780,7 +780,9 @@ const GoogleIntegration = {
                 'saveOrUpdate', 'getAll', 'import', // إضافة عمليات جديدة
                 'getAllClinicVisits', // سجل التردد كامل (موظفين + مقاولين) — يُفضّل تمرير __timeoutMs من الواجهة
                 // قراءة كاملة لورقة الموظفين (شيت كبير + إقلاع بارد لـ GAS) — لا يُطابق شرط getAll المخصص أعلاه
-                'getAllEmployees'
+                'getAllEmployees',
+                // عمليات كتابة العيادة — تستغرق وقتاً عند Cold Start لـ Apps Script
+                'addClinicVisit', 'updateClinicVisit'
             ];
             const mediumOperations = [
                 'getData', 'readData', 'loadData', 'fetchData', 'add', 'update'

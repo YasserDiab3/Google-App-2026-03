@@ -1897,6 +1897,11 @@ function appendToSheet(sheetName, data, spreadsheetId = null) {
             return { success: false, message: 'لا توجد بيانات للإضافة.' };
         }
         
+        // ✅ إبطال الكاش في البداية لضمان أن جميع القراءات اللاحقة دقيقة 100%
+        try {
+            invalidateHseSheetCaches(sheetName);
+        } catch(e) {}
+        
         // فتح الجدول
         let spreadsheet;
         try {
@@ -2497,68 +2502,55 @@ function appendToSheet(sheetName, data, spreadsheetId = null) {
                 // ✅ قراءة البيانات الفعلية من الورقة للحصول على عدد الصفوف الصحيح
                 let lastRowBefore = 1;
                 try {
-                    const existingData = readFromSheet(sheetName, spreadsheetId);
-                    if (Array.isArray(existingData) && existingData.length > 0) {
-                        // ✅ عدد الصفوف = عدد البيانات + 1 (للرؤوس)
-                        lastRowBefore = existingData.length + 1;
-                        Logger.log('✅ Using readFromSheet(): found ' + existingData.length + ' rows, lastRow=' + lastRowBefore);
-                    } else {
-                        // ✅ لا توجد بيانات - فقط الرؤوس
-                        lastRowBefore = 1;
-                        Logger.log('✅ Using readFromSheet(): no data found, lastRow=1 (headers only)');
+                    // ✅ قراءة البيانات الخام من الشيت لمعرفة آخر صف حقيقي يحتوي على بيانات (تجاهل التنسيقات)
+                    // هذه الطريقة أسرع وأكثر دقة ولا تتأثر بالصفوف الفارغة في المنتصف
+                    const dataRange = sheet.getDataRange();
+                    if (dataRange) {
+                        const rawValues = dataRange.getValues();
+                        let trueLastRow = 1;
+                        // نبحث من الأسفل للأعلى عن أول صف يحتوي على أي بيانات فعلية
+                        for (let i = rawValues.length - 1; i >= 0; i--) {
+                            const row = rawValues[i];
+                            if (row.some(cell => cell !== '' && cell !== null && cell !== undefined)) {
+                                trueLastRow = i + 1; // رقم الصف (1-indexed)
+                                break;
+                            }
+                        }
+                        lastRowBefore = trueLastRow;
+                        Logger.log('✅ Calculated true lastRowBefore directly from raw array scanning: ' + lastRowBefore);
                     }
                 } catch (readError) {
                     // ✅ في حالة فشل قراءة البيانات، نستخدم getLastRow()
-                    Logger.log('⚠️ Could not read from sheet, using getLastRow(): ' + readError.toString());
+                    Logger.log('⚠️ Could not read raw data from sheet, using getLastRow(): ' + readError.toString());
                     lastRowBefore = sheet.getLastRow() || 1;
                 }
                 
                 Logger.log('appendToSheet: Last row before appendRow() = ' + lastRowBefore + ', sheetName=' + sheetName);
                 Logger.log('appendToSheet: finalHeaders.length=' + finalHeaders.length + ', rowValues.length=' + rowValues.length + ', actualColumnCount=' + actualColumnCount);
                 
-                // ✅ التحقق من أن rowValues.length يطابق actualColumnCount قبل appendRow()
-                if (actualColumnCount > 0 && rowValues.length !== actualColumnCount) {
-                    const errorMsg = 'rowValues.length (' + rowValues.length + ') != actualColumnCount (' + actualColumnCount + ') - Cannot use appendRow()';
-                    Logger.log('❌ ' + errorMsg);
-                    throw new Error(errorMsg);
+                // ✅ كتابة البيانات في الورقة باستخدام الطريقة الموثوقة 100% (تتجاهل الصفوف الفارغة المنسقة)
+                const startRowToWrite = lastRowBefore === 1 ? 2 : lastRowBefore + 1;
+                
+                // التأكد من أن المصفوفة تطابق عدد الأعمدة
+                const columnsToWrite = actualColumnCount > 0 ? actualColumnCount : finalHeaders.length;
+                if (rowValues.length !== columnsToWrite) {
+                    if (rowValues.length < columnsToWrite) {
+                        while (rowValues.length < columnsToWrite) rowValues.push('');
+                    } else {
+                        rowValues.splice(columnsToWrite);
+                    }
                 }
                 
-                // ✅ إضافة الصف في آخر موضع تلقائياً
-                // ✅ appendRow() تضيف دائماً في آخر صف تلقائياً - لا تحتاج لحساب
-                sheet.appendRow(rowValues);
+                sheet.getRange(startRowToWrite, 1, 1, columnsToWrite).setValues([rowValues]);
                 
-                // ✅ حفظ البيانات مباشرة لضمان أن readFromSheet() يقرأ البيانات المحدثة
+                // ✅ حفظ البيانات مباشرة 
                 SpreadsheetApp.flush();
                 
-                // ✅ التحقق من الصف المضاف - استخدام طريقة موثوقة
-                let verifyLastRow = lastRowBefore;
-                try {
-                    const dataAfterAppend = readFromSheet(sheetName, spreadsheetId);
-                    if (Array.isArray(dataAfterAppend) && dataAfterAppend.length > 0) {
-                        verifyLastRow = dataAfterAppend.length + 1;
-                        Logger.log('✅ Using readFromSheet() after append: found ' + dataAfterAppend.length + ' rows, lastRow=' + verifyLastRow);
-                    } else {
-                        verifyLastRow = 1;
-                    }
-                } catch (readError) {
-                    Logger.log('⚠️ Could not read from sheet after append, using getLastRow(): ' + readError.toString());
-                    verifyLastRow = sheet.getLastRow() || lastRowBefore;
-                }
+                // ✅ إبطال الكاش
+                invalidateHseSheetCaches(sheetName);
                 
-                // ✅ التحقق من أن الصف تم إضافته في النهاية وليس في البداية
-                if (verifyLastRow <= lastRowBefore) {
-                    Logger.log('⚠️ Warning: Row number did not increase. Last row before: ' + lastRowBefore + ', after: ' + verifyLastRow);
-                    Logger.log('⚠️ This might indicate an issue with appendRow() or the sheet structure');
-                    // ✅ في هذه الحالة، نرمي خطأ لإجبار استخدام fallback
-                    throw new Error('appendRow() did not increase row number. Before: ' + lastRowBefore + ', After: ' + verifyLastRow);
-                } else {
-                    Logger.log('✅ appendToSheet: Row number increased from ' + lastRowBefore + ' to ' + verifyLastRow);
-                    Logger.log('✅ appendToSheet: Row successfully added at the END of the sheet (row ' + verifyLastRow + ')');
-                }
-                
-                Logger.log('✅ appendToSheet: Successfully appended row to ' + sheetName + ' at row ' + verifyLastRow + ' using appendRow() (was ' + lastRowBefore + ')');
-                
-                return withResolvedPTWRegistry_(sheetName, { success: true, message: 'تم إضافة البيانات بنجاح', rowNumber: verifyLastRow }, resolvedPTWRegistryForAppend);
+                Logger.log('✅ appendToSheet: Successfully appended row to ' + sheetName + ' at row ' + startRowToWrite);
+                return withResolvedPTWRegistry_(sheetName, { success: true, message: 'تم إضافة البيانات بنجاح', rowNumber: startRowToWrite }, resolvedPTWRegistryForAppend);
             } catch (error) {
                 Logger.log('Error appending single row with appendRow(): ' + error.toString());
                 Logger.log('Error details: ' + JSON.stringify(error));
@@ -2574,55 +2566,39 @@ function appendToSheet(sheetName, data, spreadsheetId = null) {
                     let lastRowMethod = 'unknown';
                     
                     try {
-                        // ✅ الطريقة الأولى: قراءة البيانات الفعلية من الورقة - الأكثر موثوقية
-                        const existingData = readFromSheet(sheetName, spreadsheetId);
-                        if (Array.isArray(existingData) && existingData.length > 0) {
-                            // ✅ عدد الصفوف = عدد البيانات + 1 (للرؤوس)
-                            verifyLastRow = existingData.length + 1;
-                            lastRowMethod = 'readFromSheet';
-                            Logger.log('✅ Using readFromSheet(): found ' + existingData.length + ' rows, lastRow=' + verifyLastRow);
+                        const dataRange = sheet.getDataRange();
+                        if (dataRange) {
+                            const rawValues = dataRange.getValues();
+                            let trueLastRow = 1;
+                            for (let i = rawValues.length - 1; i >= 0; i--) {
+                                const row = rawValues[i];
+                                if (row.some(cell => cell !== null && cell !== undefined && String(cell).trim() !== '')) {
+                                    trueLastRow = i + 1;
+                                    break;
+                                }
+                            }
+                            verifyLastRow = trueLastRow;
+                            lastRowMethod = 'raw array scan';
+                            Logger.log('✅ Using raw array scan in fallback: lastRow=' + verifyLastRow);
                         } else {
-                            // ✅ لا توجد بيانات - فقط الرؤوس
                             verifyLastRow = 1;
-                            lastRowMethod = 'readFromSheet (empty)';
-                            Logger.log('✅ Using readFromSheet(): no data found, lastRow=1 (headers only)');
+                            lastRowMethod = 'getDataRange (empty)';
                         }
                     } catch (readError) {
-                        Logger.log('⚠️ Warning: Could not read from sheet, trying getDataRange(): ' + readError.toString());
+                        Logger.log('⚠️ Warning: Could not use getDataRange() in fallback, trying getLastRow(): ' + readError.toString());
                         try {
-                            // ✅ الطريقة الثانية: استخدام getDataRange()
-                            const dataRange = sheet.getDataRange();
-                            if (dataRange && dataRange.getNumRows() > 0) {
-                                verifyLastRow = dataRange.getNumRows();
-                                lastRowMethod = 'getDataRange';
-                                Logger.log('✅ Using getDataRange(): lastRow=' + verifyLastRow);
-                                
-                                // ✅ التحقق: إذا كان verifyLastRow = 1، يعني فقط الرؤوس
-                                if (verifyLastRow < 1) {
-                                    verifyLastRow = 1;
-                                }
+                            const lastRowValue = sheet.getLastRow();
+                            if (lastRowValue && lastRowValue > 0) {
+                                verifyLastRow = lastRowValue;
+                                lastRowMethod = 'getLastRow';
                             } else {
                                 verifyLastRow = 1;
-                                lastRowMethod = 'getDataRange (empty)';
+                                lastRowMethod = 'getLastRow (empty)';
                             }
-                        } catch (e) {
-                            Logger.log('⚠️ Warning: Could not use getDataRange(), trying getLastRow(): ' + e.toString());
-                            try {
-                                // ✅ الطريقة الثالثة: استخدام getLastRow()
-                                const lastRowValue = sheet.getLastRow();
-                                if (lastRowValue && lastRowValue > 0) {
-                                    verifyLastRow = lastRowValue;
-                                    lastRowMethod = 'getLastRow';
-                                    Logger.log('✅ Using getLastRow(): lastRow=' + verifyLastRow);
-                                } else {
-                                    verifyLastRow = 1;
-                                    lastRowMethod = 'getLastRow (empty)';
-                                }
-                            } catch (e2) {
-                                Logger.log('❌ Error: Could not get last row using any method: ' + e2.toString());
-                                verifyLastRow = 1; // افتراضياً: الرؤوس فقط
-                                lastRowMethod = 'default (1)';
-                            }
+                        } catch (e2) {
+                            Logger.log('❌ Error: Could not get last row using any method: ' + e2.toString());
+                            verifyLastRow = 1;
+                            lastRowMethod = 'default (1)';
                         }
                     }
                     
@@ -2679,6 +2655,9 @@ function appendToSheet(sheetName, data, spreadsheetId = null) {
                     
                     // ✅ حفظ البيانات مباشرة لضمان أن readFromSheet() يقرأ البيانات المحدثة
                     SpreadsheetApp.flush();
+                    
+                    // ✅ إبطال الكاش قبل قراءة البيانات للتحقق
+                    invalidateHseSheetCaches(sheetName);
                     
                     // ✅ التحقق من أن الصف تم إضافته بشكل صحيح
                     // ملاحظة: readFromSheet() قد يُرجع عدداً أقل عند وجود صفوف شبه فارغة/منسقة،
@@ -3028,6 +3007,7 @@ function invalidateHseSheetCaches(sheetName) {
         if (!sn) return;
         const cache = CacheService.getScriptCache();
         cache.remove('hse_read_' + sn + '_v2');
+        cache.remove('hse_read_' + sn + '_raw');
         cache.remove('batch_' + sn + '_v2');
     } catch (e) {
         Logger.log('invalidateHseSheetCaches: ' + e.toString());
