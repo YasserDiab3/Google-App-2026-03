@@ -989,29 +989,10 @@
                 // ✅ LAYER 5: حماية Chrome Extensions
                 if (typeof chrome !== "undefined" && chrome.runtime) {
                     try {
-                        var origLastError = chrome.runtime.lastError;
+                        // قمع شامل لكل أخطاء chrome.runtime.lastError
+                        // (تأتي من إضافات المتصفح وليست من تطبيقنا)
                         Object.defineProperty(chrome.runtime, "lastError", {
-                            get: function () {
-                                try {
-                                    var err = origLastError;
-                                    if (err && err.message) {
-                                        var msg = String(
-                                            err.message,
-                                        ).toLowerCase();
-                                        if (
-                                            msg.indexOf("uploadmanager") > -1 ||
-                                            msg.indexOf("contentdocument") >
-                                                -1 ||
-                                            msg.indexOf("contentwindow") > -1
-                                        ) {
-                                            return null;
-                                        }
-                                    }
-                                    return err;
-                                } catch (e) {
-                                    return null;
-                                }
-                            },
+                            get: function () { return null; },
                             configurable: true,
                         });
                     } catch (e) {}
