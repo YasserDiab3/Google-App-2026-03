@@ -26,9 +26,10 @@
  * معالجة طلبات POST
  * ============================================
  */
+// بصمة نسخة عامة (global) ليصل إليها ActionHandlers وغيره
+var BUILD_TAG = 'HSE_WEBAPP_BUILD_2026-05-20_buildtag_fix_v117';
+
 function doPost(e) {
-    // بصمة نسخة واضحة لتأكيد أن الطلب وصل للنسخة الصحيحة
-    var BUILD_TAG = 'HSE_WEBAPP_BUILD_2026-05-07_payload_clamp_v116';
     Logger.log('🚀 [DOPOST] ===== doPost تم استدعاؤها =====');
     Logger.log('🏷️ [DOPOST] BUILD_TAG: ' + BUILD_TAG);
     Logger.log('🚀 [DOPOST] الوقت: ' + new Date().toISOString());
