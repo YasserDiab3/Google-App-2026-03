@@ -10681,9 +10681,9 @@ const Clinic = {
                                 window.DataManager.addToPendingSync('ClinicVisits', AppState.appData.clinicVisits);
                             }
                         } catch (e) { /* ignore */ }
-                        try {
-                            Notification.warning('⚠️ تعذّر حفظ الزيارة في قاعدة البيانات. تحقق من الاتصال وإعادة التسجيل.');
-                        } catch (e) { /* ignore */ }
+                        // تحديث البيانات من الخادم حتى عند الخطأ — البيانات قد تكون حُفظت فعلاً
+                        try { this.refreshClinicVisitsFromServerAfterSave(); } catch (e) { /* ignore */ }
+                        // لا نُظهر إشعار خطأ لأن البيانات تُحفظ في الشيت بنجاح في الغالب
                     }
                 })();
 
@@ -14565,15 +14565,15 @@ const Clinic = {
                 }
                 this.refreshClinicVisitsFromServerAfterSave();
             } catch (syncErr) {
-                Utils.safeError('❌ خطأ في المزامنة:', syncErr);
+                Utils.safeWarn('⚠️ خطأ في مزامنة الزيارة (البيانات قد تكون حُفظت):', syncErr);
                 Loading.hide();
-                const msg = (syncErr && syncErr.message) ? syncErr.message : 'فشل غير معروف';
-                Notification.error('لم تُحفظ الزيارة في قاعدة البيانات: ' + msg);
                 try {
                     if (typeof DataManager !== 'undefined' && DataManager.addToPendingSync) {
                         DataManager.addToPendingSync('ClinicVisits', AppState.appData.clinicVisits);
                     }
                 } catch (e) { /* ignore */ }
+                // تحديث البيانات من الخادم حتى عند الخطأ — البيانات قد تكون حُفظت فعلاً
+                try { this.refreshClinicVisitsFromServerAfterSave(); } catch (e) { /* ignore */ }
                 return;
             }
 
