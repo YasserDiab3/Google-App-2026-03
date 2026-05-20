@@ -6266,16 +6266,14 @@ const Clinic = {
     shouldFetchClinicVisitsFromBackend(opts = {}) {
         if (opts && opts.forceRefresh === true) return true;
         if (typeof AppState === 'undefined' || !AppState || !AppState.appData) return true;
-        
+
         // إذا تم التحميل بنجاح من الباكيند في هذه الجلسة، فلا داعي لإعادة الطلب مطلقاً إلا بـ forceRefresh
+        // ملاحظة: _visitsBackendFetchOk تُعاد إلى false عند إعادة تحميل الصفحة تلقائياً
         if (this._visitsBackendFetchOk === true) return false;
-        
-        const hasLocalData = Array.isArray(AppState.appData.clinicVisits) && AppState.appData.clinicVisits.length > 0;
-        const lastSync = localStorage.getItem('clinic_last_sync');
-        const cacheAge = lastSync ? (Date.now() - parseInt(lastSync, 10)) : Infinity;
-        const CACHE_DURATION = 10 * 60 * 1000;
-        const isDataStale = !Number.isFinite(cacheAge) || cacheAge >= CACHE_DURATION;
-        return !hasLocalData || isDataStale;
+
+        // عند إعادة التحميل، نجلب دائماً من الباكيند بغض النظر عن الكاش المحلي
+        // لضمان ظهور أي بيانات جديدة (زيارات مقاولين وغيرها) تم تسجيلها
+        return true;
     },
 
     /**
@@ -10608,7 +10606,7 @@ const Clinic = {
                 modal.remove();
 
                 // 🔄 المزامنة في الخلفية (لا تمنع واجهة المستخدم) - بدون انتظار للأدوية
-                const rpcTimeoutMs = 15000; // 15 ثانية
+                const rpcTimeoutMs = 60000; // 60 ثانية (يكفي Apps Script Cold Start)
                 (async () => {
                     try {
                         // ✅ تحديث الزيارة فقط (أساسي)
@@ -10677,14 +10675,15 @@ const Clinic = {
                         }
                         this.refreshClinicVisitsFromServerAfterSave();
                     } catch (syncError) {
-                        // ✅ تجاهل أخطاء المزامنة - البيانات حُفظت محلياً بنجاح
-                        Utils.safeWarn('⚠️ خطأ في المزامنة مع قاعدة البيانات (تم الحفظ محلياً):', syncError);
+                        Utils.safeWarn('⚠️ فشل حفظ الزيارة في قاعدة البيانات:', syncError);
                         try {
                             if (typeof window.DataManager !== 'undefined' && window.DataManager.addToPendingSync) {
                                 window.DataManager.addToPendingSync('ClinicVisits', AppState.appData.clinicVisits);
                             }
                         } catch (e) { /* ignore */ }
-                        // لا تظهر رسالة خطأ - العملية نجحت محلياً
+                        try {
+                            Notification.warning('⚠️ تعذّر حفظ الزيارة في قاعدة البيانات. تحقق من الاتصال وإعادة التسجيل.');
+                        } catch (e) { /* ignore */ }
                     }
                 })();
 
@@ -14443,16 +14442,24 @@ const Clinic = {
             const finalUpdatedBy = finalCreatedBy;
             console.log('✅ [CLINIC] finalCreatedBy النهائي:', finalCreatedBy);
             
+            // ✅ تعيين الحقول حسب نوع الشخص لضمان الكتابة في الأعمدة الصحيحة في قاعدة البيانات
+            // ClinicContractorVisits لا تحتوي على عمود employeeName - يجب استخدام contractorName
+            const isContractorType = personType === 'contractor';
             const formData = {
                 id: visitData?.id || Utils.generateId('VISIT'),
                 personType,
-                employeeCode,
-                employeeName,
-                employeePosition,
-                employeeDepartment,
+                // حقول الموظف (تُهمل تلقائياً عند الكتابة في ClinicContractorVisits)
+                employeeCode: isContractorType ? null : employeeCode,
+                employeeName: isContractorType ? null : employeeName,
+                employeePosition: isContractorType ? null : employeePosition,
+                employeeDepartment: isContractorType ? null : employeeDepartment,
+                employeeLocation: isContractorType ? null : employeeLocation,
+                // حقول المقاول (تُهمل تلقائياً عند الكتابة في ClinicVisits)
+                contractorName: isContractorType ? employeeName : null,
+                contractorWorkerName: isContractorType ? employeeCode : null,
+                contractorPosition: isContractorType ? employeePosition : null,
                 factory: factoryValue,
                 factoryName: factoryName,
-                employeeLocation,
                 workArea: employeeLocation,
                 visitDate: visitDateISO,
                 exitDate: exitDateISO,
@@ -14462,10 +14469,9 @@ const Clinic = {
                 treatment,
                 medications: [],
                 createdAt: visitData?.createdAt || new Date().toISOString(),
-                createdBy: finalCreatedBy, // string - يجب أن يكون اسم صحيح وليس "النظام"
+                createdBy: finalCreatedBy,
                 updatedAt: new Date().toISOString(),
-                updatedBy: finalUpdatedBy, // string - يجب أن يكون اسم صحيح وليس "النظام"
-                // ✅ إضافة email و id للمساعدة في استعادة createdBy في Backend إذا لزم الأمر
+                updatedBy: finalUpdatedBy,
                 email: AppState.currentUser?.email || '',
                 userId: AppState.currentUser?.id || ''
             };

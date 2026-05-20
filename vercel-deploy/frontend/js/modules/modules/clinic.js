@@ -6266,16 +6266,14 @@ const Clinic = {
     shouldFetchClinicVisitsFromBackend(opts = {}) {
         if (opts && opts.forceRefresh === true) return true;
         if (typeof AppState === 'undefined' || !AppState || !AppState.appData) return true;
-        
+
         // إذا تم التحميل بنجاح من الباكيند في هذه الجلسة، فلا داعي لإعادة الطلب مطلقاً إلا بـ forceRefresh
+        // ملاحظة: _visitsBackendFetchOk تُعاد إلى false عند إعادة تحميل الصفحة تلقائياً
         if (this._visitsBackendFetchOk === true) return false;
-        
-        const hasLocalData = Array.isArray(AppState.appData.clinicVisits) && AppState.appData.clinicVisits.length > 0;
-        const lastSync = localStorage.getItem('clinic_last_sync');
-        const cacheAge = lastSync ? (Date.now() - parseInt(lastSync, 10)) : Infinity;
-        const CACHE_DURATION = 10 * 60 * 1000;
-        const isDataStale = !Number.isFinite(cacheAge) || cacheAge >= CACHE_DURATION;
-        return !hasLocalData || isDataStale;
+
+        // عند إعادة التحميل، نجلب دائماً من الباكيند بغض النظر عن الكاش المحلي
+        // لضمان ظهور أي بيانات جديدة (زيارات مقاولين وغيرها) تم تسجيلها
+        return true;
     },
 
     /**
