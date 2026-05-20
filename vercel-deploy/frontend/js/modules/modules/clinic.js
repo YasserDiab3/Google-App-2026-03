@@ -14444,16 +14444,24 @@ const Clinic = {
             const finalUpdatedBy = finalCreatedBy;
             console.log('✅ [CLINIC] finalCreatedBy النهائي:', finalCreatedBy);
             
+            // ✅ تعيين الحقول حسب نوع الشخص لضمان الكتابة في الأعمدة الصحيحة في قاعدة البيانات
+            // ClinicContractorVisits لا تحتوي على عمود employeeName - يجب استخدام contractorName
+            const isContractorType = personType === 'contractor';
             const formData = {
                 id: visitData?.id || Utils.generateId('VISIT'),
                 personType,
-                employeeCode,
-                employeeName,
-                employeePosition,
-                employeeDepartment,
+                // حقول الموظف (تُهمل تلقائياً عند الكتابة في ClinicContractorVisits)
+                employeeCode: isContractorType ? null : employeeCode,
+                employeeName: isContractorType ? null : employeeName,
+                employeePosition: isContractorType ? null : employeePosition,
+                employeeDepartment: isContractorType ? null : employeeDepartment,
+                employeeLocation: isContractorType ? null : employeeLocation,
+                // حقول المقاول (تُهمل تلقائياً عند الكتابة في ClinicVisits)
+                contractorName: isContractorType ? employeeName : null,
+                contractorWorkerName: isContractorType ? employeeCode : null,
+                contractorPosition: isContractorType ? employeePosition : null,
                 factory: factoryValue,
                 factoryName: factoryName,
-                employeeLocation,
                 workArea: employeeLocation,
                 visitDate: visitDateISO,
                 exitDate: exitDateISO,
@@ -14463,10 +14471,9 @@ const Clinic = {
                 treatment,
                 medications: [],
                 createdAt: visitData?.createdAt || new Date().toISOString(),
-                createdBy: finalCreatedBy, // string - يجب أن يكون اسم صحيح وليس "النظام"
+                createdBy: finalCreatedBy,
                 updatedAt: new Date().toISOString(),
-                updatedBy: finalUpdatedBy, // string - يجب أن يكون اسم صحيح وليس "النظام"
-                // ✅ إضافة email و id للمساعدة في استعادة createdBy في Backend إذا لزم الأمر
+                updatedBy: finalUpdatedBy,
                 email: AppState.currentUser?.email || '',
                 userId: AppState.currentUser?.id || ''
             };
