@@ -3396,12 +3396,113 @@ function fixClinicSheetHeaders() {
             Logger.log('✅ [fixClinicSheetHeaders] ' + sheetName + ': الهيدر الحالي = ' + headerRow.slice(0, Math.min(5, headerRow.length)).join(', ') + '...');
         }
 
+        // ✅ تشخيص: إضافة معلومات الصف الأخير لكل شيت
+        for (var d = 0; d < sheetsToFix.length; d++) {
+            const sName = sheetsToFix[d];
+            const diagSheet = ss.getSheetByName(sName);
+            if (!diagSheet) continue;
+            try {
+                const lastRow = diagSheet.getLastRow();
+                const dataRange = diagSheet.getDataRange();
+                const rawVals = dataRange ? dataRange.getValues() : [];
+                let trueLastRow = 1;
+                for (var ri = rawVals.length - 1; ri >= 0; ri--) {
+                    if (rawVals[ri].some(function(c) { return c !== '' && c !== null && c !== undefined; })) {
+                        trueLastRow = ri + 1;
+                        break;
+                    }
+                }
+                const dataRowCount = Math.max(0, trueLastRow - 1);
+                Logger.log('[DIAG] ' + sName + ': getLastRow=' + lastRow + ' | trueLastRow=' + trueLastRow + ' | dataRows=' + dataRowCount);
+                results.push(sName + '→آخر صف: ' + trueLastRow + ' (بيانات: ' + dataRowCount + ' صف)');
+            } catch (diagErr) {
+                Logger.log('[DIAG] ' + sName + ' error: ' + diagErr.toString());
+            }
+        }
+
         const summary = results.join(' | ');
         Logger.log('✅ [fixClinicSheetHeaders] اكتمل: ' + summary);
         return { success: true, message: summary };
 
     } catch (error) {
         Logger.log('❌ [BACKEND] خطأ في fixClinicSheetHeaders: ' + error.toString());
+        return { success: false, message: 'حدث خطأ: ' + error.toString() };
+    }
+}
+
+/**
+ * ضغط شيت العيادة: حذف الصفوف الفارغة بين الهيدر والبيانات الفعلية
+ * يحل مشكلة appendRow القديمة التي كانت تكتب في صف 2000+
+ */
+function compactClinicSheets() {
+    try {
+        const spreadsheetId = getSpreadsheetId();
+        const ss = SpreadsheetApp.openById(spreadsheetId);
+        const sheetsToCompact = ['ClinicVisits', 'ClinicContractorVisits'];
+        const results = [];
+
+        for (var s = 0; s < sheetsToCompact.length; s++) {
+            const sheetName = sheetsToCompact[s];
+            const sheet = ss.getSheetByName(sheetName);
+            if (!sheet) {
+                results.push(sheetName + ': غير موجودة');
+                continue;
+            }
+
+            const lastRow = sheet.getLastRow();
+            if (lastRow <= 1) {
+                results.push(sheetName + ': فارغة');
+                continue;
+            }
+
+            // قراءة جميع البيانات
+            const allData = sheet.getDataRange().getValues();
+            const headers = allData[0]; // الصف الأول: رؤوس
+
+            // جمع الصفوف التي تحتوي على بيانات فعلية (بعد الهيدر)
+            const dataRows = [];
+            for (var r = 1; r < allData.length; r++) {
+                const row = allData[r];
+                const hasData = row.some(function(c) { return c !== '' && c !== null && c !== undefined; });
+                if (hasData) {
+                    dataRows.push(row);
+                }
+            }
+
+            if (dataRows.length === 0) {
+                results.push(sheetName + ': لا توجد بيانات');
+                continue;
+            }
+
+            const totalExistingRows = allData.length - 1; // الصفوف بعد الهيدر
+            if (dataRows.length === totalExistingRows) {
+                results.push(sheetName + ': مضغوطة بالفعل (' + dataRows.length + ' صف)');
+                continue;
+            }
+
+            // إعادة كتابة الشيت بشكل مضغوط
+            // 1. حذف جميع الصفوف بعد الهيدر
+            if (lastRow > 1) {
+                sheet.deleteRows(2, lastRow - 1);
+            }
+
+            // 2. كتابة البيانات الفعلية من الصف 2
+            sheet.getRange(2, 1, dataRows.length, headers.length).setValues(dataRows);
+
+            // 3. إبطال الكاش
+            try {
+                invalidateHseSheetCaches(sheetName);
+            } catch (e) {}
+
+            SpreadsheetApp.flush();
+            results.push(sheetName + ': ✅ تم الضغط (' + dataRows.length + ' صف من ' + totalExistingRows + ')');
+            Logger.log('✅ [compactClinicSheets] ' + sheetName + ': ' + dataRows.length + ' صف ← ' + totalExistingRows + ' صف قبل الضغط');
+        }
+
+        return { success: true, message: results.join(' | ') };
+
+    } catch (error) {
+        Logger.log('❌ [compactClinicSheets] error: ' + error.toString());
         return { success: false, message: 'حدث خطأ: ' + error.toString() };
     }
 }

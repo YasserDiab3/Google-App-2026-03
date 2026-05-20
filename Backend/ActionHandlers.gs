@@ -1096,6 +1096,13 @@ var ActionHandlers = {
         })();
         return result;
     },
+    'compactClinicSheets': function(payload, postData, action, actorUserData, spreadsheetId) {
+        var result = { success: false, message: '' };
+        (function() {
+            result = compactClinicSheets();
+        })();
+        return result;
+    },
     'updateClinicVisit': function(payload, postData, action, actorUserData, spreadsheetId) {
         var result = { success: false, message: '' };
         (function() {
