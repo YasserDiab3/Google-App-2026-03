@@ -6233,14 +6233,15 @@ const Clinic = {
      * يجب أن يعيد الخادم success: true بعد كتابة الشيت؛ وإلا نعتبر الحفظ فاشلاً (لا نعتمد على ردود ناقصة).
      */
     assertClinicVisitRpcResult(result) {
-        // ✅ متساهل: نسجل الرد لكن لا نُلقي خطأ
-        // السبب: الباكيند يحفظ البيانات بنجاح حتى لو فشلت معالجة الرد (CSRF/timing/redirect)
-        // الـ refresh اللاحق سيؤكد الحالة الفعلية من الخادم
+        // التحقق الصارم: الخادم يجب أن يُرجع success: true
         if (!result || result.success !== true) {
+            const msg = (result && result.message)
+                ? result.message
+                : 'لم يُؤكد الخادم حفظ الزيارة';
             try {
-                console.warn('⚠️ [CLINIC] استجابة الخادم غير مؤكدة، سيتم التحقق عبر إعادة التحميل:', result);
+                console.warn('⚠️ [CLINIC] فشل حفظ الزيارة:', msg, result);
             } catch (e) { /* ignore */ }
-            // لا نُلقي خطأ — نترك المنطق يستكمل التحديث من الخادم
+            throw new Error(msg);
         }
     },
 
@@ -6601,19 +6602,10 @@ const Clinic = {
             Utils.safeLog('🔄 [CLINIC] تحديث البيانات من الخادم بعد الحفظ...');
         }
 
-        // ✅ إجبار تحديث جديد: تجاهل أي طلب جلب موجود (قد يحمل بيانات قديمة)
-        // ونعطي الخادم وقتاً لإكمال الكتابة قبل القراءة (1.5 ثانية)
+        // إجبار تحديث جديد: إلغاء أي طلب جلب موجود (قد يحمل بيانات قديمة) وعلامة الجلسة
         this._clinicVisitsLoadPromise = null;
         this._visitsBackendFetchOk = false;
 
-        // تأخير قصير لضمان إكمال الكتابة على الشيت قبل القراءة
-        setTimeout(() => {
-            this._clinicVisitsLoadPromise = null; // مرة أخرى لضمان عدم وجود طلب قديم
-            this._performRefreshAfterSave();
-        }, 1500);
-    },
-
-    _performRefreshAfterSave() {
         this.loadVisitsDataFromBackend()
             .then(() => {
                 // ✅ تحديث الإحصائيات والأرقام فوراً بعد المزامنة
@@ -10696,9 +10688,13 @@ const Clinic = {
                                 window.DataManager.addToPendingSync('ClinicVisits', AppState.appData.clinicVisits);
                             }
                         } catch (e) { /* ignore */ }
-                        // تحديث البيانات من الخادم حتى عند الخطأ — البيانات قد تكون حُفظت فعلاً
+                        // تحديث من الخادم للتأكد من الحالة الفعلية (قد تكون البيانات حُفظت رغم الخطأ)
                         try { this.refreshClinicVisitsFromServerAfterSave(); } catch (e) { /* ignore */ }
-                        // لا نُظهر إشعار خطأ لأن البيانات تُحفظ في الشيت بنجاح في الغالب
+                        // إشعار واضح للمستخدم في حالة فشل حقيقي
+                        try {
+                            const errMsg = (syncError && syncError.message) ? syncError.message : 'فشل غير معروف';
+                            Notification.warning('⚠️ تعذّر تأكيد حفظ الزيارة: ' + errMsg + '. سيتم التحقق تلقائياً من الخادم.');
+                        } catch (e) { /* ignore */ }
                     }
                 })();
 
