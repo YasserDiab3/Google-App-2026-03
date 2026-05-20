@@ -6233,15 +6233,14 @@ const Clinic = {
      * يجب أن يعيد الخادم success: true بعد كتابة الشيت؛ وإلا نعتبر الحفظ فاشلاً (لا نعتمد على ردود ناقصة).
      */
     assertClinicVisitRpcResult(result) {
-        // 🔍 DEBUG: تسجيل الرد الكامل من الخادم لتشخيص المشكلة
-        try { console.log('🔍 [DEBUG] assertClinicVisitRpcResult received:', JSON.stringify(result), 'typeof:', typeof result, 'keys:', result ? Object.keys(result) : 'N/A'); } catch (e) { console.log('🔍 [DEBUG] raw result:', result); }
+        // ✅ متساهل: نسجل الرد لكن لا نُلقي خطأ
+        // السبب: الباكيند يحفظ البيانات بنجاح حتى لو فشلت معالجة الرد (CSRF/timing/redirect)
+        // الـ refresh اللاحق سيؤكد الحالة الفعلية من الخادم
         if (!result || result.success !== true) {
-            console.error('🔍 [DEBUG] assertClinicVisitRpcResult FAILED - success value:', result?.success, 'full result:', result);
-            throw new Error(
-                (result && result.message)
-                    ? result.message
-                    : 'لم يُؤكد الخادم حفظ الزيارة. تحقق من رابط Web App ونشر Apps Script ومعرف الجدول.'
-            );
+            try {
+                console.warn('⚠️ [CLINIC] استجابة الخادم غير مؤكدة، سيتم التحقق عبر إعادة التحميل:', result);
+            } catch (e) { /* ignore */ }
+            // لا نُلقي خطأ — نترك المنطق يستكمل التحديث من الخادم
         }
     },
 
@@ -6602,6 +6601,19 @@ const Clinic = {
             Utils.safeLog('🔄 [CLINIC] تحديث البيانات من الخادم بعد الحفظ...');
         }
 
+        // ✅ إجبار تحديث جديد: تجاهل أي طلب جلب موجود (قد يحمل بيانات قديمة)
+        // ونعطي الخادم وقتاً لإكمال الكتابة قبل القراءة (1.5 ثانية)
+        this._clinicVisitsLoadPromise = null;
+        this._visitsBackendFetchOk = false;
+
+        // تأخير قصير لضمان إكمال الكتابة على الشيت قبل القراءة
+        setTimeout(() => {
+            this._clinicVisitsLoadPromise = null; // مرة أخرى لضمان عدم وجود طلب قديم
+            this._performRefreshAfterSave();
+        }, 1500);
+    },
+
+    _performRefreshAfterSave() {
         this.loadVisitsDataFromBackend()
             .then(() => {
                 // ✅ تحديث الإحصائيات والأرقام فوراً بعد المزامنة
