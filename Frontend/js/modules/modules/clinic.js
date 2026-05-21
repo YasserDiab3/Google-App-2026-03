@@ -9214,6 +9214,12 @@ const Clinic = {
 
                 AppState.appData.sickLeave = sickLeaves;
 
+                // ✅ تحديث الكروت والإحصائيات فوراً (Optimistic UI)
+                try {
+                    this.calculateClinicCardValues();
+                    this.updateClinicAnalysisResults();
+                } catch (e) { Utils.safeWarn('⚠️ فشل تحديث كروت العيادة (إجازة مرضية):', e); }
+
                 // حفظ البيانات محلياً
                 if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
                     window.DataManager.save();
@@ -9716,6 +9722,12 @@ const Clinic = {
                 }
 
                 AppState.appData.injuries = injuries;
+
+                // ✅ تحديث الكروت والإحصائيات فوراً (Optimistic UI)
+                try {
+                    self.calculateClinicCardValues();
+                    self.updateClinicAnalysisResults();
+                } catch (e) { Utils.safeWarn('⚠️ فشل تحديث كروت العيادة (إصابة):', e); }
 
                 // حفظ البيانات محلياً
                 if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
@@ -10905,6 +10917,12 @@ const Clinic = {
                 AppState.appData.medications = medications;
                 AppState.appData.clinicMedications = medications;
                 AppState.appData.clinicInventory = medications;
+
+                // ✅ تحديث الكروت والإحصائيات فوراً (Optimistic UI)
+                try {
+                    this.calculateClinicCardValues();
+                    this.updateClinicAnalysisResults();
+                } catch (e) { Utils.safeWarn('⚠️ فشل تحديث كروت العيادة (دواء):', e); }
 
                 // حفظ البيانات محلياً
                 if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
