@@ -855,6 +855,28 @@ const Violations = {
         }
     },
 
+    /**
+     * تحديث كروت إحصائيات "جميع المخالفات" بشكل فوري بدون إعادة تحميل
+     * يستبدل DOM الكروت فقط، فيظهر التحديث مباشرة بعد أي إضافة/تعديل/حذف
+     */
+    updateAllViolationsStats() {
+        try {
+            const container = document.getElementById('violations-stats-cards');
+            if (!container) return;
+            // إنشاء عنصر مؤقت لاستخراج HTML الكروت الجديدة
+            const wrapper = document.createElement('div');
+            wrapper.innerHTML = this.renderAllViolationsStats();
+            const newCards = wrapper.querySelector('#violations-stats-cards');
+            if (newCards) {
+                container.replaceWith(newCards);
+            }
+        } catch (e) {
+            if (typeof Utils !== 'undefined' && Utils.safeWarn) {
+                Utils.safeWarn('⚠️ فشل تحديث كروت المخالفات الفوري:', e);
+            }
+        }
+    },
+
     renderAllViolationsStats() {
         const violations = this.getFilteredViolations();
         const total = violations.length;
@@ -1809,7 +1831,8 @@ const Violations = {
                     DataManager.save();
                 }
 
-                // 7. تحديث جميع العروض
+                // 7. تحديث الكروت فوراً (مباشر) ثم العروض
+                try { this.updateAllViolationsStats(); } catch (e) { /* ignore */ }
                 this.refreshViolationsView();
 
                 // 8. تحديث عروض المقاولين والموظفين إذا كانت مفتوحة
@@ -3216,7 +3239,8 @@ const Violations = {
                 // 3. عرض رسالة نجاح فورية (محلية أولاً مع إشارة جاري المزامنة)
                 Notification.success(`تم ${isEdit ? 'تحديث' : 'تسجيل'} المخالفة بنجاح وجاري المزامنة في الخلفية...`);
 
-                // 4. تحديث القائمة والكروت فورا لتظهر البيانات المحدثة محليا أمام المستخدم
+                // 4. تحديث الكروت فوراً (مباشر بدون انتظار) ثم القائمة بالكامل
+                try { this.updateAllViolationsStats(); } catch (e) { /* ignore */ }
                 if (typeof Violations !== 'undefined' && Violations.load) {
                     Violations.load();
                 }
