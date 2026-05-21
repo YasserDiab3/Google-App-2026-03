@@ -61,6 +61,63 @@ function addViolationToSheet(violationData) {
 
 
 /**
+ * تحديث مخالفة (upsert آمن — يحدّث الصف إن وُجد، أو يضيفه إن لم يوجد)
+ * يُستخدم بدلاً من saveToSheet الذي يستبدل الجدول كاملاً ويسبب race conditions.
+ */
+function updateViolationInSheet(violationId, updateData) {
+    try {
+        if (!violationId) {
+            return { success: false, message: 'معرف المخالفة غير محدد' };
+        }
+        if (!updateData || typeof updateData !== 'object') {
+            return { success: false, message: 'بيانات التحديث غير صحيحة' };
+        }
+
+        const sheetName = 'Violations';
+        const spreadsheetId = getSpreadsheetId();
+        if (!spreadsheetId) {
+            return { success: false, message: 'معرف Google Sheets غير محدد' };
+        }
+
+        // معالجة photo - إذا كانت Base64، نحولها إلى رابط Drive
+        if (updateData.photo && typeof updateData.photo === 'string' && updateData.photo.startsWith('data:')) {
+            try {
+                const uploadResult = uploadFileToDrive(
+                    updateData.photo,
+                    'violation_' + violationId + '_' + Date.now() + '.jpg',
+                    'image/jpeg',
+                    'Violations'
+                );
+                if (uploadResult && uploadResult.success) {
+                    updateData.photo = uploadResult.directLink || uploadResult.shareableLink || updateData.photo;
+                }
+            } catch (imageError) {
+                Logger.log('خطأ في رفع صورة المخالفة (تحديث): ' + imageError.toString());
+            }
+        }
+
+        // معالجة attachments
+        if (updateData.attachments && Array.isArray(updateData.attachments)) {
+            updateData.attachments = stringifyAttachments(updateData.attachments);
+        } else if (updateData.attachments && typeof updateData.attachments === 'object') {
+            updateData.attachments = stringifyAttachments([updateData.attachments]);
+        }
+
+        // التأكد من وجود id و updatedAt
+        const payload = Object.assign({}, updateData, {
+            id: violationId,
+            updatedAt: new Date().toISOString()
+        });
+
+        // saveToSheet مع سجل واحد يعمل upsert (يجد الصف بـ id ويحدّثه، أو يضيفه)
+        return saveToSheet(sheetName, payload, spreadsheetId);
+    } catch (error) {
+        Logger.log('Error in updateViolationInSheet: ' + error.toString());
+        return { success: false, message: 'حدث خطأ أثناء تحديث المخالفة: ' + error.toString() };
+    }
+}
+
+/**
  * حذف مخالفة
  */
 function deleteViolationFromSheet(violationId) {

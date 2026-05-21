@@ -848,6 +848,18 @@ var ActionHandlers = {
         })();
         return result;
     },
+    'updateViolation': function(payload, postData, action, actorUserData, spreadsheetId) {
+        var result = { success: false, message: '' };
+        (function() {
+
+                    var violationId = payload.violationId || payload.id || (payload.updateData && payload.updateData.id);
+                    var updateData = payload.updateData || payload;
+                    result = updateViolationInSheet(violationId, updateData);
+                    return;
+
+        })();
+        return result;
+    },
     'deleteViolationFromSheet': function(payload, postData, action, actorUserData, spreadsheetId) {
         var result = { success: false, message: '' };
         (function() {

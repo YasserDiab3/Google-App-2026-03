@@ -3261,19 +3261,45 @@ const Violations = {
                         }
                     }
 
-                    // المزامنة مع Google Sheets في الخلفية
+                    // المزامنة مع Google Sheets في الخلفية — استخدام addViolation/updateViolation
+                    // (بدل saveToSheet الذي يستبدل الجدول كاملاً ويسبب race conditions)
                     try {
-                        if (typeof GoogleIntegration !== 'undefined' && GoogleIntegration.autoSave) {
-                            const saveRes = await GoogleIntegration.autoSave('Violations', AppState.appData.violations);
-                            if (saveRes && saveRes.success !== false) {
-                                try { localStorage.setItem('violations_last_sync', String(Date.now())); } catch (eLs) { /* ignore */ }
-                                if (AppState.debugMode) Utils.safeLog('Background autoSave succeeded');
+                        if (typeof GoogleIntegration !== 'undefined' && GoogleIntegration.sendRequest) {
+                            // تحضير نسخة من البيانات مع الصورة النهائية (إن رُفعت)
+                            const payload = Object.assign({}, formData, { photo: finalPhoto });
+                            let saveRes;
+                            if (isEdit) {
+                                saveRes = await GoogleIntegration.sendRequest({
+                                    action: 'updateViolation',
+                                    data: { violationId: formData.id, updateData: payload }
+                                });
                             } else {
-                                if (AppState.debugMode) Utils.safeWarn('Background autoSave returned failure');
+                                saveRes = await GoogleIntegration.sendRequest({
+                                    action: 'addViolation',
+                                    data: payload
+                                });
+                            }
+                            if (saveRes && saveRes.success === true) {
+                                try { localStorage.setItem('violations_last_sync', String(Date.now())); } catch (eLs) { /* ignore */ }
+                                if (AppState.debugMode) Utils.safeLog('✅ حفظ المخالفة في الخادم بنجاح');
+                            } else {
+                                if (AppState.debugMode) Utils.safeWarn('⚠️ فشل حفظ المخالفة في الخادم:', saveRes && saveRes.message);
+                                // إضافة لقائمة الانتظار للمزامنة لاحقاً
+                                try {
+                                    if (typeof DataManager !== 'undefined' && DataManager.addToPendingSync) {
+                                        DataManager.addToPendingSync('Violations', AppState.appData.violations);
+                                    }
+                                } catch (eP) { /* ignore */ }
                             }
                         }
                     } catch (err) {
-                        if (AppState.debugMode) Utils.safeWarn('خطأ في حفظ Google Sheets في الخلفية:', err);
+                        if (AppState.debugMode) Utils.safeWarn('خطأ في حفظ المخالفة في الخلفية:', err);
+                        // محاولة إضافة لقائمة الانتظار لإعادة المحاولة لاحقاً
+                        try {
+                            if (typeof DataManager !== 'undefined' && DataManager.addToPendingSync) {
+                                DataManager.addToPendingSync('Violations', AppState.appData.violations);
+                            }
+                        } catch (eP) { /* ignore */ }
                     }
                 };
 
