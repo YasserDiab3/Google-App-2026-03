@@ -3241,6 +3241,19 @@ const Violations = {
 
                 // 4. تحديث الكروت فوراً (مباشر بدون انتظار) ثم القائمة بالكامل
                 try { this.updateAllViolationsStats(); } catch (e) { /* ignore */ }
+                // ✅ تحديث كروت لوحة التحكم فوراً
+                try {
+                    if (typeof Dashboard !== 'undefined') {
+                        if (typeof Dashboard.updateStats === 'function') Dashboard.updateStats();
+                        if (typeof Dashboard.updateReportsStatistics === 'function') Dashboard.updateReportsStatistics();
+                    }
+                } catch (e) { /* ignore */ }
+                // ✅ إطلاق حدث data-saved ليستجيب له أي مستمع آخر
+                try {
+                    document.dispatchEvent(new CustomEvent('data-saved', {
+                        detail: { module: 'violations', action: isEdit ? 'تحديث' : 'إضافة', data: formData }
+                    }));
+                } catch (e) { /* ignore */ }
                 if (typeof Violations !== 'undefined' && Violations.load) {
                     Violations.load();
                 }

@@ -547,7 +547,15 @@ const DataManager = {
             this._saveSyncMeta();
             // ملاحظة: _saveCacheTimestamps لا تُستدعى هنا — تُحدَّث timestamps فقط عبر recordServerFetch()
             // بعد الجلب الفعلي من الخادم، لمنع إعادة ضبط TTL عند الحفظ المحلي
-            
+
+            // ✅ تحديث كروت لوحة التحكم فوراً بعد كل حفظ محلي (جميع الموديولات)
+            try {
+                if (typeof Dashboard !== 'undefined') {
+                    if (typeof Dashboard.updateStats === 'function') Dashboard.updateStats();
+                    if (typeof Dashboard.updateReportsStatistics === 'function') Dashboard.updateReportsStatistics();
+                }
+            } catch (_) { /* تجاهل لعدم إيقاف عملية الحفظ */ }
+
             return true;
         } catch (error) {
             const isQuotaExceeded = (error.name === 'QuotaExceededError' || (error.code === 22)) || (error.message && (error.message.includes('QuotaExceeded') || error.message.includes('quota')));
