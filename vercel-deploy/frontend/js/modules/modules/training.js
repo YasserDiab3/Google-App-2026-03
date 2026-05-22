@@ -4338,21 +4338,39 @@ const Training = {
         const existingContractorId = existing?.contractorId ? String(existing.contractorId).trim() : '';
         const existingContractorName = existing?.contractorName ? String(existing.contractorName).trim() : '';
         // حساب معرف المقاول المتطابق قبل بناء الخيارات - خيار واحد فقط يحمل selected لتجنب التعارض
+        // نُجري البحث عبر قائمة كاملة تحتوي aliasIds (معرفات مجمَّعة) لتغطية تغيّر المعرف عبر الزمن
+        const _allContractorsFullList = (typeof Contractors !== 'undefined' && typeof Contractors.getAllContractorsForModules === 'function')
+            ? Contractors.getAllContractorsForModules()
+            : contractors;
         let _resolvedContractorId = '';
         if (existing) {
             if (existingContractorId) {
-                // 1. بحث دقيق بالمعرف
+                // 1. بحث مباشر بالمعرف في قائمة النموذج
                 const idMatch = contractors.find(c => String(c?.id ?? '').trim() === existingContractorId);
                 if (idMatch) {
                     _resolvedContractorId = existingContractorId;
-                } else if (existingContractorName) {
-                    // 2. احتياط: بحث بالاسم
-                    const nameMatch = contractors.find(c => String(c?.name ?? '').trim() === existingContractorName);
-                    if (nameMatch) _resolvedContractorId = String(nameMatch?.id ?? '').trim();
                 } else {
-                    // 3. احتياط: إذا خُزّن الاسم خطأً كمعرف - نبحث بالاسم = المعرف المخزّن
-                    const nameAsId = contractors.find(c => String(c?.name ?? '').trim() === existingContractorId);
-                    if (nameAsId) _resolvedContractorId = String(nameAsId?.id ?? '').trim();
+                    // 2. بحث بالـ aliasIds (قائمة المعرفات التاريخية المجمَّعة لكل مقاول)
+                    const aliasMatch = _allContractorsFullList.find(c => {
+                        const ids = Array.isArray(c.aliasIds) ? c.aliasIds : [];
+                        return ids.includes(existingContractorId) ||
+                               String(c.approvedEntityId ?? '').trim() === existingContractorId;
+                    });
+                    if (aliasMatch) {
+                        // نجد معرفه الحالي في قائمة النموذج عبر الاسم
+                        const inForm = contractors.find(c => String(c?.name ?? '').trim() === String(aliasMatch.name ?? '').trim());
+                        if (inForm) _resolvedContractorId = String(inForm?.id ?? '').trim();
+                    }
+                    if (!_resolvedContractorId && existingContractorName) {
+                        // 3. بحث بالاسم
+                        const nameMatch = contractors.find(c => String(c?.name ?? '').trim() === existingContractorName);
+                        if (nameMatch) _resolvedContractorId = String(nameMatch?.id ?? '').trim();
+                    }
+                    if (!_resolvedContractorId) {
+                        // 4. احتياط: إذا خُزّن الاسم خطأً كمعرف قديم
+                        const nameAsId = contractors.find(c => String(c?.name ?? '').trim() === existingContractorId);
+                        if (nameAsId) _resolvedContractorId = String(nameAsId?.id ?? '').trim();
+                    }
                 }
             } else if (existingContractorName) {
                 const nameMatch = contractors.find(c => String(c?.name ?? '').trim() === existingContractorName);
@@ -4428,7 +4446,8 @@ const Training = {
                                         ${contractors.map(contractor => {
                                             const contractorIdStr = String(contractor?.id ?? '').trim();
                                             // ✅ مقارنة بمعرف واحد محسوب مسبقاً — يضمن خياراً واحداً فقط بـ selected
-                                            const isSelected = contractorIdStr === _resolvedContractorId;
+                                            // الحارس: لا نختار أي مقاول عند فشل البحث (لمنع اختيار مقاول بمعرف فارغ عرضاً)
+                                            const isSelected = _resolvedContractorId !== '' && contractorIdStr !== '' && contractorIdStr === _resolvedContractorId;
                                             return `
                                                 <option value="${Utils.escapeHTML(contractorIdStr)}" ${isSelected ? 'selected' : ''}>
                                                     ${Utils.escapeHTML(contractor.name || 'بدون اسم')}
@@ -4545,6 +4564,16 @@ const Training = {
         `;
 
         document.body.appendChild(modal);
+
+        // ✅ تعيين المقاول المحدد برمجياً بعد إدراج النموذج في DOM
+        // أكثر موثوقية من خاصية selected في HTML لأنه يعمل حتى مع IDs التي تحتوي على محارف خاصة
+        if (_resolvedContractorId !== '') {
+            const contractorSelectEl = modal.querySelector('#contractor-training-contractor');
+            if (contractorSelectEl && contractorSelectEl.value !== _resolvedContractorId) {
+                contractorSelectEl.value = _resolvedContractorId;
+            }
+        }
+
         let isClosing = false;
         let handleEscKey = null;
         
