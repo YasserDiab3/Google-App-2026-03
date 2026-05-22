@@ -608,61 +608,48 @@ const Dashboard = {
             return;
         }
 
-        const data = AppState.appData || {};
-        // تجنب وميض Skeleton: إذا كانت البيانات جاهزة لا نعرض الهيكل المؤقت، نعرض المحتوى مباشرة
-        const dataReady = data && (typeof data === 'object');
-        if (!dataReady) {
-            container.innerHTML = this.renderReportsWidgetSkeleton();
-        }
+        // Stale-While-Revalidate: render immediately from cache then update from server
+        const _self = this;
+        const _renderWidgetFromData = async (snapshot) => {
+            try {
+                const stats = await _self.calculateStatsAsync(snapshot || AppState.appData || {});
+                const expiringMeds = _self.dashboardCan('clinic')
+                    ? await _self.getExpiringMedicationsAsync(snapshot || {})
+                    : [];
+                if (!document.contains(container)) return;
+                container.innerHTML = _self.renderReportsWidget(stats, expiringMeds);
+                _self.animateStatCards(container);
+                _self.setupReportsWidgetEvents(container);
+                _self.applyDashboardLayoutPermissions();
+                try {
+                    _self.updateKPIs();
+                    _self.updateStats();
+                    _self.updateReportsStatistics();
+                } catch (_) {}
+            } catch (e) {
+                if (typeof Utils !== 'undefined' && Utils.safeWarn) Utils.safeWarn('dashboard render error:', e);
+            }
+        };
 
         try {
-            if (!dataReady) {
-                const loadData = () => new Promise((resolve) => {
-                    if (window.requestIdleCallback) {
-                        window.requestIdleCallback(() => resolve(), { timeout: 1000 });
-                    } else {
-                        setTimeout(() => resolve(), 100);
-                    }
-                });
-                await loadData();
-            }
+            // 1 - render immediately from local cache (no server wait)
+            await _renderWidgetFromData(AppState.appData || {});
 
-            const dataForRender = AppState.appData;
-
-            // إحصائيات الكروت: جلب من الخلفية بالتوازي مع سجل التردد (دون الاعتماد على فتح الموديولات)
+            // 2 - fetch fresh data from server in background (non-blocking)
             const prefetchClinic = this.dashboardCan('clinic')
                 ? this.prefetchClinicVisitsForDashboard({ forceRefresh })
                 : Promise.resolve();
-            await Promise.all([
+
+            Promise.all([
                 this.prefetchReportStatsSheetsForDashboard({ forceRefresh }),
                 prefetchClinic
-            ]);
+            ]).then(() => _renderWidgetFromData(AppState.appData))
+              .catch(e => {
+                  if (typeof Utils !== 'undefined' && Utils.safeWarn) Utils.safeWarn('dashboard prefetch failed:', e);
+              });
 
-            // حساب الإحصائيات بشكل تدريجي
-            const stats = await this.calculateStatsAsync(AppState.appData || dataForRender);
-            const expiringMedications = this.dashboardCan('clinic')
-                ? await this.getExpiringMedicationsAsync(dataForRender)
-                : [];
-
-            // عرض الكارت مع البيانات
-            container.innerHTML = this.renderReportsWidget(stats, expiringMedications);
-
-            // إضافة animations للكروت
-            this.animateStatCards(container);
-
-            // إعداد مستمعي الأحداث
-            this.setupReportsWidgetEvents(container);
-            this.applyDashboardLayoutPermissions();
-
-            // تحديث كروت تصاريح العمل ومؤشرات KPI الأخرى بعد جلب PTW/PTWRegistry (كانت تُحدَّث قبل الجلب المبكر)
-            try {
-                this.updateKPIs();
-                this.updateStats();
-            } catch (kpiErr) {
-                if (typeof Utils !== 'undefined' && Utils.safeWarn) Utils.safeWarn('⚠️ تعذر تحديث KPI بعد التقارير:', kpiErr);
-            }
         } catch (error) {
-            Utils.safeError('خطأ في تحميل كارت التقارير:', error);
+            Utils.safeError('dashboard load error:', error);
             container.innerHTML = `
                 <div class="content-card">
                     <div class="card-body">
@@ -679,7 +666,7 @@ const Dashboard = {
             try {
                 this.updateKPIs();
                 this.updateStats();
-            } catch (_) { /* ignore */ }
+            } catch (_) {}
         }
     },
 

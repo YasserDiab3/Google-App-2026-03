@@ -135,6 +135,14 @@ const Dashboard = {
      */
     async load() {
         this.setupReportsStatisticsCardsClickHandlers();
+
+        // ✅ عرض البيانات المتوفرة محلياً فوراً (من AppState/localStorage) بدون انتظار الخادم
+        try {
+            this.updateKPIs();
+            this.updateStats();
+            this.updateReportsStatistics();
+        } catch (_) { /* تجاهل — البيانات قد تكون غير مكتملة بعد */ }
+
         try {
             await this.loadReportsWidget();
         } catch (e) {
@@ -507,9 +515,11 @@ const Dashboard = {
             if (typeof GoogleIntegration === 'undefined' || typeof GoogleIntegration.batchReadFromSheets !== 'function') return;
             if (typeof GoogleIntegration._isBackendRpcConfigured !== 'function' || !GoogleIntegration._isBackendRpcConfigured()) return;
 
+            // كاش 5 دقائق للزيارات المتكررة — لكن أول فتح لكل جلسة يجلب دائماً بغض النظر عن الكاش
             const CACHE_MS = 5 * 60 * 1000;
             const now = Date.now();
-            if (!forceRefresh && typeof this._reportStatsSheetsFetchedAt === 'number' && (now - this._reportStatsSheetsFetchedAt) < CACHE_MS) {
+            const alreadyFetchedThisSession = this._reportStatsSheetsFetchedInSession === true;
+            if (!forceRefresh && alreadyFetchedThisSession && typeof this._reportStatsSheetsFetchedAt === 'number' && (now - this._reportStatsSheetsFetchedAt) < CACHE_MS) {
                 return;
             }
 
@@ -558,6 +568,13 @@ const Dashboard = {
             });
 
             this._reportStatsSheetsFetchedAt = now;
+            this._reportStatsSheetsFetchedInSession = true; // علامة أول جلب ناجح في الجلسة
+
+            // ✅ تحديث الكروت فوراً بعد وصول البيانات من الخادم
+            try {
+                this.updateStats();
+                this.updateReportsStatistics();
+            } catch (_) { /* تجاهل */ }
 
             if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
                 try {
@@ -591,61 +608,48 @@ const Dashboard = {
             return;
         }
 
-        const data = AppState.appData || {};
-        // تجنب وميض Skeleton: إذا كانت البيانات جاهزة لا نعرض الهيكل المؤقت، نعرض المحتوى مباشرة
-        const dataReady = data && (typeof data === 'object');
-        if (!dataReady) {
-            container.innerHTML = this.renderReportsWidgetSkeleton();
-        }
+        // Stale-While-Revalidate: render immediately from cache then update from server
+        const _self = this;
+        const _renderWidgetFromData = async (snapshot) => {
+            try {
+                const stats = await _self.calculateStatsAsync(snapshot || AppState.appData || {});
+                const expiringMeds = _self.dashboardCan('clinic')
+                    ? await _self.getExpiringMedicationsAsync(snapshot || {})
+                    : [];
+                if (!document.contains(container)) return;
+                container.innerHTML = _self.renderReportsWidget(stats, expiringMeds);
+                _self.animateStatCards(container);
+                _self.setupReportsWidgetEvents(container);
+                _self.applyDashboardLayoutPermissions();
+                try {
+                    _self.updateKPIs();
+                    _self.updateStats();
+                    _self.updateReportsStatistics();
+                } catch (_) {}
+            } catch (e) {
+                if (typeof Utils !== 'undefined' && Utils.safeWarn) Utils.safeWarn('dashboard render error:', e);
+            }
+        };
 
         try {
-            if (!dataReady) {
-                const loadData = () => new Promise((resolve) => {
-                    if (window.requestIdleCallback) {
-                        window.requestIdleCallback(() => resolve(), { timeout: 1000 });
-                    } else {
-                        setTimeout(() => resolve(), 100);
-                    }
-                });
-                await loadData();
-            }
+            // 1 - render immediately from local cache (no server wait)
+            await _renderWidgetFromData(AppState.appData || {});
 
-            const dataForRender = AppState.appData;
-
-            // إحصائيات الكروت: جلب من الخلفية بالتوازي مع سجل التردد (دون الاعتماد على فتح الموديولات)
+            // 2 - fetch fresh data from server in background (non-blocking)
             const prefetchClinic = this.dashboardCan('clinic')
                 ? this.prefetchClinicVisitsForDashboard({ forceRefresh })
                 : Promise.resolve();
-            await Promise.all([
+
+            Promise.all([
                 this.prefetchReportStatsSheetsForDashboard({ forceRefresh }),
                 prefetchClinic
-            ]);
+            ]).then(() => _renderWidgetFromData(AppState.appData))
+              .catch(e => {
+                  if (typeof Utils !== 'undefined' && Utils.safeWarn) Utils.safeWarn('dashboard prefetch failed:', e);
+              });
 
-            // حساب الإحصائيات بشكل تدريجي
-            const stats = await this.calculateStatsAsync(AppState.appData || dataForRender);
-            const expiringMedications = this.dashboardCan('clinic')
-                ? await this.getExpiringMedicationsAsync(dataForRender)
-                : [];
-
-            // عرض الكارت مع البيانات
-            container.innerHTML = this.renderReportsWidget(stats, expiringMedications);
-
-            // إضافة animations للكروت
-            this.animateStatCards(container);
-
-            // إعداد مستمعي الأحداث
-            this.setupReportsWidgetEvents(container);
-            this.applyDashboardLayoutPermissions();
-
-            // تحديث كروت تصاريح العمل ومؤشرات KPI الأخرى بعد جلب PTW/PTWRegistry (كانت تُحدَّث قبل الجلب المبكر)
-            try {
-                this.updateKPIs();
-                this.updateStats();
-            } catch (kpiErr) {
-                if (typeof Utils !== 'undefined' && Utils.safeWarn) Utils.safeWarn('⚠️ تعذر تحديث KPI بعد التقارير:', kpiErr);
-            }
         } catch (error) {
-            Utils.safeError('خطأ في تحميل كارت التقارير:', error);
+            Utils.safeError('dashboard load error:', error);
             container.innerHTML = `
                 <div class="content-card">
                     <div class="card-body">
@@ -662,7 +666,7 @@ const Dashboard = {
             try {
                 this.updateKPIs();
                 this.updateStats();
-            } catch (_) { /* ignore */ }
+            } catch (_) {}
         }
     },
 
@@ -3032,20 +3036,25 @@ const Dashboard = {
         const externalWorkforce = Array.isArray(data.externalWorkforceMonthly) ? data.externalWorkforceMonthly : [];
         const currentYear = new Date().getFullYear();
         const monthKeys = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
-        const currentMonthKey = monthKeys[new Date().getMonth()];
 
-        // 1. محاولة الجمع من جدول العمالة الخارجية الشهري للمقاولين المعتمدين للسنة الحالية والشهر الحالي أولاً
+        // 1. جمع كل الأشهر المُدخلة لكل مقاول في السنة الحالية (ليس شهراً واحداً فقط)
         const activeYearRecords = externalWorkforce.filter(r => r && Number(r.year) === currentYear);
         if (activeYearRecords.length > 0) {
-            let monthlySum = 0;
+            let totalSum = 0;
             activeYearRecords.forEach(r => {
-                const val = parseFloat(r[currentMonthKey]);
-                if (Number.isFinite(val) && val > 0) {
-                    monthlySum += Math.round(val);
+                // استخدام حقل total إذا كان مُحسوباً مسبقاً، وإلا جمع الأشهر يدوياً
+                const savedTotal = parseFloat(r.total);
+                if (Number.isFinite(savedTotal) && savedTotal > 0) {
+                    totalSum += Math.round(savedTotal);
+                } else {
+                    monthKeys.forEach(key => {
+                        const val = parseFloat(r[key]);
+                        if (Number.isFinite(val) && val > 0) totalSum += Math.round(val);
+                    });
                 }
             });
-            if (monthlySum > 0) {
-                return monthlySum;
+            if (totalSum > 0) {
+                return totalSum;
             }
         }
 
@@ -3280,13 +3289,44 @@ const Dashboard = {
                             self.applyEnglishNumberFormat(empCountDashEl);
                         }
                         
-                        // Update active contractor count separately
+                        // ✅ تحديث كارت العمالة الخارجية — مع جلب البيانات إن لم تكن محملة
                         const contCountDashEl = document.getElementById('dash-kpi-contractors-active-count');
                         if (contCountDashEl) {
                             const approvedContractors = Array.isArray(data.approvedContractors) ? data.approvedContractors : [];
-                            const contractorWorkforceCount = self._sumContractorWorkforceHeadcount(approvedContractors, data);
-                            contCountDashEl.textContent = self.formatNumber(contractorWorkforceCount);
-                            self.applyEnglishNumberFormat(contCountDashEl);
+
+                            // إذا كانت البيانات موجودة — احسب مباشرة
+                            if (Array.isArray(data.externalWorkforceMonthly) && data.externalWorkforceMonthly.length > 0) {
+                                const contractorWorkforceCount = self._sumContractorWorkforceHeadcount(approvedContractors, data);
+                                contCountDashEl.textContent = self.formatNumber(contractorWorkforceCount);
+                                self.applyEnglishNumberFormat(contCountDashEl);
+                            } else {
+                                // البيانات غير محملة — اجلبها من الخادم وحدّث الكارت
+                                if (typeof GoogleIntegration !== 'undefined' && typeof GoogleIntegration.readFromSheets === 'function') {
+                                    GoogleIntegration.readFromSheets('ExternalWorkforceMonthly', 15000)
+                                        .then(rows => {
+                                            if (Array.isArray(rows) && rows.length > 0) {
+                                                AppState.appData.externalWorkforceMonthly = rows;
+                                            } else if (!Array.isArray(AppState.appData.externalWorkforceMonthly)) {
+                                                AppState.appData.externalWorkforceMonthly = [];
+                                            }
+                                            const count = self._sumContractorWorkforceHeadcount(approvedContractors, AppState.appData);
+                                            if (contCountDashEl) {
+                                                contCountDashEl.textContent = self.formatNumber(count);
+                                                self.applyEnglishNumberFormat(contCountDashEl);
+                                            }
+                                        })
+                                        .catch(() => {
+                                            // فشل الجلب — اعرض عدد المقاولين النشطين كبديل
+                                            const fallback = approvedContractors.filter(r => r &&
+                                                r.isActive !== 'inactive' && r.isActive !== false &&
+                                                r.isActive !== 'false' && r.isActive !== 'FALSE').length;
+                                            if (contCountDashEl) {
+                                                contCountDashEl.textContent = self.formatNumber(fallback);
+                                                self.applyEnglishNumberFormat(contCountDashEl);
+                                            }
+                                        });
+                                }
+                            }
                         }
                     }
                     if (self.dashboardCan('training')) {

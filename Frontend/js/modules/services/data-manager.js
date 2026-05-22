@@ -39,23 +39,50 @@ const DataManager = {
             'contractorTrainings', 'violations', 'blacklistRegister', 'incidents',
             'dailyObservations', 'dailySafetyCheckList', 'ptwRegistry', 'trainingAnalysisData',
             'contractorEvaluations', 'contractorApprovalRequests', 'contractorDeletionRequests',
-            'annualTrainingPlans' // قد يكون كبيراً
+            'annualTrainingPlans', 'nearmiss', 'inspections', 'chemicalInventory',
+            'clinicVisits', 'clinicMedications', 'clinicInventory', 'clinicInjuries', 'clinicSickLeave'
         ];
         const maxItems = this.MAX_ITEMS_PER_ARRAY_IN_LIGHT;
         const out = {};
         // تتبع الحقول التي تم بترها مع عدد العناصر الحقيقي
         const truncatedFields = {};
 
+        /**
+         * إزالة حقول base64 الكبيرة (صور، مرفقات) من سجل واحد
+         * لا تُحذف البيانات من الذاكرة — فقط من النسخة المحلية المحفوظة
+         */
+        const stripHeavyFields = (record) => {
+            if (!record || typeof record !== 'object') return record;
+            const stripped = { ...record };
+            // حذف الصور الكبيرة base64
+            for (const field of ['photo', 'photoBase64', 'image', 'imageBase64', 'signature', 'signatureBase64']) {
+                if (typeof stripped[field] === 'string' && stripped[field].startsWith('data:')) {
+                    stripped[field] = '__stripped__';
+                }
+            }
+            // تقليص المرفقات إلى أسمائها فقط (بدون محتوى base64)
+            if (Array.isArray(stripped.attachments)) {
+                stripped.attachments = stripped.attachments.map(a => {
+                    if (!a || typeof a !== 'object') return a;
+                    const { name, fileName, type, size } = a;
+                    return { name, fileName, type, size, __stripped: true };
+                });
+            }
+            return stripped;
+        };
+
         for (const key of Object.keys(appData)) {
             const val = appData[key];
-            if (heavyKeys.indexOf(key) >= 0 && Array.isArray(val) && val.length > maxItems) {
-                out[key] = val.slice(-maxItems);
-                truncatedFields[key] = val.length; // الحجم الحقيقي قبل البتر
+            if (heavyKeys.indexOf(key) >= 0 && Array.isArray(val)) {
+                // 1. اقتطاع العناصر الزائدة
+                const sliced = val.length > maxItems ? val.slice(-maxItems) : val;
+                if (val.length > maxItems) truncatedFields[key] = val.length;
+                // 2. إزالة base64 من كل عنصر
+                out[key] = sliced.map(stripHeavyFields);
             } else if (key === 'employeeTrainingMatrix' && val && typeof val === 'object') {
                 const entries = Object.entries(val);
                 if (entries.length > 500) {
-                    const trimmed = entries.slice(-500);
-                    out[key] = Object.fromEntries(trimmed);
+                    out[key] = Object.fromEntries(entries.slice(-500));
                     truncatedFields[key] = entries.length;
                 } else {
                     out[key] = val;
@@ -66,13 +93,11 @@ const DataManager = {
         }
 
         // إضافة metadata تشير إلى أن هذه نسخة مخففة مبتورة
-        if (Object.keys(truncatedFields).length > 0) {
-            out._lightDataMeta = {
-                isLight: true,
-                truncatedAt: Date.now(),
-                fields: truncatedFields // { fieldName: originalCount }
-            };
-        }
+        out._lightDataMeta = {
+            isLight: true,
+            truncatedAt: Date.now(),
+            fields: truncatedFields
+        };
 
         return out;
     },
@@ -522,23 +547,17 @@ const DataManager = {
                         localStorage.setItem('hse_app_data', lightSerialized);
                         this._saveSyncMeta();
                         this.saveCompanySettings();
-                        if (Date.now() - this._lastLightSaveNotification > 60000) {
-                            this._lastLightSaveNotification = Date.now();
-                            if (typeof Notification !== 'undefined' && Notification.info) {
-                                Notification.info('تم حفظ نسخة مخففة محلياً. البيانات الكاملة في Google Sheets.');
-                            }
-                        }
+                        // تسجيل في الـ console فقط — لا إشعار مرئي للمستخدم (البيانات الكاملة في الذاكرة وGoogle Sheets)
+                        Utils.safeLog('ℹ️ [DataManager] تم حفظ نسخة مخففة محلياً. البيانات الكاملة في الذاكرة وGoogle Sheets.');
                         return true;
                     } catch (e) {
                         Utils.safeWarn('⚠️ فشل حفظ النسخة المخففة:', e);
                     }
                 }
-                if (serialized.length > 10 * 1024 * 1024 && !this._hasShownLargeDataWarning) {
+                // الحجم كبير جداً حتى بعد التخفيف — سجّل في Console فقط بدون إزعاج المستخدم
+                if (!this._hasShownLargeDataWarning) {
                     this._hasShownLargeDataWarning = true;
-                    Utils.safeWarn('⚠️ حجم البيانات كبير جداً - قد يفشل الحفظ في localStorage');
-                    if (typeof Notification !== 'undefined' && Notification.warning) {
-                        Notification.warning('حجم البيانات كبير جداً. سيتم حفظ البيانات تلقائياً في Google Sheets عند المزامنة.');
-                    }
+                    Utils.safeWarn('⚠️ [DataManager] حجم البيانات كبير جداً للـ localStorage — البيانات محفوظة في الذاكرة وGoogle Sheets');
                 }
                 return false;
             }
@@ -547,7 +566,15 @@ const DataManager = {
             this._saveSyncMeta();
             // ملاحظة: _saveCacheTimestamps لا تُستدعى هنا — تُحدَّث timestamps فقط عبر recordServerFetch()
             // بعد الجلب الفعلي من الخادم، لمنع إعادة ضبط TTL عند الحفظ المحلي
-            
+
+            // ✅ تحديث كروت لوحة التحكم فوراً بعد كل حفظ محلي (جميع الموديولات)
+            try {
+                if (typeof Dashboard !== 'undefined') {
+                    if (typeof Dashboard.updateStats === 'function') Dashboard.updateStats();
+                    if (typeof Dashboard.updateReportsStatistics === 'function') Dashboard.updateReportsStatistics();
+                }
+            } catch (_) { /* تجاهل لعدم إيقاف عملية الحفظ */ }
+
             return true;
         } catch (error) {
             const isQuotaExceeded = (error.name === 'QuotaExceededError' || (error.code === 22)) || (error.message && (error.message.includes('QuotaExceeded') || error.message.includes('quota')));
@@ -559,14 +586,12 @@ const DataManager = {
             if (isStackOverflow) {
                 if (!this._hasShownLargeDataWarning) {
                     this._hasShownLargeDataWarning = true;
-                    if (typeof Notification !== 'undefined' && Notification.warning) {
-                        Notification.warning('حجم البيانات كبير جداً. سيتم حفظ البيانات تلقائياً في Google Sheets عند المزامنة.');
-                    }
+                    Utils.safeWarn('⚠️ [DataManager] حجم البيانات كبير جداً للـ localStorage — البيانات محفوظة في الذاكرة وGoogle Sheets');
                 }
                 return false;
             }
             if (isQuotaExceeded) {
-                // محاولة تحرير مساحة ثم حفظ نسخة مخففة قبل إظهار الرسالة
+                // محاولة تحرير مساحة ثم حفظ نسخة مخففة
                 try {
                     this._clearNonEssentialStorage();
                     const light = this.buildLightAppData(AppState.appData);
@@ -575,18 +600,13 @@ const DataManager = {
                         localStorage.setItem('hse_app_data', lightSerialized);
                         this._saveSyncMeta();
                         this.saveCompanySettings();
-                        if (Date.now() - this._lastLightSaveNotification > 60000) {
-                            this._lastLightSaveNotification = Date.now();
-                            if (typeof Notification !== 'undefined' && Notification.info) {
-                                Notification.info('تم حفظ نسخة مخففة. البيانات الكاملة ستُحمّل من Google Sheets عند الاتصال.');
-                            }
-                        }
+                        Utils.safeLog('ℹ️ [DataManager] تم حفظ نسخة مخففة بعد امتلاء التخزين.');
                         return true;
                     }
                 } catch (e2) {
                     Utils.safeWarn('⚠️ فشل حفظ النسخة المخففة بعد امتلاء التخزين:', e2);
                 }
-                // عدم إظهار رسالة للمستخدم؛ المزامنة تتم تلقائياً عند الاتصال
+                // عدم إظهار رسالة للمستخدم؛ البيانات في الذاكرة وGoogle Sheets
                 return false;
             }
             if (isSecurityError) {
