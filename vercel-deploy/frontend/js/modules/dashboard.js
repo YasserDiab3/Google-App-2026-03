@@ -3229,7 +3229,7 @@ const Dashboard = {
                         const numCur = document.getElementById('dash-incidents-num-current');
                         const numPrior = document.getElementById('dash-incidents-num-prior');
                         if (lblCur) {
-                            lblCur.textContent = `حوادث العام الحالي (${currentYear}):`;
+                            lblCur.textContent = `${self.t('dash.incidentsCurrentYear', 'حوادث العام الحالي')} (${currentYear}):`;
                         }
                         if (numCur) {
                             numCur.textContent = self.formatNumber(incidentsCurrentYearCount);
