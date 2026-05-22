@@ -3026,129 +3026,243 @@ const DailyObservations = {
         this.ensureChartJSLoaded().catch(() => {});
         return `
         <div id="obs-analytics-root" style="font-family: inherit;">
-            <!-- ── شريط الأدوات ── -->
-            <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; margin-bottom:20px; padding:16px 20px; background:linear-gradient(135deg,#1e3a8a 0%,#2563eb 100%); border-radius:14px; color:#fff; box-shadow:0 4px 20px rgba(37,99,235,0.3);">
-                <div style="display:flex; align-items:center; gap:12px;">
+
+            <!-- ══════════════════════════════════════════════════════
+                 شريط الأدوات الرئيسي
+            ══════════════════════════════════════════════════════ -->
+            <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:14px;padding:16px 20px;background:linear-gradient(135deg,#1e3a8a 0%,#2563eb 100%);border-radius:14px;color:#fff;box-shadow:0 4px 20px rgba(37,99,235,0.3);">
+                <div style="display:flex;align-items:center;gap:12px;">
                     <div style="width:44px;height:44px;background:rgba(255,255,255,0.18);border-radius:12px;display:flex;align-items:center;justify-content:center;">
                         <i class="fas fa-chart-line" style="font-size:20px;"></i>
                     </div>
                     <div>
-                        <h2 style="margin:0;font-size:1.25rem;font-weight:700;">لوحة التحليل الاحترافية</h2>
-                        <p style="margin:0;font-size:0.78rem;opacity:0.85;">تحليل شامل وفوري لجميع الملاحظات اليومية</p>
+                        <h2 style="margin:0;font-size:1.15rem;font-weight:700;">لوحة التحليل الاحترافية</h2>
+                        <p style="margin:0;font-size:0.75rem;opacity:0.85;">تحليل شامل وفوري • فلاتر تفاعلية • تصدير PDF</p>
                     </div>
                 </div>
-                <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
-                    <span style="font-size:0.75rem;opacity:0.85;margin-left:4px;">الفترة:</span>
-                    <div style="display:flex;gap:4px;flex-wrap:wrap;">
-                        ${['30', '90', '180', '365', '0'].map((v,i) => {
+                <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+                    <!-- فلتر الفترة -->
+                    <span style="font-size:0.72rem;opacity:0.85;margin-left:2px;">الفترة:</span>
+                    <div style="display:flex;gap:3px;flex-wrap:wrap;">
+                        ${['30','90','180','365','0'].map((v,i) => {
                             const labels = ['30 يوم','3 أشهر','6 أشهر','سنة','الكل'];
                             const active = (this._analysisPeriod || '0') === v;
-                            return `<button class="obs-period-btn" data-period="${v}" style="padding:5px 12px;border-radius:8px;border:none;cursor:pointer;font-size:0.78rem;font-weight:600;transition:all .2s;background:${active?'#fff':'rgba(255,255,255,0.15)'};color:${active?'#1e40af':'#fff'};">${labels[i]}</button>`;
+                            return `<button class="obs-period-btn" data-period="${v}" style="padding:5px 10px;border-radius:8px;border:none;cursor:pointer;font-size:0.75rem;font-weight:600;transition:all .2s;background:${active?'#fff':'rgba(255,255,255,0.15)'};color:${active?'#1e40af':'#fff'};">${labels[i]}</button>`;
                         }).join('')}
                     </div>
-                    <button id="obs-analytics-refresh" title="تحديث" style="padding:6px 12px;border-radius:8px;border:none;cursor:pointer;background:rgba(255,255,255,0.15);color:#fff;font-size:0.78rem;transition:all .2s;" onmouseover="this.style.background='rgba(255,255,255,0.3)'" onmouseout="this.style.background='rgba(255,255,255,0.15)'">
+                    <!-- زر الفلاتر -->
+                    <button id="obs-toggle-filters-btn" title="فلاتر تفاعلية" style="padding:6px 12px;border-radius:8px;border:1px solid rgba(255,255,255,0.4);cursor:pointer;background:rgba(255,255,255,0.12);color:#fff;font-size:0.78rem;font-weight:600;transition:all .2s;display:flex;align-items:center;gap:5px;" onmouseover="this.style.background='rgba(255,255,255,0.25)'" onmouseout="this.style.background='rgba(255,255,255,0.12)'">
+                        <i class="fas fa-sliders-h"></i><span>فلاتر</span><span id="obs-filter-active-badge" style="display:none;background:#ef4444;color:#fff;font-size:0.65rem;padding:1px 5px;border-radius:10px;margin-right:2px;">•</span>
+                    </button>
+                    <!-- زر تصدير PDF -->
+                    <button id="obs-export-pdf-btn" title="تصدير PDF" style="padding:6px 14px;border-radius:8px;border:none;cursor:pointer;background:rgba(239,68,68,0.85);color:#fff;font-size:0.78rem;font-weight:600;transition:all .2s;display:flex;align-items:center;gap:5px;" onmouseover="this.style.background='rgba(239,68,68,1)'" onmouseout="this.style.background='rgba(239,68,68,0.85)'">
+                        <i class="fas fa-file-pdf"></i><span>PDF</span>
+                    </button>
+                    <!-- زر تحديث -->
+                    <button id="obs-analytics-refresh" title="تحديث" style="padding:6px 10px;border-radius:8px;border:none;cursor:pointer;background:rgba(255,255,255,0.15);color:#fff;font-size:0.78rem;transition:all .2s;" onmouseover="this.style.background='rgba(255,255,255,0.3)'" onmouseout="this.style.background='rgba(255,255,255,0.15)'">
                         <i class="fas fa-sync-alt"></i>
                     </button>
                 </div>
             </div>
 
-            <!-- ── KPI Cards ── -->
-            <div id="obs-kpi-strip" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:24px;">
+            <!-- ══════════════════════════════════════════════════════
+                 لوحة الفلاتر التفاعلية (مخفية افتراضياً)
+            ══════════════════════════════════════════════════════ -->
+            <div id="obs-filter-panel" style="display:none;background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:12px;padding:18px 20px;margin-bottom:16px;animation:fadeIn .2s ease;">
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+                    <div style="display:flex;align-items:center;gap:8px;">
+                        <i class="fas fa-sliders-h" style="color:#2563eb;font-size:14px;"></i>
+                        <span style="font-weight:700;font-size:0.9rem;color:#1e3a8a;">الفلاتر التفاعلية</span>
+                        <span id="obs-filter-results-count" style="background:#dbeafe;color:#1e40af;padding:2px 8px;border-radius:12px;font-size:0.72rem;font-weight:600;"></span>
+                    </div>
+                    <button id="obs-filter-reset-btn" style="padding:4px 12px;border-radius:8px;border:1px solid #e2e8f0;background:#fff;color:#64748b;font-size:0.75rem;cursor:pointer;transition:all .2s;" onmouseover="this.style.background='#fef2f2';this.style.color='#ef4444';this.style.borderColor='#fecaca'" onmouseout="this.style.background='#fff';this.style.color='#64748b';this.style.borderColor='#e2e8f0'">
+                        <i class="fas fa-times ml-1"></i>مسح الكل
+                    </button>
+                </div>
+                <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;">
+                    <div>
+                        <label style="font-size:0.72rem;font-weight:700;color:#64748b;display:block;margin-bottom:5px;">
+                            <i class="fas fa-industry" style="color:#3b82f6;margin-left:4px;"></i>الموقع / المصنع
+                        </label>
+                        <select id="obs-af-site" style="width:100%;padding:7px 10px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:0.82rem;background:#fff;color:#374151;cursor:pointer;transition:border .2s;" onfocus="this.style.borderColor='#3b82f6'" onblur="this.style.borderColor='#e2e8f0'">
+                            <option value="">الكل</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label style="font-size:0.72rem;font-weight:700;color:#64748b;display:block;margin-bottom:5px;">
+                            <i class="fas fa-hard-hat" style="color:#f59e0b;margin-left:4px;"></i>مسؤول السلامة
+                        </label>
+                        <select id="obs-af-observer" style="width:100%;padding:7px 10px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:0.82rem;background:#fff;color:#374151;cursor:pointer;transition:border .2s;" onfocus="this.style.borderColor='#3b82f6'" onblur="this.style.borderColor='#e2e8f0'">
+                            <option value="">الكل</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label style="font-size:0.72rem;font-weight:700;color:#64748b;display:block;margin-bottom:5px;">
+                            <i class="fas fa-tag" style="color:#10b981;margin-left:4px;"></i>نوع الملاحظة
+                        </label>
+                        <select id="obs-af-type" style="width:100%;padding:7px 10px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:0.82rem;background:#fff;color:#374151;cursor:pointer;transition:border .2s;" onfocus="this.style.borderColor='#3b82f6'" onblur="this.style.borderColor='#e2e8f0'">
+                            <option value="">الكل</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label style="font-size:0.72rem;font-weight:700;color:#64748b;display:block;margin-bottom:5px;">
+                            <i class="fas fa-exclamation-triangle" style="color:#ef4444;margin-left:4px;"></i>مستوى الخطورة
+                        </label>
+                        <select id="obs-af-risk" style="width:100%;padding:7px 10px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:0.82rem;background:#fff;color:#374151;cursor:pointer;transition:border .2s;" onfocus="this.style.borderColor='#3b82f6'" onblur="this.style.borderColor='#e2e8f0'">
+                            <option value="">الكل</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label style="font-size:0.72rem;font-weight:700;color:#64748b;display:block;margin-bottom:5px;">
+                            <i class="fas fa-circle" style="color:#8b5cf6;margin-left:4px;font-size:10px;"></i>الحالة
+                        </label>
+                        <select id="obs-af-status" style="width:100%;padding:7px 10px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:0.82rem;background:#fff;color:#374151;cursor:pointer;transition:border .2s;" onfocus="this.style.borderColor='#3b82f6'" onblur="this.style.borderColor='#e2e8f0'">
+                            <option value="">الكل</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label style="font-size:0.72rem;font-weight:700;color:#64748b;display:block;margin-bottom:5px;">
+                            <i class="fas fa-sun" style="color:#f97316;margin-left:4px;"></i>الوردية
+                        </label>
+                        <select id="obs-af-shift" style="width:100%;padding:7px 10px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:0.82rem;background:#fff;color:#374151;cursor:pointer;transition:border .2s;" onfocus="this.style.borderColor='#3b82f6'" onblur="this.style.borderColor='#e2e8f0'">
+                            <option value="">الكل</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label style="font-size:0.72rem;font-weight:700;color:#64748b;display:block;margin-bottom:5px;">
+                            <i class="fas fa-building" style="color:#0ea5e9;margin-left:4px;"></i>الإدارة المسؤولة
+                        </label>
+                        <select id="obs-af-dept" style="width:100%;padding:7px 10px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:0.82rem;background:#fff;color:#374151;cursor:pointer;transition:border .2s;" onfocus="this.style.borderColor='#3b82f6'" onblur="this.style.borderColor='#e2e8f0'">
+                            <option value="">الكل</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ══════════════════════════════════════════════════════
+                 KPI Cards
+            ══════════════════════════════════════════════════════ -->
+            <div id="obs-kpi-strip" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:10px;margin-bottom:20px;">
                 <div style="text-align:center;padding:8px;color:#94a3b8;"><i class="fas fa-spinner fa-spin"></i></div>
             </div>
 
-            <!-- ── Charts Row 1 ── -->
+            <!-- ══════════════════════════════════════════════════════
+                 Row 1: الحالة + الخطورة
+            ══════════════════════════════════════════════════════ -->
             <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:16px;margin-bottom:16px;">
                 <div class="content-card" style="padding:0;overflow:hidden;">
-                    <div style="padding:14px 18px 10px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:8px;">
+                    <div style="padding:13px 18px 10px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:8px;">
                         <i class="fas fa-circle-notch" style="color:#3b82f6;"></i>
-                        <span style="font-weight:700;font-size:0.9rem;">التوزيع حسب الحالة</span>
+                        <span style="font-weight:700;font-size:0.88rem;">التوزيع حسب الحالة</span>
                     </div>
                     <div style="padding:12px;position:relative;height:240px;">
                         <canvas id="obs-chart-status"></canvas>
-                        <div id="obs-chart-status-empty" style="display:none;position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#94a3b8;font-size:0.85rem;">لا توجد بيانات</div>
+                        <div id="obs-chart-status-empty" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;color:#94a3b8;font-size:0.85rem;">لا توجد بيانات</div>
                     </div>
                 </div>
                 <div class="content-card" style="padding:0;overflow:hidden;">
-                    <div style="padding:14px 18px 10px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:8px;">
+                    <div style="padding:13px 18px 10px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:8px;">
                         <i class="fas fa-exclamation-triangle" style="color:#ef4444;"></i>
-                        <span style="font-weight:700;font-size:0.9rem;">التوزيع حسب مستوى الخطورة</span>
+                        <span style="font-weight:700;font-size:0.88rem;">التوزيع حسب مستوى الخطورة</span>
                     </div>
                     <div style="padding:12px;position:relative;height:240px;">
                         <canvas id="obs-chart-risk"></canvas>
-                        <div id="obs-chart-risk-empty" style="display:none;position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#94a3b8;font-size:0.85rem;">لا توجد بيانات</div>
+                        <div id="obs-chart-risk-empty" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;color:#94a3b8;font-size:0.85rem;">لا توجد بيانات</div>
                     </div>
                 </div>
             </div>
 
-            <!-- ── Trend Chart ── -->
+            <!-- ══════════════════════════════════════════════════════
+                 الاتجاه الزمني
+            ══════════════════════════════════════════════════════ -->
             <div class="content-card" style="padding:0;overflow:hidden;margin-bottom:16px;">
-                <div style="padding:14px 18px 10px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;justify-content:space-between;gap:8px;">
+                <div style="padding:13px 18px 10px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;justify-content:space-between;gap:8px;">
                     <div style="display:flex;align-items:center;gap:8px;">
                         <i class="fas fa-chart-area" style="color:#8b5cf6;"></i>
-                        <span style="font-weight:700;font-size:0.9rem;">الاتجاه الزمني للملاحظات (آخر 12 شهر)</span>
+                        <span style="font-weight:700;font-size:0.88rem;">الاتجاه الزمني للملاحظات (آخر 12 شهر)</span>
                     </div>
                 </div>
                 <div style="padding:12px;position:relative;height:260px;">
                     <canvas id="obs-chart-trend"></canvas>
-                    <div id="obs-chart-trend-empty" style="display:none;position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#94a3b8;font-size:0.85rem;">لا توجد بيانات</div>
+                    <div id="obs-chart-trend-empty" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;color:#94a3b8;font-size:0.85rem;">لا توجد بيانات</div>
                 </div>
             </div>
 
-            <!-- ── Charts Row 2 ── -->
+            <!-- ══════════════════════════════════════════════════════
+                 Row 2: النوع + الموقع
+            ══════════════════════════════════════════════════════ -->
             <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:16px;margin-bottom:16px;">
                 <div class="content-card" style="padding:0;overflow:hidden;">
-                    <div style="padding:14px 18px 10px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:8px;">
+                    <div style="padding:13px 18px 10px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:8px;">
                         <i class="fas fa-tag" style="color:#10b981;"></i>
-                        <span style="font-weight:700;font-size:0.9rem;">حسب نوع الملاحظة</span>
+                        <span style="font-weight:700;font-size:0.88rem;">حسب نوع الملاحظة (أعلى 10)</span>
                     </div>
                     <div style="padding:12px;position:relative;height:280px;">
                         <canvas id="obs-chart-type"></canvas>
-                        <div id="obs-chart-type-empty" style="display:none;position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#94a3b8;font-size:0.85rem;">لا توجد بيانات</div>
+                        <div id="obs-chart-type-empty" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;color:#94a3b8;font-size:0.85rem;">لا توجد بيانات</div>
                     </div>
                 </div>
                 <div class="content-card" style="padding:0;overflow:hidden;">
-                    <div style="padding:14px 18px 10px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:8px;">
+                    <div style="padding:13px 18px 10px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:8px;">
                         <i class="fas fa-map-marker-alt" style="color:#f59e0b;"></i>
-                        <span style="font-weight:700;font-size:0.9rem;">حسب الموقع (أعلى 8)</span>
+                        <span style="font-weight:700;font-size:0.88rem;">حسب الموقع / المصنع (أعلى 8)</span>
                     </div>
                     <div style="padding:12px;position:relative;height:280px;">
                         <canvas id="obs-chart-location"></canvas>
-                        <div id="obs-chart-location-empty" style="display:none;position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#94a3b8;font-size:0.85rem;">لا توجد بيانات</div>
+                        <div id="obs-chart-location-empty" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;color:#94a3b8;font-size:0.85rem;">لا توجد بيانات</div>
                     </div>
                 </div>
             </div>
 
-            <!-- ── Charts Row 3 ── -->
-            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:16px;margin-bottom:24px;">
+            <!-- ══════════════════════════════════════════════════════
+                 Row 3: الإدارة + الوردية
+            ══════════════════════════════════════════════════════ -->
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:16px;margin-bottom:16px;">
                 <div class="content-card" style="padding:0;overflow:hidden;">
-                    <div style="padding:14px 18px 10px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:8px;">
+                    <div style="padding:13px 18px 10px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:8px;">
                         <i class="fas fa-building" style="color:#0ea5e9;"></i>
-                        <span style="font-weight:700;font-size:0.9rem;">حسب الإدارة المسؤولة (أعلى 8)</span>
+                        <span style="font-weight:700;font-size:0.88rem;">حسب الإدارة المسؤولة (أعلى 8)</span>
                     </div>
                     <div style="padding:12px;position:relative;height:280px;">
                         <canvas id="obs-chart-dept"></canvas>
-                        <div id="obs-chart-dept-empty" style="display:none;position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#94a3b8;font-size:0.85rem;">لا توجد بيانات</div>
+                        <div id="obs-chart-dept-empty" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;color:#94a3b8;font-size:0.85rem;">لا توجد بيانات</div>
                     </div>
                 </div>
                 <div class="content-card" style="padding:0;overflow:hidden;">
-                    <div style="padding:14px 18px 10px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:8px;">
+                    <div style="padding:13px 18px 10px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:8px;">
                         <i class="fas fa-sun" style="color:#f97316;"></i>
-                        <span style="font-weight:700;font-size:0.9rem;">حسب الوردية</span>
+                        <span style="font-weight:700;font-size:0.88rem;">حسب الوردية</span>
                     </div>
                     <div style="padding:12px;position:relative;height:280px;">
                         <canvas id="obs-chart-shift"></canvas>
-                        <div id="obs-chart-shift-empty" style="display:none;position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#94a3b8;font-size:0.85rem;">لا توجد بيانات</div>
+                        <div id="obs-chart-shift-empty" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;color:#94a3b8;font-size:0.85rem;">لا توجد بيانات</div>
                     </div>
                 </div>
             </div>
 
-            <!-- ── Critical Open Observations Table ── -->
+            <!-- ══════════════════════════════════════════════════════
+                 مخطط متوسط أيام الإغلاق حسب النوع
+            ══════════════════════════════════════════════════════ -->
+            <div class="content-card" style="padding:0;overflow:hidden;margin-bottom:16px;">
+                <div style="padding:13px 18px 10px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:8px;">
+                    <i class="fas fa-stopwatch" style="color:#6366f1;"></i>
+                    <span style="font-weight:700;font-size:0.88rem;">متوسط أيام الإغلاق حسب نوع الملاحظة</span>
+                    <span style="font-size:0.72rem;color:#94a3b8;margin-right:auto;">(أقل = أفضل استجابة)</span>
+                </div>
+                <div style="padding:12px;position:relative;height:260px;">
+                    <canvas id="obs-chart-closetime"></canvas>
+                    <div id="obs-chart-closetime-empty" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;color:#94a3b8;font-size:0.85rem;">لا توجد ملاحظات مغلقة</div>
+                </div>
+            </div>
+
+            <!-- ══════════════════════════════════════════════════════
+                 جدول الملاحظات الحرجة المفتوحة
+            ══════════════════════════════════════════════════════ -->
             <div class="content-card" style="padding:0;overflow:hidden;">
-                <div style="padding:14px 18px 12px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;justify-content:space-between;gap:8px;">
+                <div style="padding:13px 18px 12px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;justify-content:space-between;gap:8px;">
                     <div style="display:flex;align-items:center;gap:8px;">
                         <i class="fas fa-fire" style="color:#ef4444;"></i>
-                        <span style="font-weight:700;font-size:0.9rem;">الملاحظات الحرجة المفتوحة (عالية الخطورة)</span>
+                        <span style="font-weight:700;font-size:0.88rem;">الملاحظات الحرجة المفتوحة (عالية الخطورة)</span>
                     </div>
                     <span id="obs-critical-count" style="background:#fef2f2;color:#b91c1c;padding:3px 10px;border-radius:20px;font-size:0.75rem;font-weight:700;"></span>
                 </div>
@@ -3159,14 +3273,15 @@ const DailyObservations = {
                                 <th style="padding:10px 12px;text-align:right;font-weight:700;color:#374151;white-space:nowrap;">رقم الملاحظة</th>
                                 <th style="padding:10px 12px;text-align:right;font-weight:700;color:#374151;white-space:nowrap;">التاريخ</th>
                                 <th style="padding:10px 12px;text-align:right;font-weight:700;color:#374151;white-space:nowrap;">نوع الملاحظة</th>
-                                <th style="padding:10px 12px;text-align:right;font-weight:700;color:#374151;white-space:nowrap;">الموقع</th>
+                                <th style="padding:10px 12px;text-align:right;font-weight:700;color:#374151;white-space:nowrap;">الموقع / المصنع</th>
+                                <th style="padding:10px 12px;text-align:right;font-weight:700;color:#374151;white-space:nowrap;">مسؤول السلامة</th>
                                 <th style="padding:10px 12px;text-align:right;font-weight:700;color:#374151;white-space:nowrap;">الإدارة المسؤولة</th>
                                 <th style="padding:10px 12px;text-align:right;font-weight:700;color:#374151;white-space:nowrap;">الحالة</th>
                                 <th style="padding:10px 12px;text-align:center;font-weight:700;color:#374151;white-space:nowrap;">الأيام المنقضية</th>
                             </tr>
                         </thead>
                         <tbody id="obs-critical-tbody">
-                            <tr><td colspan="7" style="padding:20px;text-align:center;color:#94a3b8;">جارٍ التحميل…</td></tr>
+                            <tr><td colspan="8" style="padding:20px;text-align:center;color:#94a3b8;">جارٍ التحميل…</td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -3310,77 +3425,297 @@ const DailyObservations = {
         return Array.from({length:n}, (_,i) => palette[i % palette.length]);
     },
 
+    // ── تطبيق الفلاتر التفاعلية ──
+    _applyAnalysisFilters(obs) {
+        const get = id => { const el = document.getElementById(id); return el ? el.value.trim() : ''; };
+        const fSite     = get('obs-af-site');
+        const fObserver = get('obs-af-observer');
+        const fType     = get('obs-af-type');
+        const fRisk     = get('obs-af-risk');
+        const fStatus   = get('obs-af-status');
+        const fShift    = get('obs-af-shift');
+        const fDept     = get('obs-af-dept');
+        const hasActive = [fSite,fObserver,fType,fRisk,fStatus,fShift,fDept].some(v => v !== '');
+        // تحديث بادج النشاط
+        const badge = document.getElementById('obs-filter-active-badge');
+        if (badge) badge.style.display = hasActive ? 'inline' : 'none';
+        return obs.filter(o => {
+            if (fSite     && String(o.siteName||'').trim()              !== fSite)     return false;
+            if (fObserver && String(o.observerName||'').trim()          !== fObserver) return false;
+            if (fType     && String(o.observationType||'').trim()       !== fType)     return false;
+            if (fRisk     && String(o.riskLevel||'').trim()             !== fRisk)     return false;
+            if (fStatus   && String(o.status||'').trim()                !== fStatus)   return false;
+            if (fShift    && String(o.shift||'').trim()                 !== fShift)    return false;
+            if (fDept     && String(o.responsibleDepartment||'').trim() !== fDept)     return false;
+            return true;
+        });
+    },
+
+    // ── ملء خيارات قوائم الفلاتر التفاعلية ──
+    _populateAnalysisFilterOptions(obs) {
+        const unique = field => [...new Set(obs.map(o => String(o[field]||'').trim()).filter(Boolean))].sort();
+        const fill = (id, values) => {
+            const el = document.getElementById(id);
+            if (!el) return;
+            const cur = el.value;
+            el.innerHTML = '<option value="">الكل</option>' + values.map(v => `<option value="${v}"${v===cur?' selected':''}>${v}</option>`).join('');
+        };
+        fill('obs-af-site',     unique('siteName'));
+        fill('obs-af-observer', unique('observerName'));
+        fill('obs-af-type',     unique('observationType'));
+        fill('obs-af-risk',     unique('riskLevel'));
+        fill('obs-af-status',   unique('status'));
+        fill('obs-af-shift',    unique('shift'));
+        fill('obs-af-dept',     unique('responsibleDepartment'));
+    },
+
+    // ── مخطط متوسط أيام الإغلاق حسب النوع ──
+    _drawCloseTimeByType(canvasId, obs) {
+        const canvas  = document.getElementById(canvasId);
+        const emptyEl = document.getElementById(canvasId + '-empty');
+        if (!canvas) return;
+        const closed = obs.filter(o => o.status === 'مغلق' && (o.overdays||0) > 0);
+        if (!closed.length) {
+            canvas.style.display = 'none';
+            if (emptyEl) { emptyEl.style.display = 'flex'; }
+            return;
+        }
+        if (emptyEl) emptyEl.style.display = 'none';
+        // تجميع حسب النوع
+        const map = {};
+        closed.forEach(o => {
+            const t = String(o.observationType || 'غير محدد').trim();
+            if (!map[t]) map[t] = [];
+            map[t].push(o.overdays || 0);
+        });
+        const entries = Object.entries(map)
+            .map(([k,v]) => ({ label:k, avg: Math.round(v.reduce((a,b)=>a+b,0)/v.length), count:v.length }))
+            .sort((a,b) => b.avg - a.avg)
+            .slice(0, 10);
+        const labels = entries.map(e => e.label);
+        const data   = entries.map(e => e.avg);
+        const maxAvg = Math.max(...data);
+        const colors = data.map(d => d > 30 ? 'rgba(239,68,68,0.75)' : d > 14 ? 'rgba(245,158,11,0.75)' : 'rgba(16,185,129,0.75)');
+        const prev = this.analysisCharts && this.analysisCharts[canvasId];
+        if (prev) { try { prev.destroy(); } catch(e){} }
+        const chart = new Chart(canvas, {
+            type: 'bar',
+            data: { labels, datasets: [{ data, backgroundColor: colors, borderRadius: 5, borderSkipped: false }] },
+            options: {
+                indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: { callbacks: { label: ctx => ` متوسط ${ctx.parsed.x} يوم (${entries[ctx.dataIndex].count} ملاحظة)` } }
+                },
+                scales: {
+                    x: { beginAtZero:true, ticks:{ precision:0, font:{size:11} }, grid:{color:'#f1f5f9'}, title:{display:true,text:'متوسط الأيام',font:{size:11}} },
+                    y: { ticks:{ font:{size:10}, callback: v => String(labels[v]).length>18 ? String(labels[v]).slice(0,17)+'…' : labels[v] } }
+                }
+            }
+        });
+        if (!this.analysisCharts) this.analysisCharts = {};
+        this.analysisCharts[canvasId] = chart;
+    },
+
+    // ── تصدير لوحة التحليل كـ PDF ──
+    async _exportAnalyticsPDF() {
+        const root = document.getElementById('obs-analytics-root');
+        if (!root) return;
+        const btn = document.getElementById('obs-export-pdf-btn');
+        const origHtml = btn ? btn.innerHTML : '';
+        if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>'; }
+
+        try {
+            // تحميل html2canvas
+            await this._loadAnalyticsLib(
+                'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js',
+                () => typeof html2canvas !== 'undefined'
+            );
+            // تحميل jsPDF
+            await this._loadAnalyticsLib(
+                'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js',
+                () => typeof window.jspdf !== 'undefined'
+            );
+
+            // إخفاء لوحة الفلاتر أثناء التصدير
+            const filterPanel = document.getElementById('obs-filter-panel');
+            const filterWasVisible = filterPanel && filterPanel.style.display !== 'none';
+            if (filterWasVisible) filterPanel.style.display = 'none';
+
+            // التقاط الصورة
+            const canvas = await html2canvas(root, {
+                scale: 1.8,
+                useCORS: true,
+                backgroundColor: '#f8fafc',
+                scrollX: 0,
+                scrollY: -window.scrollY,
+                logging: false
+            });
+
+            if (filterWasVisible) filterPanel.style.display = '';
+
+            const imgData  = canvas.toDataURL('image/jpeg', 0.90);
+            const { jsPDF } = window.jspdf;
+            const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+
+            const pdfW   = pdf.internal.pageSize.getWidth();
+            const pdfH   = pdf.internal.pageSize.getHeight();
+            const margin = 10;
+            const contentW = pdfW - margin * 2;
+            const ratio  = contentW / canvas.width;
+            const totalContentH = canvas.height * ratio;
+
+            // ترويسة كل صفحة
+            const addHeader = (pageNum, totalPages) => {
+                pdf.setFillColor(30, 58, 138);
+                pdf.rect(0, 0, pdfW, 14, 'F');
+                pdf.setTextColor(255, 255, 255);
+                pdf.setFontSize(9);
+                pdf.setFont('helvetica', 'bold');
+                pdf.text('Daily Observations - Analytics Report', margin, 9, { align: 'left' });
+                const dateStr = new Date().toLocaleDateString('ar-SA');
+                pdf.text(`${dateStr}  |  ${pageNum}/${totalPages}`, pdfW - margin, 9, { align: 'right' });
+                pdf.setTextColor(0, 0, 0);
+            };
+
+            const pageContentH = pdfH - 14 - margin; // ارتفاع المحتوى في الصفحة
+            const totalPages = Math.ceil(totalContentH / pageContentH);
+            const pageHeightPx = pageContentH / ratio;
+
+            for (let p = 0; p < totalPages; p++) {
+                if (p > 0) pdf.addPage();
+                addHeader(p + 1, totalPages);
+                // قص الجزء المناسب من الصورة
+                const sliceCanvas = document.createElement('canvas');
+                const sliceH = Math.min(pageHeightPx, canvas.height - p * pageHeightPx);
+                sliceCanvas.width  = canvas.width;
+                sliceCanvas.height = sliceH;
+                const ctx = sliceCanvas.getContext('2d');
+                ctx.drawImage(canvas, 0, p * pageHeightPx, canvas.width, sliceH, 0, 0, canvas.width, sliceH);
+                const sliceData = sliceCanvas.toDataURL('image/jpeg', 0.90);
+                pdf.addImage(sliceData, 'JPEG', margin, 14, contentW, sliceH * ratio);
+            }
+
+            const dateFile = new Date().toISOString().slice(0,10);
+            pdf.save(`تقرير-الملاحظات-اليومية-${dateFile}.pdf`);
+            if (typeof Notification !== 'undefined' && Notification.success) {
+                Notification.success('تم تصدير التقرير PDF بنجاح');
+            }
+        } catch(err) {
+            console.error('PDF export error:', err);
+            if (typeof Notification !== 'undefined' && Notification.error) {
+                Notification.error('تعذّر تصدير PDF — تأكد من الاتصال بالإنترنت وأعد المحاولة');
+            }
+        } finally {
+            if (btn) { btn.disabled = false; btn.innerHTML = origHtml; }
+        }
+    },
+
+    // ── تحميل مكتبة خارجية بشكل ديناميكي ──
+    _loadAnalyticsLib(src, checkFn) {
+        return new Promise((resolve, reject) => {
+            if (checkFn()) return resolve();
+            const s = document.createElement('script');
+            s.src = src;
+            s.onload = () => resolve();
+            s.onerror = () => reject(new Error('Failed to load: ' + src));
+            document.head.appendChild(s);
+        });
+    },
+
     // ── تحديث لوحة التحليل بالكامل ──
     async updateAnalysisResults() {
         const root = document.getElementById('obs-analytics-root');
         if (!root) return;
+
+        // ── 1. جمع البيانات الخام ──
         const period = parseInt(this._analysisPeriod || '0', 10);
         const rawObs = typeof this.getDailyObservationsVisibleToCurrentUser === 'function'
             ? this.getDailyObservationsVisibleToCurrentUser()
             : (Array.isArray(AppState.appData.dailyObservations) ? AppState.appData.dailyObservations : []);
         const allObs = rawObs.map(r => this.normalizeRecord(r));
-        const obs = this._filterObsByPeriod(allObs, period);
+
+        // ── 2. تصفية بالفترة الزمنية أولاً ──
+        const obsByPeriod = this._filterObsByPeriod(allObs, period);
+
+        // ── 3. ملء قوائم الفلاتر التفاعلية (من بيانات الفترة) ──
+        this._populateAnalysisFilterOptions(obsByPeriod);
+
+        // ── 4. تطبيق الفلاتر التفاعلية ──
+        const obs = this._applyAnalysisFilters(obsByPeriod);
         const total = obs.length;
 
-        // ── KPI Cards ──
-        const open  = obs.filter(o => o.status === 'مفتوح' || o.status === 'جديد').length;
-        const closed = obs.filter(o => o.status === 'مغلق').length;
-        const inProg = obs.filter(o => o.status === 'جاري' || o.status === 'قيد التنفيذ').length;
+        // إظهار عدد النتائج في بادج الفلاتر
+        const resultsCount = document.getElementById('obs-filter-results-count');
+        if (resultsCount) resultsCount.textContent = `${total} ملاحظة`;
+
+        // ── 5. KPI Cards (8 بطاقات) ──
+        const open     = obs.filter(o => o.status === 'مفتوح' || o.status === 'جديد').length;
+        const closed   = obs.filter(o => o.status === 'مغلق').length;
+        const inProg   = obs.filter(o => o.status === 'جاري' || o.status === 'قيد التنفيذ').length;
         const highRisk = obs.filter(o => o.riskLevel === 'عالي' || o.riskLevel === 'عالية').length;
-        const thisMonth = obs.filter(o => { if(!o.date) return false; const d=new Date(o.date); const n=new Date(); return d.getFullYear()===n.getFullYear()&&d.getMonth()===n.getMonth(); }).length;
-        const closeRate = total > 0 ? Math.round((closed/total)*100) : 0;
+        const thisMonth= obs.filter(o => { if(!o.date) return false; const d=new Date(o.date); const n=new Date(); return d.getFullYear()===n.getFullYear()&&d.getMonth()===n.getMonth(); }).length;
+        const closeRate= total > 0 ? Math.round((closed/total)*100) : 0;
+        // متوسط أيام الإغلاق
+        const closedWithDays = obs.filter(o => o.status === 'مغلق' && o.overdays > 0);
+        const avgClose = closedWithDays.length > 0
+            ? Math.round(closedWithDays.reduce((s,o) => s + (o.overdays||0), 0) / closedWithDays.length)
+            : 0;
+
         const kpiEl = document.getElementById('obs-kpi-strip');
         if (kpiEl) {
             const kpis = [
-                { label:'إجمالي الملاحظات', value:total, icon:'fas fa-clipboard-list', color:'#3b82f6', bg:'#eff6ff', border:'#bfdbfe' },
-                { label:'مفتوحة', value:open, icon:'fas fa-folder-open', color:'#f59e0b', bg:'#fffbeb', border:'#fde68a' },
-                { label:'قيد التنفيذ', value:inProg, icon:'fas fa-spinner', color:'#8b5cf6', bg:'#f5f3ff', border:'#ddd6fe' },
-                { label:'مغلقة', value:closed, icon:'fas fa-check-circle', color:'#10b981', bg:'#ecfdf5', border:'#a7f3d0' },
-                { label:'عالية الخطورة', value:highRisk, icon:'fas fa-exclamation-triangle', color:'#ef4444', bg:'#fef2f2', border:'#fecaca' },
-                { label:'هذا الشهر', value:thisMonth, icon:'fas fa-calendar-day', color:'#0ea5e9', bg:'#f0f9ff', border:'#bae6fd' },
-                { label:'معدل الإغلاق', value:closeRate+'%', icon:'fas fa-chart-pie', color:'#6366f1', bg:'#eef2ff', border:'#c7d2fe' },
+                { label:'إجمالي الملاحظات',   value:total,          icon:'fas fa-clipboard-list',      color:'#3b82f6', bg:'#eff6ff', border:'#bfdbfe' },
+                { label:'مفتوحة',              value:open,           icon:'fas fa-folder-open',          color:'#f59e0b', bg:'#fffbeb', border:'#fde68a' },
+                { label:'قيد التنفيذ',         value:inProg,         icon:'fas fa-spinner',              color:'#8b5cf6', bg:'#f5f3ff', border:'#ddd6fe' },
+                { label:'مغلقة',               value:closed,         icon:'fas fa-check-circle',         color:'#10b981', bg:'#ecfdf5', border:'#a7f3d0' },
+                { label:'عالية الخطورة',       value:highRisk,       icon:'fas fa-exclamation-triangle', color:'#ef4444', bg:'#fef2f2', border:'#fecaca' },
+                { label:'هذا الشهر',           value:thisMonth,      icon:'fas fa-calendar-day',         color:'#0ea5e9', bg:'#f0f9ff', border:'#bae6fd' },
+                { label:'معدل الإغلاق',        value:closeRate+'%',  icon:'fas fa-chart-pie',            color:'#6366f1', bg:'#eef2ff', border:'#c7d2fe' },
+                { label:'متوسط أيام الإغلاق', value:avgClose ? avgClose+' يوم' : '—', icon:'fas fa-stopwatch', color:'#0d9488', bg:'#f0fdfa', border:'#99f6e4' },
             ];
             kpiEl.innerHTML = kpis.map(k => `
-                <div style="background:${k.bg};border:1px solid ${k.border};border-radius:12px;padding:14px 16px;display:flex;align-items:center;gap:12px;transition:all .2s;" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 4px 16px rgba(0,0,0,0.08)'" onmouseout="this.style.transform='';this.style.boxShadow=''">
-                    <div style="width:40px;height:40px;background:${k.color};border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-                        <i class="${k.icon}" style="color:#fff;font-size:16px;"></i>
+                <div style="background:${k.bg};border:1px solid ${k.border};border-radius:12px;padding:12px 14px;display:flex;align-items:center;gap:10px;transition:all .2s;cursor:default;" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 6px 20px rgba(0,0,0,0.09)'" onmouseout="this.style.transform='';this.style.boxShadow=''">
+                    <div style="width:38px;height:38px;background:${k.color};border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                        <i class="${k.icon}" style="color:#fff;font-size:15px;"></i>
                     </div>
                     <div>
-                        <div style="font-size:1.4rem;font-weight:800;color:${k.color};line-height:1;">${k.value}</div>
-                        <div style="font-size:0.72rem;color:#64748b;margin-top:2px;white-space:nowrap;">${k.label}</div>
+                        <div style="font-size:1.3rem;font-weight:800;color:${k.color};line-height:1;">${k.value}</div>
+                        <div style="font-size:0.7rem;color:#64748b;margin-top:2px;white-space:nowrap;">${k.label}</div>
                     </div>
                 </div>`).join('');
         }
 
-        // ── تحميل Chart.js ورسم المخططات ──
+        // ── 6. تحميل Chart.js ──
         const loaded = await this.ensureChartJSLoaded();
         if (!loaded || typeof Chart === 'undefined') {
-            root.insertAdjacentHTML('afterbegin', `<div style="background:#fffbeb;border:1px solid #fde68a;border-radius:10px;padding:14px 18px;margin-bottom:16px;display:flex;align-items:center;gap:10px;"><i class="fas fa-exclamation-triangle" style="color:#d97706;"></i><span style="font-size:0.85rem;color:#92400e;">تعذّر تحميل مكتبة الرسوم البيانية. البيانات الإجمالية متاحة في الأرقام أعلاه. يُرجى تحديث الصفحة.</span></div>`);
+            root.insertAdjacentHTML('afterbegin', `<div style="background:#fffbeb;border:1px solid #fde68a;border-radius:10px;padding:14px 18px;margin-bottom:16px;display:flex;align-items:center;gap:10px;"><i class="fas fa-exclamation-triangle" style="color:#d97706;"></i><span style="font-size:0.85rem;color:#92400e;">تعذّر تحميل مكتبة الرسوم البيانية. البيانات الإجمالية متاحة في الأرقام أعلاه.</span></div>`);
             return;
         }
 
+        // ── 7. الرسوم البيانية ──
         // الحالة
         const statusG = this._groupBy(obs, 'status');
-        const statusColors = { 'مفتوح':'rgba(245,158,11,0.8)', 'مغلق':'rgba(16,185,129,0.8)', 'جاري':'rgba(139,92,246,0.8)', 'قيد التنفيذ':'rgba(99,102,241,0.8)', 'جديد':'rgba(59,130,246,0.8)' };
+        const statusColors = { 'مفتوح':'rgba(245,158,11,0.8)','مغلق':'rgba(16,185,129,0.8)','جاري':'rgba(139,92,246,0.8)','قيد التنفيذ':'rgba(99,102,241,0.8)','جديد':'rgba(59,130,246,0.8)' };
         this._drawDoughnut('obs-chart-status', statusG.labels, statusG.data, statusG.labels.map(l => statusColors[l] || 'rgba(148,163,184,0.8)'));
 
         // الخطورة
         const riskG = this._groupBy(obs, 'riskLevel');
-        const riskColors = { 'عالي':'rgba(239,68,68,0.85)', 'عالية':'rgba(239,68,68,0.85)', 'متوسط':'rgba(245,158,11,0.85)', 'متوسطة':'rgba(245,158,11,0.85)', 'منخفض':'rgba(16,185,129,0.85)', 'بسيط':'rgba(16,185,129,0.85)', 'بسيطة':'rgba(16,185,129,0.85)' };
+        const riskColors = { 'عالي':'rgba(239,68,68,0.85)','عالية':'rgba(239,68,68,0.85)','متوسط':'rgba(245,158,11,0.85)','متوسطة':'rgba(245,158,11,0.85)','منخفض':'rgba(16,185,129,0.85)','بسيط':'rgba(16,185,129,0.85)','بسيطة':'rgba(16,185,129,0.85)' };
         this._drawDoughnut('obs-chart-risk', riskG.labels, riskG.data, riskG.labels.map(l => riskColors[l] || 'rgba(148,163,184,0.8)'));
 
-        // الاتجاه الزمني
-        this._drawTrend('obs-chart-trend', allObs); // يستخدم كل البيانات دائماً للـ12 شهر
+        // الاتجاه الزمني (دائماً يعتمد على كل البيانات)
+        this._drawTrend('obs-chart-trend', obsByPeriod);
 
         // النوع
         const typeG = this._groupBy(obs, 'observationType', 10);
         this._drawHBar('obs-chart-type', typeG.labels, typeG.data, 'rgba(16,185,129,0.75)');
 
-        // الموقع
+        // الموقع / المصنع
         const locG = this._groupBy(obs, 'locationName', 8);
         this._drawHBar('obs-chart-location', locG.labels, locG.data, 'rgba(245,158,11,0.75)');
 
-        // الإدارة
+        // الإدارة المسؤولة
         const deptG = this._groupBy(obs, 'responsibleDepartment', 8);
         this._drawHBar('obs-chart-dept', deptG.labels, deptG.data, 'rgba(14,165,233,0.75)');
 
@@ -3388,17 +3723,20 @@ const DailyObservations = {
         const shiftG = this._groupBy(obs, 'shift');
         this._drawHBar('obs-chart-shift', shiftG.labels, shiftG.data, 'rgba(249,115,22,0.75)');
 
-        // ── جدول الملاحظات الحرجة المفتوحة ──
-        const criticalObs = allObs
-            .filter(o => (o.riskLevel === 'عالي' || o.riskLevel === 'عالية') && (o.status !== 'مغلق'))
+        // متوسط أيام الإغلاق حسب النوع
+        this._drawCloseTimeByType('obs-chart-closetime', obs);
+
+        // ── 8. جدول الملاحظات الحرجة المفتوحة ──
+        const criticalObs = obs
+            .filter(o => (o.riskLevel === 'عالي' || o.riskLevel === 'عالية') && o.status !== 'مغلق')
             .sort((a,b) => (b.overdays||0) - (a.overdays||0))
-            .slice(0, 15);
-        const tbody = document.getElementById('obs-critical-tbody');
+            .slice(0, 20);
+        const tbody  = document.getElementById('obs-critical-tbody');
         const countEl = document.getElementById('obs-critical-count');
         if (countEl) countEl.textContent = `${criticalObs.length} ملاحظة`;
         if (tbody) {
             if (criticalObs.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="7" style="padding:24px;text-align:center;color:#10b981;"><i class="fas fa-check-circle ml-2"></i>لا توجد ملاحظات حرجة مفتوحة</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="8" style="padding:24px;text-align:center;color:#10b981;"><i class="fas fa-check-circle ml-2"></i>لا توجد ملاحظات حرجة مفتوحة</td></tr>`;
             } else {
                 tbody.innerHTML = criticalObs.map((o,i) => {
                     const ovd = o.overdays || 0;
@@ -3409,14 +3747,16 @@ const DailyObservations = {
                         'قيد التنفيذ':'background:#ede9fe;color:#5b21b6;',
                         'جديد':'background:#dbeafe;color:#1e40af;'
                     }[o.status] || 'background:#f1f5f9;color:#374151;';
-                    return `<tr style="border-bottom:1px solid #f8fafc;${i%2===0?'background:#fff;':'background:#fafafa;'}" onmouseover="this.style.background='#f0f9ff'" onmouseout="this.style.background='${i%2===0?'#fff':'#fafafa'}'">
-                        <td style="padding:10px 12px;font-weight:600;color:#1e40af;white-space:nowrap;">${Utils.escapeHTML(o.isoCode || o.id || '—')}</td>
-                        <td style="padding:10px 12px;white-space:nowrap;color:#374151;">${o.date ? new Date(o.date).toLocaleDateString('ar-SA', {year:'numeric',month:'short',day:'numeric'}) : '—'}</td>
-                        <td style="padding:10px 12px;color:#374151;">${Utils.escapeHTML(o.observationType || '—')}</td>
-                        <td style="padding:10px 12px;color:#374151;">${Utils.escapeHTML(o.locationName || o.siteName || '—')}</td>
-                        <td style="padding:10px 12px;color:#374151;">${Utils.escapeHTML(o.responsibleDepartment || '—')}</td>
-                        <td style="padding:10px 12px;"><span style="padding:3px 8px;border-radius:20px;font-size:0.72rem;font-weight:700;${statusBadge}">${Utils.escapeHTML(o.status || '—')}</span></td>
-                        <td style="padding:10px 12px;text-align:center;font-weight:700;color:${ovdColor};">${ovd > 0 ? ovd + ' يوم' : '—'}</td>
+                    const rowBg = i%2===0 ? '#fff' : '#fafafa';
+                    return `<tr style="border-bottom:1px solid #f8fafc;background:${rowBg};" onmouseover="this.style.background='#f0f9ff'" onmouseout="this.style.background='${rowBg}'">
+                        <td style="padding:9px 12px;font-weight:600;color:#1e40af;white-space:nowrap;">${Utils.escapeHTML(o.isoCode || o.id || '—')}</td>
+                        <td style="padding:9px 12px;white-space:nowrap;color:#374151;">${o.date ? new Date(o.date).toLocaleDateString('ar-SA',{year:'numeric',month:'short',day:'numeric'}) : '—'}</td>
+                        <td style="padding:9px 12px;color:#374151;">${Utils.escapeHTML(o.observationType || '—')}</td>
+                        <td style="padding:9px 12px;color:#374151;">${Utils.escapeHTML(o.locationName || o.siteName || '—')}</td>
+                        <td style="padding:9px 12px;color:#374151;">${Utils.escapeHTML(o.observerName || '—')}</td>
+                        <td style="padding:9px 12px;color:#374151;">${Utils.escapeHTML(o.responsibleDepartment || '—')}</td>
+                        <td style="padding:9px 12px;"><span style="padding:3px 8px;border-radius:20px;font-size:0.7rem;font-weight:700;${statusBadge}">${Utils.escapeHTML(o.status || '—')}</span></td>
+                        <td style="padding:9px 12px;text-align:center;font-weight:700;color:${ovdColor};">${ovd > 0 ? ovd+' يوم' : '—'}</td>
                     </tr>`;
                 }).join('');
             }
@@ -5208,6 +5548,7 @@ const DailyObservations = {
             // ✅ ربط أزرار فلتر الفترة الزمنية في لوحة التحليل
             const analyticsRoot = document.getElementById('obs-analytics-root');
             if (analyticsRoot) {
+                // أزرار الفترة
                 analyticsRoot.querySelectorAll('.obs-period-btn').forEach(btn => {
                     btn.addEventListener('click', () => {
                         this._analysisPeriod = btn.getAttribute('data-period');
@@ -5219,10 +5560,42 @@ const DailyObservations = {
                         this.updateAnalysisResults();
                     });
                 });
+                // زر تحديث
                 const refreshBtn = document.getElementById('obs-analytics-refresh');
-                if (refreshBtn) {
-                    refreshBtn.addEventListener('click', () => this.updateAnalysisResults());
+                if (refreshBtn) refreshBtn.addEventListener('click', () => this.updateAnalysisResults());
+
+                // زر تبديل لوحة الفلاتر
+                const toggleFiltersBtn = document.getElementById('obs-toggle-filters-btn');
+                const filterPanel = document.getElementById('obs-filter-panel');
+                if (toggleFiltersBtn && filterPanel) {
+                    toggleFiltersBtn.addEventListener('click', () => {
+                        const isOpen = filterPanel.style.display !== 'none';
+                        filterPanel.style.display = isOpen ? 'none' : 'block';
+                        toggleFiltersBtn.style.background = isOpen ? 'rgba(255,255,255,0.12)' : 'rgba(255,255,255,0.35)';
+                    });
                 }
+
+                // زر إعادة تعيين الفلاتر
+                const resetFiltersBtn = document.getElementById('obs-filter-reset-btn');
+                if (resetFiltersBtn) {
+                    resetFiltersBtn.addEventListener('click', () => {
+                        ['obs-af-site','obs-af-observer','obs-af-type','obs-af-risk','obs-af-status','obs-af-shift','obs-af-dept'].forEach(id => {
+                            const el = document.getElementById(id);
+                            if (el) el.value = '';
+                        });
+                        this.updateAnalysisResults();
+                    });
+                }
+
+                // قوائم الفلاتر التفاعلية
+                ['obs-af-site','obs-af-observer','obs-af-type','obs-af-risk','obs-af-status','obs-af-shift','obs-af-dept'].forEach(id => {
+                    const el = document.getElementById(id);
+                    if (el) el.addEventListener('change', () => this.updateAnalysisResults());
+                });
+
+                // زر تصدير PDF
+                const pdfBtn = document.getElementById('obs-export-pdf-btn');
+                if (pdfBtn) pdfBtn.addEventListener('click', () => this._exportAnalyticsPDF());
             }
 
             // تحميل تحليل البيانات عند فتح التبويب (يتم التعامل معه في setupTabs)
