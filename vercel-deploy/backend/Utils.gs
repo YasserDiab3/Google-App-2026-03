@@ -1121,6 +1121,21 @@ function toSheetCellValue_(header, value, sheetName) {
         return value;
     }
 
+    // ✅ إصلاح انزياح الوقت: حقول الوقت فقط (HH:mm) — نكتبها كـ fraction of day (رقم بين 0 و1)
+    // هذا يمنع Google Sheets من تحويل النص "09:10" بناءً على timezone الجدول ويضمن تخزين
+    // القيمة كـ UTC fraction ثابتة (0 = 00:00, 0.38194 = 09:10, 1 = 24:00).
+    const timeOnlyFieldsForWrite_ = ['startTime', 'endTime', 'fromTime', 'toTime', 'timeFrom', 'timeTo'];
+    if (timeOnlyFieldsForWrite_.includes(h) && typeof value === 'string') {
+        const timeMatch = String(value).trim().match(/^(\d{1,2}):(\d{2})(?::\d{2})?$/);
+        if (timeMatch) {
+            const hh = parseInt(timeMatch[1], 10);
+            const mm = parseInt(timeMatch[2], 10);
+            if (hh >= 0 && hh < 24 && mm >= 0 && mm < 60) {
+                return (hh * 60 + mm) / (24 * 60); // UTC fraction of day
+            }
+        }
+    }
+
     // ✅ Convert ISO-like strings for date fields to Date objects when possible
     if (isDateLikeField_(header) && typeof value === 'string') {
         const s = unwrapQuotedString_(value);
@@ -3148,14 +3163,12 @@ function readFromSheet(sheetName, spreadsheetId = null, skipSecurityFilter = fal
                                     processedValue = normalizeSheetDateTimeText_(processedValue, sheetTz);
                                 } else if (timeOnlyFields.includes(cleanHeader)) {
                                     // من الساعة / إلى الساعة (تدريب الموظفين والمقاولين): تخزين بصيغة HH:mm فقط
-                                    // لتجنب انزياح التوقيت التاريخي (مثل فرق الدقيقة في عام 1899)، نستخرج الساعات والدقائق مباشرة باستخدام المنطقة الزمنية للسكريبت لتفادي فروق التوقيت
-                                    try {
-                                        processedValue = Utilities.formatDate(processedValue, Session.getScriptTimeZone(), 'HH:mm');
-                                    } catch (err) {
-                                        const hrs = String(processedValue.getHours()).padStart(2, '0');
-                                        const mins = String(processedValue.getMinutes()).padStart(2, '0');
-                                        processedValue = hrs + ':' + mins;
-                                    }
+                                    // ✅ إصلاح انزياح التوقيت: Google Sheets يخزن قيم الوقت كـ fraction of day بصيغة UTC.
+                                    // استخدام Utilities.formatDate مع timezone تاريخي (LMT 1899) يُضيف offset خاطئ (+61 دقيقة).
+                                    // الحل: نستخرج الساعات والدقائق مباشرة من UTC لتجنب أي تحويل timezone.
+                                    const utcH = String(processedValue.getUTCHours()).padStart(2, '0');
+                                    const utcM = String(processedValue.getUTCMinutes()).padStart(2, '0');
+                                    processedValue = utcH + ':' + utcM;
                                 } else if (timeFields.includes(cleanHeader)) {
                                     // تحويل إلى ISO string كامل مع الوقت
                                     processedValue = processedValue.toISOString();
