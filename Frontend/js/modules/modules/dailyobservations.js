@@ -3023,84 +3023,409 @@ const DailyObservations = {
     },
 
     async renderDataAnalysis() {
-        // محاولة تحميل Chart.js (بدون انتظار - سيتم التحقق لاحقاً)
-        this.ensureChartJSLoaded().catch(() => {
-            // فشل التحميل - سيتم عرض البيانات بدون رسوم بيانية
-            Utils.safeWarn('Chart.js غير متاح - سيتم عرض البيانات بدون رسوم بيانية');
-        });
-        
+        this.ensureChartJSLoaded().catch(() => {});
         return `
-            <div class="content-card">
-                <div class="card-header">
-                    <h2 class="card-title">
-                        <i class="fas fa-chart-line ml-2"></i>
-                        تحليل البيانات
-                    </h2>
-                    <p class="text-sm text-gray-500 mt-2">نظام تحليل البيانات القابل للتعديل والإضافة لأي بنود من سجل الملاحظات (مدير النظام فقط)</p>
+        <div id="obs-analytics-root" style="font-family: inherit;">
+            <!-- ── شريط الأدوات ── -->
+            <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; margin-bottom:20px; padding:16px 20px; background:linear-gradient(135deg,#1e3a8a 0%,#2563eb 100%); border-radius:14px; color:#fff; box-shadow:0 4px 20px rgba(37,99,235,0.3);">
+                <div style="display:flex; align-items:center; gap:12px;">
+                    <div style="width:44px;height:44px;background:rgba(255,255,255,0.18);border-radius:12px;display:flex;align-items:center;justify-content:center;">
+                        <i class="fas fa-chart-line" style="font-size:20px;"></i>
+                    </div>
+                    <div>
+                        <h2 style="margin:0;font-size:1.25rem;font-weight:700;">لوحة التحليل الاحترافية</h2>
+                        <p style="margin:0;font-size:0.78rem;opacity:0.85;">تحليل شامل وفوري لجميع الملاحظات اليومية</p>
+                    </div>
                 </div>
-                <div class="card-body">
-                    <div id="data-analysis-container">
-                        <!-- قسم الكروت التوضيحية -->
-                        <div class="mb-6">
-                            <div class="flex items-center justify-between mb-4">
-                                <h3 class="text-lg font-semibold">
-                                    <i class="fas fa-info-circle ml-2 text-blue-600"></i>
-                                    الكروت التوضيحية
-                                </h3>
-                                <button id="manage-cards-btn" class="btn-secondary">
-                                    <i class="fas fa-edit ml-2"></i>
-                                    إدارة الكروت
-                                </button>
-                            </div>
-                            <div id="info-cards-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
-                                <!-- سيتم ملؤها ديناميكياً من localStorage -->
-                            </div>
-                        </div>
+                <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+                    <span style="font-size:0.75rem;opacity:0.85;margin-left:4px;">الفترة:</span>
+                    <div style="display:flex;gap:4px;flex-wrap:wrap;">
+                        ${['30', '90', '180', '365', '0'].map((v,i) => {
+                            const labels = ['30 يوم','3 أشهر','6 أشهر','سنة','الكل'];
+                            const active = (this._analysisPeriod || '0') === v;
+                            return `<button class="obs-period-btn" data-period="${v}" style="padding:5px 12px;border-radius:8px;border:none;cursor:pointer;font-size:0.78rem;font-weight:600;transition:all .2s;background:${active?'#fff':'rgba(255,255,255,0.15)'};color:${active?'#1e40af':'#fff'};">${labels[i]}</button>`;
+                        }).join('')}
+                    </div>
+                    <button id="obs-analytics-refresh" title="تحديث" style="padding:6px 12px;border-radius:8px;border:none;cursor:pointer;background:rgba(255,255,255,0.15);color:#fff;font-size:0.78rem;transition:all .2s;" onmouseover="this.style.background='rgba(255,255,255,0.3)'" onmouseout="this.style.background='rgba(255,255,255,0.15)'">
+                        <i class="fas fa-sync-alt"></i>
+                    </button>
+                </div>
+            </div>
 
-                        <!-- إعدادات التحليل -->
-                        <div class="mb-6 border-t pt-6">
-                            <h3 class="text-lg font-semibold mb-4">
-                                <i class="fas fa-cog ml-2"></i>
-                                إعدادات التحليل
-                            </h3>
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div>
-                                    <label class="block text-sm font-medium mb-2">اختر البنود للتحليل</label>
-                                    <div id="analysis-items-list" class="space-y-2 max-h-64 overflow-y-auto border rounded p-3">
-                                        <!-- سيتم ملؤها ديناميكياً -->
-                                    </div>
-                                </div>
-                                <div>
-                                    <label class="block text-sm font-medium mb-2">إضافة بند جديد</label>
-                                    <div class="flex gap-2">
-                                        <input type="text" id="new-analysis-item" class="form-input flex-1" placeholder="اسم البند">
-                                        <button id="add-analysis-item-btn" class="btn-primary">
-                                            <i class="fas fa-plus"></i>
-                                        </button>
-                                    </div>
-                                    <p class="text-xs text-gray-500 mt-2">
-                                        <i class="fas fa-info-circle ml-1"></i>
-                                        يمكنك إضافة أي بند من سجل الملاحظات للتحليل (مثل: نوع الملاحظة، مستوى الخطورة، الحالة، إلخ)
-                                    </p>
-                                </div>
-                            </div>
-                        </div>
+            <!-- ── KPI Cards ── -->
+            <div id="obs-kpi-strip" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:24px;">
+                <div style="text-align:center;padding:8px;color:#94a3b8;"><i class="fas fa-spinner fa-spin"></i></div>
+            </div>
 
-                        <!-- نتائج التحليل مع الرسوم البيانية -->
-                        <div id="analysis-results" class="mt-6 border-t pt-6">
-                            <h3 class="text-lg font-semibold mb-4">
-                                <i class="fas fa-chart-bar ml-2"></i>
-                                نتائج التحليل والرسوم البيانية
-                            </h3>
-                            <div class="empty-state">
-                                <p class="text-gray-500">لا توجد نتائج تحليل. قم بإضافة بنود للتحليل.</p>
-                            </div>
-                        </div>
+            <!-- ── Charts Row 1 ── -->
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:16px;margin-bottom:16px;">
+                <div class="content-card" style="padding:0;overflow:hidden;">
+                    <div style="padding:14px 18px 10px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:8px;">
+                        <i class="fas fa-circle-notch" style="color:#3b82f6;"></i>
+                        <span style="font-weight:700;font-size:0.9rem;">التوزيع حسب الحالة</span>
+                    </div>
+                    <div style="padding:12px;position:relative;height:240px;">
+                        <canvas id="obs-chart-status"></canvas>
+                        <div id="obs-chart-status-empty" style="display:none;position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#94a3b8;font-size:0.85rem;">لا توجد بيانات</div>
+                    </div>
+                </div>
+                <div class="content-card" style="padding:0;overflow:hidden;">
+                    <div style="padding:14px 18px 10px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:8px;">
+                        <i class="fas fa-exclamation-triangle" style="color:#ef4444;"></i>
+                        <span style="font-weight:700;font-size:0.9rem;">التوزيع حسب مستوى الخطورة</span>
+                    </div>
+                    <div style="padding:12px;position:relative;height:240px;">
+                        <canvas id="obs-chart-risk"></canvas>
+                        <div id="obs-chart-risk-empty" style="display:none;position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#94a3b8;font-size:0.85rem;">لا توجد بيانات</div>
                     </div>
                 </div>
             </div>
-        `;
+
+            <!-- ── Trend Chart ── -->
+            <div class="content-card" style="padding:0;overflow:hidden;margin-bottom:16px;">
+                <div style="padding:14px 18px 10px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;justify-content:space-between;gap:8px;">
+                    <div style="display:flex;align-items:center;gap:8px;">
+                        <i class="fas fa-chart-area" style="color:#8b5cf6;"></i>
+                        <span style="font-weight:700;font-size:0.9rem;">الاتجاه الزمني للملاحظات (آخر 12 شهر)</span>
+                    </div>
+                </div>
+                <div style="padding:12px;position:relative;height:260px;">
+                    <canvas id="obs-chart-trend"></canvas>
+                    <div id="obs-chart-trend-empty" style="display:none;position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#94a3b8;font-size:0.85rem;">لا توجد بيانات</div>
+                </div>
+            </div>
+
+            <!-- ── Charts Row 2 ── -->
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:16px;margin-bottom:16px;">
+                <div class="content-card" style="padding:0;overflow:hidden;">
+                    <div style="padding:14px 18px 10px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:8px;">
+                        <i class="fas fa-tag" style="color:#10b981;"></i>
+                        <span style="font-weight:700;font-size:0.9rem;">حسب نوع الملاحظة</span>
+                    </div>
+                    <div style="padding:12px;position:relative;height:280px;">
+                        <canvas id="obs-chart-type"></canvas>
+                        <div id="obs-chart-type-empty" style="display:none;position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#94a3b8;font-size:0.85rem;">لا توجد بيانات</div>
+                    </div>
+                </div>
+                <div class="content-card" style="padding:0;overflow:hidden;">
+                    <div style="padding:14px 18px 10px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:8px;">
+                        <i class="fas fa-map-marker-alt" style="color:#f59e0b;"></i>
+                        <span style="font-weight:700;font-size:0.9rem;">حسب الموقع (أعلى 8)</span>
+                    </div>
+                    <div style="padding:12px;position:relative;height:280px;">
+                        <canvas id="obs-chart-location"></canvas>
+                        <div id="obs-chart-location-empty" style="display:none;position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#94a3b8;font-size:0.85rem;">لا توجد بيانات</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ── Charts Row 3 ── -->
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:16px;margin-bottom:24px;">
+                <div class="content-card" style="padding:0;overflow:hidden;">
+                    <div style="padding:14px 18px 10px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:8px;">
+                        <i class="fas fa-building" style="color:#0ea5e9;"></i>
+                        <span style="font-weight:700;font-size:0.9rem;">حسب الإدارة المسؤولة (أعلى 8)</span>
+                    </div>
+                    <div style="padding:12px;position:relative;height:280px;">
+                        <canvas id="obs-chart-dept"></canvas>
+                        <div id="obs-chart-dept-empty" style="display:none;position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#94a3b8;font-size:0.85rem;">لا توجد بيانات</div>
+                    </div>
+                </div>
+                <div class="content-card" style="padding:0;overflow:hidden;">
+                    <div style="padding:14px 18px 10px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:8px;">
+                        <i class="fas fa-sun" style="color:#f97316;"></i>
+                        <span style="font-weight:700;font-size:0.9rem;">حسب الوردية</span>
+                    </div>
+                    <div style="padding:12px;position:relative;height:280px;">
+                        <canvas id="obs-chart-shift"></canvas>
+                        <div id="obs-chart-shift-empty" style="display:none;position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#94a3b8;font-size:0.85rem;">لا توجد بيانات</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ── Critical Open Observations Table ── -->
+            <div class="content-card" style="padding:0;overflow:hidden;">
+                <div style="padding:14px 18px 12px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;justify-content:space-between;gap:8px;">
+                    <div style="display:flex;align-items:center;gap:8px;">
+                        <i class="fas fa-fire" style="color:#ef4444;"></i>
+                        <span style="font-weight:700;font-size:0.9rem;">الملاحظات الحرجة المفتوحة (عالية الخطورة)</span>
+                    </div>
+                    <span id="obs-critical-count" style="background:#fef2f2;color:#b91c1c;padding:3px 10px;border-radius:20px;font-size:0.75rem;font-weight:700;"></span>
+                </div>
+                <div style="overflow-x:auto;">
+                    <table id="obs-critical-table" style="width:100%;border-collapse:collapse;font-size:0.82rem;">
+                        <thead>
+                            <tr style="background:#fafafa;border-bottom:2px solid #f1f5f9;">
+                                <th style="padding:10px 12px;text-align:right;font-weight:700;color:#374151;white-space:nowrap;">رقم الملاحظة</th>
+                                <th style="padding:10px 12px;text-align:right;font-weight:700;color:#374151;white-space:nowrap;">التاريخ</th>
+                                <th style="padding:10px 12px;text-align:right;font-weight:700;color:#374151;white-space:nowrap;">نوع الملاحظة</th>
+                                <th style="padding:10px 12px;text-align:right;font-weight:700;color:#374151;white-space:nowrap;">الموقع</th>
+                                <th style="padding:10px 12px;text-align:right;font-weight:700;color:#374151;white-space:nowrap;">الإدارة المسؤولة</th>
+                                <th style="padding:10px 12px;text-align:right;font-weight:700;color:#374151;white-space:nowrap;">الحالة</th>
+                                <th style="padding:10px 12px;text-align:center;font-weight:700;color:#374151;white-space:nowrap;">الأيام المنقضية</th>
+                            </tr>
+                        </thead>
+                        <tbody id="obs-critical-tbody">
+                            <tr><td colspan="7" style="padding:20px;text-align:center;color:#94a3b8;">جارٍ التحميل…</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>`;
     },
+
+    // ── دالة مساعدة: تصفية حسب الفترة ──
+    _filterObsByPeriod(obs, days) {
+        if (!days || days === 0) return obs;
+        const cutoff = new Date();
+        cutoff.setDate(cutoff.getDate() - days);
+        return obs.filter(o => {
+            if (!o.date) return true;
+            const d = new Date(o.date);
+            return !isNaN(d.getTime()) && d >= cutoff;
+        });
+    },
+
+    // ── دالة مساعدة: مجموعة حسب حقل ──
+    _groupBy(obs, field, limit = 0) {
+        const map = {};
+        obs.forEach(o => {
+            const v = String(o[field] || 'غير محدد').trim() || 'غير محدد';
+            map[v] = (map[v] || 0) + 1;
+        });
+        let entries = Object.entries(map).sort((a,b) => b[1]-a[1]);
+        if (limit > 0) entries = entries.slice(0, limit);
+        return { labels: entries.map(e=>e[0]), data: entries.map(e=>e[1]) };
+    },
+
+    // ── رسم مخطط Doughnut ──
+    _drawDoughnut(canvasId, labels, data, colors) {
+        const canvas = document.getElementById(canvasId);
+        const emptyEl = document.getElementById(canvasId + '-empty');
+        if (!canvas) return;
+        if (!data.length || data.reduce((a,b)=>a+b,0) === 0) {
+            canvas.style.display='none';
+            if(emptyEl) emptyEl.style.display='flex';
+            return;
+        }
+        if(emptyEl) emptyEl.style.display='none';
+        const total = data.reduce((a,b)=>a+b,0);
+        const prev = this.analysisCharts && this.analysisCharts[canvasId];
+        if (prev) { try { prev.destroy(); } catch(e){} }
+        const chart = new Chart(canvas, {
+            type: 'doughnut',
+            data: { labels, datasets: [{ data, backgroundColor: colors || this._chartColors(data.length), borderWidth: 2, borderColor: '#fff', hoverOffset: 6 }] },
+            options: {
+                responsive: true, maintainAspectRatio: false, cutout: '62%',
+                plugins: {
+                    legend: { position: 'bottom', labels: { padding: 10, font: { size: 11 }, usePointStyle: true, boxWidth: 9 } },
+                    tooltip: { callbacks: { label: ctx => ` ${ctx.label}: ${ctx.parsed} (${total>0?((ctx.parsed/total)*100).toFixed(1):0}%)` } }
+                }
+            }
+        });
+        if (!this.analysisCharts) this.analysisCharts = {};
+        this.analysisCharts[canvasId] = chart;
+    },
+
+    // ── رسم مخطط Bar أفقي ──
+    _drawHBar(canvasId, labels, data, color) {
+        const canvas = document.getElementById(canvasId);
+        const emptyEl = document.getElementById(canvasId + '-empty');
+        if (!canvas) return;
+        if (!data.length || data.reduce((a,b)=>a+b,0) === 0) {
+            canvas.style.display='none';
+            if(emptyEl) emptyEl.style.display='flex';
+            return;
+        }
+        if(emptyEl) emptyEl.style.display='none';
+        const prev = this.analysisCharts && this.analysisCharts[canvasId];
+        if (prev) { try { prev.destroy(); } catch(e){} }
+        const chart = new Chart(canvas, {
+            type: 'bar',
+            data: { labels, datasets: [{ data, backgroundColor: color || 'rgba(59,130,246,0.75)', borderRadius: 5, borderSkipped: false }] },
+            options: {
+                indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+                plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => ` ${ctx.parsed.x}` } } },
+                scales: { x: { beginAtZero: true, ticks: { precision: 0, font: { size: 11 } }, grid: { color: '#f1f5f9' } }, y: { ticks: { font: { size: 11 }, callback: v => String(labels[v]).length>18 ? String(labels[v]).slice(0,17)+'…' : labels[v] } } }
+            }
+        });
+        if (!this.analysisCharts) this.analysisCharts = {};
+        this.analysisCharts[canvasId] = chart;
+    },
+
+    // ── رسم مخطط الاتجاه الزمني ──
+    _drawTrend(canvasId, obs) {
+        const canvas = document.getElementById(canvasId);
+        const emptyEl = document.getElementById(canvasId + '-empty');
+        if (!canvas) return;
+        // بناء الأشهر الـ12 الأخيرة
+        const now = new Date();
+        const months = [];
+        const arabicMonths = ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
+        for (let i = 11; i >= 0; i--) {
+            const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+            months.push({ year: d.getFullYear(), month: d.getMonth(), label: `${arabicMonths[d.getMonth()]} ${d.getFullYear()}` });
+        }
+        const counts = months.map(m => obs.filter(o => {
+            if (!o.date) return false;
+            const d = new Date(o.date);
+            return !isNaN(d.getTime()) && d.getFullYear() === m.year && d.getMonth() === m.month;
+        }).length);
+        if (counts.reduce((a,b)=>a+b,0) === 0) {
+            canvas.style.display='none';
+            if(emptyEl) emptyEl.style.display='flex';
+            return;
+        }
+        if(emptyEl) emptyEl.style.display='none';
+        const prev = this.analysisCharts && this.analysisCharts[canvasId];
+        if (prev) { try { prev.destroy(); } catch(e){} }
+        const chart = new Chart(canvas, {
+            type: 'bar',
+            data: {
+                labels: months.map(m=>m.label),
+                datasets: [{
+                    label: 'عدد الملاحظات', data: counts,
+                    backgroundColor: counts.map(c => c === Math.max(...counts) ? 'rgba(239,68,68,0.8)' : 'rgba(59,130,246,0.65)'),
+                    borderRadius: 6, borderSkipped: false,
+                    order: 1
+                }, {
+                    label: 'الاتجاه', data: counts, type: 'line',
+                    borderColor: 'rgba(139,92,246,0.9)', backgroundColor: 'rgba(139,92,246,0.08)',
+                    borderWidth: 2.5, pointRadius: 4, pointBackgroundColor: '#8b5cf6', tension: 0.4, fill: true, order: 0
+                }]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                plugins: { legend: { position: 'top', labels: { usePointStyle: true, font: { size: 11 } } }, tooltip: { mode: 'index', intersect: false } },
+                scales: { x: { grid: { display: false }, ticks: { font: { size: 10 }, maxRotation: 45 } }, y: { beginAtZero: true, ticks: { precision: 0, font: { size: 11 } }, grid: { color: '#f8fafc' } } }
+            }
+        });
+        if (!this.analysisCharts) this.analysisCharts = {};
+        this.analysisCharts[canvasId] = chart;
+    },
+
+    // ── مصفوفة الألوان الاحترافية ──
+    _chartColors(n) {
+        const palette = ['rgba(59,130,246,0.8)','rgba(16,185,129,0.8)','rgba(245,158,11,0.8)','rgba(239,68,68,0.8)','rgba(139,92,246,0.8)','rgba(236,72,153,0.8)','rgba(20,184,166,0.8)','rgba(251,146,60,0.8)','rgba(99,102,241,0.8)','rgba(168,85,247,0.8)'];
+        return Array.from({length:n}, (_,i) => palette[i % palette.length]);
+    },
+
+    // ── تحديث لوحة التحليل بالكامل ──
+    async updateAnalysisResults() {
+        const root = document.getElementById('obs-analytics-root');
+        if (!root) return;
+        const period = parseInt(this._analysisPeriod || '0', 10);
+        const rawObs = typeof this.getDailyObservationsVisibleToCurrentUser === 'function'
+            ? this.getDailyObservationsVisibleToCurrentUser()
+            : (Array.isArray(AppState.appData.dailyObservations) ? AppState.appData.dailyObservations : []);
+        const allObs = rawObs.map(r => this.normalizeRecord(r));
+        const obs = this._filterObsByPeriod(allObs, period);
+        const total = obs.length;
+
+        // ── KPI Cards ──
+        const open  = obs.filter(o => o.status === 'مفتوح' || o.status === 'جديد').length;
+        const closed = obs.filter(o => o.status === 'مغلق').length;
+        const inProg = obs.filter(o => o.status === 'جاري' || o.status === 'قيد التنفيذ').length;
+        const highRisk = obs.filter(o => o.riskLevel === 'عالي' || o.riskLevel === 'عالية').length;
+        const thisMonth = obs.filter(o => { if(!o.date) return false; const d=new Date(o.date); const n=new Date(); return d.getFullYear()===n.getFullYear()&&d.getMonth()===n.getMonth(); }).length;
+        const closeRate = total > 0 ? Math.round((closed/total)*100) : 0;
+        const kpiEl = document.getElementById('obs-kpi-strip');
+        if (kpiEl) {
+            const kpis = [
+                { label:'إجمالي الملاحظات', value:total, icon:'fas fa-clipboard-list', color:'#3b82f6', bg:'#eff6ff', border:'#bfdbfe' },
+                { label:'مفتوحة', value:open, icon:'fas fa-folder-open', color:'#f59e0b', bg:'#fffbeb', border:'#fde68a' },
+                { label:'قيد التنفيذ', value:inProg, icon:'fas fa-spinner', color:'#8b5cf6', bg:'#f5f3ff', border:'#ddd6fe' },
+                { label:'مغلقة', value:closed, icon:'fas fa-check-circle', color:'#10b981', bg:'#ecfdf5', border:'#a7f3d0' },
+                { label:'عالية الخطورة', value:highRisk, icon:'fas fa-exclamation-triangle', color:'#ef4444', bg:'#fef2f2', border:'#fecaca' },
+                { label:'هذا الشهر', value:thisMonth, icon:'fas fa-calendar-day', color:'#0ea5e9', bg:'#f0f9ff', border:'#bae6fd' },
+                { label:'معدل الإغلاق', value:closeRate+'%', icon:'fas fa-chart-pie', color:'#6366f1', bg:'#eef2ff', border:'#c7d2fe' },
+            ];
+            kpiEl.innerHTML = kpis.map(k => `
+                <div style="background:${k.bg};border:1px solid ${k.border};border-radius:12px;padding:14px 16px;display:flex;align-items:center;gap:12px;transition:all .2s;" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 4px 16px rgba(0,0,0,0.08)'" onmouseout="this.style.transform='';this.style.boxShadow=''">
+                    <div style="width:40px;height:40px;background:${k.color};border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                        <i class="${k.icon}" style="color:#fff;font-size:16px;"></i>
+                    </div>
+                    <div>
+                        <div style="font-size:1.4rem;font-weight:800;color:${k.color};line-height:1;">${k.value}</div>
+                        <div style="font-size:0.72rem;color:#64748b;margin-top:2px;white-space:nowrap;">${k.label}</div>
+                    </div>
+                </div>`).join('');
+        }
+
+        // ── تحميل Chart.js ورسم المخططات ──
+        const loaded = await this.ensureChartJSLoaded();
+        if (!loaded || typeof Chart === 'undefined') {
+            root.insertAdjacentHTML('afterbegin', `<div style="background:#fffbeb;border:1px solid #fde68a;border-radius:10px;padding:14px 18px;margin-bottom:16px;display:flex;align-items:center;gap:10px;"><i class="fas fa-exclamation-triangle" style="color:#d97706;"></i><span style="font-size:0.85rem;color:#92400e;">تعذّر تحميل مكتبة الرسوم البيانية. البيانات الإجمالية متاحة في الأرقام أعلاه. يُرجى تحديث الصفحة.</span></div>`);
+            return;
+        }
+
+        // الحالة
+        const statusG = this._groupBy(obs, 'status');
+        const statusColors = { 'مفتوح':'rgba(245,158,11,0.8)', 'مغلق':'rgba(16,185,129,0.8)', 'جاري':'rgba(139,92,246,0.8)', 'قيد التنفيذ':'rgba(99,102,241,0.8)', 'جديد':'rgba(59,130,246,0.8)' };
+        this._drawDoughnut('obs-chart-status', statusG.labels, statusG.data, statusG.labels.map(l => statusColors[l] || 'rgba(148,163,184,0.8)'));
+
+        // الخطورة
+        const riskG = this._groupBy(obs, 'riskLevel');
+        const riskColors = { 'عالي':'rgba(239,68,68,0.85)', 'عالية':'rgba(239,68,68,0.85)', 'متوسط':'rgba(245,158,11,0.85)', 'متوسطة':'rgba(245,158,11,0.85)', 'منخفض':'rgba(16,185,129,0.85)', 'بسيط':'rgba(16,185,129,0.85)', 'بسيطة':'rgba(16,185,129,0.85)' };
+        this._drawDoughnut('obs-chart-risk', riskG.labels, riskG.data, riskG.labels.map(l => riskColors[l] || 'rgba(148,163,184,0.8)'));
+
+        // الاتجاه الزمني
+        this._drawTrend('obs-chart-trend', allObs); // يستخدم كل البيانات دائماً للـ12 شهر
+
+        // النوع
+        const typeG = this._groupBy(obs, 'observationType', 10);
+        this._drawHBar('obs-chart-type', typeG.labels, typeG.data, 'rgba(16,185,129,0.75)');
+
+        // الموقع
+        const locG = this._groupBy(obs, 'locationName', 8);
+        this._drawHBar('obs-chart-location', locG.labels, locG.data, 'rgba(245,158,11,0.75)');
+
+        // الإدارة
+        const deptG = this._groupBy(obs, 'responsibleDepartment', 8);
+        this._drawHBar('obs-chart-dept', deptG.labels, deptG.data, 'rgba(14,165,233,0.75)');
+
+        // الوردية
+        const shiftG = this._groupBy(obs, 'shift');
+        this._drawHBar('obs-chart-shift', shiftG.labels, shiftG.data, 'rgba(249,115,22,0.75)');
+
+        // ── جدول الملاحظات الحرجة المفتوحة ──
+        const criticalObs = allObs
+            .filter(o => (o.riskLevel === 'عالي' || o.riskLevel === 'عالية') && (o.status !== 'مغلق'))
+            .sort((a,b) => (b.overdays||0) - (a.overdays||0))
+            .slice(0, 15);
+        const tbody = document.getElementById('obs-critical-tbody');
+        const countEl = document.getElementById('obs-critical-count');
+        if (countEl) countEl.textContent = `${criticalObs.length} ملاحظة`;
+        if (tbody) {
+            if (criticalObs.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="7" style="padding:24px;text-align:center;color:#10b981;"><i class="fas fa-check-circle ml-2"></i>لا توجد ملاحظات حرجة مفتوحة</td></tr>`;
+            } else {
+                tbody.innerHTML = criticalObs.map((o,i) => {
+                    const ovd = o.overdays || 0;
+                    const ovdColor = ovd > 30 ? '#ef4444' : ovd > 14 ? '#f59e0b' : '#64748b';
+                    const statusBadge = {
+                        'مفتوح':'background:#fef3c7;color:#92400e;',
+                        'جاري':'background:#ede9fe;color:#5b21b6;',
+                        'قيد التنفيذ':'background:#ede9fe;color:#5b21b6;',
+                        'جديد':'background:#dbeafe;color:#1e40af;'
+                    }[o.status] || 'background:#f1f5f9;color:#374151;';
+                    return `<tr style="border-bottom:1px solid #f8fafc;${i%2===0?'background:#fff;':'background:#fafafa;'}" onmouseover="this.style.background='#f0f9ff'" onmouseout="this.style.background='${i%2===0?'#fff':'#fafafa'}'">
+                        <td style="padding:10px 12px;font-weight:600;color:#1e40af;white-space:nowrap;">${Utils.escapeHTML(o.isoCode || o.id || '—')}</td>
+                        <td style="padding:10px 12px;white-space:nowrap;color:#374151;">${o.date ? new Date(o.date).toLocaleDateString('ar-SA', {year:'numeric',month:'short',day:'numeric'}) : '—'}</td>
+                        <td style="padding:10px 12px;color:#374151;">${Utils.escapeHTML(o.observationType || '—')}</td>
+                        <td style="padding:10px 12px;color:#374151;">${Utils.escapeHTML(o.locationName || o.siteName || '—')}</td>
+                        <td style="padding:10px 12px;color:#374151;">${Utils.escapeHTML(o.responsibleDepartment || '—')}</td>
+                        <td style="padding:10px 12px;"><span style="padding:3px 8px;border-radius:20px;font-size:0.72rem;font-weight:700;${statusBadge}">${Utils.escapeHTML(o.status || '—')}</span></td>
+                        <td style="padding:10px 12px;text-align:center;font-weight:700;color:${ovdColor};">${ovd > 0 ? ovd + ' يوم' : '—'}</td>
+                    </tr>`;
+                }).join('');
+            }
+        }
+    },
+
+    // دوال قديمة مُحوَّلة للتوافق مع بقية الكود
+    calculateCardValues() { /* لا يستخدم — تم دمجه في updateAnalysisResults */ },
+    loadInfoCards() { /* لا يستخدم — تم دمجه في updateAnalysisResults */ },
 
     /**
      * التأكد من تحميل Chart.js
@@ -3516,288 +3841,11 @@ const DailyObservations = {
     },
 
     async loadDataAnalysis() {
-        // التحقق من صلاحيات المدير
-        if (!this.isCurrentUserAdmin()) {
-            const container = document.getElementById('data-analysis-container');
-            if (container) {
-                container.innerHTML = `
-                    <div class="content-card">
-                        <div class="card-body">
-                            <div class="empty-state">
-                                <i class="fas fa-lock text-red-500 text-4xl mb-4"></i>
-                                <p class="text-gray-500">ليس لديك صلاحية للوصول إلى تحليل البيانات</p>
-                                <p class="text-sm text-gray-400 mt-2">هذه الميزة متاحة لمدير النظام فقط</p>
-                            </div>
-                        </div>
-                    </div>
-                `;
-            }
-            return;
-        }
-
-        const container = document.getElementById('data-analysis-container');
-        if (!container) return;
-
-        // تحميل الكروت التوضيحية
-        this.loadInfoCards();
-
-        // تحميل بنود التحليل المحفوظة
-        const analysisItems = JSON.parse(localStorage.getItem('dailyObservations_analysisItems') || '[]');
-        
-        // إذا لم تكن هناك بنود محفوظة، إنشاء بنود افتراضية
-        if (analysisItems.length === 0) {
-            const defaultItems = [
-                { id: 'observationType', label: 'نوع الملاحظة', enabled: true },
-                { id: 'riskLevel', label: 'معدل الخطورة', enabled: true },
-                { id: 'status', label: 'الحالة', enabled: true },
-                { id: 'shift', label: 'الوردية', enabled: false },
-                { id: 'site', label: 'الموقع', enabled: false }
-            ];
-            localStorage.setItem('dailyObservations_analysisItems', JSON.stringify(defaultItems));
-            return this.loadDataAnalysis(); // إعادة التحميل
-        }
-
-        // عرض قائمة البنود
-        const itemsList = document.getElementById('analysis-items-list');
-        if (itemsList) {
-            itemsList.innerHTML = analysisItems.map(item => `
-                <div class="flex items-center justify-between p-2 border rounded hover:bg-gray-50">
-                    <label class="flex items-center cursor-pointer flex-1">
-                        <input type="checkbox" class="analysis-item-checkbox mr-2" data-item-id="${item.id}" ${item.enabled ? 'checked' : ''}>
-                        <span>${Utils.escapeHTML(item.label)}</span>
-                    </label>
-                    <button class="btn-icon btn-icon-danger ml-2" onclick="DailyObservations.removeAnalysisItem('${item.id}')" title="حذف">
-                        <i class="fas fa-trash"></i>
-                    </button>
-                </div>
-            `).join('');
-
-            // إضافة مستمعين للأزرار
-            itemsList.querySelectorAll('.analysis-item-checkbox').forEach(checkbox => {
-                checkbox.addEventListener('change', (e) => {
-                    const itemId = e.target.getAttribute('data-item-id');
-                    this.toggleAnalysisItem(itemId, e.target.checked);
-                });
-            });
-        }
-
-        // ربط زر إدارة الكروت
-        const manageCardsBtn = document.getElementById('manage-cards-btn');
-        if (manageCardsBtn) {
-            manageCardsBtn.addEventListener('click', () => this.showManageCardsModal());
-        }
-
-        // تحديث نتائج التحليل
-        this.updateAnalysisResults();
+        // استدعاء updateAnalysisResults مباشرة — الكود الجديد لا يحتاج إعداداً مسبقاً
+        await this.updateAnalysisResults();
     },
 
-    async updateAnalysisResults() {
-        const resultsContainer = document.getElementById('analysis-results');
-        if (!resultsContainer) return;
-
-        const analysisItems = JSON.parse(localStorage.getItem('dailyObservations_analysisItems') || '[]');
-        const enabledItems = analysisItems.filter(item => item.enabled);
-
-        if (enabledItems.length === 0) {
-            resultsContainer.innerHTML = `
-                <div class="empty-state">
-                    <p class="text-gray-500">لا توجد بنود مفعلة للتحليل.</p>
-                </div>
-            `;
-            return;
-        }
-
-        const observationsRaw = typeof this.getDailyObservationsVisibleToCurrentUser === 'function'
-            ? this.getDailyObservationsVisibleToCurrentUser()
-            : (Array.isArray(AppState.appData.dailyObservations) ? AppState.appData.dailyObservations : []);
-        const observations = observationsRaw.map(item => this.normalizeRecord(item));
-
-        // تحديث قيم الكروت التوضيحية
-        this.calculateCardValues();
-
-        // إنشاء HTML مع الرسوم البيانية
-        let resultsHTML = '<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">';
-
-        enabledItems.forEach((item, index) => {
-            const analysis = this.analyzeByItem(item.id, observations);
-            const chartId = `chart-${item.id}-${index}`;
-            const chartContainerId = `chart-container-${item.id}-${index}`;
-            
-            resultsHTML += `
-                <div class="content-card">
-                    <div class="card-header">
-                        <h4 class="font-semibold text-lg">
-                            <i class="fas fa-chart-pie ml-2"></i>
-                            ${Utils.escapeHTML(item.label)}
-                        </h4>
-                    </div>
-                    <div class="card-body">
-                        <!-- الرسم البياني -->
-                        <div id="${chartContainerId}" style="position: relative; height: 300px; margin-bottom: 20px;">
-                            <canvas id="${chartId}"></canvas>
-                        </div>
-                        <!-- الجدول التفصيلي -->
-                        <div class="border-t pt-4">
-                            <h5 class="font-semibold mb-3 text-sm text-gray-700">التفاصيل:</h5>
-                            <div class="space-y-2">
-                                ${analysis.map(stat => `
-                                    <div class="flex justify-between items-center p-2 bg-gray-50 rounded">
-                                        <span class="text-sm">${Utils.escapeHTML(stat.label)}</span>
-                                        <div class="flex items-center gap-3">
-                                            <span class="font-semibold">${stat.count}</span>
-                                            <span class="text-xs text-gray-500">(${stat.percentage}%)</span>
-                                        </div>
-                                    </div>
-                                `).join('')}
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            `;
-        });
-
-        resultsHTML += '</div>';
-        resultsContainer.innerHTML = resultsHTML;
-
-        // رسم الرسوم البيانية بعد إضافة HTML (مع إعادة محاولة لتحميل Chart.js)
-        setTimeout(async () => {
-            // التأكد من تحميل Chart.js قبل رسم الرسوم
-            const chartLoaded = await this.ensureChartJSLoaded();
-            if (chartLoaded && typeof Chart !== 'undefined') {
-                this.renderAnalysisCharts(enabledItems, observations);
-            } else {
-                // عرض رسالة للمستخدم
-                const firstChartContainer = resultsContainer.querySelector('[id^="chart-container-"]');
-                if (firstChartContainer) {
-                    const fallbackMsg = document.createElement('div');
-                    fallbackMsg.className = 'bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4';
-                    fallbackMsg.innerHTML = `
-                        <div class="flex items-center gap-2">
-                            <i class="fas fa-exclamation-triangle text-yellow-600"></i>
-                            <p class="text-sm text-yellow-800">
-                                <strong>ملاحظة:</strong> لا يمكن تحميل مكتبة الرسوم البيانية حالياً. 
-                                البيانات متاحة في الجداول أدناه. يرجى تحديث الصفحة أو التحقق من الاتصال بالإنترنت.
-                            </p>
-                        </div>
-                    `;
-                    resultsContainer.insertBefore(fallbackMsg, resultsContainer.firstChild);
-                }
-            }
-        }, 300);
-    },
-
-    /**
-     * رسم الرسوم البيانية للتحليل
-     */
-    renderAnalysisCharts(enabledItems, observations) {
-        if (typeof Chart === 'undefined') {
-            // لا نعرض تحذير في console لأن هذا قد يكون متوقعاً
-            // سيتم عرض البيانات في الجداول بدلاً من الرسوم البيانية
-            return;
-        }
-
-        // تدمير الرسوم البيانية السابقة إن وجدت
-        if (this.analysisCharts) {
-            Object.values(this.analysisCharts).forEach(chart => {
-                if (chart && typeof chart.destroy === 'function') {
-                    chart.destroy();
-                }
-            });
-        }
-        this.analysisCharts = {};
-
-        enabledItems.forEach((item, index) => {
-            const chartId = `chart-${item.id}-${index}`;
-            const canvas = document.getElementById(chartId);
-            if (!canvas) return;
-
-            const analysis = this.analyzeByItem(item.id, observations);
-            
-            if (analysis.length === 0) {
-                const container = document.getElementById(`chart-container-${item.id}-${index}`);
-                if (container) {
-                    container.innerHTML = '<p class="text-gray-500 text-center py-8">لا توجد بيانات للعرض</p>';
-                }
-                return;
-            }
-
-            // تحديد نوع الرسم البياني حسب عدد العناصر
-            const chartType = analysis.length > 6 ? 'bar' : 'doughnut';
-            
-            // الألوان
-            const colorPalette = [
-                'rgba(59, 130, 246, 0.8)',  // blue
-                'rgba(16, 185, 129, 0.8)',  // green
-                'rgba(245, 158, 11, 0.8)',  // amber
-                'rgba(239, 68, 68, 0.8)',   // red
-                'rgba(139, 92, 246, 0.8)',  // purple
-                'rgba(236, 72, 153, 0.8)',  // pink
-                'rgba(20, 184, 166, 0.8)',  // teal
-                'rgba(251, 146, 60, 0.8)'   // orange
-            ];
-
-            const labels = analysis.map(stat => stat.label);
-            const data = analysis.map(stat => stat.count);
-            const backgroundColors = analysis.map((_, i) => colorPalette[i % colorPalette.length]);
-
-            try {
-                const chart = new Chart(canvas, {
-                    type: chartType,
-                    data: {
-                        labels: labels,
-                        datasets: [{
-                            label: item.label,
-                            data: data,
-                            backgroundColor: backgroundColors,
-                            borderColor: backgroundColors.map(c => c.replace('0.8', '1')),
-                            borderWidth: 2
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        plugins: {
-                            legend: {
-                                position: 'bottom',
-                                labels: {
-                                    padding: 15,
-                                    font: {
-                                        size: 12
-                                    },
-                                    usePointStyle: true
-                                }
-                            },
-                            tooltip: {
-                                callbacks: {
-                                    label: function(context) {
-                                        const label = context.label || '';
-                                        const value = context.parsed || 0;
-                                        const total = context.dataset.data.reduce((a, b) => a + b, 0);
-                                        const percentage = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
-                                        return `${label}: ${value} (${percentage}%)`;
-                                    }
-                                }
-                            }
-                        },
-                        ...(chartType === 'bar' ? {
-                            scales: {
-                                y: {
-                                    beginAtZero: true,
-                                    ticks: {
-                                        stepSize: 1
-                                    }
-                                }
-                            }
-                        } : {})
-                    }
-                });
-
-                this.analysisCharts[chartId] = chart;
-            } catch (error) {
-                Utils.safeError('خطأ في رسم الرسم البياني:', error);
-            }
-        });
-    },
+    renderAnalysisCharts() { /* محوَّل — الرسوم تُرسم داخل updateAnalysisResults */ },
 
     /**
      * عرض أفضل 10 ملاحظات
@@ -5155,6 +5203,26 @@ const DailyObservations = {
                         this.addAnalysisItem();
                     }
                 });
+            }
+
+            // ✅ ربط أزرار فلتر الفترة الزمنية في لوحة التحليل
+            const analyticsRoot = document.getElementById('obs-analytics-root');
+            if (analyticsRoot) {
+                analyticsRoot.querySelectorAll('.obs-period-btn').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        this._analysisPeriod = btn.getAttribute('data-period');
+                        analyticsRoot.querySelectorAll('.obs-period-btn').forEach(b => {
+                            const isActive = b === btn;
+                            b.style.background = isActive ? '#fff' : 'rgba(255,255,255,0.15)';
+                            b.style.color = isActive ? '#1e40af' : '#fff';
+                        });
+                        this.updateAnalysisResults();
+                    });
+                });
+                const refreshBtn = document.getElementById('obs-analytics-refresh');
+                if (refreshBtn) {
+                    refreshBtn.addEventListener('click', () => this.updateAnalysisResults());
+                }
             }
 
             // تحميل تحليل البيانات عند فتح التبويب (يتم التعامل معه في setupTabs)
