@@ -4346,7 +4346,7 @@ const Dashboard = {
                     <div class="card-header">
                         <h2 class="card-title">
                             <i class="fas fa-chart-line ml-2"></i>
-                            الحوادث - آخر 30 يوم
+                            ${this.t('dash.chartIncidents30d', 'Incidents - آخر 30 يوم')}
                         </h2>
                     </div>
                     <div class="card-body">
@@ -4359,7 +4359,7 @@ const Dashboard = {
                     <div class="card-header">
                         <h2 class="card-title">
                             <i class="fas fa-chart-pie ml-2"></i>
-                            توزيع الحوادث حسب الخطورة
+                            ${this.t('dash.chartIncidentsBySeverity', 'توزيع Incidents حسب الخطورة')}
                         </h2>
                     </div>
                     <div class="card-body">
@@ -4378,7 +4378,7 @@ const Dashboard = {
                     <div class="card-header">
                         <h2 class="card-title">
                             <i class="fas fa-chart-bar ml-2"></i>
-                            تصاريح العمل - آخر 30 يوم
+                            ${this.t('dash.chartPtw30d', 'Work Permits - آخر 30 يوم')}
                         </h2>
                     </div>
                     <div class="card-body">
@@ -4394,7 +4394,7 @@ const Dashboard = {
                     <div class="card-header">
                         <h2 class="card-title">
                             <i class="fas fa-chart-area ml-2"></i>
-                            التدريب - آخر 30 يوم
+                            ${this.t('dash.chartTraining30d', 'Training - آخر 30 يوم')}
                         </h2>
                     </div>
                     <div class="card-body">
@@ -4482,7 +4482,7 @@ const Dashboard = {
     renderTrendBarList(dataByDateIso, unitPhrase, variant = 'ptw') {
         const keys = Object.keys(dataByDateIso || {}).sort();
         if (keys.length === 0) {
-            return '<div class="dash-trend-empty"><p class="dash-trend-empty__text">لا توجد بيانات في آخر 30 يوماً</p></div>';
+            return `<div class="dash-trend-empty"><p class="dash-trend-empty__text">${this.t('dash.noData30d', 'لا توجد بيانات في آخر 30 يوماً')}</p></div>`;
         }
 
         const windowKeys = keys.slice(-14);

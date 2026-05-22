@@ -11051,7 +11051,7 @@
                                     <i class="fas fa-graduation-cap"></i>
                                 </div>
                                 <div class="kpi-content">
-                                    <h3 class="kpi-label">
+                                    <h3 class="kpi-label" data-i18n="dash.kpiTrainingPrograms">
                                         برامج التدريب
                                     </h3>
                                     <p
@@ -11061,7 +11061,7 @@
                                     >
                                         0
                                     </p>
-                                    <p class="kpi-description">
+                                    <p class="kpi-description" data-i18n="dash.kpiTrainingDesc">
                                         إجمالي البرامج المسجلة في النظام
                                     </p>
                                 </div>
@@ -11072,7 +11072,7 @@
                                     <i class="fas fa-hospital"></i>
                                 </div>
                                 <div class="kpi-content">
-                                    <h3 class="kpi-label">
+                                    <h3 class="kpi-label" data-i18n="dash.kpiClinicVisits">
                                         التردد على العيادة
                                     </h3>
                                     <p
@@ -11082,7 +11082,7 @@
                                     >
                                         0
                                     </p>
-                                    <p class="kpi-description">
+                                    <p class="kpi-description" data-i18n="dash.kpiClinicDesc">
                                         إجمالي الزيارات المسجلة
                                     </p>
                                 </div>
@@ -11093,7 +11093,7 @@
                                     <i class="fas fa-user-friends"></i>
                                 </div>
                                 <div class="kpi-content">
-                                    <h3 class="kpi-label">
+                                    <h3 class="kpi-label" data-i18n="dash.kpiActiveEmployees">
                                         الموظفون النشطون
                                     </h3>
                                     <p
@@ -11103,7 +11103,7 @@
                                     >
                                         0
                                     </p>
-                                    <p class="kpi-description">
+                                    <p class="kpi-description" data-i18n="dash.kpiEmployeesDesc">
                                         من قاعدة بيانات الموظفين
                                     </p>
                                 </div>
@@ -11114,7 +11114,7 @@
                                     <i class="fas fa-hard-hat"></i>
                                 </div>
                                 <div class="kpi-content">
-                                    <h3 class="kpi-label">
+                                    <h3 class="kpi-label" data-i18n="dash.kpiExternalWorkforce">
                                         العمالة الخارجية والمقاولون
                                     </h3>
                                     <p
@@ -11124,7 +11124,7 @@
                                     >
                                         0
                                     </p>
-                                    <p class="kpi-description">
+                                    <p class="kpi-description" data-i18n="dash.kpiContractorsDesc">
                                         من سجلات المقاولين المعتمدين
                                     </p>
                                 </div>
@@ -12001,14 +12001,11 @@
                                 <div
                                     class="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg"
                                 >
-                                    <p class="text-xs text-gray-600">
+                                    <p class="text-xs text-gray-600" data-i18n="dash.statsNote">
                                         <i
                                             class="fas fa-chart-pie ml-1 text-blue-600"
                                         ></i>
-                                        <strong>إحصائيات:</strong> يتم تحديث
-                                        التقارير والإحصائيات تلقائياً بناءً على
-                                        البيانات المُدخلة في النظام. جميع
-                                        الأرقام تعكس الوضع الحالي للنظام.
+                                        إحصائيات: يتم تحديث التقارير والإحصائيات تلقائياً بناءً على البيانات المُدخلة في النظام. جميع الأرقام تعكس الوضع الحالي للنظام.
                                     </p>
                                 </div>
                             </div>
@@ -12892,7 +12889,7 @@
                     }
 
                     // مطابقة CACHE_VERSION في service-worker.js — تسريع جلب سكربت SW بعد النشر (تجاوز كاش الشبكة/الوسيط)
-                    const __SW_REGISTER_QUERY = "v=hse-app-v1.0.25-20260522";
+                    const __SW_REGISTER_QUERY = "v=hse-app-v1.0.26-20260522";
                     const swUrl =
                         swPath +
                         (swPath.includes("?") ? "&" : "?") +
