@@ -3049,20 +3049,25 @@ const Dashboard = {
         const externalWorkforce = Array.isArray(data.externalWorkforceMonthly) ? data.externalWorkforceMonthly : [];
         const currentYear = new Date().getFullYear();
         const monthKeys = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
-        const currentMonthKey = monthKeys[new Date().getMonth()];
 
-        // 1. محاولة الجمع من جدول العمالة الخارجية الشهري للمقاولين المعتمدين للسنة الحالية والشهر الحالي أولاً
+        // 1. جمع كل الأشهر المُدخلة لكل مقاول في السنة الحالية (ليس شهراً واحداً فقط)
         const activeYearRecords = externalWorkforce.filter(r => r && Number(r.year) === currentYear);
         if (activeYearRecords.length > 0) {
-            let monthlySum = 0;
+            let totalSum = 0;
             activeYearRecords.forEach(r => {
-                const val = parseFloat(r[currentMonthKey]);
-                if (Number.isFinite(val) && val > 0) {
-                    monthlySum += Math.round(val);
+                // استخدام حقل total إذا كان مُحسوباً مسبقاً، وإلا جمع الأشهر يدوياً
+                const savedTotal = parseFloat(r.total);
+                if (Number.isFinite(savedTotal) && savedTotal > 0) {
+                    totalSum += Math.round(savedTotal);
+                } else {
+                    monthKeys.forEach(key => {
+                        const val = parseFloat(r[key]);
+                        if (Number.isFinite(val) && val > 0) totalSum += Math.round(val);
+                    });
                 }
             });
-            if (monthlySum > 0) {
-                return monthlySum;
+            if (totalSum > 0) {
+                return totalSum;
             }
         }
 
