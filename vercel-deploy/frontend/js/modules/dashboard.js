@@ -3302,13 +3302,44 @@ const Dashboard = {
                             self.applyEnglishNumberFormat(empCountDashEl);
                         }
                         
-                        // Update active contractor count separately
+                        // ✅ تحديث كارت العمالة الخارجية — مع جلب البيانات إن لم تكن محملة
                         const contCountDashEl = document.getElementById('dash-kpi-contractors-active-count');
                         if (contCountDashEl) {
                             const approvedContractors = Array.isArray(data.approvedContractors) ? data.approvedContractors : [];
-                            const contractorWorkforceCount = self._sumContractorWorkforceHeadcount(approvedContractors, data);
-                            contCountDashEl.textContent = self.formatNumber(contractorWorkforceCount);
-                            self.applyEnglishNumberFormat(contCountDashEl);
+
+                            // إذا كانت البيانات موجودة — احسب مباشرة
+                            if (Array.isArray(data.externalWorkforceMonthly) && data.externalWorkforceMonthly.length > 0) {
+                                const contractorWorkforceCount = self._sumContractorWorkforceHeadcount(approvedContractors, data);
+                                contCountDashEl.textContent = self.formatNumber(contractorWorkforceCount);
+                                self.applyEnglishNumberFormat(contCountDashEl);
+                            } else {
+                                // البيانات غير محملة — اجلبها من الخادم وحدّث الكارت
+                                if (typeof GoogleIntegration !== 'undefined' && typeof GoogleIntegration.readFromSheets === 'function') {
+                                    GoogleIntegration.readFromSheets('ExternalWorkforceMonthly', 15000)
+                                        .then(rows => {
+                                            if (Array.isArray(rows) && rows.length > 0) {
+                                                AppState.appData.externalWorkforceMonthly = rows;
+                                            } else if (!Array.isArray(AppState.appData.externalWorkforceMonthly)) {
+                                                AppState.appData.externalWorkforceMonthly = [];
+                                            }
+                                            const count = self._sumContractorWorkforceHeadcount(approvedContractors, AppState.appData);
+                                            if (contCountDashEl) {
+                                                contCountDashEl.textContent = self.formatNumber(count);
+                                                self.applyEnglishNumberFormat(contCountDashEl);
+                                            }
+                                        })
+                                        .catch(() => {
+                                            // فشل الجلب — اعرض عدد المقاولين النشطين كبديل
+                                            const fallback = approvedContractors.filter(r => r &&
+                                                r.isActive !== 'inactive' && r.isActive !== false &&
+                                                r.isActive !== 'false' && r.isActive !== 'FALSE').length;
+                                            if (contCountDashEl) {
+                                                contCountDashEl.textContent = self.formatNumber(fallback);
+                                                self.applyEnglishNumberFormat(contCountDashEl);
+                                            }
+                                        });
+                                }
+                            }
                         }
                     }
                     if (self.dashboardCan('training')) {
