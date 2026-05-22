@@ -5247,13 +5247,230 @@ const Clinic = {
     },
 
     /**
-     * عرض تبويب تحليل البيانات الشامل
+     * عرض تبويب تحليل البيانات الشامل — لوحة احترافية موحدة
      */
     renderDataAnalysisTab() {
         const panel = document.querySelector('.clinic-tab-panel[data-tab-panel="data-analysis"]');
         if (!panel) return;
 
-        const analysis = this.analyzeAllClinicData();
+        // بدء تحميل Chart.js مبكراً
+        this.ensureChartJSLoaded().catch(() => {});
+
+        panel.innerHTML = `
+        <div id="clinic-analytics-root" style="font-family:inherit;">
+
+            <!-- ══ شريط الأدوات ══ -->
+            <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:14px;padding:16px 20px;background:linear-gradient(135deg,#134e4a 0%,#0d9488 100%);border-radius:14px;color:#fff;box-shadow:0 4px 20px rgba(13,148,136,0.35);">
+                <div style="display:flex;align-items:center;gap:12px;">
+                    <div style="width:44px;height:44px;background:rgba(255,255,255,0.18);border-radius:12px;display:flex;align-items:center;justify-content:center;">
+                        <i class="fas fa-clinic-medical" style="font-size:20px;"></i>
+                    </div>
+                    <div>
+                        <h2 style="margin:0;font-size:1.15rem;font-weight:700;">لوحة تحليل العيادة الطبية</h2>
+                        <p style="margin:0;font-size:0.75rem;opacity:0.85;">تحليل شامل • زيارات • أدوية • إجازات • إصابات • تصدير PDF</p>
+                    </div>
+                </div>
+                <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+                    <span style="font-size:0.72rem;opacity:0.85;margin-left:2px;">الفترة:</span>
+                    <div style="display:flex;gap:3px;flex-wrap:wrap;">
+                        ${['30','90','180','365','0'].map((v,i) => {
+                            const labels=['30 يوم','3 أشهر','6 أشهر','سنة','الكل'];
+                            const active=(this._clinicPeriod||'0')===v;
+                            return `<button class="clinic-period-btn" data-period="${v}" style="padding:5px 10px;border-radius:8px;border:none;cursor:pointer;font-size:0.75rem;font-weight:600;transition:all .2s;background:${active?'#fff':'rgba(255,255,255,0.15)'};color:${active?'#134e4a':'#fff'};">${labels[i]}</button>`;
+                        }).join('')}
+                    </div>
+                    <button id="clinic-toggle-filters-btn" style="padding:6px 12px;border-radius:8px;border:1px solid rgba(255,255,255,0.4);cursor:pointer;background:rgba(255,255,255,0.12);color:#fff;font-size:0.78rem;font-weight:600;transition:all .2s;display:flex;align-items:center;gap:5px;" onmouseover="this.style.background='rgba(255,255,255,0.25)'" onmouseout="this.style.background='rgba(255,255,255,0.12)'">
+                        <i class="fas fa-sliders-h"></i><span>فلاتر</span><span id="clinic-filter-badge" style="display:none;background:#fbbf24;color:#78350f;font-size:0.65rem;padding:1px 5px;border-radius:10px;margin-right:2px;">●</span>
+                    </button>
+                    <button id="clinic-export-pdf-btn" style="padding:6px 14px;border-radius:8px;border:none;cursor:pointer;background:rgba(0,0,0,0.25);color:#fff;font-size:0.78rem;font-weight:600;transition:all .2s;display:flex;align-items:center;gap:5px;" onmouseover="this.style.background='rgba(0,0,0,0.4)'" onmouseout="this.style.background='rgba(0,0,0,0.25)'">
+                        <i class="fas fa-file-pdf"></i><span>PDF</span>
+                    </button>
+                    <button id="clinic-analytics-refresh" style="padding:6px 10px;border-radius:8px;border:none;cursor:pointer;background:rgba(255,255,255,0.15);color:#fff;font-size:0.78rem;transition:all .2s;" onmouseover="this.style.background='rgba(255,255,255,0.3)'" onmouseout="this.style.background='rgba(255,255,255,0.15)'" title="تحديث">
+                        <i class="fas fa-sync-alt"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- ══ لوحة الفلاتر ══ -->
+            <div id="clinic-filter-panel" style="display:none;background:#f0fdfa;border:1.5px solid #99f6e4;border-radius:12px;padding:18px 20px;margin-bottom:16px;">
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+                    <div style="display:flex;align-items:center;gap:8px;">
+                        <i class="fas fa-sliders-h" style="color:#0d9488;font-size:14px;"></i>
+                        <span style="font-weight:700;font-size:0.9rem;color:#134e4a;">الفلاتر التفاعلية</span>
+                        <span id="clinic-filter-count" style="background:#ccfbf1;color:#0f766e;padding:2px 8px;border-radius:12px;font-size:0.72rem;font-weight:600;"></span>
+                    </div>
+                    <button id="clinic-filter-reset-btn" style="padding:4px 12px;border-radius:8px;border:1px solid #99f6e4;background:#fff;color:#64748b;font-size:0.75rem;cursor:pointer;" onmouseover="this.style.background='#f0fdfa';this.style.color='#0d9488'" onmouseout="this.style.background='#fff';this.style.color='#64748b'">
+                        <i class="fas fa-times ml-1"></i>مسح الكل
+                    </button>
+                </div>
+                <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;">
+                    ${[
+                        {id:'clinic-af-ptype',  icon:'fas fa-id-badge',       color:'#6366f1', label:'نوع الشخص'},
+                        {id:'clinic-af-dept',   icon:'fas fa-building',        color:'#0d9488', label:'الإدارة'},
+                        {id:'clinic-af-loc',    icon:'fas fa-map-marker-alt',  color:'#f59e0b', label:'الموقع'},
+                        {id:'clinic-af-reason', icon:'fas fa-stethoscope',     color:'#3b82f6', label:'سبب الزيارة'},
+                    ].map(f=>`
+                        <div>
+                            <label style="font-size:0.72rem;font-weight:700;color:#64748b;display:block;margin-bottom:5px;">
+                                <i class="${f.icon}" style="color:${f.color};margin-left:4px;"></i>${f.label}
+                            </label>
+                            <select id="${f.id}" style="width:100%;padding:7px 10px;border:1.5px solid #99f6e4;border-radius:8px;font-size:0.82rem;background:#fff;color:#374151;cursor:pointer;" onfocus="this.style.borderColor='#0d9488'" onblur="this.style.borderColor='#99f6e4'">
+                                <option value="">الكل</option>
+                            </select>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+
+            <!-- ══ KPI Cards ══ -->
+            <div id="clinic-kpi-strip" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:10px;margin-bottom:20px;">
+                <div style="text-align:center;padding:16px;color:#94a3b8;"><i class="fas fa-spinner fa-spin"></i></div>
+            </div>
+
+            <!-- ══ Row 1: الزيارات حسب النوع + الاتجاه الشهري ══ -->
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:16px;margin-bottom:16px;">
+                <div class="content-card" style="padding:0;overflow:hidden;">
+                    <div style="padding:13px 18px 10px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:8px;">
+                        <i class="fas fa-user-circle" style="color:#3b82f6;"></i>
+                        <span style="font-weight:700;font-size:0.88rem;">الزيارات حسب نوع الشخص</span>
+                    </div>
+                    <div style="padding:12px;position:relative;height:220px;">
+                        <canvas id="clinic-chart-ptype"></canvas>
+                        <div id="clinic-chart-ptype-empty" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;color:#94a3b8;font-size:0.85rem;">لا توجد بيانات</div>
+                    </div>
+                </div>
+                <div class="content-card" style="padding:0;overflow:hidden;">
+                    <div style="padding:13px 18px 10px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:8px;">
+                        <i class="fas fa-chart-area" style="color:#8b5cf6;"></i>
+                        <span style="font-weight:700;font-size:0.88rem;">الاتجاه الزمني للزيارات (آخر 12 شهر)</span>
+                    </div>
+                    <div style="padding:12px;position:relative;height:220px;">
+                        <canvas id="clinic-chart-trend"></canvas>
+                        <div id="clinic-chart-trend-empty" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;color:#94a3b8;font-size:0.85rem;">لا توجد بيانات</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ══ Row 2: سبب الزيارة + الإدارة ══ -->
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:16px;margin-bottom:16px;">
+                <div class="content-card" style="padding:0;overflow:hidden;">
+                    <div style="padding:13px 18px 10px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:8px;">
+                        <i class="fas fa-stethoscope" style="color:#0d9488;"></i>
+                        <span style="font-weight:700;font-size:0.88rem;">حسب سبب الزيارة (أعلى 10)</span>
+                    </div>
+                    <div style="padding:12px;position:relative;height:280px;">
+                        <canvas id="clinic-chart-reason"></canvas>
+                        <div id="clinic-chart-reason-empty" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;color:#94a3b8;font-size:0.85rem;">لا توجد بيانات</div>
+                    </div>
+                </div>
+                <div class="content-card" style="padding:0;overflow:hidden;">
+                    <div style="padding:13px 18px 10px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:8px;">
+                        <i class="fas fa-building" style="color:#6366f1;"></i>
+                        <span style="font-weight:700;font-size:0.88rem;">حسب الإدارة (أعلى 8)</span>
+                    </div>
+                    <div style="padding:12px;position:relative;height:280px;">
+                        <canvas id="clinic-chart-dept"></canvas>
+                        <div id="clinic-chart-dept-empty" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;color:#94a3b8;font-size:0.85rem;">لا توجد بيانات</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ══ Row 3: الموقع + الإجازات المرضية ══ -->
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:16px;margin-bottom:16px;">
+                <div class="content-card" style="padding:0;overflow:hidden;">
+                    <div style="padding:13px 18px 10px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:8px;">
+                        <i class="fas fa-map-marker-alt" style="color:#f59e0b;"></i>
+                        <span style="font-weight:700;font-size:0.88rem;">حسب الموقع (أعلى 8)</span>
+                    </div>
+                    <div style="padding:12px;position:relative;height:280px;">
+                        <canvas id="clinic-chart-loc"></canvas>
+                        <div id="clinic-chart-loc-empty" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;color:#94a3b8;font-size:0.85rem;">لا توجد بيانات</div>
+                    </div>
+                </div>
+                <div class="content-card" style="padding:0;overflow:hidden;">
+                    <div style="padding:13px 18px 10px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:8px;">
+                        <i class="fas fa-notes-medical" style="color:#f97316;"></i>
+                        <span style="font-weight:700;font-size:0.88rem;">الإجازات المرضية حسب الحالة</span>
+                    </div>
+                    <div style="padding:12px;position:relative;height:280px;">
+                        <canvas id="clinic-chart-sl-status"></canvas>
+                        <div id="clinic-chart-sl-status-empty" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;color:#94a3b8;font-size:0.85rem;">لا توجد بيانات</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ══ Row 4: الإصابات حسب النوع + الأدوية حسب الحالة ══ -->
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:16px;margin-bottom:16px;">
+                <div class="content-card" style="padding:0;overflow:hidden;">
+                    <div style="padding:13px 18px 10px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:8px;">
+                        <i class="fas fa-user-injured" style="color:#ef4444;"></i>
+                        <span style="font-weight:700;font-size:0.88rem;">الإصابات حسب النوع</span>
+                    </div>
+                    <div style="padding:12px;position:relative;height:260px;">
+                        <canvas id="clinic-chart-inj-type"></canvas>
+                        <div id="clinic-chart-inj-type-empty" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;color:#94a3b8;font-size:0.85rem;">لا توجد إصابات</div>
+                    </div>
+                </div>
+                <div class="content-card" style="padding:0;overflow:hidden;">
+                    <div style="padding:13px 18px 10px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:8px;">
+                        <i class="fas fa-pills" style="color:#10b981;"></i>
+                        <span style="font-weight:700;font-size:0.88rem;">الأدوية حسب الحالة</span>
+                    </div>
+                    <div style="padding:12px;position:relative;height:260px;">
+                        <canvas id="clinic-chart-med-status"></canvas>
+                        <div id="clinic-chart-med-status-empty" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;color:#94a3b8;font-size:0.85rem;">لا توجد بيانات أدوية</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ══ اتجاه الإجازات والإصابات (12 شهر) ══ -->
+            <div class="content-card" style="padding:0;overflow:hidden;margin-bottom:16px;">
+                <div style="padding:13px 18px 10px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:8px;">
+                    <i class="fas fa-chart-bar" style="color:#dc2626;"></i>
+                    <span style="font-weight:700;font-size:0.88rem;">مقارنة شهرية: الزيارات vs الإجازات vs الإصابات (آخر 12 شهر)</span>
+                </div>
+                <div style="padding:12px;position:relative;height:280px;">
+                    <canvas id="clinic-chart-compare"></canvas>
+                    <div id="clinic-chart-compare-empty" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;color:#94a3b8;font-size:0.85rem;">لا توجد بيانات</div>
+                </div>
+            </div>
+
+            <!-- ══ جدول أكثر المراجعين ══ -->
+            <div class="content-card" style="padding:0;overflow:hidden;">
+                <div style="padding:13px 18px 12px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;justify-content:space-between;gap:8px;">
+                    <div style="display:flex;align-items:center;gap:8px;">
+                        <i class="fas fa-user-clock" style="color:#0d9488;"></i>
+                        <span style="font-weight:700;font-size:0.88rem;">أكثر المراجعين لعيادة (أعلى 15)</span>
+                    </div>
+                    <span id="clinic-top-visitors-count" style="background:#f0fdfa;color:#0f766e;padding:3px 10px;border-radius:20px;font-size:0.75rem;font-weight:700;"></span>
+                </div>
+                <div style="overflow-x:auto;">
+                    <table style="width:100%;border-collapse:collapse;font-size:0.82rem;">
+                        <thead>
+                            <tr style="background:#fafafa;border-bottom:2px solid #f1f5f9;">
+                                <th style="padding:10px 12px;text-align:right;font-weight:700;color:#374151;">#</th>
+                                <th style="padding:10px 12px;text-align:right;font-weight:700;color:#374151;">الاسم</th>
+                                <th style="padding:10px 12px;text-align:right;font-weight:700;color:#374151;">الإدارة</th>
+                                <th style="padding:10px 12px;text-align:right;font-weight:700;color:#374151;">الموقع</th>
+                                <th style="padding:10px 12px;text-align:center;font-weight:700;color:#374151;">عدد الزيارات</th>
+                            </tr>
+                        </thead>
+                        <tbody id="clinic-top-visitors-tbody">
+                            <tr><td colspan="5" style="padding:20px;text-align:center;color:#94a3b8;">جارٍ التحميل…</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>`;
+
+        this.applyModuleI18n(panel);
+
+        // تشغيل التحليل بعد رسم الـ DOM
+        setTimeout(() => {
+            this.updateClinicAnalyticsDashboard();
+            this._clinicBindAnalyticsEvents();
+        }, 80);
+    },
 
         // دالة مساعدة لإنشاء رسم بياني
         const createChartContainer = (id, type = 'bar') => {
@@ -5650,37 +5867,397 @@ const Clinic = {
     },
 
     /**
-     * ربط أحداث تبويب تحليل البيانات
+     * ربط أحداث تبويب تحليل البيانات (stub للتوافق)
      */
     bindDataAnalysisTabEvents(panel) {
-        const exportPdfBtn = panel.querySelector('#data-analysis-export-pdf-btn');
-        const exportExcelBtn = panel.querySelector('#data-analysis-export-excel-btn');
-        const addMedicationBtn = panel.querySelector('#analysis-add-medication-btn');
-        const addSickLeaveBtn = panel.querySelector('#analysis-add-sickleave-btn');
-        const addInjuryBtn = panel.querySelector('#analysis-add-injury-btn');
+        // تم الدمج في renderDataAnalysisTab → _clinicBindAnalyticsEvents
+    },
 
-        exportPdfBtn?.addEventListener('click', () => this.exportDataAnalysisToPDF());
-        exportExcelBtn?.addEventListener('click', () => this.exportDataAnalysisToExcel());
+    // ══════════════════════════════════════════════════════════════
+    //  لوحة تحليل العيادة — الدوال الجديدة
+    // ══════════════════════════════════════════════════════════════
 
-        addMedicationBtn?.addEventListener('click', () => {
-            this.showMedicationForm();
+    async updateClinicAnalyticsDashboard() {
+        const root = document.getElementById('clinic-analytics-root');
+        if (!root) return;
+
+        // ── 1. جمع البيانات ──
+        try { this.ensureData(); } catch(e) {}
+        const period   = parseInt(this._clinicPeriod || '0', 10);
+        const allVisits = AppState.appData?.clinicVisits       || [];
+        const allMeds   = AppState.appData?.clinicMedications  || [];
+        const allSL     = AppState.appData?.sickLeave          || [];
+        const allInj    = AppState.appData?.injuries           || [];
+        const allSR     = AppState.appData?.clinicSupplyRequests|| [];
+
+        // ── 2. تصفية الزيارات/الإجازات/الإصابات بالفترة ──
+        const cutoff = period > 0 ? (() => { const d=new Date(); d.setDate(d.getDate()-period); return d; })() : null;
+        const filterDate = (arr, dateField) => cutoff
+            ? arr.filter(r => { const d=new Date(r[dateField]||r.createdAt||''); return !isNaN(d.getTime()) && d >= cutoff; })
+            : arr;
+        const visits = filterDate(allVisits, 'visitDate');
+        const sl     = filterDate(allSL,     'startDate');
+        const inj    = filterDate(allInj,    'injuryDate');
+
+        // ── 3. ملء قوائم الفلاتر ──
+        this._clinicPopulateFilters(visits);
+
+        // ── 4. تطبيق الفلاتر التفاعلية ──
+        const filteredVisits = this._clinicApplyFilters(visits);
+        const total = filteredVisits.length;
+        const countEl = document.getElementById('clinic-filter-count');
+        if (countEl) countEl.textContent = `${total} زيارة`;
+
+        // ── 5. KPI Cards ──
+        const empVisits = filteredVisits.filter(v => !(String(v.personType||'').toLowerCase()==='contractor'));
+        const conVisits = filteredVisits.filter(v =>   String(v.personType||'').toLowerCase()==='contractor');
+        const now = new Date();
+        const thisMonthVisits = filteredVisits.filter(v => {
+            const d=new Date(v.visitDate||v.createdAt||''); return d.getFullYear()===now.getFullYear()&&d.getMonth()===now.getMonth();
+        }).length;
+        const expiredMeds     = allMeds.filter(m => m.status==='منتهي').length;
+        const expiringSoon    = allMeds.filter(m => m.status==='قريب الانتهاء').length;
+        const pendingSL       = sl.filter(l => !l.status||l.status==='قيد المعالجة').length;
+        const monthCount      = new Set(filteredVisits.map(v=>{ const d=new Date(v.visitDate||v.createdAt||''); return isNaN(d.getTime())?null:`${d.getFullYear()}-${d.getMonth()}`; }).filter(Boolean)).size;
+        const avgPerMonth     = monthCount>0 ? (total/monthCount).toFixed(1) : 0;
+
+        const kpiEl = document.getElementById('clinic-kpi-strip');
+        if (kpiEl) {
+            const kpis = [
+                { label:'إجمالي الزيارات',     value:total,             icon:'fas fa-hospital-user',    color:'#0d9488', bg:'#f0fdfa', border:'#99f6e4' },
+                { label:'زيارات الموظفين',     value:empVisits.length,  icon:'fas fa-user-tie',         color:'#3b82f6', bg:'#eff6ff', border:'#bfdbfe' },
+                { label:'زيارات المقاولين',    value:conVisits.length,  icon:'fas fa-hard-hat',         color:'#f97316', bg:'#fff7ed', border:'#fed7aa' },
+                { label:'الإجازات المرضية',    value:sl.length,         icon:'fas fa-notes-medical',    color:'#f59e0b', bg:'#fffbeb', border:'#fde68a' },
+                { label:'الإصابات',            value:inj.length,        icon:'fas fa-user-injured',     color:'#ef4444', bg:'#fef2f2', border:'#fecaca' },
+                { label:'أدوية منتهية',        value:expiredMeds,       icon:'fas fa-pills',            color:'#dc2626', bg:'#fef2f2', border:'#fca5a5' },
+                { label:'قريبة الانتهاء',      value:expiringSoon,      icon:'fas fa-exclamation',      color:'#d97706', bg:'#fffbeb', border:'#fde68a' },
+                { label:'إجازات قيد المعالجة', value:pendingSL,         icon:'fas fa-clock',            color:'#8b5cf6', bg:'#f5f3ff', border:'#ddd6fe' },
+                { label:'متوسط شهري',          value:avgPerMonth,       icon:'fas fa-calendar-check',   color:'#6366f1', bg:'#eef2ff', border:'#c7d2fe' },
+            ];
+            kpiEl.innerHTML = kpis.map(k=>`
+                <div style="background:${k.bg};border:1px solid ${k.border};border-radius:12px;padding:12px 14px;display:flex;align-items:center;gap:10px;transition:all .2s;cursor:default;" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 6px 20px rgba(0,0,0,0.09)'" onmouseout="this.style.transform='';this.style.boxShadow=''">
+                    <div style="width:38px;height:38px;background:${k.color};border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                        <i class="${k.icon}" style="color:#fff;font-size:15px;"></i>
+                    </div>
+                    <div>
+                        <div style="font-size:1.3rem;font-weight:800;color:${k.color};line-height:1;">${k.value}</div>
+                        <div style="font-size:0.68rem;color:#64748b;margin-top:2px;white-space:nowrap;">${k.label}</div>
+                    </div>
+                </div>`).join('');
+        }
+
+        // ── 6. تحميل Chart.js ──
+        const loaded = await this.ensureChartJSLoaded();
+        if (!loaded || typeof Chart === 'undefined') {
+            root.insertAdjacentHTML('afterbegin','<div style="background:#fffbeb;border:1px solid #fde68a;border-radius:10px;padding:14px 18px;margin-bottom:16px;display:flex;align-items:center;gap:10px;"><i class="fas fa-exclamation-triangle" style="color:#d97706;"></i><span style="font-size:0.85rem;color:#92400e;">تعذّر تحميل مكتبة الرسوم البيانية.</span></div>');
+            return;
+        }
+
+        // ── 7. الرسوم البيانية ──
+        // نوع الشخص (Doughnut)
+        const ptypeMap = {};
+        filteredVisits.forEach(v => {
+            const lbl = String(v.personType||'').toLowerCase()==='contractor' ? 'مقاول' : 'موظف';
+            ptypeMap[lbl] = (ptypeMap[lbl]||0)+1;
+        });
+        this._cDoughnut('clinic-chart-ptype', Object.keys(ptypeMap), Object.values(ptypeMap),
+            ['rgba(59,130,246,0.85)','rgba(249,115,22,0.85)']);
+
+        // الاتجاه الزمني
+        this._cTrend('clinic-chart-trend', allVisits, 'visitDate');
+
+        // سبب الزيارة (HBar)
+        const reasonMap = this._cGroupBy(filteredVisits, v=>v.reason||v.diagnosis||'غير محدد', 10);
+        this._cHBar('clinic-chart-reason', reasonMap.labels, reasonMap.data, 'rgba(13,148,136,0.75)');
+
+        // الإدارة (HBar)
+        const deptMap = this._cGroupBy(filteredVisits, v=>v.employeeDepartment||v.department||'غير محدد', 8);
+        this._cHBar('clinic-chart-dept', deptMap.labels, deptMap.data, 'rgba(99,102,241,0.75)');
+
+        // الموقع (HBar)
+        const locMap = this._cGroupBy(filteredVisits, v=>v.employeeLocation||v.workArea||'غير محدد', 8);
+        this._cHBar('clinic-chart-loc', locMap.labels, locMap.data, 'rgba(245,158,11,0.75)');
+
+        // الإجازات المرضية حسب الحالة (Doughnut)
+        const slStatusMap = this._cGroupBy(sl, l=>l.status||'قيد المعالجة');
+        const slColors = {'معتمدة':'rgba(16,185,129,0.85)','مرفوضة':'rgba(239,68,68,0.85)','قيد المعالجة':'rgba(245,158,11,0.85)'};
+        this._cDoughnut('clinic-chart-sl-status', slStatusMap.labels, slStatusMap.data, slStatusMap.labels.map(l=>slColors[l]||'rgba(148,163,184,0.8)'));
+
+        // الإصابات حسب النوع (HBar)
+        const injTypeMap = this._cGroupBy(inj, i=>i.injuryType||'غير محدد', 8);
+        this._cHBar('clinic-chart-inj-type', injTypeMap.labels, injTypeMap.data, 'rgba(239,68,68,0.75)');
+
+        // الأدوية حسب الحالة (Doughnut)
+        const medStatusMap = this._cGroupBy(allMeds, m=>m.status||'ساري');
+        const medColors = {'ساري':'rgba(16,185,129,0.85)','منتهي':'rgba(239,68,68,0.85)','قريب الانتهاء':'rgba(245,158,11,0.85)'};
+        this._cDoughnut('clinic-chart-med-status', medStatusMap.labels, medStatusMap.data, medStatusMap.labels.map(l=>medColors[l]||'rgba(148,163,184,0.8)'));
+
+        // مخطط مقارنة شهري (Multi-line)
+        this._cCompare('clinic-chart-compare', allVisits, allSL, allInj);
+
+        // ── 8. جدول أكثر المراجعين ──
+        const visitsByPerson = {};
+        filteredVisits.forEach(v => {
+            const name = String(v.employeeName||v.personName||v.name||'').trim()||'غير محدد';
+            if (!visitsByPerson[name]) visitsByPerson[name] = { count:0, dept:'', loc:'' };
+            visitsByPerson[name].count++;
+            if (!visitsByPerson[name].dept) visitsByPerson[name].dept = v.employeeDepartment||v.department||'—';
+            if (!visitsByPerson[name].loc)  visitsByPerson[name].loc  = v.employeeLocation||v.workArea||'—';
+        });
+        const topVisitors = Object.entries(visitsByPerson)
+            .sort((a,b)=>b[1].count-a[1].count).slice(0,15);
+        const tvCountEl = document.getElementById('clinic-top-visitors-count');
+        const tvTbody   = document.getElementById('clinic-top-visitors-tbody');
+        if (tvCountEl) tvCountEl.textContent = `${topVisitors.length} شخص`;
+        if (tvTbody) {
+            tvTbody.innerHTML = topVisitors.length === 0
+                ? `<tr><td colspan="5" style="padding:24px;text-align:center;color:#94a3b8;">لا توجد بيانات زيارات</td></tr>`
+                : topVisitors.map(([name,info],i) => {
+                    const rowBg = i%2===0?'#fff':'#fafafa';
+                    const countColor = info.count>=5?'#dc2626':info.count>=3?'#f59e0b':'#0d9488';
+                    return `<tr style="border-bottom:1px solid #f8fafc;background:${rowBg};" onmouseover="this.style.background='#f0fdfa'" onmouseout="this.style.background='${rowBg}'">
+                        <td style="padding:9px 12px;font-weight:700;color:#64748b;">${i+1}</td>
+                        <td style="padding:9px 12px;font-weight:600;color:#0f766e;">${Utils.escapeHTML(name)}</td>
+                        <td style="padding:9px 12px;color:#374151;">${Utils.escapeHTML(info.dept)}</td>
+                        <td style="padding:9px 12px;color:#374151;">${Utils.escapeHTML(info.loc)}</td>
+                        <td style="padding:9px 12px;text-align:center;"><span style="background:#f0fdfa;color:${countColor};padding:3px 10px;border-radius:20px;font-weight:700;font-size:0.82rem;">${info.count} زيارة</span></td>
+                    </tr>`;
+                }).join('')
+        }
+    },
+
+    // ── تصفية الزيارات بالفلاتر التفاعلية ──
+    _clinicApplyFilters(visits) {
+        const get = id => { const el=document.getElementById(id); return el?el.value.trim():''; };
+        const fPtype  = get('clinic-af-ptype');
+        const fDept   = get('clinic-af-dept');
+        const fLoc    = get('clinic-af-loc');
+        const fReason = get('clinic-af-reason');
+        const hasAny  = [fPtype,fDept,fLoc,fReason].some(v=>v!=='');
+        const badge   = document.getElementById('clinic-filter-badge');
+        if (badge) badge.style.display = hasAny ? 'inline' : 'none';
+        return visits.filter(v => {
+            if (fPtype) {
+                const lbl = String(v.personType||'').toLowerCase()==='contractor'?'contractor':'employee';
+                if (lbl !== fPtype) return false;
+            }
+            if (fDept   && String(v.employeeDepartment||v.department||'').trim() !== fDept)   return false;
+            if (fLoc    && String(v.employeeLocation||v.workArea||'').trim()      !== fLoc)    return false;
+            if (fReason && String(v.reason||v.diagnosis||'').trim()               !== fReason) return false;
+            return true;
+        });
+    },
+
+    // ── ملء قوائم الفلاتر ──
+    _clinicPopulateFilters(visits) {
+        const unique = fn => [...new Set(visits.map(fn).filter(Boolean))].sort();
+        const fill   = (id, values) => {
+            const el = document.getElementById(id); if(!el) return;
+            const cur = el.value;
+            el.innerHTML = '<option value="">الكل</option>' + values.map(v=>`<option value="${v}"${v===cur?' selected':''}>${v}</option>`).join('');
+        };
+        // نوع الشخص ثابت
+        const ptEl = document.getElementById('clinic-af-ptype');
+        if (ptEl) { const cur=ptEl.value; ptEl.innerHTML=`<option value="">الكل</option><option value="employee"${cur==='employee'?' selected':''}>موظف</option><option value="contractor"${cur==='contractor'?' selected':''}>مقاول</option>`; }
+        fill('clinic-af-dept',   unique(v=>String(v.employeeDepartment||v.department||'').trim()));
+        fill('clinic-af-loc',    unique(v=>String(v.employeeLocation||v.workArea||'').trim()));
+        fill('clinic-af-reason', unique(v=>String(v.reason||v.diagnosis||'').trim()));
+    },
+
+    // ── مساعد: تجميع حسب دالة ──
+    _cGroupBy(arr, fn, limit=0) {
+        const map = {};
+        arr.forEach(item => { const k=fn(item)||'غير محدد'; map[k]=(map[k]||0)+1; });
+        let entries = Object.entries(map).sort((a,b)=>b[1]-a[1]);
+        if (limit>0) entries=entries.slice(0,limit);
+        return { labels:entries.map(e=>e[0]), data:entries.map(e=>e[1]) };
+    },
+
+    // ── مساعد: Doughnut ──
+    _cDoughnut(canvasId, labels, data, colors) {
+        const canvas=document.getElementById(canvasId), emptyEl=document.getElementById(canvasId+'-empty');
+        if (!canvas) return;
+        if (!data.length||data.reduce((a,b)=>a+b,0)===0) { canvas.style.display='none'; if(emptyEl) emptyEl.style.display='flex'; return; }
+        if (emptyEl) emptyEl.style.display='none'; canvas.style.display='';
+        if (!this._clinicCharts) this._clinicCharts={};
+        try { if(this._clinicCharts[canvasId]) this._clinicCharts[canvasId].destroy(); } catch(e){}
+        const total=data.reduce((a,b)=>a+b,0);
+        this._clinicCharts[canvasId]=new Chart(canvas,{
+            type:'doughnut',
+            data:{labels,datasets:[{data,backgroundColor:colors,borderWidth:2,borderColor:'#fff',hoverOffset:6}]},
+            options:{responsive:true,maintainAspectRatio:false,cutout:'60%',
+                plugins:{legend:{position:'bottom',labels:{padding:10,font:{size:11},usePointStyle:true,boxWidth:9}},
+                tooltip:{callbacks:{label:ctx=>` ${ctx.label}: ${ctx.parsed} (${total>0?((ctx.parsed/total)*100).toFixed(1):0}%)`}}}}
+        });
+    },
+
+    // ── مساعد: HBar ──
+    _cHBar(canvasId, labels, data, color) {
+        const canvas=document.getElementById(canvasId), emptyEl=document.getElementById(canvasId+'-empty');
+        if (!canvas) return;
+        if (!data.length||data.reduce((a,b)=>a+b,0)===0) { canvas.style.display='none'; if(emptyEl) emptyEl.style.display='flex'; return; }
+        if (emptyEl) emptyEl.style.display='none'; canvas.style.display='';
+        if (!this._clinicCharts) this._clinicCharts={};
+        try { if(this._clinicCharts[canvasId]) this._clinicCharts[canvasId].destroy(); } catch(e){}
+        this._clinicCharts[canvasId]=new Chart(canvas,{
+            type:'bar',
+            data:{labels,datasets:[{data,backgroundColor:color||'rgba(13,148,136,0.75)',borderRadius:5,borderSkipped:false}]},
+            options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,
+                plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>` ${ctx.parsed.x}`}}},
+                scales:{x:{beginAtZero:true,ticks:{precision:0,font:{size:11}},grid:{color:'#f1f5f9'}},
+                    y:{ticks:{font:{size:11},callback:v=>String(labels[v]).length>18?String(labels[v]).slice(0,17)+'…':labels[v]}}}}
+        });
+    },
+
+    // ── مساعد: Trend ──
+    _cTrend(canvasId, arr, dateField) {
+        const canvas=document.getElementById(canvasId), emptyEl=document.getElementById(canvasId+'-empty');
+        if (!canvas) return;
+        const now=new Date();
+        const months=[];
+        const arabicMonths=['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
+        for(let i=11;i>=0;i--){ const d=new Date(now.getFullYear(),now.getMonth()-i,1); months.push({y:d.getFullYear(),m:d.getMonth(),label:`${arabicMonths[d.getMonth()]} ${d.getFullYear()}`}); }
+        const counts=months.map(mo=>arr.filter(r=>{ const d=new Date(r[dateField]||r.createdAt||''); return !isNaN(d.getTime())&&d.getFullYear()===mo.y&&d.getMonth()===mo.m; }).length);
+        if(counts.reduce((a,b)=>a+b,0)===0){ canvas.style.display='none'; if(emptyEl) emptyEl.style.display='flex'; return; }
+        if(emptyEl) emptyEl.style.display='none'; canvas.style.display='';
+        if(!this._clinicCharts) this._clinicCharts={};
+        try{ if(this._clinicCharts[canvasId]) this._clinicCharts[canvasId].destroy(); }catch(e){}
+        this._clinicCharts[canvasId]=new Chart(canvas,{
+            type:'bar',
+            data:{labels:months.map(m=>m.label),datasets:[
+                {label:'الزيارات',data:counts,backgroundColor:counts.map(c=>c===Math.max(...counts)?'rgba(13,148,136,0.9)':'rgba(13,148,136,0.5)'),borderRadius:5,borderSkipped:false,order:1},
+                {label:'الاتجاه',data:counts,type:'line',borderColor:'rgba(99,102,241,0.9)',backgroundColor:'rgba(99,102,241,0.08)',borderWidth:2.5,pointRadius:4,pointBackgroundColor:'#6366f1',tension:0.4,fill:true,order:0}
+            ]},
+            options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'top',labels:{usePointStyle:true,font:{size:11}}},tooltip:{mode:'index',intersect:false}},
+                scales:{x:{grid:{display:false},ticks:{font:{size:10},maxRotation:45}},y:{beginAtZero:true,ticks:{precision:0,font:{size:11}},grid:{color:'#f8fafc'}}}}
+        });
+    },
+
+    // ── مساعد: مخطط مقارنة شهري ──
+    _cCompare(canvasId, visits, sl, inj) {
+        const canvas=document.getElementById(canvasId), emptyEl=document.getElementById(canvasId+'-empty');
+        if(!canvas) return;
+        const now=new Date();
+        const arabicMonths=['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
+        const months=[];
+        for(let i=11;i>=0;i--){ const d=new Date(now.getFullYear(),now.getMonth()-i,1); months.push({y:d.getFullYear(),m:d.getMonth(),label:`${arabicMonths[d.getMonth()]}`}); }
+        const count=(arr,field)=>months.map(mo=>arr.filter(r=>{ const d=new Date(r[field]||r.createdAt||''); return !isNaN(d.getTime())&&d.getFullYear()===mo.y&&d.getMonth()===mo.m; }).length);
+        const vc=count(visits,'visitDate'), sc=count(sl,'startDate'), ic=count(inj,'injuryDate');
+        const total=(a,b,c)=>a.reduce((s,v,i)=>s+v+b[i]+c[i],0);
+        if(total(vc,sc,ic)===0){ canvas.style.display='none'; if(emptyEl) emptyEl.style.display='flex'; return; }
+        if(emptyEl) emptyEl.style.display='none'; canvas.style.display='';
+        if(!this._clinicCharts) this._clinicCharts={};
+        try{ if(this._clinicCharts[canvasId]) this._clinicCharts[canvasId].destroy(); }catch(e){}
+        this._clinicCharts[canvasId]=new Chart(canvas,{
+            type:'bar',
+            data:{labels:months.map(m=>m.label),datasets:[
+                {label:'زيارات',data:vc,backgroundColor:'rgba(13,148,136,0.75)',borderRadius:4,borderSkipped:false},
+                {label:'إجازات مرضية',data:sc,backgroundColor:'rgba(245,158,11,0.75)',borderRadius:4,borderSkipped:false},
+                {label:'إصابات',data:ic,backgroundColor:'rgba(239,68,68,0.75)',borderRadius:4,borderSkipped:false}
+            ]},
+            options:{responsive:true,maintainAspectRatio:false,
+                plugins:{legend:{position:'top',labels:{usePointStyle:true,font:{size:11}}},tooltip:{mode:'index',intersect:false}},
+                scales:{x:{grid:{display:false},ticks:{font:{size:10}}},y:{beginAtZero:true,ticks:{precision:0,font:{size:11}},grid:{color:'#f8fafc'}},}}
+        });
+    },
+
+    // ── ربط الأحداث ──
+    _clinicBindAnalyticsEvents() {
+        const root = document.getElementById('clinic-analytics-root');
+        if (!root) return;
+
+        // أزرار الفترة
+        root.querySelectorAll('.clinic-period-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                this._clinicPeriod = btn.getAttribute('data-period');
+                root.querySelectorAll('.clinic-period-btn').forEach(b => {
+                    const active = b===btn;
+                    b.style.background = active?'#fff':'rgba(255,255,255,0.15)';
+                    b.style.color      = active?'#134e4a':'#fff';
+                });
+                this.updateClinicAnalyticsDashboard();
+            });
         });
 
-        addSickLeaveBtn?.addEventListener('click', () => {
-            this.showSickLeaveForm();
-        });
+        // زر تحديث
+        const refreshBtn = document.getElementById('clinic-analytics-refresh');
+        if (refreshBtn) refreshBtn.addEventListener('click', ()=>this.updateClinicAnalyticsDashboard());
 
-        addInjuryBtn?.addEventListener('click', () => {
-            this.showInjuryForm();
-        });
+        // زر PDF
+        const pdfBtn = document.getElementById('clinic-export-pdf-btn');
+        if (pdfBtn) pdfBtn.addEventListener('click', ()=>this._clinicExportPDF());
 
-        // رسم الرسوم البيانية + تحميل محرك التحليل القابل للتخصيص
-        setTimeout(async () => {
-            // محاولة تحميل Chart.js لتحسين الرسوم
-            await this.ensureChartJSLoaded().catch(() => false);
-            this.renderDataAnalysisCharts();
-            this.loadClinicDataAnalysis();
-        }, 500);
+        // زر تبديل الفلاتر
+        const toggleBtn  = document.getElementById('clinic-toggle-filters-btn');
+        const filterPanel= document.getElementById('clinic-filter-panel');
+        if (toggleBtn && filterPanel) {
+            toggleBtn.addEventListener('click', () => {
+                const isOpen = filterPanel.style.display!=='none';
+                filterPanel.style.display = isOpen?'none':'block';
+                toggleBtn.style.background = isOpen?'rgba(255,255,255,0.12)':'rgba(255,255,255,0.35)';
+            });
+        }
+
+        // زر إعادة التعيين
+        const resetBtn = document.getElementById('clinic-filter-reset-btn');
+        if (resetBtn) {
+            resetBtn.addEventListener('click', () => {
+                ['clinic-af-ptype','clinic-af-dept','clinic-af-loc','clinic-af-reason'].forEach(id=>{
+                    const el=document.getElementById(id); if(el) el.value='';
+                });
+                this.updateClinicAnalyticsDashboard();
+            });
+        }
+
+        // قوائم الفلاتر
+        ['clinic-af-ptype','clinic-af-dept','clinic-af-loc','clinic-af-reason'].forEach(id => {
+            const el=document.getElementById(id);
+            if(el) el.addEventListener('change',()=>this.updateClinicAnalyticsDashboard());
+        });
+    },
+
+    // ── تصدير PDF ──
+    async _clinicExportPDF() {
+        const root = document.getElementById('clinic-analytics-root');
+        if (!root) return;
+        const btn = document.getElementById('clinic-export-pdf-btn');
+        const orig = btn ? btn.innerHTML : '';
+        if (btn) { btn.disabled=true; btn.innerHTML='<i class="fas fa-spinner fa-spin"></i>'; }
+        try {
+            const loadLib=(src,check)=>new Promise((res,rej)=>{
+                if(check()) return res();
+                const s=document.createElement('script'); s.src=src; s.onload=()=>res(); s.onerror=()=>rej(); document.head.appendChild(s);
+            });
+            await loadLib('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js',()=>typeof html2canvas!=='undefined');
+            await loadLib('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js',()=>typeof window.jspdf!=='undefined');
+            const fp=document.getElementById('clinic-filter-panel'), fv=fp&&fp.style.display!=='none';
+            if(fv) fp.style.display='none';
+            const cvs=await html2canvas(root,{scale:1.8,useCORS:true,backgroundColor:'#f8fafc',scrollX:0,scrollY:-window.scrollY,logging:false});
+            if(fv) fp.style.display='';
+            const {jsPDF}=window.jspdf, pdf=new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
+            const pW=pdf.internal.pageSize.getWidth(), pH=pdf.internal.pageSize.getHeight(), mg=10;
+            const cW=pW-mg*2, ratio=cW/cvs.width, pgH=pH-14-mg, pgPx=pgH/ratio;
+            const total=Math.ceil(cvs.height/pgPx);
+            for(let p=0;p<total;p++){
+                if(p>0) pdf.addPage();
+                pdf.setFillColor(19,78,74); pdf.rect(0,0,pW,14,'F');
+                pdf.setTextColor(255,255,255); pdf.setFontSize(9);
+                pdf.text('Clinic Medical Analysis Report',mg,9,{align:'left'});
+                pdf.text(`${new Date().toLocaleDateString('ar-SA')}  |  ${p+1}/${total}`,pW-mg,9,{align:'right'});
+                pdf.setTextColor(0,0,0);
+                const sc=document.createElement('canvas'), sH=Math.min(pgPx,cvs.height-p*pgPx);
+                sc.width=cvs.width; sc.height=sH;
+                sc.getContext('2d').drawImage(cvs,0,p*pgPx,cvs.width,sH,0,0,cvs.width,sH);
+                pdf.addImage(sc.toDataURL('image/jpeg',0.90),'JPEG',mg,14,cW,sH*ratio);
+            }
+            pdf.save(`تقرير-العيادة-${new Date().toISOString().slice(0,10)}.pdf`);
+            if(typeof Notification!=='undefined'&&Notification.success) Notification.success('تم تصدير تقرير العيادة PDF بنجاح');
+        } catch(err) {
+            console.error('Clinic PDF error:',err);
+            if(typeof Notification!=='undefined'&&Notification.error) Notification.error('تعذّر تصدير PDF');
+        } finally {
+            if(btn){ btn.disabled=false; btn.innerHTML=orig; }
+        }
     },
 
     /**
