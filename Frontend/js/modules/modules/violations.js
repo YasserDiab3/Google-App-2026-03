@@ -657,7 +657,7 @@ const Violations = {
                         <div id="violations-filters-container" class="mb-4">
                             ${this.renderFilters()}
                         </div>
-                        <div id="violations-list">
+                        <div id="violations-list" class="violations-list-scroll">
                             ${this.renderViolationsList()}
                             </div>
                         </div>
@@ -728,9 +728,21 @@ const Violations = {
             ]);
 
             if (Array.isArray(violationsData)) {
-                AppState.appData.violations = violationsData
+                const serverNormalized = violationsData
                     .map((item) => this.normalizeViolationRecord(item))
                     .filter(Boolean);
+                // ✅ حماية من race condition: لا تستبدل مخالفات محلية حديثة لم تصلها الخادم بعد
+                const localViolations = Array.isArray(AppState.appData.violations) ? AppState.appData.violations : [];
+                const serverIds = new Set(serverNormalized.map(v => v && v.id).filter(Boolean));
+                const fiveMinutesAgo = Date.now() - 5 * 60 * 1000;
+                const localOnlyRecent = localViolations.filter(v => {
+                    if (!v || !v.id || serverIds.has(v.id)) return false;
+                    const created = new Date(v.createdAt || v.timestamp || 0).getTime();
+                    return created >= fiveMinutesAgo;
+                });
+                AppState.appData.violations = localOnlyRecent.length > 0
+                    ? [...localOnlyRecent, ...serverNormalized]
+                    : serverNormalized;
             }
             // لا تستبدل أنواعاً محلية/مستوردة بمصفوفة فارغة من الشيت (استجابة خاطئة أو تأخر) — يمنع الرجوع للافتراضي بعد التحديث
             if (Array.isArray(typesData)) {
@@ -1456,7 +1468,17 @@ const Violations = {
         const contractors = Array.isArray(AppState.appData?.contractors) ? AppState.appData.contractors : [];
         contractors.forEach(c => addOption(c?.id || c?.contractorId || c?.code, c?.name || c?.companyName || c?.contractorName));
 
-        return Array.from(optionsMap.values()).sort((a, b) => a.name.localeCompare(b.name, 'ar', { sensitivity: 'base' }));
+        // ✅ إزالة التكرار بناءً على اسم الشركة (بعيداً عن اختلاف المعرّفات)
+        // نفس الشركة قد تظهر بمعرّفات مختلفة من مصادر مختلفة (violations/approvedContractors/contractors)
+        const nameDeduped = new Map();
+        for (const entry of optionsMap.values()) {
+            const normalizedName = entry.name.trim().toLowerCase().replace(/\s+/g, ' ');
+            if (!nameDeduped.has(normalizedName)) {
+                nameDeduped.set(normalizedName, entry);
+            }
+        }
+        return Array.from(nameDeduped.values())
+            .sort((a, b) => a.name.localeCompare(b.name, 'ar', { sensitivity: 'base' }));
     },
 
     showContractorViolationsReportDialog() {
@@ -3241,9 +3263,15 @@ const Violations = {
 
                 // 4. تحديث الكروت فوراً (مباشر بدون انتظار) ثم القائمة بالكامل
                 try { this.updateAllViolationsStats(); } catch (e) { /* ignore */ }
-                if (typeof Violations !== 'undefined' && Violations.load) {
-                    Violations.load();
-                }
+                // ✅ تحديث القائمة في المكان (بدون إعادة بناء كامل للـ DOM)
+                // Violations.load() كانت تُعيد بناء كل شيء وتطلق جلب خلفي يُلغي المخالفة الجديدة
+                try {
+                    if (typeof Violations !== 'undefined' && typeof Violations.refreshViolationsView === 'function') {
+                        Violations.refreshViolationsView();
+                    } else if (typeof Violations !== 'undefined' && Violations.load) {
+                        Violations.load();
+                    }
+                } catch (e) { /* ignore */ }
 
                 // 5. المزامنة والرفع في الخلفية دون تعطيل واجهة المستخدم
                 const performBackgroundSync = async (localPhoto) => {

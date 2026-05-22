@@ -6534,7 +6534,13 @@ const Clinic = {
                     normalizedVisits,
                     previousLocalVisits
                 );
-                
+
+                // ✅ تحديث clinicContractorVisits ببيانات المقاولين الحديثة من الخادم
+                // يضمن ظهور زيارات المقاولين فوراً في الجلسة التالية من localStorage دون انتظار الخادم
+                AppState.appData.clinicContractorVisits = AppState.appData.clinicVisits.filter(v =>
+                    v && v.personType === 'contractor'
+                );
+
                 // ✅ إعادة تطبيع البيانات بعد التحميل
                 this.ensureData();
                 

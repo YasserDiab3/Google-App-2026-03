@@ -408,6 +408,18 @@ const RealtimeSyncManager = {
             }
         });
 
+        // ✅ تحديث كروت لوحة التحكم بعد مزامنة بيانات العيادة من الخادم
+        document.addEventListener('clinic-data-refreshed', () => {
+            try {
+                if (typeof Dashboard !== 'undefined') {
+                    // ✅ مهم: updateKPIs لتحديث كارت إجمالي التردد فوراً بعد حفظ زيارة جديدة
+                    if (typeof Dashboard.updateKPIs === 'function') Dashboard.updateKPIs();
+                    if (typeof Dashboard.updateStats === 'function') Dashboard.updateStats();
+                    if (typeof Dashboard.updateReportsStatistics === 'function') Dashboard.updateReportsStatistics();
+                }
+            } catch (_) { /* تجاهل */ }
+        });
+
         // ✅ الاستماع لأحداث إعادة رسم DOM لإعادة ربط Event Listeners
         document.addEventListener('dom-rerendered', (event) => {
             const { module, container } = event.detail || {};
