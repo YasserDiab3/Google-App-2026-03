@@ -2161,14 +2161,26 @@ const SafetyPerformanceKPIs = {
     },
 
     calculateTRIR(data) {
-        const employees = AppState.appData.employees || [];
-        const totalEmployees = employees.filter(e => e && e.active !== false).length || 200;
-        const hoursPerDay = 8;
-        const workDaysPerMonth = 22;
-        const monthsPerYear = 12;
-        const totalWorkHours = totalEmployees * hoursPerDay * workDaysPerMonth * (this.filters.period === 'yearly' ? 12 : this.filters.period === 'quarterly' ? 3 : 1);
+        const { start } = this.getDateRange();
+        const year = start.getFullYear();
+        const periodMonths = this.filters.period === 'yearly' ? 12 : this.filters.period === 'quarterly' ? 3 : 1;
 
-        const recordableInjuries = data.incidents.length;
+        // ✅ عدد الموظفين الدائمين
+        const employees = AppState.appData.employees || [];
+        const permanentCount = employees.filter(e => e && e.active !== false).length || 0;
+
+        // ✅ إضافة الموقتين (External Workforce) لكل شهر في الفترة المحددة
+        const startMonth = start.getMonth();
+        let totalContractorPersonMonths = 0;
+        for (let m = startMonth; m < startMonth + periodMonths && m < 12; m++) {
+            totalContractorPersonMonths += this.getExternalWorkforceForMonth(year, m);
+        }
+
+        // إجمالي ساعات العمل = (دائمون × أشهر + موقتون-أشهر) × 8 ساعات × 22 يوم
+        const totalWorkHours = ((permanentCount * periodMonths) + totalContractorPersonMonths) * 8 * 22;
+
+        // ✅ تصفية الحوادث القابلة للتسجيل فقط (وليس جميع الحوادث)
+        const recordableInjuries = (data.incidents || []).filter(inc => this.isRecordableIncident(inc)).length;
         const trir = totalWorkHours > 0 ? ((recordableInjuries * 200000) / totalWorkHours) : 0;
         return trir.toFixed(2);
     },
@@ -2401,12 +2413,23 @@ const SafetyPerformanceKPIs = {
 
     calculateLTIFR(data) {
         // معدل تكرار الإصابات (LTIFR - Lost Time Injury Frequency Rate)
-        const employees = AppState.appData.employees || [];
-        const totalEmployees = employees.filter(e => e && e.active !== false).length || 200;
-        const hoursPerDay = 8;
-        const workDaysPerMonth = 22;
+        const { start } = this.getDateRange();
+        const year = start.getFullYear();
         const periodMonths = this.filters.period === 'yearly' ? 12 : this.filters.period === 'quarterly' ? 3 : 1;
-        const totalWorkHours = totalEmployees * hoursPerDay * workDaysPerMonth * periodMonths;
+
+        // ✅ عدد الموظفين الدائمين
+        const employees = AppState.appData.employees || [];
+        const permanentCount = employees.filter(e => e && e.active !== false).length || 0;
+
+        // ✅ إضافة الموقتين (External Workforce) لكل شهر في الفترة المحددة
+        const startMonth = start.getMonth();
+        let totalContractorPersonMonths = 0;
+        for (let m = startMonth; m < startMonth + periodMonths && m < 12; m++) {
+            totalContractorPersonMonths += this.getExternalWorkforceForMonth(year, m);
+        }
+
+        // إجمالي ساعات العمل = (دائمون × أشهر + موقتون-أشهر) × 8 ساعات × 22 يوم
+        const totalWorkHours = ((permanentCount * periodMonths) + totalContractorPersonMonths) * 8 * 22;
 
         const ltiCount = this.calculateLTICount(data);
         const ltifr = totalWorkHours > 0 ? ((ltiCount * 1000000) / totalWorkHours) : 0;
