@@ -135,6 +135,14 @@ const Dashboard = {
      */
     async load() {
         this.setupReportsStatisticsCardsClickHandlers();
+
+        // ✅ عرض البيانات المتوفرة محلياً فوراً (من AppState/localStorage) بدون انتظار الخادم
+        try {
+            this.updateKPIs();
+            this.updateStats();
+            this.updateReportsStatistics();
+        } catch (_) { /* تجاهل — البيانات قد تكون غير مكتملة بعد */ }
+
         try {
             await this.loadReportsWidget();
         } catch (e) {
@@ -507,9 +515,11 @@ const Dashboard = {
             if (typeof GoogleIntegration === 'undefined' || typeof GoogleIntegration.batchReadFromSheets !== 'function') return;
             if (typeof GoogleIntegration._isBackendRpcConfigured !== 'function' || !GoogleIntegration._isBackendRpcConfigured()) return;
 
+            // كاش 5 دقائق للزيارات المتكررة — لكن أول فتح لكل جلسة يجلب دائماً بغض النظر عن الكاش
             const CACHE_MS = 5 * 60 * 1000;
             const now = Date.now();
-            if (!forceRefresh && typeof this._reportStatsSheetsFetchedAt === 'number' && (now - this._reportStatsSheetsFetchedAt) < CACHE_MS) {
+            const alreadyFetchedThisSession = this._reportStatsSheetsFetchedInSession === true;
+            if (!forceRefresh && alreadyFetchedThisSession && typeof this._reportStatsSheetsFetchedAt === 'number' && (now - this._reportStatsSheetsFetchedAt) < CACHE_MS) {
                 return;
             }
 
@@ -558,6 +568,13 @@ const Dashboard = {
             });
 
             this._reportStatsSheetsFetchedAt = now;
+            this._reportStatsSheetsFetchedInSession = true; // علامة أول جلب ناجح في الجلسة
+
+            // ✅ تحديث الكروت فوراً بعد وصول البيانات من الخادم
+            try {
+                this.updateStats();
+                this.updateReportsStatistics();
+            } catch (_) { /* تجاهل */ }
 
             if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
                 try {
