@@ -31,6 +31,8 @@ const Training = {
     _bundleActionUnsupported: false,
     /** سياق مؤقت لخيارات نافذة تصدير تقرير التحليل (يُفرَّغ بعد التصدير) */
     _analysisExportContext: null,
+    /** طابع زمني لآخر حفظ محلي لتدريبات المقاولين - يمنع استبدال البيانات المحلية بنتيجة جلب قديمة */
+    _contractorTrainingsLocalSaveTime: 0,
 
     ensureData() {
         const data = AppState.appData || {};
@@ -651,7 +653,10 @@ const Training = {
                 if (Array.isArray(bundle.trainingSessions)) AppState.appData.trainingSessions = bundle.trainingSessions;
                 if (Array.isArray(bundle.trainingCertificates)) AppState.appData.trainingCertificates = bundle.trainingCertificates;
                 if (Array.isArray(bundle.trainingAttendance)) AppState.appData.trainingAttendance = bundle.trainingAttendance;
-                if (Array.isArray(bundle.contractorTrainings)) AppState.appData.contractorTrainings = bundle.contractorTrainings;
+                // حارس: لا نستبدل بيانات المقاولين المحلية الحديثة بنتيجة جلب قديمة (نافذة 60 ثانية)
+                if (Array.isArray(bundle.contractorTrainings) && (Date.now() - (this._contractorTrainingsLocalSaveTime || 0)) > 60000) {
+                    AppState.appData.contractorTrainings = bundle.contractorTrainings;
+                }
                 persistAndRefreshUi();
                 return;
             }
@@ -677,7 +682,10 @@ const Training = {
             const active = this._currentActiveTab || 'programs';
             if (active === 'contractors') {
                 const contractorData = await runAction('getAllContractorTrainings', 'تدريبات المقاولين');
-                if (contractorData) AppState.appData.contractorTrainings = contractorData;
+                // حارس: لا نستبدل بيانات محفوظة محلياً مؤخراً بنتيجة جلب سابقة (نافذة 60 ثانية)
+                if (contractorData && (Date.now() - (this._contractorTrainingsLocalSaveTime || 0)) > 60000) {
+                    AppState.appData.contractorTrainings = contractorData;
+                }
                 persistAndRefreshUi();
                 runAction('getAllTrainings', 'برامج التدريب').then((data) => { if (data) { AppState.appData.training = data; this._markAllTabsDirty(); } });
                 runAction('getAllTrainingAttendance', 'سجل الحضور').then((data) => { if (data) { AppState.appData.trainingAttendance = data; this._markAllTabsDirty(); } });
@@ -691,7 +699,11 @@ const Training = {
                 const trainingData = await runAction('getAllTrainings', 'برامج التدريب');
                 if (trainingData) AppState.appData.training = trainingData;
                 persistAndRefreshUi();
-                runAction('getAllContractorTrainings', 'تدريبات المقاولين').then((data) => { if (data) { AppState.appData.contractorTrainings = data; this._markAllTabsDirty(); } });
+                runAction('getAllContractorTrainings', 'تدريبات المقاولين').then((data) => {
+                    if (data && (Date.now() - (this._contractorTrainingsLocalSaveTime || 0)) > 60000) {
+                        AppState.appData.contractorTrainings = data; this._markAllTabsDirty();
+                    }
+                });
                 runAction('getAllTrainingSessions', 'جلسات التدريب').then((data) => { if (data) { AppState.appData.trainingSessions = data; this._markAllTabsDirty(); } });
                 runAction('getAllTrainingCertificates', 'الشهادات').then((data) => { if (data) { AppState.appData.trainingCertificates = data; this._markAllTabsDirty(); } });
                 return;
@@ -707,7 +719,11 @@ const Training = {
             runAction('getAllTrainingSessions', 'جلسات التدريب').then((data) => { if (data) { AppState.appData.trainingSessions = data; this._markAllTabsDirty(); } });
             runAction('getAllTrainingCertificates', 'الشهادات').then((data) => { if (data) { AppState.appData.trainingCertificates = data; this._markAllTabsDirty(); } });
             runAction('getAllTrainingAttendance', 'سجل الحضور').then((data) => { if (data) { AppState.appData.trainingAttendance = data; this._markAllTabsDirty(); } });
-            runAction('getAllContractorTrainings', 'تدريبات المقاولين').then((data) => { if (data) { AppState.appData.contractorTrainings = data; this._markAllTabsDirty(); } });
+            runAction('getAllContractorTrainings', 'تدريبات المقاولين').then((data) => {
+                if (data && (Date.now() - (this._contractorTrainingsLocalSaveTime || 0)) > 60000) {
+                    AppState.appData.contractorTrainings = data; this._markAllTabsDirty();
+                }
+            });
         } catch (error) {
             Utils.safeError('❌ خطأ في تحميل بيانات التدريب:', error);
             this._trainingBackendFetchOk = true;
@@ -4318,9 +4334,31 @@ const Training = {
         const existingToTime = existing 
             ? (this.cleanTime(existing.endTime || existing.toTime || existing.timeTo) || '') 
             : '';
-        // ✅ إصلاح: تطبيع contractorId للمقارنة الصحيحة
+        // ✅ تحديد المقاول المختار بشكل حتمي ومحدد: نبحث بالمعرف أولاً ثم بالاسم كاحتياط
         const existingContractorId = existing?.contractorId ? String(existing.contractorId).trim() : '';
         const existingContractorName = existing?.contractorName ? String(existing.contractorName).trim() : '';
+        // حساب معرف المقاول المتطابق قبل بناء الخيارات - خيار واحد فقط يحمل selected لتجنب التعارض
+        let _resolvedContractorId = '';
+        if (existing) {
+            if (existingContractorId) {
+                // 1. بحث دقيق بالمعرف
+                const idMatch = contractors.find(c => String(c?.id ?? '').trim() === existingContractorId);
+                if (idMatch) {
+                    _resolvedContractorId = existingContractorId;
+                } else if (existingContractorName) {
+                    // 2. احتياط: بحث بالاسم
+                    const nameMatch = contractors.find(c => String(c?.name ?? '').trim() === existingContractorName);
+                    if (nameMatch) _resolvedContractorId = String(nameMatch?.id ?? '').trim();
+                } else {
+                    // 3. احتياط: إذا خُزّن الاسم خطأً كمعرف - نبحث بالاسم = المعرف المخزّن
+                    const nameAsId = contractors.find(c => String(c?.name ?? '').trim() === existingContractorId);
+                    if (nameAsId) _resolvedContractorId = String(nameAsId?.id ?? '').trim();
+                }
+            } else if (existingContractorName) {
+                const nameMatch = contractors.find(c => String(c?.name ?? '').trim() === existingContractorName);
+                if (nameMatch) _resolvedContractorId = String(nameMatch?.id ?? '').trim();
+            }
+        }
 
         const modal = document.createElement('div');
         modal.className = 'modal-overlay';
@@ -4389,11 +4427,8 @@ const Training = {
                                         <option value="">اختر المقاول</option>
                                         ${contractors.map(contractor => {
                                             const contractorIdStr = String(contractor?.id ?? '').trim();
-                                            const contractorNameStr = String(contractor?.name ?? '').trim();
-                                            // ✅ مطابقة ذكية: نطابق بالمعرف أو بالاسم لضمان الاختيار الصحيح حتى مع اختلاف نوع الحقل تاريخياً
-                                            const isSelected = (existingContractorId && contractorIdStr === existingContractorId) ||
-                                                               (existingContractorName && contractorNameStr === existingContractorName) ||
-                                                               (existingContractorId && contractorNameStr === existingContractorId);
+                                            // ✅ مقارنة بمعرف واحد محسوب مسبقاً — يضمن خياراً واحداً فقط بـ selected
+                                            const isSelected = contractorIdStr === _resolvedContractorId;
                                             return `
                                                 <option value="${Utils.escapeHTML(contractorIdStr)}" ${isSelected ? 'selected' : ''}>
                                                     ${Utils.escapeHTML(contractor.name || 'بدون اسم')}
@@ -4842,6 +4877,9 @@ const Training = {
                 } else {
                     collection.push(entry);
                 }
+
+                // ✅ تسجيل وقت الحفظ المحلي لمنع استبداله بنتيجة جلب قديمة من الخادم
+                this._contractorTrainingsLocalSaveTime = Date.now();
 
                 // ✅ 2. إغلاق النموذج فوراً (قبل المزامنة) - الأولوية للاستجابة السريعة
                 close();
