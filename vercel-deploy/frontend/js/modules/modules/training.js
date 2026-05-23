@@ -9312,7 +9312,8 @@ const Training = {
                             <tr style="background:#fafafa;border-bottom:2px solid #f1f5f9;">
                                 <th style="padding:10px 12px;text-align:right;font-weight:700;color:#374151;white-space:nowrap;">الموضوع</th>
                                 <th style="padding:10px 12px;text-align:right;font-weight:700;color:#374151;white-space:nowrap;">المدرب</th>
-                                <th style="padding:10px 12px;text-align:right;font-weight:700;color:#374151;white-space:nowrap;">الموقع</th>
+                                <th style="padding:10px 12px;text-align:right;font-weight:700;color:#374151;white-space:nowrap;">المصنع</th>
+                                <th style="padding:10px 12px;text-align:right;font-weight:700;color:#374151;white-space:nowrap;">الموقع الفرعي</th>
                                 <th style="padding:10px 12px;text-align:right;font-weight:700;color:#374151;white-space:nowrap;">التاريخ</th>
                                 <th style="padding:10px 12px;text-align:right;font-weight:700;color:#374151;white-space:nowrap;">الحالة</th>
                                 <th style="padding:10px 12px;text-align:center;font-weight:700;color:#374151;white-space:nowrap;">المشاركون</th>
@@ -9320,7 +9321,7 @@ const Training = {
                             </tr>
                         </thead>
                         <tbody id="train-top-tbody">
-                            <tr><td colspan="7" style="padding:20px;text-align:center;color:#94a3b8;">جارٍ التحميل…</td></tr>
+                            <tr><td colspan="8" style="padding:20px;text-align:center;color:#94a3b8;">جارٍ التحميل…</td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -13656,21 +13657,35 @@ const Training = {
         if (topCount) topCount.textContent = `${topT.length} برنامج`;
         if (tbody) {
             if (!topT.length) {
-                tbody.innerHTML = `<tr><td colspan="7" style="padding:24px;text-align:center;color:#10b981;"><i class="fas fa-info-circle ml-2"></i>لا توجد بيانات</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="8" style="padding:24px;text-align:center;color:#10b981;"><i class="fas fa-info-circle ml-2"></i>لا توجد بيانات</td></tr>`;
             } else {
-                const sColors = { 'مكتمل':'background:#ecfdf5;color:#065f46;', 'مخطط':'background:#fffbeb;color:#92400e;', 'جارٍ':'background:#eff6ff;color:#1e40af;', 'ملغي':'background:#fef2f2;color:#991b1b;' };
+                const sColors = {
+                    'مكتمل':    'background:#ecfdf5;color:#065f46;',
+                    'مخطط':     'background:#fffbeb;color:#92400e;',
+                    'جارٍ':     'background:#eff6ff;color:#1e40af;',
+                    'قيد التنفيذ': 'background:#eff6ff;color:#1e40af;',
+                    'ملغي':     'background:#fef2f2;color:#991b1b;'
+                };
                 tbody.innerHTML = topT.map((x, i) => {
-                    const parts = this.getParticipantsCount ? this.getParticipantsCount(x) : (Number(x.participantsCount)||0);
-                    const hrs   = Number(x.totalHours||0);
-                    const trainer = x.trainer || x.conductedBy || '—';
-                    const rowBg = i%2===0 ? '#fff' : '#fafafa';
-                    const sc = sColors[x.status] || 'background:#f1f5f9;color:#374151;';
+                    const parts   = this.getParticipantsCount ? this.getParticipantsCount(x) : (Number(x.participantsCount)||0);
+                    const hrs     = Number(x.totalHours || x.hours || 0);
+                    const trainer = Utils.escapeHTML(x._trainer || x.trainer || x.conductedBy || '—');
+                    const factory = Utils.escapeHTML(x._factoryDisplay || x.factoryName || x.factory || '—');
+                    const loc     = Utils.escapeHTML(x._locationDisplay || x.locationName || x.location || '—');
+                    const topic   = Utils.escapeHTML(x.topic || x.name || x.subject || '—');
+                    const rowBg   = i % 2 === 0 ? '#fff' : '#fafafa';
+                    const sc      = sColors[x.status] || 'background:#f1f5f9;color:#374151;';
+                    const dateStr = x.date || x.startDate || '';
+                    const dateDisplay = dateStr
+                        ? (() => { try { return new Date(dateStr).toLocaleDateString('ar-SA', {year:'numeric', month:'short', day:'numeric'}); } catch(e) { return dateStr.slice(0,10); } })()
+                        : '—';
                     return `<tr style="border-bottom:1px solid #f8fafc;background:${rowBg};" onmouseover="this.style.background='#f0f9ff'" onmouseout="this.style.background='${rowBg}'">
-                        <td style="padding:9px 12px;font-weight:600;color:#1e40af;">${Utils.escapeHTML(x.topic||'—')}</td>
-                        <td style="padding:9px 12px;color:#374151;">${Utils.escapeHTML(trainer)}</td>
-                        <td style="padding:9px 12px;color:#374151;">${Utils.escapeHTML(x.location||'—')}</td>
-                        <td style="padding:9px 12px;white-space:nowrap;color:#374151;">${x.date ? new Date(x.date).toLocaleDateString('ar-SA',{year:'numeric',month:'short',day:'numeric'}) : '—'}</td>
-                        <td style="padding:9px 12px;"><span style="padding:2px 7px;border-radius:12px;font-size:0.7rem;font-weight:700;${sc}">${Utils.escapeHTML(x.status||'—')}</span></td>
+                        <td style="padding:9px 12px;font-weight:600;color:#1e40af;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${topic}">${topic}</td>
+                        <td style="padding:9px 12px;color:#374151;white-space:nowrap;">${trainer}</td>
+                        <td style="padding:9px 12px;color:#374151;white-space:nowrap;">${factory}</td>
+                        <td style="padding:9px 12px;color:#374151;white-space:nowrap;">${loc}</td>
+                        <td style="padding:9px 12px;white-space:nowrap;color:#374151;">${dateDisplay}</td>
+                        <td style="padding:9px 12px;"><span style="padding:2px 8px;border-radius:12px;font-size:0.7rem;font-weight:700;white-space:nowrap;${sc}">${Utils.escapeHTML(x.status||'—')}</span></td>
                         <td style="padding:9px 12px;text-align:center;font-weight:700;color:#4f46e5;">${parts > 0 ? parts : '—'}</td>
                         <td style="padding:9px 12px;text-align:center;color:#64748b;">${hrs > 0 ? hrs.toFixed(1) : '—'}</td>
                     </tr>`;
