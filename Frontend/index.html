@@ -12708,7 +12708,7 @@
 
         <!-- Main App - Refactored Modules -->
         <!-- 1. Utils and Constants (must be loaded first) -->
-        <script src="js/modules/app-utils.js?v=20260510-dashperm-2" defer></script>
+        <script src="js/modules/app-utils.js?v=20260523-timebug-fix" defer></script>
 
         <!-- 1.1 DOM Safety Utilities (safe DOM access functions) -->
         <script src="js/modules/dom-safety-utils.js" defer></script>
@@ -12889,7 +12889,7 @@
                     }
 
                     // مطابقة CACHE_VERSION في service-worker.js — تسريع جلب سكربت SW بعد النشر (تجاوز كاش الشبكة/الوسيط)
-                    const __SW_REGISTER_QUERY = "v=hse-app-v1.0.34-20260523";
+                    const __SW_REGISTER_QUERY = "v=hse-app-v1.0.35-20260523";
                     const swUrl =
                         swPath +
                         (swPath.includes("?") ? "&" : "?") +

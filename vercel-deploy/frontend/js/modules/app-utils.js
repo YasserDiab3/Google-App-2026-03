@@ -2956,7 +2956,9 @@ const AppState = {
     googleConfig: {
         appsScript: {
             enabled: true,
-            scriptUrl: 'https://script.google.com/macros/s/AKfycbxkqiYDwVdSUhzi-DOGZO8bBJMORw78FzLhUzRYwSfGldDqvlXerdajhd7byDeuvsP0/exec'
+            // ✅ v1.0.35 — تحديث إلى @109 (v1.0.33) الذي يتضمن إصلاح انزياح الوقت +61 دقيقة
+            // القديم @92 لا يحتوي على الإصلاح — لا تعدّل هذا الرابط لإصدار أقدم من @102
+            scriptUrl: 'https://script.google.com/macros/s/AKfycbwLzUsMbK4abB7n8Ft1hOcMIHMQhSGbeInuqvUmjOAJdyCmFqQzJ-4Oczhkw2OVZIQh/exec'
         },
         sheets: {
             // يُفعَّل تلقائياً عند ضبط spreadsheetId من الإعدادات المحفوظة؛ المعرف الرسمي يُفضَّل في Script Properties بالخادم
@@ -3030,7 +3032,24 @@ const AppState = {
                     if (parsed.appsScript && typeof parsed.appsScript === 'object') {
                         const currentApps = AppState.googleConfig.appsScript || {};
                         const parsedApps = parsed.appsScript || {};
-                        const parsedUrl = String(parsedApps.scriptUrl || '').trim();
+                        let parsedUrl = String(parsedApps.scriptUrl || '').trim();
+                        // ✅ إصلاح انزياح الوقت +61 دقيقة: ترقية تلقائية من نشرات قديمة (قبل @102)
+                        // النشرة @92 لا تحتوي على إصلاح getUTCHours — استبدلها بـ @109 تلقائياً
+                        const OLD_DEPLOYMENT_URLS = [
+                            'AKfycbxkqiYDwVdSUhzi-DOGZO8bBJMORw78FzLhUzRYwSfGldDqvlXerdajhd7byDeuvsP0', // @92
+                            'AKfycbzmZKpLvrFm-zcaY91_a7JsW7O6sHzf7vO-sw1ujsa7FbSELMhCFFxF04_5vReLU9Xr', // @95
+                            'AKfycbzzUIVg7t0RNEqL9RtmKlOZd_3yU7VDsHlFLbnMZOjantyBy62vhBTK-xn0K3AWvyme', // @97
+                            'AKfycbznQux2RDY-UB56gAhrluEoXYfPt2s0CtAUQpQ8WHwna8w64cUez_QLhm4gRk8ez2Aw', // @98
+                        ];
+                        const LATEST_DEPLOYMENT_URL = 'https://script.google.com/macros/s/AKfycbwLzUsMbK4abB7n8Ft1hOcMIHMQhSGbeInuqvUmjOAJdyCmFqQzJ-4Oczhkw2OVZIQh/exec';
+                        if (parsedUrl && OLD_DEPLOYMENT_URLS.some(old => parsedUrl.includes(old))) {
+                            parsedUrl = LATEST_DEPLOYMENT_URL;
+                            // حفظ الرابط المُحدَّث تلقائياً
+                            try {
+                                const updatedConfig = { ...parsed, appsScript: { ...parsedApps, scriptUrl: LATEST_DEPLOYMENT_URL } };
+                                localStorage.setItem('hse_google_config', JSON.stringify(updatedConfig));
+                            } catch(e) { /* ignore */ }
+                        }
                         AppState.googleConfig.appsScript = {
                             ...currentApps,
                             ...parsedApps,
