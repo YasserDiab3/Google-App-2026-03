@@ -14006,10 +14006,10 @@ const PTW = {
     },
 
     /**
-     * عرض محتوى تحليل البيانات
+     * عرض محتوى تحليل البيانات — النمط الاحترافي (مطابق للوحة تحليل التدريب)
      */
     renderAnalysisContent() {
-        // التأكد من إخفاء الخريطة في تبويب التحليل بشكل كامل
+        // إخفاء الخريطة
         const mapContent = document.getElementById('ptw-map-content');
         if (mapContent) {
             mapContent.style.display = 'none';
@@ -14024,317 +14024,186 @@ const PTW = {
             mapContent.style.zIndex = '-1';
         }
 
-        // التأكد من تهيئة بيانات التحليل
+        // تهيئة بيانات التحليل
         if (!AppState.appData) AppState.appData = {};
-        if (!AppState.appData.ptwAnalysis) {
-            AppState.appData.ptwAnalysis = [];
-        }
+        if (!AppState.appData.ptwAnalysis) AppState.appData.ptwAnalysis = [];
 
-        const analysisData = AppState.appData.ptwAnalysis || [];
-
-        // دمج بيانات التصاريح من كلا المصدرين: AppState.appData.ptw و registryData
-        const permitsFromList = AppState.appData.ptw || [];
-        const permitsFromRegistry = (this.registryData || []).map(registryEntry => {
-            // تحويل سجل التصريح إلى تنسيق التصريح للتوافق
-            return {
-                id: registryEntry.permitId || registryEntry.id,
-                workType: Array.isArray(registryEntry.permitType)
-                    ? registryEntry.permitTypeDisplay || registryEntry.permitType.join('، ')
-                    : registryEntry.permitType || registryEntry.permitTypeDisplay,
-                location: registryEntry.location,
-                siteName: registryEntry.location,
-                sublocation: registryEntry.sublocation,
-                sublocationName: registryEntry.sublocation,
-                startDate: registryEntry.openDate,
-                endDate: registryEntry.timeTo,
-                status: registryEntry.status,
-                requestingParty: registryEntry.requestingParty,
-                authorizedParty: registryEntry.authorizedParty,
-                workDescription: registryEntry.workDescription,
-                createdAt: registryEntry.createdAt,
-                updatedAt: registryEntry.updatedAt,
-                isFromRegistry: true // علامة للتمييز
-            };
-        });
-
-        const allPermits = this.mergePermitsPreferRegistry(permitsFromList, permitsFromRegistry);
-
-        // إحصائيات التحليل (مطابقة لحالات التصاريح الفعلية)
-        const totalPermits = allPermits.length;
-        const openPermits = allPermits.filter(p => this.isPermitOpenStatus(p?.status)).length;
-        const closedPermits = allPermits.filter(p => this.isPermitClosedStatus(p?.status)).length;
-        const approvedPermits = allPermits.filter(p => (p.status || '').trim() === 'موافق عليه').length;
-        const pendingPermits = allPermits.filter(p => p?.isManualEntry !== true && (p.status || '').trim() === 'قيد المراجعة').length;
-        const rejectedPermits = allPermits.filter(p => (p.status || '').trim() === 'مرفوض').length;
-        const closureRate = totalPermits > 0 ? ((closedPermits / totalPermits) * 100).toFixed(1) : '0';
-        const openRate = totalPermits > 0 ? ((openPermits / totalPermits) * 100).toFixed(1) : '0';
-        const approvalRate = totalPermits > 0 ? ((approvedPermits / totalPermits) * 100).toFixed(1) : '0';
-        const rejectedRate = totalPermits > 0 ? ((rejectedPermits / totalPermits) * 100).toFixed(1) : '0';
-        const sumCheck = openPermits + closedPermits + rejectedPermits;
-        const verificationOk = totalPermits === 0 || sumCheck === totalPermits;
-
-        const t = (k, f) => this._t(k, f);
-
-        const workTypeLabels = (p) => {
-            const wt = p.workType;
-            if (Array.isArray(wt)) return wt.length ? wt : ['أخرى'];
-            return wt ? [String(wt)] : ['أخرى'];
-        };
-        const uniqueWorkTypes = [...new Set(allPermits.flatMap(p => workTypeLabels(p).map(t => (t || '').trim()).filter(Boolean)))].filter(Boolean).sort((a, b) => (a || '').localeCompare(b || '', 'ar'));
-        const uniqueAuthorized = [...new Set(allPermits.map(p => (p.authorizedParty || '').trim()).filter(Boolean))].sort((a, b) => (a || '').localeCompare(b || '', 'ar'));
-        const uniqueRequesting = [...new Set(allPermits.map(p => (p.requestingParty || '').trim()).filter(Boolean))].sort((a, b) => (a || '').localeCompare(b || '', 'ar'));
-        const statusOptions = ['قيد المراجعة', 'موافق عليه', 'مرفوض', 'مغلق', 'اكتمل العمل بشكل آمن', 'إغلاق جبري'];
+        // بدء تحميل Chart.js مبكراً
+        this._ptwEnsureChartJS().catch(() => {});
 
         return `
-            <div class="space-y-6" id="ptw-analysis-root">
-                <!-- فلتر التحليل -->
-                <div class="content-card border-2 border-indigo-100 bg-indigo-50/30">
-                    <div class="card-body">
-                        <h3 class="text-lg font-semibold text-gray-800 mb-2 flex items-center gap-2">
-                            <i class="fas fa-filter ml-2"></i>
-                            ${t('module.ptw.analysis.filterTitle', 'فلتر التحليل')}
-                            <span id="ptw-analysis-current-count-badge" class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-indigo-100 text-indigo-700 border border-indigo-200">
-                                ${t('module.ptw.analysis.badgeAll', 'إجمالي التصاريح في التحليل: ')}<span id="ptw-analysis-current-count" class="ml-1">${totalPermits}</span>
-                            </span>
-                        </h3>
-                        <p id="ptw-analysis-summary" class="text-xs text-gray-600 mb-3">
-                            ${t('module.ptw.analysis.summaryAll', 'لا يوجد أي فلتر مطبق حالياً، يتم عرض تحليل لجميع التصاريح المسجلة ({n} تصريحاً).').replace(/\{n\}/g, String(totalPermits))}
-                        </p>
-                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-1 ptw-analysis-filter-label" data-filter-id="ptw-analysis-date-from">${t('module.ptw.analysis.fromDate', 'من تاريخ')}</label>
-                                <input type="date" id="ptw-analysis-date-from" class="form-input w-full" placeholder="${t('module.ptw.analysis.optional', 'اختياري')}">
-                            </div>
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-1 ptw-analysis-filter-label" data-filter-id="ptw-analysis-date-to">${t('module.ptw.analysis.toDate', 'إلى تاريخ')}</label>
-                                <input type="date" id="ptw-analysis-date-to" class="form-input w-full" placeholder="${t('module.ptw.analysis.optional', 'اختياري')}">
-                            </div>
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-1 ptw-analysis-filter-label" data-filter-id="ptw-analysis-work-type">${t('module.ptw.analysis.permitType', 'نوع التصريح')}</label>
-                                <select id="ptw-analysis-work-type" class="form-input w-full">
-                                    <option value="">${t('module.ptw.analysis.all', '— الكل —')}</option>
-                                    ${(uniqueWorkTypes.length ? uniqueWorkTypes : ['أعمال ساخنة', 'أماكن مغلقة', 'عمل على ارتفاع', 'أعمال حفر', 'أعمال كهرباء', 'أعمال أخرى']).map(w => `<option value="${Utils.escapeHTML(w)}">${Utils.escapeHTML(w)}</option>`).join('')}
-                                </select>
-                            </div>
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-1 ptw-analysis-filter-label" data-filter-id="ptw-analysis-authorized">${t('module.ptw.analysis.authorized', 'الجهة المصرح لها (مقاول)')}</label>
-                                <select id="ptw-analysis-authorized" class="form-input w-full">
-                                    <option value="">${t('module.ptw.analysis.all', '— الكل —')}</option>
-                                    ${uniqueAuthorized.map(a => `<option value="${Utils.escapeHTML(a)}">${Utils.escapeHTML(a)}</option>`).join('')}
-                                </select>
-                            </div>
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-1 ptw-analysis-filter-label" data-filter-id="ptw-analysis-requesting">${t('module.ptw.analysis.requesting', 'الجهة الطالبة')}</label>
-                                <select id="ptw-analysis-requesting" class="form-input w-full">
-                                    <option value="">${t('module.ptw.analysis.all', '— الكل —')}</option>
-                                    ${uniqueRequesting.map(r => `<option value="${Utils.escapeHTML(r)}">${Utils.escapeHTML(r)}</option>`).join('')}
-                                </select>
-                            </div>
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-1 ptw-analysis-filter-label" data-filter-id="ptw-analysis-status">${t('module.ptw.analysis.filterStatus', 'الحالة')}</label>
-                                <select id="ptw-analysis-status" class="form-input w-full">
-                                    <option value="">${t('module.ptw.analysis.all', '— الكل —')}</option>
-                                    ${statusOptions.map(s => `<option value="${Utils.escapeHTML(s)}">${Utils.escapeHTML(s)}</option>`).join('')}
-                                </select>
-                            </div>
-                        </div>
-                        <div class="mt-3 flex flex-wrap gap-2">
-                            <button type="button" id="ptw-analysis-apply-filter" class="btn-primary"><i class="fas fa-chart-line ml-2"></i>${t('module.ptw.analysis.apply', 'تطبيق الفلتر')}</button>
-                            <button type="button" id="ptw-analysis-reset-filter" class="btn-secondary"><i class="fas fa-undo ml-2"></i>${t('module.ptw.analysis.reset', 'إعادة تعيين')}</button>
-                        </div>
-                    </div>
-                </div>
+        <div id="ptw-analytics-root" style="font-family:inherit;">
 
-                <!-- إحصائيات التحليل (تُحدَّث حسب الفلتر) -->
-                <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-                    <div class="content-card bg-blue-50 border-blue-200">
-                        <div class="card-body">
-                            <div class="flex items-center justify-between">
-                                <div>
-                                    <p class="text-sm text-gray-600 mb-1">${t('module.ptw.analysis.kpiTotal', 'إجمالي التصاريح')}</p>
-                                    <p id="ptw-kpi-total" class="text-2xl font-bold text-blue-600">${totalPermits}</p>
-                                </div>
-                                <i class="fas fa-file-alt text-3xl text-blue-400"></i>
-                            </div>
-                        </div>
+            <!-- ── شريط الأدوات الرئيسي ── -->
+            <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:14px;padding:16px 20px;background:linear-gradient(135deg,#1e3a5f 0%,#1d4ed8 100%);border-radius:14px;color:#fff;box-shadow:0 4px 20px rgba(29,78,216,0.35);">
+                <div style="display:flex;align-items:center;gap:12px;">
+                    <div style="width:44px;height:44px;background:rgba(255,255,255,0.18);border-radius:12px;display:flex;align-items:center;justify-content:center;">
+                        <i class="fas fa-clipboard-check" style="font-size:20px;"></i>
                     </div>
-                    <div class="content-card bg-amber-50 border-amber-200">
-                        <div class="card-body">
-                            <div class="flex items-center justify-between">
-                                <div>
-                                    <p class="text-sm text-gray-600 mb-1">${t('module.ptw.analysis.kpiOpenExec', 'مفتوحة / قيد التنفيذ')}</p>
-                                    <p id="ptw-kpi-open" class="text-2xl font-bold text-amber-600">${openPermits}</p>
-                                    <p id="ptw-kpi-open-pct" class="text-xs text-gray-500 mt-1">${t('module.ptw.analysis.pctOfTotal', '{n}% من الإجمالي').replace(/\{n\}/g, String(openRate))}</p>
-                                </div>
-                                <i class="fas fa-folder-open text-3xl text-amber-400"></i>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="content-card bg-green-50 border-green-200">
-                        <div class="card-body">
-                            <div class="flex items-center justify-between">
-                                <div>
-                                    <p class="text-sm text-gray-600 mb-1">${t('module.ptw.analysis.kpiClosed', 'مغلقة / مكتملة')}</p>
-                                    <p id="ptw-kpi-closed" class="text-2xl font-bold text-green-600">${closedPermits}</p>
-                                    <p id="ptw-kpi-closure-pct" class="text-xs text-gray-500 mt-1">${t('module.ptw.analysis.closureShare', '{n}% نسبة الإغلاق').replace(/\{n\}/g, String(closureRate))}</p>
-                                </div>
-                                <i class="fas fa-check-circle text-3xl text-green-400"></i>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="content-card bg-purple-50 border-purple-200">
-                        <div class="card-body">
-                            <div class="flex items-center justify-between">
-                                <div>
-                                    <p class="text-sm text-gray-600 mb-1">${t('module.ptw.analysis.kpiApproved', 'موافق عليها')}</p>
-                                    <p id="ptw-kpi-approved" class="text-2xl font-bold text-purple-600">${approvedPermits}</p>
-                                    <p id="ptw-kpi-approved-pct" class="text-xs text-gray-500 mt-1">${t('module.ptw.analysis.pctOfTotal', '{n}% من الإجمالي').replace(/\{n\}/g, String(approvalRate))}</p>
-                                </div>
-                                <i class="fas fa-thumbs-up text-3xl text-purple-400"></i>
-                            </div>
-                        </div>
+                    <div>
+                        <h2 style="margin:0;font-size:1.15rem;font-weight:700;">لوحة تحليل تصاريح العمل</h2>
+                        <p style="margin:0;font-size:0.75rem;opacity:0.85;">تحليل شامل وفوري • فلاتر تفاعلية • تصدير PDF</p>
                     </div>
                 </div>
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div class="content-card bg-yellow-50 border-yellow-200">
-                        <div class="card-body">
-                            <div class="flex items-center justify-between">
-                                <div>
-                                    <p class="text-sm text-gray-600 mb-1">${t('module.ptw.analysis.kpiPending', 'قيد المراجعة')}</p>
-                                    <p id="ptw-kpi-pending" class="text-2xl font-bold text-yellow-600">${pendingPermits}</p>
-                                </div>
-                                <i class="fas fa-clock text-3xl text-yellow-400"></i>
-                            </div>
-                        </div>
+                <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+                    <span style="font-size:0.72rem;opacity:0.85;margin-left:2px;">الفترة:</span>
+                    <div style="display:flex;gap:3px;flex-wrap:wrap;">
+                        ${['30','90','180','365','0'].map((v,i) => {
+                            const labels = ['30 يوم','3 أشهر','6 أشهر','سنة','الكل'];
+                            const active = (this._ptwPeriod || '0') === v;
+                            return `<button class="ptw-period-btn" data-period="${v}" style="padding:5px 10px;border-radius:8px;border:none;cursor:pointer;font-size:0.75rem;font-weight:600;transition:all .2s;background:${active?'#fff':'rgba(255,255,255,0.15)'};color:${active?'#1e3a5f':'#fff'};">${labels[i]}</button>`;
+                        }).join('')}
                     </div>
-                    <div class="content-card bg-red-50 border-red-200">
-                        <div class="card-body">
-                            <div class="flex items-center justify-between">
-                                <div>
-                                    <p class="text-sm text-gray-600 mb-1">${t('module.ptw.analysis.kpiRejected', 'مرفوضة')}</p>
-                                    <p id="ptw-kpi-rejected" class="text-2xl font-bold text-red-600">${rejectedPermits}</p>
-                                </div>
-                                <i class="fas fa-times-circle text-3xl text-red-400"></i>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="content-card bg-slate-50 border-slate-200">
-                        <div class="card-body">
-                            <div class="flex items-center justify-between">
-                                <div>
-                                    <p class="text-sm text-gray-600 mb-1">${t('module.ptw.analysis.formulaLabel', 'معادلات التحليل')}</p>
-                                    <p id="ptw-kpi-formulas" class="text-xs font-semibold text-slate-700 mb-0.5">${t('module.ptw.analysis.formulaText', 'نسبة الإغلاق = {c}% | المفتوحة = {o}% | المرفوضة = {r}%').replace(/\{c\}/g, String(closureRate)).replace(/\{o\}/g, String(openRate)).replace(/\{r\}/g, String(rejectedRate))}</p>
-                                    <p class="text-xs text-gray-500 mt-1 border-t border-slate-200 pt-1">${t('module.ptw.analysis.verify', 'التحقق: إجمالي = مفتوحة + مغلقة + مرفوضة {ok}').replace(/\{ok\}/g, verificationOk ? '✓' : '')}</p>
-                                </div>
-                                <i class="fas fa-calculator text-2xl text-slate-400"></i>
-                            </div>
-                        </div>
-                    </div>
+                    <button id="ptw-toggle-filters-btn" style="padding:6px 12px;border-radius:8px;border:1px solid rgba(255,255,255,0.4);cursor:pointer;background:rgba(255,255,255,0.12);color:#fff;font-size:0.78rem;font-weight:600;transition:all .2s;display:flex;align-items:center;gap:5px;" onmouseover="this.style.background='rgba(255,255,255,0.25)'" onmouseout="this.style.background='rgba(255,255,255,0.12)'">
+                        <i class="fas fa-sliders-h"></i><span>فلاتر</span><span id="ptw-filter-badge" style="display:none;background:#fbbf24;color:#78350f;font-size:0.65rem;padding:1px 5px;border-radius:10px;margin-right:2px;">●</span>
+                    </button>
+                    <button id="ptw-export-pdf-btn" style="padding:6px 14px;border-radius:8px;border:none;cursor:pointer;background:rgba(0,0,0,0.3);color:#fff;font-size:0.78rem;font-weight:600;transition:all .2s;display:flex;align-items:center;gap:5px;" onmouseover="this.style.background='rgba(0,0,0,0.5)'" onmouseout="this.style.background='rgba(0,0,0,0.3)'">
+                        <i class="fas fa-file-pdf"></i><span>PDF</span>
+                    </button>
+                    <button id="ptw-analytics-refresh" style="padding:6px 10px;border-radius:8px;border:none;cursor:pointer;background:rgba(255,255,255,0.15);color:#fff;font-size:0.78rem;transition:all .2s;" onmouseover="this.style.background='rgba(255,255,255,0.3)'" onmouseout="this.style.background='rgba(255,255,255,0.15)'" title="تحديث"><i class="fas fa-sync-alt"></i></button>
                 </div>
+            </div>
 
-                <!-- الرسوم البيانية -->
-                <div class="content-card">
-                    <div class="card-body">
-                        <h3 class="text-lg font-semibold text-gray-800 mb-4"><i class="fas fa-chart-bar ml-2"></i>${t('module.ptw.analysis.chartsTitle', 'الرسوم البيانية')}</h3>
-                        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                            <div class="bg-white rounded-lg border border-gray-200 p-4">
-                                <p class="text-sm font-medium text-gray-700 mb-2">${t('module.ptw.analysis.chartByType', 'توزيع حسب نوع التصريح')}</p>
-                                <div class="relative" style="height: 260px;"><canvas id="ptw-chart-work-type"></canvas></div>
-                            </div>
-                            <div class="bg-white rounded-lg border border-gray-200 p-4">
-                                <p class="text-sm font-medium text-gray-700 mb-2">${t('module.ptw.analysis.chartByAuth', 'توزيع حسب الجهة المصرح لها (مقاول)')}</p>
-                                <div class="relative" style="height: 260px;"><canvas id="ptw-chart-authorized"></canvas></div>
-                            </div>
-                            <div class="bg-white rounded-lg border border-gray-200 p-4">
-                                <p class="text-sm font-medium text-gray-700 mb-2">${t('module.ptw.analysis.chartByStatus', 'توزيع حسب الحالة')}</p>
-                                <div class="relative" style="height: 260px;"><canvas id="ptw-chart-status"></canvas></div>
-                            </div>
-                            <div class="bg-white rounded-lg border border-gray-200 p-4">
-                                <p class="text-sm font-medium text-gray-700 mb-2">${t('module.ptw.analysis.chartTimeline', 'التصاريح عبر الزمن (شهرياً)')}</p>
-                                <div class="relative" style="height: 260px;"><canvas id="ptw-chart-timeline"></canvas></div>
-                            </div>
+            <!-- ── لوحة الفلاتر التفاعلية ── -->
+            <div id="ptw-filter-panel" style="display:none;background:#eff6ff;border:1.5px solid #bfdbfe;border-radius:12px;padding:18px 20px;margin-bottom:16px;">
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+                    <div style="display:flex;align-items:center;gap:8px;">
+                        <i class="fas fa-sliders-h" style="color:#1d4ed8;font-size:14px;"></i>
+                        <span style="font-weight:700;font-size:0.9rem;color:#1e3a5f;">الفلاتر التفاعلية</span>
+                        <span id="ptw-filter-count" style="background:#dbeafe;color:#1e40af;padding:2px 8px;border-radius:12px;font-size:0.72rem;font-weight:600;"></span>
+                    </div>
+                    <button id="ptw-filter-reset-btn" style="padding:4px 12px;border-radius:8px;border:1px solid #bfdbfe;background:#fff;color:#64748b;font-size:0.75rem;cursor:pointer;" onmouseover="this.style.background='#dbeafe';this.style.color='#1d4ed8'" onmouseout="this.style.background='#fff';this.style.color='#64748b'">
+                        <i class="fas fa-times ml-1"></i>مسح الكل
+                    </button>
+                </div>
+                <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;">
+                    ${[
+                        {id:'ptw-af-status',    icon:'fas fa-circle',         color:'#10b981', label:'الحالة'},
+                        {id:'ptw-af-work-type', icon:'fas fa-fire',            color:'#ef4444', label:'نوع التصريح'},
+                        {id:'ptw-af-authorized',icon:'fas fa-user-tie',        color:'#f59e0b', label:'الجهة المصرح لها'},
+                        {id:'ptw-af-requesting',icon:'fas fa-building',        color:'#6366f1', label:'الجهة الطالبة'},
+                        {id:'ptw-af-location',  icon:'fas fa-map-marker-alt', color:'#3b82f6', label:'الموقع'},
+                    ].map(f => `
+                        <div>
+                            <label style="font-size:0.72rem;font-weight:700;color:#64748b;display:block;margin-bottom:5px;"><i class="${f.icon}" style="color:${f.color};margin-left:4px;"></i>${f.label}</label>
+                            <select id="${f.id}" style="width:100%;padding:7px 10px;border:1.5px solid #bfdbfe;border-radius:8px;font-size:0.82rem;background:#fff;color:#374151;cursor:pointer;" onfocus="this.style.borderColor='#1d4ed8'" onblur="this.style.borderColor='#bfdbfe'">
+                                <option value="">الكل</option>
+                            </select>
                         </div>
+                    `).join('')}
+                </div>
+            </div>
+
+            <!-- ── KPI Cards ── -->
+            <div id="ptw-kpi-strip" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:10px;margin-bottom:20px;">
+                <div style="text-align:center;padding:16px;color:#94a3b8;"><i class="fas fa-spinner fa-spin"></i></div>
+            </div>
+
+            <!-- ── Row 1: الحالة + نوع التصريح ── -->
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:16px;margin-bottom:16px;">
+                <div class="content-card" style="padding:0;overflow:hidden;">
+                    <div style="padding:13px 18px 10px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:8px;">
+                        <i class="fas fa-tasks" style="color:#1d4ed8;"></i>
+                        <span style="font-weight:700;font-size:0.88rem;">التوزيع حسب الحالة</span>
+                    </div>
+                    <div style="padding:12px;position:relative;height:240px;">
+                        <canvas id="ptw-chart-status"></canvas>
+                        <div id="ptw-chart-status-empty" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;color:#94a3b8;font-size:0.85rem;">لا توجد بيانات</div>
                     </div>
                 </div>
-
-                <!-- أزرار الإدارة والتصدير -->
-                <div class="flex flex-wrap justify-between items-center gap-3">
-                    <h2 class="text-xl font-bold text-gray-800">
-                        <i class="fas fa-chart-line ml-2"></i>
-                        ${t('module.ptw.analysis.headerTitle', 'تحليل بيانات التصاريح')}
-                    </h2>
-                    <div class="flex flex-wrap items-center gap-2">
-                        <button type="button" id="ptw-analysis-export-excel" class="btn-secondary" title="${t('module.ptw.analysis.exportCurrentExcel', 'تصدير التقرير الحالي (حسب الفلتر) إلى Excel')}">
-                            <i class="fas fa-file-excel ml-2"></i>
-                            ${t('module.ptw.registry.exportExcel', 'تصدير Excel')}
-                        </button>
-                        <button type="button" id="ptw-analysis-export-pdf" class="btn-secondary" title="${t('module.ptw.analysis.exportCurrentPdf', 'تصدير التقرير الحالي (حسب الفلتر) إلى PDF')}">
-                            <i class="fas fa-file-pdf ml-2"></i>
-                            ${t('module.ptw.registry.exportPdf', 'تصدير PDF')}
-                        </button>
-                        <button id="ptw-analysis-add" class="btn-primary">
-                            <i class="fas fa-plus ml-2"></i>
-                            ${t('module.ptw.analysis.addNew', 'إضافة تحليل جديد')}
-                        </button>
+                <div class="content-card" style="padding:0;overflow:hidden;">
+                    <div style="padding:13px 18px 10px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:8px;">
+                        <i class="fas fa-fire" style="color:#ef4444;"></i>
+                        <span style="font-weight:700;font-size:0.88rem;">التوزيع حسب نوع التصريح</span>
                     </div>
-                </div>
-
-                <!-- جدول التحليلات -->
-                <div class="content-card">
-                    <div class="card-body">
-                        <div class="table-responsive ptw-table-wrapper">
-                            <table class="data-table">
-                                <thead>
-                                    <tr>
-                                        <th>${t('module.ptw.analysis.tblDate', 'تاريخ التحليل')}</th>
-                                        <th>${t('module.ptw.analysis.tblPeriod', 'الفترة')}</th>
-                                        <th>${t('module.ptw.analysis.tblWorkType', 'نوع العمل')}</th>
-                                        <th>${t('module.ptw.analysis.tblLocation', 'الموقع')}</th>
-                                        <th>${t('module.ptw.analysis.tblNotes', 'الملاحظات')}</th>
-                                        <th>${t('module.ptw.analysis.tblActions', 'الإجراءات')}</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="ptw-analysis-table-body">
-                                    ${analysisData.length === 0 ? `
-                                        <tr>
-                                            <td colspan="6" class="text-center text-gray-500 py-8">
-                                                ${t('module.ptw.analysis.emptyList', 'لا توجد تحليلات مسجلة بعد. اضغط على "إضافة تحليل جديد" لبدء التحليل.')}
-                                            </td>
-                                        </tr>
-                                    ` : analysisData.map(item => {
-            const safeId = Utils.escapeHTML(String(item.id || ''));
-            const formattedDate = item.analysisDate
-                ? (typeof Utils.formatDate === 'function'
-                    ? Utils.formatDate(item.analysisDate)
-                    : new Date(item.analysisDate).toLocaleDateString('ar-SA'))
-                : '-';
-            return `
-                                        <tr data-analysis-id="${safeId}">
-                                            <td>${formattedDate}</td>
-                                            <td>${Utils.escapeHTML(item.period || '-')}</td>
-                                            <td>${Utils.escapeHTML(item.workType || '-')}</td>
-                                            <td>${Utils.escapeHTML(item.location || '-')}</td>
-                                            <td class="max-w-xs truncate">${Utils.escapeHTML(item.notes || '-')}</td>
-                                            <td>
-                                                <div class="flex items-center gap-2">
-                                                    <button onclick="PTW.editAnalysis('${safeId}')" class="btn-icon btn-icon-primary" title="${t('module.ptw.analysis.btnEdit', 'تعديل')}">
-                                                        <i class="fas fa-edit"></i>
-                                                    </button>
-                                                    <button onclick="PTW.deleteAnalysis('${safeId}')" class="btn-icon btn-icon-danger" title="${t('module.ptw.analysis.btnDelete', 'حذف')}">
-                                                        <i class="fas fa-trash"></i>
-                                                    </button>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    `;
-        }).join('')}
-                                </tbody>
-                            </table>
-                        </div>
+                    <div style="padding:12px;position:relative;height:240px;">
+                        <canvas id="ptw-chart-work-type"></canvas>
+                        <div id="ptw-chart-work-type-empty" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;color:#94a3b8;font-size:0.85rem;">لا توجد بيانات</div>
                     </div>
                 </div>
             </div>
-        `;
+
+            <!-- ── الاتجاه الزمني ── -->
+            <div class="content-card" style="padding:0;overflow:hidden;margin-bottom:16px;">
+                <div style="padding:13px 18px 10px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:8px;">
+                    <i class="fas fa-chart-area" style="color:#6366f1;"></i>
+                    <span style="font-weight:700;font-size:0.88rem;">الاتجاه الزمني للتصاريح (آخر 12 شهر)</span>
+                </div>
+                <div style="padding:12px;position:relative;height:260px;">
+                    <canvas id="ptw-chart-timeline"></canvas>
+                    <div id="ptw-chart-timeline-empty" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;color:#94a3b8;font-size:0.85rem;">لا توجد بيانات</div>
+                </div>
+            </div>
+
+            <!-- ── Row 2: الجهة المصرح لها + الجهة الطالبة ── -->
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:16px;margin-bottom:16px;">
+                <div class="content-card" style="padding:0;overflow:hidden;">
+                    <div style="padding:13px 18px 10px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:8px;">
+                        <i class="fas fa-user-tie" style="color:#f59e0b;"></i>
+                        <span style="font-weight:700;font-size:0.88rem;">أكثر الجهات المصرح لها (أعلى 10)</span>
+                    </div>
+                    <div style="padding:12px;position:relative;height:280px;">
+                        <canvas id="ptw-chart-authorized"></canvas>
+                        <div id="ptw-chart-authorized-empty" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;color:#94a3b8;font-size:0.85rem;">لا توجد بيانات</div>
+                    </div>
+                </div>
+                <div class="content-card" style="padding:0;overflow:hidden;">
+                    <div style="padding:13px 18px 10px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:8px;">
+                        <i class="fas fa-building" style="color:#8b5cf6;"></i>
+                        <span style="font-weight:700;font-size:0.88rem;">أكثر الجهات الطالبة (أعلى 10)</span>
+                    </div>
+                    <div style="padding:12px;position:relative;height:280px;">
+                        <canvas id="ptw-chart-requesting"></canvas>
+                        <div id="ptw-chart-requesting-empty" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;color:#94a3b8;font-size:0.85rem;">لا توجد بيانات</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ── Row 3: الموقع ── -->
+            <div class="content-card" style="padding:0;overflow:hidden;margin-bottom:16px;">
+                <div style="padding:13px 18px 10px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:8px;">
+                    <i class="fas fa-map-marker-alt" style="color:#3b82f6;"></i>
+                    <span style="font-weight:700;font-size:0.88rem;">حسب الموقع (أعلى 10)</span>
+                </div>
+                <div style="padding:12px;position:relative;height:280px;">
+                    <canvas id="ptw-chart-location"></canvas>
+                    <div id="ptw-chart-location-empty" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;color:#94a3b8;font-size:0.85rem;">لا توجد بيانات</div>
+                </div>
+            </div>
+
+            <!-- ── جدول أحدث التصاريح ── -->
+            <div class="content-card" style="padding:0;overflow:hidden;">
+                <div style="padding:13px 18px 12px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;justify-content:space-between;gap:8px;">
+                    <div style="display:flex;align-items:center;gap:8px;">
+                        <i class="fas fa-star" style="color:#1d4ed8;"></i>
+                        <span style="font-weight:700;font-size:0.88rem;">أحدث التصاريح (حسب الفلتر)</span>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:8px;">
+                        <span id="ptw-top-count" style="background:#dbeafe;color:#1e40af;padding:3px 10px;border-radius:20px;font-size:0.75rem;font-weight:700;"></span>
+                        <button type="button" id="ptw-analysis-export-excel" style="padding:5px 12px;border-radius:8px;border:1px solid #bfdbfe;background:#fff;color:#1d4ed8;font-size:0.75rem;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:4px;" onmouseover="this.style.background='#dbeafe'" onmouseout="this.style.background='#fff'"><i class="fas fa-file-excel"></i> Excel</button>
+                        <button id="ptw-analysis-add" style="padding:5px 12px;border-radius:8px;border:none;background:#1d4ed8;color:#fff;font-size:0.75rem;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:4px;" onmouseover="this.style.background='#1e40af'" onmouseout="this.style.background='#1d4ed8'"><i class="fas fa-plus"></i> تحليل جديد</button>
+                    </div>
+                </div>
+                <div style="overflow-x:auto;">
+                    <table style="width:100%;border-collapse:collapse;font-size:0.82rem;">
+                        <thead>
+                            <tr style="background:#fafafa;border-bottom:2px solid #f1f5f9;">
+                                <th style="padding:10px 12px;text-align:right;font-weight:700;color:#374151;white-space:nowrap;">وصف العمل</th>
+                                <th style="padding:10px 12px;text-align:right;font-weight:700;color:#374151;white-space:nowrap;">نوع التصريح</th>
+                                <th style="padding:10px 12px;text-align:right;font-weight:700;color:#374151;white-space:nowrap;">الجهة المصرح لها</th>
+                                <th style="padding:10px 12px;text-align:right;font-weight:700;color:#374151;white-space:nowrap;">الجهة الطالبة</th>
+                                <th style="padding:10px 12px;text-align:right;font-weight:700;color:#374151;white-space:nowrap;">الموقع</th>
+                                <th style="padding:10px 12px;text-align:right;font-weight:700;color:#374151;white-space:nowrap;">التاريخ</th>
+                                <th style="padding:10px 12px;text-align:center;font-weight:700;color:#374151;white-space:nowrap;">الحالة</th>
+                            </tr>
+                        </thead>
+                        <tbody id="ptw-top-tbody">
+                            <tr><td colspan="7" style="padding:20px;text-align:center;color:#94a3b8;">جارٍ التحميل…</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>`;
     },
 
     /**
@@ -14766,91 +14635,515 @@ const PTW = {
      * تهيئة أحداث تبويب التحليل
      */
     setupAnalysisEventListeners() {
-        if (!this.analysisCharts) this.analysisCharts = {};
+        // تشغيل لوحة التحليل الجديدة
+        setTimeout(() => { this.updatePTWAnalyticsDashboard(); }, 150);
+
+        // ربط أحداث اللوحة
+        this._ptwBindAnalyticsEvents();
+
+        // زر إضافة تحليل
         const addBtn = document.getElementById('ptw-analysis-add');
         if (addBtn) {
-            const newAddBtn = addBtn.cloneNode(true);
-            addBtn.parentNode.replaceChild(newAddBtn, addBtn);
-            newAddBtn.addEventListener('click', (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                this.showAnalysisForm();
-            });
+            const nb = addBtn.cloneNode(true);
+            addBtn.parentNode.replaceChild(nb, addBtn);
+            nb.addEventListener('click', (e) => { e.preventDefault(); e.stopPropagation(); this.showAnalysisForm(); });
         }
 
-        const exportExcelBtn = document.getElementById('ptw-analysis-export-excel');
-        if (exportExcelBtn) {
-            const btn = exportExcelBtn.cloneNode(true);
-            exportExcelBtn.parentNode.replaceChild(btn, exportExcelBtn);
-            btn.addEventListener('click', () => this.exportAnalysisReportToExcel());
+        // زر تصدير Excel
+        const excelBtn = document.getElementById('ptw-analysis-export-excel');
+        if (excelBtn) {
+            const nb = excelBtn.cloneNode(true);
+            excelBtn.parentNode.replaceChild(nb, excelBtn);
+            nb.addEventListener('click', () => this.exportAnalysisReportToExcel());
         }
-        const exportPdfBtn = document.getElementById('ptw-analysis-export-pdf');
-        if (exportPdfBtn) {
-            const btn = exportPdfBtn.cloneNode(true);
-            exportPdfBtn.parentNode.replaceChild(btn, exportPdfBtn);
-            btn.addEventListener('click', () => this.exportAnalysisReportToPDF());
-        }
+    },
 
-        const applyFilterBtn = document.getElementById('ptw-analysis-apply-filter');
-        if (applyFilterBtn) {
-            const btn = applyFilterBtn.cloneNode(true);
-            applyFilterBtn.parentNode.replaceChild(btn, applyFilterBtn);
-            btn.addEventListener('click', () => this.updateAnalysisChartsAndKPIs(this.getFilteredAnalysisPermits()));
-        }
-        const resetFilterBtn = document.getElementById('ptw-analysis-reset-filter');
-        if (resetFilterBtn) {
-            const btn = resetFilterBtn.cloneNode(true);
-            resetFilterBtn.parentNode.replaceChild(btn, resetFilterBtn);
+    // ── ربط أحداث لوحة التحليل الجديدة ──
+    _ptwBindAnalyticsEvents() {
+        const root = document.getElementById('ptw-analytics-root');
+        if (!root) return;
+
+        // أزرار الفترة
+        root.querySelectorAll('.ptw-period-btn').forEach(btn => {
             btn.addEventListener('click', () => {
-                const from = document.getElementById('ptw-analysis-date-from');
-                const to = document.getElementById('ptw-analysis-date-to');
-                const wt = document.getElementById('ptw-analysis-work-type');
-                const auth = document.getElementById('ptw-analysis-authorized');
-                const req = document.getElementById('ptw-analysis-requesting');
-                const st = document.getElementById('ptw-analysis-status');
-                if (from) from.value = ''; if (to) to.value = '';
-                if (wt) wt.value = ''; if (auth) auth.value = ''; if (req) req.value = ''; if (st) st.value = '';
-                this.updateAnalysisChartsAndKPIs(this.getFilteredAnalysisPermits());
+                this._ptwPeriod = btn.getAttribute('data-period');
+                root.querySelectorAll('.ptw-period-btn').forEach(b => {
+                    const active = b === btn;
+                    b.style.background = active ? '#fff' : 'rgba(255,255,255,0.15)';
+                    b.style.color      = active ? '#1e3a5f' : '#fff';
+                });
+                this.updatePTWAnalyticsDashboard();
+            });
+        });
+
+        // تحديث
+        const refreshBtn = document.getElementById('ptw-analytics-refresh');
+        if (refreshBtn) refreshBtn.addEventListener('click', () => this.updatePTWAnalyticsDashboard());
+
+        // PDF
+        const pdfBtn = document.getElementById('ptw-export-pdf-btn');
+        if (pdfBtn) pdfBtn.addEventListener('click', () => this._ptwExportPDF());
+
+        // toggle filter panel
+        const toggleBtn   = document.getElementById('ptw-toggle-filters-btn');
+        const filterPanel = document.getElementById('ptw-filter-panel');
+        if (toggleBtn && filterPanel) {
+            toggleBtn.addEventListener('click', () => {
+                const isOpen = filterPanel.style.display !== 'none';
+                filterPanel.style.display = isOpen ? 'none' : 'block';
+                toggleBtn.style.background = isOpen ? 'rgba(255,255,255,0.12)' : 'rgba(255,255,255,0.35)';
             });
         }
 
-        setTimeout(() => {
-            this.updateAnalysisChartsAndKPIs(this.getFilteredAnalysisPermits());
-        }, 150);
-
-        setTimeout(() => {
-            const editButtons = document.querySelectorAll('[onclick*="PTW.editAnalysis"]');
-            editButtons.forEach(btn => {
-                const onclickAttr = btn.getAttribute('onclick');
-                if (onclickAttr && onclickAttr.includes('editAnalysis')) {
-                    const match = onclickAttr.match(/editAnalysis\('([^']+)'\)/);
-                    if (match && match[1]) {
-                        btn.removeAttribute('onclick');
-                        btn.addEventListener('click', (e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            this.editAnalysis(match[1]);
-                        });
-                    }
-                }
+        // reset filters
+        const resetBtn = document.getElementById('ptw-filter-reset-btn');
+        if (resetBtn) {
+            resetBtn.addEventListener('click', () => {
+                ['ptw-af-status','ptw-af-work-type','ptw-af-authorized','ptw-af-requesting','ptw-af-location'].forEach(id => {
+                    const el = document.getElementById(id); if (el) el.value = '';
+                });
+                this.updatePTWAnalyticsDashboard();
             });
+        }
 
-            const deleteButtons = document.querySelectorAll('[onclick*="PTW.deleteAnalysis"]');
-            deleteButtons.forEach(btn => {
-                const onclickAttr = btn.getAttribute('onclick');
-                if (onclickAttr && onclickAttr.includes('deleteAnalysis')) {
-                    const match = onclickAttr.match(/deleteAnalysis\('([^']+)'\)/);
-                    if (match && match[1]) {
-                        btn.removeAttribute('onclick');
-                        btn.addEventListener('click', (e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            this.deleteAnalysis(match[1]);
-                        });
-                    }
+        // تغيير الفلاتر
+        ['ptw-af-status','ptw-af-work-type','ptw-af-authorized','ptw-af-requesting','ptw-af-location'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.addEventListener('change', () => this.updatePTWAnalyticsDashboard());
+        });
+    },
+
+    // ══════════════════════════════════════════════════════════════
+    //  لوحة تحليل تصاريح العمل — الدوال الجديدة
+    // ══════════════════════════════════════════════════════════════
+
+    async updatePTWAnalyticsDashboard() {
+        const root = document.getElementById('ptw-analytics-root');
+        if (!root) return;
+
+        try { if (!AppState.appData) AppState.appData = {}; } catch(e) {}
+        const period = parseInt(this._ptwPeriod || '0', 10);
+
+        // دمج مصدري البيانات
+        const all = this.getAnalysisPermits();
+
+        // تصفية بالفترة
+        const byPeriod = this._ptwFilterByPeriod(all, period);
+
+        // ملء الفلاتر
+        this._ptwPopulateFilters(byPeriod);
+
+        // تطبيق الفلاتر
+        const t = this._ptwApplyFilters(byPeriod);
+        const total = t.length;
+        const countEl = document.getElementById('ptw-filter-count');
+        if (countEl) countEl.textContent = `${total} تصريح`;
+
+        // ── KPIs ──
+        const open     = t.filter(p => this.isPermitOpenStatus(p?.status)).length;
+        const closed   = t.filter(p => this.isPermitClosedStatus(p?.status)).length;
+        const approved = t.filter(p => (p.status||'').trim() === 'موافق عليه').length;
+        const pending  = t.filter(p => p?.isManualEntry !== true && (p.status||'').trim() === 'قيد المراجعة').length;
+        const rejected = t.filter(p => (p.status||'').trim() === 'مرفوض').length;
+        const closureRate  = total > 0 ? Math.round((closed  / total)*100) : 0;
+        const openRate     = total > 0 ? Math.round((open    / total)*100) : 0;
+        const approvalRate = total > 0 ? Math.round((approved/ total)*100) : 0;
+        const thisMonth = t.filter(x => {
+            const d = new Date(x.startDate || x.openDate || x.createdAt || '');
+            const n = new Date();
+            return !isNaN(d) && d.getFullYear()===n.getFullYear() && d.getMonth()===n.getMonth();
+        }).length;
+
+        const kpiEl = document.getElementById('ptw-kpi-strip');
+        if (kpiEl) {
+            const kpis = [
+                { label:'إجمالي التصاريح',         value:total,                           icon:'fas fa-clipboard-check', color:'#1d4ed8', bg:'#dbeafe', border:'#bfdbfe' },
+                { label:'مفتوحة / قيد التنفيذ',    value:open,                            icon:'fas fa-folder-open',     color:'#d97706', bg:'#fffbeb', border:'#fde68a' },
+                { label:'مغلقة / مكتملة',          value:closed,                          icon:'fas fa-check-circle',    color:'#059669', bg:'#ecfdf5', border:'#a7f3d0' },
+                { label:'موافق عليها',             value:approved,                        icon:'fas fa-thumbs-up',       color:'#7c3aed', bg:'#f5f3ff', border:'#ddd6fe' },
+                { label:'قيد المراجعة',            value:pending,                         icon:'fas fa-clock',           color:'#b45309', bg:'#fffbeb', border:'#fde68a' },
+                { label:'مرفوضة',                  value:rejected,                        icon:'fas fa-times-circle',    color:'#dc2626', bg:'#fef2f2', border:'#fecaca' },
+                { label:'نسبة الإغلاق',            value:closureRate+'%',                 icon:'fas fa-chart-pie',       color:'#0891b2', bg:'#ecfeff', border:'#a5f3fc' },
+                { label:'هذا الشهر',               value:thisMonth,                       icon:'fas fa-calendar-day',    color:'#db2777', bg:'#fdf2f8', border:'#fbcfe8' },
+            ];
+            kpiEl.innerHTML = kpis.map(k => `
+                <div style="background:${k.bg};border:1px solid ${k.border};border-radius:12px;padding:12px 14px;display:flex;align-items:center;gap:10px;transition:all .2s;cursor:default;" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 6px 20px rgba(0,0,0,0.09)'" onmouseout="this.style.transform='';this.style.boxShadow=''">
+                    <div style="width:38px;height:38px;background:${k.color};border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                        <i class="${k.icon}" style="color:#fff;font-size:15px;"></i>
+                    </div>
+                    <div>
+                        <div style="font-size:1.2rem;font-weight:800;color:${k.color};line-height:1;">${k.value}</div>
+                        <div style="font-size:0.68rem;color:#64748b;margin-top:2px;white-space:nowrap;">${k.label}</div>
+                    </div>
+                </div>`).join('');
+        }
+
+        // ── تحميل Chart.js ──
+        const loaded = await this._ptwEnsureChartJS();
+        if (!loaded || typeof Chart === 'undefined') return;
+
+        // ── الرسوم البيانية ──
+        const statusColors = {
+            'موافق عليه':'rgba(124,58,237,0.85)', 'مفتوح':'rgba(217,119,6,0.85)',
+            'قيد التنفيذ':'rgba(217,119,6,0.85)', 'مغلق':'rgba(5,150,105,0.85)',
+            'اكتمل العمل بشكل آمن':'rgba(5,150,105,0.85)', 'مرفوض':'rgba(220,38,38,0.85)',
+            'إغلاق جبري':'rgba(220,38,38,0.8)', 'قيد المراجعة':'rgba(234,179,8,0.85)'
+        };
+        const statusG = this._ptwGroupBy(t, 'status');
+        this._ptwDrawDoughnut('ptw-chart-status', statusG.labels, statusG.data, statusG.labels.map(l => statusColors[l] || 'rgba(148,163,184,0.8)'));
+
+        const wtG = this._ptwGroupByMulti(t, 'workType', 10);
+        this._ptwDrawDoughnut('ptw-chart-work-type', wtG.labels, wtG.data, this._ptwChartColors(wtG.labels.length));
+
+        this._ptwDrawTrend('ptw-chart-timeline', t);
+
+        const authG = this._ptwGroupBy(t, 'authorizedParty', 10);
+        this._ptwDrawHBar('ptw-chart-authorized', authG.labels, authG.data, 'rgba(245,158,11,0.75)');
+
+        const reqG = this._ptwGroupBy(t, 'requestingParty', 10);
+        this._ptwDrawHBar('ptw-chart-requesting', reqG.labels, reqG.data, 'rgba(139,92,246,0.75)');
+
+        const locG = this._ptwGroupBy(t, 'location', 10);
+        this._ptwDrawHBar('ptw-chart-location', locG.labels, locG.data, 'rgba(59,130,246,0.75)');
+
+        // ── جدول أحدث التصاريح ──
+        const topT = t.slice().sort((a,b) => {
+            const da = new Date(b.startDate || b.openDate || b.createdAt || '');
+            const db = new Date(a.startDate || a.openDate || a.createdAt || '');
+            return da - db;
+        }).slice(0, 20);
+        const topCount = document.getElementById('ptw-top-count');
+        const tbody    = document.getElementById('ptw-top-tbody');
+        if (topCount) topCount.textContent = `${topT.length} تصريح`;
+        if (tbody) {
+            if (!topT.length) {
+                tbody.innerHTML = `<tr><td colspan="7" style="padding:24px;text-align:center;color:#94a3b8;"><i class="fas fa-info-circle ml-2"></i>لا توجد بيانات</td></tr>`;
+            } else {
+                const sc = {
+                    'موافق عليه':'background:#f5f3ff;color:#5b21b6;',
+                    'مفتوح':'background:#fffbeb;color:#92400e;',
+                    'قيد التنفيذ':'background:#fffbeb;color:#92400e;',
+                    'مغلق':'background:#ecfdf5;color:#065f46;',
+                    'اكتمل العمل بشكل آمن':'background:#ecfdf5;color:#065f46;',
+                    'مرفوض':'background:#fef2f2;color:#991b1b;',
+                    'إغلاق جبري':'background:#fef2f2;color:#991b1b;',
+                    'قيد المراجعة':'background:#fffbeb;color:#92400e;'
+                };
+                tbody.innerHTML = topT.map((x, i) => {
+                    const wt = Array.isArray(x.workType) ? x.workType.join('، ') : (x.workType || x.permitType || '—');
+                    const auth = Utils.escapeHTML(x.authorizedParty || '—');
+                    const req  = Utils.escapeHTML(x.requestingParty || '—');
+                    const loc  = Utils.escapeHTML(x.location || x.siteName || '—');
+                    const desc = Utils.escapeHTML(x.workDescription || '—');
+                    const rowBg = i % 2 === 0 ? '#fff' : '#fafafa';
+                    const statusStyle = sc[x.status] || 'background:#f1f5f9;color:#374151;';
+                    const dateStr = x.startDate || x.openDate || x.createdAt || '';
+                    const dateDisplay = dateStr
+                        ? (() => { try { return new Date(dateStr).toLocaleDateString('ar-SA', {year:'numeric', month:'short', day:'numeric'}); } catch(e) { return dateStr.slice(0,10); } })()
+                        : '—';
+                    return `<tr style="border-bottom:1px solid #f8fafc;background:${rowBg};" onmouseover="this.style.background='#eff6ff'" onmouseout="this.style.background='${rowBg}'">
+                        <td style="padding:9px 12px;font-weight:600;color:#1e40af;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${desc}">${desc}</td>
+                        <td style="padding:9px 12px;color:#374151;white-space:nowrap;">${Utils.escapeHTML(Array.isArray(x.workType) ? x.workType.join('، ') : (x.workType||'—'))}</td>
+                        <td style="padding:9px 12px;color:#374151;white-space:nowrap;">${auth}</td>
+                        <td style="padding:9px 12px;color:#374151;white-space:nowrap;">${req}</td>
+                        <td style="padding:9px 12px;color:#374151;white-space:nowrap;">${loc}</td>
+                        <td style="padding:9px 12px;white-space:nowrap;color:#374151;">${dateDisplay}</td>
+                        <td style="padding:9px 12px;text-align:center;"><span style="padding:2px 8px;border-radius:12px;font-size:0.7rem;font-weight:700;white-space:nowrap;${statusStyle}">${Utils.escapeHTML(x.status||'—')}</span></td>
+                    </tr>`;
+                }).join('');
+            }
+        }
+    },
+
+    // ── مساعد: تصفية بالفترة ──
+    _ptwFilterByPeriod(records, days) {
+        if (!days || days === 0) return records;
+        const cutoff = new Date();
+        cutoff.setDate(cutoff.getDate() - days);
+        return records.filter(x => {
+            const d = new Date(x.startDate || x.openDate || x.createdAt || '');
+            return !isNaN(d.getTime()) && d >= cutoff;
+        });
+    },
+
+    // ── مساعد: تجميع حسب حقل ──
+    _ptwGroupBy(records, field, limit = 0) {
+        const map = {};
+        records.forEach(x => {
+            const val = String(x[field] || 'غير محدد').trim() || 'غير محدد';
+            map[val] = (map[val] || 0) + 1;
+        });
+        let entries = Object.entries(map).sort((a,b) => b[1]-a[1]);
+        if (limit > 0) entries = entries.slice(0, limit);
+        return { labels: entries.map(e=>e[0]), data: entries.map(e=>e[1]) };
+    },
+
+    // ── مساعد: تجميع لحقل متعدد القيم (workType) ──
+    _ptwGroupByMulti(records, field, limit = 0) {
+        const map = {};
+        records.forEach(x => {
+            const v = x[field];
+            const vals = Array.isArray(v) ? v : (v ? [String(v)] : ['أخرى']);
+            vals.forEach(vv => { const k = (vv||'').trim() || 'أخرى'; map[k] = (map[k]||0)+1; });
+        });
+        let entries = Object.entries(map).sort((a,b)=>b[1]-a[1]);
+        if (limit > 0) entries = entries.slice(0, limit);
+        return { labels: entries.map(e=>e[0]), data: entries.map(e=>e[1]) };
+    },
+
+    // ── مساعد: ملء الفلاتر ──
+    _ptwPopulateFilters(records) {
+        const unique = fn => [...new Set(records.map(fn).flat().filter(v => v && v !== 'غير محدد'))].sort();
+        const fill = (id, vals) => {
+            const el = document.getElementById(id);
+            if (!el) return;
+            const cur = el.value;
+            el.innerHTML = '<option value="">الكل</option>' + vals.map(v => `<option value="${v}"${v===cur?' selected':''}>${v}</option>`).join('');
+        };
+        fill('ptw-af-status',    unique(x => [String(x.status||'').trim()]));
+        fill('ptw-af-work-type', unique(x => Array.isArray(x.workType) ? x.workType.map(w=>(w||'').trim()) : [(x.workType||'').trim()]));
+        fill('ptw-af-authorized',unique(x => [String(x.authorizedParty||'').trim()]));
+        fill('ptw-af-requesting',unique(x => [String(x.requestingParty||'').trim()]));
+        fill('ptw-af-location',  unique(x => [String(x.location||x.siteName||'').trim()]));
+    },
+
+    // ── مساعد: تطبيق الفلاتر ──
+    _ptwApplyFilters(records) {
+        const get = id => { const el = document.getElementById(id); return el ? el.value.trim() : ''; };
+        const fStatus  = get('ptw-af-status');
+        const fType    = get('ptw-af-work-type');
+        const fAuth    = get('ptw-af-authorized');
+        const fReq     = get('ptw-af-requesting');
+        const fLoc     = get('ptw-af-location');
+        const hasAny   = [fStatus, fType, fAuth, fReq, fLoc].some(v => v !== '');
+        const badge    = document.getElementById('ptw-filter-badge');
+        if (badge) badge.style.display = hasAny ? 'inline' : 'none';
+        return records.filter(x => {
+            if (fStatus && String(x.status||'').trim() !== fStatus) return false;
+            if (fType) {
+                const wt = Array.isArray(x.workType) ? x.workType : [x.workType||''];
+                if (!wt.some(w => (w||'').trim() === fType)) return false;
+            }
+            if (fAuth && String(x.authorizedParty||'').trim() !== fAuth) return false;
+            if (fReq  && String(x.requestingParty||'').trim() !== fReq)  return false;
+            if (fLoc  && String(x.location||x.siteName||'').trim() !== fLoc) return false;
+            return true;
+        });
+    },
+
+    // ── مساعد: رسم Doughnut ──
+    _ptwDrawDoughnut(canvasId, labels, data, colors) {
+        const canvas  = document.getElementById(canvasId);
+        const emptyEl = document.getElementById(canvasId + '-empty');
+        if (!canvas) return;
+        if (!data.length || data.reduce((a,b)=>a+b,0) === 0) {
+            canvas.style.display = 'none';
+            if (emptyEl) emptyEl.style.display = 'flex';
+            return;
+        }
+        if (emptyEl) emptyEl.style.display = 'none';
+        canvas.style.display = '';
+        const total = data.reduce((a,b)=>a+b,0);
+        if (!this._ptwCharts) this._ptwCharts = {};
+        const prev = this._ptwCharts[canvasId];
+        if (prev) { try { prev.destroy(); } catch(e){} }
+        this._ptwCharts[canvasId] = new Chart(canvas, {
+            type: 'doughnut',
+            data: { labels, datasets: [{ data, backgroundColor: colors, borderWidth: 2, borderColor: '#fff', hoverOffset: 8 }] },
+            options: {
+                responsive: true, maintainAspectRatio: false, cutout: '60%',
+                plugins: {
+                    legend: { position: 'right', labels: { usePointStyle: true, font: { size: 11 }, padding: 12 } },
+                    tooltip: { callbacks: { label: ctx => ` ${ctx.label}: ${ctx.parsed} (${Math.round(ctx.parsed/total*100)}%)` } }
                 }
+            }
+        });
+    },
+
+    // ── مساعد: رسم HBar ──
+    _ptwDrawHBar(canvasId, labels, data, color) {
+        const canvas  = document.getElementById(canvasId);
+        const emptyEl = document.getElementById(canvasId + '-empty');
+        if (!canvas) return;
+        if (!data.length) {
+            canvas.style.display = 'none';
+            if (emptyEl) emptyEl.style.display = 'flex';
+            return;
+        }
+        if (emptyEl) emptyEl.style.display = 'none';
+        canvas.style.display = '';
+        if (!this._ptwCharts) this._ptwCharts = {};
+        const prev = this._ptwCharts[canvasId];
+        if (prev) { try { prev.destroy(); } catch(e){} }
+        this._ptwCharts[canvasId] = new Chart(canvas, {
+            type: 'bar',
+            data: { labels, datasets: [{ data, backgroundColor: color, borderRadius: 5, borderSkipped: false }] },
+            options: {
+                indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+                plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => ` ${ctx.parsed.x} تصريح` } } },
+                scales: {
+                    x: { beginAtZero: true, ticks: { precision: 0, font: { size: 11 } }, grid: { color: '#f1f5f9' } },
+                    y: { ticks: { font: { size: 11 }, callback: v => String(labels[v]).length > 20 ? String(labels[v]).slice(0,19)+'…' : labels[v] } }
+                }
+            }
+        });
+    },
+
+    // ── مساعد: الاتجاه الزمني ──
+    _ptwDrawTrend(canvasId, records) {
+        const canvas  = document.getElementById(canvasId);
+        const emptyEl = document.getElementById(canvasId + '-empty');
+        if (!canvas) return;
+        const now = new Date();
+        const arabicMonths = ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
+        const months = [];
+        for (let i = 11; i >= 0; i--) {
+            const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+            months.push({ year: d.getFullYear(), month: d.getMonth(), label: `${arabicMonths[d.getMonth()]} ${d.getFullYear()}` });
+        }
+        const counts = months.map(m => records.filter(x => {
+            const d = new Date(x.startDate || x.openDate || x.createdAt || '');
+            return !isNaN(d.getTime()) && d.getFullYear() === m.year && d.getMonth() === m.month;
+        }).length);
+        if (counts.reduce((a,b)=>a+b,0) === 0) {
+            canvas.style.display = 'none';
+            if (emptyEl) emptyEl.style.display = 'flex';
+            return;
+        }
+        if (emptyEl) emptyEl.style.display = 'none';
+        canvas.style.display = '';
+        if (!this._ptwCharts) this._ptwCharts = {};
+        const prev = this._ptwCharts[canvasId];
+        if (prev) { try { prev.destroy(); } catch(e){} }
+        this._ptwCharts[canvasId] = new Chart(canvas, {
+            type: 'bar',
+            data: {
+                labels: months.map(m => m.label),
+                datasets: [
+                    { label: 'عدد التصاريح', data: counts, backgroundColor: counts.map(c => c === Math.max(...counts) ? 'rgba(29,78,216,0.85)' : 'rgba(29,78,216,0.5)'), borderRadius: 6, borderSkipped: false, order: 1 },
+                    { label: 'الاتجاه', data: counts, type: 'line', borderColor: 'rgba(16,185,129,0.9)', backgroundColor: 'rgba(16,185,129,0.08)', borderWidth: 2.5, pointRadius: 4, pointBackgroundColor: '#10b981', tension: 0.4, fill: true, order: 0 }
+                ]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                plugins: { legend: { position: 'top', labels: { usePointStyle: true, font: { size: 11 } } }, tooltip: { mode: 'index', intersect: false } },
+                scales: { x: { grid: { display: false }, ticks: { font: { size: 10 }, maxRotation: 45 } }, y: { beginAtZero: true, ticks: { precision: 0, font: { size: 11 } }, grid: { color: '#f8fafc' } } }
+            }
+        });
+    },
+
+    // ── مساعد: تحميل Chart.js ──
+    async _ptwEnsureChartJS() {
+        if (typeof Chart !== 'undefined') return true;
+        const ex = document.querySelector('script[src*="chart.js"],script[src*="chartjs"]');
+        if (ex) {
+            return new Promise(resolve => {
+                const t = setInterval(() => { if (typeof Chart !== 'undefined') { clearInterval(t); resolve(true); } }, 100);
+                setTimeout(() => { clearInterval(t); resolve(false); }, 5000);
             });
-        }, 100);
+        }
+        return new Promise(resolve => {
+            const s = document.createElement('script');
+            s.src = 'https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js';
+            s.onload = () => resolve(true);
+            s.onerror = () => {
+                const s2 = document.createElement('script');
+                s2.src = 'https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js';
+                s2.onload = () => resolve(true);
+                s2.onerror = () => resolve(false);
+                document.head.appendChild(s2);
+            };
+            document.head.appendChild(s);
+        });
+    },
+
+    // ── مساعد: ألوان ──
+    _ptwChartColors(n) {
+        const palette = ['rgba(29,78,216,0.8)','rgba(16,185,129,0.8)','rgba(245,158,11,0.8)','rgba(239,68,68,0.8)','rgba(139,92,246,0.8)','rgba(59,130,246,0.8)','rgba(236,72,153,0.8)','rgba(20,184,166,0.8)','rgba(249,115,22,0.8)','rgba(168,85,247,0.8)'];
+        return Array.from({ length: n }, (_, i) => palette[i % palette.length]);
+    },
+
+    // ── تصدير PDF ──
+    async _ptwExportPDF() {
+        const root = document.getElementById('ptw-analytics-root');
+        if (!root) return;
+        const btn = document.getElementById('ptw-export-pdf-btn');
+        const origHtml = btn ? btn.innerHTML : '';
+        if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>'; }
+        try {
+            const loadLib = (src, check) => new Promise((res, rej) => {
+                if (check()) return res();
+                const s = document.createElement('script');
+                s.src = src; s.onload = () => res(); s.onerror = () => rej(new Error('Failed: ' + src));
+                document.head.appendChild(s);
+            });
+            await loadLib('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js', () => typeof html2canvas !== 'undefined');
+            await loadLib('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js', () => typeof window.jspdf !== 'undefined');
+
+            const filterPanel = document.getElementById('ptw-filter-panel');
+            const wasVisible  = filterPanel && filterPanel.style.display !== 'none';
+            if (wasVisible) filterPanel.style.display = 'none';
+
+            const canvas = await html2canvas(root, { scale: 1.8, useCORS: true, backgroundColor: '#f8fafc', scrollX: 0, scrollY: -window.scrollY, logging: false });
+            if (wasVisible) filterPanel.style.display = '';
+
+            const { jsPDF } = window.jspdf;
+            const pdf   = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+            const pdfW  = pdf.internal.pageSize.getWidth();
+            const pdfH  = pdf.internal.pageSize.getHeight();
+            const margin = 10, headerH = 20, footerH = 14;
+            const contentW = pdfW - margin * 2;
+            const contentAreaH = pdfH - headerH - footerH - margin * 0.5;
+            const ratio = contentW / canvas.width;
+            const pageHeightPx = contentAreaH / ratio;
+            const totalPages = Math.ceil(canvas.height / pageHeightPx);
+            const enDate = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+            const enTime = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+
+            for (let p = 0; p < totalPages; p++) {
+                if (p > 0) pdf.addPage();
+                pdf.setFillColor(30, 58, 95);
+                pdf.rect(0, 0, pdfW, headerH, 'F');
+                pdf.setFillColor(29, 78, 216);
+                pdf.rect(0, headerH - 3, pdfW, 3, 'F');
+                pdf.setTextColor(255, 255, 255);
+                pdf.setFontSize(13); pdf.setFont(undefined, 'bold');
+                pdf.text('Work Permits Analytics Report', margin, 9, { align: 'left' });
+                pdf.setFontSize(8); pdf.setFont(undefined, 'normal');
+                pdf.text('HSE Management System — Permit to Work Analysis Dashboard', margin, 15, { align: 'left' });
+                pdf.setFontSize(8.5);
+                pdf.text(`${enDate}  ${enTime}`, pdfW - margin, 9, { align: 'right' });
+                pdf.setFontSize(9); pdf.setFont(undefined, 'bold');
+                pdf.text(`Page ${p + 1} of ${totalPages}`, pdfW - margin, 15.5, { align: 'right' });
+                pdf.setTextColor(0, 0, 0);
+
+                const sliceCanvas = document.createElement('canvas');
+                const sliceH = Math.min(pageHeightPx, canvas.height - p * pageHeightPx);
+                sliceCanvas.width = canvas.width; sliceCanvas.height = sliceH;
+                sliceCanvas.getContext('2d').drawImage(canvas, 0, p * pageHeightPx, canvas.width, sliceH, 0, 0, canvas.width, sliceH);
+                pdf.addImage(sliceCanvas.toDataURL('image/jpeg', 0.92), 'JPEG', margin, headerH, contentW, sliceH * ratio);
+
+                const footerY = pdfH - footerH;
+                pdf.setDrawColor(191, 219, 254); pdf.setLineWidth(0.4);
+                pdf.line(0, footerY, pdfW, footerY);
+                pdf.setFillColor(239, 246, 255);
+                pdf.rect(0, footerY, pdfW, footerH, 'F');
+                pdf.setFontSize(7.5); pdf.setTextColor(29, 78, 216); pdf.setFont(undefined, 'bold');
+                pdf.text('HSE Management System', margin, footerY + 5, { align: 'left' });
+                pdf.setFont(undefined, 'normal'); pdf.setFontSize(6.5); pdf.setTextColor(100, 116, 139);
+                pdf.text('Work Permits Analysis Report — Confidential', margin, footerY + 10, { align: 'left' });
+                pdf.setFontSize(8); pdf.setTextColor(29, 78, 216); pdf.setFont(undefined, 'bold');
+                pdf.text(`${p + 1} / ${totalPages}`, pdfW / 2, footerY + 7.5, { align: 'center' });
+                pdf.setFont(undefined, 'normal'); pdf.setFontSize(7); pdf.setTextColor(100, 116, 139);
+                pdf.text(enDate, pdfW - margin, footerY + 5, { align: 'right' });
+                pdf.text(enTime, pdfW - margin, footerY + 10, { align: 'right' });
+            }
+            pdf.save(`تقرير-تحليل-تصاريح-العمل-${new Date().toISOString().slice(0, 10)}.pdf`);
+        } catch (err) {
+            console.error('PTW PDF export error:', err);
+        } finally {
+            if (btn) { btn.disabled = false; btn.innerHTML = origHtml; }
+        }
     },
 
     /**
