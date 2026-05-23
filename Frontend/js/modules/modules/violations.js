@@ -2122,7 +2122,7 @@ const Violations = {
         // ── 1. جمع البيانات وتطبيع السجلات ──
         const period = parseInt(this._violPeriod || '0', 10);
         const rawAll = AppState.appData.violations || [];
-        const allViol = rawAll.map(r => this.normalizeRecord(r)).filter(Boolean);
+        const allViol = rawAll.map(r => this.normalizeViolationRecord(r)).filter(Boolean);
 
         // ── 2. تصفية بالفترة الزمنية ──
         const violByPeriod = this._vFilterByPeriod(allViol, period);
