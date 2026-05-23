@@ -9180,10 +9180,11 @@ const Training = {
                 </div>
                 <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;">
                     ${[
-                        {id:'train-af-status',   icon:'fas fa-circle',           color:'#10b981', label:'الحالة'},
-                        {id:'train-af-type',     icon:'fas fa-tag',              color:'#4f46e5', label:'نوع التدريب'},
-                        {id:'train-af-trainer',  icon:'fas fa-chalkboard-teacher',color:'#f59e0b', label:'المدرب'},
-                        {id:'train-af-location', icon:'fas fa-map-marker-alt',   color:'#3b82f6', label:'الموقع'},
+                        {id:'train-af-status',   icon:'fas fa-circle',            color:'#10b981', label:'الحالة'},
+                        {id:'train-af-type',     icon:'fas fa-tag',               color:'#4f46e5', label:'نوع التدريب'},
+                        {id:'train-af-trainer',  icon:'fas fa-chalkboard-teacher', color:'#f59e0b', label:'المدرب'},
+                        {id:'train-af-factory',  icon:'fas fa-industry',           color:'#6366f1', label:'المصنع'},
+                        {id:'train-af-location', icon:'fas fa-map-marker-alt',    color:'#3b82f6', label:'الموقع'},
                     ].map(f => `
                         <div>
                             <label style="font-size:0.72rem;font-weight:700;color:#64748b;display:block;margin-bottom:5px;"><i class="${f.icon}" style="color:${f.color};margin-left:4px;"></i>${f.label}</label>
@@ -9260,8 +9261,18 @@ const Training = {
                 </div>
             </div>
 
-            <!-- ── Row 3: الموقع + المشاركون شهرياً ── -->
+            <!-- ── Row 3: المصنع + الموقع ── -->
             <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:16px;margin-bottom:16px;">
+                <div class="content-card" style="padding:0;overflow:hidden;">
+                    <div style="padding:13px 18px 10px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:8px;">
+                        <i class="fas fa-industry" style="color:#6366f1;"></i>
+                        <span style="font-weight:700;font-size:0.88rem;">حسب المصنع (أعلى 8)</span>
+                    </div>
+                    <div style="padding:12px;position:relative;height:280px;">
+                        <canvas id="train-chart-factory"></canvas>
+                        <div id="train-chart-factory-empty" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;color:#94a3b8;font-size:0.85rem;">لا توجد بيانات</div>
+                    </div>
+                </div>
                 <div class="content-card" style="padding:0;overflow:hidden;">
                     <div style="padding:13px 18px 10px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:8px;">
                         <i class="fas fa-map-marker-alt" style="color:#3b82f6;"></i>
@@ -9272,15 +9283,17 @@ const Training = {
                         <div id="train-chart-location-empty" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;color:#94a3b8;font-size:0.85rem;">لا توجد بيانات</div>
                     </div>
                 </div>
-                <div class="content-card" style="padding:0;overflow:hidden;">
-                    <div style="padding:13px 18px 10px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:8px;">
-                        <i class="fas fa-users" style="color:#ec4899;"></i>
-                        <span style="font-weight:700;font-size:0.88rem;">المشاركون شهرياً (آخر 12 شهر)</span>
-                    </div>
-                    <div style="padding:12px;position:relative;height:280px;">
-                        <canvas id="train-chart-participants"></canvas>
-                        <div id="train-chart-participants-empty" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;color:#94a3b8;font-size:0.85rem;">لا توجد بيانات</div>
-                    </div>
+            </div>
+
+            <!-- ── Row 4: المشاركون شهرياً ── -->
+            <div class="content-card" style="padding:0;overflow:hidden;margin-bottom:16px;">
+                <div style="padding:13px 18px 10px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:8px;">
+                    <i class="fas fa-users" style="color:#ec4899;"></i>
+                    <span style="font-weight:700;font-size:0.88rem;">المشاركون شهرياً (آخر 12 شهر)</span>
+                </div>
+                <div style="padding:12px;position:relative;height:260px;">
+                    <canvas id="train-chart-participants"></canvas>
+                    <div id="train-chart-participants-empty" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;color:#94a3b8;font-size:0.85rem;">لا توجد بيانات</div>
                 </div>
             </div>
 
@@ -13540,7 +13553,14 @@ const Training = {
 
         try { this.ensureData(); } catch(e) {}
         const period  = parseInt(this._trainPeriod || '0', 10);
-        const allT    = (AppState.appData?.training || []).concat(AppState.appData?.contractorTrainings || []);
+        // دمج برامج الموظفين والمقاولين مع تطبيع حقول العرض
+        const _norm = x => ({
+            ...x,
+            _locationDisplay: x.locationName || (x.location && x.factory ? (this.getPlaceName ? this.getPlaceName(x.location, x.factory) : x.location) : x.location) || 'غير محدد',
+            _factoryDisplay:  x.factoryName  || x.factory || 'غير محدد',
+            _trainer:         x.trainer || x.conductedBy || 'غير محدد',
+        });
+        const allT    = (AppState.appData?.training || []).concat(AppState.appData?.contractorTrainings || []).map(_norm);
 
         // ── تصفية بالفترة ──
         const byPeriod = this._tFilterByPeriod(allT, period);
@@ -13617,7 +13637,10 @@ const Training = {
         const topicG = this._tGroupBy(t, 'topic', 10);
         this._tDrawHBar('train-chart-topic', topicG.labels, topicG.data, 'rgba(16,185,129,0.75)');
 
-        const locG = this._tGroupBy(t, 'location', 8);
+        const factG = this._tGroupBy(t, '_factoryDisplay', 8);
+        this._tDrawHBar('train-chart-factory', factG.labels, factG.data, 'rgba(99,102,241,0.75)');
+
+        const locG = this._tGroupBy(t, '_locationDisplay', 8);
         this._tDrawHBar('train-chart-location', locG.labels, locG.data, 'rgba(59,130,246,0.75)');
 
         this._tDrawParticipants('train-chart-participants', t);
@@ -13671,11 +13694,10 @@ const Training = {
     _tGroupBy(records, field, limit = 0) {
         const map = {};
         records.forEach(x => {
-            let val;
-            if (field === '_trainer') val = x.trainer || x.conductedBy || 'غير محدد';
-            else val = String(x[field] || 'غير محدد').trim() || 'غير محدد';
+            const val = String(x[field] || 'غير محدد').trim() || 'غير محدد';
             map[val] = (map[val] || 0) + 1;
         });
+        // حذف "غير محدد" إذا كان هناك قيم أخرى
         let entries = Object.entries(map).sort((a,b) => b[1]-a[1]);
         if (limit > 0) entries = entries.slice(0, limit);
         return { labels: entries.map(e=>e[0]), data: entries.map(e=>e[1]) };
@@ -13683,7 +13705,7 @@ const Training = {
 
     // ── مساعد: ملء الفلاتر ──
     _tPopulateFilters(records) {
-        const unique = fn => [...new Set(records.map(fn).filter(Boolean))].sort();
+        const unique = fn => [...new Set(records.map(fn).filter(v => v && v !== 'غير محدد'))].sort();
         const fill = (id, vals) => {
             const el = document.getElementById(id);
             if (!el) return;
@@ -13692,8 +13714,9 @@ const Training = {
         };
         fill('train-af-status',   unique(x => String(x.status||'').trim()));
         fill('train-af-type',     unique(x => String(x.trainingType||'').trim()));
-        fill('train-af-trainer',  unique(x => (x.trainer||x.conductedBy||'').trim()));
-        fill('train-af-location', unique(x => String(x.location||'').trim()));
+        fill('train-af-trainer',  unique(x => String(x._trainer||'').trim()));
+        fill('train-af-factory',  unique(x => String(x._factoryDisplay||'').trim()));
+        fill('train-af-location', unique(x => String(x._locationDisplay||'').trim()));
     },
 
     // ── مساعد: تطبيق الفلاتر ──
@@ -13702,15 +13725,17 @@ const Training = {
         const fStatus   = get('train-af-status');
         const fType     = get('train-af-type');
         const fTrainer  = get('train-af-trainer');
+        const fFactory  = get('train-af-factory');
         const fLocation = get('train-af-location');
-        const hasAny    = [fStatus, fType, fTrainer, fLocation].some(v => v !== '');
+        const hasAny    = [fStatus, fType, fTrainer, fFactory, fLocation].some(v => v !== '');
         const badge = document.getElementById('train-filter-badge');
         if (badge) badge.style.display = hasAny ? 'inline' : 'none';
         return records.filter(x => {
-            if (fStatus   && String(x.status||'').trim()                !== fStatus)   return false;
-            if (fType     && String(x.trainingType||'').trim()          !== fType)     return false;
-            if (fTrainer  && (x.trainer||x.conductedBy||'').trim()      !== fTrainer)  return false;
-            if (fLocation && String(x.location||'').trim()              !== fLocation) return false;
+            if (fStatus   && String(x.status||'').trim()             !== fStatus)   return false;
+            if (fType     && String(x.trainingType||'').trim()       !== fType)     return false;
+            if (fTrainer  && String(x._trainer||'').trim()           !== fTrainer)  return false;
+            if (fFactory  && String(x._factoryDisplay||'').trim()    !== fFactory)  return false;
+            if (fLocation && String(x._locationDisplay||'').trim()   !== fLocation) return false;
             return true;
         });
     },
@@ -13923,8 +13948,8 @@ const Training = {
             const ratio    = contentW / canvas.width;
             const pageHeightPx = contentAreaH / ratio;
             const totalPages   = Math.ceil(canvas.height / pageHeightPx);
-            const dateStr  = new Date().toLocaleDateString('ar-SA', { year: 'numeric', month: 'long', day: 'numeric' });
-            const now      = new Date().toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit' });
+            const enDate   = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+            const enTime   = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
 
             for (let p = 0; p < totalPages; p++) {
                 if (p > 0) pdf.addPage();
@@ -13935,20 +13960,21 @@ const Training = {
                 // شريط فاتح أسفل الهيدر
                 pdf.setFillColor(79, 70, 229); // indigo-600
                 pdf.rect(0, headerH - 3, pdfW, 3, 'F');
-                // أيقونة وعنوان
+                // عنوان (English only — jsPDF لا يدعم Arabic)
                 pdf.setTextColor(255, 255, 255);
                 pdf.setFontSize(13);
                 pdf.setFont(undefined, 'bold');
                 pdf.text('Training Analytics Report', margin, 9, { align: 'left' });
                 pdf.setFontSize(8);
                 pdf.setFont(undefined, 'normal');
-                pdf.text('لوحة تحليل التدريب — نظام إدارة HSE', margin, 15, { align: 'left' });
-                // التاريخ + الصفحة (يمين)
+                pdf.text('HSE Management System — Training Analysis Dashboard', margin, 15, { align: 'left' });
+                // التاريخ + الصفحة (يمين — English date format)
+                // (enDate/enTime defined above)
                 pdf.setFontSize(8.5);
-                pdf.text(`${dateStr}  ${now}`, pdfW - margin, 9, { align: 'right' });
+                pdf.text(`${enDate}  ${enTime}`, pdfW - margin, 9, { align: 'right' });
                 pdf.setFontSize(9);
                 pdf.setFont(undefined, 'bold');
-                pdf.text(`${p + 1} / ${totalPages}`, pdfW - margin, 15.5, { align: 'right' });
+                pdf.text(`Page ${p + 1} of ${totalPages}`, pdfW - margin, 15.5, { align: 'right' });
                 pdf.setTextColor(0, 0, 0);
 
                 // ══ CONTENT ══
@@ -13964,30 +13990,30 @@ const Training = {
                 // خط فاصل
                 pdf.setDrawColor(199, 210, 254);
                 pdf.setLineWidth(0.4);
-                pdf.line(margin, footerY, pdfW - margin, footerY);
+                pdf.line(0, footerY, pdfW, footerY);
                 // خلفية فاتحة
                 pdf.setFillColor(238, 242, 255); // indigo-50
                 pdf.rect(0, footerY, pdfW, footerH, 'F');
-                // نص اليسار: اسم النظام
+                // نص اليسار
                 pdf.setFontSize(7.5);
                 pdf.setTextColor(67, 56, 202); // indigo-700
                 pdf.setFont(undefined, 'bold');
                 pdf.text('HSE Management System', margin, footerY + 5, { align: 'left' });
                 pdf.setFont(undefined, 'normal');
                 pdf.setFontSize(6.5);
-                pdf.setTextColor(100, 116, 139); // slate-500
-                pdf.text('Training Analysis Report — تقرير تحليل التدريب', margin, footerY + 10, { align: 'left' });
+                pdf.setTextColor(100, 116, 139);
+                pdf.text('Training Analysis Report — Confidential', margin, footerY + 10, { align: 'left' });
                 // رقم الصفحة (وسط)
                 pdf.setFontSize(8);
                 pdf.setTextColor(79, 70, 229);
                 pdf.setFont(undefined, 'bold');
                 pdf.text(`${p + 1} / ${totalPages}`, pdfW / 2, footerY + 7.5, { align: 'center' });
-                // التاريخ (يمين)
+                // التاريخ (يمين — English)
                 pdf.setFont(undefined, 'normal');
                 pdf.setFontSize(7);
                 pdf.setTextColor(100, 116, 139);
-                pdf.text(dateStr, pdfW - margin, footerY + 5, { align: 'right' });
-                pdf.text(now, pdfW - margin, footerY + 10, { align: 'right' });
+                pdf.text(enDate, pdfW - margin, footerY + 5, { align: 'right' });
+                pdf.text(enTime, pdfW - margin, footerY + 10, { align: 'right' });
             }
             pdf.save(`تقرير-تحليل-التدريب-${new Date().toISOString().slice(0, 10)}.pdf`);
         } catch (err) {
@@ -14038,7 +14064,7 @@ const Training = {
         const resetBtn = document.getElementById('train-filter-reset-btn');
         if (resetBtn) {
             resetBtn.addEventListener('click', () => {
-                ['train-af-status','train-af-type','train-af-trainer','train-af-location'].forEach(id => {
+                ['train-af-status','train-af-type','train-af-trainer','train-af-factory','train-af-location'].forEach(id => {
                     const el = document.getElementById(id);
                     if (el) el.value = '';
                 });
@@ -14047,7 +14073,7 @@ const Training = {
         }
 
         // قوائم الفلاتر
-        ['train-af-status','train-af-type','train-af-trainer','train-af-location'].forEach(id => {
+        ['train-af-status','train-af-type','train-af-trainer','train-af-factory','train-af-location'].forEach(id => {
             const el = document.getElementById(id);
             if (el) el.addEventListener('change', () => this.updateTrainingAnalyticsDashboard());
         });
