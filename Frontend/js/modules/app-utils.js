@@ -2956,9 +2956,9 @@ const AppState = {
     googleConfig: {
         appsScript: {
             enabled: true,
-            // ✅ v1.0.35 — تحديث إلى @109 (v1.0.33) الذي يتضمن إصلاح انزياح الوقت +61 دقيقة
-            // القديم @92 لا يحتوي على الإصلاح — لا تعدّل هذا الرابط لإصدار أقدم من @102
-            scriptUrl: 'https://script.google.com/macros/s/AKfycbwLzUsMbK4abB7n8Ft1hOcMIHMQhSGbeInuqvUmjOAJdyCmFqQzJ-4Oczhkw2OVZIQh/exec'
+            // ✅ v1.0.37 — تحديث إلى @112 الذي يتضمن updateContractorTraining handler + إصلاح انزياح +61 دقيقة
+            // النشرات قبل @112 تفتقد updateContractorTraining handler — لا تعدّل لإصدار أقدم
+            scriptUrl: 'https://script.google.com/macros/s/AKfycbxnX6Is8GOk_zHQPKhyrAokL-QHOCLgE4kZHqaTpspsnP9huAwAPI833368mfatYsiV/exec'
         },
         sheets: {
             // يُفعَّل تلقائياً عند ضبط spreadsheetId من الإعدادات المحفوظة؛ المعرف الرسمي يُفضَّل في Script Properties بالخادم
@@ -3033,15 +3033,15 @@ const AppState = {
                         const currentApps = AppState.googleConfig.appsScript || {};
                         const parsedApps = parsed.appsScript || {};
                         let parsedUrl = String(parsedApps.scriptUrl || '').trim();
-                        // ✅ إصلاح انزياح الوقت +61 دقيقة: ترقية تلقائية من نشرات قديمة (قبل @102)
-                        // النشرة @92 لا تحتوي على إصلاح getUTCHours — استبدلها بـ @109 تلقائياً
+                        // ✅ ترقية تلقائية من نشرات قديمة إلى @112 (تتضمن updateContractorTraining + إصلاح +61 دقيقة)
                         const OLD_DEPLOYMENT_URLS = [
                             'AKfycbxkqiYDwVdSUhzi-DOGZO8bBJMORw78FzLhUzRYwSfGldDqvlXerdajhd7byDeuvsP0', // @92
                             'AKfycbzmZKpLvrFm-zcaY91_a7JsW7O6sHzf7vO-sw1ujsa7FbSELMhCFFxF04_5vReLU9Xr', // @95
                             'AKfycbzzUIVg7t0RNEqL9RtmKlOZd_3yU7VDsHlFLbnMZOjantyBy62vhBTK-xn0K3AWvyme', // @97
                             'AKfycbznQux2RDY-UB56gAhrluEoXYfPt2s0CtAUQpQ8WHwna8w64cUez_QLhm4gRk8ez2Aw', // @98
+                            'AKfycbwLzUsMbK4abB7n8Ft1hOcMIHMQhSGbeInuqvUmjOAJdyCmFqQzJ-4Oczhkw2OVZIQh', // @109 — لا يحتوي updateContractorTraining
                         ];
-                        const LATEST_DEPLOYMENT_URL = 'https://script.google.com/macros/s/AKfycbwLzUsMbK4abB7n8Ft1hOcMIHMQhSGbeInuqvUmjOAJdyCmFqQzJ-4Oczhkw2OVZIQh/exec';
+                        const LATEST_DEPLOYMENT_URL = 'https://script.google.com/macros/s/AKfycbxnX6Is8GOk_zHQPKhyrAokL-QHOCLgE4kZHqaTpspsnP9huAwAPI833368mfatYsiV/exec';
                         if (parsedUrl && OLD_DEPLOYMENT_URLS.some(old => parsedUrl.includes(old))) {
                             parsedUrl = LATEST_DEPLOYMENT_URL;
                             // حفظ الرابط المُحدَّث تلقائياً
