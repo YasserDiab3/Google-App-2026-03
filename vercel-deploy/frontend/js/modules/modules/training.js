@@ -8576,14 +8576,15 @@ const Training = {
             }
 
             // ✅ 2. مزامنة مصفوفة التدريب وسجل الحضور **بشكل متزامن** قبل أي حفظ خلفي
-            // (الـ bug القديم كان يلفّ هذه الدوال في Promise.resolve().then() مما يجعلها
-            //  microtask يُنفَّذ بعد التقاط autoSave لـ snapshot من البيانات، فيصل لـ Sheets
-            //  مصفوفة attendance فارغة → تختفي السجلات بعد إعادة التحميل.)
             try { this.syncEmployeeTrainingMatrix(formData); } catch(e) { Utils.safeWarn('syncEmployeeTrainingMatrix:', e); }
-            try { this.syncAttendanceRegistry(formData); }     catch(e) { Utils.safeWarn('syncAttendanceRegistry:', e); }
+
+            // ✅ syncAttendanceRegistry يُرجع { added, updated } — نُرسل هذه فقط بدل المصفوفة كاملة
+            let attendanceChanges = { added: [], updated: [] };
+            try {
+                attendanceChanges = this.syncAttendanceRegistry(formData) || { added: [], updated: [] };
+            } catch(e) { Utils.safeWarn('syncAttendanceRegistry:', e); }
 
             // ✅ 3. تسجيل وقت الحفظ المحلي لمنع استبدال السجلات الجديدة عند جلب الخلفية
-            //    (حارس 60 ثانية مماثل لـ contractor trainings — يحمي training و trainingAttendance)
             this._trainingLocalSaveTime = Date.now();
             this._trainingAttendanceLocalSaveTime = Date.now();
 
@@ -8598,7 +8599,6 @@ const Training = {
 
             // استخدام setTimeout لضمان عدم تأخير إغلاق النموذج بسبب الحجم الكبير للبيانات
             setTimeout(() => {
-                // حفظ البيانات باستخدام window.DataManager
                 if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
                     window.DataManager.save();
                 } else {
@@ -8606,15 +8606,29 @@ const Training = {
                 }
             }, 50);
 
-            // ✅ 6. معالجة autoSave في الخلفية — الآن AppState يحتوي على السجلات الجديدة
-            //    (تمت المزامنة بشكل متزامن أعلاه قبل أن يلتقط autoSave snapshots)
+            // ✅ 6. مزامنة Google Sheets بكفاءة:
+            // — Training: ترسل البرنامج الجديد/المُحدّث فقط (سجل واحد) عبر saveToSheet (UPSERT)
+            // — TrainingAttendance: ترسل فقط السجلات المتغيّرة (added + updated) — عادة 1-20 سجل
+            //   بدلاً من إرسال المصفوفة كاملة (500+) التي تتسبب في timeout على الخادم
+            const changedAttendance = [...(attendanceChanges.added || []), ...(attendanceChanges.updated || [])];
+            const attendancePromise = (changedAttendance.length > 0 && typeof GoogleIntegration !== 'undefined' && GoogleIntegration.autoSave)
+                ? GoogleIntegration.autoSave('TrainingAttendance', changedAttendance)
+                : Promise.resolve();
+
             Promise.allSettled([
-                GoogleIntegration.autoSave('Training', AppState.appData.training),
+                GoogleIntegration.autoSave('Training', [formData]),
                 GoogleIntegration.autoSave('EmployeeTrainingMatrix', AppState.appData.employeeTrainingMatrix),
-                (typeof GoogleIntegration !== 'undefined' && GoogleIntegration.autoSave)
-                    ? GoogleIntegration.autoSave('TrainingAttendance', AppState.appData.trainingAttendance)
-                    : Promise.resolve()
-            ]).catch(error => {
+                attendancePromise
+            ]).then((results) => {
+                const labels = ['Training', 'EmployeeTrainingMatrix', 'TrainingAttendance'];
+                results.forEach((r, i) => {
+                    if (r.status === 'rejected') {
+                        Utils.safeWarn(`⚠️ فشل حفظ ${labels[i]}:`, r.reason);
+                    } else if (r.value && r.value.success === false) {
+                        Utils.safeWarn(`⚠️ فشل حفظ ${labels[i]}:`, r.value.message || r.value);
+                    }
+                });
+            }).catch(error => {
                 Utils.safeError('خطأ في معالجة المهام الخلفية:', error);
             });
         } catch (error) {
@@ -12167,25 +12181,28 @@ const Training = {
     
     /**
      * مزامنة سجل التدريب مع برنامج تدريبي
+     * ✅ يُرجع { added: [...], updated: [...] } للسجلات المتغيّرة فقط
+     *    (بدل إرسال كل سجل الحضور للـ backend → تجنّب timeout مع جداول كبيرة)
      */
     syncAttendanceRegistry(training) {
-        if (!training || !training.participants || !Array.isArray(training.participants)) return;
-        
+        const result = { added: [], updated: [] };
+        if (!training || !training.participants || !Array.isArray(training.participants)) return result;
+
         this.ensureData();
         if (!Array.isArray(AppState.appData.trainingAttendance)) {
             AppState.appData.trainingAttendance = [];
         }
-        
+
         training.participants.forEach(participant => {
             // التحقق من عدم وجود سجل مكرر
-            const existing = AppState.appData.trainingAttendance.find(r => 
-                r.trainingId === training.id && 
+            const existing = AppState.appData.trainingAttendance.find(r =>
+                r.trainingId === training.id &&
                 r.employeeCode === (participant.code || participant.employeeCode)
             );
-            
+
             const cleanedStartTime = this.cleanTime(training.startTime);
             const cleanedEndTime = this.cleanTime(training.endTime);
-            
+
             if (existing) {
                 // تحديث السجل الموجود
                 existing.date = training.startDate || training.date;
@@ -12202,6 +12219,7 @@ const Training = {
                 existing.endTime = cleanedEndTime;
                 existing.totalHours = training.hours || this.calculateTrainingHours(cleanedStartTime, cleanedEndTime);
                 existing.updatedAt = new Date().toISOString();
+                result.updated.push(existing);
             } else {
                 // إضافة سجل جديد
                 const record = {
@@ -12224,8 +12242,11 @@ const Training = {
                     updatedAt: new Date().toISOString()
                 };
                 AppState.appData.trainingAttendance.push(record);
+                result.added.push(record);
             }
         });
+
+        return result;
     },
     
     /**
