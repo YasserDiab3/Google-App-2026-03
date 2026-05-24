@@ -270,9 +270,9 @@ function addContractorTrainingToSheet(trainingData) {
         if (!trainingData) {
             return { success: false, message: 'بيانات التدريب غير موجودة' };
         }
-        
+
         const sheetName = 'ContractorTrainings';
-        
+
         // إضافة حقول تلقائية
         if (!trainingData.id) {
             trainingData.id = generateSequentialId('CTR', sheetName);
@@ -283,11 +283,92 @@ function addContractorTrainingToSheet(trainingData) {
         if (!trainingData.updatedAt) {
             trainingData.updatedAt = new Date();
         }
-        
+
         return appendToSheet(sheetName, trainingData);
     } catch (error) {
         Logger.log('Error in addContractorTrainingToSheet: ' + error.toString());
         return { success: false, message: 'حدث خطأ أثناء إضافة التدريب: ' + error.toString() };
+    }
+}
+
+/**
+ * تحديث تدريب مقاول
+ * ✅ إصلاح حرج: بدون هذه الدالة، أي تعديل على سجل تدريب مقاول كان يفشل بصمت
+ * (لأن action 'updateContractorTraining' غير موجود في ActionHandlers)، ما يجعل
+ * البيانات في الذاكرة المحلية تختلف عن Google Sheets، وعند الجلب التالي بعد
+ * نافذة الـ60 ثانية، يتم استبدال القيم الجديدة بالقيم القديمة من الشيت،
+ * فيبدو للمستخدم وكأن الوقت/البيانات تغيّرت تلقائياً.
+ */
+function updateContractorTraining(trainingId, updateData) {
+    try {
+        if (!trainingId) {
+            return { success: false, message: 'معرف التدريب غير محدد' };
+        }
+        if (!updateData || typeof updateData !== 'object') {
+            return { success: false, message: 'بيانات التحديث غير صالحة' };
+        }
+
+        const sheetName = 'ContractorTrainings';
+        const spreadsheetId = getSpreadsheetId();
+
+        // ✅ استخدام updateSingleRowInSheet لتحديث الصف بشكل مباشر بدون قراءة/كتابة كل الورقة
+        // updateSingleRowInSheet يستخدم toSheetCellValue_ الذي يحوّل حقول الوقت بصيغة UTC fraction
+        // مما يحافظ على الوقت الصحيح بعد القراءة عبر readFromSheet (الذي يستخدم getUTCHours/Minutes)
+        updateData.id = trainingId;
+        updateData.updatedAt = new Date();
+
+        const result = updateSingleRowInSheet(sheetName, trainingId, updateData, spreadsheetId);
+
+        if (result && result.success) {
+            return { success: true, message: 'تم تحديث تدريب المقاول بنجاح', data: updateData };
+        }
+
+        // ✅ احتياطي: لو فشل التحديث المباشر، نلجأ إلى saveToSheet (UPSERT)
+        const allData = readFromSheet(sheetName, spreadsheetId);
+        const idx = Array.isArray(allData) ? allData.findIndex(t => t && String(t.id) === String(trainingId)) : -1;
+
+        if (idx === -1) {
+            return { success: false, message: 'تدريب المقاول غير موجود' };
+        }
+
+        for (var key in updateData) {
+            if (updateData.hasOwnProperty(key)) {
+                allData[idx][key] = updateData[key];
+            }
+        }
+
+        return saveToSheet(sheetName, allData, spreadsheetId);
+    } catch (error) {
+        Logger.log('Error in updateContractorTraining: ' + error.toString());
+        return { success: false, message: 'حدث خطأ أثناء تحديث تدريب المقاول: ' + error.toString() };
+    }
+}
+
+/**
+ * حذف تدريب مقاول
+ */
+function deleteContractorTraining(trainingId) {
+    try {
+        if (!trainingId) {
+            return { success: false, message: 'معرف التدريب غير محدد' };
+        }
+
+        const sheetName = 'ContractorTrainings';
+        const spreadsheetId = getSpreadsheetId();
+        const data = readFromSheet(sheetName, spreadsheetId);
+
+        const filtered = Array.isArray(data)
+            ? data.filter(t => t && String(t.id) !== String(trainingId))
+            : [];
+
+        if (Array.isArray(data) && filtered.length === data.length) {
+            return { success: false, message: 'تدريب المقاول غير موجود' };
+        }
+
+        return saveToSheet(sheetName, filtered, spreadsheetId);
+    } catch (error) {
+        Logger.log('Error in deleteContractorTraining: ' + error.toString());
+        return { success: false, message: 'حدث خطأ أثناء حذف تدريب المقاول: ' + error.toString() };
     }
 }
 

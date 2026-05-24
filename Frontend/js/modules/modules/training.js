@@ -12225,9 +12225,30 @@ const Training = {
     
     /**
      * تنظيف الوقت من تنسيق ISO إلى HH:MM
+     * ✅ يدعم: HH:MM | ISO date | Google Sheets fraction (0.375 = 09:00) | Date objects
+     * ✅ آمن ضد تحويلات timezone (لا يستخدم getHours/getMinutes المحلية)
      */
     cleanTime(timeValue) {
-        if (!timeValue) return '';
+        if (timeValue === null || timeValue === undefined || timeValue === '') return '';
+
+        // ✅ معالجة Google Sheets fraction of day: 0.375 = 09:00, 0.5 = 12:00
+        // هذا يحدث عندما يُرجع الـ Backend قيمة الخلية كرقم بدل ما يكون Date object
+        // (يحدث لو الخلية مُنسّقة كرقم بدل وقت في الشيت، أو لو الإصلاح في readFromSheet غير منشور)
+        if (typeof timeValue === 'number' && isFinite(timeValue) && timeValue >= 0 && timeValue < 1) {
+            const totalMinutes = Math.round(timeValue * 24 * 60);
+            const hh = Math.floor(totalMinutes / 60) % 24;
+            const mm = totalMinutes % 60;
+            if (hh >= 0 && hh < 24 && mm >= 0 && mm < 60) {
+                return `${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}`;
+            }
+        }
+
+        // ✅ معالجة Date objects بصورة آمنة باستخدام UTC (لتفادي LMT 1899)
+        if (timeValue instanceof Date && !isNaN(timeValue.getTime())) {
+            const hh = timeValue.getUTCHours();
+            const mm = timeValue.getUTCMinutes();
+            return `${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}`;
+        }
 
         // تحويل إلى سلسلة نصية
         const timeStr = String(timeValue).trim();
@@ -12246,6 +12267,21 @@ const Training = {
             }
         }
 
+        // ✅ معالجة fraction كنص: "0.375" → 09:00 (وليس 00:37!)
+        // هذا يمنع المطابقة الخاطئة في الـ alternative regex بالأسفل
+        if (/^-?0?\.\d+$/.test(timeStr)) {
+            const num = parseFloat(timeStr);
+            if (isFinite(num) && num >= 0 && num < 1) {
+                const totalMinutes = Math.round(num * 24 * 60);
+                const hh = Math.floor(totalMinutes / 60) % 24;
+                const mm = totalMinutes % 60;
+                if (hh >= 0 && hh < 24 && mm >= 0 && mm < 60) {
+                    return `${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}`;
+                }
+            }
+            return '';
+        }
+
         // إذا كان بالفعل بتنسيق HH:MM أو H:MM
         const timeFormatMatch = timeStr.match(/^(\d{1,2}):(\d{2})(?::\d{2})?$/);
         if (timeFormatMatch) {
@@ -12256,8 +12292,8 @@ const Training = {
             }
         }
 
-        // محاولة استخراج الوقت من أي تنسيق آخر
-        const alternativeMatch = timeStr.match(/(\d{1,2})[:.](\d{2})/);
+        // ✅ محاولة استخراج الوقت من أي تنسيق آخر — anchored لمنع مطابقة الأرقام العشرية
+        const alternativeMatch = timeStr.match(/^(\d{1,2})[:.](\d{2})(?::\d{2})?$/);
         if (alternativeMatch) {
             const hours = parseInt(alternativeMatch[1], 10);
             const minutes = parseInt(alternativeMatch[2], 10);

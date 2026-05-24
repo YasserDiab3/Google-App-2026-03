@@ -974,6 +974,30 @@ var ActionHandlers = {
         })();
         return result;
     },
+    'updateContractorTraining': function(payload, postData, action, actorUserData, spreadsheetId) {
+        var result = { success: false, message: '' };
+        (function() {
+
+                    // ✅ يدعم استدعاء الواجهة: { trainingId, updateData } أو الكائن المباشر
+                    var trainingId = (payload && (payload.trainingId || payload.id)) || '';
+                    var updateData = (payload && payload.updateData) ? payload.updateData : payload;
+                    result = updateContractorTraining(trainingId, updateData);
+                    return;
+
+        })();
+        return result;
+    },
+    'deleteContractorTraining': function(payload, postData, action, actorUserData, spreadsheetId) {
+        var result = { success: false, message: '' };
+        (function() {
+
+                    var trainingId = (payload && (payload.trainingId || payload.id)) || '';
+                    result = deleteContractorTraining(trainingId);
+                    return;
+
+        })();
+        return result;
+    },
     'addAnnualTrainingPlan': function(payload, postData, action, actorUserData, spreadsheetId) {
         var result = { success: false, message: '' };
         (function() {
