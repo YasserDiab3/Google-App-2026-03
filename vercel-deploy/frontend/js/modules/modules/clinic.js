@@ -5596,13 +5596,29 @@ const Clinic = {
         this._cCompare('clinic-chart-compare', allVisits, allSL, allInj);
 
         // ── 8. جدول أكثر المراجعين ──
+        // ✅ إصلاح: زيارات المقاولين تأتي من جدول ClinicContractorVisits بحقول مختلفة
+        // (contractorWorkerName, contractorName, externalName) — كان كل المقاولين يسقطون
+        // تحت "غير محدد" ويُجمَّعون كشخص واحد بمئات الزيارات
         const visitsByPerson = {};
         filteredVisits.forEach(v => {
-            const name = String(v.employeeName||v.personName||v.name||'').trim()||'غير محدد';
+            // ✅ ترتيب الأولوية: اسم العامل المقاول > اسم الموظف > اسم الخارجي > اسم الشركة
+            // (نتجنّب استخدام اسم الشركة كمفتاح تجميع لأنه يكرر مرات كثيرة لعمال مختلفين)
+            const rawName = v.contractorWorkerName || v.employeeName || v.externalName || v.personName || v.name || '';
+            const trimmedName = String(rawName).trim();
+            // ✅ لو ما زال فاضي، نستخدم اسم الشركة كملاذ أخير حتى لا نخلط جميع المقاولين
+            const companyName = String(v.contractorName || '').trim();
+            const name = trimmedName || (companyName ? companyName + ' (بدون اسم عامل)' : 'غير محدد');
+
             if (!visitsByPerson[name]) visitsByPerson[name] = { count:0, dept:'', loc:'' };
             visitsByPerson[name].count++;
-            if (!visitsByPerson[name].dept) visitsByPerson[name].dept = v.employeeDepartment||v.department||'—';
-            if (!visitsByPerson[name].loc)  visitsByPerson[name].loc  = v.employeeLocation||v.workArea||'—';
+            // ✅ القسم: للموظف employeeDepartment، للمقاول contractorName (الشركة) أو contractorPosition، fallback department
+            if (!visitsByPerson[name].dept) {
+                visitsByPerson[name].dept = v.employeeDepartment || v.department || v.contractorName || v.contractorPosition || '—';
+            }
+            // ✅ الموقع: employeeLocation للموظفين, workArea للمقاولين, factoryName كاحتياط
+            if (!visitsByPerson[name].loc) {
+                visitsByPerson[name].loc = v.employeeLocation || v.workArea || v.factoryName || v.factory || '—';
+            }
         });
         const topVisitors = Object.entries(visitsByPerson)
             .sort((a,b)=>b[1].count-a[1].count).slice(0,15);
