@@ -5423,6 +5423,21 @@ const Clinic = {
                 </div>
             </div>
 
+            <!-- ══ أكثر المقاولين تردداً على العيادة (أعلى 8) ══ -->
+            <div class="content-card" style="padding:0;overflow:hidden;margin-bottom:16px;">
+                <div style="padding:13px 18px 10px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;justify-content:space-between;gap:8px;">
+                    <div style="display:flex;align-items:center;gap:8px;">
+                        <i class="fas fa-hard-hat" style="color:#0891b2;"></i>
+                        <span style="font-weight:700;font-size:0.88rem;">أكثر المقاولين تردداً على العيادة (أعلى 8)</span>
+                    </div>
+                    <span id="clinic-chart-contractor-count" style="background:#ecfeff;color:#0e7490;padding:3px 10px;border-radius:20px;font-size:0.75rem;font-weight:700;"></span>
+                </div>
+                <div style="padding:12px;position:relative;height:300px;">
+                    <canvas id="clinic-chart-contractor"></canvas>
+                    <div id="clinic-chart-contractor-empty" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;color:#94a3b8;font-size:0.85rem;">لا توجد بيانات مقاولين</div>
+                </div>
+            </div>
+
             <!-- ══ اتجاه الإجازات والإصابات (12 شهر) ══ -->
             <div class="content-card" style="padding:0;overflow:hidden;margin-bottom:16px;">
                 <div style="padding:13px 18px 10px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:8px;">
@@ -5580,6 +5595,27 @@ const Clinic = {
         // الإدارة (HBar)
         const deptMap = this._cGroupBy(filteredVisits, v=>v.employeeDepartment||v.department||'غير محدد', 8);
         this._cHBar('clinic-chart-dept', deptMap.labels, deptMap.data, 'rgba(99,102,241,0.75)');
+
+        // ✅ أكثر المقاولين تردداً (HBar) — فقط زيارات المقاولين/الخارجي
+        // نأخذ الزيارات التي لها contractorName/externalName (من ClinicContractorVisits)
+        const contractorVisits = filteredVisits.filter(v => {
+            const cName = String(v.contractorName || '').trim();
+            const eName = String(v.externalName || '').trim();
+            const pType = String(v.personType || '').trim().toLowerCase();
+            return cName || eName || pType === 'contractor' || pType === 'external';
+        });
+        const contractorMap = this._cGroupBy(
+            contractorVisits,
+            v => String(v.contractorName || v.externalName || '').trim() || 'غير محدد',
+            8
+        );
+        const contractorCountEl = document.getElementById('clinic-chart-contractor-count');
+        if (contractorCountEl) {
+            contractorCountEl.textContent = contractorVisits.length > 0
+                ? `${contractorVisits.length} زيارة • ${contractorMap.labels.length} مقاول`
+                : '';
+        }
+        this._cHBar('clinic-chart-contractor', contractorMap.labels, contractorMap.data, 'rgba(8,145,178,0.75)');
 
         // الموقع (HBar)
         const locMap = this._cGroupBy(filteredVisits, v=>v.employeeLocation||v.workArea||'غير محدد', 8);
