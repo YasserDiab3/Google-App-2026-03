@@ -1840,16 +1840,20 @@ function updateMedication(medicationId, updateData) {
         if (!medicationId) {
             return { success: false, message: 'معرف الدواء غير محدد' };
         }
-        
+
         const sheetName = 'Medications';
         const spreadsheetId = getSpreadsheetId();
-        const data = readFromSheet(sheetName, spreadsheetId);
-        const medicationIndex = data.findIndex(m => m.id === medicationId);
-        
-        if (medicationIndex === -1) {
+
+        // ✅ إصلاح race condition: لو تم استدعاء updateMedication بالتوازي لـ N دواء،
+        // الكود القديم كان يفعل readFromSheet (سنابشوت) → modify → saveToSheet (UPSERT الكامل)،
+        // فيخرّب كل نداء سنابشوت الآخر ويُبقي فقط تعديلات آخر نداء يكتب.
+        // الحل: قراءة سجل واحد فقط للحقول الافتراضية، ثم تحديث صف واحد بـ updateSingleRowInSheet
+        // الذي يكتب الخلايا المُتغيّرة فقط بصف محدد بـ id (atomic per-row).
+        const existing = getMedicationById_(medicationId, spreadsheetId);
+        if (!existing) {
             return { success: false, message: 'الدواء غير موجود' };
         }
-        
+
         updateData.updatedAt = new Date();
 
         // ✅ تأكيد أن الحقول الرقمية تُحفظ كأرقام
@@ -1881,16 +1885,13 @@ function updateMedication(medicationId, updateData) {
         if (updateData.createdBy && typeof updateData.createdBy === 'object') {
             updateData.createdBy = (updateData.createdBy.name || updateData.createdBy.email || '').toString();
         }
-        // ✅ إضافة updatedBy (تخزين كنص فقط)
         if (updateData.updatedBy && typeof updateData.updatedBy === 'object') {
             updateData.updatedBy = (updateData.updatedBy.name || updateData.updatedBy.email || '').toString();
         }
         if (!updateData.updatedBy) {
-            // إذا لم يتم تمرير updatedBy، نستخدم createdBy من السجل الحالي أو القيمة الافتراضية
-            const existing = data[medicationIndex];
             updateData.updatedBy = existing?.createdBy || existing?.updatedBy || 'النظام';
         }
-        
+
         // إعادة حساب الأيام المتبقية إذا تم تحديث تاريخ الانتهاء
         if (updateData.expiryDate) {
             const expiryDate = new Date(updateData.expiryDate);
@@ -1898,30 +1899,37 @@ function updateMedication(medicationId, updateData) {
             const daysRemaining = Math.ceil((expiryDate - now) / (1000 * 60 * 60 * 24));
             updateData.daysRemaining = daysRemaining;
 
-            // حساب الرصيد المتبقي
-            const remainingQuantity = parseFloat(updateData.remainingQuantity ?? updateData.quantityAdded ?? updateData.quantity ?? data[medicationIndex].remainingQuantity ?? data[medicationIndex].quantity ?? 0);
+            const remainingQuantity = parseFloat(updateData.remainingQuantity ?? updateData.quantityAdded ?? updateData.quantity ?? existing.remainingQuantity ?? existing.quantity ?? 0);
             const hasStock = remainingQuantity > 0;
 
             if (daysRemaining < 0) {
                 updateData.status = 'منتهي';
             } else if (daysRemaining <= 30) {
-                // ✅ مهم: عرض "قريب الانتهاء" فقط إذا كان هناك رصيد متبقي
                 updateData.status = hasStock ? 'قريب الانتهاء' : 'ساري';
             } else {
                 updateData.status = updateData.status || 'ساري';
             }
         }
-        
-        for (var key in updateData) {
-            if (updateData.hasOwnProperty(key)) {
-                data[medicationIndex][key] = updateData[key];
-            }
-        }
-        
-        return saveToSheet(sheetName, data, spreadsheetId);
+
+        // ✅ تحديث atomic لصف واحد فقط — يمنع race condition بين نداءات updateMedication المتوازية
+        return updateSingleRowInSheet(sheetName, medicationId, updateData, spreadsheetId);
     } catch (error) {
         Logger.log('Error updating medication: ' + error.toString());
         return { success: false, message: 'حدث خطأ أثناء تحديث الدواء: ' + error.toString() };
+    }
+}
+
+/**
+ * Helper: اقرأ سجل دواء واحد بمعرّفه (لتفادي قراءة كامل الجدول)
+ */
+function getMedicationById_(medicationId, spreadsheetId) {
+    try {
+        const data = readFromSheet('Medications', spreadsheetId);
+        if (!Array.isArray(data)) return null;
+        return data.find(m => m && String(m.id) === String(medicationId)) || null;
+    } catch (e) {
+        Logger.log('getMedicationById_ error: ' + e.toString());
+        return null;
     }
 }
 
