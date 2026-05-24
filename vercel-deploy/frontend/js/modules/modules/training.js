@@ -2913,18 +2913,38 @@ const Training = {
             return;
         }
 
+        // ✅ تنسيق محسّن للجدول لمنع التداخل وتحسين القراءة
         container.innerHTML = `
-            <div class="table-wrapper" style="overflow-x: auto;">
-                <table class="data-table table-header-purple">
+            <style id="training-list-table-style">
+                #training-table-container .data-table { table-layout: auto; }
+                #training-table-container .data-table tbody tr { transition: background-color .15s ease; }
+                #training-table-container .data-table tbody tr:nth-child(even) { background: #fafbfc; }
+                #training-table-container .data-table tbody tr:hover { background: #eef2ff !important; }
+                #training-table-container .data-table td {
+                    vertical-align: middle;
+                    padding: 14px 16px;
+                    line-height: 1.5;
+                    border-bottom: 1px solid #e5e7eb;
+                }
+                #training-table-container .data-table th { padding: 14px 16px; vertical-align: middle; }
+                #training-table-container .training-name-cell { min-width: 220px; max-width: 320px; word-break: break-word; }
+                #training-table-container .training-actions-cell { white-space: nowrap; min-width: 200px; }
+                #training-table-container .training-actions-cell .flex { flex-wrap: nowrap; gap: 6px; }
+                #training-table-container .training-actions-cell .btn-icon { width: 32px; height: 32px; padding: 0; flex-shrink: 0; }
+                #training-table-container .training-text-cell { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 220px; }
+                #training-table-container .data-table .badge { white-space: nowrap; display: inline-block; }
+            </style>
+            <div class="table-wrapper" style="overflow-x: auto; border-radius: 12px; border: 1px solid #e5e7eb; background: #fff;">
+                <table class="data-table table-header-purple" style="margin-bottom: 0;">
                     <thead>
                         <tr>
-                            <th>اسم البرنامج</th>
-                            <th>نوع التدريب</th>
-                            <th>المدرب</th>
-                            <th>تاريخ البدء</th>
-                            <th>عدد المشاركين</th>
-                            <th>الحالة</th>
-                            <th>الإجراءات</th>
+                            <th style="min-width: 220px;">اسم البرنامج</th>
+                            <th style="min-width: 110px;">نوع التدريب</th>
+                            <th style="min-width: 140px;">المدرب</th>
+                            <th style="min-width: 120px;">تاريخ البدء</th>
+                            <th style="min-width: 110px;text-align:center;">عدد المشاركين</th>
+                            <th style="min-width: 120px;">الحالة</th>
+                            <th style="min-width: 200px;text-align:center;">الإجراءات</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -2945,50 +2965,43 @@ const Training = {
             const trainingTypeLabel = Utils.escapeHTML(item.trainingType || 'داخلي');
             const trainingTypeBadge = item.trainingType === 'خارجي' ? 'badge-warning' : 'badge-info';
             const displayStatus = statusText === 'قيد التنيذ' ? 'قيد التنفيذ' : (statusText || '-');
-            
-            // الحصول على اسم المكان بدلاً من المعرف
+
             let locationDisplay = '';
             if (item.location) {
                 if (item.locationName) {
-                    // إذا كان locationName موجوداً، استخدمه مباشرة
                     locationDisplay = item.locationName;
                 } else {
-                    // حاول الحصول على اسم المكان من المعرف
                     locationDisplay = this.getPlaceName(item.location, item.factory);
                 }
             }
 
             return `
                                 <tr>
-                                    <td>
-                                        <div class="font-semibold text-gray-900">${Utils.escapeHTML(item.name || '')}</div>
-                                        ${locationDisplay ? `<div class="text-xs text-gray-500 mt-1"><i class="fas fa-map-marker-alt ml-1"></i>${Utils.escapeHTML(locationDisplay)}</div>` : ''}
+                                    <td class="training-name-cell">
+                                        <div class="font-semibold text-gray-900" style="line-height: 1.4;">${Utils.escapeHTML(item.name || '')}</div>
+                                        ${locationDisplay ? `<div class="text-xs text-gray-500" style="margin-top: 4px; line-height: 1.3;"><i class="fas fa-map-marker-alt ml-1"></i>${Utils.escapeHTML(locationDisplay)}</div>` : ''}
                                     </td>
                                     <td><span class="badge ${trainingTypeBadge}">${trainingTypeLabel}</span></td>
-                                    <td>${Utils.escapeHTML(item.trainer || '-')}</td>
-                                    <td>${startDateDisplay}</td>
-                                    <td><span class="badge badge-info">${participantsCount}</span></td>
-                                    <td>
-                                        <span class="badge badge-${badgeClass}">
-                                            ${Utils.escapeHTML(displayStatus)}
-                                        </span>
-                                    </td>
-                                    <td>
-                                        <div class="flex items-center gap-2">
+                                    <td class="training-text-cell" title="${Utils.escapeHTML(item.trainer || '')}">${Utils.escapeHTML(item.trainer || '-')}</td>
+                                    <td style="white-space: nowrap;">${startDateDisplay}</td>
+                                    <td style="text-align: center;"><span class="badge badge-info">${participantsCount}</span></td>
+                                    <td><span class="badge badge-${badgeClass}">${Utils.escapeHTML(displayStatus)}</span></td>
+                                    <td class="training-actions-cell">
+                                        <div class="flex items-center" style="justify-content: center;">
                                             <button onclick="Training.viewTraining('${item.id}')" class="btn-icon btn-icon-info" title="عرض التفاصيل">
-                                                <i class="fas fa-eye" style="font-size: 14px;"></i>
+                                                <i class="fas fa-eye" style="font-size: 13px;"></i>
                                             </button>
                                             <button onclick="Training.editTraining('${item.id}')" class="btn-icon btn-icon-primary" title="تعديل">
-                                                <i class="fas fa-edit" style="font-size: 14px;"></i>
+                                                <i class="fas fa-edit" style="font-size: 13px;"></i>
                                             </button>
                                             <button onclick="Training.printTraining('${item.id}')" class="btn-icon btn-icon-secondary" title="طباعة">
-                                                <i class="fas fa-print" style="font-size: 14px;"></i>
+                                                <i class="fas fa-print" style="font-size: 13px;"></i>
                                             </button>
                                             <button onclick="Training.exportTraining('${item.id}')" class="btn-icon btn-icon-success" title="تصدير">
-                                                <i class="fas fa-file-export" style="font-size: 14px;"></i>
+                                                <i class="fas fa-file-export" style="font-size: 13px;"></i>
                                             </button>
                                             <button onclick="Training.deleteTraining('${item.id}')" class="btn-icon btn-icon-danger" title="حذف">
-                                                <i class="fas fa-trash" style="font-size: 14px;"></i>
+                                                <i class="fas fa-trash" style="font-size: 13px;"></i>
                                             </button>
                                         </div>
                                     </td>
