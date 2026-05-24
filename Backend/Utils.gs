@@ -3191,11 +3191,25 @@ function readFromSheet(sheetName, spreadsheetId = null, skipSecurityFilter = fal
                                 if (shouldPreserveSheetDateTimeAsText_(sheetName, cleanHeader)) {
                                     processedValue = normalizeSheetDateTimeText_(processedValue, sheetTz);
                                 } else if (timeOnlyFields.includes(cleanHeader)) {
-                                    // ✅ حقول الوقت كـ Date object (لسجلات قديمة قبل تطبيق apostrophe text):
-                                    // نستخدم UTC لتجنب LMT 1899. السجلات الجديدة تُخزَّن كنص فلن تدخل هنا.
-                                    const utcH = String(processedValue.getUTCHours()).padStart(2, '0');
-                                    const utcM = String(processedValue.getUTCMinutes()).padStart(2, '0');
-                                    processedValue = utcH + ':' + utcM;
+                                    // ✅ حقول الوقت كـ Date object (للسجلات القديمة المخزَّنة كـ fraction):
+                                    //
+                                    // المشكلة: Google Sheets يخزّن time-only fraction بناءً على timezone الجدول.
+                                    // إذا الجدول في UTC+3 ودخلت "09:00"، Sheets يخزّن fraction تعني "09:00 محلي"
+                                    // والـ Date.UTC المُرجَع يكون 05:53 (بسبب LMT 1899 للمنطقة الزمنية).
+                                    //
+                                    // ✗ استخدام getUTCHours يعطي "05:53" — خطأ! المستخدم لم يُدخل ذلك.
+                                    // ✓ استخدام Utilities.formatDate(date, sheetTz, "HH:mm") يستعيد الوقت المحلي
+                                    //   الأصلي لأن IANA tz rules تُطبَّق بشكل متماثل في الكتابة والقراءة (LMT يلغي LMT).
+                                    //
+                                    // السجلات الجديدة تُخزَّن كنص apostrophe ('09:00) فلا تدخل هذا الفرع أصلاً.
+                                    try {
+                                        processedValue = Utilities.formatDate(processedValue, sheetTz, "HH:mm");
+                                    } catch (eFmt) {
+                                        // Fallback: استخدم UTC إذا فشل formatDate لأي سبب
+                                        const utcH = String(processedValue.getUTCHours()).padStart(2, '0');
+                                        const utcM = String(processedValue.getUTCMinutes()).padStart(2, '0');
+                                        processedValue = utcH + ':' + utcM;
+                                    }
                                 } else if (timeFields.includes(cleanHeader)) {
                                     // تحويل إلى ISO string كامل مع الوقت
                                     processedValue = processedValue.toISOString();
