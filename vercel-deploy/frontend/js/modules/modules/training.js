@@ -12251,8 +12251,14 @@ const Training = {
         }
 
         // تحويل إلى سلسلة نصية
-        const timeStr = String(timeValue).trim();
+        let timeStr = String(timeValue).trim();
         if (!timeStr) return '';
+
+        // ✅ إزالة apostrophe بادئ (لو رجع الباك إند نصاً مكتوباً بسابقة ' لمنع تفسير Sheets الزمني)
+        if (timeStr.charAt(0) === "'") {
+            timeStr = timeStr.slice(1).trim();
+            if (!timeStr) return '';
+        }
 
         // ✅ إصلاح: إذا كان ISO date (تحتوي على T) — نستخرج الوقت بالـ regex مباشرة
         // هذا أقوى وأصح من Date.getUTCHours الذي يعطي +1 دقيقة بسبب milliseconds مخزنة
