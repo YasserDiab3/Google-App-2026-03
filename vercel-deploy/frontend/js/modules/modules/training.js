@@ -646,13 +646,17 @@ const Training = {
                 : null;
 
             if (bundle) {
-                if (Array.isArray(bundle.training)) {
+                // ✅ حارس: لا نستبدل برامج التدريب المحلية الحديثة بنتيجة جلب قديمة (نافذة 60 ثانية)
+                if (Array.isArray(bundle.training) && (Date.now() - (this._trainingLocalSaveTime || 0)) > 60000) {
                     AppState.appData.training = bundle.training;
                     Utils.safeLog(`✅ تم تحميل ${bundle.training.length} برنامج تدريبي (مجمّع)`);
                 }
                 if (Array.isArray(bundle.trainingSessions)) AppState.appData.trainingSessions = bundle.trainingSessions;
                 if (Array.isArray(bundle.trainingCertificates)) AppState.appData.trainingCertificates = bundle.trainingCertificates;
-                if (Array.isArray(bundle.trainingAttendance)) AppState.appData.trainingAttendance = bundle.trainingAttendance;
+                // ✅ حارس: لا نستبدل سجل الحضور المحلي الحديث بنتيجة جلب قديمة (نافذة 60 ثانية)
+                if (Array.isArray(bundle.trainingAttendance) && (Date.now() - (this._trainingAttendanceLocalSaveTime || 0)) > 60000) {
+                    AppState.appData.trainingAttendance = bundle.trainingAttendance;
+                }
                 // حارس: لا نستبدل بيانات المقاولين المحلية الحديثة بنتيجة جلب قديمة (نافذة 60 ثانية)
                 if (Array.isArray(bundle.contractorTrainings) && (Date.now() - (this._contractorTrainingsLocalSaveTime || 0)) > 60000) {
                     AppState.appData.contractorTrainings = bundle.contractorTrainings;
@@ -680,27 +684,31 @@ const Training = {
 
             // أولوية التحميل حسب التبويب النشط لتقليل التأخير المرئي.
             const active = this._currentActiveTab || 'programs';
+            // ✅ helpers: حراس الحفظ المحلي (60 ثانية) لمنع استبدال السجلات الجديدة بنتيجة جلب قديمة
+            const trainingGuardOk = () => (Date.now() - (this._trainingLocalSaveTime || 0)) > 60000;
+            const attendanceGuardOk = () => (Date.now() - (this._trainingAttendanceLocalSaveTime || 0)) > 60000;
+            const contractorGuardOk = () => (Date.now() - (this._contractorTrainingsLocalSaveTime || 0)) > 60000;
+
             if (active === 'contractors') {
                 const contractorData = await runAction('getAllContractorTrainings', 'تدريبات المقاولين');
-                // حارس: لا نستبدل بيانات محفوظة محلياً مؤخراً بنتيجة جلب سابقة (نافذة 60 ثانية)
-                if (contractorData && (Date.now() - (this._contractorTrainingsLocalSaveTime || 0)) > 60000) {
+                if (contractorData && contractorGuardOk()) {
                     AppState.appData.contractorTrainings = contractorData;
                 }
                 persistAndRefreshUi();
-                runAction('getAllTrainings', 'برامج التدريب').then((data) => { if (data) { AppState.appData.training = data; this._markAllTabsDirty(); } });
-                runAction('getAllTrainingAttendance', 'سجل الحضور').then((data) => { if (data) { AppState.appData.trainingAttendance = data; this._markAllTabsDirty(); } });
+                runAction('getAllTrainings', 'برامج التدريب').then((data) => { if (data && trainingGuardOk()) { AppState.appData.training = data; this._markAllTabsDirty(); } });
+                runAction('getAllTrainingAttendance', 'سجل الحضور').then((data) => { if (data && attendanceGuardOk()) { AppState.appData.trainingAttendance = data; this._markAllTabsDirty(); } });
                 runAction('getAllTrainingSessions', 'جلسات التدريب').then((data) => { if (data) { AppState.appData.trainingSessions = data; this._markAllTabsDirty(); } });
                 runAction('getAllTrainingCertificates', 'الشهادات').then((data) => { if (data) { AppState.appData.trainingCertificates = data; this._markAllTabsDirty(); } });
                 return;
             }
             if (active === 'attendance') {
                 const attendanceData = await runAction('getAllTrainingAttendance', 'سجل الحضور');
-                if (attendanceData) AppState.appData.trainingAttendance = attendanceData;
+                if (attendanceData && attendanceGuardOk()) AppState.appData.trainingAttendance = attendanceData;
                 const trainingData = await runAction('getAllTrainings', 'برامج التدريب');
-                if (trainingData) AppState.appData.training = trainingData;
+                if (trainingData && trainingGuardOk()) AppState.appData.training = trainingData;
                 persistAndRefreshUi();
                 runAction('getAllContractorTrainings', 'تدريبات المقاولين').then((data) => {
-                    if (data && (Date.now() - (this._contractorTrainingsLocalSaveTime || 0)) > 60000) {
+                    if (data && contractorGuardOk()) {
                         AppState.appData.contractorTrainings = data; this._markAllTabsDirty();
                     }
                 });
@@ -711,16 +719,16 @@ const Training = {
 
             // باقي الحالات (programs/analysis): ابدأ ببرامج التدريب ثم أكمل بقية البيانات.
             const trainingData = await runAction('getAllTrainings', 'برامج التدريب');
-            if (trainingData) {
+            if (trainingData && trainingGuardOk()) {
                 AppState.appData.training = trainingData;
                 Utils.safeLog(`✅ تم تحميل ${trainingData.length} برنامج تدريبي`);
             }
             persistAndRefreshUi();
             runAction('getAllTrainingSessions', 'جلسات التدريب').then((data) => { if (data) { AppState.appData.trainingSessions = data; this._markAllTabsDirty(); } });
             runAction('getAllTrainingCertificates', 'الشهادات').then((data) => { if (data) { AppState.appData.trainingCertificates = data; this._markAllTabsDirty(); } });
-            runAction('getAllTrainingAttendance', 'سجل الحضور').then((data) => { if (data) { AppState.appData.trainingAttendance = data; this._markAllTabsDirty(); } });
+            runAction('getAllTrainingAttendance', 'سجل الحضور').then((data) => { if (data && attendanceGuardOk()) { AppState.appData.trainingAttendance = data; this._markAllTabsDirty(); } });
             runAction('getAllContractorTrainings', 'تدريبات المقاولين').then((data) => {
-                if (data && (Date.now() - (this._contractorTrainingsLocalSaveTime || 0)) > 60000) {
+                if (data && contractorGuardOk()) {
                     AppState.appData.contractorTrainings = data; this._markAllTabsDirty();
                 }
             });
@@ -8567,15 +8575,27 @@ const Training = {
                 Notification.success('تم إضافة البرنامج التدريبي بنجاح');
             }
 
-            // 2. إغلاق النموذج فوراً بعد الحفظ في الذاكرة (الأولوية لسرعة استجابة الواجهة)
+            // ✅ 2. مزامنة مصفوفة التدريب وسجل الحضور **بشكل متزامن** قبل أي حفظ خلفي
+            // (الـ bug القديم كان يلفّ هذه الدوال في Promise.resolve().then() مما يجعلها
+            //  microtask يُنفَّذ بعد التقاط autoSave لـ snapshot من البيانات، فيصل لـ Sheets
+            //  مصفوفة attendance فارغة → تختفي السجلات بعد إعادة التحميل.)
+            try { this.syncEmployeeTrainingMatrix(formData); } catch(e) { Utils.safeWarn('syncEmployeeTrainingMatrix:', e); }
+            try { this.syncAttendanceRegistry(formData); }     catch(e) { Utils.safeWarn('syncAttendanceRegistry:', e); }
+
+            // ✅ 3. تسجيل وقت الحفظ المحلي لمنع استبدال السجلات الجديدة عند جلب الخلفية
+            //    (حارس 60 ثانية مماثل لـ contractor trainings — يحمي training و trainingAttendance)
+            this._trainingLocalSaveTime = Date.now();
+            this._trainingAttendanceLocalSaveTime = Date.now();
+
+            // 4. إغلاق النموذج فوراً بعد الحفظ في الذاكرة (الأولوية لسرعة استجابة الواجهة)
             this.showList();
-            
-            // 3. استعادة الزر بعد النجاح
+
+            // 5. استعادة الزر بعد النجاح
             if (submitBtn) {
                 submitBtn.disabled = false;
                 submitBtn.innerHTML = originalText;
             }
-            
+
             // استخدام setTimeout لضمان عدم تأخير إغلاق النموذج بسبب الحجم الكبير للبيانات
             setTimeout(() => {
                 // حفظ البيانات باستخدام window.DataManager
@@ -8586,16 +8606,11 @@ const Training = {
                 }
             }, 50);
 
-            // 4. معالجة المهام الخلفية في الخلفية
+            // ✅ 6. معالجة autoSave في الخلفية — الآن AppState يحتوي على السجلات الجديدة
+            //    (تمت المزامنة بشكل متزامن أعلاه قبل أن يلتقط autoSave snapshots)
             Promise.allSettled([
-                // مزامنة مصفوفة التدريب
-                Promise.resolve().then(() => this.syncEmployeeTrainingMatrix(formData)),
-                // مزامنة سجل التدريب للموظفين
-                Promise.resolve().then(() => this.syncAttendanceRegistry(formData)),
-                // حفظ في Google Sheets
                 GoogleIntegration.autoSave('Training', AppState.appData.training),
                 GoogleIntegration.autoSave('EmployeeTrainingMatrix', AppState.appData.employeeTrainingMatrix),
-                // حفظ سجل الحضور الناتج عن البرنامج التدريبي
                 (typeof GoogleIntegration !== 'undefined' && GoogleIntegration.autoSave)
                     ? GoogleIntegration.autoSave('TrainingAttendance', AppState.appData.trainingAttendance)
                     : Promise.resolve()
