@@ -35,6 +35,82 @@ const Violations = {
         return Number.isFinite(parsed) && parsed >= 0 ? parsed : 0;
     },
 
+    // ═══════════════════════════════════════════════════════════════════
+    // ✅ Currency Manager — تحويل العملة (EGP افتراضي + USD اختياري)
+    // كل القيم في قاعدة البيانات مخزّنة بالجنيه المصري (EGP).
+    // التحويل لـ USD يحدث فقط وقت العرض حسب exchange rate القابل للتعديل.
+    // ═══════════════════════════════════════════════════════════════════
+    _VIOL_CURRENCY_KEY: 'viol_currency',
+    _VIOL_RATE_KEY: 'viol_exchange_rate',
+    _VIOL_DEFAULT_RATE: 50, // 1 USD ≈ 50 EGP (افتراضي قابل للتعديل)
+
+    getCurrentCurrency() {
+        try {
+            const stored = localStorage.getItem(this._VIOL_CURRENCY_KEY);
+            return (stored === 'USD') ? 'USD' : 'EGP';
+        } catch (e) { return 'EGP'; }
+    },
+
+    setCurrentCurrency(code) {
+        const normalized = (code === 'USD') ? 'USD' : 'EGP';
+        try { localStorage.setItem(this._VIOL_CURRENCY_KEY, normalized); } catch (e) {}
+        return normalized;
+    },
+
+    getExchangeRate() {
+        try {
+            const stored = parseFloat(localStorage.getItem(this._VIOL_RATE_KEY));
+            return (Number.isFinite(stored) && stored > 0) ? stored : this._VIOL_DEFAULT_RATE;
+        } catch (e) { return this._VIOL_DEFAULT_RATE; }
+    },
+
+    setExchangeRate(rate) {
+        const num = parseFloat(rate);
+        if (!Number.isFinite(num) || num <= 0) return false;
+        try { localStorage.setItem(this._VIOL_RATE_KEY, String(num)); } catch (e) {}
+        return true;
+    },
+
+    /**
+     * تحويل المبلغ من EGP إلى العملة المطلوبة
+     * @param {number} amountEGP - المبلغ بالجنيه المصري
+     * @param {string} [toCurrency] - العملة المستهدفة (افتراضي: الحالية)
+     * @returns {number} المبلغ بالعملة المستهدفة
+     */
+    convertFineAmount(amountEGP, toCurrency) {
+        const target = toCurrency || this.getCurrentCurrency();
+        const num = Number(amountEGP) || 0;
+        if (target === 'USD') {
+            const rate = this.getExchangeRate();
+            return rate > 0 ? num / rate : 0;
+        }
+        return num; // EGP
+    },
+
+    /**
+     * تنسيق المبلغ بصورة جاهزة للعرض (مع رمز العملة الحالية)
+     * مثال: 1500 → "1,500 ج.م" أو "30 $"
+     */
+    formatFineAmount(amountEGP, options = {}) {
+        const currency = options.currency || this.getCurrentCurrency();
+        const symbol = currency === 'USD' ? '$' : 'ج.م';
+        const converted = this.convertFineAmount(amountEGP, currency);
+        // الجنيه المصري: بدون كسور. الدولار: حتى منزلتين عشريتين
+        const formatted = currency === 'USD'
+            ? converted.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 })
+            : converted.toLocaleString('ar-EG', { maximumFractionDigits: 0 });
+        return currency === 'USD' ? `${formatted} $` : `${formatted} ${symbol}`;
+    },
+
+    /**
+     * إرجاع رمز/اسم العملة الحالية للاستخدام في عناوين المخططات
+     */
+    getCurrencyLabel(form = 'short') {
+        const currency = this.getCurrentCurrency();
+        if (currency === 'USD') return form === 'long' ? 'دولار أمريكي' : '$';
+        return form === 'long' ? 'جنيه مصري' : 'ج.م';
+    },
+
     normalizeViolationRecord(record) {
         if (!record || typeof record !== 'object') return null;
         const fineAmountRaw =
@@ -816,7 +892,7 @@ const Violations = {
                                         ${Utils.escapeHTML(violation.violationType || '-')}
                                     </td>
                                     <td style="padding: 14px 12px; text-align: center; border-bottom: 1px solid #fecaca; font-weight: 600; color: #166534;">
-                                        ${Number(violation.fineAmount || 0).toLocaleString('ar-EG')} ج.م
+                                        ${this.formatFineAmount(Number(violation.fineAmount || 0))}
                                     </td>
                                     <td style="padding: 14px 12px; text-align: center; border-bottom: 1px solid #fecaca; font-size: 0.85rem; color: #6b7280;">
                                         ${Utils.escapeHTML(violation.violationLocation || '-')}
@@ -914,7 +990,7 @@ const Violations = {
                     <div class="flex items-center justify-between">
                         <div>
                             <p class="stat-label">إجمالي القيمة المالية</p>
-                            <p class="text-2xl font-bold text-green-700">${totalFineAmount.toLocaleString('ar-EG')} ج.م</p>
+                            <p class="text-2xl font-bold text-green-700">${this.formatFineAmount(totalFineAmount)}</p>
                         </div>
                         <i class="fas fa-money-bill-wave text-green-600 text-xl"></i>
                     </div>
@@ -1712,7 +1788,7 @@ const Violations = {
                     <div style="display: flex; flex-wrap: wrap; gap: 16px;">
                         <div style="flex: 1 1 180px; padding: 14px; border-radius: 10px; background: #FEF2F2; border: 1px solid #FECACA;"><div style="font-size: 12px; color: #B91C1C; margin-bottom: 6px; font-weight: 600;">إجمالي المخالفات</div><div style="font-size: 24px; font-weight: 700; color: #991B1B;">${violations.length}</div></div>
                         <div style="flex: 1 1 180px; padding: 14px; border-radius: 10px; background: #EFF6FF; border: 1px solid #BFDBFE;"><div style="font-size: 12px; color: #1D4ED8; margin-bottom: 6px; font-weight: 600;">عدد المقاولين</div><div style="font-size: 24px; font-weight: 700; color: #1E3A8A;">${uniqueContractors}</div></div>
-                        <div style="flex: 1 1 180px; padding: 14px; border-radius: 10px; background: #FFFBEB; border: 1px solid #FDE68A;"><div style="font-size: 12px; color: #B45309; margin-bottom: 6px; font-weight: 600;">القيمة المالية للمخالفات</div><div style="font-size: 24px; font-weight: 700; color: #92400E;">${Number(totalFineAmount).toLocaleString('ar-EG')}</div><div style="font-size: 11px; color: #92400E; margin-top: 4px;">ج.م</div></div>
+                        <div style="flex: 1 1 180px; padding: 14px; border-radius: 10px; background: #FFFBEB; border: 1px solid #FDE68A;"><div style="font-size: 12px; color: #B45309; margin-bottom: 6px; font-weight: 600;">القيمة المالية للمخالفات</div><div style="font-size: 24px; font-weight: 700; color: #92400E;">${this.formatFineAmount(Number(totalFineAmount))}</div></div>
                         <div style="flex: 1 1 180px; padding: 14px; border-radius: 10px; background: #FFF7ED; border: 1px solid #FED7AA;"><div style="font-size: 12px; color: #C2410C; margin-bottom: 6px; font-weight: 600;">عالية / متوسطة / منخفضة</div><div style="font-size: 20px; font-weight: 700; color: #9A3412;">${highCount} / ${mediumCount} / ${lowCount}</div></div>
                         <div style="flex: 1 1 180px; padding: 14px; border-radius: 10px; background: #ECFDF5; border: 1px solid #BBF7D0;"><div style="font-size: 12px; color: #047857; margin-bottom: 6px; font-weight: 600;">معدل الحل</div><div style="font-size: 24px; font-weight: 700; color: #065F46;">${resolutionRate}%</div><div style="font-size: 11px; color: #065F46; margin-top: 4px;">محلول: ${resolvedCount} | غير محلول: ${unresolvedCount}</div></div>
                     </div>
@@ -1939,6 +2015,12 @@ const Violations = {
                     <button id="viol-toggle-filters-btn" style="padding:6px 12px;border-radius:8px;border:1px solid rgba(255,255,255,0.4);cursor:pointer;background:rgba(255,255,255,0.12);color:#fff;font-size:0.78rem;font-weight:600;transition:all .2s;display:flex;align-items:center;gap:5px;" onmouseover="this.style.background='rgba(255,255,255,0.25)'" onmouseout="this.style.background='rgba(255,255,255,0.12)'">
                         <i class="fas fa-sliders-h"></i><span>فلاتر</span><span id="viol-filter-badge" style="display:none;background:#fbbf24;color:#78350f;font-size:0.65rem;padding:1px 5px;border-radius:10px;margin-right:2px;">●</span>
                     </button>
+                    <!-- ✅ تبديل العملة EGP ⇄ USD -->
+                    <div style="display:inline-flex;align-items:center;background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.4);border-radius:8px;overflow:hidden;">
+                        <button id="viol-curr-egp" data-curr="EGP" class="viol-curr-btn" style="padding:6px 10px;border:none;cursor:pointer;background:${this.getCurrentCurrency()==='EGP'?'#fff':'transparent'};color:${this.getCurrentCurrency()==='EGP'?'#991b1b':'#fff'};font-size:0.78rem;font-weight:700;transition:all .15s;" title="جنيه مصري">ج.م</button>
+                        <button id="viol-curr-usd" data-curr="USD" class="viol-curr-btn" style="padding:6px 10px;border:none;cursor:pointer;background:${this.getCurrentCurrency()==='USD'?'#fff':'transparent'};color:${this.getCurrentCurrency()==='USD'?'#991b1b':'#fff'};font-size:0.78rem;font-weight:700;transition:all .15s;" title="دولار أمريكي">$</button>
+                        <button id="viol-curr-rate-btn" style="padding:6px 8px;border:none;border-right:1px solid rgba(255,255,255,0.25);cursor:pointer;background:transparent;color:#fff;font-size:0.78rem;transition:all .15s;" title="تعديل سعر الصرف" onmouseover="this.style.background='rgba(255,255,255,0.2)'" onmouseout="this.style.background='transparent'"><i class="fas fa-cog"></i></button>
+                    </div>
                     <button id="viol-export-pdf-btn" style="padding:6px 14px;border-radius:8px;border:none;cursor:pointer;background:rgba(0,0,0,0.3);color:#fff;font-size:0.78rem;font-weight:600;transition:all .2s;display:flex;align-items:center;gap:5px;" onmouseover="this.style.background='rgba(0,0,0,0.5)'" onmouseout="this.style.background='rgba(0,0,0,0.3)'">
                         <i class="fas fa-file-pdf"></i><span>PDF</span>
                     </button>
@@ -2073,7 +2155,7 @@ const Violations = {
             <div class="content-card" style="padding:0;overflow:hidden;margin-bottom:16px;">
                 <div style="padding:13px 18px 10px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:8px;">
                     <i class="fas fa-coins" style="color:#d97706;"></i>
-                    <span style="font-weight:700;font-size:0.88rem;">إجمالي الغرامات حسب نوع المخالفة (ريال)</span>
+                    <span style="font-weight:700;font-size:0.88rem;">إجمالي الغرامات حسب نوع المخالفة (${this.getCurrencyLabel('long')})</span>
                     <span style="font-size:0.72rem;color:#94a3b8;margin-right:auto;">(أعلى 10 أنواع)</span>
                 </div>
                 <div style="padding:12px;position:relative;height:260px;">
@@ -2161,7 +2243,7 @@ const Violations = {
                 { label:'محلولة',               value:resolved,                                          icon:'fas fa-check-circle',       color:'#10b981', bg:'#ecfdf5', border:'#a7f3d0' },
                 { label:'غير محلولة',           value:unresol,                                           icon:'fas fa-times-circle',       color:'#f59e0b', bg:'#fffbeb', border:'#fde68a' },
                 { label:'معدل الحل',            value:resolRate+'%',                                     icon:'fas fa-chart-pie',          color:'#0ea5e9', bg:'#f0f9ff', border:'#bae6fd' },
-                { label:'إجمالي الغرامات',      value:totalFines > 0 ? totalFines.toLocaleString('en-US')+' ر.س' : '—', icon:'fas fa-coins', color:'#d97706', bg:'#fffbeb', border:'#fde68a' },
+                { label:'إجمالي الغرامات',      value: totalFines > 0 ? this.formatFineAmount(totalFines) : '—', icon:'fas fa-coins', color:'#d97706', bg:'#fffbeb', border:'#fde68a' },
                 { label:'هذا الشهر',            value:thisMonth,                                         icon:'fas fa-calendar-day',       color:'#8b5cf6', bg:'#f5f3ff', border:'#ddd6fe' },
             ];
             kpiEl.innerHTML = kpis.map(k => `
@@ -2243,7 +2325,7 @@ const Violations = {
                         <td style="padding:9px 12px;color:#374151;">${Utils.escapeHTML(v.violationLocation||'—')}</td>
                         <td style="padding:9px 12px;">${sevBadge}</td>
                         <td style="padding:9px 12px;"><span style="padding:2px 7px;border-radius:12px;font-size:0.7rem;font-weight:700;${statusBadge}">${Utils.escapeHTML(v.status||'—')}</span></td>
-                        <td style="padding:9px 12px;text-align:center;font-weight:700;color:${fine>0?'#dc2626':'#94a3b8'};">${fine>0 ? fine.toLocaleString('en-US') : '—'}</td>
+                        <td style="padding:9px 12px;text-align:center;font-weight:700;color:${fine>0?'#dc2626':'#94a3b8'};">${fine>0 ? this.formatFineAmount(fine) : '—'}</td>
                     </tr>`;
                 }).join('');
             }
@@ -2439,18 +2521,27 @@ const Violations = {
         });
         const entries = Object.entries(map).sort((a,b)=>b[1]-a[1]).slice(0,10);
         const labels  = entries.map(e=>e[0]);
-        const data    = entries.map(e=>Math.round(e[1]));
+        // ✅ تحويل القيم إلى العملة المختارة (EGP افتراضي أو USD)
+        const currency = this.getCurrentCurrency();
+        const currencyLabel = this.getCurrencyLabel('long');
+        const data = entries.map(e => {
+            const converted = this.convertFineAmount(e[1], currency);
+            return currency === 'USD' ? Number(converted.toFixed(2)) : Math.round(converted);
+        });
         if (!this._violCharts) this._violCharts = {};
         const prev = this._violCharts[canvasId];
         if (prev) { try { prev.destroy(); } catch(e){} }
+        const fmt = (v) => currency === 'USD'
+            ? v.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 })
+            : v.toLocaleString('ar-EG', { maximumFractionDigits: 0 });
         this._violCharts[canvasId] = new Chart(canvas, {
             type: 'bar',
             data: { labels, datasets: [{ data, backgroundColor: 'rgba(217,119,6,0.75)', borderRadius:5, borderSkipped:false }] },
             options: {
                 indexAxis:'y', responsive:true, maintainAspectRatio:false,
-                plugins:{ legend:{display:false}, tooltip:{ callbacks:{ label: ctx => ` ${ctx.parsed.x.toLocaleString('en-US')} ر.س` } } },
+                plugins:{ legend:{display:false}, tooltip:{ callbacks:{ label: ctx => ` ${fmt(ctx.parsed.x)} ${currencyLabel}` } } },
                 scales:{
-                    x:{ beginAtZero:true, ticks:{ font:{size:11}, callback: v => v.toLocaleString('en-US') }, grid:{color:'#f1f5f9'}, title:{display:true,text:'الغرامة الإجمالية (ر.س)',font:{size:11}} },
+                    x:{ beginAtZero:true, ticks:{ font:{size:11}, callback: v => fmt(v) }, grid:{color:'#f1f5f9'}, title:{display:true,text:`الغرامة الإجمالية (${currencyLabel})`,font:{size:11}} },
                     y:{ ticks:{ font:{size:11}, callback: v => String(labels[v]).length>18 ? String(labels[v]).slice(0,17)+'…' : labels[v] } }
                 }
             }
@@ -2604,6 +2695,45 @@ const Violations = {
             const el = document.getElementById(id);
             if (el) el.addEventListener('change', () => this.updateViolationAnalytics());
         });
+
+        // ✅ أزرار تبديل العملة (EGP / USD)
+        root.querySelectorAll('.viol-curr-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const newCurr = btn.getAttribute('data-curr');
+                this.setCurrentCurrency(newCurr);
+                root.querySelectorAll('.viol-curr-btn').forEach(b => {
+                    const active = b.getAttribute('data-curr') === newCurr;
+                    b.style.background = active ? '#fff' : 'transparent';
+                    b.style.color = active ? '#991b1b' : '#fff';
+                });
+                this.updateViolationAnalytics();
+            });
+        });
+
+        // ✅ زر تعديل سعر الصرف
+        const rateBtn = document.getElementById('viol-curr-rate-btn');
+        if (rateBtn) {
+            rateBtn.addEventListener('click', () => {
+                const current = this.getExchangeRate();
+                const input = window.prompt(
+                    `أدخل سعر صرف الدولار (كم جنيه مصري يساوي 1 دولار أمريكي):\n\nالسعر الحالي: ${current} جنيه = 1 دولار`,
+                    String(current)
+                );
+                if (input === null) return;
+                const newRate = parseFloat(String(input).trim());
+                if (!Number.isFinite(newRate) || newRate <= 0) {
+                    if (typeof Notification !== 'undefined' && Notification.error) {
+                        Notification.error('سعر صرف غير صالح');
+                    } else { alert('سعر صرف غير صالح'); }
+                    return;
+                }
+                this.setExchangeRate(newRate);
+                if (typeof Notification !== 'undefined' && Notification.success) {
+                    Notification.success(`تم تحديث سعر الصرف إلى ${newRate} جنيه = 1 دولار`);
+                }
+                this.updateViolationAnalytics();
+            });
+        }
     },
 
     /**
@@ -4116,7 +4246,7 @@ const Violations = {
                                 </div>
                                 <div>
                                     <label class="text-sm font-semibold text-gray-600">القيمة المالية:</label>
-                                    <p class="text-gray-800 font-semibold">${Number(this.getEffectiveFineAmount(violation)).toLocaleString('ar-EG')} ج.م</p>
+                                    <p class="text-gray-800 font-semibold">${this.formatFineAmount(Number(this.getEffectiveFineAmount(violation)))}</p>
                                 </div>
                             </div>
                             ${violation.violationDetails ? `
@@ -4323,7 +4453,7 @@ const Violations = {
                     <tr><th>المكان</th><td>${Utils.escapeHTML(v.violationPlace || '')}</td></tr>
                     <tr><th>الشدة</th><td>${Utils.escapeHTML(v.severity || '')}</td></tr>
                     <tr><th>الحالة</th><td>${Utils.escapeHTML(v.status || '')}</td></tr>
-                    <tr><th>القيمة المالية</th><td>${Number(this.getEffectiveFineAmount(v)).toLocaleString('ar-EG')} ج.م</td></tr>
+                    <tr><th>القيمة المالية</th><td>${this.formatFineAmount(Number(this.getEffectiveFineAmount(v)))}</td></tr>
                     ${v.violationDetails ? `<tr><th>تفاصيل المخالفة</th><td>${Utils.escapeHTML(v.violationDetails || '')}</td></tr>` : ''}
                     <tr><th>الإجراء المتخذ</th><td>${Utils.escapeHTML(v.actionTaken || '')}</td></tr>
                 </table>
