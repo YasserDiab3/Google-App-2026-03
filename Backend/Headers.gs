@@ -204,6 +204,29 @@ function getDefaultHeaders(sheetName) {
             'contractorData'
         ],
         'ContractorDeletionRequests': ['id', 'requestType', 'entityId', 'reason', 'status', 'createdBy', 'createdAt', 'updatedAt', 'approvedAt', 'approvedBy', 'approvedByName', 'rejectedAt', 'rejectedBy', 'rejectedByName', 'rejectionReason'],
+        // ✅ دائرة اعتماد المخالفات (Violation Approval Workflow)
+        // requestType: 'add' (إضافة) / 'update' (تعديل)
+        // violationData: JSON يحتوي على كل بيانات المخالفة المنتظرة
+        // approvers: JSON array [{userId, userName, userEmail, role, approved, approvedAt, notes}]
+        // currentApproverIndex: trang الحالي في الدائرة (0-based)
+        // status: 'pending' / 'approved' / 'rejected' / 'committed' (دخلت Violations sheet)
+        'ViolationApprovalRequests': [
+            'id', 'requestType',
+            'violationData', 'originalViolationId',
+            'status', 'approvers', 'currentApproverIndex',
+            'createdBy', 'createdByName', 'createdAt',
+            'approvedBy', 'approvedByName', 'approvedAt',
+            'rejectedBy', 'rejectedByName', 'rejectedAt', 'rejectionReason',
+            'finalViolationId', 'notes', 'updatedAt', 'updatedBy'
+        ],
+        // إعدادات دائرة اعتماد المخالفات
+        // requireApproval: true/false — هل المخالفات الجديدة تمر بدائرة اعتماد
+        // defaultApprovers: JSON array [{userId, userName, userEmail, role}]
+        // bypassRoles: JSON array — أدوار تتجاوز الاعتماد (admin مثلاً)
+        'ViolationApprovalSettings': [
+            'id', 'requireApproval', 'defaultApprovers', 'bypassRoles',
+            'updatedBy', 'updatedByName', 'updatedAt', 'createdAt'
+        ],
         // إدارة التغيرات (Change Management - مطابق للنماذج الورقية فني/إداري + نقل الفنيين)
         'ChangeRequests': ['id', 'requestNumber', 'title', 'description', 'changeType', 'priority', 'impact', 'status', 'requestedBy', 'requestedByEmail', 'requestedAt', 'factoryId', 'factoryName', 'subLocationId', 'subLocationName', 'dueDate', 'relatedModule', 'relatedProcess', 'riskAssessment', 'mitigationActions', 'fromDepartment', 'toDepartment', 'locationOther', 'technicalChangeSubType', 'changeContinuity', 'temporaryUntilDate', 'priorityUrgentReason', 'attachedDocumentsText', 'requestingDepartment', 'otherDepartments', 'affectedDepartments', 'documentsToAmendJson', 'committeeMembersJson', 'committeeRecommendations', 'employeeName', 'employeeCode', 'currentTasksDescription', 'newTasksDescription', 'administrativeChangeSubType', 'responsibleRequestingDepartment', 'responsibleImplementingDepartment', 'previousInjury', 'chronicDiseases', 'healthNotes', 'trainingRequirementsJson', 'reviewerName', 'reviewerNotes', 'approvedBy', 'approvedAt', 'rejectedBy', 'rejectedAt', 'rejectionReason', 'implementedAt', 'implementedBy', 'closedAt', 'closedBy', 'approvalFlowJson', 'currentApprovalStep', 'approvalStatus', 'timeLog', 'attachments', 'createdBy', 'createdAt', 'updatedAt', 'updatedBy'],
         'AuditLog': ['id', 'userId', 'userName', 'action', 'module', 'details', 'ipAddress', 'timestamp', 'createdAt', 'updatedAt'],

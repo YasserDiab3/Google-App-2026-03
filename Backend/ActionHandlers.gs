@@ -1733,6 +1733,37 @@ var ActionHandlers = {
         })();
         return result;
     },
+    // ───────── دائرة اعتماد المخالفات ─────────
+    'addViolationApprovalRequest': function(payload, postData, action, actorUserData, spreadsheetId) {
+        var result = { success: false, message: '' };
+        (function() { result = addViolationApprovalRequest(payload); })();
+        return result;
+    },
+    'getAllViolationApprovalRequests': function(payload, postData, action, actorUserData, spreadsheetId) {
+        var result = { success: false, message: '' };
+        (function() { result = getAllViolationApprovalRequests(payload); })();
+        return result;
+    },
+    'approveViolationApprovalRequest': function(payload, postData, action, actorUserData, spreadsheetId) {
+        var result = { success: false, message: '' };
+        (function() { result = approveViolationApprovalRequest(payload); })();
+        return result;
+    },
+    'rejectViolationApprovalRequest': function(payload, postData, action, actorUserData, spreadsheetId) {
+        var result = { success: false, message: '' };
+        (function() { result = rejectViolationApprovalRequest(payload); })();
+        return result;
+    },
+    'getViolationApprovalSettings': function(payload, postData, action, actorUserData, spreadsheetId) {
+        var result = { success: false, message: '' };
+        (function() { result = getViolationApprovalSettings(payload); })();
+        return result;
+    },
+    'updateViolationApprovalSettings': function(payload, postData, action, actorUserData, spreadsheetId) {
+        var result = { success: false, message: '' };
+        (function() { result = updateViolationApprovalSettings(payload); })();
+        return result;
+    },
     'updateContractorApprovalRequest': function(payload, postData, action, actorUserData, spreadsheetId) {
         var result = { success: false, message: '' };
         (function() {

@@ -212,6 +212,355 @@ const Violations = {
         return d.getFullYear() * 12 + d.getMonth();
     },
 
+    // ───────── دائرة اعتماد المخالفات ─────────
+    _violApprovalSettingsCache: null,
+    _violApprovalSettingsCacheAt: 0,
+
+    async getViolationApprovalSettings() {
+        const now = Date.now();
+        if (this._violApprovalSettingsCache && (now - this._violApprovalSettingsCacheAt) < 5 * 60 * 1000) {
+            return this._violApprovalSettingsCache;
+        }
+        try {
+            if (typeof GoogleIntegration !== 'undefined' && GoogleIntegration.sendRequest) {
+                const res = await GoogleIntegration.sendRequest({
+                    action: 'getViolationApprovalSettings',
+                    data: { __timeoutMs: 20000 }
+                });
+                if (res && res.success && res.data) {
+                    this._violApprovalSettingsCache = {
+                        requireApproval: res.data.requireApproval === true,
+                        defaultApprovers: Array.isArray(res.data.defaultApprovers) ? res.data.defaultApprovers : [],
+                        bypassRoles: Array.isArray(res.data.bypassRoles) ? res.data.bypassRoles : ['admin', 'مدير النظام']
+                    };
+                    this._violApprovalSettingsCacheAt = now;
+                    return this._violApprovalSettingsCache;
+                }
+            }
+        } catch (e) {
+            if (AppState.debugMode) Utils.safeWarn('getViolationApprovalSettings:', e);
+        }
+        return { requireApproval: false, defaultApprovers: [], bypassRoles: ['admin', 'مدير النظام'] };
+    },
+
+    isCurrentUserBypassApproval(bypassRoles) {
+        try {
+            if (typeof Permissions !== 'undefined' && typeof Permissions.isCurrentUserEffectiveAdmin === 'function') {
+                if (Permissions.isCurrentUserEffectiveAdmin()) return true;
+            }
+            const role = AppState.currentUser?.role || '';
+            if (Array.isArray(bypassRoles) && bypassRoles.length > 0) {
+                const roleLower = String(role).toLowerCase();
+                return bypassRoles.some(br => String(br).toLowerCase() === roleLower || String(br) === role);
+            }
+        } catch (e) { /* ignore */ }
+        return false;
+    },
+
+    async checkViolationApprovalGate(formData, opts = {}) {
+        const settings = await this.getViolationApprovalSettings();
+        if (!settings || !settings.requireApproval) return { requiresApproval: false, settings };
+        if (this.isCurrentUserBypassApproval(settings.bypassRoles)) return { requiresApproval: false, settings, bypassed: true };
+        if (!Array.isArray(settings.defaultApprovers) || settings.defaultApprovers.length === 0) {
+            if (AppState.debugMode) Utils.safeWarn('approval required but no approvers configured');
+            return { requiresApproval: false, settings, reason: 'no_approvers' };
+        }
+        return { requiresApproval: true, settings };
+    },
+
+    async submitViolationForApproval(formData, opts = {}) {
+        try {
+            const settings = await this.getViolationApprovalSettings();
+            const approvers = (settings.defaultApprovers || []).slice();
+            const cu = AppState.currentUser || {};
+            const payload = {
+                requestType: opts.isEdit ? 'update' : 'add',
+                violationData: formData,
+                originalViolationId: opts.originalId || '',
+                approvers: approvers,
+                createdBy: cu.id || cu.email || '',
+                createdByName: cu.name || cu.email || '',
+                notes: opts.notes || ''
+            };
+            const res = await GoogleIntegration.sendRequest({
+                action: 'addViolationApprovalRequest',
+                data: { ...payload, __timeoutMs: 30000 }
+            });
+            return res || { success: false, message: 'لا توجد استجابة من الخادم' };
+        } catch (error) {
+            return { success: false, message: error?.message || String(error) };
+        }
+    },
+
+    async fetchViolationApprovalRequests(filters = {}) {
+        try {
+            const res = await GoogleIntegration.sendRequest({
+                action: 'getAllViolationApprovalRequests',
+                data: { ...filters, __timeoutMs: 25000 }
+            });
+            return (res && res.success && Array.isArray(res.data)) ? res.data : [];
+        } catch (e) {
+            if (AppState.debugMode) Utils.safeWarn('fetchViolationApprovalRequests:', e);
+            return [];
+        }
+    },
+
+    async approveViolationRequest(requestId, opts = {}) {
+        const cu = AppState.currentUser || {};
+        const approver = { userId: cu.id || cu.email || '', userName: cu.name || '', userEmail: cu.email || '' };
+        try {
+            const res = await GoogleIntegration.sendRequest({
+                action: 'approveViolationApprovalRequest',
+                data: { requestId, approver, notes: opts.notes || '', force: opts.force === true, __timeoutMs: 30000 }
+            });
+            this._violApprovalSettingsCache = null;
+            return res || { success: false, message: 'لا توجد استجابة' };
+        } catch (e) {
+            return { success: false, message: e?.message || String(e) };
+        }
+    },
+
+    async rejectViolationRequest(requestId, reason) {
+        const cu = AppState.currentUser || {};
+        const approver = { userId: cu.id || cu.email || '', userName: cu.name || '', userEmail: cu.email || '' };
+        try {
+            const res = await GoogleIntegration.sendRequest({
+                action: 'rejectViolationApprovalRequest',
+                data: { requestId, approver, reason: String(reason || '').trim(), __timeoutMs: 30000 }
+            });
+            return res || { success: false, message: 'لا توجد استجابة' };
+        } catch (e) {
+            return { success: false, message: e?.message || String(e) };
+        }
+    },
+
+    async saveViolationApprovalSettings(settings) {
+        const cu = AppState.currentUser || {};
+        try {
+            const res = await GoogleIntegration.sendRequest({
+                action: 'updateViolationApprovalSettings',
+                data: {
+                    requireApproval: settings.requireApproval === true,
+                    defaultApprovers: Array.isArray(settings.defaultApprovers) ? settings.defaultApprovers : [],
+                    bypassRoles: Array.isArray(settings.bypassRoles) ? settings.bypassRoles : ['admin', 'مدير النظام'],
+                    updatedBy: cu.id || cu.email || '',
+                    updatedByName: cu.name || '',
+                    __timeoutMs: 25000
+                }
+            });
+            this._violApprovalSettingsCache = null;
+            return res || { success: false, message: 'لا توجد استجابة' };
+        } catch (e) {
+            return { success: false, message: e?.message || String(e) };
+        }
+    },
+
+    async showViolationApprovalsManager() {
+        const isAdmin = (typeof Permissions !== 'undefined' && typeof Permissions.isCurrentUserEffectiveAdmin === 'function')
+            ? Permissions.isCurrentUserEffectiveAdmin() : false;
+        const cu = AppState.currentUser || {};
+        const allUsers = (AppState.appData?.users || []).filter(u => u && (u.email || u.id || u.name));
+        const requests = await this.fetchViolationApprovalRequests({
+            userEmail: isAdmin ? '' : (cu.email || ''),
+            userId: isAdmin ? '' : (cu.id || '')
+        });
+        const settings = await this.getViolationApprovalSettings();
+
+        const modal = document.createElement('div');
+        modal.className = 'modal modal-open';
+        modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:9999;display:flex;align-items:flex-start;justify-content:center;padding:24px;overflow:auto;';
+        modal.innerHTML = `
+            <div style="background:#fff;border-radius:14px;max-width:1100px;width:100%;max-height:92vh;overflow:auto;box-shadow:0 20px 50px rgba(0,0,0,0.3);">
+                <div style="background:linear-gradient(135deg,#991b1b,#7f1d1d);color:#fff;padding:18px 22px;border-radius:14px 14px 0 0;display:flex;align-items:center;justify-content:space-between;">
+                    <div style="display:flex;align-items:center;gap:10px;">
+                        <i class="fas fa-clipboard-check" style="font-size:22px;"></i>
+                        <h3 style="margin:0;font-size:1.15rem;">دائرة اعتماد المخالفات</h3>
+                    </div>
+                    <button type="button" id="viol-approvals-close" style="background:rgba(255,255,255,0.2);border:none;border-radius:8px;color:#fff;width:36px;height:36px;cursor:pointer;font-size:18px;">×</button>
+                </div>
+                <div style="padding:18px 22px;">
+                    ${isAdmin ? `
+                    <div style="background:#fef2f2;border:2px solid #fecaca;border-radius:12px;padding:16px;margin-bottom:18px;">
+                        <h4 style="margin:0 0 12px 0;color:#991b1b;font-size:1rem;display:flex;align-items:center;gap:8px;">
+                            <i class="fas fa-cog"></i> إعدادات دائرة الاعتماد (للمدير)
+                        </h4>
+                        <label style="display:flex;align-items:center;gap:10px;cursor:pointer;margin-bottom:14px;">
+                            <input type="checkbox" id="viol-require-approval" ${settings.requireApproval ? 'checked' : ''} style="width:18px;height:18px;cursor:pointer;">
+                            <span style="font-weight:600;color:#374151;">تفعيل دائرة الاعتماد للمخالفات الجديدة</span>
+                        </label>
+                        <div style="margin-bottom:12px;">
+                            <label style="display:block;font-weight:600;color:#374151;margin-bottom:6px;">المعتمدون المعيَّنون:</label>
+                            <div id="viol-approvers-list" style="display:flex;flex-wrap:wrap;gap:8px;padding:8px;background:#fff;border:1px solid #e5e7eb;border-radius:8px;min-height:48px;">
+                                ${(settings.defaultApprovers || []).map((a, idx) => `
+                                    <span data-approver-idx="${idx}" style="background:#dbeafe;color:#1e40af;padding:5px 10px;border-radius:20px;font-size:0.85rem;display:inline-flex;align-items:center;gap:6px;">
+                                        <i class="fas fa-user"></i> ${Utils.escapeHTML(a.userName || a.userEmail || a.userId || '?')}
+                                        <button type="button" class="viol-remove-approver" data-idx="${idx}" style="background:none;border:none;color:#dc2626;cursor:pointer;padding:0;font-size:14px;">×</button>
+                                    </span>
+                                `).join('') || '<span style="color:#94a3b8;font-size:0.85rem;">لم يُضَف معتمدون بعد</span>'}
+                            </div>
+                        </div>
+                        <div style="display:flex;gap:8px;align-items:flex-end;">
+                            <div style="flex:1;">
+                                <label style="display:block;font-size:0.8rem;color:#6b7280;margin-bottom:4px;">إضافة معتمد من قائمة المستخدمين:</label>
+                                <select id="viol-add-approver-select" class="form-input" style="width:100%;padding:8px;border:1px solid #d1d5db;border-radius:8px;">
+                                    <option value="">-- اختر مستخدماً --</option>
+                                    ${allUsers.map(u => `<option value="${Utils.escapeHTML(String(u.id || u.email || ''))}" data-name="${Utils.escapeHTML(String(u.name || ''))}" data-email="${Utils.escapeHTML(String(u.email || ''))}" data-role="${Utils.escapeHTML(String(u.role || ''))}">${Utils.escapeHTML(u.name || u.email || u.id)} ${u.role ? '(' + Utils.escapeHTML(u.role) + ')' : ''}</option>`).join('')}
+                                </select>
+                            </div>
+                            <button type="button" id="viol-add-approver-btn" style="background:#1e40af;color:#fff;border:none;padding:9px 16px;border-radius:8px;cursor:pointer;font-weight:600;"><i class="fas fa-plus"></i> إضافة</button>
+                        </div>
+                        <div style="margin-top:14px;display:flex;justify-content:flex-end;gap:8px;">
+                            <button type="button" id="viol-save-settings-btn" style="background:#059669;color:#fff;border:none;padding:10px 20px;border-radius:8px;cursor:pointer;font-weight:600;"><i class="fas fa-save"></i> حفظ الإعدادات</button>
+                        </div>
+                    </div>
+                    ` : ''}
+                    <div>
+                        <h4 style="margin:0 0 12px 0;color:#374151;font-size:1rem;display:flex;align-items:center;gap:8px;">
+                            <i class="fas fa-list-ul"></i> طلبات الاعتماد
+                            <span style="background:#fef3c7;color:#92400e;padding:2px 10px;border-radius:12px;font-size:0.75rem;">${requests.filter(r => r.status === 'pending').length} معلَّقة</span>
+                        </h4>
+                        <div style="display:flex;gap:8px;margin-bottom:12px;">
+                            <button type="button" class="viol-req-filter" data-filter="pending" style="background:#fbbf24;color:#78350f;border:none;padding:6px 12px;border-radius:8px;cursor:pointer;font-size:0.85rem;font-weight:600;">معلَّقة</button>
+                            <button type="button" class="viol-req-filter" data-filter="approved" style="background:#dcfce7;color:#166534;border:none;padding:6px 12px;border-radius:8px;cursor:pointer;font-size:0.85rem;">معتمدة</button>
+                            <button type="button" class="viol-req-filter" data-filter="rejected" style="background:#fee2e2;color:#991b1b;border:none;padding:6px 12px;border-radius:8px;cursor:pointer;font-size:0.85rem;">مرفوضة</button>
+                            <button type="button" class="viol-req-filter" data-filter="all" style="background:#e5e7eb;color:#374151;border:none;padding:6px 12px;border-radius:8px;cursor:pointer;font-size:0.85rem;">الكل</button>
+                        </div>
+                        <div id="viol-approval-requests-list">${this._renderViolationApprovalRequests(requests.filter(r => r.status === 'pending'), { isAdmin })}</div>
+                    </div>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+
+        modal.querySelector('#viol-approvals-close')?.addEventListener('click', () => modal.remove());
+        modal.querySelectorAll('.viol-remove-approver').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const idx = parseInt(btn.getAttribute('data-idx'), 10);
+                if (!isNaN(idx)) {
+                    settings.defaultApprovers.splice(idx, 1);
+                    modal.remove();
+                    this.showViolationApprovalsManager();
+                }
+            });
+        });
+        modal.querySelector('#viol-add-approver-btn')?.addEventListener('click', () => {
+            const sel = modal.querySelector('#viol-add-approver-select');
+            const val = sel?.value;
+            if (!val) { Notification.warning('اختر مستخدماً'); return; }
+            const opt = sel.options[sel.selectedIndex];
+            const newApprover = { userId: val, userName: opt?.dataset?.name || '', userEmail: opt?.dataset?.email || '', role: opt?.dataset?.role || '' };
+            if (settings.defaultApprovers.some(a => a.userId === newApprover.userId)) {
+                Notification.warning('هذا المستخدم مضاف بالفعل'); return;
+            }
+            settings.defaultApprovers.push(newApprover);
+            modal.remove();
+            this.showViolationApprovalsManager();
+        });
+        modal.querySelector('#viol-save-settings-btn')?.addEventListener('click', async () => {
+            const requireApproval = modal.querySelector('#viol-require-approval')?.checked === true;
+            const res = await this.saveViolationApprovalSettings({ requireApproval, defaultApprovers: settings.defaultApprovers, bypassRoles: settings.bypassRoles });
+            if (res && res.success) Notification.success('تم حفظ الإعدادات بنجاح');
+            else Notification.error((res && res.message) || 'فشل حفظ الإعدادات');
+        });
+        modal.querySelectorAll('.viol-req-filter').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const filter = btn.getAttribute('data-filter');
+                const filtered = filter === 'all' ? requests : requests.filter(r => r.status === filter);
+                const listEl = modal.querySelector('#viol-approval-requests-list');
+                if (listEl) listEl.innerHTML = this._renderViolationApprovalRequests(filtered, { isAdmin });
+                this._wireViolationApprovalActions(modal, isAdmin);
+            });
+        });
+        this._wireViolationApprovalActions(modal, isAdmin);
+    },
+
+    _renderViolationApprovalRequests(requests, opts = {}) {
+        if (!requests || requests.length === 0) return '<div style="text-align:center;padding:24px;color:#94a3b8;background:#f9fafb;border-radius:10px;">لا توجد طلبات</div>';
+        return requests.map(r => {
+            const vd = r.violationData || {};
+            const personName = vd.employeeName || vd.contractorName || '—';
+            const statusBadge = {
+                'pending': '<span style="background:#fef3c7;color:#92400e;padding:3px 10px;border-radius:12px;font-size:0.75rem;font-weight:700;">معلَّق</span>',
+                'approved': '<span style="background:#dcfce7;color:#166534;padding:3px 10px;border-radius:12px;font-size:0.75rem;font-weight:700;">معتمد</span>',
+                'committed': '<span style="background:#dcfce7;color:#166534;padding:3px 10px;border-radius:12px;font-size:0.75rem;font-weight:700;">مسجَّل</span>',
+                'rejected': '<span style="background:#fee2e2;color:#991b1b;padding:3px 10px;border-radius:12px;font-size:0.75rem;font-weight:700;">مرفوض</span>'
+            }[r.status] || `<span style="background:#e5e7eb;color:#374151;padding:3px 10px;border-radius:12px;font-size:0.75rem;">${r.status}</span>`;
+            const dateStr = r.createdAt ? new Date(r.createdAt).toLocaleString('ar-EG', { dateStyle: 'short', timeStyle: 'short' }) : '—';
+            const approvers = Array.isArray(r.approvers) ? r.approvers : [];
+            const currentIdx = parseInt(r.currentApproverIndex, 10) || 0;
+            const showActions = r.status === 'pending' && opts.isAdmin;
+            return `
+                <div data-request-id="${Utils.escapeHTML(String(r.id))}" style="background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:14px;margin-bottom:10px;box-shadow:0 1px 3px rgba(0,0,0,0.05);">
+                    <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap;margin-bottom:10px;">
+                        <div>
+                            <div style="font-weight:700;color:#374151;font-size:0.95rem;">${Utils.escapeHTML(personName)} — ${Utils.escapeHTML(vd.violationType || '—')}</div>
+                            <div style="font-size:0.78rem;color:#6b7280;margin-top:3px;">رقم الطلب: ${Utils.escapeHTML(String(r.id))} • أُنشئ: ${dateStr} • بواسطة: ${Utils.escapeHTML(r.createdByName || r.createdBy || '—')}</div>
+                        </div>
+                        ${statusBadge}
+                    </div>
+                    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:8px;font-size:0.82rem;color:#4b5563;background:#f9fafb;padding:10px;border-radius:8px;margin-bottom:10px;">
+                        <div><strong>الموقع:</strong> ${Utils.escapeHTML(vd.violationLocation || '—')}</div>
+                        <div><strong>الشدة:</strong> ${Utils.escapeHTML(vd.severity || '—')}</div>
+                        <div><strong>التاريخ:</strong> ${vd.violationDate ? new Date(vd.violationDate).toLocaleDateString('ar-EG') : '—'}</div>
+                        <div><strong>الغرامة:</strong> ${vd.fineAmount ? Number(vd.fineAmount).toLocaleString('ar-EG') + ' ج.م' : '—'}</div>
+                    </div>
+                    ${approvers.length > 0 ? `
+                        <div style="font-size:0.78rem;color:#6b7280;margin-bottom:8px;"><strong>المعتمدون:</strong>
+                            ${approvers.map((a, i) => `<span style="background:${a.approved ? '#dcfce7' : (i === currentIdx ? '#fef3c7' : '#f3f4f6')};color:${a.approved ? '#166534' : (i === currentIdx ? '#92400e' : '#6b7280')};padding:2px 8px;border-radius:10px;margin-right:4px;">${a.approved ? '✓' : (i === currentIdx ? '⏳' : '○')} ${Utils.escapeHTML(a.userName || a.userEmail || '?')}</span>`).join('')}
+                        </div>
+                    ` : ''}
+                    ${r.rejectionReason ? `<div style="background:#fef2f2;border-right:3px solid #dc2626;padding:8px 10px;border-radius:6px;font-size:0.82rem;color:#7f1d1d;margin-bottom:8px;"><strong>سبب الرفض:</strong> ${Utils.escapeHTML(r.rejectionReason)}</div>` : ''}
+                    ${showActions ? `
+                        <div style="display:flex;gap:8px;justify-content:flex-end;">
+                            <button type="button" class="viol-req-reject-btn" data-id="${Utils.escapeHTML(String(r.id))}" style="background:#fef2f2;color:#dc2626;border:1px solid #fecaca;padding:6px 14px;border-radius:8px;cursor:pointer;font-size:0.85rem;font-weight:600;"><i class="fas fa-times"></i> رفض</button>
+                            <button type="button" class="viol-req-approve-btn" data-id="${Utils.escapeHTML(String(r.id))}" style="background:#dcfce7;color:#166534;border:1px solid #86efac;padding:6px 14px;border-radius:8px;cursor:pointer;font-size:0.85rem;font-weight:600;"><i class="fas fa-check"></i> اعتماد</button>
+                        </div>
+                    ` : ''}
+                </div>
+            `;
+        }).join('');
+    },
+
+    _wireViolationApprovalActions(modal, isAdmin) {
+        modal.querySelectorAll('.viol-req-approve-btn').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                const id = btn.getAttribute('data-id');
+                if (!id) return;
+                btn.disabled = true;
+                btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري الاعتماد...';
+                const res = await this.approveViolationRequest(id, { force: isAdmin });
+                if (res && res.success) {
+                    Notification.success(res.message || 'تم الاعتماد');
+                    modal.remove();
+                    this.showViolationApprovalsManager();
+                    try { if (this.load) this.load(); } catch (e) {}
+                } else {
+                    Notification.error((res && res.message) || 'فشل الاعتماد');
+                    btn.disabled = false; btn.innerHTML = '<i class="fas fa-check"></i> اعتماد';
+                }
+            });
+        });
+        modal.querySelectorAll('.viol-req-reject-btn').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                const id = btn.getAttribute('data-id');
+                if (!id) return;
+                const reason = (window.prompt('سبب الرفض:') || '').trim();
+                if (!reason) { Notification.warning('سبب الرفض إلزامي'); return; }
+                btn.disabled = true;
+                btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري الرفض...';
+                const res = await this.rejectViolationRequest(id, reason);
+                if (res && res.success) {
+                    Notification.success(res.message || 'تم الرفض');
+                    modal.remove();
+                    this.showViolationApprovalsManager();
+                } else {
+                    Notification.error((res && res.message) || 'فشل الرفض');
+                    btn.disabled = false; btn.innerHTML = '<i class="fas fa-times"></i> رفض';
+                }
+            });
+        });
+    },
+
     countPriorViolationsSamePersonMonth(draft, excludeId) {
         const ym = this.getViolationYearMonthKey(draft.violationDate);
         if (ym == null) return 0;
@@ -693,6 +1042,10 @@ const Violations = {
                         <button type="button" id="add-violation-btn" class="btn-primary" style="background: white; color: #dc2626; border: none; padding: 12px 24px; border-radius: 12px; font-weight: 600; box-shadow: 0 4px 12px rgba(0,0,0,0.15); transition: all 0.3s ease;">
                             <i class="fas fa-plus ml-2"></i>
                             تسجيل مخالفة جديدة
+                        </button>
+                        <button type="button" id="viol-approvals-btn" onclick="Violations.showViolationApprovalsManager()" style="background: rgba(255,255,255,0.18); color: #fff; border: 2px solid rgba(255,255,255,0.4); padding: 12px 18px; border-radius: 12px; font-weight: 600; cursor: pointer; transition: all 0.3s ease;" title="دائرة اعتماد المخالفات">
+                            <i class="fas fa-clipboard-check ml-2"></i>
+                            دائرة الاعتماد
                         </button>
                     </div>
                 </div>
@@ -3783,6 +4136,27 @@ const Violations = {
                     isEdit && violationData?.id ? violationData.id : null
                 );
                 formData.violationSequenceInMonth = priorSeq + 1;
+
+                // ✅ دائرة اعتماد المخالفات: إذا فُعِّلت ولم يكن المستخدم مديراً، أرسل طلب اعتماد بدل الحفظ المباشر
+                try {
+                    const approvalGate = await this.checkViolationApprovalGate(formData, { isEdit });
+                    if (approvalGate && approvalGate.requiresApproval) {
+                        const approvalResult = await this.submitViolationForApproval(formData, { isEdit, originalId: violationData?.id });
+                        btn.disabled = false;
+                        btn.innerHTML = originalText;
+                        if (approvalResult && approvalResult.success) {
+                            modal.remove();
+                            Notification.success(approvalResult.message || 'تم إرسال المخالفة لدائرة الاعتماد بنجاح. ستظهر بعد اعتمادها.');
+                            try { document.dispatchEvent(new CustomEvent('violation-approval-request-created', { detail: approvalResult.data || {} })); } catch (e) { /* ignore */ }
+                            return;
+                        } else {
+                            Notification.error((approvalResult && approvalResult.message) || 'فشل إرسال طلب الاعتماد. حاول مرة أخرى.');
+                            return;
+                        }
+                    }
+                } catch (gateErr) {
+                    if (AppState.debugMode) Utils.safeWarn('approvalGate error (continuing with direct save):', gateErr);
+                }
 
                 // حفظ في AppState
                 if (!AppState.appData.violations) {
