@@ -2956,10 +2956,9 @@ const AppState = {
     googleConfig: {
         appsScript: {
             enabled: true,
-            // ✅ v1.0.37 — تحديث إلى @120: مسار موحد atomic لخصم الأدوية (applyMedicationAdjustments_)
-            // إلغاء المسار المزدوج: السابق كان يجمع backend auto-deduction مع frontend forEach(async updateMedication)
-            // → race conditions، dual-path overwrites، edits بدون خصم على الإطلاق. @120 يحل كل ذلك جذرياً.
-            scriptUrl: 'https://script.google.com/macros/s/AKfycbwhWmcjchhLNbl6cbr_BzsjrFkZOCUFk8pgoSONvbvIXHpRnqFqnER4esHiOZYIWL7X/exec'
+            // ✅ v1.0.38 — تحديث إلى @122: دائرة اعتماد المخالفات (ViolationApprovalRequests/Settings + handlers)
+            // المخالفات من المستخدمين العاديين تمر بدائرة اعتماد قابلة للتكوين قبل الكتابة في جدول Violations
+            scriptUrl: 'https://script.google.com/macros/s/AKfycbyFmgpaD4d2y74A1T3uWzLXXFK7YJSPw5IA45uv2TpCUX3gkQJhcgjuVmZS6zPNWcMa/exec'
         },
         sheets: {
             // يُفعَّل تلقائياً عند ضبط spreadsheetId من الإعدادات المحفوظة؛ المعرف الرسمي يُفضَّل في Script Properties بالخادم
@@ -3034,7 +3033,7 @@ const AppState = {
                         const currentApps = AppState.googleConfig.appsScript || {};
                         const parsedApps = parsed.appsScript || {};
                         let parsedUrl = String(parsedApps.scriptUrl || '').trim();
-                        // ✅ ترقية تلقائية من نشرات قديمة إلى @120 (مسار موحد atomic لخصم الأدوية)
+                        // ✅ ترقية تلقائية من نشرات قديمة إلى @122 (دائرة اعتماد المخالفات)
                         const OLD_DEPLOYMENT_URLS = [
                             'AKfycbxkqiYDwVdSUhzi-DOGZO8bBJMORw78FzLhUzRYwSfGldDqvlXerdajhd7byDeuvsP0', // @92
                             'AKfycbzmZKpLvrFm-zcaY91_a7JsW7O6sHzf7vO-sw1ujsa7FbSELMhCFFxF04_5vReLU9Xr', // @95
@@ -3044,9 +3043,10 @@ const AppState = {
                             'AKfycbxnX6Is8GOk_zHQPKhyrAokL-QHOCLgE4kZHqaTpspsnP9huAwAPI833368mfatYsiV', // @112
                             'AKfycbyJBW2DhTWtuNmN_IXs7jqkLChky6LQikPlUUvyXPhotC_S5hFE_3_I-_WOCOV9j1dt', // @114
                             'AKfycbwjAwsW72gWeMpRpTVZqkMFh_QVKwp_-ff2tvLcze3XcmANcZPrcmmXEvvueYLm6h7Q', // @116
-                            'AKfycbyisizNKergIPDRKFa6IUHUL9x98Prcs16FvflommIo-PSr41gXHQv59I3QUasSEPA2', // @118 — dual-path medication deduction
+                            'AKfycbyisizNKergIPDRKFa6IUHUL9x98Prcs16FvflommIo-PSr41gXHQv59I3QUasSEPA2', // @118
+                            'AKfycbwhWmcjchhLNbl6cbr_BzsjrFkZOCUFk8pgoSONvbvIXHpRnqFqnER4esHiOZYIWL7X', // @120 — no violation approval workflow
                         ];
-                        const LATEST_DEPLOYMENT_URL = 'https://script.google.com/macros/s/AKfycbwhWmcjchhLNbl6cbr_BzsjrFkZOCUFk8pgoSONvbvIXHpRnqFqnER4esHiOZYIWL7X/exec';
+                        const LATEST_DEPLOYMENT_URL = 'https://script.google.com/macros/s/AKfycbyFmgpaD4d2y74A1T3uWzLXXFK7YJSPw5IA45uv2TpCUX3gkQJhcgjuVmZS6zPNWcMa/exec';
                         if (parsedUrl && OLD_DEPLOYMENT_URLS.some(old => parsedUrl.includes(old))) {
                             parsedUrl = LATEST_DEPLOYMENT_URL;
                             // حفظ الرابط المُحدَّث تلقائياً
