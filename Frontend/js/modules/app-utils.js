@@ -2956,9 +2956,10 @@ const AppState = {
     googleConfig: {
         appsScript: {
             enabled: true,
-            // ✅ v1.0.37 — تحديث إلى @118 الذي يتضمن إصلاح قراءة الأوقات (formatDate بدل getUTCHours) للسجلات القديمة
-            // النشرات قبل @118 ترجع أوقات منزاحة عن قيمة الجدول لما يكون timezone الجدول ≠ UTC
-            scriptUrl: 'https://script.google.com/macros/s/AKfycbyisizNKergIPDRKFa6IUHUL9x98Prcs16FvflommIo-PSr41gXHQv59I3QUasSEPA2/exec'
+            // ✅ v1.0.37 — تحديث إلى @120: مسار موحد atomic لخصم الأدوية (applyMedicationAdjustments_)
+            // إلغاء المسار المزدوج: السابق كان يجمع backend auto-deduction مع frontend forEach(async updateMedication)
+            // → race conditions، dual-path overwrites، edits بدون خصم على الإطلاق. @120 يحل كل ذلك جذرياً.
+            scriptUrl: 'https://script.google.com/macros/s/AKfycbwhWmcjchhLNbl6cbr_BzsjrFkZOCUFk8pgoSONvbvIXHpRnqFqnER4esHiOZYIWL7X/exec'
         },
         sheets: {
             // يُفعَّل تلقائياً عند ضبط spreadsheetId من الإعدادات المحفوظة؛ المعرف الرسمي يُفضَّل في Script Properties بالخادم
@@ -3033,7 +3034,7 @@ const AppState = {
                         const currentApps = AppState.googleConfig.appsScript || {};
                         const parsedApps = parsed.appsScript || {};
                         let parsedUrl = String(parsedApps.scriptUrl || '').trim();
-                        // ✅ ترقية تلقائية من نشرات قديمة إلى @118 (إصلاح قراءة الأوقات للسجلات القديمة)
+                        // ✅ ترقية تلقائية من نشرات قديمة إلى @120 (مسار موحد atomic لخصم الأدوية)
                         const OLD_DEPLOYMENT_URLS = [
                             'AKfycbxkqiYDwVdSUhzi-DOGZO8bBJMORw78FzLhUzRYwSfGldDqvlXerdajhd7byDeuvsP0', // @92
                             'AKfycbzmZKpLvrFm-zcaY91_a7JsW7O6sHzf7vO-sw1ujsa7FbSELMhCFFxF04_5vReLU9Xr', // @95
@@ -3042,9 +3043,10 @@ const AppState = {
                             'AKfycbwLzUsMbK4abB7n8Ft1hOcMIHMQhSGbeInuqvUmjOAJdyCmFqQzJ-4Oczhkw2OVZIQh', // @109
                             'AKfycbxnX6Is8GOk_zHQPKhyrAokL-QHOCLgE4kZHqaTpspsnP9huAwAPI833368mfatYsiV', // @112
                             'AKfycbyJBW2DhTWtuNmN_IXs7jqkLChky6LQikPlUUvyXPhotC_S5hFE_3_I-_WOCOV9j1dt', // @114
-                            'AKfycbwjAwsW72gWeMpRpTVZqkMFh_QVKwp_-ff2tvLcze3XcmANcZPrcmmXEvvueYLm6h7Q', // @116 — wrong time read (getUTCHours bug)
+                            'AKfycbwjAwsW72gWeMpRpTVZqkMFh_QVKwp_-ff2tvLcze3XcmANcZPrcmmXEvvueYLm6h7Q', // @116
+                            'AKfycbyisizNKergIPDRKFa6IUHUL9x98Prcs16FvflommIo-PSr41gXHQv59I3QUasSEPA2', // @118 — dual-path medication deduction
                         ];
-                        const LATEST_DEPLOYMENT_URL = 'https://script.google.com/macros/s/AKfycbyisizNKergIPDRKFa6IUHUL9x98Prcs16FvflommIo-PSr41gXHQv59I3QUasSEPA2/exec';
+                        const LATEST_DEPLOYMENT_URL = 'https://script.google.com/macros/s/AKfycbwhWmcjchhLNbl6cbr_BzsjrFkZOCUFk8pgoSONvbvIXHpRnqFqnER4esHiOZYIWL7X/exec';
                         if (parsedUrl && OLD_DEPLOYMENT_URLS.some(old => parsedUrl.includes(old))) {
                             parsedUrl = LATEST_DEPLOYMENT_URL;
                             // حفظ الرابط المُحدَّث تلقائياً
