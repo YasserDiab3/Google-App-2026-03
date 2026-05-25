@@ -10866,59 +10866,44 @@ const Clinic = {
                 Notification.success(`تم ${isEdit ? 'تحديث' : 'تسجيل'} الزيارة بنجاح`);
                 modal.remove();
 
-                // 🔄 المزامنة في الخلفية (لا تمنع واجهة المستخدم) - بدون انتظار للأدوية
+                // 🔄 المزامنة في الخلفية (لا تمنع واجهة المستخدم)
                 const rpcTimeoutMs = 60000; // 60 ثانية (يكفي Apps Script Cold Start)
                 (async () => {
                     try {
-                        // ✅ تحديث الزيارة فقط (أساسي)
+                        // ✅ FIX جذري: تمرير medicationAdjustments مع الزيارة → backend يطبّقها atomically
+                        // (مسار موحد، بدون استدعاءات updateMedication متوازية → بدون race condition)
+                        const adjustmentsToSend = (hasInventoryChange && medicationAdjustments.length > 0)
+                            ? medicationAdjustments.map(a => ({ medicationId: String(a.medicationId), delta: Number(a.delta) || 0 }))
+                            : null;
+
                         if (isEdit) {
+                            const updateDataPayload = { ...formData };
+                            if (adjustmentsToSend) updateDataPayload.medicationAdjustments = adjustmentsToSend;
                             const vr = await GoogleIntegration.sendRequest({
                                 action: 'updateClinicVisit',
-                                data: { visitId: visitData.id, updateData: formData, __timeoutMs: rpcTimeoutMs }
+                                data: { visitId: visitData.id, updateData: updateDataPayload, __timeoutMs: rpcTimeoutMs }
                             });
                             this.assertClinicVisitRpcResult(vr);
                         } else {
+                            const addDataPayload = { ...formData, __timeoutMs: rpcTimeoutMs };
+                            if (adjustmentsToSend) addDataPayload.medicationAdjustments = adjustmentsToSend;
                             const vr = await GoogleIntegration.sendRequest({
                                 action: 'addClinicVisit',
-                                data: { ...formData, __timeoutMs: rpcTimeoutMs }
+                                data: addDataPayload
                             });
                             this.assertClinicVisitRpcResult(vr);
                             this.applyClinicVisitIdFromServer(formData, vr);
                         }
 
-                        // ✅ تحديث الأدوية في الخلفية بدون انتظار (لا يمنع نجاح العملية)
+                        // ✅ تم حذف الـ forEach(async updateMedication) المتوازي بالكامل
+                        // الـ backend الآن يطبّق التعديلات atomically عبر applyMedicationAdjustments_
+                        // (يستخدم updateSingleRowInSheet لكل دواء — لا race condition، لا double deduction)
                         if (hasInventoryChange) {
-                            const medicationsNow = this.getMedications();
-                            const uniqueIds = [...new Set(medicationAdjustments.map(a => String(a.medicationId)))];
-
-                            // تحديث بدون await - في الخلفية تماماً
-                            uniqueIds.forEach(async (id) => {
-                                const medication = medicationsNow.find(m => String(m.id) === String(id));
-                                if (!medication) return;
-
-                                try {
-                                    await GoogleIntegration.sendRequest({
-                                        action: 'updateMedication',
-                                        data: {
-                                            medicationId: medication.id,
-                                            updateData: {
-                                                remainingQuantity: medication.remainingQuantity,
-                                                quantityAdded: medication.quantityAdded ?? medication.quantity ?? medication.remainingQuantity
-                                            },
-                                            __timeoutMs: rpcTimeoutMs
-                                        }
-                                    });
-                                } catch (medError) {
-                                    // تجاهل أخطاء الأدوية - ستحدث في الخلفية
-                                    Utils.safeWarn('⚠️ خطأ في تحديث دواء في الخلفية:', medError);
-                                }
-                            });
-
                             document.dispatchEvent(new CustomEvent('data-saved', {
                                 detail: {
                                     module: 'medications',
                                     action: 'تحديث',
-                                    data: { updated: uniqueIds.length }
+                                    data: { updated: medicationAdjustments.length }
                                 }
                             }));
                         }

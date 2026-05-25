@@ -454,18 +454,34 @@ function addClinicVisitToSheet(visitData) {
             return result;
         }
         
-        // ✅ تفعيل خصم الأدوية تلقائياً عند تسجيل الزيارة
-        if (visitData.medications && Array.isArray(visitData.medications) && visitData.medications.length > 0) {
+        // ✅ FIX: مسار موحد لخصم الأدوية — يستخدم applyMedicationAdjustments_ الـ atomic
+        // أولوية للـ medicationAdjustments (دقيق، delta-based) ثم fallback للسلوك القديم (deductMedicationsFromInventory_)
+        var addAdjustmentsResult = null;
+        if (Array.isArray(visitData.medicationAdjustments) && visitData.medicationAdjustments.length > 0) {
             try {
-                Logger.log('💊 [BACKEND] محاولة خصم الأدوية تلقائياً لزيارة: ' + normalized.id);
+                Logger.log('💊 [BACKEND] تطبيق medicationAdjustments الـ atomic لزيارة: ' + normalized.id);
+                addAdjustmentsResult = applyMedicationAdjustments_(
+                    visitData.medicationAdjustments,
+                    normalized.id,
+                    normalized.createdBy,
+                    spreadsheetId
+                );
+                Logger.log('💊 [BACKEND] تم تطبيق ' + (addAdjustmentsResult.applied || 0) + ' تعديل، فشل ' + (addAdjustmentsResult.failed || 0));
+            } catch (adjErr) {
+                Logger.log('❌ [BACKEND] خطأ في applyMedicationAdjustments_: ' + adjErr.toString());
+            }
+        } else if (visitData.medications && Array.isArray(visitData.medications) && visitData.medications.length > 0) {
+            // ✅ Fallback للعملاء القديمين الذين لا يرسلون medicationAdjustments
+            try {
+                Logger.log('💊 [BACKEND] (fallback) deductMedicationsFromInventory_ لزيارة: ' + normalized.id);
                 const deductResult = deductMedicationsFromInventory_(visitData.medications, normalized.id, normalized.createdBy);
                 if (deductResult && deductResult.success) {
-                    Logger.log('✅ [BACKEND] تم خصم الأدوية بنجاح');
+                    Logger.log('✅ [BACKEND] تم خصم الأدوية بنجاح (fallback)');
                 } else {
-                    Logger.log('⚠️ [BACKEND] فشل خصم الأدوية تلقائياً: ' + (deductResult ? deductResult.message : 'خطأ غير معروف'));
+                    Logger.log('⚠️ [BACKEND] فشل خصم الأدوية (fallback): ' + (deductResult ? deductResult.message : 'خطأ غير معروف'));
                 }
             } catch (deductError) {
-                Logger.log('❌ [BACKEND] خطأ تقني في خصم الأدوية: ' + deductError.toString());
+                Logger.log('❌ [BACKEND] خطأ تقني في خصم الأدوية (fallback): ' + deductError.toString());
             }
         }
         
@@ -596,6 +612,14 @@ function updateClinicVisit(visitId, updateData) {
 
         const spreadsheetId = getSpreadsheetId();
         const ss = SpreadsheetApp.openById(spreadsheetId);
+
+        // ✅ FIX: التقاط medicationAdjustments قبل normalize (الـ normalize يحذف الحقل)
+        // medicationAdjustments: [{ medicationId, delta }] delta>0 = صرف (نقص)، delta<0 = استرجاع
+        var medicationAdjustments = null;
+        if (updateData && Array.isArray(updateData.medicationAdjustments)) {
+            medicationAdjustments = updateData.medicationAdjustments.slice();
+        }
+
         const normalizedUpdate = normalizeClinicVisitForSheet_(updateData || {});
         normalizedUpdate.updatedAt = new Date();
 
@@ -678,12 +702,25 @@ function updateClinicVisit(visitId, updateData) {
 
             Logger.log('✅ [BACKEND] updateClinicVisit: تم تحديث الزيارة ' + visitId + ' في ' + sheetName + ' (row=' + rowIndex + ')');
 
+            // ✅ FIX: تطبيق تعديلات الأدوية atomically (delta-based) بعد حفظ الزيارة
+            // delta>0 = صرف جديد (نقص الرصيد)، delta<0 = استرجاع (زيادة الرصيد)
+            var adjustmentsResult = null;
+            if (Array.isArray(medicationAdjustments) && medicationAdjustments.length > 0) {
+                try {
+                    adjustmentsResult = applyMedicationAdjustments_(medicationAdjustments, visitId, normalizedUpdate.updatedBy, spreadsheetId);
+                    Logger.log('💊 [BACKEND] تم تطبيق ' + (adjustmentsResult.applied || 0) + ' تعديل دواء، فشل ' + (adjustmentsResult.failed || 0));
+                } catch (adjError) {
+                    Logger.log('❌ [BACKEND] خطأ في applyMedicationAdjustments_: ' + adjError.toString());
+                }
+            }
+
             return {
                 success: true,
                 message: 'تم تحديث الزيارة',
                 visitId: visitId,
                 sheetName: sheetName,
-                rowNumber: rowIndex
+                rowNumber: rowIndex,
+                medicationAdjustmentsResult: adjustmentsResult
             };
         }
 
@@ -692,6 +729,112 @@ function updateClinicVisit(visitId, updateData) {
         Logger.log('❌ [BACKEND] Error updating clinic visit: ' + error.toString());
         return { success: false, message: 'حدث خطأ أثناء تحديث الزيارة: ' + error.toString() };
     }
+}
+
+/**
+ * ✅ تطبيق تعديلات الأدوية بناءً على delta — مسار موحد للـ ADD و EDIT
+ * delta > 0  : صرف جديد (نقص الرصيد)
+ * delta < 0  : استرجاع (زيادة الرصيد، مع حد أعلى = quantityAdded)
+ * يستخدم updateSingleRowInSheet لكل دواء — atomic per row، آمن من race conditions.
+ *
+ * @param {Array<{medicationId: string, delta: number}>} adjustments
+ * @param {string} visitId
+ * @param {string} dispensedBy
+ * @param {string} spreadsheetId
+ * @returns {{success: boolean, applied: number, failed: number, details: Array}}
+ */
+function applyMedicationAdjustments_(adjustments, visitId, dispensedBy, spreadsheetId) {
+    var result = { success: true, applied: 0, failed: 0, details: [] };
+    if (!Array.isArray(adjustments) || adjustments.length === 0) return result;
+    if (!spreadsheetId) spreadsheetId = getSpreadsheetId();
+
+    var sheetName = 'Medications';
+    var logSheetName = 'MedicationDispenseLog';
+
+    // قراءة واحدة فقط للحصول على القيم الحالية لجميع الأدوية المطلوبة
+    var allMeds = readFromSheet(sheetName, spreadsheetId);
+    if (!Array.isArray(allMeds)) {
+        return { success: false, applied: 0, failed: adjustments.length, details: [{ error: 'تعذر قراءة جدول الأدوية' }] };
+    }
+
+    for (var i = 0; i < adjustments.length; i++) {
+        var adj = adjustments[i];
+        if (!adj || !adj.medicationId) continue;
+        var medId = String(adj.medicationId).trim();
+        var delta = parseFloat(adj.delta) || 0;
+        if (delta === 0) continue;
+
+        var med = allMeds.find(function(m) { return m && String(m.id).trim() === medId; });
+        if (!med) {
+            result.failed++;
+            result.details.push({ medicationId: medId, error: 'الدواء غير موجود' });
+            continue;
+        }
+
+        var currentRemaining = parseFloat(med.remainingQuantity != null ? med.remainingQuantity : med.quantity || 0) || 0;
+        var capQty = parseFloat(med.quantityAdded != null ? med.quantityAdded : (med.quantity || 0)) || 0;
+        if (capQty <= 0) capQty = Math.max(currentRemaining, Math.abs(delta));
+
+        // delta > 0 → نقص الرصيد. delta < 0 → استرجاع (زيادة) مع تقييد بـ capQty
+        var newRemaining = currentRemaining - delta;
+        if (newRemaining < 0) newRemaining = 0;
+        if (newRemaining > capQty) newRemaining = capQty;
+
+        // إعداد updateData — فقط الحقول المتغيرة (atomic update)
+        var updateData = {
+            remainingQuantity: newRemaining,
+            quantityAdded: capQty,
+            updatedAt: new Date(),
+            updatedBy: dispensedBy || 'System'
+        };
+
+        // تحديث حالة الدواء حسب الرصيد
+        if (newRemaining === 0) updateData.status = 'منتهي';
+        else if (newRemaining <= 10) updateData.status = 'منخفض';
+
+        try {
+            var upd = updateSingleRowInSheet(sheetName, medId, updateData, spreadsheetId);
+            if (upd && upd.success) {
+                result.applied++;
+                result.details.push({
+                    medicationId: medId,
+                    medicationName: med.name || med.medicationName || '',
+                    previousQuantity: currentRemaining,
+                    newQuantity: newRemaining,
+                    delta: delta
+                });
+
+                // سجل في MedicationDispenseLog (للصرف فقط، delta>0)
+                if (delta > 0) {
+                    try {
+                        appendToSheet(logSheetName, {
+                            id: generateSequentialId('MDL', logSheetName),
+                            visitId: visitId || '',
+                            medicationId: medId,
+                            medicationName: med.name || med.medicationName || '',
+                            previousQuantity: currentRemaining,
+                            deductedQuantity: delta,
+                            newQuantity: newRemaining,
+                            dispensedBy: dispensedBy || 'System',
+                            dispensedAt: new Date().toISOString(),
+                            notes: visitId ? ('صرف عيادة — زيارة #' + visitId) : 'صرف عيادة'
+                        });
+                    } catch (logErr) { /* ignore log failure */ }
+                }
+            } else {
+                result.failed++;
+                result.details.push({ medicationId: medId, error: (upd && upd.message) || 'فشل تحديث الدواء' });
+            }
+        } catch (writeErr) {
+            result.failed++;
+            result.details.push({ medicationId: medId, error: writeErr.toString() });
+        }
+    }
+
+    if (result.failed > 0 && result.applied === 0) {
+        result.success = false;
+    }
+    return result;
 }
 
 /**
