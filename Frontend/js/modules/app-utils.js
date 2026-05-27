@@ -2956,9 +2956,10 @@ const AppState = {
     googleConfig: {
         appsScript: {
             enabled: true,
-            // ✅ v1.0.38 — تحديث إلى @122: دائرة اعتماد المخالفات (ViolationApprovalRequests/Settings + handlers)
-            // المخالفات من المستخدمين العاديين تمر بدائرة اعتماد قابلة للتكوين قبل الكتابة في جدول Violations
-            scriptUrl: 'https://script.google.com/macros/s/AKfycbyFmgpaD4d2y74A1T3uWzLXXFK7YJSPw5IA45uv2TpCUX3gkQJhcgjuVmZS6zPNWcMa/exec'
+            // ✅ v1.0.38 — تحديث إلى @124: إصلاح خصم الأدوية للزيارات الجديدة (capturedMedicationAdjustments)
+            // كان addClinicVisitToSheet يقرأ visitData.medicationAdjustments بعد ~140 سطر من المعالجة الوسيطة
+            // → في حال أي تحول للحقل (string، fault، إلخ) كان يفشل الخصم لكن EDIT يعمل لأنه يلتقطه مبكراً
+            scriptUrl: 'https://script.google.com/macros/s/AKfycbzxF2wNoo_g0Psy2k9dOG7i4X1wuw1mWSWirdXBpRu61eMBhRFhX1-5DEmNs5Ldjdjv/exec'
         },
         sheets: {
             // يُفعَّل تلقائياً عند ضبط spreadsheetId من الإعدادات المحفوظة؛ المعرف الرسمي يُفضَّل في Script Properties بالخادم
@@ -3033,7 +3034,7 @@ const AppState = {
                         const currentApps = AppState.googleConfig.appsScript || {};
                         const parsedApps = parsed.appsScript || {};
                         let parsedUrl = String(parsedApps.scriptUrl || '').trim();
-                        // ✅ ترقية تلقائية من نشرات قديمة إلى @122 (دائرة اعتماد المخالفات)
+                        // ✅ ترقية تلقائية من نشرات قديمة إلى @124 (إصلاح خصم الأدوية لزيارة جديدة + دائرة اعتماد المخالفات)
                         const OLD_DEPLOYMENT_URLS = [
                             'AKfycbxkqiYDwVdSUhzi-DOGZO8bBJMORw78FzLhUzRYwSfGldDqvlXerdajhd7byDeuvsP0', // @92
                             'AKfycbzmZKpLvrFm-zcaY91_a7JsW7O6sHzf7vO-sw1ujsa7FbSELMhCFFxF04_5vReLU9Xr', // @95
@@ -3044,9 +3045,10 @@ const AppState = {
                             'AKfycbyJBW2DhTWtuNmN_IXs7jqkLChky6LQikPlUUvyXPhotC_S5hFE_3_I-_WOCOV9j1dt', // @114
                             'AKfycbwjAwsW72gWeMpRpTVZqkMFh_QVKwp_-ff2tvLcze3XcmANcZPrcmmXEvvueYLm6h7Q', // @116
                             'AKfycbyisizNKergIPDRKFa6IUHUL9x98Prcs16FvflommIo-PSr41gXHQv59I3QUasSEPA2', // @118
-                            'AKfycbwhWmcjchhLNbl6cbr_BzsjrFkZOCUFk8pgoSONvbvIXHpRnqFqnER4esHiOZYIWL7X', // @120 — no violation approval workflow
+                            'AKfycbwhWmcjchhLNbl6cbr_BzsjrFkZOCUFk8pgoSONvbvIXHpRnqFqnER4esHiOZYIWL7X', // @120
+                            'AKfycbyFmgpaD4d2y74A1T3uWzLXXFK7YJSPw5IA45uv2TpCUX3gkQJhcgjuVmZS6zPNWcMa', // @122 — broken addClinicVisit medication deduction
                         ];
-                        const LATEST_DEPLOYMENT_URL = 'https://script.google.com/macros/s/AKfycbyFmgpaD4d2y74A1T3uWzLXXFK7YJSPw5IA45uv2TpCUX3gkQJhcgjuVmZS6zPNWcMa/exec';
+                        const LATEST_DEPLOYMENT_URL = 'https://script.google.com/macros/s/AKfycbzxF2wNoo_g0Psy2k9dOG7i4X1wuw1mWSWirdXBpRu61eMBhRFhX1-5DEmNs5Ldjdjv/exec';
                         if (parsedUrl && OLD_DEPLOYMENT_URLS.some(old => parsedUrl.includes(old))) {
                             parsedUrl = LATEST_DEPLOYMENT_URL;
                             // حفظ الرابط المُحدَّث تلقائياً
