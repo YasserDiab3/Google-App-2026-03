@@ -308,8 +308,28 @@ function addClinicVisitToSheet(visitData) {
             Logger.log('❌ [BACKEND] arguments كاملة: ' + JSON.stringify(Array.from(arguments)));
             return { success: false, message: 'بيانات الزيارة غير موجودة أو غير صحيحة' };
         }
-        
+
         Logger.log('✅ [BACKEND] visitData موجود، عدد الحقول: ' + Object.keys(visitData).length);
+
+        // ✅ FIX: التقاط medicationAdjustments بأبكر وقت ممكن — قبل أي معالجة قد تفقدها
+        // يدعم: Array مباشر / JSON string (إذا تم serialize في طبقة وسيطة) / null
+        var capturedMedicationAdjustments = (function() {
+            if (!visitData) return null;
+            var raw = visitData.medicationAdjustments;
+            if (!raw) return null;
+            if (Array.isArray(raw)) return raw.slice(); // نسخة لتفادي أي تغيير لاحق
+            if (typeof raw === 'string') {
+                try {
+                    var parsed = JSON.parse(raw);
+                    if (Array.isArray(parsed)) return parsed.slice();
+                } catch (e) { /* ignore */ }
+            }
+            return null;
+        })();
+        Logger.log('💊 [BACKEND-ADD] medicationAdjustments المُلتقَط: ' +
+            (capturedMedicationAdjustments ? capturedMedicationAdjustments.length + ' عنصر' : 'null') +
+            ' | raw type: ' + typeof visitData.medicationAdjustments +
+            ' | hasMedications: ' + (Array.isArray(visitData.medications) ? visitData.medications.length : 'no'));
 
         // ✅ تثبيت نوع الشخص بشكل موحّد لمنع التسجيل في الجدول الخطأ
         try {
@@ -455,34 +475,46 @@ function addClinicVisitToSheet(visitData) {
         }
         
         // ✅ FIX: مسار موحد لخصم الأدوية — يستخدم applyMedicationAdjustments_ الـ atomic
-        // أولوية للـ medicationAdjustments (دقيق، delta-based) ثم fallback للسلوك القديم (deductMedicationsFromInventory_)
+        // نستخدم capturedMedicationAdjustments (التُقطت في بداية الدالة) — ليس visitData.medicationAdjustments مباشرة
+        // (تفادي مشكلة احتمال فقدان/تحويل الحقل بعد المعالجة)
         var addAdjustmentsResult = null;
-        if (Array.isArray(visitData.medicationAdjustments) && visitData.medicationAdjustments.length > 0) {
+        if (Array.isArray(capturedMedicationAdjustments) && capturedMedicationAdjustments.length > 0) {
             try {
-                Logger.log('💊 [BACKEND] تطبيق medicationAdjustments الـ atomic لزيارة: ' + normalized.id);
+                Logger.log('💊 [BACKEND-ADD] تطبيق medicationAdjustments الـ atomic لزيارة: ' + normalized.id +
+                    ' (عدد التعديلات: ' + capturedMedicationAdjustments.length + ')');
                 addAdjustmentsResult = applyMedicationAdjustments_(
-                    visitData.medicationAdjustments,
+                    capturedMedicationAdjustments,
                     normalized.id,
                     normalized.createdBy,
                     spreadsheetId
                 );
-                Logger.log('💊 [BACKEND] تم تطبيق ' + (addAdjustmentsResult.applied || 0) + ' تعديل، فشل ' + (addAdjustmentsResult.failed || 0));
+                Logger.log('💊 [BACKEND-ADD] تم تطبيق ' + (addAdjustmentsResult && addAdjustmentsResult.applied || 0) +
+                    ' تعديل، فشل ' + (addAdjustmentsResult && addAdjustmentsResult.failed || 0));
+                if (addAdjustmentsResult && addAdjustmentsResult.details) {
+                    Logger.log('💊 [BACKEND-ADD] تفاصيل: ' + JSON.stringify(addAdjustmentsResult.details).substring(0, 500));
+                }
             } catch (adjErr) {
-                Logger.log('❌ [BACKEND] خطأ في applyMedicationAdjustments_: ' + adjErr.toString());
+                Logger.log('❌ [BACKEND-ADD] خطأ في applyMedicationAdjustments_: ' + adjErr.toString());
+                Logger.log('❌ [BACKEND-ADD] Stack: ' + (adjErr.stack || 'no stack'));
             }
         } else if (visitData.medications && Array.isArray(visitData.medications) && visitData.medications.length > 0) {
             // ✅ Fallback للعملاء القديمين الذين لا يرسلون medicationAdjustments
             try {
-                Logger.log('💊 [BACKEND] (fallback) deductMedicationsFromInventory_ لزيارة: ' + normalized.id);
+                Logger.log('💊 [BACKEND-ADD] (fallback) deductMedicationsFromInventory_ لزيارة: ' + normalized.id +
+                    ' (عدد الأدوية: ' + visitData.medications.length + ')');
                 const deductResult = deductMedicationsFromInventory_(visitData.medications, normalized.id, normalized.createdBy);
                 if (deductResult && deductResult.success) {
-                    Logger.log('✅ [BACKEND] تم خصم الأدوية بنجاح (fallback)');
+                    Logger.log('✅ [BACKEND-ADD] تم خصم الأدوية بنجاح (fallback): deducted=' + (deductResult.deducted ? deductResult.deducted.length : 0));
                 } else {
-                    Logger.log('⚠️ [BACKEND] فشل خصم الأدوية (fallback): ' + (deductResult ? deductResult.message : 'خطأ غير معروف'));
+                    Logger.log('⚠️ [BACKEND-ADD] فشل خصم الأدوية (fallback): ' + (deductResult ? deductResult.message : 'خطأ غير معروف'));
                 }
             } catch (deductError) {
-                Logger.log('❌ [BACKEND] خطأ تقني في خصم الأدوية (fallback): ' + deductError.toString());
+                Logger.log('❌ [BACKEND-ADD] خطأ تقني في خصم الأدوية (fallback): ' + deductError.toString());
             }
+        } else {
+            Logger.log('ℹ️ [BACKEND-ADD] لا توجد أدوية للخصم (capturedAdjustments=' +
+                (capturedMedicationAdjustments ? capturedMedicationAdjustments.length : 'null') +
+                ', medications=' + (visitData.medications ? visitData.medications.length : 'null') + ')');
         }
         
         var merged = (result && typeof result === 'object') ? result : { success: true };
