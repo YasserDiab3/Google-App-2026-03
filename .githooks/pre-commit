@@ -1,0 +1,51 @@
+#!/bin/sh
+# ═══════════════════════════════════════════════════════════════════
+# .githooks/pre-commit — bump الإصدار التلقائي قبل كل commit
+#
+# يعمل إذا كان أي ملف داخل Frontend/ أو vercel-deploy/frontend/ مرحَّلاً
+# للـ staging (باستثناء ملفات الإصدار نفسها — لتفادي bump مزدوج).
+#
+# يتجاوز الـ hook:
+#   git commit --no-verify -m "..."   ← لتخطّي bump (مثلاً commit وثائق فقط)
+# ═══════════════════════════════════════════════════════════════════
+
+# ملفات الإصدار التي يُعدّلها bump-version.js (لا نَعتبرها سبباً للـ bump)
+VERSION_FILE_PATTERN='(version\.json|service-worker\.js|index\.html|js/modules/app-utils\.js)$'
+
+# الملفات المرحَّلة في Frontend/ أو vercel-deploy/frontend/
+STAGED_FRONTEND=$(git diff --cached --name-only --diff-filter=ACMR | grep -E '^(Frontend|vercel-deploy/frontend)/' || true)
+
+# لا تغييرات frontend → تخطّي
+if [ -z "$STAGED_FRONTEND" ]; then
+    exit 0
+fi
+
+# فقط ملفات إصدار مرحَّلة (تعديل يدوي) → تخطّي
+NON_VERSION_STAGED=$(echo "$STAGED_FRONTEND" | grep -vE "$VERSION_FILE_PATTERN" || true)
+if [ -z "$NON_VERSION_STAGED" ]; then
+    exit 0
+fi
+
+echo "🔢 [pre-commit] تغييرات Frontend مكتشَفة — تشغيل bump-version.js..."
+
+# تشغيل bump-version.js (يزيد patch تلقائياً)
+if ! node bump-version.js; then
+    echo "❌ [pre-commit] فشل bump-version.js — تم إلغاء الـ commit."
+    echo "💡 لتخطّي bump (مثلاً عند فشل Node): git commit --no-verify"
+    exit 1
+fi
+
+# ضمّ ملفات الإصدار المُحدَّثة للـ commit
+git add \
+    Frontend/version.json \
+    Frontend/service-worker.js \
+    Frontend/index.html \
+    Frontend/js/modules/app-utils.js \
+    vercel-deploy/frontend/version.json \
+    vercel-deploy/frontend/service-worker.js \
+    vercel-deploy/frontend/index.html \
+    vercel-deploy/frontend/js/modules/app-utils.js \
+    2>/dev/null || true
+
+echo "✅ [pre-commit] تم رفع الإصدار وضمّه للـ commit."
+exit 0
