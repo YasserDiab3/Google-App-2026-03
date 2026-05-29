@@ -348,16 +348,21 @@ const Incidents = {
             // تحميل من AppState
             if (AppState.appData && AppState.appData.incidentsRegistry) {
                 this.registryData = AppState.appData.incidentsRegistry;
-                return;
-            }
-            // تحميل من localStorage
-            const savedData = localStorage.getItem('hse_incidents_registry');
-            if (savedData) {
-                this.registryData = JSON.parse(savedData);
-                if (!AppState.appData) AppState.appData = {};
-                AppState.appData.incidentsRegistry = this.registryData;
             } else {
-                this.registryData = [];
+                // تحميل من localStorage
+                const savedData = localStorage.getItem('hse_incidents_registry');
+                if (savedData) {
+                    this.registryData = JSON.parse(savedData);
+                    if (!AppState.appData) AppState.appData = {};
+                    AppState.appData.incidentsRegistry = this.registryData;
+                } else {
+                    this.registryData = [];
+                }
+            }
+            // ✅ تنظيف أي تكرارات قديمة عند التحميل (بنفس id أو نفس incidentId)
+            const removed = this._dedupeRegistryData();
+            if (removed > 0 && AppState.appData) {
+                AppState.appData.incidentsRegistry = this.registryData;
             }
         } catch (error) {
             Utils.safeError('❌ خطأ في تحميل بيانات سجل الحوادث:', error);
@@ -366,11 +371,46 @@ const Incidents = {
     },
 
     /**
+     * ✅ إزالة التكرارات من سجل الحوادث قبل الحفظ/المزامنة
+     * يمنع تراكم صفوف مكررة في IncidentsRegistry:
+     *  - تكرار بنفس id (هوية الصف) → يُبقي الأحدث
+     *  - تكرار منطقي بنفس incidentId غير الفارغ → يُبقي الأحدث
+     * يُعيد عدد السجلات المُزالة.
+     */
+    _dedupeRegistryData() {
+        if (!Array.isArray(this.registryData)) { this.registryData = []; return 0; }
+        const seenId = new Set();
+        const seenIncidentId = new Set();
+        const result = [];
+        for (let i = this.registryData.length - 1; i >= 0; i--) {
+            const r = this.registryData[i];
+            if (!r || typeof r !== 'object') continue;
+            const id = r.id != null ? String(r.id).trim() : '';
+            const incId = (r.incidentId != null && String(r.incidentId).trim() !== '' && String(r.incidentId).trim() !== 'null')
+                ? String(r.incidentId).trim() : '';
+            if (id && seenId.has(id)) continue;
+            if (incId && seenIncidentId.has(incId)) continue;
+            if (id) seenId.add(id);
+            if (incId) seenIncidentId.add(incId);
+            result.push(r);
+        }
+        result.reverse();
+        const removed = this.registryData.length - result.length;
+        if (removed > 0) {
+            this.registryData = result;
+            try { Utils.safeLog(`🧹 IncidentsRegistry: تم إزالة ${removed} سجل مكرر قبل الحفظ`); } catch (e) {}
+        }
+        return removed;
+    },
+
+    /**
      * حفظ بيانات السجل
      */
     async saveRegistryData(options = {}) {
         try {
             const { sync = true } = options || {};
+            // ✅ إزالة أي تكرارات قبل الحفظ والمزامنة
+            this._dedupeRegistryData();
             if (!AppState.appData) AppState.appData = {};
             AppState.appData.incidentsRegistry = this.registryData;
             localStorage.setItem('hse_incidents_registry', Utils.safeStringify(this.registryData));
