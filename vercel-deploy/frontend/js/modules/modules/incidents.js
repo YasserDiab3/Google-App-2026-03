@@ -1289,6 +1289,7 @@ const Incidents = {
                         {id:'incident-af-severity', icon:'fas fa-exclamation',    color:'#dc2626', label:'الشدة'},
                         {id:'incident-af-type',     icon:'fas fa-tag',            color:'#0d9488', label:'نوع الحادث'},
                         {id:'incident-af-dept',     icon:'fas fa-building',       color:'#f59e0b', label:'الإدارة'},
+                        {id:'incident-af-factory',  icon:'fas fa-industry',       color:'#0891b2', label:'المصنع'},
                         {id:'incident-af-loc',      icon:'fas fa-map-marker-alt', color:'#8b5cf6', label:'الموقع'},
                     ].map(f=>`
                         <div>
@@ -1356,8 +1357,18 @@ const Incidents = {
                 </div>
             </div>
 
-            <!-- ══ Row 3: الإدارة + الموقع ══ -->
+            <!-- ══ Row 3: المصنع + الإدارة ══ -->
             <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:16px;margin-bottom:16px;">
+                <div class="content-card" style="padding:0;overflow:hidden;">
+                    <div style="padding:13px 18px 10px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:8px;">
+                        <i class="fas fa-industry" style="color:#0891b2;"></i>
+                        <span style="font-weight:700;font-size:0.88rem;">حسب المصنع (أعلى 8)</span>
+                    </div>
+                    <div style="padding:12px;position:relative;height:280px;">
+                        <canvas id="incident-chart-factory"></canvas>
+                        <div id="incident-chart-factory-empty" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;color:#94a3b8;font-size:0.85rem;">لا توجد بيانات</div>
+                    </div>
+                </div>
                 <div class="content-card" style="padding:0;overflow:hidden;">
                     <div style="padding:13px 18px 10px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:8px;">
                         <i class="fas fa-building" style="color:#f59e0b;"></i>
@@ -1368,15 +1379,17 @@ const Incidents = {
                         <div id="incident-chart-dept-empty" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;color:#94a3b8;font-size:0.85rem;">لا توجد بيانات</div>
                     </div>
                 </div>
-                <div class="content-card" style="padding:0;overflow:hidden;">
-                    <div style="padding:13px 18px 10px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:8px;">
-                        <i class="fas fa-map-marker-alt" style="color:#8b5cf6;"></i>
-                        <span style="font-weight:700;font-size:0.88rem;">حسب الموقع (أعلى 8)</span>
-                    </div>
-                    <div style="padding:12px;position:relative;height:280px;">
-                        <canvas id="incident-chart-loc"></canvas>
-                        <div id="incident-chart-loc-empty" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;color:#94a3b8;font-size:0.85rem;">لا توجد بيانات</div>
-                    </div>
+            </div>
+
+            <!-- ══ Row 4: الموقع (المكان الفرعي) ══ -->
+            <div class="content-card" style="padding:0;overflow:hidden;margin-bottom:16px;">
+                <div style="padding:13px 18px 10px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:8px;">
+                    <i class="fas fa-map-marker-alt" style="color:#8b5cf6;"></i>
+                    <span style="font-weight:700;font-size:0.88rem;">حسب الموقع (المكان الفرعي — أعلى 10)</span>
+                </div>
+                <div style="padding:12px;position:relative;height:280px;">
+                    <canvas id="incident-chart-loc"></canvas>
+                    <div id="incident-chart-loc-empty" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;color:#94a3b8;font-size:0.85rem;">لا توجد بيانات</div>
                 </div>
             </div>
 
@@ -1408,6 +1421,7 @@ const Incidents = {
                                 <th style="padding:9px 12px;text-align:right;font-weight:700;color:#991b1b;white-space:nowrap;">التاريخ</th>
                                 <th style="padding:9px 12px;text-align:right;font-weight:700;color:#991b1b;">نوع الحادث</th>
                                 <th style="padding:9px 12px;text-align:right;font-weight:700;color:#991b1b;">الإدارة</th>
+                                <th style="padding:9px 12px;text-align:right;font-weight:700;color:#991b1b;">المصنع</th>
                                 <th style="padding:9px 12px;text-align:right;font-weight:700;color:#991b1b;">الموقع</th>
                                 <th style="padding:9px 12px;text-align:center;font-weight:700;color:#991b1b;">الشدة</th>
                                 <th style="padding:9px 12px;text-align:center;font-weight:700;color:#991b1b;">الحالة</th>
@@ -1546,10 +1560,15 @@ const Incidents = {
         const typeMap = this._iGroupBy(filtered, r => r.incidentType || r.type || 'غير محدد', 10);
         this._iHBar('incident-chart-type', typeMap.labels, typeMap.data, 'rgba(13,148,136,0.75)');
 
+        // ✅ المصنع (site/factory) — حقل منفصل عن الموقع الفرعي
+        const factoryMap = this._iGroupBy(filtered, r => r.siteName || r.factory || r.location || 'غير محدد', 8);
+        this._iHBar('incident-chart-factory', factoryMap.labels, factoryMap.data, 'rgba(8,145,178,0.75)');
+
         const deptMap = this._iGroupBy(filtered, r => r.department || 'غير محدد', 8);
         this._iHBar('incident-chart-dept', deptMap.labels, deptMap.data, 'rgba(245,158,11,0.75)');
 
-        const locMap = this._iGroupBy(filtered, r => r.location || r.siteName || 'غير محدد', 8);
+        // ✅ الموقع = المكان الفرعي (sublocation) مع fallback للموقع العام
+        const locMap = this._iGroupBy(filtered, r => r.sublocationName || r.sublocation || r.location || 'غير محدد', 10);
         this._iHBar('incident-chart-loc', locMap.labels, locMap.data, 'rgba(139,92,246,0.75)');
 
         this._iYearly('incident-chart-yearly', allIncidents);
@@ -1575,16 +1594,19 @@ const Incidents = {
                 return `<span style="background:${bg};color:${c};padding:2px 9px;border-radius:12px;font-size:0.72rem;font-weight:700;">${t}</span>`;
             };
             tbody.innerHTML = recent.length === 0
-                ? '<tr><td colspan="6" style="padding:24px;text-align:center;color:#94a3b8;">لا توجد حوادث في هذه الفترة</td></tr>'
+                ? '<tr><td colspan="7" style="padding:24px;text-align:center;color:#94a3b8;">لا توجد حوادث في هذه الفترة</td></tr>'
                 : recent.map((r, i) => {
                     const d = this.getIncidentDateValue(r);
                     const dateStr = d ? d.toLocaleDateString('ar-EG', { year:'numeric', month:'short', day:'numeric' }) : '—';
                     const rowBg = i%2===0 ? '#fff' : '#fafafa';
+                    const factoryVal = r.siteName || r.factory || r.location || '—';
+                    const locVal = r.sublocationName || r.sublocation || r.location || '—';
                     return `<tr style="border-bottom:1px solid #f8fafc;background:${rowBg};" onmouseover="this.style.background='#fef2f2'" onmouseout="this.style.background='${rowBg}'">
                         <td style="padding:9px 12px;white-space:nowrap;color:#374151;">${dateStr}</td>
                         <td style="padding:9px 12px;color:#374151;">${Utils.escapeHTML(r.incidentType || r.type || '—')}</td>
                         <td style="padding:9px 12px;color:#374151;">${Utils.escapeHTML(r.department || '—')}</td>
-                        <td style="padding:9px 12px;color:#374151;">${Utils.escapeHTML(r.location || r.siteName || '—')}</td>
+                        <td style="padding:9px 12px;color:#374151;">${Utils.escapeHTML(factoryVal)}</td>
+                        <td style="padding:9px 12px;color:#374151;">${Utils.escapeHTML(locVal)}</td>
                         <td style="padding:9px 12px;text-align:center;">${sevBadge(r.severity)}</td>
                         <td style="padding:9px 12px;text-align:center;">${statusBadge(r.status)}</td>
                     </tr>`;
@@ -1603,27 +1625,30 @@ const Incidents = {
         if (statusEl) { const cur=statusEl.value; statusEl.innerHTML = `<option value="">الكل</option><option value="open"${cur==='open'?' selected':''}>مفتوحة</option><option value="investigating"${cur==='investigating'?' selected':''}>قيد التحقيق</option><option value="closed"${cur==='closed'?' selected':''}>مغلقة</option>`; }
         const sevEl = document.getElementById('incident-af-severity');
         if (sevEl) { const cur=sevEl.value; sevEl.innerHTML = `<option value="">الكل</option><option value="high"${cur==='high'?' selected':''}>عالية</option><option value="medium"${cur==='medium'?' selected':''}>متوسطة</option><option value="low"${cur==='low'?' selected':''}>منخفضة</option>`; }
-        fill('incident-af-type', unique(r => String(r.incidentType || r.type || '').trim()));
-        fill('incident-af-dept', unique(r => String(r.department || '').trim()));
-        fill('incident-af-loc',  unique(r => String(r.location || r.siteName || '').trim()));
+        fill('incident-af-type',    unique(r => String(r.incidentType || r.type || '').trim()));
+        fill('incident-af-dept',    unique(r => String(r.department || '').trim()));
+        fill('incident-af-factory', unique(r => String(r.siteName || r.factory || r.location || '').trim()));
+        fill('incident-af-loc',     unique(r => String(r.sublocationName || r.sublocation || r.location || '').trim()));
     },
 
     _incidentApplyFilters(incidents) {
         const get = id => { const el = document.getElementById(id); return el ? el.value.trim() : ''; };
-        const fStatus = get('incident-af-status');
-        const fSev    = get('incident-af-severity');
-        const fType   = get('incident-af-type');
-        const fDept   = get('incident-af-dept');
-        const fLoc    = get('incident-af-loc');
-        const hasAny  = [fStatus, fSev, fType, fDept, fLoc].some(v => v !== '');
-        const badge   = document.getElementById('incident-filter-badge');
+        const fStatus  = get('incident-af-status');
+        const fSev     = get('incident-af-severity');
+        const fType    = get('incident-af-type');
+        const fDept    = get('incident-af-dept');
+        const fFactory = get('incident-af-factory');
+        const fLoc     = get('incident-af-loc');
+        const hasAny   = [fStatus, fSev, fType, fDept, fFactory, fLoc].some(v => v !== '');
+        const badge    = document.getElementById('incident-filter-badge');
         if (badge) badge.style.display = hasAny ? 'inline' : 'none';
         return incidents.filter(r => {
-            if (fStatus && this.normalizeStatus(r?.status) !== fStatus) return false;
-            if (fSev    && this.normalizeSeverity(r?.severity) !== fSev) return false;
-            if (fType   && String(r.incidentType || r.type || '').trim() !== fType) return false;
-            if (fDept   && String(r.department || '').trim() !== fDept) return false;
-            if (fLoc    && String(r.location || r.siteName || '').trim() !== fLoc) return false;
+            if (fStatus  && this.normalizeStatus(r?.status) !== fStatus) return false;
+            if (fSev     && this.normalizeSeverity(r?.severity) !== fSev) return false;
+            if (fType    && String(r.incidentType || r.type || '').trim() !== fType) return false;
+            if (fDept    && String(r.department || '').trim() !== fDept) return false;
+            if (fFactory && String(r.siteName || r.factory || r.location || '').trim() !== fFactory) return false;
+            if (fLoc     && String(r.sublocationName || r.sublocation || r.location || '').trim() !== fLoc) return false;
             return true;
         });
     },
@@ -1746,13 +1771,13 @@ const Incidents = {
         const resetBtn = document.getElementById('incident-filter-reset-btn');
         if (resetBtn) {
             resetBtn.addEventListener('click', () => {
-                ['incident-af-status','incident-af-severity','incident-af-type','incident-af-dept','incident-af-loc'].forEach(id => {
+                ['incident-af-status','incident-af-severity','incident-af-type','incident-af-dept','incident-af-factory','incident-af-loc'].forEach(id => {
                     const el = document.getElementById(id); if (el) el.value = '';
                 });
                 this.updateIncidentAnalyticsDashboard();
             });
         }
-        ['incident-af-status','incident-af-severity','incident-af-type','incident-af-dept','incident-af-loc'].forEach(id => {
+        ['incident-af-status','incident-af-severity','incident-af-type','incident-af-dept','incident-af-factory','incident-af-loc'].forEach(id => {
             const el = document.getElementById(id);
             if (el) el.addEventListener('change', () => this.updateIncidentAnalyticsDashboard());
         });
@@ -4201,6 +4226,9 @@ const Incidents = {
             setTimeout(() => {
                 try {
                     if (typeof GoogleIntegration !== 'undefined' && GoogleIntegration.autoSave) {
+                        // ✅ إصلاح التكرار: نستخدم autoSave('Incidents') فقط (saveToSheet → UPSERT بالـ id)
+                        // كان السابق يستدعي أيضاً action 'addIncident' (appendToSheet) بالتوازي → سباق
+                        // قراءة/كتابة يُنتج صفّين لنفس الحادث. autoSave وحده كافٍ وآمن من التكرار.
                         GoogleIntegration.autoSave('Incidents', AppState.appData.incidents).catch((err) => {
                             Utils.safeWarn('⚠️ فشل مزامنة الحوادث في الخلفية:', err);
                         });
@@ -4210,15 +4238,6 @@ const Incidents = {
                     }
                 } catch (e) {
                     Utils.safeWarn('⚠️ خطأ أثناء مزامنة البيانات في الخلفية:', e);
-                }
-                try {
-                    if (typeof GoogleIntegration !== 'undefined' && GoogleIntegration.sendRequest) {
-                        GoogleIntegration.sendRequest({ action: 'addIncident', data: incident }).catch((err) => {
-                            Utils.safeWarn('⚠️ فشل إرسال الحادث إلى الخادم:', err);
-                        });
-                    }
-                } catch (e) {
-                    Utils.safeWarn('⚠️ خطأ أثناء إرسال الحادث إلى الخادم:', e);
                 }
 
                 this.syncClinicSickLeaveFromRegistryEntry(entry, {
@@ -5802,9 +5821,11 @@ const Incidents = {
                                                 <button onclick="Incidents.exportPDF('${id}')" class="btn-icon btn-icon-secondary" title="تصدير / طباعة">
                                                     <i class="fas fa-print"></i>
                                                 </button>
-                                                <button onclick="Incidents.deleteIncident('${id}')" class="btn-icon btn-icon-danger" title="حذف">
+                                                ${this.isAdmin() ? `
+                                                <button onclick="Incidents.deleteIncident('${id}')" class="btn-icon btn-icon-danger" title="حذف (مدير النظام فقط)">
                                                     <i class="fas fa-trash"></i>
                                                 </button>
+                                                ` : ''}
                                             </div>
                                         </td>
                                     </tr>
@@ -8107,8 +8128,9 @@ const Incidents = {
     },
 
     async deleteIncident(id) {
-        // التحقق من الصلاحيات
-        const isAdmin = AppState.currentUser?.role === 'admin' ||
+        // ✅ التحقق من الصلاحيات (مدير النظام فقط) — يستخدم isAdmin() القوي الذي يدعم
+        // 'مدير النظام' و 'Admin' وصلاحيات admin/manage-modules عبر Permissions
+        const isAdmin = this.isAdmin() ||
             (AppState.currentUser?.permissions && (
                 AppState.currentUser.permissions.admin === true ||
                 AppState.currentUser.permissions['manage-modules'] === true ||
@@ -9157,9 +9179,11 @@ const Incidents = {
                                 <button onclick="Incidents.manageWorkflow('${incident.id}')" class="btn-icon btn-icon-warning">
                                     <i class="fas fa-project-diagram"></i>
                                 </button>
-                                <button onclick="Incidents.deleteIncident('${incident.id}')" class="btn-icon btn-icon-danger">
+                                ${this.isAdmin() ? `
+                                <button onclick="Incidents.deleteIncident('${incident.id}')" class="btn-icon btn-icon-danger" title="حذف (مدير النظام فقط)">
                                     <i class="fas fa-trash"></i>
                                 </button>
+                                ` : ''}
                             </div>
                         </td>
                     </tr>
