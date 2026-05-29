@@ -1232,34 +1232,620 @@ const Incidents = {
     },
 
     async renderAnalysisTab() {
-        // Get analysis settings from backend or use defaults
-        const analysisSettings = await this.getAnalysisSettings();
+        // بدء تحميل Chart.js مبكراً
+        this._incidentEnsureChartJS().catch(() => {});
 
+        // ✅ لوحة تحليلات احترافية بنفس نمط العيادة/الملاحظات (gradient header + فترات + فلاتر + KPI + مخططات + جدول + PDF)
         return `
-            <div class="space-y-6">
-                <div class="content-card">
-                    <div class="card-header">
-                        <div class="flex items-center justify-between">
-                            <h2 class="card-title">
-                                <i class="fas fa-chart-line ml-2"></i>
-                                تحليل الحوادث
-                            </h2>
-                            ${this.isAdmin() ? `
-                                <button id="edit-analysis-settings-btn" class="btn-secondary">
-                                    <i class="fas fa-cog ml-2"></i>
-                                    إعدادات التحليل
-                                </button>
-                            ` : ''}
-                        </div>
+        <div id="incident-analytics-root" style="font-family:inherit;">
+
+            <!-- ══ شريط الأدوات ══ -->
+            <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:14px;padding:16px 20px;background:linear-gradient(135deg,#7f1d1d 0%,#dc2626 100%);border-radius:14px;color:#fff;box-shadow:0 4px 20px rgba(220,38,38,0.35);">
+                <div style="display:flex;align-items:center;gap:12px;">
+                    <div style="width:44px;height:44px;background:rgba(255,255,255,0.18);border-radius:12px;display:flex;align-items:center;justify-content:center;">
+                        <i class="fas fa-triangle-exclamation" style="font-size:20px;"></i>
                     </div>
-                    <div class="card-body">
-                        <div id="incident-analysis-content">
-                            ${this.renderAnalysisContent(analysisSettings)}
+                    <div>
+                        <h2 style="margin:0;font-size:1.15rem;font-weight:700;">لوحة تحليل الحوادث</h2>
+                        <p style="margin:0;font-size:0.75rem;opacity:0.85;">تحليل شامل • الحالة • الشدة • النوع • الإدارة • الموقع • تصدير PDF</p>
+                    </div>
+                </div>
+                <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+                    <span style="font-size:0.72rem;opacity:0.85;margin-left:2px;">الفترة:</span>
+                    <div style="display:flex;gap:3px;flex-wrap:wrap;">
+                        ${['30','90','180','365','0'].map((v,i) => {
+                            const labels=['30 يوم','3 أشهر','6 أشهر','سنة','الكل'];
+                            const active=(this._incidentPeriod||'0')===v;
+                            return `<button class="incident-period-btn" data-period="${v}" style="padding:5px 10px;border-radius:8px;border:none;cursor:pointer;font-size:0.75rem;font-weight:600;transition:all .2s;background:${active?'#fff':'rgba(255,255,255,0.15)'};color:${active?'#991b1b':'#fff'};">${labels[i]}</button>`;
+                        }).join('')}
+                    </div>
+                    <button id="incident-toggle-filters-btn" style="padding:6px 12px;border-radius:8px;border:1px solid rgba(255,255,255,0.4);cursor:pointer;background:rgba(255,255,255,0.12);color:#fff;font-size:0.78rem;font-weight:600;transition:all .2s;display:flex;align-items:center;gap:5px;" onmouseover="this.style.background='rgba(255,255,255,0.25)'" onmouseout="this.style.background='rgba(255,255,255,0.12)'">
+                        <i class="fas fa-sliders-h"></i><span>فلاتر</span><span id="incident-filter-badge" style="display:none;background:#fbbf24;color:#78350f;font-size:0.65rem;padding:1px 5px;border-radius:10px;margin-right:2px;">●</span>
+                    </button>
+                    <button id="incident-export-pdf-btn" style="padding:6px 14px;border-radius:8px;border:none;cursor:pointer;background:rgba(0,0,0,0.25);color:#fff;font-size:0.78rem;font-weight:600;transition:all .2s;display:flex;align-items:center;gap:5px;" onmouseover="this.style.background='rgba(0,0,0,0.4)'" onmouseout="this.style.background='rgba(0,0,0,0.25)'">
+                        <i class="fas fa-file-pdf"></i><span>PDF</span>
+                    </button>
+                    <button id="incident-analytics-refresh" style="padding:6px 10px;border-radius:8px;border:none;cursor:pointer;background:rgba(255,255,255,0.15);color:#fff;font-size:0.78rem;transition:all .2s;" onmouseover="this.style.background='rgba(255,255,255,0.3)'" onmouseout="this.style.background='rgba(255,255,255,0.15)'" title="تحديث">
+                        <i class="fas fa-sync-alt"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- ══ لوحة الفلاتر ══ -->
+            <div id="incident-filter-panel" style="display:none;background:#fef2f2;border:1.5px solid #fecaca;border-radius:12px;padding:18px 20px;margin-bottom:16px;">
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+                    <div style="display:flex;align-items:center;gap:8px;">
+                        <i class="fas fa-sliders-h" style="color:#dc2626;font-size:14px;"></i>
+                        <span style="font-weight:700;font-size:0.9rem;color:#991b1b;">الفلاتر التفاعلية</span>
+                        <span id="incident-filter-count" style="background:#fee2e2;color:#b91c1c;padding:2px 8px;border-radius:12px;font-size:0.72rem;font-weight:600;"></span>
+                    </div>
+                    <button id="incident-filter-reset-btn" style="padding:4px 12px;border-radius:8px;border:1px solid #fecaca;background:#fff;color:#64748b;font-size:0.75rem;cursor:pointer;" onmouseover="this.style.background='#fef2f2';this.style.color='#dc2626'" onmouseout="this.style.background='#fff';this.style.color='#64748b'">
+                        <i class="fas fa-times ml-1"></i>مسح الكل
+                    </button>
+                </div>
+                <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;">
+                    ${[
+                        {id:'incident-af-status',   icon:'fas fa-flag',           color:'#6366f1', label:'الحالة'},
+                        {id:'incident-af-severity', icon:'fas fa-exclamation',    color:'#dc2626', label:'الشدة'},
+                        {id:'incident-af-type',     icon:'fas fa-tag',            color:'#0d9488', label:'نوع الحادث'},
+                        {id:'incident-af-dept',     icon:'fas fa-building',       color:'#f59e0b', label:'الإدارة'},
+                        {id:'incident-af-loc',      icon:'fas fa-map-marker-alt', color:'#8b5cf6', label:'الموقع'},
+                    ].map(f=>`
+                        <div>
+                            <label style="font-size:0.72rem;font-weight:700;color:#64748b;display:block;margin-bottom:5px;">
+                                <i class="${f.icon}" style="color:${f.color};margin-left:4px;"></i>${f.label}
+                            </label>
+                            <select id="${f.id}" style="width:100%;padding:7px 10px;border:1.5px solid #fecaca;border-radius:8px;font-size:0.82rem;background:#fff;color:#374151;cursor:pointer;" onfocus="this.style.borderColor='#dc2626'" onblur="this.style.borderColor='#fecaca'">
+                                <option value="">الكل</option>
+                            </select>
                         </div>
+                    `).join('')}
+                </div>
+            </div>
+
+            <!-- ══ KPI Cards ══ -->
+            <div id="incident-kpi-strip" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:10px;margin-bottom:20px;">
+                <div style="text-align:center;padding:16px;color:#94a3b8;"><i class="fas fa-spinner fa-spin"></i></div>
+            </div>
+
+            <!-- ══ Row 1: الحالة + الاتجاه الزمني ══ -->
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:16px;margin-bottom:16px;">
+                <div class="content-card" style="padding:0;overflow:hidden;">
+                    <div style="padding:13px 18px 10px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:8px;">
+                        <i class="fas fa-flag" style="color:#6366f1;"></i>
+                        <span style="font-weight:700;font-size:0.88rem;">الحوادث حسب الحالة</span>
+                    </div>
+                    <div style="padding:12px;position:relative;height:240px;">
+                        <canvas id="incident-chart-status"></canvas>
+                        <div id="incident-chart-status-empty" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;color:#94a3b8;font-size:0.85rem;">لا توجد بيانات</div>
+                    </div>
+                </div>
+                <div class="content-card" style="padding:0;overflow:hidden;">
+                    <div style="padding:13px 18px 10px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:8px;">
+                        <i class="fas fa-chart-area" style="color:#8b5cf6;"></i>
+                        <span style="font-weight:700;font-size:0.88rem;">الاتجاه الزمني للحوادث (آخر 12 شهر)</span>
+                    </div>
+                    <div style="padding:12px;position:relative;height:240px;">
+                        <canvas id="incident-chart-trend"></canvas>
+                        <div id="incident-chart-trend-empty" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;color:#94a3b8;font-size:0.85rem;">لا توجد بيانات</div>
                     </div>
                 </div>
             </div>
+
+            <!-- ══ Row 2: الشدة + نوع الحادث ══ -->
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:16px;margin-bottom:16px;">
+                <div class="content-card" style="padding:0;overflow:hidden;">
+                    <div style="padding:13px 18px 10px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:8px;">
+                        <i class="fas fa-gauge-high" style="color:#dc2626;"></i>
+                        <span style="font-weight:700;font-size:0.88rem;">الحوادث حسب الشدة</span>
+                    </div>
+                    <div style="padding:12px;position:relative;height:240px;">
+                        <canvas id="incident-chart-severity"></canvas>
+                        <div id="incident-chart-severity-empty" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;color:#94a3b8;font-size:0.85rem;">لا توجد بيانات</div>
+                    </div>
+                </div>
+                <div class="content-card" style="padding:0;overflow:hidden;">
+                    <div style="padding:13px 18px 10px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:8px;">
+                        <i class="fas fa-tags" style="color:#0d9488;"></i>
+                        <span style="font-weight:700;font-size:0.88rem;">حسب نوع الحادث (أعلى 10)</span>
+                    </div>
+                    <div style="padding:12px;position:relative;height:280px;">
+                        <canvas id="incident-chart-type"></canvas>
+                        <div id="incident-chart-type-empty" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;color:#94a3b8;font-size:0.85rem;">لا توجد بيانات</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ══ Row 3: الإدارة + الموقع ══ -->
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:16px;margin-bottom:16px;">
+                <div class="content-card" style="padding:0;overflow:hidden;">
+                    <div style="padding:13px 18px 10px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:8px;">
+                        <i class="fas fa-building" style="color:#f59e0b;"></i>
+                        <span style="font-weight:700;font-size:0.88rem;">حسب الإدارة (أعلى 8)</span>
+                    </div>
+                    <div style="padding:12px;position:relative;height:280px;">
+                        <canvas id="incident-chart-dept"></canvas>
+                        <div id="incident-chart-dept-empty" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;color:#94a3b8;font-size:0.85rem;">لا توجد بيانات</div>
+                    </div>
+                </div>
+                <div class="content-card" style="padding:0;overflow:hidden;">
+                    <div style="padding:13px 18px 10px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:8px;">
+                        <i class="fas fa-map-marker-alt" style="color:#8b5cf6;"></i>
+                        <span style="font-weight:700;font-size:0.88rem;">حسب الموقع (أعلى 8)</span>
+                    </div>
+                    <div style="padding:12px;position:relative;height:280px;">
+                        <canvas id="incident-chart-loc"></canvas>
+                        <div id="incident-chart-loc-empty" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;color:#94a3b8;font-size:0.85rem;">لا توجد بيانات</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ══ مقارنة سنوية (3 سنوات) ══ -->
+            <div class="content-card" style="padding:0;overflow:hidden;margin-bottom:16px;">
+                <div style="padding:13px 18px 10px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:8px;">
+                    <i class="fas fa-chart-column" style="color:#b91c1c;"></i>
+                    <span style="font-weight:700;font-size:0.88rem;">المقارنة السنوية (آخر 3 سنوات)</span>
+                </div>
+                <div style="padding:12px;position:relative;height:260px;">
+                    <canvas id="incident-chart-yearly"></canvas>
+                    <div id="incident-chart-yearly-empty" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;color:#94a3b8;font-size:0.85rem;">لا توجد بيانات</div>
+                </div>
+            </div>
+
+            <!-- ══ جدول أحدث الحوادث ══ -->
+            <div class="content-card" style="padding:0;overflow:hidden;">
+                <div style="padding:13px 18px 12px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;justify-content:space-between;gap:8px;">
+                    <div style="display:flex;align-items:center;gap:8px;">
+                        <i class="fas fa-list-ul" style="color:#dc2626;"></i>
+                        <span style="font-weight:700;font-size:0.88rem;">أحدث الحوادث</span>
+                    </div>
+                    <span id="incident-recent-count" style="background:#fef2f2;color:#b91c1c;padding:3px 10px;border-radius:20px;font-size:0.75rem;font-weight:700;"></span>
+                </div>
+                <div style="overflow-x:auto;">
+                    <table style="width:100%;border-collapse:collapse;font-size:0.82rem;">
+                        <thead>
+                            <tr style="background:#fef2f2;">
+                                <th style="padding:9px 12px;text-align:right;font-weight:700;color:#991b1b;white-space:nowrap;">التاريخ</th>
+                                <th style="padding:9px 12px;text-align:right;font-weight:700;color:#991b1b;">نوع الحادث</th>
+                                <th style="padding:9px 12px;text-align:right;font-weight:700;color:#991b1b;">الإدارة</th>
+                                <th style="padding:9px 12px;text-align:right;font-weight:700;color:#991b1b;">الموقع</th>
+                                <th style="padding:9px 12px;text-align:center;font-weight:700;color:#991b1b;">الشدة</th>
+                                <th style="padding:9px 12px;text-align:center;font-weight:700;color:#991b1b;">الحالة</th>
+                            </tr>
+                        </thead>
+                        <tbody id="incident-recent-tbody">
+                            <tr><td colspan="6" style="padding:24px;text-align:center;color:#94a3b8;">جاري التحميل...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
         `;
+    },
+
+    // ═══════════════════════════════════════════════════════════════════
+    // ✅ لوحة تحليلات الحوادث (نفس نمط العيادة/الملاحظات)
+    // ═══════════════════════════════════════════════════════════════════
+
+    /** تحميل Chart.js عند الحاجة */
+    async _incidentEnsureChartJS() {
+        if (typeof Chart !== 'undefined') return true;
+        const existing = document.querySelector('script[src*="chart.js"],script[src*="chartjs"]');
+        if (existing) {
+            return new Promise(resolve => {
+                let tries = 0;
+                const t = setInterval(() => {
+                    if (typeof Chart !== 'undefined') { clearInterval(t); resolve(true); }
+                    else if (++tries > 50) { clearInterval(t); resolve(false); }
+                }, 100);
+            });
+        }
+        return new Promise(resolve => {
+            const s = document.createElement('script');
+            s.src = 'https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js';
+            s.onload = () => resolve(true);
+            s.onerror = () => {
+                const s2 = document.createElement('script');
+                s2.src = 'https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js';
+                s2.onload = () => resolve(true);
+                s2.onerror = () => resolve(false);
+                document.head.appendChild(s2);
+            };
+            document.head.appendChild(s);
+        });
+    },
+
+    /** المصدر الموحّد لبيانات الحوادث */
+    _getIncidentsData() {
+        try { if (typeof this.ensureData === 'function') this.ensureData(); } catch (e) {}
+        return Array.isArray(AppState?.appData?.incidents) ? AppState.appData.incidents : [];
+    },
+
+    /** الدالة الرئيسية: تحديث لوحة التحليلات */
+    async updateIncidentAnalyticsDashboard() {
+        const root = document.getElementById('incident-analytics-root');
+        if (!root) return;
+
+        // ── 1. جمع البيانات ──
+        const allIncidents = this._getIncidentsData();
+        const period = parseInt(this._incidentPeriod || '0', 10);
+
+        // ── 2. تصفية بالفترة ──
+        const cutoff = period > 0 ? (() => { const d = new Date(); d.setDate(d.getDate() - period); return d; })() : null;
+        const inPeriod = cutoff
+            ? allIncidents.filter(r => { const d = this.getIncidentDateValue(r); return d && d >= cutoff; })
+            : allIncidents.slice();
+
+        // ── 3. ملء قوائم الفلاتر ──
+        this._incidentPopulateFilters(inPeriod);
+
+        // ── 4. تطبيق الفلاتر التفاعلية ──
+        const filtered = this._incidentApplyFilters(inPeriod);
+        const total = filtered.length;
+        const countEl = document.getElementById('incident-filter-count');
+        if (countEl) countEl.textContent = `${total} حادث`;
+
+        // ── 5. حساب KPIs ──
+        const byStatus = (s) => filtered.filter(r => this.normalizeStatus(r?.status) === s).length;
+        const bySeverity = (s) => filtered.filter(r => this.normalizeSeverity(r?.severity) === s).length;
+        const openCount = byStatus('open');
+        const investigatingCount = byStatus('investigating');
+        const closedCount = byStatus('closed');
+        const highCount = bySeverity('high');
+        const closureRate = total > 0 ? Math.round((closedCount / total) * 100) : 0;
+        const now = new Date();
+        const thisMonth = filtered.filter(r => {
+            const d = this.getIncidentDateValue(r);
+            return d && d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
+        }).length;
+        const monthsSet = new Set(filtered.map(r => {
+            const d = this.getIncidentDateValue(r);
+            return d ? `${d.getFullYear()}-${d.getMonth()}` : null;
+        }).filter(Boolean));
+        const avgPerMonth = monthsSet.size > 0 ? (total / monthsSet.size).toFixed(1) : 0;
+
+        const kpiEl = document.getElementById('incident-kpi-strip');
+        if (kpiEl) {
+            const kpis = [
+                { label:'إجمالي الحوادث', value:total,               icon:'fas fa-triangle-exclamation', color:'#dc2626', bg:'#fef2f2', border:'#fecaca' },
+                { label:'مفتوحة',         value:openCount,            icon:'fas fa-folder-open',          color:'#f59e0b', bg:'#fffbeb', border:'#fde68a' },
+                { label:'قيد التحقيق',    value:investigatingCount,   icon:'fas fa-magnifying-glass',     color:'#6366f1', bg:'#eef2ff', border:'#c7d2fe' },
+                { label:'مغلقة',          value:closedCount,          icon:'fas fa-circle-check',         color:'#059669', bg:'#ecfdf5', border:'#a7f3d0' },
+                { label:'عالية الشدة',    value:highCount,            icon:'fas fa-fire',                 color:'#b91c1c', bg:'#fef2f2', border:'#fca5a5' },
+                { label:'معدل الإغلاق',   value:closureRate + '%',    icon:'fas fa-chart-pie',            color:'#0891b2', bg:'#ecfeff', border:'#a5f3fc' },
+                { label:'هذا الشهر',      value:thisMonth,            icon:'fas fa-calendar-day',         color:'#db2777', bg:'#fdf2f8', border:'#fbcfe8' },
+                { label:'متوسط شهري',     value:avgPerMonth,          icon:'fas fa-calendar-check',       color:'#7c3aed', bg:'#f5f3ff', border:'#ddd6fe' },
+            ];
+            kpiEl.innerHTML = kpis.map(k => `
+                <div style="background:${k.bg};border:1px solid ${k.border};border-radius:12px;padding:12px 14px;display:flex;align-items:center;gap:10px;transition:all .2s;cursor:default;" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 6px 20px rgba(0,0,0,0.09)'" onmouseout="this.style.transform='';this.style.boxShadow=''">
+                    <div style="width:38px;height:38px;background:${k.color};border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                        <i class="${k.icon}" style="color:#fff;font-size:15px;"></i>
+                    </div>
+                    <div>
+                        <div style="font-size:1.3rem;font-weight:800;color:${k.color};line-height:1;">${k.value}</div>
+                        <div style="font-size:0.68rem;color:#64748b;margin-top:2px;white-space:nowrap;">${k.label}</div>
+                    </div>
+                </div>`).join('');
+        }
+
+        // ── 6. تحميل Chart.js ──
+        const loaded = await this._incidentEnsureChartJS();
+        if (!loaded || typeof Chart === 'undefined') {
+            root.insertAdjacentHTML('afterbegin', '<div style="background:#fffbeb;border:1px solid #fde68a;border-radius:10px;padding:14px 18px;margin-bottom:16px;display:flex;align-items:center;gap:10px;"><i class="fas fa-exclamation-triangle" style="color:#d97706;"></i><span style="font-size:0.85rem;color:#92400e;">تعذّر تحميل مكتبة الرسوم البيانية. الأرقام أعلاه متاحة.</span></div>');
+            return;
+        }
+
+        // ── 7. الرسوم البيانية ──
+        // الحالة (Doughnut)
+        const statusLabels = { open:'مفتوحة', investigating:'قيد التحقيق', closed:'مغلقة', other:'أخرى' };
+        const statusMap = {};
+        filtered.forEach(r => { const k = statusLabels[this.normalizeStatus(r?.status)] || 'أخرى'; statusMap[k] = (statusMap[k]||0)+1; });
+        const statusColors = { 'مفتوحة':'rgba(245,158,11,0.85)', 'قيد التحقيق':'rgba(99,102,241,0.85)', 'مغلقة':'rgba(5,150,105,0.85)', 'أخرى':'rgba(148,163,184,0.8)' };
+        this._iDoughnut('incident-chart-status', Object.keys(statusMap), Object.values(statusMap), Object.keys(statusMap).map(l=>statusColors[l]||'rgba(148,163,184,0.8)'));
+
+        // الاتجاه الزمني (Trend)
+        this._iTrend('incident-chart-trend', allIncidents);
+
+        // الشدة (Doughnut)
+        const sevLabels = { high:'عالية', medium:'متوسطة', low:'منخفضة', other:'أخرى' };
+        const sevMap = {};
+        filtered.forEach(r => { const k = sevLabels[this.normalizeSeverity(r?.severity)] || 'أخرى'; sevMap[k] = (sevMap[k]||0)+1; });
+        const sevColors = { 'عالية':'rgba(220,38,38,0.85)', 'متوسطة':'rgba(245,158,11,0.85)', 'منخفضة':'rgba(59,130,246,0.85)', 'أخرى':'rgba(148,163,184,0.8)' };
+        this._iDoughnut('incident-chart-severity', Object.keys(sevMap), Object.values(sevMap), Object.keys(sevMap).map(l=>sevColors[l]||'rgba(148,163,184,0.8)'));
+
+        // نوع الحادث (HBar)
+        const typeMap = this._iGroupBy(filtered, r => r.incidentType || r.type || 'غير محدد', 10);
+        this._iHBar('incident-chart-type', typeMap.labels, typeMap.data, 'rgba(13,148,136,0.75)');
+
+        // الإدارة (HBar)
+        const deptMap = this._iGroupBy(filtered, r => r.department || 'غير محدد', 8);
+        this._iHBar('incident-chart-dept', deptMap.labels, deptMap.data, 'rgba(245,158,11,0.75)');
+
+        // الموقع (HBar)
+        const locMap = this._iGroupBy(filtered, r => r.location || r.siteName || 'غير محدد', 8);
+        this._iHBar('incident-chart-loc', locMap.labels, locMap.data, 'rgba(139,92,246,0.75)');
+
+        // المقارنة السنوية (3 سنوات)
+        this._iYearly('incident-chart-yearly', allIncidents);
+
+        // ── 8. جدول أحدث الحوادث ──
+        const recent = filtered.slice().sort((a, b) => {
+            const da = this.getIncidentDateValue(a), db = this.getIncidentDateValue(b);
+            return (db ? db.getTime() : 0) - (da ? da.getTime() : 0);
+        }).slice(0, 20);
+        const recentCountEl = document.getElementById('incident-recent-count');
+        if (recentCountEl) recentCountEl.textContent = `${recent.length} حادث`;
+        const tbody = document.getElementById('incident-recent-tbody');
+        if (tbody) {
+            const sevBadge = (sev) => {
+                const k = this.normalizeSeverity(sev);
+                const map = {
+                    high:   ['عالية','#fef2f2','#b91c1c'],
+                    medium: ['متوسطة','#fffbeb','#b45309'],
+                    low:    ['منخفضة','#eff6ff','#1d4ed8'],
+                    other:  ['غير محدد','#f1f5f9','#475569']
+                };
+                const [t,bg,c] = map[k] || map.other;
+                return `<span style="background:${bg};color:${c};padding:2px 9px;border-radius:12px;font-size:0.72rem;font-weight:700;">${t}</span>`;
+            };
+            const statusBadge = (st) => {
+                const k = this.normalizeStatus(st);
+                const map = {
+                    open:          ['مفتوحة','#fffbeb','#b45309'],
+                    investigating: ['قيد التحقيق','#eef2ff','#4338ca'],
+                    closed:        ['مغلقة','#ecfdf5','#047857'],
+                    other:         ['أخرى','#f1f5f9','#475569']
+                };
+                const [t,bg,c] = map[k] || map.other;
+                return `<span style="background:${bg};color:${c};padding:2px 9px;border-radius:12px;font-size:0.72rem;font-weight:700;">${t}</span>`;
+            };
+            tbody.innerHTML = recent.length === 0
+                ? '<tr><td colspan="6" style="padding:24px;text-align:center;color:#94a3b8;">لا توجد حوادث في هذه الفترة</td></tr>'
+                : recent.map((r, i) => {
+                    const d = this.getIncidentDateValue(r);
+                    const dateStr = d ? d.toLocaleDateString('ar-EG', { year:'numeric', month:'short', day:'numeric' }) : '—';
+                    const rowBg = i%2===0 ? '#fff' : '#fafafa';
+                    return `<tr style="border-bottom:1px solid #f8fafc;background:${rowBg};" onmouseover="this.style.background='#fef2f2'" onmouseout="this.style.background='${rowBg}'">
+                        <td style="padding:9px 12px;white-space:nowrap;color:#374151;">${dateStr}</td>
+                        <td style="padding:9px 12px;color:#374151;">${Utils.escapeHTML(r.incidentType || r.type || '—')}</td>
+                        <td style="padding:9px 12px;color:#374151;">${Utils.escapeHTML(r.department || '—')}</td>
+                        <td style="padding:9px 12px;color:#374151;">${Utils.escapeHTML(r.location || r.siteName || '—')}</td>
+                        <td style="padding:9px 12px;text-align:center;">${sevBadge(r.severity)}</td>
+                        <td style="padding:9px 12px;text-align:center;">${statusBadge(r.status)}</td>
+                    </tr>`;
+                }).join('');
+        }
+    },
+
+    /** ملء قوائم الفلاتر */
+    _incidentPopulateFilters(incidents) {
+        const unique = fn => [...new Set(incidents.map(fn).filter(Boolean))].sort();
+        const fill = (id, values) => {
+            const el = document.getElementById(id); if (!el) return;
+            const cur = el.value;
+            el.innerHTML = '<option value="">الكل</option>' + values.map(v => `<option value="${Utils.escapeHTML(String(v))}"${v===cur?' selected':''}>${Utils.escapeHTML(String(v))}</option>`).join('');
+        };
+        // الحالة + الشدة ثابتة (canonical)
+        const statusEl = document.getElementById('incident-af-status');
+        if (statusEl) { const cur=statusEl.value; statusEl.innerHTML = `<option value="">الكل</option><option value="open"${cur==='open'?' selected':''}>مفتوحة</option><option value="investigating"${cur==='investigating'?' selected':''}>قيد التحقيق</option><option value="closed"${cur==='closed'?' selected':''}>مغلقة</option>`; }
+        const sevEl = document.getElementById('incident-af-severity');
+        if (sevEl) { const cur=sevEl.value; sevEl.innerHTML = `<option value="">الكل</option><option value="high"${cur==='high'?' selected':''}>عالية</option><option value="medium"${cur==='medium'?' selected':''}>متوسطة</option><option value="low"${cur==='low'?' selected':''}>منخفضة</option>`; }
+        fill('incident-af-type', unique(r => String(r.incidentType || r.type || '').trim()));
+        fill('incident-af-dept', unique(r => String(r.department || '').trim()));
+        fill('incident-af-loc',  unique(r => String(r.location || r.siteName || '').trim()));
+    },
+
+    /** تطبيق الفلاتر التفاعلية */
+    _incidentApplyFilters(incidents) {
+        const get = id => { const el = document.getElementById(id); return el ? el.value.trim() : ''; };
+        const fStatus = get('incident-af-status');
+        const fSev    = get('incident-af-severity');
+        const fType   = get('incident-af-type');
+        const fDept   = get('incident-af-dept');
+        const fLoc    = get('incident-af-loc');
+        const hasAny  = [fStatus, fSev, fType, fDept, fLoc].some(v => v !== '');
+        const badge   = document.getElementById('incident-filter-badge');
+        if (badge) badge.style.display = hasAny ? 'inline' : 'none';
+        return incidents.filter(r => {
+            if (fStatus && this.normalizeStatus(r?.status) !== fStatus) return false;
+            if (fSev    && this.normalizeSeverity(r?.severity) !== fSev) return false;
+            if (fType   && String(r.incidentType || r.type || '').trim() !== fType) return false;
+            if (fDept   && String(r.department || '').trim() !== fDept) return false;
+            if (fLoc    && String(r.location || r.siteName || '').trim() !== fLoc) return false;
+            return true;
+        });
+    },
+
+    /** مساعد: تجميع حسب دالة */
+    _iGroupBy(arr, fn, limit = 0) {
+        const map = {};
+        arr.forEach(item => { const k = fn(item) || 'غير محدد'; map[k] = (map[k] || 0) + 1; });
+        let entries = Object.entries(map).sort((a, b) => b[1] - a[1]);
+        if (limit > 0) entries = entries.slice(0, limit);
+        return { labels: entries.map(e => e[0]), data: entries.map(e => e[1]) };
+    },
+
+    /** مساعد: Doughnut */
+    _iDoughnut(canvasId, labels, data, colors) {
+        const canvas = document.getElementById(canvasId), emptyEl = document.getElementById(canvasId + '-empty');
+        if (!canvas) return;
+        if (!data.length || data.reduce((a, b) => a + b, 0) === 0) { canvas.style.display = 'none'; if (emptyEl) emptyEl.style.display = 'flex'; return; }
+        if (emptyEl) emptyEl.style.display = 'none'; canvas.style.display = '';
+        if (!this._incidentCharts) this._incidentCharts = {};
+        try { if (this._incidentCharts[canvasId]) this._incidentCharts[canvasId].destroy(); } catch (e) {}
+        const total = data.reduce((a, b) => a + b, 0);
+        this._incidentCharts[canvasId] = new Chart(canvas, {
+            type: 'doughnut',
+            data: { labels, datasets: [{ data, backgroundColor: colors, borderWidth: 2, borderColor: '#fff', hoverOffset: 6 }] },
+            options: { responsive: true, maintainAspectRatio: false, cutout: '60%',
+                plugins: { legend: { position: 'bottom', labels: { padding: 10, font: { size: 11 }, usePointStyle: true, boxWidth: 9 } },
+                tooltip: { callbacks: { label: ctx => ` ${ctx.label}: ${ctx.parsed} (${total > 0 ? ((ctx.parsed / total) * 100).toFixed(1) : 0}%)` } } } }
+        });
+    },
+
+    /** مساعد: HBar */
+    _iHBar(canvasId, labels, data, color) {
+        const canvas = document.getElementById(canvasId), emptyEl = document.getElementById(canvasId + '-empty');
+        if (!canvas) return;
+        if (!data.length || data.reduce((a, b) => a + b, 0) === 0) { canvas.style.display = 'none'; if (emptyEl) emptyEl.style.display = 'flex'; return; }
+        if (emptyEl) emptyEl.style.display = 'none'; canvas.style.display = '';
+        if (!this._incidentCharts) this._incidentCharts = {};
+        try { if (this._incidentCharts[canvasId]) this._incidentCharts[canvasId].destroy(); } catch (e) {}
+        this._incidentCharts[canvasId] = new Chart(canvas, {
+            type: 'bar',
+            data: { labels, datasets: [{ data, backgroundColor: color || 'rgba(220,38,38,0.75)', borderRadius: 5, borderSkipped: false }] },
+            options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+                plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => ` ${ctx.parsed.x}` } } },
+                scales: { x: { beginAtZero: true, ticks: { precision: 0, font: { size: 11 } }, grid: { color: '#f1f5f9' } },
+                    y: { ticks: { font: { size: 11 }, callback: v => String(labels[v]).length > 18 ? String(labels[v]).slice(0, 17) + '…' : labels[v] } } } }
+        });
+    },
+
+    /** مساعد: الاتجاه الزمني (12 شهر) */
+    _iTrend(canvasId, arr) {
+        const canvas = document.getElementById(canvasId), emptyEl = document.getElementById(canvasId + '-empty');
+        if (!canvas) return;
+        const now = new Date();
+        const arabicMonths = ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
+        const months = [];
+        for (let i = 11; i >= 0; i--) { const d = new Date(now.getFullYear(), now.getMonth() - i, 1); months.push({ y: d.getFullYear(), m: d.getMonth(), label: `${arabicMonths[d.getMonth()]} ${d.getFullYear()}` }); }
+        const counts = months.map(mo => arr.filter(r => { const d = this.getIncidentDateValue(r); return d && d.getFullYear() === mo.y && d.getMonth() === mo.m; }).length);
+        if (counts.reduce((a, b) => a + b, 0) === 0) { canvas.style.display = 'none'; if (emptyEl) emptyEl.style.display = 'flex'; return; }
+        if (emptyEl) emptyEl.style.display = 'none'; canvas.style.display = '';
+        if (!this._incidentCharts) this._incidentCharts = {};
+        try { if (this._incidentCharts[canvasId]) this._incidentCharts[canvasId].destroy(); } catch (e) {}
+        const maxC = Math.max(...counts);
+        this._incidentCharts[canvasId] = new Chart(canvas, {
+            type: 'bar',
+            data: { labels: months.map(m => m.label), datasets: [
+                { label: 'الحوادث', data: counts, backgroundColor: counts.map(c => c === maxC ? 'rgba(220,38,38,0.9)' : 'rgba(220,38,38,0.5)'), borderRadius: 5, borderSkipped: false, order: 1 },
+                { label: 'الاتجاه', data: counts, type: 'line', borderColor: 'rgba(139,92,246,0.9)', backgroundColor: 'rgba(139,92,246,0.08)', borderWidth: 2.5, pointRadius: 4, pointBackgroundColor: '#8b5cf6', tension: 0.4, fill: true, order: 0 }
+            ] },
+            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'top', labels: { usePointStyle: true, font: { size: 11 } } }, tooltip: { mode: 'index', intersect: false } },
+                scales: { x: { grid: { display: false }, ticks: { font: { size: 10 }, maxRotation: 45 } }, y: { beginAtZero: true, ticks: { precision: 0, font: { size: 11 } }, grid: { color: '#f8fafc' } } } }
+        });
+    },
+
+    /** مساعد: مقارنة سنوية (3 سنوات — إجمالي + مغلقة) */
+    _iYearly(canvasId, arr) {
+        const canvas = document.getElementById(canvasId), emptyEl = document.getElementById(canvasId + '-empty');
+        if (!canvas) return;
+        const cfg = this.getThreeYearConfig();
+        const years = cfg.years.slice().sort((a, b) => a - b); // تصاعدي
+        const totalByYear = years.map(y => arr.filter(r => { const d = this.getIncidentDateValue(r); return d && d.getFullYear() === y; }).length);
+        const closedByYear = years.map(y => arr.filter(r => { const d = this.getIncidentDateValue(r); return d && d.getFullYear() === y && this.normalizeStatus(r?.status) === 'closed'; }).length);
+        if (totalByYear.reduce((a, b) => a + b, 0) === 0) { canvas.style.display = 'none'; if (emptyEl) emptyEl.style.display = 'flex'; return; }
+        if (emptyEl) emptyEl.style.display = 'none'; canvas.style.display = '';
+        if (!this._incidentCharts) this._incidentCharts = {};
+        try { if (this._incidentCharts[canvasId]) this._incidentCharts[canvasId].destroy(); } catch (e) {}
+        this._incidentCharts[canvasId] = new Chart(canvas, {
+            type: 'bar',
+            data: { labels: years.map(String), datasets: [
+                { label: 'إجمالي الحوادث', data: totalByYear, backgroundColor: 'rgba(220,38,38,0.75)', borderRadius: 5, borderSkipped: false },
+                { label: 'المغلقة', data: closedByYear, backgroundColor: 'rgba(5,150,105,0.75)', borderRadius: 5, borderSkipped: false }
+            ] },
+            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'top', labels: { usePointStyle: true, font: { size: 11 } } }, tooltip: { mode: 'index', intersect: false } },
+                scales: { x: { grid: { display: false }, ticks: { font: { size: 12 } } }, y: { beginAtZero: true, ticks: { precision: 0, font: { size: 11 } }, grid: { color: '#f8fafc' } } } }
+        });
+    },
+
+    /** ربط أحداث لوحة التحليلات */
+    _incidentBindAnalyticsEvents() {
+        const root = document.getElementById('incident-analytics-root');
+        if (!root) return;
+
+        // أزرار الفترة
+        root.querySelectorAll('.incident-period-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                this._incidentPeriod = btn.getAttribute('data-period');
+                root.querySelectorAll('.incident-period-btn').forEach(b => {
+                    const active = b === btn;
+                    b.style.background = active ? '#fff' : 'rgba(255,255,255,0.15)';
+                    b.style.color = active ? '#991b1b' : '#fff';
+                });
+                this.updateIncidentAnalyticsDashboard();
+            });
+        });
+
+        // زر تحديث
+        const refreshBtn = document.getElementById('incident-analytics-refresh');
+        if (refreshBtn) refreshBtn.addEventListener('click', () => this.updateIncidentAnalyticsDashboard());
+
+        // زر PDF
+        const pdfBtn = document.getElementById('incident-export-pdf-btn');
+        if (pdfBtn) pdfBtn.addEventListener('click', () => this._incidentExportPDF());
+
+        // زر تبديل الفلاتر
+        const toggleBtn = document.getElementById('incident-toggle-filters-btn');
+        const filterPanel = document.getElementById('incident-filter-panel');
+        if (toggleBtn && filterPanel) {
+            toggleBtn.addEventListener('click', () => {
+                const isOpen = filterPanel.style.display !== 'none';
+                filterPanel.style.display = isOpen ? 'none' : 'block';
+                toggleBtn.style.background = isOpen ? 'rgba(255,255,255,0.12)' : 'rgba(255,255,255,0.35)';
+            });
+        }
+
+        // زر إعادة التعيين
+        const resetBtn = document.getElementById('incident-filter-reset-btn');
+        if (resetBtn) {
+            resetBtn.addEventListener('click', () => {
+                ['incident-af-status','incident-af-severity','incident-af-type','incident-af-dept','incident-af-loc'].forEach(id => {
+                    const el = document.getElementById(id); if (el) el.value = '';
+                });
+                this.updateIncidentAnalyticsDashboard();
+            });
+        }
+
+        // قوائم الفلاتر
+        ['incident-af-status','incident-af-severity','incident-af-type','incident-af-dept','incident-af-loc'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.addEventListener('change', () => this.updateIncidentAnalyticsDashboard());
+        });
+    },
+
+    /** تصدير PDF للوحة التحليلات */
+    async _incidentExportPDF() {
+        const root = document.getElementById('incident-analytics-root');
+        if (!root) return;
+        const btn = document.getElementById('incident-export-pdf-btn');
+        const orig = btn ? btn.innerHTML : '';
+        if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>'; }
+        try {
+            const loadLib = (src, check) => new Promise((res, rej) => {
+                if (check()) return res();
+                const s = document.createElement('script'); s.src = src; s.onload = () => res(); s.onerror = () => rej(); document.head.appendChild(s);
+            });
+            await loadLib('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js', () => typeof html2canvas !== 'undefined');
+            await loadLib('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js', () => typeof window.jspdf !== 'undefined');
+            const fp = document.getElementById('incident-filter-panel'), fv = fp && fp.style.display !== 'none';
+            if (fv) fp.style.display = 'none';
+            const cvs = await html2canvas(root, { scale: 1.8, useCORS: true, backgroundColor: '#f8fafc', scrollX: 0, scrollY: -window.scrollY, logging: false });
+            if (fv) fp.style.display = '';
+            const { jsPDF } = window.jspdf, pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+            const pW = pdf.internal.pageSize.getWidth(), pH = pdf.internal.pageSize.getHeight(), mg = 10;
+            const cW = pW - mg * 2, ratio = cW / cvs.width, pgH = pH - 14 - mg, pgPx = pgH / ratio;
+            const total = Math.ceil(cvs.height / pgPx);
+            for (let p = 0; p < total; p++) {
+                if (p > 0) pdf.addPage();
+                pdf.setFillColor(127, 29, 29); pdf.rect(0, 0, pW, 14, 'F');
+                pdf.setTextColor(255, 255, 255); pdf.setFontSize(9);
+                pdf.text('Incidents Analysis Report', mg, 9, { align: 'left' });
+                pdf.text(`${new Date().toLocaleDateString('ar-SA')}  |  ${p + 1}/${total}`, pW - mg, 9, { align: 'right' });
+                pdf.setTextColor(0, 0, 0);
+                const sc = document.createElement('canvas'), sH = Math.min(pgPx, cvs.height - p * pgPx);
+                sc.width = cvs.width; sc.height = sH;
+                sc.getContext('2d').drawImage(cvs, 0, p * pgPx, cvs.width, sH, 0, 0, cvs.width, sH);
+                pdf.addImage(sc.toDataURL('image/jpeg', 0.90), 'JPEG', mg, 14, cW, sH * ratio);
+            }
+            pdf.save(`تقرير-تحليل-الحوادث-${new Date().toISOString().slice(0, 10)}.pdf`);
+            if (typeof Notification !== 'undefined' && Notification.success) Notification.success('تم تصدير تقرير الحوادث PDF بنجاح');
+        } catch (err) {
+            Utils.safeError('Incident PDF error:', err);
+            if (typeof Notification !== 'undefined' && Notification.error) Notification.error('تعذّر تصدير PDF');
+        } finally {
+            if (btn) { btn.disabled = false; btn.innerHTML = orig; }
+        }
     },
 
     /**
@@ -4296,11 +4882,9 @@ const Incidents = {
         if (tabName === 'incidents-list') {
             this.loadIncidentsList();
         } else if (tabName === 'analysis') {
-            // Setup analysis tab event listeners
-            const editSettingsBtn = document.getElementById('edit-analysis-settings-btn');
-            if (editSettingsBtn) {
-                editSettingsBtn.addEventListener('click', () => this.showAnalysisSettingsModal());
-            }
+            // ✅ لوحة التحليلات الجديدة: ربط الأحداث + أول رسم
+            this._incidentBindAnalyticsEvents();
+            setTimeout(() => { this.updateIncidentAnalyticsDashboard(); }, 150);
         } else if (tabName === 'registry') {
             // Setup registry tab event listeners
             setTimeout(() => {
