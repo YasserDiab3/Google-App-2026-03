@@ -1805,12 +1805,54 @@ const Incidents = {
     },
 
     /** تصدير PDF للوحة التحليلات */
+    /**
+     * بناء هيدر التقرير الموحّد بنفس هيدر النظام (شعار + اسم الشركة + عنوان)
+     * يُدرَج داخل لقطة html2canvas ليظهر الاسم العربي والشعار بشكل صحيح (jsPDF لا يدعم العربية)
+     */
+    _incidentBuildReportHeaderEl(reportTitleAr, reportTitleEn) {
+        const companyName = (AppState && (AppState.companySettings?.name || AppState.companyName)) || '';
+        const companySecondaryName = (AppState && AppState.companySettings?.secondaryName) || '';
+        const rawLogo = (AppState && AppState.companyLogo) || (AppState && AppState.companySettings?.logo) || '';
+        const logo = rawLogo ? this.convertGoogleDriveLinkToPrintable(rawLogo) : '';
+        const dateStr = new Date().toLocaleDateString('ar-EG', { year: 'numeric', month: 'long', day: 'numeric' });
+
+        const el = document.createElement('div');
+        el.id = 'incident-pdf-report-header';
+        el.style.cssText = 'background:#fff;border-bottom:3px solid #dc2626;border-radius:12px;padding:16px 22px;margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;gap:16px;direction:rtl;font-family:Tahoma,Arial,sans-serif;';
+        el.innerHTML = `
+            <div style="flex:0 0 auto;min-width:90px;text-align:right;">
+                ${logo ? `<img src="${logo}" alt="" crossorigin="anonymous" style="max-height:64px;max-width:170px;object-fit:contain;">` : ''}
+            </div>
+            <div style="flex:1;text-align:center;">
+                <div style="font-size:1.5rem;font-weight:800;color:#991b1b;line-height:1.2;">${Utils.escapeHTML(reportTitleAr || 'تقرير تحليل الحوادث')}</div>
+                ${reportTitleEn ? `<div style="font-size:0.95rem;font-weight:600;color:#dc2626;margin-top:3px;">${Utils.escapeHTML(reportTitleEn)}</div>` : ''}
+                <div style="font-size:0.8rem;color:#6b7280;margin-top:5px;"><i class="fas fa-calendar-day" style="margin-left:4px;"></i>${dateStr}</div>
+            </div>
+            <div style="flex:0 0 auto;min-width:90px;text-align:left;">
+                <div style="font-size:1.05rem;font-weight:700;color:#1f2937;line-height:1.3;">${Utils.escapeHTML(companyName || '')}</div>
+                ${companySecondaryName ? `<div style="font-size:0.85rem;font-weight:500;color:#6b7280;margin-top:2px;">${Utils.escapeHTML(companySecondaryName)}</div>` : ''}
+            </div>
+        `;
+        return el;
+    },
+
     async _incidentExportPDF() {
         const root = document.getElementById('incident-analytics-root');
         if (!root) return;
         const btn = document.getElementById('incident-export-pdf-btn');
         const orig = btn ? btn.innerHTML : '';
         if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>'; }
+
+        // ✅ إدراج هيدر النظام مؤقتاً في أعلى اللوحة قبل اللقطة
+        const headerEl = this._incidentBuildReportHeaderEl('تقرير تحليل الحوادث', 'Incidents Analysis Report');
+        root.insertBefore(headerEl, root.firstChild);
+
+        // انتظار تحميل الشعار (إن وُجد) قبل اللقطة لضمان ظهوره
+        const headerImg = headerEl.querySelector('img');
+        if (headerImg && !headerImg.complete) {
+            await new Promise(res => { headerImg.onload = res; headerImg.onerror = res; setTimeout(res, 2500); });
+        }
+
         try {
             const loadLib = (src, check) => new Promise((res, rej) => {
                 if (check()) return res();
@@ -1824,19 +1866,22 @@ const Incidents = {
             if (fv) fp.style.display = '';
             const { jsPDF } = window.jspdf, pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
             const pW = pdf.internal.pageSize.getWidth(), pH = pdf.internal.pageSize.getHeight(), mg = 10;
-            const cW = pW - mg * 2, ratio = cW / cvs.width, pgH = pH - 14 - mg, pgPx = pgH / ratio;
+            // ✅ الهيدر الآن جزء من الصورة الملتقطة → نترك مساحة علوية صغيرة فقط + تذييل لرقم الصفحة
+            const footerH = 8;
+            const cW = pW - mg * 2, ratio = cW / cvs.width, pgH = pH - mg - footerH, pgPx = pgH / ratio;
             const total = Math.ceil(cvs.height / pgPx);
             for (let p = 0; p < total; p++) {
                 if (p > 0) pdf.addPage();
-                pdf.setFillColor(127, 29, 29); pdf.rect(0, 0, pW, 14, 'F');
-                pdf.setTextColor(255, 255, 255); pdf.setFontSize(9);
-                pdf.text('Incidents Analysis Report', mg, 9, { align: 'left' });
-                pdf.text(`${new Date().toLocaleDateString('ar-SA')}  |  ${p + 1}/${total}`, pW - mg, 9, { align: 'right' });
-                pdf.setTextColor(0, 0, 0);
                 const sc = document.createElement('canvas'), sH = Math.min(pgPx, cvs.height - p * pgPx);
                 sc.width = cvs.width; sc.height = sH;
                 sc.getContext('2d').drawImage(cvs, 0, p * pgPx, cvs.width, sH, 0, 0, cvs.width, sH);
-                pdf.addImage(sc.toDataURL('image/jpeg', 0.90), 'JPEG', mg, 14, cW, sH * ratio);
+                pdf.addImage(sc.toDataURL('image/jpeg', 0.92), 'JPEG', mg, mg, cW, sH * ratio);
+                // ✅ تذييل: خط فاصل + رقم الصفحة والتاريخ (أرقام لاتينية — jsPDF لا يدعم العربية)
+                pdf.setDrawColor(220, 38, 38); pdf.setLineWidth(0.4);
+                pdf.line(mg, pH - footerH + 1, pW - mg, pH - footerH + 1);
+                pdf.setTextColor(120, 120, 120); pdf.setFontSize(8);
+                pdf.text(`${new Date().toISOString().slice(0, 10)}`, mg, pH - 3, { align: 'left' });
+                pdf.text(`${p + 1} / ${total}`, pW - mg, pH - 3, { align: 'right' });
             }
             pdf.save(`تقرير-تحليل-الحوادث-${new Date().toISOString().slice(0, 10)}.pdf`);
             if (typeof Notification !== 'undefined' && Notification.success) Notification.success('تم تصدير تقرير الحوادث PDF بنجاح');
@@ -1844,6 +1889,8 @@ const Incidents = {
             Utils.safeError('Incident PDF error:', err);
             if (typeof Notification !== 'undefined' && Notification.error) Notification.error('تعذّر تصدير PDF');
         } finally {
+            // ✅ إزالة الهيدر المؤقت دائماً
+            if (headerEl && headerEl.parentNode) headerEl.parentNode.removeChild(headerEl);
             if (btn) { btn.disabled = false; btn.innerHTML = orig; }
         }
     },
