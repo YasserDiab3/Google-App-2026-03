@@ -4307,11 +4307,29 @@ const Dashboard = {
             return `${y}-${m}-${d}`;
         };
 
+        // ✅ مستخرج تاريخ مرن للحوادث (يدعم date, incidentDate, createdAt, updatedAt)
+        const getIncidentDate = (rec) => {
+            if (!rec) return null;
+            const candidates = [rec.date, rec.incidentDate, rec.createdAt, rec.updatedAt, rec.reportDate];
+            for (const v of candidates) {
+                if (!v) continue;
+                const d = new Date(v);
+                if (!isNaN(d.getTime())) return d;
+            }
+            return null;
+        };
+
+        // ✅ نتيجة الفلترة المُستخدَمة في كلا الكارتين (نفس النافذة الزمنية)
+        const incidentsLast30 = (data.incidents || []).filter(i => {
+            const d = getIncidentDate(i);
+            return d && d >= last30Days;
+        });
+
         if (showIncidents) {
-            const incidentsData = (data.incidents || []).filter(i => new Date(i.createdAt || i.date) >= last30Days);
-            incidentsData.forEach(i => {
-                const date = new Date(i.createdAt || i.date).toLocaleDateString('ar-SA');
-                incidentsByDate[date] = (incidentsByDate[date] || 0) + 1;
+            // ✅ مفاتيح بصيغة YYYY-MM-DD للتوافق مع renderTrendBarList
+            incidentsLast30.forEach(i => {
+                const k = toLocalDateKey(getIncidentDate(i));
+                if (k) incidentsByDate[k] = (incidentsByDate[k] || 0) + 1;
             });
         }
 
@@ -4350,8 +4368,8 @@ const Dashboard = {
                         </h2>
                     </div>
                     <div class="card-body">
-                        <div class="chart-container" style="height: 250px; position: relative;">
-                            <canvas id="incidents-chart"></canvas>
+                        <div class="chart-container dash-chart-container--trend">
+                            ${this.renderTrendBarList(incidentsByDate, 'حادثاً مسجلاً', 'incidents')}
                         </div>
                     </div>
                 </div>
@@ -4363,8 +4381,8 @@ const Dashboard = {
                         </h2>
                     </div>
                     <div class="card-body">
-                        <div class="chart-container" style="height: 250px; position: relative;">
-                            ${this.renderSeverityChart(data.incidents || [])}
+                        <div class="chart-container" style="min-height: 250px; position: relative;">
+                            ${this.renderSeverityChart(incidentsLast30)}
                         </div>
                     </div>
                 </div>
@@ -4415,62 +4433,59 @@ const Dashboard = {
         }, 100);
     },
 
-    renderSeverityChart(incidents) {
-        const severityCount = {
-            'عالي': 0,
-            'متوسط': 0,
-            'منخفض': 0
-        };
+    /**
+     * تطبيع قيمة الخطورة → 'high' | 'medium' | 'low' | 'unknown'
+     * يدعم العربية والإنجليزية معاً ولا يفترض أن المجهول = منخفض.
+     */
+    _normalizeIncidentSeverity(raw) {
+        const v = String(raw || '').trim().toLowerCase();
+        if (!v) return 'unknown';
+        if (v.includes('عالي') || v.includes('عاليه') || v.includes('حرج') || v.includes('high') || v.includes('critical')) return 'high';
+        if (v.includes('متوسط') || v.includes('medium') || v.includes('moderate')) return 'medium';
+        if (v.includes('منخفض') || v.includes('بسيط') || v.includes('low') || v.includes('minor')) return 'low';
+        return 'unknown';
+    },
 
-        incidents.forEach(i => {
-            const severity = i.severity || '';
-            if (severity.includes('عالي') || severity.includes('عالية') || severity.includes('عالية جداً')) {
-                severityCount['عالي']++;
-            } else if (severity.includes('متوسط') || severity.includes('متوسطة')) {
-                severityCount['متوسط']++;
-            } else {
-                severityCount['منخفض']++;
-            }
+    renderSeverityChart(incidents) {
+        // ✅ تطبيع موحَّد للخطورة + bucket مستقل للمجهول
+        const counts = { high: 0, medium: 0, low: 0, unknown: 0 };
+        (incidents || []).forEach(i => {
+            const k = this._normalizeIncidentSeverity(i && i.severity);
+            counts[k]++;
         });
 
-        const total = severityCount['عالي'] + severityCount['متوسط'] + severityCount['منخفض'];
+        const total = counts.high + counts.medium + counts.low + counts.unknown;
         if (total === 0) {
-            return '<div class="empty-state"><p class="text-gray-500">لا توجد بيانات</p></div>';
+            return `<div class="empty-state"><p class="text-gray-500">${this.t('dash.noData30d', 'لا توجد بيانات في آخر 30 يوماً')}</p></div>`;
         }
 
-        const highPercent = (severityCount['عالي'] / total) * 100;
-        const mediumPercent = (severityCount['متوسط'] / total) * 100;
-        const lowPercent = (severityCount['منخفض'] / total) * 100;
+        const pct = (n) => total > 0 ? (n / total) * 100 : 0;
+        const row = (labelAr, value, percent, barClass, textClass) => `
+                <div class="space-y-1.5">
+                    <div class="flex items-center justify-between">
+                        <span class="text-sm font-semibold">${labelAr}</span>
+                        <span class="text-sm font-bold ${textClass}" dir="ltr">${value} <span class="text-xs text-gray-400">(${percent.toFixed(1)}%)</span></span>
+                    </div>
+                    <div class="w-full bg-gray-200 rounded-full h-3">
+                        <div class="${barClass} h-3 rounded-full transition-all duration-500" style="width: ${percent}%"></div>
+                    </div>
+                </div>`;
+
+        // ✅ يُعرض bucket "غير محدد" فقط لو فيه قيم — لا يظهر كصف فارغ
+        const unknownRow = counts.unknown > 0
+            ? row('غير محدد', counts.unknown, pct(counts.unknown), 'bg-gray-400', 'text-gray-600')
+            : '';
 
         return `
-            <div class="flex flex-col gap-4">
-                <div class="space-y-2">
-                    <div class="flex items-center justify-between">
-                        <span class="text-sm font-semibold">عالي</span>
-                        <span class="text-sm font-bold text-red-600">${severityCount['عالي']}</span>
-                    </div>
-                    <div class="w-full bg-gray-200 rounded-full h-4">
-                        <div class="bg-red-600 h-4 rounded-full transition-all duration-500" style="width: ${highPercent}%"></div>
-                    </div>
+            <div class="flex flex-col gap-3">
+                <div class="flex items-center justify-between text-[11px] font-bold uppercase tracking-[0.18em] text-gray-400">
+                    <span>إجمالي الحوادث (آخر 30 يوم)</span>
+                    <span class="text-gray-700" dir="ltr">${total}</span>
                 </div>
-                <div class="space-y-2">
-                    <div class="flex items-center justify-between">
-                        <span class="text-sm font-semibold">متوسط</span>
-                        <span class="text-sm font-bold text-yellow-600">${severityCount['متوسط']}</span>
-                    </div>
-                    <div class="w-full bg-gray-200 rounded-full h-4">
-                        <div class="bg-yellow-600 h-4 rounded-full transition-all duration-500" style="width: ${mediumPercent}%"></div>
-                    </div>
-                </div>
-                <div class="space-y-2">
-                    <div class="flex items-center justify-between">
-                        <span class="text-sm font-semibold">منخفض</span>
-                        <span class="text-sm font-bold text-green-600">${severityCount['منخفض']}</span>
-                    </div>
-                    <div class="w-full bg-gray-200 rounded-full h-4">
-                        <div class="bg-green-600 h-4 rounded-full transition-all duration-500" style="width: ${lowPercent}%"></div>
-                    </div>
-                </div>
+                ${row('عالي / حرج', counts.high, pct(counts.high), 'bg-red-600', 'text-red-600')}
+                ${row('متوسط', counts.medium, pct(counts.medium), 'bg-yellow-600', 'text-yellow-600')}
+                ${row('منخفض', counts.low, pct(counts.low), 'bg-green-600', 'text-green-600')}
+                ${unknownRow}
             </div>
         `;
     },
