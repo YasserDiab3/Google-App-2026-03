@@ -4,7 +4,7 @@
  */
 const PPE = {
     state: {
-        activeTab: 'receipts', // receipts, stock-control
+        activeTab: 'receipts', // receipts, stock-control, analysis
         isSwitchingTab: false, // منع التبديل المتزامن
         eventListeners: new Map(), // تتبع مستمعي الأحداث للتنظيف
         stockItemsCache: null, // Cache لبيانات المخزون
@@ -867,7 +867,7 @@ const PPE = {
                                 <i class="fas fa-sync-alt ml-2"></i>
                                 ${ut(t('module.ppe.btn.refresh', 'تحديث'))}
                             </button>
-                        ` : `
+                        ` : this.state.activeTab === 'stock-control' ? `
                             <button id="add-stock-item-btn" class="btn-primary">
                                 <i class="fas fa-plus ml-2"></i>
                                 ${ut(t('module.ppe.btn.addStockItem', 'إضافة صنف جديد'))}
@@ -876,7 +876,7 @@ const PPE = {
                                 <i class="fas fa-exchange-alt ml-2"></i>
                                 ${ut(t('module.ppe.btn.addTransaction', 'إضافة حركة'))}
                             </button>
-                        `}
+                        ` : ''}
                     </div>
                 </div>
             </div>
@@ -891,6 +891,10 @@ const PPE = {
                             <button type="button" class="ppe-tab-btn ${this.state.activeTab === 'stock-control' ? 'active' : ''}" data-tab="stock-control">
                                 <i class="fas fa-boxes"></i>
                                 ${ut(t('module.ppe.tab.stock', 'إدارة مخزون مهمات الوقاية'))}
+                            </button>
+                            <button type="button" class="ppe-tab-btn ${this.state.activeTab === 'analysis' ? 'active' : ''}" data-tab="analysis">
+                                <i class="fas fa-chart-pie"></i>
+                                ${ut(t('module.ppe.tab.analysis', 'التحليل'))}
                             </button>
                         </div>
                     </div>
@@ -913,6 +917,10 @@ const PPE = {
                 } else if (this.state.activeTab === 'stock-control') {
                     this.bindStockFilters();
                     this._bindPpeStockExcelToolbar();
+                } else if (this.state.activeTab === 'analysis') {
+                    // ✅ تهيئة لوحة التحليل
+                    this._ppeBindAnalyticsEvents();
+                    this.updatePpeAnalyticsDashboard();
                 }
             } catch (error) {
                 Utils.safeWarn('⚠️ خطأ في setupEventListeners:', error);
@@ -955,6 +963,9 @@ const PPE = {
     async renderActiveTabContent(showLoadingOverlay = true) {
         try {
             switch (this.state.activeTab) {
+                case 'analysis':
+                    // ✅ تبويب التحليل — لا يحتاج تحميل بيانات إضافية (يستخدم AppState مباشرة)
+                    return await this.renderPpeAnalysisTab();
                 case 'stock-control':
                     // ✅ تحميل البيانات مباشرة عند الدخول للتبويب
                     if (showLoadingOverlay) {
@@ -1229,7 +1240,7 @@ const PPE = {
                         tabContentContainer.style.pointerEvents = 'none';
                     }
 
-                    const newContent = await this.renderActiveTabContent(tabName !== 'stock-control');
+                    const newContent = await this.renderActiveTabContent(tabName !== 'stock-control' && tabName !== 'analysis');
                     tabContentContainer.innerHTML = newContent;
                     this.applyModuleI18n(tabContentContainer);
                     if (tabName === 'receipts') {
@@ -1240,6 +1251,10 @@ const PPE = {
                         this.ensurePpeFilterStyles();
                         this.bindStockFilters();
                         this._bindPpeStockExcelToolbar();
+                    } else if (tabName === 'analysis') {
+                        // ✅ تهيئة لوحة التحليل بعد التبديل
+                        this._ppeBindAnalyticsEvents();
+                        this.updatePpeAnalyticsDashboard();
                     }
                     Utils.safeLog(`✅ PPE: تم التبديل إلى تبويب ${tabName}`);
                 } catch (error) {
@@ -5576,6 +5591,711 @@ const PPE = {
             Notification.error('حدث خطأ أثناء حذف الصنف: ' + (error.message || error));
         } finally {
             Loading.hide();
+        }
+    },
+
+    // ═══════════════════════════════════════════════════════════════════
+    // ✅ تبويب التحليل — PPE Analytics Dashboard
+    // (نفس نمط الحوادث/العيادة/الملاحظات — Chart.js + KPIs + فلاتر + PDF)
+    // ═══════════════════════════════════════════════════════════════════
+
+    _ppeAnalyticsPeriod: '0', // الفترة الافتراضية: الكل
+    _ppeAnalyticsCharts: {},   // ذاكرة Chart instances
+
+    /** قالب لوحة التحليل (HTML) */
+    async renderPpeAnalysisTab() {
+        // تحميل Chart.js مبكراً (لا نُعطّل العرض)
+        this._ppeEnsureChartJS().catch(() => {});
+
+        return `
+        <div id="ppe-analytics-root" style="font-family:inherit;">
+
+            <!-- ═══ شريط الأدوات ═══ -->
+            <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:14px;padding:16px 20px;background:linear-gradient(135deg,#0F766E 0%,#0E7490 50%,#1E3A8A 100%);border-radius:14px;color:#fff;box-shadow:0 8px 28px rgba(15,118,110,0.32);">
+                <div style="display:flex;align-items:center;gap:12px;">
+                    <div style="width:44px;height:44px;background:rgba(255,255,255,0.18);border-radius:12px;display:flex;align-items:center;justify-content:center;backdrop-filter: blur(8px);">
+                        <i class="fas fa-hard-hat" style="font-size:20px;"></i>
+                    </div>
+                    <div>
+                        <h2 style="margin:0;font-size:1.15rem;font-weight:700;">لوحة تحليل مهمات الوقاية</h2>
+                        <p style="margin:0;font-size:0.75rem;opacity:0.9;">تحليل شامل • الاستلامات • المخزون • الفئات • الإدارات • تصدير PDF</p>
+                    </div>
+                </div>
+                <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+                    <span style="font-size:0.72rem;opacity:0.85;margin-inline-end:2px;">الفترة:</span>
+                    <div style="display:flex;gap:3px;flex-wrap:wrap;">
+                        ${['30','90','180','365','0'].map((v,i) => {
+                            const labels=['30 يوم','3 أشهر','6 أشهر','سنة','الكل'];
+                            const active=(this._ppeAnalyticsPeriod||'0')===v;
+                            return `<button class="ppe-period-btn" data-period="${v}" style="padding:5px 10px;border-radius:8px;border:none;cursor:pointer;font-size:0.75rem;font-weight:600;transition:all .2s;background:${active?'#fff':'rgba(255,255,255,0.15)'};color:${active?'#0F766E':'#fff'};">${labels[i]}</button>`;
+                        }).join('')}
+                    </div>
+                    <button id="ppe-toggle-filters-btn" style="padding:6px 12px;border-radius:8px;border:1px solid rgba(255,255,255,0.4);cursor:pointer;background:rgba(255,255,255,0.12);color:#fff;font-size:0.78rem;font-weight:600;transition:all .2s;display:flex;align-items:center;gap:5px;" onmouseover="this.style.background='rgba(255,255,255,0.25)'" onmouseout="this.style.background='rgba(255,255,255,0.12)'">
+                        <i class="fas fa-sliders-h"></i><span>فلاتر</span><span id="ppe-filter-badge" style="display:none;background:#fbbf24;color:#78350f;font-size:0.65rem;padding:1px 5px;border-radius:10px;margin-inline-start:2px;">●</span>
+                    </button>
+                    <button id="ppe-export-pdf-btn" style="padding:6px 14px;border-radius:8px;border:none;cursor:pointer;background:rgba(0,0,0,0.25);color:#fff;font-size:0.78rem;font-weight:600;transition:all .2s;display:flex;align-items:center;gap:5px;" onmouseover="this.style.background='rgba(0,0,0,0.4)'" onmouseout="this.style.background='rgba(0,0,0,0.25)'">
+                        <i class="fas fa-file-pdf"></i><span>PDF</span>
+                    </button>
+                    <button id="ppe-analytics-refresh" style="padding:6px 10px;border-radius:8px;border:none;cursor:pointer;background:rgba(255,255,255,0.15);color:#fff;font-size:0.78rem;transition:all .2s;" onmouseover="this.style.background='rgba(255,255,255,0.3)'" onmouseout="this.style.background='rgba(255,255,255,0.15)'" title="تحديث">
+                        <i class="fas fa-sync-alt"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- ═══ لوحة الفلاتر ═══ -->
+            <div id="ppe-filter-panel" style="display:none;background:#f0fdfa;border:1.5px solid #99f6e4;border-radius:12px;padding:18px 20px;margin-bottom:16px;">
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+                    <div style="display:flex;align-items:center;gap:8px;">
+                        <i class="fas fa-sliders-h" style="color:#0F766E;font-size:14px;"></i>
+                        <span style="font-weight:700;font-size:0.9rem;color:#0F766E;">الفلاتر التفاعلية</span>
+                        <span id="ppe-filter-count" style="background:#ccfbf1;color:#115E59;padding:2px 8px;border-radius:12px;font-size:0.72rem;font-weight:600;"></span>
+                    </div>
+                    <button id="ppe-filter-reset-btn" style="padding:4px 12px;border-radius:8px;border:1px solid #99f6e4;background:#fff;color:#64748b;font-size:0.75rem;cursor:pointer;" onmouseover="this.style.background='#f0fdfa';this.style.color='#0F766E'" onmouseout="this.style.background='#fff';this.style.color='#64748b'">
+                        <i class="fas fa-times me-1"></i>مسح الكل
+                    </button>
+                </div>
+                <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;">
+                    ${[
+                        {id:'ppe-af-type',     icon:'fas fa-hard-hat',   color:'#0F766E', label:'نوع المعدة'},
+                        {id:'ppe-af-dept',     icon:'fas fa-building',   color:'#f59e0b', label:'الإدارة'},
+                        {id:'ppe-af-category', icon:'fas fa-tags',       color:'#6366f1', label:'الفئة'},
+                        {id:'ppe-af-status',   icon:'fas fa-flag',       color:'#0891b2', label:'الحالة'},
+                        {id:'ppe-af-supplier', icon:'fas fa-truck',      color:'#8b5cf6', label:'المورد'},
+                    ].map(f=>`
+                        <div>
+                            <label style="font-size:0.72rem;font-weight:700;color:#64748b;display:block;margin-bottom:5px;">
+                                <i class="${f.icon}" style="color:${f.color};margin-inline-end:4px;"></i>${f.label}
+                            </label>
+                            <select id="${f.id}" style="width:100%;padding:7px 10px;border:1.5px solid #99f6e4;border-radius:8px;font-size:0.82rem;background:#fff;color:#374151;cursor:pointer;" onfocus="this.style.borderColor='#0F766E'" onblur="this.style.borderColor='#99f6e4'">
+                                <option value="">الكل</option>
+                            </select>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+
+            <!-- ═══ KPI Cards ═══ -->
+            <div id="ppe-kpi-strip" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:10px;margin-bottom:20px;">
+                <div style="text-align:center;padding:16px;color:#94a3b8;"><i class="fas fa-spinner fa-spin"></i></div>
+            </div>
+
+            <!-- ═══ Row 1: نوع المعدة + الاتجاه الزمني ═══ -->
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:16px;margin-bottom:16px;">
+                <div class="content-card" style="padding:0;overflow:hidden;">
+                    <div style="padding:13px 18px 10px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:8px;">
+                        <i class="fas fa-hard-hat" style="color:#0F766E;"></i>
+                        <span style="font-weight:700;font-size:0.88rem;">حسب نوع المعدة (أعلى 10)</span>
+                    </div>
+                    <div style="padding:12px;position:relative;height:280px;">
+                        <canvas id="ppe-chart-type"></canvas>
+                        <div id="ppe-chart-type-empty" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;color:#94a3b8;font-size:0.85rem;">لا توجد بيانات</div>
+                    </div>
+                </div>
+                <div class="content-card" style="padding:0;overflow:hidden;">
+                    <div style="padding:13px 18px 10px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:8px;">
+                        <i class="fas fa-chart-area" style="color:#8b5cf6;"></i>
+                        <span style="font-weight:700;font-size:0.88rem;">الاتجاه الزمني للاستلامات (آخر 12 شهر)</span>
+                    </div>
+                    <div style="padding:12px;position:relative;height:280px;">
+                        <canvas id="ppe-chart-trend"></canvas>
+                        <div id="ppe-chart-trend-empty" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;color:#94a3b8;font-size:0.85rem;">لا توجد بيانات</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ═══ Row 2: الإدارة + الحالة ═══ -->
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:16px;margin-bottom:16px;">
+                <div class="content-card" style="padding:0;overflow:hidden;">
+                    <div style="padding:13px 18px 10px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:8px;">
+                        <i class="fas fa-building" style="color:#f59e0b;"></i>
+                        <span style="font-weight:700;font-size:0.88rem;">حسب الإدارة (أعلى 8)</span>
+                    </div>
+                    <div style="padding:12px;position:relative;height:260px;">
+                        <canvas id="ppe-chart-dept"></canvas>
+                        <div id="ppe-chart-dept-empty" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;color:#94a3b8;font-size:0.85rem;">لا توجد بيانات</div>
+                    </div>
+                </div>
+                <div class="content-card" style="padding:0;overflow:hidden;">
+                    <div style="padding:13px 18px 10px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:8px;">
+                        <i class="fas fa-flag" style="color:#0891b2;"></i>
+                        <span style="font-weight:700;font-size:0.88rem;">حسب الحالة</span>
+                    </div>
+                    <div style="padding:12px;position:relative;height:260px;">
+                        <canvas id="ppe-chart-status"></canvas>
+                        <div id="ppe-chart-status-empty" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;color:#94a3b8;font-size:0.85rem;">لا توجد بيانات</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ═══ Row 3: المخزون - فئة + مورد ═══ -->
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:16px;margin-bottom:16px;">
+                <div class="content-card" style="padding:0;overflow:hidden;">
+                    <div style="padding:13px 18px 10px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:8px;">
+                        <i class="fas fa-tags" style="color:#6366f1;"></i>
+                        <span style="font-weight:700;font-size:0.88rem;">المخزون حسب الفئة</span>
+                    </div>
+                    <div style="padding:12px;position:relative;height:260px;">
+                        <canvas id="ppe-chart-category"></canvas>
+                        <div id="ppe-chart-category-empty" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;color:#94a3b8;font-size:0.85rem;">لا توجد بيانات مخزون</div>
+                    </div>
+                </div>
+                <div class="content-card" style="padding:0;overflow:hidden;">
+                    <div style="padding:13px 18px 10px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:8px;">
+                        <i class="fas fa-truck" style="color:#8b5cf6;"></i>
+                        <span style="font-weight:700;font-size:0.88rem;">المخزون حسب المورد (أعلى 8)</span>
+                    </div>
+                    <div style="padding:12px;position:relative;height:260px;">
+                        <canvas id="ppe-chart-supplier"></canvas>
+                        <div id="ppe-chart-supplier-empty" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;color:#94a3b8;font-size:0.85rem;">لا توجد بيانات مخزون</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ═══ Row 4: المقارنة السنوية ═══ -->
+            <div class="content-card" style="padding:0;overflow:hidden;margin-bottom:16px;">
+                <div style="padding:13px 18px 10px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:8px;">
+                    <i class="fas fa-chart-column" style="color:#0F766E;"></i>
+                    <span style="font-weight:700;font-size:0.88rem;">المقارنة السنوية للاستلامات (آخر 3 سنوات)</span>
+                </div>
+                <div style="padding:12px;position:relative;height:260px;">
+                    <canvas id="ppe-chart-yearly"></canvas>
+                    <div id="ppe-chart-yearly-empty" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;color:#94a3b8;font-size:0.85rem;">لا توجد بيانات</div>
+                </div>
+            </div>
+
+            <!-- ═══ جدول أحدث الاستلامات ═══ -->
+            <div class="content-card" style="padding:0;overflow:hidden;">
+                <div style="padding:13px 18px 12px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;justify-content:space-between;gap:8px;">
+                    <div style="display:flex;align-items:center;gap:8px;">
+                        <i class="fas fa-list-ul" style="color:#0F766E;"></i>
+                        <span style="font-weight:700;font-size:0.88rem;">أحدث الاستلامات</span>
+                    </div>
+                    <span id="ppe-recent-count" style="background:#f0fdfa;color:#0F766E;padding:3px 10px;border-radius:20px;font-size:0.75rem;font-weight:700;"></span>
+                </div>
+                <div style="overflow-x:auto;">
+                    <table style="width:100%;border-collapse:collapse;font-size:0.82rem;">
+                        <thead>
+                            <tr style="background:#f0fdfa;">
+                                <th style="padding:9px 12px;text-align:start;font-weight:700;color:#0F766E;white-space:nowrap;">التاريخ</th>
+                                <th style="padding:9px 12px;text-align:start;font-weight:700;color:#0F766E;">اسم الموظف</th>
+                                <th style="padding:9px 12px;text-align:start;font-weight:700;color:#0F766E;">الكود</th>
+                                <th style="padding:9px 12px;text-align:start;font-weight:700;color:#0F766E;">نوع المعدة</th>
+                                <th style="padding:9px 12px;text-align:center;font-weight:700;color:#0F766E;">الكمية</th>
+                                <th style="padding:9px 12px;text-align:start;font-weight:700;color:#0F766E;">الإدارة</th>
+                                <th style="padding:9px 12px;text-align:center;font-weight:700;color:#0F766E;">الحالة</th>
+                            </tr>
+                        </thead>
+                        <tbody id="ppe-recent-tbody">
+                            <tr><td colspan="7" style="padding:24px;text-align:center;color:#94a3b8;">جاري التحميل...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        `;
+    },
+
+    /** تحميل Chart.js عند الحاجة */
+    async _ppeEnsureChartJS() {
+        if (typeof Chart !== 'undefined') return true;
+        const existing = document.querySelector('script[src*="chart.js"],script[src*="chartjs"]');
+        if (existing) {
+            return new Promise(resolve => {
+                let tries = 0;
+                const t = setInterval(() => {
+                    if (typeof Chart !== 'undefined') { clearInterval(t); resolve(true); }
+                    else if (++tries > 50) { clearInterval(t); resolve(false); }
+                }, 100);
+            });
+        }
+        return new Promise(resolve => {
+            const s = document.createElement('script');
+            s.src = 'https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js';
+            s.onload = () => resolve(true);
+            s.onerror = () => {
+                const s2 = document.createElement('script');
+                s2.src = 'https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js';
+                s2.onload = () => resolve(true);
+                s2.onerror = () => resolve(false);
+                document.head.appendChild(s2);
+            };
+            document.head.appendChild(s);
+        });
+    },
+
+    /** المصدر الموحَّد لبيانات الاستلامات */
+    _getPpeReceiptsData() {
+        return Array.isArray(AppState?.appData?.ppe) ? AppState.appData.ppe : [];
+    },
+
+    /** المصدر الموحَّد لبيانات المخزون */
+    _getPpeStockData() {
+        return Array.isArray(AppState?.appData?.ppeStock) ? AppState.appData.ppeStock : [];
+    },
+
+    /** استخراج تاريخ الاستلام كـ Date object (مع fallback ذكي) */
+    _getPpeReceiptDate(record) {
+        if (!record) return null;
+        const raw = record.receiptDate || record.date || record.createdAt || record.timestamp || null;
+        if (!raw) return null;
+        try {
+            const d = new Date(raw);
+            return isNaN(d.getTime()) ? null : d;
+        } catch (e) { return null; }
+    },
+
+    /** تطبيع الحالة */
+    _normalizePpeStatus(s) {
+        const v = String(s || '').trim().toLowerCase();
+        if (v === 'مستلم' || v === 'received' || v === 'مكتمل') return 'received';
+        if (v === 'قيد التسليم' || v === 'pending' || v === 'بانتظار') return 'pending';
+        return 'other';
+    },
+
+    /** الدالة الرئيسية: تحديث لوحة التحليل */
+    async updatePpeAnalyticsDashboard() {
+        const root = document.getElementById('ppe-analytics-root');
+        if (!root) return;
+
+        // ── 1. جمع البيانات ──
+        const allReceipts = this._getPpeReceiptsData();
+        const allStock = this._getPpeStockData();
+        const period = parseInt(this._ppeAnalyticsPeriod || '0', 10);
+
+        // ── 2. تصفية بالفترة ──
+        const cutoff = period > 0 ? (() => { const d = new Date(); d.setDate(d.getDate() - period); return d; })() : null;
+        const inPeriod = cutoff
+            ? allReceipts.filter(r => { const d = this._getPpeReceiptDate(r); return d && d >= cutoff; })
+            : allReceipts.slice();
+
+        // ── 3. ملء قوائم الفلاتر ──
+        this._ppePopulateAnalyticsFilters(inPeriod, allStock);
+
+        // ── 4. تطبيق الفلاتر التفاعلية ──
+        const { receipts: filtered, stock: filteredStock } = this._ppeApplyAnalyticsFilters(inPeriod, allStock);
+        const total = filtered.length;
+        const countEl = document.getElementById('ppe-filter-count');
+        if (countEl) countEl.textContent = `${total} استلام`;
+
+        // ── 5. حساب KPIs ──
+        const totalQty = filtered.reduce((sum, r) => sum + (parseFloat(r.quantity) || 0), 0);
+        const receivedCount = filtered.filter(r => this._normalizePpeStatus(r.status) === 'received').length;
+        const pendingCount = filtered.filter(r => this._normalizePpeStatus(r.status) === 'pending').length;
+
+        const lowStockItems = filteredStock.filter(item => {
+            const bal = parseFloat(item.balance || 0);
+            const min = parseFloat(item.minThreshold || 0);
+            return min > 0 && bal < min;
+        });
+        const stockItemsCount = filteredStock.length;
+        const lowStockCount = lowStockItems.length;
+        const uniqueEmployees = new Set(filtered.map(r => r.employeeCode || r.employeeName).filter(Boolean)).size;
+
+        const now = new Date();
+        const thisMonth = filtered.filter(r => {
+            const d = this._getPpeReceiptDate(r);
+            return d && d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
+        }).length;
+        const monthsSet = new Set(filtered.map(r => {
+            const d = this._getPpeReceiptDate(r);
+            return d ? `${d.getFullYear()}-${d.getMonth()}` : null;
+        }).filter(Boolean));
+        const avgPerMonth = monthsSet.size > 0 ? (total / monthsSet.size).toFixed(1) : '0';
+
+        const kpiEl = document.getElementById('ppe-kpi-strip');
+        if (kpiEl) {
+            const kpis = [
+                { label:'إجمالي الاستلامات', value:total,             icon:'fas fa-receipt',         color:'#0F766E', bg:'#f0fdfa', border:'#99f6e4' },
+                { label:'الكميات المُستلَمة',  value:totalQty.toFixed(0),icon:'fas fa-cubes',           color:'#0E7490', bg:'#ecfeff', border:'#a5f3fc' },
+                { label:'مكتملة الاستلام',  value:receivedCount,        icon:'fas fa-circle-check',    color:'#047857', bg:'#ecfdf5', border:'#a7f3d0' },
+                { label:'قيد التسليم',      value:pendingCount,         icon:'fas fa-hourglass-half',  color:'#b45309', bg:'#fffbeb', border:'#fde68a' },
+                { label:'أصناف المخزون',    value:stockItemsCount,      icon:'fas fa-boxes',           color:'#6366f1', bg:'#eef2ff', border:'#c7d2fe' },
+                { label:'منخفض المخزون',    value:lowStockCount,        icon:'fas fa-triangle-exclamation', color:'#dc2626', bg:'#fef2f2', border:'#fecaca' },
+                { label:'الموظفون',         value:uniqueEmployees,      icon:'fas fa-users',           color:'#7c3aed', bg:'#f5f3ff', border:'#ddd6fe' },
+                { label:'هذا الشهر',        value:thisMonth,            icon:'fas fa-calendar-day',    color:'#db2777', bg:'#fdf2f8', border:'#fbcfe8' },
+                { label:'متوسط شهري',       value:avgPerMonth,          icon:'fas fa-calendar-check',  color:'#1E3A8A', bg:'#eef2ff', border:'#c7d2fe' },
+            ];
+            kpiEl.innerHTML = kpis.map(k => `
+                <div style="background:${k.bg};border:1px solid ${k.border};border-radius:12px;padding:12px 14px;display:flex;align-items:center;gap:10px;transition:all .2s;cursor:default;" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 6px 20px rgba(0,0,0,0.09)'" onmouseout="this.style.transform='';this.style.boxShadow=''">
+                    <div style="width:38px;height:38px;background:${k.color};border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                        <i class="${k.icon}" style="color:#fff;font-size:15px;"></i>
+                    </div>
+                    <div>
+                        <div style="font-size:1.3rem;font-weight:800;color:${k.color};line-height:1;" dir="ltr">${k.value}</div>
+                        <div style="font-size:0.68rem;color:#64748b;margin-top:2px;white-space:nowrap;">${k.label}</div>
+                    </div>
+                </div>`).join('');
+        }
+
+        // ── 6. تحميل Chart.js ──
+        const loaded = await this._ppeEnsureChartJS();
+        if (!loaded || typeof Chart === 'undefined') {
+            const exist = root.querySelector('.ppe-chart-load-warning');
+            if (!exist) {
+                root.insertAdjacentHTML('afterbegin', '<div class="ppe-chart-load-warning" style="background:#fffbeb;border:1px solid #fde68a;border-radius:10px;padding:14px 18px;margin-bottom:16px;display:flex;align-items:center;gap:10px;"><i class="fas fa-exclamation-triangle" style="color:#d97706;"></i><span style="font-size:0.85rem;color:#92400e;">تعذّر تحميل مكتبة الرسوم البيانية. الأرقام أعلاه متاحة.</span></div>');
+            }
+            return;
+        }
+
+        // ── 7. الرسوم البيانية ──
+        // نوع المعدة (HBar أعلى 10)
+        const typeMap = this._ppeGroupBy(filtered, r => String(r.equipmentType || r.type || 'غير محدد').trim(), 10);
+        this._ppeHBar('ppe-chart-type', typeMap.labels, typeMap.data, 'rgba(15,118,110,0.78)');
+
+        // الاتجاه الزمني (12 شهر)
+        this._ppeTrend('ppe-chart-trend', allReceipts);
+
+        // الإدارة (HBar أعلى 8)
+        const deptMap = this._ppeGroupBy(filtered, r => String(r.department || r.dept || 'غير محدد').trim(), 8);
+        this._ppeHBar('ppe-chart-dept', deptMap.labels, deptMap.data, 'rgba(245,158,11,0.78)');
+
+        // الحالة (Doughnut)
+        const statusLabels = { received:'مستلم', pending:'قيد التسليم', other:'غير محدد' };
+        const statusMap = {};
+        filtered.forEach(r => { const k = statusLabels[this._normalizePpeStatus(r?.status)] || 'غير محدد'; statusMap[k] = (statusMap[k]||0)+1; });
+        const statusColors = { 'مستلم':'rgba(5,150,105,0.85)', 'قيد التسليم':'rgba(245,158,11,0.85)', 'غير محدد':'rgba(148,163,184,0.8)' };
+        this._ppeDoughnut('ppe-chart-status', Object.keys(statusMap), Object.values(statusMap), Object.keys(statusMap).map(l=>statusColors[l]||'rgba(148,163,184,0.8)'));
+
+        // الفئة (Doughnut)
+        const categoryMap = this._ppeGroupBy(filteredStock, item => String(item.category || 'بدون فئة').trim(), 8);
+        const categoryPalette = ['rgba(99,102,241,0.85)','rgba(15,118,110,0.85)','rgba(245,158,11,0.85)','rgba(244,63,94,0.85)','rgba(139,92,246,0.85)','rgba(8,145,178,0.85)','rgba(5,150,105,0.85)','rgba(217,119,6,0.85)'];
+        this._ppeDoughnut('ppe-chart-category', categoryMap.labels, categoryMap.data, categoryMap.labels.map((_,i)=>categoryPalette[i % categoryPalette.length]));
+
+        // المورد (HBar أعلى 8)
+        const supplierMap = this._ppeGroupBy(filteredStock, item => String(item.supplier || 'غير محدد').trim(), 8);
+        this._ppeHBar('ppe-chart-supplier', supplierMap.labels, supplierMap.data, 'rgba(139,92,246,0.78)');
+
+        // المقارنة السنوية
+        this._ppeYearly('ppe-chart-yearly', allReceipts);
+
+        // ── 8. جدول أحدث الاستلامات ──
+        const recent = filtered.slice().sort((a, b) => {
+            const da = this._getPpeReceiptDate(a), db = this._getPpeReceiptDate(b);
+            return (db ? db.getTime() : 0) - (da ? da.getTime() : 0);
+        }).slice(0, 20);
+        const recentCountEl = document.getElementById('ppe-recent-count');
+        if (recentCountEl) recentCountEl.textContent = `${recent.length} استلام`;
+        const tbody = document.getElementById('ppe-recent-tbody');
+        if (tbody) {
+            const statusBadge = (st) => {
+                const k = this._normalizePpeStatus(st);
+                const map = {
+                    received: ['مستلم','#ecfdf5','#047857'],
+                    pending:  ['قيد التسليم','#fffbeb','#b45309'],
+                    other:    ['غير محدد','#f1f5f9','#475569']
+                };
+                const [text,bg,c] = map[k] || map.other;
+                return `<span style="background:${bg};color:${c};padding:2px 9px;border-radius:12px;font-size:0.72rem;font-weight:700;">${text}</span>`;
+            };
+            tbody.innerHTML = recent.length === 0
+                ? '<tr><td colspan="7" style="padding:24px;text-align:center;color:#94a3b8;">لا توجد استلامات في هذه الفترة</td></tr>'
+                : recent.map((r, i) => {
+                    const d = this._getPpeReceiptDate(r);
+                    const dateStr = d ? d.toLocaleDateString('ar-EG', { year:'numeric', month:'short', day:'numeric' }) : '—';
+                    const rowBg = i%2===0 ? '#fff' : '#fafafa';
+                    return `<tr style="border-bottom:1px solid #f8fafc;background:${rowBg};" onmouseover="this.style.background='#f0fdfa'" onmouseout="this.style.background='${rowBg}'">
+                        <td style="padding:9px 12px;white-space:nowrap;color:#374151;" dir="ltr">${dateStr}</td>
+                        <td style="padding:9px 12px;color:#374151;">${Utils.escapeHTML(r.employeeName || '—')}</td>
+                        <td style="padding:9px 12px;color:#374151;font-family:monospace;" dir="ltr">${Utils.escapeHTML(r.employeeCode || '—')}</td>
+                        <td style="padding:9px 12px;color:#374151;">${Utils.escapeHTML(r.equipmentType || r.type || '—')}</td>
+                        <td style="padding:9px 12px;text-align:center;color:#374151;font-weight:700;" dir="ltr">${parseFloat(r.quantity || 0).toFixed(0)}</td>
+                        <td style="padding:9px 12px;color:#374151;">${Utils.escapeHTML(r.department || '—')}</td>
+                        <td style="padding:9px 12px;text-align:center;">${statusBadge(r.status)}</td>
+                    </tr>`;
+                }).join('');
+        }
+    },
+
+    /** ملء قوائم الفلاتر */
+    _ppePopulateAnalyticsFilters(receipts, stock) {
+        const unique = (arr, fn) => [...new Set(arr.map(fn).filter(Boolean))].sort();
+        const fill = (id, values) => {
+            const el = document.getElementById(id); if (!el) return;
+            const cur = el.value;
+            el.innerHTML = '<option value="">الكل</option>' + values.map(v => `<option value="${Utils.escapeHTML(String(v))}"${v===cur?' selected':''}>${Utils.escapeHTML(String(v))}</option>`).join('');
+        };
+        // الحالة ثابتة (canonical)
+        const statusEl = document.getElementById('ppe-af-status');
+        if (statusEl) {
+            const cur = statusEl.value;
+            statusEl.innerHTML = `<option value="">الكل</option>
+                <option value="received"${cur==='received'?' selected':''}>مستلم</option>
+                <option value="pending"${cur==='pending'?' selected':''}>قيد التسليم</option>`;
+        }
+        fill('ppe-af-type',     unique(receipts, r => String(r.equipmentType || r.type || '').trim()));
+        fill('ppe-af-dept',     unique(receipts, r => String(r.department || r.dept || '').trim()));
+        fill('ppe-af-category', unique(stock,    item => String(item.category || '').trim()));
+        fill('ppe-af-supplier', unique(stock,    item => String(item.supplier || '').trim()));
+    },
+
+    /** تطبيق الفلاتر التفاعلية على الاستلامات والمخزون */
+    _ppeApplyAnalyticsFilters(receipts, stock) {
+        const get = id => { const el = document.getElementById(id); return el ? el.value.trim() : ''; };
+        const fType     = get('ppe-af-type');
+        const fDept     = get('ppe-af-dept');
+        const fCategory = get('ppe-af-category');
+        const fStatus   = get('ppe-af-status');
+        const fSupplier = get('ppe-af-supplier');
+        const hasAny    = [fType, fDept, fCategory, fStatus, fSupplier].some(v => v !== '');
+        const badge     = document.getElementById('ppe-filter-badge');
+        if (badge) badge.style.display = hasAny ? 'inline' : 'none';
+
+        const filteredReceipts = receipts.filter(r => {
+            if (fType   && String(r.equipmentType || r.type || '').trim() !== fType) return false;
+            if (fDept   && String(r.department || r.dept || '').trim() !== fDept) return false;
+            if (fStatus && this._normalizePpeStatus(r?.status) !== fStatus) return false;
+            return true;
+        });
+        const filteredStock = stock.filter(item => {
+            if (fCategory && String(item.category || '').trim() !== fCategory) return false;
+            if (fSupplier && String(item.supplier || '').trim() !== fSupplier) return false;
+            return true;
+        });
+        return { receipts: filteredReceipts, stock: filteredStock };
+    },
+
+    /** مساعد: تجميع حسب دالة */
+    _ppeGroupBy(arr, fn, limit = 0) {
+        const map = {};
+        arr.forEach(item => { const k = fn(item) || 'غير محدد'; map[k] = (map[k] || 0) + 1; });
+        let entries = Object.entries(map).sort((a, b) => b[1] - a[1]);
+        if (limit > 0) entries = entries.slice(0, limit);
+        return { labels: entries.map(e => e[0]), data: entries.map(e => e[1]) };
+    },
+
+    /** مساعد: Doughnut */
+    _ppeDoughnut(canvasId, labels, data, colors) {
+        const canvas = document.getElementById(canvasId), emptyEl = document.getElementById(canvasId + '-empty');
+        if (!canvas) return;
+        if (!data.length || data.reduce((a, b) => a + b, 0) === 0) { canvas.style.display = 'none'; if (emptyEl) emptyEl.style.display = 'flex'; return; }
+        if (emptyEl) emptyEl.style.display = 'none'; canvas.style.display = '';
+        try { if (this._ppeAnalyticsCharts[canvasId]) this._ppeAnalyticsCharts[canvasId].destroy(); } catch (e) {}
+        const total = data.reduce((a, b) => a + b, 0);
+        this._ppeAnalyticsCharts[canvasId] = new Chart(canvas, {
+            type: 'doughnut',
+            data: { labels, datasets: [{ data, backgroundColor: colors, borderWidth: 2, borderColor: '#fff', hoverOffset: 6 }] },
+            options: { responsive: true, maintainAspectRatio: false, cutout: '60%',
+                plugins: { legend: { position: 'bottom', labels: { padding: 10, font: { size: 11 }, usePointStyle: true, boxWidth: 9 } },
+                tooltip: { callbacks: { label: ctx => ` ${ctx.label}: ${ctx.parsed} (${total > 0 ? ((ctx.parsed / total) * 100).toFixed(1) : 0}%)` } } } }
+        });
+    },
+
+    /** مساعد: HBar */
+    _ppeHBar(canvasId, labels, data, color) {
+        const canvas = document.getElementById(canvasId), emptyEl = document.getElementById(canvasId + '-empty');
+        if (!canvas) return;
+        if (!data.length || data.reduce((a, b) => a + b, 0) === 0) { canvas.style.display = 'none'; if (emptyEl) emptyEl.style.display = 'flex'; return; }
+        if (emptyEl) emptyEl.style.display = 'none'; canvas.style.display = '';
+        try { if (this._ppeAnalyticsCharts[canvasId]) this._ppeAnalyticsCharts[canvasId].destroy(); } catch (e) {}
+        this._ppeAnalyticsCharts[canvasId] = new Chart(canvas, {
+            type: 'bar',
+            data: { labels, datasets: [{ data, backgroundColor: color || 'rgba(15,118,110,0.78)', borderRadius: 5, borderSkipped: false }] },
+            options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+                plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => ` ${ctx.parsed.x}` } } },
+                scales: { x: { beginAtZero: true, ticks: { precision: 0, font: { size: 11 } }, grid: { color: '#f1f5f9' } },
+                    y: { ticks: { font: { size: 11 }, callback: v => String(labels[v]).length > 18 ? String(labels[v]).slice(0, 17) + '…' : labels[v] } } } }
+        });
+    },
+
+    /** مساعد: الاتجاه الزمني (12 شهر) */
+    _ppeTrend(canvasId, arr) {
+        const canvas = document.getElementById(canvasId), emptyEl = document.getElementById(canvasId + '-empty');
+        if (!canvas) return;
+        const now = new Date();
+        const arabicMonths = ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
+        const months = [];
+        for (let i = 11; i >= 0; i--) { const d = new Date(now.getFullYear(), now.getMonth() - i, 1); months.push({ y: d.getFullYear(), m: d.getMonth(), label: `${arabicMonths[d.getMonth()]} ${d.getFullYear()}` }); }
+        const counts = months.map(mo => arr.filter(r => { const d = this._getPpeReceiptDate(r); return d && d.getFullYear() === mo.y && d.getMonth() === mo.m; }).length);
+        if (counts.reduce((a, b) => a + b, 0) === 0) { canvas.style.display = 'none'; if (emptyEl) emptyEl.style.display = 'flex'; return; }
+        if (emptyEl) emptyEl.style.display = 'none'; canvas.style.display = '';
+        try { if (this._ppeAnalyticsCharts[canvasId]) this._ppeAnalyticsCharts[canvasId].destroy(); } catch (e) {}
+        const maxC = Math.max(...counts);
+        this._ppeAnalyticsCharts[canvasId] = new Chart(canvas, {
+            type: 'bar',
+            data: { labels: months.map(m => m.label), datasets: [
+                { label: 'الاستلامات', data: counts, backgroundColor: counts.map(c => c === maxC ? 'rgba(15,118,110,0.9)' : 'rgba(15,118,110,0.5)'), borderRadius: 5, borderSkipped: false, order: 1 },
+                { label: 'الاتجاه', data: counts, type: 'line', borderColor: 'rgba(30,58,138,0.9)', backgroundColor: 'rgba(30,58,138,0.08)', borderWidth: 2.5, pointRadius: 4, pointBackgroundColor: '#1E3A8A', tension: 0.4, fill: true, order: 0 }
+            ] },
+            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'top', labels: { usePointStyle: true, font: { size: 11 } } }, tooltip: { mode: 'index', intersect: false } },
+                scales: { x: { grid: { display: false }, ticks: { font: { size: 10 }, maxRotation: 45 } }, y: { beginAtZero: true, ticks: { precision: 0, font: { size: 11 } }, grid: { color: '#f8fafc' } } } }
+        });
+    },
+
+    /** مساعد: المقارنة السنوية (3 سنوات — إجمالي + كميات) */
+    _ppeYearly(canvasId, arr) {
+        const canvas = document.getElementById(canvasId), emptyEl = document.getElementById(canvasId + '-empty');
+        if (!canvas) return;
+        const currentYear = new Date().getFullYear();
+        const years = [currentYear - 2, currentYear - 1, currentYear];
+        const totalByYear = years.map(y => arr.filter(r => { const d = this._getPpeReceiptDate(r); return d && d.getFullYear() === y; }).length);
+        const qtyByYear = years.map(y => arr.filter(r => { const d = this._getPpeReceiptDate(r); return d && d.getFullYear() === y; }).reduce((sum, r) => sum + (parseFloat(r.quantity) || 0), 0));
+        if (totalByYear.reduce((a, b) => a + b, 0) === 0) { canvas.style.display = 'none'; if (emptyEl) emptyEl.style.display = 'flex'; return; }
+        if (emptyEl) emptyEl.style.display = 'none'; canvas.style.display = '';
+        try { if (this._ppeAnalyticsCharts[canvasId]) this._ppeAnalyticsCharts[canvasId].destroy(); } catch (e) {}
+        this._ppeAnalyticsCharts[canvasId] = new Chart(canvas, {
+            type: 'bar',
+            data: { labels: years.map(String), datasets: [
+                { label: 'عدد الاستلامات', data: totalByYear, backgroundColor: 'rgba(15,118,110,0.78)', borderRadius: 5, borderSkipped: false, yAxisID: 'y' },
+                { label: 'الكميات', data: qtyByYear, backgroundColor: 'rgba(30,58,138,0.78)', borderRadius: 5, borderSkipped: false, yAxisID: 'y1' }
+            ] },
+            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'top', labels: { usePointStyle: true, font: { size: 11 } } }, tooltip: { mode: 'index', intersect: false } },
+                scales: {
+                    x: { grid: { display: false }, ticks: { font: { size: 12 } } },
+                    y:  { beginAtZero: true, position: 'right', ticks: { precision: 0, font: { size: 11 } }, grid: { color: '#f8fafc' }, title: { display: true, text: 'عدد', font: { size: 10 } } },
+                    y1: { beginAtZero: true, position: 'left', ticks: { precision: 0, font: { size: 11 } }, grid: { display: false }, title: { display: true, text: 'كمية', font: { size: 10 } } }
+                }
+            }
+        });
+    },
+
+    /** ربط أحداث لوحة التحليل */
+    _ppeBindAnalyticsEvents() {
+        const root = document.getElementById('ppe-analytics-root');
+        if (!root) return;
+
+        // أزرار الفترة
+        root.querySelectorAll('.ppe-period-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                this._ppeAnalyticsPeriod = btn.getAttribute('data-period');
+                root.querySelectorAll('.ppe-period-btn').forEach(b => {
+                    const active = b === btn;
+                    b.style.background = active ? '#fff' : 'rgba(255,255,255,0.15)';
+                    b.style.color = active ? '#0F766E' : '#fff';
+                });
+                this.updatePpeAnalyticsDashboard();
+            });
+        });
+
+        // زر تحديث
+        const refreshBtn = document.getElementById('ppe-analytics-refresh');
+        if (refreshBtn) refreshBtn.addEventListener('click', () => this.updatePpeAnalyticsDashboard());
+
+        // زر PDF
+        const pdfBtn = document.getElementById('ppe-export-pdf-btn');
+        if (pdfBtn) pdfBtn.addEventListener('click', () => this._ppeExportAnalyticsPDF());
+
+        // زر تبديل الفلاتر
+        const toggleBtn = document.getElementById('ppe-toggle-filters-btn');
+        const filterPanel = document.getElementById('ppe-filter-panel');
+        if (toggleBtn && filterPanel) {
+            toggleBtn.addEventListener('click', () => {
+                const isOpen = filterPanel.style.display !== 'none';
+                filterPanel.style.display = isOpen ? 'none' : 'block';
+                toggleBtn.style.background = isOpen ? 'rgba(255,255,255,0.12)' : 'rgba(255,255,255,0.35)';
+            });
+        }
+
+        // الفلاتر التفاعلية
+        ['ppe-af-type','ppe-af-dept','ppe-af-category','ppe-af-status','ppe-af-supplier'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.addEventListener('change', () => this.updatePpeAnalyticsDashboard());
+        });
+
+        // زر إعادة تعيين الفلاتر
+        const resetBtn = document.getElementById('ppe-filter-reset-btn');
+        if (resetBtn) {
+            resetBtn.addEventListener('click', () => {
+                ['ppe-af-type','ppe-af-dept','ppe-af-category','ppe-af-status','ppe-af-supplier'].forEach(id => {
+                    const el = document.getElementById(id); if (el) el.value = '';
+                });
+                this.updatePpeAnalyticsDashboard();
+            });
+        }
+    },
+
+    /** تصدير لوحة التحليل كـ PDF (نفس نمط incidents._incidentExportPDF) */
+    async _ppeExportAnalyticsPDF() {
+        try {
+            const root = document.getElementById('ppe-analytics-root');
+            if (!root) {
+                Notification.error('لا يمكن العثور على لوحة التحليل');
+                return;
+            }
+
+            // تحميل html2canvas و jsPDF عند الحاجة
+            if (typeof html2canvas === 'undefined' || typeof window.jspdf === 'undefined') {
+                Loading.show('جاري تحميل أدوات التصدير…');
+                await Promise.all([
+                    new Promise(resolve => {
+                        if (typeof html2canvas !== 'undefined') return resolve();
+                        const s = document.createElement('script');
+                        s.src = 'https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js';
+                        s.onload = resolve; s.onerror = resolve; document.head.appendChild(s);
+                    }),
+                    new Promise(resolve => {
+                        if (typeof window.jspdf !== 'undefined') return resolve();
+                        const s = document.createElement('script');
+                        s.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
+                        s.onload = resolve; s.onerror = resolve; document.head.appendChild(s);
+                    })
+                ]);
+                Loading.hide();
+            }
+
+            if (typeof html2canvas === 'undefined' || typeof window.jspdf === 'undefined') {
+                Notification.error('تعذّر تحميل أدوات التصدير');
+                return;
+            }
+
+            Loading.show('جاري تجهيز التقرير…');
+
+            // بناء هيدر برانديد (يُضاف فوق المحتوى مؤقتاً)
+            const companyName = String(AppState?.companySettings?.name || 'Americana HSE Management System').trim();
+            const secondaryName = String(AppState?.companySettings?.secondaryName || 'إدارة السلامة والصحة المهنية والبيئة').trim();
+            const exportDateTime = (typeof Utils !== 'undefined' && typeof Utils.formatDateTime === 'function')
+                ? Utils.formatDateTime(new Date())
+                : new Date().toLocaleString('ar-EG');
+
+            const header = document.createElement('div');
+            header.id = 'ppe-pdf-header-temp';
+            header.style.cssText = 'background:linear-gradient(135deg,#0F766E 0%,#0E7490 50%,#1E3A8A 100%);color:#fff;padding:18px 24px;border-radius:14px;margin-bottom:16px;display:flex;justify-content:space-between;align-items:center;font-family:Arial,sans-serif;';
+            header.innerHTML = `
+                <div>
+                    <div style="font-size:18px;font-weight:800;margin-bottom:4px;">${Utils.escapeHTML(companyName)}</div>
+                    <div style="font-size:13px;opacity:0.95;">${Utils.escapeHTML(secondaryName)}</div>
+                </div>
+                <div style="text-align:end;">
+                    <div style="font-size:16px;font-weight:700;margin-bottom:4px;">تقرير تحليل مهمات الوقاية</div>
+                    <div style="font-size:12px;opacity:0.95;" dir="ltr">${Utils.escapeHTML(exportDateTime)}</div>
+                </div>
+            `;
+            root.insertBefore(header, root.firstChild);
+
+            const canvas = await html2canvas(root, { scale: 2, useCORS: true, backgroundColor: '#ffffff', logging: false });
+
+            // إزالة الهيدر المؤقت
+            header.remove();
+
+            const { jsPDF } = window.jspdf;
+            const pdf = new jsPDF('p', 'mm', 'a4');
+            const pdfWidth = pdf.internal.pageSize.getWidth();
+            const pdfHeight = pdf.internal.pageSize.getHeight();
+            const imgWidth = pdfWidth;
+            const imgHeight = (canvas.height * imgWidth) / canvas.width;
+
+            // قص الصورة إذا كانت أطول من صفحة واحدة
+            let heightLeft = imgHeight, position = 0;
+            const imgData = canvas.toDataURL('image/png');
+            pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+            heightLeft -= pdfHeight;
+            while (heightLeft > 0) {
+                position = heightLeft - imgHeight;
+                pdf.addPage();
+                pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+                heightLeft -= pdfHeight;
+            }
+
+            const ts = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+            pdf.save(`PPE-Analytics-${ts}.pdf`);
+            Loading.hide();
+            Notification.success('تم تصدير تقرير التحليل بنجاح');
+        } catch (error) {
+            Loading.hide();
+            Utils.safeError('❌ خطأ في تصدير PDF:', error);
+            Notification.error('حدث خطأ أثناء التصدير: ' + (error.message || error));
+            // محاولة إزالة الهيدر المؤقت في حال فشل
+            const stuck = document.getElementById('ppe-pdf-header-temp');
+            if (stuck) stuck.remove();
         }
     }
 };
