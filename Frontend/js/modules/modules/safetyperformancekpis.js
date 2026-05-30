@@ -1356,6 +1356,131 @@ const SafetyPerformanceKPIs = {
         return parseFloat(derived.toFixed(2));
     },
 
+    // ════════════════════════════════════════════════════════════════
+    // Workforce metric helpers — مصدر موحَّد للحسابات (TRIR/LTIFR/Overview)
+    //
+    // permanentCount   : عدد الموظفين النشطين الفعليين خلال الفترة (يُحسب
+    //                    من getOperationalEmployeesForMonth الذي يستبعد
+    //                    من توظف بعد نهاية الشهر، ومن استقال قبله،
+    //                    وحالات "غير نشط" بدون تاريخ استقالة).
+    // temporaryCount   : مجموع person-months للعمالة المؤقتة من
+    //                    externalWorkforceMonthly عبر أشهر الفترة.
+    // periodMonths     : أشهر الفترة (1 شهري / 3 ربع سنوي / 12 سنوي
+    //                    أو الفرق المحسوب للفترة المخصصة).
+    // معادلة الساعات   : count × periodMonths × 8 hours × 22 days
+    //                    (الموقتون: totalContractorPersonMonths × 8 × 22
+    //                     لأن العدد مُجمَّع شهرياً بالفعل).
+    // ════════════════════════════════════════════════════════════════
+
+    /**
+     * يحسب عدد أشهر الفترة الزمنية النشطة (للفترة المخصصة يحسب فرق الأشهر فعلياً).
+     * @returns {{ year:number, startMonth:number, periodMonths:number, start:Date, end:Date }}
+     */
+    getWorkforcePeriodContext() {
+        const { start, end } = this.getDateRange();
+        const year = start.getFullYear();
+        const startMonth = start.getMonth();
+
+        let periodMonths;
+        if (this.filters.period === 'yearly') {
+            periodMonths = 12;
+        } else if (this.filters.period === 'quarterly') {
+            periodMonths = 3;
+        } else if (this.filters.period === 'custom') {
+            const months = (end.getFullYear() - start.getFullYear()) * 12 + (end.getMonth() - start.getMonth()) + 1;
+            periodMonths = Math.max(1, months);
+        } else {
+            periodMonths = 1; // monthly
+        }
+
+        return { year, startMonth, periodMonths, start, end };
+    },
+
+    /**
+     * عدد الموظفين المثبتين (الدائمين) النشطين فعلياً.
+     * يستخدم متوسط الأشهر داخل الفترة لاحتساب التغيّرات (تعيين/استقالة) بدقة.
+     * @returns {number}
+     */
+    calculatePermanentEmployeesCount() {
+        const { year, startMonth, periodMonths } = this.getWorkforcePeriodContext();
+        const employees = (AppState && AppState.appData && AppState.appData.employees) || [];
+
+        if (!employees.length) return 0;
+
+        // للفترة الشهرية: نُرجع عدد الشهر مباشرة
+        if (periodMonths === 1) {
+            return this.getOperationalEmployeesForMonth(employees, year, startMonth);
+        }
+
+        // للفترات الأطول: متوسط الأشهر (يَعكس التغيّرات داخل الفترة)
+        let totalPersonMonths = 0;
+        for (let m = startMonth; m < startMonth + periodMonths && m < 12; m++) {
+            totalPersonMonths += this.getOperationalEmployeesForMonth(employees, year, m);
+        }
+        // متوسط مُقرَّب للأقرب صحيح (للعرض كرقم موظفين)
+        return Math.round(totalPersonMonths / periodMonths);
+    },
+
+    /**
+     * مجموع person-months للعمالة المؤقتة عبر أشهر الفترة.
+     * يُستخدم مباشرةً في معادلة ساعات العمل دون الحاجة لضرب في الأشهر.
+     * @returns {number}
+     */
+    calculateTemporaryWorkforcePersonMonths() {
+        const { year, startMonth, periodMonths } = this.getWorkforcePeriodContext();
+        let total = 0;
+        for (let m = startMonth; m < startMonth + periodMonths && m < 12; m++) {
+            total += this.getExternalWorkforceForMonth(year, m);
+        }
+        return total;
+    },
+
+    /**
+     * عدد العمالة المؤقتة المعروض في الواجهة (متوسط الأشهر للفترات الأطول).
+     * @returns {number}
+     */
+    calculateTemporaryWorkforceCount() {
+        const { periodMonths } = this.getWorkforcePeriodContext();
+        const personMonths = this.calculateTemporaryWorkforcePersonMonths();
+        if (periodMonths === 1) return Math.round(personMonths);
+        return Math.round(personMonths / periodMonths);
+    },
+
+    /**
+     * إجمالي ساعات عمل الموظفين الدائمين خلال الفترة.
+     * صيغة: permanentCount × periodMonths × 8 ساعات × 22 يوم
+     * @returns {number}
+     */
+    calculatePermanentEmployeesHours() {
+        const { startMonth, periodMonths, year } = this.getWorkforcePeriodContext();
+        const employees = (AppState && AppState.appData && AppState.appData.employees) || [];
+        if (!employees.length) return 0;
+
+        let totalPersonMonths = 0;
+        for (let m = startMonth; m < startMonth + periodMonths && m < 12; m++) {
+            totalPersonMonths += this.getOperationalEmployeesForMonth(employees, year, m);
+        }
+        return totalPersonMonths * 8 * 22;
+    },
+
+    /**
+     * إجمالي ساعات العمالة المؤقتة خلال الفترة.
+     * صيغة: totalContractorPersonMonths × 8 ساعات × 22 يوم
+     * @returns {number}
+     */
+    calculateTemporaryWorkforceHours() {
+        const personMonths = this.calculateTemporaryWorkforcePersonMonths();
+        return personMonths * 8 * 22;
+    },
+
+    /**
+     * إجمالي ساعات القوى العاملة (دائمون + موقتون) — يُستخدم في TRIR و LTIFR.
+     * @returns {number}
+     */
+    calculateCombinedWorkforceHours() {
+        return this.calculatePermanentEmployeesHours() + this.calculateTemporaryWorkforceHours();
+    },
+
     getManualScorecardRecord(year, monthIndex) {
         const month = String(monthIndex + 1).padStart(2, '0');
         return this.getScorecardManualRecords().find(record =>
@@ -2161,23 +2286,8 @@ const SafetyPerformanceKPIs = {
     },
 
     calculateTRIR(data) {
-        const { start } = this.getDateRange();
-        const year = start.getFullYear();
-        const periodMonths = this.filters.period === 'yearly' ? 12 : this.filters.period === 'quarterly' ? 3 : 1;
-
-        // ✅ عدد الموظفين الدائمين
-        const employees = AppState.appData.employees || [];
-        const permanentCount = employees.filter(e => e && e.active !== false).length || 0;
-
-        // ✅ إضافة الموقتين (External Workforce) لكل شهر في الفترة المحددة
-        const startMonth = start.getMonth();
-        let totalContractorPersonMonths = 0;
-        for (let m = startMonth; m < startMonth + periodMonths && m < 12; m++) {
-            totalContractorPersonMonths += this.getExternalWorkforceForMonth(year, m);
-        }
-
-        // إجمالي ساعات العمل = (دائمون × أشهر + موقتون-أشهر) × 8 ساعات × 22 يوم
-        const totalWorkHours = ((permanentCount * periodMonths) + totalContractorPersonMonths) * 8 * 22;
+        // ✅ موحَّد عبر calculateCombinedWorkforceHours (دائمون + موقتون × 8 × 22)
+        const totalWorkHours = this.calculateCombinedWorkforceHours();
 
         // ✅ تصفية الحوادث القابلة للتسجيل فقط (وليس جميع الحوادث)
         const recordableInjuries = (data.incidents || []).filter(inc => this.isRecordableIncident(inc)).length;
@@ -2413,24 +2523,8 @@ const SafetyPerformanceKPIs = {
 
     calculateLTIFR(data) {
         // معدل تكرار الإصابات (LTIFR - Lost Time Injury Frequency Rate)
-        const { start } = this.getDateRange();
-        const year = start.getFullYear();
-        const periodMonths = this.filters.period === 'yearly' ? 12 : this.filters.period === 'quarterly' ? 3 : 1;
-
-        // ✅ عدد الموظفين الدائمين
-        const employees = AppState.appData.employees || [];
-        const permanentCount = employees.filter(e => e && e.active !== false).length || 0;
-
-        // ✅ إضافة الموقتين (External Workforce) لكل شهر في الفترة المحددة
-        const startMonth = start.getMonth();
-        let totalContractorPersonMonths = 0;
-        for (let m = startMonth; m < startMonth + periodMonths && m < 12; m++) {
-            totalContractorPersonMonths += this.getExternalWorkforceForMonth(year, m);
-        }
-
-        // إجمالي ساعات العمل = (دائمون × أشهر + موقتون-أشهر) × 8 ساعات × 22 يوم
-        const totalWorkHours = ((permanentCount * periodMonths) + totalContractorPersonMonths) * 8 * 22;
-
+        // ✅ موحَّد عبر calculateCombinedWorkforceHours (دائمون + موقتون × 8 × 22)
+        const totalWorkHours = this.calculateCombinedWorkforceHours();
         const ltiCount = this.calculateLTICount(data);
         const ltifr = totalWorkHours > 0 ? ((ltiCount * 1000000) / totalWorkHours) : 0;
         return ltifr.toFixed(2);
@@ -3471,6 +3565,35 @@ SafetyPerformanceKPIs.renderOverviewMiniStat = function (id, label, icon, tone, 
     `;
 };
 
+/**
+ * بطاقة قوى عاملة محسَّنة — تصميم مميَّز للقسم الجديد:
+ * - شريط لوني علوي مطابق للـ tone
+ * - أيقونة أكبر مع توهج خفيف
+ * - قيمة بارزة مع وحدة قياس واضحة
+ * - تلميح أسفل البطاقة (subtitle)
+ */
+SafetyPerformanceKPIs.renderWorkforceStatCard = function (id, label, icon, tone, unit, subtitle = '') {
+    return `
+        <div class="relative rounded-[26px] border border-white/80 bg-white p-5 transition-transform duration-300 hover:-translate-y-0.5" style="box-shadow: 0 18px 42px rgba(15,23,42,0.08);">
+            <div class="absolute inset-x-5 top-0 h-1 rounded-b-full bg-gradient-to-r from-${tone}-500/70 via-${tone}-400/60 to-${tone}-500/70"></div>
+            <div class="flex items-start justify-between gap-3">
+                <div class="min-w-0">
+                    <div class="text-[11px] font-black uppercase tracking-[0.2em] text-${tone}-600">${unit}</div>
+                    <div class="mt-2 text-sm font-bold text-slate-800 leading-snug">${label}</div>
+                </div>
+                <div class="h-12 w-12 rounded-2xl flex items-center justify-center text-${tone}-600 bg-${tone}-50 border border-${tone}-100" style="box-shadow: inset 0 0 0 1px rgba(255,255,255,0.6);">
+                    <i class="fas ${icon} text-lg"></i>
+                </div>
+            </div>
+            <div class="mt-5 flex items-end gap-2">
+                <span id="${id}" class="text-3xl font-black text-slate-900 leading-none">-</span>
+                <span class="text-xs font-bold text-slate-400 pb-1">${unit}</span>
+            </div>
+            ${subtitle ? `<p class="mt-3 text-[11px] text-slate-500 leading-relaxed">${subtitle}</p>` : ''}
+        </div>
+    `;
+};
+
 SafetyPerformanceKPIs.renderOverviewChartCard = function (containerId, title, icon, tone, description) {
     return `
         <div class="content-card overflow-hidden" style="border: 1px solid rgba(148,163,184,0.14); box-shadow: 0 18px 38px rgba(15,23,42,0.06);">
@@ -3664,6 +3787,75 @@ SafetyPerformanceKPIs.render = async function () {
                     ${this.renderOverviewMiniStat('overview-ptw-total', t('module.kpi.overview.mini.ptw','تصاريح العمل النشطة'), 'fa-id-badge', 'indigo', t('module.kpi.overview.unit.permitU','تصريح'))}
                 </div>
 
+                <!-- ✨ قسم القوى العاملة — أساس حسابات TRIR/LTIFR -->
+                <div class="mt-6 rounded-[28px] border border-sky-100 bg-gradient-to-br from-sky-50/60 via-white to-white p-5" style="box-shadow: 0 18px 40px rgba(15,23,42,0.05);">
+                    <div class="flex items-start justify-between gap-4 flex-wrap mb-5">
+                        <div class="min-w-0">
+                            <div class="inline-flex items-center gap-2 rounded-full px-3 py-1 text-[11px] font-black uppercase tracking-[0.18em] text-sky-700 bg-sky-100/70 border border-sky-200">
+                                <i class="fas fa-people-group"></i>
+                                ${t('module.kpi.overview.workforce.eyebrow','القوى العاملة')}
+                            </div>
+                            <h3 class="mt-3 text-xl font-black text-slate-900">${t('module.kpi.overview.workforce.title','مؤشرات الموظفين وساعات العمل')}</h3>
+                            <p class="mt-1 text-xs text-slate-500 leading-relaxed">${t('module.kpi.overview.workforce.intro','تُستخدم هذه القيم كأساس لحساب TRIR و LTIFR — تشمل الموظفين الدائمين والعمالة المؤقتة معاً.')}</p>
+                        </div>
+                        <div class="rounded-2xl bg-white/90 px-3 py-2 text-[11px] font-bold text-sky-700 border border-sky-100">
+                            <i class="fas fa-calculator ml-1"></i>
+                            ${t('module.kpi.overview.workforce.formula','count × أشهر × 8 × 22')}
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+                        ${this.renderWorkforceStatCard(
+                            'overview-permanent-employees',
+                            t('module.kpi.overview.workforce.permanentCount','الموظفون المثبتون'),
+                            'fa-user-tie',
+                            'sky',
+                            t('module.kpi.overview.unit.employee','موظف'),
+                            t('module.kpi.overview.workforce.permanentCount.sub','عدد الموظفين النشطين فعلياً خلال الفترة المحددة')
+                        )}
+                        ${this.renderWorkforceStatCard(
+                            'overview-temporary-workforce',
+                            t('module.kpi.overview.workforce.temporaryCount','العمالة المؤقتة'),
+                            'fa-helmet-safety',
+                            'amber',
+                            t('module.kpi.overview.unit.worker','عامل'),
+                            t('module.kpi.overview.workforce.temporaryCount.sub','إجمالي العمالة المؤقتة من بيانات المقاولين الشهرية')
+                        )}
+                        ${this.renderWorkforceStatCard(
+                            'overview-permanent-hours',
+                            t('module.kpi.overview.workforce.permanentHours','ساعات عمل الموظفين'),
+                            'fa-business-time',
+                            'emerald',
+                            t('module.kpi.overview.unit.hour','ساعة'),
+                            t('module.kpi.overview.workforce.permanentHours.sub','إجمالي ساعات العمل للموظفين الدائمين (8 × 22 × أشهر)')
+                        )}
+                        ${this.renderWorkforceStatCard(
+                            'overview-temporary-hours',
+                            t('module.kpi.overview.workforce.temporaryHours','ساعات العمالة المؤقتة'),
+                            'fa-clock-rotate-left',
+                            'orange',
+                            t('module.kpi.overview.unit.hour','ساعة'),
+                            t('module.kpi.overview.workforce.temporaryHours.sub','إجمالي ساعات العمالة المؤقتة عبر أشهر الفترة')
+                        )}
+                        ${this.renderWorkforceStatCard(
+                            'overview-combined-hours',
+                            t('module.kpi.overview.workforce.combinedHours','إجمالي الساعات (موظفون + موقتون)'),
+                            'fa-layer-group',
+                            'indigo',
+                            t('module.kpi.overview.unit.hour','ساعة'),
+                            t('module.kpi.overview.workforce.combinedHours.sub','الأساس المُستخدَم في معادلة TRIR و LTIFR')
+                        )}
+                        <div class="rounded-[26px] border border-dashed border-slate-200 bg-white/60 p-5 flex flex-col justify-center">
+                            <div class="text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">${t('module.kpi.overview.workforce.refLabel','مراجع سريعة')}</div>
+                            <ul class="mt-3 space-y-1.5 text-xs text-slate-600 leading-relaxed">
+                                <li><i class="fas fa-circle-check ml-1 text-emerald-500"></i> ${t('module.kpi.overview.workforce.ref1','الموظف الدائم: حسب تاريخ التعيين/الاستقالة وحالة النشاط')}</li>
+                                <li><i class="fas fa-circle-check ml-1 text-emerald-500"></i> ${t('module.kpi.overview.workforce.ref2','المؤقتون: من سجل العمالة الخارجية الشهري')}</li>
+                                <li><i class="fas fa-circle-check ml-1 text-emerald-500"></i> ${t('module.kpi.overview.workforce.ref3','الساعات: 8 ساعات × 22 يوم عمل لكل person-month')}</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
                 <div class="mt-5 flex flex-wrap gap-3">
                     <button class="rounded-full border border-slate-200 bg-white/90 px-4 py-2 text-sm font-bold text-slate-700 transition hover:border-sky-200 hover:text-sky-700" data-kpi-jump="leading-kpis-section">
                         <i class="fas fa-arrow-trend-up ml-2 text-emerald-600"></i>
@@ -3804,6 +3996,26 @@ SafetyPerformanceKPIs.updateOverviewQuickStats = function () {
     setText('overview-observations-total', observationsTotal.toLocaleString(loc));
     setText('overview-training-total', trainingTotal.toLocaleString(loc));
     setText('overview-ptw-total', permitsTotal.toLocaleString(loc));
+
+    // ✨ القوى العاملة — تحديث القسم الجديد
+    try {
+        const permanentCount = this.calculatePermanentEmployeesCount();
+        const temporaryCount = this.calculateTemporaryWorkforceCount();
+        const permanentHours = this.calculatePermanentEmployeesHours();
+        const temporaryHours = this.calculateTemporaryWorkforceHours();
+        const combinedHours = this.calculateCombinedWorkforceHours();
+
+        const fmtInt = (n) => Math.round(Number(n) || 0).toLocaleString(loc);
+        setText('overview-permanent-employees', fmtInt(permanentCount));
+        setText('overview-temporary-workforce', fmtInt(temporaryCount));
+        setText('overview-permanent-hours', fmtInt(permanentHours));
+        setText('overview-temporary-hours', fmtInt(temporaryHours));
+        setText('overview-combined-hours', fmtInt(combinedHours));
+    } catch (e) {
+        if (typeof Utils !== 'undefined' && Utils.safeError) {
+            Utils.safeError('Workforce overview update failed:', e);
+        }
+    }
 };
 
 const __originalSafetyPerformanceKPIsUpdateAllKPIs = SafetyPerformanceKPIs.updateAllKPIs;
