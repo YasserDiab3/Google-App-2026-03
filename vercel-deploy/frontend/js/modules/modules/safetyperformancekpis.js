@@ -97,7 +97,7 @@ const SafetyPerformanceKPIs = {
                 <div class="section-header">
                     <div>
                         <h1 class="section-title">
-                            <i class="fas fa-gauge-high ml-3"></i>
+                            <i class="fas fa-gauge-high me-3"></i>
                             ${SafetyPerformanceKPIs._t('module.kpi.title', 'مؤشرات الأداء لإدارة السلامة')}
                         </h1>
                         <p class="section-subtitle">${SafetyPerformanceKPIs._t('module.common.loading', 'جاري التحميل...')}</p>
@@ -147,7 +147,7 @@ const SafetyPerformanceKPIs = {
                     <div class="section-header">
                         <div>
                             <h1 class="section-title">
-                                <i class="fas fa-gauge-high ml-3"></i>
+                                <i class="fas fa-gauge-high me-3"></i>
                                 ${SafetyPerformanceKPIs._t('module.kpi.title', 'مؤشرات الأداء لإدارة السلامة')}
                             </h1>
                         </div>
@@ -158,7 +158,7 @@ const SafetyPerformanceKPIs = {
                                 <i class="fas fa-exclamation-triangle text-yellow-500 text-4xl mb-4"></i>
                                 <p class="text-gray-500 mb-4">${SafetyPerformanceKPIs._t('module.kpi.loadError', 'حدث خطأ في تحميل البيانات')}</p>
                                 <button onclick="SafetyPerformanceKPIs.load()" class="btn-primary">
-                                    <i class="fas fa-redo ml-2"></i>
+                                    <i class="fas fa-redo me-2"></i>
                                     ${SafetyPerformanceKPIs._t('module.kpi.retry', 'إعادة المحاولة')}
                                 </button>
                             </div>
@@ -219,7 +219,7 @@ const SafetyPerformanceKPIs = {
                 <div class="section-header">
                     <div>
                         <h1 class="section-title">
-                            <i class="fas fa-gauge-high ml-3"></i>
+                            <i class="fas fa-gauge-high me-3"></i>
                             ${SafetyPerformanceKPIs._t('module.kpi.title', 'مؤشرات الأداء لإدارة السلامة')}
                         </h1>
                     </div>
@@ -232,7 +232,7 @@ const SafetyPerformanceKPIs = {
                                 <p class="text-gray-500 mb-2">${SafetyPerformanceKPIs._t('module.kpi.loadError', 'حدث خطأ أثناء تحميل البيانات')}</p>
                                 <p class="text-sm text-gray-400 mb-4">${error && error.message ? Utils.escapeHTML(error.message) : unk}</p>
                                 <button onclick="SafetyPerformanceKPIs.load()" class="btn-primary">
-                                    <i class="fas fa-redo ml-2"></i>
+                                    <i class="fas fa-redo me-2"></i>
                                     ${SafetyPerformanceKPIs._t('module.kpi.retry', 'إعادة المحاولة')}
                                 </button>
                             </div>
@@ -277,8 +277,8 @@ const SafetyPerformanceKPIs = {
 
     renderOverviewTab() {
         const t = (k, f) => this._t(k, f);
-        const isRTL = (window.AppI18n?.getCurrentLang?.() || window.I18n?.getCurrentLang?.() || 'ar') === 'ar';
-        const iconMargin = isRTL ? 'ml-2' : 'mr-2';
+        // ✅ logical property — auto-flips between LTR/RTL
+        const iconMargin = 'me-2';
         return `
             <!-- ===================== HERO SUMMARY BAR ===================== -->
             <div class="mt-4" style="background:linear-gradient(135deg,#0f172a 0%,#1e3a5f 50%,#1d4ed8 100%);border-radius:16px;padding:1.5rem 1.75rem;box-shadow:0 8px 32px rgba(15,23,42,.35);">
@@ -566,15 +566,15 @@ const SafetyPerformanceKPIs = {
                             </select>
                             <button onclick="SafetyPerformanceKPIs.exportAnnualPlanToExcel()" class="btn-success" style="padding: 0.5rem 0.75rem; white-space: nowrap;" title="${t('module.kpi.exportExcel','تصدير Excel')}">
                                 <i class="fas fa-file-excel"></i>
-                                <span class="hidden lg:inline mr-1">${t('module.kpi.common.excel','Excel')}</span>
+                                <span class="hidden lg:inline ms-1">${t('module.kpi.common.excel','Excel')}</span>
                             </button>
                             <button onclick="SafetyPerformanceKPIs.exportAnnualPlanToPDF()" class="btn-secondary" style="padding: 0.5rem 0.75rem; white-space: nowrap;" title="${t('module.kpi.exportPDF','تصدير PDF')}">
                                 <i class="fas fa-file-pdf"></i>
-                                <span class="hidden lg:inline mr-1">PDF</span>
+                                <span class="hidden lg:inline ms-1">PDF</span>
                             </button>
                             ${canEdit ? `
                             <button onclick="SafetyPerformanceKPIs.addKPIAnnualPlan()" class="btn-primary" style="padding: 0.5rem 1.25rem; white-space: nowrap; min-width: 180px; font-weight: 600;">
-                                <i class="fas fa-plus ml-2"></i>
+                                <i class="fas fa-plus me-2"></i>
                                 ${t('module.kpi.annual.addKPI','إضافة مؤشر جديد')}
                             </button>
                             ` : ''}
@@ -612,7 +612,7 @@ const SafetyPerformanceKPIs = {
             <div class="content-card mt-6">
                 <div class="card-header">
                     <h2 class="card-title">
-                        <i class="fas fa-info-circle ml-2"></i>
+                        <i class="fas fa-info-circle me-2"></i>
                         ${t('module.kpi.annual.abbrev','مفتاح الاختصارات')}
                     </h2>
                 </div>
@@ -662,15 +662,15 @@ const SafetyPerformanceKPIs = {
                             </select>
                             <button onclick="SafetyPerformanceKPIs.exportMonitoringPlanToExcel()" class="btn-success" style="padding: 0.5rem 0.75rem; white-space: nowrap;" title="${t('module.kpi.monitoring.excelTitle','تصدير Excel')}">
                                 <i class="fas fa-file-excel"></i>
-                                <span class="hidden lg:inline mr-1">${t('module.kpi.common.excel','Excel')}</span>
+                                <span class="hidden lg:inline ms-1">${t('module.kpi.common.excel','Excel')}</span>
                             </button>
                             <button onclick="SafetyPerformanceKPIs.exportMonitoringPlanToPDF()" class="btn-secondary" style="padding: 0.5rem 0.75rem; white-space: nowrap;" title="${t('module.kpi.exportPDF','تصدير PDF')}">
                                 <i class="fas fa-file-pdf"></i>
-                                <span class="hidden lg:inline mr-1">PDF</span>
+                                <span class="hidden lg:inline ms-1">PDF</span>
                             </button>
                             ${canEdit ? `
                             <button onclick="SafetyPerformanceKPIs.addHSEMonitoringPlan()" class="btn-primary" style="padding: 0.5rem 1.25rem; white-space: nowrap; min-width: 180px; font-weight: 600;">
-                                <i class="fas fa-plus ml-2"></i>
+                                <i class="fas fa-plus me-2"></i>
                                 ${t('module.kpi.monitoring.addActivity','إضافة نشاط جديد')}
                             </button>
                             ` : ''}
@@ -680,9 +680,9 @@ const SafetyPerformanceKPIs = {
                 <div class="card-body">
                     ${frequencies.map(freq => `
                         <div class="mb-8">
-                            <div class="bg-${freq.color}-50 border-l-4 border-${freq.color}-500 p-4 mb-4 rounded-lg">
+                            <div class="bg-${freq.color}-50 border-s-4 border-${freq.color}-500 p-4 mb-4 rounded-lg">
                                 <h3 class="text-lg font-bold text-${freq.color}-800">
-                                    <i class="fas ${freq.icon} ml-2"></i>
+                                    <i class="fas ${freq.icon} me-2"></i>
                                     ${freq.label}
                                 </h3>
                             </div>
@@ -1091,11 +1091,11 @@ const SafetyPerformanceKPIs = {
             <div class="spk-tab-bar">
                 <button type="button" id="spk-tab-overview" class="spk-tab-btn active" data-tab="overview">${t('module.kpi.tab.kpisOverview', 'نظرة عامة — KPIs')}</button>
                 <button type="button" id="spk-tab-annual-plan" class="spk-tab-btn" data-tab="annual-plan">
-                    <i class="fas fa-calendar-alt ml-1"></i>
+                    <i class="fas fa-calendar-alt me-1"></i>
                     ${t('module.kpi.tab.kpisAnnual', 'الخطة السنوية')}
                 </button>
                 <button type="button" id="spk-tab-monitoring-plan" class="spk-tab-btn" data-tab="monitoring-plan">
-                    <i class="fas fa-clipboard-check ml-1"></i>
+                    <i class="fas fa-clipboard-check me-1"></i>
                     ${t('module.kpi.tab.hseMonitoring', 'خطة متابعة HSE')}
                 </button>
                 <button type="button" id="spk-tab-scorecard" class="spk-tab-btn" data-tab="scorecard">${t('module.kpi.tab.scorecard', 'لوحة مؤشرات أداء السلامة')}</button>
@@ -2772,7 +2772,7 @@ const SafetyPerformanceKPIs = {
                                     <div class="bg-blue-500 h-2 rounded-full" style="width: ${percentage}%"></div>
                                 </div>
                             </div>
-                            <span class="text-sm font-bold w-12 text-right">${count}</span>
+                            <span class="text-sm font-bold w-12 text-end" dir="ltr">${count}</span>
                         </div>
                     `;
         }).join('')}
@@ -2890,8 +2890,8 @@ const SafetyPerformanceKPIs = {
                                 <span class="text-xs text-gray-600">${total} حادث</span>
                             </div>
                             <div class="w-full bg-gray-200 rounded-full h-6 relative overflow-hidden">
-                                <div class="absolute left-0 top-0 h-full bg-red-500" style="width: ${(stats.incidents / maxValue) * 100}%"></div>
-                                <div class="absolute left-0 top-0 h-full bg-orange-500" style="width: ${(stats.nearmiss / maxValue) * 100}%; margin-left: ${(stats.incidents / maxValue) * 100}%"></div>
+                                <div class="absolute start-0 top-0 h-full bg-red-500" style="width: ${(stats.incidents / maxValue) * 100}%"></div>
+                                <div class="absolute start-0 top-0 h-full bg-orange-500" style="width: ${(stats.nearmiss / maxValue) * 100}%; margin-inline-start: ${(stats.incidents / maxValue) * 100}%"></div>
                             </div>
                             <div class="flex gap-4 mt-1 text-xs text-gray-600">
                                 <span>حوادث: ${stats.incidents}</span>
@@ -2992,7 +2992,7 @@ const SafetyPerformanceKPIs = {
             <div class="modal-content" style="max-width: 700px;" dir="auto">
                 <div class="modal-header">
                     <h2 class="modal-title">
-                        <i class="fas fa-cog ml-2"></i>
+                        <i class="fas fa-cog me-2"></i>
                         ${t('module.kpi.settings.title','إعدادات أهداف مؤشرات الأداء')}
                     </h2>
                     <button class="modal-close">
@@ -3004,11 +3004,11 @@ const SafetyPerformanceKPIs = {
                 </div>
                 <div class="modal-footer" style="justify-content: flex-start; gap: 0.75rem;">
                     <button id="save-kpi-targets" class="btn-primary">
-                        <i class="fas fa-save ml-2"></i>
+                        <i class="fas fa-save me-2"></i>
                         ${t('module.kpi.settings.save','حفظ')}
                     </button>
                     <button class="btn-secondary modal-close">
-                        <i class="fas fa-times ml-2"></i>
+                        <i class="fas fa-times me-2"></i>
                         ${t('module.kpi.settings.cancel','إلغاء')}
                     </button>
                 </div>
@@ -3061,7 +3061,7 @@ const SafetyPerformanceKPIs = {
                 <!-- Leading Indicators Section -->
                 <div>
                     <h3 class="text-lg font-bold text-green-700 mb-4 pb-2 border-b-2 border-green-300">
-                        <i class="fas fa-arrow-trend-up ml-2"></i>
+                        <i class="fas fa-arrow-trend-up me-2"></i>
                         ${t('module.kpi.settings.leadingSection','المؤشرات الاستباقية')} (Leading Indicators)
                     </h3>
                     <div class="space-y-4">
@@ -3086,7 +3086,7 @@ const SafetyPerformanceKPIs = {
                 <!-- Lagging Indicators Section -->
                 <div>
                     <h3 class="text-lg font-bold text-red-700 mb-4 pb-2 border-b-2 border-red-300">
-                        <i class="fas fa-arrow-trend-down ml-2"></i>
+                        <i class="fas fa-arrow-trend-down me-2"></i>
                         ${t('module.kpi.settings.laggingSection','المؤشرات التراجعية')} (Lagging Indicators)
                     </h3>
                     <div class="space-y-4">
@@ -3545,51 +3545,76 @@ const SafetyPerformanceKPIs = {
     }
 };
 
+/**
+ * ✨ Mini-stat card — تصميم enterprise:
+ * - خلفية متدرجة ناعمة + غطاء زجاجي
+ * - شريط علوي ملوَّن (top accent)
+ * - أيقونة داخل rounded-square مع glow خفيف
+ * - typography هرمية واضحة (eyebrow → title → value)
+ * - hover lift خفيف + ring متغير
+ * - RTL/LTR safe (logical properties فقط)
+ */
 SafetyPerformanceKPIs.renderOverviewMiniStat = function (id, label, icon, tone, unit) {
     return `
-        <div class="rounded-[24px] border border-white/80 bg-white/92 p-4" style="box-shadow: 0 14px 35px rgba(15,23,42,0.08);">
-            <div class="flex items-start justify-between gap-3">
-                <div>
-                    <div class="text-xs font-bold uppercase tracking-[0.18em] text-slate-400">${unit}</div>
-                    <div class="mt-2 text-sm font-bold text-slate-700">${label}</div>
+        <div class="spk-mini-card group relative overflow-hidden rounded-[22px] border border-slate-200/70 bg-white p-5 transition-all duration-300 hover:-translate-y-0.5 hover:border-${tone}-200" style="box-shadow: 0 10px 28px rgba(15,23,42,0.06);">
+            <div class="absolute inset-x-0 top-0 h-[3px] bg-gradient-to-r from-${tone}-500 via-${tone}-400 to-${tone}-500"></div>
+            <div class="absolute -top-10 -end-10 h-32 w-32 rounded-full bg-${tone}-100/40 blur-2xl pointer-events-none"></div>
+            <div class="relative flex items-start justify-between gap-3">
+                <div class="min-w-0">
+                    <div class="text-[10px] font-black uppercase tracking-[0.22em] text-${tone}-600">${unit}</div>
+                    <div class="mt-2 text-sm font-bold text-slate-800 leading-snug">${label}</div>
                 </div>
-                <div class="h-11 w-11 rounded-2xl flex items-center justify-center text-${tone}-600 bg-${tone}-50 border border-${tone}-100">
+                <div class="h-11 w-11 rounded-2xl flex items-center justify-center text-${tone}-700 bg-gradient-to-br from-${tone}-50 to-${tone}-100 border border-${tone}-200/80 shrink-0">
                     <i class="fas ${icon}"></i>
                 </div>
             </div>
-            <div class="mt-5 flex items-end gap-2">
-                <span id="${id}" class="text-3xl font-black text-slate-900">-</span>
-                <span class="text-sm font-semibold text-slate-400">${unit}</span>
+            <div class="relative mt-5 flex items-end gap-2">
+                <span id="${id}" class="text-3xl font-black text-slate-900 leading-none tracking-tight" dir="ltr">-</span>
+                <span class="text-xs font-bold text-slate-400 pb-0.5">${unit}</span>
             </div>
         </div>
     `;
 };
 
 /**
- * بطاقة قوى عاملة محسَّنة — تصميم مميَّز للقسم الجديد:
- * - شريط لوني علوي مطابق للـ tone
- * - أيقونة أكبر مع توهج خفيف
- * - قيمة بارزة مع وحدة قياس واضحة
- * - تلميح أسفل البطاقة (subtitle)
+ * ✨ Workforce card — تصميم premium enterprise:
+ * - top accent متدرج مع glow
+ * - أيقونة كبيرة داخل square premium
+ * - eyebrow بـ uppercase + tracking
+ * - value بـ typography هرمية + dir="ltr" للأرقام
+ * - subtitle داخل zone منفصلة بـ divider
+ * - hover lift أنعم + border highlight
+ * - RTL/LTR safe بالكامل
  */
 SafetyPerformanceKPIs.renderWorkforceStatCard = function (id, label, icon, tone, unit, subtitle = '') {
     return `
-        <div class="relative rounded-[26px] border border-white/80 bg-white p-5 transition-transform duration-300 hover:-translate-y-0.5" style="box-shadow: 0 18px 42px rgba(15,23,42,0.08);">
-            <div class="absolute inset-x-5 top-0 h-1 rounded-b-full bg-gradient-to-r from-${tone}-500/70 via-${tone}-400/60 to-${tone}-500/70"></div>
-            <div class="flex items-start justify-between gap-3">
-                <div class="min-w-0">
-                    <div class="text-[11px] font-black uppercase tracking-[0.2em] text-${tone}-600">${unit}</div>
-                    <div class="mt-2 text-sm font-bold text-slate-800 leading-snug">${label}</div>
+        <div class="spk-workforce-card group relative overflow-hidden rounded-[24px] border border-slate-200/70 bg-white p-5 transition-all duration-300 hover:-translate-y-0.5 hover:border-${tone}-300 hover:shadow-xl" style="box-shadow: 0 12px 32px rgba(15,23,42,0.06);">
+            <div class="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-${tone}-600 via-${tone}-500 to-${tone}-400"></div>
+            <div class="absolute -top-12 -end-12 h-36 w-36 rounded-full bg-${tone}-100/30 blur-3xl pointer-events-none"></div>
+
+            <div class="relative flex items-start justify-between gap-3 mb-4">
+                <div class="min-w-0 flex-1">
+                    <div class="text-[10px] font-black uppercase tracking-[0.22em] text-${tone}-700">${unit}</div>
+                    <h4 class="mt-2 text-sm font-bold text-slate-800 leading-snug">${label}</h4>
                 </div>
-                <div class="h-12 w-12 rounded-2xl flex items-center justify-center text-${tone}-600 bg-${tone}-50 border border-${tone}-100" style="box-shadow: inset 0 0 0 1px rgba(255,255,255,0.6);">
+                <div class="h-12 w-12 rounded-2xl flex items-center justify-center text-${tone}-700 bg-gradient-to-br from-${tone}-50 via-white to-${tone}-100 border border-${tone}-200 shrink-0" style="box-shadow: 0 6px 14px rgba(15,23,42,0.06), inset 0 0 0 1px rgba(255,255,255,0.5);">
                     <i class="fas ${icon} text-lg"></i>
                 </div>
             </div>
-            <div class="mt-5 flex items-end gap-2">
-                <span id="${id}" class="text-3xl font-black text-slate-900 leading-none">-</span>
+
+            <div class="relative flex items-end gap-2">
+                <span id="${id}" class="text-[2rem] font-black text-slate-900 leading-none tracking-tight" dir="ltr">-</span>
                 <span class="text-xs font-bold text-slate-400 pb-1">${unit}</span>
             </div>
-            ${subtitle ? `<p class="mt-3 text-[11px] text-slate-500 leading-relaxed">${subtitle}</p>` : ''}
+
+            ${subtitle ? `
+                <div class="relative mt-4 pt-3 border-t border-dashed border-slate-200">
+                    <p class="text-[11px] text-slate-500 leading-relaxed flex items-start gap-1.5">
+                        <i class="fas fa-info-circle text-${tone}-400 mt-0.5 shrink-0"></i>
+                        <span>${subtitle}</span>
+                    </p>
+                </div>
+            ` : ''}
         </div>
     `;
 };
@@ -3601,7 +3626,7 @@ SafetyPerformanceKPIs.renderOverviewChartCard = function (containerId, title, ic
                 <div class="flex items-start justify-between gap-4 flex-wrap">
                     <div>
                         <h2 class="card-title text-slate-900">
-                            <i class="fas ${icon} ml-2 text-${tone}-600"></i>
+                            <i class="fas ${icon} me-2 text-${tone}-600"></i>
                             ${title}
                         </h2>
                         <p class="text-sm text-slate-500 mt-2">${description}</p>
@@ -3680,199 +3705,266 @@ SafetyPerformanceKPIs.render = async function () {
             <div class="flex items-center justify-between flex-wrap gap-4">
                 <div class="min-w-0">
                     <h1 class="section-title">
-                        <i class="fas fa-gauge-high ml-3"></i>
+                        <i class="fas fa-gauge-high me-3"></i>
                         ${t('module.kpi.title','مؤشرات الأداء لإدارة السلامة')}
                     </h1>
                     <p class="section-subtitle">${t('module.kpi.subtitle','رصد وتحليل مؤشرات أداء السلامة والصحة المهنية')}</p>
                 </div>
                 <div class="flex gap-2 flex-wrap">
                     <button id="kpis-export-excel-btn" class="btn-success" title="${t('module.kpi.exportExcel','تصدير Excel')}">
-                        <i class="fas fa-file-excel ml-2"></i>
+                        <i class="fas fa-file-excel me-2"></i>
                         ${t('module.kpi.common.excel','Excel')}
                     </button>
                     <button id="kpis-export-pdf-btn" class="btn-secondary">
-                        <i class="fas fa-file-pdf ml-2"></i>
+                        <i class="fas fa-file-pdf me-2"></i>
                         ${t('module.kpi.exportPDF','تصدير PDF')}
                     </button>
                     <button id="kpis-settings-btn" class="btn-primary">
-                        <i class="fas fa-cog ml-2"></i>
+                        <i class="fas fa-cog me-2"></i>
                         ${t('module.kpi.settings','إعدادات الأهداف')}
                     </button>
                 </div>
             </div>
         </div>
 
-        <div class="content-card mt-6 overflow-hidden" style="border: 1px solid rgba(148,163,184,0.18); box-shadow: 0 24px 50px rgba(15,23,42,0.08);">
-            <div class="card-body" style="background: linear-gradient(135deg, #f8fbff 0%, #eef6ff 45%, #ffffff 100%);">
+        <!-- ╔═══════════════════════════════════════════════════════════════╗ -->
+        <!-- ║ 🎨 Enterprise Hero — نظرة عامة KPIs                            ║ -->
+        <!-- ║ Premium glass-morphism + navy/teal palette + decorative grid  ║ -->
+        <!-- ╚═══════════════════════════════════════════════════════════════╝ -->
+        <div class="spk-hero-card mt-6 overflow-hidden relative" style="border-radius: 28px; border: 1px solid rgba(15,23,42,0.08); box-shadow: 0 30px 60px -20px rgba(15,23,42,0.18), 0 18px 36px -18px rgba(15,118,110,0.12);">
+            <!-- decorative SVG pattern (مزخرف بسيط — يدعم RTL/LTR لأنه متماثل) -->
+            <div class="absolute inset-0 opacity-[0.06] pointer-events-none" style="background-image: radial-gradient(circle at 1px 1px, #0F766E 1px, transparent 0); background-size: 22px 22px;"></div>
+            <!-- خلفية أنيقة متدرجة -->
+            <div class="absolute inset-0 pointer-events-none" style="background: linear-gradient(135deg, #f0fdfa 0%, #ecfeff 25%, #f8fafc 55%, #ffffff 100%);"></div>
+            <!-- glow accent -->
+            <div class="absolute -top-24 -end-24 h-72 w-72 rounded-full pointer-events-none" style="background: radial-gradient(circle, rgba(15,118,110,0.18) 0%, transparent 65%);"></div>
+            <div class="absolute -bottom-24 -start-24 h-72 w-72 rounded-full pointer-events-none" style="background: radial-gradient(circle, rgba(30,58,138,0.12) 0%, transparent 65%);"></div>
+
+            <div class="relative p-6 lg:p-8">
                 <div class="grid grid-cols-1 xl:grid-cols-[1.35fr_0.95fr] gap-6 items-start">
+                    <!-- ━━━ Hero Content ━━━ -->
                     <div class="min-w-0">
-                        <div class="inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-bold text-sky-700 bg-sky-100 border border-sky-200">
-                            <i class="fas fa-wave-square"></i>
-                            ${t('module.kpi.tab.kpisOverview','نظرة عامة — KPIs')}
+                        <div class="inline-flex items-center gap-2 rounded-full px-3.5 py-1.5 text-[11px] font-black uppercase tracking-[0.22em] border" style="background: linear-gradient(135deg, rgba(15,118,110,0.10), rgba(15,118,110,0.04)); border-color: rgba(15,118,110,0.25); color: #0F766E;">
+                            <i class="fas fa-shield-halved"></i>
+                            <span>${t('module.kpi.tab.kpisOverview','نظرة عامة — KPIs')}</span>
                         </div>
-                        <h2 class="mt-4 text-3xl font-black text-slate-900 leading-tight">${t('module.kpi.overview.headline','لوحة متابعة يومية لمؤشرات السلامة')}</h2>
-                        <p class="mt-3 text-sm text-slate-600 leading-7">${t('module.kpi.overview.intro','واجهة وصول سريع للمؤشرات والاتجاهات، مع نفس آلية التحديث والتكامل داخل التطبيق.')}</p>
-                        <div class="mt-5 flex flex-wrap gap-3">
-                            <div class="rounded-2xl border border-slate-200 bg-white/90 px-4 py-3 min-w-[180px]">
-                                <div class="text-xs font-semibold text-slate-500">${t('module.kpi.overview.activePeriod','الفترة النشطة')}</div>
-                                <div class="mt-1 text-sm font-bold text-slate-900" id="overview-period-label">${t('module.kpi.filter.monthly','شهري')}</div>
+                        <h2 class="mt-4 text-3xl xl:text-4xl font-black leading-tight" style="background: linear-gradient(135deg, #0F172A 0%, #1E3A8A 60%, #0F766E 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">${t('module.kpi.overview.headline','لوحة متابعة يومية لمؤشرات السلامة')}</h2>
+                        <p class="mt-3 text-sm text-slate-600 leading-7 max-w-2xl">${t('module.kpi.overview.intro','واجهة وصول سريع للمؤشرات والاتجاهات، مع نفس آلية التحديث والتكامل داخل التطبيق.')}</p>
+
+                        <div class="mt-6 flex flex-wrap gap-3">
+                            <div class="rounded-2xl border border-slate-200/80 bg-white/95 backdrop-blur px-4 py-3 min-w-[180px]" style="box-shadow: 0 6px 18px rgba(15,23,42,0.04);">
+                                <div class="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">
+                                    <i class="fas fa-calendar-week text-teal-600"></i>
+                                    ${t('module.kpi.overview.activePeriod','الفترة النشطة')}
+                                </div>
+                                <div class="mt-1.5 text-sm font-bold text-slate-900" id="overview-period-label">${t('module.kpi.filter.monthly','شهري')}</div>
                             </div>
-                            <div class="rounded-2xl border border-slate-200 bg-white/90 px-4 py-3 min-w-[220px]">
-                                <div class="text-xs font-semibold text-slate-500">${t('module.kpi.overview.timeRange','النطاق الزمني')}</div>
-                                <div class="mt-1 text-sm font-bold text-slate-900" id="overview-range-label">-</div>
+                            <div class="rounded-2xl border border-slate-200/80 bg-white/95 backdrop-blur px-4 py-3 min-w-[240px]" style="box-shadow: 0 6px 18px rgba(15,23,42,0.04);">
+                                <div class="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">
+                                    <i class="fas fa-clock text-indigo-600"></i>
+                                    ${t('module.kpi.overview.timeRange','النطاق الزمني')}
+                                </div>
+                                <div class="mt-1.5 text-sm font-bold text-slate-900" id="overview-range-label" dir="ltr">-</div>
                             </div>
                         </div>
                     </div>
 
-                    <div class="rounded-[28px] border border-slate-200 bg-white/92 p-4" style="box-shadow: 0 18px 40px rgba(15,23,42,0.08);">
-                        <div class="flex items-center justify-between gap-3 mb-4">
-                            <div>
-                                <h3 class="text-base font-black text-slate-900">${t('module.kpi.overview.quickFilterTitle','تصفية وبحث سريع')}</h3>
-                                <p class="text-xs text-slate-500 mt-1">${t('module.kpi.overview.quickFilterHint','تصفية المؤشرات حسب الفترة أو الإدارة أو الموقع.')}</p>
-                            </div>
-                            <div class="h-10 w-10 rounded-2xl bg-slate-100 text-slate-600 flex items-center justify-center">
-                                <i class="fas fa-sliders"></i>
-                            </div>
-                        </div>
-                        <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-1 gap-4">
-                            <div>
-                                <label class="block text-sm font-semibold text-gray-700 mb-2">${t('module.kpi.filter.period','الفترة الزمنية')}</label>
-                                <select id="kpi-filter-period" class="form-input">
-                                    <option value="monthly">${t('module.kpi.filter.monthly','شهري')}</option>
-                                    <option value="quarterly">${t('module.kpi.filter.quarterly','ربع سنوي')}</option>
-                                    <option value="yearly">${t('module.kpi.filter.yearly','سنوي')}</option>
-                                    <option value="custom">${t('module.kpi.filter.custom','مخصص')}</option>
-                                </select>
-                            </div>
-                            <div id="kpi-custom-dates" class="hidden">
-                                <label class="block text-sm font-semibold text-gray-700 mb-2">${t('module.kpi.filter.fromDate','من تاريخ')}</label>
-                                <input type="date" id="kpi-filter-start-date" class="form-input">
-                            </div>
-                            <div id="kpi-custom-dates-end" class="hidden">
-                                <label class="block text-sm font-semibold text-gray-700 mb-2">${t('module.kpi.filter.toDate','إلى تاريخ')}</label>
-                                <input type="date" id="kpi-filter-end-date" class="form-input">
-                            </div>
-                            <div>
-                                <label class="block text-sm font-semibold text-gray-700 mb-2">${t('module.kpi.filter.department','الإدارة')}</label>
-                                <select id="kpi-filter-department" class="form-input">
-                                    <option value="">${t('module.kpi.filter.allDepartments','جميع الإدارات')}</option>
-                                    ${this.getDepartmentOptions()}
-                                </select>
-                            </div>
-                            <div>
-                                <label class="block text-sm font-semibold text-gray-700 mb-2">${t('module.kpi.filter.location','الموقع')}</label>
-                                <select id="kpi-filter-location" class="form-input">
-                                    <option value="">${t('module.kpi.filter.allLocations','جميع المواقع')}</option>
-                                    ${this.getLocationOptions()}
-                                </select>
-                            </div>
-                        </div>
-                        <div class="mt-4 flex gap-2 flex-wrap">
-                            <button id="kpi-apply-filters" class="btn-primary">
-                                <i class="fas fa-search ml-2"></i>
-                                ${t('module.kpi.filter.apply','تطبيق التصفية')}
-                            </button>
-                            <button id="kpi-reset-filters" class="btn-secondary">
-                                <i class="fas fa-redo ml-2"></i>
-                                ${t('module.kpi.filter.reset','إعادة تعيين')}
-                            </button>
-                        </div>
-                    </div>
-                </div>
+                    <!-- ━━━ Quick Filter Card ━━━ -->
+                    <div class="relative rounded-[24px] overflow-hidden" style="border: 1px solid rgba(15,118,110,0.16); box-shadow: 0 20px 45px -15px rgba(15,23,42,0.18), inset 0 1px 0 rgba(255,255,255,0.6);">
+                        <div class="absolute inset-0 pointer-events-none" style="background: linear-gradient(160deg, rgba(255,255,255,0.96) 0%, rgba(248,250,252,0.92) 100%);"></div>
+                        <div class="absolute inset-x-0 top-0 h-1" style="background: linear-gradient(90deg, #0F766E, #1E3A8A, #0F766E);"></div>
 
-                <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 mt-6">
-                    ${this.renderOverviewMiniStat('overview-incidents-total', t('module.kpi.overview.mini.incidents','إجمالي الحوادث والإصابات'), 'fa-triangle-exclamation', 'rose', t('module.kpi.overview.unit.record','سجل'))}
-                    ${this.renderOverviewMiniStat('overview-observations-total', t('module.kpi.overview.mini.observations','الملاحظات والحوادث الوشيكة'), 'fa-binoculars', 'amber', t('module.kpi.overview.unit.case','حالة'))}
-                    ${this.renderOverviewMiniStat('overview-training-total', t('module.kpi.overview.mini.training','برامج التدريب المنفذة'), 'fa-graduation-cap', 'emerald', t('module.kpi.overview.unit.program','برنامج'))}
-                    ${this.renderOverviewMiniStat('overview-ptw-total', t('module.kpi.overview.mini.ptw','تصاريح العمل النشطة'), 'fa-id-badge', 'indigo', t('module.kpi.overview.unit.permitU','تصريح'))}
-                </div>
-
-                <!-- ✨ قسم القوى العاملة — أساس حسابات TRIR/LTIFR -->
-                <div class="mt-6 rounded-[28px] border border-sky-100 bg-gradient-to-br from-sky-50/60 via-white to-white p-5" style="box-shadow: 0 18px 40px rgba(15,23,42,0.05);">
-                    <div class="flex items-start justify-between gap-4 flex-wrap mb-5">
-                        <div class="min-w-0">
-                            <div class="inline-flex items-center gap-2 rounded-full px-3 py-1 text-[11px] font-black uppercase tracking-[0.18em] text-sky-700 bg-sky-100/70 border border-sky-200">
-                                <i class="fas fa-people-group"></i>
-                                ${t('module.kpi.overview.workforce.eyebrow','القوى العاملة')}
+                        <div class="relative p-5">
+                            <div class="flex items-center justify-between gap-3 mb-4">
+                                <div class="min-w-0">
+                                    <h3 class="text-base font-black text-slate-900 flex items-center gap-2">
+                                        <span>${t('module.kpi.overview.quickFilterTitle','تصفية وبحث سريع')}</span>
+                                    </h3>
+                                    <p class="text-xs text-slate-500 mt-1 leading-relaxed">${t('module.kpi.overview.quickFilterHint','تصفية المؤشرات حسب الفترة أو الإدارة أو الموقع.')}</p>
+                                </div>
+                                <div class="h-11 w-11 rounded-2xl flex items-center justify-center shrink-0" style="background: linear-gradient(135deg, #0F766E, #0E7490); color: #fff; box-shadow: 0 8px 20px rgba(15,118,110,0.28);">
+                                    <i class="fas fa-sliders"></i>
+                                </div>
                             </div>
-                            <h3 class="mt-3 text-xl font-black text-slate-900">${t('module.kpi.overview.workforce.title','مؤشرات الموظفين وساعات العمل')}</h3>
-                            <p class="mt-1 text-xs text-slate-500 leading-relaxed">${t('module.kpi.overview.workforce.intro','تُستخدم هذه القيم كأساس لحساب TRIR و LTIFR — تشمل الموظفين الدائمين والعمالة المؤقتة معاً.')}</p>
-                        </div>
-                        <div class="rounded-2xl bg-white/90 px-3 py-2 text-[11px] font-bold text-sky-700 border border-sky-100">
-                            <i class="fas fa-calculator ml-1"></i>
-                            ${t('module.kpi.overview.workforce.formula','count × أشهر × 8 × 22')}
-                        </div>
-                    </div>
-
-                    <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
-                        ${this.renderWorkforceStatCard(
-                            'overview-permanent-employees',
-                            t('module.kpi.overview.workforce.permanentCount','الموظفون المثبتون'),
-                            'fa-user-tie',
-                            'sky',
-                            t('module.kpi.overview.unit.employee','موظف'),
-                            t('module.kpi.overview.workforce.permanentCount.sub','عدد الموظفين النشطين فعلياً خلال الفترة المحددة')
-                        )}
-                        ${this.renderWorkforceStatCard(
-                            'overview-temporary-workforce',
-                            t('module.kpi.overview.workforce.temporaryCount','العمالة المؤقتة'),
-                            'fa-helmet-safety',
-                            'amber',
-                            t('module.kpi.overview.unit.worker','عامل'),
-                            t('module.kpi.overview.workforce.temporaryCount.sub','إجمالي العمالة المؤقتة من بيانات المقاولين الشهرية')
-                        )}
-                        ${this.renderWorkforceStatCard(
-                            'overview-permanent-hours',
-                            t('module.kpi.overview.workforce.permanentHours','ساعات عمل الموظفين'),
-                            'fa-business-time',
-                            'emerald',
-                            t('module.kpi.overview.unit.hour','ساعة'),
-                            t('module.kpi.overview.workforce.permanentHours.sub','إجمالي ساعات العمل للموظفين الدائمين (8 × 22 × أشهر)')
-                        )}
-                        ${this.renderWorkforceStatCard(
-                            'overview-temporary-hours',
-                            t('module.kpi.overview.workforce.temporaryHours','ساعات العمالة المؤقتة'),
-                            'fa-clock-rotate-left',
-                            'orange',
-                            t('module.kpi.overview.unit.hour','ساعة'),
-                            t('module.kpi.overview.workforce.temporaryHours.sub','إجمالي ساعات العمالة المؤقتة عبر أشهر الفترة')
-                        )}
-                        ${this.renderWorkforceStatCard(
-                            'overview-combined-hours',
-                            t('module.kpi.overview.workforce.combinedHours','إجمالي الساعات (موظفون + موقتون)'),
-                            'fa-layer-group',
-                            'indigo',
-                            t('module.kpi.overview.unit.hour','ساعة'),
-                            t('module.kpi.overview.workforce.combinedHours.sub','الأساس المُستخدَم في معادلة TRIR و LTIFR')
-                        )}
-                        <div class="rounded-[26px] border border-dashed border-slate-200 bg-white/60 p-5 flex flex-col justify-center">
-                            <div class="text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">${t('module.kpi.overview.workforce.refLabel','مراجع سريعة')}</div>
-                            <ul class="mt-3 space-y-1.5 text-xs text-slate-600 leading-relaxed">
-                                <li><i class="fas fa-circle-check ml-1 text-emerald-500"></i> ${t('module.kpi.overview.workforce.ref1','الموظف الدائم: حسب تاريخ التعيين/الاستقالة وحالة النشاط')}</li>
-                                <li><i class="fas fa-circle-check ml-1 text-emerald-500"></i> ${t('module.kpi.overview.workforce.ref2','المؤقتون: من سجل العمالة الخارجية الشهري')}</li>
-                                <li><i class="fas fa-circle-check ml-1 text-emerald-500"></i> ${t('module.kpi.overview.workforce.ref3','الساعات: 8 ساعات × 22 يوم عمل لكل person-month')}</li>
-                            </ul>
+                            <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-1 gap-3.5">
+                                <div>
+                                    <label class="block text-xs font-bold text-slate-700 mb-1.5">${t('module.kpi.filter.period','الفترة الزمنية')}</label>
+                                    <select id="kpi-filter-period" class="form-input">
+                                        <option value="monthly">${t('module.kpi.filter.monthly','شهري')}</option>
+                                        <option value="quarterly">${t('module.kpi.filter.quarterly','ربع سنوي')}</option>
+                                        <option value="yearly">${t('module.kpi.filter.yearly','سنوي')}</option>
+                                        <option value="custom">${t('module.kpi.filter.custom','مخصص')}</option>
+                                    </select>
+                                </div>
+                                <div id="kpi-custom-dates" class="hidden">
+                                    <label class="block text-xs font-bold text-slate-700 mb-1.5">${t('module.kpi.filter.fromDate','من تاريخ')}</label>
+                                    <input type="date" id="kpi-filter-start-date" class="form-input">
+                                </div>
+                                <div id="kpi-custom-dates-end" class="hidden">
+                                    <label class="block text-xs font-bold text-slate-700 mb-1.5">${t('module.kpi.filter.toDate','إلى تاريخ')}</label>
+                                    <input type="date" id="kpi-filter-end-date" class="form-input">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-bold text-slate-700 mb-1.5">${t('module.kpi.filter.department','الإدارة')}</label>
+                                    <select id="kpi-filter-department" class="form-input">
+                                        <option value="">${t('module.kpi.filter.allDepartments','جميع الإدارات')}</option>
+                                        ${this.getDepartmentOptions()}
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-bold text-slate-700 mb-1.5">${t('module.kpi.filter.location','الموقع')}</label>
+                                    <select id="kpi-filter-location" class="form-input">
+                                        <option value="">${t('module.kpi.filter.allLocations','جميع المواقع')}</option>
+                                        ${this.getLocationOptions()}
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="mt-4 flex gap-2 flex-wrap">
+                                <button id="kpi-apply-filters" class="inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-bold text-white transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5" style="background: linear-gradient(135deg, #0F766E, #1E3A8A); box-shadow: 0 8px 20px rgba(15,118,110,0.28);">
+                                    <i class="fas fa-search"></i>
+                                    <span>${t('module.kpi.filter.apply','تطبيق التصفية')}</span>
+                                </button>
+                                <button id="kpi-reset-filters" class="inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-bold text-slate-700 bg-white border border-slate-200 transition-all duration-200 hover:bg-slate-50 hover:border-slate-300">
+                                    <i class="fas fa-redo"></i>
+                                    <span>${t('module.kpi.filter.reset','إعادة تعيين')}</span>
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
 
-                <div class="mt-5 flex flex-wrap gap-3">
-                    <button class="rounded-full border border-slate-200 bg-white/90 px-4 py-2 text-sm font-bold text-slate-700 transition hover:border-sky-200 hover:text-sky-700" data-kpi-jump="leading-kpis-section">
-                        <i class="fas fa-arrow-trend-up ml-2 text-emerald-600"></i>
-                        ${t('module.kpi.leading.title','المؤشرات الاستباقية')}
-                    </button>
-                    <button class="rounded-full border border-slate-200 bg-white/90 px-4 py-2 text-sm font-bold text-slate-700 transition hover:border-rose-200 hover:text-rose-700" data-kpi-jump="lagging-kpis-section">
-                        <i class="fas fa-arrow-trend-down ml-2 text-rose-600"></i>
-                        ${t('module.kpi.lagging.title','المؤشرات التراجعية')}
-                    </button>
-                    <button class="rounded-full border border-slate-200 bg-white/90 px-4 py-2 text-sm font-bold text-slate-700 transition hover:border-indigo-200 hover:text-indigo-700" data-kpi-jump="charts-kpis-section">
-                        <i class="fas fa-chart-line ml-2 text-indigo-600"></i>
-                        ${t('module.kpi.overview.jump.charts','الرسوم والتحليلات')}
-                    </button>
-                    <button class="rounded-full border border-slate-200 bg-white/90 px-4 py-2 text-sm font-bold text-slate-700 transition hover:border-amber-200 hover:text-amber-700" data-kpi-jump="comparison-kpis-section">
-                        <i class="fas fa-table-cells-large ml-2 text-amber-600"></i>
-                        ${t('module.kpi.overview.jump.comparison','المقارنات وخريطة الحرارة')}
-                    </button>
+                <!-- ━━━ Quick Stats (4 cards) ━━━ -->
+                <div class="mt-7">
+                    <div class="flex items-center gap-3 mb-4">
+                        <div class="h-8 w-1 rounded-full" style="background: linear-gradient(180deg, #0F766E, #1E3A8A);"></div>
+                        <h3 class="text-sm font-black uppercase tracking-[0.18em] text-slate-700">${t('module.kpi.overview.quickStats','الإحصائيات السريعة')}</h3>
+                        <div class="flex-1 h-px bg-gradient-to-l from-transparent via-slate-200 to-transparent"></div>
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+                        ${this.renderOverviewMiniStat('overview-incidents-total', t('module.kpi.overview.mini.incidents','إجمالي الحوادث والإصابات'), 'fa-triangle-exclamation', 'rose', t('module.kpi.overview.unit.record','سجل'))}
+                        ${this.renderOverviewMiniStat('overview-observations-total', t('module.kpi.overview.mini.observations','الملاحظات والحوادث الوشيكة'), 'fa-binoculars', 'amber', t('module.kpi.overview.unit.case','حالة'))}
+                        ${this.renderOverviewMiniStat('overview-training-total', t('module.kpi.overview.mini.training','برامج التدريب المنفذة'), 'fa-graduation-cap', 'emerald', t('module.kpi.overview.unit.program','برنامج'))}
+                        ${this.renderOverviewMiniStat('overview-ptw-total', t('module.kpi.overview.mini.ptw','تصاريح العمل النشطة'), 'fa-id-badge', 'indigo', t('module.kpi.overview.unit.permitU','تصريح'))}
+                    </div>
+                </div>
+
+                <!-- ━━━ Workforce KPIs Section (Enterprise) ━━━ -->
+                <div class="mt-7 relative overflow-hidden rounded-[26px]" style="border: 1px solid rgba(15,118,110,0.18); box-shadow: 0 20px 50px -15px rgba(15,23,42,0.10);">
+                    <!-- Background gradient + decoration -->
+                    <div class="absolute inset-0 pointer-events-none" style="background: linear-gradient(135deg, #f0fdfa 0%, #ffffff 50%, #eff6ff 100%);"></div>
+                    <div class="absolute inset-x-0 top-0 h-1" style="background: linear-gradient(90deg, #0F766E, #1E3A8A, #0F766E);"></div>
+                    <div class="absolute -top-12 end-1/4 h-40 w-40 rounded-full pointer-events-none" style="background: radial-gradient(circle, rgba(15,118,110,0.12) 0%, transparent 65%);"></div>
+
+                    <div class="relative p-5 lg:p-6">
+                        <div class="flex items-start justify-between gap-4 flex-wrap mb-5">
+                            <div class="min-w-0 flex-1">
+                                <div class="inline-flex items-center gap-2 rounded-full px-3.5 py-1.5 text-[11px] font-black uppercase tracking-[0.22em] border" style="background: linear-gradient(135deg, rgba(15,118,110,0.10), rgba(15,118,110,0.04)); border-color: rgba(15,118,110,0.25); color: #0F766E;">
+                                    <i class="fas fa-people-group"></i>
+                                    ${t('module.kpi.overview.workforce.eyebrow','القوى العاملة')}
+                                </div>
+                                <h3 class="mt-3 text-xl xl:text-2xl font-black text-slate-900 leading-tight">${t('module.kpi.overview.workforce.title','مؤشرات الموظفين وساعات العمل')}</h3>
+                                <p class="mt-1.5 text-xs text-slate-600 leading-relaxed max-w-2xl">${t('module.kpi.overview.workforce.intro','تُستخدم هذه القيم كأساس لحساب TRIR و LTIFR — تشمل الموظفين الدائمين والعمالة المؤقتة معاً.')}</p>
+                            </div>
+                            <div class="inline-flex items-center gap-2 rounded-2xl px-3.5 py-2 text-[11px] font-bold border bg-white/95 backdrop-blur" style="border-color: rgba(15,118,110,0.20); color: #0F766E; box-shadow: 0 6px 18px rgba(15,23,42,0.04);" dir="ltr">
+                                <i class="fas fa-calculator"></i>
+                                <span>${t('module.kpi.overview.workforce.formula','count × أشهر × 8 × 22')}</span>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+                            ${this.renderWorkforceStatCard(
+                                'overview-permanent-employees',
+                                t('module.kpi.overview.workforce.permanentCount','الموظفون المثبتون'),
+                                'fa-user-tie',
+                                'teal',
+                                t('module.kpi.overview.unit.employee','موظف'),
+                                t('module.kpi.overview.workforce.permanentCount.sub','عدد الموظفين النشطين فعلياً خلال الفترة المحددة')
+                            )}
+                            ${this.renderWorkforceStatCard(
+                                'overview-temporary-workforce',
+                                t('module.kpi.overview.workforce.temporaryCount','العمالة المؤقتة'),
+                                'fa-helmet-safety',
+                                'amber',
+                                t('module.kpi.overview.unit.worker','عامل'),
+                                t('module.kpi.overview.workforce.temporaryCount.sub','إجمالي العمالة المؤقتة من بيانات المقاولين الشهرية')
+                            )}
+                            ${this.renderWorkforceStatCard(
+                                'overview-permanent-hours',
+                                t('module.kpi.overview.workforce.permanentHours','ساعات عمل الموظفين'),
+                                'fa-business-time',
+                                'emerald',
+                                t('module.kpi.overview.unit.hour','ساعة'),
+                                t('module.kpi.overview.workforce.permanentHours.sub','إجمالي ساعات العمل للموظفين الدائمين (8 × 22 × أشهر)')
+                            )}
+                            ${this.renderWorkforceStatCard(
+                                'overview-temporary-hours',
+                                t('module.kpi.overview.workforce.temporaryHours','ساعات العمالة المؤقتة'),
+                                'fa-clock-rotate-left',
+                                'orange',
+                                t('module.kpi.overview.unit.hour','ساعة'),
+                                t('module.kpi.overview.workforce.temporaryHours.sub','إجمالي ساعات العمالة المؤقتة عبر أشهر الفترة')
+                            )}
+                            ${this.renderWorkforceStatCard(
+                                'overview-combined-hours',
+                                t('module.kpi.overview.workforce.combinedHours','إجمالي الساعات (موظفون + موقتون)'),
+                                'fa-layer-group',
+                                'indigo',
+                                t('module.kpi.overview.unit.hour','ساعة'),
+                                t('module.kpi.overview.workforce.combinedHours.sub','الأساس المُستخدَم في معادلة TRIR و LTIFR')
+                            )}
+                            <!-- بطاقة المراجع — Premium reference card -->
+                            <div class="relative overflow-hidden rounded-[24px] p-5 flex flex-col justify-center" style="background: linear-gradient(135deg, rgba(15,23,42,0.96), rgba(30,58,138,0.94)); box-shadow: 0 12px 32px rgba(15,23,42,0.18);">
+                                <div class="absolute -top-8 -end-8 h-32 w-32 rounded-full pointer-events-none" style="background: radial-gradient(circle, rgba(15,118,110,0.25) 0%, transparent 70%);"></div>
+                                <div class="relative">
+                                    <div class="inline-flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.22em] text-teal-300">
+                                        <i class="fas fa-book-open-reader"></i>
+                                        ${t('module.kpi.overview.workforce.refLabel','مراجع سريعة')}
+                                    </div>
+                                    <ul class="mt-3 space-y-2 text-xs text-slate-200 leading-relaxed">
+                                        <li class="flex items-start gap-2">
+                                            <i class="fas fa-check-circle text-teal-400 mt-0.5 shrink-0"></i>
+                                            <span>${t('module.kpi.overview.workforce.ref1','الموظف الدائم: حسب تاريخ التعيين/الاستقالة وحالة النشاط')}</span>
+                                        </li>
+                                        <li class="flex items-start gap-2">
+                                            <i class="fas fa-check-circle text-teal-400 mt-0.5 shrink-0"></i>
+                                            <span>${t('module.kpi.overview.workforce.ref2','المؤقتون: من سجل العمالة الخارجية الشهري')}</span>
+                                        </li>
+                                        <li class="flex items-start gap-2">
+                                            <i class="fas fa-check-circle text-teal-400 mt-0.5 shrink-0"></i>
+                                            <span>${t('module.kpi.overview.workforce.ref3','الساعات: 8 ساعات × 22 يوم عمل لكل person-month')}</span>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ━━━ Quick Jump Navigation ━━━ -->
+                <div class="mt-7">
+                    <div class="flex items-center gap-3 mb-3">
+                        <div class="h-8 w-1 rounded-full" style="background: linear-gradient(180deg, #0F766E, #1E3A8A);"></div>
+                        <h3 class="text-sm font-black uppercase tracking-[0.18em] text-slate-700">${t('module.kpi.overview.quickJump','تنقّل سريع')}</h3>
+                        <div class="flex-1 h-px bg-gradient-to-l from-transparent via-slate-200 to-transparent"></div>
+                    </div>
+                    <div class="flex flex-wrap gap-2.5">
+                        <button class="spk-jump-btn group inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white/95 backdrop-blur px-4 py-2 text-sm font-bold text-slate-700 transition-all duration-200 hover:border-emerald-300 hover:text-emerald-700 hover:-translate-y-0.5 hover:shadow-md" data-kpi-jump="leading-kpis-section">
+                            <i class="fas fa-arrow-trend-up text-emerald-600 transition-transform group-hover:scale-110"></i>
+                            <span>${t('module.kpi.leading.title','المؤشرات الاستباقية')}</span>
+                        </button>
+                        <button class="spk-jump-btn group inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white/95 backdrop-blur px-4 py-2 text-sm font-bold text-slate-700 transition-all duration-200 hover:border-rose-300 hover:text-rose-700 hover:-translate-y-0.5 hover:shadow-md" data-kpi-jump="lagging-kpis-section">
+                            <i class="fas fa-arrow-trend-down text-rose-600 transition-transform group-hover:scale-110"></i>
+                            <span>${t('module.kpi.lagging.title','المؤشرات التراجعية')}</span>
+                        </button>
+                        <button class="spk-jump-btn group inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white/95 backdrop-blur px-4 py-2 text-sm font-bold text-slate-700 transition-all duration-200 hover:border-indigo-300 hover:text-indigo-700 hover:-translate-y-0.5 hover:shadow-md" data-kpi-jump="charts-kpis-section">
+                            <i class="fas fa-chart-line text-indigo-600 transition-transform group-hover:scale-110"></i>
+                            <span>${t('module.kpi.overview.jump.charts','الرسوم والتحليلات')}</span>
+                        </button>
+                        <button class="spk-jump-btn group inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white/95 backdrop-blur px-4 py-2 text-sm font-bold text-slate-700 transition-all duration-200 hover:border-amber-300 hover:text-amber-700 hover:-translate-y-0.5 hover:shadow-md" data-kpi-jump="comparison-kpis-section">
+                            <i class="fas fa-table-cells-large text-amber-600 transition-transform group-hover:scale-110"></i>
+                            <span>${t('module.kpi.overview.jump.comparison','المقارنات وخريطة الحرارة')}</span>
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -3883,7 +3975,7 @@ SafetyPerformanceKPIs.render = async function () {
                     <div class="flex items-start justify-between gap-4 flex-wrap">
                         <div>
                             <h2 class="card-title text-emerald-900">
-                                <i class="fas fa-arrow-trend-up ml-2"></i>
+                                <i class="fas fa-arrow-trend-up me-2"></i>
                                 ${t('module.kpi.leading.title','المؤشرات الاستباقية')}
                             </h2>
                             <p class="text-sm text-emerald-800 mt-2">${t('module.kpi.leading.subtitle','مؤشرات تقيس أداء الوقاية والتحكم قبل وقوع الحوادث')}</p>
@@ -3903,7 +3995,7 @@ SafetyPerformanceKPIs.render = async function () {
                     <div class="flex items-start justify-between gap-4 flex-wrap">
                         <div>
                             <h2 class="card-title text-rose-900">
-                                <i class="fas fa-arrow-trend-down ml-2"></i>
+                                <i class="fas fa-arrow-trend-down me-2"></i>
                                 ${t('module.kpi.lagging.title','المؤشرات التراجعية')}
                             </h2>
                             <p class="text-sm text-rose-800 mt-2">${t('module.kpi.lagging.subtitle','مؤشرات تقيس النتائج الفعلية لما حدث')}</p>
@@ -3923,7 +4015,7 @@ SafetyPerformanceKPIs.render = async function () {
             <div class="flex items-center justify-between gap-4 flex-wrap mb-4">
                 <div>
                     <h2 class="text-xl font-black text-slate-900">
-                        <i class="fas fa-chart-line ml-2 text-sky-600"></i>
+                        <i class="fas fa-chart-line me-2 text-sky-600"></i>
                         ${t('module.kpi.chart.title','الرسوم البيانية والتحليلات')}
                     </h2>
                     <p class="text-sm text-slate-500 mt-1"></p>
@@ -3941,7 +4033,7 @@ SafetyPerformanceKPIs.render = async function () {
             <div class="content-card overflow-hidden">
                 <div class="card-header" style="background: linear-gradient(135deg, rgba(15,23,42,0.04), rgba(59,130,246,0.06));">
                     <h2 class="card-title text-slate-900">
-                        <i class="fas fa-balance-scale ml-2 text-sky-700"></i>
+                        <i class="fas fa-balance-scale me-2 text-sky-700"></i>
                         ${t('module.kpi.chart.deptComparison','مقارنة بين الإدارات / المواقع')}
                     </h2>
                     <p class="text-sm text-slate-500 mt-2">${t('module.kpi.overview.comparisonSub','مقارنة مباشرة لاكتشاف الفجوات وفرص التحسين.')}</p>
@@ -3954,7 +4046,7 @@ SafetyPerformanceKPIs.render = async function () {
             <div class="content-card overflow-hidden">
                 <div class="card-header" style="background: linear-gradient(135deg, rgba(15,23,42,0.04), rgba(244,63,94,0.06));">
                     <h2 class="card-title text-slate-900">
-                        <i class="fas fa-th ml-2 text-rose-600"></i>
+                        <i class="fas fa-th me-2 text-rose-600"></i>
                         ${t('module.kpi.chart.heatmapTitle','خريطة الحرارة')}
                     </h2>
                     <p class="text-sm text-slate-500 mt-2">${t('module.kpi.overview.heatmapSub','عرض بصري لمناطق الكثافة في الأداء والمخاطر.')}</p>
@@ -4267,7 +4359,7 @@ SafetyPerformanceKPIs.loadKPIAnnualPlans = async function() {
                         <p>${errMsg}</p>
                         <p class="text-sm mt-2">${Utils.escapeHTML(error.message || '')}</p>
                         <button onclick="SafetyPerformanceKPIs.loadKPIAnnualPlans()" class="btn-primary mt-4">
-                            <i class="fas fa-redo ml-2"></i>
+                            <i class="fas fa-redo me-2"></i>
                             ${retryLbl}
                         </button>
                     </td>
@@ -4346,11 +4438,11 @@ SafetyPerformanceKPIs.addKPIAnnualPlan = function() {
             <div class="card-header bg-gradient-to-r from-blue-50 to-indigo-50 border-b-4 border-blue-600">
                 <div class="flex items-center justify-between">
                     <h2 class="card-title text-blue-800">
-                        <i class="fas fa-plus-circle ml-2"></i>
+                        <i class="fas fa-plus-circle me-2"></i>
                         ${t('module.kpi.annual.form.title.add','إضافة مؤشر KPI جديد')} - ${year}
                     </h2>
                     <button onclick="SafetyPerformanceKPIs.cancelAddKPIAnnualPlan()" class="btn-secondary">
-                        <i class="fas fa-times ml-2"></i>
+                        <i class="fas fa-times me-2"></i>
                         ${t('module.kpi.annual.form.cancel','إلغاء')}
                     </button>
                 </div>
@@ -4399,11 +4491,11 @@ SafetyPerformanceKPIs.addKPIAnnualPlan = function() {
                     
                     <div class="flex gap-3 mt-6 pt-4 border-t">
                         <button type="button" id="kpi-save-btn" onclick="SafetyPerformanceKPIs.saveKPIAnnualPlan()" class="btn-primary">
-                            <i class="fas fa-save ml-2"></i>
+                            <i class="fas fa-save me-2"></i>
                             <span id="kpi-save-text">${t('module.kpi.annual.form.save','حفظ المؤشر')}</span>
                         </button>
                         <button type="button" onclick="SafetyPerformanceKPIs.cancelAddKPIAnnualPlan()" class="btn-secondary">
-                            <i class="fas fa-times ml-2"></i>
+                            <i class="fas fa-times me-2"></i>
                             ${t('module.kpi.annual.form.cancel','إلغاء')}
                         </button>
                     </div>
@@ -4630,7 +4722,7 @@ SafetyPerformanceKPIs.loadHSEMonitoringPlans = async function() {
                         <i class="fas fa-exclamation-triangle text-3xl mb-3 text-yellow-500"></i>
                         <p>حدث خطأ في تحميل البيانات</p>
                         <button onclick="SafetyPerformanceKPIs.loadHSEMonitoringPlans()" class="btn-primary mt-4">
-                            <i class="fas fa-redo ml-2"></i>
+                            <i class="fas fa-redo me-2"></i>
                             إعادة المحاولة
                         </button>
                     </td>
@@ -4720,11 +4812,11 @@ SafetyPerformanceKPIs.addHSEMonitoringPlan = function() {
             <div class="card-header bg-gradient-to-r from-green-50 to-emerald-50 border-b-4 border-green-600">
                 <div class="flex items-center justify-between">
                     <h2 class="card-title text-green-800">
-                        <i class="fas fa-plus-circle ml-2"></i>
+                        <i class="fas fa-plus-circle me-2"></i>
                         إضافة نشاط جديد - خطة متابعة HSE ${year}
                     </h2>
                     <button onclick="SafetyPerformanceKPIs.cancelAddHSEMonitoringPlan()" class="btn-secondary">
-                        <i class="fas fa-times ml-2"></i>
+                        <i class="fas fa-times me-2"></i>
                         إلغاء
                     </button>
                 </div>
@@ -4782,11 +4874,11 @@ SafetyPerformanceKPIs.addHSEMonitoringPlan = function() {
                     
                     <div class="flex gap-3 mt-6 pt-4 border-t">
                         <button type="button" id="hse-save-btn" onclick="SafetyPerformanceKPIs.saveHSEMonitoringPlan()" class="btn-primary">
-                            <i class="fas fa-save ml-2"></i>
+                            <i class="fas fa-save me-2"></i>
                             <span id="hse-save-text">حفظ النشاط</span>
                         </button>
                         <button type="button" onclick="SafetyPerformanceKPIs.cancelAddHSEMonitoringPlan()" class="btn-secondary">
-                            <i class="fas fa-times ml-2"></i>
+                            <i class="fas fa-times me-2"></i>
                             إلغاء
                         </button>
                     </div>
@@ -5273,7 +5365,7 @@ SafetyPerformanceKPIs.enhanceWithScorecardTab = function (section) {
     chartBtn.id = 'spk-tab-chart-scorecard';
     chartBtn.className = 'spk-tab-btn';
     chartBtn.setAttribute('data-tab', 'chart-scorecard');
-    chartBtn.innerHTML = `<i class="fas fa-chart-line ml-1"></i>${t('module.kpi.tab.chartScoreCard', 'Chart Score Card')}`;
+    chartBtn.innerHTML = `<i class="fas fa-chart-line me-1"></i>${t('module.kpi.tab.chartScoreCard', 'Chart Score Card')}`;
     if (scoreBtn && scoreBtn.nextSibling) tabBar.insertBefore(chartBtn, scoreBtn.nextSibling);
     else tabBar.appendChild(chartBtn);
 
@@ -5371,7 +5463,7 @@ SafetyPerformanceKPIs.renderChartScorecardShell = function () {
                             placeholder="${t('module.kpi.chart.searchPlaceholder', 'اكتب اسم المؤشر...')}" value="${Utils.escapeHTML(ui.search || '')}">
                     </label>
                     <button id="chart-scorecard-compact-toggle" class="btn-secondary spk-chart-control-field">
-                        <i class="fas ${ui.compact ? 'fa-expand-arrows-alt' : 'fa-compress-arrows-alt'} ml-1"></i>
+                        <i class="fas ${ui.compact ? 'fa-expand-arrows-alt' : 'fa-compress-arrows-alt'} me-1"></i>
                         ${ui.compact ? t('module.kpi.chart.compact.off', 'إلغاء الوضع المضغوط') : t('module.kpi.chart.compact.on', 'تفعيل الوضع المضغوط')}
                     </button>
                     <label class="spk-chart-control">
