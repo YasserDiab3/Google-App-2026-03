@@ -43,6 +43,58 @@ const SafetyPerformanceKPIs = {
 
         const section = document.getElementById('safety-performance-kpis-section');
 
+        // ✅ ضمان اتجاه RTL/LTR صحيح على جذر القسم
+        // (يحلّ مشكلة ظهور المحتوى بـ LTR في اللغة العربية)
+        if (section) {
+            const lang = (typeof window.AppI18n?.getCurrentLang === 'function')
+                ? window.AppI18n.getCurrentLang()
+                : (typeof window.I18n?.getCurrentLang === 'function')
+                    ? window.I18n.getCurrentLang()
+                    : (document.documentElement?.lang || 'ar');
+            const isRTL = String(lang || 'ar').toLowerCase().startsWith('ar');
+            section.setAttribute('dir', isRTL ? 'rtl' : 'ltr');
+            section.style.direction = isRTL ? 'rtl' : 'ltr';
+            section.style.textAlign = isRTL ? 'right' : 'left';
+        }
+
+        // ✅ حقن CSS guard لضمان عدم تجاوز الاتجاه من أي rule خارجي
+        if (!document.getElementById('spk-rtl-ltr-guard-style')) {
+            const guardStyle = document.createElement('style');
+            guardStyle.id = 'spk-rtl-ltr-guard-style';
+            guardStyle.textContent = `
+                #safety-performance-kpis-section[dir="rtl"],
+                #safety-performance-kpis-section[dir="rtl"] *:not([dir="ltr"]):not(.spk-scorecard-print):not(.spk-scorecard-print *) {
+                    /* السماح للعناصر الفرعية بوراثة الاتجاه ما لم يكن لها dir="ltr" صريح (للأرقام) */
+                }
+                #safety-performance-kpis-section[dir="rtl"] {
+                    direction: rtl !important;
+                    text-align: right;
+                }
+                #safety-performance-kpis-section[dir="ltr"] {
+                    direction: ltr !important;
+                    text-align: left;
+                }
+                /* ضمان أن العناصر النصية الرئيسية ترث الاتجاه */
+                #safety-performance-kpis-section[dir="rtl"] h1,
+                #safety-performance-kpis-section[dir="rtl"] h2,
+                #safety-performance-kpis-section[dir="rtl"] h3,
+                #safety-performance-kpis-section[dir="rtl"] h4,
+                #safety-performance-kpis-section[dir="rtl"] p,
+                #safety-performance-kpis-section[dir="rtl"] label,
+                #safety-performance-kpis-section[dir="rtl"] li,
+                #safety-performance-kpis-section[dir="rtl"] button {
+                    direction: rtl;
+                    text-align: start;
+                }
+                /* الأرقام/المعدلات تبقى LTR دائماً */
+                #safety-performance-kpis-section [dir="ltr"] {
+                    direction: ltr !important;
+                    unicode-bidi: embed;
+                }
+            `;
+            document.head.appendChild(guardStyle);
+        }
+
         // التحقق من الصلاحيات - فقط للمدير
         const isAdmin = (() => {
             if (typeof Permissions?.isCurrentUserAdmin === 'function') {
@@ -3642,55 +3694,72 @@ SafetyPerformanceKPIs.renderOverviewChartCard = function (containerId, title, ic
 
 SafetyPerformanceKPIs.renderKPICard = function (id, label, type, icon, color, defaultUnit = '') {
     const t = (k, f) => SafetyPerformanceKPIs._t(k, f);
-    const ringColor = color.includes('red') || color.includes('rose')
-        ? 'rgba(244,63,94,0.22)'
-        : color.includes('orange') || color.includes('yellow')
-            ? 'rgba(245,158,11,0.22)'
-            : 'rgba(16,185,129,0.22)';
-
+    // ✨ Enterprise KPI Card — premium treatment
     return `
-        <article class="group rounded-[26px] border border-slate-200/80 bg-white p-5 transition-all duration-300 hover:-translate-y-1" style="box-shadow: 0 16px 40px rgba(15,23,42,0.07);">
-            <div class="flex items-start justify-between gap-3">
-                <div class="min-w-0">
-                    <div class="text-[11px] font-black uppercase tracking-[0.2em] text-slate-400">${type}</div>
-                    <h3 class="mt-2 text-sm font-bold leading-6 text-slate-800">${label}</h3>
-                    <p class="text-xs text-slate-500 mt-2" id="${id}-period">${t('module.kpi.card.thisMonth','هذا الشهر')}</p>
+        <article class="spk-kpi-card group relative overflow-hidden rounded-[24px] border border-slate-200/70 bg-white p-5 transition-all duration-300 hover:-translate-y-1 hover:border-${color}-300" style="box-shadow: 0 12px 32px -10px rgba(15,23,42,0.08), 0 4px 12px -4px rgba(15,23,42,0.04);">
+            <!-- Top accent gradient bar -->
+            <div class="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-${color}-600 via-${color}-500 to-${color}-400"></div>
+            <!-- Decorative glow blob -->
+            <div class="absolute -top-12 -end-12 h-36 w-36 rounded-full pointer-events-none opacity-60 transition-opacity duration-300 group-hover:opacity-100" style="background: radial-gradient(circle, var(--tw-gradient-stops)); --tw-gradient-from: rgba(15,23,42,0.04); --tw-gradient-stops: rgba(15,23,42,0.04), transparent;"></div>
+
+            <!-- Header (eyebrow + label + icon) -->
+            <div class="relative flex items-start justify-between gap-3">
+                <div class="min-w-0 flex-1">
+                    <div class="inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[10px] font-black uppercase tracking-[0.2em] bg-${color}-50 text-${color}-700 border border-${color}-200/60">
+                        <i class="fas fa-circle text-[6px]"></i>
+                        ${type}
+                    </div>
+                    <h3 class="mt-2.5 text-sm font-bold leading-snug text-slate-800">${label}</h3>
+                    <p class="text-[11px] text-slate-500 mt-2 flex items-center gap-1.5" id="${id}-period">
+                        <i class="fas fa-calendar-week text-${color}-500"></i>
+                        ${t('module.kpi.card.thisMonth','هذا الشهر')}
+                    </p>
                 </div>
-                <div class="h-12 w-12 rounded-2xl flex items-center justify-center text-${color}-600 bg-${color}-50 border border-${color}-100 shrink-0" style="box-shadow: inset 0 0 0 1px ${ringColor};">
+                <div class="h-12 w-12 rounded-2xl flex items-center justify-center text-${color}-700 shrink-0 transition-transform duration-300 group-hover:scale-110" style="background: linear-gradient(135deg, var(--tw-gradient-stops)); --tw-gradient-from: rgb(var(--c-${color}-50, 240 253 244)); --tw-gradient-to: rgb(var(--c-${color}-100, 220 252 231)); --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to); border: 1px solid; border-color: rgb(var(--c-${color}-200, 187 247 208)); box-shadow: 0 6px 16px -4px rgba(15,23,42,0.08), inset 0 0 0 1px rgba(255,255,255,0.5);">
                     <i class="fas ${icon} text-lg"></i>
                 </div>
             </div>
 
-            <div class="mt-6">
+            <!-- Value section -->
+            <div class="relative mt-5">
                 <div class="flex items-end justify-between gap-3 flex-wrap">
                     <div class="flex items-end gap-2">
-                        <span class="text-4xl font-black text-slate-900 leading-none" id="${id}-value">-</span>
-                        <span class="text-sm font-bold text-slate-400 pb-1" id="${id}-unit">${defaultUnit}</span>
+                        <span class="text-[2.25rem] font-black text-slate-900 leading-none tracking-tight" id="${id}-value" dir="ltr">-</span>
+                        <span class="text-sm font-bold text-slate-400 pb-1.5" id="${id}-unit">${defaultUnit}</span>
                     </div>
                     <div class="status-badge status-success" id="${id}-status" style="display:none;"></div>
                 </div>
 
-                <div class="mt-5 grid grid-cols-2 gap-3">
-                    <div class="rounded-2xl bg-slate-50 border border-slate-200 px-3 py-3">
-                        <div class="text-[11px] font-bold text-slate-500">${t('module.kpi.hero.target','الهدف')}</div>
-                        <div class="mt-1 text-sm font-black text-slate-800" id="${id}-target">-</div>
+                <!-- Target + Achievement -->
+                <div class="mt-4 grid grid-cols-2 gap-2.5">
+                    <div class="rounded-xl px-3 py-2.5 border border-slate-200/80 bg-gradient-to-br from-slate-50 to-white">
+                        <div class="text-[10px] font-black uppercase tracking-[0.18em] text-slate-500 flex items-center gap-1">
+                            <i class="fas fa-bullseye text-${color}-500"></i>
+                            ${t('module.kpi.hero.target','الهدف')}
+                        </div>
+                        <div class="mt-1 text-sm font-black text-slate-800" id="${id}-target" dir="ltr">-</div>
                     </div>
-                    <div class="rounded-2xl bg-slate-50 border border-slate-200 px-3 py-3">
-                        <div class="text-[11px] font-bold text-slate-500">${t('module.kpi.card.achievement','الإنجاز')}</div>
-                        <div class="mt-1 text-sm font-black text-slate-800" id="${id}-progress">-</div>
+                    <div class="rounded-xl px-3 py-2.5 border border-slate-200/80 bg-gradient-to-br from-slate-50 to-white">
+                        <div class="text-[10px] font-black uppercase tracking-[0.18em] text-slate-500 flex items-center gap-1">
+                            <i class="fas fa-chart-line text-${color}-500"></i>
+                            ${t('module.kpi.card.achievement','الإنجاز')}
+                        </div>
+                        <div class="mt-1 text-sm font-black text-slate-800" id="${id}-progress" dir="ltr">-</div>
                     </div>
                 </div>
 
-                <div class="mt-5">
-                    <div class="w-full h-2.5 rounded-full bg-slate-100 overflow-hidden">
-                        <div class="h-full rounded-full bg-${color}-500 transition-all duration-500" id="${id}-progress-bar" style="width:0%"></div>
+                <!-- Progress bar -->
+                <div class="mt-4">
+                    <div class="w-full h-2 rounded-full bg-slate-100 overflow-hidden" dir="ltr">
+                        <div class="h-full rounded-full bg-gradient-to-r from-${color}-500 to-${color}-600 transition-all duration-500" id="${id}-progress-bar" style="width:0%; box-shadow: 0 0 8px rgba(0,0,0,0.08);"></div>
                     </div>
                 </div>
 
-                <div class="mt-4 flex items-center justify-between gap-2 flex-wrap">
-                    <div class="flex items-center gap-2 text-xs" id="${id}-trend">
+                <!-- Trend indicator -->
+                <div class="mt-3.5 flex items-center justify-between gap-2 flex-wrap">
+                    <div class="flex items-center gap-1.5 text-xs" id="${id}-trend">
                         <i class="fas fa-minus text-slate-400"></i>
-                        <span class="text-slate-500">${t('module.kpi.card.noChange','لا يوجد تغيير')}</span>
+                        <span class="text-slate-500 font-semibold">${t('module.kpi.card.noChange','لا يوجد تغيير')}</span>
                     </div>
                 </div>
             </div>
@@ -3969,41 +4038,60 @@ SafetyPerformanceKPIs.render = async function () {
             </div>
         </div>
 
-        <div id="leading-kpis-section" class="mt-6 grid grid-cols-1 xl:grid-cols-[1.15fr_0.85fr] gap-6">
-            <div class="content-card overflow-hidden" style="border: 1px solid rgba(16,185,129,0.18); box-shadow: 0 18px 42px rgba(16,185,129,0.08);">
-                <div class="card-header" style="background: linear-gradient(135deg, rgba(16,185,129,0.16), rgba(16,185,129,0.06)); border-bottom: 1px solid rgba(16,185,129,0.18);">
+        <!-- ╔══════════════════════════════════════════════════════════════╗ -->
+        <!-- ║ 🎨 Leading + Lagging Indicators — Enterprise redesign         ║ -->
+        <!-- ╚══════════════════════════════════════════════════════════════╝ -->
+        <div id="leading-kpis-section" class="mt-7 grid grid-cols-1 xl:grid-cols-[1.15fr_0.85fr] gap-6">
+            <!-- ━━━ Leading Indicators (Emerald + Teal accent) ━━━ -->
+            <div class="relative overflow-hidden rounded-[26px]" style="border: 1px solid rgba(16,185,129,0.20); box-shadow: 0 22px 50px -18px rgba(16,185,129,0.22), 0 8px 20px -8px rgba(15,23,42,0.06);">
+                <div class="absolute inset-0 pointer-events-none" style="background: linear-gradient(135deg, #ecfdf5 0%, #ffffff 55%, #f0fdfa 100%);"></div>
+                <div class="absolute inset-x-0 top-0 h-1" style="background: linear-gradient(90deg, #047857, #10b981, #0F766E);"></div>
+                <div class="absolute -top-16 -end-16 h-48 w-48 rounded-full pointer-events-none" style="background: radial-gradient(circle, rgba(16,185,129,0.16) 0%, transparent 65%);"></div>
+
+                <div class="relative p-5 lg:p-6 border-b" style="border-color: rgba(16,185,129,0.18);">
                     <div class="flex items-start justify-between gap-4 flex-wrap">
-                        <div>
-                            <h2 class="card-title text-emerald-900">
-                                <i class="fas fa-arrow-trend-up me-2"></i>
-                                ${t('module.kpi.leading.title','المؤشرات الاستباقية')}
-                            </h2>
-                            <p class="text-sm text-emerald-800 mt-2">${t('module.kpi.leading.subtitle','مؤشرات تقيس أداء الوقاية والتحكم قبل وقوع الحوادث')}</p>
+                        <div class="min-w-0 flex-1">
+                            <div class="inline-flex items-center gap-2 rounded-full px-3.5 py-1.5 text-[11px] font-black uppercase tracking-[0.22em] border" style="background: linear-gradient(135deg, rgba(16,185,129,0.12), rgba(16,185,129,0.04)); border-color: rgba(16,185,129,0.28); color: #047857;">
+                                <i class="fas fa-arrow-trend-up"></i>
+                                ${t('module.kpi.leading.badge','استباقي')}
+                            </div>
+                            <h2 class="mt-3 text-xl xl:text-2xl font-black leading-tight" style="background: linear-gradient(135deg, #064E3B 0%, #047857 60%, #0F766E 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">${t('module.kpi.leading.title','المؤشرات الاستباقية')}</h2>
+                            <p class="mt-1.5 text-xs text-emerald-800/85 leading-relaxed max-w-xl">${t('module.kpi.leading.subtitle','مؤشرات تقيس أداء الوقاية والتحكم قبل وقوع الحوادث')}</p>
                         </div>
-                        <div class="rounded-2xl bg-white/90 px-3 py-2 text-xs font-bold text-emerald-700 border border-emerald-100">${t('module.kpi.leading.badge','استباقي')}</div>
+                        <div class="h-12 w-12 rounded-2xl flex items-center justify-center shrink-0 text-white" style="background: linear-gradient(135deg, #047857, #0F766E); box-shadow: 0 10px 24px rgba(16,185,129,0.32);">
+                            <i class="fas fa-shield-virus text-lg"></i>
+                        </div>
                     </div>
                 </div>
-                <div class="card-body">
+                <div class="relative p-5 lg:p-6">
                     <div id="leading-indicators-container" class="grid grid-cols-1 md:grid-cols-2 2xl:grid-cols-3 gap-4">
                         ${this.renderLeadingIndicators()}
                     </div>
                 </div>
             </div>
 
-            <div id="lagging-kpis-section" class="content-card overflow-hidden" style="border: 1px solid rgba(244,63,94,0.18); box-shadow: 0 18px 42px rgba(244,63,94,0.08);">
-                <div class="card-header" style="background: linear-gradient(135deg, rgba(244,63,94,0.16), rgba(244,63,94,0.06)); border-bottom: 1px solid rgba(244,63,94,0.18);">
+            <!-- ━━━ Lagging Indicators (Rose + Navy accent) ━━━ -->
+            <div id="lagging-kpis-section" class="relative overflow-hidden rounded-[26px]" style="border: 1px solid rgba(244,63,94,0.20); box-shadow: 0 22px 50px -18px rgba(244,63,94,0.22), 0 8px 20px -8px rgba(15,23,42,0.06);">
+                <div class="absolute inset-0 pointer-events-none" style="background: linear-gradient(135deg, #fff1f2 0%, #ffffff 55%, #fef2f2 100%);"></div>
+                <div class="absolute inset-x-0 top-0 h-1" style="background: linear-gradient(90deg, #9F1239, #E11D48, #BE123C);"></div>
+                <div class="absolute -top-16 -end-16 h-48 w-48 rounded-full pointer-events-none" style="background: radial-gradient(circle, rgba(244,63,94,0.16) 0%, transparent 65%);"></div>
+
+                <div class="relative p-5 lg:p-6 border-b" style="border-color: rgba(244,63,94,0.18);">
                     <div class="flex items-start justify-between gap-4 flex-wrap">
-                        <div>
-                            <h2 class="card-title text-rose-900">
-                                <i class="fas fa-arrow-trend-down me-2"></i>
-                                ${t('module.kpi.lagging.title','المؤشرات التراجعية')}
-                            </h2>
-                            <p class="text-sm text-rose-800 mt-2">${t('module.kpi.lagging.subtitle','مؤشرات تقيس النتائج الفعلية لما حدث')}</p>
+                        <div class="min-w-0 flex-1">
+                            <div class="inline-flex items-center gap-2 rounded-full px-3.5 py-1.5 text-[11px] font-black uppercase tracking-[0.22em] border" style="background: linear-gradient(135deg, rgba(244,63,94,0.12), rgba(244,63,94,0.04)); border-color: rgba(244,63,94,0.28); color: #BE123C;">
+                                <i class="fas fa-arrow-trend-down"></i>
+                                ${t('module.kpi.lagging.badge','تراجعي')}
+                            </div>
+                            <h2 class="mt-3 text-xl xl:text-2xl font-black leading-tight" style="background: linear-gradient(135deg, #4C0519 0%, #BE123C 60%, #1E3A8A 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">${t('module.kpi.lagging.title','المؤشرات التراجعية')}</h2>
+                            <p class="mt-1.5 text-xs text-rose-800/85 leading-relaxed max-w-xl">${t('module.kpi.lagging.subtitle','مؤشرات تقيس النتائج الفعلية لما حدث')}</p>
                         </div>
-                        <div class="rounded-2xl bg-white/90 px-3 py-2 text-xs font-bold text-rose-700 border border-rose-100">${t('module.kpi.lagging.badge','تراجعي')}</div>
+                        <div class="h-12 w-12 rounded-2xl flex items-center justify-center shrink-0 text-white" style="background: linear-gradient(135deg, #BE123C, #9F1239); box-shadow: 0 10px 24px rgba(244,63,94,0.32);">
+                            <i class="fas fa-triangle-exclamation text-lg"></i>
+                        </div>
                     </div>
                 </div>
-                <div class="card-body">
+                <div class="relative p-5 lg:p-6">
                     <div id="lagging-indicators-container" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-1 2xl:grid-cols-2 gap-4">
                         ${this.renderLaggingIndicators()}
                     </div>
