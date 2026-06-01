@@ -3607,22 +3607,31 @@ const SafetyPerformanceKPIs = {
  * - RTL/LTR safe (logical properties فقط)
  */
 SafetyPerformanceKPIs.renderOverviewMiniStat = function (id, label, icon, tone, unit) {
+    // ✨ Executive Mini Stat — navy/gold subtle accent + premium typography
     return `
-        <div class="spk-mini-card group relative overflow-hidden rounded-[22px] border border-slate-200/70 bg-white p-5 transition-all duration-300 hover:-translate-y-0.5 hover:border-${tone}-200" style="box-shadow: 0 10px 28px rgba(15,23,42,0.06);">
-            <div class="absolute inset-x-0 top-0 h-[3px] bg-gradient-to-r from-${tone}-500 via-${tone}-400 to-${tone}-500"></div>
-            <div class="absolute -top-10 -end-10 h-32 w-32 rounded-full bg-${tone}-100/40 blur-2xl pointer-events-none"></div>
+        <div class="spk-mini-card group relative overflow-hidden rounded-[20px] bg-white p-5 transition-all duration-300 hover:-translate-y-1" style="border: 1px solid rgba(20,34,61,0.10); box-shadow: 0 12px 30px -10px rgba(10,22,40,0.10), 0 4px 12px -4px rgba(10,22,40,0.04);">
+            <!-- Top accent bar: tone color blended -->
+            <div class="absolute inset-x-0 top-0 h-[3px] bg-gradient-to-r from-${tone}-600 via-${tone}-500 to-${tone}-400"></div>
+            <!-- Subtle gold corner accent (executive signature) -->
+            <div class="absolute top-2 end-2 h-1 w-1 rounded-full pointer-events-none" style="background: #D4A017; box-shadow: 0 0 6px rgba(212,160,23,0.45);"></div>
+            <!-- Decorative tone glow blob -->
+            <div class="absolute -top-12 -end-12 h-32 w-32 rounded-full bg-${tone}-100/45 blur-2xl pointer-events-none transition-opacity duration-300 group-hover:opacity-100" style="opacity:0.7;"></div>
+
             <div class="relative flex items-start justify-between gap-3">
                 <div class="min-w-0">
-                    <div class="text-[10px] font-black uppercase tracking-[0.22em] text-${tone}-600">${unit}</div>
-                    <div class="mt-2 text-sm font-bold text-slate-800 leading-snug">${label}</div>
+                    <div class="inline-flex items-center gap-1.5 text-[9px] font-black uppercase tracking-[0.26em] text-${tone}-700">
+                        <span class="inline-block h-1 w-3 rounded-full bg-${tone}-500"></span>
+                        ${unit}
+                    </div>
+                    <div class="mt-2 text-sm font-bold leading-snug" style="color: #1E293B;">${label}</div>
                 </div>
-                <div class="h-11 w-11 rounded-2xl flex items-center justify-center text-${tone}-700 bg-gradient-to-br from-${tone}-50 to-${tone}-100 border border-${tone}-200/80 shrink-0">
+                <div class="h-11 w-11 rounded-2xl flex items-center justify-center text-${tone}-700 bg-gradient-to-br from-${tone}-50 to-${tone}-100 shrink-0 transition-transform duration-300 group-hover:scale-105" style="border: 1px solid rgba(20,34,61,0.08); box-shadow: 0 4px 12px -4px rgba(10,22,40,0.10);">
                     <i class="fas ${icon}"></i>
                 </div>
             </div>
-            <div class="relative mt-5 flex items-end gap-2">
-                <span id="${id}" class="text-3xl font-black text-slate-900 leading-none tracking-tight" dir="ltr">-</span>
-                <span class="text-xs font-bold text-slate-400 pb-0.5">${unit}</span>
+            <div class="relative mt-5 flex items-end gap-2 pt-3" style="border-top: 1px dashed rgba(20,34,61,0.10);">
+                <span id="${id}" class="text-[1.875rem] font-black leading-none tracking-tight" style="color: #0A1628; font-feature-settings: 'tnum';" dir="ltr">-</span>
+                <span class="text-xs font-bold pb-0.5" style="color: #64748B;">${unit}</span>
             </div>
         </div>
     `;
@@ -3639,30 +3648,38 @@ SafetyPerformanceKPIs.renderOverviewMiniStat = function (id, label, icon, tone, 
  * - RTL/LTR safe بالكامل
  */
 SafetyPerformanceKPIs.renderWorkforceStatCard = function (id, label, icon, tone, unit, subtitle = '') {
+    // ✨ Executive Workforce Card — navy/gold polish + tabular numbers
     return `
-        <div class="spk-workforce-card group relative overflow-hidden rounded-[24px] border border-slate-200/70 bg-white p-5 transition-all duration-300 hover:-translate-y-0.5 hover:border-${tone}-300 hover:shadow-xl" style="box-shadow: 0 12px 32px rgba(15,23,42,0.06);">
+        <div class="spk-workforce-card group relative overflow-hidden rounded-[22px] bg-white p-5 transition-all duration-300 hover:-translate-y-1 hover:shadow-xl" style="border: 1px solid rgba(20,34,61,0.10); box-shadow: 0 14px 36px -12px rgba(10,22,40,0.12), 0 4px 12px -4px rgba(10,22,40,0.04);">
+            <!-- Top accent bar -->
             <div class="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-${tone}-600 via-${tone}-500 to-${tone}-400"></div>
-            <div class="absolute -top-12 -end-12 h-36 w-36 rounded-full bg-${tone}-100/30 blur-3xl pointer-events-none"></div>
+            <!-- Gold corner dot (executive signature) -->
+            <div class="absolute top-2.5 end-2.5 h-1 w-1 rounded-full pointer-events-none" style="background: #D4A017; box-shadow: 0 0 6px rgba(212,160,23,0.45);"></div>
+            <!-- Tone glow blob (premium depth) -->
+            <div class="absolute -top-14 -end-14 h-40 w-40 rounded-full bg-${tone}-100/40 blur-3xl pointer-events-none transition-opacity duration-300 group-hover:opacity-100" style="opacity:0.65;"></div>
 
             <div class="relative flex items-start justify-between gap-3 mb-4">
                 <div class="min-w-0 flex-1">
-                    <div class="text-[10px] font-black uppercase tracking-[0.22em] text-${tone}-700">${unit}</div>
-                    <h4 class="mt-2 text-sm font-bold text-slate-800 leading-snug">${label}</h4>
+                    <div class="inline-flex items-center gap-1.5 text-[9px] font-black uppercase tracking-[0.26em] text-${tone}-700">
+                        <span class="inline-block h-1 w-3 rounded-full bg-${tone}-500"></span>
+                        ${unit}
+                    </div>
+                    <h4 class="mt-2 text-sm font-bold leading-snug" style="color: #1E293B;">${label}</h4>
                 </div>
-                <div class="h-12 w-12 rounded-2xl flex items-center justify-center text-${tone}-700 bg-gradient-to-br from-${tone}-50 via-white to-${tone}-100 border border-${tone}-200 shrink-0" style="box-shadow: 0 6px 14px rgba(15,23,42,0.06), inset 0 0 0 1px rgba(255,255,255,0.5);">
+                <div class="h-12 w-12 rounded-2xl flex items-center justify-center text-${tone}-700 bg-gradient-to-br from-${tone}-50 via-white to-${tone}-100 shrink-0 transition-transform duration-300 group-hover:scale-105" style="border: 1px solid rgba(20,34,61,0.10); box-shadow: 0 6px 16px -4px rgba(10,22,40,0.10), inset 0 0 0 1px rgba(255,255,255,0.6);">
                     <i class="fas ${icon} text-lg"></i>
                 </div>
             </div>
 
-            <div class="relative flex items-end gap-2">
-                <span id="${id}" class="text-[2rem] font-black text-slate-900 leading-none tracking-tight" dir="ltr">-</span>
-                <span class="text-xs font-bold text-slate-400 pb-1">${unit}</span>
+            <div class="relative flex items-end gap-2 pt-3" style="border-top: 1px solid rgba(20,34,61,0.06);">
+                <span id="${id}" class="text-[2rem] font-black leading-none tracking-tight" style="color: #0A1628; font-feature-settings: 'tnum';" dir="ltr">-</span>
+                <span class="text-xs font-bold pb-1" style="color: #64748B;">${unit}</span>
             </div>
 
             ${subtitle ? `
-                <div class="relative mt-4 pt-3 border-t border-dashed border-slate-200">
-                    <p class="text-[11px] text-slate-500 leading-relaxed flex items-start gap-1.5">
-                        <i class="fas fa-info-circle text-${tone}-400 mt-0.5 shrink-0"></i>
+                <div class="relative mt-4 pt-3" style="border-top: 1px dashed rgba(20,34,61,0.10);">
+                    <p class="text-[11px] leading-relaxed flex items-start gap-1.5" style="color: #475569;">
+                        <i class="fas fa-info-circle mt-0.5 shrink-0" style="color: #B4870C; opacity: 0.85;"></i>
                         <span>${subtitle}</span>
                     </p>
                 </div>
@@ -3694,72 +3711,74 @@ SafetyPerformanceKPIs.renderOverviewChartCard = function (containerId, title, ic
 
 SafetyPerformanceKPIs.renderKPICard = function (id, label, type, icon, color, defaultUnit = '') {
     const t = (k, f) => SafetyPerformanceKPIs._t(k, f);
-    // ✨ Enterprise KPI Card — premium treatment
+    // ✨ Executive KPI Card — refined polish + navy/gold subtle integration
     return `
-        <article class="spk-kpi-card group relative overflow-hidden rounded-[24px] border border-slate-200/70 bg-white p-5 transition-all duration-300 hover:-translate-y-1 hover:border-${color}-300" style="box-shadow: 0 12px 32px -10px rgba(15,23,42,0.08), 0 4px 12px -4px rgba(15,23,42,0.04);">
-            <!-- Top accent gradient bar -->
+        <article class="spk-kpi-card group relative overflow-hidden rounded-[22px] bg-white p-5 transition-all duration-300 hover:-translate-y-1" style="border: 1px solid rgba(20,34,61,0.10); box-shadow: 0 14px 36px -12px rgba(10,22,40,0.12), 0 4px 12px -4px rgba(10,22,40,0.04);">
+            <!-- Top accent gradient bar (tone) -->
             <div class="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-${color}-600 via-${color}-500 to-${color}-400"></div>
-            <!-- Decorative glow blob -->
-            <div class="absolute -top-12 -end-12 h-36 w-36 rounded-full pointer-events-none opacity-60 transition-opacity duration-300 group-hover:opacity-100" style="background: radial-gradient(circle, var(--tw-gradient-stops)); --tw-gradient-from: rgba(15,23,42,0.04); --tw-gradient-stops: rgba(15,23,42,0.04), transparent;"></div>
+            <!-- Gold corner accent (executive signature) -->
+            <div class="absolute top-2.5 end-2.5 h-1 w-1 rounded-full pointer-events-none" style="background: #D4A017; box-shadow: 0 0 6px rgba(212,160,23,0.45);"></div>
+            <!-- Tone-tinted glow blob -->
+            <div class="absolute -top-14 -end-14 h-40 w-40 rounded-full bg-${color}-100/40 blur-3xl pointer-events-none transition-opacity duration-300 group-hover:opacity-100" style="opacity:0.55;"></div>
 
             <!-- Header (eyebrow + label + icon) -->
             <div class="relative flex items-start justify-between gap-3">
                 <div class="min-w-0 flex-1">
-                    <div class="inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[10px] font-black uppercase tracking-[0.2em] bg-${color}-50 text-${color}-700 border border-${color}-200/60">
-                        <i class="fas fa-circle text-[6px]"></i>
+                    <div class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[9px] font-black uppercase tracking-[0.24em] bg-${color}-50 text-${color}-700" style="border: 1px solid rgba(20,34,61,0.06);">
+                        <span class="inline-block h-1 w-3 rounded-full bg-${color}-500"></span>
                         ${type}
                     </div>
-                    <h3 class="mt-2.5 text-sm font-bold leading-snug text-slate-800">${label}</h3>
-                    <p class="text-[11px] text-slate-500 mt-2 flex items-center gap-1.5" id="${id}-period">
+                    <h3 class="mt-2.5 text-sm font-bold leading-snug" style="color: #1E293B;">${label}</h3>
+                    <p class="text-[11px] mt-2 flex items-center gap-1.5" id="${id}-period" style="color: #64748B;">
                         <i class="fas fa-calendar-week text-${color}-500"></i>
                         ${t('module.kpi.card.thisMonth','هذا الشهر')}
                     </p>
                 </div>
-                <div class="h-12 w-12 rounded-2xl flex items-center justify-center text-${color}-700 shrink-0 transition-transform duration-300 group-hover:scale-110" style="background: linear-gradient(135deg, var(--tw-gradient-stops)); --tw-gradient-from: rgb(var(--c-${color}-50, 240 253 244)); --tw-gradient-to: rgb(var(--c-${color}-100, 220 252 231)); --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to); border: 1px solid; border-color: rgb(var(--c-${color}-200, 187 247 208)); box-shadow: 0 6px 16px -4px rgba(15,23,42,0.08), inset 0 0 0 1px rgba(255,255,255,0.5);">
+                <div class="h-12 w-12 rounded-2xl flex items-center justify-center text-${color}-700 shrink-0 transition-transform duration-300 group-hover:scale-105 bg-gradient-to-br from-${color}-50 to-${color}-100" style="border: 1px solid rgba(20,34,61,0.10); box-shadow: 0 6px 16px -4px rgba(10,22,40,0.10), inset 0 0 0 1px rgba(255,255,255,0.55);">
                     <i class="fas ${icon} text-lg"></i>
                 </div>
             </div>
 
             <!-- Value section -->
-            <div class="relative mt-5">
+            <div class="relative mt-5 pt-3" style="border-top: 1px solid rgba(20,34,61,0.06);">
                 <div class="flex items-end justify-between gap-3 flex-wrap">
                     <div class="flex items-end gap-2">
-                        <span class="text-[2.25rem] font-black text-slate-900 leading-none tracking-tight" id="${id}-value" dir="ltr">-</span>
-                        <span class="text-sm font-bold text-slate-400 pb-1.5" id="${id}-unit">${defaultUnit}</span>
+                        <span class="text-[2.25rem] font-black leading-none tracking-tight" id="${id}-value" style="color: #0A1628; font-feature-settings: 'tnum';" dir="ltr">-</span>
+                        <span class="text-sm font-bold pb-1.5" id="${id}-unit" style="color: #64748B;">${defaultUnit}</span>
                     </div>
                     <div class="status-badge status-success" id="${id}-status" style="display:none;"></div>
                 </div>
 
-                <!-- Target + Achievement -->
+                <!-- Target + Achievement (refined twin chips) -->
                 <div class="mt-4 grid grid-cols-2 gap-2.5">
-                    <div class="rounded-xl px-3 py-2.5 border border-slate-200/80 bg-gradient-to-br from-slate-50 to-white">
-                        <div class="text-[10px] font-black uppercase tracking-[0.18em] text-slate-500 flex items-center gap-1">
+                    <div class="rounded-xl px-3 py-2.5 bg-gradient-to-br from-slate-50 to-white" style="border: 1px solid rgba(20,34,61,0.08); box-shadow: inset 0 1px 0 rgba(255,255,255,0.6);">
+                        <div class="text-[9px] font-black uppercase tracking-[0.22em] flex items-center gap-1" style="color: #64748B;">
                             <i class="fas fa-bullseye text-${color}-500"></i>
                             ${t('module.kpi.hero.target','الهدف')}
                         </div>
-                        <div class="mt-1 text-sm font-black text-slate-800" id="${id}-target" dir="ltr">-</div>
+                        <div class="mt-1 text-sm font-black" id="${id}-target" style="color: #14223D; font-feature-settings: 'tnum';" dir="ltr">-</div>
                     </div>
-                    <div class="rounded-xl px-3 py-2.5 border border-slate-200/80 bg-gradient-to-br from-slate-50 to-white">
-                        <div class="text-[10px] font-black uppercase tracking-[0.18em] text-slate-500 flex items-center gap-1">
+                    <div class="rounded-xl px-3 py-2.5 bg-gradient-to-br from-slate-50 to-white" style="border: 1px solid rgba(20,34,61,0.08); box-shadow: inset 0 1px 0 rgba(255,255,255,0.6);">
+                        <div class="text-[9px] font-black uppercase tracking-[0.22em] flex items-center gap-1" style="color: #64748B;">
                             <i class="fas fa-chart-line text-${color}-500"></i>
                             ${t('module.kpi.card.achievement','الإنجاز')}
                         </div>
-                        <div class="mt-1 text-sm font-black text-slate-800" id="${id}-progress" dir="ltr">-</div>
+                        <div class="mt-1 text-sm font-black" id="${id}-progress" style="color: #14223D; font-feature-settings: 'tnum';" dir="ltr">-</div>
                     </div>
                 </div>
 
-                <!-- Progress bar -->
+                <!-- Progress bar (refined with gold tip) -->
                 <div class="mt-4">
-                    <div class="w-full h-2 rounded-full bg-slate-100 overflow-hidden" dir="ltr">
-                        <div class="h-full rounded-full bg-gradient-to-r from-${color}-500 to-${color}-600 transition-all duration-500" id="${id}-progress-bar" style="width:0%; box-shadow: 0 0 8px rgba(0,0,0,0.08);"></div>
+                    <div class="w-full h-2 rounded-full overflow-hidden" style="background: rgba(20,34,61,0.06);" dir="ltr">
+                        <div class="h-full rounded-full bg-gradient-to-r from-${color}-500 to-${color}-600 transition-all duration-500" id="${id}-progress-bar" style="width:0%; box-shadow: 0 0 8px rgba(0,0,0,0.10);"></div>
                     </div>
                 </div>
 
                 <!-- Trend indicator -->
                 <div class="mt-3.5 flex items-center justify-between gap-2 flex-wrap">
                     <div class="flex items-center gap-1.5 text-xs" id="${id}-trend">
-                        <i class="fas fa-minus text-slate-400"></i>
-                        <span class="text-slate-500 font-semibold">${t('module.kpi.card.noChange','لا يوجد تغيير')}</span>
+                        <i class="fas fa-minus" style="color: #94A3B8;"></i>
+                        <span class="font-semibold" style="color: #64748B;">${t('module.kpi.card.noChange','لا يوجد تغيير')}</span>
                     </div>
                 </div>
             </div>
