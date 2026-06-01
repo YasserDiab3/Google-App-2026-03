@@ -18,9 +18,9 @@ function addPPEToSheet(ppeData) {
         if (!ppeData) {
             return { success: false, message: 'بيانات المعدات غير موجودة' };
         }
-        
+
         const sheetName = 'PPE';
-        
+
         // إضافة حقول تلقائية
         if (!ppeData.id) {
             ppeData.id = generateSequentialId('PPE', sheetName);
@@ -34,11 +34,115 @@ function addPPEToSheet(ppeData) {
         if (!ppeData.status) {
             ppeData.status = 'مستلم';
         }
-        
-        return appendToSheet(sheetName, ppeData);
+
+        const result = appendToSheet(sheetName, ppeData);
+
+        // ✅ FIX: عند تسجيل استلام جديد لمهمات الوقاية، نخصم الكمية من المخزون تلقائياً
+        // (نسجل transaction بـ action='OUT' → addPPETransaction يحدث PPE_Stock atomically)
+        if (result && result.success) {
+            try {
+                applyPPEReceiptStockDeduction_(ppeData);
+            } catch (deductErr) {
+                Logger.log('⚠️ addPPEToSheet: تعذر خصم المخزون (الاستلام محفوظ): ' + deductErr.toString());
+                // لا نُفشل الاستلام — السجل محفوظ والمخزون يمكن تصحيحه يدوياً لاحقاً
+            }
+        }
+
+        return result;
     } catch (error) {
         Logger.log('Error in addPPEToSheet: ' + error.toString());
         return { success: false, message: 'حدث خطأ أثناء إضافة المعدات: ' + error.toString() };
+    }
+}
+
+/**
+ * ✅ خصم كمية الاستلام من PPE_Stock تلقائياً عند تسجيل استلام جديد.
+ * يُطابق نوع المعدّة (equipmentType) باسم الصنف في المخزون (itemName)،
+ * ويُسجل transaction بـ action='OUT' في PPE_Transactions ليتم تحديث المخزون atomically.
+ *
+ * @param {Object} ppeData - بيانات الاستلام (يجب أن تحوي equipmentType و quantity)
+ * @returns {{success: boolean, message: string, matched?: boolean, itemId?: string}}
+ */
+function applyPPEReceiptStockDeduction_(ppeData) {
+    try {
+        if (!ppeData) return { success: false, message: 'لا توجد بيانات' };
+        var equipmentType = String(ppeData.equipmentType || '').trim();
+        var quantity = parseFloat(ppeData.quantity);
+        if (!equipmentType) return { success: false, message: 'نوع المعدّة غير محدد' };
+        if (!isFinite(quantity) || quantity <= 0) {
+            return { success: false, message: 'كمية الاستلام غير صالحة' };
+        }
+
+        var spreadsheetId = getSpreadsheetId();
+        var stockItems = readFromSheet('PPE_Stock', spreadsheetId);
+        if (!Array.isArray(stockItems) || stockItems.length === 0) {
+            Logger.log('⚠️ applyPPEReceiptStockDeduction_: PPE_Stock فارغ — تم تخطي الخصم');
+            return { success: false, matched: false, message: 'لا توجد أصناف في المخزون' };
+        }
+
+        // 1) مطابقة دقيقة بالاسم
+        var normalize = function (s) { return String(s || '').trim().toLowerCase(); };
+        var typeLower = normalize(equipmentType);
+        var matched = stockItems.find(function (item) {
+            if (!item) return false;
+            return normalize(item.itemName || item.name || item.equipmentType) === typeLower;
+        });
+
+        // 2) مطابقة بـ itemCode أو equipmentType إن وُجد على الاستلام
+        if (!matched) {
+            var receiptItemId = String(ppeData.itemId || '').trim();
+            var receiptItemCode = String(ppeData.itemCode || '').trim();
+            if (receiptItemId || receiptItemCode) {
+                matched = stockItems.find(function (item) {
+                    if (!item) return false;
+                    return (receiptItemId && String(item.itemId || '').trim() === receiptItemId) ||
+                           (receiptItemCode && String(item.itemCode || '').trim() === receiptItemCode);
+                });
+            }
+        }
+
+        // 3) مطابقة جزئية كملاذ أخير (احتواء)
+        if (!matched && typeLower.length >= 3) {
+            matched = stockItems.find(function (item) {
+                if (!item) return false;
+                var n = normalize(item.itemName || item.name);
+                return n && (n.indexOf(typeLower) !== -1 || typeLower.indexOf(n) !== -1);
+            });
+        }
+
+        if (!matched || !matched.itemId) {
+            Logger.log('⚠️ applyPPEReceiptStockDeduction_: لم يُعثر على صنف مطابق في المخزون لـ "' +
+                equipmentType + '" — لا خصم. تأكد من وجود الصنف في PPE_Stock باسم مطابق.');
+            return { success: false, matched: false, message: 'الصنف غير موجود في المخزون: ' + equipmentType };
+        }
+
+        // ✅ تسجيل transaction بـ action='OUT' — addPPETransaction سيحدث الرصيد atomically
+        var transactionData = {
+            itemId: String(matched.itemId).trim(),
+            itemName: matched.itemName || matched.name || equipmentType,
+            action: 'OUT',
+            quantity: quantity,
+            date: ppeData.receiptDate ? new Date(ppeData.receiptDate) : new Date(),
+            notes: 'صرف تلقائي عند تسجيل استلام: ' + (ppeData.employeeName || 'موظف') +
+                   (ppeData.receiptNumber ? ' (إيصال: ' + ppeData.receiptNumber + ')' : ''),
+            relatedReceiptId: ppeData.id || '',
+            createdBy: ppeData.createdBy || 'النظام',
+            source: 'auto-receipt'
+        };
+
+        var txResult = addPPETransaction(transactionData);
+        if (txResult && txResult.success) {
+            Logger.log('✅ applyPPEReceiptStockDeduction_: خصم ' + quantity + ' من "' +
+                (matched.itemName || matched.name) + '" (itemId: ' + matched.itemId + ')');
+            return { success: true, matched: true, itemId: matched.itemId };
+        } else {
+            Logger.log('⚠️ applyPPEReceiptStockDeduction_: فشل تسجيل transaction: ' +
+                (txResult && txResult.message ? txResult.message : 'unknown'));
+            return { success: false, matched: true, itemId: matched.itemId, message: 'فشل تسجيل الحركة' };
+        }
+    } catch (error) {
+        Logger.log('❌ applyPPEReceiptStockDeduction_ error: ' + error.toString());
+        return { success: false, message: 'خطأ: ' + error.toString() };
     }
 }
 
@@ -50,24 +154,54 @@ function updatePPE(ppeId, updateData) {
         if (!ppeId) {
             return { success: false, message: 'معرف المعدات غير محدد' };
         }
-        
+
         const sheetName = 'PPE';
         const spreadsheetId = getSpreadsheetId();
         const data = readFromSheet(sheetName, spreadsheetId);
         const ppeIndex = data.findIndex(p => p.id === ppeId);
-        
+
         if (ppeIndex === -1) {
             return { success: false, message: 'المعدات غير موجودة' };
         }
-        
+
+        // ✅ FIX: حفظ الـ snapshot القديم لحساب delta المخزون لاحقاً
+        const oldRecord = Object.assign({}, data[ppeIndex]);
+
         updateData.updatedAt = new Date();
         for (var key in updateData) {
             if (updateData.hasOwnProperty(key)) {
                 data[ppeIndex][key] = updateData[key];
             }
         }
-        
-        return saveToSheet(sheetName, data, spreadsheetId);
+
+        const saveResult = saveToSheet(sheetName, data, spreadsheetId);
+
+        // ✅ FIX: إذا تغيّر equipmentType أو quantity، نُطبّق delta على المخزون
+        // (نُعيد الكمية القديمة ثم نخصم الكمية الجديدة عبر transactions)
+        if (saveResult && saveResult.success) {
+            try {
+                var oldType = String(oldRecord.equipmentType || '').trim();
+                var oldQty = parseFloat(oldRecord.quantity) || 0;
+                var newType = String(data[ppeIndex].equipmentType || '').trim();
+                var newQty = parseFloat(data[ppeIndex].quantity) || 0;
+                var typeChanged = oldType && newType && oldType !== newType;
+                var qtyChanged = oldQty !== newQty;
+
+                if (typeChanged || qtyChanged) {
+                    // أعد الكمية القديمة (IN) ثم اخصم الكمية الجديدة (OUT)
+                    if (oldType && oldQty > 0) {
+                        applyPPEReceiptStockRefund_(oldRecord);
+                    }
+                    if (newType && newQty > 0) {
+                        applyPPEReceiptStockDeduction_(data[ppeIndex]);
+                    }
+                }
+            } catch (deltaErr) {
+                Logger.log('⚠️ updatePPE: تعذر تطبيق delta المخزون: ' + deltaErr.toString());
+            }
+        }
+
+        return saveResult;
     } catch (error) {
         Logger.log('Error updating PPE: ' + error.toString());
         return { success: false, message: 'حدث خطأ أثناء تحديث المعدات: ' + error.toString() };
@@ -96,15 +230,99 @@ function deletePPE(ppeId) {
         
         // ✅ حذف الاستلام باستخدام deleteRowById
         const deleteResult = deleteRowById(sheetName, ppeId, spreadsheetId);
-        
+
         if (!deleteResult.success) {
             return deleteResult;
         }
-        
+
+        // ✅ FIX: عند حذف استلام، نُعيد الكمية للمخزون (إنشاء transaction بـ action='IN')
+        try {
+            applyPPEReceiptStockRefund_(ppeItem);
+        } catch (refundErr) {
+            Logger.log('⚠️ deletePPE: تعذر إعادة الكمية للمخزون: ' + refundErr.toString());
+        }
+
         return { success: true, message: 'تم حذف الاستلام بنجاح' };
     } catch (error) {
         Logger.log('Error in deletePPE: ' + error.toString());
         return { success: false, message: 'حدث خطأ أثناء حذف الاستلام: ' + error.toString() };
+    }
+}
+
+/**
+ * ✅ إعادة كمية الاستلام للمخزون عند حذفه (action='IN').
+ * يستخدم نفس منطق المطابقة في applyPPEReceiptStockDeduction_.
+ *
+ * @param {Object} ppeData - بيانات الاستلام المحذوف
+ * @returns {{success: boolean, message: string}}
+ */
+function applyPPEReceiptStockRefund_(ppeData) {
+    try {
+        if (!ppeData) return { success: false, message: 'لا توجد بيانات' };
+        var equipmentType = String(ppeData.equipmentType || '').trim();
+        var quantity = parseFloat(ppeData.quantity);
+        if (!equipmentType) return { success: false, message: 'نوع المعدّة غير محدد' };
+        if (!isFinite(quantity) || quantity <= 0) {
+            return { success: false, message: 'كمية الاستلام غير صالحة' };
+        }
+
+        var spreadsheetId = getSpreadsheetId();
+        var stockItems = readFromSheet('PPE_Stock', spreadsheetId);
+        if (!Array.isArray(stockItems) || stockItems.length === 0) {
+            return { success: false, message: 'لا توجد أصناف في المخزون' };
+        }
+
+        var normalize = function (s) { return String(s || '').trim().toLowerCase(); };
+        var typeLower = normalize(equipmentType);
+
+        var matched = stockItems.find(function (item) {
+            if (!item) return false;
+            return normalize(item.itemName || item.name || item.equipmentType) === typeLower;
+        });
+        if (!matched) {
+            var rid = String(ppeData.itemId || '').trim();
+            var rcode = String(ppeData.itemCode || '').trim();
+            if (rid || rcode) {
+                matched = stockItems.find(function (item) {
+                    if (!item) return false;
+                    return (rid && String(item.itemId || '').trim() === rid) ||
+                           (rcode && String(item.itemCode || '').trim() === rcode);
+                });
+            }
+        }
+        if (!matched && typeLower.length >= 3) {
+            matched = stockItems.find(function (item) {
+                if (!item) return false;
+                var n = normalize(item.itemName || item.name);
+                return n && (n.indexOf(typeLower) !== -1 || typeLower.indexOf(n) !== -1);
+            });
+        }
+        if (!matched || !matched.itemId) {
+            Logger.log('⚠️ applyPPEReceiptStockRefund_: لم يُعثر على صنف مطابق — لا إعادة');
+            return { success: false, message: 'الصنف غير موجود في المخزون' };
+        }
+
+        var transactionData = {
+            itemId: String(matched.itemId).trim(),
+            itemName: matched.itemName || matched.name || equipmentType,
+            action: 'IN',
+            quantity: quantity,
+            date: new Date(),
+            notes: 'إعادة تلقائية بسبب حذف استلام رقم: ' + (ppeData.receiptNumber || ppeData.id || ''),
+            createdBy: 'النظام',
+            source: 'auto-receipt-delete'
+        };
+
+        var txResult = addPPETransaction(transactionData);
+        if (txResult && txResult.success) {
+            Logger.log('✅ applyPPEReceiptStockRefund_: إعادة ' + quantity + ' إلى "' +
+                (matched.itemName || matched.name) + '"');
+            return { success: true };
+        }
+        return { success: false, message: (txResult && txResult.message) || 'فشل تسجيل الإعادة' };
+    } catch (error) {
+        Logger.log('❌ applyPPEReceiptStockRefund_ error: ' + error.toString());
+        return { success: false, message: error.toString() };
     }
 }
 
