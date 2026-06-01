@@ -63,9 +63,9 @@ const UserVersionsAdmin = {
                         </div>
                     </div>
 
-                    <!-- كروت الإحصائيات -->
-                    <div id="uva-stats-container" class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
-                        <div class="text-center text-slate-400 col-span-4 py-6">
+                    <!-- كروت الإحصائيات (6 كروت) -->
+                    <div id="uva-stats-container" class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3 mb-5">
+                        <div class="text-center text-slate-400 col-span-full py-6">
                             <i class="fas fa-spinner fa-spin text-2xl"></i>
                             <p class="mt-2 text-sm">جاري التحميل...</p>
                         </div>
@@ -126,14 +126,22 @@ const UserVersionsAdmin = {
     _renderStats() {
         const container = document.getElementById('uva-stats-container');
         if (!container) return;
-        const stats = this._stats || { totalUsers: 0, latestUsers: 0, outdatedUsers: 0, activeLast24h: 0, activeLast7d: 0 };
+        const stats = this._stats || {};
+        const totalUsers = stats.totalUsers || 0;
+        const latestUsers = stats.latestUsers || 0;
+        const outdatedUsers = stats.outdatedUsers || 0;
+        const notReportedUsers = stats.notReportedUsers || 0;
+        const activeLast24h = stats.activeLast24h || 0;
+        const activeLast7d = stats.activeLast7d || 0;
 
+        // ✅ 6 كروت: إجمالي + 3 حالات (محدّث/قديم/لم يُسجَّل) + 2 نشاط
         const cards = [
-            { label: 'إجمالي المستخدمين', value: stats.totalUsers, icon: 'fa-users', color: '#0F766E', bg: '#f0fdfa', border: '#99f6e4' },
-            { label: 'على الإصدار الأحدث', value: stats.latestUsers, icon: 'fa-circle-check', color: '#047857', bg: '#ecfdf5', border: '#a7f3d0' },
-            { label: 'على إصدار قديم', value: stats.outdatedUsers, icon: 'fa-triangle-exclamation', color: '#b91c1c', bg: '#fef2f2', border: '#fecaca' },
-            { label: 'نشط آخر 24 ساعة', value: stats.activeLast24h, icon: 'fa-bolt', color: '#7c3aed', bg: '#f5f3ff', border: '#ddd6fe' },
-            { label: 'نشط آخر 7 أيام', value: stats.activeLast7d, icon: 'fa-calendar-week', color: '#1E3A8A', bg: '#eef2ff', border: '#c7d2fe' },
+            { label: 'إجمالي المستخدمين', value: totalUsers,        icon: 'fa-users',                color: '#0F766E', bg: '#f0fdfa', border: '#99f6e4' },
+            { label: 'على الإصدار الأحدث', value: latestUsers,      icon: 'fa-circle-check',         color: '#047857', bg: '#ecfdf5', border: '#a7f3d0' },
+            { label: 'على إصدار قديم',     value: outdatedUsers,    icon: 'fa-triangle-exclamation', color: '#b91c1c', bg: '#fef2f2', border: '#fecaca' },
+            { label: 'لم يُسجَّل بعد',       value: notReportedUsers, icon: 'fa-user-clock',           color: '#b45309', bg: '#fffbeb', border: '#fde68a' },
+            { label: 'نشط آخر 24 ساعة',   value: activeLast24h,    icon: 'fa-bolt',                 color: '#7c3aed', bg: '#f5f3ff', border: '#ddd6fe' },
+            { label: 'نشط آخر 7 أيام',    value: activeLast7d,     icon: 'fa-calendar-week',        color: '#1E3A8A', bg: '#eef2ff', border: '#c7d2fe' },
         ];
 
         container.innerHTML = cards.map(c => `
@@ -165,16 +173,30 @@ const UserVersionsAdmin = {
         const rows = byVersion.map(v => {
             const pct = Math.round((v.count / total) * 100);
             const isLatest = v.version === latestVersion;
-            const barColor = isLatest ? '#047857' : '#b45309';
-            const bg = isLatest ? '#ecfdf5' : '#fffbeb';
-            const badge = isLatest
-                ? '<span style="background:#047857;color:#fff;padding:2px 8px;border-radius:10px;font-size:0.65rem;font-weight:700;">الأحدث</span>'
-                : '<span style="background:#b45309;color:#fff;padding:2px 8px;border-radius:10px;font-size:0.65rem;font-weight:700;">قديم</span>';
+            const isNotReported = v.version === 'لم يُسجَّل بعد';
+
+            let barColor, bg, badge, versionLabel;
+            if (isNotReported) {
+                barColor = '#b45309';
+                bg = '#fffbeb';
+                badge = '<span style="background:#b45309;color:#fff;padding:2px 8px;border-radius:10px;font-size:0.65rem;font-weight:700;">لم يفتح التطبيق بعد</span>';
+                versionLabel = `<span style="font-weight:700;color:#1e293b;">⏳ ${Utils.escapeHTML(v.version)}</span>`;
+            } else if (isLatest) {
+                barColor = '#047857';
+                bg = '#ecfdf5';
+                badge = '<span style="background:#047857;color:#fff;padding:2px 8px;border-radius:10px;font-size:0.65rem;font-weight:700;">الأحدث</span>';
+                versionLabel = `<span style="font-family:monospace;font-weight:700;color:#1e293b;" dir="ltr">v${Utils.escapeHTML(v.version)}</span>`;
+            } else {
+                barColor = '#dc2626';
+                bg = '#fef2f2';
+                badge = '<span style="background:#b91c1c;color:#fff;padding:2px 8px;border-radius:10px;font-size:0.65rem;font-weight:700;">قديم</span>';
+                versionLabel = `<span style="font-family:monospace;font-weight:700;color:#1e293b;" dir="ltr">v${Utils.escapeHTML(v.version)}</span>`;
+            }
             return `
                 <div style="background:${bg};border:1px solid #e5e7eb;border-radius:10px;padding:10px 14px;margin-bottom:6px;">
                     <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:6px;">
                         <div style="display:flex;align-items:center;gap:8px;">
-                            <span style="font-family:monospace;font-weight:700;color:#1e293b;" dir="ltr">v${Utils.escapeHTML(v.version)}</span>
+                            ${versionLabel}
                             ${badge}
                         </div>
                         <div style="font-size:0.85rem;color:#64748b;">
@@ -233,27 +255,41 @@ const UserVersionsAdmin = {
 
         const rows = this._data.map((r, i) => {
             const rowBg = i % 2 === 0 ? '#fff' : '#fafafa';
-            const statusBadge = r.isOutdated
-                ? '<span style="background:#fef2f2;color:#b91c1c;padding:2px 8px;border-radius:10px;font-size:0.7rem;font-weight:700;">قديم</span>'
-                : '<span style="background:#ecfdf5;color:#047857;padding:2px 8px;border-radius:10px;font-size:0.7rem;font-weight:700;">محدّث</span>';
-            const platformIcon = r.isMobile ? 'fa-mobile-screen' : 'fa-desktop';
+            const hasReport = r.hasReport !== false; // default true for compatibility
+
+            // ✅ 3 حالات: محدّث / قديم / لم يُسجَّل بعد
+            let statusBadge, versionCell;
+            if (!hasReport) {
+                statusBadge = '<span style="background:#fffbeb;color:#b45309;padding:2px 8px;border-radius:10px;font-size:0.7rem;font-weight:700;">⏳ لم يُسجَّل</span>';
+                versionCell = '<span style="color:#94a3b8;font-size:0.85rem;">—</span>';
+            } else if (r.isOutdated) {
+                statusBadge = '<span style="background:#fef2f2;color:#b91c1c;padding:2px 8px;border-radius:10px;font-size:0.7rem;font-weight:700;">قديم</span>';
+                versionCell = `<span style="font-family:monospace;font-weight:700;color:#b91c1c;" dir="ltr">v${Utils.escapeHTML(r.currentVersion || '—')}</span>`;
+            } else {
+                statusBadge = '<span style="background:#ecfdf5;color:#047857;padding:2px 8px;border-radius:10px;font-size:0.7rem;font-weight:700;">محدّث</span>';
+                versionCell = `<span style="font-family:monospace;font-weight:700;color:#047857;" dir="ltr">v${Utils.escapeHTML(r.currentVersion || '—')}</span>`;
+            }
+
+            const platformIcon = r.isMobile ? 'fa-mobile-screen' : (r.platform ? 'fa-desktop' : 'fa-question-circle');
+            const platformText = r.platform || (hasReport ? '—' : 'غير معروف');
+            const lastSeenText = hasReport ? fmtDate(r.lastSeenAt) : '<span style="color:#94a3b8;">لم يفتح بعد</span>';
+            const sessionText = hasReport ? String(r.sessionCount || 0) : '<span style="color:#94a3b8;">0</span>';
+
             return `
-                <tr style="border-bottom:1px solid #f1f5f9;background:${rowBg};">
+                <tr style="border-bottom:1px solid #f1f5f9;background:${rowBg};${!hasReport ? 'opacity:0.85;' : ''}">
                     <td style="padding:10px 12px;">
                         <div style="font-weight:700;color:#1e293b;font-size:0.88rem;">${Utils.escapeHTML(r.userName || '—')}</div>
                         <div style="font-size:0.72rem;color:#94a3b8;" dir="ltr">${Utils.escapeHTML(r.userEmail || '')}</div>
                     </td>
                     <td style="padding:10px 12px;font-size:0.82rem;color:#475569;">${Utils.escapeHTML(r.userRole || '—')}</td>
                     <td style="padding:10px 12px;font-size:0.82rem;color:#475569;">${Utils.escapeHTML(r.userDepartment || '—')}</td>
-                    <td style="padding:10px 12px;text-align:center;">
-                        <span style="font-family:monospace;font-weight:700;color:#0F766E;" dir="ltr">v${Utils.escapeHTML(r.currentVersion || '—')}</span>
-                    </td>
+                    <td style="padding:10px 12px;text-align:center;">${versionCell}</td>
                     <td style="padding:10px 12px;text-align:center;">${statusBadge}</td>
-                    <td style="padding:10px 12px;text-align:center;font-size:0.82rem;color:#475569;" dir="ltr">${fmtDate(r.lastSeenAt)}</td>
-                    <td style="padding:10px 12px;text-align:center;font-size:0.82rem;color:#475569;" dir="ltr">${Utils.escapeHTML(String(r.sessionCount || 0))}</td>
+                    <td style="padding:10px 12px;text-align:center;font-size:0.82rem;color:#475569;" dir="ltr">${lastSeenText}</td>
+                    <td style="padding:10px 12px;text-align:center;font-size:0.82rem;color:#475569;" dir="ltr">${sessionText}</td>
                     <td style="padding:10px 12px;text-align:center;color:#64748b;font-size:0.78rem;">
                         <i class="fas ${platformIcon}" title="${Utils.escapeHTML(r.platform || '')}"></i>
-                        <span style="margin-inline-start:4px;">${Utils.escapeHTML(r.platform || '—')}</span>
+                        <span style="margin-inline-start:4px;">${Utils.escapeHTML(platformText)}</span>
                     </td>
                 </tr>
             `;
@@ -297,24 +333,28 @@ const UserVersionsAdmin = {
         }
 
         const headers = ['الاسم', 'الإيميل', 'الدور', 'القسم', 'الإصدار الحالي', 'الإصدار الأول', 'الإصدار السابق', 'الحالة', 'آخر مشاهدة', 'أول مشاهدة', 'عدد الجلسات', 'عدد التقارير', 'المنصة', 'جوال؟', 'الحجم', 'اللغة'];
-        const rows = this._data.map(r => [
-            r.userName || '',
-            r.userEmail || '',
-            r.userRole || '',
-            r.userDepartment || '',
-            r.currentVersion || '',
-            r.firstSeenVersion || '',
-            r.previousVersion || '',
-            r.isOutdated ? 'قديم' : 'محدّث',
-            r.lastSeenAt || '',
-            r.firstSeenAt || '',
-            r.sessionCount || 0,
-            r.reportCount || 0,
-            r.platform || '',
-            r.isMobile ? 'نعم' : 'لا',
-            r.screenSize || '',
-            r.language || ''
-        ]);
+        const rows = this._data.map(r => {
+            const hasReport = r.hasReport !== false;
+            const status = !hasReport ? 'لم يُسجَّل' : (r.isOutdated ? 'قديم' : 'محدّث');
+            return [
+                r.userName || '',
+                r.userEmail || '',
+                r.userRole || '',
+                r.userDepartment || '',
+                r.currentVersion || '',
+                r.firstSeenVersion || '',
+                r.previousVersion || '',
+                status,
+                r.lastSeenAt || '',
+                r.firstSeenAt || '',
+                r.sessionCount || 0,
+                r.reportCount || 0,
+                r.platform || '',
+                r.isMobile ? 'نعم' : 'لا',
+                r.screenSize || '',
+                r.language || ''
+            ];
+        });
 
         const csv = '﻿' + // BOM للعربية
             [headers, ...rows].map(row => row.map(cell => {

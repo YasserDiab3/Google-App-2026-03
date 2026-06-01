@@ -161,21 +161,49 @@ function reportUserVersion(payload) {
 }
 
 /**
+ * يقرأ كل المستخدمين النشطين من ورقة Users (المصدر الموثَّق لعدد المستخدمين الكلي).
+ * يُستخدم لمعرفة من سجَّل/لم يُسجِّل إصداره بعد.
+ * @private
+ */
+function _readActiveUsers_(spreadsheetId) {
+    try {
+        var users = readFromSheet('Users', spreadsheetId);
+        if (!Array.isArray(users)) return [];
+        return users.filter(function (u) {
+            if (!u) return false;
+            // اعتبر المستخدم نشطاً إن لم يكن active === false صراحةً
+            var active = u.active;
+            if (active === false || active === 'false' || active === 0 || active === '0') return false;
+            return !!(u.id || u.email);
+        });
+    } catch (e) {
+        Logger.log('_readActiveUsers_: فشل قراءة Users: ' + e.toString());
+        return [];
+    }
+}
+
+/**
  * يُرجع جميع سجلات إصدارات المستخدمين (لعرض المدير).
  * يضيف حقل isOutdated محسوب ديناميكياً بمقارنة currentVersion بـ latestVersion المُمرَّر.
+ * ✅ يدمج أيضاً المستخدمين المسجَّلين في Users لكن لم يُبلِّغوا عن إصدارهم بعد
+ *    (يظهرون بحالة "لم يُسجَّل بعد").
  *
  * @param {Object} [payload]
  * @param {string} [payload.latestVersion] - الإصدار الأحدث للمقارنة (يُحدَّد منه isOutdated)
- * @returns {{ success: boolean, data: Array, total: number, latestVersion: string }}
+ * @returns {{ success: boolean, data: Array, total: number, reported: number, notReported: number, latestVersion: string }}
  */
 function getAllUserVersions(payload) {
     try {
         var latestVersion = String((payload && payload.latestVersion) || '').trim();
         var spreadsheetId = getSpreadsheetId();
-        var rows = readFromSheet(USER_VERSIONS_SHEET, spreadsheetId);
-        if (!Array.isArray(rows)) rows = [];
 
-        // إضافة isOutdated لكل صف
+        var rows = [];
+        try {
+            rows = readFromSheet(USER_VERSIONS_SHEET, spreadsheetId);
+            if (!Array.isArray(rows)) rows = [];
+        } catch (e) { rows = []; }
+
+        // إضافة isOutdated لكل صف من UserVersions
         var enriched = rows.map(function (r) {
             if (!r) return null;
             var cur = String(r.currentVersion || '').trim();
@@ -183,21 +211,76 @@ function getAllUserVersions(payload) {
             if (latestVersion && cur && cur !== latestVersion) {
                 isOutdated = compareSemver_(cur, latestVersion) < 0;
             }
-            return Object.assign({}, r, { isOutdated: isOutdated });
+            return Object.assign({}, r, { isOutdated: isOutdated, hasReport: true });
         }).filter(function (r) { return r !== null; });
 
-        // ترتيب: الإصدارات القديمة أولاً، ثم آخر مشاهدة (الأحدث أولاً)
+        // ✅ دمج المستخدمين الذين لم يُبلِّغوا بعد (موجودون في Users فقط)
+        var activeUsers = _readActiveUsers_(spreadsheetId);
+        var reportedIds = {};
+        var reportedEmails = {};
+        enriched.forEach(function (r) {
+            var rid = String(r.userId || '').trim();
+            var rem = String(r.userEmail || '').trim().toLowerCase();
+            if (rid) reportedIds[rid] = true;
+            if (rem) reportedEmails[rem] = true;
+        });
+
+        activeUsers.forEach(function (u) {
+            var uid = String(u.id || '').trim();
+            var em = String(u.email || '').trim().toLowerCase();
+            // لو هذا المستخدم بلَّغ بالفعل → تخطّي
+            if (uid && reportedIds[uid]) return;
+            if (em && reportedEmails[em]) return;
+
+            // مستخدم بدون تقرير — أضفه كصف "لم يُسجَّل بعد"
+            enriched.push({
+                id: uid || em,
+                userId: uid,
+                userEmail: em,
+                userName: String(u.name || '').trim(),
+                userRole: String(u.role || '').trim(),
+                userDepartment: String(u.department || '').trim(),
+                currentVersion: '',
+                firstSeenVersion: '',
+                previousVersion: '',
+                lastSeenAt: '',
+                firstSeenAt: '',
+                sessionCount: 0,
+                reportCount: 0,
+                userAgent: '',
+                platform: '',
+                isMobile: false,
+                screenSize: '',
+                language: '',
+                updatedAt: '',
+                isOutdated: false,
+                hasReport: false
+            });
+        });
+
+        // ترتيب:
+        // 1) لم يُسجَّل بعد (أعلى أولوية للظهور — تحتاج متابعة)
+        // 2) قديم
+        // 3) محدّث، الأحدث نشاطاً أولاً
         enriched.sort(function (a, b) {
+            // not-reported أولاً
+            if (a.hasReport !== b.hasReport) return a.hasReport ? 1 : -1;
+            // ثم القديم قبل المحدّث
             if (a.isOutdated !== b.isOutdated) return a.isOutdated ? -1 : 1;
+            // ثم آخر مشاهدة (الأحدث أولاً)
             var da = a.lastSeenAt ? new Date(a.lastSeenAt).getTime() : 0;
             var db = b.lastSeenAt ? new Date(b.lastSeenAt).getTime() : 0;
             return db - da;
         });
 
+        var reportedCount = enriched.filter(function (r) { return r.hasReport; }).length;
+
         return {
             success: true,
             data: enriched,
             total: enriched.length,
+            reported: reportedCount,
+            notReported: enriched.length - reportedCount,
             latestVersion: latestVersion
         };
     } catch (error) {
@@ -208,16 +291,40 @@ function getAllUserVersions(payload) {
 
 /**
  * إحصائيات سريعة عن توزيع المستخدمين على الإصدارات (لكروت لوحة المدير).
+ * ✅ يجمع البيانات من ورقتين:
+ *   - Users (للعدد الإجمالي الموثَّق للمستخدمين النشطين)
+ *   - UserVersions (لتفاصيل الإصدارات لمن فتحوا التطبيق)
+ *
  * @param {Object} [payload]
  * @param {string} [payload.latestVersion]
- * @returns {{ success, totalUsers, latestUsers, outdatedUsers, activeLast24h, activeLast7d, byVersion, latestVersion }}
+ * @returns {{
+ *   success: boolean,
+ *   totalUsers: number,          // إجمالي المستخدمين النشطين في Users
+ *   reportedUsers: number,       // عدد من بلَّغوا عن إصدارهم
+ *   notReportedUsers: number,    // عدد من لم يفتحوا التطبيق بعد
+ *   latestUsers: number,         // على الإصدار الأحدث
+ *   outdatedUsers: number,       // على إصدار قديم
+ *   activeLast24h: number,
+ *   activeLast7d: number,
+ *   byVersion: Array,
+ *   latestVersion: string
+ * }}
  */
 function getUserVersionStats(payload) {
     try {
         var latestVersion = String((payload && payload.latestVersion) || '').trim();
         var spreadsheetId = getSpreadsheetId();
-        var rows = readFromSheet(USER_VERSIONS_SHEET, spreadsheetId);
-        if (!Array.isArray(rows)) rows = [];
+
+        // 1) اقرأ UserVersions (قد لا تكون موجودة بعد إذا لم يُبلِّغ أحد)
+        var rows = [];
+        try {
+            rows = readFromSheet(USER_VERSIONS_SHEET, spreadsheetId);
+            if (!Array.isArray(rows)) rows = [];
+        } catch (e) { rows = []; }
+
+        // 2) اقرأ Users (المصدر الموثَّق للعدد الإجمالي)
+        var activeUsers = _readActiveUsers_(spreadsheetId);
+        var totalUsers = activeUsers.length;
 
         var byVersion = {};
         var latestUsers = 0;
@@ -229,12 +336,13 @@ function getUserVersionStats(payload) {
 
         rows.forEach(function (r) {
             if (!r) return;
-            var cur = String(r.currentVersion || 'غير محدد').trim() || 'غير محدد';
+            var cur = String(r.currentVersion || '').trim();
+            if (!cur) return; // تخطّي الصفوف بدون إصدار صريح
             byVersion[cur] = (byVersion[cur] || 0) + 1;
 
             if (latestVersion && cur === latestVersion) {
                 latestUsers++;
-            } else if (latestVersion && cur) {
+            } else if (latestVersion) {
                 outdatedUsers++;
             }
 
@@ -249,17 +357,46 @@ function getUserVersionStats(payload) {
             }
         });
 
-        // ترتيب الإصدارات تنازلياً
+        // ✅ احسب من لم يُبلِّغ بعد (موجود في Users لكن ليس في UserVersions)
+        var reportedIds = {};
+        var reportedEmails = {};
+        rows.forEach(function (r) {
+            if (!r) return;
+            var rid = String(r.userId || '').trim();
+            var rem = String(r.userEmail || '').trim().toLowerCase();
+            if (rid) reportedIds[rid] = true;
+            if (rem) reportedEmails[rem] = true;
+        });
+        var reportedCount = 0;
+        activeUsers.forEach(function (u) {
+            var uid = String(u.id || '').trim();
+            var em = String(u.email || '').trim().toLowerCase();
+            if ((uid && reportedIds[uid]) || (em && reportedEmails[em])) {
+                reportedCount++;
+            }
+        });
+        var notReportedUsers = Math.max(0, totalUsers - reportedCount);
+
+        // ✅ أضف "لم يُسجَّل بعد" للتوزيع لو كان فيه
+        if (notReportedUsers > 0) {
+            byVersion['لم يُسجَّل بعد'] = notReportedUsers;
+        }
+
+        // ترتيب الإصدارات: الـ "لم يُسجَّل" في النهاية، ثم semver تنازلياً
         var byVersionArray = Object.keys(byVersion).map(function (v) {
             return { version: v, count: byVersion[v] };
         }).sort(function (a, b) {
-            // الإصدار الأحدث في الأعلى (semver comparison)
+            var aNotReported = a.version === 'لم يُسجَّل بعد';
+            var bNotReported = b.version === 'لم يُسجَّل بعد';
+            if (aNotReported !== bNotReported) return aNotReported ? 1 : -1;
             return compareSemver_(b.version, a.version);
         });
 
         return {
             success: true,
-            totalUsers: rows.length,
+            totalUsers: totalUsers,
+            reportedUsers: reportedCount,
+            notReportedUsers: notReportedUsers,
             latestUsers: latestUsers,
             outdatedUsers: outdatedUsers,
             activeLast24h: activeLast24h,
