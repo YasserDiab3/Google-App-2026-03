@@ -3929,29 +3929,38 @@ SafetyPerformanceKPIs.render = async function () {
                     </div>
                 </div>
 
-                <!-- ━━━ Workforce KPIs Section (Executive) ━━━ -->
-                <div class="mt-7 relative overflow-hidden rounded-[26px]" style="border: 1px solid rgba(20,34,61,0.16); box-shadow: 0 20px 50px -15px rgba(10,22,40,0.14);">
-                    <!-- Background gradient + decoration -->
-                    <div class="absolute inset-0 pointer-events-none" style="background: linear-gradient(135deg, #FAFBFC 0%, #FFFFFF 50%, #FEFCF3 100%);"></div>
-                    <div class="absolute inset-x-0 top-0 h-1" style="background: linear-gradient(90deg, #14223D, #D4A017, #14223D);"></div>
-                    <div class="absolute -top-12 end-1/4 h-40 w-40 rounded-full pointer-events-none" style="background: radial-gradient(circle, rgba(212,160,23,0.12) 0%, transparent 65%);"></div>
+                <!-- ━━━ Workforce KPIs Section (Executive — same hero pattern) ━━━ -->
+                <div class="mt-7 relative overflow-hidden rounded-[24px]" style="border: 1px solid rgba(20,34,61,0.16); box-shadow: 0 28px 56px -20px rgba(10,22,40,0.22), 0 8px 20px -8px rgba(10,22,40,0.06);">
+                    <!-- Header: Navy banner (matches the main hero) -->
+                    <div class="relative overflow-hidden" style="background: linear-gradient(135deg, #0A1628 0%, #14223D 40%, #1E3A5F 75%, #2A4A7B 100%);">
+                        <!-- Gold dot pattern overlay -->
+                        <div class="absolute inset-0 opacity-[0.10] pointer-events-none" style="background-image: radial-gradient(circle at 1px 1px, #D4A017 1px, transparent 0); background-size: 24px 24px;"></div>
+                        <!-- Glow accents -->
+                        <div class="absolute -top-16 -end-16 h-48 w-48 rounded-full pointer-events-none" style="background: radial-gradient(circle, rgba(212,160,23,0.22) 0%, transparent 65%);"></div>
+                        <div class="absolute -bottom-20 -start-16 h-56 w-56 rounded-full pointer-events-none" style="background: radial-gradient(circle, rgba(75,124,176,0.18) 0%, transparent 70%);"></div>
+                        <!-- Gold top accent line -->
+                        <div class="absolute inset-x-0 top-0 h-[3px]" style="background: linear-gradient(90deg, transparent, #D4A017 30%, #F4C447 50%, #D4A017 70%, transparent);"></div>
 
-                    <div class="relative p-5 lg:p-6">
-                        <div class="flex items-start justify-between gap-4 flex-wrap mb-5">
-                            <div class="min-w-0 flex-1">
-                                <div class="inline-flex items-center gap-2 rounded-full px-3.5 py-1.5 text-[11px] font-black uppercase tracking-[0.22em] border" style="background: linear-gradient(135deg, rgba(212,160,23,0.12), rgba(20,34,61,0.04)); border-color: rgba(20,34,61,0.25); color: #14223D;">
-                                    <i class="fas fa-people-group" style="color: #B4870C;"></i>
-                                    ${t('module.kpi.overview.workforce.eyebrow','القوى العاملة')}
+                        <div class="relative p-5 lg:p-6">
+                            <div class="flex items-start justify-between gap-4 flex-wrap">
+                                <div class="min-w-0 flex-1">
+                                    <div class="inline-flex items-center gap-2 rounded-full px-3.5 py-1.5 text-[10px] font-black uppercase tracking-[0.28em] border" style="background: rgba(212,160,23,0.14); border-color: rgba(212,160,23,0.42); color: #F4C447; backdrop-filter: blur(8px);">
+                                        <i class="fas fa-people-group"></i>
+                                        ${t('module.kpi.overview.workforce.eyebrow','القوى العاملة')}
+                                    </div>
+                                    <h3 class="mt-3 text-xl xl:text-2xl font-black leading-tight tracking-tight" style="color: #FFFFFF; text-shadow: 0 2px 4px rgba(0,0,0,0.18);">${t('module.kpi.overview.workforce.title','مؤشرات الموظفين وساعات العمل')}</h3>
+                                    <p class="mt-1.5 text-xs leading-relaxed max-w-2xl" style="color: rgba(255,255,255,0.78);">${t('module.kpi.overview.workforce.intro','تُستخدم هذه القيم كأساس لحساب TRIR و LTIFR — تشمل الموظفين الدائمين والعمالة المؤقتة معاً.')}</p>
                                 </div>
-                                <h3 class="mt-3 text-xl xl:text-2xl font-black text-slate-900 leading-tight">${t('module.kpi.overview.workforce.title','مؤشرات الموظفين وساعات العمل')}</h3>
-                                <p class="mt-1.5 text-xs text-slate-600 leading-relaxed max-w-2xl">${t('module.kpi.overview.workforce.intro','تُستخدم هذه القيم كأساس لحساب TRIR و LTIFR — تشمل الموظفين الدائمين والعمالة المؤقتة معاً.')}</p>
-                            </div>
-                            <div class="inline-flex items-center gap-2 rounded-2xl px-3.5 py-2 text-[11px] font-bold border bg-white/95 backdrop-blur" style="border-color: rgba(212,160,23,0.32); color: #14223D; box-shadow: 0 6px 18px rgba(10,22,40,0.06);" dir="ltr">
-                                <i class="fas fa-calculator" style="color: #B4870C;"></i>
-                                <span>${t('module.kpi.overview.workforce.formula','count × أشهر × 8 × 22')}</span>
+                                <div class="inline-flex items-center gap-2 rounded-2xl px-3.5 py-2 text-[11px] font-bold" style="background: rgba(255,255,255,0.10); border: 1px solid rgba(212,160,23,0.42); color: #F4C447; backdrop-filter: blur(10px); box-shadow: 0 6px 18px rgba(0,0,0,0.20);" dir="ltr">
+                                    <i class="fas fa-calculator"></i>
+                                    <span>${t('module.kpi.overview.workforce.formula','count × أشهر × 8 × 22')}</span>
+                                </div>
                             </div>
                         </div>
+                    </div>
 
+                    <!-- Body: clean light background -->
+                    <div class="relative p-5 lg:p-6" style="background: linear-gradient(180deg, #FAFBFC 0%, #FFFFFF 100%);">
                         <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
                             ${this.renderWorkforceStatCard(
                                 'overview-permanent-employees',
@@ -4052,59 +4061,76 @@ SafetyPerformanceKPIs.render = async function () {
         </div><!-- /spk-hero-card -->
 
         <!-- ╔══════════════════════════════════════════════════════════════╗ -->
-        <!-- ║ 🎨 Leading + Lagging Indicators — Enterprise redesign         ║ -->
+        <!-- ║ 🎨 Leading + Lagging Indicators — Executive redesign          ║ -->
+        <!-- ║ Dark prestige headers + light bodies + gold accents          ║ -->
         <!-- ╚══════════════════════════════════════════════════════════════╝ -->
         <div id="leading-kpis-section" class="mt-7 grid grid-cols-1 xl:grid-cols-[1.15fr_0.85fr] gap-6">
-            <!-- ━━━ Leading Indicators (Emerald + Teal accent) ━━━ -->
-            <div class="relative overflow-hidden rounded-[26px]" style="border: 1px solid rgba(16,185,129,0.20); box-shadow: 0 22px 50px -18px rgba(16,185,129,0.22), 0 8px 20px -8px rgba(15,23,42,0.06);">
-                <div class="absolute inset-0 pointer-events-none" style="background: linear-gradient(135deg, #ecfdf5 0%, #ffffff 55%, #f0fdfa 100%);"></div>
-                <div class="absolute inset-x-0 top-0 h-1" style="background: linear-gradient(90deg, #047857, #10b981, #0F766E);"></div>
-                <div class="absolute -top-16 -end-16 h-48 w-48 rounded-full pointer-events-none" style="background: radial-gradient(circle, rgba(16,185,129,0.16) 0%, transparent 65%);"></div>
+            <!-- ━━━ Leading Indicators (Deep Emerald executive) ━━━ -->
+            <div class="relative overflow-hidden rounded-[24px]" style="border: 1px solid rgba(6,78,59,0.16); box-shadow: 0 28px 56px -20px rgba(6,78,59,0.28), 0 8px 20px -8px rgba(10,22,40,0.06);">
+                <!-- Header: Deep Emerald banner -->
+                <div class="relative overflow-hidden" style="background: linear-gradient(135deg, #022C22 0%, #064E3B 40%, #065F46 75%, #047857 100%);">
+                    <!-- Gold dot pattern overlay -->
+                    <div class="absolute inset-0 opacity-[0.08] pointer-events-none" style="background-image: radial-gradient(circle at 1px 1px, #D4A017 1px, transparent 0); background-size: 24px 24px;"></div>
+                    <!-- Glow accents -->
+                    <div class="absolute -top-16 -end-16 h-48 w-48 rounded-full pointer-events-none" style="background: radial-gradient(circle, rgba(212,160,23,0.20) 0%, transparent 65%);"></div>
+                    <div class="absolute -bottom-20 -start-16 h-56 w-56 rounded-full pointer-events-none" style="background: radial-gradient(circle, rgba(16,185,129,0.18) 0%, transparent 65%);"></div>
+                    <!-- Gold top accent line -->
+                    <div class="absolute inset-x-0 top-0 h-[3px]" style="background: linear-gradient(90deg, transparent, #D4A017 30%, #F4C447 50%, #D4A017 70%, transparent);"></div>
 
-                <div class="relative p-5 lg:p-6 border-b" style="border-color: rgba(16,185,129,0.18);">
-                    <div class="flex items-start justify-between gap-4 flex-wrap">
-                        <div class="min-w-0 flex-1">
-                            <div class="inline-flex items-center gap-2 rounded-full px-3.5 py-1.5 text-[11px] font-black uppercase tracking-[0.22em] border" style="background: linear-gradient(135deg, rgba(16,185,129,0.12), rgba(16,185,129,0.04)); border-color: rgba(16,185,129,0.28); color: #047857;">
-                                <i class="fas fa-arrow-trend-up"></i>
-                                ${t('module.kpi.leading.badge','استباقي')}
+                    <div class="relative p-5 lg:p-6">
+                        <div class="flex items-start justify-between gap-4 flex-wrap">
+                            <div class="min-w-0 flex-1">
+                                <div class="inline-flex items-center gap-2 rounded-full px-3.5 py-1.5 text-[10px] font-black uppercase tracking-[0.28em] border" style="background: rgba(212,160,23,0.14); border-color: rgba(212,160,23,0.42); color: #F4C447; backdrop-filter: blur(8px);">
+                                    <i class="fas fa-arrow-trend-up"></i>
+                                    ${t('module.kpi.leading.badge','استباقي')}
+                                </div>
+                                <h2 class="mt-3 text-xl xl:text-2xl font-black leading-tight tracking-tight" style="color: #FFFFFF; text-shadow: 0 2px 4px rgba(0,0,0,0.18);">${t('module.kpi.leading.title','المؤشرات الاستباقية')}</h2>
+                                <p class="mt-1.5 text-xs leading-relaxed max-w-xl" style="color: rgba(255,255,255,0.78);">${t('module.kpi.leading.subtitle','مؤشرات تقيس أداء الوقاية والتحكم قبل وقوع الحوادث')}</p>
                             </div>
-                            <h2 class="mt-3 text-xl xl:text-2xl font-black leading-tight" style="background: linear-gradient(135deg, #064E3B 0%, #047857 60%, #0F766E 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">${t('module.kpi.leading.title','المؤشرات الاستباقية')}</h2>
-                            <p class="mt-1.5 text-xs text-emerald-800/85 leading-relaxed max-w-xl">${t('module.kpi.leading.subtitle','مؤشرات تقيس أداء الوقاية والتحكم قبل وقوع الحوادث')}</p>
-                        </div>
-                        <div class="h-12 w-12 rounded-2xl flex items-center justify-center shrink-0 text-white" style="background: linear-gradient(135deg, #047857, #0F766E); box-shadow: 0 10px 24px rgba(16,185,129,0.32);">
-                            <i class="fas fa-shield-virus text-lg"></i>
+                            <div class="h-12 w-12 rounded-2xl flex items-center justify-center shrink-0" style="background: rgba(255,255,255,0.10); border: 1px solid rgba(212,160,23,0.40); color: #F4C447; backdrop-filter: blur(10px); box-shadow: 0 10px 24px rgba(0,0,0,0.28);">
+                                <i class="fas fa-shield-virus text-lg"></i>
+                            </div>
                         </div>
                     </div>
                 </div>
-                <div class="relative p-5 lg:p-6">
+                <!-- Body: clean white -->
+                <div class="relative p-5 lg:p-6" style="background: linear-gradient(180deg, #FAFEFB 0%, #FFFFFF 100%);">
                     <div id="leading-indicators-container" class="grid grid-cols-1 md:grid-cols-2 2xl:grid-cols-3 gap-4">
                         ${this.renderLeadingIndicators()}
                     </div>
                 </div>
             </div>
 
-            <!-- ━━━ Lagging Indicators (Rose + Navy accent) ━━━ -->
-            <div id="lagging-kpis-section" class="relative overflow-hidden rounded-[26px]" style="border: 1px solid rgba(244,63,94,0.20); box-shadow: 0 22px 50px -18px rgba(244,63,94,0.22), 0 8px 20px -8px rgba(15,23,42,0.06);">
-                <div class="absolute inset-0 pointer-events-none" style="background: linear-gradient(135deg, #fff1f2 0%, #ffffff 55%, #fef2f2 100%);"></div>
-                <div class="absolute inset-x-0 top-0 h-1" style="background: linear-gradient(90deg, #9F1239, #E11D48, #BE123C);"></div>
-                <div class="absolute -top-16 -end-16 h-48 w-48 rounded-full pointer-events-none" style="background: radial-gradient(circle, rgba(244,63,94,0.16) 0%, transparent 65%);"></div>
+            <!-- ━━━ Lagging Indicators (Deep Crimson executive) ━━━ -->
+            <div id="lagging-kpis-section" class="relative overflow-hidden rounded-[24px]" style="border: 1px solid rgba(76,5,25,0.16); box-shadow: 0 28px 56px -20px rgba(76,5,25,0.28), 0 8px 20px -8px rgba(10,22,40,0.06);">
+                <!-- Header: Deep Crimson banner -->
+                <div class="relative overflow-hidden" style="background: linear-gradient(135deg, #2C0410 0%, #4C0519 40%, #6B0F1F 75%, #881337 100%);">
+                    <!-- Gold dot pattern overlay -->
+                    <div class="absolute inset-0 opacity-[0.08] pointer-events-none" style="background-image: radial-gradient(circle at 1px 1px, #D4A017 1px, transparent 0); background-size: 24px 24px;"></div>
+                    <!-- Glow accents -->
+                    <div class="absolute -top-16 -end-16 h-48 w-48 rounded-full pointer-events-none" style="background: radial-gradient(circle, rgba(212,160,23,0.18) 0%, transparent 65%);"></div>
+                    <div class="absolute -bottom-20 -start-16 h-56 w-56 rounded-full pointer-events-none" style="background: radial-gradient(circle, rgba(190,18,60,0.22) 0%, transparent 65%);"></div>
+                    <!-- Gold top accent line -->
+                    <div class="absolute inset-x-0 top-0 h-[3px]" style="background: linear-gradient(90deg, transparent, #D4A017 30%, #F4C447 50%, #D4A017 70%, transparent);"></div>
 
-                <div class="relative p-5 lg:p-6 border-b" style="border-color: rgba(244,63,94,0.18);">
-                    <div class="flex items-start justify-between gap-4 flex-wrap">
-                        <div class="min-w-0 flex-1">
-                            <div class="inline-flex items-center gap-2 rounded-full px-3.5 py-1.5 text-[11px] font-black uppercase tracking-[0.22em] border" style="background: linear-gradient(135deg, rgba(244,63,94,0.12), rgba(244,63,94,0.04)); border-color: rgba(244,63,94,0.28); color: #BE123C;">
-                                <i class="fas fa-arrow-trend-down"></i>
-                                ${t('module.kpi.lagging.badge','تراجعي')}
+                    <div class="relative p-5 lg:p-6">
+                        <div class="flex items-start justify-between gap-4 flex-wrap">
+                            <div class="min-w-0 flex-1">
+                                <div class="inline-flex items-center gap-2 rounded-full px-3.5 py-1.5 text-[10px] font-black uppercase tracking-[0.28em] border" style="background: rgba(212,160,23,0.14); border-color: rgba(212,160,23,0.42); color: #F4C447; backdrop-filter: blur(8px);">
+                                    <i class="fas fa-arrow-trend-down"></i>
+                                    ${t('module.kpi.lagging.badge','تراجعي')}
+                                </div>
+                                <h2 class="mt-3 text-xl xl:text-2xl font-black leading-tight tracking-tight" style="color: #FFFFFF; text-shadow: 0 2px 4px rgba(0,0,0,0.20);">${t('module.kpi.lagging.title','المؤشرات التراجعية')}</h2>
+                                <p class="mt-1.5 text-xs leading-relaxed max-w-xl" style="color: rgba(255,255,255,0.78);">${t('module.kpi.lagging.subtitle','مؤشرات تقيس النتائج الفعلية لما حدث')}</p>
                             </div>
-                            <h2 class="mt-3 text-xl xl:text-2xl font-black leading-tight" style="background: linear-gradient(135deg, #4C0519 0%, #BE123C 60%, #1E3A8A 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">${t('module.kpi.lagging.title','المؤشرات التراجعية')}</h2>
-                            <p class="mt-1.5 text-xs text-rose-800/85 leading-relaxed max-w-xl">${t('module.kpi.lagging.subtitle','مؤشرات تقيس النتائج الفعلية لما حدث')}</p>
-                        </div>
-                        <div class="h-12 w-12 rounded-2xl flex items-center justify-center shrink-0 text-white" style="background: linear-gradient(135deg, #BE123C, #9F1239); box-shadow: 0 10px 24px rgba(244,63,94,0.32);">
-                            <i class="fas fa-triangle-exclamation text-lg"></i>
+                            <div class="h-12 w-12 rounded-2xl flex items-center justify-center shrink-0" style="background: rgba(255,255,255,0.10); border: 1px solid rgba(212,160,23,0.40); color: #F4C447; backdrop-filter: blur(10px); box-shadow: 0 10px 24px rgba(0,0,0,0.28);">
+                                <i class="fas fa-triangle-exclamation text-lg"></i>
+                            </div>
                         </div>
                     </div>
                 </div>
-                <div class="relative p-5 lg:p-6">
+                <!-- Body: clean white -->
+                <div class="relative p-5 lg:p-6" style="background: linear-gradient(180deg, #FEFAFB 0%, #FFFFFF 100%);">
                     <div id="lagging-indicators-container" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-1 2xl:grid-cols-2 gap-4">
                         ${this.renderLaggingIndicators()}
                     </div>
