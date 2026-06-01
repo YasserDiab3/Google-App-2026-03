@@ -2383,8 +2383,23 @@ window.UI = {
         try {
             const raw = AppState?.companySettings?.postLoginItems;
             let items = Array.isArray(raw) ? raw : (typeof raw === 'string' && raw.trim() ? (() => { try { const p = JSON.parse(raw); return Array.isArray(p) ? p : []; } catch (e) { return []; } })() : []);
-            return items.filter(i => i && i.active !== false).sort((a, b) => (a.order ?? 999) - (b.order ?? 999));
-        } catch (e) { return []; }
+            // ✅ تطبيع دفاعي: تخطي العناصر null/غير الكائنات، وغير النشطة، والفارغة كلياً (لا title ولا body)
+            return items
+                .filter(i => {
+                    if (!i || typeof i !== 'object') return false;
+                    if (i.active === false) return false;
+                    const t = String(i.title || '').trim();
+                    const b = String(i.body || '').trim();
+                    if (!t && !b) return false; // سياسة فارغة تماماً — تخطّى
+                    return true;
+                })
+                .sort((a, b) => (Number(a.order) || 999) - (Number(b.order) || 999));
+        } catch (e) {
+            if (typeof Utils !== 'undefined' && Utils.safeWarn) {
+                Utils.safeWarn('⚠️ _getPostLoginItemsForDisplay error:', e);
+            }
+            return [];
+        }
     },
 
     /** مدة صلاحية "شاهد السياسة" بالأيام — بعدها نعرض السياسة مرة أخرى (كل 10 أيام) */
@@ -2490,10 +2505,17 @@ window.UI = {
                 if (typeof onComplete === 'function') onComplete();
                 return;
             }
+            // ✅ حماية دفاعية: لو وصلنا لعنصر تالف، نتخطّاه بدلاً من رمي خطأ يكسر العرض
             const item = items[index];
+            if (!item || typeof item !== 'object') {
+                if (AppState.debugMode && typeof Utils !== 'undefined' && Utils.safeWarn) {
+                    Utils.safeWarn('⚠️ تخطي عنصر سياسة تالف عند الفهرس ' + index);
+                }
+                return showItem(index + 1);
+            }
             const duration = Math.min(120, Math.max(0, parseInt(item.durationSeconds, 10) || 10));
-            const rawTitle = (item.title || '').trim() || 'تعليمات';
-            const rawBody = (item.body || '').trim();
+            const rawTitle = String(item.title || '').trim() || 'تعليمات';
+            const rawBody = String(item.body || '').trim() || 'مرحباً بك. يرجى الاطلاع على سياسات الشركة.';
             const safeTitle = (typeof Utils !== 'undefined' && Utils.escapeHTML) ? Utils.escapeHTML(rawTitle) : rawTitle;
             const safeBody = (typeof Utils !== 'undefined' && Utils.escapeHTML) ? Utils.escapeHTML(rawBody).replace(/\n/g, '<br>') : rawBody.replace(/\n/g, '<br>');
 
@@ -2609,7 +2631,24 @@ window.UI = {
         };
 
         // عرض السياسة فوراً بعد تسجيل الدخول (بدون تأخير)
-        showItem(0);
+        // ✅ حماية دفاعية شاملة: لو أي خطأ غير متوقع في الـ rendering، نتأكد من إكمال الـ onComplete
+        try {
+            showItem(0);
+        } catch (renderErr) {
+            if (typeof Utils !== 'undefined' && Utils.safeWarn) {
+                Utils.safeWarn('⚠️ خطأ في عرض شاشة السياسة:', renderErr);
+            }
+            // إزالة أي overlay عالق وإكمال التطبيق
+            try {
+                const stuck = document.getElementById('hse-post-login-overlay');
+                if (stuck && stuck.parentNode) stuck.remove();
+                document.documentElement.classList.remove('hse-post-login-overlay-active');
+                document.body.classList.remove('hse-post-login-overlay-active');
+            } catch (e) { /* ignore */ }
+            if (typeof onComplete === 'function') {
+                try { onComplete(); } catch (e) { /* ignore */ }
+            }
+        }
     },
 
     /**
