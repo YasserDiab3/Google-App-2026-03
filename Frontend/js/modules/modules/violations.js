@@ -3443,6 +3443,18 @@ const Violations = {
                     </button>
                 </div>
                 <div class="modal-body">
+                    <!-- ✅ شريط تنبيه داخل النموذج (يظهر أعلى الحقول) -->
+                    <div id="violation-form-banner" class="hidden mb-4 rounded-lg border p-3 flex items-start gap-2.5" role="alert" style="font-size: 0.9rem;">
+                        <i id="violation-form-banner-icon" class="fas fa-circle-info text-lg mt-0.5"></i>
+                        <div class="flex-1 min-w-0">
+                            <div id="violation-form-banner-title" class="font-bold mb-0.5"></div>
+                            <div id="violation-form-banner-text" class="leading-relaxed"></div>
+                        </div>
+                        <button type="button" id="violation-form-banner-close" class="text-gray-400 hover:text-gray-700 ms-2" title="إخفاء">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+
                     <form id="violation-form" class="space-y-4">
                         <!-- الصف الأول: نوع المخالفة والكود الوظيفي -->
                         <div class="grid grid-cols-2 gap-4">
@@ -4060,6 +4072,44 @@ const Violations = {
             return;
         }
 
+        // ✅ Helper: التحكم بشريط التنبيه أعلى النموذج (يبقي النموذج مفتوحاً)
+        const showFormBanner = (type, title, text) => {
+            const banner = modal.querySelector('#violation-form-banner');
+            const icon   = modal.querySelector('#violation-form-banner-icon');
+            const titleEl= modal.querySelector('#violation-form-banner-title');
+            const textEl = modal.querySelector('#violation-form-banner-text');
+            if (!banner || !icon || !titleEl || !textEl) return;
+
+            // ألوان حسب النوع
+            const themes = {
+                error:   { bg:'#fef2f2', border:'#fecaca', text:'#991b1b', icon:'fa-circle-xmark text-red-600' },
+                warning: { bg:'#fffbeb', border:'#fde68a', text:'#92400e', icon:'fa-triangle-exclamation text-amber-600' },
+                success: { bg:'#ecfdf5', border:'#a7f3d0', text:'#065f46', icon:'fa-circle-check text-emerald-600' },
+                info:    { bg:'#eff6ff', border:'#bfdbfe', text:'#1e40af', icon:'fa-circle-info text-blue-600' }
+            };
+            const theme = themes[type] || themes.info;
+            banner.style.background  = theme.bg;
+            banner.style.borderColor = theme.border;
+            banner.style.color       = theme.text;
+            icon.className = 'fas ' + theme.icon + ' text-lg mt-0.5';
+            titleEl.textContent = title || '';
+            textEl.textContent  = text  || '';
+            banner.classList.remove('hidden');
+            // التمرير لأعلى داخل المودال حتى يرى المستخدم التنبيه
+            try {
+                const modalBody = modal.querySelector('.modal-body');
+                if (modalBody) modalBody.scrollTo({ top: 0, behavior: 'smooth' });
+            } catch (e) { /* ignore */ }
+        };
+        const hideFormBanner = () => {
+            const banner = modal.querySelector('#violation-form-banner');
+            if (banner) banner.classList.add('hidden');
+        };
+
+        // ربط زر إغلاق التنبيه
+        const bannerCloseBtn = modal.querySelector('#violation-form-banner-close');
+        if (bannerCloseBtn) bannerCloseBtn.addEventListener('click', hideFormBanner);
+
         // ========== كود جديد بسيط ونظيف ==========
 
         // معالج النقر على زر التسجيل
@@ -4157,8 +4207,12 @@ const Violations = {
 
                 // إذا كانت هناك حقول ناقصة
                 if (missing.length > 0) {
-                    const message = `يرجى استكمال البيانات الإلزامية التالية قبل التسجيل:\n\n${missing.map(f => '• ' + f).join('\n')}`;
-                    Notification.error(message, { duration: 6000 });
+                    // ✅ تنبيه أعلى النموذج (وليس toast سفلي) — يبقى مرئياً حتى يُكمل المستخدم
+                    showFormBanner(
+                        'error',
+                        'بيانات إلزامية ناقصة',
+                        'يرجى استكمال: ' + missing.join('، ')
+                    );
                     btn.disabled = false;
                     btn.innerHTML = originalText;
 
@@ -4196,7 +4250,7 @@ const Violations = {
                 if (photoInput?.files.length > 0) {
                     const file = photoInput.files[0];
                     if (file.size > 2 * 1024 * 1024) {
-                        Notification.error('حجم الصورة كبير جداً. الحد الأقصى 2MB');
+                        showFormBanner('error', 'الصورة كبيرة جداً', 'الحد الأقصى للحجم 2MB. اختر صورة أصغر.');
                         btn.disabled = false;
                         btn.innerHTML = originalText;
                         return;
@@ -4207,6 +4261,9 @@ const Violations = {
                         if (AppState.debugMode) Utils.safeWarn('خطأ في تحويل الصورة:', err);
                     }
                 }
+
+                // ✅ مسح أي تنبيه سابق قبل المتابعة
+                hideFormBanner();
 
                 // إنشاء كائن البيانات
                 const violationTypeOption = violationTypeSelect?.selectedOptions?.[0];
@@ -4269,8 +4326,42 @@ const Violations = {
                 try {
                     const approvalGate = await this.checkViolationApprovalGate(formData, { isEdit });
                     if (approvalGate && approvalGate.requiresApproval) {
+                        // 🛡️ حماية حرجة: مسار الاعتماد يخزّن violationData كـ JSON.stringify في خلية واحدة
+                        // (Google Sheets يحدّ الخلية بـ 50000 حرف). صورة base64 بحجم 2MB ≈ 2.7M حرف!
+                        // نرفع الصورة لـ Drive أولاً ثم نضع الرابط فقط في الـ payload.
+                        let approvalPhoto = photo;
+                        if (approvalPhoto && typeof approvalPhoto === 'string' && approvalPhoto.startsWith('data:')) {
+                            try {
+                                btn.innerHTML = '<i class="fas fa-cloud-upload-alt fa-spin ml-2"></i> جاري رفع الصورة...';
+                                const uploadRes = await GoogleIntegration.uploadFileToDrive?.(
+                                    approvalPhoto,
+                                    `violation_${formData.id}_${Date.now()}.jpg`,
+                                    'image/jpeg',
+                                    'Violations'
+                                );
+                                if (uploadRes && uploadRes.success) {
+                                    approvalPhoto = uploadRes.directLink || uploadRes.shareableLink || '';
+                                } else {
+                                    // 🚨 لا نُمرر base64 للخلية أبداً — نُسقط الصورة مع تنبيه واضح
+                                    approvalPhoto = '';
+                                    showFormBanner(
+                                        'warning',
+                                        'تعذّر رفع الصورة',
+                                        'سيتم إرسال طلب الاعتماد بدون الصورة. تحقق من اتصال الإنترنت أو حاول مرة أخرى لاحقاً.'
+                                    );
+                                }
+                                btn.innerHTML = originalText;
+                                btn.disabled = true;
+                                btn.innerHTML = '<i class="fas fa-spinner fa-spin ml-2"></i> جاري الحفظ...';
+                            } catch (upErr) {
+                                if (AppState.debugMode) Utils.safeWarn('Drive upload failed in approval path:', upErr);
+                                approvalPhoto = ''; // حماية: لا نُمرر base64 أبداً
+                            }
+                        }
+                        const safeFormData = { ...formData, photo: approvalPhoto };
+
                         // إرسال طلب الاعتماد للـ backend وعدم الحفظ المحلي
-                        const approvalResult = await this.submitViolationForApproval(formData, { isEdit, originalId: violationData?.id });
+                        const approvalResult = await this.submitViolationForApproval(safeFormData, { isEdit, originalId: violationData?.id });
                         // استعادة الزر
                         btn.disabled = false;
                         btn.innerHTML = originalText;
@@ -4283,7 +4374,9 @@ const Violations = {
                             } catch (e) { /* ignore */ }
                             return; // ⚠️ نخرج هنا — لا نكمل مسار الحفظ المباشر
                         } else {
-                            Notification.error((approvalResult && approvalResult.message) || 'فشل إرسال طلب الاعتماد. حاول مرة أخرى.');
+                            // ✅ تنبيه أعلى النموذج (يبقي النموذج مفتوحاً ليُعيد المستخدم المحاولة)
+                            const msg = (approvalResult && approvalResult.message) || 'فشل إرسال طلب الاعتماد. حاول مرة أخرى.';
+                            showFormBanner('error', 'تعذّر إرسال طلب الاعتماد', msg);
                             return;
                         }
                     }
@@ -4441,7 +4534,8 @@ const Violations = {
 
             } catch (error) {
                 Utils.safeError('❌ خطأ في حفظ المخالفة:', error);
-                Notification.error('حدث خطأ أثناء حفظ المخالفة: ' + (error.message || error.toString()));
+                // ✅ تنبيه أعلى النموذج بدلاً من toast سفلي
+                showFormBanner('error', 'حدث خطأ', (error && (error.message || error.toString())) || 'فشل حفظ المخالفة');
                 btn.disabled = false;
                 btn.innerHTML = originalText;
             }
