@@ -4768,6 +4768,35 @@ const PPE = {
                 return this.state.stockItemsCache;
             }
 
+            // ✅ Inflight deduplication — يمنع تشغيل طلبات متوازية متعددة لنفس العملية
+            // (المشكلة: preloadData + renderStockControlTab كانا يستدعيان loadStockItems
+            //  بالتوازي → استدعاءان للخادم → ضغط على الحد المسموح + فتح Circuit Breaker.)
+            if (this._stockLoadInflightPromise) {
+                Utils.safeLog('⏳ طلب تحميل المخزون قيد التنفيذ — مشاركة الـ Promise');
+                return this._stockLoadInflightPromise;
+            }
+
+            // غلاف الـ Promise مع تنظيف تلقائي عند الإكتمال (success أو failure)
+            this._stockLoadInflightPromise = (async () => {
+                try {
+                    return await this._loadStockItemsInternal(forceRefresh);
+                } finally {
+                    this._stockLoadInflightPromise = null;
+                }
+            })();
+            return this._stockLoadInflightPromise;
+        } catch (error) {
+            this._stockLoadInflightPromise = null;
+            Utils.safeError('❌ خطأ في loadStockItems wrapper:', error);
+            return [];
+        }
+    },
+
+    /**
+     * المنطق الأصلي لتحميل المخزون (مُغلَّف بـ inflight dedup في loadStockItems).
+     */
+    async _loadStockItemsInternal(forceRefresh = false) {
+        try {
             const RPC_MS = 30000;
             const RETRY_PAUSE_MS = 700;
 
