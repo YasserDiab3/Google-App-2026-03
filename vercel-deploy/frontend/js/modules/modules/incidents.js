@@ -360,14 +360,51 @@ const Incidents = {
                 }
             }
             // ✅ تنظيف أي تكرارات قديمة عند التحميل (بنفس id أو نفس incidentId)
+            // يضمن أن أي تكرارات تراكمت سابقاً في IncidentsRegistry تُزال وتُمزامن نظيفة
             const removed = this._dedupeRegistryData();
             if (removed > 0 && AppState.appData) {
                 AppState.appData.incidentsRegistry = this.registryData;
+                // ✅ التنظيف المحلي وحده لا يكفي — الورقة (السيرفر) لا تزال بها صفوف orphan
+                // (saveToSheet يعمل UPSERT بـ id فقط ولا يحذف الصفوف غير المطابقة).
+                // نُرسل طلب تنظيف للسيرفر مرة واحدة في الجلسة لتنظيف الصفوف المكررة الفعلية.
+                this._triggerRegistryServerCleanupOnce();
             }
         } catch (error) {
             Utils.safeError('❌ خطأ في تحميل بيانات سجل الحوادث:', error);
             this.registryData = [];
         }
+    },
+
+    /**
+     * يُشغّل تنظيف الصفوف المكررة في IncidentsRegistry على السيرفر مرة واحدة في الجلسة.
+     * - idempotent: آمن للاستدعاء المتكرر
+     * - silent: لا يُعطّل واجهة المستخدم ولا يُظهر إشعارات في حالة الفشل
+     * - one-shot per session: لا يُعيد المحاولة لو نجح
+     */
+    _triggerRegistryServerCleanupOnce() {
+        if (this._registryServerCleanupAttempted) return;
+        this._registryServerCleanupAttempted = true;
+
+        // تشغيل غير متزامن — لا ننتظر النتيجة
+        setTimeout(() => {
+            try {
+                if (typeof GoogleIntegration === 'undefined' || !GoogleIntegration.sendToAppsScript) return;
+                GoogleIntegration.sendToAppsScript('cleanupIncidentsRegistry', {})
+                    .then((result) => {
+                        if (result && result.success && (result.removed || 0) > 0) {
+                            Utils.safeLog(`🧹 تنظيف IncidentsRegistry على السيرفر: حُذف ${result.removed} صف مكرر، أُبقي ${result.kept}`);
+                        }
+                    })
+                    .catch((err) => {
+                        Utils.safeWarn('⚠️ فشل تنظيف IncidentsRegistry على السيرفر (سيُعاد المحاولة في جلسة لاحقة):', err);
+                        // إعادة المحاولة في الجلسة التالية
+                        this._registryServerCleanupAttempted = false;
+                    });
+            } catch (e) {
+                Utils.safeWarn('⚠️ خطأ غير متوقع في تنظيف IncidentsRegistry:', e);
+                this._registryServerCleanupAttempted = false;
+            }
+        }, 1500); // تأخير 1.5 ثانية حتى لا نُحمّل السيرفر في وقت تحميل الصفحة
     },
 
     /**
@@ -382,13 +419,16 @@ const Incidents = {
         const seenId = new Set();
         const seenIncidentId = new Set();
         const result = [];
+        // نمر من النهاية للبداية لإبقاء الأحدث (آخر نسخة محدّثة)
         for (let i = this.registryData.length - 1; i >= 0; i--) {
             const r = this.registryData[i];
             if (!r || typeof r !== 'object') continue;
             const id = r.id != null ? String(r.id).trim() : '';
             const incId = (r.incidentId != null && String(r.incidentId).trim() !== '' && String(r.incidentId).trim() !== 'null')
                 ? String(r.incidentId).trim() : '';
+            // تخطّي إن تكرر الـ id
             if (id && seenId.has(id)) continue;
+            // تخطّي إن تكرر incidentId (تكرار منطقي لنفس الحادث)
             if (incId && seenIncidentId.has(incId)) continue;
             if (id) seenId.add(id);
             if (incId) seenIncidentId.add(incId);
@@ -1520,21 +1560,26 @@ const Incidents = {
         const root = document.getElementById('incident-analytics-root');
         if (!root) return;
 
+        // ── 1. جمع البيانات ──
         const allIncidents = this._getIncidentsData();
         const period = parseInt(this._incidentPeriod || '0', 10);
 
+        // ── 2. تصفية بالفترة ──
         const cutoff = period > 0 ? (() => { const d = new Date(); d.setDate(d.getDate() - period); return d; })() : null;
         const inPeriod = cutoff
             ? allIncidents.filter(r => { const d = this.getIncidentDateValue(r); return d && d >= cutoff; })
             : allIncidents.slice();
 
+        // ── 3. ملء قوائم الفلاتر ──
         this._incidentPopulateFilters(inPeriod);
 
+        // ── 4. تطبيق الفلاتر التفاعلية ──
         const filtered = this._incidentApplyFilters(inPeriod);
         const total = filtered.length;
         const countEl = document.getElementById('incident-filter-count');
         if (countEl) countEl.textContent = `${total} حادث`;
 
+        // ── 5. حساب KPIs ──
         const byStatus = (s) => filtered.filter(r => this.normalizeStatus(r?.status) === s).length;
         const bySeverity = (s) => filtered.filter(r => this.normalizeSeverity(r?.severity) === s).length;
         const openCount = byStatus('open');
@@ -1577,26 +1622,32 @@ const Incidents = {
                 </div>`).join('');
         }
 
+        // ── 6. تحميل Chart.js ──
         const loaded = await this._incidentEnsureChartJS();
         if (!loaded || typeof Chart === 'undefined') {
             root.insertAdjacentHTML('afterbegin', '<div style="background:#fffbeb;border:1px solid #fde68a;border-radius:10px;padding:14px 18px;margin-bottom:16px;display:flex;align-items:center;gap:10px;"><i class="fas fa-exclamation-triangle" style="color:#d97706;"></i><span style="font-size:0.85rem;color:#92400e;">تعذّر تحميل مكتبة الرسوم البيانية. الأرقام أعلاه متاحة.</span></div>');
             return;
         }
 
+        // ── 7. الرسوم البيانية ──
+        // الحالة (Doughnut)
         const statusLabels = { open:'مفتوحة', investigating:'قيد التحقيق', closed:'مغلقة', other:'أخرى' };
         const statusMap = {};
         filtered.forEach(r => { const k = statusLabels[this.normalizeStatus(r?.status)] || 'أخرى'; statusMap[k] = (statusMap[k]||0)+1; });
         const statusColors = { 'مفتوحة':'rgba(245,158,11,0.85)', 'قيد التحقيق':'rgba(99,102,241,0.85)', 'مغلقة':'rgba(5,150,105,0.85)', 'أخرى':'rgba(148,163,184,0.8)' };
         this._iDoughnut('incident-chart-status', Object.keys(statusMap), Object.values(statusMap), Object.keys(statusMap).map(l=>statusColors[l]||'rgba(148,163,184,0.8)'));
 
+        // الاتجاه الزمني (Trend)
         this._iTrend('incident-chart-trend', allIncidents);
 
+        // الشدة (Doughnut)
         const sevLabels = { high:'عالية', medium:'متوسطة', low:'منخفضة', other:'أخرى' };
         const sevMap = {};
         filtered.forEach(r => { const k = sevLabels[this.normalizeSeverity(r?.severity)] || 'أخرى'; sevMap[k] = (sevMap[k]||0)+1; });
         const sevColors = { 'عالية':'rgba(220,38,38,0.85)', 'متوسطة':'rgba(245,158,11,0.85)', 'منخفضة':'rgba(59,130,246,0.85)', 'أخرى':'rgba(148,163,184,0.8)' };
         this._iDoughnut('incident-chart-severity', Object.keys(sevMap), Object.values(sevMap), Object.keys(sevMap).map(l=>sevColors[l]||'rgba(148,163,184,0.8)'));
 
+        // نوع الحادث (HBar)
         const typeMap = this._iGroupBy(filtered, r => r.incidentType || r.type || 'غير محدد', 10);
         this._iHBar('incident-chart-type', typeMap.labels, typeMap.data, 'rgba(13,148,136,0.75)');
 
@@ -1604,6 +1655,7 @@ const Incidents = {
         const factoryMap = this._iGroupBy(filtered, r => r.siteName || r.factory || r.location || 'غير محدد', 8);
         this._iHBar('incident-chart-factory', factoryMap.labels, factoryMap.data, 'rgba(8,145,178,0.75)');
 
+        // الإدارة (HBar)
         const deptMap = this._iGroupBy(filtered, r => r.department || 'غير محدد', 8);
         this._iHBar('incident-chart-dept', deptMap.labels, deptMap.data, 'rgba(245,158,11,0.75)');
 
@@ -1611,8 +1663,10 @@ const Incidents = {
         const locMap = this._iGroupBy(filtered, r => r.sublocationName || r.sublocation || r.location || 'غير محدد', 10);
         this._iHBar('incident-chart-loc', locMap.labels, locMap.data, 'rgba(139,92,246,0.75)');
 
+        // المقارنة السنوية (3 سنوات)
         this._iYearly('incident-chart-yearly', allIncidents);
 
+        // ── 8. جدول أحدث الحوادث ──
         const recent = filtered.slice().sort((a, b) => {
             const da = this.getIncidentDateValue(a), db = this.getIncidentDateValue(b);
             return (db ? db.getTime() : 0) - (da ? da.getTime() : 0);
@@ -1623,13 +1677,23 @@ const Incidents = {
         if (tbody) {
             const sevBadge = (sev) => {
                 const k = this.normalizeSeverity(sev);
-                const map = { high:['عالية','#fef2f2','#b91c1c'], medium:['متوسطة','#fffbeb','#b45309'], low:['منخفضة','#eff6ff','#1d4ed8'], other:['غير محدد','#f1f5f9','#475569'] };
+                const map = {
+                    high:   ['عالية','#fef2f2','#b91c1c'],
+                    medium: ['متوسطة','#fffbeb','#b45309'],
+                    low:    ['منخفضة','#eff6ff','#1d4ed8'],
+                    other:  ['غير محدد','#f1f5f9','#475569']
+                };
                 const [t,bg,c] = map[k] || map.other;
                 return `<span style="background:${bg};color:${c};padding:2px 9px;border-radius:12px;font-size:0.72rem;font-weight:700;">${t}</span>`;
             };
             const statusBadge = (st) => {
                 const k = this.normalizeStatus(st);
-                const map = { open:['مفتوحة','#fffbeb','#b45309'], investigating:['قيد التحقيق','#eef2ff','#4338ca'], closed:['مغلقة','#ecfdf5','#047857'], other:['أخرى','#f1f5f9','#475569'] };
+                const map = {
+                    open:          ['مفتوحة','#fffbeb','#b45309'],
+                    investigating: ['قيد التحقيق','#eef2ff','#4338ca'],
+                    closed:        ['مغلقة','#ecfdf5','#047857'],
+                    other:         ['أخرى','#f1f5f9','#475569']
+                };
                 const [t,bg,c] = map[k] || map.other;
                 return `<span style="background:${bg};color:${c};padding:2px 9px;border-radius:12px;font-size:0.72rem;font-weight:700;">${t}</span>`;
             };
@@ -1654,6 +1718,7 @@ const Incidents = {
         }
     },
 
+    /** ملء قوائم الفلاتر */
     _incidentPopulateFilters(incidents) {
         const unique = fn => [...new Set(incidents.map(fn).filter(Boolean))].sort();
         const fill = (id, values) => {
@@ -1661,6 +1726,7 @@ const Incidents = {
             const cur = el.value;
             el.innerHTML = '<option value="">الكل</option>' + values.map(v => `<option value="${Utils.escapeHTML(String(v))}"${v===cur?' selected':''}>${Utils.escapeHTML(String(v))}</option>`).join('');
         };
+        // الحالة + الشدة ثابتة (canonical)
         const statusEl = document.getElementById('incident-af-status');
         if (statusEl) { const cur=statusEl.value; statusEl.innerHTML = `<option value="">الكل</option><option value="open"${cur==='open'?' selected':''}>مفتوحة</option><option value="investigating"${cur==='investigating'?' selected':''}>قيد التحقيق</option><option value="closed"${cur==='closed'?' selected':''}>مغلقة</option>`; }
         const sevEl = document.getElementById('incident-af-severity');
@@ -1671,6 +1737,7 @@ const Incidents = {
         fill('incident-af-loc',     unique(r => String(r.sublocationName || r.sublocation || r.location || '').trim()));
     },
 
+    /** تطبيق الفلاتر التفاعلية */
     _incidentApplyFilters(incidents) {
         const get = id => { const el = document.getElementById(id); return el ? el.value.trim() : ''; };
         const fStatus  = get('incident-af-status');
@@ -1693,6 +1760,7 @@ const Incidents = {
         });
     },
 
+    /** مساعد: تجميع حسب دالة */
     _iGroupBy(arr, fn, limit = 0) {
         const map = {};
         arr.forEach(item => { const k = fn(item) || 'غير محدد'; map[k] = (map[k] || 0) + 1; });
@@ -1701,6 +1769,7 @@ const Incidents = {
         return { labels: entries.map(e => e[0]), data: entries.map(e => e[1]) };
     },
 
+    /** مساعد: Doughnut */
     _iDoughnut(canvasId, labels, data, colors) {
         const canvas = document.getElementById(canvasId), emptyEl = document.getElementById(canvasId + '-empty');
         if (!canvas) return;
@@ -1718,6 +1787,7 @@ const Incidents = {
         });
     },
 
+    /** مساعد: HBar */
     _iHBar(canvasId, labels, data, color) {
         const canvas = document.getElementById(canvasId), emptyEl = document.getElementById(canvasId + '-empty');
         if (!canvas) return;
@@ -1735,6 +1805,7 @@ const Incidents = {
         });
     },
 
+    /** مساعد: الاتجاه الزمني (12 شهر) */
     _iTrend(canvasId, arr) {
         const canvas = document.getElementById(canvasId), emptyEl = document.getElementById(canvasId + '-empty');
         if (!canvas) return;
@@ -1759,11 +1830,12 @@ const Incidents = {
         });
     },
 
+    /** مساعد: مقارنة سنوية (3 سنوات — إجمالي + مغلقة) */
     _iYearly(canvasId, arr) {
         const canvas = document.getElementById(canvasId), emptyEl = document.getElementById(canvasId + '-empty');
         if (!canvas) return;
         const cfg = this.getThreeYearConfig();
-        const years = cfg.years.slice().sort((a, b) => a - b);
+        const years = cfg.years.slice().sort((a, b) => a - b); // تصاعدي
         const totalByYear = years.map(y => arr.filter(r => { const d = this.getIncidentDateValue(r); return d && d.getFullYear() === y; }).length);
         const closedByYear = years.map(y => arr.filter(r => { const d = this.getIncidentDateValue(r); return d && d.getFullYear() === y && this.normalizeStatus(r?.status) === 'closed'; }).length);
         if (totalByYear.reduce((a, b) => a + b, 0) === 0) { canvas.style.display = 'none'; if (emptyEl) emptyEl.style.display = 'flex'; return; }
@@ -1781,9 +1853,12 @@ const Incidents = {
         });
     },
 
+    /** ربط أحداث لوحة التحليلات */
     _incidentBindAnalyticsEvents() {
         const root = document.getElementById('incident-analytics-root');
         if (!root) return;
+
+        // أزرار الفترة
         root.querySelectorAll('.incident-period-btn').forEach(btn => {
             btn.addEventListener('click', () => {
                 this._incidentPeriod = btn.getAttribute('data-period');
@@ -1795,10 +1870,16 @@ const Incidents = {
                 this.updateIncidentAnalyticsDashboard();
             });
         });
+
+        // زر تحديث
         const refreshBtn = document.getElementById('incident-analytics-refresh');
         if (refreshBtn) refreshBtn.addEventListener('click', () => this.updateIncidentAnalyticsDashboard());
+
+        // زر PDF
         const pdfBtn = document.getElementById('incident-export-pdf-btn');
         if (pdfBtn) pdfBtn.addEventListener('click', () => this._incidentExportPDF());
+
+        // زر تبديل الفلاتر
         const toggleBtn = document.getElementById('incident-toggle-filters-btn');
         const filterPanel = document.getElementById('incident-filter-panel');
         if (toggleBtn && filterPanel) {
@@ -1808,6 +1889,8 @@ const Incidents = {
                 toggleBtn.style.background = isOpen ? 'rgba(255,255,255,0.12)' : 'rgba(255,255,255,0.35)';
             });
         }
+
+        // زر إعادة التعيين
         const resetBtn = document.getElementById('incident-filter-reset-btn');
         if (resetBtn) {
             resetBtn.addEventListener('click', () => {
@@ -1817,12 +1900,15 @@ const Incidents = {
                 this.updateIncidentAnalyticsDashboard();
             });
         }
+
+        // قوائم الفلاتر
         ['incident-af-status','incident-af-severity','incident-af-type','incident-af-dept','incident-af-factory','incident-af-loc'].forEach(id => {
             const el = document.getElementById(id);
             if (el) el.addEventListener('change', () => this.updateIncidentAnalyticsDashboard());
         });
     },
 
+    /** تصدير PDF للوحة التحليلات */
     /**
      * بناء هيدر التقرير الموحّد بنفس هيدر النظام (شعار + اسم الشركة + عنوان)
      * يُدرَج داخل لقطة html2canvas ليظهر الاسم العربي والشعار بشكل صحيح (jsPDF لا يدعم العربية)
@@ -1865,6 +1951,7 @@ const Incidents = {
         const headerEl = this._incidentBuildReportHeaderEl('تقرير تحليل الحوادث', 'Incidents Analysis Report');
         root.insertBefore(headerEl, root.firstChild);
 
+        // انتظار تحميل الشعار (إن وُجد) قبل اللقطة لضمان ظهوره
         const headerImg = headerEl.querySelector('img');
         if (headerImg && !headerImg.complete) {
             await new Promise(res => { headerImg.onload = res; headerImg.onerror = res; setTimeout(res, 2500); });
@@ -1883,6 +1970,7 @@ const Incidents = {
             if (fv) fp.style.display = '';
             const { jsPDF } = window.jspdf, pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
             const pW = pdf.internal.pageSize.getWidth(), pH = pdf.internal.pageSize.getHeight(), mg = 10;
+            // ✅ الهيدر الآن جزء من الصورة الملتقطة → نترك مساحة علوية صغيرة فقط + تذييل لرقم الصفحة
             const footerH = 8;
             const cW = pW - mg * 2, ratio = cW / cvs.width, pgH = pH - mg - footerH, pgPx = pgH / ratio;
             const total = Math.ceil(cvs.height / pgPx);
@@ -1892,6 +1980,7 @@ const Incidents = {
                 sc.width = cvs.width; sc.height = sH;
                 sc.getContext('2d').drawImage(cvs, 0, p * pgPx, cvs.width, sH, 0, 0, cvs.width, sH);
                 pdf.addImage(sc.toDataURL('image/jpeg', 0.92), 'JPEG', mg, mg, cW, sH * ratio);
+                // ✅ تذييل: خط فاصل + رقم الصفحة والتاريخ (أرقام لاتينية — jsPDF لا يدعم العربية)
                 pdf.setDrawColor(220, 38, 38); pdf.setLineWidth(0.4);
                 pdf.line(mg, pH - footerH + 1, pW - mg, pH - footerH + 1);
                 pdf.setTextColor(120, 120, 120); pdf.setFontSize(8);
@@ -1904,6 +1993,7 @@ const Incidents = {
             Utils.safeError('Incident PDF error:', err);
             if (typeof Notification !== 'undefined' && Notification.error) Notification.error('تعذّر تصدير PDF');
         } finally {
+            // ✅ إزالة الهيدر المؤقت دائماً
             if (headerEl && headerEl.parentNode) headerEl.parentNode.removeChild(headerEl);
             if (btn) { btn.disabled = false; btn.innerHTML = orig; }
         }

@@ -364,11 +364,47 @@ const Incidents = {
             const removed = this._dedupeRegistryData();
             if (removed > 0 && AppState.appData) {
                 AppState.appData.incidentsRegistry = this.registryData;
+                // ✅ التنظيف المحلي وحده لا يكفي — الورقة (السيرفر) لا تزال بها صفوف orphan
+                // (saveToSheet يعمل UPSERT بـ id فقط ولا يحذف الصفوف غير المطابقة).
+                // نُرسل طلب تنظيف للسيرفر مرة واحدة في الجلسة لتنظيف الصفوف المكررة الفعلية.
+                this._triggerRegistryServerCleanupOnce();
             }
         } catch (error) {
             Utils.safeError('❌ خطأ في تحميل بيانات سجل الحوادث:', error);
             this.registryData = [];
         }
+    },
+
+    /**
+     * يُشغّل تنظيف الصفوف المكررة في IncidentsRegistry على السيرفر مرة واحدة في الجلسة.
+     * - idempotent: آمن للاستدعاء المتكرر
+     * - silent: لا يُعطّل واجهة المستخدم ولا يُظهر إشعارات في حالة الفشل
+     * - one-shot per session: لا يُعيد المحاولة لو نجح
+     */
+    _triggerRegistryServerCleanupOnce() {
+        if (this._registryServerCleanupAttempted) return;
+        this._registryServerCleanupAttempted = true;
+
+        // تشغيل غير متزامن — لا ننتظر النتيجة
+        setTimeout(() => {
+            try {
+                if (typeof GoogleIntegration === 'undefined' || !GoogleIntegration.sendToAppsScript) return;
+                GoogleIntegration.sendToAppsScript('cleanupIncidentsRegistry', {})
+                    .then((result) => {
+                        if (result && result.success && (result.removed || 0) > 0) {
+                            Utils.safeLog(`🧹 تنظيف IncidentsRegistry على السيرفر: حُذف ${result.removed} صف مكرر، أُبقي ${result.kept}`);
+                        }
+                    })
+                    .catch((err) => {
+                        Utils.safeWarn('⚠️ فشل تنظيف IncidentsRegistry على السيرفر (سيُعاد المحاولة في جلسة لاحقة):', err);
+                        // إعادة المحاولة في الجلسة التالية
+                        this._registryServerCleanupAttempted = false;
+                    });
+            } catch (e) {
+                Utils.safeWarn('⚠️ خطأ غير متوقع في تنظيف IncidentsRegistry:', e);
+                this._registryServerCleanupAttempted = false;
+            }
+        }, 1500); // تأخير 1.5 ثانية حتى لا نُحمّل السيرفر في وقت تحميل الصفحة
     },
 
     /**

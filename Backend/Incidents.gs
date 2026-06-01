@@ -335,6 +335,137 @@ function deleteIncident(incidentId, userData = {}) {
 }
 
 /**
+ * ✅ تنظيف الصفوف المكررة من IncidentsRegistry
+ *
+ * يحلّ مشكلة تراكم تكرارات في الورقة بسبب:
+ *  1. saveToSheet كان يُوحّد فقط على عمود `id` ولا يتعامل مع `incidentId`
+ *  2. UPSERT لم يكن يحذف "orphan rows" (الصفوف المتبقّية بعد تنظيف الواجهة المحلية)
+ *  3. سباق بين تبويبات / نقرات مكررة يُنتج صفوف بنفس incidentId وأعمدة id مختلفة
+ *
+ * المنطق:
+ *  - يقرأ كل صفوف IncidentsRegistry من الورقة
+ *  - يجمعها حسب (incidentId) — إذا كان فارغاً يجمعها حسب (id)
+ *  - لكل مجموعة من 2+ صف: يُبقي الصف الأحدث (أكبر updatedAt أو أعلى رقم صف)
+ *  - يحذف باقي الصفوف بترتيب عكسي (من الأكبر إلى الأصغر) حتى لا تتزحزح أرقام الصفوف
+ *
+ * @param {string} [spreadsheetId] - اختياري؛ الافتراضي getSpreadsheetId()
+ * @returns {{ success: boolean, removed: number, kept: number, message: string }}
+ */
+function cleanupIncidentsRegistryDuplicates(spreadsheetId) {
+    try {
+        const sheetName = 'IncidentsRegistry';
+        const finalSpreadsheetId = spreadsheetId || getSpreadsheetId();
+        if (!finalSpreadsheetId) {
+            return { success: false, removed: 0, kept: 0, message: 'معرف Google Sheets غير محدد' };
+        }
+
+        const ss = SpreadsheetApp.openById(finalSpreadsheetId);
+        const sheet = ss.getSheetByName(sheetName);
+        if (!sheet) {
+            return { success: true, removed: 0, kept: 0, message: 'الورقة غير موجودة (لا يوجد ما يُنظَّف)' };
+        }
+
+        const lastRow = sheet.getLastRow();
+        const lastCol = sheet.getLastColumn();
+        if (lastRow <= 1 || lastCol <= 0) {
+            return { success: true, removed: 0, kept: 0, message: 'الورقة فارغة' };
+        }
+
+        const headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0]
+            .map(function (h) { return h === null || h === undefined ? '' : String(h).trim(); });
+        const idCol = headers.indexOf('id');
+        const incidentIdCol = headers.indexOf('incidentId');
+        const updatedAtCol = headers.indexOf('updatedAt');
+        if (idCol < 0 && incidentIdCol < 0) {
+            return { success: false, removed: 0, kept: 0, message: 'لا يوجد عمود id ولا incidentId في الورقة' };
+        }
+
+        const data = sheet.getRange(2, 1, lastRow - 1, lastCol).getValues();
+
+        // groupKey -> [{rowIndex (1-based incl. header), updatedAt}]
+        const groups = {};
+        for (let i = 0; i < data.length; i++) {
+            const row = data[i];
+            const rowNumber = i + 2; // 1-based incl. header
+            const idVal = idCol >= 0 ? String(row[idCol] || '').trim() : '';
+            const incidentIdVal = incidentIdCol >= 0 ? String(row[incidentIdCol] || '').trim() : '';
+            const updatedAtRaw = updatedAtCol >= 0 ? row[updatedAtCol] : '';
+            const updatedAtNum = (function () {
+                if (!updatedAtRaw) return 0;
+                try {
+                    const d = updatedAtRaw instanceof Date ? updatedAtRaw : new Date(updatedAtRaw);
+                    return isNaN(d.getTime()) ? 0 : d.getTime();
+                } catch (e) { return 0; }
+            })();
+
+            // مفتاح أولوي: incidentId غير الفارغ (يحلّ التكرار المنطقي)
+            // ثم id (يحلّ تكرار صفوف نفس السجل)
+            // ثم رقم الصف (لا تجميع — يبقى وحيداً)
+            let key;
+            if (incidentIdVal) {
+                key = 'INC::' + incidentIdVal;
+            } else if (idVal) {
+                key = 'ID::' + idVal;
+            } else {
+                key = 'ROW::' + rowNumber; // لن يُجمَّع
+            }
+
+            if (!groups[key]) groups[key] = [];
+            groups[key].push({ row: rowNumber, updatedAt: updatedAtNum });
+        }
+
+        // اختيار الصفوف للحذف (كل ما عدا الأحدث في كل مجموعة)
+        const rowsToDelete = [];
+        let groupsWithDups = 0;
+        Object.keys(groups).forEach(function (key) {
+            const list = groups[key];
+            if (list.length < 2) return;
+            groupsWithDups++;
+            // ترتيب حسب updatedAt تنازلياً، وفي حال التساوي حسب رقم الصف تنازلياً
+            list.sort(function (a, b) {
+                if (b.updatedAt !== a.updatedAt) return b.updatedAt - a.updatedAt;
+                return b.row - a.row;
+            });
+            // أول عنصر = الأحدث = يبقى. الباقي للحذف.
+            for (let k = 1; k < list.length; k++) {
+                rowsToDelete.push(list[k].row);
+            }
+        });
+
+        if (rowsToDelete.length === 0) {
+            return { success: true, removed: 0, kept: data.length, message: 'لا توجد تكرارات' };
+        }
+
+        // الحذف بترتيب عكسي حتى لا تتزحزح أرقام الصفوف
+        rowsToDelete.sort(function (a, b) { return b - a; });
+        rowsToDelete.forEach(function (r) {
+            try { sheet.deleteRow(r); } catch (e) {
+                Logger.log('cleanupIncidentsRegistryDuplicates: فشل حذف الصف ' + r + ': ' + e.toString());
+            }
+        });
+
+        SpreadsheetApp.flush();
+
+        // إبطال الكاش حتى تُقرأ البيانات النظيفة في الطلبات اللاحقة
+        try { invalidateHseSheetCaches(sheetName); } catch (e) {}
+
+        const removed = rowsToDelete.length;
+        const kept = data.length - removed;
+        Logger.log('✅ cleanupIncidentsRegistryDuplicates: حذف ' + removed + ' صف مكرر، أبقى ' + kept + ' صف، ' + groupsWithDups + ' مجموعة بها تكرار');
+        return {
+            success: true,
+            removed: removed,
+            kept: kept,
+            groupsWithDups: groupsWithDups,
+            message: 'تم تنظيف ' + removed + ' صف مكرر من IncidentsRegistry'
+        };
+    } catch (error) {
+        Logger.log('Error in cleanupIncidentsRegistryDuplicates: ' + error.toString());
+        return { success: false, removed: 0, kept: 0, message: 'حدث خطأ: ' + error.toString() };
+    }
+}
+
+/**
  * إضافة إخطار حادث جديد
  */
 function addIncidentNotificationToSheet(notificationData) {

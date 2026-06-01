@@ -465,6 +465,20 @@ var ActionHandlers = {
         })();
         return result;
     },
+    // ✅ تنظيف الصفوف المكررة في IncidentsRegistry
+    // يُستدعى تلقائياً من الواجهة عند اكتشاف تكرارات محلية،
+    // ويمكن استدعاؤه يدوياً للصيانة. آمن للاستدعاء المتكرر (idempotent).
+    'cleanupIncidentsRegistry': function(payload, postData, action, actorUserData, spreadsheetId) {
+        var result = { success: false, removed: 0, kept: 0, message: '' };
+        (function() {
+            try {
+                result = cleanupIncidentsRegistryDuplicates(spreadsheetId);
+            } catch (e) {
+                result = { success: false, removed: 0, kept: 0, message: 'فشل تنظيف التكرارات: ' + (e && e.toString ? e.toString() : e) };
+            }
+        })();
+        return result;
+    },
     'updateIncident': function(payload, postData, action, actorUserData, spreadsheetId) {
         var result = { success: false, message: '' };
         (function() {
@@ -969,6 +983,30 @@ var ActionHandlers = {
         (function() {
 
                     result = addContractorTrainingToSheet(payload);
+                    return;
+
+        })();
+        return result;
+    },
+    'updateContractorTraining': function(payload, postData, action, actorUserData, spreadsheetId) {
+        var result = { success: false, message: '' };
+        (function() {
+
+                    // ✅ يدعم استدعاء الواجهة: { trainingId, updateData } أو الكائن المباشر
+                    var trainingId = (payload && (payload.trainingId || payload.id)) || '';
+                    var updateData = (payload && payload.updateData) ? payload.updateData : payload;
+                    result = updateContractorTraining(trainingId, updateData);
+                    return;
+
+        })();
+        return result;
+    },
+    'deleteContractorTraining': function(payload, postData, action, actorUserData, spreadsheetId) {
+        var result = { success: false, message: '' };
+        (function() {
+
+                    var trainingId = (payload && (payload.trainingId || payload.id)) || '';
+                    result = deleteContractorTraining(trainingId);
                     return;
 
         })();
@@ -1707,6 +1745,37 @@ var ActionHandlers = {
                     return;
 
         })();
+        return result;
+    },
+    // ───────── دائرة اعتماد المخالفات ─────────
+    'addViolationApprovalRequest': function(payload, postData, action, actorUserData, spreadsheetId) {
+        var result = { success: false, message: '' };
+        (function() { result = addViolationApprovalRequest(payload); })();
+        return result;
+    },
+    'getAllViolationApprovalRequests': function(payload, postData, action, actorUserData, spreadsheetId) {
+        var result = { success: false, message: '' };
+        (function() { result = getAllViolationApprovalRequests(payload); })();
+        return result;
+    },
+    'approveViolationApprovalRequest': function(payload, postData, action, actorUserData, spreadsheetId) {
+        var result = { success: false, message: '' };
+        (function() { result = approveViolationApprovalRequest(payload); })();
+        return result;
+    },
+    'rejectViolationApprovalRequest': function(payload, postData, action, actorUserData, spreadsheetId) {
+        var result = { success: false, message: '' };
+        (function() { result = rejectViolationApprovalRequest(payload); })();
+        return result;
+    },
+    'getViolationApprovalSettings': function(payload, postData, action, actorUserData, spreadsheetId) {
+        var result = { success: false, message: '' };
+        (function() { result = getViolationApprovalSettings(payload); })();
+        return result;
+    },
+    'updateViolationApprovalSettings': function(payload, postData, action, actorUserData, spreadsheetId) {
+        var result = { success: false, message: '' };
+        (function() { result = updateViolationApprovalSettings(payload); })();
         return result;
     },
     'updateContractorApprovalRequest': function(payload, postData, action, actorUserData, spreadsheetId) {

@@ -465,6 +465,20 @@ var ActionHandlers = {
         })();
         return result;
     },
+    // ✅ تنظيف الصفوف المكررة في IncidentsRegistry
+    // يُستدعى تلقائياً من الواجهة عند اكتشاف تكرارات محلية،
+    // ويمكن استدعاؤه يدوياً للصيانة. آمن للاستدعاء المتكرر (idempotent).
+    'cleanupIncidentsRegistry': function(payload, postData, action, actorUserData, spreadsheetId) {
+        var result = { success: false, removed: 0, kept: 0, message: '' };
+        (function() {
+            try {
+                result = cleanupIncidentsRegistryDuplicates(spreadsheetId);
+            } catch (e) {
+                result = { success: false, removed: 0, kept: 0, message: 'فشل تنظيف التكرارات: ' + (e && e.toString ? e.toString() : e) };
+            }
+        })();
+        return result;
+    },
     'updateIncident': function(payload, postData, action, actorUserData, spreadsheetId) {
         var result = { success: false, message: '' };
         (function() {
