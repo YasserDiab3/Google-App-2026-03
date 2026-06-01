@@ -2752,17 +2752,75 @@ window.UI = {
             // إذا لم يكن هناك إصدار محفوظ للمستخدم من قبل، خزّن الإصدار الحالي وانهِ بدون إظهار نافذة
             if (!lastSeen) {
                 try { if (typeof localStorage !== 'undefined') localStorage.setItem(storageKey, serverVersion); } catch (e) {}
+                if (AppState && AppState.debugMode) console.log('🌐 [UpdateNotif] أول فحص خادم — تخزين ' + serverVersion);
                 return;
             }
 
             if (typeof this._compareVersions !== 'function') return;
+            const cmp = this._compareVersions(serverVersion, lastSeen);
             // عرض نافذة التحديث فقط إذا كان إصدار الخادم أحدث تسلسلياً من آخر إصدار شاهده المستخدم
-            if (this._compareVersions(serverVersion, lastSeen) <= 0) return;
-
+            if (cmp <= 0) {
+                if (AppState && AppState.debugMode) {
+                    console.log('🌐 [UpdateNotif] خادم=' + serverVersion + ' lastSeen=' + lastSeen + ' (cmp=' + cmp + ') — لا تغيير');
+                }
+                return;
+            }
+            if (AppState && AppState.debugMode) {
+                console.log('🌐 [UpdateNotif] خادم=' + serverVersion + ' أحدث من lastSeen=' + lastSeen + ' — عرض المودال');
+            }
             this._showUpdateModal(serverVersion);
         } catch (e) {
             if (AppState.debugMode && typeof Utils !== 'undefined' && Utils.safeWarn) Utils.safeWarn('⚠️ التحقق من إصدار الخادم:', e);
         }
+    },
+
+    /**
+     * ✅ أدوات اختبار/تشخيص لإشعار التحديث (تُستدعى من الكونسول):
+     *   - __forceUpdateNotification()  : يجبر عرض المودال للإصدار الحالي (لاختبار التصميم)
+     *   - __resetUpdateNotification()  : يصفّر lastSeen + session flag → إعادة تحميل تُظهر المودال
+     *   - __whyNoUpdateNotification()  : يطبع حالة الإصدارات والمفاتيح لمعرفة سبب عدم الظهور
+     */
+    _installUpdateNotificationDevHelpers() {
+        if (typeof window === 'undefined') return;
+        const self = this;
+        try {
+            window.__forceUpdateNotification = function () {
+                const v = (AppState && AppState.appVersion) ? String(AppState.appVersion).trim() : '1.0.0';
+                try { sessionStorage.removeItem('hse_update_modal_shown_version'); } catch (e) {}
+                self._showUpdateModal(v);
+            };
+            window.__resetUpdateNotification = function () {
+                try { localStorage.removeItem('hse_last_seen_version'); } catch (e) {}
+                try { sessionStorage.removeItem('hse_update_modal_shown_version'); } catch (e) {}
+                console.log('✅ تم تصفير حالة إشعار التحديث. أعد تحميل الصفحة لرؤيته.');
+            };
+            window.__whyNoUpdateNotification = function () {
+                const cur = (AppState && AppState.appVersion) || '(غير محدد)';
+                const lastSeen = (typeof localStorage !== 'undefined') ? (localStorage.getItem('hse_last_seen_version') || '(فارغ)') : '(localStorage غير متاح)';
+                const shownInSession = (typeof sessionStorage !== 'undefined') ? (sessionStorage.getItem('hse_update_modal_shown_version') || '(لم يظهر هذه الجلسة)') : '(sessionStorage غير متاح)';
+                const cmp = (typeof self._compareVersions === 'function' && lastSeen !== '(فارغ)') ? self._compareVersions(cur, lastSeen) : 'N/A';
+                console.log('━━━━ تشخيص إشعار التحديث ━━━━');
+                console.log('الإصدار الحالي (appVersion)        : ' + cur);
+                console.log('آخر إصدار رآه المستخدم (lastSeen) : ' + lastSeen);
+                console.log('عُرِض في هذه الجلسة                  : ' + shownInSession);
+                console.log('مقارنة (current vs lastSeen)        : ' + cmp + ' (1=أحدث، 0=نفس الإصدار، -1=أقدم)');
+                console.log('');
+                if (lastSeen === '(فارغ)') {
+                    console.log('📌 السبب: أول زيارة → النظام لا يُظهر المودال (يُخزّن الإصدار للمستقبل فقط)');
+                } else if (cmp === 0) {
+                    console.log('📌 السبب: lastSeen = current → المستخدم رأى هذا الإصدار من قبل (طبيعي)');
+                } else if (cmp < 0) {
+                    console.log('📌 السبب: lastSeen أحدث من current → JS قديم في الكاش! أعد التحميل بـ Ctrl+Shift+R');
+                } else if (shownInSession === cur) {
+                    console.log('📌 السبب: تم عرض المودال في هذه الجلسة وأُغلِق → فتح تبويب جديد سيُعيد المحاولة');
+                } else {
+                    console.log('✅ يجب أن يظهر المودال — انتظر 800ms بعد تسجيل الدخول.');
+                }
+                console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+                console.log('💡 لاختبار العرض فوراً: __forceUpdateNotification()');
+                console.log('💡 لتصفير الحالة: __resetUpdateNotification() ثم refresh');
+            };
+        } catch (e) { /* ignore */ }
     },
 
     /**
@@ -2772,16 +2830,29 @@ window.UI = {
     _showUpdateMessageIfNeeded() {
         try {
             const currentVersion = (typeof AppState !== 'undefined' && AppState.appVersion) ? String(AppState.appVersion).trim() : '';
-            if (!currentVersion) return;
+            if (!currentVersion) {
+                if (AppState && AppState.debugMode) console.warn('🔔 [UpdateNotif] لا يوجد appVersion');
+                return;
+            }
             const storageKey = 'hse_last_seen_version';
             const lastSeen = (typeof localStorage !== 'undefined' && localStorage.getItem(storageKey)) ? String(localStorage.getItem(storageKey)).trim() : '';
             if (!lastSeen) {
                 try { localStorage.setItem(storageKey, currentVersion); } catch (e) {}
+                if (AppState && AppState.debugMode) console.log('🔔 [UpdateNotif] أول زيارة — تخزين الإصدار ' + currentVersion + ' بدون عرض المودال');
                 return;
             }
             // عرض فقط إذا كان الإصدار الحالي أحدث تسلسلياً من آخر إصدار رآه المستخدم
             if (typeof this._compareVersions !== 'function') return;
-            if (this._compareVersions(currentVersion, lastSeen) <= 0) return;
+            const cmp = this._compareVersions(currentVersion, lastSeen);
+            if (cmp <= 0) {
+                if (AppState && AppState.debugMode) {
+                    console.log('🔔 [UpdateNotif] لا حاجة للمودال — current=' + currentVersion + ' lastSeen=' + lastSeen + ' (cmp=' + cmp + ')');
+                }
+                return;
+            }
+            if (AppState && AppState.debugMode) {
+                console.log('🔔 [UpdateNotif] عرض المودال — current=' + currentVersion + ' أحدث من lastSeen=' + lastSeen);
+            }
             this._showUpdateModal(currentVersion);
         } catch (e) {
             if (AppState.debugMode && typeof Utils !== 'undefined' && Utils.safeWarn) Utils.safeWarn('⚠️ خطأ في عرض رسالة التحديث:', e);
@@ -3140,6 +3211,10 @@ window.UI = {
             document.addEventListener('visibilitychange', () => {
                 if (document.visibilityState === 'visible') runServerVersionCheck();
             });
+            // ✅ تثبيت أدوات التشخيص/الاختبار على window
+            if (typeof this._installUpdateNotificationDevHelpers === 'function') {
+                this._installUpdateNotificationDevHelpers();
+            }
         }
 
         // تم نقل المزامنة إلى Auth.login لتجنب المزامنات المكررة
