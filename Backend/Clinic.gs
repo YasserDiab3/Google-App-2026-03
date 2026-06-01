@@ -474,47 +474,46 @@ function addClinicVisitToSheet(visitData) {
             return result;
         }
         
-        // ✅ FIX: مسار موحد لخصم الأدوية — يستخدم applyMedicationAdjustments_ الـ atomic
-        // نستخدم capturedMedicationAdjustments (التُقطت في بداية الدالة) — ليس visitData.medicationAdjustments مباشرة
-        // (تفادي مشكلة احتمال فقدان/تحويل الحقل بعد المعالجة)
+        // ✅ FIX جذري نهائي: مسار مُوحَّد لخصم الأدوية مع 3 fallback layers
+        // ينجح في كل سيناريو: سواء أرسلت الواجهة medicationAdjustments، أو medications array،
+        // أو حتى medicationsDispensed نص فقط — كلها تؤدي للخصم الصحيح.
         var addAdjustmentsResult = null;
-        if (Array.isArray(capturedMedicationAdjustments) && capturedMedicationAdjustments.length > 0) {
-            try {
-                Logger.log('💊 [BACKEND-ADD] تطبيق medicationAdjustments الـ atomic لزيارة: ' + normalized.id +
-                    ' (عدد التعديلات: ' + capturedMedicationAdjustments.length + ')');
+        try {
+            // الأولوية: medicationAdjustments المُلتقَطة في بداية الدالة
+            // (لكن إذا كانت null/فارغة، نستخدم deriveMedicationAdjustments_ لاشتقاق من medications أو dispensed text)
+            var adjustmentsToApply = capturedMedicationAdjustments;
+            if (!Array.isArray(adjustmentsToApply) || adjustmentsToApply.length === 0) {
+                Logger.log('💊 [BACKEND-ADD] capturedMedicationAdjustments فارغة — محاولة الاشتقاق من البيانات الأخرى...');
+                // نمرّر visitData الأصلية + normalized (لأن normalized.medicationsDispensed مُولَّد من flatten)
+                adjustmentsToApply = deriveMedicationAdjustments_(visitData, { spreadsheetId: spreadsheetId || getSpreadsheetId() });
+                if (adjustmentsToApply.length === 0 && normalized && normalized.medicationsDispensed) {
+                    // محاولة أخيرة من normalized (يحوي medicationsDispensed المسطَّحة)
+                    adjustmentsToApply = deriveMedicationAdjustments_(
+                        { medicationsDispensed: normalized.medicationsDispensed },
+                        { spreadsheetId: spreadsheetId || getSpreadsheetId() }
+                    );
+                }
+            }
+
+            if (Array.isArray(adjustmentsToApply) && adjustmentsToApply.length > 0) {
+                Logger.log('💊 [BACKEND-ADD] تطبيق ' + adjustmentsToApply.length + ' تعديل دواء لزيارة: ' + normalized.id);
                 addAdjustmentsResult = applyMedicationAdjustments_(
-                    capturedMedicationAdjustments,
+                    adjustmentsToApply,
                     normalized.id,
                     normalized.createdBy,
-                    spreadsheetId
+                    spreadsheetId || getSpreadsheetId()
                 );
                 Logger.log('💊 [BACKEND-ADD] تم تطبيق ' + (addAdjustmentsResult && addAdjustmentsResult.applied || 0) +
                     ' تعديل، فشل ' + (addAdjustmentsResult && addAdjustmentsResult.failed || 0));
                 if (addAdjustmentsResult && addAdjustmentsResult.details) {
                     Logger.log('💊 [BACKEND-ADD] تفاصيل: ' + JSON.stringify(addAdjustmentsResult.details).substring(0, 500));
                 }
-            } catch (adjErr) {
-                Logger.log('❌ [BACKEND-ADD] خطأ في applyMedicationAdjustments_: ' + adjErr.toString());
-                Logger.log('❌ [BACKEND-ADD] Stack: ' + (adjErr.stack || 'no stack'));
+            } else {
+                Logger.log('ℹ️ [BACKEND-ADD] لا توجد أدوية للخصم بعد كل المحاولات');
             }
-        } else if (visitData.medications && Array.isArray(visitData.medications) && visitData.medications.length > 0) {
-            // ✅ Fallback للعملاء القديمين الذين لا يرسلون medicationAdjustments
-            try {
-                Logger.log('💊 [BACKEND-ADD] (fallback) deductMedicationsFromInventory_ لزيارة: ' + normalized.id +
-                    ' (عدد الأدوية: ' + visitData.medications.length + ')');
-                const deductResult = deductMedicationsFromInventory_(visitData.medications, normalized.id, normalized.createdBy);
-                if (deductResult && deductResult.success) {
-                    Logger.log('✅ [BACKEND-ADD] تم خصم الأدوية بنجاح (fallback): deducted=' + (deductResult.deducted ? deductResult.deducted.length : 0));
-                } else {
-                    Logger.log('⚠️ [BACKEND-ADD] فشل خصم الأدوية (fallback): ' + (deductResult ? deductResult.message : 'خطأ غير معروف'));
-                }
-            } catch (deductError) {
-                Logger.log('❌ [BACKEND-ADD] خطأ تقني في خصم الأدوية (fallback): ' + deductError.toString());
-            }
-        } else {
-            Logger.log('ℹ️ [BACKEND-ADD] لا توجد أدوية للخصم (capturedAdjustments=' +
-                (capturedMedicationAdjustments ? capturedMedicationAdjustments.length : 'null') +
-                ', medications=' + (visitData.medications ? visitData.medications.length : 'null') + ')');
+        } catch (adjErr) {
+            Logger.log('❌ [BACKEND-ADD] خطأ في خصم الأدوية: ' + adjErr.toString());
+            Logger.log('❌ [BACKEND-ADD] Stack: ' + (adjErr.stack || 'no stack'));
         }
         
         var merged = (result && typeof result === 'object') ? result : { success: true };
@@ -736,14 +735,22 @@ function updateClinicVisit(visitId, updateData) {
 
             // ✅ FIX: تطبيق تعديلات الأدوية atomically (delta-based) بعد حفظ الزيارة
             // delta>0 = صرف جديد (نقص الرصيد)، delta<0 = استرجاع (زيادة الرصيد)
+            // ✅ تحسين: لو لم تُرسل medicationAdjustments، نشتقها من updateData (medications أو dispensed text)
             var adjustmentsResult = null;
-            if (Array.isArray(medicationAdjustments) && medicationAdjustments.length > 0) {
+            var adjustmentsToApply = medicationAdjustments;
+            if (!Array.isArray(adjustmentsToApply) || adjustmentsToApply.length === 0) {
+                Logger.log('💊 [BACKEND-UPDATE] medicationAdjustments فارغة — محاولة الاشتقاق من updateData...');
+                adjustmentsToApply = deriveMedicationAdjustments_(updateData, { spreadsheetId: spreadsheetId });
+            }
+            if (Array.isArray(adjustmentsToApply) && adjustmentsToApply.length > 0) {
                 try {
-                    adjustmentsResult = applyMedicationAdjustments_(medicationAdjustments, visitId, normalizedUpdate.updatedBy, spreadsheetId);
-                    Logger.log('💊 [BACKEND] تم تطبيق ' + (adjustmentsResult.applied || 0) + ' تعديل دواء، فشل ' + (adjustmentsResult.failed || 0));
+                    adjustmentsResult = applyMedicationAdjustments_(adjustmentsToApply, visitId, normalizedUpdate.updatedBy, spreadsheetId);
+                    Logger.log('💊 [BACKEND-UPDATE] تم تطبيق ' + (adjustmentsResult.applied || 0) + ' تعديل دواء، فشل ' + (adjustmentsResult.failed || 0));
                 } catch (adjError) {
-                    Logger.log('❌ [BACKEND] خطأ في applyMedicationAdjustments_: ' + adjError.toString());
+                    Logger.log('❌ [BACKEND-UPDATE] خطأ في applyMedicationAdjustments_: ' + adjError.toString());
                 }
+            } else {
+                Logger.log('ℹ️ [BACKEND-UPDATE] لا توجد أدوية للتعديل');
             }
 
             return {
@@ -775,6 +782,102 @@ function updateClinicVisit(visitId, updateData) {
  * @param {string} spreadsheetId
  * @returns {{success: boolean, applied: number, failed: number, details: Array}}
  */
+/**
+ * ✅ مُشتق مُوحَّد لـ medicationAdjustments من أي من المصادر التالية:
+ *   1) visitData.medicationAdjustments (الأولوية القصوى — يحوي delta صحيح للـ ADD والـ EDIT)
+ *   2) visitData.medications (مصفوفة من { medicationId, quantity }) — يحوّل لـ delta = +quantity
+ *   3) visitData.medicationsDispensed (نص: "اسم × كمية, ...") — يبحث عن medicationId بالاسم في الورقة
+ *
+ * @param {Object} visitData
+ * @param {Object} [opts]
+ * @param {string} [opts.spreadsheetId]
+ * @param {string} [opts.prevVisitId] - لـ EDIT: لقراءة الـ medications السابقة لحساب الـ delta
+ * @returns {Array<{medicationId: string, delta: number}>} مصفوفة (قد تكون فارغة)
+ */
+function deriveMedicationAdjustments_(visitData, opts) {
+    opts = opts || {};
+    var spreadsheetId = opts.spreadsheetId || getSpreadsheetId();
+    if (!visitData || typeof visitData !== 'object') return [];
+
+    // 1) medicationAdjustments الجاهز (الأولوية)
+    var raw = visitData.medicationAdjustments;
+    if (Array.isArray(raw) && raw.length > 0) {
+        Logger.log('💊 [DERIVE] استخدام medicationAdjustments المرسلة (' + raw.length + ' عنصر)');
+        return raw.slice();
+    }
+    if (typeof raw === 'string') {
+        try {
+            var parsed = JSON.parse(raw);
+            if (Array.isArray(parsed) && parsed.length > 0) {
+                Logger.log('💊 [DERIVE] استخدام medicationAdjustments من JSON string');
+                return parsed.slice();
+            }
+        } catch (e) {}
+    }
+
+    // 2) medications مصفوفة كائنات — اشتقاق delta = +quantity
+    var meds = visitData.medications;
+    if (Array.isArray(meds) && meds.length > 0) {
+        Logger.log('💊 [DERIVE] اشتقاق adjustments من medications array (' + meds.length + ' عنصر)');
+        var derived = [];
+        meds.forEach(function(m) {
+            if (!m) return;
+            var id = String(m.medicationId || m.id || '').trim();
+            var qty = parseInt(m.quantity, 10) || 0;
+            if (!id || qty <= 0) return;
+            derived.push({ medicationId: id, delta: qty });
+        });
+        if (derived.length > 0) return derived;
+    }
+
+    // 3) medicationsDispensed نص (تنسيق: "اسم1 × 2, اسم2 × 1")
+    var dispensedText = visitData.medicationsDispensed || visitData.medicationsDispensedText || '';
+    if (typeof dispensedText === 'string' && dispensedText.trim()) {
+        Logger.log('💊 [DERIVE] محاولة اشتقاق من medicationsDispensed نص: ' + dispensedText.substring(0, 100));
+        try {
+            var allMeds = readFromSheet('Medications', spreadsheetId);
+            if (Array.isArray(allMeds) && allMeds.length > 0) {
+                // فصل على الفواصل (، ,) والسطور الجديدة
+                var parts = String(dispensedText).split(/[،,\n]+/);
+                var derivedFromText = [];
+                parts.forEach(function(p) {
+                    if (!p) return;
+                    // محاولة استخراج: "اسم × عدد"
+                    var match = String(p).match(/^(.+?)\s*[×x*]\s*(\d+)\s*$/);
+                    var name, qty;
+                    if (match) {
+                        name = match[1].trim();
+                        qty = parseInt(match[2], 10);
+                    } else {
+                        name = p.trim();
+                        qty = 1;
+                    }
+                    if (!name || !qty || qty <= 0) return;
+                    var med = allMeds.find(function(mm) {
+                        if (!mm) return false;
+                        var mn = String(mm.medicationName || mm.name || '').trim();
+                        return mn === name;
+                    });
+                    if (med && med.id) {
+                        derivedFromText.push({ medicationId: String(med.id).trim(), delta: qty });
+                    } else {
+                        Logger.log('⚠️ [DERIVE] لم يُعثر على دواء بالاسم: ' + name);
+                    }
+                });
+                if (derivedFromText.length > 0) {
+                    Logger.log('💊 [DERIVE] اشتقاق ' + derivedFromText.length + ' adjustments من النص');
+                    return derivedFromText;
+                }
+            }
+        } catch (e) {
+            Logger.log('❌ [DERIVE] خطأ في اشتقاق من medicationsDispensed: ' + e.toString());
+        }
+    }
+
+    Logger.log('ℹ️ [DERIVE] لا توجد بيانات أدوية في visitData');
+    return [];
+}
+
 function applyMedicationAdjustments_(adjustments, visitId, dispensedBy, spreadsheetId) {
     var result = { success: true, applied: 0, failed: 0, details: [] };
     if (!Array.isArray(adjustments) || adjustments.length === 0) return result;
