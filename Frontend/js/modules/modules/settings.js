@@ -162,6 +162,31 @@ const Settings = {
             return;
         }
 
+        // ✅ Skeleton فوري — يظهر مباشرة قبل أي عمليات شبكة
+        // (يحلّ مشكلة بطء فتح الإعدادات وظهور placeholder قديم)
+        section.innerHTML = `
+            <div class="section-header">
+                <h1 class="section-title">
+                    <i class="fas fa-cog ml-3"></i>
+                    ${(typeof I18n !== 'undefined' && I18n.t) ? I18n.t('settings.title') : 'الإعدادات'}
+                </h1>
+                <p class="section-subtitle">${(typeof I18n !== 'undefined' && I18n.t) ? I18n.t('settings.subtitle') : 'إعدادات النظام والتطبيق'}</p>
+            </div>
+            <div class="content-card mt-6">
+                <div class="card-body">
+                    <div class="empty-state" style="padding:40px 20px;">
+                        <div style="width: 320px; margin: 0 auto 18px;">
+                            <div style="width: 100%; height: 6px; background: rgba(15, 118, 110, 0.18); border-radius: 3px; overflow: hidden;">
+                                <div style="height: 100%; background: linear-gradient(90deg, #0F766E, #1E3A8A, #0F766E); background-size: 200% 100%; border-radius: 3px; animation: loadingProgress 1.5s ease-in-out infinite;"></div>
+                            </div>
+                        </div>
+                        <p class="text-gray-600 font-semibold">جاري تجهيز الإعدادات...</p>
+                        <p class="text-xs text-gray-400 mt-2">يتم تحميل بيانات الإعدادات والمواقع في الخلفية</p>
+                    </div>
+                </div>
+            </div>
+        `;
+
         try {
             if (typeof ViolationTypesManager !== 'undefined' && ViolationTypesManager.ensureInitialized) {
                 ViolationTypesManager.ensureInitialized();
@@ -172,6 +197,7 @@ const Settings = {
                 // إعادة ربط أحداث إعدادات النماذج فقط — لا نُصفّر المواقع قبل اكتمال إعادة التحميل (تجنّب فراغ مؤقت)
                 Permissions.formSettingsEventsBound = false;
                 // قراءة المواقع من الشيت/المحلي لجميع المستخدمين — حفظ التعديل يبقى محصوراً بالمدير في الواجهة والخادم
+                // ⏱ هذا قد يستغرق ثوانٍ على شبكة بطيئة — الـ skeleton أعلاه يظهر طوال هذه الفترة
                 if (typeof Permissions.initFormSettingsState === 'function') {
                     try {
                         await Permissions.initFormSettingsState();

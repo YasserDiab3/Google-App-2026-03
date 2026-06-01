@@ -12457,40 +12457,13 @@
                         role="region"
                         aria-label="قسم اختبار التطبيق"
                     ></section>
-                    <!-- Settings Section -->
+                    <!-- Settings Section (محتواه يُملأ من Settings.load — يظهر skeleton مؤقت لمنع تأخير الواجهة) -->
                     <section
                         id="settings-section"
                         class="section"
                         role="region"
                         aria-label="قسم الإعدادات"
-                    >
-                        <div class="section-header">
-                            <h2 class="section-title">
-                                <i class="fas fa-cog ml-2"></i>
-                                الإعدادات
-                            </h2>
-                        </div>
-
-                        <div class="settings-container">
-                            <!-- Regular Settings (for all users) -->
-                            <div class="settings-group">
-                                <div class="settings-group-header">
-                                    <h3 class="settings-group-title">
-                                        <i class="fas fa-user-cog ml-2"></i>
-                                        إعدادات المستخدم
-                                    </h3>
-                                    <p class="settings-group-subtitle">
-                                        تخصيص إعداداتك الشخصية
-                                    </p>
-                                </div>
-                                <div class="settings-group-content">
-                                    <p class="text-gray-600 dark:text-gray-400">
-                                        إعدادات المستخدم ستضاف هنا...
-                                    </p>
-                                </div>
-                            </div>
-                        </div>
-                    </section>
+                    ></section>
 
                     <!-- Issue Tracking Section -->
                     <section
@@ -12893,7 +12866,7 @@
                     }
 
                     // مطابقة CACHE_VERSION في service-worker.js — تسريع جلب سكربت SW بعد النشر (تجاوز كاش الشبكة/الوسيط)
-                    const __SW_REGISTER_QUERY = "v=hse-app-v1.0.49-20260601";
+                    const __SW_REGISTER_QUERY = "v=hse-app-v1.0.50-20260601";
                     const swUrl =
                         swPath +
                         (swPath.includes("?") ? "&" : "?") +
