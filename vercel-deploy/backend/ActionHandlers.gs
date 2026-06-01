@@ -479,6 +479,34 @@ var ActionHandlers = {
         })();
         return result;
     },
+    // ✅ تتبّع إصدار التطبيق لكل مستخدم
+    // 1) reportUserVersion: تُستدعى من الواجهة بعد تسجيل الدخول + heartbeat
+    // 2) getAllUserVersions: للمدير لعرض كل المستخدمين وإصداراتهم
+    // 3) getUserVersionStats: إحصائيات مجمعة (للكروت)
+    'reportUserVersion': function(payload, postData, action, actorUserData, spreadsheetId) {
+        var result = { success: false, message: '' };
+        (function() {
+            try { result = reportUserVersion(payload); }
+            catch (e) { result = { success: false, message: 'reportUserVersion: ' + (e && e.toString ? e.toString() : e) }; }
+        })();
+        return result;
+    },
+    'getAllUserVersions': function(payload, postData, action, actorUserData, spreadsheetId) {
+        var result = { success: false, data: [], total: 0 };
+        (function() {
+            try { result = getAllUserVersions(payload || {}); }
+            catch (e) { result = { success: false, data: [], total: 0, message: 'getAllUserVersions: ' + (e && e.toString ? e.toString() : e) }; }
+        })();
+        return result;
+    },
+    'getUserVersionStats': function(payload, postData, action, actorUserData, spreadsheetId) {
+        var result = { success: false };
+        (function() {
+            try { result = getUserVersionStats(payload || {}); }
+            catch (e) { result = { success: false, message: 'getUserVersionStats: ' + (e && e.toString ? e.toString() : e) }; }
+        })();
+        return result;
+    },
     'updateIncident': function(payload, postData, action, actorUserData, spreadsheetId) {
         var result = { success: false, message: '' };
         (function() {

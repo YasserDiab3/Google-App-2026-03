@@ -1166,6 +1166,29 @@ const Settings = {
                             </div>
                         </div>
                     </div>
+
+                    <!-- ✅ متابعة إصدارات المستخدمين -->
+                    <div class="settings-group-content mt-4">
+                        <div class="content-card" style="border: 1px solid rgba(15,118,110,0.18);">
+                            <div class="card-header" style="background: linear-gradient(135deg, rgba(15,118,110,0.08), rgba(30,58,138,0.06)); border-bottom: 1px solid rgba(15,118,110,0.18);">
+                                <h2 class="card-title" style="color: #0F766E;">
+                                    <i class="fas fa-code-branch ml-2"></i>
+                                    متابعة إصدارات المستخدمين
+                                </h2>
+                            </div>
+                            <div class="card-body">
+                                <p class="text-sm text-gray-600 mb-4">
+                                    <i class="fas fa-info-circle ml-2 text-teal-600"></i>
+                                    معرفة أي إصدار من التطبيق يعمل عليه كل مستخدم، آخر مرة فتح فيها التطبيق،
+                                    والتأكد من أن الجميع يعمل على الإصدار الأحدث.
+                                </p>
+                                <button type="button" id="view-user-versions-btn" class="btn-primary w-full" style="background: linear-gradient(135deg, #0F766E, #1E3A8A);">
+                                    <i class="fas fa-code-branch ml-2"></i>
+                                    فتح لوحة متابعة الإصدارات
+                                </button>
+                            </div>
+                        </div>
+                    </div>
                 </div>
                 ` : '<div class="settings-group mt-6"><p class="text-gray-600">هذا القسم متاح للمديرين فقط</p></div>'}
             </div>
@@ -2408,6 +2431,18 @@ const Settings = {
             if (viewActivityLogBtn) {
                 viewActivityLogBtn.addEventListener('click', () => {
                     UserActivityLog.showModal();
+                });
+            }
+
+            // ✅ User Versions Admin Button
+            const viewUserVersionsBtn = document.getElementById('view-user-versions-btn');
+            if (viewUserVersionsBtn) {
+                viewUserVersionsBtn.addEventListener('click', () => {
+                    if (typeof UserVersionsAdmin !== 'undefined' && UserVersionsAdmin.open) {
+                        UserVersionsAdmin.open();
+                    } else {
+                        Notification.error('لوحة متابعة الإصدارات غير متاحة. حاول تحديث الصفحة.');
+                    }
                 });
             }
 

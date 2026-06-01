@@ -10,6 +10,8 @@
 function getDefaultHeaders(sheetName) {
     const headersMap = {
         'Users': ['id', 'name', 'email', 'password', 'passwordHash', 'role', 'department', 'active', 'photo', 'permissions', 'lastLogin', 'lastLogout', 'isOnline', 'loginHistory', 'postLoginPolicySeenAt', 'profilePublicToken', 'profilePublicTokenExpiry', 'createdAt', 'updatedAt'],
+        // ✅ تتبع إصدارات التطبيق لكل مستخدم — يساعد المدير على معرفة من يعمل على إصدار قديم
+        'UserVersions': ['id', 'userId', 'userEmail', 'userName', 'userRole', 'userDepartment', 'currentVersion', 'firstSeenVersion', 'previousVersion', 'lastSeenAt', 'firstSeenAt', 'sessionCount', 'reportCount', 'userAgent', 'platform', 'isMobile', 'screenSize', 'language', 'updatedAt'],
         'Incidents': ['id', 'isoCode', 'title', 'description', 'location', 'siteId', 'siteName', 'sublocation', 'sublocationId', 'sublocationName', 'date', 'severity', 'incidentType', 'affiliation', 'department', 'reportedBy', 'employeeCode', 'employeeNumber', 'employeeName', 'employeeJob', 'employeeDepartment', 'status', 'rootCause', 'correctiveAction', 'preventiveAction', 'actionPlan', 'affectedType', 'affectedCode', 'affectedName', 'affectedJobTitle', 'affectedDepartment', 'affectedContact', 'injuryDescription', 'losses', 'actionsTaken', 'contractorName', 'image', 'attachments', 'investigation', 'closureDate', 'actionOwner', 'requiresApproval', 'approvedBy', 'approvedAt', 'rejectedBy', 'rejectedAt', 'rejectionReason', 'createdBy', 'createdAt', 'updatedAt'],
         'IncidentNotifications': ['id', 'notificationNumber', 'date', 'location', 'siteId', 'siteName', 'sublocation', 'sublocationId', 'sublocationName', 'department', 'incidentType', 'affiliation', 'contractorName', 'employeeCode', 'employeeName', 'employeeJob', 'employeeDepartment', 'description', 'injuryDescription', 'losses', 'actions', 'reporterName', 'reporterCode', 'createdBy', 'createdAt', 'updatedAt'],
         'SafetyAlerts': ['id', 'alertNumber', 'sequentialNumber', 'incidentId', 'incidentType', 'incidentDate', 'incidentLocation', 'who', 'description', 'facts', 'causes', 'lessonsLearned', 'preventiveMeasures', 'locationImage', 'causesImage', 'notificationNumber', 'preparedBy', 'approvedBy', 'approvedAt', 'issueDate', 'status', 'createdBy', 'createdAt', 'updatedAt'],
@@ -204,6 +206,29 @@ function getDefaultHeaders(sheetName) {
             'contractorData'
         ],
         'ContractorDeletionRequests': ['id', 'requestType', 'entityId', 'reason', 'status', 'createdBy', 'createdAt', 'updatedAt', 'approvedAt', 'approvedBy', 'approvedByName', 'rejectedAt', 'rejectedBy', 'rejectedByName', 'rejectionReason'],
+        // ✅ دائرة اعتماد المخالفات (Violation Approval Workflow)
+        // requestType: 'add' (إضافة) / 'update' (تعديل)
+        // violationData: JSON يحتوي على كل بيانات المخالفة المنتظرة
+        // approvers: JSON array [{userId, userName, userEmail, role, approved, approvedAt, notes}]
+        // currentApproverIndex: trang الحالي في الدائرة (0-based)
+        // status: 'pending' / 'approved' / 'rejected' / 'committed' (دخلت Violations sheet)
+        'ViolationApprovalRequests': [
+            'id', 'requestType',
+            'violationData', 'originalViolationId',
+            'status', 'approvers', 'currentApproverIndex',
+            'createdBy', 'createdByName', 'createdAt',
+            'approvedBy', 'approvedByName', 'approvedAt',
+            'rejectedBy', 'rejectedByName', 'rejectedAt', 'rejectionReason',
+            'finalViolationId', 'notes', 'updatedAt', 'updatedBy'
+        ],
+        // إعدادات دائرة اعتماد المخالفات
+        // requireApproval: true/false — هل المخالفات الجديدة تمر بدائرة اعتماد
+        // defaultApprovers: JSON array [{userId, userName, userEmail, role}]
+        // bypassRoles: JSON array — أدوار تتجاوز الاعتماد (admin مثلاً)
+        'ViolationApprovalSettings': [
+            'id', 'requireApproval', 'defaultApprovers', 'bypassRoles',
+            'updatedBy', 'updatedByName', 'updatedAt', 'createdAt'
+        ],
         // إدارة التغيرات (Change Management - مطابق للنماذج الورقية فني/إداري + نقل الفنيين)
         'ChangeRequests': ['id', 'requestNumber', 'title', 'description', 'changeType', 'priority', 'impact', 'status', 'requestedBy', 'requestedByEmail', 'requestedAt', 'factoryId', 'factoryName', 'subLocationId', 'subLocationName', 'dueDate', 'relatedModule', 'relatedProcess', 'riskAssessment', 'mitigationActions', 'fromDepartment', 'toDepartment', 'locationOther', 'technicalChangeSubType', 'changeContinuity', 'temporaryUntilDate', 'priorityUrgentReason', 'attachedDocumentsText', 'requestingDepartment', 'otherDepartments', 'affectedDepartments', 'documentsToAmendJson', 'committeeMembersJson', 'committeeRecommendations', 'employeeName', 'employeeCode', 'currentTasksDescription', 'newTasksDescription', 'administrativeChangeSubType', 'responsibleRequestingDepartment', 'responsibleImplementingDepartment', 'previousInjury', 'chronicDiseases', 'healthNotes', 'trainingRequirementsJson', 'reviewerName', 'reviewerNotes', 'approvedBy', 'approvedAt', 'rejectedBy', 'rejectedAt', 'rejectionReason', 'implementedAt', 'implementedBy', 'closedAt', 'closedBy', 'approvalFlowJson', 'currentApprovalStep', 'approvalStatus', 'timeLog', 'attachments', 'createdBy', 'createdAt', 'updatedAt', 'updatedBy'],
         'AuditLog': ['id', 'userId', 'userName', 'action', 'module', 'details', 'ipAddress', 'timestamp', 'createdAt', 'updatedAt'],
