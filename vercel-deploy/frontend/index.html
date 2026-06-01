@@ -2,6 +2,9 @@
 <html lang="ar" dir="rtl">
     <head>
         <meta charset="UTF-8" />
+        <!-- ✅ درع الكونسول — يجب أن يُحمَّل أول شيء (يكتم ضوضاء إضافات المتصفح + يحجب logs في الإنتاج) -->
+        <!-- تعطيل: ?debug=1 في الرابط أو localStorage.setItem('hse_debug_console','1') ثم refresh -->
+        <script src="js/console-security.js"></script>
         <!-- تعطيل قمع console: أضف ?debug=1 للرابط أو localStorage.setItem('HSE_DEBUG_CONSOLE','1') -->
         <script>
             (function () {
@@ -12866,7 +12869,7 @@
                     }
 
                     // مطابقة CACHE_VERSION في service-worker.js — تسريع جلب سكربت SW بعد النشر (تجاوز كاش الشبكة/الوسيط)
-                    const __SW_REGISTER_QUERY = "v=hse-app-v1.0.51-20260601";
+                    const __SW_REGISTER_QUERY = "v=hse-app-v1.0.52-20260601";
                     const swUrl =
                         swPath +
                         (swPath.includes("?") ? "&" : "?") +
