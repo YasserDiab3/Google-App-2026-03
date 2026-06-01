@@ -524,7 +524,11 @@ const Dashboard = {
             }
 
             const tuples = [];
-            if (this.dashboardCan('violations')) tuples.push(['Violations', 'violations']);
+            if (this.dashboardCan('violations')) {
+                tuples.push(['Violations', 'violations']);
+                // ✅ تحميل طلبات الاعتماد لكي تظهر إشعارات الاعتماد/الرفض في جرس الإشعارات
+                tuples.push(['ViolationApprovalRequests', 'violationApprovalRequests']);
+            }
             if (this.dashboardCan('training')) tuples.push(['Training', 'training']);
             if (this.dashboardCan('ppe')) tuples.push(['PPE', 'ppe']);
             if (this.dashboardCan('behavior-monitoring')) tuples.push(['BehaviorMonitoring', 'behaviorMonitoring']);

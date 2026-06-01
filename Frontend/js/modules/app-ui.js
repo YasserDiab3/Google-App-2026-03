@@ -9165,6 +9165,81 @@ window.UI = {
                     });
             }
 
+            // ✅ 5b. طلبات اعتماد المخالفات (للمدير + للمُرسِل الأصلي)
+            if (Array.isArray(AppState.appData?.violationApprovalRequests)) {
+                const cu = AppState.currentUser || {};
+                const currentUserId = String(cu.id || '').trim();
+                const currentUserEmail = String(cu.email || '').trim().toLowerCase();
+                const isAdminUser = (cu.role === 'admin') ||
+                    (typeof Permissions !== 'undefined' && Permissions.isCurrentUserAdmin && Permissions.isCurrentUserAdmin());
+
+                AppState.appData.violationApprovalRequests
+                    .filter(req => {
+                        if (!req) return false;
+                        if (isAdminUser) {
+                            // المدير يرى الطلبات قيد الاعتماد فقط
+                            return req.status === 'pending';
+                        }
+                        // المستخدم العادي يرى طلباته الخاصة (قيد المراجعة / مُعتمدة / مرفوضة)
+                        const reqCreator = String(req.createdBy || '').trim();
+                        const reqCreatorLower = reqCreator.toLowerCase();
+                        const isMine = (currentUserId && reqCreator === currentUserId) ||
+                                       (currentUserEmail && reqCreatorLower === currentUserEmail);
+                        if (!isMine) return false;
+                        return ['pending', 'approved', 'committed', 'rejected'].includes(String(req.status || '').toLowerCase());
+                    })
+                    .forEach(req => {
+                        const notificationId = 'violation-approval-' + (req.id || Date.now()) + '-' + (req.status || '');
+                        if (readNotifications.includes(notificationId)) return;
+
+                        let title, message, type, icon;
+                        const status = String(req.status || '').toLowerCase();
+                        if (isAdminUser) {
+                            // للمدير: طلب جديد يحتاج اعتماد
+                            title = 'طلب اعتماد مخالفة جديد';
+                            message = `هناك مخالفة بانتظار اعتمادك (${req.id || ''}) — أرسلها ${req.createdByName || req.createdBy || ''}`;
+                            type = 'warning';
+                            icon = 'fa-gavel';
+                        } else if (status === 'approved' || status === 'committed') {
+                            title = '✅ تم اعتماد مخالفتك';
+                            message = `تم اعتماد طلب المخالفة (${req.id || ''}). شكراً لمتابعتك.`;
+                            type = 'success';
+                            icon = 'fa-circle-check';
+                        } else if (status === 'rejected') {
+                            title = '❌ تم رفض مخالفتك';
+                            message = `تم رفض طلب المخالفة (${req.id || ''})${req.rejectionReason ? '. السبب: ' + req.rejectionReason : ''}`;
+                            type = 'error';
+                            icon = 'fa-circle-xmark';
+                        } else {
+                            title = 'طلب مخالفة قيد المراجعة';
+                            message = `طلب اعتماد المخالفة (${req.id || ''}) قيد مراجعة المدير`;
+                            type = 'info';
+                            icon = 'fa-hourglass-half';
+                        }
+
+                        notifications.push({
+                            id: notificationId,
+                            type: type,
+                            title: title,
+                            message: message,
+                            time: req.updatedAt || req.createdAt || new Date(),
+                            icon: icon,
+                            onClick: () => {
+                                // الانتقال لقسم المخالفات → تبويب طلبات الاعتماد
+                                try {
+                                    const link = document.querySelector('a[data-section="violations"]');
+                                    if (link) link.click();
+                                    setTimeout(() => {
+                                        if (typeof Violations !== 'undefined' && Violations.switchTab) {
+                                            Violations.switchTab('approval-requests');
+                                        }
+                                    }, 300);
+                                } catch (e) { /* ignore */ }
+                            }
+                        });
+                    });
+            }
+
             // 6. طلبات موافقة فحص معدات الإطفاء
             if (AppState.appData && AppState.appData.fireEquipmentApprovalRequests) {
                 const isAdmin = AppState.currentUser && (

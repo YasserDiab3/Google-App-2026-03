@@ -274,6 +274,12 @@ function approveViolationApprovalRequest(payload) {
 
         updateSingleRowInSheet(VIOLATION_APPROVALS_SHEET, payload.requestId, updateData, spreadsheetId);
 
+        // ✅ إشعار المُرسِل الأصلي بحالة الاعتماد (فقط عند الاعتماد النهائي)
+        if (allApproved) {
+            try { notifyViolationSubmitter_(request, 'approved', approver, '', spreadsheetId); }
+            catch (notifyErr) { Logger.log('⚠️ notifyViolationSubmitter_(approved) failed: ' + notifyErr.toString()); }
+        }
+
         return {
             success: true,
             message: allApproved ? 'تم اعتماد المخالفة وإضافتها بنجاح' : 'تم اعتماد الخطوة. باقي ' + (approvers.length - currentIdx) + ' معتمدين',
@@ -316,6 +322,11 @@ function rejectViolationApprovalRequest(payload) {
         };
 
         updateSingleRowInSheet(VIOLATION_APPROVALS_SHEET, payload.requestId, updateData, spreadsheetId);
+
+        // ✅ إشعار المُرسِل الأصلي بحالة الرفض مع السبب
+        try { notifyViolationSubmitter_(request, 'rejected', approver, reason, spreadsheetId); }
+        catch (notifyErr) { Logger.log('⚠️ notifyViolationSubmitter_(rejected) failed: ' + notifyErr.toString()); }
+
         return { success: true, message: 'تم رفض الطلب بنجاح' };
     } catch (error) {
         Logger.log('❌ rejectViolationApprovalRequest error: ' + error.toString());
@@ -532,8 +543,10 @@ function notifyViolationApprovers_(request, approvers, spreadsheetId) {
                 userEmail: a.userEmail || '',
                 title: 'طلب اعتماد مخالفة جديد',
                 message: 'هناك مخالفة بانتظار اعتمادك. رقم الطلب: ' + request.id,
-                type: 'violation_approval',
+                type: 'violation_approval_pending',
+                priority: 'medium',
                 relatedId: request.id,
+                relatedType: 'ViolationApprovalRequest',
                 read: false,
                 createdAt: new Date()
             };
@@ -541,5 +554,61 @@ function notifyViolationApprovers_(request, approvers, spreadsheetId) {
         });
     } catch (e) {
         // تجاهل أخطاء الإشعارات
+    }
+}
+
+/**
+ * إشعار المُرسِل الأصلي (createdBy) بحالة طلب اعتماد المخالفة (اعتُمد / رُفض).
+ * يُكتب صف في ورقة Notifications ليظهر في جرس الإشعارات لدى المستخدم.
+ *
+ * @param {Object} request - سجل الطلب من ViolationApprovalRequests
+ * @param {string} outcome - 'approved' أو 'rejected'
+ * @param {Object} approver - بيانات من اعتمد/رفض
+ * @param {string} [reason] - سبب الرفض (إن كان outcome === 'rejected')
+ * @param {string} spreadsheetId
+ */
+function notifyViolationSubmitter_(request, outcome, approver, reason, spreadsheetId) {
+    try {
+        if (typeof appendToSheet !== 'function') return;
+        if (!request) return;
+
+        var submitterId = String(request.createdBy || '').trim();
+        // createdBy قد يكون email أو userId — نضعه في كلا الحقلين للسلامة
+        if (!submitterId) return;
+
+        var isEmail = submitterId.indexOf('@') > -1;
+        var notificationsSheet = 'Notifications';
+
+        var title, message, type;
+        if (outcome === 'approved') {
+            title = '✅ تم اعتماد مخالفتك';
+            message = 'تم اعتماد طلب المخالفة الذي أرسلته (' + request.id + ') من قبل ' + (approver.userName || approver.userEmail || 'المعتمد') + '.';
+            type = 'violation_approval_approved';
+        } else if (outcome === 'rejected') {
+            title = '❌ تم رفض مخالفتك';
+            message = 'تم رفض طلب المخالفة (' + request.id + ') من قبل ' + (approver.userName || approver.userEmail || 'المعتمد') + '.';
+            if (reason) message += ' السبب: ' + reason;
+            type = 'violation_approval_rejected';
+        } else {
+            return; // outcome غير معروف
+        }
+
+        var notifId = generateSequentialId('NOT', notificationsSheet, spreadsheetId);
+        var notifRecord = {
+            id: notifId,
+            userId: isEmail ? '' : submitterId,
+            userEmail: isEmail ? submitterId : (request.createdByEmail || ''),
+            title: title,
+            message: message,
+            type: type,
+            priority: outcome === 'rejected' ? 'high' : 'medium',
+            relatedId: request.id,
+            relatedType: 'ViolationApprovalRequest',
+            read: false,
+            createdAt: new Date()
+        };
+        try { appendToSheet(notificationsSheet, notifRecord, spreadsheetId); } catch (e) { /* ignore */ }
+    } catch (e) {
+        Logger.log('notifyViolationSubmitter_ failed: ' + e.toString());
     }
 }
