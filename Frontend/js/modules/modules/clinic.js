@@ -10855,7 +10855,12 @@ const Clinic = {
                         if (typeof Notification !== 'undefined' && Notification.warning) {
                             Notification.warning('تنبيه: عدد زيارات ' + who + ' للعيادة هذا الشهر وصل أو تجاوز ' + threshold + ' زيارة. تم إشعار مدير النظام.');
                         }
-                        this.notifyAdminsAboutHighClinicVisits(formData, monthlyCount).catch(function() {});
+                        this.notifyAdminsAboutHighClinicVisits(formData, monthlyCount).catch(function (notifyErr) {
+                        // ✅ تشخيص: لا نُسكت الفشل — مفيد لتعقب لماذا لم يصل إشعار للمدير
+                        if (typeof Utils !== 'undefined' && Utils.safeWarn) {
+                            Utils.safeWarn('⚠️ Clinic: فشل إشعار مدير النظام عن تجاوز تردد الزيارات:', notifyErr);
+                        }
+                    });
                     }
                 } catch (e) {
                     Utils.safeWarn('فحص تردد العيادة الشهري:', e);
@@ -11980,7 +11985,14 @@ const Clinic = {
 
             try { localStorage.setItem('clinic_approvals_last_sync', String(Date.now())); } catch (e) {}
             if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
-                try { window.DataManager.save(); } catch (e) {}
+                try {
+                    window.DataManager.save();
+                } catch (e) {
+                    // ✅ تشخيص: لا نُسكت الفشل — مفيد لتعقب فقدان البيانات (quota / privacy mode)
+                    if (typeof Utils !== 'undefined' && Utils.safeWarn) {
+                        Utils.safeWarn('⚠️ Clinic approvals: فشل DataManager.save بعد جلب الـ approvals:', e);
+                    }
+                }
             }
             this._approvalsBackendFetchOk = true;
         })().finally(() => {
@@ -14783,7 +14795,12 @@ const Clinic = {
                     if (typeof Notification !== 'undefined' && Notification.warning) {
                         Notification.warning('تنبيه: عدد زيارات ' + who + ' للعيادة هذا الشهر وصل أو تجاوز ' + threshold + ' زيارة. تم إشعار مدير النظام.');
                     }
-                    this.notifyAdminsAboutHighClinicVisits(formData, monthlyCount).catch(function() {});
+                    this.notifyAdminsAboutHighClinicVisits(formData, monthlyCount).catch(function (notifyErr) {
+                        // ✅ تشخيص: لا نُسكت الفشل — مفيد لتعقب لماذا لم يصل إشعار للمدير
+                        if (typeof Utils !== 'undefined' && Utils.safeWarn) {
+                            Utils.safeWarn('⚠️ Clinic: فشل إشعار مدير النظام عن تجاوز تردد الزيارات:', notifyErr);
+                        }
+                    });
                 }
             } catch (e) {
                 Utils.safeWarn('فحص تردد العيادة الشهري:', e);

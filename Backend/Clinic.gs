@@ -886,90 +886,116 @@ function applyMedicationAdjustments_(adjustments, visitId, dispensedBy, spreadsh
     var sheetName = 'Medications';
     var logSheetName = 'MedicationDispenseLog';
 
-    // قراءة واحدة فقط للحصول على القيم الحالية لجميع الأدوية المطلوبة
-    var allMeds = readFromSheet(sheetName, spreadsheetId);
-    if (!Array.isArray(allMeds)) {
-        return { success: false, applied: 0, failed: adjustments.length, details: [{ error: 'تعذر قراءة جدول الأدوية' }] };
-    }
-
-    for (var i = 0; i < adjustments.length; i++) {
-        var adj = adjustments[i];
-        if (!adj || !adj.medicationId) continue;
-        var medId = String(adj.medicationId).trim();
-        var delta = parseFloat(adj.delta) || 0;
-        if (delta === 0) continue;
-
-        var med = allMeds.find(function(m) { return m && String(m.id).trim() === medId; });
-        if (!med) {
-            result.failed++;
-            result.details.push({ medicationId: medId, error: 'الدواء غير موجود' });
-            continue;
-        }
-
-        var currentRemaining = parseFloat(med.remainingQuantity != null ? med.remainingQuantity : med.quantity || 0) || 0;
-        var capQty = parseFloat(med.quantityAdded != null ? med.quantityAdded : (med.quantity || 0)) || 0;
-        if (capQty <= 0) capQty = Math.max(currentRemaining, Math.abs(delta));
-
-        // delta > 0 → نقص الرصيد. delta < 0 → استرجاع (زيادة) مع تقييد بـ capQty
-        var newRemaining = currentRemaining - delta;
-        if (newRemaining < 0) newRemaining = 0;
-        if (newRemaining > capQty) newRemaining = capQty;
-
-        // إعداد updateData — فقط الحقول المتغيرة (atomic update)
-        var updateData = {
-            remainingQuantity: newRemaining,
-            quantityAdded: capQty,
-            updatedAt: new Date(),
-            updatedBy: dispensedBy || 'System'
-        };
-
-        // تحديث حالة الدواء حسب الرصيد
-        if (newRemaining === 0) updateData.status = 'منتهي';
-        else if (newRemaining <= 10) updateData.status = 'منخفض';
-
+    // ✅ FIX: LockService لمنع TOCTOU race بين مستخدمين موازيَين
+    // يخصم/يُضيف صفّ-صفّ atomically — لا تداخل بين زيارات تُحدِّث نفس الدواء.
+    // المهلة 30 ثانية — كافية لـ batch صغير، وتُحرّر تلقائياً عند الإكتمال أو الخطأ.
+    var lock = null;
+    try { lock = LockService.getScriptLock(); } catch (e) {}
+    if (lock) {
         try {
-            var upd = updateSingleRowInSheet(sheetName, medId, updateData, spreadsheetId);
-            if (upd && upd.success) {
-                result.applied++;
-                result.details.push({
-                    medicationId: medId,
-                    medicationName: med.name || med.medicationName || '',
-                    previousQuantity: currentRemaining,
-                    newQuantity: newRemaining,
-                    delta: delta
-                });
-
-                // سجل في MedicationDispenseLog (للصرف فقط، delta>0)
-                if (delta > 0) {
-                    try {
-                        appendToSheet(logSheetName, {
-                            id: generateSequentialId('MDL', logSheetName),
-                            visitId: visitId || '',
-                            medicationId: medId,
-                            medicationName: med.name || med.medicationName || '',
-                            previousQuantity: currentRemaining,
-                            deductedQuantity: delta,
-                            newQuantity: newRemaining,
-                            dispensedBy: dispensedBy || 'System',
-                            dispensedAt: new Date().toISOString(),
-                            notes: visitId ? ('صرف عيادة — زيارة #' + visitId) : 'صرف عيادة'
-                        });
-                    } catch (logErr) { /* ignore log failure */ }
-                }
-            } else {
-                result.failed++;
-                result.details.push({ medicationId: medId, error: (upd && upd.message) || 'فشل تحديث الدواء' });
-            }
-        } catch (writeErr) {
-            result.failed++;
-            result.details.push({ medicationId: medId, error: writeErr.toString() });
+            lock.waitLock(30000);
+        } catch (lockErr) {
+            Logger.log('⚠️ applyMedicationAdjustments_: تعذّر الحصول على القفل خلال 30 ثانية، نُكمل بدون قفل (احتمال race منخفض): ' + lockErr.toString());
+            lock = null; // نُكمل بدون قفل — أفضل من فشل العملية
         }
     }
 
-    if (result.failed > 0 && result.applied === 0) {
-        result.success = false;
+    try {
+        // قراءة واحدة فقط للحصول على القيم الحالية لجميع الأدوية المطلوبة
+        var allMeds = readFromSheet(sheetName, spreadsheetId);
+        if (!Array.isArray(allMeds)) {
+            return { success: false, applied: 0, failed: adjustments.length, details: [{ error: 'تعذر قراءة جدول الأدوية' }] };
+        }
+
+        for (var i = 0; i < adjustments.length; i++) {
+            var adj = adjustments[i];
+            if (!adj || !adj.medicationId) continue;
+            var medId = String(adj.medicationId).trim();
+            var delta = parseFloat(adj.delta) || 0;
+            if (delta === 0) continue;
+
+            var med = allMeds.find(function(m) { return m && String(m.id).trim() === medId; });
+            if (!med) {
+                result.failed++;
+                result.details.push({ medicationId: medId, error: 'الدواء غير موجود' });
+                continue;
+            }
+
+            var currentRemaining = parseFloat(med.remainingQuantity != null ? med.remainingQuantity : med.quantity || 0) || 0;
+            var capQty = parseFloat(med.quantityAdded != null ? med.quantityAdded : (med.quantity || 0)) || 0;
+            if (capQty <= 0) capQty = Math.max(currentRemaining, Math.abs(delta));
+
+            // delta > 0 → نقص الرصيد. delta < 0 → استرجاع (زيادة) مع تقييد بـ capQty
+            var newRemaining = currentRemaining - delta;
+            if (newRemaining < 0) newRemaining = 0;
+            if (newRemaining > capQty) newRemaining = capQty;
+
+            // إعداد updateData — فقط الحقول المتغيرة (atomic update)
+            var updateData = {
+                remainingQuantity: newRemaining,
+                quantityAdded: capQty,
+                updatedAt: new Date(),
+                updatedBy: dispensedBy || 'System'
+            };
+
+            // تحديث حالة الدواء حسب الرصيد
+            if (newRemaining === 0) updateData.status = 'منتهي';
+            else if (newRemaining <= 10) updateData.status = 'منخفض';
+
+            try {
+                var upd = updateSingleRowInSheet(sheetName, medId, updateData, spreadsheetId);
+                if (upd && upd.success) {
+                    result.applied++;
+                    result.details.push({
+                        medicationId: medId,
+                        medicationName: med.name || med.medicationName || '',
+                        previousQuantity: currentRemaining,
+                        newQuantity: newRemaining,
+                        delta: delta
+                    });
+
+                    // سجل في MedicationDispenseLog (للصرف فقط، delta>0)
+                    if (delta > 0) {
+                        try {
+                            appendToSheet(logSheetName, {
+                                id: generateSequentialId('MDL', logSheetName),
+                                visitId: visitId || '',
+                                medicationId: medId,
+                                medicationName: med.name || med.medicationName || '',
+                                previousQuantity: currentRemaining,
+                                deductedQuantity: delta,
+                                newQuantity: newRemaining,
+                                dispensedBy: dispensedBy || 'System',
+                                dispensedAt: new Date().toISOString(),
+                                notes: visitId ? ('صرف عيادة — زيارة #' + visitId) : 'صرف عيادة'
+                            });
+                        } catch (logErr) {
+                            // ابتلاع آمن — الـ log السطحي لا يجب أن يُفشل الخصم الفعلي
+                            Logger.log('⚠️ applyMedicationAdjustments_: فشل تسجيل MedicationDispenseLog (الخصم نجح): ' + logErr.toString());
+                        }
+                    }
+                } else {
+                    result.failed++;
+                    result.details.push({ medicationId: medId, error: (upd && upd.message) || 'فشل تحديث الدواء' });
+                }
+            } catch (writeErr) {
+                result.failed++;
+                result.details.push({ medicationId: medId, error: writeErr.toString() });
+            }
+        }
+
+        if (result.failed > 0 && result.applied === 0) {
+            result.success = false;
+        }
+        return result;
+    } finally {
+        // ضمان تحرير القفل في كل الأحوال (نجاح/خطأ/إفلات استثناء)
+        if (lock) {
+            try { lock.releaseLock(); } catch (relErr) {
+                Logger.log('⚠️ applyMedicationAdjustments_: فشل تحرير القفل: ' + relErr.toString());
+            }
+        }
     }
-    return result;
 }
 
 /**

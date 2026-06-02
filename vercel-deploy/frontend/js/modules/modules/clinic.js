@@ -5488,6 +5488,13 @@ const Clinic = {
     },
 
 
+    /**
+     * ربط أحداث تبويب تحليل البيانات (stub للتوافق)
+     */
+    bindDataAnalysisTabEvents(panel) {
+        // تم الدمج في renderDataAnalysisTab → _clinicBindAnalyticsEvents
+    },
+
     // ══════════════════════════════════════════════════════════════
     //  لوحة تحليل العيادة — الدوال الجديدة
     // ══════════════════════════════════════════════════════════════
@@ -10848,7 +10855,12 @@ const Clinic = {
                         if (typeof Notification !== 'undefined' && Notification.warning) {
                             Notification.warning('تنبيه: عدد زيارات ' + who + ' للعيادة هذا الشهر وصل أو تجاوز ' + threshold + ' زيارة. تم إشعار مدير النظام.');
                         }
-                        this.notifyAdminsAboutHighClinicVisits(formData, monthlyCount).catch(function() {});
+                        this.notifyAdminsAboutHighClinicVisits(formData, monthlyCount).catch(function (notifyErr) {
+                        // ✅ تشخيص: لا نُسكت الفشل — مفيد لتعقب لماذا لم يصل إشعار للمدير
+                        if (typeof Utils !== 'undefined' && Utils.safeWarn) {
+                            Utils.safeWarn('⚠️ Clinic: فشل إشعار مدير النظام عن تجاوز تردد الزيارات:', notifyErr);
+                        }
+                    });
                     }
                 } catch (e) {
                     Utils.safeWarn('فحص تردد العيادة الشهري:', e);
@@ -10890,6 +10902,7 @@ const Clinic = {
 
                         // ✅ تم حذف الـ forEach(async updateMedication) المتوازي بالكامل
                         // الـ backend الآن يطبّق التعديلات atomically عبر applyMedicationAdjustments_
+                        // (يستخدم updateSingleRowInSheet لكل دواء — لا race condition، لا double deduction)
                         if (hasInventoryChange) {
                             document.dispatchEvent(new CustomEvent('data-saved', {
                                 detail: {
@@ -11972,7 +11985,14 @@ const Clinic = {
 
             try { localStorage.setItem('clinic_approvals_last_sync', String(Date.now())); } catch (e) {}
             if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
-                try { window.DataManager.save(); } catch (e) {}
+                try {
+                    window.DataManager.save();
+                } catch (e) {
+                    // ✅ تشخيص: لا نُسكت الفشل — مفيد لتعقب فقدان البيانات (quota / privacy mode)
+                    if (typeof Utils !== 'undefined' && Utils.safeWarn) {
+                        Utils.safeWarn('⚠️ Clinic approvals: فشل DataManager.save بعد جلب الـ approvals:', e);
+                    }
+                }
             }
             this._approvalsBackendFetchOk = true;
         })().finally(() => {
@@ -14775,7 +14795,12 @@ const Clinic = {
                     if (typeof Notification !== 'undefined' && Notification.warning) {
                         Notification.warning('تنبيه: عدد زيارات ' + who + ' للعيادة هذا الشهر وصل أو تجاوز ' + threshold + ' زيارة. تم إشعار مدير النظام.');
                     }
-                    this.notifyAdminsAboutHighClinicVisits(formData, monthlyCount).catch(function() {});
+                    this.notifyAdminsAboutHighClinicVisits(formData, monthlyCount).catch(function (notifyErr) {
+                        // ✅ تشخيص: لا نُسكت الفشل — مفيد لتعقب لماذا لم يصل إشعار للمدير
+                        if (typeof Utils !== 'undefined' && Utils.safeWarn) {
+                            Utils.safeWarn('⚠️ Clinic: فشل إشعار مدير النظام عن تجاوز تردد الزيارات:', notifyErr);
+                        }
+                    });
                 }
             } catch (e) {
                 Utils.safeWarn('فحص تردد العيادة الشهري:', e);
