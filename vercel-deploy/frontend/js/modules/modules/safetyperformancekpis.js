@@ -3606,26 +3606,56 @@ const SafetyPerformanceKPIs = {
  * - hover lift خفيف + ring متغير
  * - RTL/LTR safe (logical properties فقط)
  */
+/**
+ * ✨ خريطة الألوان للـ tones — تُستخدم بدلاً من Tailwind classes
+ * (Tailwind المُجمَّع لا يحوي تركيبات tone ديناميكية، فنستخدم inline styles)
+ */
+SafetyPerformanceKPIs._tonePalette = {
+    rose:    { c50:'#FFF1F2', c100:'#FFE4E6', c200:'#FECDD3', c400:'#FB7185', c500:'#F43F5E', c600:'#E11D48', c700:'#BE123C', soft:'rgba(244,63,94,0.10)' },
+    amber:   { c50:'#FFFBEB', c100:'#FEF3C7', c200:'#FDE68A', c400:'#FBBF24', c500:'#F59E0B', c600:'#D97706', c700:'#B45309', soft:'rgba(245,158,11,0.10)' },
+    emerald: { c50:'#ECFDF5', c100:'#D1FAE5', c200:'#A7F3D0', c400:'#34D399', c500:'#10B981', c600:'#059669', c700:'#047857', soft:'rgba(16,185,129,0.10)' },
+    indigo:  { c50:'#EEF2FF', c100:'#E0E7FF', c200:'#C7D2FE', c400:'#818CF8', c500:'#6366F1', c600:'#4F46E5', c700:'#4338CA', soft:'rgba(99,102,241,0.10)' },
+    sky:     { c50:'#F0F9FF', c100:'#E0F2FE', c200:'#BAE6FD', c400:'#38BDF8', c500:'#0EA5E9', c600:'#0284C7', c700:'#0369A1', soft:'rgba(14,165,233,0.10)' },
+    teal:    { c50:'#F0FDFA', c100:'#CCFBF1', c200:'#99F6E4', c400:'#2DD4BF', c500:'#14B8A6', c600:'#0D9488', c700:'#0F766E', soft:'rgba(20,184,166,0.10)' },
+    blue:    { c50:'#EFF6FF', c100:'#DBEAFE', c200:'#BFDBFE', c400:'#60A5FA', c500:'#3B82F6', c600:'#2563EB', c700:'#1D4ED8', soft:'rgba(59,130,246,0.10)' },
+    violet:  { c50:'#F5F3FF', c100:'#EDE9FE', c200:'#DDD6FE', c400:'#A78BFA', c500:'#8B5CF6', c600:'#7C3AED', c700:'#6D28D9', soft:'rgba(139,92,246,0.10)' },
+    orange:  { c50:'#FFF7ED', c100:'#FFEDD5', c200:'#FED7AA', c400:'#FB923C', c500:'#F97316', c600:'#EA580C', c700:'#C2410C', soft:'rgba(249,115,22,0.10)' },
+    red:     { c50:'#FEF2F2', c100:'#FEE2E2', c200:'#FECACA', c400:'#F87171', c500:'#EF4444', c600:'#DC2626', c700:'#B91C1C', soft:'rgba(239,68,68,0.10)' },
+    green:   { c50:'#F0FDF4', c100:'#DCFCE7', c200:'#BBF7D0', c400:'#4ADE80', c500:'#22C55E', c600:'#16A34A', c700:'#15803D', soft:'rgba(34,197,94,0.10)' },
+    purple:  { c50:'#FAF5FF', c100:'#F3E8FF', c200:'#E9D5FF', c400:'#C084FC', c500:'#A855F7', c600:'#9333EA', c700:'#7E22CE', soft:'rgba(168,85,247,0.10)' },
+    pink:    { c50:'#FDF2F8', c100:'#FCE7F3', c200:'#FBCFE8', c400:'#F472B6', c500:'#EC4899', c600:'#DB2777', c700:'#BE185D', soft:'rgba(236,72,153,0.10)' },
+    cyan:    { c50:'#ECFEFF', c100:'#CFFAFE', c200:'#A5F3FC', c400:'#22D3EE', c500:'#06B6D4', c600:'#0891B2', c700:'#0E7490', soft:'rgba(6,182,212,0.10)' },
+    yellow:  { c50:'#FEFCE8', c100:'#FEF9C3', c200:'#FEF08A', c400:'#FACC15', c500:'#EAB308', c600:'#CA8A04', c700:'#A16207', soft:'rgba(234,179,8,0.10)' }
+};
+
+/**
+ * يُرجع كائن tone palette لاسم النغمة، مع fallback لـ indigo إذا لم يُعرَف.
+ */
+SafetyPerformanceKPIs._toneColors = function (tone) {
+    return this._tonePalette[String(tone || '').toLowerCase()] || this._tonePalette.indigo;
+};
+
 SafetyPerformanceKPIs.renderOverviewMiniStat = function (id, label, icon, tone, unit) {
-    // ✨ Executive Mini Stat — navy/gold subtle accent + premium typography
+    // ✨ Executive Mini Stat — explicit hex colors (Tailwind tone classes ليست متاحة هنا)
+    const c = this._toneColors(tone);
     return `
         <div class="spk-mini-card group relative overflow-hidden rounded-[20px] bg-white p-5 transition-all duration-300 hover:-translate-y-1" style="border: 1px solid rgba(20,34,61,0.10); box-shadow: 0 12px 30px -10px rgba(10,22,40,0.10), 0 4px 12px -4px rgba(10,22,40,0.04);">
-            <!-- Top accent bar: tone color blended -->
-            <div class="absolute inset-x-0 top-0 h-[3px] bg-gradient-to-r from-${tone}-600 via-${tone}-500 to-${tone}-400"></div>
-            <!-- Subtle gold corner accent (executive signature) -->
-            <div class="absolute top-2 end-2 h-1 w-1 rounded-full pointer-events-none" style="background: #D4A017; box-shadow: 0 0 6px rgba(212,160,23,0.45);"></div>
-            <!-- Decorative tone glow blob -->
-            <div class="absolute -top-12 -end-12 h-32 w-32 rounded-full bg-${tone}-100/45 blur-2xl pointer-events-none transition-opacity duration-300 group-hover:opacity-100" style="opacity:0.7;"></div>
+            <!-- Top accent bar (tone gradient — hex inline) -->
+            <div class="absolute inset-x-0 top-0 h-1" style="background: linear-gradient(90deg, ${c.c600}, ${c.c500}, ${c.c400});"></div>
+            <!-- Gold corner dot (executive signature) -->
+            <div class="absolute top-2.5 end-2.5 h-1.5 w-1.5 rounded-full pointer-events-none" style="background: #D4A017; box-shadow: 0 0 8px rgba(212,160,23,0.55);"></div>
+            <!-- Tone glow blob -->
+            <div class="absolute -top-12 -end-12 h-32 w-32 rounded-full pointer-events-none transition-opacity duration-300 group-hover:opacity-90" style="background: ${c.c100}; opacity:0.55; filter: blur(20px);"></div>
 
             <div class="relative flex items-start justify-between gap-3">
                 <div class="min-w-0">
-                    <div class="inline-flex items-center gap-1.5 text-[9px] font-black uppercase tracking-[0.26em] text-${tone}-700">
-                        <span class="inline-block h-1 w-3 rounded-full bg-${tone}-500"></span>
+                    <div class="inline-flex items-center gap-1.5 text-[9px] font-black uppercase tracking-[0.26em]" style="color: ${c.c700};">
+                        <span class="inline-block h-1 w-3 rounded-full" style="background: ${c.c500};"></span>
                         ${unit}
                     </div>
                     <div class="mt-2 text-sm font-bold leading-snug" style="color: #1E293B;">${label}</div>
                 </div>
-                <div class="h-11 w-11 rounded-2xl flex items-center justify-center text-${tone}-700 bg-gradient-to-br from-${tone}-50 to-${tone}-100 shrink-0 transition-transform duration-300 group-hover:scale-105" style="border: 1px solid rgba(20,34,61,0.08); box-shadow: 0 4px 12px -4px rgba(10,22,40,0.10);">
+                <div class="h-11 w-11 rounded-2xl flex items-center justify-center shrink-0 transition-transform duration-300 group-hover:scale-105" style="color: ${c.c700}; background: linear-gradient(135deg, ${c.c50}, ${c.c100}); border: 1px solid ${c.c200}; box-shadow: 0 4px 12px -4px ${c.soft.replace('0.10','0.30')};">
                     <i class="fas ${icon}"></i>
                 </div>
             </div>
@@ -3648,25 +3678,26 @@ SafetyPerformanceKPIs.renderOverviewMiniStat = function (id, label, icon, tone, 
  * - RTL/LTR safe بالكامل
  */
 SafetyPerformanceKPIs.renderWorkforceStatCard = function (id, label, icon, tone, unit, subtitle = '') {
-    // ✨ Executive Workforce Card — navy/gold polish + tabular numbers
+    // ✨ Executive Workforce Card — explicit hex colors
+    const c = this._toneColors(tone);
     return `
         <div class="spk-workforce-card group relative overflow-hidden rounded-[22px] bg-white p-5 transition-all duration-300 hover:-translate-y-1 hover:shadow-xl" style="border: 1px solid rgba(20,34,61,0.10); box-shadow: 0 14px 36px -12px rgba(10,22,40,0.12), 0 4px 12px -4px rgba(10,22,40,0.04);">
-            <!-- Top accent bar -->
-            <div class="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-${tone}-600 via-${tone}-500 to-${tone}-400"></div>
+            <!-- Top accent bar (tone gradient — hex inline) -->
+            <div class="absolute inset-x-0 top-0 h-1" style="background: linear-gradient(90deg, ${c.c600}, ${c.c500}, ${c.c400});"></div>
             <!-- Gold corner dot (executive signature) -->
-            <div class="absolute top-2.5 end-2.5 h-1 w-1 rounded-full pointer-events-none" style="background: #D4A017; box-shadow: 0 0 6px rgba(212,160,23,0.45);"></div>
-            <!-- Tone glow blob (premium depth) -->
-            <div class="absolute -top-14 -end-14 h-40 w-40 rounded-full bg-${tone}-100/40 blur-3xl pointer-events-none transition-opacity duration-300 group-hover:opacity-100" style="opacity:0.65;"></div>
+            <div class="absolute top-2.5 end-2.5 h-1.5 w-1.5 rounded-full pointer-events-none" style="background: #D4A017; box-shadow: 0 0 8px rgba(212,160,23,0.55);"></div>
+            <!-- Tone glow blob -->
+            <div class="absolute -top-14 -end-14 h-40 w-40 rounded-full pointer-events-none transition-opacity duration-300 group-hover:opacity-90" style="background: ${c.c100}; opacity:0.55; filter: blur(28px);"></div>
 
             <div class="relative flex items-start justify-between gap-3 mb-4">
                 <div class="min-w-0 flex-1">
-                    <div class="inline-flex items-center gap-1.5 text-[9px] font-black uppercase tracking-[0.26em] text-${tone}-700">
-                        <span class="inline-block h-1 w-3 rounded-full bg-${tone}-500"></span>
+                    <div class="inline-flex items-center gap-1.5 text-[9px] font-black uppercase tracking-[0.26em]" style="color: ${c.c700};">
+                        <span class="inline-block h-1 w-3 rounded-full" style="background: ${c.c500};"></span>
                         ${unit}
                     </div>
                     <h4 class="mt-2 text-sm font-bold leading-snug" style="color: #1E293B;">${label}</h4>
                 </div>
-                <div class="h-12 w-12 rounded-2xl flex items-center justify-center text-${tone}-700 bg-gradient-to-br from-${tone}-50 via-white to-${tone}-100 shrink-0 transition-transform duration-300 group-hover:scale-105" style="border: 1px solid rgba(20,34,61,0.10); box-shadow: 0 6px 16px -4px rgba(10,22,40,0.10), inset 0 0 0 1px rgba(255,255,255,0.6);">
+                <div class="h-12 w-12 rounded-2xl flex items-center justify-center shrink-0 transition-transform duration-300 group-hover:scale-105" style="color: ${c.c700}; background: linear-gradient(135deg, ${c.c50}, #FFFFFF 50%, ${c.c100}); border: 1px solid ${c.c200}; box-shadow: 0 6px 16px -4px ${c.soft.replace('0.10','0.32')}, inset 0 0 0 1px rgba(255,255,255,0.6);">
                     <i class="fas ${icon} text-lg"></i>
                 </div>
             </div>
@@ -3711,30 +3742,40 @@ SafetyPerformanceKPIs.renderOverviewChartCard = function (containerId, title, ic
 
 SafetyPerformanceKPIs.renderKPICard = function (id, label, type, icon, color, defaultUnit = '') {
     const t = (k, f) => SafetyPerformanceKPIs._t(k, f);
-    // ✨ Executive KPI Card — refined polish + navy/gold subtle integration
+    // ✨ Executive KPI Card — explicit hex colors (Tailwind tone classes ليست متاحة)
+    // ⚠️ Note: renderLeadingIndicators / renderLaggingIndicators قد تمرّر color
+    // كـ hex (مثلاً '#2563eb') بدلاً من اسم نغمة. نعالج كلا الحالتين.
+    let c;
+    const colorStr = String(color || '').trim();
+    if (colorStr.startsWith('#')) {
+        // hex مُمرَّر — نستخدمه مباشرة لكل المستويات
+        c = { c50: colorStr + '0F', c100: colorStr + '1F', c200: colorStr + '40', c400: colorStr, c500: colorStr, c600: colorStr, c700: colorStr, soft: colorStr + '20' };
+    } else {
+        c = this._toneColors(colorStr);
+    }
     return `
         <article class="spk-kpi-card group relative overflow-hidden rounded-[22px] bg-white p-5 transition-all duration-300 hover:-translate-y-1" style="border: 1px solid rgba(20,34,61,0.10); box-shadow: 0 14px 36px -12px rgba(10,22,40,0.12), 0 4px 12px -4px rgba(10,22,40,0.04);">
-            <!-- Top accent gradient bar (tone) -->
-            <div class="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-${color}-600 via-${color}-500 to-${color}-400"></div>
-            <!-- Gold corner accent (executive signature) -->
-            <div class="absolute top-2.5 end-2.5 h-1 w-1 rounded-full pointer-events-none" style="background: #D4A017; box-shadow: 0 0 6px rgba(212,160,23,0.45);"></div>
+            <!-- Top accent gradient bar (tone — hex inline) -->
+            <div class="absolute inset-x-0 top-0 h-1" style="background: linear-gradient(90deg, ${c.c600}, ${c.c500}, ${c.c400});"></div>
+            <!-- Gold corner dot (executive signature) -->
+            <div class="absolute top-2.5 end-2.5 h-1.5 w-1.5 rounded-full pointer-events-none" style="background: #D4A017; box-shadow: 0 0 8px rgba(212,160,23,0.55);"></div>
             <!-- Tone-tinted glow blob -->
-            <div class="absolute -top-14 -end-14 h-40 w-40 rounded-full bg-${color}-100/40 blur-3xl pointer-events-none transition-opacity duration-300 group-hover:opacity-100" style="opacity:0.55;"></div>
+            <div class="absolute -top-14 -end-14 h-40 w-40 rounded-full pointer-events-none transition-opacity duration-300 group-hover:opacity-90" style="background: ${c.c100}; opacity:0.50; filter: blur(28px);"></div>
 
             <!-- Header (eyebrow + label + icon) -->
             <div class="relative flex items-start justify-between gap-3">
                 <div class="min-w-0 flex-1">
-                    <div class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[9px] font-black uppercase tracking-[0.24em] bg-${color}-50 text-${color}-700" style="border: 1px solid rgba(20,34,61,0.06);">
-                        <span class="inline-block h-1 w-3 rounded-full bg-${color}-500"></span>
+                    <div class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[9px] font-black uppercase tracking-[0.24em]" style="color: ${c.c700}; background: ${c.c50}; border: 1px solid ${c.c200};">
+                        <span class="inline-block h-1 w-3 rounded-full" style="background: ${c.c500};"></span>
                         ${type}
                     </div>
                     <h3 class="mt-2.5 text-sm font-bold leading-snug" style="color: #1E293B;">${label}</h3>
                     <p class="text-[11px] mt-2 flex items-center gap-1.5" id="${id}-period" style="color: #64748B;">
-                        <i class="fas fa-calendar-week text-${color}-500"></i>
+                        <i class="fas fa-calendar-week" style="color: ${c.c500};"></i>
                         ${t('module.kpi.card.thisMonth','هذا الشهر')}
                     </p>
                 </div>
-                <div class="h-12 w-12 rounded-2xl flex items-center justify-center text-${color}-700 shrink-0 transition-transform duration-300 group-hover:scale-105 bg-gradient-to-br from-${color}-50 to-${color}-100" style="border: 1px solid rgba(20,34,61,0.10); box-shadow: 0 6px 16px -4px rgba(10,22,40,0.10), inset 0 0 0 1px rgba(255,255,255,0.55);">
+                <div class="h-12 w-12 rounded-2xl flex items-center justify-center shrink-0 transition-transform duration-300 group-hover:scale-105" style="color: ${c.c700}; background: linear-gradient(135deg, ${c.c50}, ${c.c100}); border: 1px solid ${c.c200}; box-shadow: 0 6px 16px -4px ${c.soft.replace('0.10','0.32')}, inset 0 0 0 1px rgba(255,255,255,0.55);">
                     <i class="fas ${icon} text-lg"></i>
                 </div>
             </div>
@@ -3751,26 +3792,26 @@ SafetyPerformanceKPIs.renderKPICard = function (id, label, type, icon, color, de
 
                 <!-- Target + Achievement (refined twin chips) -->
                 <div class="mt-4 grid grid-cols-2 gap-2.5">
-                    <div class="rounded-xl px-3 py-2.5 bg-gradient-to-br from-slate-50 to-white" style="border: 1px solid rgba(20,34,61,0.08); box-shadow: inset 0 1px 0 rgba(255,255,255,0.6);">
+                    <div class="rounded-xl px-3 py-2.5" style="background: linear-gradient(135deg, #F8FAFC, #FFFFFF); border: 1px solid rgba(20,34,61,0.08); box-shadow: inset 0 1px 0 rgba(255,255,255,0.6);">
                         <div class="text-[9px] font-black uppercase tracking-[0.22em] flex items-center gap-1" style="color: #64748B;">
-                            <i class="fas fa-bullseye text-${color}-500"></i>
+                            <i class="fas fa-bullseye" style="color: ${c.c500};"></i>
                             ${t('module.kpi.hero.target','الهدف')}
                         </div>
                         <div class="mt-1 text-sm font-black" id="${id}-target" style="color: #14223D; font-feature-settings: 'tnum';" dir="ltr">-</div>
                     </div>
-                    <div class="rounded-xl px-3 py-2.5 bg-gradient-to-br from-slate-50 to-white" style="border: 1px solid rgba(20,34,61,0.08); box-shadow: inset 0 1px 0 rgba(255,255,255,0.6);">
+                    <div class="rounded-xl px-3 py-2.5" style="background: linear-gradient(135deg, #F8FAFC, #FFFFFF); border: 1px solid rgba(20,34,61,0.08); box-shadow: inset 0 1px 0 rgba(255,255,255,0.6);">
                         <div class="text-[9px] font-black uppercase tracking-[0.22em] flex items-center gap-1" style="color: #64748B;">
-                            <i class="fas fa-chart-line text-${color}-500"></i>
+                            <i class="fas fa-chart-line" style="color: ${c.c500};"></i>
                             ${t('module.kpi.card.achievement','الإنجاز')}
                         </div>
                         <div class="mt-1 text-sm font-black" id="${id}-progress" style="color: #14223D; font-feature-settings: 'tnum';" dir="ltr">-</div>
                     </div>
                 </div>
 
-                <!-- Progress bar (refined with gold tip) -->
+                <!-- Progress bar -->
                 <div class="mt-4">
                     <div class="w-full h-2 rounded-full overflow-hidden" style="background: rgba(20,34,61,0.06);" dir="ltr">
-                        <div class="h-full rounded-full bg-gradient-to-r from-${color}-500 to-${color}-600 transition-all duration-500" id="${id}-progress-bar" style="width:0%; box-shadow: 0 0 8px rgba(0,0,0,0.10);"></div>
+                        <div class="h-full rounded-full transition-all duration-500" id="${id}-progress-bar" style="width:0%; background: linear-gradient(90deg, ${c.c500}, ${c.c600}); box-shadow: 0 0 8px rgba(0,0,0,0.10);"></div>
                     </div>
                 </div>
 
