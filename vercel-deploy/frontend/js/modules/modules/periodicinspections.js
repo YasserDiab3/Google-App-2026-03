@@ -3699,439 +3699,387 @@ const PeriodicInspections = {
         const f = this.state.dailySafetyFilters || {};
         const trendMax = Math.max(1, ...(trend.map((r) => r.records)));
         const activeFilterCount = [f.search, f.siteId, f.inspectorName, f.shift, f.dateFrom, f.dateTo].filter(v => v && String(v).trim()).length;
+        const period = this._dscPeriod || '0';
 
-        // ── helpers ──────────────────────────────────────────────────────────
-        // Grade badge for compliance rate
-        const gradeInfo = (rate) => {
-            if (rate >= 90) return { label: 'ممتاز',   color: '#15803d', bg: '#dcfce7', border: '#86efac' };
-            if (rate >= 75) return { label: 'جيد',      color: '#1d4ed8', bg: '#dbeafe', border: '#93c5fd' };
-            if (rate >= 60) return { label: 'مقبول',    color: '#d97706', bg: '#fef3c7', border: '#fcd34d' };
-            return            { label: 'ضعيف',    color: '#dc2626', bg: '#fee2e2', border: '#fca5a5' };
-        };
-        const riskInfo = (rate) => {
-            if (rate >= 40) return { label: 'عالي',    color: '#dc2626', bg: '#fee2e2', grad: 'linear-gradient(90deg,#dc2626,#ef4444)' };
-            if (rate >= 20) return { label: 'متوسط',   color: '#d97706', bg: '#fef3c7', grad: 'linear-gradient(90deg,#d97706,#f59e0b)' };
-            return            { label: 'منخفض',   color: '#15803d', bg: '#dcfce7', grad: 'linear-gradient(90deg,#15803d,#22c55e)' };
-        };
-
-        // Ranked list rows for inspectors/sites
-        const renderRankList = (items, gradStart, gradEnd) => {
-            if (!items.length) return `<div style="text-align:center; padding:2rem; color:#94a3b8;">${t('module.periodic.noData','لا توجد بيانات')}</div>`;
-            const max = Math.max(1, ...items.map(i => i.count));
-            const total = items.reduce((s, i) => s + i.count, 0) || 1;
-            return items.map((item, idx) => {
-                const pct = Math.round((item.count / max) * 100);
-                const share = Math.round((item.count / total) * 100);
-                const rank = idx + 1;
-                const rankColor = rank === 1 ? '#f59e0b' : rank === 2 ? '#94a3b8' : rank === 3 ? '#b45309' : '#e2e8f0';
-                return `
-                    <div style="display:flex; align-items:center; gap:0.75rem; margin-bottom:0.9rem;">
-                        <div style="width:28px; height:28px; border-radius:50%; background:${rankColor}; color:${rank<=3?'#fff':'#64748b'}; font-weight:800; font-size:0.75rem; display:flex; align-items:center; justify-content:center; flex-shrink:0;">${rank}</div>
-                        <div style="flex:1; min-width:0;">
-                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.3rem;">
-                                <span style="font-weight:600; font-size:0.85rem; color:#1e293b; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:60%;">${Utils.escapeHTML(item.name || '-')}</span>
-                                <div style="display:flex; align-items:center; gap:0.35rem; flex-shrink:0;">
-                                    <span style="font-weight:700; font-size:0.85rem; color:#1e293b;">${item.count}</span>
-                                    <span style="font-size:0.72rem; background:#f1f5f9; color:#64748b; padding:0.1rem 0.4rem; border-radius:999px;">${share}%</span>
-                                </div>
-                            </div>
-                            <div style="height:6px; background:#f1f5f9; border-radius:999px; overflow:hidden;">
-                                <div style="width:${pct}%; height:100%; background:linear-gradient(90deg,${gradStart},${gradEnd}); border-radius:999px; transition:width 0.6s ease;"></div>
-                            </div>
-                        </div>
-                    </div>`;
-            }).join('');
-        };
-
-        // SVG Trend chart (dual: bars=records, dots+line=compliance%)
-        const buildTrendSVG = (trendData) => {
-            if (!trendData.length) return `<div style="text-align:center; padding:2rem; color:#94a3b8;">${t('module.periodic.noData','لا توجد بيانات')}</div>`;
-            const W = 700, H = 180, padL = 10, padR = 10, padT = 16, padB = 40;
-            const chartW = W - padL - padR;
-            const chartH = H - padT - padB;
-            const n = trendData.length;
-            const barW = Math.max(8, Math.min(48, Math.floor((chartW / n) * 0.6)));
-            const gap = chartW / n;
-            const maxRec = Math.max(1, ...trendData.map(d => d.records));
-            const xOf = (i) => padL + gap * i + gap / 2;
-            const yOfRec = (v) => padT + chartH - Math.max(2, Math.round((v / maxRec) * chartH));
-            const barH = (v) => Math.max(2, Math.round((v / maxRec) * chartH));
-            const yOfComp = (v) => padT + chartH - Math.round((v / 100) * chartH);
-
-            // Bars
-            const bars = trendData.map((d, i) => {
-                const x = xOf(i) - barW / 2;
-                const h = barH(d.records);
-                const y = padT + chartH - h;
-                const fillStart = '#3b82f6', fillEnd = '#2563eb';
-                return `<defs><linearGradient id="bg${i}" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="${fillStart}"/><stop offset="100%" stop-color="${fillEnd}"/></linearGradient></defs>
-                    <rect x="${x}" y="${y}" width="${barW}" height="${h}" rx="3" fill="url(#bg${i})" opacity="0.85"/>
-                    <text x="${xOf(i)}" y="${y - 4}" text-anchor="middle" font-size="9" fill="#1d4ed8" font-weight="700">${d.records}</text>`;
-            }).join('');
-
-            // Compliance line + dots
-            const linePoints = trendData.map((d, i) => `${xOf(i)},${yOfComp(d.complianceRate)}`).join(' ');
-            const compLine = trendData.length > 1
-                ? `<polyline points="${linePoints}" fill="none" stroke="#16a34a" stroke-width="2" stroke-linejoin="round" opacity="0.9"/>`
-                : '';
-            const dots = trendData.map((d, i) => {
-                const cx = xOf(i), cy = yOfComp(d.complianceRate);
-                const g = gradeInfo(d.complianceRate);
-                return `<circle cx="${cx}" cy="${cy}" r="4.5" fill="${g.color}" stroke="#fff" stroke-width="1.5"/>
-                    <text x="${cx}" y="${cy - 8}" text-anchor="middle" font-size="8.5" fill="${g.color}" font-weight="700">${d.complianceRate}%</text>`;
-            }).join('');
-
-            // Month labels + baseline
-            const labels = trendData.map((d, i) => {
-                const lbl = d.month.slice(5) + '/' + d.month.slice(2, 4); // MM/YY
-                return `<text x="${xOf(i)}" y="${padT + chartH + 14}" text-anchor="middle" font-size="9" fill="#64748b">${lbl}</text>`;
-            }).join('');
-            const baseline = `<line x1="${padL}" y1="${padT + chartH}" x2="${W - padR}" y2="${padT + chartH}" stroke="#e2e8f0" stroke-width="1"/>`;
-
-            // Legend
-            const legend = `<rect x="${padL}" y="${H - 10}" width="10" height="4" rx="2" fill="#2563eb"/>
-                <text x="${padL + 13}" y="${H - 6}" font-size="9" fill="#64748b">${t('module.periodic.dsc.stats.total','السجلات')}</text>
-                <circle cx="${padL + 90}" cy="${H - 8}" r="4" fill="#16a34a"/>
-                <text x="${padL + 97}" y="${H - 6}" font-size="9" fill="#64748b">${t('module.periodic.complianceRate','نسبة المطابقة')}</text>`;
-
-            return `<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" style="width:100%; height:auto; direction:ltr;" aria-hidden="true">
-                ${baseline}${bars}${compLine}${dots}${labels}${legend}
-            </svg>`;
-        };
+        // ── KPI cards ─────────────────────────────────────────────────────────
+        const shift1count = analytics.shiftList.find(s => s.name === 'الأولى')?.count || 0;
+        const shift2count = analytics.shiftList.find(s => s.name === 'الثانية')?.count || 0;
+        const shift3count = analytics.shiftList.find(s => s.name === 'الثالثة')?.count || 0;
+        const kpis = [
+            { label: t('module.periodic.dsc.stats.total','إجمالي السجلات'),       value: analytics.totalRecords,          icon:'fas fa-clipboard-list',  color:'#2563eb', bg:'#eff6ff', border:'#bfdbfe' },
+            { label: t('module.periodic.complianceRate','نسبة المطابقة'),         value: analytics.complianceRate + '%',   icon:'fas fa-check-circle',    color:'#15803d', bg:'#f0fdf4', border:'#bbf7d0' },
+            { label: t('module.periodic.nonCompliantPoints','غير المطابق'),       value: analytics.overallNonCompliant,    icon:'fas fa-times-circle',    color:'#dc2626', bg:'#fef2f2', border:'#fecaca' },
+            { label: t('module.periodic.pointsChecked','نقاط الفحص'),             value: analytics.overallPointsTotal,     icon:'fas fa-tasks',           color:'#6366f1', bg:'#eef2ff', border:'#c7d2fe' },
+            { label: t('module.periodic.dsc.stats.shift1','الوردية الأولى'),      value: shift1count,                      icon:'fas fa-sun',             color:'#ca8a04', bg:'#fefce8', border:'#fde68a' },
+            { label: t('module.periodic.dsc.stats.shift23','الوردية 2/3'),        value: shift2count + shift3count,        icon:'fas fa-moon',            color:'#7c3aed', bg:'#f5f3ff', border:'#ddd6fe' },
+        ];
 
         return `
-            <style>
-                /* ═══ Analytics dashboard scoped styles ═════════════════════════ */
-                .dsc-analytics-hero {
-                    background: linear-gradient(135deg, #0f172a 0%, #1e3a5f 50%, #1e40af 100%);
-                    border-radius: 16px; padding: 1.4rem 1.6rem; margin-bottom: 1.25rem;
-                    color: #fff; position: relative; overflow: hidden;
-                }
-                .dsc-analytics-hero::before {
-                    content: ''; position: absolute; top: -40px; left: -40px;
-                    width: 220px; height: 220px; border-radius: 50%;
-                    background: rgba(255,255,255,0.04); pointer-events: none;
-                }
-                .dsc-analytics-hero::after {
-                    content: ''; position: absolute; bottom: -60px; right: -30px;
-                    width: 280px; height: 280px; border-radius: 50%;
-                    background: rgba(255,255,255,0.03); pointer-events: none;
-                }
-                .dsc-analytics-hero .hero-title { font-size: 1.3rem; font-weight: 800; margin: 0 0 0.2rem; }
-                .dsc-analytics-hero .hero-subtitle { font-size: 0.82rem; opacity: 0.8; margin: 0 0 1rem; }
-                .dsc-analytics-hero .hero-metrics { display: flex; flex-wrap: wrap; gap: 1rem; }
-                .dsc-analytics-hero .hero-metric {
-                    background: rgba(255,255,255,0.1); backdrop-filter: blur(4px);
-                    border: 1px solid rgba(255,255,255,0.2); border-radius: 10px;
-                    padding: 0.7rem 1rem; min-width: 110px; flex: 1;
-                }
-                .dsc-analytics-hero .hero-metric .hm-val { font-size: 1.75rem; font-weight: 800; line-height: 1; }
-                .dsc-analytics-hero .hero-metric .hm-lbl { font-size: 0.74rem; opacity: 0.8; margin-top: 3px; }
-                .dsc-analytics-hero .hero-metric .hm-sub { font-size: 0.68rem; opacity: 0.65; margin-top: 1px; }
-                /* controls panel */
-                .dsc-ctrl-panel {
-                    background: #fff; border: 1px solid #e2e8f0; border-radius: 12px;
-                    margin-bottom: 1.25rem; overflow: hidden; box-shadow: 0 1px 6px rgba(0,0,0,0.04);
-                }
-                .dsc-ctrl-header {
-                    display: flex; align-items: center; justify-content: space-between;
-                    padding: 0.75rem 1rem; background: linear-gradient(90deg,#f8fafc,#fff);
-                    border-bottom: 1px solid #e2e8f0; cursor: pointer; user-select: none;
-                }
-                .dsc-ctrl-header .ch-left { display: flex; align-items: center; gap: 0.5rem; font-weight: 700; color: #1e293b; font-size: 0.88rem; }
-                .dsc-ctrl-body { padding: 1rem; }
-                .dsc-ctrl-body .dsc-field label { font-size: 0.77rem; font-weight: 600; color: #475569; margin-bottom: 0.2rem; display: block; }
-                .dsc-ctrl-body .dsc-field input,
-                .dsc-ctrl-body .dsc-field select {
-                    width: 100%; padding: 0.48rem 0.65rem; font-size: 0.83rem;
-                    border: 1.5px solid #e2e8f0; border-radius: 8px;
-                    outline: none; transition: border-color 0.15s, box-shadow 0.15s;
-                }
-                .dsc-ctrl-body .dsc-field input:focus,
-                .dsc-ctrl-body .dsc-field select:focus {
-                    border-color: #2563eb; box-shadow: 0 0 0 3px rgba(37,99,235,0.1);
-                }
-                .dsc-ctrl-body .sep { border: none; border-top: 1px solid #f1f5f9; margin: 0.85rem 0; }
-                .dsc-ctrl-footer { padding: 0.6rem 1rem; background: #fafbfc; border-top: 1px solid #f1f5f9; display: flex; justify-content: flex-end; gap: 0.5rem; }
-                /* section cards */
-                .dsc-section {
-                    background: #fff; border: 1px solid #e2e8f0; border-radius: 12px;
-                    overflow: hidden; box-shadow: 0 1px 8px rgba(0,0,0,0.05); margin-bottom: 1.25rem;
-                }
-                .dsc-section-header {
-                    display: flex; align-items: center; justify-content: space-between;
-                    padding: 0.8rem 1.1rem; border-bottom: 2px solid #f1f5f9;
-                }
-                .dsc-section-header h3 { margin: 0; font-size: 0.92rem; font-weight: 700; color: #1e293b; display: flex; align-items: center; gap: 0.4rem; }
-                .dsc-section-header .sh-badge { font-size: 0.72rem; font-weight: 700; padding: 0.15rem 0.5rem; border-radius: 999px; }
-                .dsc-section-body { padding: 1rem 1.1rem; }
-                /* checkpoint heatmap */
-                .dsc-checkpoint-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.75rem; }
-                @media(max-width:960px){ .dsc-checkpoint-grid{ grid-template-columns: repeat(2,1fr); } }
-                @media(max-width:600px){ .dsc-checkpoint-grid{ grid-template-columns: 1fr; } }
-                .dsc-cp-card {
-                    border-radius: 10px; padding: 0.85rem 0.9rem;
-                    border: 1px solid; transition: transform 0.12s, box-shadow 0.12s;
-                    position: relative; overflow: hidden;
-                }
-                .dsc-cp-card:hover { transform: translateY(-1px); box-shadow: 0 4px 14px rgba(0,0,0,0.1); }
-                .dsc-cp-card .cp-idx {
-                    position: absolute; top: 0.5rem; left: 0.6rem;
-                    font-size: 0.65rem; font-weight: 800; opacity: 0.5; font-family: monospace;
-                }
-                .dsc-cp-card .cp-label { font-size: 0.78rem; font-weight: 600; color: #1e293b; line-height: 1.35; margin-bottom: 0.55rem; padding-left: 1.4rem; }
-                .dsc-cp-card .cp-stats { display: flex; gap: 0.5rem; align-items: center; margin-bottom: 0.45rem; flex-wrap: wrap; }
-                .dsc-cp-card .cp-pill { font-size: 0.71rem; font-weight: 700; padding: 0.12rem 0.45rem; border-radius: 999px; }
-                .dsc-cp-card .cp-bar-wrap { height: 5px; background: rgba(0,0,0,0.08); border-radius: 999px; overflow: hidden; }
-                .dsc-cp-card .cp-bar-fill { height: 100%; border-radius: 999px; transition: width 0.6s ease; }
-                .dsc-cp-card .cp-rate { font-size: 0.7rem; color: #64748b; margin-top: 0.3rem; }
-                /* export buttons row */
-                .dsc-export-row { display: flex; gap: 0.6rem; flex-wrap: wrap; }
-                .dsc-export-btn {
-                    background: #fff; border: 1.5px solid #e2e8f0; color: #374151;
-                    padding: 0.48rem 1rem; border-radius: 8px; font-size: 0.82rem;
-                    font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 0.35rem;
-                    transition: all 0.15s;
-                }
-                .dsc-export-btn:hover { border-color: #2563eb; color: #1d4ed8; background: #eff6ff; }
-                .dsc-reset-btn-an {
-                    background: #fff; border: 1.5px solid #e2e8f0; color: #64748b;
-                    padding: 0.48rem 0.9rem; border-radius: 8px; font-size: 0.82rem;
-                    font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 0.35rem;
-                    transition: all 0.15s;
-                }
-                .dsc-reset-btn-an:hover { border-color: #ef4444; color: #dc2626; background: #fff1f2; }
-            </style>
+        <div id="dsc-analytics-root" style="font-family:inherit;">
 
-            <!-- ════════════════ HERO ══════════════════════════════════════════════ -->
-            <div class="dsc-analytics-hero">
-                <div class="hero-title"><i class="fas fa-chart-line" style="margin-left:0.5rem; opacity:0.9;"></i>${t('module.periodic.tab.dailySafetyAnalytics','تحليل البيانات')}</div>
-                <div class="hero-subtitle">${t('module.periodic.analytics.subtitle','لوحة تحليل ديناميكية شاملة لسجلات المرور اليومي للسلامة')}</div>
-                <div class="hero-metrics">
-                    <div class="hero-metric">
-                        <div class="hm-val">${analytics.totalRecords}</div>
-                        <div class="hm-lbl">${t('module.periodic.dsc.stats.total','إجمالي السجلات')}</div>
-                        <div class="hm-sub">${t('module.periodic.allData','كل البيانات')}</div>
+            <!-- ══ شريط الأدوات الرئيسي (نفس نمط العيادة والملاحظات) ══ -->
+            <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:14px;padding:16px 20px;background:linear-gradient(135deg,#1e3a8a 0%,#2563eb 100%);border-radius:14px;color:#fff;box-shadow:0 4px 20px rgba(37,99,235,0.3);">
+                <div style="display:flex;align-items:center;gap:12px;">
+                    <div style="width:44px;height:44px;background:rgba(255,255,255,0.18);border-radius:12px;display:flex;align-items:center;justify-content:center;">
+                        <i class="fas fa-chart-line" style="font-size:20px;"></i>
                     </div>
-                    <div class="hero-metric" style="${analytics.complianceRate>=90?'background:rgba(21,128,61,0.25);border-color:rgba(21,128,61,0.5);':analytics.complianceRate>=75?'':analytics.complianceRate>=60?'background:rgba(217,119,6,0.2);border-color:rgba(217,119,6,0.4);':'background:rgba(220,38,38,0.2);border-color:rgba(220,38,38,0.4);'}">
-                        <div class="hm-val">${analytics.complianceRate}%</div>
-                        <div class="hm-lbl">${t('module.periodic.complianceRate','نسبة المطابقة')}</div>
-                        <div class="hm-sub">${gradeInfo(analytics.complianceRate).label}</div>
+                    <div>
+                        <h2 style="margin:0;font-size:1.15rem;font-weight:700;">${t('module.periodic.tab.dailySafetyAnalytics','لوحة تحليل المرور اليومي للسلامة')}</h2>
+                        <p style="margin:0;font-size:0.75rem;opacity:0.85;">${t('module.periodic.analytics.subtitle','تحليل شامل وفوري • فلاتر تفاعلية • تصدير PDF')}</p>
                     </div>
-                    <div class="hero-metric" style="background:rgba(220,38,38,0.15); border-color:rgba(220,38,38,0.35);">
-                        <div class="hm-val">${analytics.overallNonCompliant}</div>
-                        <div class="hm-lbl">${t('module.periodic.nonCompliantPoints','غير المطابق')}</div>
-                        <div class="hm-sub">${t('module.periodic.pointsChecked','نقطة فحص')}</div>
+                </div>
+                <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+                    <span style="font-size:0.72rem;opacity:0.85;margin-left:2px;">الفترة:</span>
+                    <div style="display:flex;gap:3px;flex-wrap:wrap;">
+                        ${['30','90','180','365','0'].map((v,i) => {
+                            const labels=['30 يوم','3 أشهر','6 أشهر','سنة','الكل'];
+                            const active = period === v;
+                            return `<button class="dsc-an-period-btn" data-period="${v}" style="padding:5px 10px;border-radius:8px;border:none;cursor:pointer;font-size:0.75rem;font-weight:600;transition:all .2s;background:${active?'#fff':'rgba(255,255,255,0.15)'};color:${active?'#1e40af':'#fff'};">${labels[i]}</button>`;
+                        }).join('')}
                     </div>
-                    <div class="hero-metric">
-                        <div class="hm-val">${analytics.overallPointsTotal}</div>
-                        <div class="hm-lbl">${t('module.periodic.pointsChecked','إجمالي نقاط الفحص')}</div>
-                        <div class="hm-sub">${t('module.periodic.dsc.stats.total','') + (analytics.overallPointsTotal ? '' : '-')}</div>
-                    </div>
+                    <button id="dsc-an-toggle-filters-btn" style="padding:6px 12px;border-radius:8px;border:1px solid rgba(255,255,255,0.4);cursor:pointer;background:rgba(255,255,255,0.12);color:#fff;font-size:0.78rem;font-weight:600;transition:all .2s;display:flex;align-items:center;gap:5px;" onmouseover="this.style.background='rgba(255,255,255,0.25)'" onmouseout="this.style.background='rgba(255,255,255,0.12)'">
+                        <i class="fas fa-sliders-h"></i><span>فلاتر</span><span id="dsc-an-filter-badge" style="${activeFilterCount>0?'':'display:none;'}background:#fbbf24;color:#78350f;font-size:0.65rem;padding:1px 5px;border-radius:10px;margin-right:2px;">${activeFilterCount||'●'}</span>
+                    </button>
+                    <button id="dsc-analytics-export-pdf-btn" style="padding:6px 14px;border-radius:8px;border:none;cursor:pointer;background:rgba(239,68,68,0.85);color:#fff;font-size:0.78rem;font-weight:600;transition:all .2s;display:flex;align-items:center;gap:5px;" onmouseover="this.style.background='rgba(239,68,68,1)'" onmouseout="this.style.background='rgba(239,68,68,0.85)'">
+                        <i class="fas fa-file-pdf"></i><span>PDF</span>
+                    </button>
+                    <button id="dsc-analytics-export-excel-btn" style="padding:6px 14px;border-radius:8px;border:none;cursor:pointer;background:rgba(22,163,74,0.85);color:#fff;font-size:0.78rem;font-weight:600;transition:all .2s;display:flex;align-items:center;gap:5px;" onmouseover="this.style.background='rgba(22,163,74,1)'" onmouseout="this.style.background='rgba(22,163,74,0.85)'">
+                        <i class="fas fa-file-excel"></i><span>Excel</span>
+                    </button>
+                    <button id="dsc-an-refresh-btn" style="padding:6px 10px;border-radius:8px;border:none;cursor:pointer;background:rgba(255,255,255,0.15);color:#fff;font-size:0.78rem;transition:all .2s;" onmouseover="this.style.background='rgba(255,255,255,0.3)'" onmouseout="this.style.background='rgba(255,255,255,0.15)'" title="تحديث">
+                        <i class="fas fa-sync-alt"></i>
+                    </button>
                 </div>
             </div>
 
-            <!-- ════════════════ CONTROLS PANEL ═══════════════════════════════════ -->
-            <div class="dsc-ctrl-panel">
-                <div class="dsc-ctrl-header" id="dsc-an-ctrl-toggle">
-                    <div class="ch-left">
-                        <i class="fas fa-sliders-h" style="color:#2563eb;"></i>
-                        ${t('module.periodic.analytics.filterData','الفلاتر وإعدادات العرض')}
-                        ${activeFilterCount > 0 ? `<span style="background:#2563eb;color:#fff;padding:0.15rem 0.45rem;border-radius:999px;font-size:0.7rem;font-weight:700;">${activeFilterCount}</span>` : ''}
+            <!-- ══ لوحة الفلاتر التفاعلية (مخفية افتراضياً) ══ -->
+            <div id="dsc-an-filter-panel" style="display:none;background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:12px;padding:18px 20px;margin-bottom:16px;">
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+                    <div style="display:flex;align-items:center;gap:8px;">
+                        <i class="fas fa-sliders-h" style="color:#2563eb;font-size:14px;"></i>
+                        <span style="font-weight:700;font-size:0.9rem;color:#1e3a8a;">الفلاتر التفاعلية</span>
+                        <span id="dsc-an-filter-count" style="background:#dbeafe;color:#1e40af;padding:2px 8px;border-radius:12px;font-size:0.72rem;font-weight:600;">${filteredRecords.length} سجل</span>
                     </div>
-                    <i class="fas fa-chevron-down" id="dsc-an-ctrl-chevron" style="color:#64748b;font-size:0.8rem;transition:transform 0.2s;"></i>
+                    <button id="dsc-filter-reset-btn" style="padding:4px 12px;border-radius:8px;border:1px solid #e2e8f0;background:#fff;color:#64748b;font-size:0.75rem;cursor:pointer;transition:all .2s;" onmouseover="this.style.background='#fef2f2';this.style.color='#ef4444';this.style.borderColor='#fecaca'" onmouseout="this.style.background='#fff';this.style.color='#64748b';this.style.borderColor='#e2e8f0'">
+                        <i class="fas fa-times ml-1"></i>مسح الكل
+                    </button>
                 </div>
-                <div id="dsc-an-ctrl-body" class="dsc-ctrl-body">
-                    <!-- Filters -->
-                    <div class="dsc-mb-sm" style="font-size:0.78rem;font-weight:700;color:#64748b;margin-bottom:0.6rem;text-transform:uppercase;letter-spacing:0.5px;">
-                        <i class="fas fa-filter" style="margin-left:0.35rem;color:#94a3b8;"></i>${t('module.periodic.analytics.filterData','الفلاتر')}
+                <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;margin-bottom:12px;">
+                    ${[
+                        {id:'dsc-filter-date-from', icon:'fas fa-calendar-alt', color:'#2563eb', label:'من تاريخ', type:'date', val: Utils.escapeHTML(f.dateFrom||'')},
+                        {id:'dsc-filter-date-to',   icon:'fas fa-calendar-alt', color:'#2563eb', label:'إلى تاريخ', type:'date', val: Utils.escapeHTML(f.dateTo||'')},
+                    ].map(field => `
+                        <div>
+                            <label style="font-size:0.72rem;font-weight:700;color:#64748b;display:block;margin-bottom:5px;">
+                                <i class="${field.icon}" style="color:${field.color};margin-left:4px;"></i>${field.label}
+                            </label>
+                            <input id="${field.id}" type="${field.type}" value="${field.val}" style="width:100%;padding:7px 10px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:0.82rem;background:#fff;transition:border .2s;" onfocus="this.style.borderColor='#3b82f6'" onblur="this.style.borderColor='#e2e8f0'">
+                        </div>
+                    `).join('')}
+                    <div>
+                        <label style="font-size:0.72rem;font-weight:700;color:#64748b;display:block;margin-bottom:5px;">
+                            <i class="fas fa-layer-group" style="color:#f59e0b;margin-left:4px;"></i>الوردية
+                        </label>
+                        <select id="dsc-filter-shift" style="width:100%;padding:7px 10px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:0.82rem;background:#fff;cursor:pointer;transition:border .2s;" onfocus="this.style.borderColor='#3b82f6'" onblur="this.style.borderColor='#e2e8f0'">
+                            <option value="">الكل</option>
+                            ${filterOptions.shifts.map(s=>`<option value="${Utils.escapeHTML(s)}" ${String(f.shift||'')===String(s)?'selected':''}>${Utils.escapeHTML(this._formatDailyShiftLabel(s))}</option>`).join('')}
+                        </select>
                     </div>
-                    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:0.75rem;margin-bottom:0.75rem;">
-                        <div class="dsc-field">
-                            <label><i class="fas fa-calendar-alt" style="margin-left:0.25rem;color:#94a3b8;"></i>${t('module.periodic.fromDate','من تاريخ')}</label>
-                            <input id="dsc-filter-date-from" type="date" value="${Utils.escapeHTML(f.dateFrom || '')}">
-                        </div>
-                        <div class="dsc-field">
-                            <label><i class="fas fa-calendar-alt" style="margin-left:0.25rem;color:#94a3b8;"></i>${t('module.periodic.toDate','إلى تاريخ')}</label>
-                            <input id="dsc-filter-date-to" type="date" value="${Utils.escapeHTML(f.dateTo || '')}">
-                        </div>
-                        <div class="dsc-field">
-                            <label><i class="fas fa-layer-group" style="margin-left:0.25rem;color:#94a3b8;"></i>${t('module.periodic.dsc.table.shift','الوردية')}</label>
-                            <select id="dsc-filter-shift">
-                                <option value="">${t('module.periodic.all','الكل')}</option>
-                                ${filterOptions.shifts.map(s=>`<option value="${Utils.escapeHTML(s)}" ${String(f.shift||'')===String(s)?'selected':''}>${Utils.escapeHTML(this._formatDailyShiftLabel(s))}</option>`).join('')}
+                    <div>
+                        <label style="font-size:0.72rem;font-weight:700;color:#64748b;display:block;margin-bottom:5px;">
+                            <i class="fas fa-user-hard-hat" style="color:#6366f1;margin-left:4px;"></i>القائم بالمرور
+                        </label>
+                        <select id="dsc-filter-inspector" style="width:100%;padding:7px 10px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:0.82rem;background:#fff;cursor:pointer;transition:border .2s;" onfocus="this.style.borderColor='#3b82f6'" onblur="this.style.borderColor='#e2e8f0'">
+                            <option value="">الكل</option>
+                            ${filterOptions.inspectors.map(n=>`<option value="${Utils.escapeHTML(n)}" ${String(f.inspectorName||'')===n?'selected':''}>${Utils.escapeHTML(n)}</option>`).join('')}
+                        </select>
+                    </div>
+                    <div>
+                        <label style="font-size:0.72rem;font-weight:700;color:#64748b;display:block;margin-bottom:5px;">
+                            <i class="fas fa-industry" style="color:#0ea5e9;margin-left:4px;"></i>المصنع/الموقع
+                        </label>
+                        <select id="dsc-filter-site" style="width:100%;padding:7px 10px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:0.82rem;background:#fff;cursor:pointer;transition:border .2s;" onfocus="this.style.borderColor='#3b82f6'" onblur="this.style.borderColor='#e2e8f0'">
+                            <option value="">الكل</option>
+                            ${filterOptions.sites.map(s=>`<option value="${Utils.escapeHTML(s.id)}" ${String(f.siteId||'')===String(s.id)?'selected':''}>${Utils.escapeHTML(s.name)}</option>`).join('')}
+                        </select>
+                    </div>
+                    <div>
+                        <label style="font-size:0.72rem;font-weight:700;color:#64748b;display:block;margin-bottom:5px;">
+                            <i class="fas fa-search" style="color:#94a3b8;margin-left:4px;"></i>بحث
+                        </label>
+                        <input id="dsc-filter-search" type="text" value="${Utils.escapeHTML(f.search||'')}" placeholder="رقم / الموقع / الاسم" style="width:100%;padding:7px 10px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:0.82rem;background:#fff;transition:border .2s;" onfocus="this.style.borderColor='#3b82f6'" onblur="this.style.borderColor='#e2e8f0'">
+                    </div>
+                </div>
+                <!-- عناصر التحكم بالعرض -->
+                <div style="border-top:1px solid #e2e8f0;padding-top:12px;">
+                    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;">
+                        <div>
+                            <label style="font-size:0.72rem;font-weight:700;color:#64748b;display:block;margin-bottom:5px;"><i class="fas fa-sort-amount-down" style="color:#94a3b8;margin-left:4px;"></i>ترتيب البنود حسب</label>
+                            <select id="dsc-analytics-ranking" style="width:100%;padding:7px 10px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:0.82rem;background:#fff;cursor:pointer;transition:border .2s;" onfocus="this.style.borderColor='#3b82f6'" onblur="this.style.borderColor='#e2e8f0'">
+                                <option value="nonCompliantRate" ${controls.rankingMetric==='nonCompliantRate'?'selected':''}>معدل الخطورة</option>
+                                <option value="nonCompliantCount" ${controls.rankingMetric==='nonCompliantCount'?'selected':''}>عدد غير المطابق</option>
+                                <option value="complianceRate" ${controls.rankingMetric==='complianceRate'?'selected':''}>نسبة المطابقة</option>
                             </select>
                         </div>
-                        <div class="dsc-field">
-                            <label><i class="fas fa-user-hard-hat" style="margin-left:0.25rem;color:#94a3b8;"></i>${t('module.periodic.dsc.table.inspector','القائم بالمرور')}</label>
-                            <select id="dsc-filter-inspector">
-                                <option value="">${t('module.periodic.all','الكل')}</option>
-                                ${filterOptions.inspectors.map(n=>`<option value="${Utils.escapeHTML(n)}" ${String(f.inspectorName||'')===n?'selected':''}>${Utils.escapeHTML(n)}</option>`).join('')}
-                            </select>
-                        </div>
-                        <div class="dsc-field">
-                            <label><i class="fas fa-industry" style="margin-left:0.25rem;color:#94a3b8;"></i>${t('module.periodic.dsc.table.site','المصنع/الموقع')}</label>
-                            <select id="dsc-filter-site">
-                                <option value="">${t('module.periodic.all','الكل')}</option>
-                                ${filterOptions.sites.map(s=>`<option value="${Utils.escapeHTML(s.id)}" ${String(f.siteId||'')===String(s.id)?'selected':''}>${Utils.escapeHTML(s.name)}</option>`).join('')}
-                            </select>
-                        </div>
-                        <div class="dsc-field">
-                            <label><i class="fas fa-search" style="margin-left:0.25rem;color:#94a3b8;"></i>${t('module.periodic.search','بحث')}</label>
-                            <input id="dsc-filter-search" type="text" value="${Utils.escapeHTML(f.search||'')}" placeholder="${t('module.periodic.searchPlaceholder','رقم التقرير / الموقع / الاسم')}">
-                        </div>
-                    </div>
-                    <hr class="sep">
-                    <!-- Display controls -->
-                    <div style="font-size:0.78rem;font-weight:700;color:#64748b;margin-bottom:0.6rem;text-transform:uppercase;letter-spacing:0.5px;">
-                        <i class="fas fa-sliders-h" style="margin-left:0.35rem;color:#94a3b8;"></i>${t('module.periodic.analytics.displaySettings','إعدادات العرض')}
-                    </div>
-                    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:0.75rem;margin-bottom:0.75rem;">
-                        <div class="dsc-field">
-                            <label>${t('module.periodic.analytics.topN','عدد العناصر')}</label>
-                            <select id="dsc-analytics-topn">
+                        <div>
+                            <label style="font-size:0.72rem;font-weight:700;color:#64748b;display:block;margin-bottom:5px;"><i class="fas fa-list-ol" style="color:#94a3b8;margin-left:4px;"></i>عدد العناصر</label>
+                            <select id="dsc-analytics-topn" style="width:100%;padding:7px 10px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:0.82rem;background:#fff;cursor:pointer;transition:border .2s;" onfocus="this.style.borderColor='#3b82f6'" onblur="this.style.borderColor='#e2e8f0'">
                                 ${[5,8,10,12,15,18,20].map(n=>`<option value="${n}" ${n===topN?'selected':''}>Top ${n}</option>`).join('')}
                             </select>
                         </div>
-                        <div class="dsc-field">
-                            <label>${t('module.periodic.analytics.rankingMetric','ترتيب البنود')}</label>
-                            <select id="dsc-analytics-ranking">
-                                <option value="nonCompliantRate" ${controls.rankingMetric==='nonCompliantRate'?'selected':''}>${t('module.periodic.analytics.byRiskRate','معدل الخطورة')}</option>
-                                <option value="nonCompliantCount" ${controls.rankingMetric==='nonCompliantCount'?'selected':''}>${t('module.periodic.analytics.byNonCompliantCount','عدد غير المطابق')}</option>
-                                <option value="complianceRate" ${controls.rankingMetric==='complianceRate'?'selected':''}>${t('module.periodic.analytics.byComplianceRate','نسبة المطابقة')}</option>
-                            </select>
-                        </div>
-                        <div class="dsc-field">
-                            <label>${t('module.periodic.analytics.exportScope','نطاق التصدير')}</label>
-                            <select id="dsc-analytics-export-inspector">
-                                <option value="__all__">${t('module.periodic.analytics.exportAll','الكل')}</option>
+                        <div>
+                            <label style="font-size:0.72rem;font-weight:700;color:#64748b;display:block;margin-bottom:5px;"><i class="fas fa-download" style="color:#94a3b8;margin-left:4px;"></i>نطاق التصدير</label>
+                            <select id="dsc-analytics-export-inspector" style="width:100%;padding:7px 10px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:0.82rem;background:#fff;cursor:pointer;transition:border .2s;" onfocus="this.style.borderColor='#3b82f6'" onblur="this.style.borderColor='#e2e8f0'">
+                                <option value="__all__">الكل</option>
                                 ${filterOptions.inspectors.map(n=>`<option value="${Utils.escapeHTML(n)}">${Utils.escapeHTML(n)}</option>`).join('')}
                             </select>
                         </div>
                         ${isAdmin ? `
-                        <div class="dsc-field">
-                            <label>${t('module.periodic.analytics.cardStyle','نمط الكروت')}</label>
-                            <select id="dsc-analytics-card-style">
-                                <option value="gradient" ${controls.cardStyle==='gradient'?'selected':''}>${t('module.periodic.analytics.styleGradient','متدرج')}</option>
-                                <option value="flat" ${controls.cardStyle==='flat'?'selected':''}>${t('module.periodic.analytics.styleFlat','مسطح')}</option>
+                        <div>
+                            <label style="font-size:0.72rem;font-weight:700;color:#64748b;display:block;margin-bottom:5px;">نمط الكروت</label>
+                            <select id="dsc-analytics-card-style" style="width:100%;padding:7px 10px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:0.82rem;background:#fff;cursor:pointer;" onfocus="this.style.borderColor='#3b82f6'" onblur="this.style.borderColor='#e2e8f0'">
+                                <option value="gradient" ${controls.cardStyle==='gradient'?'selected':''}>متدرج</option>
+                                <option value="flat" ${controls.cardStyle==='flat'?'selected':''}>مسطح</option>
                             </select>
                         </div>
-                        ` : '<div></div>'}
+                        <div>
+                            <label style="font-size:0.72rem;font-weight:700;color:#64748b;display:block;margin-bottom:5px;">نمط الأشرطة</label>
+                            <select id="dsc-analytics-bar-style" style="width:100%;padding:7px 10px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:0.82rem;background:#fff;cursor:pointer;" onfocus="this.style.borderColor='#3b82f6'" onblur="this.style.borderColor='#e2e8f0'">
+                                <option value="rounded" ${controls.barStyle==='rounded'?'selected':''}>حواف ناعمة</option>
+                                <option value="square" ${controls.barStyle==='square'?'selected':''}>حواف مستقيمة</option>
+                            </select>
+                        </div>
+                        ` : ''}
                     </div>
-                    ${isAdmin ? `
-                    <div class="dsc-field" style="max-width:260px; margin-bottom:0.75rem;">
-                        <label>${t('module.periodic.analytics.barStyle','نمط الأشرطة')}</label>
-                        <select id="dsc-analytics-bar-style">
-                            <option value="rounded" ${controls.barStyle==='rounded'?'selected':''}>${t('module.periodic.analytics.styleRounded','حواف ناعمة')}</option>
-                            <option value="square" ${controls.barStyle==='square'?'selected':''}>${t('module.periodic.analytics.styleSquare','حواف مستقيمة')}</option>
-                        </select>
-                    </div>` : ''}
-                </div>
-                <div class="dsc-ctrl-footer">
-                    <button type="button" class="dsc-reset-btn-an" id="dsc-filter-reset-btn">
-                        <i class="fas fa-times-circle"></i>${t('module.periodic.resetFilters','مسح الفلاتر')}
-                    </button>
-                    <button type="button" class="dsc-export-btn" id="dsc-analytics-export-pdf-btn">
-                        <i class="fas fa-file-pdf" style="color:#dc2626;"></i>${t('module.periodic.analytics.exportPdf','تصدير PDF')}
-                    </button>
-                    <button type="button" class="dsc-export-btn" id="dsc-analytics-export-excel-btn">
-                        <i class="fas fa-file-excel" style="color:#16a34a;"></i>${t('module.periodic.analytics.exportExcel','تصدير Excel')}
-                    </button>
                 </div>
             </div>
 
-            <!-- ════════════════ TWO-COLUMN: INSPECTORS + SITES ═══════════════════ -->
-            <div style="display:grid; grid-template-columns:1fr 1fr; gap:1.25rem; margin-bottom:1.25rem;">
-                <div class="dsc-section">
-                    <div class="dsc-section-header">
-                        <h3><i class="fas fa-user-shield" style="color:#16a34a;"></i>${t('module.periodic.topInspectors','تحليل القائمين بالمرور')}</h3>
-                        <span class="sh-badge" style="background:#dcfce7;color:#15803d;">${topInspectors.length}</span>
+            <!-- ══ KPI Cards (نفس نمط العيادة) ══ -->
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:10px;margin-bottom:20px;">
+                ${kpis.map(k=>`
+                <div style="background:${k.bg};border:1px solid ${k.border};border-radius:12px;padding:12px 14px;display:flex;align-items:center;gap:10px;transition:all .2s;cursor:default;" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 6px 20px rgba(0,0,0,0.09)'" onmouseout="this.style.transform='';this.style.boxShadow=''">
+                    <div style="width:38px;height:38px;background:${k.color};border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                        <i class="${k.icon}" style="color:#fff;font-size:15px;"></i>
                     </div>
-                    <div class="dsc-section-body">
-                        ${renderRankList(topInspectors,'#16a34a','#4ade80')}
+                    <div>
+                        <div style="font-size:1.3rem;font-weight:800;color:${k.color};line-height:1;">${k.value}</div>
+                        <div style="font-size:0.68rem;color:#64748b;margin-top:2px;white-space:nowrap;">${k.label}</div>
                     </div>
-                </div>
-                <div class="dsc-section">
-                    <div class="dsc-section-header">
-                        <h3><i class="fas fa-industry" style="color:#2563eb;"></i>${t('module.periodic.topSites','تحليل المواقع')}</h3>
-                        <span class="sh-badge" style="background:#dbeafe;color:#1d4ed8;">${topSites.length}</span>
-                    </div>
-                    <div class="dsc-section-body">
-                        ${renderRankList(topSites,'#2563eb','#60a5fa')}
-                    </div>
-                </div>
+                </div>`).join('')}
             </div>
-            @media(max-width:700px){ .dsc-trend-inspectors-grid{ grid-template-columns:1fr !important; } }
 
-            <!-- ════════════════ TREND CHART ══════════════════════════════════════ -->
-            <div class="dsc-section" style="margin-bottom:1.25rem;">
-                <div class="dsc-section-header">
-                    <h3><i class="fas fa-chart-area" style="color:#6366f1;"></i>${t('module.periodic.analytics.trend','الاتجاه الزمني')}</h3>
-                    <span class="sh-badge" style="background:#e0e7ff;color:#4338ca;">${trend.length} ${t('module.periodic.analytics.months','شهر')}</span>
+            <!-- ══ Row 1: توزيع الورديات + الاتجاه الزمني ══ -->
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:16px;margin-bottom:16px;">
+                <div class="content-card" style="padding:0;overflow:hidden;">
+                    <div style="padding:13px 18px 10px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:8px;">
+                        <i class="fas fa-layer-group" style="color:#f59e0b;"></i>
+                        <span style="font-weight:700;font-size:0.88rem;">التوزيع حسب الوردية</span>
+                    </div>
+                    <div style="padding:12px;position:relative;height:220px;">
+                        <canvas id="dsc-chart-shift"></canvas>
+                        <div id="dsc-chart-shift-empty" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;color:#94a3b8;font-size:0.85rem;">لا توجد بيانات</div>
+                    </div>
                 </div>
-                <div class="dsc-section-body" style="overflow-x:auto;">
-                    ${buildTrendSVG(trend)}
-                    ${trend.length ? `
-                    <div style="display:flex; flex-wrap:wrap; gap:0.5rem; margin-top:0.75rem;">
-                        ${trend.map(item => {
-                            const g = gradeInfo(item.complianceRate);
-                            return `<div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:0.4rem 0.7rem;font-size:0.76rem;min-width:130px;">
-                                <div style="font-weight:700;color:#1e293b;">${item.month}</div>
-                                <div style="color:#64748b;margin-top:2px;">
-                                    <span style="color:#1d4ed8;">${item.records} ${t('module.periodic.dsc.stats.total','سجل')}</span>
-                                    · <span style="color:${g.color};">${item.complianceRate}%</span>
-                                </div>
-                            </div>`;
-                        }).join('')}
-                    </div>` : ''}
+                <div class="content-card" style="padding:0;overflow:hidden;">
+                    <div style="padding:13px 18px 10px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:8px;">
+                        <i class="fas fa-chart-area" style="color:#6366f1;"></i>
+                        <span style="font-weight:700;font-size:0.88rem;">الاتجاه الزمني (آخر 12 شهر)</span>
+                    </div>
+                    <div style="padding:12px;position:relative;height:220px;">
+                        <canvas id="dsc-chart-trend"></canvas>
+                        <div id="dsc-chart-trend-empty" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;color:#94a3b8;font-size:0.85rem;">لا توجد بيانات</div>
+                    </div>
                 </div>
             </div>
 
-            <!-- ════════════════ CHECKPOINT HEATMAP ══════════════════════════════ -->
-            <div class="dsc-section">
-                <div class="dsc-section-header">
-                    <h3><i class="fas fa-tasks" style="color:#dc2626;"></i>${t('module.periodic.criticalPoints','تحليل نقاط الفحص')}</h3>
-                    <div style="display:flex;gap:0.4rem;">
-                        <span class="sh-badge" style="background:#fee2e2;color:#dc2626;">
-                            <i class="fas fa-exclamation-circle" style="font-size:0.65rem;margin-left:0.2rem;"></i>
-                            ${worstPoints.filter(p=>p.nonCompliantRate>=40).length} ${t('module.periodic.riskHigh','خطر عالي')}
-                        </span>
-                        <span class="sh-badge" style="background:#fef3c7;color:#d97706;">
-                            ${worstPoints.filter(p=>p.nonCompliantRate>=20&&p.nonCompliantRate<40).length} ${t('module.periodic.riskMedium','متوسط')}
-                        </span>
-                        <span class="sh-badge" style="background:#dcfce7;color:#15803d;">
-                            ${worstPoints.filter(p=>p.nonCompliantRate<20&&p.total>0).length} ${t('module.periodic.riskLow','سليم')}
-                        </span>
+            <!-- ══ Row 2: القائمون بالمرور + المواقع ══ -->
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:16px;margin-bottom:16px;">
+                <div class="content-card" style="padding:0;overflow:hidden;">
+                    <div style="padding:13px 18px 10px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:8px;">
+                        <i class="fas fa-user-shield" style="color:#16a34a;"></i>
+                        <span style="font-weight:700;font-size:0.88rem;">تحليل القائمين بالمرور (أعلى ${topN})</span>
+                    </div>
+                    <div style="padding:12px;position:relative;height:${Math.max(200, topInspectors.length * 32 + 40)}px;">
+                        <canvas id="dsc-chart-inspectors"></canvas>
+                        <div id="dsc-chart-inspectors-empty" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;color:#94a3b8;font-size:0.85rem;">لا توجد بيانات</div>
                     </div>
                 </div>
-                <div class="dsc-section-body">
-                    ${worstPoints.length ? `
-                    <div class="dsc-checkpoint-grid">
-                        ${worstPoints.map((p, idx) => {
-                            if (!p.total) return '';
-                            const risk = riskInfo(p.nonCompliantRate);
-                            const comp = gradeInfo(p.complianceRate);
-                            return `
-                            <div class="dsc-cp-card" style="background:${risk.bg}22; border-color:${risk.bg}; border-left: 3px solid ${risk.color};">
-                                <div class="cp-idx">#${String(idx+1).padStart(2,'0')}</div>
-                                <div class="cp-label" title="${Utils.escapeHTML(p.label)}">${Utils.escapeHTML(p.label.length > 70 ? p.label.slice(0, 68) + '…' : p.label)}</div>
-                                <div class="cp-stats">
-                                    <span class="cp-pill" style="background:#dcfce7;color:#15803d;">✓ ${p.compliant}</span>
-                                    <span class="cp-pill" style="background:#fee2e2;color:#dc2626;">✗ ${p.nonCompliant}</span>
-                                    <span class="cp-pill" style="background:${risk.bg};color:${risk.color};">${risk.label}</span>
-                                    <span class="cp-pill" style="background:${comp.bg};color:${comp.color};">${p.complianceRate}%</span>
-                                </div>
-                                <div class="cp-bar-wrap">
-                                    <div class="cp-bar-fill" style="width:${Math.max(2,p.nonCompliantRate)}%; background:${risk.grad};"></div>
-                                </div>
-                                <div class="cp-rate">${t('module.periodic.riskRate','معدل الخطورة')}: ${p.nonCompliantRate}% · ${t('module.periodic.checked','من')} ${p.total} ${t('module.periodic.dsc.recordsWord','فحص')}</div>
-                            </div>`;
-                        }).join('')}
+                <div class="content-card" style="padding:0;overflow:hidden;">
+                    <div style="padding:13px 18px 10px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:8px;">
+                        <i class="fas fa-industry" style="color:#0ea5e9;"></i>
+                        <span style="font-weight:700;font-size:0.88rem;">تحليل المواقع (أعلى ${topN})</span>
                     </div>
-                    ` : `<div style="text-align:center;padding:2rem;color:#94a3b8;">${t('module.periodic.noData','لا توجد بيانات')}</div>`}
+                    <div style="padding:12px;position:relative;height:${Math.max(200, topSites.length * 32 + 40)}px;">
+                        <canvas id="dsc-chart-sites"></canvas>
+                        <div id="dsc-chart-sites-empty" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;color:#94a3b8;font-size:0.85rem;">لا توجد بيانات</div>
+                    </div>
                 </div>
             </div>
+
+            <!-- ══ Row 3: نقاط الفحص – امتثال كامل (عرض كامل) ══ -->
+            <div class="content-card" style="padding:0;overflow:hidden;margin-bottom:16px;">
+                <div style="padding:13px 18px 12px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
+                    <div style="display:flex;align-items:center;gap:8px;">
+                        <i class="fas fa-tasks" style="color:#dc2626;"></i>
+                        <span style="font-weight:700;font-size:0.88rem;">امتثال نقاط الفحص (${worstPoints.filter(p=>p.total>0).length} بند)</span>
+                    </div>
+                    <div style="display:flex;gap:6px;font-size:0.72rem;font-weight:700;">
+                        <span style="background:#fee2e2;color:#dc2626;padding:2px 8px;border-radius:12px;">${worstPoints.filter(p=>p.nonCompliantRate>=40).length} عالي</span>
+                        <span style="background:#fef3c7;color:#d97706;padding:2px 8px;border-radius:12px;">${worstPoints.filter(p=>p.nonCompliantRate>=20&&p.nonCompliantRate<40).length} متوسط</span>
+                        <span style="background:#dcfce7;color:#15803d;padding:2px 8px;border-radius:12px;">${worstPoints.filter(p=>p.nonCompliantRate<20&&p.total>0).length} سليم</span>
+                    </div>
+                </div>
+                <div style="padding:12px;position:relative;height:${Math.max(300, worstPoints.filter(p=>p.total>0).length * 32 + 60)}px;">
+                    <canvas id="dsc-chart-compliance"></canvas>
+                    <div id="dsc-chart-compliance-empty" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;color:#94a3b8;font-size:0.85rem;">لا توجد بيانات</div>
+                </div>
+            </div>
+
+        </div>
         `;
+    },
+
+    /**
+     * رسم مخططات تحليل المرور اليومي بعد inject الـ HTML (نفس نمط clinic/obs)
+     * يُستدعى من refreshCurrentTabContent بعد contentContainer.innerHTML = html
+     */
+    async _dscDrawCharts() {
+        const root = document.getElementById('dsc-analytics-root');
+        if (!root) return;
+
+        // ── تحميل Chart.js (من CDN إذا لم يكن محمَّلاً) ──
+        if (typeof Chart === 'undefined') {
+            await new Promise((resolve) => {
+                const existing = document.querySelector('script[src*="chart"]');
+                if (existing) {
+                    const iv = setInterval(() => { if (typeof Chart !== 'undefined') { clearInterval(iv); resolve(); } }, 150);
+                    setTimeout(() => { clearInterval(iv); resolve(); }, 6000);
+                    return;
+                }
+                const s = document.createElement('script');
+                s.src = 'https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js';
+                s.onload = () => setTimeout(resolve, 400);
+                s.onerror = () => { s.src='https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js'; s.onerror=()=>resolve(); document.head.appendChild(s); };
+                document.head.appendChild(s);
+            });
+        }
+        if (typeof Chart === 'undefined') return; // graceful fail
+
+        const allRecords = this.getDailySafetyCheckListRecords();
+        const filteredRecords = this._getDailySafetyAnalyticsRecordsByScope('__all__');
+        const analytics = this.getDailySafetyAnalytics(filteredRecords);
+        const trend = this.getDailySafetyTrend(filteredRecords);
+        const controls = this.state.dailySafetyAnalyticsControls || { topN: 18, rankingMetric: 'nonCompliantRate' };
+        const topN = Math.max(3, Math.min(20, Number(controls.topN || 10)));
+        const topInspectors = analytics.inspectorList.slice(0, topN);
+        const topSites = analytics.siteList.slice(0, topN);
+        const points = [...analytics.points];
+        if (controls.rankingMetric === 'complianceRate') points.sort((a,b) => b.complianceRate - a.complianceRate);
+        else if (controls.rankingMetric === 'nonCompliantCount') points.sort((a,b) => b.nonCompliant - a.nonCompliant);
+        else points.sort((a,b) => b.nonCompliantRate - a.nonCompliantRate);
+        const worstPoints = points.filter(p => p.total > 0);
+
+        if (!this._dscCharts) this._dscCharts = {};
+        const _chart = (id, config) => {
+            const canvas = document.getElementById(id);
+            const emptyEl = document.getElementById(id + '-empty');
+            if (!canvas) return;
+            try { if (this._dscCharts[id]) { this._dscCharts[id].destroy(); delete this._dscCharts[id]; } } catch(e) {}
+            this._dscCharts[id] = new Chart(canvas, config);
+            if (emptyEl) emptyEl.style.display = 'none';
+            canvas.style.display = '';
+        };
+        const _empty = (id) => {
+            const canvas = document.getElementById(id);
+            const emptyEl = document.getElementById(id + '-empty');
+            if (canvas) canvas.style.display = 'none';
+            if (emptyEl) emptyEl.style.display = 'flex';
+        };
+
+        // 1) Shift distribution — Doughnut
+        const shiftMap = { 'الأولى': 0, 'الثانية': 0, 'الثالثة': 0 };
+        filteredRecords.forEach(r => { if (r.shift in shiftMap) shiftMap[r.shift]++; });
+        const sValues = Object.values(shiftMap);
+        if (sValues.reduce((a,b) => a+b, 0) > 0) {
+            _chart('dsc-chart-shift', {
+                type: 'doughnut',
+                data: { labels: ['الوردية الأولى','الوردية الثانية','الوردية الثالثة'], datasets: [{ data: sValues, backgroundColor: ['rgba(22,163,74,0.85)','rgba(234,88,12,0.85)','rgba(124,58,237,0.85)'], borderWidth: 2, borderColor: '#fff', hoverOffset: 6 }] },
+                options: { responsive: true, maintainAspectRatio: false, cutout: '58%', plugins: { legend: { position: 'bottom', labels: { padding: 10, font: { size: 11 }, usePointStyle: true, boxWidth: 9 } }, tooltip: { callbacks: { label: ctx => ` ${ctx.label}: ${ctx.parsed}` } } } }
+            });
+        } else _empty('dsc-chart-shift');
+
+        // 2) Trend — bar + line (نفس نمط clinic._cTrend)
+        const arabicMonths = ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
+        const now = new Date();
+        const months12 = [];
+        for (let i = 11; i >= 0; i--) {
+            const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+            months12.push({ y: d.getFullYear(), m: d.getMonth(), label: `${arabicMonths[d.getMonth()]} ${d.getFullYear()}` });
+        }
+        const trendCounts = months12.map(mo => filteredRecords.filter(r => {
+            const d = new Date(r.date || r.createdAt || '');
+            return !isNaN(d.getTime()) && d.getFullYear() === mo.y && d.getMonth() === mo.m;
+        }).length);
+        const trendCompRate = months12.map((mo, i) => {
+            const monthRec = filteredRecords.filter(r => {
+                const d = new Date(r.date || r.createdAt || '');
+                return !isNaN(d.getTime()) && d.getFullYear() === mo.y && d.getMonth() === mo.m;
+            });
+            const sub = this.getDailySafetyAnalytics(monthRec);
+            return sub.complianceRate;
+        });
+        if (trendCounts.reduce((a,b) => a+b, 0) > 0) {
+            _chart('dsc-chart-trend', {
+                type: 'bar',
+                data: { labels: months12.map(m => m.label), datasets: [
+                    { label: 'السجلات', data: trendCounts, backgroundColor: trendCounts.map(c => c === Math.max(...trendCounts) ? 'rgba(37,99,235,0.9)' : 'rgba(37,99,235,0.5)'), borderRadius: 4, borderSkipped: false, order: 1 },
+                    { label: 'المطابقة%', data: trendCompRate, type: 'line', borderColor: 'rgba(22,163,74,0.9)', backgroundColor: 'rgba(22,163,74,0.07)', borderWidth: 2.5, pointRadius: 4, pointBackgroundColor: '#16a34a', tension: 0.4, fill: true, yAxisID: 'y2', order: 0 }
+                ]},
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'top', labels: { usePointStyle: true, font: { size: 11 } } }, tooltip: { mode: 'index', intersect: false } },
+                    scales: { x: { grid: { display: false }, ticks: { font: { size: 10 }, maxRotation: 40 } }, y: { beginAtZero: true, position: 'right', ticks: { precision: 0, font: { size: 11 } }, grid: { color: '#f8fafc' } }, y2: { beginAtZero: true, max: 100, position: 'left', ticks: { font: { size: 11 }, callback: v => v + '%' }, grid: { display: false } } } }
+            });
+        } else _empty('dsc-chart-trend');
+
+        // 3) Inspector ranking — Horizontal Bar
+        if (topInspectors.length > 0) {
+            _chart('dsc-chart-inspectors', {
+                type: 'bar',
+                data: { labels: topInspectors.map(i => i.name), datasets: [{ data: topInspectors.map(i => i.count), backgroundColor: 'rgba(22,163,74,0.72)', borderRadius: 5, borderSkipped: false }] },
+                options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => ` ${ctx.parsed.x} سجل` } } },
+                    scales: { x: { beginAtZero: true, ticks: { precision: 0, font: { size: 11 } }, grid: { color: '#f1f5f9' } }, y: { ticks: { font: { size: 11 }, callback: v => { const lbl = topInspectors[v]?.name || ''; return lbl.length > 18 ? lbl.slice(0, 17) + '…' : lbl; } } } } }
+            });
+        } else _empty('dsc-chart-inspectors');
+
+        // 4) Sites distribution — Horizontal Bar
+        if (topSites.length > 0) {
+            _chart('dsc-chart-sites', {
+                type: 'bar',
+                data: { labels: topSites.map(s => s.name), datasets: [{ data: topSites.map(s => s.count), backgroundColor: 'rgba(14,165,233,0.72)', borderRadius: 5, borderSkipped: false }] },
+                options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => ` ${ctx.parsed.x} سجل` } } },
+                    scales: { x: { beginAtZero: true, ticks: { precision: 0, font: { size: 11 } }, grid: { color: '#f1f5f9' } }, y: { ticks: { font: { size: 11 }, callback: v => { const lbl = topSites[v]?.name || ''; return lbl.length > 18 ? lbl.slice(0, 17) + '…' : lbl; } } } } }
+            });
+        } else _empty('dsc-chart-sites');
+
+        // 5) Compliance by checkpoint — Horizontal Bar (color-coded by risk)
+        const cpPoints = worstPoints;
+        if (cpPoints.length > 0) {
+            const cpColors = cpPoints.map(p => p.nonCompliantRate >= 40 ? 'rgba(220,38,38,0.78)' : p.nonCompliantRate >= 20 ? 'rgba(217,119,6,0.78)' : 'rgba(22,163,74,0.78)');
+            _chart('dsc-chart-compliance', {
+                type: 'bar',
+                data: { labels: cpPoints.map((p, i) => `${String(i+1).padStart(2,'0')} ${p.label.length > 35 ? p.label.slice(0,33)+'…' : p.label}`),
+                    datasets: [
+                        { label: 'نسبة المطابقة%', data: cpPoints.map(p => p.complianceRate), backgroundColor: cpColors.map(c => c.replace('0.78','0.2')), borderColor: cpColors, borderWidth: 1.5, borderRadius: 4, borderSkipped: false }
+                    ]
+                },
+                options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+                    plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => { const p = cpPoints[ctx.dataIndex]; return ` المطابقة: ${p.complianceRate}% | غير مطابق: ${p.nonCompliant}/${p.total}`; } } } },
+                    scales: {
+                        x: { beginAtZero: true, max: 100, ticks: { font: { size: 10 }, callback: v => v + '%' }, grid: { color: '#f1f5f9' } },
+                        y: { ticks: { font: { size: 10 } } }
+                    }
+                }
+            });
+        } else _empty('dsc-chart-compliance');
     },
 
     async exportDailySafetyAnalyticsPDF(scopeInspector = '__all__') {
@@ -4296,6 +4244,47 @@ const PeriodicInspections = {
             exportExcelBtn.addEventListener('click', () => {
                 const scope = document.getElementById('dsc-analytics-export-inspector')?.value || '__all__';
                 this.exportDailySafetyAnalyticsExcel(scope);
+            });
+        }
+
+        // ✅ أزرار الفترة الزمنية (نمط موحد مع العيادة والملاحظات)
+        document.querySelectorAll('.dsc-an-period-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const v = btn.getAttribute('data-period') || '0';
+                this._dscPeriod = v;
+                // تحديث حالة الفلاتر: حساب dateFrom / dateTo من الفترة المختارة
+                if (v === '0') {
+                    this.state.dailySafetyFilters.dateFrom = '';
+                    this.state.dailySafetyFilters.dateTo = '';
+                } else {
+                    const days = parseInt(v, 10);
+                    const d = new Date();
+                    d.setDate(d.getDate() - days);
+                    this.state.dailySafetyFilters.dateFrom = d.toISOString().slice(0, 10);
+                    this.state.dailySafetyFilters.dateTo = '';
+                }
+                this.refreshCurrentTabContent();
+            });
+        });
+
+        // ✅ زر إظهار/إخفاء لوحة الفلاتر (نمط موحد)
+        const filterToggleBtn = document.getElementById('dsc-an-toggle-filters-btn');
+        if (filterToggleBtn) {
+            filterToggleBtn.addEventListener('click', () => {
+                const panel = document.getElementById('dsc-an-filter-panel');
+                if (!panel) return;
+                const isHidden = panel.style.display === 'none' || !panel.style.display;
+                panel.style.display = isHidden ? 'block' : 'none';
+            });
+        }
+
+        // ✅ زر التحديث
+        const refreshBtn = document.getElementById('dsc-an-refresh-btn');
+        if (refreshBtn) {
+            const icon = refreshBtn.querySelector('i');
+            refreshBtn.addEventListener('click', () => {
+                if (icon) { icon.style.transition='transform 0.5s'; icon.style.transform='rotate(360deg)'; setTimeout(()=>{icon.style.transform='';},500); }
+                this.refreshCurrentTabContent();
             });
         }
     },
@@ -5215,6 +5204,10 @@ const PeriodicInspections = {
             if (html) {
                 contentContainer.innerHTML = html;
                 this.setupEventListeners();
+                // ✅ رسم مخططات تحليل البيانات بعد inject الـ HTML (نفس نمط clinic/obs)
+                if (this.state.currentTab === 'daily-safety-analytics') {
+                    requestAnimationFrame(() => { this._dscDrawCharts().catch(() => {}); });
+                }
             }
         } catch (e) {
             Utils.safeWarn('⚠️ خطأ في refreshCurrentTabContent:', e);
