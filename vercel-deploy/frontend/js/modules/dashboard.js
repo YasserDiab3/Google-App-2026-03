@@ -1008,7 +1008,10 @@ const Dashboard = {
             'iso': 'iso',
             'electricity-consumption': 'sustainability',
             'water-consumption': 'sustainability',
-            'gas-consumption': 'sustainability'
+            'gas-consumption': 'sustainability',
+            // ✅ كروت إصابات العيادة (موظفين + مقاولين) — يفتح العيادة
+            'clinic-injuries-employee': 'clinic',
+            'clinic-injuries-contractor': 'clinic'
         };
         return statToModuleMap[statId] || null;
     },
@@ -4029,6 +4032,26 @@ const Dashboard = {
             if (this.dashboardCan('iso')) {
                 totalReports += audits.length;
                 rows.push(['audits-value', audits.length, 'report']);
+            }
+
+            // ✅ إصابات العيادة (موظفين / مقاولين) — تُقرأ من AppState.appData.injuries
+            // مع التفريق بحقل personType ('employee' vs 'contractor'/'external')
+            if (this.dashboardCan('clinic')) {
+                const injuries = Array.isArray(data.injuries) ? data.injuries : [];
+                let employeeInjuries = 0;
+                let contractorInjuries = 0;
+                for (const inj of injuries) {
+                    const pType = String((inj && inj.personType) || 'employee').toLowerCase().trim();
+                    if (pType === 'employee') {
+                        employeeInjuries++;
+                    } else {
+                        // أي شيء غير 'employee' يُعدّ ضمن مقاولين/عمالة خارجية
+                        // (يتطابق مع منطق فلترة تبويب الإصابات في clinic.js السطر 2386-2388)
+                        contractorInjuries++;
+                    }
+                }
+                rows.push(['clinic-injuries-employee-value', employeeInjuries, 'report']);
+                rows.push(['clinic-injuries-contractor-value', contractorInjuries, 'report']);
             }
 
             if (this.anyReportsStatisticVisibleForDashboard()) {

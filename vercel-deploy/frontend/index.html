@@ -11858,6 +11858,106 @@
                                         </div>
                                     </div>
 
+                                    <!-- Clinic Injuries — Employees -->
+                                    <div
+                                        class="metric-card-frame kpi-danger"
+                                        data-stat-id="clinic-injuries-employee"
+                                        data-clickable="true"
+                                        style="cursor: pointer"
+                                    >
+                                        <div>
+                                            <div
+                                                class="flex items-center justify-between mb-2 w-full"
+                                            >
+                                                <div
+                                                    class="w-8 h-8 flex items-center justify-center rounded-md bg-red-100 text-red-500"
+                                                >
+                                                    <i
+                                                        class="fas fa-user-injured"
+                                                    ></i>
+                                                </div>
+                                                <span
+                                                    class="text-xs font-bold px-2 py-1 rounded bg-gray-100 text-gray-600 tracking-wide"
+                                                    >EMP. INJURIES</span
+                                                >
+                                            </div>
+                                            <h3
+                                                class="text-sm font-semibold text-gray-700 mb-1"
+                                                data-i18n="dash.clinicInjuriesEmployeeTitle"
+                                            >
+                                                إصابات الموظفين
+                                            </h3>
+                                            <p
+                                                class="text-2xl font-bold text-gray-900"
+                                                id="clinic-injuries-employee-value"
+                                                dir="ltr"
+                                                style="
+                                                    direction: ltr;
+                                                    text-align: left;
+                                                    font-variant-numeric: tabular-nums;
+                                                "
+                                            >
+                                                0
+                                            </p>
+                                            <p
+                                                class="text-xs text-gray-600 mt-1"
+                                                data-i18n="dash.clinicInjuriesEmployeeSubtitle"
+                                            >
+                                                إصابات الموظفين المسجلة بالعيادة
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    <!-- Clinic Injuries — Contractors -->
+                                    <div
+                                        class="metric-card-frame kpi-warning"
+                                        data-stat-id="clinic-injuries-contractor"
+                                        data-clickable="true"
+                                        style="cursor: pointer"
+                                    >
+                                        <div>
+                                            <div
+                                                class="flex items-center justify-between mb-2 w-full"
+                                            >
+                                                <div
+                                                    class="w-8 h-8 flex items-center justify-center rounded-md bg-orange-100 text-orange-500"
+                                                >
+                                                    <i
+                                                        class="fas fa-hard-hat"
+                                                    ></i>
+                                                </div>
+                                                <span
+                                                    class="text-xs font-bold px-2 py-1 rounded bg-gray-100 text-gray-600 tracking-wide"
+                                                    >CONTR. INJURIES</span
+                                                >
+                                            </div>
+                                            <h3
+                                                class="text-sm font-semibold text-gray-700 mb-1"
+                                                data-i18n="dash.clinicInjuriesContractorTitle"
+                                            >
+                                                إصابات المقاولين
+                                            </h3>
+                                            <p
+                                                class="text-2xl font-bold text-gray-900"
+                                                id="clinic-injuries-contractor-value"
+                                                dir="ltr"
+                                                style="
+                                                    direction: ltr;
+                                                    text-align: left;
+                                                    font-variant-numeric: tabular-nums;
+                                                "
+                                            >
+                                                0
+                                            </p>
+                                            <p
+                                                class="text-xs text-gray-600 mt-1"
+                                                data-i18n="dash.clinicInjuriesContractorSubtitle"
+                                            >
+                                                إصابات المقاولين المسجلة بالعيادة
+                                            </p>
+                                        </div>
+                                    </div>
+
                                     <!-- Electricity Consumption -->
                                     <div
                                         class="metric-card-frame kpi-warning"
@@ -12866,7 +12966,7 @@
                     }
 
                     // مطابقة CACHE_VERSION في service-worker.js — تسريع جلب سكربت SW بعد النشر (تجاوز كاش الشبكة/الوسيط)
-                    const __SW_REGISTER_QUERY = "v=hse-app-v1.0.62-20260603";
+                    const __SW_REGISTER_QUERY = "v=hse-app-v1.0.63-20260603";
                     const swUrl =
                         swPath +
                         (swPath.includes("?") ? "&" : "?") +
