@@ -14125,13 +14125,32 @@ const Clinic = {
 
     /**
      * نموذج محسّن وجميل لتسجيل زيارة جديدة
+     *
+     * 🛑 إصلاح جذري (v1.0.62):
+     * الدالة الأصلية كانت تعرض نموذجاً جميلاً لكنه لا يحتوي على قسم اختيار الأدوية
+     * (medications picker). نتيجة لذلك كانت كل زيارة تُسجَّل بـ medications:[] وبدون
+     * medicationAdjustments — فلا يحدث أي خصم من رصيد الأدوية حتى يقوم المستخدم
+     * بالرجوع وتعديل الزيارة عبر showVisitForm (الذي يدعم اختيار الأدوية).
+     *
+     * الحل: نُفوِّض هذا النموذج إلى showVisitForm الذي يحتوي على القسم الكامل
+     * لاختيار الأدوية وبناء medicationAdjustments deltas وإرسالها إلى الـ backend
+     * → الخصم يحدث atomically من أول حفظ (لا حاجة للرجوع للتعديل).
+     *
+     * مرجع: راجع الـ submit handler في الدالة الأصلية حول السطر 14716 حيث كان
+     * يُضبَط medications:[] فارغاً في formData.
      */
     showEnhancedVisitForm(visitData = null) {
+        // ✅ FIX جذري: استخدام النموذج الكامل (showVisitForm) الذي يدعم اختيار الأدوية
+        // وبناء medicationAdjustments — يضمن الخصم من الرصيد عند تسجيل الزيارة مباشرة.
+        if (typeof this.showVisitForm === 'function') {
+            return this.showVisitForm(visitData);
+        }
+        // Fallback (لا يجب أن يحدث): استمرار على الكود القديم لو تعذّر الوصول للدالة الأصلية
         const isEdit = !!visitData;
-        
+
         // ✅ التأكد من تحميل البيانات قبل حساب الإحصائيات
         this.ensureData();
-        
+
         const modal = document.createElement('div');
         modal.className = 'modal-overlay';
 
