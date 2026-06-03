@@ -4092,45 +4092,236 @@ const PeriodicInspections = {
             Notification.warning(t('module.periodic.dsc.noRecordsToExport', 'لا توجد سجلات لتصديرها'));
             return;
         }
-        const analytics = this.getDailySafetyAnalytics(records);
-        const trend = this.getDailySafetyTrend(records);
-        const inspectorLabel = (scopeInspector && scopeInspector !== '__all__') ? scopeInspector : t('module.periodic.analytics.exportAll', 'الكل');
-        const rows = analytics.points.map((p) => `
-            <tr>
-                <td>${Utils.escapeHTML(p.label)}</td>
-                <td>${p.total}</td>
-                <td>${p.compliant}</td>
-                <td>${p.nonCompliant}</td>
-                <td>${p.nonCompliantRate}%</td>
-            </tr>
-        `).join('');
-        const trendRows = trend.map((r) => `
-            <tr><td>${Utils.escapeHTML(r.month)}</td><td>${r.records}</td><td>${r.complianceRate}%</td><td>${r.nonCompliantRate}%</td></tr>
-        `).join('');
-        const htmlContent = `
-            <html dir="rtl" lang="ar"><head><meta charset="UTF-8"></head><body style="font-family:Tahoma,Arial,sans-serif;padding:16px;">
-            <h2 style="margin:0 0 8px;">${t('module.periodic.tab.dailySafetyAnalytics', 'تحليل البيانات')}</h2>
-            <p style="margin:0 0 14px;color:#475569;">${t('module.periodic.analytics.exportScope', 'نطاق التصدير')}: ${Utils.escapeHTML(inspectorLabel)}</p>
-            <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-bottom:12px;">
-                <div style="padding:8px;border:1px solid #dbeafe;border-radius:8px;">${t('module.periodic.dsc.stats.total', 'إجمالي السجلات')}: <strong>${analytics.totalRecords}</strong></div>
-                <div style="padding:8px;border:1px solid #bbf7d0;border-radius:8px;">${t('module.periodic.complianceRate', 'نسبة المطابقة')}: <strong>${analytics.complianceRate}%</strong></div>
-            </div>
-            <h3 style="margin:12px 0 8px;">${t('module.periodic.criticalPoints', 'تحليل نقاط الفحص (مثل Power BI)')}</h3>
-            <table style="width:100%;border-collapse:collapse;font-size:12px;">
-                <thead><tr><th style="border:1px solid #e2e8f0;padding:6px;">${t('module.periodic.point', 'النقطة')}</th><th style="border:1px solid #e2e8f0;padding:6px;">${t('module.periodic.checked', 'المرات المفحوصة')}</th><th style="border:1px solid #e2e8f0;padding:6px;">${t('module.periodic.compliant', 'مطابق')}</th><th style="border:1px solid #e2e8f0;padding:6px;">${t('module.periodic.nonCompliant', 'غير مطابق')}</th><th style="border:1px solid #e2e8f0;padding:6px;">${t('module.periodic.riskRate', 'معدل الخطورة')}</th></tr></thead>
-                <tbody>${rows}</tbody>
-            </table>
-            <h3 style="margin:12px 0 8px;">${t('module.periodic.analytics.trend', 'الاتجاه الزمني')}</h3>
-            <table style="width:100%;border-collapse:collapse;font-size:12px;">
-                <thead><tr><th style="border:1px solid #e2e8f0;padding:6px;">${t('module.periodic.analytics.month', 'الشهر')}</th><th style="border:1px solid #e2e8f0;padding:6px;">${t('module.periodic.dsc.stats.total', 'إجمالي السجلات')}</th><th style="border:1px solid #e2e8f0;padding:6px;">${t('module.periodic.complianceRate', 'نسبة المطابقة')}</th><th style="border:1px solid #e2e8f0;padding:6px;">${t('module.periodic.riskRate', 'معدل الخطورة')}</th></tr></thead>
-                <tbody>${trendRows}</tbody>
-            </table>
-            </body></html>
-        `;
-        const fileName = this._buildDailySafetyFileName({ ext: 'pdf', dateValue: new Date().toISOString(), shiftValue: inspectorLabel, full: true });
-        const ok = await this.exportDailySafetyHtmlToPdf({ htmlContent, fileName, orientation: 'p', forceSinglePage: false });
-        if (ok) Notification.success(t('module.periodic.analytics.exportPdfSuccess', 'تم تصدير تقرير التحليل PDF بنجاح'));
-        else Notification.error(t('module.periodic.analytics.exportPdfError', 'تعذر تصدير تقرير التحليل PDF'));
+        Loading.show(t('module.periodic.dsc.exportPdfLoading', 'جاري إنشاء تقرير PDF...'));
+        try {
+            const analytics = this.getDailySafetyAnalytics(records);
+            const trend = this.getDailySafetyTrend(records);
+            const inspectorLabel = (scopeInspector && scopeInspector !== '__all__') ? scopeInspector : t('module.periodic.analytics.exportAll', 'الكل');
+            const isPersonReport = (scopeInspector && scopeInspector !== '__all__');
+            const now = new Date();
+            const dateLabel = now.toLocaleDateString('ar-EG', { year: 'numeric', month: 'long', day: 'numeric' });
+            const formCode = `DSC-AN-${now.toISOString().slice(0,10).replace(/-/g,'')}`;
+
+            // ── helpers ──────────────────────────────────────────────────────
+            const riskColor = (rate) => rate >= 40 ? '#dc2626' : rate >= 20 ? '#d97706' : '#15803d';
+            const riskBg    = (rate) => rate >= 40 ? '#fff1f2' : rate >= 20 ? '#fffbeb' : '#f0fdf4';
+            const riskLabel = (rate) => rate >= 40 ? 'عالي' : rate >= 20 ? 'متوسط' : 'منخفض';
+            const compColor = (rate) => rate >= 90 ? '#15803d' : rate >= 75 ? '#1d4ed8' : rate >= 60 ? '#d97706' : '#dc2626';
+            const compLabel = (rate) => rate >= 90 ? 'ممتاز' : rate >= 75 ? 'جيد' : rate >= 60 ? 'مقبول' : 'ضعيف';
+
+            // ── 1) KPI tiles ──────────────────────────────────────────────────
+            const shift1 = analytics.shiftList.find(s => s.name === 'الأولى')?.count || 0;
+            const shift2 = analytics.shiftList.find(s => s.name === 'الثانية')?.count || 0;
+            const shift3 = analytics.shiftList.find(s => s.name === 'الثالثة')?.count || 0;
+            const kpiTiles = [
+                { label: 'إجمالي السجلات',  value: analytics.totalRecords,          bg: '#eff6ff', color: '#1d4ed8', border: '#bfdbfe' },
+                { label: 'نسبة المطابقة',   value: analytics.complianceRate + '%',   bg: '#f0fdf4', color: compColor(analytics.complianceRate), border: '#bbf7d0' },
+                { label: 'إجمالي غير المطابق', value: analytics.overallNonCompliant, bg: '#fff1f2', color: '#dc2626', border: '#fecaca' },
+                { label: 'نقاط الفحص',      value: analytics.overallPointsTotal,     bg: '#eef2ff', color: '#4338ca', border: '#c7d2fe' },
+                { label: 'الوردية الأولى',  value: shift1,                            bg: '#fefce8', color: '#ca8a04', border: '#fde68a' },
+                { label: 'الوردية 2/3',     value: shift2 + shift3,                  bg: '#f5f3ff', color: '#7c3aed', border: '#ddd6fe' },
+            ].map(k => `
+                <div style="border:1px solid ${k.border};background:${k.bg};border-radius:8px;padding:10px 12px;text-align:center;-webkit-print-color-adjust:exact;print-color-adjust:exact;">
+                    <div style="font-size:1.6rem;font-weight:800;color:${k.color};line-height:1;-webkit-print-color-adjust:exact;print-color-adjust:exact;">${k.value}</div>
+                    <div style="font-size:0.7rem;color:#64748b;margin-top:3px;">${k.label}</div>
+                </div>`).join('');
+
+            // ── 2) Inspector ranking rows ─────────────────────────────────────
+            const inspList = analytics.inspectorList.slice(0, 10);
+            const maxInsp = Math.max(1, ...inspList.map(i => i.count));
+            const totalInsp = inspList.reduce((s, i) => s + i.count, 0) || 1;
+            const inspRows = inspList.map((item, idx) => {
+                const pct = Math.round((item.count / maxInsp) * 100);
+                const share = Math.round((item.count / totalInsp) * 100);
+                return `<tr style="background:${idx % 2 === 0 ? '#f8fafc' : '#fff'};-webkit-print-color-adjust:exact;print-color-adjust:exact;">
+                    <td style="padding:6px 8px;font-weight:700;color:#64748b;width:28px;">${idx + 1}</td>
+                    <td style="padding:6px 8px;font-weight:600;">${Utils.escapeHTML(item.name || '-')}</td>
+                    <td style="padding:6px 8px;text-align:center;font-weight:700;color:#1d4ed8;">${item.count}</td>
+                    <td style="padding:6px 8px;width:130px;">
+                        <div style="background:#e2e8f0;height:6px;border-radius:3px;overflow:hidden;-webkit-print-color-adjust:exact;print-color-adjust:exact;">
+                            <div style="width:${pct}%;height:100%;background:linear-gradient(90deg,#16a34a,#22c55e);border-radius:3px;-webkit-print-color-adjust:exact;print-color-adjust:exact;"></div>
+                        </div>
+                    </td>
+                    <td style="padding:6px 8px;text-align:center;color:#64748b;font-size:0.8rem;">${share}%</td>
+                </tr>`;
+            }).join('');
+
+            // ── 3) Trend rows ─────────────────────────────────────────────────
+            const trendMax = Math.max(1, ...trend.map(r => r.records));
+            const trendRows = trend.map((r, idx) => {
+                const barPct = Math.round((r.records / trendMax) * 100);
+                const cc = compColor(r.complianceRate);
+                const cl = compLabel(r.complianceRate);
+                return `<tr style="background:${idx % 2 === 0 ? '#f8fafc' : '#fff'};-webkit-print-color-adjust:exact;print-color-adjust:exact;">
+                    <td style="padding:6px 8px;font-weight:600;">${Utils.escapeHTML(r.month)}</td>
+                    <td style="padding:6px 8px;text-align:center;font-weight:700;color:#1d4ed8;">${r.records}</td>
+                    <td style="padding:6px 8px;width:120px;">
+                        <div style="background:#e2e8f0;height:6px;border-radius:3px;overflow:hidden;-webkit-print-color-adjust:exact;print-color-adjust:exact;">
+                            <div style="width:${barPct}%;height:100%;background:linear-gradient(90deg,#2563eb,#60a5fa);border-radius:3px;-webkit-print-color-adjust:exact;print-color-adjust:exact;"></div>
+                        </div>
+                    </td>
+                    <td style="padding:6px 8px;text-align:center;">
+                        <span style="color:${cc};font-weight:700;">${r.complianceRate}%</span>
+                        <span style="margin-right:4px;font-size:0.75rem;background:${riskBg(100-r.complianceRate)};color:${cc};padding:1px 5px;border-radius:4px;-webkit-print-color-adjust:exact;print-color-adjust:exact;">${cl}</span>
+                    </td>
+                    <td style="padding:6px 8px;text-align:center;font-size:0.85rem;color:${riskColor(r.nonCompliantRate)};">${r.nonCompliantRate}%</td>
+                </tr>`;
+            }).join('');
+
+            // ── 4) Checkpoint rows ────────────────────────────────────────────
+            const pointRows = analytics.points
+                .filter(p => p.total > 0)
+                .sort((a, b) => b.nonCompliantRate - a.nonCompliantRate)
+                .map((p, idx) => {
+                    const rc = riskColor(p.nonCompliantRate);
+                    const rb = riskBg(p.nonCompliantRate);
+                    const rl = riskLabel(p.nonCompliantRate);
+                    const barW = Math.max(2, p.nonCompliantRate);
+                    const compW = Math.max(2, p.complianceRate);
+                    return `<tr style="background:${idx % 2 === 0 ? '#f8fafc' : '#fff'};-webkit-print-color-adjust:exact;print-color-adjust:exact;">
+                        <td style="padding:5px 8px;color:#64748b;font-weight:700;width:28px;">${idx + 1}</td>
+                        <td style="padding:5px 8px;font-size:0.82rem;line-height:1.35;">${Utils.escapeHTML(p.label)}</td>
+                        <td style="padding:5px 8px;text-align:center;">${p.total}</td>
+                        <td style="padding:5px 8px;text-align:center;color:#15803d;font-weight:700;">${p.compliant}</td>
+                        <td style="padding:5px 8px;text-align:center;color:#dc2626;font-weight:700;">${p.nonCompliant}</td>
+                        <td style="padding:5px 8px;width:120px;">
+                            <div style="margin-bottom:2px;">
+                                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:2px;">
+                                    <span style="font-size:0.7rem;color:#64748b;">مطابقة</span>
+                                    <span style="font-size:0.72rem;font-weight:700;color:${compColor(p.complianceRate)};">${p.complianceRate}%</span>
+                                </div>
+                                <div style="background:#e2e8f0;height:5px;border-radius:3px;overflow:hidden;-webkit-print-color-adjust:exact;print-color-adjust:exact;">
+                                    <div style="width:${compW}%;height:100%;background:${compColor(p.complianceRate)};border-radius:3px;-webkit-print-color-adjust:exact;print-color-adjust:exact;"></div>
+                                </div>
+                            </div>
+                        </td>
+                        <td style="padding:5px 8px;text-align:center;">
+                            <span style="background:${rb};color:${rc};padding:2px 6px;border-radius:4px;font-size:0.75rem;font-weight:700;white-space:nowrap;-webkit-print-color-adjust:exact;print-color-adjust:exact;">${rl}</span>
+                        </td>
+                    </tr>`;
+                }).join('');
+
+            // ── 5) Assemble content ───────────────────────────────────────────
+            const content = `
+                <style>
+                    @media print {
+                        -webkit-print-color-adjust: exact !important;
+                        print-color-adjust: exact !important;
+                        color-adjust: exact !important;
+                    }
+                    body { font-family: Tahoma, Arial, sans-serif; font-size: 12px; color: #1e293b; direction: rtl; }
+                    .section-title { font-size: 0.9rem; font-weight: 700; color: #1e40af; margin: 14px 0 6px; padding: 6px 10px; background: #eff6ff; border-right: 4px solid #1e40af; border-radius: 4px; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+                    table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
+                    thead tr { background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%); color: #fff; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+                    thead th { padding: 7px 8px; font-weight: 700; text-align: right; }
+                    tbody tr { border-bottom: 1px solid #f1f5f9; }
+                </style>
+
+                <!-- تسمية النطاق -->
+                ${isPersonReport ? `
+                <div style="margin-bottom:12px;padding:10px 14px;background:linear-gradient(135deg,#eff6ff,#dbeafe);border:1px solid #93c5fd;border-radius:8px;display:flex;align-items:center;gap:8px;-webkit-print-color-adjust:exact;print-color-adjust:exact;">
+                    <i style="font-size:14px;color:#1d4ed8;">👤</i>
+                    <div>
+                        <span style="font-size:0.72rem;color:#64748b;">القائم بالمرور:</span>
+                        <span style="font-weight:800;font-size:1rem;color:#1d4ed8;margin-right:6px;">${Utils.escapeHTML(inspectorLabel)}</span>
+                    </div>
+                    <div style="margin-right:auto;font-size:0.72rem;color:#64748b;">${dateLabel}</div>
+                </div>` : `
+                <div style="margin-bottom:12px;padding:8px 14px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;font-size:0.8rem;color:#64748b;">
+                    نطاق التقرير: <strong style="color:#1e293b;">جميع القائمين بالمرور</strong> — التاريخ: ${dateLabel}
+                </div>`}
+
+                <!-- KPI Tiles -->
+                <div class="section-title">📊 مؤشرات الأداء الرئيسية</div>
+                <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px;">
+                    ${kpiTiles}
+                </div>
+
+                <!-- نقاط الفحص -->
+                <div class="section-title">📋 تحليل نقاط الفحص — مرتبة حسب مستوى الخطر</div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th style="width:28px;">#</th>
+                            <th>البند</th>
+                            <th style="text-align:center;">الفحوصات</th>
+                            <th style="text-align:center;">مطابق</th>
+                            <th style="text-align:center;">غير مطابق</th>
+                            <th style="width:120px;">الامتثال</th>
+                            <th style="text-align:center;">الخطر</th>
+                        </tr>
+                    </thead>
+                    <tbody>${pointRows || `<tr><td colspan="7" style="text-align:center;padding:12px;color:#94a3b8;">لا توجد بيانات</td></tr>`}</tbody>
+                </table>
+
+                <!-- الاتجاه الزمني -->
+                ${trend.length > 0 ? `
+                <div class="section-title">📈 الاتجاه الزمني</div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>الشهر</th>
+                            <th style="text-align:center;">السجلات</th>
+                            <th style="width:120px;">الحجم</th>
+                            <th style="text-align:center;">نسبة المطابقة</th>
+                            <th style="text-align:center;">معدل الخطر</th>
+                        </tr>
+                    </thead>
+                    <tbody>${trendRows}</tbody>
+                </table>` : ''}
+
+                <!-- القائمون بالمرور -->
+                ${!isPersonReport && inspList.length > 0 ? `
+                <div class="section-title">👷 أنشط القائمين بالمرور</div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th style="width:28px;">#</th>
+                            <th>الاسم</th>
+                            <th style="text-align:center;">عدد التقارير</th>
+                            <th style="width:130px;">النشاط</th>
+                            <th style="text-align:center;">الحصة</th>
+                        </tr>
+                    </thead>
+                    <tbody>${inspRows}</tbody>
+                </table>` : ''}
+            `;
+
+            // ── 6) Wrap with FormHeader (header + footer + logo + QR) ─────────
+            const formTitle = t('module.periodic.dsc.singleRecordTitleAr', 'تقرير تحليل المرور اليومي للسلامة');
+            const rawHtmlContent = (typeof FormHeader !== 'undefined' && typeof FormHeader.generatePDFHTML === 'function')
+                ? FormHeader.generatePDFHTML(
+                    formCode,
+                    formTitle,
+                    this._getDailySafetyCompactFooterStyle() + content,
+                    false,
+                    false,
+                    {
+                        source: 'DailySafetyAnalytics',
+                        titleEn: 'Daily Safety Check List — Analytics Report',
+                        titleAr: 'تحليل المرور اليومي للسلامة',
+                        inspector: isPersonReport ? inspectorLabel : null
+                    },
+                    new Date().toISOString(),
+                    new Date().toISOString()
+                )
+                : `<!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="UTF-8"><title>${formTitle}</title></head><body>${content}</body></html>`;
+
+            const htmlContent = this.prepareDailySafetyPdfHtmlContent(rawHtmlContent, { landscape: false });
+            const safeInspector = isPersonReport
+                ? inspectorLabel.replace(/[\/\\:*?"<>|]/g, '_').substring(0, 40)
+                : 'الكل';
+            const fileName = `DSC-Analytics-${safeInspector}-${now.toISOString().slice(0, 10)}.pdf`;
+
+            const ok = await this.exportDailySafetyHtmlToPdf({ htmlContent, fileName, orientation: 'p', forceSinglePage: false });
+            Loading.hide();
+            if (ok) Notification.success(t('module.periodic.analytics.exportPdfSuccess', 'تم تصدير تقرير التحليل PDF بنجاح'));
+            else Notification.error(t('module.periodic.analytics.exportPdfError', 'تعذر تصدير تقرير التحليل PDF'));
+        } catch (err) {
+            Loading.hide();
+            Utils.safeError('❌ خطأ في تصدير تقرير تحليل المرور اليومي:', err);
+            Notification.error(t('module.periodic.analytics.exportPdfError', 'تعذر تصدير تقرير التحليل PDF'));
+        }
     },
 
     exportDailySafetyAnalyticsExcel(scopeInspector = '__all__') {
