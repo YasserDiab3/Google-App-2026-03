@@ -1323,7 +1323,8 @@ const PeriodicInspections = {
             // إعداد التبويبات
             this.setupTabsNavigation();
 
-            if (this.state.currentTab === 'daily-safety-checklist') {
+            // ✅ ربط الأحداث لكلا تبويبي المرور اليومي (قائمة السجلات + تحليل البيانات)
+            if (this.state.currentTab === 'daily-safety-checklist' || this.state.currentTab === 'daily-safety-analytics') {
                 this.bindDailySafetyCheckListTableEvents();
             }
 
@@ -3740,13 +3741,21 @@ const PeriodicInspections = {
                     <button id="dsc-an-toggle-filters-btn" style="padding:6px 12px;border-radius:8px;border:1px solid rgba(255,255,255,0.4);cursor:pointer;background:rgba(255,255,255,0.12);color:#fff;font-size:0.78rem;font-weight:600;transition:all .2s;display:flex;align-items:center;gap:5px;" onmouseover="this.style.background='rgba(255,255,255,0.25)'" onmouseout="this.style.background='rgba(255,255,255,0.12)'">
                         <i class="fas fa-sliders-h"></i><span>فلاتر</span><span id="dsc-an-filter-badge" style="${activeFilterCount>0?'':'display:none;'}background:#fbbf24;color:#78350f;font-size:0.65rem;padding:1px 5px;border-radius:10px;margin-right:2px;">${activeFilterCount||'●'}</span>
                     </button>
-                    <button id="dsc-analytics-export-pdf-btn" style="padding:6px 14px;border-radius:8px;border:none;cursor:pointer;background:rgba(239,68,68,0.85);color:#fff;font-size:0.78rem;font-weight:600;transition:all .2s;display:flex;align-items:center;gap:5px;" onmouseover="this.style.background='rgba(239,68,68,1)'" onmouseout="this.style.background='rgba(239,68,68,0.85)'">
+                    <!-- مختار الشخص للتصدير (مرئي في الشريط) -->
+                    <div style="display:flex;align-items:center;gap:4px;background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.3);border-radius:8px;padding:3px 6px;">
+                        <i class="fas fa-user" style="font-size:0.72rem;opacity:0.8;"></i>
+                        <select id="dsc-analytics-export-inspector" style="background:transparent;border:none;color:#fff;font-size:0.75rem;font-weight:600;outline:none;cursor:pointer;padding:2px 0;max-width:130px;" title="نطاق التصدير">
+                            <option value="__all__" style="color:#1e293b;background:#fff;">الكل</option>
+                            ${filterOptions.inspectors.map(n=>`<option value="${Utils.escapeHTML(n)}" style="color:#1e293b;background:#fff;">${Utils.escapeHTML(n)}</option>`).join('')}
+                        </select>
+                    </div>
+                    <button id="dsc-analytics-export-pdf-btn" style="padding:6px 14px;border-radius:8px;border:none;cursor:pointer;background:rgba(239,68,68,0.85);color:#fff;font-size:0.78rem;font-weight:600;transition:all .2s;display:flex;align-items:center;gap:5px;" onmouseover="this.style.background='rgba(239,68,68,1)'" onmouseout="this.style.background='rgba(239,68,68,0.85)'" title="تصدير PDF للشخص المحدد">
                         <i class="fas fa-file-pdf"></i><span>PDF</span>
                     </button>
-                    <button id="dsc-analytics-export-excel-btn" style="padding:6px 14px;border-radius:8px;border:none;cursor:pointer;background:rgba(22,163,74,0.85);color:#fff;font-size:0.78rem;font-weight:600;transition:all .2s;display:flex;align-items:center;gap:5px;" onmouseover="this.style.background='rgba(22,163,74,1)'" onmouseout="this.style.background='rgba(22,163,74,0.85)'">
+                    <button id="dsc-analytics-export-excel-btn" style="padding:6px 14px;border-radius:8px;border:none;cursor:pointer;background:rgba(22,163,74,0.85);color:#fff;font-size:0.78rem;font-weight:600;transition:all .2s;display:flex;align-items:center;gap:5px;" onmouseover="this.style.background='rgba(22,163,74,1)'" onmouseout="this.style.background='rgba(22,163,74,0.85)'" title="تصدير Excel للشخص المحدد">
                         <i class="fas fa-file-excel"></i><span>Excel</span>
                     </button>
-                    <button id="dsc-an-refresh-btn" style="padding:6px 10px;border-radius:8px;border:none;cursor:pointer;background:rgba(255,255,255,0.15);color:#fff;font-size:0.78rem;transition:all .2s;" onmouseover="this.style.background='rgba(255,255,255,0.3)'" onmouseout="this.style.background='rgba(255,255,255,0.15)'" title="تحديث">
+                    <button id="dsc-an-refresh-btn" style="padding:6px 10px;border-radius:8px;border:none;cursor:pointer;background:rgba(255,255,255,0.15);color:#fff;font-size:0.78rem;transition:all .2s;" onmouseover="this.style.background='rgba(255,255,255,0.3)'" onmouseout="this.style.background='rgba(255,255,255,0.15)'" title="تحديث البيانات">
                         <i class="fas fa-sync-alt"></i>
                     </button>
                 </div>
@@ -3827,13 +3836,7 @@ const PeriodicInspections = {
                                 ${[5,8,10,12,15,18,20].map(n=>`<option value="${n}" ${n===topN?'selected':''}>Top ${n}</option>`).join('')}
                             </select>
                         </div>
-                        <div>
-                            <label style="font-size:0.72rem;font-weight:700;color:#64748b;display:block;margin-bottom:5px;"><i class="fas fa-download" style="color:#94a3b8;margin-left:4px;"></i>نطاق التصدير</label>
-                            <select id="dsc-analytics-export-inspector" style="width:100%;padding:7px 10px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:0.82rem;background:#fff;cursor:pointer;transition:border .2s;" onfocus="this.style.borderColor='#3b82f6'" onblur="this.style.borderColor='#e2e8f0'">
-                                <option value="__all__">الكل</option>
-                                ${filterOptions.inspectors.map(n=>`<option value="${Utils.escapeHTML(n)}">${Utils.escapeHTML(n)}</option>`).join('')}
-                            </select>
-                        </div>
+                        <!-- نطاق التصدير موجود في الشريط العلوي (dsc-analytics-export-inspector) — لا نكرره هنا -->
                         ${isAdmin ? `
                         <div>
                             <label style="font-size:0.72rem;font-weight:700;color:#64748b;display:block;margin-bottom:5px;">نمط الكروت</label>
