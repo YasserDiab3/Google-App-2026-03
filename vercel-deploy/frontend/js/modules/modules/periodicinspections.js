@@ -3263,124 +3263,254 @@ const PeriodicInspections = {
         const dscAlign = en ? 'left' : 'right';
         const dscItems = en ? 'items-start' : 'items-end';
         const dscJustify = en ? 'flex-start' : 'flex-end';
+        // حساب عدد الفلاتر النشطة
+        const activeFilterCount = [f.search, f.siteId, f.inspectorName, f.shift, f.dateFrom, f.dateTo].filter(v => v && String(v).trim()).length;
+        // نسبة تغطية كل وردية (لشريط التقدم)
+        const totalForBar = stats.total || 1;
+        const shift1Pct = Math.round((stats.shift1 / totalForBar) * 100);
+        const shift2Pct = Math.round((stats.shift2 / totalForBar) * 100);
+        const shift3Pct = Math.round((stats.shift3 / totalForBar) * 100);
         return `
-            <!-- إحصائيات قائمة المرور اليومي للسلامة -->
-            <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-                <div class="content-card bg-gradient-to-br from-blue-50 to-blue-100 border border-blue-200">
-                    <div class="card-body">
-                        <div class="flex items-center justify-between">
-                            <div>
-                                <p class="text-sm font-medium text-blue-700 mb-1">${t('module.periodic.dsc.stats.total', 'إجمالي السجلات')}</p>
-                                <p class="text-3xl font-bold text-blue-800">${stats.total}</p>
-                                <p class="text-xs text-blue-600 mt-1">${records.length !== filteredRecords.length ? `${t('module.periodic.filtered', 'بعد التصفية')}: ${filteredRecords.length} / ${records.length}` : t('module.periodic.allData', 'كل البيانات')}</p>
-                            </div>
-                            <div class="bg-blue-500/90 rounded-xl px-3 py-2 shadow-sm border border-blue-400/40">
-                                <i class="fas fa-file-alt text-white text-lg"></i>
-                            </div>
-                        </div>
+            <style>
+                /* ═══ Stats cards ═══════════════════════════════════════════════════ */
+                .dsc-kpi-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:1rem; margin-bottom:1.25rem; }
+                @media(max-width:900px){ .dsc-kpi-grid{ grid-template-columns:repeat(2,1fr); } }
+                @media(max-width:520px){ .dsc-kpi-grid{ grid-template-columns:1fr; } }
+                .dsc-kpi-card {
+                    border-radius:14px; padding:1.1rem 1.2rem 0.9rem;
+                    display:flex; flex-direction:column; gap:0.5rem;
+                    background:#fff; box-shadow:0 2px 12px rgba(0,0,0,0.07);
+                    border:1px solid transparent; transition:transform 0.15s, box-shadow 0.15s;
+                    position:relative; overflow:hidden;
+                }
+                .dsc-kpi-card:hover{ transform:translateY(-2px); box-shadow:0 6px 24px rgba(0,0,0,0.11); }
+                .dsc-kpi-card .kpi-accent-bar {
+                    position:absolute; top:0; right:0; left:0; height:4px; border-radius:14px 14px 0 0;
+                }
+                .dsc-kpi-card .kpi-top { display:flex; align-items:center; justify-content:space-between; }
+                .dsc-kpi-card .kpi-icon {
+                    width:40px; height:40px; border-radius:10px;
+                    display:flex; align-items:center; justify-content:center;
+                    font-size:1.15rem; flex-shrink:0;
+                }
+                .dsc-kpi-card .kpi-badge {
+                    font-size:0.7rem; font-weight:700; padding:0.15rem 0.5rem;
+                    border-radius:999px; letter-spacing:0.3px;
+                }
+                .dsc-kpi-card .kpi-number {
+                    font-size:2.4rem; font-weight:800; line-height:1; letter-spacing:-0.5px; margin:0.1rem 0;
+                }
+                .dsc-kpi-card .kpi-label { font-size:0.82rem; font-weight:600; }
+                .dsc-kpi-card .kpi-sublabel { font-size:0.74rem; opacity:0.75; }
+                .dsc-kpi-card .kpi-bar-wrap { height:4px; background:#f1f5f9; border-radius:999px; margin-top:0.3rem; overflow:hidden; }
+                .dsc-kpi-card .kpi-bar-fill { height:100%; border-radius:999px; transition:width 0.6s ease; }
+                /* ═══ Action bar ════════════════════════════════════════════════════ */
+                .dsc-action-bar {
+                    display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap;
+                    gap:0.75rem; margin-bottom:1rem; padding:0.85rem 1rem;
+                    background: linear-gradient(135deg, #1e40af 0%, #2563eb 100%);
+                    border-radius:12px; box-shadow:0 4px 15px rgba(37,99,235,0.25);
+                }
+                .dsc-action-bar .dsc-title-block h3 { margin:0; font-size:1.1rem; font-weight:700; color:#fff; }
+                .dsc-action-bar .dsc-title-block p { margin:0; font-size:0.78rem; color:rgba(255,255,255,0.8); margin-top:2px; }
+                .dsc-action-bar .dsc-action-btns { display:flex; gap:0.5rem; flex-wrap:wrap; }
+                .dsc-btn-white {
+                    background:#fff; border:none; color:#1e40af; padding:0.5rem 1rem;
+                    border-radius:8px; font-weight:700; font-size:0.85rem; cursor:pointer;
+                    display:inline-flex; align-items:center; gap:0.35rem;
+                    transition:all 0.15s; box-shadow:0 2px 6px rgba(0,0,0,0.08);
+                }
+                .dsc-btn-white:hover { background:#eff6ff; transform:translateY(-1px); box-shadow:0 4px 10px rgba(0,0,0,0.12); }
+                .dsc-btn-white-outline {
+                    background:rgba(255,255,255,0.15); border:1px solid rgba(255,255,255,0.6); color:#fff;
+                    padding:0.5rem 1rem; border-radius:8px; font-weight:600; font-size:0.85rem; cursor:pointer;
+                    display:inline-flex; align-items:center; gap:0.35rem; transition:all 0.15s;
+                }
+                .dsc-btn-white-outline:hover { background:rgba(255,255,255,0.28); }
+                /* ═══ Filter panel ══════════════════════════════════════════════════ */
+                .dsc-filter-panel {
+                    background: #fff; border:1px solid #e2e8f0; border-radius:12px;
+                    margin-bottom:1rem; overflow:hidden;
+                    box-shadow:0 1px 8px rgba(0,0,0,0.05);
+                }
+                .dsc-filter-header {
+                    display:flex; align-items:center; justify-content:space-between;
+                    padding:0.7rem 1rem; cursor:pointer;
+                    background:linear-gradient(90deg,#f8fafc,#fff);
+                    border-bottom:1px solid #e2e8f0;
+                    user-select:none;
+                }
+                .dsc-filter-header .fh-left { display:flex; align-items:center; gap:0.5rem; font-weight:700; color:#1e293b; font-size:0.9rem; }
+                .dsc-filter-header .fh-right { display:flex; align-items:center; gap:0.5rem; }
+                .dsc-active-count { background:#2563eb; color:#fff; padding:0.15rem 0.5rem; border-radius:999px; font-size:0.72rem; font-weight:700; }
+                .dsc-filter-toggle-icon { color:#64748b; transition:transform 0.2s; font-size:0.8rem; }
+                .dsc-filter-body { padding:1rem; display:grid; grid-template-columns:repeat(3,1fr); gap:0.85rem; }
+                @media(max-width:900px){ .dsc-filter-body{ grid-template-columns:repeat(2,1fr); } }
+                @media(max-width:520px){ .dsc-filter-body{ grid-template-columns:1fr; } }
+                .dsc-filter-body .dsc-field label { font-size:0.78rem; font-weight:600; color:#475569; margin-bottom:0.25rem; display:block; }
+                .dsc-filter-body .dsc-field input,
+                .dsc-filter-body .dsc-field select {
+                    width:100%; padding:0.5rem 0.7rem; font-size:0.85rem;
+                    border:1.5px solid #e2e8f0; border-radius:8px; background:#fff;
+                    transition:border-color 0.15s, box-shadow 0.15s; outline:none;
+                }
+                .dsc-filter-body .dsc-field input:focus,
+                .dsc-filter-body .dsc-field select:focus {
+                    border-color:#2563eb; box-shadow:0 0 0 3px rgba(37,99,235,0.12);
+                }
+                .dsc-filter-body .dsc-field input[value]:not([value=""]),
+                .dsc-filter-body .dsc-field select option:checked:not([value=""]) { border-color:#2563eb; }
+                .dsc-filter-footer { padding:0.6rem 1rem; border-top:1px solid #f1f5f9; background:#fafbfc; display:flex; justify-content:flex-end; }
+                .dsc-reset-btn {
+                    background:#fff; border:1px solid #cbd5e1; color:#64748b;
+                    padding:0.4rem 0.9rem; border-radius:7px; font-size:0.8rem;
+                    font-weight:600; cursor:pointer; display:inline-flex; align-items:center; gap:0.35rem;
+                    transition:all 0.15s;
+                }
+                .dsc-reset-btn:hover { border-color:#ef4444; color:#ef4444; background:#fff1f2; }
+            </style>
+
+            <!-- ════ KPI Cards ════════════════════════════════════════════════════ -->
+            <div class="dsc-kpi-grid">
+
+                <!-- كارت الإجمالي -->
+                <div class="dsc-kpi-card" style="border-color:#bfdbfe;">
+                    <div class="kpi-accent-bar" style="background:linear-gradient(90deg,#2563eb,#60a5fa);"></div>
+                    <div class="kpi-top">
+                        <div class="kpi-icon" style="background:#dbeafe; color:#1d4ed8;"><i class="fas fa-clipboard-list"></i></div>
+                        <span class="kpi-badge" style="background:#dbeafe; color:#1e40af;">TOTAL</span>
                     </div>
+                    <div class="kpi-number" style="color:#1e40af;">${stats.total}</div>
+                    <div class="kpi-label" style="color:#1e40af;">${t('module.periodic.dsc.stats.total', 'إجمالي السجلات')}</div>
+                    <div class="kpi-sublabel">${records.length !== filteredRecords.length ? `${t('module.periodic.filtered','بعد التصفية')}: ${filteredRecords.length} / ${records.length}` : t('module.periodic.allData','كل البيانات')}</div>
                 </div>
-                <div class="content-card bg-gradient-to-br from-indigo-50 to-indigo-100 border border-indigo-200">
-                    <div class="card-body">
-                        <div class="flex items-center justify-between">
-                            <div>
-                                <p class="text-sm font-medium text-indigo-700 mb-1">${t('module.periodic.dsc.stats.thisMonth', 'هذا الشهر')}</p>
-                                <p class="text-3xl font-bold text-indigo-800">${stats.thisMonth}</p>
-                                <p class="text-xs text-indigo-600 mt-1">${t('module.periodic.total', 'الإجمالي')}: ${allStats.thisMonth}</p>
-                            </div>
-                            <div class="bg-indigo-500/90 rounded-xl px-3 py-2 shadow-sm border border-indigo-400/40">
-                                <i class="fas fa-calendar-alt text-white text-lg"></i>
-                            </div>
-                        </div>
+
+                <!-- كارت هذا الشهر -->
+                <div class="dsc-kpi-card" style="border-color:#c7d2fe;">
+                    <div class="kpi-accent-bar" style="background:linear-gradient(90deg,#6366f1,#a5b4fc);"></div>
+                    <div class="kpi-top">
+                        <div class="kpi-icon" style="background:#e0e7ff; color:#4338ca;"><i class="fas fa-calendar-check"></i></div>
+                        <span class="kpi-badge" style="background:#e0e7ff; color:#4338ca;">MONTH</span>
                     </div>
+                    <div class="kpi-number" style="color:#4338ca;">${stats.thisMonth}</div>
+                    <div class="kpi-label" style="color:#4338ca;">${t('module.periodic.dsc.stats.thisMonth', 'هذا الشهر')}</div>
+                    <div class="kpi-sublabel">${t('module.periodic.total','الإجمالي')}: ${allStats.thisMonth}</div>
                 </div>
-                <div class="content-card bg-gradient-to-br from-green-50 to-green-100 border border-green-200">
-                    <div class="card-body">
-                        <div class="flex items-center justify-between">
-                            <div>
-                                <p class="text-sm font-medium text-green-700 mb-1">${t('module.periodic.dsc.stats.shift1', 'الوردية الأولى')}</p>
-                                <p class="text-3xl font-bold text-green-800">${stats.shift1}</p>
-                            </div>
-                            <div class="bg-green-500/90 rounded-xl px-3 py-2 shadow-sm border border-green-400/40">
-                                <i class="fas fa-sun text-white text-lg"></i>
-                            </div>
-                        </div>
+
+                <!-- كارت الوردية الأولى -->
+                <div class="dsc-kpi-card" style="border-color:#bbf7d0;">
+                    <div class="kpi-accent-bar" style="background:linear-gradient(90deg,#16a34a,#4ade80);"></div>
+                    <div class="kpi-top">
+                        <div class="kpi-icon" style="background:#dcfce7; color:#15803d;"><i class="fas fa-sun"></i></div>
+                        <span class="kpi-badge" style="background:#dcfce7; color:#166534;">SHIFT 1</span>
                     </div>
+                    <div class="kpi-number" style="color:#15803d;">${stats.shift1}</div>
+                    <div class="kpi-label" style="color:#15803d;">${t('module.periodic.dsc.stats.shift1', 'الوردية الأولى')}</div>
+                    <div class="kpi-bar-wrap"><div class="kpi-bar-fill" style="width:${shift1Pct}%; background:linear-gradient(90deg,#16a34a,#4ade80);"></div></div>
                 </div>
-                <div class="content-card bg-gradient-to-br from-orange-50 to-orange-100 border border-orange-200">
-                    <div class="card-body">
-                        <div class="flex items-center justify-between">
-                            <div>
-                                <p class="text-sm font-medium text-orange-700 mb-1">${t('module.periodic.dsc.stats.shift23', 'الوردية الثانية / الثالثة')}</p>
-                                <p class="text-3xl font-bold text-orange-800">${stats.shift2 + stats.shift3}</p>
-                            </div>
-                            <div class="bg-orange-500/90 rounded-xl px-3 py-2 shadow-sm border border-orange-400/40">
-                                <i class="fas fa-moon text-white text-lg"></i>
-                            </div>
-                        </div>
+
+                <!-- كارت الوردية الثانية/الثالثة -->
+                <div class="dsc-kpi-card" style="border-color:#fed7aa;">
+                    <div class="kpi-accent-bar" style="background:linear-gradient(90deg,#ea580c,#fb923c);"></div>
+                    <div class="kpi-top">
+                        <div class="kpi-icon" style="background:#ffedd5; color:#c2410c;"><i class="fas fa-moon"></i></div>
+                        <span class="kpi-badge" style="background:#ffedd5; color:#9a3412;">SHIFT 2&3</span>
                     </div>
+                    <div class="kpi-number" style="color:#c2410c;">${stats.shift2 + stats.shift3}</div>
+                    <div class="kpi-label" style="color:#c2410c;">${t('module.periodic.dsc.stats.shift23', 'الوردية الثانية / الثالثة')}</div>
+                    <div style="display:flex; gap:6px; margin-top:4px;">
+                        <span style="font-size:0.72rem; background:#fef3c7; color:#d97706; padding:0.1rem 0.4rem; border-radius:999px;">٢: ${stats.shift2}</span>
+                        <span style="font-size:0.72rem; background:#ede9fe; color:#7c3aed; padding:0.1rem 0.4rem; border-radius:999px;">٣: ${stats.shift3}</span>
+                    </div>
+                    <div class="kpi-bar-wrap"><div class="kpi-bar-fill" style="width:${shift2Pct + shift3Pct}%; background:linear-gradient(90deg,#ea580c,#fb923c);"></div></div>
                 </div>
             </div>
-            <!-- شريط العنوان والأزرار أسفل الكروت - بنفس شكل الصورة (عنوان + عنوان فرعي ثم أزرار محاذاة لليمين) -->
-            <div class="mb-4" style="direction:${dscDir}; text-align:${dscAlign};">
-                <div class="flex flex-col ${dscItems} gap-2 mb-3">
-                    <h3 class="text-xl font-bold text-gray-900 m-0" style="display:flex; align-items:center; gap:0.5rem; flex-direction:row;"><i class="fas fa-tasks" style="color:#1e40af;"></i>${en ? t('module.periodic.tab.dailySafety', 'Daily Safety Report') : t('module.periodic.dsc.recordTitleAr', 'سجل المرور اليومي للسلامة')}</h3>
-                    ${en ? '' : `<p class="text-sm font-medium text-gray-500 m-0">${t('module.periodic.dsc.recordTitleEn', 'Daily Safety Report')}</p>`}
+
+            <!-- ════ Action bar ══════════════════════════════════════════════════ -->
+            <div class="dsc-action-bar" style="direction:${dscDir};">
+                <div class="dsc-title-block">
+                    <h3><i class="fas fa-tasks" style="margin-${en?'right':'left'}:0.4rem;"></i>${en ? t('module.periodic.tab.dailySafety','Daily Safety Report') : t('module.periodic.dsc.recordTitleAr','سجل المرور اليومي للسلامة')}</h3>
+                    <p>${en ? t('module.periodic.dsc.recordTitleAr','سجل المرور اليومي للسلامة') : t('module.periodic.dsc.recordTitleEn','Daily Safety Report')}</p>
                 </div>
-                <div class="flex flex-row gap-2 flex-wrap" style="justify-content:${dscJustify};">
-                    <button type="button" id="daily-safety-checklist-add-btn" class="btn-primary" style="background:linear-gradient(180deg, #3b82f6 0%, #2563eb 100%); border:none; color:#fff; padding:0.5rem 1rem; border-radius:8px; font-weight:600;"><i class="fas fa-plus ml-2"></i>${t('module.periodic.dsc.addRecord', 'إضافة سجل')}</button>
-                    <button type="button" id="daily-safety-checklist-export-pdf-btn" class="btn-secondary" title="${t('module.periodic.dsc.exportPdfHint', 'تصدير السجل كامل إلى PDF')}" style="background:#fff; border:1px solid #d1d5db; color:#374151;"><i class="fas fa-file-pdf ml-2"></i>${t('module.periodic.dsc.exportPdf', 'تصدير PDF')}</button>
-                    <button type="button" id="daily-safety-checklist-export-excel-btn" class="btn-secondary" title="${t('module.periodic.dsc.exportExcelHint', 'تصدير السجل كامل إلى Excel')}" style="background:#fff; border:1px solid #d1d5db; color:#374151;"><i class="fas fa-file-excel ml-2"></i>${t('module.periodic.dsc.exportExcel', 'تصدير Excel')}</button>
-                </div>
-            </div>
-            <div class="content-card mb-4">
-                <div class="card-body">
-                    <div class="mb-2 text-sm font-semibold text-slate-700"><i class="fas fa-filter ml-2 text-blue-600"></i>${t('module.periodic.analytics.filterData', 'فلترة البيانات')}</div>
-                    <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-3">
-                        <div>
-                            <label class="form-label">${t('module.periodic.search', 'بحث')}</label>
-                            <input id="dsc-filter-search" class="form-input" type="text" value="${Utils.escapeHTML(f.search || '')}" placeholder="${t('module.periodic.searchPlaceholder', 'بحث برقم التقرير/الموقع/الاسم')}">
-                        </div>
-                        <div>
-                            <label class="form-label">${t('module.periodic.dsc.table.site', 'المصنع/الموقع')}</label>
-                            <select id="dsc-filter-site" class="form-input">
-                                <option value="">${t('module.periodic.all', 'الكل')}</option>
-                                ${filterOptions.sites.map((s) => `<option value="${Utils.escapeHTML(s.id)}" ${String(f.siteId || '') === String(s.id) ? 'selected' : ''}>${Utils.escapeHTML(s.name)}</option>`).join('')}
-                            </select>
-                        </div>
-                        <div>
-                            <label class="form-label">${t('module.periodic.dsc.table.inspector', 'القائم بالمرور')}</label>
-                            <select id="dsc-filter-inspector" class="form-input">
-                                <option value="">${t('module.periodic.all', 'الكل')}</option>
-                                ${filterOptions.inspectors.map((name) => `<option value="${Utils.escapeHTML(name)}" ${String(f.inspectorName || '') === String(name) ? 'selected' : ''}>${Utils.escapeHTML(name)}</option>`).join('')}
-                            </select>
-                        </div>
-                        <div>
-                            <label class="form-label">${t('module.periodic.dsc.table.shift', 'الوردية')}</label>
-                            <select id="dsc-filter-shift" class="form-input">
-                                <option value="">${t('module.periodic.all', 'الكل')}</option>
-                                ${filterOptions.shifts.map((shift) => `<option value="${Utils.escapeHTML(shift)}" ${String(f.shift || '') === String(shift) ? 'selected' : ''}>${Utils.escapeHTML(this._formatDailyShiftLabel(shift))}</option>`).join('')}
-                            </select>
-                        </div>
-                        <div>
-                            <label class="form-label">${t('module.periodic.fromDate', 'من تاريخ')}</label>
-                            <input id="dsc-filter-date-from" class="form-input" type="date" value="${Utils.escapeHTML(f.dateFrom || '')}">
-                        </div>
-                        <div>
-                            <label class="form-label">${t('module.periodic.toDate', 'إلى تاريخ')}</label>
-                            <input id="dsc-filter-date-to" class="form-input" type="date" value="${Utils.escapeHTML(f.dateTo || '')}">
-                        </div>
-                    </div>
-                    <div class="mt-3 flex items-center gap-2" style="justify-content:${dscJustify};">
-                        <button type="button" id="dsc-filter-reset-btn" class="btn-secondary" style="background:#fff; border:1px solid #d1d5db; color:#374151;">
-                            <i class="fas fa-eraser ml-2"></i>${t('module.periodic.resetFilters', 'مسح الفلاتر')}
-                        </button>
-                    </div>
+                <div class="dsc-action-btns">
+                    <button type="button" id="daily-safety-checklist-add-btn" class="dsc-btn-white">
+                        <i class="fas fa-plus"></i>${t('module.periodic.dsc.addRecord','إضافة سجل')}
+                    </button>
+                    <button type="button" id="daily-safety-checklist-export-pdf-btn" class="dsc-btn-white-outline" title="${t('module.periodic.dsc.exportPdfHint','تصدير السجل كامل إلى PDF')}">
+                        <i class="fas fa-file-pdf"></i>${t('module.periodic.dsc.exportPdf','تصدير PDF')}
+                    </button>
+                    <button type="button" id="daily-safety-checklist-export-excel-btn" class="dsc-btn-white-outline" title="${t('module.periodic.dsc.exportExcelHint','تصدير السجل كامل إلى Excel')}">
+                        <i class="fas fa-file-excel"></i>${t('module.periodic.dsc.exportExcel','تصدير Excel')}
+                    </button>
                 </div>
             </div>
-            <div class="content-card">
-                <div class="card-header"><h2 class="card-title"><i class="fas fa-list ml-2"></i>${en ? t('module.periodic.dsc.recordTitle', 'Daily Safety Report Log') : t('module.periodic.dsc.recordTitleAr', 'سجل المرور اليومي للسلامة')}</h2></div>
-                <div class="card-body" id="daily-safety-checklist-table">${this.renderDailySafetyCheckListTable(filteredRecords)}</div>
+
+            <!-- ════ Filter panel ════════════════════════════════════════════════ -->
+            <div class="dsc-filter-panel">
+                <div class="dsc-filter-header" id="dsc-filter-toggle-header">
+                    <div class="fh-left">
+                        <i class="fas fa-sliders-h" style="color:#2563eb;"></i>
+                        ${t('module.periodic.analytics.filterData','فلترة البيانات')}
+                        ${activeFilterCount > 0 ? `<span class="dsc-active-count">${activeFilterCount}</span>` : ''}
+                    </div>
+                    <div class="fh-right">
+                        ${activeFilterCount > 0 ? `<span style="font-size:0.75rem; color:#64748b;">${filteredRecords.length} / ${records.length}</span>` : ''}
+                        <i class="fas fa-chevron-down dsc-filter-toggle-icon" id="dsc-filter-chevron"></i>
+                    </div>
+                </div>
+                <div id="dsc-filter-body" class="dsc-filter-body">
+                    <div class="dsc-field" style="grid-column:1/-1;">
+                        <label><i class="fas fa-search" style="margin-${en?'right':'left'}:0.3rem; color:#94a3b8;"></i>${t('module.periodic.search','بحث')}</label>
+                        <input id="dsc-filter-search" type="text" value="${Utils.escapeHTML(f.search || '')}" placeholder="${t('module.periodic.searchPlaceholder','بحث برقم التقرير/الموقع/الاسم...')}">
+                    </div>
+                    <div class="dsc-field">
+                        <label><i class="fas fa-industry" style="margin-${en?'right':'left'}:0.3rem; color:#94a3b8;"></i>${t('module.periodic.dsc.table.site','المصنع/الموقع')}</label>
+                        <select id="dsc-filter-site">
+                            <option value="">${t('module.periodic.all','الكل')}</option>
+                            ${filterOptions.sites.map(s => `<option value="${Utils.escapeHTML(s.id)}" ${String(f.siteId||'')===String(s.id)?'selected':''}>${Utils.escapeHTML(s.name)}</option>`).join('')}
+                        </select>
+                    </div>
+                    <div class="dsc-field">
+                        <label><i class="fas fa-user-hard-hat" style="margin-${en?'right':'left'}:0.3rem; color:#94a3b8;"></i>${t('module.periodic.dsc.table.inspector','القائم بالمرور')}</label>
+                        <select id="dsc-filter-inspector">
+                            <option value="">${t('module.periodic.all','الكل')}</option>
+                            ${filterOptions.inspectors.map(name => `<option value="${Utils.escapeHTML(name)}" ${String(f.inspectorName||'')===String(name)?'selected':''}>${Utils.escapeHTML(name)}</option>`).join('')}
+                        </select>
+                    </div>
+                    <div class="dsc-field">
+                        <label><i class="fas fa-layer-group" style="margin-${en?'right':'left'}:0.3rem; color:#94a3b8;"></i>${t('module.periodic.dsc.table.shift','الوردية')}</label>
+                        <select id="dsc-filter-shift">
+                            <option value="">${t('module.periodic.all','الكل')}</option>
+                            ${filterOptions.shifts.map(shift => `<option value="${Utils.escapeHTML(shift)}" ${String(f.shift||'')===String(shift)?'selected':''}>${Utils.escapeHTML(this._formatDailyShiftLabel(shift))}</option>`).join('')}
+                        </select>
+                    </div>
+                    <div class="dsc-field">
+                        <label><i class="fas fa-calendar-alt" style="margin-${en?'right':'left'}:0.3rem; color:#94a3b8;"></i>${t('module.periodic.fromDate','من تاريخ')}</label>
+                        <input id="dsc-filter-date-from" type="date" value="${Utils.escapeHTML(f.dateFrom||'')}">
+                    </div>
+                    <div class="dsc-field">
+                        <label><i class="fas fa-calendar-alt" style="margin-${en?'right':'left'}:0.3rem; color:#94a3b8;"></i>${t('module.periodic.toDate','إلى تاريخ')}</label>
+                        <input id="dsc-filter-date-to" type="date" value="${Utils.escapeHTML(f.dateTo||'')}">
+                    </div>
+                </div>
+                <div class="dsc-filter-footer">
+                    <button type="button" id="dsc-filter-reset-btn" class="dsc-reset-btn">
+                        <i class="fas fa-times-circle"></i>${t('module.periodic.resetFilters','مسح الفلاتر')}
+                    </button>
+                </div>
+            </div>
+
+            <!-- ════ Records table ═══════════════════════════════════════════════ -->
+            <div class="content-card" style="border-radius:12px; overflow:hidden; box-shadow:0 2px 10px rgba(0,0,0,0.06);">
+                <div class="card-header" style="background:linear-gradient(90deg,#f8fafc,#fff); border-bottom:2px solid #e2e8f0; padding:0.85rem 1.1rem;">
+                    <h2 class="card-title" style="margin:0; font-size:0.95rem; font-weight:700; color:#1e293b;">
+                        <i class="fas fa-list-check ml-2" style="color:#2563eb;"></i>
+                        ${en ? t('module.periodic.dsc.recordTitle','Daily Safety Report Log') : t('module.periodic.dsc.recordTitleAr','سجل المرور اليومي للسلامة')}
+                    </h2>
+                </div>
+                <div class="card-body" id="daily-safety-checklist-table" style="padding:0.75rem;">
+                    ${this.renderDailySafetyCheckListTable(filteredRecords)}
+                </div>
             </div>
         `;
     },
@@ -4076,9 +4206,19 @@ const PeriodicInspections = {
             document.body.appendChild(container);
 
             const canvas = await window.html2canvas(container, {
-                scale: 1.6,
+                // ✅ رفع الدقة من 1.6 إلى 2.8 → PDF عالي الجودة بدون بكسلة
+                // 2.8 = ~270 DPI على A4 (الحد المقبول للطباعة المهنية)
+                scale: 2.8,
                 useCORS: true,
-                backgroundColor: '#ffffff'
+                allowTaint: false,
+                backgroundColor: '#ffffff',
+                scrollX: 0,
+                scrollY: 0,
+                logging: false,
+                imageTimeout: 15000,     // انتظار تحميل الشعار حتى 15s
+                removeContainer: true,
+                windowWidth: container.scrollWidth,
+                windowHeight: container.scrollHeight
             });
             const pageWidth = doc.internal.pageSize.getWidth();
             const pageHeight = doc.internal.pageSize.getHeight();
@@ -4112,7 +4252,9 @@ const PeriodicInspections = {
                 temp.height = hPx;
                 const ctx = temp.getContext('2d');
                 ctx.drawImage(canvas, 0, yPx, canvas.width, hPx, 0, 0, canvas.width, hPx);
-                return temp.toDataURL('image/jpeg', 0.98);
+                // ✅ PNG بدلاً من JPEG للحصول على حدود واضحة بدون artifacts
+                // (الملف أكبر قليلاً لكن الخط والأرقام تظهر بوضوح كامل)
+                return temp.toDataURL('image/png');
             };
 
             const headerImg = headerPx > 0 ? sliceToImage(0, headerPx) : '';
@@ -4124,7 +4266,7 @@ const PeriodicInspections = {
                 let cursorY = margin;
 
                 if (headerImg) {
-                    doc.addImage(headerImg, 'JPEG', margin, cursorY, usableWidth, headerMm, undefined, 'FAST');
+                    doc.addImage(headerImg, 'PNG', margin, cursorY, usableWidth, headerMm, undefined, 'NONE');
                     cursorY += headerMm;
                 }
 
@@ -4135,11 +4277,11 @@ const PeriodicInspections = {
                 const bodyImg = sliceToImage(bodyStartPx, bodyHeightPx);
                 const rawBodyMm = bodyHeightPx / pxPerMm;
                 const bodyMm = forceSinglePage ? Math.min(rawBodyMm, bodyMmPerPage) : rawBodyMm;
-                doc.addImage(bodyImg, 'JPEG', margin, cursorY, usableWidth, bodyMm, undefined, 'FAST');
+                doc.addImage(bodyImg, 'PNG', margin, cursorY, usableWidth, bodyMm, undefined, 'NONE');
 
                 if (footerImg) {
                     const footerY = margin + usableHeight - footerMm;
-                    doc.addImage(footerImg, 'JPEG', margin, footerY, usableWidth, footerMm, undefined, 'FAST');
+                    doc.addImage(footerImg, 'PNG', margin, footerY, usableWidth, footerMm, undefined, 'NONE');
                 }
             }
 
