@@ -3695,204 +3695,440 @@ const PeriodicInspections = {
             points.sort((a, b) => b.nonCompliantRate - a.nonCompliantRate);
         }
         const worstPoints = points.slice(0, this.DAILY_SAFETY_CHECKLIST_QUESTIONS.length);
-
-        const renderRankBars = (items, colorClass = 'bg-blue-500') => {
-            const max = Math.max(1, ...(items.map((i) => i.count)));
-            return items.map((item) => `
-                <div class="mb-2">
-                    <div class="flex items-center justify-between text-sm mb-1">
-                        <span class="font-medium text-gray-700">${Utils.escapeHTML(item.name || '-')}</span>
-                        <span class="text-gray-500">${item.count}</span>
-                    </div>
-                    <div style="width:100%; height:8px; background:#eef2f7; border-radius:${controls.barStyle === 'square' ? '2px' : '6px'}; overflow:hidden;">
-                        <div class="${colorClass}" style="width:${Math.round((item.count / max) * 100)}%; height:8px; border-radius:${controls.barStyle === 'square' ? '2px' : '6px'};"></div>
-                    </div>
-                </div>
-            `).join('');
-        };
-
         const filterOptions = this.getDailySafetyFilterOptions(allRecords);
         const f = this.state.dailySafetyFilters || {};
         const trendMax = Math.max(1, ...(trend.map((r) => r.records)));
+        const activeFilterCount = [f.search, f.siteId, f.inspectorName, f.shift, f.dateFrom, f.dateTo].filter(v => v && String(v).trim()).length;
+
+        // ── helpers ──────────────────────────────────────────────────────────
+        // Grade badge for compliance rate
+        const gradeInfo = (rate) => {
+            if (rate >= 90) return { label: 'ممتاز',   color: '#15803d', bg: '#dcfce7', border: '#86efac' };
+            if (rate >= 75) return { label: 'جيد',      color: '#1d4ed8', bg: '#dbeafe', border: '#93c5fd' };
+            if (rate >= 60) return { label: 'مقبول',    color: '#d97706', bg: '#fef3c7', border: '#fcd34d' };
+            return            { label: 'ضعيف',    color: '#dc2626', bg: '#fee2e2', border: '#fca5a5' };
+        };
+        const riskInfo = (rate) => {
+            if (rate >= 40) return { label: 'عالي',    color: '#dc2626', bg: '#fee2e2', grad: 'linear-gradient(90deg,#dc2626,#ef4444)' };
+            if (rate >= 20) return { label: 'متوسط',   color: '#d97706', bg: '#fef3c7', grad: 'linear-gradient(90deg,#d97706,#f59e0b)' };
+            return            { label: 'منخفض',   color: '#15803d', bg: '#dcfce7', grad: 'linear-gradient(90deg,#15803d,#22c55e)' };
+        };
+
+        // Ranked list rows for inspectors/sites
+        const renderRankList = (items, gradStart, gradEnd) => {
+            if (!items.length) return `<div style="text-align:center; padding:2rem; color:#94a3b8;">${t('module.periodic.noData','لا توجد بيانات')}</div>`;
+            const max = Math.max(1, ...items.map(i => i.count));
+            const total = items.reduce((s, i) => s + i.count, 0) || 1;
+            return items.map((item, idx) => {
+                const pct = Math.round((item.count / max) * 100);
+                const share = Math.round((item.count / total) * 100);
+                const rank = idx + 1;
+                const rankColor = rank === 1 ? '#f59e0b' : rank === 2 ? '#94a3b8' : rank === 3 ? '#b45309' : '#e2e8f0';
+                return `
+                    <div style="display:flex; align-items:center; gap:0.75rem; margin-bottom:0.9rem;">
+                        <div style="width:28px; height:28px; border-radius:50%; background:${rankColor}; color:${rank<=3?'#fff':'#64748b'}; font-weight:800; font-size:0.75rem; display:flex; align-items:center; justify-content:center; flex-shrink:0;">${rank}</div>
+                        <div style="flex:1; min-width:0;">
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.3rem;">
+                                <span style="font-weight:600; font-size:0.85rem; color:#1e293b; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:60%;">${Utils.escapeHTML(item.name || '-')}</span>
+                                <div style="display:flex; align-items:center; gap:0.35rem; flex-shrink:0;">
+                                    <span style="font-weight:700; font-size:0.85rem; color:#1e293b;">${item.count}</span>
+                                    <span style="font-size:0.72rem; background:#f1f5f9; color:#64748b; padding:0.1rem 0.4rem; border-radius:999px;">${share}%</span>
+                                </div>
+                            </div>
+                            <div style="height:6px; background:#f1f5f9; border-radius:999px; overflow:hidden;">
+                                <div style="width:${pct}%; height:100%; background:linear-gradient(90deg,${gradStart},${gradEnd}); border-radius:999px; transition:width 0.6s ease;"></div>
+                            </div>
+                        </div>
+                    </div>`;
+            }).join('');
+        };
+
+        // SVG Trend chart (dual: bars=records, dots+line=compliance%)
+        const buildTrendSVG = (trendData) => {
+            if (!trendData.length) return `<div style="text-align:center; padding:2rem; color:#94a3b8;">${t('module.periodic.noData','لا توجد بيانات')}</div>`;
+            const W = 700, H = 180, padL = 10, padR = 10, padT = 16, padB = 40;
+            const chartW = W - padL - padR;
+            const chartH = H - padT - padB;
+            const n = trendData.length;
+            const barW = Math.max(8, Math.min(48, Math.floor((chartW / n) * 0.6)));
+            const gap = chartW / n;
+            const maxRec = Math.max(1, ...trendData.map(d => d.records));
+            const xOf = (i) => padL + gap * i + gap / 2;
+            const yOfRec = (v) => padT + chartH - Math.max(2, Math.round((v / maxRec) * chartH));
+            const barH = (v) => Math.max(2, Math.round((v / maxRec) * chartH));
+            const yOfComp = (v) => padT + chartH - Math.round((v / 100) * chartH);
+
+            // Bars
+            const bars = trendData.map((d, i) => {
+                const x = xOf(i) - barW / 2;
+                const h = barH(d.records);
+                const y = padT + chartH - h;
+                const fillStart = '#3b82f6', fillEnd = '#2563eb';
+                return `<defs><linearGradient id="bg${i}" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="${fillStart}"/><stop offset="100%" stop-color="${fillEnd}"/></linearGradient></defs>
+                    <rect x="${x}" y="${y}" width="${barW}" height="${h}" rx="3" fill="url(#bg${i})" opacity="0.85"/>
+                    <text x="${xOf(i)}" y="${y - 4}" text-anchor="middle" font-size="9" fill="#1d4ed8" font-weight="700">${d.records}</text>`;
+            }).join('');
+
+            // Compliance line + dots
+            const linePoints = trendData.map((d, i) => `${xOf(i)},${yOfComp(d.complianceRate)}`).join(' ');
+            const compLine = trendData.length > 1
+                ? `<polyline points="${linePoints}" fill="none" stroke="#16a34a" stroke-width="2" stroke-linejoin="round" opacity="0.9"/>`
+                : '';
+            const dots = trendData.map((d, i) => {
+                const cx = xOf(i), cy = yOfComp(d.complianceRate);
+                const g = gradeInfo(d.complianceRate);
+                return `<circle cx="${cx}" cy="${cy}" r="4.5" fill="${g.color}" stroke="#fff" stroke-width="1.5"/>
+                    <text x="${cx}" y="${cy - 8}" text-anchor="middle" font-size="8.5" fill="${g.color}" font-weight="700">${d.complianceRate}%</text>`;
+            }).join('');
+
+            // Month labels + baseline
+            const labels = trendData.map((d, i) => {
+                const lbl = d.month.slice(5) + '/' + d.month.slice(2, 4); // MM/YY
+                return `<text x="${xOf(i)}" y="${padT + chartH + 14}" text-anchor="middle" font-size="9" fill="#64748b">${lbl}</text>`;
+            }).join('');
+            const baseline = `<line x1="${padL}" y1="${padT + chartH}" x2="${W - padR}" y2="${padT + chartH}" stroke="#e2e8f0" stroke-width="1"/>`;
+
+            // Legend
+            const legend = `<rect x="${padL}" y="${H - 10}" width="10" height="4" rx="2" fill="#2563eb"/>
+                <text x="${padL + 13}" y="${H - 6}" font-size="9" fill="#64748b">${t('module.periodic.dsc.stats.total','السجلات')}</text>
+                <circle cx="${padL + 90}" cy="${H - 8}" r="4" fill="#16a34a"/>
+                <text x="${padL + 97}" y="${H - 6}" font-size="9" fill="#64748b">${t('module.periodic.complianceRate','نسبة المطابقة')}</text>`;
+
+            return `<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" style="width:100%; height:auto; direction:ltr;" aria-hidden="true">
+                ${baseline}${bars}${compLine}${dots}${labels}${legend}
+            </svg>`;
+        };
 
         return `
-            <div class="mb-4">
-                <h3 class="text-xl font-bold text-gray-900 m-0"><i class="fas fa-chart-line ml-2" style="color:#1e40af;"></i>${t('module.periodic.tab.dailySafetyAnalytics', 'تحليل البيانات')}</h3>
-                <p class="text-sm text-gray-500 mt-1 mb-0">${t('module.periodic.analytics.subtitle', 'لوحة تحليل ديناميكية شاملة لسجلات المرور اليومي للسلامة')}</p>
+            <style>
+                /* ═══ Analytics dashboard scoped styles ═════════════════════════ */
+                .dsc-analytics-hero {
+                    background: linear-gradient(135deg, #0f172a 0%, #1e3a5f 50%, #1e40af 100%);
+                    border-radius: 16px; padding: 1.4rem 1.6rem; margin-bottom: 1.25rem;
+                    color: #fff; position: relative; overflow: hidden;
+                }
+                .dsc-analytics-hero::before {
+                    content: ''; position: absolute; top: -40px; left: -40px;
+                    width: 220px; height: 220px; border-radius: 50%;
+                    background: rgba(255,255,255,0.04); pointer-events: none;
+                }
+                .dsc-analytics-hero::after {
+                    content: ''; position: absolute; bottom: -60px; right: -30px;
+                    width: 280px; height: 280px; border-radius: 50%;
+                    background: rgba(255,255,255,0.03); pointer-events: none;
+                }
+                .dsc-analytics-hero .hero-title { font-size: 1.3rem; font-weight: 800; margin: 0 0 0.2rem; }
+                .dsc-analytics-hero .hero-subtitle { font-size: 0.82rem; opacity: 0.8; margin: 0 0 1rem; }
+                .dsc-analytics-hero .hero-metrics { display: flex; flex-wrap: wrap; gap: 1rem; }
+                .dsc-analytics-hero .hero-metric {
+                    background: rgba(255,255,255,0.1); backdrop-filter: blur(4px);
+                    border: 1px solid rgba(255,255,255,0.2); border-radius: 10px;
+                    padding: 0.7rem 1rem; min-width: 110px; flex: 1;
+                }
+                .dsc-analytics-hero .hero-metric .hm-val { font-size: 1.75rem; font-weight: 800; line-height: 1; }
+                .dsc-analytics-hero .hero-metric .hm-lbl { font-size: 0.74rem; opacity: 0.8; margin-top: 3px; }
+                .dsc-analytics-hero .hero-metric .hm-sub { font-size: 0.68rem; opacity: 0.65; margin-top: 1px; }
+                /* controls panel */
+                .dsc-ctrl-panel {
+                    background: #fff; border: 1px solid #e2e8f0; border-radius: 12px;
+                    margin-bottom: 1.25rem; overflow: hidden; box-shadow: 0 1px 6px rgba(0,0,0,0.04);
+                }
+                .dsc-ctrl-header {
+                    display: flex; align-items: center; justify-content: space-between;
+                    padding: 0.75rem 1rem; background: linear-gradient(90deg,#f8fafc,#fff);
+                    border-bottom: 1px solid #e2e8f0; cursor: pointer; user-select: none;
+                }
+                .dsc-ctrl-header .ch-left { display: flex; align-items: center; gap: 0.5rem; font-weight: 700; color: #1e293b; font-size: 0.88rem; }
+                .dsc-ctrl-body { padding: 1rem; }
+                .dsc-ctrl-body .dsc-field label { font-size: 0.77rem; font-weight: 600; color: #475569; margin-bottom: 0.2rem; display: block; }
+                .dsc-ctrl-body .dsc-field input,
+                .dsc-ctrl-body .dsc-field select {
+                    width: 100%; padding: 0.48rem 0.65rem; font-size: 0.83rem;
+                    border: 1.5px solid #e2e8f0; border-radius: 8px;
+                    outline: none; transition: border-color 0.15s, box-shadow 0.15s;
+                }
+                .dsc-ctrl-body .dsc-field input:focus,
+                .dsc-ctrl-body .dsc-field select:focus {
+                    border-color: #2563eb; box-shadow: 0 0 0 3px rgba(37,99,235,0.1);
+                }
+                .dsc-ctrl-body .sep { border: none; border-top: 1px solid #f1f5f9; margin: 0.85rem 0; }
+                .dsc-ctrl-footer { padding: 0.6rem 1rem; background: #fafbfc; border-top: 1px solid #f1f5f9; display: flex; justify-content: flex-end; gap: 0.5rem; }
+                /* section cards */
+                .dsc-section {
+                    background: #fff; border: 1px solid #e2e8f0; border-radius: 12px;
+                    overflow: hidden; box-shadow: 0 1px 8px rgba(0,0,0,0.05); margin-bottom: 1.25rem;
+                }
+                .dsc-section-header {
+                    display: flex; align-items: center; justify-content: space-between;
+                    padding: 0.8rem 1.1rem; border-bottom: 2px solid #f1f5f9;
+                }
+                .dsc-section-header h3 { margin: 0; font-size: 0.92rem; font-weight: 700; color: #1e293b; display: flex; align-items: center; gap: 0.4rem; }
+                .dsc-section-header .sh-badge { font-size: 0.72rem; font-weight: 700; padding: 0.15rem 0.5rem; border-radius: 999px; }
+                .dsc-section-body { padding: 1rem 1.1rem; }
+                /* checkpoint heatmap */
+                .dsc-checkpoint-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.75rem; }
+                @media(max-width:960px){ .dsc-checkpoint-grid{ grid-template-columns: repeat(2,1fr); } }
+                @media(max-width:600px){ .dsc-checkpoint-grid{ grid-template-columns: 1fr; } }
+                .dsc-cp-card {
+                    border-radius: 10px; padding: 0.85rem 0.9rem;
+                    border: 1px solid; transition: transform 0.12s, box-shadow 0.12s;
+                    position: relative; overflow: hidden;
+                }
+                .dsc-cp-card:hover { transform: translateY(-1px); box-shadow: 0 4px 14px rgba(0,0,0,0.1); }
+                .dsc-cp-card .cp-idx {
+                    position: absolute; top: 0.5rem; left: 0.6rem;
+                    font-size: 0.65rem; font-weight: 800; opacity: 0.5; font-family: monospace;
+                }
+                .dsc-cp-card .cp-label { font-size: 0.78rem; font-weight: 600; color: #1e293b; line-height: 1.35; margin-bottom: 0.55rem; padding-left: 1.4rem; }
+                .dsc-cp-card .cp-stats { display: flex; gap: 0.5rem; align-items: center; margin-bottom: 0.45rem; flex-wrap: wrap; }
+                .dsc-cp-card .cp-pill { font-size: 0.71rem; font-weight: 700; padding: 0.12rem 0.45rem; border-radius: 999px; }
+                .dsc-cp-card .cp-bar-wrap { height: 5px; background: rgba(0,0,0,0.08); border-radius: 999px; overflow: hidden; }
+                .dsc-cp-card .cp-bar-fill { height: 100%; border-radius: 999px; transition: width 0.6s ease; }
+                .dsc-cp-card .cp-rate { font-size: 0.7rem; color: #64748b; margin-top: 0.3rem; }
+                /* export buttons row */
+                .dsc-export-row { display: flex; gap: 0.6rem; flex-wrap: wrap; }
+                .dsc-export-btn {
+                    background: #fff; border: 1.5px solid #e2e8f0; color: #374151;
+                    padding: 0.48rem 1rem; border-radius: 8px; font-size: 0.82rem;
+                    font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 0.35rem;
+                    transition: all 0.15s;
+                }
+                .dsc-export-btn:hover { border-color: #2563eb; color: #1d4ed8; background: #eff6ff; }
+                .dsc-reset-btn-an {
+                    background: #fff; border: 1.5px solid #e2e8f0; color: #64748b;
+                    padding: 0.48rem 0.9rem; border-radius: 8px; font-size: 0.82rem;
+                    font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 0.35rem;
+                    transition: all 0.15s;
+                }
+                .dsc-reset-btn-an:hover { border-color: #ef4444; color: #dc2626; background: #fff1f2; }
+            </style>
+
+            <!-- ════════════════ HERO ══════════════════════════════════════════════ -->
+            <div class="dsc-analytics-hero">
+                <div class="hero-title"><i class="fas fa-chart-line" style="margin-left:0.5rem; opacity:0.9;"></i>${t('module.periodic.tab.dailySafetyAnalytics','تحليل البيانات')}</div>
+                <div class="hero-subtitle">${t('module.periodic.analytics.subtitle','لوحة تحليل ديناميكية شاملة لسجلات المرور اليومي للسلامة')}</div>
+                <div class="hero-metrics">
+                    <div class="hero-metric">
+                        <div class="hm-val">${analytics.totalRecords}</div>
+                        <div class="hm-lbl">${t('module.periodic.dsc.stats.total','إجمالي السجلات')}</div>
+                        <div class="hm-sub">${t('module.periodic.allData','كل البيانات')}</div>
+                    </div>
+                    <div class="hero-metric" style="${analytics.complianceRate>=90?'background:rgba(21,128,61,0.25);border-color:rgba(21,128,61,0.5);':analytics.complianceRate>=75?'':analytics.complianceRate>=60?'background:rgba(217,119,6,0.2);border-color:rgba(217,119,6,0.4);':'background:rgba(220,38,38,0.2);border-color:rgba(220,38,38,0.4);'}">
+                        <div class="hm-val">${analytics.complianceRate}%</div>
+                        <div class="hm-lbl">${t('module.periodic.complianceRate','نسبة المطابقة')}</div>
+                        <div class="hm-sub">${gradeInfo(analytics.complianceRate).label}</div>
+                    </div>
+                    <div class="hero-metric" style="background:rgba(220,38,38,0.15); border-color:rgba(220,38,38,0.35);">
+                        <div class="hm-val">${analytics.overallNonCompliant}</div>
+                        <div class="hm-lbl">${t('module.periodic.nonCompliantPoints','غير المطابق')}</div>
+                        <div class="hm-sub">${t('module.periodic.pointsChecked','نقطة فحص')}</div>
+                    </div>
+                    <div class="hero-metric">
+                        <div class="hm-val">${analytics.overallPointsTotal}</div>
+                        <div class="hm-lbl">${t('module.periodic.pointsChecked','إجمالي نقاط الفحص')}</div>
+                        <div class="hm-sub">${t('module.periodic.dsc.stats.total','') + (analytics.overallPointsTotal ? '' : '-')}</div>
+                    </div>
+                </div>
             </div>
 
-            <div class="content-card mb-4">
-                <div class="card-body">
-                    <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-3">
-                        <div>
-                            <label class="form-label">${t('module.periodic.fromDate', 'من تاريخ')}</label>
-                            <input id="dsc-filter-date-from" class="form-input" type="date" value="${Utils.escapeHTML(f.dateFrom || '')}">
+            <!-- ════════════════ CONTROLS PANEL ═══════════════════════════════════ -->
+            <div class="dsc-ctrl-panel">
+                <div class="dsc-ctrl-header" id="dsc-an-ctrl-toggle">
+                    <div class="ch-left">
+                        <i class="fas fa-sliders-h" style="color:#2563eb;"></i>
+                        ${t('module.periodic.analytics.filterData','الفلاتر وإعدادات العرض')}
+                        ${activeFilterCount > 0 ? `<span style="background:#2563eb;color:#fff;padding:0.15rem 0.45rem;border-radius:999px;font-size:0.7rem;font-weight:700;">${activeFilterCount}</span>` : ''}
+                    </div>
+                    <i class="fas fa-chevron-down" id="dsc-an-ctrl-chevron" style="color:#64748b;font-size:0.8rem;transition:transform 0.2s;"></i>
+                </div>
+                <div id="dsc-an-ctrl-body" class="dsc-ctrl-body">
+                    <!-- Filters -->
+                    <div class="dsc-mb-sm" style="font-size:0.78rem;font-weight:700;color:#64748b;margin-bottom:0.6rem;text-transform:uppercase;letter-spacing:0.5px;">
+                        <i class="fas fa-filter" style="margin-left:0.35rem;color:#94a3b8;"></i>${t('module.periodic.analytics.filterData','الفلاتر')}
+                    </div>
+                    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:0.75rem;margin-bottom:0.75rem;">
+                        <div class="dsc-field">
+                            <label><i class="fas fa-calendar-alt" style="margin-left:0.25rem;color:#94a3b8;"></i>${t('module.periodic.fromDate','من تاريخ')}</label>
+                            <input id="dsc-filter-date-from" type="date" value="${Utils.escapeHTML(f.dateFrom || '')}">
                         </div>
-                        <div>
-                            <label class="form-label">${t('module.periodic.toDate', 'إلى تاريخ')}</label>
-                            <input id="dsc-filter-date-to" class="form-input" type="date" value="${Utils.escapeHTML(f.dateTo || '')}">
+                        <div class="dsc-field">
+                            <label><i class="fas fa-calendar-alt" style="margin-left:0.25rem;color:#94a3b8;"></i>${t('module.periodic.toDate','إلى تاريخ')}</label>
+                            <input id="dsc-filter-date-to" type="date" value="${Utils.escapeHTML(f.dateTo || '')}">
                         </div>
-                        <div>
-                            <label class="form-label">${t('module.periodic.dsc.table.inspector', 'القائم بالمرور')}</label>
-                            <select id="dsc-filter-inspector" class="form-input">
-                                <option value="">${t('module.periodic.all', 'الكل')}</option>
-                                ${filterOptions.inspectors.map((name) => `<option value="${Utils.escapeHTML(name)}" ${String(f.inspectorName || '') === String(name) ? 'selected' : ''}>${Utils.escapeHTML(name)}</option>`).join('')}
+                        <div class="dsc-field">
+                            <label><i class="fas fa-layer-group" style="margin-left:0.25rem;color:#94a3b8;"></i>${t('module.periodic.dsc.table.shift','الوردية')}</label>
+                            <select id="dsc-filter-shift">
+                                <option value="">${t('module.periodic.all','الكل')}</option>
+                                ${filterOptions.shifts.map(s=>`<option value="${Utils.escapeHTML(s)}" ${String(f.shift||'')===String(s)?'selected':''}>${Utils.escapeHTML(this._formatDailyShiftLabel(s))}</option>`).join('')}
                             </select>
                         </div>
-                        <div>
-                            <label class="form-label">${t('module.periodic.dsc.table.site', 'المصنع/الموقع')}</label>
-                            <select id="dsc-filter-site" class="form-input">
-                                <option value="">${t('module.periodic.all', 'الكل')}</option>
-                                ${filterOptions.sites.map((s) => `<option value="${Utils.escapeHTML(s.id)}" ${String(f.siteId || '') === String(s.id) ? 'selected' : ''}>${Utils.escapeHTML(s.name)}</option>`).join('')}
+                        <div class="dsc-field">
+                            <label><i class="fas fa-user-hard-hat" style="margin-left:0.25rem;color:#94a3b8;"></i>${t('module.periodic.dsc.table.inspector','القائم بالمرور')}</label>
+                            <select id="dsc-filter-inspector">
+                                <option value="">${t('module.periodic.all','الكل')}</option>
+                                ${filterOptions.inspectors.map(n=>`<option value="${Utils.escapeHTML(n)}" ${String(f.inspectorName||'')===n?'selected':''}>${Utils.escapeHTML(n)}</option>`).join('')}
                             </select>
                         </div>
-                        <div>
-                            <label class="form-label">${t('module.periodic.dsc.table.shift', 'الوردية')}</label>
-                            <select id="dsc-filter-shift" class="form-input">
-                                <option value="">${t('module.periodic.all', 'الكل')}</option>
-                                ${filterOptions.shifts.map((shift) => `<option value="${Utils.escapeHTML(shift)}" ${String(f.shift || '') === String(shift) ? 'selected' : ''}>${Utils.escapeHTML(this._formatDailyShiftLabel(shift))}</option>`).join('')}
+                        <div class="dsc-field">
+                            <label><i class="fas fa-industry" style="margin-left:0.25rem;color:#94a3b8;"></i>${t('module.periodic.dsc.table.site','المصنع/الموقع')}</label>
+                            <select id="dsc-filter-site">
+                                <option value="">${t('module.periodic.all','الكل')}</option>
+                                ${filterOptions.sites.map(s=>`<option value="${Utils.escapeHTML(s.id)}" ${String(f.siteId||'')===String(s.id)?'selected':''}>${Utils.escapeHTML(s.name)}</option>`).join('')}
                             </select>
                         </div>
-                        <div>
-                            <label class="form-label">${t('module.periodic.search', 'بحث')}</label>
-                            <input id="dsc-filter-search" class="form-input" type="text" value="${Utils.escapeHTML(f.search || '')}" placeholder="${t('module.periodic.searchPlaceholder', 'بحث برقم التقرير/الموقع/الاسم')}">
+                        <div class="dsc-field">
+                            <label><i class="fas fa-search" style="margin-left:0.25rem;color:#94a3b8;"></i>${t('module.periodic.search','بحث')}</label>
+                            <input id="dsc-filter-search" type="text" value="${Utils.escapeHTML(f.search||'')}" placeholder="${t('module.periodic.searchPlaceholder','رقم التقرير / الموقع / الاسم')}">
                         </div>
                     </div>
-                    <div class="mt-3 pt-3 border-t border-slate-200">
-                        <div class="mb-2 text-sm font-semibold text-slate-700"><i class="fas fa-sliders-h ml-2 text-indigo-600"></i>${t('module.periodic.analytics.displaySettings', 'إعدادات العرض والتحكم')}</div>
+                    <hr class="sep">
+                    <!-- Display controls -->
+                    <div style="font-size:0.78rem;font-weight:700;color:#64748b;margin-bottom:0.6rem;text-transform:uppercase;letter-spacing:0.5px;">
+                        <i class="fas fa-sliders-h" style="margin-left:0.35rem;color:#94a3b8;"></i>${t('module.periodic.analytics.displaySettings','إعدادات العرض')}
                     </div>
-                    <div class="grid grid-cols-1 md:grid-cols-5 gap-3">
-                        <div>
-                            <label class="form-label">${t('module.periodic.analytics.topN', 'عدد العناصر المعروضة')}</label>
-                            <select id="dsc-analytics-topn" class="form-input">
-                                ${[5, 8, 10, 12, 15, 18, 20].map((n) => `<option value="${n}" ${n === topN ? 'selected' : ''}>Top ${n}</option>`).join('')}
+                    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:0.75rem;margin-bottom:0.75rem;">
+                        <div class="dsc-field">
+                            <label>${t('module.periodic.analytics.topN','عدد العناصر')}</label>
+                            <select id="dsc-analytics-topn">
+                                ${[5,8,10,12,15,18,20].map(n=>`<option value="${n}" ${n===topN?'selected':''}>Top ${n}</option>`).join('')}
                             </select>
                         </div>
-                        <div>
-                            <label class="form-label">${t('module.periodic.analytics.rankingMetric', 'ترتيب نقاط الفحص حسب')}</label>
-                            <select id="dsc-analytics-ranking" class="form-input">
-                                <option value="nonCompliantRate" ${controls.rankingMetric === 'nonCompliantRate' ? 'selected' : ''}>${t('module.periodic.analytics.byRiskRate', 'معدل الخطورة')}</option>
-                                <option value="nonCompliantCount" ${controls.rankingMetric === 'nonCompliantCount' ? 'selected' : ''}>${t('module.periodic.analytics.byNonCompliantCount', 'عدد غير المطابق')}</option>
-                                <option value="complianceRate" ${controls.rankingMetric === 'complianceRate' ? 'selected' : ''}>${t('module.periodic.analytics.byComplianceRate', 'نسبة المطابقة')}</option>
+                        <div class="dsc-field">
+                            <label>${t('module.periodic.analytics.rankingMetric','ترتيب البنود')}</label>
+                            <select id="dsc-analytics-ranking">
+                                <option value="nonCompliantRate" ${controls.rankingMetric==='nonCompliantRate'?'selected':''}>${t('module.periodic.analytics.byRiskRate','معدل الخطورة')}</option>
+                                <option value="nonCompliantCount" ${controls.rankingMetric==='nonCompliantCount'?'selected':''}>${t('module.periodic.analytics.byNonCompliantCount','عدد غير المطابق')}</option>
+                                <option value="complianceRate" ${controls.rankingMetric==='complianceRate'?'selected':''}>${t('module.periodic.analytics.byComplianceRate','نسبة المطابقة')}</option>
                             </select>
                         </div>
-                        <div>
-                            <label class="form-label">${t('module.periodic.analytics.exportScope', 'نطاق التصدير')}</label>
-                            <select id="dsc-analytics-export-inspector" class="form-input">
-                                <option value="__all__">${t('module.periodic.analytics.exportAll', 'الكل')}</option>
-                                ${filterOptions.inspectors.map((name) => `<option value="${Utils.escapeHTML(name)}">${Utils.escapeHTML(name)}</option>`).join('')}
+                        <div class="dsc-field">
+                            <label>${t('module.periodic.analytics.exportScope','نطاق التصدير')}</label>
+                            <select id="dsc-analytics-export-inspector">
+                                <option value="__all__">${t('module.periodic.analytics.exportAll','الكل')}</option>
+                                ${filterOptions.inspectors.map(n=>`<option value="${Utils.escapeHTML(n)}">${Utils.escapeHTML(n)}</option>`).join('')}
                             </select>
                         </div>
-                        <div class="flex items-end">
-                            <button type="button" id="dsc-analytics-export-pdf-btn" class="btn-secondary" style="background:#fff; border:1px solid #d1d5db; color:#374151; width:100%;">
-                                <i class="fas fa-file-pdf ml-2"></i>${t('module.periodic.analytics.exportPdf', 'تصدير تحليل PDF')}
-                            </button>
+                        ${isAdmin ? `
+                        <div class="dsc-field">
+                            <label>${t('module.periodic.analytics.cardStyle','نمط الكروت')}</label>
+                            <select id="dsc-analytics-card-style">
+                                <option value="gradient" ${controls.cardStyle==='gradient'?'selected':''}>${t('module.periodic.analytics.styleGradient','متدرج')}</option>
+                                <option value="flat" ${controls.cardStyle==='flat'?'selected':''}>${t('module.periodic.analytics.styleFlat','مسطح')}</option>
+                            </select>
                         </div>
-                        <div class="flex items-end">
-                            <button type="button" id="dsc-analytics-export-excel-btn" class="btn-secondary" style="background:#fff; border:1px solid #d1d5db; color:#374151; width:100%;">
-                                <i class="fas fa-file-excel ml-2"></i>${t('module.periodic.analytics.exportExcel', 'تصدير تحليل Excel')}
-                            </button>
-                        </div>
+                        ` : '<div></div>'}
                     </div>
                     ${isAdmin ? `
-                    <div class="mt-3 pt-3 border-t border-slate-200">
-                        <div class="mb-2 text-sm font-semibold text-slate-700"><i class="fas fa-user-cog ml-2 text-emerald-600"></i>${t('module.periodic.analytics.adminDisplay', 'خيارات المدير لتخصيص الشكل')}</div>
-                    </div>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                        <div>
-                            <label class="form-label">${t('module.periodic.analytics.cardStyle', 'نمط البطاقات')}</label>
-                            <select id="dsc-analytics-card-style" class="form-input">
-                                <option value="gradient" ${controls.cardStyle === 'gradient' ? 'selected' : ''}>${t('module.periodic.analytics.styleGradient', 'متدرج')}</option>
-                                <option value="flat" ${controls.cardStyle === 'flat' ? 'selected' : ''}>${t('module.periodic.analytics.styleFlat', 'مسطح')}</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label class="form-label">${t('module.periodic.analytics.barStyle', 'نمط الأشرطة')}</label>
-                            <select id="dsc-analytics-bar-style" class="form-input">
-                                <option value="rounded" ${controls.barStyle === 'rounded' ? 'selected' : ''}>${t('module.periodic.analytics.styleRounded', 'حواف ناعمة')}</option>
-                                <option value="square" ${controls.barStyle === 'square' ? 'selected' : ''}>${t('module.periodic.analytics.styleSquare', 'حواف مستقيمة')}</option>
-                            </select>
-                        </div>
+                    <div class="dsc-field" style="max-width:260px; margin-bottom:0.75rem;">
+                        <label>${t('module.periodic.analytics.barStyle','نمط الأشرطة')}</label>
+                        <select id="dsc-analytics-bar-style">
+                            <option value="rounded" ${controls.barStyle==='rounded'?'selected':''}>${t('module.periodic.analytics.styleRounded','حواف ناعمة')}</option>
+                            <option value="square" ${controls.barStyle==='square'?'selected':''}>${t('module.periodic.analytics.styleSquare','حواف مستقيمة')}</option>
+                        </select>
                     </div>` : ''}
-                    <div class="grid grid-cols-1 md:grid-cols-1 gap-3 mt-3">
-                        <div class="flex items-end">
-                            <button type="button" id="dsc-filter-reset-btn" class="btn-secondary" style="background:#fff; border:1px solid #d1d5db; color:#374151; width:100%;">
-                                <i class="fas fa-eraser ml-2"></i>${t('module.periodic.resetFilters', 'مسح الفلاتر')}
-                            </button>
-                        </div>
+                </div>
+                <div class="dsc-ctrl-footer">
+                    <button type="button" class="dsc-reset-btn-an" id="dsc-filter-reset-btn">
+                        <i class="fas fa-times-circle"></i>${t('module.periodic.resetFilters','مسح الفلاتر')}
+                    </button>
+                    <button type="button" class="dsc-export-btn" id="dsc-analytics-export-pdf-btn">
+                        <i class="fas fa-file-pdf" style="color:#dc2626;"></i>${t('module.periodic.analytics.exportPdf','تصدير PDF')}
+                    </button>
+                    <button type="button" class="dsc-export-btn" id="dsc-analytics-export-excel-btn">
+                        <i class="fas fa-file-excel" style="color:#16a34a;"></i>${t('module.periodic.analytics.exportExcel','تصدير Excel')}
+                    </button>
+                </div>
+            </div>
+
+            <!-- ════════════════ TWO-COLUMN: INSPECTORS + SITES ═══════════════════ -->
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:1.25rem; margin-bottom:1.25rem;">
+                <div class="dsc-section">
+                    <div class="dsc-section-header">
+                        <h3><i class="fas fa-user-shield" style="color:#16a34a;"></i>${t('module.periodic.topInspectors','تحليل القائمين بالمرور')}</h3>
+                        <span class="sh-badge" style="background:#dcfce7;color:#15803d;">${topInspectors.length}</span>
+                    </div>
+                    <div class="dsc-section-body">
+                        ${renderRankList(topInspectors,'#16a34a','#4ade80')}
+                    </div>
+                </div>
+                <div class="dsc-section">
+                    <div class="dsc-section-header">
+                        <h3><i class="fas fa-industry" style="color:#2563eb;"></i>${t('module.periodic.topSites','تحليل المواقع')}</h3>
+                        <span class="sh-badge" style="background:#dbeafe;color:#1d4ed8;">${topSites.length}</span>
+                    </div>
+                    <div class="dsc-section-body">
+                        ${renderRankList(topSites,'#2563eb','#60a5fa')}
                     </div>
                 </div>
             </div>
+            @media(max-width:700px){ .dsc-trend-inspectors-grid{ grid-template-columns:1fr !important; } }
 
-            <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-                <div class="content-card" style="border:1px solid #dbeafe; background:${controls.cardStyle === 'flat' ? '#eff6ff' : 'linear-gradient(135deg, #eff6ff, #dbeafe)'};"><div class="card-body"><p class="text-sm font-medium text-blue-700 mb-1">${t('module.periodic.dsc.stats.total', 'إجمالي السجلات')}</p><p class="text-3xl font-bold text-blue-900">${analytics.totalRecords}</p></div></div>
-                <div class="content-card" style="border:1px solid #bbf7d0; background:${controls.cardStyle === 'flat' ? '#f0fdf4' : 'linear-gradient(135deg, #f0fdf4, #dcfce7)'};"><div class="card-body"><p class="text-sm font-medium text-green-700 mb-1">${t('module.periodic.complianceRate', 'نسبة المطابقة')}</p><p class="text-3xl font-bold text-green-900">${analytics.complianceRate}%</p></div></div>
-                <div class="content-card" style="border:1px solid #fecaca; background:${controls.cardStyle === 'flat' ? '#fef2f2' : 'linear-gradient(135deg, #fef2f2, #fee2e2)'};"><div class="card-body"><p class="text-sm font-medium text-red-700 mb-1">${t('module.periodic.nonCompliantPoints', 'إجمالي غير المطابق')}</p><p class="text-3xl font-bold text-red-900">${analytics.overallNonCompliant}</p></div></div>
-                <div class="content-card" style="border:1px solid #c7d2fe; background:${controls.cardStyle === 'flat' ? '#eef2ff' : 'linear-gradient(135deg, #eef2ff, #e0e7ff)'};"><div class="card-body"><p class="text-sm font-medium text-indigo-700 mb-1">${t('module.periodic.pointsChecked', 'إجمالي نقاط الفحص')}</p><p class="text-3xl font-bold text-indigo-900">${analytics.overallPointsTotal}</p></div></div>
-            </div>
-
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
-                <div class="content-card">
-                    <div class="card-header"><h3 class="card-title"><i class="fas fa-user-shield ml-2"></i>${t('module.periodic.topInspectors', 'تحليل القائمين بالمرور')}</h3></div>
-                    <div class="card-body">${topInspectors.length ? renderRankBars(topInspectors, 'bg-green-500') : `<div class="empty-state"><p class="text-gray-500">${t('module.periodic.noData', 'لا توجد بيانات')}</p></div>`}</div>
+            <!-- ════════════════ TREND CHART ══════════════════════════════════════ -->
+            <div class="dsc-section" style="margin-bottom:1.25rem;">
+                <div class="dsc-section-header">
+                    <h3><i class="fas fa-chart-area" style="color:#6366f1;"></i>${t('module.periodic.analytics.trend','الاتجاه الزمني')}</h3>
+                    <span class="sh-badge" style="background:#e0e7ff;color:#4338ca;">${trend.length} ${t('module.periodic.analytics.months','شهر')}</span>
                 </div>
-                <div class="content-card">
-                    <div class="card-header"><h3 class="card-title"><i class="fas fa-industry ml-2"></i>${t('module.periodic.topSites', 'تحليل المواقع')}</h3></div>
-                    <div class="card-body">${topSites.length ? renderRankBars(topSites, 'bg-blue-500') : `<div class="empty-state"><p class="text-gray-500">${t('module.periodic.noData', 'لا توجد بيانات')}</p></div>`}</div>
-                </div>
-            </div>
-
-            <div class="content-card mb-6">
-                <div class="card-header"><h3 class="card-title"><i class="fas fa-chart-area ml-2"></i>${t('module.periodic.analytics.trend', 'الاتجاه الزمني')}</h3></div>
-                <div class="card-body">
-                    ${trend.length ? trend.map((item) => `
-                        <div class="mb-3">
-                            <div class="flex items-center justify-between text-sm mb-1">
-                                <span class="font-medium text-gray-700">${Utils.escapeHTML(item.month)}</span>
-                                <span class="text-gray-500">${t('module.periodic.dsc.stats.total', 'إجمالي السجلات')}: ${item.records} | ${t('module.periodic.complianceRate', 'نسبة المطابقة')}: ${item.complianceRate}%</span>
-                            </div>
-                            <div style="width:100%; height:10px; background:#eef2f7; border-radius:6px; overflow:hidden;">
-                                <div style="width:${Math.round((item.records / trendMax) * 100)}%; height:10px; background:linear-gradient(90deg,#2563eb,#3b82f6); border-radius:6px;"></div>
-                            </div>
-                        </div>
-                    `).join('') : `<div class="empty-state"><p class="text-gray-500">${t('module.periodic.noData', 'لا توجد بيانات')}</p></div>`}
+                <div class="dsc-section-body" style="overflow-x:auto;">
+                    ${buildTrendSVG(trend)}
+                    ${trend.length ? `
+                    <div style="display:flex; flex-wrap:wrap; gap:0.5rem; margin-top:0.75rem;">
+                        ${trend.map(item => {
+                            const g = gradeInfo(item.complianceRate);
+                            return `<div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:0.4rem 0.7rem;font-size:0.76rem;min-width:130px;">
+                                <div style="font-weight:700;color:#1e293b;">${item.month}</div>
+                                <div style="color:#64748b;margin-top:2px;">
+                                    <span style="color:#1d4ed8;">${item.records} ${t('module.periodic.dsc.stats.total','سجل')}</span>
+                                    · <span style="color:${g.color};">${item.complianceRate}%</span>
+                                </div>
+                            </div>`;
+                        }).join('')}
+                    </div>` : ''}
                 </div>
             </div>
 
-            <div class="content-card">
-                <div class="card-header"><h3 class="card-title"><i class="fas fa-chart-bar ml-2"></i>${t('module.periodic.criticalPoints', 'تحليل نقاط الفحص (مثل Power BI)')}</h3></div>
-                <div class="card-body">
+            <!-- ════════════════ CHECKPOINT HEATMAP ══════════════════════════════ -->
+            <div class="dsc-section">
+                <div class="dsc-section-header">
+                    <h3><i class="fas fa-tasks" style="color:#dc2626;"></i>${t('module.periodic.criticalPoints','تحليل نقاط الفحص')}</h3>
+                    <div style="display:flex;gap:0.4rem;">
+                        <span class="sh-badge" style="background:#fee2e2;color:#dc2626;">
+                            <i class="fas fa-exclamation-circle" style="font-size:0.65rem;margin-left:0.2rem;"></i>
+                            ${worstPoints.filter(p=>p.nonCompliantRate>=40).length} ${t('module.periodic.riskHigh','خطر عالي')}
+                        </span>
+                        <span class="sh-badge" style="background:#fef3c7;color:#d97706;">
+                            ${worstPoints.filter(p=>p.nonCompliantRate>=20&&p.nonCompliantRate<40).length} ${t('module.periodic.riskMedium','متوسط')}
+                        </span>
+                        <span class="sh-badge" style="background:#dcfce7;color:#15803d;">
+                            ${worstPoints.filter(p=>p.nonCompliantRate<20&&p.total>0).length} ${t('module.periodic.riskLow','سليم')}
+                        </span>
+                    </div>
+                </div>
+                <div class="dsc-section-body">
                     ${worstPoints.length ? `
-                        <div class="table-wrapper" style="width:100%; overflow-x:auto;">
-                            <table class="data-table table-header-red" style="width:100%;">
-                                <thead>
-                                    <tr>
-                                        <th>${t('module.periodic.point', 'النقطة')}</th>
-                                        <th>${t('module.periodic.checked', 'المرات المفحوصة')}</th>
-                                        <th>${t('module.periodic.compliant', 'مطابق')}</th>
-                                        <th>${t('module.periodic.nonCompliant', 'غير مطابق')}</th>
-                                        <th>${t('module.periodic.riskRate', 'معدل الخطورة')}</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    ${worstPoints.map((p) => `
-                                        <tr>
-                                            <td>${Utils.escapeHTML(p.label)}</td>
-                                            <td>${p.total}</td>
-                                            <td>${p.compliant}</td>
-                                            <td class="text-red-600 font-bold">${p.nonCompliant}</td>
-                                            <td>
-                                                <div style="width:100%; height:8px; background:#eef2f7; border-radius:${controls.barStyle === 'square' ? '2px' : '6px'}; overflow:hidden;">
-                                                    <div class="${p.nonCompliantRate >= 40 ? 'bg-red-500' : (p.nonCompliantRate >= 20 ? 'bg-orange-500' : 'bg-green-500')}" style="width:${Math.max(2, p.nonCompliantRate)}%; height:8px; border-radius:${controls.barStyle === 'square' ? '2px' : '6px'};"></div>
-                                                </div>
-                                                <div class="text-xs mt-1 text-gray-600">${p.nonCompliantRate}%</div>
-                                            </td>
-                                        </tr>
-                                    `).join('')}
-                                </tbody>
-                            </table>
-                        </div>
-                    ` : `<div class="empty-state"><p class="text-gray-500">${t('module.periodic.noData', 'لا توجد بيانات')}</p></div>`}
+                    <div class="dsc-checkpoint-grid">
+                        ${worstPoints.map((p, idx) => {
+                            if (!p.total) return '';
+                            const risk = riskInfo(p.nonCompliantRate);
+                            const comp = gradeInfo(p.complianceRate);
+                            return `
+                            <div class="dsc-cp-card" style="background:${risk.bg}22; border-color:${risk.bg}; border-left: 3px solid ${risk.color};">
+                                <div class="cp-idx">#${String(idx+1).padStart(2,'0')}</div>
+                                <div class="cp-label" title="${Utils.escapeHTML(p.label)}">${Utils.escapeHTML(p.label.length > 70 ? p.label.slice(0, 68) + '…' : p.label)}</div>
+                                <div class="cp-stats">
+                                    <span class="cp-pill" style="background:#dcfce7;color:#15803d;">✓ ${p.compliant}</span>
+                                    <span class="cp-pill" style="background:#fee2e2;color:#dc2626;">✗ ${p.nonCompliant}</span>
+                                    <span class="cp-pill" style="background:${risk.bg};color:${risk.color};">${risk.label}</span>
+                                    <span class="cp-pill" style="background:${comp.bg};color:${comp.color};">${p.complianceRate}%</span>
+                                </div>
+                                <div class="cp-bar-wrap">
+                                    <div class="cp-bar-fill" style="width:${Math.max(2,p.nonCompliantRate)}%; background:${risk.grad};"></div>
+                                </div>
+                                <div class="cp-rate">${t('module.periodic.riskRate','معدل الخطورة')}: ${p.nonCompliantRate}% · ${t('module.periodic.checked','من')} ${p.total} ${t('module.periodic.dsc.recordsWord','فحص')}</div>
+                            </div>`;
+                        }).join('')}
+                    </div>
+                    ` : `<div style="text-align:center;padding:2rem;color:#94a3b8;">${t('module.periodic.noData','لا توجد بيانات')}</div>`}
                 </div>
             </div>
         `;
