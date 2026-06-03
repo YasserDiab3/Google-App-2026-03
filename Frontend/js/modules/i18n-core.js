@@ -3901,6 +3901,7 @@
 
         // Print / export
         'طباعة / تصدير PDF': 'Print / Export PDF',
+        'تحميل PDF (A4)': 'Download PDF (A4)',
         'فشل في تصدير PDF:': 'Failed to export PDF:',
 
         // Tags / form details

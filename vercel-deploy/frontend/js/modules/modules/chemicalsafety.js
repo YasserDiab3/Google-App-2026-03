@@ -2627,11 +2627,15 @@ const ChemicalSafety = {
                     <button type="button" class="btn-secondary" onclick="this.closest('.modal-overlay').remove()" style="padding: 10px 20px;">
                         <i class="fas fa-times ml-2"></i>إغلاق
                     </button>
-                    <button type="button" onclick="ChemicalSafety.exportPDF('${chemical.id}');" 
+                    <button type="button" onclick="ChemicalSafety.exportPDF('${chemical.id}');"
                         class="btn-success" style="padding: 10px 20px;">
                         <i class="fas fa-file-pdf ml-2"></i>طباعة / تصدير PDF
                     </button>
-                    <button type="button" onclick="ChemicalSafety.editChemical('${chemical.id}'); this.closest('.modal-overlay').remove();" 
+                    <button type="button" onclick="ChemicalSafety.downloadChemicalPDF('${chemical.id}');"
+                        class="btn-primary" style="padding: 10px 20px; background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%); border: none;">
+                        <i class="fas fa-download ml-2"></i>تحميل PDF (A4)
+                    </button>
+                    <button type="button" onclick="ChemicalSafety.editChemical('${chemical.id}'); this.closest('.modal-overlay').remove();"
                         class="btn-primary" style="padding: 10px 20px;">
                         <i class="fas fa-edit ml-2"></i>تعديل
                     </button>
@@ -3149,6 +3153,181 @@ const ChemicalSafety = {
             Loading.hide();
             Utils.safeError('خطأ في تصدير PDF للمادة الكيميائية:', error);
             Notification.error('فشل في تصدير PDF: ' + error.message);
+        }
+    },
+
+    /**
+     * تحميل PDF مباشر لنموذج بيانات المادة في صفحة A4 واحدة
+     *
+     * يستخدم html2canvas + jsPDF لالتقاط محتوى SDS المُولَّد وتحويله إلى PDF
+     * يُحمَّل مباشرة (بدون نافذة طباعة) ويُجبَر على ورقة A4 واحدة فقط:
+     * - إذا كان المحتوى مناسباً للارتفاع → يملأ الصفحة
+     * - إذا كان أطول → يُقلَّص بنسبة scale ليتسع في صفحة واحدة (بدون قص)
+     *
+     * النمط مأخوذ من incidents.js (_incidentExportPDF) مع تعديل:
+     * - حاوية مؤقتة off-screen بأبعاد A4 (210×297mm)
+     * - بدون pagination — صفحة واحدة فقط
+     */
+    async downloadChemicalPDF(id) {
+        const chemical = AppState.appData.chemicalRegister.find(c => c.id === id);
+        if (!chemical) {
+            Notification.error('المادة غير موجودة');
+            return;
+        }
+
+        let tempContainer = null;
+        try {
+            Loading.show('جاري إنشاء PDF...');
+
+            // 1) تحميل المكتبات المطلوبة (مع cache: لو محمَّلة سابقاً، يعود فوراً)
+            const loadLib = (src, check) => new Promise((resolve, reject) => {
+                if (check()) return resolve();
+                const s = document.createElement('script');
+                s.src = src;
+                s.onload = () => resolve();
+                s.onerror = () => reject(new Error('Failed to load: ' + src));
+                document.head.appendChild(s);
+            });
+            await loadLib(
+                'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js',
+                () => typeof window.html2canvas !== 'undefined'
+            );
+            await loadLib(
+                'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js',
+                () => typeof window.jspdf !== 'undefined'
+            );
+
+            // 2) بناء محتوى SDS داخل حاوية مؤقتة off-screen بأبعاد A4
+            //    A4 portrait = 210mm × 297mm. عند 96 DPI ≈ 794px × 1123px (CSS)
+            //    نستخدم scale أعلى للحصول على دقة طباعة جيدة
+            const formCode = chemical.serialNumber || `CHEM-${chemical.id?.substring(0, 8) || 'UNKNOWN'}`;
+            const sdsHTML = this.generateSDSPrintContent(chemical);
+
+            tempContainer = document.createElement('div');
+            tempContainer.id = 'chemical-pdf-temp-container';
+            tempContainer.style.cssText = [
+                'position: fixed',
+                'top: -10000px',         // off-screen
+                'left: 0',
+                'width: 794px',          // A4 width @ 96dpi
+                'background: #ffffff',
+                'padding: 24px 32px',
+                'box-sizing: border-box',
+                'font-family: Tahoma, Arial, sans-serif',
+                'direction: rtl',
+                'color: #111827',
+                'z-index: -1'
+            ].join('; ');
+
+            // إضافة هيدر مبسّط (شعار + اسم الشركة + رمز النموذج)
+            const companyName = (AppState && (AppState.companySettings?.name || AppState.companyName)) || '';
+            const rawLogo = (AppState && AppState.companyLogo) || (AppState && AppState.companySettings?.logo) || '';
+            const dateStr = new Date().toLocaleDateString('en-GB');
+
+            tempContainer.innerHTML = `
+                <div style="display:flex;align-items:center;justify-content:space-between;border-bottom:3px solid #dc2626;padding-bottom:10px;margin-bottom:14px;gap:12px;">
+                    <div style="flex:0 0 auto;min-width:80px;">
+                        ${rawLogo ? `<img src="${rawLogo}" alt="" crossorigin="anonymous" style="max-height:54px;max-width:130px;object-fit:contain;">` : ''}
+                    </div>
+                    <div style="flex:1;text-align:center;">
+                        <div style="font-size:18px;font-weight:800;color:#991b1b;line-height:1.2;">تعليمات السلامة للمواد الكيميائية (SDS)</div>
+                        <div style="font-size:11px;color:#6b7280;margin-top:4px;">Chemical Safety Data Sheet — ${formCode}</div>
+                    </div>
+                    <div style="flex:0 0 auto;min-width:80px;text-align:left;font-size:11px;color:#374151;">
+                        <div style="font-weight:700;">${Utils.escapeHTML(companyName)}</div>
+                        <div style="margin-top:3px;color:#6b7280;">${dateStr}</div>
+                    </div>
+                </div>
+                <div id="chemical-pdf-body" style="font-size:11px;line-height:1.5;">
+                    ${sdsHTML}
+                </div>
+            `;
+            document.body.appendChild(tempContainer);
+
+            // 3) انتظار تحميل الشعار (إن وُجد) قبل اللقطة
+            const logoImg = tempContainer.querySelector('img');
+            if (logoImg && !logoImg.complete) {
+                await new Promise(res => {
+                    logoImg.onload = res;
+                    logoImg.onerror = res;
+                    setTimeout(res, 2000); // timeout safety
+                });
+            }
+
+            // 4) التقاط الحاوية كـ canvas
+            const canvas = await window.html2canvas(tempContainer, {
+                scale: 2,                    // دقة مضاعفة لجودة طباعة جيدة
+                useCORS: true,
+                allowTaint: false,
+                backgroundColor: '#ffffff',
+                logging: false,
+                scrollX: 0,
+                scrollY: 0,
+                windowWidth: tempContainer.scrollWidth,
+                windowHeight: tempContainer.scrollHeight
+            });
+
+            // 5) إنشاء PDF بحجم A4 portrait + تركيب الصورة في صفحة واحدة
+            const { jsPDF } = window.jspdf;
+            const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+            const pageWidth = pdf.internal.pageSize.getWidth();   // 210 mm
+            const pageHeight = pdf.internal.pageSize.getHeight(); // 297 mm
+            const margin = 8;
+            const availableW = pageWidth - margin * 2;
+            const availableH = pageHeight - margin * 2;
+
+            // حساب الأبعاد للحفاظ على نسبة العرض/الارتفاع مع الإجبار على صفحة واحدة
+            const canvasAspect = canvas.width / canvas.height;
+            let imgW = availableW;
+            let imgH = imgW / canvasAspect;
+
+            // إذا تجاوز الارتفاع المتاح → نُقلِّص ليتسع في صفحة واحدة (مع توسيط أفقي)
+            if (imgH > availableH) {
+                imgH = availableH;
+                imgW = imgH * canvasAspect;
+            }
+            const xPos = (pageWidth - imgW) / 2;   // توسيط أفقي
+            const yPos = margin;                    // أعلى الصفحة
+
+            pdf.addImage(
+                canvas.toDataURL('image/jpeg', 0.92),
+                'JPEG',
+                xPos,
+                yPos,
+                imgW,
+                imgH
+            );
+
+            // 6) إضافة فوتر صغير برقم النموذج + التاريخ + 1/1
+            pdf.setDrawColor(220, 38, 38);
+            pdf.setLineWidth(0.3);
+            pdf.line(margin, pageHeight - 7, pageWidth - margin, pageHeight - 7);
+            pdf.setTextColor(120, 120, 120);
+            pdf.setFontSize(8);
+            pdf.text(`${formCode}`, margin, pageHeight - 3, { align: 'left' });
+            pdf.text(`${new Date().toISOString().slice(0, 10)}`, pageWidth / 2, pageHeight - 3, { align: 'center' });
+            pdf.text('1 / 1', pageWidth - margin, pageHeight - 3, { align: 'right' });
+
+            // 7) حفظ الملف
+            const safeName = (chemical.materialName || chemical.tradeName || formCode)
+                .toString()
+                .replace(/[\/\\:*?"<>|]/g, '_')
+                .substring(0, 60);
+            pdf.save(`SDS_${safeName}_${formCode}.pdf`);
+
+            Loading.hide();
+            if (typeof Notification !== 'undefined' && Notification.success) {
+                Notification.success('تم تصدير البيانات بنجاح');
+            }
+        } catch (error) {
+            Loading.hide();
+            Utils.safeError('خطأ في تحميل PDF للمادة الكيميائية:', error);
+            Notification.error('فشل في تصدير PDF: ' + (error?.message || 'خطأ غير معروف'));
+        } finally {
+            // تنظيف الحاوية المؤقتة دائماً (نجاح أو خطأ)
+            if (tempContainer && tempContainer.parentNode) {
+                tempContainer.parentNode.removeChild(tempContainer);
+            }
         }
     },
 
