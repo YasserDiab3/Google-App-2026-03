@@ -3388,29 +3388,161 @@ const PeriodicInspections = {
     renderDailySafetyCheckListTable(records) {
         const t = (key, fallback) => this._t(key, fallback);
         if (!records || records.length === 0) return `<div class="empty-state"><p class="text-gray-500">${t('module.periodic.dsc.emptyRecords', 'لا توجد سجلات. اضغط "إضافة سجل" لتسجيل مرور يومي جديد.')}</p></div>`;
-        const rows = records
-            .sort((a, b) => new Date(b.date || b.createdAt) - new Date(a.date || a.createdAt))
-            .map(r => `
-            <tr>
-                <td>${Utils.escapeHTML(this.getDailySafetyCheckListSerialNumber(r))}</td>
-                <td>${Utils.escapeHTML(r.siteName || '-')}</td>
-                <td>${r.date ? Utils.formatDate(r.date) : '-'}</td>
-                <td>${Utils.escapeHTML(r.inspectorName || '-')}</td>
-                <td>${Utils.escapeHTML(this._formatDailyShiftLabel(r.shift || '-'))}</td>
-                <td class="text-left">
-                    <button type="button" class="btn-icon btn-icon-info ml-2" onclick="PeriodicInspections.showDailySafetyCheckListView('${Utils.escapeHTML(r.id)}')" title="${t('module.periodic.dsc.action.view', 'عرض')}"><i class="fas fa-eye"></i></button>
-                    <button type="button" class="btn-icon btn-icon-success ml-2" onclick="PeriodicInspections.exportDailySafetyCheckListRecord('${Utils.escapeHTML(r.id)}')" title="${t('module.periodic.dsc.action.downloadPdf', 'تحميل PDF')}"><i class="fas fa-file-pdf"></i></button>
-                    <button type="button" class="btn-icon btn-icon-primary" onclick="PeriodicInspections.showDailySafetyCheckListForm('${Utils.escapeHTML(r.id)}')" title="${t('module.periodic.dsc.action.edit', 'تعديل')}"><i class="fas fa-edit"></i></button>
-                    <button type="button" class="btn-icon btn-icon-danger" onclick="PeriodicInspections.deleteDailySafetyCheckListRecord('${Utils.escapeHTML(r.id)}')" title="${t('module.periodic.dsc.action.delete', 'حذف')}"><i class="fas fa-trash"></i></button>
-                </td>
-            </tr>
-        `).join('');
-        return `<div class="table-wrapper" style="width:100%; overflow-x:auto;">
-            <table class="data-table table-header-red" style="width:100%;">
-                <thead><tr><th style="min-width:90px;">${t('module.periodic.dsc.table.reportNumber', 'رقم التقرير')}</th><th style="min-width:120px;">${t('module.periodic.dsc.table.site', 'المصنع/الموقع')}</th><th style="min-width:100px;">${t('module.periodic.dsc.table.date', 'التاريخ')}</th><th style="min-width:120px;">${t('module.periodic.dsc.table.inspector', 'القائم بالمرور')}</th><th style="min-width:80px;">${t('module.periodic.dsc.table.shift', 'الوردية')}</th><th style="min-width:140px;">${t('module.periodic.dsc.table.action', 'الإجراء')}</th></tr></thead>
-                <tbody>${rows}</tbody>
-            </table>
-        </div>`;
+
+        // ✅ ترتيب تنازلي حسب التاريخ — أحدث السجلات في الأعلى
+        const sorted = [...records].sort((a, b) => new Date(b.date || b.createdAt) - new Date(a.date || a.createdAt));
+
+        // ✅ تجميع السجلات حسب التاريخ لإضافة رؤوس فاصلة تسهّل التنقّل
+        const groupedByDate = {};
+        sorted.forEach(r => {
+            const dateKey = (r.date || '').slice(0, 10) || 'unknown';
+            if (!groupedByDate[dateKey]) groupedByDate[dateKey] = [];
+            groupedByDate[dateKey].push(r);
+        });
+        const dateKeys = Object.keys(groupedByDate).sort((a, b) => b.localeCompare(a));
+
+        // ✅ بناء الصفوف مع فواصل التاريخ
+        const tbodyRows = dateKeys.map(dateKey => {
+            const dayRecords = groupedByDate[dateKey];
+            const dateLabel = dateKey !== 'unknown' ? Utils.formatDate(dateKey) : '-';
+            const dateAnchorId = `dsc-day-${dateKey.replace(/[^a-zA-Z0-9_-]/g, '_')}`;
+            const dateHeaderRow = `
+                <tr class="dsc-date-divider" id="${dateAnchorId}">
+                    <td colspan="6" style="background: linear-gradient(90deg, #eff6ff 0%, #dbeafe 100%); padding: 0.65rem 1rem; border-top: 2px solid #2563eb; font-weight: 700; color: #1e40af;">
+                        <i class="fas fa-calendar-day ml-2"></i>${Utils.escapeHTML(dateLabel)}
+                        <span style="background:#2563eb; color:#fff; padding:0.15rem 0.55rem; border-radius:999px; font-size:0.75rem; margin-right:0.5rem;">${dayRecords.length}</span>
+                    </td>
+                </tr>`;
+            const dataRows = dayRecords.map(r => {
+                const serial = this.getDailySafetyCheckListSerialNumber(r);
+                const shiftLabel = this._formatDailyShiftLabel(r.shift || '-');
+                const shiftCode = ({ 'الأولى': '1', 'الثانية': '2', 'الثالثة': '3' })[r.shift] || '?';
+                const shiftColor = shiftCode === '1' ? '#16a34a' : shiftCode === '2' ? '#ea580c' : shiftCode === '3' ? '#7c3aed' : '#64748b';
+                return `
+                <tr class="dsc-data-row" data-record-id="${Utils.escapeHTML(r.id)}" style="transition: background-color 0.15s ease;">
+                    <td>
+                        <span class="dsc-serial-badge" style="display:inline-block; padding:0.3rem 0.65rem; background:linear-gradient(135deg,#1e40af,#2563eb); color:#fff; font-weight:700; font-family:'Courier New',monospace; border-radius:6px; font-size:0.85rem; letter-spacing:0.5px;" dir="ltr">${Utils.escapeHTML(serial)}</span>
+                    </td>
+                    <td>${Utils.escapeHTML(r.siteName || '-')}</td>
+                    <td>${r.date ? Utils.formatDate(r.date) : '-'}</td>
+                    <td>${Utils.escapeHTML(r.inspectorName || '-')}</td>
+                    <td>
+                        <span style="display:inline-flex; align-items:center; gap:0.3rem; padding:0.2rem 0.55rem; background:${shiftColor}1A; color:${shiftColor}; border:1px solid ${shiftColor}55; border-radius:999px; font-size:0.8rem; font-weight:600;">
+                            <i class="fas fa-${shiftCode === '1' ? 'sun' : 'moon'}" style="font-size:0.7rem;"></i>${Utils.escapeHTML(shiftLabel)}
+                        </span>
+                    </td>
+                    <td class="text-left">
+                        <button type="button" class="btn-icon btn-icon-info ml-2" onclick="PeriodicInspections.showDailySafetyCheckListView('${Utils.escapeHTML(r.id)}')" title="${t('module.periodic.dsc.action.view', 'عرض')}"><i class="fas fa-eye"></i></button>
+                        <button type="button" class="btn-icon btn-icon-success ml-2" onclick="PeriodicInspections.exportDailySafetyCheckListRecord('${Utils.escapeHTML(r.id)}')" title="${t('module.periodic.dsc.action.downloadPdf', 'تحميل PDF')}"><i class="fas fa-file-pdf"></i></button>
+                        <button type="button" class="btn-icon btn-icon-primary" onclick="PeriodicInspections.showDailySafetyCheckListForm('${Utils.escapeHTML(r.id)}')" title="${t('module.periodic.dsc.action.edit', 'تعديل')}"><i class="fas fa-edit"></i></button>
+                        <button type="button" class="btn-icon btn-icon-danger" onclick="PeriodicInspections.deleteDailySafetyCheckListRecord('${Utils.escapeHTML(r.id)}')" title="${t('module.periodic.dsc.action.delete', 'حذف')}"><i class="fas fa-trash"></i></button>
+                    </td>
+                </tr>`;
+            }).join('');
+            return dateHeaderRow + dataRows;
+        }).join('');
+
+        // ✅ بناء أزرار "القفز إلى تاريخ معين" — تتيح للمستخدم الانتقال السريع لأي يوم محفوظ
+        const todayStr = new Date().toISOString().slice(0, 10);
+        const todayKey = `dsc-day-${todayStr.replace(/[^a-zA-Z0-9_-]/g, '_')}`;
+        const hasToday = dateKeys.includes(todayStr);
+        const quickJumpButtons = dateKeys.slice(0, 7).map(dateKey => {
+            const anchor = `dsc-day-${dateKey.replace(/[^a-zA-Z0-9_-]/g, '_')}`;
+            const label = Utils.formatDate(dateKey);
+            const count = groupedByDate[dateKey].length;
+            return `<button type="button" class="dsc-quick-jump-btn" onclick="document.getElementById('${anchor}')?.scrollIntoView({ behavior: 'smooth', block: 'start' });" style="background:#fff; border:1px solid #cbd5e1; color:#1e293b; padding:0.4rem 0.8rem; border-radius:8px; font-size:0.8rem; font-weight:600; cursor:pointer; transition:all 0.15s; white-space:nowrap;">
+                <i class="fas fa-calendar-day ml-1 text-blue-600"></i>${Utils.escapeHTML(label)}
+                <span style="background:#1e40af; color:#fff; padding:0.05rem 0.4rem; border-radius:999px; font-size:0.7rem; margin-right:0.3rem;">${count}</span>
+            </button>`;
+        }).join('');
+
+        return `
+            <style>
+                /* ✅ Sticky header — يبقى رأس الجدول مرئياً عند التمرير */
+                .dsc-table-shell { position: relative; }
+                .dsc-table-shell .dsc-table-scroll { max-height: 70vh; overflow-y: auto; overflow-x: auto; border: 1px solid #e2e8f0; border-radius: 10px; scroll-behavior: smooth; }
+                .dsc-table-shell .dsc-table-scroll table { width: 100%; border-collapse: separate; border-spacing: 0; }
+                .dsc-table-shell .dsc-table-scroll thead th {
+                    position: sticky; top: 0; z-index: 5;
+                    background: linear-gradient(180deg, #dc2626 0%, #b91c1c 100%);
+                    color: #fff; padding: 0.85rem 0.75rem; font-weight: 700; font-size: 0.85rem;
+                    text-align: right; box-shadow: 0 2px 4px rgba(0,0,0,0.08);
+                }
+                .dsc-table-shell .dsc-data-row td { padding: 0.65rem 0.75rem; border-bottom: 1px solid #f1f5f9; vertical-align: middle; }
+                .dsc-table-shell .dsc-data-row:hover { background-color: #f8fafc; }
+                .dsc-table-shell .dsc-date-divider td { position: sticky; top: 40px; z-index: 3; }
+                /* أزرار القفز السريع */
+                .dsc-quick-jump-btn:hover { background: #1e40af !important; color: #fff !important; border-color: #1e40af !important; transform: translateY(-1px); box-shadow: 0 2px 6px rgba(30,64,175,0.25); }
+                .dsc-quick-jump-btn:hover .text-blue-600 { color: #fff !important; }
+                /* Floating scroll-to-top button */
+                #dsc-scroll-top-fab { position: fixed; bottom: 24px; left: 24px; width: 48px; height: 48px; border-radius: 50%; background: linear-gradient(135deg, #1e40af, #2563eb); color: #fff; border: none; box-shadow: 0 6px 20px rgba(30,64,175,0.4); cursor: pointer; opacity: 0; pointer-events: none; transform: translateY(20px); transition: all 0.2s; z-index: 50; font-size: 1.1rem; }
+                #dsc-scroll-top-fab.visible { opacity: 1; pointer-events: auto; transform: translateY(0); }
+                #dsc-scroll-top-fab:hover { transform: translateY(-3px); box-shadow: 0 8px 24px rgba(30,64,175,0.5); }
+                @media (max-width: 768px) {
+                    .dsc-table-shell .dsc-table-scroll { max-height: 60vh; }
+                    #dsc-scroll-top-fab { bottom: 16px; left: 16px; width: 44px; height: 44px; }
+                }
+            </style>
+            <!-- ✅ شريط القفز السريع للأيام الأخيرة (آخر 7 أيام محفوظة) -->
+            ${dateKeys.length > 1 ? `
+            <div style="margin-bottom: 0.75rem; padding: 0.65rem 0.75rem; background: #f8fafc; border: 1px dashed #cbd5e1; border-radius: 8px;">
+                <div style="font-size: 0.8rem; font-weight: 600; color: #475569; margin-bottom: 0.5rem;">
+                    <i class="fas fa-bolt ml-1 text-amber-500"></i>${t('module.periodic.dsc.quickJump', 'انتقال سريع إلى تاريخ')}:
+                </div>
+                <div style="display: flex; flex-wrap: wrap; gap: 0.4rem;">
+                    ${hasToday ? `<button type="button" class="dsc-quick-jump-btn" onclick="document.getElementById('${todayKey}')?.scrollIntoView({ behavior: 'smooth', block: 'start' });" style="background:#dcfce7; border:1px solid #16a34a; color:#15803d; padding:0.4rem 0.8rem; border-radius:8px; font-size:0.8rem; font-weight:700; cursor:pointer; transition:all 0.15s; white-space:nowrap;">
+                        <i class="fas fa-star ml-1"></i>${t('module.periodic.dsc.today', 'اليوم')}
+                    </button>` : ''}
+                    ${quickJumpButtons}
+                </div>
+            </div>` : ''}
+
+            <!-- ✅ معلومات العدّ -->
+            <div style="margin-bottom: 0.5rem; font-size: 0.85rem; color: #64748b;">
+                <i class="fas fa-list-ol ml-1"></i>${t('module.periodic.dsc.totalRecords', 'إجمالي السجلات')}: <strong style="color:#1e40af;">${sorted.length}</strong>
+                · ${t('module.periodic.dsc.acrossDays', 'موزَّعة على')} <strong style="color:#1e40af;">${dateKeys.filter(k => k !== 'unknown').length}</strong> ${t('module.periodic.dsc.daysWord', 'يوم')}
+            </div>
+
+            <!-- ✅ الجدول مع sticky header + smooth scroll + max-height -->
+            <div class="dsc-table-shell">
+                <div class="dsc-table-scroll">
+                    <table class="data-table" style="width:100%;">
+                        <thead>
+                            <tr>
+                                <th style="min-width:110px;">${t('module.periodic.dsc.table.reportNumber', 'رقم التقرير')}</th>
+                                <th style="min-width:130px;">${t('module.periodic.dsc.table.site', 'المصنع/الموقع')}</th>
+                                <th style="min-width:110px;">${t('module.periodic.dsc.table.date', 'التاريخ')}</th>
+                                <th style="min-width:130px;">${t('module.periodic.dsc.table.inspector', 'القائم بالمرور')}</th>
+                                <th style="min-width:120px;">${t('module.periodic.dsc.table.shift', 'الوردية')}</th>
+                                <th style="min-width:160px;">${t('module.periodic.dsc.table.action', 'الإجراء')}</th>
+                            </tr>
+                        </thead>
+                        <tbody>${tbodyRows}</tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- ✅ زر العودة لأعلى الصفحة (floating) — يظهر فقط بعد التمرير -->
+            <button id="dsc-scroll-top-fab" type="button" title="${t('module.periodic.dsc.scrollTop', 'العودة لأعلى')}" aria-label="${t('module.periodic.dsc.scrollTop', 'العودة لأعلى')}">
+                <i class="fas fa-arrow-up"></i>
+            </button>
+            <script>
+                (function() {
+                    // إعداد الزر العائم للعودة لأعلى — يستهدف الـ scroll container الخاص بالجدول
+                    var fab = document.getElementById('dsc-scroll-top-fab');
+                    var scrollContainer = document.querySelector('.dsc-table-shell .dsc-table-scroll');
+                    if (!fab || !scrollContainer) return;
+                    function onScroll() {
+                        if (scrollContainer.scrollTop > 200) fab.classList.add('visible');
+                        else fab.classList.remove('visible');
+                    }
+                    scrollContainer.addEventListener('scroll', onScroll, { passive: true });
+                    fab.addEventListener('click', function() {
+                        scrollContainer.scrollTo({ top: 0, behavior: 'smooth' });
+                    });
+                })();
+            </script>
+        `;
     },
 
     async renderDailySafetyAnalyticsContent() {
@@ -4632,7 +4764,21 @@ const PeriodicInspections = {
         const now = new Date().toISOString();
         if (editId) {
             const idx = list.findIndex(r => r.id === editId);
-            if (idx >= 0) { list[idx] = { ...list[idx], ...payload, updatedAt: now }; }
+            if (idx >= 0) {
+                const oldRecord = list[idx];
+                const dateChanged = (oldRecord.date || '').slice(0, 10) !== (payload.date || '').slice(0, 10);
+                const shiftChanged = (oldRecord.shift || '') !== (payload.shift || '');
+                // ✅ FIX: عند تغيير التاريخ أو الوردية، نُعيد توليد رقم التقرير
+                // كي يبقى تنسيق DD-SH-NO متوافقاً مع البيانات الفعلية (وإلا يبقى الرقم
+                // مرتبطاً بالتاريخ/الوردية القديمة → معلومة مضلِّلة في الجدول والـ PDF).
+                let updatedReportNumber = oldRecord.reportNumber;
+                if (dateChanged || shiftChanged) {
+                    // نستبعد السجل الحالي من قائمة الحساب لتفادي عدّه ضد نفسه
+                    const otherRecords = list.filter((_, i) => i !== idx);
+                    updatedReportNumber = this.getNextDailySafetyCheckListReportNumber(payload, otherRecords);
+                }
+                list[idx] = { ...oldRecord, ...payload, reportNumber: updatedReportNumber, updatedAt: now };
+            }
         } else {
             const id = 'DSC-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6);
             const reportNumber = this.getNextDailySafetyCheckListReportNumber(payload, list);
