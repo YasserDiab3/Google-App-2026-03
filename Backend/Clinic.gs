@@ -335,7 +335,17 @@ function addClinicVisitToSheet(visitData) {
         try {
             visitData.personType = normalizeClinicPersonType_(visitData.personType, visitData);
         } catch (e) {}
-        
+
+        // ✅✅ FIX جذري حاسم (سبب عدم الخصم عند الزيارة الجديدة):
+        // كتلة خصم الأدوية أدناه (السطور ~488/493/504) كانت تستخدم المتغير
+        // `spreadsheetId` بينما لم يكن مُعرَّفاً إطلاقاً داخل هذه الدالة
+        // (كان مُعرَّفاً فقط داخل دوال أخرى مثل updateClinicVisit/upsertClinicVisit_).
+        // النتيجة: ReferenceError يُرمى داخل try/catch الخصم → يُلتقَط بصمت →
+        // الزيارة تُحفظ لكن لا يحدث أي خصم. (التعديل كان يعمل لأنه يُعرّف
+        // spreadsheetId قبل الخصم — لذلك "الرجوع للتعديل" كان يخصم).
+        // الإصلاح: تعريف spreadsheetId مبكراً ليتوفّر لكتلة الخصم.
+        var spreadsheetId = getSpreadsheetId();
+
         const sheetName = getClinicVisitSheetName_(visitData);
         const normalized = normalizeClinicVisitForSheet_(visitData);
 
@@ -525,6 +535,14 @@ function addClinicVisitToSheet(visitData) {
         }
         if (visitData.medications && Array.isArray(visitData.medications) && visitData.medications.length > 0) {
             merged.medicationsCount = visitData.medications.length;
+        }
+        // ✅ إرفاق نتيجة خصم الأدوية في الاستجابة (شفافية + تشخيص — لا فشل صامت بعد الآن)
+        if (addAdjustmentsResult) {
+            merged.medicationAdjustmentsResult = {
+                applied: addAdjustmentsResult.applied || 0,
+                failed: addAdjustmentsResult.failed || 0,
+                details: addAdjustmentsResult.details || []
+            };
         }
         return merged;
     } catch (error) {
