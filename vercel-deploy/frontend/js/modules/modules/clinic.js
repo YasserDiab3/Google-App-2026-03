@@ -10903,7 +10903,29 @@ const Clinic = {
                         // ✅ تم حذف الـ forEach(async updateMedication) المتوازي بالكامل
                         // الـ backend الآن يطبّق التعديلات atomically عبر applyMedicationAdjustments_
                         // (يستخدم updateSingleRowInSheet لكل دواء — لا race condition، لا double deduction)
+
+                        // ✅ FIX: إعادة جلب الأدوية من الخادم بعد النجاح للتأكد من عرض الرصيد الصحيح
+                        // الجلب المباشر يضمن أن المستخدم يرى الرصيد الفعلي بعد الخصم (لا يعتمد على
+                        // الـ optimistic update الذي قد يُلغى لاحقاً من syncModule أو data-saved).
                         if (hasInventoryChange) {
+                            GoogleIntegration.sendRequest({
+                                action: 'getAllMedications',
+                                data: {}
+                            }).then(medResult => {
+                                if (medResult && medResult.success && Array.isArray(medResult.data)) {
+                                    const normalizedMeds = medResult.data.map(m => this.normalizeMedicationRecord(m));
+                                    AppState.appData.medications     = normalizedMeds;
+                                    AppState.appData.clinicMedications = normalizedMeds;
+                                    AppState.appData.clinicInventory   = normalizedMeds;
+                                    Utils.safeLog('✅ [CLINIC] الأدوية مُحدَّثة من الخادم بعد الزيارة: '
+                                        + normalizedMeds.length + ' دواء');
+                                    // إعادة عرض تبويب الأدوية إذا كان مفتوحاً
+                                    if (this.state && this.state.activeTab === 'medications') {
+                                        try { this.renderMedicationsTab(); } catch (e) { /* ignore */ }
+                                    }
+                                }
+                            }).catch(() => { /* صامت — الـ optimistic update يبقى */ });
+
                             document.dispatchEvent(new CustomEvent('data-saved', {
                                 detail: {
                                     module: 'medications',

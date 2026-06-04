@@ -921,8 +921,17 @@ function applyMedicationAdjustments_(adjustments, visitId, dispensedBy, spreadsh
                 continue;
             }
 
-            var currentRemaining = parseFloat(med.remainingQuantity != null ? med.remainingQuantity : med.quantity || 0) || 0;
-            var capQty = parseFloat(med.quantityAdded != null ? med.quantityAdded : (med.quantity || 0)) || 0;
+            // ✅ FIX: تعامل مع '' (empty string) كـ null — readFromSheet يُعيد '' للخلايا الفارغة
+            // parseFloat('') = NaN → NaN || 0 = 0 → يكسر الحساب ويجعل currentRemaining = 0
+            var _isBlank = function(v) { return v == null || v === ''; };
+            var currentRemaining = parseFloat(
+                !_isBlank(med.remainingQuantity) ? med.remainingQuantity
+                    : (!_isBlank(med.quantity) ? med.quantity : 0)
+            ) || 0;
+            var capQty = parseFloat(
+                !_isBlank(med.quantityAdded) ? med.quantityAdded
+                    : (!_isBlank(med.quantity) ? med.quantity : 0)
+            ) || 0;
             if (capQty <= 0) capQty = Math.max(currentRemaining, Math.abs(delta));
 
             // delta > 0 → نقص الرصيد. delta < 0 → استرجاع (زيادة) مع تقييد بـ capQty
