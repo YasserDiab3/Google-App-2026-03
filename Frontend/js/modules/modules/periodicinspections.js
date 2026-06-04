@@ -5465,12 +5465,27 @@ const PeriodicInspections = {
             const tabContents = document.querySelectorAll('#periodic-inspections-section .tab-content');
 
             tabButtons.forEach(button => {
+                // ✅ FIX أداء (إصلاح التباطؤ التراكمي):
+                // أزرار التبويبات موجودة في ترويسة المديول — خارج content-area —
+                // فهي تبقى عبر كل refreshCurrentTabContent. سابقاً كنا نُضيف
+                // addEventListener('click') جديد في كل مرة → تتراكم المستمعات،
+                // فالنقرة الواحدة تُطلق refreshCurrentTabContent عدة مرات
+                // (كل مرة تعيد رسم HTML ضخم + 5 رسوم Chart.js) → بطء متضاعف.
+                // الحل: ربط مرة واحدة فقط لكل زر عبر علامة dataset.
+                if (button.dataset.tabNavBound === 'true') return;
+                button.dataset.tabNavBound = 'true';
+
                 button.addEventListener('click', () => {
                     const targetTab = button.getAttribute('data-tab');
-
-                    tabButtons.forEach(btn => btn.classList.remove('active'));
-                    tabContents.forEach(content => content.classList.remove('active'));
+                    // إعادة قراءة الأزرار لحظة النقر (قد تتغير الحالة بين الربط والنقر)
+                    const allBtns = document.querySelectorAll('#periodic-inspections-section .tab-btn[data-tab]');
+                    const allContents = document.querySelectorAll('#periodic-inspections-section .tab-content');
+                    allBtns.forEach(btn => btn.classList.remove('active'));
+                    allContents.forEach(content => content.classList.remove('active'));
                     button.classList.add('active');
+
+                    // تفادي إعادة رسم نفس التبويب المعروض حالياً (لا داعي لإعادة العمل)
+                    if (this.state.currentTab === targetTab) return;
 
                     this.state.currentTab = targetTab;
                     this.refreshCurrentTabContent();
