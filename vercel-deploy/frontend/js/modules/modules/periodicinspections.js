@@ -4270,28 +4270,73 @@ const PeriodicInspections = {
             }
 
             const page2 = page2Parts.length > 0
-                ? `<div style="page-break-before:always;padding-top:6px;">${page2Parts.join('')}</div>`
+                ? `<div class="dsc-page2">${page2Parts.join('')}</div>`
                 : '';
 
             // ── Assemble full content ─────────────────────────────────────────
-            const content = `
-                <style>
-                    /* ✅ مهم: كل الأنماط inline بلا class لضمان عمل html2canvas وprint */
-                    @page { size: A4 portrait !important; margin: 12mm 8mm !important; }
+            // ✅ ANALYTICS OVERRIDE: يلغي flex-layout الأحادي الصفحة من
+            //    _getDailySafetyCompactFooterStyle() الذي يضع min-height:100vh
+            //    على .report-wrapper ويجعل body flex — هذا يكسر pagination
+            //    في تقارير متعددة الصفحات ويسبب فراغات أو تداخل صفحات خاطئ.
+            //    نحتاج normal document flow حتى يتحكم @page بفواصل الصفحات.
+            const analyticsLayoutOverride = `
+                <style id="dsc-analytics-layout-override">
+                    /* Reset: الغاء flex layout للتقارير متعددة الصفحات */
+                    html, body {
+                        min-height: 0 !important;
+                        height: auto !important;
+                        display: block !important;
+                    }
+                    body {
+                        flex-direction: unset !important;
+                        font-family: Tahoma, 'Arial Unicode MS', Arial, sans-serif !important;
+                    }
+                    .report-wrapper {
+                        display: block !important;
+                        flex: none !important;
+                        min-height: 0 !important;
+                        height: auto !important;
+                        padding-bottom: 0 !important;
+                    }
+                    .report-body {
+                        flex: none !important;
+                        min-height: 0 !important;
+                    }
+                    .report-footer {
+                        margin-top: 18px !important;
+                        padding-top: 6px !important;
+                    }
+                    /* @page: A4 portrait مع هوامش مناسبة */
+                    @page {
+                        size: A4 portrait !important;
+                        margin: 10mm 8mm !important;
+                    }
                     @media print {
                         -webkit-print-color-adjust: exact !important;
                         print-color-adjust: exact !important;
                         color-adjust: exact !important;
                     }
+                    /* لا تقطع الجداول داخل سطر واحد */
+                    tr  { page-break-inside: avoid !important; break-inside: avoid !important; }
+                    /* الصفحة الثانية تبدأ دائماً على ورقة جديدة */
+                    .dsc-page2 {
+                        page-break-before: always !important;
+                        break-before: page !important;
+                        padding-top: 4px;
+                    }
                     * { box-sizing: border-box; }
-                    /* لا تقطع الجدول بين السطور */
-                    tr { page-break-inside: avoid; break-inside: avoid; }
                 </style>
+            `;
+
+            const content = `
+                ${analyticsLayoutOverride}
                 ${page1}
                 ${page2}
             `;
 
             // ── Wrap with FormHeader (شعار + هيدر + فوتر رسمي) ───────────────
+            // نمرر _getDailySafetyCompactFooterStyle() أولاً ثم analyticsLayoutOverride
+            // داخل content — لأن CSS الأخير يفوز في ترتيب التتالي (cascade order)
             const rawHtml = (typeof FormHeader !== 'undefined' && typeof FormHeader.generatePDFHTML === 'function')
                 ? FormHeader.generatePDFHTML(
                     formCode, formTitle,
