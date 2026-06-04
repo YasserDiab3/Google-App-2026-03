@@ -3218,6 +3218,64 @@ const PeriodicInspections = {
         return AppState.appData.dailySafetyCheckList;
     },
 
+    /**
+     * ✅ تحميل بيانات قائمة المرور اليومي للسلامة عند الطلب — مستقل تماماً
+     * عن loadInspectionDataAsync (الذي يُحجب بحارس 3 ثوانٍ skipBg ويأتي بعد
+     * getAllPeriodicInspections). هذا يضمن تحميل بيانات DSC دائماً عند فتح
+     * التبويب، حتى لو كانت البيانات المحلية مبتورة (heavy-key truncation) أو
+     * تخطّى التحميل الخلفي بسبب الحارس الزمني.
+     *
+     * - يُعيد القيمة الحالية فوراً إذا كانت محمَّلة سابقاً (ما لم يُطلب force).
+     * - يمنع الطلبات المتزامنة المكررة عبر _dscDataLoadPromise.
+     */
+    async ensureDailySafetyDataLoaded(force = false) {
+        // طلب جارٍ بالفعل — أعِد نفس الوعد
+        if (this._dscDataLoadPromise) return this._dscDataLoadPromise;
+
+        const arr = AppState.appData.dailySafetyCheckList;
+        const alreadyLoaded = Array.isArray(arr) && this._dscDataLoadedOnce === true;
+        if (alreadyLoaded && !force) return true;
+
+        // الخادم غير مهيأ — نكتفي بالبيانات المحلية
+        if (typeof GoogleIntegration === 'undefined' || typeof GoogleIntegration.readFromSheets !== 'function') {
+            if (!Array.isArray(AppState.appData.dailySafetyCheckList)) AppState.appData.dailySafetyCheckList = [];
+            return false;
+        }
+
+        this._dscDataLoadPromise = (async () => {
+            try {
+                const dscData = await GoogleIntegration.readFromSheets('DailySafetyCheckList', 20000);
+                if (Array.isArray(dscData)) {
+                    AppState.appData.dailySafetyCheckList = dscData;
+                    this._dscDataLoadedOnce = true;
+                    if (typeof DataManager !== 'undefined' && DataManager.save) {
+                        try { DataManager.save(); } catch (e) { /* ignore */ }
+                    }
+                    if (typeof Utils !== 'undefined' && Utils.safeLog) {
+                        Utils.safeLog('✅ [DSC] تم تحميل قائمة المرور اليومي: ' + dscData.length + ' سجل');
+                    }
+                    return true;
+                }
+                // النتيجة ليست مصفوفة (timeout/خطأ) — لا نمسح البيانات الحالية
+                if (!Array.isArray(AppState.appData.dailySafetyCheckList)) {
+                    AppState.appData.dailySafetyCheckList = [];
+                }
+                return false;
+            } catch (e) {
+                if (typeof Utils !== 'undefined' && Utils.safeWarn) {
+                    Utils.safeWarn('⚠️ [DSC] تعذّر تحميل قائمة المرور اليومي:', e);
+                }
+                if (!Array.isArray(AppState.appData.dailySafetyCheckList)) {
+                    AppState.appData.dailySafetyCheckList = [];
+                }
+                return false;
+            } finally {
+                this._dscDataLoadPromise = null;
+            }
+        })();
+        return this._dscDataLoadPromise;
+    },
+
     getSafetyTeamMembersForCheckList() {
         try {
             const settingsTeam = AppState.companySettings?.safetyTeam || AppState.companySettings?.safetyTeamMembers;
@@ -4523,12 +4581,14 @@ const PeriodicInspections = {
             });
         }
 
-        // ✅ زر التحديث
+        // ✅ زر التحديث — يُجبر إعادة جلب البيانات من الخادم
         const refreshBtn = document.getElementById('dsc-an-refresh-btn');
         if (refreshBtn) {
             const icon = refreshBtn.querySelector('i');
             refreshBtn.addEventListener('click', () => {
                 if (icon) { icon.style.transition='transform 0.5s'; icon.style.transform='rotate(360deg)'; setTimeout(()=>{icon.style.transform='';},500); }
+                // إجبار إعادة الجلب: نُلغي علامة "محمَّل" ثم نُعيد الرسم (سيجلب من جديد)
+                this._dscDataLoadedOnce = false;
                 this.refreshCurrentTabContent();
             });
         }
@@ -5436,6 +5496,37 @@ const PeriodicInspections = {
         const contentContainer = document.getElementById('periodic-inspections-content-area');
         if (!contentContainer || this.state.currentView === 'form' || this.state.currentView === 'edit') return;
         try {
+            const isDscTab = (this.state.currentTab === 'daily-safety-checklist' || this.state.currentTab === 'daily-safety-analytics');
+
+            // ✅ FIX تحميل البيانات: تبويبا المرور اليومي يحتاجان بيانات DailySafetyCheckList.
+            // إذا لم تكن محمَّلة بعد، نضمن تحميلها عند الطلب (مستقل عن الحارس الزمني 3 ثوانٍ
+            // وعن سلسلة getAllPeriodicInspections). نعرض الواجهة فوراً بالبيانات المتاحة،
+            // ثم نُعيد الرسم تلقائياً بعد وصول البيانات من الخادم.
+            let needsBackgroundDscFetch = false;
+            if (isDscTab) {
+                const dscArr = AppState.appData.dailySafetyCheckList;
+                const hasData = Array.isArray(dscArr) && dscArr.length > 0;
+                if (!this._dscDataLoadedOnce && !this._dscDataLoadPromise) {
+                    needsBackgroundDscFetch = true;
+                    // عرض مؤشر تحميل خفيف فقط إذا لا توجد بيانات محلية لعرضها
+                    if (!hasData) {
+                        contentContainer.innerHTML = `
+                            <div class="content-card">
+                                <div class="card-body">
+                                    <div class="empty-state" style="padding:2.5rem 1rem;text-align:center;">
+                                        <div style="width:280px;margin:0 auto 14px;">
+                                            <div style="width:100%;height:6px;background:rgba(37,99,235,0.18);border-radius:3px;overflow:hidden;">
+                                                <div style="height:100%;background:linear-gradient(90deg,#3b82f6,#2563eb,#3b82f6);background-size:200% 100%;border-radius:3px;animation:loadingProgress 1.4s ease-in-out infinite;"></div>
+                                            </div>
+                                        </div>
+                                        <p class="text-gray-500" style="font-size:0.9rem;">جاري تحميل بيانات قائمة المرور اليومي للسلامة...</p>
+                                    </div>
+                                </div>
+                            </div>`;
+                    }
+                }
+            }
+
             let html = '';
             if (this.state.currentTab === 'daily-safety-checklist') {
                 html = await this.renderDailySafetyCheckListContent();
@@ -5446,13 +5537,33 @@ const PeriodicInspections = {
             } else {
                 html = await this.renderList();
             }
-            if (html) {
+            // إذا كنا نعرض مؤشر التحميل (لا بيانات محلية)، لا نكتب فوقه HTML الفارغ — ننتظر الجلب
+            const dscArrNow = AppState.appData.dailySafetyCheckList;
+            const showingLoader = needsBackgroundDscFetch && !(Array.isArray(dscArrNow) && dscArrNow.length > 0);
+            if (html && !showingLoader) {
                 contentContainer.innerHTML = html;
                 this.setupEventListeners();
                 // ✅ رسم مخططات تحليل البيانات بعد inject الـ HTML (نفس نمط clinic/obs)
                 if (this.state.currentTab === 'daily-safety-analytics') {
                     requestAnimationFrame(() => { this._dscDrawCharts().catch(() => {}); });
                 }
+            }
+
+            // ✅ الجلب في الخلفية ثم إعادة الرسم عند وصول البيانات
+            if (needsBackgroundDscFetch) {
+                this.ensureDailySafetyDataLoaded().then(() => {
+                    // ✅ منع أي حلقة إعادة جلب: نعتبر المحاولة منتهية (نجحت أو فشلت)
+                    // عند الفشل تبقى البيانات الحالية معروضة، والمستخدم يستطيع التحديث يدوياً.
+                    this._dscDataLoadedOnce = true;
+                    if (this.state.currentTab === 'daily-safety-checklist' || this.state.currentTab === 'daily-safety-analytics') {
+                        this.refreshCurrentTabContent().catch(() => {});
+                    }
+                }).catch(() => {
+                    this._dscDataLoadedOnce = true;
+                    if (this.state.currentTab === 'daily-safety-checklist' || this.state.currentTab === 'daily-safety-analytics') {
+                        this.refreshCurrentTabContent().catch(() => {});
+                    }
+                });
             }
         } catch (e) {
             Utils.safeWarn('⚠️ خطأ في refreshCurrentTabContent:', e);
