@@ -1159,18 +1159,29 @@ const UserTasks = {
                         updatedAt: new Date().toISOString()
                     };
 
-                    // حفظ البيانات باستخدام window.DataManager
+                    // حفظ محلياً
                     if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
                         window.DataManager.save();
                     } else {
                         Utils.safeWarn('⚠️ DataManager غير متاح - لم يتم حفظ البيانات');
                     }
 
-                    // محاولة الحفظ في Google Sheets
-                    try {
-                        await GoogleIntegration.autoSave?.('UserTasks', AppState.appData.userTasks);
-                    } catch (error) {
-                        Utils.safeWarn('⚠️ خطأ في حفظ التحديث في Google Sheets:', error);
+                    // ✅ FIX حرج (منع فقدان بيانات): استخدام updateUserTask الذرّي
+                    // بدل autoSave('UserTasks', الكامل). في عرض المستخدم العادي تكون
+                    // AppState.appData.userTasks مفلترة (مهامه فقط) → الحفظ الجماعي
+                    // كان سيعيد كتابة ورقة UserTasks بمهام هذا المستخدم فقط فيمحو
+                    // مهام جميع المستخدمين الآخرين. updateUserTask يحدّث صفّاً واحداً فقط.
+                    if (AppState.googleConfig?.appsScript?.enabled
+                        && typeof GoogleIntegration !== 'undefined' && GoogleIntegration.sendRequest) {
+                        try {
+                            const vr = await GoogleIntegration.sendRequest({
+                                action: 'updateUserTask',
+                                data: { taskId: taskId, updateData: { status: newStatus, notes: notes } }
+                            });
+                            if (vr && vr.success === false) throw new Error(vr.message || 'فشل تحديث المهمة');
+                        } catch (error) {
+                            Utils.safeWarn('⚠️ خطأ في حفظ التحديث في Google Sheets:', error);
+                        }
                     }
 
                     Notification.success('تم تحديث حالة المهمة بنجاح');
@@ -1746,8 +1757,10 @@ const UserTasks = {
             Loading.show();
             this.ensureData();
 
+            let savedTaskId = existingTask ? existingTask.id : Utils.generateId('TASK');
+
             if (existingTask) {
-                // تحديث
+                // تحديث محلي (optimistic)
                 const index = AppState.appData.userTasks.findIndex(t => t.id === existingTask.id);
                 if (index !== -1) {
                     AppState.appData.userTasks[index] = {
@@ -1757,15 +1770,11 @@ const UserTasks = {
                     };
                 }
             } else {
-                // إضافة جديدة
-                const newTask = {
-                    id: Utils.generateId('TASK'),
-                    ...taskData
-                };
-                AppState.appData.userTasks.push(newTask);
+                // إضافة جديدة محلياً (optimistic)
+                AppState.appData.userTasks.push({ id: savedTaskId, ...taskData });
             }
 
-            // حفظ البيانات باستخدام window.DataManager
+            // حفظ البيانات محلياً
             if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
                 window.DataManager.save();
             } else {
@@ -1773,12 +1782,30 @@ const UserTasks = {
                 throw new Error('نظام إدارة البيانات غير جاهز');
             }
 
-            // حفظ في Google Sheets إذا كان مفعلاً
-            if (AppState.googleConfig && AppState.googleConfig.appsScript && AppState.googleConfig.appsScript.enabled) {
+            // ✅ FIX جذري: استخدام الدوال الذرّية المخصّصة (addUserTask/updateUserTask)
+            // بدلاً من autoSave('UserTasks', الكامل) الذي يعيد كتابة الورقة بالكامل.
+            // إعادة الكتابة الكاملة خطِرة: في عرض غير المدير تكون مصفوفة المهام
+            // مفلترة (مهام المستخدم فقط) → الحفظ الجماعي كان سيمسح مهام بقية
+            // المستخدمين. الدوال الذرّية تكتب صفّاً واحداً فقط (appendToSheet/
+            // updateSingleRowInSheet) — آمنة ولا تمسّ صفوف الآخرين.
+            if (AppState.googleConfig && AppState.googleConfig.appsScript && AppState.googleConfig.appsScript.enabled
+                && typeof GoogleIntegration !== 'undefined' && GoogleIntegration.sendRequest) {
                 try {
-                    await GoogleIntegration.autoSave?.('UserTasks', AppState.appData.userTasks);
+                    if (existingTask) {
+                        const vr = await GoogleIntegration.sendRequest({
+                            action: 'updateUserTask',
+                            data: { taskId: savedTaskId, updateData: { ...taskData } }
+                        });
+                        if (vr && vr.success === false) throw new Error(vr.message || 'فشل تحديث المهمة في الخادم');
+                    } else {
+                        const vr = await GoogleIntegration.sendRequest({
+                            action: 'addUserTask',
+                            data: { id: savedTaskId, ...taskData }
+                        });
+                        if (vr && vr.success === false) throw new Error(vr.message || 'فشل إضافة المهمة في الخادم');
+                    }
                 } catch (error) {
-                    Utils.safeWarn('⚠️ خطأ في حفظ المهام في Google Sheets:', error);
+                    Utils.safeWarn('⚠️ خطأ في حفظ المهمة في Google Sheets:', error);
                 }
             }
 
@@ -1952,17 +1979,23 @@ const UserTasks = {
             const index = AppState.appData.userTasks.findIndex(t => t.id === taskId);
             if (index !== -1) {
                 AppState.appData.userTasks.splice(index, 1);
-                // حفظ البيانات باستخدام window.DataManager
+                // حفظ محلياً
                 if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
                     window.DataManager.save();
                 } else {
                     Utils.safeWarn('⚠️ DataManager غير متاح - لم يتم حفظ البيانات');
                 }
 
-                // حذف من Google Sheets إذا كان مفعلاً
-                if (AppState.googleConfig.appsScript.enabled) {
+                // ✅ FIX جذري: استخدام deleteUserTask الذرّي (حذف صفّ واحد بالـ id)
+                // بدل autoSave('UserTasks', الكامل) الذي يعيد كتابة الورقة كاملةً.
+                if (AppState.googleConfig?.appsScript?.enabled
+                    && typeof GoogleIntegration !== 'undefined' && GoogleIntegration.sendRequest) {
                     try {
-                        await GoogleIntegration.autoSave?.('UserTasks', AppState.appData.userTasks);
+                        const vr = await GoogleIntegration.sendRequest({
+                            action: 'deleteUserTask',
+                            data: { taskId: taskId }
+                        });
+                        if (vr && vr.success === false) throw new Error(vr.message || 'فشل حذف المهمة');
                     } catch (error) {
                         Utils.safeWarn('⚠️ خطأ في حذف المهمة من Google Sheets:', error);
                     }
