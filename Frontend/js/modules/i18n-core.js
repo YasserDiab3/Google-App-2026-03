@@ -3919,7 +3919,160 @@
         'خطورة': 'Hazard',
         'خطير': 'Hazardous',
         'آمن': 'Safe',
-        'اختر': 'Select'
+        'اختر': 'Select',
+
+        // ───────────────────────────────────────────────────────────────
+        // 💰 Safety Budget Module — full Arabic ⇄ English coverage
+        // Module: Frontend/js/modules/modules/safetybudget.js
+        // ───────────────────────────────────────────────────────────────
+
+        // Headers / sections
+        'مصروفات السلامة': 'Safety Expenses',
+        'قائمة المصروفات': 'Expenses List',
+        'قائمة مصروفات': 'Expenses List',
+        'جميع المصروفات': 'All Expenses',
+        'تفاصيل المصروفات': 'Expense Details',
+        'تفاصيل المصروف': 'Expense Details',
+        'إجمالي المصروفات': 'Total Expenses',
+        'إجمالي المصروفات:': 'Total Expenses:',
+        'عدد المصروفات:': 'Expense Count:',
+        'العمليات الأخيرة': 'Recent Operations',
+        'نموذج الميزانية': 'Budget Form',
+        'لوحة التحكم': 'Dashboard',
+
+        // Budget actions
+        'تسجيل المصروف': 'Record Expense',
+        'تعديل المصروف': 'Edit Expense',
+        'تسجيل مصروف جديد': 'Record New Expense',
+        'حفظ الميزانية': 'Save Budget',
+        'إضافة ميزانية': 'Add Budget',
+        'إضافة ميزانية جديدة': 'Add New Budget',
+        'تعديل الميزانية': 'Edit Budget',
+        'الميزانية المعتمدة:': 'Approved Budget:',
+        'المبلغ المعتمد *': 'Approved Amount *',
+        'السنة المالية *': 'Fiscal Year *',
+        'تسجيل أول مصروف': 'Record first expense',
+        'لا توجد مصروفات مسجلة': 'No expenses recorded',
+
+        // Analytics / KPIs
+        'نسبة الاستهلاك': 'Consumption Rate',
+        'نسبة الاستهلاك:': 'Consumption Rate:',
+        'الإنفاق الشهري': 'Monthly Spending',
+        'الإنفاق حسب الفئة': 'Spending by Category',
+        'أعلى بنود الإنفاق': 'Top Spending Items',
+        'تاريخ الإنشاء': 'Created Date',
+        'تاريخ الإنشاء:': 'Created Date:',
+
+        // OPEX / CAPEX
+        'إضافة مصروف OPEX': 'Add OPEX Expense',
+        'إضافة مصروف OPEX جديد': 'Add New OPEX Expense',
+        'إضافة مصروف CAPEX': 'Add CAPEX Expense',
+        'إضافة مصروف CAPEX جديد': 'Add New CAPEX Expense',
+        'إجمالي مصروفات OPEX': 'Total OPEX Expenses',
+        'إجمالي مصروفات CAPEX': 'Total CAPEX Expenses',
+        'OPEX (مصروفات تشغيلية)': 'OPEX (Operating Expenses)',
+        'OPEX - مصروفات تشغيلية': 'OPEX — Operating Expenses',
+        'نوع المصروف (الفئة) *': 'Expense Type (Category) *',
+
+        // Purchase orders
+        'تسجيل طلب شراء': 'Record Purchase Order',
+        'تسجيل طلب شراء جديد': 'Record New Purchase Order',
+        'تعديل طلب شراء': 'Edit Purchase Order',
+        'تفاصيل طلب الشراء': 'Purchase Order Details',
+        'تسجيل أول طلب شراء': 'Record first purchase order',
+        'تسجيل الطلب': 'Record Order',
+        'بيانات الطلب الأساسية': 'Basic Order Data',
+        'حالة PR / PO': 'PR / PO Status',
+        'رقم الفاتورة': 'Invoice Number',
+
+        // Suppliers / categories
+        'الجهة / المورد': 'Entity / Supplier',
+        'الجهة / المورد *': 'Entity / Supplier *',
+        'اسم المورد أو الجهة': 'Supplier or entity name',
+        'مورد المعدات': 'Equipment supplier',
+        'شركة الصيانة': 'Maintenance company',
+        'مركز التدريب': 'Training center',
+        'أدوات حماية': 'Protective Equipment',
+        'معدات': 'Equipment',
+        'تدريب': 'Training',
+        'صيانة': 'Maintenance',
+        'طوارئ': 'Emergency',
+        'المورد': 'Supplier',
+        'الجهة': 'Entity',
+        'الفئة': 'Category',
+        'اختر الفئة': 'Select Category',
+        'جميع الفئات': 'All Categories',
+        'جميع الأشهر': 'All Months',
+        'جميع السنوات': 'All Years',
+
+        // Fields / labels
+        'المبلغ': 'Amount',
+        'أدخل المبلغ': 'Enter amount',
+        'القيمة *': 'Value *',
+        'المتبقي': 'Remaining',
+        'المتبقي:': 'Remaining:',
+        'العملة': 'Currency',
+        'العملة:': 'Currency:',
+        'العملة *': 'Currency *',
+        'التاريخ *': 'Date *',
+        'الوصف *': 'Description *',
+        'الوصف / الملاحظات': 'Description / Notes',
+        'ملاحظات إضافية': 'Additional Notes',
+        'المرفقات': 'Attachments',
+        'المرفقات (PDF / صورة)': 'Attachments (PDF / image)',
+        'معاينة': 'Preview',
+        'معاينة البيانات:': 'Data Preview:',
+
+        // Currencies
+        'جنيه مصري': 'Egyptian Pound',
+        'جنيه مصري (ج.م)': 'Egyptian Pound (EGP)',
+        'دولار أمريكي': 'US Dollar',
+        'دولار أمريكي ($)': 'US Dollar ($)',
+
+        // Excel import / export
+        'استيراد': 'Import',
+        'استيراد من Excel': 'Import from Excel',
+        'خيارات الاستيراد': 'Import Options',
+        'تعليمات الاستيراد': 'Import Instructions',
+        'تحميل نموذج Excel': 'Download Excel Template',
+        'فشل الاستيراد:': 'Import failed:',
+        'تم الاستيراد بنجاح:': 'Imported successfully:',
+        'خطأ في استيراد سطر:': 'Error importing row:',
+        'فشل قراءة الملف:': 'Failed to read file:',
+        'جاري قراءة الملف...': 'Reading file...',
+        'مكتبة Excel غير متوفرة': 'Excel library unavailable',
+        'تم تحميل النموذج بنجاح': 'Template downloaded successfully',
+
+        // Loading / status / toasts
+        'جاري تجهيز الجدول...': 'Preparing table...',
+        'جاري تجهيز الواجهة...': 'Preparing interface...',
+        'جاري معالجة المرفقات...': 'Processing attachments...',
+        'فشل تحميل المرفقات:': 'Failed to load attachments:',
+        'تعذر تحميل ميزانية السلامة': 'Failed to load Safety Budget',
+        'تم حذف المصروف بنجاح': 'Expense deleted successfully',
+        'تم تحديث المصروف بنجاح': 'Expense updated successfully',
+        'تم تسجيل المصروف بنجاح': 'Expense recorded successfully',
+        'تم حذف طلب الشراء بنجاح': 'Purchase order deleted successfully',
+        'تم تصدير التقرير بنجاح': 'Report exported successfully',
+
+        // Placeholders / examples
+        'مثال: دورة تدريبية': 'e.g.: Training course',
+        'مثال: شراء معدات جديدة': 'e.g.: Purchase new equipment',
+
+        // Short month names (budget filters)
+        'يناير': 'January',
+        'فبراير': 'February',
+        'مارس': 'March',
+        'أبريل': 'April',
+        'مايو': 'May',
+        'يونيو': 'June',
+        'يوليو': 'July',
+        'أغسطس': 'August',
+        'سبتمبر': 'September',
+        'أكتوبر': 'October',
+        'نوفمبر': 'November',
+        'ديسمبر': 'December',
+        'ج.م': 'EGP'
     };
 
     const literalEnToAr = Object.fromEntries(Object.entries(literalArToEn).map(([ar, en]) => [en, ar]));
