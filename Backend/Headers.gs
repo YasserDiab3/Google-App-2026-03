@@ -39,6 +39,7 @@ function getDefaultHeaders(sheetName) {
         'PTW_DEFAULT_COORDINATES': ['latitude', 'longitude', 'zoom', 'updatedAt', 'updatedBy'],
         'Training': ['id', 'name', 'trainer', 'trainingType', 'date', 'factory', 'factoryName', 'location', 'locationName', 'startTime', 'endTime', 'hours', 'startDate', 'participants', 'participantsCount', 'status', 'createdAt', 'updatedAt'],
         'TrainingAttendance': ['id', 'trainingId', 'date', 'trainingType', 'factory', 'factoryName', 'employeeCode', 'employeeName', 'position', 'department', 'topic', 'trainer', 'startTime', 'endTime', 'totalHours', 'createdAt', 'updatedAt'],
+        'LegalTrainings': ['id', 'title', 'legalReference', 'legalArticle', 'category', 'frequency', 'targetGroup', 'department', 'factory', 'factoryName', 'scheduledDate', 'actualDate', 'trainer', 'trainerQualification', 'duration', 'participantsCount', 'status', 'expiryDate', 'nextDueDate', 'certificateRequired', 'complianceStatus', 'penaltyForNonCompliance', 'notes', 'attachments', 'createdBy', 'createdAt', 'updatedAt'],
         // ✅ Clinic Visits (Employees) - avoid JSON fields; flatten medications into plain text + total qty
         'ClinicVisits': [
             'id',

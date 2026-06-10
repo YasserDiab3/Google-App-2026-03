@@ -869,6 +869,7 @@ function getTrainingModuleBundle(payload) {
         var r3 = getAllTrainingCertificates(filters);
         var r4 = getAllTrainingAttendance(filters);
         var r5 = getAllContractorTrainings(filters);
+        var r6 = getAllLegalTrainings(filters);
         return {
             success: true,
             data: {
@@ -876,12 +877,267 @@ function getTrainingModuleBundle(payload) {
                 trainingSessions: (r2 && r2.success && r2.data) ? r2.data : [],
                 trainingCertificates: (r3 && r3.success && r3.data) ? r3.data : [],
                 trainingAttendance: (r4 && r4.success && r4.data) ? r4.data : [],
-                contractorTrainings: (r5 && r5.success && r5.data) ? r5.data : []
+                contractorTrainings: (r5 && r5.success && r5.data) ? r5.data : [],
+                legalTrainings: (r6 && r6.success && r6.data) ? r6.data : []
             }
         };
     } catch (error) {
         Logger.log('Error in getTrainingModuleBundle: ' + error.toString());
         return { success: false, message: 'حدث خطأ أثناء تحميل بيانات التدريب: ' + error.toString(), data: null };
+    }
+}
+
+// ============================================
+// التدريبات القانونية (Legal Trainings)
+// ============================================
+
+/**
+ * إضافة تدريب قانوني
+ */
+function addLegalTrainingToSheet(trainingData) {
+    try {
+        if (!trainingData) {
+            return { success: false, message: 'بيانات التدريب القانوني غير موجودة' };
+        }
+
+        const sheetName = 'LegalTrainings';
+
+        if (!trainingData.id) {
+            trainingData.id = generateSequentialId('LTR', sheetName);
+        }
+        if (!trainingData.createdAt) {
+            trainingData.createdAt = new Date();
+        }
+        if (!trainingData.updatedAt) {
+            trainingData.updatedAt = new Date();
+        }
+        if (!trainingData.status) {
+            trainingData.status = 'مخطط';
+        }
+        if (!trainingData.complianceStatus) {
+            trainingData.complianceStatus = 'مخطط';
+        }
+
+        return appendToSheet(sheetName, trainingData);
+    } catch (error) {
+        Logger.log('Error in addLegalTrainingToSheet: ' + error.toString());
+        return { success: false, message: 'حدث خطأ أثناء إضافة التدريب القانوني: ' + error.toString() };
+    }
+}
+
+/**
+ * تحديث تدريب قانوني
+ */
+function updateLegalTraining(trainingId, updateData) {
+    try {
+        if (!trainingId) {
+            return { success: false, message: 'معرف التدريب القانوني غير محدد' };
+        }
+        if (!updateData || typeof updateData !== 'object') {
+            return { success: false, message: 'بيانات التحديث غير صالحة' };
+        }
+
+        const sheetName = 'LegalTrainings';
+        const spreadsheetId = getSpreadsheetId();
+
+        updateData.id = trainingId;
+        updateData.updatedAt = new Date();
+
+        var result = updateSingleRowInSheet(sheetName, trainingId, updateData, spreadsheetId);
+
+        if (result && result.success) {
+            return { success: true, message: 'تم تحديث التدريب القانوني بنجاح', data: updateData };
+        }
+
+        var allData = readFromSheet(sheetName, spreadsheetId);
+        var idx = Array.isArray(allData) ? allData.findIndex(function(t) { return t && String(t.id) === String(trainingId); }) : -1;
+
+        if (idx === -1) {
+            return { success: false, message: 'التدريب القانوني غير موجود' };
+        }
+
+        for (var key in updateData) {
+            if (updateData.hasOwnProperty(key)) {
+                allData[idx][key] = updateData[key];
+            }
+        }
+
+        return saveToSheet(sheetName, allData, spreadsheetId);
+    } catch (error) {
+        Logger.log('Error in updateLegalTraining: ' + error.toString());
+        return { success: false, message: 'حدث خطأ أثناء تحديث التدريب القانوني: ' + error.toString() };
+    }
+}
+
+/**
+ * الحصول على تدريب قانوني محدد
+ */
+function getLegalTraining(trainingId) {
+    try {
+        if (!trainingId) {
+            return { success: false, message: 'معرف التدريب القانوني غير محدد' };
+        }
+
+        const sheetName = 'LegalTrainings';
+        const data = readFromSheet(sheetName, getSpreadsheetId());
+        const training = data.find(function(t) { return t && t.id === trainingId; });
+
+        if (!training) {
+            return { success: false, message: 'التدريب القانوني غير موجود' };
+        }
+
+        return { success: true, data: training };
+    } catch (error) {
+        Logger.log('Error in getLegalTraining: ' + error.toString());
+        return { success: false, message: 'حدث خطأ أثناء قراءة التدريب القانوني: ' + error.toString() };
+    }
+}
+
+/**
+ * الحصول على جميع التدريبات القانونية
+ */
+function getAllLegalTrainings(filters) {
+    filters = filters || {};
+    try {
+        const sheetName = 'LegalTrainings';
+        var data = readFromSheet(sheetName, getSpreadsheetId());
+
+        if (filters.category) {
+            data = data.filter(function(t) { return t && t.category === filters.category; });
+        }
+        if (filters.status) {
+            data = data.filter(function(t) { return t && t.status === filters.status; });
+        }
+        if (filters.complianceStatus) {
+            data = data.filter(function(t) { return t && t.complianceStatus === filters.complianceStatus; });
+        }
+        if (filters.department) {
+            data = data.filter(function(t) { return t && t.department === filters.department; });
+        }
+        if (filters.startDate) {
+            data = data.filter(function(t) {
+                var d = t.scheduledDate || t.actualDate;
+                if (!d) return false;
+                return new Date(d) >= new Date(filters.startDate);
+            });
+        }
+        if (filters.endDate) {
+            data = data.filter(function(t) {
+                var d = t.scheduledDate || t.actualDate;
+                if (!d) return false;
+                return new Date(d) <= new Date(filters.endDate);
+            });
+        }
+
+        data.sort(function(a, b) {
+            var dateA = new Date(a.scheduledDate || a.actualDate || a.createdAt || 0);
+            var dateB = new Date(b.scheduledDate || b.actualDate || b.createdAt || 0);
+            return dateB - dateA;
+        });
+
+        return { success: true, data: data, count: data.length };
+    } catch (error) {
+        Logger.log('Error in getAllLegalTrainings: ' + error.toString());
+        return { success: false, message: 'حدث خطأ أثناء قراءة التدريبات القانونية: ' + error.toString(), data: [] };
+    }
+}
+
+/**
+ * حذف تدريب قانوني
+ */
+function deleteLegalTraining(trainingId, userData) {
+    try {
+        if (typeof checkAdminPermissions !== 'function' || !checkAdminPermissions(userData || {})) {
+            return {
+                success: false,
+                message: 'ليس لديك صلاحية الحذف. الحذف متاح لمدير النظام فقط.',
+                errorCode: 'DELETE_ADMIN_ONLY'
+            };
+        }
+        if (!trainingId) {
+            return { success: false, message: 'معرف التدريب القانوني غير محدد' };
+        }
+
+        const sheetName = 'LegalTrainings';
+        const spreadsheetId = getSpreadsheetId();
+
+        if (!spreadsheetId || spreadsheetId.trim() === '') {
+            return {
+                success: false,
+                message: 'معرف Google Sheets غير محدد. يرجى إدخال معرف الجدول في الإعدادات أو في Config.gs.'
+            };
+        }
+
+        const data = readFromSheet(sheetName, spreadsheetId);
+        const filteredData = data.filter(function(t) { return t && t.id !== trainingId; });
+
+        if (filteredData.length === data.length) {
+            return { success: false, message: 'التدريب القانوني غير موجود' };
+        }
+
+        return saveToSheet(sheetName, filteredData, spreadsheetId);
+    } catch (error) {
+        Logger.log('Error in deleteLegalTraining: ' + error.toString());
+        return { success: false, message: 'حدث خطأ أثناء حذف التدريب القانوني: ' + error.toString() };
+    }
+}
+
+/**
+ * إحصائيات التدريبات القانونية
+ */
+function getLegalTrainingStatistics(filters) {
+    filters = filters || {};
+    try {
+        var result = getAllLegalTrainings(filters);
+        if (!result.success) {
+            return { success: false, message: 'فشل في قراءة التدريبات القانونية' };
+        }
+
+        var trainings = result.data;
+        var now = new Date();
+        var stats = {
+            total: trainings.length,
+            compliant: 0,
+            nonCompliant: 0,
+            expiringSoon: 0,
+            planned: 0,
+            completed: 0,
+            overdue: 0,
+            byCategory: {},
+            byFrequency: {},
+            complianceRate: 0
+        };
+
+        trainings.forEach(function(t) {
+            var status = t.complianceStatus || t.status || '';
+
+            if (status === 'ممتثل') stats.compliant++;
+            else if (status === 'غير ممتثل') stats.nonCompliant++;
+            else if (status === 'قارب على الانتهاء') stats.expiringSoon++;
+            else if (status === 'مخطط') stats.planned++;
+
+            if (t.status === 'مكتمل') stats.completed++;
+
+            if (t.expiryDate) {
+                var expiry = new Date(t.expiryDate);
+                if (expiry < now && t.status !== 'مكتمل') stats.overdue++;
+            }
+
+            var cat = t.category || 'غير مصنف';
+            stats.byCategory[cat] = (stats.byCategory[cat] || 0) + 1;
+
+            var freq = t.frequency || 'غير محدد';
+            stats.byFrequency[freq] = (stats.byFrequency[freq] || 0) + 1;
+        });
+
+        stats.complianceRate = trainings.length > 0
+            ? Math.round((stats.compliant / trainings.length) * 100)
+            : 0;
+
+        return { success: true, data: stats };
+    } catch (error) {
+        Logger.log('Error in getLegalTrainingStatistics: ' + error.toString());
+        return { success: false, message: 'حدث خطأ أثناء حساب الإحصائيات: ' + error.toString() };
     }
 }
 

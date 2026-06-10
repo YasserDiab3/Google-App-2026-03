@@ -24,9 +24,9 @@ const Training = {
     /** التبويب النشط حالياً (programs | contractors | attendance | analysis) */
     _currentActiveTab: 'programs',
     /** كاش HTML لكل تبويب لتجنب إعادة الرسم عند التبديل */
-    _tabCache: { programs: null, contractors: null, attendance: null, analysis: null },
+    _tabCache: { programs: null, contractors: null, attendance: null, analysis: null, legalTraining: null },
     /** علامات «بحاجة لإعادة بناء» لكل تبويب */
-    _tabDirty: { programs: true, contractors: true, attendance: true, analysis: true },
+    _tabDirty: { programs: true, contractors: true, attendance: true, analysis: true, legalTraining: true },
     /** إذا كان إجراء المجمّع غير مدعوم في نسخة Apps Script الحالية، نتجاوزه مباشرة في المحاولات التالية */
     _bundleActionUnsupported: false,
     /** سياق مؤقت لخيارات نافذة تصدير تقرير التحليل (يُفرَّغ بعد التصدير) */
@@ -41,6 +41,7 @@ const Training = {
         if (!Array.isArray(data.trainingCertificates)) data.trainingCertificates = [];
         if (!Array.isArray(data.trainingAttendance)) data.trainingAttendance = [];
         if (!Array.isArray(data.contractorTrainings)) data.contractorTrainings = [];
+        if (!Array.isArray(data.legalTrainings)) data.legalTrainings = [];
         if (!data.employeeTrainingMatrix || typeof data.employeeTrainingMatrix !== 'object') {
             data.employeeTrainingMatrix = {};
         }
@@ -462,6 +463,10 @@ const Training = {
                             <i class="fas fa-clipboard-check ml-2"></i>
                             سجل التدريب للموظفين
                         </button>
+                        <button class="tab-btn" data-tab="legalTraining" onclick="Training.switchTab('legalTraining')">
+                            <i class="fas fa-gavel ml-2"></i>
+                            التدريبات القانونية
+                        </button>
                         ${this.isCurrentUserAdmin() ? `
                         <button class="tab-btn" data-tab="analysis" onclick="Training.switchTab('analysis')">
                             <i class="fas fa-chart-bar ml-2"></i>
@@ -608,6 +613,8 @@ const Training = {
                 this.refreshContractorTrainingList();
             } else if (active === 'attendance') {
                 this.loadAttendanceRegistry();
+            } else if (active === 'legalTraining') {
+                this.loadLegalTrainingList();
             } else if (active === 'analysis') {
                 this.refreshAnalysisTabContent();
             }
@@ -661,6 +668,9 @@ const Training = {
                 if (Array.isArray(bundle.contractorTrainings) && (Date.now() - (this._contractorTrainingsLocalSaveTime || 0)) > 60000) {
                     AppState.appData.contractorTrainings = bundle.contractorTrainings;
                 }
+                if (Array.isArray(bundle.legalTrainings) && (Date.now() - (this._legalTrainingsLocalSaveTime || 0)) > 60000) {
+                    AppState.appData.legalTrainings = bundle.legalTrainings;
+                }
                 persistAndRefreshUi();
                 return;
             }
@@ -688,6 +698,7 @@ const Training = {
             const trainingGuardOk = () => (Date.now() - (this._trainingLocalSaveTime || 0)) > 60000;
             const attendanceGuardOk = () => (Date.now() - (this._trainingAttendanceLocalSaveTime || 0)) > 60000;
             const contractorGuardOk = () => (Date.now() - (this._contractorTrainingsLocalSaveTime || 0)) > 60000;
+            const legalGuardOk = () => (Date.now() - (this._legalTrainingsLocalSaveTime || 0)) > 60000;
 
             if (active === 'contractors') {
                 const contractorData = await runAction('getAllContractorTrainings', 'تدريبات المقاولين');
@@ -699,6 +710,7 @@ const Training = {
                 runAction('getAllTrainingAttendance', 'سجل الحضور').then((data) => { if (data && attendanceGuardOk()) { AppState.appData.trainingAttendance = data; this._markAllTabsDirty(); } });
                 runAction('getAllTrainingSessions', 'جلسات التدريب').then((data) => { if (data) { AppState.appData.trainingSessions = data; this._markAllTabsDirty(); } });
                 runAction('getAllTrainingCertificates', 'الشهادات').then((data) => { if (data) { AppState.appData.trainingCertificates = data; this._markAllTabsDirty(); } });
+                runAction('getAllLegalTrainings', 'التدريبات القانونية').then((data) => { if (data && legalGuardOk()) { AppState.appData.legalTrainings = data; this._markAllTabsDirty(); } });
                 return;
             }
             if (active === 'attendance') {
@@ -714,6 +726,7 @@ const Training = {
                 });
                 runAction('getAllTrainingSessions', 'جلسات التدريب').then((data) => { if (data) { AppState.appData.trainingSessions = data; this._markAllTabsDirty(); } });
                 runAction('getAllTrainingCertificates', 'الشهادات').then((data) => { if (data) { AppState.appData.trainingCertificates = data; this._markAllTabsDirty(); } });
+                runAction('getAllLegalTrainings', 'التدريبات القانونية').then((data) => { if (data && legalGuardOk()) { AppState.appData.legalTrainings = data; this._markAllTabsDirty(); } });
                 return;
             }
 
@@ -732,6 +745,7 @@ const Training = {
                     AppState.appData.contractorTrainings = data; this._markAllTabsDirty();
                 }
             });
+            runAction('getAllLegalTrainings', 'التدريبات القانونية').then((data) => { if (data && legalGuardOk()) { AppState.appData.legalTrainings = data; this._markAllTabsDirty(); } });
         } catch (error) {
             Utils.safeError('❌ خطأ في تحميل بيانات التدريب:', error);
             this._trainingBackendFetchOk = true;
@@ -2803,6 +2817,8 @@ const Training = {
             `;
         } else if (tabName === 'attendance') {
             return await this.renderAttendanceRegistry();
+        } else if (tabName === 'legalTraining') {
+            return this.renderLegalTrainingTab();
         } else if (tabName === 'analysis') {
             return await this.renderAnalysisTab();
         }
@@ -2866,6 +2882,8 @@ const Training = {
                 resetAttendanceFilter.dataset.bound = '1';
             }
             this.bindAttendanceAnalyticsEvents((document.getElementById('attendance-month-filter') || {}).value || '');
+        } else if (tabName === 'legalTraining') {
+            this.loadLegalTrainingList();
         } else if (tabName === 'analysis') {
             setTimeout(() => {
                 this.updateTrainingAnalyticsDashboard();
@@ -2880,10 +2898,12 @@ const Training = {
         this._tabDirty.contractors = true;
         this._tabDirty.attendance = true;
         this._tabDirty.analysis = true;
+        this._tabDirty.legalTraining = true;
         this._tabCache.programs = null;
         this._tabCache.contractors = null;
         this._tabCache.attendance = null;
         this._tabCache.analysis = null;
+        this._tabCache.legalTraining = null;
     },
 
     async renderList() {
@@ -14200,6 +14220,783 @@ const Training = {
             const el = document.getElementById(id);
             if (el) el.addEventListener('change', () => this.updateTrainingAnalyticsDashboard());
         });
+    },
+
+    // ============================================
+    // التدريبات القانونية (Legal Trainings)
+    // ============================================
+
+    _legalTrainingsLocalSaveTime: 0,
+
+    LEGAL_CATEGORIES: [
+        { value: 'السلامة المهنية', label: 'السلامة المهنية', ref: 'قانون العمل 12/2003 - الباب الخامس' },
+        { value: 'الصحة المهنية', label: 'الصحة المهنية', ref: 'قرار 211/2003' },
+        { value: 'الحماية من الحريق', label: 'الحماية من الحريق', ref: 'قانون 12/2003 مادة 208-209' },
+        { value: 'الإسعافات الأولية', label: 'الإسعافات الأولية', ref: 'قرار 211/2003 مادة 6' },
+        { value: 'المواد الخطرة والكيميائية', label: 'المواد الخطرة والكيميائية', ref: 'قانون البيئة 4/1994 + قرار 211/2003' },
+        { value: 'حماية البيئة', label: 'حماية البيئة', ref: 'قانون 4/1994 المعدل بـ 9/2009' },
+        { value: 'العمل على ارتفاعات', label: 'العمل على ارتفاعات', ref: 'قرار 211/2003' },
+        { value: 'الأماكن المغلقة', label: 'الأماكن المغلقة', ref: 'قرار 211/2003' },
+        { value: 'تصاريح العمل', label: 'تصاريح العمل', ref: 'ISO 45001 بند 7.2' },
+        { value: 'التوعية القانونية العامة', label: 'التوعية القانونية العامة', ref: 'قانون العمل 12/2003' }
+    ],
+
+    LEGAL_FREQUENCIES: [
+        { value: 'سنوي', label: 'سنوي' },
+        { value: 'نصف سنوي', label: 'نصف سنوي' },
+        { value: 'ربع سنوي', label: 'ربع سنوي' },
+        { value: 'شهري', label: 'شهري' },
+        { value: 'لمرة واحدة', label: 'لمرة واحدة' },
+        { value: 'عند الحاجة', label: 'عند الحاجة' }
+    ],
+
+    getLegalTrainingStats() {
+        this.ensureData();
+        const items = AppState.appData.legalTrainings || [];
+        const now = new Date();
+        let compliant = 0, nonCompliant = 0, expiringSoon = 0, planned = 0, completed = 0, overdue = 0;
+
+        items.forEach(t => {
+            const cs = t.complianceStatus || '';
+            if (cs === 'ممتثل') compliant++;
+            else if (cs === 'غير ممتثل') nonCompliant++;
+            else if (cs === 'قارب على الانتهاء') expiringSoon++;
+            else if (cs === 'مخطط') planned++;
+
+            if (t.status === 'مكتمل') completed++;
+
+            if (t.expiryDate) {
+                const exp = new Date(t.expiryDate);
+                if (exp < now && t.status !== 'مكتمل') overdue++;
+                else if (exp > now) {
+                    const daysLeft = Math.ceil((exp - now) / (1000 * 60 * 60 * 24));
+                    if (daysLeft <= 30 && cs !== 'غير ممتثل') expiringSoon++;
+                }
+            }
+        });
+
+        const complianceRate = items.length > 0 ? Math.round((compliant / items.length) * 100) : 0;
+        return { total: items.length, compliant, nonCompliant, expiringSoon, planned, completed, overdue, complianceRate };
+    },
+
+    renderLegalTrainingTab() {
+        const stats = this.getLegalTrainingStats();
+        return `
+            <!-- كروت إحصائية -->
+            <div class="grid grid-cols-5 gap-4 mb-6">
+                <div class="content-card h-full">
+                    <div class="flex items-center gap-3">
+                        <div class="w-12 h-12 rounded-xl bg-blue-100 text-blue-600 flex items-center justify-center shadow-sm flex-shrink-0">
+                            <i class="fas fa-gavel text-xl"></i>
+                        </div>
+                        <div class="min-w-0">
+                            <p class="text-xs text-gray-500">إجمالي التدريبات</p>
+                            <p class="text-xl font-bold text-gray-900" id="legal-total-count">${stats.total}</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="content-card h-full">
+                    <div class="flex items-center gap-3">
+                        <div class="w-12 h-12 rounded-xl bg-green-100 text-green-600 flex items-center justify-center shadow-sm flex-shrink-0">
+                            <i class="fas fa-check-circle text-xl"></i>
+                        </div>
+                        <div class="min-w-0">
+                            <p class="text-xs text-gray-500">ممتثل</p>
+                            <p class="text-xl font-bold text-green-700" id="legal-compliant-count">${stats.compliant}</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="content-card h-full">
+                    <div class="flex items-center gap-3">
+                        <div class="w-12 h-12 rounded-xl bg-red-100 text-red-600 flex items-center justify-center shadow-sm flex-shrink-0">
+                            <i class="fas fa-exclamation-triangle text-xl"></i>
+                        </div>
+                        <div class="min-w-0">
+                            <p class="text-xs text-gray-500">غير ممتثل</p>
+                            <p class="text-xl font-bold text-red-700" id="legal-noncompliant-count">${stats.nonCompliant}</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="content-card h-full">
+                    <div class="flex items-center gap-3">
+                        <div class="w-12 h-12 rounded-xl bg-amber-100 text-amber-600 flex items-center justify-center shadow-sm flex-shrink-0">
+                            <i class="fas fa-clock text-xl"></i>
+                        </div>
+                        <div class="min-w-0">
+                            <p class="text-xs text-gray-500">قارب على الانتهاء</p>
+                            <p class="text-xl font-bold text-amber-700" id="legal-expiring-count">${stats.expiringSoon}</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="content-card h-full">
+                    <div class="flex items-center gap-3">
+                        <div class="w-12 h-12 rounded-xl bg-purple-100 text-purple-600 flex items-center justify-center shadow-sm flex-shrink-0">
+                            <i class="fas fa-percentage text-xl"></i>
+                        </div>
+                        <div class="min-w-0">
+                            <p class="text-xs text-gray-500">نسبة الامتثال</p>
+                            <p class="text-xl font-bold text-purple-700" id="legal-compliance-rate">${stats.complianceRate}%</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- فلاتر -->
+            <div class="content-card mb-4">
+                <div class="card-body">
+                    <div class="flex items-center gap-4 flex-wrap">
+                        <div class="flex items-center gap-2">
+                            <label class="text-sm font-medium text-gray-700">التصنيف:</label>
+                            <select id="legal-training-category-filter" class="form-input" style="max-width: 200px;">
+                                <option value="">الكل</option>
+                                ${this.LEGAL_CATEGORIES.map(c => `<option value="${c.value}">${c.label}</option>`).join('')}
+                            </select>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <label class="text-sm font-medium text-gray-700">حالة الامتثال:</label>
+                            <select id="legal-training-compliance-filter" class="form-input" style="max-width: 180px;">
+                                <option value="">الكل</option>
+                                <option value="ممتثل">ممتثل</option>
+                                <option value="غير ممتثل">غير ممتثل</option>
+                                <option value="قارب على الانتهاء">قارب على الانتهاء</option>
+                                <option value="مخطط">مخطط</option>
+                            </select>
+                        </div>
+                        <button id="reset-legal-filter-btn" class="btn-secondary">
+                            <i class="fas fa-redo ml-2"></i>إعادة تعيين
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- الجدول الرئيسي -->
+            <div class="content-card">
+                <div class="card-header">
+                    <div class="flex items-center justify-between">
+                        <h2 class="card-title"><i class="fas fa-gavel ml-2"></i>سجل التدريبات القانونية</h2>
+                        <div class="flex items-center gap-3">
+                            <button id="export-legal-training-pdf-btn" class="btn-secondary">
+                                <i class="fas fa-file-pdf ml-2" style="font-size: 14px;"></i>تقرير PDF
+                            </button>
+                            <button id="export-legal-training-excel-btn" class="btn-success">
+                                <i class="fas fa-file-excel ml-2" style="font-size: 14px;"></i>تصدير Excel
+                            </button>
+                            <input type="text" id="legal-training-search" class="form-input" style="max-width: 260px;" placeholder="بحث (عنوان، مرجع قانوني، مدرب)">
+                            <button id="add-legal-training-btn" class="btn-primary">
+                                <i class="fas fa-plus ml-2"></i>إضافة تدريب قانوني
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body" id="legal-training-container">
+                    <div class="text-center py-8 text-gray-500">جاري تحميل السجل…</div>
+                </div>
+            </div>
+        `;
+    },
+
+    loadLegalTrainingList() {
+        this.ensureData();
+        const container = document.getElementById('legal-training-container');
+        if (!container) return;
+
+        const stats = this.getLegalTrainingStats();
+        const statsEls = {
+            'legal-total-count': stats.total,
+            'legal-compliant-count': stats.compliant,
+            'legal-noncompliant-count': stats.nonCompliant,
+            'legal-expiring-count': stats.expiringSoon,
+            'legal-compliance-rate': stats.complianceRate + '%'
+        };
+        Object.keys(statsEls).forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.textContent = statsEls[id];
+        });
+
+        let items = AppState.appData.legalTrainings || [];
+
+        const categoryFilter = document.getElementById('legal-training-category-filter');
+        const complianceFilter = document.getElementById('legal-training-compliance-filter');
+        const searchInput = document.getElementById('legal-training-search');
+
+        if (categoryFilter && categoryFilter.value) {
+            items = items.filter(t => t.category === categoryFilter.value);
+        }
+        if (complianceFilter && complianceFilter.value) {
+            items = items.filter(t => t.complianceStatus === complianceFilter.value);
+        }
+        if (searchInput && searchInput.value.trim()) {
+            const q = searchInput.value.trim().toLowerCase();
+            items = items.filter(t =>
+                (t.title || '').toLowerCase().includes(q) ||
+                (t.legalReference || '').toLowerCase().includes(q) ||
+                (t.trainer || '').toLowerCase().includes(q) ||
+                (t.category || '').toLowerCase().includes(q)
+            );
+        }
+
+        if (items.length === 0) {
+            container.innerHTML = '<div class="text-center py-8 text-gray-500"><i class="fas fa-gavel text-4xl mb-3 text-gray-300"></i><p>لا توجد تدريبات قانونية مسجلة</p></div>';
+            return;
+        }
+
+        const complianceBadge = (status) => {
+            const map = {
+                'ممتثل': 'bg-green-100 text-green-800',
+                'غير ممتثل': 'bg-red-100 text-red-800',
+                'قارب على الانتهاء': 'bg-amber-100 text-amber-800',
+                'مخطط': 'bg-blue-100 text-blue-800'
+            };
+            const cls = map[status] || 'bg-gray-100 text-gray-800';
+            return `<span class="px-2 py-1 rounded-full text-xs font-medium ${cls}">${status || '—'}</span>`;
+        };
+
+        const statusBadge = (status) => {
+            const map = {
+                'مكتمل': 'bg-green-100 text-green-800',
+                'مخطط': 'bg-blue-100 text-blue-800',
+                'قيد التنفيذ': 'bg-yellow-100 text-yellow-800',
+                'ملغي': 'bg-gray-100 text-gray-600',
+                'منتهي الصلاحية': 'bg-red-100 text-red-800'
+            };
+            const cls = map[status] || 'bg-gray-100 text-gray-800';
+            return `<span class="px-2 py-1 rounded-full text-xs font-medium ${cls}">${status || '—'}</span>`;
+        };
+
+        const rows = items.map(t => `
+            <tr>
+                <td class="text-sm font-mono text-gray-500">${t.id || '—'}</td>
+                <td class="text-sm font-medium">${t.title || '—'}</td>
+                <td class="text-sm text-gray-600">${t.category || '—'}</td>
+                <td class="text-sm text-gray-600" title="${t.legalArticle || ''}">${t.legalReference || '—'}</td>
+                <td class="text-sm">${t.frequency || '—'}</td>
+                <td class="text-sm">${t.scheduledDate || '—'}</td>
+                <td class="text-sm">${t.actualDate || '—'}</td>
+                <td class="text-sm">${t.trainer || '—'}</td>
+                <td class="text-sm text-center">${t.duration || '—'}</td>
+                <td class="text-sm text-center">${t.participantsCount || '—'}</td>
+                <td>${statusBadge(t.status)}</td>
+                <td>${complianceBadge(t.complianceStatus)}</td>
+                <td class="text-sm">${t.expiryDate || '—'}</td>
+                <td>
+                    <div class="flex items-center gap-1">
+                        <button class="btn-icon btn-sm" onclick="Training.showLegalTrainingForm('${t.id}')" title="تعديل">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        ${this.isCurrentUserAdmin() ? `
+                        <button class="btn-icon btn-sm text-red-600" onclick="Training.deleteLegalTrainingRecord('${t.id}')" title="حذف">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                        ` : ''}
+                    </div>
+                </td>
+            </tr>
+        `).join('');
+
+        container.innerHTML = `
+            <div class="table-responsive">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>الرقم</th>
+                            <th>عنوان التدريب</th>
+                            <th>التصنيف</th>
+                            <th>المرجع القانوني</th>
+                            <th>الدورية</th>
+                            <th>التاريخ المخطط</th>
+                            <th>التاريخ الفعلي</th>
+                            <th>المدرب</th>
+                            <th>المدة (ساعة)</th>
+                            <th>المشاركين</th>
+                            <th>الحالة</th>
+                            <th>الامتثال</th>
+                            <th>تاريخ الانتهاء</th>
+                            <th>إجراءات</th>
+                        </tr>
+                    </thead>
+                    <tbody>${rows}</tbody>
+                </table>
+            </div>
+        `;
+
+        this._bindLegalTrainingEvents();
+    },
+
+    _bindLegalTrainingEvents() {
+        const categoryFilter = document.getElementById('legal-training-category-filter');
+        const complianceFilter = document.getElementById('legal-training-compliance-filter');
+        const searchInput = document.getElementById('legal-training-search');
+        const resetBtn = document.getElementById('reset-legal-filter-btn');
+        const addBtn = document.getElementById('add-legal-training-btn');
+        const exportExcel = document.getElementById('export-legal-training-excel-btn');
+        const exportPdf = document.getElementById('export-legal-training-pdf-btn');
+
+        if (categoryFilter && !categoryFilter.dataset.bound) {
+            categoryFilter.addEventListener('change', () => this.loadLegalTrainingList());
+            categoryFilter.dataset.bound = '1';
+        }
+        if (complianceFilter && !complianceFilter.dataset.bound) {
+            complianceFilter.addEventListener('change', () => this.loadLegalTrainingList());
+            complianceFilter.dataset.bound = '1';
+        }
+        if (searchInput && !searchInput.dataset.bound) {
+            let debounce;
+            searchInput.addEventListener('input', () => {
+                clearTimeout(debounce);
+                debounce = setTimeout(() => this.loadLegalTrainingList(), 300);
+            });
+            searchInput.dataset.bound = '1';
+        }
+        if (resetBtn && !resetBtn.dataset.bound) {
+            resetBtn.addEventListener('click', () => {
+                if (categoryFilter) categoryFilter.value = '';
+                if (complianceFilter) complianceFilter.value = '';
+                if (searchInput) searchInput.value = '';
+                this.loadLegalTrainingList();
+            });
+            resetBtn.dataset.bound = '1';
+        }
+        if (addBtn && !addBtn.dataset.bound) {
+            addBtn.addEventListener('click', () => this.showLegalTrainingForm());
+            addBtn.dataset.bound = '1';
+        }
+        if (exportExcel && !exportExcel.dataset.bound) {
+            exportExcel.addEventListener('click', () => this.exportLegalTrainingExcel());
+            exportExcel.dataset.bound = '1';
+        }
+        if (exportPdf && !exportPdf.dataset.bound) {
+            exportPdf.addEventListener('click', () => this.exportLegalTrainingPdf());
+            exportPdf.dataset.bound = '1';
+        }
+    },
+
+    showLegalTrainingForm(editId) {
+        this.ensureData();
+        let existing = null;
+        if (editId) {
+            existing = (AppState.appData.legalTrainings || []).find(t => t.id === editId);
+        }
+        const isEdit = !!existing;
+        const val = (field, def) => (existing && existing[field] != null) ? existing[field] : (def || '');
+
+        const categoryOptions = this.LEGAL_CATEGORIES.map(c =>
+            `<option value="${c.value}" ${val('category') === c.value ? 'selected' : ''}>${c.label} — ${c.ref}</option>`
+        ).join('');
+
+        const frequencyOptions = this.LEGAL_FREQUENCIES.map(f =>
+            `<option value="${f.value}" ${val('frequency') === f.value ? 'selected' : ''}>${f.label}</option>`
+        ).join('');
+
+        const html = `
+            <div class="modal-overlay active" id="legal-training-modal">
+                <div class="modal-content" style="max-width: 800px; max-height: 90vh; overflow-y: auto;">
+                    <div class="modal-header">
+                        <h3><i class="fas fa-gavel ml-2"></i>${isEdit ? 'تعديل' : 'إضافة'} تدريب قانوني</h3>
+                        <button class="modal-close" onclick="document.getElementById('legal-training-modal').remove()">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                    <form id="legal-training-form" onsubmit="Training.handleLegalTrainingSubmit(event)">
+                        <input type="hidden" id="legal-training-edit-id" value="${editId || ''}">
+                        <div class="modal-body">
+                            <div class="grid grid-cols-2 gap-4">
+                                <div class="form-group col-span-2">
+                                    <label class="form-label">عنوان التدريب <span class="text-red-500">*</span></label>
+                                    <input type="text" id="lt-title" class="form-input" value="${val('title')}" required placeholder="مثال: تدريب السلامة من الحرائق">
+                                </div>
+
+                                <div class="form-group">
+                                    <label class="form-label">التصنيف القانوني <span class="text-red-500">*</span></label>
+                                    <select id="lt-category" class="form-input" required>
+                                        <option value="">اختر التصنيف</option>
+                                        ${categoryOptions}
+                                    </select>
+                                </div>
+
+                                <div class="form-group">
+                                    <label class="form-label">المرجع القانوني</label>
+                                    <input type="text" id="lt-legalReference" class="form-input" value="${val('legalReference')}" placeholder="مثال: قانون العمل 12/2003">
+                                </div>
+
+                                <div class="form-group">
+                                    <label class="form-label">المادة / البند</label>
+                                    <input type="text" id="lt-legalArticle" class="form-input" value="${val('legalArticle')}" placeholder="مثال: مادة 208">
+                                </div>
+
+                                <div class="form-group">
+                                    <label class="form-label">دورية التدريب <span class="text-red-500">*</span></label>
+                                    <select id="lt-frequency" class="form-input" required>
+                                        <option value="">اختر الدورية</option>
+                                        ${frequencyOptions}
+                                    </select>
+                                </div>
+
+                                <div class="form-group">
+                                    <label class="form-label">الفئة المستهدفة</label>
+                                    <input type="text" id="lt-targetGroup" class="form-input" value="${val('targetGroup')}" placeholder="مثال: جميع العاملين، المشرفين">
+                                </div>
+
+                                <div class="form-group">
+                                    <label class="form-label">القسم</label>
+                                    <input type="text" id="lt-department" class="form-input" value="${val('department')}" placeholder="القسم">
+                                </div>
+
+                                <div class="form-group">
+                                    <label class="form-label">المصنع / الموقع</label>
+                                    <input type="text" id="lt-factory" class="form-input" value="${val('factory')}" placeholder="المصنع أو الموقع">
+                                </div>
+
+                                <div class="form-group">
+                                    <label class="form-label">المدرب</label>
+                                    <input type="text" id="lt-trainer" class="form-input" value="${val('trainer')}" placeholder="اسم المدرب">
+                                </div>
+
+                                <div class="form-group">
+                                    <label class="form-label">مؤهلات المدرب</label>
+                                    <input type="text" id="lt-trainerQualification" class="form-input" value="${val('trainerQualification')}" placeholder="مثال: NEBOSH, OSHA">
+                                </div>
+
+                                <div class="form-group">
+                                    <label class="form-label">التاريخ المخطط</label>
+                                    <input type="date" id="lt-scheduledDate" class="form-input" value="${val('scheduledDate')}">
+                                </div>
+
+                                <div class="form-group">
+                                    <label class="form-label">التاريخ الفعلي</label>
+                                    <input type="date" id="lt-actualDate" class="form-input" value="${val('actualDate')}">
+                                </div>
+
+                                <div class="form-group">
+                                    <label class="form-label">المدة (ساعات)</label>
+                                    <input type="number" id="lt-duration" class="form-input" value="${val('duration')}" min="0" step="0.5" placeholder="عدد الساعات">
+                                </div>
+
+                                <div class="form-group">
+                                    <label class="form-label">عدد المشاركين</label>
+                                    <input type="number" id="lt-participantsCount" class="form-input" value="${val('participantsCount')}" min="0" placeholder="عدد المشاركين">
+                                </div>
+
+                                <div class="form-group">
+                                    <label class="form-label">الحالة</label>
+                                    <select id="lt-status" class="form-input">
+                                        <option value="مخطط" ${val('status', 'مخطط') === 'مخطط' ? 'selected' : ''}>مخطط</option>
+                                        <option value="قيد التنفيذ" ${val('status') === 'قيد التنفيذ' ? 'selected' : ''}>قيد التنفيذ</option>
+                                        <option value="مكتمل" ${val('status') === 'مكتمل' ? 'selected' : ''}>مكتمل</option>
+                                        <option value="ملغي" ${val('status') === 'ملغي' ? 'selected' : ''}>ملغي</option>
+                                    </select>
+                                </div>
+
+                                <div class="form-group">
+                                    <label class="form-label">حالة الامتثال</label>
+                                    <select id="lt-complianceStatus" class="form-input">
+                                        <option value="مخطط" ${val('complianceStatus', 'مخطط') === 'مخطط' ? 'selected' : ''}>مخطط</option>
+                                        <option value="ممتثل" ${val('complianceStatus') === 'ممتثل' ? 'selected' : ''}>ممتثل</option>
+                                        <option value="غير ممتثل" ${val('complianceStatus') === 'غير ممتثل' ? 'selected' : ''}>غير ممتثل</option>
+                                        <option value="قارب على الانتهاء" ${val('complianceStatus') === 'قارب على الانتهاء' ? 'selected' : ''}>قارب على الانتهاء</option>
+                                    </select>
+                                </div>
+
+                                <div class="form-group">
+                                    <label class="form-label">تاريخ انتهاء الصلاحية</label>
+                                    <input type="date" id="lt-expiryDate" class="form-input" value="${val('expiryDate')}">
+                                </div>
+
+                                <div class="form-group">
+                                    <label class="form-label">الاستحقاق التالي</label>
+                                    <input type="date" id="lt-nextDueDate" class="form-input" value="${val('nextDueDate')}">
+                                </div>
+
+                                <div class="form-group">
+                                    <label class="form-label">يتطلب شهادة</label>
+                                    <select id="lt-certificateRequired" class="form-input">
+                                        <option value="لا" ${val('certificateRequired', 'لا') === 'لا' ? 'selected' : ''}>لا</option>
+                                        <option value="نعم" ${val('certificateRequired') === 'نعم' ? 'selected' : ''}>نعم</option>
+                                    </select>
+                                </div>
+
+                                <div class="form-group">
+                                    <label class="form-label">عقوبة عدم الامتثال</label>
+                                    <input type="text" id="lt-penaltyForNonCompliance" class="form-input" value="${val('penaltyForNonCompliance')}" placeholder="مثال: غرامة مالية / إيقاف العمل">
+                                </div>
+
+                                <div class="form-group col-span-2">
+                                    <label class="form-label">ملاحظات</label>
+                                    <textarea id="lt-notes" class="form-input" rows="3" placeholder="ملاحظات إضافية">${val('notes')}</textarea>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn-secondary" onclick="document.getElementById('legal-training-modal').remove()">إلغاء</button>
+                            <button type="submit" class="btn-primary">
+                                <i class="fas fa-save ml-2"></i>${isEdit ? 'حفظ التعديلات' : 'إضافة التدريب'}
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        `;
+
+        const existing_modal = document.getElementById('legal-training-modal');
+        if (existing_modal) existing_modal.remove();
+        document.body.insertAdjacentHTML('beforeend', html);
+
+        const catSelect = document.getElementById('lt-category');
+        const refInput = document.getElementById('lt-legalReference');
+        if (catSelect && refInput) {
+            catSelect.addEventListener('change', () => {
+                const found = this.LEGAL_CATEGORIES.find(c => c.value === catSelect.value);
+                if (found && !refInput.value) {
+                    refInput.value = found.ref;
+                }
+            });
+        }
+    },
+
+    async handleLegalTrainingSubmit(e) {
+        e.preventDefault();
+        const editId = document.getElementById('legal-training-edit-id')?.value;
+        const isEdit = !!editId;
+
+        const getVal = (id) => {
+            const el = document.getElementById(id);
+            return el ? el.value.trim() : '';
+        };
+
+        const data = {
+            title: getVal('lt-title'),
+            category: getVal('lt-category'),
+            legalReference: getVal('lt-legalReference'),
+            legalArticle: getVal('lt-legalArticle'),
+            frequency: getVal('lt-frequency'),
+            targetGroup: getVal('lt-targetGroup'),
+            department: getVal('lt-department'),
+            factory: getVal('lt-factory'),
+            factoryName: getVal('lt-factory'),
+            scheduledDate: getVal('lt-scheduledDate'),
+            actualDate: getVal('lt-actualDate'),
+            trainer: getVal('lt-trainer'),
+            trainerQualification: getVal('lt-trainerQualification'),
+            duration: getVal('lt-duration'),
+            participantsCount: getVal('lt-participantsCount'),
+            status: getVal('lt-status'),
+            complianceStatus: getVal('lt-complianceStatus'),
+            expiryDate: getVal('lt-expiryDate'),
+            nextDueDate: getVal('lt-nextDueDate'),
+            certificateRequired: getVal('lt-certificateRequired'),
+            penaltyForNonCompliance: getVal('lt-penaltyForNonCompliance'),
+            notes: getVal('lt-notes')
+        };
+
+        if (!data.title || !data.category || !data.frequency) {
+            if (typeof Notification !== 'undefined' && Notification.error) {
+                Notification.error('يرجى ملء الحقول المطلوبة: العنوان، التصنيف، الدورية');
+            }
+            return;
+        }
+
+        const modal = document.getElementById('legal-training-modal');
+
+        try {
+            if (isEdit) {
+                data.id = editId;
+                data.updatedAt = new Date().toISOString();
+
+                const items = AppState.appData.legalTrainings || [];
+                const idx = items.findIndex(t => t.id === editId);
+                if (idx !== -1) {
+                    Object.assign(items[idx], data);
+                }
+                this._legalTrainingsLocalSaveTime = Date.now();
+
+                if (modal) modal.remove();
+                this._markAllTabsDirty();
+                this.loadLegalTrainingList();
+
+                if (typeof Notification !== 'undefined' && Notification.success) {
+                    Notification.success('تم تحديث التدريب القانوني بنجاح');
+                }
+
+                if (typeof GoogleIntegration !== 'undefined' && GoogleIntegration.sendRequest) {
+                    GoogleIntegration.sendRequest({
+                        action: 'updateLegalTraining',
+                        data: { trainingId: editId, updateData: data }
+                    }).catch(err => Utils.safeWarn('⚠️ تعذر تحديث التدريب القانوني على الخادم:', err));
+                }
+            } else {
+                data.createdAt = new Date().toISOString();
+                data.updatedAt = data.createdAt;
+                data.createdBy = AppState.currentUser?.email || '';
+
+                if (!AppState.appData.legalTrainings) AppState.appData.legalTrainings = [];
+                const tempId = 'LTR-LOCAL-' + Date.now();
+                data.id = tempId;
+                AppState.appData.legalTrainings.unshift(data);
+                this._legalTrainingsLocalSaveTime = Date.now();
+
+                if (modal) modal.remove();
+                this._markAllTabsDirty();
+                this.loadLegalTrainingList();
+
+                if (typeof Notification !== 'undefined' && Notification.success) {
+                    Notification.success('تم إضافة التدريب القانوني بنجاح');
+                }
+
+                if (typeof GoogleIntegration !== 'undefined' && GoogleIntegration.sendRequest) {
+                    const serverData = Object.assign({}, data);
+                    delete serverData.id;
+                    GoogleIntegration.sendRequest({
+                        action: 'addLegalTraining',
+                        data: serverData
+                    }).then(resp => {
+                        if (resp && resp.success && resp.data && resp.data.id) {
+                            const items = AppState.appData.legalTrainings || [];
+                            const localIdx = items.findIndex(t => t.id === tempId);
+                            if (localIdx !== -1) {
+                                items[localIdx].id = resp.data.id;
+                            }
+                            if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
+                                window.DataManager.save();
+                            }
+                        }
+                    }).catch(err => Utils.safeWarn('⚠️ تعذر حفظ التدريب القانوني على الخادم:', err));
+                }
+            }
+
+            if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
+                window.DataManager.save();
+            }
+        } catch (error) {
+            Utils.safeError('❌ خطأ في حفظ التدريب القانوني:', error);
+            if (typeof Notification !== 'undefined' && Notification.error) {
+                Notification.error('حدث خطأ أثناء الحفظ');
+            }
+        }
+    },
+
+    async deleteLegalTrainingRecord(trainingId) {
+        if (!trainingId) return;
+        if (!confirm('هل أنت متأكد من حذف هذا التدريب القانوني؟')) return;
+
+        try {
+            const items = AppState.appData.legalTrainings || [];
+            AppState.appData.legalTrainings = items.filter(t => t.id !== trainingId);
+            this._legalTrainingsLocalSaveTime = Date.now();
+            this._markAllTabsDirty();
+            this.loadLegalTrainingList();
+
+            if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
+                window.DataManager.save();
+            }
+
+            if (typeof Notification !== 'undefined' && Notification.success) {
+                Notification.success('تم حذف التدريب القانوني');
+            }
+
+            if (typeof GoogleIntegration !== 'undefined' && GoogleIntegration.sendRequest) {
+                GoogleIntegration.sendRequest({
+                    action: 'deleteLegalTraining',
+                    data: { trainingId: trainingId }
+                }).catch(err => Utils.safeWarn('⚠️ تعذر حذف التدريب القانوني من الخادم:', err));
+            }
+        } catch (error) {
+            Utils.safeError('❌ خطأ في حذف التدريب القانوني:', error);
+        }
+    },
+
+    exportLegalTrainingExcel() {
+        try {
+            this.ensureData();
+            const items = AppState.appData.legalTrainings || [];
+            if (items.length === 0) {
+                if (typeof Notification !== 'undefined' && Notification.warning) {
+                    Notification.warning('لا توجد بيانات للتصدير');
+                }
+                return;
+            }
+
+            const headers = ['الرقم', 'عنوان التدريب', 'التصنيف', 'المرجع القانوني', 'المادة/البند', 'الدورية', 'الفئة المستهدفة', 'القسم', 'المصنع', 'التاريخ المخطط', 'التاريخ الفعلي', 'المدرب', 'مؤهلات المدرب', 'المدة (ساعة)', 'المشاركين', 'الحالة', 'حالة الامتثال', 'تاريخ الانتهاء', 'الاستحقاق التالي', 'يتطلب شهادة', 'عقوبة عدم الامتثال', 'ملاحظات'];
+
+            const rows = items.map(t => [
+                t.id || '', t.title || '', t.category || '', t.legalReference || '', t.legalArticle || '',
+                t.frequency || '', t.targetGroup || '', t.department || '', t.factory || '',
+                t.scheduledDate || '', t.actualDate || '', t.trainer || '', t.trainerQualification || '',
+                t.duration || '', t.participantsCount || '', t.status || '', t.complianceStatus || '',
+                t.expiryDate || '', t.nextDueDate || '', t.certificateRequired || '', t.penaltyForNonCompliance || '', t.notes || ''
+            ]);
+
+            if (typeof XLSX !== 'undefined') {
+                const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
+                const wb = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(wb, ws, 'التدريبات القانونية');
+                XLSX.writeFile(wb, 'التدريبات_القانونية_' + new Date().toISOString().slice(0, 10) + '.xlsx');
+            } else {
+                Utils.safeWarn('مكتبة XLSX غير متوفرة');
+            }
+        } catch (error) {
+            Utils.safeError('❌ خطأ في تصدير Excel:', error);
+        }
+    },
+
+    exportLegalTrainingPdf() {
+        try {
+            this.ensureData();
+            const items = AppState.appData.legalTrainings || [];
+            if (items.length === 0) {
+                if (typeof Notification !== 'undefined' && Notification.warning) {
+                    Notification.warning('لا توجد بيانات للتصدير');
+                }
+                return;
+            }
+
+            if (typeof jspdf === 'undefined' && typeof window.jspdf === 'undefined') {
+                Utils.safeWarn('مكتبة jsPDF غير متوفرة');
+                return;
+            }
+
+            const { jsPDF } = window.jspdf || jspdf;
+            const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+
+            doc.setFont('Helvetica', 'bold');
+            doc.setFontSize(16);
+            doc.text('Legal Trainings Report - Egyptian Law Compliance', 148, 15, { align: 'center' });
+
+            doc.setFontSize(10);
+            doc.setFont('Helvetica', 'normal');
+            doc.text('Date: ' + new Date().toLocaleDateString('en-GB'), 15, 25);
+            doc.text('Total Records: ' + items.length, 15, 30);
+
+            const stats = this.getLegalTrainingStats();
+            doc.text('Compliant: ' + stats.compliant + ' | Non-Compliant: ' + stats.nonCompliant + ' | Expiring Soon: ' + stats.expiringSoon + ' | Compliance Rate: ' + stats.complianceRate + '%', 15, 35);
+
+            const tableHeaders = ['#', 'Title', 'Category', 'Legal Ref', 'Frequency', 'Scheduled', 'Status', 'Compliance', 'Expiry'];
+            const tableRows = items.map((t, i) => [
+                i + 1, t.title || '', t.category || '', t.legalReference || '',
+                t.frequency || '', t.scheduledDate || '', t.status || '',
+                t.complianceStatus || '', t.expiryDate || ''
+            ]);
+
+            if (typeof doc.autoTable === 'function') {
+                doc.autoTable({
+                    head: [tableHeaders],
+                    body: tableRows,
+                    startY: 40,
+                    styles: { fontSize: 8, cellPadding: 2 },
+                    headStyles: { fillColor: [37, 99, 235] }
+                });
+            } else {
+                let y = 45;
+                doc.setFontSize(8);
+                tableRows.forEach((row, i) => {
+                    if (y > 190) { doc.addPage(); y = 15; }
+                    doc.text(row.join(' | '), 15, y);
+                    y += 5;
+                });
+            }
+
+            doc.save('Legal_Trainings_' + new Date().toISOString().slice(0, 10) + '.pdf');
+        } catch (error) {
+            Utils.safeError('❌ خطأ في تصدير PDF:', error);
+        }
     },
 
 };
