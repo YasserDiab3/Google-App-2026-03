@@ -14424,18 +14424,21 @@ const Training = {
 
             <div class="legal-table-card">
                 <div class="card-header">
-                    <div class="flex items-center justify-between">
-                        <h3 class="card-title"><i class="fas fa-gavel ml-2"></i>سجل التدريبات القانونية</h3>
+                    <div class="flex items-center justify-between" style="flex-wrap: wrap; gap: 10px;">
+                        <h3 class="card-title" style="margin: 0;"><i class="fas fa-gavel ml-2"></i>سجل التدريبات القانونية</h3>
                         <div class="flex items-center gap-3 flex-wrap">
-                            <button id="export-legal-training-pdf-btn" class="btn-secondary btn-sm">
-                                <i class="fas fa-file-pdf ml-2" style="font-size: 14px;"></i>PDF
-                            </button>
-                            <button id="export-legal-training-excel-btn" class="btn-success btn-sm">
-                                <i class="fas fa-file-excel ml-2" style="font-size: 14px;"></i>Excel
-                            </button>
-                            <input type="text" id="legal-training-search" class="form-input" style="max-width: 220px;" placeholder="بحث (عنوان، مرجع، مدرب)">
+                            <div class="flex items-center gap-2">
+                                <button id="export-legal-training-pdf-btn" class="btn-secondary btn-sm">
+                                    <i class="fas fa-file-pdf ml-1" style="font-size: 14px;"></i>PDF
+                                </button>
+                                <button id="export-legal-training-excel-btn" class="btn-success btn-sm">
+                                    <i class="fas fa-file-excel ml-1" style="font-size: 14px;"></i>Excel
+                                </button>
+                            </div>
+                            <span class="separator hidden md:inline">|</span>
+                            <input type="text" id="legal-training-search" class="form-input" style="max-width: 220px; min-width: 160px;" placeholder="بحث (عنوان، مرجع، مدرب)">
                             <button id="add-legal-training-btn" class="btn-primary">
-                                <i class="fas fa-plus ml-2"></i>إضافة تدريب قانوني
+                                <i class="fas fa-plus ml-2"></i>إضافة تدريب
                             </button>
                         </div>
                     </div>
@@ -15025,7 +15028,7 @@ const Training = {
         }
     },
 
-    exportLegalTrainingPdf() {
+    async exportLegalTrainingPdf() {
         try {
             this.ensureData();
             const items = AppState.appData.legalTrainings || [];
@@ -15036,54 +15039,143 @@ const Training = {
                 return;
             }
 
-            if (typeof jspdf === 'undefined' && typeof window.jspdf === 'undefined') {
-                Utils.safeWarn('مكتبة jsPDF غير متوفرة');
-                return;
-            }
+            const origBtn = document.getElementById('export-legal-training-pdf-btn');
+            if (origBtn) { origBtn.disabled = true; origBtn.innerHTML = '<i class="fas fa-spinner fa-spin ml-1"></i> جاري التصدير...'; }
 
-            const { jsPDF } = window.jspdf || jspdf;
-            const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+            const loadLib = (src, check) => new Promise((res, rej) => {
+                if (check()) return res();
+                const s = document.createElement('script'); s.src = src; s.onload = () => res(); s.onerror = () => rej(); document.head.appendChild(s);
+            });
 
-            doc.setFont('Helvetica', 'bold');
-            doc.setFontSize(16);
-            doc.text('Legal Trainings Report - Egyptian Law Compliance', 148, 15, { align: 'center' });
-
-            doc.setFontSize(10);
-            doc.setFont('Helvetica', 'normal');
-            doc.text('Date: ' + new Date().toLocaleDateString('en-GB'), 15, 25);
-            doc.text('Total Records: ' + items.length, 15, 30);
+            await loadLib('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js', () => typeof html2canvas !== 'undefined');
+            await loadLib('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js', () => typeof window.jspdf !== 'undefined');
 
             const stats = this.getLegalTrainingStats();
-            doc.text('Compliant: ' + stats.compliant + ' | Non-Compliant: ' + stats.nonCompliant + ' | Expiring Soon: ' + stats.expiringSoon + ' | Compliance Rate: ' + stats.complianceRate + '%', 15, 35);
+            const container = document.getElementById('legal-training-container');
+            const origHtml = container ? container.innerHTML : '';
 
-            const tableHeaders = ['#', 'Title', 'Category', 'Legal Ref', 'Frequency', 'Scheduled', 'Status', 'Compliance', 'Expiry'];
-            const tableRows = items.map((t, i) => [
-                i + 1, t.title || '', t.category || '', t.legalReference || '',
-                t.frequency || '', t.scheduledDate || '', t.status || '',
-                t.complianceStatus || '', t.expiryDate || ''
-            ]);
+            const reportHtml = `
+                <div dir="rtl" style="font-family: 'Segoe UI', Tahoma, sans-serif; padding: 30px; background: #fff; direction: rtl;">
+                    <div style="text-align: center; border-bottom: 3px solid #1e40af; padding-bottom: 16px; margin-bottom: 20px;">
+                        <h1 style="font-size: 22px; color: #1e293b; margin: 0 0 4px;">تقرير التدريبات القانونية</h1>
+                        <p style="font-size: 13px; color: #64748b; margin: 0;">الامتثال للقوانين المصرية — Egyptian Law Compliance</p>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 20px; gap: 12px; flex-wrap: wrap;">
+                        <div style="background: #f8fafc; padding: 12px 18px; border-radius: 10px; flex: 1; min-width: 140px; border: 1px solid #e2e8f0;">
+                            <p style="font-size: 11px; color: #64748b; margin: 0 0 2px;">التاريخ</p>
+                            <p style="font-size: 14px; font-weight: 700; color: #1e293b; margin: 0;">${new Date().toLocaleDateString('ar-EG')}</p>
+                        </div>
+                        <div style="background: #f8fafc; padding: 12px 18px; border-radius: 10px; flex: 1; min-width: 140px; border: 1px solid #e2e8f0;">
+                            <p style="font-size: 11px; color: #64748b; margin: 0 0 2px;">إجمالي السجلات</p>
+                            <p style="font-size: 14px; font-weight: 700; color: #1e293b; margin: 0;">${items.length}</p>
+                        </div>
+                        <div style="background: #f8fafc; padding: 12px 18px; border-radius: 10px; flex: 1; min-width: 140px; border: 1px solid #e2e8f0;">
+                            <p style="font-size: 11px; color: #64748b; margin: 0 0 2px;">نسبة الامتثال</p>
+                            <p style="font-size: 14px; font-weight: 700; color: #1e293b; margin: 0;">${stats.complianceRate}%</p>
+                        </div>
+                        <div style="background: #f8fafc; padding: 12px 18px; border-radius: 10px; flex: 1; min-width: 140px; border: 1px solid #e2e8f0;">
+                            <p style="font-size: 11px; color: #64748b; margin: 0 0 2px;">ممتثل / غير ممتثل</p>
+                            <p style="font-size: 14px; font-weight: 700; color: #1e293b; margin: 0;">${stats.compliant} / ${stats.nonCompliant}</p>
+                        </div>
+                    </div>
+                    <table style="width: 100%; border-collapse: collapse; font-size: 12px;">
+                        <thead>
+                            <tr style="background: #1e40af; color: #fff;">
+                                <th style="padding: 8px 10px; border: 1px solid #1e3a8a; text-align: center;">#</th>
+                                <th style="padding: 8px 10px; border: 1px solid #1e3a8a; text-align: right;">عنوان التدريب</th>
+                                <th style="padding: 8px 10px; border: 1px solid #1e3a8a; text-align: right;">التصنيف</th>
+                                <th style="padding: 8px 10px; border: 1px solid #1e3a8a; text-align: right;">المرجع القانوني</th>
+                                <th style="padding: 8px 10px; border: 1px solid #1e3a8a; text-align: center;">الدورية</th>
+                                <th style="padding: 8px 10px; border: 1px solid #1e3a8a; text-align: center;">التاريخ المخطط</th>
+                                <th style="padding: 8px 10px; border: 1px solid #1e3a8a; text-align: center;">الحالة</th>
+                                <th style="padding: 8px 10px; border: 1px solid #1e3a8a; text-align: center;">الامتثال</th>
+                                <th style="padding: 8px 10px; border: 1px solid #1e3a8a; text-align: center;">تاريخ الانتهاء</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${items.map((t, i) => `
+                                <tr style="background: ${i % 2 === 0 ? '#fff' : '#f8fafc'};">
+                                    <td style="padding: 6px 10px; border: 1px solid #e2e8f0; text-align: center; color: #64748b;">${i + 1}</td>
+                                    <td style="padding: 6px 10px; border: 1px solid #e2e8f0; text-align: right; font-weight: 600;">${t.title || '—'}</td>
+                                    <td style="padding: 6px 10px; border: 1px solid #e2e8f0; text-align: right; color: #475569;">${t.category || '—'}</td>
+                                    <td style="padding: 6px 10px; border: 1px solid #e2e8f0; text-align: right; color: #475569;">${t.legalReference || '—'}</td>
+                                    <td style="padding: 6px 10px; border: 1px solid #e2e8f0; text-align: center;">${t.frequency || '—'}</td>
+                                    <td style="padding: 6px 10px; border: 1px solid #e2e8f0; text-align: center;">${t.scheduledDate || '—'}</td>
+                                    <td style="padding: 6px 10px; border: 1px solid #e2e8f0; text-align: center;">
+                                        <span style="display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 600;
+                                            background: ${t.status === 'مكتمل' ? '#dcfce7' : t.status === 'مخطط' ? '#dbeafe' : t.status === 'قيد التنفيذ' ? '#fef3c7' : '#f1f5f9'};
+                                            color: ${t.status === 'مكتمل' ? '#166534' : t.status === 'مخطط' ? '#1e40af' : t.status === 'قيد التنفيذ' ? '#92400e' : '#475569'};">
+                                            ${t.status || '—'}
+                                        </span>
+                                    </td>
+                                    <td style="padding: 6px 10px; border: 1px solid #e2e8f0; text-align: center;">
+                                        <span style="display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 600;
+                                            background: ${t.complianceStatus === 'ممتثل' ? '#dcfce7' : t.complianceStatus === 'غير ممتثل' ? '#fecaca' : t.complianceStatus === 'قارب على الانتهاء' ? '#fef3c7' : '#dbeafe'};
+                                            color: ${t.complianceStatus === 'ممتثل' ? '#166534' : t.complianceStatus === 'غير ممتثل' ? '#991b1b' : t.complianceStatus === 'قارب على الانتهاء' ? '#92400e' : '#1e40af'};">
+                                            ${t.complianceStatus || '—'}
+                                        </span>
+                                    </td>
+                                    <td style="padding: 6px 10px; border: 1px solid #e2e8f0; text-align: center;">${t.expiryDate || '—'}</td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                    <div style="margin-top: 20px; text-align: center; color: #94a3b8; font-size: 11px; border-top: 1px solid #e2e8f0; padding-top: 12px;">
+                        تم التصدير في ${new Date().toLocaleString('ar-EG')} — نظام إدارة HSE
+                    </div>
+                </div>
+            `;
 
-            if (typeof doc.autoTable === 'function') {
-                doc.autoTable({
-                    head: [tableHeaders],
-                    body: tableRows,
-                    startY: 40,
-                    styles: { fontSize: 8, cellPadding: 2 },
-                    headStyles: { fillColor: [37, 99, 235] }
-                });
-            } else {
-                let y = 45;
-                doc.setFontSize(8);
-                tableRows.forEach((row, i) => {
-                    if (y > 190) { doc.addPage(); y = 15; }
-                    doc.text(row.join(' | '), 15, y);
-                    y += 5;
-                });
+            const wrapper = document.createElement('div');
+            wrapper.style.cssText = 'position: absolute; left: -9999px; top: 0; z-index: -1;';
+            wrapper.innerHTML = reportHtml;
+            document.body.appendChild(wrapper);
+
+            try {
+                const canvas = await html2canvas(wrapper, { scale: 2, useCORS: true, backgroundColor: '#ffffff', logging: false });
+                const { jsPDF } = window.jspdf;
+                const pdf = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+                const pW = pdf.internal.pageSize.getWidth();
+                const pH = pdf.internal.pageSize.getHeight();
+                const mg = 8;
+                const cW = pW - mg * 2;
+                const ratio = cW / canvas.width;
+                const pgH = pH - mg * 2;
+                const pgPx = pgH / ratio;
+                const total = Math.ceil(canvas.height / pgPx);
+
+                for (let p = 0; p < total; p++) {
+                    if (p > 0) pdf.addPage();
+                    const sc = document.createElement('canvas');
+                    const sH = Math.min(pgPx, canvas.height - p * pgPx);
+                    sc.width = canvas.width;
+                    sc.height = sH;
+                    sc.getContext('2d').drawImage(canvas, 0, p * pgPx, canvas.width, sH, 0, 0, canvas.width, sH);
+                    pdf.addImage(sc.toDataURL('image/jpeg', 0.95), 'JPEG', mg, mg, cW, sH * ratio);
+                    pdf.setDrawColor(37, 99, 235);
+                    pdf.setLineWidth(0.3);
+                    pdf.line(mg, pH - mg + 1, pW - mg, pH - mg + 1);
+                    pdf.setTextColor(148, 163, 184);
+                    pdf.setFontSize(7);
+                    pdf.text(new Date().toISOString().slice(0, 10), mg, pH - 3);
+                    pdf.text(`${p + 1} / ${total}`, pW - mg, pH - 3, { align: 'right' });
+                }
+
+                pdf.save(`Legal_Trainings_${new Date().toISOString().slice(0, 10)}.pdf`);
+                if (typeof Notification !== 'undefined' && Notification.success) {
+                    Notification.success('تم تصدير تقرير PDF بنجاح');
+                }
+            } finally {
+                document.body.removeChild(wrapper);
             }
-
-            doc.save('Legal_Trainings_' + new Date().toISOString().slice(0, 10) + '.pdf');
         } catch (error) {
             Utils.safeError('❌ خطأ في تصدير PDF:', error);
+            if (typeof Notification !== 'undefined' && Notification.error) {
+                Notification.error('تعذر تصدير PDF');
+            }
+        } finally {
+            const btn = document.getElementById('export-legal-training-pdf-btn');
+            if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-file-pdf ml-1" style="font-size: 14px;"></i>PDF'; }
         }
     },
 
