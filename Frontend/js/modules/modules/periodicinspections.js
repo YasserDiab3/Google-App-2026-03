@@ -5467,6 +5467,28 @@ const PeriodicInspections = {
         }
         if (editId) Notification.success('تم تحديث السجل بنجاح');
         else Notification.success('تم إضافة السجل بنجاح');
+        // إشعار المشرفين + تسجيل النشاط (في الخلفية)
+        if (typeof GoogleIntegration !== 'undefined' && GoogleIntegration.sendRequest) {
+            GoogleIntegration.sendRequest({
+                action: 'addNotification',
+                data: {
+                    userId: 'admin',
+                    title: editId ? 'تحديث سجل مرور يومي' : 'سجل مرور يومي جديد',
+                    message: `${editId ? 'تم تحديث' : 'تم إضافة'} سجل مرور يومي للسلامة: ${payload.siteName || ''} - ${payload.date || ''} (${payload.shift || ''})`,
+                    type: 'info',
+                    priority: 'normal',
+                    link: '#periodic-inspections-section',
+                    data: { module: 'periodic-inspections', action: editId ? 'daily_safety_checklist_updated' : 'daily_safety_checklist_added', recordId: editId || '' }
+                }
+            }).catch(() => {});
+        }
+        if (typeof UserActivityLog !== 'undefined' && UserActivityLog.log) {
+            UserActivityLog.log(editId ? 'update' : 'add', 'DailySafetyCheckList', editId || '', {
+                description: `${editId ? 'تحديث' : 'إضافة'} سجل مرور يومي: ${payload.siteName || ''} - ${payload.date || ''}`,
+                siteName: payload.siteName,
+                inspectorName: payload.inspectorName
+            }).catch(() => {});
+        }
         // المزامنة مع الخلفية في الخلفية (بدون انتظار)
         if (typeof GoogleIntegration !== 'undefined' && GoogleIntegration.autoSave) {
             GoogleIntegration.autoSave('DailySafetyCheckList', list).catch(() => {});

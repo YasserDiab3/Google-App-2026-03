@@ -3614,6 +3614,31 @@ const Dashboard = {
                 });
             }
 
+            // قائمة المرور اليومي للسلامة (Daily Safety Checklist)
+            if (this.dashboardCan('periodic-inspections')) {
+                const dscList = Array.isArray(ad.dailySafetyCheckList) ? ad.dailySafetyCheckList : [];
+                dscList.forEach((r) => {
+                    if (!r) return;
+                    try {
+                        const d = r.createdAt || r.date;
+                        if (!d) return;
+                        const dateObj = new Date(d);
+                        if (isNaN(dateObj.getTime())) return;
+                        const loc = r.siteName || r.siteId || 'موقع';
+                        activities.push({
+                            type: 'daily-safety-checklist',
+                            title: `مرور يومي للسلامة: ${loc} - ${r.shift || ''}`,
+                            date: dateObj,
+                            time: this.getTimeAgo(d),
+                            icon: 'fa-clipboard-check',
+                            color: 'text-cyan-500'
+                        });
+                    } catch (e) {
+                        Utils.safeWarn('⚠️ خطأ في معالجة المرور اليومي:', e);
+                    }
+                });
+            }
+
             // ترتيب الأنشطة حسب التاريخ الفعلي (الأحدث أولاً)
             activities.sort((a, b) => {
                 if (!a.date || !b.date) return 0;
