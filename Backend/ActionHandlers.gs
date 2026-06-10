@@ -1186,6 +1186,38 @@ var ActionHandlers = {
         })();
         return result;
     },
+    // ============================================
+    // سجل التشريعات والقوانين (Legal Register)
+    // ============================================
+    'addLegalRegister': function(payload, postData, action, actorUserData, spreadsheetId) {
+        var result = { success: false, message: '' };
+        (function() { result = addLegalRegisterToSheet(payload); })();
+        return result;
+    },
+    'updateLegalRegister': function(payload, postData, action, actorUserData, spreadsheetId) {
+        var result = { success: false, message: '' };
+        (function() {
+            var registerId = payload.registerId || payload.id;
+            var updateData = payload.updateData || payload;
+            result = updateLegalRegister(registerId, updateData);
+        })();
+        return result;
+    },
+    'getAllLegalRegisters': function(payload, postData, action, actorUserData, spreadsheetId) {
+        var result = { success: false, message: '' };
+        (function() { result = getAllLegalRegisters(payload.filters || {}); })();
+        return result;
+    },
+    'deleteLegalRegister': function(payload, postData, action, actorUserData, spreadsheetId) {
+        var result = { success: false, message: '' };
+        (function() { result = deleteLegalRegister(payload.registerId || payload.id, actorUserData); })();
+        return result;
+    },
+    'getLegalRegisterStatistics': function(payload, postData, action, actorUserData, spreadsheetId) {
+        var result = { success: false, message: '' };
+        (function() { result = getLegalRegisterStatistics(payload.filters || {}); })();
+        return result;
+    },
     'addClinicVisit': function(payload, postData, action, actorUserData, spreadsheetId) {
         var result = { success: false, message: '' };
         (function() {
