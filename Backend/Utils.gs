@@ -840,6 +840,11 @@ function getHeaders(sheetName, data) {
         return getDefaultHeaders('TrainingAttendance');
     }
 
+    // ✅ التدريبات القانونية وحضورها: ترتيب أعمدة ثابت
+    if (sheetName === 'LegalTrainings' || sheetName === 'LegalTrainingAttendees') {
+        return getDefaultHeaders(sheetName);
+    }
+
     // ✅ سجل نشاط المستخدم: رؤوس ثابتة؛ ensureSheetHeaders يضيف الأعمدة الجديدة للأوراق القديمة دون إعادة ترتيب الصفوف
     if (sheetName === 'UserActivityLog') {
         return getDefaultHeaders('UserActivityLog');

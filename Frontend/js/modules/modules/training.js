@@ -14922,10 +14922,12 @@ const Training = {
                     const serverData = Object.assign({}, data);
                     delete serverData.id;
                     try {
+                        Utils.safeLog('📤 إرسال addLegalTraining إلى الخادم:', JSON.stringify(serverData).substring(0, 200));
                         const resp = await GoogleIntegration.sendRequest({
                             action: 'addLegalTraining',
                             data: serverData
                         });
+                        Utils.safeLog('📥 رد الخادم addLegalTraining:', JSON.stringify(resp).substring(0, 300));
                         if (resp && resp.success && resp.data && resp.data.id) {
                             const items = AppState.appData.legalTrainings || [];
                             const localIdx = items.findIndex(t => t.id === tempId);
@@ -14933,18 +14935,24 @@ const Training = {
                                 items[localIdx].id = resp.data.id;
                             }
                             if (typeof Notification !== 'undefined' && Notification.success) {
-                                Notification.success('تم حفظ التدريب القانوني بنجاح');
+                                Notification.success('تم حفظ التدريب القانوني بنجاح ✅');
                             }
                         } else {
+                            Utils.safeWarn('⚠️ الخادم لم يرجع نجاح:', resp);
                             if (typeof Notification !== 'undefined' && Notification.warning) {
-                                Notification.warning('تم الحفظ محلياً — سيتم المزامنة لاحقاً');
+                                Notification.warning('⚠️ تعذر الحفظ في قاعدة البيانات: ' + (resp?.message || 'خطأ غير معروف'));
                             }
                         }
                     } catch (err) {
-                        Utils.safeWarn('⚠️ تعذر حفظ التدريب القانوني على الخادم:', err);
-                        if (typeof Notification !== 'undefined' && Notification.warning) {
-                            Notification.warning('تم الحفظ محلياً — سيتم المزامنة عند الاتصال');
+                        Utils.safeError('❌ خطأ في حفظ التدريب القانوني على الخادم:', err);
+                        if (typeof Notification !== 'undefined' && Notification.error) {
+                            Notification.error('❌ فشل الحفظ في قاعدة البيانات: ' + (err?.message || err));
                         }
+                    }
+                } else {
+                    Utils.safeWarn('⚠️ GoogleIntegration غير متاح — لن يتم الحفظ في قاعدة البيانات');
+                    if (typeof Notification !== 'undefined' && Notification.warning) {
+                        Notification.warning('⚠️ الاتصال بالخادم غير متاح');
                     }
                 }
             }
