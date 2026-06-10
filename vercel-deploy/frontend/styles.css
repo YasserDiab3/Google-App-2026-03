@@ -15435,17 +15435,10 @@ body[data-theme="dark"] .profile-info-list>div,
     padding: 0;
 }
 
-.legal-table-card .card-header .separator {
-    color: #cbd5e1;
-    font-size: 18px;
-    user-select: none;
-}
-
 @media (max-width: 768px) {
-    .legal-table-card .card-header .separator { display: none; }
     .legal-table-card .card-header .flex { flex-direction: column; align-items: stretch; }
-    .legal-table-card .card-header .flex > .flex { width: 100%; }
-    .legal-table-card .card-header .flex > .flex .btn-sm { flex: 1; }
+    .legal-table-card .card-header .flex.items-center.gap-2 { flex-direction: row; flex-wrap: wrap; }
+    .legal-table-card .card-header .flex.items-center.gap-2 .btn-sm { flex: 1; }
     .legal-table-card .card-header #legal-training-search { max-width: 100% !important; min-width: 0 !important; width: 100%; }
 }
 

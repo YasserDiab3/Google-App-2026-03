@@ -14342,18 +14342,17 @@ const Training = {
 
             <div class="legal-table-card">
                 <div class="card-header">
-                    <h3 class="card-title" style="margin: 0 0 12px;"><i class="fas fa-gavel ml-2"></i>سجل التدريبات القانونية</h3>
-                    <div class="flex items-center gap-3 flex-wrap">
-                        <div class="flex items-center gap-2">
-                            <button id="export-legal-training-pdf-btn" class="btn-secondary btn-sm">
-                                <i class="fas fa-file-pdf ml-1" style="font-size: 14px;"></i>PDF
-                            </button>
-                            <button id="export-legal-training-excel-btn" class="btn-success btn-sm">
-                                <i class="fas fa-file-excel ml-1" style="font-size: 14px;"></i>Excel
-                            </button>
-                        </div>
-                        <span class="separator hidden md:inline">|</span>
-                        <input type="text" id="legal-training-search" class="form-input" style="max-width: 260px; min-width: 180px;" placeholder="بحث (عنوان، مرجع قانوني، مدرب)">
+                    <div class="flex items-center justify-between gap-3 flex-wrap" style="margin-bottom: 10px;">
+                        <h3 class="card-title" style="margin: 0;"><i class="fas fa-gavel ml-2"></i>سجل التدريبات القانونية</h3>
+                        <input type="text" id="legal-training-search" class="form-input" style="max-width: 260px; min-width: 160px;" placeholder="بحث (عنوان، مرجع قانوني، مدرب)">
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <button id="export-legal-training-pdf-btn" class="btn-secondary btn-sm">
+                            <i class="fas fa-file-pdf ml-1" style="font-size: 14px;"></i>PDF
+                        </button>
+                        <button id="export-legal-training-excel-btn" class="btn-success btn-sm">
+                            <i class="fas fa-file-excel ml-1" style="font-size: 14px;"></i>Excel
+                        </button>
                     </div>
                 </div>
                 <div class="card-body" id="legal-training-container">
