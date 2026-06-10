@@ -7591,6 +7591,14 @@ textarea.form-input {
     overflow-x: hidden;
 }
 
+/* السماح بالتمرير الأفقي داخل تحليل المقاولين دون قص */
+.content-card:has(.contractor-analytics-section) {
+    overflow-x: auto !important;
+}
+.content-card:has(.contractor-analytics-section) .card-body {
+    overflow-x: auto !important;
+}
+
 /* Ensure all data tables respect container width */
 /* Note: This rule complements the existing .data-table rules, not replaces them */
 .data-table {
@@ -15925,11 +15933,13 @@ body[data-theme="dark"] .profile-info-list>div,
 
 /* Pivot table */
 .contractor-analytics-pivot-wrap {
-    overflow: auto;
+    overflow-x: auto;
+    overflow-y: auto;
     border-radius: 12px;
     box-shadow: 0 2px 8px rgba(0,0,0,0.06);
     border: 1px solid #e5e7eb;
     max-height: 400px;
+    width: 100%;
     scrollbar-width: thin;
     scrollbar-color: #667eea #e0e7ff;
 }
@@ -16043,11 +16053,13 @@ body[data-theme="dark"] .profile-info-list>div,
 
 /* Details table */
 .contractor-analytics-details-wrap {
-    overflow: auto;
+    overflow-x: auto;
+    overflow-y: auto;
     border-radius: 12px;
     box-shadow: 0 2px 8px rgba(0,0,0,0.06);
     border: 1px solid #e5e7eb;
     max-height: 450px;
+    width: 100%;
     scrollbar-width: thin;
     scrollbar-color: #667eea #e0e7ff;
 }
@@ -16161,7 +16173,6 @@ body[data-theme="dark"] .profile-info-list>div,
 @media (max-width: 768px) {
     .contractor-analytics-section {
         max-width: 100%;
-        overflow-x: hidden;
     }
     .contractor-analytics-slicers {
         padding: 16px;
