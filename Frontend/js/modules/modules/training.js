@@ -14890,10 +14890,14 @@ const Training = {
                 }
 
                 if (typeof GoogleIntegration !== 'undefined' && GoogleIntegration.sendRequest) {
-                    GoogleIntegration.sendRequest({
-                        action: 'updateLegalTraining',
-                        data: { trainingId: editId, updateData: data }
-                    }).catch(err => Utils.safeWarn('⚠️ تعذر تحديث التدريب القانوني على الخادم:', err));
+                    try {
+                        await GoogleIntegration.sendRequest({
+                            action: 'updateLegalTraining',
+                            data: { trainingId: editId, updateData: data }
+                        });
+                    } catch (err) {
+                        Utils.safeWarn('⚠️ تعذر تحديث التدريب القانوني على الخادم:', err);
+                    }
                 }
             } else {
                 data.createdAt = new Date().toISOString();
@@ -14911,27 +14915,37 @@ const Training = {
                 this.loadLegalTrainingList();
 
                 if (typeof Notification !== 'undefined' && Notification.success) {
-                    Notification.success('تم إضافة التدريب القانوني بنجاح');
+                    Notification.success('جاري حفظ التدريب القانوني...');
                 }
 
                 if (typeof GoogleIntegration !== 'undefined' && GoogleIntegration.sendRequest) {
                     const serverData = Object.assign({}, data);
                     delete serverData.id;
-                    GoogleIntegration.sendRequest({
-                        action: 'addLegalTraining',
-                        data: serverData
-                    }).then(resp => {
+                    try {
+                        const resp = await GoogleIntegration.sendRequest({
+                            action: 'addLegalTraining',
+                            data: serverData
+                        });
                         if (resp && resp.success && resp.data && resp.data.id) {
                             const items = AppState.appData.legalTrainings || [];
                             const localIdx = items.findIndex(t => t.id === tempId);
                             if (localIdx !== -1) {
                                 items[localIdx].id = resp.data.id;
                             }
-                            if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
-                                window.DataManager.save();
+                            if (typeof Notification !== 'undefined' && Notification.success) {
+                                Notification.success('تم حفظ التدريب القانوني بنجاح');
+                            }
+                        } else {
+                            if (typeof Notification !== 'undefined' && Notification.warning) {
+                                Notification.warning('تم الحفظ محلياً — سيتم المزامنة لاحقاً');
                             }
                         }
-                    }).catch(err => Utils.safeWarn('⚠️ تعذر حفظ التدريب القانوني على الخادم:', err));
+                    } catch (err) {
+                        Utils.safeWarn('⚠️ تعذر حفظ التدريب القانوني على الخادم:', err);
+                        if (typeof Notification !== 'undefined' && Notification.warning) {
+                            Notification.warning('تم الحفظ محلياً — سيتم المزامنة عند الاتصال');
+                        }
+                    }
                 }
             }
 
@@ -15275,6 +15289,19 @@ const Training = {
         const existingModal = document.getElementById('legal-attendee-form-modal');
         if (existingModal) existingModal.remove();
         document.body.insertAdjacentHTML('beforeend', html);
+
+        if (typeof EmployeeHelper !== 'undefined' && typeof EmployeeHelper.setupEmployeeCodeSearch === 'function') {
+            EmployeeHelper.setupEmployeeCodeSearch('lta-employeeCode', 'lta-employeeName', (employee) => {
+                if (employee) {
+                    const posInput = document.getElementById('lta-employeePosition');
+                    const deptInput = document.getElementById('lta-department');
+                    const factInput = document.getElementById('lta-factory');
+                    if (posInput && !posInput.value) posInput.value = employee.position || employee.jobTitle || '';
+                    if (deptInput && !deptInput.value) deptInput.value = employee.department || employee.unit || employee.section || '';
+                    if (factInput && !factInput.value) factInput.value = employee.factory || employee.factoryName || employee.location || '';
+                }
+            }, { employeeNotFoundWarn: 'blur-enter' });
+        }
     },
 
     async handleAttendeeSubmit(e, trainingId, editId) {
@@ -15377,10 +15404,14 @@ const Training = {
                 if (typeof Notification !== 'undefined' && Notification.success) Notification.success('تم تحديث بيانات المتدرب بنجاح');
 
                 if (typeof GoogleIntegration !== 'undefined' && GoogleIntegration.sendRequest) {
-                    GoogleIntegration.sendRequest({
-                        action: 'updateLegalTrainingAttendee',
-                        data: { attendeeId: editId, updateData: data }
-                    }).catch(err => Utils.safeWarn('⚠️ تعذر تحديث بيانات المتدرب على الخادم:', err));
+                    try {
+                        await GoogleIntegration.sendRequest({
+                            action: 'updateLegalTrainingAttendee',
+                            data: { attendeeId: editId, updateData: data }
+                        });
+                    } catch (err) {
+                        Utils.safeWarn('⚠️ تعذر تحديث بيانات المتدرب على الخادم:', err);
+                    }
                 }
             } else {
                 data.createdAt = new Date().toISOString();
@@ -15393,31 +15424,35 @@ const Training = {
                 AppState.appData.legalTrainingAttendees.push(data);
                 this._legalAttendeesLocalSaveTime = Date.now();
 
-                const formModal = document.getElementById('legal-attendee-form-modal');
-                if (formModal) formModal.remove();
-                this.showLegalTrainingAttendees(trainingId);
-
                 this._updateLegalTrainingParticipantsCount(trainingId);
 
-                if (typeof Notification !== 'undefined' && Notification.success) Notification.success('تم إضافة المتدرب بنجاح');
+                if (typeof Notification !== 'undefined' && Notification.success) Notification.success('جاري حفظ بيانات المتدرب...');
 
                 if (typeof GoogleIntegration !== 'undefined' && GoogleIntegration.sendRequest) {
                     const serverData = Object.assign({}, data);
                     delete serverData.id;
-                    GoogleIntegration.sendRequest({
-                        action: 'addLegalTrainingAttendee',
-                        data: serverData
-                    }).then(resp => {
+                    try {
+                        const resp = await GoogleIntegration.sendRequest({
+                            action: 'addLegalTrainingAttendee',
+                            data: serverData
+                        });
                         if (resp && resp.success && resp.data && resp.data.id) {
                             const items = AppState.appData.legalTrainingAttendees || [];
                             const localIdx = items.findIndex(a => a.id === tempId);
                             if (localIdx !== -1) {
                                 items[localIdx].id = resp.data.id;
                             }
-                            if (typeof window.DataManager !== 'undefined' && window.DataManager.save) window.DataManager.save();
                         }
-                    }).catch(err => Utils.safeWarn('⚠️ تعذر حفظ بيانات المتدرب على الخادم:', err));
+                    } catch (err) {
+                        Utils.safeWarn('⚠️ تعذر حفظ بيانات المتدرب على الخادم:', err);
+                    }
                 }
+
+                const formModal = document.getElementById('legal-attendee-form-modal');
+                if (formModal) formModal.remove();
+                this.showLegalTrainingAttendees(trainingId);
+
+                if (typeof Notification !== 'undefined' && Notification.success) Notification.success('تم إضافة المتدرب بنجاح');
             }
 
             if (typeof window.DataManager !== 'undefined' && window.DataManager.save) window.DataManager.save();
