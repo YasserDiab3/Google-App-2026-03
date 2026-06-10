@@ -14351,106 +14351,89 @@ const Training = {
     renderLegalTrainingTab() {
         const stats = this.getLegalTrainingStats();
         return `
-            <!-- كروت إحصائية -->
-            <div class="grid grid-cols-5 gap-4 mb-6">
-                <div class="content-card h-full">
+            <div class="legal-kpi-grid">
+                <div class="legal-kpi-card kpi-blue">
                     <div class="flex items-center gap-3">
-                        <div class="w-12 h-12 rounded-xl bg-blue-100 text-blue-600 flex items-center justify-center shadow-sm flex-shrink-0">
-                            <i class="fas fa-gavel text-xl"></i>
-                        </div>
+                        <div class="kpi-icon-wrap"><i class="fas fa-gavel"></i></div>
                         <div class="min-w-0">
-                            <p class="text-xs text-gray-500">إجمالي التدريبات</p>
-                            <p class="text-xl font-bold text-gray-900" id="legal-total-count">${stats.total}</p>
+                            <p class="kpi-label">إجمالي التدريبات</p>
+                            <p class="kpi-value" id="legal-total-count">${stats.total}</p>
                         </div>
                     </div>
                 </div>
-                <div class="content-card h-full">
+                <div class="legal-kpi-card kpi-green">
                     <div class="flex items-center gap-3">
-                        <div class="w-12 h-12 rounded-xl bg-green-100 text-green-600 flex items-center justify-center shadow-sm flex-shrink-0">
-                            <i class="fas fa-check-circle text-xl"></i>
-                        </div>
+                        <div class="kpi-icon-wrap"><i class="fas fa-check-circle"></i></div>
                         <div class="min-w-0">
-                            <p class="text-xs text-gray-500">ممتثل</p>
-                            <p class="text-xl font-bold text-green-700" id="legal-compliant-count">${stats.compliant}</p>
+                            <p class="kpi-label">ممتثل</p>
+                            <p class="kpi-value" id="legal-compliant-count">${stats.compliant}</p>
                         </div>
                     </div>
                 </div>
-                <div class="content-card h-full">
+                <div class="legal-kpi-card kpi-red">
                     <div class="flex items-center gap-3">
-                        <div class="w-12 h-12 rounded-xl bg-red-100 text-red-600 flex items-center justify-center shadow-sm flex-shrink-0">
-                            <i class="fas fa-exclamation-triangle text-xl"></i>
-                        </div>
+                        <div class="kpi-icon-wrap"><i class="fas fa-exclamation-triangle"></i></div>
                         <div class="min-w-0">
-                            <p class="text-xs text-gray-500">غير ممتثل</p>
-                            <p class="text-xl font-bold text-red-700" id="legal-noncompliant-count">${stats.nonCompliant}</p>
+                            <p class="kpi-label">غير ممتثل</p>
+                            <p class="kpi-value" id="legal-noncompliant-count">${stats.nonCompliant}</p>
                         </div>
                     </div>
                 </div>
-                <div class="content-card h-full">
+                <div class="legal-kpi-card kpi-amber">
                     <div class="flex items-center gap-3">
-                        <div class="w-12 h-12 rounded-xl bg-amber-100 text-amber-600 flex items-center justify-center shadow-sm flex-shrink-0">
-                            <i class="fas fa-clock text-xl"></i>
-                        </div>
+                        <div class="kpi-icon-wrap"><i class="fas fa-clock"></i></div>
                         <div class="min-w-0">
-                            <p class="text-xs text-gray-500">قارب على الانتهاء</p>
-                            <p class="text-xl font-bold text-amber-700" id="legal-expiring-count">${stats.expiringSoon}</p>
+                            <p class="kpi-label">قارب على الانتهاء</p>
+                            <p class="kpi-value" id="legal-expiring-count">${stats.expiringSoon}</p>
                         </div>
                     </div>
                 </div>
-                <div class="content-card h-full">
+                <div class="legal-kpi-card kpi-purple">
                     <div class="flex items-center gap-3">
-                        <div class="w-12 h-12 rounded-xl bg-purple-100 text-purple-600 flex items-center justify-center shadow-sm flex-shrink-0">
-                            <i class="fas fa-percentage text-xl"></i>
-                        </div>
+                        <div class="kpi-icon-wrap"><i class="fas fa-percentage"></i></div>
                         <div class="min-w-0">
-                            <p class="text-xs text-gray-500">نسبة الامتثال</p>
-                            <p class="text-xl font-bold text-purple-700" id="legal-compliance-rate">${stats.complianceRate}%</p>
+                            <p class="kpi-label">نسبة الامتثال</p>
+                            <p class="kpi-value" id="legal-compliance-rate">${stats.complianceRate}%</p>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <!-- فلاتر -->
-            <div class="content-card mb-4">
-                <div class="card-body">
-                    <div class="flex items-center gap-4 flex-wrap">
-                        <div class="flex items-center gap-2">
-                            <label class="text-sm font-medium text-gray-700">التصنيف:</label>
-                            <select id="legal-training-category-filter" class="form-input" style="max-width: 200px;">
-                                <option value="">الكل</option>
-                                ${this.LEGAL_CATEGORIES.map(c => `<option value="${c.value}">${c.label}</option>`).join('')}
-                            </select>
-                        </div>
-                        <div class="flex items-center gap-2">
-                            <label class="text-sm font-medium text-gray-700">حالة الامتثال:</label>
-                            <select id="legal-training-compliance-filter" class="form-input" style="max-width: 180px;">
-                                <option value="">الكل</option>
-                                <option value="ممتثل">ممتثل</option>
-                                <option value="غير ممتثل">غير ممتثل</option>
-                                <option value="قارب على الانتهاء">قارب على الانتهاء</option>
-                                <option value="مخطط">مخطط</option>
-                            </select>
-                        </div>
-                        <button id="reset-legal-filter-btn" class="btn-secondary">
-                            <i class="fas fa-redo ml-2"></i>إعادة تعيين
-                        </button>
-                    </div>
+            <div class="legal-filters-bar">
+                <div class="filter-group">
+                    <label>التصنيف:</label>
+                    <select id="legal-training-category-filter" class="form-input" style="max-width: 200px;">
+                        <option value="">الكل</option>
+                        ${this.LEGAL_CATEGORIES.map(c => `<option value="${c.value}">${c.label}</option>`).join('')}
+                    </select>
                 </div>
+                <div class="filter-group">
+                    <label>حالة الامتثال:</label>
+                    <select id="legal-training-compliance-filter" class="form-input" style="max-width: 180px;">
+                        <option value="">الكل</option>
+                        <option value="ممتثل">ممتثل</option>
+                        <option value="غير ممتثل">غير ممتثل</option>
+                        <option value="قارب على الانتهاء">قارب على الانتهاء</option>
+                        <option value="مخطط">مخطط</option>
+                    </select>
+                </div>
+                <button id="reset-legal-filter-btn" class="btn-secondary btn-sm">
+                    <i class="fas fa-redo ml-2"></i>إعادة تعيين
+                </button>
             </div>
 
-            <!-- الجدول الرئيسي -->
-            <div class="content-card">
+            <div class="legal-table-card">
                 <div class="card-header">
                     <div class="flex items-center justify-between">
-                        <h2 class="card-title"><i class="fas fa-gavel ml-2"></i>سجل التدريبات القانونية</h2>
-                        <div class="flex items-center gap-3">
-                            <button id="export-legal-training-pdf-btn" class="btn-secondary">
-                                <i class="fas fa-file-pdf ml-2" style="font-size: 14px;"></i>تقرير PDF
+                        <h3 class="card-title"><i class="fas fa-gavel ml-2"></i>سجل التدريبات القانونية</h3>
+                        <div class="flex items-center gap-3 flex-wrap">
+                            <button id="export-legal-training-pdf-btn" class="btn-secondary btn-sm">
+                                <i class="fas fa-file-pdf ml-2" style="font-size: 14px;"></i>PDF
                             </button>
-                            <button id="export-legal-training-excel-btn" class="btn-success">
-                                <i class="fas fa-file-excel ml-2" style="font-size: 14px;"></i>تصدير Excel
+                            <button id="export-legal-training-excel-btn" class="btn-success btn-sm">
+                                <i class="fas fa-file-excel ml-2" style="font-size: 14px;"></i>Excel
                             </button>
-                            <input type="text" id="legal-training-search" class="form-input" style="max-width: 260px;" placeholder="بحث (عنوان، مرجع قانوني، مدرب)">
+                            <input type="text" id="legal-training-search" class="form-input" style="max-width: 220px;" placeholder="بحث (عنوان، مرجع، مدرب)">
                             <button id="add-legal-training-btn" class="btn-primary">
                                 <i class="fas fa-plus ml-2"></i>إضافة تدريب قانوني
                             </button>
@@ -14652,19 +14635,19 @@ const Training = {
         const isEdit = !!existing;
         const val = (field, def) => (existing && existing[field] != null) ? existing[field] : (def || '');
 
-        const categoryOptions = this.LEGAL_CATEGORIES.map(c =>
+        const categoryOptions = '<option value="">اختر التصنيف</option>' + this.LEGAL_CATEGORIES.map(c =>
             `<option value="${c.value}" ${val('category') === c.value ? 'selected' : ''}>${c.label} — ${c.ref}</option>`
         ).join('');
 
-        const frequencyOptions = this.LEGAL_FREQUENCIES.map(f =>
+        const frequencyOptions = '<option value="">اختر الدورية</option>' + this.LEGAL_FREQUENCIES.map(f =>
             `<option value="${f.value}" ${val('frequency') === f.value ? 'selected' : ''}>${f.label}</option>`
         ).join('');
 
         const html = `
             <div class="modal-overlay active" id="legal-training-modal">
-                <div class="modal-content" style="max-width: 800px; max-height: 90vh; overflow-y: auto;">
-                    <div class="modal-header">
-                        <h3><i class="fas fa-gavel ml-2"></i>${isEdit ? 'تعديل' : 'إضافة'} تدريب قانوني</h3>
+                <div class="modal-content" style="max-width: 820px; max-height: 90vh; overflow-y: auto;">
+                    <div class="legal-modal-header">
+                        <h3><i class="fas fa-gavel"></i>${isEdit ? 'تعديل' : 'إضافة'} تدريب قانوني</h3>
                         <button class="modal-close" onclick="document.getElementById('legal-training-modal').remove()">
                             <i class="fas fa-times"></i>
                         </button>
@@ -14672,128 +14655,138 @@ const Training = {
                     <form id="legal-training-form" onsubmit="Training.handleLegalTrainingSubmit(event)">
                         <input type="hidden" id="legal-training-edit-id" value="${editId || ''}">
                         <div class="modal-body">
-                            <div class="grid grid-cols-2 gap-4">
-                                <div class="form-group col-span-2">
-                                    <label class="form-label">عنوان التدريب <span class="text-red-500">*</span></label>
-                                    <input type="text" id="lt-title" class="form-input" value="${val('title')}" required placeholder="مثال: تدريب السلامة من الحرائق">
+                            <div class="legal-form-section">
+                                <div class="section-title"><i class="fas fa-info-circle"></i>معلومات أساسية</div>
+                                <div class="grid grid-cols-2 gap-4">
+                                    <div class="form-group col-span-2">
+                                        <label class="form-label">عنوان التدريب <span class="text-red-500">*</span></label>
+                                        <input type="text" id="lt-title" class="form-input" value="${val('title')}" required placeholder="مثال: تدريب السلامة من الحرائق">
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">التصنيف القانوني <span class="text-red-500">*</span></label>
+                                        <select id="lt-category" class="form-input" required>${categoryOptions}</select>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">دورية التدريب <span class="text-red-500">*</span></label>
+                                        <select id="lt-frequency" class="form-input" required>${frequencyOptions}</select>
+                                    </div>
                                 </div>
+                            </div>
 
+                            <div class="legal-form-section">
+                                <div class="section-title"><i class="fas fa-balance-scale"></i>مرجع قانوني</div>
+                                <div class="grid grid-cols-2 gap-4">
+                                    <div class="form-group">
+                                        <label class="form-label">المرجع القانوني</label>
+                                        <input type="text" id="lt-legalReference" class="form-input" value="${val('legalReference')}" placeholder="مثال: قانون العمل 12/2003">
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">المادة / البند</label>
+                                        <input type="text" id="lt-legalArticle" class="form-input" value="${val('legalArticle')}" placeholder="مثال: مادة 208">
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">عقوبة عدم الامتثال</label>
+                                        <input type="text" id="lt-penaltyForNonCompliance" class="form-input" value="${val('penaltyForNonCompliance')}" placeholder="مثال: غرامة مالية / إيقاف العمل">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="legal-form-section">
+                                <div class="section-title"><i class="fas fa-users"></i>الفئة المستهدفة</div>
+                                <div class="grid grid-cols-2 gap-4">
+                                    <div class="form-group">
+                                        <label class="form-label">الفئة المستهدفة</label>
+                                        <input type="text" id="lt-targetGroup" class="form-input" value="${val('targetGroup')}" placeholder="مثال: جميع العاملين، المشرفين">
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">القسم</label>
+                                        <input type="text" id="lt-department" class="form-input" value="${val('department')}" placeholder="القسم">
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">المصنع / الموقع</label>
+                                        <input type="text" id="lt-factory" class="form-input" value="${val('factory')}" placeholder="المصنع أو الموقع">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="legal-form-section">
+                                <div class="section-title"><i class="fas fa-chalkboard-teacher"></i>المدرب</div>
+                                <div class="grid grid-cols-2 gap-4">
+                                    <div class="form-group">
+                                        <label class="form-label">المدرب</label>
+                                        <input type="text" id="lt-trainer" class="form-input" value="${val('trainer')}" placeholder="اسم المدرب">
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">مؤهلات المدرب</label>
+                                        <input type="text" id="lt-trainerQualification" class="form-input" value="${val('trainerQualification')}" placeholder="مثال: NEBOSH, OSHA">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="legal-form-section">
+                                <div class="section-title"><i class="fas fa-calendar-alt"></i>المواعيد والمدة</div>
+                                <div class="grid grid-cols-3 gap-4">
+                                    <div class="form-group">
+                                        <label class="form-label">التاريخ المخطط</label>
+                                        <input type="date" id="lt-scheduledDate" class="form-input" value="${val('scheduledDate')}">
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">التاريخ الفعلي</label>
+                                        <input type="date" id="lt-actualDate" class="form-input" value="${val('actualDate')}">
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">المدة (ساعات)</label>
+                                        <input type="number" id="lt-duration" class="form-input" value="${val('duration')}" min="0" step="0.5" placeholder="عدد الساعات">
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">عدد المشاركين</label>
+                                        <input type="number" id="lt-participantsCount" class="form-input" value="${val('participantsCount')}" min="0" placeholder="عدد المشاركين">
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">تاريخ انتهاء الصلاحية</label>
+                                        <input type="date" id="lt-expiryDate" class="form-input" value="${val('expiryDate')}">
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">الاستحقاق التالي</label>
+                                        <input type="date" id="lt-nextDueDate" class="form-input" value="${val('nextDueDate')}">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="legal-form-section">
+                                <div class="section-title"><i class="fas fa-clipboard-check"></i>الحالة والامتثال</div>
+                                <div class="grid grid-cols-3 gap-4">
+                                    <div class="form-group">
+                                        <label class="form-label">الحالة</label>
+                                        <select id="lt-status" class="form-input">
+                                            <option value="مخطط" ${val('status', 'مخطط') === 'مخطط' ? 'selected' : ''}>مخطط</option>
+                                            <option value="قيد التنفيذ" ${val('status') === 'قيد التنفيذ' ? 'selected' : ''}>قيد التنفيذ</option>
+                                            <option value="مكتمل" ${val('status') === 'مكتمل' ? 'selected' : ''}>مكتمل</option>
+                                            <option value="ملغي" ${val('status') === 'ملغي' ? 'selected' : ''}>ملغي</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">حالة الامتثال</label>
+                                        <select id="lt-complianceStatus" class="form-input">
+                                            <option value="مخطط" ${val('complianceStatus', 'مخطط') === 'مخطط' ? 'selected' : ''}>مخطط</option>
+                                            <option value="ممتثل" ${val('complianceStatus') === 'ممتثل' ? 'selected' : ''}>ممتثل</option>
+                                            <option value="غير ممتثل" ${val('complianceStatus') === 'غير ممتثل' ? 'selected' : ''}>غير ممتثل</option>
+                                            <option value="قارب على الانتهاء" ${val('complianceStatus') === 'قارب على الانتهاء' ? 'selected' : ''}>قارب على الانتهاء</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">يتطلب شهادة</label>
+                                        <select id="lt-certificateRequired" class="form-input">
+                                            <option value="لا" ${val('certificateRequired', 'لا') === 'لا' ? 'selected' : ''}>لا</option>
+                                            <option value="نعم" ${val('certificateRequired') === 'نعم' ? 'selected' : ''}>نعم</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="legal-form-section">
+                                <div class="section-title"><i class="fas fa-sticky-note"></i>ملاحظات</div>
                                 <div class="form-group">
-                                    <label class="form-label">التصنيف القانوني <span class="text-red-500">*</span></label>
-                                    <select id="lt-category" class="form-input" required>
-                                        <option value="">اختر التصنيف</option>
-                                        ${categoryOptions}
-                                    </select>
-                                </div>
-
-                                <div class="form-group">
-                                    <label class="form-label">المرجع القانوني</label>
-                                    <input type="text" id="lt-legalReference" class="form-input" value="${val('legalReference')}" placeholder="مثال: قانون العمل 12/2003">
-                                </div>
-
-                                <div class="form-group">
-                                    <label class="form-label">المادة / البند</label>
-                                    <input type="text" id="lt-legalArticle" class="form-input" value="${val('legalArticle')}" placeholder="مثال: مادة 208">
-                                </div>
-
-                                <div class="form-group">
-                                    <label class="form-label">دورية التدريب <span class="text-red-500">*</span></label>
-                                    <select id="lt-frequency" class="form-input" required>
-                                        <option value="">اختر الدورية</option>
-                                        ${frequencyOptions}
-                                    </select>
-                                </div>
-
-                                <div class="form-group">
-                                    <label class="form-label">الفئة المستهدفة</label>
-                                    <input type="text" id="lt-targetGroup" class="form-input" value="${val('targetGroup')}" placeholder="مثال: جميع العاملين، المشرفين">
-                                </div>
-
-                                <div class="form-group">
-                                    <label class="form-label">القسم</label>
-                                    <input type="text" id="lt-department" class="form-input" value="${val('department')}" placeholder="القسم">
-                                </div>
-
-                                <div class="form-group">
-                                    <label class="form-label">المصنع / الموقع</label>
-                                    <input type="text" id="lt-factory" class="form-input" value="${val('factory')}" placeholder="المصنع أو الموقع">
-                                </div>
-
-                                <div class="form-group">
-                                    <label class="form-label">المدرب</label>
-                                    <input type="text" id="lt-trainer" class="form-input" value="${val('trainer')}" placeholder="اسم المدرب">
-                                </div>
-
-                                <div class="form-group">
-                                    <label class="form-label">مؤهلات المدرب</label>
-                                    <input type="text" id="lt-trainerQualification" class="form-input" value="${val('trainerQualification')}" placeholder="مثال: NEBOSH, OSHA">
-                                </div>
-
-                                <div class="form-group">
-                                    <label class="form-label">التاريخ المخطط</label>
-                                    <input type="date" id="lt-scheduledDate" class="form-input" value="${val('scheduledDate')}">
-                                </div>
-
-                                <div class="form-group">
-                                    <label class="form-label">التاريخ الفعلي</label>
-                                    <input type="date" id="lt-actualDate" class="form-input" value="${val('actualDate')}">
-                                </div>
-
-                                <div class="form-group">
-                                    <label class="form-label">المدة (ساعات)</label>
-                                    <input type="number" id="lt-duration" class="form-input" value="${val('duration')}" min="0" step="0.5" placeholder="عدد الساعات">
-                                </div>
-
-                                <div class="form-group">
-                                    <label class="form-label">عدد المشاركين</label>
-                                    <input type="number" id="lt-participantsCount" class="form-input" value="${val('participantsCount')}" min="0" placeholder="عدد المشاركين">
-                                </div>
-
-                                <div class="form-group">
-                                    <label class="form-label">الحالة</label>
-                                    <select id="lt-status" class="form-input">
-                                        <option value="مخطط" ${val('status', 'مخطط') === 'مخطط' ? 'selected' : ''}>مخطط</option>
-                                        <option value="قيد التنفيذ" ${val('status') === 'قيد التنفيذ' ? 'selected' : ''}>قيد التنفيذ</option>
-                                        <option value="مكتمل" ${val('status') === 'مكتمل' ? 'selected' : ''}>مكتمل</option>
-                                        <option value="ملغي" ${val('status') === 'ملغي' ? 'selected' : ''}>ملغي</option>
-                                    </select>
-                                </div>
-
-                                <div class="form-group">
-                                    <label class="form-label">حالة الامتثال</label>
-                                    <select id="lt-complianceStatus" class="form-input">
-                                        <option value="مخطط" ${val('complianceStatus', 'مخطط') === 'مخطط' ? 'selected' : ''}>مخطط</option>
-                                        <option value="ممتثل" ${val('complianceStatus') === 'ممتثل' ? 'selected' : ''}>ممتثل</option>
-                                        <option value="غير ممتثل" ${val('complianceStatus') === 'غير ممتثل' ? 'selected' : ''}>غير ممتثل</option>
-                                        <option value="قارب على الانتهاء" ${val('complianceStatus') === 'قارب على الانتهاء' ? 'selected' : ''}>قارب على الانتهاء</option>
-                                    </select>
-                                </div>
-
-                                <div class="form-group">
-                                    <label class="form-label">تاريخ انتهاء الصلاحية</label>
-                                    <input type="date" id="lt-expiryDate" class="form-input" value="${val('expiryDate')}">
-                                </div>
-
-                                <div class="form-group">
-                                    <label class="form-label">الاستحقاق التالي</label>
-                                    <input type="date" id="lt-nextDueDate" class="form-input" value="${val('nextDueDate')}">
-                                </div>
-
-                                <div class="form-group">
-                                    <label class="form-label">يتطلب شهادة</label>
-                                    <select id="lt-certificateRequired" class="form-input">
-                                        <option value="لا" ${val('certificateRequired', 'لا') === 'لا' ? 'selected' : ''}>لا</option>
-                                        <option value="نعم" ${val('certificateRequired') === 'نعم' ? 'selected' : ''}>نعم</option>
-                                    </select>
-                                </div>
-
-                                <div class="form-group">
-                                    <label class="form-label">عقوبة عدم الامتثال</label>
-                                    <input type="text" id="lt-penaltyForNonCompliance" class="form-input" value="${val('penaltyForNonCompliance')}" placeholder="مثال: غرامة مالية / إيقاف العمل">
-                                </div>
-
-                                <div class="form-group col-span-2">
-                                    <label class="form-label">ملاحظات</label>
                                     <textarea id="lt-notes" class="form-input" rows="3" placeholder="ملاحظات إضافية">${val('notes')}</textarea>
                                 </div>
                             </div>
@@ -15153,18 +15146,16 @@ const Training = {
         const html = `
             <div class="modal-overlay active" id="legal-attendees-modal">
                 <div class="modal-content" style="max-width: 1000px; max-height: 90vh; overflow-y: auto;">
-                    <div class="modal-header">
-                        <h3><i class="fas fa-users ml-2"></i>المتدربين — ${training.title || ''}</h3>
+                    <div class="legal-modal-header">
+                        <h3><i class="fas fa-users"></i>المتدربين — ${training.title || ''}</h3>
                         <button class="modal-close" onclick="document.getElementById('legal-attendees-modal').remove()">
                             <i class="fas fa-times"></i>
                         </button>
                     </div>
                     <div class="modal-body">
-                        <div class="flex items-center justify-between mb-4">
-                            <div class="flex items-center gap-3">
-                                <span class="text-sm text-gray-600"><i class="fas fa-users ml-1"></i> ${attendees.length} متدرب</span>
-                                <span class="text-sm text-gray-600"><i class="fas fa-certificate ml-1"></i> ${attendees.filter(a => a.certificateImage).length} شهادة مرفقة</span>
-                            </div>
+                        <div class="legal-attendee-summary">
+                            <div class="sum-item"><i class="fas fa-users"></i> ${attendees.length} متدرب</div>
+                            <div class="sum-item"><i class="fas fa-certificate"></i> ${attendees.filter(a => a.certificateImage).length} شهادة مرفقة</div>
                             <button class="btn-primary btn-sm" onclick="Training.showAddAttendeeForm('${trainingId}')">
                                 <i class="fas fa-user-plus ml-2"></i>إضافة متدرب
                             </button>
@@ -15211,74 +15202,93 @@ const Training = {
 
         const html = `
             <div class="modal-overlay active" id="legal-attendee-form-modal" style="z-index: 10001;">
-                <div class="modal-content" style="max-width: 700px; max-height: 90vh; overflow-y: auto;">
-                    <div class="modal-header">
-                        <h3><i class="fas fa-user-plus ml-2"></i>${isEdit ? 'تعديل بيانات' : 'إضافة'} متدرب</h3>
+                <div class="modal-content" style="max-width: 720px; max-height: 90vh; overflow-y: auto;">
+                    <div class="legal-modal-header">
+                        <h3><i class="fas fa-user-plus"></i>${isEdit ? 'تعديل بيانات' : 'إضافة'} متدرب</h3>
                         <button class="modal-close" onclick="document.getElementById('legal-attendee-form-modal').remove()">
                             <i class="fas fa-times"></i>
                         </button>
                     </div>
                     <form id="legal-attendee-form" onsubmit="Training.handleAttendeeSubmit(event, '${trainingId}', '${editId || ''}')">
                         <div class="modal-body">
-                            <div class="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
-                                <span class="text-sm text-blue-800"><i class="fas fa-gavel ml-1"></i> التدريب: <strong>${trainingTitle}</strong></span>
+                            <div class="legal-attendee-summary">
+                                <div class="sum-item"><i class="fas fa-gavel"></i> التدريب: <strong>${trainingTitle}</strong></div>
                             </div>
-                            <div class="grid grid-cols-2 gap-4">
-                                <div class="form-group">
-                                    <label class="form-label">كود الموظف <span class="text-red-500">*</span></label>
-                                    <input type="text" id="lta-employeeCode" class="form-input" value="${val('employeeCode')}" required placeholder="مثال: EMP001">
+
+                            <div class="legal-form-section">
+                                <div class="section-title"><i class="fas fa-user"></i>بيانات المتدرب</div>
+                                <div class="grid grid-cols-2 gap-4">
+                                    <div class="form-group">
+                                        <label class="form-label">كود الموظف <span class="text-red-500">*</span></label>
+                                        <input type="text" id="lta-employeeCode" class="form-input" value="${val('employeeCode')}" required placeholder="مثال: EMP001">
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">اسم الموظف <span class="text-red-500">*</span></label>
+                                        <input type="text" id="lta-employeeName" class="form-input" value="${val('employeeName')}" required placeholder="الاسم الكامل">
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">الوظيفة</label>
+                                        <input type="text" id="lta-employeePosition" class="form-input" value="${val('employeePosition')}" placeholder="المسمى الوظيفي">
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">القسم</label>
+                                        <input type="text" id="lta-department" class="form-input" value="${val('department')}" placeholder="القسم">
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">المصنع / الموقع</label>
+                                        <input type="text" id="lta-factory" class="form-input" value="${val('factory')}" placeholder="المصنع أو الموقع">
+                                    </div>
                                 </div>
-                                <div class="form-group">
-                                    <label class="form-label">اسم الموظف <span class="text-red-500">*</span></label>
-                                    <input type="text" id="lta-employeeName" class="form-input" value="${val('employeeName')}" required placeholder="الاسم الكامل">
+                            </div>
+
+                            <div class="legal-form-section">
+                                <div class="section-title"><i class="fas fa-calendar-check"></i>الحضور والتقييم</div>
+                                <div class="grid grid-cols-2 gap-4">
+                                    <div class="form-group">
+                                        <label class="form-label">تاريخ الحضور</label>
+                                        <input type="date" id="lta-attendanceDate" class="form-input" value="${val('attendanceDate', new Date().toISOString().slice(0, 10))}">
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">حالة الحضور</label>
+                                        <select id="lta-attendanceStatus" class="form-input">
+                                            <option value="حاضر" ${val('attendanceStatus', 'حاضر') === 'حاضر' ? 'selected' : ''}>حاضر</option>
+                                            <option value="غائب" ${val('attendanceStatus') === 'غائب' ? 'selected' : ''}>غائب</option>
+                                            <option value="مبرر" ${val('attendanceStatus') === 'مبرر' ? 'selected' : ''}>غياب مبرر</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">الدرجة / التقييم</label>
+                                        <input type="text" id="lta-score" class="form-input" value="${val('score')}" placeholder="مثال: ناجح، 85%">
+                                    </div>
                                 </div>
-                                <div class="form-group">
-                                    <label class="form-label">الوظيفة</label>
-                                    <input type="text" id="lta-employeePosition" class="form-input" value="${val('employeePosition')}" placeholder="المسمى الوظيفي">
+                            </div>
+
+                            <div class="legal-form-section">
+                                <div class="section-title"><i class="fas fa-certificate"></i>الشهادة</div>
+                                <div class="grid grid-cols-2 gap-4">
+                                    <div class="form-group">
+                                        <label class="form-label">رقم الشهادة</label>
+                                        <input type="text" id="lta-certificateNumber" class="form-input" value="${val('certificateNumber')}" placeholder="رقم الشهادة إن وجد">
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">تاريخ الشهادة</label>
+                                        <input type="date" id="lta-certificateDate" class="form-input" value="${val('certificateDate')}">
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">تاريخ انتهاء الشهادة</label>
+                                        <input type="date" id="lta-certificateExpiryDate" class="form-input" value="${val('certificateExpiryDate')}">
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label"><i class="fas fa-camera ml-1"></i> صورة الشهادة</label>
+                                        <input type="file" id="lta-certificateImage" class="form-input" accept="image/*,.pdf">
+                                        ${val('certificateImage') ? `<div class="mt-2"><a href="${val('certificateImage')}" target="_blank" class="text-blue-600 text-sm hover:underline"><i class="fas fa-file-image ml-1"></i> عرض الشهادة الحالية</a></div>` : ''}
+                                    </div>
                                 </div>
+                            </div>
+
+                            <div class="legal-form-section">
+                                <div class="section-title"><i class="fas fa-sticky-note"></i>ملاحظات</div>
                                 <div class="form-group">
-                                    <label class="form-label">القسم</label>
-                                    <input type="text" id="lta-department" class="form-input" value="${val('department')}" placeholder="القسم">
-                                </div>
-                                <div class="form-group">
-                                    <label class="form-label">المصنع / الموقع</label>
-                                    <input type="text" id="lta-factory" class="form-input" value="${val('factory')}" placeholder="المصنع أو الموقع">
-                                </div>
-                                <div class="form-group">
-                                    <label class="form-label">تاريخ الحضور</label>
-                                    <input type="date" id="lta-attendanceDate" class="form-input" value="${val('attendanceDate', new Date().toISOString().slice(0, 10))}">
-                                </div>
-                                <div class="form-group">
-                                    <label class="form-label">حالة الحضور</label>
-                                    <select id="lta-attendanceStatus" class="form-input">
-                                        <option value="حاضر" ${val('attendanceStatus', 'حاضر') === 'حاضر' ? 'selected' : ''}>حاضر</option>
-                                        <option value="غائب" ${val('attendanceStatus') === 'غائب' ? 'selected' : ''}>غائب</option>
-                                        <option value="مبرر" ${val('attendanceStatus') === 'مبرر' ? 'selected' : ''}>غياب مبرر</option>
-                                    </select>
-                                </div>
-                                <div class="form-group">
-                                    <label class="form-label">الدرجة / التقييم</label>
-                                    <input type="text" id="lta-score" class="form-input" value="${val('score')}" placeholder="مثال: ناجح، 85%">
-                                </div>
-                                <div class="form-group">
-                                    <label class="form-label">رقم الشهادة</label>
-                                    <input type="text" id="lta-certificateNumber" class="form-input" value="${val('certificateNumber')}" placeholder="رقم الشهادة إن وجد">
-                                </div>
-                                <div class="form-group">
-                                    <label class="form-label">تاريخ الشهادة</label>
-                                    <input type="date" id="lta-certificateDate" class="form-input" value="${val('certificateDate')}">
-                                </div>
-                                <div class="form-group">
-                                    <label class="form-label">تاريخ انتهاء الشهادة</label>
-                                    <input type="date" id="lta-certificateExpiryDate" class="form-input" value="${val('certificateExpiryDate')}">
-                                </div>
-                                <div class="form-group">
-                                    <label class="form-label"><i class="fas fa-camera ml-1"></i> صورة الشهادة</label>
-                                    <input type="file" id="lta-certificateImage" class="form-input" accept="image/*,.pdf">
-                                    ${val('certificateImage') ? `<div class="mt-2"><a href="${val('certificateImage')}" target="_blank" class="text-blue-600 text-sm hover:underline"><i class="fas fa-file-image ml-1"></i> عرض الشهادة الحالية</a></div>` : ''}
-                                </div>
-                                <div class="form-group col-span-2">
-                                    <label class="form-label">ملاحظات</label>
                                     <textarea id="lta-notes" class="form-input" rows="2" placeholder="ملاحظات إضافية">${val('notes')}</textarea>
                                 </div>
                             </div>
