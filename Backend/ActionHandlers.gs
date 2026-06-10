@@ -1149,6 +1149,43 @@ var ActionHandlers = {
         })();
         return result;
     },
+    // ============================================
+    // حضور التدريبات القانونية (Legal Training Attendees)
+    // ============================================
+    'addLegalTrainingAttendee': function(payload, postData, action, actorUserData, spreadsheetId) {
+        var result = { success: false, message: '' };
+        (function() {
+                    result = addLegalTrainingAttendee(payload);
+                    return;
+        })();
+        return result;
+    },
+    'updateLegalTrainingAttendee': function(payload, postData, action, actorUserData, spreadsheetId) {
+        var result = { success: false, message: '' };
+        (function() {
+                    var attendeeId = payload.attendeeId || payload.id;
+                    var updateData = payload.updateData || payload;
+                    result = updateLegalTrainingAttendee(attendeeId, updateData);
+                    return;
+        })();
+        return result;
+    },
+    'getAllLegalTrainingAttendees': function(payload, postData, action, actorUserData, spreadsheetId) {
+        var result = { success: false, message: '' };
+        (function() {
+                    result = getAllLegalTrainingAttendees(payload.filters || {});
+                    return;
+        })();
+        return result;
+    },
+    'deleteLegalTrainingAttendee': function(payload, postData, action, actorUserData, spreadsheetId) {
+        var result = { success: false, message: '' };
+        (function() {
+                    result = deleteLegalTrainingAttendee(payload.attendeeId || payload.id, actorUserData);
+                    return;
+        })();
+        return result;
+    },
     'addClinicVisit': function(payload, postData, action, actorUserData, spreadsheetId) {
         var result = { success: false, message: '' };
         (function() {

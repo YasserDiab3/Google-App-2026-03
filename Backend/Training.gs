@@ -870,6 +870,7 @@ function getTrainingModuleBundle(payload) {
         var r4 = getAllTrainingAttendance(filters);
         var r5 = getAllContractorTrainings(filters);
         var r6 = getAllLegalTrainings(filters);
+        var r7 = getAllLegalTrainingAttendees(filters);
         return {
             success: true,
             data: {
@@ -878,7 +879,8 @@ function getTrainingModuleBundle(payload) {
                 trainingCertificates: (r3 && r3.success && r3.data) ? r3.data : [],
                 trainingAttendance: (r4 && r4.success && r4.data) ? r4.data : [],
                 contractorTrainings: (r5 && r5.success && r5.data) ? r5.data : [],
-                legalTrainings: (r6 && r6.success && r6.data) ? r6.data : []
+                legalTrainings: (r6 && r6.success && r6.data) ? r6.data : [],
+                legalTrainingAttendees: (r7 && r7.success && r7.data) ? r7.data : []
             }
         };
     } catch (error) {
@@ -1138,6 +1140,129 @@ function getLegalTrainingStatistics(filters) {
     } catch (error) {
         Logger.log('Error in getLegalTrainingStatistics: ' + error.toString());
         return { success: false, message: 'حدث خطأ أثناء حساب الإحصائيات: ' + error.toString() };
+    }
+}
+
+// ============================================
+// حضور التدريبات القانونية (Legal Training Attendees)
+// ============================================
+
+function addLegalTrainingAttendee(attendeeData) {
+    try {
+        if (!attendeeData) {
+            return { success: false, message: 'بيانات الحضور غير موجودة' };
+        }
+        if (!attendeeData.legalTrainingId) {
+            return { success: false, message: 'معرف التدريب القانوني مطلوب' };
+        }
+
+        var sheetName = 'LegalTrainingAttendees';
+
+        if (!attendeeData.id) {
+            attendeeData.id = generateSequentialId('LTA', sheetName);
+        }
+        if (!attendeeData.createdAt) {
+            attendeeData.createdAt = new Date();
+        }
+        if (!attendeeData.updatedAt) {
+            attendeeData.updatedAt = new Date();
+        }
+        if (!attendeeData.attendanceStatus) {
+            attendeeData.attendanceStatus = 'حاضر';
+        }
+
+        var result = appendToSheet(sheetName, attendeeData, getSpreadsheetId());
+        if (result && result.success) {
+            return { success: true, message: 'تم إضافة المتدرب بنجاح', data: attendeeData };
+        }
+        return result || { success: false, message: 'فشل في إضافة المتدرب' };
+    } catch (error) {
+        Logger.log('Error in addLegalTrainingAttendee: ' + error.toString());
+        return { success: false, message: 'حدث خطأ أثناء إضافة المتدرب: ' + error.toString() };
+    }
+}
+
+function updateLegalTrainingAttendee(attendeeId, updateData) {
+    try {
+        if (!attendeeId) {
+            return { success: false, message: 'معرف سجل الحضور غير محدد' };
+        }
+
+        var sheetName = 'LegalTrainingAttendees';
+        var spreadsheetId = getSpreadsheetId();
+
+        updateData.id = attendeeId;
+        updateData.updatedAt = new Date();
+
+        var result = updateSingleRowInSheet(sheetName, attendeeId, updateData, spreadsheetId);
+        if (result && result.success) {
+            return { success: true, message: 'تم تحديث بيانات المتدرب بنجاح', data: updateData };
+        }
+
+        var allData = readFromSheet(sheetName, spreadsheetId);
+        var idx = Array.isArray(allData) ? allData.findIndex(function(a) { return a && String(a.id) === String(attendeeId); }) : -1;
+        if (idx === -1) {
+            return { success: false, message: 'سجل الحضور غير موجود' };
+        }
+        for (var key in updateData) {
+            if (updateData.hasOwnProperty(key)) {
+                allData[idx][key] = updateData[key];
+            }
+        }
+        return saveToSheet(sheetName, allData, spreadsheetId);
+    } catch (error) {
+        Logger.log('Error in updateLegalTrainingAttendee: ' + error.toString());
+        return { success: false, message: 'حدث خطأ أثناء تحديث بيانات المتدرب: ' + error.toString() };
+    }
+}
+
+function getAllLegalTrainingAttendees(filters) {
+    try {
+        var sheetName = 'LegalTrainingAttendees';
+        var spreadsheetId = getSpreadsheetId();
+        var data = readFromSheet(sheetName, spreadsheetId);
+
+        if (!Array.isArray(data)) data = [];
+
+        if (filters && filters.legalTrainingId) {
+            data = data.filter(function(a) { return a && String(a.legalTrainingId) === String(filters.legalTrainingId); });
+        }
+        if (filters && filters.employeeCode) {
+            data = data.filter(function(a) { return a && String(a.employeeCode) === String(filters.employeeCode); });
+        }
+        if (filters && filters.department) {
+            data = data.filter(function(a) { return a && a.department === filters.department; });
+        }
+
+        return { success: true, data: data };
+    } catch (error) {
+        Logger.log('Error in getAllLegalTrainingAttendees: ' + error.toString());
+        return { success: false, message: 'حدث خطأ أثناء جلب بيانات الحضور: ' + error.toString(), data: [] };
+    }
+}
+
+function deleteLegalTrainingAttendee(attendeeId, userData) {
+    try {
+        if (!attendeeId) {
+            return { success: false, message: 'معرف سجل الحضور غير محدد' };
+        }
+
+        var sheetName = 'LegalTrainingAttendees';
+        var spreadsheetId = getSpreadsheetId();
+        var data = readFromSheet(sheetName, spreadsheetId);
+
+        var filtered = Array.isArray(data)
+            ? data.filter(function(a) { return a && String(a.id) !== String(attendeeId); })
+            : [];
+
+        if (Array.isArray(data) && filtered.length === data.length) {
+            return { success: false, message: 'سجل الحضور غير موجود' };
+        }
+
+        return saveToSheet(sheetName, filtered, spreadsheetId);
+    } catch (error) {
+        Logger.log('Error in deleteLegalTrainingAttendee: ' + error.toString());
+        return { success: false, message: 'حدث خطأ أثناء حذف سجل الحضور: ' + error.toString() };
     }
 }
 

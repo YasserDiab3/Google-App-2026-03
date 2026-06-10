@@ -42,6 +42,7 @@ const Training = {
         if (!Array.isArray(data.trainingAttendance)) data.trainingAttendance = [];
         if (!Array.isArray(data.contractorTrainings)) data.contractorTrainings = [];
         if (!Array.isArray(data.legalTrainings)) data.legalTrainings = [];
+        if (!Array.isArray(data.legalTrainingAttendees)) data.legalTrainingAttendees = [];
         if (!data.employeeTrainingMatrix || typeof data.employeeTrainingMatrix !== 'object') {
             data.employeeTrainingMatrix = {};
         }
@@ -671,6 +672,9 @@ const Training = {
                 if (Array.isArray(bundle.legalTrainings) && (Date.now() - (this._legalTrainingsLocalSaveTime || 0)) > 60000) {
                     AppState.appData.legalTrainings = bundle.legalTrainings;
                 }
+                if (Array.isArray(bundle.legalTrainingAttendees) && (Date.now() - (this._legalAttendeesLocalSaveTime || 0)) > 60000) {
+                    AppState.appData.legalTrainingAttendees = bundle.legalTrainingAttendees;
+                }
                 persistAndRefreshUi();
                 return;
             }
@@ -699,6 +703,7 @@ const Training = {
             const attendanceGuardOk = () => (Date.now() - (this._trainingAttendanceLocalSaveTime || 0)) > 60000;
             const contractorGuardOk = () => (Date.now() - (this._contractorTrainingsLocalSaveTime || 0)) > 60000;
             const legalGuardOk = () => (Date.now() - (this._legalTrainingsLocalSaveTime || 0)) > 60000;
+            const legalAttendeesGuardOk = () => (Date.now() - (this._legalAttendeesLocalSaveTime || 0)) > 60000;
 
             if (active === 'contractors') {
                 const contractorData = await runAction('getAllContractorTrainings', 'تدريبات المقاولين');
@@ -711,6 +716,7 @@ const Training = {
                 runAction('getAllTrainingSessions', 'جلسات التدريب').then((data) => { if (data) { AppState.appData.trainingSessions = data; this._markAllTabsDirty(); } });
                 runAction('getAllTrainingCertificates', 'الشهادات').then((data) => { if (data) { AppState.appData.trainingCertificates = data; this._markAllTabsDirty(); } });
                 runAction('getAllLegalTrainings', 'التدريبات القانونية').then((data) => { if (data && legalGuardOk()) { AppState.appData.legalTrainings = data; this._markAllTabsDirty(); } });
+                runAction('getAllLegalTrainingAttendees', 'حضور التدريبات القانونية').then((data) => { if (data && legalAttendeesGuardOk()) { AppState.appData.legalTrainingAttendees = data; this._markAllTabsDirty(); } });
                 return;
             }
             if (active === 'attendance') {
@@ -727,6 +733,7 @@ const Training = {
                 runAction('getAllTrainingSessions', 'جلسات التدريب').then((data) => { if (data) { AppState.appData.trainingSessions = data; this._markAllTabsDirty(); } });
                 runAction('getAllTrainingCertificates', 'الشهادات').then((data) => { if (data) { AppState.appData.trainingCertificates = data; this._markAllTabsDirty(); } });
                 runAction('getAllLegalTrainings', 'التدريبات القانونية').then((data) => { if (data && legalGuardOk()) { AppState.appData.legalTrainings = data; this._markAllTabsDirty(); } });
+                runAction('getAllLegalTrainingAttendees', 'حضور التدريبات القانونية').then((data) => { if (data && legalAttendeesGuardOk()) { AppState.appData.legalTrainingAttendees = data; this._markAllTabsDirty(); } });
                 return;
             }
 
@@ -746,6 +753,7 @@ const Training = {
                 }
             });
             runAction('getAllLegalTrainings', 'التدريبات القانونية').then((data) => { if (data && legalGuardOk()) { AppState.appData.legalTrainings = data; this._markAllTabsDirty(); } });
+            runAction('getAllLegalTrainingAttendees', 'حضور التدريبات القانونية').then((data) => { if (data && legalAttendeesGuardOk()) { AppState.appData.legalTrainingAttendees = data; this._markAllTabsDirty(); } });
         } catch (error) {
             Utils.safeError('❌ خطأ في تحميل بيانات التدريب:', error);
             this._trainingBackendFetchOk = true;
@@ -14542,6 +14550,9 @@ const Training = {
                 <td class="text-sm">${t.expiryDate || '—'}</td>
                 <td>
                     <div class="flex items-center gap-1">
+                        <button class="btn-icon btn-sm" onclick="Training.showLegalTrainingAttendees('${t.id}')" title="المتدربين والشهادات">
+                            <i class="fas fa-users"></i>
+                        </button>
                         <button class="btn-icon btn-sm" onclick="Training.showLegalTrainingForm('${t.id}')" title="تعديل">
                             <i class="fas fa-edit"></i>
                         </button>
@@ -15058,6 +15069,403 @@ const Training = {
             doc.save('Legal_Trainings_' + new Date().toISOString().slice(0, 10) + '.pdf');
         } catch (error) {
             Utils.safeError('❌ خطأ في تصدير PDF:', error);
+        }
+    },
+
+    // ============================================
+    // حضور التدريبات القانونية — المتدربين والشهادات
+    // ============================================
+
+    _legalFileToBase64(file) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result);
+            reader.onerror = reject;
+            reader.readAsDataURL(file);
+        });
+    },
+
+    showLegalTrainingAttendees(trainingId) {
+        this.ensureData();
+        const training = (AppState.appData.legalTrainings || []).find(t => t.id === trainingId);
+        if (!training) {
+            if (typeof Notification !== 'undefined' && Notification.error) Notification.error('التدريب غير موجود');
+            return;
+        }
+
+        const attendees = (AppState.appData.legalTrainingAttendees || []).filter(a => a.legalTrainingId === trainingId);
+
+        const statusBadge = (status) => {
+            const map = { 'حاضر': 'bg-green-100 text-green-800', 'غائب': 'bg-red-100 text-red-800', 'مبرر': 'bg-yellow-100 text-yellow-800' };
+            const cls = map[status] || 'bg-gray-100 text-gray-800';
+            return `<span class="px-2 py-1 rounded-full text-xs font-medium ${cls}">${status || '—'}</span>`;
+        };
+
+        const rows = attendees.length === 0
+            ? '<tr><td colspan="9" class="text-center py-6 text-gray-500">لا يوجد متدربين مسجلين حتى الآن</td></tr>'
+            : attendees.map(a => `
+                <tr>
+                    <td class="text-sm">${a.employeeCode || '—'}</td>
+                    <td class="text-sm font-medium">${a.employeeName || '—'}</td>
+                    <td class="text-sm">${a.employeePosition || '—'}</td>
+                    <td class="text-sm">${a.department || '—'}</td>
+                    <td class="text-sm">${a.attendanceDate || '—'}</td>
+                    <td>${statusBadge(a.attendanceStatus)}</td>
+                    <td class="text-sm">${a.certificateNumber || '—'}</td>
+                    <td class="text-sm text-center">
+                        ${a.certificateImage ? `<a href="${a.certificateImage}" target="_blank" class="text-blue-600 hover:underline" title="عرض الشهادة"><i class="fas fa-file-image"></i> عرض</a>` : '—'}
+                    </td>
+                    <td>
+                        <div class="flex items-center gap-1">
+                            <button class="btn-icon btn-sm" onclick="Training.showAddAttendeeForm('${trainingId}', '${a.id}')" title="تعديل">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button class="btn-icon btn-sm text-red-600" onclick="Training.deleteLegalTrainingAttendee('${a.id}', '${trainingId}')" title="حذف">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            `).join('');
+
+        const html = `
+            <div class="modal-overlay active" id="legal-attendees-modal">
+                <div class="modal-content" style="max-width: 1000px; max-height: 90vh; overflow-y: auto;">
+                    <div class="modal-header">
+                        <h3><i class="fas fa-users ml-2"></i>المتدربين — ${training.title || ''}</h3>
+                        <button class="modal-close" onclick="document.getElementById('legal-attendees-modal').remove()">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="flex items-center justify-between mb-4">
+                            <div class="flex items-center gap-3">
+                                <span class="text-sm text-gray-600"><i class="fas fa-users ml-1"></i> ${attendees.length} متدرب</span>
+                                <span class="text-sm text-gray-600"><i class="fas fa-certificate ml-1"></i> ${attendees.filter(a => a.certificateImage).length} شهادة مرفقة</span>
+                            </div>
+                            <button class="btn-primary btn-sm" onclick="Training.showAddAttendeeForm('${trainingId}')">
+                                <i class="fas fa-user-plus ml-2"></i>إضافة متدرب
+                            </button>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>كود الموظف</th>
+                                        <th>الاسم</th>
+                                        <th>الوظيفة</th>
+                                        <th>القسم</th>
+                                        <th>تاريخ الحضور</th>
+                                        <th>الحالة</th>
+                                        <th>رقم الشهادة</th>
+                                        <th>الشهادة</th>
+                                        <th>إجراءات</th>
+                                    </tr>
+                                </thead>
+                                <tbody>${rows}</tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        const existingModal = document.getElementById('legal-attendees-modal');
+        if (existingModal) existingModal.remove();
+        document.body.insertAdjacentHTML('beforeend', html);
+    },
+
+    showAddAttendeeForm(trainingId, editId) {
+        this.ensureData();
+        let existing = null;
+        if (editId) {
+            existing = (AppState.appData.legalTrainingAttendees || []).find(a => a.id === editId);
+        }
+        const isEdit = !!existing;
+        const val = (field, def) => (existing && existing[field] != null) ? existing[field] : (def || '');
+
+        const training = (AppState.appData.legalTrainings || []).find(t => t.id === trainingId);
+        const trainingTitle = training ? training.title : '';
+
+        const html = `
+            <div class="modal-overlay active" id="legal-attendee-form-modal" style="z-index: 10001;">
+                <div class="modal-content" style="max-width: 700px; max-height: 90vh; overflow-y: auto;">
+                    <div class="modal-header">
+                        <h3><i class="fas fa-user-plus ml-2"></i>${isEdit ? 'تعديل بيانات' : 'إضافة'} متدرب</h3>
+                        <button class="modal-close" onclick="document.getElementById('legal-attendee-form-modal').remove()">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                    <form id="legal-attendee-form" onsubmit="Training.handleAttendeeSubmit(event, '${trainingId}', '${editId || ''}')">
+                        <div class="modal-body">
+                            <div class="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
+                                <span class="text-sm text-blue-800"><i class="fas fa-gavel ml-1"></i> التدريب: <strong>${trainingTitle}</strong></span>
+                            </div>
+                            <div class="grid grid-cols-2 gap-4">
+                                <div class="form-group">
+                                    <label class="form-label">كود الموظف <span class="text-red-500">*</span></label>
+                                    <input type="text" id="lta-employeeCode" class="form-input" value="${val('employeeCode')}" required placeholder="مثال: EMP001">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">اسم الموظف <span class="text-red-500">*</span></label>
+                                    <input type="text" id="lta-employeeName" class="form-input" value="${val('employeeName')}" required placeholder="الاسم الكامل">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">الوظيفة</label>
+                                    <input type="text" id="lta-employeePosition" class="form-input" value="${val('employeePosition')}" placeholder="المسمى الوظيفي">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">القسم</label>
+                                    <input type="text" id="lta-department" class="form-input" value="${val('department')}" placeholder="القسم">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">المصنع / الموقع</label>
+                                    <input type="text" id="lta-factory" class="form-input" value="${val('factory')}" placeholder="المصنع أو الموقع">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">تاريخ الحضور</label>
+                                    <input type="date" id="lta-attendanceDate" class="form-input" value="${val('attendanceDate', new Date().toISOString().slice(0, 10))}">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">حالة الحضور</label>
+                                    <select id="lta-attendanceStatus" class="form-input">
+                                        <option value="حاضر" ${val('attendanceStatus', 'حاضر') === 'حاضر' ? 'selected' : ''}>حاضر</option>
+                                        <option value="غائب" ${val('attendanceStatus') === 'غائب' ? 'selected' : ''}>غائب</option>
+                                        <option value="مبرر" ${val('attendanceStatus') === 'مبرر' ? 'selected' : ''}>غياب مبرر</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">الدرجة / التقييم</label>
+                                    <input type="text" id="lta-score" class="form-input" value="${val('score')}" placeholder="مثال: ناجح، 85%">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">رقم الشهادة</label>
+                                    <input type="text" id="lta-certificateNumber" class="form-input" value="${val('certificateNumber')}" placeholder="رقم الشهادة إن وجد">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">تاريخ الشهادة</label>
+                                    <input type="date" id="lta-certificateDate" class="form-input" value="${val('certificateDate')}">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">تاريخ انتهاء الشهادة</label>
+                                    <input type="date" id="lta-certificateExpiryDate" class="form-input" value="${val('certificateExpiryDate')}">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label"><i class="fas fa-camera ml-1"></i> صورة الشهادة</label>
+                                    <input type="file" id="lta-certificateImage" class="form-input" accept="image/*,.pdf">
+                                    ${val('certificateImage') ? `<div class="mt-2"><a href="${val('certificateImage')}" target="_blank" class="text-blue-600 text-sm hover:underline"><i class="fas fa-file-image ml-1"></i> عرض الشهادة الحالية</a></div>` : ''}
+                                </div>
+                                <div class="form-group col-span-2">
+                                    <label class="form-label">ملاحظات</label>
+                                    <textarea id="lta-notes" class="form-input" rows="2" placeholder="ملاحظات إضافية">${val('notes')}</textarea>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn-secondary" onclick="document.getElementById('legal-attendee-form-modal').remove()">إلغاء</button>
+                            <button type="submit" class="btn-primary" id="lta-submit-btn">
+                                <i class="fas fa-save ml-2"></i>${isEdit ? 'حفظ التعديلات' : 'إضافة المتدرب'}
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        `;
+
+        const existingModal = document.getElementById('legal-attendee-form-modal');
+        if (existingModal) existingModal.remove();
+        document.body.insertAdjacentHTML('beforeend', html);
+    },
+
+    async handleAttendeeSubmit(e, trainingId, editId) {
+        e.preventDefault();
+        const isEdit = !!editId;
+
+        const getVal = (id) => {
+            const el = document.getElementById(id);
+            return el ? el.value.trim() : '';
+        };
+
+        const data = {
+            legalTrainingId: trainingId,
+            employeeCode: getVal('lta-employeeCode'),
+            employeeName: getVal('lta-employeeName'),
+            employeePosition: getVal('lta-employeePosition'),
+            department: getVal('lta-department'),
+            factory: getVal('lta-factory'),
+            factoryName: getVal('lta-factory'),
+            attendanceDate: getVal('lta-attendanceDate'),
+            attendanceStatus: getVal('lta-attendanceStatus'),
+            score: getVal('lta-score'),
+            certificateNumber: getVal('lta-certificateNumber'),
+            certificateDate: getVal('lta-certificateDate'),
+            certificateExpiryDate: getVal('lta-certificateExpiryDate'),
+            notes: getVal('lta-notes')
+        };
+
+        const training = (AppState.appData.legalTrainings || []).find(t => t.id === trainingId);
+        data.legalTrainingTitle = training ? training.title : '';
+
+        if (!data.employeeCode || !data.employeeName) {
+            if (typeof Notification !== 'undefined' && Notification.error) {
+                Notification.error('يرجى إدخال كود الموظف واسمه');
+            }
+            return;
+        }
+
+        const submitBtn = document.getElementById('lta-submit-btn');
+        if (submitBtn) { submitBtn.disabled = true; submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin ml-2"></i>جاري الحفظ...'; }
+
+        try {
+            const fileInput = document.getElementById('lta-certificateImage');
+            if (fileInput && fileInput.files && fileInput.files.length > 0) {
+                const file = fileInput.files[0];
+                if (file.size > 10 * 1024 * 1024) {
+                    if (typeof Notification !== 'undefined' && Notification.error) Notification.error('حجم الملف كبير جداً (الحد الأقصى 10 ميجابايت)');
+                    if (submitBtn) { submitBtn.disabled = false; submitBtn.innerHTML = '<i class="fas fa-save ml-2"></i>' + (isEdit ? 'حفظ التعديلات' : 'إضافة المتدرب'); }
+                    return;
+                }
+
+                try {
+                    if (typeof Loading !== 'undefined' && Loading.show) Loading.show();
+                    const base64Data = await this._legalFileToBase64(file);
+                    const fileName = `legal_cert_${trainingId}_${data.employeeCode}_${Date.now()}.${file.name.split('.').pop()}`;
+                    const mimeType = file.type || 'image/jpeg';
+
+                    if (typeof GoogleIntegration !== 'undefined' && GoogleIntegration.uploadFileToDrive) {
+                        const uploadResult = await GoogleIntegration.uploadFileToDrive(base64Data, fileName, mimeType, 'LegalTrainingCertificates');
+                        if (uploadResult && uploadResult.success) {
+                            data.certificateImage = uploadResult.directLink || uploadResult.shareableLink || base64Data;
+                        } else {
+                            data.certificateImage = base64Data;
+                        }
+                    } else {
+                        data.certificateImage = base64Data;
+                    }
+                    if (typeof Loading !== 'undefined' && Loading.hide) Loading.hide();
+                } catch (uploadError) {
+                    if (typeof Loading !== 'undefined' && Loading.hide) Loading.hide();
+                    Utils.safeWarn('⚠️ تعذر رفع صورة الشهادة إلى Drive:', uploadError);
+                    try {
+                        data.certificateImage = await this._legalFileToBase64(fileInput.files[0]);
+                    } catch (_) {
+                        data.certificateImage = '';
+                    }
+                }
+            } else if (isEdit) {
+                const existingAttendee = (AppState.appData.legalTrainingAttendees || []).find(a => a.id === editId);
+                if (existingAttendee && existingAttendee.certificateImage) {
+                    data.certificateImage = existingAttendee.certificateImage;
+                }
+            }
+
+            if (isEdit) {
+                data.id = editId;
+                data.updatedAt = new Date().toISOString();
+
+                const items = AppState.appData.legalTrainingAttendees || [];
+                const idx = items.findIndex(a => a.id === editId);
+                if (idx !== -1) {
+                    Object.assign(items[idx], data);
+                }
+                this._legalAttendeesLocalSaveTime = Date.now();
+
+                const formModal = document.getElementById('legal-attendee-form-modal');
+                if (formModal) formModal.remove();
+                this.showLegalTrainingAttendees(trainingId);
+
+                if (typeof Notification !== 'undefined' && Notification.success) Notification.success('تم تحديث بيانات المتدرب بنجاح');
+
+                if (typeof GoogleIntegration !== 'undefined' && GoogleIntegration.sendRequest) {
+                    GoogleIntegration.sendRequest({
+                        action: 'updateLegalTrainingAttendee',
+                        data: { attendeeId: editId, updateData: data }
+                    }).catch(err => Utils.safeWarn('⚠️ تعذر تحديث بيانات المتدرب على الخادم:', err));
+                }
+            } else {
+                data.createdAt = new Date().toISOString();
+                data.updatedAt = data.createdAt;
+                data.createdBy = AppState.currentUser?.email || '';
+
+                if (!AppState.appData.legalTrainingAttendees) AppState.appData.legalTrainingAttendees = [];
+                const tempId = 'LTA-LOCAL-' + Date.now();
+                data.id = tempId;
+                AppState.appData.legalTrainingAttendees.push(data);
+                this._legalAttendeesLocalSaveTime = Date.now();
+
+                const formModal = document.getElementById('legal-attendee-form-modal');
+                if (formModal) formModal.remove();
+                this.showLegalTrainingAttendees(trainingId);
+
+                this._updateLegalTrainingParticipantsCount(trainingId);
+
+                if (typeof Notification !== 'undefined' && Notification.success) Notification.success('تم إضافة المتدرب بنجاح');
+
+                if (typeof GoogleIntegration !== 'undefined' && GoogleIntegration.sendRequest) {
+                    const serverData = Object.assign({}, data);
+                    delete serverData.id;
+                    GoogleIntegration.sendRequest({
+                        action: 'addLegalTrainingAttendee',
+                        data: serverData
+                    }).then(resp => {
+                        if (resp && resp.success && resp.data && resp.data.id) {
+                            const items = AppState.appData.legalTrainingAttendees || [];
+                            const localIdx = items.findIndex(a => a.id === tempId);
+                            if (localIdx !== -1) {
+                                items[localIdx].id = resp.data.id;
+                            }
+                            if (typeof window.DataManager !== 'undefined' && window.DataManager.save) window.DataManager.save();
+                        }
+                    }).catch(err => Utils.safeWarn('⚠️ تعذر حفظ بيانات المتدرب على الخادم:', err));
+                }
+            }
+
+            if (typeof window.DataManager !== 'undefined' && window.DataManager.save) window.DataManager.save();
+        } catch (error) {
+            Utils.safeError('❌ خطأ في حفظ بيانات المتدرب:', error);
+            if (typeof Notification !== 'undefined' && Notification.error) Notification.error('حدث خطأ أثناء الحفظ');
+            if (submitBtn) { submitBtn.disabled = false; submitBtn.innerHTML = '<i class="fas fa-save ml-2"></i>' + (isEdit ? 'حفظ التعديلات' : 'إضافة المتدرب'); }
+        }
+    },
+
+    _updateLegalTrainingParticipantsCount(trainingId) {
+        const attendees = (AppState.appData.legalTrainingAttendees || []).filter(a => a.legalTrainingId === trainingId);
+        const training = (AppState.appData.legalTrainings || []).find(t => t.id === trainingId);
+        if (training) {
+            training.participantsCount = attendees.length;
+            this._legalTrainingsLocalSaveTime = Date.now();
+            if (typeof GoogleIntegration !== 'undefined' && GoogleIntegration.sendRequest) {
+                GoogleIntegration.sendRequest({
+                    action: 'updateLegalTraining',
+                    data: { trainingId: trainingId, updateData: { participantsCount: attendees.length } }
+                }).catch(() => {});
+            }
+        }
+    },
+
+    async deleteLegalTrainingAttendee(attendeeId, trainingId) {
+        if (!attendeeId) return;
+        if (!confirm('هل أنت متأكد من حذف هذا المتدرب؟')) return;
+
+        try {
+            const items = AppState.appData.legalTrainingAttendees || [];
+            AppState.appData.legalTrainingAttendees = items.filter(a => a.id !== attendeeId);
+            this._legalAttendeesLocalSaveTime = Date.now();
+
+            this._updateLegalTrainingParticipantsCount(trainingId);
+            this.showLegalTrainingAttendees(trainingId);
+
+            if (typeof window.DataManager !== 'undefined' && window.DataManager.save) window.DataManager.save();
+            if (typeof Notification !== 'undefined' && Notification.success) Notification.success('تم حذف المتدرب');
+
+            if (typeof GoogleIntegration !== 'undefined' && GoogleIntegration.sendRequest) {
+                GoogleIntegration.sendRequest({
+                    action: 'deleteLegalTrainingAttendee',
+                    data: { attendeeId: attendeeId }
+                }).catch(err => Utils.safeWarn('⚠️ تعذر حذف المتدرب من الخادم:', err));
+            }
+        } catch (error) {
+            Utils.safeError('❌ خطأ في حذف المتدرب:', error);
         }
     },
 
