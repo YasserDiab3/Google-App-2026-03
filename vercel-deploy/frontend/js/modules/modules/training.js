@@ -14424,23 +14424,21 @@ const Training = {
 
             <div class="legal-table-card">
                 <div class="card-header">
-                    <div class="flex items-center justify-between" style="flex-wrap: wrap; gap: 10px;">
-                        <h3 class="card-title" style="margin: 0;"><i class="fas fa-gavel ml-2"></i>سجل التدريبات القانونية</h3>
-                        <div class="flex items-center gap-3 flex-wrap">
-                            <div class="flex items-center gap-2">
-                                <button id="export-legal-training-pdf-btn" class="btn-secondary btn-sm">
-                                    <i class="fas fa-file-pdf ml-1" style="font-size: 14px;"></i>PDF
-                                </button>
-                                <button id="export-legal-training-excel-btn" class="btn-success btn-sm">
-                                    <i class="fas fa-file-excel ml-1" style="font-size: 14px;"></i>Excel
-                                </button>
-                            </div>
-                            <span class="separator hidden md:inline">|</span>
-                            <input type="text" id="legal-training-search" class="form-input" style="max-width: 220px; min-width: 160px;" placeholder="بحث (عنوان، مرجع، مدرب)">
-                            <button id="add-legal-training-btn" class="btn-primary">
-                                <i class="fas fa-plus ml-2"></i>إضافة تدريب
+                    <h3 class="card-title" style="margin: 0 0 12px;"><i class="fas fa-gavel ml-2"></i>سجل التدريبات القانونية</h3>
+                    <div class="flex items-center gap-3 flex-wrap">
+                        <div class="flex items-center gap-2">
+                            <button id="export-legal-training-pdf-btn" class="btn-secondary btn-sm">
+                                <i class="fas fa-file-pdf ml-1" style="font-size: 14px;"></i>PDF
+                            </button>
+                            <button id="export-legal-training-excel-btn" class="btn-success btn-sm">
+                                <i class="fas fa-file-excel ml-1" style="font-size: 14px;"></i>Excel
                             </button>
                         </div>
+                        <span class="separator hidden md:inline">|</span>
+                        <input type="text" id="legal-training-search" class="form-input" style="max-width: 260px; min-width: 180px;" placeholder="بحث (عنوان، مرجع قانوني، مدرب)">
+                        <button id="add-legal-training-btn" class="btn-primary">
+                            <i class="fas fa-plus ml-2"></i>إضافة تدريب قانوني
+                        </button>
                     </div>
                 </div>
                 <div class="card-body" id="legal-training-container">
@@ -15054,11 +15052,22 @@ const Training = {
             const container = document.getElementById('legal-training-container');
             const origHtml = container ? container.innerHTML : '';
 
+            const companyName = (AppState && AppState.companySettings && AppState.companySettings.name)
+                ? String(AppState.companySettings.name).trim()
+                : (AppState && AppState.companyName) ? String(AppState.companyName).trim() : '';
+            const logoUrl = (AppState && (AppState.companyLogo || (AppState.companySettings && AppState.companySettings.logo)))
+                ? (AppState.companyLogo || AppState.companySettings.logo || '') : '';
+            const logoHtml = logoUrl ? `<img src="${logoUrl}" alt="" style="max-height:50px; max-width:130px; object-fit:contain;">` : '';
+
             const reportHtml = `
                 <div dir="rtl" style="font-family: 'Segoe UI', Tahoma, sans-serif; padding: 30px; background: #fff; direction: rtl;">
-                    <div style="text-align: center; border-bottom: 3px solid #1e40af; padding-bottom: 16px; margin-bottom: 20px;">
-                        <h1 style="font-size: 22px; color: #1e293b; margin: 0 0 4px;">تقرير التدريبات القانونية</h1>
-                        <p style="font-size: 13px; color: #64748b; margin: 0;">الامتثال للقوانين المصرية — Egyptian Law Compliance</p>
+                    <div style="display: flex; align-items: center; justify-content: space-between; border-bottom: 3px solid #1e40af; padding-bottom: 16px; margin-bottom: 20px;">
+                        <div style="text-align: right;">
+                            ${companyName ? `<div style="font-size: 18px; font-weight: 700; color: #1e40af; margin-bottom: 4px;">${companyName}</div>` : ''}
+                            <h1 style="font-size: 20px; color: #1e293b; margin: 0 0 2px;">تقرير التدريبات القانونية</h1>
+                            <p style="font-size: 12px; color: #64748b; margin: 0;">الامتثال للقوانين المصرية — Egyptian Law Compliance</p>
+                        </div>
+                        ${logoHtml ? `<div style="flex-shrink: 0;">${logoHtml}</div>` : ''}
                     </div>
                     <div style="display: flex; justify-content: space-between; margin-bottom: 20px; gap: 12px; flex-wrap: wrap;">
                         <div style="background: #f8fafc; padding: 12px 18px; border-radius: 10px; flex: 1; min-width: 140px; border: 1px solid #e2e8f0;">

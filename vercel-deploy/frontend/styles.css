@@ -15436,10 +15436,10 @@ body[data-theme="dark"] .profile-info-list>div,
 @media (max-width: 768px) {
     .legal-table-card .card-header .separator { display: none; }
     .legal-table-card .card-header .flex { flex-direction: column; align-items: stretch; }
-    .legal-table-card .card-header .flex .flex { width: 100%; }
-    .legal-table-card .card-header .flex .flex .btn-sm { flex: 1; }
-    .legal-table-card #legal-training-search { max-width: 100% !important; width: 100%; }
-    .legal-table-card #add-legal-training-btn { width: 100%; justify-content: center; }
+    .legal-table-card .card-header .flex > .flex { width: 100%; }
+    .legal-table-card .card-header .flex > .flex .btn-sm { flex: 1; }
+    .legal-table-card .card-header #legal-training-search { max-width: 100% !important; min-width: 0 !important; width: 100%; }
+    .legal-table-card .card-header #add-legal-training-btn { width: 100%; justify-content: center; }
 }
 
 .legal-table-card .data-table th {
