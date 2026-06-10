@@ -16156,3 +16156,127 @@ body[data-theme="dark"] .profile-info-list>div,
     color: #4c51bf;
     font-weight: 600;
 }
+
+/* Responsive improvements for Contractor Analytics */
+@media (max-width: 768px) {
+    .contractor-analytics-section {
+        max-width: 100%;
+        overflow-x: hidden;
+    }
+    .contractor-analytics-slicers {
+        padding: 16px;
+    }
+    .contractor-analytics-slicers-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+    }
+    .contractor-analytics-kpi-card {
+        padding: 12px 10px;
+        min-height: 60px;
+    }
+    .contractor-analytics-kpi-card .kpi-value {
+        font-size: 18px;
+    }
+    .contractor-analytics-tabs-bar {
+        padding: 12px 14px;
+    }
+    .contractor-analytics-tabs-bar .tabs-row {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    .contractor-analytics-tabs-bar .tabs-group {
+        width: 100%;
+    }
+    .contractor-analytics-tab {
+        flex: 1;
+        justify-content: center;
+        padding: 8px 10px;
+        font-size: 0.75rem;
+        text-align: center;
+    }
+    .contractor-analytics-sort-group {
+        width: 100%;
+    }
+    .contractor-analytics-sort-box {
+        width: 100%;
+        flex-wrap: wrap;
+        padding: 8px 10px;
+    }
+    .contractor-analytics-sort-box select {
+        flex: 1;
+        min-width: 60px;
+    }
+    .contractor-analytics-content {
+        padding: 14px;
+    }
+    .contractor-analytics-clear-drill {
+        width: 100%;
+        justify-content: center;
+    }
+    .contractor-analytics-pivot-table {
+        min-width: 500px;
+    }
+    .contractor-analytics-pivot-table th,
+    .contractor-analytics-pivot-table td {
+        padding: 10px 12px;
+        font-size: 11px;
+    }
+    .contractor-analytics-details-table {
+        min-width: 700px;
+    }
+    .contractor-analytics-details-table th,
+    .contractor-analytics-details-table td {
+        padding: 8px 8px;
+        font-size: 10px;
+    }
+}
+
+@media (max-width: 480px) {
+    .contractor-analytics-kpi-grid {
+        grid-template-columns: 1fr;
+    }
+    .contractor-analytics-slicers-grid {
+        gap: 12px;
+    }
+    .contractor-analytics-kpi-card {
+        padding: 10px 14px;
+        min-height: 50px;
+        flex-direction: row;
+        align-items: center;
+        justify-content: space-between;
+    }
+    .contractor-analytics-kpi-card .kpi-label {
+        margin-bottom: 0;
+        white-space: normal;
+        font-size: 10px;
+    }
+    .contractor-analytics-kpi-card .kpi-value {
+        font-size: 16px;
+    }
+    .contractor-analytics-pivot-table {
+        min-width: 400px;
+    }
+    .contractor-analytics-pivot-table th,
+    .contractor-analytics-pivot-table td {
+        padding: 8px 8px;
+        font-size: 10px;
+    }
+    .contractor-analytics-details-table {
+        min-width: 560px;
+    }
+    .contractor-analytics-details-footer {
+        flex-direction: column;
+        gap: 6px;
+        text-align: center;
+    }
+    .contractor-analytics-empty {
+        padding: 24px 16px;
+    }
+    .contractor-analytics-empty i {
+        font-size: 2rem;
+    }
+    .contractor-analytics-pivot-footnote {
+        font-size: 0.65rem;
+    }
+}
