@@ -1142,7 +1142,6 @@ const Training = {
 
     renderContractorAnalyticsDashboard(model, state) {
         const safe = (v) => Utils.escapeHTML(String(v ?? ''));
-        // ✅ استخدام الأرقام الإنجليزية (en-US) في جميع الكروت والإحصائيات
         const fmt = (n, digits = 0) => {
             const num = Number(n) || 0;
             return num.toLocaleString('en-US', { minimumFractionDigits: digits, maximumFractionDigits: digits });
@@ -1158,67 +1157,39 @@ const Training = {
                 .join('');
         };
 
-        const tabBtn = (id, label, icon, active) => `
-            <button type="button" class="btn-secondary btn-sm" id="${id}" style="${active ? 'background:#EEF2FF;border-color:#C7D2FE;color:#1E3A8A;' : ''}">
-                <i class="fas ${icon} ml-2"></i>${label}
-            </button>
-        `;
-
         const renderPivotTable = (rows, mode) => {
             if (!rows.length) {
-                return `<div style="padding: 40px 20px; text-align: center; background: linear-gradient(180deg, #fafbfc 0%, #f3f4f6 100%); border-radius: 12px; border: 2px dashed #e5e7eb;">
-                    <i class="fas fa-inbox" style="font-size: 2.5rem; color: #d1d5db; margin-bottom: 12px; display: block;"></i>
-                    <p style="color: #9ca3af; font-size: 0.9rem; margin: 0;">لا توجد بيانات مطابقة للفلاتر الحالية</p>
-                </div>`;
+                return `<div class="contractor-analytics-empty"><i class="fas fa-inbox"></i><p>لا توجد بيانات مطابقة للفلاتر الحالية</p></div>`;
             }
             return `
-                <div style="overflow: auto; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); border: 1px solid #e5e7eb; max-height: 400px; scrollbar-width: thin; scrollbar-color: #667eea #e0e7ff;">
-                    <style>
-                        .pivot-table-container::-webkit-scrollbar { width: 6px; height: 6px; }
-                        .pivot-table-container::-webkit-scrollbar-track { background: #e0e7ff; border-radius: 10px; }
-                        .pivot-table-container::-webkit-scrollbar-thumb { background: linear-gradient(180deg, #667eea, #764ba2); border-radius: 10px; }
-                    </style>
-                    <table class="table-auto w-full" style="min-width: 640px; border-collapse: separate; border-spacing: 0;">
+                <div class="contractor-analytics-pivot-wrap">
+                    <table class="contractor-analytics-pivot-table w-full">
                         <thead>
-                            <tr style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
-                                <th style="padding: 14px 16px; font-size: 12px; text-align: right; color: white; font-weight: 700; position: sticky; top: 0; z-index: 10; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
-                                    <i class="fas ${mode === 'trainer' ? 'fa-user-tie' : 'fa-building'} ml-2"></i>${mode === 'trainer' ? 'القائم بالتدريب' : 'المقاول'}
-                                </th>
-                                <th style="padding: 14px 12px; font-size: 12px; text-align: center; color: white; font-weight: 700; position: sticky; top: 0; z-index: 10; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
-                                    <i class="fas fa-clipboard-list ml-1"></i>البرامج
-                                </th>
-                                <th style="padding: 14px 12px; font-size: 12px; text-align: center; color: white; font-weight: 700; position: sticky; top: 0; z-index: 10; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
-                                    <i class="fas fa-users ml-1"></i>المتدربين
-                                </th>
-                                <th style="padding: 14px 12px; font-size: 12px; text-align: center; color: white; font-weight: 700; position: sticky; top: 0; z-index: 10; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
-                                    <i class="fas fa-clock ml-1"></i>الساعات
-                                </th>
+                            <tr>
+                                <th><i class="fas ${mode === 'trainer' ? 'fa-user-tie' : 'fa-building'} ml-2"></i>${mode === 'trainer' ? 'القائم بالتدريب' : 'المقاول'}</th>
+                                <th><i class="fas fa-clipboard-list ml-1"></i>البرامج</th>
+                                <th><i class="fas fa-users ml-1"></i>المتدربين</th>
+                                <th><i class="fas fa-clock ml-1"></i>الساعات</th>
                             </tr>
                         </thead>
                         <tbody>
-                            ${rows.map((r, idx) => `
-                                <tr class="hover:bg-indigo-50 cursor-pointer transition-all duration-200" data-analytics-drill="${safe(r.label)}" data-analytics-mode="${mode}" style="background: ${idx % 2 === 0 ? '#ffffff' : '#f8fafc'};" onmouseover="this.style.background='#eef2ff'; this.style.transform='scale(1.005)'" onmouseout="this.style.background='${idx % 2 === 0 ? '#ffffff' : '#f8fafc'}'; this.style.transform='scale(1)'">
-                                    <td style="padding: 12px 16px; font-size: 12px; text-align: right; border-bottom: 1px solid #f0f0f0;">
-                                        <span style="color: #4c51bf; font-weight: 600; display: flex; align-items: center; gap: 8px;">
-                                            <span style="width: 8px; height: 8px; background: linear-gradient(135deg, #667eea, #764ba2); border-radius: 50%; flex-shrink: 0;"></span>
+                            ${rows.map((r) => `
+                                <tr data-analytics-drill="${safe(r.label)}" data-analytics-mode="${mode}">
+                                    <td>
+                                        <span class="label-cell">
+                                            <span class="dot"></span>
                                             ${safe(r.label)}
                                         </span>
                                     </td>
-                                    <td style="padding: 12px; font-size: 12px; text-align: center; border-bottom: 1px solid #f0f0f0;">
-                                        <span style="background: #dbeafe; color: #1e40af; padding: 4px 10px; border-radius: 20px; font-weight: 600;">${fmt(r.count)}</span>
-                                    </td>
-                                    <td style="padding: 12px; font-size: 12px; text-align: center; border-bottom: 1px solid #f0f0f0;">
-                                        <span style="background: #dcfce7; color: #166534; padding: 4px 10px; border-radius: 20px; font-weight: 600;">${fmt(r.trainees)}</span>
-                                    </td>
-                                    <td style="padding: 12px; font-size: 12px; text-align: center; border-bottom: 1px solid #f0f0f0;">
-                                        <span style="background: #fef3c7; color: #92400e; padding: 4px 10px; border-radius: 20px; font-weight: 600;">${fmt(r.hours, 2)}</span>
-                                    </td>
+                                    <td><span class="badge badge-blue">${fmt(r.count)}</span></td>
+                                    <td><span class="badge badge-green">${fmt(r.trainees)}</span></td>
+                                    <td><span class="badge badge-amber">${fmt(r.hours, 2)}</span></td>
                                 </tr>
                             `).join('')}
                         </tbody>
                     </table>
                 </div>
-                <p style="font-size: 0.75rem; color: #9ca3af; margin-top: 8px; text-align: center;">
+                <p class="contractor-analytics-pivot-footnote">
                     <i class="fas fa-mouse-pointer ml-1"></i>اضغط على أي صف للتعمق في التفاصيل
                 </p>
             `;
@@ -1226,215 +1197,145 @@ const Training = {
 
         const renderDetails = () => {
             const rows = computed.details.slice(0, 300);
-            if (!rows.length) return `<div style="padding: 40px 20px; text-align: center; background: linear-gradient(180deg, #fafbfc 0%, #f3f4f6 100%); border-radius: 12px; border: 2px dashed #e5e7eb;">
-                <i class="fas fa-folder-open" style="font-size: 2.5rem; color: #d1d5db; margin-bottom: 12px; display: block;"></i>
-                <p style="color: #9ca3af; font-size: 0.9rem; margin: 0;">لا توجد تفاصيل للعرض</p>
-            </div>`;
+            if (!rows.length) return `<div class="contractor-analytics-empty"><i class="fas fa-folder-open"></i><p>لا توجد تفاصيل للعرض</p></div>`;
             return `
-                <div class="details-table-container" style="overflow: auto; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); border: 1px solid #e5e7eb; max-height: 450px; scrollbar-width: thin; scrollbar-color: #667eea #e0e7ff;">
-                    <style>
-                        .details-table-container::-webkit-scrollbar { width: 6px; height: 6px; }
-                        .details-table-container::-webkit-scrollbar-track { background: #e0e7ff; border-radius: 10px; }
-                        .details-table-container::-webkit-scrollbar-thumb { background: linear-gradient(180deg, #667eea, #764ba2); border-radius: 10px; }
-                    </style>
-                    <table class="table-auto w-full" style="min-width: 980px; border-collapse: separate; border-spacing: 0;">
+                <div class="contractor-analytics-details-wrap">
+                    <table class="contractor-analytics-details-table w-full">
                         <thead>
-                            <tr style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
-                                <th style="padding: 14px 12px; font-size: 11px; text-align: center; color: white; font-weight: 700; position: sticky; top: 0; z-index: 10; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); white-space: nowrap;">
-                                    <i class="fas fa-calendar ml-1"></i>التاريخ
-                                </th>
-                                <th style="padding: 14px 12px; font-size: 11px; text-align: right; color: white; font-weight: 700; position: sticky; top: 0; z-index: 10; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); white-space: nowrap;">
-                                    <i class="fas fa-book ml-1"></i>الموضوع
-                                </th>
-                                <th style="padding: 14px 12px; font-size: 11px; text-align: right; color: white; font-weight: 700; position: sticky; top: 0; z-index: 10; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); white-space: nowrap;">
-                                    <i class="fas fa-user-tie ml-1"></i>المدرب
-                                </th>
-                                <th style="padding: 14px 12px; font-size: 11px; text-align: right; color: white; font-weight: 700; position: sticky; top: 0; z-index: 10; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); white-space: nowrap;">
-                                    <i class="fas fa-building ml-1"></i>المقاول
-                                </th>
-                                <th style="padding: 14px 12px; font-size: 11px; text-align: center; color: white; font-weight: 700; position: sticky; top: 0; z-index: 10; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); white-space: nowrap;">
-                                    <i class="fas fa-users ml-1"></i>المتدربين
-                                </th>
-                                <th style="padding: 14px 12px; font-size: 11px; text-align: center; color: white; font-weight: 700; position: sticky; top: 0; z-index: 10; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); white-space: nowrap;">
-                                    <i class="fas fa-clock ml-1"></i>الساعات
-                                </th>
-                                <th style="padding: 14px 12px; font-size: 11px; text-align: right; color: white; font-weight: 700; position: sticky; top: 0; z-index: 10; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); white-space: nowrap;">
-                                    <i class="fas fa-map-marker-alt ml-1"></i>الموقع
-                                </th>
+                            <tr>
+                                <th><i class="fas fa-calendar ml-1"></i>التاريخ</th>
+                                <th><i class="fas fa-book ml-1"></i>الموضوع</th>
+                                <th><i class="fas fa-user-tie ml-1"></i>المدرب</th>
+                                <th><i class="fas fa-building ml-1"></i>المقاول</th>
+                                <th><i class="fas fa-users ml-1"></i>المتدربين</th>
+                                <th><i class="fas fa-clock ml-1"></i>الساعات</th>
+                                <th><i class="fas fa-map-marker-alt ml-1"></i>الموقع</th>
                             </tr>
                         </thead>
                         <tbody>
-                            ${rows.map((r, idx) => `
-                                <tr class="hover:bg-indigo-50 transition-all duration-200" style="background: ${idx % 2 === 0 ? '#ffffff' : '#f8fafc'};" onmouseover="this.style.background='#eef2ff'" onmouseout="this.style.background='${idx % 2 === 0 ? '#ffffff' : '#f8fafc'}'">
-                                    <td style="padding: 10px 12px; font-size: 11px; text-align: center; border-bottom: 1px solid #f0f0f0; white-space: nowrap;">
-                                        <span style="background: #f3f4f6; padding: 3px 8px; border-radius: 6px; color: #4b5563;">${r.raw?.date ? safe(Utils.formatDate(r.raw.date)) : '-'}</span>
-                                    </td>
-                                    <td style="padding: 10px 12px; font-size: 11px; text-align: right; border-bottom: 1px solid #f0f0f0; max-width: 200px; overflow: hidden; text-overflow: ellipsis;" title="${safe(r.topic || '-')}">${safe(r.topic || '-')}</td>
-                                    <td style="padding: 10px 12px; font-size: 11px; text-align: right; border-bottom: 1px solid #f0f0f0;">
-                                        <span style="color: #4c51bf; font-weight: 500;">${safe(r.trainer || '-')}</span>
-                                    </td>
-                                    <td style="padding: 10px 12px; font-size: 11px; text-align: right; border-bottom: 1px solid #f0f0f0;">
-                                        <span style="color: #059669; font-weight: 500;">${safe(r.contractorName || '-')}</span>
-                                    </td>
-                                    <td style="padding: 10px 12px; font-size: 11px; text-align: center; border-bottom: 1px solid #f0f0f0;">
-                                        <span style="background: #dcfce7; color: #166534; padding: 2px 8px; border-radius: 12px; font-weight: 600; font-size: 10px;">${fmt(r.trainees)}</span>
-                                    </td>
-                                    <td style="padding: 10px 12px; font-size: 11px; text-align: center; border-bottom: 1px solid #f0f0f0;">
-                                        <span style="background: #fef3c7; color: #92400e; padding: 2px 8px; border-radius: 12px; font-weight: 600; font-size: 10px;">${fmt(r.hours, 2)}</span>
-                                    </td>
-                                    <td style="padding: 10px 12px; font-size: 11px; text-align: right; border-bottom: 1px solid #f0f0f0; max-width: 150px; overflow: hidden; text-overflow: ellipsis;" title="${safe(r.location || '-')}">${safe(r.location || '-')}</td>
+                            ${rows.map((r) => `
+                                <tr>
+                                    <td><span class="date-badge">${r.raw?.date ? safe(Utils.formatDate(r.raw.date)) : '-'}</span></td>
+                                    <td title="${safe(r.topic || '-')}" style="max-width:200px;overflow:hidden;text-overflow:ellipsis;">${safe(r.topic || '-')}</td>
+                                    <td><span class="trainer-name">${safe(r.trainer || '-')}</span></td>
+                                    <td><span class="contractor-name">${safe(r.contractorName || '-')}</span></td>
+                                    <td><span class="trainee-badge">${fmt(r.trainees)}</span></td>
+                                    <td><span class="hour-badge">${fmt(r.hours, 2)}</span></td>
+                                    <td title="${safe(r.location || '-')}" style="max-width:150px;overflow:hidden;text-overflow:ellipsis;">${safe(r.location || '-')}</td>
                                 </tr>
                             `).join('')}
                         </tbody>
                     </table>
                 </div>
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 10px; padding: 8px 12px; background: #f8fafc; border-radius: 8px; border: 1px solid #e5e7eb;">
-                    <span style="font-size: 0.75rem; color: #6b7280;"><i class="fas fa-info-circle ml-1"></i>يتم عرض أول 300 سجل فقط لتحسين الأداء</span>
-                    <span style="font-size: 0.75rem; color: #4c51bf; font-weight: 600;"><i class="fas fa-table ml-1"></i>إجمالي: ${rows.length} سجل</span>
+                <div class="contractor-analytics-details-footer">
+                    <span class="info"><i class="fas fa-info-circle ml-1"></i>يتم عرض أول 300 سجل فقط لتحسين الأداء</span>
+                    <span class="count"><i class="fas fa-table ml-1"></i>إجمالي: ${rows.length} سجل</span>
                 </div>
             `;
         };
 
+        const tabActiveClass = (tabName) => state.view === tabName ? 'active' : '';
+
         return `
-            <div class="grid grid-cols-1 gap-4" style="font-family: 'Segoe UI', Tahoma, Arial, sans-serif;">
-                <!-- Slicers - فلاتر التحليل -->
-                <div style="background: linear-gradient(135deg, #f8fafc 0%, #eef2ff 100%); border-radius: 16px; padding: 22px 24px; border: 1px solid #e0e7ff; box-shadow: 0 4px 12px rgba(102,126,234,0.1);">
-                    <!-- Header Section -->
-                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; padding-bottom: 16px; border-bottom: 1px solid rgba(224,231,255,0.6);">
-                        <h4 style="margin: 0; font-size: 0.95rem; font-weight: 700; color: #4c51bf; display: flex; align-items: center; gap: 10px; letter-spacing: -0.2px;">
-                            <i class="fas fa-filter" style="color: #667eea; font-size: 0.9rem;"></i>
+            <div class="contractor-analytics-section grid grid-cols-1 gap-4">
+                <!-- Slicers -->
+                <div class="contractor-analytics-slicers">
+                    <div class="contractor-analytics-slicers-header">
+                        <h4 class="contractor-analytics-slicers-title">
+                            <i class="fas fa-filter"></i>
                             فلاتر التحليل
                         </h4>
-                        <button type="button" id="contractor-analytics-reset-btn" style="background: white; border: 1.5px solid #e5e7eb; padding: 8px 16px; border-radius: 10px; font-size: 0.8rem; font-weight: 600; color: #6b7280; cursor: pointer; transition: all 0.25s ease; display: flex; align-items: center; gap: 7px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);" onmouseover="this.style.background='#f9fafb'; this.style.borderColor='#d1d5db'; this.style.boxShadow='0 2px 6px rgba(0,0,0,0.08)'; this.style.transform='translateY(-1px)'" onmouseout="this.style.background='white'; this.style.borderColor='#e5e7eb'; this.style.boxShadow='0 1px 3px rgba(0,0,0,0.05)'; this.style.transform='translateY(0)'">
-                            <i class="fas fa-redo-alt" style="font-size: 0.75rem;"></i>إعادة تعيين
+                        <button type="button" id="contractor-analytics-reset-btn" class="contractor-analytics-reset-btn">
+                            <i class="fas fa-redo-alt"></i>إعادة تعيين
                         </button>
                     </div>
-                    <!-- Filters Grid -->
-                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4" style="margin-bottom: 16px;">
-                        <div style="display: flex; flex-direction: column; gap: 8px;">
-                            <label style="font-size: 0.75rem; font-weight: 600; color: #4b5563; display: flex; align-items: center; gap: 6px; margin-bottom: 2px;">
-                                <i class="fas fa-building" style="color: #667eea; font-size: 0.7rem; width: 14px; text-align: center;"></i>
-                                <span>المقاول</span>
-                            </label>
-                            <select id="contractor-analytics-contractor" class="form-input" style="border: 2px solid #e0e7ff; border-radius: 10px; padding: 10px 12px; font-size: 0.85rem; transition: all 0.25s ease; background: white; min-height: 42px; box-shadow: 0 1px 3px rgba(0,0,0,0.04);" onfocus="this.style.borderColor='#667eea'; this.style.boxShadow='0 0 0 4px rgba(102,126,234,0.12), 0 2px 6px rgba(102,126,234,0.15)'; this.style.transform='translateY(-1px)'" onblur="this.style.borderColor='#e0e7ff'; this.style.boxShadow='0 1px 3px rgba(0,0,0,0.04)'; this.style.transform='translateY(0)'">${optionList(model.dimensions.contractors, state.contractor)}</select>
+                    <div class="contractor-analytics-slicers-grid">
+                        <div class="filter-group">
+                            <label><i class="fas fa-building"></i><span>المقاول</span></label>
+                            <select id="contractor-analytics-contractor">${optionList(model.dimensions.contractors, state.contractor)}</select>
                         </div>
-                        <div style="display: flex; flex-direction: column; gap: 8px;">
-                            <label style="font-size: 0.75rem; font-weight: 600; color: #4b5563; display: flex; align-items: center; gap: 6px; margin-bottom: 2px;">
-                                <i class="fas fa-user-tie" style="color: #667eea; font-size: 0.7rem; width: 14px; text-align: center;"></i>
-                                <span>القائم بالتدريب</span>
-                            </label>
-                            <select id="contractor-analytics-trainer" class="form-input" style="border: 2px solid #e0e7ff; border-radius: 10px; padding: 10px 12px; font-size: 0.85rem; transition: all 0.25s ease; background: white; min-height: 42px; box-shadow: 0 1px 3px rgba(0,0,0,0.04);" onfocus="this.style.borderColor='#667eea'; this.style.boxShadow='0 0 0 4px rgba(102,126,234,0.12), 0 2px 6px rgba(102,126,234,0.15)'; this.style.transform='translateY(-1px)'" onblur="this.style.borderColor='#e0e7ff'; this.style.boxShadow='0 1px 3px rgba(0,0,0,0.04)'; this.style.transform='translateY(0)'">${optionList(model.dimensions.trainers, state.trainer)}</select>
+                        <div class="filter-group">
+                            <label><i class="fas fa-user-tie"></i><span>القائم بالتدريب</span></label>
+                            <select id="contractor-analytics-trainer">${optionList(model.dimensions.trainers, state.trainer)}</select>
                         </div>
-                        <div style="display: flex; flex-direction: column; gap: 8px;">
-                            <label style="font-size: 0.75rem; font-weight: 600; color: #4b5563; display: flex; align-items: center; gap: 6px; margin-bottom: 2px;">
-                                <i class="fas fa-book" style="color: #667eea; font-size: 0.7rem; width: 14px; text-align: center;"></i>
-                                <span>الموضوع</span>
-                            </label>
-                            <select id="contractor-analytics-topic" class="form-input" style="border: 2px solid #e0e7ff; border-radius: 10px; padding: 10px 12px; font-size: 0.85rem; transition: all 0.25s ease; background: white; min-height: 42px; box-shadow: 0 1px 3px rgba(0,0,0,0.04);" onfocus="this.style.borderColor='#667eea'; this.style.boxShadow='0 0 0 4px rgba(102,126,234,0.12), 0 2px 6px rgba(102,126,234,0.15)'; this.style.transform='translateY(-1px)'" onblur="this.style.borderColor='#e0e7ff'; this.style.boxShadow='0 1px 3px rgba(0,0,0,0.04)'; this.style.transform='translateY(0)'">${optionList(model.dimensions.topics, state.topic)}</select>
+                        <div class="filter-group">
+                            <label><i class="fas fa-book"></i><span>الموضوع</span></label>
+                            <select id="contractor-analytics-topic">${optionList(model.dimensions.topics, state.topic)}</select>
                         </div>
-                        <div style="display: flex; flex-direction: column; gap: 8px;">
-                            <label style="font-size: 0.75rem; font-weight: 600; color: #4b5563; display: flex; align-items: center; gap: 6px; margin-bottom: 2px;">
-                                <i class="fas fa-map-marker-alt" style="color: #667eea; font-size: 0.7rem; width: 14px; text-align: center;"></i>
-                                <span>الموقع</span>
-                            </label>
-                            <select id="contractor-analytics-location" class="form-input" style="border: 2px solid #e0e7ff; border-radius: 10px; padding: 10px 12px; font-size: 0.85rem; transition: all 0.25s ease; background: white; min-height: 42px; box-shadow: 0 1px 3px rgba(0,0,0,0.04);" onfocus="this.style.borderColor='#667eea'; this.style.boxShadow='0 0 0 4px rgba(102,126,234,0.12), 0 2px 6px rgba(102,126,234,0.15)'; this.style.transform='translateY(-1px)'" onblur="this.style.borderColor='#e0e7ff'; this.style.boxShadow='0 1px 3px rgba(0,0,0,0.04)'; this.style.transform='translateY(0)'">${optionList(model.dimensions.locations, state.location)}</select>
+                        <div class="filter-group">
+                            <label><i class="fas fa-map-marker-alt"></i><span>الموقع</span></label>
+                            <select id="contractor-analytics-location">${optionList(model.dimensions.locations, state.location)}</select>
                         </div>
-                    </div>
-                    <!-- Search Section -->
-                    <div style="display: flex; flex-direction: column; gap: 8px;">
-                        <label style="font-size: 0.75rem; font-weight: 600; color: #4b5563; display: flex; align-items: center; gap: 6px; margin-bottom: 2px;">
-                            <i class="fas fa-search" style="color: #667eea; font-size: 0.7rem; width: 14px; text-align: center;"></i>
-                            <span>بحث سريع</span>
-                        </label>
-                        <input id="contractor-analytics-search" class="form-input" placeholder="ابحث..." value="${safe(state.search)}" style="border: 2px solid #e0e7ff; border-radius: 10px; padding: 10px 12px; font-size: 0.85rem; transition: all 0.25s ease; background: white; min-height: 42px; box-shadow: 0 1px 3px rgba(0,0,0,0.04);" onfocus="this.style.borderColor='#667eea'; this.style.boxShadow='0 0 0 4px rgba(102,126,234,0.12), 0 2px 6px rgba(102,126,234,0.15)'; this.style.transform='translateY(-1px)'" onblur="this.style.borderColor='#e0e7ff'; this.style.boxShadow='0 1px 3px rgba(0,0,0,0.04)'; this.style.transform='translateY(0)'">
+                        <div class="filter-group search-full">
+                            <label><i class="fas fa-search"></i><span>بحث سريع</span></label>
+                            <input id="contractor-analytics-search" placeholder="ابحث عن مقاول، موضوع، مدرب..." value="${safe(state.search)}">
+                        </div>
                     </div>
                 </div>
 
-                <!-- KPI Cards - بطاقات المؤشرات -->
-                <div class="contractor-analytics-kpi-grid" style="display: grid; grid-template-columns: repeat(6, 1fr); gap: 12px;">
-                    <div style="padding: 14px 12px; border-radius: 10px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); box-shadow: 0 3px 10px rgba(102,126,234,0.25); min-height: 70px; display: flex; flex-direction: column; justify-content: center;">
-                        <div style="font-size: 11px; color: rgba(255,255,255,0.9); font-weight: 600; margin-bottom: 4px; display: flex; align-items: center; gap: 5px; white-space: nowrap;">
-                            <i class="fas fa-clipboard-list" style="font-size: 10px;"></i>البرامج
-                        </div>
-                        <div style="font-size: 22px; font-weight: 800; color: white; line-height: 1.1;">${fmt(computed.totals.programs)}</div>
+                <!-- KPI Cards -->
+                <div class="contractor-analytics-kpi-grid">
+                    <div class="contractor-analytics-kpi-card kpi-purple">
+                        <div class="kpi-label"><i class="fas fa-clipboard-list"></i>البرامج</div>
+                        <div class="kpi-value">${fmt(computed.totals.programs)}</div>
                     </div>
-                    <div style="padding: 14px 12px; border-radius: 10px; background: linear-gradient(135deg, #10b981 0%, #059669 100%); box-shadow: 0 3px 10px rgba(16,185,129,0.25); min-height: 70px; display: flex; flex-direction: column; justify-content: center;">
-                        <div style="font-size: 11px; color: rgba(255,255,255,0.9); font-weight: 600; margin-bottom: 4px; display: flex; align-items: center; gap: 5px; white-space: nowrap;">
-                            <i class="fas fa-users" style="font-size: 10px;"></i>المتدربين
-                        </div>
-                        <div style="font-size: 22px; font-weight: 800; color: white; line-height: 1.1;">${fmt(computed.totals.trainees)}</div>
+                    <div class="contractor-analytics-kpi-card kpi-green">
+                        <div class="kpi-label"><i class="fas fa-users"></i>المتدربين</div>
+                        <div class="kpi-value">${fmt(computed.totals.trainees)}</div>
                     </div>
-                    <div style="padding: 14px 12px; border-radius: 10px; background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); box-shadow: 0 3px 10px rgba(245,158,11,0.25); min-height: 70px; display: flex; flex-direction: column; justify-content: center;">
-                        <div style="font-size: 11px; color: rgba(255,255,255,0.9); font-weight: 600; margin-bottom: 4px; display: flex; align-items: center; gap: 5px; white-space: nowrap;">
-                            <i class="fas fa-clock" style="font-size: 10px;"></i>الساعات
-                        </div>
-                        <div style="font-size: 22px; font-weight: 800; color: white; line-height: 1.1;">${fmt(computed.totals.hours, 2)}</div>
+                    <div class="contractor-analytics-kpi-card kpi-amber">
+                        <div class="kpi-label"><i class="fas fa-clock"></i>الساعات</div>
+                        <div class="kpi-value">${fmt(computed.totals.hours, 2)}</div>
                     </div>
-                    <div style="padding: 14px 12px; border-radius: 10px; background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); box-shadow: 0 3px 10px rgba(59,130,246,0.25); min-height: 70px; display: flex; flex-direction: column; justify-content: center;">
-                        <div style="font-size: 11px; color: rgba(255,255,255,0.9); font-weight: 600; margin-bottom: 4px; display: flex; align-items: center; gap: 5px; white-space: nowrap;">
-                            <i class="fas fa-building" style="font-size: 10px;"></i>المقاولين
-                        </div>
-                        <div style="font-size: 22px; font-weight: 800; color: white; line-height: 1.1;">${fmt(computed.totals.contractors)}</div>
+                    <div class="contractor-analytics-kpi-card kpi-blue">
+                        <div class="kpi-label"><i class="fas fa-building"></i>المقاولين</div>
+                        <div class="kpi-value">${fmt(computed.totals.contractors)}</div>
                     </div>
-                    <div style="padding: 14px 12px; border-radius: 10px; background: linear-gradient(135deg, #ec4899 0%, #db2777 100%); box-shadow: 0 3px 10px rgba(236,72,153,0.25); min-height: 70px; display: flex; flex-direction: column; justify-content: center;">
-                        <div style="font-size: 11px; color: rgba(255,255,255,0.9); font-weight: 600; margin-bottom: 4px; display: flex; align-items: center; gap: 5px; white-space: nowrap;">
-                            <i class="fas fa-user-tie" style="font-size: 10px;"></i>المدربين
-                        </div>
-                        <div style="font-size: 22px; font-weight: 800; color: white; line-height: 1.1;">${fmt(computed.totals.trainers)}</div>
+                    <div class="contractor-analytics-kpi-card kpi-pink">
+                        <div class="kpi-label"><i class="fas fa-user-tie"></i>المدربين</div>
+                        <div class="kpi-value">${fmt(computed.totals.trainers)}</div>
                     </div>
-                    <div style="padding: 14px 12px; border-radius: 10px; background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%); box-shadow: 0 3px 10px rgba(139,92,246,0.25); min-height: 70px; display: flex; flex-direction: column; justify-content: center;">
-                        <div style="font-size: 11px; color: rgba(255,255,255,0.9); font-weight: 600; margin-bottom: 4px; display: flex; align-items: center; gap: 5px; white-space: nowrap;">
-                            <i class="fas fa-book" style="font-size: 10px;"></i>الموضوعات
-                        </div>
-                        <div style="font-size: 22px; font-weight: 800; color: white; line-height: 1.1;">${fmt(computed.totals.topics)}</div>
+                    <div class="contractor-analytics-kpi-card kpi-indigo">
+                        <div class="kpi-label"><i class="fas fa-book"></i>الموضوعات</div>
+                        <div class="kpi-value">${fmt(computed.totals.topics)}</div>
                     </div>
                 </div>
-                <style>
-                    @media (max-width: 1024px) {
-                        .contractor-analytics-kpi-grid { grid-template-columns: repeat(3, 1fr) !important; }
-                    }
-                    @media (max-width: 640px) {
-                        .contractor-analytics-kpi-grid { grid-template-columns: repeat(2, 1fr) !important; }
-                    }
-                </style>
 
-                <!-- Tabs + Sort - التبويبات والفرز -->
-                <div style="background: white; border-radius: 14px; padding: 16px 20px; border: 1px solid #e5e7eb; box-shadow: 0 2px 6px rgba(0,0,0,0.04);">
-                    <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px; justify-content: space-between;">
-                        <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
-                            <button type="button" id="contractor-analytics-tab-contractor" style="padding: 10px 18px; border-radius: 10px; font-size: 0.8rem; font-weight: 600; border: 2px solid ${state.view === 'contractor' ? '#667eea' : '#e5e7eb'}; background: ${state.view === 'contractor' ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' : 'white'}; color: ${state.view === 'contractor' ? 'white' : '#6b7280'}; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 8px; box-shadow: ${state.view === 'contractor' ? '0 4px 12px rgba(102,126,234,0.3)' : 'none'};" onmouseover="if(!this.classList.contains('active')){this.style.borderColor='#c7d2fe'; this.style.background='#f5f3ff'}" onmouseout="if(!this.classList.contains('active')){this.style.borderColor='#e5e7eb'; this.style.background='white'}">
+                <!-- Tabs + Sort -->
+                <div class="contractor-analytics-tabs-bar">
+                    <div class="tabs-row">
+                        <div class="tabs-group">
+                            <button type="button" id="contractor-analytics-tab-contractor" class="contractor-analytics-tab ${tabActiveClass('contractor')}">
                                 <i class="fas fa-building"></i>ملخص حسب المقاول
                             </button>
-                            <button type="button" id="contractor-analytics-tab-trainer" style="padding: 10px 18px; border-radius: 10px; font-size: 0.8rem; font-weight: 600; border: 2px solid ${state.view === 'trainer' ? '#667eea' : '#e5e7eb'}; background: ${state.view === 'trainer' ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' : 'white'}; color: ${state.view === 'trainer' ? 'white' : '#6b7280'}; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 8px; box-shadow: ${state.view === 'trainer' ? '0 4px 12px rgba(102,126,234,0.3)' : 'none'};" onmouseover="if(!this.classList.contains('active')){this.style.borderColor='#c7d2fe'; this.style.background='#f5f3ff'}" onmouseout="if(!this.classList.contains('active')){this.style.borderColor='#e5e7eb'; this.style.background='white'}">
+                            <button type="button" id="contractor-analytics-tab-trainer" class="contractor-analytics-tab ${tabActiveClass('trainer')}">
                                 <i class="fas fa-user-tie"></i>ملخص حسب المدرب
                             </button>
-                            <button type="button" id="contractor-analytics-tab-details" style="padding: 10px 18px; border-radius: 10px; font-size: 0.8rem; font-weight: 600; border: 2px solid ${state.view === 'details' ? '#667eea' : '#e5e7eb'}; background: ${state.view === 'details' ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' : 'white'}; color: ${state.view === 'details' ? 'white' : '#6b7280'}; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 8px; box-shadow: ${state.view === 'details' ? '0 4px 12px rgba(102,126,234,0.3)' : 'none'};" onmouseover="if(!this.classList.contains('active')){this.style.borderColor='#c7d2fe'; this.style.background='#f5f3ff'}" onmouseout="if(!this.classList.contains('active')){this.style.borderColor='#e5e7eb'; this.style.background='white'}">
+                            <button type="button" id="contractor-analytics-tab-details" class="contractor-analytics-tab ${tabActiveClass('details')}">
                                 <i class="fas fa-list-alt"></i>عرض التفاصيل
                             </button>
                         </div>
-                        <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
-                            <div style="display: flex; align-items: center; gap: 6px; background: #f8fafc; padding: 6px 12px; border-radius: 8px; border: 1px solid #e5e7eb;">
-                                <label style="font-size: 0.7rem; font-weight: 600; color: #6b7280; white-space: nowrap;">
-                                    <i class="fas fa-sort-amount-down ml-1" style="color: #667eea;"></i>فرز:
-                                </label>
-                                <select id="contractor-analytics-sortby" class="form-input" style="border: 1px solid #e5e7eb; border-radius: 6px; padding: 6px 10px; font-size: 0.75rem; min-width: 100px; background: white;">
+                        <div class="contractor-analytics-sort-group">
+                            <div class="contractor-analytics-sort-box">
+                                <label><i class="fas fa-sort-amount-down"></i>فرز:</label>
+                                <select id="contractor-analytics-sortby">
                                     <option value="hours" ${state.sortBy === 'hours' ? 'selected' : ''}>الساعات</option>
                                     <option value="trainees" ${state.sortBy === 'trainees' ? 'selected' : ''}>المتدربين</option>
                                     <option value="count" ${state.sortBy === 'count' ? 'selected' : ''}>عدد البرامج</option>
                                     <option value="date" ${state.sortBy === 'date' ? 'selected' : ''}>التاريخ</option>
                                 </select>
-                                <select id="contractor-analytics-sortdir" class="form-input" style="border: 1px solid #e5e7eb; border-radius: 6px; padding: 6px 10px; font-size: 0.75rem; min-width: 90px; background: white;">
+                                <select id="contractor-analytics-sortdir">
                                     <option value="desc" ${state.sortDir === 'desc' ? 'selected' : ''}>تنازلي</option>
                                     <option value="asc" ${state.sortDir === 'asc' ? 'selected' : ''}>تصاعدي</option>
                                 </select>
                             </div>
-                            ${drillLabel ? `<button type="button" id="contractor-analytics-clear-drill" style="padding: 8px 14px; border-radius: 8px; font-size: 0.75rem; font-weight: 600; background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); color: #92400e; border: 1px solid #fcd34d; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: all 0.2s;" onmouseover="this.style.transform='scale(1.02)'" onmouseout="this.style.transform='scale(1)'"><i class="fas fa-times-circle"></i>إلغاء التعمق: ${safe(drillLabel)}</button>` : ''}
+                            ${drillLabel ? `<button type="button" id="contractor-analytics-clear-drill" class="contractor-analytics-clear-drill"><i class="fas fa-times-circle"></i>إلغاء التعمق: ${safe(drillLabel)}</button>` : ''}
                         </div>
                     </div>
                 </div>
 
-                <!-- Content - المحتوى الرئيسي -->
-                <div style="background: white; border-radius: 14px; padding: 20px; border: 1px solid #e5e7eb; box-shadow: 0 2px 6px rgba(0,0,0,0.04); min-height: 300px;">
+                <!-- Content -->
+                <div class="contractor-analytics-content">
                     ${state.view === 'trainer'
                         ? renderPivotTable(computed.topTrainers, 'trainer')
                         : state.view === 'details'

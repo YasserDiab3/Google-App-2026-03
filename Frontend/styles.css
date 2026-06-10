@@ -15581,3 +15581,578 @@ body[data-theme="dark"] .profile-info-list>div,
 @media (max-width: 480px) {
     .legal-kpi-grid { grid-template-columns: 1fr; }
 }
+
+/* ==============================
+   Contractor Analytics Section
+   ============================== */
+.contractor-analytics-section {
+    font-family: 'Segoe UI', Tahoma, Arial, sans-serif;
+}
+
+/* Slicers / Filters */
+.contractor-analytics-slicers {
+    background: linear-gradient(135deg, #f8fafc 0%, #eef2ff 100%);
+    border-radius: 16px;
+    padding: 22px 24px;
+    border: 1px solid #e0e7ff;
+    box-shadow: 0 4px 12px rgba(102,126,234,0.1);
+}
+
+.contractor-analytics-slicers-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 20px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid rgba(224,231,255,0.6);
+}
+
+.contractor-analytics-slicers-title {
+    margin: 0;
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: #4c51bf;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    letter-spacing: -0.2px;
+}
+
+.contractor-analytics-slicers-title i {
+    color: #667eea;
+    font-size: 0.9rem;
+}
+
+.contractor-analytics-slicers-grid {
+    display: grid;
+    grid-template-columns: repeat(1, 1fr);
+    gap: 16px;
+    margin-bottom: 16px;
+}
+
+@media (min-width: 768px) {
+    .contractor-analytics-slicers-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (min-width: 1024px) {
+    .contractor-analytics-slicers-grid {
+        grid-template-columns: repeat(4, 1fr);
+    }
+}
+
+.contractor-analytics-slicers-grid .filter-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.contractor-analytics-slicers-grid .filter-group label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #4b5563;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.contractor-analytics-slicers-grid .filter-group label i {
+    color: #667eea;
+    font-size: 0.7rem;
+    width: 14px;
+    text-align: center;
+}
+
+.contractor-analytics-slicers-grid .filter-group select,
+.contractor-analytics-slicers-grid .filter-group input {
+    border: 2px solid #e0e7ff;
+    border-radius: 10px;
+    padding: 10px 12px;
+    font-size: 0.85rem;
+    transition: all 0.25s ease;
+    background: white;
+    min-height: 42px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+}
+
+.contractor-analytics-slicers-grid .filter-group select:focus,
+.contractor-analytics-slicers-grid .filter-group input:focus {
+    border-color: #667eea;
+    box-shadow: 0 0 0 4px rgba(102,126,234,0.12), 0 2px 6px rgba(102,126,234,0.15);
+    outline: none;
+    transform: translateY(-1px);
+}
+
+.contractor-analytics-slicers-grid .search-full {
+    grid-column: 1 / -1;
+}
+
+/* Reset button in slicers */
+.contractor-analytics-reset-btn {
+    background: white;
+    border: 1.5px solid #e5e7eb;
+    padding: 8px 16px;
+    border-radius: 10px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #6b7280;
+    cursor: pointer;
+    transition: all 0.25s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+}
+
+.contractor-analytics-reset-btn:hover {
+    background: #f9fafb;
+    border-color: #d1d5db;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+    transform: translateY(-1px);
+}
+
+/* KPI Cards Grid */
+.contractor-analytics-kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 12px;
+}
+
+@media (max-width: 1024px) {
+    .contractor-analytics-kpi-grid { grid-template-columns: repeat(3, 1fr); }
+}
+
+@media (max-width: 640px) {
+    .contractor-analytics-kpi-grid { grid-template-columns: repeat(2, 1fr); }
+}
+
+.contractor-analytics-kpi-card {
+    padding: 14px 12px;
+    border-radius: 10px;
+    min-height: 70px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    box-shadow: 0 3px 10px rgba(0,0,0,0.25);
+}
+
+.contractor-analytics-kpi-card .kpi-label {
+    font-size: 11px;
+    color: rgba(255,255,255,0.9);
+    font-weight: 600;
+    margin-bottom: 4px;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    white-space: nowrap;
+}
+
+.contractor-analytics-kpi-card .kpi-label i {
+    font-size: 10px;
+}
+
+.contractor-analytics-kpi-card .kpi-value {
+    font-size: 22px;
+    font-weight: 800;
+    color: white;
+    line-height: 1.1;
+}
+
+.contractor-analytics-kpi-card.kpi-purple {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.contractor-analytics-kpi-card.kpi-green {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+}
+
+.contractor-analytics-kpi-card.kpi-amber {
+    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+}
+
+.contractor-analytics-kpi-card.kpi-blue {
+    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+}
+
+.contractor-analytics-kpi-card.kpi-pink {
+    background: linear-gradient(135deg, #ec4899 0%, #db2777 100%);
+}
+
+.contractor-analytics-kpi-card.kpi-indigo {
+    background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+}
+
+/* Tabs bar */
+.contractor-analytics-tabs-bar {
+    background: white;
+    border-radius: 14px;
+    padding: 16px 20px;
+    border: 1px solid #e5e7eb;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.04);
+}
+
+.contractor-analytics-tabs-bar .tabs-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 12px;
+    justify-content: space-between;
+}
+
+.contractor-analytics-tabs-bar .tabs-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.contractor-analytics-tab {
+    padding: 10px 18px;
+    border-radius: 10px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    border: 2px solid #e5e7eb;
+    background: white;
+    color: #6b7280;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.contractor-analytics-tab:hover {
+    border-color: #c7d2fe;
+    background: #f5f3ff;
+}
+
+.contractor-analytics-tab.active {
+    border-color: #667eea;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    box-shadow: 0 4px 12px rgba(102,126,234,0.3);
+}
+
+/* Sort controls */
+.contractor-analytics-sort-group {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.contractor-analytics-sort-box {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: #f8fafc;
+    padding: 6px 12px;
+    border-radius: 8px;
+    border: 1px solid #e5e7eb;
+}
+
+.contractor-analytics-sort-box label {
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: #6b7280;
+    white-space: nowrap;
+}
+
+.contractor-analytics-sort-box label i {
+    color: #667eea;
+}
+
+.contractor-analytics-sort-box select {
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+    padding: 6px 10px;
+    font-size: 0.75rem;
+    background: white;
+}
+
+/* Clear drill button */
+.contractor-analytics-clear-drill {
+    padding: 8px 14px;
+    border-radius: 8px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+    color: #92400e;
+    border: 1px solid #fcd34d;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.2s;
+}
+
+.contractor-analytics-clear-drill:hover {
+    transform: scale(1.02);
+}
+
+/* Main content area */
+.contractor-analytics-content {
+    background: white;
+    border-radius: 14px;
+    padding: 20px;
+    border: 1px solid #e5e7eb;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.04);
+    min-height: 300px;
+}
+
+/* Empty state */
+.contractor-analytics-empty {
+    padding: 40px 20px;
+    text-align: center;
+    background: linear-gradient(180deg, #fafbfc 0%, #f3f4f6 100%);
+    border-radius: 12px;
+    border: 2px dashed #e5e7eb;
+}
+
+.contractor-analytics-empty i {
+    font-size: 2.5rem;
+    color: #d1d5db;
+    margin-bottom: 12px;
+    display: block;
+}
+
+.contractor-analytics-empty p {
+    color: #9ca3af;
+    font-size: 0.9rem;
+    margin: 0;
+}
+
+/* Pivot table */
+.contractor-analytics-pivot-wrap {
+    overflow: auto;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    border: 1px solid #e5e7eb;
+    max-height: 400px;
+    scrollbar-width: thin;
+    scrollbar-color: #667eea #e0e7ff;
+}
+
+.contractor-analytics-pivot-wrap::-webkit-scrollbar { width: 6px; height: 6px; }
+.contractor-analytics-pivot-wrap::-webkit-scrollbar-track { background: #e0e7ff; border-radius: 10px; }
+.contractor-analytics-pivot-wrap::-webkit-scrollbar-thumb { background: linear-gradient(180deg, #667eea, #764ba2); border-radius: 10px; }
+
+.contractor-analytics-pivot-table {
+    min-width: 640px;
+    border-collapse: separate;
+    border-spacing: 0;
+}
+
+.contractor-analytics-pivot-table th {
+    padding: 14px 16px;
+    font-size: 12px;
+    font-weight: 700;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+}
+
+.contractor-analytics-pivot-table th:first-child {
+    text-align: right;
+}
+
+.contractor-analytics-pivot-table th:not(:first-child) {
+    text-align: center;
+}
+
+.contractor-analytics-pivot-table td {
+    padding: 12px 16px;
+    font-size: 12px;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.contractor-analytics-pivot-table td:first-child {
+    text-align: right;
+}
+
+.contractor-analytics-pivot-table td:not(:first-child) {
+    text-align: center;
+}
+
+.contractor-analytics-pivot-table tr {
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.contractor-analytics-pivot-table tr:nth-child(even) {
+    background: #f8fafc;
+}
+
+.contractor-analytics-pivot-table tr:nth-child(odd) {
+    background: #ffffff;
+}
+
+.contractor-analytics-pivot-table tr:hover {
+    background: #eef2ff !important;
+    transform: scale(1.005);
+}
+
+.contractor-analytics-pivot-table .label-cell {
+    color: #4c51bf;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.contractor-analytics-pivot-table .label-cell .dot {
+    width: 8px;
+    height: 8px;
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    border-radius: 50%;
+    flex-shrink: 0;
+    display: inline-block;
+}
+
+.contractor-analytics-pivot-table .badge {
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-weight: 600;
+    display: inline-block;
+}
+
+.contractor-analytics-pivot-table .badge-blue {
+    background: #dbeafe;
+    color: #1e40af;
+}
+
+.contractor-analytics-pivot-table .badge-green {
+    background: #dcfce7;
+    color: #166534;
+}
+
+.contractor-analytics-pivot-table .badge-amber {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.contractor-analytics-pivot-footnote {
+    font-size: 0.75rem;
+    color: #9ca3af;
+    margin-top: 8px;
+    text-align: center;
+}
+
+/* Details table */
+.contractor-analytics-details-wrap {
+    overflow: auto;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    border: 1px solid #e5e7eb;
+    max-height: 450px;
+    scrollbar-width: thin;
+    scrollbar-color: #667eea #e0e7ff;
+}
+
+.contractor-analytics-details-wrap::-webkit-scrollbar { width: 6px; height: 6px; }
+.contractor-analytics-details-wrap::-webkit-scrollbar-track { background: #e0e7ff; border-radius: 10px; }
+.contractor-analytics-details-wrap::-webkit-scrollbar-thumb { background: linear-gradient(180deg, #667eea, #764ba2); border-radius: 10px; }
+
+.contractor-analytics-details-table {
+    min-width: 980px;
+    border-collapse: separate;
+    border-spacing: 0;
+}
+
+.contractor-analytics-details-table th {
+    padding: 14px 12px;
+    font-size: 11px;
+    font-weight: 700;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    white-space: nowrap;
+}
+
+.contractor-analytics-details-table td {
+    padding: 10px 12px;
+    font-size: 11px;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.contractor-analytics-details-table th:nth-child(1),
+.contractor-analytics-details-table td:nth-child(1) { text-align: center; }
+.contractor-analytics-details-table th:nth-child(2),
+.contractor-analytics-details-table td:nth-child(2) { text-align: right; }
+.contractor-analytics-details-table th:nth-child(3),
+.contractor-analytics-details-table td:nth-child(3) { text-align: right; }
+.contractor-analytics-details-table th:nth-child(4),
+.contractor-analytics-details-table td:nth-child(4) { text-align: right; }
+.contractor-analytics-details-table th:nth-child(5),
+.contractor-analytics-details-table td:nth-child(5) { text-align: center; }
+.contractor-analytics-details-table th:nth-child(6),
+.contractor-analytics-details-table td:nth-child(6) { text-align: center; }
+.contractor-analytics-details-table th:nth-child(7),
+.contractor-analytics-details-table td:nth-child(7) { text-align: right; }
+
+.contractor-analytics-details-table tr:nth-child(even) { background: #ffffff; }
+.contractor-analytics-details-table tr:nth-child(odd) { background: #f8fafc; }
+.contractor-analytics-details-table tr:hover { background: #eef2ff !important; }
+
+.contractor-analytics-details-table .date-badge {
+    background: #f3f4f6;
+    padding: 3px 8px;
+    border-radius: 6px;
+    color: #4b5563;
+    font-size: 11px;
+}
+
+.contractor-analytics-details-table .trainer-name {
+    color: #4c51bf;
+    font-weight: 500;
+}
+
+.contractor-analytics-details-table .contractor-name {
+    color: #059669;
+    font-weight: 500;
+}
+
+.contractor-analytics-details-table .trainee-badge {
+    background: #dcfce7;
+    color: #166534;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-weight: 600;
+    font-size: 10px;
+}
+
+.contractor-analytics-details-table .hour-badge {
+    background: #fef3c7;
+    color: #92400e;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-weight: 600;
+    font-size: 10px;
+}
+
+.contractor-analytics-details-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 10px;
+    padding: 8px 12px;
+    background: #f8fafc;
+    border-radius: 8px;
+    border: 1px solid #e5e7eb;
+}
+
+.contractor-analytics-details-footer .info {
+    font-size: 0.75rem;
+    color: #6b7280;
+}
+
+.contractor-analytics-details-footer .count {
+    font-size: 0.75rem;
+    color: #4c51bf;
+    font-weight: 600;
+}
