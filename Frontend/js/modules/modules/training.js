@@ -42,6 +42,7 @@ const Training = {
         if (!Array.isArray(data.trainingAttendance)) data.trainingAttendance = [];
         if (!Array.isArray(data.contractorTrainings)) data.contractorTrainings = [];
         if (!Array.isArray(data.legalTrainings)) data.legalTrainings = [];
+        if (!Array.isArray(data.legalRegister)) data.legalRegister = [];
         if (!Array.isArray(data.legalTrainingAttendees)) data.legalTrainingAttendees = [];
         if (!data.employeeTrainingMatrix || typeof data.employeeTrainingMatrix !== 'object') {
             data.employeeTrainingMatrix = {};
@@ -674,6 +675,9 @@ const Training = {
                 if (Array.isArray(bundle.legalTrainings) && (Date.now() - (this._legalTrainingsLocalSaveTime || 0)) > 60000) {
                     AppState.appData.legalTrainings = bundle.legalTrainings;
                 }
+                if (Array.isArray(bundle.legalRegister) && (Date.now() - (this._legalRegisterLocalSaveTime || 0)) > 60000) {
+                    AppState.appData.legalRegister = bundle.legalRegister;
+                }
                 if (Array.isArray(bundle.legalTrainingAttendees) && (Date.now() - (this._legalAttendeesLocalSaveTime || 0)) > 60000) {
                     AppState.appData.legalTrainingAttendees = bundle.legalTrainingAttendees;
                 }
@@ -706,6 +710,7 @@ const Training = {
             const contractorGuardOk = () => (Date.now() - (this._contractorTrainingsLocalSaveTime || 0)) > 60000;
             const legalGuardOk = () => (Date.now() - (this._legalTrainingsLocalSaveTime || 0)) > 60000;
             const legalAttendeesGuardOk = () => (Date.now() - (this._legalAttendeesLocalSaveTime || 0)) > 60000;
+            const legalRegisterGuardOk = () => (Date.now() - (this._legalRegisterLocalSaveTime || 0)) > 60000;
 
             if (active === 'contractors') {
                 const contractorData = await runAction('getAllContractorTrainings', 'تدريبات المقاولين');
@@ -719,6 +724,7 @@ const Training = {
                 runAction('getAllTrainingCertificates', 'الشهادات').then((data) => { if (data) { AppState.appData.trainingCertificates = data; this._markAllTabsDirty(); } });
                 runAction('getAllLegalTrainings', 'التدريبات القانونية').then((data) => { if (data && legalGuardOk()) { AppState.appData.legalTrainings = data; this._markAllTabsDirty(); } });
                 runAction('getAllLegalTrainingAttendees', 'حضور التدريبات القانونية').then((data) => { if (data && legalAttendeesGuardOk()) { AppState.appData.legalTrainingAttendees = data; this._markAllTabsDirty(); } });
+                runAction('getAllLegalRegisters', 'سجل التشريعات').then((data) => { if (data && legalRegisterGuardOk()) { AppState.appData.legalRegister = data; this._markAllTabsDirty(); } });
                 return;
             }
             if (active === 'attendance') {
@@ -736,6 +742,7 @@ const Training = {
                 runAction('getAllTrainingCertificates', 'الشهادات').then((data) => { if (data) { AppState.appData.trainingCertificates = data; this._markAllTabsDirty(); } });
                 runAction('getAllLegalTrainings', 'التدريبات القانونية').then((data) => { if (data && legalGuardOk()) { AppState.appData.legalTrainings = data; this._markAllTabsDirty(); } });
                 runAction('getAllLegalTrainingAttendees', 'حضور التدريبات القانونية').then((data) => { if (data && legalAttendeesGuardOk()) { AppState.appData.legalTrainingAttendees = data; this._markAllTabsDirty(); } });
+                runAction('getAllLegalRegisters', 'سجل التشريعات').then((data) => { if (data && legalRegisterGuardOk()) { AppState.appData.legalRegister = data; this._markAllTabsDirty(); } });
                 return;
             }
 
@@ -756,6 +763,7 @@ const Training = {
             });
             runAction('getAllLegalTrainings', 'التدريبات القانونية').then((data) => { if (data && legalGuardOk()) { AppState.appData.legalTrainings = data; this._markAllTabsDirty(); } });
             runAction('getAllLegalTrainingAttendees', 'حضور التدريبات القانونية').then((data) => { if (data && legalAttendeesGuardOk()) { AppState.appData.legalTrainingAttendees = data; this._markAllTabsDirty(); } });
+            runAction('getAllLegalRegisters', 'سجل التشريعات').then((data) => { if (data && legalRegisterGuardOk()) { AppState.appData.legalRegister = data; this._markAllTabsDirty(); } });
         } catch (error) {
             Utils.safeError('❌ خطأ في تحميل بيانات التدريب:', error);
             this._trainingBackendFetchOk = true;
@@ -14211,6 +14219,7 @@ const Training = {
     // ============================================
 
     _legalTrainingsLocalSaveTime: 0,
+    _legalRegisterLocalSaveTime: 0,
 
     LEGAL_CATEGORIES: [
         { value: 'السلامة المهنية', label: 'السلامة المهنية', ref: 'قانون العمل 12/2003 - الباب الخامس' },
@@ -14263,105 +14272,278 @@ const Training = {
         return { total: items.length, compliant, nonCompliant, expiringSoon, planned, completed, overdue, complianceRate };
     },
 
+    _legalRegisterSubTab: 'register',
+
+    LEGAL_LAW_TYPES: [
+        { value: 'law', label: 'قانون' },
+        { value: 'regulation', label: 'لائحة / قرار وزاري' },
+        { value: 'decree', label: 'مرسوم' },
+        { value: 'standard', label: 'مواصفة قياسية' },
+        { value: 'code', label: 'كود / دليل' },
+        { value: 'other', label: 'أخرى' }
+    ],
+
+    LEGAL_REGISTER_STATUSES: [
+        { value: 'applicable', label: 'نافذ', color: 'green' },
+        { value: 'amended', label: 'معدل', color: 'amber' },
+        { value: 'repealed', label: 'ملغي', color: 'red' },
+        { value: 'pending', label: 'قيد الإصدار', color: 'blue' }
+    ],
+
+    LEGAL_PRIORITIES: [
+        { value: 'high', label: 'عالية', color: 'red' },
+        { value: 'medium', label: 'متوسطة', color: 'amber' },
+        { value: 'low', label: 'منخفضة', color: 'green' }
+    ],
+
+    LEGAL_REGISTER_CATEGORIES: [
+        { value: 'labor', label: 'قوانين العمل' },
+        { value: 'safety', label: 'السلامة والصحة المهنية' },
+        { value: 'environment', label: 'البيئة' },
+        { value: 'civil_defense', label: 'الدفاع المدني والحريق' },
+        { value: 'social_insurance', label: 'التأمينات الاجتماعية' },
+        { value: 'tax', label: 'الضرائب' },
+        { value: 'municipal', label: 'القوانين البلدية' },
+        { value: 'industry', label: 'القوانين الصناعية' },
+        { value: 'quality', label: 'الجودة والمواصفات' },
+        { value: 'other', label: 'أخرى' }
+    ],
+
+    getLegalRegisterStats() {
+        const items = AppState.appData.legalRegister || [];
+        let applicable = 0, amended = 0, repealed = 0, pending = 0;
+        let high = 0, medium = 0, low = 0;
+        let withAmendments = 0;
+        items.forEach(r => {
+            const s = r.status || '';
+            if (s === 'applicable') applicable++;
+            else if (s === 'amended') amended++;
+            else if (s === 'repealed') repealed++;
+            else if (s === 'pending') pending++;
+            const p = r.priority || '';
+            if (p === 'high') high++;
+            else if (p === 'medium') medium++;
+            else if (p === 'low') low++;
+            let amds = r.amendments;
+            if (typeof amds === 'string') { try { amds = JSON.parse(amds); } catch (e) { amds = []; } }
+            if (Array.isArray(amds) && amds.length > 0) withAmendments++;
+        });
+        const total = items.length;
+        const complianceRate = total > 0 ? Math.round(((applicable + amended) / total) * 100) : 0;
+        return { total, applicable, amended, repealed, pending, high, medium, low, withAmendments, complianceRate };
+    },
+
     renderLegalTrainingTab() {
         const stats = this.getLegalTrainingStats();
+        const regStats = this.getLegalRegisterStats();
+        const activeSub = this._legalRegisterSubTab || 'register';
         return `
-            <div class="legal-kpi-grid">
-                <div class="legal-kpi-card kpi-blue">
-                    <div class="flex items-center gap-3">
-                        <div class="kpi-icon-wrap"><i class="fas fa-gavel"></i></div>
-                        <div class="min-w-0">
-                            <p class="kpi-label">إجمالي التدريبات</p>
-                            <p class="kpi-value" id="legal-total-count">${stats.total}</p>
-                        </div>
-                    </div>
-                </div>
-                <div class="legal-kpi-card kpi-green">
-                    <div class="flex items-center gap-3">
-                        <div class="kpi-icon-wrap"><i class="fas fa-check-circle"></i></div>
-                        <div class="min-w-0">
-                            <p class="kpi-label">ممتثل</p>
-                            <p class="kpi-value" id="legal-compliant-count">${stats.compliant}</p>
-                        </div>
-                    </div>
-                </div>
-                <div class="legal-kpi-card kpi-red">
-                    <div class="flex items-center gap-3">
-                        <div class="kpi-icon-wrap"><i class="fas fa-exclamation-triangle"></i></div>
-                        <div class="min-w-0">
-                            <p class="kpi-label">غير ممتثل</p>
-                            <p class="kpi-value" id="legal-noncompliant-count">${stats.nonCompliant}</p>
-                        </div>
-                    </div>
-                </div>
-                <div class="legal-kpi-card kpi-amber">
-                    <div class="flex items-center gap-3">
-                        <div class="kpi-icon-wrap"><i class="fas fa-clock"></i></div>
-                        <div class="min-w-0">
-                            <p class="kpi-label">قارب على الانتهاء</p>
-                            <p class="kpi-value" id="legal-expiring-count">${stats.expiringSoon}</p>
-                        </div>
-                    </div>
-                </div>
-                <div class="legal-kpi-card kpi-purple">
-                    <div class="flex items-center gap-3">
-                        <div class="kpi-icon-wrap"><i class="fas fa-percentage"></i></div>
-                        <div class="min-w-0">
-                            <p class="kpi-label">نسبة الامتثال</p>
-                            <p class="kpi-value" id="legal-compliance-rate">${stats.complianceRate}%</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="legal-filters-bar">
-                <div class="filter-group">
-                    <label>التصنيف:</label>
-                    <select id="legal-training-category-filter" class="form-input" style="max-width: 200px;">
-                        <option value="">الكل</option>
-                        ${this.LEGAL_CATEGORIES.map(c => `<option value="${c.value}">${c.label}</option>`).join('')}
-                    </select>
-                </div>
-                <div class="filter-group">
-                    <label>حالة الامتثال:</label>
-                    <select id="legal-training-compliance-filter" class="form-input" style="max-width: 180px;">
-                        <option value="">الكل</option>
-                        <option value="ممتثل">ممتثل</option>
-                        <option value="غير ممتثل">غير ممتثل</option>
-                        <option value="قارب على الانتهاء">قارب على الانتهاء</option>
-                        <option value="مخطط">مخطط</option>
-                    </select>
-                </div>
-                <button id="reset-legal-filter-btn" class="btn-secondary btn-sm">
-                    <i class="fas fa-redo ml-2"></i>إعادة تعيين
+            <div class="legal-sub-tabs">
+                <button class="legal-sub-tab ${activeSub === 'register' ? 'active' : ''}" data-sub="register">
+                    <i class="fas fa-balance-scale ml-2"></i>سجل التشريعات والقوانين
                 </button>
-                <button id="add-legal-training-btn" class="btn-primary btn-sm">
-                    <i class="fas fa-plus ml-2"></i>إضافة تدريب قانوني
+                <button class="legal-sub-tab ${activeSub === 'training' ? 'active' : ''}" data-sub="training">
+                    <i class="fas fa-gavel ml-2"></i>التدريبات القانونية
                 </button>
             </div>
 
-            <div class="legal-table-card">
-                <div class="card-header">
-                    <div class="legal-header-row">
-                        <div class="legal-title-section">
-                            <h3 class="card-title"><i class="fas fa-gavel ml-2"></i>سجل التدريبات القانونية</h3>
-                        </div>
-                        <div class="legal-header-actions">
-                            <div class="legal-search-wrapper">
-                                <i class="fas fa-search legal-search-icon"></i>
-                                <input type="text" id="legal-training-search" class="legal-search-input" placeholder="بحث في السجل...">
+            <div id="legal-register-section" class="${activeSub === 'register' ? '' : 'hidden'}">
+                <div class="lr-kpi-grid">
+                    <div class="lr-kpi-card lr-kpi-blue">
+                        <div class="flex items-center gap-3">
+                            <div class="kpi-icon-wrap"><i class="fas fa-book"></i></div>
+                            <div class="min-w-0">
+                                <p class="kpi-label">إجمالي التشريعات</p>
+                                <p class="kpi-value" id="lr-total-count">${regStats.total}</p>
                             </div>
-                            <button id="export-legal-training-pdf-btn" class="legal-action-btn btn-pdf" title="تصدير PDF">
-                                <i class="fas fa-file-pdf"></i>
-                            </button>
-                            <button id="export-legal-training-excel-btn" class="legal-action-btn btn-excel" title="تصدير Excel">
-                                <i class="fas fa-file-excel"></i>
-                            </button>
+                        </div>
+                    </div>
+                    <div class="lr-kpi-card lr-kpi-green">
+                        <div class="flex items-center gap-3">
+                            <div class="kpi-icon-wrap"><i class="fas fa-check-circle"></i></div>
+                            <div class="min-w-0">
+                                <p class="kpi-label">نافذ</p>
+                                <p class="kpi-value" id="lr-applicable-count">${regStats.applicable}</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="lr-kpi-card lr-kpi-amber">
+                        <div class="flex items-center gap-3">
+                            <div class="kpi-icon-wrap"><i class="fas fa-pen"></i></div>
+                            <div class="min-w-0">
+                                <p class="kpi-label">معدل</p>
+                                <p class="kpi-value" id="lr-amended-count">${regStats.amended}</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="lr-kpi-card lr-kpi-red">
+                        <div class="flex items-center gap-3">
+                            <div class="kpi-icon-wrap"><i class="fas fa-ban"></i></div>
+                            <div class="min-w-0">
+                                <p class="kpi-label">ملغي</p>
+                                <p class="kpi-value" id="lr-repealed-count">${regStats.repealed}</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="lr-kpi-card lr-kpi-purple">
+                        <div class="flex items-center gap-3">
+                            <div class="kpi-icon-wrap"><i class="fas fa-percentage"></i></div>
+                            <div class="min-w-0">
+                                <p class="kpi-label">نسبة الامتثال</p>
+                                <p class="kpi-value" id="lr-compliance-rate">${regStats.complianceRate}%</p>
+                            </div>
                         </div>
                     </div>
                 </div>
-                <div class="card-body" id="legal-training-container">
-                    <div class="text-center py-8 text-gray-500">جاري تحميل السجل…</div>
+
+                <div class="lr-filters-bar">
+                    <div class="filter-group">
+                        <label>التصنيف:</label>
+                        <select id="lr-category-filter" class="form-input" style="max-width: 200px;">
+                            <option value="">الكل</option>
+                            ${this.LEGAL_REGISTER_CATEGORIES.map(c => `<option value="${c.value}">${c.label}</option>`).join('')}
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label>الحالة:</label>
+                        <select id="lr-status-filter" class="form-input" style="max-width: 160px;">
+                            <option value="">الكل</option>
+                            ${this.LEGAL_REGISTER_STATUSES.map(s => `<option value="${s.value}">${s.label}</option>`).join('')}
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label>الأولوية:</label>
+                        <select id="lr-priority-filter" class="form-input" style="max-width: 160px;">
+                            <option value="">الكل</option>
+                            ${this.LEGAL_PRIORITIES.map(p => `<option value="${p.value}">${p.label}</option>`).join('')}
+                        </select>
+                    </div>
+                    <button id="lr-reset-filter-btn" class="btn-secondary btn-sm">
+                        <i class="fas fa-redo ml-2"></i>إعادة تعيين
+                    </button>
+                    <button id="lr-add-btn" class="btn-primary btn-sm">
+                        <i class="fas fa-plus ml-2"></i>إضافة تشريع
+                    </button>
+                </div>
+
+                <div class="lr-table-card">
+                    <div class="card-header">
+                        <div class="legal-header-row">
+                            <div class="legal-title-section">
+                                <h3 class="card-title"><i class="fas fa-balance-scale ml-2"></i>سجل حصر التشريعات والقوانين</h3>
+                            </div>
+                            <div class="legal-header-actions">
+                                <div class="legal-search-wrapper">
+                                    <i class="fas fa-search legal-search-icon"></i>
+                                    <input type="text" id="lr-search" class="legal-search-input" placeholder="بحث في التشريعات...">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-body" id="lr-container">
+                        <div class="text-center py-8 text-gray-500">جاري تحميل السجل…</div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="legal-training-section" class="${activeSub === 'training' ? '' : 'hidden'}">
+                <div class="legal-kpi-grid">
+                    <div class="legal-kpi-card kpi-blue">
+                        <div class="flex items-center gap-3">
+                            <div class="kpi-icon-wrap"><i class="fas fa-gavel"></i></div>
+                            <div class="min-w-0">
+                                <p class="kpi-label">إجمالي التدريبات</p>
+                                <p class="kpi-value" id="legal-total-count">${stats.total}</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="legal-kpi-card kpi-green">
+                        <div class="flex items-center gap-3">
+                            <div class="kpi-icon-wrap"><i class="fas fa-check-circle"></i></div>
+                            <div class="min-w-0">
+                                <p class="kpi-label">ممتثل</p>
+                                <p class="kpi-value" id="legal-compliant-count">${stats.compliant}</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="legal-kpi-card kpi-red">
+                        <div class="flex items-center gap-3">
+                            <div class="kpi-icon-wrap"><i class="fas fa-exclamation-triangle"></i></div>
+                            <div class="min-w-0">
+                                <p class="kpi-label">غير ممتثل</p>
+                                <p class="kpi-value" id="legal-noncompliant-count">${stats.nonCompliant}</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="legal-kpi-card kpi-amber">
+                        <div class="flex items-center gap-3">
+                            <div class="kpi-icon-wrap"><i class="fas fa-clock"></i></div>
+                            <div class="min-w-0">
+                                <p class="kpi-label">قارب على الانتهاء</p>
+                                <p class="kpi-value" id="legal-expiring-count">${stats.expiringSoon}</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="legal-kpi-card kpi-purple">
+                        <div class="flex items-center gap-3">
+                            <div class="kpi-icon-wrap"><i class="fas fa-percentage"></i></div>
+                            <div class="min-w-0">
+                                <p class="kpi-label">نسبة الامتثال</p>
+                                <p class="kpi-value" id="legal-compliance-rate">${stats.complianceRate}%</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="legal-filters-bar">
+                    <div class="filter-group">
+                        <label>التصنيف:</label>
+                        <select id="legal-training-category-filter" class="form-input" style="max-width: 200px;">
+                            <option value="">الكل</option>
+                            ${this.LEGAL_CATEGORIES.map(c => `<option value="${c.value}">${c.label}</option>`).join('')}
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label>حالة الامتثال:</label>
+                        <select id="legal-training-compliance-filter" class="form-input" style="max-width: 180px;">
+                            <option value="">الكل</option>
+                            <option value="ممتثل">ممتثل</option>
+                            <option value="غير ممتثل">غير ممتثل</option>
+                            <option value="قارب على الانتهاء">قارب على الانتهاء</option>
+                            <option value="مخطط">مخطط</option>
+                        </select>
+                    </div>
+                    <button id="reset-legal-filter-btn" class="btn-secondary btn-sm">
+                        <i class="fas fa-redo ml-2"></i>إعادة تعيين
+                    </button>
+                    <button id="add-legal-training-btn" class="btn-primary btn-sm">
+                        <i class="fas fa-plus ml-2"></i>إضافة تدريب قانوني
+                    </button>
+                </div>
+
+                <div class="legal-table-card">
+                    <div class="card-header">
+                        <div class="legal-header-row">
+                            <div class="legal-title-section">
+                                <h3 class="card-title"><i class="fas fa-gavel ml-2"></i>سجل التدريبات القانونية</h3>
+                            </div>
+                            <div class="legal-header-actions">
+                                <div class="legal-search-wrapper">
+                                    <i class="fas fa-search legal-search-icon"></i>
+                                    <input type="text" id="legal-training-search" class="legal-search-input" placeholder="بحث في السجل...">
+                                </div>
+                                <button id="export-legal-training-pdf-btn" class="legal-action-btn btn-pdf" title="تصدير PDF">
+                                    <i class="fas fa-file-pdf"></i>
+                                </button>
+                                <button id="export-legal-training-excel-btn" class="legal-action-btn btn-excel" title="تصدير Excel">
+                                    <i class="fas fa-file-excel"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-body" id="legal-training-container">
+                        <div class="text-center py-8 text-gray-500">جاري تحميل السجل…</div>
+                    </div>
                 </div>
             </div>
         `;
@@ -14543,6 +14725,24 @@ const Training = {
         if (exportPdf && !exportPdf.dataset.bound) {
             exportPdf.addEventListener('click', () => this.exportLegalTrainingPdf());
             exportPdf.dataset.bound = '1';
+        }
+
+        // ربط أزرار التبديل بين سجل التشريعات والتدريبات القانونية
+        const subTabs = document.querySelectorAll('.legal-sub-tab');
+        subTabs.forEach(btn => {
+            if (!btn.dataset.bound) {
+                btn.addEventListener('click', () => {
+                    const sub = btn.dataset.sub;
+                    this._legalRegisterSubTab = sub;
+                    subTabs.forEach(b => b.classList.toggle('active', b.dataset.sub === sub));
+                    document.getElementById('legal-register-section')?.classList.toggle('hidden', sub !== 'register');
+                    document.getElementById('legal-training-section')?.classList.toggle('hidden', sub !== 'training');
+                    if (sub === 'register') this.loadLegalRegisterList();
+                    else this.loadLegalTrainingList();
+                });
+                btn.dataset.bound = '1';
+            }
+        });
         }
     },
 
@@ -14909,6 +15109,602 @@ const Training = {
         } catch (error) {
             Utils.safeError('❌ خطأ في حذف التدريب القانوني:', error);
         }
+    },
+
+    // ============================================
+    // سجل التشريعات والقوانين (Legal Register)
+    // ============================================
+
+    loadLegalRegisterList() {
+        const container = document.getElementById('lr-container');
+        if (!container) return;
+
+        const stats = this.getLegalRegisterStats();
+        const ids = ['lr-total-count', 'lr-applicable-count', 'lr-amended-count', 'lr-repealed-count', 'lr-compliance-rate'];
+        const vals = [stats.total, stats.applicable, stats.amended, stats.repealed, stats.complianceRate + '%'];
+        ids.forEach((id, i) => { const el = document.getElementById(id); if (el) el.textContent = vals[i]; });
+
+        let items = AppState.appData.legalRegister || [];
+        const catFilter = document.getElementById('lr-category-filter');
+        const statusFilter = document.getElementById('lr-status-filter');
+        const priorityFilter = document.getElementById('lr-priority-filter');
+        const searchInput = document.getElementById('lr-search');
+
+        if (catFilter && catFilter.value) items = items.filter(r => r.category === catFilter.value);
+        if (statusFilter && statusFilter.value) items = items.filter(r => r.status === statusFilter.value);
+        if (priorityFilter && priorityFilter.value) items = items.filter(r => r.priority === priorityFilter.value);
+        if (searchInput && searchInput.value.trim()) {
+            const q = searchInput.value.trim().toLowerCase();
+            items = items.filter(r =>
+                (r.title || '').toLowerCase().includes(q) ||
+                (r.legalReference || '').toLowerCase().includes(q) ||
+                (r.issuingAuthority || '').toLowerCase().includes(q) ||
+                (r.lawNumber || '').toLowerCase().includes(q)
+            );
+        }
+
+        if (items.length === 0) {
+            container.innerHTML = '<div class="text-center py-8 text-gray-500"><i class="fas fa-balance-scale text-4xl mb-3 text-gray-300"></i><p>لا توجد تشريعات مسجلة</p></div>';
+            this._bindLegalRegisterEvents();
+            return;
+        }
+
+        const statusBadge = (status) => {
+            const map = {
+                'applicable': '<span class="lr-badge lr-badge-green">نافذ</span>',
+                'amended': '<span class="lr-badge lr-badge-amber">معدل</span>',
+                'repealed': '<span class="lr-badge lr-badge-red">ملغي</span>',
+                'pending': '<span class="lr-badge lr-badge-blue">قيد الإصدار</span>'
+            };
+            return map[status] || '<span class="lr-badge lr-badge-gray">—</span>';
+        };
+
+        const priorityBadge = (priority) => {
+            const map = {
+                'high': '<span class="lr-priority lr-priority-high">عالية</span>',
+                'medium': '<span class="lr-priority lr-priority-medium">متوسطة</span>',
+                'low': '<span class="lr-priority lr-priority-low">منخفضة</span>'
+            };
+            return map[priority] || '<span class="lr-priority">—</span>';
+        };
+
+        const lawTypeLabel = (type) => {
+            const found = this.LEGAL_LAW_TYPES.find(t => t.value === type);
+            return found ? found.label : type || '—';
+        };
+
+        const countAmendments = (record) => {
+            let amds = record.amendments;
+            if (typeof amds === 'string') { try { amds = JSON.parse(amds); } catch (e) { amds = []; } }
+            return Array.isArray(amds) ? amds.length : 0;
+        };
+
+        const rows = items.map(r => {
+            const amdCount = countAmendments(r);
+            return `
+            <tr>
+                <td class="text-sm font-mono text-gray-500">${r.id || '—'}</td>
+                <td class="text-sm font-medium">${r.title || '—'}</td>
+                <td class="text-sm text-gray-600">${r.issuingAuthority || '—'}</td>
+                <td class="text-sm text-gray-600">${lawTypeLabel(r.lawType)} ${r.lawNumber ? 'رقم ' + r.lawNumber : ''} ${r.lawYear ? '(' + r.lawYear + ')' : ''}</td>
+                <td class="text-sm text-gray-600">${r.legalReference || '—'}</td>
+                <td>${statusBadge(r.status)}</td>
+                <td>${priorityBadge(r.priority)}</td>
+                <td class="text-sm text-center">${r.issueDate || '—'}</td>
+                <td class="text-sm text-center">
+                    <button class="lr-amd-btn" onclick="Training.showLegalAmendments('${r.id}')" title="عرض التحديثات القانونية">
+                        <i class="fas fa-history"></i>
+                        ${amdCount > 0 ? `<span class="lr-amd-badge">${amdCount}</span>` : ''}
+                    </button>
+                </td>
+                <td>
+                    <div class="flex items-center gap-1">
+                        <button class="btn-icon btn-sm" onclick="Training.showLegalRegisterForm('${r.id}')" title="تعديل">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button class="btn-icon btn-sm text-red-600" onclick="Training.deleteLegalRegisterRecord('${r.id}')" title="حذف">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </td>
+            </tr>`;
+        }).join('');
+
+        container.innerHTML = `
+            <div style="overflow-x: auto;">
+                <table class="data-table lr-data-table">
+                    <thead>
+                        <tr>
+                            <th>المعرف</th>
+                            <th>التشريع / القانون</th>
+                            <th>جهة الإصدار</th>
+                            <th>النوع / الرقم</th>
+                            <th>المرجع</th>
+                            <th>الحالة</th>
+                            <th>الأولوية</th>
+                            <th>تاريخ الإصدار</th>
+                            <th>التحديثات</th>
+                            <th>إجراءات</th>
+                        </tr>
+                    </thead>
+                    <tbody>${rows}</tbody>
+                </table>
+            </div>
+        `;
+        this._bindLegalRegisterEvents();
+    },
+
+    _bindLegalRegisterEvents() {
+        const catFilter = document.getElementById('lr-category-filter');
+        const statusFilter = document.getElementById('lr-status-filter');
+        const priorityFilter = document.getElementById('lr-priority-filter');
+        const searchInput = document.getElementById('lr-search');
+        const resetBtn = document.getElementById('lr-reset-filter-btn');
+        const addBtn = document.getElementById('lr-add-btn');
+
+        const reload = () => this.loadLegalRegisterList();
+
+        if (catFilter) catFilter.onchange = reload;
+        if (statusFilter) statusFilter.onchange = reload;
+        if (priorityFilter) priorityFilter.onchange = reload;
+        if (searchInput) searchInput.oninput = Utils.debounce ? Utils.debounce(reload, 300) : reload;
+        if (resetBtn) resetBtn.onclick = () => {
+            if (catFilter) catFilter.value = '';
+            if (statusFilter) statusFilter.value = '';
+            if (priorityFilter) priorityFilter.value = '';
+            if (searchInput) searchInput.value = '';
+            reload();
+        };
+        if (addBtn) addBtn.onclick = () => this.showLegalRegisterForm();
+    },
+
+    showLegalRegisterForm(editId) {
+        this.ensureData();
+        let existing = null;
+        if (editId) existing = (AppState.appData.legalRegister || []).find(r => r.id === editId);
+        const isEdit = !!existing;
+        const val = (f, def) => (existing && existing[f] != null) ? existing[f] : (def || '');
+
+        const lawTypeOpts = '<option value="">اختر النوع</option>' + this.LEGAL_LAW_TYPES.map(t =>
+            `<option value="${t.value}" ${val('lawType') === t.value ? 'selected' : ''}>${t.label}</option>`
+        ).join('');
+
+        const statusOpts = this.LEGAL_REGISTER_STATUSES.map(s =>
+            `<option value="${s.value}" ${val('status', 'applicable') === s.value ? 'selected' : ''}>${s.label}</option>`
+        ).join('');
+
+        const priorityOpts = this.LEGAL_PRIORITIES.map(p =>
+            `<option value="${p.value}" ${val('priority', 'medium') === p.value ? 'selected' : ''}>${p.label}</option>`
+        ).join('');
+
+        const catOpts = '<option value="">اختر التصنيف</option>' + this.LEGAL_REGISTER_CATEGORIES.map(c =>
+            `<option value="${c.value}" ${val('category') === c.value ? 'selected' : ''}>${c.label}</option>`
+        ).join('');
+
+        const html = `
+            <div class="modal-overlay active" id="lr-modal">
+                <div class="modal-content" style="max-width: 860px; max-height: 92vh; overflow-y: auto;">
+                    <div class="lr-modal-header">
+                        <h3><i class="fas fa-balance-scale"></i>${isEdit ? 'تعديل' : 'إضافة'} سجل تشريع وقانون</h3>
+                        <button class="modal-close" onclick="document.getElementById('lr-modal').remove()">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                    <form id="lr-form" onsubmit="Training.handleLegalRegisterSubmit(event)">
+                        <input type="hidden" id="lr-edit-id" value="${editId || ''}">
+                        <div class="modal-body">
+                            <div class="lr-form-section">
+                                <div class="section-title"><i class="fas fa-info-circle"></i>معلومات أساسية</div>
+                                <div class="grid grid-cols-2 gap-4">
+                                    <div class="form-group col-span-2">
+                                        <label class="form-label">عنوان التشريع / القانون <span class="text-red-500">*</span></label>
+                                        <input type="text" id="lr-title" class="form-input" value="${val('title')}" required placeholder="مثال: قانون العمل رقم 12 لسنة 2003">
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">جهة الإصدار <span class="text-red-500">*</span></label>
+                                        <input type="text" id="lr-issuingAuthority" class="form-input" value="${val('issuingAuthority')}" required placeholder="مثال: وزارة القوى العاملة">
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">نوع التشريع <span class="text-red-500">*</span></label>
+                                        <select id="lr-lawType" class="form-input" required>${lawTypeOpts}</select>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">رقم القانون / القرار</label>
+                                        <input type="text" id="lr-lawNumber" class="form-input" value="${val('lawNumber')}" placeholder="مثال: 12">
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">سنة الإصدار</label>
+                                        <input type="text" id="lr-lawYear" class="form-input" value="${val('lawYear')}" placeholder="مثال: 2003">
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">التصنيف <span class="text-red-500">*</span></label>
+                                        <select id="lr-category" class="form-input" required>${catOpts}</select>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="lr-form-section">
+                                <div class="section-title"><i class="fas fa-calendar-alt"></i>التواريخ</div>
+                                <div class="grid grid-cols-3 gap-4">
+                                    <div class="form-group">
+                                        <label class="form-label">تاريخ الإصدار</label>
+                                        <input type="date" id="lr-issueDate" class="form-input" value="${val('issueDate')}">
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">تاريخ النفاذ</label>
+                                        <input type="date" id="lr-effectiveDate" class="form-input" value="${val('effectiveDate')}">
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">تاريخ المراجعة القادم</label>
+                                        <input type="date" id="lr-nextReviewDate" class="form-input" value="${val('nextReviewDate')}">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="lr-form-section">
+                                <div class="section-title"><i class="fas fa-file-alt"></i>التفاصيل القانونية</div>
+                                <div class="grid grid-cols-2 gap-4">
+                                    <div class="form-group">
+                                        <label class="form-label">المرجع القانوني</label>
+                                        <input type="text" id="lr-legalReference" class="form-input" value="${val('legalReference')}" placeholder="مثال: قانون العمل">
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">المواد / البنود</label>
+                                        <input type="text" id="lr-legalArticles" class="form-input" value="${val('legalArticles')}" placeholder="مثال: 208، 209، 210">
+                                    </div>
+                                    <div class="form-group col-span-2">
+                                        <label class="form-label">نطاق التطبيق</label>
+                                        <input type="text" id="lr-scopeOfApplication" class="form-input" value="${val('scopeOfApplication')}" placeholder="مثال: جميع المنشآت الخاضعة للقانون">
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">الجهة المسؤولة</label>
+                                        <input type="text" id="lr-responsibleDepartment" class="form-input" value="${val('responsibleDepartment')}" placeholder="مثال: إدارة الموارد البشرية">
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">الأولوية</label>
+                                        <select id="lr-priority" class="form-input">${priorityOpts}</select>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">الحالة</label>
+                                        <select id="lr-status" class="form-input">${statusOpts}</select>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">تاريخ المراجعة القادم</label>
+                                        <input type="date" id="lr-nextReviewDate2" class="form-input" value="${val('nextReviewDate')}">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="lr-form-section">
+                                <div class="section-title"><i class="fas fa-align-left"></i>ملخص وملاحظات</div>
+                                <div class="form-group">
+                                    <textarea id="lr-summary" class="form-input" rows="3" placeholder="ملخص التشريع ومتطلباته">${val('summary')}</textarea>
+                                </div>
+                                <div class="form-group" style="margin-top: 12px;">
+                                    <textarea id="lr-notes" class="form-input" rows="2" placeholder="ملاحظات إضافية">${val('notes')}</textarea>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn-secondary" onclick="document.getElementById('lr-modal').remove()">إلغاء</button>
+                            <button type="submit" class="btn-primary">
+                                <i class="fas fa-save ml-2"></i>${isEdit ? 'حفظ التعديلات' : 'إضافة التشريع'}
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        `;
+
+        const existingModal = document.getElementById('lr-modal');
+        if (existingModal) existingModal.remove();
+        document.body.insertAdjacentHTML('beforeend', html);
+    },
+
+    async handleLegalRegisterSubmit(e) {
+        e.preventDefault();
+        const editId = document.getElementById('lr-edit-id')?.value;
+        const isEdit = !!editId;
+
+        const g = (id) => { const el = document.getElementById(id); return el ? el.value.trim() : ''; };
+
+        const data = {
+            title: g('lr-title'),
+            issuingAuthority: g('lr-issuingAuthority'),
+            lawType: g('lr-lawType'),
+            lawNumber: g('lr-lawNumber'),
+            lawYear: g('lr-lawYear'),
+            category: g('lr-category'),
+            issueDate: g('lr-issueDate'),
+            effectiveDate: g('lr-effectiveDate'),
+            nextReviewDate: g('lr-nextReviewDate') || g('lr-nextReviewDate2'),
+            legalReference: g('lr-legalReference'),
+            legalArticles: g('lr-legalArticles'),
+            scopeOfApplication: g('lr-scopeOfApplication'),
+            responsibleDepartment: g('lr-responsibleDepartment'),
+            priority: g('lr-priority'),
+            status: g('lr-status'),
+            summary: g('lr-summary'),
+            notes: g('lr-notes')
+        };
+
+        if (!data.title || !data.issuingAuthority || !data.lawType || !data.category) {
+            if (typeof Notification !== 'undefined' && Notification.error)
+                Notification.error('يرجى ملء الحقول المطلوبة: العنوان، جهة الإصدار، النوع، التصنيف');
+            return;
+        }
+
+        const modal = document.getElementById('lr-modal');
+
+        try {
+            if (isEdit) {
+                data.id = editId;
+                data.updatedAt = new Date().toISOString();
+                const items = AppState.appData.legalRegister || [];
+                const idx = items.findIndex(r => r.id === editId);
+                if (idx !== -1) {
+                    const existingAmendments = items[idx].amendments || [];
+                    data.amendments = existingAmendments;
+                    Object.assign(items[idx], data);
+                    this._legalRegisterLocalSaveTime = Date.now();
+                }
+                if (modal) modal.remove();
+                this.loadLegalRegisterList();
+                if (typeof Notification !== 'undefined' && Notification.success)
+                    Notification.success('تم تحديث السجل القانوني بنجاح');
+                if (typeof GoogleIntegration !== 'undefined' && GoogleIntegration.sendRequest) {
+                    GoogleIntegration.sendRequest({
+                        action: 'updateLegalRegister',
+                        data: { registerId: editId, updateData: data }
+                    }).catch(() => {});
+                }
+            } else {
+                data.createdAt = new Date().toISOString();
+                data.updatedAt = data.createdAt;
+                data.amendments = [];
+                if (!AppState.appData.legalRegister) AppState.appData.legalRegister = [];
+                const tempId = 'LR-LOCAL-' + Date.now();
+                data.id = tempId;
+                AppState.appData.legalRegister.unshift(data);
+                this._legalRegisterLocalSaveTime = Date.now();
+                if (modal) modal.remove();
+                this.loadLegalRegisterList();
+                if (typeof Notification !== 'undefined' && Notification.success)
+                    Notification.success('جاري حفظ السجل القانوني...');
+                if (typeof GoogleIntegration !== 'undefined' && GoogleIntegration.sendRequest) {
+                    const serverData = Object.assign({}, data);
+                    delete serverData.id;
+                    GoogleIntegration.sendRequest({
+                        action: 'addLegalRegister',
+                        data: serverData
+                    }).then(resp => {
+                        if (resp && resp.success && resp.data && resp.data.id) {
+                            const items = AppState.appData.legalRegister || [];
+                            const localIdx = items.findIndex(r => r.id === tempId);
+                            if (localIdx !== -1) items[localIdx].id = resp.data.id;
+                            if (typeof Notification !== 'undefined' && Notification.success)
+                                Notification.success('تم حفظ السجل القانوني بنجاح ✅');
+                        }
+                    }).catch(err => Utils.safeWarn('⚠️ خطأ في حفظ السجل القانوني:', err));
+                }
+            }
+            if (typeof window.DataManager !== 'undefined' && window.DataManager.save) window.DataManager.save();
+        } catch (error) {
+            Utils.safeError('❌ خطأ في حفظ السجل القانوني:', error);
+            if (typeof Notification !== 'undefined' && Notification.error)
+                Notification.error('حدث خطأ أثناء الحفظ');
+        }
+    },
+
+    async deleteLegalRegisterRecord(registerId) {
+        if (!confirm('هل أنت متأكد من حذف هذا السجل القانوني؟')) return;
+        try {
+            const items = AppState.appData.legalRegister || [];
+            AppState.appData.legalRegister = items.filter(r => r.id !== registerId);
+            this._legalRegisterLocalSaveTime = Date.now();
+            if (typeof DataManager !== 'undefined' && DataManager.save) DataManager.save();
+            this.loadLegalRegisterList();
+            if (typeof Notification !== 'undefined' && Notification.success)
+                Notification.success('تم حذف السجل القانوني');
+            if (typeof GoogleIntegration !== 'undefined' && GoogleIntegration.sendRequest) {
+                GoogleIntegration.sendRequest({
+                    action: 'deleteLegalRegister',
+                    data: { registerId }
+                }).catch(err => Utils.safeWarn('⚠️ تعذر حذف السجل القانوني من الخادم:', err));
+            }
+        } catch (error) {
+            Utils.safeError('❌ خطأ في حذف السجل القانوني:', error);
+        }
+    },
+
+    // آلية التحديثات القانونية (Amendments)
+
+    showLegalAmendments(registerId) {
+        this.ensureData();
+        const record = (AppState.appData.legalRegister || []).find(r => r.id === registerId);
+        if (!record) { if (typeof Notification !== 'undefined' && Notification.error) Notification.error('السجل القانوني غير موجود'); return; }
+
+        let amendments = record.amendments;
+        if (typeof amendments === 'string') { try { amendments = JSON.parse(amendments); } catch (e) { amendments = []; } }
+        if (!Array.isArray(amendments)) amendments = [];
+
+        const html = `
+            <div class="modal-overlay active" id="lr-amendments-modal">
+                <div class="modal-content" style="max-width: 780px; max-height: 90vh; overflow-y: auto;">
+                    <div class="lr-modal-header lr-modal-header-alt">
+                        <h3><i class="fas fa-history"></i>التحديثات القانونية</h3>
+                        <button class="modal-close" onclick="document.getElementById('lr-amendments-modal').remove()">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="lr-amd-record-info">
+                            <div><i class="fas fa-file-alt"></i> ${record.title || '—'}</div>
+                            <div><i class="fas fa-hashtag"></i> ${record.id || ''}</div>
+                        </div>
+
+                        ${amendments.length === 0 ? `
+                            <div class="lr-amd-empty">
+                                <i class="fas fa-history text-4xl text-gray-300 mb-3"></i>
+                                <p>لا توجد تحديثات قانونية مسجلة لهذا التشريع</p>
+                            </div>
+                        ` : `
+                            <div class="lr-amd-timeline">
+                                ${amendments.map((a, i) => {
+                                    const side = i % 2 === 0 ? 'right' : 'left';
+                                    return `
+                                    <div class="lr-amd-item lr-amd-${side}">
+                                        <div class="lr-amd-dot"></div>
+                                        <div class="lr-amd-content">
+                                            <div class="lr-amd-header">
+                                                <span class="lr-amd-num">تحديث ${a.amendmentNumber || i + 1}</span>
+                                                <span class="lr-amd-date">${a.date || ''}</span>
+                                            </div>
+                                            <h4 class="lr-amd-title">${a.title || 'تحديث'}</h4>
+                                            <p class="lr-amd-desc">${a.description || ''}</p>
+                                            ${a.affectedArticles ? `<div class="lr-amd-articles"><i class="fas fa-gavel"></i> المواد المتأثرة: ${a.affectedArticles}</div>` : ''}
+                                            ${a.newRequirements ? `<div class="lr-amd-req"><i class="fas fa-clipboard-list"></i> المتطلبات الجديدة: ${a.newRequirements}</div>` : ''}
+                                            ${a.referenceLaw ? `<div class="lr-amd-ref"><i class="fas fa-book"></i> المرجع: ${a.referenceLaw}</div>` : ''}
+                                        </div>
+                                    </div>`;
+                                }).join('')}
+                            </div>
+                        `}
+
+                        <button id="lr-add-amendment-btn" class="btn-primary btn-sm" style="width: 100%; justify-content: center; margin-top: 16px;">
+                            <i class="fas fa-plus ml-2"></i>إضافة تحديث قانوني
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        const existingModal = document.getElementById('lr-amendments-modal');
+        if (existingModal) existingModal.remove();
+        document.body.insertAdjacentHTML('beforeend', html);
+
+        document.getElementById('lr-add-amendment-btn').onclick = () => {
+            document.getElementById('lr-amendments-modal').remove();
+            this.showLegalAmendmentForm(registerId);
+        };
+    },
+
+    showLegalAmendmentForm(registerId) {
+        this.ensureData();
+        const html = `
+            <div class="modal-overlay active" id="lr-amd-form-modal">
+                <div class="modal-content" style="max-width: 640px;">
+                    <div class="lr-modal-header lr-modal-header-alt">
+                        <h3><i class="fas fa-plus-circle"></i>إضافة تحديث قانوني</h3>
+                        <button class="modal-close" onclick="document.getElementById('lr-amd-form-modal').remove()">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                    <form id="lr-amd-form" onsubmit="Training.handleAmendmentSubmit(event, '${registerId}')">
+                        <input type="hidden" id="lr-amd-registerId" value="${registerId}">
+                        <div class="modal-body">
+                            <div class="lr-form-section">
+                                <div class="form-group">
+                                    <label class="form-label">رقم التحديث <span class="text-red-500">*</span></label>
+                                    <input type="text" id="lr-amd-number" class="form-input" required placeholder="مثال: 1">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">تاريخ التحديث</label>
+                                    <input type="date" id="lr-amd-date" class="form-input">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">عنوان التحديث <span class="text-red-500">*</span></label>
+                                    <input type="text" id="lr-amd-title" class="form-input" required placeholder="مثال: تعديل المادة 208 من قانون العمل">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">وصف التحديث</label>
+                                    <textarea id="lr-amd-description" class="form-input" rows="3" placeholder="شرح التعديلات والتحديثات"></textarea>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">المواد المتأثرة</label>
+                                    <input type="text" id="lr-amd-articles" class="form-input" placeholder="مثال: 208، 209، 210">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">المتطلبات الجديدة</label>
+                                    <textarea id="lr-amd-requirements" class="form-input" rows="2" placeholder="المتطلبات الجديدة الناتجة عن التعديل"></textarea>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">المرجع القانوني للتعديل</label>
+                                    <input type="text" id="lr-amd-reference" class="form-input" placeholder="مثال: قانون رقم 180 لسنة 2023">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn-secondary" onclick="document.getElementById('lr-amd-form-modal').remove()">إلغاء</button>
+                            <button type="submit" class="btn-primary">
+                                <i class="fas fa-save ml-2"></i>إضافة التحديث
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        `;
+
+        const existingModal = document.getElementById('lr-amd-form-modal');
+        if (existingModal) existingModal.remove();
+        document.body.insertAdjacentHTML('beforeend', html);
+    },
+
+    async handleAmendmentSubmit(e, registerId) {
+        e.preventDefault();
+        const g = (id) => { const el = document.getElementById(id); return el ? el.value.trim() : ''; };
+
+        const amendment = {
+            id: 'AMD-' + Date.now(),
+            amendmentNumber: g('lr-amd-number'),
+            date: g('lr-amd-date'),
+            title: g('lr-amd-title'),
+            description: g('lr-amd-description'),
+            affectedArticles: g('lr-amd-articles'),
+            newRequirements: g('lr-amd-requirements'),
+            referenceLaw: g('lr-amd-reference'),
+            createdAt: new Date().toISOString()
+        };
+
+        if (!amendment.title || !amendment.amendmentNumber) {
+            if (typeof Notification !== 'undefined' && Notification.error)
+                Notification.error('يرجى إدخال رقم التحديث والعنوان');
+            return;
+        }
+
+        const items = AppState.appData.legalRegister || [];
+        const record = items.find(r => r.id === registerId);
+        if (!record) {
+            if (typeof Notification !== 'undefined' && Notification.error)
+                Notification.error('السجل القانوني غير موجود');
+            return;
+        }
+
+        let amendments = record.amendments;
+        if (typeof amendments === 'string') { try { amendments = JSON.parse(amendments); } catch (e) { amendments = []; } }
+        if (!Array.isArray(amendments)) amendments = [];
+
+        amendments.push(amendment);
+        record.amendments = amendments;
+        record.updatedAt = new Date().toISOString();
+
+        if (typeof window.DataManager !== 'undefined' && window.DataManager.save) window.DataManager.save();
+
+        const modal = document.getElementById('lr-amd-form-modal');
+        if (modal) modal.remove();
+
+        this.loadLegalRegisterList();
+        if (typeof Notification !== 'undefined' && Notification.success)
+            Notification.success('تم إضافة التحديث القانوني بنجاح');
+
+        if (typeof GoogleIntegration !== 'undefined' && GoogleIntegration.sendRequest) {
+            GoogleIntegration.sendRequest({
+                action: 'updateLegalRegister',
+                data: { registerId, updateData: { amendments: JSON.stringify(amendments), updatedAt: record.updatedAt } }
+            }).catch(() => {});
+        }
+
+        this.showLegalAmendments(registerId);
     },
 
     exportLegalTrainingExcel() {

@@ -15576,6 +15576,535 @@ body[data-theme="dark"] .profile-info-list>div,
     background: #f1f5f9;
 }
 
+/* ==============================
+   Legal Sub-Tabs
+   ============================== */
+.legal-sub-tabs {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 20px;
+    background: #f1f5f9;
+    border-radius: 12px;
+    padding: 4px;
+    direction: rtl;
+}
+
+.legal-sub-tab {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 10px 16px;
+    border: none;
+    border-radius: 10px;
+    background: transparent;
+    color: #64748b;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.25s;
+}
+
+.legal-sub-tab:hover {
+    color: #1e293b;
+    background: rgba(255,255,255,0.5);
+}
+
+.legal-sub-tab.active {
+    background: #fff;
+    color: #1e293b;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+}
+
+.legal-sub-tab i {
+    font-size: 15px;
+}
+
+/* ==============================
+   Legal Register KPI Cards
+   ============================== */
+.lr-kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 16px;
+    margin-bottom: 20px;
+}
+
+.lr-kpi-card {
+    background: #fff;
+    border-radius: 16px;
+    padding: 20px 16px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+    border: 1px solid #f1f5f9;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    overflow: hidden;
+}
+
+.lr-kpi-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    border-radius: 16px 16px 0 0;
+}
+
+.lr-kpi-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 10px 25px -5px rgba(0,0,0,0.08);
+}
+
+.lr-kpi-card .kpi-icon-wrap {
+    width: 48px;
+    height: 48px;
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    font-size: 20px;
+}
+
+.lr-kpi-card .kpi-label {
+    font-size: 12px;
+    color: #64748b;
+    margin: 0 0 2px;
+    line-height: 1.2;
+}
+
+.lr-kpi-card .kpi-value {
+    font-size: 24px;
+    font-weight: 700;
+    line-height: 1.2;
+    margin: 0;
+}
+
+.lr-kpi-card.lr-kpi-blue .kpi-icon-wrap { background: #eff6ff; color: #2563eb; }
+.lr-kpi-card.lr-kpi-blue .kpi-value { color: #1e40af; }
+.lr-kpi-card.lr-kpi-blue::before { background: #3b82f6; }
+
+.lr-kpi-card.lr-kpi-green .kpi-icon-wrap { background: #f0fdf4; color: #16a34a; }
+.lr-kpi-card.lr-kpi-green .kpi-value { color: #166534; }
+.lr-kpi-card.lr-kpi-green::before { background: #22c55e; }
+
+.lr-kpi-card.lr-kpi-amber .kpi-icon-wrap { background: #fffbeb; color: #d97706; }
+.lr-kpi-card.lr-kpi-amber .kpi-value { color: #92400e; }
+.lr-kpi-card.lr-kpi-amber::before { background: #f59e0b; }
+
+.lr-kpi-card.lr-kpi-red .kpi-icon-wrap { background: #fef2f2; color: #dc2626; }
+.lr-kpi-card.lr-kpi-red .kpi-value { color: #991b1b; }
+.lr-kpi-card.lr-kpi-red::before { background: #ef4444; }
+
+.lr-kpi-card.lr-kpi-purple .kpi-icon-wrap { background: #faf5ff; color: #9333ea; }
+.lr-kpi-card.lr-kpi-purple .kpi-value { color: #6b21a8; }
+.lr-kpi-card.lr-kpi-purple::before { background: #a855f7; }
+
+/* ==============================
+   Legal Register Filters
+   ============================== */
+.lr-filters-bar {
+    background: #fff;
+    border-radius: 14px;
+    padding: 16px 20px;
+    margin-bottom: 20px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+    border: 1px solid #f1f5f9;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+
+.lr-filters-bar .filter-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.lr-filters-bar .filter-group label {
+    font-size: 13px;
+    font-weight: 600;
+    color: #475569;
+    white-space: nowrap;
+}
+
+.lr-filters-bar .form-input {
+    border-radius: 10px;
+    border: 1.5px solid #e2e8f0;
+    padding: 8px 14px;
+    font-size: 13px;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.lr-filters-bar .form-input:focus {
+    border-color: #6366f1;
+    box-shadow: 0 0 0 3px rgba(99,102,241,0.12);
+    outline: none;
+}
+
+/* ==============================
+   Legal Register Table Card
+   ============================== */
+.lr-table-card {
+    background: #fff;
+    border-radius: 16px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+    border: 1px solid #f1f5f9;
+    overflow: hidden;
+}
+
+.lr-table-card .card-header {
+    padding: 16px 24px;
+    border-bottom: 1px solid #f1f5f9;
+    background: #fafbfc;
+}
+
+.lr-table-card .card-body {
+    padding: 0;
+}
+
+/* ==============================
+   Legal Register Badges
+   ============================== */
+.lr-badge {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.lr-badge-green { background: #dcfce7; color: #15803d; }
+.lr-badge-amber { background: #fef3c7; color: #b45309; }
+.lr-badge-red { background: #fee2e2; color: #b91c1c; }
+.lr-badge-blue { background: #dbeafe; color: #1d4ed8; }
+.lr-badge-gray { background: #f1f5f9; color: #64748b; }
+
+.lr-priority {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 600;
+}
+
+.lr-priority-high { background: #fef2f2; color: #dc2626; }
+.lr-priority-medium { background: #fffbeb; color: #d97706; }
+.lr-priority-low { background: #f0fdf4; color: #16a34a; }
+
+/* ==============================
+   Legal Register Data Table
+   ============================== */
+.lr-data-table th {
+    background: #f8fafc;
+    color: #475569;
+    font-size: 12px;
+    font-weight: 700;
+    white-space: nowrap;
+    padding: 12px 14px;
+    border-bottom: 2px solid #e2e8f0;
+    letter-spacing: 0.02em;
+}
+
+.lr-data-table td {
+    padding: 12px 14px;
+    font-size: 13px;
+    border-bottom: 1px solid #f1f5f9;
+    vertical-align: middle;
+}
+
+.lr-data-table tbody tr { transition: background 0.15s; }
+.lr-data-table tbody tr:hover { background: #f8fafc; }
+.lr-data-table tbody tr:nth-child(even) { background: #fafbfc; }
+.lr-data-table tbody tr:nth-child(even):hover { background: #f1f5f9; }
+
+/* Amendment button */
+.lr-amd-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 10px;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    background: #fff;
+    color: #6366f1;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.lr-amd-btn:hover {
+    background: #eef2ff;
+    border-color: #6366f1;
+}
+
+.lr-amd-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 5px;
+    border-radius: 10px;
+    background: #6366f1;
+    color: #fff;
+    font-size: 10px;
+    font-weight: 700;
+}
+
+/* ==============================
+   Legal Register Modal
+   ============================== */
+.lr-modal-header {
+    background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+    color: #fff;
+    padding: 18px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.lr-modal-header h3 {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 700;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.lr-modal-header .modal-close {
+    color: rgba(255,255,255,0.7);
+    background: rgba(255,255,255,0.1);
+    border: none;
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.lr-modal-header .modal-close:hover {
+    background: rgba(255,255,255,0.2);
+    color: #fff;
+}
+
+.lr-modal-header-alt {
+    background: linear-gradient(135deg, #4f46e5 0%, #6366f1 100%);
+}
+
+.lr-form-section {
+    background: #f8fafc;
+    border-radius: 12px;
+    padding: 16px 18px;
+    margin-bottom: 16px;
+    border: 1px solid #e2e8f0;
+}
+
+.lr-form-section .section-title {
+    font-size: 14px;
+    font-weight: 700;
+    color: #1e293b;
+    margin: 0 0 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.lr-form-section .section-title i {
+    color: #6366f1;
+    font-size: 16px;
+}
+
+/* ==============================
+   Legal Register Amendments Timeline
+   ============================== */
+.lr-amd-record-info {
+    background: #eef2ff;
+    border: 1px solid #c7d2fe;
+    border-radius: 12px;
+    padding: 14px 18px;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 8px;
+    font-size: 13px;
+    color: #4338ca;
+}
+
+.lr-amd-record-info i {
+    margin-left: 6px;
+    color: #6366f1;
+}
+
+.lr-amd-empty {
+    text-align: center;
+    padding: 40px 20px;
+    color: #94a3b8;
+}
+
+.lr-amd-timeline {
+    position: relative;
+    padding: 10px 0;
+}
+
+.lr-amd-timeline::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    right: 50%;
+    width: 2px;
+    background: #e2e8f0;
+    transform: translateX(50%);
+}
+
+.lr-amd-item {
+    position: relative;
+    width: 50%;
+    padding: 10px 0;
+}
+
+.lr-amd-right {
+    left: 0;
+    padding-left: 30px;
+}
+
+.lr-amd-left {
+    left: 50%;
+    padding-right: 30px;
+}
+
+.lr-amd-dot {
+    position: absolute;
+    top: 20px;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: #6366f1;
+    border: 3px solid #e0e7ff;
+    z-index: 1;
+}
+
+.lr-amd-right .lr-amd-dot {
+    left: -7px;
+}
+
+.lr-amd-left .lr-amd-dot {
+    right: -7px;
+}
+
+.lr-amd-content {
+    background: #fff;
+    border: 1px solid #f1f5f9;
+    border-radius: 12px;
+    padding: 14px 16px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+    transition: all 0.2s;
+}
+
+.lr-amd-content:hover {
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    border-color: #c7d2fe;
+}
+
+.lr-amd-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 6px;
+}
+
+.lr-amd-num {
+    font-size: 11px;
+    font-weight: 700;
+    color: #6366f1;
+    background: #eef2ff;
+    padding: 2px 8px;
+    border-radius: 6px;
+}
+
+.lr-amd-date {
+    font-size: 11px;
+    color: #94a3b8;
+}
+
+.lr-amd-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: #1e293b;
+    margin: 0 0 6px;
+}
+
+.lr-amd-desc {
+    font-size: 13px;
+    color: #64748b;
+    margin: 0 0 8px;
+    line-height: 1.5;
+}
+
+.lr-amd-articles,
+.lr-amd-req,
+.lr-amd-ref {
+    font-size: 12px;
+    color: #475569;
+    padding: 4px 8px;
+    background: #f8fafc;
+    border-radius: 6px;
+    margin-top: 4px;
+}
+
+.lr-amd-articles i,
+.lr-amd-req i,
+.lr-amd-ref i {
+    margin-left: 5px;
+    font-size: 11px;
+}
+
+.lr-amd-articles i { color: #6366f1; }
+.lr-amd-req i { color: #16a34a; }
+.lr-amd-ref i { color: #d97706; }
+
+/* Hidden utility */
+.hidden {
+    display: none !important;
+}
+
+/* ==============================
+   Legal Register Responsive
+   ============================== */
+@media (max-width: 1200px) {
+    .lr-kpi-grid { grid-template-columns: repeat(3, 1fr); }
+    .lr-amd-timeline::before { right: 20px; }
+    .lr-amd-item { width: 100%; padding-right: 0 !important; padding-left: 40px !important; left: 0 !important; }
+    .lr-amd-dot { right: 13px !important; left: auto !important; }
+}
+
+@media (max-width: 768px) {
+    .lr-kpi-grid { grid-template-columns: repeat(2, 1fr); gap: 12px; }
+    .lr-filters-bar { flex-direction: column; align-items: stretch; }
+    .lr-filters-bar .filter-group { flex-direction: column; align-items: stretch; }
+    .lr-filters-bar .filter-group .form-input { max-width: 100% !important; }
+    .lr-filters-bar #lr-add-btn { width: 100%; justify-content: center; }
+    .legal-sub-tabs { flex-direction: column; }
+}
+
+@media (max-width: 480px) {
+    .lr-kpi-grid { grid-template-columns: 1fr; }
+}
+
 .legal-form-section {
     background: #f8fafc;
     border-radius: 12px;

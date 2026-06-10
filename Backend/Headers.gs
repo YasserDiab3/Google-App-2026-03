@@ -41,6 +41,7 @@ function getDefaultHeaders(sheetName) {
         'TrainingAttendance': ['id', 'trainingId', 'date', 'trainingType', 'factory', 'factoryName', 'employeeCode', 'employeeName', 'position', 'department', 'topic', 'trainer', 'startTime', 'endTime', 'totalHours', 'createdAt', 'updatedAt'],
         'LegalTrainings': ['id', 'title', 'legalReference', 'legalArticle', 'category', 'frequency', 'targetGroup', 'department', 'factory', 'factoryName', 'scheduledDate', 'actualDate', 'trainer', 'trainerQualification', 'duration', 'participantsCount', 'status', 'expiryDate', 'nextDueDate', 'certificateRequired', 'complianceStatus', 'penaltyForNonCompliance', 'notes', 'attachments', 'createdBy', 'createdAt', 'updatedAt'],
         'LegalTrainingAttendees': ['id', 'legalTrainingId', 'legalTrainingTitle', 'employeeCode', 'employeeName', 'employeePosition', 'department', 'factory', 'factoryName', 'attendanceDate', 'attendanceStatus', 'score', 'certificateNumber', 'certificateDate', 'certificateExpiryDate', 'certificateImage', 'notes', 'createdBy', 'createdAt', 'updatedAt'],
+        'LegalRegister': ['id', 'title', 'issuingAuthority', 'lawType', 'lawNumber', 'lawYear', 'issueDate', 'effectiveDate', 'category', 'legalReference', 'legalArticles', 'scopeOfApplication', 'responsibleDepartment', 'summary', 'status', 'priority', 'nextReviewDate', 'amendments', 'notes', 'createdBy', 'createdAt', 'updatedAt'],
         // ✅ Clinic Visits (Employees) - avoid JSON fields; flatten medications into plain text + total qty
         'ClinicVisits': [
             'id',
