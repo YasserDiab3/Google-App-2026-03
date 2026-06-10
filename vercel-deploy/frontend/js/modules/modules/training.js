@@ -464,10 +464,12 @@ const Training = {
                             <i class="fas fa-clipboard-check ml-2"></i>
                             سجل التدريب للموظفين
                         </button>
+                        ${this.canViewLegalTrainingTab() ? `
                         <button class="tab-btn" data-tab="legalTraining" onclick="Training.switchTab('legalTraining')">
                             <i class="fas fa-gavel ml-2"></i>
                             التدريبات القانونية
                         </button>
+                        ` : ''}
                         ${this.isCurrentUserAdmin() ? `
                         <button class="tab-btn" data-tab="analysis" onclick="Training.switchTab('analysis')">
                             <i class="fas fa-chart-bar ml-2"></i>
@@ -2735,6 +2737,10 @@ const Training = {
     },
 
     async switchTab(tabName) {
+        // حماية: منع الوصول للتبويبات غير المسموح بها
+        if (tabName === 'legalTraining' && !this.canViewLegalTrainingTab()) {
+            return this.switchTab('programs');
+        }
         document.querySelectorAll('.tab-btn').forEach(btn => {
             btn.classList.remove('active');
         });
@@ -6440,6 +6446,14 @@ const Training = {
         if (this.isCurrentUserAdmin()) return true;
         const role = (AppState.currentUser?.role || '').toString().trim().toLowerCase();
         return ['admin', 'system_admin', 'manager', 'مدير', 'مدير النظام', 'system-manager', 'safety_officer'].some(r => role.includes(r));
+    },
+
+    canViewLegalTrainingTab() {
+        if (this.isCurrentUserAdmin()) return true;
+        if (typeof Permissions !== 'undefined' && typeof Permissions.hasDetailedPermission === 'function') {
+            return Permissions.hasDetailedPermission('training', 'legal-training');
+        }
+        return false;
     },
 
     getAnnualPlan(year, { createIfMissing = false } = {}) {

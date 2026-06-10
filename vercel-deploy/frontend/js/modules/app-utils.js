@@ -170,7 +170,8 @@ const MODULE_DETAILED_PERMISSIONS = {
             { key: 'training-matrix', label: 'مصفوفة التدريب', icon: 'fa-table' },
             { key: 'annual-plan', label: 'الخطة السنوية', icon: 'fa-calendar-check' },
             { key: 'analysis', label: 'التحليل', icon: 'fa-chart-line' },
-            { key: 'contractor-training', label: 'تدريب المقاولين', icon: 'fa-users' }
+            { key: 'contractor-training', label: 'تدريب المقاولين', icon: 'fa-users' },
+            { key: 'legal-training', label: 'التدريبات القانونية', icon: 'fa-gavel' }
         ]
     },
     'fire-equipment': {
@@ -2847,7 +2848,7 @@ const DEFAULT_COMPANY_NAME = '';
 
 const AppState = {
     /** إصدار التطبيق — تسلسلي: 1.0.0 → 1.0.1 → 1.0.2 … عند كل نشر زِد الرقم هنا وفي version.json */
-    appVersion: '1.0.91',
+    appVersion: '1.0.92',
     /** نص اختياري لرسالة التحديث (ملخص التغييرات). إن تُركت فارغة يُستخدم النص الافتراضي. */
     updateMessage: '',
     debugMode: false,
