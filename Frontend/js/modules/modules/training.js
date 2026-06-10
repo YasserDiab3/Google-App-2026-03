@@ -9373,6 +9373,26 @@ const Training = {
                 </div>
             </div>
 
+            <!-- ── الامتثال القانوني ── -->
+            <div class="content-card" style="padding:0;overflow:hidden;margin-bottom:16px;">
+                <div style="padding:13px 18px 10px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:8px;">
+                    <i class="fas fa-gavel" style="color:#dc2626;"></i>
+                    <span style="font-weight:700;font-size:0.88rem;">تحليل الامتثال القانوني</span>
+                    <span style="font-size:0.72rem;color:#64748b;margin-right:6px;">— القانون المصري والمواصفات الدولية</span>
+                </div>
+                <div style="display:grid;grid-template-columns:280px 1fr;gap:16px;padding:16px;">
+                    <div style="position:relative;height:240px;">
+                        <canvas id="train-chart-legal-compliance"></canvas>
+                        <div id="train-chart-legal-compliance-empty" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;color:#94a3b8;font-size:0.85rem;">لا توجد تدريبات قانونية</div>
+                    </div>
+                    <div>
+                        <div id="train-legal-category-bars" style="position:relative;height:240px;">
+                            <canvas id="train-chart-legal-categories"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- ── جدول أعلى البرامج ── -->
             <div class="content-card" style="padding:0;overflow:hidden;">
                 <div style="padding:13px 18px 12px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;justify-content:space-between;gap:8px;">
@@ -13689,7 +13709,18 @@ const Training = {
             _factoryDisplay:  x.factoryName  || x.factory || 'غير محدد',
             _trainer:         x.trainer || x.conductedBy || 'غير محدد',
         });
-        const allT    = (AppState.appData?.training || []).concat(AppState.appData?.contractorTrainings || []).map(_norm);
+        const allT    = (AppState.appData?.training || []).concat(AppState.appData?.contractorTrainings || []).concat(
+            (AppState.appData?.legalTrainings || []).map(lt => ({
+                ...lt,
+                trainingType: lt.category || 'تدريب قانوني',
+                name: lt.title,
+                topic: lt.title,
+                date: lt.actualDate || lt.scheduledDate,
+                startDate: lt.scheduledDate,
+                totalHours: Number(lt.duration) || 0,
+                _isLegalTraining: true
+            }))
+        ).map(_norm);
 
         // ── تصفية بالفترة ──
         const byPeriod = this._tFilterByPeriod(allT, period);
@@ -13709,7 +13740,10 @@ const Training = {
         const totalPart = t.reduce((s, x) => s + (this.getParticipantsCount ? this.getParticipantsCount(x) : (Number(x.participantsCount)||0)), 0);
         const totalHrs  = t.reduce((s, x) => s + (Number(x.totalHours)||0), 0);
         const conT      = (AppState.appData?.contractorTrainings || []).filter(x => this._tFilterByPeriod([x], period).length && this._tApplyFilters([x]).length).length;
-        const empT      = total - conT;
+        const legalT    = t.filter(x => x._isLegalTraining).length;
+        const legalCompliant = t.filter(x => x._isLegalTraining && (x.complianceStatus === 'ممتثل')).length;
+        const legalCompRate  = legalT > 0 ? Math.round((legalCompliant / legalT) * 100) : 0;
+        const empT      = total - conT - legalT;
         const avgPart   = total > 0 ? Math.round(totalPart / total) : 0;
         const complRate = total > 0 ? Math.round((completed / total) * 100) : 0;
         const thisMonth = t.filter(x => {
@@ -13730,6 +13764,8 @@ const Training = {
                 { label:'متوسط مشاركين/برنامج',value:avgPart,                         icon:'fas fa-chart-line',           color:'#8b5cf6', bg:'#f5f3ff', border:'#ddd6fe' },
                 { label:'إجمالي ساعات التدريب',value:totalHrs.toLocaleString('en-US'),icon:'fas fa-clock',               color:'#14b8a6', bg:'#f0fdfa', border:'#99f6e4' },
                 { label:'هذا الشهر',           value:thisMonth,                       icon:'fas fa-calendar-day',         color:'#db2777', bg:'#fdf2f8', border:'#fbcfe8' },
+                { label:'تدريبات قانونية',     value:legalT,                          icon:'fas fa-gavel',                color:'#dc2626', bg:'#fef2f2', border:'#fecaca' },
+                { label:'نسبة الامتثال القانوني',value:legalCompRate + '%',            icon:'fas fa-balance-scale',        color:'#059669', bg:'#ecfdf5', border:'#a7f3d0' },
             ];
             kpiEl.innerHTML = kpis.map(k => `
                 <div style="background:${k.bg};border:1px solid ${k.border};border-radius:12px;padding:12px 14px;display:flex;align-items:center;gap:10px;transition:all .2s;cursor:default;" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 6px 20px rgba(0,0,0,0.09)'" onmouseout="this.style.transform='';this.style.boxShadow=''">
@@ -13773,6 +13809,31 @@ const Training = {
         this._tDrawHBar('train-chart-location', locG.labels, locG.data, 'rgba(59,130,246,0.75)');
 
         this._tDrawParticipants('train-chart-participants', t);
+
+        // ── رسوم الامتثال القانوني ──
+        const legalItems = t.filter(x => x._isLegalTraining);
+        if (legalItems.length > 0) {
+            const compG = this._tGroupBy(legalItems, 'complianceStatus');
+            const compColors = compG.labels.map(l => {
+                if (l === 'ممتثل') return 'rgba(5,150,105,0.85)';
+                if (l === 'غير ممتثل') return 'rgba(220,38,38,0.85)';
+                if (l === 'قارب على الانتهاء') return 'rgba(245,158,11,0.85)';
+                if (l === 'مخطط') return 'rgba(59,130,246,0.85)';
+                return 'rgba(148,163,184,0.8)';
+            });
+            this._tDrawDoughnut('train-chart-legal-compliance', compG.labels, compG.data, compColors);
+            const catG = this._tGroupBy(legalItems, 'category', 10);
+            this._tDrawHBar('train-chart-legal-categories', catG.labels, catG.data, 'rgba(220,38,38,0.7)');
+            const emptyEl1 = document.getElementById('train-chart-legal-compliance-empty');
+            if (emptyEl1) emptyEl1.style.display = 'none';
+        } else {
+            const emptyEl1 = document.getElementById('train-chart-legal-compliance-empty');
+            if (emptyEl1) emptyEl1.style.display = 'flex';
+            const emptyEl2 = document.getElementById('train-chart-legal-categories');
+            if (emptyEl2 && emptyEl2.parentElement) {
+                emptyEl2.parentElement.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#94a3b8;font-size:0.85rem;">لا توجد تدريبات قانونية</div>';
+            }
+        }
 
         // ── جدول أعلى البرامج ──
         const topT = t.slice().sort((a,b) => {
@@ -14437,6 +14498,7 @@ const Training = {
 
         if (items.length === 0) {
             container.innerHTML = '<div class="text-center py-8 text-gray-500"><i class="fas fa-gavel text-4xl mb-3 text-gray-300"></i><p>لا توجد تدريبات قانونية مسجلة</p></div>';
+            this._bindLegalTrainingEvents();
             return;
         }
 
