@@ -14420,6 +14420,9 @@ const Training = {
                 <button id="reset-legal-filter-btn" class="btn-secondary btn-sm">
                     <i class="fas fa-redo ml-2"></i>إعادة تعيين
                 </button>
+                <button id="add-legal-training-btn" class="btn-primary btn-sm">
+                    <i class="fas fa-plus ml-2"></i>إضافة تدريب قانوني
+                </button>
             </div>
 
             <div class="legal-table-card">
@@ -14436,9 +14439,6 @@ const Training = {
                         </div>
                         <span class="separator hidden md:inline">|</span>
                         <input type="text" id="legal-training-search" class="form-input" style="max-width: 260px; min-width: 180px;" placeholder="بحث (عنوان، مرجع قانوني، مدرب)">
-                        <button id="add-legal-training-btn" class="btn-primary">
-                            <i class="fas fa-plus ml-2"></i>إضافة تدريب قانوني
-                        </button>
                     </div>
                 </div>
                 <div class="card-body" id="legal-training-container">

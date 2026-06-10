@@ -15439,7 +15439,6 @@ body[data-theme="dark"] .profile-info-list>div,
     .legal-table-card .card-header .flex > .flex { width: 100%; }
     .legal-table-card .card-header .flex > .flex .btn-sm { flex: 1; }
     .legal-table-card .card-header #legal-training-search { max-width: 100% !important; min-width: 0 !important; width: 100%; }
-    .legal-table-card .card-header #add-legal-training-btn { width: 100%; justify-content: center; }
 }
 
 .legal-table-card .data-table th {
@@ -15575,6 +15574,7 @@ body[data-theme="dark"] .profile-info-list>div,
     .legal-filters-bar { flex-direction: column; align-items: stretch; }
     .legal-filters-bar .filter-group { flex-direction: column; align-items: stretch; }
     .legal-filters-bar .filter-group .form-input { max-width: 100% !important; }
+    .legal-filters-bar #add-legal-training-btn { width: 100%; justify-content: center; }
     .legal-table-card .card-header .flex { flex-direction: column; gap: 10px; }
 }
 
