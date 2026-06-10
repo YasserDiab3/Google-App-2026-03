@@ -2847,7 +2847,7 @@ const DEFAULT_COMPANY_NAME = '';
 
 const AppState = {
     /** إصدار التطبيق — تسلسلي: 1.0.0 → 1.0.1 → 1.0.2 … عند كل نشر زِد الرقم هنا وفي version.json */
-    appVersion: '1.0.84',
+    appVersion: '1.0.86',
     /** نص اختياري لرسالة التحديث (ملخص التغييرات). إن تُركت فارغة يُستخدم النص الافتراضي. */
     updateMessage: '',
     debugMode: false,
@@ -2956,10 +2956,8 @@ const AppState = {
     googleConfig: {
         appsScript: {
             enabled: true,
-            // ✅ v1.0.38 — تحديث إلى @124: إصلاح خصم الأدوية للزيارات الجديدة (capturedMedicationAdjustments)
-            // كان addClinicVisitToSheet يقرأ visitData.medicationAdjustments بعد ~140 سطر من المعالجة الوسيطة
-            // → في حال أي تحول للحقل (string، fault، إلخ) كان يفشل الخصم لكن EDIT يعمل لأنه يلتقطه مبكراً
-            scriptUrl: 'https://script.google.com/macros/s/AKfycbzxF2wNoo_g0Psy2k9dOG7i4X1wuw1mWSWirdXBpRu61eMBhRFhX1-5DEmNs5Ldjdjv/exec'
+            // ✅ v1.0.84 — تحديث إلى @135: إصلاح addLegalTraining ليعيد data.id لربط المعرف المؤقت
+            scriptUrl: 'https://script.google.com/macros/s/AKfycbxaIlrBSSHeRR56X3ZEJiTm5iMw-c2Tb3H206WaZKywY0zo-1AgdqdkMkf5MF0yFf-T/exec'
         },
         sheets: {
             // يُفعَّل تلقائياً عند ضبط spreadsheetId من الإعدادات المحفوظة؛ المعرف الرسمي يُفضَّل في Script Properties بالخادم
@@ -3047,8 +3045,9 @@ const AppState = {
                             'AKfycbyisizNKergIPDRKFa6IUHUL9x98Prcs16FvflommIo-PSr41gXHQv59I3QUasSEPA2', // @118
                             'AKfycbwhWmcjchhLNbl6cbr_BzsjrFkZOCUFk8pgoSONvbvIXHpRnqFqnER4esHiOZYIWL7X', // @120
                             'AKfycbyFmgpaD4d2y74A1T3uWzLXXFK7YJSPw5IA45uv2TpCUX3gkQJhcgjuVmZS6zPNWcMa', // @122 — broken addClinicVisit medication deduction
+                            'AKfycbzxF2wNoo_g0Psy2k9dOG7i4X1wuw1mWSWirdXBpRu61eMBhRFhX1-5DEmNs5Ldjdjv', // @134 — fixed in @135
                         ];
-                        const LATEST_DEPLOYMENT_URL = 'https://script.google.com/macros/s/AKfycbzxF2wNoo_g0Psy2k9dOG7i4X1wuw1mWSWirdXBpRu61eMBhRFhX1-5DEmNs5Ldjdjv/exec';
+                        const LATEST_DEPLOYMENT_URL = 'https://script.google.com/macros/s/AKfycbxaIlrBSSHeRR56X3ZEJiTm5iMw-c2bT3H206WaZKywY0zo-1AgdqdkMkf5MF0yFf-T/exec';
                         if (parsedUrl && OLD_DEPLOYMENT_URLS.some(old => parsedUrl.includes(old))) {
                             parsedUrl = LATEST_DEPLOYMENT_URL;
                             // حفظ الرابط المُحدَّث تلقائياً

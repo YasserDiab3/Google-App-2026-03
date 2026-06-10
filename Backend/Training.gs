@@ -920,7 +920,16 @@ function addLegalTrainingToSheet(trainingData) {
             trainingData.complianceStatus = 'مخطط';
         }
 
-        return appendToSheet(sheetName, trainingData);
+        var result = appendToSheet(sheetName, trainingData);
+        if (result && result.success) {
+            return {
+                success: true,
+                data: { id: trainingData.id },
+                message: result.message,
+                rowNumber: result.rowNumber
+            };
+        }
+        return result;
     } catch (error) {
         Logger.log('Error in addLegalTrainingToSheet: ' + error.toString());
         return { success: false, message: 'حدث خطأ أثناء إضافة التدريب القانوني: ' + error.toString() };

@@ -394,14 +394,6 @@ const RealtimeSyncManager = {
             if (module && data) {
                 realtimeSyncLog(`💾 تم حفظ بيانات في ${module} - الإجراء: ${action}`);
 
-                // ✅ تحديث كروت لوحة التحكم فوراً من AppState (بدون انتظار مزامنة)
-                try {
-                    if (typeof Dashboard !== 'undefined') {
-                        if (typeof Dashboard.updateStats === 'function') Dashboard.updateStats();
-                        if (typeof Dashboard.updateReportsStatistics === 'function') Dashboard.updateReportsStatistics();
-                    }
-                } catch (_) { /* تجاهل أي خطأ حتى لا يوقف باقي المعالجة */ }
-
                 // إرسال إشعار للتبويبات الأخرى
                 this.broadcast('data-updated', module, {
                     action,

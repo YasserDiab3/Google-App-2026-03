@@ -200,59 +200,41 @@ const GoogleIntegration = {
      */
     async immediateSyncWithRetry(action, data, maxRetries = 3) {
         if (!this._isBackendRpcConfigured()) {
-            return {
-                success: false,
-                message: 'Google Apps Script غير مفعل',
-                shouldDefer: true
-            };
+            throw new Error('Google Apps Script غير مفعل');
         }
 
         let lastError = null;
 
         for (let attempt = 1; attempt <= maxRetries; attempt++) {
             try {
-                Utils.safeLog(`تحقق من المزامنة في التقدم باستخدام Google Sheets ${attempt}/${maxRetries} ${action}...`);
+                Utils.safeLog(`🔄 محاولة ${attempt}/${maxRetries} للـ ${action}...`);
 
                 const result = await this.sendToAppsScript(action, data);
 
                 if (result && result.success) {
-                    Utils.safeLog(`تم تحقق من المزامنة في التقدم باستخدام Google Sheets ${action} ${attempt}`);
+                    Utils.safeLog(`✅ تم بنجاح ${action} في المحاولة ${attempt}`);
                     return result;
                 }
 
-                // فشل تحقق من المزامنة في التقدم باستخدام Google Sheets
-                lastError = new Error(result?.message || 'فشل تحقق من المزامنة في التقدم باستخدام Google Sheets');
-                Utils.safeWarn(`فشل تحقق من المزامنة في التقدم باستخدام Google Sheets ${action} ${attempt}: ${result?.message}`);
+                lastError = new Error(result?.message || 'فشل المزامنة');
+                Utils.safeWarn(`⚠️ فشل ${action} في المحاولة ${attempt}: ${result?.message}`);
 
-                // التحقق من هل هو invalid
-                if (result?.message && (
-                    result.message.includes('invalid') ||
-                    result.message.includes('invalid') ||
-                    result.message.includes('invalid')
-                )) {
-                    return result; // التحقق من هل هو invalid
+                if (result?.message && result.message.includes('invalid')) {
+                    return result;
                 }
 
             } catch (error) {
                 lastError = error;
-                Utils.safeWarn(`فشل تحقق من المزامنة في التقدم باستخدام Google Sheets ${attempt}/${maxRetries} ${action}:`, error.message);
-
-                // التحقق من هل هو invalid
-                if (attempt < maxRetries) {
-                    const waitTime = 500 * attempt; // التحقق من هل هو invalid
-                    Utils.safeLog(`فشل تحقق من المزامنة في التقدم باستخدام Google Sheets ${waitTime}ms ${action}...`);
-                    await new Promise(resolve => setTimeout(resolve, waitTime));
-                }
+                Utils.safeWarn(`❌ خطأ في ${action} (محاولة ${attempt}/${maxRetries}):`, error.message);
+            }
+            
+            if (attempt < maxRetries) {
+                const waitTime = 500 * attempt;
+                await new Promise(resolve => setTimeout(resolve, waitTime));
             }
         }
 
-        // فشل تحقق من المزامنة في التقدم باستخدام Google Sheets
-        return {
-            success: false,
-            message: lastError?.message || 'فشل تحقق من المزامنة في التقدم باستخدام Google Sheets',
-            shouldDefer: true,
-            lastError: lastError
-        };
+        throw lastError || new Error('فشل المزامنة بعد استنفاذ جميع المحاولات');
     },
 
     /**
@@ -780,9 +762,7 @@ const GoogleIntegration = {
                 'saveOrUpdate', 'getAll', 'import', // إضافة عمليات جديدة
                 'getAllClinicVisits', // سجل التردد كامل (موظفين + مقاولين) — يُفضّل تمرير __timeoutMs من الواجهة
                 // قراءة كاملة لورقة الموظفين (شيت كبير + إقلاع بارد لـ GAS) — لا يُطابق شرط getAll المخصص أعلاه
-                'getAllEmployees',
-                // عمليات كتابة العيادة — تستغرق وقتاً عند Cold Start لـ Apps Script
-                'addClinicVisit', 'updateClinicVisit'
+                'getAllEmployees'
             ];
             const mediumOperations = [
                 'getData', 'readData', 'loadData', 'fetchData', 'add', 'update'

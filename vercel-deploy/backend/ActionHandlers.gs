@@ -1104,6 +1104,88 @@ var ActionHandlers = {
         })();
         return result;
     },
+    // ============================================
+    // التدريبات القانونية (Legal Trainings)
+    // ============================================
+    'addLegalTraining': function(payload, postData, action, actorUserData, spreadsheetId) {
+        var result = { success: false, message: '' };
+        (function() {
+                    result = addLegalTrainingToSheet(payload);
+                    return;
+        })();
+        return result;
+    },
+    'updateLegalTraining': function(payload, postData, action, actorUserData, spreadsheetId) {
+        var result = { success: false, message: '' };
+        (function() {
+                    var trainingId = payload.trainingId || payload.id;
+                    var updateData = payload.updateData || payload;
+                    result = updateLegalTraining(trainingId, updateData);
+                    return;
+        })();
+        return result;
+    },
+    'getAllLegalTrainings': function(payload, postData, action, actorUserData, spreadsheetId) {
+        var result = { success: false, message: '' };
+        (function() {
+                    result = getAllLegalTrainings(payload.filters || {});
+                    return;
+        })();
+        return result;
+    },
+    'deleteLegalTraining': function(payload, postData, action, actorUserData, spreadsheetId) {
+        var result = { success: false, message: '' };
+        (function() {
+                    result = deleteLegalTraining(payload.trainingId || payload.id, actorUserData);
+                    return;
+        })();
+        return result;
+    },
+    'getLegalTrainingStatistics': function(payload, postData, action, actorUserData, spreadsheetId) {
+        var result = { success: false, message: '' };
+        (function() {
+                    result = getLegalTrainingStatistics(payload.filters || {});
+                    return;
+        })();
+        return result;
+    },
+    // ============================================
+    // حضور التدريبات القانونية (Legal Training Attendees)
+    // ============================================
+    'addLegalTrainingAttendee': function(payload, postData, action, actorUserData, spreadsheetId) {
+        var result = { success: false, message: '' };
+        (function() {
+                    result = addLegalTrainingAttendee(payload);
+                    return;
+        })();
+        return result;
+    },
+    'updateLegalTrainingAttendee': function(payload, postData, action, actorUserData, spreadsheetId) {
+        var result = { success: false, message: '' };
+        (function() {
+                    var attendeeId = payload.attendeeId || payload.id;
+                    var updateData = payload.updateData || payload;
+                    result = updateLegalTrainingAttendee(attendeeId, updateData);
+                    return;
+        })();
+        return result;
+    },
+    'getAllLegalTrainingAttendees': function(payload, postData, action, actorUserData, spreadsheetId) {
+        var result = { success: false, message: '' };
+        (function() {
+                    result = getAllLegalTrainingAttendees(payload.filters || {});
+                    return;
+        })();
+        return result;
+    },
+    'deleteLegalTrainingAttendee': function(payload, postData, action, actorUserData, spreadsheetId) {
+        var result = { success: false, message: '' };
+        (function() {
+                    result = deleteLegalTrainingAttendee(payload.attendeeId || payload.id, actorUserData);
+                    return;
+        })();
+        return result;
+    },
     'addClinicVisit': function(payload, postData, action, actorUserData, spreadsheetId) {
         var result = { success: false, message: '' };
         (function() {
