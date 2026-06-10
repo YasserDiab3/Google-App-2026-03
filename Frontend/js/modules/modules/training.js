@@ -14743,7 +14743,6 @@ const Training = {
                 btn.dataset.bound = '1';
             }
         });
-        }
     },
 
     showLegalTrainingForm(editId) {
