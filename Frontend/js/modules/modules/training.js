@@ -14342,17 +14342,22 @@ const Training = {
 
             <div class="legal-table-card">
                 <div class="card-header">
-                    <div class="flex items-center justify-between gap-3 flex-wrap" style="margin-bottom: 10px;">
-                        <h3 class="card-title" style="margin: 0;"><i class="fas fa-gavel ml-2"></i>سجل التدريبات القانونية</h3>
-                        <input type="text" id="legal-training-search" class="form-input" style="max-width: 260px; min-width: 160px;" placeholder="بحث (عنوان، مرجع قانوني، مدرب)">
-                    </div>
-                    <div class="flex items-center gap-2">
-                        <button id="export-legal-training-pdf-btn" class="btn-secondary btn-sm">
-                            <i class="fas fa-file-pdf ml-1" style="font-size: 14px;"></i>PDF
-                        </button>
-                        <button id="export-legal-training-excel-btn" class="btn-success btn-sm">
-                            <i class="fas fa-file-excel ml-1" style="font-size: 14px;"></i>Excel
-                        </button>
+                    <div class="legal-header-row">
+                        <div class="legal-title-section">
+                            <h3 class="card-title"><i class="fas fa-gavel ml-2"></i>سجل التدريبات القانونية</h3>
+                        </div>
+                        <div class="legal-header-actions">
+                            <div class="legal-search-wrapper">
+                                <i class="fas fa-search legal-search-icon"></i>
+                                <input type="text" id="legal-training-search" class="legal-search-input" placeholder="بحث في السجل...">
+                            </div>
+                            <button id="export-legal-training-pdf-btn" class="legal-action-btn btn-pdf" title="تصدير PDF">
+                                <i class="fas fa-file-pdf"></i>
+                            </button>
+                            <button id="export-legal-training-excel-btn" class="legal-action-btn btn-excel" title="تصدير Excel">
+                                <i class="fas fa-file-excel"></i>
+                            </button>
+                        </div>
                     </div>
                 </div>
                 <div class="card-body" id="legal-training-container">
