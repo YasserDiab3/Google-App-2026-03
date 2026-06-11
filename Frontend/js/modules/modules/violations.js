@@ -2292,7 +2292,7 @@ const Violations = {
             const formCode = `CONTRACTOR-VIOL-${new Date().toISOString().slice(0, 10)}`;
             const reportTitle = selectedContractorName ? `تقرير مخالفات المقاول: ${selectedContractorName}` : 'تقرير مخالفات المقاولين';
             const htmlContent = typeof FormHeader !== 'undefined' && typeof FormHeader.generatePDFHTML === 'function'
-                ? FormHeader.generatePDFHTML(formCode, reportTitle, content, false, true, { source: 'ContractorViolationsTab', contractorId: contractorId || '', contractorName: selectedContractorName || '' }, new Date().toISOString(), new Date().toISOString())
+                ? FormHeader.generatePDFHTML(formCode, reportTitle, content, false, false, { source: 'ContractorViolationsTab', contractorId: contractorId || '', contractorName: selectedContractorName || '' }, new Date().toISOString(), new Date().toISOString())
                 : `<html dir="rtl" lang="ar"><head><meta charset="UTF-8"><title>${reportTitle}</title></head><body>${content}</body></html>`;
 
             if (typeof FormHeader !== 'undefined' && typeof FormHeader.generatePDF === 'function') {

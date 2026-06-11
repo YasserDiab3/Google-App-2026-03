@@ -12017,7 +12017,7 @@ const Contractors = {
                     content,
                     false,
                     true,
-                    { source: 'ContractorViolations', contractorId: contractorLookup, contractorName },
+                    { source: 'ContractorViolations', contractorId: contractorLookup, contractorName, includeQRCode: false },
                     new Date().toISOString(),
                     new Date().toISOString()
                 )
