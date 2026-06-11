@@ -536,13 +536,30 @@ function getUsersForApp(actorUserData) {
 }
 
 /**
+ * تطبيع قيمة خلية/حقل من Google Sheets إلى نص
+ */
+function normalizeSheetScalarField_(val) {
+    if (val === undefined || val === null) return '';
+    if (typeof val === 'object' && val !== null) {
+        if (val.value !== undefined && val.value !== null) {
+            return String(val.value).trim();
+        }
+        var vals = Object.values(val);
+        if (vals.length === 1 && (typeof vals[0] === 'string' || typeof vals[0] === 'number')) {
+            return String(vals[0]).trim();
+        }
+    }
+    return String(val).trim();
+}
+
+/**
  * جلب سجل مستخدم من ورقة Users للتحقق من الصلاحيات من المصدر الرسمي (مع كاش readFromSheet).
  * @param {string} email
  * @return {Object|null}
  */
 function getUserRecordFromUsersSheetByEmail_(email) {
     try {
-        var e = String(email || '').trim().toLowerCase();
+        var e = normalizeSheetScalarField_(email).toLowerCase();
         if (!e) return null;
         var spreadsheetId = getSpreadsheetId();
         // Skip security filter to get passwordHash for authentication
@@ -550,13 +567,55 @@ function getUserRecordFromUsersSheetByEmail_(email) {
         if (!users || !Array.isArray(users)) return null;
         for (var i = 0; i < users.length; i++) {
             var u = users[i];
-            if (u && String(u.email || '').trim().toLowerCase() === e) return u;
+            if (!u) continue;
+            var rowEmail = normalizeSheetScalarField_(u.email).toLowerCase();
+            if (rowEmail && rowEmail === e) return u;
         }
         return null;
     } catch (err) {
         Logger.log('getUserRecordFromUsersSheetByEmail_: ' + err.toString());
         return null;
     }
+}
+
+/**
+ * جلب سجل مستخدم من ورقة Users بواسطة المعرف
+ * @param {string} userId
+ * @return {Object|null}
+ */
+function getUserRecordFromUsersSheetById_(userId) {
+    try {
+        var id = normalizeSheetScalarField_(userId);
+        if (!id) return null;
+        var spreadsheetId = getSpreadsheetId();
+        var users = readFromSheet('Users', spreadsheetId, true);
+        if (!users || !Array.isArray(users)) return null;
+        for (var i = 0; i < users.length; i++) {
+            var u = users[i];
+            if (!u) continue;
+            if (normalizeSheetScalarField_(u.id) === id) return u;
+        }
+        return null;
+    } catch (err) {
+        Logger.log('getUserRecordFromUsersSheetById_: ' + err.toString());
+        return null;
+    }
+}
+
+/**
+ * حل سجل المستخدم من ورقة Users بالبريد أو المعرف
+ */
+function resolveActorRecordFromUsersSheet_(actorUserData) {
+    if (!actorUserData) return null;
+    var email = normalizeSheetScalarField_(actorUserData.email).toLowerCase();
+    if (email) {
+        var byEmail = getUserRecordFromUsersSheetByEmail_(email);
+        if (byEmail) return byEmail;
+    }
+    if (actorUserData.id) {
+        return getUserRecordFromUsersSheetById_(actorUserData.id);
+    }
+    return null;
 }
 
 /**

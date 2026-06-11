@@ -590,17 +590,38 @@ function getCachedActorRecordByEmail_(email) {
     if (Object.prototype.hasOwnProperty.call(__AUTH_ACTOR_RECORD_CACHE_, e)) {
         return __AUTH_ACTOR_RECORD_CACHE_[e];
     }
-    var rec = (typeof getUserRecordFromUsersSheetByEmail_ === 'function')
-        ? getUserRecordFromUsersSheetByEmail_(e)
-        : null;
+    var rec = (typeof resolveActorRecordFromUsersSheet_ === 'function')
+        ? resolveActorRecordFromUsersSheet_({ email: e })
+        : ((typeof getUserRecordFromUsersSheetByEmail_ === 'function') ? getUserRecordFromUsersSheetByEmail_(e) : null);
     __AUTH_ACTOR_RECORD_CACHE_[e] = rec;
+    return rec;
+}
+
+function getCachedActorRecordForActor_(actorUserData) {
+    if (!actorUserData) return null;
+    var email = (typeof normalizeSheetScalarField_ === 'function')
+        ? normalizeSheetScalarField_(actorUserData.email).toLowerCase()
+        : String(actorUserData.email || '').trim().toLowerCase();
+    if (email && Object.prototype.hasOwnProperty.call(__AUTH_ACTOR_RECORD_CACHE_, email)) {
+        return __AUTH_ACTOR_RECORD_CACHE_[email];
+    }
+    var rec = (typeof resolveActorRecordFromUsersSheet_ === 'function')
+        ? resolveActorRecordFromUsersSheet_(actorUserData)
+        : getCachedActorRecordByEmail_(email);
+    if (email) {
+        __AUTH_ACTOR_RECORD_CACHE_[email] = rec;
+    }
     return rec;
 }
 
 function requireAuthenticatedActor_(actorUserData, actionName) {
     var action = String(actionName || 'unknown');
-    var email = actorUserData && actorUserData.email ? String(actorUserData.email).trim().toLowerCase() : '';
-    if (!email) {
+    var email = actorUserData && actorUserData.email
+        ? ((typeof normalizeSheetScalarField_ === 'function')
+            ? normalizeSheetScalarField_(actorUserData.email).toLowerCase()
+            : String(actorUserData.email).trim().toLowerCase())
+        : '';
+    if (!email && !(actorUserData && actorUserData.id)) {
         if (typeof logSecurityEvent === 'function') {
             logSecurityEvent('auth_required_missing_email', { action: action, severity: 'high' });
         }
@@ -612,7 +633,7 @@ function requireAuthenticatedActor_(actorUserData, actionName) {
             action: action
         };
     }
-    var sheetUser = getCachedActorRecordByEmail_(email);
+    var sheetUser = getCachedActorRecordForActor_(actorUserData);
     if (!sheetUser) {
         if (typeof logSecurityEvent === 'function') {
             logSecurityEvent('auth_required_unknown_user', { action: action, actor: email, severity: 'high' });

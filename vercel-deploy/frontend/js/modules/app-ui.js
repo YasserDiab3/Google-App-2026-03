@@ -9603,6 +9603,10 @@ window.UI = {
                 throw new Error('طبقة المزامنة غير متاحة');
             }
 
+            if (typeof GoogleIntegration.resetCircuitBreaker === 'function') {
+                GoogleIntegration.resetCircuitBreaker();
+            }
+
             if (typeof Notification !== 'undefined') {
                 Notification.info('جاري تحميل البيانات من قاعدة البيانات');
             }
@@ -9612,16 +9616,21 @@ window.UI = {
             const cloudSyncConfigured = typeof Utils !== 'undefined' && typeof Utils.hasCloudBackendSync === 'function'
                 ? Utils.hasCloudBackendSync()
                 : !!(AppState.googleConfig?.appsScript?.enabled && AppState.googleConfig?.appsScript?.scriptUrl);
+
+            const includeUsersSheet = !!(typeof Permissions !== 'undefined'
+                && AppState.currentUser
+                && typeof Permissions.isCurrentUserEffectiveAdmin === 'function'
+                && Permissions.isCurrentUserEffectiveAdmin(AppState.currentUser))
+                || (typeof Permissions !== 'undefined' && typeof Permissions.hasAccess === 'function' && Permissions.hasAccess('users'));
             
             if (typeof GoogleIntegration.syncData === 'function') {
-                // ✅ تحميل تدريجي: تحميل البيانات غير المكتملة فقط
                 syncResult = await GoogleIntegration.syncData({
                     silent: false,
                     showLoader: true,
-                    notifyOnSuccess: false, // سنعرض الرسالة يدوياً
-                    notifyOnError: false, // سنعرض الرسالة يدوياً
-                    includeUsersSheet: true,
-                    incremental: true // ✅ تحميل تدريجي: البيانات غير المكتملة فقط
+                    notifyOnSuccess: false,
+                    notifyOnError: false,
+                    includeUsersSheet: includeUsersSheet,
+                    incremental: false
                 });
                 
                 // ✅ إذا نجحت المزامنة، عطّل bootstrap تلقائياً (إن كان مستخدماً)
@@ -9655,7 +9664,10 @@ window.UI = {
             }
             
             if (!syncResult && cloudSyncConfigured) {
-                throw new Error('فشلت المزامنة مع قاعدة البيانات');
+                const detail = (GoogleIntegration && GoogleIntegration._lastSyncError)
+                    ? String(GoogleIntegration._lastSyncError)
+                    : '';
+                throw new Error(detail ? `فشلت المزامنة مع قاعدة البيانات: ${detail}` : 'فشلت المزامنة مع قاعدة البيانات');
             }
 
             if (typeof Notification !== 'undefined') {

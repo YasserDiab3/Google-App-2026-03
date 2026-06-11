@@ -658,8 +658,19 @@ const GoogleIntegration = {
                     errorMsg.includes('aborted') ||
                     errorMsg.includes('فشل الاتصال مع google apps script بسبب cors') ||
                     errorMsg.includes('cors');
+                const isAuthOrPermissionError =
+                    errorMsg.includes('csrf') ||
+                    errorMsg.includes('actor_identity') ||
+                    errorMsg.includes('actor_not_registered') ||
+                    errorMsg.includes('actor_inactive') ||
+                    errorMsg.includes('admin_only') ||
+                    errorMsg.includes('permission_denied') ||
+                    errorMsg.includes('strict_admin_denied') ||
+                    errorMsg.includes('رفض أمني') ||
+                    errorMsg.includes('غير مسجل') ||
+                    errorMsg.includes('رفض قراءة');
 
-                if (!isCircuitBreakerError && !isConfigError && !isTransientNetworkError) {
+                if (!isCircuitBreakerError && !isConfigError && !isTransientNetworkError && !isAuthOrPermissionError) {
                     // التحقق من هل هو recordFailure
                     this._recordFailure();
                 }
@@ -3027,6 +3038,10 @@ const GoogleIntegration = {
         }
 
         this._syncInProgress.global = true;
+        this._lastSyncError = null;
+        if (typeof this.resetCircuitBreaker === 'function') {
+            this.resetCircuitBreaker();
+        }
 
         // إيقاف نظام عدم النشاط أثناء المزامنة
         let inactivityWasPaused = false;
@@ -3771,6 +3786,9 @@ const GoogleIntegration = {
                     Utils.safeLog(`اكتملت المزامنة بنجاح: ${syncedCount} جداول تم تحديثها`);
                 }
             } else {
+                this._lastSyncError = failedSheets.length
+                    ? ('فشلت أوراق: ' + failedSheets.slice(0, 8).join(', ') + (failedSheets.length > 8 ? '...' : ''))
+                    : 'لم تُحمَّل أي بيانات من الخادم';
                 if (notifyOnError) {
                     Notification.warning(`فشل مزامنة بعض الجداول: ${failedSheets.join(', ')}`);
                 }
@@ -3779,7 +3797,6 @@ const GoogleIntegration = {
                 }
             }
 
-            // إعادة تشغيل نظام عدم النشاط بعد اكتمال المزامنة
             if (typeof InactivityManager !== 'undefined' && AppState.currentUser && !inactivityWasPaused) {
                 InactivityManager.resume();
             }
@@ -3792,12 +3809,12 @@ const GoogleIntegration = {
                 Loading.hide();
             }
 
-            // إعادة تشغيل نظام عدم النشاط حتى في حالة الخطأ
             if (typeof InactivityManager !== 'undefined' && AppState.currentUser && !inactivityWasPaused) {
                 InactivityManager.resume();
             }
 
-            // قمع الأخطاء المتوقعة (عندما يكون Google Apps Script غير مفعّل)
+            this._lastSyncError = error.message || String(error);
+
             const errorMsg = error.message || 'خطأ غير معروف';
             const isBackendRpcConfigured = this._isBackendRpcConfigured();
             const isExpectedError = !isBackendRpcConfigured ||
