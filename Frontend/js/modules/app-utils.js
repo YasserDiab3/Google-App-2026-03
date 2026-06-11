@@ -7078,8 +7078,9 @@ FormHeader.generatePDF = async function (htmlContent, filename = 'document.pdf')
         iframe.style.overflow = 'hidden';
         document.body.appendChild(iframe);
         iframe.srcdoc = htmlContent;
-        await new Promise(function (resolve) { iframe.onload = resolve; setTimeout(resolve, 5000); });
-        await new Promise(function (resolve) { setTimeout(resolve, 800); });
+        await new Promise(function (resolve) { iframe.onload = resolve; setTimeout(resolve, 10000); });
+        try { await iframe.contentDocument.fonts.ready; } catch (e) {}
+        await new Promise(function (resolve) { setTimeout(resolve, 500); });
         const bodyEl = (iframe.contentDocument || iframe.contentWindow.document).body;
         const canvas = await html2canvas(bodyEl, {
             scale: 2, useCORS: true, logging: false,
