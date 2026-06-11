@@ -57,54 +57,33 @@
     }
 
     function initDashboardEnhancements() {
-        // تفعيل التأثيرات التفاعلية
-        enhanceKPICards();
-        enhanceContentCards();
-        // Disabled addParallaxEffect() to prevent scroll-linked positioning warnings
-        // This causes performance issues with asynchronous panning in Firefox
-        // addParallaxEffect();
-        addCountUpAnimation();
-        addProgressIndicators();
-        addHoverSoundEffects();
-        addCardFlipEffect();
-        addGlowEffect();
+        const dashboardRoot = document.getElementById('dashboard-section');
+        if (!dashboardRoot) return;
+
+        // تفعيل التأثيرات التفاعلية (مقيّدة بلوحة التحكم — بدون تحريك 3D/عدّ تصاعدي يتداخل مع KPIs الحية)
+        enhanceKPICards(dashboardRoot);
+        enhanceContentCards(dashboardRoot);
+        addHoverSoundEffects(dashboardRoot);
+        addCardFlipEffect(dashboardRoot);
+        addGlowEffect(dashboardRoot);
     }
 
     /**
      * تحسين بطاقات KPI بتأثيرات تفاعلية
      */
-    function enhanceKPICards() {
-        const kpiCards = document.querySelectorAll('.kpi-card');
+    function enhanceKPICards(dashboardRoot) {
+        const kpiCards = dashboardRoot.querySelectorAll('.kpi-grid > .kpi-card');
 
         kpiCards.forEach((card, index) => {
-            // إضافة تأثير الظهور التدريجي
+            // إضافة تأثير الظهور التدريجي فقط — بدون transform ثلاثي الأبعاد (يسبب تداخل الأرقام بين الكروت)
             card.style.opacity = '0';
-            card.style.transform = 'translateY(30px)';
+            card.style.transform = 'translateY(12px)';
 
             setTimeout(() => {
-                card.style.transition = 'all 0.6s cubic-bezier(0.4, 0, 0.2, 1)';
+                card.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
                 card.style.opacity = '1';
                 card.style.transform = 'translateY(0)';
-            }, index * 100);
-
-            // تأثير التتبع بالماوس (3D Tilt)
-            card.addEventListener('mousemove', (e) => {
-                const rect = card.getBoundingClientRect();
-                const x = e.clientX - rect.left;
-                const y = e.clientY - rect.top;
-
-                const centerX = rect.width / 2;
-                const centerY = rect.height / 2;
-
-                const rotateX = (y - centerY) / 10;
-                const rotateY = (centerX - x) / 10;
-
-                card.style.transform = `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) translateY(-8px) scale(1.02)`;
-            });
-
-            card.addEventListener('mouseleave', () => {
-                card.style.transform = 'perspective(1000px) rotateX(0) rotateY(0) translateY(0) scale(1)';
-            });
+            }, index * 80);
 
             // تأثير النقر
             card.addEventListener('click', function (e) {
@@ -152,8 +131,8 @@
      * تحسين بطاقات المحتوى
      * لا يُطبَّق على قسم التقارير والإحصائيات أو مؤشرات السلامة (منع وميض).
      */
-    function enhanceContentCards() {
-        const contentCards = document.querySelectorAll('.content-card');
+    function enhanceContentCards(dashboardRoot) {
+        const contentCards = dashboardRoot.querySelectorAll('.content-card');
         const noEnhanceClasses = ['reports-statistics-section', 'safety-metrics-section'];
 
         contentCards.forEach((card, index) => {
@@ -290,11 +269,11 @@
     /**
      * إضافة تأثيرات صوتية عند التمرير (اختياري)
      */
-    function addHoverSoundEffects() {
+    function addHoverSoundEffects(dashboardRoot) {
         // يمكن إضافة أصوات خفيفة عند التفاعل مع البطاقات
         // هذه الميزة اختيارية ويمكن تفعيلها حسب الحاجة
 
-        const kpiCards = document.querySelectorAll('.kpi-card');
+        const kpiCards = dashboardRoot.querySelectorAll('.kpi-grid > .kpi-card');
 
         kpiCards.forEach(card => {
             card.addEventListener('mouseenter', () => {
@@ -307,8 +286,8 @@
     /**
      * إضافة تأثير القلب للبطاقات عند النقر المزدوج
      */
-    function addCardFlipEffect() {
-        const kpiCards = document.querySelectorAll('.kpi-card');
+    function addCardFlipEffect(dashboardRoot) {
+        const kpiCards = dashboardRoot.querySelectorAll('.kpi-grid > .kpi-card');
 
         kpiCards.forEach(card => {
             card.addEventListener('dblclick', function () {
@@ -325,9 +304,9 @@
      * إضافة تأثير التوهج للعناصر المهمة
      * لا يُطبَّق على كروت التقارير والإحصائيات أو مؤشرات السلامة (منع وميض).
      */
-    function addGlowEffect() {
-        const importantElements = document.querySelectorAll('.kpi-danger, .kpi-warning');
-        const noGlowContainers = document.querySelectorAll('.reports-statistics-section, .safety-metrics-section');
+    function addGlowEffect(dashboardRoot) {
+        const importantElements = dashboardRoot.querySelectorAll('.kpi-grid > .kpi-card.kpi-danger, .kpi-grid > .kpi-card.kpi-warning');
+        const noGlowContainers = dashboardRoot.querySelectorAll('.reports-statistics-section, .safety-metrics-section');
 
         importantElements.forEach(element => {
             const insideNoGlow = Array.from(noGlowContainers).some(container => container.contains(element));
@@ -529,10 +508,9 @@
         window.cleanupDashboardEnhancements = cleanupDashboardEnhancements;
     }
 
-    // تفعيل التحسينات الإضافية
+    // تفعيل التحسينات الإضافية (خلفية فقط — بدون دوائر/شرائط تقدم فوق أرقام KPI)
     setTimeout(() => {
         addParticleEffect();
-        addCircularProgress();
         updateRealTimeData();
     }, 1000);
 

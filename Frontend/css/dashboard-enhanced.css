@@ -245,6 +245,9 @@
 #dashboard-section .kpi-grid > .kpi-card {
     height: auto;
     align-self: start;
+    overflow: hidden;
+    isolation: isolate;
+    contain: paint;
 }
 
 #dashboard-section .kpi-grid > .kpi-card:not(.kpi-card--permits) {
@@ -533,6 +536,16 @@
     font-size: clamp(1.05rem, 2.2vw + 0.65rem, 1.875rem);
     line-height: 1.15;
     min-height: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+    position: relative;
+    z-index: 1;
+}
+
+#dashboard-section .kpi-grid > .kpi-card .kpi-content {
+    overflow: hidden;
+    min-width: 0;
 }
 
 /* Ensure values share baseline line-height خارج لوحة التحكم */
@@ -646,6 +659,16 @@
     font-variant-numeric: tabular-nums;
     font-feature-settings: "tnum";
     font-family: 'Inter', 'Cairo', 'Arial', sans-serif;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+}
+
+.safety-metrics-section .metric-card-frame,
+.reports-statistics-section .metric-card-frame {
+    overflow: hidden;
+    isolation: isolate;
+    contain: paint;
 }
 
 /* Ensure numbers are always in English format */

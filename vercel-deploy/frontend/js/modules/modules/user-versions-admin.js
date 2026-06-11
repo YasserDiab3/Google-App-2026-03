@@ -147,6 +147,14 @@ const UserVersionsAdmin = {
         const container = document.getElementById('uva-stats-container');
         if (!container) return;
         const stats = this._stats || {};
+        const fmt = (n) => {
+            const num = Number(n);
+            const safe = Number.isFinite(num) ? num : 0;
+            if (typeof Dashboard !== 'undefined' && typeof Dashboard.formatNumber === 'function') {
+                return Dashboard.formatNumber(safe);
+            }
+            return String(safe);
+        };
         const totalUsers = stats.totalUsers || 0;
         const latestUsers = stats.latestUsers || 0;
         const outdatedUsers = stats.outdatedUsers || 0;
@@ -156,21 +164,21 @@ const UserVersionsAdmin = {
 
         // ✅ 6 كروت: إجمالي + 3 حالات (محدّث/قديم/لم يُسجَّل) + 2 نشاط
         const cards = [
-            { label: 'إجمالي المستخدمين', value: totalUsers,        icon: 'fa-users',                color: '#0F766E', bg: '#f0fdfa', border: '#99f6e4' },
-            { label: 'على الإصدار الأحدث', value: latestUsers,      icon: 'fa-circle-check',         color: '#047857', bg: '#ecfdf5', border: '#a7f3d0' },
-            { label: 'على إصدار قديم',     value: outdatedUsers,    icon: 'fa-triangle-exclamation', color: '#b91c1c', bg: '#fef2f2', border: '#fecaca' },
-            { label: 'لم يُسجَّل بعد',       value: notReportedUsers, icon: 'fa-user-clock',           color: '#b45309', bg: '#fffbeb', border: '#fde68a' },
-            { label: 'نشط آخر 24 ساعة',   value: activeLast24h,    icon: 'fa-bolt',                 color: '#7c3aed', bg: '#f5f3ff', border: '#ddd6fe' },
-            { label: 'نشط آخر 7 أيام',    value: activeLast7d,     icon: 'fa-calendar-week',        color: '#1E3A8A', bg: '#eef2ff', border: '#c7d2fe' },
+            { label: 'إجمالي المستخدمين', value: fmt(totalUsers),        icon: 'fa-users',                color: '#0F766E', bg: '#f0fdfa', border: '#99f6e4' },
+            { label: 'على الإصدار الأحدث', value: fmt(latestUsers),      icon: 'fa-circle-check',         color: '#047857', bg: '#ecfdf5', border: '#a7f3d0' },
+            { label: 'على إصدار قديم',     value: fmt(outdatedUsers),    icon: 'fa-triangle-exclamation', color: '#b91c1c', bg: '#fef2f2', border: '#fecaca' },
+            { label: 'لم يُسجَّل بعد',       value: fmt(notReportedUsers), icon: 'fa-user-clock',           color: '#b45309', bg: '#fffbeb', border: '#fde68a' },
+            { label: 'نشط آخر 24 ساعة',   value: fmt(activeLast24h),    icon: 'fa-bolt',                 color: '#7c3aed', bg: '#f5f3ff', border: '#ddd6fe' },
+            { label: 'نشط آخر 7 أيام',    value: fmt(activeLast7d),     icon: 'fa-calendar-week',        color: '#1E3A8A', bg: '#eef2ff', border: '#c7d2fe' },
         ];
 
         container.innerHTML = cards.map(c => `
-            <div style="background:${c.bg};border:1px solid ${c.border};border-radius:12px;padding:14px;display:flex;align-items:center;gap:10px;">
+            <div class="uva-stat-card" style="background:${c.bg};border:1px solid ${c.border};border-radius:12px;padding:14px;display:flex;align-items:center;gap:10px;overflow:hidden;isolation:isolate;min-width:0;">
                 <div style="width:42px;height:42px;background:${c.color};border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
                     <i class="fas ${c.icon}" style="color:#fff;font-size:16px;"></i>
                 </div>
-                <div>
-                    <div style="font-size:1.5rem;font-weight:800;color:${c.color};line-height:1;" dir="ltr">${c.value}</div>
+                <div style="min-width:0;flex:1;">
+                    <div class="uva-stat-card__value" style="font-size:1.5rem;font-weight:800;color:${c.color};line-height:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" dir="ltr">${c.value}</div>
                     <div style="font-size:0.72rem;color:#64748b;margin-top:3px;white-space:nowrap;">${c.label}</div>
                 </div>
             </div>

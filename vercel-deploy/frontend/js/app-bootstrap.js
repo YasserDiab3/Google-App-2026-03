@@ -972,10 +972,6 @@
                     if (window.DataManager && window.DataManager._saveSyncMeta) {
                         try { window.DataManager._saveSyncMeta(); } catch (e) {}
                     }
-                    // ✅ تسجيل timestamps الجلب الفعلي من الخادم (للـ TTL check في الـ reload القادم)
-                    const fetchedKeys = results
-                        .filter(r => r.result && r.result.success && Array.isArray(r.result.data))
-                        .map(r => r.type);
                     if (fetchedKeys.length > 0 && window.DataManager && window.DataManager.recordServerFetch) {
                         try { window.DataManager.recordServerFetch(fetchedKeys); } catch (e) {}
                     }

@@ -1090,6 +1090,12 @@
     min-width: 0;
 }
 
+/* لوحة التحكم: منع تسرّب الأرقام الكبيرة إلى الكروت المجاورة */
+#dashboard-section .kpi-grid .kpi-card {
+    overflow: hidden;
+    isolation: isolate;
+}
+
 /* إصلاح خاص للكروت في content-card */
 .content-card .kpi-grid {
     width: 100%;

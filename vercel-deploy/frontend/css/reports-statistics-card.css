@@ -247,7 +247,15 @@
     opacity: 1 !important;
 }
 .reports-statistics-section .metric-card-frame {
-    contain: layout style;
+    overflow: hidden;
+    isolation: isolate;
+    contain: paint;
+}
+
+.safety-metrics-section .metric-card-frame {
+    overflow: hidden;
+    isolation: isolate;
+    contain: paint;
 }
 
 .safety-metrics-section .metrics-grid-container,
@@ -255,9 +263,6 @@
     animation: none !important;
     transition: none !important;
     opacity: 1 !important;
-}
-.safety-metrics-section .metric-card-frame {
-    contain: layout style;
 }
 
 /* ===== لا إخفاء ولا conditional rendering: القيم ظاهرة دائماً، التحديث داخلي فقط (textContent) =====
@@ -277,7 +282,9 @@
     min-width: 3.5ch !important;
     transition: none !important;
     animation: none !important;
-    contain: layout style;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
 }
 
 /* ===== ثبات كروت التقارير والإحصائيات (مثل إعداد المقاولين المعتمدين) =====
@@ -293,7 +300,9 @@
     min-width: 3.5ch !important;
     transition: none !important;
     animation: none !important;
-    contain: layout style;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
 }
 
 /* ===== ضمان عرض الأرقام بالإنجليزية في التقارير والإحصائيات ===== */
