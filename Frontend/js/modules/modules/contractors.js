@@ -12090,8 +12090,6 @@ const Contractors = {
                 )
                 : `<html dir="rtl" lang="ar"><head><meta charset="UTF-8"><title>${reportTitle}</title></head><body>${content}</body></html>`;
 
-            Loading.show('جاري إنشاء تقرير المخالفات...');
-
             if (typeof FormHeader !== 'undefined' && typeof FormHeader.generatePDF === 'function') {
                 FormHeader.generatePDF(htmlContent, `${reportTitle}.pdf`);
             } else {
@@ -12107,8 +12105,6 @@ const Contractors = {
             }
 
             Loading.hide();
-            Notification.success(`تم إنشاء تقرير مخالفات المقاول: ${contractorName || 'غير محدد'}`);
-
             Notification.success(`تم إنشاء تقرير مخالفات المقاول: ${contractorName || 'غير محدد'}`);
         } catch (error) {
             Loading.hide();

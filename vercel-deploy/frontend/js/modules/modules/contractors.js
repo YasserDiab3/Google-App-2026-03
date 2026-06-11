@@ -12090,26 +12090,21 @@ const Contractors = {
                 )
                 : `<html dir="rtl" lang="ar"><head><meta charset="UTF-8"><title>${reportTitle}</title></head><body>${content}</body></html>`;
 
-            const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
-            const url = URL.createObjectURL(blob);
-            const reportWindow = window.open(url, '_blank');
-            if (reportWindow) {
-                reportWindow.onload = () => {
-                    try {
-                        reportWindow.print();
-                        setTimeout(() => URL.revokeObjectURL(url), 1000);
-                    } catch (error) {
-                        Utils.safeWarn('تعذر الطباعة التلقائية لتقرير المخالفات:', error);
-                    } finally {
-                        Loading.hide();
-                    }
-                };
+            if (typeof FormHeader !== 'undefined' && typeof FormHeader.generatePDF === 'function') {
+                FormHeader.generatePDF(htmlContent, `${reportTitle}.pdf`);
             } else {
+                const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = `${reportTitle.replace(/\s+/g, '_')}.pdf`;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
                 URL.revokeObjectURL(url);
-                Loading.hide();
-                Notification.info('تم إنشاء التقرير. يرجى السماح بالنوافذ المنبثقة لعرضه.');
             }
 
+            Loading.hide();
             Notification.success(`تم إنشاء تقرير مخالفات المقاول: ${contractorName || 'غير محدد'}`);
         } catch (error) {
             Loading.hide();
