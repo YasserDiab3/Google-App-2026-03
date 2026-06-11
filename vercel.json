@@ -1,6 +1,4 @@
 {
-  "rootDirectory": "vercel-deploy/frontend",
-  "buildCommand": "npm run build",
   "outputDirectory": "dist",
   "headers": [
     {
