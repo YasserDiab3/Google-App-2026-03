@@ -1591,10 +1591,20 @@ const GoogleIntegration = {
     },
 
     _purgeLegacyReadFromSheetLocalCache_() {
+        this._purgeAllSheetReadLocalCache_();
+    },
+
+    _purgeAllSheetReadLocalCache_() {
         try {
-            if (typeof localStorage !== 'undefined') {
-                localStorage.removeItem('hse_local_readFromSheet');
+            if (typeof localStorage === 'undefined') return;
+            const keysToRemove = [];
+            for (let i = 0; i < localStorage.length; i++) {
+                const k = localStorage.key(i);
+                if (k && (k.startsWith('hse_local_readFromSheet') || k.startsWith('hse_local_batchReadSheets'))) {
+                    keysToRemove.push(k);
+                }
             }
+            keysToRemove.forEach((k) => localStorage.removeItem(k));
         } catch (e) { /* ignore */ }
     },
 
@@ -1739,7 +1749,8 @@ const GoogleIntegration = {
     async batchReadFromSheets(sheetNames, options = {}) {
         const {
             timeout = 30000,
-            batchSize = 12 // Default batch size (max 15 supported by backend)
+            batchSize = 12, // Default batch size (max 15 supported by backend)
+            skipCache = false
         } = options;
 
         if (!this._isBackendRpcConfigured()) {
@@ -1786,6 +1797,9 @@ const GoogleIntegration = {
                 // إضافة context خاص لـ DailyObservations إذا كان في الباتش
                 if (batch.includes('DailyObservations') && options.observationsRequestContext) {
                     payload.data.observationsRequestContext = options.observationsRequestContext;
+                }
+                if (skipCache) {
+                    payload.data.skipCache = true;
                 }
 
                 payload.data.__timeoutMs = timeout;
@@ -2929,15 +2943,14 @@ const GoogleIntegration = {
             ? AppState.appData.resourceConsumption[slot]
             : [];
 
-        const shouldKeepOld = normalized.length === 0 && oldData.length > 0;
+        const shouldKeepOld = !this._currentSyncForceRefresh && normalized.length === 0 && oldData.length > 0;
         const effectiveData = shouldKeepOld ? oldData : normalized;
 
         if (!shouldKeepOld) {
             AppState.appData.resourceConsumption[slot] = normalized;
+            AppState.syncMeta.sheets[sheetName] = Date.now();
+            AppState.syncMeta.lastSyncTime = Date.now();
         }
-
-        AppState.syncMeta.sheets[sheetName] = Date.now();
-        AppState.syncMeta.lastSyncTime = Date.now();
 
         return {
             handled: true,
@@ -3018,7 +3031,8 @@ const GoogleIntegration = {
             notifyOnError = !silent,
             includeUsersSheet = true,
             sheets: requestedSheets = null, // ✅ إضافة دعم sheets في options
-            incremental = false // ✅ جديد: تحميل تدريجي
+            incremental = false, // ✅ جديد: تحميل تدريجي
+            forceRefresh = false // ✅ إجبار قراءة الخادم دون الاحتفاظ ببيانات قديمة عند الفراغ/الفشل
         } = options;
 
         if (!this._isBackendRpcConfigured()) {
@@ -3041,6 +3055,16 @@ const GoogleIntegration = {
         this._lastSyncError = null;
         if (typeof this.resetCircuitBreaker === 'function') {
             this.resetCircuitBreaker();
+        }
+
+        this._currentSyncForceRefresh = !!forceRefresh;
+        if (forceRefresh) {
+            this._purgeAllSheetReadLocalCache_();
+            if (!AppState.syncMeta) {
+                AppState.syncMeta = { sheets: {}, lastSyncTime: 0, userEmail: null };
+            }
+            AppState.syncMeta.sheets = {};
+            AppState.syncMeta.lastSyncTime = 0;
         }
 
         // إيقاف نظام عدم النشاط أثناء المزامنة
@@ -3345,6 +3369,7 @@ const GoogleIntegration = {
                         Notification.success('جميع البيانات محدثة');
                     }
                     this._syncInProgress.global = false;
+                    this._currentSyncForceRefresh = false;
                     return true;
                 }
             }
@@ -3413,11 +3438,14 @@ const GoogleIntegration = {
                                 if (Array.isArray(data)) {
                                     const oldData = Array.isArray(AppState.appData[key]) ? AppState.appData[key] : [];
                                     // ✅ حماية: لا نُبدّل البيانات المحلية بمصفوفة فارغة (عند نجاح القراءة لكن بدون محتوى)
-                                    const shouldKeepOld = data.length === 0 && oldData.length > 0;
+                                    const shouldKeepOld = !this._currentSyncForceRefresh && data.length === 0 && oldData.length > 0;
                                     const effectiveData = shouldKeepOld ? oldData : data;
 
                                     if (!shouldKeepOld) {
                                         AppState.appData[key] = data;
+                                        if (!AppState.syncMeta.sheets) AppState.syncMeta.sheets = {};
+                                        AppState.syncMeta.sheets[sheetName] = Date.now();
+                                        AppState.syncMeta.lastSyncTime = Date.now();
                                     }
 
                                     if (effectiveData.length > 0) {
@@ -3426,7 +3454,9 @@ const GoogleIntegration = {
                                             Utils.safeLog(`✅ تم تحميل ${sheetName}: ${effectiveData.length} سجل`);
                                         }
                                     } else if (shouldLog) {
-                                        Utils.safeLog(`✅ ${sheetName} فارغة (تم التحميل بنجاح)`);
+                                        Utils.safeLog(shouldKeepOld
+                                            ? `⚠️ ${sheetName} فارغة من الخادم — بيانات محلية قديمة (${oldData.length})`
+                                            : `✅ ${sheetName} فارغة (تم التحميل بنجاح)`);
                                     }
                                 } else {
                                     // ✅ تحسين: إذا لم تكن array، نستخدم البيانات القديمة بدلاً من استبدالها بمصفوفة فارغة
@@ -3512,7 +3542,8 @@ const GoogleIntegration = {
                     const batchResult = await this.batchReadFromSheets(remainingSheets, {
                         batchSize: 12, // 12 sheets per request
                         timeout: 30000, // 30 seconds timeout
-                        observationsRequestContext: null // Add if needed
+                        observationsRequestContext: null,
+                        skipCache: !!this._currentSyncForceRefresh
                     });
 
                     // تحويل النتائج إلى format موحد
@@ -3638,11 +3669,22 @@ const GoogleIntegration = {
                     const oldData = Array.isArray(AppState.appData[key]) ? AppState.appData[key] : [];
                     // ✅ حماية: لا نُبدّل البيانات المحلية بمصفوفة فارغة
                     // ملاحظة: ورقة ViolationTypes يجب أن تعكس الشيت بدقة. لا نحتفظ بالقديم إذا كانت القراءة ناجحة لكنها فارغة.
-                    const shouldKeepOld = sheetName !== 'ViolationTypes' && data.length === 0 && oldData.length > 0;
+                    const shouldKeepOld = !this._currentSyncForceRefresh
+                        && sheetName !== 'ViolationTypes'
+                        && data.length === 0
+                        && oldData.length > 0;
                     const effectiveData = shouldKeepOld ? oldData : data;
 
                     if (!shouldKeepOld) {
                         AppState.appData[key] = data;
+                        if (!AppState.syncMeta) {
+                            AppState.syncMeta = { sheets: {}, lastSyncTime: 0, userEmail: null };
+                        }
+                        if (!AppState.syncMeta.sheets) {
+                            AppState.syncMeta.sheets = {};
+                        }
+                        AppState.syncMeta.sheets[sheetName] = Date.now();
+                        AppState.syncMeta.lastSyncTime = Date.now();
                     }
 
                     if (effectiveData.length > 0) {
@@ -3651,20 +3693,10 @@ const GoogleIntegration = {
                             Utils.safeLog(`✅ تم تحديث بيانات الورقة ${sheetName} بنجاح: ${effectiveData.length} سجل`);
                         }
                     } else if (shouldLog) {
-                        Utils.safeLog(`✅ الورقة ${sheetName} فارغة في Google Sheets (تم الاحتفاظ بالبيانات المحلية)`);
+                        Utils.safeLog(shouldKeepOld
+                            ? `⚠️ الورقة ${sheetName} فارغة من الخادم — بيانات محلية قديمة (${oldData.length})`
+                            : `✅ الورقة ${sheetName} فارغة في Google Sheets`);
                     }
-                    
-                    // ✅ إضافة: تحديث syncMeta بعد تحميل ناجح
-                    // مهم: حتى لو كانت الورقة فارغة وتم الاحتفاظ بالبيانات القديمة (shouldKeepOld)، نعتبرها "تم تحميلها"
-                    // لتفادي إعادة تهيئة ViolationTypes افتراضياً قبل اكتمال التحميل.
-                    if (!AppState.syncMeta) {
-                        AppState.syncMeta = { sheets: {}, lastSyncTime: 0, userEmail: null };
-                    }
-                    if (!AppState.syncMeta.sheets) {
-                        AppState.syncMeta.sheets = {};
-                    }
-                    AppState.syncMeta.sheets[sheetName] = Date.now();
-                    AppState.syncMeta.lastSyncTime = Date.now();
                 } else {
                     // ✅ تحسين: إذا لم تكن array، نستخدم البيانات القديمة بدلاً من استبدالها بمصفوفة فارغة
                     const oldData = AppState.appData[key] || [];
@@ -3802,9 +3834,11 @@ const GoogleIntegration = {
             }
 
             this._syncInProgress.global = false;
+            this._currentSyncForceRefresh = false;
             return success || syncedCount > 0;
         } catch (error) {
             this._syncInProgress.global = false;
+            this._currentSyncForceRefresh = false;
             if (showLoader && typeof Loading !== 'undefined') {
                 Loading.hide();
             }

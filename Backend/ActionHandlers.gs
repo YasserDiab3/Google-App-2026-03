@@ -240,9 +240,10 @@ var ActionHandlers = {
                                             continue;
                                         }
                                         // ✅ Use CacheService for frequently-read sheets
+                                        const skipCache = !!(payload && payload.skipCache);
                                         const cache = CacheService.getScriptCache();
                                         const cacheKey = 'batch_' + sheetName + '_v2';
-                                        const cached = cache.get(cacheKey);
+                                        const cached = skipCache ? null : cache.get(cacheKey);
 
                                         if (cached) {
                                             // Return cached data
@@ -259,11 +260,11 @@ var ActionHandlers = {
 
                                             batchResults[sheetName] = sheetData;
 
-                                            // ✅ Cache for 3 minutes (180 seconds)
+                                            // ✅ Cache for 3 minutes (180 seconds) — يُتخطى عند skipCache (مزامنة يدوية)
                                             // Only cache if data is not too large (< 100KB)
                                             try {
                                                 const dataSize = JSON.stringify(sheetData).length;
-                                                if (dataSize < 100000) { // 100KB limit
+                                                if (!skipCache && dataSize < 100000) { // 100KB limit
                                                     cache.put(cacheKey, JSON.stringify(sheetData), 180);
                                                     Logger.log('Cached batch sheet: ' + sheetName + ' (' + dataSize + ' bytes)');
                                                 }

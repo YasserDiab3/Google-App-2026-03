@@ -3034,7 +3034,8 @@ window.UI = {
             notifyOnSuccess: false,
             notifyOnError: false,
             includeUsersSheet: true,
-            incremental: true,
+            incremental: false,
+            forceRefresh: true,
             ...options
         };
 
@@ -9630,7 +9631,8 @@ window.UI = {
                     notifyOnSuccess: false,
                     notifyOnError: false,
                     includeUsersSheet: includeUsersSheet,
-                    incremental: false
+                    incremental: false,
+                    forceRefresh: true
                 });
                 
                 // ✅ إذا نجحت المزامنة، عطّل bootstrap تلقائياً (إن كان مستخدماً)

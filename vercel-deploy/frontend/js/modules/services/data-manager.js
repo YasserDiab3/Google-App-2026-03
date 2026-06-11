@@ -24,8 +24,15 @@ const DataManager = {
             localStorage.removeItem('hse_sync_meta');
             localStorage.removeItem('hse_cache_timestamps');
             localStorage.removeItem('hse_cached_users');
-            // cache قديم لـ readFromSheet بدون اسم الورقة — كان يسبب تكرار نفس العدد في كل الموديولات
-            localStorage.removeItem('hse_local_readFromSheet');
+            // مسح كل مفاتيح cache القراءة (قديمة ولكل ورقة)
+            const keysToRemove = [];
+            for (let i = 0; i < localStorage.length; i++) {
+                const k = localStorage.key(i);
+                if (k && (k.startsWith('hse_local_readFromSheet') || k.startsWith('hse_local_batchReadSheets'))) {
+                    keysToRemove.push(k);
+                }
+            }
+            keysToRemove.forEach((k) => localStorage.removeItem(k));
         } catch (e) {
             if (typeof Utils !== 'undefined' && Utils.safeWarn) {
                 Utils.safeWarn('⚠️ فشل مسح localStorage:', e);
