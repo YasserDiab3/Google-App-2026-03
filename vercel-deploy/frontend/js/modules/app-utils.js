@@ -2848,7 +2848,7 @@ const DEFAULT_COMPANY_NAME = '';
 
 const AppState = {
     /** إصدار التطبيق — تسلسلي: 1.0.0 → 1.0.1 → 1.0.2 … عند كل نشر زِد الرقم هنا وفي version.json */
-    appVersion: '1.0.109',
+    appVersion: '1.0.110',
     /** نص اختياري لرسالة التحديث (ملخص التغييرات). إن تُركت فارغة يُستخدم النص الافتراضي. */
     updateMessage: '',
     debugMode: false,
@@ -7040,17 +7040,15 @@ FormHeader.generatePDFHTML = function (
 FormHeader.generatePDF = async function (htmlContent, filename = 'document.pdf') {
     try {
         if (typeof html2canvas === 'undefined') {
-            await new Promise((resolve, reject) => {
-                const s = document.createElement('script');
-                s.src = 'https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js';
-                s.onerror = function () {
-                    this.onerror = null;
-                    this.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';
-                    this.onerror = function () { reject(new Error('html2canvas load failed')); };
-                };
-                s.onload = resolve;
-                document.head.appendChild(s);
-            });
+            try {
+                await new Promise((resolve, reject) => {
+                    const s = document.createElement('script');
+                    s.src = 'https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js';
+                    s.onerror = function () { this.onerror = null; this.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js'; this.onerror = reject; };
+                    s.onload = resolve;
+                    document.head.appendChild(s);
+                });
+            } catch (e) {}
         }
         if (typeof window.jspdf === 'undefined' || typeof window.jspdf.jsPDF === 'undefined') {
             await new Promise((resolve, reject) => {
@@ -7061,13 +7059,7 @@ FormHeader.generatePDF = async function (htmlContent, filename = 'document.pdf')
                     this.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
                     this.onerror = function () { reject(new Error('jsPDF load failed')); };
                 };
-                s.onload = function () {
-                    const at = document.createElement('script');
-                    at.src = 'https://cdn.jsdelivr.net/npm/jspdf-autotable@3.5.24/dist/jspdf.plugin.autotable.min.js';
-                    at.onerror = function () { this.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.24/jspdf.plugin.autotable.min.js'; };
-                    document.head.appendChild(at);
-                    setTimeout(resolve, 500);
-                };
+                s.onload = resolve;
                 document.head.appendChild(s);
             });
         }
@@ -7082,31 +7074,18 @@ FormHeader.generatePDF = async function (htmlContent, filename = 'document.pdf')
         document.body.appendChild(iframe);
         iframe.srcdoc = htmlContent;
         await new Promise(resolve => { iframe.onload = resolve; setTimeout(resolve, 5000); });
-        await new Promise(resolve => setTimeout(resolve, 1200));
-        const body = (iframe.contentDocument || iframe.contentWindow.document).body;
-        const canvas = await html2canvas(body, {
-            scale: 2, useCORS: true, logging: false,
-            width: body.scrollWidth, height: body.scrollHeight,
-            windowWidth: body.scrollWidth, windowHeight: body.scrollHeight
-        });
-        document.body.removeChild(iframe);
+        await new Promise(resolve => setTimeout(resolve, 500));
+        const bodyEl = (iframe.contentDocument || iframe.contentWindow.document).body;
         const { jsPDF } = window.jspdf;
         const pdf = new jsPDF('p', 'mm', 'a4');
-        const pdfW = pdf.internal.pageSize.getWidth();
-        const pdfH = pdf.internal.pageSize.getHeight();
-        const margin = 8;
-        const usableW = pdfW - 2 * margin;
-        const usableH = pdfH - 2 * margin;
-        const imgData = canvas.toDataURL('image/jpeg', 0.92);
-        const displayH = usableW * canvas.height / canvas.width;
-        const pagePx = usableH * canvas.height / displayH;
-        let srcY = 0, pageIdx = 0;
-        while (srcY < canvas.height) {
-            if (pageIdx > 0) pdf.addPage();
-            pdf.addImage(imgData, 'JPEG', margin, margin - (srcY / canvas.height) * displayH, usableW, displayH);
-            srcY += pagePx;
-            pageIdx++;
-        }
+        await pdf.html(bodyEl, {
+            x: 8,
+            y: 8,
+            html2canvas: { scale: 2, useCORS: true, logging: false },
+            autoPaging: 'text',
+            margin: [8, 8, 8, 8]
+        });
+        document.body.removeChild(iframe);
         pdf.save(filename);
         return true;
     } catch (error) {

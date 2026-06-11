@@ -12091,7 +12091,7 @@ const Contractors = {
                 : `<html dir="rtl" lang="ar"><head><meta charset="UTF-8"><title>${reportTitle}</title></head><body>${content}</body></html>`;
 
             if (typeof FormHeader !== 'undefined' && typeof FormHeader.generatePDF === 'function') {
-                FormHeader.generatePDF(htmlContent, `${reportTitle}.pdf`);
+                await FormHeader.generatePDF(htmlContent, `${reportTitle}.pdf`);
             } else {
                 const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
                 const url = URL.createObjectURL(blob);
