@@ -1922,73 +1922,88 @@ const Emergency = {
         const hasExistingImage = !!(val('imageDriveId'));
 
         const html = `
-            <div class="modal-overlay active" id="fm-floor-modal">
-                <div class="modal-content" style="max-width: 700px;">
+            <div class="modal-overlay active" id="fm-floor-modal" style="z-index:9999;">
+                <div class="modal-content fm-modal-improved">
                     <div class="lr-modal-header">
-                        <h3><i class="fas fa-map"></i> ${editId ? 'تعديل' : 'إضافة'} مخطط طابق</h3>
-                        <button class="modal-close" onclick="document.getElementById('fm-floor-modal').remove()"><i class="fas fa-times"></i></button>
+                        <h3><i class="fas fa-draw-polygon" style="color:#2563eb;"></i> ${editId ? 'تعديل' : 'إضافة'} مخطط طابق</h3>
+                        <button type="button" class="modal-close" onclick="this.closest('.modal-overlay').remove()"><i class="fas fa-times"></i></button>
                     </div>
-                    <form id="fm-floor-form" onsubmit="Emergency.handleFloorPlanSubmit(event)">
+                    <form id="fm-floor-form" onsubmit="return Emergency.handleFloorPlanSubmit(event)">
                         <input type="hidden" id="fm-floor-edit-id" value="${editId || ''}">
-                        <div class="modal-body">
-                            <div class="form-group">
-                                <label class="form-label">اسم المخطط <span class="text-red-500">*</span></label>
-                                <input type="text" id="fm-floor-name" class="form-input" value="${val('name')}" required placeholder="مثال: مخطط الطابق الأرضي">
-                            </div>
-                            <div class="form-group">
-                                <label class="form-label">الطابق</label>
-                                <select id="fm-floor-level" class="form-input">${floorOpts}</select>
-                            </div>
-                            <div class="form-group">
-                                <label class="form-label">مصدر المخطط</label>
-                                <div class="fm-source-tabs" style="display:flex;gap:8px;margin-bottom:8px;">
-                                    <button type="button" class="btn-sm fm-source-tab active" data-mode="draw" onclick="Emergency._fmSwitchSource('draw')"><i class="fas fa-pen"></i> رسم يدوي</button>
-                                    <button type="button" class="btn-sm fm-source-tab" data-mode="upload" onclick="Emergency._fmSwitchSource('upload')"><i class="fas fa-image"></i> رفع صورة</button>
+                        <div class="modal-body" style="padding:16px 24px;">
+                            <div class="fm-form-row">
+                                <div class="form-group" style="flex:1;">
+                                    <label class="form-label">اسم المخطط <span class="text-red-500">*</span></label>
+                                    <input type="text" id="fm-floor-name" class="form-input" value="${val('name')}" required placeholder="مثال: مخطط الطابق الأرضي" autofocus>
                                 </div>
-                                <div id="fm-source-draw" class="fm-source-pane" style="display:block;">
-                                    <div class="fm-canvas-toolbar" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px;">
-                                        <button type="button" class="btn-icon btn-sm fm-draw-tool active" data-tool="pen" title="قلم"><i class="fas fa-pen"></i></button>
-                                        <button type="button" class="btn-icon btn-sm fm-draw-tool" data-tool="rect" title="مستطيل"><i class="fas fa-square"></i></button>
-                                        <button type="button" class="btn-icon btn-sm fm-draw-tool" data-tool="eraser" title="ممحاة"><i class="fas fa-eraser"></i></button>
-                                        <input type="color" id="fm-draw-color" value="#1e293b" title="اللون" style="width:32px;height:32px;border:1px solid #e2e8f0;border-radius:6px;cursor:pointer;padding:2px;">
-                                        <select id="fm-draw-width" title="سماكة الخط" style="width:60px;height:32px;border:1px solid #e2e8f0;border-radius:6px;padding:2px 4px;">
+                                <div class="form-group" style="flex:0 0 140px;">
+                                    <label class="form-label">الطابق</label>
+                                    <select id="fm-floor-level" class="form-input">${floorOpts}</select>
+                                </div>
+                                <div class="form-group" style="flex:0 0 80px;">
+                                    <label class="form-label">الترتيب</label>
+                                    <input type="number" id="fm-floor-sort" class="form-input" value="${val('sortOrder', '1')}" min="0">
+                                </div>
+                            </div>
+                            <div class="form-group" style="margin-top:12px;">
+                                <div class="fm-source-tabs" style="display:flex;gap:0;margin-bottom:0;background:#f1f5f9;border-radius:10px;padding:4px;border:1px solid #e2e8f0;">
+                                    <button type="button" class="fm-source-tab active" data-mode="draw" onclick="Emergency._fmSwitchSource('draw')"><i class="fas fa-pen-fancy"></i> رسم يدوي</button>
+                                    <button type="button" class="fm-source-tab" data-mode="upload" onclick="Emergency._fmSwitchSource('upload')"><i class="fas fa-cloud-upload-alt"></i> رفع صورة</button>
+                                </div>
+                            </div>
+                            <div id="fm-source-draw" class="fm-source-pane" style="display:block;margin-top:4px;">
+                                <div class="fm-canvas-toolbar">
+                                    <div class="fm-tool-group">
+                                        <button type="button" class="fm-draw-tool active" data-tool="pen" title="قلم"><i class="fas fa-pen"></i></button>
+                                        <button type="button" class="fm-draw-tool" data-tool="rect" title="مستطيل"><i class="fas fa-vector-square"></i></button>
+                                        <button type="button" class="fm-draw-tool" data-tool="eraser" title="ممحاة"><i class="fas fa-eraser"></i></button>
+                                    </div>
+                                    <div class="fm-tool-group">
+                                        <label class="fm-tool-label">اللون</label>
+                                        <input type="color" id="fm-draw-color" value="#1e293b" title="اللون">
+                                    </div>
+                                    <div class="fm-tool-group">
+                                        <label class="fm-tool-label">السماكة</label>
+                                        <select id="fm-draw-width" title="سماكة الخط">
                                             <option value="2">2</option>
                                             <option value="4" selected>4</option>
                                             <option value="6">6</option>
                                             <option value="10">10</option>
                                         </select>
-                                        <button type="button" class="btn-icon btn-sm" onclick="Emergency._fmClearCanvas()" title="مسح الكل"><i class="fas fa-trash-alt"></i></button>
                                     </div>
-                                    <div class="fm-canvas-wrap" style="position:relative;border:1px solid #e2e8f0;border-radius:8px;overflow:hidden;background:#fff;">
-                                        <canvas id="fm-sketch-canvas" width="1200" height="700" style="display:block;width:100%;height:auto;aspect-ratio:1200/700;cursor:crosshair;touch-action:none;"></canvas>
+                                    <div class="fm-tool-group">
+                                        <button type="button" class="fm-draw-action" onclick="Emergency._fmClearCanvas()" title="مسح الكل"><i class="fas fa-trash-alt"></i> مسح</button>
                                     </div>
-                                    <input type="hidden" id="fm-canvas-data" value="">
-                                    <p class="text-xs text-gray-400 mt-1"><i class="fas fa-info-circle"></i> ارسم مخطط الطابق باستخدام الأدوات أعلاه. المستطيلات تمثل الجدران والغرف.</p>
-                                    ${hasExistingImage ? `<p class="text-xs text-amber-500 mt-1"><i class="fas fa-exclamation-triangle"></i> يوجد مخطط موجود مسبقاً. الرسم الجديد سيستبدله.</p>` : ''}
                                 </div>
-                                <div id="fm-source-upload" class="fm-source-pane" style="display:none;">
+                                <div class="fm-canvas-wrap" onclick="this.querySelector('canvas').focus()">
+                                    <canvas id="fm-sketch-canvas" width="1200" height="650" tabindex="-1"></canvas>
+                                </div>
+                                <div class="fm-canvas-hint">
+                                    <i class="fas fa-info-circle"></i> ارسم جدران وغرف المصنع باستخدام <strong>القلم</strong> أو أضف <strong>مستطيلات</strong>. استخدم <strong>الممحاة</strong> للمسح.
+                                </div>
+                                ${hasExistingImage ? `<div class="fm-canvas-warning"><i class="fas fa-exclamation-triangle"></i> يوجد رسم سابق — الرسم الجديد سيحل محله.</div>` : ''}
+                            </div>
+                            <div id="fm-source-upload" class="fm-source-pane" style="display:none;margin-top:4px;">
+                                <div class="form-group">
+                                    <label class="form-label">رابط الصورة</label>
                                     <input type="text" id="fm-floor-image" class="form-input" value="${val('imageDriveId')}" placeholder="رابط صورة المخطط (Google Drive ID أو URL)">
-                                    <p class="text-xs text-gray-400 mt-1">أدخل معرف Google Drive للمخطط أو رابط مباشر للصورة</p>
+                                    <p class="fm-field-hint">أدخل معرف Google Drive للصورة أو رابطاً مباشراً.</p>
                                 </div>
                             </div>
-                            <div class="grid grid-cols-2 gap-4">
-                                <div class="form-group">
-                                    <label class="form-label">العرض (بكسل)</label>
+                            <div class="fm-form-row" style="margin-top:10px;">
+                                <div class="form-group" style="flex:1;">
+                                    <label class="form-label">العرض (px)</label>
                                     <input type="number" id="fm-floor-width" class="form-input" value="${val('imageWidth', 1200)}" min="100">
                                 </div>
-                                <div class="form-group">
-                                    <label class="form-label">الارتفاع (بكسل)</label>
+                                <div class="form-group" style="flex:1;">
+                                    <label class="form-label">الارتفاع (px)</label>
                                     <input type="number" id="fm-floor-height" class="form-input" value="${val('imageHeight', 800)}" min="100">
                                 </div>
                             </div>
-                            <div class="form-group">
-                                <label class="form-label">ترتيب العرض</label>
-                                <input type="number" id="fm-floor-sort" class="form-input" value="${val('sortOrder', '1')}" min="0">
-                            </div>
                         </div>
-                        <div class="modal-footer">
-                            <button type="button" class="btn-secondary" onclick="document.getElementById('fm-floor-modal').remove()">إلغاء</button>
-                            <button type="submit" class="btn-primary"><i class="fas fa-save ml-2"></i>${editId ? 'حفظ' : 'إضافة'}</button>
+                        <div class="modal-footer" style="padding:12px 24px;gap:8px;">
+                            <button type="button" class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">إلغاء</button>
+                            <button type="submit" class="btn-primary"><i class="fas fa-save ml-2"></i>${editId ? 'حفظ التعديلات' : 'إضافة المخطط'}</button>
                         </div>
                     </form>
                 </div>
@@ -2119,15 +2134,13 @@ const Emergency = {
         e.preventDefault();
         const editId = document.getElementById('fm-floor-edit-id')?.value;
         const name = document.getElementById('fm-floor-name')?.value?.trim();
-        if (!name) { if (typeof Notification !== 'undefined' && Notification.error) Notification.error('اسم المخطط مطلوب'); return; }
+        if (!name) { if (typeof Notification !== 'undefined' && Notification.error) Notification.error('اسم المخطط مطلوب'); return false; }
 
-        // Capture canvas data if draw mode is active
         let imageDriveId = document.getElementById('fm-floor-image')?.value?.trim() || '';
-        const drawVisible = document.getElementById('fm-source-draw')?.style.display !== 'none';
-        if (drawVisible) {
+        const drawPane = document.getElementById('fm-source-draw');
+        if (drawPane && drawPane.style.display !== 'none') {
             const canvas = document.getElementById('fm-sketch-canvas');
             if (canvas) {
-                // Check if canvas is not empty (has content)
                 const ctx = canvas.getContext('2d');
                 const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
                 const hasContent = imageData.data.some(ch => ch !== 0);
@@ -2154,8 +2167,8 @@ const Emergency = {
         try {
             if (!window.GoogleIntegration || typeof GoogleIntegration.sendRequest !== 'function') {
                 if (typeof Notification !== 'undefined' && Notification.error) Notification.error('خدمة التكامل غير متوفرة');
-                if (submitBtn) { submitBtn.disabled = false; submitBtn.innerHTML = '<i class="fas fa-save ml-2"></i>' + (editId ? 'حفظ' : 'إضافة'); }
-                return;
+                if (submitBtn) { submitBtn.disabled = false; submitBtn.innerHTML = '<i class="fas fa-save ml-2"></i>' + (editId ? 'حفظ التعديلات' : 'إضافة المخطط'); }
+                return false;
             }
 
             if (editId) {
@@ -2171,8 +2184,10 @@ const Emergency = {
         } catch (err) {
             const msg = err?.message || 'خطأ غير معروف';
             if (typeof Notification !== 'undefined' && Notification.error) Notification.error('فشل الحفظ: ' + msg);
-            if (submitBtn) { submitBtn.disabled = false; submitBtn.innerHTML = '<i class="fas fa-save ml-2"></i>' + (editId ? 'حفظ' : 'إضافة'); }
+            if (submitBtn) { submitBtn.disabled = false; submitBtn.innerHTML = '<i class="fas fa-save ml-2"></i>' + (editId ? 'حفظ التعديلات' : 'إضافة المخطط'); }
+            return false;
         }
+        return false;
     },
 
     loadMapItems(planId) {
