@@ -1919,10 +1919,11 @@ const Emergency = {
         const val = (f, def) => (existing && existing[f] != null) ? existing[f] : (def || '');
         const floors = ['الطابق الأرضي', 'الطابق الأول', 'الطابق الثاني', 'الطابق الثالث', 'سطح المبنى', 'مبنى آخر'];
         const floorOpts = floors.map(f => `<option value="${f}" ${val('floor') === f ? 'selected' : ''}>${f}</option>`).join('');
+        const hasExistingImage = !!(val('imageDriveId'));
 
         const html = `
             <div class="modal-overlay active" id="fm-floor-modal">
-                <div class="modal-content" style="max-width: 520px;">
+                <div class="modal-content" style="max-width: 700px;">
                     <div class="lr-modal-header">
                         <h3><i class="fas fa-map"></i> ${editId ? 'تعديل' : 'إضافة'} مخطط طابق</h3>
                         <button class="modal-close" onclick="document.getElementById('fm-floor-modal').remove()"><i class="fas fa-times"></i></button>
@@ -1939,9 +1940,36 @@ const Emergency = {
                                 <select id="fm-floor-level" class="form-input">${floorOpts}</select>
                             </div>
                             <div class="form-group">
-                                <label class="form-label">رابط صورة المخطط</label>
-                                <input type="text" id="fm-floor-image" class="form-input" value="${val('imageDriveId')}" placeholder="رابط Drive ID أو URL صورة المخطط">
-                                <p class="text-xs text-gray-400 mt-1">أدخل معرف Google Drive للمخطط أو رابط مباشر للصورة</p>
+                                <label class="form-label">مصدر المخطط</label>
+                                <div class="fm-source-tabs" style="display:flex;gap:8px;margin-bottom:8px;">
+                                    <button type="button" class="btn-sm fm-source-tab active" data-mode="draw" onclick="Emergency._fmSwitchSource('draw')"><i class="fas fa-pen"></i> رسم يدوي</button>
+                                    <button type="button" class="btn-sm fm-source-tab" data-mode="upload" onclick="Emergency._fmSwitchSource('upload')"><i class="fas fa-image"></i> رفع صورة</button>
+                                </div>
+                                <div id="fm-source-draw" class="fm-source-pane" style="display:block;">
+                                    <div class="fm-canvas-toolbar" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px;">
+                                        <button type="button" class="btn-icon btn-sm fm-draw-tool active" data-tool="pen" title="قلم"><i class="fas fa-pen"></i></button>
+                                        <button type="button" class="btn-icon btn-sm fm-draw-tool" data-tool="rect" title="مستطيل"><i class="fas fa-square"></i></button>
+                                        <button type="button" class="btn-icon btn-sm fm-draw-tool" data-tool="eraser" title="ممحاة"><i class="fas fa-eraser"></i></button>
+                                        <input type="color" id="fm-draw-color" value="#1e293b" title="اللون" style="width:32px;height:32px;border:1px solid #e2e8f0;border-radius:6px;cursor:pointer;padding:2px;">
+                                        <select id="fm-draw-width" title="سماكة الخط" style="width:60px;height:32px;border:1px solid #e2e8f0;border-radius:6px;padding:2px 4px;">
+                                            <option value="2">2</option>
+                                            <option value="4" selected>4</option>
+                                            <option value="6">6</option>
+                                            <option value="10">10</option>
+                                        </select>
+                                        <button type="button" class="btn-icon btn-sm" onclick="Emergency._fmClearCanvas()" title="مسح الكل"><i class="fas fa-trash-alt"></i></button>
+                                    </div>
+                                    <div class="fm-canvas-wrap" style="position:relative;border:1px solid #e2e8f0;border-radius:8px;overflow:hidden;background:#fff;">
+                                        <canvas id="fm-sketch-canvas" width="1200" height="700" style="display:block;width:100%;height:auto;aspect-ratio:1200/700;cursor:crosshair;touch-action:none;"></canvas>
+                                    </div>
+                                    <input type="hidden" id="fm-canvas-data" value="">
+                                    <p class="text-xs text-gray-400 mt-1"><i class="fas fa-info-circle"></i> ارسم مخطط الطابق باستخدام الأدوات أعلاه. المستطيلات تمثل الجدران والغرف.</p>
+                                    ${hasExistingImage ? `<p class="text-xs text-amber-500 mt-1"><i class="fas fa-exclamation-triangle"></i> يوجد مخطط موجود مسبقاً. الرسم الجديد سيستبدله.</p>` : ''}
+                                </div>
+                                <div id="fm-source-upload" class="fm-source-pane" style="display:none;">
+                                    <input type="text" id="fm-floor-image" class="form-input" value="${val('imageDriveId')}" placeholder="رابط صورة المخطط (Google Drive ID أو URL)">
+                                    <p class="text-xs text-gray-400 mt-1">أدخل معرف Google Drive للمخطط أو رابط مباشر للصورة</p>
+                                </div>
                             </div>
                             <div class="grid grid-cols-2 gap-4">
                                 <div class="form-group">
@@ -1968,40 +1996,182 @@ const Emergency = {
         const m = document.getElementById('fm-floor-modal');
         if (m) m.remove();
         document.body.insertAdjacentHTML('beforeend', html);
+        this._fmInitCanvas();
+    },
+
+    _fmSwitchSource(mode) {
+        document.querySelectorAll('.fm-source-tab').forEach(t => t.classList.toggle('active', t.dataset.mode === mode));
+        document.getElementById('fm-source-draw').style.display = mode === 'draw' ? 'block' : 'none';
+        document.getElementById('fm-source-upload').style.display = mode === 'upload' ? 'block' : 'none';
+    },
+
+    _fmInitCanvas() {
+        const canvas = document.getElementById('fm-sketch-canvas');
+        if (!canvas) return;
+        const ctx = canvas.getContext('2d');
+        const rect = { x: 0, y: 0, w: 0, h: 0, drawing: false };
+        let drawing = false, tool = 'pen', color = '#1e293b', width = 4, lastX, lastY;
+
+        // Restore existing data if editing
+        const existingData = document.getElementById('fm-floor-edit-id')?.value;
+        if (existingData) {
+            const plan = this._fmState.floorPlans.find(p => p.id === existingData);
+            if (plan && plan.imageDriveId && plan.imageDriveId.startsWith('data:image')) {
+                const img = new Image();
+                img.onload = () => { ctx.drawImage(img, 0, 0, canvas.width, canvas.height); };
+                img.src = plan.imageDriveId;
+            }
+        }
+
+        const getPos = (e) => {
+            const rect2 = canvas.getBoundingClientRect();
+            const scaleX = canvas.width / rect2.width;
+            const scaleY = canvas.height / rect2.height;
+            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+            return { x: (clientX - rect2.left) * scaleX, y: (clientY - rect2.top) * scaleY };
+        };
+
+        const startDraw = (e) => {
+            e.preventDefault();
+            const pos = getPos(e);
+            drawing = true;
+            lastX = pos.x; lastY = pos.y;
+            if (tool === 'rect') { rect.x = pos.x; rect.y = pos.y; rect.drawing = true; }
+            else { ctx.beginPath(); ctx.moveTo(pos.x, pos.y); }
+        };
+
+        const draw = (e) => {
+            e.preventDefault();
+            const pos = getPos(e);
+            if (!drawing) return;
+            if (tool === 'eraser') {
+                ctx.clearRect(Math.min(lastX, pos.x) - width, Math.min(lastY, pos.y) - width, Math.abs(pos.x - lastX) + width * 2, Math.abs(pos.y - lastY) + width * 2);
+                lastX = pos.x; lastY = pos.y;
+                return;
+            }
+            if (tool === 'rect') {
+                if (!rect.drawing) return;
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                // redraw from saved snapshot if available
+                const snapshot = canvas._snapshot;
+                if (snapshot) ctx.putImageData(snapshot, 0, 0);
+                ctx.strokeStyle = color; ctx.lineWidth = width;
+                ctx.strokeRect(rect.x, rect.y, pos.x - rect.x, pos.y - rect.y);
+                ctx.fillStyle = color + '20';
+                ctx.fillRect(rect.x, rect.y, pos.x - rect.x, pos.y - rect.y);
+                return;
+            }
+            ctx.strokeStyle = color; ctx.lineWidth = width; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+            ctx.lineTo(pos.x, pos.y); ctx.stroke();
+            lastX = pos.x; lastY = pos.y;
+        };
+
+        const endDraw = (e) => {
+            if (tool === 'rect' && rect.drawing) {
+                // Snapshot after drawing rectangle
+                canvas._snapshot = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                rect.drawing = false;
+            } else if (tool !== 'eraser' && drawing) {
+                ctx.closePath();
+            }
+            drawing = false;
+            canvas._snapshot = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        };
+
+        canvas.addEventListener('mousedown', startDraw);
+        canvas.addEventListener('mousemove', draw);
+        canvas.addEventListener('mouseup', endDraw);
+        canvas.addEventListener('mouseleave', endDraw);
+        canvas.addEventListener('touchstart', startDraw, { passive: false });
+        canvas.addEventListener('touchmove', draw, { passive: false });
+        canvas.addEventListener('touchend', endDraw);
+
+        // Tool buttons
+        document.querySelectorAll('.fm-draw-tool').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.fm-draw-tool').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                tool = btn.dataset.tool;
+                canvas.style.cursor = tool === 'eraser' ? 'cell' : 'crosshair';
+            });
+        });
+
+        const colorInput = document.getElementById('fm-draw-color');
+        if (colorInput) colorInput.addEventListener('input', (e) => { color = e.target.value; });
+
+        const widthSelect = document.getElementById('fm-draw-width');
+        if (widthSelect) widthSelect.addEventListener('change', (e) => { width = parseInt(e.target.value); });
+
+        // Initial snapshot
+        canvas._snapshot = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    },
+
+    _fmClearCanvas() {
+        const canvas = document.getElementById('fm-sketch-canvas');
+        if (!canvas) return;
+        const ctx = canvas.getContext('2d');
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        canvas._snapshot = ctx.getImageData(0, 0, canvas.width, canvas.height);
     },
 
     async handleFloorPlanSubmit(e) {
         e.preventDefault();
         const editId = document.getElementById('fm-floor-edit-id')?.value;
+        const name = document.getElementById('fm-floor-name')?.value?.trim();
+        if (!name) { if (typeof Notification !== 'undefined' && Notification.error) Notification.error('اسم المخطط مطلوب'); return; }
+
+        // Capture canvas data if draw mode is active
+        let imageDriveId = document.getElementById('fm-floor-image')?.value?.trim() || '';
+        const drawVisible = document.getElementById('fm-source-draw')?.style.display !== 'none';
+        if (drawVisible) {
+            const canvas = document.getElementById('fm-sketch-canvas');
+            if (canvas) {
+                // Check if canvas is not empty (has content)
+                const ctx = canvas.getContext('2d');
+                const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                const hasContent = imageData.data.some(ch => ch !== 0);
+                if (hasContent) {
+                    imageDriveId = canvas.toDataURL('image/png');
+                }
+            }
+        }
+
         const data = {
-            name: document.getElementById('fm-floor-name')?.value?.trim(),
-            floor: document.getElementById('fm-floor-level')?.value,
-            imageDriveId: document.getElementById('fm-floor-image')?.value?.trim(),
+            name,
+            floor: document.getElementById('fm-floor-level')?.value || '',
+            imageDriveId,
             imageWidth: parseInt(document.getElementById('fm-floor-width')?.value) || 1200,
             imageHeight: parseInt(document.getElementById('fm-floor-height')?.value) || 800,
             sortOrder: parseInt(document.getElementById('fm-floor-sort')?.value) || 1,
             isActive: 'true'
         };
-        if (!data.name) { if (typeof Notification !== 'undefined' && Notification.error) Notification.error('اسم المخطط مطلوب'); return; }
 
         const modal = document.getElementById('fm-floor-modal');
+        const submitBtn = modal?.querySelector('button[type="submit"]');
+        if (submitBtn) { submitBtn.disabled = true; submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin ml-2"></i>جاري الحفظ...'; }
+
         try {
-            if (editId) {
-                if (typeof GoogleIntegration !== 'undefined' && GoogleIntegration.sendRequest) {
-                    await GoogleIntegration.sendRequest({ action: 'updateEmergencyFloorPlan', data: { planId: editId, updateData: data } });
-                }
-                if (typeof Notification !== 'undefined' && Notification.success) Notification.success('تم تحديث المخطط');
-            } else {
-                if (typeof GoogleIntegration !== 'undefined' && GoogleIntegration.sendRequest) {
-                    await GoogleIntegration.sendRequest({ action: 'addEmergencyFloorPlan', data });
-                }
-                if (typeof Notification !== 'undefined' && Notification.success) Notification.success('تم إضافة المخطط');
+            if (!window.GoogleIntegration || typeof GoogleIntegration.sendRequest !== 'function') {
+                if (typeof Notification !== 'undefined' && Notification.error) Notification.error('خدمة التكامل غير متوفرة');
+                if (submitBtn) { submitBtn.disabled = false; submitBtn.innerHTML = '<i class="fas fa-save ml-2"></i>' + (editId ? 'حفظ' : 'إضافة'); }
+                return;
             }
+
+            if (editId) {
+                const resp = await GoogleIntegration.sendRequest({ action: 'updateEmergencyFloorPlan', data: { planId: editId, updateData: data } });
+                if (resp && resp.success === false) throw new Error(resp.message || 'فشل التحديث');
+            } else {
+                const resp = await GoogleIntegration.sendRequest({ action: 'addEmergencyFloorPlan', data });
+                if (resp && resp.success === false) throw new Error(resp.message || 'فشل الإضافة');
+            }
+            if (typeof Notification !== 'undefined' && Notification.success) Notification.success(editId ? 'تم تحديث المخطط' : 'تم إضافة المخطط');
             if (modal) modal.remove();
             this.loadFloorPlans();
         } catch (err) {
-            Utils.safeWarn('⚠️ خطأ في حفظ المخطط:', err);
-            if (typeof Notification !== 'undefined' && Notification.error) Notification.error('فشل الحفظ');
+            const msg = err?.message || 'خطأ غير معروف';
+            if (typeof Notification !== 'undefined' && Notification.error) Notification.error('فشل الحفظ: ' + msg);
+            if (submitBtn) { submitBtn.disabled = false; submitBtn.innerHTML = '<i class="fas fa-save ml-2"></i>' + (editId ? 'حفظ' : 'إضافة'); }
         }
     },
 
@@ -2015,9 +2185,12 @@ const Emergency = {
 
         const mapCanvas = document.getElementById('fm-map-canvas');
         const mapImage = document.getElementById('fm-map-image');
-        const imgSrc = plan.imageDriveId
-            ? (plan.imageDriveId.startsWith('http') ? plan.imageDriveId : `https://drive.google.com/thumbnail?id=${plan.imageDriveId}&sz=w1600`)
-            : '';
+        const imgId = plan.imageDriveId || '';
+        const imgSrc = imgId.startsWith('data:')
+            ? imgId
+            : imgId.startsWith('http')
+                ? imgId
+                : imgId ? `https://drive.google.com/thumbnail?id=${imgId}&sz=w1600` : '';
         mapImage.src = imgSrc;
         mapImage.style.width = (plan.imageWidth || 1200) + 'px';
         mapImage.style.height = (plan.imageHeight || 800) + 'px';

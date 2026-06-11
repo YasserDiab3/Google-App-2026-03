@@ -17075,6 +17075,60 @@ body[data-theme="dark"] .profile-info-list>div,
     font-size: 13px;
 }
 
+/* Canvas Drawing Tool */
+.fm-canvas-toolbar {
+    background: #f8fafc;
+    padding: 8px;
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+}
+
+.fm-draw-tool {
+    width: 36px;
+    height: 36px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    background: #fff;
+    color: #64748b;
+    cursor: pointer;
+    transition: all .15s;
+}
+
+.fm-draw-tool:hover {
+    background: #f1f5f9;
+    color: #1e293b;
+}
+
+.fm-draw-tool.active {
+    background: #1e293b;
+    color: #fff;
+    border-color: #1e293b;
+}
+
+.fm-source-tab {
+    padding: 6px 16px;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    background: #fff;
+    color: #64748b;
+    cursor: pointer;
+    font-size: 13px;
+    transition: all .15s;
+}
+
+.fm-source-tab:hover {
+    background: #f1f5f9;
+}
+
+.fm-source-tab.active {
+    background: #2563eb;
+    color: #fff;
+    border-color: #2563eb;
+}
+
 .fm-map-placeholder {
     display: flex;
     flex-direction: column;
