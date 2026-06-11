@@ -47,7 +47,7 @@ const GoogleIntegration = {
     },
 
     /** أوراق قراءتها للمدير فقط (تطابق Backend/Utils.gs) */
-    ADMIN_ONLY_READ_SHEETS: ['UserVersions', 'AuditLog', 'SecurityAuditLog', 'UserActivityLog'],
+    ADMIN_ONLY_READ_SHEETS: ['Users', 'UserVersions', 'AuditLog', 'SecurityAuditLog', 'UserActivityLog'],
 
     _isCurrentUserEffectiveAdmin_() {
         try {
@@ -63,6 +63,46 @@ const GoogleIntegration = {
         const list = Array.isArray(sheetNames) ? sheetNames.slice() : [];
         if (this._isCurrentUserEffectiveAdmin_()) return list;
         return list.filter((s) => !this.ADMIN_ONLY_READ_SHEETS.includes(s));
+    },
+
+    _canReadUsersSheet_() {
+        if (this._isCurrentUserEffectiveAdmin_()) return true;
+        if (typeof Permissions !== 'undefined' && typeof Permissions.hasAccess === 'function') {
+            return Permissions.hasAccess('users');
+        }
+        return false;
+    },
+
+    /**
+     * جلب قائمة مستخدمين مُصفّاة من الخادم (بدون passwordHash) — للمستخدمين غير المديرين
+     */
+    async fetchUsersForApp(options = {}) {
+        if (!this._isBackendRpcConfigured()) return null;
+        try {
+            const result = await this.sendToAppsScript('getUsersForApp', {
+                __timeoutMs: options.timeout || 15000
+            });
+            if (result && result.success && Array.isArray(result.data)) {
+                AppState.appData.users = result.data;
+                if (!AppState.syncMeta) AppState.syncMeta = { sheets: {}, lastSyncTime: 0, userEmail: null };
+                AppState.syncMeta.users = Date.now();
+                AppState.syncMeta.sheets = AppState.syncMeta.sheets || {};
+                AppState.syncMeta.sheets.Users = Date.now();
+                if (AppState.currentUser?.email) {
+                    AppState.syncMeta.userEmail = AppState.currentUser.email;
+                }
+                if (typeof DataManager !== 'undefined' && DataManager.save) {
+                    DataManager.save();
+                }
+                return result.data;
+            }
+            return null;
+        } catch (error) {
+            if (AppState?.debugMode) {
+                Utils.safeWarn('⚠️ fetchUsersForApp:', error?.message || error);
+            }
+            return null;
+        }
     },
 
     _isExpectedReadError_(errorMessage = '') {
@@ -1568,6 +1608,13 @@ const GoogleIntegration = {
             return null;
         }
 
+        if (String(sheetName || '').trim() === 'Users' && !this._canReadUsersSheet_()) {
+            if (typeof this.fetchUsersForApp === 'function') {
+                return await this.fetchUsersForApp({ timeout: typeof timeoutOrOptions === 'number' ? timeoutOrOptions : (timeoutOrOptions?.timeout || 15000) });
+            }
+            return null;
+        }
+
         let timeout = 15000;
         let observationsRequestContext = null;
         if (typeof timeoutOrOptions === 'number') {
@@ -2102,7 +2149,12 @@ const GoogleIntegration = {
 
         try {
             Utils.safeLog('🔄 جاري قراءة المستخدمين من Google Sheets...');
-            const data = await this.readFromSheets('Users');
+            let data = null;
+            if (this._canReadUsersSheet_() && this._isCurrentUserEffectiveAdmin_()) {
+                data = await this.readFromSheets('Users');
+            } else {
+                data = await this.fetchUsersForApp({ timeout: 20000 });
+            }
 
             // التحقق من وجود البيانات المستلمة
             if (!data) {

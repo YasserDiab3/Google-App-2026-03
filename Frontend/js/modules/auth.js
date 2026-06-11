@@ -529,6 +529,10 @@ window.Auth = {
         };
         this._sanitizeCurrentUserSecrets();
 
+        if (typeof window.DataManager !== 'undefined' && typeof window.DataManager.purgeIfUserChanged === 'function') {
+            window.DataManager.purgeIfUserChanged(email);
+        }
+
         Utils.safeLog('✅ تسجيل الدخول ناجح');
         Utils.safeLog('📋 الصلاحيات:', Object.keys(AppState.currentUser.permissions || {}).length, 'صلاحية');
 
@@ -724,9 +728,12 @@ window.Auth = {
             try {
                 Utils.safeLog('🚀 بدء تحميل البيانات بعد تسجيل الدخول...');
                 
-                // ✅ الخطوة 1: تحميل البيانات المحلية أولاً كـ fallback فوري
+                // ✅ الخطوة 1: تحميل البيانات المحلية (بعد purgeIfUserChanged عند تبديل المستخدم)
                 if (typeof DataManager !== 'undefined' && DataManager.load) {
                     try {
+                        if (typeof DataManager.purgeIfUserChanged === 'function' && AppState.currentUser?.email) {
+                            DataManager.purgeIfUserChanged(AppState.currentUser.email);
+                        }
                         await DataManager.load();
                         Utils.safeLog('✅ تم تحميل البيانات المحلية');
                     } catch (loadError) {
@@ -748,7 +755,19 @@ window.Auth = {
 
                 // ✅ الخطوة 2: تحميل البيانات الأساسية بشكل متسلسل (مهم جداً)
                 if (typeof Utils !== 'undefined' && typeof Utils.hasCloudBackendSync === 'function' && Utils.hasCloudBackendSync() && typeof GoogleIntegration !== 'undefined') {
-                    const prioritySheets = ['Users', 'Employees', 'ExternalWorkforceMonthly', 'Contractors', 'ApprovedContractors'];
+                    const isAdminLogin = (typeof Permissions !== 'undefined' && typeof Permissions.isCurrentUserEffectiveAdmin === 'function'
+                        && Permissions.isCurrentUserEffectiveAdmin());
+                    if (!isAdminLogin && typeof GoogleIntegration.fetchUsersForApp === 'function') {
+                        try {
+                            await GoogleIntegration.fetchUsersForApp();
+                        } catch (usersErr) {
+                            Utils.safeWarn('⚠️ فشل جلب دليل المستخدمين:', usersErr);
+                        }
+                    }
+                    const prioritySheets = ['Employees', 'ExternalWorkforceMonthly', 'Contractors', 'ApprovedContractors'];
+                    if (isAdminLogin) {
+                        prioritySheets.unshift('Users');
+                    }
                     const sheetMapping = {
                         'Users': 'users',
                         'Employees': 'employees',
@@ -997,13 +1016,16 @@ window.Auth = {
             } catch (e) {}
         }
         
-        // مسح جميع بيانات الجلسة
+        // مسح جميع بيانات الجلسة والبيانات المحلية الحساسة
         try {
             localStorage.removeItem('hse_remember_user');
             sessionStorage.removeItem('hse_current_session');
             sessionStorage.removeItem('hse_current_section');
             sessionStorage.removeItem('hse_session_id'); // مسح معرف الجلسة
-            Utils.safeLog('✅ تم مسح جميع بيانات الجلسة بما في ذلك معرف الجلسة');
+            if (typeof window.DataManager !== 'undefined' && typeof window.DataManager.purgeLocalAppData === 'function') {
+                window.DataManager.purgeLocalAppData('logout');
+            }
+            Utils.safeLog('✅ تم مسح جميع بيانات الجلسة والتخزين المحلي');
         } catch (e) {
             Utils.safeWarn('⚠️ فشل مسح بعض بيانات الجلسة:', e);
         }

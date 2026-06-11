@@ -382,11 +382,12 @@ function checkAdminPermissionsAuthoritative(userData) {
             if (sheetUser) {
                 return checkAdminPermissions(sheetUser);
             }
+            return false;
         }
-        return checkAdminPermissions(userData);
+        return false;
     } catch (error) {
         Logger.log('checkAdminPermissionsAuthoritative: ' + error.toString());
-        return checkAdminPermissions(userData);
+        return false;
     }
 }
 

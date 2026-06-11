@@ -393,7 +393,10 @@
                         };
                         
                         // تطبيق صلاحيات المستخدم (منطق مبسط)
-                        if (AppState.currentUser && AppState.currentUser.role !== 'admin' && typeof Permissions !== 'undefined') {
+                        const isEffectiveAdmin = (typeof Permissions !== 'undefined'
+                            && typeof Permissions.isCurrentUserEffectiveAdmin === 'function'
+                            && Permissions.isCurrentUserEffectiveAdmin());
+                        if (AppState.currentUser && !isEffectiveAdmin && typeof Permissions !== 'undefined') {
                             const accessibleModules = Permissions.getAccessibleModules(true);
                             const moduleSheetsMap = {
                                 'users': ['Users'], 'incidents': ['Incidents'], 'nearmiss': ['NearMiss'],
@@ -416,7 +419,10 @@
                                 'action-tracking': ['ActionTrackingRegister', 'HSECorrectiveActions', 'HSENonConformities', 'HSEObjectives']
                             };
                             
-                            const allowedSheets = new Set(includeUsersSheet ? ['Users'] : []);
+                            const allowedSheets = new Set();
+                            if (includeUsersSheet && typeof Permissions.hasAccess === 'function' && Permissions.hasAccess('users')) {
+                                allowedSheets.add('Users');
+                            }
                             accessibleModules.forEach(module => {
                                 const moduleSheets = moduleSheetsMap[module];
                                 if (Array.isArray(moduleSheets)) {
@@ -447,6 +453,10 @@
                             }
                             
                             sheets = sheets.filter(sheet => allowedSheets.has(sheet));
+                        }
+
+                        if (typeof GoogleIntegration._filterSheetsForCurrentUser === 'function') {
+                            sheets = GoogleIntegration._filterSheetsForCurrentUser(sheets);
                         }
                         
                         if (sheets.length === 0) {

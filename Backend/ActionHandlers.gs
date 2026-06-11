@@ -588,6 +588,22 @@ var ActionHandlers = {
         })();
         return result;
     },
+    'getUsersForApp': function(payload, postData, action, actorUserData, spreadsheetId) {
+        var result = { success: false, data: [] };
+        (function() {
+            try { result = getUsersForApp(actorUserData); }
+            catch (e) { result = { success: false, message: 'getUsersForApp: ' + (e && e.toString ? e.toString() : e), data: [] }; }
+        })();
+        return result;
+    },
+    'getDataIntegritySnapshot': function(payload, postData, action, actorUserData, spreadsheetId) {
+        var result = { success: false, counts: {} };
+        (function() {
+            try { result = getDataIntegritySnapshot(payload || {}, actorUserData); }
+            catch (e) { result = { success: false, message: 'getDataIntegritySnapshot: ' + (e && e.toString ? e.toString() : e), counts: {} }; }
+        })();
+        return result;
+    },
     'updateIncident': function(payload, postData, action, actorUserData, spreadsheetId) {
         var result = { success: false, message: '' };
         (function() {
@@ -5492,7 +5508,8 @@ var ActionHandlers = {
     'getAllBackups': function(payload, postData, action, actorUserData, spreadsheetId) {
         var result = { success: false, message: '' };
         (function() {
-
+                    var adminFail = actionRequireAdmin_(actorUserData, action);
+                    if (adminFail) { result = adminFail; return; }
                     result = getAllBackups(payload.filters || {});
                     return;
 
@@ -5502,7 +5519,8 @@ var ActionHandlers = {
     'getBackup': function(payload, postData, action, actorUserData, spreadsheetId) {
         var result = { success: false, message: '' };
         (function() {
-
+                    var adminFail = actionRequireAdmin_(actorUserData, action);
+                    if (adminFail) { result = adminFail; return; }
                     result = getBackup(payload.backupId || payload.id);
                     return;
 
@@ -5531,7 +5549,8 @@ var ActionHandlers = {
     'restoreFromBackup': function(payload, postData, action, actorUserData, spreadsheetId) {
         var result = { success: false, message: '' };
         (function() {
-
+                    var adminFail = actionRequireAdmin_(actorUserData, action);
+                    if (adminFail) { result = adminFail; return; }
                     if (payload && !payload.userData && !payload.user) {
                         payload.userData = payload.userData || payload.user || {
                             role: payload.role || '',
@@ -5619,7 +5638,8 @@ var ActionHandlers = {
     'downloadBackup': function(payload, postData, action, actorUserData, spreadsheetId) {
         var result = { success: false, message: '' };
         (function() {
-
+                    var adminFail = actionRequireAdmin_(actorUserData, action);
+                    if (adminFail) { result = adminFail; return; }
                     result = downloadBackup(payload.backupId || payload.id);
                     return;
 
@@ -5629,6 +5649,8 @@ var ActionHandlers = {
     'importBackup': function(payload, postData, action, actorUserData, spreadsheetId) {
         var result = { success: false, message: '' };
         (function() {
+                    var adminFail = actionRequireAdmin_(actorUserData, action);
+                    if (adminFail) { result = adminFail; return; }
 
                     if (payload && !payload.userData && !payload.user) {
                         payload.userData = payload.userData || payload.user || {
@@ -5653,6 +5675,8 @@ var ActionHandlers = {
     'importBackupFromFile': function(payload, postData, action, actorUserData, spreadsheetId) {
         var result = { success: false, message: '' };
         (function() {
+                    var adminFail = actionRequireAdmin_(actorUserData, action);
+                    if (adminFail) { result = adminFail; return; }
 
                     if (payload && !payload.userData && !payload.user) {
                         payload.userData = payload.userData || payload.user || {

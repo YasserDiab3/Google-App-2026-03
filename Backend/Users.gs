@@ -491,6 +491,51 @@ function deleteUserFromSheet(userId, userData) {
 }
 
 /**
+ * تنقية سجل مستخدم للعميل (بدون passwordHash أو tokens)
+ */
+function sanitizeUserRecordForClient_(user, isAdmin, actorEmail) {
+    if (!user || typeof user !== 'object') return null;
+    var out = {};
+    var safeFields = ['id', 'name', 'email', 'department', 'active', 'role', 'jobTitle', 'phone', 'photo', 'isOnline', 'lastLogin', 'passwordChanged', 'forcePasswordChange', 'updatedAt', 'createdAt'];
+    for (var i = 0; i < safeFields.length; i++) {
+        var f = safeFields[i];
+        if (user[f] !== undefined) out[f] = user[f];
+    }
+    var email = String(user.email || '').trim().toLowerCase();
+    var actor = String(actorEmail || '').trim().toLowerCase();
+    if (isAdmin || (email && email === actor)) {
+        if (user.permissions !== undefined) out.permissions = user.permissions;
+    }
+    return out;
+}
+
+/**
+ * قائمة مستخدمين مُصفّاة للتطبيق — بدون قراءة ورقة Users مباشرة من العميل
+ */
+function getUsersForApp(actorUserData) {
+    try {
+        var authGate = requireAuthenticatedActor_(actorUserData, 'getUsersForApp');
+        if (!authGate.ok) return authGate;
+        var isAdmin = (typeof checkAdminPermissionsAuthoritative === 'function')
+            ? checkAdminPermissionsAuthoritative(actorUserData)
+            : false;
+        var actorEmail = String(actorUserData.email || '').trim().toLowerCase();
+        var spreadsheetId = getSpreadsheetId();
+        var rows = readFromSheet('Users', spreadsheetId);
+        if (!Array.isArray(rows)) rows = [];
+        var sanitized = [];
+        for (var j = 0; j < rows.length; j++) {
+            var u = sanitizeUserRecordForClient_(rows[j], isAdmin, actorEmail);
+            if (u && u.email) sanitized.push(u);
+        }
+        return { success: true, data: sanitized, total: sanitized.length };
+    } catch (err) {
+        Logger.log('getUsersForApp error: ' + err.toString());
+        return { success: false, message: 'getUsersForApp: ' + err.toString() };
+    }
+}
+
+/**
  * جلب سجل مستخدم من ورقة Users للتحقق من الصلاحيات من المصدر الرسمي (مع كاش readFromSheet).
  * @param {string} email
  * @return {Object|null}

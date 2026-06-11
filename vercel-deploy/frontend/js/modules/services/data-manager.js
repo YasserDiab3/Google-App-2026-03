@@ -12,6 +12,115 @@ const DataManager = {
     _lastLightSaveNotification: 0,
     _hasShownLargeDataWarning: false,
 
+    /** حقول حساسة لا تُحفظ في localStorage أبداً */
+    _USER_SENSITIVE_FIELDS: ['password', 'passwordHash', 'token', 'loginHistory', 'activeSessionId', 'profilePublicToken', 'profilePublicTokenExpiry'],
+
+    /**
+     * مسح البيانات المحلية عند logout أو تبديل المستخدم (منع تسريب بين الجلسات)
+     */
+    purgeLocalAppData(reason) {
+        try {
+            localStorage.removeItem('hse_app_data');
+            localStorage.removeItem('hse_sync_meta');
+            localStorage.removeItem('hse_cache_timestamps');
+            localStorage.removeItem('hse_cached_users');
+        } catch (e) {
+            if (typeof Utils !== 'undefined' && Utils.safeWarn) {
+                Utils.safeWarn('⚠️ فشل مسح localStorage:', e);
+            }
+        }
+        if (typeof AppState !== 'undefined' && AppState.appData && typeof AppState.appData === 'object') {
+            Object.keys(AppState.appData).forEach((key) => {
+                if (key === 'systemStatistics') return;
+                const val = AppState.appData[key];
+                if (Array.isArray(val)) {
+                    AppState.appData[key] = [];
+                } else if (val && typeof val === 'object') {
+                    AppState.appData[key] = {};
+                } else {
+                    AppState.appData[key] = null;
+                }
+            });
+        }
+        if (typeof AppState !== 'undefined') {
+            AppState.syncMeta = { sheets: {}, lastSyncTime: 0, userEmail: null };
+            AppState._localDataIsTruncated = false;
+            AppState._truncatedFields = {};
+        }
+        if (AppState && AppState.debugMode && typeof Utils !== 'undefined' && Utils.safeLog) {
+            Utils.safeLog('🧹 تم مسح البيانات المحلية' + (reason ? ': ' + reason : ''));
+        }
+        return true;
+    },
+
+    /**
+     * إذا تغيّر المستخدم — مسح cache الجلسة السابقة قبل التحميل
+     */
+    purgeIfUserChanged(newUserEmail) {
+        const next = newUserEmail ? String(newUserEmail).trim().toLowerCase() : '';
+        const prev = (AppState && AppState.syncMeta && AppState.syncMeta.userEmail)
+            ? String(AppState.syncMeta.userEmail).trim().toLowerCase()
+            : '';
+        if (prev && next && prev !== next) {
+            return this.purgeLocalAppData('user_changed');
+        }
+        if (next && AppState && AppState.syncMeta) {
+            AppState.syncMeta.userEmail = next;
+        }
+        return false;
+    },
+
+    _isEffectiveAdminForStorage() {
+        try {
+            return !!(typeof Permissions !== 'undefined'
+                && typeof Permissions.isCurrentUserEffectiveAdmin === 'function'
+                && AppState.currentUser
+                && Permissions.isCurrentUserEffectiveAdmin(AppState.currentUser));
+        } catch (e) {
+            return false;
+        }
+    },
+
+    _stripUserRecordForStorage(user, isAdmin, currentEmail) {
+        if (!user || typeof user !== 'object') return user;
+        const out = { ...user };
+        this._USER_SENSITIVE_FIELDS.forEach((f) => {
+            if (Object.prototype.hasOwnProperty.call(out, f)) delete out[f];
+        });
+        const email = out.email ? String(out.email).trim().toLowerCase() : '';
+        const isSelf = currentEmail && email === String(currentEmail).trim().toLowerCase();
+        if (!isAdmin && !isSelf) {
+            delete out.permissions;
+        }
+        if (!isAdmin) {
+            return {
+                id: out.id,
+                name: out.name,
+                email: out.email,
+                department: out.department,
+                role: out.role,
+                active: out.active,
+                jobTitle: out.jobTitle,
+                phone: out.phone,
+                photo: out.photo,
+                isOnline: out.isOnline,
+                ...(isSelf && out.permissions ? { permissions: out.permissions } : {})
+            };
+        }
+        return out;
+    },
+
+    sanitizeAppDataForStorage(appData) {
+        if (!appData || typeof appData !== 'object') return appData;
+        const isAdmin = this._isEffectiveAdminForStorage();
+        const currentEmail = AppState && AppState.currentUser ? AppState.currentUser.email : '';
+        const out = { ...appData };
+        if (Array.isArray(out.users)) {
+            out.users = out.users.map((u) => this._stripUserRecordForStorage(u, isAdmin, currentEmail));
+        }
+        return out;
+    },
+
     /**
      * تقدير حجم استخدام localStorage بالبايتات (للتشخيص فقط)
      */
@@ -531,8 +640,8 @@ const DataManager = {
                 return false;
             }
             
-            // استخدام safeStringify لتجنب الأخطاء في التسلسل
-            const serialized = Utils.safeStringify(AppState.appData);
+            const dataToSave = this.sanitizeAppDataForStorage(AppState.appData);
+            const serialized = Utils.safeStringify(dataToSave);
             if (!serialized) {
                 Utils.safeWarn('⚠️ فشل تسلسل البيانات');
                 return false;
@@ -540,7 +649,7 @@ const DataManager = {
             const safeLimit = this.SAFE_APP_DATA_BYTES;
             // إذا تجاوز الحجم الحد الآمن، نحفظ نسخة مخففة مباشرة (بدون محاولة حفظ كاملة)
             if (serialized.length > safeLimit) {
-                const light = this.buildLightAppData(AppState.appData);
+                const light = this.buildLightAppData(this.sanitizeAppDataForStorage(AppState.appData));
                 const lightSerialized = Utils.safeStringify(light);
                 if (lightSerialized && lightSerialized.length <= safeLimit) {
                     try {
@@ -594,7 +703,7 @@ const DataManager = {
                 // محاولة تحرير مساحة ثم حفظ نسخة مخففة
                 try {
                     this._clearNonEssentialStorage();
-                    const light = this.buildLightAppData(AppState.appData);
+                    const light = this.buildLightAppData(this.sanitizeAppDataForStorage(AppState.appData));
                     const lightSerialized = Utils.safeStringify(light);
                     if (lightSerialized && lightSerialized.length < this.SAFE_APP_DATA_BYTES) {
                         localStorage.setItem('hse_app_data', lightSerialized);

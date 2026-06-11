@@ -557,13 +557,55 @@ const RealtimeSyncManager = {
 
     getActiveSyncModules() {
         const currentSection = this.state.currentSection || AppState.currentSection || null;
-        const alwaysModules = Array.isArray(this.config.alwaysSyncModules)
-            ? this.config.alwaysSyncModules
+        const isAdmin = (typeof Permissions !== 'undefined'
+            && typeof Permissions.isCurrentUserEffectiveAdmin === 'function'
+            && Permissions.isCurrentUserEffectiveAdmin());
+        let alwaysModules = Array.isArray(this.config.alwaysSyncModules)
+            ? this.config.alwaysSyncModules.slice()
             : ['users'];
+        if (!isAdmin) {
+            alwaysModules = alwaysModules.filter((m) => m !== 'users');
+        }
         const sectionModules = currentSection ? this.getModulesForSection(currentSection) : [];
 
+        const moduleToPermission = {
+            users: 'users',
+            incidents: 'incidents',
+            nearmiss: 'nearmiss',
+            ptw: 'ptw',
+            training: 'training',
+            clinicVisits: 'clinic',
+            clinicContractorVisits: 'clinic',
+            sickLeave: 'clinic',
+            injuries: 'clinic',
+            clinicInventory: 'clinic',
+            medications: 'clinic',
+            approvedContractors: 'contractors',
+            contractors: 'contractors',
+            employees: 'employees',
+            externalWorkforceMonthly: 'employees',
+            violations: 'violations',
+            ppe: 'ppe',
+            dailyObservations: 'daily-observations',
+            behaviorMonitoring: 'behavior-monitoring',
+            chemicalSafety: 'chemical-safety',
+            isoDocuments: 'iso',
+            sustainability: 'sustainability',
+            emergencyAlerts: 'emergency',
+            emergencyPlans: 'emergency',
+            actionTrackingRegister: 'action-tracking'
+        };
+
+        const canSyncModule = (module) => {
+            if (!module) return false;
+            if (isAdmin) return true;
+            if (typeof Permissions === 'undefined' || typeof Permissions.hasAccess !== 'function') return false;
+            const perm = moduleToPermission[module] || module;
+            return Permissions.hasAccess(perm);
+        };
+
         const modules = [...alwaysModules, ...sectionModules].filter((module, index, array) => {
-            return module &&
+            return canSyncModule(module) &&
                 this.config.autoSyncModules.includes(module) &&
                 array.indexOf(module) === index;
         });
@@ -573,7 +615,7 @@ const RealtimeSyncManager = {
         }
 
         return alwaysModules.filter((module, index, array) => {
-            return module &&
+            return canSyncModule(module) &&
                 this.config.autoSyncModules.includes(module) &&
                 array.indexOf(module) === index;
         });

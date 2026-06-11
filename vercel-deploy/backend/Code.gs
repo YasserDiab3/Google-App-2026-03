@@ -258,8 +258,6 @@ function doPost(e) {
 
         // قائمة بالـ actions التي لا تتطلب CSRF token (عمليات قراءة فقط)
         const readOnlyActions = [
-            'readFromSheet', 'getData',
-            'batchReadSheets', // ✅ Batch read - read only
             'getSafetyTeamMembers', 'getSafetyTeamMember', 'getOrganizationalStructure',
             'getJobDescription', 'getSafetyTeamKPIs', 'getSafetyHealthManagementSettings',
             'getActionTrackingSettings', 'getAllActionTracking', 'getActionTracking',
@@ -360,6 +358,22 @@ function doPost(e) {
                     success: false,
                     message: 'تم تجاوز الحد المسموح من الطلبات، حاول لاحقاً',
                     errorCode: 'RATE_LIMIT_EXCEEDED'
+                })));
+            }
+        }
+
+        // قراءة الأوراق: CSRF + هوية مسجّلة في Users
+        const sheetReadActions = ['readFromSheet', 'batchReadSheets'];
+        if (sheetReadActions.indexOf(action) !== -1) {
+            var readAuthGate = (typeof requireAuthenticatedActor_ === 'function')
+                ? requireAuthenticatedActor_(actorUserData, action)
+                : { ok: true };
+            if (!readAuthGate.ok) {
+                return setCorsHeaders(ContentService.createTextOutput(JSON.stringify({
+                    success: false,
+                    message: readAuthGate.message || 'رفض القراءة',
+                    errorCode: readAuthGate.errorCode || 'ACTOR_IDENTITY_REQUIRED',
+                    action: action
                 })));
             }
         }
@@ -766,47 +780,14 @@ function doGet(e) {
             return setCorsHeaders(output);
         }
 
-        // معالجة طلب getData
+        // معالجة طلب getData — مُعطّل في الإنتاج (منع قراءة علنية)
         if (action === 'getData') {
-            if (!sheetName || sheetName.trim() === '') {
-                const errorOutput = ContentService.createTextOutput(JSON.stringify({
-                    success: false,
-                    message: 'Sheet name is required for getData action',
-                    received: {
-                        action: action || 'none',
-                        sheetName: sheetName || 'none',
-                        spreadsheetId: spreadsheetId ? 'provided' : 'using default'
-                    }
-                }));
-                return setCorsHeaders(errorOutput);
-            }
-
-            try {
-                if (typeof isAdminOnlyReadSheet_ === 'function' && isAdminOnlyReadSheet_(sheetName)) {
-                    const deniedOutput = ContentService.createTextOutput(JSON.stringify({
-                        success: false,
-                        message: 'قراءة هذه الورقة غير متاحة عبر GET',
-                        errorCode: 'GET_READ_DENIED',
-                        sheetName: sheetName
-                    }));
-                    return setCorsHeaders(deniedOutput);
-                }
-                const data = readFromSheet(sheetName, spreadsheetId);
-                const output = ContentService.createTextOutput(JSON.stringify({
-                    success: true,
-                    data: data,
-                    count: Array.isArray(data) ? data.length : 0
-                }));
-                return setCorsHeaders(output);
-            } catch (readError) {
-                Logger.log('Error in readFromSheet: ' + readError.toString());
-                const errorOutput = ContentService.createTextOutput(JSON.stringify({
-                    success: false,
-                    message: 'Error reading sheet: ' + readError.toString(),
-                    sheetName: sheetName
-                }));
-                return setCorsHeaders(errorOutput);
-            }
+            const deniedOutput = ContentService.createTextOutput(JSON.stringify({
+                success: false,
+                message: 'قراءة البيانات عبر GET غير متاحة. استخدم POST مع مصادقة.',
+                errorCode: 'GET_READ_DISABLED'
+            }));
+            return setCorsHeaders(deniedOutput);
         }
 
         // إذا لم يكن action معروفاً
@@ -831,7 +812,7 @@ function doGet(e) {
                 step5: 'تحقق من Execution Logs في Google Apps Script لمزيد من التفاصيل'
             },
             note: 'ملاحظة: ملف google-apps-script.gs غير مطلوب. الملف الرئيسي هو Code.gs',
-            supportedGetActions: ['getData', 'getProfileImage', 'publicProfileCard', 'getPublicProfileData'],
+            supportedGetActions: ['getProfileImage', 'publicProfileCard', 'getPublicProfileData'],
             recommendedMethod: 'POST',
             commonIssues: {
                 issue1: 'URL ينتهي بـ /dev بدلاً من /exec → استخدم رابط /exec',

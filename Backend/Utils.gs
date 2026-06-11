@@ -505,7 +505,7 @@ function logSecurityEvent(eventName, details) {
 
 /** أوراق لا تُقرأ عبر readFromSheet/batchReadSheets/getData إلا لمدير النظام */
 function getAdminOnlyReadSheetNames_() {
-    return ['UserVersions', 'AuditLog', 'SecurityAuditLog', 'UserActivityLog'];
+    return ['Users', 'UserVersions', 'AuditLog', 'SecurityAuditLog', 'UserActivityLog'];
 }
 
 /** أوراق لا تُكتب مباشرة عبر saveToSheet/appendToSheet */
@@ -574,7 +574,56 @@ function requireAdminActor_(actorUserData, actionName) {
     return { ok: true };
 }
 
+/**
+ * فرض هوية مسجّل دخول موجودة في ورقة Users (بدون ثقة بـ role من العميل).
+ * @returns {{ ok: boolean, success?: boolean, message?: string, errorCode?: string, action?: string, sheetUser?: Object }}
+ */
+function requireAuthenticatedActor_(actorUserData, actionName) {
+    var action = String(actionName || 'unknown');
+    var email = actorUserData && actorUserData.email ? String(actorUserData.email).trim().toLowerCase() : '';
+    if (!email) {
+        if (typeof logSecurityEvent === 'function') {
+            logSecurityEvent('auth_required_missing_email', { action: action, severity: 'high' });
+        }
+        return {
+            ok: false,
+            success: false,
+            message: 'رفض أمني: بيانات المستخدم المنفذ (email) مطلوبة.',
+            errorCode: 'ACTOR_IDENTITY_REQUIRED',
+            action: action
+        };
+    }
+    var sheetUser = null;
+    if (typeof getUserRecordFromUsersSheetByEmail_ === 'function') {
+        sheetUser = getUserRecordFromUsersSheetByEmail_(email);
+    }
+    if (!sheetUser) {
+        if (typeof logSecurityEvent === 'function') {
+            logSecurityEvent('auth_required_unknown_user', { action: action, actor: email, severity: 'high' });
+        }
+        return {
+            ok: false,
+            success: false,
+            message: 'المستخدم غير مسجل في النظام أو البريد غير صحيح.',
+            errorCode: 'ACTOR_NOT_REGISTERED',
+            action: action
+        };
+    }
+    if (sheetUser.active === false || sheetUser.active === 'false' || sheetUser.active === 'FALSE') {
+        return {
+            ok: false,
+            success: false,
+            message: 'حساب المستخدم غير مفعّل.',
+            errorCode: 'ACTOR_INACTIVE',
+            action: action
+        };
+    }
+    return { ok: true, sheetUser: sheetUser };
+}
+
 function checkSheetReadAccess_(sheetName, actorUserData, actionName) {
+    var authGate = requireAuthenticatedActor_(actorUserData, actionName || ('read:' + sheetName));
+    if (!authGate.ok) return authGate;
     if (!isAdminOnlyReadSheet_(sheetName)) return { ok: true };
     return requireAdminActor_(actorUserData, actionName || ('read:' + sheetName));
 }
@@ -600,6 +649,31 @@ function checkSheetDirectWriteAccess_(sheetName, actorUserData, actionName) {
         };
     }
     return requireAdminActor_(actorUserData, actionName || ('write:' + name));
+}
+
+/**
+ * لقطة عدّ صفوف الأوراق للمطابقة مع الواجهة (مدير فقط)
+ */
+function getDataIntegritySnapshot(payload, actorUserData) {
+    var adminGate = requireAdminActor_(actorUserData, 'getDataIntegritySnapshot');
+    if (!adminGate.ok) return adminGate;
+    var sheets = (payload && Array.isArray(payload.sheetNames)) ? payload.sheetNames : null;
+    if (!sheets || sheets.length === 0) {
+        sheets = ['Users', 'Incidents', 'NearMiss', 'Employees', 'Training', 'PTW', 'Violations', 'ClinicVisits', 'ApprovedContractors'];
+    }
+    var spreadsheetId = getSpreadsheetId();
+    var counts = {};
+    for (var i = 0; i < sheets.length; i++) {
+        var name = String(sheets[i] || '').trim();
+        if (!name) continue;
+        try {
+            var data = readFromSheet(name, spreadsheetId);
+            counts[name] = Array.isArray(data) ? data.length : 0;
+        } catch (e) {
+            counts[name] = -1;
+        }
+    }
+    return { success: true, counts: counts, serverTime: new Date().toISOString() };
 }
 
 /**

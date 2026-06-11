@@ -3159,6 +3159,24 @@ const Dashboard = {
             return;
         }
 
+        const syncUserEmail = AppState.syncMeta?.userEmail
+            ? String(AppState.syncMeta.userEmail).trim().toLowerCase()
+            : '';
+        const currentEmail = AppState.currentUser?.email
+            ? String(AppState.currentUser.email).trim().toLowerCase()
+            : '';
+        if (syncUserEmail && currentEmail && syncUserEmail !== currentEmail) {
+            Utils.safeWarn('⚠️ بيانات KPI من جلسة مستخدم سابق — تخطي التحديث');
+            if (typeof Notification !== 'undefined' && typeof Notification.warning === 'function') {
+                Notification.warning('البيانات المحلية لا تطابق المستخدم الحالي — جاري إعادة المزامنة...');
+            }
+            if (typeof GoogleIntegration !== 'undefined' && typeof GoogleIntegration.syncData === 'function') {
+                GoogleIntegration.syncData({ silent: true, showLoader: false, notifyOnSuccess: false, notifyOnError: false })
+                    .catch(() => {});
+            }
+            return;
+        }
+
         /* لا نزيل kpis-values-ready أبداً؛ الكروت تظهر مرة واحدة وتبقى ثابتة. التحديث بتغيير القيم (textContent) فقط دون إخفاء أو إعادة إنشاء عناصر. */
 
         try {
@@ -3610,6 +3628,31 @@ const Dashboard = {
                         });
                     } catch (e) {
                         Utils.safeWarn('⚠️ خطأ في معالجة مخالفة:', e);
+                    }
+                });
+            }
+
+            // قائمة المرور اليومي للسلامة (Daily Safety Checklist)
+            if (this.dashboardCan('periodic-inspections')) {
+                const dscList = Array.isArray(ad.dailySafetyCheckList) ? ad.dailySafetyCheckList : [];
+                dscList.forEach((r) => {
+                    if (!r) return;
+                    try {
+                        const d = r.createdAt || r.date;
+                        if (!d) return;
+                        const dateObj = new Date(d);
+                        if (isNaN(dateObj.getTime())) return;
+                        const loc = r.siteName || r.siteId || 'موقع';
+                        activities.push({
+                            type: 'daily-safety-checklist',
+                            title: `مرور يومي للسلامة: ${loc} - ${r.shift || ''}`,
+                            date: dateObj,
+                            time: this.getTimeAgo(d),
+                            icon: 'fa-clipboard-check',
+                            color: 'text-cyan-500'
+                        });
+                    } catch (e) {
+                        Utils.safeWarn('⚠️ خطأ في معالجة المرور اليومي:', e);
                     }
                 });
             }

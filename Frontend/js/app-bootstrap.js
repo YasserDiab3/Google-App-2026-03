@@ -893,9 +893,25 @@
 
                 log(`🎯 جلب ${staleTypes.length} نوع بيانات قديمة من الخادم باستخدام Batch Read: [${staleTypes.join(', ')}]`);
 
-                // تجميع أسماء الأوراق الفريدة المطلوب جلبها
+                let fetchedCount = 0;
+                const fetchedKeys = [];
+
+                if (staleTypes.includes('users') && typeof GoogleIntegration.fetchUsersForApp === 'function') {
+                    try {
+                        const usersData = await GoogleIntegration.fetchUsersForApp({ timeout: 20000 });
+                        if (Array.isArray(usersData)) {
+                            fetchedCount++;
+                            fetchedKeys.push('users');
+                            log(`✅ تم جلب ${usersData.length} مستخدم (getUsersForApp)`);
+                        }
+                    } catch (usersErr) {
+                        log('⚠️ فشل جلب users عبر getUsersForApp:', usersErr.message);
+                    }
+                }
+
+                // تجميع أسماء الأوراق الفريدة المطلوب جلبها (Users عبر getUsersForApp)
                 const sheetToDataTypeMap = {};
-                staleTypes.forEach(dt => {
+                staleTypes.filter((dt) => dt !== 'users').forEach(dt => {
                     const sheetName = this._getSyncMetaSheetKey(dt);
                     if (sheetName) {
                         if (!sheetToDataTypeMap[sheetName]) sheetToDataTypeMap[sheetName] = [];
@@ -904,8 +920,6 @@
                 });
 
                 const sheetNames = Object.keys(sheetToDataTypeMap);
-                let fetchedCount = 0;
-                const fetchedKeys = [];
 
                 try {
                     const batchResult = await GoogleIntegration.batchReadFromSheets(sheetNames, {
@@ -998,7 +1012,7 @@
          * تحديد البيانات المطلوبة حسب الصلاحيات
          */
         getRequiredDataForPermissions(permissions) {
-            const requiredData = ['users'];
+            const requiredData = [];
             const user = AppState.currentUser;
 
             if (!user || typeof Permissions === 'undefined') {
@@ -1006,8 +1020,12 @@
             }
 
             if (permissions?.__isAdmin || permissions?.canViewAll || Permissions.isCurrentUserEffectiveAdmin(user)) {
-                requiredData.push('employees', 'approvedContractors', 'contractors');
+                requiredData.push('users', 'employees', 'approvedContractors', 'contractors');
                 return [...new Set(requiredData)];
+            }
+
+            if (typeof Permissions.hasAccess === 'function' && Permissions.hasAccess('users')) {
+                requiredData.push('users');
             }
 
             if (permissions?.canViewIncidents) {
@@ -1075,7 +1093,7 @@
                 'employees':              'Employees',
                 'training':               'Training',
                 'approvedContractors':    'ApprovedContractors',
-                'contractors':            'ApprovedContractors',
+                'contractors':            'Contractors',
                 'clinicVisits':           'ClinicVisits',
                 'clinicContractorVisits': 'ClinicContractorVisits'
             };
