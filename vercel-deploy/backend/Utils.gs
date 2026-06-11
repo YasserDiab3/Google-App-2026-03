@@ -498,6 +498,111 @@ function logSecurityEvent(eventName, details) {
 }
 
 /**
+ * ============================================
+ * ضوابط الوصول للأوراق والعمليات الإدارية
+ * ============================================
+ */
+
+/** أوراق لا تُقرأ عبر readFromSheet/batchReadSheets/getData إلا لمدير النظام */
+function getAdminOnlyReadSheetNames_() {
+    return ['UserVersions', 'AuditLog', 'SecurityAuditLog', 'UserActivityLog'];
+}
+
+/** أوراق لا تُكتب مباشرة عبر saveToSheet/appendToSheet */
+function getDirectWriteBlockedSheetNames_() {
+    return ['Users', 'UserVersions'];
+}
+
+function isAdminOnlyReadSheet_(sheetName) {
+    var name = String(sheetName || '').trim();
+    if (!name) return false;
+    var list = getAdminOnlyReadSheetNames_();
+    for (var i = 0; i < list.length; i++) {
+        if (list[i] === name) return true;
+    }
+    return false;
+}
+
+function isDirectWriteBlockedSheet_(sheetName) {
+    var name = String(sheetName || '').trim();
+    if (!name) return false;
+    var list = getDirectWriteBlockedSheetNames_();
+    for (var i = 0; i < list.length; i++) {
+        if (list[i] === name) return true;
+    }
+    return false;
+}
+
+/**
+ * فرض هوية منفّذ + صلاحية مدير (مع consult Users sheet عند الإمكان).
+ * @returns {{ ok: boolean, success?: boolean, message?: string, errorCode?: string, action?: string }}
+ */
+function requireAdminActor_(actorUserData, actionName) {
+    var action = String(actionName || 'unknown');
+    var hasIdentity = !!(actorUserData && (actorUserData.email || actorUserData.id || actorUserData.name));
+    if (!hasIdentity) {
+        if (typeof logSecurityEvent === 'function') {
+            logSecurityEvent('admin_required_missing_identity', { action: action, severity: 'high' });
+        }
+        return {
+            ok: false,
+            success: false,
+            message: 'رفض أمني: بيانات المستخدم المنفذ مطلوبة لهذه العملية.',
+            errorCode: 'ACTOR_IDENTITY_REQUIRED',
+            action: action
+        };
+    }
+    var isAdmin = (typeof checkAdminPermissionsAuthoritative === 'function')
+        ? checkAdminPermissionsAuthoritative(actorUserData)
+        : ((typeof checkAdminPermissions === 'function') && checkAdminPermissions(actorUserData));
+    if (!isAdmin) {
+        if (typeof logSecurityEvent === 'function') {
+            logSecurityEvent('admin_required_denied', {
+                action: action,
+                actor: actorUserData.email || actorUserData.id || '',
+                severity: 'high'
+            });
+        }
+        return {
+            ok: false,
+            success: false,
+            message: 'ليس لديك صلاحية تنفيذ هذه العملية. متاح لمدير النظام فقط.',
+            errorCode: 'ADMIN_ONLY',
+            action: action
+        };
+    }
+    return { ok: true };
+}
+
+function checkSheetReadAccess_(sheetName, actorUserData, actionName) {
+    if (!isAdminOnlyReadSheet_(sheetName)) return { ok: true };
+    return requireAdminActor_(actorUserData, actionName || ('read:' + sheetName));
+}
+
+function checkSheetDirectWriteAccess_(sheetName, actorUserData, actionName) {
+    if (!isDirectWriteBlockedSheet_(sheetName)) return { ok: true };
+    var name = String(sheetName || '').trim();
+    if (name === 'UserVersions') {
+        if (typeof logSecurityEvent === 'function') {
+            logSecurityEvent('direct_write_blocked', {
+                sheet: name,
+                action: actionName,
+                actor: actorUserData && (actorUserData.email || actorUserData.id || ''),
+                severity: 'high'
+            });
+        }
+        return {
+            ok: false,
+            success: false,
+            message: 'الكتابة المباشرة على ورقة UserVersions غير مسموحة. استخدم reportUserVersion.',
+            errorCode: 'DIRECT_SHEET_WRITE_BLOCKED',
+            sheetName: name
+        };
+    }
+    return requireAdminActor_(actorUserData, actionName || ('write:' + name));
+}
+
+/**
  * إنشاء ورقة جديدة مع الرؤوس الديناميكية
  * @param {Spreadsheet} spreadsheet - جدول البيانات
  * @param {string} sheetName - اسم الورقة

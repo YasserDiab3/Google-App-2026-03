@@ -280,17 +280,11 @@ function doPost(e) {
             'getAllContractorIssuingAuthorities',
             'getContractorIssuingAuthoritiesForPermitType',
             'getEmployeeByCode',
-            // تقرير الجلسات اليومي (قراءة فقط)
-            'getDailyUserSessionActivityReport',
-            'getAllUserActivityLogs',
-            'getUserActivityLogs',
-            'getLogStatistics',
-            'getAllAuditLogs',
+            // تقرير الجلسات اليومي (قراءة فقط — يتطلب CSRF + مدير)
+            // getDailyUserSessionActivityReport, getAllUserActivityLogs, getUserActivityLogs, getLogStatistics, getAllAuditLogs
             // ✅ مهمات الوقاية — قراءة فقط (تجنب فشل ربط CSRF عند تغيّر المستخدم بعد أول طلب)
             'getAllPPE', 'getPPEMatrix', 'getAllPPEMatrices',
-            'getAllPPEStockItems', 'getAllPPETransactions', 'getPPEItemsList',
-            // ✅ لوحة إصدارات المستخدمين (قراءة فقط)
-            'getAllUserVersions', 'getUserVersionStats', 'getUserVersionsDashboard'
+            'getAllPPEStockItems', 'getAllPPETransactions', 'getPPEItemsList'
         ];
 
         // قائمة بالـ actions الحساسة التي تتطلب CSRF token إلزامي
@@ -300,7 +294,7 @@ function doPost(e) {
             'deleteFromSheet', 'updateSheetData'
         ];
         const strictAdminActions = [
-            'addUser', 'deleteUser', 'resetUserPassword', 'fixUsersSheetHeaders',
+            'addUser', 'deleteUser', 'updateUser', 'resetUserPassword', 'fixUsersSheetHeaders',
             'fixMissingSheetHeaders', 'initializeSheets'
         ];
         const isDeleteAction = (typeof action === 'string') && action.indexOf('delete') === 0;
@@ -788,6 +782,15 @@ function doGet(e) {
             }
 
             try {
+                if (typeof isAdminOnlyReadSheet_ === 'function' && isAdminOnlyReadSheet_(sheetName)) {
+                    const deniedOutput = ContentService.createTextOutput(JSON.stringify({
+                        success: false,
+                        message: 'قراءة هذه الورقة غير متاحة عبر GET',
+                        errorCode: 'GET_READ_DENIED',
+                        sheetName: sheetName
+                    }));
+                    return setCorsHeaders(deniedOutput);
+                }
                 const data = readFromSheet(sheetName, spreadsheetId);
                 const output = ContentService.createTextOutput(JSON.stringify({
                     success: true,

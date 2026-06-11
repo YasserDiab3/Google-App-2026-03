@@ -1,11 +1,42 @@
 /**
  * ActionHandlers Registry
  */
+
+/** بوابة مدير — تُرجع كائن خطأ جاهز أو null */
+function actionRequireAdmin_(actorUserData, actionName, extraFields) {
+    if (typeof requireAdminActor_ !== 'function') return null;
+    var gate = requireAdminActor_(actorUserData, actionName);
+    if (!gate.ok) {
+        var fail = {
+            success: false,
+            message: gate.message,
+            errorCode: gate.errorCode,
+            action: gate.action
+        };
+        if (extraFields && typeof extraFields === 'object') {
+            for (var k in extraFields) {
+                if (extraFields.hasOwnProperty(k)) fail[k] = extraFields[k];
+            }
+        }
+        return fail;
+    }
+    return null;
+}
+
 var ActionHandlers = {
     'saveToSheet': function(payload, postData, action, actorUserData, spreadsheetId) {
         var result = { success: false, message: '' };
         (function() {
 
+                    if (payload && payload.sheetName != null) {
+                        var writeGate = (typeof checkSheetDirectWriteAccess_ === 'function')
+                            ? checkSheetDirectWriteAccess_(payload.sheetName, actorUserData, action)
+                            : { ok: true };
+                        if (!writeGate.ok) {
+                            result = writeGate;
+                            return;
+                        }
+                    }
                     if (payload && payload.sheetName != null && payload.data !== undefined && typeof clampPayloadToDefaultHeaders === 'function') {
                         payload.data = clampPayloadToDefaultHeaders(payload.sheetName, payload.data);
                     }
@@ -56,6 +87,15 @@ var ActionHandlers = {
         var result = { success: false, message: '' };
         (function() {
 
+                    if (payload && payload.sheetName != null) {
+                        var appendWriteGate = (typeof checkSheetDirectWriteAccess_ === 'function')
+                            ? checkSheetDirectWriteAccess_(payload.sheetName, actorUserData, action)
+                            : { ok: true };
+                        if (!appendWriteGate.ok) {
+                            result = appendWriteGate;
+                            return;
+                        }
+                    }
                     if (payload && payload.sheetName != null && payload.data !== undefined && typeof clampPayloadToDefaultHeaders === 'function') {
                         payload.data = clampPayloadToDefaultHeaders(payload.sheetName, payload.data);
                     }
@@ -137,6 +177,13 @@ var ActionHandlers = {
                     if (!readSheetName) {
                         result = { success: false, message: 'Sheet name is required for readFromSheet action' };
                     } else {
+                        var readGate = (typeof checkSheetReadAccess_ === 'function')
+                            ? checkSheetReadAccess_(readSheetName, actorUserData, action)
+                            : { ok: true };
+                        if (!readGate.ok) {
+                            result = readGate;
+                            return;
+                        }
                         Logger.log('readFromSheet called with sheetName: ' + readSheetName);
                         var readRaw = readFromSheet(readSheetName, readSpreadsheetId);
                         if (readSheetName === 'DailyObservations' && payload.observationsRequestContext) {
@@ -181,6 +228,13 @@ var ActionHandlers = {
                                 for (let i = 0; i < sheetNames.length; i++) {
                                     const sheetName = sheetNames[i];
                                     try {
+                                        var batchReadGate = (typeof checkSheetReadAccess_ === 'function')
+                                            ? checkSheetReadAccess_(sheetName, actorUserData, 'batchReadSheets:' + sheetName)
+                                            : { ok: true };
+                                        if (!batchReadGate.ok) {
+                                            failedSheets.push({ sheet: sheetName, error: batchReadGate.message });
+                                            continue;
+                                        }
                                         // ✅ Use CacheService for frequently-read sheets
                                         const cache = CacheService.getScriptCache();
                                         const cacheKey = 'batch_' + sheetName + '_v2';
@@ -395,9 +449,22 @@ var ActionHandlers = {
         var result = { success: false, message: '' };
         (function() {
 
-                    result = updateUserInSheet(payload.userId || payload.id, payload.updateData || payload);
+                    var adminFail = actionRequireAdmin_(actorUserData, action);
+                    if (adminFail) {
+                        result = adminFail;
+                        return;
+                    }
+                    result = updateUserInSheet(payload.userId || payload.id, payload.updateData || payload, actorUserData, { internalCall: false });
                     return;
 
+        })();
+        return result;
+    },
+    'changePassword': function(payload, postData, action, actorUserData, spreadsheetId) {
+        var result = { success: false, message: '' };
+        (function() {
+            try { result = changeUserPassword(payload || {}, actorUserData); }
+            catch (e) { result = { success: false, message: 'changePassword: ' + (e && e.toString ? e.toString() : e) }; }
         })();
         return result;
     },
@@ -494,6 +561,8 @@ var ActionHandlers = {
     'getAllUserVersions': function(payload, postData, action, actorUserData, spreadsheetId) {
         var result = { success: false, data: [], total: 0 };
         (function() {
+            var adminFail = actionRequireAdmin_(actorUserData, action, { data: [], total: 0 });
+            if (adminFail) { result = adminFail; return; }
             try { result = getAllUserVersions(payload || {}); }
             catch (e) { result = { success: false, data: [], total: 0, message: 'getAllUserVersions: ' + (e && e.toString ? e.toString() : e) }; }
         })();
@@ -502,6 +571,8 @@ var ActionHandlers = {
     'getUserVersionStats': function(payload, postData, action, actorUserData, spreadsheetId) {
         var result = { success: false };
         (function() {
+            var adminFail = actionRequireAdmin_(actorUserData, action);
+            if (adminFail) { result = adminFail; return; }
             try { result = getUserVersionStats(payload || {}); }
             catch (e) { result = { success: false, message: 'getUserVersionStats: ' + (e && e.toString ? e.toString() : e) }; }
         })();
@@ -510,6 +581,8 @@ var ActionHandlers = {
     'getUserVersionsDashboard': function(payload, postData, action, actorUserData, spreadsheetId) {
         var result = { success: false, data: [], stats: null, total: 0 };
         (function() {
+            var adminFail = actionRequireAdmin_(actorUserData, action, { data: [], stats: null, total: 0 });
+            if (adminFail) { result = adminFail; return; }
             try { result = getUserVersionsDashboard(payload || {}); }
             catch (e) { result = { success: false, data: [], stats: null, total: 0, message: 'getUserVersionsDashboard: ' + (e && e.toString ? e.toString() : e) }; }
         })();
@@ -4513,6 +4586,8 @@ var ActionHandlers = {
         var result = { success: false, message: '' };
         (function() {
 
+                    var adminFail = actionRequireAdmin_(actorUserData, action);
+                    if (adminFail) { result = adminFail; return; }
                     result = getAllAuditLogs(payload.filters || {});
                     return;
 
@@ -4533,6 +4608,8 @@ var ActionHandlers = {
         var result = { success: false, message: '' };
         (function() {
 
+                    var adminFail = actionRequireAdmin_(actorUserData, action);
+                    if (adminFail) { result = adminFail; return; }
                     result = getAllUserActivityLogs(payload.filters || {});
                     return;
 
@@ -4543,6 +4620,8 @@ var ActionHandlers = {
         var result = { success: false, message: '' };
         (function() {
 
+                    var adminFail = actionRequireAdmin_(actorUserData, action);
+                    if (adminFail) { result = adminFail; return; }
                     result = getUserActivityLogs(payload.userId || payload.id, payload.filters || {});
                     return;
 
@@ -4553,6 +4632,8 @@ var ActionHandlers = {
         var result = { success: false, message: '' };
         (function() {
 
+                    var adminFail = actionRequireAdmin_(actorUserData, action);
+                    if (adminFail) { result = adminFail; return; }
                     result = getLogStatistics(payload.filters || {});
                     return;
 
@@ -4563,6 +4644,8 @@ var ActionHandlers = {
         var result = { success: false, message: '' };
         (function() {
 
+                    var adminFail = actionRequireAdmin_(actorUserData, action);
+                    if (adminFail) { result = adminFail; return; }
                     result = getDailyUserSessionActivityReport(payload.filters || payload || {});
                     return;
 

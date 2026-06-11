@@ -191,9 +191,19 @@ function addUserToSheet(userData) {
 
 /**
  * تحديث مستخدم موجود مع تشفير كلمة المرور إذا تم تحديثها
+ * @param {Object} [options] - { internalCall: boolean } للاستدعاء الداخلي (login/hash migration)
  */
-function updateUserInSheet(userId, updateData) {
+function updateUserInSheet(userId, updateData, actorUserData, options) {
     try {
+        options = options || {};
+        if (!options.internalCall) {
+            var adminGate = (typeof requireAdminActor_ === 'function')
+                ? requireAdminActor_(actorUserData, 'updateUser')
+                : { ok: true };
+            if (!adminGate.ok) {
+                return adminGate;
+            }
+        }
         const sheetName = 'Users';
         const spreadsheetId = getSpreadsheetId();
         const spreadsheet = SpreadsheetApp.openById(spreadsheetId);
@@ -596,7 +606,7 @@ function loginUser(email, password) {
         // تحديث الـ Hash تلقائياً إذا لزم الأمر
         if (needsHashUpdate) {
             const newHash = hashPassword(p);
-            updateUserInSheet(user.id, { passwordHash: newHash, password: '***' });
+            updateUserInSheet(user.id, { passwordHash: newHash, password: '***' }, null, { internalCall: true });
         }
 
         // تسجيل وقت الدخول — مسار سريع (تحديث خلايا مستهدفة فقط بدون قراءة الشيت كاملاً)
@@ -637,5 +647,48 @@ function loginUser(email, password) {
     } catch (error) {
         Logger.log('Error in loginUser: ' + error.toString());
         return { success: false, message: 'حدث خطأ في الخادم أثناء تسجيل الدخول' };
+    }
+}
+
+/**
+ * تغيير كلمة مرور المستخدم الحالي (أو بواسطة مدير لبريد محدد).
+ */
+function changeUserPassword(payload, actorUserData) {
+    try {
+        var email = String((payload && payload.email) || (actorUserData && actorUserData.email) || '').trim().toLowerCase();
+        var currentPassword = String((payload && payload.currentPassword) || '');
+        var newPassword = String((payload && payload.newPassword) || '');
+
+        if (!email || !currentPassword || !newPassword) {
+            return { success: false, message: 'بيانات تغيير كلمة المرور ناقصة' };
+        }
+        if (String(newPassword).trim().length < 6) {
+            return { success: false, message: 'كلمة المرور الجديدة قصيرة جداً (6 أحرف على الأقل)' };
+        }
+
+        var actorEmail = String((actorUserData && actorUserData.email) || '').trim().toLowerCase();
+        if (!actorEmail || actorEmail !== email) {
+            var adminGate = (typeof requireAdminActor_ === 'function')
+                ? requireAdminActor_(actorUserData, 'changePassword')
+                : { ok: false, success: false, message: 'لا يمكن تغيير كلمة مرور مستخدم آخر' };
+            if (!adminGate.ok) return adminGate;
+        }
+
+        var verify = loginUser(email, currentPassword);
+        if (!verify || !verify.success || !verify.user) {
+            return { success: false, message: 'كلمة المرور الحالية غير صحيحة' };
+        }
+
+        var userId = verify.user.id || email;
+        var newHash = hashPassword(String(newPassword).trim());
+        return updateUserInSheet(userId, {
+            passwordHash: newHash,
+            password: '***',
+            passwordChanged: true,
+            forcePasswordChange: false
+        }, actorUserData, { internalCall: true });
+    } catch (error) {
+        Logger.log('changeUserPassword error: ' + error.toString());
+        return { success: false, message: 'حدث خطأ أثناء تغيير كلمة المرور: ' + error.toString() };
     }
 }

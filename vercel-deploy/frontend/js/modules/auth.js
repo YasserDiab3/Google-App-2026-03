@@ -1600,10 +1600,20 @@ window.Auth = {
         // حفظ في Google Sheets إذا كان معّلاً
         if (AppState.googleConfig && AppState.googleConfig.appsScript && AppState.googleConfig.appsScript.enabled && AppState.googleConfig.sheets && AppState.googleConfig.sheets.spreadsheetId) {
             try {
-                await GoogleIntegration.autoSave('Users', AppState.appData.users);
-                Utils.safeLog('✅ تم حفظ كلمة المرور الجديدة في Google Sheets');
+                const changeResult = await GoogleIntegration.sendToAppsScript('changePassword', {
+                    email,
+                    currentPassword,
+                    newPassword
+                });
+                if (changeResult && changeResult.success) {
+                    Utils.safeLog('✅ تم حفظ كلمة المرور الجديدة في Google Sheets');
+                } else {
+                    Utils.safeWarn('⚠ فشل حفظ كلمة المرور في Google Sheets:', changeResult?.message);
+                    Notification.warning('تم التحديث محلياً؛ فشلت المزامنة مع الخادم: ' + (changeResult?.message || ''));
+                }
             } catch (error) {
-                Utils.safeWarn('⚠ فشل حظ كلمة المرور ي Google Sheets:', error);
+                Utils.safeWarn('⚠ فشل حفظ كلمة المرور في Google Sheets:', error);
+                Notification.warning('تم التحديث محلياً؛ فشلت المزامنة مع الخادم.');
             }
         }
 
