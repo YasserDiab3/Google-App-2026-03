@@ -2848,7 +2848,7 @@ const DEFAULT_COMPANY_NAME = '';
 
 const AppState = {
     /** إصدار التطبيق — تسلسلي: 1.0.0 → 1.0.1 → 1.0.2 … عند كل نشر زِد الرقم هنا وفي version.json */
-    appVersion: '1.0.114',
+    appVersion: '1.0.115',
     /** نص اختياري لرسالة التحديث (ملخص التغييرات). إن تُركت فارغة يُستخدم النص الافتراضي. */
     updateMessage: '',
     debugMode: false,
@@ -7038,81 +7038,27 @@ FormHeader.generatePDFHTML = function (
 };
 
 FormHeader.generatePDF = async function (htmlContent, filename = 'document.pdf') {
-    let iframe;
     try {
-        if (typeof html2canvas === 'undefined') {
-            try {
-                await new Promise((resolve, reject) => {
-                    const s = document.createElement('script');
-                    s.src = 'https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js';
-                    s.onerror = function () { this.onerror = null; this.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js'; this.onerror = reject; };
-                    s.onload = resolve;
-                    document.head.appendChild(s);
-                });
-            } catch (e) {}
-        }
-        if (typeof window.jspdf === 'undefined' || typeof window.jspdf.jsPDF === 'undefined') {
-            await new Promise((resolve, reject) => {
-                const s = document.createElement('script');
-                s.src = 'https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js';
-                s.onerror = function () {
-                    this.onerror = null;
-                    this.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
-                    this.onerror = function () { reject(new Error('jsPDF load failed')); };
-                };
-                s.onload = resolve;
-                document.head.appendChild(s);
-            });
-        }
         htmlContent = htmlContent.replace(/\s*min-height\s*:\s*100vh\s*/gi, '');
-        iframe = document.createElement('iframe');
-        iframe.style.position = 'fixed';
-        iframe.style.left = '-9999px';
-        iframe.style.top = '0';
-        iframe.style.width = '793.7px';
-        iframe.style.height = '1px';
-        iframe.style.border = 'none';
-        iframe.style.overflow = 'hidden';
-        document.body.appendChild(iframe);
-        iframe.srcdoc = htmlContent;
-        await new Promise(function (resolve) { iframe.onload = resolve; setTimeout(resolve, 10000); });
-        try { await iframe.contentDocument.fonts.ready; } catch (e) {}
-        await new Promise(function (resolve) { setTimeout(resolve, 500); });
-        const bodyEl = (iframe.contentDocument || iframe.contentWindow.document).body;
-        const canvas = await html2canvas(bodyEl, {
-            scale: 3, useCORS: true, logging: false,
-            width: bodyEl.scrollWidth, height: bodyEl.scrollHeight,
-            windowWidth: bodyEl.scrollWidth, windowHeight: bodyEl.scrollHeight
-        });
-        document.body.removeChild(iframe);
-        iframe = null;
-        const { jsPDF } = window.jspdf;
-        const pdf = new jsPDF('p', 'mm', 'a4');
-        const pdfW = pdf.internal.pageSize.getWidth();
-        const pdfH = pdf.internal.pageSize.getHeight();
-        const margin = 8;
-        const usableW = pdfW - 2 * margin;
-        const usableH = pdfH - 2 * margin;
-        const imgData = canvas.toDataURL('image/png');
-        const scaleRatio = usableW / canvas.width;
-        const displayH = canvas.height * scaleRatio;
-        const pagePx = usableH / scaleRatio;
-        let srcY = 0, pageIdx = 0;
-        while (srcY < canvas.height) {
-            if (pageIdx > 0) pdf.addPage();
-            pdf.addImage(imgData, 'PNG', margin, margin - srcY * scaleRatio, usableW, displayH);
-            srcY += pagePx;
-            pageIdx++;
+        const printWindow = window.open('', '_blank');
+        if (!printWindow) {
+            Notification.error('يرجى السماح بنوافذ منبثقة للطباعة');
+            return false;
         }
-        pdf.save(filename);
+        printWindow.document.open();
+        printWindow.document.write(htmlContent);
+        printWindow.document.close();
+        await new Promise(function (resolve) {
+            printWindow.onload = resolve;
+            setTimeout(resolve, 8000);
+        });
+        try { await printWindow.document.fonts.ready; } catch (e) {}
+        await new Promise(function (resolve) { setTimeout(resolve, 500); });
+        printWindow.focus();
+        printWindow.print();
         return true;
     } catch (error) {
         Utils.safeError('FormHeader.generatePDF error:', error);
-        if (iframe && iframe.parentNode) { try { document.body.removeChild(iframe); } catch (e) {} }
-        const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
-        const url = URL.createObjectURL(blob);
-        const w = window.open(url, '_blank');
-        if (w) { setTimeout(function () { URL.revokeObjectURL(url); }, 10000); }
         return false;
     }
 };

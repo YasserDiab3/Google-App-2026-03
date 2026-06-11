@@ -7,6 +7,12 @@
       "skillPath": "skills/frontend-design/SKILL.md",
       "computedHash": "7c650eb77d72437f3e70a333888dce9d5648a5b6e2c43c448f4901932ed1e9b1"
     },
+    "sf-multiframework": {
+      "source": "dylandersen/sf-multiframework",
+      "sourceType": "github",
+      "skillPath": "SKILL.md",
+      "computedHash": "dd3f1bc0ccd1a9e196f36b1966756777f1e0eadc7474039f3012c8256be4f422"
+    },
     "vercel-composition-patterns": {
       "source": "vercel-labs/agent-skills",
       "sourceType": "github",
