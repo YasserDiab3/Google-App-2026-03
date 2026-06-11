@@ -1002,35 +1002,35 @@
          * تحديد البيانات المطلوبة حسب الصلاحيات
          */
         getRequiredDataForPermissions(permissions) {
-            const requiredData = [];
+            const requiredData = ['users'];
+            const user = AppState.currentUser;
 
-            // بيانات أساسية لجميع المستخدمين
-            requiredData.push('users');
+            if (!user || typeof Permissions === 'undefined') {
+                return requiredData;
+            }
 
-            // بيانات حسب الصلاحيات
-            if (permissions.canViewIncidents) {
+            if (permissions?.__isAdmin || permissions?.canViewAll || Permissions.isCurrentUserEffectiveAdmin(user)) {
+                requiredData.push('employees', 'approvedContractors', 'contractors');
+                return [...new Set(requiredData)];
+            }
+
+            if (permissions?.canViewIncidents) {
                 requiredData.push('incidents', 'nearmiss');
             }
-
-            if (permissions.canViewContractors) {
+            if (permissions?.canViewContractors) {
                 requiredData.push('approvedContractors', 'contractors');
             }
-
-            if (permissions.canViewEmployees) {
+            if (permissions?.canViewEmployees) {
                 requiredData.push('employees');
             }
-
-            if (permissions.canViewTraining) {
+            if (permissions?.canViewTraining) {
                 requiredData.push('training');
             }
-
-            if (permissions.canViewClinic) {
+            if (permissions?.canViewClinic) {
                 requiredData.push('clinicVisits', 'clinicContractorVisits');
             }
 
-            // إلخ... يمكن توسيع هذا حسب الحاجة
-
-            return requiredData;
+            return [...new Set(requiredData)];
         },
 
         /**

@@ -46,6 +46,34 @@ const GoogleIntegration = {
         }
     },
 
+    /** أوراق قراءتها للمدير فقط (تطابق Backend/Utils.gs) */
+    ADMIN_ONLY_READ_SHEETS: ['UserVersions', 'AuditLog', 'SecurityAuditLog', 'UserActivityLog'],
+
+    _isCurrentUserEffectiveAdmin_() {
+        try {
+            return !!(AppState.currentUser && typeof Permissions !== 'undefined'
+                && typeof Permissions.isCurrentUserEffectiveAdmin === 'function'
+                && Permissions.isCurrentUserEffectiveAdmin(AppState.currentUser));
+        } catch (e) {
+            return false;
+        }
+    },
+
+    _filterSheetsForCurrentUser(sheetNames) {
+        const list = Array.isArray(sheetNames) ? sheetNames.slice() : [];
+        if (this._isCurrentUserEffectiveAdmin_()) return list;
+        return list.filter((s) => !this.ADMIN_ONLY_READ_SHEETS.includes(s));
+    },
+
+    _isExpectedReadError_(errorMessage = '') {
+        const msg = String(errorMessage || '').toLowerCase();
+        return msg.includes('admin_only') ||
+            msg.includes('actor_identity_required') ||
+            msg.includes('ليس لديك صلاحية') ||
+            msg.includes('direct_sheet_write_blocked') ||
+            msg.includes('get_read_denied');
+    },
+
     /**
      * عمليات تعديل على الخادم — لا يجب أبداً اعتبار نسخة localStorage/cache قديمة «نجاحاً» لها
      * (وإلا يظهر للمستخدم أن الزيارة/السجل حُفظ وهو غير موجود في الشيت).
@@ -1536,6 +1564,10 @@ const GoogleIntegration = {
             return null;
         }
 
+        if (!this._isCurrentUserEffectiveAdmin_() && this.ADMIN_ONLY_READ_SHEETS.includes(String(sheetName || '').trim())) {
+            return null;
+        }
+
         let timeout = 15000;
         let observationsRequestContext = null;
         if (typeof timeoutOrOptions === 'number') {
@@ -1577,6 +1609,7 @@ const GoogleIntegration = {
             const isBackendRpcConfigured = this._isBackendRpcConfigured();
 
             const isExpectedError = !isBackendRpcConfigured ||
+                this._isExpectedReadError_(errorMsg) ||
                 errorMsg.includes('معرف Google Sheets غير محدد') ||
                 errorMsg.includes('Google Sheets غير مفعّل') ||
                 errorMsg.includes('الخادم الخلفي غير مُهيأ') ||
@@ -1617,6 +1650,11 @@ const GoogleIntegration = {
 
         if (!Array.isArray(sheetNames) || sheetNames.length === 0) {
             return {};
+        }
+
+        sheetNames = this._filterSheetsForCurrentUser(sheetNames);
+        if (sheetNames.length === 0) {
+            return { data: {}, failedSheets: [], totalSheets: 0, successfulSheets: 0 };
         }
 
         const results = {};
@@ -3216,6 +3254,18 @@ const GoogleIntegration = {
                 return true;
             }
 
+            sheets = this._filterSheetsForCurrentUser(sheets);
+
+            if (sheets.length === 0) {
+                if (showLoader && typeof Loading !== 'undefined') {
+                    Loading.hide();
+                }
+                if (shouldLog) {
+                    Utils.safeLog('لا توجد أوراق مسموح قراءتها للمستخدم الحالي');
+                }
+                return true;
+            }
+
             // ✅ إصلاح: تحميل البيانات الأساسية أولاً بشكل منفصل ومتوازي
             const prioritySheetsInList = prioritySheets.filter(sheet => sheets.includes(sheet));
             const remainingSheets = sheets.filter(sheet => !prioritySheets.includes(sheet));
@@ -3795,8 +3845,11 @@ const GoogleIntegration = {
      */
     _getCurrentUserPermissions() {
         try {
-            if (typeof Permissions !== 'undefined' && Permissions.getCurrentUserPermissions) {
+            if (typeof Permissions !== 'undefined' && typeof Permissions.getCurrentUserPermissions === 'function') {
                 return Permissions.getCurrentUserPermissions();
+            }
+            if (typeof Permissions !== 'undefined' && typeof Permissions.getEffectivePermissions === 'function') {
+                return Permissions.getEffectivePermissions(AppState?.currentUser);
             }
             return AppState?.currentUser?.permissions || {};
         } catch (e) {

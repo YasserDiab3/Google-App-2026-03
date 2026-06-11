@@ -1805,6 +1805,30 @@ const Permissions = {
     },
 
     /**
+     * صلاحيات التحميل الذكي — تستخدمها app-bootstrap و modules-loader
+     * (تربط hasAccess بأعلام canView* المتوقعة في getRequiredDataForPermissions)
+     */
+    getCurrentUserPermissions(user = AppState.currentUser) {
+        if (!user) return {};
+        if (this.isCurrentUserEffectiveAdmin(user)) {
+            return { __isAdmin: true, canViewAll: true };
+        }
+        const eff = this.getEffectivePermissions(user);
+        const can = (key) => eff && eff[key] === true;
+        return {
+            canViewIncidents: can('incidents') || can('nearmiss'),
+            canViewContractors: can('contractors'),
+            canViewEmployees: can('employees'),
+            canViewTraining: can('training'),
+            canViewClinic: can('clinic'),
+            canViewPTW: can('ptw'),
+            canViewFireEquipment: can('fire-equipment'),
+            canViewViolations: can('violations'),
+            canViewUsers: can('users')
+        };
+    },
+
+    /**
      * التحقق من صلاحية المستخدم للوصول إلى مديول معين
      * 
      * ⚠️ مهم: لا توجد صلاحيات افتراضية - جميع الصلاحيات يجب منحها صراحةً من قبل مدير النظام
@@ -2848,7 +2872,7 @@ const DEFAULT_COMPANY_NAME = '';
 
 const AppState = {
     /** إصدار التطبيق — تسلسلي: 1.0.0 → 1.0.1 → 1.0.2 … عند كل نشر زِد الرقم هنا وفي version.json */
-    appVersion: '1.0.117',
+    appVersion: '1.0.118',
     /** نص اختياري لرسالة التحديث (ملخص التغييرات). إن تُركت فارغة يُستخدم النص الافتراضي. */
     updateMessage: '',
     debugMode: false,
