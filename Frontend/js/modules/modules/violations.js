@@ -2243,22 +2243,23 @@ const Violations = {
                 periodInfo = `من ${Utils.formatDate(fromDate)} إلى ${Utils.formatDate(toDate)}`;
             }
 
+            const arCell = this._AR_PDF_TEXT_STYLE_;
             const rowsHtml = violations.map((v, index) => `
                 <tr>
-                    <td style="padding: 10px 8px; border: 1px solid #E5E7EB; text-align: center; font-size: 11px;">${index + 1}</td>
-                    <td style="padding: 10px 8px; border: 1px solid #E5E7EB; text-align: right; font-size: 11px;">${Utils.escapeHTML(v.contractorName || '-')}</td>
-                    <td style="padding: 10px 8px; border: 1px solid #E5E7EB; text-align: right; font-size: 11px;">${Utils.escapeHTML(v.violationType || '-')}</td>
-                    <td style="padding: 10px 8px; border: 1px solid #E5E7EB; text-align: center; font-size: 11px;">${v.violationDate ? Utils.formatDate(v.violationDate) : '-'}</td>
-                    <td style="padding: 10px 8px; border: 1px solid #E5E7EB; text-align: center; font-size: 11px;">${Utils.escapeHTML(v.severity || '-')}</td>
-                    <td style="padding: 10px 8px; border: 1px solid #E5E7EB; text-align: right; font-size: 11px;">${Utils.escapeHTML(v.actionTaken || '-')}</td>
-                    <td style="padding: 10px 8px; border: 1px solid #E5E7EB; text-align: center; font-size: 11px;">${Utils.escapeHTML(v.status || '-')}</td>
+                    <td dir="rtl" style="padding: 10px 8px; border: 1px solid #E5E7EB; text-align: center; font-size: 11px; ${arCell}">${index + 1}</td>
+                    <td dir="rtl" style="padding: 10px 8px; border: 1px solid #E5E7EB; text-align: right; font-size: 11px; ${arCell}">${Utils.escapeHTML(v.contractorName || '-')}</td>
+                    <td dir="rtl" style="padding: 10px 8px; border: 1px solid #E5E7EB; text-align: right; font-size: 11px; ${arCell}">${Utils.escapeHTML(v.violationType || '-')}</td>
+                    <td dir="rtl" style="padding: 10px 8px; border: 1px solid #E5E7EB; text-align: center; font-size: 11px; ${arCell}">${v.violationDate ? Utils.formatDate(v.violationDate) : '-'}</td>
+                    <td dir="rtl" style="padding: 10px 8px; border: 1px solid #E5E7EB; text-align: center; font-size: 11px; ${arCell}">${Utils.escapeHTML(v.severity || '-')}</td>
+                    <td dir="rtl" style="padding: 10px 8px; border: 1px solid #E5E7EB; text-align: right; font-size: 11px; ${arCell}">${Utils.escapeHTML(v.actionTaken || '-')}</td>
+                    <td dir="rtl" style="padding: 10px 8px; border: 1px solid #E5E7EB; text-align: center; font-size: 11px; ${arCell}">${Utils.escapeHTML(v.status || '-')}</td>
                 </tr>
             `).join('');
 
             const headingName = selectedContractorName ? ` - ${Utils.escapeHTML(selectedContractorName)}` : '';
             const content = `
-                <div style="margin-bottom: 24px;">
-                    <h2 style="font-size: 20px; margin-bottom: 12px; color: #991B1B; font-weight: 700;">تقرير مخالفات المقاولين${headingName}</h2>
+                <div style="margin-bottom: 24px; direction: rtl;">
+                    <h2 dir="rtl" style="font-size: 20px; margin-bottom: 12px; color: #991B1B; font-weight: 700; ${arCell}">تقرير مخالفات المقاولين${headingName}</h2>
                     ${periodInfo ? `<div style="margin-bottom: 16px; padding: 12px; background: #FFF7ED; border-right: 4px solid #F59E0B; border-radius: 8px;"><strong style="color: #D97706;">الفترة:</strong> <span style="color: #1F2937;">${Utils.escapeHTML(periodInfo)}</span></div>` : ''}
                     <div style="display: flex; flex-wrap: wrap; gap: 16px;">
                         <div style="flex: 1 1 180px; padding: 14px; border-radius: 10px; background: #FEF2F2; border: 1px solid #FECACA;"><div style="font-size: 12px; color: #B91C1C; margin-bottom: 6px; font-weight: 600;">إجمالي المخالفات</div><div style="font-size: 24px; font-weight: 700; color: #991B1B;">${violations.length}</div></div>
@@ -2268,20 +2269,20 @@ const Violations = {
                         <div style="flex: 1 1 180px; padding: 14px; border-radius: 10px; background: #ECFDF5; border: 1px solid #BBF7D0;"><div style="font-size: 12px; color: #047857; margin-bottom: 6px; font-weight: 600;">معدل الحل</div><div style="font-size: 24px; font-weight: 700; color: #065F46;">${resolutionRate}%</div><div style="font-size: 11px; color: #065F46; margin-top: 4px;">محلول: ${resolvedCount} | غير محلول: ${unresolvedCount}</div></div>
                     </div>
                 </div>
-                <div style="margin-bottom: 16px;">
-                    <h3 style="font-size: 18px; margin-bottom: 12px; color: #991B1B; font-weight: 700; border-bottom: 2px solid #DC2626; padding-bottom: 8px;">جدول المخالفات</h3>
+                <div style="margin-bottom: 16px; direction: rtl;">
+                    <h3 dir="rtl" style="font-size: 18px; margin-bottom: 12px; color: #991B1B; font-weight: 700; border-bottom: 2px solid #DC2626; padding-bottom: 8px; ${arCell}">جدول المخالفات</h3>
                 </div>
-                <div style="overflow-x: auto;">
-                    <table style="width: 100%; border-collapse: collapse; font-size: 11px; direction: rtl;">
+                <div style="overflow-x: auto; direction: rtl;">
+                    <table dir="rtl" style="width: 100%; border-collapse: collapse; font-size: 11px; direction: rtl; ${arCell}">
                         <thead>
                             <tr style="background: #B91C1C; color: #FFFFFF;">
-                                <th style="padding: 12px 8px; border: 1px solid #991B1B; text-align: center; font-weight: 700;">#</th>
-                                <th style="padding: 12px 8px; border: 1px solid #991B1B; text-align: center; font-weight: 700;">اسم المقاول</th>
-                                <th style="padding: 12px 8px; border: 1px solid #991B1B; text-align: center; font-weight: 700;">نوع المخالفة</th>
-                                <th style="padding: 12px 8px; border: 1px solid #991B1B; text-align: center; font-weight: 700;">التاريخ</th>
-                                <th style="padding: 12px 8px; border: 1px solid #991B1B; text-align: center; font-weight: 700;">الشدة</th>
-                                <th style="padding: 12px 8px; border: 1px solid #991B1B; text-align: center; font-weight: 700;">الإجراء المتخذ</th>
-                                <th style="padding: 12px 8px; border: 1px solid #991B1B; text-align: center; font-weight: 700;">الحالة</th>
+                                <th dir="rtl" style="padding: 12px 8px; border: 1px solid #991B1B; text-align: center; font-weight: 700; ${arCell}">#</th>
+                                <th dir="rtl" style="padding: 12px 8px; border: 1px solid #991B1B; text-align: center; font-weight: 700; ${arCell}">اسم المقاول</th>
+                                <th dir="rtl" style="padding: 12px 8px; border: 1px solid #991B1B; text-align: center; font-weight: 700; ${arCell}">نوع المخالفة</th>
+                                <th dir="rtl" style="padding: 12px 8px; border: 1px solid #991B1B; text-align: center; font-weight: 700; ${arCell}">التاريخ</th>
+                                <th dir="rtl" style="padding: 12px 8px; border: 1px solid #991B1B; text-align: center; font-weight: 700; ${arCell}">الشدة</th>
+                                <th dir="rtl" style="padding: 12px 8px; border: 1px solid #991B1B; text-align: center; font-weight: 700; ${arCell}">الإجراء المتخذ</th>
+                                <th dir="rtl" style="padding: 12px 8px; border: 1px solid #991B1B; text-align: center; font-weight: 700; ${arCell}">الحالة</th>
                             </tr>
                         </thead>
                         <tbody>${rowsHtml}</tbody>
@@ -2292,8 +2293,13 @@ const Violations = {
             const formCode = `CONTRACTOR-VIOL-${new Date().toISOString().slice(0, 10)}`;
             const reportTitle = selectedContractorName ? `تقرير مخالفات المقاول: ${selectedContractorName}` : 'تقرير مخالفات المقاولين';
             const htmlContent = typeof FormHeader !== 'undefined' && typeof FormHeader.generatePDFHTML === 'function'
-                ? FormHeader.generatePDFHTML(formCode, reportTitle, content, false, false, { source: 'ContractorViolationsTab', contractorId: contractorId || '', contractorName: selectedContractorName || '' }, new Date().toISOString(), new Date().toISOString())
-                : `<html dir="rtl" lang="ar"><head><meta charset="UTF-8"><title>${reportTitle}</title></head><body>${content}</body></html>`;
+                ? FormHeader.generatePDFHTML(formCode, reportTitle, content, false, false, {
+                    source: 'ContractorViolationsTab',
+                    contractorId: contractorId || '',
+                    contractorName: selectedContractorName || '',
+                    titleAr: reportTitle
+                }, new Date().toISOString(), new Date().toISOString())
+                : `<html dir="rtl" lang="ar"><head><meta charset="UTF-8"><title>${Utils.escapeHTML(reportTitle)}</title></head><body>${content}</body></html>`;
 
             const safeFileName = `${String(reportTitle).replace(/[\\/:*?"<>|]/g, '_')}.pdf`;
             const downloaded = await this._downloadHtmlReportAsPdf(htmlContent, safeFileName);
@@ -3085,6 +3091,61 @@ const Violations = {
         return html2canvasOk && jsPdfOk;
     },
 
+    /** أنماط عربية آمنة لـ PDF — منع تفكيك الحروف (letter-spacing) */
+    _AR_PDF_TEXT_STYLE_: "font-family:'Cairo','Tahoma','Segoe UI',sans-serif;direction:rtl;unicode-bidi:embed;letter-spacing:0;word-spacing:normal;",
+
+    _prepareArabicPdfHtml_(htmlContent) {
+        const arabicFix = `
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style id="violations-arabic-pdf-fix">
+    html, body {
+        font-family: 'Cairo', 'Tahoma', 'Segoe UI', 'Arial', sans-serif !important;
+        direction: rtl !important;
+        unicode-bidi: embed;
+        letter-spacing: 0 !important;
+        word-spacing: normal !important;
+        text-rendering: optimizeLegibility;
+        -webkit-font-smoothing: antialiased;
+    }
+    body *, .report-wrapper, .report-wrapper * {
+        font-family: 'Cairo', 'Tahoma', 'Segoe UI', 'Arial', sans-serif !important;
+        letter-spacing: 0 !important;
+        word-spacing: normal !important;
+    }
+    h1, h2, h3, .header-title-ar, .company-name, .company-name-secondary,
+    .footer-bottom-text, .footer-bottom-text span, .footer-meta-item,
+    th, td, .meta-label, .meta-value {
+        direction: rtl !important;
+        unicode-bidi: embed;
+        letter-spacing: 0 !important;
+        word-break: normal !important;
+        font-family: 'Cairo', 'Tahoma', 'Segoe UI', sans-serif !important;
+    }
+    table, thead, tbody, tr, th, td { direction: rtl !important; }
+    .header-info h1 { letter-spacing: 0 !important; }
+</style>`;
+        if (!htmlContent) return arabicFix;
+        if (htmlContent.includes('</head>')) {
+            return htmlContent.replace('</head>', `${arabicFix}</head>`);
+        }
+        return `<!DOCTYPE html><html lang="ar" dir="rtl"><head><meta charset="UTF-8">${arabicFix}</head><body>${htmlContent}</body></html>`;
+    },
+
+    async _waitArabicPdfFontsReady_(doc) {
+        if (!doc || !doc.fonts || typeof doc.fonts.load !== 'function') return;
+        try {
+            await Promise.all([
+                doc.fonts.load("400 12px Cairo"),
+                doc.fonts.load("600 14px Cairo"),
+                doc.fonts.load("700 18px Cairo"),
+                doc.fonts.load("800 24px Cairo")
+            ]);
+            await doc.fonts.ready;
+        } catch (_e) { /* ignore */ }
+    },
+
     /**
      * تحويل HTML كامل إلى PDF وتحميله مباشرة (بدون نافذة طباعة)
      */
@@ -3094,41 +3155,45 @@ const Violations = {
             return false;
         }
 
+        const preparedHtml = this._prepareArabicPdfHtml_(htmlContent);
+        const blobUrl = URL.createObjectURL(new Blob([preparedHtml], { type: 'text/html;charset=utf-8' }));
+
         const iframe = document.createElement('iframe');
         iframe.setAttribute('aria-hidden', 'true');
-        iframe.style.cssText = 'position:fixed;left:-100000px;top:0;width:794px;height:1px;border:0;visibility:hidden;';
+        iframe.style.cssText = 'position:fixed;left:-100000px;top:0;width:900px;height:1200px;border:0;visibility:hidden;';
         document.body.appendChild(iframe);
 
         try {
-            const iDoc = iframe.contentDocument || iframe.contentWindow.document;
-            iDoc.open();
-            iDoc.write(htmlContent);
-            iDoc.close();
-
             await new Promise((resolve) => {
                 iframe.onload = resolve;
-                setTimeout(resolve, 3500);
+                iframe.onerror = resolve;
+                iframe.src = blobUrl;
+                setTimeout(resolve, 5000);
             });
-            try { await iDoc.fonts.ready; } catch (_e) { /* ignore */ }
+
+            const iDoc = iframe.contentDocument || iframe.contentWindow?.document;
+            if (!iDoc) return false;
+
+            await this._waitArabicPdfFontsReady_(iDoc);
 
             const images = Array.from(iDoc.images || []);
             await Promise.all(images.map((img) => new Promise((resolve) => {
                 if (img.complete) return resolve();
                 img.onload = resolve;
                 img.onerror = resolve;
-                setTimeout(resolve, 2500);
+                setTimeout(resolve, 3000);
             })));
 
-            const root = iDoc.body;
+            const root = iDoc.querySelector('.report-wrapper') || iDoc.body;
             if (!root) return false;
 
             const canvas = await html2canvas(root, {
-                scale: 2,
+                scale: 2.5,
                 useCORS: true,
                 allowTaint: false,
                 backgroundColor: '#ffffff',
                 logging: false,
-                windowWidth: Math.max(root.scrollWidth, 794),
+                windowWidth: Math.max(root.scrollWidth, 900),
                 windowHeight: root.scrollHeight
             });
 
@@ -3152,7 +3217,7 @@ const Violations = {
                 sliceCanvas.getContext('2d').drawImage(
                     canvas, 0, p * pageHeightPx, canvas.width, sliceH, 0, 0, canvas.width, sliceH
                 );
-                pdf.addImage(sliceCanvas.toDataURL('image/jpeg', 0.92), 'JPEG', margin, margin, contentW, sliceH * ratio);
+                pdf.addImage(sliceCanvas.toDataURL('image/png'), 'PNG', margin, margin, contentW, sliceH * ratio);
             }
 
             pdf.save(fileName);
@@ -3161,6 +3226,7 @@ const Violations = {
             Utils.safeWarn('فشل تحميل تقرير PDF:', error);
             return false;
         } finally {
+            URL.revokeObjectURL(blobUrl);
             iframe.remove();
         }
     },
