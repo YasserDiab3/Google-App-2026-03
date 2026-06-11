@@ -230,6 +230,12 @@ const Emergency = {
                                 <select id="fm-floor-select" class="form-input" style="max-width: 250px;">
                                     <option value="">-- اختر المخطط --</option>
                                 </select>
+                                <button id="fm-edit-floor-btn" class="btn-secondary btn-sm hidden" title="تعديل المخطط">
+                                    <i class="fas fa-pen ml-1"></i>تعديل
+                                </button>
+                                <button id="fm-delete-floor-btn" class="btn-secondary btn-sm hidden" style="color:#dc2626;" title="حذف المخطط">
+                                    <i class="fas fa-trash ml-1"></i>حذف
+                                </button>
                                 <button id="fm-admin-toggle" class="btn-secondary btn-sm">
                                     <i class="fas fa-edit ml-1"></i>وضع الإدارة
                                 </button>
@@ -1859,10 +1865,17 @@ const Emergency = {
         if (floorSelect && !floorSelect.dataset.fmBound) {
             floorSelect.addEventListener('change', () => {
                 const planId = floorSelect.value;
-                if (planId) this.loadMapItems(planId);
-                else {
+                const editBtn = document.getElementById('fm-edit-floor-btn');
+                const deleteBtn = document.getElementById('fm-delete-floor-btn');
+                if (planId) {
+                    this.loadMapItems(planId);
+                    if (editBtn) editBtn.classList.remove('hidden');
+                    if (deleteBtn) deleteBtn.classList.remove('hidden');
+                } else {
                     document.getElementById('fm-map-placeholder')?.classList.remove('hidden');
                     document.getElementById('fm-map-wrapper')?.classList.add('hidden');
+                    if (editBtn) editBtn.classList.add('hidden');
+                    if (deleteBtn) deleteBtn.classList.add('hidden');
                 }
             });
             floorSelect.dataset.fmBound = '1';
@@ -1878,6 +1891,22 @@ const Emergency = {
         if (addFloorBtn && !addFloorBtn.dataset.fmBound) {
             addFloorBtn.addEventListener('click', () => this.showFloorPlanForm());
             addFloorBtn.dataset.fmBound = '1';
+        }
+        const editFloorBtn = document.getElementById('fm-edit-floor-btn');
+        if (editFloorBtn && !editFloorBtn.dataset.fmBound) {
+            editFloorBtn.addEventListener('click', () => {
+                const planId = floorSelect?.value;
+                if (planId) this.showFloorPlanForm(planId);
+            });
+            editFloorBtn.dataset.fmBound = '1';
+        }
+        const deleteFloorBtn = document.getElementById('fm-delete-floor-btn');
+        if (deleteFloorBtn && !deleteFloorBtn.dataset.fmBound) {
+            deleteFloorBtn.addEventListener('click', () => {
+                const planId = floorSelect?.value;
+                if (planId) this.deleteFloorPlan(planId);
+            });
+            deleteFloorBtn.dataset.fmBound = '1';
         }
 
         // أزرار إضافة العناصر
@@ -2298,6 +2327,7 @@ const Emergency = {
                     const items = Array.isArray(resp) ? resp : (resp && Array.isArray(resp.data) ? resp.data : []);
                     this._fmState.items = items;
                     this.renderMapItems();
+                    this._renderLegend();
                 }).catch(() => {});
         }
     },
@@ -2457,6 +2487,61 @@ const Emergency = {
         if (typeof GoogleIntegration !== 'undefined' && GoogleIntegration.sendRequest) {
             GoogleIntegration.sendRequest({ action: 'deleteEmergencyMapItem', data: { itemId } }).catch(() => {});
         }
+    },
+
+    deleteFloorPlan(planId) {
+        if (!planId) return;
+        const plan = this._fmState.floorPlans.find(p => p.id === planId);
+        const name = plan?.name || 'هذا المخطط';
+        if (!confirm(`حذف "${name}" نهائياً؟ سيتم حذف جميع العناصر المرتبطة به.`)) return;
+        Loading.show('جاري حذف المخطط...');
+        const promises = [];
+        if (typeof GoogleIntegration !== 'undefined' && GoogleIntegration.sendRequest) {
+            const itemsToDelete = this._fmState.items.filter(i => i.floorPlanId === planId);
+            itemsToDelete.forEach(item => {
+                promises.push(
+                    GoogleIntegration.sendRequest({ action: 'deleteEmergencyMapItem', data: { itemId: item.id } }).catch(() => {})
+                );
+            });
+            promises.push(
+                GoogleIntegration.sendRequest({ action: 'deleteEmergencyFloorPlan', data: { planId } })
+                    .then(resp => {
+                        if (resp && resp.success === false) throw new Error(resp.message || 'فشل الحذف');
+                    }).catch(err => { throw err; })
+            );
+        }
+        Promise.all(promises).then(() => {
+            Loading.hide();
+            if (typeof Notification !== 'undefined' && Notification.success) Notification.success('تم حذف المخطط');
+            this._fmState.floorPlans = this._fmState.floorPlans.filter(p => p.id !== planId);
+            this._fmState.items = this._fmState.items.filter(i => i.floorPlanId !== planId);
+            const select = document.getElementById('fm-floor-select');
+            if (select) {
+                select.value = '';
+                select.innerHTML = '<option value="">-- اختر المخطط --</option>' +
+                    this._fmState.floorPlans.map(p => `<option value="${Utils.escapeAttr(p.id)}">${Utils.escapeHTML(p.name || 'مخطط')}${p.floor ? ' - ' + Utils.escapeHTML(p.floor) : ''}</option>`).join('');
+            }
+            document.getElementById('fm-map-placeholder')?.classList.remove('hidden');
+            document.getElementById('fm-map-wrapper')?.classList.add('hidden');
+            document.getElementById('fm-edit-floor-btn')?.classList.add('hidden');
+            document.getElementById('fm-delete-floor-btn')?.classList.add('hidden');
+            this._fmState.currentPlanId = null;
+        }).catch(err => {
+            Loading.hide();
+            if (typeof Notification !== 'undefined' && Notification.error) Notification.error('فشل الحذف: ' + (err?.message || 'خطأ غير معروف'));
+        });
+    },
+
+    _renderLegend() {
+        const container = document.getElementById('fm-legend-items');
+        if (!container) return;
+        container.innerHTML = '';
+        Object.entries(this.FM_ITEM_TYPES).forEach(([key, def]) => {
+            const item = document.createElement('div');
+            item.className = 'fm-legend-item';
+            item.innerHTML = `<span class="fm-legend-icon" style="background:${def.color};"><i class="fas ${def.icon}"></i></span><span class="fm-legend-label">${def.label}</span>`;
+            container.appendChild(item);
+        });
     }
 };
 
