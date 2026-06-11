@@ -405,3 +405,132 @@ function deleteEmergencyPlanUpdate(sectionKey) {
     }
 }
 
+// ============================================
+// خرائط المصنع للطوارئ (Factory Safety Maps)
+// ============================================
+
+function addEmergencyFloorPlan(data) {
+    try {
+        if (!data || !data.name) return { success: false, message: 'اسم المخطط مطلوب' };
+        var sheetName = 'EmergencyFloorPlans';
+        if (!data.id) data.id = generateSequentialId('FP', sheetName);
+        if (!data.isActive) data.isActive = 'true';
+        if (!data.createdAt) data.createdAt = new Date();
+        if (!data.updatedAt) data.updatedAt = new Date();
+        var result = appendToSheet(sheetName, data);
+        return result && result.success
+            ? { success: true, data: { id: data.id }, message: result.message }
+            : result;
+    } catch (error) {
+        Logger.log('Error in addEmergencyFloorPlan: ' + error.toString());
+        return { success: false, message: 'خطأ في إضافة مخطط الطوارئ: ' + error.toString() };
+    }
+}
+
+function updateEmergencyFloorPlan(planId, updateData) {
+    try {
+        if (!planId) return { success: false, message: 'معرف المخطط غير محدد' };
+        var sheetName = 'EmergencyFloorPlans';
+        updateData.id = planId;
+        updateData.updatedAt = new Date();
+        var result = updateSingleRowInSheet(sheetName, planId, updateData, getSpreadsheetId());
+        if (result && result.success) return { success: true, message: 'تم تحديث المخطط', data: updateData };
+        var allData = readFromSheet(sheetName, getSpreadsheetId());
+        var idx = Array.isArray(allData) ? allData.findIndex(function(r) { return r && String(r.id) === String(planId); }) : -1;
+        if (idx === -1) return { success: false, message: 'المخطط غير موجود' };
+        for (var k in updateData) { if (updateData.hasOwnProperty(k)) allData[idx][k] = updateData[k]; }
+        return saveToSheet(sheetName, allData, getSpreadsheetId());
+    } catch (error) {
+        Logger.log('Error in updateEmergencyFloorPlan: ' + error.toString());
+        return { success: false, message: 'خطأ في تحديث المخطط: ' + error.toString() };
+    }
+}
+
+function getAllEmergencyFloorPlans() {
+    try {
+        var data = readFromSheet('EmergencyFloorPlans', getSpreadsheetId());
+        return Array.isArray(data) ? data : [];
+    } catch (error) {
+        Logger.log('Error in getAllEmergencyFloorPlans: ' + error.toString());
+        return [];
+    }
+}
+
+function deleteEmergencyFloorPlan(planId) {
+    try {
+        if (!planId) return { success: false, message: 'معرف المخطط غير محدد' };
+        var sheetName = 'EmergencyFloorPlans';
+        var data = readFromSheet(sheetName, getSpreadsheetId());
+        var filtered = Array.isArray(data) ? data.filter(function(r) { return r && String(r.id) !== String(planId); }) : [];
+        if (filtered.length === data.length) return { success: false, message: 'المخطط غير موجود' };
+        return saveToSheet(sheetName, filtered, getSpreadsheetId());
+    } catch (error) {
+        Logger.log('Error in deleteEmergencyFloorPlan: ' + error.toString());
+        return { success: false, message: 'خطأ في حذف المخطط: ' + error.toString() };
+    }
+}
+
+// عناصر الخريطة (أجهزة إطفاء، مخارج، طرق هروب...)
+function addEmergencyMapItem(data) {
+    try {
+        if (!data || !data.floorPlanId || !data.itemType) return { success: false, message: 'المخطط ونوع العنصر مطلوبان' };
+        var sheetName = 'EmergencyMapItems';
+        if (!data.id) data.id = generateSequentialId('MI', sheetName);
+        if (!data.createdAt) data.createdAt = new Date();
+        if (!data.updatedAt) data.updatedAt = new Date();
+        var result = appendToSheet(sheetName, data);
+        return result && result.success
+            ? { success: true, data: { id: data.id }, message: result.message }
+            : result;
+    } catch (error) {
+        Logger.log('Error in addEmergencyMapItem: ' + error.toString());
+        return { success: false, message: 'خطأ في إضافة عنصر الخريطة: ' + error.toString() };
+    }
+}
+
+function updateEmergencyMapItem(itemId, updateData) {
+    try {
+        if (!itemId) return { success: false, message: 'معرف العنصر غير محدد' };
+        var sheetName = 'EmergencyMapItems';
+        updateData.id = itemId;
+        updateData.updatedAt = new Date();
+        var result = updateSingleRowInSheet(sheetName, itemId, updateData, getSpreadsheetId());
+        if (result && result.success) return { success: true, message: 'تم تحديث العنصر', data: updateData };
+        var allData = readFromSheet(sheetName, getSpreadsheetId());
+        var idx = Array.isArray(allData) ? allData.findIndex(function(r) { return r && String(r.id) === String(itemId); }) : -1;
+        if (idx === -1) return { success: false, message: 'العنصر غير موجود' };
+        for (var k in updateData) { if (updateData.hasOwnProperty(k)) allData[idx][k] = updateData[k]; }
+        return saveToSheet(sheetName, allData, getSpreadsheetId());
+    } catch (error) {
+        Logger.log('Error in updateEmergencyMapItem: ' + error.toString());
+        return { success: false, message: 'خطأ في تحديث عنصر الخريطة: ' + error.toString() };
+    }
+}
+
+function getAllEmergencyMapItems(filters) {
+    try {
+        var data = readFromSheet('EmergencyMapItems', getSpreadsheetId());
+        if (!Array.isArray(data)) return [];
+        if (filters && filters.floorPlanId) data = data.filter(function(r) { return String(r.floorPlanId) === String(filters.floorPlanId); });
+        if (filters && filters.itemType) data = data.filter(function(r) { return r.itemType === filters.itemType; });
+        return data;
+    } catch (error) {
+        Logger.log('Error in getAllEmergencyMapItems: ' + error.toString());
+        return [];
+    }
+}
+
+function deleteEmergencyMapItem(itemId) {
+    try {
+        if (!itemId) return { success: false, message: 'معرف العنصر غير محدد' };
+        var sheetName = 'EmergencyMapItems';
+        var data = readFromSheet(sheetName, getSpreadsheetId());
+        var filtered = Array.isArray(data) ? data.filter(function(r) { return r && String(r.id) !== String(itemId); }) : [];
+        if (filtered.length === data.length) return { success: false, message: 'العنصر غير موجود' };
+        return saveToSheet(sheetName, filtered, getSpreadsheetId());
+    } catch (error) {
+        Logger.log('Error in deleteEmergencyMapItem: ' + error.toString());
+        return { success: false, message: 'خطأ في حذف عنصر الخريطة: ' + error.toString() };
+    }
+}
+

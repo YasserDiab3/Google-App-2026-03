@@ -4445,11 +4445,50 @@ var ActionHandlers = {
                     result = deleteEmergencyPlanUpdate(payload.sectionKey);
                     return;
 
-                // ============================================
-                // السجلات والذكاء الاصطناعي (Logs & AI)
-                // ============================================
-
         })();
+        return result;
+    },
+    // ============================================
+    // خرائط المصنع للطوارئ (Factory Safety Maps)
+    // ============================================
+    'addEmergencyFloorPlan': function(payload, postData, action, actorUserData, spreadsheetId) {
+        var result = { success: false, message: '' };
+        (function() { result = addEmergencyFloorPlan(payload); })();
+        return result;
+    },
+    'updateEmergencyFloorPlan': function(payload, postData, action, actorUserData, spreadsheetId) {
+        var result = { success: false, message: '' };
+        (function() { result = updateEmergencyFloorPlan(payload.planId || payload.id, payload.updateData || payload); })();
+        return result;
+    },
+    'getAllEmergencyFloorPlans': function(payload, postData, action, actorUserData, spreadsheetId) {
+        var result = { success: false, message: '' };
+        (function() { result = getAllEmergencyFloorPlans(); })();
+        return result;
+    },
+    'deleteEmergencyFloorPlan': function(payload, postData, action, actorUserData, spreadsheetId) {
+        var result = { success: false, message: '' };
+        (function() { result = deleteEmergencyFloorPlan(payload.planId || payload.id); })();
+        return result;
+    },
+    'addEmergencyMapItem': function(payload, postData, action, actorUserData, spreadsheetId) {
+        var result = { success: false, message: '' };
+        (function() { result = addEmergencyMapItem(payload); })();
+        return result;
+    },
+    'updateEmergencyMapItem': function(payload, postData, action, actorUserData, spreadsheetId) {
+        var result = { success: false, message: '' };
+        (function() { result = updateEmergencyMapItem(payload.itemId || payload.id, payload.updateData || payload); })();
+        return result;
+    },
+    'getAllEmergencyMapItems': function(payload, postData, action, actorUserData, spreadsheetId) {
+        var result = { success: false, message: '' };
+        (function() { result = getAllEmergencyMapItems(payload.filters || {}); })();
+        return result;
+    },
+    'deleteEmergencyMapItem': function(payload, postData, action, actorUserData, spreadsheetId) {
+        var result = { success: false, message: '' };
+        (function() { result = deleteEmergencyMapItem(payload.itemId || payload.id); })();
         return result;
     },
     'addAuditLog': function(payload, postData, action, actorUserData, spreadsheetId) {

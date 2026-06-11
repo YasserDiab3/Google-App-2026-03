@@ -99,6 +99,10 @@ const Emergency = {
                             <i class="fas fa-file-medical-alt"></i>
                             خطط الطوارئ
                         </button>
+                        <button class="tab-btn" data-tab="factory-map" style="flex-shrink: 0; min-width: fit-content; white-space: nowrap; width: auto; max-width: none;">
+                            <i class="fas fa-map"></i>
+                            خريطة المصنع
+                        </button>
                     </div>
 
                     <!-- تبويب التنبيهات -->
@@ -214,6 +218,87 @@ const Emergency = {
                         <div class="card-body" id="emergency-plans-board"></div>
                     </div>
                 </div>
+
+                <!-- تبويب خريطة المصنع -->
+                <div id="tab-factory-map" class="tab-content">
+                    <div id="fm-header-area">
+                        <div class="fm-toolbar">
+                            <div class="fm-toolbar-left">
+                                <h2><i class="fas fa-map"></i> خريطة المصنع التفاعلية</h2>
+                            </div>
+                            <div class="fm-toolbar-right">
+                                <select id="fm-floor-select" class="form-input" style="max-width: 250px;">
+                                    <option value="">-- اختر المخطط --</option>
+                                </select>
+                                <button id="fm-admin-toggle" class="btn-secondary btn-sm">
+                                    <i class="fas fa-edit ml-1"></i>وضع الإدارة
+                                </button>
+                                <button id="fm-add-floor-btn" class="btn-primary btn-sm">
+                                    <i class="fas fa-plus ml-1"></i>إضافة مخطط
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="fm-map-container" id="fm-map-container">
+                        <div class="fm-map-placeholder" id="fm-map-placeholder">
+                            <i class="fas fa-map-marked-alt text-6xl text-gray-300 mb-4"></i>
+                            <p class="text-gray-500 text-lg">اختر مخططاً لعرض خريطة المصنع</p>
+                            <p class="text-gray-400 text-sm mt-2">قم بإضافة مخططات الطوابق من زر "إضافة مخطط"</p>
+                        </div>
+                        <div class="fm-map-wrapper hidden" id="fm-map-wrapper">
+                            <div class="fm-map-canvas" id="fm-map-canvas">
+                                <img id="fm-map-image" class="fm-map-image" src="" alt="مخطط الطابق">
+                                <div id="fm-map-items-layer" class="fm-map-items-layer"></div>
+                            </div>
+                            <div class="fm-map-legend" id="fm-map-legend">
+                                <div class="fm-legend-title"><i class="fas fa-info-circle"></i> دليل الرموز</div>
+                                <div class="fm-legend-items" id="fm-legend-items"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Admin panel (hidden by default) -->
+                    <div class="fm-admin-panel hidden" id="fm-admin-panel">
+                        <div class="fm-admin-header">
+                            <h3><i class="fas fa-tools"></i> لوحة الإدارة — إضافة عناصر للخريطة</h3>
+                            <button id="fm-admin-close" class="btn-secondary btn-sm">إغلاق</button>
+                        </div>
+                        <div class="fm-admin-body">
+                            <div class="fm-admin-tools">
+                                <button class="fm-add-item-btn" data-type="fire_extinguisher" style="background:#ef4444;">
+                                    <i class="fas fa-fire-extinguisher"></i> مطفأة حريق
+                                </button>
+                                <button class="fm-add-item-btn" data-type="fire_hose" style="background:#dc2626;">
+                                    <i class="fas fa-fire"></i> خرطوم حريق
+                                </button>
+                                <button class="fm-add-item-btn" data-type="fire_alarm" style="background:#f97316;">
+                                    <i class="fas fa-bell"></i> إنذار حريق
+                                </button>
+                                <button class="fm-add-item-btn" data-type="emergency_exit" style="background:#22c55e;">
+                                    <i class="fas fa-door-open"></i> مخرج طوارئ
+                                </button>
+                                <button class="fm-add-item-btn" data-type="escape_route" style="background:#16a34a;">
+                                    <i class="fas fa-arrow-right"></i> طريق هروب
+                                </button>
+                                <button class="fm-add-item-btn" data-type="assembly_point" style="background:#3b82f6;">
+                                    <i class="fas fa-users"></i> نقطة تجمع
+                                </button>
+                                <button class="fm-add-item-btn" data-type="first_aid" style="background:#ec4899;">
+                                    <i class="fas fa-medkit"></i> إسعافات أولية
+                                </button>
+                                <button class="fm-add-item-btn" data-type="hazmat" style="background:#a855f7;">
+                                    <i class="fas fa-skull-crossbones"></i> مواد خطرة
+                                </button>
+                                <button class="fm-add-item-btn" data-type="evacuation_chair" style="background:#06b6d4;">
+                                    <i class="fas fa-wheelchair"></i> كرسي إخلاء
+                                </button>
+                                <button class="fm-add-item-btn" data-type="fire_panel" style="background:#64748b;">
+                                    <i class="fas fa-server"></i> لوحة إطفاء
+                                </button>
+                            </div>
+                            <p class="fm-admin-hint"><i class="fas fa-mouse-pointer"></i> اختر نوع العنصر ثم انقر على الخريطة لإضافته. يمكنك سحب العناصر الموجودة لتعديل موقعها.</p>
+                        </div>
+                    </div>
+                </div>
             </div>
             `;
 
@@ -283,6 +368,8 @@ const Emergency = {
                     this.renderTimelineBoard();
                 } else if (targetTab === 'plans') {
                     this.renderPlansBoard();
+                } else if (targetTab === 'factory-map') {
+                    this.initFactoryMapTab();
                 }
             });
         });
@@ -1729,6 +1816,378 @@ const Emergency = {
             if (typeof Utils !== 'undefined' && Utils.safeWarn) {
                 Utils.safeWarn('⚠️ خطأ في تنظيف Emergency module:', error);
             }
+        }
+    },
+
+    // ============================================
+    // خريطة المصنع التفاعلية (Factory Safety Map)
+    // ============================================
+
+    _fmState: {
+        currentPlanId: null,
+        items: [],
+        adminMode: false,
+        addingType: null,
+        dragItem: null,
+        floorPlans: []
+    },
+
+    FM_ITEM_TYPES: {
+        fire_extinguisher: { label: 'مطفأة حريق', icon: 'fa-fire-extinguisher', color: '#ef4444' },
+        fire_hose: { label: 'خرطوم حريق', icon: 'fa-fire', color: '#dc2626' },
+        fire_alarm: { label: 'إنذار حريق', icon: 'fa-bell', color: '#f97316' },
+        emergency_exit: { label: 'مخرج طوارئ', icon: 'fa-door-open', color: '#22c55e' },
+        escape_route: { label: 'طريق هروب', icon: 'fa-arrow-right', color: '#16a34a' },
+        assembly_point: { label: 'نقطة تجمع', icon: 'fa-users', color: '#3b82f6' },
+        first_aid: { label: 'إسعافات أولية', icon: 'fa-medkit', color: '#ec4899' },
+        hazmat: { label: 'مواد خطرة', icon: 'fa-skull-crossbones', color: '#a855f7' },
+        evacuation_chair: { label: 'كرسي إخلاء', icon: 'fa-wheelchair', color: '#06b6d4' },
+        fire_panel: { label: 'لوحة إطفاء', icon: 'fa-server', color: '#64748b' }
+    },
+
+    initFactoryMapTab() {
+        this.loadFloorPlans();
+        this._bindFactoryMapEvents();
+    },
+
+    _bindFactoryMapEvents() {
+        const floorSelect = document.getElementById('fm-floor-select');
+        const adminToggle = document.getElementById('fm-admin-toggle');
+        const adminClose = document.getElementById('fm-admin-close');
+        const addFloorBtn = document.getElementById('fm-add-floor-btn');
+
+        if (floorSelect && !floorSelect.dataset.fmBound) {
+            floorSelect.addEventListener('change', () => {
+                const planId = floorSelect.value;
+                if (planId) this.loadMapItems(planId);
+                else {
+                    document.getElementById('fm-map-placeholder')?.classList.remove('hidden');
+                    document.getElementById('fm-map-wrapper')?.classList.add('hidden');
+                }
+            });
+            floorSelect.dataset.fmBound = '1';
+        }
+        if (adminToggle && !adminToggle.dataset.fmBound) {
+            adminToggle.addEventListener('click', () => this.toggleAdminMode());
+            adminToggle.dataset.fmBound = '1';
+        }
+        if (adminClose && !adminClose.dataset.fmBound) {
+            adminClose.addEventListener('click', () => { if (this._fmState.adminMode) this.toggleAdminMode(); });
+            adminClose.dataset.fmBound = '1';
+        }
+        if (addFloorBtn && !addFloorBtn.dataset.fmBound) {
+            addFloorBtn.addEventListener('click', () => this.showFloorPlanForm());
+            addFloorBtn.dataset.fmBound = '1';
+        }
+
+        // أزرار إضافة العناصر
+        document.querySelectorAll('.fm-add-item-btn').forEach(btn => {
+            if (!btn.dataset.fmBound) {
+                btn.addEventListener('click', () => {
+                    const type = btn.dataset.type;
+                    if (this._fmState.addingType === type) {
+                        this._fmState.addingType = null;
+                        document.querySelectorAll('.fm-add-item-btn').forEach(b => b.classList.remove('active'));
+                    } else {
+                        this._fmState.addingType = type;
+                        document.querySelectorAll('.fm-add-item-btn').forEach(b => b.classList.remove('active'));
+                        btn.classList.add('active');
+                    }
+                });
+                btn.dataset.fmBound = '1';
+            }
+        });
+    },
+
+    loadFloorPlans() {
+        const select = document.getElementById('fm-floor-select');
+        if (!select) return;
+
+        if (typeof GoogleIntegration !== 'undefined' && GoogleIntegration.sendRequest) {
+            GoogleIntegration.sendRequest({ action: 'getAllEmergencyFloorPlans', data: {} })
+                .then(resp => {
+                    const plans = Array.isArray(resp) ? resp : (resp && Array.isArray(resp.data) ? resp.data : []);
+                    this._fmState.floorPlans = plans;
+                    select.innerHTML = '<option value="">-- اختر المخطط --</option>' +
+                        plans.map(p => `<option value="${p.id}">${p.name || 'مخطط'}${p.floor ? ' - ' + p.floor : ''}</option>`).join('');
+                }).catch(() => {});
+        }
+    },
+
+    showFloorPlanForm(editId) {
+        const existing = this._fmState.floorPlans.find(p => p.id === editId);
+        const val = (f, def) => (existing && existing[f] != null) ? existing[f] : (def || '');
+        const floors = ['الطابق الأرضي', 'الطابق الأول', 'الطابق الثاني', 'الطابق الثالث', 'سطح المبنى', 'مبنى آخر'];
+        const floorOpts = floors.map(f => `<option value="${f}" ${val('floor') === f ? 'selected' : ''}>${f}</option>`).join('');
+
+        const html = `
+            <div class="modal-overlay active" id="fm-floor-modal">
+                <div class="modal-content" style="max-width: 520px;">
+                    <div class="lr-modal-header">
+                        <h3><i class="fas fa-map"></i> ${editId ? 'تعديل' : 'إضافة'} مخطط طابق</h3>
+                        <button class="modal-close" onclick="document.getElementById('fm-floor-modal').remove()"><i class="fas fa-times"></i></button>
+                    </div>
+                    <form id="fm-floor-form" onsubmit="Emergency.handleFloorPlanSubmit(event)">
+                        <input type="hidden" id="fm-floor-edit-id" value="${editId || ''}">
+                        <div class="modal-body">
+                            <div class="form-group">
+                                <label class="form-label">اسم المخطط <span class="text-red-500">*</span></label>
+                                <input type="text" id="fm-floor-name" class="form-input" value="${val('name')}" required placeholder="مثال: مخطط الطابق الأرضي">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">الطابق</label>
+                                <select id="fm-floor-level" class="form-input">${floorOpts}</select>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">رابط صورة المخطط</label>
+                                <input type="text" id="fm-floor-image" class="form-input" value="${val('imageDriveId')}" placeholder="رابط Drive ID أو URL صورة المخطط">
+                                <p class="text-xs text-gray-400 mt-1">أدخل معرف Google Drive للمخطط أو رابط مباشر للصورة</p>
+                            </div>
+                            <div class="grid grid-cols-2 gap-4">
+                                <div class="form-group">
+                                    <label class="form-label">العرض (بكسل)</label>
+                                    <input type="number" id="fm-floor-width" class="form-input" value="${val('imageWidth', 1200)}" min="100">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">الارتفاع (بكسل)</label>
+                                    <input type="number" id="fm-floor-height" class="form-input" value="${val('imageHeight', 800)}" min="100">
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">ترتيب العرض</label>
+                                <input type="number" id="fm-floor-sort" class="form-input" value="${val('sortOrder', '1')}" min="0">
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn-secondary" onclick="document.getElementById('fm-floor-modal').remove()">إلغاء</button>
+                            <button type="submit" class="btn-primary"><i class="fas fa-save ml-2"></i>${editId ? 'حفظ' : 'إضافة'}</button>
+                        </div>
+                    </form>
+                </div>
+            </div>`;
+        const m = document.getElementById('fm-floor-modal');
+        if (m) m.remove();
+        document.body.insertAdjacentHTML('beforeend', html);
+    },
+
+    async handleFloorPlanSubmit(e) {
+        e.preventDefault();
+        const editId = document.getElementById('fm-floor-edit-id')?.value;
+        const data = {
+            name: document.getElementById('fm-floor-name')?.value?.trim(),
+            floor: document.getElementById('fm-floor-level')?.value,
+            imageDriveId: document.getElementById('fm-floor-image')?.value?.trim(),
+            imageWidth: parseInt(document.getElementById('fm-floor-width')?.value) || 1200,
+            imageHeight: parseInt(document.getElementById('fm-floor-height')?.value) || 800,
+            sortOrder: parseInt(document.getElementById('fm-floor-sort')?.value) || 1,
+            isActive: 'true'
+        };
+        if (!data.name) { if (typeof Notification !== 'undefined' && Notification.error) Notification.error('اسم المخطط مطلوب'); return; }
+
+        const modal = document.getElementById('fm-floor-modal');
+        try {
+            if (editId) {
+                if (typeof GoogleIntegration !== 'undefined' && GoogleIntegration.sendRequest) {
+                    await GoogleIntegration.sendRequest({ action: 'updateEmergencyFloorPlan', data: { planId: editId, updateData: data } });
+                }
+                if (typeof Notification !== 'undefined' && Notification.success) Notification.success('تم تحديث المخطط');
+            } else {
+                if (typeof GoogleIntegration !== 'undefined' && GoogleIntegration.sendRequest) {
+                    await GoogleIntegration.sendRequest({ action: 'addEmergencyFloorPlan', data });
+                }
+                if (typeof Notification !== 'undefined' && Notification.success) Notification.success('تم إضافة المخطط');
+            }
+            if (modal) modal.remove();
+            this.loadFloorPlans();
+        } catch (err) {
+            Utils.safeWarn('⚠️ خطأ في حفظ المخطط:', err);
+            if (typeof Notification !== 'undefined' && Notification.error) Notification.error('فشل الحفظ');
+        }
+    },
+
+    loadMapItems(planId) {
+        this._fmState.currentPlanId = planId;
+        const plan = this._fmState.floorPlans.find(p => p.id === planId);
+        if (!plan) return;
+
+        document.getElementById('fm-map-placeholder')?.classList.add('hidden');
+        document.getElementById('fm-map-wrapper')?.classList.remove('hidden');
+
+        const mapCanvas = document.getElementById('fm-map-canvas');
+        const mapImage = document.getElementById('fm-map-image');
+        const imgSrc = plan.imageDriveId
+            ? (plan.imageDriveId.startsWith('http') ? plan.imageDriveId : `https://drive.google.com/thumbnail?id=${plan.imageDriveId}&sz=w1600`)
+            : '';
+        mapImage.src = imgSrc;
+        mapImage.style.width = (plan.imageWidth || 1200) + 'px';
+        mapImage.style.height = (plan.imageHeight || 800) + 'px';
+        mapCanvas.style.width = (plan.imageWidth || 1200) + 'px';
+        mapCanvas.style.height = (plan.imageHeight || 800) + 'px';
+
+        if (typeof GoogleIntegration !== 'undefined' && GoogleIntegration.sendRequest) {
+            GoogleIntegration.sendRequest({ action: 'getAllEmergencyMapItems', data: { filters: { floorPlanId: planId } } })
+                .then(resp => {
+                    const items = Array.isArray(resp) ? resp : (resp && Array.isArray(resp.data) ? resp.data : []);
+                    this._fmState.items = items;
+                    this.renderMapItems();
+                }).catch(() => {});
+        }
+    },
+
+    renderMapItems() {
+        const layer = document.getElementById('fm-map-items-layer');
+        if (!layer) return;
+        layer.innerHTML = '';
+
+        this._fmState.items.forEach(item => {
+            const typeDef = this.FM_ITEM_TYPES[item.itemType] || { label: item.itemType, icon: 'fa-question-circle', color: '#6b7280' };
+            const el = document.createElement('div');
+            el.className = 'fm-marker' + (this._fmState.adminMode ? ' fm-marker-draggable' : '');
+            el.dataset.itemId = item.id;
+            el.title = `${typeDef.label}: ${item.label || ''}`;
+            el.style.left = (parseFloat(item.x) * 100) + '%';
+            el.style.top = (parseFloat(item.y) * 100) + '%';
+            el.style.background = typeDef.color;
+            el.innerHTML = `<i class="fas ${typeDef.icon}"></i>`;
+
+            el.addEventListener('click', (e) => {
+                e.stopPropagation();
+                if (!this._fmState.adminMode) this._showMapItemTooltip(item, el);
+            });
+
+            if (this._fmState.adminMode) {
+                this._makeMarkerDraggable(el, item);
+            }
+
+            layer.appendChild(el);
+        });
+    },
+
+    _showMapItemTooltip(item, el) {
+        const typeDef = this.FM_ITEM_TYPES[item.itemType] || { label: item.itemType, icon: 'fa-question-circle', color: '#6b7280' };
+        const existing = document.getElementById('fm-tooltip');
+        if (existing) existing.remove();
+
+        const tip = document.createElement('div');
+        tip.id = 'fm-tooltip';
+        tip.className = 'fm-tooltip';
+        tip.innerHTML = `
+            <div class="fm-tip-header" style="background:${typeDef.color};">
+                <i class="fas ${typeDef.icon}"></i> ${typeDef.label}
+            </div>
+            <div class="fm-tip-body">
+                <p><strong>${item.label || '—'}</strong></p>
+                <p>الحالة: ${item.status === 'maintenance' ? 'صيانة' : item.status === 'inactive' ? 'غير فعال' : 'فعال'}</p>
+                ${item.notes ? `<p>${item.notes}</p>` : ''}
+                <div class="fm-tip-actions">
+                    ${this._fmState.adminMode ? `<button class="btn-icon btn-sm text-red-600" onclick="Emergency.deleteMapItem('${item.id}')" title="حذف"><i class="fas fa-trash"></i></button>` : ''}
+                </div>
+            </div>`;
+        document.body.appendChild(tip);
+
+        const rect = el.getBoundingClientRect();
+        tip.style.left = Math.min(rect.left + rect.width / 2 - tip.offsetWidth / 2, window.innerWidth - tip.offsetWidth - 10) + 'px';
+        tip.style.top = (rect.top - tip.offsetHeight - 10) + 'px';
+
+        document.addEventListener('click', function rm() { tip.remove(); document.removeEventListener('click', rm); });
+    },
+
+    _makeMarkerDraggable(el, item) {
+        let startX, startY, origX, origY, dragging = false;
+        el.addEventListener('mousedown', (e) => {
+            if (e.button !== 0) return;
+            e.preventDefault();
+            dragging = true;
+            const mapRect = document.getElementById('fm-map-canvas').getBoundingClientRect();
+            startX = e.clientX;
+            startY = e.clientY;
+            origX = parseFloat(item.x);
+            origY = parseFloat(item.y);
+
+            const onMove = (me) => {
+                if (!dragging) return;
+                const dx = (me.clientX - startX) / mapRect.width;
+                const dy = (me.clientY - startY) / mapRect.height;
+                const newX = Math.max(0, Math.min(1, origX + dx));
+                const newY = Math.max(0, Math.min(1, origY + dy));
+                item.x = newX;
+                item.y = newY;
+                el.style.left = (newX * 100) + '%';
+                el.style.top = (newY * 100) + '%';
+            };
+            const onUp = () => {
+                dragging = false;
+                document.removeEventListener('mousemove', onMove);
+                document.removeEventListener('mouseup', onUp);
+                if (typeof GoogleIntegration !== 'undefined' && GoogleIntegration.sendRequest) {
+                    GoogleIntegration.sendRequest({ action: 'updateEmergencyMapItem', data: { itemId: item.id, updateData: { x: item.x, y: item.y } } }).catch(() => {});
+                }
+            };
+            document.addEventListener('mousemove', onMove);
+            document.addEventListener('mouseup', onUp);
+        });
+    },
+
+    toggleAdminMode() {
+        this._fmState.adminMode = !this._fmState.adminMode;
+        const panel = document.getElementById('fm-admin-panel');
+        const toggleBtn = document.getElementById('fm-admin-toggle');
+        if (panel) panel.classList.toggle('hidden', !this._fmState.adminMode);
+        if (toggleBtn) toggleBtn.classList.toggle('btn-primary', this._fmState.adminMode);
+        if (toggleBtn) toggleBtn.classList.toggle('btn-secondary', !this._fmState.adminMode);
+        this.renderMapItems();
+
+        // في وضع الإدارة، النقر على الخريطة يضيف عنصراً
+        const canvas = document.getElementById('fm-map-canvas');
+        if (canvas) {
+            if (this._fmState.adminMode) {
+                canvas.addEventListener('click', this._fmCanvasClickHandler = (e) => {
+                    if (!this._fmState.addingType) return;
+                    const rect = canvas.getBoundingClientRect();
+                    const x = (e.clientX - rect.left) / rect.width;
+                    const y = (e.clientY - rect.top) / rect.height;
+                    this._addMapItemAt(this._fmState.addingType, x, y);
+                });
+            } else {
+                if (this._fmCanvasClickHandler) {
+                    canvas.removeEventListener('click', this._fmCanvasClickHandler);
+                    this._fmCanvasClickHandler = null;
+                }
+                this._fmState.addingType = null;
+                document.querySelectorAll('.fm-add-item-btn').forEach(b => b.classList.remove('active'));
+            }
+        }
+    },
+
+    _addMapItemAt(type, x, y) {
+        if (!this._fmState.currentPlanId) return;
+        const items = this._fmState.items;
+        const count = items.filter(i => i.itemType === type).length + 1;
+        const typeDef = this.FM_ITEM_TYPES[type] || { label: type, icon: 'fa-question', color: '#6b7280' };
+
+        const tempId = 'MI-TEMP-' + Date.now();
+        const newItem = { id: tempId, floorPlanId: this._fmState.currentPlanId, itemType: type, label: typeDef.label + ' ' + count, x, y, status: 'active', notes: '' };
+        items.push(newItem);
+        this.renderMapItems();
+        if (typeof Notification !== 'undefined' && Notification.success) Notification.success('تم إضافة ' + typeDef.label);
+
+        if (typeof GoogleIntegration !== 'undefined' && GoogleIntegration.sendRequest) {
+            GoogleIntegration.sendRequest({ action: 'addEmergencyMapItem', data: { floorPlanId: this._fmState.currentPlanId, itemType: type, label: typeDef.label + ' ' + count, x, y, status: 'active' } })
+                .then(resp => {
+                    if (resp && resp.success && resp.data && resp.data.id) {
+                        const idx = items.findIndex(i => i.id === tempId);
+                        if (idx >= 0) items[idx].id = resp.data.id;
+                    }
+                }).catch(() => {});
+        }
+    },
+
+    deleteMapItem(itemId) {
+        if (!confirm('حذف هذا العنصر من الخريطة؟')) return;
+        this._fmState.items = this._fmState.items.filter(i => i.id !== itemId);
+        this.renderMapItems();
+        if (typeof GoogleIntegration !== 'undefined' && GoogleIntegration.sendRequest) {
+            GoogleIntegration.sendRequest({ action: 'deleteEmergencyMapItem', data: { itemId } }).catch(() => {});
         }
     }
 };
