@@ -1984,10 +1984,22 @@ const Emergency = {
                                 ${hasExistingImage ? `<div class="fm-canvas-warning"><i class="fas fa-exclamation-triangle"></i> يوجد رسم سابق — الرسم الجديد سيحل محله.</div>` : ''}
                             </div>
                             <div id="fm-source-upload" class="fm-source-pane" style="display:none;margin-top:4px;">
-                                <div class="form-group">
-                                    <label class="form-label">رابط الصورة</label>
-                                    <input type="text" id="fm-floor-image" class="form-input" value="${val('imageDriveId')}" placeholder="رابط صورة المخطط (Google Drive ID أو URL)">
-                                    <p class="fm-field-hint">أدخل معرف Google Drive للصورة أو رابطاً مباشراً.</p>
+                                <div class="fm-upload-area" id="fm-upload-area">
+                                    <input type="file" id="fm-file-input" accept="image/*" style="display:none;">
+                                    <div class="fm-upload-dropzone" id="fm-upload-dropzone">
+                                        <i class="fas fa-cloud-upload-alt"></i>
+                                        <p>اختر صورة من جهازك</p>
+                                        <span>أو اسحب وأفلت الصورة هنا</span>
+                                        <button type="button" class="btn-sm btn-primary" style="margin-top:8px;" onclick="document.getElementById('fm-file-input').click()">اختيار صورة</button>
+                                    </div>
+                                    <div class="fm-upload-preview" id="fm-upload-preview" style="display:none;">
+                                        <img id="fm-upload-img" src="" alt="معاينة">
+                                        <div class="fm-upload-actions">
+                                            <button type="button" class="btn-icon btn-sm" onclick="Emergency._fmRemoveUploadedImage()" title="إزالة"><i class="fas fa-times"></i></button>
+                                        </div>
+                                    </div>
+                                    <input type="hidden" id="fm-floor-image" value="${val('imageDriveId')}">
+                                    <p class="fm-field-hint" id="fm-upload-hint">${val('imageDriveId') ? 'الصورة موجودة مسبقاً.' : 'اختر صورة من جهازك لعرضها كخلفية للمخطط.'}</p>
                                 </div>
                             </div>
                             <div class="fm-form-row" style="margin-top:10px;">
@@ -2012,12 +2024,80 @@ const Emergency = {
         if (m) m.remove();
         document.body.insertAdjacentHTML('beforeend', html);
         this._fmInitCanvas();
+        this._fmInitUpload();
     },
 
     _fmSwitchSource(mode) {
         document.querySelectorAll('.fm-source-tab').forEach(t => t.classList.toggle('active', t.dataset.mode === mode));
         document.getElementById('fm-source-draw').style.display = mode === 'draw' ? 'block' : 'none';
         document.getElementById('fm-source-upload').style.display = mode === 'upload' ? 'block' : 'none';
+    },
+
+    _fmInitUpload() {
+        const fileInput = document.getElementById('fm-file-input');
+        const dropzone = document.getElementById('fm-upload-dropzone');
+        const preview = document.getElementById('fm-upload-preview');
+        const img = document.getElementById('fm-upload-img');
+        const hidden = document.getElementById('fm-floor-image');
+        const hint = document.getElementById('fm-upload-hint');
+        if (!fileInput || fileInput.dataset.fmBound) return;
+
+        fileInput.addEventListener('change', () => this._fmHandleFile(fileInput.files[0]));
+        dropzone.addEventListener('dragover', (e) => { e.preventDefault(); dropzone.style.borderColor = '#2563eb'; });
+        dropzone.addEventListener('dragleave', () => { dropzone.style.borderColor = '#cbd5e1'; });
+        dropzone.addEventListener('drop', (e) => { e.preventDefault(); dropzone.style.borderColor = '#cbd5e1'; this._fmHandleFile(e.dataTransfer.files[0]); });
+        dropzone.addEventListener('click', () => fileInput.click());
+        fileInput.dataset.fmBound = '1';
+
+        // If there's existing data URL, show it
+        if (hidden && hidden.value && hidden.value.startsWith('data:')) {
+            img.src = hidden.value;
+            dropzone.style.display = 'none';
+            preview.style.display = 'flex';
+            if (hint) hint.textContent = 'الصورة المرفوعة حالياً.';
+        }
+    },
+
+    _fmHandleFile(file) {
+        if (!file) return;
+        if (!file.type.startsWith('image/')) {
+            if (typeof Notification !== 'undefined' && Notification.error) Notification.error('يرجى اختيار ملف صورة فقط');
+            return;
+        }
+        if (file.size > 10 * 1024 * 1024) {
+            if (typeof Notification !== 'undefined' && Notification.error) Notification.error('حجم الصورة كبير جداً (الحد الأقصى 10MB)');
+            return;
+        }
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const dataUrl = e.target.result;
+            const img = document.getElementById('fm-upload-img');
+            const dropzone = document.getElementById('fm-upload-dropzone');
+            const preview = document.getElementById('fm-upload-preview');
+            const hidden = document.getElementById('fm-floor-image');
+            const hint = document.getElementById('fm-upload-hint');
+            if (img) img.src = dataUrl;
+            if (dropzone) dropzone.style.display = 'none';
+            if (preview) preview.style.display = 'flex';
+            if (hidden) hidden.value = dataUrl;
+            if (hint) hint.textContent = 'تم رفع الصورة بنجاح.';
+        };
+        reader.readAsDataURL(file);
+    },
+
+    _fmRemoveUploadedImage() {
+        const img = document.getElementById('fm-upload-img');
+        const dropzone = document.getElementById('fm-upload-dropzone');
+        const preview = document.getElementById('fm-upload-preview');
+        const hidden = document.getElementById('fm-floor-image');
+        const fileInput = document.getElementById('fm-file-input');
+        const hint = document.getElementById('fm-upload-hint');
+        if (img) img.src = '';
+        if (dropzone) dropzone.style.display = 'block';
+        if (preview) preview.style.display = 'none';
+        if (hidden) hidden.value = '';
+        if (fileInput) fileInput.value = '';
+        if (hint) hint.textContent = 'اختر صورة من جهازك لعرضها كخلفية للمخطط.';
     },
 
     _fmInitCanvas() {

@@ -12966,7 +12966,7 @@
                     }
 
                     // مطابقة CACHE_VERSION في service-worker.js — تسريع جلب سكربت SW بعد النشر (تجاوز كاش الشبكة/الوسيط)
-                    const __SW_REGISTER_QUERY = "v=hse-app-v1.0.102-20260611";
+                    const __SW_REGISTER_QUERY = "v=hse-app-v1.0.104-20260611";
                     const swUrl =
                         swPath +
                         (swPath.includes("?") ? "&" : "?") +
@@ -13007,17 +13007,6 @@
                             { passive: true },
                         );
 
-                        // إعادة تحميل الصفحة مرة واحدة فقط عند تفعيل Service Worker جديد
-                        let __swRefreshing = false;
-                        navigator.serviceWorker.addEventListener(
-                            "controllerchange",
-                            () => {
-                                if (__swRefreshing) return;
-                                __swRefreshing = true;
-                                window.location.reload();
-                            },
-                        );
-
                         // التحقق من التحديثات
                         registration.addEventListener("updatefound", () => {
                             const newWorker = registration.installing;
@@ -13033,30 +13022,18 @@
                                 ) {
                                     if (__isDev)
                                         console.log(
-                                            "✨ تحديث جديد متاح! سيتم تطبيقه عند إعادة تحميل الصفحة.",
+                                            "✨ تحديث جديد متاح! سيتم التفعيل عند إعادة التحميل.",
                                         );
 
-                                    // يمكن إضافة إشعار للمستخدم هنا
                                     if (
                                         window.Notification &&
                                         typeof window.Notification.info ===
                                             "function"
                                     ) {
                                         window.Notification.info(
-                                            "يتوفر إصدار جديد من التطبيق — جاري التحديث تلقائياً. إذا لم تُحدَّث الصفحة، أعد التحميل يدوياً (F5).",
-                                            { duration: 12000 },
+                                            "يتوفر إصدار جديد — أعد تحميل الصفحة لتطبيق التحديث.",
+                                            { duration: 10000 },
                                         );
-                                    }
-
-                                    // تفعيل النسخة الجديدة فورًا بدون انتظار إغلاق كل التبويبات
-                                    if (registration.waiting) {
-                                        registration.waiting.postMessage({
-                                            type: "SKIP_WAITING",
-                                        });
-                                    } else if (newWorker) {
-                                        newWorker.postMessage({
-                                            type: "SKIP_WAITING",
-                                        });
                                     }
                                 }
                             });
@@ -13108,15 +13085,6 @@
                                 },
                                 { passive: true },
                             );
-                            let __swRefreshingAlt = false;
-                            navigator.serviceWorker.addEventListener(
-                                "controllerchange",
-                                () => {
-                                    if (__swRefreshingAlt) return;
-                                    __swRefreshingAlt = true;
-                                    window.location.reload();
-                                },
-                            );
                             registration.addEventListener("updatefound", () => {
                                 const newWorker = registration.installing;
                                 if (!newWorker) return;
@@ -13131,17 +13099,8 @@
                                                 "function"
                                         ) {
                                             window.Notification.info(
-                                                "تم العثور على تحديث جديد... جاري التفعيل الآن.",
+                                                "تحديث جديد متاح — أعد تحميل الصفحة لتطبيقه.",
                                             );
-                                        }
-                                        if (registration.waiting) {
-                                            registration.waiting.postMessage({
-                                                type: "SKIP_WAITING",
-                                            });
-                                        } else {
-                                            newWorker.postMessage({
-                                                type: "SKIP_WAITING",
-                                            });
                                         }
                                     }
                                 });
