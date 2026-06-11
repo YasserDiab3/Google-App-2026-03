@@ -2297,27 +2297,18 @@ const Violations = {
                     source: 'ContractorViolationsTab',
                     contractorId: contractorId || '',
                     contractorName: selectedContractorName || '',
-                    titleAr: reportTitle
+                    titleAr: reportTitle,
+                    includeQRCode: false
                 }, new Date().toISOString(), new Date().toISOString())
                 : `<html dir="rtl" lang="ar"><head><meta charset="UTF-8"><title>${Utils.escapeHTML(reportTitle)}</title></head><body>${content}</body></html>`;
 
             const safeFileName = `${String(reportTitle).replace(/[\\/:*?"<>|]/g, '_')}.pdf`;
             const downloaded = await this._downloadHtmlReportAsPdf(htmlContent, safeFileName);
             if (!downloaded) {
-                const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
-                const url = URL.createObjectURL(blob);
-                const link = document.createElement('a');
-                link.href = url;
-                link.download = safeFileName.replace(/\.pdf$/i, '.html');
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-                URL.revokeObjectURL(url);
+                throw new Error('تعذّر إنشاء ملف PDF — تحقق من الاتصال بالإنترنت ثم أعد المحاولة');
             }
             Loading.hide();
-            Notification.success(downloaded
-                ? 'تم تحميل تقرير مخالفات المقاولين بنجاح'
-                : 'تم تحميل التقرير بصيغة HTML — تعذّر إنشاء PDF تلقائياً');
+            Notification.success('تم تحميل تقرير مخالفات المقاولين بصيغة PDF بنجاح');
         } catch (error) {
             Loading.hide();
             Utils.safeError('خطأ في إنشاء تقرير مخالفات المقاولين:', error);
@@ -3094,6 +3085,27 @@ const Violations = {
     /** أنماط عربية آمنة لـ PDF — منع تفكيك الحروف (letter-spacing) */
     _AR_PDF_TEXT_STYLE_: "font-family:'Cairo','Tahoma','Segoe UI',sans-serif;direction:rtl;unicode-bidi:embed;letter-spacing:0;word-spacing:normal;",
 
+    _stripScriptsFromHtml_(htmlContent) {
+        return String(htmlContent || '').replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '');
+    },
+
+    async _preloadCairoFontForPdf_() {
+        if (!document.getElementById('viol-cairo-font-link')) {
+            const link = document.createElement('link');
+            link.id = 'viol-cairo-font-link';
+            link.rel = 'stylesheet';
+            link.href = 'https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap';
+            document.head.appendChild(link);
+        }
+        try {
+            if (document.fonts && typeof document.fonts.load === 'function') {
+                await document.fonts.load("400 14px Cairo");
+                await document.fonts.load("700 20px Cairo");
+                await document.fonts.ready;
+            }
+        } catch (_e) { /* ignore */ }
+    },
+
     _prepareArabicPdfHtml_(htmlContent) {
         const arabicFix = `
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -3126,11 +3138,12 @@ const Violations = {
     table, thead, tbody, tr, th, td { direction: rtl !important; }
     .header-info h1 { letter-spacing: 0 !important; }
 </style>`;
-        if (!htmlContent) return arabicFix;
-        if (htmlContent.includes('</head>')) {
-            return htmlContent.replace('</head>', `${arabicFix}</head>`);
+        const cleaned = this._stripScriptsFromHtml_(htmlContent);
+        if (!cleaned) return arabicFix;
+        if (cleaned.includes('</head>')) {
+            return cleaned.replace('</head>', `${arabicFix}</head>`);
         }
-        return `<!DOCTYPE html><html lang="ar" dir="rtl"><head><meta charset="UTF-8">${arabicFix}</head><body>${htmlContent}</body></html>`;
+        return `<!DOCTYPE html><html lang="ar" dir="rtl"><head><meta charset="UTF-8">${arabicFix}</head><body>${cleaned}</body></html>`;
     },
 
     async _waitArabicPdfFontsReady_(doc) {
@@ -3149,14 +3162,47 @@ const Violations = {
     /**
      * تحويل HTML كامل إلى PDF وتحميله مباشرة (بدون نافذة طباعة)
      */
+    async _captureHtmlToCanvas_(root, opts = {}) {
+        const baseOpts = {
+            scale: 2.5,
+            backgroundColor: '#ffffff',
+            logging: false,
+            windowWidth: Math.max(root.scrollWidth, 900),
+            windowHeight: Math.max(root.scrollHeight, 1),
+            scrollX: 0,
+            scrollY: 0
+        };
+        const attempts = [
+            { ...baseOpts, useCORS: true, allowTaint: false },
+            { ...baseOpts, useCORS: true, allowTaint: true },
+            { ...baseOpts, useCORS: false, allowTaint: true }
+        ];
+        let lastError = null;
+        for (let i = 0; i < attempts.length; i++) {
+            try {
+                const canvas = await html2canvas(root, attempts[i]);
+                if (canvas && canvas.width > 0 && canvas.height > 0) {
+                    return canvas;
+                }
+            } catch (err) {
+                lastError = err;
+            }
+        }
+        if (lastError) throw lastError;
+        return null;
+    },
+
     async _downloadHtmlReportAsPdf(htmlContent, fileName = 'report.pdf') {
         const libsReady = await this._ensureReportPdfLibs_();
         if (!libsReady || typeof html2canvas === 'undefined' || !window.jspdf) {
             return false;
         }
 
+        await this._preloadCairoFontForPdf_();
         const preparedHtml = this._prepareArabicPdfHtml_(htmlContent);
-        const blobUrl = URL.createObjectURL(new Blob([preparedHtml], { type: 'text/html;charset=utf-8' }));
+        const pdfFileName = String(fileName || 'report.pdf').toLowerCase().endsWith('.pdf')
+            ? String(fileName)
+            : `${String(fileName)}.pdf`;
 
         const iframe = document.createElement('iframe');
         iframe.setAttribute('aria-hidden', 'true');
@@ -3164,11 +3210,11 @@ const Violations = {
         document.body.appendChild(iframe);
 
         try {
+            iframe.srcdoc = preparedHtml;
             await new Promise((resolve) => {
                 iframe.onload = resolve;
                 iframe.onerror = resolve;
-                iframe.src = blobUrl;
-                setTimeout(resolve, 5000);
+                setTimeout(resolve, 6000);
             });
 
             const iDoc = iframe.contentDocument || iframe.contentWindow?.document;
@@ -3187,15 +3233,8 @@ const Violations = {
             const root = iDoc.querySelector('.report-wrapper') || iDoc.body;
             if (!root) return false;
 
-            const canvas = await html2canvas(root, {
-                scale: 2.5,
-                useCORS: true,
-                allowTaint: false,
-                backgroundColor: '#ffffff',
-                logging: false,
-                windowWidth: Math.max(root.scrollWidth, 900),
-                windowHeight: root.scrollHeight
-            });
+            const canvas = await this._captureHtmlToCanvas_(root);
+            if (!canvas) return false;
 
             const { jsPDF } = window.jspdf;
             const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
@@ -3220,13 +3259,12 @@ const Violations = {
                 pdf.addImage(sliceCanvas.toDataURL('image/png'), 'PNG', margin, margin, contentW, sliceH * ratio);
             }
 
-            pdf.save(fileName);
+            pdf.save(pdfFileName);
             return true;
         } catch (error) {
             Utils.safeWarn('فشل تحميل تقرير PDF:', error);
             return false;
         } finally {
-            URL.revokeObjectURL(blobUrl);
             iframe.remove();
         }
     },
