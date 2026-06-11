@@ -2872,7 +2872,7 @@ const DEFAULT_COMPANY_NAME = '';
 
 const AppState = {
     /** إصدار التطبيق — تسلسلي: 1.0.0 → 1.0.1 → 1.0.2 … عند كل نشر زِد الرقم هنا وفي version.json */
-    appVersion: '1.0.125',
+    appVersion: '1.0.126',
     /** نص اختياري لرسالة التحديث (ملخص التغييرات). إن تُركت فارغة يُستخدم النص الافتراضي. */
     updateMessage: '',
     debugMode: false,
@@ -3076,10 +3076,24 @@ const AppState = {
                         const LATEST_DEPLOYMENT_URL = 'https://script.google.com/macros/s/AKfycbx88ue81OTEXapNCcfFcBUEoONTJnSypsm9zGT6upSHnIieBDskcyH-Tij9D7lxHP6Y/exec';
                         if (parsedUrl && OLD_DEPLOYMENT_URLS.some(old => parsedUrl.includes(old))) {
                             parsedUrl = LATEST_DEPLOYMENT_URL;
-                            // حفظ الرابط المُحدَّث تلقائياً
                             try {
                                 const updatedConfig = { ...parsed, appsScript: { ...parsedApps, scriptUrl: LATEST_DEPLOYMENT_URL } };
                                 localStorage.setItem('hse_google_config', JSON.stringify(updatedConfig));
+                                // مسح التخزين المؤقت وإعادة تعيين الدارة لحل مشكلة عدم تطابق البيانات
+                                try {
+                                    localStorage.removeItem('hse_sync_meta');
+                                    localStorage.removeItem('hse_cache_timestamps');
+                                } catch(e2) {}
+                                if (typeof GoogleIntegration !== 'undefined' && GoogleIntegration && typeof GoogleIntegration.resetCircuitBreaker === 'function') {
+                                    try { GoogleIntegration.resetCircuitBreaker(); } catch(e3) {}
+                                }
+                                if (typeof GoogleIntegration !== 'undefined' && GoogleIntegration && typeof GoogleIntegration._purgeAllSheetReadLocalCache_ === 'function') {
+                                    try { GoogleIntegration._purgeAllSheetReadLocalCache_(); } catch(e4) {}
+                                }
+                                if (typeof AppState !== 'undefined' && AppState && AppState.syncMeta) {
+                                    AppState.syncMeta.sheets = {};
+                                    AppState.syncMeta.lastSyncTime = 0;
+                                }
                             } catch(e) { /* ignore */ }
                         }
                         AppState.googleConfig.appsScript = {
