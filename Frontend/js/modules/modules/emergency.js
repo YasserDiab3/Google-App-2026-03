@@ -717,7 +717,7 @@ const Emergency = {
                         <div class="text-xs text-gray-500 mt-1 flex items-center gap-2">
                             <span><i class="fas fa-user ml-1"></i>${Utils.escapeHTML(entry.actor || 'النظام')}</span>
                             <span><i class="fas fa-bolt ml-1"></i>${Utils.escapeHTML(entry.severity || '')}</span>
-                            <button class="text-blue-600 hover:text-blue-800" onclick="Emergency.viewAlert('${entry.alertId}')">عرض التنبيه</button>
+                            <button class="text-blue-600 hover:text-blue-800" onclick="Emergency.viewAlert('${Utils.escapeAttr(entry.alertId)}')">عرض التنبيه</button>
                         </div>
                     </div>
                 `).join('')}
@@ -819,7 +819,7 @@ const Emergency = {
                                 <td>${plan.lastTested ? Utils.formatDate(plan.lastTested) : '<span class="text-xs text-gray-400">لم يتم الاختبار</span>'}</td>
                                 <td>
                                     <div class="flex gap-2">
-                                        <button class="btn-icon btn-icon-info" title="عرض التفاصيل" onclick="Emergency.viewPlan('${plan.id}')">
+                                        <button class="btn-icon btn-icon-info" title="عرض التفاصيل" onclick="Emergency.viewPlan('${Utils.escapeAttr(plan.id)}')">
                                             <i class="fas fa-eye"></i>
                                         </button>
                                         <button class="btn-icon btn-icon-primary" title="تعديل" onclick="Emergency.showPlanForm(${JSON.stringify(plan).replace(/"/g, '&quot;')})">
@@ -1087,16 +1087,16 @@ const Emergency = {
                 </td>
                 <td>
                     <div class="flex flex-wrap gap-2">
-                        <button class="btn-icon btn-icon-info" title="عرض التفاصيل" onclick="Emergency.viewAlert('${alert.id}')">
+                        <button class="btn-icon btn-icon-info" title="عرض التفاصيل" onclick="Emergency.viewAlert('${Utils.escapeAttr(alert.id)}')">
                             <i class="fas fa-eye"></i>
                         </button>
                         ${!alert.acknowledgedAt ? `
-                            <button class="btn-icon btn-icon-success" title="اعتماد التنبيه" onclick="Emergency.acknowledgeAlert('${alert.id}')">
+                            <button class="btn-icon btn-icon-success" title="اعتماد التنبيه" onclick="Emergency.acknowledgeAlert('${Utils.escapeAttr(alert.id)}')">
                                 <i class="fas fa-check"></i>
                             </button>
                         ` : ''}
                         ${alert.status !== 'مغلق' ? `
-                            <button class="btn-icon btn-icon-primary" title="إغلاق التنبيه" onclick="Emergency.resolveAlert('${alert.id}')">
+                            <button class="btn-icon btn-icon-primary" title="إغلاق التنبيه" onclick="Emergency.resolveAlert('${Utils.escapeAttr(alert.id)}')">
                                 <i class="fas fa-flag-checkered"></i>
                             </button>
                         ` : ''}
@@ -1909,7 +1909,7 @@ const Emergency = {
                     const plans = Array.isArray(resp) ? resp : (resp && Array.isArray(resp.data) ? resp.data : []);
                     this._fmState.floorPlans = plans;
                     select.innerHTML = '<option value="">-- اختر المخطط --</option>' +
-                        plans.map(p => `<option value="${p.id}">${p.name || 'مخطط'}${p.floor ? ' - ' + p.floor : ''}</option>`).join('');
+                        plans.map(p => `<option value="${Utils.escapeAttr(p.id)}">${Utils.escapeHTML(p.name || 'مخطط')}${p.floor ? ' - ' + Utils.escapeHTML(p.floor) : ''}</option>`).join('');
                 }).catch(() => {});
         }
     },
@@ -2316,7 +2316,7 @@ const Emergency = {
             el.style.left = (parseFloat(item.x) * 100) + '%';
             el.style.top = (parseFloat(item.y) * 100) + '%';
             el.style.background = typeDef.color;
-            el.innerHTML = `<i class="fas ${typeDef.icon}"></i>`;
+            el.innerHTML = `<i class="fas ${Utils.escapeAttr(typeDef.icon)}"></i>`;
 
             el.addEventListener('click', (e) => {
                 e.stopPropagation();
@@ -2340,15 +2340,15 @@ const Emergency = {
         tip.id = 'fm-tooltip';
         tip.className = 'fm-tooltip';
         tip.innerHTML = `
-            <div class="fm-tip-header" style="background:${typeDef.color};">
-                <i class="fas ${typeDef.icon}"></i> ${typeDef.label}
+            <div class="fm-tip-header" style="background:${Utils.escapeAttr(typeDef.color)};">
+                <i class="fas ${Utils.escapeAttr(typeDef.icon)}"></i> ${Utils.escapeHTML(typeDef.label)}
             </div>
             <div class="fm-tip-body">
-                <p><strong>${item.label || '—'}</strong></p>
-                <p>الحالة: ${item.status === 'maintenance' ? 'صيانة' : item.status === 'inactive' ? 'غير فعال' : 'فعال'}</p>
-                ${item.notes ? `<p>${item.notes}</p>` : ''}
+                <p><strong>${Utils.escapeHTML(item.label || '—')}</strong></p>
+                <p>الحالة: ${Utils.escapeHTML(item.status === 'maintenance' ? 'صيانة' : item.status === 'inactive' ? 'غير فعال' : 'فعال')}</p>
+                ${item.notes ? `<p>${Utils.escapeHTML(item.notes)}</p>` : ''}
                 <div class="fm-tip-actions">
-                    ${this._fmState.adminMode ? `<button class="btn-icon btn-sm text-red-600" onclick="Emergency.deleteMapItem('${item.id}')" title="حذف"><i class="fas fa-trash"></i></button>` : ''}
+                    ${this._fmState.adminMode ? `<button class="btn-icon btn-sm text-red-600" onclick="Emergency.deleteMapItem('${Utils.escapeAttr(item.id)}')" title="حذف"><i class="fas fa-trash"></i></button>` : ''}
                 </div>
             </div>`;
         document.body.appendChild(tip);
