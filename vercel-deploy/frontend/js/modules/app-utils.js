@@ -7038,7 +7038,7 @@ FormHeader.generatePDFHTML = function (
 };
 
 FormHeader.generatePDF = async function (htmlContent, filename = 'document.pdf') {
-    let wrapper;
+    let iframe;
     try {
         if (typeof html2canvas === 'undefined') {
             try {
@@ -7064,35 +7064,50 @@ FormHeader.generatePDF = async function (htmlContent, filename = 'document.pdf')
                 document.head.appendChild(s);
             });
         }
-        const parser = new DOMParser();
-        const doc = parser.parseFromString(htmlContent, 'text/html');
-        const styles = Array.from(doc.querySelectorAll('style')).map(function (s) { return s.textContent; }).join('\n');
-        const bodyContent = doc.body.innerHTML;
-        wrapper = document.createElement('div');
-        wrapper.style.position = 'fixed';
-        wrapper.style.left = '-9999px';
-        wrapper.style.top = '0';
-        wrapper.style.width = '793.7px';
-        wrapper.style.zIndex = '-1000';
-        wrapper.innerHTML = '<style>' + styles + '</style>' + bodyContent;
-        document.body.appendChild(wrapper);
-        await new Promise(function (resolve) { setTimeout(resolve, 300); });
+        htmlContent = htmlContent.replace(/\s*min-height\s*:\s*100vh\s*/gi, '');
+        iframe = document.createElement('iframe');
+        iframe.style.position = 'fixed';
+        iframe.style.left = '-9999px';
+        iframe.style.top = '0';
+        iframe.style.width = '793.7px';
+        iframe.style.height = '1px';
+        iframe.style.border = 'none';
+        iframe.style.overflow = 'hidden';
+        document.body.appendChild(iframe);
+        iframe.srcdoc = htmlContent;
+        await new Promise(function (resolve) { iframe.onload = resolve; setTimeout(resolve, 5000); });
+        await new Promise(function (resolve) { setTimeout(resolve, 800); });
+        const bodyEl = (iframe.contentDocument || iframe.contentWindow.document).body;
+        const canvas = await html2canvas(bodyEl, {
+            scale: 2, useCORS: true, logging: false,
+            width: bodyEl.scrollWidth, height: bodyEl.scrollHeight,
+            windowWidth: bodyEl.scrollWidth, windowHeight: bodyEl.scrollHeight
+        });
+        document.body.removeChild(iframe);
+        iframe = null;
         const { jsPDF } = window.jspdf;
         const pdf = new jsPDF('p', 'mm', 'a4');
-        await pdf.html(wrapper, {
-            x: 8,
-            y: 8,
-            html2canvas: { scale: 2, useCORS: true, logging: false },
-            autoPaging: 'text',
-            margin: [8, 8, 8, 8]
-        });
-        document.body.removeChild(wrapper);
-        wrapper = null;
+        const pdfW = pdf.internal.pageSize.getWidth();
+        const pdfH = pdf.internal.pageSize.getHeight();
+        const margin = 8;
+        const usableW = pdfW - 2 * margin;
+        const usableH = pdfH - 2 * margin;
+        const imgData = canvas.toDataURL('image/jpeg', 0.92);
+        const scaleRatio = usableW / canvas.width;
+        const displayH = canvas.height * scaleRatio;
+        const pagePx = usableH / scaleRatio;
+        let srcY = 0, pageIdx = 0;
+        while (srcY < canvas.height) {
+            if (pageIdx > 0) pdf.addPage();
+            pdf.addImage(imgData, 'JPEG', margin, margin - srcY * scaleRatio, usableW, displayH);
+            srcY += pagePx;
+            pageIdx++;
+        }
         pdf.save(filename);
         return true;
     } catch (error) {
         Utils.safeError('FormHeader.generatePDF error:', error);
-        if (wrapper && wrapper.parentNode) { try { document.body.removeChild(wrapper); } catch (e) {} }
+        if (iframe && iframe.parentNode) { try { document.body.removeChild(iframe); } catch (e) {} }
         const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
         const url = URL.createObjectURL(blob);
         const w = window.open(url, '_blank');
