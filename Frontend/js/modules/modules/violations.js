@@ -2295,29 +2295,23 @@ const Violations = {
                 ? FormHeader.generatePDFHTML(formCode, reportTitle, content, false, false, { source: 'ContractorViolationsTab', contractorId: contractorId || '', contractorName: selectedContractorName || '' }, new Date().toISOString(), new Date().toISOString())
                 : `<html dir="rtl" lang="ar"><head><meta charset="UTF-8"><title>${reportTitle}</title></head><body>${content}</body></html>`;
 
-            if (typeof FormHeader !== 'undefined' && typeof FormHeader.generatePDF === 'function') {
-                await FormHeader.generatePDF(htmlContent, `${reportTitle}.pdf`);
-                Loading.hide();
-            } else {
+            const safeFileName = `${String(reportTitle).replace(/[\\/:*?"<>|]/g, '_')}.pdf`;
+            const downloaded = await this._downloadHtmlReportAsPdf(htmlContent, safeFileName);
+            if (!downloaded) {
                 const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
                 const url = URL.createObjectURL(blob);
-                const reportWindow = window.open(url, '_blank');
-                if (reportWindow) {
-                    reportWindow.onload = () => {
-                        try { reportWindow.print(); } finally {
-                            setTimeout(() => URL.revokeObjectURL(url), 1000);
-                            Loading.hide();
-                        }
-                    };
-                } else {
-                    URL.revokeObjectURL(url);
-                    Loading.hide();
-                    Notification.error('يرجى السماح بالنوافذ المنبثقة للطباعة');
-                    return;
-                }
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = safeFileName.replace(/\.pdf$/i, '.html');
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                URL.revokeObjectURL(url);
             }
-
-            Notification.success('تم إنشاء تقرير مخالفات المقاولين بنجاح');
+            Loading.hide();
+            Notification.success(downloaded
+                ? 'تم تحميل تقرير مخالفات المقاولين بنجاح'
+                : 'تم تحميل التقرير بصيغة HTML — تعذّر إنشاء PDF تلقائياً');
         } catch (error) {
             Loading.hide();
             Utils.safeError('خطأ في إنشاء تقرير مخالفات المقاولين:', error);
@@ -3057,6 +3051,118 @@ const Violations = {
     _vChartColors(n) {
         const palette = ['rgba(220,38,38,0.8)','rgba(245,158,11,0.8)','rgba(16,185,129,0.8)','rgba(99,102,241,0.8)','rgba(249,115,22,0.8)','rgba(139,92,246,0.8)','rgba(59,130,246,0.8)','rgba(236,72,153,0.8)','rgba(20,184,166,0.8)','rgba(168,85,247,0.8)'];
         return Array.from({length:n}, (_,i) => palette[i % palette.length]);
+    },
+
+    async _loadReportPdfLib_(src, checkFn) {
+        if (checkFn()) return true;
+        return new Promise((resolve) => {
+            const existing = Array.from(document.querySelectorAll('script[src]'))
+                .find((s) => String(s.src || '').includes(src));
+            if (existing) {
+                const done = () => resolve(!!checkFn());
+                existing.addEventListener('load', done, { once: true });
+                setTimeout(done, 4000);
+                return;
+            }
+            const script = document.createElement('script');
+            script.src = src;
+            script.async = true;
+            script.onload = () => resolve(!!checkFn());
+            script.onerror = () => resolve(false);
+            document.head.appendChild(script);
+        });
+    },
+
+    async _ensureReportPdfLibs_() {
+        const html2canvasOk = await this._loadReportPdfLib_(
+            'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js',
+            () => typeof html2canvas !== 'undefined'
+        );
+        const jsPdfOk = await this._loadReportPdfLib_(
+            'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js',
+            () => typeof window.jspdf !== 'undefined'
+        );
+        return html2canvasOk && jsPdfOk;
+    },
+
+    /**
+     * تحويل HTML كامل إلى PDF وتحميله مباشرة (بدون نافذة طباعة)
+     */
+    async _downloadHtmlReportAsPdf(htmlContent, fileName = 'report.pdf') {
+        const libsReady = await this._ensureReportPdfLibs_();
+        if (!libsReady || typeof html2canvas === 'undefined' || !window.jspdf) {
+            return false;
+        }
+
+        const iframe = document.createElement('iframe');
+        iframe.setAttribute('aria-hidden', 'true');
+        iframe.style.cssText = 'position:fixed;left:-100000px;top:0;width:794px;height:1px;border:0;visibility:hidden;';
+        document.body.appendChild(iframe);
+
+        try {
+            const iDoc = iframe.contentDocument || iframe.contentWindow.document;
+            iDoc.open();
+            iDoc.write(htmlContent);
+            iDoc.close();
+
+            await new Promise((resolve) => {
+                iframe.onload = resolve;
+                setTimeout(resolve, 3500);
+            });
+            try { await iDoc.fonts.ready; } catch (_e) { /* ignore */ }
+
+            const images = Array.from(iDoc.images || []);
+            await Promise.all(images.map((img) => new Promise((resolve) => {
+                if (img.complete) return resolve();
+                img.onload = resolve;
+                img.onerror = resolve;
+                setTimeout(resolve, 2500);
+            })));
+
+            const root = iDoc.body;
+            if (!root) return false;
+
+            const canvas = await html2canvas(root, {
+                scale: 2,
+                useCORS: true,
+                allowTaint: false,
+                backgroundColor: '#ffffff',
+                logging: false,
+                windowWidth: Math.max(root.scrollWidth, 794),
+                windowHeight: root.scrollHeight
+            });
+
+            const { jsPDF } = window.jspdf;
+            const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+            const pdfW = pdf.internal.pageSize.getWidth();
+            const pdfH = pdf.internal.pageSize.getHeight();
+            const margin = 8;
+            const contentW = pdfW - margin * 2;
+            const ratio = contentW / canvas.width;
+            const pageContentH = pdfH - margin * 2;
+            const pageHeightPx = pageContentH / ratio;
+            const totalPages = Math.max(1, Math.ceil(canvas.height / pageHeightPx));
+
+            for (let p = 0; p < totalPages; p++) {
+                if (p > 0) pdf.addPage();
+                const sliceH = Math.min(pageHeightPx, canvas.height - p * pageHeightPx);
+                const sliceCanvas = document.createElement('canvas');
+                sliceCanvas.width = canvas.width;
+                sliceCanvas.height = sliceH;
+                sliceCanvas.getContext('2d').drawImage(
+                    canvas, 0, p * pageHeightPx, canvas.width, sliceH, 0, 0, canvas.width, sliceH
+                );
+                pdf.addImage(sliceCanvas.toDataURL('image/jpeg', 0.92), 'JPEG', margin, margin, contentW, sliceH * ratio);
+            }
+
+            pdf.save(fileName);
+            return true;
+        } catch (error) {
+            Utils.safeWarn('فشل تحميل تقرير PDF:', error);
+            return false;
+        } finally {
+            iframe.remove();
+        }
     },
 
     // ── تصدير لوحة المخالفات PDF ──
