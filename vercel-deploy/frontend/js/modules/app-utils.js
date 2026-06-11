@@ -5952,7 +5952,7 @@ const Loading = {
 
             progressText = document.createElement('div');
             progressText.className = 'loading-progress-text';
-            progressText.style.cssText = 'text-align: center; color: #374151; font-weight: 700; font-size: 1.125rem; margin-top: 4px; font-family: Cairo, Segoe UI, sans-serif;';
+            progressText.style.cssText = 'text-align: center; color: #374151; font-weight: 700; font-size: 1.125rem; margin-top: 4px; font-family: Tahoma, Segoe UI, sans-serif;';
 
             progressBar.appendChild(progressFill);
             // ترتيب: النص ثم الشريط ثم النسبة المئوية أسفل الشريط
@@ -6126,9 +6126,6 @@ const PDFTemplates = {
 <head>
     <meta charset="UTF-8">
     <title>${escape(title || '')}</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
         :root { color-scheme: light; }
         @page { size: A4; margin: 25mm 20mm; }
@@ -6136,7 +6133,7 @@ const PDFTemplates = {
             height: 100%;
         }
         body {
-            font-family: 'Cairo', 'Segoe UI', Tahoma, sans-serif;
+            font-family: 'Tahoma', 'Segoe UI', 'Arial', sans-serif;
             background: #f3f4f6;
             margin: 0;
             color: #1f2937;
@@ -6279,7 +6276,7 @@ const PDFTemplates = {
             letter-spacing: 0;
             direction: rtl;
             unicode-bidi: isolate;
-            font-family: 'Tahoma', 'Cairo', 'Segoe UI', sans-serif;
+            font-family: 'Tahoma', 'Segoe UI', sans-serif;
             border-bottom: 2px solid #003865;
             padding-bottom: 2px;
             word-break: break-word;
@@ -6340,7 +6337,7 @@ const PDFTemplates = {
             font-weight: 700;
             width: 100%;
             letter-spacing: 0 !important;
-            font-family: 'Cairo', 'Tahoma', 'Segoe UI', sans-serif !important;
+            font-family: 'Tahoma', 'Segoe UI', sans-serif !important;
             text-align: center;
             border-bottom-width: 1px;
         }
@@ -6364,7 +6361,7 @@ const PDFTemplates = {
             max-width: 100%;
             line-height: 1.15;
             letter-spacing: 0 !important;
-            font-family: 'Cairo', 'Tahoma', 'Segoe UI', sans-serif !important;
+            font-family: 'Tahoma', 'Segoe UI', sans-serif !important;
         }
         .report-wrapper.dsc-report .company-brand .company-name {
             font-size: clamp(10px, 0.9vw, 14px);
@@ -6383,7 +6380,7 @@ const PDFTemplates = {
             text-overflow: ellipsis;
             max-width: 100%;
             letter-spacing: 0;
-            font-family: 'Cairo', 'Tahoma', 'Segoe UI', sans-serif;
+            font-family: 'Tahoma', 'Segoe UI', sans-serif;
             line-height: 1.25;
         }
         .header-meta {
@@ -6633,7 +6630,7 @@ const PDFTemplates = {
             direction: rtl;
             unicode-bidi: isolate;
             letter-spacing: 0;
-            font-family: 'Tahoma', 'Cairo', 'Segoe UI', sans-serif;
+            font-family: 'Tahoma', 'Segoe UI', sans-serif;
         }
         .footer-meta-left {
             justify-content: flex-start;
@@ -7083,7 +7080,7 @@ FormHeader.generatePDF = async function (htmlContent, filename = 'document.pdf')
         await new Promise(function (resolve) { setTimeout(resolve, 500); });
         const bodyEl = (iframe.contentDocument || iframe.contentWindow.document).body;
         const canvas = await html2canvas(bodyEl, {
-            scale: 2, useCORS: true, logging: false,
+            scale: 3, useCORS: true, logging: false,
             width: bodyEl.scrollWidth, height: bodyEl.scrollHeight,
             windowWidth: bodyEl.scrollWidth, windowHeight: bodyEl.scrollHeight
         });
@@ -7096,14 +7093,14 @@ FormHeader.generatePDF = async function (htmlContent, filename = 'document.pdf')
         const margin = 8;
         const usableW = pdfW - 2 * margin;
         const usableH = pdfH - 2 * margin;
-        const imgData = canvas.toDataURL('image/jpeg', 0.92);
+        const imgData = canvas.toDataURL('image/png');
         const scaleRatio = usableW / canvas.width;
         const displayH = canvas.height * scaleRatio;
         const pagePx = usableH / scaleRatio;
         let srcY = 0, pageIdx = 0;
         while (srcY < canvas.height) {
             if (pageIdx > 0) pdf.addPage();
-            pdf.addImage(imgData, 'JPEG', margin, margin - srcY * scaleRatio, usableW, displayH);
+            pdf.addImage(imgData, 'PNG', margin, margin - srcY * scaleRatio, usableW, displayH);
             srcY += pagePx;
             pageIdx++;
         }
