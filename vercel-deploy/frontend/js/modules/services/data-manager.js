@@ -24,6 +24,8 @@ const DataManager = {
             localStorage.removeItem('hse_sync_meta');
             localStorage.removeItem('hse_cache_timestamps');
             localStorage.removeItem('hse_cached_users');
+            // cache قديم لـ readFromSheet بدون اسم الورقة — كان يسبب تكرار نفس العدد في كل الموديولات
+            localStorage.removeItem('hse_local_readFromSheet');
         } catch (e) {
             if (typeof Utils !== 'undefined' && Utils.safeWarn) {
                 Utils.safeWarn('⚠️ فشل مسح localStorage:', e);

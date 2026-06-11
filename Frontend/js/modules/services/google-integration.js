@@ -1473,6 +1473,9 @@ const GoogleIntegration = {
             // في حال رجع الرد ولم يكن ناجحاً
             if (result && typeof result === 'object') {
                 if (result.success === false) {
+                    if (this._shouldSkipLocalFallbackForRead_(action, result)) {
+                        throw new Error(result.message || 'رفض قراءة البيانات من الخادم');
+                    }
                     const localData = this.getLocalData(action, data);
                     if (localData !== null && !this._isWriteMutationAction(action)) {
                         Utils.safeLog(`تم استخدام البيانات المحلية كبديل عند فشل المزامنة: ${action}`);
@@ -1483,7 +1486,7 @@ const GoogleIntegration = {
             }
 
             // Save successful data to local storage as cache
-            this.saveLocalData(action, result);
+            this.saveLocalData(action, result, data);
 
             return result;
         } catch (error) {
@@ -1516,6 +1519,9 @@ const GoogleIntegration = {
                 errorMessage.includes('Too Many Requests') ||
                 errorMessage.includes('فشل الاتصال بالشبكة') ||
                 errorMessage.includes('Network request failed')) {
+                if (this._shouldSkipLocalFallbackForRead_(action, null, errorMessage)) {
+                    throw new Error(errorMessage);
+                }
                 const localData = this.getLocalData(action, data);
                 if (localData !== null && !this._isWriteMutationAction(action)) {
                     Utils.safeLog(`تم استخدام البيانات المحلية كبديل عند فشل الاتصال: ${action} (الخطأ: ${errorMessage.substring(0, 50)})`);
@@ -1559,11 +1565,46 @@ const GoogleIntegration = {
     },
 
     /**
+     * مفتاح تخزين محلي لكل action — readFromSheet/batchReadSheets لكل ورقة/دفعة على حدة
+     * (تجنّب إرجاع بيانات ورقة A عند فشل قراءة ورقة B — كان يسبب نفس العدد 345 في كل الموديولات)
+     */
+    _buildLocalDataStorageKey(action, data) {
+        const base = `hse_local_${action}`;
+        if (action === 'readFromSheet' && data && data.sheetName) {
+            return `${base}_${String(data.sheetName).trim()}`;
+        }
+        if (action === 'batchReadSheets' && data && Array.isArray(data.sheetNames) && data.sheetNames.length) {
+            return `${base}_${data.sheetNames.slice().sort().join('|')}`;
+        }
+        return base;
+    },
+
+    _purgeLegacyReadFromSheetLocalCache_() {
+        try {
+            if (typeof localStorage !== 'undefined') {
+                localStorage.removeItem('hse_local_readFromSheet');
+            }
+        } catch (e) { /* ignore */ }
+    },
+
+    _shouldSkipLocalFallbackForRead_(action, result, errorMessage) {
+        if (action !== 'readFromSheet' && action !== 'batchReadSheets') return false;
+        const code = result && result.errorCode ? String(result.errorCode) : '';
+        const msg = String((result && result.message) || errorMessage || '');
+        const authPatterns = [
+            'ACTOR_IDENTITY_REQUIRED', 'ACTOR_NOT_REGISTERED', 'ACTOR_INACTIVE',
+            'CSRF_TOKEN', 'STRICT_ADMIN_DENIED', 'READ_DENIED', 'PERMISSION_DENIED',
+            'GET_READ_DISABLED', 'رفض أمني', 'غير مسجل', 'CSRF'
+        ];
+        return authPatterns.some((p) => code.includes(p) || msg.includes(p));
+    },
+
+    /**
      * جلب البيانات المحلية من localStorage
      */
     getLocalData(action, data) {
         try {
-            const storageKey = `hse_local_${action}`;
+            const storageKey = this._buildLocalDataStorageKey(action, data);
             const stored = localStorage.getItem(storageKey);
             if (stored) {
                 const parsed = JSON.parse(stored);
@@ -1581,9 +1622,9 @@ const GoogleIntegration = {
     /**
      * حفظ البيانات المحلية في localStorage
      */
-    saveLocalData(action, result) {
+    saveLocalData(action, result, data) {
         try {
-            const storageKey = `hse_local_${action}`;
+            const storageKey = this._buildLocalDataStorageKey(action, data);
             const dataToStore = {
                 data: result,
                 timestamp: Date.now()
@@ -3943,4 +3984,7 @@ const GoogleIntegration = {
 if (typeof window !== 'undefined') {
     window.GoogleIntegration = GoogleIntegration;
     window.BackendRpc = GoogleIntegration;
+    try {
+        GoogleIntegration._purgeLegacyReadFromSheetLocalCache_();
+    } catch (e) { /* ignore */ }
 }
