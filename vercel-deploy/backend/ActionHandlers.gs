@@ -212,6 +212,10 @@ var ActionHandlers = {
 
                         if (!Array.isArray(sheetNames) || sheetNames.length === 0) {
                             result = { success: false, message: 'sheetNames array is required for batchReadSheets' };
+                        } else if ((typeof requireAuthenticatedActor_ === 'function') &&
+                                   !requireAuthenticatedActor_(actorUserData, 'batchReadSheets').ok) {
+                            // فحص الهوية مرة واحدة قبل المعالجة (memoized داخلياً)
+                            result = requireAuthenticatedActor_(actorUserData, 'batchReadSheets');
                         } else {
                             // Limit batch size to prevent timeout
                             const maxBatchSize = 15;

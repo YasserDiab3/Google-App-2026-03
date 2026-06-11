@@ -578,6 +578,25 @@ function requireAdminActor_(actorUserData, actionName) {
  * فرض هوية مسجّل دخول موجودة في ورقة Users (بدون ثقة بـ role من العميل).
  * @returns {{ ok: boolean, success?: boolean, message?: string, errorCode?: string, action?: string, sheetUser?: Object }}
  */
+/**
+ * ذاكرة مؤقتة لسجلّات المستخدمين خلال نفس تنفيذ الطلب فقط (كل doPost = تنفيذ منفصل في GAS).
+ * تمنع قراءة ورقة Users كاملةً بشكل متكرر داخل batchReadSheets (كانت تسبب بطئاً/timeout).
+ */
+var __AUTH_ACTOR_RECORD_CACHE_ = {};
+
+function getCachedActorRecordByEmail_(email) {
+    var e = String(email || '').trim().toLowerCase();
+    if (!e) return null;
+    if (Object.prototype.hasOwnProperty.call(__AUTH_ACTOR_RECORD_CACHE_, e)) {
+        return __AUTH_ACTOR_RECORD_CACHE_[e];
+    }
+    var rec = (typeof getUserRecordFromUsersSheetByEmail_ === 'function')
+        ? getUserRecordFromUsersSheetByEmail_(e)
+        : null;
+    __AUTH_ACTOR_RECORD_CACHE_[e] = rec;
+    return rec;
+}
+
 function requireAuthenticatedActor_(actorUserData, actionName) {
     var action = String(actionName || 'unknown');
     var email = actorUserData && actorUserData.email ? String(actorUserData.email).trim().toLowerCase() : '';
@@ -593,10 +612,7 @@ function requireAuthenticatedActor_(actorUserData, actionName) {
             action: action
         };
     }
-    var sheetUser = null;
-    if (typeof getUserRecordFromUsersSheetByEmail_ === 'function') {
-        sheetUser = getUserRecordFromUsersSheetByEmail_(email);
-    }
+    var sheetUser = getCachedActorRecordByEmail_(email);
     if (!sheetUser) {
         if (typeof logSecurityEvent === 'function') {
             logSecurityEvent('auth_required_unknown_user', { action: action, actor: email, severity: 'high' });
