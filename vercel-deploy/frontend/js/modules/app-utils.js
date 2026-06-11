@@ -2872,7 +2872,7 @@ const DEFAULT_COMPANY_NAME = '';
 
 const AppState = {
     /** إصدار التطبيق — تسلسلي: 1.0.0 → 1.0.1 → 1.0.2 … عند كل نشر زِد الرقم هنا وفي version.json */
-    appVersion: '1.0.124',
+    appVersion: '1.0.125',
     /** نص اختياري لرسالة التحديث (ملخص التغييرات). إن تُركت فارغة يُستخدم النص الافتراضي. */
     updateMessage: '',
     debugMode: false,
@@ -3071,8 +3071,9 @@ const AppState = {
                             'AKfycbwhWmcjchhLNbl6cbr_BzsjrFkZOCUFk8pgoSONvbvIXHpRnqFqnER4esHiOZYIWL7X', // @120
                             'AKfycbyFmgpaD4d2y74A1T3uWzLXXFK7YJSPw5IA45uv2TpCUX3gkQJhcgjuVmZS6zPNWcMa', // @122 — broken addClinicVisit medication deduction
                             'AKfycbzxF2wNoo_g0Psy2k9dOG7i4X1wuw1mWSWirdXBpRu61eMBhRFhX1-5DEmNs5Ldjdjv', // @134 — fixed in @135
+                            'AKfycbxaIlrBSSHeRR56X3ZEJiTm5iMw-c2bT3H206WaZKywY0zo-1AgdqdkMkf5MF0yFf-T', // old URL (pre-@149)
                         ];
-                        const LATEST_DEPLOYMENT_URL = 'https://script.google.com/macros/s/AKfycbxaIlrBSSHeRR56X3ZEJiTm5iMw-c2bT3H206WaZKywY0zo-1AgdqdkMkf5MF0yFf-T/exec';
+                        const LATEST_DEPLOYMENT_URL = 'https://script.google.com/macros/s/AKfycbx88ue81OTEXapNCcfFcBUEoONTJnSypsm9zGT6upSHnIieBDskcyH-Tij9D7lxHP6Y/exec';
                         if (parsedUrl && OLD_DEPLOYMENT_URLS.some(old => parsedUrl.includes(old))) {
                             parsedUrl = LATEST_DEPLOYMENT_URL;
                             // حفظ الرابط المُحدَّث تلقائياً
