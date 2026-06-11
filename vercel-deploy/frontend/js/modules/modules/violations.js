@@ -2295,23 +2295,26 @@ const Violations = {
                 ? FormHeader.generatePDFHTML(formCode, reportTitle, content, false, true, { source: 'ContractorViolationsTab', contractorId: contractorId || '', contractorName: selectedContractorName || '' }, new Date().toISOString(), new Date().toISOString())
                 : `<html dir="rtl" lang="ar"><head><meta charset="UTF-8"><title>${reportTitle}</title></head><body>${content}</body></html>`;
 
-            const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
-            const url = URL.createObjectURL(blob);
-            const reportWindow = window.open(url, '_blank');
-            if (reportWindow) {
-                reportWindow.onload = () => {
-                    try {
-                        reportWindow.print();
-                    } finally {
-                        setTimeout(() => URL.revokeObjectURL(url), 1000);
-                        Loading.hide();
-                    }
-                };
-            } else {
-                URL.revokeObjectURL(url);
+            if (typeof FormHeader !== 'undefined' && typeof FormHeader.generatePDF === 'function') {
+                await FormHeader.generatePDF(htmlContent, `${reportTitle}.pdf`);
                 Loading.hide();
-                Notification.error('يرجى السماح بالنوافذ المنبثقة للطباعة');
-                return;
+            } else {
+                const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
+                const url = URL.createObjectURL(blob);
+                const reportWindow = window.open(url, '_blank');
+                if (reportWindow) {
+                    reportWindow.onload = () => {
+                        try { reportWindow.print(); } finally {
+                            setTimeout(() => URL.revokeObjectURL(url), 1000);
+                            Loading.hide();
+                        }
+                    };
+                } else {
+                    URL.revokeObjectURL(url);
+                    Loading.hide();
+                    Notification.error('يرجى السماح بالنوافذ المنبثقة للطباعة');
+                    return;
+                }
             }
 
             Notification.success('تم إنشاء تقرير مخالفات المقاولين بنجاح');
