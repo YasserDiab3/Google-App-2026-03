@@ -411,6 +411,42 @@ function getUserVersionStats(payload) {
 }
 
 /**
+ * طلب واحد للوحة إصدارات المستخدمين (جدول + إحصائيات) لتقليل الضغط على GAS وتجنب مهلة مزدوجة.
+ *
+ * @param {Object} [payload]
+ * @param {string} [payload.latestVersion]
+ * @returns {{ success: boolean, data: Array, stats: Object, total: number, latestVersion: string }}
+ */
+function getUserVersionsDashboard(payload) {
+    try {
+        var p = payload || {};
+        var versionsRes = getAllUserVersions(p);
+        var statsRes = getUserVersionStats(p);
+        if (!versionsRes || versionsRes.success !== true) {
+            return {
+                success: false,
+                message: (versionsRes && versionsRes.message) ? versionsRes.message : 'فشل جلب بيانات الإصدارات',
+                data: [],
+                stats: null,
+                total: 0
+            };
+        }
+        return {
+            success: true,
+            data: versionsRes.data || [],
+            total: versionsRes.total || 0,
+            reported: versionsRes.reported || 0,
+            notReported: versionsRes.notReported || 0,
+            latestVersion: versionsRes.latestVersion || '',
+            stats: (statsRes && statsRes.success) ? statsRes : null
+        };
+    } catch (error) {
+        Logger.log('getUserVersionsDashboard error: ' + error.toString());
+        return { success: false, message: 'حدث خطأ: ' + error.toString(), data: [], stats: null, total: 0 };
+    }
+}
+
+/**
  * مقارنة semver — يُرجع -1 / 0 / 1
  *   compareSemver_('1.0.5', '1.0.10') === -1
  *   compareSemver_('1.0.10', '1.0.5') === 1

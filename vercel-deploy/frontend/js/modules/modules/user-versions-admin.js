@@ -101,16 +101,36 @@ const UserVersionsAdmin = {
         this._loading = true;
 
         try {
+            if (typeof GoogleIntegration !== 'undefined' && typeof GoogleIntegration.resetCircuitBreaker === 'function') {
+                GoogleIntegration.resetCircuitBreaker();
+            }
+
             const latestVersion = AppState.appVersion || '';
+            const payload = { latestVersion, __timeoutMs: 45000 };
 
-            // جلب البيانات بالتوازي
-            const [versionsRes, statsRes] = await Promise.all([
-                GoogleIntegration.sendToAppsScript('getAllUserVersions', { latestVersion }),
-                GoogleIntegration.sendToAppsScript('getUserVersionStats', { latestVersion })
-            ]);
+            // طلب واحد للخادم (جدول + إحصائيات) لتقليل الضغط وتجنب مهلة مزدوجة
+            let dashboardRes = null;
+            try {
+                dashboardRes = await GoogleIntegration.sendToAppsScript('getUserVersionsDashboard', payload);
+            } catch (dashboardErr) {
+                Utils.safeWarn('⚠️ getUserVersionsDashboard فشل — محاولة fallback بإجراءين منفصلين:', dashboardErr);
+            }
 
-            this._data = (versionsRes && versionsRes.success && Array.isArray(versionsRes.data)) ? versionsRes.data : [];
-            this._stats = (statsRes && statsRes.success) ? statsRes : null;
+            if (dashboardRes && dashboardRes.success) {
+                this._data = Array.isArray(dashboardRes.data) ? dashboardRes.data : [];
+                this._stats = dashboardRes.stats || null;
+            } else {
+                const [versionsRes, statsRes] = await Promise.all([
+                    GoogleIntegration.sendToAppsScript('getAllUserVersions', payload),
+                    GoogleIntegration.sendToAppsScript('getUserVersionStats', payload)
+                ]);
+                this._data = (versionsRes && versionsRes.success && Array.isArray(versionsRes.data)) ? versionsRes.data : [];
+                this._stats = (statsRes && statsRes.success) ? statsRes : null;
+
+                if (dashboardRes && dashboardRes.message && !versionsRes?.success && !statsRes?.success) {
+                    throw new Error(dashboardRes.message);
+                }
+            }
 
             this._renderStats();
             this._renderVersionDistribution();

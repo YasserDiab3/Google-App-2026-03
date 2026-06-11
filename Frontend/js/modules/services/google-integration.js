@@ -464,6 +464,13 @@ const GoogleIntegration = {
         }
     },
 
+    /** إعادة تعيين Circuit Breaker يدوياً (مثلاً عند تحديث لوحة إدارية) */
+    resetCircuitBreaker() {
+        this._closeCircuitBreaker();
+        this._circuitBreaker.successCount = 0;
+        this._circuitBreaker.lastFailureTime = null;
+    },
+
     /**
      * Circuit Breaker: التحقق من هل هو Circuit Breaker
      */
@@ -572,8 +579,19 @@ const GoogleIntegration = {
                     errorMsg.includes('scripturl') ||
                     errorMsg.includes('spreadsheet') ||
                     errorMsg.includes('معرف google sheets');
+                const isTransientNetworkError =
+                    errorMsg.includes('failed to fetch') ||
+                    errorMsg.includes('networkerror') ||
+                    errorMsg.includes('network request failed') ||
+                    errorMsg.includes('انتهت مهلة') ||
+                    errorMsg.includes('timeout') ||
+                    errorMsg.includes('timed out') ||
+                    errorMsg.includes('aborterror') ||
+                    errorMsg.includes('aborted') ||
+                    errorMsg.includes('فشل الاتصال مع google apps script بسبب cors') ||
+                    errorMsg.includes('cors');
 
-                if (!isCircuitBreakerError && !isConfigError) {
+                if (!isCircuitBreakerError && !isConfigError && !isTransientNetworkError) {
                     // التحقق من هل هو recordFailure
                     this._recordFailure();
                 }
@@ -762,7 +780,9 @@ const GoogleIntegration = {
                 'saveOrUpdate', 'getAll', 'import', // إضافة عمليات جديدة
                 'getAllClinicVisits', // سجل التردد كامل (موظفين + مقاولين) — يُفضّل تمرير __timeoutMs من الواجهة
                 // قراءة كاملة لورقة الموظفين (شيت كبير + إقلاع بارد لـ GAS) — لا يُطابق شرط getAll المخصص أعلاه
-                'getAllEmployees'
+                'getAllEmployees',
+                // لوحة إصدارات المستخدمين — قراءة Users + UserVersions
+                'getUserVersionsDashboard', 'getAllUserVersions', 'getUserVersionStats'
             ];
             const mediumOperations = [
                 'getData', 'readData', 'loadData', 'fetchData', 'add', 'update'
@@ -861,9 +881,62 @@ const GoogleIntegration = {
                         `3. إعدادات المتصفح (قد تحتاج لتحديث المتصفح)\n` +
                         `4. الاتصال بالإنترنت (قد تكون هناك مشكلة في الشبكة)`);
                 }
+
+                const isAbortOrTimeoutError =
+                    fetchError.name === 'AbortError' ||
+                    errorStr.includes('aborterror') ||
+                    errorStr.includes('aborted') ||
+                    errorStr.includes('timeout') ||
+                    errorStr.includes('timed out') ||
+                    errorStr.includes('err_connection_timed_out') ||
+                    errorStr.includes('connection_timed_out');
+
+                if (isAbortOrTimeoutError) {
+                    const isWriteOperation = action === 'saveToSheet' || action === 'appendToSheet' ||
+                        action.startsWith('save') || action.startsWith('update') || action.startsWith('add');
+                    let maxRetries = isWriteOperation ? 2 : 1;
+                    if (isHeavyOperation && isWriteOperation) {
+                        maxRetries = 3;
+                    }
+
+                    if (retryCount < maxRetries) {
+                        const delay = Math.min(Math.pow(2, retryCount + 1) * 700, 3000);
+                        Utils.safeLog(`⏱️ انتهت مهلة الاتصال للخادم (${Math.round(timeoutDuration / 1000)}s). إعادة المحاولة بعد ${delay / 1000} ثانية (المحاولة ${retryCount + 1}/${maxRetries})`);
+                        await new Promise(resolve => setTimeout(resolve, delay));
+                        return this._executeRequest(action, data, retryCount + 1);
+                    }
+
+                    const timeStr = new Date().toLocaleString('ar-SA');
+                    const timeoutSeconds = Math.round(timeoutDuration / 1000);
+                    throw new Error(`⚠️ انتهت مهلة الاتصال بخادم Google Apps Script (${timeoutSeconds} ثانية).\n` +
+                        `العملية: ${action}\n` +
+                        `الوقت: ${timeStr}\n\n` +
+                        `جرّب:\n` +
+                        `1. الضغط على «تحديث» بعد 30 ثانية\n` +
+                        `2. التأكد من نشر السكربت برابط ينتهي بـ /exec\n` +
+                        `3. التحقق من سرعة الإنترنت أو إعادة تحميل الصفحة`);
+                }
+
+                const isGenericNetworkError =
+                    (fetchError.name === 'TypeError' && errorStr.includes('failed to fetch')) ||
+                    fetchError.name === 'NetworkError' ||
+                    errorStr.includes('network request failed') ||
+                    (errorStr.includes('networkerror') && (errorStr.includes('fetch') || errorStr.includes('resource'))) ||
+                    (errorStr.includes('err_failed') && (errorStr.includes('script.google.com') || errorStr.includes('google.com/macros')));
+
+                if (isGenericNetworkError) {
+                    const timeStr = new Date().toLocaleTimeString('ar-EG');
+                    throw new Error(`⚠️ تعذّر الاتصال بخادم Google Apps Script.\n` +
+                        `الوقت: ${timeStr}\n` +
+                        `العملية: ${action}\n\n` +
+                        `قد يكون السبب بطء الخادم أو انقطاع الشبكة — وليس بالضرورة CORS.\n` +
+                        `يرجى:\n` +
+                        `1. إعادة المحاولة بعد نصف دقيقة\n` +
+                        `2. التأكد من رابط Web App (ينتهي بـ /exec)\n` +
+                        `3. التحقق من نشر السكربت: Execute as: Me / Who has access: Anyone`);
+                }
                 
-                // معالجة أخطاء CORS بشكل خاص
-                // فحص شامل لجميع أنواع أخطاء CORS
+                // معالجة أخطاء CORS الحقيقية فقط (رسالة المتصفح تذكر CORS صراحة)
                 const isCorsError = 
                     errorStr.includes('cors') ||
                     errorStr.includes('cross-origin request blocked') ||
@@ -872,10 +945,6 @@ const GoogleIntegration = {
                     errorStr.includes('no \'access-control-allow-origin\' header') ||
                     errorStr.includes('same origin policy') ||
                     errorStr.includes('same-origin policy') ||
-                    (errorStr.includes('networkerror') && (errorStr.includes('fetch') || errorStr.includes('resource'))) ||
-                    (fetchError.name === 'TypeError' && errorStr.includes('failed to fetch')) ||
-                    (fetchError.name === 'NetworkError') ||
-                    (errorStr.includes('err_failed') && (errorStr.includes('script.google.com') || errorStr.includes('google.com/macros'))) ||
                     (fetchError.message && fetchError.message.toLowerCase().includes('cors')) ||
                     (fetchError.message && fetchError.message.toLowerCase().includes('cross-origin')) ||
                     (fetchError.message && fetchError.message.includes('Access-Control-Allow-Origin'));

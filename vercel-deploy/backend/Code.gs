@@ -288,7 +288,9 @@ function doPost(e) {
             'getAllAuditLogs',
             // ✅ مهمات الوقاية — قراءة فقط (تجنب فشل ربط CSRF عند تغيّر المستخدم بعد أول طلب)
             'getAllPPE', 'getPPEMatrix', 'getAllPPEMatrices',
-            'getAllPPEStockItems', 'getAllPPETransactions', 'getPPEItemsList'
+            'getAllPPEStockItems', 'getAllPPETransactions', 'getPPEItemsList',
+            // ✅ لوحة إصدارات المستخدمين (قراءة فقط)
+            'getAllUserVersions', 'getUserVersionStats', 'getUserVersionsDashboard'
         ];
 
         // قائمة بالـ actions الحساسة التي تتطلب CSRF token إلزامي
