@@ -11914,6 +11914,136 @@ const Contractors = {
             }
         `;
         document.head.appendChild(style);
+    },
+
+    async exportContractorViolationsReport(contractorLookupEncoded = '', contractorNameEncoded = '') {
+        try {
+            const contractorLookup = decodeURIComponent(String(contractorLookupEncoded || ''));
+            const contractorName = decodeURIComponent(String(contractorNameEncoded || ''));
+            const ctx = this.buildContractorAnalyticsMatchers(
+                { id: contractorLookup, contractorId: contractorLookup, name: contractorName, companyName: contractorName },
+                contractorLookup
+            );
+            const violations = (AppState.appData.violations || []).filter(ctx.violationBelongsToContractor);
+
+            if (!violations.length) {
+                Notification.warning('لا توجد مخالفات مسجلة لهذا المقاول');
+                return;
+            }
+
+            const highCount = violations.filter(v => {
+                const severity = String(v.severity || '').trim();
+                return severity === 'عالية' || severity === 'high' || severity === 'حرجة';
+            }).length;
+            const resolvedCount = violations.filter(v => {
+                const status = String(v.status || '').trim();
+                return status === 'محلول' || status === 'resolved' || status === 'تم الحل';
+            }).length;
+            const inProgressCount = Math.max(0, violations.length - resolvedCount);
+            const resolutionRate = violations.length > 0 ? Math.round((resolvedCount / violations.length) * 100) : 0;
+
+            Loading.show('جاري إنشاء تقرير المخالفات...');
+
+            const rowsHtml = violations.map((v, idx) => `
+                <tr>
+                    <td style="padding: 10px 8px; border: 1px solid #E5E7EB; text-align: center; font-size: 11px;">${idx + 1}</td>
+                    <td style="padding: 10px 8px; border: 1px solid #E5E7EB; text-align: center; font-size: 11px;">${v.violationDate ? Utils.formatDate(v.violationDate) : '-'}</td>
+                    <td style="padding: 10px 8px; border: 1px solid #E5E7EB; text-align: right; font-size: 11px;">${Utils.escapeHTML(v.violationType || v.title || '-')}</td>
+                    <td style="padding: 10px 8px; border: 1px solid #E5E7EB; text-align: center; font-size: 11px;">${Utils.escapeHTML(v.severity || '-')}</td>
+                    <td style="padding: 10px 8px; border: 1px solid #E5E7EB; text-align: center; font-size: 11px;">${Utils.escapeHTML(v.status || '-')}</td>
+                    <td style="padding: 10px 8px; border: 1px solid #E5E7EB; text-align: right; font-size: 11px;">${Utils.escapeHTML(v.location || v.subLocation || '-')}</td>
+                    <td style="padding: 10px 8px; border: 1px solid #E5E7EB; text-align: right; font-size: 11px;">${Utils.escapeHTML(v.description || v.details || v.notes || '-')}</td>
+                </tr>
+            `).join('');
+
+            const reportTitle = `تقرير مخالفات المقاول: ${Utils.escapeHTML(contractorName || 'غير محدد')}`;
+            const content = `
+                <div style="margin-bottom: 24px;">
+                    <h2 style="font-size: 20px; margin-bottom: 12px; color: #991B1B; font-weight: 700;">ملخص مخالفات المقاول</h2>
+                    <div style="margin-bottom: 16px; padding: 12px; background: #FEF2F2; border-right: 4px solid #DC2626; border-radius: 8px;">
+                        <strong style="color: #991B1B;">المقاول:</strong> <span style="color: #1F2937;">${Utils.escapeHTML(contractorName || 'غير محدد')}</span>
+                    </div>
+                    <div style="display: flex; flex-wrap: wrap; gap: 16px;">
+                        <div style="flex: 1 1 200px; padding: 14px; border-radius: 10px; background: #FEF2F2; border: 1px solid #FECACA;">
+                            <div style="font-size: 12px; color: #B91C1C; margin-bottom: 6px; font-weight: 600;">إجمالي المخالفات</div>
+                            <div style="font-size: 26px; font-weight: 700; color: #991B1B;">${violations.length}</div>
+                        </div>
+                        <div style="flex: 1 1 200px; padding: 14px; border-radius: 10px; background: #FFF7ED; border: 1px solid #FED7AA;">
+                            <div style="font-size: 12px; color: #C2410C; margin-bottom: 6px; font-weight: 600;">مخالفات عالية الخطورة</div>
+                            <div style="font-size: 26px; font-weight: 700; color: #9A3412;">${highCount}</div>
+                        </div>
+                        <div style="flex: 1 1 200px; padding: 14px; border-radius: 10px; background: #ECFDF5; border: 1px solid #BBF7D0;">
+                            <div style="font-size: 12px; color: #047857; margin-bottom: 6px; font-weight: 600;">المخالفات المحلولة</div>
+                            <div style="font-size: 26px; font-weight: 700; color: #065F46;">${resolvedCount}</div>
+                        </div>
+                        <div style="flex: 1 1 200px; padding: 14px; border-radius: 10px; background: #EFF6FF; border: 1px solid #BFDBFE;">
+                            <div style="font-size: 12px; color: #1D4ED8; margin-bottom: 6px; font-weight: 600;">معدل الحل</div>
+                            <div style="font-size: 26px; font-weight: 700; color: #1E3A8A;">${resolutionRate}%</div>
+                        </div>
+                        <div style="flex: 1 1 200px; padding: 14px; border-radius: 10px; background: #FFFBEB; border: 1px solid #FDE68A;">
+                            <div style="font-size: 12px; color: #B45309; margin-bottom: 6px; font-weight: 600;">قيد المعالجة</div>
+                            <div style="font-size: 26px; font-weight: 700; color: #92400E;">${inProgressCount}</div>
+                        </div>
+                    </div>
+                </div>
+                <div style="margin-bottom: 16px;">
+                    <h3 style="font-size: 18px; margin-bottom: 12px; color: #991B1B; font-weight: 700; border-bottom: 2px solid #DC2626; padding-bottom: 8px;">سجل المخالفات</h3>
+                </div>
+                <div style="overflow-x: auto;">
+                    <table style="width: 100%; border-collapse: collapse; font-size: 11px; direction: rtl;">
+                        <thead>
+                            <tr style="background: #B91C1C; color: #FFFFFF;">
+                                <th style="padding: 12px 8px; border: 1px solid #991B1B; text-align: center; font-weight: 700; white-space: nowrap;">#</th>
+                                <th style="padding: 12px 8px; border: 1px solid #991B1B; text-align: center; font-weight: 700; white-space: nowrap;">التاريخ</th>
+                                <th style="padding: 12px 8px; border: 1px solid #991B1B; text-align: center; font-weight: 700; white-space: nowrap;">نوع المخالفة</th>
+                                <th style="padding: 12px 8px; border: 1px solid #991B1B; text-align: center; font-weight: 700; white-space: nowrap;">الشدة</th>
+                                <th style="padding: 12px 8px; border: 1px solid #991B1B; text-align: center; font-weight: 700; white-space: nowrap;">الحالة</th>
+                                <th style="padding: 12px 8px; border: 1px solid #991B1B; text-align: center; font-weight: 700; white-space: nowrap;">الموقع</th>
+                                <th style="padding: 12px 8px; border: 1px solid #991B1B; text-align: center; font-weight: 700; white-space: nowrap;">الوصف</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${rowsHtml}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+
+            const formCode = `CON-VIOL-${String(contractorLookup || contractorName || 'NA').substring(0, 8)}-${new Date().toISOString().slice(0, 10)}`;
+            const htmlContent = typeof FormHeader !== 'undefined' && typeof FormHeader.generatePDFHTML === 'function'
+                ? FormHeader.generatePDFHTML(
+                    formCode,
+                    reportTitle,
+                    content,
+                    false,
+                    true,
+                    { source: 'ContractorViolations', contractorId: contractorLookup, contractorName },
+                    new Date().toISOString(),
+                    new Date().toISOString()
+                )
+                : `<html dir="rtl" lang="ar"><head><meta charset="UTF-8"><title>${reportTitle}</title></head><body>${content}</body></html>`;
+
+            if (typeof FormHeader !== 'undefined' && typeof FormHeader.generatePDF === 'function') {
+                await FormHeader.generatePDF(htmlContent, `${reportTitle}.pdf`);
+            } else {
+                const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = `${reportTitle.replace(/\s+/g, '_')}.html`;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                URL.revokeObjectURL(url);
+            }
+
+            Loading.hide();
+            Notification.success(`تم إنشاء تقرير مخالفات المقاول: ${contractorName || 'غير محدد'}`);
+        } catch (error) {
+            Loading.hide();
+            Utils.safeError('خطأ في إنشاء تقرير مخالفات المقاول:', error);
+            Notification.error('تعذر إنشاء تقرير مخالفات المقاول: ' + (error.message || 'خطأ غير معروف'));
+        }
     }
 };
 

@@ -2848,7 +2848,7 @@ const DEFAULT_COMPANY_NAME = '';
 
 const AppState = {
     /** إصدار التطبيق — تسلسلي: 1.0.0 → 1.0.1 → 1.0.2 … عند كل نشر زِد الرقم هنا وفي version.json */
-    appVersion: '1.0.107',
+    appVersion: '1.0.108',
     /** نص اختياري لرسالة التحديث (ملخص التغييرات). إن تُركت فارغة يُستخدم النص الافتراضي. */
     updateMessage: '',
     debugMode: false,
@@ -7037,6 +7037,87 @@ FormHeader.generatePDFHTML = function (
     });
 };
 
+FormHeader.generatePDF = async function (htmlContent, filename = 'document.pdf') {
+    try {
+        if (typeof html2canvas === 'undefined') {
+            await new Promise((resolve, reject) => {
+                const s = document.createElement('script');
+                s.src = 'https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js';
+                s.onerror = function () {
+                    this.onerror = null;
+                    this.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';
+                    this.onerror = function () { reject(new Error('html2canvas load failed')); };
+                };
+                s.onload = resolve;
+                document.head.appendChild(s);
+            });
+        }
+        if (typeof window.jspdf === 'undefined' || typeof window.jspdf.jsPDF === 'undefined') {
+            await new Promise((resolve, reject) => {
+                const s = document.createElement('script');
+                s.src = 'https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js';
+                s.onerror = function () {
+                    this.onerror = null;
+                    this.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
+                    this.onerror = function () { reject(new Error('jsPDF load failed')); };
+                };
+                s.onload = function () {
+                    const at = document.createElement('script');
+                    at.src = 'https://cdn.jsdelivr.net/npm/jspdf-autotable@3.5.24/dist/jspdf.plugin.autotable.min.js';
+                    at.onerror = function () { this.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.24/jspdf.plugin.autotable.min.js'; };
+                    document.head.appendChild(at);
+                    setTimeout(resolve, 500);
+                };
+                document.head.appendChild(s);
+            });
+        }
+        const iframe = document.createElement('iframe');
+        iframe.style.position = 'fixed';
+        iframe.style.left = '-9999px';
+        iframe.style.top = '0';
+        iframe.style.width = '793.7px';
+        iframe.style.height = '1px';
+        iframe.style.border = 'none';
+        iframe.style.overflow = 'hidden';
+        document.body.appendChild(iframe);
+        iframe.srcdoc = htmlContent;
+        await new Promise(resolve => { iframe.onload = resolve; setTimeout(resolve, 5000); });
+        await new Promise(resolve => setTimeout(resolve, 1200));
+        const body = (iframe.contentDocument || iframe.contentWindow.document).body;
+        const canvas = await html2canvas(body, {
+            scale: 2, useCORS: true, logging: false,
+            width: body.scrollWidth, height: body.scrollHeight,
+            windowWidth: body.scrollWidth, windowHeight: body.scrollHeight
+        });
+        document.body.removeChild(iframe);
+        const { jsPDF } = window.jspdf;
+        const pdf = new jsPDF('p', 'mm', 'a4');
+        const pdfW = pdf.internal.pageSize.getWidth();
+        const pdfH = pdf.internal.pageSize.getHeight();
+        const margin = 8;
+        const usableW = pdfW - 2 * margin;
+        const usableH = pdfH - 2 * margin;
+        const imgData = canvas.toDataURL('image/jpeg', 0.92);
+        const displayH = usableW * canvas.height / canvas.width;
+        const pagePx = usableH * canvas.height / displayH;
+        let srcY = 0, pageIdx = 0;
+        while (srcY < canvas.height) {
+            if (pageIdx > 0) pdf.addPage();
+            pdf.addImage(imgData, 'JPEG', margin, margin - (srcY / canvas.height) * displayH, usableW, displayH);
+            srcY += pagePx;
+            pageIdx++;
+        }
+        pdf.save(filename);
+        return true;
+    } catch (error) {
+        Utils.safeError('FormHeader.generatePDF error:', error);
+        const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const w = window.open(url, '_blank');
+        if (w) { setTimeout(() => { URL.revokeObjectURL(url); }, 10000); }
+        return false;
+    }
+};
 if (typeof window !== 'undefined') {
     window.FormHeader = FormHeader;
 }

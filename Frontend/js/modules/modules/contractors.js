@@ -11983,7 +11983,7 @@ const Contractors = {
         document.head.appendChild(style);
     },
 
-    exportContractorViolationsReport(contractorLookupEncoded = '', contractorNameEncoded = '') {
+    async exportContractorViolationsReport(contractorLookupEncoded = '', contractorNameEncoded = '') {
         try {
             const contractorLookup = decodeURIComponent(String(contractorLookupEncoded || ''));
             const contractorName = decodeURIComponent(String(contractorNameEncoded || ''));
@@ -12091,13 +12091,13 @@ const Contractors = {
                 : `<html dir="rtl" lang="ar"><head><meta charset="UTF-8"><title>${reportTitle}</title></head><body>${content}</body></html>`;
 
             if (typeof FormHeader !== 'undefined' && typeof FormHeader.generatePDF === 'function') {
-                FormHeader.generatePDF(htmlContent, `${reportTitle}.pdf`);
+                await FormHeader.generatePDF(htmlContent, `${reportTitle}.pdf`);
             } else {
                 const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
                 const url = URL.createObjectURL(blob);
                 const link = document.createElement('a');
                 link.href = url;
-                link.download = `${reportTitle.replace(/\s+/g, '_')}.pdf`;
+                link.download = `${reportTitle.replace(/\s+/g, '_')}.html`;
                 document.body.appendChild(link);
                 link.click();
                 document.body.removeChild(link);
