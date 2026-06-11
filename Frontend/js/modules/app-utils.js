@@ -2982,7 +2982,7 @@ const AppState = {
         appsScript: {
             enabled: true,
             // ✅ v1.0.84 — تحديث إلى @135: إصلاح addLegalTraining ليعيد data.id لربط المعرف المؤقت
-            scriptUrl: 'https://script.google.com/macros/s/AKfycbxaIlrBSSHeRR56X3ZEJiTm5iMw-c2Tb3H206WaZKywY0zo-1AgdqdkMkf5MF0yFf-T/exec'
+            scriptUrl: 'https://script.google.com/macros/s/AKfycbw6ycjx5XAyHKCqW6kzMwWjOxuv7fdm-rBbKN9f1nhp7300R87hTNsQmZfSa49qeGlQ/exec'
         },
         sheets: {
             // يُفعَّل تلقائياً عند ضبط spreadsheetId من الإعدادات المحفوظة؛ المعرف الرسمي يُفضَّل في Script Properties بالخادم
@@ -3071,7 +3071,7 @@ const AppState = {
                             'AKfycbwhWmcjchhLNbl6cbr_BzsjrFkZOCUFk8pgoSONvbvIXHpRnqFqnER4esHiOZYIWL7X', // @120
                             'AKfycbyFmgpaD4d2y74A1T3uWzLXXFK7YJSPw5IA45uv2TpCUX3gkQJhcgjuVmZS6zPNWcMa', // @122 — broken addClinicVisit medication deduction
                             'AKfycbzxF2wNoo_g0Psy2k9dOG7i4X1wuw1mWSWirdXBpRu61eMBhRFhX1-5DEmNs5Ldjdjv', // @134 — fixed in @135
-                            'AKfycbxaIlrBSSHeRR56X3ZEJiTm5iMw-c2bT3H206WaZKywY0zo-1AgdqdkMkf5MF0yFf-T', // old URL (pre-@149)
+                            'AKfycbxaIlrBSSHeRR56X3ZEJiTm5iMw-c2Tb3H206WaZKywY0zo-1AgdqdkMkf5MF0yFf-T', // old URL (pre-@149)
                             'AKfycbx88ue81OTEXapNCcfFcBUEoONTJnSypsm9zGT6upSHnIieBDskcyH-Tij9D7lxHP6Y', // @149/@150 (replaced)
                         ];
                         const LATEST_DEPLOYMENT_URL = 'https://script.google.com/macros/s/AKfycbw6ycjx5XAyHKCqW6kzMwWjOxuv7fdm-rBbKN9f1nhp7300R87hTNsQmZfSa49qeGlQ/exec';
