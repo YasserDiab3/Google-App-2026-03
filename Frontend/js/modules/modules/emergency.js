@@ -1995,14 +1995,27 @@ const Emergency = {
         const preset = this.FM_FRAME_PRESETS[presetKey];
         const canvas = document.getElementById('fm-sketch-canvas');
         if (!preset || !canvas) return;
+        this._fmInitCanvasLayers(canvas);
         const color = document.getElementById('fm-draw-color')?.value || '#1e293b';
         const lineW = parseInt(document.getElementById('fm-draw-width')?.value, 10) || 4;
-        const x1 = Math.round((canvas.width - preset.w) / 2);
-        const y1 = Math.round((canvas.height - preset.h) / 2);
-        this._fmCommitRectToBase(canvas, x1, y1, x1 + preset.w, y1 + preset.h, color, lineW);
+        const w = preset.w;
+        const h = preset.h;
+        let x = Math.round((canvas.width - w) / 2);
+        let y = Math.round((canvas.height - h) / 2);
+        const pos = this._fmFindFreePosition(canvas, 'frame', -1, x, y, w, h);
+        x = pos.x;
+        y = pos.y;
+        canvas._fmFrames.push({
+            id: 'fr_' + Date.now(),
+            presetKey,
+            x, y, w, h,
+            color,
+            width: lineW
+        });
+        canvas._fmSelected = { kind: 'frame', index: canvas._fmFrames.length - 1 };
         this._fmRedrawSketchCanvas(canvas);
         if (typeof Notification !== 'undefined' && Notification.success) {
-            Notification.success('تم إدراج إطار ' + preset.label);
+            Notification.success('تم إدراج إطار ' + preset.label + ' — اسحبه للنقل');
         }
     },
 
@@ -2371,20 +2384,170 @@ const Emergency = {
 
     _fmInitCanvasLayers(canvas) {
         if (!canvas._fmStamps) canvas._fmStamps = [];
+        if (!canvas._fmFrames) canvas._fmFrames = [];
         if (!canvas._fmCustomImages) canvas._fmCustomImages = {};
+        if (!canvas._fmSelected) canvas._fmSelected = null;
+    },
+
+    _fmObjectGap() {
+        return 10;
+    },
+
+    _fmStampHitRadius() {
+        return this._fmStampRadius + 6;
+    },
+
+    _fmClampRect(x, y, w, h, maxW, maxH) {
+        const nx = Math.max(0, Math.min(x, maxW - w));
+        const ny = Math.max(0, Math.min(y, maxH - h));
+        return { x: nx, y: ny };
+    },
+
+    _fmRectsOverlap(a, b, gap) {
+        const g = gap || 0;
+        return !(a.x + a.w + g <= b.x || b.x + b.w + g <= a.x || a.y + a.h + g <= b.y || b.y + b.h + g <= a.y);
+    },
+
+    _fmCircleRectOverlap(cx, cy, cr, rect, gap) {
+        const g = gap || 0;
+        const closestX = Math.max(rect.x - g, Math.min(cx, rect.x + rect.w + g));
+        const closestY = Math.max(rect.y - g, Math.min(cy, rect.y + rect.h + g));
+        const dx = cx - closestX;
+        const dy = cy - closestY;
+        return (dx * dx + dy * dy) <= (cr + g) * (cr + g);
+    },
+
+    _fmGetFrameRect(frame) {
+        return { x: frame.x, y: frame.y, w: frame.w, h: frame.h };
+    },
+
+    _fmWouldOverlap(canvas, kind, index, x, y, w, h) {
+        const gap = this._fmObjectGap();
+        const stamps = canvas._fmStamps || [];
+        const frames = canvas._fmFrames || [];
+        const stampR = this._fmStampHitRadius();
+        const target = w > 0 && h > 0
+            ? { x, y, w, h }
+            : null;
+        const stampPoint = !target ? { cx: x, cy: y, r: stampR } : null;
+
+        for (let i = 0; i < frames.length; i++) {
+            if (kind === 'frame' && i === index) continue;
+            const fr = this._fmGetFrameRect(frames[i]);
+            if (target) {
+                if (this._fmRectsOverlap(target, fr, gap)) return true;
+            } else if (this._fmCircleRectOverlap(stampPoint.cx, stampPoint.cy, stampPoint.r, fr, gap)) {
+                return true;
+            }
+        }
+        for (let i = 0; i < stamps.length; i++) {
+            if (kind === 'stamp' && i === index) continue;
+            const s = stamps[i];
+            if (target) {
+                if (this._fmCircleRectOverlap(s.x, s.y, stampR, target, gap)) return true;
+            } else {
+                const dx = x - s.x;
+                const dy = y - s.y;
+                if ((dx * dx + dy * dy) <= (stampR * 2 + gap) * (stampR * 2 + gap)) return true;
+            }
+        }
+        return false;
+    },
+
+    _fmFindFreePosition(canvas, kind, index, x, y, w, h) {
+        const gap = this._fmObjectGap();
+        const cw = canvas.width;
+        const ch = canvas.height;
+        const bw = w || 0;
+        const bh = h || 0;
+        const tryPos = (tx, ty) => {
+            if (bw && bh) {
+                const c = this._fmClampRect(tx, ty, bw, bh, cw, ch);
+                return { x: c.x, y: c.y };
+            }
+            return {
+                x: Math.max(gap, Math.min(tx, cw - gap)),
+                y: Math.max(gap, Math.min(ty, ch - gap))
+            };
+        };
+        if (!this._fmWouldOverlap(canvas, kind, index, x, y, bw, bh)) {
+            return tryPos(x, y);
+        }
+        const radii = [0, 12, 24, 36, 48, 64, 80, 100, 130, 160, 200];
+        for (let ri = 1; ri < radii.length; ri++) {
+            const rad = radii[ri];
+            for (let a = 0; a < 16; a++) {
+                const ang = (a / 16) * Math.PI * 2;
+                const tx = x + Math.cos(ang) * rad;
+                const ty = y + Math.sin(ang) * rad;
+                const p = tryPos(tx, ty);
+                if (!this._fmWouldOverlap(canvas, kind, index, p.x, p.y, bw, bh)) return p;
+            }
+        }
+        return tryPos(x, y);
+    },
+
+    _fmDrawFrameOnCanvas(ctx, frame, isSelected) {
+        const preset = this.FM_FRAME_PRESETS[frame.presetKey] || {};
+        const label = preset.label || '';
+        ctx.save();
+        ctx.strokeStyle = frame.color || '#1e293b';
+        ctx.lineWidth = frame.width || 4;
+        ctx.strokeRect(frame.x, frame.y, frame.w, frame.h);
+        ctx.fillStyle = (frame.color || '#1e293b') + '18';
+        ctx.fillRect(frame.x, frame.y, frame.w, frame.h);
+        if (label) {
+            ctx.font = 'bold 11px Tahoma, Arial, sans-serif';
+            ctx.fillStyle = frame.color || '#1e293b';
+            ctx.textAlign = 'left';
+            ctx.textBaseline = 'top';
+            ctx.fillText(label, frame.x + 6, frame.y + 4);
+        }
+        if (isSelected) {
+            ctx.setLineDash([6, 4]);
+            ctx.strokeStyle = '#2563eb';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(frame.x - 3, frame.y - 3, frame.w + 6, frame.h + 6);
+            ctx.setLineDash([]);
+        }
+        ctx.restore();
     },
 
     _fmRedrawSketchCanvas(canvas) {
         const ctx = canvas.getContext('2d');
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         if (canvas._fmBaseSnapshot) ctx.putImageData(canvas._fmBaseSnapshot, 0, 0);
-        (canvas._fmStamps || []).forEach((stamp) => {
+        const sel = canvas._fmSelected;
+        (canvas._fmFrames || []).forEach((frame, i) => {
+            this._fmDrawFrameOnCanvas(ctx, frame, sel && sel.kind === 'frame' && sel.index === i);
+        });
+        (canvas._fmStamps || []).forEach((stamp, i) => {
             this._fmDrawStampOnCanvas(ctx, stamp.type, stamp.x, stamp.y, stamp.customImage);
+            if (sel && sel.kind === 'stamp' && sel.index === i) {
+                ctx.save();
+                ctx.beginPath();
+                ctx.arc(stamp.x, stamp.y, this._fmStampRadius + 8, 0, Math.PI * 2);
+                ctx.setLineDash([5, 4]);
+                ctx.strokeStyle = '#2563eb';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+                ctx.setLineDash([]);
+                ctx.restore();
+            }
         });
     },
 
+    _fmHitTestFrame(canvas, x, y) {
+        const frames = canvas._fmFrames || [];
+        for (let i = frames.length - 1; i >= 0; i--) {
+            const f = frames[i];
+            if (x >= f.x && x <= f.x + f.w && y >= f.y && y <= f.y + f.h) return i;
+        }
+        return -1;
+    },
+
     _fmHitTestStamp(canvas, x, y) {
-        const r = this._fmStampRadius + 6;
+        const r = this._fmStampHitRadius();
         const stamps = canvas._fmStamps || [];
         for (let i = stamps.length - 1; i >= 0; i--) {
             const s = stamps[i];
@@ -2393,6 +2556,27 @@ const Emergency = {
             if ((dx * dx) + (dy * dy) <= r * r) return i;
         }
         return -1;
+    },
+
+    _fmHitTestTopObject(canvas, x, y) {
+        const frameIdx = this._fmHitTestFrame(canvas, x, y);
+        if (frameIdx >= 0) return { kind: 'frame', index: frameIdx };
+        const stampIdx = this._fmHitTestStamp(canvas, x, y);
+        if (stampIdx >= 0) return { kind: 'stamp', index: stampIdx };
+        return null;
+    },
+
+    _fmUpdateCanvasCursor(canvas, toolState) {
+        if (!canvas || !toolState) return;
+        if (toolState.tool === 'move') {
+            canvas.style.cursor = canvas._fmDragState?.active ? 'grabbing' : 'grab';
+        } else if (toolState.tool === 'eraser') {
+            canvas.style.cursor = 'cell';
+        } else if (toolState.tool === 'stamp') {
+            canvas.style.cursor = 'copy';
+        } else {
+            canvas.style.cursor = 'crosshair';
+        }
     },
 
     _fmEraseBaseAt(canvas, x, y, brushSize) {
@@ -2426,6 +2610,15 @@ const Emergency = {
                 type: s.type,
                 x: s.x,
                 y: s.y
+            })),
+            frames: (canvas._fmFrames || []).map(f => ({
+                presetKey: f.presetKey,
+                x: f.x,
+                y: f.y,
+                w: f.w,
+                h: f.h,
+                color: f.color,
+                width: f.width
             }))
         });
     },
@@ -2464,10 +2657,18 @@ const Emergency = {
         try {
             const parsed = typeof rawJson === 'string' ? JSON.parse(rawJson) : rawJson;
             canvas._fmStamps = Array.isArray(parsed.stamps) ? parsed.stamps : (Array.isArray(parsed) ? parsed : []);
+            canvas._fmFrames = Array.isArray(parsed.frames) ? parsed.frames.map((f, i) => ({
+                id: f.id || ('fr_' + i),
+                presetKey: f.presetKey || 'room',
+                x: f.x, y: f.y, w: f.w, h: f.h,
+                color: f.color || '#1e293b',
+                width: f.width || 4
+            })) : [];
             canvas._fmCustomImages = parsed.customImages || {};
             Object.assign(this._fmState.customStampImages, canvas._fmCustomImages);
         } catch (_e) {
             canvas._fmStamps = [];
+            canvas._fmFrames = [];
         }
     },
 
@@ -2680,6 +2881,7 @@ const Emergency = {
                                 <div class="fm-canvas-toolbar">
                                     <div class="fm-tool-group">
                                         <button type="button" class="fm-draw-tool active" data-tool="pen" title="قلم"><i class="fas fa-pen"></i></button>
+                                        <button type="button" class="fm-draw-tool" data-tool="move" title="تحريك الأيقونات والإطارات"><i class="fas fa-arrows-alt"></i></button>
                                         <button type="button" class="fm-draw-tool" data-tool="rect" title="مستطيل / إطار"><i class="fas fa-vector-square"></i></button>
                                         <button type="button" class="fm-draw-tool" data-tool="eraser" title="ممحاة"><i class="fas fa-eraser"></i></button>
                                     </div>
@@ -3013,6 +3215,17 @@ const Emergency = {
             const sy = newH / oldH;
             canvas._fmStamps = canvas._fmStamps.map(s => ({ ...s, x: s.x * sx, y: s.y * sy }));
         }
+        if (canvas._fmFrames && oldW && oldH) {
+            const sx = newW / oldW;
+            const sy = newH / oldH;
+            canvas._fmFrames = canvas._fmFrames.map(f => ({
+                ...f,
+                x: f.x * sx,
+                y: f.y * sy,
+                w: f.w * sx,
+                h: f.h * sy
+            }));
+        }
         this._fmRedrawSketchCanvas(canvas);
         this._fmFitSketchZoom();
         if (typeof Notification !== 'undefined' && Notification.success) Notification.success('تم تطبيق أبعاد لوحة الرسم');
@@ -3078,8 +3291,9 @@ const Emergency = {
         let drawing = false;
         let lastX;
         let lastY;
-        const toolState = { tool: 'pen', color: '#1e293b', width: 4, stampType: null };
+        const toolState = canvas._fmToolState || { tool: 'pen', color: '#1e293b', width: 4, stampType: null };
         canvas._fmToolState = toolState;
+        canvas._fmDragState = canvas._fmDragState || { active: false, kind: null, index: -1, offsetX: 0, offsetY: 0 };
 
         this._fmInitCanvasLayers(canvas);
 
@@ -3089,6 +3303,8 @@ const Emergency = {
             canvas._fmBaseSnapshot = ctx.getImageData(0, 0, canvas.width, canvas.height);
             canvas._snapshot = canvas._fmBaseSnapshot;
             canvas._fmStamps = [];
+            canvas._fmFrames = [];
+            canvas._fmSelected = null;
             this._fmRedrawSketchCanvas(canvas);
         };
 
@@ -3123,21 +3339,84 @@ const Emergency = {
             return { x: (clientX - rect2.left) * scaleX, y: (clientY - rect2.top) * scaleY };
         };
 
+        const beginObjectDrag = (hit, pos) => {
+            const drag = canvas._fmDragState;
+            drag.active = true;
+            drag.kind = hit.kind;
+            drag.index = hit.index;
+            canvas._fmSelected = { kind: hit.kind, index: hit.index };
+            if (hit.kind === 'frame') {
+                const f = canvas._fmFrames[hit.index];
+                drag.offsetX = pos.x - f.x;
+                drag.offsetY = pos.y - f.y;
+            } else {
+                const s = canvas._fmStamps[hit.index];
+                drag.offsetX = pos.x - s.x;
+                drag.offsetY = pos.y - s.y;
+            }
+            this._fmUpdateCanvasCursor(canvas, toolState);
+        };
+
+        const finalizeObjectDrag = () => {
+            const drag = canvas._fmDragState;
+            if (!drag.active) return;
+            if (drag.kind === 'frame' && canvas._fmFrames[drag.index]) {
+                const f = canvas._fmFrames[drag.index];
+                const p = this._fmFindFreePosition(canvas, 'frame', drag.index, f.x, f.y, f.w, f.h);
+                f.x = p.x;
+                f.y = p.y;
+            } else if (drag.kind === 'stamp' && canvas._fmStamps[drag.index]) {
+                const s = canvas._fmStamps[drag.index];
+                const p = this._fmFindFreePosition(canvas, 'stamp', drag.index, s.x, s.y, 0, 0);
+                s.x = p.x;
+                s.y = p.y;
+            }
+            drag.active = false;
+            drag.kind = null;
+            drag.index = -1;
+            this._fmUpdateCanvasCursor(canvas, toolState);
+            this._fmRedrawSketchCanvas(canvas);
+        };
+
         const startDraw = (e) => {
             e.preventDefault();
             e.stopPropagation();
             const pos = getPos(e);
+            const topHit = this._fmHitTestTopObject(canvas, pos.x, pos.y);
+
+            if (toolState.tool === 'move' || (toolState.tool === 'stamp' && topHit)) {
+                if (topHit) {
+                    beginObjectDrag(topHit, pos);
+                    return;
+                }
+                if (toolState.tool === 'move') {
+                    canvas._fmSelected = null;
+                    this._fmRedrawSketchCanvas(canvas);
+                    return;
+                }
+            }
+
             if (toolState.tool === 'stamp' && toolState.stampType) {
                 const customImage = (toolState.stampType.startsWith('custom_') && canvas._fmCustomImages)
                     ? canvas._fmCustomImages[toolState.stampType] : '';
-                canvas._fmStamps.push({ type: toolState.stampType, x: pos.x, y: pos.y, customImage });
+                const p = this._fmFindFreePosition(canvas, 'stamp', -1, pos.x, pos.y, 0, 0);
+                canvas._fmStamps.push({ type: toolState.stampType, x: p.x, y: p.y, customImage });
+                canvas._fmSelected = { kind: 'stamp', index: canvas._fmStamps.length - 1 };
                 this._fmRedrawSketchCanvas(canvas);
                 return;
             }
             if (toolState.tool === 'eraser') {
+                const frameHit = this._fmHitTestFrame(canvas, pos.x, pos.y);
+                if (frameHit >= 0) {
+                    canvas._fmFrames.splice(frameHit, 1);
+                    canvas._fmSelected = null;
+                    this._fmRedrawSketchCanvas(canvas);
+                    return;
+                }
                 const hit = this._fmHitTestStamp(canvas, pos.x, pos.y);
                 if (hit >= 0) {
                     canvas._fmStamps.splice(hit, 1);
+                    canvas._fmSelected = null;
                     this._fmRedrawSketchCanvas(canvas);
                     return;
                 }
@@ -3148,6 +3427,7 @@ const Emergency = {
                 lastY = pos.y;
                 return;
             }
+            if (toolState.tool === 'move') return;
             drawing = true;
             lastX = pos.x;
             lastY = pos.y;
@@ -3166,14 +3446,35 @@ const Emergency = {
         const draw = (e) => {
             e.preventDefault();
             const pos = getPos(e);
+            const drag = canvas._fmDragState;
+            if (drag.active) {
+                if (drag.kind === 'frame' && canvas._fmFrames[drag.index]) {
+                    const f = canvas._fmFrames[drag.index];
+                    const c = this._fmClampRect(pos.x - drag.offsetX, pos.y - drag.offsetY, f.w, f.h, canvas.width, canvas.height);
+                    f.x = c.x;
+                    f.y = c.y;
+                } else if (drag.kind === 'stamp' && canvas._fmStamps[drag.index]) {
+                    const s = canvas._fmStamps[drag.index];
+                    const gap = this._fmObjectGap();
+                    s.x = Math.max(gap, Math.min(pos.x - drag.offsetX, canvas.width - gap));
+                    s.y = Math.max(gap, Math.min(pos.y - drag.offsetY, canvas.height - gap));
+                }
+                this._fmRedrawSketchCanvas(canvas);
+                return;
+            }
             if (!drawing) return;
             if (toolState.tool === 'eraser') {
-                const hit = this._fmHitTestStamp(canvas, pos.x, pos.y);
-                if (hit >= 0) {
-                    canvas._fmStamps.splice(hit, 1);
+                const frameHit = this._fmHitTestFrame(canvas, pos.x, pos.y);
+                if (frameHit >= 0) {
+                    canvas._fmFrames.splice(frameHit, 1);
                 } else {
-                    this._fmEraseBaseAt(canvas, pos.x, pos.y, toolState.width * 3);
-                    this._fmEraseBaseAt(canvas, lastX, lastY, toolState.width * 3);
+                    const hit = this._fmHitTestStamp(canvas, pos.x, pos.y);
+                    if (hit >= 0) {
+                        canvas._fmStamps.splice(hit, 1);
+                    } else {
+                        this._fmEraseBaseAt(canvas, pos.x, pos.y, toolState.width * 3);
+                        this._fmEraseBaseAt(canvas, lastX, lastY, toolState.width * 3);
+                    }
                 }
                 this._fmRedrawSketchCanvas(canvas);
                 lastX = pos.x;
@@ -3209,6 +3510,10 @@ const Emergency = {
         };
 
         const endDraw = () => {
+            if (canvas._fmDragState?.active) {
+                finalizeObjectDrag();
+                return;
+            }
             if (toolState.tool === 'rect' && rect.drawing) {
                 this._fmCommitRectToBase(canvas, rect.x, rect.y, rect.endX, rect.endY, toolState.color, toolState.width);
                 rect.drawing = false;
@@ -3220,24 +3525,31 @@ const Emergency = {
             }
         };
 
-        canvas.addEventListener('mousedown', startDraw);
-        canvas.addEventListener('mousemove', draw);
-        canvas.addEventListener('mouseup', endDraw);
-        canvas.addEventListener('mouseleave', endDraw);
-        canvas.addEventListener('touchstart', startDraw, { passive: false });
-        canvas.addEventListener('touchmove', draw, { passive: false });
-        canvas.addEventListener('touchend', endDraw);
+        if (!canvas._fmEventsBound) {
+            canvas.addEventListener('mousedown', startDraw);
+            canvas.addEventListener('mousemove', draw);
+            canvas.addEventListener('mouseup', endDraw);
+            canvas.addEventListener('mouseleave', endDraw);
+            canvas.addEventListener('touchstart', startDraw, { passive: false });
+            canvas.addEventListener('touchmove', draw, { passive: false });
+            canvas.addEventListener('touchend', endDraw);
+            canvas._fmEventsBound = true;
+        }
 
-        document.querySelectorAll('.fm-draw-tool').forEach(btn => {
-            btn.addEventListener('click', () => {
-                document.querySelectorAll('.fm-draw-tool').forEach(b => b.classList.remove('active'));
-                document.querySelectorAll('.fm-stamp-btn').forEach(b => b.classList.remove('active'));
-                btn.classList.add('active');
-                toolState.tool = btn.dataset.tool;
-                toolState.stampType = null;
-                canvas.style.cursor = toolState.tool === 'eraser' ? 'cell' : 'crosshair';
+        if (!canvas._fmToolsBound) {
+            document.querySelectorAll('.fm-draw-tool[data-tool]').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    document.querySelectorAll('.fm-draw-tool[data-tool]').forEach(b => b.classList.remove('active'));
+                    document.querySelectorAll('.fm-stamp-btn').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    toolState.tool = btn.dataset.tool;
+                    toolState.stampType = null;
+                    this._fmUpdateCanvasCursor(canvas, toolState);
+                });
             });
-        });
+            canvas._fmToolsBound = true;
+        }
+        this._fmUpdateCanvasCursor(canvas, toolState);
 
         const stampToolbar = document.querySelector('.fm-stamp-toolbar');
         if (stampToolbar && !stampToolbar.dataset.fmDelegBound) {
@@ -3249,7 +3561,7 @@ const Emergency = {
                 btn.classList.add('active');
                 toolState.tool = 'stamp';
                 toolState.stampType = btn.dataset.stamp;
-                canvas.style.cursor = 'copy';
+                this._fmUpdateCanvasCursor(canvas, toolState);
             });
             stampToolbar.dataset.fmDelegBound = '1';
         }
@@ -3276,6 +3588,8 @@ const Emergency = {
         ctx.fillStyle = '#ffffff';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
         canvas._fmStamps = [];
+        canvas._fmFrames = [];
+        canvas._fmSelected = null;
         canvas._fmBaseSnapshot = ctx.getImageData(0, 0, canvas.width, canvas.height);
         canvas._snapshot = canvas._fmBaseSnapshot;
         this._fmRedrawSketchCanvas(canvas);

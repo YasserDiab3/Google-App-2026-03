@@ -17655,6 +17655,16 @@ body.fm-floor-modal-open {
     font-size: 0.85rem;
 }
 
+.fm-draw-tool[data-tool="move"].active {
+    background: #dbeafe !important;
+    border-color: #2563eb !important;
+    color: #1d4ed8 !important;
+}
+
+#fm-sketch-canvas.fm-canvas-moving {
+    cursor: grab;
+}
+
 .fm-modal-body-scroll {
     overflow-y: auto !important;
     overflow-x: hidden;
