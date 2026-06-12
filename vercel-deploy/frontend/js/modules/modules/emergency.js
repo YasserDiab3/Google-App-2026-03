@@ -1987,8 +1987,59 @@ const Emergency = {
 
     _fmPlanMatchesFactory(plan, factoryFilter) {
         if (!factoryFilter) return true;
-        const f = String(factoryFilter);
-        return String(plan?.factoryId || '') === f || String(plan?.factory || '') === f;
+        const f = String(factoryFilter).trim();
+        if (!f) return true;
+        const planFactoryId = String(plan?.factoryId || plan?.factory || '').trim();
+        const planFactoryName = String(plan?.factoryName || '').trim();
+        if (planFactoryId === f || planFactoryName === f) return true;
+        const sites = this.getSiteOptions();
+        const filterSite = sites.find(s => String(s.id) === f);
+        if (filterSite) {
+            const filterName = String(filterSite.name || '').trim();
+            if (filterName && (planFactoryName === filterName || planFactoryId === filterName)) return true;
+        }
+        return false;
+    },
+
+    _fmNormalizeFloorPlan(plan) {
+        if (!plan || typeof plan !== 'object') return plan;
+        const normalized = { ...plan };
+        const sites = this.getSiteOptions();
+        const rawFactory = String(normalized.factory || '').trim();
+        const rawFactoryId = String(normalized.factoryId || '').trim();
+        const rawFactoryName = String(normalized.factoryName || '').trim();
+
+        if (!rawFactoryId && rawFactory) {
+            const byId = sites.find(s => String(s.id) === rawFactory);
+            const byName = sites.find(s => String(s.name) === rawFactory);
+            if (byId) {
+                normalized.factoryId = byId.id;
+                normalized.factory = byId.id;
+                if (!rawFactoryName) normalized.factoryName = byId.name;
+            } else if (byName) {
+                normalized.factoryId = byName.id;
+                normalized.factory = byName.id;
+                normalized.factoryName = byName.name;
+            }
+        } else if (rawFactoryId) {
+            normalized.factoryId = rawFactoryId;
+            if (!rawFactory || rawFactory === rawFactoryName) normalized.factory = rawFactoryId;
+            if (!rawFactoryName) {
+                const site = sites.find(s => String(s.id) === rawFactoryId);
+                if (site) normalized.factoryName = site.name;
+            }
+        } else if (rawFactoryName) {
+            const site = sites.find(s => String(s.name) === rawFactoryName);
+            if (site) {
+                normalized.factoryId = site.id;
+                normalized.factory = site.id;
+            }
+        }
+
+        if (normalized.imageDriveId) {
+            normalized.imageDriveId = String(normalized.imageDriveId).trim();
+        }
+        return normalized;
     },
 
     _fmInvalidateFloorPlansCache() {
@@ -2369,8 +2420,12 @@ const Emergency = {
 
         try {
             this._fmInvalidateFloorPlansCache();
-            const resp = await GoogleIntegration.sendRequest({ action: 'getAllEmergencyFloorPlans', data: {} });
+            const resp = await GoogleIntegration.sendRequest({
+                action: 'getAllEmergencyFloorPlans',
+                data: { skipCache: true }
+            });
             const allPlans = this._fmParseListResponse(resp)
+                .map(p => this._fmNormalizeFloorPlan(p))
                 .filter(p => p && String(p.isActive || 'true') !== 'false')
                 .sort((a, b) => (parseInt(a.sortOrder, 10) || 0) - (parseInt(b.sortOrder, 10) || 0));
             this._fmState.floorPlans = allPlans;
@@ -2390,6 +2445,15 @@ const Emergency = {
             let displayPlans = factoryFilter
                 ? allPlans.filter(p => this._fmPlanMatchesFactory(p, factoryFilter))
                 : allPlans.slice();
+            if (factoryFilter && displayPlans.length === 0 && allPlans.length > 0) {
+                const filterField = document.getElementById('fm-factory-filter');
+                if (filterField) filterField.value = '';
+                this._fmState.factoryFilter = '';
+                displayPlans = allPlans.slice();
+                if (typeof Notification !== 'undefined' && Notification.warning) {
+                    Notification.warning('تصفية المصنع أخفت المخططات — تم عرض كل المخططات المحفوظة');
+                }
+            }
             if (savedPlan && !displayPlans.some(p => String(p.id) === targetId)) {
                 displayPlans = [savedPlan, ...displayPlans];
             }
@@ -2763,7 +2827,48 @@ const Emergency = {
         }
         const fileId = this._fmExtractDriveFileId_(ref);
         if (!fileId) return '';
-        return `https://lh3.googleusercontent.com/d/${fileId}`;
+        return `https://lh3.googleusercontent.com/d/${fileId}=w2000`;
+    },
+
+    _fmShowMapImageError(mapImage) {
+        if (!mapImage) return;
+        const canvas = mapImage.closest('#fm-map-canvas');
+        mapImage.removeAttribute('src');
+        mapImage.alt = 'تعذر تحميل صورة المخطط';
+        mapImage.classList.add('fm-map-image-error');
+        let banner = canvas?.querySelector('.fm-map-image-error-banner');
+        if (!banner && canvas) {
+            banner = document.createElement('div');
+            banner.className = 'fm-map-image-error-banner';
+            banner.innerHTML = '<i class="fas fa-image"></i><span>تعذر تحميل صورة المخطط من Drive — جرّب تعديل المخطط وإعادة رفع الصورة</span>';
+            canvas.appendChild(banner);
+        }
+    },
+
+    _fmClearMapImageError(mapImage) {
+        if (!mapImage) return;
+        mapImage.classList.remove('fm-map-image-error');
+        const canvas = mapImage.closest('#fm-map-canvas');
+        canvas?.querySelector('.fm-map-image-error-banner')?.remove();
+    },
+
+    async _fmFetchDriveImageViaProxy(mapImage, imageRef) {
+        if (!mapImage || !imageRef || typeof GoogleIntegration === 'undefined' || !GoogleIntegration.sendRequest) {
+            this._fmShowMapImageError(mapImage);
+            return;
+        }
+        try {
+            const resp = await GoogleIntegration.sendRequest({
+                action: 'getDriveImageDataUrl',
+                data: { fileIdOrUrl: imageRef }
+            });
+            if (resp?.success && resp.dataUrl) {
+                this._fmClearMapImageError(mapImage);
+                mapImage.src = resp.dataUrl;
+                return;
+            }
+        } catch (_e) { /* ignore */ }
+        this._fmShowMapImageError(mapImage);
     },
 
     _fmBuildPlanImageFallbacks_(imageRef) {
@@ -2774,7 +2879,7 @@ const Emergency = {
         const candidates = [
             this._fmResolvePlanImageSrc(ref),
             ref.startsWith('http') ? ref : '',
-            fileId ? `https://lh3.googleusercontent.com/d/${fileId}` : '',
+            fileId ? `https://lh3.googleusercontent.com/d/${fileId}=w2000` : '',
             fileId && typeof window !== 'undefined' && typeof window.__googleDriveDirectUrlFromId === 'function'
                 ? window.__googleDriveDirectUrlFromId(fileId) : '',
             fileId ? `https://drive.google.com/uc?export=view&id=${fileId}` : '',
@@ -2787,17 +2892,19 @@ const Emergency = {
 
     _fmApplyMapImageSrc(mapImage, imageRef) {
         if (!mapImage) return;
+        this._fmClearMapImageError(mapImage);
         const fallbacks = this._fmBuildPlanImageFallbacks_(imageRef);
         if (!fallbacks.length) {
             mapImage.removeAttribute('src');
             mapImage.alt = 'لا توجد صورة للمخطط';
+            this._fmShowMapImageError(mapImage);
             return;
         }
         mapImage.alt = 'مخطط الطابق';
         let step = 0;
         const tryNext = () => {
             if (step >= fallbacks.length) {
-                mapImage.alt = 'تعذر تحميل صورة المخطط';
+                this._fmFetchDriveImageViaProxy(mapImage, imageRef);
                 return;
             }
             const nextSrc = fallbacks[step++];
@@ -2806,7 +2913,10 @@ const Emergency = {
                 mapImage.onerror = null;
                 tryNext();
             };
-            mapImage.onload = () => { mapImage.onerror = null; };
+            mapImage.onload = () => {
+                mapImage.onerror = null;
+                this._fmClearMapImageError(mapImage);
+            };
             mapImage.src = nextSrc;
         };
         tryNext();

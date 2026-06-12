@@ -17247,6 +17247,38 @@ body.fm-body-fullscreen {
     pointer-events: none;
 }
 
+.fm-map-image-error {
+    opacity: 0.15;
+}
+
+.fm-map-image-error-banner {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 4;
+    max-width: min(92%, 480px);
+    padding: 16px 20px;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.96);
+    border: 1px solid #fecaca;
+    color: #991b1b;
+    font-size: 0.875rem;
+    line-height: 1.6;
+    text-align: center;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    pointer-events: none;
+}
+
+.fm-map-image-error-banner i {
+    font-size: 1.5rem;
+    color: #ef4444;
+}
+
 .fm-map-items-layer {
     position: absolute;
     top: 0;

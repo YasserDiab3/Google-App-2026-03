@@ -501,8 +501,11 @@ function updateEmergencyFloorPlan(planId, updateData) {
     }
 }
 
-function getAllEmergencyFloorPlans() {
+function getAllEmergencyFloorPlans(options) {
     try {
+        if (options && options.skipCache) {
+            invalidateHseSheetCaches('EmergencyFloorPlans');
+        }
         var data = readFromSheet('EmergencyFloorPlans', getSpreadsheetId());
         return Array.isArray(data) ? data : [];
     } catch (error) {

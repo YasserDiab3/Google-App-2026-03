@@ -166,6 +166,61 @@ function uploadFileToDrive(base64Data, fileName, mimeType, moduleName = null) {
 }
 
 /**
+ * استخراج معرف ملف Drive من رابط أو معرف خام
+ */
+function _driveExtractFileId_(fileIdOrUrl) {
+    var raw = String(fileIdOrUrl || '').trim();
+    if (!raw) return '';
+    if (/^[a-zA-Z0-9_-]{10,}$/.test(raw) && raw.indexOf('/') === -1 && raw.indexOf('http') !== 0) {
+        return raw;
+    }
+    var m = raw.match(/[?&]id=([a-zA-Z0-9_-]+)/i)
+        || raw.match(/\/file\/d\/([a-zA-Z0-9_-]+)/i)
+        || raw.match(/googleusercontent\.com\/d\/([a-zA-Z0-9_-]+)/i)
+        || raw.match(/\/thumbnail\?id=([a-zA-Z0-9_-]+)/i);
+    return m ? String(m[1] || '').trim() : '';
+}
+
+/**
+ * جلب صورة من Drive كـ data URL (احتياطي عند فشل روابط العرض المباشرة في المتصفح)
+ */
+function getDriveImageDataUrl(fileIdOrUrl) {
+    try {
+        var fileId = _driveExtractFileId_(fileIdOrUrl);
+        if (!fileId) {
+            return { success: false, message: 'معرف صورة المخطط غير صالح' };
+        }
+        var file = DriveApp.getFileById(fileId);
+        var blob = file.getBlob();
+        var mime = String(blob.getContentType() || '').toLowerCase();
+        if (mime.indexOf('image/') !== 0) {
+            return { success: false, message: 'الملف ليس صورة' };
+        }
+        var bytes = blob.getBytes();
+        if (!bytes || bytes.length === 0) {
+            return { success: false, message: 'ملف الصورة فارغ' };
+        }
+        if (bytes.length > 4 * 1024 * 1024) {
+            return { success: false, message: 'حجم الصورة كبير جداً للعرض المباشر' };
+        }
+        try {
+            file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+        } catch (shareErr) {
+            Logger.log('getDriveImageDataUrl setSharing: ' + shareErr.toString());
+        }
+        return {
+            success: true,
+            dataUrl: 'data:' + mime + ';base64,' + Utilities.base64Encode(bytes),
+            fileId: fileId,
+            directLink: 'https://lh3.googleusercontent.com/d/' + fileId
+        };
+    } catch (error) {
+        Logger.log('getDriveImageDataUrl: ' + error.toString());
+        return { success: false, message: 'تعذر جلب صورة المخطط: ' + error.toString() };
+    }
+}
+
+/**
  * رفع عدة ملفات دفعة واحدة
  * @param {Array} files - مصفوفة من الملفات [{base64Data, fileName, mimeType}, ...]
  * @param {string} moduleName - اسم الموديول (اختياري)

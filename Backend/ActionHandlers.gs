@@ -4574,8 +4574,11 @@ var ActionHandlers = {
         return result;
     },
     'getAllEmergencyFloorPlans': function(payload, postData, action, actorUserData, spreadsheetId) {
-        var plans = getAllEmergencyFloorPlans();
+        var plans = getAllEmergencyFloorPlans({ skipCache: !!(payload && payload.skipCache) });
         return { success: true, data: Array.isArray(plans) ? plans : [] };
+    },
+    'getDriveImageDataUrl': function(payload, postData, action, actorUserData, spreadsheetId) {
+        return getDriveImageDataUrl(payload && (payload.fileIdOrUrl || payload.fileId || payload.imageDriveId || payload.url));
     },
     'deleteEmergencyFloorPlan': function(payload, postData, action, actorUserData, spreadsheetId) {
         var result = { success: false, message: '' };

@@ -93,7 +93,10 @@ function checkIncidentPermissions(userData, action = 'edit') {
         }
         
         const userRole = userData.role || '';
-        if (userRole.toLowerCase() === 'admin') {
+        const roleStr = String(userRole).trim();
+        const roleLow = roleStr.toLowerCase();
+        if (roleLow === 'admin' || roleLow === 'administrator' || roleLow === 'system_admin' ||
+            roleStr === 'مدير النظام' || roleStr === 'مدير') {
             return { hasPermission: true, message: 'صلاحية صحيحة' };
         }
         

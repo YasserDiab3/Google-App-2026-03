@@ -3581,13 +3581,7 @@ const Incidents = {
                                                             <i class="fas fa-times"></i>
                                                         </button>
                                                     ` : ''}
-                                                    <button 
-                                                        onclick="if(confirm('هل أنت متأكد من حذف هذا الحادث؟')) { Incidents.deleteIncident('${incident.id}'); }" 
-                                                        class="btn-icon btn-icon-danger" 
-                                                        title="حذف"
-                                                    >
-                                                        <i class="fas fa-trash"></i>
-                                                    </button>
+                                                    ${this.renderIncidentDeleteButton(incident.id)}
                                                 </div>
                                             </td>
                                         </tr>
@@ -5023,6 +5017,32 @@ const Incidents = {
         return (AppState.currentUser?.role || '').toLowerCase() === 'admin';
     },
 
+    canDeleteIncident(user = AppState.currentUser) {
+        if (!user) return false;
+        if (this.isAdmin()) return true;
+        let perms = user.permissions;
+        if (typeof Permissions !== 'undefined' && typeof Permissions.normalizePermissions === 'function') {
+            perms = Permissions.normalizePermissions(perms) || perms;
+        } else if (typeof perms === 'string') {
+            try { perms = JSON.parse(perms); } catch (_e) { perms = null; }
+        }
+        if (perms && typeof perms === 'object') {
+            return perms.admin === true ||
+                perms['manage-modules'] === true ||
+                perms['incidents-manage'] === true;
+        }
+        return false;
+    },
+
+    renderIncidentDeleteButton(incidentId, title = 'حذف (مدير النظام فقط)') {
+        if (!this.canDeleteIncident()) return '';
+        const id = String(incidentId || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+        return `
+            <button onclick="Incidents.deleteIncident('${id}')" class="btn-icon btn-icon-danger" title="${Utils.escapeHTML(title)}">
+                <i class="fas fa-trash"></i>
+            </button>`;
+    },
+
     setupTabEventListeners(tabName) {
         if (tabName === 'incidents-list') {
             this.loadIncidentsList();
@@ -5951,11 +5971,7 @@ const Incidents = {
                                                 <button onclick="Incidents.exportPDF('${id}')" class="btn-icon btn-icon-secondary" title="تصدير / طباعة">
                                                     <i class="fas fa-print"></i>
                                                 </button>
-                                                ${this.isAdmin() ? `
-                                                <button onclick="Incidents.deleteIncident('${id}')" class="btn-icon btn-icon-danger" title="حذف (مدير النظام فقط)">
-                                                    <i class="fas fa-trash"></i>
-                                                </button>
-                                                ` : ''}
+                                                ${this.renderIncidentDeleteButton(id)}
                                             </div>
                                         </td>
                                     </tr>
@@ -5980,6 +5996,7 @@ const Incidents = {
         container.dataset.renderSignature = signature;
         this.lastRenderedSignature = signature;
         this.refreshAnalytics();
+        this.applyPermissions();
     },
 
     getSeverityBadgeClass(severity) {
@@ -8258,78 +8275,71 @@ const Incidents = {
     },
 
     async deleteIncident(id) {
-        // ✅ التحقق من الصلاحيات (مدير النظام فقط) — يستخدم isAdmin() القوي الذي يدعم
-        // 'مدير النظام' و 'Admin' وصلاحيات admin/manage-modules عبر Permissions
-        const isAdmin = this.isAdmin() ||
-            (AppState.currentUser?.permissions && (
-                AppState.currentUser.permissions.admin === true ||
-                AppState.currentUser.permissions['manage-modules'] === true ||
-                AppState.currentUser.permissions['incidents-manage'] === true
-            ));
-
-        if (!isAdmin) {
-            Notification.error('ليس لديك صلاحية لحذف الحوادث. يجب أن تكون مدير النظام فقط.');
+        if (!id) {
+            Notification.error('معرف الحادث غير موجود');
             return;
         }
 
-        if (!confirm('هل أنت متأكد من حذف هذا الحادث؟')) return;
-        Loading.show();
+        if (!this.canDeleteIncident()) {
+            Notification.error('ليس لديك صلاحية لحذف الحوادث. الحذف متاح لمدير النظام فقط.');
+            return;
+        }
+
+        if (!confirm('هل أنت متأكد من حذف هذا الحادث؟ لا يمكن التراجع عن هذا الإجراء.')) return;
+
+        const deletedIncident = (AppState.appData.incidents || []).find(i => i.id === id);
+        if (!deletedIncident) {
+            Notification.error('الحادث غير موجود أو تم حذفه مسبقاً');
+            return;
+        }
+
+        Loading.show('جاري حذف الحادث...');
         try {
-            const deletedIncident = AppState.appData.incidents.find(i => i.id === id);
+            const userData = {
+                id: AppState.currentUser?.id || '',
+                email: AppState.currentUser?.email || '',
+                name: AppState.currentUser?.name || '',
+                role: AppState.currentUser?.role || '',
+                permissions: AppState.currentUser?.permissions || {}
+            };
+
+            await GoogleIntegration.sendRequest({
+                action: 'deleteIncident',
+                data: {
+                    incidentId: id,
+                    userData: userData
+                }
+            });
+
             AppState.appData.incidents = (AppState.appData.incidents || []).filter(i => i.id !== id);
-            // حفظ البيانات باستخدام window.DataManager
             if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
                 window.DataManager.save();
             } else {
-                Utils.safeWarn('⚠️ DataManager غير متاح - لم يتم حفظ البيانات');
+                Utils.safeWarn('⚠️ DataManager غير متاح - لم يتم حفظ البيانات محلياً');
             }
 
-            // حذف من Google Sheets
-            if (deletedIncident) {
-                // إرسال بيانات المستخدم للتحقق من الصلاحيات في Backend
-                const userData = {
-                    id: AppState.currentUser?.id || '',
-                    email: AppState.currentUser?.email || '',
-                    name: AppState.currentUser?.name || '',
-                    role: AppState.currentUser?.role || '',
-                    permissions: AppState.currentUser?.permissions || {}
-                };
+            await this.removeFromRegistry(id);
 
-                const deleteResult = await GoogleIntegration.sendRequest({
-                    action: 'deleteIncident',
-                    data: {
-                        incidentId: id,
-                        userData: userData
-                    }
-                });
-
-                // التحقق من استجابة Backend
-                if (deleteResult && deleteResult.success === false) {
-                    // استعادة الحادث المحذوف محلياً إذا فشل الحذف في Backend
-                    AppState.appData.incidents.push(deletedIncident);
-                    if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
-                        window.DataManager.save();
-                    }
-                    throw new Error(deleteResult.message || 'فشل حذف الحادث في Backend');
-                }
-
-                // حذف من السجل فقط عند نجاح الحذف في Backend
-                if (deletedIncident) {
-                    await this.removeFromRegistry(id);
-                }
-            }
-
-            // تحديث Dashboard
             if (typeof Dashboard !== 'undefined' && Dashboard.refreshIncidents) {
                 Dashboard.refreshIncidents();
             }
 
-            Loading.hide();
             Notification.success('تم حذف الحادث بنجاح');
-            this.loadIncidentsList();
+
+            if (this.currentTab === 'approvals') {
+                const content = document.getElementById('incidents-tab-content');
+                if (content) {
+                    content.innerHTML = await this.renderApprovalsTab();
+                    this.setupTabEventListeners('approvals');
+                }
+            } else {
+                this.loadIncidentsList();
+            }
         } catch (error) {
+            Utils.safeError('خطأ في حذف الحادث:', error);
+            Notification.error('فشل حذف الحادث: ' + (error.message || 'خطأ غير معروف'));
+        } finally {
             Loading.hide();
-            Notification.error('حدث خطأ: ' + error.message);
         }
     },
 
@@ -9216,30 +9226,26 @@ const Incidents = {
 
     // تطبيق نظام الصلاحيات
     applyPermissions() {
-        const isAdmin = AppState.currentUser?.role === 'admin' ||
-            (AppState.currentUser?.permissions && (
-                AppState.currentUser.permissions.admin === true ||
-                AppState.currentUser.permissions['manage-modules'] === true
-            ));
+        const isAdmin = this.isAdmin();
+        const canDelete = this.canDeleteIncident();
 
-        // إخفاء/تعطيل عناصر للمستخدمين العاديين
         if (!isAdmin) {
-            // إخفاء أزرار التعديل والحذف من الجدول
-            document.querySelectorAll('[onclick*="editIncident"], [onclick*="deleteIncident"]').forEach(btn => {
+            document.querySelectorAll('[onclick*="editIncident"]').forEach(btn => {
                 btn.style.display = 'none';
             });
-
-            // تعطيل تعديل إعدادات المواقع (يتم التحقق في Backend أيضاً)
             const locationToggleBtn = document.getElementById('incident-location-toggle');
             if (locationToggleBtn) {
                 locationToggleBtn.style.display = 'none';
             }
         } else {
-            // إظهار جميع العناصر للمدير
-            document.querySelectorAll('[onclick*="editIncident"], [onclick*="deleteIncident"]').forEach(btn => {
+            document.querySelectorAll('[onclick*="editIncident"]').forEach(btn => {
                 btn.style.display = '';
             });
         }
+
+        document.querySelectorAll('[onclick*="deleteIncident"]').forEach(btn => {
+            btn.style.display = canDelete ? '' : 'none';
+        });
 
         // التحقق من صلاحيات إضافة الإجراءات
         const addActionBtn = document.getElementById('add-action-plan-row');
@@ -9309,11 +9315,7 @@ const Incidents = {
                                 <button onclick="Incidents.manageWorkflow('${incident.id}')" class="btn-icon btn-icon-warning">
                                     <i class="fas fa-project-diagram"></i>
                                 </button>
-                                ${this.isAdmin() ? `
-                                <button onclick="Incidents.deleteIncident('${incident.id}')" class="btn-icon btn-icon-danger" title="حذف (مدير النظام فقط)">
-                                    <i class="fas fa-trash"></i>
-                                </button>
-                                ` : ''}
+                                ${this.renderIncidentDeleteButton(incident.id)}
                             </div>
                         </td>
                     </tr>
