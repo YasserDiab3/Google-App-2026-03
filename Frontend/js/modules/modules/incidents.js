@@ -9090,6 +9090,300 @@ const Incidents = {
         return rows.join('');
     },
 
+    _formatIncidentPrintDate(dateStr) {
+        if (!dateStr) return 'غير محدد';
+        try {
+            const date = new Date(dateStr);
+            if (isNaN(date.getTime())) return String(dateStr);
+            return date.toLocaleString('ar-SA', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        } catch {
+            return String(dateStr || 'غير محدد');
+        }
+    },
+
+    _buildPrintSectionHeading(sectionNum, title, color, accentColor) {
+        return `<div style="margin-bottom: 20px; font-weight: bold; font-size: 20px; color: ${color}; border-bottom: 3px solid ${accentColor}; padding-bottom: 10px;">${sectionNum}) ${Utils.escapeHTML(title)}</div>`;
+    },
+
+    _buildPrintDataTable(rows, headerBg = '#e3f2fd') {
+        const filtered = (Array.isArray(rows) ? rows : []).filter(r =>
+            r && r.label && r.value !== undefined && r.value !== null && String(r.value).trim() !== ''
+        );
+        if (!filtered.length) return '';
+        return `<table style="width: 100%; border-collapse: collapse; margin: 15px 0;">
+            ${filtered.map(r => `
+                <tr>
+                    <th style="padding: 10px; border: 1px solid #ddd; background-color: ${headerBg}; text-align: right; width: 30%;">${Utils.escapeHTML(r.label)}</th>
+                    <td style="padding: 10px; border: 1px solid #ddd; ${r.cellStyle || ''}">${r.html ? r.html : Utils.escapeHTML(String(r.value))}</td>
+                </tr>
+            `).join('')}
+        </table>`;
+    },
+
+    _buildPrintTextPanel(text, bgColor = '#fff3e0', borderColor = '#FF9800') {
+        return `<div style="padding: 15px; background-color: ${bgColor}; border: 2px solid ${borderColor}; border-radius: 8px; white-space: pre-wrap; line-height: 1.75;">${Utils.escapeHTML(text || 'غير محدد')}</div>`;
+    },
+
+    _collectIncidentExportImages(incident) {
+        const images = [];
+        const pushImage = (src) => {
+            const normalized = String(src || '').trim();
+            if (normalized && !images.includes(normalized)) images.push(normalized);
+        };
+        if (Array.isArray(incident?.attachments)) {
+            incident.attachments.forEach(att => {
+                if (images.length >= 2) return;
+                if (!att) return;
+                const isImage = att.type?.startsWith('image/') || att.name?.match(/\.(jpg|jpeg|png|gif|webp)$/i);
+                if (!isImage) return;
+                pushImage(att.directLink || att.shareableLink || att.cloudLink?.url || att.data || att.url || '');
+            });
+        }
+        if (images.length < 2 && incident?.image) pushImage(incident.image);
+        return images.slice(0, 2);
+    },
+
+    _buildIncidentReportImagesSection(images, sectionNum = '6') {
+        if (!Array.isArray(images) || !images.length) return '';
+        const imageContainerStyle = 'display: inline-block; width: 48%; max-width: 360px; margin: 1%; vertical-align: top; text-align: center;';
+        const imageFrameStyle = 'width: 100%; height: 300px; border: 2px solid #1565C0; border-radius: 12px; padding: 8px; background: #f8fafc; box-shadow: 0 4px 12px rgba(15,23,42,0.08); display: flex; align-items: center; justify-content: center; overflow: hidden;';
+        const imageStyle = 'max-width: 100%; max-height: 100%; object-fit: contain; border-radius: 8px;';
+        return `
+            <div style="margin-bottom: 30px;">
+                ${this._buildPrintSectionHeading(sectionNum, 'الصور المرفقة', '#1565C0', '#2196F3')}
+                <div style="text-align: center; margin: 10px 0; direction: rtl; display: flex; flex-wrap: wrap; justify-content: center; gap: 16px;">
+                    ${images.map((img, idx) => `
+                        <div style="${imageContainerStyle}">
+                            <div style="${imageFrameStyle}">
+                                <img src="${this.convertGoogleDriveLinkToPrintable(img)}" alt="صورة ${idx + 1}" style="${imageStyle}" onerror="this.parentElement.innerHTML='<div style=\\'color:#94a3b8;font-size:14px;\\'>تعذر تحميل الصورة</div>';">
+                            </div>
+                            <div style="margin-top: 10px; font-size: 13px; color: #475569; font-weight: 600;">صورة ${idx + 1}</div>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+        `;
+    },
+
+    _buildIncidentReportActionPlanSection(actionPlan, sectionNum = '5') {
+        if (!Array.isArray(actionPlan) || !actionPlan.length) return '';
+        const statusLabel = (status) => {
+            if (status === 'completed') return 'تم الإنجاز';
+            if (status === 'in_progress') return 'تحت التنفيذ';
+            return 'جارٍ';
+        };
+        const actionRows = actionPlan.map(action => `
+            <tr>
+                <td style="padding: 8px; border: 1px solid #ddd;">${Utils.escapeHTML(action.actionType === 'corrective' ? 'إجراء تصحيحي' : action.actionType === 'preventive' ? 'إجراء وقائي' : (action.actionType || 'إجراء'))}</td>
+                <td style="padding: 8px; border: 1px solid #ddd;">${Utils.escapeHTML(action.description || action.correctiveAction || '')}</td>
+                <td style="padding: 8px; border: 1px solid #ddd; text-align: center;">${Utils.escapeHTML(action.owner || action.responsibleName || '')}</td>
+                <td style="padding: 8px; border: 1px solid #ddd; text-align: center;">${action.dueDate || action.plannedDate ? this._formatIncidentPrintDate(action.dueDate || action.plannedDate) : ''}</td>
+                <td style="padding: 8px; border: 1px solid #ddd; text-align: center;">${action.closedDate ? this._formatIncidentPrintDate(action.closedDate) : ''}</td>
+                <td style="padding: 8px; border: 1px solid #ddd; text-align: center;">${Utils.escapeHTML(statusLabel(action.status))}</td>
+            </tr>
+        `).join('');
+        return `
+            <div style="margin-bottom: 30px;">
+                ${this._buildPrintSectionHeading(sectionNum, 'خطة الإجراءات التصحيحية والوقائية', '#2E7D32', '#4CAF50')}
+                <table style="width: 100%; border-collapse: collapse; margin: 15px 0;">
+                    <thead>
+                        <tr style="background: linear-gradient(135deg, #388E3C 0%, #4CAF50 100%); color: white;">
+                            <th style="padding: 12px; border: 1px solid #2E7D32; text-align: right;">نوع الإجراء</th>
+                            <th style="padding: 12px; border: 1px solid #2E7D32; text-align: right;">وصف الإجراء</th>
+                            <th style="padding: 12px; border: 1px solid #2E7D32; text-align: center;">المسؤول</th>
+                            <th style="padding: 12px; border: 1px solid #2E7D32; text-align: center;">تاريخ الاستحقاق</th>
+                            <th style="padding: 12px; border: 1px solid #2E7D32; text-align: center;">تاريخ الإغلاق</th>
+                            <th style="padding: 12px; border: 1px solid #2E7D32; text-align: center;">الحالة</th>
+                        </tr>
+                    </thead>
+                    <tbody>${actionRows}</tbody>
+                </table>
+            </div>
+        `;
+    },
+
+    _parseIncidentInvestigationSummary(incident) {
+        if (!incident?.investigation) return null;
+        try {
+            return typeof incident.investigation === 'string'
+                ? JSON.parse(incident.investigation)
+                : incident.investigation;
+        } catch {
+            return null;
+        }
+    },
+
+    buildIncidentReportPrintContent(incident) {
+        const investigation = this._parseIncidentInvestigationSummary(incident);
+        const locationLabel = [
+            incident.siteName || incident.factory,
+            incident.sublocationName || incident.sublocation,
+            incident.location
+        ].filter(v => v && String(v).trim()).join(' — ') || 'غير محدد';
+
+        const severityBadge = incident.severity
+            ? `<span style="display:inline-block;padding:4px 12px;border-radius:999px;background:#fee2e2;color:#991b1b;font-weight:700;">${Utils.escapeHTML(incident.severity)}</span>`
+            : 'غير محدد';
+
+        const statusBadge = incident.status
+            ? `<span style="display:inline-block;padding:4px 12px;border-radius:999px;background:#e0e7ff;color:#3730a3;font-weight:700;">${Utils.escapeHTML(incident.status)}</span>`
+            : 'غير محدد';
+
+        const section1 = `
+            <div style="margin-bottom: 30px;">
+                ${this._buildPrintSectionHeading('1', 'بيانات الحادث الأساسية', '#1565C0', '#2196F3')}
+                ${this._buildPrintDataTable([
+                    { label: 'كود الحادث / ISO', value: incident.isoCode || incident.id || 'غير محدد' },
+                    { label: 'عنوان التقرير', value: incident.title || 'غير محدد' },
+                    { label: 'رقم الإخطار', value: incident.notificationNumber },
+                    { label: 'تاريخ ووقت الحادث', value: this._formatIncidentPrintDate(incident.date || incident.incidentDateTime) },
+                    { label: 'تاريخ الإنشاء', value: this._formatIncidentPrintDate(incident.createdAt) },
+                    { label: 'آخر تحديث', value: this._formatIncidentPrintDate(incident.updatedAt) },
+                    { label: 'نوع الحادث', value: incident.incidentType },
+                    { label: 'درجة الشدة', value: incident.severity, html: severityBadge },
+                    { label: 'حالة الحادث', value: incident.status, html: statusBadge }
+                ])}
+            </div>
+        `;
+
+        const section2 = `
+            <div style="margin-bottom: 30px;">
+                ${this._buildPrintSectionHeading('2', 'الموقع والجهة', '#6A1B9A', '#9C27B0')}
+                ${this._buildPrintDataTable([
+                    { label: 'المصنع / الموقع', value: incident.siteName || incident.factory },
+                    { label: 'المكان الفرعي', value: incident.sublocationName || incident.sublocation },
+                    { label: 'الموقع التفصيلي', value: locationLabel },
+                    { label: 'الإدارة / القسم', value: incident.department }
+                ], '#f3e5f5')}
+            </div>
+        `;
+
+        const section3 = `
+            <div style="margin-bottom: 30px;">
+                ${this._buildPrintSectionHeading('3', 'بيانات الإبلاغ والمتضرر', '#AD1457', '#E91E63')}
+                ${this._buildPrintDataTable([
+                    { label: 'المبلِّغ', value: incident.reportedBy },
+                    { label: 'الكود الوظيفي', value: incident.employeeCode || incident.employeeNumber },
+                    { label: 'الطرف المتضرر', value: incident.affectedName },
+                    { label: 'وظيفة المتضرر', value: incident.affectedJob || incident.affectedRole },
+                    { label: 'جهة المتضرر', value: incident.affectedDepartment }
+                ], '#fce4ec')}
+            </div>
+        `;
+
+        const section4 = `
+            <div style="margin-bottom: 30px;">
+                ${this._buildPrintSectionHeading('4', 'وصف الحادث', '#E65100', '#FF9800')}
+                ${this._buildPrintTextPanel(incident.description, '#fff3e0', '#FF9800')}
+            </div>
+        `;
+
+        const analysisBlocks = [];
+        if (incident.rootCause) {
+            analysisBlocks.push(`
+                <div style="margin-top: 18px;">
+                    <div style="font-weight: 700; color: #00695C; margin-bottom: 8px;">الأسباب الجذرية</div>
+                    ${this._buildPrintTextPanel(incident.rootCause, '#e0f2f1', '#009688')}
+                </div>
+            `);
+        }
+        if (incident.correctiveAction) {
+            analysisBlocks.push(`
+                <div style="margin-top: 18px;">
+                    <div style="font-weight: 700; color: #00695C; margin-bottom: 8px;">الإجراءات التصحيحية الفورية</div>
+                    ${this._buildPrintTextPanel(incident.correctiveAction, '#e0f2f1', '#009688')}
+                </div>
+            `);
+        }
+        if (incident.preventiveAction) {
+            analysisBlocks.push(`
+                <div style="margin-top: 18px;">
+                    <div style="font-weight: 700; color: #00695C; margin-bottom: 8px;">الإجراءات الوقائية</div>
+                    ${this._buildPrintTextPanel(incident.preventiveAction, '#e0f2f1', '#009688')}
+                </div>
+            `);
+        }
+
+        const section5 = analysisBlocks.length ? `
+            <div style="margin-bottom: 30px;">
+                ${this._buildPrintSectionHeading('5', 'التحليل والإجراءات', '#00695C', '#009688')}
+                ${analysisBlocks.join('')}
+            </div>
+        ` : '';
+
+        const hasActionPlan = Array.isArray(incident.actionPlan) && incident.actionPlan.length > 0;
+        let nextSection = analysisBlocks.length ? 6 : 5;
+        const actionPlanSection = hasActionPlan
+            ? this._buildIncidentReportActionPlanSection(incident.actionPlan, String(nextSection++))
+            : '';
+
+        const exportImages = this._collectIncidentExportImages(incident);
+        const imagesSection = exportImages.length
+            ? this._buildIncidentReportImagesSection(exportImages, String(nextSection++))
+            : '';
+
+        let investigationSection = '';
+        if (investigation && (investigation.investigationNumber || investigation.description)) {
+            investigationSection = `
+                <div style="margin-bottom: 30px;">
+                    ${this._buildPrintSectionHeading(String(nextSection), 'ملخص التحقيق المرتبط', '#F57F17', '#FFC107')}
+                    ${this._buildPrintDataTable([
+                        { label: 'رقم التحقيق', value: investigation.investigationNumber },
+                        { label: 'تاريخ التحقيق', value: this._formatIncidentPrintDate(investigation.investigationDateTime) },
+                        { label: 'نتيجة تقييم الخطر', value: investigation.riskResult || investigation.riskLevel }
+                    ], '#fff9c4')}
+                    ${investigation.description ? `
+                        <div style="margin-top: 12px;">
+                            <div style="font-weight: 700; color: #92400e; margin-bottom: 8px;">ملخص التحقيق</div>
+                            ${this._buildPrintTextPanel(investigation.description, '#fffbeb', '#f59e0b')}
+                        </div>
+                    ` : ''}
+                </div>
+            `;
+        }
+
+        return `
+            <div style="direction: rtl; text-align: right; font-family: 'Tahoma', Arial, sans-serif;">
+                ${section1}
+                ${section2}
+                ${section3}
+                ${section4}
+                ${section5}
+                ${actionPlanSection}
+                ${imagesSection}
+                ${investigationSection}
+            </div>
+        `;
+    },
+
+    _openIncidentPrintableHtml(htmlContent, successMessage) {
+        const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const printWindow = window.open(url, '_blank');
+        if (!printWindow) {
+            Loading.hide();
+            Notification.error('يرجى السماح للنوافذ المنبثقة لعرض التقرير');
+            return false;
+        }
+        printWindow.onload = () => {
+            setTimeout(() => {
+                printWindow.print();
+                setTimeout(() => {
+                    URL.revokeObjectURL(url);
+                    Loading.hide();
+                    Notification.success(successMessage || 'تم تجهيز التقرير للطباعة/الحفظ كـ PDF');
+                }, 800);
+            }, 500);
+        };
+        return true;
+    },
+
     async exportPDF(id) {
         const incident = AppState.appData.incidents.find(i => i.id === id);
         if (!incident) {
@@ -9098,135 +9392,31 @@ const Incidents = {
         }
 
         try {
-            Loading.show();
+            Loading.show('جاري تحضير تقرير الحادث...');
 
-            const formCode = incident.isoCode || incident.id?.substring(0, 12) || 'INCIDENT-UNKNOWN';
-            const formTitle = 'تقرير الحادث';
-
-            // جمع الصور من attachments و image (حد أقصى صورتين)
-            const images = [];
-            if (incident.attachments && Array.isArray(incident.attachments)) {
-                incident.attachments.forEach(att => {
-                    if (images.length < 2 && att && (att.type?.startsWith('image/') || att.name?.match(/\.(jpg|jpeg|png|gif)$/i))) {
-                        const imgSrc = att.directLink || att.shareableLink || att.cloudLink?.url || att.data || '';
-                        if (imgSrc) images.push(imgSrc);
-                    }
-                });
-            }
-            if (images.length < 2 && incident.image) {
-                const imgSrc = incident.image.startsWith('http') ? incident.image : incident.image;
-                if (imgSrc) images.push(imgSrc);
-            }
-
-            // بناء قسم الصور بشكل منسق (مربعات) - حد أقصى صورتين
-            let imagesSection = '';
-            if (images.length > 0) {
-                const maxImages = Math.min(images.length, 2); // حد أقصى صورتين
-                const imageContainerStyle = 'display: inline-block; width: 48%; max-width: 350px; margin: 1%; vertical-align: top; text-align: center;';
-                const imageFrameStyle = 'width: 100%; height: 300px; border: 3px solid #003865; border-radius: 12px; padding: 8px; background: #f8f9fa; box-shadow: 0 4px 8px rgba(0,0,0,0.1); display: flex; align-items: center; justify-content: center; overflow: hidden;';
-                const imageStyle = 'max-width: 100%; max-height: 100%; object-fit: contain; border-radius: 8px;';
-                imagesSection = `
-                    <div class="section-title" style="margin-top: 30px; margin-bottom: 20px; font-weight: bold; font-size: 18px; color: #003865; border-bottom: 2px solid #003865; padding-bottom: 10px;">الصور المرفقة:</div>
-                    <div style="text-align: center; margin: 20px 0; direction: rtl; display: flex; flex-wrap: wrap; justify-content: center; gap: 20px;">
-                        ${images.slice(0, maxImages).map((img, idx) => `
-                            <div style="${imageContainerStyle}">
-                                <div style="${imageFrameStyle}">
-                                    <img src="${this.convertGoogleDriveLinkToPrintable(img)}" alt="صورة ${idx + 1}" style="${imageStyle}" onerror="this.parentElement.innerHTML='<div style=\\'color: #999; font-size: 14px;\\'>فشل تحميل الصورة</div>';">
-                                </div>
-                                <div style="margin-top: 10px; font-size: 13px; color: #555; font-weight: 600;">صورة ${idx + 1}</div>
-                            </div>
-                        `).join('')}
-                    </div>
-                `;
-            }
-
-            // بناء خطة الإجراءات
-            let actionPlanSection = '';
-            if (incident.actionPlan && Array.isArray(incident.actionPlan) && incident.actionPlan.length > 0) {
-                const actionRows = incident.actionPlan.map(action => `
-                    <tr>
-                        <td style="padding: 8px; border: 1px solid #ddd;">${Utils.escapeHTML(action.actionType === 'corrective' ? 'إجراء تصحيحي' : 'إجراء وقائي')}</td>
-                        <td style="padding: 8px; border: 1px solid #ddd;">${Utils.escapeHTML(action.description || '')}</td>
-                        <td style="padding: 8px; border: 1px solid #ddd;">${Utils.escapeHTML(action.owner || '')}</td>
-                        <td style="padding: 8px; border: 1px solid #ddd;">${action.dueDate ? Utils.formatDate(action.dueDate) : ''}</td>
-                        <td style="padding: 8px; border: 1px solid #ddd;">${action.closedDate ? Utils.formatDate(action.closedDate) : ''}</td>
-                        <td style="padding: 8px; border: 1px solid #ddd;">${Utils.escapeHTML(action.status === 'completed' ? 'تم إنجازه' : action.status === 'in_progress' ? 'تحت التنفيذ' : 'جار')}</td>
-                    </tr>
-                `).join('');
-                actionPlanSection = `
-                    <div class="section-title" style="margin-top: 30px; margin-bottom: 15px; font-weight: bold; font-size: 16px;">خطة الإجراءات التصحيحية والوقائية:</div>
-                    <table style="width: 100%; border-collapse: collapse; margin: 15px 0;">
-                        <thead>
-                            <tr style="background-color: #f5f5f5;">
-                                <th style="padding: 10px; border: 1px solid #ddd; text-align: right;">نوع الإجراء</th>
-                                <th style="padding: 10px; border: 1px solid #ddd; text-align: right;">وصف الإجراء</th>
-                                <th style="padding: 10px; border: 1px solid #ddd; text-align: right;">المسؤول</th>
-                                <th style="padding: 10px; border: 1px solid #ddd; text-align: right;">تاريخ الاستحقاق</th>
-                                <th style="padding: 10px; border: 1px solid #ddd; text-align: right;">تاريخ الإغلاق</th>
-                                <th style="padding: 10px; border: 1px solid #ddd; text-align: right;">الحالة</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            ${actionRows}
-                        </tbody>
-                    </table>
-                `;
-            }
-
-            const content = `
-                <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
-                    <tr><th style="padding: 8px; border: 1px solid #ddd; background-color: #f5f5f5; text-align: right;">كود ISO</th><td style="padding: 8px; border: 1px solid #ddd;">${Utils.escapeHTML(incident.isoCode || 'N/A')}</td></tr>
-                    <tr><th style="padding: 8px; border: 1px solid #ddd; background-color: #f5f5f5; text-align: right;">العنوان</th><td style="padding: 8px; border: 1px solid #ddd;">${Utils.escapeHTML(incident.title || 'N/A')}</td></tr>
-                    <tr><th style="padding: 8px; border: 1px solid #ddd; background-color: #f5f5f5; text-align: right;">الموقع</th><td style="padding: 8px; border: 1px solid #ddd;">${Utils.escapeHTML(incident.location || 'N/A')}</td></tr>
-                    <tr><th style="padding: 8px; border: 1px solid #ddd; background-color: #f5f5f5; text-align: right;">التاريخ</th><td style="padding: 8px; border: 1px solid #ddd;">${incident.date ? Utils.formatDate(incident.date) : 'N/A'}</td></tr>
-                    <tr><th style="padding: 8px; border: 1px solid #ddd; background-color: #f5f5f5; text-align: right;">الشدة</th><td style="padding: 8px; border: 1px solid #ddd;">${Utils.escapeHTML(incident.severity || 'N/A')}</td></tr>
-                    <tr><th style="padding: 8px; border: 1px solid #ddd; background-color: #f5f5f5; text-align: right;">المبلغ</th><td style="padding: 8px; border: 1px solid #ddd;">${Utils.escapeHTML(incident.reportedBy || 'N/A')}</td></tr>
-                    <tr><th style="padding: 8px; border: 1px solid #ddd; background-color: #f5f5f5; text-align: right;">الكود الوظيفي</th><td style="padding: 8px; border: 1px solid #ddd;">${Utils.escapeHTML(incident.employeeCode || incident.employeeNumber || 'N/A')}</td></tr>
-                    <tr><th style="padding: 8px; border: 1px solid #ddd; background-color: #f5f5f5; text-align: right;">الحالة</th><td style="padding: 8px; border: 1px solid #ddd;">${Utils.escapeHTML(incident.status || 'N/A')}</td></tr>
-                    ${incident.affectedName ? `<tr><th style="padding: 8px; border: 1px solid #ddd; background-color: #f5f5f5; text-align: right;">الطرف المتضرر</th><td style="padding: 8px; border: 1px solid #ddd;">${Utils.escapeHTML(incident.affectedName || 'N/A')}</td></tr>` : ''}
-                    ${incident.incidentType ? `<tr><th style="padding: 8px; border: 1px solid #ddd; background-color: #f5f5f5; text-align: right;">نوع الحادث</th><td style="padding: 8px; border: 1px solid #ddd;">${Utils.escapeHTML(incident.incidentType || 'N/A')}</td></tr>` : ''}
-                </table>
-                <div class="section-title" style="margin-top: 20px; margin-bottom: 10px; font-weight: bold; font-size: 16px;">الوصف:</div>
-                <div class="description" style="padding: 15px; background-color: #f9f9f9; border: 1px solid #ddd; border-radius: 4px; margin-bottom: 20px; white-space: pre-wrap;">${Utils.escapeHTML(incident.description || 'N/A')}</div>
-                ${incident.rootCause ? `
-                <div class="section-title" style="margin-top: 20px; margin-bottom: 10px; font-weight: bold; font-size: 16px;">الأسباب الجذرية:</div>
-                <div class="description" style="padding: 15px; background-color: #f9f9f9; border: 1px solid #ddd; border-radius: 4px; margin-bottom: 20px; white-space: pre-wrap;">${Utils.escapeHTML(incident.rootCause || '')}</div>
-                ` : ''}
-                ${incident.correctiveAction ? `
-                <div class="section-title" style="margin-top: 20px; margin-bottom: 10px; font-weight: bold; font-size: 16px;">الإجراءات التصحيحية الفورية:</div>
-                <div class="description" style="padding: 15px; background-color: #f9f9f9; border: 1px solid #ddd; border-radius: 4px; margin-bottom: 20px; white-space: pre-wrap;">${Utils.escapeHTML(incident.correctiveAction || '')}</div>
-                ` : ''}
-                ${incident.preventiveAction ? `
-                <div class="section-title" style="margin-top: 20px; margin-bottom: 10px; font-weight: bold; font-size: 16px;">الإجراءات الوقائية:</div>
-                <div class="description" style="padding: 15px; background-color: #f9f9f9; border: 1px solid #ddd; border-radius: 4px; margin-bottom: 20px; white-space: pre-wrap;">${Utils.escapeHTML(incident.preventiveAction || '')}</div>
-                ` : ''}
-                ${actionPlanSection}
-                ${imagesSection}
-            `;
-
+            const formCode = incident.isoCode || `INC-${String(incident.id || '').substring(0, 10)}` || 'INCIDENT-REPORT';
+            const formVersion = AppState?.companySettings?.formVersion || '1.0';
+            const content = this.buildIncidentReportPrintContent(incident);
             const htmlContent = typeof FormHeader !== 'undefined' && FormHeader.generatePDFHTML
-                ? FormHeader.generatePDFHTML(formCode, formTitle, content, false, true, { version: '1.0' }, incident.createdAt, incident.updatedAt)
-                : `<html><head><style>body { font-family: 'Tahoma', Arial, sans-serif; direction: rtl; text-align: right; padding: 20px; } @media print { body { margin: 0; padding: 15px; } }</style></head><body>${content}</body></html>`;
+                ? FormHeader.generatePDFHTML(
+                    formCode,
+                    'تقرير الحادث',
+                    content,
+                    false,
+                    true,
+                    {
+                        version: formVersion,
+                        titleAr: 'تقرير الحادث',
+                        titleEn: 'Incident Report',
+                        'مرجع الحادث': incident.id || '—',
+                        'حالة التقرير': incident.status || '—'
+                    },
+                    incident.createdAt || incident.date,
+                    incident.updatedAt || incident.createdAt
+                )
+                : `<html dir="rtl" lang="ar"><head><meta charset="UTF-8"><style>body { font-family: 'Tahoma', Arial, sans-serif; direction: rtl; text-align: right; padding: 20px; } @media print { body { margin: 0; padding: 15px; } }</style></head><body>${content}</body></html>`;
 
-            const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
-            const url = URL.createObjectURL(blob);
-            const printWindow = window.open(url, '_blank');
-
-            if (printWindow) {
-                printWindow.onload = () => {
-                    setTimeout(() => {
-                        printWindow.print();
-                        setTimeout(() => {
-                            URL.revokeObjectURL(url);
-                            Loading.hide();
-                            Notification.success('تم تجهيز التقرير للطباعة/الحفظ كـ PDF');
-                        }, 1000);
-                    }, 500);
-                };
-            } else {
-                Loading.hide();
-                Notification.error('يرجى السماح للنوافذ المنبثقة لعرض التقرير');
-            }
+            this._openIncidentPrintableHtml(htmlContent, 'تم تجهيز تقرير الحادث للطباعة/الحفظ كـ PDF');
         } catch (error) {
             Loading.hide();
             Utils.safeError('خطأ في تصدير PDF:', error);
@@ -10659,7 +10849,12 @@ const Incidents = {
                     content,
                     false,
                     true,
-                    { version: '1.0' },
+                    {
+                        version: AppState?.companySettings?.formVersion || '1.0',
+                        titleAr: 'نموذج التحقيق في الحادث',
+                        titleEn: 'Incident Investigation Report',
+                        'مرجع الحادث': incident.id || '—'
+                    },
                     incident.createdAt,
                     investigationData.updatedAt || incident.updatedAt
                 )
