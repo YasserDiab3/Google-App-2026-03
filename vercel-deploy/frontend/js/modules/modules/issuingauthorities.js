@@ -852,7 +852,7 @@ const IssuingAuthorities = {
 
     _bestPermitLevelForFields(row, permitTypeFields) {
         const fields = Array.isArray(permitTypeFields) ? permitTypeFields : [];
-        if (!fields.length) return 'G';
+        if (!fields.length) return 'X';
         let best = 'X';
         fields.forEach((f) => {
             const l = String(row[f] || 'X').toUpperCase().trim();

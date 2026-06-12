@@ -217,7 +217,7 @@ const PTW = {
         const manualValue = isManualSelected || effectiveSelect === '__manual__' ? selName : '';
 
         return `
-            <div class="ia-role-picker" data-role="${esc(roleLabel)}" data-ia-role-key="${esc(roleKey)}">
+            <div class="ia-role-picker" data-role="${esc(roleLabel)}" data-ia-role-key="${esc(roleKey)}" data-ia-scope="${isClosure ? 'closure' : 'approval'}">
                 <select class="form-input text-sm w-full ia-approval-select ${sigClass ? '' : 'mb-1'}" data-role="${esc(roleLabel)}" data-ia-role-key="${esc(roleKey)}">
                     <option value="">اختر من القائمة</option>
                     ${candidates.map(c => `
@@ -254,9 +254,12 @@ const PTW = {
         const role = typeof pickerOrRole === 'string' ? pickerOrRole : pickerOrRole?.dataset?.role;
         if (!role || !modal) return { name: '', approverId: '', personType: '', isManualApprover: true };
         const nameSelector = isClosure ? '.manual-closure-approval-name' : '.manual-approval-name';
-        const picker = modal.querySelector(`.ia-role-picker[data-role="${role}"]`);
+        const listSelector = isClosure ? '#manual-closure-approvals-list' : '#manual-approvals-list';
+        const listRoot = modal.querySelector(listSelector) || modal;
+        const picker = listRoot.querySelector(`.ia-role-picker[data-role="${role}"]`);
         if (!picker) {
-            const nameEl = modal.querySelector(`${nameSelector}[data-role="${role}"]`);
+            const nameEl = listRoot.querySelector(`${nameSelector}[data-role="${role}"]`)
+                || modal.querySelector(`${nameSelector}[data-role="${role}"]`);
             return { name: nameEl?.value?.trim() || '', approverId: '', personType: '', isManualApprover: true };
         }
         const select = picker.querySelector('.ia-approval-select');

@@ -2737,11 +2737,79 @@ const Emergency = {
         });
     },
 
+    _fmExtractDriveFileId_(imageRef) {
+        const raw = String(imageRef || '').trim();
+        if (!raw) return '';
+        if (typeof Utils !== 'undefined' && typeof Utils.extractDriveFileId === 'function') {
+            return Utils.extractDriveFileId(raw) || raw;
+        }
+        const m = raw.match(/[?&]id=([a-zA-Z0-9_-]+)/i)
+            || raw.match(/\/file\/d\/([a-zA-Z0-9_-]+)/i)
+            || raw.match(/googleusercontent\.com\/d\/([a-zA-Z0-9_-]+)/i)
+            || raw.match(/\/thumbnail\?id=([a-zA-Z0-9_-]+)/i);
+        return m ? String(m[1] || '').trim() : raw;
+    },
+
     _fmResolvePlanImageSrc(imageRef) {
         if (!imageRef) return '';
-        const ref = String(imageRef);
-        if (ref.startsWith('data:') || ref.startsWith('http')) return ref;
-        return `https://drive.google.com/thumbnail?id=${ref}&sz=w2000`;
+        const ref = String(imageRef).trim();
+        if (!ref) return '';
+        if (ref.startsWith('data:')) return ref;
+        if (ref.startsWith('http')) {
+            if (typeof Utils !== 'undefined' && typeof Utils.normalizeGoogleDriveImageUrl === 'function') {
+                return Utils.normalizeGoogleDriveImageUrl(ref) || ref;
+            }
+            return ref;
+        }
+        const fileId = this._fmExtractDriveFileId_(ref);
+        if (!fileId) return '';
+        return `https://lh3.googleusercontent.com/d/${fileId}`;
+    },
+
+    _fmBuildPlanImageFallbacks_(imageRef) {
+        const ref = String(imageRef || '').trim();
+        if (!ref) return [];
+        if (ref.startsWith('data:')) return [ref];
+        const fileId = this._fmExtractDriveFileId_(ref);
+        const candidates = [
+            this._fmResolvePlanImageSrc(ref),
+            ref.startsWith('http') ? ref : '',
+            fileId ? `https://lh3.googleusercontent.com/d/${fileId}` : '',
+            fileId && typeof window !== 'undefined' && typeof window.__googleDriveDirectUrlFromId === 'function'
+                ? window.__googleDriveDirectUrlFromId(fileId) : '',
+            fileId ? `https://drive.google.com/uc?export=view&id=${fileId}` : '',
+            fileId && typeof window !== 'undefined' && typeof window.__googleDrivePreviewUrlFromId === 'function'
+                ? window.__googleDrivePreviewUrlFromId(fileId) : '',
+            fileId ? `https://drive.google.com/thumbnail?id=${fileId}&sz=w2000` : ''
+        ];
+        return candidates.filter((url, idx, arr) => url && arr.indexOf(url) === idx);
+    },
+
+    _fmApplyMapImageSrc(mapImage, imageRef) {
+        if (!mapImage) return;
+        const fallbacks = this._fmBuildPlanImageFallbacks_(imageRef);
+        if (!fallbacks.length) {
+            mapImage.removeAttribute('src');
+            mapImage.alt = 'لا توجد صورة للمخطط';
+            return;
+        }
+        mapImage.alt = 'مخطط الطابق';
+        let step = 0;
+        const tryNext = () => {
+            if (step >= fallbacks.length) {
+                mapImage.alt = 'تعذر تحميل صورة المخطط';
+                return;
+            }
+            const nextSrc = fallbacks[step++];
+            mapImage.removeAttribute('data-drive-thumbnail-handled');
+            mapImage.onerror = () => {
+                mapImage.onerror = null;
+                tryNext();
+            };
+            mapImage.onload = () => { mapImage.onerror = null; };
+            mapImage.src = nextSrc;
+        };
+        tryNext();
     },
 
     async _fmUploadFloorPlanImageToDrive(imageData, planName) {
@@ -2763,7 +2831,7 @@ const Emergency = {
         if (!uploadResult?.success || !uploadResult.fileId) {
             throw new Error(uploadResult?.message || 'فشل رفع صورة المخطط إلى Drive');
         }
-        return uploadResult.fileId;
+        return uploadResult.directLink || uploadResult.shareableLink || uploadResult.fileId;
     },
 
     _fmRestoreCanvasStamps(canvas, rawJson) {
@@ -2825,11 +2893,7 @@ const Emergency = {
         ctx.fillStyle = '#ffffff';
         ctx.fillRect(0, 0, w, h);
 
-        const imgSrc = (plan.imageDriveId || '').startsWith('data:')
-            ? plan.imageDriveId
-            : (plan.imageDriveId || '').startsWith('http')
-                ? plan.imageDriveId
-                : plan.imageDriveId ? `https://drive.google.com/thumbnail?id=${plan.imageDriveId}&sz=w1600` : '';
+        const imgSrc = this._fmResolvePlanImageSrc(plan.imageDriveId || '');
 
         const drawMarkers = () => {
             (this._fmState.items || []).forEach(item => {
@@ -3879,17 +3943,15 @@ const Emergency = {
 
         const mapCanvas = document.getElementById('fm-map-canvas');
         const mapImage = document.getElementById('fm-map-image');
-        const imgId = plan.imageDriveId || '';
-        const imgSrc = imgId.startsWith('data:')
-            ? imgId
-            : imgId.startsWith('http')
-                ? imgId
-                : imgId ? `https://drive.google.com/thumbnail?id=${imgId}&sz=w1600` : '';
-        mapImage.src = imgSrc;
-        mapImage.style.width = (plan.imageWidth || 1200) + 'px';
-        mapImage.style.height = (plan.imageHeight || 800) + 'px';
-        mapCanvas.style.width = (plan.imageWidth || 1200) + 'px';
-        mapCanvas.style.height = (plan.imageHeight || 800) + 'px';
+        this._fmApplyMapImageSrc(mapImage, plan.imageDriveId || '');
+        if (mapImage) {
+            mapImage.style.width = (plan.imageWidth || 1200) + 'px';
+            mapImage.style.height = (plan.imageHeight || 800) + 'px';
+        }
+        if (mapCanvas) {
+            mapCanvas.style.width = (plan.imageWidth || 1200) + 'px';
+            mapCanvas.style.height = (plan.imageHeight || 800) + 'px';
+        }
 
         if (typeof GoogleIntegration !== 'undefined' && GoogleIntegration.sendRequest) {
             GoogleIntegration.sendRequest({ action: 'getAllEmergencyMapItems', data: { filters: { floorPlanId: planId } } })
