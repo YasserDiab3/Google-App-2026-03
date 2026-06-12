@@ -278,7 +278,7 @@ function getDefaultHeaders(sheetName) {
         // Y = مصرح بالتوقيع بعد التنسيق مع مدير السلامة (يُضاف شرط HSE)
         // X = غير مصرح له بالتوقيع
         'PTWIssuingAuthorities': [
-            'id', 'personType', 'employeeCode', 'contractorCompanyName', 'name', 'departmentId', 'departmentName', 'jobTitle', 'factory', 'location', 'sublocation', 'email', 'phone', 'isActive',
+            'id', 'personType', 'employeeCode', 'contractorCompanyName', 'name', 'departmentId', 'departmentName', 'jobTitle', 'approvalRole', 'factory', 'location', 'sublocation', 'email', 'phone', 'isActive',
             'contractorFlag',
             'coldWork', 'loto', 'hotWork', 'workAtHeight', 'confinedSpace',
             'excavation', 'contractorPTW', 'liftingPlan',
@@ -287,7 +287,7 @@ function getDefaultHeaders(sheetName) {
         ],
         // ✅ قائمة المصرح لهم بالتوقيع - مقاولين (قاعدة بيانات منفصلة)
         'PTWContractorIssuingAuthorities': [
-            'id', 'personType', 'employeeCode', 'contractorCompanyName', 'name', 'departmentId', 'departmentName', 'jobTitle', 'factory', 'location', 'sublocation', 'email', 'phone', 'isActive',
+            'id', 'personType', 'employeeCode', 'contractorCompanyName', 'name', 'departmentId', 'departmentName', 'jobTitle', 'approvalRole', 'factory', 'location', 'sublocation', 'email', 'phone', 'isActive',
             'contractorFlag',
             'coldWork', 'loto', 'hotWork', 'workAtHeight', 'confinedSpace',
             'excavation', 'contractorPTW', 'liftingPlan',

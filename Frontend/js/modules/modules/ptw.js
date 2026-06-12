@@ -111,9 +111,201 @@ const PTW = {
     getDefaultApprovals() {
         return [
             { role: 'مسؤول الجهة الطالبة', required: true, approved: false, rejected: false, status: 'pending', approver: '', date: '', comments: '', order: 0 },
-            { role: 'مدير منطقة الأعمال', required: true, approved: false, rejected: false, status: 'pending', approver: '', date: '', comments: '', order: 1 },
-            { role: 'مسؤول السلامة والصحة المهنية', required: true, approved: false, rejected: false, status: 'pending', approver: '', date: '', comments: '', order: 2, isSafetyOfficer: true }
+            { role: 'مدير منطقة الأعمال', required: true, approved: false, rejected: false, status: 'pending', approver: '', date: '', comments: '', order: 1, approvalRoleKey: 'areaManager' },
+            { role: 'مدير / مهندس الصيانة', required: true, approved: false, rejected: false, status: 'pending', approver: '', date: '', comments: '', order: 2, approvalRoleKey: 'maintenanceEngineer' },
+            { role: 'مسؤول السلامة والصحة المهنية', required: true, approved: false, rejected: false, status: 'pending', approver: '', date: '', comments: '', order: 3, isSafetyOfficer: true }
         ];
+    },
+
+    _PTW_IA_ROLE_BY_AR: {
+        'مدير منطقة الأعمال': 'areaManager',
+        'مدير / مهندس الصيانة': 'maintenanceEngineer'
+    },
+
+    _PTW_IA_ROLE_LABELS: {
+        areaManager: 'مدير منطقة الأعمال',
+        maintenanceEngineer: 'مدير / مهندس الصيانة'
+    },
+
+    _resolveIaRoleKey(roleLabel, explicitKey) {
+        if (explicitKey) return String(explicitKey).trim();
+        return this._PTW_IA_ROLE_BY_AR[String(roleLabel || '').trim()] || '';
+    },
+
+    async _fetchIaCandidatesForRole(ptwData, approvalRoleKey) {
+        const roleKey = String(approvalRoleKey || '').trim();
+        if (!roleKey || roleKey === 'general') return [];
+        const iaModule = typeof IssuingAuthorities !== 'undefined' ? IssuingAuthorities : null;
+        if (!iaModule || typeof iaModule.getAuthoritiesForApprovalRole !== 'function') return [];
+        const permitTypeFields = this._extractPermitTypeFields(ptwData);
+        try {
+            return await iaModule.getAuthoritiesForApprovalRole(permitTypeFields, roleKey);
+        } catch (err) {
+            if (typeof Utils !== 'undefined') Utils.safeWarn('_fetchIaCandidatesForRole error:', err);
+            return [];
+        }
+    },
+
+    _manualEntryToPtwStub(entry) {
+        if (!entry) return null;
+        return {
+            hotWorkDetails: entry.hotWorkDetails,
+            confinedSpaceDetails: entry.confinedSpaceDetails,
+            heightWorkDetails: entry.heightWorkDetails,
+            lotoApplied: entry.lotoApplied,
+            coldWorkType: entry.coldWorkType,
+            excavationLength: entry.excavationLength,
+            excavationWidth: entry.excavationWidth,
+            excavationDepth: entry.excavationDepth,
+            soilType: entry.soilType,
+            permitType: entry.permitType,
+            workType: entry.workType || entry.permitTypeDisplay,
+            otherWorkType: entry.otherWorkType,
+            electricalWorkType: entry.electricalWorkType
+        };
+    },
+
+    _renderIaRolePickerHTML(options = {}) {
+        const esc = Utils.escapeHTML;
+        const roleLabel = String(options.roleLabel || options.role || '').trim();
+        const roleKey = this._resolveIaRoleKey(roleLabel, options.roleKey);
+        const candidates = Array.isArray(options.candidates) ? options.candidates : [];
+        const selId = String(options.selectedId || options.approverId || '').trim();
+        const selName = String(options.selectedName || options.name || '').trim();
+        const inputClass = options.inputClass || 'form-input text-sm w-full manual-approval-name';
+        const sigClass = options.sigClass || '';
+        const isClosure = !!options.isClosure;
+        const nameClass = isClosure ? 'manual-closure-approval-name' : 'manual-approval-name';
+        const resolvedInputClass = inputClass.includes(nameClass) ? inputClass : `${inputClass} ${nameClass}`;
+
+        const personTag = (t) => (t === 'contractor' ? ' (مقاول)' : ' (موظف)');
+        const matched = candidates.find(c => c.id === selId);
+        const isManualSelected = selName && !matched && selId !== '__manual__';
+        const effectiveSelect = isManualSelected ? '__manual__' : (selId || (candidates.length === 1 ? candidates[0].id : ''));
+
+        if (candidates.length === 0) {
+            return `
+                <input type="text" class="${resolvedInputClass}" data-role="${esc(roleLabel)}" data-ia-role-key="${esc(roleKey)}" data-ia-manual-only="true" placeholder="الاسم" value="${esc(selName)}">
+                <p class="text-xs text-gray-500 mt-0.5 mb-0">لا يوجد في القائمة — أدخل الاسم يدوياً</p>`;
+        }
+
+        const manualHidden = effectiveSelect !== '__manual__' && !isManualSelected;
+        const manualValue = isManualSelected || effectiveSelect === '__manual__' ? selName : '';
+
+        return `
+            <div class="ia-role-picker" data-role="${esc(roleLabel)}" data-ia-role-key="${esc(roleKey)}">
+                <select class="form-input text-sm w-full ia-approval-select ${sigClass ? '' : 'mb-1'}" data-role="${esc(roleLabel)}" data-ia-role-key="${esc(roleKey)}">
+                    <option value="">اختر من القائمة</option>
+                    ${candidates.map(c => `
+                        <option value="${esc(c.id || '')}" ${c.id === effectiveSelect ? 'selected' : ''}>
+                            ${esc(c.name || c.email || '')}${esc(personTag(c.personType))}
+                        </option>
+                    `).join('')}
+                    <option value="__manual__" ${effectiveSelect === '__manual__' || isManualSelected ? 'selected' : ''}>إدخال يدوي</option>
+                </select>
+                <input type="text" class="${resolvedInputClass} ia-approval-manual ${manualHidden ? 'hidden' : ''}" data-role="${esc(roleLabel)}" data-ia-role-key="${esc(roleKey)}" placeholder="أدخل الاسم يدوياً" value="${esc(manualValue)}">
+            </div>`;
+    },
+
+    _setupIaRolePickerListeners(root) {
+        if (!root) return;
+        root.querySelectorAll('.ia-role-picker').forEach(picker => {
+            const select = picker.querySelector('.ia-approval-select');
+            const manualInput = picker.querySelector('.ia-approval-manual');
+            if (!select || !manualInput) return;
+            const sync = () => {
+                const isManual = select.value === '__manual__';
+                manualInput.classList.toggle('hidden', !isManual);
+                if (!isManual && select.value) {
+                    const opt = select.options[select.selectedIndex];
+                    manualInput.value = opt ? opt.textContent.replace(/\s*\((?:مقاول|موظف)\)\s*$/, '').trim() : '';
+                }
+            };
+            select.addEventListener('change', sync);
+            sync();
+        });
+    },
+
+    _readIaRolePickerValue(pickerOrRole, modal, { isClosure = false } = {}) {
+        const role = typeof pickerOrRole === 'string' ? pickerOrRole : pickerOrRole?.dataset?.role;
+        if (!role || !modal) return { name: '', approverId: '', personType: '', isManualApprover: true };
+        const nameSelector = isClosure ? '.manual-closure-approval-name' : '.manual-approval-name';
+        const picker = modal.querySelector(`.ia-role-picker[data-role="${role}"]`);
+        if (!picker) {
+            const nameEl = modal.querySelector(`${nameSelector}[data-role="${role}"]`);
+            return { name: nameEl?.value?.trim() || '', approverId: '', personType: '', isManualApprover: true };
+        }
+        const select = picker.querySelector('.ia-approval-select');
+        const manualInput = picker.querySelector('.ia-approval-manual');
+        const roleKey = picker.dataset.iaRoleKey || this._resolveIaRoleKey(role);
+        if (select?.value && select.value !== '__manual__') {
+            const opt = select.options[select.selectedIndex];
+            const name = opt ? opt.textContent.replace(/\s*\((?:مقاول|موظف)\)\s*$/, '').trim() : '';
+            const personType = opt && opt.textContent.includes('(مقاول)') ? 'contractor' : 'employee';
+            return { name, approverId: select.value, personType, isManualApprover: false, approvalRoleKey: roleKey };
+        }
+        return {
+            name: manualInput?.value?.trim() || '',
+            approverId: '',
+            personType: '',
+            isManualApprover: true,
+            approvalRoleKey: roleKey
+        };
+    },
+
+    _renderSystemApproverCell(approval, index, isEdit, prefix = 'approval') {
+        const esc = Utils.escapeHTML;
+        const candidates = Array.isArray(approval.candidates) ? approval.candidates : [];
+        const approverId = approval.approverId || '';
+        const approverName = approval.approver || '';
+        const isManual = approval.isManualApprover === true || (!approverId && !!approverName);
+        const selectValue = isManual ? '__manual__' : approverId;
+        const personTag = (t) => (t === 'contractor' ? ' (مقاول)' : ' (موظف)');
+        const selectId = `${prefix}-approver-select-${index}`;
+        const manualId = `${prefix}-approver-manual-${index}`;
+        const plainId = `${prefix}-approver-${index}`;
+
+        if (candidates.length === 0) {
+            return `
+                <input type="text" class="form-input ${prefix}-approver-manual" style="min-width: 180px;"
+                    value="${esc(approverName)}" placeholder="اسم المعتمد"
+                    id="${plainId}">
+                <p class="text-xs text-gray-500 mt-1">لا يوجد في قائمة المصرح لهم — أدخل الاسم يدوياً.</p>`;
+        }
+
+        const manualHidden = selectValue !== '__manual__';
+        return `
+            <div class="ia-system-approver-picker" data-index="${index}" data-prefix="${prefix}">
+                <select class="form-input ${prefix}-approver-select" id="${selectId}" style="min-width: 180px;">
+                    <option value="">اختر المعتمد</option>
+                    ${candidates.map(candidate => `
+                        <option value="${esc(candidate.id || '')}" ${candidate.id === selectValue ? 'selected' : ''}>
+                            ${esc(candidate.name || candidate.email || '')}${esc(personTag(candidate.personType))}
+                            ${candidate.email ? ` - ${esc(candidate.email)}` : ''}
+                        </option>
+                    `).join('')}
+                    <option value="__manual__" ${selectValue === '__manual__' ? 'selected' : ''}>إدخال يدوي</option>
+                </select>
+                <input type="text" class="form-input ${prefix}-approver-manual ${manualHidden ? 'hidden' : ''} mt-1" style="min-width: 180px;"
+                    value="${esc(isManual ? approverName : '')}" placeholder="اسم المعتمد يدوياً"
+                    id="${manualId}">
+            </div>`;
+    },
+
+    _setupSystemApproverPickerListeners(root) {
+        if (!root) return;
+        root.querySelectorAll('.ia-system-approver-picker').forEach(picker => {
+            const index = picker.dataset.index;
+            const prefix = picker.dataset.prefix || 'approval';
+            const select = picker.querySelector(`#${prefix}-approver-select-${index}`);
+            const manualInput = picker.querySelector(`#${prefix}-approver-manual-${index}`);
+            if (!select || !manualInput) return;
+            const sync = () => {
+                manualInput.classList.toggle('hidden', select.value !== '__manual__');
+            };
+            select.addEventListener('change', sync);
+            sync();
+        });
     },
 
     isSafetyRole(role = '') {
@@ -187,7 +379,13 @@ const PTW = {
                 history: Array.isArray(approval.history) ? approval.history : [],
                 assignedAt: approval.assignedAt || '',
                 assignedBy: approval.assignedBy || null,
-                circuitOwnerId: ownerId
+                circuitOwnerId: ownerId,
+                issuingAuthoritySource: approval.issuingAuthoritySource === true,
+                approvalRoleKey: approval.approvalRoleKey || this._resolveIaRoleKey(approval.role),
+                isManualApprover: approval.isManualApprover === true,
+                personType: approval.personType || '',
+                requiresHseCoApproval: approval.requiresHseCoApproval === true,
+                isHseCoApprovalGate: approval.isHseCoApprovalGate === true
             };
 
             if (normalized.status === 'approved') {
@@ -5783,12 +5981,23 @@ const PTW = {
                         const roleInput = document.getElementById(`closure-approval-role-${index}`);
                         const approverSelect = document.getElementById(`closure-approval-approver-select-${index}`);
                         const approverInput = document.getElementById(`closure-approval-approver-${index}`);
+                        const approverManual = document.getElementById(`closure-approval-approver-manual-${index}`);
                         const statusInput = document.getElementById(`closure-approval-status-${index}`);
                         const dateInput = document.getElementById(`closure-approval-date-${index}`);
                         const commentsInput = document.getElementById(`closure-approval-comments-${index}`);
-                        
-                        const approverId = approverSelect?.value || '';
-                        const approverName = approverSelect?.options[approverSelect?.selectedIndex]?.text || approverInput?.value || '';
+
+                        let approverId = approverSelect?.value || '';
+                        let approverName = approverInput?.value || '';
+                        if (approverSelect) {
+                            if (approverId === '__manual__') {
+                                approverId = '';
+                                approverName = approverManual?.value?.trim() || '';
+                            } else if (approverId) {
+                                approverName = approverSelect.options[approverSelect.selectedIndex]?.text?.replace(/\s*\((?:مقاول|موظف)\)\s*(\s*-\s*.*)?$/, '').trim() || approverName;
+                            } else {
+                                approverName = '';
+                            }
+                        }
                         
                         closureApprovals.push({
                             role: roleInput?.value || '',
@@ -6708,7 +6917,7 @@ const PTW = {
     /**
      * فتح نموذج إدخال تصريح يدوي
      */
-    openManualPermitForm(entryId = null) {
+    async openManualPermitForm(entryId = null) {
         const isEdit = entryId !== null;
         const existingEntry = entryId ? this.registryData.find(r => r.id === entryId) : null;
 
@@ -6783,6 +6992,48 @@ const PTW = {
             return html;
         };
         const manualSupervisorSelectAttrs = 'class="form-input" style="border: 2px solid #e0e7ff; border-radius: 10px; transition: all 0.3s; padding: 10px 12px; width: 100%;" onfocus="this.style.borderColor=\'#667eea\'; this.style.boxShadow=\'0 0 0 3px rgba(102,126,234,0.15)\'" onblur="this.style.borderColor=\'#e0e7ff\'; this.style.boxShadow=\'none\'"';
+
+        const ptwStub = this._manualEntryToPtwStub(existingEntry);
+        let iaAreaCandidates = [];
+        let iaMaintCandidates = [];
+        try {
+            iaAreaCandidates = await this._fetchIaCandidatesForRole(ptwStub, 'areaManager');
+            iaMaintCandidates = await this._fetchIaCandidatesForRole(ptwStub, 'maintenanceEngineer');
+        } catch (iaErr) {
+            if (typeof Utils !== 'undefined') Utils.safeWarn('openManualPermitForm IA fetch:', iaErr);
+        }
+
+        const getManualApprovalMeta = (role) => {
+            const row = (existingEntry?.manualApprovals || []).find(a => a.role === role) || {};
+            return { name: row.name || '', approverId: row.approverId || '', personType: row.personType || '' };
+        };
+        const areaMeta = getManualApprovalMeta('مدير منطقة الأعمال');
+        const maintMeta = getManualApprovalMeta('مدير / مهندس الصيانة');
+        const closureAreaMeta = (existingEntry?.manualClosureApprovals || []).find(a => a.role === 'مدير منطقة الأعمال') || {};
+
+        const areaManagerPickerHtml = this._renderIaRolePickerHTML({
+            roleLabel: 'مدير منطقة الأعمال',
+            roleKey: 'areaManager',
+            candidates: iaAreaCandidates,
+            selectedId: areaMeta.approverId,
+            selectedName: areaMeta.name
+        });
+        const maintPickerHtml = this._renderIaRolePickerHTML({
+            roleLabel: 'مدير / مهندس الصيانة',
+            roleKey: 'maintenanceEngineer',
+            candidates: iaMaintCandidates,
+            selectedId: maintMeta.approverId,
+            selectedName: maintMeta.name
+        });
+        const closureAreaPickerHtml = this._renderIaRolePickerHTML({
+            roleLabel: 'مدير منطقة الأعمال',
+            roleKey: 'areaManager',
+            candidates: iaAreaCandidates,
+            selectedId: closureAreaMeta.approverId || '',
+            selectedName: closureAreaMeta.name || '',
+            isClosure: true,
+            inputClass: 'form-input text-sm w-full manual-closure-approval-name'
+        });
 
         const modal = document.createElement('div');
         modal.className = 'modal-overlay';
@@ -7677,8 +7928,8 @@ const PTW = {
                                         <tr class="manual-approval-row" style="border: 1px solid #000;">
                                             <td class="p-1 border border-gray-800 text-center bg-gray-50 font-medium text-sm">الاسم</td>
                                             <td class="p-1 border border-gray-800"><input type="text" class="form-input text-sm w-full manual-approval-name" data-role="مسئول الجهة الطالبة" placeholder="الاسم" value="${Utils.escapeHTML((existingEntry?.manualApprovals || []).find(a => a.role === 'مسئول الجهة الطالبة')?.name || '')}"></td>
-                                            <td class="p-1 border border-gray-800"><input type="text" class="form-input text-sm w-full manual-approval-name" data-role="مدير منطقة الأعمال" placeholder="الاسم" value="${Utils.escapeHTML((existingEntry?.manualApprovals || []).find(a => a.role === 'مدير منطقة الأعمال')?.name || '')}"></td>
-                                            <td class="p-1 border border-gray-800"><input type="text" class="form-input text-sm w-full manual-approval-name" data-role="مدير / مهندس الصيانة" placeholder="الاسم" value="${Utils.escapeHTML((existingEntry?.manualApprovals || []).find(a => a.role === 'مدير / مهندس الصيانة')?.name || '')}"></td>
+                                            <td class="p-1 border border-gray-800">${areaManagerPickerHtml}</td>
+                                            <td class="p-1 border border-gray-800">${maintPickerHtml}</td>
                                             <td class="p-1 border border-gray-800">
                                                 <select class="form-input text-sm w-full manual-approval-name border-0 focus:ring-0" data-role="مسئول السلامة والصحة المهنية" style="background: transparent; padding: 4px 6px;">
                                                     ${buildManualSupervisorOptions('اختر مسئول السلامة', (existingEntry?.manualApprovals || []).find(a => a.role === 'مسئول السلامة والصحة المهنية')?.name || '')}
@@ -7755,7 +8006,7 @@ const PTW = {
                                         <tr class="manual-closure-approval-row" style="border: 1px solid #000;">
                                             <td class="p-1 border border-gray-800 text-center bg-gray-50 font-medium text-sm">الاسم</td>
                                             <td class="p-1 border border-gray-800"><input type="text" class="form-input text-sm w-full manual-closure-approval-name" data-role="مسؤول الجهة الطالبة" placeholder="الاسم" value="${Utils.escapeHTML((existingEntry?.manualClosureApprovals || []).find(a => a.role === 'مسؤول الجهة الطالبة')?.name || '')}"></td>
-                                            <td class="p-1 border border-gray-800"><input type="text" class="form-input text-sm w-full manual-closure-approval-name" data-role="مدير منطقة الأعمال" placeholder="الاسم" value="${Utils.escapeHTML((existingEntry?.manualClosureApprovals || []).find(a => a.role === 'مدير منطقة الأعمال')?.name || '')}"></td>
+                                            <td class="p-1 border border-gray-800">${closureAreaPickerHtml}</td>
                                             <td class="p-1 border border-gray-800">
                                                 <select class="form-input text-sm w-full manual-closure-approval-name border-0 focus:ring-0" data-role="مسؤول السلامة والصحة المهنية" style="background: transparent; padding: 4px 6px;">
                                                     ${buildManualSupervisorOptions('اختر مسئول السلامة', (existingEntry?.manualClosureApprovals || []).find(a => a.role === 'مسؤول السلامة والصحة المهنية')?.name || '')}
@@ -8133,11 +8384,17 @@ const PTW = {
                     syncRow(event.target);
                 }
             });
+            list.addEventListener('change', (event) => {
+                if (event.target.matches(nameSelector) || event.target.matches('.ia-approval-select')) {
+                    syncRow(event.target);
+                }
+            });
         };
 
         modal.querySelectorAll('#manual-team-members-list tr.manual-team-member-row').forEach(attachAutoCopyToTeamRow);
-        attachAutoCopyToApprovals('#manual-approvals-list', '.manual-approval-name', '.manual-approval-sig');
-        attachAutoCopyToApprovals('#manual-closure-approvals-list', '.manual-closure-approval-name', '.manual-closure-approval-sig');
+        attachAutoCopyToApprovals('#manual-approvals-list', '.manual-approval-name, .ia-approval-select', '.manual-approval-sig');
+        attachAutoCopyToApprovals('#manual-closure-approvals-list', '.manual-closure-approval-name, .ia-approval-select', '.manual-closure-approval-sig');
+        this._setupIaRolePickerListeners(modal);
 
         // تم إلغاء مزامنة مسئول السلامة والصحة المهنية بين القسم السابع والتاسع تلبيةً لطلب المستخدم
         // لأن الشخص الذي يفتح التصريح قد يختلف عن الشخص الذي يغلق التصريح من فريق السلامة
@@ -8542,16 +8799,44 @@ const PTW = {
             // جمع بيانات الاعتمادات اليدوية (جدول القسم السابع: الاسم والتوقيع حسب الدور)
             const approvalRoles = ['مسئول الجهة الطالبة', 'مدير منطقة الأعمال', 'مدير / مهندس الصيانة', 'مسئول السلامة والصحة المهنية'];
             const manualApprovals = approvalRoles.map(role => {
-                const nameEl = modal.querySelector(`.manual-approval-name[data-role="${role}"]`);
+                const iaVal = this._readIaRolePickerValue(role, modal, { isClosure: false });
                 const sigEl = modal.querySelector(`.manual-approval-sig[data-role="${role}"]`);
+                if (iaVal.name || iaVal.approverId) {
+                    return {
+                        role,
+                        name: iaVal.name,
+                        signature: sigEl?.value?.trim() || '',
+                        approverId: iaVal.approverId || '',
+                        personType: iaVal.personType || '',
+                        isManualApprover: iaVal.isManualApprover === true,
+                        approvalRoleKey: iaVal.approvalRoleKey || this._resolveIaRoleKey(role),
+                        date: '',
+                        notes: ''
+                    };
+                }
+                const nameEl = modal.querySelector(`.manual-approval-name[data-role="${role}"]`);
                 return { role, name: nameEl?.value?.trim() || '', signature: sigEl?.value?.trim() || '', date: '', notes: '' };
             });
 
             // جمع بيانات اعتمادات الإغلاق (جدول القسم التاسع: الاسم والتوقيع حسب الدور)
             const closureApprovalRoles = ['مسؤول الجهة الطالبة', 'مدير منطقة الأعمال', 'مسؤول السلامة والصحة المهنية', 'مدير السلامة والصحة المهنية'];
             const manualClosureApprovals = closureApprovalRoles.map(role => {
-                const nameEl = modal.querySelector(`.manual-closure-approval-name[data-role="${role}"]`);
+                const iaVal = this._readIaRolePickerValue(role, modal, { isClosure: true });
                 const sigEl = modal.querySelector(`.manual-closure-approval-sig[data-role="${role}"]`);
+                if (iaVal.name || iaVal.approverId) {
+                    return {
+                        role,
+                        name: iaVal.name,
+                        signature: sigEl?.value?.trim() || '',
+                        approverId: iaVal.approverId || '',
+                        personType: iaVal.personType || '',
+                        isManualApprover: iaVal.isManualApprover === true,
+                        approvalRoleKey: iaVal.approvalRoleKey || this._resolveIaRoleKey(role),
+                        date: '',
+                        notes: ''
+                    };
+                }
+                const nameEl = modal.querySelector(`.manual-closure-approval-name[data-role="${role}"]`);
                 return { role, name: nameEl?.value?.trim() || '', signature: sigEl?.value?.trim() || '', date: '', notes: '' };
             });
 
@@ -10063,41 +10348,118 @@ const PTW = {
     async _buildIssuingAuthoritiesWorkflow(permitTypeFields) {
         if (!permitTypeFields || permitTypeFields.length === 0) return null;
         const iaModule = typeof IssuingAuthorities !== 'undefined' ? IssuingAuthorities : null;
-        if (!iaModule || typeof iaModule.getAuthoritiesForPermitType !== 'function') return null;
+        if (!iaModule || typeof iaModule.getAuthoritiesForApprovalRole !== 'function') return null;
 
+        const ptwStub = { permitType: permitTypeFields.join(', ') };
+        const areaCandidates = await this._fetchIaCandidatesForRole(ptwStub, 'areaManager');
+        const maintCandidates = await this._fetchIaCandidatesForRole(ptwStub, 'maintenanceEngineer');
+        const hseSafetyTeam = this._getHseSafetyTeamCandidates();
+
+        const toCandidate = (a) => ({
+            id: a.id || '',
+            name: a.name || '',
+            email: a.email || '',
+            phone: a.phone || '',
+            personType: a.personType || 'employee',
+            permitLevel: a.permitLevel || 'G'
+        });
+
+        const approvals = [];
+        let order = 0;
+
+        approvals.push({
+            role: 'مسؤول الجهة الطالبة',
+            required: true,
+            approved: false,
+            rejected: false,
+            status: 'pending',
+            approver: AppState.currentUser?.name || '',
+            approverEmail: AppState.currentUser?.email || '',
+            approverId: AppState.currentUser?.id || '',
+            date: '',
+            comments: '',
+            order: order++,
+            isSafetyOfficer: false,
+            candidates: []
+        });
+
+        approvals.push({
+            role: 'مدير منطقة الأعمال',
+            required: true,
+            approved: false,
+            rejected: false,
+            status: 'pending',
+            approver: areaCandidates.length === 1 ? (areaCandidates[0].name || '') : '',
+            approverEmail: areaCandidates.length === 1 ? (areaCandidates[0].email || '') : '',
+            approverId: areaCandidates.length === 1 ? (areaCandidates[0].id || '') : '',
+            date: '',
+            comments: '',
+            order: order++,
+            isSafetyOfficer: false,
+            issuingAuthoritySource: true,
+            approvalRoleKey: 'areaManager',
+            candidates: areaCandidates.map(toCandidate)
+        });
+
+        approvals.push({
+            role: 'مدير / مهندس الصيانة',
+            required: true,
+            approved: false,
+            rejected: false,
+            status: 'pending',
+            approver: maintCandidates.length === 1 ? (maintCandidates[0].name || '') : '',
+            approverEmail: maintCandidates.length === 1 ? (maintCandidates[0].email || '') : '',
+            approverId: maintCandidates.length === 1 ? (maintCandidates[0].id || '') : '',
+            date: '',
+            comments: '',
+            order: order++,
+            isSafetyOfficer: false,
+            issuingAuthoritySource: true,
+            approvalRoleKey: 'maintenanceEngineer',
+            candidates: maintCandidates.map(toCandidate)
+        });
+
+        approvals.push({
+            role: 'مسؤول السلامة والصحة المهنية',
+            required: true,
+            approved: false,
+            rejected: false,
+            status: 'pending',
+            approver: '',
+            approverEmail: '',
+            approverId: '',
+            date: '',
+            comments: '',
+            order: order++,
+            isSafetyOfficer: true,
+            candidates: hseSafetyTeam
+        });
+
+        // مرشحو general G/Y — للحفاظ على اعتمادات المصرّحين العامين
         const allAuthoritiesMap = {};
         for (const field of permitTypeFields) {
             try {
                 const list = await iaModule.getAuthoritiesForPermitType(field);
                 (list || []).forEach(auth => {
+                    if (iaModule._normalizeApprovalRole && iaModule._normalizeApprovalRole(auth.approvalRole) !== 'general') return;
                     const key = auth.id || auth.email || auth.name;
                     if (!key) return;
-                    if (!allAuthoritiesMap[key]) {
-                        allAuthoritiesMap[key] = { ...auth, _permitFields: [] };
-                    }
+                    if (!allAuthoritiesMap[key]) allAuthoritiesMap[key] = { ...auth, _permitFields: [] };
                     allAuthoritiesMap[key]._permitFields.push(field);
-                    // إذا كان G في أي نوع → يبقى G (الأولوية لـ G)
                     if (auth.permitLevel === 'G') {
                         allAuthoritiesMap[key].permitLevel = 'G';
                         allAuthoritiesMap[key].requiresHseCoApproval = false;
                     }
                 });
             } catch (err) {
-                if (typeof Utils !== 'undefined') Utils.safeWarn('_buildIssuingAuthoritiesWorkflow fetch error:', err);
+                if (typeof Utils !== 'undefined') Utils.safeWarn('_buildIssuingAuthoritiesWorkflow general fetch error:', err);
             }
         }
 
-        const authorities = Object.values(allAuthoritiesMap);
-        if (authorities.length === 0) return null;
+        const generalAuthorities = Object.values(allAuthoritiesMap);
+        const gAuthorities = generalAuthorities.filter(a => a.permitLevel === 'G');
+        const yAuthorities = generalAuthorities.filter(a => a.permitLevel === 'Y');
 
-        const approvals = [];
-        let order = 0;
-
-        // نفصل G عن Y لترتيب G أولاً
-        const gAuthorities = authorities.filter(a => a.permitLevel === 'G');
-        const yAuthorities = authorities.filter(a => a.permitLevel === 'Y');
-
-        // مرشحو G → خطوة واحدة مع candidates (بدون شرط إضافي)
         if (gAuthorities.length > 0) {
             approvals.push({
                 role: 'مسؤول الجهة المصرح لهم بالتوقيع (G)',
@@ -10113,21 +10475,13 @@ const PTW = {
                 order: order++,
                 isSafetyOfficer: false,
                 issuingAuthoritySource: true,
+                approvalRoleKey: 'general',
                 requiresHseCoApproval: false,
-                candidates: gAuthorities.map(a => ({
-                    id: a.id || '',
-                    name: a.name || '',
-                    email: a.email || '',
-                    phone: a.phone || '',
-                    permitLevel: 'G'
-                }))
+                candidates: gAuthorities.map(toCandidate)
             });
         }
 
-        // مرشحو Y → خطوة HSE Co-Approval أولاً، ثم خطوة التوقيع
         if (yAuthorities.length > 0) {
-            // خطوة 1: تنسيق مدير السلامة (HSE Gate)
-            const hseSafetyTeam = this._getHseSafetyTeamCandidates();
             approvals.push({
                 role: 'مسؤول السلامة والصحة المهنية (تنسيق Y)',
                 required: true,
@@ -10142,11 +10496,11 @@ const PTW = {
                 order: order++,
                 isSafetyOfficer: true,
                 issuingAuthoritySource: true,
+                approvalRoleKey: 'general',
                 requiresHseCoApproval: false,
                 isHseCoApprovalGate: true,
                 candidates: hseSafetyTeam
             });
-            // خطوة 2: توقيع الشخص (Y)
             approvals.push({
                 role: 'مسؤول الجهة المصرح لهم بالتوقيع (Y - بعد تنسيق HSE)',
                 required: true,
@@ -10161,18 +10515,11 @@ const PTW = {
                 order: order++,
                 isSafetyOfficer: false,
                 issuingAuthoritySource: true,
+                approvalRoleKey: 'general',
                 requiresHseCoApproval: true,
-                candidates: yAuthorities.map(a => ({
-                    id: a.id || '',
-                    name: a.name || '',
-                    email: a.email || '',
-                    phone: a.phone || '',
-                    permitLevel: 'Y'
-                }))
+                candidates: yAuthorities.map(toCandidate)
             });
         }
-
-        if (approvals.length === 0) return null;
 
         return {
             approvals,
@@ -11298,22 +11645,7 @@ const PTW = {
                                         id="approval-role-${index}" readonly>
                                 </td>
                                 <td>
-                                    ${approval.candidates && approval.candidates.length > 0 ? `
-                                        <select class="form-input approval-approver-select" id="approval-approver-select-${index}">
-                                            <option value="">اختر المعتمد</option>
-                                            ${approval.candidates.map(candidate => `
-                                                <option value="${Utils.escapeHTML(candidate.id || '')}" ${candidate.id === approval.approverId ? 'selected' : ''}>
-                                                    ${Utils.escapeHTML(candidate.name || candidate.email || '')}
-                                                    ${candidate.email ? ` - ${Utils.escapeHTML(candidate.email)}` : ''}
-                                                </option>
-                                            `).join('')}
-                                        </select>
-                                    ` : `
-                                        <input type="text" class="form-input" style="min-width: 180px;"
-                                            value="${Utils.escapeHTML(approval.approver || '')}" placeholder="اسم المعتمد"
-                                            id="approval-approver-${index}" ${isEdit ? '' : 'readonly'}>
-                                        <p class="text-xs text-gray-500 mt-1">لم يتم تحديد مستخدمين لهذا المستوى.</p>
-                                    `}
+                                    ${this._renderSystemApproverCell(approval, index, isEdit)}
                                 </td>
                                 <td>
                                     ${(() => {
@@ -11386,22 +11718,7 @@ const PTW = {
                                         id="closure-approval-role-${index}" readonly>
                                 </td>
                                 <td>
-                                    ${approval.candidates && approval.candidates.length > 0 ? `
-                                        <select class="form-input closure-approval-approver-select" id="closure-approval-approver-select-${index}">
-                                            <option value="">اختر المعتمد</option>
-                                            ${approval.candidates.map(candidate => `
-                                                <option value="${Utils.escapeHTML(candidate.id || '')}" ${candidate.id === approval.approverId ? 'selected' : ''}>
-                                                    ${Utils.escapeHTML(candidate.name || candidate.email || '')}
-                                                    ${candidate.email ? ` - ${Utils.escapeHTML(candidate.email)}` : ''}
-                                                </option>
-                                            `).join('')}
-                                        </select>
-                                    ` : `
-                                        <input type="text" class="form-input" style="min-width: 180px;"
-                                            value="${Utils.escapeHTML(approval.approver || '')}" placeholder="اسم المعتمد"
-                                            id="closure-approval-approver-${index}" ${isEdit ? '' : 'readonly'}>
-                                        <p class="text-xs text-gray-500 mt-1">لم يتم تحديد مستخدمين لهذا المستوى.</p>
-                                    `}
+                                    ${this._renderSystemApproverCell(approval, index, isEdit, 'closure-approval')}
                                 </td>
                                 <td>
                                     ${(() => {
@@ -11584,6 +11901,9 @@ const PTW = {
             if (addClosureApprovalBtn) {
                 addClosureApprovalBtn.addEventListener('click', () => this.addClosureApproval());
             }
+
+            this._setupSystemApproverPickerListeners(document.getElementById('approval-matrix'));
+            this._setupSystemApproverPickerListeners(document.getElementById('closure-approval-matrix'));
 
             // التحكم في حجم خط نص الإعلان
             this.setupDisclaimerFontControls();
@@ -11843,7 +12163,12 @@ const PTW = {
 
             if (selectEl) {
                 approverId = selectEl.value || '';
-                if (approverId) {
+                if (approverId === '__manual__') {
+                    approverId = '';
+                    const manualInput = document.getElementById(`approval-approver-manual-${index}`);
+                    approverName = manualInput?.value.trim() || '';
+                    approverEmail = '';
+                } else if (approverId) {
                     const candidate = (baseApproval.candidates || []).find(c => c.id === approverId);
                     if (candidate) {
                         approverName = candidate.name || '';
@@ -11889,7 +12214,13 @@ const PTW = {
                     assignedAt: baseApproval.assignedAt || '',
                     assignedBy: baseApproval.assignedBy || null,
                     isSafetyOfficer: baseApproval.isSafetyOfficer === true,
-                    circuitOwnerId: baseApproval.circuitOwnerId || this.formCircuitOwnerId || '__default__'
+                    circuitOwnerId: baseApproval.circuitOwnerId || this.formCircuitOwnerId || '__default__',
+                    issuingAuthoritySource: baseApproval.issuingAuthoritySource === true,
+                    approvalRoleKey: baseApproval.approvalRoleKey || this._resolveIaRoleKey(role),
+                    isManualApprover: !approverId && !!approverName,
+                    personType: approverId ? ((baseApproval.candidates || []).find(c => c.id === approverId)?.personType || '') : '',
+                    requiresHseCoApproval: baseApproval.requiresHseCoApproval === true,
+                    isHseCoApprovalGate: baseApproval.isHseCoApprovalGate === true
                 });
             }
         });

@@ -13,6 +13,13 @@ const ISSUING_AUTHORITIES_SHEET = 'PTWIssuingAuthorities';
 const CONTRACTOR_ISSUING_AUTHORITIES_SHEET = 'PTWContractorIssuingAuthorities';
 
 // أنواع التصاريح المدعومة وحقولها
+// أدوار الاعتماد في تصريح العمل
+const IA_APPROVAL_ROLES = {
+    areaManager:          'مدير منطقة الأعمال',
+    maintenanceEngineer:  'مدير / مهندس الصيانة',
+    general:              'عام'
+};
+
 const PERMIT_TYPE_FIELDS = {
     coldWork:      'الأعمال الباردة',
     loto:          'عزل مصادر الطاقة',
@@ -104,6 +111,19 @@ function _normalizePersonType(personType, fallbackType) {
     return (v === 'contractor') ? 'contractor' : 'employee';
 }
 
+function _normalizeApprovalRole(value) {
+    const v = String(value || '').trim();
+    if (v === 'areaManager' || v === 'maintenanceEngineer' || v === 'general') return v;
+    return 'general';
+}
+
+function _approvalRoleMatchesRecord(recordRole, targetRole) {
+    const rec = _normalizeApprovalRole(recordRole);
+    const target = _normalizeApprovalRole(targetRole);
+    if (target === 'general') return rec === 'general';
+    return rec === target;
+}
+
 function _normalizeDupText(value) {
     return String(value || '').replace(/\s+/g, ' ').trim().toLowerCase();
 }
@@ -140,6 +160,7 @@ function _buildIssuingAuthorityRecordData(data, fallbackPersonType, targetSheet)
         departmentId:  String(data.departmentId || '').trim(),
         departmentName:String(data.departmentName || '').trim(),
         jobTitle:      String(data.jobTitle || '').trim(),
+        approvalRole:  _normalizeApprovalRole(data.approvalRole),
         factory:       String(data.factory || '').trim(),
         location:      String(data.location || '').trim(),
         sublocation:   String(data.sublocation || '').trim(),
@@ -228,6 +249,7 @@ function _updateIssuingAuthorityBySheet(recordId, data, sheetName, fallbackPerso
             departmentId:  data.departmentId  !== undefined ? String(data.departmentId).trim()  : existing.departmentId,
             departmentName:data.departmentName!== undefined ? String(data.departmentName).trim(): existing.departmentName,
             jobTitle:      data.jobTitle      !== undefined ? String(data.jobTitle).trim()      : existing.jobTitle,
+            approvalRole:  data.approvalRole  !== undefined ? _normalizeApprovalRole(data.approvalRole) : _normalizeApprovalRole(existing.approvalRole),
             factory:       data.factory       !== undefined ? String(data.factory).trim()       : existing.factory,
             location:      data.location      !== undefined ? String(data.location).trim()      : existing.location,
             sublocation:   data.sublocation   !== undefined ? String(data.sublocation).trim()   : existing.sublocation,
@@ -270,18 +292,21 @@ function _deleteIssuingAuthorityBySheet(recordId, userData, sheetName) {
     }
 }
 
-function _getIssuingAuthoritiesForPermitTypeBySheet(permitType, sheetName) {
+function _getIssuingAuthoritiesForPermitTypeBySheet(permitType, sheetName, approvalRole) {
     try {
         if (!permitType || !PERMIT_TYPE_FIELDS[permitType]) {
             return { success: false, message: 'نوع التصريح غير معروف: ' + permitType, authorities: [] };
         }
+        const roleFilter = approvalRole ? String(approvalRole).trim() : '';
         const allResult = _getAllIssuingAuthoritiesBySheet(sheetName);
         if (!allResult.success) return { success: false, message: allResult.message, authorities: [] };
         const active = allResult.data.filter(r => r.isActive !== false && r.isActive !== 'false');
         const qualified = active
             .filter(r => {
                 const val = String(r[permitType] || 'X').toUpperCase().trim();
-                return val === 'G' || val === 'Y';
+                if (val !== 'G' && val !== 'Y') return false;
+                if (roleFilter && !_approvalRoleMatchesRecord(r.approvalRole, roleFilter)) return false;
+                return true;
             })
             .map(r => {
                 const val = String(r[permitType] || 'X').toUpperCase().trim();
@@ -293,6 +318,7 @@ function _getIssuingAuthoritiesForPermitTypeBySheet(permitType, sheetName) {
                     departmentId:          r.departmentId,
                     departmentName:        r.departmentName,
                     jobTitle:              r.jobTitle || '',
+                    approvalRole:          _normalizeApprovalRole(r.approvalRole),
                     factory:               r.factory || '',
                     location:              r.location || '',
                     sublocation:           r.sublocation || '',
@@ -350,8 +376,37 @@ function deleteIssuingAuthority(recordId, userData) {
  * @returns {{ success: boolean, authorities: Array }}
  *   كل عنصر: { id, name, email, phone, permitLevel: 'G'|'Y', requiresHseCoApproval: boolean }
  */
-function getIssuingAuthoritiesForPermitType(permitType) {
-    return _getIssuingAuthoritiesForPermitTypeBySheet(permitType, ISSUING_AUTHORITIES_SHEET);
+function getIssuingAuthoritiesForPermitType(permitType, approvalRole) {
+    return _getIssuingAuthoritiesForPermitTypeBySheet(permitType, ISSUING_AUTHORITIES_SHEET, approvalRole);
+}
+
+/**
+ * دمج مرشحي الموظفين والمقاولين لنوع تصريح ودور اعتماد محدد
+ */
+function getIssuingAuthoritiesForPermitTypeAndRole(permitType, approvalRole) {
+    try {
+        const roleKey = String(approvalRole || '').trim();
+        const rEmp = _getIssuingAuthoritiesForPermitTypeBySheet(permitType, ISSUING_AUTHORITIES_SHEET, roleKey);
+        const rCon = _getIssuingAuthoritiesForPermitTypeBySheet(permitType, CONTRACTOR_ISSUING_AUTHORITIES_SHEET, roleKey);
+        const merged = []
+            .concat((rEmp && rEmp.success && Array.isArray(rEmp.authorities)) ? rEmp.authorities : [])
+            .concat((rCon && rCon.success && Array.isArray(rCon.authorities)) ? rCon.authorities : []);
+        merged.sort(function (a, b) {
+            if (a.permitLevel === 'G' && b.permitLevel !== 'G') return -1;
+            if (b.permitLevel === 'G' && a.permitLevel !== 'G') return 1;
+            return String(a.name || '').localeCompare(String(b.name || ''), 'ar', { sensitivity: 'base' });
+        });
+        return {
+            success: true,
+            authorities: merged,
+            permitType: permitType,
+            approvalRole: roleKey || 'general',
+            count: merged.length
+        };
+    } catch (error) {
+        Logger.log('Error in getIssuingAuthoritiesForPermitTypeAndRole: ' + error.toString());
+        return { success: false, message: 'حدث خطأ: ' + error.toString(), authorities: [] };
+    }
 }
 
 // =========================
@@ -373,8 +428,8 @@ function deleteContractorIssuingAuthority(recordId, userData) {
     return _deleteIssuingAuthorityBySheet(recordId, userData, CONTRACTOR_ISSUING_AUTHORITIES_SHEET);
 }
 
-function getContractorIssuingAuthoritiesForPermitType(permitType) {
-    return _getIssuingAuthoritiesForPermitTypeBySheet(permitType, CONTRACTOR_ISSUING_AUTHORITIES_SHEET);
+function getContractorIssuingAuthoritiesForPermitType(permitType, approvalRole) {
+    return _getIssuingAuthoritiesForPermitTypeBySheet(permitType, CONTRACTOR_ISSUING_AUTHORITIES_SHEET, approvalRole);
 }
 
 /**
@@ -503,22 +558,31 @@ function validatePtwApproversAgainstIssuingAuthorities_(mergedPtwPayload) {
         });
         if (permitKeys.length === 0) return null;
 
-        const allowedIds = {};
-        permitKeys.forEach(pk => {
-            const rEmp = _getIssuingAuthoritiesForPermitTypeBySheet(pk, ISSUING_AUTHORITIES_SHEET);
-            const rCon = _getIssuingAuthoritiesForPermitTypeBySheet(pk, CONTRACTOR_ISSUING_AUTHORITIES_SHEET);
-            [rEmp, rCon].forEach(function (res) {
-                if (!res || !res.success || !Array.isArray(res.authorities)) return;
-                res.authorities.forEach(function (a) {
-                    if (a && a.id) allowedIds[String(a.id).trim()] = true;
+        const allowedById = {};
+        const buildAllowedForRole = function (roleKey) {
+            permitKeys.forEach(function (pk) {
+                const rEmp = _getIssuingAuthoritiesForPermitTypeBySheet(pk, ISSUING_AUTHORITIES_SHEET, roleKey || '');
+                const rCon = _getIssuingAuthoritiesForPermitTypeBySheet(pk, CONTRACTOR_ISSUING_AUTHORITIES_SHEET, roleKey || '');
+                [rEmp, rCon].forEach(function (res) {
+                    if (!res || !res.success || !Array.isArray(res.authorities)) return;
+                    res.authorities.forEach(function (a) {
+                        if (a && a.id) {
+                            allowedById[String(a.id).trim()] = {
+                                approvalRole: a.approvalRole || 'general',
+                                permitLevel: a.permitLevel || 'G'
+                            };
+                        }
+                    });
                 });
             });
-        });
-        if (!Object.keys(allowedIds).length) return null;
+        };
+        buildAllowedForRole('');
+        if (!Object.keys(allowedById).length) return null;
 
         for (var i = 0; i < approvals.length; i++) {
             var ap = approvals[i];
             if (!ap || ap.isHseCoApprovalGate === true) continue;
+            if (ap.isManualApprover === true) continue;
 
             var isIaStep = !!(ap.issuingAuthoritySource || ap.issuingAuthoritiesSource);
             if (!isIaStep) continue;
@@ -526,10 +590,18 @@ function validatePtwApproversAgainstIssuingAuthorities_(mergedPtwPayload) {
             var id = String(ap.approverId || '').trim();
             if (!id) continue;
 
-            if (!allowedIds[id]) {
+            var allowed = allowedById[id];
+            if (!allowed) {
                 return {
                     valid: false,
                     message: 'المعتمد المختار لا يُدرَج ضمن قائمة المصرح لهم بالتوقيع لنوع التصاريح المعروض في هذا التصريح.'
+                };
+            }
+            var stepRole = String(ap.approvalRoleKey || '').trim();
+            if (stepRole && stepRole !== 'general' && allowed.approvalRole !== stepRole) {
+                return {
+                    valid: false,
+                    message: 'المعتمد المختار لا يطابق دور الاعتماد المطلوب (' + (IA_APPROVAL_ROLES[stepRole] || stepRole) + ').'
                 };
             }
         }

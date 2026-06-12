@@ -41,6 +41,7 @@ function getDefaultHeaders(sheetName) {
         'TrainingAttendance': ['id', 'trainingId', 'date', 'trainingType', 'factory', 'factoryName', 'employeeCode', 'employeeName', 'position', 'department', 'topic', 'trainer', 'startTime', 'endTime', 'totalHours', 'createdAt', 'updatedAt'],
         'LegalTrainings': ['id', 'title', 'legalReference', 'legalArticle', 'category', 'frequency', 'targetGroup', 'department', 'factory', 'factoryName', 'scheduledDate', 'actualDate', 'trainer', 'trainerQualification', 'duration', 'participantsCount', 'status', 'expiryDate', 'nextDueDate', 'certificateRequired', 'complianceStatus', 'penaltyForNonCompliance', 'notes', 'attachments', 'createdBy', 'createdAt', 'updatedAt'],
         'LegalTrainingAttendees': ['id', 'legalTrainingId', 'legalTrainingTitle', 'employeeCode', 'employeeName', 'employeePosition', 'department', 'factory', 'factoryName', 'attendanceDate', 'attendanceStatus', 'score', 'certificateNumber', 'certificateDate', 'certificateExpiryDate', 'certificateImage', 'notes', 'createdBy', 'createdAt', 'updatedAt'],
+        'LegalRegister': ['id', 'title', 'issuingAuthority', 'lawType', 'lawNumber', 'lawYear', 'issueDate', 'effectiveDate', 'category', 'legalReference', 'legalArticles', 'scopeOfApplication', 'responsibleDepartment', 'summary', 'status', 'priority', 'nextReviewDate', 'amendments', 'notes', 'createdBy', 'createdAt', 'updatedAt'],
         // ✅ Clinic Visits (Employees) - avoid JSON fields; flatten medications into plain text + total qty
         'ClinicVisits': [
             'id',
@@ -269,6 +270,7 @@ function getDefaultHeaders(sheetName) {
         'BackupSettings': ['id', 'autoBackupEnabled', 'backupTimes', 'maxBackupFiles', 'backupFolderName', 'retentionDays', 'notifyOnBackup', 'notifyOnFailure', 'updatedAt', 'updatedBy', 'updatedById'],
         // أرقام طوارئ المؤسسة (يُديرها المدير) — تظهر في الملف الشخصي والبطاقة العامة
         'AppEmergencyNumbers': ['id', 'label', 'phone', 'sortOrder', 'isActive', 'createdAt', 'updatedAt'],
+        // خرائط المصنع للطوارئ (Factory Safety Maps)
         'EmergencyFloorPlans': ['id', 'name', 'floor', 'factory', 'factoryId', 'factoryName', 'subLocationId', 'subLocationName', 'imageDriveId', 'imageWidth', 'imageHeight', 'sortOrder', 'isActive', 'qrToken', 'drawStampsJson', 'createdAt', 'updatedAt'],
         'EmergencyMapItems': ['id', 'floorPlanId', 'itemType', 'label', 'x', 'y', 'width', 'height', 'rotation', 'strokeColor', 'fillColor', 'status', 'notes', 'createdAt', 'updatedAt'],
         // ✅ قائمة الأشخاص المصرح لهم بالتوقيع على تصاريح العمل (Issuing Authorities)
@@ -276,7 +278,7 @@ function getDefaultHeaders(sheetName) {
         // Y = مصرح بالتوقيع بعد التنسيق مع مدير السلامة (يُضاف شرط HSE)
         // X = غير مصرح له بالتوقيع
         'PTWIssuingAuthorities': [
-            'id', 'personType', 'employeeCode', 'contractorCompanyName', 'name', 'departmentId', 'departmentName', 'jobTitle', 'factory', 'location', 'sublocation', 'email', 'phone', 'isActive',
+            'id', 'personType', 'employeeCode', 'contractorCompanyName', 'name', 'departmentId', 'departmentName', 'jobTitle', 'approvalRole', 'factory', 'location', 'sublocation', 'email', 'phone', 'isActive',
             'contractorFlag',
             'coldWork', 'loto', 'hotWork', 'workAtHeight', 'confinedSpace',
             'excavation', 'contractorPTW', 'liftingPlan',
@@ -285,7 +287,7 @@ function getDefaultHeaders(sheetName) {
         ],
         // ✅ قائمة المصرح لهم بالتوقيع - مقاولين (قاعدة بيانات منفصلة)
         'PTWContractorIssuingAuthorities': [
-            'id', 'personType', 'employeeCode', 'contractorCompanyName', 'name', 'departmentId', 'departmentName', 'jobTitle', 'factory', 'location', 'sublocation', 'email', 'phone', 'isActive',
+            'id', 'personType', 'employeeCode', 'contractorCompanyName', 'name', 'departmentId', 'departmentName', 'jobTitle', 'approvalRole', 'factory', 'location', 'sublocation', 'email', 'phone', 'isActive',
             'contractorFlag',
             'coldWork', 'loto', 'hotWork', 'workAtHeight', 'confinedSpace',
             'excavation', 'contractorPTW', 'liftingPlan',

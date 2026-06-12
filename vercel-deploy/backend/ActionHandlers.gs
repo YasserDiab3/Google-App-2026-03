@@ -906,7 +906,17 @@ var ActionHandlers = {
         var result = { success: false, message: '' };
         (function() {
 
-                    result = getIssuingAuthoritiesForPermitType(payload.permitType);
+                    result = getIssuingAuthoritiesForPermitType(payload.permitType, payload.approvalRole);
+                    return;
+
+        })();
+        return result;
+    },
+    'getIssuingAuthoritiesForPermitTypeAndRole': function(payload, postData, action, actorUserData, spreadsheetId) {
+        var result = { success: false, message: '' };
+        (function() {
+
+                    result = getIssuingAuthoritiesForPermitTypeAndRole(payload.permitType, payload.approvalRole);
                     return;
 
         })();

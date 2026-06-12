@@ -493,6 +493,7 @@ const IssuingAuthorities = {
         normalized.name = String(nameVal || '').trim();
         normalized.departmentName = String(normalized.departmentName || '').trim();
         normalized.jobTitle = String(normalized.jobTitle || '').trim();
+        normalized.approvalRole = this._normalizeApprovalRole(normalized.approvalRole);
         normalized.branch = String(normalized.branch || '').trim();
         normalized.factory = String(normalized.factory || '').trim();
         normalized.location = String(normalized.location || '').trim();
@@ -540,6 +541,33 @@ const IssuingAuthorities = {
         { key: 'contractorPTW', labelAr: 'تصريح دخول مقاول',       labelEn: 'Contractor PTW' },
         { key: 'liftingPlan',   labelAr: 'خطة الرفع',              labelEn: 'Lifting plan' }
     ],
+
+    APPROVAL_ROLE_OPTIONS: [
+        { key: 'general', value: 'general', labelKey: 'module.issuingAuthorities.approvalRole.general' },
+        { key: 'areaManager', value: 'areaManager', labelKey: 'module.issuingAuthorities.approvalRole.areaManager' },
+        { key: 'maintenanceEngineer', value: 'maintenanceEngineer', labelKey: 'module.issuingAuthorities.approvalRole.maintenanceEngineer' }
+    ],
+
+    _normalizeApprovalRole(value) {
+        const v = String(value || '').trim();
+        if (v === 'areaManager' || v === 'maintenanceEngineer' || v === 'general') return v;
+        return 'general';
+    },
+
+    _approvalRoleLabel(roleKey) {
+        const key = this._normalizeApprovalRole(roleKey);
+        const opt = (this.APPROVAL_ROLE_OPTIONS || []).find(o => o.value === key);
+        return opt ? this.t(opt.labelKey, key) : key;
+    },
+
+    _renderApprovalRoleOptions(selectedValue) {
+        const selected = this._normalizeApprovalRole(selectedValue);
+        const esc = (typeof Utils !== 'undefined' && Utils.escapeHTML) ? Utils.escapeHTML : (s) => String(s == null ? '' : s);
+        return (this.APPROVAL_ROLE_OPTIONS || []).map(opt => {
+            const label = esc(this.t(opt.labelKey, opt.value));
+            return `<option value="${esc(opt.value)}" ${selected === opt.value ? 'selected' : ''}>${label}</option>`;
+        }).join('');
+    },
 
     PERMIT_VALUE_STYLES: {
         G: { label: 'G', class: 'ia-badge-g', title: 'مصرح بالتوقيع في كل الحالات' },
@@ -1682,9 +1710,18 @@ const IssuingAuthorities = {
                     <input type="text" id="ia-f-job-title" class="form-input" value="${val('jobTitle')}" placeholder="${escOpt(this.t('module.issuingAuthorities.form.jobTitlePh', 'المسمى الوظيفي'))}">
                 </div>
                 <div class="form-group">
+                    <label class="form-label">${escOpt(this.t('module.issuingAuthorities.form.approvalRole', 'دور الاعتماد في تصريح العمل'))}</label>
+                    <select id="ia-f-approval-role" class="form-select ia-form-select">
+                        ${this._renderApprovalRoleOptions(val('approvalRole'))}
+                    </select>
+                </div>
+                </div>
+                <div class="ia-form-two-cols">
+                <div class="form-group">
                     <label class="form-label">${escOpt(this.t('module.issuingAuthorities.form.branch', 'الفرع / Branch'))}</label>
                     <input type="text" id="ia-f-branch" class="form-input" value="${val('branch') || ''}" placeholder="${escOpt(this.t('module.issuingAuthorities.form.branchPh', 'اسم الفرع'))}">
                 </div>
+                <div class="form-group"></div>
                 </div>
                 <div class="ia-form-two-cols">
                 <div class="form-group">
@@ -1926,7 +1963,7 @@ const IssuingAuthorities = {
                 </span>`;
 
             const metaLine = `${esc(rec.departmentName || '')} ${activeIndicator}`;
-            const subLine = esc([rec.jobTitle, rec.factory, rec.location, rec.sublocation].filter(Boolean).join(' - '));
+            const subLine = esc([this._approvalRoleLabel(rec.approvalRole), rec.jobTitle, rec.factory, rec.location, rec.sublocation].filter(Boolean).join(' - '));
 
             const nameCells = isCv
                 ? `<td style="padding:8px 10px;">
@@ -2338,6 +2375,7 @@ const IssuingAuthorities = {
             name,
             departmentName: document.getElementById('ia-f-dept')?.value?.trim() || '',
             jobTitle:       document.getElementById('ia-f-job-title')?.value?.trim() || '',
+            approvalRole:   this._normalizeApprovalRole(document.getElementById('ia-f-approval-role')?.value),
             branch:         document.getElementById('ia-f-branch')?.value?.trim() || '',
             factory:        !isFacPlaceholder ? facTxt : (document.getElementById('ia-f-factory')?.value?.trim() || ''),
             factoryId:      document.getElementById('ia-f-factory')?.value?.trim() || '',
@@ -2503,6 +2541,73 @@ const IssuingAuthorities = {
      * @param {string} permitType - مفتاح نوع التصريح
      * @returns {Promise<Array>} قائمة المرشحين مع permitLevel وrequiresHseCoApproval
      */
+    async getAuthoritiesForApprovalRole(permitTypeFields, approvalRole) {
+        try {
+            const roleKey = this._normalizeApprovalRole(approvalRole);
+            if (roleKey === 'general') return [];
+            const fields = Array.isArray(permitTypeFields)
+                ? [...new Set(permitTypeFields.filter(Boolean))]
+                : (permitTypeFields ? [String(permitTypeFields).trim()] : []);
+            if (!fields.length) {
+                const emp = await this._fetchNormalizedRowsForCategory('employees');
+                const con = await this._fetchNormalizedRowsForCategory('contractors');
+                const merged = this._dedupeMergedAuthorityRows([].concat(emp || [], con || []));
+                return (merged || [])
+                    .filter(r => r.isActive !== false && this._normalizeApprovalRole(r.approvalRole) === roleKey)
+                    .map(r => ({
+                        id: r.id,
+                        name: this._authorityWorkflowDisplayName(r),
+                        email: r.email || '',
+                        phone: r.phone || '',
+                        personType: r.personType || 'employee',
+                        approvalRole: this._normalizeApprovalRole(r.approvalRole),
+                        permitLevel: 'G',
+                        requiresHseCoApproval: false
+                    }));
+            }
+
+            const mapById = {};
+            for (const field of fields) {
+                const key = String(field || '').trim();
+                if (!key) continue;
+                let list = [];
+                try {
+                    if (typeof GoogleIntegration !== 'undefined' && GoogleIntegration.sendRequest) {
+                        const res = await GoogleIntegration.sendRequest({
+                            action: 'getIssuingAuthoritiesForPermitTypeAndRole',
+                            data: { permitType: key, approvalRole: roleKey }
+                        });
+                        if (res && res.success && Array.isArray(res.authorities)) {
+                            list = res.authorities;
+                        }
+                    }
+                } catch (_) { /* fallback below */ }
+                if (!list.length) {
+                    list = await this.getAuthoritiesForPermitType(key);
+                    list = (list || []).filter(a => this._normalizeApprovalRole(a.approvalRole) === roleKey);
+                }
+                (list || []).forEach(auth => {
+                    const id = auth.id || auth.email || auth.name;
+                    if (!id) return;
+                    if (!mapById[id]) {
+                        mapById[id] = { ...auth, approvalRole: this._normalizeApprovalRole(auth.approvalRole || roleKey) };
+                    } else if (auth.permitLevel === 'G') {
+                        mapById[id].permitLevel = 'G';
+                        mapById[id].requiresHseCoApproval = false;
+                    }
+                });
+            }
+            return Object.values(mapById).sort((a, b) => {
+                if (a.permitLevel === 'G' && b.permitLevel !== 'G') return -1;
+                if (b.permitLevel === 'G' && a.permitLevel !== 'G') return 1;
+                return String(a.name || '').localeCompare(String(b.name || ''), 'ar', { sensitivity: 'base' });
+            });
+        } catch (err) {
+            if (typeof Utils !== 'undefined') Utils.safeError('IssuingAuthorities.getAuthoritiesForApprovalRole error:', err);
+            return [];
+        }
+    },
+
     async getAuthoritiesForPermitType(permitType) {
         try {
             const key = String(permitType || '').trim();
@@ -2522,6 +2627,8 @@ const IssuingAuthorities = {
                         departmentName: r.departmentName,
                         email: r.email,
                         phone: r.phone,
+                        approvalRole: this._normalizeApprovalRole(r.approvalRole),
+                        personType: r.personType || 'employee',
                         permitLevel: level,
                         requiresHseCoApproval: level === 'Y'
                     };
