@@ -17506,6 +17506,155 @@ body.fm-floor-modal-open {
     border-bottom: 1px solid #e2e8f0;
 }
 
+/* نموذج مخطط الطابق — تصميم احترافي */
+.fm-plan-form-pro .fm-plan-form-header {
+    flex-shrink: 0;
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 18px 24px;
+    background: linear-gradient(135deg, #0f172a 0%, #1e3a5f 55%, #1d4ed8 100%);
+    color: #fff;
+    border-bottom: none;
+}
+
+.fm-plan-form-pro .fm-plan-form-header .modal-close {
+    color: #e2e8f0;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 10px;
+    width: 40px;
+    height: 40px;
+    flex-shrink: 0;
+}
+
+.fm-plan-form-pro .fm-plan-form-header .modal-close:hover {
+    background: rgba(255, 255, 255, 0.2);
+    color: #fff;
+}
+
+.fm-plan-form-kicker {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: #93c5fd;
+    margin-bottom: 4px;
+}
+
+.fm-plan-form-header-text h3 {
+    margin: 0 0 4px;
+    font-size: 1.25rem;
+    font-weight: 800;
+    color: #fff;
+}
+
+.fm-plan-form-header-text p {
+    margin: 0;
+    font-size: 0.82rem;
+    color: #cbd5e1;
+    max-width: 520px;
+}
+
+.fm-plan-meta-card {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 14px;
+    padding: 14px 16px;
+    margin-bottom: 10px;
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
+}
+
+.fm-plan-meta-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 10px 12px;
+}
+
+.fm-plan-field .form-label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: #475569;
+    margin-bottom: 4px;
+}
+
+.fm-plan-field .form-label i {
+    color: #2563eb;
+    font-size: 0.7rem;
+}
+
+.fm-plan-field-sm {
+    max-width: 120px;
+}
+
+.fm-frame-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin: 8px 0 6px;
+    padding: 10px 12px;
+    background: linear-gradient(180deg, #eff6ff 0%, #f8fafc 100%);
+    border: 1px solid #bfdbfe;
+    border-radius: 12px;
+    flex-shrink: 0;
+}
+
+.fm-frame-toolbar-label {
+    font-size: 0.75rem;
+    font-weight: 800;
+    color: #1e40af;
+    white-space: nowrap;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.fm-frame-toolbar-items {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    flex: 1;
+}
+
+.fm-frame-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    border: 1px solid #93c5fd;
+    border-radius: 8px;
+    background: #fff;
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: #1e3a8a;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s, transform 0.1s;
+}
+
+.fm-frame-btn:hover {
+    background: #dbeafe;
+    border-color: #3b82f6;
+    transform: translateY(-1px);
+}
+
+.fm-frame-btn i {
+    font-size: 0.8rem;
+    color: #2563eb;
+}
+
+.fm-factory-filter {
+    min-width: 140px;
+    max-width: 200px;
+    font-size: 0.85rem;
+}
+
 .fm-modal-body-scroll {
     overflow-y: auto !important;
     overflow-x: hidden;

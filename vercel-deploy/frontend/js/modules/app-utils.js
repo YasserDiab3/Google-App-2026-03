@@ -721,7 +721,7 @@ const Permissions = {
                 window.dispatchEvent(new CustomEvent('formSettingsUpdated', {
                     detail: { sites: clonedSites, observationSites: AppState.appData.observationSites }
                 }));
-                var names = ['Training', 'Clinic', 'PTW', 'Incidents', 'Violations', 'FireEquipment', 'PeriodicInspections', 'BehaviorMonitoring', 'Sustainability'];
+                var names = ['Training', 'Clinic', 'PTW', 'Incidents', 'Violations', 'FireEquipment', 'PeriodicInspections', 'BehaviorMonitoring', 'Sustainability', 'Emergency'];
                 for (var i = 0; i < names.length; i++) {
                     try {
                         var M = window[names[i]];
@@ -2872,7 +2872,7 @@ const DEFAULT_COMPANY_NAME = '';
 
 const AppState = {
     /** إصدار التطبيق — تسلسلي: 1.0.0 → 1.0.1 → 1.0.2 … عند كل نشر زِد الرقم هنا وفي version.json */
-    appVersion: '1.0.136',
+    appVersion: '1.0.138',
     /** نص اختياري لرسالة التحديث (ملخص التغييرات). إن تُركت فارغة يُستخدم النص الافتراضي. */
     updateMessage: '',
     debugMode: false,
@@ -7853,7 +7853,7 @@ if (typeof window !== 'undefined') {
     // استدعاء تلقائي لتحديث قوائم المصنع/الموقع في جميع الموديولات عند اكتمال تحميل إعدادات النماذج
     (function () {
         function refreshAllSiteDropdowns() {
-            var names = ['Training', 'Clinic', 'PTW', 'Incidents', 'Violations', 'FireEquipment', 'PeriodicInspections', 'BehaviorMonitoring', 'Sustainability'];
+            var names = ['Training', 'Clinic', 'PTW', 'Incidents', 'Violations', 'FireEquipment', 'PeriodicInspections', 'BehaviorMonitoring', 'Sustainability', 'Emergency'];
             for (var i = 0; i < names.length; i++) {
                 try {
                     var M = window[names[i]];

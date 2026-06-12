@@ -231,6 +231,9 @@ const Emergency = {
                                 </div>
                             </div>
                             <div class="fm-toolbar-actions">
+                                <select id="fm-factory-filter" class="form-input fm-factory-filter" title="تصفية حسب المصنع">
+                                    <option value="">كل المصانع</option>
+                                </select>
                                 <select id="fm-floor-select" class="form-input fm-floor-select" title="اختيار المخطط">
                                     <option value="">— اختر المخطط —</option>
                                 </select>
@@ -1879,6 +1882,7 @@ const Emergency = {
         addingType: null,
         dragItem: null,
         floorPlans: [],
+        factoryFilter: '',
         zoom: 1,
         fullscreen: false,
         pendingDeepLink: null,
@@ -1886,6 +1890,15 @@ const Emergency = {
     },
 
     _fmStampRadius: 24,
+
+    FM_FRAME_PRESETS: {
+        room: { label: 'غرفة', icon: 'fa-door-closed', w: 220, h: 160 },
+        hall: { label: 'قاعة', icon: 'fa-warehouse', w: 420, h: 260 },
+        corridor: { label: 'ممر', icon: 'fa-arrows-alt-h', w: 360, h: 70 },
+        office: { label: 'مكتب', icon: 'fa-briefcase', w: 180, h: 140 },
+        door: { label: 'باب', icon: 'fa-door-open', w: 70, h: 24 },
+        zone: { label: 'منطقة', icon: 'fa-border-all', w: 300, h: 200 }
+    },
 
     FM_ITEM_TYPES: {
         fire_extinguisher: { label: 'مطفأة حريق', icon: 'fa-fire-extinguisher', color: '#ef4444' },
@@ -1902,11 +1915,106 @@ const Emergency = {
 
     initFactoryMapTab() {
         const pending = this._fmState.pendingDeepLink;
-        this.loadFloorPlans(pending?.planId || this._fmState.currentPlanId || '').then(() => {
+        this._fmEnsureFormSettings().then(() => {
+            this.refreshSiteDropdowns();
+            return this.loadFloorPlans(pending?.planId || this._fmState.currentPlanId || '');
+        }).then(() => {
             if (pending) this._fmHandlePendingDeepLink();
         });
         this._bindFactoryMapEvents();
         this._renderLegend();
+    },
+
+    async _fmEnsureFormSettings() {
+        if (typeof Permissions !== 'undefined' && typeof Permissions.ensureFormSettingsState === 'function') {
+            try { await Permissions.ensureFormSettingsState(); } catch (_e) { /* ignore */ }
+        }
+    },
+
+    getSiteOptions() {
+        try {
+            if (typeof Permissions !== 'undefined' && Permissions.formSettingsState?.sites) {
+                return Permissions.formSettingsState.sites.map(site => ({ id: site.id, name: site.name }));
+            }
+            if (Array.isArray(AppState.appData?.observationSites) && AppState.appData.observationSites.length > 0) {
+                return AppState.appData.observationSites.map(site => ({
+                    id: site.id || site.siteId || '',
+                    name: site.name || site.title || site.label || 'موقع غير محدد'
+                }));
+            }
+            return [];
+        } catch (_e) {
+            return [];
+        }
+    },
+
+    refreshSiteDropdowns() {
+        try {
+            const sites = this.getSiteOptions();
+            const esc = (v) => (typeof Utils !== 'undefined' && Utils.escapeAttr) ? Utils.escapeAttr(v) : String(v ?? '');
+            const escHtml = (v) => (typeof Utils !== 'undefined' && Utils.escapeHTML) ? Utils.escapeHTML(v) : String(v ?? '');
+            const opts = '<option value="">— اختر المصنع —</option>' +
+                sites.map(s => `<option value="${esc(s.id)}" data-name="${esc(s.name)}">${escHtml(s.name)}</option>`).join('');
+            const filterOpts = '<option value="">كل المصانع</option>' +
+                sites.map(s => `<option value="${esc(s.id)}">${escHtml(s.name)}</option>`).join('');
+            const factoryField = document.getElementById('fm-floor-factory');
+            if (factoryField) {
+                const prev = factoryField.value;
+                factoryField.innerHTML = opts;
+                if (prev) factoryField.value = prev;
+            }
+            const filterField = document.getElementById('fm-factory-filter');
+            if (filterField) {
+                const prevF = filterField.value || this._fmState.factoryFilter || '';
+                filterField.innerHTML = filterOpts;
+                if (prevF) filterField.value = prevF;
+            }
+        } catch (_e) { /* ignore */ }
+    },
+
+    _fmBuildFactorySelectHtml(selectedFactoryId, selectedFactoryName) {
+        const sites = this.getSiteOptions();
+        const selectedId = selectedFactoryId || sites.find(s => s.name === selectedFactoryName)?.id || '';
+        const esc = (v) => (typeof Utils !== 'undefined' && Utils.escapeAttr) ? Utils.escapeAttr(v) : String(v ?? '');
+        const escHtml = (v) => (typeof Utils !== 'undefined' && Utils.escapeHTML) ? Utils.escapeHTML(v) : String(v ?? '');
+        return '<option value="">— اختر المصنع —</option>' + sites.map(s =>
+            `<option value="${esc(s.id)}" data-name="${esc(s.name)}" ${String(s.id) === String(selectedId) ? 'selected' : ''}>${escHtml(s.name)}</option>`
+        ).join('');
+    },
+
+    _fmBuildFrameToolbarHtml() {
+        return Object.entries(this.FM_FRAME_PRESETS).map(([key, def]) => `
+            <button type="button" class="fm-frame-btn" data-frame="${key}" title="إدراج إطار: ${Utils.escapeHTML(def.label)}">
+                <i class="fas ${Utils.escapeAttr(def.icon)}"></i>
+                <span>${Utils.escapeHTML(def.label)}</span>
+            </button>
+        `).join('');
+    },
+
+    _fmInsertFramePreset(presetKey) {
+        const preset = this.FM_FRAME_PRESETS[presetKey];
+        const canvas = document.getElementById('fm-sketch-canvas');
+        if (!preset || !canvas) return;
+        const color = document.getElementById('fm-draw-color')?.value || '#1e293b';
+        const lineW = parseInt(document.getElementById('fm-draw-width')?.value, 10) || 4;
+        const x1 = Math.round((canvas.width - preset.w) / 2);
+        const y1 = Math.round((canvas.height - preset.h) / 2);
+        this._fmCommitRectToBase(canvas, x1, y1, x1 + preset.w, y1 + preset.h, color, lineW);
+        this._fmRedrawSketchCanvas(canvas);
+        if (typeof Notification !== 'undefined' && Notification.success) {
+            Notification.success('تم إدراج إطار ' + preset.label);
+        }
+    },
+
+    _fmBindFrameToolbar() {
+        const bar = document.getElementById('fm-frame-toolbar');
+        if (!bar || bar.dataset.fmBound) return;
+        bar.addEventListener('click', (e) => {
+            const btn = e.target.closest('.fm-frame-btn');
+            if (!btn) return;
+            this._fmInsertFramePreset(btn.dataset.frame);
+        });
+        bar.dataset.fmBound = '1';
     },
 
     _fmParseListResponse(resp) {
@@ -1922,7 +2030,7 @@ const Emergency = {
         const plan = this._fmState.floorPlans.find(p => p.id === this._fmState.currentPlanId);
         if (meta) {
             meta.textContent = plan
-                ? `${plan.name || 'مخطط'}${plan.floor ? ' — ' + plan.floor : ''}`
+                ? `${plan.name || 'مخطط'}${plan.factoryName ? ' · ' + plan.factoryName : ''}${plan.floor ? ' — ' + plan.floor : ''}`
                 : 'اختر مخططاً لعرض خريطة السلامة';
         }
         if (countEl) {
@@ -2090,6 +2198,14 @@ const Emergency = {
             addFloorBtn.addEventListener('click', () => this.showFloorPlanForm());
             addFloorBtn.dataset.fmBound = '1';
         }
+        const factoryFilter = document.getElementById('fm-factory-filter');
+        if (factoryFilter && !factoryFilter.dataset.fmBound) {
+            factoryFilter.addEventListener('change', () => {
+                this._fmState.factoryFilter = factoryFilter.value || '';
+                this.loadFloorPlans(this._fmState.currentPlanId || '');
+            });
+            factoryFilter.dataset.fmBound = '1';
+        }
         const exportBtn = document.getElementById('fm-export-png-btn');
         if (exportBtn && !exportBtn.dataset.fmBound) {
             exportBtn.addEventListener('click', () => this._fmExportCurrentMapPng());
@@ -2146,10 +2262,17 @@ const Emergency = {
 
         try {
             const resp = await GoogleIntegration.sendRequest({ action: 'getAllEmergencyFloorPlans', data: {} });
-            const plans = this._fmParseListResponse(resp);
+            let plans = this._fmParseListResponse(resp);
             this._fmState.floorPlans = plans;
+            const factoryFilter = document.getElementById('fm-factory-filter')?.value || this._fmState.factoryFilter || '';
+            if (factoryFilter) {
+                plans = plans.filter(p => String(p.factoryId || p.factory || '') === String(factoryFilter));
+            }
             select.innerHTML = '<option value="">— اختر المخطط —</option>' +
-                plans.map(p => `<option value="${Utils.escapeAttr(p.id)}">${Utils.escapeHTML(p.name || 'مخطط')}${p.floor ? ' — ' + Utils.escapeHTML(p.floor) : ''}</option>`).join('');
+                plans.map(p => {
+                    const factoryLabel = p.factoryName || p.factory || '';
+                    return `<option value="${Utils.escapeAttr(p.id)}">${Utils.escapeHTML(p.name || 'مخطط')}${factoryLabel ? ' · ' + Utils.escapeHTML(factoryLabel) : ''}${p.floor ? ' — ' + Utils.escapeHTML(p.floor) : ''}</option>`;
+                }).join('');
 
             const targetId = selectPlanId || this._fmState.currentPlanId || '';
             if (targetId && plans.some(p => String(p.id) === String(targetId))) {
@@ -2490,48 +2613,61 @@ const Emergency = {
         });
     },
 
-    showFloorPlanForm(editId) {
+    async showFloorPlanForm(editId) {
         try {
+        await this._fmEnsureFormSettings();
         if (this._fmState.fullscreen) {
             this.toggleFactoryMapFullscreen();
         }
-        const existing = this._fmState.floorPlans.find(p => p.id === editId);
+        const existing = this._fmState.floorPlans.find(p => String(p.id) === String(editId || ''));
         const val = (f, def) => (existing && existing[f] != null) ? existing[f] : (def || '');
         const escAttr = (v) => (typeof Utils !== 'undefined' && Utils.escapeAttr) ? Utils.escapeAttr(v) : String(v ?? '');
         const floors = ['الطابق الأرضي', 'الطابق الأول', 'الطابق الثاني', 'الطابق الثالث', 'سطح المبنى', 'مبنى آخر'];
         const floorOpts = floors.map(f => `<option value="${f}" ${val('floor') === f ? 'selected' : ''}>${f}</option>`).join('');
         const hasExistingImage = !!(val('imageDriveId'));
+        const defaultFactoryId = val('factoryId') || val('factory') || document.getElementById('fm-factory-filter')?.value || '';
+        const factoryOpts = this._fmBuildFactorySelectHtml(defaultFactoryId, val('factoryName'));
 
         const html = `
             <div class="modal-overlay active fm-floor-modal-overlay fm-floor-modal-fullscreen" id="fm-floor-modal" role="dialog" aria-modal="true">
-                <div class="modal-content fm-modal-improved fm-modal-fullscreen">
-                    <div class="fm-modal-header-fixed lr-modal-header">
-                        <h3><i class="fas fa-draw-polygon" style="color:#2563eb;"></i> ${editId ? 'تعديل' : 'إضافة'} مخطط طابق</h3>
+                <div class="modal-content fm-modal-improved fm-modal-fullscreen fm-plan-form-pro">
+                    <div class="fm-plan-form-header">
+                        <div class="fm-plan-form-header-text">
+                            <span class="fm-plan-form-kicker"><i class="fas fa-industry"></i> خريطة المصنع · الطوارئ</span>
+                            <h3>${editId ? 'تعديل مخطط الطابق' : 'إضافة مخطط طابق جديد'}</h3>
+                            <p>ارسم المخطط أو ارفع صورة، ثم أضف إطارات الغرف والرموز</p>
+                        </div>
                         <button type="button" class="modal-close" id="fm-floor-modal-close" aria-label="إغلاق"><i class="fas fa-times"></i></button>
                     </div>
                     <form id="fm-floor-form" class="fm-floor-form-flex" onsubmit="return Emergency.handleFloorPlanSubmit(event)">
                         <input type="hidden" id="fm-floor-edit-id" value="${escAttr(editId || '')}">
                         <div class="fm-modal-body-scroll modal-body">
-                            <div class="fm-form-row fm-form-row-compact">
-                                <div class="form-group" style="flex:1;min-width:140px;">
-                                    <label class="form-label">اسم المخطط <span class="text-red-500">*</span></label>
-                                    <input type="text" id="fm-floor-name" class="form-input" value="${escAttr(val('name'))}" required placeholder="مثال: مخطط الطابق الأرضي" autofocus>
-                                </div>
-                                <div class="form-group" style="flex:0 0 130px;">
-                                    <label class="form-label">الطابق</label>
-                                    <select id="fm-floor-level" class="form-input">${floorOpts}</select>
-                                </div>
-                                <div class="form-group" style="flex:0 0 70px;">
-                                    <label class="form-label">الترتيب</label>
-                                    <input type="number" id="fm-floor-sort" class="form-input" value="${escAttr(val('sortOrder', '1'))}" min="0">
-                                </div>
-                                <div class="form-group" style="flex:0 0 90px;">
-                                    <label class="form-label">العرض</label>
-                                    <input type="number" id="fm-floor-width" class="form-input" value="${escAttr(val('imageWidth', 1600))}" min="400">
-                                </div>
-                                <div class="form-group" style="flex:0 0 90px;">
-                                    <label class="form-label">الارتفاع</label>
-                                    <input type="number" id="fm-floor-height" class="form-input" value="${escAttr(val('imageHeight', 900))}" min="300">
+                            <div class="fm-plan-meta-card">
+                                <div class="fm-plan-meta-grid">
+                                    <div class="form-group fm-plan-field">
+                                        <label class="form-label"><i class="fas fa-tag"></i> اسم المخطط <span class="text-red-500">*</span></label>
+                                        <input type="text" id="fm-floor-name" class="form-input" value="${escAttr(val('name'))}" required placeholder="مثال: مخطط الطابق الأرضي" autofocus>
+                                    </div>
+                                    <div class="form-group fm-plan-field">
+                                        <label class="form-label"><i class="fas fa-industry"></i> المصنع <span class="text-red-500">*</span></label>
+                                        <select id="fm-floor-factory" class="form-input" required>${factoryOpts}</select>
+                                    </div>
+                                    <div class="form-group fm-plan-field">
+                                        <label class="form-label"><i class="fas fa-layer-group"></i> الطابق</label>
+                                        <select id="fm-floor-level" class="form-input">${floorOpts}</select>
+                                    </div>
+                                    <div class="form-group fm-plan-field fm-plan-field-sm">
+                                        <label class="form-label"><i class="fas fa-sort-numeric-down"></i> الترتيب</label>
+                                        <input type="number" id="fm-floor-sort" class="form-input" value="${escAttr(val('sortOrder', '1'))}" min="0">
+                                    </div>
+                                    <div class="form-group fm-plan-field fm-plan-field-sm">
+                                        <label class="form-label"><i class="fas fa-arrows-alt-h"></i> العرض</label>
+                                        <input type="number" id="fm-floor-width" class="form-input" value="${escAttr(val('imageWidth', 1600))}" min="400">
+                                    </div>
+                                    <div class="form-group fm-plan-field fm-plan-field-sm">
+                                        <label class="form-label"><i class="fas fa-arrows-alt-v"></i> الارتفاع</label>
+                                        <input type="number" id="fm-floor-height" class="form-input" value="${escAttr(val('imageHeight', 900))}" min="300">
+                                    </div>
                                 </div>
                             </div>
                             <div class="fm-source-tabs-bar">
@@ -2570,6 +2706,10 @@ const Emergency = {
                                         <button type="button" class="fm-draw-action" onclick="Emergency._fmClearCanvas()" title="مسح الكل"><i class="fas fa-trash-alt"></i> مسح</button>
                                         <button type="button" class="fm-draw-action" onclick="Emergency._fmApplyCanvasSizeFromInputs()" title="تطبيق الأبعاد"><i class="fas fa-expand-arrows-alt"></i> الأبعاد</button>
                                     </div>
+                                </div>
+                                <div class="fm-frame-toolbar" id="fm-frame-toolbar">
+                                    <span class="fm-frame-toolbar-label"><i class="fas fa-border-all"></i> إطارات جاهزة:</span>
+                                    <div class="fm-frame-toolbar-items">${this._fmBuildFrameToolbarHtml()}</div>
                                 </div>
                                 <div class="fm-stamp-toolbar fm-stamp-toolbar-compact">
                                     <div class="fm-stamp-toolbar-head">
@@ -2624,6 +2764,13 @@ const Emergency = {
         document.body.insertAdjacentHTML('beforeend', html);
         document.body.classList.add('fm-floor-modal-open');
         this._fmBindFloorPlanModal();
+        this.refreshSiteDropdowns();
+        const editFactoryId = defaultFactoryId;
+        if (editFactoryId) {
+            const ff = document.getElementById('fm-floor-factory');
+            if (ff) ff.value = editFactoryId;
+        }
+        this._fmBindFrameToolbar();
         this._fmInitCanvas();
         this._fmInitSketchZoom();
         this._fmInitUpload();
@@ -3188,9 +3335,21 @@ const Emergency = {
             if (submitBtn) { submitBtn.disabled = false; submitBtn.innerHTML = '<i class="fas fa-save ml-2"></i>إضافة المخطط'; }
             return false;
         }
+        const factorySelect = document.getElementById('fm-floor-factory');
+        const factoryId = factorySelect?.value?.trim() || '';
+        const factoryOpt = factorySelect?.selectedOptions?.[0];
+        const factoryName = factoryOpt?.dataset?.name || factoryOpt?.textContent?.trim() || '';
+        if (!factoryId) {
+            if (typeof Notification !== 'undefined' && Notification.error) Notification.error('يرجى اختيار المصنع');
+            if (submitBtn) { submitBtn.disabled = false; submitBtn.innerHTML = '<i class="fas fa-save ml-2"></i>' + (editId ? 'حفظ التعديلات' : 'إضافة المخطط'); }
+            return false;
+        }
         const data = {
             name,
             floor: document.getElementById('fm-floor-level')?.value || '',
+            factory: factoryId,
+            factoryId,
+            factoryName,
             imageDriveId,
             imageWidth: parseInt(document.getElementById('fm-floor-width')?.value) || 1200,
             imageHeight: parseInt(document.getElementById('fm-floor-height')?.value) || 800,
