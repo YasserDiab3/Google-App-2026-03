@@ -2485,31 +2485,39 @@ const Emergency = {
                     <form id="fm-floor-form" class="fm-floor-form-flex" onsubmit="return Emergency.handleFloorPlanSubmit(event)">
                         <input type="hidden" id="fm-floor-edit-id" value="${escAttr(editId || '')}">
                         <div class="fm-modal-body-scroll modal-body">
-                            <div class="fm-form-row">
-                                <div class="form-group" style="flex:1;">
+                            <div class="fm-form-row fm-form-row-compact">
+                                <div class="form-group" style="flex:1;min-width:140px;">
                                     <label class="form-label">اسم المخطط <span class="text-red-500">*</span></label>
                                     <input type="text" id="fm-floor-name" class="form-input" value="${escAttr(val('name'))}" required placeholder="مثال: مخطط الطابق الأرضي" autofocus>
                                 </div>
-                                <div class="form-group" style="flex:0 0 140px;">
+                                <div class="form-group" style="flex:0 0 130px;">
                                     <label class="form-label">الطابق</label>
                                     <select id="fm-floor-level" class="form-input">${floorOpts}</select>
                                 </div>
-                                <div class="form-group" style="flex:0 0 80px;">
+                                <div class="form-group" style="flex:0 0 70px;">
                                     <label class="form-label">الترتيب</label>
                                     <input type="number" id="fm-floor-sort" class="form-input" value="${escAttr(val('sortOrder', '1'))}" min="0">
                                 </div>
+                                <div class="form-group" style="flex:0 0 90px;">
+                                    <label class="form-label">العرض</label>
+                                    <input type="number" id="fm-floor-width" class="form-input" value="${escAttr(val('imageWidth', 1600))}" min="400">
+                                </div>
+                                <div class="form-group" style="flex:0 0 90px;">
+                                    <label class="form-label">الارتفاع</label>
+                                    <input type="number" id="fm-floor-height" class="form-input" value="${escAttr(val('imageHeight', 900))}" min="300">
+                                </div>
                             </div>
-                            <div class="form-group" style="margin-top:12px;">
-                                <div class="fm-source-tabs" style="display:flex;gap:0;margin-bottom:0;background:#f1f5f9;border-radius:10px;padding:4px;border:1px solid #e2e8f0;">
+                            <div class="fm-source-tabs-bar">
+                                <div class="fm-source-tabs">
                                     <button type="button" class="fm-source-tab active" data-mode="draw" onclick="Emergency._fmSwitchSource('draw')"><i class="fas fa-pen-fancy"></i> رسم يدوي</button>
                                     <button type="button" class="fm-source-tab" data-mode="upload" onclick="Emergency._fmSwitchSource('upload')"><i class="fas fa-cloud-upload-alt"></i> رفع صورة</button>
                                 </div>
                             </div>
-                            <div id="fm-source-draw" class="fm-source-pane" style="display:block;margin-top:4px;">
+                            <div id="fm-source-draw" class="fm-source-pane fm-sketch-stage">
                                 <div class="fm-canvas-toolbar">
                                     <div class="fm-tool-group">
                                         <button type="button" class="fm-draw-tool active" data-tool="pen" title="قلم"><i class="fas fa-pen"></i></button>
-                                        <button type="button" class="fm-draw-tool" data-tool="rect" title="مستطيل"><i class="fas fa-vector-square"></i></button>
+                                        <button type="button" class="fm-draw-tool" data-tool="rect" title="مستطيل / إطار"><i class="fas fa-vector-square"></i></button>
                                         <button type="button" class="fm-draw-tool" data-tool="eraser" title="ممحاة"><i class="fas fa-eraser"></i></button>
                                     </div>
                                     <div class="fm-tool-group">
@@ -2525,25 +2533,36 @@ const Emergency = {
                                             <option value="10">10</option>
                                         </select>
                                     </div>
+                                    <div class="fm-tool-group fm-sketch-zoom-controls">
+                                        <button type="button" class="fm-draw-tool" id="fm-sketch-zoom-out" title="تصغير"><i class="fas fa-search-minus"></i></button>
+                                        <span class="fm-sketch-zoom-label" id="fm-sketch-zoom-label">100%</span>
+                                        <button type="button" class="fm-draw-tool" id="fm-sketch-zoom-in" title="تكبير"><i class="fas fa-search-plus"></i></button>
+                                        <button type="button" class="fm-draw-tool" id="fm-sketch-zoom-fit" title="ملاءمة الشاشة"><i class="fas fa-compress-arrows-alt"></i></button>
+                                    </div>
                                     <div class="fm-tool-group">
                                         <button type="button" class="fm-draw-action" onclick="Emergency._fmClearCanvas()" title="مسح الكل"><i class="fas fa-trash-alt"></i> مسح</button>
+                                        <button type="button" class="fm-draw-action" onclick="Emergency._fmApplyCanvasSizeFromInputs()" title="تطبيق الأبعاد"><i class="fas fa-expand-arrows-alt"></i> الأبعاد</button>
                                     </div>
                                 </div>
-                                <div class="fm-stamp-toolbar">
+                                <div class="fm-stamp-toolbar fm-stamp-toolbar-compact">
                                     <div class="fm-stamp-toolbar-head">
-                                        <span class="fm-stamp-toolbar-label"><i class="fas fa-map-pin"></i> رموز السلامة والحريق:</span>
+                                        <span class="fm-stamp-toolbar-label"><i class="fas fa-map-pin"></i> رموز السلامة:</span>
                                         <label class="btn-secondary btn-sm fm-import-stamp-btn" title="استيراد أيقونة مخصصة">
-                                            <i class="fas fa-file-import"></i> استيراد أيقونة
+                                            <i class="fas fa-file-import"></i> استيراد
                                             <input type="file" id="fm-import-stamp-input" accept="image/*" hidden>
                                         </label>
                                     </div>
                                     <div class="fm-stamp-toolbar-items">${this._fmBuildStampToolbarHtml()}</div>
                                 </div>
-                                <div class="fm-canvas-wrap">
-                                    <canvas id="fm-sketch-canvas" width="1200" height="650" tabindex="-1"></canvas>
+                                <div class="fm-sketch-viewport" id="fm-sketch-viewport">
+                                    <div class="fm-sketch-zoom-inner" id="fm-sketch-zoom-inner">
+                                        <div class="fm-canvas-wrap">
+                                            <canvas id="fm-sketch-canvas" width="1600" height="900" tabindex="-1"></canvas>
+                                        </div>
+                                    </div>
                                 </div>
                                 <div class="fm-canvas-hint">
-                                    <i class="fas fa-info-circle"></i> ارسم الجدران بالقلم أو المستطيلات، ثم اختر <strong>رمزاً</strong> وانقر على الرسم لوضعه. الممحاة تمسح الرمز <strong>كاملاً</strong> عند النقر عليه.
+                                    <i class="fas fa-info-circle"></i> اسحب لرسم <strong>مستطيل/إطار</strong>، أو استخدم أزرار التكبير أعلى منطقة الرسم.
                                 </div>
                                 ${hasExistingImage ? `<div class="fm-canvas-warning"><i class="fas fa-exclamation-triangle"></i> يوجد رسم سابق — الرسم الجديد سيحل محله.</div>` : ''}
                             </div>
@@ -2566,16 +2585,6 @@ const Emergency = {
                                     <p class="fm-field-hint" id="fm-upload-hint">${val('imageDriveId') ? 'الصورة موجودة مسبقاً.' : 'اختر صورة من جهازك لعرضها كخلفية للمخطط.'}</p>
                                 </div>
                             </div>
-                            <div class="fm-form-row" style="margin-top:10px;">
-                                <div class="form-group" style="flex:1;">
-                                    <label class="form-label">العرض (px)</label>
-                                    <input type="number" id="fm-floor-width" class="form-input" value="${escAttr(val('imageWidth', 1200))}" min="100">
-                                </div>
-                                <div class="form-group" style="flex:1;">
-                                    <label class="form-label">الارتفاع (px)</label>
-                                    <input type="number" id="fm-floor-height" class="form-input" value="${escAttr(val('imageHeight', 800))}" min="100">
-                                </div>
-                            </div>
                         </div>
                         <div class="modal-footer fm-modal-footer-fixed">
                             <button type="button" class="btn-secondary" id="fm-floor-modal-cancel">إلغاء</button>
@@ -2589,6 +2598,7 @@ const Emergency = {
         document.body.classList.add('fm-floor-modal-open');
         this._fmBindFloorPlanModal();
         this._fmInitCanvas();
+        this._fmInitSketchZoom();
         this._fmInitUpload();
         } catch (err) {
             if (typeof Utils !== 'undefined' && Utils.safeError) {
@@ -2738,6 +2748,134 @@ const Emergency = {
         ctx.restore();
     },
 
+    _fmInitSketchZoom() {
+        const inner = document.getElementById('fm-sketch-zoom-inner');
+        const viewport = document.getElementById('fm-sketch-viewport');
+        if (!inner) return;
+        if (!this._fmState.sketchZoom) this._fmState.sketchZoom = 1;
+        this._fmApplySketchZoom(this._fmState.sketchZoom);
+
+        const bind = (id, fn) => {
+            const el = document.getElementById(id);
+            if (el && !el.dataset.fmBound) {
+                el.addEventListener('click', fn);
+                el.dataset.fmBound = '1';
+            }
+        };
+        bind('fm-sketch-zoom-in', () => this._fmSetSketchZoom((this._fmState.sketchZoom || 1) + 0.1));
+        bind('fm-sketch-zoom-out', () => this._fmSetSketchZoom((this._fmState.sketchZoom || 1) - 0.1));
+        bind('fm-sketch-zoom-fit', () => this._fmFitSketchZoom());
+        if (viewport && !viewport.dataset.fmWheelBound) {
+            viewport.addEventListener('wheel', (e) => {
+                if (!e.ctrlKey) return;
+                e.preventDefault();
+                const delta = e.deltaY > 0 ? -0.08 : 0.08;
+                this._fmSetSketchZoom((this._fmState.sketchZoom || 1) + delta);
+            }, { passive: false });
+            viewport.dataset.fmWheelBound = '1';
+        }
+        setTimeout(() => this._fmFitSketchZoom(), 80);
+    },
+
+    _fmApplySketchZoom(zoom) {
+        const inner = document.getElementById('fm-sketch-zoom-inner');
+        const label = document.getElementById('fm-sketch-zoom-label');
+        const z = Math.max(0.25, Math.min(3, zoom || 1));
+        this._fmState.sketchZoom = z;
+        if (inner) inner.style.transform = `scale(${z})`;
+        if (label) label.textContent = Math.round(z * 100) + '%';
+    },
+
+    _fmSetSketchZoom(zoom) {
+        this._fmApplySketchZoom(zoom);
+    },
+
+    _fmFitSketchZoom() {
+        const viewport = document.getElementById('fm-sketch-viewport');
+        const canvas = document.getElementById('fm-sketch-canvas');
+        if (!viewport || !canvas) return;
+        const pad = 24;
+        const availW = Math.max(200, viewport.clientWidth - pad);
+        const availH = Math.max(200, viewport.clientHeight - pad);
+        const scaleW = availW / canvas.width;
+        const scaleH = availH / canvas.height;
+        this._fmApplySketchZoom(Math.min(scaleW, scaleH, 1.5));
+    },
+
+    _fmApplyCanvasSizeFromInputs() {
+        const canvas = document.getElementById('fm-sketch-canvas');
+        if (!canvas) return;
+        const newW = Math.max(400, parseInt(document.getElementById('fm-floor-width')?.value, 10) || 1600);
+        const newH = Math.max(300, parseInt(document.getElementById('fm-floor-height')?.value, 10) || 900);
+        const oldW = canvas.width;
+        const oldH = canvas.height;
+        if (newW === oldW && newH === oldH) {
+            this._fmFitSketchZoom();
+            return;
+        }
+        const tmp = document.createElement('canvas');
+        tmp.width = newW;
+        tmp.height = newH;
+        const tctx = tmp.getContext('2d');
+        tctx.fillStyle = '#ffffff';
+        tctx.fillRect(0, 0, newW, newH);
+        if (canvas._fmBaseSnapshot) {
+            const prev = document.createElement('canvas');
+            prev.width = oldW;
+            prev.height = oldH;
+            prev.getContext('2d').putImageData(canvas._fmBaseSnapshot, 0, 0);
+            tctx.drawImage(prev, 0, 0, newW, newH);
+        } else {
+            tctx.drawImage(canvas, 0, 0, newW, newH);
+        }
+        canvas.width = newW;
+        canvas.height = newH;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(tmp, 0, 0);
+        canvas._fmBaseSnapshot = ctx.getImageData(0, 0, newW, newH);
+        canvas._snapshot = canvas._fmBaseSnapshot;
+        if (canvas._fmStamps && oldW && oldH) {
+            const sx = newW / oldW;
+            const sy = newH / oldH;
+            canvas._fmStamps = canvas._fmStamps.map(s => ({ ...s, x: s.x * sx, y: s.y * sy }));
+        }
+        this._fmRedrawSketchCanvas(canvas);
+        this._fmFitSketchZoom();
+        if (typeof Notification !== 'undefined' && Notification.success) Notification.success('تم تطبيق أبعاد لوحة الرسم');
+    },
+
+    _fmDrawRectPreview(ctx, x1, y1, x2, y2, color, width) {
+        const x = Math.min(x1, x2);
+        const y = Math.min(y1, y2);
+        const w = Math.abs(x2 - x1);
+        const h = Math.abs(y2 - y1);
+        ctx.strokeStyle = color;
+        ctx.lineWidth = width;
+        ctx.strokeRect(x, y, w, h);
+        ctx.fillStyle = color + '20';
+        ctx.fillRect(x, y, w, h);
+    },
+
+    _fmCommitRectToBase(canvas, x1, y1, x2, y2, color, width) {
+        const x = Math.min(x1, x2);
+        const y = Math.min(y1, y2);
+        const w = Math.abs(x2 - x1);
+        const h = Math.abs(y2 - y1);
+        if (w < 2 && h < 2) return;
+        const t = document.createElement('canvas');
+        t.width = canvas.width;
+        t.height = canvas.height;
+        const tc = t.getContext('2d');
+        if (canvas._fmBaseSnapshot) tc.putImageData(canvas._fmBaseSnapshot, 0, 0);
+        tc.strokeStyle = color;
+        tc.lineWidth = width;
+        tc.strokeRect(x, y, w, h);
+        tc.fillStyle = color + '20';
+        tc.fillRect(x, y, w, h);
+        canvas._fmBaseSnapshot = tc.getImageData(0, 0, canvas.width, canvas.height);
+        canvas._snapshot = canvas._fmBaseSnapshot;
+    },
+
     _fmRestoreCanvasImage_(canvas, ctx, dataUrl, onDone) {
         if (!dataUrl || !dataUrl.startsWith('data:image')) {
             if (onDone) onDone();
@@ -2760,7 +2898,7 @@ const Emergency = {
         const canvas = document.getElementById('fm-sketch-canvas');
         if (!canvas) return;
         const ctx = canvas.getContext('2d');
-        const rect = { x: 0, y: 0, drawing: false };
+        const rect = { x: 0, y: 0, endX: 0, endY: 0, drawing: false };
         let drawing = false;
         let lastX;
         let lastY;
@@ -2777,6 +2915,13 @@ const Emergency = {
             canvas._fmStamps = [];
             this._fmRedrawSketchCanvas(canvas);
         };
+
+        const targetW = Math.max(400, parseInt(document.getElementById('fm-floor-width')?.value, 10) || 1600);
+        const targetH = Math.max(300, parseInt(document.getElementById('fm-floor-height')?.value, 10) || 900);
+        if (canvas.width !== targetW || canvas.height !== targetH) {
+            canvas.width = targetW;
+            canvas.height = targetH;
+        }
 
         const existingData = document.getElementById('fm-floor-edit-id')?.value;
         if (existingData) {
@@ -2833,6 +2978,8 @@ const Emergency = {
             if (toolState.tool === 'rect') {
                 rect.x = pos.x;
                 rect.y = pos.y;
+                rect.endX = pos.x;
+                rect.endY = pos.y;
                 rect.drawing = true;
             } else {
                 ctx.beginPath();
@@ -2859,12 +3006,10 @@ const Emergency = {
             }
             if (toolState.tool === 'rect') {
                 if (!rect.drawing) return;
+                rect.endX = pos.x;
+                rect.endY = pos.y;
                 this._fmRedrawSketchCanvas(canvas);
-                ctx.strokeStyle = toolState.color;
-                ctx.lineWidth = toolState.width;
-                ctx.strokeRect(rect.x, rect.y, pos.x - rect.x, pos.y - rect.y);
-                ctx.fillStyle = toolState.color + '20';
-                ctx.fillRect(rect.x, rect.y, pos.x - rect.x, pos.y - rect.y);
+                this._fmDrawRectPreview(ctx, rect.x, rect.y, rect.endX, rect.endY, toolState.color, toolState.width);
                 return;
             }
             if (!canvas._fmBaseSnapshot) return;
@@ -2889,20 +3034,7 @@ const Emergency = {
 
         const endDraw = () => {
             if (toolState.tool === 'rect' && rect.drawing) {
-                this._fmRedrawSketchCanvas(canvas);
-                const t = document.createElement('canvas');
-                t.width = canvas.width;
-                t.height = canvas.height;
-                const tc = t.getContext('2d');
-                tc.putImageData(canvas._fmBaseSnapshot || tc.createImageData(canvas.width, canvas.height), 0, 0);
-                tc.strokeStyle = toolState.color;
-                tc.lineWidth = toolState.width;
-                const rw = lastX - rect.x;
-                const rh = lastY - rect.y;
-                tc.strokeRect(rect.x, rect.y, rw, rh);
-                tc.fillStyle = toolState.color + '20';
-                tc.fillRect(rect.x, rect.y, rw, rh);
-                canvas._fmBaseSnapshot = tc.getImageData(0, 0, canvas.width, canvas.height);
+                this._fmCommitRectToBase(canvas, rect.x, rect.y, rect.endX, rect.endY, toolState.color, toolState.width);
                 rect.drawing = false;
                 this._fmRedrawSketchCanvas(canvas);
             }

@@ -17518,28 +17518,107 @@ body.fm-floor-modal-open {
 
 .fm-modal-fullscreen .fm-modal-body-scroll {
     max-height: none;
+    flex: 1 1 auto;
     display: flex;
     flex-direction: column;
+    overflow: hidden !important;
+    padding: 8px 12px !important;
+    min-height: 0;
+}
+
+.fm-form-row-compact {
+    flex-shrink: 0;
+    margin-bottom: 6px !important;
+}
+
+.fm-form-row-compact .form-label {
+    font-size: 0.72rem;
+    margin-bottom: 2px;
+}
+
+.fm-form-row-compact .form-input {
+    padding: 6px 8px;
+    font-size: 0.85rem;
+}
+
+.fm-source-tabs-bar {
+    flex-shrink: 0;
+    margin-bottom: 6px;
+}
+
+.fm-source-tabs-bar .fm-source-tabs {
+    display: flex;
+    gap: 0;
+    background: #f1f5f9;
+    border-radius: 10px;
+    padding: 4px;
+    border: 1px solid #e2e8f0;
+}
+
+.fm-sketch-stage {
+    flex: 1 1 auto;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.fm-stamp-toolbar-compact {
+    flex-shrink: 0;
+    margin-top: 0;
+    max-height: 88px;
+    overflow: hidden;
+}
+
+.fm-stamp-toolbar-compact .fm-stamp-toolbar-items {
+    max-height: 44px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    flex-wrap: nowrap;
+}
+
+.fm-sketch-viewport {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: auto;
+    background: #cbd5e1;
+    border: 1px solid #94a3b8;
+    border-radius: 0 0 12px 12px;
+    -webkit-overflow-scrolling: touch;
+}
+
+.fm-sketch-zoom-inner {
+    transform-origin: top center;
+    padding: 20px;
+    display: flex;
+    justify-content: center;
+    min-width: min-content;
+    margin: 0 auto;
+}
+
+.fm-sketch-zoom-controls .fm-sketch-zoom-label {
+    min-width: 44px;
+    text-align: center;
+    font-size: 11px;
+    font-weight: 700;
+    color: #334155;
 }
 
 .fm-modal-fullscreen .fm-canvas-wrap {
-    flex: 1 1 auto;
-    min-height: 280px;
-    max-height: none;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: #f8fafc;
-    border: 1px solid #e2e8f0;
-    border-radius: 12px;
-    overflow: auto;
+    display: inline-block;
+    line-height: 0;
+    background: #fff;
+    box-shadow: 0 8px 32px rgba(15, 23, 42, 0.15);
+    border-radius: 4px;
 }
 
 .fm-modal-fullscreen #fm-sketch-canvas {
-    max-width: 100%;
-    max-height: 100%;
+    display: block;
     width: auto !important;
     height: auto !important;
+    max-width: none !important;
+    max-height: none !important;
+    cursor: crosshair;
 }
 
 .fm-modal-footer-fixed {
@@ -17814,20 +17893,11 @@ body.fm-floor-modal-open {
 
 .fm-canvas-wrap {
     position: relative;
-    border: 1px solid #e2e8f0;
-    border-radius: 0 0 10px 10px;
-    overflow: auto;
-    max-height: 380px;
     background: #fff;
-    -webkit-overflow-scrolling: touch;
 }
 
 #fm-sketch-canvas {
     display: block;
-    width: 100%;
-    min-width: 600px;
-    height: auto;
-    aspect-ratio: 1200/650;
     cursor: crosshair;
     touch-action: none;
     outline: none;
