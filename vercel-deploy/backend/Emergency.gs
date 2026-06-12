@@ -409,6 +409,53 @@ function deleteEmergencyPlanUpdate(sectionKey) {
 // خرائط المصنع للطوارئ (Factory Safety Maps)
 // ============================================
 
+/** منع تخزين base64 في خلايا Sheets (حد 50000 حرف) — رفع الصور إلى Drive */
+function sanitizeEmergencyFloorPlanData_(data, options) {
+    if (!data) return data;
+    var isUpdate = options && options.isUpdate === true;
+    var imageRef = data.imageDriveId ? String(data.imageDriveId) : '';
+    if (imageRef.indexOf('data:image') === 0) {
+        try {
+            var uploadResult = uploadFileToDrive(
+                imageRef,
+                'floor_plan_' + (data.id || Utilities.getUuid()) + '_' + Date.now() + '.jpg',
+                'image/jpeg',
+                'EmergencyFloorPlans'
+            );
+            if (uploadResult && uploadResult.success && uploadResult.fileId) {
+                data.imageDriveId = uploadResult.fileId;
+            } else if (isUpdate) {
+                delete data.imageDriveId;
+            } else {
+                data.imageDriveId = '';
+            }
+        } catch (uploadErr) {
+            Logger.log('sanitizeEmergencyFloorPlanData_ image: ' + uploadErr.toString());
+            if (isUpdate) delete data.imageDriveId;
+            else data.imageDriveId = '';
+        }
+    }
+    if (data.drawStampsJson && String(data.drawStampsJson).length > 45000) {
+        try {
+            var parsed = JSON.parse(String(data.drawStampsJson));
+            if (parsed && parsed.customImages) delete parsed.customImages;
+            if (parsed && parsed.stamps) {
+                parsed.stamps = parsed.stamps.map(function(s) {
+                    if (s && s.customImage) delete s.customImage;
+                    return s;
+                });
+            }
+            data.drawStampsJson = JSON.stringify(parsed);
+        } catch (jsonErr) {
+            data.drawStampsJson = '';
+        }
+    }
+    if (data.drawStampsJson && String(data.drawStampsJson).length > 45000) {
+        data.drawStampsJson = '';
+    }
+    return data;
+}
+
 function addEmergencyFloorPlan(data) {
     try {
         if (!data || !data.name) return { success: false, message: 'اسم المخطط مطلوب' };
@@ -420,6 +467,10 @@ function addEmergencyFloorPlan(data) {
         }
         if (!data.createdAt) data.createdAt = new Date();
         if (!data.updatedAt) data.updatedAt = new Date();
+        data = sanitizeEmergencyFloorPlanData_(data, { isUpdate: false });
+        if (!data.imageDriveId) {
+            return { success: false, message: 'صورة المخطط مطلوبة — تعذر رفع الصورة إلى Drive' };
+        }
         var result = appendToSheet(sheetName, data);
         return result && result.success
             ? { success: true, data: { id: data.id }, message: result.message }
@@ -436,6 +487,7 @@ function updateEmergencyFloorPlan(planId, updateData) {
         var sheetName = 'EmergencyFloorPlans';
         updateData.id = planId;
         updateData.updatedAt = new Date();
+        updateData = sanitizeEmergencyFloorPlanData_(updateData, { isUpdate: true });
         var result = updateSingleRowInSheet(sheetName, planId, updateData, getSpreadsheetId());
         if (result && result.success) return { success: true, message: 'تم تحديث المخطط', data: updateData };
         var allData = readFromSheet(sheetName, getSpreadsheetId());

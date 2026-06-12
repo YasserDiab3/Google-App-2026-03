@@ -2302,11 +2302,38 @@ const Emergency = {
             stamps: (canvas._fmStamps || []).map(s => ({
                 type: s.type,
                 x: s.x,
-                y: s.y,
-                customImage: s.customImage || ''
-            })),
-            customImages: canvas._fmCustomImages || {}
+                y: s.y
+            }))
         });
+    },
+
+    _fmResolvePlanImageSrc(imageRef) {
+        if (!imageRef) return '';
+        const ref = String(imageRef);
+        if (ref.startsWith('data:') || ref.startsWith('http')) return ref;
+        return `https://drive.google.com/thumbnail?id=${ref}&sz=w2000`;
+    },
+
+    async _fmUploadFloorPlanImageToDrive(imageData, planName) {
+        if (!imageData) return '';
+        const ref = String(imageData);
+        if (!ref.startsWith('data:image')) {
+            return ref;
+        }
+        if (!window.GoogleIntegration || typeof GoogleIntegration.uploadFileToDrive !== 'function') {
+            throw new Error('خدمة رفع الصور غير متوفرة');
+        }
+        const safeName = String(planName || 'floor_plan').replace(/[^\w\u0600-\u06FF.-]+/g, '_').slice(0, 40);
+        const uploadResult = await GoogleIntegration.uploadFileToDrive(
+            ref,
+            `${safeName}_${Date.now()}.jpg`,
+            'image/jpeg',
+            'EmergencyFloorPlans'
+        );
+        if (!uploadResult?.success || !uploadResult.fileId) {
+            throw new Error(uploadResult?.message || 'فشل رفع صورة المخطط إلى Drive');
+        }
+        return uploadResult.fileId;
     },
 
     _fmRestoreCanvasStamps(canvas, rawJson) {
@@ -2876,12 +2903,14 @@ const Emergency = {
         canvas._snapshot = canvas._fmBaseSnapshot;
     },
 
-    _fmRestoreCanvasImage_(canvas, ctx, dataUrl, onDone) {
-        if (!dataUrl || !dataUrl.startsWith('data:image')) {
+    _fmRestoreCanvasImage_(canvas, ctx, imageRef, onDone) {
+        const src = this._fmResolvePlanImageSrc(imageRef);
+        if (!src) {
             if (onDone) onDone();
             return;
         }
         const img = new Image();
+        if (!src.startsWith('data:')) img.crossOrigin = 'anonymous';
         img.onload = () => {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
@@ -2891,7 +2920,7 @@ const Emergency = {
             if (onDone) onDone();
         };
         img.onerror = () => { if (onDone) onDone(); };
-        img.src = dataUrl;
+        img.src = src;
     },
 
     _fmInitCanvas() {
@@ -3129,7 +3158,7 @@ const Emergency = {
                 const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
                 const hasContent = imageData.data.some(ch => ch !== 0);
                 if (hasContent) {
-                    imageDriveId = this._fmCompressCanvasDataUrl(canvas, 1400, 0.85);
+                    imageDriveId = this._fmCompressCanvasDataUrl(canvas, 1200, 0.78);
                 }
             }
         } else if (isUploadMode && imageDriveId && imageDriveId.startsWith('data:image')) {
@@ -3140,7 +3169,7 @@ const Emergency = {
                 tmp.height = img.naturalHeight;
                 const tctx = tmp.getContext('2d');
                 tctx.drawImage(img, 0, 0);
-                imageDriveId = this._fmCompressCanvasDataUrl(tmp, 1600, 0.85);
+                imageDriveId = this._fmCompressCanvasDataUrl(tmp, 1200, 0.78);
             }
         }
 
@@ -3178,6 +3207,12 @@ const Emergency = {
                 if (typeof Notification !== 'undefined' && Notification.error) Notification.error('خدمة التكامل غير متوفرة');
                 if (submitBtn) { submitBtn.disabled = false; submitBtn.innerHTML = '<i class="fas fa-save ml-2"></i>' + (editId ? 'حفظ التعديلات' : 'إضافة المخطط'); }
                 return false;
+            }
+
+            if (imageDriveId && String(imageDriveId).startsWith('data:image')) {
+                if (submitBtn) submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin ml-2"></i>جاري رفع الصورة...';
+                imageDriveId = await this._fmUploadFloorPlanImageToDrive(imageDriveId, name);
+                data.imageDriveId = imageDriveId;
             }
 
             let savedPlanId = editId || '';
