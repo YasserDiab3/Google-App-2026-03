@@ -1201,7 +1201,7 @@ const Incidents = {
                     <button onclick="Incidents.viewIncident('${incidentId}')" class="btn-icon btn-icon-info" title="معاينة">
                         <i class="fas fa-eye"></i>
                     </button>
-                    <button onclick="Incidents.exportPDF('${incidentId}')" class="btn-icon btn-icon-primary" title="طباعة / PDF">
+                    <button onclick="Incidents.exportPDF('${incidentId}')" class="btn-icon btn-icon-primary" title="تصدير PDF">
                         <i class="fas fa-print"></i>
                     </button>
                 </div>
@@ -5326,7 +5326,7 @@ const Incidents = {
                     <button onclick="Incidents.viewIncident('${incidentId}')" class="btn-icon btn-icon-info" title="معاينة">
                         <i class="fas fa-eye"></i>
                     </button>
-                    <button onclick="Incidents.exportPDF('${incidentId}')" class="btn-icon btn-icon-primary" title="طباعة / PDF">
+                    <button onclick="Incidents.exportPDF('${incidentId}')" class="btn-icon btn-icon-primary" title="تصدير PDF">
                         <i class="fas fa-print"></i>
                     </button>
                 </div>
@@ -5974,7 +5974,7 @@ const Incidents = {
                                                 <button onclick="Incidents.manageWorkflow('${id}')" class="btn-icon btn-icon-warning" title="إدارة التدفق">
                                                     <i class="fas fa-project-diagram"></i>
                                                 </button>
-                                                <button onclick="Incidents.exportPDF('${id}')" class="btn-icon btn-icon-secondary" title="تصدير / طباعة">
+                                                <button onclick="Incidents.exportPDF('${id}')" class="btn-icon btn-icon-secondary" title="تصدير PDF">
                                                     <i class="fas fa-print"></i>
                                                 </button>
                                                 ${this.renderIncidentDeleteButton(id)}
@@ -9362,6 +9362,338 @@ const Incidents = {
         `;
     },
 
+    async _loadReportPdfLib_(src, checkFn) {
+        if (checkFn()) return true;
+        return new Promise((resolve) => {
+            const existing = Array.from(document.querySelectorAll('script[src]'))
+                .find((s) => String(s.src || '').includes(src));
+            if (existing) {
+                const done = () => resolve(!!checkFn());
+                existing.addEventListener('load', done, { once: true });
+                setTimeout(done, 4000);
+                return;
+            }
+            const script = document.createElement('script');
+            script.src = src;
+            script.async = true;
+            script.onload = () => resolve(!!checkFn());
+            script.onerror = () => resolve(false);
+            document.head.appendChild(script);
+        });
+    },
+
+    async _ensureReportPdfLibs_() {
+        const html2canvasOk = await this._loadReportPdfLib_(
+            'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js',
+            () => typeof html2canvas !== 'undefined'
+        );
+        const jsPdfOk = await this._loadReportPdfLib_(
+            'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js',
+            () => typeof window.jspdf !== 'undefined'
+        );
+        return html2canvasOk && jsPdfOk;
+    },
+
+    _stripScriptsFromHtml_(htmlContent) {
+        return String(htmlContent || '').replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '');
+    },
+
+    async _preloadCairoFontForPdf_() {
+        if (!document.getElementById('inc-cairo-font-link')) {
+            const link = document.createElement('link');
+            link.id = 'inc-cairo-font-link';
+            link.rel = 'stylesheet';
+            link.href = 'https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap';
+            document.head.appendChild(link);
+        }
+        try {
+            if (document.fonts && typeof document.fonts.load === 'function') {
+                await document.fonts.load('400 14px Cairo');
+                await document.fonts.load('700 20px Cairo');
+                await document.fonts.ready;
+            }
+        } catch (_e) { /* ignore */ }
+    },
+
+    _prepareArabicPdfHtml_(htmlContent) {
+        const arabicFix = `
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style id="incidents-arabic-pdf-fix">
+    html, body {
+        font-family: 'Cairo', 'Tahoma', 'Segoe UI', 'Arial', sans-serif !important;
+        direction: rtl !important;
+        unicode-bidi: embed;
+        letter-spacing: 0 !important;
+        word-spacing: normal !important;
+        text-rendering: optimizeLegibility;
+        -webkit-font-smoothing: antialiased;
+    }
+    body *, .report-wrapper, .report-wrapper * {
+        font-family: 'Cairo', 'Tahoma', 'Segoe UI', 'Arial', sans-serif !important;
+        letter-spacing: 0 !important;
+        word-spacing: normal !important;
+    }
+    h1, h2, h3, .header-title-ar, .company-name, .company-name-secondary,
+    .footer-bottom-text, .footer-bottom-text span, .footer-meta-item,
+    th, td, .meta-label, .meta-value {
+        direction: rtl !important;
+        unicode-bidi: embed;
+        letter-spacing: 0 !important;
+        word-break: normal !important;
+        font-family: 'Cairo', 'Tahoma', 'Segoe UI', sans-serif !important;
+    }
+    table, thead, tbody, tr, th, td { direction: rtl !important; }
+    .header-info h1 { letter-spacing: 0 !important; }
+</style>`;
+        const cleaned = this._stripScriptsFromHtml_(htmlContent);
+        if (!cleaned) return arabicFix;
+        if (cleaned.includes('</head>')) {
+            return cleaned.replace('</head>', `${arabicFix}</head>`);
+        }
+        return `<!DOCTYPE html><html lang="ar" dir="rtl"><head><meta charset="UTF-8">${arabicFix}</head><body>${cleaned}</body></html>`;
+    },
+
+    async _waitArabicPdfFontsReady_(doc) {
+        if (!doc || !doc.fonts || typeof doc.fonts.load !== 'function') return;
+        try {
+            await Promise.all([
+                doc.fonts.load('400 12px Cairo'),
+                doc.fonts.load('600 14px Cairo'),
+                doc.fonts.load('700 18px Cairo'),
+                doc.fonts.load('800 24px Cairo')
+            ]);
+            await doc.fonts.ready;
+        } catch (_e) { /* ignore */ }
+    },
+
+    async _captureHtmlToCanvas_(root, opts = {}) {
+        const baseOpts = {
+            scale: 2.5,
+            backgroundColor: '#ffffff',
+            logging: false,
+            windowWidth: Math.max(root.scrollWidth, 900),
+            windowHeight: Math.max(root.scrollHeight, 1),
+            scrollX: 0,
+            scrollY: 0
+        };
+        const attempts = [
+            { ...baseOpts, useCORS: true, allowTaint: false },
+            { ...baseOpts, useCORS: true, allowTaint: true },
+            { ...baseOpts, useCORS: false, allowTaint: true }
+        ];
+        let lastError = null;
+        for (let i = 0; i < attempts.length; i++) {
+            try {
+                const canvas = await html2canvas(root, attempts[i]);
+                if (canvas && canvas.width > 0 && canvas.height > 0) {
+                    return canvas;
+                }
+            } catch (err) {
+                lastError = err;
+            }
+        }
+        if (lastError) throw lastError;
+        return null;
+    },
+
+    async _downloadHtmlReportAsPdf(htmlContent, fileName = 'report.pdf') {
+        const libsReady = await this._ensureReportPdfLibs_();
+        if (!libsReady || typeof html2canvas === 'undefined' || !window.jspdf) {
+            return false;
+        }
+
+        await this._preloadCairoFontForPdf_();
+        const preparedHtml = this._prepareArabicPdfHtml_(htmlContent);
+        const pdfFileName = String(fileName || 'report.pdf').toLowerCase().endsWith('.pdf')
+            ? String(fileName)
+            : `${String(fileName)}.pdf`;
+
+        const iframe = document.createElement('iframe');
+        iframe.setAttribute('aria-hidden', 'true');
+        iframe.style.cssText = 'position:fixed;left:-100000px;top:0;width:900px;height:1200px;border:0;visibility:hidden;';
+        document.body.appendChild(iframe);
+
+        try {
+            iframe.srcdoc = preparedHtml;
+            await new Promise((resolve) => {
+                iframe.onload = resolve;
+                iframe.onerror = resolve;
+                setTimeout(resolve, 6000);
+            });
+
+            const iDoc = iframe.contentDocument || iframe.contentWindow?.document;
+            if (!iDoc) return false;
+
+            await this._waitArabicPdfFontsReady_(iDoc);
+
+            const images = Array.from(iDoc.images || []);
+            await Promise.all(images.map((img) => new Promise((resolve) => {
+                if (img.complete) return resolve();
+                img.onload = resolve;
+                img.onerror = resolve;
+                setTimeout(resolve, 3000);
+            })));
+
+            const root = iDoc.querySelector('.report-wrapper') || iDoc.body;
+            if (!root) return false;
+
+            const canvas = await this._captureHtmlToCanvas_(root);
+            if (!canvas) return false;
+
+            const { jsPDF } = window.jspdf;
+            const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+            const pdfW = pdf.internal.pageSize.getWidth();
+            const pdfH = pdf.internal.pageSize.getHeight();
+            const margin = 8;
+            const contentW = pdfW - margin * 2;
+            const ratio = contentW / canvas.width;
+            const pageContentH = pdfH - margin * 2;
+            const pageHeightPx = pageContentH / ratio;
+            const totalPages = Math.max(1, Math.ceil(canvas.height / pageHeightPx));
+
+            for (let p = 0; p < totalPages; p++) {
+                if (p > 0) pdf.addPage();
+                const sliceH = Math.min(pageHeightPx, canvas.height - p * pageHeightPx);
+                const sliceCanvas = document.createElement('canvas');
+                sliceCanvas.width = canvas.width;
+                sliceCanvas.height = sliceH;
+                sliceCanvas.getContext('2d').drawImage(
+                    canvas, 0, p * pageHeightPx, canvas.width, sliceH, 0, 0, canvas.width, sliceH
+                );
+                pdf.addImage(sliceCanvas.toDataURL('image/png'), 'PNG', margin, margin, contentW, sliceH * ratio);
+            }
+
+            pdf.save(pdfFileName);
+            return true;
+        } catch (error) {
+            Utils.safeWarn('فشل تحميل تقرير PDF:', error);
+            return false;
+        } finally {
+            iframe.remove();
+        }
+    },
+
+    _buildInvestigationDataFromIncident(incident, existing = {}) {
+        const merged = { ...existing };
+        if (!merged.investigationNumber) {
+            merged.investigationNumber = incident.isoCode
+                ? `INV-${String(incident.isoCode).replace(/^ISO-?/i, '')}`
+                : `INV-${String(incident.id || '').substring(0, 8)}`;
+        }
+        if (!merged.investigationDateTime) merged.investigationDateTime = incident.updatedAt || incident.createdAt;
+        if (!merged.incidentDateTime) merged.incidentDateTime = incident.date || incident.incidentDateTime;
+        if (!merged.factoryName) merged.factoryName = incident.siteName || incident.factory;
+        if (!merged.locationName) {
+            merged.locationName = [
+                incident.sublocationName || incident.sublocation,
+                incident.location
+            ].filter(v => v && String(v).trim()).join(' — ') || incident.location;
+        }
+        if (!merged.description) merged.description = incident.description;
+        if (!merged.affectedName) merged.affectedName = incident.affectedName;
+        if (!merged.affectedJob) merged.affectedJob = incident.affectedJob || incident.affectedRole;
+        if (!merged.affectedDepartment) merged.affectedDepartment = incident.affectedDepartment;
+        if (!merged.unsafeBehavior && incident.unsafeBehavior) merged.unsafeBehavior = incident.unsafeBehavior;
+        if (!merged.unsafeCondition && incident.unsafeCondition) merged.unsafeCondition = incident.unsafeCondition;
+        if (!merged.riskResult && (incident.riskResult || incident.riskLevel)) {
+            merged.riskResult = incident.riskResult || incident.riskLevel;
+        }
+        if (!merged.riskExplanation && incident.rootCause) merged.riskExplanation = incident.rootCause;
+        if (!merged.actionPlan?.length && Array.isArray(incident.actionPlan) && incident.actionPlan.length) {
+            merged.actionPlan = incident.actionPlan.map((action) => ({
+                correctiveAction: action.correctiveAction || action.description || '',
+                plannedDate: action.plannedDate || action.dueDate || '',
+                responsibleName: action.responsibleName || action.owner || '',
+                responsibleDate: action.responsibleDate || '',
+                followUpName: action.followUpName || '',
+                followUpDate: action.followUpDate || ''
+            }));
+        }
+        if (!merged.incidentTypes?.length && incident.incidentType) {
+            merged.incidentTypes = [incident.incidentType];
+        }
+        return merged;
+    },
+
+    _resolveInvestigationDataForExport(incidentId) {
+        const incident = AppState.appData.incidents.find(i => i.id === incidentId);
+        if (!incident) return { incident: null, investigationData: null };
+
+        let investigationData = this.getInvestigationFormData();
+        if (!investigationData) {
+            investigationData = this._parseIncidentInvestigationSummary(incident) || {};
+        }
+
+        if (!investigationData.investigationNumber && !investigationData.description) {
+            investigationData = this._buildInvestigationDataFromIncident(incident, investigationData);
+        }
+
+        return { incident, investigationData };
+    },
+
+    _buildInvestigationReportHtml(incident, investigationData) {
+        const content = this.buildInvestigationPrintContent(incident, investigationData);
+        const formCode = investigationData.investigationNumber
+            || incident.isoCode
+            || `INV-${String(incident.id || '').substring(0, 8)}`;
+
+        if (typeof FormHeader !== 'undefined' && FormHeader.generatePDFHTML) {
+            return FormHeader.generatePDFHTML(
+                formCode,
+                'نموذج التحقيق في الحادث',
+                content,
+                false,
+                true,
+                {
+                    version: AppState?.companySettings?.formVersion || '1.0',
+                    titleAr: 'نموذج التحقيق في الحادث',
+                    titleEn: 'Incident Investigation Report',
+                    'مرجع الحادث': incident.id || '—'
+                },
+                incident.createdAt,
+                investigationData.updatedAt || incident.updatedAt
+            );
+        }
+
+        return `<html dir="rtl" lang="ar"><head><meta charset="UTF-8"><style>body { font-family: 'Tahoma', Arial, sans-serif; direction: rtl; text-align: right; padding: 20px; } @media print { body { margin: 0; padding: 15px; } }</style></head><body>${content}</body></html>`;
+    },
+
+    async _exportInvestigationReportPdf(incidentId) {
+        const { incident, investigationData } = this._resolveInvestigationDataForExport(incidentId);
+        if (!incident) {
+            Notification.error('الحادث غير موجود');
+            return false;
+        }
+        if (!investigationData.investigationNumber && !investigationData.description) {
+            Notification.warning('لا توجد بيانات كافية للتصدير');
+            return false;
+        }
+
+        try {
+            Loading.show('جاري تحضير تقرير التحقيق...');
+            const htmlContent = this._buildInvestigationReportHtml(incident, investigationData);
+            const ref = investigationData.investigationNumber || incident.isoCode || incident.id;
+            const safeName = `تحقيق-حادث-${String(ref).replace(/[^\w\u0600-\u06FF.-]/g, '_')}`;
+            const downloaded = await this._downloadHtmlReportAsPdf(htmlContent, safeName);
+            Loading.hide();
+
+            if (downloaded) {
+                Notification.success('تم تحميل تقرير التحقيق بنجاح');
+                return true;
+            }
+
+            this._openIncidentPrintableHtml(htmlContent, 'تعذّر التحميل المباشر — تم فتح نافذة الطباعة');
+            return true;
+        } catch (error) {
+            Loading.hide();
+            Utils.safeError('خطأ في تصدير PDF:', error);
+            Notification.error('فشل تصدير PDF: ' + error.message);
+            return false;
+        }
+    },
+
     _openIncidentPrintableHtml(htmlContent, successMessage) {
         const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
         const url = URL.createObjectURL(blob);
@@ -9385,43 +9717,7 @@ const Incidents = {
     },
 
     async exportPDF(id) {
-        const incident = AppState.appData.incidents.find(i => i.id === id);
-        if (!incident) {
-            Notification.error('الحادث غير موجود');
-            return;
-        }
-
-        try {
-            Loading.show('جاري تحضير تقرير الحادث...');
-
-            const formCode = incident.isoCode || `INC-${String(incident.id || '').substring(0, 10)}` || 'INCIDENT-REPORT';
-            const formVersion = AppState?.companySettings?.formVersion || '1.0';
-            const content = this.buildIncidentReportPrintContent(incident);
-            const htmlContent = typeof FormHeader !== 'undefined' && FormHeader.generatePDFHTML
-                ? FormHeader.generatePDFHTML(
-                    formCode,
-                    'تقرير الحادث',
-                    content,
-                    false,
-                    true,
-                    {
-                        version: formVersion,
-                        titleAr: 'تقرير الحادث',
-                        titleEn: 'Incident Report',
-                        'مرجع الحادث': incident.id || '—',
-                        'حالة التقرير': incident.status || '—'
-                    },
-                    incident.createdAt || incident.date,
-                    incident.updatedAt || incident.createdAt
-                )
-                : `<html dir="rtl" lang="ar"><head><meta charset="UTF-8"><style>body { font-family: 'Tahoma', Arial, sans-serif; direction: rtl; text-align: right; padding: 20px; } @media print { body { margin: 0; padding: 15px; } }</style></head><body>${content}</body></html>`;
-
-            this._openIncidentPrintableHtml(htmlContent, 'تم تجهيز تقرير الحادث للطباعة/الحفظ كـ PDF');
-        } catch (error) {
-            Loading.hide();
-            Utils.safeError('خطأ في تصدير PDF:', error);
-            Notification.error('فشل تصدير PDF: ' + error.message);
-        }
+        await this._exportInvestigationReportPdf(id);
     },
 
     // تطبيق نظام الصلاحيات
@@ -10812,73 +11108,19 @@ const Incidents = {
     // طباعة نموذج التحقيق
     printInvestigation(incidentId) {
         try {
-            const incident = AppState.appData.incidents.find(i => i.id === incidentId);
+            const { incident, investigationData } = this._resolveInvestigationDataForExport(incidentId);
             if (!incident) {
                 Notification.error('الحادث غير موجود');
                 return;
             }
-
-            // جمع البيانات من النموذج المفتوح أو من البيانات المحفوظة
-            let investigationData = this.getInvestigationFormData();
-            if (!investigationData) {
-                // إذا لم يكن النموذج مفتوحاً، استخدم البيانات المحفوظة
-                investigationData = incident.investigation || {};
-                if (typeof investigationData === 'string') {
-                    try {
-                        investigationData = JSON.parse(investigationData);
-                    } catch (e) {
-                        investigationData = {};
-                    }
-                }
-            }
-
             if (!investigationData.investigationNumber && !investigationData.description) {
                 Notification.warning('لا توجد بيانات تحقيق للطباعة');
                 return;
             }
 
             Loading.show('جاري إعداد الطباعة...');
-
-            // بناء محتوى HTML للطباعة
-            const content = this.buildInvestigationPrintContent(incident, investigationData);
-
-            const htmlContent = typeof FormHeader !== 'undefined' && FormHeader.generatePDFHTML
-                ? FormHeader.generatePDFHTML(
-                    investigationData.investigationNumber || `INV-${incidentId.substring(0, 8)}`,
-                    'نموذج التحقيق في الحادث',
-                    content,
-                    false,
-                    true,
-                    {
-                        version: AppState?.companySettings?.formVersion || '1.0',
-                        titleAr: 'نموذج التحقيق في الحادث',
-                        titleEn: 'Incident Investigation Report',
-                        'مرجع الحادث': incident.id || '—'
-                    },
-                    incident.createdAt,
-                    investigationData.updatedAt || incident.updatedAt
-                )
-                : `<html dir="rtl" lang="ar"><head><meta charset="UTF-8"><style>body { font-family: 'Tahoma', Arial, sans-serif; direction: rtl; text-align: right; padding: 20px; } @media print { body { margin: 0; padding: 15px; } }</style></head><body>${content}</body></html>`;
-
-            const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
-            const url = URL.createObjectURL(blob);
-            const printWindow = window.open(url, '_blank');
-
-            if (printWindow) {
-                printWindow.onload = () => {
-                    setTimeout(() => {
-                        printWindow.print();
-                        setTimeout(() => {
-                            URL.revokeObjectURL(url);
-                            Loading.hide();
-                            Notification.success('تم تجهيز التقرير للطباعة');
-                        }, 800);
-                    }, 500);
-                };
-            } else {
-                Loading.hide();
-                Notification.error('يرجى السماح للنوافذ المنبثقة لعرض التقرير');
-            }
+            const htmlContent = this._buildInvestigationReportHtml(incident, investigationData);
+            this._openIncidentPrintableHtml(htmlContent, 'تم تجهيز التقرير للطباعة');
         } catch (error) {
             Loading.hide();
             Utils.safeError('خطأ في طباعة التحقيق:', error);
@@ -10886,10 +11128,9 @@ const Incidents = {
         }
     },
 
-    // تصدير نموذج التحقيق إلى PDF
-    exportInvestigationPDF(incidentId) {
-        // استخدام نفس دالة الطباعة حيث أن exportPDF تقوم بفتح نافذة طباعة يمكن حفظها كـ PDF
-        this.printInvestigation(incidentId);
+    // تصدير نموذج التحقيق إلى PDF — تحميل مباشر
+    async exportInvestigationPDF(incidentId) {
+        await this._exportInvestigationReportPdf(incidentId);
     },
 
     // بناء محتوى HTML للطباعة
