@@ -2456,10 +2456,11 @@ const Dashboard = {
             const content = this.buildEmployeeReportPdfContent(report, codeTrimmed);
 
             const htmlContent = typeof FormHeader !== 'undefined' && FormHeader.generatePDFHTML
-                ? FormHeader.generatePDFHTML(formCode, formTitle, content, false, true, {
+                ? FormHeader.generatePDFHTML(formCode, formTitle, content, false, false, {
                     titleAr: formTitle,
                     titleEn: 'Comprehensive Employee Report',
-                    compactPdfFooter: true
+                    compactPdfFooter: true,
+                    includeQRCode: false
                 }, new Date(), new Date())
                 : `<html dir="rtl" lang="ar"><head><meta charset="UTF-8"><title>${Utils.escapeHTML(formTitle)}</title></head><body>${content}</body></html>`;
 
