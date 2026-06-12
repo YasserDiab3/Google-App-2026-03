@@ -3148,6 +3148,17 @@ const Dashboard = {
     },
 
     /**
+     * تحديث قيمة KPI بدون إعادة الرسم إذا لم تتغير (منع الوميض)
+     */
+    _updateKpiElement(el, formattedValue) {
+        if (!el || formattedValue == null) return;
+        const next = String(formattedValue);
+        if (el.textContent === next) return;
+        el.textContent = next;
+        this.applyEnglishNumberFormat(el);
+    },
+
+    /**
      * تحديث مؤشرات الأداء
      * جميع التحديثات بتغيير القيم (textContent) فقط؛ لا إعادة بناء DOM ولا إخفاء عناصر.
      * الكروت تظهر مرة واحدة وتبقى ثابتة (لا display:none ولا conditional rendering).
@@ -3246,24 +3257,16 @@ const Dashboard = {
                 try {
                     if (self.dashboardCan('incidents')) {
                         const totalIncidentsEl = document.getElementById('total-incidents');
-                        if (totalIncidentsEl) {
-                            totalIncidentsEl.textContent = self.formatNumber(totalIncidentsCount);
-                            self.applyEnglishNumberFormat(totalIncidentsEl);
-                        }
+                        self._updateKpiElement(totalIncidentsEl, self.formatNumber(totalIncidentsCount));
                         const lblCur = document.getElementById('dash-incidents-label-current');
                         const numCur = document.getElementById('dash-incidents-num-current');
                         const numPrior = document.getElementById('dash-incidents-num-prior');
-                        if (lblCur) {
-                            lblCur.textContent = `${self.t('dash.incidentsCurrentYear', 'حوادث العام الحالي')} (${currentYear}):`;
+                        const labelCurrent = `${self.t('dash.incidentsCurrentYear', 'حوادث العام الحالي')} (${currentYear}):`;
+                        if (lblCur && lblCur.textContent !== labelCurrent) {
+                            lblCur.textContent = labelCurrent;
                         }
-                        if (numCur) {
-                            numCur.textContent = self.formatNumber(incidentsCurrentYearCount);
-                            self.applyEnglishNumberFormat(numCur);
-                        }
-                        if (numPrior) {
-                            numPrior.textContent = self.formatNumber(incidentsPriorYearsCount);
-                            self.applyEnglishNumberFormat(numPrior);
-                        }
+                        self._updateKpiElement(numCur, self.formatNumber(incidentsCurrentYearCount));
+                        self._updateKpiElement(numPrior, self.formatNumber(incidentsPriorYearsCount));
                     }
                     if (self.dashboardCan('users')) {
                         const activeUsersEl = document.getElementById('active-users');
@@ -3318,14 +3321,10 @@ const Dashboard = {
                         const contCountDashEl = document.getElementById('dash-kpi-contractors-active-count');
                         if (contCountDashEl) {
                             const approvedContractors = Array.isArray(data.approvedContractors) ? data.approvedContractors : [];
+                            const contractorWorkforceCount = self._sumContractorWorkforceHeadcount(approvedContractors, data);
+                            self._updateKpiElement(contCountDashEl, self.formatNumber(contractorWorkforceCount));
 
-                            // إذا كانت البيانات موجودة — احسب مباشرة
-                            if (Array.isArray(data.externalWorkforceMonthly) && data.externalWorkforceMonthly.length > 0) {
-                                const contractorWorkforceCount = self._sumContractorWorkforceHeadcount(approvedContractors, data);
-                                contCountDashEl.textContent = self.formatNumber(contractorWorkforceCount);
-                                self.applyEnglishNumberFormat(contCountDashEl);
-                            } else {
-                                // البيانات غير محملة — اجلبها من الخادم وحدّث الكارت
+                            if (!Array.isArray(data.externalWorkforceMonthly) || data.externalWorkforceMonthly.length === 0) {
                                 if (typeof GoogleIntegration !== 'undefined' && typeof GoogleIntegration.readFromSheets === 'function') {
                                     GoogleIntegration.readFromSheets('ExternalWorkforceMonthly', 15000)
                                         .then(rows => {
@@ -3334,33 +3333,24 @@ const Dashboard = {
                                             } else if (!Array.isArray(AppState.appData.externalWorkforceMonthly)) {
                                                 AppState.appData.externalWorkforceMonthly = [];
                                             }
-                                            const count = self._sumContractorWorkforceHeadcount(approvedContractors, AppState.appData);
-                                            if (contCountDashEl) {
-                                                contCountDashEl.textContent = self.formatNumber(count);
-                                                self.applyEnglishNumberFormat(contCountDashEl);
-                                            }
+                                            const refreshedCount = self._sumContractorWorkforceHeadcount(
+                                                approvedContractors,
+                                                AppState.appData
+                                            );
+                                            self._updateKpiElement(
+                                                document.getElementById('dash-kpi-contractors-active-count'),
+                                                self.formatNumber(refreshedCount)
+                                            );
                                         })
-                                        .catch(() => {
-                                            // فشل الجلب — اعرض عدد المقاولين النشطين كبديل
-                                            const fallback = approvedContractors.filter(r => r &&
-                                                r.isActive !== 'inactive' && r.isActive !== false &&
-                                                r.isActive !== 'false' && r.isActive !== 'FALSE').length;
-                                            if (contCountDashEl) {
-                                                contCountDashEl.textContent = self.formatNumber(fallback);
-                                                self.applyEnglishNumberFormat(contCountDashEl);
-                                            }
-                                        });
+                                        .catch(() => { /* الإبقاء على القيمة المتزامنة المحسوبة */ });
                                 }
                             }
                         }
                     }
                     if (self.dashboardCan('training')) {
                         const trainingProgDashEl = document.getElementById('dash-kpi-training-programs');
-                        if (trainingProgDashEl) {
-                            const tr = Array.isArray(data.training) ? data.training : [];
-                            trainingProgDashEl.textContent = self.formatNumber(tr.length);
-                            self.applyEnglishNumberFormat(trainingProgDashEl);
-                        }
+                        const tr = Array.isArray(data.training) ? data.training : [];
+                        self._updateKpiElement(trainingProgDashEl, self.formatNumber(tr.length));
                     }
                     if (self.dashboardCan('clinic')) {
                         const clinicDashEl = document.getElementById('dash-kpi-clinic-visits-total');
@@ -3384,6 +3374,7 @@ const Dashboard = {
                     }
                     document.querySelector('.safety-metrics-section')?.classList.add('kpis-values-ready');
                     document.querySelector('.reports-statistics-section')?.classList.add('kpis-values-ready');
+                    document.getElementById('dashboard-section')?.classList.add('kpi-grid-values-ready');
                 } catch (err) {
                     if (typeof Utils !== 'undefined' && Utils.safeWarn) Utils.safeWarn('⚠️ خطأ في تحديث KPIs:', err);
                 }

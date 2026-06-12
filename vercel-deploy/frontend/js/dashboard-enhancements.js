@@ -74,18 +74,12 @@
     function enhanceKPICards(dashboardRoot) {
         const kpiCards = dashboardRoot.querySelectorAll('.kpi-grid > .kpi-card');
 
-        kpiCards.forEach((card, index) => {
-            // إضافة تأثير الظهور التدريجي فقط — بدون transform ثلاثي الأبعاد (يسبب تداخل الأرقام بين الكروت)
-            card.style.opacity = '0';
-            card.style.transform = 'translateY(12px)';
+        kpiCards.forEach((card) => {
+            // ثبات فوري — بدون fade-in متدرج يسبب وميضاً مع تحديث الأرقام الحية
+            card.style.opacity = '1';
+            card.style.transform = 'none';
+            card.style.transition = 'none';
 
-            setTimeout(() => {
-                card.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
-                card.style.opacity = '1';
-                card.style.transform = 'translateY(0)';
-            }, index * 80);
-
-            // تأثير النقر
             card.addEventListener('click', function (e) {
                 // إضافة تأثير الموجة (Ripple Effect)
                 const ripple = document.createElement('div');
@@ -310,7 +304,8 @@
 
         importantElements.forEach(element => {
             const insideNoGlow = Array.from(noGlowContainers).some(container => container.contains(element));
-            if (insideNoGlow) return;
+            const isTopKpiGridCard = element.parentElement && element.parentElement.classList.contains('kpi-grid');
+            if (insideNoGlow || isTopKpiGridCard) return;
             setInterval(() => {
                 element.style.boxShadow = '0 0 30px rgba(245, 87, 108, 0.5)';
                 setTimeout(() => {

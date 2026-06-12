@@ -219,6 +219,7 @@
 #dash-kpi-training-programs,
 #dash-kpi-clinic-visits-total,
 #dash-kpi-employees-active-count,
+#dash-kpi-contractors-active-count,
 #dash-incidents-num-current,
 #dash-incidents-num-prior {
     direction: ltr !important;
@@ -227,6 +228,33 @@
     font-variant-numeric: tabular-nums !important;
     font-feature-settings: "tnum" !important;
     font-family: 'Inter', 'Cairo', 'Arial', sans-serif !important;
+    min-width: 2.5ch;
+    transition: none !important;
+    animation: none !important;
+}
+
+/* ثبات كروت KPI العلوية — حوادث، تدريب، عمالة (بدون وميض) */
+#dashboard-section.kpi-grid-values-ready .kpi-grid > .kpi-card {
+    animation: none !important;
+    transition: box-shadow 0.2s ease-in-out !important;
+    opacity: 1 !important;
+    transform: none !important;
+}
+
+#dashboard-section.kpi-grid-values-ready .kpi-grid > .kpi-card .kpi-value,
+#dashboard-section.kpi-grid-values-ready .kpi-grid .kpi-incidents-breakdown__num {
+    transition: none !important;
+    animation: none !important;
+}
+
+#dashboard-section .kpi-grid > .kpi-card[data-dash-scope="incidents"],
+#dashboard-section .kpi-grid > .kpi-card[data-dash-scope="training"],
+#dashboard-section .kpi-grid > .kpi-card[data-dash-scope="employees"].kpi-warning {
+    contain: layout style paint;
+}
+
+#dashboard-section .kpi-incidents-breakdown {
+    min-height: 2.85rem;
 }
 
 .kpi-value {
