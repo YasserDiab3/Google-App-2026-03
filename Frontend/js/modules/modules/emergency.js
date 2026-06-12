@@ -2053,7 +2053,12 @@ const Emergency = {
         if (!document.body.dataset.fmFsBound) {
             document.addEventListener('fullscreenchange', () => this._fmOnFullscreenChange());
             document.addEventListener('keydown', (e) => {
-                if (e.key === 'Escape' && this._fmState.fullscreen) this.toggleFactoryMapFullscreen();
+                if (e.key !== 'Escape') return;
+                if (document.getElementById('fm-floor-modal')) {
+                    this._closeFloorPlanModal();
+                    return;
+                }
+                if (this._fmState.fullscreen) this.toggleFactoryMapFullscreen();
             });
             document.body.dataset.fmFsBound = '1';
         }
@@ -2138,7 +2143,25 @@ const Emergency = {
         }
     },
 
+    _closeFloorPlanModal() {
+        const modal = document.getElementById('fm-floor-modal');
+        if (modal) modal.remove();
+        document.body.classList.remove('fm-floor-modal-open');
+    },
+
+    _fmBuildStampToolbarHtml() {
+        return Object.entries(this.FM_ITEM_TYPES).map(([key, def]) => `
+            <button type="button" class="fm-stamp-btn" data-stamp="${key}" title="${Utils.escapeHTML(def.label)}" style="--stamp-color:${def.color};">
+                <i class="fas ${Utils.escapeAttr(def.icon)}"></i>
+                <span>${Utils.escapeHTML(def.label)}</span>
+            </button>
+        `).join('');
+    },
+
     showFloorPlanForm(editId) {
+        if (this._fmState.fullscreen) {
+            this.toggleFactoryMapFullscreen();
+        }
         const existing = this._fmState.floorPlans.find(p => p.id === editId);
         const val = (f, def) => (existing && existing[f] != null) ? existing[f] : (def || '');
         const floors = ['الطابق الأرضي', 'الطابق الأول', 'الطابق الثاني', 'الطابق الثالث', 'سطح المبنى', 'مبنى آخر'];
@@ -2146,15 +2169,15 @@ const Emergency = {
         const hasExistingImage = !!(val('imageDriveId'));
 
         const html = `
-            <div class="modal-overlay active" id="fm-floor-modal" style="z-index:9999;">
+            <div class="modal-overlay active fm-floor-modal-overlay" id="fm-floor-modal" role="dialog" aria-modal="true">
                 <div class="modal-content fm-modal-improved">
-                    <div class="lr-modal-header">
+                    <div class="fm-modal-header-fixed lr-modal-header">
                         <h3><i class="fas fa-draw-polygon" style="color:#2563eb;"></i> ${editId ? 'تعديل' : 'إضافة'} مخطط طابق</h3>
-                        <button type="button" class="modal-close" onclick="this.closest('.modal-overlay').remove()"><i class="fas fa-times"></i></button>
+                        <button type="button" class="modal-close" id="fm-floor-modal-close" aria-label="إغلاق"><i class="fas fa-times"></i></button>
                     </div>
-                    <form id="fm-floor-form" onsubmit="return Emergency.handleFloorPlanSubmit(event)">
+                    <form id="fm-floor-form" class="fm-floor-form-flex" onsubmit="return Emergency.handleFloorPlanSubmit(event)">
                         <input type="hidden" id="fm-floor-edit-id" value="${editId || ''}">
-                        <div class="modal-body" style="padding:16px 24px;">
+                        <div class="fm-modal-body-scroll modal-body">
                             <div class="fm-form-row">
                                 <div class="form-group" style="flex:1;">
                                     <label class="form-label">اسم المخطط <span class="text-red-500">*</span></label>
@@ -2199,11 +2222,15 @@ const Emergency = {
                                         <button type="button" class="fm-draw-action" onclick="Emergency._fmClearCanvas()" title="مسح الكل"><i class="fas fa-trash-alt"></i> مسح</button>
                                     </div>
                                 </div>
-                                <div class="fm-canvas-wrap" onclick="this.querySelector('canvas').focus()">
+                                <div class="fm-stamp-toolbar">
+                                    <span class="fm-stamp-toolbar-label"><i class="fas fa-map-pin"></i> رموز السلامة والحريق:</span>
+                                    <div class="fm-stamp-toolbar-items">${this._fmBuildStampToolbarHtml()}</div>
+                                </div>
+                                <div class="fm-canvas-wrap">
                                     <canvas id="fm-sketch-canvas" width="1200" height="650" tabindex="-1"></canvas>
                                 </div>
                                 <div class="fm-canvas-hint">
-                                    <i class="fas fa-info-circle"></i> ارسم جدران وغرف المصنع باستخدام <strong>القلم</strong> أو أضف <strong>مستطيلات</strong>. استخدم <strong>الممحاة</strong> للمسح.
+                                    <i class="fas fa-info-circle"></i> ارسم الجدران بالقلم أو المستطيلات، ثم اختر <strong>رمزاً</strong> وانقر على الرسم لوضعه. استخدم الممحاة للمسح.
                                 </div>
                                 ${hasExistingImage ? `<div class="fm-canvas-warning"><i class="fas fa-exclamation-triangle"></i> يوجد رسم سابق — الرسم الجديد سيحل محله.</div>` : ''}
                             </div>
@@ -2237,18 +2264,30 @@ const Emergency = {
                                 </div>
                             </div>
                         </div>
-                        <div class="modal-footer" style="padding:12px 24px;gap:8px;">
-                            <button type="button" class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">إلغاء</button>
+                        <div class="modal-footer fm-modal-footer-fixed">
+                            <button type="button" class="btn-secondary" id="fm-floor-modal-cancel">إلغاء</button>
                             <button type="submit" class="btn-primary"><i class="fas fa-save ml-2"></i>${editId ? 'حفظ التعديلات' : 'إضافة المخطط'}</button>
                         </div>
                     </form>
                 </div>
             </div>`;
-        const m = document.getElementById('fm-floor-modal');
-        if (m) m.remove();
+        this._closeFloorPlanModal();
         document.body.insertAdjacentHTML('beforeend', html);
+        document.body.classList.add('fm-floor-modal-open');
+        this._fmBindFloorPlanModal();
         this._fmInitCanvas();
         this._fmInitUpload();
+    },
+
+    _fmBindFloorPlanModal() {
+        const modal = document.getElementById('fm-floor-modal');
+        if (!modal) return;
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) this._closeFloorPlanModal();
+        });
+        modal.querySelector('#fm-floor-modal-close')?.addEventListener('click', () => this._closeFloorPlanModal());
+        modal.querySelector('#fm-floor-modal-cancel')?.addEventListener('click', () => this._closeFloorPlanModal());
+        setTimeout(() => document.getElementById('fm-floor-name')?.focus(), 50);
     },
 
     _fmSwitchSource(mode) {
@@ -2324,22 +2363,74 @@ const Emergency = {
         if (hint) hint.textContent = 'اختر صورة من جهازك لعرضها كخلفية للمخطط.';
     },
 
+    _fmDrawStampOnCanvas(ctx, stampType, x, y) {
+        const def = this.FM_ITEM_TYPES[stampType] || { color: '#64748b', label: '?' };
+        const symbols = {
+            fire_extinguisher: '🧯',
+            fire_hose: '🔥',
+            fire_alarm: '🔔',
+            emergency_exit: '🚪',
+            escape_route: '➡️',
+            assembly_point: '👥',
+            first_aid: '➕',
+            hazmat: '☣️',
+            evacuation_chair: '♿',
+            fire_panel: '🖥️'
+        };
+        const r = 20;
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(x, y, r, 0, Math.PI * 2);
+        ctx.fillStyle = def.color;
+        ctx.fill();
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 2.5;
+        ctx.stroke();
+        ctx.font = '18px "Segoe UI Emoji", "Apple Color Emoji", Tahoma, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(symbols[stampType] || '●', x, y + 1);
+        ctx.restore();
+    },
+
+    _fmRestoreCanvasImage_(canvas, ctx, dataUrl, onDone) {
+        if (!dataUrl || !dataUrl.startsWith('data:image')) {
+            if (onDone) onDone();
+            return;
+        }
+        const img = new Image();
+        img.onload = () => {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+            canvas._snapshot = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            if (onDone) onDone();
+        };
+        img.onerror = () => { if (onDone) onDone(); };
+        img.src = dataUrl;
+    },
+
     _fmInitCanvas() {
         const canvas = document.getElementById('fm-sketch-canvas');
         if (!canvas) return;
         const ctx = canvas.getContext('2d');
         const rect = { x: 0, y: 0, w: 0, h: 0, drawing: false };
-        let drawing = false, tool = 'pen', color = '#1e293b', width = 4, lastX, lastY;
+        let drawing = false, tool = 'pen', color = '#1e293b', width = 4, lastX, lastY, stampType = null;
+
+        const refreshSnapshot = () => {
+            canvas._snapshot = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        };
 
         // Restore existing data if editing
         const existingData = document.getElementById('fm-floor-edit-id')?.value;
         if (existingData) {
             const plan = this._fmState.floorPlans.find(p => p.id === existingData);
-            if (plan && plan.imageDriveId && plan.imageDriveId.startsWith('data:image')) {
-                const img = new Image();
-                img.onload = () => { ctx.drawImage(img, 0, 0, canvas.width, canvas.height); };
-                img.src = plan.imageDriveId;
+            if (plan?.imageDriveId) {
+                this._fmRestoreCanvasImage_(canvas, ctx, plan.imageDriveId, refreshSnapshot);
+            } else {
+                refreshSnapshot();
             }
+        } else {
+            refreshSnapshot();
         }
 
         const getPos = (e) => {
@@ -2353,7 +2444,13 @@ const Emergency = {
 
         const startDraw = (e) => {
             e.preventDefault();
+            e.stopPropagation();
             const pos = getPos(e);
+            if (tool === 'stamp' && stampType) {
+                this._fmDrawStampOnCanvas(ctx, stampType, pos.x, pos.y);
+                refreshSnapshot();
+                return;
+            }
             drawing = true;
             lastX = pos.x; lastY = pos.y;
             if (tool === 'rect') { rect.x = pos.x; rect.y = pos.y; rect.drawing = true; }
@@ -2395,7 +2492,7 @@ const Emergency = {
                 ctx.closePath();
             }
             drawing = false;
-            canvas._snapshot = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            refreshSnapshot();
         };
 
         canvas.addEventListener('mousedown', startDraw);
@@ -2410,9 +2507,22 @@ const Emergency = {
         document.querySelectorAll('.fm-draw-tool').forEach(btn => {
             btn.addEventListener('click', () => {
                 document.querySelectorAll('.fm-draw-tool').forEach(b => b.classList.remove('active'));
+                document.querySelectorAll('.fm-stamp-btn').forEach(b => b.classList.remove('active'));
                 btn.classList.add('active');
                 tool = btn.dataset.tool;
+                stampType = null;
                 canvas.style.cursor = tool === 'eraser' ? 'cell' : 'crosshair';
+            });
+        });
+
+        document.querySelectorAll('.fm-stamp-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.fm-stamp-btn').forEach(b => b.classList.remove('active'));
+                document.querySelectorAll('.fm-draw-tool').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                tool = 'stamp';
+                stampType = btn.dataset.stamp;
+                canvas.style.cursor = 'copy';
             });
         });
 
@@ -2422,8 +2532,6 @@ const Emergency = {
         const widthSelect = document.getElementById('fm-draw-width');
         if (widthSelect) widthSelect.addEventListener('change', (e) => { width = parseInt(e.target.value); });
 
-        // Initial snapshot
-        canvas._snapshot = ctx.getImageData(0, 0, canvas.width, canvas.height);
     },
 
     _fmClearCanvas() {
@@ -2512,7 +2620,7 @@ const Emergency = {
                 savedPlanId = resp?.data?.id || resp?.id || savedPlanId;
             }
             if (typeof Notification !== 'undefined' && Notification.success) Notification.success(editId ? 'تم تحديث المخطط' : 'تم إضافة المخطط');
-            if (modal) modal.remove();
+            this._closeFloorPlanModal();
             await this.loadFloorPlans(savedPlanId);
         } catch (err) {
             const msg = err?.message || 'خطأ غير معروف';
