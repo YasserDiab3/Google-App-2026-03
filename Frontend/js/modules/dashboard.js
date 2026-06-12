@@ -1442,7 +1442,7 @@ const Dashboard = {
                             </div>
                             <div style="flex-shrink: 0;">
                                 <button id="export-employee-report-btn" class="btn-success" disabled style="height: 44px; padding: 0 1rem; display: flex; align-items: center; gap: 0.25rem; border-radius: 8px; background: #059669;">
-                                    <i class="fas fa-file-pdf ml-2"></i>تصدير PDF
+                                    <i class="fas fa-download ml-2"></i>تحميل PDF
                                 </button>
                             </div>
                         </div>` : '';
@@ -1465,7 +1465,7 @@ const Dashboard = {
                             </div>
                             <div style="flex-shrink: 0;">
                                 <button id="export-contractor-report-btn" class="btn-success" disabled style="height: 44px; padding: 0 1rem; display: flex; align-items: center; gap: 0.25rem; border-radius: 8px; background: #059669;">
-                                    <i class="fas fa-file-pdf ml-2"></i>تصدير PDF
+                                    <i class="fas fa-download ml-2"></i>تحميل PDF
                                 </button>
                             </div>
                         </div>` : '';
@@ -2086,6 +2086,351 @@ const Dashboard = {
         return false;
     },
 
+    _AR_PDF_TEXT_STYLE_: "font-family:'Cairo','Tahoma','Segoe UI',sans-serif;direction:rtl;unicode-bidi:embed;letter-spacing:0;word-spacing:normal;",
+
+    async _loadReportPdfLib_(src, checkFn) {
+        if (checkFn()) return true;
+        return new Promise((resolve) => {
+            const existing = document.querySelector(`script[src="${src}"]`);
+            if (existing) {
+                const done = () => resolve(!!checkFn());
+                existing.addEventListener('load', done, { once: true });
+                setTimeout(done, 4000);
+                return;
+            }
+            const script = document.createElement('script');
+            script.src = src;
+            script.async = true;
+            script.onload = () => resolve(!!checkFn());
+            script.onerror = () => resolve(false);
+            document.head.appendChild(script);
+        });
+    },
+
+    async _ensureReportPdfLibs_() {
+        const html2canvasOk = await this._loadReportPdfLib_(
+            'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js',
+            () => typeof html2canvas !== 'undefined'
+        );
+        const jsPdfOk = await this._loadReportPdfLib_(
+            'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js',
+            () => typeof window.jspdf !== 'undefined'
+        );
+        return html2canvasOk && jsPdfOk;
+    },
+
+    _stripScriptsFromHtml_(htmlContent) {
+        return String(htmlContent || '').replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '');
+    },
+
+    async _preloadCairoFontForPdf_() {
+        if (!document.getElementById('dash-cairo-font-link')) {
+            const link = document.createElement('link');
+            link.id = 'dash-cairo-font-link';
+            link.rel = 'stylesheet';
+            link.href = 'https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap';
+            document.head.appendChild(link);
+        }
+        try {
+            if (document.fonts && typeof document.fonts.load === 'function') {
+                await document.fonts.load('400 14px Cairo');
+                await document.fonts.load('700 20px Cairo');
+                await document.fonts.ready;
+            }
+        } catch (_e) { /* ignore */ }
+    },
+
+    _prepareArabicPdfHtml_(htmlContent) {
+        const arabicFix = `
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style id="dashboard-arabic-pdf-fix">
+    html, body {
+        font-family: 'Cairo', 'Tahoma', 'Segoe UI', 'Arial', sans-serif !important;
+        direction: rtl !important;
+        unicode-bidi: embed;
+        letter-spacing: 0 !important;
+        word-spacing: normal !important;
+        text-rendering: optimizeLegibility;
+        -webkit-font-smoothing: antialiased;
+    }
+    body *, .report-wrapper, .report-wrapper * {
+        font-family: 'Cairo', 'Tahoma', 'Segoe UI', 'Arial', sans-serif !important;
+        letter-spacing: 0 !important;
+        word-spacing: normal !important;
+    }
+    h1, h2, h3, th, td, .meta-label, .meta-value {
+        direction: rtl !important;
+        unicode-bidi: embed;
+        letter-spacing: 0 !important;
+        word-break: normal !important;
+    }
+    table, thead, tbody, tr, th, td { direction: rtl !important; }
+</style>`;
+        const cleaned = this._stripScriptsFromHtml_(htmlContent);
+        if (!cleaned) return arabicFix;
+        if (cleaned.includes('</head>')) {
+            return cleaned.replace('</head>', `${arabicFix}</head>`);
+        }
+        return `<!DOCTYPE html><html lang="ar" dir="rtl"><head><meta charset="UTF-8">${arabicFix}</head><body>${cleaned}</body></html>`;
+    },
+
+    async _waitArabicPdfFontsReady_(doc) {
+        if (!doc || !doc.fonts || typeof doc.fonts.load !== 'function') return;
+        try {
+            await Promise.all([
+                doc.fonts.load('400 12px Cairo'),
+                doc.fonts.load('600 14px Cairo'),
+                doc.fonts.load('700 18px Cairo'),
+                doc.fonts.load('800 24px Cairo')
+            ]);
+            await doc.fonts.ready;
+        } catch (_e) { /* ignore */ }
+    },
+
+    async _captureHtmlToCanvas_(root) {
+        const baseOpts = {
+            scale: 2.5,
+            backgroundColor: '#ffffff',
+            logging: false,
+            windowWidth: Math.max(root.scrollWidth, 900),
+            windowHeight: Math.max(root.scrollHeight, 1),
+            scrollX: 0,
+            scrollY: 0
+        };
+        const attempts = [
+            { ...baseOpts, useCORS: true, allowTaint: false },
+            { ...baseOpts, useCORS: true, allowTaint: true },
+            { ...baseOpts, useCORS: false, allowTaint: true }
+        ];
+        let lastError = null;
+        for (let i = 0; i < attempts.length; i++) {
+            try {
+                const canvas = await html2canvas(root, attempts[i]);
+                if (canvas && canvas.width > 0 && canvas.height > 0) return canvas;
+            } catch (err) {
+                lastError = err;
+            }
+        }
+        if (lastError) throw lastError;
+        return null;
+    },
+
+    async _downloadHtmlReportAsPdf(htmlContent, fileName = 'report.pdf') {
+        const libsReady = await this._ensureReportPdfLibs_();
+        if (!libsReady || typeof html2canvas === 'undefined' || !window.jspdf) return false;
+
+        await this._preloadCairoFontForPdf_();
+        const preparedHtml = this._prepareArabicPdfHtml_(htmlContent);
+        const pdfFileName = String(fileName || 'report.pdf').toLowerCase().endsWith('.pdf')
+            ? String(fileName)
+            : `${String(fileName)}.pdf`;
+
+        const iframe = document.createElement('iframe');
+        iframe.setAttribute('aria-hidden', 'true');
+        iframe.style.cssText = 'position:fixed;left:-100000px;top:0;width:900px;height:1200px;border:0;visibility:hidden;';
+        document.body.appendChild(iframe);
+
+        try {
+            iframe.srcdoc = preparedHtml;
+            await new Promise((resolve) => {
+                iframe.onload = resolve;
+                iframe.onerror = resolve;
+                setTimeout(resolve, 6000);
+            });
+
+            const iDoc = iframe.contentDocument || iframe.contentWindow?.document;
+            if (!iDoc) return false;
+
+            await this._waitArabicPdfFontsReady_(iDoc);
+
+            const images = Array.from(iDoc.images || []);
+            await Promise.all(images.map((img) => new Promise((resolve) => {
+                if (img.complete) return resolve();
+                img.onload = resolve;
+                img.onerror = resolve;
+                setTimeout(resolve, 3000);
+            })));
+
+            const root = iDoc.querySelector('.report-wrapper') || iDoc.body;
+            if (!root) return false;
+
+            const canvas = await this._captureHtmlToCanvas_(root);
+            if (!canvas) return false;
+
+            const { jsPDF } = window.jspdf;
+            const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+            const pdfW = pdf.internal.pageSize.getWidth();
+            const pdfH = pdf.internal.pageSize.getHeight();
+            const margin = 8;
+            const contentW = pdfW - margin * 2;
+            const ratio = contentW / canvas.width;
+            const pageContentH = pdfH - margin * 2;
+            const pageHeightPx = pageContentH / ratio;
+            const totalPages = Math.max(1, Math.ceil(canvas.height / pageHeightPx));
+
+            for (let p = 0; p < totalPages; p++) {
+                if (p > 0) pdf.addPage();
+                const sliceH = Math.min(pageHeightPx, canvas.height - p * pageHeightPx);
+                const sliceCanvas = document.createElement('canvas');
+                sliceCanvas.width = canvas.width;
+                sliceCanvas.height = sliceH;
+                sliceCanvas.getContext('2d').drawImage(
+                    canvas, 0, p * pageHeightPx, canvas.width, sliceH, 0, 0, canvas.width, sliceH
+                );
+                pdf.addImage(sliceCanvas.toDataURL('image/png'), 'PNG', margin, margin, contentW, sliceH * ratio);
+            }
+
+            pdf.save(pdfFileName);
+            return true;
+        } catch (error) {
+            if (Utils.safeWarn) Utils.safeWarn('فشل تحميل تقرير PDF:', error);
+            return false;
+        } finally {
+            iframe.remove();
+        }
+    },
+
+    buildEmployeeReportPdfContent(report, employeeCode) {
+        const emp = report.employee || {};
+        const ar = this._AR_PDF_TEXT_STYLE_;
+        const esc = (v) => Utils.escapeHTML(String(v ?? ''));
+        const fmtDate = (d) => (d && typeof Utils.formatDate === 'function') ? Utils.formatDate(d) : '';
+        const code = emp.employeeNumber || emp.sapId || emp.employeeCode || employeeCode || '';
+        const name = emp.name || '—';
+        const initials = name.trim().split(/\s+/).slice(0, 2).map((w) => w.charAt(0)).join('') || 'م';
+        const reportDate = fmtDate(new Date()) || new Date().toLocaleDateString('ar-SA');
+
+        const statCard = (label, value, bg, border, labelColor, valueColor) => `
+            <div style="flex:1 1 140px;min-width:120px;padding:14px 12px;border-radius:12px;background:${bg};border:1px solid ${border};text-align:center;">
+                <div style="font-size:11px;color:${labelColor};font-weight:600;margin-bottom:6px;${ar}">${esc(label)}</div>
+                <div style="font-size:26px;font-weight:800;color:${valueColor};line-height:1.1;${ar}">${value}</div>
+            </div>`;
+
+        const thStyle = (accent) => `padding:11px 8px;border:1px solid ${accent};text-align:center;font-weight:700;font-size:11px;${ar}`;
+        const tdStyle = `padding:10px 8px;border:1px solid #E5E7EB;text-align:right;font-size:11px;vertical-align:top;${ar}`;
+        const tdCenter = `padding:10px 8px;border:1px solid #E5E7EB;text-align:center;font-size:11px;vertical-align:top;${ar}`;
+
+        const sectionTable = (title, accent, headers, rowsHtml) => {
+            if (!rowsHtml) return '';
+            return `
+                <div style="margin:28px 0 16px;direction:rtl;">
+                    <h3 dir="rtl" style="font-size:16px;margin:0 0 12px;color:${accent};font-weight:700;border-right:4px solid ${accent};padding-right:12px;${ar}">${esc(title)}</h3>
+                    <table dir="rtl" style="width:100%;border-collapse:collapse;${ar}">
+                        <thead><tr style="background:${accent};color:#FFFFFF;">${headers.map((h) => `<th dir="rtl" style="${thStyle(accent)}">${esc(h)}</th>`).join('')}</tr></thead>
+                        <tbody>${rowsHtml}</tbody>
+                    </table>
+                </div>`;
+        };
+
+        const violationsRows = (report.violations || []).map((v) => `
+            <tr>
+                <td style="${tdStyle}">${esc(v.violationType)}</td>
+                <td style="${tdCenter}">${fmtDate(v.violationDate)}</td>
+                <td style="${tdCenter}">${esc(v.severity)}</td>
+                <td style="${tdStyle}">${esc(v.actionTaken)}</td>
+                <td style="${tdCenter}">${esc(v.status)}</td>
+            </tr>`).join('');
+
+        const sickLeaveRows = (report.sickLeave || []).map((s) => `
+            <tr>
+                <td style="${tdCenter}">${fmtDate(s.startDate)}</td>
+                <td style="${tdCenter}">${fmtDate(s.endDate)}</td>
+                <td style="${tdStyle}">${esc(s.reason)}</td>
+                <td style="${tdStyle}">${esc(s.medicalNotes)}</td>
+            </tr>`).join('');
+
+        const trainingRows = (report.training || []).map((t) => `
+            <tr>
+                <td style="${tdStyle}">${esc(t.name)}</td>
+                <td style="${tdStyle}">${esc(t.trainer)}</td>
+                <td style="${tdCenter}">${fmtDate(t.startDate)}</td>
+                <td style="${tdCenter}">${esc(t.status)}</td>
+            </tr>`).join('');
+
+        const ppeRows = (report.ppe || []).map((p) => `
+            <tr>
+                <td style="${tdCenter}">${esc(p.receiptNumber || p.id)}</td>
+                <td style="${tdStyle}">${esc(p.equipmentType)}</td>
+                <td style="${tdCenter}">${p.quantity != null ? p.quantity : 0}</td>
+                <td style="${tdCenter}">${fmtDate(p.receiptDate)}</td>
+                <td style="${tdCenter}">${esc(p.status)}</td>
+            </tr>`).join('');
+
+        const behaviorRows = (report.behaviorMonitoring || []).map((b) => `
+            <tr>
+                <td style="${tdStyle}">${esc(b.behaviorType)}</td>
+                <td style="${tdCenter}">${b.rating != null ? `${b.rating}/5` : '—'}</td>
+                <td style="${tdCenter}">${fmtDate(b.date)}</td>
+                <td style="${tdStyle}">${esc(b.description)}</td>
+            </tr>`).join('');
+
+        const clinicRows = (report.clinicVisits || []).map((c) => `
+            <tr>
+                <td style="${tdCenter}">${fmtDate(c.visitDate)}</td>
+                <td style="${tdStyle}">${esc(c.reason || 'زيارة عادية')}</td>
+                <td style="${tdStyle}">${esc(c.diagnosis)}</td>
+                <td style="${tdStyle}">${esc(c.treatment)}</td>
+            </tr>`).join('');
+
+        const incidentRows = (report.incidents || []).map((i) => `
+            <tr>
+                <td style="${tdCenter}">${fmtDate(i.incidentDate || i.date || i.createdAt)}</td>
+                <td style="${tdStyle}">${esc(String(i.title || i.description || '').substring(0, 120))}</td>
+                <td style="${tdCenter}">${esc(i.severity)}</td>
+                <td style="${tdCenter}">${esc(i.status)}</td>
+            </tr>`).join('');
+
+        const totalRecords = (report.violations?.length || 0) + (report.sickLeave?.length || 0)
+            + (report.training?.length || 0) + (report.ppe?.length || 0)
+            + (report.behaviorMonitoring?.length || 0) + (report.clinicVisits?.length || 0)
+            + (report.incidents?.length || 0);
+
+        return `
+            <div style="direction:rtl;margin-bottom:24px;">
+                <div style="display:flex;align-items:center;gap:18px;padding:20px 22px;border-radius:16px;background:linear-gradient(135deg,#eff6ff 0%,#dbeafe 100%);border:1px solid #93c5fd;">
+                    <div style="width:72px;height:72px;border-radius:50%;background:linear-gradient(135deg,#2563eb,#1d4ed8);color:#fff;display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:800;flex-shrink:0;box-shadow:0 8px 20px rgba(37,99,235,0.25);${ar}">${esc(initials)}</div>
+                    <div style="flex:1;min-width:0;">
+                        <h2 dir="rtl" style="margin:0 0 8px;font-size:22px;font-weight:800;color:#1e3a8a;${ar}">${esc(name)}</h2>
+                        <div style="display:flex;flex-wrap:wrap;gap:8px 20px;font-size:12px;color:#334155;${ar}">
+                            <span><strong style="color:#1e40af;">الكود الوظيفي:</strong> ${esc(code)}</span>
+                            ${emp.department ? `<span><strong style="color:#1e40af;">القسم:</strong> ${esc(emp.department)}</span>` : ''}
+                            ${emp.position ? `<span><strong style="color:#1e40af;">المنصب:</strong> ${esc(emp.position)}</span>` : ''}
+                        </div>
+                    </div>
+                    <div style="text-align:left;font-size:11px;color:#64748b;line-height:1.7;flex-shrink:0;${ar}">
+                        <div><strong>تاريخ التقرير:</strong> ${esc(reportDate)}</div>
+                        <div><strong>إجمالي السجلات:</strong> ${totalRecords}</div>
+                    </div>
+                </div>
+            </div>
+
+            <div style="margin-bottom:8px;direction:rtl;">
+                <h3 dir="rtl" style="font-size:15px;margin:0 0 14px;color:#003865;font-weight:700;${ar}">ملخص مؤشرات السلامة والصحة المهنية</h3>
+                <div style="display:flex;flex-wrap:wrap;gap:12px;">
+                    ${statCard('المخالفات', report.violations?.length || 0, '#FEF2F2', '#FECACA', '#B91C1C', '#991B1B')}
+                    ${statCard('الإجازات المرضية', report.sickLeave?.length || 0, '#EFF6FF', '#BFDBFE', '#1D4ED8', '#1E40AF')}
+                    ${statCard('برامج التدريب', report.training?.length || 0, '#ECFDF5', '#BBF7D0', '#047857', '#065F46')}
+                    ${statCard('مهمات الوقاية', report.ppe?.length || 0, '#FFFBEB', '#FDE68A', '#B45309', '#92400E')}
+                    ${statCard('مراقبة السلوكيات', report.behaviorMonitoring?.length || 0, '#F5F3FF', '#DDD6FE', '#6D28D9', '#5B21B6')}
+                    ${statCard('التردد على العيادة', report.clinicVisits?.length || 0, '#FDF2F8', '#FBCFE8', '#BE185D', '#9D174D')}
+                    ${statCard('الحوادث', report.incidents?.length || 0, '#FFF7ED', '#FED7AA', '#C2410C', '#9A3412')}
+                </div>
+            </div>
+
+            ${sectionTable(`المخالفات (${report.violations?.length || 0})`, '#B91C1C', ['النوع', 'التاريخ', 'الشدة', 'الإجراء المتخذ', 'الحالة'], violationsRows)}
+            ${sectionTable(`الإجازات المرضية (${report.sickLeave?.length || 0})`, '#1D4ED8', ['من تاريخ', 'إلى تاريخ', 'السبب', 'الملاحظات الطبية'], sickLeaveRows)}
+            ${sectionTable(`برامج التدريب (${report.training?.length || 0})`, '#047857', ['اسم البرنامج', 'المدرب', 'تاريخ البدء', 'الحالة'], trainingRows)}
+            ${sectionTable(`مهمات الوقاية (${report.ppe?.length || 0})`, '#B45309', ['رقم الإيصال', 'نوع المعدة', 'الكمية', 'تاريخ الاستلام', 'الحالة'], ppeRows)}
+            ${sectionTable(`مراقبة السلوكيات (${report.behaviorMonitoring?.length || 0})`, '#6D28D9', ['نوع السلوك', 'التقييم', 'التاريخ', 'الوصف'], behaviorRows)}
+            ${sectionTable(`التردد على العيادة (${report.clinicVisits?.length || 0})`, '#BE185D', ['تاريخ الزيارة', 'السبب', 'التشخيص', 'العلاج'], clinicRows)}
+            ${sectionTable(`الحوادث (${report.incidents?.length || 0})`, '#C2410C', ['التاريخ', 'الوصف', 'الشدة', 'الحالة'], incidentRows)}
+
+            ${totalRecords === 0 ? `<div style="margin-top:24px;padding:18px;border-radius:12px;background:#F8FAFC;border:2px dashed #CBD5E1;text-align:center;color:#475569;font-size:13px;${ar}">لا توجد سجلات مرتبطة بهذا الموظف في الأنظمة المتابَعة.</div>` : ''}
+        `;
+    },
+
     /**
      * تصدير تقرير الموظف كـ PDF
      */
@@ -2103,194 +2448,35 @@ const Dashboard = {
         }
 
         try {
-            Loading.show();
+            Loading.show('جاري إعداد وتحميل التقرير...');
 
-            const formCode = `EMP-REPORT-${employeeCode}-${new Date().toISOString().slice(0, 10)}`;
-            const formTitle = `تقرير شامل للموظ: ${report.employee.name || ''}`;
-
-            let content = `
-                <table style="margin-bottom: 30px;">
-                    <tr><th>الاسم</th><td>${Utils.escapeHTML(report.employee.name || '')}</td></tr>
-                    <tr><th>الكود الوظيفي</th><td>${Utils.escapeHTML(report.employee.employeeNumber || report.employee.sapId || report.employee.employeeCode || employeeCode)}</td></tr>
-                    ${report.employee.department ? `<tr><th>القسم</th><td>${Utils.escapeHTML(report.employee.department)}</td></tr>` : ''}
-                    ${report.employee.position ? `<tr><th>المنصب</th><td>${Utils.escapeHTML(report.employee.position)}</td></tr>` : ''}
-                </table>
-                
-                <div class="section-title">ملخص الإحصائيات</div>
-                <table>
-                    <tr><th>المخالفات</th><td>${report.violations.length}</td></tr>
-                    <tr><th>الإجازات المرضية</th><td>${report.sickLeave.length}</td></tr>
-                    <tr><th>برامج التدريب</th><td>${report.training.length}</td></tr>
-                    <tr><th>مهمات الوقاية</th><td>${report.ppe.length}</td></tr>
-                    <tr><th>مراقبة السلوكيات</th><td>${report.behaviorMonitoring.length}</td></tr>
-                    <tr><th>التردد على العيادة</th><td>${report.clinicVisits.length}</td></tr>
-                    <tr><th>الحوادث</th><td>${report.incidents.length}</td></tr>
-                </table>
-            `;
-
-            if (report.violations.length > 0) {
-                content += `
-                    <div class="section-title">المخالفات (${report.violations.length})</div>
-                    <table>
-                        <tr>
-                            <th>النوع</th>
-                            <th>التاريخ</th>
-                            <th>الشدة</th>
-                            <th>الإجراء المتخذ</th>
-                            <th>الحالة</th>
-                        </tr>
-                        ${report.violations.map(v => `
-                            <tr>
-                                <td>${Utils.escapeHTML(v.violationType || '')}</td>
-                                <td>${v.violationDate ? Utils.formatDate(v.violationDate) : ''}</td>
-                                <td>${Utils.escapeHTML(v.severity || '')}</td>
-                                <td>${Utils.escapeHTML(v.actionTaken || '')}</td>
-                                <td>${Utils.escapeHTML(v.status || '')}</td>
-                            </tr>
-                        `).join('')}
-                    </table>
-                `;
-            }
-
-            if (report.sickLeave.length > 0) {
-                content += `
-                    <div class="section-title">الإجازات المرضية (${report.sickLeave.length})</div>
-                    <table>
-                        <tr>
-                            <th>من تاريخ</th>
-                            <th>إلى تاريخ</th>
-                            <th>السبب</th>
-                            <th>الملاحظات الطبية</th>
-                        </tr>
-                        ${report.sickLeave.map(s => `
-                            <tr>
-                                <td>${s.startDate ? Utils.formatDate(s.startDate) : ''}</td>
-                                <td>${s.endDate ? Utils.formatDate(s.endDate) : ''}</td>
-                                <td>${Utils.escapeHTML(s.reason || '')}</td>
-                                <td>${Utils.escapeHTML(s.medicalNotes || '')}</td>
-                            </tr>
-                        `).join('')}
-                    </table>
-                `;
-            }
-
-            if (report.training.length > 0) {
-                content += `
-                    <div class="section-title">برامج التدريب (${report.training.length})</div>
-                    <table>
-                        <tr>
-                            <th>اسم البرنامج</th>
-                            <th>المدرب</th>
-                            <th>تاريخ البدء</th>
-                            <th>الحالة</th>
-                        </tr>
-                        ${report.training.map(t => `
-                            <tr>
-                                <td>${Utils.escapeHTML(t.name || '')}</td>
-                                <td>${Utils.escapeHTML(t.trainer || '')}</td>
-                                <td>${t.startDate ? Utils.formatDate(t.startDate) : ''}</td>
-                                <td>${Utils.escapeHTML(t.status || '')}</td>
-                            </tr>
-                        `).join('')}
-                    </table>
-                `;
-            }
-
-            if (report.ppe.length > 0) {
-                content += `
-                    <div class="section-title">مهمات الوقاية (${report.ppe.length})</div>
-                    <table>
-                        <tr>
-                            <th>رقم الإيصال</th>
-                            <th>نوع المعدة</th>
-                            <th>الكمية</th>
-                            <th>تاريخ الاستلام</th>
-                            <th>الحالة</th>
-                        </tr>
-                        ${report.ppe.map(p => `
-                            <tr>
-                                <td>${Utils.escapeHTML(p.receiptNumber || p.id || '')}</td>
-                                <td>${Utils.escapeHTML(p.equipmentType || '')}</td>
-                                <td>${p.quantity || 0}</td>
-                                <td>${p.receiptDate ? Utils.formatDate(p.receiptDate) : ''}</td>
-                                <td>${Utils.escapeHTML(p.status || '')}</td>
-                            </tr>
-                        `).join('')}
-                    </table>
-                `;
-            }
-
-            if (report.behaviorMonitoring.length > 0) {
-                content += `
-                    <div class="section-title">مراقبة السلوكيات (${report.behaviorMonitoring.length})</div>
-                    <table>
-                        <tr>
-                            <th>نوع السلوك</th>
-                            <th>التقييم</th>
-                            <th>التاريخ</th>
-                            <th>الوصف</th>
-                        </tr>
-                        ${report.behaviorMonitoring.map(b => `
-                            <tr>
-                                <td>${Utils.escapeHTML(b.behaviorType || '')}</td>
-                                <td>${b.rating || 0}/5</td>
-                                <td>${b.date ? Utils.formatDate(b.date) : ''}</td>
-                                <td>${Utils.escapeHTML(b.description || '')}</td>
-                            </tr>
-                        `).join('')}
-                    </table>
-                `;
-            }
-
-            if (report.clinicVisits.length > 0) {
-                content += `
-                    <div class="section-title">التردد على العيادة (${report.clinicVisits.length})</div>
-                    <table>
-                        <tr>
-                            <th>تاريخ الزيارة</th>
-                            <th>السبب</th>
-                            <th>التشخيص</th>
-                            <th>العلاج</th>
-                        </tr>
-                        ${report.clinicVisits.map(c => `
-                            <tr>
-                                <td>${c.visitDate ? Utils.formatDate(c.visitDate) : ''}</td>
-                                <td>${Utils.escapeHTML(c.reason || '')}</td>
-                                <td>${Utils.escapeHTML(c.diagnosis || '')}</td>
-                                <td>${Utils.escapeHTML(c.treatment || '')}</td>
-                            </tr>
-                        `).join('')}
-                    </table>
-                `;
-            }
+            const empName = report.employee.name || '';
+            const formCode = `EMP-REPORT-${codeTrimmed}-${new Date().toISOString().slice(0, 10)}`;
+            const formTitle = `تقرير شامل للموظف: ${empName}`;
+            const content = this.buildEmployeeReportPdfContent(report, codeTrimmed);
 
             const htmlContent = typeof FormHeader !== 'undefined' && FormHeader.generatePDFHTML
-                ? FormHeader.generatePDFHTML(formCode, formTitle, content, false, true)
-                : `<html><body>${content}</body></html>`;
+                ? FormHeader.generatePDFHTML(formCode, formTitle, content, false, true, {
+                    titleAr: formTitle,
+                    titleEn: 'Comprehensive Employee Report',
+                    compactPdfFooter: true
+                }, new Date(), new Date())
+                : `<html dir="rtl" lang="ar"><head><meta charset="UTF-8"><title>${Utils.escapeHTML(formTitle)}</title></head><body>${content}</body></html>`;
 
-            const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
-            const url = URL.createObjectURL(blob);
-            const printWindow = window.open(url, '_blank');
+            const safeCode = String(codeTrimmed).replace(/[\\/:*?"<>|]/g, '_');
+            const fileName = `تقرير-موظف-${safeCode}-${new Date().toISOString().slice(0, 10)}.pdf`;
+            const downloaded = await this._downloadHtmlReportAsPdf(htmlContent, fileName);
 
-            if (printWindow) {
-                printWindow.onload = () => {
-                    setTimeout(() => {
-                        printWindow.print();
-                        setTimeout(() => {
-                            URL.revokeObjectURL(url);
-                            Loading.hide();
-                            Notification.success('تم تحضير التقرير للطباعة/الحفظ كـ PDF');
-                        }, 1000);
-                    }, 500);
-                };
+            Loading.hide();
+            if (downloaded) {
+                Notification.success('تم تحميل تقرير الموظف بصيغة PDF بنجاح');
             } else {
-                Loading.hide();
-                Notification.error('يرجى السماح للنوافذ المنبثقة لعرض التقرير');
+                Notification.error('تعذّر تحميل PDF — تحقق من الاتصال بالإنترنت ثم أعد المحاولة');
             }
         } catch (error) {
             Loading.hide();
             Utils.safeError('خطأ في تصدير PDF:', error);
-            Notification.error('فشل تصدير PDF: ' + error.message);
+            Notification.error('فشل تصدير PDF: ' + (error.message || 'خطأ غير معروف'));
         }
     },
 
