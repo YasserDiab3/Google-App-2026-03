@@ -14,6 +14,10 @@ const IssuingAuthorities = {
     _activeCategory: 'employees',
     _contractorOptions: [],
     _employeesCache: null,
+    /** cache صفوف IA المدمجة (موظفين+مقاولين) لتجنب قراءات الشيت المتكررة من PTW */
+    _mergedRowsCache: null,
+    _mergedRowsInflight: null,
+    _IA_ROWS_CACHE_TTL_MS: 90000,
     _unsupportedActions: {
         employees: false,
         contractors: false
@@ -799,6 +803,90 @@ const IssuingAuthorities = {
                 'PTWContractorIssuingAuthorities'
             ]);
         }
+        this._mergedRowsCache = null;
+        this._mergedRowsInflight = null;
+    },
+
+    /**
+     * جلب صفوف IA النشطة (موظفين + مقاولين) مرة واحدة مع cache وتجميع الطلبات المتزامنة
+     */
+    async _getMergedActiveRows(forceRefresh = false) {
+        const now = Date.now();
+        if (!forceRefresh && this._mergedRowsCache && (now - this._mergedRowsCache.ts) < this._IA_ROWS_CACHE_TTL_MS) {
+            return this._mergedRowsCache.rows;
+        }
+        if (this._mergedRowsInflight) {
+            return this._mergedRowsInflight;
+        }
+        this._mergedRowsInflight = Promise.all([
+            this._fetchNormalizedRowsForCategory('employees'),
+            this._fetchNormalizedRowsForCategory('contractors')
+        ]).then(([emp, con]) => {
+            const merged = this._dedupeMergedAuthorityRows([].concat(emp || [], con || []));
+            const rows = merged.filter(r => r.isActive !== false);
+            this._mergedRowsCache = { rows, ts: Date.now() };
+            this._mergedRowsInflight = null;
+            return rows;
+        }).catch((err) => {
+            this._mergedRowsInflight = null;
+            throw err;
+        });
+        return this._mergedRowsInflight;
+    },
+
+    _mapRowToAuthorityCandidate(row, permitLevel) {
+        const level = String(permitLevel || 'X').toUpperCase().trim();
+        return {
+            id: row.id,
+            name: this._authorityWorkflowDisplayName(row),
+            departmentId: row.departmentId,
+            departmentName: row.departmentName,
+            email: row.email,
+            phone: row.phone,
+            approvalRole: this._normalizeApprovalRole(row.approvalRole),
+            personType: row.personType || 'employee',
+            permitLevel: level,
+            requiresHseCoApproval: level === 'Y'
+        };
+    },
+
+    _bestPermitLevelForFields(row, permitTypeFields) {
+        const fields = Array.isArray(permitTypeFields) ? permitTypeFields : [];
+        if (!fields.length) return 'G';
+        let best = 'X';
+        fields.forEach((f) => {
+            const l = String(row[f] || 'X').toUpperCase().trim();
+            if (l === 'G') best = 'G';
+            else if (l === 'Y' && best !== 'G') best = 'Y';
+        });
+        return best;
+    },
+
+    _filterAuthorityCandidates(rows, permitTypeFields, approvalRole) {
+        const roleKey = this._normalizeApprovalRole(approvalRole);
+        const fields = Array.isArray(permitTypeFields)
+            ? [...new Set(permitTypeFields.filter(Boolean))]
+            : (permitTypeFields ? [String(permitTypeFields).trim()] : []);
+        const mapById = {};
+        (rows || []).forEach((row) => {
+            if (this._normalizeApprovalRole(row.approvalRole) !== roleKey) return;
+            const level = this._bestPermitLevelForFields(row, fields);
+            if (level !== 'G' && level !== 'Y') return;
+            const id = row.id || row.email || row.name;
+            if (!id) return;
+            const cand = this._mapRowToAuthorityCandidate(row, level);
+            if (!mapById[id]) {
+                mapById[id] = cand;
+            } else if (cand.permitLevel === 'G') {
+                mapById[id].permitLevel = 'G';
+                mapById[id].requiresHseCoApproval = false;
+            }
+        });
+        return Object.values(mapById).sort((a, b) => {
+            if (a.permitLevel === 'G' && b.permitLevel !== 'G') return -1;
+            if (b.permitLevel === 'G' && a.permitLevel !== 'G') return 1;
+            return String(a.name || '').localeCompare(String(b.name || ''), 'ar', { sensitivity: 'base' });
+        });
     },
 
     /**
@@ -2548,62 +2636,27 @@ const IssuingAuthorities = {
             const fields = Array.isArray(permitTypeFields)
                 ? [...new Set(permitTypeFields.filter(Boolean))]
                 : (permitTypeFields ? [String(permitTypeFields).trim()] : []);
-            if (!fields.length) {
-                const emp = await this._fetchNormalizedRowsForCategory('employees');
-                const con = await this._fetchNormalizedRowsForCategory('contractors');
-                const merged = this._dedupeMergedAuthorityRows([].concat(emp || [], con || []));
-                return (merged || [])
-                    .filter(r => r.isActive !== false && this._normalizeApprovalRole(r.approvalRole) === roleKey)
-                    .map(r => ({
-                        id: r.id,
-                        name: this._authorityWorkflowDisplayName(r),
-                        email: r.email || '',
-                        phone: r.phone || '',
-                        personType: r.personType || 'employee',
-                        approvalRole: this._normalizeApprovalRole(r.approvalRole),
-                        permitLevel: 'G',
-                        requiresHseCoApproval: false
-                    }));
-            }
-
-            const mapById = {};
-            for (const field of fields) {
-                const key = String(field || '').trim();
-                if (!key) continue;
-                let list = [];
-                try {
-                    if (typeof GoogleIntegration !== 'undefined' && GoogleIntegration.sendRequest) {
-                        const res = await GoogleIntegration.sendRequest({
-                            action: 'getIssuingAuthoritiesForPermitTypeAndRole',
-                            data: { permitType: key, approvalRole: roleKey }
-                        });
-                        if (res && res.success && Array.isArray(res.authorities)) {
-                            list = res.authorities;
-                        }
-                    }
-                } catch (_) { /* fallback below */ }
-                if (!list.length) {
-                    list = await this.getAuthoritiesForPermitType(key);
-                    list = (list || []).filter(a => this._normalizeApprovalRole(a.approvalRole) === roleKey);
-                }
-                (list || []).forEach(auth => {
-                    const id = auth.id || auth.email || auth.name;
-                    if (!id) return;
-                    if (!mapById[id]) {
-                        mapById[id] = { ...auth, approvalRole: this._normalizeApprovalRole(auth.approvalRole || roleKey) };
-                    } else if (auth.permitLevel === 'G') {
-                        mapById[id].permitLevel = 'G';
-                        mapById[id].requiresHseCoApproval = false;
-                    }
-                });
-            }
-            return Object.values(mapById).sort((a, b) => {
-                if (a.permitLevel === 'G' && b.permitLevel !== 'G') return -1;
-                if (b.permitLevel === 'G' && a.permitLevel !== 'G') return 1;
-                return String(a.name || '').localeCompare(String(b.name || ''), 'ar', { sensitivity: 'base' });
-            });
+            const rows = await this._getMergedActiveRows();
+            return this._filterAuthorityCandidates(rows, fields, roleKey);
         } catch (err) {
             if (typeof Utils !== 'undefined') Utils.safeError('IssuingAuthorities.getAuthoritiesForApprovalRole error:', err);
+            return [];
+        }
+    },
+
+    /**
+     * مرشحو general (G/Y) لأنواع تصاريح متعددة — قراءة واحدة من cache
+     */
+    async getGeneralAuthoritiesForPermitTypes(permitTypeFields) {
+        try {
+            const fields = Array.isArray(permitTypeFields)
+                ? [...new Set(permitTypeFields.filter(Boolean))]
+                : [];
+            if (!fields.length) return [];
+            const rows = await this._getMergedActiveRows();
+            return this._filterAuthorityCandidates(rows, fields, 'general');
+        } catch (err) {
+            if (typeof Utils !== 'undefined') Utils.safeWarn('IssuingAuthorities.getGeneralAuthoritiesForPermitTypes error:', err);
             return [];
         }
     },
@@ -2612,29 +2665,26 @@ const IssuingAuthorities = {
         try {
             const key = String(permitType || '').trim();
             if (!key) return [];
-            /** لا نلمس this._activeCategory هنا أبداً (تعارض زمني مع حفظ المستخدم في الواجهة). */
-            const emp = await this._fetchNormalizedRowsForCategory('employees');
-            const con = await this._fetchNormalizedRowsForCategory('contractors');
-            const merged = this._dedupeMergedAuthorityRows([].concat(emp || [], con || []));
-            return (merged || [])
-                .filter(r => r.isActive !== false)
-                .map(r => {
-                    const level = String(r[key] || 'X').toUpperCase().trim();
-                    return {
-                        id: r.id,
-                        name: this._authorityWorkflowDisplayName(r),
-                        departmentId: r.departmentId,
-                        departmentName: r.departmentName,
-                        email: r.email,
-                        phone: r.phone,
-                        approvalRole: this._normalizeApprovalRole(r.approvalRole),
-                        personType: r.personType || 'employee',
-                        permitLevel: level,
-                        requiresHseCoApproval: level === 'Y'
-                    };
-                })
-                .filter(x => x.permitLevel === 'G' || x.permitLevel === 'Y')
-                .sort((a, b) => (a.permitLevel === 'G' && b.permitLevel !== 'G') ? -1 : (b.permitLevel === 'G' && a.permitLevel !== 'G') ? 1 : 0);
+            const rows = await this._getMergedActiveRows();
+            const mapById = {};
+            rows.forEach((row) => {
+                const level = String(row[key] || 'X').toUpperCase().trim();
+                if (level !== 'G' && level !== 'Y') return;
+                const id = row.id || row.email || row.name;
+                if (!id) return;
+                const cand = this._mapRowToAuthorityCandidate(row, level);
+                if (!mapById[id]) {
+                    mapById[id] = cand;
+                } else if (cand.permitLevel === 'G') {
+                    mapById[id].permitLevel = 'G';
+                    mapById[id].requiresHseCoApproval = false;
+                }
+            });
+            return Object.values(mapById).sort((a, b) => {
+                if (a.permitLevel === 'G' && b.permitLevel !== 'G') return -1;
+                if (b.permitLevel === 'G' && a.permitLevel !== 'G') return 1;
+                return 0;
+            });
         } catch (err) {
             if (typeof Utils !== 'undefined') Utils.safeError('IssuingAuthorities.getAuthoritiesForPermitType error:', err);
             return [];

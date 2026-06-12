@@ -132,6 +132,30 @@ const PTW = {
         return this._PTW_IA_ROLE_BY_AR[String(roleLabel || '').trim()] || '';
     },
 
+    _iaWorkflowCacheKey: '',
+    _iaWorkflowCachePromise: null,
+
+    async _getCachedIaWorkflow(permitTypeFields) {
+        const fields = Array.isArray(permitTypeFields) ? permitTypeFields.filter(Boolean) : [];
+        if (!fields.length) return null;
+        const key = fields.slice().sort().join('|');
+        if (this._iaWorkflowCacheKey === key && this._iaWorkflowCachePromise) {
+            return this._iaWorkflowCachePromise;
+        }
+        this._iaWorkflowCacheKey = key;
+        this._iaWorkflowCachePromise = this._buildIssuingAuthoritiesWorkflow(fields).catch((err) => {
+            this._iaWorkflowCacheKey = '';
+            this._iaWorkflowCachePromise = null;
+            throw err;
+        });
+        return this._iaWorkflowCachePromise;
+    },
+
+    _clearIaWorkflowCache() {
+        this._iaWorkflowCacheKey = '';
+        this._iaWorkflowCachePromise = null;
+    },
+
     async _fetchIaCandidatesForRole(ptwData, approvalRoleKey) {
         const roleKey = String(approvalRoleKey || '').trim();
         if (!roleKey || roleKey === 'general') return [];
@@ -1869,6 +1893,12 @@ const PTW = {
                 this.load();
             });
             this._languageChangeListenerAdded = true;
+        }
+        if (!this._iaCacheListenerAdded) {
+            document.addEventListener('issuingAuthoritiesUpdated', () => {
+                this._clearIaWorkflowCache();
+            });
+            this._iaCacheListenerAdded = true;
         }
         this._isLoading = true;
         // التحقق من وجود التبعيات المطلوبة
@@ -6997,8 +7027,10 @@ const PTW = {
         let iaAreaCandidates = [];
         let iaMaintCandidates = [];
         try {
-            iaAreaCandidates = await this._fetchIaCandidatesForRole(ptwStub, 'areaManager');
-            iaMaintCandidates = await this._fetchIaCandidatesForRole(ptwStub, 'maintenanceEngineer');
+            [iaAreaCandidates, iaMaintCandidates] = await Promise.all([
+                this._fetchIaCandidatesForRole(ptwStub, 'areaManager'),
+                this._fetchIaCandidatesForRole(ptwStub, 'maintenanceEngineer')
+            ]);
         } catch (iaErr) {
             if (typeof Utils !== 'undefined') Utils.safeWarn('openManualPermitForm IA fetch:', iaErr);
         }
@@ -10351,8 +10383,10 @@ const PTW = {
         if (!iaModule || typeof iaModule.getAuthoritiesForApprovalRole !== 'function') return null;
 
         const ptwStub = { permitType: permitTypeFields.join(', ') };
-        const areaCandidates = await this._fetchIaCandidatesForRole(ptwStub, 'areaManager');
-        const maintCandidates = await this._fetchIaCandidatesForRole(ptwStub, 'maintenanceEngineer');
+        const [areaCandidates, maintCandidates] = await Promise.all([
+            this._fetchIaCandidatesForRole(ptwStub, 'areaManager'),
+            this._fetchIaCandidatesForRole(ptwStub, 'maintenanceEngineer')
+        ]);
         const hseSafetyTeam = this._getHseSafetyTeamCandidates();
 
         const toCandidate = (a) => ({
@@ -10435,28 +10469,16 @@ const PTW = {
             candidates: hseSafetyTeam
         });
 
-        // مرشحو general G/Y — للحفاظ على اعتمادات المصرّحين العامين
-        const allAuthoritiesMap = {};
-        for (const field of permitTypeFields) {
-            try {
-                const list = await iaModule.getAuthoritiesForPermitType(field);
-                (list || []).forEach(auth => {
-                    if (iaModule._normalizeApprovalRole && iaModule._normalizeApprovalRole(auth.approvalRole) !== 'general') return;
-                    const key = auth.id || auth.email || auth.name;
-                    if (!key) return;
-                    if (!allAuthoritiesMap[key]) allAuthoritiesMap[key] = { ...auth, _permitFields: [] };
-                    allAuthoritiesMap[key]._permitFields.push(field);
-                    if (auth.permitLevel === 'G') {
-                        allAuthoritiesMap[key].permitLevel = 'G';
-                        allAuthoritiesMap[key].requiresHseCoApproval = false;
-                    }
-                });
-            } catch (err) {
-                if (typeof Utils !== 'undefined') Utils.safeWarn('_buildIssuingAuthoritiesWorkflow general fetch error:', err);
+        // مرشحو general G/Y — قراءة واحدة من cache (بدلاً من حلقة طلبات لكل نوع تصريح)
+        let generalAuthorities = [];
+        try {
+            if (typeof iaModule.getGeneralAuthoritiesForPermitTypes === 'function') {
+                generalAuthorities = await iaModule.getGeneralAuthoritiesForPermitTypes(permitTypeFields);
             }
+        } catch (err) {
+            if (typeof Utils !== 'undefined') Utils.safeWarn('_buildIssuingAuthoritiesWorkflow general fetch error:', err);
         }
 
-        const generalAuthorities = Object.values(allAuthoritiesMap);
         const gAuthorities = generalAuthorities.filter(a => a.permitLevel === 'G');
         const yAuthorities = generalAuthorities.filter(a => a.permitLevel === 'Y');
 
@@ -10574,7 +10596,7 @@ const PTW = {
         try {
             const permitTypeFields = this._extractPermitTypeFields(ptwData);
             if (permitTypeFields.length > 0) {
-                const iaWorkflow = await this._buildIssuingAuthoritiesWorkflow(permitTypeFields);
+                const iaWorkflow = await this._getCachedIaWorkflow(permitTypeFields);
                 if (iaWorkflow && iaWorkflow.approvals && iaWorkflow.approvals.length > 0) {
                     const approvals = this.normalizeApprovals(iaWorkflow.approvals);
                     return {
@@ -10629,7 +10651,7 @@ const PTW = {
         try {
             const permitTypeFields = this._extractPermitTypeFields(ptwData);
             if (permitTypeFields.length > 0) {
-                const iaWorkflow = await this._buildIssuingAuthoritiesWorkflow(permitTypeFields);
+                const iaWorkflow = await this._getCachedIaWorkflow(permitTypeFields);
                 if (iaWorkflow && iaWorkflow.approvals && iaWorkflow.approvals.length > 0) {
                     const approvals = this.normalizeApprovals(iaWorkflow.approvals);
                     return {
