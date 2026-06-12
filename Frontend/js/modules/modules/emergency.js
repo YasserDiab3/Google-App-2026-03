@@ -2806,9 +2806,253 @@ const Emergency = {
     _fmGetExportBranding() {
         return {
             companyName: String(AppState?.companySettings?.name || AppState?.companyName || '').trim(),
+            companySecondaryName: String(AppState?.companySettings?.secondaryName || '').trim(),
             logoUrl: String(AppState?.companyLogo || AppState?.companySettings?.logo || '').trim(),
-            formVersion: String(AppState?.companySettings?.formVersion || '').trim()
+            formVersion: String(AppState?.companySettings?.formVersion || '1.0').trim(),
+            formCode: String(AppState?.companySettings?.factoryMapFormCode || 'HSE-FM-MAP-01').trim()
         };
+    },
+
+    _fmDrawRoundedRect(ctx, x, y, w, h, r) {
+        const radius = Math.max(0, Math.min(r, w / 2, h / 2));
+        ctx.beginPath();
+        ctx.moveTo(x + radius, y);
+        ctx.arcTo(x + w, y, x + w, y + h, radius);
+        ctx.arcTo(x + w, y + h, x, y + h, radius);
+        ctx.arcTo(x, y + h, x, y, radius);
+        ctx.arcTo(x, y, x + w, y, radius);
+        ctx.closePath();
+    },
+
+    _fmCanvasSetFont(ctx, size, weight, color) {
+        ctx.font = `${weight || 'normal'} ${size}px Tahoma, 'Segoe UI', Arial, sans-serif`;
+        if (color) ctx.fillStyle = color;
+    },
+
+    _fmCanvasFitFontSize(ctx, text, maxWidth, startSize, weight) {
+        let size = startSize;
+        while (size > 8) {
+            this._fmCanvasSetFont(ctx, size, weight);
+            if (ctx.measureText(text).width <= maxWidth) return size;
+            size -= 1;
+        }
+        return size;
+    },
+
+    _fmCanvasDrawWrappedLines(ctx, text, x, y, maxWidth, lineHeight, align, maxLines) {
+        const words = String(text || '').split(/\s+/).filter(Boolean);
+        const lines = [];
+        let line = '';
+        words.forEach((word) => {
+            const test = line ? `${line} ${word}` : word;
+            if (ctx.measureText(test).width > maxWidth && line) {
+                lines.push(line);
+                line = word;
+            } else {
+                line = test;
+            }
+        });
+        if (line) lines.push(line);
+        const clipped = lines.slice(0, maxLines || lines.length);
+        if (lines.length > clipped.length) {
+            clipped[clipped.length - 1] = clipped[clipped.length - 1].slice(0, -1) + '…';
+        }
+        ctx.textAlign = align || 'right';
+        clipped.forEach((ln, idx) => ctx.fillText(ln, x, y + idx * lineHeight));
+        return clipped.length;
+    },
+
+    _fmGetExportDocumentMeta(plan) {
+        const brand = this._fmGetExportBranding();
+        const now = new Date();
+        const placeLabel = plan?.subLocationName || plan?.floor || '';
+        const planTitle = `${plan?.name || 'مخطط'}${plan?.factoryName ? ' · ' + plan.factoryName : ''}${placeLabel ? ' — ' + placeLabel : ''}`;
+        return {
+            ...brand,
+            planTitle,
+            planRef: String(plan?.id || '—'),
+            exportDate: now.toLocaleDateString('ar-EG', { year: 'numeric', month: 'long', day: 'numeric' }),
+            exportTime: now.toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' }),
+            exportDateTime: now.toLocaleString('ar-EG', { hour: '2-digit', minute: '2-digit', year: 'numeric', month: 'long', day: 'numeric' })
+        };
+    },
+
+    async _fmDrawExportHeader(ctx, totalW, headerH, plan, logoImg) {
+        const meta = this._fmGetExportDocumentMeta(plan);
+        const pad = 18;
+        const logoColW = 150;
+        const metaColW = 250;
+
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, totalW, headerH);
+        ctx.fillStyle = '#003865';
+        ctx.fillRect(0, headerH - 3, totalW, 3);
+        ctx.fillStyle = '#dc2626';
+        ctx.fillRect(0, headerH - 6, totalW, 2);
+
+        const logoBoxX = pad;
+        const logoBoxY = 14;
+        const logoBoxW = logoColW - 8;
+        const logoBoxH = headerH - 28;
+        ctx.fillStyle = '#f8fafc';
+        this._fmDrawRoundedRect(ctx, logoBoxX, logoBoxY, logoBoxW, logoBoxH, 12);
+        ctx.fill();
+        ctx.strokeStyle = '#dbeafe';
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+
+        if (logoImg) {
+            const logoPad = 10;
+            const maxLogoW = logoBoxW - logoPad * 2;
+            const maxLogoH = logoBoxH - logoPad * 2;
+            const ratio = Math.min(maxLogoW / logoImg.width, maxLogoH / logoImg.height, 1);
+            const drawW = logoImg.width * ratio;
+            const drawH = logoImg.height * ratio;
+            ctx.drawImage(
+                logoImg,
+                logoBoxX + (logoBoxW - drawW) / 2,
+                logoBoxY + (logoBoxH - drawH) / 2,
+                drawW,
+                drawH
+            );
+        } else {
+            this._fmCanvasSetFont(ctx, 22, 'bold', '#003865');
+            ctx.textAlign = 'center';
+            const initials = (meta.companyName || 'HS').trim().slice(0, 2).toUpperCase();
+            ctx.fillText(initials, logoBoxX + logoBoxW / 2, logoBoxY + logoBoxH / 2 + 8);
+        }
+
+        const centerX = logoColW + (totalW - logoColW - metaColW) / 2;
+        const centerMaxW = totalW - logoColW - metaColW - pad * 2;
+        this._fmCanvasSetFont(ctx, 22, 'bold', '#003865');
+        ctx.textAlign = 'center';
+        const titleSize = this._fmCanvasFitFontSize(ctx, 'خريطة المصنع التفاعلية — استجابة الطوارئ', centerMaxW, 22, 'bold');
+        this._fmCanvasSetFont(ctx, titleSize, 'bold', '#003865');
+        ctx.fillText('خريطة المصنع التفاعلية — استجابة الطوارئ', centerX, 34);
+
+        this._fmCanvasSetFont(ctx, 12, '600', '#1e40af');
+        ctx.fillText('Interactive Factory Emergency Response Map', centerX, 52);
+
+        this._fmCanvasSetFont(ctx, 12, 'normal', '#64748b');
+        const subSize = this._fmCanvasFitFontSize(ctx, meta.planTitle, centerMaxW, 12, 'normal');
+        this._fmCanvasSetFont(ctx, subSize, 'normal', '#64748b');
+        ctx.fillText(meta.planTitle, centerX, 70);
+
+        const badgeW = Math.min(280, centerMaxW);
+        const badgeH = 24;
+        const badgeX = centerX - badgeW / 2;
+        const badgeY = 82;
+        ctx.fillStyle = '#eff6ff';
+        this._fmDrawRoundedRect(ctx, badgeX, badgeY, badgeW, badgeH, 12);
+        ctx.fill();
+        ctx.strokeStyle = '#93c5fd';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+        this._fmCanvasSetFont(ctx, 11, 'bold', '#1d4ed8');
+        ctx.textAlign = 'center';
+        ctx.fillText(`كود النموذج: ${meta.formCode}  |  رقم الإصدار: ${meta.formVersion}`, centerX, badgeY + 16);
+
+        const metaX = totalW - pad;
+        const metaBoxW = metaColW - 10;
+        const metaBoxX = totalW - pad - metaBoxW;
+        const metaBoxY = 14;
+        const metaBoxH = headerH - 28;
+        ctx.fillStyle = '#f8fafc';
+        this._fmDrawRoundedRect(ctx, metaBoxX, metaBoxY, metaBoxW, metaBoxH, 10);
+        ctx.fill();
+        ctx.strokeStyle = '#e2e8f0';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+
+        let metaLineY = metaBoxY + 22;
+        const metaInnerW = metaBoxW - 20;
+        ctx.textAlign = 'right';
+        this._fmCanvasSetFont(ctx, 10, 'bold', '#64748b');
+        ctx.fillText('بيانات الوثيقة', metaX - 10, metaLineY);
+        metaLineY += 18;
+        this._fmCanvasSetFont(ctx, 11, 'bold', '#0f172a');
+        const nameSize = this._fmCanvasFitFontSize(ctx, meta.companyName || '—', metaInnerW, 11, 'bold');
+        this._fmCanvasSetFont(ctx, nameSize, 'bold', '#0f172a');
+        const nameLines = this._fmCanvasDrawWrappedLines(ctx, meta.companyName || '—', metaX - 10, metaLineY, metaInnerW, 14, 'right', 2);
+        metaLineY += nameLines * 14 + 6;
+        if (meta.companySecondaryName) {
+            this._fmCanvasSetFont(ctx, 10, 'normal', '#64748b');
+            this._fmCanvasDrawWrappedLines(ctx, meta.companySecondaryName, metaX - 10, metaLineY, metaInnerW, 13, 'right', 1);
+            metaLineY += 18;
+        }
+        this._fmCanvasSetFont(ctx, 10, 'normal', '#475569');
+        ctx.fillText(`مرجع المخطط: ${meta.planRef}`, metaX - 10, metaLineY);
+        metaLineY += 14;
+        ctx.fillText(`تاريخ التصدير: ${meta.exportDate}`, metaX - 10, metaLineY);
+    },
+
+    _fmDrawExportFooter(ctx, totalW, footerTop, footerH) {
+        const meta = this._fmGetExportDocumentMeta(this._fmState.floorPlans.find(p => p.id === this._fmState.currentPlanId) || {});
+        const pad = 18;
+
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, footerTop, totalW, footerH);
+        ctx.fillStyle = '#e0e7ff';
+        ctx.fillRect(0, footerTop, totalW, 2);
+
+        const frameY = footerTop + 8;
+        const frameH = footerH - 16;
+        ctx.fillStyle = '#f8fbff';
+        this._fmDrawRoundedRect(ctx, pad, frameY, totalW - pad * 2, frameH, 10);
+        ctx.fill();
+        ctx.strokeStyle = 'rgba(59, 130, 246, 0.25)';
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+
+        const colW = (totalW - pad * 2) / 3;
+        const col1X = pad + colW * 0.5;
+        const col2X = pad + colW * 1.5;
+        const col3X = pad + colW * 2.5;
+        const textY1 = frameY + 22;
+        const textY2 = frameY + 40;
+
+        this._fmCanvasSetFont(ctx, 10, 'bold', '#64748b');
+        ctx.textAlign = 'center';
+        ctx.fillText('كود النموذج', col1X, textY1);
+        this._fmCanvasSetFont(ctx, 12, 'bold', '#003865');
+        ctx.fillText(meta.formCode, col1X, textY2);
+
+        this._fmCanvasSetFont(ctx, 10, 'bold', '#64748b');
+        ctx.fillText('تاريخ التصدير', col2X, textY1);
+        this._fmCanvasSetFont(ctx, 11, 'bold', '#0f172a');
+        const exportSize = this._fmCanvasFitFontSize(ctx, meta.exportDateTime, colW - 24, 11, 'bold');
+        this._fmCanvasSetFont(ctx, exportSize, 'bold', '#0f172a');
+        ctx.fillText(meta.exportDateTime, col2X, textY2);
+
+        this._fmCanvasSetFont(ctx, 10, 'bold', '#64748b');
+        ctx.fillText('رقم الإصدار', col3X, textY1);
+        this._fmCanvasSetFont(ctx, 12, 'bold', '#1d4ed8');
+        ctx.fillText(`Rev. ${meta.formVersion}`, col3X, textY2);
+
+        ctx.strokeStyle = '#dbeafe';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(pad + colW, frameY + 10);
+        ctx.lineTo(pad + colW, frameY + frameH - 10);
+        ctx.moveTo(pad + colW * 2, frameY + 10);
+        ctx.lineTo(pad + colW * 2, frameY + frameH - 10);
+        ctx.stroke();
+
+        this._fmCanvasSetFont(ctx, 10, 'bold', '#003865');
+        ctx.textAlign = 'center';
+        const companySize = this._fmCanvasFitFontSize(ctx, meta.companyName || 'نظام إدارة السلامة والصحة المهنية', totalW - pad * 4, 10, 'bold');
+        this._fmCanvasSetFont(ctx, companySize, 'bold', '#003865');
+        ctx.fillText(meta.companyName || 'نظام إدارة السلامة والصحة المهنية', totalW / 2, frameY + frameH - 22);
+        this._fmCanvasSetFont(ctx, 9, 'normal', '#94a3b8');
+        ctx.fillText('سري — للاستخدام الداخلي | إدارة السلامة والصحة المهنية والبيئة', totalW / 2, frameY + frameH - 8);
+    },
+
+    _fmDrawExportMapFrame(ctx, x, y, w, h) {
+        ctx.fillStyle = '#f1f5f9';
+        ctx.fillRect(x, y, w, h);
+        ctx.strokeStyle = '#cbd5e1';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(x + 1, y + 1, w - 2, h - 2);
     },
 
     _fmLoadImageElement(src) {
@@ -2866,62 +3110,6 @@ const Emergency = {
             }
         }
         return '';
-    },
-
-    async _fmDrawExportHeader(ctx, totalW, headerH, plan, logoImg) {
-        const brand = this._fmGetExportBranding();
-        const grad = ctx.createLinearGradient(0, 0, totalW, 0);
-        grad.addColorStop(0, '#1e3a5f');
-        grad.addColorStop(1, '#1d4ed8');
-        ctx.fillStyle = grad;
-        ctx.fillRect(0, 0, totalW, headerH);
-        ctx.fillStyle = '#dc2626';
-        ctx.fillRect(0, headerH - 4, totalW, 4);
-
-        if (logoImg) {
-            const logoH = Math.min(52, headerH - 20);
-            const logoW = Math.min(130, logoH * 2.2);
-            ctx.drawImage(logoImg, 16, (headerH - logoH) / 2, logoW, logoH);
-        }
-
-        ctx.fillStyle = '#ffffff';
-        ctx.textAlign = 'center';
-        ctx.font = 'bold 20px Tahoma, Arial, sans-serif';
-        ctx.fillText('خريطة المصنع التفاعلية — استجابة الطوارئ', totalW / 2, 30);
-        ctx.font = '13px Tahoma, Arial, sans-serif';
-        const placeLabel = plan?.subLocationName || plan?.floor || '';
-        const subTitle = `${plan?.name || 'مخطط'}${plan?.factoryName ? ' · ' + plan.factoryName : ''}${placeLabel ? ' — ' + placeLabel : ''}`;
-        ctx.fillText(subTitle, totalW / 2, 52);
-        ctx.textAlign = 'right';
-        ctx.font = '11px Tahoma, Arial, sans-serif';
-        if (brand.companyName) ctx.fillText(brand.companyName, totalW - 16, headerH - 16);
-        ctx.textAlign = 'left';
-        ctx.fillText(new Date().toLocaleDateString('ar-EG'), 16, headerH - 16);
-    },
-
-    _fmDrawExportFooter(ctx, totalW, footerTop, footerH) {
-        const brand = this._fmGetExportBranding();
-        ctx.fillStyle = '#f8fafc';
-        ctx.fillRect(0, footerTop, totalW, footerH);
-        ctx.strokeStyle = '#cbd5e1';
-        ctx.lineWidth = 1;
-        ctx.beginPath();
-        ctx.moveTo(0, footerTop);
-        ctx.lineTo(totalW, footerTop);
-        ctx.stroke();
-        ctx.fillStyle = '#475569';
-        ctx.font = '11px Tahoma, Arial, sans-serif';
-        ctx.textAlign = 'right';
-        ctx.fillText('نظام إدارة السلامة والصحة المهنية — خريطة طوارئ تفاعلية', totalW - 16, footerTop + 20);
-        ctx.fillStyle = '#1d4ed8';
-        ctx.font = 'bold 11px Tahoma, Arial, sans-serif';
-        ctx.fillText(brand.companyName || 'HSE Management System', totalW - 16, footerTop + 36);
-        ctx.textAlign = 'left';
-        ctx.fillStyle = '#94a3b8';
-        ctx.font = '10px Tahoma, Arial, sans-serif';
-        ctx.fillText(`تاريخ التصدير: ${new Date().toLocaleString('ar-EG')}`, 16, footerTop + 20);
-        if (brand.formVersion) ctx.fillText(`إصدار النموذج: ${brand.formVersion}`, 16, footerTop + 34);
-        ctx.fillText('سري — للاستخدام الداخلي', 16, footerTop + 46);
     },
 
     _fmExtractDriveFileId_(imageRef) {
@@ -3115,8 +3303,8 @@ const Emergency = {
         }
         const mapW = parseInt(plan.imageWidth, 10) || 1200;
         const mapH = parseInt(plan.imageHeight, 10) || 800;
-        const headerH = 80;
-        const footerH = 48;
+        const headerH = 118;
+        const footerH = 86;
         const totalW = mapW;
         const totalH = headerH + mapH + footerH;
         const mapTop = headerH;
@@ -3137,19 +3325,14 @@ const Emergency = {
             logoImg = await this._fmLoadImageElement(logoSrc || brand.logoUrl);
         }
         await this._fmDrawExportHeader(ctx, totalW, headerH, plan, logoImg);
+        this._fmDrawExportMapFrame(ctx, 0, mapTop, mapW, mapH);
 
         const imageDataUrl = await this._fmFetchPlanImageDataUrl(plan.imageDriveId || '', plan.id);
         if (imageDataUrl) {
             const bg = await this._fmLoadImageElement(imageDataUrl);
             if (bg) {
                 ctx.drawImage(bg, 0, mapTop, mapW, mapH);
-            } else {
-                ctx.fillStyle = '#ffffff';
-                ctx.fillRect(0, mapTop, mapW, mapH);
             }
-        } else {
-            ctx.fillStyle = '#ffffff';
-            ctx.fillRect(0, mapTop, mapW, mapH);
         }
 
         const finishExport = () => {
@@ -3167,15 +3350,23 @@ const Emergency = {
         if (qrUrl && typeof QRCode !== 'undefined' && QRCode.generate) {
             const qrImg = await this._fmLoadImageElement(QRCode.generate(qrUrl, 110));
             if (qrImg) {
-                const pad = 12;
-                const qrSize = 110;
-                ctx.fillStyle = 'rgba(255,255,255,0.95)';
-                ctx.fillRect(mapW - qrSize - pad * 2, mapTop + mapH - qrSize - pad * 2 - 18, qrSize + pad * 2, qrSize + pad * 2 + 18);
-                ctx.drawImage(qrImg, mapW - qrSize - pad, mapTop + mapH - qrSize - pad - 18, qrSize, qrSize);
-                ctx.fillStyle = '#0f172a';
+                const pad = 14;
+                const qrSize = 108;
+                const cardX = mapW - qrSize - pad * 2 - 8;
+                const cardY = mapTop + mapH - qrSize - pad * 2 - 28;
+                const cardW = qrSize + pad * 2 + 8;
+                const cardH = qrSize + pad + 30;
+                ctx.fillStyle = 'rgba(255,255,255,0.97)';
+                this._fmDrawRoundedRect(ctx, cardX, cardY, cardW, cardH, 10);
+                ctx.fill();
+                ctx.strokeStyle = '#bfdbfe';
+                ctx.lineWidth = 1.5;
+                ctx.stroke();
+                ctx.drawImage(qrImg, cardX + pad + 4, cardY + pad, qrSize, qrSize);
+                ctx.fillStyle = '#003865';
                 ctx.font = 'bold 11px Tahoma, Arial, sans-serif';
                 ctx.textAlign = 'center';
-                ctx.fillText('استجابة طوارئ', mapW - qrSize / 2 - pad, mapTop + mapH - pad - 4);
+                ctx.fillText('استجابة طوارئ', cardX + cardW / 2, cardY + cardH - 10);
             }
         }
         finishExport();
