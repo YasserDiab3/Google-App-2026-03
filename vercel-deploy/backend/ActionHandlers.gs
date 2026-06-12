@@ -4564,9 +4564,8 @@ var ActionHandlers = {
         return result;
     },
     'getAllEmergencyFloorPlans': function(payload, postData, action, actorUserData, spreadsheetId) {
-        var result = { success: false, message: '' };
-        (function() { result = getAllEmergencyFloorPlans(); })();
-        return result;
+        var plans = getAllEmergencyFloorPlans();
+        return { success: true, data: Array.isArray(plans) ? plans : [] };
     },
     'deleteEmergencyFloorPlan': function(payload, postData, action, actorUserData, spreadsheetId) {
         var result = { success: false, message: '' };
@@ -4584,9 +4583,8 @@ var ActionHandlers = {
         return result;
     },
     'getAllEmergencyMapItems': function(payload, postData, action, actorUserData, spreadsheetId) {
-        var result = { success: false, message: '' };
-        (function() { result = getAllEmergencyMapItems(payload.filters || {}); })();
-        return result;
+        var items = getAllEmergencyMapItems(payload.filters || {});
+        return { success: true, data: Array.isArray(items) ? items : [] };
     },
     'deleteEmergencyMapItem': function(payload, postData, action, actorUserData, spreadsheetId) {
         var result = { success: false, message: '' };

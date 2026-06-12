@@ -16917,13 +16917,317 @@ body[data-theme="dark"] .profile-info-list>div,
    خريطة المصنع التفاعلية (Factory Safety Map)
    ======================================== */
 
+.fm-shell {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    background: linear-gradient(180deg, #f8fafc 0%, #ffffff 40%);
+    border: 1px solid #e2e8f0;
+    border-radius: 16px;
+    padding: 14px;
+    box-shadow: 0 4px 24px rgba(15, 23, 42, 0.06);
+}
+
+.fm-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 12px 14px;
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+}
+
+.fm-toolbar-brand {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 0;
+}
+
+.fm-toolbar-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    background: linear-gradient(135deg, #dc2626, #b91c1c);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    flex-shrink: 0;
+    box-shadow: 0 4px 12px rgba(220, 38, 38, 0.25);
+}
+
+.fm-toolbar-title {
+    margin: 0;
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: #0f172a;
+}
+
+.fm-toolbar-sub {
+    margin: 2px 0 0;
+    font-size: 0.78rem;
+    color: #64748b;
+}
+
+.fm-toolbar-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+}
+
+.fm-floor-select {
+    min-width: 200px;
+    max-width: 280px;
+}
+
+.fm-toolbar-btn-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.fm-toolbar-btn-group .btn-sm span {
+    margin-right: 4px;
+}
+
+.fm-btn-danger {
+    color: #dc2626 !important;
+    border-color: #fecaca !important;
+}
+
+.fm-workspace {
+    display: grid;
+    grid-template-columns: 1fr 220px;
+    gap: 12px;
+    align-items: stretch;
+    min-height: 520px;
+}
+
+.fm-map-stage {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    min-width: 0;
+}
+
+.fm-viewport-bar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 8px 10px;
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+}
+
+.fm-viewport-bar-right {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.fm-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 600;
+    background: #eff6ff;
+    color: #1d4ed8;
+    border: 1px solid #bfdbfe;
+}
+
+.fm-badge-muted {
+    background: #f1f5f9;
+    color: #475569;
+    border-color: #e2e8f0;
+}
+
+.fm-viewport-controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.fm-ctrl-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 10px;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    background: #fff;
+    color: #334155;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.15s;
+}
+
+.fm-ctrl-btn:hover {
+    background: #f1f5f9;
+    border-color: #cbd5e1;
+}
+
+.fm-ctrl-btn-primary {
+    background: #1e293b;
+    color: #fff;
+    border-color: #1e293b;
+}
+
+.fm-ctrl-btn-primary:hover {
+    background: #334155;
+}
+
+.fm-legend-sidebar {
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 12px;
+    overflow-y: auto;
+    max-height: 72vh;
+}
+
+.fm-legend-sidebar .fm-legend-items {
+    flex-direction: column;
+    align-items: stretch;
+}
+
+.fm-legend-sidebar .fm-legend-item {
+    width: 100%;
+}
+
+.fm-viewport {
+    overflow: auto;
+    max-height: min(72vh, 720px);
+    background: #e2e8f0;
+    border-radius: 0 0 12px 12px;
+    border: 1px solid #cbd5e1;
+    border-top: none;
+}
+
+.fm-viewport-inner {
+    display: flex;
+    justify-content: center;
+    padding: 16px;
+    transition: transform 0.15s ease;
+}
+
+.fm-placeholder-card {
+    text-align: center;
+    max-width: 360px;
+    padding: 24px;
+}
+
+.fm-placeholder-icon {
+    width: 72px;
+    height: 72px;
+    margin: 0 auto 16px;
+    border-radius: 50%;
+    background: #f1f5f9;
+    color: #94a3b8;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 28px;
+}
+
+.fm-placeholder-card h3 {
+    margin: 0 0 8px;
+    font-size: 1.1rem;
+    color: #334155;
+}
+
+.fm-placeholder-card p {
+    margin: 0 0 16px;
+    font-size: 0.875rem;
+    color: #64748b;
+    line-height: 1.6;
+}
+
+.fm-fullscreen-active {
+    position: fixed !important;
+    inset: 0 !important;
+    z-index: 10050 !important;
+    margin: 0 !important;
+    border-radius: 0 !important;
+    max-width: none !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    padding: 12px !important;
+    overflow: hidden;
+}
+
+.fm-fullscreen-active .fm-workspace {
+    flex: 1;
+    min-height: 0;
+    grid-template-columns: 1fr 200px;
+}
+
+.fm-fullscreen-active .fm-map-stage {
+    flex: 1;
+    min-height: 0;
+}
+
+.fm-fullscreen-active .fm-map-container {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.fm-fullscreen-active .fm-map-wrapper {
+    flex: 1;
+    display: flex !important;
+    flex-direction: column;
+    min-height: 0;
+}
+
+.fm-fullscreen-active .fm-viewport {
+    flex: 1;
+    max-height: none;
+}
+
+.fm-fullscreen-active .fm-legend-sidebar {
+    max-height: none;
+}
+
+body.fm-body-fullscreen {
+    overflow: hidden;
+}
+
+.fm-admin-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+
+.fm-admin-header h3 {
+    margin: 0;
+    font-size: 14px;
+    font-weight: 700;
+    color: #1e293b;
+}
+
 .fm-map-container {
     position: relative;
     background: #f8fafc;
     border-radius: 12px;
     overflow: hidden;
     border: 1px solid #e2e8f0;
-    min-height: 600px;
+    min-height: 480px;
+    flex: 1;
 }
 
 .fm-map-canvas {
@@ -17066,8 +17370,16 @@ body[data-theme="dark"] .profile-info-list>div,
 /* Admin Panel */
 .fm-admin-panel {
     background: #fff;
-    border-top: 1px solid #e2e8f0;
-    padding: 16px;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 14px 16px;
+    box-shadow: 0 -4px 20px rgba(15, 23, 42, 0.06);
+}
+
+.fm-fullscreen-active .fm-admin-panel {
+    flex-shrink: 0;
+    max-height: 28vh;
+    overflow-y: auto;
 }
 
 .fm-admin-panel-header {
@@ -17092,25 +17404,41 @@ body[data-theme="dark"] .profile-info-list>div,
 .fm-add-item-btn {
     display: flex;
     align-items: center;
-    gap: 6px;
-    padding: 6px 12px;
+    gap: 8px;
+    padding: 8px 12px;
     border: 1px solid #e2e8f0;
-    border-radius: 8px;
-    background: #f8fafc;
+    border-radius: 10px;
+    background: #fff;
     font-size: 12px;
-    color: #475569;
+    font-weight: 600;
+    color: #334155;
     cursor: pointer;
     transition: all .15s;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+}
+
+.fm-add-item-btn i {
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-size: 12px;
+    flex-shrink: 0;
 }
 
 .fm-add-item-btn:hover {
-    background: #e2e8f0;
+    border-color: #cbd5e1;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 10px rgba(15, 23, 42, 0.08);
 }
 
 .fm-add-item-btn.active {
-    background: #e2e8f0;
-    border-color: #94a3b8;
-    box-shadow: inset 0 0 0 1px #64748b;
+    border-color: #2563eb;
+    background: #eff6ff;
+    box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.2);
 }
 
 .fm-add-item-btn i {
@@ -17422,7 +17750,41 @@ body[data-theme="dark"] .profile-info-list>div,
 }
 
 /* Responsive */
+@media (max-width: 1024px) {
+    .fm-workspace {
+        grid-template-columns: 1fr;
+    }
+    .fm-legend-sidebar {
+        max-height: none;
+    }
+    .fm-legend-sidebar .fm-legend-items {
+        flex-direction: row;
+    }
+}
+
 @media (max-width: 768px) {
+    .fm-toolbar {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    .fm-toolbar-actions {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    .fm-floor-select {
+        max-width: none;
+        width: 100%;
+    }
+    .fm-toolbar-btn-group {
+        width: 100%;
+    }
+    .fm-toolbar-btn-group .btn-sm {
+        flex: 1;
+        justify-content: center;
+    }
+    .fm-ctrl-btn span {
+        display: none;
+    }
     .fm-admin-tools {
         gap: 4px;
     }

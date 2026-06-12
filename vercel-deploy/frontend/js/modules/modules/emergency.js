@@ -221,54 +221,87 @@ const Emergency = {
 
                 <!-- تبويب خريطة المصنع -->
                 <div id="tab-factory-map" class="tab-content">
-                    <div id="fm-header-area">
+                    <div id="fm-shell" class="fm-shell">
                         <div class="fm-toolbar">
-                            <div class="fm-toolbar-left">
-                                <h2><i class="fas fa-map"></i> خريطة المصنع التفاعلية</h2>
+                            <div class="fm-toolbar-brand">
+                                <div class="fm-toolbar-icon"><i class="fas fa-map-marked-alt"></i></div>
+                                <div>
+                                    <h2 class="fm-toolbar-title">خريطة المصنع التفاعلية</h2>
+                                    <p class="fm-toolbar-sub" id="fm-plan-meta">اختر مخططاً لعرض خريطة السلامة</p>
+                                </div>
                             </div>
-                            <div class="fm-toolbar-right">
-                                <select id="fm-floor-select" class="form-input" style="max-width: 250px;">
-                                    <option value="">-- اختر المخطط --</option>
+                            <div class="fm-toolbar-actions">
+                                <select id="fm-floor-select" class="form-input fm-floor-select" title="اختيار المخطط">
+                                    <option value="">— اختر المخطط —</option>
                                 </select>
-                                <button id="fm-edit-floor-btn" class="btn-secondary btn-sm hidden" title="تعديل المخطط">
-                                    <i class="fas fa-pen ml-1"></i>تعديل
-                                </button>
-                                <button id="fm-delete-floor-btn" class="btn-secondary btn-sm hidden" style="color:#dc2626;" title="حذف المخطط">
-                                    <i class="fas fa-trash ml-1"></i>حذف
-                                </button>
-                                <button id="fm-admin-toggle" class="btn-secondary btn-sm">
-                                    <i class="fas fa-edit ml-1"></i>وضع الإدارة
-                                </button>
-                                <button id="fm-add-floor-btn" class="btn-primary btn-sm">
-                                    <i class="fas fa-plus ml-1"></i>إضافة مخطط
-                                </button>
+                                <div class="fm-toolbar-btn-group">
+                                    <button id="fm-edit-floor-btn" class="btn-secondary btn-sm hidden" title="تعديل المخطط">
+                                        <i class="fas fa-pen"></i><span>تعديل</span>
+                                    </button>
+                                    <button id="fm-delete-floor-btn" class="btn-secondary btn-sm fm-btn-danger hidden" title="حذف المخطط">
+                                        <i class="fas fa-trash"></i><span>حذف</span>
+                                    </button>
+                                    <button id="fm-admin-toggle" class="btn-secondary btn-sm" title="إضافة وتعديل عناصر الخريطة">
+                                        <i class="fas fa-tools"></i><span>وضع الإدارة</span>
+                                    </button>
+                                    <button id="fm-add-floor-btn" class="btn-primary btn-sm" title="إضافة مخطط طابق جديد">
+                                        <i class="fas fa-plus"></i><span>إضافة مخطط</span>
+                                    </button>
+                                </div>
                             </div>
                         </div>
-                    </div>
-                    <div class="fm-map-container" id="fm-map-container">
-                        <div class="fm-map-placeholder" id="fm-map-placeholder">
-                            <i class="fas fa-map-marked-alt text-6xl text-gray-300 mb-4"></i>
-                            <p class="text-gray-500 text-lg">اختر مخططاً لعرض خريطة المصنع</p>
-                            <p class="text-gray-400 text-sm mt-2">قم بإضافة مخططات الطوابق من زر "إضافة مخطط"</p>
-                        </div>
-                        <div class="fm-map-wrapper hidden" id="fm-map-wrapper">
-                            <div class="fm-map-canvas" id="fm-map-canvas">
-                                <img id="fm-map-image" class="fm-map-image" src="" alt="مخطط الطابق">
-                                <div id="fm-map-items-layer" class="fm-map-items-layer"></div>
+
+                        <div class="fm-workspace">
+                            <div class="fm-map-stage">
+                                <div class="fm-viewport-bar hidden" id="fm-viewport-bar">
+                                    <div class="fm-viewport-bar-right">
+                                        <span class="fm-badge" id="fm-items-count"><i class="fas fa-map-pin"></i> 0 عنصر</span>
+                                        <span class="fm-badge fm-badge-muted" id="fm-zoom-label">100%</span>
+                                    </div>
+                                    <div class="fm-viewport-controls">
+                                        <button type="button" class="fm-ctrl-btn" id="fm-zoom-out" title="تصغير"><i class="fas fa-search-minus"></i></button>
+                                        <button type="button" class="fm-ctrl-btn" id="fm-zoom-reset" title="ملاءمة الشاشة"><i class="fas fa-compress-arrows-alt"></i></button>
+                                        <button type="button" class="fm-ctrl-btn" id="fm-zoom-in" title="تكبير"><i class="fas fa-search-plus"></i></button>
+                                        <button type="button" class="fm-ctrl-btn fm-ctrl-btn-primary" id="fm-fullscreen-btn" title="ملء الشاشة">
+                                            <i class="fas fa-expand"></i><span>ملء الشاشة</span>
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="fm-map-container" id="fm-map-container">
+                                    <div class="fm-map-placeholder" id="fm-map-placeholder">
+                                        <div class="fm-placeholder-card">
+                                            <div class="fm-placeholder-icon"><i class="fas fa-map-marked-alt"></i></div>
+                                            <h3>لا يوجد مخطط معروض</h3>
+                                            <p>اختر مخططاً من القائمة أو أضف مخطط طابق جديد لبدء وضع عناصر السلامة</p>
+                                            <button type="button" class="btn-primary btn-sm" onclick="Emergency.showFloorPlanForm()">
+                                                <i class="fas fa-plus ml-1"></i>إضافة أول مخطط
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div class="fm-map-wrapper hidden" id="fm-map-wrapper">
+                                        <div class="fm-viewport" id="fm-viewport">
+                                            <div class="fm-viewport-inner" id="fm-viewport-inner">
+                                                <div class="fm-map-canvas" id="fm-map-canvas">
+                                                    <img id="fm-map-image" class="fm-map-image" src="" alt="مخطط الطابق">
+                                                    <div id="fm-map-items-layer" class="fm-map-items-layer"></div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
-                            <div class="fm-map-legend" id="fm-map-legend">
+                            <aside class="fm-legend-sidebar hidden" id="fm-legend-sidebar">
                                 <div class="fm-legend-title"><i class="fas fa-info-circle"></i> دليل الرموز</div>
                                 <div class="fm-legend-items" id="fm-legend-items"></div>
+                            </aside>
+                        </div>
+
+                        <div class="fm-admin-panel hidden" id="fm-admin-panel">
+                            <div class="fm-admin-header">
+                                <h3><i class="fas fa-tools"></i> لوحة الإدارة — إضافة عناصر للخريطة</h3>
+                                <button id="fm-admin-close" class="btn-secondary btn-sm">إغلاق</button>
                             </div>
-                        </div>
-                    </div>
-                    <!-- Admin panel (hidden by default) -->
-                    <div class="fm-admin-panel hidden" id="fm-admin-panel">
-                        <div class="fm-admin-header">
-                            <h3><i class="fas fa-tools"></i> لوحة الإدارة — إضافة عناصر للخريطة</h3>
-                            <button id="fm-admin-close" class="btn-secondary btn-sm">إغلاق</button>
-                        </div>
-                        <div class="fm-admin-body">
+                            <div class="fm-admin-body">
                             <div class="fm-admin-tools">
                                 <button class="fm-add-item-btn" data-type="fire_extinguisher" style="background:#ef4444;">
                                     <i class="fas fa-fire-extinguisher"></i> مطفأة حريق
@@ -302,6 +335,7 @@ const Emergency = {
                                 </button>
                             </div>
                             <p class="fm-admin-hint"><i class="fas fa-mouse-pointer"></i> اختر نوع العنصر ثم انقر على الخريطة لإضافته. يمكنك سحب العناصر الموجودة لتعديل موقعها.</p>
+                        </div>
                         </div>
                     </div>
                 </div>
@@ -723,7 +757,7 @@ const Emergency = {
                         <div class="text-xs text-gray-500 mt-1 flex items-center gap-2">
                             <span><i class="fas fa-user ml-1"></i>${Utils.escapeHTML(entry.actor || 'النظام')}</span>
                             <span><i class="fas fa-bolt ml-1"></i>${Utils.escapeHTML(entry.severity || '')}</span>
-                            <button class="text-blue-600 hover:text-blue-800" onclick="Emergency.viewAlert('${entry.alertId}')">عرض التنبيه</button>
+                            <button class="text-blue-600 hover:text-blue-800" onclick="Emergency.viewAlert('${Utils.escapeAttr(entry.alertId)}')">عرض التنبيه</button>
                         </div>
                     </div>
                 `).join('')}
@@ -825,7 +859,7 @@ const Emergency = {
                                 <td>${plan.lastTested ? Utils.formatDate(plan.lastTested) : '<span class="text-xs text-gray-400">لم يتم الاختبار</span>'}</td>
                                 <td>
                                     <div class="flex gap-2">
-                                        <button class="btn-icon btn-icon-info" title="عرض التفاصيل" onclick="Emergency.viewPlan('${plan.id}')">
+                                        <button class="btn-icon btn-icon-info" title="عرض التفاصيل" onclick="Emergency.viewPlan('${Utils.escapeAttr(plan.id)}')">
                                             <i class="fas fa-eye"></i>
                                         </button>
                                         <button class="btn-icon btn-icon-primary" title="تعديل" onclick="Emergency.showPlanForm(${JSON.stringify(plan).replace(/"/g, '&quot;')})">
@@ -1093,16 +1127,16 @@ const Emergency = {
                 </td>
                 <td>
                     <div class="flex flex-wrap gap-2">
-                        <button class="btn-icon btn-icon-info" title="عرض التفاصيل" onclick="Emergency.viewAlert('${alert.id}')">
+                        <button class="btn-icon btn-icon-info" title="عرض التفاصيل" onclick="Emergency.viewAlert('${Utils.escapeAttr(alert.id)}')">
                             <i class="fas fa-eye"></i>
                         </button>
                         ${!alert.acknowledgedAt ? `
-                            <button class="btn-icon btn-icon-success" title="اعتماد التنبيه" onclick="Emergency.acknowledgeAlert('${alert.id}')">
+                            <button class="btn-icon btn-icon-success" title="اعتماد التنبيه" onclick="Emergency.acknowledgeAlert('${Utils.escapeAttr(alert.id)}')">
                                 <i class="fas fa-check"></i>
                             </button>
                         ` : ''}
                         ${alert.status !== 'مغلق' ? `
-                            <button class="btn-icon btn-icon-primary" title="إغلاق التنبيه" onclick="Emergency.resolveAlert('${alert.id}')">
+                            <button class="btn-icon btn-icon-primary" title="إغلاق التنبيه" onclick="Emergency.resolveAlert('${Utils.escapeAttr(alert.id)}')">
                                 <i class="fas fa-flag-checkered"></i>
                             </button>
                         ` : ''}
@@ -1835,7 +1869,9 @@ const Emergency = {
         adminMode: false,
         addingType: null,
         dragItem: null,
-        floorPlans: []
+        floorPlans: [],
+        zoom: 1,
+        fullscreen: false
     },
 
     FM_ITEM_TYPES: {
@@ -1852,8 +1888,112 @@ const Emergency = {
     },
 
     initFactoryMapTab() {
-        this.loadFloorPlans();
+        this.loadFloorPlans(this._fmState.currentPlanId || '');
         this._bindFactoryMapEvents();
+        this._renderLegend();
+    },
+
+    _fmParseListResponse(resp) {
+        if (Array.isArray(resp)) return resp;
+        if (resp && Array.isArray(resp.data)) return resp.data;
+        if (resp && resp.success !== false && resp.data && Array.isArray(resp.data)) return resp.data;
+        return [];
+    },
+
+    _fmUpdatePlanMeta() {
+        const meta = document.getElementById('fm-plan-meta');
+        const countEl = document.getElementById('fm-items-count');
+        const plan = this._fmState.floorPlans.find(p => p.id === this._fmState.currentPlanId);
+        if (meta) {
+            meta.textContent = plan
+                ? `${plan.name || 'مخطط'}${plan.floor ? ' — ' + plan.floor : ''}`
+                : 'اختر مخططاً لعرض خريطة السلامة';
+        }
+        if (countEl) {
+            const n = this._fmState.items.length;
+            countEl.innerHTML = `<i class="fas fa-map-pin"></i> ${n} عنصر`;
+        }
+    },
+
+    _fmApplyZoom() {
+        const inner = document.getElementById('fm-viewport-inner');
+        const label = document.getElementById('fm-zoom-label');
+        const z = this._fmState.zoom || 1;
+        if (inner) {
+            inner.style.transform = `scale(${z})`;
+            inner.style.transformOrigin = 'top center';
+        }
+        if (label) label.textContent = Math.round(z * 100) + '%';
+    },
+
+    _fmSetZoom(nextZoom) {
+        this._fmState.zoom = Math.max(0.35, Math.min(2.5, nextZoom));
+        this._fmApplyZoom();
+    },
+
+    _fmResetZoom() {
+        this._fmState.zoom = 1;
+        this._fmApplyZoom();
+        const viewport = document.getElementById('fm-viewport');
+        if (viewport) viewport.scrollTop = 0;
+    },
+
+    toggleFactoryMapFullscreen() {
+        const shell = document.getElementById('fm-shell');
+        const btn = document.getElementById('fm-fullscreen-btn');
+        if (!shell) return;
+
+        const entering = !this._fmState.fullscreen;
+        this._fmState.fullscreen = entering;
+        shell.classList.toggle('fm-fullscreen-active', entering);
+        document.body.classList.toggle('fm-body-fullscreen', entering);
+
+        if (btn) {
+            btn.innerHTML = entering
+                ? '<i class="fas fa-compress"></i><span>خروج</span>'
+                : '<i class="fas fa-expand"></i><span>ملء الشاشة</span>';
+            btn.title = entering ? 'الخروج من ملء الشاشة' : 'ملء الشاشة';
+        }
+
+        if (entering && shell.requestFullscreen) {
+            shell.requestFullscreen().catch(() => {});
+        } else if (!entering && document.fullscreenElement && document.exitFullscreen) {
+            document.exitFullscreen().catch(() => {});
+        }
+    },
+
+    _fmOnFullscreenChange() {
+        const shell = document.getElementById('fm-shell');
+        const isFs = !!(document.fullscreenElement && shell && document.fullscreenElement === shell);
+        if (!isFs && this._fmState.fullscreen) {
+            this._fmState.fullscreen = false;
+            shell?.classList.remove('fm-fullscreen-active');
+            document.body.classList.remove('fm-body-fullscreen');
+            const btn = document.getElementById('fm-fullscreen-btn');
+            if (btn) {
+                btn.innerHTML = '<i class="fas fa-expand"></i><span>ملء الشاشة</span>';
+                btn.title = 'ملء الشاشة';
+            }
+        }
+    },
+
+    _fmCompressCanvasDataUrl(canvas, maxWidth, quality) {
+        if (!canvas) return '';
+        const mw = maxWidth || 1400;
+        let w = canvas.width;
+        let h = canvas.height;
+        if (w > mw) {
+            h = Math.round(h * (mw / w));
+            w = mw;
+        }
+        const tmp = document.createElement('canvas');
+        tmp.width = w;
+        tmp.height = h;
+        const ctx = tmp.getContext('2d');
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, w, h);
+        ctx.drawImage(canvas, 0, 0, w, h);
+        return tmp.toDataURL('image/jpeg', quality || 0.85);
     },
 
     _bindFactoryMapEvents() {
@@ -1867,18 +2007,55 @@ const Emergency = {
                 const planId = floorSelect.value;
                 const editBtn = document.getElementById('fm-edit-floor-btn');
                 const deleteBtn = document.getElementById('fm-delete-floor-btn');
+                const viewportBar = document.getElementById('fm-viewport-bar');
+                const legendSidebar = document.getElementById('fm-legend-sidebar');
                 if (planId) {
                     this.loadMapItems(planId);
                     if (editBtn) editBtn.classList.remove('hidden');
                     if (deleteBtn) deleteBtn.classList.remove('hidden');
+                    if (viewportBar) viewportBar.classList.remove('hidden');
+                    if (legendSidebar) legendSidebar.classList.remove('hidden');
                 } else {
                     document.getElementById('fm-map-placeholder')?.classList.remove('hidden');
                     document.getElementById('fm-map-wrapper')?.classList.add('hidden');
                     if (editBtn) editBtn.classList.add('hidden');
                     if (deleteBtn) deleteBtn.classList.add('hidden');
+                    if (viewportBar) viewportBar.classList.add('hidden');
+                    if (legendSidebar) legendSidebar.classList.add('hidden');
+                    this._fmState.currentPlanId = null;
+                    this._fmState.items = [];
+                    this._fmUpdatePlanMeta();
                 }
             });
             floorSelect.dataset.fmBound = '1';
+        }
+
+        const zoomIn = document.getElementById('fm-zoom-in');
+        const zoomOut = document.getElementById('fm-zoom-out');
+        const zoomReset = document.getElementById('fm-zoom-reset');
+        const fsBtn = document.getElementById('fm-fullscreen-btn');
+        if (zoomIn && !zoomIn.dataset.fmBound) {
+            zoomIn.addEventListener('click', () => this._fmSetZoom((this._fmState.zoom || 1) + 0.15));
+            zoomIn.dataset.fmBound = '1';
+        }
+        if (zoomOut && !zoomOut.dataset.fmBound) {
+            zoomOut.addEventListener('click', () => this._fmSetZoom((this._fmState.zoom || 1) - 0.15));
+            zoomOut.dataset.fmBound = '1';
+        }
+        if (zoomReset && !zoomReset.dataset.fmBound) {
+            zoomReset.addEventListener('click', () => this._fmResetZoom());
+            zoomReset.dataset.fmBound = '1';
+        }
+        if (fsBtn && !fsBtn.dataset.fmBound) {
+            fsBtn.addEventListener('click', () => this.toggleFactoryMapFullscreen());
+            fsBtn.dataset.fmBound = '1';
+        }
+        if (!document.body.dataset.fmFsBound) {
+            document.addEventListener('fullscreenchange', () => this._fmOnFullscreenChange());
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape' && this._fmState.fullscreen) this.toggleFactoryMapFullscreen();
+            });
+            document.body.dataset.fmFsBound = '1';
         }
         if (adminToggle && !adminToggle.dataset.fmBound) {
             adminToggle.addEventListener('click', () => this.toggleAdminMode());
@@ -1928,18 +2105,36 @@ const Emergency = {
         });
     },
 
-    loadFloorPlans() {
+    async loadFloorPlans(selectPlanId) {
         const select = document.getElementById('fm-floor-select');
-        if (!select) return;
+        if (!select) return [];
 
-        if (typeof GoogleIntegration !== 'undefined' && GoogleIntegration.sendRequest) {
-            GoogleIntegration.sendRequest({ action: 'getAllEmergencyFloorPlans', data: {} })
-                .then(resp => {
-                    const plans = Array.isArray(resp) ? resp : (resp && Array.isArray(resp.data) ? resp.data : []);
-                    this._fmState.floorPlans = plans;
-                    select.innerHTML = '<option value="">-- اختر المخطط --</option>' +
-                        plans.map(p => `<option value="${p.id}">${p.name || 'مخطط'}${p.floor ? ' - ' + p.floor : ''}</option>`).join('');
-                }).catch(() => {});
+        if (typeof GoogleIntegration === 'undefined' || !GoogleIntegration.sendRequest) {
+            return [];
+        }
+
+        try {
+            const resp = await GoogleIntegration.sendRequest({ action: 'getAllEmergencyFloorPlans', data: {} });
+            const plans = this._fmParseListResponse(resp);
+            this._fmState.floorPlans = plans;
+            select.innerHTML = '<option value="">— اختر المخطط —</option>' +
+                plans.map(p => `<option value="${Utils.escapeAttr(p.id)}">${Utils.escapeHTML(p.name || 'مخطط')}${p.floor ? ' — ' + Utils.escapeHTML(p.floor) : ''}</option>`).join('');
+
+            const targetId = selectPlanId || this._fmState.currentPlanId || '';
+            if (targetId && plans.some(p => String(p.id) === String(targetId))) {
+                select.value = targetId;
+                this.loadMapItems(targetId);
+                document.getElementById('fm-edit-floor-btn')?.classList.remove('hidden');
+                document.getElementById('fm-delete-floor-btn')?.classList.remove('hidden');
+                document.getElementById('fm-viewport-bar')?.classList.remove('hidden');
+                document.getElementById('fm-legend-sidebar')?.classList.remove('hidden');
+            }
+            return plans;
+        } catch (_e) {
+            if (typeof Notification !== 'undefined' && Notification.error) {
+                Notification.error('تعذر تحميل مخططات الطوارئ');
+            }
+            return [];
         }
     },
 
@@ -2243,20 +2438,49 @@ const Emergency = {
         e.preventDefault();
         const editId = document.getElementById('fm-floor-edit-id')?.value;
         const name = document.getElementById('fm-floor-name')?.value?.trim();
+        const modal = document.getElementById('fm-floor-modal');
+        const submitBtn = modal?.querySelector('button[type="submit"]');
         if (!name) { if (typeof Notification !== 'undefined' && Notification.error) Notification.error('اسم المخطط مطلوب'); return false; }
 
         let imageDriveId = document.getElementById('fm-floor-image')?.value?.trim() || '';
         const drawPane = document.getElementById('fm-source-draw');
-        if (drawPane && drawPane.style.display !== 'none') {
+        const uploadPane = document.getElementById('fm-source-upload');
+        const isDrawMode = drawPane && drawPane.style.display !== 'none';
+        const isUploadMode = uploadPane && uploadPane.style.display !== 'none';
+
+        if (isDrawMode) {
             const canvas = document.getElementById('fm-sketch-canvas');
             if (canvas) {
                 const ctx = canvas.getContext('2d');
                 const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
                 const hasContent = imageData.data.some(ch => ch !== 0);
                 if (hasContent) {
-                    imageDriveId = canvas.toDataURL('image/png');
+                    imageDriveId = this._fmCompressCanvasDataUrl(canvas, 1400, 0.85);
                 }
             }
+        } else if (isUploadMode && imageDriveId && imageDriveId.startsWith('data:image')) {
+            const img = document.getElementById('fm-upload-img');
+            if (img && img.complete && img.naturalWidth) {
+                const tmp = document.createElement('canvas');
+                tmp.width = img.naturalWidth;
+                tmp.height = img.naturalHeight;
+                const tctx = tmp.getContext('2d');
+                tctx.drawImage(img, 0, 0);
+                imageDriveId = this._fmCompressCanvasDataUrl(tmp, 1600, 0.85);
+            }
+        }
+
+        if (!imageDriveId && editId) {
+            const existingPlan = this._fmState.floorPlans.find(p => String(p.id) === String(editId));
+            if (existingPlan?.imageDriveId) imageDriveId = existingPlan.imageDriveId;
+        }
+
+        if (!editId && !imageDriveId) {
+            if (typeof Notification !== 'undefined' && Notification.error) {
+                Notification.error('يرجى رسم المخطط أو رفع صورة قبل الحفظ');
+            }
+            if (submitBtn) { submitBtn.disabled = false; submitBtn.innerHTML = '<i class="fas fa-save ml-2"></i>إضافة المخطط'; }
+            return false;
         }
 
         const data = {
@@ -2269,8 +2493,6 @@ const Emergency = {
             isActive: 'true'
         };
 
-        const modal = document.getElementById('fm-floor-modal');
-        const submitBtn = modal?.querySelector('button[type="submit"]');
         if (submitBtn) { submitBtn.disabled = true; submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin ml-2"></i>جاري الحفظ...'; }
 
         try {
@@ -2280,16 +2502,18 @@ const Emergency = {
                 return false;
             }
 
+            let savedPlanId = editId || '';
             if (editId) {
                 const resp = await GoogleIntegration.sendRequest({ action: 'updateEmergencyFloorPlan', data: { planId: editId, updateData: data } });
                 if (resp && resp.success === false) throw new Error(resp.message || 'فشل التحديث');
             } else {
                 const resp = await GoogleIntegration.sendRequest({ action: 'addEmergencyFloorPlan', data });
                 if (resp && resp.success === false) throw new Error(resp.message || 'فشل الإضافة');
+                savedPlanId = resp?.data?.id || resp?.id || savedPlanId;
             }
             if (typeof Notification !== 'undefined' && Notification.success) Notification.success(editId ? 'تم تحديث المخطط' : 'تم إضافة المخطط');
             if (modal) modal.remove();
-            this.loadFloorPlans();
+            await this.loadFloorPlans(savedPlanId);
         } catch (err) {
             const msg = err?.message || 'خطأ غير معروف';
             if (typeof Notification !== 'undefined' && Notification.error) Notification.error('فشل الحفظ: ' + msg);
@@ -2306,6 +2530,9 @@ const Emergency = {
 
         document.getElementById('fm-map-placeholder')?.classList.add('hidden');
         document.getElementById('fm-map-wrapper')?.classList.remove('hidden');
+        document.getElementById('fm-viewport-bar')?.classList.remove('hidden');
+        document.getElementById('fm-legend-sidebar')?.classList.remove('hidden');
+        this._fmResetZoom();
 
         const mapCanvas = document.getElementById('fm-map-canvas');
         const mapImage = document.getElementById('fm-map-image');
@@ -2324,12 +2551,16 @@ const Emergency = {
         if (typeof GoogleIntegration !== 'undefined' && GoogleIntegration.sendRequest) {
             GoogleIntegration.sendRequest({ action: 'getAllEmergencyMapItems', data: { filters: { floorPlanId: planId } } })
                 .then(resp => {
-                    const items = Array.isArray(resp) ? resp : (resp && Array.isArray(resp.data) ? resp.data : []);
-                    this._fmState.items = items;
+                    this._fmState.items = this._fmParseListResponse(resp);
                     this.renderMapItems();
                     this._renderLegend();
-                }).catch(() => {});
+                    this._fmUpdatePlanMeta();
+                }).catch(() => {
+                    this._fmState.items = [];
+                    this._fmUpdatePlanMeta();
+                });
         }
+        this._fmUpdatePlanMeta();
     },
 
     renderMapItems() {
@@ -2346,7 +2577,7 @@ const Emergency = {
             el.style.left = (parseFloat(item.x) * 100) + '%';
             el.style.top = (parseFloat(item.y) * 100) + '%';
             el.style.background = typeDef.color;
-            el.innerHTML = `<i class="fas ${typeDef.icon}"></i>`;
+            el.innerHTML = `<i class="fas ${Utils.escapeAttr(typeDef.icon)}"></i>`;
 
             el.addEventListener('click', (e) => {
                 e.stopPropagation();
@@ -2359,6 +2590,7 @@ const Emergency = {
 
             layer.appendChild(el);
         });
+        this._fmUpdatePlanMeta();
     },
 
     _showMapItemTooltip(item, el) {
@@ -2370,15 +2602,15 @@ const Emergency = {
         tip.id = 'fm-tooltip';
         tip.className = 'fm-tooltip';
         tip.innerHTML = `
-            <div class="fm-tip-header" style="background:${typeDef.color};">
-                <i class="fas ${typeDef.icon}"></i> ${typeDef.label}
+            <div class="fm-tip-header" style="background:${Utils.escapeAttr(typeDef.color)};">
+                <i class="fas ${Utils.escapeAttr(typeDef.icon)}"></i> ${Utils.escapeHTML(typeDef.label)}
             </div>
             <div class="fm-tip-body">
-                <p><strong>${item.label || '—'}</strong></p>
-                <p>الحالة: ${item.status === 'maintenance' ? 'صيانة' : item.status === 'inactive' ? 'غير فعال' : 'فعال'}</p>
-                ${item.notes ? `<p>${item.notes}</p>` : ''}
+                <p><strong>${Utils.escapeHTML(item.label || '—')}</strong></p>
+                <p>الحالة: ${Utils.escapeHTML(item.status === 'maintenance' ? 'صيانة' : item.status === 'inactive' ? 'غير فعال' : 'فعال')}</p>
+                ${item.notes ? `<p>${Utils.escapeHTML(item.notes)}</p>` : ''}
                 <div class="fm-tip-actions">
-                    ${this._fmState.adminMode ? `<button class="btn-icon btn-sm text-red-600" onclick="Emergency.deleteMapItem('${item.id}')" title="حذف"><i class="fas fa-trash"></i></button>` : ''}
+                    ${this._fmState.adminMode ? `<button class="btn-icon btn-sm text-red-600" onclick="Emergency.deleteMapItem('${Utils.escapeAttr(item.id)}')" title="حذف"><i class="fas fa-trash"></i></button>` : ''}
                 </div>
             </div>`;
         document.body.appendChild(tip);
@@ -2525,7 +2757,10 @@ const Emergency = {
             document.getElementById('fm-map-wrapper')?.classList.add('hidden');
             document.getElementById('fm-edit-floor-btn')?.classList.add('hidden');
             document.getElementById('fm-delete-floor-btn')?.classList.add('hidden');
+            document.getElementById('fm-viewport-bar')?.classList.add('hidden');
+            document.getElementById('fm-legend-sidebar')?.classList.add('hidden');
             this._fmState.currentPlanId = null;
+            this._fmUpdatePlanMeta();
         }).catch(err => {
             Loading.hide();
             if (typeof Notification !== 'undefined' && Notification.error) Notification.error('فشل الحذف: ' + (err?.message || 'خطأ غير معروف'));
