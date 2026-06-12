@@ -2159,11 +2159,13 @@ const Emergency = {
     },
 
     showFloorPlanForm(editId) {
+        try {
         if (this._fmState.fullscreen) {
             this.toggleFactoryMapFullscreen();
         }
         const existing = this._fmState.floorPlans.find(p => p.id === editId);
         const val = (f, def) => (existing && existing[f] != null) ? existing[f] : (def || '');
+        const escAttr = (v) => (typeof Utils !== 'undefined' && Utils.escapeAttr) ? Utils.escapeAttr(v) : String(v ?? '');
         const floors = ['الطابق الأرضي', 'الطابق الأول', 'الطابق الثاني', 'الطابق الثالث', 'سطح المبنى', 'مبنى آخر'];
         const floorOpts = floors.map(f => `<option value="${f}" ${val('floor') === f ? 'selected' : ''}>${f}</option>`).join('');
         const hasExistingImage = !!(val('imageDriveId'));
@@ -2176,12 +2178,12 @@ const Emergency = {
                         <button type="button" class="modal-close" id="fm-floor-modal-close" aria-label="إغلاق"><i class="fas fa-times"></i></button>
                     </div>
                     <form id="fm-floor-form" class="fm-floor-form-flex" onsubmit="return Emergency.handleFloorPlanSubmit(event)">
-                        <input type="hidden" id="fm-floor-edit-id" value="${editId || ''}">
+                        <input type="hidden" id="fm-floor-edit-id" value="${escAttr(editId || '')}">
                         <div class="fm-modal-body-scroll modal-body">
                             <div class="fm-form-row">
                                 <div class="form-group" style="flex:1;">
                                     <label class="form-label">اسم المخطط <span class="text-red-500">*</span></label>
-                                    <input type="text" id="fm-floor-name" class="form-input" value="${val('name')}" required placeholder="مثال: مخطط الطابق الأرضي" autofocus>
+                                    <input type="text" id="fm-floor-name" class="form-input" value="${escAttr(val('name'))}" required placeholder="مثال: مخطط الطابق الأرضي" autofocus>
                                 </div>
                                 <div class="form-group" style="flex:0 0 140px;">
                                     <label class="form-label">الطابق</label>
@@ -2189,7 +2191,7 @@ const Emergency = {
                                 </div>
                                 <div class="form-group" style="flex:0 0 80px;">
                                     <label class="form-label">الترتيب</label>
-                                    <input type="number" id="fm-floor-sort" class="form-input" value="${val('sortOrder', '1')}" min="0">
+                                    <input type="number" id="fm-floor-sort" class="form-input" value="${escAttr(val('sortOrder', '1'))}" min="0">
                                 </div>
                             </div>
                             <div class="form-group" style="margin-top:12px;">
@@ -2249,18 +2251,18 @@ const Emergency = {
                                             <button type="button" class="btn-icon btn-sm" onclick="Emergency._fmRemoveUploadedImage()" title="إزالة"><i class="fas fa-times"></i></button>
                                         </div>
                                     </div>
-                                    <input type="hidden" id="fm-floor-image" value="${val('imageDriveId')}">
+                                    <input type="hidden" id="fm-floor-image" value="${escAttr(val('imageDriveId'))}">
                                     <p class="fm-field-hint" id="fm-upload-hint">${val('imageDriveId') ? 'الصورة موجودة مسبقاً.' : 'اختر صورة من جهازك لعرضها كخلفية للمخطط.'}</p>
                                 </div>
                             </div>
                             <div class="fm-form-row" style="margin-top:10px;">
                                 <div class="form-group" style="flex:1;">
                                     <label class="form-label">العرض (px)</label>
-                                    <input type="number" id="fm-floor-width" class="form-input" value="${val('imageWidth', 1200)}" min="100">
+                                    <input type="number" id="fm-floor-width" class="form-input" value="${escAttr(val('imageWidth', 1200))}" min="100">
                                 </div>
                                 <div class="form-group" style="flex:1;">
                                     <label class="form-label">الارتفاع (px)</label>
-                                    <input type="number" id="fm-floor-height" class="form-input" value="${val('imageHeight', 800)}" min="100">
+                                    <input type="number" id="fm-floor-height" class="form-input" value="${escAttr(val('imageHeight', 800))}" min="100">
                                 </div>
                             </div>
                         </div>
@@ -2277,6 +2279,16 @@ const Emergency = {
         this._fmBindFloorPlanModal();
         this._fmInitCanvas();
         this._fmInitUpload();
+        } catch (err) {
+            if (typeof Utils !== 'undefined' && Utils.safeError) {
+                Utils.safeError('فشل فتح نموذج المخطط:', err);
+            } else {
+                console.error('فشل فتح نموذج المخطط:', err);
+            }
+            if (typeof Notification !== 'undefined' && Notification.error) {
+                Notification.error('تعذر فتح نموذج إضافة المخطط');
+            }
+        }
     },
 
     _fmBindFloorPlanModal() {
