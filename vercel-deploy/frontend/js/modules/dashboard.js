@@ -2064,7 +2064,7 @@ const Dashboard = {
             employeeIdentifiers: Array.from(employeeIdentifiers), // ✅ حفظ جميع المعرفات للتحقق
             violations,
             sickLeave,
-            training: reportTraining,
+            training,
             ppe,
             behaviorMonitoring,
             clinicVisits,
@@ -2072,13 +2072,28 @@ const Dashboard = {
         };
     },
 
+    employeeReportMatchesSearchCode(report, searchCode) {
+        if (!report || searchCode == null || searchCode === '') return false;
+        const code = String(searchCode).trim();
+        if (!code) return false;
+        if (String(report.employeeCode || '').trim() === code) return true;
+        if (Array.isArray(report.employeeIdentifiers)) {
+            const codeLower = code.toLowerCase();
+            if (report.employeeIdentifiers.includes(code) || report.employeeIdentifiers.includes(codeLower)) return true;
+            const num = Number(code);
+            if (!isNaN(num) && isFinite(num) && report.employeeIdentifiers.includes(String(num))) return true;
+        }
+        return false;
+    },
+
     /**
      * تصدير تقرير الموظف كـ PDF
      */
     async exportEmployeeReportPDF(employeeCode) {
-        if (!window.currentEmployeeReport || window.currentEmployeeReport.employeeCode !== employeeCode) {
-            this.generateEmployeeReport(employeeCode);
-            await new Promise(resolve => setTimeout(resolve, 500));
+        const codeTrimmed = String(employeeCode || '').trim();
+        const existing = window.currentEmployeeReport;
+        if (!existing || !this.employeeReportMatchesSearchCode(existing, codeTrimmed)) {
+            await this.generateEmployeeReport(codeTrimmed);
         }
 
         const report = window.currentEmployeeReport;
