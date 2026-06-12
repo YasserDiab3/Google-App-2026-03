@@ -291,7 +291,7 @@ const Emergency = {
                                         <div class="fm-viewport" id="fm-viewport">
                                             <div class="fm-viewport-inner" id="fm-viewport-inner">
                                                 <div class="fm-map-canvas" id="fm-map-canvas">
-                                                    <img id="fm-map-image" class="fm-map-image" src="" alt="مخطط الطابق">
+                                                    <img id="fm-map-image" class="fm-map-image" data-fm-map-image="1" src="" alt="مخطط الطابق">
                                                     <div id="fm-map-items-layer" class="fm-map-items-layer"></div>
                                                 </div>
                                             </div>
@@ -1886,7 +1886,8 @@ const Emergency = {
         zoom: 1,
         fullscreen: false,
         pendingDeepLink: null,
-        customStampImages: {}
+        customStampImages: {},
+        planImageCache: {}
     },
 
     _fmStampRadius: 24,
@@ -2053,6 +2054,7 @@ const Emergency = {
                 }
             }
             localStorage.removeItem('hse_local_getAllEmergencyFloorPlans');
+            this._fmState.planImageCache = {};
         } catch (_e) { /* ignore */ }
     },
 
@@ -2801,6 +2803,127 @@ const Emergency = {
         });
     },
 
+    _fmGetExportBranding() {
+        return {
+            companyName: String(AppState?.companySettings?.name || AppState?.companyName || '').trim(),
+            logoUrl: String(AppState?.companyLogo || AppState?.companySettings?.logo || '').trim(),
+            formVersion: String(AppState?.companySettings?.formVersion || '').trim()
+        };
+    },
+
+    _fmLoadImageElement(src) {
+        return new Promise((resolve) => {
+            if (!src) { resolve(null); return; }
+            const img = new Image();
+            img.crossOrigin = 'anonymous';
+            img.onload = () => resolve(img);
+            img.onerror = () => resolve(null);
+            img.src = src;
+        });
+    },
+
+    async _fmFetchPlanImageDataUrl(imageRef, planId) {
+        const ref = String(imageRef || '').trim();
+        if (!ref) return '';
+        const cacheKey = String(planId || ref);
+        if (this._fmState.planImageCache?.[cacheKey]) {
+            return this._fmState.planImageCache[cacheKey];
+        }
+        if (ref.startsWith('data:')) {
+            this._fmState.planImageCache[cacheKey] = ref;
+            return ref;
+        }
+
+        if (typeof GoogleIntegration !== 'undefined' && GoogleIntegration.sendRequest) {
+            try {
+                const resp = await GoogleIntegration.sendRequest({
+                    action: 'getDriveImageDataUrl',
+                    data: { fileIdOrUrl: ref }
+                });
+                if (resp?.success && resp.dataUrl) {
+                    this._fmState.planImageCache[cacheKey] = resp.dataUrl;
+                    return resp.dataUrl;
+                }
+            } catch (_e) { /* ignore */ }
+        }
+
+        const candidates = this._fmBuildPlanImageFallbacks_(ref);
+        for (let i = 0; i < candidates.length; i++) {
+            const img = await this._fmLoadImageElement(candidates[i]);
+            if (!img) continue;
+            try {
+                const tmp = document.createElement('canvas');
+                tmp.width = img.naturalWidth || 1200;
+                tmp.height = img.naturalHeight || 800;
+                const tctx = tmp.getContext('2d');
+                tctx.drawImage(img, 0, 0);
+                const dataUrl = tmp.toDataURL('image/jpeg', 0.9);
+                this._fmState.planImageCache[cacheKey] = dataUrl;
+                return dataUrl;
+            } catch (_e) {
+                this._fmState.planImageCache[cacheKey] = candidates[i];
+                return candidates[i];
+            }
+        }
+        return '';
+    },
+
+    async _fmDrawExportHeader(ctx, totalW, headerH, plan, logoImg) {
+        const brand = this._fmGetExportBranding();
+        const grad = ctx.createLinearGradient(0, 0, totalW, 0);
+        grad.addColorStop(0, '#1e3a5f');
+        grad.addColorStop(1, '#1d4ed8');
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, 0, totalW, headerH);
+        ctx.fillStyle = '#dc2626';
+        ctx.fillRect(0, headerH - 4, totalW, 4);
+
+        if (logoImg) {
+            const logoH = Math.min(52, headerH - 20);
+            const logoW = Math.min(130, logoH * 2.2);
+            ctx.drawImage(logoImg, 16, (headerH - logoH) / 2, logoW, logoH);
+        }
+
+        ctx.fillStyle = '#ffffff';
+        ctx.textAlign = 'center';
+        ctx.font = 'bold 20px Tahoma, Arial, sans-serif';
+        ctx.fillText('خريطة المصنع التفاعلية — استجابة الطوارئ', totalW / 2, 30);
+        ctx.font = '13px Tahoma, Arial, sans-serif';
+        const placeLabel = plan?.subLocationName || plan?.floor || '';
+        const subTitle = `${plan?.name || 'مخطط'}${plan?.factoryName ? ' · ' + plan.factoryName : ''}${placeLabel ? ' — ' + placeLabel : ''}`;
+        ctx.fillText(subTitle, totalW / 2, 52);
+        ctx.textAlign = 'right';
+        ctx.font = '11px Tahoma, Arial, sans-serif';
+        if (brand.companyName) ctx.fillText(brand.companyName, totalW - 16, headerH - 16);
+        ctx.textAlign = 'left';
+        ctx.fillText(new Date().toLocaleDateString('ar-EG'), 16, headerH - 16);
+    },
+
+    _fmDrawExportFooter(ctx, totalW, footerTop, footerH) {
+        const brand = this._fmGetExportBranding();
+        ctx.fillStyle = '#f8fafc';
+        ctx.fillRect(0, footerTop, totalW, footerH);
+        ctx.strokeStyle = '#cbd5e1';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(0, footerTop);
+        ctx.lineTo(totalW, footerTop);
+        ctx.stroke();
+        ctx.fillStyle = '#475569';
+        ctx.font = '11px Tahoma, Arial, sans-serif';
+        ctx.textAlign = 'right';
+        ctx.fillText('نظام إدارة السلامة والصحة المهنية — خريطة طوارئ تفاعلية', totalW - 16, footerTop + 20);
+        ctx.fillStyle = '#1d4ed8';
+        ctx.font = 'bold 11px Tahoma, Arial, sans-serif';
+        ctx.fillText(brand.companyName || 'HSE Management System', totalW - 16, footerTop + 36);
+        ctx.textAlign = 'left';
+        ctx.fillStyle = '#94a3b8';
+        ctx.font = '10px Tahoma, Arial, sans-serif';
+        ctx.fillText(`تاريخ التصدير: ${new Date().toLocaleString('ar-EG')}`, 16, footerTop + 20);
+        if (brand.formVersion) ctx.fillText(`إصدار النموذج: ${brand.formVersion}`, 16, footerTop + 34);
+        ctx.fillText('سري — للاستخدام الداخلي', 16, footerTop + 46);
+    },
+
     _fmExtractDriveFileId_(imageRef) {
         const raw = String(imageRef || '').trim();
         if (!raw) return '';
@@ -2890,36 +3013,32 @@ const Emergency = {
         return candidates.filter((url, idx, arr) => url && arr.indexOf(url) === idx);
     },
 
-    _fmApplyMapImageSrc(mapImage, imageRef) {
+    async _fmApplyMapImageSrc(mapImage, imageRef, planId) {
         if (!mapImage) return;
+        mapImage.setAttribute('data-fm-map-image', '1');
         this._fmClearMapImageError(mapImage);
-        const fallbacks = this._fmBuildPlanImageFallbacks_(imageRef);
-        if (!fallbacks.length) {
+        if (!imageRef) {
             mapImage.removeAttribute('src');
             mapImage.alt = 'لا توجد صورة للمخطط';
             this._fmShowMapImageError(mapImage);
             return;
         }
-        mapImage.alt = 'مخطط الطابق';
-        let step = 0;
-        const tryNext = () => {
-            if (step >= fallbacks.length) {
-                this._fmFetchDriveImageViaProxy(mapImage, imageRef);
-                return;
-            }
-            const nextSrc = fallbacks[step++];
-            mapImage.removeAttribute('data-drive-thumbnail-handled');
-            mapImage.onerror = () => {
-                mapImage.onerror = null;
-                tryNext();
-            };
-            mapImage.onload = () => {
-                mapImage.onerror = null;
-                this._fmClearMapImageError(mapImage);
-            };
-            mapImage.src = nextSrc;
+        mapImage.alt = 'جاري تحميل المخطط...';
+        const dataUrl = await this._fmFetchPlanImageDataUrl(imageRef, planId);
+        if (!dataUrl) {
+            this._fmShowMapImageError(mapImage);
+            return;
+        }
+        mapImage.onload = () => {
+            mapImage.onerror = null;
+            mapImage.alt = 'مخطط الطابق';
+            this._fmClearMapImageError(mapImage);
         };
-        tryNext();
+        mapImage.onerror = () => {
+            mapImage.onerror = null;
+            this._fmShowMapImageError(mapImage);
+        };
+        mapImage.src = dataUrl;
     },
 
     async _fmUploadFloorPlanImageToDrive(imageData, planName) {
@@ -2994,55 +3113,72 @@ const Emergency = {
             if (typeof Notification !== 'undefined' && Notification.warning) Notification.warning('اختر مخططاً أولاً');
             return;
         }
-        const w = parseInt(plan.imageWidth, 10) || 1200;
-        const h = parseInt(plan.imageHeight, 10) || 800;
+        const mapW = parseInt(plan.imageWidth, 10) || 1200;
+        const mapH = parseInt(plan.imageHeight, 10) || 800;
+        const headerH = 80;
+        const footerH = 48;
+        const totalW = mapW;
+        const totalH = headerH + mapH + footerH;
+        const mapTop = headerH;
+
         const tmp = document.createElement('canvas');
-        tmp.width = w;
-        tmp.height = h;
+        tmp.width = totalW;
+        tmp.height = totalH;
         const ctx = tmp.getContext('2d');
         ctx.fillStyle = '#ffffff';
-        ctx.fillRect(0, 0, w, h);
+        ctx.fillRect(0, 0, totalW, totalH);
 
-        const imgSrc = this._fmResolvePlanImageSrc(plan.imageDriveId || '');
+        const brand = this._fmGetExportBranding();
+        let logoImg = null;
+        if (brand.logoUrl) {
+            const logoSrc = brand.logoUrl.startsWith('data:')
+                ? brand.logoUrl
+                : (await this._fmFetchPlanImageDataUrl(brand.logoUrl, 'logo_' + brand.logoUrl.slice(0, 24)));
+            logoImg = await this._fmLoadImageElement(logoSrc || brand.logoUrl);
+        }
+        await this._fmDrawExportHeader(ctx, totalW, headerH, plan, logoImg);
 
-        const drawMarkers = () => {
-            (this._fmState.items || []).forEach(item => {
-                const def = this.FM_ITEM_TYPES[item.itemType] || { color: '#64748b', label: item.itemType };
-                const x = parseFloat(item.x) * w;
-                const y = parseFloat(item.y) * h;
-                this._fmDrawStampOnCanvas(ctx, item.itemType, x, y);
-            });
-            const qrUrl = this._fmBuildMapQrUrl(plan);
-            if (qrUrl && typeof QRCode !== 'undefined' && QRCode.generate) {
-                const qrImg = new Image();
-                qrImg.onload = () => {
-                    const pad = 12;
-                    const qrSize = 110;
-                    ctx.fillStyle = 'rgba(255,255,255,0.95)';
-                    ctx.fillRect(w - qrSize - pad * 2, h - qrSize - pad * 2 - 18, qrSize + pad * 2, qrSize + pad * 2 + 18);
-                    ctx.drawImage(qrImg, w - qrSize - pad, h - qrSize - pad - 18, qrSize, qrSize);
-                    ctx.fillStyle = '#0f172a';
-                    ctx.font = 'bold 11px Tahoma, Arial, sans-serif';
-                    ctx.textAlign = 'center';
-                    ctx.fillText('استجابة طوارئ', w - qrSize / 2 - pad, h - pad - 4);
-                    this._fmDownloadCanvasPng(tmp, (plan.name || 'خريطة') + '.png');
-                };
-                qrImg.onerror = () => this._fmDownloadCanvasPng(tmp, (plan.name || 'خريطة') + '.png');
-                qrImg.src = QRCode.generate(qrUrl, 110);
+        const imageDataUrl = await this._fmFetchPlanImageDataUrl(plan.imageDriveId || '', plan.id);
+        if (imageDataUrl) {
+            const bg = await this._fmLoadImageElement(imageDataUrl);
+            if (bg) {
+                ctx.drawImage(bg, 0, mapTop, mapW, mapH);
             } else {
-                this._fmDownloadCanvasPng(tmp, (plan.name || 'خريطة') + '.png');
+                ctx.fillStyle = '#ffffff';
+                ctx.fillRect(0, mapTop, mapW, mapH);
             }
+        } else {
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, mapTop, mapW, mapH);
+        }
+
+        const finishExport = () => {
+            this._fmDrawExportFooter(ctx, totalW, mapTop + mapH, footerH);
+            this._fmDownloadCanvasPng(tmp, (plan.name || 'خريطة') + '.png');
         };
 
-        if (!imgSrc) {
-            drawMarkers();
-            return;
+        (this._fmState.items || []).forEach(item => {
+            const x = parseFloat(item.x) * mapW;
+            const y = parseFloat(item.y) * mapH + mapTop;
+            this._fmDrawStampOnCanvas(ctx, item.itemType, x, y);
+        });
+
+        const qrUrl = this._fmBuildMapQrUrl(plan);
+        if (qrUrl && typeof QRCode !== 'undefined' && QRCode.generate) {
+            const qrImg = await this._fmLoadImageElement(QRCode.generate(qrUrl, 110));
+            if (qrImg) {
+                const pad = 12;
+                const qrSize = 110;
+                ctx.fillStyle = 'rgba(255,255,255,0.95)';
+                ctx.fillRect(mapW - qrSize - pad * 2, mapTop + mapH - qrSize - pad * 2 - 18, qrSize + pad * 2, qrSize + pad * 2 + 18);
+                ctx.drawImage(qrImg, mapW - qrSize - pad, mapTop + mapH - qrSize - pad - 18, qrSize, qrSize);
+                ctx.fillStyle = '#0f172a';
+                ctx.font = 'bold 11px Tahoma, Arial, sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText('استجابة طوارئ', mapW - qrSize / 2 - pad, mapTop + mapH - pad - 4);
+            }
         }
-        const bg = new Image();
-        bg.crossOrigin = 'anonymous';
-        bg.onload = () => { ctx.drawImage(bg, 0, 0, w, h); drawMarkers(); };
-        bg.onerror = () => drawMarkers();
-        bg.src = imgSrc;
+        finishExport();
     },
 
     _fmDownloadCanvasPng(canvas, filename) {
@@ -4053,7 +4189,7 @@ const Emergency = {
 
         const mapCanvas = document.getElementById('fm-map-canvas');
         const mapImage = document.getElementById('fm-map-image');
-        this._fmApplyMapImageSrc(mapImage, plan.imageDriveId || '');
+        this._fmApplyMapImageSrc(mapImage, plan.imageDriveId || '', plan.id);
         if (mapImage) {
             mapImage.style.width = (plan.imageWidth || 1200) + 'px';
             mapImage.style.height = (plan.imageHeight || 800) + 'px';

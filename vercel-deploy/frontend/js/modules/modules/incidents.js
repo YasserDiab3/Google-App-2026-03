@@ -3476,10 +3476,9 @@ const Incidents = {
             });
 
             const pendingApprovals = incidents.filter(incident => {
-                // الحوادث التي تحتاج موافقة (مفتوحة أو قيد التحقيق أو تحتاج موافقة)
-                return incident.status === 'مفتوح' || 
-                       incident.status === 'قيد التحقيق' || 
-                       incident.requiresApproval === true;
+                if (incident.requiresApproval === true) return true;
+                if (incident.status === 'في انتظار الموافقة') return true;
+                return false;
             });
 
             return `
@@ -3566,6 +3565,13 @@ const Incidents = {
                                                         </button>
                                                     `}
                                                     ${incident.requiresApproval && this.canApproveIncident() ? `
+                                                        <button 
+                                                            onclick="Incidents.showIncidentApprovalFlow('${incident.id}')" 
+                                                            class="btn-icon btn-icon-warning" 
+                                                            title="دائرة الموافقة"
+                                                        >
+                                                            <i class="fas fa-project-diagram"></i>
+                                                        </button>
                                                         <button 
                                                             onclick="Incidents.approveIncident('${incident.id}')" 
                                                             class="btn-icon btn-icon-success" 
@@ -8149,6 +8155,7 @@ const Incidents = {
                     </button>
                 </div>
                 <div class="modal-body">
+                    ${this.renderApprovalFlowHtml(incident)}
                     <div class="space-y-4">
                         <div class="grid grid-cols-2 gap-4">
                             <div>
@@ -8248,7 +8255,10 @@ const Incidents = {
                     <button class="btn-secondary" onclick="Incidents.exportPDF('${incident.id}');">
                         <i class="fas fa-file-pdf ml-2"></i>تصدير PDF
                     </button>
-                    ${incident.requiresApproval && incident.investigation && this.canApproveIncident() ? `
+                    ${incident.requiresApproval && this.hasInvestigationData(incident) && this.canApproveIncident() ? `
+                    <button class="btn-danger" onclick="Incidents.rejectIncident('${incident.id}'); this.closest('.modal-overlay').remove();">
+                        <i class="fas fa-times ml-2"></i>رفض التحقيق
+                    </button>
                     <button class="btn-success" onclick="Incidents.approveIncident('${incident.id}'); this.closest('.modal-overlay').remove();">
                         <i class="fas fa-check ml-2"></i>اعتماد التحقيق
                     </button>
@@ -10317,11 +10327,7 @@ const Incidents = {
                 incident.updatedAt = new Date().toISOString();
 
                 // التحقق من صلاحيات المستخدم
-                const isAdmin = AppState.currentUser?.role === 'admin' ||
-                    (AppState.currentUser?.permissions && (
-                        AppState.currentUser.permissions.admin === true ||
-                        AppState.currentUser.permissions['manage-modules'] === true
-                    ));
+                const isAdmin = this.isAdmin();
 
                 // التحقق من صلاحية مسئول السلامة
                 const isSafetyOfficer = AppState.currentUser?.role === 'safety_officer' ||
@@ -10329,13 +10335,12 @@ const Incidents = {
                         AppState.currentUser.permissions['incidents-complete-investigation'] === true);
 
                 // تحديث حالة الحادث:
-                // - إذا كان مدير النظام: يبقى "قيد التحقيق" أو الحالة الحالية
-                // - إذا كان مسئول السلامة: يبقى "قيد التحقيق" (حالة تحتاج موافقة)
+                // - إذا كان مسئول السلامة: يحتاج موافقة مدير النظام
                 if (!isAdmin && isSafetyOfficer) {
-                    // مسئول السلامة: الحادث يحتاج موافقة مدير النظام
-                    incident.status = 'قيد التحقيق';
+                    incident.status = 'في انتظار الموافقة';
                     incident.requiresApproval = true;
                     incident.approvedBy = null;
+                    incident.approvedAt = null;
                 } else if (isAdmin) {
                     // مدير النظام: يمكنه الموافقة مباشرة
                     if (incident.status !== 'قيد التحقيق' && incident.status !== 'مغلق') {
@@ -10992,13 +10997,122 @@ const Incidents = {
     },
 
     canApproveIncident() {
-        const user = AppState.currentUser;
-        if (!user) return false;
-        // مدير النظام فقط يمكنه الموافقة
-        if (user.role === 'admin') return true;
-        return user.permissions?.admin === true || 
-               user.permissions?.['manage-modules'] === true ||
-               user.permissions?.['incidents-manage'] === true;
+        return this.isAdmin() || this.canDeleteIncident();
+    },
+
+    hasInvestigationData(incident) {
+        if (!incident || !incident.investigation) return false;
+        let inv = incident.investigation;
+        if (typeof inv === 'string') {
+            try { inv = JSON.parse(inv); } catch (_e) { return false; }
+        }
+        return inv && typeof inv === 'object' && Object.keys(inv).length > 0;
+    },
+
+    renderApprovalFlowHtml(incident) {
+        const esc = (v) => Utils.escapeHTML(String(v ?? ''));
+        const hasInvestigation = this.hasInvestigationData(incident);
+        const awaitingApproval = incident.requiresApproval === true;
+        const approved = !awaitingApproval && !!(incident.approvedAt || incident.approvedBy);
+        const rejected = !!(incident.rejectedAt || incident.rejectionReason);
+
+        const stepState = (done, active, rejectedStep = false) => {
+            if (rejectedStep) return { bg: '#FEE2E2', border: '#F87171', color: '#991B1B', icon: 'fa-times' };
+            if (done) return { bg: '#DCFCE7', border: '#4ADE80', color: '#166534', icon: 'fa-check' };
+            if (active) return { bg: '#FEF3C7', border: '#FBBF24', color: '#92400E', icon: 'fa-clock' };
+            return { bg: '#F1F5F9', border: '#CBD5E1', color: '#64748B', icon: 'fa-circle' };
+        };
+
+        const steps = [
+            { label: 'تسجيل الحادث', done: true, active: false },
+            { label: 'إكمال التحقيق', done: hasInvestigation, active: !hasInvestigation && !approved },
+            {
+                label: rejected ? 'مرفوض' : (approved ? 'معتمد' : 'اعتماد المدير'),
+                done: approved,
+                active: awaitingApproval && hasInvestigation,
+                rejected: rejected && !approved
+            }
+        ];
+
+        const circles = steps.map((step, index) => {
+            const st = stepState(step.done, step.active, step.rejected);
+            const connector = index < steps.length - 1
+                ? `<div style="flex:1;height:3px;margin:0 8px;background:${step.done ? '#4ADE80' : '#CBD5E1'};align-self:center;border-radius:2px;"></div>`
+                : '';
+            return `
+                <div style="display:flex;align-items:center;flex:1;min-width:0;">
+                    <div style="display:flex;flex-direction:column;align-items:center;gap:8px;min-width:88px;">
+                        <div style="width:52px;height:52px;border-radius:50%;background:${st.bg};border:3px solid ${st.border};color:${st.color};display:flex;align-items:center;justify-content:center;font-size:18px;box-shadow:0 4px 12px rgba(15,23,42,0.08);">
+                            <i class="fas ${st.icon}"></i>
+                        </div>
+                        <div style="font-size:12px;font-weight:700;color:${st.color};text-align:center;line-height:1.4;">${esc(step.label)}</div>
+                    </div>
+                    ${connector}
+                </div>`;
+        }).join('');
+
+        const meta = [];
+        if (incident.approvedBy?.name) meta.push(`اعتمد: ${esc(incident.approvedBy.name)}${incident.approvedAt ? ' — ' + esc(Utils.formatDate(incident.approvedAt)) : ''}`);
+        if (incident.rejectedBy?.name) meta.push(`رفض: ${esc(incident.rejectedBy.name)}${incident.rejectionReason ? ' — ' + esc(incident.rejectionReason) : ''}`);
+
+        return `
+            <div style="direction:rtl;margin-bottom:20px;padding:18px;border-radius:14px;background:linear-gradient(135deg,#f8fafc,#eff6ff);border:1px solid #bfdbfe;">
+                <h4 style="margin:0 0 16px;font-size:15px;font-weight:800;color:#1e40af;text-align:center;">
+                    <i class="fas fa-check-circle ml-2"></i>دائرة الموافقة على الحادث
+                </h4>
+                <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:4px;flex-wrap:wrap;">
+                    ${circles}
+                </div>
+                ${meta.length ? `<div style="margin-top:14px;padding-top:12px;border-top:1px dashed #cbd5e1;font-size:12px;color:#475569;text-align:center;">${meta.join(' | ')}</div>` : ''}
+            </div>`;
+    },
+
+    showIncidentApprovalFlow(incidentId) {
+        const incident = (AppState.appData?.incidents || []).find(i => i.id === incidentId);
+        if (!incident) {
+            Notification.error('الحادث غير موجود');
+            return;
+        }
+
+        const canApprove = this.canApproveIncident();
+        const showActions = canApprove && incident.requiresApproval && this.hasInvestigationData(incident);
+
+        const modal = document.createElement('div');
+        modal.className = 'modal-overlay';
+        modal.innerHTML = `
+            <div class="modal-content" style="max-width:720px;">
+                <div class="modal-header">
+                    <h2 class="modal-title">مسار الموافقة — ${Utils.escapeHTML(incident.title || incident.isoCode || incident.id || '')}</h2>
+                    <button class="modal-close" onclick="this.closest('.modal-overlay').remove()"><i class="fas fa-times"></i></button>
+                </div>
+                <div class="modal-body">
+                    ${this.renderApprovalFlowHtml(incident)}
+                    <div style="font-size:13px;color:#64748b;line-height:1.7;">
+                        <div><strong>الحالة:</strong> ${Utils.escapeHTML(incident.status || '—')}</div>
+                        <div><strong>بانتظار الاعتماد:</strong> ${incident.requiresApproval ? 'نعم' : 'لا'}</div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">إغلاق</button>
+                    <button class="btn-secondary" onclick="Incidents.viewIncident('${incident.id}'); this.closest('.modal-overlay').remove();">
+                        <i class="fas fa-eye ml-2"></i>عرض التفاصيل
+                    </button>
+                    ${showActions ? `
+                    <button class="btn-danger" onclick="Incidents.rejectIncident('${incident.id}'); this.closest('.modal-overlay').remove();">
+                        <i class="fas fa-times ml-2"></i>رفض
+                    </button>
+                    <button class="btn-success" onclick="Incidents.approveIncident('${incident.id}'); this.closest('.modal-overlay').remove();">
+                        <i class="fas fa-check ml-2"></i>اعتماد
+                    </button>
+                    ` : ''}
+                </div>
+            </div>`;
+        document.body.appendChild(modal);
+        modal.addEventListener('click', (e) => { if (e.target === modal) modal.remove(); });
+    },
+
+    manageWorkflow(incidentId) {
+        this.showIncidentApprovalFlow(incidentId);
     },
 
     async approveIncident(incidentId) {

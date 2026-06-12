@@ -518,7 +518,8 @@
                     function addThumbnailFallback(img) {
                         if (
                             !img ||
-                            img.getAttribute("data-drive-thumbnail-handled")
+                            img.getAttribute("data-drive-thumbnail-handled") ||
+                            img.getAttribute("data-fm-map-image")
                         )
                             return;
                         if (!img.src || img.src.indexOf("drive.google.com") === -1)
@@ -598,6 +599,7 @@
                                     m.target.tagName === "IMG"
                                 ) {
                                     var img = m.target;
+                                    if (img.getAttribute("data-fm-map-image")) return;
                                     if (
                                         img.src &&
                                         img.src.indexOf(
@@ -12967,7 +12969,7 @@
                     }
 
                     // مطابقة CACHE_VERSION في service-worker.js — تسريع جلب سكربت SW بعد النشر (تجاوز كاش الشبكة/الوسيط)
-                    const __SW_REGISTER_QUERY = "v=hse-app-v1.0.150-20260613";
+                    const __SW_REGISTER_QUERY = "v=hse-app-v1.0.151-20260613";
                     const swUrl =
                         swPath +
                         (swPath.includes("?") ? "&" : "?") +
