@@ -995,9 +995,9 @@ const PTW = {
         };
 
         // 1) لكل صف له id في PTWRegistry: صف واحد لكل id (يطابق عدد صفوف الورقة عادةً)
-        // 2) بدون id (قديم): الإبقاء على دمج التكرار حسب sequentialNumber أو permitId
+        // 2) بدون id (قديم): دمج التكرار بمفتاح مركّب — لا بالمسلسل فقط (كان يثبّت العد عند ~999)
         const byRegistryId = new Map();
-        const seqMap = new Map();
+        const legacyMap = new Map();
         const noSeqEntries = [];
 
         for (const entry of normalized) {
@@ -1011,30 +1011,33 @@ const PTW = {
                 continue;
             }
 
-            const seq = (entry.sequentialNumber != null && entry.sequentialNumber !== '')
-                ? String(entry.sequentialNumber)
-                : null;
+            const legacyKeyParts = [
+                (entry.sequentialNumber != null && entry.sequentialNumber !== '')
+                    ? String(entry.sequentialNumber)
+                    : '',
+                String(entry.permitId || '').trim(),
+                String(entry.paperPermitNumber || '').trim(),
+                String(entry.openDate || entry.timeFrom || '').trim(),
+                String(entry.location || '').trim(),
+                String(entry.requestingParty || '').trim()
+            ];
+            const legacyKey = legacyKeyParts.filter(Boolean).join('::');
 
-            if (seq) {
-                if (!seqMap.has(seq)) {
-                    seqMap.set(seq, entry);
+            if (legacyKey) {
+                if (!legacyMap.has(legacyKey)) {
+                    legacyMap.set(legacyKey, entry);
                 } else {
-                    const existing = seqMap.get(seq);
-                    const existingIsTmp = String(existing.id || '').includes('_TMP_');
-                    const newIsTmp = String(entry.id || '').includes('_TMP_');
-                    if (!newIsTmp && existingIsTmp) {
-                        seqMap.set(seq, entry);
-                    }
+                    legacyMap.set(legacyKey, preferEntry(legacyMap.get(legacyKey), entry));
                 }
             } else {
-                const idKey = entry.permitId;
-                if (!idKey || !noSeqEntries.some(e => e.permitId === idKey)) {
+                const idKey = entry.permitId || entry.paperPermitNumber;
+                if (!idKey || !noSeqEntries.some(e => (e.permitId || e.paperPermitNumber) === idKey)) {
                     noSeqEntries.push(entry);
                 }
             }
         }
 
-        return [...byRegistryId.values(), ...seqMap.values(), ...noSeqEntries];
+        return [...byRegistryId.values(), ...legacyMap.values(), ...noSeqEntries];
     },
 
     isLikelyUsersRecord(record) {
@@ -1123,17 +1126,31 @@ const PTW = {
         return Array.from(allPermitsMap.values());
     },
 
+    getRegistrySanitizedDataset() {
+        const localRaw = Array.isArray(this.registryData) ? this.registryData : [];
+        const stateRaw = Array.isArray(AppState?.appData?.ptwRegistry) ? AppState.appData.ptwRegistry : [];
+        const localReg = this.sanitizePtwRegistryDataset(localRaw, 'metrics.registryData');
+        const stateReg = this.sanitizePtwRegistryDataset(stateRaw, 'metrics.AppState.ptwRegistry');
+        const useState = stateReg.length > localReg.length;
+        const best = useState ? stateReg : (localReg.length > 0 ? localReg : stateReg);
+
+        if (useState && best.length !== localReg.length) {
+            this.registryData = best;
+        } else if (!useState && localReg.length > stateReg.length) {
+            if (!AppState.appData) AppState.appData = {};
+            AppState.appData.ptwRegistry = [...localReg];
+        }
+        return best;
+    },
+
+    formatPtwMetricCount(value) {
+        const num = Number(value);
+        if (!Number.isFinite(num)) return '0';
+        return Math.max(0, Math.floor(num)).toLocaleString('en-US');
+    },
+
     getRegistryPermitsForMetrics() {
-        // قبل تهيئة الموديول يبقى registryData فارغاً بينما لوحة التحكم قد تملأ AppState.ptwRegistry (جلب مجمع)
-        const localReg = this.sanitizePtwRegistryDataset(
-            Array.isArray(this.registryData) ? this.registryData : [],
-            'metrics.registryData'
-        );
-        const stateReg = this.sanitizePtwRegistryDataset(
-            Array.isArray(AppState?.appData?.ptwRegistry) ? AppState.appData.ptwRegistry : [],
-            'metrics.AppState.ptwRegistry'
-        );
-        const raw = localReg.length > 0 ? localReg : stateReg;
+        const raw = this.getRegistrySanitizedDataset();
         return raw.map((registryEntry) => ({
             id: registryEntry.permitId || registryEntry.id,
             workType: Array.isArray(registryEntry.permitType)
@@ -1145,12 +1162,13 @@ const PTW = {
     },
 
     getPermitMetricsDataset() {
+        const registryRows = this.getRegistrySanitizedDataset();
         const permitsFromList = AppState.appData.ptw || [];
         const permitsFromRegistry = this.getRegistryPermitsForMetrics();
         const merged = this.mergePermitsPreferRegistry(permitsFromList, permitsFromRegistry);
-        // Source of truth for KPI counters is DB registry when available.
+        // مصدر العدّ: صفوف PTWRegistry المعقّمة (تطابق السجل/الورقة) وليس دمج PTW الفريد فقط
         const source = permitsFromRegistry.length > 0 ? permitsFromRegistry : merged;
-        return { source, merged, permitsFromList, permitsFromRegistry };
+        return { source, merged, permitsFromList, permitsFromRegistry, registryRows };
     },
 
     getPermitTypeDisplay(entry) {
@@ -2332,15 +2350,14 @@ const PTW = {
         });
 
         const allItems = this.mergePermitsPreferRegistry(permitsFromList, permitsFromRegistry);
-        const totalCount = allItems.length;
-
-        // عدد صفوف السجل المعروضة = صفوف الجدول = الكارت (بعد تطبيع PTWRegistry؛ دمج التكرار بمعرف السجل id وليس بمسلسل واحد فقط)
-        const registryRowCount = this.registryData.length;
-        const openCount = this.registryData.filter(r => this.isPermitOpenStatus(r?.status)).length;
-        const closedCount = this.registryData.filter(r => this.isPermitClosedStatus(r?.status)).length;
+        const registryRows = this.getRegistrySanitizedDataset();
+        const registryRowCount = registryRows.length;
+        const totalCount = registryRowCount;
+        const openCount = registryRows.filter(r => this.isPermitOpenStatus(r?.status)).length;
+        const closedCount = registryRows.filter(r => this.isPermitClosedStatus(r?.status)).length;
 
         // حساب متوسط الوقت للحالات المغلقة (من السجل فقط)
-        const closedRecords = this.registryData.filter(r => this.isPermitClosedStatus(r?.status) && (r.closureDate || r.timeTo));
+        const closedRecords = registryRows.filter(r => this.isPermitClosedStatus(r?.status) && (r.closureDate || r.timeTo));
         let avgTime = t('module.ptw.registry.avgNotAvailable', 'غير متاح');
         if (closedRecords.length > 0) {
             let totalMs = 0;
@@ -9552,7 +9569,7 @@ const PTW = {
 
     async renderList() {
         const { source: sourceItems, merged: allItems, permitsFromList, permitsFromRegistry } = this.getPermitMetricsDataset();
-        const totalCount = allItems.length;
+        const totalCount = sourceItems.length;
         const openCount = sourceItems.filter(p => p && this.isPermitOpenStatus(p.status)).length;
         const closedCount = sourceItems.filter(p => p && this.isPermitClosedStatus(p.status)).length;
 
@@ -9857,25 +9874,28 @@ const PTW = {
     updateKPIs() {
         try {
             const { source: sourceItems, merged: allItems, permitsFromList, permitsFromRegistry } = this.getPermitMetricsDataset();
-            const totalCount = allItems.length;
+            const totalCount = sourceItems.length;
             const openCount = sourceItems.filter(p => p && this.isPermitOpenStatus(p.status)).length;
             const closedCount = sourceItems.filter(p => p && this.isPermitClosedStatus(p.status)).length;
+            const fmt = (n) => this.formatPtwMetricCount(n);
 
             // تحديث الكروت الأساسية
             const openCountEl = document.getElementById('ptw-open-count');
             const closedCountEl = document.getElementById('ptw-closed-count');
             const totalCountEl = document.getElementById('ptw-total-count');
 
-            if (openCountEl) openCountEl.textContent = openCount;
-            if (closedCountEl) closedCountEl.textContent = closedCount;
+            if (openCountEl) openCountEl.textContent = fmt(openCount);
+            if (closedCountEl) closedCountEl.textContent = fmt(closedCount);
             if (totalCountEl) {
-                totalCountEl.textContent = totalCount;
+                totalCountEl.textContent = fmt(totalCount);
                 // تحديث النص التوضيحي
                 const parentCard = totalCountEl.closest('.bg-gradient-to-br');
                 if (parentCard) {
                     const subtitle = parentCard.querySelector('.text-xs.text-gray-600');
                     if (subtitle) {
-                        subtitle.textContent = `من ${permitsFromList.length} قائمة + ${permitsFromRegistry.length} سجل`;
+                        subtitle.textContent = permitsFromRegistry.length > 0
+                            ? `سجل PTWRegistry: ${fmt(permitsFromRegistry.length)} صف`
+                            : `من ${fmt(permitsFromList.length)} قائمة PTW`;
                     }
                 }
             }

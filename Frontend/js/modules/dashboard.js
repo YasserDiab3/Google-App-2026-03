@@ -99,23 +99,31 @@ const Dashboard = {
     },
 
     getUnifiedPTWDataset(data) {
+        const mapRegistryRows = (rows) => (rows || []).map((r) => ({
+            id: r?.permitId || r?.id,
+            ...r,
+            status: this.normalizePTWStatus(r?.status),
+            isFromRegistry: true
+        }));
+
+        if (window.PTW && typeof window.PTW.getRegistrySanitizedDataset === 'function') {
+            const registryRows = window.PTW.getRegistrySanitizedDataset();
+            if (registryRows.length > 0) {
+                return mapRegistryRows(registryRows);
+            }
+        }
+
         if (window.PTW && typeof window.PTW.getPermitMetricsDataset === 'function') {
             const dataset = window.PTW.getPermitMetricsDataset();
             const source = Array.isArray(dataset?.source) ? dataset.source : [];
             if (source.length > 0) {
                 return source.map((p) => ({ ...p, status: this.normalizePTWStatus(p?.status) }));
             }
-            // مصفوفة فارغة رغم وجود بيانات في AppState (مثلاً قبل مزامنة registryData داخل الموديول)
         }
 
         const list = Array.isArray(data?.ptw) ? data.ptw : [];
         const registryRaw = Array.isArray(data?.ptwRegistry) ? data.ptwRegistry : [];
-        const registry = registryRaw.map((r) => ({
-            id: r?.permitId || r?.id,
-            ...r,
-            status: this.normalizePTWStatus(r?.status),
-            isFromRegistry: true
-        }));
+        const registry = mapRegistryRows(registryRaw);
 
         const mergedMap = new Map();
         list.forEach((p) => {
