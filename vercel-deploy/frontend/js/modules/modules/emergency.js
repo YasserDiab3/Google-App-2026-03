@@ -259,6 +259,12 @@ const Emergency = {
                                         <span class="fm-badge fm-badge-muted" id="fm-zoom-label">100%</span>
                                     </div>
                                     <div class="fm-viewport-controls">
+                                        <button type="button" class="fm-ctrl-btn fm-ctrl-btn-accent hidden" id="fm-qr-btn" title="رمز QR للاستجابة">
+                                            <i class="fas fa-qrcode"></i><span>QR</span>
+                                        </button>
+                                        <button type="button" class="fm-ctrl-btn hidden" id="fm-export-png-btn" title="تصدير الخريطة PNG">
+                                            <i class="fas fa-file-image"></i><span>تصدير</span>
+                                        </button>
                                         <button type="button" class="fm-ctrl-btn" id="fm-zoom-out" title="تصغير"><i class="fas fa-search-minus"></i></button>
                                         <button type="button" class="fm-ctrl-btn" id="fm-zoom-reset" title="ملاءمة الشاشة"><i class="fas fa-compress-arrows-alt"></i></button>
                                         <button type="button" class="fm-ctrl-btn" id="fm-zoom-in" title="تكبير"><i class="fas fa-search-plus"></i></button>
@@ -355,6 +361,9 @@ const Emergency = {
             }
             if (typeof moduleRef.setupAutoRefresh === 'function') {
                 moduleRef.setupAutoRefresh();
+            }
+            if (typeof moduleRef._fmCheckQrEntry === 'function') {
+                moduleRef._fmCheckQrEntry();
             }
         } catch (error) {
             if (typeof Utils !== 'undefined' && Utils.safeError) {
@@ -1871,8 +1880,12 @@ const Emergency = {
         dragItem: null,
         floorPlans: [],
         zoom: 1,
-        fullscreen: false
+        fullscreen: false,
+        pendingDeepLink: null,
+        customStampImages: {}
     },
+
+    _fmStampRadius: 24,
 
     FM_ITEM_TYPES: {
         fire_extinguisher: { label: 'مطفأة حريق', icon: 'fa-fire-extinguisher', color: '#ef4444' },
@@ -1888,7 +1901,10 @@ const Emergency = {
     },
 
     initFactoryMapTab() {
-        this.loadFloorPlans(this._fmState.currentPlanId || '');
+        const pending = this._fmState.pendingDeepLink;
+        this.loadFloorPlans(pending?.planId || this._fmState.currentPlanId || '').then(() => {
+            if (pending) this._fmHandlePendingDeepLink();
+        });
         this._bindFactoryMapEvents();
         this._renderLegend();
     },
@@ -2074,6 +2090,16 @@ const Emergency = {
             addFloorBtn.addEventListener('click', () => this.showFloorPlanForm());
             addFloorBtn.dataset.fmBound = '1';
         }
+        const exportBtn = document.getElementById('fm-export-png-btn');
+        if (exportBtn && !exportBtn.dataset.fmBound) {
+            exportBtn.addEventListener('click', () => this._fmExportCurrentMapPng());
+            exportBtn.dataset.fmBound = '1';
+        }
+        const qrBtn = document.getElementById('fm-qr-btn');
+        if (qrBtn && !qrBtn.dataset.fmBound) {
+            qrBtn.addEventListener('click', () => this._fmShowMapQrPanel());
+            qrBtn.dataset.fmBound = '1';
+        }
         const editFloorBtn = document.getElementById('fm-edit-floor-btn');
         if (editFloorBtn && !editFloorBtn.dataset.fmBound) {
             editFloorBtn.addEventListener('click', () => {
@@ -2150,12 +2176,291 @@ const Emergency = {
     },
 
     _fmBuildStampToolbarHtml() {
-        return Object.entries(this.FM_ITEM_TYPES).map(([key, def]) => `
+        const builtIn = Object.entries(this.FM_ITEM_TYPES).map(([key, def]) => `
             <button type="button" class="fm-stamp-btn" data-stamp="${key}" title="${Utils.escapeHTML(def.label)}" style="--stamp-color:${def.color};">
                 <i class="fas ${Utils.escapeAttr(def.icon)}"></i>
                 <span>${Utils.escapeHTML(def.label)}</span>
             </button>
         `).join('');
+        const custom = Object.entries(this._fmState.customStampImages || {}).map(([key, img]) => `
+            <button type="button" class="fm-stamp-btn fm-stamp-btn-custom" data-stamp="${Utils.escapeAttr(key)}" title="أيقونة مستوردة" style="--stamp-color:#0ea5e9;">
+                <img src="${Utils.escapeAttr(img)}" alt="" class="fm-stamp-thumb">
+                <span>مخصص</span>
+            </button>
+        `).join('');
+        return builtIn + custom;
+    },
+
+    _fmGenerateQrToken() {
+        return 'QR-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 10);
+    },
+
+    _fmBuildMapQrUrl(plan) {
+        if (!plan || !plan.id) return '';
+        const url = new URL(window.location.origin + window.location.pathname);
+        url.searchParams.set('section', 'emergency');
+        url.searchParams.set('factoryMap', plan.id);
+        if (plan.qrToken) url.searchParams.set('qr', plan.qrToken);
+        url.hash = 'emergency';
+        return url.toString();
+    },
+
+    _fmCheckQrEntry() {
+        try {
+            const params = new URLSearchParams(window.location.search);
+            const planId = params.get('factoryMap');
+            if (!planId || params.get('section') !== 'emergency') return;
+            this._fmState.pendingDeepLink = { planId, qr: params.get('qr') || '' };
+            if (typeof UI !== 'undefined' && UI.showSection) {
+                setTimeout(() => {
+                    UI.showSection('emergency');
+                    const tab = document.querySelector('#emergency-section .tab-btn[data-tab="factory-map"]');
+                    if (tab) tab.click();
+                }, 400);
+            }
+        } catch (_e) { /* ignore */ }
+    },
+
+    _fmHandlePendingDeepLink() {
+        const pending = this._fmState.pendingDeepLink;
+        if (!pending?.planId) return;
+        const plan = this._fmState.floorPlans.find(p => String(p.id) === String(pending.planId));
+        if (!plan) {
+            if (typeof Notification !== 'undefined' && Notification.warning) Notification.warning('المخطط المطلوب عبر QR غير موجود');
+            this._fmState.pendingDeepLink = null;
+            return;
+        }
+        if (pending.qr && plan.qrToken && pending.qr !== plan.qrToken) {
+            if (typeof Notification !== 'undefined' && Notification.error) Notification.error('رمز QR غير صالح لهذا المخطط');
+            this._fmState.pendingDeepLink = null;
+            return;
+        }
+        const select = document.getElementById('fm-floor-select');
+        if (select) {
+            select.value = plan.id;
+            select.dispatchEvent(new Event('change'));
+        }
+        if (typeof Notification !== 'undefined' && Notification.info) {
+            Notification.info('تم فتح مخطط الطوارئ: ' + (plan.name || plan.id));
+        }
+        this._fmState.pendingDeepLink = null;
+    },
+
+    _fmInitCanvasLayers(canvas) {
+        if (!canvas._fmStamps) canvas._fmStamps = [];
+        if (!canvas._fmCustomImages) canvas._fmCustomImages = {};
+    },
+
+    _fmRedrawSketchCanvas(canvas) {
+        const ctx = canvas.getContext('2d');
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        if (canvas._fmBaseSnapshot) ctx.putImageData(canvas._fmBaseSnapshot, 0, 0);
+        (canvas._fmStamps || []).forEach((stamp) => {
+            this._fmDrawStampOnCanvas(ctx, stamp.type, stamp.x, stamp.y, stamp.customImage);
+        });
+    },
+
+    _fmHitTestStamp(canvas, x, y) {
+        const r = this._fmStampRadius + 6;
+        const stamps = canvas._fmStamps || [];
+        for (let i = stamps.length - 1; i >= 0; i--) {
+            const s = stamps[i];
+            const dx = x - s.x;
+            const dy = y - s.y;
+            if ((dx * dx) + (dy * dy) <= r * r) return i;
+        }
+        return -1;
+    },
+
+    _fmEraseBaseAt(canvas, x, y, brushSize) {
+        if (!canvas._fmBaseSnapshot) return;
+        const data = canvas._fmBaseSnapshot.data;
+        const w = canvas.width;
+        const h = canvas.height;
+        const r = Math.max(brushSize, 12);
+        const r2 = r * r;
+        const minX = Math.max(0, Math.floor(x - r));
+        const maxX = Math.min(w - 1, Math.ceil(x + r));
+        const minY = Math.max(0, Math.floor(y - r));
+        const maxY = Math.min(h - 1, Math.ceil(y + r));
+        for (let py = minY; py <= maxY; py++) {
+            for (let px = minX; px <= maxX; px++) {
+                const dx = px - x;
+                const dy = py - y;
+                if ((dx * dx) + (dy * dy) > r2) continue;
+                const idx = (py * w + px) * 4;
+                data[idx] = 255;
+                data[idx + 1] = 255;
+                data[idx + 2] = 255;
+                data[idx + 3] = 0;
+            }
+        }
+    },
+
+    _fmSerializeCanvasStamps(canvas) {
+        return JSON.stringify({
+            stamps: (canvas._fmStamps || []).map(s => ({
+                type: s.type,
+                x: s.x,
+                y: s.y,
+                customImage: s.customImage || ''
+            })),
+            customImages: canvas._fmCustomImages || {}
+        });
+    },
+
+    _fmRestoreCanvasStamps(canvas, rawJson) {
+        if (!rawJson) return;
+        try {
+            const parsed = typeof rawJson === 'string' ? JSON.parse(rawJson) : rawJson;
+            canvas._fmStamps = Array.isArray(parsed.stamps) ? parsed.stamps : (Array.isArray(parsed) ? parsed : []);
+            canvas._fmCustomImages = parsed.customImages || {};
+            Object.assign(this._fmState.customStampImages, canvas._fmCustomImages);
+        } catch (_e) {
+            canvas._fmStamps = [];
+        }
+    },
+
+    _fmImportCustomStamp(file) {
+        if (!file || !file.type.startsWith('image/')) {
+            if (typeof Notification !== 'undefined' && Notification.error) Notification.error('يرجى اختيار صورة للأيقونة');
+            return;
+        }
+        if (file.size > 2 * 1024 * 1024) {
+            if (typeof Notification !== 'undefined' && Notification.error) Notification.error('حجم الأيقونة كبير (الحد 2MB)');
+            return;
+        }
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const dataUrl = e.target.result;
+            const id = 'custom_' + Date.now();
+            this._fmState.customStampImages[id] = dataUrl;
+            const canvas = document.getElementById('fm-sketch-canvas');
+            if (canvas) canvas._fmCustomImages = canvas._fmCustomImages || {};
+            if (canvas) canvas._fmCustomImages[id] = dataUrl;
+            const container = document.querySelector('.fm-stamp-toolbar-items');
+            if (container) container.innerHTML = this._fmBuildStampToolbarHtml();
+            if (typeof Notification !== 'undefined' && Notification.success) Notification.success('تم استيراد الأيقونة — انقر عليها ثم على الرسم');
+        };
+        reader.readAsDataURL(file);
+    },
+
+    async _fmExportCurrentMapPng() {
+        const plan = this._fmState.floorPlans.find(p => p.id === this._fmState.currentPlanId);
+        if (!plan) {
+            if (typeof Notification !== 'undefined' && Notification.warning) Notification.warning('اختر مخططاً أولاً');
+            return;
+        }
+        const w = parseInt(plan.imageWidth, 10) || 1200;
+        const h = parseInt(plan.imageHeight, 10) || 800;
+        const tmp = document.createElement('canvas');
+        tmp.width = w;
+        tmp.height = h;
+        const ctx = tmp.getContext('2d');
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, w, h);
+
+        const imgSrc = (plan.imageDriveId || '').startsWith('data:')
+            ? plan.imageDriveId
+            : (plan.imageDriveId || '').startsWith('http')
+                ? plan.imageDriveId
+                : plan.imageDriveId ? `https://drive.google.com/thumbnail?id=${plan.imageDriveId}&sz=w1600` : '';
+
+        const drawMarkers = () => {
+            (this._fmState.items || []).forEach(item => {
+                const def = this.FM_ITEM_TYPES[item.itemType] || { color: '#64748b', label: item.itemType };
+                const x = parseFloat(item.x) * w;
+                const y = parseFloat(item.y) * h;
+                this._fmDrawStampOnCanvas(ctx, item.itemType, x, y);
+            });
+            const qrUrl = this._fmBuildMapQrUrl(plan);
+            if (qrUrl && typeof QRCode !== 'undefined' && QRCode.generate) {
+                const qrImg = new Image();
+                qrImg.onload = () => {
+                    const pad = 12;
+                    const qrSize = 110;
+                    ctx.fillStyle = 'rgba(255,255,255,0.95)';
+                    ctx.fillRect(w - qrSize - pad * 2, h - qrSize - pad * 2 - 18, qrSize + pad * 2, qrSize + pad * 2 + 18);
+                    ctx.drawImage(qrImg, w - qrSize - pad, h - qrSize - pad - 18, qrSize, qrSize);
+                    ctx.fillStyle = '#0f172a';
+                    ctx.font = 'bold 11px Tahoma, Arial, sans-serif';
+                    ctx.textAlign = 'center';
+                    ctx.fillText('استجابة طوارئ', w - qrSize / 2 - pad, h - pad - 4);
+                    this._fmDownloadCanvasPng(tmp, (plan.name || 'خريطة') + '.png');
+                };
+                qrImg.onerror = () => this._fmDownloadCanvasPng(tmp, (plan.name || 'خريطة') + '.png');
+                qrImg.src = QRCode.generate(qrUrl, 110);
+            } else {
+                this._fmDownloadCanvasPng(tmp, (plan.name || 'خريطة') + '.png');
+            }
+        };
+
+        if (!imgSrc) {
+            drawMarkers();
+            return;
+        }
+        const bg = new Image();
+        bg.crossOrigin = 'anonymous';
+        bg.onload = () => { ctx.drawImage(bg, 0, 0, w, h); drawMarkers(); };
+        bg.onerror = () => drawMarkers();
+        bg.src = imgSrc;
+    },
+
+    _fmDownloadCanvasPng(canvas, filename) {
+        const link = document.createElement('a');
+        link.download = filename.replace(/[^\w\u0600-\u06FF.\-]+/g, '_');
+        link.href = canvas.toDataURL('image/png');
+        link.click();
+        if (typeof Notification !== 'undefined' && Notification.success) Notification.success('تم تصدير الخريطة');
+    },
+
+    _fmShowMapQrPanel() {
+        const plan = this._fmState.floorPlans.find(p => p.id === this._fmState.currentPlanId);
+        if (!plan) {
+            if (typeof Notification !== 'undefined' && Notification.warning) Notification.warning('اختر مخططاً أولاً');
+            return;
+        }
+        const qrUrl = this._fmBuildMapQrUrl(plan);
+        const qrImg = (typeof QRCode !== 'undefined' && QRCode.generate) ? QRCode.generate(qrUrl, 220) : '';
+        const html = `
+            <div class="modal-overlay active fm-qr-modal-overlay" id="fm-qr-modal" role="dialog">
+                <div class="modal-content fm-qr-modal">
+                    <div class="fm-modal-header-fixed lr-modal-header">
+                        <h3><i class="fas fa-qrcode" style="color:#dc2626;"></i> رمز الاستجابة للطوارئ</h3>
+                        <button type="button" class="modal-close" id="fm-qr-modal-close"><i class="fas fa-times"></i></button>
+                    </div>
+                    <div class="modal-body fm-qr-body">
+                        <p class="fm-qr-plan-name">${Utils.escapeHTML(plan.name || '')}${plan.floor ? ' — ' + Utils.escapeHTML(plan.floor) : ''}</p>
+                        <div class="fm-qr-card">
+                            ${qrImg ? `<img src="${qrImg}" alt="QR" class="fm-qr-image">` : '<p>تعذر توليد QR</p>'}
+                        </div>
+                        <p class="fm-qr-hint">امسح الرمز للوصول المباشر إلى مخطط الطوارئ وعناصر الاستجابة</p>
+                        <div class="fm-qr-link-box">
+                            <input type="text" class="form-input" id="fm-qr-link-input" readonly value="${Utils.escapeAttr(qrUrl)}">
+                            <button type="button" class="btn-secondary btn-sm" id="fm-qr-copy-btn"><i class="fas fa-copy"></i> نسخ</button>
+                        </div>
+                    </div>
+                    <div class="modal-footer fm-modal-footer-fixed">
+                        <button type="button" class="btn-secondary" id="fm-qr-export-btn"><i class="fas fa-file-image ml-1"></i>تصدير الخريطة</button>
+                        <button type="button" class="btn-primary" id="fm-qr-close-btn">إغلاق</button>
+                    </div>
+                </div>
+            </div>`;
+        document.getElementById('fm-qr-modal')?.remove();
+        document.body.insertAdjacentHTML('beforeend', html);
+        const close = () => document.getElementById('fm-qr-modal')?.remove();
+        document.getElementById('fm-qr-modal-close')?.addEventListener('click', close);
+        document.getElementById('fm-qr-close-btn')?.addEventListener('click', close);
+        document.getElementById('fm-qr-export-btn')?.addEventListener('click', () => this._fmExportCurrentMapPng());
+        document.getElementById('fm-qr-copy-btn')?.addEventListener('click', () => {
+            const input = document.getElementById('fm-qr-link-input');
+            if (input) {
+                input.select();
+                navigator.clipboard?.writeText(input.value).then(() => {
+                    if (typeof Notification !== 'undefined' && Notification.success) Notification.success('تم نسخ الرابط');
+                }).catch(() => {});
+            }
+        });
     },
 
     showFloorPlanForm(editId) {
@@ -2171,8 +2476,8 @@ const Emergency = {
         const hasExistingImage = !!(val('imageDriveId'));
 
         const html = `
-            <div class="modal-overlay active fm-floor-modal-overlay" id="fm-floor-modal" role="dialog" aria-modal="true">
-                <div class="modal-content fm-modal-improved">
+            <div class="modal-overlay active fm-floor-modal-overlay fm-floor-modal-fullscreen" id="fm-floor-modal" role="dialog" aria-modal="true">
+                <div class="modal-content fm-modal-improved fm-modal-fullscreen">
                     <div class="fm-modal-header-fixed lr-modal-header">
                         <h3><i class="fas fa-draw-polygon" style="color:#2563eb;"></i> ${editId ? 'تعديل' : 'إضافة'} مخطط طابق</h3>
                         <button type="button" class="modal-close" id="fm-floor-modal-close" aria-label="إغلاق"><i class="fas fa-times"></i></button>
@@ -2225,14 +2530,20 @@ const Emergency = {
                                     </div>
                                 </div>
                                 <div class="fm-stamp-toolbar">
-                                    <span class="fm-stamp-toolbar-label"><i class="fas fa-map-pin"></i> رموز السلامة والحريق:</span>
+                                    <div class="fm-stamp-toolbar-head">
+                                        <span class="fm-stamp-toolbar-label"><i class="fas fa-map-pin"></i> رموز السلامة والحريق:</span>
+                                        <label class="btn-secondary btn-sm fm-import-stamp-btn" title="استيراد أيقونة مخصصة">
+                                            <i class="fas fa-file-import"></i> استيراد أيقونة
+                                            <input type="file" id="fm-import-stamp-input" accept="image/*" hidden>
+                                        </label>
+                                    </div>
                                     <div class="fm-stamp-toolbar-items">${this._fmBuildStampToolbarHtml()}</div>
                                 </div>
                                 <div class="fm-canvas-wrap">
                                     <canvas id="fm-sketch-canvas" width="1200" height="650" tabindex="-1"></canvas>
                                 </div>
                                 <div class="fm-canvas-hint">
-                                    <i class="fas fa-info-circle"></i> ارسم الجدران بالقلم أو المستطيلات، ثم اختر <strong>رمزاً</strong> وانقر على الرسم لوضعه. استخدم الممحاة للمسح.
+                                    <i class="fas fa-info-circle"></i> ارسم الجدران بالقلم أو المستطيلات، ثم اختر <strong>رمزاً</strong> وانقر على الرسم لوضعه. الممحاة تمسح الرمز <strong>كاملاً</strong> عند النقر عليه.
                                 </div>
                                 ${hasExistingImage ? `<div class="fm-canvas-warning"><i class="fas fa-exclamation-triangle"></i> يوجد رسم سابق — الرسم الجديد سيحل محله.</div>` : ''}
                             </div>
@@ -2375,33 +2686,55 @@ const Emergency = {
         if (hint) hint.textContent = 'اختر صورة من جهازك لعرضها كخلفية للمخطط.';
     },
 
-    _fmDrawStampOnCanvas(ctx, stampType, x, y) {
-        const def = this.FM_ITEM_TYPES[stampType] || { color: '#64748b', label: '?' };
-        const symbols = {
-            fire_extinguisher: '🧯',
-            fire_hose: '🔥',
-            fire_alarm: '🔔',
-            emergency_exit: '🚪',
-            escape_route: '➡️',
-            assembly_point: '👥',
-            first_aid: '➕',
-            hazmat: '☣️',
-            evacuation_chair: '♿',
-            fire_panel: '🖥️'
-        };
-        const r = 20;
+    _fmDrawStampOnCanvas(ctx, stampType, x, y, customImageDataUrl) {
+        const r = this._fmStampRadius;
+        const customImg = customImageDataUrl || (stampType && String(stampType).startsWith('custom_')
+            ? (this._fmState.customStampImages[stampType] || '')
+            : '');
         ctx.save();
         ctx.beginPath();
         ctx.arc(x, y, r, 0, Math.PI * 2);
-        ctx.fillStyle = def.color;
-        ctx.fill();
+        if (customImg) {
+            const img = new Image();
+            img.src = customImg;
+            if (img.complete && img.naturalWidth) {
+                ctx.save();
+                ctx.clip();
+                ctx.drawImage(img, x - r, y - r, r * 2, r * 2);
+                ctx.restore();
+            } else {
+                ctx.fillStyle = '#0ea5e9';
+                ctx.fill();
+            }
+        } else {
+            const def = this.FM_ITEM_TYPES[stampType] || { color: '#64748b', label: '?' };
+            const symbols = {
+                fire_extinguisher: '🧯',
+                fire_hose: '🔥',
+                fire_alarm: '🔔',
+                emergency_exit: '🚪',
+                escape_route: '➡️',
+                assembly_point: '👥',
+                first_aid: '➕',
+                hazmat: '☣️',
+                evacuation_chair: '♿',
+                fire_panel: '🖥️'
+            };
+            ctx.fillStyle = def.color;
+            ctx.fill();
+            ctx.font = '18px "Segoe UI Emoji", "Apple Color Emoji", Tahoma, sans-serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(symbols[stampType] || '●', x, y + 1);
+        }
+        ctx.beginPath();
+        ctx.arc(x, y, r, 0, Math.PI * 2);
         ctx.strokeStyle = '#ffffff';
-        ctx.lineWidth = 2.5;
+        ctx.lineWidth = 3;
         ctx.stroke();
-        ctx.font = '18px "Segoe UI Emoji", "Apple Color Emoji", Tahoma, sans-serif';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText(symbols[stampType] || '●', x, y + 1);
+        ctx.strokeStyle = 'rgba(15,23,42,0.25)';
+        ctx.lineWidth = 1;
+        ctx.stroke();
         ctx.restore();
     },
 
@@ -2414,7 +2747,9 @@ const Emergency = {
         img.onload = () => {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-            canvas._snapshot = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            canvas._fmBaseSnapshot = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            canvas._snapshot = canvas._fmBaseSnapshot;
+            this._fmRedrawSketchCanvas(canvas);
             if (onDone) onDone();
         };
         img.onerror = () => { if (onDone) onDone(); };
@@ -2425,24 +2760,37 @@ const Emergency = {
         const canvas = document.getElementById('fm-sketch-canvas');
         if (!canvas) return;
         const ctx = canvas.getContext('2d');
-        const rect = { x: 0, y: 0, w: 0, h: 0, drawing: false };
-        let drawing = false, tool = 'pen', color = '#1e293b', width = 4, lastX, lastY, stampType = null;
+        const rect = { x: 0, y: 0, drawing: false };
+        let drawing = false;
+        let lastX;
+        let lastY;
+        const toolState = { tool: 'pen', color: '#1e293b', width: 4, stampType: null };
+        canvas._fmToolState = toolState;
 
-        const refreshSnapshot = () => {
-            canvas._snapshot = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        this._fmInitCanvasLayers(canvas);
+
+        const initEmptyBase = () => {
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            canvas._fmBaseSnapshot = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            canvas._snapshot = canvas._fmBaseSnapshot;
+            canvas._fmStamps = [];
+            this._fmRedrawSketchCanvas(canvas);
         };
 
-        // Restore existing data if editing
         const existingData = document.getElementById('fm-floor-edit-id')?.value;
         if (existingData) {
-            const plan = this._fmState.floorPlans.find(p => p.id === existingData);
+            const plan = this._fmState.floorPlans.find(p => String(p.id) === String(existingData));
+            if (plan?.drawStampsJson) this._fmRestoreCanvasStamps(canvas, plan.drawStampsJson);
             if (plan?.imageDriveId) {
-                this._fmRestoreCanvasImage_(canvas, ctx, plan.imageDriveId, refreshSnapshot);
+                this._fmRestoreCanvasImage_(canvas, ctx, plan.imageDriveId, () => {
+                    if (plan?.drawStampsJson) this._fmRedrawSketchCanvas(canvas);
+                });
             } else {
-                refreshSnapshot();
+                initEmptyBase();
             }
         } else {
-            refreshSnapshot();
+            initEmptyBase();
         }
 
         const getPos = (e) => {
@@ -2458,53 +2806,110 @@ const Emergency = {
             e.preventDefault();
             e.stopPropagation();
             const pos = getPos(e);
-            if (tool === 'stamp' && stampType) {
-                this._fmDrawStampOnCanvas(ctx, stampType, pos.x, pos.y);
-                refreshSnapshot();
+            if (toolState.tool === 'stamp' && toolState.stampType) {
+                const customImage = (toolState.stampType.startsWith('custom_') && canvas._fmCustomImages)
+                    ? canvas._fmCustomImages[toolState.stampType] : '';
+                canvas._fmStamps.push({ type: toolState.stampType, x: pos.x, y: pos.y, customImage });
+                this._fmRedrawSketchCanvas(canvas);
+                return;
+            }
+            if (toolState.tool === 'eraser') {
+                const hit = this._fmHitTestStamp(canvas, pos.x, pos.y);
+                if (hit >= 0) {
+                    canvas._fmStamps.splice(hit, 1);
+                    this._fmRedrawSketchCanvas(canvas);
+                    return;
+                }
+                this._fmEraseBaseAt(canvas, pos.x, pos.y, toolState.width * 3);
+                this._fmRedrawSketchCanvas(canvas);
+                drawing = true;
+                lastX = pos.x;
+                lastY = pos.y;
                 return;
             }
             drawing = true;
-            lastX = pos.x; lastY = pos.y;
-            if (tool === 'rect') { rect.x = pos.x; rect.y = pos.y; rect.drawing = true; }
-            else { ctx.beginPath(); ctx.moveTo(pos.x, pos.y); }
+            lastX = pos.x;
+            lastY = pos.y;
+            if (toolState.tool === 'rect') {
+                rect.x = pos.x;
+                rect.y = pos.y;
+                rect.drawing = true;
+            } else {
+                ctx.beginPath();
+                ctx.moveTo(pos.x, pos.y);
+            }
         };
 
         const draw = (e) => {
             e.preventDefault();
             const pos = getPos(e);
             if (!drawing) return;
-            if (tool === 'eraser') {
-                ctx.clearRect(Math.min(lastX, pos.x) - width, Math.min(lastY, pos.y) - width, Math.abs(pos.x - lastX) + width * 2, Math.abs(pos.y - lastY) + width * 2);
-                lastX = pos.x; lastY = pos.y;
+            if (toolState.tool === 'eraser') {
+                const hit = this._fmHitTestStamp(canvas, pos.x, pos.y);
+                if (hit >= 0) {
+                    canvas._fmStamps.splice(hit, 1);
+                } else {
+                    this._fmEraseBaseAt(canvas, pos.x, pos.y, toolState.width * 3);
+                    this._fmEraseBaseAt(canvas, lastX, lastY, toolState.width * 3);
+                }
+                this._fmRedrawSketchCanvas(canvas);
+                lastX = pos.x;
+                lastY = pos.y;
                 return;
             }
-            if (tool === 'rect') {
+            if (toolState.tool === 'rect') {
                 if (!rect.drawing) return;
-                ctx.clearRect(0, 0, canvas.width, canvas.height);
-                // redraw from saved snapshot if available
-                const snapshot = canvas._snapshot;
-                if (snapshot) ctx.putImageData(snapshot, 0, 0);
-                ctx.strokeStyle = color; ctx.lineWidth = width;
+                this._fmRedrawSketchCanvas(canvas);
+                ctx.strokeStyle = toolState.color;
+                ctx.lineWidth = toolState.width;
                 ctx.strokeRect(rect.x, rect.y, pos.x - rect.x, pos.y - rect.y);
-                ctx.fillStyle = color + '20';
+                ctx.fillStyle = toolState.color + '20';
                 ctx.fillRect(rect.x, rect.y, pos.x - rect.x, pos.y - rect.y);
                 return;
             }
-            ctx.strokeStyle = color; ctx.lineWidth = width; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
-            ctx.lineTo(pos.x, pos.y); ctx.stroke();
-            lastX = pos.x; lastY = pos.y;
+            if (!canvas._fmBaseSnapshot) return;
+            const tmp = document.createElement('canvas');
+            tmp.width = canvas.width;
+            tmp.height = canvas.height;
+            const t = tmp.getContext('2d');
+            t.putImageData(canvas._fmBaseSnapshot, 0, 0);
+            t.strokeStyle = toolState.color;
+            t.lineWidth = toolState.width;
+            t.lineCap = 'round';
+            t.lineJoin = 'round';
+            t.beginPath();
+            t.moveTo(lastX, lastY);
+            t.lineTo(pos.x, pos.y);
+            t.stroke();
+            canvas._fmBaseSnapshot = t.getImageData(0, 0, canvas.width, canvas.height);
+            this._fmRedrawSketchCanvas(canvas);
+            lastX = pos.x;
+            lastY = pos.y;
         };
 
-        const endDraw = (e) => {
-            if (tool === 'rect' && rect.drawing) {
-                // Snapshot after drawing rectangle
-                canvas._snapshot = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const endDraw = () => {
+            if (toolState.tool === 'rect' && rect.drawing) {
+                this._fmRedrawSketchCanvas(canvas);
+                const t = document.createElement('canvas');
+                t.width = canvas.width;
+                t.height = canvas.height;
+                const tc = t.getContext('2d');
+                tc.putImageData(canvas._fmBaseSnapshot || tc.createImageData(canvas.width, canvas.height), 0, 0);
+                tc.strokeStyle = toolState.color;
+                tc.lineWidth = toolState.width;
+                const rw = lastX - rect.x;
+                const rh = lastY - rect.y;
+                tc.strokeRect(rect.x, rect.y, rw, rh);
+                tc.fillStyle = toolState.color + '20';
+                tc.fillRect(rect.x, rect.y, rw, rh);
+                canvas._fmBaseSnapshot = tc.getImageData(0, 0, canvas.width, canvas.height);
                 rect.drawing = false;
-            } else if (tool !== 'eraser' && drawing) {
-                ctx.closePath();
+                this._fmRedrawSketchCanvas(canvas);
             }
             drawing = false;
-            refreshSnapshot();
+            if (toolState.tool === 'pen' || toolState.tool === 'eraser') {
+                canvas._snapshot = canvas._fmBaseSnapshot;
+            }
         };
 
         canvas.addEventListener('mousedown', startDraw);
@@ -2515,43 +2920,57 @@ const Emergency = {
         canvas.addEventListener('touchmove', draw, { passive: false });
         canvas.addEventListener('touchend', endDraw);
 
-        // Tool buttons
         document.querySelectorAll('.fm-draw-tool').forEach(btn => {
             btn.addEventListener('click', () => {
                 document.querySelectorAll('.fm-draw-tool').forEach(b => b.classList.remove('active'));
                 document.querySelectorAll('.fm-stamp-btn').forEach(b => b.classList.remove('active'));
                 btn.classList.add('active');
-                tool = btn.dataset.tool;
-                stampType = null;
-                canvas.style.cursor = tool === 'eraser' ? 'cell' : 'crosshair';
+                toolState.tool = btn.dataset.tool;
+                toolState.stampType = null;
+                canvas.style.cursor = toolState.tool === 'eraser' ? 'cell' : 'crosshair';
             });
         });
 
-        document.querySelectorAll('.fm-stamp-btn').forEach(btn => {
-            btn.addEventListener('click', () => {
+        const stampToolbar = document.querySelector('.fm-stamp-toolbar');
+        if (stampToolbar && !stampToolbar.dataset.fmDelegBound) {
+            stampToolbar.addEventListener('click', (e) => {
+                const btn = e.target.closest('.fm-stamp-btn');
+                if (!btn) return;
                 document.querySelectorAll('.fm-stamp-btn').forEach(b => b.classList.remove('active'));
                 document.querySelectorAll('.fm-draw-tool').forEach(b => b.classList.remove('active'));
                 btn.classList.add('active');
-                tool = 'stamp';
-                stampType = btn.dataset.stamp;
+                toolState.tool = 'stamp';
+                toolState.stampType = btn.dataset.stamp;
                 canvas.style.cursor = 'copy';
             });
-        });
+            stampToolbar.dataset.fmDelegBound = '1';
+        }
 
         const colorInput = document.getElementById('fm-draw-color');
-        if (colorInput) colorInput.addEventListener('input', (e) => { color = e.target.value; });
-
+        if (colorInput) colorInput.addEventListener('input', (e) => { toolState.color = e.target.value; });
         const widthSelect = document.getElementById('fm-draw-width');
-        if (widthSelect) widthSelect.addEventListener('change', (e) => { width = parseInt(e.target.value); });
+        if (widthSelect) widthSelect.addEventListener('change', (e) => { toolState.width = parseInt(e.target.value, 10) || 4; });
 
+        const importInput = document.getElementById('fm-import-stamp-input');
+        if (importInput && !importInput.dataset.fmBound) {
+            importInput.addEventListener('change', () => {
+                this._fmImportCustomStamp(importInput.files[0]);
+                importInput.value = '';
+            });
+            importInput.dataset.fmBound = '1';
+        }
     },
 
     _fmClearCanvas() {
         const canvas = document.getElementById('fm-sketch-canvas');
         if (!canvas) return;
         const ctx = canvas.getContext('2d');
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        canvas._snapshot = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        canvas._fmStamps = [];
+        canvas._fmBaseSnapshot = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        canvas._snapshot = canvas._fmBaseSnapshot;
+        this._fmRedrawSketchCanvas(canvas);
     },
 
     async handleFloorPlanSubmit(e) {
@@ -2568,9 +2987,12 @@ const Emergency = {
         const isDrawMode = drawPane && drawPane.style.display !== 'none';
         const isUploadMode = uploadPane && uploadPane.style.display !== 'none';
 
+        let drawStampsJson = '';
         if (isDrawMode) {
             const canvas = document.getElementById('fm-sketch-canvas');
             if (canvas) {
+                this._fmRedrawSketchCanvas(canvas);
+                drawStampsJson = this._fmSerializeCanvasStamps(canvas);
                 const ctx = canvas.getContext('2d');
                 const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
                 const hasContent = imageData.data.some(ch => ch !== 0);
@@ -2590,9 +3012,12 @@ const Emergency = {
             }
         }
 
-        if (!imageDriveId && editId) {
-            const existingPlan = this._fmState.floorPlans.find(p => String(p.id) === String(editId));
-            if (existingPlan?.imageDriveId) imageDriveId = existingPlan.imageDriveId;
+        const existingPlan = editId
+            ? this._fmState.floorPlans.find(p => String(p.id) === String(editId))
+            : null;
+
+        if (!imageDriveId && existingPlan?.imageDriveId) {
+            imageDriveId = existingPlan.imageDriveId;
         }
 
         if (!editId && !imageDriveId) {
@@ -2602,7 +3027,6 @@ const Emergency = {
             if (submitBtn) { submitBtn.disabled = false; submitBtn.innerHTML = '<i class="fas fa-save ml-2"></i>إضافة المخطط'; }
             return false;
         }
-
         const data = {
             name,
             floor: document.getElementById('fm-floor-level')?.value || '',
@@ -2610,7 +3034,9 @@ const Emergency = {
             imageWidth: parseInt(document.getElementById('fm-floor-width')?.value) || 1200,
             imageHeight: parseInt(document.getElementById('fm-floor-height')?.value) || 800,
             sortOrder: parseInt(document.getElementById('fm-floor-sort')?.value) || 1,
-            isActive: 'true'
+            isActive: 'true',
+            qrToken: existingPlan?.qrToken || this._fmGenerateQrToken(),
+            drawStampsJson: drawStampsJson || existingPlan?.drawStampsJson || ''
         };
 
         if (submitBtn) { submitBtn.disabled = true; submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin ml-2"></i>جاري الحفظ...'; }
@@ -2652,6 +3078,8 @@ const Emergency = {
         document.getElementById('fm-map-wrapper')?.classList.remove('hidden');
         document.getElementById('fm-viewport-bar')?.classList.remove('hidden');
         document.getElementById('fm-legend-sidebar')?.classList.remove('hidden');
+        document.getElementById('fm-export-png-btn')?.classList.remove('hidden');
+        document.getElementById('fm-qr-btn')?.classList.remove('hidden');
         this._fmResetZoom();
 
         const mapCanvas = document.getElementById('fm-map-canvas');

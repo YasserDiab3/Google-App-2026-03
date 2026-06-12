@@ -271,7 +271,7 @@ function getDefaultHeaders(sheetName) {
         // أرقام طوارئ المؤسسة (يُديرها المدير) — تظهر في الملف الشخصي والبطاقة العامة
         'AppEmergencyNumbers': ['id', 'label', 'phone', 'sortOrder', 'isActive', 'createdAt', 'updatedAt'],
         // خرائط المصنع للطوارئ (Factory Safety Maps)
-        'EmergencyFloorPlans': ['id', 'name', 'floor', 'imageDriveId', 'imageWidth', 'imageHeight', 'sortOrder', 'isActive', 'createdAt', 'updatedAt'],
+        'EmergencyFloorPlans': ['id', 'name', 'floor', 'imageDriveId', 'imageWidth', 'imageHeight', 'sortOrder', 'isActive', 'qrToken', 'drawStampsJson', 'createdAt', 'updatedAt'],
         'EmergencyMapItems': ['id', 'floorPlanId', 'itemType', 'label', 'x', 'y', 'width', 'height', 'rotation', 'strokeColor', 'fillColor', 'status', 'notes', 'createdAt', 'updatedAt'],
         // ✅ قائمة الأشخاص المصرح لهم بالتوقيع على تصاريح العمل (Issuing Authorities)
         // G = مصرح بالتوقيع في كل الحالات

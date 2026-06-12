@@ -415,6 +415,9 @@ function addEmergencyFloorPlan(data) {
         var sheetName = 'EmergencyFloorPlans';
         if (!data.id) data.id = generateSequentialId('FP', sheetName);
         if (!data.isActive) data.isActive = 'true';
+        if (!data.qrToken) {
+            data.qrToken = 'QR-' + Utilities.getUuid().replace(/-/g, '').substring(0, 16);
+        }
         if (!data.createdAt) data.createdAt = new Date();
         if (!data.updatedAt) data.updatedAt = new Date();
         var result = appendToSheet(sheetName, data);
