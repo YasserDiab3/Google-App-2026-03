@@ -1948,6 +1948,97 @@ const Emergency = {
         }
     },
 
+    getPlaceOptions(siteId) {
+        try {
+            if (!siteId) return [];
+            const sid = String(siteId);
+            if (typeof Permissions !== 'undefined' && Permissions.formSettingsState?.sites) {
+                const site = Permissions.formSettingsState.sites.find(s => String(s.id) === sid);
+                if (site && Array.isArray(site.places)) {
+                    return site.places.map(place => ({
+                        id: place.id,
+                        name: place.name
+                    }));
+                }
+            }
+            if (Array.isArray(AppState.appData?.observationSites)) {
+                const site = AppState.appData.observationSites.find(s => String(s.id || s.siteId) === sid);
+                if (site) {
+                    const placesSource = Array.isArray(site.places)
+                        ? site.places
+                        : Array.isArray(site.locations)
+                            ? site.locations
+                            : Array.isArray(site.children)
+                                ? site.children
+                                : Array.isArray(site.areas)
+                                    ? site.areas
+                                    : [];
+                    return placesSource.map((place, idx) => ({
+                        id: place.id || place.placeId || place.value || `PLACE_${idx}`,
+                        name: place.name || place.placeName || place.title || place.label || place.locationName || `مكان ${idx + 1}`
+                    }));
+                }
+            }
+            return [];
+        } catch (_e) {
+            return [];
+        }
+    },
+
+    _fmPlanMatchesFactory(plan, factoryFilter) {
+        if (!factoryFilter) return true;
+        const f = String(factoryFilter);
+        return String(plan?.factoryId || '') === f || String(plan?.factory || '') === f;
+    },
+
+    _fmInvalidateFloorPlansCache() {
+        try {
+            if (typeof GoogleIntegration !== 'undefined') {
+                if (typeof GoogleIntegration.clearCache === 'function') {
+                    GoogleIntegration.clearCache('getAllEmergencyFloorPlans');
+                }
+                if (typeof GoogleIntegration.invalidateReadFromSheetCacheForSheets === 'function') {
+                    GoogleIntegration.invalidateReadFromSheetCacheForSheets('EmergencyFloorPlans');
+                }
+            }
+            localStorage.removeItem('hse_local_getAllEmergencyFloorPlans');
+        } catch (_e) { /* ignore */ }
+    },
+
+    _fmBuildSubLocationOptionsHtml(factoryId, selectedSubId, selectedSubName) {
+        const places = this.getPlaceOptions(factoryId);
+        const esc = (v) => (typeof Utils !== 'undefined' && Utils.escapeAttr) ? Utils.escapeAttr(v) : String(v ?? '');
+        const escHtml = (v) => (typeof Utils !== 'undefined' && Utils.escapeHTML) ? Utils.escapeHTML(v) : String(v ?? '');
+        const selectedId = selectedSubId || places.find(p => p.name === selectedSubName)?.id || '';
+        if (!places.length) {
+            return `<option value="">— لا توجد مواقع فرعية لهذا المصنع —</option>`;
+        }
+        return '<option value="">— اختر الطابق / الموقع الفرعي —</option>' + places.map(p =>
+            `<option value="${esc(p.id)}" data-name="${esc(p.name)}" ${String(p.id) === String(selectedId) ? 'selected' : ''}>${escHtml(p.name)}</option>`
+        ).join('');
+    },
+
+    _fmRefreshSubLocationDropdown(factoryId, selectedSubId, selectedSubName) {
+        const floorField = document.getElementById('fm-floor-level');
+        if (!floorField) return;
+        floorField.innerHTML = this._fmBuildSubLocationOptionsHtml(factoryId, selectedSubId, selectedSubName);
+    },
+
+    _fmBindFactoryCascade(selectedSubId, selectedSubName) {
+        const factoryField = document.getElementById('fm-floor-factory');
+        if (!factoryField || factoryField.dataset.fmCascadeBound) return;
+        const refresh = () => {
+            this._fmRefreshSubLocationDropdown(factoryField.value, selectedSubId, selectedSubName);
+        };
+        factoryField.addEventListener('change', () => {
+            selectedSubId = '';
+            selectedSubName = '';
+            this._fmRefreshSubLocationDropdown(factoryField.value, '', '');
+        });
+        factoryField.dataset.fmCascadeBound = '1';
+        refresh();
+    },
+
     refreshSiteDropdowns() {
         try {
             const sites = this.getSiteOptions();
@@ -2032,18 +2123,21 @@ const Emergency = {
 
     _fmParseListResponse(resp) {
         if (Array.isArray(resp)) return resp;
-        if (resp && Array.isArray(resp.data)) return resp.data;
-        if (resp && resp.success !== false && resp.data && Array.isArray(resp.data)) return resp.data;
+        if (!resp || typeof resp !== 'object') return [];
+        if (Array.isArray(resp.data)) return resp.data;
+        if (resp.data && Array.isArray(resp.data.data)) return resp.data.data;
+        if (resp.success !== false && resp.data && Array.isArray(resp.data)) return resp.data;
         return [];
     },
 
     _fmUpdatePlanMeta() {
         const meta = document.getElementById('fm-plan-meta');
         const countEl = document.getElementById('fm-items-count');
-        const plan = this._fmState.floorPlans.find(p => p.id === this._fmState.currentPlanId);
+        const plan = this._fmState.floorPlans.find(p => String(p.id) === String(this._fmState.currentPlanId || ''));
         if (meta) {
+            const placeLabel = plan?.subLocationName || plan?.floor || '';
             meta.textContent = plan
-                ? `${plan.name || 'مخطط'}${plan.factoryName ? ' · ' + plan.factoryName : ''}${plan.floor ? ' — ' + plan.floor : ''}`
+                ? `${plan.name || 'مخطط'}${plan.factoryName ? ' · ' + plan.factoryName : ''}${placeLabel ? ' — ' + placeLabel : ''}`
                 : 'اختر مخططاً لعرض خريطة السلامة';
         }
         if (countEl) {
@@ -2265,7 +2359,7 @@ const Emergency = {
         });
     },
 
-    async loadFloorPlans(selectPlanId) {
+    async loadFloorPlans(selectPlanId, options) {
         const select = document.getElementById('fm-floor-select');
         if (!select) return [];
 
@@ -2274,34 +2368,54 @@ const Emergency = {
         }
 
         try {
+            this._fmInvalidateFloorPlansCache();
             const resp = await GoogleIntegration.sendRequest({ action: 'getAllEmergencyFloorPlans', data: {} });
-            let plans = this._fmParseListResponse(resp);
-            this._fmState.floorPlans = plans;
-            const factoryFilter = document.getElementById('fm-factory-filter')?.value || this._fmState.factoryFilter || '';
-            if (factoryFilter) {
-                plans = plans.filter(p => String(p.factoryId || p.factory || '') === String(factoryFilter));
+            const allPlans = this._fmParseListResponse(resp)
+                .filter(p => p && String(p.isActive || 'true') !== 'false')
+                .sort((a, b) => (parseInt(a.sortOrder, 10) || 0) - (parseInt(b.sortOrder, 10) || 0));
+            this._fmState.floorPlans = allPlans;
+
+            const targetId = String(selectPlanId || this._fmState.currentPlanId || '');
+            const savedPlan = targetId ? allPlans.find(p => String(p.id) === targetId) : null;
+            if (savedPlan && options?.syncFactoryFilter !== false) {
+                const fid = savedPlan.factoryId || savedPlan.factory || '';
+                if (fid) {
+                    this._fmState.factoryFilter = String(fid);
+                    const filterField = document.getElementById('fm-factory-filter');
+                    if (filterField) filterField.value = String(fid);
+                }
             }
+
+            const factoryFilter = document.getElementById('fm-factory-filter')?.value || this._fmState.factoryFilter || '';
+            let displayPlans = factoryFilter
+                ? allPlans.filter(p => this._fmPlanMatchesFactory(p, factoryFilter))
+                : allPlans.slice();
+            if (savedPlan && !displayPlans.some(p => String(p.id) === targetId)) {
+                displayPlans = [savedPlan, ...displayPlans];
+            }
+
             select.innerHTML = '<option value="">— اختر المخطط —</option>' +
-                plans.map(p => {
+                displayPlans.map(p => {
                     const factoryLabel = p.factoryName || p.factory || '';
-                    return `<option value="${Utils.escapeAttr(p.id)}">${Utils.escapeHTML(p.name || 'مخطط')}${factoryLabel ? ' · ' + Utils.escapeHTML(factoryLabel) : ''}${p.floor ? ' — ' + Utils.escapeHTML(p.floor) : ''}</option>`;
+                    const placeLabel = p.subLocationName || p.floor || '';
+                    return `<option value="${Utils.escapeAttr(p.id)}">${Utils.escapeHTML(p.name || 'مخطط')}${factoryLabel ? ' · ' + Utils.escapeHTML(factoryLabel) : ''}${placeLabel ? ' — ' + Utils.escapeHTML(placeLabel) : ''}</option>`;
                 }).join('');
 
-            const targetId = selectPlanId || this._fmState.currentPlanId || '';
-            if (targetId && plans.some(p => String(p.id) === String(targetId))) {
+            if (targetId && allPlans.some(p => String(p.id) === targetId)) {
                 select.value = targetId;
+                this._fmState.currentPlanId = targetId;
                 this.loadMapItems(targetId);
                 document.getElementById('fm-edit-floor-btn')?.classList.remove('hidden');
                 document.getElementById('fm-delete-floor-btn')?.classList.remove('hidden');
                 document.getElementById('fm-viewport-bar')?.classList.remove('hidden');
                 document.getElementById('fm-legend-sidebar')?.classList.remove('hidden');
             }
-            return plans;
+            return allPlans;
         } catch (_e) {
             if (typeof Notification !== 'undefined' && Notification.error) {
                 Notification.error('تعذر تحميل مخططات الطوارئ');
             }
-            return [];
+            return this._fmState.floorPlans || [];
         }
     },
 
@@ -2823,11 +2937,12 @@ const Emergency = {
         const existing = this._fmState.floorPlans.find(p => String(p.id) === String(editId || ''));
         const val = (f, def) => (existing && existing[f] != null) ? existing[f] : (def || '');
         const escAttr = (v) => (typeof Utils !== 'undefined' && Utils.escapeAttr) ? Utils.escapeAttr(v) : String(v ?? '');
-        const floors = ['الطابق الأرضي', 'الطابق الأول', 'الطابق الثاني', 'الطابق الثالث', 'سطح المبنى', 'مبنى آخر'];
-        const floorOpts = floors.map(f => `<option value="${f}" ${val('floor') === f ? 'selected' : ''}>${f}</option>`).join('');
         const hasExistingImage = !!(val('imageDriveId'));
         const defaultFactoryId = val('factoryId') || val('factory') || document.getElementById('fm-factory-filter')?.value || '';
+        const defaultSubId = val('subLocationId') || '';
+        const defaultSubName = val('subLocationName') || val('floor') || '';
         const factoryOpts = this._fmBuildFactorySelectHtml(defaultFactoryId, val('factoryName'));
+        const floorOpts = this._fmBuildSubLocationOptionsHtml(defaultFactoryId, defaultSubId, defaultSubName);
 
         const html = `
             <div class="modal-overlay active fm-floor-modal-overlay fm-floor-modal-fullscreen" id="fm-floor-modal" role="dialog" aria-modal="true">
@@ -2854,7 +2969,7 @@ const Emergency = {
                                         <select id="fm-floor-factory" class="form-input" required>${factoryOpts}</select>
                                     </div>
                                     <div class="form-group fm-plan-field">
-                                        <label class="form-label"><i class="fas fa-layer-group"></i> الطابق</label>
+                                        <label class="form-label"><i class="fas fa-layer-group"></i> الطابق / الموقع الفرعي</label>
                                         <select id="fm-floor-level" class="form-input">${floorOpts}</select>
                                     </div>
                                     <div class="form-group fm-plan-field fm-plan-field-sm">
@@ -2905,7 +3020,8 @@ const Emergency = {
                                         <button type="button" class="fm-draw-tool" id="fm-sketch-zoom-fit" title="ملاءمة الشاشة"><i class="fas fa-compress-arrows-alt"></i></button>
                                     </div>
                                     <div class="fm-tool-group">
-                                        <button type="button" class="fm-draw-action" onclick="Emergency._fmClearCanvas()" title="مسح الكل"><i class="fas fa-trash-alt"></i> مسح</button>
+                                        <button type="button" class="fm-draw-action" onclick="Emergency._fmClearCanvasTarget()" title="مسح العنصر المحدد فقط (أيقونة أو إطار)"><i class="fas fa-eraser"></i> مسح المحدد</button>
+                                        <button type="button" class="fm-draw-action fm-draw-action-muted" onclick="Emergency._fmClearCanvas(true)" title="مسح لوحة الرسم فقط — لا يمسح بيانات النموذج"><i class="fas fa-trash-alt"></i> مسح اللوحة</button>
                                         <button type="button" class="fm-draw-action" onclick="Emergency._fmApplyCanvasSizeFromInputs()" title="تطبيق الأبعاد"><i class="fas fa-expand-arrows-alt"></i> الأبعاد</button>
                                     </div>
                                 </div>
@@ -2972,6 +3088,7 @@ const Emergency = {
             const ff = document.getElementById('fm-floor-factory');
             if (ff) ff.value = editFactoryId;
         }
+        this._fmBindFactoryCascade(defaultSubId, defaultSubName);
         this._fmBindFrameToolbar();
         this._fmInitCanvas();
         this._fmInitSketchZoom();
@@ -3581,7 +3698,31 @@ const Emergency = {
         }
     },
 
-    _fmClearCanvas() {
+    _fmClearCanvasTarget() {
+        const canvas = document.getElementById('fm-sketch-canvas');
+        if (!canvas) return;
+        const sel = canvas._fmSelected;
+        if (sel?.kind === 'stamp' && canvas._fmStamps?.[sel.index]) {
+            canvas._fmStamps.splice(sel.index, 1);
+            canvas._fmSelected = null;
+            this._fmRedrawSketchCanvas(canvas);
+            if (typeof Notification !== 'undefined' && Notification.success) Notification.success('تم مسح الأيقونة المحددة');
+            return;
+        }
+        if (sel?.kind === 'frame' && canvas._fmFrames?.[sel.index]) {
+            canvas._fmFrames.splice(sel.index, 1);
+            canvas._fmSelected = null;
+            this._fmRedrawSketchCanvas(canvas);
+            if (typeof Notification !== 'undefined' && Notification.success) Notification.success('تم مسح الإطار المحدد');
+            return;
+        }
+        if (typeof Notification !== 'undefined' && Notification.warning) {
+            Notification.warning('حدد أيقونة أو إطاراً بأداة التحريك ثم اضغط مسح المحدد');
+        }
+    },
+
+    _fmClearCanvas(requireConfirm) {
+        if (requireConfirm && !window.confirm('مسح لوحة الرسم بالكامل؟ لن تُمسح بيانات النموذج (الاسم، المصنع، الموقع).')) return;
         const canvas = document.getElementById('fm-sketch-canvas');
         if (!canvas) return;
         const ctx = canvas.getContext('2d');
@@ -3593,6 +3734,7 @@ const Emergency = {
         canvas._fmBaseSnapshot = ctx.getImageData(0, 0, canvas.width, canvas.height);
         canvas._snapshot = canvas._fmBaseSnapshot;
         this._fmRedrawSketchCanvas(canvas);
+        if (typeof Notification !== 'undefined' && Notification.info) Notification.info('تم مسح لوحة الرسم');
     },
 
     async handleFloorPlanSubmit(e) {
@@ -3658,9 +3800,15 @@ const Emergency = {
             if (submitBtn) { submitBtn.disabled = false; submitBtn.innerHTML = '<i class="fas fa-save ml-2"></i>' + (editId ? 'حفظ التعديلات' : 'إضافة المخطط'); }
             return false;
         }
+        const floorSelect = document.getElementById('fm-floor-level');
+        const subLocationId = floorSelect?.value?.trim() || '';
+        const subLocationOpt = floorSelect?.selectedOptions?.[0];
+        const subLocationName = subLocationOpt?.dataset?.name || subLocationOpt?.textContent?.trim() || '';
         const data = {
             name,
-            floor: document.getElementById('fm-floor-level')?.value || '',
+            floor: subLocationName || '',
+            subLocationId,
+            subLocationName,
             factory: factoryId,
             factoryId,
             factoryName,
@@ -3695,11 +3843,18 @@ const Emergency = {
             } else {
                 const resp = await GoogleIntegration.sendRequest({ action: 'addEmergencyFloorPlan', data });
                 if (resp && resp.success === false) throw new Error(resp.message || 'فشل الإضافة');
-                savedPlanId = resp?.data?.id || resp?.id || savedPlanId;
+                savedPlanId = resp?.data?.id || resp?.data?.data?.id || resp?.id || savedPlanId;
             }
+            this._fmInvalidateFloorPlansCache();
             if (typeof Notification !== 'undefined' && Notification.success) Notification.success(editId ? 'تم تحديث المخطط' : 'تم إضافة المخطط');
             this._closeFloorPlanModal();
-            await this.loadFloorPlans(savedPlanId);
+            const planIdToSelect = String(savedPlanId || editId || '');
+            if (planIdToSelect) {
+                this._fmState.factoryFilter = String(factoryId);
+                const filterField = document.getElementById('fm-factory-filter');
+                if (filterField) filterField.value = String(factoryId);
+            }
+            await this.loadFloorPlans(planIdToSelect, { syncFactoryFilter: true });
         } catch (err) {
             const msg = err?.message || 'خطأ غير معروف';
             if (typeof Notification !== 'undefined' && Notification.error) Notification.error('فشل الحفظ: ' + msg);
@@ -3711,7 +3866,7 @@ const Emergency = {
 
     loadMapItems(planId) {
         this._fmState.currentPlanId = planId;
-        const plan = this._fmState.floorPlans.find(p => p.id === planId);
+        const plan = this._fmState.floorPlans.find(p => String(p.id) === String(planId));
         if (!plan) return;
 
         document.getElementById('fm-map-placeholder')?.classList.add('hidden');
@@ -3911,7 +4066,7 @@ const Emergency = {
 
     deleteFloorPlan(planId) {
         if (!planId) return;
-        const plan = this._fmState.floorPlans.find(p => p.id === planId);
+        const plan = this._fmState.floorPlans.find(p => String(p.id) === String(planId));
         const name = plan?.name || 'هذا المخطط';
         if (!confirm(`حذف "${name}" نهائياً؟ سيتم حذف جميع العناصر المرتبطة به.`)) return;
         Loading.show('جاري حذف المخطط...');
@@ -3930,17 +4085,15 @@ const Emergency = {
                     }).catch(err => { throw err; })
             );
         }
-        Promise.all(promises).then(() => {
+        Promise.all(promises).then(async () => {
             Loading.hide();
+            this._fmInvalidateFloorPlansCache();
             if (typeof Notification !== 'undefined' && Notification.success) Notification.success('تم حذف المخطط');
-            this._fmState.floorPlans = this._fmState.floorPlans.filter(p => p.id !== planId);
+            this._fmState.floorPlans = this._fmState.floorPlans.filter(p => String(p.id) !== String(planId));
             this._fmState.items = this._fmState.items.filter(i => i.floorPlanId !== planId);
+            await this.loadFloorPlans('');
             const select = document.getElementById('fm-floor-select');
-            if (select) {
-                select.value = '';
-                select.innerHTML = '<option value="">-- اختر المخطط --</option>' +
-                    this._fmState.floorPlans.map(p => `<option value="${Utils.escapeAttr(p.id)}">${Utils.escapeHTML(p.name || 'مخطط')}${p.floor ? ' - ' + Utils.escapeHTML(p.floor) : ''}</option>`).join('');
-            }
+            if (select) select.value = '';
             document.getElementById('fm-map-placeholder')?.classList.remove('hidden');
             document.getElementById('fm-map-wrapper')?.classList.add('hidden');
             document.getElementById('fm-edit-floor-btn')?.classList.add('hidden');

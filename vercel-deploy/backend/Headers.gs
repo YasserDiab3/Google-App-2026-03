@@ -269,7 +269,7 @@ function getDefaultHeaders(sheetName) {
         'BackupSettings': ['id', 'autoBackupEnabled', 'backupTimes', 'maxBackupFiles', 'backupFolderName', 'retentionDays', 'notifyOnBackup', 'notifyOnFailure', 'updatedAt', 'updatedBy', 'updatedById'],
         // أرقام طوارئ المؤسسة (يُديرها المدير) — تظهر في الملف الشخصي والبطاقة العامة
         'AppEmergencyNumbers': ['id', 'label', 'phone', 'sortOrder', 'isActive', 'createdAt', 'updatedAt'],
-        'EmergencyFloorPlans': ['id', 'name', 'floor', 'factory', 'factoryId', 'factoryName', 'imageDriveId', 'imageWidth', 'imageHeight', 'sortOrder', 'isActive', 'qrToken', 'drawStampsJson', 'createdAt', 'updatedAt'],
+        'EmergencyFloorPlans': ['id', 'name', 'floor', 'factory', 'factoryId', 'factoryName', 'subLocationId', 'subLocationName', 'imageDriveId', 'imageWidth', 'imageHeight', 'sortOrder', 'isActive', 'qrToken', 'drawStampsJson', 'createdAt', 'updatedAt'],
         'EmergencyMapItems': ['id', 'floorPlanId', 'itemType', 'label', 'x', 'y', 'width', 'height', 'rotation', 'strokeColor', 'fillColor', 'status', 'notes', 'createdAt', 'updatedAt'],
         // ✅ قائمة الأشخاص المصرح لهم بالتوقيع على تصاريح العمل (Issuing Authorities)
         // G = مصرح بالتوقيع في كل الحالات

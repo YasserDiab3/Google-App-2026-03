@@ -17655,6 +17655,15 @@ body.fm-floor-modal-open {
     font-size: 0.85rem;
 }
 
+.fm-draw-action-muted {
+    opacity: 0.85;
+    font-size: 0.78rem;
+}
+
+.fm-draw-action-muted:hover {
+    opacity: 1;
+}
+
 .fm-draw-tool[data-tool="move"].active {
     background: #dbeafe !important;
     border-color: #2563eb !important;
