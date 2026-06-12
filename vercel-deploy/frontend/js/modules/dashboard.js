@@ -2431,6 +2431,175 @@ const Dashboard = {
         `;
     },
 
+    buildContractorReportPdfContent(report) {
+        const con = report.contractor || {};
+        const ar = this._AR_PDF_TEXT_STYLE_;
+        const esc = (v) => Utils.escapeHTML(String(v ?? ''));
+        const fmtDate = (d) => (d && typeof Utils.formatDate === 'function') ? Utils.formatDate(d) : '';
+        const name = report.contractorName || con.companyName || con.name || '—';
+        const code = report.contractorCode || con.code || con.isoCode || '';
+        const initials = name.trim().split(/\s+/).slice(0, 2).map((w) => w.charAt(0)).join('') || 'م';
+        const reportDate = fmtDate(new Date()) || new Date().toLocaleDateString('ar-SA');
+        const ptwOpen = report.ptwOpen != null ? report.ptwOpen : 0;
+        const ptwClosed = report.ptwClosed != null ? report.ptwClosed : 0;
+        const ptwList = Array.isArray(report.ptwContractor) ? report.ptwContractor : [];
+        const injuriesList = Array.isArray(report.injuriesContractor) ? report.injuriesContractor : [];
+
+        const statCard = (label, value, bg, border, labelColor, valueColor) => `
+            <div style="flex:1 1 140px;min-width:120px;padding:14px 12px;border-radius:12px;background:${bg};border:1px solid ${border};text-align:center;">
+                <div style="font-size:11px;color:${labelColor};font-weight:600;margin-bottom:6px;${ar}">${esc(label)}</div>
+                <div style="font-size:26px;font-weight:800;color:${valueColor};line-height:1.1;${ar}">${value}</div>
+            </div>`;
+
+        const thStyle = (accent) => `padding:11px 8px;border:1px solid ${accent};text-align:center;font-weight:700;font-size:11px;${ar}`;
+        const tdStyle = `padding:10px 8px;border:1px solid #E5E7EB;text-align:right;font-size:11px;vertical-align:top;${ar}`;
+        const tdCenter = `padding:10px 8px;border:1px solid #E5E7EB;text-align:center;font-size:11px;vertical-align:top;${ar}`;
+
+        const sectionTable = (title, accent, headers, rowsHtml) => {
+            if (!rowsHtml) return '';
+            return `
+                <div style="margin:28px 0 16px;direction:rtl;">
+                    <h3 dir="rtl" style="font-size:16px;margin:0 0 12px;color:${accent};font-weight:700;border-right:4px solid ${accent};padding-right:12px;${ar}">${esc(title)}</h3>
+                    <table dir="rtl" style="width:100%;border-collapse:collapse;${ar}">
+                        <thead><tr style="background:${accent};color:#FFFFFF;">${headers.map((h) => `<th dir="rtl" style="${thStyle(accent)}">${esc(h)}</th>`).join('')}</tr></thead>
+                        <tbody>${rowsHtml}</tbody>
+                    </table>
+                </div>`;
+        };
+
+        const ptwRows = ptwList.map((p) => `
+            <tr>
+                <td style="${tdCenter}">${esc(p.permitId || p.id || p.serialNumber)}</td>
+                <td style="${tdStyle}">${esc(p.workDescription || p.workType || p.location || p.siteName)}</td>
+                <td style="${tdCenter}">${esc(this.normalizePTWStatus(p.status))}</td>
+                <td style="${tdCenter}">${fmtDate(p.startDate || p.createdAt || p.issueDate)}</td>
+            </tr>`).join('');
+
+        const violationsRows = (report.violations || []).map((v) => `
+            <tr>
+                <td style="${tdStyle}">${esc(v.violationType)}</td>
+                <td style="${tdCenter}">${fmtDate(v.violationDate)}</td>
+                <td style="${tdCenter}">${esc(v.severity)}</td>
+                <td style="${tdStyle}">${esc(v.actionTaken)}</td>
+                <td style="${tdCenter}">${esc(v.status)}</td>
+            </tr>`).join('');
+
+        const incidentRows = (report.incidents || []).map((i) => `
+            <tr>
+                <td style="${tdCenter}">${fmtDate(i.incidentDate || i.date || i.createdAt)}</td>
+                <td style="${tdStyle}">${esc(String(i.title || i.description || '').substring(0, 120))}</td>
+                <td style="${tdCenter}">${esc(i.severity)}</td>
+                <td style="${tdCenter}">${esc(i.status)}</td>
+            </tr>`).join('');
+
+        const injuryRows = injuriesList.map((inj) => `
+            <tr>
+                <td style="${tdStyle}">${esc(inj.personName || inj.employeeName || inj.contractorName)}</td>
+                <td style="${tdCenter}">${fmtDate(inj.injuryDate || inj.date || inj.createdAt)}</td>
+                <td style="${tdStyle}">${esc(inj.injuryType || inj.injuryDescription || inj.description)}</td>
+                <td style="${tdCenter}">${esc(inj.severity || inj.injurySeverity)}</td>
+            </tr>`).join('');
+
+        const sickLeaveRows = (report.sickLeave || []).map((s) => `
+            <tr>
+                <td style="${tdCenter}">${fmtDate(s.startDate)}</td>
+                <td style="${tdCenter}">${fmtDate(s.endDate)}</td>
+                <td style="${tdStyle}">${esc(s.reason)}</td>
+                <td style="${tdStyle}">${esc(s.medicalNotes)}</td>
+            </tr>`).join('');
+
+        const trainingRows = (report.training || []).map((t) => `
+            <tr>
+                <td style="${tdStyle}">${esc(t.name)}</td>
+                <td style="${tdStyle}">${esc(t.trainer)}</td>
+                <td style="${tdCenter}">${fmtDate(t.startDate)}</td>
+                <td style="${tdCenter}">${esc(t.status)}</td>
+            </tr>`).join('');
+
+        const clinicRows = (report.clinicVisits || []).map((c) => `
+            <tr>
+                <td style="${tdCenter}">${fmtDate(c.visitDate)}</td>
+                <td style="${tdStyle}">${esc(c.reason || 'زيارة عادية')}</td>
+                <td style="${tdStyle}">${esc(c.diagnosis)}</td>
+                <td style="${tdStyle}">${esc(c.treatment)}</td>
+            </tr>`).join('');
+
+        const evaluationRows = (report.contractorEvaluations || []).map((e) => `
+            <tr>
+                <td style="${tdStyle}">${esc(e.projectName || 'تقييم')}</td>
+                <td style="${tdStyle}">${esc(e.evaluatorName)}</td>
+                <td style="${tdCenter}">${fmtDate(e.evaluationDate)}</td>
+                <td style="${tdCenter}">${e.finalScore != null ? e.finalScore : ''} ${esc(e.finalRating || '')}</td>
+            </tr>`).join('');
+
+        const totalRecords = ptwList.length + (report.violations?.length || 0) + (report.incidents?.length || 0)
+            + injuriesList.length + (report.sickLeave?.length || 0) + (report.training?.length || 0)
+            + (report.clinicVisits?.length || 0) + (report.contractorEvaluations?.length || 0);
+
+        const approvalDateStr = con.approvalDate ? fmtDate(con.approvalDate) : '';
+        const expiryDateStr = con.expiryDate ? fmtDate(con.expiryDate) : '';
+
+        return `
+            <div style="direction:rtl;margin-bottom:24px;">
+                <div style="display:flex;align-items:center;gap:18px;padding:20px 22px;border-radius:16px;background:linear-gradient(135deg,#fffbeb 0%,#fef3c7 100%);border:1px solid #fcd34d;">
+                    <div style="width:72px;height:72px;border-radius:50%;background:linear-gradient(135deg,#d97706,#b45309);color:#fff;display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:800;flex-shrink:0;box-shadow:0 8px 20px rgba(217,119,6,0.25);${ar}">${esc(initials)}</div>
+                    <div style="flex:1;min-width:0;">
+                        <h2 dir="rtl" style="margin:0 0 8px;font-size:22px;font-weight:800;color:#92400e;${ar}">${esc(name)}</h2>
+                        <div style="display:flex;flex-wrap:wrap;gap:8px 20px;font-size:12px;color:#334155;${ar}">
+                            <span><strong style="color:#b45309;">كود المقاول:</strong> ${esc(code)}</span>
+                            ${con.entityType ? `<span><strong style="color:#b45309;">نوع الكيان:</strong> ${esc(con.entityType)}</span>` : ''}
+                            ${con.serviceType ? `<span><strong style="color:#b45309;">نوع الخدمة:</strong> ${esc(con.serviceType)}</span>` : ''}
+                            ${approvalDateStr ? `<span><strong style="color:#b45309;">تاريخ الاعتماد:</strong> ${esc(approvalDateStr)}</span>` : ''}
+                            ${expiryDateStr ? `<span><strong style="color:#b45309;">تاريخ الانتهاء:</strong> ${esc(expiryDateStr)}</span>` : ''}
+                        </div>
+                    </div>
+                    <div style="text-align:left;font-size:11px;color:#64748b;line-height:1.7;flex-shrink:0;${ar}">
+                        <div><strong>تاريخ التقرير:</strong> ${esc(reportDate)}</div>
+                        <div><strong>إجمالي السجلات:</strong> ${totalRecords}</div>
+                    </div>
+                </div>
+            </div>
+
+            <div style="margin-bottom:8px;direction:rtl;">
+                <h3 dir="rtl" style="font-size:15px;margin:0 0 14px;color:#003865;font-weight:700;${ar}">ملخص مؤشرات السلامة والصحة المهنية</h3>
+                <div style="display:flex;flex-wrap:wrap;gap:12px;">
+                    ${statCard('تصاريح مفتوحة', ptwOpen, '#CCFBF1', '#99F6E4', '#0F766E', '#115E59')}
+                    ${statCard('تصاريح مغلقة', ptwClosed, '#ECFDF5', '#A7F3D0', '#047857', '#065F46')}
+                    ${statCard('إجمالي التصاريح', ptwList.length, '#F0FDFA', '#5EEAD4', '#0D9488', '#134E4A')}
+                    ${statCard('الحوادث', report.incidents?.length || 0, '#FFF7ED', '#FED7AA', '#C2410C', '#9A3412')}
+                    ${statCard('الإصابات', injuriesList.length, '#FFEDD5', '#FDBA74', '#EA580C', '#C2410C')}
+                    ${statCard('المخالفات', report.violations?.length || 0, '#FEF2F2', '#FECACA', '#B91C1C', '#991B1B')}
+                    ${statCard('الإجازات المرضية', report.sickLeave?.length || 0, '#EFF6FF', '#BFDBFE', '#1D4ED8', '#1E40AF')}
+                    ${statCard('برامج التدريب', report.training?.length || 0, '#ECFDF5', '#BBF7D0', '#047857', '#065F46')}
+                    ${statCard('التردد على العيادة', report.clinicVisits?.length || 0, '#FDF2F8', '#FBCFE8', '#BE185D', '#9D174D')}
+                    ${statCard('التقييمات', report.contractorEvaluations?.length || 0, '#EEF2FF', '#C7D2FE', '#4F46E5', '#3730A3')}
+                </div>
+            </div>
+
+            ${sectionTable(`تصاريح العمل (${ptwList.length})`, '#0D9488', ['رقم التصريح', 'نوع/وصف العمل', 'الحالة', 'تاريخ البداية'], ptwRows)}
+            ${sectionTable(`المخالفات (${report.violations?.length || 0})`, '#B91C1C', ['النوع', 'التاريخ', 'الشدة', 'الإجراء المتخذ', 'الحالة'], violationsRows)}
+            ${sectionTable(`الحوادث (${report.incidents?.length || 0})`, '#C2410C', ['التاريخ', 'الوصف', 'الشدة', 'الحالة'], incidentRows)}
+            ${sectionTable(`الإصابات (${injuriesList.length})`, '#EA580C', ['اسم المصاب', 'التاريخ', 'نوع الإصابة', 'الشدة'], injuryRows)}
+            ${sectionTable(`الإجازات المرضية (${report.sickLeave?.length || 0})`, '#1D4ED8', ['من تاريخ', 'إلى تاريخ', 'السبب', 'الملاحظات الطبية'], sickLeaveRows)}
+            ${sectionTable(`برامج التدريب (${report.training?.length || 0})`, '#047857', ['اسم البرنامج', 'المدرب', 'تاريخ البدء', 'الحالة'], trainingRows)}
+            ${sectionTable(`التردد على العيادة (${report.clinicVisits?.length || 0})`, '#BE185D', ['تاريخ الزيارة', 'السبب', 'التشخيص', 'العلاج'], clinicRows)}
+            ${sectionTable(`التقييمات (${report.contractorEvaluations?.length || 0})`, '#4F46E5', ['المشروع', 'المقيّم', 'التاريخ', 'الدرجة/التقييم'], evaluationRows)}
+
+            ${totalRecords === 0 ? `<div style="margin-top:24px;padding:18px;border-radius:12px;background:#F8FAFC;border:2px dashed #CBD5E1;text-align:center;color:#475569;font-size:13px;${ar}">لا توجد سجلات مرتبطة بهذا المقاول في الأنظمة المتابَعة.</div>` : ''}
+        `;
+    },
+
+    contractorReportMatchesSearchCode(report, searchCode) {
+        if (!report || searchCode == null || searchCode === '') return false;
+        const code = String(searchCode).trim();
+        if (!code) return false;
+        if (String(report.contractorCode || '').trim() === code) return true;
+        if (report.contractorName && String(report.contractorName).trim() === code) return true;
+        const con = report.contractor || {};
+        const aliases = [con.code, con.isoCode, con.contractorId, con.id, con.companyName, con.name];
+        return aliases.some((a) => a != null && String(a).trim() === code);
+    },
+
     /**
      * تصدير تقرير الموظف كـ PDF
      */
@@ -2986,10 +3155,9 @@ const Dashboard = {
      * تصدير تقرير المقاول كـ PDF
      */
     async exportContractorReportPDF(contractorCode) {
-        const codeTrimmed = String(contractorCode).trim();
+        const codeTrimmed = String(contractorCode || '').trim();
         const existing = window.currentContractorReport;
-        const sameContractor = existing && (existing.contractorCode === codeTrimmed || (existing.contractorName && String(existing.contractorName).trim() === codeTrimmed));
-        if (!existing || !sameContractor) {
+        if (!existing || !this.contractorReportMatchesSearchCode(existing, codeTrimmed)) {
             await this.generateContractorReport(codeTrimmed);
         }
 
@@ -3000,157 +3168,31 @@ const Dashboard = {
         }
 
         try {
-            Loading.show();
+            Loading.show('جاري إعداد وتحميل التقرير...');
 
-            const formCode = `CON-REPORT-${report.contractorCode}-${new Date().toISOString().slice(0, 10)}`;
-            const formTitle = `تقرير شامل للمقاول: ${report.contractorName || ''}`;
-
-            let content = `
-                <table style="margin-bottom: 30px;">
-                    <tr><th>اسم المقاول</th><td>${Utils.escapeHTML(report.contractorName || '')}</td></tr>
-                    <tr><th>كود المقاول</th><td>${Utils.escapeHTML(report.contractorCode || '')}</td></tr>
-                    ${report.contractor.entityType ? `<tr><th>نوع الكيان</th><td>${Utils.escapeHTML(report.contractor.entityType)}</td></tr>` : ''}
-                    ${report.contractor.serviceType ? `<tr><th>نوع الخدمة</th><td>${Utils.escapeHTML(report.contractor.serviceType)}</td></tr>` : ''}
-                </table>
-
-                <div class="section-title">ملخص الإحصائيات</div>
-                <table>
-                    <tr><th>التصاريح (مفتوح)</th><td>${report.ptwOpen != null ? report.ptwOpen : 0}</td></tr>
-                    <tr><th>التصاريح (مغلق)</th><td>${report.ptwClosed != null ? report.ptwClosed : 0}</td></tr>
-                    <tr><th>التصاريح (الإجمالي)</th><td>${(report.ptwContractor && report.ptwContractor.length) || 0}</td></tr>
-                    <tr><th>الحوادث</th><td>${report.incidents.length}</td></tr>
-                    <tr><th>الإصابات</th><td>${(report.injuriesContractor && report.injuriesContractor.length) || 0}</td></tr>
-                    <tr><th>المخالفات</th><td>${report.violations.length}</td></tr>
-                    <tr><th>الإجازات المرضية</th><td>${report.sickLeave.length}</td></tr>
-                    <tr><th>برامج التدريب</th><td>${report.training.length}</td></tr>
-                    <tr><th>التردد على العيادة</th><td>${report.clinicVisits.length}</td></tr>
-                    <tr><th>التقييمات</th><td>${report.contractorEvaluations.length}</td></tr>
-                </table>
-            `;
-
-            if (report.violations.length > 0) {
-                content += `
-                    <div class="section-title">المخالفات (${report.violations.length})</div>
-                    <table>
-                        <tr><th>النوع</th><th>التاريخ</th><th>الشدة</th><th>الإجراء المتخذ</th><th>الحالة</th></tr>
-                        ${report.violations.map(v => `
-                            <tr>
-                                <td>${Utils.escapeHTML(v.violationType || '')}</td>
-                                <td>${v.violationDate ? Utils.formatDate(v.violationDate) : ''}</td>
-                                <td>${Utils.escapeHTML(v.severity || '')}</td>
-                                <td>${Utils.escapeHTML(v.actionTaken || '')}</td>
-                                <td>${Utils.escapeHTML(v.status || '')}</td>
-                            </tr>
-                        `).join('')}
-                    </table>
-                `;
-            }
-
-            if (report.incidents.length > 0) {
-                content += `
-                    <div class="section-title">الحوادث (${report.incidents.length})</div>
-                    <table>
-                        <tr><th>التاريخ</th><th>العنوان/الوصف</th><th>الشدة</th></tr>
-                        ${report.incidents.map(i => `
-                            <tr>
-                                <td>${i.date ? Utils.formatDate(i.date) : ''}</td>
-                                <td>${Utils.escapeHTML(String(i.title || i.description || '').substring(0, 100))}</td>
-                                <td>${Utils.escapeHTML(i.severity || '')}</td>
-                            </tr>
-                        `).join('')}
-                    </table>
-                `;
-            }
-
-            if (report.sickLeave.length > 0) {
-                content += `
-                    <div class="section-title">الإجازات المرضية (${report.sickLeave.length})</div>
-                    <table>
-                        <tr><th>من تاريخ</th><th>إلى تاريخ</th><th>السبب</th></tr>
-                        ${report.sickLeave.map(s => `
-                            <tr>
-                                <td>${s.startDate ? Utils.formatDate(s.startDate) : ''}</td>
-                                <td>${s.endDate ? Utils.formatDate(s.endDate) : ''}</td>
-                                <td>${Utils.escapeHTML(s.reason || '')}</td>
-                            </tr>
-                        `).join('')}
-                    </table>
-                `;
-            }
-
-            if (report.training.length > 0) {
-                content += `
-                    <div class="section-title">برامج التدريب (${report.training.length})</div>
-                    <table>
-                        <tr><th>اسم البرنامج</th><th>المدرب</th><th>تاريخ البدء</th><th>الحالة</th></tr>
-                        ${report.training.map(t => `
-                            <tr>
-                                <td>${Utils.escapeHTML(t.name || '')}</td>
-                                <td>${Utils.escapeHTML(t.trainer || '')}</td>
-                                <td>${t.startDate ? Utils.formatDate(t.startDate) : ''}</td>
-                                <td>${Utils.escapeHTML(t.status || '')}</td>
-                            </tr>
-                        `).join('')}
-                    </table>
-                `;
-            }
-
-            if (report.clinicVisits.length > 0) {
-                content += `
-                    <div class="section-title">التردد على العيادة (${report.clinicVisits.length})</div>
-                    <table>
-                        <tr><th>تاريخ الزيارة</th><th>السبب</th><th>التشخيص</th><th>العلاج</th></tr>
-                        ${report.clinicVisits.map(c => `
-                            <tr>
-                                <td>${c.visitDate ? Utils.formatDate(c.visitDate) : ''}</td>
-                                <td>${Utils.escapeHTML(c.reason || '')}</td>
-                                <td>${Utils.escapeHTML(c.diagnosis || '')}</td>
-                                <td>${Utils.escapeHTML(c.treatment || '')}</td>
-                            </tr>
-                        `).join('')}
-                    </table>
-                `;
-            }
-
-            if (report.contractorEvaluations.length > 0) {
-                content += `
-                    <div class="section-title">التقييمات (${report.contractorEvaluations.length})</div>
-                    <table>
-                        <tr><th>المشروع</th><th>المقيّم</th><th>التاريخ</th><th>الدرجة/التقييم</th></tr>
-                        ${report.contractorEvaluations.map(e => `
-                            <tr>
-                                <td>${Utils.escapeHTML(e.projectName || '')}</td>
-                                <td>${Utils.escapeHTML(e.evaluatorName || '')}</td>
-                                <td>${e.evaluationDate ? Utils.formatDate(e.evaluationDate) : ''}</td>
-                                <td>${e.finalScore != null ? e.finalScore : ''} ${Utils.escapeHTML(e.finalRating || '')}</td>
-                            </tr>
-                        `).join('')}
-                    </table>
-                `;
-            }
+            const conName = report.contractorName || '';
+            const safeCode = String(report.contractorCode || codeTrimmed).replace(/[\\/:*?"<>|]/g, '_');
+            const formCode = `CON-REPORT-${safeCode}-${new Date().toISOString().slice(0, 10)}`;
+            const formTitle = `تقرير شامل للمقاول: ${conName}`;
+            const content = this.buildContractorReportPdfContent(report);
 
             const htmlContent = typeof FormHeader !== 'undefined' && FormHeader.generatePDFHTML
-                ? FormHeader.generatePDFHTML(formCode, formTitle, content, false, true)
-                : `<html><body>${content}</body></html>`;
+                ? FormHeader.generatePDFHTML(formCode, formTitle, content, false, false, {
+                    titleAr: formTitle,
+                    titleEn: 'Comprehensive Contractor Report',
+                    compactPdfFooter: true,
+                    includeQRCode: false
+                }, new Date(), new Date())
+                : `<html dir="rtl" lang="ar"><head><meta charset="UTF-8"><title>${Utils.escapeHTML(formTitle)}</title></head><body>${content}</body></html>`;
 
-            const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
-            const url = URL.createObjectURL(blob);
-            const printWindow = window.open(url, '_blank');
+            const fileName = `تقرير-مقاول-${safeCode}-${new Date().toISOString().slice(0, 10)}.pdf`;
+            const downloaded = await this._downloadHtmlReportAsPdf(htmlContent, fileName);
 
-            if (printWindow) {
-                printWindow.onload = () => {
-                    setTimeout(() => {
-                        printWindow.print();
-                        setTimeout(() => {
-                            URL.revokeObjectURL(url);
-                            Loading.hide();
-                            Notification.success('تم تحضير التقرير للطباعة/الحفظ كـ PDF');
-                        }, 1000);
-                    }, 500);
-                };
+            Loading.hide();
+            if (downloaded) {
+                Notification.success('تم تحميل تقرير المقاول بصيغة PDF بنجاح');
             } else {
-                Loading.hide();
-                Notification.error('يرجى السماح للنوافذ المنبثقة لعرض التقرير');
+                Notification.error('تعذّر تحميل PDF — تحقق من الاتصال بالإنترنت ثم أعد المحاولة');
             }
         } catch (error) {
             Loading.hide();
