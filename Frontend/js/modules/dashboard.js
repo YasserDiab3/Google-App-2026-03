@@ -7,6 +7,7 @@
 const Dashboard = {
     contractorReportCache: new Map(),
     contractorReportRequests: new Map(),
+    CONTRACTOR_REPORT_PDF_MAX_SECTION_ROWS: 50,
     t(key, fallback) {
         const i18nCore = (window.AppI18n && typeof window.AppI18n.t === 'function')
             ? window.AppI18n
@@ -2204,9 +2205,10 @@ const Dashboard = {
         } catch (_e) { /* ignore */ }
     },
 
-    async _captureHtmlToCanvas_(root) {
+    async _captureHtmlToCanvas_(root, opts = {}) {
+        const scale = this._getAdaptivePdfCanvasScale_(root, opts.scale || 2.5);
         const baseOpts = {
-            scale: 2.5,
+            scale,
             backgroundColor: '#ffffff',
             logging: false,
             windowWidth: Math.max(root.scrollWidth, 900),
@@ -2305,6 +2307,34 @@ const Dashboard = {
         } finally {
             iframe.remove();
         }
+    },
+
+    _getAdaptivePdfCanvasScale_(root, preferredScale = 2.5) {
+        const scrollH = Math.max(root?.scrollHeight || 0, 1);
+        const scrollW = Math.max(root?.scrollWidth || 900, 900);
+        const maxDim = 14000;
+        const maxArea = 90000000;
+        let scale = Number(preferredScale) || 2.5;
+        while (scale > 0.85 && (
+            scrollW * scale > maxDim ||
+            scrollH * scale > maxDim ||
+            scrollW * scrollH * scale * scale > maxArea
+        )) {
+            scale -= 0.25;
+        }
+        return Math.max(0.85, Math.round(scale * 100) / 100);
+    },
+
+    _buildPdfSectionTable_(sectionTable, label, accent, headers, records, rowMapper, maxRows) {
+        const list = Array.isArray(records) ? records : [];
+        const limit = Math.max(1, Number(maxRows) || 50);
+        const shown = list.slice(0, limit);
+        const omitted = Math.max(0, list.length - shown.length);
+        const rowsHtml = shown.map(rowMapper).join('');
+        const titleSuffix = list.length
+            ? (omitted > 0 ? ` (${list.length} — عرض ${shown.length} في PDF)` : ` (${list.length})`)
+            : '';
+        return sectionTable(`${label}${titleSuffix}`, accent, headers, rowsHtml);
     },
 
     buildEmployeeReportPdfContent(report, employeeCode) {
@@ -2481,63 +2511,9 @@ const Dashboard = {
                     </table>
                 </div>`;
         };
-
-        const ptwRows = ptwList.map((p) => `
-            <tr>
-                <td style="${tdCenter}">${esc(p.permitId || p.id || p.serialNumber)}</td>
-                <td style="${tdStyle}">${esc(p.workDescription || p.workType || p.location || p.siteName)}</td>
-                <td style="${tdCenter}">${esc(this.normalizePTWStatus(p.status))}</td>
-                <td style="${tdCenter}">${fmtDate(p.startDate || p.createdAt || p.issueDate)}</td>
-            </tr>`).join('');
-
-        const violationsRows = (report.violations || []).map((v) => `
-            <tr>
-                <td style="${tdStyle}">${esc(v.violationType)}</td>
-                <td style="${tdCenter}">${fmtDate(v.violationDate)}</td>
-                <td style="${tdCenter}">${esc(v.severity)}</td>
-                <td style="${tdStyle}">${esc(v.actionTaken)}</td>
-                <td style="${tdCenter}">${esc(v.status)}</td>
-            </tr>`).join('');
-
-        const incidentRows = (report.incidents || []).map((i) => `
-            <tr>
-                <td style="${tdCenter}">${fmtDate(i.incidentDate || i.date || i.createdAt)}</td>
-                <td style="${tdStyle}">${esc(String(i.title || i.description || '').substring(0, 120))}</td>
-                <td style="${tdCenter}">${esc(i.severity)}</td>
-                <td style="${tdCenter}">${esc(i.status)}</td>
-            </tr>`).join('');
-
-        const injuryRows = injuriesList.map((inj) => `
-            <tr>
-                <td style="${tdStyle}">${esc(inj.personName || inj.employeeName || inj.contractorName)}</td>
-                <td style="${tdCenter}">${fmtDate(inj.injuryDate || inj.date || inj.createdAt)}</td>
-                <td style="${tdStyle}">${esc(inj.injuryType || inj.injuryDescription || inj.description)}</td>
-                <td style="${tdCenter}">${esc(inj.severity || inj.injurySeverity)}</td>
-            </tr>`).join('');
-
-        const trainingRows = (report.training || []).map((t) => `
-            <tr>
-                <td style="${tdStyle}">${esc(t.name)}</td>
-                <td style="${tdStyle}">${esc(t.trainer)}</td>
-                <td style="${tdCenter}">${fmtDate(t.startDate)}</td>
-                <td style="${tdCenter}">${esc(t.status)}</td>
-            </tr>`).join('');
-
-        const clinicRows = (report.clinicVisits || []).map((c) => `
-            <tr>
-                <td style="${tdCenter}">${fmtDate(c.visitDate)}</td>
-                <td style="${tdStyle}">${esc(c.reason || 'زيارة عادية')}</td>
-                <td style="${tdStyle}">${esc(c.diagnosis)}</td>
-                <td style="${tdStyle}">${esc(c.treatment)}</td>
-            </tr>`).join('');
-
-        const evaluationRows = (report.contractorEvaluations || []).map((e) => `
-            <tr>
-                <td style="${tdStyle}">${esc(e.projectName || 'تقييم')}</td>
-                <td style="${tdStyle}">${esc(e.evaluatorName)}</td>
-                <td style="${tdCenter}">${fmtDate(e.evaluationDate)}</td>
-                <td style="${tdCenter}">${e.finalScore != null ? e.finalScore : ''} ${esc(e.finalRating || '')}</td>
-            </tr>`).join('');
+        const pdfRowLimit = this.CONTRACTOR_REPORT_PDF_MAX_SECTION_ROWS || 50;
+        const pdfSection = (label, accent, headers, records, rowMapper) =>
+            this._buildPdfSectionTable_(sectionTable, label, accent, headers, records, rowMapper, pdfRowLimit);
 
         const totalRecords = ptwList.length + (report.violations?.length || 0) + (report.incidents?.length || 0)
             + injuriesList.length + (report.training?.length || 0)
@@ -2582,13 +2558,56 @@ const Dashboard = {
                 </div>
             </div>
 
-            ${sectionTable(`تصاريح العمل (${ptwList.length})`, '#0D9488', ['رقم التصريح', 'نوع/وصف العمل', 'الحالة', 'تاريخ البداية'], ptwRows)}
-            ${sectionTable(`المخالفات (${report.violations?.length || 0})`, '#B91C1C', ['النوع', 'التاريخ', 'الشدة', 'الإجراء المتخذ', 'الحالة'], violationsRows)}
-            ${sectionTable(`الحوادث (${report.incidents?.length || 0})`, '#C2410C', ['التاريخ', 'الوصف', 'الشدة', 'الحالة'], incidentRows)}
-            ${sectionTable(`الإصابات (${injuriesList.length})`, '#EA580C', ['اسم المصاب', 'التاريخ', 'نوع الإصابة', 'الشدة'], injuryRows)}
-            ${sectionTable(`برامج التدريب (${report.training?.length || 0})`, '#047857', ['اسم البرنامج', 'المدرب', 'تاريخ البدء', 'الحالة'], trainingRows)}
-            ${sectionTable(`التردد على العيادة (${report.clinicVisits?.length || 0})`, '#BE185D', ['تاريخ الزيارة', 'السبب', 'التشخيص', 'العلاج'], clinicRows)}
-            ${sectionTable(`التقييمات (${report.contractorEvaluations?.length || 0})`, '#4F46E5', ['المشروع', 'المقيّم', 'التاريخ', 'الدرجة/التقييم'], evaluationRows)}
+            ${pdfSection('تصاريح العمل', '#0D9488', ['رقم التصريح', 'نوع/وصف العمل', 'الحالة', 'تاريخ البداية'], ptwList, (p) => `
+            <tr>
+                <td style="${tdCenter}">${esc(p.permitId || p.id || p.serialNumber)}</td>
+                <td style="${tdStyle}">${esc(p.workDescription || p.workType || p.location || p.siteName)}</td>
+                <td style="${tdCenter}">${esc(this.normalizePTWStatus(p.status))}</td>
+                <td style="${tdCenter}">${fmtDate(p.startDate || p.createdAt || p.issueDate)}</td>
+            </tr>`)}
+            ${pdfSection('المخالفات', '#B91C1C', ['النوع', 'التاريخ', 'الشدة', 'الإجراء المتخذ', 'الحالة'], report.violations, (v) => `
+            <tr>
+                <td style="${tdStyle}">${esc(v.violationType)}</td>
+                <td style="${tdCenter}">${fmtDate(v.violationDate)}</td>
+                <td style="${tdCenter}">${esc(v.severity)}</td>
+                <td style="${tdStyle}">${esc(v.actionTaken)}</td>
+                <td style="${tdCenter}">${esc(v.status)}</td>
+            </tr>`)}
+            ${pdfSection('الحوادث', '#C2410C', ['التاريخ', 'الوصف', 'الشدة', 'الحالة'], report.incidents, (i) => `
+            <tr>
+                <td style="${tdCenter}">${fmtDate(i.incidentDate || i.date || i.createdAt)}</td>
+                <td style="${tdStyle}">${esc(String(i.title || i.description || '').substring(0, 120))}</td>
+                <td style="${tdCenter}">${esc(i.severity)}</td>
+                <td style="${tdCenter}">${esc(i.status)}</td>
+            </tr>`)}
+            ${pdfSection('الإصابات', '#EA580C', ['اسم المصاب', 'التاريخ', 'نوع الإصابة', 'الشدة'], injuriesList, (inj) => `
+            <tr>
+                <td style="${tdStyle}">${esc(inj.personName || inj.employeeName || inj.contractorName)}</td>
+                <td style="${tdCenter}">${fmtDate(inj.injuryDate || inj.date || inj.createdAt)}</td>
+                <td style="${tdStyle}">${esc(inj.injuryType || inj.injuryDescription || inj.description)}</td>
+                <td style="${tdCenter}">${esc(inj.severity || inj.injurySeverity)}</td>
+            </tr>`)}
+            ${pdfSection('برامج التدريب', '#047857', ['اسم البرنامج', 'المدرب', 'تاريخ البدء', 'الحالة'], report.training, (t) => `
+            <tr>
+                <td style="${tdStyle}">${esc(t.name)}</td>
+                <td style="${tdStyle}">${esc(t.trainer)}</td>
+                <td style="${tdCenter}">${fmtDate(t.startDate)}</td>
+                <td style="${tdCenter}">${esc(t.status)}</td>
+            </tr>`)}
+            ${pdfSection('التردد على العيادة', '#BE185D', ['تاريخ الزيارة', 'السبب', 'التشخيص', 'العلاج'], report.clinicVisits, (c) => `
+            <tr>
+                <td style="${tdCenter}">${fmtDate(c.visitDate)}</td>
+                <td style="${tdStyle}">${esc(c.reason || 'زيارة عادية')}</td>
+                <td style="${tdStyle}">${esc(c.diagnosis)}</td>
+                <td style="${tdStyle}">${esc(c.treatment)}</td>
+            </tr>`)}
+            ${pdfSection('التقييمات', '#4F46E5', ['المشروع', 'المقيّم', 'التاريخ', 'الدرجة/التقييم'], report.contractorEvaluations, (e) => `
+            <tr>
+                <td style="${tdStyle}">${esc(e.projectName || 'تقييم')}</td>
+                <td style="${tdStyle}">${esc(e.evaluatorName)}</td>
+                <td style="${tdCenter}">${fmtDate(e.evaluationDate)}</td>
+                <td style="${tdCenter}">${e.finalScore != null ? e.finalScore : ''} ${esc(e.finalRating || '')}</td>
+            </tr>`)}
 
             ${totalRecords === 0 ? `<div style="margin-top:24px;padding:18px;border-radius:12px;background:#F8FAFC;border:2px dashed #CBD5E1;text-align:center;color:#475569;font-size:13px;${ar}">لا توجد سجلات مرتبطة بهذا المقاول في الأنظمة المتابَعة.</div>` : ''}
         `;
@@ -3181,7 +3200,7 @@ const Dashboard = {
             if (downloaded) {
                 Notification.success('تم تحميل تقرير المقاول بصيغة PDF بنجاح');
             } else {
-                Notification.error('تعذّر تحميل PDF — تحقق من الاتصال بالإنترنت ثم أعد المحاولة');
+                Notification.error('تعذّر إنشاء ملف PDF. أعد المحاولة بعد عرض التقرير أولاً.');
             }
         } catch (error) {
             Loading.hide();
