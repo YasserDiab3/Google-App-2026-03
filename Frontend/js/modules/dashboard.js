@@ -2704,6 +2704,13 @@ const Dashboard = {
             ? Utils.buildContractorIdentityMatcher(reportContractor, contractorLookupKey)
             : null;
         const matchesContractor = contractorCtx ? contractorCtx.matchesContractor : (() => false);
+        const violationBelongsToContractor = contractorCtx
+            ? (record) => contractorCtx.violationBelongsToContractor(record)
+            : (() => false);
+        const evaluationBelongsToContractor = contractorCtx
+            ? (record) => contractorCtx.evaluationBelongsToContractor(record)
+            : (() => false);
+        const isContractorViolation = (v) => v && (v.personType === 'contractor' || v.contractorName);
         const cacheKey = this.getContractorReportCacheKey(reportContractor, contractorLookupKey, searchTerm);
         const dataSignature = this.getContractorReportDataSignature();
         const requestKey = `${cacheKey}::${dataSignature}`;
@@ -2772,11 +2779,11 @@ const Dashboard = {
             return unique;
         };
 
-        const violationsRaw = Array.isArray(serverDetailedAnalytics?.violations)
+        const violationsSource = Array.isArray(serverDetailedAnalytics?.violations)
             ? serverDetailedAnalytics.violations
-            : (data.violations || []).filter(v => (v.personType === 'contractor' || v.contractorName) && matchesContractor(v));
+            : (data.violations || []);
         const violations = dedupeContractorRecords(
-            violationsRaw,
+            violationsSource.filter(v => isContractorViolation(v) && violationBelongsToContractor(v)),
             ['isoCode', 'id'],
             ['contractorId', 'contractorName', 'violationType', 'violationDate', 'violationTime']
         );
@@ -2800,11 +2807,11 @@ const Dashboard = {
         const clinicVisits = Array.isArray(serverDetailedAnalytics?.clinicVisits)
             ? serverDetailedAnalytics.clinicVisits
             : clinicSources.filter(c => (c.personType === 'contractor' || c.personType === 'external' || c.contractorName) && matchesContractor(c));
-        const contractorEvaluationRowsRaw = Array.isArray(serverDetailedAnalytics?.evaluations)
+        const evaluationsSource = Array.isArray(serverDetailedAnalytics?.evaluations)
             ? serverDetailedAnalytics.evaluations
-            : (data.contractorEvaluations || []).filter(e => matchesContractor(e));
+            : (data.contractorEvaluations || []);
         const contractorEvaluationRows = dedupeContractorRecords(
-            contractorEvaluationRowsRaw,
+            evaluationsSource.filter(e => evaluationBelongsToContractor(e)),
             ['evaluationId', 'id', 'isoCode'],
             ['contractorId', 'contractorName', 'evaluationDate', 'projectName', 'finalScore']
         );
