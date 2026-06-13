@@ -9642,14 +9642,15 @@ const Incidents = {
         if (typeof FormHeader !== 'undefined' && FormHeader.generatePDFHTML) {
             return FormHeader.generatePDFHTML(
                 formCode,
-                'نموذج التحقيق في الحادث',
+                'التحقيق في الحادث – Incident Investigation',
                 content,
                 false,
-                true,
+                false,
                 {
                     version: AppState?.companySettings?.formVersion || '1.0',
-                    titleAr: 'نموذج التحقيق في الحادث',
-                    titleEn: 'Incident Investigation Report',
+                    titleAr: 'التحقيق في الحادث',
+                    titleEn: 'Incident Investigation',
+                    includeQRCode: false,
                     'مرجع الحادث': incident.id || '—'
                 },
                 incident.createdAt,
@@ -11133,10 +11134,141 @@ const Incidents = {
         await this._exportInvestigationReportPdf(incidentId);
     },
 
-    // بناء محتوى HTML للطباعة
+    _getInvestigationFormPrintStyles() {
+        return `
+            <style>
+                .inv-print-wrap { direction: rtl; text-align: right; font-family: 'Cairo', 'Tahoma', Arial, sans-serif; }
+                .inv-print-section {
+                    border-radius: 12px;
+                    padding: 20px 24px;
+                    margin-bottom: 20px;
+                    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+                    border: 2px solid;
+                }
+                .inv-print-section h3 {
+                    font-size: 18px;
+                    font-weight: 700;
+                    margin: 0 0 16px;
+                    padding-bottom: 10px;
+                    border-bottom: 3px solid;
+                }
+                .inv-s1 { background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%); border-color: #2196F3; }
+                .inv-s1 h3 { color: #1565C0; border-color: #2196F3; }
+                .inv-s2 { background: linear-gradient(135deg, #f3e5f5 0%, #e1bee7 100%); border-color: #9C27B0; }
+                .inv-s2 h3 { color: #6A1B9A; border-color: #9C27B0; }
+                .inv-s3 { background: linear-gradient(135deg, #fff3e0 0%, #ffe0b2 100%); border-color: #FF9800; }
+                .inv-s3 h3 { color: #E65100; border-color: #FF9800; }
+                .inv-s4 { background: linear-gradient(135deg, #fce4ec 0%, #f8bbd0 100%); border-color: #E91E63; }
+                .inv-s4 h3 { color: #AD1457; border-color: #E91E63; }
+                .inv-s5 { background: linear-gradient(135deg, #e0f2f1 0%, #b2dfdb 100%); border-color: #009688; }
+                .inv-s5 h3 { color: #00695C; border-color: #009688; }
+                .inv-s6 { background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%); border-color: #4CAF50; }
+                .inv-s6 h3 { color: #2E7D32; border-color: #4CAF50; }
+                .inv-s7 { background: linear-gradient(135deg, #fff9c4 0%, #fff59d 100%); border-color: #FFC107; }
+                .inv-s7 h3 { color: #F57F17; border-color: #FFC107; }
+                .inv-field-grid {
+                    display: grid;
+                    grid-template-columns: repeat(3, minmax(0, 1fr));
+                    gap: 14px 16px;
+                }
+                .inv-field-label {
+                    font-size: 12px;
+                    font-weight: 600;
+                    color: #374151;
+                    margin-bottom: 6px;
+                }
+                .inv-field-value {
+                    padding: 10px 12px;
+                    background: #fff;
+                    border-radius: 8px;
+                    font-weight: 500;
+                    min-height: 20px;
+                }
+                .inv-type-grid {
+                    display: grid;
+                    grid-template-columns: repeat(3, minmax(0, 1fr));
+                    gap: 10px;
+                }
+                .inv-type-item {
+                    display: flex;
+                    align-items: center;
+                    gap: 8px;
+                    padding: 10px 12px;
+                    background: #fff;
+                    border: 2px solid #9C27B0;
+                    border-radius: 8px;
+                    font-weight: 600;
+                    color: #374151;
+                }
+                .inv-type-item.checked { background: #f3e5f5; }
+                .inv-type-box {
+                    width: 18px;
+                    height: 18px;
+                    border: 2px solid #9C27B0;
+                    border-radius: 4px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    font-size: 12px;
+                    font-weight: 800;
+                    color: #7B1FA2;
+                    flex-shrink: 0;
+                }
+                .inv-text-panel {
+                    padding: 14px;
+                    background: #fff;
+                    border: 2px solid;
+                    border-radius: 8px;
+                    white-space: pre-wrap;
+                    line-height: 1.7;
+                }
+                .inv-inner-white {
+                    background: #fff;
+                    padding: 14px;
+                    border: 2px solid;
+                    border-radius: 10px;
+                }
+                .inv-sig-grid {
+                    display: grid;
+                    grid-template-columns: repeat(3, minmax(0, 1fr));
+                    gap: 14px;
+                }
+                .inv-sig-box {
+                    border: 1px solid #d1d5db;
+                    border-radius: 8px;
+                    padding: 8px;
+                    min-height: 64px;
+                    background: #f9fafb;
+                    text-align: center;
+                }
+                .inv-sig-box img { max-height: 56px; max-width: 100%; }
+            </style>
+        `;
+    },
+
+    _buildInvestigationFormPrintField(label, value, borderColor = '#2196F3', highlight = false) {
+        const bg = highlight ? 'background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 50%); font-weight: 700; color: #0D47A1;' : '';
+        return `
+            <div>
+                <div class="inv-field-label">${Utils.escapeHTML(label)}</div>
+                <div class="inv-field-value" style="border: 2px solid ${borderColor}; ${bg}">${value || '—'}</div>
+            </div>
+        `;
+    },
+
+    _buildInvestigationFormPrintSection(sectionClass, num, title, innerHtml) {
+        return `
+            <div class="inv-print-section ${sectionClass}">
+                <h3>${num}) ${Utils.escapeHTML(title)}</h3>
+                ${innerHtml}
+            </div>
+        `;
+    },
+
+    // بناء محتوى HTML للطباعة — مطابق لنموذج التحقيق في الحادث
     buildInvestigationPrintContent(incident, investigationData) {
         const formatDate = (dateStr) => {
-            if (!dateStr) return 'غير محدد';
+            if (!dateStr) return '';
             try {
                 const date = new Date(dateStr);
                 return date.toLocaleString('ar-SA', {
@@ -11147,252 +11279,196 @@ const Incidents = {
                     minute: '2-digit'
                 });
             } catch {
-                return dateStr;
+                return String(dateStr);
             }
         };
 
-        const incidentTypeNames = {
-            'nearmiss': 'حادث وشيك',
-            'property': 'تلف ممتلكات',
-            'injury-no-lost': 'إصابة بدون فقد أيام عمل',
-            'injury-lost': 'إصابة مع فقد أيام عمل',
-            'fatality': 'وفاة'
+        const formatDateOnly = (dateStr) => {
+            if (!dateStr) return '';
+            try {
+                return new Date(dateStr).toLocaleDateString('ar-SA');
+            } catch {
+                return String(dateStr);
+            }
         };
 
-        const riskResultNames = {
-            'low': 'منخفض',
-            'medium': 'متوسط',
-            'high': 'عالي'
-        };
+        const esc = (v) => Utils.escapeHTML(String(v ?? ''));
+        const incidentTypeOptions = [
+            { key: 'nearmiss', label: 'حادث وشيك' },
+            { key: 'property', label: 'تلف ممتلكات' },
+            { key: 'injury-no-lost', label: 'إصابة بدون فقد أيام عمل' },
+            { key: 'injury-lost', label: 'إصابة مع فقد أيام عمل' },
+            { key: 'fatality', label: 'وفاة' }
+        ];
+        const selectedTypes = Array.isArray(investigationData.incidentTypes) ? investigationData.incidentTypes : [];
 
         const affiliationNames = {
-            'company': 'شركة',
+            company: 'شركة',
             'daily-labor': 'عمالة يومية',
-            'contractor': 'مقاول',
-            'visitor': 'زائر',
-            'none': 'لا يوجد'
+            contractor: 'مقاول',
+            visitor: 'زائر',
+            none: 'لا يوجد'
         };
+        const yesNoNames = { yes: 'نعم', no: 'لا' };
+        const riskResultNames = { low: 'منخفض', medium: 'متوسط', high: 'عالي' };
 
-        const unsafeBehaviorNames = {
-            'yes': 'نعم',
-            'no': 'لا'
-        };
+        const section1 = this._buildInvestigationFormPrintSection('inv-s1', '1', 'بيانات الحادث الأساسية', `
+            <div class="inv-field-grid">
+                ${this._buildInvestigationFormPrintField('تاريخ ووقت التحقيق', formatDate(investigationData.investigationDateTime), '#2196F3')}
+                ${this._buildInvestigationFormPrintField('تاريخ ووقت الحادث', formatDate(investigationData.incidentDateTime), '#2196F3')}
+                ${this._buildInvestigationFormPrintField('المصنع', esc(investigationData.factoryName || 'غير محدد'), '#2196F3')}
+                ${this._buildInvestigationFormPrintField('موقع الحادث بالضبط', esc(investigationData.locationName || 'غير محدد'), '#2196F3')}
+                ${this._buildInvestigationFormPrintField('رقم التحقيق', esc(investigationData.investigationNumber || '—'), '#1976D2', true)}
+                ${incident.isoCode ? this._buildInvestigationFormPrintField('كود الحادث', esc(incident.isoCode), '#2196F3') : ''}
+            </div>
+        `);
 
-        // بناء جدول خطة العمل
-        let actionPlanHTML = '';
-        if (investigationData.actionPlan && Array.isArray(investigationData.actionPlan) && investigationData.actionPlan.length > 0) {
-            const actionRows = investigationData.actionPlan.map(action => `
-                <tr>
-                    <td style="padding: 8px; border: 1px solid #ddd;">${Utils.escapeHTML(action.correctiveAction || '')}</td>
-                    <td style="padding: 8px; border: 1px solid #ddd; text-align: center;">${action.plannedDate ? formatDate(action.plannedDate) : ''}</td>
-                    <td style="padding: 8px; border: 1px solid #ddd;">
-                        ${Utils.escapeHTML(action.responsibleName || '')}
-                        ${action.responsibleDate ? '<br>' + formatDate(action.responsibleDate) : ''}
+        const typeItems = incidentTypeOptions.map((type) => {
+            const checked = selectedTypes.includes(type.key);
+            return `
+                <div class="inv-type-item${checked ? ' checked' : ''}">
+                    <div class="inv-type-box">${checked ? '✓' : ''}</div>
+                    <span>${esc(type.label)}</span>
+                </div>
+            `;
+        }).join('');
+
+        const section2 = this._buildInvestigationFormPrintSection('inv-s2', '2', 'نوع الحادث', `
+            <div class="inv-type-grid">${typeItems}</div>
+        `);
+
+        const section3 = this._buildInvestigationFormPrintSection('inv-s3', '3', 'وصف وقائع وظروف الحادث', `
+            <div style="margin-bottom: 14px;">
+                <div class="inv-field-label">الوصف الرئيسي</div>
+                <div class="inv-text-panel" style="border-color:#FF9800;">${esc(investigationData.description || 'غير محدد')}</div>
+            </div>
+            ${(selectedTypes.includes('nearmiss') || investigationData.nearmissDescription) ? `
+            <div>
+                <div class="inv-field-label">وصف الحالة الوشيكة</div>
+                <div class="inv-text-panel" style="border-color:#FF9800;">${esc(investigationData.nearmissDescription || '—')}</div>
+            </div>
+            ` : ''}
+        `);
+
+        const section4 = this._buildInvestigationFormPrintSection('inv-s4', '4', 'بيانات المصاب', `
+            <div class="inv-field-grid" style="grid-template-columns: repeat(2, minmax(0, 1fr));">
+                ${this._buildInvestigationFormPrintField('تبعية المصاب', affiliationNames[investigationData.affectedAffiliation] || investigationData.affectedAffiliation || '—', '#E91E63')}
+                ${this._buildInvestigationFormPrintField('الاسم', esc(investigationData.affectedName || '—'), '#E91E63')}
+                ${this._buildInvestigationFormPrintField('الوظيفة', esc(investigationData.affectedJob || '—'), '#E91E63')}
+                ${this._buildInvestigationFormPrintField('السن', esc(investigationData.affectedAge || '—'), '#E91E63')}
+            </div>
+            <div style="margin-top:14px;">
+                ${this._buildInvestigationFormPrintField('الجهة التابع لها', esc(investigationData.affectedDepartment || '—'), '#E91E63')}
+            </div>
+        `);
+
+        const riskMatrixHtml = typeof RiskMatrix !== 'undefined'
+            ? RiskMatrix.generate(`inv-print-risk-${Date.now()}`, {
+                selectedLikelihood: investigationData.riskProbability ? parseInt(investigationData.riskProbability, 10) : null,
+                selectedConsequence: investigationData.riskSeverity ? parseInt(investigationData.riskSeverity, 10) : null,
+                interactive: false
+            })
+            : '';
+
+        const section5 = this._buildInvestigationFormPrintSection('inv-s5', '5', 'الجزء الخاص بالمحقق', `
+            <div class="inv-field-grid" style="grid-template-columns: repeat(2, minmax(0, 1fr)); margin-bottom: 14px;">
+                ${this._buildInvestigationFormPrintField('سلوك غير آمن', yesNoNames[investigationData.unsafeBehavior] || investigationData.unsafeBehavior || '—', '#009688')}
+                ${this._buildInvestigationFormPrintField('وضع غير آمن', yesNoNames[investigationData.unsafeCondition] || investigationData.unsafeCondition || '—', '#009688')}
+            </div>
+            ${riskMatrixHtml ? `
+            <div style="margin-bottom: 14px;">
+                <div class="inv-field-label">مصفوفة تقييم المخاطر</div>
+                <div class="inv-inner-white" style="border-color:#14b8a6;">${riskMatrixHtml}</div>
+            </div>
+            ` : ''}
+            <div class="inv-field-grid" style="grid-template-columns: 1fr; gap: 14px;">
+                ${this._buildInvestigationFormPrintField(
+                    'نتيجة التقييم',
+                    riskResultNames[investigationData.riskResult] || investigationData.riskResult || investigationData.riskLevel || '—',
+                    '#14b8a6'
+                )}
+            </div>
+            <div style="margin-top:14px;">
+                <div class="inv-field-label">شرح الخطر</div>
+                <div class="inv-text-panel" style="border-color:#14b8a6; background:#f0fdfa;">${esc(investigationData.riskExplanation || '—')}</div>
+            </div>
+        `);
+
+        const actionPlan = Array.isArray(investigationData.actionPlan) ? investigationData.actionPlan : [];
+        const actionRowsCount = Math.max(3, actionPlan.length);
+        const actionRows = Array.from({ length: actionRowsCount }, (_, i) => {
+            const action = actionPlan[i] || {};
+            return `
+                <tr style="border-bottom: 1px solid #c8e6c9;">
+                    <td style="padding: 12px; border: 1px solid #c8e6c9; vertical-align: top;">${esc(action.correctiveAction || '')}</td>
+                    <td style="padding: 12px; border: 1px solid #c8e6c9; text-align: center; vertical-align: top;">${action.plannedDate ? formatDateOnly(action.plannedDate) : ''}</td>
+                    <td style="padding: 12px; border: 1px solid #c8e6c9; vertical-align: top;">
+                        ${esc(action.responsibleName || '')}
+                        ${action.responsibleDate ? `<br><span style="font-size:11px;color:#64748b;">${formatDateOnly(action.responsibleDate)}</span>` : ''}
                     </td>
-                    <td style="padding: 8px; border: 1px solid #ddd;">
-                        ${Utils.escapeHTML(action.followUpName || '')}
-                        ${action.followUpDate ? '<br>' + formatDate(action.followUpDate) : ''}
+                    <td style="padding: 12px; border: 1px solid #c8e6c9; vertical-align: top;">
+                        ${esc(action.followUpName || '')}
+                        ${action.followUpDate ? `<br><span style="font-size:11px;color:#64748b;">${formatDateOnly(action.followUpDate)}</span>` : ''}
                     </td>
                 </tr>
-            `).join('');
+            `;
+        }).join('');
 
-            actionPlanHTML = `
-                <div style="margin-top: 30px; margin-bottom: 15px; font-weight: bold; font-size: 18px; color: #2E7D32; border-bottom: 2px solid #4CAF50; padding-bottom: 10px;">
-                    6) خطة العمل
-                </div>
-                <table style="width: 100%; border-collapse: collapse; margin: 15px 0;">
+        const section6 = this._buildInvestigationFormPrintSection('inv-s6', '6', 'خطة العمل', `
+            <div class="inv-inner-white" style="border-color:#4CAF50;">
+                <table style="width:100%;border-collapse:collapse;table-layout:fixed;">
                     <thead>
                         <tr style="background: linear-gradient(135deg, #388E3C 0%, #4CAF50 100%); color: white;">
-                            <th style="padding: 12px; border: 1px solid #2E7D32; text-align: right;">الإجراء التصحيحي</th>
-                            <th style="padding: 12px; border: 1px solid #2E7D32; text-align: center;">التاريخ المخطط</th>
-                            <th style="padding: 12px; border: 1px solid #2E7D32; text-align: center;">مسئول التنفيذ</th>
-                            <th style="padding: 12px; border: 1px solid #2E7D32; text-align: center;">المتابعة</th>
+                            <th style="padding: 12px; width: 35%; text-align: right; border: 1px solid #2E7D32;">الإجراء التصحيحي</th>
+                            <th style="padding: 12px; width: 15%; text-align: center; border: 1px solid #2E7D32;">التاريخ المخطط</th>
+                            <th style="padding: 12px; width: 25%; text-align: center; border: 1px solid #2E7D32;">مسئول التنفيذ</th>
+                            <th style="padding: 12px; width: 25%; text-align: center; border: 1px solid #2E7D32;">المتابعة</th>
                         </tr>
                     </thead>
-                    <tbody>
-                        ${actionRows}
-                    </tbody>
+                    <tbody style="background:#f9fff9;">${actionRows}</tbody>
                 </table>
+            </div>
+        `);
+
+        const buildSigCell = (sig, label) => {
+            const name = esc(sig?.name || '');
+            const date = sig?.date ? formatDateOnly(sig.date) : '';
+            const sigSrc = sig?.signature ? String(sig.signature).replace(/"/g, '&quot;') : '';
+            const img = sigSrc
+                ? `<img src="${sigSrc}" alt="توقيع">`
+                : '<span style="color:#9ca3af;font-size:12px;">التوقيع</span>';
+            return `
+                <div>
+                    <div class="inv-field-label">${esc(label)}</div>
+                    <div class="inv-field-value" style="border-color:#FFC107;margin-bottom:8px;">${name || '—'}</div>
+                    <div class="inv-field-value" style="border-color:#FFC107;margin-bottom:8px;">${date || '—'}</div>
+                    <div class="inv-sig-box">${img}</div>
+                </div>
             `;
-        }
+        };
 
-        const content = `
-            <div style="margin-bottom: 30px;">
-                <div style="margin-bottom: 20px; font-weight: bold; font-size: 20px; color: #1565C0; border-bottom: 3px solid #2196F3; padding-bottom: 10px;">
-                    1) بيانات الحادث الأساسية
-                </div>
-                <table style="width: 100%; border-collapse: collapse; margin: 15px 0;">
-                    <tr>
-                        <th style="padding: 10px; border: 1px solid #ddd; background-color: #e3f2fd; text-align: right; width: 30%;">رقم التحقيق</th>
-                        <td style="padding: 10px; border: 1px solid #ddd;">${Utils.escapeHTML(investigationData.investigationNumber || 'غير محدد')}</td>
-                    </tr>
-                    <tr>
-                        <th style="padding: 10px; border: 1px solid #ddd; background-color: #e3f2fd; text-align: right;">تاريخ ووقت التحقيق</th>
-                        <td style="padding: 10px; border: 1px solid #ddd;">${formatDate(investigationData.investigationDateTime)}</td>
-                    </tr>
-                    <tr>
-                        <th style="padding: 10px; border: 1px solid #ddd; background-color: #e3f2fd; text-align: right;">تاريخ ووقت الحادث</th>
-                        <td style="padding: 10px; border: 1px solid #ddd;">${formatDate(investigationData.incidentDateTime)}</td>
-                    </tr>
-                    <tr>
-                        <th style="padding: 10px; border: 1px solid #ddd; background-color: #e3f2fd; text-align: right;">المصنع</th>
-                        <td style="padding: 10px; border: 1px solid #ddd;">${Utils.escapeHTML(investigationData.factoryName || 'غير محدد')}</td>
-                    </tr>
-                    <tr>
-                        <th style="padding: 10px; border: 1px solid #ddd; background-color: #e3f2fd; text-align: right;">موقع الحادث بالضبط</th>
-                        <td style="padding: 10px; border: 1px solid #ddd;">${Utils.escapeHTML(investigationData.locationName || 'غير محدد')}</td>
-                    </tr>
-                    ${incident.isoCode ? `
-                    <tr>
-                        <th style="padding: 10px; border: 1px solid #ddd; background-color: #e3f2fd; text-align: right;">كود الحادث</th>
-                        <td style="padding: 10px; border: 1px solid #ddd;">${Utils.escapeHTML(incident.isoCode)}</td>
-                    </tr>
-                    ` : ''}
-                </table>
+        const section7 = this._buildInvestigationFormPrintSection('inv-s7', '7', 'التوقيعات', `
+            <div class="inv-sig-grid">
+                ${buildSigCell(investigationData.signatureAreaManager, 'مسئول المنطقة')}
+                ${buildSigCell(investigationData.signatureSafetyManager, 'مسئول السلامة والصحة')}
+                ${buildSigCell(investigationData.signatureSafetyDirector, 'مدير السلامة والصحة')}
             </div>
+        `);
 
-            ${investigationData.incidentTypes && investigationData.incidentTypes.length > 0 ? `
-            <div style="margin-bottom: 30px;">
-                <div style="margin-bottom: 20px; font-weight: bold; font-size: 20px; color: #6A1B9A; border-bottom: 3px solid #9C27B0; padding-bottom: 10px;">
-                    2) نوع الحادث
-                </div>
-                <div style="padding: 15px; background-color: #f3e5f5; border: 2px solid #9C27B0; border-radius: 8px;">
-                    ${investigationData.incidentTypes.map(type => `<div style="padding: 5px 0;">• ${incidentTypeNames[type] || type}</div>`).join('')}
-                </div>
-            </div>
-            ` : ''}
-
-            <div style="margin-bottom: 30px;">
-                <div style="margin-bottom: 20px; font-weight: bold; font-size: 20px; color: #E65100; border-bottom: 3px solid #FF9800; padding-bottom: 10px;">
-                    3) وصف وقائع وظروف الحادث
-                </div>
-                <div style="padding: 15px; background-color: #fff3e0; border: 2px solid #FF9800; border-radius: 8px; white-space: pre-wrap;">
-                    ${Utils.escapeHTML(investigationData.description || 'غير محدد')}
-                </div>
-                ${investigationData.nearmissDescription ? `
-                <div style="margin-top: 15px;">
-                    <div style="font-weight: bold; margin-bottom: 10px;">وصف الحالة الوشيكة:</div>
-                    <div style="padding: 15px; background-color: #fff3e0; border: 2px solid #FF9800; border-radius: 8px; white-space: pre-wrap;">
-                        ${Utils.escapeHTML(investigationData.nearmissDescription)}
-                    </div>
-                </div>
-                ` : ''}
-            </div>
-
-            ${investigationData.affectedAffiliation || investigationData.affectedName ? `
-            <div style="margin-bottom: 30px;">
-                <div style="margin-bottom: 20px; font-weight: bold; font-size: 20px; color: #AD1457; border-bottom: 3px solid #E91E63; padding-bottom: 10px;">
-                    4) بيانات المصاب
-                </div>
-                <table style="width: 100%; border-collapse: collapse; margin: 15px 0;">
-                    ${investigationData.affectedAffiliation ? `
-                    <tr>
-                        <th style="padding: 10px; border: 1px solid #ddd; background-color: #fce4ec; text-align: right; width: 30%;">تبعية المصاب</th>
-                        <td style="padding: 10px; border: 1px solid #ddd;">${affiliationNames[investigationData.affectedAffiliation] || investigationData.affectedAffiliation}</td>
-                    </tr>
-                    ` : ''}
-                    ${investigationData.affectedName ? `
-                    <tr>
-                        <th style="padding: 10px; border: 1px solid #ddd; background-color: #fce4ec; text-align: right;">الاسم</th>
-                        <td style="padding: 10px; border: 1px solid #ddd;">${Utils.escapeHTML(investigationData.affectedName)}</td>
-                    </tr>
-                    ` : ''}
-                    ${investigationData.affectedJob ? `
-                    <tr>
-                        <th style="padding: 10px; border: 1px solid #ddd; background-color: #fce4ec; text-align: right;">الوظيفة</th>
-                        <td style="padding: 10px; border: 1px solid #ddd;">${Utils.escapeHTML(investigationData.affectedJob)}</td>
-                    </tr>
-                    ` : ''}
-                    ${investigationData.affectedAge ? `
-                    <tr>
-                        <th style="padding: 10px; border: 1px solid #ddd; background-color: #fce4ec; text-align: right;">السن</th>
-                        <td style="padding: 10px; border: 1px solid #ddd;">${Utils.escapeHTML(investigationData.affectedAge)}</td>
-                    </tr>
-                    ` : ''}
-                    ${investigationData.affectedDepartment ? `
-                    <tr>
-                        <th style="padding: 10px; border: 1px solid #ddd; background-color: #fce4ec; text-align: right;">الجهة التابع لها</th>
-                        <td style="padding: 10px; border: 1px solid #ddd;">${Utils.escapeHTML(investigationData.affectedDepartment)}</td>
-                    </tr>
-                    ` : ''}
-                </table>
-            </div>
-            ` : ''}
-
-            <div style="margin-bottom: 30px;">
-                <div style="margin-bottom: 20px; font-weight: bold; font-size: 20px; color: #00695C; border-bottom: 3px solid #009688; padding-bottom: 10px;">
-                    5) الجزء الخاص بالمحقق
-                </div>
-                <table style="width: 100%; border-collapse: collapse; margin: 15px 0;">
-                    ${investigationData.unsafeBehavior ? `
-                    <tr>
-                        <th style="padding: 10px; border: 1px solid #ddd; background-color: #e0f2f1; text-align: right; width: 30%;">سلوك غير آمن</th>
-                        <td style="padding: 10px; border: 1px solid #ddd;">${unsafeBehaviorNames[investigationData.unsafeBehavior] || investigationData.unsafeBehavior}</td>
-                    </tr>
-                    ` : ''}
-                    ${investigationData.unsafeCondition ? `
-                    <tr>
-                        <th style="padding: 10px; border: 1px solid #ddd; background-color: #e0f2f1; text-align: right;">وضع غير آمن</th>
-                        <td style="padding: 10px; border: 1px solid #ddd;">${unsafeBehaviorNames[investigationData.unsafeCondition] || investigationData.unsafeCondition}</td>
-                    </tr>
-                    ` : ''}
-                    ${investigationData.riskProbability || investigationData.riskSeverity || investigationData.riskLevel ? `
-                    <tr>
-                        <th style="padding: 10px; border: 1px solid #ddd; background-color: #e0f2f1; text-align: right;">جدول تقييم الخطر</th>
-                        <td style="padding: 10px; border: 1px solid #ddd;">
-                            الاحتمالية: ${investigationData.riskProbability || 'غير محدد'} | 
-                            الشدة: ${investigationData.riskSeverity || 'غير محدد'} | 
-                            مستوى الخطر: ${Utils.escapeHTML(investigationData.riskLevel || 'غير محدد')}
-                        </td>
-                    </tr>
-                    ` : ''}
-                    ${investigationData.riskResult ? `
-                    <tr>
-                        <th style="padding: 10px; border: 1px solid #ddd; background-color: #e0f2f1; text-align: right;">نتيجة التقييم</th>
-                        <td style="padding: 10px; border: 1px solid #ddd;">${riskResultNames[investigationData.riskResult] || investigationData.riskResult}</td>
-                    </tr>
-                    ` : ''}
-                    ${investigationData.riskExplanation ? `
-                    <tr>
-                        <th style="padding: 10px; border: 1px solid #ddd; background-color: #e0f2f1; text-align: right;">شرح الخطر</th>
-                        <td style="padding: 10px; border: 1px solid #ddd; white-space: pre-wrap;">${Utils.escapeHTML(investigationData.riskExplanation)}</td>
-                    </tr>
-                    ` : ''}
-                </table>
-            </div>
-
-            ${actionPlanHTML}
-
-            <div style="margin-top: 30px;">
-                <div style="margin-bottom: 20px; font-weight: bold; font-size: 20px; color: #F57F17; border-bottom: 3px solid #FFC107; padding-bottom: 10px;">
-                    7) التوقيعات
-                </div>
-                <table style="width: 100%; border-collapse: collapse; margin: 15px 0;">
-                    <tr>
-                        <th style="padding: 10px; border: 1px solid #ddd; background-color: #fff9c4; text-align: center; width: 33%;">مسئول المنطقة</th>
-                        <th style="padding: 10px; border: 1px solid #ddd; background-color: #fff9c4; text-align: center; width: 33%;">مسئول السلامة والصحة</th>
-                        <th style="padding: 10px; border: 1px solid #ddd; background-color: #fff9c4; text-align: center; width: 33%;">مدير السلامة والصحة</th>
-                    </tr>
-                    <tr>
-                        <td style="padding: 10px; border: 1px solid #ddd; text-align: center; vertical-align: top;">
-                            ${Utils.escapeHTML(investigationData.signatureAreaManager?.name || '')}
-                            ${investigationData.signatureAreaManager?.date ? '<br>' + formatDate(investigationData.signatureAreaManager.date) : ''}
-                        </td>
-                        <td style="padding: 10px; border: 1px solid #ddd; text-align: center; vertical-align: top;">
-                            ${Utils.escapeHTML(investigationData.signatureSafetyManager?.name || '')}
-                            ${investigationData.signatureSafetyManager?.date ? '<br>' + formatDate(investigationData.signatureSafetyManager.date) : ''}
-                        </td>
-                        <td style="padding: 10px; border: 1px solid #ddd; text-align: center; vertical-align: top;">
-                            ${Utils.escapeHTML(investigationData.signatureSafetyDirector?.name || '')}
-                            ${investigationData.signatureSafetyDirector?.date ? '<br>' + formatDate(investigationData.signatureSafetyDirector.date) : ''}
-                        </td>
-                    </tr>
-                </table>
+        return `
+            ${this._getInvestigationFormPrintStyles()}
+            <div class="inv-print-wrap">
+                ${section1}
+                ${section2}
+                ${section3}
+                ${section4}
+                ${section5}
+                ${section6}
+                ${section7}
             </div>
         `;
-
-        return content;
     },
+
 
     // ===== Safety Alert Helper Functions =====
     
