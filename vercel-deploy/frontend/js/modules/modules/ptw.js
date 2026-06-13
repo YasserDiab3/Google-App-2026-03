@@ -6883,10 +6883,9 @@ const PTW = {
     PERMIT_A4_MAX_PAGES: 4,
     PERMIT_A4_CAPTURE_SCALE: 2,
 
-    getManualPermitPdfCaptureSafeStyles_() {
+    getManualPermitPdfExportTechnicalStyles_() {
         const w = this.PERMIT_A4_WIDTH_PX;
         return `
-            @page { size: A4 portrait; margin: 5mm; }
             html, body {
                 width: ${w}px !important;
                 max-width: ${w}px !important;
@@ -6899,7 +6898,7 @@ const PTW = {
             .ptw-manual-print, #ptw-permit-print-root {
                 width: ${w}px !important;
                 max-width: ${w}px !important;
-                margin: 0 !important;
+                margin: 0 auto !important;
                 transform: none !important;
                 zoom: 1 !important;
             }
@@ -6909,90 +6908,12 @@ const PTW = {
                 transform: none !important;
                 zoom: 1 !important;
                 overflow: visible !important;
+                box-sizing: border-box !important;
                 padding: 6px 8px !important;
+                page-break-after: always;
+                break-after: page;
             }
-            .ptw-paper-header-center { display: block !important; text-align: center !important; }
-            .ptw-paper-header-center .ptw-paper-header-form-title,
-            .ptw-paper-header-center .ptw-paper-header-form-subtitle { display: block !important; }
-            .ptw-paper-header-company, .ptw-paper-header-dept, .ptw-paper-header-form-title,
-            .ptw-paper-header-form-subtitle, .ppe-label, .manual-print-field .lbl, .manual-print-field .val {
-                letter-spacing: 0 !important;
-                word-spacing: normal !important;
-                line-height: 1.4 !important;
-                transform: none !important;
-            }
-            .manual-print-grid { display: block !important; }
-            .manual-print-grid .manual-print-field {
-                display: block !important;
-                width: 100% !important;
-                margin-bottom: 5px !important;
-            }
-            .manual-print-req-grid { display: block !important; }
-            .manual-print-req-grid .manual-print-req-item {
-                display: block !important;
-                width: 100% !important;
-                margin-bottom: 4px !important;
-            }
-            .ptw-manual-ppe-fixed-row {
-                display: table !important;
-                width: 100% !important;
-                table-layout: fixed !important;
-                border-collapse: separate !important;
-                border-spacing: 4px !important;
-                margin-bottom: 4px !important;
-            }
-            .ptw-manual-ppe-fixed-row .ptw-manual-ppe-cell {
-                display: table-cell !important;
-                vertical-align: top !important;
-                transform: none !important;
-            }
-            .manual-print-supervisors-grid { display: block !important; }
-            .manual-print-supervisor-card { display: block !important; margin-bottom: 6px !important; }
-            .ptw-paper-footer-meta { display: block !important; text-align: center !important; }
-            .ptw-pf-item { display: block !important; margin: 2px 0 !important; }
-            .ptw-paper-footer-company { display: block !important; text-align: center !important; }
-            .ptw-manual-form-section h3 { display: block !important; }
-            .manual-risk-summary { display: block !important; }
-            .manual-risk-badge { display: inline-block !important; margin: 4px !important; }
-            .ptw-capture-mode .ptw-manual-form-section h3 {
-                display: block !important;
-                flex: none !important;
-            }
-            .ptw-capture-mode .ptw-manual-ppe-cell {
-                display: block !important;
-                text-align: right !important;
-            }
-            .ptw-capture-mode .ppe-checkbox {
-                display: inline-block !important;
-                vertical-align: top !important;
-                margin-left: 6px !important;
-            }
-            .ptw-capture-mode .ppe-label {
-                display: inline !important;
-                white-space: normal !important;
-            }
-            .ptw-capture-mode .manual-print-permit-no {
-                display: block !important;
-                text-align: center !important;
-            }
-            .ptw-capture-mode .manual-print-seq-badge {
-                display: inline-block !important;
-            }
-            .ptw-capture-mode .manual-risk-summary {
-                display: block !important;
-            }
-            .ptw-capture-mode .manual-risk-badge {
-                display: inline-block !important;
-                text-align: center !important;
-                line-height: 48px !important;
-            }
-            .ptw-capture-mode .ptw-paper-header-logo-fallback {
-                display: inline-block !important;
-            }
-            .ptw-capture-mode * {
-                -webkit-font-smoothing: antialiased !important;
-                text-rendering: optimizeLegibility !important;
-            }
+            .ptw-a4-page:last-child { page-break-after: auto; break-after: auto; }
         `;
     },
 
@@ -7617,8 +7538,6 @@ const PTW = {
 
     generateManualPermitPrintHTML(entry, options = {}) {
         const pdfExport = options?.pdfExport === true;
-        const forPdf = options?.forPdf === true;
-        const forA4Layout = pdfExport || forPdf;
         const content = this.generateManualPermitPrintContent(entry);
         const displayNo = this.getPermitDisplayNumber(entry);
         const footerMeta = {
@@ -7627,10 +7546,12 @@ const PTW = {
             revisionDate: entry?.updatedAt || entry?.timeTo || entry?.createdAt
         };
         const footer = this.renderPermitSystemFooter(footerMeta);
-        const header = this.renderPermitSystemHeader({ forPdf: forA4Layout });
-        const bodyHtml = this._splitManualPermitPrintPages_(content, header, footer, forA4Layout);
-        const captureStyles = pdfExport ? this.getManualPermitPdfCaptureSafeStyles_() : '';
-        const styleBlock = `${this.getManualPermitPrintStyles(forA4Layout)}${captureStyles}`;
+        const header = this.renderPermitSystemHeader({ forPdf: false });
+        const bodyHtml = pdfExport
+            ? this._splitManualPermitPrintPages_(content, header, footer, true)
+            : `${header}${content}${footer}`;
+        const exportStyles = pdfExport ? this.getManualPermitPdfExportTechnicalStyles_() : '';
+        const styleBlock = `${this.getManualPermitPrintStyles(false)}${exportStyles}`;
 
         const html = `<!DOCTYPE html>
 <html dir="rtl" lang="ar">
@@ -7643,14 +7564,14 @@ const PTW = {
     <style>${styleBlock}</style>
 </head>
 <body>
-    <div class="ptw-manual-print${forA4Layout ? ' ptw-manual-print-a4' : ''}${pdfExport ? ' ptw-capture-mode' : ''}" id="ptw-permit-print-root">
+    <div class="ptw-manual-print${pdfExport ? ' ptw-manual-print-a4' : ''}" id="ptw-permit-print-root">
         ${bodyHtml}
     </div>
 </body>
 </html>`;
 
         if (options?.skipReview !== true) {
-            this._logManualPermitExportReview_(html, entry, pdfExport ? 'pdf-capture' : (forPdf ? 'pdf' : 'print'));
+            this._logManualPermitExportReview_(html, entry, pdfExport ? 'pdf-export' : 'print');
         }
         return html;
     },
@@ -7943,7 +7864,6 @@ const PTW = {
             onclone: (clonedDoc, element) => {
                 const cloneRoot = clonedDoc.getElementById('ptw-permit-print-root') || element;
                 this._sanitizePermitNodeForCanvasCapture_(cloneRoot);
-                if (cloneRoot) cloneRoot.classList.add('ptw-capture-mode');
                 if (clonedDoc.body) {
                     clonedDoc.body.style.width = `${scrollW}px`;
                     clonedDoc.body.style.padding = '8px';
@@ -8076,8 +7996,8 @@ const PTW = {
         if (reg?.isManualEntry) {
             const displayNo = this.getPermitDisplayNumber(reg);
             const seq = String(reg.sequentialNumber || displayNo).replace(/\D/g, '').padStart(4, '0') || displayNo;
-            const html = this.generateManualPermitPrintHTML(reg, { pdfExport: true });
-            const printHtml = this.generateManualPermitPrintHTML(reg, { forPdf: false, skipReview: true });
+            const printHtml = this.generateManualPermitPrintHTML(reg);
+            const html = this.generateManualPermitPrintHTML(reg, { pdfExport: true, skipReview: true });
             const review = this._verifyManualPermitExportHtml_(html);
             return {
                 html,
@@ -8162,7 +8082,8 @@ const PTW = {
             Notification.error(this._t('module.ptw.notify.permitNotFound', 'لم يتم العثور على التصريح'));
             return;
         }
-        this.openPermitPrintWindow(payload.html);
+        const html = payload.isManualEntry && payload.printHtml ? payload.printHtml : payload.html;
+        this.openPermitPrintWindow(html);
     },
 
     /**
