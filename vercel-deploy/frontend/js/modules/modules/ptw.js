@@ -2494,6 +2494,7 @@ const PTW = {
                 this.mapInitTimeout = null;
             }
             this._clearMapPendingTimeouts();
+            if (this.isMapInitializing) this.isMapInitializing = false;
         }
     },
 
@@ -6831,8 +6832,8 @@ const PTW = {
             const rowClass = rowIdx === rows.length - 1 ? 'ptw-manual-ppe-fixed-row ppe-row-last' : 'ptw-manual-ppe-fixed-row';
             html += `<div class="${rowClass}">`;
             row.forEach((label) => {
-                const mark = isSel(label) ? '☑' : '☐';
-                html += `<span class="ptw-manual-ppe-cell"><span class="ppe-mark">${mark}</span><span>${esc(label)}</span></span>`;
+                const checked = isSel(label);
+                html += `<span class="ptw-manual-ppe-cell${checked ? ' ppe-selected' : ''}"><span class="ppe-checkbox${checked ? ' checked' : ''}" aria-hidden="true"></span><span class="ppe-label">${esc(label)}</span></span>`;
             });
             html += '</div>';
         });
@@ -6843,19 +6844,33 @@ const PTW = {
     getManualPermitPrintStyles() {
         return `
             * { box-sizing: border-box; }
-            body { margin: 0; padding: 12px; font-family: 'Segoe UI', Tahoma, Arial, sans-serif; font-size: 12px; color: #1f2937; background: #fff; direction: rtl; }
+            body { margin: 0; padding: 12px; font-family: 'Cairo', 'Segoe UI', Tahoma, Arial, sans-serif; font-size: 12px; color: #1f2937; background: #fff; direction: rtl; }
             .ptw-manual-print { max-width: 1100px; margin: 0 auto; }
             .ptw-paper-header {
-                display: grid; grid-template-columns: 1fr 1.2fr 1fr; gap: 12px; align-items: center;
+                display: grid; grid-template-columns: 1fr 1.45fr 1fr; gap: 14px; align-items: center;
                 background: linear-gradient(135deg, #1e3a5f 0%, #1d4ed8 100%); color: #fff;
-                padding: 14px 18px; border-radius: 8px; margin-bottom: 12px;
+                padding: 16px 20px; border-radius: 10px; margin-bottom: 14px;
+                border: 1px solid rgba(255, 255, 255, 0.18);
+                min-height: 78px;
             }
-            .ptw-paper-header-right { text-align: right; }
-            .ptw-paper-header-title { font-weight: 700; font-size: 15px; }
-            .ptw-paper-header-subtitle { font-size: 11px; opacity: 0.9; margin-top: 2px; }
-            .ptw-paper-header-center { text-align: center; }
-            .ptw-paper-header-company { font-size: 17px; font-weight: 700; }
-            .ptw-paper-header-left { display: flex; justify-content: flex-end; }
+            .ptw-paper-header-right { text-align: right; min-width: 0; }
+            .ptw-paper-header-company { font-size: 16px; font-weight: 700; line-height: 1.35; letter-spacing: 0.2px; }
+            .ptw-paper-header-dept { font-size: 12px; font-weight: 500; opacity: 0.9; margin-top: 5px; line-height: 1.4; }
+            .ptw-paper-header-center {
+                text-align: center; min-width: 0;
+                display: flex; flex-direction: column; align-items: center; justify-content: center;
+                padding: 4px 10px;
+            }
+            .ptw-paper-header-form-title {
+                font-size: 19px; font-weight: 800; line-height: 1.25; letter-spacing: 0.3px;
+                padding-bottom: 5px; margin-bottom: 5px;
+                border-bottom: 2px solid rgba(255, 255, 255, 0.38);
+            }
+            .ptw-paper-header-form-subtitle {
+                font-size: 13px; font-weight: 600; letter-spacing: 1.4px;
+                text-transform: uppercase; opacity: 0.96;
+            }
+            .ptw-paper-header-left { display: flex; justify-content: flex-end; align-items: center; min-width: 0; }
             .ptw-paper-header-logo { max-height: 56px; max-width: 140px; object-fit: contain; background: #fff; border-radius: 4px; padding: 4px; }
             .ptw-paper-header-logo-fallback { width: 80px; height: 44px; border: 1px solid #cbd5e1; display: flex; align-items: center; justify-content: center; color: #94a3b8; font-size: 11px; background: #fff; border-radius: 4px; }
             .manual-print-disclaimer-wrap { margin-bottom: 14px; border: 2px solid #2196F3; border-radius: 10px; overflow: hidden; }
@@ -6900,24 +6915,41 @@ const PTW = {
             .manual-print-req-item { background: #fff; border: 1px solid #e2e8f0; border-radius: 6px; padding: 8px; font-size: 11px; }
             .manual-print-req-item.on { border-color: #f97316; background: #fff7ed; font-weight: 600; }
             .ptw-manual-ppe-print-matrix {
-                background: #fff; border: 1.2px solid #94a3b8; border-radius: 10px;
-                padding: 14px 10px; box-shadow: 0 1px 4px rgba(15, 23, 42, 0.07);
+                background: #fff; border: 1.5px solid #64748b; border-radius: 8px;
+                padding: 12px 10px; box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06);
             }
             .ptw-manual-ppe-fixed-wrap { width: 100%; }
             .ptw-manual-ppe-fixed-row {
                 display: grid; grid-template-columns: repeat(9, minmax(0, 1fr));
-                gap: 10px 5px; margin-bottom: 12px; direction: rtl;
+                gap: 8px 6px; margin-bottom: 8px; direction: rtl;
             }
             .ptw-manual-ppe-fixed-row.ppe-row-last {
                 grid-template-columns: repeat(5, minmax(0, 1fr));
                 margin-bottom: 0;
             }
             .ptw-manual-ppe-cell {
-                display: flex; align-items: flex-start; gap: 5px;
-                font-size: 10px; font-weight: 600; color: #000; direction: rtl;
-                min-width: 0; line-height: 1.35; word-break: break-word;
+                display: flex; align-items: flex-start; gap: 6px;
+                font-size: 10.5px; font-weight: 600; color: #0f172a; direction: rtl;
+                min-width: 0; line-height: 1.4; word-break: break-word;
+                padding: 7px 6px; border: 1.2px solid #94a3b8; border-radius: 5px;
+                background: #fff; min-height: 34px;
             }
-            .ppe-mark { font-size: 12px; flex-shrink: 0; }
+            .ptw-manual-ppe-cell.ppe-selected {
+                border-color: #1d4ed8; background: #f8fafc;
+            }
+            .ppe-checkbox {
+                width: 14px; height: 14px; border: 2px solid #334155; border-radius: 2px;
+                flex-shrink: 0; margin-top: 1px; background: #fff; position: relative;
+            }
+            .ppe-checkbox.checked {
+                background: #1e40af; border-color: #1e3a8a;
+            }
+            .ppe-checkbox.checked::after {
+                content: ''; position: absolute; left: 3px; top: 1px;
+                width: 4px; height: 8px; border: solid #fff;
+                border-width: 0 2px 2px 0; transform: rotate(45deg);
+            }
+            .ppe-label { flex: 1; min-width: 0; }
             .ptw-manual-ppe-notes-print {
                 margin-top: 8px; background: #fff; border: 1px solid #cbd5e1;
                 border-radius: 8px; padding: 8px 10px;
@@ -7265,6 +7297,9 @@ const PTW = {
 <html dir="rtl" lang="ar">
 <head>
     <meta charset="UTF-8">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
     <title>تصريح عمل يدوي #${Utils.escapeHTML(displayNo)}</title>
     <style>${this.getManualPermitPrintStyles()}</style>
 </head>
@@ -7905,32 +7940,56 @@ const PTW = {
                 /* رأس الورق + الشعار: يُحقن عبر renderPermitSystemHeader() ولا يمر بنمط نموذج PTW العادي */
                 .ptw-manual-permit-modal .ptw-paper-header {
                     display: grid;
-                    grid-template-columns: 1fr 1.35fr 1fr;
+                    grid-template-columns: 1fr 1.45fr 1fr;
                     align-items: center;
                     gap: 10px 14px;
-                    padding: 10px 20px;
+                    padding: 12px 20px;
                     margin: 0 24px;
                     background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
                     color: #fff;
                     border-radius: 0 0 12px 12px;
                     border: 1px solid rgba(255, 255, 255, 0.22);
                     border-top: none;
-                    min-height: 64px;
-                    max-height: 84px;
+                    min-height: 72px;
+                    max-height: 92px;
                     box-sizing: border-box;
                 }
                 .ptw-manual-permit-modal .ptw-paper-header-right { text-align: right; min-width: 0; }
-                .ptw-manual-permit-modal .ptw-paper-header-title { font-weight: 700; font-size: 14px; color: #fff; line-height: 1.25; }
-                .ptw-manual-permit-modal .ptw-paper-header-subtitle { font-size: 11px; color: rgba(255, 255, 255, 0.88); margin-top: 2px; }
-                .ptw-manual-permit-modal .ptw-paper-header-center { text-align: center; min-width: 0; }
                 .ptw-manual-permit-modal .ptw-paper-header-company {
                     font-size: 15px;
                     font-weight: 700;
                     color: #fff;
                     letter-spacing: 0.2px;
+                    line-height: 1.35;
                     overflow: hidden;
                     text-overflow: ellipsis;
-                    white-space: nowrap;
+                }
+                .ptw-manual-permit-modal .ptw-paper-header-dept {
+                    font-size: 11px;
+                    font-weight: 500;
+                    color: rgba(255, 255, 255, 0.9);
+                    margin-top: 4px;
+                    line-height: 1.3;
+                }
+                .ptw-manual-permit-modal .ptw-paper-header-center {
+                    text-align: center; min-width: 0;
+                    display: flex; flex-direction: column; align-items: center; justify-content: center;
+                }
+                .ptw-manual-permit-modal .ptw-paper-header-form-title {
+                    font-size: 16px;
+                    font-weight: 800;
+                    color: #fff;
+                    line-height: 1.25;
+                    padding-bottom: 4px;
+                    margin-bottom: 4px;
+                    border-bottom: 2px solid rgba(255, 255, 255, 0.35);
+                }
+                .ptw-manual-permit-modal .ptw-paper-header-form-subtitle {
+                    font-size: 11px;
+                    font-weight: 600;
+                    color: rgba(255, 255, 255, 0.94);
+                    letter-spacing: 1.1px;
+                    text-transform: uppercase;
                 }
                 .ptw-manual-permit-modal .ptw-paper-header-left {
                     display: flex;
@@ -7971,7 +8030,8 @@ const PTW = {
                     .ptw-manual-permit-modal .ptw-paper-header-right,
                     .ptw-manual-permit-modal .ptw-paper-header-center { text-align: center; }
                     .ptw-manual-permit-modal .ptw-paper-header-left { justify-content: center; }
-                    .ptw-manual-permit-modal .ptw-paper-header-company { white-space: normal; }
+                    .ptw-manual-permit-modal .ptw-paper-header-company,
+                    .ptw-manual-permit-modal .ptw-paper-header-dept { white-space: normal; }
                 }
                 /* جداول النموذج اليدوي — خلفية فاتحة ووضوح دون فرض ثيم أسود */
                 .ptw-manual-permit-modal .ptw-paper-grid-table {
@@ -8087,35 +8147,66 @@ const PTW = {
                 .ptw-manual-permit-modal .manual-section-5 .ptw-manual-ppe-fixed-row {
                     display: grid;
                     grid-template-columns: repeat(9, minmax(0, 1fr));
-                    gap: 12px 5px;
-                    margin-bottom: 14px;
+                    gap: 8px 6px;
+                    margin-bottom: 8px;
                     direction: rtl;
                 }
                 .ptw-manual-permit-modal .manual-section-5 .ptw-manual-ppe-fixed-row:last-child {
+                    grid-template-columns: repeat(5, minmax(0, 1fr));
                     margin-bottom: 0;
                 }
                 .ptw-manual-permit-modal .manual-section-5 .ptw-manual-ppe-cell {
                     display: flex;
                     align-items: flex-start;
-                    gap: 5px;
-                    font-size: 0.8125rem;
+                    gap: 6px;
+                    font-size: 0.8rem;
                     font-weight: 600;
-                    color: #000000 !important;
+                    color: #0f172a !important;
                     cursor: pointer;
                     direction: rtl;
                     min-width: 0;
-                    line-height: 1.32;
+                    line-height: 1.38;
                     word-break: break-word;
+                    padding: 7px 6px;
+                    border: 1.2px solid #94a3b8;
+                    border-radius: 5px;
+                    background: #fff;
+                    min-height: 34px;
+                }
+                .ptw-manual-permit-modal .manual-section-5 .ptw-manual-ppe-cell:has(input:checked) {
+                    border-color: #1d4ed8;
+                    background: #f8fafc;
                 }
                 .ptw-manual-permit-modal .manual-section-5 .ptw-manual-ppe-cell span {
                     min-width: 0;
                 }
                 .ptw-manual-permit-modal .manual-section-5 .ptw-manual-ppe-cell input[type="checkbox"] {
                     flex-shrink: 0;
-                    width: 1.05rem;
-                    height: 1.05rem;
+                    width: 14px;
+                    height: 14px;
                     margin-top: 2px;
-                    accent-color: #1e3a5f;
+                    appearance: none;
+                    -webkit-appearance: none;
+                    border: 2px solid #334155;
+                    border-radius: 2px;
+                    background: #fff;
+                    cursor: pointer;
+                    position: relative;
+                }
+                .ptw-manual-permit-modal .manual-section-5 .ptw-manual-ppe-cell input[type="checkbox"]:checked {
+                    background: #1e40af;
+                    border-color: #1e3a8a;
+                }
+                .ptw-manual-permit-modal .manual-section-5 .ptw-manual-ppe-cell input[type="checkbox"]:checked::after {
+                    content: '';
+                    position: absolute;
+                    left: 3px;
+                    top: 1px;
+                    width: 4px;
+                    height: 8px;
+                    border: solid #fff;
+                    border-width: 0 2px 2px 0;
+                    transform: rotate(45deg);
                 }
                 @media (max-width: 1200px) {
                     .ptw-manual-permit-modal .manual-section-5 .ptw-manual-ppe-fixed-row {
@@ -11467,19 +11558,21 @@ const PTW = {
 
     renderPermitSystemHeader() {
         const settings = AppState?.companySettings || {};
-        const companyName = settings.companyName || settings.name || settings.organizationName || 'HSE System';
-        const logoUrl = settings.logoUrl || settings.companyLogo || settings.logo || '';
-        const formTitle = 'نموذج تصريح العمل';
-        const subTitle = 'Permit To Work';
+        const companyName = settings.name || settings.companyName || settings.organizationName || 'HSE System';
+        const deptName = String(settings.secondaryName || settings.departmentName || settings.managementName || '').trim();
+        const logoUrl = settings.logoUrl || settings.companyLogo || settings.logo || AppState?.companyLogo || '';
+        const formTitleAr = 'نموذج تصريح العمل';
+        const formTitleEn = 'Permit To Work';
 
         return `
             <div class="ptw-paper-header">
                 <div class="ptw-paper-header-right">
-                    <div class="ptw-paper-header-title">${Utils.escapeHTML(formTitle)}</div>
-                    <div class="ptw-paper-header-subtitle">${Utils.escapeHTML(subTitle)}</div>
+                    <div class="ptw-paper-header-company">${Utils.escapeHTML(companyName)}</div>
+                    ${deptName ? `<div class="ptw-paper-header-dept">${Utils.escapeHTML(deptName)}</div>` : ''}
                 </div>
                 <div class="ptw-paper-header-center">
-                    <div class="ptw-paper-header-company">${Utils.escapeHTML(companyName)}</div>
+                    <div class="ptw-paper-header-form-title">${Utils.escapeHTML(formTitleAr)}</div>
+                    <div class="ptw-paper-header-form-subtitle">${Utils.escapeHTML(formTitleEn)}</div>
                 </div>
                 <div class="ptw-paper-header-left">
                     ${logoUrl
@@ -11595,20 +11688,32 @@ const PTW = {
                 }
                 .ptw-paper-header {
                     display: grid;
-                    grid-template-columns: 1fr 1.4fr 1fr;
+                    grid-template-columns: 1fr 1.45fr 1fr;
                     align-items: center;
                     gap: 12px;
-                    background: #000;
-                    border-bottom: 1px solid #6b7280;
-                    padding: 12px 16px;
+                    background: linear-gradient(135deg, #1e3a5f 0%, #1d4ed8 100%);
+                    border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+                    padding: 14px 18px;
                     min-height: 86px;
+                    color: #fff;
                 }
-                .ptw-paper-header-right { text-align: right; }
-                .ptw-paper-header-title { font-weight: 700; font-size: 15px; color: #dbeafe; }
-                .ptw-paper-header-subtitle { font-size: 12px; color: #93c5fd; }
-                .ptw-paper-header-center { text-align: center; }
-                .ptw-paper-header-company { font-size: 17px; font-weight: 700; color: #f9fafb; letter-spacing: 0.3px; }
-                .ptw-paper-header-left { display: flex; justify-content: flex-end; }
+                .ptw-paper-header-right { text-align: right; min-width: 0; }
+                .ptw-paper-header-company { font-size: 16px; font-weight: 700; color: #fff; letter-spacing: 0.2px; line-height: 1.35; }
+                .ptw-paper-header-dept { font-size: 12px; font-weight: 500; color: rgba(255, 255, 255, 0.9); margin-top: 4px; line-height: 1.35; }
+                .ptw-paper-header-center {
+                    text-align: center; min-width: 0;
+                    display: flex; flex-direction: column; align-items: center; justify-content: center;
+                }
+                .ptw-paper-header-form-title {
+                    font-size: 18px; font-weight: 800; color: #fff; line-height: 1.25;
+                    padding-bottom: 4px; margin-bottom: 4px;
+                    border-bottom: 2px solid rgba(255, 255, 255, 0.35);
+                }
+                .ptw-paper-header-form-subtitle {
+                    font-size: 12px; font-weight: 600; color: rgba(255, 255, 255, 0.94);
+                    letter-spacing: 1.2px; text-transform: uppercase;
+                }
+                .ptw-paper-header-left { display: flex; justify-content: flex-end; align-items: center; }
                 .ptw-paper-header-logo { max-height: 60px; max-width: 150px; object-fit: contain; background: #fff; border-radius: 4px; padding: 4px; }
                 .ptw-paper-header-logo-fallback { width: 90px; height: 48px; border: 1px solid #6b7280; display: flex; align-items: center; justify-content: center; color: #d1d5db; font-size: 12px; }
                 .ptw-form-header-centered {
