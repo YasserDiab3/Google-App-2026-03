@@ -12,7 +12,7 @@ const Clinic = {
             visits: { search: '' },
             sickLeave: { search: '', department: '', dateFrom: '', dateTo: '' },
             injuries: { search: '', status: 'all', department: '', injuryType: 'all', injuryBodyPart: 'all', dateFrom: '', dateTo: '' },
-            attendance: { search: '', staffRole: 'all', status: 'all', dateFrom: '', dateTo: '' }
+            attendance: { search: '', staffRole: 'all', status: 'all', staffId: 'all', month: '', dateFrom: '', dateTo: '', period: 'all' }
         },
         currentInjuryAttachments: [],
         medicationAlertsNotified: new Set(),
@@ -8642,7 +8642,7 @@ const Clinic = {
             visits: { search: '', factory: '', position: '', workplace: '' },
             sickLeave: { search: '', department: '', dateFrom: '', dateTo: '' },
             injuries: { search: '', status: 'all', department: '', dateFrom: '', dateTo: '' },
-            attendance: { search: '', staffRole: 'all', status: 'all', dateFrom: '', dateTo: '', period: 'all' }
+            attendance: { search: '', staffRole: 'all', status: 'all', staffId: 'all', month: '', dateFrom: '', dateTo: '', period: 'all' }
         };
 
         this.state.filters = this.state.filters || {};
@@ -13132,6 +13132,8 @@ const Clinic = {
         if (String(filters.search || '').trim()) n++;
         if (filters.staffRole && filters.staffRole !== 'all') n++;
         if (filters.status && filters.status !== 'all') n++;
+        if (filters.staffId && filters.staffId !== 'all') n++;
+        if (filters.month) n++;
         if (filters.dateFrom) n++;
         if (filters.dateTo) n++;
         return n;
@@ -13148,27 +13150,78 @@ const Clinic = {
         return { dateFrom: from, dateTo: to };
     },
 
-    getFilteredClinicAttendance() {
-        const filters = this.state.filters.attendance || {};
-        let rows = this.getClinicStaffAttendanceList().slice();
-        if (filters.search) {
-            const q = String(filters.search).trim().toLowerCase();
+    _getAttendanceMonthRange(monthVal) {
+        const raw = String(monthVal || '').trim();
+        if (!/^\d{4}-\d{2}$/.test(raw)) return { dateFrom: '', dateTo: '' };
+        const parts = raw.split('-');
+        const y = parseInt(parts[0], 10);
+        const m = parseInt(parts[1], 10);
+        if (!y || !m || m < 1 || m > 12) return { dateFrom: '', dateTo: '' };
+        const mm = String(m).padStart(2, '0');
+        const lastDay = new Date(y, m, 0).getDate();
+        return {
+            dateFrom: `${y}-${mm}-01`,
+            dateTo: `${y}-${mm}-${String(lastDay).padStart(2, '0')}`
+        };
+    },
+
+    _getAttendanceStaffOptions() {
+        const staffMap = new Map();
+        (this.getClinicStaffList() || []).forEach(s => {
+            const key = String(s.userId || s.id || s.userEmail || '').trim();
+            if (!key) return;
+            staffMap.set(key, {
+                id: key,
+                staffId: s.id || '',
+                name: s.userName || s.userEmail || key,
+                role: s.staffRole || ''
+            });
+        });
+        (this.getClinicStaffAttendanceList() || []).forEach(r => {
+            const key = String(r.userId || r.staffId || r.userEmail || '').trim();
+            if (!key || staffMap.has(key)) return;
+            staffMap.set(key, {
+                id: key,
+                staffId: r.staffId || '',
+                name: r.userName || r.userEmail || key,
+                role: r.staffRole || ''
+            });
+        });
+        return Array.from(staffMap.values()).sort((a, b) => String(a.name).localeCompare(String(b.name), 'ar'));
+    },
+
+    _resolveAttendanceFilterDates(filters) {
+        const f = filters || {};
+        if (f.month) {
+            const mr = this._getAttendanceMonthRange(f.month);
+            if (mr.dateFrom && mr.dateTo) return mr;
+        }
+        return this._normalizeAttendanceDateRange(f.dateFrom, f.dateTo);
+    },
+
+    _filterAttendanceRows(sourceRows, filters) {
+        const f = filters || {};
+        let rows = (sourceRows || []).slice();
+        if (f.staffId && f.staffId !== 'all') {
+            const sid = String(f.staffId);
+            rows = rows.filter(r => String(r.staffId || '') === sid || String(r.userId || '') === sid || String(r.userEmail || '').toLowerCase() === sid.toLowerCase());
+        }
+        if (f.search) {
+            const q = String(f.search).trim().toLowerCase();
             rows = rows.filter(r => String(r.userName || '').toLowerCase().includes(q) || String(r.userEmail || '').toLowerCase().includes(q));
         }
-        if (filters.staffRole && filters.staffRole !== 'all') {
-            rows = rows.filter(r => String(r.staffRole) === String(filters.staffRole));
+        if (f.staffRole && f.staffRole !== 'all') {
+            rows = rows.filter(r => String(r.staffRole) === String(f.staffRole));
         }
-        if (filters.status && filters.status !== 'all') {
-            rows = rows.filter(r => String(r.status) === String(filters.status));
+        if (f.status && f.status !== 'all') {
+            rows = rows.filter(r => String(r.status) === String(f.status));
         }
-        if (filters.dateFrom || filters.dateTo) {
-            const range = this._normalizeAttendanceDateRange(filters.dateFrom, filters.dateTo);
-            if (range.dateFrom) {
-                rows = rows.filter(r => this._attendanceDayKey(r.date) >= range.dateFrom);
-            }
-            if (range.dateTo) {
-                rows = rows.filter(r => this._attendanceDayKey(r.date) <= range.dateTo);
-            }
+        const range = this._resolveAttendanceFilterDates(f);
+        if (range.dateFrom) {
+            rows = rows.filter(r => this._attendanceDayKey(r.date) >= range.dateFrom);
+        }
+        if (range.dateTo) {
+            rows = rows.filter(r => this._attendanceDayKey(r.date) <= range.dateTo);
         }
         rows.sort((a, b) => {
             const da = this._attendanceDayKey(b.date) + String(b.checkIn || '');
@@ -13176,6 +13229,69 @@ const Clinic = {
             return da.localeCompare(db);
         });
         return rows;
+    },
+
+    _computeAttendanceReportStats(rows) {
+        const list = rows || [];
+        let totalHours = 0;
+        let present = 0;
+        let partial = 0;
+        const staffSet = new Set();
+        list.forEach(r => {
+            const h = parseFloat(r.workDuration);
+            if (!Number.isNaN(h)) totalHours += h;
+            if (String(r.status) === 'present') present++;
+            else if (String(r.status) === 'partial') partial++;
+            const sk = String(r.userId || r.staffId || r.userEmail || r.userName || '');
+            if (sk) staffSet.add(sk);
+        });
+        return {
+            total: list.length,
+            present,
+            partial,
+            staffCount: staffSet.size,
+            totalHours: Math.round(totalHours * 100) / 100
+        };
+    },
+
+    _buildAttendanceReportMeta(filters) {
+        const f = filters || {};
+        const parts = [];
+        if (f.staffId && f.staffId !== 'all') {
+            const staff = this._getAttendanceStaffOptions().find(s => String(s.id) === String(f.staffId) || String(s.staffId) === String(f.staffId));
+            parts.push('المسئول: ' + (staff?.name || f.staffId));
+        }
+        if (f.month) {
+            const [y, m] = String(f.month).split('-');
+            const monthNames = ['', 'يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
+            parts.push('الشهر: ' + (monthNames[parseInt(m, 10)] || m) + ' ' + y);
+        }
+        const range = this._resolveAttendanceFilterDates(f);
+        if (range.dateFrom || range.dateTo) {
+            parts.push('المدة: ' + (range.dateFrom || '…') + ' → ' + (range.dateTo || '…'));
+        }
+        if (f.staffRole && f.staffRole !== 'all') parts.push('الدور: ' + this.getStaffRoleLabel(f.staffRole));
+        if (f.status && f.status !== 'all') parts.push('الحالة: ' + this.getAttendanceStatusLabel(f.status));
+        if (f.search) parts.push('بحث: ' + String(f.search).trim());
+        return parts.length ? parts.join(' | ') : 'جميع السجلات';
+    },
+
+    _attendanceReportFileSuffix(filters) {
+        const f = filters || {};
+        if (f.month) return String(f.month);
+        if (f.staffId && f.staffId !== 'all') {
+            const staff = this._getAttendanceStaffOptions().find(s => String(s.id) === String(f.staffId));
+            const nm = (staff?.name || 'staff').replace(/[^\w\u0600-\u06FF-]+/g, '_').slice(0, 24);
+            return nm;
+        }
+        const range = this._resolveAttendanceFilterDates(f);
+        if (range.dateFrom && range.dateTo) return `${range.dateFrom}_${range.dateTo}`;
+        if (range.dateFrom) return `from_${range.dateFrom}`;
+        return new Date().toISOString().slice(0, 10);
+    },
+
+    getFilteredClinicAttendance() {
+        return this._filterAttendanceRows(this.getClinicStaffAttendanceList(), this.state.filters.attendance || {});
     },
 
     async loadClinicAttendanceData(force) {
@@ -13192,8 +13308,9 @@ const Clinic = {
         } catch (_e) { /* ignore */ }
     },
 
-    exportAttendanceToExcel() {
-        const rows = this.getFilteredClinicAttendance();
+    exportAttendanceToExcel(overrideFilters) {
+        const filters = overrideFilters || this.state.filters.attendance || {};
+        const rows = this._filterAttendanceRows(this.getClinicStaffAttendanceList(), filters);
         if (!rows.length) {
             Notification?.info?.('لا توجد بيانات لتصديرها');
             return;
@@ -13216,7 +13333,206 @@ const Clinic = {
         const workbook = XLSX.utils.book_new();
         const worksheet = XLSX.utils.json_to_sheet(excelData);
         XLSX.utils.book_append_sheet(workbook, worksheet, 'Attendance');
-        XLSX.writeFile(workbook, `Clinic_Attendance_${new Date().toISOString().slice(0, 10)}.xlsx`);
+        XLSX.writeFile(workbook, `Clinic_Attendance_${this._attendanceReportFileSuffix(filters)}.xlsx`);
+    },
+
+    exportAttendanceToPDF(overrideFilters) {
+        const filters = overrideFilters || this.state.filters.attendance || {};
+        const rows = this._filterAttendanceRows(this.getClinicStaffAttendanceList(), filters);
+        if (!rows.length) {
+            Notification?.info?.('لا توجد بيانات لتصديرها');
+            return;
+        }
+        const stats = this._computeAttendanceReportStats(rows);
+        const meta = this._buildAttendanceReportMeta(filters);
+        const tableRows = rows.map(r => `
+            <tr>
+                <td>${Utils.escapeHTML(r.userName || '—')}</td>
+                <td>${Utils.escapeHTML(r.userEmail || '—')}</td>
+                <td>${Utils.escapeHTML(this.getStaffRoleLabel(r.staffRole))}</td>
+                <td>${Utils.escapeHTML(r.date || '—')}</td>
+                <td>${r.checkIn ? (Utils.formatDateTime ? Utils.formatDateTime(r.checkIn) : Utils.escapeHTML(String(r.checkIn))) : '—'}</td>
+                <td>${r.checkOut ? (Utils.formatDateTime ? Utils.formatDateTime(r.checkOut) : Utils.escapeHTML(String(r.checkOut))) : '—'}</td>
+                <td class="text-center">${Utils.escapeHTML(String(r.workDuration || '—'))}</td>
+                <td>${Utils.escapeHTML(this.getAttendanceStatusLabel(r.status))}</td>
+            </tr>
+        `).join('');
+
+        const content = `
+            <div style="margin-bottom:14px;padding:14px 16px;background:#f0fdfa;border:1px solid #99f6e4;border-radius:10px;font-size:13px;line-height:1.7;">
+                <div><strong>نطاق التقرير:</strong> ${Utils.escapeHTML(meta)}</div>
+                <div style="margin-top:8px;display:flex;flex-wrap:wrap;gap:12px;">
+                    <span><strong>السجلات:</strong> ${stats.total}</span>
+                    <span><strong>المسئولون:</strong> ${stats.staffCount}</span>
+                    <span><strong>حاضر:</strong> ${stats.present}</span>
+                    <span><strong>خروج جزئي:</strong> ${stats.partial}</span>
+                    <span><strong>إجمالي الساعات:</strong> ${stats.totalHours}</span>
+                </div>
+            </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>الاسم</th><th>البريد</th><th>الدور</th><th>التاريخ</th>
+                        <th>وقت الدخول</th><th>وقت الخروج</th><th>المدة (س)</th><th>الحالة</th>
+                    </tr>
+                </thead>
+                <tbody>${tableRows}</tbody>
+            </table>
+        `;
+
+        const formCode = `CLINIC-ATT-${this._attendanceReportFileSuffix(filters)}`;
+        const htmlContent = typeof FormHeader !== 'undefined' && FormHeader.generatePDFHTML
+            ? FormHeader.generatePDFHTML(formCode, 'تقرير حضور مسئولي العيادة', content, false, true)
+            : `<html dir="rtl" lang="ar"><body>${content}</body></html>`;
+
+        try {
+            const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const printWindow = window.open(url, '_blank');
+            if (printWindow) {
+                printWindow.onload = () => {
+                    setTimeout(() => {
+                        printWindow.print();
+                        setTimeout(() => URL.revokeObjectURL(url), 1000);
+                    }, 450);
+                };
+            } else {
+                Notification?.error?.('يرجى السماح للنوافذ المنبثقة لتصدير PDF');
+            }
+        } catch (error) {
+            Utils.safeError('فشل تصدير تقرير الحضور PDF:', error);
+            Notification?.error?.('تعذر تصدير تقرير الحضور');
+        }
+    },
+
+    showAttendanceReportModal() {
+        document.getElementById('clinic-attendance-report-modal')?.remove();
+        const staffOptions = this._getAttendanceStaffOptions();
+        const curMonth = new Date();
+        const defaultMonth = `${curMonth.getFullYear()}-${String(curMonth.getMonth() + 1).padStart(2, '0')}`;
+        const staffOptsHtml = staffOptions.map(s =>
+            `<option value="${Utils.escapeAttr(s.id)}">${Utils.escapeHTML(s.name)}${s.role ? ' — ' + Utils.escapeHTML(this.getStaffRoleLabel(s.role)) : ''}</option>`
+        ).join('');
+
+        const html = `
+            <div class="modal-overlay active" id="clinic-attendance-report-modal">
+                <div class="modal-content" style="max-width:560px;border-radius:14px;overflow:hidden;">
+                    <div class="modal-header" style="background:linear-gradient(135deg,#134e4a,#0d9488);color:#fff;">
+                        <h3 style="margin:0;color:#fff;"><i class="fas fa-file-export ml-2"></i>تصدير تقرير الحضور</h3>
+                        <button type="button" class="modal-close" style="color:#fff;" onclick="document.getElementById('clinic-attendance-report-modal')?.remove()"><i class="fas fa-times"></i></button>
+                    </div>
+                    <div class="modal-body" style="padding:20px;">
+                        <p style="font-size:0.82rem;color:#64748b;margin:0 0 14px;">اختر نطاق التقرير ثم صيغة التصدير.</p>
+                        <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:16px;">
+                            <label style="display:flex;align-items:center;gap:8px;padding:10px 12px;border:1.5px solid #e2e8f0;border-radius:10px;cursor:pointer;">
+                                <input type="radio" name="att-report-scope" value="month" checked>
+                                <span><i class="fas fa-calendar-alt" style="color:#0d9488;margin-left:6px;"></i><strong>شهر محدد</strong></span>
+                            </label>
+                            <div id="att-report-month-wrap" style="padding-right:28px;">
+                                <input type="month" id="att-report-month" class="form-input" value="${defaultMonth}" style="width:100%;box-sizing:border-box;">
+                            </div>
+                            <label style="display:flex;align-items:center;gap:8px;padding:10px 12px;border:1.5px solid #e2e8f0;border-radius:10px;cursor:pointer;">
+                                <input type="radio" name="att-report-scope" value="period">
+                                <span><i class="fas fa-calendar-range" style="color:#3b82f6;margin-left:6px;"></i><strong>مدة محددة</strong></span>
+                            </label>
+                            <div id="att-report-period-wrap" style="padding-right:28px;display:none;">
+                                <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+                                    <div><label class="form-label" style="font-size:0.72rem;">من</label><input type="date" id="att-report-from" class="form-input" style="width:100%;box-sizing:border-box;"></div>
+                                    <div><label class="form-label" style="font-size:0.72rem;">إلى</label><input type="date" id="att-report-to" class="form-input" style="width:100%;box-sizing:border-box;"></div>
+                                </div>
+                            </div>
+                            <label style="display:flex;align-items:center;gap:8px;padding:10px 12px;border:1.5px solid #e2e8f0;border-radius:10px;cursor:pointer;">
+                                <input type="radio" name="att-report-scope" value="person">
+                                <span><i class="fas fa-user" style="color:#6366f1;margin-left:6px;"></i><strong>شخص محدد</strong></span>
+                            </label>
+                            <div id="att-report-person-wrap" style="padding-right:28px;display:none;">
+                                <select id="att-report-staff" class="form-input" style="width:100%;box-sizing:border-box;">
+                                    <option value="">— اختر مسئول —</option>${staffOptsHtml}
+                                </select>
+                            </div>
+                            <label style="display:flex;align-items:center;gap:8px;padding:10px 12px;border:1.5px solid #e2e8f0;border-radius:10px;cursor:pointer;">
+                                <input type="radio" name="att-report-scope" value="current">
+                                <span><i class="fas fa-filter" style="color:#f59e0b;margin-left:6px;"></i><strong>الفلاتر الحالية على الشاشة</strong></span>
+                            </label>
+                        </div>
+                        <div style="margin-bottom:4px;font-size:0.78rem;font-weight:700;color:#64748b;">صيغة التصدير</div>
+                        <div style="display:flex;gap:8px;">
+                            <label style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;padding:10px;border:2px solid #0d9488;border-radius:10px;cursor:pointer;background:#f0fdfa;font-weight:600;color:#134e4a;">
+                                <input type="radio" name="att-report-format" value="pdf" checked> PDF
+                            </label>
+                            <label style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;padding:10px;border:2px solid #e2e8f0;border-radius:10px;cursor:pointer;font-weight:600;color:#64748b;">
+                                <input type="radio" name="att-report-format" value="excel"> Excel
+                            </label>
+                        </div>
+                    </div>
+                    <div class="modal-footer" style="gap:8px;">
+                        <button type="button" class="btn-secondary" onclick="document.getElementById('clinic-attendance-report-modal')?.remove()">إلغاء</button>
+                        <button type="button" class="btn-primary" id="att-report-export-btn"><i class="fas fa-download ml-2"></i>تصدير التقرير</button>
+                    </div>
+                </div>
+            </div>`;
+        document.body.insertAdjacentHTML('beforeend', html);
+
+        const modal = document.getElementById('clinic-attendance-report-modal');
+        const syncScopePanels = () => {
+            const scope = modal.querySelector('input[name="att-report-scope"]:checked')?.value || 'month';
+            modal.querySelector('#att-report-month-wrap').style.display = scope === 'month' ? 'block' : 'none';
+            modal.querySelector('#att-report-period-wrap').style.display = scope === 'period' ? 'block' : 'none';
+            modal.querySelector('#att-report-person-wrap').style.display = scope === 'person' ? 'block' : 'none';
+        };
+        modal.querySelectorAll('input[name="att-report-scope"]').forEach(r => r.addEventListener('change', syncScopePanels));
+
+        modal.querySelector('#att-report-export-btn')?.addEventListener('click', () => {
+            const scope = modal.querySelector('input[name="att-report-scope"]:checked')?.value || 'month';
+            const format = modal.querySelector('input[name="att-report-format"]:checked')?.value || 'pdf';
+            let filters = { search: '', staffRole: 'all', status: 'all', staffId: 'all', month: '', dateFrom: '', dateTo: '', period: 'all' };
+
+            if (scope === 'current') {
+                filters = Object.assign({}, this.state.filters.attendance || {});
+            } else if (scope === 'month') {
+                const month = modal.querySelector('#att-report-month')?.value || '';
+                if (!month) {
+                    Notification?.warning?.('يرجى اختيار الشهر');
+                    return;
+                }
+                filters.month = month;
+                const mr = this._getAttendanceMonthRange(month);
+                filters.dateFrom = mr.dateFrom;
+                filters.dateTo = mr.dateTo;
+            } else if (scope === 'period') {
+                const from = modal.querySelector('#att-report-from')?.value || '';
+                const to = modal.querySelector('#att-report-to')?.value || '';
+                if (!from && !to) {
+                    Notification?.warning?.('يرجى تحديد تاريخ البداية أو النهاية');
+                    return;
+                }
+                const range = this._normalizeAttendanceDateRange(from, to);
+                filters.dateFrom = range.dateFrom;
+                filters.dateTo = range.dateTo;
+            } else if (scope === 'person') {
+                const staffId = modal.querySelector('#att-report-staff')?.value || '';
+                if (!staffId) {
+                    Notification?.warning?.('يرجى اختيار المسئول');
+                    return;
+                }
+                filters.staffId = staffId;
+            }
+
+            const rows = this._filterAttendanceRows(this.getClinicStaffAttendanceList(), filters);
+            if (!rows.length) {
+                Notification?.info?.('لا توجد سجلات مطابقة لنطاق التقرير');
+                return;
+            }
+
+            modal.remove();
+            if (format === 'excel') {
+                this.exportAttendanceToExcel(filters);
+                Notification?.success?.('تم تصدير تقرير Excel');
+            } else {
+                this.exportAttendanceToPDF(filters);
+                Notification?.success?.('تم فتح تقرير PDF للطباعة/الحفظ');
+            }
+        });
     },
 
     showAddClinicStaffModal() {
@@ -13335,12 +13651,13 @@ const Clinic = {
         this.ensureData();
         this.state.filters = this.state.filters || {};
         this.state.filters.attendance = Object.assign(
-            { search: '', staffRole: 'all', status: 'all', dateFrom: '', dateTo: '', period: 'all' },
+            { search: '', staffRole: 'all', status: 'all', staffId: 'all', month: '', dateFrom: '', dateTo: '', period: 'all' },
             this.state.filters.attendance || {}
         );
         const filters = this.state.filters.attendance;
         const rows = this.getFilteredClinicAttendance();
         const staffList = this.getClinicStaffList();
+        const staffFilterOptions = this._getAttendanceStaffOptions();
         const activeStaff = staffList.filter(s => String(s.isActive || 'true').toLowerCase() !== 'false');
         const todayKey = this._getTodayLocalKey();
         const allAttendance = this.getClinicStaffAttendanceList();
@@ -13352,9 +13669,14 @@ const Clinic = {
         const filterPanelOpen = this.state.attendanceFilterPanelOpen !== false;
         const period = filters.period || 'all';
         const periodLabels = { today: 'اليوم', week: '7 أيام', month: '30 يوم', all: 'الكل' };
-        const afInput = 'width:100%;padding:8px 11px;border:1.5px solid #99f6e4;border-radius:8px;font-size:0.82rem;background:#fff;color:#374151;transition:border-color .2s,box-shadow .2s;';
+        const afField = 'min-width:0;box-sizing:border-box;';
+        const afInput = `${afField}width:100%;padding:8px 11px;border:1.5px solid #99f6e4;border-radius:8px;font-size:0.82rem;background:#fff;color:#374151;transition:border-color .2s,box-shadow .2s;`;
+        const afLabel = 'font-size:0.72rem;font-weight:700;color:#64748b;display:block;margin-bottom:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;';
         const afFocus = "this.style.borderColor='#0d9488';this.style.boxShadow='0 0 0 3px rgba(13,148,136,0.12)'";
         const afBlur = "this.style.borderColor='#99f6e4';this.style.boxShadow='none'";
+        const staffFilterOpts = staffFilterOptions.map(s =>
+            `<option value="${Utils.escapeAttr(s.id)}" ${String(filters.staffId) === String(s.id) ? 'selected' : ''}>${Utils.escapeHTML(s.name)}</option>`
+        ).join('');
 
         const tableRows = rows.length ? rows.map(r => `
             <tr>
@@ -13384,6 +13706,10 @@ const Clinic = {
         }).join('') : `<tr><td colspan="4" class="text-center text-gray-500 py-4">لا يوجد مسئولون — أضف من القائمة</td></tr>`) : '';
 
         panel.innerHTML = `
+            <style>
+                @media (max-width:900px){#clinic-attendance-filter-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important;}}
+                @media (max-width:520px){#clinic-attendance-filter-grid{grid-template-columns:1fr!important;}}
+            </style>
             <div id="clinic-attendance-root" style="font-family:inherit;">
                 <!-- KPI -->
                 <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(155px,1fr));gap:10px;margin-bottom:14px;">
@@ -13427,7 +13753,9 @@ const Clinic = {
                             ${activeFilterCount ? `<span style="background:#fbbf24;color:#78350f;font-size:0.65rem;padding:1px 6px;border-radius:10px;">${activeFilterCount}</span>` : ''}
                         </button>
                         <button type="button" id="clinic-attendance-refresh-btn" style="padding:6px 10px;border-radius:8px;border:none;cursor:pointer;background:rgba(255,255,255,0.14);color:#fff;font-size:0.76rem;" title="تحديث من الخادم"><i class="fas fa-sync-alt"></i></button>
-                        <button type="button" id="clinic-attendance-export-btn" style="padding:6px 12px;border-radius:8px;border:none;cursor:pointer;background:rgba(0,0,0,0.22);color:#fff;font-size:0.76rem;font-weight:600;display:flex;align-items:center;gap:5px;"><i class="fas fa-file-excel"></i><span>Excel</span></button>
+                        <button type="button" id="clinic-attendance-report-btn" style="padding:6px 12px;border-radius:8px;border:none;cursor:pointer;background:rgba(255,255,255,0.92);color:#134e4a;font-size:0.76rem;font-weight:700;display:flex;align-items:center;gap:5px;" title="تصدير تقرير"><i class="fas fa-file-export"></i><span>تقرير</span></button>
+                        <button type="button" id="clinic-attendance-pdf-btn" style="padding:6px 12px;border-radius:8px;border:none;cursor:pointer;background:rgba(0,0,0,0.22);color:#fff;font-size:0.76rem;font-weight:600;display:flex;align-items:center;gap:5px;" title="PDF للفلتر الحالي"><i class="fas fa-file-pdf"></i><span>PDF</span></button>
+                        <button type="button" id="clinic-attendance-export-btn" style="padding:6px 12px;border-radius:8px;border:none;cursor:pointer;background:rgba(0,0,0,0.22);color:#fff;font-size:0.76rem;font-weight:600;display:flex;align-items:center;gap:5px;" title="Excel للفلتر الحالي"><i class="fas fa-file-excel"></i><span>Excel</span></button>
                         ${isAdmin ? `<button type="button" id="clinic-attendance-add-staff-btn" style="padding:6px 12px;border-radius:8px;border:none;cursor:pointer;background:#fff;color:#134e4a;font-size:0.76rem;font-weight:700;display:flex;align-items:center;gap:5px;"><i class="fas fa-user-plus"></i><span>إضافة مسئول</span></button>` : ''}
                     </div>
                 </div>
@@ -13444,13 +13772,24 @@ const Clinic = {
                             <i class="fas fa-times ml-1"></i>مسح الكل
                         </button>
                     </div>
-                    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;">
-                        <div style="grid-column:1/-1;">
-                            <label style="font-size:0.72rem;font-weight:700;color:#64748b;display:block;margin-bottom:5px;"><i class="fas fa-search" style="color:#0d9488;margin-left:4px;"></i>بحث بالاسم أو البريد</label>
-                            <input type="text" id="clinic-attendance-search" style="${afInput}" placeholder="اكتب للبحث..." value="${Utils.escapeAttr(filters.search || '')}" onfocus="${afFocus}" onblur="${afBlur}">
+                    <div id="clinic-attendance-filter-grid" style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px 12px;">
+                        <div style="grid-column:1/-1;${afField}">
+                            <label style="${afLabel}"><i class="fas fa-search" style="color:#0d9488;margin-left:4px;"></i>بحث بالاسم أو البريد</label>
+                            <input type="search" id="clinic-attendance-search" style="${afInput}" placeholder="اكتب للبحث..." value="${Utils.escapeAttr(filters.search || '')}" autocomplete="off" onfocus="${afFocus}" onblur="${afBlur}">
                         </div>
-                        <div>
-                            <label style="font-size:0.72rem;font-weight:700;color:#64748b;display:block;margin-bottom:5px;"><i class="fas fa-user-tag" style="color:#6366f1;margin-left:4px;"></i>الدور</label>
+                        <div style="${afField}">
+                            <label style="${afLabel}"><i class="fas fa-calendar-alt" style="color:#f59e0b;margin-left:4px;"></i>الشهر</label>
+                            <input type="month" id="clinic-attendance-month" style="${afInput}" value="${Utils.escapeAttr(filters.month || '')}" onfocus="${afFocus}" onblur="${afBlur}">
+                        </div>
+                        <div style="${afField}">
+                            <label style="${afLabel}"><i class="fas fa-user" style="color:#6366f1;margin-left:4px;"></i>المسئول</label>
+                            <select id="clinic-attendance-staff" style="${afInput}cursor:pointer;" onfocus="${afFocus}" onblur="${afBlur}">
+                                <option value="all" ${!filters.staffId || filters.staffId === 'all' ? 'selected' : ''}>كل المسئولين</option>
+                                ${staffFilterOpts}
+                            </select>
+                        </div>
+                        <div style="${afField}">
+                            <label style="${afLabel}"><i class="fas fa-user-tag" style="color:#8b5cf6;margin-left:4px;"></i>الدور</label>
                             <select id="clinic-attendance-role" style="${afInput}cursor:pointer;" onfocus="${afFocus}" onblur="${afBlur}">
                                 <option value="all" ${filters.staffRole === 'all' || !filters.staffRole ? 'selected' : ''}>كل الأدوار</option>
                                 <option value="doctor" ${filters.staffRole === 'doctor' ? 'selected' : ''}>طبيب</option>
@@ -13458,8 +13797,8 @@ const Clinic = {
                                 <option value="clinic_officer" ${filters.staffRole === 'clinic_officer' ? 'selected' : ''}>مسئول عيادة</option>
                             </select>
                         </div>
-                        <div>
-                            <label style="font-size:0.72rem;font-weight:700;color:#64748b;display:block;margin-bottom:5px;"><i class="fas fa-circle-check" style="color:#059669;margin-left:4px;"></i>الحالة</label>
+                        <div style="${afField}">
+                            <label style="${afLabel}"><i class="fas fa-circle-check" style="color:#059669;margin-left:4px;"></i>الحالة</label>
                             <select id="clinic-attendance-status" style="${afInput}cursor:pointer;" onfocus="${afFocus}" onblur="${afBlur}">
                                 <option value="all" ${filters.status === 'all' || !filters.status ? 'selected' : ''}>كل الحالات</option>
                                 <option value="present" ${filters.status === 'present' ? 'selected' : ''}>حاضر</option>
@@ -13467,12 +13806,12 @@ const Clinic = {
                                 <option value="absent" ${filters.status === 'absent' ? 'selected' : ''}>غائب</option>
                             </select>
                         </div>
-                        <div>
-                            <label style="font-size:0.72rem;font-weight:700;color:#64748b;display:block;margin-bottom:5px;"><i class="fas fa-calendar-day" style="color:#f59e0b;margin-left:4px;"></i>من تاريخ</label>
+                        <div style="${afField}">
+                            <label style="${afLabel}"><i class="fas fa-calendar-day" style="color:#f59e0b;margin-left:4px;"></i>من تاريخ</label>
                             <input type="date" id="clinic-attendance-from" style="${afInput}" value="${Utils.escapeAttr(filters.dateFrom || '')}" onfocus="${afFocus}" onblur="${afBlur}">
                         </div>
-                        <div>
-                            <label style="font-size:0.72rem;font-weight:700;color:#64748b;display:block;margin-bottom:5px;"><i class="fas fa-calendar-check" style="color:#3b82f6;margin-left:4px;"></i>إلى تاريخ</label>
+                        <div style="${afField}">
+                            <label style="${afLabel}"><i class="fas fa-calendar-check" style="color:#3b82f6;margin-left:4px;"></i>إلى تاريخ</label>
                             <input type="date" id="clinic-attendance-to" style="${afInput}" value="${Utils.escapeAttr(filters.dateTo || '')}" onfocus="${afFocus}" onblur="${afBlur}">
                         </div>
                     </div>
@@ -13481,6 +13820,8 @@ const Clinic = {
                         <span style="font-size:0.72rem;color:#64748b;font-weight:600;">الفلاتر المطبّقة:</span>
                         ${filters.search ? `<span style="background:#fff;border:1px solid #99f6e4;color:#0f766e;padding:3px 8px;border-radius:999px;font-size:0.72rem;">بحث: ${Utils.escapeHTML(String(filters.search).slice(0, 24))}</span>` : ''}
                         ${filters.staffRole && filters.staffRole !== 'all' ? `<span style="background:#fff;border:1px solid #99f6e4;color:#0f766e;padding:3px 8px;border-radius:999px;font-size:0.72rem;">${Utils.escapeHTML(this.getStaffRoleLabel(filters.staffRole))}</span>` : ''}
+                        ${filters.staffId && filters.staffId !== 'all' ? `<span style="background:#fff;border:1px solid #99f6e4;color:#0f766e;padding:3px 8px;border-radius:999px;font-size:0.72rem;">${Utils.escapeHTML((staffFilterOptions.find(s => String(s.id) === String(filters.staffId)) || {}).name || filters.staffId)}</span>` : ''}
+                        ${filters.month ? `<span style="background:#fff;border:1px solid #99f6e4;color:#0f766e;padding:3px 8px;border-radius:999px;font-size:0.72rem;">شهر ${Utils.escapeHTML(filters.month)}</span>` : ''}
                         ${filters.status && filters.status !== 'all' ? `<span style="background:#fff;border:1px solid #99f6e4;color:#0f766e;padding:3px 8px;border-radius:999px;font-size:0.72rem;">${Utils.escapeHTML(this.getAttendanceStatusLabel(filters.status))}</span>` : ''}
                         ${filters.dateFrom ? `<span style="background:#fff;border:1px solid #99f6e4;color:#0f766e;padding:3px 8px;border-radius:999px;font-size:0.72rem;">من ${Utils.escapeHTML(filters.dateFrom)}</span>` : ''}
                         ${filters.dateTo ? `<span style="background:#fff;border:1px solid #99f6e4;color:#0f766e;padding:3px 8px;border-radius:999px;font-size:0.72rem;">إلى ${Utils.escapeHTML(filters.dateTo)}</span>` : ''}
@@ -13519,16 +13860,26 @@ const Clinic = {
             </div>`;
 
         const readFilterInputs = () => {
-            const range = this._normalizeAttendanceDateRange(
-                document.getElementById('clinic-attendance-from')?.value || '',
-                document.getElementById('clinic-attendance-to')?.value || ''
-            );
+            const month = document.getElementById('clinic-attendance-month')?.value || '';
+            let dateFrom = document.getElementById('clinic-attendance-from')?.value || '';
+            let dateTo = document.getElementById('clinic-attendance-to')?.value || '';
+            if (month && !dateFrom && !dateTo) {
+                const mr = this._getAttendanceMonthRange(month);
+                dateFrom = mr.dateFrom;
+                dateTo = mr.dateTo;
+            } else {
+                const range = this._normalizeAttendanceDateRange(dateFrom, dateTo);
+                dateFrom = range.dateFrom;
+                dateTo = range.dateTo;
+            }
             return {
                 search: document.getElementById('clinic-attendance-search')?.value || '',
                 staffRole: document.getElementById('clinic-attendance-role')?.value || 'all',
                 status: document.getElementById('clinic-attendance-status')?.value || 'all',
-                dateFrom: range.dateFrom,
-                dateTo: range.dateTo,
+                staffId: document.getElementById('clinic-attendance-staff')?.value || 'all',
+                month,
+                dateFrom,
+                dateTo,
                 period: this.state.filters.attendance?.period || 'all'
             };
         };
@@ -13558,6 +13909,7 @@ const Clinic = {
             }
             this.state.filters.attendance = Object.assign({}, this.state.filters.attendance || {}, {
                 period: preset,
+                month: '',
                 dateFrom,
                 dateTo
             });
@@ -13576,17 +13928,29 @@ const Clinic = {
 
         panel.querySelector('#clinic-attendance-role')?.addEventListener('change', applyFilters);
         panel.querySelector('#clinic-attendance-status')?.addEventListener('change', applyFilters);
+        panel.querySelector('#clinic-attendance-staff')?.addEventListener('change', applyFilters);
+        panel.querySelector('#clinic-attendance-month')?.addEventListener('change', () => {
+            const month = document.getElementById('clinic-attendance-month')?.value || '';
+            const mr = month ? this._getAttendanceMonthRange(month) : { dateFrom: '', dateTo: '' };
+            this.state.filters.attendance = Object.assign({}, readFilterInputs.call(this), {
+                month,
+                dateFrom: mr.dateFrom,
+                dateTo: mr.dateTo,
+                period: 'monthPick'
+            });
+            applyFilters();
+        });
         panel.querySelector('#clinic-attendance-from')?.addEventListener('change', () => {
-            this.state.filters.attendance = Object.assign({}, readFilterInputs.call(this), { period: 'custom' });
+            this.state.filters.attendance = Object.assign({}, readFilterInputs.call(this), { month: '', period: 'custom' });
             applyFilters();
         });
         panel.querySelector('#clinic-attendance-to')?.addEventListener('change', () => {
-            this.state.filters.attendance = Object.assign({}, readFilterInputs.call(this), { period: 'custom' });
+            this.state.filters.attendance = Object.assign({}, readFilterInputs.call(this), { month: '', period: 'custom' });
             applyFilters();
         });
 
         panel.querySelector('#clinic-attendance-reset-filters')?.addEventListener('click', () => {
-            this.state.filters.attendance = { search: '', staffRole: 'all', status: 'all', dateFrom: '', dateTo: '', period: 'all' };
+            this.state.filters.attendance = { search: '', staffRole: 'all', status: 'all', staffId: 'all', month: '', dateFrom: '', dateTo: '', period: 'all' };
             this.renderAttendanceTab();
         });
 
@@ -13601,6 +13965,8 @@ const Clinic = {
         });
 
         panel.querySelector('#clinic-attendance-export-btn')?.addEventListener('click', () => this.exportAttendanceToExcel());
+        panel.querySelector('#clinic-attendance-pdf-btn')?.addEventListener('click', () => this.exportAttendanceToPDF());
+        panel.querySelector('#clinic-attendance-report-btn')?.addEventListener('click', () => this.showAttendanceReportModal());
         panel.querySelector('#clinic-attendance-add-staff-btn')?.addEventListener('click', () => this.showAddClinicStaffModal());
         panel.querySelector('#clinic-attendance-refresh-btn')?.addEventListener('click', async () => {
             Notification?.info?.('جاري تحديث سجل الحضور...');
