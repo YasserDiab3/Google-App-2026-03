@@ -6881,7 +6881,7 @@ const PTW = {
     PERMIT_A4_HEIGHT_PX: 1123,
     PERMIT_A4_MARGIN_MM: 3,
     PERMIT_A4_MAX_PAGES: 2,
-    PERMIT_A4_CAPTURE_SCALE: 3,
+    PERMIT_A4_CAPTURE_SCALE: 2,
 
     getManualPermitPrintStyles(forPdfExport = false) {
         const a4Overrides = forPdfExport ? `
@@ -6906,7 +6906,13 @@ const PTW = {
                 box-sizing: border-box;
                 padding: 8px 10px 10px;
                 background: #fff;
-                overflow: hidden;
+                page-break-after: always;
+                break-after: page;
+            }
+            .ptw-a4-page:last-child { page-break-after: auto; break-after: auto; }
+            .ptw-manual-print-a4 .manual-section-7 {
+                page-break-before: always;
+                break-before: page;
             }
             .ptw-paper-header { padding: 12px 14px; min-height: 68px; border-radius: 8px; }
             .ptw-paper-header-pdf { display: block; padding: 0; background: transparent; border: none; min-height: 0; margin-bottom: 8px; }
@@ -7466,21 +7472,7 @@ const PTW = {
         const footer = this.renderPermitSystemFooter(footerMeta);
         const header = this.renderPermitSystemHeader({ forPdf });
 
-        let bodyHtml = content;
-        if (forPdf) {
-            const breakAt = content.indexOf('manual-section-6');
-            if (breakAt > 0) {
-                const part1 = content.slice(0, breakAt);
-                const part2 = content.slice(breakAt);
-                bodyHtml = `
-                    <div class="ptw-a4-page">${header}${part1}</div>
-                    <div class="ptw-a4-page">${part2}${footer}</div>`;
-            } else {
-                bodyHtml = `<div class="ptw-a4-page">${header}${content}${footer}</div>`;
-            }
-        } else {
-            bodyHtml = `${content}${footer}`;
-        }
+        const bodyHtml = `${header}${content}${footer}`;
 
         return `<!DOCTYPE html>
 <html dir="rtl" lang="ar">
@@ -7494,7 +7486,7 @@ const PTW = {
 </head>
 <body>
     <div class="ptw-manual-print${forPdf ? ' ptw-manual-print-a4' : ''}" id="ptw-permit-print-root">
-        ${forPdf ? bodyHtml : `${header}${bodyHtml}`}
+        ${bodyHtml}
     </div>
 </body>
 </html>`;
@@ -7569,89 +7561,28 @@ const PTW = {
         } catch (_e) { /* ignore */ }
     },
 
-    _preparePermitA4PageForCapture_(pageEl, iDoc) {
-        const maxW = this.PERMIT_A4_WIDTH_PX;
-        const maxH = this.PERMIT_A4_HEIGHT_PX;
-        if (!pageEl) return { captureEl: null, captureH: maxH, captureW: maxW, scale: 1 };
-
-        pageEl.style.width = `${maxW}px`;
-        pageEl.style.maxWidth = `${maxW}px`;
-        pageEl.style.boxSizing = 'border-box';
-        pageEl.style.minHeight = '0';
-        pageEl.style.height = 'auto';
-        pageEl.style.margin = '0';
-        pageEl.style.zoom = '1';
-        pageEl.style.transform = '';
-        pageEl.style.transformOrigin = 'top right';
-
-        const naturalH = Math.max(pageEl.scrollHeight, pageEl.offsetHeight, 1);
-        const scaleY = maxH / naturalH;
-        pageEl.style.transform = `scale(1, ${scaleY})`;
-        pageEl.style.transformOrigin = 'top right';
-
-        let frame = pageEl.closest('.ptw-a4-capture-frame');
-        if (!frame && iDoc) {
-            frame = iDoc.createElement('div');
-            frame.className = 'ptw-a4-capture-frame';
-            const parent = pageEl.parentNode;
-            if (parent) {
-                parent.insertBefore(frame, pageEl);
-                frame.appendChild(pageEl);
-            }
-        }
-        if (frame) {
-            frame.style.width = `${maxW}px`;
-            frame.style.height = `${maxH}px`;
-            frame.style.maxWidth = `${maxW}px`;
-            frame.style.maxHeight = `${maxH}px`;
-            frame.style.overflow = 'hidden';
-            frame.style.background = '#ffffff';
-            frame.style.position = 'relative';
-            frame.style.boxSizing = 'border-box';
-        }
-
-        return {
-            captureEl: frame || pageEl,
-            captureH: maxH,
-            captureW: maxW,
-            scale: scaleY
-        };
-    },
-
-    _addPermitPdfPageImage_(pdf, canvas, marginMm, options = {}) {
+    _addPermitCanvasToPdfFullWidth_(pdf, canvas, marginMm, options = {}) {
         const pdfW = pdf.internal.pageSize.getWidth();
         const pdfH = pdf.internal.pageSize.getHeight();
         const contentWmm = pdfW - marginMm * 2;
         const contentHmm = pdfH - marginMm * 2;
-        const fillPage = options.fillPage === true;
-        const imageType = options.imageType || 'PNG';
-        const imageData = imageType === 'JPEG'
-            ? canvas.toDataURL('image/jpeg', 0.96)
-            : canvas.toDataURL('image/png');
-
-        if (fillPage) {
-            pdf.addImage(imageData, imageType, marginMm, marginMm, contentWmm, contentHmm);
-            return;
-        }
-
         const drawWmm = contentWmm;
-        const drawHmm = Math.min((canvas.height / canvas.width) * drawWmm, contentHmm);
-        pdf.addImage(imageData, imageType, marginMm, marginMm, drawWmm, drawHmm);
-    },
+        const natHmm = (canvas.height / canvas.width) * drawWmm;
+        const imageData = canvas.toDataURL('image/png');
 
-    _slicePermitCanvasToPdfPages_(pdf, canvas, marginMm, maxPages) {
-        const pdfW = pdf.internal.pageSize.getWidth();
-        const pdfH = pdf.internal.pageSize.getHeight();
-        const contentWmm = pdfW - marginMm * 2;
-        const contentHmm = pdfH - marginMm * 2;
-        const pxPerMm = canvas.width / contentWmm;
+        if (natHmm <= contentHmm + 0.5 || options.allowSlice === false) {
+            pdf.addImage(imageData, 'PNG', marginMm, marginMm, drawWmm, Math.min(natHmm, contentHmm));
+            return 1;
+        }
+
+        const pxPerMm = canvas.width / drawWmm;
         const slicePxH = Math.max(1, Math.floor(contentHmm * pxPerMm));
-        const totalSlices = Math.min(maxPages || 2, Math.max(1, Math.ceil(canvas.height / slicePxH)));
+        const maxSlices = Math.max(1, options.maxSlices || 4);
+        let pagesAdded = 0;
 
-        for (let p = 0; p < totalSlices; p++) {
-            if (p > 0) pdf.addPage();
-            const srcY = p * slicePxH;
-            const sliceH = Math.min(slicePxH, canvas.height - srcY);
+        for (let y = 0; y < canvas.height && pagesAdded < maxSlices; y += slicePxH) {
+            if (pagesAdded > 0) pdf.addPage();
+            const sliceH = Math.min(slicePxH, canvas.height - y);
             const sliceCanvas = document.createElement('canvas');
             sliceCanvas.width = canvas.width;
             sliceCanvas.height = sliceH;
@@ -7659,12 +7590,106 @@ const PTW = {
             if (ctx) {
                 ctx.fillStyle = '#ffffff';
                 ctx.fillRect(0, 0, sliceCanvas.width, sliceCanvas.height);
-                ctx.drawImage(canvas, 0, srcY, canvas.width, sliceH, 0, 0, canvas.width, sliceH);
+                ctx.drawImage(canvas, 0, y, canvas.width, sliceH, 0, 0, canvas.width, sliceH);
             }
-            const drawWmm = contentWmm;
-            const drawHmm = Math.min((sliceH / canvas.width) * drawWmm, contentHmm);
-            pdf.addImage(sliceCanvas.toDataURL('image/png'), 'PNG', marginMm, marginMm, drawWmm, drawHmm);
+            const sliceHmm = (sliceH / canvas.width) * drawWmm;
+            pdf.addImage(sliceCanvas.toDataURL('image/png'), 'PNG', marginMm, marginMm, drawWmm, Math.min(sliceHmm, contentHmm));
+            pagesAdded += 1;
         }
+        return pagesAdded;
+    },
+
+    async _ensureJsPdfInFrame_(iDoc, iWin) {
+        if (!iDoc || !iWin) return false;
+        if (iWin.jspdf?.jsPDF || typeof iWin.jsPDF === 'function') return true;
+        return new Promise((resolve) => {
+            const s = iDoc.createElement('script');
+            s.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
+            s.async = true;
+            s.onload = () => resolve(!!(iWin.jspdf?.jsPDF || typeof iWin.jsPDF === 'function'));
+            s.onerror = () => resolve(false);
+            (iDoc.head || iDoc.documentElement).appendChild(s);
+        });
+    },
+
+    _getPermitJsPdfFromFrame_(iWin) {
+        if (!iWin) return this._getPermitJsPdfConstructor_();
+        if (iWin.jspdf?.jsPDF) return iWin.jspdf.jsPDF;
+        if (typeof iWin.jsPDF === 'function') return iWin.jsPDF;
+        return this._getPermitJsPdfConstructor_();
+    },
+
+    async _downloadPermitHtmlViaJsPdfHtml_(pdf, root, iWin, fileName, marginMm, a4W) {
+        const JsPDF = this._getPermitJsPdfFromFrame_(iWin);
+        if (!JsPDF || !root) return false;
+
+        const doc = (pdf && typeof pdf.html === 'function') ? pdf : new JsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+        if (typeof doc.html !== 'function') return false;
+
+        const contentWmm = doc.internal.pageSize.getWidth() - marginMm * 2;
+
+        return new Promise((resolve) => {
+            let settled = false;
+            const done = (ok) => {
+                if (settled) return;
+                settled = true;
+                resolve(!!ok);
+            };
+            const timer = setTimeout(() => done(false), 45000);
+
+            try {
+                doc.html(root, {
+                    callback: (savedDoc) => {
+                        clearTimeout(timer);
+                        try {
+                            savedDoc.save(fileName);
+                            done(true);
+                        } catch (_e) {
+                            done(false);
+                        }
+                    },
+                    margin: [marginMm, marginMm, marginMm, marginMm],
+                    width: contentWmm,
+                    windowWidth: a4W,
+                    html2canvas: {
+                        scale: this.PERMIT_A4_CAPTURE_SCALE || 2,
+                        useCORS: true,
+                        allowTaint: true,
+                        backgroundColor: '#ffffff',
+                        logging: false,
+                        width: a4W,
+                        windowWidth: a4W,
+                        scrollX: 0,
+                        scrollY: 0
+                    },
+                    autoPaging: 'slice'
+                });
+            } catch (_err) {
+                clearTimeout(timer);
+                done(false);
+            }
+        });
+    },
+
+    async _downloadPermitHtmlAsPdfByCanvas_(pdf, root, iWin, marginMm, maxPages) {
+        if (!pdf || !root) return false;
+
+        root.style.width = `${this.PERMIT_A4_WIDTH_PX}px`;
+        root.style.maxWidth = `${this.PERMIT_A4_WIDTH_PX}px`;
+        root.style.boxSizing = 'border-box';
+
+        const contentHeight = Math.max(root.scrollHeight, root.offsetHeight, 1);
+        const canvas = await this._capturePermitHtmlToCanvas_(root, iWin, {
+            width: this.PERMIT_A4_WIDTH_PX,
+            height: contentHeight
+        });
+        if (!canvas) return false;
+
+        const pagesAdded = this._addPermitCanvasToPdfFullWidth_(pdf, canvas, marginMm, {
+            allowSlice: true,
+            maxSlices: maxPages
+        });
+        return pagesAdded > 0;
     },
 
     async _ensureHtml2CanvasInFrame_(iDoc, iWin) {
@@ -7682,10 +7707,9 @@ const PTW = {
 
     async _capturePermitHtmlToCanvas_(root, iWin, options = {}) {
         const a4W = options.width || this.PERMIT_A4_WIDTH_PX;
-        const a4H = options.height || Math.max(root?.scrollHeight || 1, 1);
         const scrollW = Math.max(root?.scrollWidth || a4W, a4W);
-        const scrollH = Math.max(root?.scrollHeight || a4H, a4H, 1);
-        let scale = this.PERMIT_A4_CAPTURE_SCALE || 3;
+        const scrollH = Math.max(root?.scrollHeight || 1, options.height || root?.scrollHeight || 1, 1);
+        let scale = this.PERMIT_A4_CAPTURE_SCALE || 2;
         while (scale > 1 && (scrollW * scale > 16000 || scrollH * scale > 16000)) {
             scale -= 0.25;
         }
@@ -7694,15 +7718,11 @@ const PTW = {
             scale,
             backgroundColor: '#ffffff',
             logging: false,
-            width: scrollW,
-            height: scrollH,
-            windowWidth: scrollW,
-            windowHeight: scrollH,
-            scrollX: 0,
-            scrollY: 0,
             useCORS: true,
             allowTaint: true,
-            imageTimeout: 8000
+            imageTimeout: 8000,
+            scrollX: 0,
+            scrollY: 0
         };
         const attempts = [
             baseOpts,
@@ -7764,6 +7784,7 @@ const PTW = {
             })));
 
             await this._ensureHtml2CanvasInFrame_(iDoc, iWin);
+            await this._ensureJsPdfInFrame_(iDoc, iWin);
             await new Promise((r) => setTimeout(r, 400));
 
             const root = iDoc.getElementById('ptw-permit-print-root')
@@ -7773,39 +7794,31 @@ const PTW = {
                 || iDoc.body;
             if (!root) return false;
 
-            const pageEls = Array.from(root.querySelectorAll('.ptw-a4-page'));
+            root.style.width = `${a4W}px`;
+            root.style.maxWidth = `${a4W}px`;
+            root.style.margin = '0';
+            root.style.padding = '0';
+            root.style.boxSizing = 'border-box';
+            root.style.background = '#ffffff';
+
+            const contentHeight = Math.max(root.scrollHeight, root.offsetHeight, 200);
+            iframe.style.width = `${a4W}px`;
+            iframe.style.height = `${contentHeight + 80}px`;
+
+            await new Promise((r) => setTimeout(r, 200));
+
             const pdf = new JsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
 
-            if (pageEls.length > 0) {
-                const pagesToRender = pageEls.slice(0, maxPages);
-                for (let p = 0; p < pagesToRender.length; p++) {
-                    if (p > 0) pdf.addPage();
-                    const pageEl = pagesToRender[p];
-                    const fit = this._preparePermitA4PageForCapture_(pageEl, iDoc);
-                    const captureTarget = fit.captureEl || pageEl;
-                    iframe.style.width = `${fit.captureW}px`;
-                    iframe.style.height = `${fit.captureH + 40}px`;
-                    await new Promise((r) => setTimeout(r, 120));
-                    const canvas = await this._capturePermitHtmlToCanvas_(captureTarget, iWin, {
-                        width: fit.captureW,
-                        height: fit.captureH
-                    });
-                    if (!canvas) return false;
-                    this._addPermitPdfPageImage_(pdf, canvas, marginMm, { fillPage: true });
-                    pageEl.style.transform = '';
+            let ok = await this._downloadPermitHtmlViaJsPdfHtml_(pdf, root, iWin, pdfFileName, marginMm, a4W);
+            if (!ok) {
+                const canvasPdf = new JsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+                ok = await this._downloadPermitHtmlAsPdfByCanvas_(canvasPdf, root, iWin, marginMm, maxPages);
+                if (ok) {
+                    canvasPdf.save(pdfFileName);
                 }
-            } else {
-                const contentHeight = Math.max(root.scrollHeight, root.offsetHeight, this.PERMIT_A4_HEIGHT_PX);
-                iframe.style.height = `${contentHeight + 40}px`;
-
-                const canvas = await this._capturePermitHtmlToCanvas_(root, iWin);
-                if (!canvas) return false;
-
-                this._slicePermitCanvasToPdfPages_(pdf, canvas, marginMm, maxPages);
             }
 
-            pdf.save(pdfFileName);
-            return true;
+            return ok;
         } catch (error) {
             Utils.safeWarn('فشل تحميل تصريح PDF:', error);
             return false;
