@@ -440,11 +440,13 @@ const Dashboard = {
                             <div class="space-y-3">
                                 ${clinicVisits.slice(0, 5).map(c => `
                                     <div class="border rounded p-3">
-                                        <div class="flex items-center justify-between mb-2">
-                                            <span class="font-semibold">${Utils.escapeHTML(c.reason || 'زيارة عادية')}</span>
+                                        <div class="flex items-center justify-between mb-2 gap-2 flex-wrap">
+                                            <span class="font-semibold">${Utils.escapeHTML(this._getContractorClinicVisitDisplayName_(c) || '—')}</span>
+                                            <span class="text-xs text-gray-500">${c.visitDate ? Utils.formatDate(c.visitDate) : ''}</span>
                                         </div>
+                                        <p class="text-sm text-gray-700">السبب: ${Utils.escapeHTML(c.reason || 'زيارة عادية')}</p>
                                         ${c.diagnosis ? `<p class="text-sm text-gray-600">التشخيص: ${Utils.escapeHTML(c.diagnosis)}</p>` : ''}
-                                        <p class="text-xs text-gray-500 mt-2">${c.visitDate ? Utils.formatDate(c.visitDate) : ''}</p>
+                                        ${c.treatment ? `<p class="text-sm text-gray-600">العلاج: ${Utils.escapeHTML(c.treatment)}</p>` : ''}
                                     </div>
                                 `).join('')}
                                 ${clinicVisits.length > 5 ? `<p class="text-sm text-gray-500 text-center mt-2">و ${clinicVisits.length - 5} زيارة أخرى...</p>` : ''}
@@ -2337,6 +2339,18 @@ const Dashboard = {
         return sectionTable(`${label}${titleSuffix}`, accent, headers, rowsHtml);
     },
 
+    _getContractorClinicVisitDisplayName_(visit) {
+        if (!visit || typeof visit !== 'object') return '';
+        return String(
+            visit.contractorWorkerName ||
+            visit.personName ||
+            visit.employeeName ||
+            visit.externalName ||
+            visit.name ||
+            ''
+        ).replace(/\s+/g, ' ').trim();
+    },
+
     buildEmployeeReportPdfContent(report, employeeCode) {
         const emp = report.employee || {};
         const ar = this._AR_PDF_TEXT_STYLE_;
@@ -2594,9 +2608,10 @@ const Dashboard = {
                 <td style="${tdCenter}">${fmtDate(t.startDate)}</td>
                 <td style="${tdCenter}">${esc(t.status)}</td>
             </tr>`)}
-            ${pdfSection('التردد على العيادة', '#BE185D', ['تاريخ الزيارة', 'السبب', 'التشخيص', 'العلاج'], report.clinicVisits, (c) => `
+            ${pdfSection('التردد على العيادة', '#BE185D', ['تاريخ الزيارة', 'الاسم', 'السبب', 'التشخيص', 'العلاج'], report.clinicVisits, (c) => `
             <tr>
                 <td style="${tdCenter}">${fmtDate(c.visitDate)}</td>
+                <td style="${tdStyle}">${esc(this._getContractorClinicVisitDisplayName_(c) || '—')}</td>
                 <td style="${tdStyle}">${esc(c.reason || 'زيارة عادية')}</td>
                 <td style="${tdStyle}">${esc(c.diagnosis)}</td>
                 <td style="${tdStyle}">${esc(c.treatment)}</td>
@@ -3093,11 +3108,13 @@ const Dashboard = {
                             <div class="space-y-3">
                                 ${clinicVisits.slice(0, 5).map(c => `
                                     <div class="border rounded p-3">
-                                        <div class="flex items-center justify-between mb-2">
-                                            <span class="font-semibold">${Utils.escapeHTML(c.reason || 'زيارة عادية')}</span>
+                                        <div class="flex items-center justify-between mb-2 gap-2 flex-wrap">
+                                            <span class="font-semibold">${Utils.escapeHTML(this._getContractorClinicVisitDisplayName_(c) || '—')}</span>
+                                            <span class="text-xs text-gray-500">${c.visitDate ? Utils.formatDate(c.visitDate) : ''}</span>
                                         </div>
+                                        <p class="text-sm text-gray-700">السبب: ${Utils.escapeHTML(c.reason || 'زيارة عادية')}</p>
                                         ${c.diagnosis ? `<p class="text-sm text-gray-600">التشخيص: ${Utils.escapeHTML(c.diagnosis)}</p>` : ''}
-                                        <p class="text-xs text-gray-500 mt-2">${c.visitDate ? Utils.formatDate(c.visitDate) : ''}</p>
+                                        ${c.treatment ? `<p class="text-sm text-gray-600">العلاج: ${Utils.escapeHTML(c.treatment)}</p>` : ''}
                                     </div>
                                 `).join('')}
                                 ${clinicVisits.length > 5 ? `<p class="text-sm text-gray-500 text-center mt-2">و ${clinicVisits.length - 5} زيارة أخرى...</p>` : ''}
