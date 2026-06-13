@@ -6904,16 +6904,13 @@ const PTW = {
                 height: auto;
                 min-height: 0;
                 box-sizing: border-box;
-                padding: 8px 10px 10px;
+                padding: 6px 8px 8px;
                 background: #fff;
+                overflow: hidden;
                 page-break-after: always;
                 break-after: page;
             }
             .ptw-a4-page:last-child { page-break-after: auto; break-after: auto; }
-            .ptw-manual-print-a4 .manual-section-7 {
-                page-break-before: always;
-                break-before: page;
-            }
             .ptw-paper-header { padding: 12px 14px; min-height: 68px; border-radius: 8px; }
             .ptw-paper-header-pdf { display: block; padding: 0; background: transparent; border: none; min-height: 0; margin-bottom: 8px; }
             .ptw-paper-header-table { width: 100%; border-collapse: collapse; table-layout: fixed; background: #1e3a5f; border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.18); }
@@ -7132,7 +7129,7 @@ const PTW = {
             @media print {
                 body { padding: 6px; font-size: 10px; }
                 .ptw-manual-form-section { page-break-inside: auto; break-inside: auto; margin: 6px 0; padding: 10px; }
-                .manual-section-6 { page-break-before: always; break-before: page; }
+                .manual-section-7 { page-break-before: always; break-before: page; }
                 .ptw-manual-ppe-fixed-row { gap: 6px 3px; }
                 .ptw-paper-footer { page-break-inside: avoid; break-inside: avoid; }
             }
@@ -7460,6 +7457,51 @@ const PTW = {
         `;
     },
 
+    _splitManualPermitPrintPages_(content, header, footer, forPdf) {
+        const breakAt = content.indexOf('manual-section-7');
+        const wrapPage = (inner) => (forPdf ? `<div class="ptw-a4-page">${inner}</div>` : inner);
+        if (breakAt > 0) {
+            return `${wrapPage(`${header}${content.slice(0, breakAt)}`)}${wrapPage(`${content.slice(breakAt)}${footer}`)}`;
+        }
+        return wrapPage(`${header}${content}${footer}`);
+    },
+
+    _verifyManualPermitExportHtml_(html) {
+        const checks = [
+            { key: 'header-title', label: 'عنوان النموذج', test: (h) => h.includes('نموذج تصريح العمل') && h.includes('Permit To Work') },
+            { key: 'header-company', label: 'هيدر الشركة', test: (h) => h.includes('ptw-paper-header') },
+            { key: 'footer', label: 'فوتر النموذج', test: (h) => h.includes('ptw-paper-footer') && h.includes('كود النموذج') },
+            { key: 'disclaimer', label: 'إخلاء المسؤولية', test: (h) => h.includes('manual-print-disclaimer-text') },
+            { key: 'sections', label: 'الأقسام العشرة', test: (h) => {
+                for (let i = 1; i <= 10; i++) {
+                    if (!h.includes(`manual-section-${i}`)) return false;
+                }
+                return true;
+            } },
+            { key: 'ppe', label: 'مهمات الوقاية', test: (h) => h.includes('ptw-manual-ppe-print-matrix') || h.includes('ptw-manual-ppe-fixed') },
+            { key: 'risk', label: 'مصفوفة المخاطر', test: (h) => h.includes('manual-risk-matrix') },
+            { key: 'approvals', label: 'دائرة الاعتمادات', test: (h) => h.includes('manual-section-7') },
+            { key: 'closure', label: 'إغلاق التصريح', test: (h) => h.includes('manual-section-8') },
+            { key: 'supervisors', label: 'مسؤولي المتابعة', test: (h) => h.includes('manual-section-10') }
+        ];
+        const failed = checks.filter((c) => !c.test(html || ''));
+        return {
+            ok: failed.length === 0,
+            failed: failed.map((c) => c.label),
+            pageCount: (String(html || '').match(/ptw-a4-page/g) || []).length
+        };
+    },
+
+    _logManualPermitExportReview_(html, entry, context = 'export') {
+        const review = this._verifyManualPermitExportHtml_(html);
+        if (review.ok) {
+            Utils.safeLog(`✅ مراجعة تصدير تصريح العمل (${context}): مطابق — ${review.pageCount || 1} صفحة/صفحات HTML`);
+            return review;
+        }
+        Utils.safeWarn(`⚠️ مراجعة تصدير تصريح العمل (${context}): عناصر ناقصة — ${review.failed.join('، ')}`);
+        return review;
+    },
+
     generateManualPermitPrintHTML(entry, options = {}) {
         const forPdf = options?.forPdf === true;
         const content = this.generateManualPermitPrintContent(entry);
@@ -7471,10 +7513,9 @@ const PTW = {
         };
         const footer = this.renderPermitSystemFooter(footerMeta);
         const header = this.renderPermitSystemHeader({ forPdf });
+        const bodyHtml = this._splitManualPermitPrintPages_(content, header, footer, forPdf);
 
-        const bodyHtml = `${header}${content}${footer}`;
-
-        return `<!DOCTYPE html>
+        const html = `<!DOCTYPE html>
 <html dir="rtl" lang="ar">
 <head>
     <meta charset="UTF-8">
@@ -7490,6 +7531,11 @@ const PTW = {
     </div>
 </body>
 </html>`;
+
+        if (options?.skipReview !== true) {
+            this._logManualPermitExportReview_(html, entry, forPdf ? 'pdf' : 'print');
+        }
+        return html;
     },
 
     _loadPermitPdfLib_(urls, checkFn) {
@@ -7671,6 +7717,43 @@ const PTW = {
         });
     },
 
+    async _downloadPermitHtmlAsPdfByPages_(pdf, pageEls, iWin, iframe, marginMm, a4W, maxPages) {
+        if (!pdf || !pageEls?.length) return false;
+        const pages = Array.from(pageEls).slice(0, maxPages);
+        const maxH = this.PERMIT_A4_HEIGHT_PX;
+
+        for (let p = 0; p < pages.length; p++) {
+            if (p > 0) pdf.addPage();
+            const pageEl = pages[p];
+            pageEl.style.width = `${a4W}px`;
+            pageEl.style.maxWidth = `${a4W}px`;
+            pageEl.style.boxSizing = 'border-box';
+            pageEl.style.transform = '';
+            pageEl.style.zoom = '1';
+            pageEl.style.background = '#ffffff';
+
+            let naturalH = Math.max(pageEl.scrollHeight, pageEl.offsetHeight, 1);
+            if (naturalH > maxH) {
+                pageEl.style.zoom = String(maxH / naturalH);
+                naturalH = maxH;
+            }
+
+            iframe.style.width = `${a4W}px`;
+            iframe.style.height = `${naturalH + 80}px`;
+            await new Promise((r) => setTimeout(r, 180));
+
+            const canvas = await this._capturePermitHtmlToCanvas_(pageEl, iWin, {
+                width: a4W,
+                height: naturalH
+            });
+            if (!canvas) return false;
+
+            this._addPermitCanvasToPdfFullWidth_(pdf, canvas, marginMm, { allowSlice: false });
+            pageEl.style.zoom = '1';
+        }
+        return true;
+    },
+
     async _downloadPermitHtmlAsPdfByCanvas_(pdf, root, iWin, marginMm, maxPages) {
         if (!pdf || !root) return false;
 
@@ -7807,15 +7890,24 @@ const PTW = {
 
             await new Promise((r) => setTimeout(r, 200));
 
-            const pdf = new JsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+            const pageEls = root.querySelectorAll('.ptw-a4-page');
+            let ok = false;
 
-            let ok = await this._downloadPermitHtmlViaJsPdfHtml_(pdf, root, iWin, pdfFileName, marginMm, a4W);
+            if (pageEls.length > 0) {
+                const pdf = new JsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+                ok = await this._downloadPermitHtmlAsPdfByPages_(pdf, pageEls, iWin, iframe, marginMm, a4W, maxPages);
+                if (ok) pdf.save(pdfFileName);
+            }
+
+            if (!ok) {
+                const pdf = new JsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+                ok = await this._downloadPermitHtmlViaJsPdfHtml_(pdf, root, iWin, pdfFileName, marginMm, a4W);
+            }
+
             if (!ok) {
                 const canvasPdf = new JsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
                 ok = await this._downloadPermitHtmlAsPdfByCanvas_(canvasPdf, root, iWin, marginMm, maxPages);
-                if (ok) {
-                    canvasPdf.save(pdfFileName);
-                }
+                if (ok) canvasPdf.save(pdfFileName);
             }
 
             return ok;
@@ -7831,7 +7923,8 @@ const PTW = {
         return String(name || 'PTW').replace(/[/\\?%*:|"<>]/g, '-').trim() || 'PTW';
     },
 
-    buildPermitExportPayload(permitId) {
+    buildPermitExportPayload(permitId, options = {}) {
+        const forPdf = options?.forPdf !== false;
         const reg = Array.isArray(this.registryData)
             ? this.registryData.find((r) => r.permitId === permitId || r.id === permitId)
             : null;
@@ -7839,10 +7932,14 @@ const PTW = {
         if (reg?.isManualEntry) {
             const displayNo = this.getPermitDisplayNumber(reg);
             const seq = String(reg.sequentialNumber || displayNo).replace(/\D/g, '').padStart(4, '0') || displayNo;
+            const html = this.generateManualPermitPrintHTML(reg, { forPdf });
+            const review = this._verifyManualPermitExportHtml_(html);
             return {
-                html: this.generateManualPermitPrintHTML(reg, { forPdf: true }),
+                html,
                 fileName: `PTW-${this._sanitizePermitFileName_(seq)}.pdf`,
-                displayNo
+                displayNo,
+                isManualEntry: true,
+                exportReview: review
             };
         }
 
@@ -7914,7 +8011,7 @@ const PTW = {
      * طباعة التصريح
      */
     printPermit(permitId) {
-        const payload = this.buildPermitExportPayload(permitId);
+        const payload = this.buildPermitExportPayload(permitId, { forPdf: false });
         if (!payload) {
             Notification.error(this._t('module.ptw.notify.permitNotFound', 'لم يتم العثور على التصريح'));
             return;
@@ -15196,6 +15293,10 @@ const PTW = {
             if (!payload) {
                 Notification.error(this._t('module.ptw.notify.permitNotFound', 'لم يتم العثور على التصريح'));
                 return;
+            }
+
+            if (payload.isManualEntry && payload.exportReview && !payload.exportReview.ok) {
+                Utils.safeWarn('تصدير تصريح يدوي بعناصر ناقصة:', payload.exportReview.failed);
             }
 
             Loading.show(this._t('module.ptw.pdf.exportLoading', 'جاري تحميل PDF...'));
