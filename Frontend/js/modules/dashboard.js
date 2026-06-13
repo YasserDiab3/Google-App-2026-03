@@ -2804,8 +2804,7 @@ const Dashboard = {
         });
         this.contractorReportRequests.set(requestKey, contractorReportPromise);
         this.renderContractorReportLoading(reportContractor, contractorCodeVal);
-        await this.ensureContractorReportData();
-        data = AppState.appData || data;
+        // لا ننتظر تحميل جداول الموديولات (مثل ContractorTrainings) — نستخدم AppState + الخادم مباشرة
         let serverDetailedAnalytics = null;
         if (typeof GoogleIntegration !== 'undefined' && GoogleIntegration.sendRequest && AppState.googleConfig?.appsScript?.enabled) {
             try {
