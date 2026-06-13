@@ -2977,18 +2977,15 @@ const Emergency = {
         metaLineY += nameLines * 14 + 6;
         if (meta.companySecondaryName) {
             this._fmCanvasSetFont(ctx, 10, 'normal', '#64748b');
-            this._fmCanvasDrawWrappedLines(ctx, meta.companySecondaryName, metaX - 10, metaLineY, metaInnerW, 13, 'right', 1);
-            metaLineY += 18;
+            this._fmCanvasDrawWrappedLines(ctx, meta.companySecondaryName, metaX - 10, metaLineY, metaInnerW, 13, 'right', 2);
         }
-        this._fmCanvasSetFont(ctx, 10, 'normal', '#475569');
-        ctx.fillText(`مرجع المخطط: ${meta.planRef}`, metaX - 10, metaLineY);
-        metaLineY += 14;
-        ctx.fillText(`تاريخ التصدير: ${meta.exportDate}`, metaX - 10, metaLineY);
     },
 
-    _fmDrawExportFooter(ctx, totalW, footerTop, footerH) {
+    _fmDrawExportFooter(ctx, totalW, footerTop, footerH, qrImg) {
         const meta = this._fmGetExportDocumentMeta(this._fmState.floorPlans.find(p => p.id === this._fmState.currentPlanId) || {});
         const pad = 18;
+        const qrCardW = qrImg ? 108 : 0;
+        const contentW = totalW - pad * 2 - (qrImg ? qrCardW + 10 : 0);
 
         ctx.fillStyle = '#ffffff';
         ctx.fillRect(0, footerTop, totalW, footerH);
@@ -3004,25 +3001,30 @@ const Emergency = {
         ctx.lineWidth = 1.5;
         ctx.stroke();
 
-        const colW = (totalW - pad * 2) / 3;
+        const colW = contentW / 3;
         const col1X = pad + colW * 0.5;
         const col2X = pad + colW * 1.5;
         const col3X = pad + colW * 2.5;
-        const textY1 = frameY + 22;
-        const textY2 = frameY + 40;
+        const textY1 = frameY + 16;
+        const textY2 = frameY + 32;
+        const colInnerW = colW - 28;
 
         this._fmCanvasSetFont(ctx, 10, 'bold', '#64748b');
         ctx.textAlign = 'center';
         ctx.fillText('كود النموذج', col1X, textY1);
         this._fmCanvasSetFont(ctx, 12, 'bold', '#003865');
+        const codeSize = this._fmCanvasFitFontSize(ctx, meta.formCode, colInnerW, 12, 'bold');
+        this._fmCanvasSetFont(ctx, codeSize, 'bold', '#003865');
         ctx.fillText(meta.formCode, col1X, textY2);
 
         this._fmCanvasSetFont(ctx, 10, 'bold', '#64748b');
         ctx.fillText('تاريخ التصدير', col2X, textY1);
-        this._fmCanvasSetFont(ctx, 11, 'bold', '#0f172a');
-        const exportSize = this._fmCanvasFitFontSize(ctx, meta.exportDateTime, colW - 24, 11, 'bold');
-        this._fmCanvasSetFont(ctx, exportSize, 'bold', '#0f172a');
-        ctx.fillText(meta.exportDateTime, col2X, textY2);
+        this._fmCanvasSetFont(ctx, 10, 'bold', '#0f172a');
+        const dateSize = this._fmCanvasFitFontSize(ctx, meta.exportDate, colInnerW, 10, 'bold');
+        this._fmCanvasSetFont(ctx, dateSize, 'bold', '#0f172a');
+        ctx.fillText(meta.exportDate, col2X, textY2);
+        this._fmCanvasSetFont(ctx, 9, '600', '#475569');
+        ctx.fillText(meta.exportTime, col2X, textY2 + 13);
 
         this._fmCanvasSetFont(ctx, 10, 'bold', '#64748b');
         ctx.fillText('رقم الإصدار', col3X, textY1);
@@ -3032,19 +3034,49 @@ const Emergency = {
         ctx.strokeStyle = '#dbeafe';
         ctx.lineWidth = 1;
         ctx.beginPath();
-        ctx.moveTo(pad + colW, frameY + 10);
-        ctx.lineTo(pad + colW, frameY + frameH - 10);
-        ctx.moveTo(pad + colW * 2, frameY + 10);
-        ctx.lineTo(pad + colW * 2, frameY + frameH - 10);
+        ctx.moveTo(pad + colW, frameY + 8);
+        ctx.lineTo(pad + colW, frameY + frameH - 28);
+        ctx.moveTo(pad + colW * 2, frameY + 8);
+        ctx.lineTo(pad + colW * 2, frameY + frameH - 28);
         ctx.stroke();
 
-        this._fmCanvasSetFont(ctx, 10, 'bold', '#003865');
+        const bottomBandY = frameY + frameH - 24;
+        ctx.strokeStyle = '#e2e8f0';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(pad + 12, bottomBandY);
+        ctx.lineTo(pad + contentW - 6, bottomBandY);
+        ctx.stroke();
+
+        this._fmCanvasSetFont(ctx, 9, 'bold', '#003865');
         ctx.textAlign = 'center';
-        const companySize = this._fmCanvasFitFontSize(ctx, meta.companyName || 'نظام إدارة السلامة والصحة المهنية', totalW - pad * 4, 10, 'bold');
+        const companySize = this._fmCanvasFitFontSize(ctx, meta.companyName || 'نظام إدارة السلامة والصحة المهنية', contentW - 24, 9, 'bold');
         this._fmCanvasSetFont(ctx, companySize, 'bold', '#003865');
-        ctx.fillText(meta.companyName || 'نظام إدارة السلامة والصحة المهنية', totalW / 2, frameY + frameH - 22);
-        this._fmCanvasSetFont(ctx, 9, 'normal', '#94a3b8');
-        ctx.fillText('سري — للاستخدام الداخلي | إدارة السلامة والصحة المهنية والبيئة', totalW / 2, frameY + frameH - 8);
+        ctx.fillText(meta.companyName || 'نظام إدارة السلامة والصحة المهنية', pad + contentW / 2, frameY + frameH - 14);
+        this._fmCanvasSetFont(ctx, 8, 'normal', '#94a3b8');
+        const confSize = this._fmCanvasFitFontSize(ctx, 'سري — للاستخدام الداخلي | إدارة السلامة والصحة المهنية والبيئة', contentW - 24, 8, 'normal');
+        this._fmCanvasSetFont(ctx, confSize, 'normal', '#94a3b8');
+        ctx.fillText('سري — للاستخدام الداخلي | إدارة السلامة والصحة المهنية والبيئة', pad + contentW / 2, frameY + frameH - 3);
+
+        if (qrImg) {
+            const qrPad = 8;
+            const qrSize = 72;
+            const cardW = qrCardW;
+            const cardH = qrSize + qrPad + 22;
+            const cardX = totalW - pad - cardW + 4;
+            const cardY = footerTop + 10 + (frameH - cardH) / 2;
+            ctx.fillStyle = '#ffffff';
+            this._fmDrawRoundedRect(ctx, cardX, cardY, cardW, cardH, 10);
+            ctx.fill();
+            ctx.strokeStyle = '#bfdbfe';
+            ctx.lineWidth = 1.5;
+            ctx.stroke();
+            ctx.drawImage(qrImg, cardX + (cardW - qrSize) / 2, cardY + qrPad, qrSize, qrSize);
+            ctx.fillStyle = '#003865';
+            ctx.font = 'bold 9px Tahoma, Arial, sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText('استجابة طوارئ', cardX + cardW / 2, cardY + cardH - 8);
+        }
     },
 
     _fmDrawExportMapFrame(ctx, x, y, w, h) {
@@ -3304,10 +3336,11 @@ const Emergency = {
         const mapW = parseInt(plan.imageWidth, 10) || 1200;
         const mapH = parseInt(plan.imageHeight, 10) || 800;
         const headerH = 118;
-        const footerH = 86;
+        const footerH = 104;
         const totalW = mapW;
-        const totalH = headerH + mapH + footerH;
         const mapTop = headerH;
+        const footerTop = headerH + mapH;
+        const totalH = footerTop + footerH;
 
         const tmp = document.createElement('canvas');
         tmp.width = totalW;
@@ -3335,11 +3368,6 @@ const Emergency = {
             }
         }
 
-        const finishExport = () => {
-            this._fmDrawExportFooter(ctx, totalW, mapTop + mapH, footerH);
-            this._fmDownloadCanvasPng(tmp, (plan.name || 'خريطة') + '.png');
-        };
-
         (this._fmState.items || []).forEach(item => {
             const x = parseFloat(item.x) * mapW;
             const y = parseFloat(item.y) * mapH + mapTop;
@@ -3347,29 +3375,13 @@ const Emergency = {
         });
 
         const qrUrl = this._fmBuildMapQrUrl(plan);
+        let qrImg = null;
         if (qrUrl && typeof QRCode !== 'undefined' && QRCode.generate) {
-            const qrImg = await this._fmLoadImageElement(QRCode.generate(qrUrl, 110));
-            if (qrImg) {
-                const pad = 14;
-                const qrSize = 108;
-                const cardX = mapW - qrSize - pad * 2 - 8;
-                const cardY = mapTop + mapH - qrSize - pad * 2 - 28;
-                const cardW = qrSize + pad * 2 + 8;
-                const cardH = qrSize + pad + 30;
-                ctx.fillStyle = 'rgba(255,255,255,0.97)';
-                this._fmDrawRoundedRect(ctx, cardX, cardY, cardW, cardH, 10);
-                ctx.fill();
-                ctx.strokeStyle = '#bfdbfe';
-                ctx.lineWidth = 1.5;
-                ctx.stroke();
-                ctx.drawImage(qrImg, cardX + pad + 4, cardY + pad, qrSize, qrSize);
-                ctx.fillStyle = '#003865';
-                ctx.font = 'bold 11px Tahoma, Arial, sans-serif';
-                ctx.textAlign = 'center';
-                ctx.fillText('استجابة طوارئ', cardX + cardW / 2, cardY + cardH - 10);
-            }
+            qrImg = await this._fmLoadImageElement(QRCode.generate(qrUrl, 96));
         }
-        finishExport();
+
+        this._fmDrawExportFooter(ctx, totalW, footerTop, footerH, qrImg);
+        this._fmDownloadCanvasPng(tmp, (plan.name || 'خريطة') + '.png');
     },
 
     _fmDownloadCanvasPng(canvas, filename) {
