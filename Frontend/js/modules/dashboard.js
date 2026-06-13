@@ -188,7 +188,6 @@ const Dashboard = {
             'approvedContractors',
             'violations',
             'incidents',
-            'sickLeave',
             'clinicVisits',
             'clinicContractorVisits',
             'contractorEvaluations',
@@ -298,7 +297,6 @@ const Dashboard = {
         const contractorCodeVal = report.contractorCode || contractor.code || contractor.isoCode || contractor.contractorId || contractor.id || '';
         const violations = Array.isArray(report.violations) ? report.violations : [];
         const incidents = Array.isArray(report.incidents) ? report.incidents : [];
-        const sickLeave = Array.isArray(report.sickLeave) ? report.sickLeave : [];
         const training = Array.isArray(report.training) ? report.training : [];
         const clinicVisits = Array.isArray(report.clinicVisits) ? report.clinicVisits : [];
         const contractorEvaluations = Array.isArray(report.contractorEvaluations) ? report.contractorEvaluations : [];
@@ -348,10 +346,6 @@ const Dashboard = {
                 <div class="dashboard-stat-card" style="background: linear-gradient(145deg, #fee2e2 0%, #fecaca 100%); border: 1px solid #f87171; border-radius: 12px; padding: 1rem; text-align: center; box-shadow: 0 2px 6px rgba(220, 38, 38, 0.15);">
                     <div style="font-size: 1.875rem; font-weight: 700; color: #dc2626; margin-bottom: 0.25rem;">${violations.length}</div>
                     <div style="font-size: 0.8125rem; font-weight: 600; color: #991b1b;">المخالفات</div>
-                </div>
-                <div class="dashboard-stat-card" style="background: linear-gradient(145deg, #dbeafe 0%, #bfdbfe 100%); border: 1px solid #60a5fa; border-radius: 12px; padding: 1rem; text-align: center; box-shadow: 0 2px 6px rgba(37, 99, 235, 0.15);">
-                    <div style="font-size: 1.875rem; font-weight: 700; color: #2563eb; margin-bottom: 0.25rem;">${sickLeave.length}</div>
-                    <div style="font-size: 0.8125rem; font-weight: 600; color: #1e40af;">الإجازات المرضية</div>
                 </div>
                 <div class="dashboard-stat-card" style="background: linear-gradient(145deg, #d1fae5 0%, #a7f3d0 100%); border: 1px solid #34d399; border-radius: 12px; padding: 1rem; text-align: center; box-shadow: 0 2px 6px rgba(5, 150, 105, 0.15);">
                     <div style="font-size: 1.875rem; font-weight: 700; color: #059669; margin-bottom: 0.25rem;">${training.length}</div>
@@ -408,27 +402,6 @@ const Dashboard = {
                                     </div>
                                 `).join('')}
                                 ${incidents.length > 5 ? `<p class="text-sm text-gray-500 text-center mt-2">و ${incidents.length - 5} حادث آخر...</p>` : ''}
-                            </div>
-                        </div>
-                    </div>
-                ` : ''}
-
-                ${sickLeave.length > 0 ? `
-                    <div class="content-card">
-                        <div class="card-header">
-                            <h3 class="card-title"><i class="fas fa-calendar-times ml-2"></i>الإجازات المرضية (${sickLeave.length})</h3>
-                        </div>
-                        <div class="card-body">
-                            <div class="space-y-3">
-                                ${sickLeave.slice(0, 5).map(s => `
-                                    <div class="border rounded p-3">
-                                        <div class="flex items-center justify-between mb-2">
-                                            <span class="font-semibold">من ${s.startDate ? Utils.formatDate(s.startDate) : ''} إلى ${s.endDate ? Utils.formatDate(s.endDate) : ''}</span>
-                                        </div>
-                                        <p class="text-sm text-gray-600">${Utils.escapeHTML(s.reason || '')}</p>
-                                    </div>
-                                `).join('')}
-                                ${sickLeave.length > 5 ? `<p class="text-sm text-gray-500 text-center mt-2">و ${sickLeave.length - 5} إجازة أخرى...</p>` : ''}
                             </div>
                         </div>
                     </div>
@@ -2542,14 +2515,6 @@ const Dashboard = {
                 <td style="${tdCenter}">${esc(inj.severity || inj.injurySeverity)}</td>
             </tr>`).join('');
 
-        const sickLeaveRows = (report.sickLeave || []).map((s) => `
-            <tr>
-                <td style="${tdCenter}">${fmtDate(s.startDate)}</td>
-                <td style="${tdCenter}">${fmtDate(s.endDate)}</td>
-                <td style="${tdStyle}">${esc(s.reason)}</td>
-                <td style="${tdStyle}">${esc(s.medicalNotes)}</td>
-            </tr>`).join('');
-
         const trainingRows = (report.training || []).map((t) => `
             <tr>
                 <td style="${tdStyle}">${esc(t.name)}</td>
@@ -2575,7 +2540,7 @@ const Dashboard = {
             </tr>`).join('');
 
         const totalRecords = ptwList.length + (report.violations?.length || 0) + (report.incidents?.length || 0)
-            + injuriesList.length + (report.sickLeave?.length || 0) + (report.training?.length || 0)
+            + injuriesList.length + (report.training?.length || 0)
             + (report.clinicVisits?.length || 0) + (report.contractorEvaluations?.length || 0);
 
         const approvalDateStr = con.approvalDate ? fmtDate(con.approvalDate) : '';
@@ -2611,7 +2576,6 @@ const Dashboard = {
                     ${statCard('الحوادث', report.incidents?.length || 0, '#FFF7ED', '#FED7AA', '#C2410C', '#9A3412')}
                     ${statCard('الإصابات', injuriesList.length, '#FFEDD5', '#FDBA74', '#EA580C', '#C2410C')}
                     ${statCard('المخالفات', report.violations?.length || 0, '#FEF2F2', '#FECACA', '#B91C1C', '#991B1B')}
-                    ${statCard('الإجازات المرضية', report.sickLeave?.length || 0, '#EFF6FF', '#BFDBFE', '#1D4ED8', '#1E40AF')}
                     ${statCard('برامج التدريب', report.training?.length || 0, '#ECFDF5', '#BBF7D0', '#047857', '#065F46')}
                     ${statCard('التردد على العيادة', report.clinicVisits?.length || 0, '#FDF2F8', '#FBCFE8', '#BE185D', '#9D174D')}
                     ${statCard('التقييمات', report.contractorEvaluations?.length || 0, '#EEF2FF', '#C7D2FE', '#4F46E5', '#3730A3')}
@@ -2622,7 +2586,6 @@ const Dashboard = {
             ${sectionTable(`المخالفات (${report.violations?.length || 0})`, '#B91C1C', ['النوع', 'التاريخ', 'الشدة', 'الإجراء المتخذ', 'الحالة'], violationsRows)}
             ${sectionTable(`الحوادث (${report.incidents?.length || 0})`, '#C2410C', ['التاريخ', 'الوصف', 'الشدة', 'الحالة'], incidentRows)}
             ${sectionTable(`الإصابات (${injuriesList.length})`, '#EA580C', ['اسم المصاب', 'التاريخ', 'نوع الإصابة', 'الشدة'], injuryRows)}
-            ${sectionTable(`الإجازات المرضية (${report.sickLeave?.length || 0})`, '#1D4ED8', ['من تاريخ', 'إلى تاريخ', 'السبب', 'الملاحظات الطبية'], sickLeaveRows)}
             ${sectionTable(`برامج التدريب (${report.training?.length || 0})`, '#047857', ['اسم البرنامج', 'المدرب', 'تاريخ البدء', 'الحالة'], trainingRows)}
             ${sectionTable(`التردد على العيادة (${report.clinicVisits?.length || 0})`, '#BE185D', ['تاريخ الزيارة', 'السبب', 'التشخيص', 'العلاج'], clinicRows)}
             ${sectionTable(`التقييمات (${report.contractorEvaluations?.length || 0})`, '#4F46E5', ['المشروع', 'المقيّم', 'التاريخ', 'الدرجة/التقييم'], evaluationRows)}
@@ -2859,8 +2822,6 @@ const Dashboard = {
         const isContractorIncident = (i) => (i && (i.personType === 'contractor' || i.contractorName || i.affiliation === 'contractor' || (i.contractorId != null && i.contractorId !== '')));
         const localIncidents = (data.incidents || []).filter(i => isContractorIncident(i) && analyticsRecordBelongsToContractor(i));
         const incidents = pickContractorReportSection(serverDetailedAnalytics?.incidents, localIncidents);
-        const localSickLeave = (data.sickLeave || []).filter(s => (s.personType === 'contractor' || s.contractorName) && analyticsRecordBelongsToContractor(s));
-        const sickLeave = pickContractorReportSection(serverDetailedAnalytics?.sickLeave, localSickLeave);
         const rawClinicSources = (data.clinicVisits || []).concat(Array.isArray(data.clinicContractorVisits) ? data.clinicContractorVisits : []);
         const seenClinicIds = new Set();
         const clinicSources = rawClinicSources.filter(c => {
@@ -3021,10 +2982,6 @@ const Dashboard = {
                     <div style="font-size: 1.875rem; font-weight: 700; color: #dc2626; margin-bottom: 0.25rem;">${violations.length}</div>
                     <div style="font-size: 0.8125rem; font-weight: 600; color: #991b1b;">المخالفات</div>
                 </div>
-                <div class="dashboard-stat-card" style="background: linear-gradient(145deg, #dbeafe 0%, #bfdbfe 100%); border: 1px solid #60a5fa; border-radius: 12px; padding: 1rem; text-align: center; box-shadow: 0 2px 6px rgba(37, 99, 235, 0.15);">
-                    <div style="font-size: 1.875rem; font-weight: 700; color: #2563eb; margin-bottom: 0.25rem;">${sickLeave.length}</div>
-                    <div style="font-size: 0.8125rem; font-weight: 600; color: #1e40af;">الإجازات المرضية</div>
-                </div>
                 <div class="dashboard-stat-card" style="background: linear-gradient(145deg, #d1fae5 0%, #a7f3d0 100%); border: 1px solid #34d399; border-radius: 12px; padding: 1rem; text-align: center; box-shadow: 0 2px 6px rgba(5, 150, 105, 0.15);">
                     <div style="font-size: 1.875rem; font-weight: 700; color: #059669; margin-bottom: 0.25rem;">${reportTraining.length}</div>
                     <div style="font-size: 0.8125rem; font-weight: 600; color: #065f46;">برامج التدريب</div>
@@ -3080,27 +3037,6 @@ const Dashboard = {
                                     </div>
                                 `).join('')}
                                 ${incidents.length > 5 ? `<p class="text-sm text-gray-500 text-center mt-2">و ${incidents.length - 5} حادث آخر...</p>` : ''}
-                            </div>
-                        </div>
-                    </div>
-                ` : ''}
-
-                ${sickLeave.length > 0 ? `
-                    <div class="content-card">
-                        <div class="card-header">
-                            <h3 class="card-title"><i class="fas fa-calendar-times ml-2"></i>الإجازات المرضية (${sickLeave.length})</h3>
-                        </div>
-                        <div class="card-body">
-                            <div class="space-y-3">
-                                ${sickLeave.slice(0, 5).map(s => `
-                                    <div class="border rounded p-3">
-                                        <div class="flex items-center justify-between mb-2">
-                                            <span class="font-semibold">من ${s.startDate ? Utils.formatDate(s.startDate) : ''} إلى ${s.endDate ? Utils.formatDate(s.endDate) : ''}</span>
-                                        </div>
-                                        <p class="text-sm text-gray-600">${Utils.escapeHTML(s.reason || '')}</p>
-                                    </div>
-                                `).join('')}
-                                ${sickLeave.length > 5 ? `<p class="text-sm text-gray-500 text-center mt-2">و ${sickLeave.length - 5} إجازة أخرى...</p>` : ''}
                             </div>
                         </div>
                     </div>
@@ -3188,7 +3124,6 @@ const Dashboard = {
             contractorName,
             violations,
             incidents,
-            sickLeave,
             training: reportTraining,
             clinicVisits,
             contractorEvaluations,
