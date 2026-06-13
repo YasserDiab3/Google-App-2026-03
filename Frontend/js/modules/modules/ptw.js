@@ -1198,6 +1198,33 @@ const PTW = {
             const st = String(normalized.status || '').trim();
             // تصريح يدوي مكتمل افتراضياً (دائرة الاعتمادات مكتملة من النموذج الورقي)
             normalized.status = st || 'اكتمل العمل بشكل آمن';
+
+            // استعادة مصفوفات الاعتمادات ومهمات الوقاية من النص المخزن في الشيت
+            normalized.manualApprovals = this.resolveManualApprovalsList(
+                normalized.manualApprovals,
+                normalized.manualApprovalsText
+            );
+            normalized.manualClosureApprovals = this.resolveManualApprovalsList(
+                normalized.manualClosureApprovals,
+                normalized.manualClosureApprovalsText
+            );
+            if (!Array.isArray(normalized.requiredPPE) || !normalized.requiredPPE.length) {
+                const ppeSrc = normalized.requiredPPE || normalized.ppeNotes || '';
+                if (typeof ppeSrc === 'string' && ppeSrc.trim()) {
+                    normalized.requiredPPE = ppeSrc.split(/[،,]/).map((s) => s.trim()).filter(Boolean);
+                } else if (!Array.isArray(normalized.requiredPPE)) {
+                    normalized.requiredPPE = [];
+                }
+            }
+            if ((!normalized.teamMembers || !normalized.teamMembers.length) && normalized.teamMembersText) {
+                const text = String(normalized.teamMembersText).trim();
+                normalized.teamMembers = text.split(/[،,]/).map((s) => {
+                    s = s.trim();
+                    const m = s.match(/^(.+?)\s*\(([^)]*)\)\s*$/);
+                    if (m) return { name: m[1].trim(), signature: m[2].trim() };
+                    return { name: s, signature: '' };
+                }).filter((x) => x.name || x.signature);
+            }
         }
 
         if (normalized.sequentialNumber != null && normalized.sequentialNumber !== '') {
@@ -6718,6 +6745,83 @@ const PTW = {
     },
 
     /**
+     * تطبيع مفتاح الدور للمطابقة (مسئول/مسؤول، همزات، مسافات)
+     */
+    _normManualRoleKey(role) {
+        return String(role || '')
+            .trim()
+            .replace(/[أإآٱ]/g, 'ا')
+            .replace(/ة/g, 'ه')
+            .replace(/ى/g, 'ي')
+            .replace(/ؤ/g, 'و')
+            .replace(/ئ/g, 'ي')
+            .replace(/مسؤول/g, 'مسئول')
+            .replace(/\s*\/\s*/g, ' / ')
+            .replace(/\s+/g, ' ');
+    },
+
+    /**
+     * تحويل نص الاعتمادات المخزن في الشيت إلى مصفوفة {role, name, signature}
+     * الصيغة: «الدور: الاسم توقيع: التوقيع» مفصولة بـ |
+     */
+    parseManualApprovalsFromText(text) {
+        const raw = String(text || '').trim();
+        if (!raw) return [];
+        return raw.split(/\s*\|\s*/).map((part) => {
+            const chunk = String(part || '').trim();
+            if (!chunk) return null;
+            const withSig = chunk.match(/^(.+?):\s*(.+?)\s+توقيع:\s*(.*)$/);
+            if (withSig) {
+                const name = String(withSig[2] || '').trim();
+                return {
+                    role: String(withSig[1] || '').trim(),
+                    name: name === '—' || name === '-' ? '' : name,
+                    signature: String(withSig[3] || '').trim()
+                };
+            }
+            const nameOnly = chunk.match(/^(.+?):\s*(.*)$/);
+            if (nameOnly) {
+                const name = String(nameOnly[2] || '').trim();
+                return {
+                    role: String(nameOnly[1] || '').trim(),
+                    name: name === '—' || name === '-' ? '' : name,
+                    signature: ''
+                };
+            }
+            return null;
+        }).filter(Boolean);
+    },
+
+    /**
+     * استعادة قائمة الاعتمادات من المصفوفة أو النص أو JSON المخزن
+     */
+    resolveManualApprovalsList(arrayValue, textValue) {
+        if (Array.isArray(arrayValue) && arrayValue.length) {
+            return arrayValue.map((a) => ({
+                role: a.role || '',
+                name: a.name || a.approver || '',
+                signature: a.signature || ''
+            }));
+        }
+        if (typeof arrayValue === 'string' && arrayValue.trim()) {
+            const trimmed = arrayValue.trim();
+            if (trimmed.startsWith('[')) {
+                try {
+                    const parsed = JSON.parse(trimmed);
+                    if (Array.isArray(parsed) && parsed.length) {
+                        return parsed.map((a) => ({
+                            role: a.role || '',
+                            name: a.name || a.approver || '',
+                            signature: a.signature || ''
+                        }));
+                    }
+                } catch (_) { /* fallback to text parser */ }
+            }
+        }
+        return this.parseManualApprovalsFromText(textValue);
+    },
+
+    /**
      * تطبيع بيانات التصريح اليدوي للطباعة (استعادة المصفوفات من النص المخزن)
      */
     normalizeManualPermitEntryForPrint(entry) {
@@ -6744,21 +6848,39 @@ const PTW = {
             if (!Array.isArray(e[field])) e[field] = [];
         });
 
+        e.manualApprovals = this.resolveManualApprovalsList(e.manualApprovals, e.manualApprovalsText);
+        e.manualClosureApprovals = this.resolveManualApprovalsList(e.manualClosureApprovals, e.manualClosureApprovalsText);
+
         const ppeItems = [];
-        if (Array.isArray(e.requiredPPE)) ppeItems.push(...e.requiredPPE);
+        if (Array.isArray(e.requiredPPE)) {
+            ppeItems.push(...e.requiredPPE);
+        } else if (typeof e.requiredPPE === 'string' && e.requiredPPE.trim()) {
+            ppeItems.push(...e.requiredPPE.split(/[،,]/).map((s) => s.trim()).filter(Boolean));
+        }
         if (e.ppeNotes) {
             ppeItems.push(...String(e.ppeNotes).split(/[،,]/).map((s) => s.trim()).filter(Boolean));
         }
         e._ppeSelected = [...new Set(ppeItems.map((s) => String(s).trim()).filter(Boolean))];
 
+        const fixedPpeLabels = [
+            'حذاء سلامة', 'جوانتي سلامة', 'جوانتى احماض', 'جوانتي كهربي', 'كمامة', 'سدادة أذن', 'كاتم أذن', 'بدلة كيمائية', 'كشاف إنارة',
+            'واقي رأس', 'نظارة واقية', 'وجه لحام', 'أذرع واقية', 'حزام أمان', 'حبل سلامة', 'جهاز تنفس', 'سترة عاكسة', 'شريط عاكس',
+            'حواجز', 'أقماع مرور', 'وسائل اتصال', 'بطانية حريق', 'أخرى'
+        ];
+        const normPpe = (x) => String(x || '').trim().replace(/[أإآٱ]/g, 'ا').replace(/ة/g, 'ه').replace(/ى/g, 'ي');
+        const fixedNorm = new Set(fixedPpeLabels.map(normPpe));
+        e._ppeExtraNotes = e._ppeSelected.filter((item) => !fixedNorm.has(normPpe(item)));
+
         return e;
     },
 
     _findManualApprovalByRoles(approvals, roles) {
-        if (!Array.isArray(approvals)) return { name: '', signature: '' };
-        const norm = (s) => String(s || '').trim().replace(/[ؤ]/g, 'و').replace(/ئ/g, 'ي');
+        const list = this.resolveManualApprovalsList(approvals, '');
+        if (!list.length) return { name: '', signature: '' };
+        const norm = (s) => this._normManualRoleKey(s);
         for (const role of roles) {
-            const found = approvals.find((a) => norm(a.role) === norm(role));
+            const nr = norm(role);
+            const found = list.find((a) => norm(a.role) === nr);
             if (found) return { name: found.name || found.approver || '', signature: found.signature || '' };
         }
         return { name: '', signature: '' };
@@ -6791,16 +6913,17 @@ const PTW = {
             ['واقي رأس', 'نظارة واقية', 'وجه لحام', 'أذرع واقية', 'حزام أمان', 'حبل سلامة', 'جهاز تنفس', 'سترة عاكسة', 'شريط عاكس'],
             ['حواجز', 'أقماع مرور', 'وسائل اتصال', 'بطانية حريق', 'أخرى']
         ];
-        let html = '<div class="ptw-manual-ppe-fixed-wrap">';
-        rows.forEach((row) => {
-            html += '<div class="ptw-manual-ppe-fixed-row">';
+        let html = '<div class="ptw-manual-ppe-print-matrix"><div class="ptw-manual-ppe-fixed-wrap">';
+        rows.forEach((row, rowIdx) => {
+            const rowClass = rowIdx === rows.length - 1 ? 'ptw-manual-ppe-fixed-row ppe-row-last' : 'ptw-manual-ppe-fixed-row';
+            html += `<div class="${rowClass}">`;
             row.forEach((label) => {
                 const mark = isSel(label) ? '☑' : '☐';
                 html += `<span class="ptw-manual-ppe-cell"><span class="ppe-mark">${mark}</span><span>${esc(label)}</span></span>`;
             });
             html += '</div>';
         });
-        html += '</div>';
+        html += '</div></div>';
         return html;
     },
 
@@ -6863,10 +6986,33 @@ const PTW = {
             .manual-print-req-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
             .manual-print-req-item { background: #fff; border: 1px solid #e2e8f0; border-radius: 6px; padding: 8px; font-size: 11px; }
             .manual-print-req-item.on { border-color: #f97316; background: #fff7ed; font-weight: 600; }
-            .ptw-manual-ppe-fixed-wrap { background: #fff; border: 1px solid #cbd5e1; border-radius: 6px; padding: 8px; }
-            .ptw-manual-ppe-fixed-row { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 4px; }
-            .ptw-manual-ppe-cell { display: inline-flex; align-items: center; gap: 4px; padding: 4px 6px; border: 1px solid #e2e8f0; border-radius: 4px; font-size: 10px; min-width: 90px; }
-            .ppe-mark { font-size: 12px; }
+            .ptw-manual-ppe-print-matrix {
+                background: #fff; border: 1.2px solid #94a3b8; border-radius: 10px;
+                padding: 14px 10px; box-shadow: 0 1px 4px rgba(15, 23, 42, 0.07);
+            }
+            .ptw-manual-ppe-fixed-wrap { width: 100%; }
+            .ptw-manual-ppe-fixed-row {
+                display: grid; grid-template-columns: repeat(9, minmax(0, 1fr));
+                gap: 10px 5px; margin-bottom: 12px; direction: rtl;
+            }
+            .ptw-manual-ppe-fixed-row.ppe-row-last {
+                grid-template-columns: repeat(5, minmax(0, 1fr));
+                margin-bottom: 0;
+            }
+            .ptw-manual-ppe-cell {
+                display: flex; align-items: flex-start; gap: 5px;
+                font-size: 10px; font-weight: 600; color: #000; direction: rtl;
+                min-width: 0; line-height: 1.35; word-break: break-word;
+            }
+            .ppe-mark { font-size: 12px; flex-shrink: 0; }
+            .ptw-manual-ppe-notes-print {
+                margin-top: 8px; background: #fff; border: 1px solid #cbd5e1;
+                border-radius: 8px; padding: 8px 10px;
+            }
+            .ptw-manual-ppe-notes-print .lbl {
+                color: #334155; font-weight: 600; font-size: 10px; margin-bottom: 4px;
+            }
+            .ptw-manual-ppe-notes-print .val { font-size: 11px; color: #1f2937; white-space: pre-wrap; }
             .manual-risk-matrix { width: 100%; border-collapse: collapse; text-align: center; font-size: 10px; background: #fff; }
             .manual-risk-matrix th, .manual-risk-matrix td { border: 1px solid #6b7280; padding: 4px; }
             .manual-risk-matrix .risk-cell { font-weight: 700; padding: 8px 4px; }
@@ -6879,9 +7025,27 @@ const PTW = {
             .manual-status-completed { background: #d1fae5; color: #065f46; border: 1px solid #10b981; }
             .manual-status-incomplete { background: #fef3c7; color: #92400e; border: 1px solid #f59e0b; }
             .manual-status-forced { background: #fee2e2; color: #991b1b; border: 1px solid #ef4444; }
+            .manual-print-supervisors-grid {
+                display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px;
+            }
+            .manual-print-supervisor-card {
+                background: #fff; border: 1px solid #cbd5e1; border-radius: 8px;
+                padding: 12px 14px; box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05);
+            }
+            .manual-print-supervisor-card .lbl {
+                font-size: 11px; font-weight: 700; color: #4338ca; margin-bottom: 6px;
+            }
+            .manual-print-supervisor-card .val {
+                font-size: 13px; font-weight: 600; color: #1f2937; min-height: 1.5em;
+            }
+            .ptw-paper-grid-table .approval-name-cell,
+            .ptw-paper-grid-table .approval-sig-cell {
+                min-height: 28px; font-weight: 500; color: #111827;
+            }
             @media print {
                 body { padding: 6px; font-size: 10px; }
                 .ptw-manual-form-section { page-break-inside: auto; break-inside: auto; margin: 6px 0; padding: 10px; }
+                .ptw-manual-ppe-fixed-row { gap: 6px 3px; }
             }
         `;
     },
@@ -6977,9 +7141,26 @@ const PTW = {
         const riskBadgeTextColor = (e.riskScore > 4 && e.riskScore <= 9) ? '#1c1917' : '#fff';
 
         const approvalRoles7 = ['مسئول الجهة الطالبة', 'مدير منطقة الأعمال', 'مدير / مهندس الصيانة', 'مسئول السلامة والصحة المهنية'];
-        const approvals7 = approvalRoles7.map((role) => this._findManualApprovalByRoles(e.manualApprovals, [role, role.replace(/ئ/g, 'ؤ')]));
+        const approvals7 = approvalRoles7.map((role) => this._findManualApprovalByRoles(e.manualApprovals, [
+            role,
+            role.replace(/ئ/g, 'ؤ'),
+            role.replace(/ؤ/g, 'ئ'),
+            role.replace(/مسئول/g, 'مسؤول'),
+            role.replace(/مسؤول/g, 'مسئول')
+        ]));
         const closureRoles9 = ['مسؤول الجهة الطالبة', 'مدير منطقة الأعمال', 'مسؤول السلامة والصحة المهنية', 'مدير السلامة والصحة المهنية'];
-        const approvals9 = closureRoles9.map((role) => this._findManualApprovalByRoles(e.manualClosureApprovals, [role, role.replace(/ؤ/g, 'ئ')]));
+        const approvals9 = closureRoles9.map((role) => this._findManualApprovalByRoles(e.manualClosureApprovals, [
+            role,
+            role.replace(/ئ/g, 'ؤ'),
+            role.replace(/ؤ/g, 'ئ'),
+            role.replace(/مسئول/g, 'مسؤول'),
+            role.replace(/مسؤول/g, 'مسئول')
+        ]));
+
+        const renderApprovalCell = (value) => {
+            const v = String(value || '').trim();
+            return v ? esc(v) : '—';
+        };
 
         const statusClass = e.status === 'اكتمل العمل بشكل آمن' ? 'manual-status-completed'
             : e.status === 'إغلاق جبري' ? 'manual-status-forced'
@@ -7045,8 +7226,14 @@ const PTW = {
 
             <div class="ptw-manual-form-section manual-section-5">
                 <h3>القسم الخامس : تحديد مهمات الوقاية / وسائل الوقاية الأخرى</h3>
-                ${this.buildManualFixedPPEPrintHtml(e._ppeSelected)}
-                ${e.ppeNotes && !e._ppeSelected.length ? `<div class="manual-print-field full" style="margin-top:8px;"><div class="lbl">مهمات الوقاية المطلوبة (إضافي يدوي)</div><div class="val">${esc(e.ppeNotes)}</div></div>` : ''}
+                <div class="ptw-manual-ppe-body">
+                    ${this.buildManualFixedPPEPrintHtml(e._ppeSelected)}
+                    ${(e._ppeExtraNotes && e._ppeExtraNotes.length) ? `
+                    <div class="ptw-manual-ppe-notes-print">
+                        <div class="lbl">مهمات الوقاية المطلوبة (إضافي يدوي)</div>
+                        <div class="val">${esc(e._ppeExtraNotes.join('، '))}</div>
+                    </div>` : ''}
+                </div>
             </div>
 
             <div class="ptw-manual-form-section manual-section-6">
@@ -7091,11 +7278,11 @@ const PTW = {
                     <tbody>
                         <tr>
                             <td class="row-label">الاسم</td>
-                            ${approvals7.map((a) => `<td>${esc(a.name) || '—'}</td>`).join('')}
+                            ${approvals7.map((a) => `<td class="approval-name-cell">${renderApprovalCell(a.name)}</td>`).join('')}
                         </tr>
                         <tr>
                             <td class="row-label">التوقيع</td>
-                            ${approvals7.map((a) => `<td>${esc(a.signature) || '—'}</td>`).join('')}
+                            ${approvals7.map((a) => `<td class="approval-sig-cell">${renderApprovalCell(a.signature)}</td>`).join('')}
                         </tr>
                     </tbody>
                 </table>
@@ -7132,11 +7319,11 @@ const PTW = {
                     <tbody>
                         <tr>
                             <td class="row-label">الاسم</td>
-                            ${approvals9.map((a) => `<td>${esc(a.name) || '—'}</td>`).join('')}
+                            ${approvals9.map((a) => `<td class="approval-name-cell">${renderApprovalCell(a.name)}</td>`).join('')}
                         </tr>
                         <tr>
                             <td class="row-label">التوقيع</td>
-                            ${approvals9.map((a) => `<td>${esc(a.signature) || '—'}</td>`).join('')}
+                            ${approvals9.map((a) => `<td class="approval-sig-cell">${renderApprovalCell(a.signature)}</td>`).join('')}
                         </tr>
                     </tbody>
                 </table>
@@ -7144,9 +7331,15 @@ const PTW = {
 
             <div class="ptw-manual-form-section manual-section-10">
                 <h3>القسم العاشر : مسؤولي المتابعة</h3>
-                <div class="manual-print-grid">
-                    ${field('مسؤول المتابعة الأول', e.supervisor1)}
-                    ${field('مسؤول المتابعة الثاني', e.supervisor2)}
+                <div class="manual-print-supervisors-grid">
+                    <div class="manual-print-supervisor-card">
+                        <div class="lbl">مسؤول المتابعة الأول</div>
+                        <div class="val">${renderApprovalCell(e.supervisor1)}</div>
+                    </div>
+                    <div class="manual-print-supervisor-card">
+                        <div class="lbl">مسؤول المتابعة الثاني</div>
+                        <div class="val">${renderApprovalCell(e.supervisor2)}</div>
+                    </div>
                 </div>
             </div>
         `;
