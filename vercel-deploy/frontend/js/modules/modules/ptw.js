@@ -7304,12 +7304,256 @@ const PTW = {
     <style>${this.getManualPermitPrintStyles()}</style>
 </head>
 <body>
-    <div class="ptw-manual-print">
+    <div class="ptw-manual-print" id="ptw-permit-print-root">
         ${this.renderPermitSystemHeader()}
         ${content}
     </div>
 </body>
 </html>`;
+    },
+
+    _loadPermitPdfLib_(urls, checkFn) {
+        if (checkFn()) return Promise.resolve(true);
+        const list = Array.isArray(urls) ? urls : [urls];
+        const tryAt = (index) => {
+            if (index >= list.length) return Promise.resolve(false);
+            const src = list[index];
+            const existing = Array.from(document.querySelectorAll('script[src]'))
+                .find((s) => String(s.src || '').includes(src.replace(/^https?:\/\//, '').split('/').slice(-2).join('/')));
+            if (existing) {
+                return new Promise((resolve) => {
+                    const done = () => resolve(!!checkFn());
+                    existing.addEventListener('load', done, { once: true });
+                    setTimeout(done, 4000);
+                });
+            }
+            return new Promise((resolve) => {
+                const script = document.createElement('script');
+                script.src = src;
+                script.async = true;
+                script.onload = () => resolve(!!checkFn());
+                script.onerror = () => resolve(tryAt(index + 1));
+                document.head.appendChild(script);
+            });
+        };
+        return tryAt(0);
+    },
+
+    async _ensurePermitPdfLibs_() {
+        const jsPdfOk = await this._loadPermitPdfLib_([
+            'https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js',
+            'https://unpkg.com/jspdf@2.5.1/dist/jspdf.umd.min.js',
+            'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js'
+        ], () => typeof window.jspdf !== 'undefined' || typeof window.jsPDF !== 'undefined');
+        const h2cOk = await this._loadPermitPdfLib_([
+            'https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js',
+            'https://unpkg.com/html2canvas@1.4.1/dist/html2canvas.min.js',
+            'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js'
+        ], () => typeof html2canvas !== 'undefined');
+        return jsPdfOk && h2cOk;
+    },
+
+    _getPermitJsPdfConstructor_() {
+        if (window.jspdf && window.jspdf.jsPDF) return window.jspdf.jsPDF;
+        if (window.jsPDF && window.jsPDF.jsPDF) return window.jsPDF.jsPDF;
+        if (typeof window.jsPDF === 'function') return window.jsPDF;
+        return null;
+    },
+
+    async _preloadPermitPdfFonts_() {
+        if (!document.getElementById('ptw-permit-cairo-font')) {
+            const link = document.createElement('link');
+            link.id = 'ptw-permit-cairo-font';
+            link.rel = 'stylesheet';
+            link.href = 'https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap';
+            document.head.appendChild(link);
+        }
+        try {
+            if (document.fonts && typeof document.fonts.load === 'function') {
+                await document.fonts.load('400 14px Cairo');
+                await document.fonts.load('700 18px Cairo');
+                await document.fonts.ready;
+            }
+        } catch (_e) { /* ignore */ }
+    },
+
+    async _capturePermitHtmlToCanvas_(root) {
+        const scrollW = Math.max(root?.scrollWidth || 1100, 1100);
+        const scrollH = Math.max(root?.scrollHeight || 1, 1);
+        let scale = 2;
+        while (scale > 0.85 && (scrollW * scale > 14000 || scrollH * scale > 14000)) {
+            scale -= 0.25;
+        }
+        const baseOpts = {
+            scale,
+            backgroundColor: '#ffffff',
+            logging: false,
+            windowWidth: scrollW,
+            windowHeight: scrollH,
+            scrollX: 0,
+            scrollY: 0,
+            useCORS: true,
+            allowTaint: true
+        };
+        const attempts = [
+            baseOpts,
+            { ...baseOpts, useCORS: false, allowTaint: true },
+            { ...baseOpts, scale: Math.max(1, scale - 0.5) }
+        ];
+        let lastError = null;
+        for (let i = 0; i < attempts.length; i++) {
+            try {
+                const canvas = await html2canvas(root, attempts[i]);
+                if (canvas && canvas.width > 0 && canvas.height > 0) return canvas;
+            } catch (err) {
+                lastError = err;
+            }
+        }
+        if (lastError) throw lastError;
+        return null;
+    },
+
+    async _downloadPermitHtmlAsPdf(htmlContent, fileName) {
+        const JsPDF = this._getPermitJsPdfConstructor_();
+        if (!JsPDF || typeof html2canvas === 'undefined') return false;
+
+        const pdfFileName = String(fileName || 'PTW.pdf').toLowerCase().endsWith('.pdf')
+            ? String(fileName)
+            : `${String(fileName)}.pdf`;
+
+        await this._preloadPermitPdfFonts_();
+
+        const container = document.createElement('div');
+        container.setAttribute('aria-hidden', 'true');
+        container.style.cssText = 'position:fixed;left:-15000px;top:0;width:1100px;background:#fff;z-index:-1;overflow:visible;';
+
+        const iframe = document.createElement('iframe');
+        iframe.setAttribute('aria-hidden', 'true');
+        iframe.style.cssText = 'position:fixed;left:-15000px;top:0;width:1100px;height:1px;border:0;visibility:hidden;';
+        document.body.appendChild(iframe);
+
+        try {
+            iframe.srcdoc = htmlContent;
+            await new Promise((resolve) => {
+                iframe.onload = resolve;
+                iframe.onerror = resolve;
+                setTimeout(resolve, 6000);
+            });
+
+            const iDoc = iframe.contentDocument || iframe.contentWindow?.document;
+            if (!iDoc) return false;
+
+            if (iDoc.fonts && typeof iDoc.fonts.ready !== 'undefined') {
+                try { await iDoc.fonts.ready; } catch (_e) { /* ignore */ }
+            }
+
+            const images = Array.from(iDoc.images || []);
+            await Promise.all(images.map((img) => new Promise((resolve) => {
+                if (img.complete) return resolve();
+                img.onload = resolve;
+                img.onerror = resolve;
+                setTimeout(resolve, 2500);
+            })));
+
+            const root = iDoc.getElementById('ptw-permit-print-root')
+                || iDoc.querySelector('.ptw-manual-print')
+                || iDoc.querySelector('.form-container')
+                || iDoc.body;
+            if (!root) return false;
+
+            const clone = root.cloneNode(true);
+            container.appendChild(clone);
+            document.body.appendChild(container);
+            await new Promise((r) => setTimeout(r, 400));
+
+            const canvas = await this._capturePermitHtmlToCanvas_(container);
+            if (!canvas) return false;
+
+            const pdf = new JsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+            const pdfW = pdf.internal.pageSize.getWidth();
+            const pdfH = pdf.internal.pageSize.getHeight();
+            const margin = 8;
+            const contentW = pdfW - margin * 2;
+            const ratio = contentW / canvas.width;
+            const pageContentH = pdfH - margin * 2;
+            const pageHeightPx = pageContentH / ratio;
+            const totalPages = Math.max(1, Math.ceil(canvas.height / pageHeightPx));
+
+            for (let p = 0; p < totalPages; p++) {
+                if (p > 0) pdf.addPage();
+                const sliceH = Math.min(pageHeightPx, canvas.height - p * pageHeightPx);
+                const sliceCanvas = document.createElement('canvas');
+                sliceCanvas.width = canvas.width;
+                sliceCanvas.height = sliceH;
+                sliceCanvas.getContext('2d').drawImage(
+                    canvas, 0, p * pageHeightPx, canvas.width, sliceH, 0, 0, canvas.width, sliceH
+                );
+                pdf.addImage(sliceCanvas.toDataURL('image/jpeg', 0.92), 'JPEG', margin, margin, contentW, sliceH * ratio);
+            }
+
+            pdf.save(pdfFileName);
+            return true;
+        } catch (error) {
+            Utils.safeWarn('فشل تحميل تصريح PDF:', error);
+            return false;
+        } finally {
+            container.remove();
+            iframe.remove();
+        }
+    },
+
+    _sanitizePermitFileName_(name) {
+        return String(name || 'PTW').replace(/[/\\?%*:|"<>]/g, '-').trim() || 'PTW';
+    },
+
+    buildPermitExportPayload(permitId) {
+        const reg = Array.isArray(this.registryData)
+            ? this.registryData.find((r) => r.permitId === permitId || r.id === permitId)
+            : null;
+
+        if (reg?.isManualEntry) {
+            const displayNo = this.getPermitDisplayNumber(reg);
+            const seq = String(reg.sequentialNumber || displayNo).replace(/\D/g, '').padStart(4, '0') || displayNo;
+            return {
+                html: this.generateManualPermitPrintHTML(reg),
+                fileName: `PTW-${this._sanitizePermitFileName_(seq)}.pdf`,
+                displayNo
+            };
+        }
+
+        const effectiveId = reg?.permitId || permitId;
+        const item = AppState.appData.ptw.find((i) => i.id === effectiveId);
+        if (!item) return null;
+
+        const registryEntry = reg || this.registryData.find((r) => r.permitId === item.id);
+        const displayNo = this.getPermitDisplayNumber(registryEntry || item);
+        const formCode = item.isoCode || `PTW-${item.id?.substring(0, 8) || 'UNKNOWN'}`;
+        const formData = this.getPermitFormDataForPrint(item);
+        const content = this.generatePrintContent(formData);
+
+        const html = typeof FormHeader !== 'undefined' && typeof FormHeader.generatePDFHTML === 'function'
+            ? FormHeader.generatePDFHTML(
+                formCode,
+                `تصريح عمل #${displayNo}`,
+                content,
+                false,
+                false,
+                {
+                    version: item.version || '1.0',
+                    releaseDate: item.startDate || item.createdAt,
+                    revisionDate: item.updatedAt || item.endDate || item.startDate,
+                    'رقم التصريح': displayNo
+                },
+                item.createdAt || item.startDate,
+                item.updatedAt || item.endDate || item.createdAt
+            )
+            : `<!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="UTF-8"><title>تصريح عمل</title></head><body><div id="ptw-permit-print-root">${content}</div></body></html>`;
+
+        return {
+            html,
+            fileName: `PTW-${this._sanitizePermitFileName_(displayNo)}.pdf`,
+            displayNo
+        };
     },
 
     openPermitPrintWindow(htmlContent, onDone) {
@@ -7342,59 +7586,12 @@ const PTW = {
      * طباعة التصريح
      */
     printPermit(permitId) {
-        const reg = Array.isArray(this.registryData)
-            ? this.registryData.find((r) => r.permitId === permitId || r.id === permitId)
-            : null;
-
-        if (reg?.isManualEntry) {
-            const htmlContent = this.generateManualPermitPrintHTML(reg);
-            this.openPermitPrintWindow(htmlContent);
-            return;
-        }
-
-        const effectiveId = reg?.permitId || permitId;
-        let item = AppState.appData.ptw.find((i) => i.id === effectiveId);
-        if (!item && reg && reg.isManualEntry) {
-            item = {
-                id: effectiveId,
-                isManualEntry: true,
-                createdAt: reg.createdAt,
-                updatedAt: reg.updatedAt,
-                startDate: reg.timeFrom,
-                endDate: reg.timeTo,
-                version: '1.0'
-            };
-        }
-        if (!item) {
+        const payload = this.buildPermitExportPayload(permitId);
+        if (!payload) {
             Notification.error(this._t('module.ptw.notify.permitNotFound', 'لم يتم العثور على التصريح'));
             return;
         }
-
-        const registryEntry = reg || this.registryData.find((r) => r.permitId === item.id);
-        const formCode = item.isoCode || `PTW-${item.id?.substring(0, 8) || 'UNKNOWN'}`;
-
-        const formData = this.getPermitFormDataForPrint(item);
-        const content = this.generatePrintContent(formData);
-
-        const htmlContent = typeof FormHeader !== 'undefined' && typeof FormHeader.generatePDFHTML === 'function'
-            ? FormHeader.generatePDFHTML(
-                formCode,
-                `تصريح عمل #${this.getPermitDisplayNumber(registryEntry || item)}`,
-                content,
-                false,
-                false,
-                {
-                    version: item.version || '1.0',
-                    releaseDate: item.startDate || item.createdAt,
-                    revisionDate: item.updatedAt || item.endDate || item.startDate,
-                    'رقم التصريح': this.getPermitDisplayNumber(registryEntry || item)
-                },
-                item.createdAt || item.startDate,
-                item.updatedAt || item.endDate || item.createdAt
-            )
-            : `<html dir="rtl" lang="ar"><head><meta charset="UTF-8"><title>طباعة تصريح العمل</title></head><body>${content}</body></html>`;
-
-        this.openPermitPrintWindow(htmlContent);
+        this.openPermitPrintWindow(payload.html);
     },
 
     /**
@@ -14610,93 +14807,33 @@ const PTW = {
     },
 
     async exportPDF(id) {
-        const reg = Array.isArray(this.registryData)
-            ? this.registryData.find((r) => r.permitId === id || r.id === id)
-            : null;
-
-        if (reg?.isManualEntry) {
-            try {
-                Loading.show();
-                const htmlContent = this.generateManualPermitPrintHTML(reg);
-                this.openPermitPrintWindow(htmlContent, () => {
-                    Loading.hide();
-                    Notification.success(this._t('module.ptw.notify.pdfViewReady', 'تم فتح التصريح للطباعة أو الحفظ كملف PDF'));
-                });
-            } catch (error) {
-                Loading.hide();
-                Utils.safeError('خطأ في تصدير PDF:', error);
-                Notification.error(this._t('module.ptw.notify.pdfErr', 'فشل تصدير PDF: ') + (error?.message || ''));
-            }
-            return;
-        }
-
-        const effectiveId = reg?.permitId || id;
-        let item = AppState.appData.ptw.find((i) => i.id === effectiveId);
-        if (!item && reg && reg.isManualEntry) {
-            item = {
-                id: effectiveId,
-                isManualEntry: true,
-                createdAt: reg.createdAt,
-                updatedAt: reg.updatedAt,
-                startDate: reg.timeFrom,
-                endDate: reg.timeTo,
-                version: '1.0'
-            };
-        }
-        if (!item) {
-            Notification.error(this._t('module.ptw.notify.permitNotFound', 'لم يتم العثور على التصريح'));
-            return;
-        }
-
         try {
-            Loading.show();
+            const payload = this.buildPermitExportPayload(id);
+            if (!payload) {
+                Notification.error(this._t('module.ptw.notify.permitNotFound', 'لم يتم العثور على التصريح'));
+                return;
+            }
 
-            const registryEntry = reg || this.registryData.find((r) => r.permitId === item.id);
-            const formCode = item.isoCode || `PTW-${item.id?.substring(0, 8) || 'UNKNOWN'}`;
-            const formData = this.getPermitFormDataForPrint(item);
-            const content = this.generatePrintContent(formData);
+            Loading.show(this._t('module.ptw.pdf.exportLoading', 'جاري تحميل PDF...'));
 
-            const htmlContent = typeof FormHeader !== 'undefined' && typeof FormHeader.generatePDFHTML === 'function'
-                ? FormHeader.generatePDFHTML(
-                    formCode,
-                    `تصريح عمل #${registryEntry?.sequentialNumber || item.id?.substring(0, 8)}`,
-                    content,
-                    false,
-                    false,
-                    {
-                        version: item.version || '1.0',
-                        releaseDate: item.startDate || item.createdAt,
-                        revisionDate: item.updatedAt || item.endDate || item.startDate,
-                        'رقم التصريح': registryEntry?.sequentialNumber || item.id?.substring(0, 8)
-                    },
-                    item.createdAt || item.startDate,
-                    item.updatedAt || item.endDate || item.createdAt
-                )
-                : `<html><body>${content}</body></html>`;
+            const libsReady = await this._ensurePermitPdfLibs_();
+            if (!libsReady) {
+                Notification.error(this._t('module.ptw.notify.pdfLibsError', 'تعذّر تحميل مكتبات PDF — تحقق من الاتصال بالإنترنت'));
+                return;
+            }
 
-            const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
-            const url = URL.createObjectURL(blob);
-            const printWindow = window.open(url, '_blank');
-            if (printWindow) {
-                printWindow.onload = () => {
-                    setTimeout(() => {
-                        printWindow.print();
-                        setTimeout(() => {
-                            URL.revokeObjectURL(url);
-                            Loading.hide();
-                            Notification.success(this._t('module.ptw.notify.pdfViewReady', 'تم فتح التصريح للطباعة أو الحفظ كملف PDF'));
-                        }, 1000);
-                    }, 500);
-                };
+            const ok = await this._downloadPermitHtmlAsPdf(payload.html, payload.fileName);
+            if (ok) {
+                Notification.success(this._t('module.ptw.notify.pdfDownloadOk', 'تم تحميل التصريح PDF بنجاح'));
             } else {
-                Loading.hide();
-                Notification.error(this._t('module.ptw.notify.popupsViewPtw', 'يرجى السماح للنوافذ المنبثقة لعرض التصريح'));
+                Notification.error(this._t('module.ptw.notify.pdfErr', 'فشل تصدير PDF'));
             }
         } catch (error) {
-            Loading.hide();
             Utils.safeError('خطأ في تصدير PDF:', error);
             const unk = this._t('module.ptw.notify.unknownError', 'خطأ غير معروف');
-            Notification.error(this._t('module.ptw.notify.pdfErr', 'فشل تصدير PDF: ') + (error && error.message ? error.message : unk));
+            Notification.error(this._t('module.ptw.notify.pdfErr', 'فشل تصدير PDF: ') + (error?.message || unk));
+        } finally {
+            Loading.hide();
         }
     },
 
