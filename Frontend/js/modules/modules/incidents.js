@@ -7803,9 +7803,8 @@ const Incidents = {
     // طباعة إخطار الحادث
     printNotification() {
         try {
-            // جمع البيانات من النموذج المفتوح
             const notificationData = this.getNotificationFormData();
-            
+
             if (!notificationData) {
                 Notification.warning('لا توجد بيانات للطباعة. يرجى فتح النموذج أولاً.');
                 return;
@@ -7817,9 +7816,8 @@ const Incidents = {
             }
 
             Loading.show('جاري إعداد الطباعة...');
-
-            // استخدام دالة exportNotificationPDF لكن مع البيانات المباشرة
-            this.exportNotificationPDFWithData(notificationData);
+            const htmlContent = this._buildNotificationReportHtml(notificationData);
+            this._openIncidentPrintableHtml(htmlContent, 'تم تجهيز الإخطار للطباعة');
         } catch (error) {
             Loading.hide();
             Utils.safeError('خطأ في طباعة الإخطار:', error);
@@ -8003,57 +8001,68 @@ const Incidents = {
         `;
     },
 
-    // تصدير إخطار الحادث إلى PDF باستخدام البيانات المباشرة
-    exportNotificationPDFWithData(notificationData) {
+    _buildNotificationReportHtml(notificationData) {
+        const content = this.buildNotificationPrintContent(notificationData);
+        const formCode = notificationData.notificationNumber || `NOT-${new Date().toISOString().slice(0, 10)}`;
+
+        if (typeof FormHeader !== 'undefined' && FormHeader.generatePDFHTML) {
+            return FormHeader.generatePDFHTML(
+                formCode,
+                'إخطار عن حادث - Incident Notification',
+                content,
+                false,
+                false,
+                {
+                    version: AppState?.companySettings?.formVersion || '1.0',
+                    titleAr: 'إخطار عن حادث',
+                    titleEn: 'Incident Notification',
+                    includeQRCode: false
+                },
+                notificationData.date || new Date(),
+                new Date()
+            );
+        }
+
+        return `<html dir="rtl" lang="ar"><head><meta charset="UTF-8"><style>body { font-family: 'Tahoma', Arial, sans-serif; direction: rtl; text-align: right; padding: 20px; } @media print { body { margin: 0; padding: 15px; } }</style></head><body>${content}</body></html>`;
+    },
+
+    // تصدير إخطار الحادث إلى PDF — تحميل مباشر
+    async exportNotificationPDFWithData(notificationData) {
         try {
             Loading.show('جاري تحضير PDF...');
+            const htmlContent = this._buildNotificationReportHtml(notificationData);
+            const ref = notificationData.notificationNumber || 'notification';
+            const safeName = `إخطار-حادث-${String(ref).replace(/[^\w\u0600-\u06FF.-]/g, '_')}`;
+            const downloaded = await this._downloadHtmlReportAsPdf(htmlContent, safeName);
+            Loading.hide();
 
-            const content = this.buildNotificationPrintContent(notificationData);
-
-            const formCode = notificationData.notificationNumber || `NOT-${new Date().toISOString().slice(0, 10)}`;
-            const htmlContent = typeof FormHeader !== 'undefined' && FormHeader.generatePDFHTML
-                ? FormHeader.generatePDFHTML(
-                    formCode,
-                    'إخطار عن حادث - Incident Notification',
-                    content,
-                    false,
-                    true,
-                    { version: '1.0' },
-                    new Date().toISOString(),
-                    new Date().toISOString()
-                )
-                : `<html dir="rtl" lang="ar"><head><meta charset="UTF-8"><style>body { font-family: 'Tahoma', Arial, sans-serif; direction: rtl; text-align: right; padding: 20px; } @media print { body { margin: 0; padding: 15px; } }</style></head><body>${content}</body></html>`;
-
-            const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
-            const url = URL.createObjectURL(blob);
-            const printWindow = window.open(url, '_blank');
-
-            if (printWindow) {
-                printWindow.onload = () => {
-                    setTimeout(() => {
-                        printWindow.print();
-                        setTimeout(() => {
-                            URL.revokeObjectURL(url);
-                            Loading.hide();
-                            Notification.success('تم تجهيز التقرير للطباعة/الحفظ كـ PDF');
-                        }, 800);
-                    }, 500);
-                };
-            } else {
-                Loading.hide();
-                Notification.error('يرجى السماح للنوافذ المنبثقة لعرض التقرير');
+            if (downloaded) {
+                Notification.success('تم تحميل إخطار الحادث بنجاح');
+                return true;
             }
+
+            this._openIncidentPrintableHtml(htmlContent, 'تعذّر التحميل المباشر — تم فتح نافذة الطباعة');
+            return true;
         } catch (error) {
             Loading.hide();
             Utils.safeError('خطأ في تصدير PDF:', error);
             Notification.error('فشل تصدير PDF: ' + error.message);
+            return false;
         }
     },
 
     // تصدير إخطار الحادث إلى PDF
-    exportNotificationPDF() {
-        // استخدام نفس دالة الطباعة حيث أن exportPDF تقوم بفتح نافذة طباعة يمكن حفظها كـ PDF
-        this.printNotification();
+    async exportNotificationPDF() {
+        const notificationData = this.getNotificationFormData();
+        if (!notificationData) {
+            Notification.warning('لا توجد بيانات للتصدير. يرجى فتح النموذج أولاً.');
+            return;
+        }
+        if (!notificationData.notificationNumber && !notificationData.description) {
+            Notification.warning('لا توجد بيانات للتصدير');
+            return;
+        }
+        await this.exportNotificationPDFWithData(notificationData);
     },
 
     // معالجة المهام الخلفية بعد حفظ الإخطار
