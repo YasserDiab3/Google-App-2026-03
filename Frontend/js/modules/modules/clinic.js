@@ -13998,70 +13998,64 @@ const Clinic = {
     showAttendanceReportModal() {
         document.getElementById('clinic-attendance-report-modal')?.remove();
         const isAdmin = this.canViewAllAttendanceData();
-        const staffOptions = isAdmin ? this._getAttendanceStaffOptions() : (() => {
-            const me = this.getCurrentUserStaffRecord();
-            if (!me) return [];
-            const key = String(me.userId || me.id || me.userEmail || '').trim();
-            if (!key) return [];
-            return [{ id: key, staffId: me.id || '', name: me.userName || AppState.currentUser?.name || key, role: me.staffRole || '' }];
-        })();
+        const staffOptions = isAdmin ? this._getAttendanceStaffOptions() : [];
         const curMonth = new Date();
         const defaultMonth = `${curMonth.getFullYear()}-${String(curMonth.getMonth() + 1).padStart(2, '0')}`;
         const staffOptsHtml = staffOptions.map(s =>
             `<option value="${Utils.escapeAttr(s.id)}">${Utils.escapeHTML(s.name)}${s.role ? ' — ' + Utils.escapeHTML(this.getStaffRoleLabel(s.role)) : ''}</option>`
         ).join('');
-        const scopeCardStyle = (active) => `border:2px solid ${active ? '#0d9488' : '#e2e8f0'};border-radius:12px;padding:10px 12px;background:${active ? '#f0fdfa' : '#fff'};cursor:pointer;`;
+        const sectionStyle = 'border:1px solid #e2e8f0;border-radius:12px;padding:12px 14px;background:#fafafa;';
+        const dateOptStyle = (active) => `display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:8px;cursor:pointer;margin:0 0 6px;background:${active ? '#f0fdfa' : 'transparent'};border:1px solid ${active ? '#99f6e4' : 'transparent'};`;
 
         const html = `
             <div class="modal-overlay active" id="clinic-attendance-report-modal">
-                <div class="modal-content" style="max-width:560px;border-radius:14px;overflow:hidden;">
+                <div class="modal-content" style="max-width:580px;border-radius:14px;overflow:hidden;">
                     <div class="modal-header" style="background:linear-gradient(135deg,#134e4a,#0d9488);color:#fff;">
                         <h3 style="margin:0;color:#fff;"><i class="fas fa-file-export ml-2"></i>تصدير تقرير الحضور</h3>
                         <button type="button" class="modal-close" style="color:#fff;" onclick="document.getElementById('clinic-attendance-report-modal')?.remove()"><i class="fas fa-times"></i></button>
                     </div>
                     <div class="modal-body" style="padding:20px;">
-                        <p style="font-size:0.82rem;color:#64748b;margin:0 0 14px;">اختر نطاق التقرير ثم صيغة التصدير.</p>
-                        <div id="att-report-scope-list" style="display:flex;flex-direction:column;gap:10px;margin-bottom:16px;">
-                            <div class="att-report-scope-card" data-scope="month" style="${scopeCardStyle(true)}">
-                                <label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin:0 0 8px;">
-                                    <input type="radio" name="att-report-scope" value="month" checked>
-                                    <span><i class="fas fa-calendar-alt" style="color:#0d9488;margin-left:6px;"></i><strong>شهر محدد</strong></span>
+                        <p style="font-size:0.82rem;color:#64748b;margin:0 0 14px;">حدّد الفترة والمسئول (اختياري) بشكل مستقل، ثم اختر صيغة التصدير.</p>
+
+                        <label id="att-report-current-wrap" style="display:flex;align-items:center;gap:8px;padding:10px 12px;border:2px solid #f59e0b;border-radius:10px;background:#fffbeb;cursor:pointer;margin-bottom:12px;">
+                            <input type="checkbox" id="att-report-use-current">
+                            <span><i class="fas fa-filter" style="color:#f59e0b;margin-left:6px;"></i><strong>استخدام فلاتر الشاشة الحالية</strong></span>
+                        </label>
+
+                        <div id="att-report-custom-filters">
+                            <div style="${sectionStyle}margin-bottom:12px;">
+                                <div style="font-size:0.78rem;font-weight:700;color:#334155;margin-bottom:8px;"><i class="fas fa-calendar-alt ml-1" style="color:#0d9488;"></i> الفترة الزمنية</div>
+                                <label style="${dateOptStyle(true)}" data-date-opt="month">
+                                    <input type="radio" name="att-report-date-scope" value="month" checked>
+                                    <span>شهر محدد</span>
                                 </label>
-                                <div class="att-report-scope-body" data-scope-body="month">
+                                <div id="att-report-month-wrap" style="padding-right:28px;margin-bottom:8px;">
                                     <input type="month" id="att-report-month" class="form-input" value="${defaultMonth}" style="width:100%;box-sizing:border-box;">
                                 </div>
-                            </div>
-                            <div class="att-report-scope-card" data-scope="period" style="${scopeCardStyle(false)}">
-                                <label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin:0 0 8px;">
-                                    <input type="radio" name="att-report-scope" value="period">
-                                    <span><i class="fas fa-calendar-range" style="color:#3b82f6;margin-left:6px;"></i><strong>مدة محددة</strong></span>
+                                <label style="${dateOptStyle(false)}" data-date-opt="period">
+                                    <input type="radio" name="att-report-date-scope" value="period">
+                                    <span>مدة محددة (من — إلى)</span>
                                 </label>
-                                <div class="att-report-scope-body" data-scope-body="period" style="display:none;">
+                                <div id="att-report-period-wrap" style="padding-right:28px;margin-bottom:8px;display:none;">
                                     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
                                         <div><label class="form-label" style="font-size:0.72rem;display:block;margin-bottom:4px;">من تاريخ</label><input type="date" id="att-report-from" class="form-input" style="width:100%;box-sizing:border-box;"></div>
                                         <div><label class="form-label" style="font-size:0.72rem;display:block;margin-bottom:4px;">إلى تاريخ</label><input type="date" id="att-report-to" class="form-input" style="width:100%;box-sizing:border-box;"></div>
                                     </div>
                                 </div>
+                                <label style="${dateOptStyle(false)}" data-date-opt="all">
+                                    <input type="radio" name="att-report-date-scope" value="all">
+                                    <span>جميع التواريخ (بدون تقييد زمني)</span>
+                                </label>
                             </div>
+
                             ${isAdmin ? `
-                            <div class="att-report-scope-card" data-scope="person" style="${scopeCardStyle(false)}">
-                                <label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin:0 0 8px;">
-                                    <input type="radio" name="att-report-scope" value="person">
-                                    <span><i class="fas fa-user" style="color:#6366f1;margin-left:6px;"></i><strong>شخص محدد</strong></span>
-                                </label>
-                                <div class="att-report-scope-body" data-scope-body="person" style="display:none;">
-                                    <label class="form-label" style="font-size:0.72rem;display:block;margin-bottom:4px;">المسئول</label>
-                                    <select id="att-report-staff" class="form-input" style="width:100%;box-sizing:border-box;">
-                                        <option value="">— اختر مسئول —</option>${staffOptsHtml}
-                                    </select>
-                                </div>
+                            <div style="${sectionStyle}margin-bottom:12px;">
+                                <div style="font-size:0.78rem;font-weight:700;color:#334155;margin-bottom:8px;"><i class="fas fa-user ml-1" style="color:#6366f1;"></i> المسئول</div>
+                                <select id="att-report-staff" class="form-input" style="width:100%;box-sizing:border-box;">
+                                    <option value="all">— جميع المسئولين —</option>${staffOptsHtml}
+                                </select>
+                                <p style="font-size:0.72rem;color:#64748b;margin:8px 0 0;">يمكن الجمع مع أي خيار زمني أعلاه.</p>
                             </div>` : ''}
-                            <div class="att-report-scope-card" data-scope="current" style="${scopeCardStyle(false)}">
-                                <label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin:0;">
-                                    <input type="radio" name="att-report-scope" value="current">
-                                    <span><i class="fas fa-filter" style="color:#f59e0b;margin-left:6px;"></i><strong>الفلاتر الحالية على الشاشة</strong></span>
-                                </label>
-                            </div>
                         </div>
                         <div style="margin-bottom:4px;font-size:0.78rem;font-weight:700;color:#64748b;">صيغة التصدير</div>
                         <div style="display:flex;gap:8px;">
@@ -14084,63 +14078,52 @@ const Clinic = {
         const modal = document.getElementById('clinic-attendance-report-modal');
         if (!modal) return;
 
-        const selectScope = (scope) => {
-            const radio = modal.querySelector(`input[name="att-report-scope"][value="${scope}"]`);
-            if (radio) radio.checked = true;
-            modal.querySelectorAll('.att-report-scope-card').forEach(card => {
-                const active = card.dataset.scope === scope;
-                card.style.borderColor = active ? '#0d9488' : '#e2e8f0';
-                card.style.background = active ? '#f0fdfa' : '#fff';
-                const body = card.querySelector('.att-report-scope-body');
-                if (body) body.style.display = active ? 'block' : 'none';
+        const customFiltersEl = modal.querySelector('#att-report-custom-filters');
+        const useCurrentEl = modal.querySelector('#att-report-use-current');
+
+        const setCustomFiltersEnabled = (enabled) => {
+            if (customFiltersEl) {
+                customFiltersEl.style.opacity = enabled ? '1' : '0.45';
+                customFiltersEl.style.pointerEvents = enabled ? 'auto' : 'none';
+            }
+        };
+
+        const syncDateScopeUi = () => {
+            const dateScope = modal.querySelector('input[name="att-report-date-scope"]:checked')?.value || 'month';
+            modal.querySelector('#att-report-month-wrap').style.display = dateScope === 'month' ? 'block' : 'none';
+            modal.querySelector('#att-report-period-wrap').style.display = dateScope === 'period' ? 'block' : 'none';
+            modal.querySelectorAll('[data-date-opt]').forEach(label => {
+                const active = label.dataset.dateOpt === dateScope;
+                label.style.background = active ? '#f0fdfa' : 'transparent';
+                label.style.borderColor = active ? '#99f6e4' : 'transparent';
             });
         };
 
-        modal.querySelectorAll('input[name="att-report-scope"]').forEach(r => {
-            r.addEventListener('change', () => selectScope(r.value));
+        useCurrentEl?.addEventListener('change', () => setCustomFiltersEnabled(!useCurrentEl.checked));
+        modal.querySelectorAll('input[name="att-report-date-scope"]').forEach(r => {
+            r.addEventListener('change', syncDateScopeUi);
         });
-        modal.querySelectorAll('.att-report-scope-card').forEach(card => {
-            card.addEventListener('click', (e) => {
-                if (e.target.closest('input[type="radio"]')) return;
-                selectScope(card.dataset.scope || 'month');
-            });
-        });
-        [
-            ['#att-report-month', 'month'],
-            ['#att-report-from', 'period'],
-            ['#att-report-to', 'period'],
-            ['#att-report-staff', 'person']
-        ].forEach(([sel, scope]) => {
-            const el = modal.querySelector(sel);
-            if (!el) return;
-            el.addEventListener('focus', () => selectScope(scope));
-            el.addEventListener('mousedown', (e) => { e.stopPropagation(); selectScope(scope); });
-        });
-        selectScope('month');
+        syncDateScopeUi();
+        setCustomFiltersEnabled(true);
 
         const buildReportFiltersFromModal = () => {
-            const scope = modal.querySelector('input[name="att-report-scope"]:checked')?.value || 'month';
-            let filters = { search: '', staffRole: 'all', status: 'all', staffId: 'all', month: '', dateFrom: '', dateTo: '', period: 'all' };
-
-            if (scope === 'current') {
+            if (useCurrentEl?.checked) {
                 return Object.assign({}, this.state.filters.attendance || {});
             }
 
-            const monthVal = modal.querySelector('#att-report-month')?.value || '';
-            const fromVal = modal.querySelector('#att-report-from')?.value || '';
-            const toVal = modal.querySelector('#att-report-to')?.value || '';
-            const staffVal = modal.querySelector('#att-report-staff')?.value || '';
+            const filters = { search: '', staffRole: 'all', status: 'all', staffId: 'all', month: '', dateFrom: '', dateTo: '', period: 'all' };
+            const dateScope = modal.querySelector('input[name="att-report-date-scope"]:checked')?.value || 'month';
 
-            if (scope === 'month') {
+            if (dateScope === 'month') {
+                const monthVal = modal.querySelector('#att-report-month')?.value || '';
                 if (!monthVal) {
                     Notification?.warning?.('يرجى اختيار الشهر');
                     return null;
                 }
                 filters.month = monthVal;
-                const mr = this._getAttendanceMonthRange(monthVal);
-                filters.dateFrom = mr.dateFrom;
-                filters.dateTo = mr.dateTo;
-            } else if (scope === 'period') {
+            } else if (dateScope === 'period') {
+                const fromVal = modal.querySelector('#att-report-from')?.value || '';
+                const toVal = modal.querySelector('#att-report-to')?.value || '';
                 if (!fromVal && !toVal) {
                     Notification?.warning?.('يرجى تحديد تاريخ البداية أو النهاية');
                     return null;
@@ -14148,13 +14131,10 @@ const Clinic = {
                 const range = this._normalizeAttendanceDateRange(fromVal, toVal);
                 filters.dateFrom = range.dateFrom;
                 filters.dateTo = range.dateTo;
-            } else if (scope === 'person') {
-                if (!staffVal) {
-                    Notification?.warning?.('يرجى اختيار المسئول');
-                    return null;
-                }
-                filters.staffId = staffVal;
             }
+
+            const staffVal = modal.querySelector('#att-report-staff')?.value || 'all';
+            if (staffVal && staffVal !== 'all') filters.staffId = staffVal;
 
             return filters;
         };
