@@ -1375,7 +1375,46 @@ const PTW = {
                 });
             }
         });
-        return Array.from(allPermitsMap.values());
+        return this.sortPermitRecordsNewestFirst(Array.from(allPermitsMap.values()));
+    },
+
+    getPermitRecordSortKey(record = {}) {
+        const toNum = (v) => {
+            const n = parseInt(String(v ?? '').replace(/^0+(?=\d)/, ''), 10);
+            return Number.isFinite(n) && n > 0 ? n : 0;
+        };
+        const fromId = (v) => {
+            const m = String(v || '').match(/(?:PTW|REG)_(\d+)/i);
+            return m ? parseInt(m[1], 10) || 0 : 0;
+        };
+        const seq = toNum(record.sequentialNumber)
+            || fromId(record.permitId)
+            || fromId(record.id);
+
+        const toTime = (v) => {
+            const d = this.parseDateTimeValue(v);
+            return d && !isNaN(d.getTime()) ? d.getTime() : 0;
+        };
+
+        return {
+            seq,
+            createdAt: toTime(record.createdAt),
+            startAt: toTime(record.openDate || record.timeFrom || record.startDate),
+            updatedAt: toTime(record.updatedAt || record.endDate || record.timeTo)
+        };
+    },
+
+    sortPermitRecordsNewestFirst(records) {
+        if (!Array.isArray(records)) return [];
+        return [...records].sort((a, b) => {
+            const ka = this.getPermitRecordSortKey(a);
+            const kb = this.getPermitRecordSortKey(b);
+            if (kb.seq !== ka.seq) return kb.seq - ka.seq;
+            if (kb.createdAt !== ka.createdAt) return kb.createdAt - ka.createdAt;
+            if (kb.startAt !== ka.startAt) return kb.startAt - ka.startAt;
+            if (kb.updatedAt !== ka.updatedAt) return kb.updatedAt - ka.updatedAt;
+            return String(b.id || b.permitId || '').localeCompare(String(a.id || a.permitId || ''), 'en', { numeric: true });
+        });
     },
 
     getRegistrySanitizedDataset() {
@@ -2732,7 +2771,8 @@ const PTW = {
      */
     renderRegistryTable() {
         const t = (key, fallback) => this._t(key, fallback);
-        if (this.registryData.length === 0) {
+        const registryRows = this.getRegistrySanitizedDataset();
+        if (registryRows.length === 0) {
             return `
                 <div class="empty-state">
                     <i class="fas fa-clipboard-list text-4xl text-gray-300 mb-4"></i>
@@ -2742,12 +2782,8 @@ const PTW = {
             `;
         }
 
-        // ترتيب حسب المسلسل: الأقدم بالأعلى (1، 2، 3...) والأحدث بالأسفل
-        const sortedData = [...this.registryData].sort((a, b) => {
-            const seqA = parseInt(a.sequentialNumber) || 0;
-            const seqB = parseInt(b.sequentialNumber) || 0;
-            return seqA - seqB; // ترتيب تصاعدي: 1، 2، 3...
-        });
+        // الأحدث في الأعلى والأقدم في الأسفل
+        const sortedData = this.sortPermitRecordsNewestFirst(registryRows);
 
         let tableHTML = `
             <table class="data-table">
@@ -10695,7 +10731,7 @@ const PTW = {
             return;
         }
 
-        const data = this.registryData.map(entry => ({
+        const data = this.sortPermitRecordsNewestFirst(this.getRegistrySanitizedDataset()).map(entry => ({
             'مسلسل': entry.sequentialNumber,
             'التاريخ': new Date(entry.openDate).toLocaleDateString('ar-EG'),
             'نوع التصريح': this.getPermitTypeDisplay(entry),
@@ -10757,7 +10793,7 @@ const PTW = {
             };
 
             // إنشاء صفوف الجدول
-            const tableRows = this.registryData.map(entry => {
+            const tableRows = this.sortPermitRecordsNewestFirst(this.getRegistrySanitizedDataset()).map(entry => {
                 const sequentialNumber = entry.sequentialNumber || '-';
                 const openDate = formatDate(entry.openDate);
                 const permitType = this.getPermitTypeDisplay(entry) || '-';
@@ -15434,15 +15470,15 @@ const PTW = {
             siteName: registryEntry.location,
             sublocation: registryEntry.sublocation,
             sublocationName: registryEntry.sublocation,
-            startDate: registryEntry.openDate,
-            endDate: registryEntry.timeTo,
+            startDate: registryEntry.timeFrom || registryEntry.openDate,
+            endDate: registryEntry.timeTo || registryEntry.closureDate,
             status: registryEntry.status,
             workDescription: registryEntry.workDescription,
             requestingParty: registryEntry.requestingParty,
             authorizedParty: registryEntry.authorizedParty,
             approvals: [],
-            createdAt: registryEntry.createdAt,
-            updatedAt: registryEntry.updatedAt,
+            createdAt: registryEntry.createdAt || registryEntry.timeFrom || registryEntry.openDate,
+            updatedAt: registryEntry.updatedAt || registryEntry.closureDate || registryEntry.timeTo,
             isFromRegistry: true,
             isManualEntry: registryEntry.isManualEntry === true || registryEntry.isManualEntry === 'true',
             skipApprovalFlow: registryEntry.skipApprovalFlow === true || registryEntry.isManualEntry === true || registryEntry.isManualEntry === 'true',
@@ -15518,6 +15554,7 @@ const PTW = {
                 return d <= dateTo;
             });
         }
+        filtered = this.sortPermitRecordsNewestFirst(filtered);
         const tbody = document.querySelector('#ptw-table-container tbody');
         if (tbody) {
             tbody.innerHTML = filtered.length === 0 ?
