@@ -4590,6 +4590,8 @@ function getModulePrefix(moduleName) {
         'ClinicContractorInjuries': 'CIN',
         'clinicinventory': 'CLI',
         'ClinicInventory': 'CLI',
+        'ClinicStaff': 'CST',
+        'ClinicStaffAttendance': 'CSA',
         
         // ISO و HSE
         'iso': 'ISO',

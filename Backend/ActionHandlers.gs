@@ -1747,6 +1747,55 @@ var ActionHandlers = {
         })();
         return result;
     },
+    'getAllClinicStaff': function(payload, postData, action, actorUserData, spreadsheetId) {
+        var result = { success: false, message: '' };
+        (function() {
+            result = getAllClinicStaff(payload && payload.filters ? payload.filters : payload || {});
+        })();
+        return result;
+    },
+    'addClinicStaff': function(payload, postData, action, actorUserData, spreadsheetId) {
+        var result = { success: false, message: '' };
+        (function() {
+            result = addClinicStaff(payload);
+        })();
+        return result;
+    },
+    'updateClinicStaff': function(payload, postData, action, actorUserData, spreadsheetId) {
+        var result = { success: false, message: '' };
+        (function() {
+            result = updateClinicStaff(payload.staffId || payload.id, payload.updateData || payload);
+        })();
+        return result;
+    },
+    'deleteClinicStaff': function(payload, postData, action, actorUserData, spreadsheetId) {
+        var result = { success: false, message: '' };
+        (function() {
+            result = deleteClinicStaff(payload.staffId || payload.id);
+        })();
+        return result;
+    },
+    'getClinicStaffAttendance': function(payload, postData, action, actorUserData, spreadsheetId) {
+        var result = { success: false, message: '' };
+        (function() {
+            result = getClinicStaffAttendance(payload && payload.filters ? payload.filters : payload || {});
+        })();
+        return result;
+    },
+    'recordClinicStaffLogin': function(payload, postData, action, actorUserData, spreadsheetId) {
+        var result = { success: false, message: '' };
+        (function() {
+            result = recordClinicStaffLogin(payload);
+        })();
+        return result;
+    },
+    'recordClinicStaffLogout': function(payload, postData, action, actorUserData, spreadsheetId) {
+        var result = { success: false, message: '' };
+        (function() {
+            result = recordClinicStaffLogout(payload);
+        })();
+        return result;
+    },
     'updateContractor': function(payload, postData, action, actorUserData, spreadsheetId) {
         var result = { success: false, message: '' };
         (function() {

@@ -60,6 +60,24 @@ window.Auth = {
         } catch (e) { /* ignore */ }
     },
 
+    _recordClinicStaffAttendance(kind) {
+        try {
+            const user = AppState.currentUser;
+            if (!user || typeof GoogleIntegration === 'undefined' || typeof GoogleIntegration.sendRequest !== 'function') return;
+            if (typeof Utils !== 'undefined' && typeof Utils.hasCloudBackendSync === 'function' && !Utils.hasCloudBackendSync()) return;
+            const actionName = kind === 'logout' ? 'recordClinicStaffLogout' : 'recordClinicStaffLogin';
+            GoogleIntegration.sendRequest({
+                action: actionName,
+                data: {
+                    userId: user.id || '',
+                    email: user.email || '',
+                    userName: user.name || '',
+                    sessionId: user.sessionId || sessionStorage.getItem('hse_session_id') || ''
+                }
+            }).catch(() => { });
+        } catch (_e) { /* ignore */ }
+    },
+
     _isSessionExpiredForRestore(sessionUser) {
         if (!sessionUser || !sessionUser.loginTime) return false;
         const t = new Date(sessionUser.loginTime).getTime();
@@ -553,6 +571,7 @@ window.Auth = {
                 description: `تسجيل دخول المستخدم ${AppState.currentUser.name || AppState.currentUser.email}`
             }).catch(() => { });
         }
+        this._recordClinicStaffAttendance('login');
 
         // تحديث بيانات تسجيل الدخول للمستخدم في قاعدة البيانات
         const usersList = AppState.appData.users || [];
@@ -933,6 +952,7 @@ window.Auth = {
                 description: `تسجيل خروج المستخدم ${userName}`
             }).catch(() => { }); // لا ننتظر حتى لا نبطئ عملية تسجيل الخروج
         }
+        this._recordClinicStaffAttendance('logout');
 
         // تحديث حالة المستخدم إلى غير متصل
         if (AppState.currentUser && AppState.currentUser.email) {

@@ -160,7 +160,8 @@ const MODULE_DETAILED_PERMISSIONS = {
             { key: 'injuries', label: 'الإصابات', icon: 'fa-user-injured' },
             { key: 'supply-request', label: 'طلب احتياجات', icon: 'fa-shopping-cart' },
             { key: 'approvals', label: 'طلبات الموافقة', icon: 'fa-check-circle' },
-            { key: 'data-analysis', label: 'تحليل البيانات', icon: 'fa-chart-bar' }
+            { key: 'data-analysis', label: 'تحليل البيانات', icon: 'fa-chart-bar' },
+            { key: 'attendance', label: 'الحضور', icon: 'fa-user-clock' }
         ]
     },
     'training': {
@@ -2872,7 +2873,7 @@ const DEFAULT_COMPANY_NAME = '';
 
 const AppState = {
     /** إصدار التطبيق — تسلسلي: 1.0.0 → 1.0.1 → 1.0.2 … عند كل نشر زِد الرقم هنا وفي version.json */
-    appVersion: '1.0.166',
+    appVersion: '1.0.167',
     /** نص اختياري لرسالة التحديث (ملخص التغييرات). إن تُركت فارغة يُستخدم النص الافتراضي. */
     updateMessage: '',
     debugMode: false,
@@ -2896,6 +2897,8 @@ const AppState = {
         sickLeave: [],
         injuries: [],
         clinicInventory: [],
+        clinicStaff: [],
+        clinicStaffAttendance: [],
         fireEquipment: [],
         fireEquipmentAssets: [],
         fireEquipmentInspections: [],
@@ -8388,6 +8391,7 @@ const I18n = {
             'clinic.tabs.contractors': 'المقاولين',
             'clinic.tabs.medications': 'الأدوية',
             'clinic.tabs.analytics': 'التحليلات',
+            'clinic.tabs.attendance': 'الحضور',
             'clinic.table.employeeCode': 'الكود الوظيفي',
             'clinic.table.name': 'الاسم',
             'clinic.table.visitDate': 'تاريخ الزيارة',
@@ -9045,6 +9049,7 @@ const I18n = {
             'clinic.tabs.contractors': 'Contractors',
             'clinic.tabs.medications': 'Medications',
             'clinic.tabs.analytics': 'Analytics',
+            'clinic.tabs.attendance': 'Attendance',
             'clinic.table.employeeCode': 'Employee Code',
             'clinic.table.name': 'Name',
             'clinic.table.visitDate': 'Visit Date',

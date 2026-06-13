@@ -158,7 +158,7 @@ const DataManager = {
             'dailyObservations', 'dailySafetyCheckList', 'ptwRegistry', 'trainingAnalysisData',
             'contractorEvaluations', 'contractorApprovalRequests', 'contractorDeletionRequests',
             'annualTrainingPlans', 'nearmiss', 'inspections', 'chemicalInventory',
-            'clinicVisits', 'clinicMedications', 'clinicInventory', 'clinicInjuries', 'clinicSickLeave'
+            'clinicVisits', 'clinicMedications', 'clinicInventory', 'clinicInjuries', 'clinicSickLeave', 'clinicStaff', 'clinicStaffAttendance'
         ];
         const maxItems = this.MAX_ITEMS_PER_ARRAY_IN_LIGHT;
         const out = {};

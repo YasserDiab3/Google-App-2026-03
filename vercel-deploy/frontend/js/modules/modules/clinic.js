@@ -11,7 +11,8 @@ const Clinic = {
             medications: { search: '', status: 'all', dateFrom: '', dateTo: '' },
             visits: { search: '' },
             sickLeave: { search: '', department: '', dateFrom: '', dateTo: '' },
-            injuries: { search: '', status: 'all', department: '', injuryType: 'all', injuryBodyPart: 'all', dateFrom: '', dateTo: '' }
+            injuries: { search: '', status: 'all', department: '', injuryType: 'all', injuryBodyPart: 'all', dateFrom: '', dateTo: '' },
+            attendance: { search: '', staffRole: 'all', status: 'all', dateFrom: '', dateTo: '' }
         },
         currentInjuryAttachments: [],
         medicationAlertsNotified: new Set(),
@@ -2605,6 +2606,7 @@ const Clinic = {
         if (tabKey === 'analytics') return this.renderAnalyticsTab();
         if (tabKey === 'data-analysis') return this.renderDataAnalysisTab();
         if (tabKey === 'supply-request') return this.renderSupplyRequestTab();
+        if (tabKey === 'attendance') return this.renderAttendanceTab();
     },
 
     renderActiveTabContent() {
@@ -8446,6 +8448,8 @@ const Clinic = {
         if (!Array.isArray(data.sickLeave)) data.sickLeave = [];
         if (!Array.isArray(data.injuries)) data.injuries = [];
         if (!Array.isArray(data.clinicSupplyRequests)) data.clinicSupplyRequests = [];
+        if (!Array.isArray(data.clinicStaff)) data.clinicStaff = [];
+        if (!Array.isArray(data.clinicStaffAttendance)) data.clinicStaffAttendance = [];
 
         // ✅ حماية حاسمة: دمج زيارات المقاولين من clinicContractorVisits إلى clinicVisits لمنع اختفائها عند إعادة تحميل الصفحة
         let visitsChanged = false;
@@ -12968,6 +12972,30 @@ const Clinic = {
             Utils.safeLog('ℹ️ تخطي جلب سجل التردد في المزامنة — بيانات حديثة ومؤكدة من الخادم');
         }
 
+        // تحميل حضور مسئولي العيادة
+        promises.push(
+            requestWithTimeout(
+                GoogleIntegration.sendRequest({ action: 'getClinicStaffAttendance', data: {} }),
+                REQUEST_TIMEOUT,
+                'clinicStaffAttendance'
+            ).then(result => {
+                if (result && result.success && Array.isArray(result.data)) {
+                    AppState.appData.clinicStaffAttendance = result.data;
+                }
+            }).catch(() => { })
+        );
+        promises.push(
+            requestWithTimeout(
+                GoogleIntegration.sendRequest({ action: 'getAllClinicStaff', data: {} }),
+                REQUEST_TIMEOUT,
+                'clinicStaff'
+            ).then(result => {
+                if (result && result.success && Array.isArray(result.data)) {
+                    AppState.appData.clinicStaff = result.data;
+                }
+            }).catch(() => { })
+        );
+
         // انتظار انتهاء جميع الطلبات دون قطع مجمع بمهلة قصيرة (كانت تُسقط سجل التردد قبل اكتماله)
         try {
             await Promise.allSettled(promises);
@@ -13022,6 +13050,9 @@ const Clinic = {
                 if (this.state && this.state.activeTab === 'visits') {
                     this.scheduleVisitsTabRender(false, 0);
                 }
+                if (this.state && this.state.activeTab === 'attendance') {
+                    this.renderAttendanceTab();
+                }
                 
                 Utils.safeLog('✅ تمت مزامنة بيانات العيادة في الخلفية');
             }
@@ -13045,6 +13076,335 @@ const Clinic = {
         await this.load();
 
         Notification?.success?.('تم تحديث البيانات بنجاح');
+    },
+
+    getClinicStaffList() {
+        this.ensureData();
+        return Array.isArray(AppState.appData.clinicStaff) ? AppState.appData.clinicStaff : [];
+    },
+
+    getClinicStaffAttendanceList() {
+        this.ensureData();
+        return Array.isArray(AppState.appData.clinicStaffAttendance) ? AppState.appData.clinicStaffAttendance : [];
+    },
+
+    getStaffRoleLabel(role) {
+        const map = { doctor: 'طبيب', nurse: 'تمريض', clinic_officer: 'مسئول عيادة' };
+        return map[String(role || '').trim()] || role || '—';
+    },
+
+    getAttendanceStatusLabel(status) {
+        const map = { present: 'حاضر', partial: 'خروج جزئي', absent: 'غائب' };
+        return map[String(status || '').trim()] || status || '—';
+    },
+
+    getAttendanceStatusBadgeClass(status) {
+        const s = String(status || '').trim();
+        if (s === 'present') return 'badge-success';
+        if (s === 'partial') return 'badge-warning';
+        return 'badge-secondary';
+    },
+
+    _attendanceDayKey(dateVal) {
+        if (!dateVal) return '';
+        try {
+            const d = new Date(dateVal);
+            if (Number.isNaN(d.getTime())) return String(dateVal).slice(0, 10);
+            return d.toISOString().slice(0, 10);
+        } catch (_e) {
+            return String(dateVal).slice(0, 10);
+        }
+    },
+
+    getFilteredClinicAttendance() {
+        const filters = this.state.filters.attendance || {};
+        let rows = this.getClinicStaffAttendanceList().slice();
+        if (filters.search) {
+            const q = String(filters.search).trim().toLowerCase();
+            rows = rows.filter(r => String(r.userName || '').toLowerCase().includes(q) || String(r.userEmail || '').toLowerCase().includes(q));
+        }
+        if (filters.staffRole && filters.staffRole !== 'all') {
+            rows = rows.filter(r => String(r.staffRole) === String(filters.staffRole));
+        }
+        if (filters.status && filters.status !== 'all') {
+            rows = rows.filter(r => String(r.status) === String(filters.status));
+        }
+        if (filters.dateFrom) {
+            const from = this._attendanceDayKey(filters.dateFrom);
+            rows = rows.filter(r => this._attendanceDayKey(r.date) >= from);
+        }
+        if (filters.dateTo) {
+            const to = this._attendanceDayKey(filters.dateTo);
+            rows = rows.filter(r => this._attendanceDayKey(r.date) <= to);
+        }
+        rows.sort((a, b) => {
+            const da = this._attendanceDayKey(b.date) + String(b.checkIn || '');
+            const db = this._attendanceDayKey(a.date) + String(a.checkIn || '');
+            return da.localeCompare(db);
+        });
+        return rows;
+    },
+
+    async loadClinicAttendanceData(force) {
+        if (typeof GoogleIntegration === 'undefined' || !GoogleIntegration.sendRequest) return;
+        try {
+            const [attResp, staffResp] = await Promise.all([
+                GoogleIntegration.sendRequest({ action: 'getClinicStaffAttendance', data: force ? { skipCache: true } : {} }),
+                GoogleIntegration.sendRequest({ action: 'getAllClinicStaff', data: {} })
+            ]);
+            if (attResp?.success && Array.isArray(attResp.data)) AppState.appData.clinicStaffAttendance = attResp.data;
+            if (staffResp?.success && Array.isArray(staffResp.data)) AppState.appData.clinicStaff = staffResp.data;
+            this.ensureData();
+            if (typeof window.DataManager !== 'undefined' && window.DataManager.save) window.DataManager.save();
+        } catch (_e) { /* ignore */ }
+    },
+
+    exportAttendanceToExcel() {
+        const rows = this.getFilteredClinicAttendance();
+        if (!rows.length) {
+            Notification?.info?.('لا توجد بيانات لتصديرها');
+            return;
+        }
+        if (typeof XLSX === 'undefined') {
+            Notification?.error?.('مكتبة Excel غير متوفرة');
+            return;
+        }
+        const excelData = rows.map(r => ({
+            'الاسم': r.userName || '',
+            'البريد': r.userEmail || '',
+            'الدور': this.getStaffRoleLabel(r.staffRole),
+            'التاريخ': r.date || '',
+            'وقت الدخول': r.checkIn ? (Utils.formatDateTime ? Utils.formatDateTime(r.checkIn) : r.checkIn) : '',
+            'وقت الخروج': r.checkOut ? (Utils.formatDateTime ? Utils.formatDateTime(r.checkOut) : r.checkOut) : '',
+            'مدة العمل (ساعة)': r.workDuration || '',
+            'الحالة': this.getAttendanceStatusLabel(r.status),
+            'معرف الجلسة': r.sessionId || ''
+        }));
+        const workbook = XLSX.utils.book_new();
+        const worksheet = XLSX.utils.json_to_sheet(excelData);
+        XLSX.utils.book_append_sheet(workbook, worksheet, 'Attendance');
+        XLSX.writeFile(workbook, `Clinic_Attendance_${new Date().toISOString().slice(0, 10)}.xlsx`);
+    },
+
+    showAddClinicStaffModal() {
+        if (!this.isCurrentUserAdmin()) {
+            Notification?.error?.('هذا الإجراء متاح لمدير النظام فقط');
+            return;
+        }
+        const staffList = this.getClinicStaffList();
+        const staffIds = new Set(staffList.map(s => String(s.userId || s.userEmail || '').toLowerCase()).filter(Boolean));
+        const users = (AppState.appData.users || []).filter(u => u && u.active !== false && u.email);
+        const options = users.filter(u => !staffIds.has(String(u.id || '').toLowerCase()) && !staffIds.has(String(u.email || '').toLowerCase()))
+            .map(u => `<option value="${Utils.escapeAttr(u.id || '')}" data-email="${Utils.escapeAttr(u.email || '')}" data-name="${Utils.escapeAttr(u.name || '')}" data-dept="${Utils.escapeAttr(u.department || '')}" data-job="${Utils.escapeAttr(u.jobTitle || u.position || '')}">${Utils.escapeHTML(u.name || u.email)}</option>`)
+            .join('');
+        const html = `
+            <div class="modal-overlay active" id="clinic-staff-modal">
+                <div class="modal-content" style="max-width:520px;">
+                    <div class="modal-header"><h3><i class="fas fa-user-plus ml-2"></i>إضافة مسئول عيادة</h3>
+                        <button type="button" class="modal-close" onclick="document.getElementById('clinic-staff-modal')?.remove()"><i class="fas fa-times"></i></button>
+                    </div>
+                    <div class="modal-body space-y-4">
+                        <div class="form-group">
+                            <label class="form-label">المستخدم</label>
+                            <select id="clinic-staff-user" class="form-input"><option value="">— اختر —</option>${options}</select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">الدور</label>
+                            <select id="clinic-staff-role" class="form-input">
+                                <option value="doctor">طبيب</option>
+                                <option value="nurse">تمريض</option>
+                                <option value="clinic_officer">مسئول عيادة</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn-secondary" onclick="document.getElementById('clinic-staff-modal')?.remove()">إلغاء</button>
+                        <button type="button" class="btn-primary" id="clinic-staff-save-btn"><i class="fas fa-save ml-2"></i>حفظ</button>
+                    </div>
+                </div>
+            </div>`;
+        document.getElementById('clinic-staff-modal')?.remove();
+        document.body.insertAdjacentHTML('beforeend', html);
+        document.getElementById('clinic-staff-save-btn')?.addEventListener('click', async () => {
+            const sel = document.getElementById('clinic-staff-user');
+            const opt = sel?.selectedOptions?.[0];
+            if (!sel?.value || !opt) {
+                Notification?.warning?.('يرجى اختيار مستخدم');
+                return;
+            }
+            const role = document.getElementById('clinic-staff-role')?.value || 'clinic_officer';
+            try {
+                const resp = await GoogleIntegration.sendRequest({
+                    action: 'addClinicStaff',
+                    data: {
+                        userId: sel.value,
+                        userEmail: opt.dataset.email || '',
+                        userName: opt.dataset.name || '',
+                        department: opt.dataset.dept || '',
+                        jobTitle: opt.dataset.job || '',
+                        staffRole: role,
+                        isActive: 'true'
+                    }
+                });
+                if (resp?.success) {
+                    Notification?.success?.('تمت إضافة مسئول العيادة');
+                    document.getElementById('clinic-staff-modal')?.remove();
+                    await this.loadClinicAttendanceData(true);
+                    this.renderAttendanceTab();
+                } else {
+                    Notification?.error?.(resp?.message || 'فشل الإضافة');
+                }
+            } catch (err) {
+                Notification?.error?.(err?.message || 'فشل الإضافة');
+            }
+        });
+    },
+
+    async toggleClinicStaffActive(staffId, isActive) {
+        if (!this.isCurrentUserAdmin() || !staffId) return;
+        try {
+            const resp = await GoogleIntegration.sendRequest({
+                action: 'updateClinicStaff',
+                data: { staffId, updateData: { isActive: isActive ? 'true' : 'false' } }
+            });
+            if (resp?.success) {
+                await this.loadClinicAttendanceData(true);
+                this.renderAttendanceTab();
+                Notification?.success?.('تم تحديث حالة المسئول');
+            } else {
+                Notification?.error?.(resp?.message || 'فشل التحديث');
+            }
+        } catch (err) {
+            Notification?.error?.(err?.message || 'فشل التحديث');
+        }
+    },
+
+    async deleteClinicStaffMember(staffId) {
+        if (!this.isCurrentUserAdmin() || !staffId) return;
+        if (!confirm('حذف هذا المسئول من قائمة العيادة؟ (سجل الحضور السابق يبقى محفوظاً)')) return;
+        try {
+            const resp = await GoogleIntegration.sendRequest({ action: 'deleteClinicStaff', data: { staffId } });
+            if (resp?.success) {
+                await this.loadClinicAttendanceData(true);
+                this.renderAttendanceTab();
+                Notification?.success?.('تم الحذف');
+            } else {
+                Notification?.error?.(resp?.message || 'فشل الحذف');
+            }
+        } catch (err) {
+            Notification?.error?.(err?.message || 'فشل الحذف');
+        }
+    },
+
+    renderAttendanceTab() {
+        const panel = document.querySelector('.clinic-tab-panel[data-tab-panel="attendance"]');
+        if (!panel) return;
+        this.ensureData();
+        const filters = this.state.filters.attendance || {};
+        const rows = this.getFilteredClinicAttendance();
+        const staffList = this.getClinicStaffList();
+        const activeStaff = staffList.filter(s => String(s.isActive || 'true').toLowerCase() !== 'false');
+        const todayKey = new Date().toISOString().slice(0, 10);
+        const todayRows = this.getClinicStaffAttendanceList().filter(r => this._attendanceDayKey(r.date) === todayKey);
+        const presentToday = todayRows.filter(r => r.checkIn).length;
+        const openSessions = todayRows.filter(r => r.checkIn && !r.checkOut).length;
+        const isAdmin = this.isCurrentUserAdmin();
+
+        const tableRows = rows.length ? rows.map(r => `
+            <tr>
+                <td>${Utils.escapeHTML(r.userName || '—')}</td>
+                <td>${Utils.escapeHTML(r.userEmail || '—')}</td>
+                <td>${Utils.escapeHTML(this.getStaffRoleLabel(r.staffRole))}</td>
+                <td>${Utils.escapeHTML(r.date || '—')}</td>
+                <td>${r.checkIn ? (Utils.formatDateTime ? Utils.formatDateTime(r.checkIn) : Utils.escapeHTML(String(r.checkIn))) : '—'}</td>
+                <td>${r.checkOut ? (Utils.formatDateTime ? Utils.formatDateTime(r.checkOut) : Utils.escapeHTML(String(r.checkOut))) : '—'}</td>
+                <td>${Utils.escapeHTML(String(r.workDuration || '—'))}</td>
+                <td><span class="badge ${this.getAttendanceStatusBadgeClass(r.status)}">${Utils.escapeHTML(this.getAttendanceStatusLabel(r.status))}</span></td>
+                <td class="text-xs text-gray-500">${Utils.escapeHTML(String(r.sessionId || '—').slice(0, 18))}</td>
+            </tr>
+        `).join('') : `<tr><td colspan="9" class="text-center text-gray-500 py-8">لا توجد سجلات حضور</td></tr>`;
+
+        const staffAdminRows = isAdmin ? (staffList.length ? staffList.map(s => {
+            const active = String(s.isActive || 'true').toLowerCase() !== 'false';
+            return `<tr>
+                <td>${Utils.escapeHTML(s.userName || '—')}</td>
+                <td>${Utils.escapeHTML(this.getStaffRoleLabel(s.staffRole))}</td>
+                <td>${active ? '<span class="badge badge-success">نشط</span>' : '<span class="badge badge-secondary">موقوف</span>'}</td>
+                <td>
+                    <button type="button" class="btn-icon btn-icon-warning" title="${active ? 'إيقاف' : 'تفعيل'}" onclick="Clinic.toggleClinicStaffActive('${Utils.escapeAttr(s.id)}', ${!active})"><i class="fas fa-${active ? 'pause' : 'play'}"></i></button>
+                    <button type="button" class="btn-icon btn-icon-danger" title="حذف" onclick="Clinic.deleteClinicStaffMember('${Utils.escapeAttr(s.id)}')"><i class="fas fa-trash"></i></button>
+                </td>
+            </tr>`;
+        }).join('') : `<tr><td colspan="4" class="text-center text-gray-500 py-4">لا يوجد مسئولون — أضف من القائمة</td></tr>`) : '';
+
+        panel.innerHTML = `
+            <div class="content-card mt-4">
+                <div class="card-body">
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                        <div class="summary-card"><p class="text-sm text-gray-600">حاضرون اليوم</p><p class="text-2xl font-bold text-green-600">${presentToday}</p></div>
+                        <div class="summary-card"><p class="text-sm text-gray-600">بدون تسجيل خروج</p><p class="text-2xl font-bold text-amber-600">${openSessions}</p></div>
+                        <div class="summary-card"><p class="text-sm text-gray-600">إجمالي السجلات</p><p class="text-2xl font-bold text-blue-600">${rows.length}</p></div>
+                        <div class="summary-card"><p class="text-sm text-gray-600">مسئولون نشطون</p><p class="text-2xl font-bold text-indigo-600">${activeStaff.length}</p></div>
+                    </div>
+                    <div class="flex flex-wrap gap-2 mb-4">
+                        <input type="text" id="clinic-attendance-search" class="form-input" placeholder="بحث بالاسم أو البريد..." value="${Utils.escapeAttr(filters.search || '')}" style="min-width:200px;">
+                        <select id="clinic-attendance-role" class="form-input">
+                            <option value="all" ${filters.staffRole === 'all' || !filters.staffRole ? 'selected' : ''}>كل الأدوار</option>
+                            <option value="doctor" ${filters.staffRole === 'doctor' ? 'selected' : ''}>طبيب</option>
+                            <option value="nurse" ${filters.staffRole === 'nurse' ? 'selected' : ''}>تمريض</option>
+                            <option value="clinic_officer" ${filters.staffRole === 'clinic_officer' ? 'selected' : ''}>مسئول عيادة</option>
+                        </select>
+                        <select id="clinic-attendance-status" class="form-input">
+                            <option value="all" ${filters.status === 'all' || !filters.status ? 'selected' : ''}>كل الحالات</option>
+                            <option value="present" ${filters.status === 'present' ? 'selected' : ''}>حاضر</option>
+                            <option value="partial" ${filters.status === 'partial' ? 'selected' : ''}>خروج جزئي</option>
+                        </select>
+                        <input type="date" id="clinic-attendance-from" class="form-input" value="${Utils.escapeAttr(filters.dateFrom || '')}">
+                        <input type="date" id="clinic-attendance-to" class="form-input" value="${Utils.escapeAttr(filters.dateTo || '')}">
+                        <button type="button" class="btn-secondary" id="clinic-attendance-refresh-btn"><i class="fas fa-sync-alt ml-1"></i>تحديث</button>
+                        <button type="button" class="btn-secondary" id="clinic-attendance-export-btn"><i class="fas fa-file-excel ml-1"></i>تصدير Excel</button>
+                        ${isAdmin ? `<button type="button" class="btn-primary" id="clinic-attendance-add-staff-btn"><i class="fas fa-user-plus ml-1"></i>إضافة مسئول</button>` : ''}
+                    </div>
+                    <p class="text-sm text-gray-500 mb-3"><i class="fas fa-info-circle ml-1"></i>يُسجَّل الحضور تلقائياً عند تسجيل الدخول/الخروج للمسئولين المضافين في القائمة أدناه.</p>
+                    <div class="table-wrapper"><table class="data-table table-header-green">
+                        <thead><tr>
+                            <th>الاسم</th><th>البريد</th><th>الدور</th><th>التاريخ</th>
+                            <th>وقت الدخول</th><th>وقت الخروج</th><th>مدة (س)</th><th>الحالة</th><th>الجلسة</th>
+                        </tr></thead>
+                        <tbody>${tableRows}</tbody>
+                    </table></div>
+                    ${isAdmin ? `
+                    <h4 class="text-lg font-bold mt-8 mb-3"><i class="fas fa-users ml-2"></i>قائمة مسئولي العيادة</h4>
+                    <div class="table-wrapper"><table class="data-table">
+                        <thead><tr><th>الاسم</th><th>الدور</th><th>الحالة</th><th>إجراءات</th></tr></thead>
+                        <tbody>${staffAdminRows}</tbody>
+                    </table></div>` : ''}
+                </div>
+            </div>`;
+
+        const applyFilters = () => {
+            this.state.filters.attendance = {
+                search: document.getElementById('clinic-attendance-search')?.value || '',
+                staffRole: document.getElementById('clinic-attendance-role')?.value || 'all',
+                status: document.getElementById('clinic-attendance-status')?.value || 'all',
+                dateFrom: document.getElementById('clinic-attendance-from')?.value || '',
+                dateTo: document.getElementById('clinic-attendance-to')?.value || ''
+            };
+            this.renderAttendanceTab();
+        };
+        panel.querySelector('#clinic-attendance-search')?.addEventListener('input', applyFilters);
+        panel.querySelector('#clinic-attendance-role')?.addEventListener('change', applyFilters);
+        panel.querySelector('#clinic-attendance-status')?.addEventListener('change', applyFilters);
+        panel.querySelector('#clinic-attendance-from')?.addEventListener('change', applyFilters);
+        panel.querySelector('#clinic-attendance-to')?.addEventListener('change', applyFilters);
+        panel.querySelector('#clinic-attendance-export-btn')?.addEventListener('click', () => this.exportAttendanceToExcel());
+        panel.querySelector('#clinic-attendance-add-staff-btn')?.addEventListener('click', () => this.showAddClinicStaffModal());
+        panel.querySelector('#clinic-attendance-refresh-btn')?.addEventListener('click', async () => {
+            Notification?.info?.('جاري تحديث سجل الحضور...');
+            await this.loadClinicAttendanceData(true);
+            this.renderAttendanceTab();
+            Notification?.success?.('تم التحديث');
+        });
     },
 
     /**
@@ -13201,6 +13561,12 @@ const Clinic = {
                         تحليل البيانات
                     </button>
                     ` : ''}
+                    ${this.hasTabAccess('attendance') ? `
+                    <button class="clinic-tab-btn ${this.state.activeTab === 'attendance' ? 'active' : ''}" data-tab="attendance">
+                        <i class="fas fa-user-clock ml-2"></i>
+                        الحضور
+                    </button>
+                    ` : ''}
                 </div>
 
                 <!-- Tab Panels -->
@@ -13215,6 +13581,9 @@ const Clinic = {
                 ${isAdmin ? `
                 <div class="clinic-tab-panel ${this.state.activeTab === 'approvals' ? 'active' : ''}" data-tab-panel="approvals"></div>
                 <div class="clinic-tab-panel ${this.state.activeTab === 'data-analysis' ? 'active' : ''}" data-tab-panel="data-analysis"></div>
+                ` : ''}
+                ${this.hasTabAccess('attendance') ? `
+                <div class="clinic-tab-panel ${this.state.activeTab === 'attendance' ? 'active' : ''}" data-tab-panel="attendance"></div>
                 ` : ''}
             </div>
         `;

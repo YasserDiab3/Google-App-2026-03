@@ -321,7 +321,7 @@
                         // جلب قائمة الأوراق (نسخة من الكود الأصلي)
                         const baseSheets = [
                             'Users', 'Incidents', 'NearMiss', 'PTW', 'Training',
-                            'ClinicVisits', 'Medications', 'SickLeave', 'Injuries', 'ClinicInventory',
+                            'ClinicVisits', 'Medications', 'SickLeave', 'Injuries', 'ClinicInventory', 'ClinicStaff', 'ClinicStaffAttendance',
                             'FireEquipment', 'FireEquipmentAssets', 'FireEquipmentInspections',
                             'PeriodicInspectionCategories', 'PeriodicInspectionRecords', 'PeriodicInspectionSchedules', 'PeriodicInspectionChecklists',
                             'PPE', 'ViolationTypes', 'Violations',
@@ -356,7 +356,7 @@
                             'ClinicVisits': 'clinicVisits', 'ClinicContractorVisits': 'clinicContractorVisits',
                             'Medications': 'medications', 'SickLeave': 'sickLeave',
                             'Injuries': 'injuries', 'ClinicContractorInjuries': 'clinicContractorInjuries',
-                            'ClinicInventory': 'clinicInventory', 'FireEquipment': 'fireEquipment',
+                            'ClinicInventory': 'clinicInventory', 'ClinicStaff': 'clinicStaff', 'ClinicStaffAttendance': 'clinicStaffAttendance', 'FireEquipment': 'fireEquipment',
                             'FireEquipmentAssets': 'fireEquipmentAssets', 'FireEquipmentInspections': 'fireEquipmentInspections',
                             'PeriodicInspectionCategories': 'periodicInspectionCategories',
                             'PeriodicInspectionRecords': 'periodicInspectionRecords',
@@ -401,7 +401,7 @@
                             const moduleSheetsMap = {
                                 'users': ['Users'], 'incidents': ['Incidents'], 'nearmiss': ['NearMiss'],
                                 'ptw': ['PTW'], 'training': ['Training'],
-                                'clinic': ['ClinicVisits', 'Medications', 'SickLeave', 'Injuries', 'ClinicInventory'],
+                                'clinic': ['ClinicVisits', 'Medications', 'SickLeave', 'Injuries', 'ClinicInventory', 'ClinicStaff', 'ClinicStaffAttendance'],
                                 'fire-equipment': ['FireEquipment', 'FireEquipmentAssets', 'FireEquipmentInspections'],
                                 'periodic-inspections': ['PeriodicInspectionCategories', 'PeriodicInspectionRecords', 'PeriodicInspectionSchedules', 'PeriodicInspectionChecklists'],
                                 'ppe': ['PPE'], 'violations': ['Violations', 'ViolationTypes'],
