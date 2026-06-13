@@ -12550,6 +12550,18 @@ const Clinic = {
                 Loading.hide();
                 Notification.success('تم رفض الطلب بنجاح');
 
+                if (requestType === 'timeoff') {
+                    try {
+                        const refresh = await GoogleIntegration.sendRequest({
+                            action: 'getClinicStaffTimeOffRequests',
+                            data: {}
+                        });
+                        if (refresh?.success && Array.isArray(refresh.data)) {
+                            AppState.appData.clinicStaffTimeOffRequests = refresh.data;
+                        }
+                    } catch (_e) { /* ignore */ }
+                }
+
                 // تحديث تبويبة طلبات الموافقة فقط
                 setTimeout(() => {
                     this.renderApprovalsTab();
@@ -13516,72 +13528,226 @@ const Clinic = {
         XLSX.writeFile(workbook, `Clinic_Attendance_${this._attendanceReportFileSuffix(filters)}.xlsx`);
     },
 
-    exportAttendanceToPDF(overrideFilters) {
+    _buildAttendanceReportContent(filters, rows) {
+        const stats = this._computeAttendanceReportStats(rows);
+        const meta = this._buildAttendanceReportMeta(filters);
+        const isSelfView = !this.canViewAllAttendanceData();
+        const generatedAt = typeof Utils !== 'undefined' && Utils.formatDateTime
+            ? Utils.formatDateTime(new Date(), true)
+            : new Date().toLocaleString('ar-EG');
+
+        const kpiItems = [
+            { label: 'إجمالي السجلات', value: stats.total, color: '#2563eb', bg: '#eff6ff' },
+            { label: 'حاضر', value: stats.present, color: '#059669', bg: '#ecfdf5' },
+            { label: 'خروج جزئي', value: stats.partial, color: '#d97706', bg: '#fffbeb' },
+            { label: 'المسئولون', value: stats.staffCount, color: '#4f46e5', bg: '#eef2ff' },
+            { label: 'إجمالي الساعات', value: stats.totalHours, color: '#0d9488', bg: '#f0fdfa' }
+        ];
+
+        const kpiHtml = kpiItems.map(k => `
+            <div style="background:${k.bg};border:1px solid rgba(0,0,0,0.06);border-radius:10px;padding:12px 14px;text-align:center;">
+                <div style="font-size:10px;color:#64748b;font-weight:700;margin-bottom:4px;">${k.label}</div>
+                <div style="font-size:20px;font-weight:800;color:${k.color};line-height:1.1;">${k.value}</div>
+            </div>
+        `).join('');
+
+        const tableRows = rows.map((r, i) => {
+            const bg = i % 2 === 0 ? '#ffffff' : '#f8fafc';
+            const statusLabel = this.getAttendanceStatusLabel(r.status);
+            if (isSelfView) {
+                return `<tr style="background:${bg};">
+                    <td style="padding:8px 10px;border:1px solid #e2e8f0;">${Utils.escapeHTML(r.date || '—')}</td>
+                    <td style="padding:8px 10px;border:1px solid #e2e8f0;">${r.checkIn ? (Utils.formatDateTime ? Utils.formatDateTime(r.checkIn) : Utils.escapeHTML(String(r.checkIn))) : '—'}</td>
+                    <td style="padding:8px 10px;border:1px solid #e2e8f0;">${r.checkOut ? (Utils.formatDateTime ? Utils.formatDateTime(r.checkOut) : Utils.escapeHTML(String(r.checkOut))) : '—'}</td>
+                    <td style="padding:8px 10px;border:1px solid #e2e8f0;text-align:center;">${Utils.escapeHTML(String(r.workDuration || '—'))}</td>
+                    <td style="padding:8px 10px;border:1px solid #e2e8f0;">${Utils.escapeHTML(statusLabel)}</td>
+                </tr>`;
+            }
+            return `<tr style="background:${bg};">
+                <td style="padding:8px 10px;border:1px solid #e2e8f0;">${Utils.escapeHTML(r.userName || '—')}</td>
+                <td style="padding:8px 10px;border:1px solid #e2e8f0;font-size:10px;">${Utils.escapeHTML(r.userEmail || '—')}</td>
+                <td style="padding:8px 10px;border:1px solid #e2e8f0;">${Utils.escapeHTML(this.getStaffRoleLabel(r.staffRole))}</td>
+                <td style="padding:8px 10px;border:1px solid #e2e8f0;">${Utils.escapeHTML(r.date || '—')}</td>
+                <td style="padding:8px 10px;border:1px solid #e2e8f0;">${r.checkIn ? (Utils.formatDateTime ? Utils.formatDateTime(r.checkIn) : Utils.escapeHTML(String(r.checkIn))) : '—'}</td>
+                <td style="padding:8px 10px;border:1px solid #e2e8f0;">${r.checkOut ? (Utils.formatDateTime ? Utils.formatDateTime(r.checkOut) : Utils.escapeHTML(String(r.checkOut))) : '—'}</td>
+                <td style="padding:8px 10px;border:1px solid #e2e8f0;text-align:center;">${Utils.escapeHTML(String(r.workDuration || '—'))}</td>
+                <td style="padding:8px 10px;border:1px solid #e2e8f0;">${Utils.escapeHTML(statusLabel)}</td>
+            </tr>`;
+        }).join('');
+
+        const thead = isSelfView
+            ? `<tr style="background:linear-gradient(135deg,#134e4a,#0d9488);color:#fff;">
+                <th style="padding:10px;border:1px solid #0f766e;text-align:right;">التاريخ</th>
+                <th style="padding:10px;border:1px solid #0f766e;text-align:right;">وقت الدخول</th>
+                <th style="padding:10px;border:1px solid #0f766e;text-align:right;">وقت الخروج</th>
+                <th style="padding:10px;border:1px solid #0f766e;text-align:center;">المدة (س)</th>
+                <th style="padding:10px;border:1px solid #0f766e;text-align:right;">الحالة</th>
+            </tr>`
+            : `<tr style="background:linear-gradient(135deg,#134e4a,#0d9488);color:#fff;">
+                <th style="padding:10px;border:1px solid #0f766e;text-align:right;">الاسم</th>
+                <th style="padding:10px;border:1px solid #0f766e;text-align:right;">البريد</th>
+                <th style="padding:10px;border:1px solid #0f766e;text-align:right;">الدور</th>
+                <th style="padding:10px;border:1px solid #0f766e;text-align:right;">التاريخ</th>
+                <th style="padding:10px;border:1px solid #0f766e;text-align:right;">وقت الدخول</th>
+                <th style="padding:10px;border:1px solid #0f766e;text-align:right;">وقت الخروج</th>
+                <th style="padding:10px;border:1px solid #0f766e;text-align:center;">المدة (س)</th>
+                <th style="padding:10px;border:1px solid #0f766e;text-align:right;">الحالة</th>
+            </tr>`;
+
+        return `
+            <div style="margin-bottom:18px;">
+                <div style="background:linear-gradient(135deg,#134e4a 0%,#0d9488 100%);color:#fff;padding:16px 20px;border-radius:12px;margin-bottom:14px;box-shadow:0 4px 14px rgba(13,148,136,0.25);">
+                    <div style="font-size:17px;font-weight:800;margin-bottom:6px;">تقرير حضور مسئولي العيادة</div>
+                    <div style="font-size:11px;opacity:0.92;line-height:1.6;">
+                        <span><strong>النطاق:</strong> ${Utils.escapeHTML(meta)}</span>
+                        <span style="margin-right:12px;"> | </span>
+                        <span><strong>تاريخ الإصدار:</strong> ${Utils.escapeHTML(generatedAt)}</span>
+                    </div>
+                </div>
+                <div style="display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px;margin-bottom:16px;">
+                    ${kpiHtml}
+                </div>
+            </div>
+            <table style="width:100%;border-collapse:collapse;font-size:11px;direction:rtl;">
+                <thead>${thead}</thead>
+                <tbody>${tableRows}</tbody>
+            </table>
+        `;
+    },
+
+    async _ensureAttendancePdfLibs_() {
+        const loadLib = (src, check) => new Promise((res, rej) => {
+            if (check()) return res();
+            const s = document.createElement('script');
+            s.src = src;
+            s.onload = () => res();
+            s.onerror = () => rej(new Error('Failed: ' + src));
+            document.head.appendChild(s);
+        });
+        try {
+            await loadLib('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js', () => typeof html2canvas !== 'undefined');
+            await loadLib('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js', () => typeof window.jspdf !== 'undefined');
+            return true;
+        } catch (_e) {
+            return false;
+        }
+    },
+
+    async _downloadAttendanceHtmlAsPdf(htmlContent, fileName) {
+        const libsReady = await this._ensureAttendancePdfLibs_();
+        if (!libsReady || typeof html2canvas === 'undefined' || !window.jspdf) return false;
+
+        const pdfFileName = String(fileName || 'report.pdf').toLowerCase().endsWith('.pdf')
+            ? String(fileName)
+            : `${String(fileName)}.pdf`;
+
+        const iframe = document.createElement('iframe');
+        iframe.setAttribute('aria-hidden', 'true');
+        iframe.style.cssText = 'position:fixed;left:-100000px;top:0;width:900px;height:1200px;border:0;visibility:hidden;';
+        document.body.appendChild(iframe);
+
+        try {
+            iframe.srcdoc = htmlContent;
+            await new Promise((resolve) => {
+                iframe.onload = resolve;
+                iframe.onerror = resolve;
+                setTimeout(resolve, 5000);
+            });
+
+            const iDoc = iframe.contentDocument || iframe.contentWindow?.document;
+            if (!iDoc) return false;
+
+            const images = Array.from(iDoc.images || []);
+            await Promise.all(images.map((img) => new Promise((resolve) => {
+                if (img.complete) return resolve();
+                img.onload = resolve;
+                img.onerror = resolve;
+                setTimeout(resolve, 2000);
+            })));
+
+            const root = iDoc.querySelector('.report-wrapper') || iDoc.body;
+            if (!root) return false;
+
+            const canvas = await html2canvas(root, {
+                scale: 2,
+                useCORS: true,
+                backgroundColor: '#ffffff',
+                logging: false,
+                scrollX: 0,
+                scrollY: 0
+            });
+
+            const { jsPDF } = window.jspdf;
+            const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+            const pdfW = pdf.internal.pageSize.getWidth();
+            const pdfH = pdf.internal.pageSize.getHeight();
+            const margin = 8;
+            const contentW = pdfW - margin * 2;
+            const ratio = contentW / canvas.width;
+            const pageContentH = pdfH - margin * 2;
+            const pageHeightPx = pageContentH / ratio;
+            const totalPages = Math.max(1, Math.ceil(canvas.height / pageHeightPx));
+
+            for (let p = 0; p < totalPages; p++) {
+                if (p > 0) pdf.addPage();
+                const sliceH = Math.min(pageHeightPx, canvas.height - p * pageHeightPx);
+                const sliceCanvas = document.createElement('canvas');
+                sliceCanvas.width = canvas.width;
+                sliceCanvas.height = sliceH;
+                sliceCanvas.getContext('2d').drawImage(
+                    canvas, 0, p * pageHeightPx, canvas.width, sliceH, 0, 0, canvas.width, sliceH
+                );
+                pdf.addImage(sliceCanvas.toDataURL('image/png'), 'PNG', margin, margin, contentW, sliceH * ratio);
+            }
+
+            pdf.save(pdfFileName);
+            return true;
+        } catch (error) {
+            Utils.safeWarn('فشل تحميل تقرير حضور PDF:', error);
+            return false;
+        } finally {
+            iframe.remove();
+        }
+    },
+
+    async exportAttendanceToPDF(overrideFilters) {
         const filters = overrideFilters || this.state.filters.attendance || {};
         const rows = this._filterAttendanceRows(this.getClinicStaffAttendanceList(), filters);
         if (!rows.length) {
             Notification?.info?.('لا توجد بيانات لتصديرها');
             return;
         }
-        const stats = this._computeAttendanceReportStats(rows);
-        const meta = this._buildAttendanceReportMeta(filters);
-        const tableRows = rows.map(r => `
-            <tr>
-                <td>${Utils.escapeHTML(r.userName || '—')}</td>
-                <td>${Utils.escapeHTML(r.userEmail || '—')}</td>
-                <td>${Utils.escapeHTML(this.getStaffRoleLabel(r.staffRole))}</td>
-                <td>${Utils.escapeHTML(r.date || '—')}</td>
-                <td>${r.checkIn ? (Utils.formatDateTime ? Utils.formatDateTime(r.checkIn) : Utils.escapeHTML(String(r.checkIn))) : '—'}</td>
-                <td>${r.checkOut ? (Utils.formatDateTime ? Utils.formatDateTime(r.checkOut) : Utils.escapeHTML(String(r.checkOut))) : '—'}</td>
-                <td class="text-center">${Utils.escapeHTML(String(r.workDuration || '—'))}</td>
-                <td>${Utils.escapeHTML(this.getAttendanceStatusLabel(r.status))}</td>
-            </tr>
-        `).join('');
 
-        const content = `
-            <div style="margin-bottom:14px;padding:14px 16px;background:#f0fdfa;border:1px solid #99f6e4;border-radius:10px;font-size:13px;line-height:1.7;">
-                <div><strong>نطاق التقرير:</strong> ${Utils.escapeHTML(meta)}</div>
-                <div style="margin-top:8px;display:flex;flex-wrap:wrap;gap:12px;">
-                    <span><strong>السجلات:</strong> ${stats.total}</span>
-                    <span><strong>المسئولون:</strong> ${stats.staffCount}</span>
-                    <span><strong>حاضر:</strong> ${stats.present}</span>
-                    <span><strong>خروج جزئي:</strong> ${stats.partial}</span>
-                    <span><strong>إجمالي الساعات:</strong> ${stats.totalHours}</span>
-                </div>
-            </div>
-            <table>
-                <thead>
-                    <tr>
-                        <th>الاسم</th><th>البريد</th><th>الدور</th><th>التاريخ</th>
-                        <th>وقت الدخول</th><th>وقت الخروج</th><th>المدة (س)</th><th>الحالة</th>
-                    </tr>
-                </thead>
-                <tbody>${tableRows}</tbody>
-            </table>
-        `;
-
+        const content = this._buildAttendanceReportContent(filters, rows);
         const formCode = `CLINIC-ATT-${this._attendanceReportFileSuffix(filters)}`;
         const htmlContent = typeof FormHeader !== 'undefined' && FormHeader.generatePDFHTML
-            ? FormHeader.generatePDFHTML(formCode, 'تقرير حضور مسئولي العيادة', content, false, true)
-            : `<html dir="rtl" lang="ar"><body>${content}</body></html>`;
+            ? FormHeader.generatePDFHTML(
+                formCode,
+                'تقرير حضور مسئولي العيادة',
+                content,
+                false,
+                false,
+                { includeQRCode: false, compactPdfFooter: true, source: 'ClinicStaffAttendance' },
+                new Date().toISOString(),
+                new Date().toISOString()
+            )
+            : `<html dir="rtl" lang="ar"><head><meta charset="UTF-8"><title>تقرير حضور</title></head><body>${content}</body></html>`;
 
+        const fileName = `Clinic_Attendance_${this._attendanceReportFileSuffix(filters)}.pdf`;
+
+        if (typeof Loading !== 'undefined' && Loading.show) Loading.show();
         try {
-            const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
-            const url = URL.createObjectURL(blob);
-            const printWindow = window.open(url, '_blank');
-            if (printWindow) {
-                printWindow.onload = () => {
-                    setTimeout(() => {
-                        printWindow.print();
-                        setTimeout(() => URL.revokeObjectURL(url), 1000);
-                    }, 450);
-                };
+            const ok = await this._downloadAttendanceHtmlAsPdf(htmlContent, fileName);
+            if (ok) {
+                Notification?.success?.('تم تحميل تقرير PDF بنجاح');
             } else {
-                Notification?.error?.('يرجى السماح للنوافذ المنبثقة لتصدير PDF');
+                Notification?.error?.('تعذّر تحميل التقرير — تحقق من الاتصال وحاول مجدداً');
             }
         } catch (error) {
             Utils.safeError('فشل تصدير تقرير الحضور PDF:', error);
             Notification?.error?.('تعذر تصدير تقرير الحضور');
+        } finally {
+            if (typeof Loading !== 'undefined' && Loading.hide) Loading.hide();
         }
     },
 
@@ -13707,10 +13873,9 @@ const Clinic = {
             modal.remove();
             if (format === 'excel') {
                 this.exportAttendanceToExcel(filters);
-                Notification?.success?.('تم تصدير تقرير Excel');
+                Notification?.success?.('تم تحميل تقرير Excel');
             } else {
                 this.exportAttendanceToPDF(filters);
-                Notification?.success?.('تم فتح تقرير PDF للطباعة/الحفظ');
             }
         });
     },
