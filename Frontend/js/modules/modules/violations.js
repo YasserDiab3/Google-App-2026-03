@@ -2037,6 +2037,51 @@ const Violations = {
             .sort((a, b) => a.name.localeCompare(b.name, 'ar', { sensitivity: 'base' }));
     },
 
+    _normalizeContractorExportName(name) {
+        const raw = String(name || '').replace(/\s+/g, ' ').trim();
+        if (!raw) return '';
+        const dashIdx = raw.indexOf(' - ');
+        const baseName = dashIdx > 0 ? raw.slice(0, dashIdx).trim() : raw;
+        return this._normKeyStr(baseName);
+    },
+
+    _resolveContractorExportIdentity(contractorId = '', contractorName = '') {
+        const id = String(contractorId || '').trim();
+        let name = this._normalizeContractorExportName(contractorName);
+
+        if (id) {
+            const pools = [
+                ...(Array.isArray(AppState.appData?.contractors) ? AppState.appData.contractors : []),
+                ...(Array.isArray(AppState.appData?.approvedContractors) ? AppState.appData.approvedContractors : [])
+            ];
+            const match = pools.find((c) => String(c?.id || c?.contractorId || '').trim() === id);
+            if (match) {
+                name = this._normalizeContractorExportName(match.name || match.companyName || contractorName);
+            }
+        }
+
+        return { id, name };
+    },
+
+    _violationMatchesContractorExport(violation, identity) {
+        if (!identity?.id && !identity?.name) return true;
+
+        const isContractorViolation = violation?.personType === 'contractor'
+            || !!String(violation?.contractorName || '').trim();
+        if (!isContractorViolation) return false;
+
+        const recordId = String(violation?.contractorId || '').trim();
+        const recordName = this._normalizeContractorExportName(violation?.contractorName);
+        const legacyIdAsName = recordId ? this._normalizeContractorExportName(recordId) : '';
+
+        if (identity.id && recordId && recordId === identity.id) return true;
+        if (identity.name && recordName && recordName === identity.name) return true;
+        if (identity.id && legacyIdAsName && legacyIdAsName === this._normalizeContractorExportName(identity.id)) return true;
+        if (identity.name && legacyIdAsName && legacyIdAsName === identity.name) return true;
+
+        return false;
+    },
+
     showContractorViolationsReportDialog() {
         const contractors = this.getContractorViolationsExportOptions();
         const currentDate = new Date();
@@ -2073,7 +2118,7 @@ const Violations = {
                         <select id="contractor-violations-report-select" class="form-input">
                             <option value="">جميع المقاولين</option>
                             ${contractors.map(contractor => `
-                                <option value="${Utils.escapeHTML(String(contractor.id ?? '').trim())}">
+                                <option value="${Utils.escapeHTML(String(contractor.id ?? '').trim())}" data-contractor-name="${Utils.escapeHTML(contractor.name || '')}">
                                     ${Utils.escapeHTML(contractor.name || 'بدون اسم')}
                                 </option>
                             `).join('')}
@@ -2150,10 +2195,13 @@ const Violations = {
 
         modal.querySelector('#generate-contractor-violations-report-btn')?.addEventListener('click', async () => {
             const contractorSelect = modal.querySelector('#contractor-violations-report-select');
-            const selectedContractorId = contractorSelect?.value ? String(contractorSelect.value).trim() : '';
-            const selectedContractorName = selectedContractorId
-                ? String(contractorSelect?.options?.[contractorSelect.selectedIndex]?.textContent || '').replace(/\s+/g, ' ').trim()
-                : '';
+            const selectedOption = contractorSelect && contractorSelect.selectedIndex >= 0
+                ? contractorSelect.options[contractorSelect.selectedIndex]
+                : null;
+            const selectedContractorId = selectedOption?.value ? String(selectedOption.value).trim() : '';
+            const selectedContractorName = selectedOption?.dataset?.contractorName
+                ? String(selectedOption.dataset.contractorName).trim()
+                : String(selectedOption?.textContent || '').replace(/\s+/g, ' ').trim();
             const dateRangeType = modal.querySelector('input[name="contractor-violations-range-type"]:checked')?.value || 'all';
             const month = modal.querySelector('#contractor-violations-report-month')?.value || '';
             const fromDate = modal.querySelector('#contractor-violations-report-from-date')?.value || '';
@@ -2185,18 +2233,13 @@ const Violations = {
     },
 
     async generateContractorViolationsReport(contractorId = '', dateFilter = {}, selectedContractorName = '') {
-        const normalizedContractorId = String(contractorId || '').trim();
-        const normalizedName = String(selectedContractorName || '').replace(/\s+/g, ' ').trim().toLowerCase();
-        let violations = (AppState.appData.violations || []).filter(v => v.contractorName || v.personType === 'contractor');
+        const contractorIdentity = this._resolveContractorExportIdentity(contractorId, selectedContractorName);
+        let violations = (AppState.appData.violations || []).filter(v =>
+            v?.personType === 'contractor' || !!String(v?.contractorName || '').trim()
+        );
 
-        if (normalizedContractorId || normalizedName) {
-            violations = violations.filter(v => {
-                const recordId = String(v.contractorId || '').trim();
-                const recordName = String(v.contractorName || '').replace(/\s+/g, ' ').trim().toLowerCase();
-                if (normalizedContractorId && recordId && normalizedContractorId === recordId) return true;
-                if (normalizedName && recordName && (recordName === normalizedName || recordName.includes(normalizedName) || normalizedName.includes(recordName))) return true;
-                return false;
-            });
+        if (contractorIdentity.id || contractorIdentity.name) {
+            violations = violations.filter(v => this._violationMatchesContractorExport(v, contractorIdentity));
         }
 
         const { dateRangeType = 'all', month = '', fromDate = '', toDate = '' } = dateFilter || {};
