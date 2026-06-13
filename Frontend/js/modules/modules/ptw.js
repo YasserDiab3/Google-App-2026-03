@@ -6879,8 +6879,9 @@ const PTW = {
 
     PERMIT_A4_WIDTH_PX: 794,
     PERMIT_A4_HEIGHT_PX: 1123,
-    PERMIT_A4_MARGIN_MM: 4,
+    PERMIT_A4_MARGIN_MM: 3,
     PERMIT_A4_MAX_PAGES: 2,
+    PERMIT_A4_CAPTURE_SCALE: 3,
 
     getManualPermitPrintStyles(forPdfExport = false) {
         const a4Overrides = forPdfExport ? `
@@ -6900,9 +6901,10 @@ const PTW = {
             .ptw-a4-page {
                 width: ${this.PERMIT_A4_WIDTH_PX}px !important;
                 max-width: ${this.PERMIT_A4_WIDTH_PX}px !important;
-                min-height: ${this.PERMIT_A4_HEIGHT_PX}px;
+                height: auto;
+                min-height: 0;
                 box-sizing: border-box;
-                padding: 6px 8px 8px;
+                padding: 8px 10px 10px;
                 background: #fff;
                 overflow: hidden;
             }
@@ -6920,29 +6922,29 @@ const PTW = {
             .ptw-paper-header-dept { font-size: 10px; }
             .ptw-paper-header-logo { max-height: 48px; max-width: 110px; }
             .manual-print-disclaimer-wrap { margin-bottom: 8px; }
-            .manual-print-disclaimer-text { font-size: 10px; line-height: 1.55; padding: 8px; }
-            .manual-print-permit-no { padding: 8px; }
-            .manual-print-seq-badge { padding: 6px 18px; }
-            .manual-print-seq-badge .val { font-size: 18px; letter-spacing: 1px; }
-            .ptw-manual-form-section { margin: 4px 0; padding: 8px 10px; border-radius: 8px; page-break-inside: auto; break-inside: auto; }
-            .ptw-manual-form-section h3 { font-size: 11px; margin-bottom: 6px; padding-bottom: 4px; display: block; }
-            .manual-print-field .lbl { font-size: 8px; }
-            .manual-print-field .val { font-size: 9px; }
-            .manual-print-grid { gap: 6px; }
-            .ptw-paper-grid-table { font-size: 8px; }
-            .ptw-paper-grid-table th, .ptw-paper-grid-table td { padding: 3px 4px; }
-            .ptw-manual-ppe-fixed-row { gap: 3px 2px; margin-bottom: 3px; }
-            .ptw-manual-ppe-cell { font-size: 7.5px; padding: 3px 2px; min-height: 22px; line-height: 1.25; letter-spacing: 0; }
-            .ppe-checkbox { width: 10px; height: 10px; border-width: 1.5px; }
-            .ppe-checkbox.checked::after { left: 2px; top: 0; width: 3px; height: 5px; }
-            .manual-risk-matrix { font-size: 7.5px; }
-            .manual-risk-matrix th, .manual-risk-matrix td { padding: 2px; }
-            .manual-risk-badge { width: 36px; height: 36px; font-size: 13px; }
-            .manual-print-req-item { font-size: 8px; padding: 4px; }
-            .manual-print-supervisor-card { padding: 8px 10px; }
-            .manual-print-supervisor-card .val { font-size: 10px; }
-            .manual-work-block { padding: 6px; margin-bottom: 4px; }
-            .manual-work-block h4 { font-size: 10px; margin-bottom: 4px; }
+            .manual-print-disclaimer-text { font-size: 11px; line-height: 1.6; padding: 10px; }
+            .manual-print-permit-no { padding: 10px; }
+            .manual-print-seq-badge { padding: 8px 20px; }
+            .manual-print-seq-badge .val { font-size: 20px; letter-spacing: 1px; }
+            .ptw-manual-form-section { margin: 5px 0; padding: 9px 11px; border-radius: 8px; page-break-inside: auto; break-inside: auto; }
+            .ptw-manual-form-section h3 { font-size: 12px; margin-bottom: 7px; padding-bottom: 5px; display: block; }
+            .manual-print-field .lbl { font-size: 9px; }
+            .manual-print-field .val { font-size: 10px; }
+            .manual-print-grid { gap: 7px; }
+            .ptw-paper-grid-table { font-size: 9px; }
+            .ptw-paper-grid-table th, .ptw-paper-grid-table td { padding: 4px 5px; }
+            .ptw-manual-ppe-fixed-row { gap: 4px 3px; margin-bottom: 4px; }
+            .ptw-manual-ppe-cell { font-size: 8.5px; padding: 4px 3px; min-height: 24px; line-height: 1.3; letter-spacing: 0; }
+            .ppe-checkbox { width: 11px; height: 11px; border-width: 1.5px; }
+            .ppe-checkbox.checked::after { left: 2px; top: 0; width: 3px; height: 6px; }
+            .manual-risk-matrix { font-size: 8.5px; }
+            .manual-risk-matrix th, .manual-risk-matrix td { padding: 3px; }
+            .manual-risk-badge { width: 40px; height: 40px; font-size: 14px; }
+            .manual-print-req-item { font-size: 9px; padding: 5px; }
+            .manual-print-supervisor-card { padding: 9px 11px; }
+            .manual-print-supervisor-card .val { font-size: 11px; }
+            .manual-work-block { padding: 7px; margin-bottom: 5px; }
+            .manual-work-block h4 { font-size: 11px; margin-bottom: 4px; }
             .ptw-paper-footer { margin-top: 8px; padding-top: 6px; border-top: 2px solid #e0e7ff; }
             .ptw-paper-footer-frame {
                 background: linear-gradient(135deg, rgba(59, 130, 246, 0.03), rgba(37, 99, 235, 0.05));
@@ -7567,27 +7569,102 @@ const PTW = {
         } catch (_e) { /* ignore */ }
     },
 
-    _addPermitPdfPageImage_(pdf, canvas, marginMm) {
+    _preparePermitA4PageForCapture_(pageEl, iDoc) {
+        const maxW = this.PERMIT_A4_WIDTH_PX;
+        const maxH = this.PERMIT_A4_HEIGHT_PX;
+        if (!pageEl) return { captureEl: null, captureH: maxH, captureW: maxW, scale: 1 };
+
+        pageEl.style.width = `${maxW}px`;
+        pageEl.style.maxWidth = `${maxW}px`;
+        pageEl.style.boxSizing = 'border-box';
+        pageEl.style.minHeight = '0';
+        pageEl.style.height = 'auto';
+        pageEl.style.margin = '0';
+        pageEl.style.zoom = '1';
+        pageEl.style.transform = '';
+        pageEl.style.transformOrigin = 'top right';
+
+        const naturalH = Math.max(pageEl.scrollHeight, pageEl.offsetHeight, 1);
+        const scaleY = maxH / naturalH;
+        pageEl.style.transform = `scale(1, ${scaleY})`;
+        pageEl.style.transformOrigin = 'top right';
+
+        let frame = pageEl.closest('.ptw-a4-capture-frame');
+        if (!frame && iDoc) {
+            frame = iDoc.createElement('div');
+            frame.className = 'ptw-a4-capture-frame';
+            const parent = pageEl.parentNode;
+            if (parent) {
+                parent.insertBefore(frame, pageEl);
+                frame.appendChild(pageEl);
+            }
+        }
+        if (frame) {
+            frame.style.width = `${maxW}px`;
+            frame.style.height = `${maxH}px`;
+            frame.style.maxWidth = `${maxW}px`;
+            frame.style.maxHeight = `${maxH}px`;
+            frame.style.overflow = 'hidden';
+            frame.style.background = '#ffffff';
+            frame.style.position = 'relative';
+            frame.style.boxSizing = 'border-box';
+        }
+
+        return {
+            captureEl: frame || pageEl,
+            captureH: maxH,
+            captureW: maxW,
+            scale: scaleY
+        };
+    },
+
+    _addPermitPdfPageImage_(pdf, canvas, marginMm, options = {}) {
         const pdfW = pdf.internal.pageSize.getWidth();
         const pdfH = pdf.internal.pageSize.getHeight();
         const contentWmm = pdfW - marginMm * 2;
         const contentHmm = pdfH - marginMm * 2;
-        let drawWmm = contentWmm;
-        let drawHmm = (canvas.height / canvas.width) * drawWmm;
-        if (drawHmm > contentHmm) {
-            const scale = contentHmm / drawHmm;
-            drawHmm = contentHmm;
-            drawWmm = drawWmm * scale;
+        const fillPage = options.fillPage === true;
+        const imageType = options.imageType || 'PNG';
+        const imageData = imageType === 'JPEG'
+            ? canvas.toDataURL('image/jpeg', 0.96)
+            : canvas.toDataURL('image/png');
+
+        if (fillPage) {
+            pdf.addImage(imageData, imageType, marginMm, marginMm, contentWmm, contentHmm);
+            return;
         }
-        const offsetX = marginMm + (contentWmm - drawWmm) / 2;
-        pdf.addImage(
-            canvas.toDataURL('image/png'),
-            'PNG',
-            offsetX,
-            marginMm,
-            drawWmm,
-            drawHmm
-        );
+
+        const drawWmm = contentWmm;
+        const drawHmm = Math.min((canvas.height / canvas.width) * drawWmm, contentHmm);
+        pdf.addImage(imageData, imageType, marginMm, marginMm, drawWmm, drawHmm);
+    },
+
+    _slicePermitCanvasToPdfPages_(pdf, canvas, marginMm, maxPages) {
+        const pdfW = pdf.internal.pageSize.getWidth();
+        const pdfH = pdf.internal.pageSize.getHeight();
+        const contentWmm = pdfW - marginMm * 2;
+        const contentHmm = pdfH - marginMm * 2;
+        const pxPerMm = canvas.width / contentWmm;
+        const slicePxH = Math.max(1, Math.floor(contentHmm * pxPerMm));
+        const totalSlices = Math.min(maxPages || 2, Math.max(1, Math.ceil(canvas.height / slicePxH)));
+
+        for (let p = 0; p < totalSlices; p++) {
+            if (p > 0) pdf.addPage();
+            const srcY = p * slicePxH;
+            const sliceH = Math.min(slicePxH, canvas.height - srcY);
+            const sliceCanvas = document.createElement('canvas');
+            sliceCanvas.width = canvas.width;
+            sliceCanvas.height = sliceH;
+            const ctx = sliceCanvas.getContext('2d');
+            if (ctx) {
+                ctx.fillStyle = '#ffffff';
+                ctx.fillRect(0, 0, sliceCanvas.width, sliceCanvas.height);
+                ctx.drawImage(canvas, 0, srcY, canvas.width, sliceH, 0, 0, canvas.width, sliceH);
+            }
+            const drawWmm = contentWmm;
+            const drawHmm = Math.min((sliceH / canvas.width) * drawWmm, contentHmm);
+            pdf.addImage(sliceCanvas.toDataURL('image/png'), 'PNG', marginMm, marginMm, drawWmm, drawHmm);
+        }
     },
 
     async _ensureHtml2CanvasInFrame_(iDoc, iWin) {
@@ -7603,11 +7680,12 @@ const PTW = {
         });
     },
 
-    async _capturePermitHtmlToCanvas_(root, iWin) {
-        const a4W = this.PERMIT_A4_WIDTH_PX;
+    async _capturePermitHtmlToCanvas_(root, iWin, options = {}) {
+        const a4W = options.width || this.PERMIT_A4_WIDTH_PX;
+        const a4H = options.height || Math.max(root?.scrollHeight || 1, 1);
         const scrollW = Math.max(root?.scrollWidth || a4W, a4W);
-        const scrollH = Math.max(root?.scrollHeight || 1, 1);
-        let scale = 2;
+        const scrollH = Math.max(root?.scrollHeight || a4H, a4H, 1);
+        let scale = this.PERMIT_A4_CAPTURE_SCALE || 3;
         while (scale > 1 && (scrollW * scale > 16000 || scrollH * scale > 16000)) {
             scale -= 0.25;
         }
@@ -7703,11 +7781,18 @@ const PTW = {
                 for (let p = 0; p < pagesToRender.length; p++) {
                     if (p > 0) pdf.addPage();
                     const pageEl = pagesToRender[p];
-                    const pageHeight = Math.max(pageEl.scrollHeight, pageEl.offsetHeight, 1);
-                    iframe.style.height = `${pageHeight + 60}px`;
-                    const canvas = await this._capturePermitHtmlToCanvas_(pageEl, iWin);
+                    const fit = this._preparePermitA4PageForCapture_(pageEl, iDoc);
+                    const captureTarget = fit.captureEl || pageEl;
+                    iframe.style.width = `${fit.captureW}px`;
+                    iframe.style.height = `${fit.captureH + 40}px`;
+                    await new Promise((r) => setTimeout(r, 120));
+                    const canvas = await this._capturePermitHtmlToCanvas_(captureTarget, iWin, {
+                        width: fit.captureW,
+                        height: fit.captureH
+                    });
                     if (!canvas) return false;
-                    this._addPermitPdfPageImage_(pdf, canvas, marginMm);
+                    this._addPermitPdfPageImage_(pdf, canvas, marginMm, { fillPage: true });
+                    pageEl.style.transform = '';
                 }
             } else {
                 const contentHeight = Math.max(root.scrollHeight, root.offsetHeight, this.PERMIT_A4_HEIGHT_PX);
@@ -7716,26 +7801,7 @@ const PTW = {
                 const canvas = await this._capturePermitHtmlToCanvas_(root, iWin);
                 if (!canvas) return false;
 
-                const pdfW = pdf.internal.pageSize.getWidth();
-                const pdfH = pdf.internal.pageSize.getHeight();
-                const contentWmm = pdfW - marginMm * 2;
-                const contentHmm = pdfH - marginMm * 2;
-                const pxPerMm = canvas.width / contentWmm;
-                const pageHeightPx = contentHmm * pxPerMm;
-                let totalPages = Math.max(1, Math.ceil(canvas.height / pageHeightPx));
-                if (totalPages > maxPages) totalPages = maxPages;
-
-                for (let p = 0; p < totalPages; p++) {
-                    if (p > 0) pdf.addPage();
-                    const sliceH = Math.min(pageHeightPx, canvas.height - p * pageHeightPx);
-                    const sliceCanvas = document.createElement('canvas');
-                    sliceCanvas.width = canvas.width;
-                    sliceCanvas.height = sliceH;
-                    sliceCanvas.getContext('2d').drawImage(
-                        canvas, 0, p * pageHeightPx, canvas.width, sliceH, 0, 0, canvas.width, sliceH
-                    );
-                    this._addPermitPdfPageImage_(pdf, sliceCanvas, marginMm);
-                }
+                this._slicePermitCanvasToPdfPages_(pdf, canvas, marginMm, maxPages);
             }
 
             pdf.save(pdfFileName);
