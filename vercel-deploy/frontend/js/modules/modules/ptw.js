@@ -6880,8 +6880,121 @@ const PTW = {
     PERMIT_A4_WIDTH_PX: 794,
     PERMIT_A4_HEIGHT_PX: 1123,
     PERMIT_A4_MARGIN_MM: 3,
-    PERMIT_A4_MAX_PAGES: 2,
+    PERMIT_A4_MAX_PAGES: 4,
     PERMIT_A4_CAPTURE_SCALE: 2,
+
+    getManualPermitPdfCaptureSafeStyles_() {
+        const w = this.PERMIT_A4_WIDTH_PX;
+        return `
+            @page { size: A4 portrait; margin: 5mm; }
+            html, body {
+                width: ${w}px !important;
+                max-width: ${w}px !important;
+                margin: 0 !important;
+                padding: 8px !important;
+                background: #fff !important;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }
+            .ptw-manual-print, #ptw-permit-print-root {
+                width: ${w}px !important;
+                max-width: ${w}px !important;
+                margin: 0 !important;
+                transform: none !important;
+                zoom: 1 !important;
+            }
+            .ptw-a4-page {
+                width: ${w}px !important;
+                max-width: ${w}px !important;
+                transform: none !important;
+                zoom: 1 !important;
+                overflow: visible !important;
+                padding: 6px 8px !important;
+            }
+            .ptw-paper-header-center { display: block !important; text-align: center !important; }
+            .ptw-paper-header-center .ptw-paper-header-form-title,
+            .ptw-paper-header-center .ptw-paper-header-form-subtitle { display: block !important; }
+            .ptw-paper-header-company, .ptw-paper-header-dept, .ptw-paper-header-form-title,
+            .ptw-paper-header-form-subtitle, .ppe-label, .manual-print-field .lbl, .manual-print-field .val {
+                letter-spacing: 0 !important;
+                word-spacing: normal !important;
+                line-height: 1.4 !important;
+                transform: none !important;
+            }
+            .manual-print-grid { display: block !important; }
+            .manual-print-grid .manual-print-field {
+                display: block !important;
+                width: 100% !important;
+                margin-bottom: 5px !important;
+            }
+            .manual-print-req-grid { display: block !important; }
+            .manual-print-req-grid .manual-print-req-item {
+                display: block !important;
+                width: 100% !important;
+                margin-bottom: 4px !important;
+            }
+            .ptw-manual-ppe-fixed-row {
+                display: table !important;
+                width: 100% !important;
+                table-layout: fixed !important;
+                border-collapse: separate !important;
+                border-spacing: 4px !important;
+                margin-bottom: 4px !important;
+            }
+            .ptw-manual-ppe-fixed-row .ptw-manual-ppe-cell {
+                display: table-cell !important;
+                vertical-align: top !important;
+                transform: none !important;
+            }
+            .manual-print-supervisors-grid { display: block !important; }
+            .manual-print-supervisor-card { display: block !important; margin-bottom: 6px !important; }
+            .ptw-paper-footer-meta { display: block !important; text-align: center !important; }
+            .ptw-pf-item { display: block !important; margin: 2px 0 !important; }
+            .ptw-paper-footer-company { display: block !important; text-align: center !important; }
+            .ptw-manual-form-section h3 { display: block !important; }
+            .manual-risk-summary { display: block !important; }
+            .manual-risk-badge { display: inline-block !important; margin: 4px !important; }
+            .ptw-capture-mode .ptw-manual-form-section h3 {
+                display: block !important;
+                flex: none !important;
+            }
+            .ptw-capture-mode .ptw-manual-ppe-cell {
+                display: block !important;
+                text-align: right !important;
+            }
+            .ptw-capture-mode .ppe-checkbox {
+                display: inline-block !important;
+                vertical-align: top !important;
+                margin-left: 6px !important;
+            }
+            .ptw-capture-mode .ppe-label {
+                display: inline !important;
+                white-space: normal !important;
+            }
+            .ptw-capture-mode .manual-print-permit-no {
+                display: block !important;
+                text-align: center !important;
+            }
+            .ptw-capture-mode .manual-print-seq-badge {
+                display: inline-block !important;
+            }
+            .ptw-capture-mode .manual-risk-summary {
+                display: block !important;
+            }
+            .ptw-capture-mode .manual-risk-badge {
+                display: inline-block !important;
+                text-align: center !important;
+                line-height: 48px !important;
+            }
+            .ptw-capture-mode .ptw-paper-header-logo-fallback {
+                display: inline-block !important;
+            }
+            .ptw-capture-mode * {
+                -webkit-font-smoothing: antialiased !important;
+                text-rendering: optimizeLegibility !important;
+            }
+        `;
+    },
 
     getManualPermitPrintStyles(forPdfExport = false) {
         const a4Overrides = forPdfExport ? `
@@ -7503,7 +7616,9 @@ const PTW = {
     },
 
     generateManualPermitPrintHTML(entry, options = {}) {
+        const pdfExport = options?.pdfExport === true;
         const forPdf = options?.forPdf === true;
+        const forA4Layout = pdfExport || forPdf;
         const content = this.generateManualPermitPrintContent(entry);
         const displayNo = this.getPermitDisplayNumber(entry);
         const footerMeta = {
@@ -7512,8 +7627,10 @@ const PTW = {
             revisionDate: entry?.updatedAt || entry?.timeTo || entry?.createdAt
         };
         const footer = this.renderPermitSystemFooter(footerMeta);
-        const header = this.renderPermitSystemHeader({ forPdf });
-        const bodyHtml = this._splitManualPermitPrintPages_(content, header, footer, forPdf);
+        const header = this.renderPermitSystemHeader({ forPdf: forA4Layout });
+        const bodyHtml = this._splitManualPermitPrintPages_(content, header, footer, forA4Layout);
+        const captureStyles = pdfExport ? this.getManualPermitPdfCaptureSafeStyles_() : '';
+        const styleBlock = `${this.getManualPermitPrintStyles(forA4Layout)}${captureStyles}`;
 
         const html = `<!DOCTYPE html>
 <html dir="rtl" lang="ar">
@@ -7523,17 +7640,17 @@ const PTW = {
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
     <title>تصريح عمل يدوي #${Utils.escapeHTML(displayNo)}</title>
-    <style>${this.getManualPermitPrintStyles(forPdf)}</style>
+    <style>${styleBlock}</style>
 </head>
 <body>
-    <div class="ptw-manual-print${forPdf ? ' ptw-manual-print-a4' : ''}" id="ptw-permit-print-root">
+    <div class="ptw-manual-print${forA4Layout ? ' ptw-manual-print-a4' : ''}${pdfExport ? ' ptw-capture-mode' : ''}" id="ptw-permit-print-root">
         ${bodyHtml}
     </div>
 </body>
 </html>`;
 
         if (options?.skipReview !== true) {
-            this._logManualPermitExportReview_(html, entry, forPdf ? 'pdf' : 'print');
+            this._logManualPermitExportReview_(html, entry, pdfExport ? 'pdf-capture' : (forPdf ? 'pdf' : 'print'));
         }
         return html;
     },
@@ -7728,19 +7845,16 @@ const PTW = {
             pageEl.style.width = `${a4W}px`;
             pageEl.style.maxWidth = `${a4W}px`;
             pageEl.style.boxSizing = 'border-box';
-            pageEl.style.transform = '';
+            pageEl.style.transform = 'none';
             pageEl.style.zoom = '1';
             pageEl.style.background = '#ffffff';
+            pageEl.style.overflow = 'visible';
+            this._sanitizePermitNodeForCanvasCapture_(pageEl);
 
-            let naturalH = Math.max(pageEl.scrollHeight, pageEl.offsetHeight, 1);
-            if (naturalH > maxH) {
-                pageEl.style.zoom = String(maxH / naturalH);
-                naturalH = maxH;
-            }
-
+            const naturalH = Math.max(pageEl.scrollHeight, pageEl.offsetHeight, 1);
             iframe.style.width = `${a4W}px`;
-            iframe.style.height = `${naturalH + 80}px`;
-            await new Promise((r) => setTimeout(r, 180));
+            iframe.style.height = `${Math.min(naturalH, maxH * 2) + 100}px`;
+            await new Promise((r) => setTimeout(r, 400));
 
             const canvas = await this._capturePermitHtmlToCanvas_(pageEl, iWin, {
                 width: a4W,
@@ -7748,8 +7862,11 @@ const PTW = {
             });
             if (!canvas) return false;
 
-            this._addPermitCanvasToPdfFullWidth_(pdf, canvas, marginMm, { allowSlice: false });
-            pageEl.style.zoom = '1';
+            const needsSlice = naturalH > maxH;
+            this._addPermitCanvasToPdfFullWidth_(pdf, canvas, marginMm, {
+                allowSlice: needsSlice,
+                maxSlices: needsSlice ? 2 : 1
+            });
         }
         return true;
     },
@@ -7788,6 +7905,19 @@ const PTW = {
         });
     },
 
+    _sanitizePermitNodeForCanvasCapture_(root) {
+        if (!root) return;
+        const reset = (el) => {
+            if (!el || !el.style) return;
+            el.style.transform = 'none';
+            el.style.zoom = '1';
+            el.style.filter = 'none';
+            el.style.webkitFilter = 'none';
+        };
+        reset(root);
+        root.querySelectorAll('*').forEach(reset);
+    },
+
     async _capturePermitHtmlToCanvas_(root, iWin, options = {}) {
         const a4W = options.width || this.PERMIT_A4_WIDTH_PX;
         const scrollW = Math.max(root?.scrollWidth || a4W, a4W);
@@ -7803,9 +7933,28 @@ const PTW = {
             logging: false,
             useCORS: true,
             allowTaint: true,
-            imageTimeout: 8000,
+            imageTimeout: 12000,
             scrollX: 0,
-            scrollY: 0
+            scrollY: 0,
+            width: scrollW,
+            height: scrollH,
+            windowWidth: scrollW,
+            windowHeight: scrollH,
+            onclone: (clonedDoc, element) => {
+                const cloneRoot = clonedDoc.getElementById('ptw-permit-print-root') || element;
+                this._sanitizePermitNodeForCanvasCapture_(cloneRoot);
+                if (cloneRoot) cloneRoot.classList.add('ptw-capture-mode');
+                if (clonedDoc.body) {
+                    clonedDoc.body.style.width = `${scrollW}px`;
+                    clonedDoc.body.style.padding = '8px';
+                    clonedDoc.body.style.margin = '0';
+                    clonedDoc.body.style.background = '#ffffff';
+                    clonedDoc.body.style.direction = 'rtl';
+                }
+                if (clonedDoc.documentElement) {
+                    clonedDoc.documentElement.style.direction = 'rtl';
+                }
+            }
         };
         const attempts = [
             baseOpts,
@@ -7856,7 +8005,7 @@ const PTW = {
             if (!iDoc || !iWin) return false;
 
             await this._preloadPermitPdfFonts_(iDoc);
-            await new Promise((r) => setTimeout(r, 500));
+            await new Promise((r) => setTimeout(r, 900));
 
             const images = Array.from(iDoc.images || []);
             await Promise.all(images.map((img) => new Promise((resolve) => {
@@ -7900,11 +8049,6 @@ const PTW = {
             }
 
             if (!ok) {
-                const pdf = new JsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-                ok = await this._downloadPermitHtmlViaJsPdfHtml_(pdf, root, iWin, pdfFileName, marginMm, a4W);
-            }
-
-            if (!ok) {
                 const canvasPdf = new JsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
                 ok = await this._downloadPermitHtmlAsPdfByCanvas_(canvasPdf, root, iWin, marginMm, maxPages);
                 if (ok) canvasPdf.save(pdfFileName);
@@ -7932,10 +8076,12 @@ const PTW = {
         if (reg?.isManualEntry) {
             const displayNo = this.getPermitDisplayNumber(reg);
             const seq = String(reg.sequentialNumber || displayNo).replace(/\D/g, '').padStart(4, '0') || displayNo;
-            const html = this.generateManualPermitPrintHTML(reg, { forPdf });
+            const html = this.generateManualPermitPrintHTML(reg, { pdfExport: true });
+            const printHtml = this.generateManualPermitPrintHTML(reg, { forPdf: false, skipReview: true });
             const review = this._verifyManualPermitExportHtml_(html);
             return {
                 html,
+                printHtml,
                 fileName: `PTW-${this._sanitizePermitFileName_(seq)}.pdf`,
                 displayNo,
                 isManualEntry: true,
@@ -15310,6 +15456,9 @@ const PTW = {
             const ok = await this._downloadPermitHtmlAsPdf(payload.html, payload.fileName);
             if (ok) {
                 Notification.success(this._t('module.ptw.notify.pdfDownloadOk', 'تم تحميل التصريح PDF بنجاح'));
+            } else if (payload.isManualEntry && payload.printHtml) {
+                Notification.warning('تعذّر التحميل المباشر — جاري فتح معاينة الطباعة. اختر «حفظ كـ PDF» أو «Microsoft Print to PDF».');
+                this.openPermitPrintWindow(payload.printHtml);
             } else {
                 Notification.error(this._t('module.ptw.notify.pdfErr', 'فشل تصدير PDF'));
             }
