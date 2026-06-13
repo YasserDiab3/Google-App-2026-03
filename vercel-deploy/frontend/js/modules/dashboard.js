@@ -1645,6 +1645,48 @@ const Dashboard = {
         }
     },
 
+    async ensureContractorReportData() {
+        if (!AppState.appData) AppState.appData = {};
+        const ad = AppState.appData;
+        const sheetToKey = {
+            'Violations': 'violations',
+            'Incidents': 'incidents',
+            'SickLeave': 'sickLeave',
+            'ClinicVisits': 'clinicVisits',
+            'ClinicContractorVisits': 'clinicContractorVisits',
+            'ContractorEvaluations': 'contractorEvaluations',
+            'Training': 'training',
+            'ContractorTrainings': 'contractorTrainings',
+            'PTW': 'ptw',
+            'PTWRegistry': 'ptwRegistry',
+            'Injuries': 'injuries',
+            'ClinicContractorInjuries': 'clinicContractorInjuries'
+        };
+        const toLoad = [];
+        for (const [sheetName, key] of Object.entries(sheetToKey)) {
+            const current = ad[key];
+            if (!Array.isArray(current) || current.length === 0) toLoad.push({ sheetName, key });
+        }
+        if (!toLoad.length) return;
+        if (typeof Loading !== 'undefined' && Loading.show) Loading.show();
+        try {
+            for (const { sheetName, key } of toLoad) {
+                try {
+                    if (typeof GoogleIntegration === 'undefined' || !GoogleIntegration.readFromSheets) continue;
+                    const sheetData = await GoogleIntegration.readFromSheets(sheetName);
+                    if (Array.isArray(sheetData)) {
+                        AppState.appData[key] = sheetData;
+                        if (Utils.safeLog) Utils.safeLog(`✅ تقرير المقاول: تم تحميل ${sheetName} (${sheetData.length} سجل)`);
+                    }
+                } catch (err) {
+                    if (Utils.safeWarn) Utils.safeWarn(`⚠️ تقرير المقاول: فشل تحميل ${sheetName}:`, err?.message || err);
+                }
+            }
+        } finally {
+            if (typeof Loading !== 'undefined' && Loading.hide) Loading.hide();
+        }
+    },
+
     /**
      * توليد تقرير شامل للموظف
      */
@@ -2654,7 +2696,7 @@ const Dashboard = {
      * توليد تقرير شامل للمقاول (البحث بكود المقاول أو اسم الشركة)
      */
     async generateContractorReport(contractorCode) {
-        const data = AppState.appData;
+        let data = AppState.appData;
         const approved = data.approvedContractors || [];
         const searchTerm = String(contractorCode).trim();
         const contractorSearch = typeof Utils !== 'undefined' && typeof Utils.findApprovedContractorByTerm === 'function'
@@ -2700,9 +2742,11 @@ const Dashboard = {
             ? Contractors.getPreferredContractorAnalyticsKey(reportContractor, searchTerm)
             : (reportContractor.code || reportContractor.isoCode || reportContractor.contractorId || reportContractor.id || contractorCode);
         const contractorCodeVal = reportContractor.code || reportContractor.isoCode || contractorLookupKey || contractorCode;
-        const contractorCtx = typeof Utils !== 'undefined' && typeof Utils.buildContractorIdentityMatcher === 'function'
-            ? Utils.buildContractorIdentityMatcher(reportContractor, contractorLookupKey)
-            : null;
+        const contractorCtx = typeof Contractors !== 'undefined' && typeof Contractors.buildContractorAnalyticsMatchers === 'function'
+            ? Contractors.buildContractorAnalyticsMatchers(reportContractor, contractorLookupKey)
+            : (typeof Utils !== 'undefined' && typeof Utils.buildContractorIdentityMatcher === 'function'
+                ? Utils.buildContractorIdentityMatcher(reportContractor, contractorLookupKey)
+                : null);
         const matchesContractor = contractorCtx ? contractorCtx.matchesContractor : (() => false);
         const violationBelongsToContractor = contractorCtx
             ? (record) => contractorCtx.violationBelongsToContractor(record)
@@ -2710,7 +2754,33 @@ const Dashboard = {
         const evaluationBelongsToContractor = contractorCtx
             ? (record) => contractorCtx.evaluationBelongsToContractor(record)
             : (() => false);
-        const isContractorViolation = (v) => v && (v.personType === 'contractor' || v.contractorName);
+        const recordHasExplicitContractorIds = (record) => {
+            if (!record || !contractorCtx) return false;
+            if (typeof contractorCtx.hasAnyRecordIds === 'function' && contractorCtx.hasAnyRecordIds.length > 0) {
+                return contractorCtx.hasAnyRecordIds(record);
+            }
+            return ['contractorId', 'contractorCode', 'code', 'isoCode', 'licenseNumber', 'contractNumber', 'approvedEntityId', 'entityCode']
+                .some((field) => String(record?.[field] || '').trim() !== '');
+        };
+        const analyticsRecordBelongsToContractor = (record) => {
+            if (!record || !contractorCtx) return false;
+            if (typeof contractorCtx.violationBelongsToContractor === 'function') {
+                return contractorCtx.violationBelongsToContractor(record);
+            }
+            return matchesContractor(record);
+        };
+        const matchContractorNameFields = (values) => {
+            if (!contractorCtx || typeof contractorCtx.matchesNameValue !== 'function') return false;
+            return (Array.isArray(values) ? values : [values])
+                .filter(Boolean)
+                .some((value) => contractorCtx.matchesNameValue(value));
+        };
+        const pickContractorReportSection = (serverRecords, localRecords) => {
+            const serverList = Array.isArray(serverRecords) ? serverRecords : null;
+            const localList = Array.isArray(localRecords) ? localRecords : [];
+            if (serverList && serverList.length > 0) return serverList;
+            return localList;
+        };
         const cacheKey = this.getContractorReportCacheKey(reportContractor, contractorLookupKey, searchTerm);
         const dataSignature = this.getContractorReportDataSignature();
         const requestKey = `${cacheKey}::${dataSignature}`;
@@ -2734,6 +2804,8 @@ const Dashboard = {
         });
         this.contractorReportRequests.set(requestKey, contractorReportPromise);
         this.renderContractorReportLoading(reportContractor, contractorCodeVal);
+        await this.ensureContractorReportData();
+        data = AppState.appData || data;
         let serverDetailedAnalytics = null;
         if (typeof GoogleIntegration !== 'undefined' && GoogleIntegration.sendRequest && AppState.googleConfig?.appsScript?.enabled) {
             try {
@@ -2779,21 +2851,17 @@ const Dashboard = {
             return unique;
         };
 
-        const violationsSource = Array.isArray(serverDetailedAnalytics?.violations)
-            ? serverDetailedAnalytics.violations
-            : (data.violations || []);
-        const violations = dedupeContractorRecords(
-            violationsSource.filter(v => isContractorViolation(v) && violationBelongsToContractor(v)),
+        const localViolations = dedupeContractorRecords(
+            (data.violations || []).filter(v => violationBelongsToContractor(v)),
             ['isoCode', 'id'],
             ['contractorId', 'contractorName', 'violationType', 'violationDate', 'violationTime']
         );
+        const violations = pickContractorReportSection(serverDetailedAnalytics?.violations, localViolations);
         const isContractorIncident = (i) => (i && (i.personType === 'contractor' || i.contractorName || i.affiliation === 'contractor' || (i.contractorId != null && i.contractorId !== '')));
-        const incidents = Array.isArray(serverDetailedAnalytics?.incidents)
-            ? serverDetailedAnalytics.incidents
-            : (data.incidents || []).filter(i => isContractorIncident(i) && matchesContractor(i));
-        const sickLeave = Array.isArray(serverDetailedAnalytics?.sickLeave)
-            ? serverDetailedAnalytics.sickLeave
-            : (data.sickLeave || []).filter(s => (s.personType === 'contractor' || s.contractorName) && matchesContractor(s));
+        const localIncidents = (data.incidents || []).filter(i => isContractorIncident(i) && analyticsRecordBelongsToContractor(i));
+        const incidents = pickContractorReportSection(serverDetailedAnalytics?.incidents, localIncidents);
+        const localSickLeave = (data.sickLeave || []).filter(s => (s.personType === 'contractor' || s.contractorName) && analyticsRecordBelongsToContractor(s));
+        const sickLeave = pickContractorReportSection(serverDetailedAnalytics?.sickLeave, localSickLeave);
         const rawClinicSources = (data.clinicVisits || []).concat(Array.isArray(data.clinicContractorVisits) ? data.clinicContractorVisits : []);
         const seenClinicIds = new Set();
         const clinicSources = rawClinicSources.filter(c => {
@@ -2804,17 +2872,14 @@ const Dashboard = {
             seenClinicIds.add(id);
             return true;
         });
-        const clinicVisits = Array.isArray(serverDetailedAnalytics?.clinicVisits)
-            ? serverDetailedAnalytics.clinicVisits
-            : clinicSources.filter(c => (c.personType === 'contractor' || c.personType === 'external' || c.contractorName) && matchesContractor(c));
-        const evaluationsSource = Array.isArray(serverDetailedAnalytics?.evaluations)
-            ? serverDetailedAnalytics.evaluations
-            : (data.contractorEvaluations || []);
-        const contractorEvaluationRows = dedupeContractorRecords(
-            evaluationsSource.filter(e => evaluationBelongsToContractor(e)),
+        const localClinicVisits = clinicSources.filter(c => (c.personType === 'contractor' || c.personType === 'external' || c.contractorName) && analyticsRecordBelongsToContractor(c));
+        const clinicVisits = pickContractorReportSection(serverDetailedAnalytics?.clinicVisits, localClinicVisits);
+        const localEvaluationRows = dedupeContractorRecords(
+            (data.contractorEvaluations || []).filter(e => evaluationBelongsToContractor(e)),
             ['evaluationId', 'id', 'isoCode'],
             ['contractorId', 'contractorName', 'evaluationDate', 'projectName', 'finalScore']
         );
+        const contractorEvaluationRows = pickContractorReportSection(serverDetailedAnalytics?.evaluations, localEvaluationRows);
         const seenEvaluationIds = new Set();
         const contractorEvaluations = contractorEvaluationRows.filter(e => {
             const evaluationId = String(e?.evaluationId || e?.id || '').trim();
@@ -2849,7 +2914,7 @@ const Dashboard = {
             if (!ct) return false;
             if (matchesContractor(ct)) return true;
             const name = String(ct.contractorName || ct.companyName || '').replace(/\s+/g, ' ').trim();
-            return contractorCtx ? !contractorCtx.hasAnyRecordIds(ct) && contractorCtx.matchesNameValue(name) : false;
+            return contractorCtx ? !recordHasExplicitContractorIds(ct) && contractorCtx.matchesNameValue(name) : false;
         });
         const seenTrainingIds = new Set();
         let training = [...trainingFromMain];
@@ -2870,11 +2935,11 @@ const Dashboard = {
         const matchesPtwContractor = (p) => {
             if (!p) return false;
             if (matchesContractor(p)) return true;
-            if (contractorCtx && contractorCtx.hasAnyRecordIds(p)) return false;
+            if (recordHasExplicitContractorIds(p)) return false;
             const req = String(p.requestingParty || '').replace(/\s+/g, ' ').trim();
             const auth = String(p.authorizedParty || '').replace(/\s+/g, ' ').trim();
             const resp = String(p.responsible || '').replace(/\s+/g, ' ').trim();
-            return contractorCtx ? contractorCtx.matchFieldsByName([req, auth, resp]) : false;
+            return matchContractorNameFields([req, auth, resp]);
         };
         let ptwContractor = ptwAll.filter(matchesPtwContractor);
         let ptwOpen = ptwContractor.filter(p => !this.isPTWClosedStatus(p?.status)).length;
@@ -2887,38 +2952,21 @@ const Dashboard = {
             if (pType !== 'contractor') return false;
             if (matchesContractor(inj)) return true;
             const name = String(inj.personName || inj.employeeName || inj.contractorName || '').trim();
-            return contractorCtx ? !contractorCtx.hasAnyRecordIds(inj) && contractorCtx.matchesNameValue(name) : false;
+            return contractorCtx ? !recordHasExplicitContractorIds(inj) && contractorCtx.matchesNameValue(name) : false;
         });
-        if (Array.isArray(serverDetailedAnalytics?.trainings)) {
-            training = serverDetailedAnalytics.trainings;
+        const reportTraining = pickContractorReportSection(serverDetailedAnalytics?.trainings, training);
+        const reportPtwContractor = pickContractorReportSection(serverDetailedAnalytics?.ptw, ptwContractor);
+        let reportPtwOpen = reportPtwContractor.filter(p => !this.isPTWClosedStatus(p?.status)).length;
+        let reportPtwClosed = reportPtwContractor.filter(p => this.isPTWClosedStatus(p?.status)).length;
+        if (Array.isArray(serverDetailedAnalytics?.ptw) && serverDetailedAnalytics.ptw.length > 0) {
+            if (typeof serverDetailedAnalytics.ptwOpenCount === 'number') {
+                reportPtwOpen = serverDetailedAnalytics.ptwOpenCount;
+            }
+            if (typeof serverDetailedAnalytics.ptwClosedCount === 'number') {
+                reportPtwClosed = serverDetailedAnalytics.ptwClosedCount;
+            }
         }
-        if (Array.isArray(serverDetailedAnalytics?.ptw)) {
-            ptwContractor = serverDetailedAnalytics.ptw;
-        }
-        if (typeof serverDetailedAnalytics?.ptwOpenCount === 'number') {
-            ptwOpen = serverDetailedAnalytics.ptwOpenCount;
-        }
-        if (typeof serverDetailedAnalytics?.ptwClosedCount === 'number') {
-            ptwClosed = serverDetailedAnalytics.ptwClosedCount;
-        }
-        if (Array.isArray(serverDetailedAnalytics?.injuries)) {
-            injuriesContractor = serverDetailedAnalytics.injuries;
-        }
-        const reportTraining = Array.isArray(serverDetailedAnalytics?.trainings)
-            ? serverDetailedAnalytics.trainings
-            : training;
-        const reportPtwContractor = Array.isArray(serverDetailedAnalytics?.ptw)
-            ? serverDetailedAnalytics.ptw
-            : ptwContractor;
-        const reportPtwOpen = typeof serverDetailedAnalytics?.ptwOpenCount === 'number'
-            ? serverDetailedAnalytics.ptwOpenCount
-            : ptwOpen;
-        const reportPtwClosed = typeof serverDetailedAnalytics?.ptwClosedCount === 'number'
-            ? serverDetailedAnalytics.ptwClosedCount
-            : ptwClosed;
-        const reportInjuriesContractor = Array.isArray(serverDetailedAnalytics?.injuries)
-            ? serverDetailedAnalytics.injuries
-            : injuriesContractor;
+        const reportInjuriesContractor = pickContractorReportSection(serverDetailedAnalytics?.injuries, injuriesContractor);
 
         const reportContainer = document.getElementById('contractor-report-data');
         const contentContainer = document.getElementById('contractor-report-content');
