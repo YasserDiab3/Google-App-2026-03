@@ -6842,7 +6842,9 @@ const PTW = {
     },
 
     PERMIT_A4_WIDTH_PX: 794,
+    PERMIT_A4_HEIGHT_PX: 1123,
     PERMIT_A4_MARGIN_MM: 4,
+    PERMIT_A4_MAX_PAGES: 2,
 
     getManualPermitPrintStyles(forPdfExport = false) {
         const a4Overrides = forPdfExport ? `
@@ -6859,26 +6861,67 @@ const PTW = {
                 max-width: ${this.PERMIT_A4_WIDTH_PX}px !important;
                 margin: 0 !important;
             }
+            .ptw-a4-page {
+                width: ${this.PERMIT_A4_WIDTH_PX}px !important;
+                max-width: ${this.PERMIT_A4_WIDTH_PX}px !important;
+                min-height: ${this.PERMIT_A4_HEIGHT_PX}px;
+                box-sizing: border-box;
+                padding: 6px 8px 8px;
+                background: #fff;
+                overflow: hidden;
+            }
             .ptw-paper-header { padding: 12px 14px; min-height: 68px; border-radius: 8px; }
+            .ptw-paper-header-pdf { display: block; padding: 0; background: transparent; border: none; min-height: 0; margin-bottom: 8px; }
+            .ptw-paper-header-table { width: 100%; border-collapse: collapse; table-layout: fixed; background: #1e3a5f; border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.18); }
+            .ptw-ph-cell { padding: 10px 12px; vertical-align: middle; color: #fff; letter-spacing: 0 !important; word-spacing: normal; }
+            .ptw-ph-right { width: 33%; text-align: right; }
+            .ptw-ph-center { width: 34%; text-align: center; }
+            .ptw-ph-left { width: 33%; text-align: left; }
+            .ptw-paper-header-company, .ptw-paper-header-dept, .ptw-paper-header-form-title { letter-spacing: 0 !important; word-break: normal; white-space: normal; unicode-bidi: embed; }
+            .ptw-paper-header-form-subtitle { font-size: 11px; letter-spacing: 0.4px !important; }
             .ptw-paper-header-form-title { font-size: 16px; }
-            .ptw-paper-header-form-subtitle { font-size: 11px; letter-spacing: 1px; }
             .ptw-paper-header-company { font-size: 14px; }
             .ptw-paper-header-dept { font-size: 10px; }
             .ptw-paper-header-logo { max-height: 48px; max-width: 110px; }
-            .manual-print-disclaimer-text { font-size: 11px; line-height: 1.75; padding: 10px; }
-            .ptw-manual-form-section { margin: 6px 0; padding: 10px 12px; border-radius: 8px; }
-            .ptw-manual-form-section h3 { font-size: 12px; margin-bottom: 8px; }
-            .manual-print-field .lbl { font-size: 9px; }
-            .manual-print-field .val { font-size: 10px; }
-            .ptw-paper-grid-table { font-size: 9px; }
-            .ptw-paper-grid-table th, .ptw-paper-grid-table td { padding: 4px 5px; }
-            .ptw-manual-ppe-fixed-row { gap: 4px 3px; margin-bottom: 5px; }
-            .ptw-manual-ppe-cell { font-size: 8px; padding: 4px 3px; min-height: 26px; line-height: 1.3; }
-            .ppe-checkbox { width: 11px; height: 11px; border-width: 1.5px; }
-            .ppe-checkbox.checked::after { left: 2px; top: 0; width: 3px; height: 6px; }
-            .manual-risk-matrix { font-size: 8px; }
-            .manual-print-req-item { font-size: 9px; padding: 6px; }
-            .manual-print-supervisor-card .val { font-size: 11px; }
+            .manual-print-disclaimer-wrap { margin-bottom: 8px; }
+            .manual-print-disclaimer-text { font-size: 10px; line-height: 1.55; padding: 8px; }
+            .manual-print-permit-no { padding: 8px; }
+            .manual-print-seq-badge { padding: 6px 18px; }
+            .manual-print-seq-badge .val { font-size: 18px; letter-spacing: 1px; }
+            .ptw-manual-form-section { margin: 4px 0; padding: 8px 10px; border-radius: 8px; page-break-inside: auto; break-inside: auto; }
+            .ptw-manual-form-section h3 { font-size: 11px; margin-bottom: 6px; padding-bottom: 4px; display: block; }
+            .manual-print-field .lbl { font-size: 8px; }
+            .manual-print-field .val { font-size: 9px; }
+            .manual-print-grid { gap: 6px; }
+            .ptw-paper-grid-table { font-size: 8px; }
+            .ptw-paper-grid-table th, .ptw-paper-grid-table td { padding: 3px 4px; }
+            .ptw-manual-ppe-fixed-row { gap: 3px 2px; margin-bottom: 3px; }
+            .ptw-manual-ppe-cell { font-size: 7.5px; padding: 3px 2px; min-height: 22px; line-height: 1.25; letter-spacing: 0; }
+            .ppe-checkbox { width: 10px; height: 10px; border-width: 1.5px; }
+            .ppe-checkbox.checked::after { left: 2px; top: 0; width: 3px; height: 5px; }
+            .manual-risk-matrix { font-size: 7.5px; }
+            .manual-risk-matrix th, .manual-risk-matrix td { padding: 2px; }
+            .manual-risk-badge { width: 36px; height: 36px; font-size: 13px; }
+            .manual-print-req-item { font-size: 8px; padding: 4px; }
+            .manual-print-supervisor-card { padding: 8px 10px; }
+            .manual-print-supervisor-card .val { font-size: 10px; }
+            .manual-work-block { padding: 6px; margin-bottom: 4px; }
+            .manual-work-block h4 { font-size: 10px; margin-bottom: 4px; }
+            .ptw-paper-footer { margin-top: 8px; padding-top: 6px; border-top: 2px solid #e0e7ff; }
+            .ptw-paper-footer-frame {
+                background: linear-gradient(135deg, rgba(59, 130, 246, 0.03), rgba(37, 99, 235, 0.05));
+                border: 1.5px solid rgba(59, 130, 246, 0.15); border-radius: 8px; padding: 8px 12px;
+            }
+            .ptw-paper-footer-meta {
+                display: flex; flex-wrap: wrap; justify-content: space-between; gap: 6px 10px;
+                font-size: 9px; color: #475569; font-weight: 600; padding-bottom: 6px;
+                border-bottom: 1px dashed rgba(148, 163, 184, 0.45); letter-spacing: 0;
+            }
+            .ptw-pf-item { white-space: nowrap; }
+            .ptw-paper-footer-company {
+                display: flex; flex-direction: column; align-items: center; gap: 2px;
+                margin-top: 6px; font-size: 9px; color: #334155; font-weight: 600; letter-spacing: 0;
+            }
         ` : '';
         return `
             * { box-sizing: border-box; }
@@ -7021,6 +7064,23 @@ const PTW = {
             .manual-print-supervisor-card .val {
                 font-size: 13px; font-weight: 600; color: #1f2937; min-height: 1.5em;
             }
+            .ptw-paper-footer {
+                margin-top: 14px; padding-top: 10px; border-top: 2px solid #e0e7ff;
+                page-break-inside: avoid; break-inside: avoid;
+            }
+            .ptw-paper-footer-frame {
+                background: linear-gradient(135deg, rgba(59, 130, 246, 0.03), rgba(37, 99, 235, 0.05));
+                border: 2px solid rgba(59, 130, 246, 0.15); border-radius: 10px; padding: 12px 16px;
+            }
+            .ptw-paper-footer-meta {
+                display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px 12px;
+                font-size: 11px; color: #475569; font-weight: 600; padding-bottom: 8px;
+                border-bottom: 1px dashed rgba(148, 163, 184, 0.45);
+            }
+            .ptw-paper-footer-company {
+                display: flex; flex-direction: column; align-items: center; gap: 3px;
+                margin-top: 8px; font-size: 11px; color: #334155; font-weight: 600;
+            }
             .ptw-paper-grid-table .approval-name-cell,
             .ptw-paper-grid-table .approval-sig-cell {
                 min-height: 28px; font-weight: 500; color: #111827;
@@ -7028,7 +7088,9 @@ const PTW = {
             @media print {
                 body { padding: 6px; font-size: 10px; }
                 .ptw-manual-form-section { page-break-inside: auto; break-inside: auto; margin: 6px 0; padding: 10px; }
+                .manual-section-6 { page-break-before: always; break-before: page; }
                 .ptw-manual-ppe-fixed-row { gap: 6px 3px; }
+                .ptw-paper-footer { page-break-inside: avoid; break-inside: avoid; }
             }
             ${a4Overrides}
         `;
@@ -7358,6 +7420,30 @@ const PTW = {
         const forPdf = options?.forPdf === true;
         const content = this.generateManualPermitPrintContent(entry);
         const displayNo = this.getPermitDisplayNumber(entry);
+        const footerMeta = {
+            formCode: entry?.isoCode || `PTW-MANUAL-${displayNo}`,
+            issueDate: entry?.createdAt || entry?.timeFrom,
+            revisionDate: entry?.updatedAt || entry?.timeTo || entry?.createdAt
+        };
+        const footer = this.renderPermitSystemFooter(footerMeta);
+        const header = this.renderPermitSystemHeader({ forPdf });
+
+        let bodyHtml = content;
+        if (forPdf) {
+            const breakAt = content.indexOf('manual-section-6');
+            if (breakAt > 0) {
+                const part1 = content.slice(0, breakAt);
+                const part2 = content.slice(breakAt);
+                bodyHtml = `
+                    <div class="ptw-a4-page">${header}${part1}</div>
+                    <div class="ptw-a4-page">${part2}${footer}</div>`;
+            } else {
+                bodyHtml = `<div class="ptw-a4-page">${header}${content}${footer}</div>`;
+            }
+        } else {
+            bodyHtml = `${content}${footer}`;
+        }
+
         return `<!DOCTYPE html>
 <html dir="rtl" lang="ar">
 <head>
@@ -7370,8 +7456,7 @@ const PTW = {
 </head>
 <body>
     <div class="ptw-manual-print${forPdf ? ' ptw-manual-print-a4' : ''}" id="ptw-permit-print-root">
-        ${this.renderPermitSystemHeader()}
-        ${content}
+        ${forPdf ? bodyHtml : `${header}${bodyHtml}`}
     </div>
 </body>
 </html>`;
@@ -7425,21 +7510,48 @@ const PTW = {
         return null;
     },
 
-    async _preloadPermitPdfFonts_() {
-        if (!document.getElementById('ptw-permit-cairo-font')) {
-            const link = document.createElement('link');
+    async _preloadPermitPdfFonts_(targetDoc) {
+        const doc = targetDoc || document;
+        const head = doc.head || doc.documentElement;
+        if (head && !doc.getElementById('ptw-permit-cairo-font')) {
+            const link = doc.createElement('link');
             link.id = 'ptw-permit-cairo-font';
             link.rel = 'stylesheet';
             link.href = 'https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap';
-            document.head.appendChild(link);
+            head.appendChild(link);
         }
         try {
-            if (document.fonts && typeof document.fonts.load === 'function') {
-                await document.fonts.load('400 14px Cairo');
-                await document.fonts.load('700 18px Cairo');
-                await document.fonts.ready;
+            if (doc.fonts && typeof doc.fonts.load === 'function') {
+                await doc.fonts.load('400 14px Cairo');
+                await doc.fonts.load('600 14px Cairo');
+                await doc.fonts.load('700 18px Cairo');
+                await doc.fonts.load('800 16px Cairo');
+                await doc.fonts.ready;
             }
         } catch (_e) { /* ignore */ }
+    },
+
+    _addPermitPdfPageImage_(pdf, canvas, marginMm) {
+        const pdfW = pdf.internal.pageSize.getWidth();
+        const pdfH = pdf.internal.pageSize.getHeight();
+        const contentWmm = pdfW - marginMm * 2;
+        const contentHmm = pdfH - marginMm * 2;
+        let drawWmm = contentWmm;
+        let drawHmm = (canvas.height / canvas.width) * drawWmm;
+        if (drawHmm > contentHmm) {
+            const scale = contentHmm / drawHmm;
+            drawHmm = contentHmm;
+            drawWmm = drawWmm * scale;
+        }
+        const offsetX = marginMm + (contentWmm - drawWmm) / 2;
+        pdf.addImage(
+            canvas.toDataURL('image/png'),
+            'PNG',
+            offsetX,
+            marginMm,
+            drawWmm,
+            drawHmm
+        );
     },
 
     async _ensureHtml2CanvasInFrame_(iDoc, iWin) {
@@ -7505,6 +7617,7 @@ const PTW = {
             : `${String(fileName)}.pdf`;
         const a4W = this.PERMIT_A4_WIDTH_PX;
         const marginMm = this.PERMIT_A4_MARGIN_MM;
+        const maxPages = this.PERMIT_A4_MAX_PAGES || 2;
 
         await this._preloadPermitPdfFonts_();
 
@@ -7525,9 +7638,8 @@ const PTW = {
             const iWin = iframe.contentWindow;
             if (!iDoc || !iWin) return false;
 
-            if (iDoc.fonts && typeof iDoc.fonts.ready !== 'undefined') {
-                try { await iDoc.fonts.ready; } catch (_e) { /* ignore */ }
-            }
+            await this._preloadPermitPdfFonts_(iDoc);
+            await new Promise((r) => setTimeout(r, 500));
 
             const images = Array.from(iDoc.images || []);
             await Promise.all(images.map((img) => new Promise((resolve) => {
@@ -7538,47 +7650,56 @@ const PTW = {
             })));
 
             await this._ensureHtml2CanvasInFrame_(iDoc, iWin);
-            await new Promise((r) => setTimeout(r, 350));
+            await new Promise((r) => setTimeout(r, 400));
 
             const root = iDoc.getElementById('ptw-permit-print-root')
                 || iDoc.querySelector('.ptw-manual-print')
+                || iDoc.querySelector('.report-wrapper')
                 || iDoc.querySelector('.form-container')
                 || iDoc.body;
             if (!root) return false;
 
-            const contentHeight = Math.max(root.scrollHeight, root.offsetHeight, 1123);
-            iframe.style.height = `${contentHeight + 40}px`;
-
-            const canvas = await this._capturePermitHtmlToCanvas_(root, iWin);
-            if (!canvas) return false;
-
+            const pageEls = Array.from(root.querySelectorAll('.ptw-a4-page'));
             const pdf = new JsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-            const pdfW = pdf.internal.pageSize.getWidth();
-            const pdfH = pdf.internal.pageSize.getHeight();
-            const contentWmm = pdfW - marginMm * 2;
-            const contentHmm = pdfH - marginMm * 2;
-            const pxPerMm = canvas.width / contentWmm;
-            const pageHeightPx = contentHmm * pxPerMm;
-            const totalPages = Math.max(1, Math.ceil(canvas.height / pageHeightPx));
 
-            for (let p = 0; p < totalPages; p++) {
-                if (p > 0) pdf.addPage();
-                const sliceH = Math.min(pageHeightPx, canvas.height - p * pageHeightPx);
-                const sliceCanvas = document.createElement('canvas');
-                sliceCanvas.width = canvas.width;
-                sliceCanvas.height = sliceH;
-                sliceCanvas.getContext('2d').drawImage(
-                    canvas, 0, p * pageHeightPx, canvas.width, sliceH, 0, 0, canvas.width, sliceH
-                );
-                const sliceHmm = sliceH / pxPerMm;
-                pdf.addImage(
-                    sliceCanvas.toDataURL('image/png'),
-                    'PNG',
-                    marginMm,
-                    marginMm,
-                    contentWmm,
-                    sliceHmm
-                );
+            if (pageEls.length > 0) {
+                const pagesToRender = pageEls.slice(0, maxPages);
+                for (let p = 0; p < pagesToRender.length; p++) {
+                    if (p > 0) pdf.addPage();
+                    const pageEl = pagesToRender[p];
+                    const pageHeight = Math.max(pageEl.scrollHeight, pageEl.offsetHeight, 1);
+                    iframe.style.height = `${pageHeight + 60}px`;
+                    const canvas = await this._capturePermitHtmlToCanvas_(pageEl, iWin);
+                    if (!canvas) return false;
+                    this._addPermitPdfPageImage_(pdf, canvas, marginMm);
+                }
+            } else {
+                const contentHeight = Math.max(root.scrollHeight, root.offsetHeight, this.PERMIT_A4_HEIGHT_PX);
+                iframe.style.height = `${contentHeight + 40}px`;
+
+                const canvas = await this._capturePermitHtmlToCanvas_(root, iWin);
+                if (!canvas) return false;
+
+                const pdfW = pdf.internal.pageSize.getWidth();
+                const pdfH = pdf.internal.pageSize.getHeight();
+                const contentWmm = pdfW - marginMm * 2;
+                const contentHmm = pdfH - marginMm * 2;
+                const pxPerMm = canvas.width / contentWmm;
+                const pageHeightPx = contentHmm * pxPerMm;
+                let totalPages = Math.max(1, Math.ceil(canvas.height / pageHeightPx));
+                if (totalPages > maxPages) totalPages = maxPages;
+
+                for (let p = 0; p < totalPages; p++) {
+                    if (p > 0) pdf.addPage();
+                    const sliceH = Math.min(pageHeightPx, canvas.height - p * pageHeightPx);
+                    const sliceCanvas = document.createElement('canvas');
+                    sliceCanvas.width = canvas.width;
+                    sliceCanvas.height = sliceH;
+                    sliceCanvas.getContext('2d').drawImage(
+                        canvas, 0, p * pageHeightPx, canvas.width, sliceH, 0, 0, canvas.width, sliceH
+                    );
+                    this._addPermitPdfPageImage_(pdf, sliceCanvas, marginMm);
+                }
             }
 
             pdf.save(pdfFileName);
@@ -7632,6 +7753,7 @@ const PTW = {
                         version: item.version || '1.0',
                         releaseDate: item.startDate || item.createdAt,
                         revisionDate: item.updatedAt || item.endDate || item.startDate,
+                        compactPdfFooter: true,
                         'رقم التصريح': displayNo
                     },
                     item.createdAt || item.startDate,
@@ -11844,32 +11966,88 @@ const PTW = {
         };
     },
 
-    renderPermitSystemHeader() {
+    renderPermitSystemHeader(options = {}) {
+        const forPdf = options?.forPdf === true;
         const settings = AppState?.companySettings || {};
         const companyName = settings.name || settings.companyName || settings.organizationName || 'HSE System';
         const deptName = String(settings.secondaryName || settings.departmentName || settings.managementName || '').trim();
         const logoUrl = settings.logoUrl || settings.companyLogo || settings.logo || AppState?.companyLogo || '';
         const formTitleAr = 'نموذج تصريح العمل';
         const formTitleEn = 'Permit To Work';
+        const esc = (v) => Utils.escapeHTML(v);
+        const logoHtml = logoUrl
+            ? `<img src="${esc(logoUrl)}" alt="Company Logo" class="ptw-paper-header-logo">`
+            : `<div class="ptw-paper-header-logo-fallback">LOGO</div>`;
+
+        if (forPdf) {
+            return `
+            <div class="ptw-paper-header ptw-paper-header-pdf">
+                <table class="ptw-paper-header-table" dir="rtl" cellpadding="0" cellspacing="0" role="presentation">
+                    <tr>
+                        <td class="ptw-ph-cell ptw-ph-right" valign="middle">
+                            <div class="ptw-paper-header-company" dir="rtl">${esc(companyName)}</div>
+                            ${deptName ? `<div class="ptw-paper-header-dept" dir="rtl">${esc(deptName)}</div>` : ''}
+                        </td>
+                        <td class="ptw-ph-cell ptw-ph-center" valign="middle">
+                            <div class="ptw-paper-header-form-title" dir="rtl">${esc(formTitleAr)}</div>
+                            <div class="ptw-paper-header-form-subtitle" dir="ltr">${esc(formTitleEn)}</div>
+                        </td>
+                        <td class="ptw-ph-cell ptw-ph-left" valign="middle">${logoHtml}</td>
+                    </tr>
+                </table>
+            </div>`;
+        }
 
         return `
             <div class="ptw-paper-header">
                 <div class="ptw-paper-header-right">
-                    <div class="ptw-paper-header-company">${Utils.escapeHTML(companyName)}</div>
-                    ${deptName ? `<div class="ptw-paper-header-dept">${Utils.escapeHTML(deptName)}</div>` : ''}
+                    <div class="ptw-paper-header-company">${esc(companyName)}</div>
+                    ${deptName ? `<div class="ptw-paper-header-dept">${esc(deptName)}</div>` : ''}
                 </div>
                 <div class="ptw-paper-header-center">
-                    <div class="ptw-paper-header-form-title">${Utils.escapeHTML(formTitleAr)}</div>
-                    <div class="ptw-paper-header-form-subtitle">${Utils.escapeHTML(formTitleEn)}</div>
+                    <div class="ptw-paper-header-form-title">${esc(formTitleAr)}</div>
+                    <div class="ptw-paper-header-form-subtitle">${esc(formTitleEn)}</div>
                 </div>
-                <div class="ptw-paper-header-left">
-                    ${logoUrl
-                        ? `<img src="${Utils.escapeHTML(logoUrl)}" alt="Company Logo" class="ptw-paper-header-logo">`
-                        : `<div class="ptw-paper-header-logo-fallback">LOGO</div>`
-                    }
-                </div>
+                <div class="ptw-paper-header-left">${logoHtml}</div>
             </div>
         `;
+    },
+
+    renderPermitSystemFooter(options = {}) {
+        const settings = AppState?.companySettings || {};
+        const companyName = settings.name || settings.companyName || settings.organizationName || 'HSE System';
+        const deptName = String(
+            settings.secondaryName || settings.departmentName || settings.managementName || 'إدارة السلامة والصحة المهنية والبيئة'
+        ).trim();
+        const esc = (v) => Utils.escapeHTML(v == null ? '' : String(v));
+        const formCode = esc(options.formCode || 'PTW-MANUAL');
+        const formatFooterDate = (value) => {
+            if (!value) return '—';
+            try {
+                const d = new Date(value);
+                if (isNaN(d.getTime())) return esc(value);
+                return esc(d.toLocaleDateString('ar-EG', { year: 'numeric', month: 'long', day: 'numeric' }));
+            } catch {
+                return esc(value);
+            }
+        };
+        const issueDate = formatFooterDate(options.issueDate || options.releaseDate || options.createdAt);
+        const revisionDate = formatFooterDate(options.revisionDate || options.updatedAt || options.issueDate || options.createdAt);
+
+        return `
+            <div class="ptw-paper-footer">
+                <div class="ptw-paper-footer-frame">
+                    <div class="ptw-paper-footer-meta" dir="rtl">
+                        <span class="ptw-pf-item">كود النموذج: ${formCode}</span>
+                        <span class="ptw-pf-item">تاريخ الإصدار: ${issueDate}</span>
+                        <span class="ptw-pf-item">تاريخ التعديل: ${revisionDate}</span>
+                    </div>
+                    <div class="ptw-paper-footer-company" dir="rtl">
+                        <span>${esc(companyName)}</span>
+                        <span>${esc(deptName)}</span>
+                    </div>
+                </div>
+            </div>`;
     },
 
     async renderForm(ptwData = null) {
