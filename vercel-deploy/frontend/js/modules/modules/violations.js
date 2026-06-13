@@ -2004,36 +2004,36 @@ const Violations = {
 
     getContractorViolationsExportOptions() {
         const optionsMap = new Map();
-        const addOption = (id, name) => {
+        const addEntry = (id, name, code = '') => {
             const cleanName = String(name || '').replace(/\s+/g, ' ').trim();
             if (!cleanName) return;
-            const key = String(id || cleanName).trim();
-            if (!optionsMap.has(key)) {
-                optionsMap.set(key, { id: key, name: cleanName });
-            }
+            const nameKey = this._normalizeContractorExportName(cleanName);
+            if (!nameKey || optionsMap.has(nameKey)) return;
+            optionsMap.set(nameKey, {
+                id: String(id || code || cleanName).trim(),
+                name: cleanName,
+                code: String(code || '').trim()
+            });
         };
 
-        const appViolations = Array.isArray(AppState.appData?.violations) ? AppState.appData.violations : [];
-        appViolations.forEach(v => {
-            if (v?.contractorName) addOption(v.contractorId || v.contractorName, v.contractorName);
+        if (typeof Contractors !== 'undefined' && typeof Contractors.getContractorOptionsForModules === 'function') {
+            Contractors.getContractorOptionsForModules({ includeSuppliers: true, approvedOnly: false })
+                .forEach((c) => addEntry(c.id, c.name, c.code));
+        } else {
+            (AppState.appData?.contractors || []).forEach((c) => {
+                addEntry(c.id || c.contractorId, c.name || c.companyName, c.code || c.contractorCode || c.isoCode);
+            });
+            (AppState.appData?.approvedContractors || []).forEach((c) => {
+                addEntry(c.id || c.contractorId, c.companyName || c.name, c.code || c.contractorCode);
+            });
+        }
+
+        (AppState.appData?.violations || []).forEach((v) => {
+            if (!v?.contractorName) return;
+            addEntry(v.contractorId, v.contractorName, v.contractorCode || v.code || v.isoCode);
         });
 
-        const approved = Array.isArray(AppState.appData?.approvedContractors) ? AppState.appData.approvedContractors : [];
-        approved.forEach(c => addOption(c?.contractorId || c?.id || c?.code, c?.companyName || c?.name || c?.contractorName));
-
-        const contractors = Array.isArray(AppState.appData?.contractors) ? AppState.appData.contractors : [];
-        contractors.forEach(c => addOption(c?.id || c?.contractorId || c?.code, c?.name || c?.companyName || c?.contractorName));
-
-        // ✅ إزالة التكرار بناءً على اسم الشركة (بعيداً عن اختلاف المعرّفات)
-        // نفس الشركة قد تظهر بمعرّفات مختلفة من مصادر مختلفة (violations/approvedContractors/contractors)
-        const nameDeduped = new Map();
-        for (const entry of optionsMap.values()) {
-            const normalizedName = entry.name.trim().toLowerCase().replace(/\s+/g, ' ');
-            if (!nameDeduped.has(normalizedName)) {
-                nameDeduped.set(normalizedName, entry);
-            }
-        }
-        return Array.from(nameDeduped.values())
+        return Array.from(optionsMap.values())
             .sort((a, b) => a.name.localeCompare(b.name, 'ar', { sensitivity: 'base' }));
     },
 
@@ -2045,41 +2045,52 @@ const Violations = {
         return this._normKeyStr(baseName);
     },
 
-    _resolveContractorExportIdentity(contractorId = '', contractorName = '') {
+    _buildContractorExportMatcher(contractorId = '', contractorName = '', contractorCode = '') {
         const id = String(contractorId || '').trim();
-        let name = this._normalizeContractorExportName(contractorName);
+        const name = String(contractorName || '').trim();
+        const code = String(contractorCode || '').trim();
+        if (!id && !name && !code) return null;
 
-        if (id) {
-            const pools = [
-                ...(Array.isArray(AppState.appData?.contractors) ? AppState.appData.contractors : []),
-                ...(Array.isArray(AppState.appData?.approvedContractors) ? AppState.appData.approvedContractors : [])
-            ];
-            const match = pools.find((c) => String(c?.id || c?.contractorId || '').trim() === id);
-            if (match) {
-                name = this._normalizeContractorExportName(match.name || match.companyName || contractorName);
-            }
+        let contractorRecord = null;
+        if (typeof Contractors !== 'undefined' && typeof Contractors.resolveContractorForAnalytics === 'function') {
+            contractorRecord = Contractors.resolveContractorForAnalytics(id || code, name);
         }
 
-        return { id, name };
-    },
+        const lookupKey = id || code || name;
+        const baseRecord = contractorRecord || {
+            id,
+            name,
+            companyName: name,
+            code,
+            contractorCode: code
+        };
 
-    _violationMatchesContractorExport(violation, identity) {
-        if (!identity?.id && !identity?.name) return true;
+        if (typeof Utils !== 'undefined' && typeof Utils.buildContractorIdentityMatcher === 'function') {
+            return Utils.buildContractorIdentityMatcher(baseRecord, lookupKey);
+        }
+        if (typeof Contractors !== 'undefined' && typeof Contractors.buildContractorAnalyticsMatchers === 'function') {
+            return Contractors.buildContractorAnalyticsMatchers(baseRecord, lookupKey);
+        }
 
-        const isContractorViolation = violation?.personType === 'contractor'
-            || !!String(violation?.contractorName || '').trim();
-        if (!isContractorViolation) return false;
+        const targetName = this._normalizeContractorExportName(name || id);
+        const targetIds = new Set([id, code].filter(Boolean).map((v) => String(v).trim().toLowerCase()));
+        return {
+            violationBelongsToContractor: (record) => {
+                if (!record) return false;
+                const isContractorViolation = record.personType === 'contractor'
+                    || !!String(record.contractorName || '').trim();
+                if (!isContractorViolation) return false;
 
-        const recordId = String(violation?.contractorId || '').trim();
-        const recordName = this._normalizeContractorExportName(violation?.contractorName);
-        const legacyIdAsName = recordId ? this._normalizeContractorExportName(recordId) : '';
+                const recordName = this._normalizeContractorExportName(record.contractorName);
+                const recordId = String(record.contractorId || record.contractorCode || record.code || '').trim().toLowerCase();
+                const idMatches = recordId && targetIds.has(recordId);
 
-        if (identity.id && recordId && recordId === identity.id) return true;
-        if (identity.name && recordName && recordName === identity.name) return true;
-        if (identity.id && legacyIdAsName && legacyIdAsName === this._normalizeContractorExportName(identity.id)) return true;
-        if (identity.name && legacyIdAsName && legacyIdAsName === identity.name) return true;
-
-        return false;
+                if (idMatches) {
+                    return !recordName || !targetName || recordName === targetName;
+                }
+                return !!targetName && recordName === targetName;
+            }
+        };
     },
 
     showContractorViolationsReportDialog() {
@@ -2118,7 +2129,7 @@ const Violations = {
                         <select id="contractor-violations-report-select" class="form-input">
                             <option value="">جميع المقاولين</option>
                             ${contractors.map(contractor => `
-                                <option value="${Utils.escapeHTML(String(contractor.id ?? '').trim())}" data-contractor-name="${Utils.escapeHTML(contractor.name || '')}">
+                                <option value="${Utils.escapeHTML(String(contractor.id ?? '').trim())}" data-contractor-name="${Utils.escapeHTML(contractor.name || '')}" data-contractor-code="${Utils.escapeHTML(contractor.code || '')}">
                                     ${Utils.escapeHTML(contractor.name || 'بدون اسم')}
                                 </option>
                             `).join('')}
@@ -2198,10 +2209,16 @@ const Violations = {
             const selectedOption = contractorSelect && contractorSelect.selectedIndex >= 0
                 ? contractorSelect.options[contractorSelect.selectedIndex]
                 : null;
-            const selectedContractorId = selectedOption?.value ? String(selectedOption.value).trim() : '';
-            const selectedContractorName = selectedOption?.dataset?.contractorName
+            const isAllContractors = contractorSelect?.selectedIndex === 0;
+            const selectedContractorId = !isAllContractors && selectedOption?.value
+                ? String(selectedOption.value).trim()
+                : '';
+            const selectedContractorName = !isAllContractors && selectedOption?.dataset?.contractorName
                 ? String(selectedOption.dataset.contractorName).trim()
-                : String(selectedOption?.textContent || '').replace(/\s+/g, ' ').trim();
+                : '';
+            const selectedContractorCode = !isAllContractors && selectedOption?.dataset?.contractorCode
+                ? String(selectedOption.dataset.contractorCode).trim()
+                : '';
             const dateRangeType = modal.querySelector('input[name="contractor-violations-range-type"]:checked')?.value || 'all';
             const month = modal.querySelector('#contractor-violations-report-month')?.value || '';
             const fromDate = modal.querySelector('#contractor-violations-report-from-date')?.value || '';
@@ -2228,18 +2245,23 @@ const Violations = {
                 month,
                 fromDate,
                 toDate
-            }, selectedContractorName);
+            }, selectedContractorName, selectedContractorCode);
         });
     },
 
-    async generateContractorViolationsReport(contractorId = '', dateFilter = {}, selectedContractorName = '') {
-        const contractorIdentity = this._resolveContractorExportIdentity(contractorId, selectedContractorName);
-        let violations = (AppState.appData.violations || []).filter(v =>
-            v?.personType === 'contractor' || !!String(v?.contractorName || '').trim()
+    async generateContractorViolationsReport(contractorId = '', dateFilter = {}, selectedContractorName = '', selectedContractorCode = '') {
+        const contractorMatcher = this._buildContractorExportMatcher(
+            contractorId,
+            selectedContractorName,
+            selectedContractorCode
         );
+        let violations = (AppState.appData.violations || [])
+            .map((item) => this.normalizeViolationRecord(item))
+            .filter(Boolean)
+            .filter(v => v?.personType === 'contractor' || !!String(v?.contractorName || '').trim());
 
-        if (contractorIdentity.id || contractorIdentity.name) {
-            violations = violations.filter(v => this._violationMatchesContractorExport(v, contractorIdentity));
+        if (contractorMatcher) {
+            violations = violations.filter(v => contractorMatcher.violationBelongsToContractor(v));
         }
 
         const { dateRangeType = 'all', month = '', fromDate = '', toDate = '' } = dateFilter || {};
