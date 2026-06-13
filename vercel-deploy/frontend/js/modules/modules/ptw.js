@@ -6718,12 +6718,499 @@ const PTW = {
     },
 
     /**
+     * تطبيع بيانات التصريح اليدوي للطباعة (استعادة المصفوفات من النص المخزن)
+     */
+    normalizeManualPermitEntryForPrint(entry) {
+        if (!entry) return null;
+        const e = { ...entry };
+
+        if ((!e.teamMembers || !e.teamMembers.length) && e.teamMembersText) {
+            const text = String(e.teamMembersText).trim();
+            e.teamMembers = text.split(/[،,]/).map((s) => {
+                s = s.trim();
+                const m = s.match(/^(.+?)\s*\(([^)]*)\)\s*$/);
+                if (m) return { name: m[1].trim(), signature: m[2].trim() };
+                return { name: s, signature: '' };
+            }).filter((x) => x.name || x.signature);
+        }
+        if (!Array.isArray(e.teamMembers) || !e.teamMembers.length) {
+            e.teamMembers = [{ name: '', signature: '' }];
+        }
+
+        ['hotWorkDetails', 'confinedSpaceDetails', 'heightWorkDetails'].forEach((field) => {
+            if (e[field] != null && typeof e[field] === 'string') {
+                e[field] = e[field].split(/[،,]/).map((s) => s.trim()).filter(Boolean);
+            }
+            if (!Array.isArray(e[field])) e[field] = [];
+        });
+
+        const ppeItems = [];
+        if (Array.isArray(e.requiredPPE)) ppeItems.push(...e.requiredPPE);
+        if (e.ppeNotes) {
+            ppeItems.push(...String(e.ppeNotes).split(/[،,]/).map((s) => s.trim()).filter(Boolean));
+        }
+        e._ppeSelected = [...new Set(ppeItems.map((s) => String(s).trim()).filter(Boolean))];
+
+        return e;
+    },
+
+    _findManualApprovalByRoles(approvals, roles) {
+        if (!Array.isArray(approvals)) return { name: '', signature: '' };
+        const norm = (s) => String(s || '').trim().replace(/[ؤ]/g, 'و').replace(/ئ/g, 'ي');
+        for (const role of roles) {
+            const found = approvals.find((a) => norm(a.role) === norm(role));
+            if (found) return { name: found.name || found.approver || '', signature: found.signature || '' };
+        }
+        return { name: '', signature: '' };
+    },
+
+    /**
+     * شبكة مهمات الوقاية للطباعة (مطابقة النموذج اليدوي — عرض ثابت)
+     */
+    buildManualFixedPPEPrintHtml(selectedItems = []) {
+        const esc = (v) => Utils.escapeHTML(v);
+        const raw = new Set((selectedItems || []).map((s) => String(s || '').trim()).filter(Boolean));
+        const normKey = (x) =>
+            String(x || '')
+                .trim()
+                .replace(/\s+/g, ' ')
+                .replace(/[أإآٱ]/g, 'ا')
+                .replace(/ة/g, 'ه')
+                .replace(/ى/g, 'ي');
+        const isSel = (label) => {
+            const t = String(label).trim();
+            if (raw.has(t)) return true;
+            const nk = normKey(t);
+            for (const s of raw) {
+                if (normKey(s) === nk) return true;
+            }
+            return false;
+        };
+        const rows = [
+            ['حذاء سلامة', 'جوانتي سلامة', 'جوانتى احماض', 'جوانتي كهربي', 'كمامة', 'سدادة أذن', 'كاتم أذن', 'بدلة كيمائية', 'كشاف إنارة'],
+            ['واقي رأس', 'نظارة واقية', 'وجه لحام', 'أذرع واقية', 'حزام أمان', 'حبل سلامة', 'جهاز تنفس', 'سترة عاكسة', 'شريط عاكس'],
+            ['حواجز', 'أقماع مرور', 'وسائل اتصال', 'بطانية حريق', 'أخرى']
+        ];
+        let html = '<div class="ptw-manual-ppe-fixed-wrap">';
+        rows.forEach((row) => {
+            html += '<div class="ptw-manual-ppe-fixed-row">';
+            row.forEach((label) => {
+                const mark = isSel(label) ? '☑' : '☐';
+                html += `<span class="ptw-manual-ppe-cell"><span class="ppe-mark">${mark}</span><span>${esc(label)}</span></span>`;
+            });
+            html += '</div>';
+        });
+        html += '</div>';
+        return html;
+    },
+
+    getManualPermitPrintStyles() {
+        return `
+            * { box-sizing: border-box; }
+            body { margin: 0; padding: 12px; font-family: 'Segoe UI', Tahoma, Arial, sans-serif; font-size: 12px; color: #1f2937; background: #fff; direction: rtl; }
+            .ptw-manual-print { max-width: 1100px; margin: 0 auto; }
+            .ptw-paper-header {
+                display: grid; grid-template-columns: 1fr 1.2fr 1fr; gap: 12px; align-items: center;
+                background: linear-gradient(135deg, #1e3a5f 0%, #1d4ed8 100%); color: #fff;
+                padding: 14px 18px; border-radius: 8px; margin-bottom: 12px;
+            }
+            .ptw-paper-header-right { text-align: right; }
+            .ptw-paper-header-title { font-weight: 700; font-size: 15px; }
+            .ptw-paper-header-subtitle { font-size: 11px; opacity: 0.9; margin-top: 2px; }
+            .ptw-paper-header-center { text-align: center; }
+            .ptw-paper-header-company { font-size: 17px; font-weight: 700; }
+            .ptw-paper-header-left { display: flex; justify-content: flex-end; }
+            .ptw-paper-header-logo { max-height: 56px; max-width: 140px; object-fit: contain; background: #fff; border-radius: 4px; padding: 4px; }
+            .ptw-paper-header-logo-fallback { width: 80px; height: 44px; border: 1px solid #cbd5e1; display: flex; align-items: center; justify-content: center; color: #94a3b8; font-size: 11px; background: #fff; border-radius: 4px; }
+            .manual-print-disclaimer-wrap { margin-bottom: 14px; border: 2px solid #2196F3; border-radius: 10px; overflow: hidden; }
+            .manual-print-disclaimer-text { text-align: center; padding: 14px; background: linear-gradient(135deg, #fff 0%, #f5f5f5 100%); font-size: 13px; line-height: 2; color: #1e3a5f; font-weight: 500; }
+            .manual-print-permit-no { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 12px; background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%); }
+            .manual-print-seq-badge { background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%); color: #fff; padding: 10px 28px; border-radius: 8px; text-align: center; }
+            .manual-print-seq-badge .lbl { font-size: 10px; opacity: 0.9; display: block; }
+            .manual-print-seq-badge .val { font-size: 22px; font-weight: 700; letter-spacing: 2px; font-family: 'Courier New', monospace; }
+            .manual-print-paper-no { font-size: 13px; font-weight: 600; color: #1e3a5f; }
+            .ptw-manual-form-section { margin: 10px 0; padding: 14px 16px; border-radius: 10px; border: 2px solid; page-break-inside: avoid; }
+            .ptw-manual-form-section h3 { margin: 0 0 12px 0; padding-bottom: 8px; font-size: 14px; font-weight: 700; border-bottom: 2px solid; display: flex; align-items: center; gap: 8px; }
+            .manual-section-1 { background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%); border-color: #2196F3; }
+            .manual-section-1 h3 { color: #1565C0; border-color: #2196F3; }
+            .manual-section-2 { background: linear-gradient(135deg, #e0f2f1 0%, #b2dfdb 100%); border-color: #009688; }
+            .manual-section-2 h3 { color: #00695C; border-color: #009688; }
+            .manual-section-3 { background: linear-gradient(135deg, #f3e5f5 0%, #e1bee7 100%); border-color: #9C27B0; }
+            .manual-section-3 h3 { color: #6A1B9A; border-color: #9C27B0; }
+            .manual-section-4 { background: linear-gradient(135deg, #fff3e0 0%, #ffe0b2 100%); border-color: #FF9800; }
+            .manual-section-4 h3 { color: #E65100; border-color: #FF9800; }
+            .manual-section-5 { background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%); border-color: #4CAF50; }
+            .manual-section-5 h3 { color: #2E7D32; border-color: #4CAF50; }
+            .manual-section-6 { background: linear-gradient(135deg, #fce4ec 0%, #f8bbd0 100%); border-color: #E91E63; }
+            .manual-section-6 h3 { color: #AD1457; border-color: #E91E63; }
+            .manual-section-7 { background: linear-gradient(135deg, #efebe9 0%, #d7ccc8 100%); border-color: #795548; }
+            .manual-section-7 h3 { color: #4E342E; border-color: #795548; }
+            .manual-section-8 { background: linear-gradient(135deg, #f5f5f5 0%, #e0e0e0 100%); border-color: #9e9e9e; }
+            .manual-section-8 h3 { color: #424242; border-color: #9e9e9e; }
+            .manual-section-9 { background: linear-gradient(135deg, #e1f5fe 0%, #b3e5fc 100%); border-color: #03a9f4; }
+            .manual-section-9 h3 { color: #0277bd; border-color: #03a9f4; }
+            .manual-section-10 { background: linear-gradient(135deg, #ede7f6 0%, #d1c4e9 100%); border-color: #673ab7; }
+            .manual-section-10 h3 { color: #4527a0; border-color: #673ab7; }
+            .manual-print-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+            .manual-print-field { background: #fff; border: 1px solid #cbd5e1; border-radius: 6px; padding: 8px 10px; }
+            .manual-print-field.full { grid-column: 1 / -1; }
+            .manual-print-field .lbl { font-size: 10px; color: #64748b; font-weight: 600; margin-bottom: 3px; }
+            .manual-print-field .val { font-size: 12px; font-weight: 500; color: #1f2937; white-space: pre-wrap; word-break: break-word; }
+            .ptw-paper-grid-table { width: 100%; border-collapse: collapse; border: 1px solid #000; background: #fff; font-size: 11px; }
+            .ptw-paper-grid-table th, .ptw-paper-grid-table td { border: 1px solid #374151; padding: 6px 8px; text-align: center; vertical-align: middle; }
+            .ptw-paper-grid-table thead th { background: linear-gradient(135deg, #b3e5fc 0%, #81d4fa 100%); color: #01579b; font-weight: 700; }
+            .ptw-paper-grid-table .row-label { background: #f5f5f5; font-weight: 600; }
+            .manual-print-req-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+            .manual-print-req-item { background: #fff; border: 1px solid #e2e8f0; border-radius: 6px; padding: 8px; font-size: 11px; }
+            .manual-print-req-item.on { border-color: #f97316; background: #fff7ed; font-weight: 600; }
+            .ptw-manual-ppe-fixed-wrap { background: #fff; border: 1px solid #cbd5e1; border-radius: 6px; padding: 8px; }
+            .ptw-manual-ppe-fixed-row { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 4px; }
+            .ptw-manual-ppe-cell { display: inline-flex; align-items: center; gap: 4px; padding: 4px 6px; border: 1px solid #e2e8f0; border-radius: 4px; font-size: 10px; min-width: 90px; }
+            .ppe-mark { font-size: 12px; }
+            .manual-risk-matrix { width: 100%; border-collapse: collapse; text-align: center; font-size: 10px; background: #fff; }
+            .manual-risk-matrix th, .manual-risk-matrix td { border: 1px solid #6b7280; padding: 4px; }
+            .manual-risk-matrix .risk-cell { font-weight: 700; padding: 8px 4px; }
+            .manual-risk-matrix .risk-selected { outline: 3px solid #2563eb; outline-offset: -3px; }
+            .manual-risk-summary { margin-top: 10px; padding: 10px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; display: flex; flex-wrap: wrap; gap: 16px; align-items: center; }
+            .manual-risk-badge { width: 48px; height: 48px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 16px; color: #fff; }
+            .manual-work-block { background: #fff; border: 1px solid #d8b4fe; border-radius: 8px; padding: 10px; margin-bottom: 8px; }
+            .manual-work-block h4 { margin: 0 0 6px 0; font-size: 12px; color: #6b21a8; }
+            .manual-status-pill { display: inline-block; padding: 6px 14px; border-radius: 20px; font-weight: 600; font-size: 12px; }
+            .manual-status-completed { background: #d1fae5; color: #065f46; border: 1px solid #10b981; }
+            .manual-status-incomplete { background: #fef3c7; color: #92400e; border: 1px solid #f59e0b; }
+            .manual-status-forced { background: #fee2e2; color: #991b1b; border: 1px solid #ef4444; }
+            @media print {
+                body { padding: 6px; font-size: 10px; }
+                .ptw-manual-form-section { page-break-inside: auto; break-inside: auto; margin: 6px 0; padding: 10px; }
+            }
+        `;
+    },
+
+    _formatManualPermitDateTime(dateStr) {
+        if (!dateStr || dateStr === 'غير محدد') return '—';
+        try {
+            const date = this.parseDateTimeValue(dateStr);
+            if (!date || isNaN(date.getTime())) return String(dateStr);
+            return date.toLocaleString('ar-SA', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+        } catch {
+            return String(dateStr);
+        }
+    },
+
+    /**
+     * محتوى HTML للطباعة — مطابق لتصميم نموذج إصدار تصريح عمل يدوي
+     */
+    generateManualPermitPrintContent(entry) {
+        const e = this.normalizeManualPermitEntryForPrint(entry);
+        if (!e) return '';
+        const esc = (v) => Utils.escapeHTML(v == null ? '' : String(v));
+        const field = (label, value, full = false) => `
+            <div class="manual-print-field${full ? ' full' : ''}">
+                <div class="lbl">${esc(label)}</div>
+                <div class="val">${value ? esc(value) : '—'}</div>
+            </div>`;
+
+        const seqNum = String(e.sequentialNumber || this.getPermitDisplayNumber(e)).padStart(4, '0');
+        const paperNo = String(e.paperPermitNumber || '').trim() || '—';
+
+        const teamRows = (e.teamMembers || []).map((m) => `
+            <tr>
+                <td>${esc(m.name) || '—'}</td>
+                <td style="border-right: 3px solid #1e3a8a;">${esc(m.signature || m.id) || '—'}</td>
+            </tr>`).join('');
+
+        const reqItems = [
+            { key: 'preStartChecklist', label: 'قائمة التحقق بقرار بدء العمل' },
+            { key: 'lotoApplied', label: 'تطبيق نظام العزل LOTO' },
+            { key: 'governmentPermits', label: 'تصاريح جهات حكومية' },
+            { key: 'riskAssessmentAttached', label: 'تحليل المخاطر ووسائل التحكم' },
+            { key: 'gasTesting', label: 'قياس الغازات' },
+            { key: 'mocRequest', label: 'طلب تغيير فني (MOC)' }
+        ];
+        const parseBool = (v) => v === true || v === 'true' || v === 1 || v === '1';
+        const reqHtml = reqItems.map((item) => {
+            const on = parseBool(e[item.key]);
+            return `<div class="manual-print-req-item${on ? ' on' : ''}">${on ? '☑' : '☐'} ${esc(item.label)}</div>`;
+        }).join('');
+
+        const workBlocks = [];
+        const pushWork = (title, items, other) => {
+            const list = Array.isArray(items) ? items.filter(Boolean) : [];
+            const extra = other ? String(other).trim() : '';
+            if (!list.length && !extra) return;
+            workBlocks.push(`<div class="manual-work-block"><h4>${esc(title)}</h4><div>${esc([...list, extra].filter(Boolean).join('، ') || '—')}</div></div>`);
+        };
+        pushWork('أعمال ساخنة', e.hotWorkDetails, e.hotWorkOther);
+        pushWork('أماكن مغلقة', e.confinedSpaceDetails, e.confinedSpaceOther);
+        pushWork('عمل على ارتفاع', e.heightWorkDetails, e.heightWorkOther);
+        if (e.excavationLength || e.excavationWidth || e.excavationDepth || e.soilType) {
+            workBlocks.push(`<div class="manual-work-block"><h4>أعمال حفر</h4>
+                <div>الطول: ${esc(e.excavationLength) || '—'} م | العرض: ${esc(e.excavationWidth) || '—'} م | العمق: ${esc(e.excavationDepth) || '—'} م | نوع التربة: ${esc(e.soilType) || '—'}</div></div>`);
+        }
+        if (e.electricalWorkType) workBlocks.push(`<div class="manual-work-block"><h4>أعمال كهرباء</h4><div>${esc(e.electricalWorkType)}</div></div>`);
+        if (e.coldWorkType) workBlocks.push(`<div class="manual-work-block"><h4>أعمال على البارد</h4><div>${esc(e.coldWorkType)}</div></div>`);
+        if (e.otherWorkType) workBlocks.push(`<div class="manual-work-block"><h4>أعمال أخرى</h4><div>${esc(e.otherWorkType)}</div></div>`);
+        const permitTypes = this.getPermitTypeDisplay(e);
+        const workSectionHtml = `
+            <div class="manual-work-block" style="border-color:#93c5fd;background:#eff6ff;"><h4>أنواع التصريح المختارة</h4><div>${esc(permitTypes)}</div></div>
+            ${workBlocks.length ? workBlocks.join('') : '<div class="manual-print-field full"><div class="val">—</div></div>'}`;
+
+        const likelihoodLabels = { 5: 'شبه مؤكد', 4: 'محتمل جداً', 3: 'محتمل', 2: 'غير محتمل', 1: 'نادر' };
+        const selL = parseInt(e.riskLikelihood, 10);
+        const selC = parseInt(e.riskConsequence, 10);
+        const riskMatrixRows = [5, 4, 3, 2, 1].map((likelihood) => {
+            const cells = [1, 2, 3, 4, 5].map((consequence) => {
+                const score = likelihood * consequence;
+                let bg = '#22c55e'; let color = '#fff';
+                if (score <= 4) { bg = '#22c55e'; color = '#fff'; }
+                else if (score <= 9) { bg = '#eab308'; color = '#1c1917'; }
+                else if (score <= 16) { bg = '#f97316'; color = '#fff'; }
+                else { bg = '#dc2626'; color = '#fff'; }
+                const selected = selL === likelihood && selC === consequence;
+                return `<td class="risk-cell${selected ? ' risk-selected' : ''}" style="background:${bg};color:${color};">${score}</td>`;
+            }).join('');
+            return `<tr><td class="row-label">${likelihood} - ${likelihoodLabels[likelihood]}</td>${cells}</tr>`;
+        }).join('');
+
+        const riskBadgeColor = !e.riskScore ? '#94a3b8'
+            : (e.riskScore <= 4 ? '#22c55e' : e.riskScore <= 9 ? '#eab308' : e.riskScore <= 16 ? '#f97316' : '#dc2626');
+        const riskBadgeTextColor = (e.riskScore > 4 && e.riskScore <= 9) ? '#1c1917' : '#fff';
+
+        const approvalRoles7 = ['مسئول الجهة الطالبة', 'مدير منطقة الأعمال', 'مدير / مهندس الصيانة', 'مسئول السلامة والصحة المهنية'];
+        const approvals7 = approvalRoles7.map((role) => this._findManualApprovalByRoles(e.manualApprovals, [role, role.replace(/ئ/g, 'ؤ')]));
+        const closureRoles9 = ['مسؤول الجهة الطالبة', 'مدير منطقة الأعمال', 'مسؤول السلامة والصحة المهنية', 'مدير السلامة والصحة المهنية'];
+        const approvals9 = closureRoles9.map((role) => this._findManualApprovalByRoles(e.manualClosureApprovals, [role, role.replace(/ؤ/g, 'ئ')]));
+
+        const statusClass = e.status === 'اكتمل العمل بشكل آمن' ? 'manual-status-completed'
+            : e.status === 'إغلاق جبري' ? 'manual-status-forced'
+                : e.status === 'لم يكتمل العمل' ? 'manual-status-incomplete' : '';
+
+        const sublocationDisplay = e.sublocation || (Array.isArray(e.locationEntries) && e.locationEntries.length
+            ? e.locationEntries.map((le) => le.sublocation).filter(Boolean).join(' | ')
+            : '');
+
+        return `
+            <div class="manual-print-disclaimer-wrap">
+                <div class="manual-print-disclaimer-text">
+                    تم إصدار هذا التصريح فقط للعمل الذي تم وصفه أدناه<br>
+                    ولا يجوز بأي حال من الأحوال استخدامه لأي عمل آخر لم يتم وصفه<br>
+                    وعليه فإنه يجب الالتزام بمدة صلاحية التصريح للعمل المذكور أدناه وفى الموقع المصرح للعمل فيه فقط.
+                </div>
+                <div class="manual-print-permit-no">
+                    <div class="manual-print-seq-badge">
+                        <span class="lbl">رقم التصريح / Permit No.</span>
+                        <span class="val">${esc(seqNum)}</span>
+                    </div>
+                    <div class="manual-print-paper-no">رقم التصريح الورقي: <strong>${esc(paperNo)}</strong></div>
+                </div>
+            </div>
+
+            <div class="ptw-manual-form-section manual-section-1">
+                <h3>القسم الأول : بيانات التصريح الأساسية</h3>
+                <div class="manual-print-grid">
+                    ${field('الموقع / القسم', e.location)}
+                    ${field('المكان الفرعي', sublocationDisplay)}
+                    ${field('تاريخ البدء', this._formatManualPermitDateTime(e.timeFrom))}
+                    ${field('تاريخ الانتهاء', this._formatManualPermitDateTime(e.timeTo))}
+                    ${field('الجهة المصرح لها بالعمل', e.authorizedParty)}
+                    ${field('الجهة الطالبة للتصريح', e.requestingParty)}
+                    ${field('المعدة / الماكينة / العملية', e.equipment, true)}
+                    ${field('الأدوات أو العدد (بعد فحصها وقبولها)', e.tools || e.toolsList, true)}
+                    ${field('وصف العمل', e.workDescription, true)}
+                </div>
+            </div>
+
+            <div class="ptw-manual-form-section manual-section-2">
+                <h3>القسم الثاني : أسماء القائمين بالعمل</h3>
+                <table class="ptw-paper-grid-table">
+                    <thead>
+                        <tr>
+                            <th style="width:50%;">أسماء القائمين بالعمل</th>
+                            <th style="width:50%;border-right:3px solid #1e3a8a;">التوقيع</th>
+                        </tr>
+                    </thead>
+                    <tbody>${teamRows}</tbody>
+                </table>
+            </div>
+
+            <div class="ptw-manual-form-section manual-section-3">
+                <h3>القسم الثالث : تحديد نوع / طبيعة الأعمال</h3>
+                ${workSectionHtml}
+            </div>
+
+            <div class="ptw-manual-form-section manual-section-4">
+                <h3>القسم الرابع : المتطلبات والمرفقات</h3>
+                <div class="manual-print-req-grid">${reqHtml}</div>
+            </div>
+
+            <div class="ptw-manual-form-section manual-section-5">
+                <h3>القسم الخامس : تحديد مهمات الوقاية / وسائل الوقاية الأخرى</h3>
+                ${this.buildManualFixedPPEPrintHtml(e._ppeSelected)}
+                ${e.ppeNotes && !e._ppeSelected.length ? `<div class="manual-print-field full" style="margin-top:8px;"><div class="lbl">مهمات الوقاية المطلوبة (إضافي يدوي)</div><div class="val">${esc(e.ppeNotes)}</div></div>` : ''}
+            </div>
+
+            <div class="ptw-manual-form-section manual-section-6">
+                <h3>القسم السادس : مصفوفة تقييم المخاطر</h3>
+                <table class="manual-risk-matrix">
+                    <thead>
+                        <tr>
+                            <th rowspan="2">الاحتمالية</th>
+                            <th colspan="5" style="background:#374151;color:#fff;">الخطورة (العواقب)</th>
+                        </tr>
+                        <tr>
+                            <th>1 - طفيف</th><th>2 - بسيط</th><th>3 - متوسط</th><th>4 - خطير</th><th>5 - كارثي</th>
+                        </tr>
+                    </thead>
+                    <tbody>${riskMatrixRows}</tbody>
+                </table>
+                ${e.riskScore ? `
+                <div class="manual-risk-summary">
+                    <div class="manual-risk-badge" style="background:${riskBadgeColor};color:${riskBadgeTextColor};">${esc(e.riskScore)}</div>
+                    <div>
+                        <div><strong>درجة المخاطر:</strong> ${esc(e.riskScore)}</div>
+                        <div><strong>مستوى المخاطر:</strong> ${esc(e.riskLevel || '—')}</div>
+                        <div><strong>الاحتمالية:</strong> ${esc(e.riskLikelihood || '—')} | <strong>الخطورة:</strong> ${esc(e.riskConsequence || '—')}</div>
+                    </div>
+                </div>` : ''}
+                ${e.riskNotes ? `<div class="manual-print-field full" style="margin-top:8px;"><div class="lbl">ملاحظات تقييم المخاطر</div><div class="val">${esc(e.riskNotes)}</div></div>` : ''}
+            </div>
+
+            <div class="ptw-manual-form-section manual-section-7">
+                <h3>القسم السابع : دائرة الاعتمادات</h3>
+                <table class="ptw-paper-grid-table">
+                    <thead>
+                        <tr><th colspan="5">اعتماد التصريح (يشترط جميع التوقيعات لبدء العمل)</th></tr>
+                        <tr>
+                            <th style="width:12%;">الاسم / التوقيع</th>
+                            <th>مسئول الجهة الطالبة</th>
+                            <th>مدير منطقة الأعمال</th>
+                            <th>مدير / مهندس الصيانة</th>
+                            <th>مسئول السلامة والصحة المهنية</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td class="row-label">الاسم</td>
+                            ${approvals7.map((a) => `<td>${esc(a.name) || '—'}</td>`).join('')}
+                        </tr>
+                        <tr>
+                            <td class="row-label">التوقيع</td>
+                            ${approvals7.map((a) => `<td>${esc(a.signature) || '—'}</td>`).join('')}
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="ptw-manual-form-section manual-section-8">
+                <h3>القسم الثامن : إغلاق التصريح</h3>
+                <div class="manual-print-disclaimer-text" style="margin-bottom:10px;font-size:11px;padding:10px;">
+                    تم متابعة العمل حتى النهاية وتم فحص موقع العمل والمواقع المجاورة له والتأكد من خلوها من الأخطار المحتمل حدوثها وذلك بعد عملية الانتهاء من العمل
+                </div>
+                <div class="manual-print-grid">
+                    <div class="manual-print-field">
+                        <div class="lbl">حالة الإغلاق</div>
+                        <div class="val"><span class="manual-status-pill ${statusClass}">${esc(e.status || '—')}</span></div>
+                    </div>
+                    ${field('وقت الإغلاق', this._formatManualPermitDateTime(e.closureDate || e.closureTime))}
+                    ${field('السبب', e.closureReason, true)}
+                </div>
+            </div>
+
+            <div class="ptw-manual-form-section manual-section-9">
+                <h3>القسم التاسع : اعتماد إغلاق التصريح</h3>
+                <table class="ptw-paper-grid-table">
+                    <thead>
+                        <tr><th colspan="5">اعتماد اغلاق التصريح ( يشترط جميع التوقيعات)</th></tr>
+                        <tr>
+                            <th style="width:12%;">الاسم / التوقيع</th>
+                            <th>مسؤول الجهة الطالبة</th>
+                            <th>مدير منطقة الأعمال</th>
+                            <th>مسؤول السلامة والصحة المهنية</th>
+                            <th>مدير السلامة والصحة المهنية</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td class="row-label">الاسم</td>
+                            ${approvals9.map((a) => `<td>${esc(a.name) || '—'}</td>`).join('')}
+                        </tr>
+                        <tr>
+                            <td class="row-label">التوقيع</td>
+                            ${approvals9.map((a) => `<td>${esc(a.signature) || '—'}</td>`).join('')}
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="ptw-manual-form-section manual-section-10">
+                <h3>القسم العاشر : مسؤولي المتابعة</h3>
+                <div class="manual-print-grid">
+                    ${field('مسؤول المتابعة الأول', e.supervisor1)}
+                    ${field('مسؤول المتابعة الثاني', e.supervisor2)}
+                </div>
+            </div>
+        `;
+    },
+
+    generateManualPermitPrintHTML(entry) {
+        const content = this.generateManualPermitPrintContent(entry);
+        const displayNo = this.getPermitDisplayNumber(entry);
+        return `<!DOCTYPE html>
+<html dir="rtl" lang="ar">
+<head>
+    <meta charset="UTF-8">
+    <title>تصريح عمل يدوي #${Utils.escapeHTML(displayNo)}</title>
+    <style>${this.getManualPermitPrintStyles()}</style>
+</head>
+<body>
+    <div class="ptw-manual-print">
+        ${this.renderPermitSystemHeader()}
+        ${content}
+    </div>
+</body>
+</html>`;
+    },
+
+    openPermitPrintWindow(htmlContent, onDone) {
+        try {
+            const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const printWindow = window.open(url, '_blank');
+            if (printWindow) {
+                printWindow.onload = () => {
+                    setTimeout(() => {
+                        printWindow.print();
+                        setTimeout(() => {
+                            URL.revokeObjectURL(url);
+                            if (typeof onDone === 'function') onDone();
+                        }, 800);
+                    }, 500);
+                };
+            } else {
+                Notification.error(this._t('module.ptw.notify.popupsPrint', 'يرجى السماح بالنوافذ المنبثقة للطباعة'));
+                if (typeof onDone === 'function') onDone();
+            }
+        } catch (error) {
+            Utils.safeError('خطأ في الطباعة:', error);
+            Notification.error(this._t('module.ptw.notify.printErr', 'حدث خطأ أثناء الطباعة: ') + error.message);
+            if (typeof onDone === 'function') onDone();
+        }
+    },
+
+    /**
      * طباعة التصريح
      */
     printPermit(permitId) {
         const reg = Array.isArray(this.registryData)
             ? this.registryData.find((r) => r.permitId === permitId || r.id === permitId)
             : null;
+
+        if (reg?.isManualEntry) {
+            const htmlContent = this.generateManualPermitPrintHTML(reg);
+            this.openPermitPrintWindow(htmlContent);
+            return;
+        }
+
         const effectiveId = reg?.permitId || permitId;
         let item = AppState.appData.ptw.find((i) => i.id === effectiveId);
         if (!item && reg && reg.isManualEntry) {
@@ -6748,14 +7235,13 @@ const PTW = {
         const formData = this.getPermitFormDataForPrint(item);
         const content = this.generatePrintContent(formData);
 
-        // إزالة QR code من الطباعة (includeQrInFooter = false)
         const htmlContent = typeof FormHeader !== 'undefined' && typeof FormHeader.generatePDFHTML === 'function'
             ? FormHeader.generatePDFHTML(
                 formCode,
                 `تصريح عمل #${this.getPermitDisplayNumber(registryEntry || item)}`,
                 content,
                 false,
-                false, // إزالة QR code
+                false,
                 {
                     version: item.version || '1.0',
                     releaseDate: item.startDate || item.createdAt,
@@ -6765,21 +7251,9 @@ const PTW = {
                 item.createdAt || item.startDate,
                 item.updatedAt || item.endDate || item.createdAt
             )
-            : `<html><body>${content}</body></html>`;
+            : `<html dir="rtl" lang="ar"><head><meta charset="UTF-8"><title>طباعة تصريح العمل</title></head><body>${content}</body></html>`;
 
-        const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
-        const url = URL.createObjectURL(blob);
-        const printWindow = window.open(url, '_blank');
-        if (printWindow) {
-            printWindow.onload = () => {
-                setTimeout(() => {
-                    printWindow.print();
-                    setTimeout(() => {
-                        URL.revokeObjectURL(url);
-                    }, 800);
-                }, 500);
-            };
-        }
+        this.openPermitPrintWindow(htmlContent);
     },
 
     /**
@@ -8129,6 +8603,9 @@ const PTW = {
                     <button type="button" class="btn-secondary" data-action="close" style="padding: 14px 32px; font-weight: 600; border-radius: 10px;">
                         <i class="fas fa-times ml-2"></i>إلغاء
                     </button>
+                    <button type="button" class="btn-secondary" id="manual-permit-print-btn" style="padding: 14px 32px; font-weight: 600; border-radius: 10px;">
+                        <i class="fas fa-print ml-2"></i>طباعة
+                    </button>
                     <button type="submit" form="manual-permit-form" class="btn-primary" style="padding: 14px 40px; font-weight: 600; background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%); border-radius: 10px; box-shadow: 0 4px 15px rgba(30, 60, 114, 0.3);">
                         <i class="fas fa-save ml-2"></i>${isEdit ? 'حفظ التعديلات' : 'تسجيل التصريح'}
                     </button>
@@ -8691,6 +9168,10 @@ const PTW = {
         });
 
         
+        modal.querySelector('#manual-permit-print-btn')?.addEventListener('click', () => {
+            this.printManualPermitFromModal(modal, entryId);
+        });
+
         modal.querySelector('#manual-permit-form')?.addEventListener('submit', async (event) => {
             event.preventDefault();
             
@@ -8705,6 +9186,166 @@ const PTW = {
             
             await this.saveManualPermitEntry(modal, entryId);
         });
+    },
+
+    /**
+     * جمع بيانات النموذج اليدوي الحالي للطباعة (معاينة قبل/بعد الحفظ)
+     */
+    collectManualPermitDataFromModal(modal, entryId = null) {
+        if (!modal) return null;
+        const existingEntry = entryId ? this.registryData.find((r) => r.id === entryId) : null;
+
+        const locationSelect = modal.querySelector('#manual-permit-location');
+        const selectedLocationOption = locationSelect?.options[locationSelect?.selectedIndex];
+        const locationId = String(locationSelect?.value || '').trim();
+        const locationName = String(
+            selectedLocationOption?.getAttribute('data-site-name')
+            || selectedLocationOption?.textContent
+            || ''
+        ).trim();
+
+        const sublocationSelect = modal.querySelector('#manual-permit-sublocation');
+        const locationEntriesInput = modal.querySelector('#manual-permit-location-entries');
+        let selectedLocationEntries = [];
+        if (locationEntriesInput?.value) {
+            try {
+                const raw = JSON.parse(locationEntriesInput.value);
+                if (Array.isArray(raw)) selectedLocationEntries = raw;
+            } catch (_) { /* ignore */ }
+        }
+        if (!selectedLocationEntries.length) {
+            const subOpt = sublocationSelect?.options[sublocationSelect?.selectedIndex];
+            const subName = String(subOpt?.getAttribute('data-place-name') || subOpt?.textContent || '').trim();
+            if (locationName && subName) {
+                selectedLocationEntries = [{ locationId, location: locationName, sublocationId: sublocationSelect?.value || '', sublocation: subName }];
+            }
+        }
+        const sublocationNames = selectedLocationEntries.map((e) => e.sublocation).filter(Boolean);
+
+        const teamMembers = Array.from(modal.querySelectorAll('#manual-team-members-list tr.manual-team-member-row')).map((row) => ({
+            name: row.querySelector('.manual-team-member-name')?.value?.trim() || '',
+            signature: row.querySelector('.manual-team-member-signature')?.value?.trim() || ''
+        })).filter((m) => m.name || m.signature);
+
+        const approvalRoles = ['مسئول الجهة الطالبة', 'مدير منطقة الأعمال', 'مدير / مهندس الصيانة', 'مسئول السلامة والصحة المهنية'];
+        const manualApprovals = approvalRoles.map((role) => {
+            const iaVal = this._readIaRolePickerValue(role, modal, { isClosure: false });
+            const sigEl = modal.querySelector(`.manual-approval-sig[data-role="${role}"]`);
+            if (iaVal.name || iaVal.approverId) {
+                return { role, name: iaVal.name, signature: sigEl?.value?.trim() || '' };
+            }
+            const nameEl = modal.querySelector(`.manual-approval-name[data-role="${role}"]`);
+            return { role, name: nameEl?.value?.trim() || '', signature: sigEl?.value?.trim() || '' };
+        });
+
+        const closureApprovalRoles = ['مسؤول الجهة الطالبة', 'مدير منطقة الأعمال', 'مسؤول السلامة والصحة المهنية', 'مدير السلامة والصحة المهنية'];
+        const manualClosureApprovals = closureApprovalRoles.map((role) => {
+            const iaVal = this._readIaRolePickerValue(role, modal, { isClosure: true });
+            const sigEl = modal.querySelector(`.manual-closure-approval-sig[data-role="${role}"]`);
+            if (iaVal.name || iaVal.approverId) {
+                return { role, name: iaVal.name, signature: sigEl?.value?.trim() || '' };
+            }
+            const nameEl = modal.querySelector(`.manual-closure-approval-name[data-role="${role}"]`);
+            return { role, name: nameEl?.value?.trim() || '', signature: sigEl?.value?.trim() || '' };
+        });
+
+        const timeFromValue = modal.querySelector('#manual-permit-time-from')?.value || '';
+        const timeToValue = modal.querySelector('#manual-permit-time-to')?.value || '';
+        const ppeFromMatrix = Array.from(modal.querySelectorAll('#manual-ppe-matrix .manual-ppe-fixed-cb:checked'))
+            .map((el) => String(el.value || '').trim()).filter(Boolean);
+        const ppeNotesRaw = modal.querySelector('#manual-ppe-notes')?.value?.trim() || '';
+        const ppeFromNotes = ppeNotesRaw ? ppeNotesRaw.split(/[،,]/).map((s) => s.trim()).filter(Boolean) : [];
+        const requiredPPE = [...new Set([...ppeFromMatrix, ...ppeFromNotes])];
+
+        const hotWorkDetails = Array.from(modal.querySelectorAll('input[name="manual-hot-work"]:checked')).map((cb) => cb.value);
+        const confinedSpaceDetails = Array.from(modal.querySelectorAll('input[name="manual-confined-space"]:checked')).map((cb) => cb.value);
+        const heightWorkDetails = Array.from(modal.querySelectorAll('input[name="manual-height-work"]:checked')).map((cb) => cb.value);
+
+        const derivedPermitTypes = [];
+        if (hotWorkDetails.length) derivedPermitTypes.push('أعمال ساخنة');
+        if (confinedSpaceDetails.length) derivedPermitTypes.push('أعمال في الأماكن المغلقة');
+        if (heightWorkDetails.length) derivedPermitTypes.push('أعمال في الارتفاعات');
+        const hasExcavation = modal.querySelector('#manual-excavation-check')?.checked
+            || modal.querySelector('#manual-excavation-length')?.value?.trim();
+        if (hasExcavation) derivedPermitTypes.push('أعمال حفر');
+        if (modal.querySelector('#manual-electrical-check')?.checked || modal.querySelector('#manual-electrical-work-type')?.value?.trim()) derivedPermitTypes.push('أعمال كهربائية');
+        if (modal.querySelector('#manual-cold-check')?.checked || modal.querySelector('#manual-cold-work-type')?.value?.trim()) derivedPermitTypes.push('أعمال باردة');
+        if (modal.querySelector('#manual-other-check')?.checked || modal.querySelector('#manual-other-work-type')?.value?.trim()) derivedPermitTypes.push('أعمال أخرى');
+        const finalPermitTypes = derivedPermitTypes.length ? derivedPermitTypes : ['أعمال أخرى'];
+
+        const closureTimeVal = modal.querySelector('#manual-closure-time')?.value || '';
+
+        return {
+            ...(existingEntry || {}),
+            sequentialNumber: parseInt(modal.querySelector('#manual-permit-sequential')?.value || existingEntry?.sequentialNumber || '0', 10),
+            paperPermitNumber: modal.querySelector('#manual-paper-permit-number')?.value?.trim() || existingEntry?.paperPermitNumber || '',
+            location: locationName,
+            locationId,
+            locationEntries: selectedLocationEntries,
+            sublocation: sublocationNames.join(' | '),
+            timeFrom: timeFromValue ? (Utils.dateTimeLocalToISO(timeFromValue) || timeFromValue) : (existingEntry?.timeFrom || ''),
+            timeTo: timeToValue ? (Utils.dateTimeLocalToISO(timeToValue) || timeToValue) : (existingEntry?.timeTo || ''),
+            authorizedParty: modal.querySelector('#manual-permit-authorized-party')?.value?.trim() || '',
+            requestingParty: modal.querySelector('#manual-permit-requesting-party')?.value?.trim() || '',
+            equipment: modal.querySelector('#manual-permit-equipment')?.value?.trim() || '',
+            tools: modal.querySelector('#manual-permit-tools')?.value?.trim() || '',
+            workDescription: modal.querySelector('#manual-permit-work-description')?.value?.trim() || '',
+            teamMembers: teamMembers.length ? teamMembers : [{ name: '', signature: '' }],
+            hotWorkDetails,
+            hotWorkOther: modal.querySelector('#manual-hot-work-other')?.value?.trim() || '',
+            confinedSpaceDetails,
+            confinedSpaceOther: modal.querySelector('#manual-confined-space-other')?.value?.trim() || '',
+            heightWorkDetails,
+            heightWorkOther: modal.querySelector('#manual-height-work-other')?.value?.trim() || '',
+            electricalWorkType: modal.querySelector('#manual-electrical-work-type')?.value?.trim() || '',
+            coldWorkType: modal.querySelector('#manual-cold-work-type')?.value?.trim() || '',
+            otherWorkType: modal.querySelector('#manual-other-work-type')?.value?.trim() || '',
+            excavationLength: modal.querySelector('#manual-excavation-length')?.value?.trim() || '',
+            excavationWidth: modal.querySelector('#manual-excavation-width')?.value?.trim() || '',
+            excavationDepth: modal.querySelector('#manual-excavation-depth')?.value?.trim() || '',
+            soilType: modal.querySelector('#manual-excavation-soil')?.value?.trim() || '',
+            preStartChecklist: modal.querySelector('#manual-permit-preStartChecklist')?.checked || false,
+            lotoApplied: modal.querySelector('#manual-permit-lotoApplied')?.checked || false,
+            governmentPermits: modal.querySelector('#manual-permit-governmentPermits')?.checked || false,
+            riskAssessmentAttached: modal.querySelector('#manual-permit-riskAssessmentAttached')?.checked || false,
+            gasTesting: modal.querySelector('#manual-permit-gasTesting')?.checked || false,
+            mocRequest: modal.querySelector('#manual-permit-mocRequest')?.checked || false,
+            requiredPPE,
+            ppeNotes: requiredPPE.join('، '),
+            riskLikelihood: modal.querySelector('#manual-risk-likelihood')?.value || '',
+            riskConsequence: modal.querySelector('#manual-risk-consequence')?.value || '',
+            riskScore: modal.querySelector('#manual-risk-score')?.value || '',
+            riskLevel: modal.querySelector('#manual-risk-level')?.value || '',
+            riskNotes: modal.querySelector('#manual-risk-notes')?.value?.trim() || '',
+            manualApprovals,
+            manualClosureApprovals,
+            status: modal.querySelector('#manual-permit-status')?.value
+                || modal.querySelector('input[name="manual-permit-status-radio"]:checked')?.value
+                || existingEntry?.status
+                || 'اكتمل العمل بشكل آمن',
+            closureDate: closureTimeVal ? (Utils.dateTimeLocalToISO(closureTimeVal) || closureTimeVal) : (existingEntry?.closureDate || ''),
+            closureReason: modal.querySelector('#manual-closure-reason')?.value?.trim() || '',
+            supervisor1: modal.querySelector('#manual-permit-supervisor1')?.value?.trim() || '',
+            supervisor2: modal.querySelector('#manual-permit-supervisor2')?.value?.trim() || '',
+            permitType: finalPermitTypes,
+            permitTypeDisplay: finalPermitTypes.join('، '),
+            isManualEntry: true
+        };
+    },
+
+    printManualPermitFromModal(modal, entryId = null) {
+        try {
+            const data = this.collectManualPermitDataFromModal(modal, entryId);
+            if (!data) {
+                Notification.warning(this._t('module.ptw.notify.formNotFound', 'النموذج غير موجود'));
+                return;
+            }
+            const htmlContent = this.generateManualPermitPrintHTML(data);
+            this.openPermitPrintWindow(htmlContent);
+        } catch (error) {
+            Utils.safeError('خطأ في طباعة التصريح اليدوي:', error);
+            Notification.error(this._t('module.ptw.notify.printErr', 'حدث خطأ أثناء الطباعة: ') + error.message);
+        }
     },
 
     /**
@@ -13761,6 +14402,23 @@ const PTW = {
         const reg = Array.isArray(this.registryData)
             ? this.registryData.find((r) => r.permitId === id || r.id === id)
             : null;
+
+        if (reg?.isManualEntry) {
+            try {
+                Loading.show();
+                const htmlContent = this.generateManualPermitPrintHTML(reg);
+                this.openPermitPrintWindow(htmlContent, () => {
+                    Loading.hide();
+                    Notification.success(this._t('module.ptw.notify.pdfViewReady', 'تم فتح التصريح للطباعة أو الحفظ كملف PDF'));
+                });
+            } catch (error) {
+                Loading.hide();
+                Utils.safeError('خطأ في تصدير PDF:', error);
+                Notification.error(this._t('module.ptw.notify.pdfErr', 'فشل تصدير PDF: ') + (error?.message || ''));
+            }
+            return;
+        }
+
         const effectiveId = reg?.permitId || id;
         let item = AppState.appData.ptw.find((i) => i.id === effectiveId);
         if (!item && reg && reg.isManualEntry) {
@@ -14284,6 +14942,9 @@ const PTW = {
                             <div class="flex items-center gap-2">
                                 <button onclick="PTW.viewPTW('${item.id}')" class="btn-icon btn-icon-info" title="عرض التفاصيل">
                                     <i class="fas fa-eye"></i>
+                                </button>
+                                <button onclick="PTW.printPermit('${item.id}')" class="btn-icon btn-icon-primary" title="طباعة">
+                                    <i class="fas fa-print"></i>
                                 </button>
                                 <button onclick="PTW.exportPDF('${item.id}')" class="btn-icon btn-icon-success" title="تصدير PDF">
                                     <i class="fas fa-file-pdf"></i>
