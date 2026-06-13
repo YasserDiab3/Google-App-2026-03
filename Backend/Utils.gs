@@ -4592,6 +4592,7 @@ function getModulePrefix(moduleName) {
         'ClinicInventory': 'CLI',
         'ClinicStaff': 'CST',
         'ClinicStaffAttendance': 'CSA',
+        'ClinicStaffTimeOffRequests': 'CTO',
         
         // ISO و HSE
         'iso': 'ISO',

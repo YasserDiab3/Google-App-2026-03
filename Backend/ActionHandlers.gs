@@ -1778,7 +1778,50 @@ var ActionHandlers = {
     'getClinicStaffAttendance': function(payload, postData, action, actorUserData, spreadsheetId) {
         var result = { success: false, message: '' };
         (function() {
-            result = getClinicStaffAttendance(payload && payload.filters ? payload.filters : payload || {});
+            result = getClinicStaffAttendance(payload && payload.filters ? payload.filters : payload || {}, actorUserData);
+        })();
+        return result;
+    },
+    'addClinicStaffTimeOffRequest': function(payload, postData, action, actorUserData, spreadsheetId) {
+        var result = { success: false, message: '' };
+        (function() {
+            result = addClinicStaffTimeOffRequest(payload, actorUserData);
+        })();
+        return result;
+    },
+    'getClinicStaffTimeOffRequests': function(payload, postData, action, actorUserData, spreadsheetId) {
+        var result = { success: false, message: '' };
+        (function() {
+            result = getClinicStaffTimeOffRequests(payload && payload.filters ? payload.filters : payload || {}, actorUserData);
+        })();
+        return result;
+    },
+    'approveClinicStaffTimeOffRequest': function(payload, postData, action, actorUserData, spreadsheetId) {
+        var result = { success: false, message: '' };
+        (function() {
+            result = approveClinicStaffTimeOffRequest(
+                payload.requestId || payload.id,
+                actorUserData,
+                payload.notes || payload.reviewNotes || ''
+            );
+        })();
+        return result;
+    },
+    'rejectClinicStaffTimeOffRequest': function(payload, postData, action, actorUserData, spreadsheetId) {
+        var result = { success: false, message: '' };
+        (function() {
+            result = rejectClinicStaffTimeOffRequest(
+                payload.requestId || payload.id,
+                actorUserData,
+                payload.reason || payload.reviewNotes || ''
+            );
+        })();
+        return result;
+    },
+    'cancelClinicStaffTimeOffRequest': function(payload, postData, action, actorUserData, spreadsheetId) {
+        var result = { success: false, message: '' };
+        (function() {
+            result = cancelClinicStaffTimeOffRequest(payload.requestId || payload.id, actorUserData);
         })();
         return result;
     },

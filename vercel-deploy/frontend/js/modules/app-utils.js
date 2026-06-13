@@ -2873,7 +2873,7 @@ const DEFAULT_COMPANY_NAME = '';
 
 const AppState = {
     /** إصدار التطبيق — تسلسلي: 1.0.0 → 1.0.1 → 1.0.2 … عند كل نشر زِد الرقم هنا وفي version.json */
-    appVersion: '1.0.169',
+    appVersion: '1.0.170',
     /** نص اختياري لرسالة التحديث (ملخص التغييرات). إن تُركت فارغة يُستخدم النص الافتراضي. */
     updateMessage: '',
     debugMode: false,
@@ -2899,6 +2899,7 @@ const AppState = {
         clinicInventory: [],
         clinicStaff: [],
         clinicStaffAttendance: [],
+        clinicStaffTimeOffRequests: [],
         fireEquipment: [],
         fireEquipmentAssets: [],
         fireEquipmentInspections: [],

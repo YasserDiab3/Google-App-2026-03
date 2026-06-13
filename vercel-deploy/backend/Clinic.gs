@@ -3478,15 +3478,20 @@ function upsertClinicStaffAttendanceOnLogout_(payload) {
     }
 }
 
-function getClinicStaffAttendance(filters) {
+function getClinicStaffAttendance(filters, actorUserData) {
     try {
         filters = filters || {};
+        var isAdmin = _clinicStaffIsAdminActor_(actorUserData);
         var data = readFromSheet('ClinicStaffAttendance', getSpreadsheetId()) || [];
-        if (filters.staffId) {
-            data = data.filter(function(r) { return r && String(r.staffId) === String(filters.staffId); });
-        }
-        if (filters.userId) {
-            data = data.filter(function(r) { return r && String(r.userId) === String(filters.userId); });
+        if (!isAdmin) {
+            data = data.filter(function(r) { return _clinicStaffRowMatchesActor_(r, actorUserData); });
+        } else {
+            if (filters.staffId) {
+                data = data.filter(function(r) { return r && String(r.staffId) === String(filters.staffId); });
+            }
+            if (filters.userId) {
+                data = data.filter(function(r) { return r && String(r.userId) === String(filters.userId); });
+            }
         }
         if (filters.staffRole) {
             data = data.filter(function(r) { return r && String(r.staffRole) === String(filters.staffRole); });
@@ -3531,5 +3536,249 @@ function recordClinicStaffLogin(payload) {
 
 function recordClinicStaffLogout(payload) {
     return upsertClinicStaffAttendanceOnLogout_(payload || {});
+}
+
+// ============================================
+// طلبات إجازة / إذن / إضافي — مسئولو العيادة
+// ============================================
+
+function _clinicStaffIsAdminActor_(actorUserData) {
+    if (typeof checkAdminPermissionsAuthoritative === 'function') {
+        return checkAdminPermissionsAuthoritative(actorUserData);
+    }
+    if (!actorUserData) return false;
+    var role = String(actorUserData.role || '').toLowerCase();
+    return role === 'admin' || role === 'مدير';
+}
+
+function _clinicStaffActorKeys_(actorUserData) {
+    if (!actorUserData) return { userId: '', email: '' };
+    return {
+        userId: String(actorUserData.id || actorUserData.userId || '').trim(),
+        email: String(actorUserData.email || '').trim().toLowerCase()
+    };
+}
+
+function _clinicStaffRowMatchesActor_(row, actorUserData) {
+    if (!row || !actorUserData) return false;
+    var keys = _clinicStaffActorKeys_(actorUserData);
+    var uid = String(row.userId || '').trim();
+    var em = String(row.userEmail || '').trim().toLowerCase();
+    if (keys.userId && uid === keys.userId) return true;
+    if (keys.email && em === keys.email) return true;
+    return false;
+}
+
+function _clinicStaffTimeOffCalcDays_(dateFrom, dateTo) {
+    try {
+        var a = new Date(dateFrom);
+        var b = new Date(dateTo);
+        if (isNaN(a.getTime()) || isNaN(b.getTime()) || b < a) return '';
+        return Math.floor((b - a) / (1000 * 60 * 60 * 24)) + 1;
+    } catch (_e) {
+        return '';
+    }
+}
+
+function _clinicStaffTimeOffCalcHoursFromTimes_(timeFrom, timeTo) {
+    try {
+        if (!timeFrom || !timeTo) return '';
+        var partsA = String(timeFrom).split(':');
+        var partsB = String(timeTo).split(':');
+        if (partsA.length < 2 || partsB.length < 2) return '';
+        var minsA = parseInt(partsA[0], 10) * 60 + parseInt(partsA[1], 10);
+        var minsB = parseInt(partsB[0], 10) * 60 + parseInt(partsB[1], 10);
+        if (isNaN(minsA) || isNaN(minsB) || minsB <= minsA) return '';
+        return Math.round(((minsB - minsA) / 60) * 100) / 100;
+    } catch (_e) {
+        return '';
+    }
+}
+
+function addClinicStaffTimeOffRequest(data, actorUserData) {
+    try {
+        if (!data) return { success: false, message: 'بيانات الطلب غير موجودة' };
+        var keys = _clinicStaffActorKeys_(actorUserData);
+        if (!keys.userId && !keys.email) {
+            return { success: false, message: 'يجب تسجيل الدخول لتقديم الطلب' };
+        }
+        var staff = isActiveClinicStaffUser_(keys.userId) || isActiveClinicStaffUser_(keys.email);
+        if (!staff) {
+            return { success: false, message: 'يجب أن تكون مسئول عيادة نشطاً لتقديم الطلب' };
+        }
+        var requestType = String(data.requestType || '').trim().toLowerCase();
+        if (['leave', 'permission', 'overtime'].indexOf(requestType) === -1) {
+            return { success: false, message: 'نوع الطلب غير صالح' };
+        }
+        var reason = String(data.reason || '').trim();
+        if (!reason) return { success: false, message: 'سبب الطلب مطلوب' };
+
+        var row = {
+            id: generateSequentialId('CTO', 'ClinicStaffTimeOffRequests'),
+            requestType: requestType,
+            staffId: staff.id || '',
+            userId: staff.userId || keys.userId,
+            userEmail: staff.userEmail || keys.email,
+            userName: staff.userName || (actorUserData && actorUserData.name) || '',
+            staffRole: staff.staffRole || '',
+            dateFrom: data.dateFrom || '',
+            dateTo: data.dateTo || '',
+            timeFrom: data.timeFrom || '',
+            timeTo: data.timeTo || '',
+            durationHours: data.durationHours || '',
+            durationDays: data.durationDays || '',
+            reason: reason,
+            status: 'pending',
+            reviewedById: '',
+            reviewedByName: '',
+            reviewNotes: '',
+            requestedAt: new Date(),
+            reviewedAt: '',
+            createdAt: new Date(),
+            updatedAt: new Date()
+        };
+
+        if (requestType === 'leave') {
+            if (!row.dateFrom || !row.dateTo) {
+                return { success: false, message: 'تاريخ بداية ونهاية الإجازة مطلوبان' };
+            }
+            row.durationDays = _clinicStaffTimeOffCalcDays_(row.dateFrom, row.dateTo);
+        } else if (requestType === 'permission') {
+            if (!row.dateFrom) row.dateFrom = _clinicStaffDayKey_(new Date());
+            if (!row.timeFrom || !row.timeTo) {
+                return { success: false, message: 'وقت بداية ونهاية الإذن مطلوبان' };
+            }
+            row.dateTo = row.dateFrom;
+            row.durationHours = _clinicStaffTimeOffCalcHoursFromTimes_(row.timeFrom, row.timeTo);
+        } else if (requestType === 'overtime') {
+            if (!row.dateFrom) {
+                return { success: false, message: 'تاريخ العمل الإضافي مطلوب' };
+            }
+            if (row.timeFrom && row.timeTo) {
+                row.durationHours = _clinicStaffTimeOffCalcHoursFromTimes_(row.timeFrom, row.timeTo);
+            }
+            if (!row.durationHours && data.durationHours) {
+                row.durationHours = data.durationHours;
+            }
+            if (!row.durationHours) {
+                return { success: false, message: 'مدة العمل الإضافي (ساعات) مطلوبة' };
+            }
+            row.dateTo = row.dateFrom;
+        }
+
+        var result = appendToSheet('ClinicStaffTimeOffRequests', row);
+        return result && result.success
+            ? { success: true, data: { id: row.id }, message: 'تم إرسال الطلب بنجاح' }
+            : result;
+    } catch (error) {
+        Logger.log('Error in addClinicStaffTimeOffRequest: ' + error.toString());
+        return { success: false, message: 'خطأ في إرسال الطلب: ' + error.toString() };
+    }
+}
+
+function getClinicStaffTimeOffRequests(filters, actorUserData) {
+    try {
+        filters = filters || {};
+        var isAdmin = _clinicStaffIsAdminActor_(actorUserData);
+        var data = readFromSheet('ClinicStaffTimeOffRequests', getSpreadsheetId()) || [];
+        if (!isAdmin) {
+            data = data.filter(function(r) { return _clinicStaffRowMatchesActor_(r, actorUserData); });
+        } else {
+            if (filters.staffId) {
+                data = data.filter(function(r) { return r && String(r.staffId) === String(filters.staffId); });
+            }
+            if (filters.userId) {
+                data = data.filter(function(r) { return r && String(r.userId) === String(filters.userId); });
+            }
+        }
+        if (filters.requestType) {
+            data = data.filter(function(r) { return r && String(r.requestType) === String(filters.requestType); });
+        }
+        if (filters.status) {
+            data = data.filter(function(r) { return r && String(r.status) === String(filters.status); });
+        }
+        data.sort(function(a, b) {
+            var da = String(b.requestedAt || b.createdAt || '');
+            var db = String(a.requestedAt || a.createdAt || '');
+            return da.localeCompare(db);
+        });
+        return { success: true, data: data };
+    } catch (error) {
+        Logger.log('Error in getClinicStaffTimeOffRequests: ' + error.toString());
+        return { success: false, message: 'خطأ في جلب الطلبات: ' + error.toString(), data: [] };
+    }
+}
+
+function _updateClinicStaffTimeOffRequest_(requestId, updateData) {
+    if (!requestId) return { success: false, message: 'معرف الطلب غير محدد' };
+    updateData = updateData || {};
+    updateData.id = requestId;
+    updateData.updatedAt = new Date();
+    var result = updateSingleRowInSheet('ClinicStaffTimeOffRequests', requestId, updateData, getSpreadsheetId());
+    if (result && result.success) return result;
+    var allData = readFromSheet('ClinicStaffTimeOffRequests', getSpreadsheetId()) || [];
+    var idx = allData.findIndex(function(r) { return r && String(r.id) === String(requestId); });
+    if (idx === -1) return { success: false, message: 'الطلب غير موجود' };
+    for (var k in updateData) {
+        if (updateData.hasOwnProperty(k)) allData[idx][k] = updateData[k];
+    }
+    return saveToSheet('ClinicStaffTimeOffRequests', allData, getSpreadsheetId());
+}
+
+function approveClinicStaffTimeOffRequest(requestId, actorUserData, notes) {
+    try {
+        if (!_clinicStaffIsAdminActor_(actorUserData)) {
+            return { success: false, message: 'الاعتماد متاح لمدير النظام فقط' };
+        }
+        return _updateClinicStaffTimeOffRequest_(requestId, {
+            status: 'approved',
+            reviewedById: actorUserData && (actorUserData.id || actorUserData.userId) || '',
+            reviewedByName: actorUserData && actorUserData.name || '',
+            reviewNotes: notes || '',
+            reviewedAt: new Date()
+        });
+    } catch (error) {
+        Logger.log('Error in approveClinicStaffTimeOffRequest: ' + error.toString());
+        return { success: false, message: 'خطأ في اعتماد الطلب: ' + error.toString() };
+    }
+}
+
+function rejectClinicStaffTimeOffRequest(requestId, actorUserData, reason) {
+    try {
+        if (!_clinicStaffIsAdminActor_(actorUserData)) {
+            return { success: false, message: 'الرفض متاح لمدير النظام فقط' };
+        }
+        return _updateClinicStaffTimeOffRequest_(requestId, {
+            status: 'rejected',
+            reviewedById: actorUserData && (actorUserData.id || actorUserData.userId) || '',
+            reviewedByName: actorUserData && actorUserData.name || '',
+            reviewNotes: reason || '',
+            reviewedAt: new Date()
+        });
+    } catch (error) {
+        Logger.log('Error in rejectClinicStaffTimeOffRequest: ' + error.toString());
+        return { success: false, message: 'خطأ في رفض الطلب: ' + error.toString() };
+    }
+}
+
+function cancelClinicStaffTimeOffRequest(requestId, actorUserData) {
+    try {
+        var allData = readFromSheet('ClinicStaffTimeOffRequests', getSpreadsheetId()) || [];
+        var row = allData.find(function(r) { return r && String(r.id) === String(requestId); });
+        if (!row) return { success: false, message: 'الطلب غير موجود' };
+        if (String(row.status) !== 'pending') {
+            return { success: false, message: 'لا يمكن إلغاء طلب غير معلق' };
+        }
+        if (!_clinicStaffIsAdminActor_(actorUserData) && !_clinicStaffRowMatchesActor_(row, actorUserData)) {
+            return { success: false, message: 'غير مصرح بإلغاء هذا الطلب' };
+        }
+        return _updateClinicStaffTimeOffRequest_(requestId, {
+            status: 'cancelled',
+            updatedAt: new Date()
+        });
+    } catch (error) {
+        Logger.log('Error in cancelClinicStaffTimeOffRequest: ' + error.toString());
+        return { success: false, message: 'خطأ في إلغاء الطلب: ' + error.toString() };
+    }
 }
 

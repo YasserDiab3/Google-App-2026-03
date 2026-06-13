@@ -8450,6 +8450,7 @@ const Clinic = {
         if (!Array.isArray(data.clinicSupplyRequests)) data.clinicSupplyRequests = [];
         if (!Array.isArray(data.clinicStaff)) data.clinicStaff = [];
         if (!Array.isArray(data.clinicStaffAttendance)) data.clinicStaffAttendance = [];
+        if (!Array.isArray(data.clinicStaffTimeOffRequests)) data.clinicStaffTimeOffRequests = [];
 
         // ✅ حماية حاسمة: دمج زيارات المقاولين من clinicContractorVisits إلى clinicVisits لمنع اختفائها عند إعادة تحميل الصفحة
         let visitsChanged = false;
@@ -11984,20 +11985,27 @@ const Clinic = {
                 action: 'getAllClinicVisitDeletionRequests',
                 data: { filters: {} }
             });
+            const timeOffP = GoogleIntegration.sendRequest({
+                action: 'getClinicStaffTimeOffRequests',
+                data: { filters: {} }
+            });
 
-            const [deletionResult, supplyResult, visitDeletionResult] = await Promise.allSettled([
+            const [deletionResult, supplyResult, visitDeletionResult, timeOffResult] = await Promise.allSettled([
                 Utils.promiseWithTimeout(deletionP, 15000, 'انتهت مهلة تحميل طلبات حذف الأدوية'),
                 Utils.promiseWithTimeout(supplyP, 15000, 'انتهت مهلة تحميل طلبات الاحتياج'),
-                Utils.promiseWithTimeout(visitDeletionP, 15000, 'انتهت مهلة تحميل طلبات حذف الزيارات')
+                Utils.promiseWithTimeout(visitDeletionP, 15000, 'انتهت مهلة تحميل طلبات حذف الزيارات'),
+                Utils.promiseWithTimeout(timeOffP, 15000, 'انتهت مهلة تحميل طلبات الإجازة/الإذن/الإضافي')
             ]);
 
             const delVal = deletionResult.status === 'fulfilled' ? deletionResult.value : null;
             const supVal = supplyResult.status === 'fulfilled' ? supplyResult.value : null;
             const visVal = visitDeletionResult.status === 'fulfilled' ? visitDeletionResult.value : null;
+            const toVal = timeOffResult.status === 'fulfilled' ? timeOffResult.value : null;
 
             const deletionRequests = Array.isArray(delVal?.data) ? delVal.data : [];
             const supplyRequests = Array.isArray(supVal?.data) ? supVal.data : [];
             const visitDeletionRequests = Array.isArray(visVal?.data) ? visVal.data : [];
+            const timeOffRequests = Array.isArray(toVal?.data) ? toVal.data : [];
 
             // ✅ لا تستبدل بيانات محلية غير فارغة ببيانات فارغة من backend
             if (deletionRequests.length > 0 || !(Array.isArray(AppState.appData?.clinicMedicationDeletionRequests) && AppState.appData.clinicMedicationDeletionRequests.length > 0)) {
@@ -12008,6 +12016,9 @@ const Clinic = {
             }
             if (visitDeletionRequests.length > 0 || !(Array.isArray(AppState.appData?.clinicVisitDeletionRequests) && AppState.appData.clinicVisitDeletionRequests.length > 0)) {
                 AppState.appData.clinicVisitDeletionRequests = visitDeletionRequests;
+            }
+            if (timeOffRequests.length > 0 || !(Array.isArray(AppState.appData?.clinicStaffTimeOffRequests) && AppState.appData.clinicStaffTimeOffRequests.length > 0)) {
+                AppState.appData.clinicStaffTimeOffRequests = timeOffRequests;
             }
 
             try { localStorage.setItem('clinic_approvals_last_sync', String(Date.now())); } catch (e) {}
@@ -12051,7 +12062,8 @@ const Clinic = {
             const hasLocalDeletion = Array.isArray(AppState.appData?.clinicMedicationDeletionRequests) && AppState.appData.clinicMedicationDeletionRequests.length > 0;
             const hasLocalSupply = Array.isArray(AppState.appData?.clinicSupplyRequests) && AppState.appData.clinicSupplyRequests.length > 0;
             const hasLocalVisitDeletion = Array.isArray(AppState.appData?.clinicVisitDeletionRequests) && AppState.appData.clinicVisitDeletionRequests.length > 0;
-            const hasLocalAny = hasLocalDeletion || hasLocalSupply || hasLocalVisitDeletion;
+            const hasLocalTimeOff = Array.isArray(AppState.appData?.clinicStaffTimeOffRequests) && AppState.appData.clinicStaffTimeOffRequests.length > 0;
+            const hasLocalAny = hasLocalDeletion || hasLocalSupply || hasLocalVisitDeletion || hasLocalTimeOff;
             const isStale = cacheAge >= CACHE_DURATION;
 
             if (!isStale && hasLocalAny) {
@@ -12083,16 +12095,18 @@ const Clinic = {
             const deletionRequests = Array.isArray(AppState.appData?.clinicMedicationDeletionRequests) ? AppState.appData.clinicMedicationDeletionRequests : [];
             const supplyRequests = Array.isArray(AppState.appData?.clinicSupplyRequests) ? AppState.appData.clinicSupplyRequests : [];
             const visitDeletionRequests = Array.isArray(AppState.appData?.clinicVisitDeletionRequests) ? AppState.appData.clinicVisitDeletionRequests : [];
+            const timeOffRequests = Array.isArray(AppState.appData?.clinicStaffTimeOffRequests) ? AppState.appData.clinicStaffTimeOffRequests : [];
 
             // إضافة نوع الطلب لكل طلب
             const allDeletionRequests = deletionRequests.map(r => ({ ...r, requestType: 'deletion' }));
             const allSupplyRequests = supplyRequests.map(r => ({ ...r, requestType: 'supply' }));
             const allVisitDeletionRequests = visitDeletionRequests.map(r => ({ ...r, requestType: 'visit' }));
+            const allTimeOffRequests = timeOffRequests.map(r => ({ ...r, requestType: 'timeoff' }));
 
             // دمج الطلبات
-            const allRequests = [...allDeletionRequests, ...allSupplyRequests, ...allVisitDeletionRequests];
+            const allRequests = [...allDeletionRequests, ...allSupplyRequests, ...allVisitDeletionRequests, ...allTimeOffRequests];
 
-            Utils.safeLog(`📋 تم تحميل ${allDeletionRequests.length} طلب حذف دواء و ${allSupplyRequests.length} طلب احتياج و ${allVisitDeletionRequests.length} طلب حذف زيارة`);
+            Utils.safeLog(`📋 تم تحميل ${allDeletionRequests.length} طلب حذف دواء و ${allSupplyRequests.length} طلب احتياج و ${allVisitDeletionRequests.length} طلب حذف زيارة و ${allTimeOffRequests.length} طلب إجازة/إذن/إضافي`);
 
             const pendingRequests = allRequests.filter(r => r.status === 'pending');
             const approvedRequests = allRequests.filter(r => r.status === 'approved');
@@ -12156,6 +12170,7 @@ const Clinic = {
                                     <option value="deletion">طلبات حذف الأدوية</option>
                                     <option value="supply">طلبات الاحتياج</option>
                                     <option value="visit">طلبات حذف الزيارات</option>
+                                    <option value="timeoff">طلبات إجازة / إذن / إضافي</option>
                                 </select>
                             </div>
                         </div>
@@ -12225,6 +12240,7 @@ const Clinic = {
             const isDeletion = requestType === 'deletion';
             const isSupply = requestType === 'supply';
             const isVisitDeletion = requestType === 'visit';
+            const isTimeOff = requestType === 'timeoff';
 
             let itemName = '-';
             let itemType = '-';
@@ -12254,16 +12270,24 @@ const Clinic = {
                 itemName = personName;
                 itemType = typeLabel;
                 itemDetails = `زيارة: ${Utils.escapeHTML(personName)} (${Utils.escapeHTML(typeLabel)})`;
+            } else if (isTimeOff) {
+                itemName = request.userName || request.userEmail || '-';
+                itemType = this.getTimeOffRequestTypeLabel(request.requestType);
+                itemDetails = `${Utils.escapeHTML(itemType)}: ${Utils.escapeHTML(this.formatTimeOffRequestDetails(request))}`;
             }
 
-            const requestedBy = request.requestedBy || {};
+            const requestedBy = isTimeOff
+                ? { name: request.userName || request.userEmail || '-' }
+                : (request.requestedBy || {});
             const statusBadge = this.getApprovalStatusBadge(request.status);
             const isPending = request.status === 'pending';
             const requestTypeBadge = isDeletion
                 ? '<span class="badge badge-info">حذف دواء</span>'
                 : isSupply
                     ? '<span class="badge badge-primary">طلب احتياج</span>'
-                    : '<span class="badge badge-warning">حذف زيارة</span>';
+                    : isTimeOff
+                        ? '<span class="badge badge-success">إجازة/إذن/إضافي</span>'
+                        : '<span class="badge badge-warning">حذف زيارة</span>';
 
             return `
                 <tr>
@@ -12357,11 +12381,14 @@ const Clinic = {
         const isDeletion = requestType === 'deletion';
         const isSupply = requestType === 'supply';
         const isVisitDeletion = requestType === 'visit';
+        const isTimeOff = requestType === 'timeoff';
         const confirmMessage = isDeletion
             ? 'هل أنت متأكد من الموافقة على حذف هذا الدواء؟\n\nسيتم حذف الدواء نهائياً من النظام.'
             : isSupply
                 ? 'هل أنت متأكد من الموافقة على هذا الطلب؟'
-                : 'هل أنت متأكد من الموافقة على حذف هذه الزيارة؟\n\nسيتم حذف الزيارة نهائياً من سجل التردد.';
+                : isTimeOff
+                    ? 'هل أنت متأكد من الموافقة على طلب الإجازة/الإذن/الإضافي؟'
+                    : 'هل أنت متأكد من الموافقة على حذف هذه الزيارة؟\n\nسيتم حذف الزيارة نهائياً من سجل التردد.';
 
         const confirmed = confirm(confirmMessage);
         if (!confirmed) return;
@@ -12400,6 +12427,11 @@ const Clinic = {
                         approverData: approverData
                     }
                 });
+            } else if (isTimeOff) {
+                result = await GoogleIntegration.sendRequest({
+                    action: 'approveClinicStaffTimeOffRequest',
+                    data: { requestId: requestId, notes: '' }
+                });
             }
 
             if (result && result.success) {
@@ -12408,8 +12440,22 @@ const Clinic = {
                     ? 'تمت الموافقة على الطلب وحذف الدواء بنجاح'
                     : isSupply
                         ? 'تمت الموافقة على الطلب بنجاح'
-                        : 'تمت الموافقة على طلب حذف الزيارة بنجاح';
+                        : isTimeOff
+                            ? 'تمت الموافقة على طلب الإجازة/الإذن/الإضافي'
+                            : 'تمت الموافقة على طلب حذف الزيارة بنجاح';
                 Notification.success(successMessage);
+
+                if (isTimeOff) {
+                    try {
+                        const refresh = await GoogleIntegration.sendRequest({
+                            action: 'getClinicStaffTimeOffRequests',
+                            data: {}
+                        });
+                        if (refresh?.success && Array.isArray(refresh.data)) {
+                            AppState.appData.clinicStaffTimeOffRequests = refresh.data;
+                        }
+                    } catch (_e) { /* ignore */ }
+                }
 
                 // تحديث تبويبة طلبات الموافقة فقط بدون إعادة تحميل كامل
                 setTimeout(() => {
@@ -12490,11 +12536,31 @@ const Clinic = {
                         reason: reason || 'لم يتم تحديد سبب'
                     }
                 });
+            } else if (requestType === 'timeoff') {
+                result = await GoogleIntegration.sendRequest({
+                    action: 'rejectClinicStaffTimeOffRequest',
+                    data: {
+                        requestId: requestId,
+                        reason: reason || 'لم يتم تحديد سبب'
+                    }
+                });
             }
 
             if (result && result.success) {
                 Loading.hide();
                 Notification.success('تم رفض الطلب بنجاح');
+
+                if (requestType === 'timeoff') {
+                    try {
+                        const refresh = await GoogleIntegration.sendRequest({
+                            action: 'getClinicStaffTimeOffRequests',
+                            data: {}
+                        });
+                        if (refresh?.success && Array.isArray(refresh.data)) {
+                            AppState.appData.clinicStaffTimeOffRequests = refresh.data;
+                        }
+                    } catch (_e) { /* ignore */ }
+                }
 
                 // تحديث تبويبة طلبات الموافقة فقط
                 setTimeout(() => {
@@ -12528,6 +12594,11 @@ const Clinic = {
                     action: 'getAllClinicVisitDeletionRequests',
                     data: { filters: {} }
                 });
+            } else if (requestType === 'timeoff') {
+                result = await GoogleIntegration.sendRequest({
+                    action: 'getClinicStaffTimeOffRequests',
+                    data: { filters: {} }
+                });
             }
 
             if (!result || !result.success) {
@@ -12543,7 +12614,10 @@ const Clinic = {
 
             const isDeletion = requestType === 'deletion';
             const isVisitDeletion = requestType === 'visit';
-            const requestedBy = request.requestedBy || {};
+            const isTimeOff = requestType === 'timeoff';
+            const requestedBy = isTimeOff
+                ? { name: request.userName || request.userEmail || '-' }
+                : (request.requestedBy || {});
             const approvedBy = request.approvedBy || {};
             const rejectedBy = request.rejectedBy || {};
 
@@ -12582,6 +12656,20 @@ const Clinic = {
                             <button class="btn-secondary" onclick="Clinic.viewVisit('${Utils.escapeHTML(visit.id || request.visitId || '')}')">
                                 <i class="fas fa-eye ml-2"></i>عرض الزيارة
                             </button>
+                        </div>
+                    </div>
+                `;
+            } else if (isTimeOff) {
+                itemDetailsHTML = `
+                    <div>
+                        <h3 class="font-semibold text-lg mb-2">تفاصيل طلب ${Utils.escapeHTML(this.getTimeOffRequestTypeLabel(request.requestType))}:</h3>
+                        <div class="grid grid-cols-2 gap-3">
+                            <div><strong>المسئول:</strong> ${Utils.escapeHTML(request.userName || '-')}</div>
+                            <div><strong>الدور:</strong> ${Utils.escapeHTML(this.getStaffRoleLabel(request.staffRole))}</div>
+                            <div><strong>التفاصيل:</strong> ${Utils.escapeHTML(this.formatTimeOffRequestDetails(request))}</div>
+                            <div><strong>الحالة:</strong> ${this.getTimeOffStatusBadge(request.status)}</div>
+                            <div class="col-span-2"><strong>السبب:</strong> ${Utils.escapeHTML(request.reason || '-')}</div>
+                            ${request.reviewNotes ? `<div class="col-span-2"><strong>ملاحظات المراجعة:</strong> ${Utils.escapeHTML(request.reviewNotes)}</div>` : ''}
                         </div>
                     </div>
                 `;
@@ -12997,6 +13085,18 @@ const Clinic = {
             }).catch(() => { })
         );
 
+        promises.push(
+            requestWithTimeout(
+                GoogleIntegration.sendRequest({ action: 'getClinicStaffTimeOffRequests', data: {} }),
+                REQUEST_TIMEOUT,
+                'clinicStaffTimeOffRequests'
+            ).then(result => {
+                if (result && result.success && Array.isArray(result.data)) {
+                    AppState.appData.clinicStaffTimeOffRequests = result.data;
+                }
+            }).catch(() => { })
+        );
+
         // انتظار انتهاء جميع الطلبات دون قطع مجمع بمهلة قصيرة (كانت تُسقط سجل التردد قبل اكتماله)
         try {
             await Promise.allSettled(promises);
@@ -13086,7 +13186,97 @@ const Clinic = {
 
     getClinicStaffAttendanceList() {
         this.ensureData();
-        return Array.isArray(AppState.appData.clinicStaffAttendance) ? AppState.appData.clinicStaffAttendance : [];
+        let list = Array.isArray(AppState.appData.clinicStaffAttendance) ? AppState.appData.clinicStaffAttendance : [];
+        if (!this.canViewAllAttendanceData()) {
+            list = list.filter(r => this._attendanceRowBelongsToCurrentUser_(r));
+        }
+        return list;
+    },
+
+    getClinicStaffTimeOffRequestsList() {
+        this.ensureData();
+        let list = Array.isArray(AppState.appData.clinicStaffTimeOffRequests) ? AppState.appData.clinicStaffTimeOffRequests : [];
+        if (!this.canViewAllAttendanceData()) {
+            const user = AppState.currentUser;
+            const uid = String(user?.id || '').trim();
+            const email = String(user?.email || '').trim().toLowerCase();
+            list = list.filter(r =>
+                (uid && String(r.userId || '') === uid) ||
+                (email && String(r.userEmail || '').trim().toLowerCase() === email)
+            );
+        }
+        return list;
+    },
+
+    getCurrentUserStaffRecord() {
+        const user = AppState.currentUser;
+        if (!user) return null;
+        const uid = String(user.id || '').trim();
+        const email = String(user.email || '').trim().toLowerCase();
+        return (this.getClinicStaffList() || []).find(s => {
+            const suid = String(s.userId || s.id || '').trim();
+            const semail = String(s.userEmail || '').trim().toLowerCase();
+            return (uid && suid === uid) || (email && semail === email);
+        }) || null;
+    },
+
+    isActiveClinicStaffMember() {
+        const staff = this.getCurrentUserStaffRecord();
+        if (!staff) return false;
+        return String(staff.isActive || 'true').toLowerCase() !== 'false';
+    },
+
+    canAccessAttendanceTab() {
+        if (this.isCurrentUserAdmin()) return true;
+        if (typeof Permissions !== 'undefined' && !Permissions.hasDetailedPermission('clinic', 'attendance')) return false;
+        return this.isActiveClinicStaffMember();
+    },
+
+    canViewAllAttendanceData() {
+        return this.isCurrentUserAdmin();
+    },
+
+    _attendanceRowBelongsToCurrentUser_(row) {
+        const user = AppState.currentUser;
+        if (!user || !row) return false;
+        const uid = String(user.id || '').trim();
+        const email = String(user.email || '').trim().toLowerCase();
+        const staff = this.getCurrentUserStaffRecord();
+        if (staff && staff.id && String(row.staffId) === String(staff.id)) return true;
+        if (uid && String(row.userId || '') === uid) return true;
+        if (email && String(row.userEmail || '').trim().toLowerCase() === email) return true;
+        return false;
+    },
+
+    getTimeOffRequestTypeLabel(type) {
+        const map = { leave: 'إجازة', permission: 'إذن', overtime: 'إضافي' };
+        return map[String(type || '').trim()] || type || '—';
+    },
+
+    getTimeOffStatusBadge(status) {
+        const map = {
+            pending: '<span class="badge badge-warning">معلق</span>',
+            approved: '<span class="badge badge-success">معتمد</span>',
+            rejected: '<span class="badge badge-danger">مرفوض</span>',
+            cancelled: '<span class="badge badge-secondary">ملغى</span>'
+        };
+        return map[String(status || '').trim()] || '<span class="badge badge-secondary">—</span>';
+    },
+
+    formatTimeOffRequestDetails(req) {
+        const type = String(req.requestType || '').trim();
+        if (type === 'leave') {
+            return `${req.dateFrom || '—'} → ${req.dateTo || '—'} (${req.durationDays || '—'} يوم)`;
+        }
+        if (type === 'permission') {
+            return `${req.dateFrom || '—'} | ${req.timeFrom || '—'} - ${req.timeTo || '—'}`;
+        }
+        if (type === 'overtime') {
+            const hours = req.durationHours ? `${req.durationHours} س` : '';
+            const times = (req.timeFrom && req.timeTo) ? `${req.timeFrom} - ${req.timeTo}` : '';
+            return `${req.dateFrom || '—'} ${hours || times}`.trim();
+        }
+        return '—';
     },
 
     getStaffRoleLabel(role) {
@@ -13297,12 +13487,14 @@ const Clinic = {
     async loadClinicAttendanceData(force) {
         if (typeof GoogleIntegration === 'undefined' || !GoogleIntegration.sendRequest) return;
         try {
-            const [attResp, staffResp] = await Promise.all([
+            const [attResp, staffResp, timeOffResp] = await Promise.all([
                 GoogleIntegration.sendRequest({ action: 'getClinicStaffAttendance', data: force ? { skipCache: true } : {} }),
-                GoogleIntegration.sendRequest({ action: 'getAllClinicStaff', data: {} })
+                GoogleIntegration.sendRequest({ action: 'getAllClinicStaff', data: {} }),
+                GoogleIntegration.sendRequest({ action: 'getClinicStaffTimeOffRequests', data: {} })
             ]);
             if (attResp?.success && Array.isArray(attResp.data)) AppState.appData.clinicStaffAttendance = attResp.data;
             if (staffResp?.success && Array.isArray(staffResp.data)) AppState.appData.clinicStaff = staffResp.data;
+            if (timeOffResp?.success && Array.isArray(timeOffResp.data)) AppState.appData.clinicStaffTimeOffRequests = timeOffResp.data;
             this.ensureData();
             if (typeof window.DataManager !== 'undefined' && window.DataManager.save) window.DataManager.save();
         } catch (_e) { /* ignore */ }
@@ -13645,9 +13837,414 @@ const Clinic = {
         }
     },
 
+    async notifyAdminAboutTimeOffRequest(request) {
+        try {
+            const usersResult = await GoogleIntegration.sendRequest({
+                action: 'readFromSheet',
+                data: { sheetName: 'Users' }
+            });
+
+            if (usersResult && usersResult.success && Array.isArray(usersResult.data)) {
+                const admins = usersResult.data.filter(user => {
+                    const role = (user.role || '').toLowerCase();
+                    return role === 'admin' || role === 'مدير';
+                });
+
+                const typeLabel = this.getTimeOffRequestTypeLabel(request.requestType);
+
+                for (const admin of admins) {
+                    if (admin.id) {
+                        await GoogleIntegration.sendRequest({
+                            action: 'addNotification',
+                            data: {
+                                userId: admin.id,
+                                title: 'طلب موافقة على ' + typeLabel,
+                                message: `طلب ${AppState.currentUser?.name || 'مسئول عيادة'} ${typeLabel}: ${this.formatTimeOffRequestDetails(request)}`,
+                                type: 'approval_request',
+                                priority: 'normal',
+                                link: '#clinic-approvals',
+                                data: {
+                                    module: 'clinic',
+                                    action: 'timeoff_request',
+                                    requestId: request.id
+                                }
+                            }
+                        }).catch(error => {
+                            Utils.safeWarn('فشل إرسال الإشعار للمدير:', error);
+                        });
+                    }
+                }
+            }
+        } catch (error) {
+            Utils.safeWarn('خطأ في إرسال الإشعارات:', error);
+        }
+    },
+
+    async submitTimeOffRequest() {
+        const requestType = document.getElementById('timeoff-request-type')?.value || '';
+        const reason = document.getElementById('timeoff-reason')?.value?.trim() || '';
+        let dateFrom = '';
+        let dateTo = '';
+        const timeFrom = document.getElementById('timeoff-time-from')?.value || '';
+        const timeTo = document.getElementById('timeoff-time-to')?.value || '';
+        const durationHours = document.getElementById('timeoff-duration-hours')?.value || '';
+
+        if (requestType === 'leave') {
+            dateFrom = document.getElementById('timeoff-date-from')?.value || '';
+            dateTo = document.getElementById('timeoff-date-to')?.value || '';
+        } else if (requestType === 'permission') {
+            dateFrom = document.getElementById('timeoff-perm-date')?.value || '';
+            dateTo = dateFrom;
+        } else if (requestType === 'overtime') {
+            dateFrom = document.getElementById('timeoff-ot-date')?.value || '';
+            dateTo = dateFrom;
+        }
+
+        if (!requestType) {
+            Notification?.error?.('يرجى اختيار نوع الطلب');
+            return;
+        }
+        if (!reason) {
+            Notification?.error?.('سبب الطلب مطلوب');
+            return;
+        }
+
+        Loading.show();
+        try {
+            const payload = { requestType, reason, dateFrom, dateTo, timeFrom, timeTo, durationHours };
+            const result = await GoogleIntegration.sendRequest({
+                action: 'addClinicStaffTimeOffRequest',
+                data: payload
+            });
+
+            if (result && result.success) {
+                const refresh = await GoogleIntegration.sendRequest({
+                    action: 'getClinicStaffTimeOffRequests',
+                    data: {}
+                });
+                if (refresh?.success && Array.isArray(refresh.data)) {
+                    AppState.appData.clinicStaffTimeOffRequests = refresh.data;
+                }
+                if (typeof window.DataManager !== 'undefined' && window.DataManager.save) window.DataManager.save();
+
+                const newReq = (AppState.appData.clinicStaffTimeOffRequests || []).find(r => r.id === result.data?.id) || {
+                    id: result.data?.id,
+                    requestType,
+                    reason,
+                    dateFrom,
+                    dateTo,
+                    timeFrom,
+                    timeTo,
+                    durationHours,
+                    status: 'pending'
+                };
+                this.notifyAdminAboutTimeOffRequest(newReq);
+
+                Loading.hide();
+                Notification?.success?.('تم إرسال الطلب بنجاح — بانتظار موافقة المدير');
+                document.getElementById('timeoff-request-form')?.reset();
+                this.renderAttendanceTab();
+            } else {
+                throw new Error(result?.message || 'فشل إرسال الطلب');
+            }
+        } catch (error) {
+            Loading.hide();
+            Notification?.error?.(error?.message || 'فشل إرسال الطلب');
+        }
+    },
+
+    async cancelTimeOffRequest(requestId) {
+        if (!requestId) return;
+        const confirmed = confirm('هل تريد إلغاء هذا الطلب؟');
+        if (!confirmed) return;
+
+        Loading.show();
+        try {
+            const result = await GoogleIntegration.sendRequest({
+                action: 'cancelClinicStaffTimeOffRequest',
+                data: { requestId }
+            });
+            if (result && result.success) {
+                const refresh = await GoogleIntegration.sendRequest({
+                    action: 'getClinicStaffTimeOffRequests',
+                    data: {}
+                });
+                if (refresh?.success && Array.isArray(refresh.data)) {
+                    AppState.appData.clinicStaffTimeOffRequests = refresh.data;
+                }
+                if (typeof window.DataManager !== 'undefined' && window.DataManager.save) window.DataManager.save();
+                Loading.hide();
+                Notification?.success?.('تم إلغاء الطلب');
+                this.renderAttendanceTab();
+            } else {
+                throw new Error(result?.message || 'فشل الإلغاء');
+            }
+        } catch (error) {
+            Loading.hide();
+            Notification?.error?.(error?.message || 'فشل إلغاء الطلب');
+        }
+    },
+
+    renderTimeOffRequestsTable(requests) {
+        if (!requests || !requests.length) {
+            return '<p class="text-center text-gray-500 py-6">لا توجد طلبات</p>';
+        }
+        const rows = requests.map(req => {
+            const isPending = String(req.status) === 'pending';
+            return `<tr>
+                <td><span class="badge badge-info">${Utils.escapeHTML(this.getTimeOffRequestTypeLabel(req.requestType))}</span></td>
+                <td>${Utils.escapeHTML(this.formatTimeOffRequestDetails(req))}</td>
+                <td class="text-sm">${Utils.escapeHTML(req.reason || '—')}</td>
+                <td>${this.getTimeOffStatusBadge(req.status)}</td>
+                <td>${this.formatDate(req.requestedAt || req.createdAt, true)}</td>
+                <td>${isPending ? `<button type="button" class="btn-icon btn-icon-danger" title="إلغاء" onclick="Clinic.cancelTimeOffRequest('${Utils.escapeAttr(req.id)}')"><i class="fas fa-ban"></i></button>` : '—'}</td>
+            </tr>`;
+        }).join('');
+        return `<div class="table-wrapper"><table class="data-table table-header-green">
+            <thead><tr><th>النوع</th><th>التفاصيل</th><th>السبب</th><th>الحالة</th><th>التاريخ</th><th>إجراء</th></tr></thead>
+            <tbody>${rows}</tbody>
+        </table></div>`;
+    },
+
+    renderAttendanceSelfTab(panel) {
+        this.ensureData();
+        this.state.filters = this.state.filters || {};
+        this.state.filters.attendance = Object.assign(
+            { search: '', staffRole: 'all', status: 'all', staffId: 'all', month: '', dateFrom: '', dateTo: '', period: 'all' },
+            this.state.filters.attendance || {}
+        );
+        const filters = this.state.filters.attendance;
+        const rows = this.getFilteredClinicAttendance();
+        const myRequests = this.getClinicStaffTimeOffRequestsList().sort((a, b) =>
+            new Date(b.requestedAt || b.createdAt) - new Date(a.requestedAt || a.createdAt)
+        );
+        const pendingCount = myRequests.filter(r => r.status === 'pending').length;
+        const stats = this._computeAttendanceReportStats(rows);
+        const staff = this.getCurrentUserStaffRecord();
+        const activeFilterCount = this._countActiveAttendanceFilters(filters);
+        const filterPanelOpen = this.state.attendanceFilterPanelOpen !== false;
+        const period = filters.period || 'all';
+        const periodLabels = { today: 'اليوم', week: '7 أيام', month: '30 يوم', all: 'الكل' };
+        const afField = 'min-width:0;box-sizing:border-box;';
+        const afInput = `${afField}width:100%;padding:8px 11px;border:1.5px solid #99f6e4;border-radius:8px;font-size:0.82rem;background:#fff;color:#374151;`;
+        const afLabel = 'font-size:0.72rem;font-weight:700;color:#64748b;display:block;margin-bottom:5px;';
+
+        const tableRows = rows.length ? rows.map(r => `
+            <tr>
+                <td>${Utils.escapeHTML(r.date || '—')}</td>
+                <td>${r.checkIn ? (Utils.formatDateTime ? Utils.formatDateTime(r.checkIn) : Utils.escapeHTML(String(r.checkIn))) : '—'}</td>
+                <td>${r.checkOut ? (Utils.formatDateTime ? Utils.formatDateTime(r.checkOut) : Utils.escapeHTML(String(r.checkOut))) : '—'}</td>
+                <td>${Utils.escapeHTML(String(r.workDuration || '—'))}</td>
+                <td><span class="badge ${this.getAttendanceStatusBadgeClass(r.status)}">${Utils.escapeHTML(this.getAttendanceStatusLabel(r.status))}</span></td>
+            </tr>
+        `).join('') : `<tr><td colspan="5" class="text-center text-gray-500 py-8">لا توجد سجلات حضور</td></tr>`;
+
+        panel.innerHTML = `
+            <div id="clinic-attendance-self-root">
+                <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:14px;">
+                    ${[
+                        { label: 'أيام حضوري', value: stats.total, icon: 'fa-calendar-check', color: '#059669', bg: '#ecfdf5' },
+                        { label: 'ساعاتي', value: stats.totalHours, icon: 'fa-clock', color: '#2563eb', bg: '#eff6ff' },
+                        { label: 'طلبات معلقة', value: pendingCount, icon: 'fa-hourglass-half', color: '#d97706', bg: '#fffbeb' }
+                    ].map(k => `
+                        <div style="background:${k.bg};border-radius:12px;padding:14px;display:flex;align-items:center;gap:10px;">
+                            <i class="fas ${k.icon}" style="color:${k.color};font-size:1.2rem;"></i>
+                            <div><p style="margin:0;font-size:0.72rem;color:#64748b;">${k.label}</p><p style="margin:0;font-size:1.35rem;font-weight:800;color:${k.color};">${k.value}</p></div>
+                        </div>`).join('')}
+                </div>
+
+                <div style="padding:14px 18px;background:linear-gradient(135deg,#134e4a,#0d9488);border-radius:14px;color:#fff;margin-bottom:14px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;align-items:center;">
+                    <div>
+                        <h3 style="margin:0;font-size:1rem;font-weight:700;">حضوري وطلباتي</h3>
+                        <p style="margin:4px 0 0;font-size:0.72rem;opacity:0.9;">${Utils.escapeHTML(staff?.userName || AppState.currentUser?.name || '')} — ${Utils.escapeHTML(this.getStaffRoleLabel(staff?.staffRole))}</p>
+                    </div>
+                    <div style="display:flex;gap:6px;flex-wrap:wrap;">
+                        ${['today', 'week', 'month', 'all'].map(p => {
+                            const active = period === p;
+                            return `<button type="button" class="clinic-attendance-period-btn" data-period="${p}" style="padding:5px 10px;border-radius:8px;border:none;cursor:pointer;font-size:0.74rem;font-weight:600;background:${active ? '#fff' : 'rgba(255,255,255,0.14)'};color:${active ? '#134e4a' : '#fff'};">${periodLabels[p]}</button>`;
+                        }).join('')}
+                        <button type="button" id="clinic-attendance-toggle-filters" style="padding:6px 10px;border-radius:8px;border:1px solid rgba(255,255,255,0.35);background:rgba(255,255,255,0.12);color:#fff;font-size:0.74rem;cursor:pointer;"><i class="fas fa-sliders-h"></i> فلاتر</button>
+                        <button type="button" id="clinic-attendance-refresh-btn" style="padding:6px 10px;border-radius:8px;border:none;background:rgba(255,255,255,0.14);color:#fff;cursor:pointer;"><i class="fas fa-sync-alt"></i></button>
+                        <button type="button" id="clinic-attendance-pdf-btn" style="padding:6px 10px;border-radius:8px;border:none;background:rgba(0,0,0,0.22);color:#fff;font-size:0.74rem;cursor:pointer;"><i class="fas fa-file-pdf"></i> PDF</button>
+                        <button type="button" id="clinic-attendance-export-btn" style="padding:6px 10px;border-radius:8px;border:none;background:rgba(0,0,0,0.22);color:#fff;font-size:0.74rem;cursor:pointer;"><i class="fas fa-file-excel"></i> Excel</button>
+                    </div>
+                </div>
+
+                <div id="clinic-attendance-filter-panel" style="display:${filterPanelOpen ? 'block' : 'none'};background:#f0fdfa;border:1.5px solid #99f6e4;border-radius:12px;padding:14px;margin-bottom:14px;">
+                    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;">
+                        <div><label style="${afLabel}">الشهر</label><input type="month" id="clinic-attendance-month" style="${afInput}" value="${Utils.escapeAttr(filters.month || '')}"></div>
+                        <div><label style="${afLabel}">الحالة</label>
+                            <select id="clinic-attendance-status" style="${afInput}">
+                                <option value="all">كل الحالات</option>
+                                <option value="present" ${filters.status === 'present' ? 'selected' : ''}>حاضر</option>
+                                <option value="partial" ${filters.status === 'partial' ? 'selected' : ''}>خروج جزئي</option>
+                                <option value="absent" ${filters.status === 'absent' ? 'selected' : ''}>غائب</option>
+                            </select>
+                        </div>
+                        <div><label style="${afLabel}">من تاريخ</label><input type="date" id="clinic-attendance-from" style="${afInput}" value="${Utils.escapeAttr(filters.dateFrom || '')}"></div>
+                        <div><label style="${afLabel}">إلى تاريخ</label><input type="date" id="clinic-attendance-to" style="${afInput}" value="${Utils.escapeAttr(filters.dateTo || '')}"></div>
+                    </div>
+                    ${activeFilterCount ? `<button type="button" id="clinic-attendance-reset-filters" class="btn-secondary btn-sm mt-2"><i class="fas fa-times ml-1"></i>مسح الفلاتر</button>` : ''}
+                </div>
+
+                <div class="content-card mb-4">
+                    <div class="card-header"><h4 class="card-title"><i class="fas fa-paper-plane ml-2"></i>طلب جديد</h4></div>
+                    <div class="card-body">
+                        <form id="timeoff-request-form" class="space-y-3">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                <div>
+                                    <label class="block text-sm font-semibold mb-1">نوع الطلب *</label>
+                                    <select id="timeoff-request-type" class="form-input" required>
+                                        <option value="">اختر النوع</option>
+                                        <option value="leave">إجازة</option>
+                                        <option value="permission">إذن</option>
+                                        <option value="overtime">إضافي</option>
+                                    </select>
+                                </div>
+                                <div id="timeoff-leave-dates" class="hidden md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-3">
+                                    <div><label class="block text-sm font-semibold mb-1">من تاريخ *</label><input type="date" id="timeoff-date-from" class="form-input"></div>
+                                    <div><label class="block text-sm font-semibold mb-1">إلى تاريخ *</label><input type="date" id="timeoff-date-to" class="form-input"></div>
+                                </div>
+                                <div id="timeoff-permission-fields" class="hidden md:col-span-2 grid grid-cols-1 md:grid-cols-3 gap-3">
+                                    <div><label class="block text-sm font-semibold mb-1">التاريخ *</label><input type="date" id="timeoff-perm-date" class="form-input"></div>
+                                    <div><label class="block text-sm font-semibold mb-1">من وقت *</label><input type="time" id="timeoff-time-from" class="form-input"></div>
+                                    <div><label class="block text-sm font-semibold mb-1">إلى وقت *</label><input type="time" id="timeoff-time-to" class="form-input"></div>
+                                </div>
+                                <div id="timeoff-overtime-fields" class="hidden md:col-span-2 grid grid-cols-1 md:grid-cols-3 gap-3">
+                                    <div><label class="block text-sm font-semibold mb-1">التاريخ *</label><input type="date" id="timeoff-ot-date" class="form-input"></div>
+                                    <div><label class="block text-sm font-semibold mb-1">عدد الساعات</label><input type="number" id="timeoff-duration-hours" class="form-input" min="0.5" step="0.5" placeholder="مثال: 2"></div>
+                                    <div class="text-sm text-gray-500 self-end pb-2">أو حدد من/إلى وقت أدناه</div>
+                                </div>
+                            </div>
+                            <div><label class="block text-sm font-semibold mb-1">السبب *</label><textarea id="timeoff-reason" class="form-textarea" rows="2" required placeholder="اذكر سبب الطلب..."></textarea></div>
+                            <button type="submit" class="btn-primary"><i class="fas fa-paper-plane ml-2"></i>إرسال الطلب</button>
+                        </form>
+                    </div>
+                </div>
+
+                <div class="content-card mb-4">
+                    <div class="card-header"><h4 class="card-title"><i class="fas fa-list ml-2"></i>طلباتي (${myRequests.length})</h4></div>
+                    <div class="card-body" style="padding:0;">${this.renderTimeOffRequestsTable(myRequests)}</div>
+                </div>
+
+                <div class="content-card">
+                    <div class="card-header"><h4 class="card-title"><i class="fas fa-clipboard-user ml-2"></i>سجل حضوري (${rows.length})</h4></div>
+                    <div class="card-body" style="padding:0;">
+                        <div class="table-wrapper"><table class="data-table table-header-green">
+                            <thead><tr><th>التاريخ</th><th>دخول</th><th>خروج</th><th>مدة (س)</th><th>الحالة</th></tr></thead>
+                            <tbody>${tableRows}</tbody>
+                        </table></div>
+                    </div>
+                </div>
+            </div>`;
+
+        const readFilterInputs = () => {
+            const month = document.getElementById('clinic-attendance-month')?.value || '';
+            let dateFrom = document.getElementById('clinic-attendance-from')?.value || '';
+            let dateTo = document.getElementById('clinic-attendance-to')?.value || '';
+            if (month && !dateFrom && !dateTo) {
+                const mr = this._getAttendanceMonthRange(month);
+                dateFrom = mr.dateFrom;
+                dateTo = mr.dateTo;
+            } else {
+                const range = this._normalizeAttendanceDateRange(dateFrom, dateTo);
+                dateFrom = range.dateFrom;
+                dateTo = range.dateTo;
+            }
+            return {
+                search: '',
+                staffRole: 'all',
+                status: document.getElementById('clinic-attendance-status')?.value || 'all',
+                staffId: 'all',
+                month,
+                dateFrom,
+                dateTo,
+                period: this.state.filters.attendance?.period || 'all'
+            };
+        };
+
+        const applyFilters = () => {
+            this.state.filters.attendance = readFilterInputs.call(this);
+            this.renderAttendanceTab();
+        };
+
+        const applyPeriodPreset = (preset) => {
+            const today = this._getTodayLocalKey();
+            let dateFrom = '';
+            let dateTo = '';
+            if (preset === 'today') { dateFrom = today; dateTo = today; }
+            else if (preset === 'week') {
+                const d = new Date(); d.setDate(d.getDate() - 6);
+                dateFrom = this._attendanceDayKey(d); dateTo = today;
+            } else if (preset === 'month') {
+                const d = new Date(); d.setDate(d.getDate() - 29);
+                dateFrom = this._attendanceDayKey(d); dateTo = today;
+            }
+            this.state.filters.attendance = Object.assign({}, this.state.filters.attendance || {}, { period: preset, month: '', dateFrom, dateTo });
+            this.renderAttendanceTab();
+        };
+
+        panel.querySelector('#clinic-attendance-status')?.addEventListener('change', applyFilters);
+        panel.querySelector('#clinic-attendance-month')?.addEventListener('change', applyFilters);
+        panel.querySelector('#clinic-attendance-from')?.addEventListener('change', applyFilters);
+        panel.querySelector('#clinic-attendance-to')?.addEventListener('change', applyFilters);
+        panel.querySelector('#clinic-attendance-reset-filters')?.addEventListener('click', () => {
+            this.state.filters.attendance = { search: '', staffRole: 'all', status: 'all', staffId: 'all', month: '', dateFrom: '', dateTo: '', period: 'all' };
+            this.renderAttendanceTab();
+        });
+        panel.querySelector('#clinic-attendance-toggle-filters')?.addEventListener('click', () => {
+            this.state.attendanceFilterPanelOpen = !filterPanelOpen;
+            const fp = panel.querySelector('#clinic-attendance-filter-panel');
+            if (fp) fp.style.display = this.state.attendanceFilterPanelOpen ? 'block' : 'none';
+        });
+        panel.querySelectorAll('.clinic-attendance-period-btn').forEach(btn => {
+            btn.addEventListener('click', () => applyPeriodPreset(btn.dataset.period || 'all'));
+        });
+        panel.querySelector('#clinic-attendance-export-btn')?.addEventListener('click', () => this.exportAttendanceToExcel());
+        panel.querySelector('#clinic-attendance-pdf-btn')?.addEventListener('click', () => this.exportAttendanceToPDF());
+        panel.querySelector('#clinic-attendance-refresh-btn')?.addEventListener('click', async () => {
+            Notification?.info?.('جاري التحديث...');
+            await this.loadClinicAttendanceData(true);
+            this.renderAttendanceTab();
+            Notification?.success?.('تم التحديث');
+        });
+
+        const typeEl = panel.querySelector('#timeoff-request-type');
+        const leaveBlock = panel.querySelector('#timeoff-leave-dates');
+        const permBlock = panel.querySelector('#timeoff-permission-fields');
+        const otBlock = panel.querySelector('#timeoff-overtime-fields');
+        const syncTypeFields = () => {
+            const t = typeEl?.value || '';
+            leaveBlock?.classList.toggle('hidden', t !== 'leave');
+            permBlock?.classList.toggle('hidden', t !== 'permission');
+            otBlock?.classList.toggle('hidden', t !== 'overtime');
+        };
+        typeEl?.addEventListener('change', syncTypeFields);
+        syncTypeFields();
+
+        panel.querySelector('#timeoff-request-form')?.addEventListener('submit', (e) => {
+            e.preventDefault();
+            this.submitTimeOffRequest();
+        });
+    },
+
     renderAttendanceTab() {
         const panel = document.querySelector('.clinic-tab-panel[data-tab-panel="attendance"]');
         if (!panel) return;
+
+        if (!this.canAccessAttendanceTab()) {
+            panel.innerHTML = `<div class="text-center py-12 text-gray-500">
+                <i class="fas fa-lock text-4xl mb-4 opacity-40"></i>
+                <p class="font-semibold">غير مصرح</p>
+                <p class="text-sm mt-2">تبويب الحضور متاح لمدير النظام أو مسئولي العيادة المسجّلين والنشطين فقط.</p>
+            </div>`;
+            return;
+        }
+
+        if (!this.canViewAllAttendanceData()) {
+            return this.renderAttendanceSelfTab(panel);
+        }
+
         this.ensureData();
         this.state.filters = this.state.filters || {};
         this.state.filters.attendance = Object.assign(
@@ -13996,10 +14593,14 @@ const Clinic = {
 
         // التحقق من الصلاحيات التفصيلية
         if (typeof Permissions !== 'undefined') {
-            return Permissions.hasDetailedPermission('clinic', tabName);
+            if (!Permissions.hasDetailedPermission('clinic', tabName)) return false;
         }
 
-        // افتراضياً، نعطي الوصول (للتوافق مع المستخدمين القدامى)
+        // تبويب الحضور: مسئول عيادة نشط فقط (بالإضافة لصلاحية attendance)
+        if (tabName === 'attendance') {
+            return this.isActiveClinicStaffMember();
+        }
+
         return true;
     },
 
