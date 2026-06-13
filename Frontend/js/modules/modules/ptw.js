@@ -3021,6 +3021,43 @@ const PTW = {
     isFullscreen: false,
     googleMapsApiKeyChecked: false, // Cache للتحقق من وجود مفتاح API
     hasGoogleMapsApiKey: false, // Cache لنتيجة التحقق
+    EGYPT_MAP_DEFAULT: { lat: 30.0444, lng: 31.2357, zoom: 6 },
+    LEGACY_SAUDI_MAP_DEFAULT: { lat: 24.7136, lng: 46.6753 },
+
+    getEgyptMapDefault() {
+        return { lat: this.EGYPT_MAP_DEFAULT.lat, lng: this.EGYPT_MAP_DEFAULT.lng, zoom: this.EGYPT_MAP_DEFAULT.zoom };
+    },
+
+    _isLegacySaudiMapDefault_(lat, lng) {
+        const legacy = this.LEGACY_SAUDI_MAP_DEFAULT;
+        return Math.abs(lat - legacy.lat) < 0.001 && Math.abs(lng - legacy.lng) < 0.001;
+    },
+
+    _normalizeMapCoordinates_(coords) {
+        if (!coords || typeof coords.lat !== 'number' || typeof coords.lng !== 'number' ||
+            isNaN(coords.lat) || isNaN(coords.lng)) {
+            return this.getEgyptMapDefault();
+        }
+        if (this._isLegacySaudiMapDefault_(coords.lat, coords.lng)) {
+            return this.getEgyptMapDefault();
+        }
+        return coords;
+    },
+
+    applyEgyptDefaultView() {
+        if (!this.mapInstance || this.currentTab !== 'map') return;
+        const egypt = this.getEgyptMapDefault();
+        try {
+            if (this.mapType === 'google' && typeof google !== 'undefined' && google.maps) {
+                this.mapInstance.setCenter({ lat: egypt.lat, lng: egypt.lng });
+                if (this.mapInstance.setZoom) this.mapInstance.setZoom(egypt.zoom);
+            } else if (this.mapType === 'leaflet') {
+                this.mapInstance.setView([egypt.lat, egypt.lng], egypt.zoom);
+            }
+        } catch (e) {
+            Utils.safeWarn('⚠️ تعذر ضبط عرض مصر الافتراضي:', e);
+        }
+    },
 
     /**
      * تهيئة الخريطة
@@ -3085,6 +3122,7 @@ const PTW = {
                             errorMsg.innerHTML = '<p>' + this._t('module.ptw.mapError.containerMissing', 'خطأ: حاوية الخريطة غير موجودة. يرجى تحديث الصفحة.') + '</p>';
                         }
                     }
+                    this.isMapInitializing = false;
                     return;
                 }
             } else {
@@ -3096,12 +3134,14 @@ const PTW = {
                         errorMsg.innerHTML = '<p>' + this._t('module.ptw.mapError.containerMissing', 'خطأ: حاوية الخريطة غير موجودة. يرجى تحديث الصفحة.') + '</p>';
                     }
                 }
+                this.isMapInitializing = false;
                 return;
             }
         }
 
         if (!mapContainer) {
             Utils.safeError('❌ فشل إنشاء أو العثور على div الخريطة');
+            this.isMapInitializing = false;
             return;
         }
 
@@ -3722,7 +3762,7 @@ const PTW = {
             };
 
             const script = document.createElement('script');
-            script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&language=ar&region=SA&callback=${callbackName}`;
+            script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&language=ar&region=EG&callback=${callbackName}`;
             script.async = true;
             script.defer = true;
 
@@ -4587,16 +4627,13 @@ const PTW = {
             coords = {
                 lat: parseFloat(companySettings.latitude),
                 lng: parseFloat(companySettings.longitude),
-                zoom: parseInt(companySettings.mapZoom) || 15
+                zoom: parseInt(companySettings.mapZoom) || this.EGYPT_MAP_DEFAULT.zoom
             };
         } else {
-        // إحداثيات افتراضية (يمكن تغييرها حسب موقع المصنع)
-            coords = {
-            lat: 24.7136, // مثال: الرياض
-            lng: 46.6753,
-            zoom: 15
-        };
+            coords = this.getEgyptMapDefault();
         }
+
+        coords = this._normalizeMapCoordinates_(coords);
         
         // تحديث البيانات من MapCoordinatesManager في الخلفية (إذا كان متاحاً)
         if (typeof MapCoordinatesManager !== 'undefined' && MapCoordinatesManager.loadDefaultCoordinates) {
@@ -4927,13 +4964,13 @@ const PTW = {
                                                 <input type="number" step="0.000001" class="form-input site-lat-input" 
                                                     value="${site.latitude || defaultCoords.lat}" 
                                                     data-site-id="${Utils.escapeHTML(site.id || '')}"
-                                                    placeholder="24.7136">
+                                                    placeholder="30.0444">
                                             </td>
                                             <td>
                                                 <input type="number" step="0.000001" class="form-input site-lng-input" 
                                                     value="${site.longitude || defaultCoords.lng}" 
                                                     data-site-id="${Utils.escapeHTML(site.id || '')}"
-                                                    placeholder="46.6753">
+                                                    placeholder="31.2357">
                                             </td>
                                             <td>
                                                 <input type="number" min="1" max="20" class="form-input site-zoom-input" 
@@ -4975,12 +5012,12 @@ const PTW = {
                             <div>
                                 <label class="block text-sm font-semibold text-gray-700 mb-2">${t('module.ptw.mapSettings.defaultLat', 'خط العرض الافتراضي')}</label>
                                 <input type="number" step="0.000001" id="ptw-default-lat" class="form-input" 
-                                    value="${defaultCoords.lat}" placeholder="24.7136">
+                                    value="${defaultCoords.lat}" placeholder="30.0444">
                             </div>
                             <div>
                                 <label class="block text-sm font-semibold text-gray-700 mb-2">${t('module.ptw.mapSettings.defaultLng', 'خط الطول الافتراضي')}</label>
                                 <input type="number" step="0.000001" id="ptw-default-lng" class="form-input" 
-                                    value="${defaultCoords.lng}" placeholder="46.6753">
+                                    value="${defaultCoords.lng}" placeholder="31.2357">
                             </div>
                             <div>
                                 <label class="block text-sm font-semibold text-gray-700 mb-2">${t('module.ptw.mapSettings.defaultZoom', 'مستوى التكبير الافتراضي')}</label>
@@ -5231,8 +5268,8 @@ const PTW = {
         Utils.safeLog('📊 عدد التصاريح للعرض:', filteredPermits.length);
 
         if (filteredPermits.length === 0) {
-            Utils.safeLog('ℹ️ لا توجد تصاريح للعرض بعد التصفية');
-            // لا نظهر إشعار هنا لمنع الإزعاج عند التصفية
+            Utils.safeLog('ℹ️ لا توجد تصاريح للعرض بعد التصفية — عرض مصر الافتراضي');
+            this.applyEgyptDefaultView();
             return;
         }
 
@@ -5371,7 +5408,8 @@ const PTW = {
                 Utils.safeLog(`✅ تم إضافة ${this.mapMarkers.length} علامة على الخريطة (بدون ضبط الحدود)`);
             }
         } else {
-            Utils.safeLog('ℹ️ لا توجد علامات على الخريطة - الخريطة ستظهر بدون تصاريح');
+            Utils.safeLog('ℹ️ لا توجد علامات على الخريطة — عرض مصر الافتراضي');
+            this.applyEgyptDefaultView();
         }
     },
 
@@ -13824,117 +13862,8 @@ const PTW = {
     },
 
     updateMapUI() {
-        // التأكد من أننا في تبويب الخريطة فقط
-        if (this.currentTab !== 'map') {
-            return;
-        }
-
-        if (!this.mapInstance || typeof L === 'undefined') return;
-
-        // Clear existing markers
-        this.mapMarkers.forEach(marker => marker.remove());
-        this.mapMarkers = [];
-
-        const statusFilter = document.getElementById('ptw-map-filter-status')?.value;
-        const typeFilter = document.getElementById('ptw-map-filter-type')?.value;
-
-        const items = AppState.appData.ptw || [];
-        const filteredItems = items.filter(item => {
-            if (statusFilter && item.status !== statusFilter) return false;
-            if (typeFilter && item.workType !== typeFilter) return false;
-            return true;
-        });
-
-        const bounds = L.latLngBounds();
-        let hasValidLocations = false;
-
-        // Helper to find site and coordinates
-        const findSite = (id, name) => {
-            // البحث أولاً في إعدادات الخريطة (الأولوية الأولى)
-            const mapSites = this.getMapSites();
-            const mapSite = mapSites.find(s =>
-                (s.id === id || s.name === name) && s.latitude && s.longitude
-            );
-            if (mapSite) {
-                return {
-                    coordinates: {
-                        lat: parseFloat(mapSite.latitude),
-                        lng: parseFloat(mapSite.longitude)
-                    }
-                };
-            }
-
-            const sources = [
-                (typeof Permissions !== 'undefined' ? Permissions?.formSettingsState?.sites : null),
-                AppState?.appData?.observationSites,
-                (typeof DailyObservations !== 'undefined' ? DailyObservations.DEFAULT_SITES : [])
-            ];
-
-            for (const source of sources) {
-                if (Array.isArray(source)) {
-                    const found = source.find(s =>
-                        (s.id && (s.id === id || s.id == id)) ||
-                        (s.name && s.name === name) ||
-                        (s.title && s.title === name) ||
-                        (s.label && s.label === name)
-                    );
-                    if (found) return found;
-                }
-            }
-            return null;
-        };
-
-        filteredItems.forEach(item => {
-            let lat, lng;
-
-            // 1. Try to find coordinates in the item itself
-            if (item.coordinates && item.coordinates.lat && item.coordinates.lng) {
-                lat = parseFloat(item.coordinates.lat);
-                lng = parseFloat(item.coordinates.lng);
-            } else {
-                // 2. Lookup site
-                const site = findSite(item.siteId, item.siteName || item.location);
-                if (site) {
-                    if (site.lat && site.lng) {
-                        lat = parseFloat(site.lat);
-                        lng = parseFloat(site.lng);
-                    } else if (site.coordinates && site.coordinates.lat) {
-                        lat = parseFloat(site.coordinates.lat);
-                        lng = parseFloat(site.coordinates.lng);
-                    }
-                }
-            }
-
-            // Only map if we have valid coordinates
-            if (lat && lng && !isNaN(lat) && !isNaN(lng)) {
-                hasValidLocations = true;
-                const markerColor = this.getMarkerColor(item.status);
-
-                // Create a custom icon with color
-                const iconHtml = `<div style="background-color: ${markerColor}; width: 14px; height: 14px; border-radius: 50%; border: 2px solid white; box-shadow: 0 0 4px rgba(0,0,0,0.4);"></div>`;
-                const customIcon = L.divIcon({
-                    html: iconHtml,
-                    className: 'ptw-map-marker',
-                    iconSize: [18, 18],
-                    iconAnchor: [9, 9],
-                    popupAnchor: [0, -9]
-                });
-
-                const marker = L.marker([lat, lng], { icon: customIcon })
-                    .bindPopup(this.createMapPopup(item));
-
-                marker.addTo(this.mapInstance);
-                this.mapMarkers.push(marker);
-                bounds.extend([lat, lng]);
-            }
-        });
-
-        if (hasValidLocations) {
-            this.mapInstance.fitBounds(bounds, { padding: [50, 50], maxZoom: 15 });
-        } else {
-            // Default view if no markers
-            this.mapInstance.setView([30.0444, 31.2357], 6);
-        }
+        if (this.currentTab !== 'map') return;
+        this.updateMapMarkers();
     },
 
     getMarkerColor(status) {

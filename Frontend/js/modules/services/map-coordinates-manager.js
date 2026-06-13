@@ -216,18 +216,18 @@ const MapCoordinatesManager = {
                 Utils.safeLog('ℹ️ استخدام الإحداثيات الافتراضية');
             }
             return {
-                lat: 24.7136, // الرياض
-                lng: 46.6753,
-                zoom: 15
+                lat: 30.0444,
+                lng: 31.2357,
+                zoom: 6
             };
         } catch (error) {
             if (typeof Utils !== 'undefined' && Utils.safeError) {
                 Utils.safeError('❌ خطأ في تحميل الإحداثيات الافتراضية:', error);
             }
             return {
-                lat: 24.7136,
-                lng: 46.6753,
-                zoom: 15
+                lat: 30.0444,
+                lng: 31.2357,
+                zoom: 6
             };
         }
     },

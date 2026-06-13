@@ -635,7 +635,10 @@ function doGet(e) {
             getData: true,
             getProfileImage: true,
             publicProfileCard: true,
-            getPublicProfileData: true
+            getPublicProfileData: true,
+            publicEmergencyMap: true,
+            getPublicEmergencyMapData: true,
+            publicEmergencyMapImage: true
         };
         if (action && !allowedGetActions[action]) {
             if (typeof logSecurityEvent === 'function') {
@@ -780,6 +783,41 @@ function doGet(e) {
             return setCorsHeaders(output);
         }
 
+        // خريطة طوارئ عامة (HTML) — بدون تسجيل دخول
+        if (action === 'publicEmergencyMap') {
+            const planId = String(e.parameter.planId || e.parameter.factoryMap || '').trim();
+            const token = String(e.parameter.token || e.parameter.qr || '').trim();
+            let scriptBase = '';
+            try {
+                if (typeof ScriptApp !== 'undefined' && ScriptApp.getService) {
+                    scriptBase = String(ScriptApp.getService().getUrl() || '').trim();
+                }
+            } catch (_scriptErr) { /* ignore */ }
+            const html = buildPublicEmergencyMapHtml_(planId, token, scriptBase);
+            return HtmlService.createHtmlOutput(html).setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+        }
+
+        if (action === 'getPublicEmergencyMapData') {
+            const planId = String(e.parameter.planId || e.parameter.factoryMap || '').trim();
+            const token = String(e.parameter.token || e.parameter.qr || '').trim();
+            const mapResult = getPublicEmergencyMapData(planId, token);
+            const output = ContentService.createTextOutput(JSON.stringify(mapResult || { success: false, message: 'فشل جلب بيانات الخريطة' }))
+                .setMimeType(ContentService.MimeType.JSON);
+            return setCorsHeaders(output);
+        }
+
+        if (action === 'publicEmergencyMapImage') {
+            const planId = String(e.parameter.planId || e.parameter.factoryMap || '').trim();
+            const token = String(e.parameter.token || e.parameter.qr || '').trim();
+            const blob = getPublicEmergencyMapImage(planId, token);
+            if (blob) return blob;
+            const errOut = ContentService.createTextOutput(JSON.stringify({
+                success: false,
+                message: 'تعذر تحميل صورة المخطط'
+            })).setMimeType(ContentService.MimeType.JSON);
+            return setCorsHeaders(errOut);
+        }
+
         // معالجة طلب getData — مُعطّل في الإنتاج (منع قراءة علنية)
         if (action === 'getData') {
             const deniedOutput = ContentService.createTextOutput(JSON.stringify({
@@ -812,7 +850,7 @@ function doGet(e) {
                 step5: 'تحقق من Execution Logs في Google Apps Script لمزيد من التفاصيل'
             },
             note: 'ملاحظة: ملف google-apps-script.gs غير مطلوب. الملف الرئيسي هو Code.gs',
-            supportedGetActions: ['getProfileImage', 'publicProfileCard', 'getPublicProfileData'],
+            supportedGetActions: ['getProfileImage', 'publicProfileCard', 'getPublicProfileData', 'publicEmergencyMap', 'getPublicEmergencyMapData', 'publicEmergencyMapImage'],
             recommendedMethod: 'POST',
             commonIssues: {
                 issue1: 'URL ينتهي بـ /dev بدلاً من /exec → استخدم رابط /exec',

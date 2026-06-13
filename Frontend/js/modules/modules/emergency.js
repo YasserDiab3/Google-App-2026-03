@@ -2511,12 +2511,27 @@ const Emergency = {
         return 'QR-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 10);
     },
 
+    _fmGetGasScriptUrl() {
+        let scriptUrl = String(AppState?.googleConfig?.appsScript?.scriptUrl || '').trim();
+        if (!scriptUrl) return '';
+        if (scriptUrl.indexOf('script.google.com/macros/s/') !== -1) {
+            scriptUrl = scriptUrl.replace(/\/dev(\?|#|$)/, '/exec$1');
+        }
+        return scriptUrl;
+    },
+
     _fmBuildMapQrUrl(plan) {
         if (!plan || !plan.id) return '';
+        const scriptUrl = this._fmGetGasScriptUrl();
+        const token = plan.qrToken || '';
+        if (scriptUrl) {
+            const joiner = scriptUrl.includes('?') ? '&' : '?';
+            return `${scriptUrl}${joiner}action=publicEmergencyMap&planId=${encodeURIComponent(plan.id)}&token=${encodeURIComponent(token)}`;
+        }
         const url = new URL(window.location.origin + window.location.pathname);
         url.searchParams.set('section', 'emergency');
         url.searchParams.set('factoryMap', plan.id);
-        if (plan.qrToken) url.searchParams.set('qr', plan.qrToken);
+        if (token) url.searchParams.set('qr', token);
         url.hash = 'emergency';
         return url.toString();
     },
@@ -3412,7 +3427,7 @@ const Emergency = {
                         <div class="fm-qr-card">
                             ${qrImg ? `<img src="${qrImg}" alt="QR" class="fm-qr-image">` : '<p>تعذر توليد QR</p>'}
                         </div>
-                        <p class="fm-qr-hint">امسح الرمز للوصول المباشر إلى مخطط الطوارئ وعناصر الاستجابة</p>
+                        <p class="fm-qr-hint">امسح الرمز لفتح الخريطة مباشرة <strong>بدون تسجيل دخول</strong> — ستظهر نقطة <strong>«أنت هنا»</strong> على المخطط</p>
                         <div class="fm-qr-link-box">
                             <input type="text" class="form-input" id="fm-qr-link-input" readonly value="${Utils.escapeAttr(qrUrl)}">
                             <button type="button" class="btn-secondary btn-sm" id="fm-qr-copy-btn"><i class="fas fa-copy"></i> نسخ</button>
@@ -4331,6 +4346,12 @@ const Emergency = {
             sortOrder: parseInt(document.getElementById('fm-floor-sort')?.value) || 1,
             isActive: 'true',
             qrToken: existingPlan?.qrToken || this._fmGenerateQrToken(),
+            qrAnchorX: existingPlan?.qrAnchorX ?? 0.5,
+            qrAnchorY: existingPlan?.qrAnchorY ?? 0.85,
+            geoNwLat: existingPlan?.geoNwLat ?? '',
+            geoNwLng: existingPlan?.geoNwLng ?? '',
+            geoSeLat: existingPlan?.geoSeLat ?? '',
+            geoSeLng: existingPlan?.geoSeLng ?? '',
             drawStampsJson: drawStampsJson || existingPlan?.drawStampsJson || ''
         };
 

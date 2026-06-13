@@ -465,6 +465,8 @@ function addEmergencyFloorPlan(data) {
         if (!data.qrToken) {
             data.qrToken = 'QR-' + Utilities.getUuid().replace(/-/g, '').substring(0, 16);
         }
+        if (data.qrAnchorX == null || data.qrAnchorX === '') data.qrAnchorX = 0.5;
+        if (data.qrAnchorY == null || data.qrAnchorY === '') data.qrAnchorY = 0.85;
         if (!data.createdAt) data.createdAt = new Date();
         if (!data.updatedAt) data.updatedAt = new Date();
         data = sanitizeEmergencyFloorPlanData_(data, { isUpdate: false });
@@ -590,5 +592,237 @@ function deleteEmergencyMapItem(itemId) {
         Logger.log('Error in deleteEmergencyMapItem: ' + error.toString());
         return { success: false, message: 'خطأ في حذف عنصر الخريطة: ' + error.toString() };
     }
+}
+
+// ============================================
+// عرض عام لخريطة الطوارئ (QR بدون تسجيل دخول)
+// ============================================
+
+function _fmPublicEscHtml_(value) {
+    return String(value || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
+function _fmPublicItemTypeMeta_() {
+    return {
+        fire_extinguisher: { label: 'مطفأة حريق', color: '#ef4444' },
+        fire_hose: { label: 'خرطوم حريق', color: '#dc2626' },
+        fire_alarm: { label: 'إنذار حريق', color: '#f97316' },
+        emergency_exit: { label: 'مخرج طوارئ', color: '#22c55e' },
+        escape_route: { label: 'طريق هروب', color: '#16a34a' },
+        assembly_point: { label: 'نقطة تجمع', color: '#3b82f6' },
+        first_aid: { label: 'إسعافات أولية', color: '#ec4899' },
+        hazmat: { label: 'مواد خطرة', color: '#a855f7' },
+        evacuation_chair: { label: 'كرسي إخلاء', color: '#06b6d4' },
+        fire_panel: { label: 'لوحة إطفاء', color: '#64748b' }
+    };
+}
+
+function getPublicEmergencyMapByToken_(planId, token) {
+    try {
+        var pid = String(planId || '').trim();
+        var tok = String(token || '').trim();
+        if (!pid || !tok) {
+            return { success: false, message: 'معرف المخطط أو رمز QR غير صالح' };
+        }
+        var plans = getAllEmergencyFloorPlans();
+        var plan = (plans || []).find(function(p) {
+            return p && String(p.id) === pid;
+        });
+        if (!plan) {
+            return { success: false, message: 'المخطط غير موجود' };
+        }
+        if (String(plan.isActive || 'true').toLowerCase() === 'false') {
+            return { success: false, message: 'هذا المخطط غير متاح حالياً' };
+        }
+        if (!plan.qrToken || String(plan.qrToken).trim() !== tok) {
+            return { success: false, message: 'رمز QR غير صالح لهذا المخطط' };
+        }
+        var items = getAllEmergencyMapItems({ floorPlanId: pid }) || [];
+        var activeItems = items.filter(function(it) {
+            return it && String(it.status || 'active').toLowerCase() !== 'inactive';
+        });
+        return {
+            success: true,
+            data: {
+                plan: plan,
+                items: activeItems
+            }
+        };
+    } catch (error) {
+        Logger.log('getPublicEmergencyMapByToken_ error: ' + error.toString());
+        return { success: false, message: 'تعذر تحميل خريطة الطوارئ' };
+    }
+}
+
+function getPublicEmergencyMapData(planId, token) {
+    var gate = getPublicEmergencyMapByToken_(planId, token);
+    if (!gate.success) return gate;
+    var plan = gate.data.plan || {};
+    var img = getDriveImageDataUrl(plan.imageDriveId);
+    return {
+        success: true,
+        data: {
+            plan: {
+                id: plan.id,
+                name: plan.name,
+                factoryName: plan.factoryName,
+                floor: plan.floor || plan.subLocationName,
+                imageWidth: plan.imageWidth,
+                imageHeight: plan.imageHeight,
+                qrAnchorX: parseFloat(plan.qrAnchorX),
+                qrAnchorY: parseFloat(plan.qrAnchorY),
+                geoNwLat: parseFloat(plan.geoNwLat),
+                geoNwLng: parseFloat(plan.geoNwLng),
+                geoSeLat: parseFloat(plan.geoSeLat),
+                geoSeLng: parseFloat(plan.geoSeLng)
+            },
+            items: (gate.data.items || []).map(function(it) {
+                return {
+                    id: it.id,
+                    itemType: it.itemType,
+                    label: it.label,
+                    x: parseFloat(it.x),
+                    y: parseFloat(it.y),
+                    status: it.status
+                };
+            }),
+            imageDirectLink: (img && img.success && img.directLink) ? img.directLink : '',
+            imageDataUrl: (img && img.success && img.dataUrl && String(img.dataUrl).length < 500000) ? img.dataUrl : ''
+        }
+    };
+}
+
+function getPublicEmergencyMapImage(planId, token) {
+    var gate = getPublicEmergencyMapByToken_(planId, token);
+    if (!gate.success) return null;
+    var img = getDriveImageDataUrl(gate.data.plan.imageDriveId);
+    if (!img || !img.success || !img.dataUrl) return null;
+    try {
+        var parts = String(img.dataUrl).split(',');
+        if (parts.length < 2) return null;
+        var mimeMatch = String(parts[0] || '').match(/^data:([^;]+)/);
+        var mime = mimeMatch ? mimeMatch[1] : 'image/jpeg';
+        var bytes = Utilities.base64Decode(parts[1]);
+        return ContentService.createBlob(bytes, mime, 'emergency-map.jpg');
+    } catch (err) {
+        Logger.log('getPublicEmergencyMapImage blob error: ' + err.toString());
+        return null;
+    }
+}
+
+function buildPublicEmergencyMapHtml_(planId, token, scriptBaseUrl) {
+    var gate = getPublicEmergencyMapByToken_(planId, token);
+    if (!gate.success) {
+        var errMsg = _fmPublicEscHtml_(gate.message || 'تعذر عرض الخريطة');
+        return '<!doctype html><html dir="rtl" lang="ar"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>خريطة الطوارئ</title></head>'
+            + '<body style="margin:0;font-family:system-ui,Arial,sans-serif;background:#f1f5f9;padding:20px;">'
+            + '<div style="max-width:520px;margin:40px auto;background:#fff;border:1px solid #e2e8f0;border-radius:14px;padding:22px;text-align:center;">'
+            + '<h2 style="margin:0 0 10px;color:#0f172a;">تعذر فتح الخريطة</h2>'
+            + '<p style="margin:0;color:#64748b;">' + errMsg + '</p></div></body></html>';
+    }
+
+    var plan = gate.data.plan || {};
+    var items = gate.data.items || [];
+    var typeMeta = _fmPublicItemTypeMeta_();
+    var esc = _fmPublicEscHtml_;
+    var base = String(scriptBaseUrl || '').trim();
+    var joiner = base.indexOf('?') >= 0 ? '&' : '?';
+    var imageUrl = base + joiner + 'action=publicEmergencyMapImage&planId=' + encodeURIComponent(String(planId))
+        + '&token=' + encodeURIComponent(String(token));
+
+    var title = esc(plan.name || 'خريطة الطوارئ');
+    var subtitle = esc((plan.factoryName || '') + (plan.subLocationName || plan.floor ? ' — ' + (plan.subLocationName || plan.floor) : ''));
+
+    var markersHtml = '';
+    for (var i = 0; i < items.length; i++) {
+        var it = items[i] || {};
+        var meta = typeMeta[it.itemType] || { label: it.itemType || 'عنصر', color: '#64748b' };
+        var px = Math.max(0, Math.min(100, parseFloat(it.x) * 100 || 0));
+        var py = Math.max(0, Math.min(100, parseFloat(it.y) * 100 || 0));
+        markersHtml += '<div class="fm-pub-marker" style="left:' + px + '%;top:' + py + '%;background:' + esc(meta.color) + ';" title="' + esc(meta.label) + '"></div>';
+    }
+
+    var anchorX = parseFloat(plan.qrAnchorX);
+    var anchorY = parseFloat(plan.qrAnchorY);
+    if (isNaN(anchorX)) anchorX = 0.5;
+    if (isNaN(anchorY)) anchorY = 0.85;
+
+    var geoNwLat = parseFloat(plan.geoNwLat);
+    var geoNwLng = parseFloat(plan.geoNwLng);
+    var geoSeLat = parseFloat(plan.geoSeLat);
+    var geoSeLng = parseFloat(plan.geoSeLng);
+    var hasGeo = !isNaN(geoNwLat) && !isNaN(geoNwLng) && !isNaN(geoSeLat) && !isNaN(geoSeLng)
+        && Math.abs(geoSeLng - geoNwLng) > 0.000001 && Math.abs(geoNwLat - geoSeLat) > 0.000001;
+
+    var configJson = JSON.stringify({
+        anchorX: anchorX,
+        anchorY: anchorY,
+        hasGeo: hasGeo,
+        geo: hasGeo ? { nwLat: geoNwLat, nwLng: geoNwLng, seLat: geoSeLat, seLng: geoSeLng } : null
+    }).replace(/</g, '\\u003c');
+
+    return '<!doctype html><html dir="rtl" lang="ar"><head><meta charset="utf-8">'
+        + '<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=5,user-scalable=yes">'
+        + '<meta name="theme-color" content="#003865"><title>' + title + '</title>'
+        + '<style>'
+        + '*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}'
+        + 'body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Tahoma,Arial,sans-serif;background:#0f172a;color:#fff;min-height:100vh;}'
+        + '.fm-pub-header{padding:14px 16px 10px;background:linear-gradient(135deg,#003865,#1e40af);}'
+        + '.fm-pub-header h1{margin:0;font-size:18px;font-weight:800;}'
+        + '.fm-pub-header p{margin:4px 0 0;font-size:12px;opacity:.9;}'
+        + '.fm-pub-status{margin:10px 16px 0;padding:10px 12px;border-radius:10px;background:rgba(255,255,255,.08);font-size:12px;line-height:1.5;}'
+        + '.fm-pub-viewport{margin:12px 16px 16px;border-radius:14px;overflow:hidden;background:#1e293b;border:2px solid rgba(255,255,255,.12);touch-action:none;}'
+        + '.fm-pub-map-wrap{position:relative;transform-origin:0 0;will-change:transform;}'
+        + '.fm-pub-map-img{display:block;width:100%;height:auto;user-select:none;-webkit-user-drag:none;}'
+        + '.fm-pub-markers{position:absolute;inset:0;pointer-events:none;}'
+        + '.fm-pub-marker{position:absolute;width:14px;height:14px;border-radius:999px;border:2px solid #fff;transform:translate(-50%,-50%);box-shadow:0 2px 8px rgba(0,0,0,.35);}'
+        + '.fm-pub-you{position:absolute;z-index:20;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;gap:4px;pointer-events:none;transition:left .35s ease,top .35s ease;}'
+        + '.fm-pub-you-dot{width:18px;height:18px;border-radius:999px;background:#2563eb;border:3px solid #fff;box-shadow:0 0 0 6px rgba(37,99,235,.25);animation:fmPulse 1.8s infinite;}'
+        + '.fm-pub-you-label{background:#2563eb;color:#fff;font-size:11px;font-weight:700;padding:3px 8px;border-radius:999px;white-space:nowrap;box-shadow:0 4px 12px rgba(0,0,0,.25);}'
+        + '@keyframes fmPulse{0%,100%{box-shadow:0 0 0 6px rgba(37,99,235,.25);}50%{box-shadow:0 0 0 12px rgba(37,99,235,.12);}}'
+        + '.fm-pub-legend{margin:0 16px 18px;padding:12px;border-radius:12px;background:rgba(255,255,255,.06);font-size:11px;color:#cbd5e1;}'
+        + '.fm-pub-legend b{color:#fff;}'
+        + '</style></head><body>'
+        + '<div class="fm-pub-header"><h1>' + title + '</h1><p>' + subtitle + '</p></div>'
+        + '<div class="fm-pub-status" id="fm-pub-status">جاري تحديد موقعك...</div>'
+        + '<div class="fm-pub-viewport" id="fm-pub-viewport"><div class="fm-pub-map-wrap" id="fm-pub-map-wrap">'
+        + '<img id="fm-pub-map-img" class="fm-pub-map-img" src="' + esc(imageUrl) + '" alt="مخطط الطوارئ">'
+        + '<div class="fm-pub-markers">' + markersHtml + '</div>'
+        + '<div class="fm-pub-you" id="fm-pub-you" style="left:' + (anchorX * 100) + '%;top:' + (anchorY * 100) + '%;">'
+        + '<div class="fm-pub-you-dot"></div><div class="fm-pub-you-label">أنت هنا</div></div>'
+        + '</div></div>'
+        + '<div class="fm-pub-legend"><b>استجابة طوارئ</b> — امسح الرمز للوصول المباشر. النقطة الزرقاء توضح موقعك على المخطط.'
+        + (hasGeo ? ' يتم تحديث الموقع تلقائياً.' : ' الموقع تقريبي من نقطة QR.') + '</div>'
+        + '<script>window.__FM_PUBLIC_MAP__=' + configJson + ';<\/script>'
+        + '<script>(function(){'
+        + 'var cfg=window.__FM_PUBLIC_MAP__||{};'
+        + 'var you=document.getElementById("fm-pub-you");'
+        + 'var statusEl=document.getElementById("fm-pub-status");'
+        + 'var wrap=document.getElementById("fm-pub-map-wrap");'
+        + 'var viewport=document.getElementById("fm-pub-viewport");'
+        + 'function setPos(x,y){if(!you)return;x=Math.max(0.02,Math.min(0.98,x));y=Math.max(0.02,Math.min(0.98,y));you.style.left=(x*100)+"%";you.style.top=(y*100)+"%";}'
+        + 'function gpsToMap(lat,lng){if(!cfg.hasGeo||!cfg.geo)return null;var g=cfg.geo;var x=(lng-g.nwLng)/(g.seLng-g.nwLng);var y=1-((lat-g.seLat)/(g.nwLat-g.seLat));return{x:Math.max(0.02,Math.min(0.98,x)),y:Math.max(0.02,Math.min(0.98,y))};}'
+        + 'function applyAnchor(){setPos(cfg.anchorX||0.5,cfg.anchorY||0.85);}'
+        + 'function setStatus(msg){if(statusEl)statusEl.textContent=msg;}'
+        + 'applyAnchor();'
+        + 'if(navigator.geolocation){'
+        + 'navigator.geolocation.watchPosition(function(pos){'
+        + 'var mapped=gpsToMap(pos.coords.latitude,pos.coords.longitude);'
+        + 'if(mapped){setPos(mapped.x,mapped.y);setStatus("تم تحديد موقعك على المخطط (دقة ±"+Math.round(pos.coords.accuracy||0)+"م)");}'
+        + 'else{applyAnchor();setStatus("تم عرض موقعك عند نقطة QR — فعّل إحداثيات المخطط لتحديد أدق");}'
+        + '},function(err){applyAnchor();setStatus(err&&err.code===1?"تم عرض موقعك عند نقطة QR — اسمح بالوصول للموقع لتحديث أدق":"تم عرض موقعك عند نقطة QR");},{enableHighAccuracy:true,maximumAge:4000,timeout:15000});'
+        + '}else{applyAnchor();setStatus("تم عرض موقعك عند نقطة QR");}'
+        + 'var scale=1,tx=0,ty=0,pointers=new Map();'
+        + 'function applyTransform(){if(wrap)wrap.style.transform="translate("+tx+"px,"+ty+"px) scale("+scale+")";}'
+        + 'viewport.addEventListener("wheel",function(e){e.preventDefault();var d=e.deltaY>0?0.9:1.1;scale=Math.max(0.6,Math.min(4,scale*d));applyTransform();},{passive:false});'
+        + 'viewport.addEventListener("pointerdown",function(e){viewport.setPointerCapture(e.pointerId);pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});});'
+        + 'viewport.addEventListener("pointermove",function(e){if(!pointers.has(e.pointerId))return;var p=pointers.get(e.pointerId);tx+=e.clientX-p.x;ty+=e.clientY-p.y;pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});applyTransform();});'
+        + 'viewport.addEventListener("pointerup",function(e){pointers.delete(e.pointerId);});'
+        + '})();<\/script></body></html>';
 }
 
