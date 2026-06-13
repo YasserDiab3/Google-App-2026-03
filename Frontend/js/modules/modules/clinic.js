@@ -13532,9 +13532,7 @@ const Clinic = {
         const stats = this._computeAttendanceReportStats(rows);
         const meta = this._buildAttendanceReportMeta(filters);
         const isSelfView = !this.canViewAllAttendanceData();
-        const generatedAt = typeof Utils !== 'undefined' && Utils.formatDateTime
-            ? Utils.formatDateTime(new Date(), true)
-            : new Date().toLocaleString('ar-EG');
+        const generatedAt = this.formatDate(new Date(), true);
 
         const kpiItems = [
             { label: 'إجمالي السجلات', value: stats.total, color: '#2563eb', bg: '#eff6ff' },
@@ -13618,7 +13616,7 @@ const Clinic = {
     _buildAttendanceReportFullHtml(filters, rows) {
         const content = this._buildAttendanceReportContent(filters, rows);
         const companyName = Utils.escapeHTML(AppState?.companySettings?.name || 'نظام HSE');
-        const logo = AppState?.companyLogo || '';
+        const logo = typeof AppState?.companyLogo === 'string' ? AppState.companyLogo : '';
         const formCode = Utils.escapeHTML(`CLINIC-ATT-${this._attendanceReportFileSuffix(filters)}`);
         const logoHtml = logo
             ? `<img src="${Utils.escapeAttr(logo)}" alt="" style="max-height:52px;max-width:96px;object-fit:contain;display:block;">`

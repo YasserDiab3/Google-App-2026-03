@@ -6841,7 +6841,45 @@ const PTW = {
         return html;
     },
 
-    getManualPermitPrintStyles() {
+    PERMIT_A4_WIDTH_PX: 794,
+    PERMIT_A4_MARGIN_MM: 4,
+
+    getManualPermitPrintStyles(forPdfExport = false) {
+        const a4Overrides = forPdfExport ? `
+            @page { size: A4 portrait; margin: 5mm; }
+            html, body {
+                width: ${this.PERMIT_A4_WIDTH_PX}px !important;
+                max-width: ${this.PERMIT_A4_WIDTH_PX}px !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                background: #fff !important;
+            }
+            .ptw-manual-print {
+                width: ${this.PERMIT_A4_WIDTH_PX}px !important;
+                max-width: ${this.PERMIT_A4_WIDTH_PX}px !important;
+                margin: 0 !important;
+            }
+            .ptw-paper-header { padding: 12px 14px; min-height: 68px; border-radius: 8px; }
+            .ptw-paper-header-form-title { font-size: 16px; }
+            .ptw-paper-header-form-subtitle { font-size: 11px; letter-spacing: 1px; }
+            .ptw-paper-header-company { font-size: 14px; }
+            .ptw-paper-header-dept { font-size: 10px; }
+            .ptw-paper-header-logo { max-height: 48px; max-width: 110px; }
+            .manual-print-disclaimer-text { font-size: 11px; line-height: 1.75; padding: 10px; }
+            .ptw-manual-form-section { margin: 6px 0; padding: 10px 12px; border-radius: 8px; }
+            .ptw-manual-form-section h3 { font-size: 12px; margin-bottom: 8px; }
+            .manual-print-field .lbl { font-size: 9px; }
+            .manual-print-field .val { font-size: 10px; }
+            .ptw-paper-grid-table { font-size: 9px; }
+            .ptw-paper-grid-table th, .ptw-paper-grid-table td { padding: 4px 5px; }
+            .ptw-manual-ppe-fixed-row { gap: 4px 3px; margin-bottom: 5px; }
+            .ptw-manual-ppe-cell { font-size: 8px; padding: 4px 3px; min-height: 26px; line-height: 1.3; }
+            .ppe-checkbox { width: 11px; height: 11px; border-width: 1.5px; }
+            .ppe-checkbox.checked::after { left: 2px; top: 0; width: 3px; height: 6px; }
+            .manual-risk-matrix { font-size: 8px; }
+            .manual-print-req-item { font-size: 9px; padding: 6px; }
+            .manual-print-supervisor-card .val { font-size: 11px; }
+        ` : '';
         return `
             * { box-sizing: border-box; }
             body { margin: 0; padding: 12px; font-family: 'Cairo', 'Segoe UI', Tahoma, Arial, sans-serif; font-size: 12px; color: #1f2937; background: #fff; direction: rtl; }
@@ -6992,7 +7030,33 @@ const PTW = {
                 .ptw-manual-form-section { page-break-inside: auto; break-inside: auto; margin: 6px 0; padding: 10px; }
                 .ptw-manual-ppe-fixed-row { gap: 6px 3px; }
             }
+            ${a4Overrides}
         `;
+    },
+
+    getPermitA4ExportOverrides_() {
+        const w = this.PERMIT_A4_WIDTH_PX;
+        return `
+            @page { size: A4 portrait; margin: 5mm; }
+            html, body {
+                width: ${w}px !important;
+                max-width: ${w}px !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                background: #fff !important;
+            }
+            body > * { max-width: ${w}px !important; box-sizing: border-box; }
+            #ptw-permit-print-root { width: ${w}px !important; max-width: ${w}px !important; margin: 0 !important; }
+        `;
+    },
+
+    _wrapPermitHtmlForA4Export(html) {
+        if (!html) return html;
+        const styleBlock = `<style id="ptw-a4-export-overrides">${this.getPermitA4ExportOverrides_()}</style>`;
+        if (html.includes('</head>')) {
+            return html.replace('</head>', `${styleBlock}</head>`);
+        }
+        return `<!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="UTF-8">${styleBlock}</head><body><div id="ptw-permit-print-root">${html}</div></body></html>`;
     },
 
     _formatManualPermitDateTime(dateStr) {
@@ -7290,7 +7354,8 @@ const PTW = {
         `;
     },
 
-    generateManualPermitPrintHTML(entry) {
+    generateManualPermitPrintHTML(entry, options = {}) {
+        const forPdf = options?.forPdf === true;
         const content = this.generateManualPermitPrintContent(entry);
         const displayNo = this.getPermitDisplayNumber(entry);
         return `<!DOCTYPE html>
@@ -7301,10 +7366,10 @@ const PTW = {
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
     <title>تصريح عمل يدوي #${Utils.escapeHTML(displayNo)}</title>
-    <style>${this.getManualPermitPrintStyles()}</style>
+    <style>${this.getManualPermitPrintStyles(forPdf)}</style>
 </head>
 <body>
-    <div class="ptw-manual-print" id="ptw-permit-print-root">
+    <div class="ptw-manual-print${forPdf ? ' ptw-manual-print-a4' : ''}" id="ptw-permit-print-root">
         ${this.renderPermitSystemHeader()}
         ${content}
     </div>
@@ -7377,33 +7442,51 @@ const PTW = {
         } catch (_e) { /* ignore */ }
     },
 
-    async _capturePermitHtmlToCanvas_(root) {
-        const scrollW = Math.max(root?.scrollWidth || 1100, 1100);
+    async _ensureHtml2CanvasInFrame_(iDoc, iWin) {
+        if (!iDoc || !iWin) return false;
+        if (typeof iWin.html2canvas === 'function') return true;
+        return new Promise((resolve) => {
+            const s = iDoc.createElement('script');
+            s.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';
+            s.async = true;
+            s.onload = () => resolve(typeof iWin.html2canvas === 'function');
+            s.onerror = () => resolve(false);
+            (iDoc.head || iDoc.documentElement).appendChild(s);
+        });
+    },
+
+    async _capturePermitHtmlToCanvas_(root, iWin) {
+        const a4W = this.PERMIT_A4_WIDTH_PX;
+        const scrollW = Math.max(root?.scrollWidth || a4W, a4W);
         const scrollH = Math.max(root?.scrollHeight || 1, 1);
         let scale = 2;
-        while (scale > 0.85 && (scrollW * scale > 14000 || scrollH * scale > 14000)) {
+        while (scale > 1 && (scrollW * scale > 16000 || scrollH * scale > 16000)) {
             scale -= 0.25;
         }
+        const h2c = (iWin && typeof iWin.html2canvas === 'function') ? iWin.html2canvas : html2canvas;
         const baseOpts = {
             scale,
             backgroundColor: '#ffffff',
             logging: false,
+            width: scrollW,
+            height: scrollH,
             windowWidth: scrollW,
             windowHeight: scrollH,
             scrollX: 0,
             scrollY: 0,
             useCORS: true,
-            allowTaint: true
+            allowTaint: true,
+            imageTimeout: 8000
         };
         const attempts = [
             baseOpts,
             { ...baseOpts, useCORS: false, allowTaint: true },
-            { ...baseOpts, scale: Math.max(1, scale - 0.5) }
+            { ...baseOpts, scale: Math.max(1.25, scale - 0.5) }
         ];
         let lastError = null;
         for (let i = 0; i < attempts.length; i++) {
             try {
-                const canvas = await html2canvas(root, attempts[i]);
+                const canvas = await h2c(root, attempts[i]);
                 if (canvas && canvas.width > 0 && canvas.height > 0) return canvas;
             } catch (err) {
                 lastError = err;
@@ -7420,16 +7503,14 @@ const PTW = {
         const pdfFileName = String(fileName || 'PTW.pdf').toLowerCase().endsWith('.pdf')
             ? String(fileName)
             : `${String(fileName)}.pdf`;
+        const a4W = this.PERMIT_A4_WIDTH_PX;
+        const marginMm = this.PERMIT_A4_MARGIN_MM;
 
         await this._preloadPermitPdfFonts_();
 
-        const container = document.createElement('div');
-        container.setAttribute('aria-hidden', 'true');
-        container.style.cssText = 'position:fixed;left:-15000px;top:0;width:1100px;background:#fff;z-index:-1;overflow:visible;';
-
         const iframe = document.createElement('iframe');
         iframe.setAttribute('aria-hidden', 'true');
-        iframe.style.cssText = 'position:fixed;left:-15000px;top:0;width:1100px;height:1px;border:0;visibility:hidden;';
+        iframe.style.cssText = `position:fixed;left:-20000px;top:0;width:${a4W}px;height:200px;border:0;visibility:hidden;`;
         document.body.appendChild(iframe);
 
         try {
@@ -7437,11 +7518,12 @@ const PTW = {
             await new Promise((resolve) => {
                 iframe.onload = resolve;
                 iframe.onerror = resolve;
-                setTimeout(resolve, 6000);
+                setTimeout(resolve, 8000);
             });
 
             const iDoc = iframe.contentDocument || iframe.contentWindow?.document;
-            if (!iDoc) return false;
+            const iWin = iframe.contentWindow;
+            if (!iDoc || !iWin) return false;
 
             if (iDoc.fonts && typeof iDoc.fonts.ready !== 'undefined') {
                 try { await iDoc.fonts.ready; } catch (_e) { /* ignore */ }
@@ -7452,8 +7534,11 @@ const PTW = {
                 if (img.complete) return resolve();
                 img.onload = resolve;
                 img.onerror = resolve;
-                setTimeout(resolve, 2500);
+                setTimeout(resolve, 3000);
             })));
+
+            await this._ensureHtml2CanvasInFrame_(iDoc, iWin);
+            await new Promise((r) => setTimeout(r, 350));
 
             const root = iDoc.getElementById('ptw-permit-print-root')
                 || iDoc.querySelector('.ptw-manual-print')
@@ -7461,22 +7546,19 @@ const PTW = {
                 || iDoc.body;
             if (!root) return false;
 
-            const clone = root.cloneNode(true);
-            container.appendChild(clone);
-            document.body.appendChild(container);
-            await new Promise((r) => setTimeout(r, 400));
+            const contentHeight = Math.max(root.scrollHeight, root.offsetHeight, 1123);
+            iframe.style.height = `${contentHeight + 40}px`;
 
-            const canvas = await this._capturePermitHtmlToCanvas_(container);
+            const canvas = await this._capturePermitHtmlToCanvas_(root, iWin);
             if (!canvas) return false;
 
             const pdf = new JsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
             const pdfW = pdf.internal.pageSize.getWidth();
             const pdfH = pdf.internal.pageSize.getHeight();
-            const margin = 8;
-            const contentW = pdfW - margin * 2;
-            const ratio = contentW / canvas.width;
-            const pageContentH = pdfH - margin * 2;
-            const pageHeightPx = pageContentH / ratio;
+            const contentWmm = pdfW - marginMm * 2;
+            const contentHmm = pdfH - marginMm * 2;
+            const pxPerMm = canvas.width / contentWmm;
+            const pageHeightPx = contentHmm * pxPerMm;
             const totalPages = Math.max(1, Math.ceil(canvas.height / pageHeightPx));
 
             for (let p = 0; p < totalPages; p++) {
@@ -7488,7 +7570,15 @@ const PTW = {
                 sliceCanvas.getContext('2d').drawImage(
                     canvas, 0, p * pageHeightPx, canvas.width, sliceH, 0, 0, canvas.width, sliceH
                 );
-                pdf.addImage(sliceCanvas.toDataURL('image/jpeg', 0.92), 'JPEG', margin, margin, contentW, sliceH * ratio);
+                const sliceHmm = sliceH / pxPerMm;
+                pdf.addImage(
+                    sliceCanvas.toDataURL('image/png'),
+                    'PNG',
+                    marginMm,
+                    marginMm,
+                    contentWmm,
+                    sliceHmm
+                );
             }
 
             pdf.save(pdfFileName);
@@ -7497,7 +7587,6 @@ const PTW = {
             Utils.safeWarn('فشل تحميل تصريح PDF:', error);
             return false;
         } finally {
-            container.remove();
             iframe.remove();
         }
     },
@@ -7515,7 +7604,7 @@ const PTW = {
             const displayNo = this.getPermitDisplayNumber(reg);
             const seq = String(reg.sequentialNumber || displayNo).replace(/\D/g, '').padStart(4, '0') || displayNo;
             return {
-                html: this.generateManualPermitPrintHTML(reg),
+                html: this.generateManualPermitPrintHTML(reg, { forPdf: true }),
                 fileName: `PTW-${this._sanitizePermitFileName_(seq)}.pdf`,
                 displayNo
             };
@@ -7531,23 +7620,25 @@ const PTW = {
         const formData = this.getPermitFormDataForPrint(item);
         const content = this.generatePrintContent(formData);
 
-        const html = typeof FormHeader !== 'undefined' && typeof FormHeader.generatePDFHTML === 'function'
-            ? FormHeader.generatePDFHTML(
-                formCode,
-                `تصريح عمل #${displayNo}`,
-                content,
-                false,
-                false,
-                {
-                    version: item.version || '1.0',
-                    releaseDate: item.startDate || item.createdAt,
-                    revisionDate: item.updatedAt || item.endDate || item.startDate,
-                    'رقم التصريح': displayNo
-                },
-                item.createdAt || item.startDate,
-                item.updatedAt || item.endDate || item.createdAt
-            )
-            : `<!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="UTF-8"><title>تصريح عمل</title></head><body><div id="ptw-permit-print-root">${content}</div></body></html>`;
+        const html = this._wrapPermitHtmlForA4Export(
+            typeof FormHeader !== 'undefined' && typeof FormHeader.generatePDFHTML === 'function'
+                ? FormHeader.generatePDFHTML(
+                    formCode,
+                    `تصريح عمل #${displayNo}`,
+                    content,
+                    false,
+                    false,
+                    {
+                        version: item.version || '1.0',
+                        releaseDate: item.startDate || item.createdAt,
+                        revisionDate: item.updatedAt || item.endDate || item.startDate,
+                        'رقم التصريح': displayNo
+                    },
+                    item.createdAt || item.startDate,
+                    item.updatedAt || item.endDate || item.createdAt
+                )
+                : `<!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="UTF-8"><title>تصريح عمل</title></head><body><div id="ptw-permit-print-root">${content}</div></body></html>`
+        );
 
         return {
             html,
