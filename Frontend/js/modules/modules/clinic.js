@@ -13615,35 +13615,166 @@ const Clinic = {
         `;
     },
 
+    _buildAttendanceReportFullHtml(filters, rows) {
+        const content = this._buildAttendanceReportContent(filters, rows);
+        const companyName = Utils.escapeHTML(AppState?.companySettings?.name || 'نظام HSE');
+        const logo = AppState?.companyLogo || '';
+        const formCode = Utils.escapeHTML(`CLINIC-ATT-${this._attendanceReportFileSuffix(filters)}`);
+        const logoHtml = logo
+            ? `<img src="${Utils.escapeAttr(logo)}" alt="" style="max-height:52px;max-width:96px;object-fit:contain;display:block;">`
+            : '';
+
+        return `<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+    html, body { margin: 0; padding: 0; background: #fff; direction: rtl; font-family: 'Cairo', Tahoma, 'Segoe UI', sans-serif; letter-spacing: 0; }
+    .att-report-doc { width: 794px; box-sizing: border-box; padding: 22px 26px 28px; background: #fff; }
+    .att-report-top { display: flex; align-items: center; justify-content: space-between; gap: 16px; border-bottom: 3px solid #134e4a; padding-bottom: 12px; margin-bottom: 14px; }
+    .att-report-brand { display: flex; align-items: center; gap: 12px; min-width: 0; }
+    .att-report-brand-name { font-size: 13px; font-weight: 700; color: #334155; line-height: 1.4; }
+    .att-report-code { font-size: 10px; color: #64748b; text-align: left; white-space: nowrap; }
+    .att-report-footer { margin-top: 18px; padding-top: 10px; border-top: 1px dashed #cbd5e1; text-align: center; font-size: 9px; color: #94a3b8; line-height: 1.5; }
+</style>
+</head>
+<body>
+<div class="att-report-doc" id="attendance-report-root">
+    <div class="att-report-top">
+        <div class="att-report-brand">
+            ${logoHtml}
+            <div class="att-report-brand-name">${companyName}</div>
+        </div>
+        <div class="att-report-code">${formCode}</div>
+    </div>
+    ${content}
+    <div class="att-report-footer">${companyName} — تقرير حضور مسئولي العيادة</div>
+</div>
+</body>
+</html>`;
+    },
+
+    _loadAttendancePdfLib_(urls, checkFn) {
+        if (checkFn()) return Promise.resolve(true);
+        const list = Array.isArray(urls) ? urls : [urls];
+        const tryAt = (index) => {
+            if (index >= list.length) return Promise.resolve(false);
+            const src = list[index];
+            const existing = Array.from(document.querySelectorAll('script[src]'))
+                .find(s => String(s.src || '').includes(src.replace(/^https?:\/\//, '').split('/').slice(-2).join('/')));
+            if (existing) {
+                return new Promise((resolve) => {
+                    const done = () => resolve(!!checkFn());
+                    existing.addEventListener('load', done, { once: true });
+                    setTimeout(done, 4000);
+                });
+            }
+            return new Promise((resolve) => {
+                const script = document.createElement('script');
+                script.src = src;
+                script.async = true;
+                script.onload = () => resolve(!!checkFn());
+                script.onerror = () => resolve(tryAt(index + 1));
+                document.head.appendChild(script);
+            });
+        };
+        return tryAt(0);
+    },
+
     async _ensureAttendancePdfLibs_() {
-        const loadLib = (src, check) => new Promise((res, rej) => {
-            if (check()) return res();
-            const s = document.createElement('script');
-            s.src = src;
-            s.onload = () => res();
-            s.onerror = () => rej(new Error('Failed: ' + src));
-            document.head.appendChild(s);
-        });
-        try {
-            await loadLib('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js', () => typeof html2canvas !== 'undefined');
-            await loadLib('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js', () => typeof window.jspdf !== 'undefined');
-            return true;
-        } catch (_e) {
-            return false;
+        const jsPdfOk = await this._loadAttendancePdfLib_([
+            'https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js',
+            'https://unpkg.com/jspdf@2.5.1/dist/jspdf.umd.min.js',
+            'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js'
+        ], () => typeof window.jspdf !== 'undefined' || typeof window.jsPDF !== 'undefined');
+        const h2cOk = await this._loadAttendancePdfLib_([
+            'https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js',
+            'https://unpkg.com/html2canvas@1.4.1/dist/html2canvas.min.js',
+            'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js'
+        ], () => typeof html2canvas !== 'undefined');
+        return jsPdfOk && h2cOk;
+    },
+
+    _getJsPdfConstructor_() {
+        if (window.jspdf && window.jspdf.jsPDF) return window.jspdf.jsPDF;
+        if (window.jsPDF && window.jsPDF.jsPDF) return window.jsPDF.jsPDF;
+        if (typeof window.jsPDF === 'function') return window.jsPDF;
+        return null;
+    },
+
+    async _preloadAttendancePdfFonts_() {
+        if (!document.getElementById('clinic-att-cairo-font')) {
+            const link = document.createElement('link');
+            link.id = 'clinic-att-cairo-font';
+            link.rel = 'stylesheet';
+            link.href = 'https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap';
+            document.head.appendChild(link);
         }
+        try {
+            if (document.fonts && typeof document.fonts.load === 'function') {
+                await document.fonts.load("400 14px Cairo");
+                await document.fonts.load("700 18px Cairo");
+                await document.fonts.ready;
+            }
+        } catch (_e) { /* ignore */ }
+    },
+
+    async _captureAttendanceHtmlToCanvas_(root) {
+        const scrollW = Math.max(root?.scrollWidth || 794, 794);
+        const scrollH = Math.max(root?.scrollHeight || 1, 1);
+        let scale = 2;
+        while (scale > 0.85 && (scrollW * scale > 12000 || scrollH * scale > 12000)) {
+            scale -= 0.25;
+        }
+        const baseOpts = {
+            scale,
+            backgroundColor: '#ffffff',
+            logging: false,
+            windowWidth: scrollW,
+            windowHeight: scrollH,
+            scrollX: 0,
+            scrollY: 0,
+            useCORS: true,
+            allowTaint: true
+        };
+        const attempts = [
+            baseOpts,
+            { ...baseOpts, useCORS: false, allowTaint: true },
+            { ...baseOpts, scale: Math.max(1, scale - 0.5) }
+        ];
+        let lastError = null;
+        for (let i = 0; i < attempts.length; i++) {
+            try {
+                const canvas = await html2canvas(root, attempts[i]);
+                if (canvas && canvas.width > 0 && canvas.height > 0) return canvas;
+            } catch (err) {
+                lastError = err;
+            }
+        }
+        if (lastError) throw lastError;
+        return null;
     },
 
     async _downloadAttendanceHtmlAsPdf(htmlContent, fileName) {
-        const libsReady = await this._ensureAttendancePdfLibs_();
-        if (!libsReady || typeof html2canvas === 'undefined' || !window.jspdf) return false;
+        const JsPDF = this._getJsPdfConstructor_();
+        if (!JsPDF || typeof html2canvas === 'undefined') return false;
 
         const pdfFileName = String(fileName || 'report.pdf').toLowerCase().endsWith('.pdf')
             ? String(fileName)
             : `${String(fileName)}.pdf`;
 
+        await this._preloadAttendancePdfFonts_();
+
+        const container = document.createElement('div');
+        container.setAttribute('aria-hidden', 'true');
+        container.style.cssText = 'position:fixed;left:-15000px;top:0;width:794px;background:#fff;z-index:-1;overflow:visible;';
+
         const iframe = document.createElement('iframe');
         iframe.setAttribute('aria-hidden', 'true');
-        iframe.style.cssText = 'position:fixed;left:-100000px;top:0;width:900px;height:1200px;border:0;visibility:hidden;';
+        iframe.style.cssText = 'position:fixed;left:-15000px;top:0;width:794px;height:1px;border:0;visibility:hidden;';
         document.body.appendChild(iframe);
 
         try {
@@ -13651,34 +13782,36 @@ const Clinic = {
             await new Promise((resolve) => {
                 iframe.onload = resolve;
                 iframe.onerror = resolve;
-                setTimeout(resolve, 5000);
+                setTimeout(resolve, 6000);
             });
 
             const iDoc = iframe.contentDocument || iframe.contentWindow?.document;
             if (!iDoc) return false;
+
+            if (iDoc.fonts && typeof iDoc.fonts.ready !== 'undefined') {
+                try { await iDoc.fonts.ready; } catch (_e) { /* ignore */ }
+            }
 
             const images = Array.from(iDoc.images || []);
             await Promise.all(images.map((img) => new Promise((resolve) => {
                 if (img.complete) return resolve();
                 img.onload = resolve;
                 img.onerror = resolve;
-                setTimeout(resolve, 2000);
+                setTimeout(resolve, 2500);
             })));
 
-            const root = iDoc.querySelector('.report-wrapper') || iDoc.body;
+            const root = iDoc.getElementById('attendance-report-root') || iDoc.querySelector('.att-report-doc') || iDoc.body;
             if (!root) return false;
 
-            const canvas = await html2canvas(root, {
-                scale: 2,
-                useCORS: true,
-                backgroundColor: '#ffffff',
-                logging: false,
-                scrollX: 0,
-                scrollY: 0
-            });
+            const clone = root.cloneNode(true);
+            container.appendChild(clone);
+            document.body.appendChild(container);
+            await new Promise(r => setTimeout(r, 400));
 
-            const { jsPDF } = window.jspdf;
-            const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+            const canvas = await this._captureAttendanceHtmlToCanvas_(container);
+            if (!canvas) return false;
+
+            const pdf = new JsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
             const pdfW = pdf.internal.pageSize.getWidth();
             const pdfH = pdf.internal.pageSize.getHeight();
             const margin = 8;
@@ -13697,7 +13830,7 @@ const Clinic = {
                 sliceCanvas.getContext('2d').drawImage(
                     canvas, 0, p * pageHeightPx, canvas.width, sliceH, 0, 0, canvas.width, sliceH
                 );
-                pdf.addImage(sliceCanvas.toDataURL('image/png'), 'PNG', margin, margin, contentW, sliceH * ratio);
+                pdf.addImage(sliceCanvas.toDataURL('image/jpeg', 0.92), 'JPEG', margin, margin, contentW, sliceH * ratio);
             }
 
             pdf.save(pdfFileName);
@@ -13706,6 +13839,7 @@ const Clinic = {
             Utils.safeWarn('فشل تحميل تقرير حضور PDF:', error);
             return false;
         } finally {
+            container.remove();
             iframe.remove();
         }
     },
@@ -13718,34 +13852,26 @@ const Clinic = {
             return;
         }
 
-        const content = this._buildAttendanceReportContent(filters, rows);
-        const formCode = `CLINIC-ATT-${this._attendanceReportFileSuffix(filters)}`;
-        const htmlContent = typeof FormHeader !== 'undefined' && FormHeader.generatePDFHTML
-            ? FormHeader.generatePDFHTML(
-                formCode,
-                'تقرير حضور مسئولي العيادة',
-                content,
-                false,
-                false,
-                { includeQRCode: false, compactPdfFooter: true, source: 'ClinicStaffAttendance' },
-                new Date().toISOString(),
-                new Date().toISOString()
-            )
-            : `<html dir="rtl" lang="ar"><head><meta charset="UTF-8"><title>تقرير حضور</title></head><body>${content}</body></html>`;
-
         const fileName = `Clinic_Attendance_${this._attendanceReportFileSuffix(filters)}.pdf`;
 
-        if (typeof Loading !== 'undefined' && Loading.show) Loading.show();
+        if (typeof Loading !== 'undefined' && Loading.show) Loading.show('جاري إعداد التقرير...');
         try {
+            const libsReady = await this._ensureAttendancePdfLibs_();
+            if (!libsReady) {
+                Notification?.error?.('تعذّر تحميل مكتبات PDF — تحقق من الاتصال بالإنترنت');
+                return;
+            }
+
+            const htmlContent = this._buildAttendanceReportFullHtml(filters, rows);
             const ok = await this._downloadAttendanceHtmlAsPdf(htmlContent, fileName);
             if (ok) {
                 Notification?.success?.('تم تحميل تقرير PDF بنجاح');
             } else {
-                Notification?.error?.('تعذّر تحميل التقرير — تحقق من الاتصال وحاول مجدداً');
+                Notification?.error?.('تعذّر إنشاء ملف PDF — حاول مجدداً');
             }
         } catch (error) {
             Utils.safeError('فشل تصدير تقرير الحضور PDF:', error);
-            Notification?.error?.('تعذر تصدير تقرير الحضور');
+            Notification?.error?.('تعذر تصدير تقرير الحضور: ' + (error?.message || ''));
         } finally {
             if (typeof Loading !== 'undefined' && Loading.hide) Loading.hide();
         }

@@ -1970,6 +1970,7 @@ const PTW = {
             if (typeof MapCoordinatesManager !== 'undefined' && MapCoordinatesManager.syncFromGoogleSheets) {
                 MapCoordinatesManager.syncFromGoogleSheets().then(() => {
                     Utils.safeLog('✅ تم مزامنة إحداثيات المواقع من Google Sheets');
+                    this._notifyMapCoordinatesUpdated();
                 }).catch(error => {
                     Utils.safeWarn('⚠️ تعذر مزامنة إحداثيات المواقع:', error);
                 });
@@ -2291,19 +2292,13 @@ const PTW = {
                 mapContent.style.overflow = 'hidden';
                 mapContent.style.pointerEvents = 'none';
                 mapContent.style.zIndex = '-1';
-                // إيقاف أي عمليات تهيئة للخريطة
+                // إيقاف أي عمليات تهيئة للخريطة (الإبقاء على mapInstance للاستئناع السريع)
                 if (this.mapInitTimeout) {
                     clearTimeout(this.mapInitTimeout);
                     this.mapInitTimeout = null;
                 }
-                // تدمير الخريطة إذا كانت موجودة
-                if (this.mapInstance && this.currentTab !== 'map') {
-                    try {
-                        this.destroyMap();
-                    } catch (e) {
-                        Utils.safeWarn('⚠️ خطأ في تدمير الخريطة:', e);
-                    }
-                }
+                this._clearMapPendingTimeouts();
+                if (this.isMapInitializing) this.isMapInitializing = false;
             }
             if (permitsContent) {
                 permitsContent.style.display = 'block';
@@ -2409,30 +2404,19 @@ const PTW = {
                         mapDiv.style.visibility = 'visible';
                     }
 
-                // Initialize map with delay to ensure DOM is ready
+                // تهيئة أو استئناف الخريطة بعد جاهزية DOM
                 if (this.mapInitTimeout) clearTimeout(this.mapInitTimeout);
                 this.mapInitTimeout = setTimeout(() => {
-                    // التأكد من أننا ما زلنا في تبويب الخريطة
                     if (this.currentTab === 'map' && mapContent && mapContent.style.display !== 'none') {
-                        // تهيئة الخريطة (initMap يعرض رسالة الخطأ داخلياً - لا نكرر تسجيل الخطأ كـ error)
-                        this.initMap().catch(error => {
-                            Utils.safeWarn('⚠️ فشل تهيئة الخريطة (سيظهر للمستخدم في التبويب):', error?.message || error);
-                        });
-                        
-                        // Force map resize after initialization
-                        setTimeout(() => {
-                            if (this.mapInstance && this.currentTab === 'map') {
-                                if (this.mapType === 'leaflet' && typeof L !== 'undefined' && this.mapInstance && this.mapInstance.invalidateSize) {
-                                    this.mapInstance.invalidateSize();
-                                    Utils.safeLog('✅ تم تحديث حجم الخريطة بعد التبديل للتبويب');
-                                } else if (this.mapType === 'google' && typeof google !== 'undefined' && google.maps && google.maps.event && this.mapInstance) {
-                                    google.maps.event.trigger(this.mapInstance, 'resize');
-                                    Utils.safeLog('✅ تم تحديث حجم Google Maps بعد التبديل للتبويب');
-                                }
-                            }
-                        }, 400);
+                        if (this.isMapInstanceAlive()) {
+                            this.resumeMap();
+                        } else {
+                            this.initMap().catch(error => {
+                                Utils.safeWarn('⚠️ فشل تهيئة الخريطة (سيظهر للمستخدم في التبويب):', error?.message || error);
+                            });
+                        }
                     }
-                }, 300);
+                }, 50);
                 } catch (mapTabError) {
                     Utils.safeWarn('⚠️ خطأ عند فتح تبويب الخرائط:', mapTabError?.message || mapTabError);
                     if (mapContent) {
@@ -2504,19 +2488,12 @@ const PTW = {
             mapContent.style.overflow = 'hidden';
             mapContent.style.pointerEvents = 'none';
             mapContent.style.zIndex = '-1';
-            // إيقاف أي عمليات تهيئة للخريطة
+            // إيقاف أي عمليات تهيئة للخريطة (الإبقاء على mapInstance للاستئناع السريع)
             if (this.mapInitTimeout) {
                 clearTimeout(this.mapInitTimeout);
                 this.mapInitTimeout = null;
             }
-            // تدمير الخريطة إذا كانت موجودة
-            if (this.mapInstance && this.currentTab !== 'map') {
-                try {
-                    this.destroyMap();
-                } catch (e) {
-                    Utils.safeWarn('⚠️ خطأ في تدمير الخريطة:', e);
-                }
-            }
+            this._clearMapPendingTimeouts();
         }
     },
 
@@ -2554,7 +2531,11 @@ const PTW = {
                 this.setupRegistryEventListeners();
                 done();
             } else if (tab === 'map' && mapContent) {
-                if (this.mapInstance && typeof this.updateMapMarkers === 'function') this.updateMapMarkers();
+                if (this.isMapInstanceAlive()) {
+                    this.resumeMap();
+                } else if (typeof this.initMap === 'function') {
+                    this.initMap().catch(err => Utils.safeWarn('⚠️ فشل تحديث الخريطة:', err?.message || err));
+                }
                 done();
             } else if (tab === 'analysis' && analysisContent) {
                 analysisContent.innerHTML = this.renderAnalysisContent();
@@ -3045,6 +3026,9 @@ const PTW = {
     },
     isMapInitializing: false,
     mapInitTimeout: null,
+    mapFiltersInitialized: false,
+    mapFullscreenHandler: null,
+    mapPendingTimeouts: [],
     isFullscreen: false,
     googleMapsApiKeyChecked: false, // Cache للتحقق من وجود مفتاح API
     hasGoogleMapsApiKey: false, // Cache لنتيجة التحقق
@@ -3073,17 +3057,143 @@ const PTW = {
 
     applyEgyptDefaultView() {
         if (!this.mapInstance || this.currentTab !== 'map') return;
-        const egypt = this.getEgyptMapDefault();
+        const coords = this.getCurrentSiteCoordinates() || this.getDefaultFactoryCoordinates();
+        this._applyCoordsToMapView(this._normalizeMapCoordinates_(coords));
+    },
+
+    _scheduleMapTimeout(fn, delay) {
+        const id = setTimeout(() => {
+            const idx = this.mapPendingTimeouts.indexOf(id);
+            if (idx > -1) this.mapPendingTimeouts.splice(idx, 1);
+            fn();
+        }, delay);
+        this.mapPendingTimeouts.push(id);
+        return id;
+    },
+
+    _clearMapPendingTimeouts() {
+        if (!this.mapPendingTimeouts || !this.mapPendingTimeouts.length) return;
+        this.mapPendingTimeouts.forEach(id => clearTimeout(id));
+        this.mapPendingTimeouts = [];
+    },
+
+    _notifyMapCoordinatesUpdated() {
+        if (this.currentTab !== 'map' || !this.mapInstance) return;
+        this._scheduleMapTimeout(() => {
+            if (this.currentTab === 'map' && this.mapInstance) {
+                this.updateMapMarkers();
+            }
+        }, 50);
+    },
+
+    getCurrentSiteCoordinates() {
+        try {
+            const user = AppState.currentUser || {};
+            const candidates = [user.factoryId, user.factory, user.siteId, user.site, user.plant, user.location]
+                .filter(v => v != null && String(v).trim() !== '');
+            const mapSites = AppState.appData?.ptwMapSites || [];
+            for (const candidate of candidates) {
+                const key = String(candidate).trim();
+                const site = mapSites.find(s =>
+                    String(s.id || '').trim() === key || String(s.name || '').trim() === key
+                );
+                if (site && site.latitude && site.longitude) {
+                    return {
+                        lat: parseFloat(site.latitude),
+                        lng: parseFloat(site.longitude),
+                        zoom: parseInt(site.zoom) || 15
+                    };
+                }
+            }
+            if (typeof Permissions !== 'undefined' && Permissions.formSettingsState?.sites) {
+                for (const candidate of candidates) {
+                    const key = String(candidate).trim();
+                    const site = Permissions.formSettingsState.sites.find(s =>
+                        String(s.id || '').trim() === key || String(s.name || '').trim() === key
+                    );
+                    if (site && site.latitude && site.longitude) {
+                        return {
+                            lat: parseFloat(site.latitude),
+                            lng: parseFloat(site.longitude),
+                            zoom: parseInt(site.zoom) || 15
+                        };
+                    }
+                }
+            }
+        } catch (error) {
+            Utils.safeWarn('⚠️ خطأ في قراءة إحداثيات الموقع الحالي:', error);
+        }
+        return null;
+    },
+
+    _applyCoordsToMapView(coords) {
+        if (!this.mapInstance || !coords) return;
         try {
             if (this.mapType === 'google' && typeof google !== 'undefined' && google.maps) {
-                this.mapInstance.setCenter({ lat: egypt.lat, lng: egypt.lng });
-                if (this.mapInstance.setZoom) this.mapInstance.setZoom(egypt.zoom);
+                this.mapInstance.setCenter({ lat: coords.lat, lng: coords.lng });
+                if (this.mapInstance.setZoom) this.mapInstance.setZoom(coords.zoom || 15);
             } else if (this.mapType === 'leaflet') {
-                this.mapInstance.setView([egypt.lat, egypt.lng], egypt.zoom);
+                this.mapInstance.setView([coords.lat, coords.lng], coords.zoom || 15);
             }
         } catch (e) {
-            Utils.safeWarn('⚠️ تعذر ضبط عرض مصر الافتراضي:', e);
+            Utils.safeWarn('⚠️ تعذر ضبط عرض الخريطة:', e);
         }
+    },
+
+    isMapInstanceAlive() {
+        if (!this.mapInstance || !this.mapType) return false;
+        const mapDiv = document.getElementById('ptw-map');
+        if (!mapDiv || !document.body.contains(mapDiv)) return false;
+        try {
+            if (this.mapType === 'leaflet' && this.mapInstance.getContainer) {
+                const container = this.mapInstance.getContainer();
+                return !!(container && container.parentNode && document.body.contains(container));
+            }
+            if (this.mapType === 'google' && this.mapInstance.getDiv) {
+                const div = this.mapInstance.getDiv();
+                return !!(div && document.body.contains(div));
+            }
+        } catch (e) {
+            return false;
+        }
+        return false;
+    },
+
+    refreshMapLayout() {
+        if (!this.mapInstance) return;
+        try {
+            if (this.mapType === 'leaflet' && this.mapInstance.invalidateSize) {
+                this.mapInstance.invalidateSize();
+            } else if (this.mapType === 'google' && typeof google !== 'undefined' && google.maps?.event) {
+                google.maps.event.trigger(this.mapInstance, 'resize');
+            }
+        } catch (e) {
+            Utils.safeWarn('⚠️ خطأ في تحديث حجم الخريطة:', e);
+        }
+    },
+
+    resumeMap() {
+        if (this.currentTab !== 'map') return;
+        if (!this.isMapInstanceAlive()) {
+            this.initMap().catch(err => Utils.safeWarn('⚠️ فشل استئناف الخريطة:', err?.message || err));
+            return;
+        }
+        const loadingDiv = document.getElementById('ptw-map-loading');
+        const errorDiv = document.getElementById('ptw-map-error');
+        if (loadingDiv) loadingDiv.style.display = 'none';
+        if (errorDiv) errorDiv.classList.add('hidden');
+
+        requestAnimationFrame(() => {
+            this.refreshMapLayout();
+            requestAnimationFrame(() => {
+                this.refreshMapLayout();
+                try {
+                    this.updateMapMarkers();
+                } catch (e) {
+                    Utils.safeWarn('⚠️ خطأ في تحديث العلامات عند استئناف الخريطة:', e);
+                }
+            });
+        });
     },
 
     /**
@@ -3107,6 +3217,12 @@ const PTW = {
             Utils.safeLog('⚠️ جاري تهيئة الخريطة حالياً - تجاهل الطلب المكرر');
             return;
         }
+
+        if (this.isMapInstanceAlive()) {
+            this.resumeMap();
+            return;
+        }
+
         this.isMapInitializing = true;
 
         // الحصول على الحاوية الخارجية
@@ -3324,266 +3440,53 @@ const PTW = {
             // إخفاء التحميل
             if (loadingDiv) loadingDiv.style.display = 'none';
 
-            // إعطاء الخريطة وقت للعرض
-            await new Promise(resolve => setTimeout(resolve, 500));
+            await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
 
-            // التحقق من أن الخريطة مرئية وإعادة حساب الحجم
-            if (this.mapType === 'leaflet' && this.mapInstance) {
-                try {
-                    // إجبار الخريطة على إعادة الحساب عدة مرات للتأكد
-                    this.mapInstance.invalidateSize();
-                    Utils.safeLog('✅ تم تحديث حجم الخريطة (المحاولة الأولى)');
-
-                    setTimeout(() => {
-                        if (this.mapInstance) {
-                            this.mapInstance.invalidateSize();
-                            Utils.safeLog('✅ تم تحديث حجم الخريطة (المحاولة الثانية - 200ms)');
-                        }
-                    }, 200);
-
-                    setTimeout(() => {
-                        if (this.mapInstance && mapContainer) {
-                            this.mapInstance.invalidateSize();
-                            Utils.safeLog('✅ تم تحديث حجم الخريطة (المحاولة الثالثة - 500ms)');
-
-                            // التحقق النهائي من أن الخريطة مرئية
-                            const finalRect = mapContainer.getBoundingClientRect();
-                            Utils.safeLog('📐 الأبعاد النهائية:', finalRect.width, 'x', finalRect.height);
-
-                            // التحقق من حاوية Leaflet أيضاً
-                            const leafletContainer = this.mapInstance.getContainer();
-                            if (leafletContainer) {
-                                const leafletRect = leafletContainer.getBoundingClientRect();
-                                Utils.safeLog('📐 أبعاد حاوية Leaflet:', leafletRect.width, 'x', leafletRect.height);
-                            }
-
-                            if (finalRect.width === 0 || finalRect.height === 0) {
-                                Utils.safeWarn('⚠️ تحذير: الحاوية لا تزال بدون أبعاد بعد التهيئة');
-                                // محاولة إصلاح
-                                mapContainer.style.width = '100%';
-                                mapContainer.style.height = '600px';
-                                this.mapInstance.invalidateSize();
-                            } else {
-                                Utils.safeLog('✅ الخريطة يجب أن تكون مرئية الآن');
-                            }
-                        }
-                    }, 500);
-                } catch (e) {
-                    Utils.safeWarn('⚠️ خطأ في تحديث حجم الخريطة:', e);
+            if (mapContainer) {
+                const containerRect = mapContainer.getBoundingClientRect();
+                if (containerRect.width === 0 || containerRect.height === 0) {
+                    mapContainer.style.width = '100%';
+                    mapContainer.style.height = '600px';
+                    mapContainer.style.minHeight = '400px';
                 }
             }
 
-            // التحقق النهائي من أن الخريطة مرئية
-            if (this.mapInstance && this.mapType === 'leaflet') {
-                // محاولة الحصول على الحاوية مع إعادة المحاولة
-                const getContainerWithRetry = (retries = 3, delay = 100) => {
-                    return new Promise((resolve) => {
-                        const tryGetContainer = (attempt) => {
-                            try {
-                                if (this.mapInstance && this.mapInstance.getContainer) {
-                                    const container = this.mapInstance.getContainer();
-                                    if (container) {
-                                        resolve(container);
-                                        return;
-                                    }
-                                }
-                                
-                                if (attempt < retries) {
-                                    setTimeout(() => tryGetContainer(attempt + 1), delay);
-                                } else {
-                                    resolve(null);
-                                }
-                            } catch (e) {
-                                if (attempt < retries) {
-                                    setTimeout(() => tryGetContainer(attempt + 1), delay);
-                                } else {
-                                    resolve(null);
-                                }
-                            }
-                        };
-                        tryGetContainer(0);
-                    });
-                };
-                
-                // محاولة الحصول على الحاوية
-                getContainerWithRetry().then((finalCheck) => {
-                    if (finalCheck) {
-                        try {
-                            const finalRect = finalCheck.getBoundingClientRect();
-                            Utils.safeLog('📐 التحقق النهائي - أبعاد حاوية Leaflet:', finalRect.width, 'x', finalRect.height);
+            this.refreshMapLayout();
 
-                            if (finalRect.width > 0 && finalRect.height > 0) {
-                                Utils.safeLog('✅ الخريطة مرئية وجاهزة');
-                            } else {
-                                Utils.safeWarn('⚠️ تحذير: حاوية Leaflet بدون أبعاد - قد تكون مخفية');
-                                // محاولة إصلاح
-                                if (mapContainer) {
-                                    mapContainer.style.width = '100%';
-                                    mapContainer.style.height = '600px';
-                                    setTimeout(() => {
-                                        if (this.mapInstance && this.mapInstance.invalidateSize) {
-                                            this.mapInstance.invalidateSize();
-                                        }
-                                    }, 100);
-                                }
-                            }
-                        } catch (checkError) {
-                            Utils.safeWarn('⚠️ خطأ في التحقق النهائي:', checkError);
-                        }
-                    } else {
-                        // الحاوية غير متاحة بعد - قد تكون الخريطة لم تكتمل بعد
-                        // هذا طبيعي في بعض الحالات، لذا سنحاول مرة أخرى بعد تأخير
-                        setTimeout(() => {
-                            if (this.mapInstance && this.mapInstance.getContainer) {
-                                try {
-                                    const retryContainer = this.mapInstance.getContainer();
-                                    if (retryContainer) {
-                                        Utils.safeLog('✅ تم الحصول على حاوية Leaflet بعد إعادة المحاولة');
-                                    }
-                                } catch (e) {
-                                    // تجاهل الخطأ بصمت - قد تكون الخريطة لم تكتمل بعد
-                                }
-                            }
-                        }, 500);
-                    }
-                });
-            } else if (this.mapInstance && this.mapType === 'google') {
-                // للخرائط Google Maps، التحقق مختلف
-                try {
-                    if (this.mapInstance.getDiv) {
-                        const googleDiv = this.mapInstance.getDiv();
-                        if (googleDiv) {
-                            const googleRect = googleDiv.getBoundingClientRect();
-                            Utils.safeLog('📐 التحقق النهائي - أبعاد حاوية Google Maps:', googleRect.width, 'x', googleRect.height);
-                        }
-                    }
-                } catch (checkError) {
-                    Utils.safeWarn('⚠️ خطأ في التحقق من Google Maps:', checkError);
-                }
-            }
-
-            // تحديث العلامات (مع معالجة الأخطاء والتأخير للتأكد من جاهزية الخريطة)
-            setTimeout(() => {
-                try {
-                    // التأكد من أن الخريطة جاهزة تماماً
-                    if (this.mapInstance && this.mapType === 'leaflet') {
-                        const container = this.mapInstance.getContainer();
-                        if (container && container.offsetWidth > 0 && container.offsetHeight > 0) {
-                            // إجبار الخريطة على إعادة الحساب
-                            this.mapInstance.invalidateSize();
-                        }
-                    }
+            try {
                 this.updateMapMarkers();
             } catch (markerError) {
                 Utils.safeWarn('⚠️ خطأ في تحديث العلامات (سيتم تجاهله):', markerError);
-                // لا نرمي الخطأ هنا لأن الخريطة نفسها تعمل
             }
-            }, 800);
 
-            // إعداد مستمعي التحديثات (مع معالجة الأخطاء)
             try {
                 this.setupMapEventListeners();
-                // إعداد أحداث الفلاتر والإعدادات
-                setTimeout(() => {
+                if (!this.mapFiltersInitialized) {
                     this.initMapFilters();
-                }, 500);
-                
-                // إضافة مستمعي أحداث ملء الشاشة
-                document.addEventListener('fullscreenchange', () => {
-                    this.isFullscreen = !!document.fullscreenElement;
-                    const fullscreenBtn = document.getElementById('ptw-map-fullscreen-btn');
-                    if (fullscreenBtn) {
-                        if (this.isFullscreen) {
-                            fullscreenBtn.innerHTML = '<i class="fas fa-compress ml-2"></i>';
-                            fullscreenBtn.title = 'الخروج من ملء الشاشة';
-                        } else {
-                            fullscreenBtn.innerHTML = '<i class="fas fa-expand ml-2"></i>';
-                            fullscreenBtn.title = 'ملء الشاشة';
-                        }
-                    }
-                    // تحديث حجم الخريطة
-                    setTimeout(() => {
-                        if (this.mapInstance) {
-                            if (this.mapType === 'leaflet' && this.mapInstance.invalidateSize) {
-                                this.mapInstance.invalidateSize();
-                            } else if (this.mapType === 'google' && typeof google !== 'undefined' && google.maps && google.maps.event) {
-                                google.maps.event.trigger(this.mapInstance, 'resize');
+                    this.mapFiltersInitialized = true;
+                }
+                if (!this.mapFullscreenHandler) {
+                    this.mapFullscreenHandler = () => {
+                        this.isFullscreen = !!document.fullscreenElement;
+                        const fullscreenBtn = document.getElementById('ptw-map-fullscreen-btn');
+                        if (fullscreenBtn) {
+                            if (this.isFullscreen) {
+                                fullscreenBtn.innerHTML = '<i class="fas fa-compress ml-2"></i>';
+                                fullscreenBtn.title = 'الخروج من ملء الشاشة';
+                            } else {
+                                fullscreenBtn.innerHTML = '<i class="fas fa-expand ml-2"></i>';
+                                fullscreenBtn.title = 'ملء الشاشة';
                             }
                         }
-                    }, 300);
-                });
+                        this._scheduleMapTimeout(() => this.refreshMapLayout(), 150);
+                    };
+                    document.addEventListener('fullscreenchange', this.mapFullscreenHandler);
+                }
             } catch (listenerError) {
                 Utils.safeWarn('⚠️ خطأ في إعداد مستمعي التحديثات (سيتم تجاهله):', listenerError);
-                // لا نرمي الخطأ هنا لأن الخريطة نفسها تعمل
             }
 
             Utils.safeLog('✅ تم تهيئة الخريطة بنجاح - الخريطة جاهزة للاستخدام');
-
-            // إجبار إعادة رسم الخريطة بعد ثانية إضافية
-            setTimeout(() => {
-                if (this.mapInstance && this.mapType === 'leaflet') {
-                    try {
-                        // التحقق من حاوية الخريطة الخارجية أولاً
-                        const mapContent = document.getElementById('ptw-map-content');
-                        const mapContainerWrapper = document.getElementById('ptw-map-container');
-                        const mapDiv = document.getElementById('ptw-map');
-                        
-                        if (mapContent && mapContainerWrapper && mapDiv) {
-                            // إجبار الأبعاد على الحاويات
-                            if (mapContent.style.display === 'none' || mapContent.style.visibility === 'hidden') {
-                                mapContent.style.display = 'flex';
-                                mapContent.style.visibility = 'visible';
-                                mapContent.style.height = 'calc(100vh - 280px)';
-                                mapContent.style.minHeight = '600px';
-                            }
-                            
-                            if (mapContainerWrapper.style.height === '0px' || !mapContainerWrapper.style.height) {
-                                mapContainerWrapper.style.height = '100%';
-                                mapContainerWrapper.style.minHeight = '600px';
-                            }
-                            
-                            if (mapDiv.style.height === '0px' || !mapDiv.style.height) {
-                                mapDiv.style.height = '100%';
-                                mapDiv.style.width = '100%';
-                            }
-                        }
-                        
-                        this.mapInstance.invalidateSize();
-                        Utils.safeLog('✅ تم إعادة رسم الخريطة (2000ms)');
-
-                        // التحقق النهائي
-                        const leafletContainer = this.mapInstance.getContainer();
-                        if (leafletContainer) {
-                            const leafletRect = leafletContainer.getBoundingClientRect();
-                            Utils.safeLog('📐 التحقق النهائي (2000ms) - أبعاد:', leafletRect.width, 'x', leafletRect.height);
-
-                            if (leafletRect.width > 0 && leafletRect.height > 0) {
-                                Utils.safeLog('✅ الخريطة مرئية ومتاحة للاستخدام');
-                            } else {
-                                Utils.safeWarn('⚠️ الخريطة لا تزال غير مرئية بعد 2 ثانية - محاولة إصلاح إضافية');
-                                // محاولة إصلاح إضافية
-                                setTimeout(() => {
-                                    if (this.mapInstance && this.mapInstance.invalidateSize) {
-                                        // إجبار الأبعاد مرة أخرى
-                                        if (mapContainerWrapper) {
-                                            mapContainerWrapper.style.height = '600px';
-                                            mapContainerWrapper.style.minHeight = '600px';
-                                        }
-                                        if (mapDiv) {
-                                            mapDiv.style.height = '600px';
-                                            mapDiv.style.width = '100%';
-                                        }
-                                        this.mapInstance.invalidateSize();
-                                        Utils.safeLog('✅ تم محاولة إصلاح الخريطة (3000ms)');
-                                    }
-                                }, 1000);
-                            }
-                        }
-                    } catch (e) {
-                        Utils.safeWarn('⚠️ خطأ في إعادة رسم الخريطة:', e);
-                    }
-                }
-            }, 2000);
         } catch (error) {
             Utils.safeWarn('⚠️ تهيئة الخريطة فشلت (الرسالة معروضة للمستخدم):', error?.message || error);
             if (loadingDiv) loadingDiv.style.display = 'none';
@@ -3671,6 +3574,14 @@ const PTW = {
      */
     destroyMap() {
         try {
+            this._clearMapPendingTimeouts();
+
+            if (this.mapFullscreenHandler) {
+                document.removeEventListener('fullscreenchange', this.mapFullscreenHandler);
+                this.mapFullscreenHandler = null;
+            }
+            this.mapFiltersInitialized = false;
+
             // تنظيف event listeners
             if (this.mapUpdateHandler) {
                 document.removeEventListener('ptw:updated', this.mapUpdateHandler);
@@ -4671,6 +4582,7 @@ const PTW = {
                     AppState.companySettings.longitude = updatedCoords.lng;
                     AppState.companySettings.mapZoom = updatedCoords.zoom || 15;
                     Utils.safeLog('✅ تم تحديث الإحداثيات الافتراضية من MapCoordinatesManager');
+                    this._notifyMapCoordinatesUpdated();
                 }
             }).catch(error => {
                 Utils.safeWarn('⚠️ خطأ في تحديث الإحداثيات الافتراضية من MapCoordinatesManager:', error);
@@ -4757,6 +4669,7 @@ const PTW = {
                     if (!AppState.appData) AppState.appData = {};
                     AppState.appData.ptwMapSites = sites;
                     Utils.safeLog('✅ تم تحديث المواقع من MapCoordinatesManager');
+                    this._notifyMapCoordinatesUpdated();
                 }
             }).catch(error => {
                 Utils.safeWarn('⚠️ خطأ في تحديث المواقع من MapCoordinatesManager:', error);
@@ -5554,9 +5467,9 @@ const PTW = {
 
         this.mapStateUpdateHandler = () => {
             if (this.currentTab === 'map' && this.mapInstance) {
-                setTimeout(() => {
+                this._scheduleMapTimeout(() => {
                     this.updateMapMarkers();
-                }, 500);
+                }, 100);
             }
         };
 
@@ -14683,32 +14596,33 @@ const PTW = {
     },
 
     initMapFilters() {
-        // إعدادات أحداث إعدادات الخريطة
         this.setupMapSettingsEventListeners();
         ['ptw-map-filter-status', 'ptw-map-filter-type'].forEach(id => {
             const el = document.getElementById(id);
-            if (el) {
-                el.addEventListener('change', () => this.updateMapUI());
+            if (el && el.parentNode) {
+                const clone = el.cloneNode(true);
+                el.parentNode.replaceChild(clone, el);
+                clone.addEventListener('change', () => this.updateMapUI());
             }
         });
 
-        // أحداث أزرار نوع الخريطة
-        const normalBtn = document.getElementById('ptw-map-type-normal');
-        const satelliteBtn = document.getElementById('ptw-map-type-satellite');
-        const terrainBtn = document.getElementById('ptw-map-type-terrain');
-        const fullscreenBtn = document.getElementById('ptw-map-fullscreen-btn');
+        const bindMapTypeBtn = (id, type) => {
+            const btn = document.getElementById(id);
+            if (btn && btn.parentNode) {
+                const clone = btn.cloneNode(true);
+                btn.parentNode.replaceChild(clone, btn);
+                clone.addEventListener('click', () => this.switchMapType(type));
+            }
+        };
+        bindMapTypeBtn('ptw-map-type-normal', 'normal');
+        bindMapTypeBtn('ptw-map-type-satellite', 'satellite');
+        bindMapTypeBtn('ptw-map-type-terrain', 'terrain');
 
-        if (normalBtn) {
-            normalBtn.addEventListener('click', () => this.switchMapType('normal'));
-        }
-        if (satelliteBtn) {
-            satelliteBtn.addEventListener('click', () => this.switchMapType('satellite'));
-        }
-        if (terrainBtn) {
-            terrainBtn.addEventListener('click', () => this.switchMapType('terrain'));
-        }
-        if (fullscreenBtn) {
-            fullscreenBtn.addEventListener('click', () => this.toggleFullscreen());
+        const fullscreenBtn = document.getElementById('ptw-map-fullscreen-btn');
+        if (fullscreenBtn && fullscreenBtn.parentNode) {
+            const clone = fullscreenBtn.cloneNode(true);
+            fullscreenBtn.parentNode.replaceChild(clone, fullscreenBtn);
+            clone.addEventListener('click', () => this.toggleFullscreen());
         }
     },
 
