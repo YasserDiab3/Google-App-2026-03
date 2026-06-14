@@ -6880,7 +6880,7 @@ const PTW = {
     PERMIT_A4_WIDTH_PX: 794,
     PERMIT_A4_HEIGHT_PX: 1123,
     PERMIT_A4_MARGIN_MM: 3,
-    PERMIT_A4_MAX_PAGES: 4,
+    PERMIT_A4_MAX_PAGES: 6,
     PERMIT_A4_CAPTURE_SCALE: 2,
 
     getManualPermitPdfExportTechnicalStyles_() {
@@ -6914,6 +6914,30 @@ const PTW = {
                 break-after: page;
             }
             .ptw-a4-page:last-child { page-break-after: auto; break-after: auto; }
+            .ptw-paper-header-pdf { display: block; padding: 0; background: transparent; border: none; min-height: 0; margin-bottom: 8px; }
+            .ptw-paper-header-table {
+                width: 100%; border-collapse: collapse; table-layout: fixed;
+                background: #1e3a5f; border-radius: 8px;
+                border: 1px solid rgba(255, 255, 255, 0.18);
+            }
+            .ptw-ph-cell {
+                padding: 10px 12px; vertical-align: middle; color: #fff;
+                letter-spacing: 0 !important; word-spacing: normal !important;
+                font-family: 'Cairo', Tahoma, Arial, sans-serif !important;
+            }
+            .ptw-ph-right { width: 33%; text-align: right; }
+            .ptw-ph-center { width: 34%; text-align: center; }
+            .ptw-ph-left { width: 33%; text-align: left; }
+            .ptw-paper-header-company, .ptw-paper-header-dept, .ptw-paper-header-form-title {
+                letter-spacing: 0 !important; word-spacing: normal !important;
+                word-break: normal; white-space: normal; unicode-bidi: embed; direction: rtl;
+                line-height: 1.35 !important; transform: none !important;
+            }
+            .ptw-paper-header-form-subtitle { font-size: 11px; letter-spacing: 0.4px !important; direction: ltr; }
+            .ptw-paper-header-form-title { font-size: 16px; font-weight: 800; }
+            .ptw-paper-header-company { font-size: 14px; font-weight: 700; }
+            .ptw-paper-header-dept { font-size: 10px; }
+            .ptw-paper-header-logo { max-height: 48px; max-width: 110px; }
         `;
     },
 
@@ -7492,12 +7516,30 @@ const PTW = {
     },
 
     _splitManualPermitPrintPages_(content, header, footer, forPdf) {
-        const breakAt = content.indexOf('manual-section-7');
-        const wrapPage = (inner) => (forPdf ? `<div class="ptw-a4-page">${inner}</div>` : inner);
-        if (breakAt > 0) {
-            return `${wrapPage(`${header}${content.slice(0, breakAt)}`)}${wrapPage(`${content.slice(breakAt)}${footer}`)}`;
+        if (!forPdf) return `${header}${content}${footer}`;
+        const wrapPage = (inner) => `<div class="ptw-a4-page">${inner}</div>`;
+        const breakMarkers = ['manual-section-4', 'manual-section-7', 'manual-section-9'];
+        const positions = breakMarkers
+            .map((marker) => content.indexOf(marker))
+            .filter((idx) => idx > 0)
+            .sort((a, b) => a - b);
+        const uniquePositions = [...new Set(positions)];
+
+        if (!uniquePositions.length) {
+            return wrapPage(`${header}${content}${footer}`);
         }
-        return wrapPage(`${header}${content}${footer}`);
+
+        const parts = [];
+        uniquePositions.forEach((pos, index) => {
+            if (index === 0) {
+                parts.push(wrapPage(`${header}${content.slice(0, pos)}`));
+            } else {
+                parts.push(wrapPage(content.slice(uniquePositions[index - 1], pos)));
+            }
+        });
+        const lastPos = uniquePositions[uniquePositions.length - 1];
+        parts.push(wrapPage(`${content.slice(lastPos)}${footer}`));
+        return parts.join('');
     },
 
     _verifyManualPermitExportHtml_(html) {
@@ -7546,7 +7588,7 @@ const PTW = {
             revisionDate: entry?.updatedAt || entry?.timeTo || entry?.createdAt
         };
         const footer = this.renderPermitSystemFooter(footerMeta);
-        const header = this.renderPermitSystemHeader({ forPdf: false });
+        const header = this.renderPermitSystemHeader({ forPdf: pdfExport });
         const bodyHtml = pdfExport
             ? this._splitManualPermitPrintPages_(content, header, footer, true)
             : `${header}${content}${footer}`;
@@ -7763,6 +7805,7 @@ const PTW = {
         for (let p = 0; p < pages.length; p++) {
             if (p > 0) pdf.addPage();
             const pageEl = pages[p];
+            pageEl.style.display = 'block';
             pageEl.style.width = `${a4W}px`;
             pageEl.style.maxWidth = `${a4W}px`;
             pageEl.style.boxSizing = 'border-box';
@@ -7770,12 +7813,16 @@ const PTW = {
             pageEl.style.zoom = '1';
             pageEl.style.background = '#ffffff';
             pageEl.style.overflow = 'visible';
+            pageEl.style.position = 'relative';
             this._sanitizePermitNodeForCanvasCapture_(pageEl);
 
             const naturalH = Math.max(pageEl.scrollHeight, pageEl.offsetHeight, 1);
             iframe.style.width = `${a4W}px`;
-            iframe.style.height = `${Math.min(naturalH, maxH * 2) + 100}px`;
-            await new Promise((r) => setTimeout(r, 400));
+            iframe.style.height = `${naturalH + 160}px`;
+            if (typeof pageEl.scrollIntoView === 'function') {
+                pageEl.scrollIntoView({ block: 'start' });
+            }
+            await new Promise((r) => setTimeout(r, 450));
 
             const canvas = await this._capturePermitHtmlToCanvas_(pageEl, iWin, {
                 width: a4W,
@@ -7784,9 +7831,10 @@ const PTW = {
             if (!canvas) return false;
 
             const needsSlice = naturalH > maxH;
+            const sliceCount = needsSlice ? Math.min(6, Math.max(1, Math.ceil(naturalH / maxH))) : 1;
             this._addPermitCanvasToPdfFullWidth_(pdf, canvas, marginMm, {
                 allowSlice: needsSlice,
-                maxSlices: needsSlice ? 2 : 1
+                maxSlices: sliceCount
             });
         }
         return true;
@@ -7864,6 +7912,16 @@ const PTW = {
             onclone: (clonedDoc, element) => {
                 const cloneRoot = clonedDoc.getElementById('ptw-permit-print-root') || element;
                 this._sanitizePermitNodeForCanvasCapture_(cloneRoot);
+                clonedDoc.querySelectorAll(
+                    '.ptw-ph-cell, .ptw-paper-header-company, .ptw-paper-header-dept, .ptw-paper-header-form-title, .ptw-paper-header-form-subtitle'
+                ).forEach((el) => {
+                    if (!el?.style) return;
+                    el.style.letterSpacing = '0';
+                    el.style.wordSpacing = 'normal';
+                    el.style.fontFamily = "'Cairo', Tahoma, Arial, sans-serif";
+                    el.style.transform = 'none';
+                    el.style.unicodeBidi = 'embed';
+                });
                 if (clonedDoc.body) {
                     clonedDoc.body.style.width = `${scrollW}px`;
                     clonedDoc.body.style.padding = '8px';
@@ -7903,7 +7961,7 @@ const PTW = {
             : `${String(fileName)}.pdf`;
         const a4W = this.PERMIT_A4_WIDTH_PX;
         const marginMm = this.PERMIT_A4_MARGIN_MM;
-        const maxPages = this.PERMIT_A4_MAX_PAGES || 2;
+        const maxPages = this.PERMIT_A4_MAX_PAGES || 6;
 
         await this._preloadPermitPdfFonts_();
 
