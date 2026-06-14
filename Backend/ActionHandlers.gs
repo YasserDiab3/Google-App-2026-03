@@ -1825,6 +1825,16 @@ var ActionHandlers = {
         })();
         return result;
     },
+    'getClinicStaffSystemActivities': function(payload, postData, action, actorUserData, spreadsheetId) {
+        var result = { success: false, message: '' };
+        (function() {
+            result = getClinicStaffSystemActivities(
+                payload && payload.filters ? payload.filters : payload || {},
+                actorUserData
+            );
+        })();
+        return result;
+    },
     'recordClinicStaffLogin': function(payload, postData, action, actorUserData, spreadsheetId) {
         var result = { success: false, message: '' };
         (function() {

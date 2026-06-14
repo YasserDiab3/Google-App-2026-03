@@ -8516,6 +8516,7 @@ const Clinic = {
         if (!Array.isArray(data.clinicStaff)) data.clinicStaff = [];
         if (!Array.isArray(data.clinicStaffAttendance)) data.clinicStaffAttendance = [];
         if (!Array.isArray(data.clinicStaffTimeOffRequests)) data.clinicStaffTimeOffRequests = [];
+        if (!Array.isArray(data.clinicStaffSystemActivities)) data.clinicStaffSystemActivities = [];
 
         // ✅ حماية حاسمة: دمج زيارات المقاولين من clinicContractorVisits إلى clinicVisits لمنع اختفائها عند إعادة تحميل الصفحة
         let visitsChanged = false;
@@ -13277,6 +13278,145 @@ const Clinic = {
         return list;
     },
 
+    getClinicStaffSystemActivitiesList() {
+        this.ensureData();
+        return Array.isArray(AppState.appData.clinicStaffSystemActivities)
+            ? AppState.appData.clinicStaffSystemActivities
+            : [];
+    },
+
+    getFilteredClinicStaffActivities() {
+        let list = this.getClinicStaffSystemActivitiesList().slice();
+        const f = this.state.filters?.attendance || {};
+        const range = this._resolveAttendanceFilterDates(f);
+        if (range.dateFrom) {
+            list = list.filter(a => a.timestamp && this._attendanceDayKey(a.timestamp) >= range.dateFrom);
+        }
+        if (range.dateTo) {
+            list = list.filter(a => a.timestamp && this._attendanceDayKey(a.timestamp) <= range.dateTo);
+        }
+        if (f.activityModule && f.activityModule !== 'all') {
+            list = list.filter(a => String(a.moduleKey) === String(f.activityModule));
+        }
+        if (this.canViewAllAttendanceData() && f.staffId && f.staffId !== 'all') {
+            const staff = (this.getClinicStaffList() || []).find(s => String(s.id) === String(f.staffId));
+            if (staff) {
+                const uid = String(staff.userId || '').trim();
+                const email = String(staff.userEmail || '').trim().toLowerCase();
+                const name = String(staff.userName || '').trim().toLowerCase();
+                list = list.filter(a =>
+                    (uid && String(a.userId || '') === uid) ||
+                    (email && String(a.userEmail || '').trim().toLowerCase() === email) ||
+                    (name && String(a.userName || '').trim().toLowerCase() === name)
+                );
+            }
+        }
+        return list.sort((a, b) => new Date(b.timestamp || 0) - new Date(a.timestamp || 0));
+    },
+
+    getClinicStaffActivityModuleIcon(moduleKey) {
+        const map = {
+            ptw: 'fa-id-card',
+            clinic: 'fa-clinic-medical',
+            training: 'fa-chalkboard-teacher',
+            incidents: 'fa-exclamation-triangle',
+            nearmiss: 'fa-exclamation-circle',
+            observations: 'fa-eye',
+            violations: 'fa-gavel',
+            system: 'fa-cogs'
+        };
+        return map[String(moduleKey || '').trim()] || 'fa-circle';
+    },
+
+    renderClinicStaffActivitiesSection({ showUserColumn = false, activities = [], loading = false, title = 'نشاطي داخل النظام' } = {}) {
+        const moduleOptions = [
+            { value: 'all', label: 'كل الأنشطة' },
+            { value: 'ptw', label: 'تصاريح العمل' },
+            { value: 'clinic', label: 'العيادة' },
+            { value: 'training', label: 'التدريب' },
+            { value: 'incidents', label: 'الحوادث' },
+            { value: 'nearmiss', label: 'حادث وشيك' },
+            { value: 'observations', label: 'الملاحظات' },
+            { value: 'violations', label: 'المخالفات' },
+            { value: 'system', label: 'النظام' }
+        ];
+        const currentModule = this.state.filters?.attendance?.activityModule || 'all';
+        const rows = activities.length ? activities.map(a => `
+            <tr>
+                ${showUserColumn ? `<td>${Utils.escapeHTML(a.userName || a.userEmail || '—')}</td>` : ''}
+                <td><span class="badge badge-info" style="white-space:nowrap;"><i class="fas ${this.getClinicStaffActivityModuleIcon(a.moduleKey)} ml-1"></i>${Utils.escapeHTML(a.moduleLabel || '—')}</span></td>
+                <td>${Utils.escapeHTML(a.actionLabel || '—')}</td>
+                <td class="text-sm">${Utils.escapeHTML(a.summary || '—')}</td>
+                <td>${a.timestamp ? (Utils.formatDateTime ? Utils.formatDateTime(a.timestamp) : Utils.escapeHTML(String(a.timestamp))) : '—'}</td>
+            </tr>
+        `).join('') : `<tr><td colspan="${showUserColumn ? 5 : 4}" class="text-center text-gray-500 py-8">${loading ? 'جاري تحميل النشاط...' : 'لا توجد أنشطة مسجّلة في الفترة المحددة'}</td></tr>`;
+
+        return `
+            <div class="content-card mt-4" id="clinic-staff-activities-section">
+                <div class="card-header" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">
+                    <h4 class="card-title" style="margin:0;"><i class="fas fa-history ml-2"></i>${Utils.escapeHTML(title)} (${activities.length})</h4>
+                    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+                        <select id="clinic-activity-module-filter" class="form-input" style="min-width:160px;padding:6px 10px;font-size:0.82rem;">
+                            ${moduleOptions.map(o => `<option value="${Utils.escapeAttr(o.value)}" ${currentModule === o.value ? 'selected' : ''}>${Utils.escapeHTML(o.label)}</option>`).join('')}
+                        </select>
+                        <button type="button" id="clinic-activity-refresh-btn" class="btn-secondary btn-sm" title="تحديث النشاط"><i class="fas fa-sync-alt"></i></button>
+                    </div>
+                </div>
+                <div class="card-body" style="padding:0;">
+                    <p style="padding:10px 16px;margin:0;font-size:0.78rem;color:#64748b;border-bottom:1px solid #f1f5f9;">
+                        <i class="fas fa-info-circle ml-1" style="color:#0d9488;"></i>
+                        يعرض ما تم تسجيله عبر النظام: تصاريح العمل، زيارات العيادة، التدريب، الحوادث، الملاحظات، وغيرها.
+                    </p>
+                    <div class="table-wrapper"><table class="data-table table-header-green">
+                        <thead><tr>
+                            ${showUserColumn ? '<th>المستخدم</th>' : ''}
+                            <th>القسم</th><th>الإجراء</th><th>التفاصيل</th><th>التاريخ</th>
+                        </tr></thead>
+                        <tbody>${rows}</tbody>
+                    </table></div>
+                </div>
+            </div>`;
+    },
+
+    bindClinicStaffActivitiesEvents(panel) {
+        if (!panel) return;
+        panel.querySelector('#clinic-activity-module-filter')?.addEventListener('change', (e) => {
+            this.state.filters = this.state.filters || {};
+            this.state.filters.attendance = Object.assign({}, this.state.filters.attendance || {}, {
+                activityModule: e.target.value || 'all'
+            });
+            this.renderAttendanceTab();
+        });
+        panel.querySelector('#clinic-activity-refresh-btn')?.addEventListener('click', async () => {
+            Notification?.info?.('جاري تحديث النشاط...');
+            await this.loadClinicStaffActivities(true);
+            this.renderAttendanceTab();
+            Notification?.success?.('تم تحديث النشاط');
+        });
+    },
+
+    async loadClinicStaffActivities(force) {
+        if (typeof GoogleIntegration === 'undefined' || !GoogleIntegration.sendRequest) return;
+        const hasLocal = Array.isArray(AppState.appData?.clinicStaffSystemActivities) && AppState.appData.clinicStaffSystemActivities.length > 0;
+        if (!force && hasLocal) return;
+        try {
+            const f = this.state.filters?.attendance || {};
+            const payload = { limit: 300 };
+            if (f.staffId && f.staffId !== 'all' && this.canViewAllAttendanceData()) {
+                payload.staffId = f.staffId;
+            }
+            const resp = await GoogleIntegration.sendRequest({
+                action: 'getClinicStaffSystemActivities',
+                data: { filters: payload }
+            });
+            if (resp?.success && Array.isArray(resp.data)) {
+                AppState.appData.clinicStaffSystemActivities = resp.data;
+                this.ensureData();
+                if (typeof window.DataManager !== 'undefined' && window.DataManager.save) window.DataManager.save();
+            }
+        } catch (_e) { /* ignore */ }
+    },
+
     getCurrentUserStaffRecord() {
         const user = AppState.currentUser;
         if (!user) return null;
@@ -14491,6 +14631,8 @@ const Clinic = {
         const pendingCount = myRequests.filter(r => r.status === 'pending').length;
         const stats = this._computeAttendanceReportStats(rows);
         const staff = this.getCurrentUserStaffRecord();
+        const activityList = this.getFilteredClinicStaffActivities();
+        const activitiesLoaded = this.getClinicStaffSystemActivitiesList().length > 0;
         const activeFilterCount = this._countActiveAttendanceFilters(filters);
         const filterPanelOpen = this.state.attendanceFilterPanelOpen !== false;
         const period = filters.period || 'all';
@@ -14606,6 +14748,13 @@ const Clinic = {
                         </table></div>
                     </div>
                 </div>
+
+                ${this.renderClinicStaffActivitiesSection({
+                    showUserColumn: false,
+                    activities: activityList,
+                    loading: !activitiesLoaded,
+                    title: 'نشاطي داخل النظام'
+                })}
             </div>`;
 
         const readFilterInputs = () => {
@@ -14674,10 +14823,17 @@ const Clinic = {
         panel.querySelector('#clinic-attendance-pdf-btn')?.addEventListener('click', () => this.exportAttendanceToPDF());
         panel.querySelector('#clinic-attendance-refresh-btn')?.addEventListener('click', async () => {
             Notification?.info?.('جاري التحديث...');
-            await this.loadClinicAttendanceData(true);
+            await Promise.all([this.loadClinicAttendanceData(true), this.loadClinicStaffActivities(true)]);
             this.renderAttendanceTab();
             Notification?.success?.('تم التحديث');
         });
+
+        this.bindClinicStaffActivitiesEvents(panel);
+        if (!activitiesLoaded) {
+            this.loadClinicStaffActivities(true).then(() => {
+                if (this.state?.activeTab === 'attendance') this.renderAttendanceTab();
+            }).catch(() => {});
+        }
 
         const typeEl = panel.querySelector('#timeoff-request-type');
         const leaveBlock = panel.querySelector('#timeoff-leave-dates');
@@ -14732,6 +14888,8 @@ const Clinic = {
         const presentToday = todayRows.filter(r => r.checkIn).length;
         const openSessions = todayRows.filter(r => r.checkIn && !r.checkOut).length;
         const isAdmin = this.isCurrentUserAdmin();
+        const activityList = this.getFilteredClinicStaffActivities();
+        const activitiesLoaded = this.getClinicStaffSystemActivitiesList().length > 0;
         const activeFilterCount = this._countActiveAttendanceFilters(filters);
         const filterPanelOpen = this.state.attendanceFilterPanelOpen !== false;
         const period = filters.period || 'all';
@@ -14912,6 +15070,13 @@ const Clinic = {
                     </div>
                 </div>
 
+                ${this.renderClinicStaffActivitiesSection({
+                    showUserColumn: true,
+                    activities: activityList,
+                    loading: !activitiesLoaded,
+                    title: 'نشاط المستخدمين داخل النظام'
+                })}
+
                 ${isAdmin ? `
                 <div class="content-card mt-4">
                     <div class="card-header" style="padding:14px 18px;border-bottom:1px solid #f1f5f9;">
@@ -15037,10 +15202,17 @@ const Clinic = {
         panel.querySelector('#clinic-attendance-add-staff-btn')?.addEventListener('click', () => this.showAddClinicStaffModal());
         panel.querySelector('#clinic-attendance-refresh-btn')?.addEventListener('click', async () => {
             Notification?.info?.('جاري تحديث سجل الحضور...');
-            await this.loadClinicAttendanceData(true);
+            await Promise.all([this.loadClinicAttendanceData(true), this.loadClinicStaffActivities(true)]);
             this.renderAttendanceTab();
             Notification?.success?.('تم التحديث');
         });
+
+        this.bindClinicStaffActivitiesEvents(panel);
+        if (!activitiesLoaded) {
+            this.loadClinicStaffActivities(true).then(() => {
+                if (this.state?.activeTab === 'attendance') this.renderAttendanceTab();
+            }).catch(() => {});
+        }
 
         if (this._attendanceSearchFocused && searchEl) {
             searchEl.focus();

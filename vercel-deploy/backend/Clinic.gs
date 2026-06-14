@@ -3916,3 +3916,256 @@ function cancelClinicStaffTimeOffRequest(requestId, actorUserData) {
     }
 }
 
+// ============================================
+// نشاط المستخدم داخل النظام (لتبويب الحضور)
+// ============================================
+
+function _clinicStaffActivityParseCreator_(row) {
+    if (!row) return { userId: '', email: '', name: '' };
+    var userId = String(row.createdById || row.userId || row.submittedByEmail || '').trim();
+    var email = String(row.userEmail || row.submittedByEmail || '').trim().toLowerCase();
+    var name = String(row.userName || row.submittedBy || row.reportedBy || row.observerName || '').trim();
+    var raw = row.createdBy;
+    if (raw) {
+        if (typeof raw === 'object') {
+            userId = userId || String(raw.id || raw.userId || '').trim();
+            name = name || String(raw.name || raw.displayName || '').trim();
+            email = email || String(raw.email || '').trim().toLowerCase();
+        } else {
+            var s = String(raw).trim();
+            if (s.charAt(0) === '{') {
+                try {
+                    var obj = JSON.parse(s);
+                    userId = userId || String(obj.id || obj.userId || '').trim();
+                    name = name || String(obj.name || obj.displayName || '').trim();
+                    email = email || String(obj.email || '').trim().toLowerCase();
+                } catch (_e) {
+                    name = name || s;
+                }
+            } else {
+                name = name || s;
+            }
+        }
+    }
+    return { userId: userId, email: email, name: name };
+}
+
+function _clinicStaffActivityActorProfile_(actorUserData) {
+    var keys = _clinicStaffActorKeys_(actorUserData);
+    var name = actorUserData && (actorUserData.name || actorUserData.displayName) || '';
+    var staff = isActiveClinicStaffUser_(keys.userId) || isActiveClinicStaffUser_(keys.email);
+    if (staff && staff.userName) name = staff.userName;
+    return {
+        userId: keys.userId,
+        email: keys.email,
+        name: String(name || '').trim(),
+        staffId: staff && staff.id || '',
+        staff: staff
+    };
+}
+
+function _clinicStaffActivityMatchesProfile_(creator, profile) {
+    if (!creator || !profile) return false;
+    if (profile.userId && creator.userId && String(profile.userId) === String(creator.userId)) return true;
+    if (profile.email && creator.email && String(profile.email).toLowerCase() === String(creator.email).toLowerCase()) return true;
+    if (profile.name && creator.name && String(profile.name).toLowerCase() === String(creator.name).toLowerCase()) return true;
+    return false;
+}
+
+function _clinicStaffActivityStaffProfile_(staffId) {
+    if (!staffId) return null;
+    var staff = readFromSheet('ClinicStaff', getSpreadsheetId()) || [];
+    for (var i = 0; i < staff.length; i++) {
+        if (staff[i] && String(staff[i].id) === String(staffId)) {
+            return {
+                userId: String(staff[i].userId || '').trim(),
+                email: String(staff[i].userEmail || '').trim().toLowerCase(),
+                name: String(staff[i].userName || '').trim(),
+                staffId: String(staff[i].id || '').trim(),
+                staff: staff[i]
+            };
+        }
+    }
+    return null;
+}
+
+function _clinicStaffActivityPickDate_(row) {
+    return row.timestamp || row.createdAt || row.requestedAt || row.visitDate || row.startDate || row.date || row.violationDate || '';
+}
+
+function _clinicStaffActivityBuildSummary_(row, cfg) {
+    if (!row || !cfg) return '';
+    if (cfg.kind === 'timeoff') {
+        var typeMap = { leave: 'إجازة', permission: 'إذن', overtime: 'إضافي' };
+        var t = typeMap[String(row.requestType || '').trim()] || String(row.requestType || '');
+        return t + (row.reason ? ': ' + String(row.reason).slice(0, 80) : '');
+    }
+    if (cfg.sheet === 'PTW') {
+        return String(row.workDescription || row.workType || row.location || row.id || '').slice(0, 120);
+    }
+    if (cfg.sheet === 'ClinicVisits') {
+        return String(row.employeeName || row.visitType || row.reason || row.id || '').slice(0, 120);
+    }
+    if (cfg.sheet === 'ClinicContractorVisits') {
+        return String(row.contractorWorkerName || row.externalName || row.contractorName || row.visitType || row.id || '').slice(0, 120);
+    }
+    if (cfg.sheet === 'SickLeave') {
+        return String(row.employeeName || row.externalName || row.contractorName || row.reason || row.id || '').slice(0, 120);
+    }
+    if (cfg.sheet === 'Injuries' || cfg.sheet === 'ClinicContractorInjuries') {
+        return String(row.employeeName || row.personName || row.injuryType || row.id || '').slice(0, 120);
+    }
+    if (cfg.sheet === 'LegalTrainings') {
+        return String(row.title || row.category || row.id || '').slice(0, 120);
+    }
+    if (cfg.sheet === 'Incidents') {
+        return String(row.title || row.employeeName || row.incidentType || row.id || '').slice(0, 120);
+    }
+    if (cfg.sheet === 'NearMiss') {
+        return String(row.description || row.type || row.location || row.id || '').slice(0, 120);
+    }
+    if (cfg.sheet === 'DailyObservations') {
+        return String(row.details || row.observationType || row.locationName || row.id || '').slice(0, 120);
+    }
+    if (cfg.sheet === 'Violations') {
+        return String(row.employeeName || row.contractorWorker || row.violationType || row.id || '').slice(0, 120);
+    }
+    if (cfg.sheet === 'Medications') {
+        return String(row.name || row.type || row.id || '').slice(0, 120);
+    }
+    if (cfg.sheet === 'UserActivityLog') {
+        return String(row.details || row.module || row.actionType || row.id || '').slice(0, 120);
+    }
+    return String(row.id || '').slice(0, 120);
+}
+
+function _clinicStaffActivitySources_() {
+    return [
+        { moduleKey: 'ptw', moduleLabel: 'تصاريح العمل', actionLabel: 'تسجيل تصريح عمل', sheet: 'PTW' },
+        { moduleKey: 'clinic', moduleLabel: 'العيادة', actionLabel: 'تسجيل زيارة موظف', sheet: 'ClinicVisits' },
+        { moduleKey: 'clinic', moduleLabel: 'العيادة', actionLabel: 'تسجيل زيارة مقاول/خارجي', sheet: 'ClinicContractorVisits' },
+        { moduleKey: 'clinic', moduleLabel: 'العيادة', actionLabel: 'تسجيل إجازة مرضية', sheet: 'SickLeave' },
+        { moduleKey: 'clinic', moduleLabel: 'العيادة', actionLabel: 'تسجيل إصابة موظف', sheet: 'Injuries' },
+        { moduleKey: 'clinic', moduleLabel: 'العيادة', actionLabel: 'تسجيل إصابة مقاول', sheet: 'ClinicContractorInjuries' },
+        { moduleKey: 'clinic', moduleLabel: 'العيادة', actionLabel: 'إضافة/تحديث دواء', sheet: 'Medications' },
+        { moduleKey: 'training', moduleLabel: 'التدريب', actionLabel: 'تسجيل تدريب نظامي', sheet: 'LegalTrainings' },
+        { moduleKey: 'incidents', moduleLabel: 'الحوادث', actionLabel: 'تسجيل حادث', sheet: 'Incidents' },
+        { moduleKey: 'nearmiss', moduleLabel: 'حادث وشيك', actionLabel: 'تسجيل حادث وشيك', sheet: 'NearMiss' },
+        { moduleKey: 'observations', moduleLabel: 'الملاحظات اليومية', actionLabel: 'تسجيل ملاحظة', sheet: 'DailyObservations' },
+        { moduleKey: 'violations', moduleLabel: 'المخالفات', actionLabel: 'تسجيل مخالفة', sheet: 'Violations' },
+        { moduleKey: 'clinic', moduleLabel: 'العيادة', actionLabel: 'طلب إجازة/إذن/إضافي', sheet: 'ClinicStaffTimeOffRequests', kind: 'timeoff' }
+    ];
+}
+
+function getClinicStaffSystemActivities(filters, actorUserData) {
+    try {
+        filters = filters || {};
+        var isAdmin = _clinicStaffIsAdminActor_(actorUserData);
+        var actorProfile = _clinicStaffActivityActorProfile_(actorUserData);
+        var targetProfile = actorProfile;
+        if (isAdmin && filters.staffId) {
+            var staffProfile = _clinicStaffActivityStaffProfile_(filters.staffId);
+            if (staffProfile) targetProfile = staffProfile;
+        } else if (!isAdmin) {
+            targetProfile = actorProfile;
+        }
+        var fromKey = filters.dateFrom ? _clinicStaffDayKey_(filters.dateFrom) : null;
+        var toKey = filters.dateTo ? _clinicStaffDayKey_(filters.dateTo) : null;
+        var moduleFilter = filters.moduleKey ? String(filters.moduleKey) : '';
+        var limit = parseInt(filters.limit, 10);
+        if (isNaN(limit) || limit <= 0) limit = 200;
+        var activities = [];
+        var sources = _clinicStaffActivitySources_();
+        for (var s = 0; s < sources.length; s++) {
+            var cfg = sources[s];
+            if (moduleFilter && moduleFilter !== 'all' && cfg.moduleKey !== moduleFilter) continue;
+            var rows = readFromSheet(cfg.sheet, getSpreadsheetId()) || [];
+            for (var i = 0; i < rows.length; i++) {
+                var row = rows[i];
+                if (!row) continue;
+                var creator = _clinicStaffActivityParseCreator_(row);
+                if (cfg.kind === 'timeoff') {
+                    creator = {
+                        userId: String(row.userId || '').trim(),
+                        email: String(row.userEmail || '').trim().toLowerCase(),
+                        name: String(row.userName || '').trim()
+                    };
+                }
+                if (!isAdmin) {
+                    if (!_clinicStaffActivityMatchesProfile_(creator, actorProfile)) continue;
+                } else if (filters.staffId) {
+                    if (!_clinicStaffActivityMatchesProfile_(creator, targetProfile)) continue;
+                }
+                var when = _clinicStaffActivityPickDate_(row);
+                if (when) {
+                    var dayKey = _clinicStaffDayKey_(when);
+                    if (fromKey && dayKey < fromKey) continue;
+                    if (toKey && dayKey > toKey) continue;
+                } else if (fromKey || toKey) {
+                    continue;
+                }
+                activities.push({
+                    id: String(row.id || '') + '-' + cfg.sheet,
+                    recordId: row.id || '',
+                    moduleKey: cfg.moduleKey,
+                    moduleLabel: cfg.moduleLabel,
+                    actionLabel: cfg.actionLabel,
+                    summary: _clinicStaffActivityBuildSummary_(row, cfg),
+                    timestamp: when || '',
+                    userId: creator.userId || '',
+                    userEmail: creator.email || '',
+                    userName: creator.name || row.userName || row.submittedBy || row.reportedBy || row.observerName || '',
+                    sheet: cfg.sheet
+                });
+            }
+        }
+        try {
+            var logs = readFromSheet('UserActivityLog', getSpreadsheetId()) || [];
+            for (var j = 0; j < logs.length; j++) {
+                var log = logs[j];
+                if (!log) continue;
+                var act = String(log.actionType || log.activity || '').toLowerCase();
+                if (act === 'login' || act === 'logout') continue;
+                var logCreator = {
+                    userId: String(log.userId || '').trim(),
+                    email: String(log.userEmail || '').trim().toLowerCase(),
+                    name: String(log.username || '').trim()
+                };
+                if (!isAdmin) {
+                    if (!_clinicStaffActivityMatchesProfile_(logCreator, actorProfile)) continue;
+                } else if (filters.staffId) {
+                    if (!_clinicStaffActivityMatchesProfile_(logCreator, targetProfile)) continue;
+                }
+                var logWhen = log.timestamp || log.createdAt || '';
+                if (logWhen) {
+                    var logDay = _clinicStaffDayKey_(logWhen);
+                    if (fromKey && logDay < fromKey) continue;
+                    if (toKey && logDay > toKey) continue;
+                }
+                if (moduleFilter && moduleFilter !== 'all' && moduleFilter !== 'system') continue;
+                activities.push({
+                    id: String(log.id || 'log-' + j),
+                    recordId: log.recordId || '',
+                    moduleKey: 'system',
+                    moduleLabel: 'النظام',
+                    actionLabel: String(log.actionType || log.activity || 'نشاط'),
+                    summary: String(log.details || log.module || '').slice(0, 120),
+                    timestamp: logWhen,
+                    userId: logCreator.userId,
+                    userEmail: logCreator.email,
+                    userName: logCreator.name,
+                    sheet: 'UserActivityLog'
+                });
+            }
+        } catch (_logErr) { /* ignore */ }
+        activities.sort(function(a, b) {
+            return String(b.timestamp || '').localeCompare(String(a.timestamp || ''));
+        });
+        if (activities.length > limit) activities = activities.slice(0, limit);
+        return { success: true, data: activities, count: activities.length };
+    } catch (error) {
+        Logger.log('Error in getClinicStaffSystemActivities: ' + error.toString());
+        return { success: false, message: 'خطأ في جلب نشاط المستخدم: ' + error.toString(), data: [] };
+    }
+}
+
