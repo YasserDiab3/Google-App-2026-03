@@ -152,6 +152,10 @@ const Dashboard = {
             this.updateReportsStatistics();
         } catch (_) { /* تجاهل — البيانات قد تكون غير مكتملة بعد */ }
 
+        // ✅ أولوية: تحميل السجل الكامل لسجل التردد (موظفين + مقاولين) في الخلفية فوراً — دون فتح المديول
+        // غير حاجب حتى لا يؤخّر عرض لوحة التحكم؛ يُحدّث الكارت تلقائياً عند الوصول.
+        try { void this.prefetchClinicVisitsForDashboard(); } catch (_) { /* تجاهل */ }
+
         try {
             await this.loadReportsWidget();
         } catch (e) {
@@ -618,11 +622,17 @@ const Dashboard = {
             await _renderWidgetFromData(AppState.appData || {});
 
             // 2 - fetch fresh data from server in background (non-blocking)
-            // سجل التردد الكامل (getAllClinicVisits) لا يُجلب هنا — يُحمّل عند فتح مديول العيادة فقط
             this.prefetchReportStatsSheetsForDashboard({ forceRefresh })
                 .then(() => _renderWidgetFromData(AppState.appData))
                 .catch(e => {
                     if (typeof Utils !== 'undefined' && Utils.safeWarn) Utils.safeWarn('dashboard prefetch failed:', e);
+                });
+
+            // ✅ سجل التردد الكامل (موظفين + مقاولين) — أولوية تحميل في الخلفية ثم تحديث الكارت مباشرة
+            this.prefetchClinicVisitsForDashboard({ forceRefresh })
+                .then(() => _renderWidgetFromData(AppState.appData))
+                .catch(e => {
+                    if (typeof Utils !== 'undefined' && Utils.safeWarn) Utils.safeWarn('dashboard clinic visits prefetch failed:', e);
                 });
 
         } catch (error) {
@@ -730,11 +740,48 @@ const Dashboard = {
     },
 
     /**
-     * @deprecated لا يُستدعى من لوحة التحكم — سجل التردد يُحمّل عند فتح مديول العيادة فقط.
-     * محفوظ للتوافق إن وُجد استدعاء يدوي مستقبلاً.
+     * تحميل السجل الكامل لسجل التردد (موظفين + مقاولين) بأولوية في الخلفية — دون فتح مديول العيادة.
+     * يُحدّث عدّاد كارت لوحة التحكم مباشرة بعد وصول البيانات.
+     * - غير حاجب: يُستدعى بدون await من load()/loadReportsWidget.
+     * - يحترم الكاش عبر Clinic.shouldFetchClinicVisitsFromBackend (10 دقائق) إلا عند forceRefresh.
+     * - منع التكرار عبر علامة جلسة + _clinicVisitsLoadPromise داخل Clinic.
      */
-    async prefetchClinicVisitsForDashboard(_opts = {}) {
-        return;
+    async prefetchClinicVisitsForDashboard(opts = {}) {
+        const forceRefresh = opts && opts.forceRefresh === true;
+        try {
+            if (!AppState || !AppState.appData) return;
+            if (typeof this.dashboardCan === 'function' && !this.dashboardCan('clinic')) return;
+            if (typeof GoogleIntegration === 'undefined' || typeof GoogleIntegration.sendRequest !== 'function') return;
+            if (typeof GoogleIntegration._isBackendRpcConfigured === 'function' && !GoogleIntegration._isBackendRpcConfigured()) return;
+            if (typeof Clinic === 'undefined' || typeof Clinic.loadVisitsDataFromBackend !== 'function') return;
+
+            // تفادي إعادة الجلب داخل نفس الجلسة بعد نجاح أول جلب (إلا عند التحديث القسري)
+            if (!forceRefresh && this._clinicVisitsPrefetchedInSession === true && Clinic._visitsBackendFetchOk === true) {
+                return;
+            }
+
+            // احترام الكاش: لا نجلب إن كانت البيانات حديثة بما يكفي
+            if (!forceRefresh
+                && typeof Clinic.shouldFetchClinicVisitsFromBackend === 'function'
+                && !Clinic.shouldFetchClinicVisitsFromBackend({ forceRefresh })) {
+                this._clinicVisitsPrefetchedInSession = true;
+                return;
+            }
+
+            await Clinic.loadVisitsDataFromBackend();
+            this._clinicVisitsPrefetchedInSession = true;
+
+            // تحديث عدّاد كارت العيادة فوراً بعد وصول السجل الكامل (موظفين + مقاولين)
+            try {
+                this.updateKPIs();
+                this.updateStats();
+                this.updateReportsStatistics();
+            } catch (_) { /* تجاهل */ }
+        } catch (e) {
+            if (typeof Utils !== 'undefined' && Utils.safeWarn) {
+                Utils.safeWarn('⚠️ تعذر تحميل سجل التردد الكامل للوحة التحكم:', e);
+            }
+        }
     },
 
     /**
