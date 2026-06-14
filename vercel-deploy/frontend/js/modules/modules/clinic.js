@@ -13510,12 +13510,12 @@ const Clinic = {
             this.state.filters.attendance = Object.assign({}, this.state.filters.attendance || {}, {
                 activityModule: e.target.value || 'all'
             });
-            this.renderAttendanceTab();
+            this.renderAttendanceTab({ force: true });
         });
         panel.querySelector('#clinic-activity-refresh-btn')?.addEventListener('click', async () => {
             Notification?.info?.('جاري تحديث النشاط...');
             await this.loadClinicStaffActivities(true);
-            this.renderAttendanceTab();
+            this.renderAttendanceTab({ force: true });
             Notification?.success?.('تم تحديث النشاط');
         });
     },
@@ -13662,6 +13662,107 @@ const Clinic = {
         if (this.state?.activeTab === 'attendance') {
             this.scheduleAttendanceTabRender(0);
         }
+    },
+
+    _getDefaultTimeOffFormDraft() {
+        return {
+            requestType: '', reason: '', dateFrom: '', dateTo: '',
+            permDate: '', otDate: '', timeFrom: '', timeTo: '', durationHours: ''
+        };
+    },
+
+    _saveTimeOffFormDraftFromDom() {
+        if (!this.state) this.state = {};
+        const form = document.getElementById('timeoff-request-form');
+        if (!form) return;
+        this.state.timeOffFormDraft = {
+            requestType: document.getElementById('timeoff-request-type')?.value || '',
+            reason: document.getElementById('timeoff-reason')?.value || '',
+            dateFrom: document.getElementById('timeoff-date-from')?.value || '',
+            dateTo: document.getElementById('timeoff-date-to')?.value || '',
+            permDate: document.getElementById('timeoff-perm-date')?.value || '',
+            otDate: document.getElementById('timeoff-ot-date')?.value || '',
+            timeFrom: document.getElementById('timeoff-time-from')?.value || '',
+            timeTo: document.getElementById('timeoff-time-to')?.value || '',
+            durationHours: document.getElementById('timeoff-duration-hours')?.value || ''
+        };
+    },
+
+    _applyTimeOffFormDraftToPanel(panel) {
+        const d = this.state?.timeOffFormDraft;
+        if (!d || !panel) return;
+        const setVal = (id, val) => {
+            const el = panel.querySelector('#' + id);
+            if (el && val != null && val !== '') el.value = val;
+        };
+        setVal('timeoff-request-type', d.requestType);
+        setVal('timeoff-reason', d.reason);
+        setVal('timeoff-date-from', d.dateFrom);
+        setVal('timeoff-date-to', d.dateTo);
+        setVal('timeoff-perm-date', d.permDate);
+        setVal('timeoff-ot-date', d.otDate);
+        setVal('timeoff-time-from', d.timeFrom);
+        setVal('timeoff-time-to', d.timeTo);
+        setVal('timeoff-duration-hours', d.durationHours);
+    },
+
+    _isTimeOffFormDraftDirty() {
+        const d = this.state?.timeOffFormDraft;
+        if (!d) return false;
+        return !!(
+            d.requestType ||
+            String(d.reason || '').trim() ||
+            d.dateFrom || d.dateTo || d.permDate || d.otDate ||
+            d.timeFrom || d.timeTo || d.durationHours
+        );
+    },
+
+    _shouldDeferAttendanceRender() {
+        if (this._timeOffFormSubmitting) return true;
+        if (this._timeOffFormFocused) return true;
+        return this._isTimeOffFormDraftDirty();
+    },
+
+    _flushDeferredAttendanceRender() {
+        if (!this._attendanceRenderPending || this.state?.activeTab !== 'attendance') return;
+        if (this._shouldDeferAttendanceRender()) return;
+        this._attendanceRenderPending = false;
+        this.renderAttendanceTab({ force: true });
+    },
+
+    _bindTimeOffFormPanelEvents(panel) {
+        const form = panel.querySelector('#timeoff-request-form');
+        if (!form) return;
+        const typeEl = panel.querySelector('#timeoff-request-type');
+        const leaveBlock = panel.querySelector('#timeoff-leave-dates');
+        const permBlock = panel.querySelector('#timeoff-permission-fields');
+        const otBlock = panel.querySelector('#timeoff-overtime-fields');
+        const syncTypeFields = () => {
+            const t = typeEl?.value || '';
+            leaveBlock?.classList.toggle('hidden', t !== 'leave');
+            permBlock?.classList.toggle('hidden', t !== 'permission');
+            otBlock?.classList.toggle('hidden', t !== 'overtime');
+        };
+        const syncDraft = () => this._saveTimeOffFormDraftFromDom();
+        typeEl?.addEventListener('change', () => { syncTypeFields(); syncDraft(); });
+        form.querySelectorAll('input, textarea, select').forEach(el => {
+            el.addEventListener('input', syncDraft);
+            el.addEventListener('change', syncDraft);
+        });
+        form.addEventListener('focusin', () => { this._timeOffFormFocused = true; });
+        form.addEventListener('focusout', () => {
+            setTimeout(() => {
+                if (!form.contains(document.activeElement)) {
+                    this._timeOffFormFocused = false;
+                    this._flushDeferredAttendanceRender();
+                }
+            }, 120);
+        });
+        syncTypeFields();
+        form.addEventListener('submit', (e) => {
+            e.preventDefault();
+            this.submitTimeOffRequest();
+        });
     },
 
     _scheduleAttendanceDataLoadIfNeeded(force) {
@@ -14727,7 +14828,7 @@ const Clinic = {
                     Notification?.success?.('تمت إضافة مسئول العيادة');
                     document.getElementById('clinic-staff-modal')?.remove();
                     await this.loadClinicAttendanceData(true);
-                    this.renderAttendanceTab();
+                    this.renderAttendanceTab({ force: true });
                 } else {
                     Notification?.error?.(resp?.message || 'فشل الإضافة');
                 }
@@ -14746,7 +14847,7 @@ const Clinic = {
             });
             if (resp?.success) {
                 await this.loadClinicAttendanceData(true);
-                this.renderAttendanceTab();
+                this.renderAttendanceTab({ force: true });
                 Notification?.success?.('تم تحديث حالة المسئول');
             } else {
                 Notification?.error?.(resp?.message || 'فشل التحديث');
@@ -14814,6 +14915,8 @@ const Clinic = {
     },
 
     async submitTimeOffRequest() {
+        this._saveTimeOffFormDraftFromDom();
+        this._timeOffFormSubmitting = true;
         const requestType = document.getElementById('timeoff-request-type')?.value || '';
         const reason = document.getElementById('timeoff-reason')?.value?.trim() || '';
         let dateFrom = '';
@@ -14834,10 +14937,12 @@ const Clinic = {
         }
 
         if (!requestType) {
+            this._timeOffFormSubmitting = false;
             Notification?.error?.('يرجى اختيار نوع الطلب');
             return;
         }
         if (!reason) {
+            this._timeOffFormSubmitting = false;
             Notification?.error?.('سبب الطلب مطلوب');
             return;
         }
@@ -14876,14 +14981,17 @@ const Clinic = {
 
                 Loading.hide();
                 Notification?.success?.('تم إرسال الطلب بنجاح — بانتظار موافقة المدير');
-                document.getElementById('timeoff-request-form')?.reset();
-                this.renderAttendanceTab();
+                if (this.state) this.state.timeOffFormDraft = this._getDefaultTimeOffFormDraft();
+                this._attendanceRenderPending = false;
+                this.renderAttendanceTab({ force: true });
             } else {
                 throw new Error(result?.message || 'فشل إرسال الطلب');
             }
         } catch (error) {
             Loading.hide();
             Notification?.error?.(error?.message || 'فشل إرسال الطلب');
+        } finally {
+            this._timeOffFormSubmitting = false;
         }
     },
 
@@ -14909,7 +15017,7 @@ const Clinic = {
                 if (typeof window.DataManager !== 'undefined' && window.DataManager.save) window.DataManager.save();
                 Loading.hide();
                 Notification?.success?.('تم إلغاء الطلب');
-                this.renderAttendanceTab();
+                this.renderAttendanceTab({ force: true });
             } else {
                 throw new Error(result?.message || 'فشل الإلغاء');
             }
@@ -14941,6 +15049,7 @@ const Clinic = {
     },
 
     renderAttendanceSelfTab(panel) {
+        this._saveTimeOffFormDraftFromDom();
         this.ensureData();
         const dataLoading = this._isAttendanceDataLoading();
         this.state.filters = this.state.filters || {};
@@ -15111,7 +15220,7 @@ const Clinic = {
 
         const applyFilters = () => {
             this.state.filters.attendance = readFilterInputs.call(this);
-            this.renderAttendanceTab();
+            this.renderAttendanceTab({ force: true });
         };
 
         const applyPeriodPreset = (preset) => {
@@ -15127,7 +15236,7 @@ const Clinic = {
                 dateFrom = this._attendanceDayKey(d); dateTo = today;
             }
             this.state.filters.attendance = Object.assign({}, this.state.filters.attendance || {}, { period: preset, month: '', dateFrom, dateTo });
-            this.renderAttendanceTab();
+            this.renderAttendanceTab({ force: true });
         };
 
         panel.querySelector('#clinic-attendance-status')?.addEventListener('change', applyFilters);
@@ -15136,7 +15245,7 @@ const Clinic = {
         panel.querySelector('#clinic-attendance-to')?.addEventListener('change', applyFilters);
         panel.querySelector('#clinic-attendance-reset-filters')?.addEventListener('click', () => {
             this.state.filters.attendance = { search: '', staffRole: 'all', status: 'all', staffId: 'all', month: '', dateFrom: '', dateTo: '', period: 'all' };
-            this.renderAttendanceTab();
+            this.renderAttendanceTab({ force: true });
         });
         panel.querySelector('#clinic-attendance-toggle-filters')?.addEventListener('click', () => {
             this.state.attendanceFilterPanelOpen = !filterPanelOpen;
@@ -15153,32 +15262,23 @@ const Clinic = {
             this._attendanceDataFetchedInSession = false;
             await this.loadClinicAttendanceData(true);
             this._attendanceDataFetchedInSession = true;
-            this.renderAttendanceTab();
+            this.renderAttendanceTab({ force: true });
             Notification?.success?.('تم التحديث');
         });
 
         this.bindClinicStaffActivitiesEvents(panel);
-
-        const typeEl = panel.querySelector('#timeoff-request-type');
-        const leaveBlock = panel.querySelector('#timeoff-leave-dates');
-        const permBlock = panel.querySelector('#timeoff-permission-fields');
-        const otBlock = panel.querySelector('#timeoff-overtime-fields');
-        const syncTypeFields = () => {
-            const t = typeEl?.value || '';
-            leaveBlock?.classList.toggle('hidden', t !== 'leave');
-            permBlock?.classList.toggle('hidden', t !== 'permission');
-            otBlock?.classList.toggle('hidden', t !== 'overtime');
-        };
-        typeEl?.addEventListener('change', syncTypeFields);
-        syncTypeFields();
-
-        panel.querySelector('#timeoff-request-form')?.addEventListener('submit', (e) => {
-            e.preventDefault();
-            this.submitTimeOffRequest();
-        });
+        this._applyTimeOffFormDraftToPanel(panel);
+        this._bindTimeOffFormPanelEvents(panel);
     },
 
-    renderAttendanceTab() {
+    renderAttendanceTab(options) {
+        const force = options && options.force === true;
+        if (!force && this._shouldDeferAttendanceRender()) {
+            this._attendanceRenderPending = true;
+            return;
+        }
+        this._attendanceRenderPending = false;
+
         const panel = document.querySelector('.clinic-tab-panel[data-tab-panel="attendance"]');
         if (!panel) return;
 
@@ -15448,7 +15548,7 @@ const Clinic = {
 
         const applyFilters = () => {
             this.state.filters.attendance = readFilterInputs.call(this);
-            this.renderAttendanceTab();
+            this.renderAttendanceTab({ force: true });
         };
 
         const applyPeriodPreset = (preset) => {
@@ -15475,7 +15575,7 @@ const Clinic = {
                 dateFrom,
                 dateTo
             });
-            this.renderAttendanceTab();
+            this.renderAttendanceTab({ force: true });
         };
 
         const searchEl = panel.querySelector('#clinic-attendance-search');
@@ -15513,7 +15613,7 @@ const Clinic = {
 
         panel.querySelector('#clinic-attendance-reset-filters')?.addEventListener('click', () => {
             this.state.filters.attendance = { search: '', staffRole: 'all', status: 'all', staffId: 'all', month: '', dateFrom: '', dateTo: '', period: 'all' };
-            this.renderAttendanceTab();
+            this.renderAttendanceTab({ force: true });
         });
 
         panel.querySelector('#clinic-attendance-toggle-filters')?.addEventListener('click', () => {
@@ -15535,7 +15635,7 @@ const Clinic = {
             this._attendanceDataFetchedInSession = false;
             await this.loadClinicAttendanceData(true);
             this._attendanceDataFetchedInSession = true;
-            this.renderAttendanceTab();
+            this.renderAttendanceTab({ force: true });
             Notification?.success?.('تم التحديث');
         });
 
