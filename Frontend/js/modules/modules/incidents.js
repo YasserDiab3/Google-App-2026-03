@@ -7804,7 +7804,7 @@ const Incidents = {
     printNotification() {
         try {
             const notificationData = this.getNotificationFormData();
-
+            
             if (!notificationData) {
                 Notification.warning('لا توجد بيانات للطباعة. يرجى فتح النموذج أولاً.');
                 return;
@@ -8002,15 +8002,15 @@ const Incidents = {
     },
 
     _buildNotificationReportHtml(notificationData) {
-        const content = this.buildNotificationPrintContent(notificationData);
-        const formCode = notificationData.notificationNumber || `NOT-${new Date().toISOString().slice(0, 10)}`;
+            const content = this.buildNotificationPrintContent(notificationData);
+            const formCode = notificationData.notificationNumber || `NOT-${new Date().toISOString().slice(0, 10)}`;
 
         if (typeof FormHeader !== 'undefined' && FormHeader.generatePDFHTML) {
             return FormHeader.generatePDFHTML(
-                formCode,
-                'إخطار عن حادث - Incident Notification',
-                content,
-                false,
+                    formCode,
+                    'إخطار عن حادث - Incident Notification',
+                    content,
+                    false,
                 false,
                 {
                     version: AppState?.companySettings?.formVersion || '1.0',
@@ -8034,7 +8034,7 @@ const Incidents = {
             const ref = notificationData.notificationNumber || 'notification';
             const safeName = `إخطار-حادث-${String(ref).replace(/[^\w\u0600-\u06FF.-]/g, '_')}`;
             const downloaded = await this._downloadHtmlReportAsPdf(htmlContent, safeName);
-            Loading.hide();
+                            Loading.hide();
 
             if (downloaded) {
                 Notification.success('تم تحميل إخطار الحادث بنجاح');
@@ -8314,30 +8314,30 @@ const Incidents = {
 
         Loading.show('جاري حذف الحادث...');
         try {
-            const userData = {
-                id: AppState.currentUser?.id || '',
-                email: AppState.currentUser?.email || '',
-                name: AppState.currentUser?.name || '',
-                role: AppState.currentUser?.role || '',
-                permissions: AppState.currentUser?.permissions || {}
-            };
+                const userData = {
+                    id: AppState.currentUser?.id || '',
+                    email: AppState.currentUser?.email || '',
+                    name: AppState.currentUser?.name || '',
+                    role: AppState.currentUser?.role || '',
+                    permissions: AppState.currentUser?.permissions || {}
+                };
 
             await GoogleIntegration.sendRequest({
-                action: 'deleteIncident',
-                data: {
-                    incidentId: id,
-                    userData: userData
-                }
-            });
+                    action: 'deleteIncident',
+                    data: {
+                        incidentId: id,
+                        userData: userData
+                    }
+                });
 
             AppState.appData.incidents = (AppState.appData.incidents || []).filter(i => i.id !== id);
-            if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
-                window.DataManager.save();
+                    if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
+                        window.DataManager.save();
             } else {
                 Utils.safeWarn('⚠️ DataManager غير متاح - لم يتم حفظ البيانات محلياً');
-            }
+                }
 
-            await this.removeFromRegistry(id);
+                    await this.removeFromRegistry(id);
 
             if (typeof Dashboard !== 'undefined' && Dashboard.refreshIncidents) {
                 Dashboard.refreshIncidents();
@@ -8352,7 +8352,7 @@ const Incidents = {
                     this.setupTabEventListeners('approvals');
                 }
             } else {
-                this.loadIncidentsList();
+            this.loadIncidentsList();
             }
         } catch (error) {
             Utils.safeError('خطأ في حذف الحادث:', error);
@@ -9140,13 +9140,13 @@ const Incidents = {
     },
 
     _collectIncidentExportImages(incident) {
-        const images = [];
+            const images = [];
         const pushImage = (src) => {
             const normalized = String(src || '').trim();
             if (normalized && !images.includes(normalized)) images.push(normalized);
         };
         if (Array.isArray(incident?.attachments)) {
-            incident.attachments.forEach(att => {
+                incident.attachments.forEach(att => {
                 if (images.length >= 2) return;
                 if (!att) return;
                 const isImage = att.type?.startsWith('image/') || att.name?.match(/\.(jpg|jpeg|png|gif|webp)$/i);
@@ -9162,22 +9162,22 @@ const Incidents = {
         if (!Array.isArray(images) || !images.length) return '';
         const imageContainerStyle = 'display: inline-block; width: 48%; max-width: 360px; margin: 1%; vertical-align: top; text-align: center;';
         const imageFrameStyle = 'width: 100%; height: 300px; border: 2px solid #1565C0; border-radius: 12px; padding: 8px; background: #f8fafc; box-shadow: 0 4px 12px rgba(15,23,42,0.08); display: flex; align-items: center; justify-content: center; overflow: hidden;';
-        const imageStyle = 'max-width: 100%; max-height: 100%; object-fit: contain; border-radius: 8px;';
+                const imageStyle = 'max-width: 100%; max-height: 100%; object-fit: contain; border-radius: 8px;';
         return `
             <div style="margin-bottom: 30px;">
                 ${this._buildPrintSectionHeading(sectionNum, 'الصور المرفقة', '#1565C0', '#2196F3')}
                 <div style="text-align: center; margin: 10px 0; direction: rtl; display: flex; flex-wrap: wrap; justify-content: center; gap: 16px;">
                     ${images.map((img, idx) => `
-                        <div style="${imageContainerStyle}">
-                            <div style="${imageFrameStyle}">
+                            <div style="${imageContainerStyle}">
+                                <div style="${imageFrameStyle}">
                                 <img src="${this.convertGoogleDriveLinkToPrintable(img)}" alt="صورة ${idx + 1}" style="${imageStyle}" onerror="this.parentElement.innerHTML='<div style=\\'color:#94a3b8;font-size:14px;\\'>تعذر تحميل الصورة</div>';">
-                            </div>
+                                </div>
                             <div style="margin-top: 10px; font-size: 13px; color: #475569; font-weight: 600;">صورة ${idx + 1}</div>
-                        </div>
-                    `).join('')}
+                            </div>
+                        `).join('')}
                 </div>
-            </div>
-        `;
+                    </div>
+                `;
     },
 
     _buildIncidentReportActionPlanSection(actionPlan, sectionNum = '5') {
@@ -9195,13 +9195,13 @@ const Incidents = {
                 <td style="padding: 8px; border: 1px solid #ddd; text-align: center;">${action.dueDate || action.plannedDate ? this._formatIncidentPrintDate(action.dueDate || action.plannedDate) : ''}</td>
                 <td style="padding: 8px; border: 1px solid #ddd; text-align: center;">${action.closedDate ? this._formatIncidentPrintDate(action.closedDate) : ''}</td>
                 <td style="padding: 8px; border: 1px solid #ddd; text-align: center;">${Utils.escapeHTML(statusLabel(action.status))}</td>
-            </tr>
-        `).join('');
+                    </tr>
+                `).join('');
         return `
             <div style="margin-bottom: 30px;">
                 ${this._buildPrintSectionHeading(sectionNum, 'خطة الإجراءات التصحيحية والوقائية', '#2E7D32', '#4CAF50')}
-                <table style="width: 100%; border-collapse: collapse; margin: 15px 0;">
-                    <thead>
+                    <table style="width: 100%; border-collapse: collapse; margin: 15px 0;">
+                        <thead>
                         <tr style="background: linear-gradient(135deg, #388E3C 0%, #4CAF50 100%); color: white;">
                             <th style="padding: 12px; border: 1px solid #2E7D32; text-align: right;">نوع الإجراء</th>
                             <th style="padding: 12px; border: 1px solid #2E7D32; text-align: right;">وصف الإجراء</th>
@@ -9209,10 +9209,10 @@ const Incidents = {
                             <th style="padding: 12px; border: 1px solid #2E7D32; text-align: center;">تاريخ الاستحقاق</th>
                             <th style="padding: 12px; border: 1px solid #2E7D32; text-align: center;">تاريخ الإغلاق</th>
                             <th style="padding: 12px; border: 1px solid #2E7D32; text-align: center;">الحالة</th>
-                        </tr>
-                    </thead>
+                            </tr>
+                        </thead>
                     <tbody>${actionRows}</tbody>
-                </table>
+                    </table>
             </div>
         `;
     },
@@ -9352,7 +9352,7 @@ const Incidents = {
                             <div style="font-weight: 700; color: #92400e; margin-bottom: 8px;">ملخص التحقيق</div>
                             ${this._buildPrintTextPanel(investigation.description, '#fffbeb', '#f59e0b')}
                         </div>
-                    ` : ''}
+                ` : ''}
                 </div>
             `;
         }
@@ -9685,24 +9685,24 @@ const Incidents = {
     },
 
     _openIncidentPrintableHtml(htmlContent, successMessage) {
-        const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
-        const url = URL.createObjectURL(blob);
-        const printWindow = window.open(url, '_blank');
+            const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const printWindow = window.open(url, '_blank');
         if (!printWindow) {
             Loading.hide();
             Notification.error('يرجى السماح للنوافذ المنبثقة لعرض التقرير');
             return false;
         }
-        printWindow.onload = () => {
-            setTimeout(() => {
-                printWindow.print();
-                setTimeout(() => {
-                    URL.revokeObjectURL(url);
-                    Loading.hide();
+                printWindow.onload = () => {
+                    setTimeout(() => {
+                        printWindow.print();
+                        setTimeout(() => {
+                            URL.revokeObjectURL(url);
+                            Loading.hide();
                     Notification.success(successMessage || 'تم تجهيز التقرير للطباعة/الحفظ كـ PDF');
                 }, 800);
-            }, 500);
-        };
+                    }, 500);
+                };
         return true;
     },
 
@@ -11330,7 +11330,7 @@ const Incidents = {
             <div style="margin-bottom: 14px;">
                 <div class="inv-field-label">الوصف الرئيسي</div>
                 <div class="inv-text-panel" style="border-color:#FF9800;">${esc(investigationData.description || 'غير محدد')}</div>
-            </div>
+                </div>
             ${(selectedTypes.includes('nearmiss') || investigationData.nearmissDescription) ? `
             <div>
                 <div class="inv-field-label">وصف الحالة الوشيكة</div>
@@ -11345,10 +11345,10 @@ const Incidents = {
                 ${this._buildInvestigationFormPrintField('الاسم', esc(investigationData.affectedName || '—'), '#E91E63')}
                 ${this._buildInvestigationFormPrintField('الوظيفة', esc(investigationData.affectedJob || '—'), '#E91E63')}
                 ${this._buildInvestigationFormPrintField('السن', esc(investigationData.affectedAge || '—'), '#E91E63')}
-            </div>
+                </div>
             <div style="margin-top:14px;">
                 ${this._buildInvestigationFormPrintField('الجهة التابع لها', esc(investigationData.affectedDepartment || '—'), '#E91E63')}
-            </div>
+                </div>
         `);
 
         const riskMatrixHtml = typeof RiskMatrix !== 'undefined'
@@ -11363,13 +11363,13 @@ const Incidents = {
             <div class="inv-field-grid" style="grid-template-columns: repeat(2, minmax(0, 1fr)); margin-bottom: 14px;">
                 ${this._buildInvestigationFormPrintField('سلوك غير آمن', yesNoNames[investigationData.unsafeBehavior] || investigationData.unsafeBehavior || '—', '#009688')}
                 ${this._buildInvestigationFormPrintField('وضع غير آمن', yesNoNames[investigationData.unsafeCondition] || investigationData.unsafeCondition || '—', '#009688')}
-            </div>
+                    </div>
             ${riskMatrixHtml ? `
             <div style="margin-bottom: 14px;">
                 <div class="inv-field-label">مصفوفة تقييم المخاطر</div>
                 <div class="inv-inner-white" style="border-color:#14b8a6;">${riskMatrixHtml}</div>
-            </div>
-            ` : ''}
+                </div>
+                ` : ''}
             <div class="inv-field-grid" style="grid-template-columns: 1fr; gap: 14px;">
                 ${this._buildInvestigationFormPrintField(
                     'نتيجة التقييم',
@@ -11380,7 +11380,7 @@ const Incidents = {
             <div style="margin-top:14px;">
                 <div class="inv-field-label">شرح الخطر</div>
                 <div class="inv-text-panel" style="border-color:#14b8a6; background:#f0fdfa;">${esc(investigationData.riskExplanation || '—')}</div>
-            </div>
+                </div>
         `);
 
         const actionPlan = Array.isArray(investigationData.actionPlan) ? investigationData.actionPlan : [];
@@ -11398,8 +11398,8 @@ const Incidents = {
                     <td style="padding: 12px; border: 1px solid #c8e6c9; vertical-align: top;">
                         ${esc(action.followUpName || '')}
                         ${action.followUpDate ? `<br><span style="font-size:11px;color:#64748b;">${formatDateOnly(action.followUpDate)}</span>` : ''}
-                    </td>
-                </tr>
+                        </td>
+                    </tr>
             `;
         }).join('');
 
@@ -11412,7 +11412,7 @@ const Incidents = {
                             <th style="padding: 12px; width: 15%; text-align: center; border: 1px solid #2E7D32;">التاريخ المخطط</th>
                             <th style="padding: 12px; width: 25%; text-align: center; border: 1px solid #2E7D32;">مسئول التنفيذ</th>
                             <th style="padding: 12px; width: 25%; text-align: center; border: 1px solid #2E7D32;">المتابعة</th>
-                        </tr>
+                    </tr>
                     </thead>
                     <tbody style="background:#f9fff9;">${actionRows}</tbody>
                 </table>
@@ -11441,7 +11441,7 @@ const Incidents = {
                 ${buildSigCell(investigationData.signatureAreaManager, 'مسئول المنطقة')}
                 ${buildSigCell(investigationData.signatureSafetyManager, 'مسئول السلامة والصحة')}
                 ${buildSigCell(investigationData.signatureSafetyDirector, 'مدير السلامة والصحة')}
-            </div>
+                </div>
         `);
 
         return `
