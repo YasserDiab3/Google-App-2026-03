@@ -2526,8 +2526,8 @@ const Violations = {
         return `
         <div id="viol-analytics-root" style="font-family:inherit;">
 
-            <!-- ── شريط الأدوات الرئيسي ── -->
-            <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:14px;padding:16px 20px;background:linear-gradient(135deg,#7f1d1d 0%,#dc2626 100%);border-radius:14px;color:#fff;box-shadow:0 4px 20px rgba(220,38,38,0.35);">
+            <!-- ── شريط الأدوات الرئيسي (يُخفى عند تصدير PDF) ── -->
+            <div id="viol-analytics-toolbar" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:14px;padding:16px 20px;background:linear-gradient(135deg,#7f1d1d 0%,#dc2626 100%);border-radius:14px;color:#fff;box-shadow:0 4px 20px rgba(220,38,38,0.35);">
                 <div style="display:flex;align-items:center;gap:12px;">
                     <div style="width:44px;height:44px;background:rgba(255,255,255,0.18);border-radius:12px;display:flex;align-items:center;justify-content:center;">
                         <i class="fas fa-chart-bar" style="font-size:20px;"></i>
@@ -2564,7 +2564,7 @@ const Violations = {
                 </div>
             </div>
 
-            <!-- ── لوحة الفلاتر التفاعلية ── -->
+            <div id="viol-analytics-capture">
             <div id="viol-filter-panel" style="display:none;background:#fef2f2;border:1.5px solid #fecaca;border-radius:12px;padding:18px 20px;margin-bottom:16px;">
                 <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
                     <div style="display:flex;align-items:center;gap:8px;">
@@ -2726,6 +2726,7 @@ const Violations = {
                         </tbody>
                     </table>
                 </div>
+            </div>
             </div>
         </div>`;
     },
@@ -3315,60 +3316,126 @@ const Violations = {
     },
 
     // ── تصدير لوحة المخالفات PDF ──
+    _getViolAnalyticsPeriodLabel_() {
+        const map = { '30': 'Last 30 Days', '90': 'Last 3 Months', '180': 'Last 6 Months', '365': 'Last 12 Months', '0': 'All Time' };
+        return map[String(this._violPeriod || '0')] || 'All Time';
+    },
+
+    _drawViolAnalyticsPdfHeader_(pdf, pageIndex, totalPages, margin, pdfW, headerH) {
+        pdf.setFillColor(127, 29, 29);
+        pdf.rect(0, 0, pdfW, headerH, 'F');
+        pdf.setFillColor(220, 38, 38);
+        pdf.rect(0, headerH - 3, pdfW, 3, 'F');
+        pdf.setTextColor(255, 255, 255);
+        pdf.setFontSize(13);
+        pdf.setFont(undefined, 'bold');
+        pdf.text('Violations Analysis Report', margin, 9, { align: 'left' });
+        pdf.setFontSize(8);
+        pdf.setFont(undefined, 'normal');
+        pdf.text(`HSE Management System — Violations Analytics Dashboard (${this._getViolAnalyticsPeriodLabel_()})`, margin, 15, { align: 'left' });
+        const enDate = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+        const enTime = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+        pdf.setFontSize(8.5);
+        pdf.text(`${enDate}  ${enTime}`, pdfW - margin, 9, { align: 'right' });
+        pdf.setFontSize(9);
+        pdf.setFont(undefined, 'bold');
+        pdf.text(`Page ${pageIndex + 1} of ${totalPages}`, pdfW - margin, 15.5, { align: 'right' });
+        pdf.setTextColor(0, 0, 0);
+    },
+
+    _drawViolAnalyticsPdfFooter_(pdf, pageIndex, totalPages, margin, pdfW, pdfH, footerH) {
+        const footerY = pdfH - footerH;
+        const enDate = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+        const enTime = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+        pdf.setDrawColor(254, 202, 202);
+        pdf.setLineWidth(0.4);
+        pdf.line(0, footerY, pdfW, footerY);
+        pdf.setFillColor(254, 242, 242);
+        pdf.rect(0, footerY, pdfW, footerH, 'F');
+        pdf.setFontSize(7.5);
+        pdf.setTextColor(153, 27, 27);
+        pdf.setFont(undefined, 'bold');
+        pdf.text('HSE Management System', margin, footerY + 5, { align: 'left' });
+        pdf.setFont(undefined, 'normal');
+        pdf.setFontSize(6.5);
+        pdf.setTextColor(100, 116, 139);
+        pdf.text('Violations Analysis Report — Confidential', margin, footerY + 10, { align: 'left' });
+        pdf.setFontSize(8);
+        pdf.setTextColor(185, 28, 28);
+        pdf.setFont(undefined, 'bold');
+        pdf.text(`${pageIndex + 1} / ${totalPages}`, pdfW / 2, footerY + 7.5, { align: 'center' });
+        pdf.setFont(undefined, 'normal');
+        pdf.setFontSize(7);
+        pdf.setTextColor(100, 116, 139);
+        pdf.text(enDate, pdfW - margin, footerY + 5, { align: 'right' });
+        pdf.text(enTime, pdfW - margin, footerY + 10, { align: 'right' });
+    },
+
     async _vExportPDF() {
-        const root = document.getElementById('viol-analytics-root');
-        if (!root) return;
+        const captureRoot = document.getElementById('viol-analytics-capture');
+        if (!captureRoot) return;
         const btn = document.getElementById('viol-export-pdf-btn');
         const origHtml = btn ? btn.innerHTML : '';
         if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>'; }
         try {
-            const loadLib = (src, check) => new Promise((res,rej) => {
+            const loadLib = (src, check) => new Promise((res, rej) => {
                 if (check()) return res();
                 const s = document.createElement('script');
-                s.src = src; s.onload = () => res(); s.onerror = () => rej(new Error('Failed: '+src));
+                s.src = src; s.onload = () => res(); s.onerror = () => rej(new Error('Failed: ' + src));
                 document.head.appendChild(s);
             });
             await loadLib('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js', () => typeof html2canvas !== 'undefined');
             await loadLib('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js', () => typeof window.jspdf !== 'undefined');
 
             const filterPanel = document.getElementById('viol-filter-panel');
-            const wasVisible  = filterPanel && filterPanel.style.display !== 'none';
+            const wasVisible = filterPanel && filterPanel.style.display !== 'none';
             if (wasVisible) filterPanel.style.display = 'none';
 
-            const canvas = await html2canvas(root, { scale:1.8, useCORS:true, backgroundColor:'#f8fafc', scrollX:0, scrollY:-window.scrollY, logging:false });
+            const scale = Utils.PdfExport.getOptimalCaptureScale(captureRoot.scrollWidth, captureRoot.scrollHeight, Utils.PdfExport.DEFAULT_CAPTURE_SCALE);
+            const canvas = await html2canvas(captureRoot, {
+                scale,
+                useCORS: true,
+                backgroundColor: '#f8fafc',
+                scrollX: 0,
+                scrollY: 0,
+                logging: false
+            });
             if (wasVisible) filterPanel.style.display = '';
 
-            const { jsPDF } = window.jspdf;
-            const pdf = new jsPDF({ orientation:'portrait', unit:'mm', format:'a4' });
+            const pdf = Utils.PdfExport.createPdf({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+            if (!pdf) throw new Error('jsPDF unavailable');
+
             const pdfW = pdf.internal.pageSize.getWidth();
             const pdfH = pdf.internal.pageSize.getHeight();
             const margin = 10;
+            const headerH = 20;
+            const footerH = 14;
             const contentW = pdfW - margin * 2;
+            const contentAreaH = pdfH - headerH - footerH - margin * 0.5;
             const ratio = contentW / canvas.width;
-            const pageContentH = pdfH - 14 - margin;
-            const pageHeightPx = pageContentH / ratio;
-            const totalPages   = Math.ceil(canvas.height / pageHeightPx);
+            const pageHeightPx = contentAreaH / ratio;
+            const totalPages = Math.max(1, Math.ceil(canvas.height / pageHeightPx));
 
             for (let p = 0; p < totalPages; p++) {
                 if (p > 0) pdf.addPage();
-                // ترويسة
-                pdf.setFillColor(127,29,29);
-                pdf.rect(0,0,pdfW,14,'F');
-                pdf.setTextColor(255,255,255);
-                pdf.setFontSize(9);
-                pdf.text('Violations Analysis Report', margin, 9, {align:'left'});
-                pdf.text(`${new Date().toLocaleDateString('ar-SA')}  |  ${p+1}/${totalPages}`, pdfW-margin, 9, {align:'right'});
-                pdf.setTextColor(0,0,0);
-                // قص الشريحة
+                this._drawViolAnalyticsPdfHeader_(pdf, p, totalPages, margin, pdfW, headerH);
+
                 const sliceCanvas = document.createElement('canvas');
-                const sliceH = Math.min(pageHeightPx, canvas.height - p*pageHeightPx);
-                sliceCanvas.width = canvas.width; sliceCanvas.height = sliceH;
-                sliceCanvas.getContext('2d').drawImage(canvas, 0, p*pageHeightPx, canvas.width, sliceH, 0, 0, canvas.width, sliceH);
-                pdf.addImage(sliceCanvas.toDataURL('image/jpeg',0.90), 'JPEG', margin, 14, contentW, sliceH*ratio);
+                const sliceH = Math.min(pageHeightPx, canvas.height - p * pageHeightPx);
+                sliceCanvas.width = canvas.width;
+                sliceCanvas.height = sliceH;
+                sliceCanvas.getContext('2d').drawImage(canvas, 0, p * pageHeightPx, canvas.width, sliceH, 0, 0, canvas.width, sliceH);
+                const { dataUrl: sliceData, format: sliceFmt } = Utils.PdfExport.compressCanvasToJpegDataUrl(
+                    sliceCanvas,
+                    Math.floor(Utils.PdfExport.TARGET_MAX_BYTES / totalPages)
+                );
+                pdf.addImage(sliceData, sliceFmt, margin, headerH, contentW, sliceH * ratio);
+                this._drawViolAnalyticsPdfFooter_(pdf, p, totalPages, margin, pdfW, pdfH, footerH);
             }
-            pdf.save(`تقرير-المخالفات-${new Date().toISOString().slice(0,10)}.pdf`);
+
+            Utils.PdfExport.savePdf(pdf, `Violations-Analysis-${new Date().toISOString().slice(0, 10)}.pdf`);
             if (typeof Notification !== 'undefined' && Notification.success) Notification.success('تم تصدير تقرير المخالفات PDF بنجاح');
-        } catch(err) {
+        } catch (err) {
             console.error('PDF export error:', err);
             if (typeof Notification !== 'undefined' && Notification.error) Notification.error('تعذّر تصدير PDF — تأكد من الاتصال بالإنترنت');
         } finally {
