@@ -1119,10 +1119,10 @@ const SafetyPerformanceKPIs = {
                 #safety-performance-kpis-section[dir="ltr"] .spk-row-subsection td { text-align: left; direction: ltr; }
                 #safety-performance-kpis-section[dir="rtl"] #spk-scorecard-panel,
                 #safety-performance-kpis-section[dir="rtl"] .spk-scorecard-hero { direction: rtl; text-align: start; }
-                /* الجدول يبقى LTR لترتيب الأشهر (ينا→ديس) وتجنّب إخفاء يناير تحت العمود الثابت */
-                #safety-performance-kpis-section[dir="rtl"] .spk-scorecard-table { direction: ltr; }
+                #safety-performance-kpis-section[dir="rtl"] .spk-scorecard-table-wrap { direction: rtl; }
+                #safety-performance-kpis-section[dir="rtl"] .spk-scorecard-table { direction: rtl; }
                 #safety-performance-kpis-section[dir="rtl"] .spk-scorecard-table th:first-child,
-                #safety-performance-kpis-section[dir="rtl"] .spk-scorecard-table td:first-child { left: 0; right: auto; text-align: right; direction: rtl; }
+                #safety-performance-kpis-section[dir="rtl"] .spk-scorecard-table td:first-child { right: 0; left: auto; text-align: right; direction: rtl; box-shadow: -4px 0 8px rgba(15, 23, 42, 0.06); }
                 #safety-performance-kpis-section[dir="rtl"] .spk-label-cell { direction: rtl; text-align: right; }
                 #safety-performance-kpis-section[dir="rtl"] .spk-row-section td,
                 #safety-performance-kpis-section[dir="rtl"] .spk-row-subsection td { text-align: right; direction: rtl; }
@@ -2032,6 +2032,26 @@ const SafetyPerformanceKPIs = {
         return this.sumYtd(values, limit);
     },
 
+    /** ضبط التمرير في RTL لإظهار يناير بجانب العمود الثابت دون إخفائه */
+    applyScorecardRtlScroll(container) {
+        if (!this.isModuleRTL()) return;
+        const wrap = container?.closest('.spk-scorecard-table-wrap');
+        if (!wrap) return;
+        const align = () => {
+            const labelCell = wrap.querySelector('thead th:first-child');
+            const janCell = wrap.querySelector('thead th.spk-month-head');
+            if (!labelCell || !janCell) return;
+            const overlap = janCell.getBoundingClientRect().right - labelCell.getBoundingClientRect().left;
+            if (overlap <= 1) return;
+            const before = wrap.scrollLeft;
+            wrap.scrollLeft += overlap;
+            if (Math.abs(wrap.scrollLeft - before) < 1) {
+                wrap.scrollLeft -= overlap;
+            }
+        };
+        requestAnimationFrame(() => requestAnimationFrame(align));
+    },
+
     renderScorecardTable(force = false) {
         const container = document.getElementById('spk-scorecard-table-container');
         if (!container) return;
@@ -2048,6 +2068,7 @@ const SafetyPerformanceKPIs = {
         container.dataset.signature = signature;
         this._lastScorecardSignature = signature;
         this.applyScorecardAccessState();
+        this.applyScorecardRtlScroll(container);
     },
 
     renderScorecardTableHtml(model) {
