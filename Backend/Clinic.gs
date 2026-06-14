@@ -1351,6 +1351,37 @@ function getAllClinicVisits(filters = {}) {
 
         let data = employeeData.concat(contractorData);
 
+        // ✅ إزالة التكرار بين ClinicVisits و ClinicContractorVisits لنفس id (بيانات قديمة قبل فصل الجداول)
+        if (data.length > 1) {
+            const deduped = [];
+            const idIndex = new Map();
+            for (let i = 0; i < data.length; i++) {
+                const row = data[i];
+                if (!row || typeof row !== 'object') continue;
+                const rid = String(row.id || '').trim();
+                if (!rid) {
+                    deduped.push(row);
+                    continue;
+                }
+                if (!idIndex.has(rid)) {
+                    idIndex.set(rid, deduped.length);
+                    deduped.push(row);
+                    continue;
+                }
+                const existingIdx = idIndex.get(rid);
+                const existing = deduped[existingIdx];
+                const rowIsContractor = row._tempSourceType === 'contractor' || String(row.personType || '').toLowerCase() === 'contractor';
+                const existingIsContractor = existing && (existing._tempSourceType === 'contractor' || String(existing.personType || '').toLowerCase() === 'contractor');
+                if (rowIsContractor && !existingIsContractor) {
+                    deduped[existingIdx] = row;
+                }
+            }
+            if (deduped.length !== data.length) {
+                Logger.log('getAllClinicVisits: removed ' + (data.length - deduped.length) + ' cross-sheet duplicate id(s)');
+            }
+            data = deduped;
+        }
+
         // ✅ تطبيع البيانات وضمان وجود معرفات فريدة
         data = data.map((v, index) => {
             if (!v || typeof v !== 'object') return v;
@@ -1411,6 +1442,11 @@ function getAllClinicVisits(filters = {}) {
             }
             if (!v.updatedBy) {
                 v.updatedBy = null;
+            }
+
+            // حقل داخلي للتطبيع فقط — لا يُرسل للواجهة
+            if (v._tempSourceType !== undefined) {
+                delete v._tempSourceType;
             }
             
             return v;

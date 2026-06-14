@@ -152,10 +152,6 @@ const Dashboard = {
             this.updateReportsStatistics();
         } catch (_) { /* تجاهل — البيانات قد تكون غير مكتملة بعد */ }
 
-        // ✅ أولوية: تحميل السجل الكامل لسجل التردد (موظفين + مقاولين) في الخلفية فوراً — دون فتح المديول
-        // غير حاجب حتى لا يؤخّر عرض لوحة التحكم؛ يُحدّث الكارت تلقائياً عند الوصول.
-        try { void this.prefetchClinicVisitsForDashboard(); } catch (_) { /* تجاهل */ }
-
         try {
             await this.loadReportsWidget();
         } catch (e) {
@@ -585,7 +581,10 @@ const Dashboard = {
         const container = document.getElementById('dashboard-reports-widget');
         if (!container) {
             try {
-                await this.prefetchReportStatsSheetsForDashboard({ forceRefresh });
+                await Promise.allSettled([
+                    this.prefetchClinicVisitsForDashboard({ forceRefresh }),
+                    this.prefetchReportStatsSheetsForDashboard({ forceRefresh })
+                ]);
                 this.updateKPIs();
                 this.updateStats();
             } catch (e) {
@@ -618,6 +617,9 @@ const Dashboard = {
         };
 
         try {
+            // ✅ أولوية: بدء جلب سجل التردد الكامل (موظفين + مقاولين) فوراً — قبل عرض الكاش
+            const clinicVisitsPrefetch = this.prefetchClinicVisitsForDashboard({ forceRefresh });
+
             // 1 - render immediately from local cache (no server wait)
             await _renderWidgetFromData(AppState.appData || {});
 
@@ -628,8 +630,8 @@ const Dashboard = {
                     if (typeof Utils !== 'undefined' && Utils.safeWarn) Utils.safeWarn('dashboard prefetch failed:', e);
                 });
 
-            // ✅ سجل التردد الكامل (موظفين + مقاولين) — أولوية تحميل في الخلفية ثم تحديث الكارت مباشرة
-            this.prefetchClinicVisitsForDashboard({ forceRefresh })
+            // 3 - تحديث الكارت عند اكتمال جلب سجل التردد (نفس الوعد — لا طلب شبكي مكرر)
+            clinicVisitsPrefetch
                 .then(() => _renderWidgetFromData(AppState.appData))
                 .catch(e => {
                     if (typeof Utils !== 'undefined' && Utils.safeWarn) Utils.safeWarn('dashboard clinic visits prefetch failed:', e);
@@ -741,47 +743,55 @@ const Dashboard = {
 
     /**
      * تحميل السجل الكامل لسجل التردد (موظفين + مقاولين) بأولوية في الخلفية — دون فتح مديول العيادة.
-     * يُحدّث عدّاد كارت لوحة التحكم مباشرة بعد وصول البيانات.
-     * - غير حاجب: يُستدعى بدون await من load()/loadReportsWidget.
+     * يُحدّث عدّاد كارت لوحة التحكم عبر loadReportsWidget بعد اكتمال الجلب.
+     * - يُرجع Promise واحداً مُ dedupe لمنع طلبات/تحديثات واجهة مكررة.
      * - يحترم الكاش عبر Clinic.shouldFetchClinicVisitsFromBackend (10 دقائق) إلا عند forceRefresh.
-     * - منع التكرار عبر علامة جلسة + _clinicVisitsLoadPromise داخل Clinic.
      */
-    async prefetchClinicVisitsForDashboard(opts = {}) {
+    prefetchClinicVisitsForDashboard(opts = {}) {
         const forceRefresh = opts && opts.forceRefresh === true;
-        try {
-            if (!AppState || !AppState.appData) return;
-            if (typeof this.dashboardCan === 'function' && !this.dashboardCan('clinic')) return;
-            if (typeof GoogleIntegration === 'undefined' || typeof GoogleIntegration.sendRequest !== 'function') return;
-            if (typeof GoogleIntegration._isBackendRpcConfigured === 'function' && !GoogleIntegration._isBackendRpcConfigured()) return;
-            if (typeof Clinic === 'undefined' || typeof Clinic.loadVisitsDataFromBackend !== 'function') return;
 
-            // تفادي إعادة الجلب داخل نفس الجلسة بعد نجاح أول جلب (إلا عند التحديث القسري)
-            if (!forceRefresh && this._clinicVisitsPrefetchedInSession === true && Clinic._visitsBackendFetchOk === true) {
-                return;
-            }
+        if (!AppState || !AppState.appData) return Promise.resolve();
+        if (typeof this.dashboardCan === 'function' && !this.dashboardCan('clinic')) return Promise.resolve();
+        if (typeof GoogleIntegration === 'undefined' || typeof GoogleIntegration.sendRequest !== 'function') return Promise.resolve();
+        if (typeof GoogleIntegration._isBackendRpcConfigured === 'function' && !GoogleIntegration._isBackendRpcConfigured()) return Promise.resolve();
+        if (typeof Clinic === 'undefined' || typeof Clinic.loadVisitsDataFromBackend !== 'function') return Promise.resolve();
 
-            // احترام الكاش: لا نجلب إن كانت البيانات حديثة بما يكفي
-            if (!forceRefresh
-                && typeof Clinic.shouldFetchClinicVisitsFromBackend === 'function'
-                && !Clinic.shouldFetchClinicVisitsFromBackend({ forceRefresh })) {
-                this._clinicVisitsPrefetchedInSession = true;
-                return;
-            }
-
-            await Clinic.loadVisitsDataFromBackend();
-            this._clinicVisitsPrefetchedInSession = true;
-
-            // تحديث عدّاد كارت العيادة فوراً بعد وصول السجل الكامل (موظفين + مقاولين)
-            try {
-                this.updateKPIs();
-                this.updateStats();
-                this.updateReportsStatistics();
-            } catch (_) { /* تجاهل */ }
-        } catch (e) {
-            if (typeof Utils !== 'undefined' && Utils.safeWarn) {
-                Utils.safeWarn('⚠️ تعذر تحميل سجل التردد الكامل للوحة التحكم:', e);
-            }
+        if (forceRefresh) {
+            this._clinicVisitsPrefetchedInSession = false;
+            this._clinicVisitsPrefetchPromise = null;
+            Clinic._clinicVisitsLoadPromise = null;
+            Clinic._visitsBackendFetchOk = false;
         }
+
+        if (!forceRefresh && this._clinicVisitsPrefetchedInSession === true) {
+            return Promise.resolve();
+        }
+
+        if (!forceRefresh
+            && typeof Clinic.shouldFetchClinicVisitsFromBackend === 'function'
+            && !Clinic.shouldFetchClinicVisitsFromBackend({ forceRefresh })) {
+            this._clinicVisitsPrefetchedInSession = true;
+            return Promise.resolve();
+        }
+
+        if (this._clinicVisitsPrefetchPromise) {
+            return this._clinicVisitsPrefetchPromise;
+        }
+
+        this._clinicVisitsPrefetchPromise = Clinic.loadVisitsDataFromBackend()
+            .then(() => {
+                this._clinicVisitsPrefetchedInSession = true;
+            })
+            .catch((e) => {
+                if (typeof Utils !== 'undefined' && Utils.safeWarn) {
+                    Utils.safeWarn('⚠️ تعذر تحميل سجل التردد الكامل للوحة التحكم:', e);
+                }
+            })
+            .finally(() => {
+                this._clinicVisitsPrefetchPromise = null;
+            });
+
+        return this._clinicVisitsPrefetchPromise;
     },
 
     /**
@@ -2134,8 +2144,8 @@ const Dashboard = {
                 const done = () => resolve(!!checkFn());
                 existing.addEventListener('load', done, { once: true });
                 setTimeout(done, 4000);
-                return;
-            }
+            return;
+        }
             const script = document.createElement('script');
             script.src = src;
             script.async = true;
@@ -2379,7 +2389,7 @@ const Dashboard = {
                     <table dir="rtl" style="width:100%;border-collapse:collapse;${ar}">
                         <thead><tr style="background:${accent};color:#FFFFFF;">${headers.map((h) => `<th dir="rtl" style="${thStyle(accent)}">${esc(h)}</th>`).join('')}</tr></thead>
                         <tbody>${rowsHtml}</tbody>
-                    </table>
+                </table>
                 </div>`;
         };
 
@@ -2676,7 +2686,7 @@ const Dashboard = {
             const fileName = `تقرير-موظف-${safeCode}-${new Date().toISOString().slice(0, 10)}.pdf`;
             const downloaded = await this._downloadHtmlReportAsPdf(htmlContent, fileName);
 
-            Loading.hide();
+                            Loading.hide();
             if (downloaded) {
                 Notification.success('تم تحميل تقرير الموظف بصيغة PDF بنجاح');
             } else {
@@ -2742,7 +2752,7 @@ const Dashboard = {
         const contractorCtx = typeof Contractors !== 'undefined' && typeof Contractors.buildContractorAnalyticsMatchers === 'function'
             ? Contractors.buildContractorAnalyticsMatchers(reportContractor, contractorLookupKey)
             : (typeof Utils !== 'undefined' && typeof Utils.buildContractorIdentityMatcher === 'function'
-                ? Utils.buildContractorIdentityMatcher(reportContractor, contractorLookupKey)
+            ? Utils.buildContractorIdentityMatcher(reportContractor, contractorLookupKey)
                 : null);
         const matchesContractor = contractorCtx ? contractorCtx.matchesContractor : (() => false);
         const violationBelongsToContractor = contractorCtx
@@ -3213,7 +3223,7 @@ const Dashboard = {
             const fileName = `تقرير-مقاول-${safeCode}-${new Date().toISOString().slice(0, 10)}.pdf`;
             const downloaded = await this._downloadHtmlReportAsPdf(htmlContent, fileName);
 
-            Loading.hide();
+                            Loading.hide();
             if (downloaded) {
                 Notification.success('تم تحميل تقرير المقاول بصيغة PDF بنجاح');
             } else {
