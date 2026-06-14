@@ -13105,6 +13105,7 @@ const Clinic = {
         );
 
         // سجل التردد: لا نعيد getAllClinicVisits إذا كان الـ prefetch (أو جلب سابق) قد حدّث الكاش للتو
+        // ملاحظة: نشاط المستخدم (getClinicStaffSystemActivities) لا يُجلب هنا — يُحمّل من تبويب الحضور فقط
         if (this.shouldFetchClinicVisitsFromBackend()) {
             promises.push(
                 requestWithTimeout(
@@ -13397,8 +13398,14 @@ const Clinic = {
 
     async loadClinicStaffActivities(force) {
         if (typeof GoogleIntegration === 'undefined' || !GoogleIntegration.sendRequest) return;
+        // لا نُحمّل النشاط إلا من تبويب الحضور — عزل كامل عن سجل التردد
+        if (this.state?.activeTab && this.state.activeTab !== 'attendance') return;
         const hasLocal = Array.isArray(AppState.appData?.clinicStaffSystemActivities) && AppState.appData.clinicStaffSystemActivities.length > 0;
         if (!force && hasLocal) return;
+        // أولوية لسجل التردد: لا نبدأ طلب النشاط أثناء جلب الزيارات
+        if (this._clinicVisitsLoadPromise) {
+            try { await this._clinicVisitsLoadPromise; } catch (_e) { /* ignore */ }
+        }
         try {
             const f = this.state.filters?.attendance || {};
             const payload = { limit: 300 };
