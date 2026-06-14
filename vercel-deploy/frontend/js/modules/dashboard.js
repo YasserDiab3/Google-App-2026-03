@@ -581,13 +581,7 @@ const Dashboard = {
         const container = document.getElementById('dashboard-reports-widget');
         if (!container) {
             try {
-                const prefetchClinic = this.dashboardCan('clinic')
-                    ? this.prefetchClinicVisitsForDashboard({ forceRefresh })
-                    : Promise.resolve();
-                await Promise.all([
-                    this.prefetchReportStatsSheetsForDashboard({ forceRefresh }),
-                    prefetchClinic
-                ]);
+                await this.prefetchReportStatsSheetsForDashboard({ forceRefresh });
                 this.updateKPIs();
                 this.updateStats();
             } catch (e) {
@@ -624,17 +618,12 @@ const Dashboard = {
             await _renderWidgetFromData(AppState.appData || {});
 
             // 2 - fetch fresh data from server in background (non-blocking)
-            const prefetchClinic = this.dashboardCan('clinic')
-                ? this.prefetchClinicVisitsForDashboard({ forceRefresh })
-                : Promise.resolve();
-
-            Promise.all([
-                this.prefetchReportStatsSheetsForDashboard({ forceRefresh }),
-                prefetchClinic
-            ]).then(() => _renderWidgetFromData(AppState.appData))
-              .catch(e => {
-                  if (typeof Utils !== 'undefined' && Utils.safeWarn) Utils.safeWarn('dashboard prefetch failed:', e);
-              });
+            // سجل التردد الكامل (getAllClinicVisits) لا يُجلب هنا — يُحمّل عند فتح مديول العيادة فقط
+            this.prefetchReportStatsSheetsForDashboard({ forceRefresh })
+                .then(() => _renderWidgetFromData(AppState.appData))
+                .catch(e => {
+                    if (typeof Utils !== 'undefined' && Utils.safeWarn) Utils.safeWarn('dashboard prefetch failed:', e);
+                });
 
         } catch (error) {
             Utils.safeError('dashboard load error:', error);
@@ -741,27 +730,11 @@ const Dashboard = {
     },
 
     /**
-     * جلب سجل التردد الكامل للوحة التحكم (لا يعتمد على فتح موديول العيادة)
-     * يطابق شروط تحديث تبويب الزيارات: بيانات ناقصة، انتهاء الكاش، أو عدم إكمال جلب الخادم بعد.
+     * @deprecated لا يُستدعى من لوحة التحكم — سجل التردد يُحمّل عند فتح مديول العيادة فقط.
+     * محفوظ للتوافق إن وُجد استدعاء يدوي مستقبلاً.
      */
-    async prefetchClinicVisitsForDashboard(opts = {}) {
-        const forceRefresh = opts && opts.forceRefresh === true;
-        try {
-            if (!AppState || !AppState.appData) return;
-            if (!this.dashboardCan('clinic')) return;
-            if (typeof Clinic === 'undefined' || typeof Clinic.loadVisitsDataFromBackend !== 'function') return;
-            if (typeof GoogleIntegration === 'undefined' || typeof GoogleIntegration.sendRequest !== 'function') return;
-
-            if (!forceRefresh && typeof Clinic.shouldFetchClinicVisitsFromBackend === 'function') {
-                if (!Clinic.shouldFetchClinicVisitsFromBackend()) return;
-            }
-
-            await Clinic.loadVisitsDataFromBackend();
-        } catch (e) {
-            if (typeof Utils !== 'undefined' && Utils.safeWarn) {
-                Utils.safeWarn('⚠️ تعذر جلب سجل التردد على العيادة للوحة التحكم:', e);
-            }
-        }
+    async prefetchClinicVisitsForDashboard(_opts = {}) {
+        return;
     },
 
     /**
