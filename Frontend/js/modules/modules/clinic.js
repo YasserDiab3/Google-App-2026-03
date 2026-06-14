@@ -5944,14 +5944,85 @@ const Clinic = {
 
     _prepareClinicAnalysisPdfHtmlContent(htmlContent) {
         const overrideStyle = `
+            <link rel="preconnect" href="https://fonts.googleapis.com">
+            <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+            <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
             <style id="clinic-analysis-pdf-export-overrides">
                 @page { size: A4 portrait !important; margin: 6mm !important; }
-                html, body { min-height: auto !important; height: auto !important; background: #ffffff !important; }
-                body { display: block !important; line-height: 1.35 !important; margin: 0 !important; padding: 0 !important; }
-                .report-wrapper { min-height: auto !important; height: auto !important; display: block !important; box-shadow: none !important; border-radius: 0 !important; padding: 10px !important; }
+                html, body {
+                    min-height: auto !important;
+                    height: auto !important;
+                    background: #ffffff !important;
+                    font-family: 'Cairo', 'Tahoma', 'Segoe UI', sans-serif !important;
+                }
+                body { display: block !important; line-height: 1.45 !important; margin: 0 !important; padding: 0 !important; }
+                .report-wrapper {
+                    min-height: auto !important;
+                    height: auto !important;
+                    display: block !important;
+                    box-shadow: none !important;
+                    border-radius: 0 !important;
+                    padding: 12px 14px !important;
+                    width: 794px !important;
+                    max-width: 794px !important;
+                    box-sizing: border-box !important;
+                }
+                .report-header, .report-body, .report-footer,
+                .company-brand, .header-info, .footer-bottom, .footer-meta-item, .footer-bottom-text {
+                    font-family: 'Cairo', 'Tahoma', 'Segoe UI', sans-serif !important;
+                }
                 .report-body { flex: none !important; min-height: auto !important; }
-                .report-footer { margin-top: 10px !important; padding-top: 4px !important; page-break-inside: avoid !important; break-inside: avoid !important; }
-                .clinic-analysis-pdf-image { width: 100%; max-width: 100%; height: auto; display: block; border-radius: 8px; }
+                .report-footer {
+                    margin-top: 12px !important;
+                    padding-top: 6px !important;
+                    page-break-inside: avoid !important;
+                    break-inside: avoid !important;
+                }
+                .footer-meta-line {
+                    display: flex !important;
+                    flex-direction: column !important;
+                    align-items: stretch !important;
+                    gap: 6px !important;
+                    grid-template-columns: 1fr !important;
+                }
+                .footer-meta-item {
+                    justify-content: center !important;
+                    text-align: center !important;
+                    white-space: normal !important;
+                    word-break: normal !important;
+                    overflow-wrap: normal !important;
+                    direction: rtl !important;
+                    unicode-bidi: plaintext !important;
+                    line-height: 1.65 !important;
+                    font-size: 12px !important;
+                }
+                .footer-bottom-text {
+                    display: flex !important;
+                    flex-direction: column !important;
+                    align-items: center !important;
+                    gap: 4px !important;
+                    width: 100% !important;
+                    text-align: center !important;
+                }
+                .footer-bottom-text span {
+                    display: block !important;
+                    width: 100% !important;
+                    text-align: center !important;
+                    direction: rtl !important;
+                    unicode-bidi: plaintext !important;
+                    word-break: normal !important;
+                    overflow-wrap: normal !important;
+                    line-height: 1.65 !important;
+                    font-size: 12px !important;
+                }
+                .clinic-analysis-pdf-image {
+                    width: 100%;
+                    max-width: 100%;
+                    height: auto;
+                    display: block;
+                    border-radius: 8px;
+                    image-rendering: -webkit-optimize-contrast;
+                }
             </style>
         `;
         if (typeof htmlContent !== 'string') return '';
@@ -5985,6 +6056,51 @@ const Clinic = {
         return !!(Utils.PdfExport && Utils.PdfExport.getJsPdfConstructor());
     },
 
+    async _clinicCaptureElementCanvas_(element, scale) {
+        if (!element || typeof html2canvas === 'undefined') return null;
+        return html2canvas(element, {
+            scale: scale || 2,
+            useCORS: true,
+            allowTaint: false,
+            backgroundColor: '#ffffff',
+            scrollX: 0,
+            scrollY: 0,
+            logging: false,
+            imageTimeout: 20000,
+            letterRendering: true
+        });
+    },
+
+    async _clinicWaitForPdfContainerReady_(container) {
+        if (!container) return;
+        try {
+            if (document.fonts && document.fonts.ready) {
+                await Promise.race([
+                    document.fonts.ready,
+                    new Promise(r => setTimeout(r, 2500))
+                ]);
+            } else {
+                await new Promise(r => setTimeout(r, 900));
+            }
+        } catch (_e) { /* ignore */ }
+        await Promise.all(Array.from(container.querySelectorAll('img')).map(img => (
+            img.complete ? Promise.resolve() : new Promise(res => { img.onload = img.onerror = res; })
+        )));
+        await new Promise(r => setTimeout(r, 350));
+    },
+
+    _clinicCanvasToPdfImage_(canvas, budgetBytes, preferPng) {
+        if (!canvas) return { dataUrl: '', format: 'JPEG', mmHeight: 0 };
+        if (preferPng) {
+            try {
+                const dataUrl = canvas.toDataURL('image/png');
+                return { dataUrl, format: 'PNG', mmHeight: 0 };
+            } catch (_e) { /* fallback jpeg */ }
+        }
+        const budget = Math.max(350000, Number(budgetBytes) || 600000);
+        return Utils.PdfExport.compressCanvasToJpegDataUrl(canvas, budget);
+    },
+
     async _clinicExportFormHeaderHtmlToPdf(htmlContent, fileName) {
         const JsPDF = Utils.PdfExport.getJsPdfConstructor();
         if (!JsPDF || typeof html2canvas === 'undefined') return false;
@@ -5992,74 +6108,66 @@ const Clinic = {
         let container = null;
         try {
             const doc = new JsPDF('p', 'mm', 'a4', { compress: true });
+            const captureScale = 2.25;
+
             container = document.createElement('div');
-            container.style.cssText = 'position:fixed;left:-100000px;top:0;width:794px;background:#fff;direction:rtl;font-family:Tahoma,Arial,sans-serif;';
+            container.style.cssText = 'position:fixed;left:-120000px;top:0;width:794px;background:#fff;direction:rtl;font-family:Cairo,Tahoma,Arial,sans-serif;';
             container.innerHTML = htmlContent;
             document.body.appendChild(container);
 
-            await new Promise(r => setTimeout(r, 500));
-            await Promise.all(Array.from(container.querySelectorAll('img')).map(img => (
-                img.complete ? Promise.resolve() : new Promise(res => { img.onload = img.onerror = res; })
-            )));
+            await this._clinicWaitForPdfContainerReady_(container);
 
-            const canvas = await html2canvas(container, {
-                scale: Utils.PdfExport.getOptimalCaptureScale(container.scrollWidth, container.scrollHeight, Utils.PdfExport.DEFAULT_CAPTURE_SCALE),
-                useCORS: true,
-                allowTaint: false,
-                backgroundColor: '#ffffff',
-                scrollX: 0,
-                scrollY: 0,
-                logging: false,
-                imageTimeout: 15000,
-                windowWidth: container.scrollWidth,
-                windowHeight: container.scrollHeight
-            });
+            const headerEl = container.querySelector('.report-header');
+            const bodyEl = container.querySelector('.report-body');
+            const footerEl = container.querySelector('.report-footer');
+            if (!bodyEl) return false;
+
+            const [headerCanvas, bodyCanvas, footerCanvas] = await Promise.all([
+                headerEl ? this._clinicCaptureElementCanvas_(headerEl, captureScale) : Promise.resolve(null),
+                this._clinicCaptureElementCanvas_(bodyEl, captureScale),
+                footerEl ? this._clinicCaptureElementCanvas_(footerEl, captureScale) : Promise.resolve(null)
+            ]);
+            if (!bodyCanvas) return false;
 
             const pageWidth = doc.internal.pageSize.getWidth();
             const pageHeight = doc.internal.pageSize.getHeight();
-            const margin = 5;
+            const margin = 6;
             const usableWidth = pageWidth - margin * 2;
             const usableHeight = pageHeight - margin * 2;
-            const pxPerMm = canvas.width / usableWidth;
 
-            const headerEl = container.querySelector('.report-header');
-            const footerEl = container.querySelector('.report-footer');
-            const renderScale = canvas.width / Math.max(1, container.getBoundingClientRect().width);
-            const headerPx = headerEl ? Math.max(0, Math.round(headerEl.getBoundingClientRect().height * renderScale)) : 0;
-            const footerPx = footerEl ? Math.max(0, Math.round(footerEl.getBoundingClientRect().height * renderScale)) : 0;
-            const headerMm = headerPx > 0 ? (headerPx / pxPerMm) : 0;
-            const footerMm = footerPx > 0 ? (footerPx / pxPerMm) : 0;
-            const bodyMmPerPage = Math.max(10, usableHeight - headerMm - footerMm);
-            const bodyPxPerPage = Math.max(1, Math.floor(bodyMmPerPage * pxPerMm));
-            const contentStartPx = headerPx;
-            const contentEndPx = Math.max(contentStartPx, canvas.height - footerPx);
-            const contentHeightPx = Math.max(1, contentEndPx - contentStartPx);
-            const totalPages = Math.max(1, Math.ceil(contentHeightPx / bodyPxPerPage));
+            const canvasWidthPx = bodyCanvas.width;
+            const pxPerMm = canvasWidthPx / usableWidth;
 
-            const sliceToImage = (yPx, hPx) => {
-                if (hPx <= 0) return { dataUrl: '', format: 'JPEG' };
-                const temp = Utils.PdfExport.createSliceCanvas(canvas, yPx, hPx);
-                const budget = Math.floor(Utils.PdfExport.TARGET_MAX_BYTES / Math.max(1, totalPages * 3));
-                return Utils.PdfExport.compressCanvasToJpegDataUrl(temp, budget);
-            };
+            const headerMm = headerCanvas ? (headerCanvas.height / pxPerMm) : 0;
+            const footerMm = footerCanvas ? (footerCanvas.height / pxPerMm) : 0;
+            const bodyAreaMm = Math.max(20, usableHeight - headerMm - footerMm);
+            const bodyPxPerPage = Math.max(1, Math.floor(bodyAreaMm * pxPerMm));
+            const totalPages = Math.max(1, Math.ceil(bodyCanvas.height / bodyPxPerPage));
 
-            const headerSlice = headerPx > 0 ? sliceToImage(0, headerPx) : { dataUrl: '', format: 'JPEG' };
-            const footerSlice = footerPx > 0 ? sliceToImage(canvas.height - footerPx, footerPx) : { dataUrl: '', format: 'JPEG' };
+            const headerImg = this._clinicCanvasToPdfImage_(headerCanvas, 900000, true);
+            const footerImg = this._clinicCanvasToPdfImage_(footerCanvas, 900000, true);
+            const bodyBudgetPerPage = Math.floor(Utils.PdfExport.TARGET_MAX_BYTES * 0.55 / Math.max(1, totalPages));
 
             for (let pageIndex = 0; pageIndex < totalPages; pageIndex++) {
                 if (pageIndex > 0) doc.addPage();
+
                 let cursorY = margin;
-                if (headerSlice.dataUrl) {
-                    doc.addImage(headerSlice.dataUrl, headerSlice.format, margin, cursorY, usableWidth, headerMm, undefined, 'FAST');
+
+                if (headerImg.dataUrl) {
+                    doc.addImage(headerImg.dataUrl, headerImg.format, margin, cursorY, usableWidth, headerMm, undefined, 'SLOW');
                     cursorY += headerMm;
                 }
-                const bodyStartPx = contentStartPx + pageIndex * bodyPxPerPage;
-                const bodyHeightPx = Math.max(1, Math.min(bodyPxPerPage, contentEndPx - bodyStartPx));
-                const bodySlice = sliceToImage(bodyStartPx, bodyHeightPx);
+
+                const bodyStartPx = pageIndex * bodyPxPerPage;
+                const bodyHeightPx = Math.min(bodyPxPerPage, bodyCanvas.height - bodyStartPx);
+                const bodySlice = Utils.PdfExport.createSliceCanvas(bodyCanvas, bodyStartPx, bodyHeightPx);
+                const bodyImg = this._clinicCanvasToPdfImage_(bodySlice, bodyBudgetPerPage, false);
                 const bodyMm = bodyHeightPx / pxPerMm;
-                doc.addImage(bodySlice.dataUrl, bodySlice.format, margin, cursorY, usableWidth, bodyMm, undefined, 'FAST');
-                if (footerSlice.dataUrl) {
-                    doc.addImage(footerSlice.dataUrl, footerSlice.format, margin, margin + usableHeight - footerMm, usableWidth, footerMm, undefined, 'FAST');
+                doc.addImage(bodyImg.dataUrl, bodyImg.format, margin, cursorY, usableWidth, bodyMm, undefined, 'SLOW');
+
+                if (footerImg.dataUrl) {
+                    const footerY = margin + usableHeight - footerMm;
+                    doc.addImage(footerImg.dataUrl, footerImg.format, margin, footerY, usableWidth, footerMm, undefined, 'SLOW');
                 }
             }
 
@@ -6089,18 +6197,19 @@ const Clinic = {
             if (fv) fp.style.display = 'none';
 
             const dashCanvas = await html2canvas(root, {
-                scale: Utils.PdfExport.getOptimalCaptureScale(root.scrollWidth, root.scrollHeight, 1.6),
+                scale: 2.25,
                 useCORS: true,
                 backgroundColor: '#f8fafc',
                 scrollX: 0,
                 scrollY: -window.scrollY,
-                logging: false
+                logging: false,
+                letterRendering: true
             });
             if (fv) fp.style.display = '';
 
-            const { dataUrl: dashImg } = Utils.PdfExport.compressCanvasToJpegDataUrl(
+            const { dataUrl: dashImg, format: dashFmt } = Utils.PdfExport.compressCanvasToJpegDataUrl(
                 dashCanvas,
-                Math.floor(Utils.PdfExport.TARGET_MAX_BYTES * 0.45)
+                Math.floor(Utils.PdfExport.TARGET_MAX_BYTES * 0.7)
             );
             const exportDateTime = typeof Utils.formatDateTime === 'function'
                 ? Utils.formatDateTime(new Date())
