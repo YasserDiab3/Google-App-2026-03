@@ -5948,41 +5948,137 @@ const Clinic = {
         if (!root) return;
         const btn = document.getElementById('clinic-export-pdf-btn');
         const orig = btn ? btn.innerHTML : '';
-        if (btn) { btn.disabled=true; btn.innerHTML='<i class="fas fa-spinner fa-spin"></i>'; }
+        if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>'; }
         try {
-            const loadLib=(src,check)=>new Promise((res,rej)=>{
-                if(check()) return res();
-                const s=document.createElement('script'); s.src=src; s.onload=()=>res(); s.onerror=()=>rej(); document.head.appendChild(s);
+            const loadLib = (src, check) => new Promise((res, rej) => {
+                if (check()) return res();
+                const s = document.createElement('script');
+                s.src = src;
+                s.onload = () => res();
+                s.onerror = () => rej(new Error('Failed: ' + src));
+                document.head.appendChild(s);
             });
-            await loadLib('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js',()=>typeof html2canvas!=='undefined');
-            await loadLib('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js',()=>typeof window.jspdf!=='undefined');
-            const fp=document.getElementById('clinic-filter-panel'), fv=fp&&fp.style.display!=='none';
-            if(fv) fp.style.display='none';
-            const cvs=await html2canvas(root,{scale:1.8,useCORS:true,backgroundColor:'#f8fafc',scrollX:0,scrollY:-window.scrollY,logging:false});
-            if(fv) fp.style.display='';
-            const {jsPDF}=window.jspdf, pdf=new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
-            const pW=pdf.internal.pageSize.getWidth(), pH=pdf.internal.pageSize.getHeight(), mg=10;
-            const cW=pW-mg*2, ratio=cW/cvs.width, pgH=pH-14-mg, pgPx=pgH/ratio;
-            const total=Math.ceil(cvs.height/pgPx);
-            for(let p=0;p<total;p++){
-                if(p>0) pdf.addPage();
-                pdf.setFillColor(19,78,74); pdf.rect(0,0,pW,14,'F');
-                pdf.setTextColor(255,255,255); pdf.setFontSize(9);
-                pdf.text('Clinic Medical Analysis Report',mg,9,{align:'left'});
-                pdf.text(`${new Date().toLocaleDateString('ar-SA')}  |  ${p+1}/${total}`,pW-mg,9,{align:'right'});
-                pdf.setTextColor(0,0,0);
-                const sc=document.createElement('canvas'), sH=Math.min(pgPx,cvs.height-p*pgPx);
-                sc.width=cvs.width; sc.height=sH;
-                sc.getContext('2d').drawImage(cvs,0,p*pgPx,cvs.width,sH,0,0,cvs.width,sH);
-                pdf.addImage(sc.toDataURL('image/jpeg',0.90),'JPEG',mg,14,cW,sH*ratio);
+            await loadLib('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js', () => typeof html2canvas !== 'undefined');
+            await loadLib('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js', () => typeof window.jspdf !== 'undefined');
+
+            const fp = document.getElementById('clinic-filter-panel');
+            const fv = fp && fp.style.display !== 'none';
+            if (fv) fp.style.display = 'none';
+            const cvs = await html2canvas(root, {
+                scale: 1.8,
+                useCORS: true,
+                backgroundColor: '#f8fafc',
+                scrollX: 0,
+                scrollY: -window.scrollY,
+                logging: false
+            });
+            if (fv) fp.style.display = '';
+
+            const { jsPDF } = window.jspdf;
+            const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+            const pdfW = pdf.internal.pageSize.getWidth();
+            const pdfH = pdf.internal.pageSize.getHeight();
+            const margin = 10;
+            const headerH = 22;
+            const footerH = 14;
+            const contentW = pdfW - margin * 2;
+            const contentAreaH = pdfH - headerH - footerH - margin * 0.5;
+            const ratio = contentW / cvs.width;
+            const pageHeightPx = contentAreaH / ratio;
+            const total = Math.ceil(cvs.height / pageHeightPx);
+
+            const companyName = String(AppState?.companySettings?.name || 'HSE Management System').trim();
+            const enDate = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+            const enTime = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+            const generatedBy = String(AppState?.currentUser?.name || AppState?.currentUser?.email || '').trim();
+
+            for (let p = 0; p < total; p++) {
+                if (p > 0) pdf.addPage();
+
+                // ── Header ──
+                pdf.setFillColor(19, 78, 74);
+                pdf.rect(0, 0, pdfW, headerH, 'F');
+                pdf.setFillColor(13, 148, 136);
+                pdf.rect(0, headerH - 3, pdfW, 3, 'F');
+                pdf.setTextColor(255, 255, 255);
+                pdf.setFontSize(13);
+                pdf.setFont(undefined, 'bold');
+                pdf.text('Clinic Medical Analysis Report', margin, 10, { align: 'left' });
+                pdf.setFontSize(8);
+                pdf.setFont(undefined, 'normal');
+                pdf.text(`${companyName} — Clinic Medical Analysis Dashboard`, margin, 16, { align: 'left' });
+                pdf.setFontSize(7.5);
+                pdf.text('تقرير تحليل البيانات الطبية للعيادة', margin, 20.5, { align: 'left' });
+                pdf.setFontSize(8.5);
+                pdf.text(`${enDate}  ${enTime}`, pdfW - margin, 10, { align: 'right' });
+                pdf.setFontSize(9);
+                pdf.setFont(undefined, 'bold');
+                pdf.text(`Page ${p + 1} of ${total}`, pdfW - margin, 16, { align: 'right' });
+                if (generatedBy) {
+                    pdf.setFontSize(7);
+                    pdf.setFont(undefined, 'normal');
+                    pdf.text(generatedBy.slice(0, 48), pdfW - margin, 20.5, { align: 'right' });
+                }
+                pdf.setTextColor(0, 0, 0);
+
+                // ── Content ──
+                const sc = document.createElement('canvas');
+                const sH = Math.min(pageHeightPx, cvs.height - p * pageHeightPx);
+                sc.width = cvs.width;
+                sc.height = sH;
+                sc.getContext('2d').drawImage(cvs, 0, p * pageHeightPx, cvs.width, sH, 0, 0, cvs.width, sH);
+
+                let sliceData;
+                let sliceFmt = 'JPEG';
+                if (typeof Utils !== 'undefined' && Utils.PdfExport && Utils.PdfExport.compressCanvasToJpegDataUrl) {
+                    const compressed = Utils.PdfExport.compressCanvasToJpegDataUrl(
+                        sc,
+                        Math.floor(Utils.PdfExport.TARGET_MAX_BYTES / Math.max(1, total))
+                    );
+                    sliceData = compressed.dataUrl;
+                    sliceFmt = compressed.format || 'JPEG';
+                } else {
+                    sliceData = sc.toDataURL('image/jpeg', 0.90);
+                }
+                pdf.addImage(sliceData, sliceFmt, margin, headerH, contentW, sH * ratio);
+
+                // ── Footer ──
+                const footerY = pdfH - footerH;
+                pdf.setDrawColor(153, 246, 228);
+                pdf.setLineWidth(0.4);
+                pdf.line(0, footerY, pdfW, footerY);
+                pdf.setFillColor(240, 253, 250);
+                pdf.rect(0, footerY, pdfW, footerH, 'F');
+                pdf.setFontSize(7.5);
+                pdf.setTextColor(19, 78, 74);
+                pdf.setFont(undefined, 'bold');
+                pdf.text(companyName, margin, footerY + 5, { align: 'left' });
+                pdf.setFont(undefined, 'normal');
+                pdf.setFontSize(6.5);
+                pdf.setTextColor(100, 116, 139);
+                pdf.text('Clinic Medical Analysis Report — Confidential | Internal Use Only', margin, footerY + 10, { align: 'left' });
+                pdf.setFontSize(8);
+                pdf.setTextColor(13, 148, 136);
+                pdf.setFont(undefined, 'bold');
+                pdf.text(`${p + 1} / ${total}`, pdfW / 2, footerY + 7.5, { align: 'center' });
+                pdf.setFont(undefined, 'normal');
+                pdf.setFontSize(7);
+                pdf.setTextColor(100, 116, 139);
+                pdf.text(enDate, pdfW - margin, footerY + 5, { align: 'right' });
+                pdf.text(enTime, pdfW - margin, footerY + 10, { align: 'right' });
             }
-            pdf.save(`تقرير-العيادة-${new Date().toISOString().slice(0,10)}.pdf`);
-            if(typeof Notification!=='undefined'&&Notification.success) Notification.success('تم تصدير تقرير العيادة PDF بنجاح');
-        } catch(err) {
-            console.error('Clinic PDF error:',err);
-            if(typeof Notification!=='undefined'&&Notification.error) Notification.error('تعذّر تصدير PDF');
+
+            pdf.save(`Clinic-Medical-Analysis-Report-${new Date().toISOString().slice(0, 10)}.pdf`);
+            if (typeof Notification !== 'undefined' && Notification.success) {
+                Notification.success('تم تصدير تقرير العيادة PDF بنجاح');
+            }
+        } catch (err) {
+            console.error('Clinic PDF error:', err);
+            if (typeof Notification !== 'undefined' && Notification.error) {
+                Notification.error('تعذّر تصدير PDF');
+            }
         } finally {
-            if(btn){ btn.disabled=false; btn.innerHTML=orig; }
+            if (btn) { btn.disabled = false; btn.innerHTML = orig; }
         }
     },
 
