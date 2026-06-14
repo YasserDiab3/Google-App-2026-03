@@ -5942,6 +5942,137 @@ const Clinic = {
         });
     },
 
+    _prepareClinicAnalysisPdfHtmlContent(htmlContent) {
+        const overrideStyle = `
+            <style id="clinic-analysis-pdf-export-overrides">
+                @page { size: A4 portrait !important; margin: 6mm !important; }
+                html, body { min-height: auto !important; height: auto !important; background: #ffffff !important; }
+                body { display: block !important; line-height: 1.35 !important; margin: 0 !important; padding: 0 !important; }
+                .report-wrapper { min-height: auto !important; height: auto !important; display: block !important; box-shadow: none !important; border-radius: 0 !important; padding: 10px !important; }
+                .report-body { flex: none !important; min-height: auto !important; }
+                .report-footer { margin-top: 10px !important; padding-top: 4px !important; page-break-inside: avoid !important; break-inside: avoid !important; }
+                .clinic-analysis-pdf-image { width: 100%; max-width: 100%; height: auto; display: block; border-radius: 8px; }
+            </style>
+        `;
+        if (typeof htmlContent !== 'string') return '';
+        if (htmlContent.includes('</head>')) {
+            return htmlContent.replace('</head>', overrideStyle + '</head>');
+        }
+        return overrideStyle + htmlContent;
+    },
+
+    async _clinicEnsureHtml2CanvasForPdf_() {
+        if (typeof html2canvas !== 'undefined') return true;
+        await new Promise((resolve, reject) => {
+            const s = document.createElement('script');
+            s.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';
+            s.onload = () => resolve();
+            s.onerror = () => reject(new Error('html2canvas'));
+            document.head.appendChild(s);
+        });
+        return typeof html2canvas !== 'undefined';
+    },
+
+    async _clinicEnsureJsPdfForExport_() {
+        if (Utils.PdfExport && Utils.PdfExport.getJsPdfConstructor()) return true;
+        await new Promise((resolve, reject) => {
+            const s = document.createElement('script');
+            s.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
+            s.onload = () => resolve();
+            s.onerror = () => reject(new Error('jspdf'));
+            document.head.appendChild(s);
+        });
+        return !!(Utils.PdfExport && Utils.PdfExport.getJsPdfConstructor());
+    },
+
+    async _clinicExportFormHeaderHtmlToPdf(htmlContent, fileName) {
+        const JsPDF = Utils.PdfExport.getJsPdfConstructor();
+        if (!JsPDF || typeof html2canvas === 'undefined') return false;
+
+        let container = null;
+        try {
+            const doc = new JsPDF('p', 'mm', 'a4', { compress: true });
+            container = document.createElement('div');
+            container.style.cssText = 'position:fixed;left:-100000px;top:0;width:794px;background:#fff;direction:rtl;font-family:Tahoma,Arial,sans-serif;';
+            container.innerHTML = htmlContent;
+            document.body.appendChild(container);
+
+            await new Promise(r => setTimeout(r, 500));
+            await Promise.all(Array.from(container.querySelectorAll('img')).map(img => (
+                img.complete ? Promise.resolve() : new Promise(res => { img.onload = img.onerror = res; })
+            )));
+
+            const canvas = await html2canvas(container, {
+                scale: Utils.PdfExport.getOptimalCaptureScale(container.scrollWidth, container.scrollHeight, Utils.PdfExport.DEFAULT_CAPTURE_SCALE),
+                useCORS: true,
+                allowTaint: false,
+                backgroundColor: '#ffffff',
+                scrollX: 0,
+                scrollY: 0,
+                logging: false,
+                imageTimeout: 15000,
+                windowWidth: container.scrollWidth,
+                windowHeight: container.scrollHeight
+            });
+
+            const pageWidth = doc.internal.pageSize.getWidth();
+            const pageHeight = doc.internal.pageSize.getHeight();
+            const margin = 5;
+            const usableWidth = pageWidth - margin * 2;
+            const usableHeight = pageHeight - margin * 2;
+            const pxPerMm = canvas.width / usableWidth;
+
+            const headerEl = container.querySelector('.report-header');
+            const footerEl = container.querySelector('.report-footer');
+            const renderScale = canvas.width / Math.max(1, container.getBoundingClientRect().width);
+            const headerPx = headerEl ? Math.max(0, Math.round(headerEl.getBoundingClientRect().height * renderScale)) : 0;
+            const footerPx = footerEl ? Math.max(0, Math.round(footerEl.getBoundingClientRect().height * renderScale)) : 0;
+            const headerMm = headerPx > 0 ? (headerPx / pxPerMm) : 0;
+            const footerMm = footerPx > 0 ? (footerPx / pxPerMm) : 0;
+            const bodyMmPerPage = Math.max(10, usableHeight - headerMm - footerMm);
+            const bodyPxPerPage = Math.max(1, Math.floor(bodyMmPerPage * pxPerMm));
+            const contentStartPx = headerPx;
+            const contentEndPx = Math.max(contentStartPx, canvas.height - footerPx);
+            const contentHeightPx = Math.max(1, contentEndPx - contentStartPx);
+            const totalPages = Math.max(1, Math.ceil(contentHeightPx / bodyPxPerPage));
+
+            const sliceToImage = (yPx, hPx) => {
+                if (hPx <= 0) return { dataUrl: '', format: 'JPEG' };
+                const temp = Utils.PdfExport.createSliceCanvas(canvas, yPx, hPx);
+                const budget = Math.floor(Utils.PdfExport.TARGET_MAX_BYTES / Math.max(1, totalPages * 3));
+                return Utils.PdfExport.compressCanvasToJpegDataUrl(temp, budget);
+            };
+
+            const headerSlice = headerPx > 0 ? sliceToImage(0, headerPx) : { dataUrl: '', format: 'JPEG' };
+            const footerSlice = footerPx > 0 ? sliceToImage(canvas.height - footerPx, footerPx) : { dataUrl: '', format: 'JPEG' };
+
+            for (let pageIndex = 0; pageIndex < totalPages; pageIndex++) {
+                if (pageIndex > 0) doc.addPage();
+                let cursorY = margin;
+                if (headerSlice.dataUrl) {
+                    doc.addImage(headerSlice.dataUrl, headerSlice.format, margin, cursorY, usableWidth, headerMm, undefined, 'FAST');
+                    cursorY += headerMm;
+                }
+                const bodyStartPx = contentStartPx + pageIndex * bodyPxPerPage;
+                const bodyHeightPx = Math.max(1, Math.min(bodyPxPerPage, contentEndPx - bodyStartPx));
+                const bodySlice = sliceToImage(bodyStartPx, bodyHeightPx);
+                const bodyMm = bodyHeightPx / pxPerMm;
+                doc.addImage(bodySlice.dataUrl, bodySlice.format, margin, cursorY, usableWidth, bodyMm, undefined, 'FAST');
+                if (footerSlice.dataUrl) {
+                    doc.addImage(footerSlice.dataUrl, footerSlice.format, margin, margin + usableHeight - footerMm, usableWidth, footerMm, undefined, 'FAST');
+                }
+            }
+
+            Utils.PdfExport.savePdf(doc, fileName);
+            return true;
+        } catch (err) {
+            Utils.safeWarn('Clinic FormHeader PDF export failed:', err);
+            return false;
+        } finally {
+            if (container && container.parentNode) container.remove();
+        }
+    },
+
     // ── تصدير PDF ──
     async _clinicExportPDF() {
         const root = document.getElementById('clinic-analytics-root');
@@ -5950,22 +6081,15 @@ const Clinic = {
         const orig = btn ? btn.innerHTML : '';
         if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>'; }
         try {
-            const loadLib = (src, check) => new Promise((res, rej) => {
-                if (check()) return res();
-                const s = document.createElement('script');
-                s.src = src;
-                s.onload = () => res();
-                s.onerror = () => rej(new Error('Failed: ' + src));
-                document.head.appendChild(s);
-            });
-            await loadLib('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js', () => typeof html2canvas !== 'undefined');
-            await loadLib('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js', () => typeof window.jspdf !== 'undefined');
+            await this._clinicEnsureHtml2CanvasForPdf_();
+            await this._clinicEnsureJsPdfForExport_();
 
             const fp = document.getElementById('clinic-filter-panel');
             const fv = fp && fp.style.display !== 'none';
             if (fv) fp.style.display = 'none';
-            const cvs = await html2canvas(root, {
-                scale: 1.8,
+
+            const dashCanvas = await html2canvas(root, {
+                scale: Utils.PdfExport.getOptimalCaptureScale(root.scrollWidth, root.scrollHeight, 1.6),
                 useCORS: true,
                 backgroundColor: '#f8fafc',
                 scrollX: 0,
@@ -5974,103 +6098,51 @@ const Clinic = {
             });
             if (fv) fp.style.display = '';
 
-            const { jsPDF } = window.jspdf;
-            const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-            const pdfW = pdf.internal.pageSize.getWidth();
-            const pdfH = pdf.internal.pageSize.getHeight();
-            const margin = 10;
-            const headerH = 22;
-            const footerH = 14;
-            const contentW = pdfW - margin * 2;
-            const contentAreaH = pdfH - headerH - footerH - margin * 0.5;
-            const ratio = contentW / cvs.width;
-            const pageHeightPx = contentAreaH / ratio;
-            const total = Math.ceil(cvs.height / pageHeightPx);
+            const { dataUrl: dashImg } = Utils.PdfExport.compressCanvasToJpegDataUrl(
+                dashCanvas,
+                Math.floor(Utils.PdfExport.TARGET_MAX_BYTES * 0.45)
+            );
+            const exportDateTime = typeof Utils.formatDateTime === 'function'
+                ? Utils.formatDateTime(new Date())
+                : new Date().toLocaleString('ar-EG');
+            const periodLabel = this._clinicPeriod === 'month' ? 'آخر 30 يوم'
+                : this._clinicPeriod === 'quarter' ? 'آخر 3 أشهر'
+                    : this._clinicPeriod === 'year' ? 'آخر سنة' : 'كل الفترات';
 
-            const companyName = String(AppState?.companySettings?.name || 'HSE Management System').trim();
-            const enDate = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
-            const enTime = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
-            const generatedBy = String(AppState?.currentUser?.name || AppState?.currentUser?.email || '').trim();
+            const content = `
+                <p style="text-align:center;color:#64748b;font-size:13px;margin:0 0 14px;">
+                    فترة التحليل: ${Utils.escapeHTML(periodLabel)} &nbsp;|&nbsp; ${Utils.escapeHTML(exportDateTime)}
+                </p>
+                <img class="clinic-analysis-pdf-image" src="${dashImg}" alt="Clinic Medical Analysis Dashboard">
+            `;
 
-            for (let p = 0; p < total; p++) {
-                if (p > 0) pdf.addPage();
+            const formCode = `CLINIC-MED-ANALYSIS-${new Date().toISOString().slice(0, 10)}`;
+            const formTitle = 'تقرير التحليل الطبي للعيادة';
+            const rawHtml = typeof FormHeader !== 'undefined' && typeof FormHeader.generatePDFHTML === 'function'
+                ? FormHeader.generatePDFHTML(
+                    formCode,
+                    formTitle,
+                    content,
+                    false,
+                    true,
+                    {
+                        source: 'ClinicMedicalAnalysis',
+                        titleEn: 'Clinic Medical Analysis Report',
+                        titleAr: 'تقرير التحليل الطبي للعيادة'
+                    },
+                    new Date().toISOString(),
+                    new Date().toISOString()
+                )
+                : `<html dir="rtl"><body>${content}</body></html>`;
 
-                // ── Header ──
-                pdf.setFillColor(19, 78, 74);
-                pdf.rect(0, 0, pdfW, headerH, 'F');
-                pdf.setFillColor(13, 148, 136);
-                pdf.rect(0, headerH - 3, pdfW, 3, 'F');
-                pdf.setTextColor(255, 255, 255);
-                pdf.setFontSize(13);
-                pdf.setFont(undefined, 'bold');
-                pdf.text('Clinic Medical Analysis Report', margin, 10, { align: 'left' });
-                pdf.setFontSize(8);
-                pdf.setFont(undefined, 'normal');
-                pdf.text(`${companyName} — Clinic Medical Analysis Dashboard`, margin, 16, { align: 'left' });
-                pdf.setFontSize(7.5);
-                pdf.text('تقرير تحليل البيانات الطبية للعيادة', margin, 20.5, { align: 'left' });
-                pdf.setFontSize(8.5);
-                pdf.text(`${enDate}  ${enTime}`, pdfW - margin, 10, { align: 'right' });
-                pdf.setFontSize(9);
-                pdf.setFont(undefined, 'bold');
-                pdf.text(`Page ${p + 1} of ${total}`, pdfW - margin, 16, { align: 'right' });
-                if (generatedBy) {
-                    pdf.setFontSize(7);
-                    pdf.setFont(undefined, 'normal');
-                    pdf.text(generatedBy.slice(0, 48), pdfW - margin, 20.5, { align: 'right' });
-                }
-                pdf.setTextColor(0, 0, 0);
+            const htmlContent = this._prepareClinicAnalysisPdfHtmlContent(rawHtml);
+            const fileName = `Clinic-Medical-Analysis-Report-${new Date().toISOString().slice(0, 10)}.pdf`;
+            const ok = await this._clinicExportFormHeaderHtmlToPdf(htmlContent, fileName);
 
-                // ── Content ──
-                const sc = document.createElement('canvas');
-                const sH = Math.min(pageHeightPx, cvs.height - p * pageHeightPx);
-                sc.width = cvs.width;
-                sc.height = sH;
-                sc.getContext('2d').drawImage(cvs, 0, p * pageHeightPx, cvs.width, sH, 0, 0, cvs.width, sH);
-
-                let sliceData;
-                let sliceFmt = 'JPEG';
-                if (typeof Utils !== 'undefined' && Utils.PdfExport && Utils.PdfExport.compressCanvasToJpegDataUrl) {
-                    const compressed = Utils.PdfExport.compressCanvasToJpegDataUrl(
-                        sc,
-                        Math.floor(Utils.PdfExport.TARGET_MAX_BYTES / Math.max(1, total))
-                    );
-                    sliceData = compressed.dataUrl;
-                    sliceFmt = compressed.format || 'JPEG';
-                } else {
-                    sliceData = sc.toDataURL('image/jpeg', 0.90);
-                }
-                pdf.addImage(sliceData, sliceFmt, margin, headerH, contentW, sH * ratio);
-
-                // ── Footer ──
-                const footerY = pdfH - footerH;
-                pdf.setDrawColor(153, 246, 228);
-                pdf.setLineWidth(0.4);
-                pdf.line(0, footerY, pdfW, footerY);
-                pdf.setFillColor(240, 253, 250);
-                pdf.rect(0, footerY, pdfW, footerH, 'F');
-                pdf.setFontSize(7.5);
-                pdf.setTextColor(19, 78, 74);
-                pdf.setFont(undefined, 'bold');
-                pdf.text(companyName, margin, footerY + 5, { align: 'left' });
-                pdf.setFont(undefined, 'normal');
-                pdf.setFontSize(6.5);
-                pdf.setTextColor(100, 116, 139);
-                pdf.text('Clinic Medical Analysis Report — Confidential | Internal Use Only', margin, footerY + 10, { align: 'left' });
-                pdf.setFontSize(8);
-                pdf.setTextColor(13, 148, 136);
-                pdf.setFont(undefined, 'bold');
-                pdf.text(`${p + 1} / ${total}`, pdfW / 2, footerY + 7.5, { align: 'center' });
-                pdf.setFont(undefined, 'normal');
-                pdf.setFontSize(7);
-                pdf.setTextColor(100, 116, 139);
-                pdf.text(enDate, pdfW - margin, footerY + 5, { align: 'right' });
-                pdf.text(enTime, pdfW - margin, footerY + 10, { align: 'right' });
-            }
-
-            pdf.save(`Clinic-Medical-Analysis-Report-${new Date().toISOString().slice(0, 10)}.pdf`);
-            if (typeof Notification !== 'undefined' && Notification.success) {
+            if (ok && typeof Notification !== 'undefined' && Notification.success) {
                 Notification.success('تم تصدير تقرير العيادة PDF بنجاح');
+            } else if (!ok && typeof Notification !== 'undefined' && Notification.error) {
+                Notification.error('تعذّر تصدير PDF');
             }
         } catch (err) {
             console.error('Clinic PDF error:', err);
