@@ -13088,6 +13088,13 @@ const Clinic = {
             // هذا يضمن عدم وجود واجهة فارغة حتى لو فشل تحميل البيانات
             this.renderUI();
 
+            // ✅ مسئولو العيادة: جلب clinicStaff مبكراً لإظهار تبويب الحضور (لا يُحمّل في syncDataFromServer)
+            if (this._userNeedsClinicStaffForAttendance() && !this.isActiveClinicStaffMember()) {
+                void this._ensureClinicStaffLoadedForAttendance()
+                    .then((ok) => { if (ok) this._refreshAttendanceTabNavAfterStaffLoad(); })
+                    .catch(() => { });
+            }
+
             // ✅ تحسين سرعة التحميل: عدم انتظار syncDataFromServer في الخلفية
             // التحميل ينتهي فوراً بعد عرض الواجهة؛ جلب البيانات يتم في الخلفية ثم تحديث الواجهة
             const shouldLoadData = isFirstLoad || !hasLocalData || cacheAge >= CACHE_DURATION;
@@ -13105,6 +13112,9 @@ const Clinic = {
                     if (this.state && this.state.activeTab === 'visits') {
                         // تشغيل الرسم الثقيل في frame مستقل لتقليل تحذيرات setTimeout الطويلة
                         this.scheduleVisitsTabRender(false, 0);
+                    }
+                    if (this.state?.activeTab === 'attendance' && this.canAccessAttendanceTab()) {
+                        this.scheduleAttendanceTabRender(0);
                     }
                     if (typeof Utils !== 'undefined' && Utils.safeLog && AppState.appData) {
                         const visitsCount = (AppState.appData.clinicVisits || []).length;
@@ -13606,6 +13616,52 @@ const Clinic = {
             if (!map.has(item.id)) map.set(item.id, item);
         });
         return Array.from(map.values()).sort((a, b) => new Date(b.timestamp || 0) - new Date(a.timestamp || 0));
+    },
+
+    _userNeedsClinicStaffForAttendance() {
+        if (this.isCurrentUserAdmin()) return false;
+        if (typeof Permissions === 'undefined' || typeof Permissions.hasDetailedPermission !== 'function') return false;
+        return Permissions.hasDetailedPermission('clinic', 'attendance');
+    },
+
+    /**
+     * جلب قائمة مسئولي العيادة فقط — لإظهار تبويب الحضور للمستخدمين المصرّح لهم
+     * (clinicStaff لا يُحمّل في syncDataFromServer لتفادي تعارض مع سجل التردد)
+     */
+    async _ensureClinicStaffLoadedForAttendance() {
+        if (this._clinicStaffPreloadPromise) return this._clinicStaffPreloadPromise;
+        this._clinicStaffPreloadPromise = (async () => {
+            try {
+                if (typeof GoogleIntegration === 'undefined' || !GoogleIntegration.sendRequest) return false;
+                const resp = await GoogleIntegration.sendRequest({ action: 'getAllClinicStaff', data: {} });
+                if (resp?.success && Array.isArray(resp.data)) {
+                    AppState.appData.clinicStaff = resp.data;
+                    this.ensureData();
+                    if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
+                        try { window.DataManager.save(); } catch (_e) { /* ignore */ }
+                    }
+                }
+                return this.canAccessAttendanceTab();
+            } catch (_e) {
+                return false;
+            } finally {
+                this._clinicStaffPreloadPromise = null;
+            }
+        })();
+        return this._clinicStaffPreloadPromise;
+    },
+
+    _refreshAttendanceTabNavAfterStaffLoad() {
+        const section = document.getElementById('clinic-section');
+        if (!section || !this.canAccessAttendanceTab()) return;
+        const hasBtn = section.querySelector('.clinic-tab-btn[data-tab="attendance"]');
+        if (!hasBtn) {
+            this.renderUI();
+            return;
+        }
+        if (this.state?.activeTab === 'attendance') {
+            this.scheduleAttendanceTabRender(0);
+        }
     },
 
     _scheduleAttendanceDataLoadIfNeeded(force) {
@@ -15501,17 +15557,14 @@ const Clinic = {
         const user = AppState.currentUser;
         if (!user) return false;
 
-        // المدير لديه صلاحيات كاملة
-        if (user.role === 'admin') return true;
+        if (this.isCurrentUserAdmin()) return true;
 
-        // التحقق من الصلاحيات التفصيلية
         if (typeof Permissions !== 'undefined') {
             if (!Permissions.hasDetailedPermission('clinic', tabName)) return false;
         }
 
-        // تبويب الحضور: مسئول عيادة نشط فقط (بالإضافة لصلاحية attendance)
         if (tabName === 'attendance') {
-            return this.isActiveClinicStaffMember();
+            return this.canAccessAttendanceTab();
         }
 
         return true;
@@ -15538,6 +15591,11 @@ const Clinic = {
         const injuriesCount = this.getInjuries().length;
         const visitsCount = (ad.clinicVisits || []).length;
         const isAdmin = this.isCurrentUserAdmin();
+
+        if (this.state.activeTab === 'attendance' && !this.canAccessAttendanceTab()) {
+            this.state.activeTab = this.hasTabAccess('visits') ? 'visits'
+                : (this.hasTabAccess('medications') ? 'medications' : 'visits');
+        }
 
         section.innerHTML = `
             <div class="section-header">
