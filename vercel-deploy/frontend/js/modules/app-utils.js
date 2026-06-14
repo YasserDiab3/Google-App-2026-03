@@ -2873,7 +2873,7 @@ const DEFAULT_COMPANY_NAME = '';
 
 const AppState = {
     /** إصدار التطبيق — تسلسلي: 1.0.0 → 1.0.1 → 1.0.2 … عند كل نشر زِد الرقم هنا وفي version.json */
-    appVersion: '1.0.193',
+    appVersion: '1.0.194',
     /** نص اختياري لرسالة التحديث (ملخص التغييرات). إن تُركت فارغة يُستخدم النص الافتراضي. */
     updateMessage: '',
     debugMode: false,
@@ -6277,7 +6277,7 @@ const PDFTemplates = {
             .replace(/<ul(?![^>]*class=)/g, '<ul class="report-list"');
 
         const isDailySafetyTemplate = String(meta?.source || '').trim() === 'DailySafetyCheckList';
-        const excludedMetaKeys = ['version', 'releaseDate', 'revisionDate', 'issueDate', 'includeQRCode', 'qrData', 'modifiedAt', 'titleEn', 'titleAr', 'footerLegendHtml', 'compactPdfFooter'];
+        const excludedMetaKeys = ['version', 'releaseDate', 'revisionDate', 'issueDate', 'includeQRCode', 'qrData', 'modifiedAt', 'titleEn', 'titleAr', 'footerLegendHtml', 'compactPdfFooter', 'headerLayoutLtr'];
         const metaRows = Object.entries(meta || {})
             .filter(([key, value]) => {
                 if (value === undefined || value === null || value === '') return false;
@@ -6308,6 +6308,7 @@ const PDFTemplates = {
         const shouldRenderQRCode = includeQRCode !== false && metaIncludeQRCode;
         const footerLegendHtml = (typeof meta?.footerLegendHtml === 'string' && meta.footerLegendHtml.trim()) ? meta.footerLegendHtml : '';
         const compactPdfFooter = !!meta?.compactPdfFooter;
+        const headerLayoutLtr = !!meta?.headerLayoutLtr;
         const qrPayloadRaw = qrData != null ? qrData
             : (meta && meta.qrData != null ? meta.qrData
                 : `Form: ${formCode || '-'} | Title: ${title || ''} | Company: ${companyNameRaw}`);
@@ -6364,6 +6365,12 @@ const PDFTemplates = {
             padding-bottom: 16px;
             margin-bottom: 20px;
             flex-shrink: 0;
+        }
+        .report-header.ltr-layout {
+            direction: ltr;
+        }
+        .report-header.ltr-layout .company-brand {
+            text-align: left;
         }
         .report-logo {
             display: flex;
@@ -7134,7 +7141,7 @@ const PDFTemplates = {
 </head>
 <body>
     <div class="report-wrapper${isDailySafetyTemplate ? ' dsc-report' : ''}${compactPdfFooter ? ' pdf-compact-footer' : ''}">
-        <div class="report-header">
+        <div class="report-header${headerLayoutLtr ? ' ltr-layout' : ''}">
             <div class="company-brand">
                 <div class="company-name-group">
                     <div class="company-name">${companyName}</div>
