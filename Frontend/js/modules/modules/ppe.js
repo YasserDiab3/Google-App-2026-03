@@ -6290,32 +6290,22 @@ const PPE = {
             `;
             root.insertBefore(header, root.firstChild);
 
-            const canvas = await html2canvas(root, { scale: 2, useCORS: true, backgroundColor: '#ffffff', logging: false });
+            const canvas = await html2canvas(root, {
+                scale: Utils.PdfExport.getOptimalCaptureScale(root.scrollWidth, root.scrollHeight, Utils.PdfExport.DEFAULT_CAPTURE_SCALE),
+                useCORS: true,
+                backgroundColor: '#ffffff',
+                logging: false
+            });
 
             // إزالة الهيدر المؤقت
             header.remove();
 
-            const { jsPDF } = window.jspdf;
-            const pdf = new jsPDF('p', 'mm', 'a4');
-            const pdfWidth = pdf.internal.pageSize.getWidth();
-            const pdfHeight = pdf.internal.pageSize.getHeight();
-            const imgWidth = pdfWidth;
-            const imgHeight = (canvas.height * imgWidth) / canvas.width;
-
-            // قص الصورة إذا كانت أطول من صفحة واحدة
-            let heightLeft = imgHeight, position = 0;
-            const imgData = canvas.toDataURL('image/png');
-            pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-            heightLeft -= pdfHeight;
-            while (heightLeft > 0) {
-                position = heightLeft - imgHeight;
-                pdf.addPage();
-                pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-                heightLeft -= pdfHeight;
-            }
+            const pdf = Utils.PdfExport.createPdf({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+            if (!pdf) throw new Error('jsPDF unavailable');
+            Utils.PdfExport.appendCanvasAsPdfPages(pdf, canvas, { marginMm: 0 });
 
             const ts = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
-            pdf.save(`PPE-Analytics-${ts}.pdf`);
+            Utils.PdfExport.savePdf(pdf, `PPE-Analytics-${ts}.pdf`);
             Loading.hide();
             Notification.success('تم تصدير تقرير التحليل بنجاح');
         } catch (error) {

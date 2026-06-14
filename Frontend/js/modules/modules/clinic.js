@@ -13713,7 +13713,7 @@ const Clinic = {
         const drawHmm = canvas.height * ratio;
         const offsetX = marginMm + (contentWmm - drawWmm) / 2;
         const offsetY = marginMm;
-        pdf.addImage(canvas.toDataURL('image/png'), 'PNG', offsetX, offsetY, drawWmm, drawHmm);
+        Utils.PdfExport.addCanvasToPdf(pdf, canvas, offsetX, offsetY, drawWmm, drawHmm);
     },
 
     _buildAttendanceReportFullHtml(filters, rows) {
@@ -13829,10 +13829,7 @@ const Clinic = {
         const a4W = this.ATTENDANCE_A4_WIDTH_PX || 794;
         const scrollW = Math.max(root?.scrollWidth || a4W, a4W);
         const scrollH = Math.max(root?.scrollHeight || 1, 1);
-        let scale = 2;
-        while (scale > 1 && (scrollW * scale > 14000 || scrollH * scale > 14000)) {
-            scale -= 0.25;
-        }
+        let scale = Utils.PdfExport.getOptimalCaptureScale(scrollW, scrollH, Utils.PdfExport.DEFAULT_CAPTURE_SCALE);
         const h2c = (iWin && typeof iWin.html2canvas === 'function') ? iWin.html2canvas : html2canvas;
         const baseOpts = {
             scale,
@@ -13922,37 +13919,10 @@ const Clinic = {
             const canvas = await this._captureAttendanceHtmlToCanvas_(root, iWin);
             if (!canvas) return false;
 
-            const pdf = new JsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-            const pdfW = pdf.internal.pageSize.getWidth();
-            const pdfH = pdf.internal.pageSize.getHeight();
-            const contentWmm = pdfW - marginMm * 2;
-            const contentHmm = pdfH - marginMm * 2;
-            const pxPerMm = canvas.width / contentWmm;
-            const pageHeightPx = Math.floor(contentHmm * pxPerMm);
-            const totalPages = Math.max(1, Math.ceil(canvas.height / pageHeightPx));
-
-            for (let p = 0; p < totalPages; p++) {
-                if (p > 0) pdf.addPage();
-                const sliceH = Math.min(pageHeightPx, canvas.height - p * pageHeightPx);
-                const sliceCanvas = document.createElement('canvas');
-                sliceCanvas.width = canvas.width;
-                sliceCanvas.height = sliceH;
-                sliceCanvas.getContext('2d').drawImage(
-                    canvas, 0, p * pageHeightPx, canvas.width, sliceH, 0, 0, canvas.width, sliceH
-                );
-                const sliceRatio = contentWmm / sliceCanvas.width;
-                const drawHmm = sliceCanvas.height * sliceRatio;
-                pdf.addImage(
-                    sliceCanvas.toDataURL('image/png'),
-                    'PNG',
-                    marginMm,
-                    marginMm,
-                    contentWmm,
-                    drawHmm
-                );
-            }
-
-            pdf.save(pdfFileName);
+            const pdf = Utils.PdfExport.createPdf({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+            if (!pdf) return false;
+            Utils.PdfExport.appendCanvasAsPdfPages(pdf, canvas, { marginMm });
+            Utils.PdfExport.savePdf(pdf, pdfFileName);
             return true;
         } catch (error) {
             Utils.safeWarn('فشل تحميل تقرير حضور PDF:', error);

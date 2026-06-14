@@ -3301,30 +3301,10 @@ const Violations = {
             const canvas = await this._captureHtmlToCanvas_(root);
             if (!canvas) return false;
 
-            const { jsPDF } = window.jspdf;
-            const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-            const pdfW = pdf.internal.pageSize.getWidth();
-            const pdfH = pdf.internal.pageSize.getHeight();
-            const margin = 8;
-            const contentW = pdfW - margin * 2;
-            const ratio = contentW / canvas.width;
-            const pageContentH = pdfH - margin * 2;
-            const pageHeightPx = pageContentH / ratio;
-            const totalPages = Math.max(1, Math.ceil(canvas.height / pageHeightPx));
-
-            for (let p = 0; p < totalPages; p++) {
-                if (p > 0) pdf.addPage();
-                const sliceH = Math.min(pageHeightPx, canvas.height - p * pageHeightPx);
-                const sliceCanvas = document.createElement('canvas');
-                sliceCanvas.width = canvas.width;
-                sliceCanvas.height = sliceH;
-                sliceCanvas.getContext('2d').drawImage(
-                    canvas, 0, p * pageHeightPx, canvas.width, sliceH, 0, 0, canvas.width, sliceH
-                );
-                pdf.addImage(sliceCanvas.toDataURL('image/png'), 'PNG', margin, margin, contentW, sliceH * ratio);
-            }
-
-            pdf.save(pdfFileName);
+            const pdf = Utils.PdfExport.createPdf({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+            if (!pdf) return false;
+            Utils.PdfExport.appendCanvasAsPdfPages(pdf, canvas, { marginMm: 8 });
+            Utils.PdfExport.savePdf(pdf, pdfFileName);
             return true;
         } catch (error) {
             Utils.safeWarn('فشل تحميل تقرير PDF:', error);

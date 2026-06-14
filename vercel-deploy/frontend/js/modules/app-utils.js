@@ -2873,7 +2873,7 @@ const DEFAULT_COMPANY_NAME = '';
 
 const AppState = {
     /** إصدار التطبيق — تسلسلي: 1.0.0 → 1.0.1 → 1.0.2 … عند كل نشر زِد الرقم هنا وفي version.json */
-    appVersion: '1.0.191',
+    appVersion: '1.0.192',
     /** نص اختياري لرسالة التحديث (ملخص التغييرات). إن تُركت فارغة يُستخدم النص الافتراضي. */
     updateMessage: '',
     debugMode: false,
@@ -4784,6 +4784,146 @@ const Utils = {
         async clearAttempts(email) {
             localStorage.removeItem(this.getAttemptsKey(email));
             localStorage.removeItem(this.getLockoutKey(email));
+        }
+    },
+
+    /**
+     * ضغط وتصدير PDF — حد مستهدف 3MB وأقصى 5MB
+     */
+    PdfExport: {
+        TARGET_MAX_BYTES: 3 * 1024 * 1024,
+        HARD_MAX_BYTES: 5 * 1024 * 1024,
+        DEFAULT_JPEG_QUALITY: 0.82,
+        MIN_JPEG_QUALITY: 0.42,
+        DEFAULT_CAPTURE_SCALE: 1.35,
+
+        formatBytes(bytes) {
+            const n = Number(bytes) || 0;
+            if (n >= 1024 * 1024) return `${(n / (1024 * 1024)).toFixed(1)} MB`;
+            if (n >= 1024) return `${Math.round(n / 1024)} KB`;
+            return `${n} B`;
+        },
+
+        estimateDataUrlBytes(dataUrl) {
+            if (!dataUrl || typeof dataUrl !== 'string') return 0;
+            const base64 = dataUrl.split(',')[1] || '';
+            return Math.floor(base64.length * 0.75);
+        },
+
+        canvasToJpegDataUrl(canvas, quality = this.DEFAULT_JPEG_QUALITY) {
+            try {
+                return canvas.toDataURL('image/jpeg', quality);
+            } catch (_e) {
+                return canvas.toDataURL('image/png');
+            }
+        },
+
+        compressCanvasToJpegDataUrl(canvas, maxBytesPerImage) {
+            let quality = this.DEFAULT_JPEG_QUALITY;
+            let dataUrl = this.canvasToJpegDataUrl(canvas, quality);
+            const budget = Math.max(120000, Number(maxBytesPerImage) || this.TARGET_MAX_BYTES);
+            while (quality > this.MIN_JPEG_QUALITY && this.estimateDataUrlBytes(dataUrl) > budget) {
+                quality = Math.max(this.MIN_JPEG_QUALITY, quality - 0.08);
+                dataUrl = this.canvasToJpegDataUrl(canvas, quality);
+            }
+            const format = String(dataUrl).startsWith('data:image/png') ? 'PNG' : 'JPEG';
+            return { dataUrl, format, quality };
+        },
+
+        getJsPdfConstructor() {
+            if (window.jspdf && window.jspdf.jsPDF) return window.jspdf.jsPDF;
+            if (window.jsPDF && window.jsPDF.jsPDF) return window.jsPDF.jsPDF;
+            if (typeof window.jsPDF === 'function') return window.jsPDF;
+            return null;
+        },
+
+        createPdf(options = {}) {
+            const JsPDF = this.getJsPdfConstructor();
+            if (!JsPDF) return null;
+            return new JsPDF({
+                orientation: options.orientation || 'portrait',
+                unit: options.unit || 'mm',
+                format: options.format || 'a4',
+                compress: true
+            });
+        },
+
+        getOptimalCaptureScale(contentWidthPx, contentHeightPx, preferredScale) {
+            let scale = Number(preferredScale) || this.DEFAULT_CAPTURE_SCALE;
+            const w = Math.max(1, Number(contentWidthPx) || 794);
+            const h = Math.max(1, Number(contentHeightPx) || 1);
+            while (scale > 1 && (w * scale > 8192 || h * scale > 12000)) {
+                scale -= 0.15;
+            }
+            return Math.max(1, Math.round(scale * 100) / 100);
+        },
+
+        createSliceCanvas(sourceCanvas, yPx, heightPx) {
+            const hPx = Math.max(1, Math.floor(heightPx));
+            const sliceCanvas = document.createElement('canvas');
+            sliceCanvas.width = sourceCanvas.width;
+            sliceCanvas.height = hPx;
+            const ctx = sliceCanvas.getContext('2d');
+            if (ctx) {
+                ctx.fillStyle = '#ffffff';
+                ctx.fillRect(0, 0, sliceCanvas.width, sliceCanvas.height);
+                ctx.drawImage(sourceCanvas, 0, yPx, sourceCanvas.width, hPx, 0, 0, sourceCanvas.width, hPx);
+            }
+            return sliceCanvas;
+        },
+
+        appendCanvasAsPdfPages(pdf, canvas, options = {}) {
+            if (!pdf || !canvas) return 0;
+            const marginMm = options.marginMm ?? 6;
+            const pdfW = pdf.internal.pageSize.getWidth();
+            const pdfH = pdf.internal.pageSize.getHeight();
+            const contentWmm = pdfW - marginMm * 2;
+            const contentHmm = pdfH - marginMm * 2;
+            const pxPerMm = canvas.width / contentWmm;
+            const pageHeightPx = Math.max(1, Math.floor(contentHmm * pxPerMm));
+            const totalPages = Math.max(1, Math.ceil(canvas.height / pageHeightPx));
+            const bytesPerPage = Math.floor(this.TARGET_MAX_BYTES / totalPages);
+
+            for (let p = 0; p < totalPages; p++) {
+                if (p > 0) pdf.addPage();
+                const sliceH = Math.min(pageHeightPx, canvas.height - p * pageHeightPx);
+                const sliceCanvas = this.createSliceCanvas(canvas, p * pageHeightPx, sliceH);
+                const { dataUrl, format } = this.compressCanvasToJpegDataUrl(sliceCanvas, bytesPerPage);
+                const drawHmm = (sliceCanvas.height / sliceCanvas.width) * contentWmm;
+                pdf.addImage(dataUrl, format, marginMm, marginMm, contentWmm, Math.min(drawHmm, contentHmm));
+            }
+            return totalPages;
+        },
+
+        addCanvasToPdf(pdf, canvas, xMm, yMm, wMm, hMm, options = {}) {
+            if (!pdf || !canvas) return;
+            const budget = options.maxBytes || Math.floor(this.TARGET_MAX_BYTES / 2);
+            const { dataUrl, format } = this.compressCanvasToJpegDataUrl(canvas, budget);
+            pdf.addImage(dataUrl, format, xMm, yMm, wMm, hMm, undefined, options.compression || 'FAST');
+        },
+
+        savePdf(pdf, fileName, options = {}) {
+            if (!pdf) return { ok: false, bytes: 0 };
+            const target = options.targetMaxBytes || this.TARGET_MAX_BYTES;
+            const hardMax = options.hardMaxBytes || this.HARD_MAX_BYTES;
+            const safeName = String(fileName || 'report.pdf').toLowerCase().endsWith('.pdf')
+                ? String(fileName)
+                : `${String(fileName)}.pdf`;
+            let bytes = 0;
+            try {
+                bytes = pdf.output('arraybuffer').byteLength;
+            } catch (_e) {
+                try { bytes = pdf.output('blob').size; } catch (_e2) { bytes = 0; }
+            }
+            if (bytes > target && options.warnOnOversize !== false && typeof Notification !== 'undefined') {
+                Notification.warning(
+                    `تم التصدير (${this.formatBytes(bytes)}). للحصول على ملف أصغر جرّب تقليل الفترة أو عدد السجلات.`
+                );
+            } else if (bytes > hardMax && typeof Notification !== 'undefined') {
+                Notification.warning(`حجم الملف (${this.formatBytes(bytes)}) يتجاوز الحد الموصى به (${this.formatBytes(hardMax)}).`);
+            }
+            pdf.save(safeName);
+            return { ok: true, bytes, oversized: bytes > target };
         }
     },
 

@@ -4722,7 +4722,7 @@ const PeriodicInspections = {
         let container = null;
         try {
             const jsPDF = this.getJsPdfCtor();
-            const doc = new jsPDF(orientation, 'mm', 'a4');
+            const doc = new jsPDF(orientation, 'mm', 'a4', { compress: true });
 
             container = document.createElement('div');
             container.style.position = 'fixed';
@@ -4736,16 +4736,14 @@ const PeriodicInspections = {
             document.body.appendChild(container);
 
             const canvas = await window.html2canvas(container, {
-                // ✅ رفع الدقة من 1.6 إلى 2.8 → PDF عالي الجودة بدون بكسلة
-                // 2.8 = ~270 DPI على A4 (الحد المقبول للطباعة المهنية)
-                scale: 2.8,
+                scale: Utils.PdfExport.getOptimalCaptureScale(container.scrollWidth, container.scrollHeight, Utils.PdfExport.DEFAULT_CAPTURE_SCALE),
                 useCORS: true,
                 allowTaint: false,
                 backgroundColor: '#ffffff',
                 scrollX: 0,
                 scrollY: 0,
                 logging: false,
-                imageTimeout: 15000,     // انتظار تحميل الشعار حتى 15s
+                imageTimeout: 15000,
                 removeContainer: true,
                 windowWidth: container.scrollWidth,
                 windowHeight: container.scrollHeight
@@ -4776,19 +4774,18 @@ const PeriodicInspections = {
             const totalPages = forceSinglePage ? 1 : Math.max(1, Math.ceil(contentHeightPx / bodyPxPerPage));
 
             const sliceToImage = (yPx, hPx) => {
-                if (hPx <= 0) return '';
-                const temp = document.createElement('canvas');
-                temp.width = canvas.width;
-                temp.height = hPx;
-                const ctx = temp.getContext('2d');
-                ctx.drawImage(canvas, 0, yPx, canvas.width, hPx, 0, 0, canvas.width, hPx);
-                // ✅ PNG بدلاً من JPEG للحصول على حدود واضحة بدون artifacts
-                // (الملف أكبر قليلاً لكن الخط والأرقام تظهر بوضوح كامل)
-                return temp.toDataURL('image/png');
+                if (hPx <= 0) return { dataUrl: '', format: 'JPEG' };
+                const temp = Utils.PdfExport.createSliceCanvas(canvas, yPx, hPx);
+                const budget = Math.floor(Utils.PdfExport.TARGET_MAX_BYTES / Math.max(1, totalPages * 3));
+                return Utils.PdfExport.compressCanvasToJpegDataUrl(temp, budget);
             };
 
-            const headerImg = headerPx > 0 ? sliceToImage(0, headerPx) : '';
-            const footerImg = footerPx > 0 ? sliceToImage(canvas.height - footerPx, footerPx) : '';
+            const headerSlice = headerPx > 0 ? sliceToImage(0, headerPx) : { dataUrl: '', format: 'JPEG' };
+            const footerSlice = footerPx > 0 ? sliceToImage(canvas.height - footerPx, footerPx) : { dataUrl: '', format: 'JPEG' };
+            const headerImg = headerSlice.dataUrl;
+            const footerImg = footerSlice.dataUrl;
+            const headerFmt = headerSlice.format;
+            const footerFmt = footerSlice.format;
 
             for (let pageIndex = 0; pageIndex < totalPages; pageIndex++) {
                 if (pageIndex > 0) doc.addPage();
@@ -4796,7 +4793,7 @@ const PeriodicInspections = {
                 let cursorY = margin;
 
                 if (headerImg) {
-                    doc.addImage(headerImg, 'PNG', margin, cursorY, usableWidth, headerMm, undefined, 'NONE');
+                    doc.addImage(headerImg, headerFmt, margin, cursorY, usableWidth, headerMm, undefined, 'FAST');
                     cursorY += headerMm;
                 }
 
@@ -4804,15 +4801,22 @@ const PeriodicInspections = {
                 const bodyHeightPx = forceSinglePage
                     ? Math.max(1, contentEndPx - contentStartPx)
                     : Math.max(1, Math.min(bodyPxPerPage, contentEndPx - bodyStartPx));
-                const bodyImg = sliceToImage(bodyStartPx, bodyHeightPx);
+                const bodySlice = sliceToImage(bodyStartPx, bodyHeightPx);
                 const rawBodyMm = bodyHeightPx / pxPerMm;
                 const bodyMm = forceSinglePage ? Math.min(rawBodyMm, bodyMmPerPage) : rawBodyMm;
-                doc.addImage(bodyImg, 'PNG', margin, cursorY, usableWidth, bodyMm, undefined, 'NONE');
+                doc.addImage(bodySlice.dataUrl, bodySlice.format, margin, cursorY, usableWidth, bodyMm, undefined, 'FAST');
 
                 if (footerImg) {
                     const footerY = margin + usableHeight - footerMm;
-                    doc.addImage(footerImg, 'PNG', margin, footerY, usableWidth, footerMm, undefined, 'NONE');
+                    doc.addImage(footerImg, footerFmt, margin, footerY, usableWidth, footerMm, undefined, 'FAST');
                 }
+            }
+
+            const pdfBlobSize = (() => {
+                try { return doc.output('arraybuffer').byteLength; } catch (_e) { return 0; }
+            })();
+            if (pdfBlobSize > Utils.PdfExport.TARGET_MAX_BYTES && typeof Notification !== 'undefined') {
+                Notification.warning(`تم التصدير (${Utils.PdfExport.formatBytes(pdfBlobSize)}). للحصول على ملف أصغر جرّب تقليل نطاق التقرير.`);
             }
 
             doc.save(fileName);
@@ -5467,6 +5471,28 @@ const PeriodicInspections = {
         }
         if (editId) Notification.success('تم تحديث السجل بنجاح');
         else Notification.success('تم إضافة السجل بنجاح');
+        // إشعار المشرفين + تسجيل النشاط (في الخلفية)
+        if (typeof GoogleIntegration !== 'undefined' && GoogleIntegration.sendRequest) {
+            GoogleIntegration.sendRequest({
+                action: 'addNotification',
+                data: {
+                    userId: 'admin',
+                    title: editId ? 'تحديث سجل مرور يومي' : 'سجل مرور يومي جديد',
+                    message: `${editId ? 'تم تحديث' : 'تم إضافة'} سجل مرور يومي للسلامة: ${payload.siteName || ''} - ${payload.date || ''} (${payload.shift || ''})`,
+                    type: 'info',
+                    priority: 'normal',
+                    link: '#periodic-inspections-section',
+                    data: { module: 'periodic-inspections', action: editId ? 'daily_safety_checklist_updated' : 'daily_safety_checklist_added', recordId: editId || '' }
+                }
+            }).catch(() => {});
+        }
+        if (typeof UserActivityLog !== 'undefined' && UserActivityLog.log) {
+            UserActivityLog.log(editId ? 'update' : 'add', 'DailySafetyCheckList', editId || '', {
+                description: `${editId ? 'تحديث' : 'إضافة'} سجل مرور يومي: ${payload.siteName || ''} - ${payload.date || ''}`,
+                siteName: payload.siteName,
+                inspectorName: payload.inspectorName
+            }).catch(() => {});
+        }
         // المزامنة مع الخلفية في الخلفية (بدون انتظار)
         if (typeof GoogleIntegration !== 'undefined' && GoogleIntegration.autoSave) {
             GoogleIntegration.autoSave('DailySafetyCheckList', list).catch(() => {});

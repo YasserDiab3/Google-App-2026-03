@@ -6881,7 +6881,7 @@ const PTW = {
     PERMIT_A4_HEIGHT_PX: 1123,
     PERMIT_A4_MARGIN_MM: 3,
     PERMIT_A4_MAX_PAGES: 6,
-    PERMIT_A4_CAPTURE_SCALE: 2,
+    PERMIT_A4_CAPTURE_SCALE: 1.35,
 
     getManualPermitPdfExportTechnicalStyles_() {
         const w = this.PERMIT_A4_WIDTH_PX;
@@ -7694,10 +7694,10 @@ const PTW = {
         const contentHmm = pdfH - marginMm * 2;
         const drawWmm = contentWmm;
         const natHmm = (canvas.height / canvas.width) * drawWmm;
-        const imageData = canvas.toDataURL('image/png');
+        const { dataUrl, format } = Utils.PdfExport.compressCanvasToJpegDataUrl(canvas, Utils.PdfExport.TARGET_MAX_BYTES);
 
         if (natHmm <= contentHmm + 0.5 || options.allowSlice === false) {
-            pdf.addImage(imageData, 'PNG', marginMm, marginMm, drawWmm, Math.min(natHmm, contentHmm));
+            pdf.addImage(dataUrl, format, marginMm, marginMm, drawWmm, Math.min(natHmm, contentHmm));
             return 1;
         }
 
@@ -7719,7 +7719,11 @@ const PTW = {
                 ctx.drawImage(canvas, 0, y, canvas.width, sliceH, 0, 0, canvas.width, sliceH);
             }
             const sliceHmm = (sliceH / canvas.width) * drawWmm;
-            pdf.addImage(sliceCanvas.toDataURL('image/png'), 'PNG', marginMm, marginMm, drawWmm, Math.min(sliceHmm, contentHmm));
+            const { dataUrl: sliceData, format: sliceFmt } = Utils.PdfExport.compressCanvasToJpegDataUrl(
+                sliceCanvas,
+                Math.floor(Utils.PdfExport.TARGET_MAX_BYTES / maxSlices)
+            );
+            pdf.addImage(sliceData, sliceFmt, marginMm, marginMm, drawWmm, Math.min(sliceHmm, contentHmm));
             pagesAdded += 1;
         }
         return pagesAdded;
@@ -17050,7 +17054,11 @@ const PTW = {
                 const sliceH = Math.min(pageHeightPx, canvas.height - p * pageHeightPx);
                 sliceCanvas.width = canvas.width; sliceCanvas.height = sliceH;
                 sliceCanvas.getContext('2d').drawImage(canvas, 0, p * pageHeightPx, canvas.width, sliceH, 0, 0, canvas.width, sliceH);
-                pdf.addImage(sliceCanvas.toDataURL('image/jpeg', 0.92), 'JPEG', margin, headerH, contentW, sliceH * ratio);
+                const { dataUrl: sliceData, format: sliceFmt } = Utils.PdfExport.compressCanvasToJpegDataUrl(
+                    sliceCanvas,
+                    Math.floor(Utils.PdfExport.TARGET_MAX_BYTES / Math.max(1, totalPages))
+                );
+                pdf.addImage(sliceData, sliceFmt, margin, headerH, contentW, sliceH * ratio);
 
                 const footerY = pdfH - footerH;
                 pdf.setDrawColor(191, 219, 254); pdf.setLineWidth(0.4);
