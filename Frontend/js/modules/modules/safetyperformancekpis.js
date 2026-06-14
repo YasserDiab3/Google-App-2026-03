@@ -316,6 +316,29 @@ const SafetyPerformanceKPIs = {
         i18nCore.applyModuleI18n(target);
     },
 
+    isModuleRTL() {
+        const section = document.getElementById('safety-performance-kpis-section');
+        if (section?.getAttribute('dir')) return section.getAttribute('dir') === 'rtl';
+        const lang = (typeof window.AppI18n?.getCurrentLang === 'function')
+            ? window.AppI18n.getCurrentLang()
+            : (typeof window.I18n?.getCurrentLang === 'function')
+                ? window.I18n.getCurrentLang()
+                : (document.documentElement?.lang || 'ar');
+        return String(lang || 'ar').toLowerCase().startsWith('ar');
+    },
+
+    translateNeboshStatus(status) {
+        const key = String(status || '').trim();
+        const map = {
+            'Certified': 'module.kpi.scorecard.nebosh.certified',
+            'In Progress': 'module.kpi.scorecard.nebosh.inProgress',
+            'Expired': 'module.kpi.scorecard.nebosh.expired',
+            'Not Available': 'module.kpi.scorecard.nebosh.notAvailable'
+        };
+        if (map[key]) return this._t(map[key], key);
+        return key;
+    },
+
     /** أسماء أشهر مختصرة حسب اللغة (لرؤوس الجداول) */
     getMonthAbbreviations() {
         const keys = [
@@ -909,20 +932,11 @@ const SafetyPerformanceKPIs = {
     },
 
     getScorecardMonths() {
-        return [
-            { index: 0, key: '01', label: 'January' },
-            { index: 1, key: '02', label: 'February' },
-            { index: 2, key: '03', label: 'March' },
-            { index: 3, key: '04', label: 'April' },
-            { index: 4, key: '05', label: 'May' },
-            { index: 5, key: '06', label: 'June' },
-            { index: 6, key: '07', label: 'July' },
-            { index: 7, key: '08', label: 'August' },
-            { index: 8, key: '09', label: 'September' },
-            { index: 9, key: '10', label: 'October' },
-            { index: 10, key: '11', label: 'November' },
-            { index: 11, key: '12', label: 'December' }
-        ];
+        return this.getMonthAbbreviations().map((label, index) => ({
+            index,
+            key: String(index + 1).padStart(2, '0'),
+            label
+        }));
     },
 
     getScorecardManualRecords() {
@@ -1071,16 +1085,35 @@ const SafetyPerformanceKPIs = {
                 .spk-chip-blue { background: #dbeafe; color: #1e40af; }
                 .spk-chip-yellow { background: #fef3c7; color: #92400e; }
                 .spk-scorecard-table-wrap { overflow: auto; border: 1px solid #d1d5db; border-radius: 18px; background: #fff; }
-                .spk-scorecard-table { width: max-content; min-width: 100%; border-collapse: collapse; font-size: 0.82rem; direction: ltr; }
+                .spk-scorecard-table { width: max-content; min-width: 100%; border-collapse: collapse; font-size: 0.82rem; }
                 .spk-scorecard-table th, .spk-scorecard-table td { border: 1px solid #1f2937; padding: 0.45rem 0.55rem; text-align: center; white-space: nowrap; }
-                .spk-scorecard-table th:first-child, .spk-scorecard-table td:first-child { position: sticky; left: 0; z-index: 2; background: #fff; text-align: left; min-width: 255px; max-width: 255px; white-space: normal; }
+                .spk-scorecard-table th:first-child, .spk-scorecard-table td:first-child { position: sticky; z-index: 2; background: #fff; min-width: 255px; max-width: 255px; white-space: normal; }
                 .spk-scorecard-table thead th:first-child { z-index: 4; }
                 .spk-scorecard-table thead th { background: #ffffff; font-weight: 800; }
                 .spk-scorecard-table .spk-ytd-head { color: #0ea5e9; font-weight: 800; }
-                .spk-row-section td { background: #ffffff; border: 0; font-size: 1rem; font-weight: 800; color: #0369a1; text-align: left; padding: 1rem 0.5rem 0.35rem; }
-                .spk-row-subsection td { background: #ffffff; border-left: 0; border-right: 0; font-weight: 800; color: #0f766e; text-align: left; padding-top: 0.55rem; padding-bottom: 0.35rem; }
+                .spk-row-section td { background: #ffffff; border: 0; font-size: 1rem; font-weight: 800; color: #0369a1; padding: 1rem 0.5rem 0.35rem; }
+                .spk-row-subsection td { background: #ffffff; border-left: 0; border-right: 0; font-weight: 800; color: #0f766e; padding-top: 0.55rem; padding-bottom: 0.35rem; }
                 .spk-row-subsection .spk-subsection-ytd { text-align: center; color: #0ea5e9; font-weight: 800; }
-                .spk-label-cell { font-weight: 600; direction: ltr; }
+                .spk-label-cell { font-weight: 600; }
+                .spk-cell-numeric { direction: ltr; unicode-bidi: isolate; }
+                #safety-performance-kpis-section[dir="ltr"] .spk-scorecard-table { direction: ltr; }
+                #safety-performance-kpis-section[dir="ltr"] .spk-scorecard-table th:first-child,
+                #safety-performance-kpis-section[dir="ltr"] .spk-scorecard-table td:first-child { left: 0; right: auto; text-align: left; direction: ltr; }
+                #safety-performance-kpis-section[dir="ltr"] .spk-label-cell { direction: ltr; text-align: left; }
+                #safety-performance-kpis-section[dir="ltr"] .spk-row-section td,
+                #safety-performance-kpis-section[dir="ltr"] .spk-row-subsection td { text-align: left; direction: ltr; }
+                #safety-performance-kpis-section[dir="rtl"] #spk-scorecard-panel,
+                #safety-performance-kpis-section[dir="rtl"] .spk-scorecard-hero { direction: rtl; text-align: start; }
+                #safety-performance-kpis-section[dir="rtl"] .spk-scorecard-table { direction: rtl; }
+                #safety-performance-kpis-section[dir="rtl"] .spk-scorecard-table th:first-child,
+                #safety-performance-kpis-section[dir="rtl"] .spk-scorecard-table td:first-child { right: 0; left: auto; text-align: right; direction: rtl; }
+                #safety-performance-kpis-section[dir="rtl"] .spk-label-cell { direction: rtl; text-align: right; }
+                #safety-performance-kpis-section[dir="rtl"] .spk-row-section td,
+                #safety-performance-kpis-section[dir="rtl"] .spk-row-subsection td { text-align: right; direction: rtl; }
+                #safety-performance-kpis-section[dir="rtl"] .spk-scorecard-table th:not(:first-child),
+                #safety-performance-kpis-section[dir="rtl"] .spk-scorecard-table td:not(:first-child) { direction: ltr; unicode-bidi: isolate; }
+                #safety-performance-kpis-section[dir="ltr"] #spk-scorecard-panel,
+                #safety-performance-kpis-section[dir="ltr"] .spk-scorecard-hero { direction: ltr; text-align: start; }
                 .spk-cell-blue { background: #dceaf6; }
                 .spk-cell-yellow { background: #fff6cf; }
                 .spk-cell-neutral { background: #ffffff; }
@@ -1125,7 +1158,7 @@ const SafetyPerformanceKPIs = {
     enhanceWithScorecardTab(section) {
         if (!section || section.querySelector('#spk-tab-overview')) {
             this.populateScorecardYearSelector();
-            this.renderScorecardTable();
+            this.renderScorecardTable(true);
             this.applyScorecardAccessState();
             return;
         }
@@ -1958,7 +1991,12 @@ const SafetyPerformanceKPIs = {
     },
 
     formatScorecardValue(value, decimals = 0, monthIndex = -1, year = this.scorecardYear) {
-        if (typeof value === 'string') return value;
+        if (typeof value === 'string') {
+            const trimmed = String(value).trim();
+            if (!trimmed || trimmed === '-') return trimmed || '-';
+            const translated = this.translateNeboshStatus(trimmed);
+            return translated !== trimmed ? translated : value;
+        }
         if (this.isFutureMonth(year, monthIndex)) return '';
         const number = parseFloat(value || 0) || 0;
         return number.toLocaleString('en-US', {
@@ -2025,14 +2063,14 @@ const SafetyPerformanceKPIs = {
                 ];
                 return `<td class="${classes.join(' ')}"><select class="spk-manual-select" data-scorecard-manual="neboshStatus" data-year="${year}" data-month="${month.index}">${optionsList.map(choice => `<option value="${choice.value}" ${choice.value === current ? 'selected' : ''}>${choice.label}</option>`).join('')}</select></td>`;
             }
-            return `<td class="${classes.join(' ')}">${this.formatScorecardValue(value, decimals, month.index, year)}</td>`;
+            return `<td class="${classes.join(' ')} spk-cell-numeric" dir="ltr">${this.formatScorecardValue(value, decimals, month.index, year)}</td>`;
         }).join('');
 
         const renderMetricRow = (label, values, tone, ytdValue, ytdTone = tone, decimals = 0, options = {}) => `
             <tr class="${options.total ? 'spk-row-total' : ''}">
                 <td class="spk-label-cell">${label}</td>
                 ${renderCells(values, tone, decimals, options)}
-                <td class="spk-cell-${ytdTone}">${typeof ytdValue === 'string' ? ytdValue : this.formatScorecardValue(ytdValue, decimals)}</td>
+                <td class="spk-cell-${ytdTone} spk-cell-numeric" dir="ltr">${typeof ytdValue === 'string' ? this.formatScorecardValue(ytdValue, decimals) : this.formatScorecardValue(ytdValue, decimals)}</td>
             </tr>
         `;
 
