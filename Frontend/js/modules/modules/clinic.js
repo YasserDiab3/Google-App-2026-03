@@ -2552,6 +2552,7 @@ const Clinic = {
             const panel = document.querySelector(`.clinic-tab-panel[data-tab-panel="${tabKey}"]`);
             const labelMap = {
                 visits: 'جاري فتح سجل التردد...',
+                attendance: 'جاري فتح الحضور...',
                 medications: 'جاري فتح الأدوية...',
                 sickLeave: 'جاري فتح الإجازات المرضية...',
                 'dispensed-medications': 'جاري فتح سجل الأدوية المنصرفة...',
@@ -2575,8 +2576,13 @@ const Clinic = {
                 }, 0);
             };
 
-            // ضمان سلاسة الانتقال: ننتظر frame ثم نستخدم idle إن توفر
+            // ضمان سلاسة الانتقال — تبويبات الحضور/التردد: rAF فقط (بدون idle) لتفادي تأخير حتى 900ms
+            const fastTabKeys = ['visits', 'attendance'];
             requestAnimationFrame(() => {
+                if (fastTabKeys.includes(tabKey)) {
+                    run();
+                    return;
+                }
                 if (typeof requestIdleCallback === 'function') {
                     requestIdleCallback(run, { timeout: 900 });
                 } else {
@@ -2606,7 +2612,10 @@ const Clinic = {
         if (tabKey === 'analytics') return this.renderAnalyticsTab();
         if (tabKey === 'data-analysis') return this.renderDataAnalysisTab();
         if (tabKey === 'supply-request') return this.renderSupplyRequestTab();
-        if (tabKey === 'attendance') return this.renderAttendanceTab();
+        if (tabKey === 'attendance') {
+            this.scheduleAttendanceTabRender(0);
+            return;
+        }
     },
 
     renderActiveTabContent() {
@@ -6488,6 +6497,23 @@ const Clinic = {
         };
         // setTimeout(0) بدل requestIdleCallback لتفادي تأخير يصل إلى ~1.2 ثانية
         this._visitsRenderTimer = setTimeout(doRender, Math.max(0, delayMs));
+    },
+
+    /**
+     * جدولة رندر تبويب الحضور — بنية فورية ثم بيانات بالخلفية (نفس فكرة سجل التردد)
+     */
+    scheduleAttendanceTabRender(delayMs = 0) {
+        if (this._attendanceRenderTimer) {
+            clearTimeout(this._attendanceRenderTimer);
+            this._attendanceRenderTimer = null;
+        }
+        const doRender = () => {
+            this._attendanceRenderTimer = null;
+            requestAnimationFrame(() => {
+                this.renderAttendanceTab();
+            });
+        };
+        this._attendanceRenderTimer = setTimeout(doRender, Math.max(0, delayMs));
     },
 
     scheduleMedicationsTabRender(delayMs = 0) {
@@ -13582,17 +13608,33 @@ const Clinic = {
         return Array.from(map.values()).sort((a, b) => new Date(b.timestamp || 0) - new Date(a.timestamp || 0));
     },
 
-    _scheduleAttendanceDataLoadIfNeeded() {
+    _scheduleAttendanceDataLoadIfNeeded(force) {
         if (this._attendanceDataLoadPromise) return;
         const hasStaff = Array.isArray(AppState.appData?.clinicStaff) && AppState.appData.clinicStaff.length > 0;
-        const hasAttendance = Array.isArray(AppState.appData?.clinicStaffAttendance);
-        if (hasStaff && hasAttendance) return;
-        this._attendanceDataLoadPromise = this.loadClinicAttendanceData(false)
+        const hasAttendanceRecords = Array.isArray(AppState.appData?.clinicStaffAttendance) && AppState.appData.clinicStaffAttendance.length > 0;
+        if (!force && this._attendanceDataFetchedInSession === true) return;
+        if (!force && hasStaff && hasAttendanceRecords) {
+            this._attendanceDataFetchedInSession = true;
+            return;
+        }
+        this._attendanceDataLoadPromise = this.loadClinicAttendanceData(!!force)
             .then(() => {
+                this._attendanceDataFetchedInSession = true;
                 if (this.state?.activeTab === 'attendance') this.renderAttendanceTab();
             })
             .catch(() => { })
             .finally(() => { this._attendanceDataLoadPromise = null; });
+    },
+
+    _isAttendanceDataLoading() {
+        return !!this._attendanceDataLoadPromise;
+    },
+
+    _renderAttendanceTableLoadingRow(colspan, label) {
+        const safeLabel = Utils.escapeHTML(label || 'جاري تحميل البيانات...');
+        return `<tr><td colspan="${colspan}" class="text-center text-gray-500 py-10">
+            <i class="fas fa-spinner fa-spin ml-2" style="color:#0d9488;"></i>${safeLabel}
+        </td></tr>`;
     },
 
     async loadClinicStaffActivities(force) {
@@ -14844,6 +14886,7 @@ const Clinic = {
 
     renderAttendanceSelfTab(panel) {
         this.ensureData();
+        const dataLoading = this._isAttendanceDataLoading();
         this.state.filters = this.state.filters || {};
         this.state.filters.attendance = Object.assign(
             { search: '', staffRole: 'all', status: 'all', staffId: 'all', month: '', dateFrom: '', dateTo: '', period: 'all' },
@@ -14867,7 +14910,9 @@ const Clinic = {
         const afInput = `${afField}width:100%;padding:8px 11px;border:1.5px solid #99f6e4;border-radius:8px;font-size:0.82rem;background:#fff;color:#374151;`;
         const afLabel = 'font-size:0.72rem;font-weight:700;color:#64748b;display:block;margin-bottom:5px;';
 
-        const tableRows = rows.length ? rows.map(r => `
+        const tableRows = dataLoading && rows.length === 0
+            ? this._renderAttendanceTableLoadingRow(5)
+            : (rows.length ? rows.map(r => `
             <tr>
                 <td>${Utils.escapeHTML(r.date || '—')}</td>
                 <td>${r.checkIn ? (Utils.formatDateTime ? Utils.formatDateTime(r.checkIn) : Utils.escapeHTML(String(r.checkIn))) : '—'}</td>
@@ -14875,7 +14920,7 @@ const Clinic = {
                 <td>${Utils.escapeHTML(String(r.workDuration || '—'))}</td>
                 <td><span class="badge ${this.getAttendanceStatusBadgeClass(r.status)}">${Utils.escapeHTML(this.getAttendanceStatusLabel(r.status))}</span></td>
             </tr>
-        `).join('') : `<tr><td colspan="5" class="text-center text-gray-500 py-8">لا توجد سجلات حضور</td></tr>`;
+        `).join('') : `<tr><td colspan="5" class="text-center text-gray-500 py-8">لا توجد سجلات حضور</td></tr>`);
 
         panel.innerHTML = `
             <div id="clinic-attendance-self-root">
@@ -14902,7 +14947,7 @@ const Clinic = {
                             return `<button type="button" class="clinic-attendance-period-btn" data-period="${p}" style="padding:5px 10px;border-radius:8px;border:none;cursor:pointer;font-size:0.74rem;font-weight:600;background:${active ? '#fff' : 'rgba(255,255,255,0.14)'};color:${active ? '#134e4a' : '#fff'};">${periodLabels[p]}</button>`;
                         }).join('')}
                         <button type="button" id="clinic-attendance-toggle-filters" style="padding:6px 10px;border-radius:8px;border:1px solid rgba(255,255,255,0.35);background:rgba(255,255,255,0.12);color:#fff;font-size:0.74rem;cursor:pointer;"><i class="fas fa-sliders-h"></i> فلاتر</button>
-                        <button type="button" id="clinic-attendance-refresh-btn" style="padding:6px 10px;border-radius:8px;border:none;background:rgba(255,255,255,0.14);color:#fff;cursor:pointer;"><i class="fas fa-sync-alt"></i></button>
+                        <button type="button" id="clinic-attendance-refresh-btn" style="padding:6px 10px;border-radius:8px;border:none;background:rgba(255,255,255,0.14);color:#fff;cursor:pointer;"><i class="fas fa-sync-alt${dataLoading ? ' fa-spin' : ''}"></i></button>
                         <button type="button" id="clinic-attendance-pdf-btn" style="padding:6px 10px;border-radius:8px;border:none;background:rgba(0,0,0,0.22);color:#fff;font-size:0.74rem;cursor:pointer;"><i class="fas fa-file-pdf"></i> PDF</button>
                         <button type="button" id="clinic-attendance-export-btn" style="padding:6px 10px;border-radius:8px;border:none;background:rgba(0,0,0,0.22);color:#fff;font-size:0.74rem;cursor:pointer;"><i class="fas fa-file-excel"></i> Excel</button>
                     </div>
@@ -15049,13 +15094,14 @@ const Clinic = {
         panel.querySelector('#clinic-attendance-pdf-btn')?.addEventListener('click', () => this.exportAttendanceToPDF());
         panel.querySelector('#clinic-attendance-refresh-btn')?.addEventListener('click', async () => {
             Notification?.info?.('جاري التحديث...');
+            this._attendanceDataFetchedInSession = false;
             await this.loadClinicAttendanceData(true);
+            this._attendanceDataFetchedInSession = true;
             this.renderAttendanceTab();
             Notification?.success?.('تم التحديث');
         });
 
         this.bindClinicStaffActivitiesEvents(panel);
-        this._scheduleAttendanceDataLoadIfNeeded();
 
         const typeEl = panel.querySelector('#timeoff-request-type');
         const leaveBlock = panel.querySelector('#timeoff-leave-dates');
@@ -15088,6 +15134,10 @@ const Clinic = {
             </div>`;
             return;
         }
+
+        // ✅ بنية فورية + جلب البيانات بالخلفية (لا انتظار الشبكة قبل عرض الواجهة)
+        this._scheduleAttendanceDataLoadIfNeeded(false);
+        const dataLoading = this._isAttendanceDataLoading();
 
         if (!this.canViewAllAttendanceData()) {
             return this.renderAttendanceSelfTab(panel);
@@ -15125,7 +15175,9 @@ const Clinic = {
             `<option value="${Utils.escapeAttr(s.id)}" ${String(filters.staffId) === String(s.id) ? 'selected' : ''}>${Utils.escapeHTML(s.name)}</option>`
         ).join('');
 
-        const tableRows = rows.length ? rows.map(r => `
+        const tableRows = dataLoading && rows.length === 0
+            ? this._renderAttendanceTableLoadingRow(9)
+            : (rows.length ? rows.map(r => `
             <tr>
                 <td>${Utils.escapeHTML(r.userName || '—')}</td>
                 <td>${Utils.escapeHTML(r.userEmail || '—')}</td>
@@ -15137,7 +15189,7 @@ const Clinic = {
                 <td><span class="badge ${this.getAttendanceStatusBadgeClass(r.status)}">${Utils.escapeHTML(this.getAttendanceStatusLabel(r.status))}</span></td>
                 <td class="text-xs text-gray-500">${Utils.escapeHTML(String(r.sessionId || '—').slice(0, 18))}</td>
             </tr>
-        `).join('') : `<tr><td colspan="9" class="text-center text-gray-500 py-8"><i class="fas fa-calendar-times ml-2 opacity-60"></i>لا توجد سجلات مطابقة للفلاتر</td></tr>`;
+        `).join('') : `<tr><td colspan="9" class="text-center text-gray-500 py-8"><i class="fas fa-calendar-times ml-2 opacity-60"></i>لا توجد سجلات مطابقة للفلاتر</td></tr>`);
 
         const staffAdminRows = isAdmin ? (staffList.length ? staffList.map(s => {
             const active = String(s.isActive || 'true').toLowerCase() !== 'false';
@@ -15186,7 +15238,7 @@ const Clinic = {
                         </div>
                         <div>
                             <h3 style="margin:0;font-size:1rem;font-weight:700;">سجل حضور مسئولي العيادة</h3>
-                            <p style="margin:0;font-size:0.72rem;opacity:0.88;">تسجيل تلقائي عند الدخول والخروج • ${allAttendance.length} سجل إجمالي</p>
+                            <p style="margin:0;font-size:0.72rem;opacity:0.88;">تسجيل تلقائي عند الدخول والخروج • ${dataLoading && rows.length === 0 ? 'جاري تحميل البيانات...' : `${allAttendance.length} سجل إجمالي`}</p>
                         </div>
                     </div>
                     <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
@@ -15199,7 +15251,7 @@ const Clinic = {
                             <i class="fas fa-sliders-h"></i><span>فلاتر</span>
                             ${activeFilterCount ? `<span style="background:#fbbf24;color:#78350f;font-size:0.65rem;padding:1px 6px;border-radius:10px;">${activeFilterCount}</span>` : ''}
                         </button>
-                        <button type="button" id="clinic-attendance-refresh-btn" style="padding:6px 10px;border-radius:8px;border:none;cursor:pointer;background:rgba(255,255,255,0.14);color:#fff;font-size:0.76rem;" title="تحديث من الخادم"><i class="fas fa-sync-alt"></i></button>
+                        <button type="button" id="clinic-attendance-refresh-btn" style="padding:6px 10px;border-radius:8px;border:none;cursor:pointer;background:rgba(255,255,255,0.14);color:#fff;font-size:0.76rem;" title="تحديث من الخادم"><i class="fas fa-sync-alt${dataLoading ? ' fa-spin' : ''}"></i></button>
                         <button type="button" id="clinic-attendance-report-btn" style="padding:6px 12px;border-radius:8px;border:none;cursor:pointer;background:rgba(255,255,255,0.92);color:#134e4a;font-size:0.76rem;font-weight:700;display:flex;align-items:center;gap:5px;" title="تصدير تقرير"><i class="fas fa-file-export"></i><span>تقرير</span></button>
                         <button type="button" id="clinic-attendance-pdf-btn" style="padding:6px 12px;border-radius:8px;border:none;cursor:pointer;background:rgba(0,0,0,0.22);color:#fff;font-size:0.76rem;font-weight:600;display:flex;align-items:center;gap:5px;" title="PDF للفلتر الحالي"><i class="fas fa-file-pdf"></i><span>PDF</span></button>
                         <button type="button" id="clinic-attendance-export-btn" style="padding:6px 12px;border-radius:8px;border:none;cursor:pointer;background:rgba(0,0,0,0.22);color:#fff;font-size:0.76rem;font-weight:600;display:flex;align-items:center;gap:5px;" title="Excel للفلتر الحالي"><i class="fas fa-file-excel"></i><span>Excel</span></button>
@@ -15424,13 +15476,14 @@ const Clinic = {
         panel.querySelector('#clinic-attendance-add-staff-btn')?.addEventListener('click', () => this.showAddClinicStaffModal());
         panel.querySelector('#clinic-attendance-refresh-btn')?.addEventListener('click', async () => {
             Notification?.info?.('جاري تحديث سجل الحضور...');
+            this._attendanceDataFetchedInSession = false;
             await this.loadClinicAttendanceData(true);
+            this._attendanceDataFetchedInSession = true;
             this.renderAttendanceTab();
             Notification?.success?.('تم التحديث');
         });
 
         this.bindClinicStaffActivitiesEvents(panel);
-        this._scheduleAttendanceDataLoadIfNeeded();
 
         if (this._attendanceSearchFocused && searchEl) {
             searchEl.focus();
