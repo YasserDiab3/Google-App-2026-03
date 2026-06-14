@@ -1,0 +1,74 @@
+---
+description: حماية نظام التحميل المستقر — لا تعديلات تسبب تضارباً أو كسراً لجلب البيانات
+globs:
+  - "Frontend/**"
+  - "Backend/**"
+  - "vercel-deploy/frontend/**"
+  - "vercel-deploy/backend/**"
+alwaysApply: true
+---
+
+# حماية نظام التحميل المستقر (بدون تضارب)
+
+عند **أي تحديث أو إضافة** في الواجهة أو الخلفية: **لا تُعدّل** مسارات التحميل المثبتة إلا إذا كان الإصلاح مطلوباً صراحةً. الميزات الجديدة تُبنى **بجانب** النظام الحالي، لا **بداخله** بطريقة تكسره.
+
+## 1. مسارات محمية — لا تلمسها بدون ضرورة
+
+في مديول العيادة (ونفس المبدأ في المديولات الثقيلة الأخرى):
+
+| المسار | الدور |
+|--------|--------|
+| `syncDataFromServer()` | مزامنة الخلفية المركزية |
+| `loadVisitsDataFromBackend()` + `_clinicVisitsLoadPromise` | **سجل التردد** |
+| `shouldFetchClinicVisitsFromBackend()` + `_visitsBackendFetchOk` | منع إعادة جلب غير ضرورية |
+| `mergeClinicVisitsWithLocalOnly()` | عدم فقدان زيارات محلية |
+| `renderVisitsTab()` → عرض فوري ثم جلب بالخلفية | UX مستقر |
+
+**ممنوع** دمج ميزة جديدة داخل هذه الدوال إذا كان يمكن فصلها.
+
+## 2. قواعد إضافة ميزة جديدة (تحميل منفصل)
+
+1. **دالة تحميل مستقلة** لكل تبويب/ميزة (مثل `loadClinicStaffActivities`) — لا تُضاف تلقائياً إلى `syncDataFromServer()` إلا بعد مراجعة تأثيرها على الطلبات الثقيلة.
+2. **لا تستبدل** `AppState.appData.*` لمديول آخر (مثال: لا تمس `clinicVisits` من تبويب الحضور).
+3. **لا تستبدل** بيانات محلية غير فارغة بمصفوفة فارغة من الخادم.
+4. **انتظر** التحميل الحرج قبل الثانوي:
+   ```javascript
+   // ✅ قبل طلب ثانوي (نشاط، إحصائيات...)
+   if (this._clinicVisitsLoadPromise) {
+     try { await this._clinicVisitsLoadPromise; } catch (_e) {}
+   }
+   ```
+5. **قيّد** التحميل الثانوي بالتبويب النشط:
+   ```javascript
+   if (this.state?.activeTab !== 'attendance') return;
+   ```
+6. **مهلة كافية** للطلبات الثقيلة (سجل التردد: ~120000ms) — لا `Promise.race` قصير يقطع الجلب.
+7. استخدم `Promise.allSettled` للمزامنة المجمّعة؛ لا تفشل كل المزامنة بسبب طلب واحد.
+
+## 3. الخلفية (GAS)
+
+- دوال **قراءة/تجميع** (مثل نشاط المستخدم) **قراءة فقط** — لا تغيّر منطق `getAllClinicVisits` أو upsert الزيارات.
+- لا تربط action جديد بمسار كتابة موجود إذا كان يمكن action منفصل.
+
+## 4. قبل إنهاء التعديل — تحقق
+
+- [ ] هل مسّست `syncDataFromServer` أو `loadVisitsDataFromBackend` أو `renderVisitsTab`؟ إن نعم: هل الضرورة مبررة؟
+- [ ] هل يوجد طلب API جديد يتنافس مع جلب سجل التردد في نفس اللحظة؟
+- [ ] هل الميزة الجديدة معزولة في `AppState` ودالة تحميل خاصة؟
+- [ ] هل طُبّق نفس التعديل في `vercel-deploy/` (انظر قاعدة المزامنة)؟
+
+## 5. أمثلة
+
+```javascript
+// ❌ خطأ — نشاط جديد داخل syncDataFromServer بدون مراجعة
+promises.push(getClinicStaffSystemActivities(...));
+
+// ✅ صحيح — تحميل من تبويب الحضور فقط، بعد انتهاء جلب الزيارات
+async loadClinicStaffActivities(force) {
+  if (this.state?.activeTab !== 'attendance') return;
+  if (this._clinicVisitsLoadPromise) {
+    try { await this._clinicVisitsLoadPromise; } catch (_e) {}
+  }
+  // ...
+}
+```

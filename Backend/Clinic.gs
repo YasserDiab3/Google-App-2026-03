@@ -4042,12 +4042,10 @@ function _clinicStaffActivityBuildSummary_(row, cfg) {
 function _clinicStaffActivitySources_() {
     return [
         { moduleKey: 'ptw', moduleLabel: 'تصاريح العمل', actionLabel: 'تسجيل تصريح عمل', sheet: 'PTW' },
-        { moduleKey: 'clinic', moduleLabel: 'العيادة', actionLabel: 'تسجيل زيارة موظف', sheet: 'ClinicVisits' },
-        { moduleKey: 'clinic', moduleLabel: 'العيادة', actionLabel: 'تسجيل زيارة مقاول/خارجي', sheet: 'ClinicContractorVisits' },
+        // ClinicVisits / ClinicContractorVisits: تُجمَّع من الواجهة بعد تحميل سجل التردد — لا قراءة مكررة من الشيت
         { moduleKey: 'clinic', moduleLabel: 'العيادة', actionLabel: 'تسجيل إجازة مرضية', sheet: 'SickLeave' },
         { moduleKey: 'clinic', moduleLabel: 'العيادة', actionLabel: 'تسجيل إصابة موظف', sheet: 'Injuries' },
         { moduleKey: 'clinic', moduleLabel: 'العيادة', actionLabel: 'تسجيل إصابة مقاول', sheet: 'ClinicContractorInjuries' },
-        { moduleKey: 'clinic', moduleLabel: 'العيادة', actionLabel: 'إضافة/تحديث دواء', sheet: 'Medications' },
         { moduleKey: 'training', moduleLabel: 'التدريب', actionLabel: 'تسجيل تدريب نظامي', sheet: 'LegalTrainings' },
         { moduleKey: 'incidents', moduleLabel: 'الحوادث', actionLabel: 'تسجيل حادث', sheet: 'Incidents' },
         { moduleKey: 'nearmiss', moduleLabel: 'حادث وشيك', actionLabel: 'تسجيل حادث وشيك', sheet: 'NearMiss' },

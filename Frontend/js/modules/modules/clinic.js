@@ -13131,41 +13131,7 @@ const Clinic = {
             Utils.safeLog('ℹ️ تخطي جلب سجل التردد في المزامنة — بيانات حديثة ومؤكدة من الخادم');
         }
 
-        // تحميل حضور مسئولي العيادة
-        promises.push(
-            requestWithTimeout(
-                GoogleIntegration.sendRequest({ action: 'getClinicStaffAttendance', data: {} }),
-                REQUEST_TIMEOUT,
-                'clinicStaffAttendance'
-            ).then(result => {
-                if (result && result.success && Array.isArray(result.data)) {
-                    AppState.appData.clinicStaffAttendance = result.data;
-                }
-            }).catch(() => { })
-        );
-        promises.push(
-            requestWithTimeout(
-                GoogleIntegration.sendRequest({ action: 'getAllClinicStaff', data: {} }),
-                REQUEST_TIMEOUT,
-                'clinicStaff'
-            ).then(result => {
-                if (result && result.success && Array.isArray(result.data)) {
-                    AppState.appData.clinicStaff = result.data;
-                }
-            }).catch(() => { })
-        );
-
-        promises.push(
-            requestWithTimeout(
-                GoogleIntegration.sendRequest({ action: 'getClinicStaffTimeOffRequests', data: {} }),
-                REQUEST_TIMEOUT,
-                'clinicStaffTimeOffRequests'
-            ).then(result => {
-                if (result && result.success && Array.isArray(result.data)) {
-                    AppState.appData.clinicStaffTimeOffRequests = result.data;
-                }
-            }).catch(() => { })
-        );
+        // حضور/طلبات/نشاط المستخدم: لا تُجلب هنا — تبويب الحضور فقط (أولوية سجل التردد)
 
         // انتظار انتهاء جميع الطلبات دون قطع مجمع بمهلة قصيرة (كانت تُسقط سجل التردد قبل اكتماله)
         try {
@@ -13342,6 +13308,11 @@ const Clinic = {
             { value: 'system', label: 'النظام' }
         ];
         const currentModule = this.state.filters?.attendance?.activityModule || 'all';
+        const emptyHint = loading
+            ? 'جاري تحميل النشاط...'
+            : (this._clinicStaffActivitiesFetched
+                ? 'لا توجد أنشطة مسجّلة في الفترة المحددة'
+                : 'اضغط زر التحديث <i class="fas fa-sync-alt"></i> لتحميل النشاط (لا يُحمّل تلقائياً حفاظاً على سرعة سجل التردد)');
         const rows = activities.length ? activities.map(a => `
             <tr>
                 ${showUserColumn ? `<td>${Utils.escapeHTML(a.userName || a.userEmail || '—')}</td>` : ''}
@@ -13350,7 +13321,7 @@ const Clinic = {
                 <td class="text-sm">${Utils.escapeHTML(a.summary || '—')}</td>
                 <td>${a.timestamp ? (Utils.formatDateTime ? Utils.formatDateTime(a.timestamp) : Utils.escapeHTML(String(a.timestamp))) : '—'}</td>
             </tr>
-        `).join('') : `<tr><td colspan="${showUserColumn ? 5 : 4}" class="text-center text-gray-500 py-8">${loading ? 'جاري تحميل النشاط...' : 'لا توجد أنشطة مسجّلة في الفترة المحددة'}</td></tr>`;
+        `).join('') : `<tr><td colspan="${showUserColumn ? 5 : 4}" class="text-center text-gray-500 py-8">${emptyHint}</td></tr>`;
 
         return `
             <div class="content-card mt-4" id="clinic-staff-activities-section">
@@ -13366,7 +13337,7 @@ const Clinic = {
                 <div class="card-body" style="padding:0;">
                     <p style="padding:10px 16px;margin:0;font-size:0.78rem;color:#64748b;border-bottom:1px solid #f1f5f9;">
                         <i class="fas fa-info-circle ml-1" style="color:#0d9488;"></i>
-                        يعرض ما تم تسجيله عبر النظام: تصاريح العمل، زيارات العيادة، التدريب، الحوادث، الملاحظات، وغيرها.
+                        يعرض ما تم تسجيله عبر النظام: تصاريح العمل، زيارات العيادة (من سجل التردد المحمّل)، التدريب، الحوادث، والملاحظات. اضغط زر التحديث لتحميل النشاط.
                     </p>
                     <div class="table-wrapper"><table class="data-table table-header-green">
                         <thead><tr>
@@ -13396,32 +13367,163 @@ const Clinic = {
         });
     },
 
+    _parseActivityCreatorFromRecord_(row) {
+        if (!row) return { userId: '', email: '', name: '' };
+        let userId = String(row.createdById || row.userId || '').trim();
+        let email = String(row.userEmail || '').trim().toLowerCase();
+        let name = String(row.userName || '').trim();
+        const raw = row.createdBy;
+        if (raw && typeof raw === 'object') {
+            userId = userId || String(raw.id || raw.userId || '').trim();
+            name = name || String(raw.name || raw.displayName || '').trim();
+            email = email || String(raw.email || '').trim().toLowerCase();
+        } else if (raw) {
+            name = name || String(raw).trim();
+        }
+        return { userId, email, name };
+    },
+
+    _activityCreatorMatchesUser_(creator, user) {
+        if (!creator || !user) return false;
+        const uid = String(user.id || '').trim();
+        const em = String(user.email || '').trim().toLowerCase();
+        const nm = String(user.name || '').trim().toLowerCase();
+        if (uid && creator.userId && uid === creator.userId) return true;
+        if (em && creator.email && em === creator.email) return true;
+        if (nm && creator.name && nm === String(creator.name).trim().toLowerCase()) return true;
+        return false;
+    },
+
+    _activityCreatorMatchesStaff_(creator, staff) {
+        if (!creator || !staff) return false;
+        const uid = String(staff.userId || '').trim();
+        const em = String(staff.userEmail || '').trim().toLowerCase();
+        const nm = String(staff.userName || '').trim().toLowerCase();
+        if (uid && creator.userId && uid === creator.userId) return true;
+        if (em && creator.email && em === creator.email) return true;
+        if (nm && creator.name && nm === String(creator.name).trim().toLowerCase()) return true;
+        return false;
+    },
+
+    _buildLocalClinicVisitActivities_(filters) {
+        filters = filters || {};
+        const visits = Array.isArray(AppState.appData?.clinicVisits) ? AppState.appData.clinicVisits : [];
+        const user = AppState.currentUser;
+        const isAdmin = this.canViewAllAttendanceData();
+        let staffTarget = null;
+        if (isAdmin && filters.staffId) {
+            staffTarget = (this.getClinicStaffList() || []).find(s => String(s.id) === String(filters.staffId)) || null;
+        }
+        const fromKey = filters.dateFrom ? this._attendanceDayKey(filters.dateFrom) : null;
+        const toKey = filters.dateTo ? this._attendanceDayKey(filters.dateTo) : null;
+        const moduleFilter = filters.moduleKey || 'all';
+        if (moduleFilter !== 'all' && moduleFilter !== 'clinic') return [];
+
+        return visits.filter(v => {
+            if (!v) return false;
+            const creator = this._parseActivityCreatorFromRecord_(v);
+            if (!isAdmin) {
+                if (!this._activityCreatorMatchesUser_(creator, user)) return false;
+            } else if (staffTarget) {
+                if (!this._activityCreatorMatchesStaff_(creator, staffTarget)) return false;
+            }
+            const when = v.createdAt || v.visitDate || '';
+            if (when) {
+                const dk = this._attendanceDayKey(when);
+                if (fromKey && dk < fromKey) return false;
+                if (toKey && dk > toKey) return false;
+            } else if (fromKey || toKey) return false;
+            return true;
+        }).map(v => {
+            const isContractor = v.personType === 'contractor' || v.contractorName || v.contractorWorkerName || v.externalName;
+            const creator = this._parseActivityCreatorFromRecord_(v);
+            const summary = isContractor
+                ? String(v.contractorWorkerName || v.externalName || v.contractorName || v.visitType || v.id || '').slice(0, 120)
+                : String(v.employeeName || v.visitType || v.reason || v.id || '').slice(0, 120);
+            return {
+                id: 'local-visit-' + v.id,
+                recordId: v.id || '',
+                moduleKey: 'clinic',
+                moduleLabel: 'العيادة',
+                actionLabel: isContractor ? 'تسجيل زيارة مقاول/خارجي' : 'تسجيل زيارة موظف',
+                summary,
+                timestamp: v.createdAt || v.visitDate || '',
+                userId: creator.userId || '',
+                userEmail: creator.email || '',
+                userName: creator.name || this.getUserDisplayName(v.createdBy) || '',
+                sheet: 'ClinicVisits-local'
+            };
+        });
+    },
+
+    _mergeClinicStaffActivities_(lists) {
+        const map = new Map();
+        (lists || []).flat().forEach(item => {
+            if (!item || !item.id) return;
+            if (!map.has(item.id)) map.set(item.id, item);
+        });
+        return Array.from(map.values()).sort((a, b) => new Date(b.timestamp || 0) - new Date(a.timestamp || 0));
+    },
+
+    _scheduleAttendanceDataLoadIfNeeded() {
+        if (this._attendanceDataLoadPromise) return;
+        const hasStaff = Array.isArray(AppState.appData?.clinicStaff) && AppState.appData.clinicStaff.length > 0;
+        const hasAttendance = Array.isArray(AppState.appData?.clinicStaffAttendance);
+        if (hasStaff && hasAttendance) return;
+        this._attendanceDataLoadPromise = this.loadClinicAttendanceData(false)
+            .then(() => {
+                if (this.state?.activeTab === 'attendance') this.renderAttendanceTab();
+            })
+            .catch(() => { })
+            .finally(() => { this._attendanceDataLoadPromise = null; });
+    },
+
     async loadClinicStaffActivities(force) {
         if (typeof GoogleIntegration === 'undefined' || !GoogleIntegration.sendRequest) return;
-        // لا نُحمّل النشاط إلا من تبويب الحضور — عزل كامل عن سجل التردد
         if (this.state?.activeTab && this.state.activeTab !== 'attendance') return;
         const hasLocal = Array.isArray(AppState.appData?.clinicStaffSystemActivities) && AppState.appData.clinicStaffSystemActivities.length > 0;
         if (!force && hasLocal) return;
-        // أولوية لسجل التردد: لا نبدأ طلب النشاط أثناء جلب الزيارات
+
+        this._clinicStaffActivitiesLoading = true;
+
         if (this._clinicVisitsLoadPromise) {
             try { await this._clinicVisitsLoadPromise; } catch (_e) { /* ignore */ }
         }
+        await new Promise(resolve => setTimeout(resolve, 800));
+
+        const f = this.state.filters?.attendance || {};
+        const range = this._resolveAttendanceFilterDates(f);
+        const payload = {
+            limit: 200,
+            dateFrom: range.dateFrom || '',
+            dateTo: range.dateTo || '',
+            moduleKey: f.activityModule && f.activityModule !== 'all' ? f.activityModule : ''
+        };
+        if (f.staffId && f.staffId !== 'all' && this.canViewAllAttendanceData()) {
+            payload.staffId = f.staffId;
+        }
+
+        const localVisitActivities = this._buildLocalClinicVisitActivities_(payload);
+
         try {
-            const f = this.state.filters?.attendance || {};
-            const payload = { limit: 300 };
-            if (f.staffId && f.staffId !== 'all' && this.canViewAllAttendanceData()) {
-                payload.staffId = f.staffId;
-            }
             const resp = await GoogleIntegration.sendRequest({
                 action: 'getClinicStaffSystemActivities',
                 data: { filters: payload }
             });
-            if (resp?.success && Array.isArray(resp.data)) {
-                AppState.appData.clinicStaffSystemActivities = resp.data;
-                this.ensureData();
-                if (typeof window.DataManager !== 'undefined' && window.DataManager.save) window.DataManager.save();
+            const remote = (resp?.success && Array.isArray(resp.data)) ? resp.data : [];
+            AppState.appData.clinicStaffSystemActivities = this._mergeClinicStaffActivities_([
+                localVisitActivities,
+                remote
+            ]).slice(0, payload.limit || 200);
+            this._clinicStaffActivitiesFetched = true;
+        } catch (_e) {
+            if (localVisitActivities.length) {
+                AppState.appData.clinicStaffSystemActivities = localVisitActivities;
+                this._clinicStaffActivitiesFetched = true;
             }
-        } catch (_e) { /* ignore */ }
+        } finally {
+            this._clinicStaffActivitiesLoading = false;
+        }
     },
 
     getCurrentUserStaffRecord() {
@@ -14639,7 +14741,7 @@ const Clinic = {
         const stats = this._computeAttendanceReportStats(rows);
         const staff = this.getCurrentUserStaffRecord();
         const activityList = this.getFilteredClinicStaffActivities();
-        const activitiesLoaded = this.getClinicStaffSystemActivitiesList().length > 0;
+        const activitiesLoading = !!this._clinicStaffActivitiesLoading;
         const activeFilterCount = this._countActiveAttendanceFilters(filters);
         const filterPanelOpen = this.state.attendanceFilterPanelOpen !== false;
         const period = filters.period || 'all';
@@ -14759,7 +14861,7 @@ const Clinic = {
                 ${this.renderClinicStaffActivitiesSection({
                     showUserColumn: false,
                     activities: activityList,
-                    loading: !activitiesLoaded,
+                    loading: activitiesLoading,
                     title: 'نشاطي داخل النظام'
                 })}
             </div>`;
@@ -14830,17 +14932,13 @@ const Clinic = {
         panel.querySelector('#clinic-attendance-pdf-btn')?.addEventListener('click', () => this.exportAttendanceToPDF());
         panel.querySelector('#clinic-attendance-refresh-btn')?.addEventListener('click', async () => {
             Notification?.info?.('جاري التحديث...');
-            await Promise.all([this.loadClinicAttendanceData(true), this.loadClinicStaffActivities(true)]);
+            await this.loadClinicAttendanceData(true);
             this.renderAttendanceTab();
             Notification?.success?.('تم التحديث');
         });
 
         this.bindClinicStaffActivitiesEvents(panel);
-        if (!activitiesLoaded) {
-            this.loadClinicStaffActivities(true).then(() => {
-                if (this.state?.activeTab === 'attendance') this.renderAttendanceTab();
-            }).catch(() => {});
-        }
+        this._scheduleAttendanceDataLoadIfNeeded();
 
         const typeEl = panel.querySelector('#timeoff-request-type');
         const leaveBlock = panel.querySelector('#timeoff-leave-dates');
@@ -14896,7 +14994,7 @@ const Clinic = {
         const openSessions = todayRows.filter(r => r.checkIn && !r.checkOut).length;
         const isAdmin = this.isCurrentUserAdmin();
         const activityList = this.getFilteredClinicStaffActivities();
-        const activitiesLoaded = this.getClinicStaffSystemActivitiesList().length > 0;
+        const activitiesLoading = !!this._clinicStaffActivitiesLoading;
         const activeFilterCount = this._countActiveAttendanceFilters(filters);
         const filterPanelOpen = this.state.attendanceFilterPanelOpen !== false;
         const period = filters.period || 'all';
@@ -15080,7 +15178,7 @@ const Clinic = {
                 ${this.renderClinicStaffActivitiesSection({
                     showUserColumn: true,
                     activities: activityList,
-                    loading: !activitiesLoaded,
+                    loading: activitiesLoading,
                     title: 'نشاط المستخدمين داخل النظام'
                 })}
 
@@ -15209,17 +15307,13 @@ const Clinic = {
         panel.querySelector('#clinic-attendance-add-staff-btn')?.addEventListener('click', () => this.showAddClinicStaffModal());
         panel.querySelector('#clinic-attendance-refresh-btn')?.addEventListener('click', async () => {
             Notification?.info?.('جاري تحديث سجل الحضور...');
-            await Promise.all([this.loadClinicAttendanceData(true), this.loadClinicStaffActivities(true)]);
+            await this.loadClinicAttendanceData(true);
             this.renderAttendanceTab();
             Notification?.success?.('تم التحديث');
         });
 
         this.bindClinicStaffActivitiesEvents(panel);
-        if (!activitiesLoaded) {
-            this.loadClinicStaffActivities(true).then(() => {
-                if (this.state?.activeTab === 'attendance') this.renderAttendanceTab();
-            }).catch(() => {});
-        }
+        this._scheduleAttendanceDataLoadIfNeeded();
 
         if (this._attendanceSearchFocused && searchEl) {
             searchEl.focus();
