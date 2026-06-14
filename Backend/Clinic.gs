@@ -3274,6 +3274,135 @@ function _clinicStaffCalcDurationHours_(checkIn, checkOut) {
     }
 }
 
+function _clinicStaffPickEarliestIso_(values) {
+    var best = '';
+    var bestT = Infinity;
+    for (var i = 0; i < (values || []).length; i++) {
+        var v = values[i];
+        if (!v) continue;
+        var t = new Date(v).getTime();
+        if (!isNaN(t) && t < bestT) {
+            bestT = t;
+            best = v;
+        }
+    }
+    return best;
+}
+
+function _clinicStaffPickLatestIso_(values) {
+    var best = '';
+    var bestT = -Infinity;
+    for (var i = 0; i < (values || []).length; i++) {
+        var v = values[i];
+        if (!v) continue;
+        var t = new Date(v).getTime();
+        if (!isNaN(t) && t > bestT) {
+            bestT = t;
+            best = v;
+        }
+    }
+    return best;
+}
+
+function _clinicStaffAttendanceMatchesUser_(r, staff, userId, email) {
+    if (!r) return false;
+    var uid = String(staff.userId || userId || '').trim();
+    var rid = String(r.userId || '').trim();
+    var rem = String(staff.userEmail || email || '').trim().toLowerCase();
+    var rmail = String(r.userEmail || '').trim().toLowerCase();
+    if (staff.id && r.staffId && String(staff.id) === String(r.staffId)) return true;
+    return (uid && rid && uid === rid) || (rem && rmail && rem === rmail);
+}
+
+function _clinicStaffAttendanceUserDayKey_(r) {
+    if (!r) return '';
+    var dk = _clinicStaffDayKey_(r.date);
+    var uk = String(r.staffId || r.userId || r.userEmail || '').trim().toLowerCase();
+    return dk + '|' + uk;
+}
+
+function _clinicStaffMergeAllAttendanceRecords_(data) {
+    if (!data || !data.length) return [];
+    var map = {};
+    var order = [];
+    for (var i = 0; i < data.length; i++) {
+        var r = data[i];
+        if (!r) continue;
+        var key = _clinicStaffAttendanceUserDayKey_(r);
+        if (!key || key === '|') continue;
+        if (!map[key]) {
+            map[key] = {
+                id: r.id,
+                staffId: r.staffId,
+                userId: r.userId,
+                userName: r.userName,
+                userEmail: r.userEmail,
+                staffRole: r.staffRole,
+                date: _clinicStaffDayKey_(r.date),
+                checkIn: r.checkIn || '',
+                checkOut: r.checkOut || '',
+                workDuration: r.workDuration || '',
+                status: r.status || 'present',
+                sessionId: r.sessionId || '',
+                source: r.source || 'login',
+                notes: r.notes || '',
+                createdAt: r.createdAt || '',
+                updatedAt: r.updatedAt || ''
+            };
+            order.push(key);
+            continue;
+        }
+        var m = map[key];
+        m.checkIn = _clinicStaffPickEarliestIso_([m.checkIn, r.checkIn]) || m.checkIn || r.checkIn;
+        m.checkOut = _clinicStaffPickLatestIso_([m.checkOut, r.checkOut]) || m.checkOut || r.checkOut;
+        m.workDuration = _clinicStaffCalcDurationHours_(m.checkIn, m.checkOut);
+        m.updatedAt = _clinicStaffPickLatestIso_([m.updatedAt, r.updatedAt]) || m.updatedAt || r.updatedAt;
+        if (m.checkIn && m.checkOut) {
+            m.status = m.workDuration ? 'present' : 'partial';
+        }
+    }
+    return order.map(function(k) { return map[k]; });
+}
+
+function _clinicStaffConsolidateAttendanceForUserDay_(all, staff, userId, email, today) {
+    all = all || [];
+    var matching = [];
+    var rest = [];
+    for (var i = 0; i < all.length; i++) {
+        var r = all[i];
+        if (r && _clinicStaffDayKey_(r.date) === today && _clinicStaffAttendanceMatchesUser_(r, staff, userId, email)) {
+            matching.push(r);
+        } else if (r) {
+            rest.push(r);
+        }
+    }
+    if (!matching.length) {
+        return { all: all, merged: null, hadDuplicates: false };
+    }
+    var primary = matching[0];
+    var merged = {
+        id: primary.id,
+        staffId: staff.id || primary.staffId,
+        userId: staff.userId || userId || primary.userId,
+        userName: primary.userName || staff.userName || '',
+        userEmail: staff.userEmail || email || primary.userEmail,
+        staffRole: staff.staffRole || primary.staffRole || '',
+        date: today,
+        checkIn: _clinicStaffPickEarliestIso_(matching.map(function(row) { return row.checkIn; })),
+        checkOut: _clinicStaffPickLatestIso_(matching.map(function(row) { return row.checkOut; })),
+        sessionId: primary.sessionId || '',
+        source: primary.source || 'login',
+        notes: primary.notes || '',
+        createdAt: _clinicStaffPickEarliestIso_(matching.map(function(row) { return row.createdAt; })) || primary.createdAt,
+        updatedAt: new Date().toISOString()
+    };
+    merged.workDuration = _clinicStaffCalcDurationHours_(merged.checkIn, merged.checkOut);
+    merged.status = merged.checkIn && merged.checkOut
+        ? (merged.workDuration ? 'present' : 'partial')
+        : (merged.checkIn ? 'present' : 'partial');
+    return { all: rest.concat([merged]), merged: merged, hadDuplicates: matching.length > 1 };
+}
+
 function isActiveClinicStaffUser_(userIdOrEmail) {
     var key = String(userIdOrEmail || '').trim().toLowerCase();
     if (!key) return null;
@@ -3386,25 +3515,15 @@ function upsertClinicStaffAttendanceOnLogin_(payload) {
         var today = _clinicStaffDayKey_(new Date());
         var now = new Date().toISOString();
         var all = readFromSheet(sheetName, getSpreadsheetId()) || [];
-        var existingIdx = -1;
-        for (var i = 0; i < all.length; i++) {
-            var r = all[i];
-            if (!r) continue;
-            var rDate = _clinicStaffDayKey_(r.date);
-            var uid = String(staff.userId || userId || '').trim();
-            var rid = String(r.userId || '').trim();
-            var rem = String(staff.userEmail || email || '').trim().toLowerCase();
-            var rmail = String(r.userEmail || '').trim().toLowerCase();
-            var matchUser = (uid && rid && uid === rid) || (rem && rmail && rem === rmail);
-            if (matchUser && rDate === today) {
-                existingIdx = i;
-                break;
+        var consolidated = _clinicStaffConsolidateAttendanceForUserDay_(all, staff, userId, email, today);
+        all = consolidated.all;
+        if (consolidated.merged && consolidated.merged.checkIn) {
+            if (consolidated.hadDuplicates) {
+                saveToSheet(sheetName, all, getSpreadsheetId());
             }
+            return { success: true, data: consolidated.merged, message: 'سجل حضور موجود لليوم — أول دخول محفوظ' };
         }
-        if (existingIdx >= 0 && all[existingIdx].checkIn) {
-            return { success: true, data: all[existingIdx], message: 'سجل حضور موجود لليوم' };
-        }
-        var record = {
+        var record = consolidated.merged || {
             id: generateSequentialId('CSA', sheetName),
             staffId: staff.id,
             userId: staff.userId || userId,
@@ -3412,7 +3531,7 @@ function upsertClinicStaffAttendanceOnLogin_(payload) {
             userEmail: staff.userEmail || email || '',
             staffRole: staff.staffRole || '',
             date: today,
-            checkIn: now,
+            checkIn: '',
             checkOut: '',
             workDuration: '',
             status: 'present',
@@ -3422,11 +3541,22 @@ function upsertClinicStaffAttendanceOnLogin_(payload) {
             createdAt: now,
             updatedAt: now
         };
-        if (existingIdx >= 0) {
-            for (var k in record) {
-                if (record.hasOwnProperty(k) && k !== 'id') all[existingIdx][k] = record[k];
+        record.checkIn = now;
+        record.checkOut = record.checkOut || '';
+        record.workDuration = _clinicStaffCalcDurationHours_(record.checkIn, record.checkOut);
+        record.sessionId = sessionId || record.sessionId || '';
+        record.updatedAt = now;
+        if (!record.createdAt) record.createdAt = now;
+        if (consolidated.merged) {
+            var replaced = false;
+            for (var i = 0; i < all.length; i++) {
+                if (all[i] && String(all[i].id) === String(record.id)) {
+                    all[i] = record;
+                    replaced = true;
+                    break;
+                }
             }
-            all[existingIdx].updatedAt = now;
+            if (!replaced) all.push(record);
             return saveToSheet(sheetName, all, getSpreadsheetId());
         }
         return appendToSheet(sheetName, record);
@@ -3449,28 +3579,21 @@ function upsertClinicStaffAttendanceOnLogout_(payload) {
         var today = _clinicStaffDayKey_(new Date());
         var now = new Date().toISOString();
         var all = readFromSheet(sheetName, getSpreadsheetId()) || [];
-        var existingIdx = -1;
+        var consolidated = _clinicStaffConsolidateAttendanceForUserDay_(all, staff, userId, email, today);
+        if (!consolidated.merged) {
+            return { success: true, skipped: true, message: 'لا يوجد سجل حضور لليوم' };
+        }
+        consolidated.merged.checkOut = now;
+        consolidated.merged.workDuration = _clinicStaffCalcDurationHours_(consolidated.merged.checkIn, now);
+        consolidated.merged.status = consolidated.merged.workDuration ? 'present' : 'partial';
+        consolidated.merged.updatedAt = now;
+        all = consolidated.all;
         for (var i = 0; i < all.length; i++) {
-            var r = all[i];
-            if (!r) continue;
-            var rDate = _clinicStaffDayKey_(r.date);
-            var uid = String(staff.userId || userId || '').trim();
-            var rid = String(r.userId || '').trim();
-            var rem = String(staff.userEmail || email || '').trim().toLowerCase();
-            var rmail = String(r.userEmail || '').trim().toLowerCase();
-            var matchUser = (uid && rid && uid === rid) || (rem && rmail && rem === rmail);
-            if (matchUser && rDate === today) {
-                existingIdx = i;
+            if (all[i] && String(all[i].id) === String(consolidated.merged.id)) {
+                all[i] = consolidated.merged;
                 break;
             }
         }
-        if (existingIdx < 0) {
-            return { success: true, skipped: true, message: 'لا يوجد سجل حضور لليوم' };
-        }
-        all[existingIdx].checkOut = now;
-        all[existingIdx].workDuration = _clinicStaffCalcDurationHours_(all[existingIdx].checkIn, now);
-        all[existingIdx].status = all[existingIdx].workDuration ? 'present' : 'partial';
-        all[existingIdx].updatedAt = now;
         return saveToSheet(sheetName, all, getSpreadsheetId());
     } catch (error) {
         Logger.log('Error in upsertClinicStaffAttendanceOnLogout_: ' + error.toString());
@@ -3483,6 +3606,7 @@ function getClinicStaffAttendance(filters, actorUserData) {
         filters = filters || {};
         var isAdmin = _clinicStaffIsAdminActor_(actorUserData);
         var data = readFromSheet('ClinicStaffAttendance', getSpreadsheetId()) || [];
+        data = _clinicStaffMergeAllAttendanceRecords_(data);
         if (!isAdmin) {
             data = data.filter(function(r) { return _clinicStaffRowMatchesActor_(r, actorUserData); });
         } else {
@@ -3543,12 +3667,22 @@ function recordClinicStaffLogout(payload) {
 // ============================================
 
 function _clinicStaffIsAdminActor_(actorUserData) {
-    if (typeof checkAdminPermissionsAuthoritative === 'function') {
-        return checkAdminPermissionsAuthoritative(actorUserData);
-    }
     if (!actorUserData) return false;
-    var role = String(actorUserData.role || '').toLowerCase();
-    return role === 'admin' || role === 'مدير';
+    if (typeof resolveActorRecordFromUsersSheet_ === 'function') {
+        var resolved = resolveActorRecordFromUsersSheet_(actorUserData);
+        if (resolved && typeof checkAdminPermissions === 'function' && checkAdminPermissions(resolved)) {
+            return true;
+        }
+    }
+    if (typeof checkAdminPermissionsAuthoritative === 'function' && checkAdminPermissionsAuthoritative(actorUserData)) {
+        return true;
+    }
+    if (typeof checkAdminPermissions === 'function' && checkAdminPermissions(actorUserData)) {
+        return true;
+    }
+    var role = String(actorUserData.role || '').trim();
+    var low = role.toLowerCase();
+    return low === 'admin' || low === 'system_admin' || role === 'مدير النظام' || role === 'مدير';
 }
 
 function _clinicStaffActorKeys_(actorUserData) {

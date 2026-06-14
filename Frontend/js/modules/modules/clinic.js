@@ -3127,7 +3127,78 @@ const Clinic = {
             return Permissions.isCurrentUserAdmin();
         }
         const userRole = (AppState.currentUser?.role || '').toLowerCase();
-        return userRole === 'admin' || userRole === 'مدير';
+        return userRole === 'admin' || userRole === 'system_admin' || AppState.currentUser?.role === 'مدير النظام' || userRole === 'مدير';
+    },
+
+    _isUsersSheetAdminRecord(user) {
+        if (!user) return false;
+        if (typeof Permissions !== 'undefined') {
+            if (typeof Permissions.isAdminRole === 'function' && Permissions.isAdminRole(user.role)) return true;
+            const perms = typeof Permissions.normalizePermissions === 'function'
+                ? Permissions.normalizePermissions(user.permissions)
+                : user.permissions;
+            if (perms && typeof perms === 'object' && !Array.isArray(perms)) {
+                if (Permissions.isAdminRole && Permissions.isAdminRole(perms.role)) return true;
+                if (perms.admin === true || perms.isAdmin === true || perms['manage-modules'] === true) return true;
+            }
+        }
+        const role = String(user.role || '').trim().toLowerCase();
+        return role === 'admin' || role === 'system_admin' || user.role === 'مدير النظام' || user.role === 'مدير';
+    },
+
+    _invalidateApprovalsCache() {
+        this._approvalsBackendFetchOk = false;
+        try { localStorage.removeItem('clinic_approvals_last_sync'); } catch (_e) { /* ignore */ }
+    },
+
+    _isApprovalTimeOffRequest(request) {
+        return request && (request.approvalKind === 'timeoff' || request.requestType === 'timeoff');
+    },
+
+    _mergeAttendanceRowsByUserDay(rows) {
+        if (!Array.isArray(rows) || !rows.length) return [];
+        const map = new Map();
+        const order = [];
+        const pickEarliest = (values) => {
+            let best = '';
+            let bestT = Infinity;
+            values.filter(Boolean).forEach(v => {
+                const t = new Date(v).getTime();
+                if (!Number.isNaN(t) && t < bestT) { bestT = t; best = v; }
+            });
+            return best;
+        };
+        const pickLatest = (values) => {
+            let best = '';
+            let bestT = -Infinity;
+            values.filter(Boolean).forEach(v => {
+                const t = new Date(v).getTime();
+                if (!Number.isNaN(t) && t > bestT) { bestT = t; best = v; }
+            });
+            return best;
+        };
+        rows.forEach(r => {
+            if (!r) return;
+            const dayKey = this._attendanceDayKey(r.date);
+            const userKey = String(r.staffId || r.userId || r.userEmail || '').trim().toLowerCase();
+            const key = `${dayKey}|${userKey}`;
+            if (!map.has(key)) {
+                map.set(key, { ...r, date: dayKey || r.date });
+                order.push(key);
+                return;
+            }
+            const m = map.get(key);
+            m.checkIn = pickEarliest([m.checkIn, r.checkIn]) || m.checkIn || r.checkIn;
+            m.checkOut = pickLatest([m.checkOut, r.checkOut]) || m.checkOut || r.checkOut;
+            if (m.checkIn && m.checkOut) {
+                const a = new Date(m.checkIn).getTime();
+                const b = new Date(m.checkOut).getTime();
+                if (!Number.isNaN(a) && !Number.isNaN(b) && b > a) {
+                    m.workDuration = Math.round(((b - a) / (1000 * 60 * 60)) * 100) / 100;
+                }
+            }
+        });
+        return order.map(k => map.get(k));
     },
 
     /**
@@ -3142,10 +3213,7 @@ const Clinic = {
             });
 
             if (usersResult && usersResult.success && Array.isArray(usersResult.data)) {
-                const admins = usersResult.data.filter(user => {
-                    const role = (user.role || '').toLowerCase();
-                    return role === 'admin' || role === 'مدير';
-                });
+                const admins = usersResult.data.filter(user => this._isUsersSheetAdminRecord(user));
 
                 // إرسال إشعار لكل مدير
                 for (const admin of admins) {
@@ -3188,10 +3256,7 @@ const Clinic = {
             });
 
             if (usersResult && usersResult.success && Array.isArray(usersResult.data)) {
-                const admins = usersResult.data.filter(user => {
-                    const role = (user.role || '').toLowerCase();
-                    return role === 'admin' || role === 'مدير';
-                });
+                const admins = usersResult.data.filter(user => this._isUsersSheetAdminRecord(user));
 
                 const typeLabel = {
                     'medication': 'أدوية',
@@ -12019,6 +12084,8 @@ const Clinic = {
             }
             if (timeOffRequests.length > 0 || !(Array.isArray(AppState.appData?.clinicStaffTimeOffRequests) && AppState.appData.clinicStaffTimeOffRequests.length > 0)) {
                 AppState.appData.clinicStaffTimeOffRequests = timeOffRequests;
+            } else if (timeOffResult.status === 'fulfilled' && toVal && toVal.success !== false) {
+                AppState.appData.clinicStaffTimeOffRequests = timeOffRequests;
             }
 
             try { localStorage.setItem('clinic_approvals_last_sync', String(Date.now())); } catch (e) {}
@@ -12069,7 +12136,8 @@ const Clinic = {
             if (!isStale && hasLocalAny) {
                 this._approvalsBackendFetchOk = true;
             }
-            if ((isStale || !hasLocalAny || this._approvalsBackendFetchOk !== true) && typeof GoogleIntegration !== 'undefined' && GoogleIntegration.sendRequest) {
+            const needsFreshFetch = isStale || !hasLocalAny || this._approvalsBackendFetchOk !== true;
+            if ((needsFreshFetch || !hasLocalTimeOff) && typeof GoogleIntegration !== 'undefined' && GoogleIntegration.sendRequest) {
                 const loadAndMaybeRerender = async () => {
                     await this.ensureApprovalsDataLoaded({ force: isStale && hasLocalAny });
                 };
@@ -12101,7 +12169,7 @@ const Clinic = {
             const allDeletionRequests = deletionRequests.map(r => ({ ...r, requestType: 'deletion' }));
             const allSupplyRequests = supplyRequests.map(r => ({ ...r, requestType: 'supply' }));
             const allVisitDeletionRequests = visitDeletionRequests.map(r => ({ ...r, requestType: 'visit' }));
-            const allTimeOffRequests = timeOffRequests.map(r => ({ ...r, requestType: 'timeoff' }));
+            const allTimeOffRequests = timeOffRequests.map(r => ({ ...r, approvalKind: 'timeoff' }));
 
             // دمج الطلبات
             const allRequests = [...allDeletionRequests, ...allSupplyRequests, ...allVisitDeletionRequests, ...allTimeOffRequests];
@@ -12197,7 +12265,7 @@ const Clinic = {
                     filteredRequests = filteredRequests.filter(r => r.status === status);
                 }
                 if (type !== 'all') {
-                    filteredRequests = filteredRequests.filter(r => r.requestType === type);
+                    filteredRequests = filteredRequests.filter(r => (r.approvalKind || r.requestType) === type);
                 }
 
                 const approvalsTableContainer = document.getElementById('approvals-table-container');
@@ -12236,11 +12304,11 @@ const Clinic = {
         }
 
         const rows = requests.map(request => {
-            const requestType = request.requestType || 'deletion';
-            const isDeletion = requestType === 'deletion';
-            const isSupply = requestType === 'supply';
-            const isVisitDeletion = requestType === 'visit';
-            const isTimeOff = requestType === 'timeoff';
+            const approvalKind = request.approvalKind || request.requestType || 'deletion';
+            const isDeletion = approvalKind === 'deletion';
+            const isSupply = approvalKind === 'supply';
+            const isVisitDeletion = approvalKind === 'visit';
+            const isTimeOff = this._isApprovalTimeOffRequest(request);
 
             let itemName = '-';
             let itemType = '-';
@@ -12300,14 +12368,14 @@ const Clinic = {
                     <td>
                         <div class="flex gap-2 justify-center">
                             ${isPending ? `
-                                <button class="btn-icon btn-icon-success" data-action="approve-request" data-id="${request.id}" data-type="${requestType}" title="موافقة">
+                                <button class="btn-icon btn-icon-success" data-action="approve-request" data-id="${request.id}" data-type="${approvalKind}" title="موافقة">
                                     <i class="fas fa-check"></i>
                                 </button>
-                                <button class="btn-icon btn-icon-danger" data-action="reject-request" data-id="${request.id}" data-type="${requestType}" title="رفض">
+                                <button class="btn-icon btn-icon-danger" data-action="reject-request" data-id="${request.id}" data-type="${approvalKind}" title="رفض">
                                     <i class="fas fa-times"></i>
                                 </button>
                             ` : ''}
-                            <button class="btn-icon btn-icon-primary" data-action="view-request" data-id="${request.id}" data-type="${requestType}" title="عرض التفاصيل">
+                            <button class="btn-icon btn-icon-primary" data-action="view-request" data-id="${request.id}" data-type="${approvalKind}" title="عرض التفاصيل">
                                 <i class="fas fa-eye"></i>
                             </button>
                         </div>
@@ -13187,6 +13255,7 @@ const Clinic = {
     getClinicStaffAttendanceList() {
         this.ensureData();
         let list = Array.isArray(AppState.appData.clinicStaffAttendance) ? AppState.appData.clinicStaffAttendance : [];
+        list = this._mergeAttendanceRowsByUserDay(list);
         if (!this.canViewAllAttendanceData()) {
             list = list.filter(r => this._attendanceRowBelongsToCurrentUser_(r));
         }
@@ -14248,10 +14317,7 @@ const Clinic = {
             });
 
             if (usersResult && usersResult.success && Array.isArray(usersResult.data)) {
-                const admins = usersResult.data.filter(user => {
-                    const role = (user.role || '').toLowerCase();
-                    return role === 'admin' || role === 'مدير';
-                });
+                const admins = usersResult.data.filter(user => this._isUsersSheetAdminRecord(user));
 
                 const typeLabel = this.getTimeOffRequestTypeLabel(request.requestType);
 
@@ -14341,6 +14407,7 @@ const Clinic = {
                     durationHours,
                     status: 'pending'
                 };
+                this._invalidateApprovalsCache();
                 this.notifyAdminAboutTimeOffRequest(newReq);
 
                 Loading.hide();
