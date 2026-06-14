@@ -350,6 +350,20 @@ const SafetyPerformanceKPIs = {
         return keys.map((k, i) => this._t(k, fallbacks[i]));
     },
 
+    /** أسماء أشهر كاملة (لرؤوس لوحة السكور كارد) */
+    getScorecardMonthNames() {
+        const keys = [
+            'module.kpi.monthFull.jan', 'module.kpi.monthFull.feb', 'module.kpi.monthFull.mar', 'module.kpi.monthFull.apr',
+            'module.kpi.monthFull.may', 'module.kpi.monthFull.jun', 'module.kpi.monthFull.jul', 'module.kpi.monthFull.aug',
+            'module.kpi.monthFull.sep', 'module.kpi.monthFull.oct', 'module.kpi.monthFull.nov', 'module.kpi.monthFull.dec'
+        ];
+        const fallbacks = [
+            'January', 'February', 'March', 'April', 'May', 'June',
+            'July', 'August', 'September', 'October', 'November', 'December'
+        ];
+        return keys.map((k, i) => this._t(k, fallbacks[i]));
+    },
+
     renderOverviewTab() {
         const t = (k, f) => this._t(k, f);
         // ✅ logical property — auto-flips between LTR/RTL
@@ -932,7 +946,7 @@ const SafetyPerformanceKPIs = {
     },
 
     getScorecardMonths() {
-        return this.getMonthAbbreviations().map((label, index) => ({
+        return this.getScorecardMonthNames().map((label, index) => ({
             index,
             key: String(index + 1).padStart(2, '0'),
             label
@@ -1091,6 +1105,7 @@ const SafetyPerformanceKPIs = {
                 .spk-scorecard-table thead th:first-child { z-index: 4; }
                 .spk-scorecard-table thead th { background: #ffffff; font-weight: 800; }
                 .spk-scorecard-table .spk-ytd-head { color: #0ea5e9; font-weight: 800; }
+                .spk-scorecard-table th.spk-month-head { min-width: 5.75rem; font-size: 0.78rem; white-space: nowrap; }
                 .spk-row-section td { background: #ffffff; border: 0; font-size: 1rem; font-weight: 800; color: #0369a1; padding: 1rem 0.5rem 0.35rem; }
                 .spk-row-subsection td { background: #ffffff; border-left: 0; border-right: 0; font-weight: 800; color: #0f766e; padding-top: 0.55rem; padding-bottom: 0.35rem; }
                 .spk-row-subsection .spk-subsection-ytd { text-align: center; color: #0ea5e9; font-weight: 800; }
@@ -1104,14 +1119,15 @@ const SafetyPerformanceKPIs = {
                 #safety-performance-kpis-section[dir="ltr"] .spk-row-subsection td { text-align: left; direction: ltr; }
                 #safety-performance-kpis-section[dir="rtl"] #spk-scorecard-panel,
                 #safety-performance-kpis-section[dir="rtl"] .spk-scorecard-hero { direction: rtl; text-align: start; }
-                #safety-performance-kpis-section[dir="rtl"] .spk-scorecard-table { direction: rtl; }
+                /* الجدول يبقى LTR لترتيب الأشهر (ينا→ديس) وتجنّب إخفاء يناير تحت العمود الثابت */
+                #safety-performance-kpis-section[dir="rtl"] .spk-scorecard-table { direction: ltr; }
                 #safety-performance-kpis-section[dir="rtl"] .spk-scorecard-table th:first-child,
-                #safety-performance-kpis-section[dir="rtl"] .spk-scorecard-table td:first-child { right: 0; left: auto; text-align: right; direction: rtl; }
+                #safety-performance-kpis-section[dir="rtl"] .spk-scorecard-table td:first-child { left: 0; right: auto; text-align: right; direction: rtl; }
                 #safety-performance-kpis-section[dir="rtl"] .spk-label-cell { direction: rtl; text-align: right; }
                 #safety-performance-kpis-section[dir="rtl"] .spk-row-section td,
                 #safety-performance-kpis-section[dir="rtl"] .spk-row-subsection td { text-align: right; direction: rtl; }
                 #safety-performance-kpis-section[dir="rtl"] .spk-scorecard-table th:not(:first-child),
-                #safety-performance-kpis-section[dir="rtl"] .spk-scorecard-table td:not(:first-child) { direction: ltr; unicode-bidi: isolate; }
+                #safety-performance-kpis-section[dir="rtl"] .spk-scorecard-table td:not(:first-child) { direction: ltr; unicode-bidi: isolate; text-align: center; }
                 #safety-performance-kpis-section[dir="ltr"] #spk-scorecard-panel,
                 #safety-performance-kpis-section[dir="ltr"] .spk-scorecard-hero { direction: ltr; text-align: start; }
                 .spk-cell-blue { background: #dceaf6; }
@@ -2079,7 +2095,7 @@ const SafetyPerformanceKPIs = {
                 <thead>
                     <tr>
                         <th>${t('module.kpi.scorecard.table.title', 'HEALTH & SAFETY PERFORMANCE SCORECARD')} ${year}</th>
-                        ${months.map(month => `<th>${month.label}</th>`).join('')}
+                        ${months.map(month => `<th class="spk-month-head">${month.label}</th>`).join('')}
                         <th class="spk-ytd-head">${t('module.kpi.scorecard.table.cumulativeYtd', 'Cumulative YTD')}</th>
                     </tr>
                 </thead>
