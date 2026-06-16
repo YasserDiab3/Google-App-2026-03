@@ -620,6 +620,10 @@ const Dashboard = {
             // ✅ أولوية: بدء جلب سجل التردد الكامل (موظفين + مقاولين) فوراً — قبل عرض الكاش
             const clinicVisitsPrefetch = this.prefetchClinicVisitsForDashboard({ forceRefresh });
 
+            if (typeof Clinic !== 'undefined' && typeof Clinic.prefetchClinicTimeOffApprovalsForAdminIfNeeded === 'function') {
+                void Clinic.prefetchClinicTimeOffApprovalsForAdminIfNeeded().catch(() => { });
+            }
+
             // 1 - render immediately from local cache (no server wait)
             await _renderWidgetFromData(AppState.appData || {});
 
@@ -781,6 +785,9 @@ const Dashboard = {
         this._clinicVisitsPrefetchPromise = Clinic.loadVisitsDataFromBackend()
             .then(() => {
                 this._clinicVisitsPrefetchedInSession = true;
+                if (typeof Clinic.prefetchClinicTimeOffApprovalsForAdminIfNeeded === 'function') {
+                    void Clinic.prefetchClinicTimeOffApprovalsForAdminIfNeeded().catch(() => { });
+                }
             })
             .catch((e) => {
                 if (typeof Utils !== 'undefined' && Utils.safeWarn) {

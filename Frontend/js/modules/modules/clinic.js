@@ -3161,7 +3161,66 @@ const Clinic = {
     },
 
     _isApprovalTimeOffRequest(request) {
-        return request && (request.approvalKind === 'timeoff' || request.requestType === 'timeoff');
+        if (!request) return false;
+        if (request.approvalKind === 'timeoff') return true;
+        const rt = String(request.requestType || '').trim().toLowerCase();
+        return rt === 'leave' || rt === 'permission' || rt === 'overtime';
+    },
+
+    _approvalRequestMatchesTypeFilter(request, type) {
+        if (!request || !type || type === 'all') return true;
+        if (type === 'timeoff') return this._isApprovalTimeOffRequest(request);
+        return (request.approvalKind || request.requestType) === type;
+    },
+
+    /**
+     * جلب طلبات الإجازة/الإذن للمدير (خلفية) — لإظهارها في الإشعارات وتبويب الموافقات
+     */
+    prefetchClinicTimeOffApprovalsForAdminIfNeeded() {
+        if (!this.isCurrentUserAdmin()) return Promise.resolve();
+        if (typeof GoogleIntegration === 'undefined' || !GoogleIntegration.sendRequest) return Promise.resolve();
+        if (this._adminTimeOffPrefetchPromise) return this._adminTimeOffPrefetchPromise;
+
+        this._adminTimeOffPrefetchPromise = GoogleIntegration.sendRequest({
+            action: 'getClinicStaffTimeOffRequests',
+            data: { filters: {} }
+        }).then((resp) => {
+            if (resp?.success && Array.isArray(resp.data)) {
+                AppState.appData.clinicStaffTimeOffRequests = resp.data;
+                if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
+                    try { window.DataManager.save(); } catch (_e) { /* ignore */ }
+                }
+                this._updatePendingApprovalsBadgeFromLocal_();
+                if (typeof UI !== 'undefined' && typeof UI.updateNotificationsBadge === 'function') {
+                    UI.updateNotificationsBadge();
+                }
+            }
+        }).catch(() => { }).finally(() => {
+            this._adminTimeOffPrefetchPromise = null;
+        });
+
+        return this._adminTimeOffPrefetchPromise;
+    },
+
+    _updatePendingApprovalsBadgeFromLocal_() {
+        const badge = document.getElementById('pending-approvals-badge');
+        if (!badge) return;
+        const deletion = Array.isArray(AppState.appData?.clinicMedicationDeletionRequests)
+            ? AppState.appData.clinicMedicationDeletionRequests : [];
+        const supply = Array.isArray(AppState.appData?.clinicSupplyRequests)
+            ? AppState.appData.clinicSupplyRequests : [];
+        const visitDel = Array.isArray(AppState.appData?.clinicVisitDeletionRequests)
+            ? AppState.appData.clinicVisitDeletionRequests : [];
+        const timeOff = Array.isArray(AppState.appData?.clinicStaffTimeOffRequests)
+            ? AppState.appData.clinicStaffTimeOffRequests : [];
+        const totalPending = [...deletion, ...supply, ...visitDel, ...timeOff]
+            .filter(r => r && String(r.status) === 'pending').length;
+        if (totalPending > 0) {
+            badge.textContent = String(totalPending);
+            badge.style.display = 'inline-block';
+        } else {
+            badge.style.display = 'none';
+        }
     },
 
     _mergeAttendanceRowsByUserDay(rows) {
@@ -12409,7 +12468,7 @@ const Clinic = {
                     filteredRequests = filteredRequests.filter(r => r.status === status);
                 }
                 if (type !== 'all') {
-                    filteredRequests = filteredRequests.filter(r => (r.approvalKind || r.requestType) === type);
+                    filteredRequests = filteredRequests.filter(r => this._approvalRequestMatchesTypeFilter(r, type));
                 }
 
                 const approvalsTableContainer = document.getElementById('approvals-table-container');
@@ -13093,6 +13152,11 @@ const Clinic = {
                 void this._ensureClinicStaffLoadedForAttendance()
                     .then((ok) => { if (ok) this._refreshAttendanceTabNavAfterStaffLoad(); })
                     .catch(() => { });
+            }
+
+            // ✅ المدير: جلب طلبات الإجازة/الإذن بالخلفية لإظهارها في الإشعارات وطلبات الموافقة
+            if (this.isCurrentUserAdmin()) {
+                void this.prefetchClinicTimeOffApprovalsForAdminIfNeeded().catch(() => { });
             }
 
             // ✅ تحسين سرعة التحميل: عدم انتظار syncDataFromServer في الخلفية
@@ -14875,42 +14939,23 @@ const Clinic = {
     },
 
     async notifyAdminAboutTimeOffRequest(request) {
+        // الإشعار يُرسل من الخادم عند addClinicStaffTimeOffRequest (مسئول العيادة لا يقرأ ورقة Users)
+        if (!request || !request.id) return;
         try {
-            const usersResult = await GoogleIntegration.sendRequest({
-                action: 'readFromSheet',
-                data: { sheetName: 'Users' }
-            });
-
-            if (usersResult && usersResult.success && Array.isArray(usersResult.data)) {
-                const admins = usersResult.data.filter(user => this._isUsersSheetAdminRecord(user));
-
-                const typeLabel = this.getTimeOffRequestTypeLabel(request.requestType);
-
-                for (const admin of admins) {
-                    if (admin.id) {
-                        await GoogleIntegration.sendRequest({
-                            action: 'addNotification',
-                            data: {
-                                userId: admin.id,
-                                title: 'طلب موافقة على ' + typeLabel,
-                                message: `طلب ${AppState.currentUser?.name || 'مسئول عيادة'} ${typeLabel}: ${this.formatTimeOffRequestDetails(request)}`,
-                                type: 'approval_request',
-                                priority: 'normal',
-                                link: '#clinic-approvals',
-                                data: {
-                                    module: 'clinic',
-                                    action: 'timeoff_request',
-                                    requestId: request.id
-                                }
-                            }
-                        }).catch(error => {
-                            Utils.safeWarn('فشل إرسال الإشعار للمدير:', error);
-                        });
-                    }
+            if (this.isCurrentUserAdmin()) {
+                const list = Array.isArray(AppState.appData?.clinicStaffTimeOffRequests)
+                    ? AppState.appData.clinicStaffTimeOffRequests : [];
+                const exists = list.some(r => String(r.id) === String(request.id));
+                if (!exists) {
+                    AppState.appData.clinicStaffTimeOffRequests = [request, ...list];
+                }
+                this._updatePendingApprovalsBadgeFromLocal_();
+                if (typeof UI !== 'undefined' && typeof UI.updateNotificationsBadge === 'function') {
+                    UI.updateNotificationsBadge();
                 }
             }
         } catch (error) {
-            Utils.safeWarn('خطأ في إرسال الإشعارات:', error);
+            Utils.safeWarn('خطأ في تحديث إشعارات طلب الحضور:', error);
         }
     },
 

@@ -3765,6 +3765,80 @@ function _clinicStaffTimeOffCalcHoursFromTimes_(timeFrom, timeTo) {
     }
 }
 
+function _clinicStaffTimeOffTypeLabel_(requestType) {
+    var map = { leave: 'إجازة', permission: 'إذن', overtime: 'إضافي' };
+    return map[String(requestType || '').trim().toLowerCase()] || requestType || 'طلب';
+}
+
+function _clinicStaffTimeOffDetailsText_(row) {
+    if (!row) return '';
+    var rt = String(row.requestType || '').trim().toLowerCase();
+    if (rt === 'leave') {
+        return (row.dateFrom || '—') + ' → ' + (row.dateTo || '—');
+    }
+    if (rt === 'permission') {
+        return (row.dateFrom || '—') + ' | ' + (row.timeFrom || '—') + ' - ' + (row.timeTo || '—');
+    }
+    var parts = [row.dateFrom || '—'];
+    if (row.durationHours) parts.push(String(row.durationHours) + ' س');
+    else if (row.timeFrom && row.timeTo) parts.push(row.timeFrom + ' - ' + row.timeTo);
+    return parts.join(' ');
+}
+
+/**
+ * إشعار مديري النظام بطلب إجازة/إذن/إضافي جديد (من الخادم — لا يعتمد على قراءة Users من الواجهة)
+ */
+function notifyAdminsOfClinicStaffTimeOffRequest_(row) {
+    try {
+        if (!row || !row.id || typeof addNotification !== 'function') return;
+        var spreadsheetId = getSpreadsheetId();
+        if (!spreadsheetId) return;
+        var users = readFromSheet('Users', spreadsheetId) || [];
+        if (!Array.isArray(users) || !users.length) return;
+
+        var typeLabel = _clinicStaffTimeOffTypeLabel_(row.requestType);
+        var userName = row.userName || row.userEmail || 'مسئول عيادة';
+        var message = userName + ' — ' + typeLabel + ': ' + _clinicStaffTimeOffDetailsText_(row);
+        if (row.reason) {
+            message += ' — ' + String(row.reason).trim().substring(0, 120);
+        }
+
+        users.forEach(function(u) {
+            if (!u) return;
+            var active = u.active;
+            if (active === false || String(active).toLowerCase() === 'false') return;
+
+            var isAdmin = false;
+            if (typeof checkAdminPermissions === 'function' && checkAdminPermissions(u)) {
+                isAdmin = true;
+            } else {
+                var role = String(u.role || '').trim().toLowerCase();
+                isAdmin = role === 'admin' || role === 'system_admin' || u.role === 'مدير النظام' || u.role === 'مدير';
+            }
+            if (!isAdmin) return;
+
+            var userId = u.email || u.id;
+            if (!userId) return;
+
+            try {
+                addNotification({
+                    userId: userId,
+                    type: 'approval_request',
+                    priority: 'normal',
+                    title: 'طلب موافقة على ' + typeLabel,
+                    message: message,
+                    relatedId: row.id,
+                    relatedType: 'ClinicStaffTimeOffRequest'
+                });
+            } catch (notifyErr) {
+                Logger.log('notifyAdminsOfClinicStaffTimeOffRequest_ notify error: ' + notifyErr.toString());
+            }
+        });
+    } catch (e) {
+        Logger.log('Error in notifyAdminsOfClinicStaffTimeOffRequest_: ' + e.toString());
+    }
+}
+
 function addClinicStaffTimeOffRequest(data, actorUserData) {
     try {
         if (!data) return { success: false, message: 'بيانات الطلب غير موجودة' };
@@ -3837,9 +3911,11 @@ function addClinicStaffTimeOffRequest(data, actorUserData) {
         }
 
         var result = appendToSheet('ClinicStaffTimeOffRequests', row);
-        return result && result.success
-            ? { success: true, data: { id: row.id }, message: 'تم إرسال الطلب بنجاح' }
-            : result;
+        if (result && result.success) {
+            notifyAdminsOfClinicStaffTimeOffRequest_(row);
+            return { success: true, data: { id: row.id }, message: 'تم إرسال الطلب بنجاح' };
+        }
+        return result;
     } catch (error) {
         Logger.log('Error in addClinicStaffTimeOffRequest: ' + error.toString());
         return { success: false, message: 'خطأ في إرسال الطلب: ' + error.toString() };

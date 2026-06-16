@@ -9444,6 +9444,50 @@ window.UI = {
                 Utils.safeWarn('⚠️ تنبيهات الملاحظات في الإشعارات:', obsErr);
             }
 
+            // 7b. طلبات إجازة/إذن/إضافي — العيادة (للمدير)
+            try {
+                const cu = AppState.currentUser || {};
+                const isAdminUser = (cu.role === 'admin') ||
+                    (typeof Permissions !== 'undefined' && Permissions.isCurrentUserAdmin && Permissions.isCurrentUserAdmin());
+                if (isAdminUser && Array.isArray(AppState.appData?.clinicStaffTimeOffRequests)) {
+                    const typeLabels = { leave: 'إجازة', permission: 'إذن', overtime: 'إضافي' };
+                    AppState.appData.clinicStaffTimeOffRequests
+                        .filter(req => req && String(req.status) === 'pending')
+                        .forEach(req => {
+                            const notificationId = 'clinic-timeoff-' + (req.id || Date.now());
+                            if (readNotifications.includes(notificationId)) return;
+                            const typeLabel = typeLabels[String(req.requestType || '').toLowerCase()] || req.requestType || 'طلب';
+                            const who = req.userName || req.userEmail || 'مسئول عيادة';
+                            let details = req.dateFrom || '';
+                            if (req.requestType === 'leave' && req.dateTo) details += ' → ' + req.dateTo;
+                            else if (req.requestType === 'permission' && req.timeFrom) details += ' ' + req.timeFrom + '-' + (req.timeTo || '');
+                            notifications.push({
+                                id: notificationId,
+                                type: 'warning',
+                                title: 'طلب ' + typeLabel + ' — العيادة',
+                                message: who + ': ' + (details || typeLabel) + (req.reason ? ' — ' + String(req.reason).slice(0, 80) : ''),
+                                time: req.requestedAt || req.createdAt || new Date(),
+                                icon: 'fa-user-clock',
+                                onClick: () => {
+                                    try {
+                                        const link = document.querySelector('a[data-section="clinic"]');
+                                        if (link) link.click();
+                                        setTimeout(() => {
+                                            if (typeof Clinic !== 'undefined') {
+                                                Clinic.state = Clinic.state || {};
+                                                Clinic.state.activeTab = 'approvals';
+                                                if (typeof Clinic.renderUI === 'function') Clinic.renderUI();
+                                            }
+                                        }, 400);
+                                    } catch (_e) { /* ignore */ }
+                                }
+                            });
+                        });
+                }
+            } catch (clinicToErr) {
+                Utils.safeWarn('⚠️ تنبيهات طلبات الحضور في الإشعارات:', clinicToErr);
+            }
+
             // ترتيب الإشعارات حسب التاريخ (الأحدث أولاً)
             notifications.sort((a, b) => {
                 const dateA = new Date(a.time);
