@@ -549,6 +549,138 @@ const Clinic = {
             .clinic-table-wrapper:not(.scrolled-bottom)::after {
                 opacity: 1;
             }
+
+            /* تبويب الحضور — جداول قابلة للتمرير */
+            .clinic-attendance-scroll-table {
+                max-height: 42vh;
+            }
+            @media (max-width: 768px) {
+                .clinic-attendance-scroll-table {
+                    max-height: 50vh;
+                }
+            }
+
+            /* قائمة منزلقة للانتقال بين أقسام الحضور */
+            .clinic-attendance-quick-nav {
+                position: fixed;
+                inset-inline-end: 18px;
+                bottom: 88px;
+                z-index: 120;
+                display: flex;
+                flex-direction: column;
+                align-items: stretch;
+                gap: 0;
+                max-width: min(240px, calc(100vw - 24px));
+            }
+            .clinic-attendance-quick-nav-toggle {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                gap: 8px;
+                padding: 10px 14px;
+                border: none;
+                border-radius: 12px;
+                cursor: pointer;
+                font-size: 0.8rem;
+                font-weight: 700;
+                color: #fff;
+                background: linear-gradient(135deg, #134e4a 0%, #0d9488 100%);
+                box-shadow: 0 6px 20px rgba(13, 148, 136, 0.35);
+                transition: transform 0.2s, box-shadow 0.2s;
+            }
+            .clinic-attendance-quick-nav-toggle:hover {
+                transform: translateY(-1px);
+                box-shadow: 0 8px 24px rgba(13, 148, 136, 0.42);
+            }
+            .clinic-attendance-quick-nav-chevron {
+                transition: transform 0.25s ease;
+                font-size: 0.7rem;
+                opacity: 0.9;
+            }
+            .clinic-attendance-quick-nav.open .clinic-attendance-quick-nav-chevron {
+                transform: rotate(180deg);
+            }
+            .clinic-attendance-quick-nav-panel {
+                max-height: 0;
+                overflow: hidden;
+                opacity: 0;
+                transition: max-height 0.32s ease, opacity 0.22s ease, margin 0.22s ease;
+                margin-top: 0;
+                background: #fff;
+                border-radius: 12px;
+                box-shadow: 0 10px 32px rgba(15, 23, 42, 0.14);
+                border: 1px solid #ccfbf1;
+            }
+            .clinic-attendance-quick-nav.open .clinic-attendance-quick-nav-panel {
+                max-height: 280px;
+                overflow-y: auto;
+                opacity: 1;
+                margin-top: 8px;
+            }
+            .clinic-attendance-quick-nav-panel::-webkit-scrollbar {
+                width: 8px;
+            }
+            .clinic-attendance-quick-nav-panel::-webkit-scrollbar-thumb {
+                background: #0d9488;
+                border-radius: 6px;
+            }
+            .clinic-attendance-quick-nav-item {
+                display: flex;
+                align-items: center;
+                width: 100%;
+                padding: 10px 14px;
+                border: none;
+                border-bottom: 1px solid #f1f5f9;
+                background: transparent;
+                cursor: pointer;
+                font-size: 0.78rem;
+                font-weight: 600;
+                color: #334155;
+                text-align: start;
+                transition: background 0.15s, color 0.15s;
+            }
+            .clinic-attendance-quick-nav-item:last-child {
+                border-bottom: none;
+            }
+            .clinic-attendance-quick-nav-item:hover,
+            .clinic-attendance-quick-nav-item:focus {
+                background: #f0fdfa;
+                color: #0f766e;
+                outline: none;
+            }
+            .clinic-attendance-quick-nav-item i {
+                color: #0d9488;
+                width: 18px;
+                text-align: center;
+            }
+            [id^="clinic-attendance-section"],
+            #clinic-staff-activities-section,
+            #clinic-leave-balances-section,
+            #clinic-approved-timeoff-section {
+                scroll-margin-top: 72px;
+            }
+            [data-theme="dark"] .clinic-attendance-quick-nav-panel {
+                background: #1e293b;
+                border-color: #334155;
+            }
+            [data-theme="dark"] .clinic-attendance-quick-nav-item {
+                color: #e2e8f0;
+                border-bottom-color: #334155;
+            }
+            [data-theme="dark"] .clinic-attendance-quick-nav-item:hover {
+                background: #0f766e33;
+                color: #5eead4;
+            }
+            @media (max-width: 640px) {
+                .clinic-attendance-quick-nav {
+                    inset-inline-end: 10px;
+                    bottom: 72px;
+                    max-width: calc(100vw - 20px);
+                }
+                .clinic-attendance-quick-nav-toggle span {
+                    display: none;
+                }
+            }
             
             /* ✅ أنماط الفلاتر الاحترافية لسجل التردد */
             .visits-filters-row {
@@ -709,6 +841,88 @@ const Clinic = {
 
         // تحديث الحالة الأولية
         updateScrollState();
+    },
+
+    _clinicAttendanceScrollTable(tableHtml, maxHeight) {
+        const mh = maxHeight || '42vh';
+        return `<div class="table-wrapper clinic-table-wrapper clinic-attendance-scroll-table" style="overflow-x:auto;overflow-y:auto;max-height:${mh};">${tableHtml}</div>`;
+    },
+
+    renderAttendanceQuickNav(sections) {
+        if (!Array.isArray(sections) || !sections.length) return '';
+        const items = sections.map(s => `
+            <button type="button" class="clinic-attendance-quick-nav-item" data-target="${Utils.escapeAttr(s.id)}">
+                <i class="fas ${Utils.escapeAttr(s.icon || 'fa-circle')} ml-2"></i>${Utils.escapeHTML(s.label || '')}
+            </button>
+        `).join('');
+        return `<div class="clinic-attendance-quick-nav" id="clinic-attendance-quick-nav">
+            <button type="button" class="clinic-attendance-quick-nav-toggle" id="clinic-attendance-quick-nav-toggle" aria-expanded="false" title="قائمة الأقسام والتمرير">
+                <span><i class="fas fa-list-ul ml-2"></i>الأقسام</span>
+                <i class="fas fa-chevron-up clinic-attendance-quick-nav-chevron"></i>
+            </button>
+            <div class="clinic-attendance-quick-nav-panel" id="clinic-attendance-quick-nav-panel" hidden>${items}</div>
+        </div>`;
+    },
+
+    bindAttendanceQuickNav(panel) {
+        const nav = panel?.querySelector('#clinic-attendance-quick-nav');
+        if (!nav) return;
+        const toggle = nav.querySelector('#clinic-attendance-quick-nav-toggle');
+        const navPanel = nav.querySelector('#clinic-attendance-quick-nav-panel');
+        const closeNav = () => {
+            nav.classList.remove('open');
+            if (toggle) toggle.setAttribute('aria-expanded', 'false');
+            if (navPanel) navPanel.hidden = true;
+        };
+        const openNav = () => {
+            nav.classList.add('open');
+            if (toggle) toggle.setAttribute('aria-expanded', 'true');
+            if (navPanel) navPanel.hidden = false;
+        };
+        toggle?.addEventListener('click', (e) => {
+            e.stopPropagation();
+            if (nav.classList.contains('open')) closeNav();
+            else openNav();
+        });
+        nav.querySelectorAll('.clinic-attendance-quick-nav-item').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const targetId = btn.dataset.target;
+                const el = targetId ? document.getElementById(targetId) : null;
+                if (el) {
+                    el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    el.style.transition = 'box-shadow 0.3s';
+                    el.style.boxShadow = '0 0 0 3px rgba(13,148,136,0.35)';
+                    setTimeout(() => { el.style.boxShadow = ''; }, 1200);
+                }
+                closeNav();
+            });
+        });
+        if (!this._attendanceQuickNavDocListener) {
+            this._attendanceQuickNavDocListener = (e) => {
+                const activeNav = document.querySelector('#clinic-attendance-quick-nav.open');
+                if (activeNav && !activeNav.contains(e.target)) {
+                    activeNav.classList.remove('open');
+                    const t = activeNav.querySelector('#clinic-attendance-quick-nav-toggle');
+                    const p = activeNav.querySelector('#clinic-attendance-quick-nav-panel');
+                    if (t) t.setAttribute('aria-expanded', 'false');
+                    if (p) p.hidden = true;
+                }
+            };
+            document.addEventListener('click', this._attendanceQuickNavDocListener);
+        }
+        this._syncAttendanceQuickNavVisibility();
+    },
+
+    _syncAttendanceQuickNavVisibility() {
+        const show = this.state?.activeTab === 'attendance' && this.canAccessAttendanceTab();
+        document.querySelectorAll('#clinic-attendance-quick-nav').forEach(nav => {
+            nav.style.display = show ? '' : 'none';
+        });
+    },
+
+    initAttendanceTableScroll(panel) {
+        this.injectTableScrollbarStyles();
+        panel?.querySelectorAll('.clinic-table-wrapper').forEach(w => this.setupTableScrollListeners(w));
     },
 
     loadClinicDataAnalysis() {
@@ -2498,6 +2712,7 @@ const Clinic = {
                     panel.style.display = 'none';
                 }
             });
+            this._syncAttendanceQuickNavVisibility?.();
         } catch (e) { /* ignore */ }
     },
 
@@ -3441,10 +3656,10 @@ const Clinic = {
                 <h4 style="margin:0;font-size:0.92rem;font-weight:700;color:#134e4a;"><i class="fas fa-check-circle ml-2" style="color:#059669;"></i>الإجازات والأذونات المعتمدة (${Utils.escapeHTML(month || '')})</h4>
             </div>
             <div class="card-body" style="padding:0;">
-                <div class="table-wrapper"><table class="data-table table-header-green">
+                ${this._clinicAttendanceScrollTable(`<table class="data-table table-header-green">
                     <thead><tr><th>المسئول</th><th>النوع</th><th>التفاصيل</th><th>السبب</th><th>تاريخ الاعتماد</th></tr></thead>
                     <tbody>${rows}</tbody>
-                </table></div>
+                </table>`)}
             </div>
         </div>`;
     },
@@ -3505,7 +3720,7 @@ const Clinic = {
                     <i class="fas fa-info-circle ml-1" style="color:#0d9488;"></i>
                     المستنفذ يحسب من الطلبات <strong>المعتمدة</strong> فقط. حدّد الرصيد الشهري والسنوي لكل مسئول عبر «تعديل».
                 </p>
-                <div class="table-wrapper"><table class="data-table table-header-green">
+                ${this._clinicAttendanceScrollTable(`<table class="data-table table-header-green">
                     <thead><tr>
                         <th>المسئول</th><th>الدور</th>
                         <th>إجازة (${Utils.escapeHTML(month)})</th>
@@ -3515,7 +3730,7 @@ const Clinic = {
                         ${isAdmin ? '<th>إجراء</th>' : ''}
                     </tr></thead>
                     <tbody>${rows}</tbody>
-                </table></div>
+                </table>`)}
             </div>
         </div>`;
     },
@@ -14010,13 +14225,13 @@ const Clinic = {
                         <i class="fas fa-info-circle ml-1" style="color:#0d9488;"></i>
                         يعرض ما تم تسجيله عبر النظام: تصاريح العمل، زيارات العيادة (من سجل التردد المحمّل)، التدريب، الحوادث، والملاحظات. اضغط زر التحديث لتحميل النشاط.
                     </p>
-                    <div class="table-wrapper"><table class="data-table table-header-green">
+                    ${this._clinicAttendanceScrollTable(`<table class="data-table table-header-green">
                         <thead><tr>
                             ${showUserColumn ? '<th>المستخدم</th>' : ''}
                             <th>القسم</th><th>الإجراء</th><th>التفاصيل</th><th>التاريخ</th>
                         </tr></thead>
                         <tbody>${rows}</tbody>
-                    </table></div>
+                    </table>`)}
                 </div>
             </div>`;
     },
@@ -15541,10 +15756,10 @@ const Clinic = {
                 <td>${isPending ? `<button type="button" class="btn-icon btn-icon-danger" title="إلغاء" onclick="Clinic.cancelTimeOffRequest('${Utils.escapeAttr(req.id)}')"><i class="fas fa-ban"></i></button>` : '—'}</td>
             </tr>`;
         }).join('');
-        return `<div class="table-wrapper"><table class="data-table table-header-green">
+        return this._clinicAttendanceScrollTable(`<table class="data-table table-header-green">
             <thead><tr><th>النوع</th><th>التفاصيل</th><th>السبب</th><th>الحالة</th><th>التاريخ</th><th>إجراء</th></tr></thead>
             <tbody>${rows}</tbody>
-        </table></div>`;
+        </table>`);
     },
 
     renderAttendanceSelfTab(panel) {
@@ -15592,8 +15807,18 @@ const Clinic = {
             </tr>
         `).join('') : `<tr><td colspan="5" class="text-center text-gray-500 py-8">لا توجد سجلات حضور</td></tr>`);
 
+        const selfNavSections = [
+            { id: 'clinic-attendance-section-timeoff', label: 'طلب جديد', icon: 'fa-paper-plane' },
+            { id: 'clinic-attendance-section-my-requests', label: 'طلباتي', icon: 'fa-list' },
+            { id: 'clinic-attendance-section-records', label: 'سجل حضوري', icon: 'fa-clipboard-user' },
+            { id: 'clinic-staff-activities-section', label: 'نشاطي', icon: 'fa-history' },
+            { id: 'clinic-leave-balances-section', label: 'أرصدة الإجازات', icon: 'fa-wallet' },
+            { id: 'clinic-approved-timeoff-section', label: 'الإجازات المعتمدة', icon: 'fa-check-circle' }
+        ];
+
         panel.innerHTML = `
             <div id="clinic-attendance-self-root">
+                ${this.renderAttendanceQuickNav(selfNavSections)}
                 <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:14px;">
                     ${[
                         { label: 'أيام حضوري', value: stats.total, icon: 'fa-calendar-check', color: '#059669', bg: '#ecfdf5' },
@@ -15643,7 +15868,7 @@ const Clinic = {
                     ${activeFilterCount ? `<button type="button" id="clinic-attendance-reset-filters" class="btn-secondary btn-sm mt-2"><i class="fas fa-times ml-1"></i>مسح الفلاتر</button>` : ''}
                 </div>
 
-                <div class="content-card mb-4">
+                <div class="content-card mb-4" id="clinic-attendance-section-timeoff">
                     <div class="card-header"><h4 class="card-title"><i class="fas fa-paper-plane ml-2"></i>طلب جديد</h4></div>
                     <div class="card-body">
                         <form id="timeoff-request-form" class="space-y-3">
@@ -15678,18 +15903,18 @@ const Clinic = {
                     </div>
                 </div>
 
-                <div class="content-card mb-4">
+                <div class="content-card mb-4" id="clinic-attendance-section-my-requests">
                     <div class="card-header"><h4 class="card-title"><i class="fas fa-list ml-2"></i>طلباتي (${myRequests.length})</h4></div>
                     <div class="card-body" style="padding:0;">${this.renderTimeOffRequestsTable(myRequests)}</div>
                 </div>
 
-                <div class="content-card">
+                <div class="content-card" id="clinic-attendance-section-records">
                     <div class="card-header"><h4 class="card-title"><i class="fas fa-clipboard-user ml-2"></i>سجل حضوري (${rows.length})</h4></div>
                     <div class="card-body" style="padding:0;">
-                        <div class="table-wrapper"><table class="data-table table-header-green">
+                        ${this._clinicAttendanceScrollTable(`<table class="data-table table-header-green">
                             <thead><tr><th>التاريخ</th><th>دخول</th><th>خروج</th><th>مدة (س)</th><th>الحالة</th></tr></thead>
                             <tbody>${tableRows}</tbody>
-                        </table></div>
+                        </table>`)}
                     </div>
                 </div>
 
@@ -15785,6 +16010,8 @@ const Clinic = {
 
         this.bindClinicStaffActivitiesEvents(panel);
         this.bindClinicStaffLeaveBalanceEvents(panel);
+        this.bindAttendanceQuickNav(panel);
+        this.initAttendanceTableScroll(panel);
         this._applyTimeOffFormDraftToPanel(panel);
         this._bindTimeOffFormPanelEvents(panel);
     },
@@ -15882,12 +16109,23 @@ const Clinic = {
             </tr>`;
         }).join('') : `<tr><td colspan="4" class="text-center text-gray-500 py-4">لا يوجد مسئولون — أضف من القائمة</td></tr>`) : '';
 
+        const adminNavSections = [
+            { id: 'clinic-attendance-section-records', label: 'سجل الحضور', icon: 'fa-clipboard-user' },
+            { id: 'clinic-staff-activities-section', label: 'نشاط المستخدمين', icon: 'fa-history' },
+            { id: 'clinic-leave-balances-section', label: 'أرصدة الإجازات', icon: 'fa-wallet' },
+            { id: 'clinic-approved-timeoff-section', label: 'الإجازات المعتمدة', icon: 'fa-check-circle' }
+        ];
+        if (isAdmin) {
+            adminNavSections.push({ id: 'clinic-attendance-section-staff', label: 'مسئولو العيادة', icon: 'fa-users' });
+        }
+
         panel.innerHTML = `
             <style>
                 @media (max-width:900px){#clinic-attendance-filter-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important;}}
                 @media (max-width:520px){#clinic-attendance-filter-grid{grid-template-columns:1fr!important;}}
             </style>
             <div id="clinic-attendance-root" style="font-family:inherit;">
+                ${this.renderAttendanceQuickNav(adminNavSections)}
                 <!-- KPI -->
                 <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(155px,1fr));gap:10px;margin-bottom:14px;">
                     ${[
@@ -16010,15 +16248,15 @@ const Clinic = {
                     يُسجَّل الحضور تلقائياً عند تسجيل الدخول/الخروج للمسئولين المضافين في القائمة.
                 </p>
 
-                <div class="content-card" style="margin:0;">
+                <div class="content-card" id="clinic-attendance-section-records" style="margin:0;">
                     <div class="card-body" style="padding:0;">
-                        <div class="table-wrapper"><table class="data-table table-header-green">
+                        ${this._clinicAttendanceScrollTable(`<table class="data-table table-header-green">
                             <thead><tr>
                                 <th>الاسم</th><th>البريد</th><th>الدور</th><th>التاريخ</th>
                                 <th>وقت الدخول</th><th>وقت الخروج</th><th>مدة (س)</th><th>الحالة</th><th>الجلسة</th>
                             </tr></thead>
                             <tbody>${tableRows}</tbody>
-                        </table></div>
+                        </table>`, '48vh')}
                     </div>
                 </div>
 
@@ -16039,15 +16277,15 @@ const Clinic = {
                 ${this.renderApprovedTimeOffRequestsSection(leaveBalances, balancePeriods.month)}
 
                 ${isAdmin ? `
-                <div class="content-card mt-4">
+                <div class="content-card mt-4" id="clinic-attendance-section-staff">
                     <div class="card-header" style="padding:14px 18px;border-bottom:1px solid #f1f5f9;">
                         <h4 style="margin:0;font-size:0.95rem;font-weight:700;color:#134e4a;"><i class="fas fa-users ml-2" style="color:#0d9488;"></i>قائمة مسئولي العيادة</h4>
                     </div>
                     <div class="card-body" style="padding:0;">
-                        <div class="table-wrapper"><table class="data-table">
+                        ${this._clinicAttendanceScrollTable(`<table class="data-table">
                             <thead><tr><th>الاسم</th><th>الدور</th><th>الحالة</th><th>إجراءات</th></tr></thead>
                             <tbody>${staffAdminRows}</tbody>
-                        </table></div>
+                        </table>`)}
                     </div>
                 </div>` : ''}
             </div>`;
@@ -16172,6 +16410,8 @@ const Clinic = {
 
         this.bindClinicStaffActivitiesEvents(panel);
         this.bindClinicStaffLeaveBalanceEvents(panel);
+        this.bindAttendanceQuickNav(panel);
+        this.initAttendanceTableScroll(panel);
 
         if (this._attendanceSearchFocused && searchEl) {
             searchEl.focus();
