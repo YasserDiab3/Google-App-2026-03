@@ -3223,6 +3223,281 @@ const Clinic = {
         }
     },
 
+    getClinicStaffLeaveBalancesList() {
+        return Array.isArray(AppState.appData?.clinicStaffLeaveBalances)
+            ? AppState.appData.clinicStaffLeaveBalances : [];
+    },
+
+    _getLeaveBalancePeriodDefaults() {
+        const today = this._getTodayLocalKey();
+        this.state = this.state || {};
+        if (!this.state.leaveBalanceMonth) this.state.leaveBalanceMonth = today.substring(0, 7);
+        if (!this.state.leaveBalanceYear) this.state.leaveBalanceYear = today.substring(0, 4);
+        return { month: this.state.leaveBalanceMonth, year: this.state.leaveBalanceYear };
+    },
+
+    _scheduleLeaveBalancesLoadIfNeeded(force) {
+        if (!this.canAccessAttendanceTab()) return;
+        if (this._leaveBalancesLoadPromise && !force) return;
+        if (!force && this._leaveBalancesFetchedInSession) return;
+        this._leaveBalancesLoadPromise = this.loadClinicStaffLeaveBalances(!!force)
+            .then(() => {
+                this._leaveBalancesFetchedInSession = true;
+                if (this.state?.activeTab === 'attendance') this.renderAttendanceTab({ force: true });
+            })
+            .catch(() => { })
+            .finally(() => { this._leaveBalancesLoadPromise = null; });
+    },
+
+    _isLeaveBalancesLoading() {
+        return !!this._leaveBalancesLoadPromise;
+    },
+
+    async loadClinicStaffLeaveBalances(force) {
+        if (typeof GoogleIntegration === 'undefined' || !GoogleIntegration.sendRequest) return;
+        const periods = this._getLeaveBalancePeriodDefaults();
+        try {
+            const resp = await GoogleIntegration.sendRequest({
+                action: 'getClinicStaffLeaveBalances',
+                data: { month: periods.month, year: periods.year, skipCache: !!force }
+            });
+            if (resp?.success && Array.isArray(resp.data)) {
+                AppState.appData.clinicStaffLeaveBalances = resp.data;
+                if (resp.meta) {
+                    this.state.leaveBalanceMonth = resp.meta.month || periods.month;
+                    this.state.leaveBalanceYear = resp.meta.year || periods.year;
+                }
+                if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
+                    try { window.DataManager.save(); } catch (_e) { /* ignore */ }
+                }
+            }
+        } catch (_e) { /* ignore */ }
+    },
+
+    _renderBalanceTriplet(entitled, consumed, remaining) {
+        const e = entitled ?? 0;
+        const c = consumed ?? 0;
+        const r = remaining ?? 0;
+        const remColor = (e > 0 && r <= 0) ? '#dc2626' : '#059669';
+        return `<span style="font-size:0.76rem;white-space:nowrap;line-height:1.5;">
+            <span style="color:#64748b;">مستحق <strong>${e}</strong></span>
+            <span style="color:#cbd5e1;"> · </span>
+            <span style="color:#d97706;">مستنفذ <strong>${c}</strong></span>
+            <span style="color:#cbd5e1;"> · </span>
+            <span style="color:${remColor};">متبقي <strong>${r}</strong></span>
+        </span>`;
+    },
+
+    renderClinicStaffLeaveBalancesSection(opts) {
+        opts = opts || {};
+        const balances = opts.balances || [];
+        const loading = !!opts.loading;
+        const month = opts.month || '';
+        const year = opts.year || '';
+        const isAdmin = this.canViewAllAttendanceData();
+        if (!isAdmin && !balances.length && !loading) return '';
+
+        const colSpan = isAdmin ? 7 : 6;
+        const rows = loading && !balances.length
+            ? `<tr><td colspan="${colSpan}" class="text-center text-gray-500 py-8"><i class="fas fa-spinner fa-spin ml-2" style="color:#0d9488;"></i>جاري تحميل الأرصدة...</td></tr>`
+            : (balances.length ? balances.map(b => {
+                const m = b.month || {};
+                const y = b.year || {};
+                return `<tr>
+                    <td>${Utils.escapeHTML(b.userName || '—')}</td>
+                    <td>${Utils.escapeHTML(this.getStaffRoleLabel(b.staffRole))}</td>
+                    <td>${this._renderBalanceTriplet(m.leaveEntitled, m.leaveConsumed, m.leaveRemaining)}</td>
+                    <td>${this._renderBalanceTriplet(m.permissionEntitled, m.permissionConsumed, m.permissionRemaining)}</td>
+                    <td>${this._renderBalanceTriplet(y.leaveEntitled, y.leaveConsumed, y.leaveRemaining)}</td>
+                    <td>${this._renderBalanceTriplet(y.permissionEntitled, y.permissionConsumed, y.permissionRemaining)}</td>
+                    ${isAdmin ? `<td><button type="button" class="btn-secondary btn-sm clinic-leave-quota-edit-btn" data-staff-id="${Utils.escapeAttr(b.staffId)}" data-staff-name="${Utils.escapeAttr(b.userName || '')}"><i class="fas fa-edit ml-1"></i>تعديل</button></td>` : ''}
+                </tr>`;
+            }).join('') : `<tr><td colspan="${colSpan}" class="text-center text-gray-500 py-6">لا يوجد مسئولون</td></tr>`);
+
+        return `<div class="content-card mt-4" id="clinic-leave-balances-section">
+            <div class="card-header" style="padding:14px 18px;border-bottom:1px solid #f1f5f9;display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;align-items:center;">
+                <h4 style="margin:0;font-size:0.95rem;font-weight:700;color:#134e4a;"><i class="fas fa-wallet ml-2" style="color:#0d9488;"></i>أرصدة الإجازات والأذونات</h4>
+                <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+                    <label style="font-size:0.72rem;color:#64748b;font-weight:600;">الشهر</label>
+                    <input type="month" id="clinic-leave-balance-month" class="form-input" style="padding:6px 10px;font-size:0.8rem;width:auto;" value="${Utils.escapeAttr(month)}">
+                    <label style="font-size:0.72rem;color:#64748b;font-weight:600;">السنة</label>
+                    <input type="number" id="clinic-leave-balance-year" class="form-input" style="padding:6px 10px;font-size:0.8rem;width:90px;" min="2020" max="2100" value="${Utils.escapeAttr(year)}">
+                    <button type="button" id="clinic-leave-balance-refresh-btn" class="btn-secondary btn-sm" title="تحديث"><i class="fas fa-sync-alt${loading ? ' fa-spin' : ''}"></i></button>
+                </div>
+            </div>
+            <div class="card-body" style="padding:0;">
+                <p style="padding:10px 16px;margin:0;font-size:0.76rem;color:#64748b;border-bottom:1px solid #f1f5f9;">
+                    <i class="fas fa-info-circle ml-1" style="color:#0d9488;"></i>
+                    المستنفذ يحسب من الطلبات <strong>المعتمدة</strong> فقط. حدّد الرصيد الشهري والسنوي لكل مسئول عبر «تعديل».
+                </p>
+                <div class="table-wrapper"><table class="data-table table-header-green">
+                    <thead><tr>
+                        <th>المسئول</th><th>الدور</th>
+                        <th>إجازة (${Utils.escapeHTML(month)})</th>
+                        <th>أذونات (${Utils.escapeHTML(month)})</th>
+                        <th>إجازة (${Utils.escapeHTML(year)})</th>
+                        <th>أذونات (${Utils.escapeHTML(year)})</th>
+                        ${isAdmin ? '<th>إجراء</th>' : ''}
+                    </tr></thead>
+                    <tbody>${rows}</tbody>
+                </table></div>
+            </div>
+        </div>`;
+    },
+
+    showClinicStaffLeaveQuotaModal(staffId, staffName) {
+        if (!this.isCurrentUserAdmin() || !staffId) return;
+        const balances = this.getClinicStaffLeaveBalancesList();
+        const row = balances.find(b => String(b.staffId) === String(staffId)) || {};
+        const periods = this._getLeaveBalancePeriodDefaults();
+        const m = row.month || {};
+        const y = row.year || {};
+
+        const existing = document.getElementById('clinic-leave-quota-modal');
+        if (existing) existing.remove();
+
+        const modal = document.createElement('div');
+        modal.id = 'clinic-leave-quota-modal';
+        modal.className = 'modal-overlay';
+        modal.innerHTML = `
+            <div class="modal-content" style="max-width:520px;">
+                <div class="modal-header">
+                    <h3 class="modal-title"><i class="fas fa-wallet ml-2"></i>تعديل رصيد — ${Utils.escapeHTML(staffName || '')}</h3>
+                    <button type="button" class="modal-close" id="clinic-leave-quota-close"><i class="fas fa-times"></i></button>
+                </div>
+                <div class="modal-body space-y-3">
+                    <div>
+                        <label class="block text-sm font-semibold mb-1">نوع الفترة *</label>
+                        <select id="clinic-leave-quota-period-type" class="form-input">
+                            <option value="month">شهري</option>
+                            <option value="year">سنوي</option>
+                        </select>
+                    </div>
+                    <div id="clinic-leave-quota-month-wrap">
+                        <label class="block text-sm font-semibold mb-1">الشهر *</label>
+                        <input type="month" id="clinic-leave-quota-month" class="form-input" value="${Utils.escapeAttr(periods.month)}">
+                    </div>
+                    <div id="clinic-leave-quota-year-wrap" class="hidden">
+                        <label class="block text-sm font-semibold mb-1">السنة *</label>
+                        <input type="number" id="clinic-leave-quota-year" class="form-input" min="2020" max="2100" value="${Utils.escapeAttr(periods.year)}">
+                    </div>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-sm font-semibold mb-1">رصيد الإجازة (أيام)</label>
+                            <input type="number" id="clinic-leave-quota-days" class="form-input" min="0" step="0.5" value="${m.leaveEntitled ?? 0}">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold mb-1">عدد الأذونات</label>
+                            <input type="number" id="clinic-leave-quota-perms" class="form-input" min="0" step="1" value="${m.permissionEntitled ?? 0}">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold mb-1">ملاحظات</label>
+                        <textarea id="clinic-leave-quota-notes" class="form-textarea" rows="2" placeholder="اختياري">${Utils.escapeHTML(m.quotaNotes || '')}</textarea>
+                    </div>
+                    <p class="text-xs text-gray-500">الحالي شهرياً: إجازة ${m.leaveConsumed ?? 0}/${m.leaveEntitled ?? 0} · أذونات ${m.permissionConsumed ?? 0}/${m.permissionEntitled ?? 0}</p>
+                    <p class="text-xs text-gray-500">الحالي سنوياً: إجازة ${y.leaveConsumed ?? 0}/${y.leaveEntitled ?? 0} · أذونات ${y.permissionConsumed ?? 0}/${y.permissionEntitled ?? 0}</p>
+                </div>
+                <div class="modal-footer flex gap-2 justify-end">
+                    <button type="button" class="btn-secondary" id="clinic-leave-quota-cancel">إلغاء</button>
+                    <button type="button" class="btn-primary" id="clinic-leave-quota-save"><i class="fas fa-save ml-2"></i>حفظ الرصيد</button>
+                </div>
+            </div>`;
+        document.body.appendChild(modal);
+
+        const typeEl = modal.querySelector('#clinic-leave-quota-period-type');
+        const monthWrap = modal.querySelector('#clinic-leave-quota-month-wrap');
+        const yearWrap = modal.querySelector('#clinic-leave-quota-year-wrap');
+        const daysEl = modal.querySelector('#clinic-leave-quota-days');
+        const permsEl = modal.querySelector('#clinic-leave-quota-perms');
+        const notesEl = modal.querySelector('#clinic-leave-quota-notes');
+
+        const syncPeriodFields = () => {
+            const isYear = typeEl.value === 'year';
+            monthWrap.classList.toggle('hidden', isYear);
+            yearWrap.classList.toggle('hidden', !isYear);
+            const period = isYear ? y : m;
+            daysEl.value = period.leaveEntitled ?? 0;
+            permsEl.value = period.permissionEntitled ?? 0;
+            notesEl.value = period.quotaNotes || '';
+        };
+        typeEl.addEventListener('change', syncPeriodFields);
+        syncPeriodFields();
+
+        const close = () => modal.remove();
+        modal.querySelector('#clinic-leave-quota-close')?.addEventListener('click', close);
+        modal.querySelector('#clinic-leave-quota-cancel')?.addEventListener('click', close);
+        modal.addEventListener('click', (e) => { if (e.target === modal) close(); });
+
+        modal.querySelector('#clinic-leave-quota-save')?.addEventListener('click', async () => {
+            const periodType = typeEl.value;
+            const periodKey = periodType === 'year'
+                ? String(modal.querySelector('#clinic-leave-quota-year')?.value || '').trim()
+                : String(modal.querySelector('#clinic-leave-quota-month')?.value || '').trim();
+            if (!periodKey) {
+                Notification?.error?.('حدد الشهر أو السنة');
+                return;
+            }
+            Loading.show();
+            try {
+                const result = await GoogleIntegration.sendRequest({
+                    action: 'upsertClinicStaffLeaveQuota',
+                    data: {
+                        staffId,
+                        periodType,
+                        periodKey,
+                        leaveDaysQuota: daysEl.value,
+                        permissionCountQuota: permsEl.value,
+                        notes: notesEl.value?.trim() || ''
+                    }
+                });
+                if (result?.success) {
+                    this._leaveBalancesFetchedInSession = false;
+                    await this.loadClinicStaffLeaveBalances(true);
+                    this._leaveBalancesFetchedInSession = true;
+                    Loading.hide();
+                    Notification?.success?.('تم حفظ الرصيد بنجاح');
+                    close();
+                    this.renderAttendanceTab({ force: true });
+                } else {
+                    throw new Error(result?.message || 'فشل الحفظ');
+                }
+            } catch (err) {
+                Loading.hide();
+                Notification?.error?.(err?.message || 'فشل حفظ الرصيد');
+            }
+        });
+    },
+
+    bindClinicStaffLeaveBalanceEvents(panel) {
+        if (!panel) return;
+        const applyPeriod = () => {
+            const month = panel.querySelector('#clinic-leave-balance-month')?.value || '';
+            const year = panel.querySelector('#clinic-leave-balance-year')?.value || '';
+            this.state.leaveBalanceMonth = month || this._getLeaveBalancePeriodDefaults().month;
+            this.state.leaveBalanceYear = year || this._getLeaveBalancePeriodDefaults().year;
+            this._leaveBalancesFetchedInSession = false;
+            void this.loadClinicStaffLeaveBalances(true).then(() => {
+                this._leaveBalancesFetchedInSession = true;
+                this.renderAttendanceTab({ force: true });
+            });
+        };
+        panel.querySelector('#clinic-leave-balance-month')?.addEventListener('change', applyPeriod);
+        panel.querySelector('#clinic-leave-balance-year')?.addEventListener('change', applyPeriod);
+        panel.querySelector('#clinic-leave-balance-refresh-btn')?.addEventListener('click', () => {
+            this._leaveBalancesFetchedInSession = false;
+            void this.loadClinicStaffLeaveBalances(true).then(() => {
+                this._leaveBalancesFetchedInSession = true;
+                this.renderAttendanceTab({ force: true });
+            });
+        });
+        panel.querySelectorAll('.clinic-leave-quota-edit-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                this.showClinicStaffLeaveQuotaModal(btn.dataset.staffId, btn.dataset.staffName);
+            });
+        });
+    },
+
     _mergeAttendanceRowsByUserDay(rows) {
         if (!Array.isArray(rows) || !rows.length) return [];
         const map = new Map();
@@ -8718,6 +8993,7 @@ const Clinic = {
         if (!Array.isArray(data.clinicStaff)) data.clinicStaff = [];
         if (!Array.isArray(data.clinicStaffAttendance)) data.clinicStaffAttendance = [];
         if (!Array.isArray(data.clinicStaffTimeOffRequests)) data.clinicStaffTimeOffRequests = [];
+        if (!Array.isArray(data.clinicStaffLeaveBalances)) data.clinicStaffLeaveBalances = [];
         if (!Array.isArray(data.clinicStaffSystemActivities)) data.clinicStaffSystemActivities = [];
 
         // ✅ حماية حاسمة: دمج زيارات المقاولين من clinicContractorVisits إلى clinicVisits لمنع اختفائها عند إعادة تحميل الصفحة
@@ -12725,6 +13001,9 @@ const Clinic = {
                         if (refresh?.success && Array.isArray(refresh.data)) {
                             AppState.appData.clinicStaffTimeOffRequests = refresh.data;
                         }
+                        this._leaveBalancesFetchedInSession = false;
+                        await this.loadClinicStaffLeaveBalances(true);
+                        this._leaveBalancesFetchedInSession = true;
                     } catch (_e) { /* ignore */ }
                 }
 
@@ -15095,8 +15374,14 @@ const Clinic = {
 
     renderAttendanceSelfTab(panel) {
         this._saveTimeOffFormDraftFromDom();
+        this._scheduleLeaveBalancesLoadIfNeeded(false);
         this.ensureData();
         const dataLoading = this._isAttendanceDataLoading();
+        const balancesLoading = this._isLeaveBalancesLoading();
+        const balancePeriods = this._getLeaveBalancePeriodDefaults();
+        const myBalance = this.getClinicStaffLeaveBalancesList()[0] || {};
+        const bm = myBalance.month || {};
+        const by = myBalance.year || {};
         this.state.filters = this.state.filters || {};
         this.state.filters.attendance = Object.assign(
             { search: '', staffRole: 'all', status: 'all', staffId: 'all', month: '', dateFrom: '', dateTo: '', period: 'all' },
@@ -15138,7 +15423,10 @@ const Clinic = {
                     ${[
                         { label: 'أيام حضوري', value: stats.total, icon: 'fa-calendar-check', color: '#059669', bg: '#ecfdf5' },
                         { label: 'ساعاتي', value: stats.totalHours, icon: 'fa-clock', color: '#2563eb', bg: '#eff6ff' },
-                        { label: 'طلبات معلقة', value: pendingCount, icon: 'fa-hourglass-half', color: '#d97706', bg: '#fffbeb' }
+                        { label: 'طلبات معلقة', value: pendingCount, icon: 'fa-hourglass-half', color: '#d97706', bg: '#fffbeb' },
+                        { label: 'إجازة متبقية (شهر)', value: balancesLoading ? '…' : (bm.leaveRemaining ?? 0), icon: 'fa-umbrella-beach', color: '#0d9488', bg: '#f0fdfa' },
+                        { label: 'أذونات متبقية (شهر)', value: balancesLoading ? '…' : (bm.permissionRemaining ?? 0), icon: 'fa-door-open', color: '#7c3aed', bg: '#f5f3ff' },
+                        { label: 'إجازة متبقية (سنة)', value: balancesLoading ? '…' : (by.leaveRemaining ?? 0), icon: 'fa-calendar', color: '#0369a1', bg: '#f0f9ff' }
                     ].map(k => `
                         <div style="background:${k.bg};border-radius:12px;padding:14px;display:flex;align-items:center;gap:10px;">
                             <i class="fas ${k.icon}" style="color:${k.color};font-size:1.2rem;"></i>
@@ -15236,6 +15524,13 @@ const Clinic = {
                     loading: activitiesLoading,
                     title: 'نشاطي داخل النظام'
                 })}
+
+                ${this.renderClinicStaffLeaveBalancesSection({
+                    balances: this.getClinicStaffLeaveBalancesList(),
+                    loading: balancesLoading,
+                    month: balancePeriods.month,
+                    year: balancePeriods.year
+                })}
             </div>`;
 
         const readFilterInputs = () => {
@@ -15312,6 +15607,7 @@ const Clinic = {
         });
 
         this.bindClinicStaffActivitiesEvents(panel);
+        this.bindClinicStaffLeaveBalanceEvents(panel);
         this._applyTimeOffFormDraftToPanel(panel);
         this._bindTimeOffFormPanelEvents(panel);
     },
@@ -15338,7 +15634,11 @@ const Clinic = {
 
         // ✅ بنية فورية + جلب البيانات بالخلفية (لا انتظار الشبكة قبل عرض الواجهة)
         this._scheduleAttendanceDataLoadIfNeeded(false);
+        this._scheduleLeaveBalancesLoadIfNeeded(false);
         const dataLoading = this._isAttendanceDataLoading();
+        const balancesLoading = this._isLeaveBalancesLoading();
+        const balancePeriods = this._getLeaveBalancePeriodDefaults();
+        const leaveBalances = this.getClinicStaffLeaveBalancesList();
 
         if (!this.canViewAllAttendanceData()) {
             return this.renderAttendanceSelfTab(panel);
@@ -15552,6 +15852,13 @@ const Clinic = {
                     title: 'نشاط المستخدمين داخل النظام'
                 })}
 
+                ${this.renderClinicStaffLeaveBalancesSection({
+                    balances: leaveBalances,
+                    loading: balancesLoading,
+                    month: balancePeriods.month,
+                    year: balancePeriods.year
+                })}
+
                 ${isAdmin ? `
                 <div class="content-card mt-4">
                     <div class="card-header" style="padding:14px 18px;border-bottom:1px solid #f1f5f9;">
@@ -15685,6 +15992,7 @@ const Clinic = {
         });
 
         this.bindClinicStaffActivitiesEvents(panel);
+        this.bindClinicStaffLeaveBalanceEvents(panel);
 
         if (this._attendanceSearchFocused && searchEl) {
             searchEl.focus();

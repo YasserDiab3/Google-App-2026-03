@@ -87,7 +87,7 @@ function getSystemModules() {
             name: 'العيادة الطبية',
             description: 'إدارة العيادة الطبية والزيارات',
             file: 'Clinic.gs',
-            sheets: ['ClinicVisits', 'Medications', 'SickLeave', 'Injuries', 'ClinicContractorInjuries', 'ClinicInventory', 'ClinicStaff', 'ClinicStaffAttendance', 'ClinicStaffTimeOffRequests'],
+            sheets: ['ClinicVisits', 'Medications', 'SickLeave', 'Injuries', 'ClinicContractorInjuries', 'ClinicInventory', 'ClinicStaff', 'ClinicStaffAttendance', 'ClinicStaffTimeOffRequests', 'ClinicStaffLeaveQuota'],
             version: '1.0.0',
             enabled: true,
             critical: false

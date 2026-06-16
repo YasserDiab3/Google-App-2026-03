@@ -1825,6 +1825,20 @@ var ActionHandlers = {
         })();
         return result;
     },
+    'getClinicStaffLeaveBalances': function(payload, postData, action, actorUserData, spreadsheetId) {
+        var result = { success: false, message: '' };
+        (function() {
+            result = getClinicStaffLeaveBalances(payload || {}, actorUserData);
+        })();
+        return result;
+    },
+    'upsertClinicStaffLeaveQuota': function(payload, postData, action, actorUserData, spreadsheetId) {
+        var result = { success: false, message: '' };
+        (function() {
+            result = upsertClinicStaffLeaveQuota(payload, actorUserData);
+        })();
+        return result;
+    },
     'getClinicStaffSystemActivities': function(payload, postData, action, actorUserData, spreadsheetId) {
         var result = { success: false, message: '' };
         (function() {

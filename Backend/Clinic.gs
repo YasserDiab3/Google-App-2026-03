@@ -4029,6 +4029,220 @@ function cancelClinicStaffTimeOffRequest(requestId, actorUserData) {
 }
 
 // ============================================
+// أرصدة إجازات وأذونات مسئولي العيادة
+// ============================================
+
+function _clinicStaffPeriodKeyMonth_(dateStr) {
+    var dk = _clinicStaffDayKey_(dateStr);
+    return dk && dk.length >= 7 ? dk.substring(0, 7) : '';
+}
+
+function _clinicStaffPeriodKeyYear_(dateStr) {
+    var dk = _clinicStaffDayKey_(dateStr);
+    return dk && dk.length >= 4 ? dk.substring(0, 4) : '';
+}
+
+function _clinicStaffRequestInPeriod_(req, periodType, periodKey) {
+    if (!req || !periodKey) return false;
+    var anchor = req.dateFrom || req.requestedAt || req.createdAt;
+    if (!anchor) return false;
+    var pk = periodType === 'year'
+        ? _clinicStaffPeriodKeyYear_(anchor)
+        : _clinicStaffPeriodKeyMonth_(anchor);
+    return pk === String(periodKey);
+}
+
+function _clinicStaffComputeTimeOffConsumed_(requests, staffId, periodType, periodKey) {
+    var leaveDays = 0;
+    var permissionCount = 0;
+    (requests || []).forEach(function(r) {
+        if (!r || String(r.status) !== 'approved') return;
+        if (staffId && String(r.staffId) !== String(staffId)) return;
+        if (!_clinicStaffRequestInPeriod_(r, periodType, periodKey)) return;
+        var rt = String(r.requestType || '').trim().toLowerCase();
+        if (rt === 'leave') {
+            var d = parseFloat(r.durationDays);
+            if (!isNaN(d) && d > 0) {
+                leaveDays += d;
+            } else {
+                var calc = _clinicStaffTimeOffCalcDays_(r.dateFrom, r.dateTo);
+                if (calc) leaveDays += parseFloat(calc) || 0;
+            }
+        } else if (rt === 'permission') {
+            permissionCount += 1;
+        }
+    });
+    return {
+        leaveDaysConsumed: Math.round(leaveDays * 100) / 100,
+        permissionCountConsumed: permissionCount
+    };
+}
+
+function _clinicStaffBuildLeaveBalancePeriod_(staff, quotas, requests, periodType, periodKey) {
+    var sid = staff && staff.id;
+    var quota = (quotas || []).find(function(q) {
+        return q && String(q.staffId) === String(sid) &&
+            String(q.periodType) === String(periodType) &&
+            String(q.periodKey) === String(periodKey);
+    }) || null;
+    var leaveEntitled = quota ? (parseFloat(quota.leaveDaysQuota) || 0) : 0;
+    var permEntitled = quota ? (parseInt(quota.permissionCountQuota, 10) || 0) : 0;
+    var consumed = _clinicStaffComputeTimeOffConsumed_(requests, sid, periodType, periodKey);
+    var leaveConsumed = consumed.leaveDaysConsumed;
+    var permConsumed = consumed.permissionCountConsumed;
+    return {
+        periodType: periodType,
+        periodKey: periodKey,
+        leaveEntitled: leaveEntitled,
+        leaveConsumed: leaveConsumed,
+        leaveRemaining: Math.max(0, Math.round((leaveEntitled - leaveConsumed) * 100) / 100),
+        permissionEntitled: permEntitled,
+        permissionConsumed: permConsumed,
+        permissionRemaining: Math.max(0, permEntitled - permConsumed),
+        quotaId: quota ? quota.id : '',
+        quotaNotes: quota ? (quota.notes || '') : ''
+    };
+}
+
+function getClinicStaffLeaveBalances(payload, actorUserData) {
+    try {
+        payload = payload || {};
+        var isAdmin = _clinicStaffIsAdminActor_(actorUserData);
+        if (!isAdmin) {
+            var selfStaff = isActiveClinicStaffUser_(
+                actorUserData && (actorUserData.id || actorUserData.userId)
+            ) || isActiveClinicStaffUser_(actorUserData && actorUserData.email);
+            if (!selfStaff) {
+                return { success: false, message: 'عرض الأرصدة غير متاح', data: [] };
+            }
+        }
+
+        var now = new Date();
+        var monthKey = String(payload.month || _clinicStaffPeriodKeyMonth_(now) || '').trim();
+        var yearKey = String(payload.year || _clinicStaffPeriodKeyYear_(now) || '').trim();
+        if (!monthKey) monthKey = _clinicStaffPeriodKeyMonth_(now);
+        if (!yearKey) yearKey = _clinicStaffPeriodKeyYear_(now);
+
+        var staffList = readFromSheet('ClinicStaff', getSpreadsheetId()) || [];
+        if (payload.staffId) {
+            staffList = staffList.filter(function(s) { return s && String(s.id) === String(payload.staffId); });
+        } else if (!isAdmin) {
+            staffList = staffList.filter(function(s) {
+                return _clinicStaffRowMatchesActor_(s, actorUserData);
+            });
+        }
+
+        var quotas = readFromSheet('ClinicStaffLeaveQuota', getSpreadsheetId()) || [];
+        var requests = readFromSheet('ClinicStaffTimeOffRequests', getSpreadsheetId()) || [];
+
+        var rows = staffList.map(function(staff) {
+            return {
+                staffId: staff.id,
+                userId: staff.userId || '',
+                userName: staff.userName || '',
+                userEmail: staff.userEmail || '',
+                staffRole: staff.staffRole || '',
+                isActive: staff.isActive,
+                month: _clinicStaffBuildLeaveBalancePeriod_(staff, quotas, requests, 'month', monthKey),
+                year: _clinicStaffBuildLeaveBalancePeriod_(staff, quotas, requests, 'year', yearKey)
+            };
+        });
+
+        return {
+            success: true,
+            data: rows,
+            meta: { month: monthKey, year: yearKey }
+        };
+    } catch (error) {
+        Logger.log('Error in getClinicStaffLeaveBalances: ' + error.toString());
+        return { success: false, message: 'خطأ في جلب الأرصدة: ' + error.toString(), data: [] };
+    }
+}
+
+function upsertClinicStaffLeaveQuota(payload, actorUserData) {
+    try {
+        if (!_clinicStaffIsAdminActor_(actorUserData)) {
+            return { success: false, message: 'تعديل الرصيد متاح لمدير النظام فقط' };
+        }
+        if (!payload || !payload.staffId) {
+            return { success: false, message: 'معرف المسئول مطلوب' };
+        }
+
+        var periodType = String(payload.periodType || 'month').trim().toLowerCase();
+        if (periodType !== 'month' && periodType !== 'year') {
+            return { success: false, message: 'نوع الفترة غير صالح (month أو year)' };
+        }
+
+        var periodKey = String(payload.periodKey || '').trim();
+        if (!periodKey) {
+            periodKey = periodType === 'year'
+                ? _clinicStaffPeriodKeyYear_(new Date())
+                : _clinicStaffPeriodKeyMonth_(new Date());
+        }
+        if (periodType === 'month' && !/^\d{4}-\d{2}$/.test(periodKey)) {
+            return { success: false, message: 'صيغة الشهر يجب أن تكون YYYY-MM' };
+        }
+        if (periodType === 'year' && !/^\d{4}$/.test(periodKey)) {
+            return { success: false, message: 'صيغة السنة يجب أن تكون YYYY' };
+        }
+
+        var leaveDays = parseFloat(payload.leaveDaysQuota);
+        if (isNaN(leaveDays) || leaveDays < 0) leaveDays = 0;
+        var permCount = parseInt(payload.permissionCountQuota, 10);
+        if (isNaN(permCount) || permCount < 0) permCount = 0;
+
+        var staffList = readFromSheet('ClinicStaff', getSpreadsheetId()) || [];
+        var staff = staffList.find(function(s) { return s && String(s.id) === String(payload.staffId); });
+        if (!staff) return { success: false, message: 'المسئول غير موجود' };
+
+        var sheetName = 'ClinicStaffLeaveQuota';
+        var allData = readFromSheet(sheetName, getSpreadsheetId()) || [];
+        var idx = allData.findIndex(function(q) {
+            return q && String(q.staffId) === String(payload.staffId) &&
+                String(q.periodType) === periodType &&
+                String(q.periodKey) === periodKey;
+        });
+
+        var row = {
+            staffId: staff.id,
+            userId: staff.userId || '',
+            userEmail: staff.userEmail || '',
+            userName: staff.userName || '',
+            periodType: periodType,
+            periodKey: periodKey,
+            leaveDaysQuota: leaveDays,
+            permissionCountQuota: permCount,
+            notes: String(payload.notes || '').trim(),
+            updatedById: actorUserData && (actorUserData.id || actorUserData.userId) || '',
+            updatedByName: actorUserData && actorUserData.name || '',
+            updatedAt: new Date()
+        };
+
+        if (idx >= 0) {
+            row.id = allData[idx].id;
+            row.createdAt = allData[idx].createdAt || new Date();
+            for (var k in row) {
+                if (row.hasOwnProperty(k)) allData[idx][k] = row[k];
+            }
+            var saveResult = saveToSheet(sheetName, allData, getSpreadsheetId());
+            return saveResult && saveResult.success
+                ? { success: true, data: allData[idx], message: 'تم تحديث الرصيد بنجاح' }
+                : saveResult;
+        }
+
+        row.id = generateSequentialId('CLQ', sheetName);
+        row.createdAt = new Date();
+        var appendResult = appendToSheet(sheetName, row);
+        return appendResult && appendResult.success
+            ? { success: true, data: row, message: 'تم إضافة الرصيد بنجاح' }
+            : appendResult;
+    } catch (error) {
+        Logger.log('Error in upsertClinicStaffLeaveQuota: ' + error.toString());
+        return { success: false, message: 'خطأ في حفظ الرصيد: ' + error.toString() };
+    }
+}
+
+// ============================================
 // نشاط المستخدم داخل النظام (لتبويب الحضور)
 // ============================================
 
