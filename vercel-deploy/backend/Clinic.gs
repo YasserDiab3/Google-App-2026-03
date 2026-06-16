@@ -3976,13 +3976,17 @@ function approveClinicStaffTimeOffRequest(requestId, actorUserData, notes) {
         if (!_clinicStaffIsAdminActor_(actorUserData)) {
             return { success: false, message: 'الاعتماد متاح لمدير النظام فقط' };
         }
-        return _updateClinicStaffTimeOffRequest_(requestId, {
+        var result = _updateClinicStaffTimeOffRequest_(requestId, {
             status: 'approved',
             reviewedById: actorUserData && (actorUserData.id || actorUserData.userId) || '',
             reviewedByName: actorUserData && actorUserData.name || '',
             reviewNotes: notes || '',
             reviewedAt: new Date()
         });
+        if (result && result.success && typeof invalidateHseSheetCaches === 'function') {
+            invalidateHseSheetCaches('ClinicStaffTimeOffRequests');
+        }
+        return result;
     } catch (error) {
         Logger.log('Error in approveClinicStaffTimeOffRequest: ' + error.toString());
         return { success: false, message: 'خطأ في اعتماد الطلب: ' + error.toString() };
@@ -4032,6 +4036,81 @@ function cancelClinicStaffTimeOffRequest(requestId, actorUserData) {
 // أرصدة إجازات وأذونات مسئولي العيادة
 // ============================================
 
+function _clinicStaffTimeOffStatusIsApproved_(status) {
+    var s = String(status || '').trim().toLowerCase();
+    return s === 'approved' || s === 'معتمد' || s === 'موافق عليه' || s === 'موافق عليها';
+}
+
+function _clinicStaffRequestMatchesStaff_(req, staff) {
+    if (!req || !staff) return false;
+    if (staff.id && req.staffId && String(req.staffId) === String(staff.id)) return true;
+    var uid = String(staff.userId || '').trim();
+    var em = String(staff.userEmail || '').trim().toLowerCase();
+    if (uid && String(req.userId || '').trim() === uid) return true;
+    if (em && String(req.userEmail || '').trim().toLowerCase() === em) return true;
+    return false;
+}
+
+function _clinicStaffDateInPeriod_(dateKey, periodType, periodKey) {
+    if (!dateKey || !periodKey) return false;
+    if (periodType === 'year') return dateKey.substring(0, 4) === String(periodKey);
+    return dateKey.substring(0, 7) === String(periodKey);
+}
+
+function _clinicStaffRequestOverlapsPeriod_(req, periodType, periodKey) {
+    var from = _clinicStaffDayKey_(req.dateFrom);
+    var to = _clinicStaffDayKey_(req.dateTo || req.dateFrom);
+    if (!from) from = _clinicStaffDayKey_(req.requestedAt || req.createdAt);
+    if (!to) to = from;
+    if (!from) return false;
+    if (_clinicStaffDateInPeriod_(from, periodType, periodKey) || _clinicStaffDateInPeriod_(to, periodType, periodKey)) {
+        return true;
+    }
+    try {
+        var cur = new Date(from);
+        var endD = new Date(to);
+        if (isNaN(cur.getTime()) || isNaN(endD.getTime())) return false;
+        var guard = 0;
+        while (cur <= endD && guard < 400) {
+            var dk = _clinicStaffDayKey_(cur);
+            if (_clinicStaffDateInPeriod_(dk, periodType, periodKey)) return true;
+            cur.setDate(cur.getDate() + 1);
+            guard++;
+        }
+    } catch (_e) { /* ignore */ }
+    return false;
+}
+
+function _clinicStaffCountLeaveDaysInPeriod_(req, periodType, periodKey) {
+    var from = _clinicStaffDayKey_(req.dateFrom);
+    var to = _clinicStaffDayKey_(req.dateTo || req.dateFrom);
+    if (!from) {
+        var d = parseFloat(req.durationDays);
+        return !isNaN(d) && d > 0 ? d : (_clinicStaffTimeOffCalcDays_(req.dateFrom, req.dateTo) || 0);
+    }
+    if (!to) to = from;
+    try {
+        var cur = new Date(from);
+        var endD = new Date(to);
+        if (isNaN(cur.getTime()) || isNaN(endD.getTime())) {
+            var fallback = parseFloat(req.durationDays);
+            return !isNaN(fallback) && fallback > 0 ? fallback : (_clinicStaffTimeOffCalcDays_(req.dateFrom, req.dateTo) || 0);
+        }
+        var total = 0;
+        var guard = 0;
+        while (cur <= endD && guard < 400) {
+            var dk = _clinicStaffDayKey_(cur);
+            if (_clinicStaffDateInPeriod_(dk, periodType, periodKey)) total += 1;
+            cur.setDate(cur.getDate() + 1);
+            guard++;
+        }
+        return total;
+    } catch (_e) {
+        var fb = parseFloat(req.durationDays);
+        return !isNaN(fb) && fb > 0 ? fb : (_clinicStaffTimeOffCalcDays_(req.dateFrom, req.dateTo) || 0);
+    }
+}
+
 function _clinicStaffPeriodKeyMonth_(dateStr) {
     var dk = _clinicStaffDayKey_(dateStr);
     return dk && dk.length >= 7 ? dk.substring(0, 7) : '';
@@ -4052,29 +4131,27 @@ function _clinicStaffRequestInPeriod_(req, periodType, periodKey) {
     return pk === String(periodKey);
 }
 
-function _clinicStaffComputeTimeOffConsumed_(requests, staffId, periodType, periodKey) {
+function _clinicStaffComputeTimeOffConsumed_(requests, staff, periodType, periodKey) {
     var leaveDays = 0;
     var permissionCount = 0;
+    var approvedItems = [];
     (requests || []).forEach(function(r) {
-        if (!r || String(r.status) !== 'approved') return;
-        if (staffId && String(r.staffId) !== String(staffId)) return;
-        if (!_clinicStaffRequestInPeriod_(r, periodType, periodKey)) return;
+        if (!_clinicStaffTimeOffStatusIsApproved_(r.status)) return;
+        if (!_clinicStaffRequestMatchesStaff_(r, staff)) return;
+        if (!_clinicStaffRequestOverlapsPeriod_(r, periodType, periodKey)) return;
         var rt = String(r.requestType || '').trim().toLowerCase();
         if (rt === 'leave') {
-            var d = parseFloat(r.durationDays);
-            if (!isNaN(d) && d > 0) {
-                leaveDays += d;
-            } else {
-                var calc = _clinicStaffTimeOffCalcDays_(r.dateFrom, r.dateTo);
-                if (calc) leaveDays += parseFloat(calc) || 0;
-            }
+            leaveDays += _clinicStaffCountLeaveDaysInPeriod_(r, periodType, periodKey);
+            approvedItems.push(r);
         } else if (rt === 'permission') {
             permissionCount += 1;
+            approvedItems.push(r);
         }
     });
     return {
         leaveDaysConsumed: Math.round(leaveDays * 100) / 100,
-        permissionCountConsumed: permissionCount
+        permissionCountConsumed: permissionCount,
+        approvedItems: approvedItems
     };
 }
 
@@ -4087,7 +4164,7 @@ function _clinicStaffBuildLeaveBalancePeriod_(staff, quotas, requests, periodTyp
     }) || null;
     var leaveEntitled = quota ? (parseFloat(quota.leaveDaysQuota) || 0) : 0;
     var permEntitled = quota ? (parseInt(quota.permissionCountQuota, 10) || 0) : 0;
-    var consumed = _clinicStaffComputeTimeOffConsumed_(requests, sid, periodType, periodKey);
+    var consumed = _clinicStaffComputeTimeOffConsumed_(requests, staff, periodType, periodKey);
     var leaveConsumed = consumed.leaveDaysConsumed;
     var permConsumed = consumed.permissionCountConsumed;
     return {
@@ -4100,7 +4177,8 @@ function _clinicStaffBuildLeaveBalancePeriod_(staff, quotas, requests, periodTyp
         permissionConsumed: permConsumed,
         permissionRemaining: Math.max(0, permEntitled - permConsumed),
         quotaId: quota ? quota.id : '',
-        quotaNotes: quota ? (quota.notes || '') : ''
+        quotaNotes: quota ? (quota.notes || '') : '',
+        approvedItems: consumed.approvedItems || []
     };
 }
 

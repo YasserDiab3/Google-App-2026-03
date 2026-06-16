@@ -3257,21 +3257,196 @@ const Clinic = {
         if (typeof GoogleIntegration === 'undefined' || !GoogleIntegration.sendRequest) return;
         const periods = this._getLeaveBalancePeriodDefaults();
         try {
-            const resp = await GoogleIntegration.sendRequest({
-                action: 'getClinicStaffLeaveBalances',
-                data: { month: periods.month, year: periods.year, skipCache: !!force }
-            });
-            if (resp?.success && Array.isArray(resp.data)) {
-                AppState.appData.clinicStaffLeaveBalances = resp.data;
-                if (resp.meta) {
-                    this.state.leaveBalanceMonth = resp.meta.month || periods.month;
-                    this.state.leaveBalanceYear = resp.meta.year || periods.year;
+            const [balResp, toResp] = await Promise.all([
+                GoogleIntegration.sendRequest({
+                    action: 'getClinicStaffLeaveBalances',
+                    data: { month: periods.month, year: periods.year, skipCache: !!force }
+                }),
+                GoogleIntegration.sendRequest({
+                    action: 'getClinicStaffTimeOffRequests',
+                    data: force ? { skipCache: true } : {}
+                })
+            ]);
+            if (toResp?.success && Array.isArray(toResp.data)) {
+                AppState.appData.clinicStaffTimeOffRequests = toResp.data;
+            }
+            if (balResp?.success && Array.isArray(balResp.data)) {
+                AppState.appData.clinicStaffLeaveBalances = this._enrichLeaveBalancesFromLocal_(balResp.data, periods);
+                if (balResp.meta) {
+                    this.state.leaveBalanceMonth = balResp.meta.month || periods.month;
+                    this.state.leaveBalanceYear = balResp.meta.year || periods.year;
                 }
                 if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
                     try { window.DataManager.save(); } catch (_e) { /* ignore */ }
                 }
             }
         } catch (_e) { /* ignore */ }
+    },
+
+    _isTimeOffApprovedStatus(status) {
+        const s = String(status || '').trim().toLowerCase();
+        return s === 'approved' || s === 'معتمد' || s === 'موافق عليه' || s === 'موافق عليها';
+    },
+
+    _timeOffRequestMatchesStaffRow(req, staffRow) {
+        if (!req || !staffRow) return false;
+        if (staffRow.staffId && req.staffId && String(staffRow.staffId) === String(req.staffId)) return true;
+        if (staffRow.id && req.staffId && String(staffRow.id) === String(req.staffId)) return true;
+        const uid = String(staffRow.userId || '').trim();
+        const em = String(staffRow.userEmail || '').trim().toLowerCase();
+        if (uid && String(req.userId || '').trim() === uid) return true;
+        if (em && String(req.userEmail || '').trim().toLowerCase() === em) return true;
+        return false;
+    },
+
+    _dateKeyInPeriod(dateVal, periodType, periodKey) {
+        const dk = this._attendanceDayKey(dateVal);
+        if (!dk || !periodKey) return false;
+        if (periodType === 'year') return dk.substring(0, 4) === String(periodKey);
+        return dk.substring(0, 7) === String(periodKey);
+    },
+
+    _requestOverlapsPeriod(req, periodType, periodKey) {
+        if (!req || !periodKey) return false;
+        const from = this._attendanceDayKey(req.dateFrom);
+        const to = this._attendanceDayKey(req.dateTo || req.dateFrom);
+        const anchor = from || this._attendanceDayKey(req.requestedAt || req.createdAt);
+        if (!anchor) return false;
+        if (this._dateKeyInPeriod(anchor, periodType, periodKey)) return true;
+        if (to && this._dateKeyInPeriod(to, periodType, periodKey)) return true;
+        try {
+            let cur = new Date(anchor);
+            const endD = new Date(to || anchor);
+            if (Number.isNaN(cur.getTime())) return false;
+            let guard = 0;
+            while (cur <= endD && guard < 400) {
+                if (this._dateKeyInPeriod(cur, periodType, periodKey)) return true;
+                cur.setDate(cur.getDate() + 1);
+                guard++;
+            }
+        } catch (_e) { /* ignore */ }
+        return false;
+    },
+
+    _countLeaveDaysInPeriod_(req, periodType, periodKey) {
+        const from = this._attendanceDayKey(req.dateFrom);
+        const to = this._attendanceDayKey(req.dateTo || req.dateFrom);
+        if (!from) {
+            const d = parseFloat(req.durationDays);
+            return !isNaN(d) && d > 0 ? d : 0;
+        }
+        try {
+            let cur = new Date(from);
+            const endD = new Date(to || from);
+            if (Number.isNaN(cur.getTime())) return parseFloat(req.durationDays) || 0;
+            let total = 0;
+            let guard = 0;
+            while (cur <= endD && guard < 400) {
+                if (this._dateKeyInPeriod(cur, periodType, periodKey)) total += 1;
+                cur.setDate(cur.getDate() + 1);
+                guard++;
+            }
+            return total || parseFloat(req.durationDays) || 0;
+        } catch (_e) {
+            return parseFloat(req.durationDays) || 0;
+        }
+    },
+
+    _collectLocalApprovedTimeOffItems(staffRow, periodType, periodKey) {
+        const requests = Array.isArray(AppState.appData?.clinicStaffTimeOffRequests)
+            ? AppState.appData.clinicStaffTimeOffRequests : [];
+        return requests.filter(r => {
+            if (!this._isTimeOffApprovedStatus(r.status)) return false;
+            if (!this._timeOffRequestMatchesStaffRow(r, staffRow)) return false;
+            return this._requestOverlapsPeriod(r, periodType, periodKey);
+        });
+    },
+
+    _enrichLeaveBalancesFromLocal_(balances, periods) {
+        const month = periods?.month || '';
+        const year = periods?.year || '';
+        return (balances || []).map(b => {
+            const staffRow = {
+                id: b.staffId,
+                staffId: b.staffId,
+                userId: b.userId,
+                userEmail: b.userEmail
+            };
+            const monthApproved = [
+                ...(Array.isArray(b.month?.approvedItems) ? b.month.approvedItems : []),
+                ...this._collectLocalApprovedTimeOffItems(staffRow, 'month', month)
+            ];
+            const yearApproved = [
+                ...(Array.isArray(b.year?.approvedItems) ? b.year.approvedItems : []),
+                ...this._collectLocalApprovedTimeOffItems(staffRow, 'year', year)
+            ];
+            const dedupe = (list) => {
+                const map = new Map();
+                list.forEach(r => { if (r?.id) map.set(String(r.id), r); });
+                return Array.from(map.values());
+            };
+            const mItems = dedupe(monthApproved);
+            const yItems = dedupe(yearApproved);
+            const mLeave = mItems.filter(r => String(r.requestType).toLowerCase() === 'leave')
+                .reduce((sum, r) => sum + this._countLeaveDaysInPeriod_(r, 'month', month), 0);
+            const mPerm = mItems.filter(r => String(r.requestType).toLowerCase() === 'permission').length;
+            const yLeave = yItems.filter(r => String(r.requestType).toLowerCase() === 'leave')
+                .reduce((sum, r) => sum + this._countLeaveDaysInPeriod_(r, 'year', year), 0);
+            const yPerm = yItems.filter(r => String(r.requestType).toLowerCase() === 'permission').length;
+            const monthData = { ...(b.month || {}) };
+            const yearData = { ...(b.year || {}) };
+            if (mItems.length) {
+                monthData.leaveConsumed = Math.max(monthData.leaveConsumed || 0, Math.round(mLeave * 100) / 100);
+                monthData.permissionConsumed = Math.max(monthData.permissionConsumed || 0, mPerm);
+                monthData.leaveRemaining = Math.max(0, Math.round(((monthData.leaveEntitled || 0) - monthData.leaveConsumed) * 100) / 100);
+                monthData.permissionRemaining = Math.max(0, (monthData.permissionEntitled || 0) - monthData.permissionConsumed);
+                monthData.approvedItems = mItems;
+            }
+            if (yItems.length) {
+                yearData.leaveConsumed = Math.max(yearData.leaveConsumed || 0, Math.round(yLeave * 100) / 100);
+                yearData.permissionConsumed = Math.max(yearData.permissionConsumed || 0, yPerm);
+                yearData.leaveRemaining = Math.max(0, Math.round(((yearData.leaveEntitled || 0) - yearData.leaveConsumed) * 100) / 100);
+                yearData.permissionRemaining = Math.max(0, (yearData.permissionEntitled || 0) - yearData.permissionConsumed);
+                yearData.approvedItems = yItems;
+            }
+            return { ...b, month: monthData, year: yearData };
+        });
+    },
+
+    renderApprovedTimeOffRequestsSection(balances, month) {
+        const items = [];
+        (balances || []).forEach(b => {
+            (b.month?.approvedItems || []).forEach(req => {
+                items.push({
+                    ...req,
+                    userName: b.userName || req.userName,
+                    staffRole: b.staffRole || req.staffRole
+                });
+            });
+        });
+        items.sort((a, b) => new Date(b.reviewedAt || b.requestedAt || b.createdAt) - new Date(a.reviewedAt || a.requestedAt || a.createdAt));
+
+        const rows = items.length ? items.map(req => `
+            <tr>
+                <td>${Utils.escapeHTML(req.userName || '—')}</td>
+                <td><span class="badge badge-info">${Utils.escapeHTML(this.getTimeOffRequestTypeLabel(req.requestType))}</span></td>
+                <td>${Utils.escapeHTML(this.formatTimeOffRequestDetails(req))}</td>
+                <td class="text-sm">${Utils.escapeHTML(req.reason || '—')}</td>
+                <td>${this.formatDate(req.reviewedAt || req.requestedAt || req.createdAt, true)}</td>
+            </tr>
+        `).join('') : `<tr><td colspan="5" class="text-center text-gray-500 py-6">لا توجد إجازات أو أذونات معتمدة في ${Utils.escapeHTML(month || 'هذا الشهر')}</td></tr>`;
+
+        return `<div class="content-card mt-4" id="clinic-approved-timeoff-section">
+            <div class="card-header" style="padding:12px 18px;border-bottom:1px solid #f1f5f9;">
+                <h4 style="margin:0;font-size:0.92rem;font-weight:700;color:#134e4a;"><i class="fas fa-check-circle ml-2" style="color:#059669;"></i>الإجازات والأذونات المعتمدة (${Utils.escapeHTML(month || '')})</h4>
+            </div>
+            <div class="card-body" style="padding:0;">
+                <div class="table-wrapper"><table class="data-table table-header-green">
+                    <thead><tr><th>المسئول</th><th>النوع</th><th>التفاصيل</th><th>السبب</th><th>تاريخ الاعتماد</th></tr></thead>
+                    <tbody>${rows}</tbody>
+                </table></div>
+            </div>
+        </div>`;
     },
 
     _renderBalanceTriplet(entitled, consumed, remaining) {
@@ -15531,6 +15706,8 @@ const Clinic = {
                     month: balancePeriods.month,
                     year: balancePeriods.year
                 })}
+
+                ${this.renderApprovedTimeOffRequestsSection(this.getClinicStaffLeaveBalancesList(), balancePeriods.month)}
             </div>`;
 
         const readFilterInputs = () => {
@@ -15858,6 +16035,8 @@ const Clinic = {
                     month: balancePeriods.month,
                     year: balancePeriods.year
                 })}
+
+                ${this.renderApprovedTimeOffRequestsSection(leaveBalances, balancePeriods.month)}
 
                 ${isAdmin ? `
                 <div class="content-card mt-4">
