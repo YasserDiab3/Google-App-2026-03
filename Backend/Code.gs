@@ -449,6 +449,10 @@ function doPost(e) {
             if (typeof ActionHandlers[action] === 'function') {
                 const spreadsheetId = getSpreadsheetId() || postData.spreadsheetId || '';
                 result = ActionHandlers[action](payload, postData, action, actorUserData, spreadsheetId);
+            } else if (action === 'upsertClinicStaffLeaveQuota' && typeof upsertClinicStaffLeaveQuota === 'function') {
+                result = upsertClinicStaffLeaveQuota(payload || {}, actorUserData);
+            } else if (action === 'getClinicStaffLeaveBalances' && typeof getClinicStaffLeaveBalances === 'function') {
+                result = getClinicStaffLeaveBalances(payload || {}, actorUserData);
             } else {
                 result = {
                     success: false,

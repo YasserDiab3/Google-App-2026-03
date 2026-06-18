@@ -4584,3 +4584,49 @@ function getClinicStaffSystemActivities(filters, actorUserData) {
     }
 }
 
+/**
+ * تسجيل actions الحضور/الأرصدة في ActionHandlers بعد تحميل Clinic.gs
+ * (احتياط إذا كان السجل في ActionHandlers.gs قديماً على النشر)
+ */
+(function registerClinicStaffActionHandlers_() {
+    if (typeof ActionHandlers === 'undefined' || !ActionHandlers) return;
+    var handlers = {
+        'getClinicStaffLeaveBalances': function(payload, postData, action, actorUserData, spreadsheetId) {
+            return getClinicStaffLeaveBalances(payload || {}, actorUserData);
+        },
+        'upsertClinicStaffLeaveQuota': function(payload, postData, action, actorUserData, spreadsheetId) {
+            return upsertClinicStaffLeaveQuota(payload || {}, actorUserData);
+        },
+        'getClinicStaffTimeOffRequests': function(payload, postData, action, actorUserData, spreadsheetId) {
+            return getClinicStaffTimeOffRequests(payload && payload.filters ? payload.filters : payload || {}, actorUserData);
+        },
+        'getClinicStaffAttendance': function(payload, postData, action, actorUserData, spreadsheetId) {
+            return getClinicStaffAttendance(payload && payload.filters ? payload.filters : payload || {}, actorUserData);
+        },
+        'addClinicStaffTimeOffRequest': function(payload, postData, action, actorUserData, spreadsheetId) {
+            return addClinicStaffTimeOffRequest(payload || {}, actorUserData);
+        },
+        'approveClinicStaffTimeOffRequest': function(payload, postData, action, actorUserData, spreadsheetId) {
+            return approveClinicStaffTimeOffRequest(
+                payload.requestId || payload.id,
+                actorUserData,
+                payload.notes || payload.reviewNotes || ''
+            );
+        },
+        'rejectClinicStaffTimeOffRequest': function(payload, postData, action, actorUserData, spreadsheetId) {
+            return rejectClinicStaffTimeOffRequest(
+                payload.requestId || payload.id,
+                actorUserData,
+                payload.reason || payload.reviewNotes || ''
+            );
+        },
+        'cancelClinicStaffTimeOffRequest': function(payload, postData, action, actorUserData, spreadsheetId) {
+            return cancelClinicStaffTimeOffRequest(payload.requestId || payload.id, actorUserData);
+        }
+    };
+    for (var key in handlers) {
+        if (handlers.hasOwnProperty(key) && typeof handlers[key] === 'function') {
+            ActionHandlers[key] = handlers[key];
+        }
+    }
+})();
