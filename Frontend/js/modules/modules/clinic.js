@@ -3389,32 +3389,39 @@ const Clinic = {
     },
 
     /**
-     * جلب طلبات الإجازة/الإذن للمدير (خلفية) — لإظهارها في الإشعارات وتبويب الموافقات
+     * جلب بيانات الحضور والإجازات للمدير (خلفية) — مسئولو العيادة + الحضور + الأرصدة + الطلبات
      */
-    prefetchClinicTimeOffApprovalsForAdminIfNeeded() {
+    prefetchClinicAttendanceForAdminIfNeeded(force) {
         if (!this.isCurrentUserAdmin()) return Promise.resolve();
         if (typeof GoogleIntegration === 'undefined' || !GoogleIntegration.sendRequest) return Promise.resolve();
-        if (this._adminTimeOffPrefetchPromise) return this._adminTimeOffPrefetchPromise;
+        if (this._adminAttendancePrefetchPromise && !force) return this._adminAttendancePrefetchPromise;
 
-        this._adminTimeOffPrefetchPromise = GoogleIntegration.sendRequest({
-            action: 'getClinicStaffTimeOffRequests',
-            data: { filters: {} }
-        }).then((resp) => {
-            if (resp?.success && Array.isArray(resp.data)) {
-                AppState.appData.clinicStaffTimeOffRequests = resp.data;
-                if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
-                    try { window.DataManager.save(); } catch (_e) { /* ignore */ }
-                }
+        this._adminAttendancePrefetchPromise = (async () => {
+            try {
+                await this._ensureClinicStaffLoadedForAttendance();
+                const attOk = await this.loadClinicAttendanceData(!!force);
+                if (attOk) this._attendanceDataFetchedInSession = true;
+                this._leaveBalancesFetchedInSession = false;
+                await this.loadClinicStaffLeaveBalances(!!force);
+                this._leaveBalancesFetchedInSession = true;
                 this._updatePendingApprovalsBadgeFromLocal_();
                 if (typeof UI !== 'undefined' && typeof UI.updateNotificationsBadge === 'function') {
                     UI.updateNotificationsBadge();
                 }
-            }
-        }).catch(() => { }).finally(() => {
-            this._adminTimeOffPrefetchPromise = null;
+                if (this.state?.activeTab === 'attendance') {
+                    this.renderAttendanceTab({ force: true });
+                }
+            } catch (_e) { /* ignore */ }
+        })().finally(() => {
+            this._adminAttendancePrefetchPromise = null;
         });
 
-        return this._adminTimeOffPrefetchPromise;
+        return this._adminAttendancePrefetchPromise;
+    },
+
+    /** @deprecated استخدم prefetchClinicAttendanceForAdminIfNeeded */
+    prefetchClinicTimeOffApprovalsForAdminIfNeeded() {
+        return this.prefetchClinicAttendanceForAdminIfNeeded(false);
     },
 
     _updatePendingApprovalsBadgeFromLocal_() {
@@ -3469,9 +3476,13 @@ const Clinic = {
     },
 
     async loadClinicStaffLeaveBalances(force) {
-        if (typeof GoogleIntegration === 'undefined' || !GoogleIntegration.sendRequest) return;
+        if (typeof GoogleIntegration === 'undefined' || !GoogleIntegration.sendRequest) return false;
         const periods = this._getLeaveBalancePeriodDefaults();
+        const isAdmin = this.canViewAllAttendanceData();
         try {
+            if (isAdmin) {
+                await this._ensureClinicStaffLoadedForAttendance();
+            }
             const [balResp, toResp] = await Promise.all([
                 GoogleIntegration.sendRequest({
                     action: 'getClinicStaffLeaveBalances',
@@ -3491,11 +3502,92 @@ const Clinic = {
                     this.state.leaveBalanceMonth = balResp.meta.month || periods.month;
                     this.state.leaveBalanceYear = balResp.meta.year || periods.year;
                 }
-                if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
-                    try { window.DataManager.save(); } catch (_e) { /* ignore */ }
-                }
+            } else if (isAdmin) {
+                AppState.appData.clinicStaffLeaveBalances = this._buildLeaveBalancesFromStaffAndRequests_(periods);
             }
-        } catch (_e) { /* ignore */ }
+            if (AppState.appData.clinicStaffLeaveBalances && typeof window.DataManager !== 'undefined' && window.DataManager.save) {
+                try { window.DataManager.save(); } catch (_e) { /* ignore */ }
+            }
+            return !!(balResp?.success || (isAdmin && (AppState.appData.clinicStaffLeaveBalances || []).length));
+        } catch (_e) {
+            if (isAdmin) {
+                AppState.appData.clinicStaffLeaveBalances = this._buildLeaveBalancesFromStaffAndRequests_(periods);
+                return (AppState.appData.clinicStaffLeaveBalances || []).length > 0;
+            }
+            return false;
+        }
+    },
+
+    _buildLeaveBalancePeriodFromItems_(periodType, periodKey, items, entitledLeave, entitledPerm) {
+        const mLeave = items.filter(r => String(r.requestType).toLowerCase() === 'leave')
+            .reduce((sum, r) => sum + this._countLeaveDaysInPeriod_(r, periodType, periodKey), 0);
+        const mPerm = items.filter(r => String(r.requestType).toLowerCase() === 'permission').length;
+        const leaveEntitled = entitledLeave ?? 0;
+        const permEntitled = entitledPerm ?? 0;
+        return {
+            periodType,
+            periodKey,
+            leaveEntitled,
+            leaveConsumed: Math.round(mLeave * 100) / 100,
+            leaveRemaining: Math.max(0, Math.round((leaveEntitled - mLeave) * 100) / 100),
+            permissionEntitled: permEntitled,
+            permissionConsumed: mPerm,
+            permissionRemaining: Math.max(0, permEntitled - mPerm),
+            approvedItems: items
+        };
+    },
+
+    _buildLeaveBalancesFromStaffAndRequests_(periods) {
+        const month = periods?.month || '';
+        const year = periods?.year || '';
+        const existing = this.getClinicStaffLeaveBalancesList();
+        const existingByStaff = new Map(existing.map(b => [String(b.staffId), b]));
+        return (this.getClinicStaffList() || []).map(s => {
+            const staffRow = { id: s.id, staffId: s.id, userId: s.userId, userEmail: s.userEmail };
+            const prev = existingByStaff.get(String(s.id)) || {};
+            const mItems = this._collectLocalApprovedTimeOffItems(staffRow, 'month', month);
+            const yItems = this._collectLocalApprovedTimeOffItems(staffRow, 'year', year);
+            return {
+                staffId: s.id,
+                userId: s.userId || '',
+                userName: s.userName || '',
+                userEmail: s.userEmail || '',
+                staffRole: s.staffRole || '',
+                isActive: s.isActive,
+                month: this._buildLeaveBalancePeriodFromItems_('month', month, mItems, prev.month?.leaveEntitled, prev.month?.permissionEntitled),
+                year: this._buildLeaveBalancePeriodFromItems_('year', year, yItems, prev.year?.leaveEntitled, prev.year?.permissionEntitled)
+            };
+        });
+    },
+
+    _collectAllApprovedTimeOffForMonth_(month, balances) {
+        const items = [];
+        const seen = new Set();
+        const pushItem = (req, userName, staffRole) => {
+            const id = String(req?.id || `${userName}_${req?.dateFrom}_${req?.requestType}`).trim();
+            if (id && seen.has(id)) return;
+            if (id) seen.add(id);
+            items.push({
+                ...req,
+                userName: userName || req.userName || '—',
+                staffRole: staffRole || req.staffRole
+            });
+        };
+        (balances || []).forEach(b => {
+            (b.month?.approvedItems || []).forEach(req => {
+                pushItem(req, b.userName, b.staffRole);
+            });
+        });
+        if (this.canViewAllAttendanceData()) {
+            const staffById = new Map((this.getClinicStaffList() || []).map(s => [String(s.id), s]));
+            this.getClinicStaffTimeOffRequestsList().forEach(req => {
+                if (!this._isTimeOffApprovedStatus(req.status)) return;
+                if (!this._requestOverlapsPeriod(req, 'month', month)) return;
+                const staff = staffById.get(String(req.staffId)) || {};
+                pushItem(req, req.userName || staff.userName, staff.staffRole);
+            });
+        }
+        return items.sort((a, b) => new Date(b.reviewedAt || b.requestedAt || b.createdAt) - new Date(a.reviewedAt || a.requestedAt || a.createdAt));
     },
 
     _isTimeOffApprovedStatus(status) {
@@ -3629,17 +3721,7 @@ const Clinic = {
     },
 
     renderApprovedTimeOffRequestsSection(balances, month) {
-        const items = [];
-        (balances || []).forEach(b => {
-            (b.month?.approvedItems || []).forEach(req => {
-                items.push({
-                    ...req,
-                    userName: b.userName || req.userName,
-                    staffRole: b.staffRole || req.staffRole
-                });
-            });
-        });
-        items.sort((a, b) => new Date(b.reviewedAt || b.requestedAt || b.createdAt) - new Date(a.reviewedAt || a.requestedAt || a.createdAt));
+        const items = this._collectAllApprovedTimeOffForMonth_(month, balances);
 
         const rows = items.length ? items.map(req => `
             <tr>
@@ -13823,9 +13905,9 @@ const Clinic = {
                     .catch(() => { });
             }
 
-            // ✅ المدير: جلب طلبات الإجازة/الإذن بالخلفية لإظهارها في الإشعارات وطلبات الموافقة
+            // ✅ المدير: جلب الحضور والإجازات والأرصدة بالخلفية
             if (this.isCurrentUserAdmin()) {
-                void this.prefetchClinicTimeOffApprovalsForAdminIfNeeded().catch(() => { });
+                void this.prefetchClinicAttendanceForAdminIfNeeded(false).catch(() => { });
             }
 
             // ✅ تحسين سرعة التحميل: عدم انتظار syncDataFromServer في الخلفية
@@ -14502,15 +14584,18 @@ const Clinic = {
         if (this._attendanceDataLoadPromise) return;
         const hasStaff = Array.isArray(AppState.appData?.clinicStaff) && AppState.appData.clinicStaff.length > 0;
         const hasAttendanceRecords = Array.isArray(AppState.appData?.clinicStaffAttendance) && AppState.appData.clinicStaffAttendance.length > 0;
-        if (!force && this._attendanceDataFetchedInSession === true) return;
-        if (!force && hasStaff && hasAttendanceRecords) {
+        const isAdmin = this.canViewAllAttendanceData();
+        if (!force && this._attendanceDataFetchedInSession === true) {
+            if (!isAdmin || (hasStaff && hasAttendanceRecords)) return;
+        }
+        if (!force && !isAdmin && hasStaff && hasAttendanceRecords) {
             this._attendanceDataFetchedInSession = true;
             return;
         }
         this._attendanceDataLoadPromise = this.loadClinicAttendanceData(!!force)
-            .then(() => {
-                this._attendanceDataFetchedInSession = true;
-                if (this.state?.activeTab === 'attendance') this.renderAttendanceTab();
+            .then((ok) => {
+                if (ok) this._attendanceDataFetchedInSession = true;
+                if (this.state?.activeTab === 'attendance') this.renderAttendanceTab({ force: true });
             })
             .catch(() => { })
             .finally(() => { this._attendanceDataLoadPromise = null; });
@@ -14867,19 +14952,25 @@ const Clinic = {
     },
 
     async loadClinicAttendanceData(force) {
-        if (typeof GoogleIntegration === 'undefined' || !GoogleIntegration.sendRequest) return;
+        if (typeof GoogleIntegration === 'undefined' || !GoogleIntegration.sendRequest) return false;
         try {
+            if (this.canViewAllAttendanceData()) {
+                await this._ensureClinicStaffLoadedForAttendance();
+            }
             const [attResp, staffResp, timeOffResp] = await Promise.all([
                 GoogleIntegration.sendRequest({ action: 'getClinicStaffAttendance', data: force ? { skipCache: true } : {} }),
                 GoogleIntegration.sendRequest({ action: 'getAllClinicStaff', data: {} }),
-                GoogleIntegration.sendRequest({ action: 'getClinicStaffTimeOffRequests', data: {} })
+                GoogleIntegration.sendRequest({ action: 'getClinicStaffTimeOffRequests', data: force ? { skipCache: true } : {} })
             ]);
             if (attResp?.success && Array.isArray(attResp.data)) AppState.appData.clinicStaffAttendance = attResp.data;
             if (staffResp?.success && Array.isArray(staffResp.data)) AppState.appData.clinicStaff = staffResp.data;
             if (timeOffResp?.success && Array.isArray(timeOffResp.data)) AppState.appData.clinicStaffTimeOffRequests = timeOffResp.data;
             this.ensureData();
             if (typeof window.DataManager !== 'undefined' && window.DataManager.save) window.DataManager.save();
-        } catch (_e) { /* ignore */ }
+            return !!(attResp?.success || staffResp?.success || timeOffResp?.success);
+        } catch (_e) {
+            return false;
+        }
     },
 
     exportAttendanceToExcel(overrideFilters) {
@@ -16037,6 +16128,9 @@ const Clinic = {
         }
 
         // ✅ بنية فورية + جلب البيانات بالخلفية (لا انتظار الشبكة قبل عرض الواجهة)
+        if (this.isCurrentUserAdmin()) {
+            void this.prefetchClinicAttendanceForAdminIfNeeded(false);
+        }
         this._scheduleAttendanceDataLoadIfNeeded(false);
         this._scheduleLeaveBalancesLoadIfNeeded(false);
         const dataLoading = this._isAttendanceDataLoading();

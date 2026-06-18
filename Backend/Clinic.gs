@@ -3716,6 +3716,19 @@ function _clinicStaffIsAdminActor_(actorUserData) {
     if (typeof checkAdminPermissions === 'function' && checkAdminPermissions(actorUserData)) {
         return true;
     }
+    var perms = actorUserData.permissions;
+    if (perms && typeof perms === 'object' && !Array.isArray(perms)) {
+        if (typeof checkAdminPermissions === 'function' && checkAdminPermissions({ role: perms.role, permissions: perms })) {
+            return true;
+        }
+        if (perms.admin === true || perms.isAdmin === true || perms['manage-modules'] === true) {
+            return true;
+        }
+        var pr = String(perms.role || '').trim().toLowerCase();
+        if (pr === 'admin' || pr === 'system_admin' || perms.role === 'مدير النظام' || perms.role === 'مدير') {
+            return true;
+        }
+    }
     var role = String(actorUserData.role || '').trim();
     var low = role.toLowerCase();
     return low === 'admin' || low === 'system_admin' || role === 'مدير النظام' || role === 'مدير';
