@@ -27,7 +27,7 @@
  * ============================================
  */
 // بصمة نسخة عامة (global) ليصل إليها ActionHandlers وغيره
-var BUILD_TAG = 'HSE_WEBAPP_BUILD_2026-05-20_buildtag_fix_v117';
+var BUILD_TAG = 'HSE_WEBAPP_BUILD_2026-06-16_leave_quota_v218';
 
 function doPost(e) {
     Logger.log('🚀 [DOPOST] ===== doPost تم استدعاؤها =====');

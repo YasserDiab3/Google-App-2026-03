@@ -3817,6 +3817,102 @@ const Clinic = {
         </div>`;
     },
 
+    _isClinicRpcActionMissing_(message) {
+        const m = String(message || '');
+        return /غير معترف|ACTION_NOT_RECOGNIZED|Action not recognized|الإجراء غير معروف/i.test(m);
+    },
+
+    async upsertClinicStaffLeaveQuotaOnServer_(payload) {
+        if (!payload?.staffId) {
+            return { success: false, message: 'معرف المسئول مطلوب' };
+        }
+        try {
+            return await GoogleIntegration.sendRequest({
+                action: 'upsertClinicStaffLeaveQuota',
+                data: payload
+            });
+        } catch (err) {
+            if (!this._isClinicRpcActionMissing_(err?.message)) throw err;
+            return this._upsertClinicStaffLeaveQuotaViaSheet_(payload);
+        }
+    },
+
+    async _upsertClinicStaffLeaveQuotaViaSheet_(payload) {
+        if (!this.isCurrentUserAdmin()) {
+            return { success: false, message: 'تعديل الرصيد متاح لمدير النظام فقط' };
+        }
+        const sheetName = 'ClinicStaffLeaveQuota';
+        const periodType = String(payload.periodType || 'month').trim().toLowerCase();
+        const periodKey = String(payload.periodKey || '').trim();
+        if (!periodKey) {
+            return { success: false, message: 'حدد الفترة' };
+        }
+
+        await this._ensureClinicStaffLoadedForAttendance();
+        const staff = (AppState.appData.clinicStaff || []).find(s => s && String(s.id) === String(payload.staffId));
+        if (!staff) {
+            return { success: false, message: 'المسئول غير موجود' };
+        }
+
+        let leaveDays = parseFloat(payload.leaveDaysQuota);
+        if (isNaN(leaveDays) || leaveDays < 0) leaveDays = 0;
+        let permCount = parseInt(payload.permissionCountQuota, 10);
+        if (isNaN(permCount) || permCount < 0) permCount = 0;
+
+        if (typeof GoogleIntegration.invalidateReadFromSheetCacheForSheets === 'function') {
+            GoogleIntegration.invalidateReadFromSheetCacheForSheets(sheetName);
+        }
+        const allDataRaw = await GoogleIntegration.readFromSheets(sheetName, 30000);
+        const allData = Array.isArray(allDataRaw) ? [...allDataRaw] : [];
+
+        const idx = allData.findIndex(q =>
+            q && String(q.staffId) === String(payload.staffId) &&
+            String(q.periodType) === periodType &&
+            String(q.periodKey) === periodKey
+        );
+
+        const actor = AppState.currentUser || {};
+        const now = new Date().toISOString();
+        const row = {
+            staffId: staff.id,
+            userId: staff.userId || '',
+            userEmail: staff.userEmail || '',
+            userName: staff.userName || '',
+            periodType,
+            periodKey,
+            leaveDaysQuota: leaveDays,
+            permissionCountQuota: permCount,
+            notes: String(payload.notes || '').trim(),
+            updatedById: actor.id || actor.userId || '',
+            updatedByName: actor.name || '',
+            updatedAt: now
+        };
+
+        let result;
+        if (idx >= 0) {
+            row.id = allData[idx].id;
+            row.createdAt = allData[idx].createdAt || now;
+            Object.assign(allData[idx], row);
+            result = await GoogleIntegration.saveToSheets(sheetName, allData);
+        } else {
+            row.id = typeof Utils !== 'undefined' && Utils.generateSequentialId
+                ? Utils.generateSequentialId('CLQ', allData)
+                : `CLQ-${Date.now()}`;
+            row.createdAt = now;
+            result = await GoogleIntegration.saveToSheets(sheetName, [...allData, row]);
+            if (!result?.success) {
+                result = await GoogleIntegration.appendToSheets(sheetName, row);
+            }
+        }
+
+        if (result?.success && typeof GoogleIntegration.invalidateReadFromSheetCacheForSheets === 'function') {
+            GoogleIntegration.invalidateReadFromSheetCacheForSheets(sheetName);
+        }
+        return result?.success
+            ? { success: true, data: idx >= 0 ? allData[idx] : row, message: 'تم حفظ الرصيد بنجاح' }
+            : (result || { success: false, message: 'فشل حفظ الرصيد' });
+    },
+
     showClinicStaffLeaveQuotaModal(staffId, staffName) {
         if (!this.isCurrentUserAdmin() || !staffId) return;
         const balances = this.getClinicStaffLeaveBalancesList();
@@ -3912,16 +4008,13 @@ const Clinic = {
             }
             Loading.show();
             try {
-                const result = await GoogleIntegration.sendRequest({
-                    action: 'upsertClinicStaffLeaveQuota',
-                    data: {
-                        staffId,
-                        periodType,
-                        periodKey,
-                        leaveDaysQuota: daysEl.value,
-                        permissionCountQuota: permsEl.value,
-                        notes: notesEl.value?.trim() || ''
-                    }
+                const result = await this.upsertClinicStaffLeaveQuotaOnServer_({
+                    staffId,
+                    periodType,
+                    periodKey,
+                    leaveDaysQuota: daysEl.value,
+                    permissionCountQuota: permsEl.value,
+                    notes: notesEl.value?.trim() || ''
                 });
                 if (result?.success) {
                     this._leaveBalancesFetchedInSession = false;
