@@ -4740,6 +4740,35 @@ window.UI = {
     },
 
     /**
+     * الحصول على نص إصدار النظام للعرض
+     */
+    getAppVersionDisplay_() {
+        const v = (typeof AppState !== 'undefined' && AppState.appVersion)
+            ? String(AppState.appVersion).trim()
+            : '';
+        return v || '—';
+    },
+
+    /**
+     * تحديث عرض إصدار النظام في الشريط الجانبي وتسجيل الدخول والجوال
+     */
+    updateAppVersionDisplay() {
+        const raw = this.getAppVersionDisplay_();
+        const label = raw === '—' ? raw : `v${raw}`;
+        const sidebar = document.getElementById('sidebar-app-version');
+        const sidebarValue = document.getElementById('sidebar-app-version-value');
+        const loginEl = document.getElementById('login-footer-version');
+        const mobileEl = document.getElementById('mobile-app-version');
+        if (sidebarValue) sidebarValue.textContent = label;
+        if (sidebar) sidebar.setAttribute('title', `إصدار النظام ${label}`);
+        if (loginEl) loginEl.textContent = label;
+        if (mobileEl) {
+            mobileEl.textContent = label;
+            mobileEl.style.display = raw === '—' ? 'none' : 'block';
+        }
+    },
+
+    /**
      * تحديث معلومات المستخدم
      */
     updateUserProfile() {
@@ -4812,6 +4841,7 @@ window.UI = {
         this.updateUserProfilePhoto();
         // تحديث حالة الاتصال للمستخدم
         this.updateUserConnectionStatus();
+        this.updateAppVersionDisplay();
     },
 
     _formatProfileHireDateDisplay(hireRaw) {
@@ -11045,9 +11075,19 @@ if (typeof document !== 'undefined') {
         tryInitNotificationsOnly();
         setTimeout(tryInitNotificationsOnly, 500);
     };
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', runNotificationsInit);
-    } else {
+    const tryInitAppVersionDisplay = () => {
+        if (typeof window.UI !== 'undefined' && typeof window.UI.updateAppVersionDisplay === 'function') {
+            try { window.UI.updateAppVersionDisplay(); } catch (_e) { /* ignore */ }
+        }
+    };
+    const runDomInit = () => {
         runNotificationsInit();
+        tryInitAppVersionDisplay();
+        setTimeout(tryInitAppVersionDisplay, 300);
+    };
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', runDomInit);
+    } else {
+        runDomInit();
     }
 }

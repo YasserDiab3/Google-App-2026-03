@@ -625,6 +625,7 @@ const Settings = {
 
             <!-- Tab Content: إعدادات النظام -->
             <div class="tab-content" id="tab-system-settings">
+                ${this.renderSystemVersionCard()}
                 <div class="settings-group mt-6">
                     <div class="settings-group-header">
                         <h2 class="settings-group-title">
@@ -1308,6 +1309,33 @@ const Settings = {
         return (AppState.currentUser?.role || '').toLowerCase() === 'admin';
     },
 
+    renderSystemVersionCard() {
+        const version = (typeof AppState !== 'undefined' && AppState.appVersion)
+            ? String(AppState.appVersion).trim()
+            : '—';
+        const label = version === '—' ? version : `v${version}`;
+        return `
+            <div class="content-card mt-6">
+                <div class="card-header">
+                    <h2 class="card-title"><i class="fas fa-code-branch ml-2"></i>إصدار النظام</h2>
+                </div>
+                <div class="card-body space-y-3">
+                    <p class="text-sm text-gray-600 dark:text-gray-400">
+                        يعرض الإصدار الحالي المثبّت على جهازك. عند نشر تحديث جديد سيظهر إشعار تلقائي بعد تسجيل الدخول.
+                    </p>
+                    <div style="display:flex;align-items:center;flex-wrap:wrap;gap:12px;">
+                        <div style="padding:10px 14px;border-radius:10px;background:#f8fafc;border:1px solid #e2e8f0;">
+                            <span style="font-size:0.75rem;color:#64748b;font-weight:600;display:block;margin-bottom:4px;">الإصدار الحالي</span>
+                            <strong id="settings-app-version-value" dir="ltr" style="font-size:1.15rem;color:#0f766e;">${Utils.escapeHTML(label)}</strong>
+                        </div>
+                        <button type="button" id="settings-check-app-update-btn" class="btn-secondary btn-sm" style="align-self:flex-end;">
+                            <i class="fas fa-sync-alt ml-2"></i>التحقق من التحديثات
+                        </button>
+                    </div>
+                </div>
+            </div>`;
+    },
+
     setupTabsNavigation() {
         const tabButtons = document.querySelectorAll('.tab-btn');
         const tabContents = document.querySelectorAll('.tab-content');
@@ -1412,6 +1440,28 @@ const Settings = {
             const generateFullBtn = document.getElementById('generate-full-report-btn');
             if (generateFullBtn) {
                 generateFullBtn.addEventListener('click', () => Settings.generateReport('full'));
+            }
+
+            const checkUpdateBtn = document.getElementById('settings-check-app-update-btn');
+            if (checkUpdateBtn) {
+                checkUpdateBtn.addEventListener('click', async () => {
+                    if (typeof UI !== 'undefined' && typeof UI.updateAppVersionDisplay === 'function') {
+                        UI.updateAppVersionDisplay();
+                    }
+                    if (typeof UI !== 'undefined' && typeof UI._checkServerVersion === 'function') {
+                        checkUpdateBtn.disabled = true;
+                        try {
+                            await UI._checkServerVersion();
+                            if (typeof Notification !== 'undefined') {
+                                Notification.info('تم التحقق من التحديثات. إن وُجد إصدار أحدث سيظهر إشعار.');
+                            }
+                        } finally {
+                            checkUpdateBtn.disabled = false;
+                        }
+                    } else if (typeof Notification !== 'undefined') {
+                        Notification.info('الإصدار الحالي: ' + (AppState.appVersion || '—'));
+                    }
+                });
             }
 
             // Logo upload

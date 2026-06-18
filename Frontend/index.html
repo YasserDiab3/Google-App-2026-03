@@ -9599,6 +9599,14 @@
                                         >سياسة الخصوصية</span
                                     ></a
                                 >
+                                <span class="login-footer-separator">|</span>
+                                <span
+                                    id="login-footer-version"
+                                    class="login-footer-version"
+                                    dir="ltr"
+                                    aria-label="إصدار النظام"
+                                    >—</span
+                                >
                             </div>
                         </div>
                     </footer>
@@ -10595,6 +10603,21 @@
                     </a>
                 </nav>
 
+                <!-- إصدار النظام -->
+                <div
+                    id="sidebar-app-version"
+                    class="sidebar-app-version"
+                    role="status"
+                    aria-label="إصدار النظام"
+                    title="إصدار النظام"
+                >
+                    <i class="fas fa-code-branch" aria-hidden="true"></i>
+                    <span class="sidebar-app-version-text">
+                        <span class="sidebar-app-version-label">إصدار النظام</span>
+                        <strong id="sidebar-app-version-value" class="sidebar-app-version-value" dir="ltr">—</strong>
+                    </span>
+                </div>
+
                 <!-- Logout Button -->
                 <button
                     id="logout-btn"
@@ -10624,6 +10647,12 @@
                         <small
                             id="mobile-user-name"
                             class="mobile-user-name"
+                        ></small>
+                        <small
+                            id="mobile-app-version"
+                            class="mobile-app-version"
+                            dir="ltr"
+                            aria-label="إصدار النظام"
                         ></small>
                     </div>
                     <div class="mobile-topbar-actions">
@@ -12969,7 +12998,7 @@
                     }
 
                     // مطابقة CACHE_VERSION في service-worker.js — تسريع جلب سكربت SW بعد النشر (تجاوز كاش الشبكة/الوسيط)
-                    const __SW_REGISTER_QUERY = "v=hse-app-v1.0.216-20260618";
+                    const __SW_REGISTER_QUERY = "v=hse-app-v1.0.217-20260618";
                     const swUrl =
                         swPath +
                         (swPath.includes("?") ? "&" : "?") +

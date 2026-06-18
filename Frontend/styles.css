@@ -390,6 +390,12 @@ body.app-active {
     color: var(--primary-light);
 }
 
+.login-footer-version {
+    font-weight: 700;
+    color: var(--text-secondary);
+    letter-spacing: 0.02em;
+}
+
 .login-footer-link {
     color: var(--primary-color);
     text-decoration: none;
