@@ -2686,19 +2686,7 @@ const PeriodicInspections = {
 
     parseInspectionRecordForExport(inspection) {
         if (!inspection || typeof inspection !== 'object') return null;
-        let checklistResults = inspection.checklistResults;
-        if (checklistResults && typeof checklistResults === 'string') {
-            try { checklistResults = JSON.parse(checklistResults); } catch (_e) { checklistResults = []; }
-        }
-        if (!Array.isArray(checklistResults)) checklistResults = [];
-        const checklistItems = checklistResults.map((r, index) => ({
-            number: index + 1,
-            label: r.label || '',
-            checked: !!r.checked,
-            status: r.status || '',
-            note: r.note || '',
-            required: !!r.required
-        }));
+        const checklistItems = this.resolveInspectionChecklistItems(inspection);
         return {
             category: inspection.category || '',
             inspectionDate: inspection.inspectionDate || '',
@@ -2714,11 +2702,91 @@ const PeriodicInspections = {
         };
     },
 
+    resolveInspectionChecklistItems(inspection) {
+        if (!inspection || typeof inspection !== 'object') return [];
+        let checklistResults = inspection.checklistResults;
+        if (checklistResults && typeof checklistResults === 'string') {
+            try { checklistResults = JSON.parse(checklistResults); } catch (_e) { checklistResults = []; }
+        }
+        if (!Array.isArray(checklistResults)) checklistResults = [];
+
+        const templateId = inspection.templateId || inspection.template || '';
+        const template = templateId ? this.INSPECTION_TEMPLATES[templateId] : null;
+        if (template && Array.isArray(template.checklist) && template.checklist.length) {
+            return template.checklist.map((item, index) => {
+                const result = checklistResults.find(r => String(r?.id) === String(item.id)) || {};
+                return {
+                    number: index + 1,
+                    label: item.label || result.label || '',
+                    checked: !!result.checked,
+                    status: result.status || '',
+                    note: result.note || '',
+                    required: !!item.required
+                };
+            });
+        }
+
+        return checklistResults.map((r, index) => ({
+            number: index + 1,
+            label: r.label || '',
+            checked: !!r.checked,
+            status: r.status || '',
+            note: r.note || '',
+            required: !!r.required
+        }));
+    },
+
+    collectChecklistItemsFromForm(template) {
+        const templateId = document.getElementById('inspection-template')?.value || this.state?.selectedTemplate || '';
+        const resolvedTemplate = template || (templateId ? this.INSPECTION_TEMPLATES[templateId] : null);
+
+        if (resolvedTemplate && Array.isArray(resolvedTemplate.checklist) && resolvedTemplate.checklist.length) {
+            return resolvedTemplate.checklist.map((item, index) => {
+                const checkbox = document.getElementById(`checklist-${item.id}`);
+                const statusSelect = document.getElementById(`checklist-status-${item.id}`);
+                const noteTextarea = document.getElementById(`checklist-note-${item.id}`);
+                return {
+                    number: index + 1,
+                    label: item.label,
+                    checked: checkbox ? checkbox.checked : false,
+                    status: statusSelect ? statusSelect.value : '',
+                    note: noteTextarea ? noteTextarea.value.trim() : '',
+                    required: item.required
+                };
+            });
+        }
+
+        const items = [];
+        const statusSelects = document.querySelectorAll('[id^="checklist-status-"]');
+        statusSelects.forEach((statusSelect, index) => {
+            const itemId = statusSelect.id.replace('checklist-status-', '');
+            const checkbox = document.getElementById(`checklist-${itemId}`);
+            const noteTextarea = document.getElementById(`checklist-note-${itemId}`);
+            const labelEl = document.querySelector(`label[for="checklist-${itemId}"]`);
+            let label = '';
+            if (labelEl) {
+                label = String(labelEl.textContent || '')
+                    .replace(/^\s*\d+\.\s*/, '')
+                    .replace(/\*+\s*مطلوب\s*$/g, '')
+                    .trim();
+            }
+            items.push({
+                number: index + 1,
+                label,
+                checked: checkbox ? checkbox.checked : false,
+                status: statusSelect ? statusSelect.value : '',
+                note: noteTextarea ? noteTextarea.value.trim() : '',
+                required: labelEl ? /مطلوب/.test(labelEl.textContent || '') : false
+            });
+        });
+        return items;
+    },
+
     collectInspectionFormData() {
         const form = document.getElementById('periodic-inspection-form');
         if (!form) return null;
 
-        const templateId = document.getElementById('inspection-template')?.value || '';
+        const templateId = document.getElementById('inspection-template')?.value || this.state?.selectedTemplate || '';
         const template = templateId ? this.INSPECTION_TEMPLATES[templateId] : null;
         const category = document.getElementById('inspection-category')?.value || '';
         const inspectionDate = document.getElementById('inspection-date')?.value || '';
@@ -2736,23 +2804,7 @@ const PeriodicInspections = {
         const subLocationName = selectedPlace ? selectedPlace.name : '';
         const notes = document.getElementById('inspection-notes')?.value || '';
         const correctiveActions = document.getElementById('inspection-corrective-actions')?.value || '';
-
-        const checklistItems = [];
-        if (template && template.checklist) {
-            template.checklist.forEach((item, index) => {
-                const checkbox = document.getElementById(`checklist-${item.id}`);
-                const statusSelect = document.getElementById(`checklist-status-${item.id}`);
-                const noteTextarea = document.getElementById(`checklist-note-${item.id}`);
-                checklistItems.push({
-                    number: index + 1,
-                    label: item.label,
-                    checked: checkbox ? checkbox.checked : false,
-                    status: statusSelect ? statusSelect.value : '',
-                    note: noteTextarea ? noteTextarea.value.trim() : '',
-                    required: item.required
-                });
-            });
-        }
+        const checklistItems = this.collectChecklistItemsFromForm(template);
 
         return {
             category,
@@ -2765,7 +2817,8 @@ const PeriodicInspections = {
             subLocationName,
             notes,
             correctiveActions,
-            checklistItems
+            checklistItems,
+            templateId
         };
     },
 
@@ -2804,7 +2857,10 @@ const PeriodicInspections = {
                     ${data.subLocationName ? `<div class="info-item"><div class="info-label">الموقع الفرعي</div><div class="info-value">${Utils.escapeHTML(data.subLocationName)}</div></div>` : ''}
                     ${data.assetCode ? `<div class="info-item"><div class="info-label">رقم المعدة/الكود</div><div class="info-value">${Utils.escapeHTML(data.assetCode)}</div></div>` : ''}
                 </div>
-                ${checklistRows ? `<table><thead><tr><th style="width: 50px;">#</th><th>عنصر الفحص</th><th style="width: 80px;">تم الفحص</th><th style="width: 120px;">حالة المطابقة</th><th>ملاحظات</th></tr></thead><tbody>${checklistRows}</tbody></table>` : ''}
+                ${checklistItems.length ? `
+                <h3 style="margin: 14px 0 8px; color: #1e3a5f; font-size: 14px; font-weight: bold;">قائمة الفحص (${checklistItems.length} بند)</h3>
+                <table><thead><tr><th style="width: 50px;">#</th><th>عنصر الفحص</th><th style="width: 80px;">تم الفحص</th><th style="width: 120px;">حالة المطابقة</th><th>ملاحظات</th></tr></thead><tbody>${checklistRows}</tbody></table>
+                ` : ''}
                 ${data.notes || data.correctiveActions ? `<div class="notes-section">${data.notes ? `<div class="notes-title">ملاحظات عامة:</div><p style="margin: 0 0 12px 0; line-height: 1.6;">${Utils.escapeHTML(data.notes)}</p>` : ''}${data.correctiveActions ? `<div class="notes-title">الإجراءات التصحيحية المطلوبة:</div><p style="margin: 0; line-height: 1.6;">${Utils.escapeHTML(data.correctiveActions)}</p>` : ''}</div>` : ''}
             </div>
         `;
@@ -2824,12 +2880,14 @@ const PeriodicInspections = {
                 formTitle,
                 content,
                 false,
-                true,
+                false,
                 {
                     source: 'PeriodicInspection',
                     titleEn: 'Periodic Inspection Report',
                     titleAr: 'تقرير فحص دوري',
-                    version: '1.0'
+                    version: '1.0',
+                    includeQRCode: false,
+                    compactPdfFooter: true
                 },
                 createdAt,
                 updatedAt
@@ -2839,6 +2897,92 @@ const PeriodicInspections = {
         return `<!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="UTF-8"><title>${formTitle}</title></head><body style="font-family:Arial,Tahoma,sans-serif;direction:rtl;padding:20px;">${content}</body></html>`;
     },
 
+    preparePeriodicInspectionPdfHtmlContent(htmlContent) {
+        const overrideStyle = `
+            <style id="pi-pdf-export-overrides">
+                @page { size: A4 portrait !important; margin: 6mm !important; }
+                html, body {
+                    min-height: auto !important;
+                    height: auto !important;
+                    background: #ffffff !important;
+                }
+                body {
+                    display: block !important;
+                    line-height: 1.35 !important;
+                    margin: 0 !important;
+                    padding: 0 !important;
+                    font-family: 'Tahoma', 'Segoe UI', 'Arial', sans-serif !important;
+                }
+                .report-wrapper {
+                    min-height: auto !important;
+                    height: auto !important;
+                    display: block !important;
+                    box-shadow: none !important;
+                    border-radius: 0 !important;
+                    padding: 10px !important;
+                }
+                .report-body {
+                    flex: none !important;
+                    min-height: auto !important;
+                }
+                .report-footer {
+                    margin-top: 8px !important;
+                    padding-top: 2px !important;
+                    page-break-inside: avoid !important;
+                    break-inside: avoid !important;
+                }
+                .pdf-compact-footer .footer-watermark-frame {
+                    padding: 5px 8px !important;
+                    margin-top: 2px !important;
+                    border-radius: 6px !important;
+                    border-width: 1px !important;
+                }
+                .pdf-compact-footer .footer-bottom {
+                    gap: 3px !important;
+                }
+                .pdf-compact-footer .footer-meta-line {
+                    gap: 4px !important;
+                    padding: 2px 0 !important;
+                    margin-top: 2px !important;
+                    font-size: 9px !important;
+                }
+                .pdf-compact-footer .footer-meta-item {
+                    font-size: 9px !important;
+                    padding: 1px 2px !important;
+                    line-height: 1.3 !important;
+                }
+                .pdf-compact-footer .footer-bottom-text {
+                    font-size: 9px !important;
+                    gap: 1px !important;
+                    line-height: 1.35 !important;
+                }
+                .pdf-compact-footer .footer-bottom-text span,
+                .pdf-compact-footer .company-brand .company-name,
+                .pdf-compact-footer .company-brand .company-name-secondary {
+                    word-break: normal !important;
+                    overflow-wrap: normal !important;
+                    hyphens: none !important;
+                    direction: rtl !important;
+                    unicode-bidi: plaintext !important;
+                    white-space: normal !important;
+                    letter-spacing: 0 !important;
+                }
+                .pi-print-report table {
+                    page-break-inside: auto !important;
+                }
+                .pi-print-report tr {
+                    page-break-inside: avoid !important;
+                    break-inside: avoid !important;
+                }
+            </style>
+        `;
+
+        if (/<\/head>/i.test(htmlContent)) {
+            return htmlContent.replace(/<\/head>/i, `${overrideStyle}</head>`);
+        }
+        return `${overrideStyle}${htmlContent}`;
+    },
+
     async downloadPeriodicInspectionPdf(data, options = {}) {
         if (!data) return false;
         if (typeof Loading !== 'undefined' && Loading.show) {
@@ -2846,7 +2990,7 @@ const PeriodicInspections = {
         }
         try {
             const rawHtmlContent = this.buildPeriodicInspectionPdfHtml(data, options);
-            const htmlContent = this.prepareDailySafetyPdfHtmlContent(rawHtmlContent, { landscape: false });
+            const htmlContent = this.preparePeriodicInspectionPdfHtmlContent(rawHtmlContent);
             const fileName = this._buildPeriodicInspectionFileName({
                 category: data.category,
                 dateValue: data.inspectionDate

@@ -2873,7 +2873,7 @@ const DEFAULT_COMPANY_NAME = '';
 
 const AppState = {
     /** إصدار التطبيق — تسلسلي: 1.0.0 → 1.0.1 → 1.0.2 … عند كل نشر زِد الرقم هنا وفي version.json */
-    appVersion: '1.0.222',
+    appVersion: '1.0.223',
     /** نص اختياري لرسالة التحديث (ملخص التغييرات). إن تُركت فارغة يُستخدم النص الافتراضي. */
     updateMessage: '',
     debugMode: false,
@@ -6414,7 +6414,10 @@ const PDFTemplates = {
             font-weight: 700;
             color: #0f172a;
             line-height: 1.45;
-            word-break: break-word;
+            word-break: normal;
+            overflow-wrap: normal;
+            hyphens: none;
+            unicode-bidi: plaintext;
         }
         .company-brand .company-name-group {
             display: flex;
@@ -6427,7 +6430,10 @@ const PDFTemplates = {
             font-weight: 700;
             color: ${secondaryNameColor};
             line-height: 1.45;
-            word-break: break-word;
+            word-break: normal;
+            overflow-wrap: normal;
+            hyphens: none;
+            unicode-bidi: plaintext;
         }
         .header-info {
             flex: 1;
@@ -6748,6 +6754,18 @@ const PDFTemplates = {
             font-size: 10px;
             gap: 2px;
         }
+        .pdf-compact-footer .footer-bottom-text span,
+        .pdf-compact-footer .company-brand .company-name,
+        .pdf-compact-footer .company-brand .company-name-secondary {
+            word-break: normal;
+            overflow-wrap: normal;
+            hyphens: none;
+            direction: rtl;
+            unicode-bidi: plaintext;
+            white-space: normal;
+            line-height: 1.45;
+            letter-spacing: 0;
+        }
         .footer-watermark-frame {
             background: linear-gradient(135deg, rgba(59, 130, 246, 0.03), rgba(37, 99, 235, 0.05));
             border: 2px solid rgba(59, 130, 246, 0.15);
@@ -6827,9 +6845,11 @@ const PDFTemplates = {
             min-width: 0;
             font-size: 13px;
             line-height: 1.6;
-            word-break: break-word;
+            word-break: normal;
+            overflow-wrap: normal;
+            hyphens: none;
             direction: rtl;
-            unicode-bidi: isolate;
+            unicode-bidi: plaintext;
             letter-spacing: 0;
             font-family: 'Tahoma', 'Segoe UI', sans-serif;
         }
@@ -6855,6 +6875,15 @@ const PDFTemplates = {
             gap: 4px;
             text-align: center;
             width: 100%;
+        }
+        .footer-bottom-text span {
+            word-break: normal;
+            overflow-wrap: normal;
+            hyphens: none;
+            direction: rtl;
+            unicode-bidi: plaintext;
+            line-height: 1.45;
+            letter-spacing: 0;
         }
         .report-list {
             padding-right: 20px;
