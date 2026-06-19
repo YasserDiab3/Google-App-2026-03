@@ -999,11 +999,27 @@ const Training = {
             location: '',
             search: '',
             view: 'contractor', // contractor | trainer | details
+            drillMode: 'contractor', // contractor | trainer — يُستخدم عند التعمق لأن view تصبح details
             sortBy: 'hours', // count | trainees | hours | date
             sortDir: 'desc', // asc | desc
-            drillKey: '' // contractor name OR trainer name (based on view)
+            drillKey: '' // contractor name OR trainer name (based on drillMode)
         };
         return this._contractorAnalyticsState;
+    },
+
+    resetContractorAnalyticsState() {
+        this._contractorAnalyticsState = {
+            contractor: '',
+            trainer: '',
+            topic: '',
+            location: '',
+            search: '',
+            view: 'contractor',
+            drillMode: 'contractor',
+            sortBy: 'hours',
+            sortDir: 'desc',
+            drillKey: ''
+        };
     },
 
     getContractorTrainingAnalyticsModel(monthFilter = '') {
@@ -1137,7 +1153,7 @@ const Training = {
 
         const drillKey = normalizeKey(state.drillKey);
         const drilled = drillKey
-            ? filtered.filter(r => (state.view === 'trainer' ? r.trainerKey === drillKey : r.contractorNameKey === drillKey))
+            ? filtered.filter(r => (state.drillMode === 'trainer' ? r.trainerKey === drillKey : r.contractorNameKey === drillKey))
             : filtered;
 
         const detailsSorted = drilled.slice().sort((a, b) => {
@@ -1255,9 +1271,6 @@ const Training = {
                             <i class="fas fa-filter"></i>
                             فلاتر التحليل
                         </h4>
-                        <button type="button" id="contractor-analytics-reset-btn" class="contractor-analytics-reset-btn">
-                            <i class="fas fa-redo-alt"></i>إعادة تعيين
-                        </button>
                     </div>
                     <div class="contractor-analytics-slicers-grid">
                         <div class="filter-group">
@@ -1405,10 +1418,23 @@ const Training = {
 
         const search = document.getElementById('contractor-analytics-search');
         if (search) {
+            if (this._contractorAnalyticsSearchTimer) {
+                clearTimeout(this._contractorAnalyticsSearchTimer);
+            }
             search.addEventListener('input', (e) => {
                 state.search = String(e.target.value || '');
-                // تحديث خفيف بدون فقد التركيز
-                this.refreshContractorAnalytics(monthFilter);
+                const selStart = e.target.selectionStart;
+                const selEnd = e.target.selectionEnd;
+                clearTimeout(this._contractorAnalyticsSearchTimer);
+                this._contractorAnalyticsSearchTimer = setTimeout(() => {
+                    this.refreshContractorAnalytics(monthFilter);
+                    requestAnimationFrame(() => {
+                        const next = document.getElementById('contractor-analytics-search');
+                        if (!next) return;
+                        next.focus();
+                        try { next.setSelectionRange(selStart, selEnd); } catch (_e) { /* ignore */ }
+                    });
+                }, 220);
             });
         }
 
@@ -1436,22 +1462,6 @@ const Training = {
             this.refreshContractorAnalytics(monthFilter);
         });
 
-        const resetBtn = document.getElementById('contractor-analytics-reset-btn');
-        if (resetBtn) resetBtn.addEventListener('click', () => {
-            this._contractorAnalyticsState = {
-                contractor: '',
-                trainer: '',
-                topic: '',
-                location: '',
-                search: '',
-                view: 'contractor',
-                sortBy: 'hours',
-                sortDir: 'desc',
-                drillKey: ''
-            };
-            this.refreshContractorAnalytics(monthFilter);
-        });
-
         // Drill-down from pivot rows
         const dashboard = document.getElementById('contractor-analytics-dashboard');
         if (dashboard) {
@@ -1459,9 +1469,8 @@ const Training = {
                 row.addEventListener('click', () => {
                     const key = String(row.getAttribute('data-analytics-drill') || '').trim();
                     const mode = String(row.getAttribute('data-analytics-mode') || '').trim();
-                    state.view = mode === 'trainer' ? 'trainer' : 'contractor';
+                    state.drillMode = mode === 'trainer' ? 'trainer' : 'contractor';
                     state.drillKey = key;
-                    // عند الـ drill نعرض التفاصيل مباشرة
                     state.view = 'details';
                     this.refreshContractorAnalytics(monthFilter);
                 });
@@ -3008,6 +3017,7 @@ const Training = {
         });
 
         bindOnce(document.getElementById('contractor-analytics-reset-btn'), 'click', () => {
+            this.resetContractorAnalyticsState();
             this.refreshContractorAnalytics(document.getElementById('contractor-month-filter')?.value || '');
         });
 
