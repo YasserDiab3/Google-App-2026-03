@@ -2822,13 +2822,24 @@ const PeriodicInspections = {
         };
     },
 
+    _formatChecklistInspectedMark(item) {
+        const status = String(item?.status || '').trim();
+        if (status === 'مطابق') {
+            return '<span style="color: #16a34a; font-weight: bold; font-size: 15px;">✓</span>';
+        }
+        if (status === 'غير مطابق') {
+            return '<span style="color: #dc2626; font-weight: bold; font-size: 15px;">✗</span>';
+        }
+        return '-';
+    },
+
     buildPeriodicInspectionPrintContent(data) {
         const checklistItems = Array.isArray(data?.checklistItems) ? data.checklistItems : [];
         const checklistRows = checklistItems.map(item => `
             <tr>
                 <td style="text-align: center; padding: 8px; border: 1px solid #ddd;">${item.number}</td>
                 <td style="padding: 8px; border: 1px solid #ddd;">${Utils.escapeHTML(item.label)} ${item.required ? '<span style="color: red;">*</span>' : ''}</td>
-                <td style="text-align: center; padding: 8px; border: 1px solid #ddd;">${item.checked ? '✓' : '✗'}</td>
+                <td style="text-align: center; padding: 8px; border: 1px solid #ddd;">${this._formatChecklistInspectedMark(item)}</td>
                 <td style="text-align: center; padding: 8px; border: 1px solid #ddd; ${item.status === 'مطابق' ? 'color: green; font-weight: bold;' : item.status === 'غير مطابق' ? 'color: red; font-weight: bold;' : item.status === 'أخرى' ? 'color: orange; font-weight: bold;' : ''}">${Utils.escapeHTML(item.status) || '-'}</td>
                 <td style="padding: 8px; border: 1px solid #ddd;">${Utils.escapeHTML(item.note) || '-'}</td>
             </tr>
