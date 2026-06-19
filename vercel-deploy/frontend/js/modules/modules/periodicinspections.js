@@ -1028,6 +1028,9 @@ const PeriodicInspections = {
                                                     <button onclick="PeriodicInspections.viewInspection('${inspection.id}')" class="btn-icon btn-icon-info hover:scale-110 transition-transform" title="عرض التفاصيل">
                                                         <i class="fas fa-eye"></i>
                                                     </button>
+                                                    <button onclick="PeriodicInspections.exportInspectionById('${inspection.id}')" class="btn-icon btn-icon-success hover:scale-110 transition-transform" title="تحميل PDF">
+                                                        <i class="fas fa-file-pdf"></i>
+                                                    </button>
                                                     <button onclick="PeriodicInspections.editInspection('${inspection.id}')" class="btn-icon btn-icon-primary hover:scale-110 transition-transform" title="تعديل">
                                                         <i class="fas fa-edit"></i>
                                                     </button>
@@ -1936,9 +1939,9 @@ const PeriodicInspections = {
                                     <i class="fas fa-print ml-2"></i>
                                     طباعة
                                 </button>
-                                <button type="button" class="px-4 py-2 rounded-xl font-semibold transition-all text-white" style="background: linear-gradient(135deg, #b45309 0%, #92400e 100%);" onclick="PeriodicInspections.exportInspection()" title="تصدير الفحص">
-                                    <i class="fas fa-file-export ml-2"></i>
-                                    تصدير
+                                <button type="button" class="px-4 py-2 rounded-xl font-semibold transition-all text-white" style="background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);" onclick="PeriodicInspections.exportInspection()" title="تحميل PDF">
+                                    <i class="fas fa-file-pdf ml-2"></i>
+                                    تحميل PDF
                                 </button>
                             </div>
                         </div>
@@ -1949,9 +1952,9 @@ const PeriodicInspections = {
                                 <i class="fas fa-print ml-2"></i>
                                 طباعة
                             </button>
-                            <button type="button" class="px-4 py-2.5 rounded-xl font-semibold transition-all text-white" style="background: linear-gradient(135deg, #b45309 0%, #92400e 100%);" onclick="PeriodicInspections.exportInspection()" title="تصدير الفحص">
-                                <i class="fas fa-file-export ml-2"></i>
-                                تصدير
+                            <button type="button" class="px-4 py-2.5 rounded-xl font-semibold transition-all text-white" style="background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);" onclick="PeriodicInspections.exportInspection()" title="تحميل PDF">
+                                <i class="fas fa-file-pdf ml-2"></i>
+                                تحميل PDF
                             </button>
                             <button type="submit" class="px-4 py-2.5 rounded-xl font-semibold transition-all text-white" style="background: linear-gradient(135deg, #1e40af 0%, #1d4ed8 100%);">
                                 <i class="fas fa-save ml-2"></i>
@@ -2656,9 +2659,9 @@ const PeriodicInspections = {
                             <i class="fas fa-print ml-2"></i>
                             طباعة
                         </button>
-                        <button type="button" class="px-4 py-2.5 rounded-xl font-semibold transition-all text-white" style="background: linear-gradient(135deg, #b45309 0%, #92400e 100%); border: 1px solid #78350f;" onclick="PeriodicInspections.exportInspectionById('${id}');">
-                            <i class="fas fa-file-export ml-2"></i>
-                            تصدير
+                        <button type="button" class="px-4 py-2.5 rounded-xl font-semibold transition-all text-white" style="background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%); border: 1px solid #991b1b;" onclick="PeriodicInspections.exportInspectionById('${id}');">
+                            <i class="fas fa-file-pdf ml-2"></i>
+                            تحميل PDF
                         </button>
                         <button type="button" class="px-4 py-2.5 rounded-xl font-semibold transition-all text-white" style="background: linear-gradient(135deg, #1e40af 0%, #1d4ed8 100%); border: 1px solid #1e40af;" onclick="PeriodicInspections.editInspection('${id}'); this.closest('.modal-overlay').remove();">
                             <i class="fas fa-edit ml-2"></i>
@@ -2672,6 +2675,191 @@ const PeriodicInspections = {
         modal.addEventListener('click', (e) => {
             if (e.target === modal) modal.remove();
         });
+    },
+
+    _buildPeriodicInspectionFileName({ category, dateValue, ext = 'pdf' } = {}) {
+        const safeCategory = this._sanitizeFileNamePart(category || 'فحص').replace(/\s+/g, '_');
+        const safeDate = String(dateValue || '').slice(0, 10) || new Date().toISOString().slice(0, 10);
+        const safeExt = String(ext || 'pdf').replace('.', '').toLowerCase();
+        return `تقرير_فحص_دوري_${safeCategory}_${safeDate}.${safeExt}`;
+    },
+
+    parseInspectionRecordForExport(inspection) {
+        if (!inspection || typeof inspection !== 'object') return null;
+        let checklistResults = inspection.checklistResults;
+        if (checklistResults && typeof checklistResults === 'string') {
+            try { checklistResults = JSON.parse(checklistResults); } catch (_e) { checklistResults = []; }
+        }
+        if (!Array.isArray(checklistResults)) checklistResults = [];
+        const checklistItems = checklistResults.map((r, index) => ({
+            number: index + 1,
+            label: r.label || '',
+            checked: !!r.checked,
+            status: r.status || '',
+            note: r.note || '',
+            required: !!r.required
+        }));
+        return {
+            category: inspection.category || '',
+            inspectionDate: inspection.inspectionDate || '',
+            location: inspection.location || inspection.equipment || '',
+            inspector: inspection.inspector || '',
+            result: inspection.result || '',
+            assetCode: inspection.assetCode || '',
+            factoryName: inspection.factoryName || '',
+            subLocationName: inspection.subLocationName || '',
+            notes: inspection.notes || '',
+            correctiveActions: inspection.correctiveActions || '',
+            checklistItems
+        };
+    },
+
+    collectInspectionFormData() {
+        const form = document.getElementById('periodic-inspection-form');
+        if (!form) return null;
+
+        const templateId = document.getElementById('inspection-template')?.value || '';
+        const template = templateId ? this.INSPECTION_TEMPLATES[templateId] : null;
+        const category = document.getElementById('inspection-category')?.value || '';
+        const inspectionDate = document.getElementById('inspection-date')?.value || '';
+        const location = document.getElementById('inspection-location')?.value || '';
+        const inspector = document.getElementById('inspection-inspector')?.value || '';
+        const result = document.getElementById('inspection-result')?.value || '';
+        const assetCode = document.getElementById('inspection-asset-code')?.value || '';
+        const factoryId = document.getElementById('inspection-factory')?.value || '';
+        const subLocationId = document.getElementById('inspection-sub-location')?.value || '';
+        const sites = this.getSiteOptions();
+        const selectedSite = sites.find(s => s.id === factoryId);
+        const places = this.getPlaceOptions(factoryId);
+        const selectedPlace = places.find(p => p.id === subLocationId);
+        const factoryName = selectedSite ? selectedSite.name : '';
+        const subLocationName = selectedPlace ? selectedPlace.name : '';
+        const notes = document.getElementById('inspection-notes')?.value || '';
+        const correctiveActions = document.getElementById('inspection-corrective-actions')?.value || '';
+
+        const checklistItems = [];
+        if (template && template.checklist) {
+            template.checklist.forEach((item, index) => {
+                const checkbox = document.getElementById(`checklist-${item.id}`);
+                const statusSelect = document.getElementById(`checklist-status-${item.id}`);
+                const noteTextarea = document.getElementById(`checklist-note-${item.id}`);
+                checklistItems.push({
+                    number: index + 1,
+                    label: item.label,
+                    checked: checkbox ? checkbox.checked : false,
+                    status: statusSelect ? statusSelect.value : '',
+                    note: noteTextarea ? noteTextarea.value.trim() : '',
+                    required: item.required
+                });
+            });
+        }
+
+        return {
+            category,
+            inspectionDate,
+            location,
+            inspector,
+            result,
+            assetCode,
+            factoryName,
+            subLocationName,
+            notes,
+            correctiveActions,
+            checklistItems
+        };
+    },
+
+    buildPeriodicInspectionPrintContent(data) {
+        const checklistItems = Array.isArray(data?.checklistItems) ? data.checklistItems : [];
+        const checklistRows = checklistItems.map(item => `
+            <tr>
+                <td style="text-align: center; padding: 8px; border: 1px solid #ddd;">${item.number}</td>
+                <td style="padding: 8px; border: 1px solid #ddd;">${Utils.escapeHTML(item.label)} ${item.required ? '<span style="color: red;">*</span>' : ''}</td>
+                <td style="text-align: center; padding: 8px; border: 1px solid #ddd;">${item.checked ? '✓' : '✗'}</td>
+                <td style="text-align: center; padding: 8px; border: 1px solid #ddd; ${item.status === 'مطابق' ? 'color: green; font-weight: bold;' : item.status === 'غير مطابق' ? 'color: red; font-weight: bold;' : item.status === 'أخرى' ? 'color: orange; font-weight: bold;' : ''}">${Utils.escapeHTML(item.status) || '-'}</td>
+                <td style="padding: 8px; border: 1px solid #ddd;">${Utils.escapeHTML(item.note) || '-'}</td>
+            </tr>
+        `).join('');
+
+        return `
+            <style>
+                .pi-print-report .info-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-bottom: 16px; }
+                .pi-print-report .info-item { padding: 10px; background: #fffbeb; border-right: 3px solid #d97706; border-radius: 5px; }
+                .pi-print-report .info-label { font-weight: bold; color: #92400e; font-size: 12px; margin-bottom: 4px; }
+                .pi-print-report .info-value { color: #1e293b; font-size: 14px; }
+                .pi-print-report table { width: 100%; border-collapse: collapse; margin-top: 16px; }
+                .pi-print-report th { background: linear-gradient(135deg, #1e3a5f, #0f172a); color: #fef3c7; padding: 10px; text-align: right; font-weight: bold; font-size: 12px; }
+                .pi-print-report td { padding: 8px; border: 1px solid #ddd; font-size: 12px; }
+                .pi-print-report .notes-section { margin-top: 16px; padding: 12px; background: #fafaf9; border-radius: 8px; border: 1px solid #e7e5e4; }
+                .pi-print-report .notes-title { font-weight: bold; color: #1e3a5f; margin-bottom: 8px; }
+            </style>
+            <div class="pi-print-report">
+                <div class="info-grid">
+                    <div class="info-item"><div class="info-label">نوع الفحص</div><div class="info-value">${Utils.escapeHTML(data.category || '')}</div></div>
+                    <div class="info-item"><div class="info-label">تاريخ الفحص</div><div class="info-value">${data.inspectionDate || '-'}</div></div>
+                    <div class="info-item"><div class="info-label">الموقع/المعدة</div><div class="info-value">${Utils.escapeHTML(data.location || '')}</div></div>
+                    <div class="info-item"><div class="info-label">المفتش</div><div class="info-value">${Utils.escapeHTML(data.inspector || '')}</div></div>
+                    <div class="info-item"><div class="info-label">النتيجة</div><div class="info-value">${Utils.escapeHTML(data.result || '')}</div></div>
+                    ${data.factoryName ? `<div class="info-item"><div class="info-label">المصنع</div><div class="info-value">${Utils.escapeHTML(data.factoryName)}</div></div>` : ''}
+                    ${data.subLocationName ? `<div class="info-item"><div class="info-label">الموقع الفرعي</div><div class="info-value">${Utils.escapeHTML(data.subLocationName)}</div></div>` : ''}
+                    ${data.assetCode ? `<div class="info-item"><div class="info-label">رقم المعدة/الكود</div><div class="info-value">${Utils.escapeHTML(data.assetCode)}</div></div>` : ''}
+                </div>
+                ${checklistRows ? `<table><thead><tr><th style="width: 50px;">#</th><th>عنصر الفحص</th><th style="width: 80px;">تم الفحص</th><th style="width: 120px;">حالة المطابقة</th><th>ملاحظات</th></tr></thead><tbody>${checklistRows}</tbody></table>` : ''}
+                ${data.notes || data.correctiveActions ? `<div class="notes-section">${data.notes ? `<div class="notes-title">ملاحظات عامة:</div><p style="margin: 0 0 12px 0; line-height: 1.6;">${Utils.escapeHTML(data.notes)}</p>` : ''}${data.correctiveActions ? `<div class="notes-title">الإجراءات التصحيحية المطلوبة:</div><p style="margin: 0; line-height: 1.6;">${Utils.escapeHTML(data.correctiveActions)}</p>` : ''}</div>` : ''}
+            </div>
+        `;
+    },
+
+    buildPeriodicInspectionPdfHtml(data, options = {}) {
+        const inspectionDate = data?.inspectionDate || '';
+        const formCode = options.formCode || `PINSP-${(inspectionDate || new Date().toISOString().slice(0, 10)).replace(/-/g, '')}-${Date.now().toString().slice(-6)}`;
+        const formTitle = `تقرير فحص دوري - ${Utils.escapeHTML(data?.category || '')}`;
+        const content = this.buildPeriodicInspectionPrintContent(data);
+        const createdAt = options.createdAt || new Date().toISOString();
+        const updatedAt = options.updatedAt || createdAt;
+
+        if (typeof FormHeader !== 'undefined' && typeof FormHeader.generatePDFHTML === 'function') {
+            return FormHeader.generatePDFHTML(
+                formCode,
+                formTitle,
+                content,
+                false,
+                true,
+                {
+                    source: 'PeriodicInspection',
+                    titleEn: 'Periodic Inspection Report',
+                    titleAr: 'تقرير فحص دوري',
+                    version: '1.0'
+                },
+                createdAt,
+                updatedAt
+            );
+        }
+
+        return `<!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="UTF-8"><title>${formTitle}</title></head><body style="font-family:Arial,Tahoma,sans-serif;direction:rtl;padding:20px;">${content}</body></html>`;
+    },
+
+    async downloadPeriodicInspectionPdf(data, options = {}) {
+        if (!data) return false;
+        if (typeof Loading !== 'undefined' && Loading.show) {
+            Loading.show('جاري إعداد ملف PDF...');
+        }
+        try {
+            const rawHtmlContent = this.buildPeriodicInspectionPdfHtml(data, options);
+            const htmlContent = this.prepareDailySafetyPdfHtmlContent(rawHtmlContent, { landscape: false });
+            const fileName = this._buildPeriodicInspectionFileName({
+                category: data.category,
+                dateValue: data.inspectionDate
+            });
+            return await this.exportDailySafetyHtmlToPdf({
+                htmlContent,
+                fileName,
+                orientation: 'p',
+                forceSinglePage: false
+            });
+        } finally {
+            if (typeof Loading !== 'undefined' && Loading.hide) Loading.hide();
+        }
     },
 
     printInspectionById(id) {
@@ -2693,106 +2881,39 @@ const PeriodicInspections = {
     },
 
     _printOrExportInspection(inspection, mode) {
-        const category = inspection.category || '';
-        const inspectionDate = inspection.inspectionDate || '';
-        const location = inspection.location || inspection.equipment || '';
-        const inspector = inspection.inspector || '';
-        const result = inspection.result || '';
-        const assetCode = inspection.assetCode || '';
-        const factoryName = inspection.factoryName || '';
-        const subLocationName = inspection.subLocationName || '';
-        const notes = inspection.notes || '';
-        const correctiveActions = inspection.correctiveActions || '';
-        let checklistResults = inspection.checklistResults;
-        if (checklistResults && typeof checklistResults === 'string') {
-            try { checklistResults = JSON.parse(checklistResults); } catch (e) { checklistResults = []; }
-        }
-        if (!Array.isArray(checklistResults)) checklistResults = [];
-        const checklistItems = checklistResults.map((r, index) => ({
-            number: index + 1,
-            label: r.label || '',
-            checked: !!r.checked,
-            status: r.status || '',
-            note: r.note || '',
-            required: !!r.required
-        }));
-        const checklistRows = checklistItems.map(item => `
-            <tr>
-                <td style="text-align: center; padding: 8px; border: 1px solid #ddd;">${item.number}</td>
-                <td style="padding: 8px; border: 1px solid #ddd;">${Utils.escapeHTML(item.label)} ${item.required ? '<span style="color: red;">*</span>' : ''}</td>
-                <td style="text-align: center; padding: 8px; border: 1px solid #ddd;">${item.checked ? '✓' : '✗'}</td>
-                <td style="text-align: center; padding: 8px; border: 1px solid #ddd; ${item.status === 'مطابق' ? 'color: green; font-weight: bold;' : item.status === 'غير مطابق' ? 'color: red; font-weight: bold;' : item.status === 'أخرى' ? 'color: orange; font-weight: bold;' : ''}">${Utils.escapeHTML(item.status) || '-'}</td>
-                <td style="padding: 8px; border: 1px solid #ddd;">${Utils.escapeHTML(item.note) || '-'}</td>
-            </tr>
-        `).join('');
-        const content = `
-            <style>
-                .info-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; margin-bottom: 20px; }
-                .info-item { padding: 10px; background: #fffbeb; border-right: 3px solid #d97706; border-radius: 5px; }
-                .info-label { font-weight: bold; color: #92400e; font-size: 12px; margin-bottom: 5px; }
-                .info-value { color: #1e293b; font-size: 14px; }
-                table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-                th { background: linear-gradient(135deg, #1e3a5f, #0f172a); color: #fef3c7; padding: 12px; text-align: right; font-weight: bold; }
-                td { padding: 10px; border: 1px solid #ddd; }
-                .notes-section { margin-top: 20px; padding: 15px; background: #fafaf9; border-radius: 8px; border: 1px solid #e7e5e4; }
-                .notes-title { font-weight: bold; color: #1e3a5f; margin-bottom: 10px; }
-            </style>
-            <div class="info-grid">
-                <div class="info-item"><div class="info-label">نوع الفحص</div><div class="info-value">${Utils.escapeHTML(category)}</div></div>
-                <div class="info-item"><div class="info-label">تاريخ الفحص</div><div class="info-value">${inspectionDate || '-'}</div></div>
-                <div class="info-item"><div class="info-label">الموقع/المعدة</div><div class="info-value">${Utils.escapeHTML(location)}</div></div>
-                <div class="info-item"><div class="info-label">المفتش</div><div class="info-value">${Utils.escapeHTML(inspector)}</div></div>
-                <div class="info-item"><div class="info-label">النتيجة</div><div class="info-value">${Utils.escapeHTML(result)}</div></div>
-                ${factoryName ? `<div class="info-item"><div class="info-label">المصنع</div><div class="info-value">${Utils.escapeHTML(factoryName)}</div></div>` : ''}
-                ${subLocationName ? `<div class="info-item"><div class="info-label">الموقع الفرعي</div><div class="info-value">${Utils.escapeHTML(subLocationName)}</div></div>` : ''}
-                ${assetCode ? `<div class="info-item"><div class="info-label">رقم المعدة/الكود</div><div class="info-value">${Utils.escapeHTML(assetCode)}</div></div>` : ''}
-            </div>
-            ${checklistRows ? `<table><thead><tr><th style="width: 50px;">#</th><th>عنصر الفحص</th><th style="width: 80px;">تم الفحص</th><th style="width: 120px;">حالة المطابقة</th><th>ملاحظات</th></tr></thead><tbody>${checklistRows}</tbody></table>` : ''}
-            ${notes || correctiveActions ? `<div class="notes-section">${notes ? `<div class="notes-title">ملاحظات عامة:</div><p style="margin: 0 0 15px 0; line-height: 1.6;">${Utils.escapeHTML(notes)}</p>` : ''}${correctiveActions ? `<div class="notes-title">الإجراءات التصحيحية المطلوبة:</div><p style="margin: 0; line-height: 1.6;">${Utils.escapeHTML(correctiveActions)}</p>` : ''}</div>` : ''}
-        `;
-        const formCode = `PINSP-${(inspectionDate || new Date().toISOString().slice(0, 10)).replace(/-/g, '')}-${Date.now().toString().slice(-6)}`;
-        const formTitle = `تقرير فحص دوري - ${Utils.escapeHTML(category)}`;
-        if (mode === 'export') {
-            const excelContent = `
-                <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
-                <head><meta charset="UTF-8"><style>body { direction: rtl; font-family: Arial, Tahoma; } table { border-collapse: collapse; width: 100%; } th { background: #1e3a5f; color: #fef3c7; padding: 10px; font-weight: bold; } td { border: 1px solid #ddd; padding: 8px; }</style></head>
-                <body>
-                <h2>تقرير فحص دوري</h2>
-                <table>
-                    <tr><th>نوع الفحص</th><td>${Utils.escapeHTML(category)}</td></tr>
-                    <tr><th>تاريخ الفحص</th><td>${inspectionDate || '-'}</td></tr>
-                    <tr><th>الموقع/المعدة</th><td>${Utils.escapeHTML(location)}</td></tr>
-                    <tr><th>المفتش</th><td>${Utils.escapeHTML(inspector)}</td></tr>
-                    <tr><th>النتيجة</th><td>${Utils.escapeHTML(result)}</td></tr>
-                    ${factoryName ? `<tr><th>المصنع</th><td>${Utils.escapeHTML(factoryName)}</td></tr>` : ''}
-                    ${subLocationName ? `<tr><th>الموقع الفرعي</th><td>${Utils.escapeHTML(subLocationName)}</td></tr>` : ''}
-                    ${assetCode ? `<tr><th>رقم المعدة/الكود</th><td>${Utils.escapeHTML(assetCode)}</td></tr>` : ''}
-                </table>
-                ${checklistItems.length > 0 ? `<h3 style="margin-top: 20px;">قائمة الفحص</h3><table border="1"><tr><th>#</th><th>عنصر الفحص</th><th>تم الفحص</th><th>حالة المطابقة</th><th>ملاحظات</th></tr>${checklistItems.map(item => `<tr><td>${item.number}</td><td>${Utils.escapeHTML(item.label)} ${item.required ? '*' : ''}</td><td>${item.checked ? '✓' : '✗'}</td><td>${Utils.escapeHTML(item.status) || '-'}</td><td>${Utils.escapeHTML(item.note) || '-'}</td></tr>`).join('')}</table>` : ''}
-                ${notes ? `<h3 style="margin-top: 20px;">ملاحظات عامة</h3><p>${Utils.escapeHTML(notes)}</p>` : ''}
-                ${correctiveActions ? `<h3 style="margin-top: 20px;">الإجراءات التصحيحية</h3><p>${Utils.escapeHTML(correctiveActions)}</p>` : ''}
-                </body></html>`;
-            const blob = new Blob(['\ufeff', excelContent], { type: 'application/vnd.ms-excel;charset=utf-8' });
-            const url = URL.createObjectURL(blob);
-            const link = document.createElement('a');
-            link.href = url;
-            link.download = `فحص_دوري_${category}_${inspectionDate || new Date().toISOString().slice(0, 10)}.xls`;
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-            URL.revokeObjectURL(url);
-            Notification.success('تم تصدير الفحص بنجاح');
+        const data = this.parseInspectionRecordForExport(inspection);
+        if (!data) {
+            Notification.warning('تعذر تجهيز بيانات الفحص');
             return;
         }
-        const htmlContent = typeof FormHeader !== 'undefined' && FormHeader.generatePDFHTML
-            ? FormHeader.generatePDFHTML(formCode, formTitle, content, false, true, { version: '1.0' }, new Date().toISOString(), new Date().toISOString())
-            : `<!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="UTF-8"><title>${formTitle}</title><style>@media print{@page{margin:1cm}body{margin:0;padding:0}}body{font-family:Arial,Tahoma,sans-serif;direction:rtl;padding:20px;color:#333}</style></head><body><h1 style="text-align:center;color:#1e3a5f;margin-bottom:20px;">${formTitle}</h1>${content}</body></html>`;
+
+        if (mode === 'export') {
+            this.downloadPeriodicInspectionPdf(data, {
+                createdAt: inspection.createdAt,
+                updatedAt: inspection.updatedAt,
+                formCode: inspection.isoCode || inspection.id
+            }).then((ok) => {
+                if (ok) Notification.success('تم تحميل تقرير الفحص PDF بنجاح');
+            });
+            return;
+        }
+
+        const formCode = inspection.isoCode || inspection.id || `PINSP-${(data.inspectionDate || new Date().toISOString().slice(0, 10)).replace(/-/g, '')}-${Date.now().toString().slice(-6)}`;
+        const formTitle = `تقرير فحص دوري - ${Utils.escapeHTML(data.category)}`;
+        const htmlContent = this.buildPeriodicInspectionPdfHtml(data, {
+            formCode,
+            createdAt: inspection.createdAt || new Date().toISOString(),
+            updatedAt: inspection.updatedAt || inspection.createdAt || new Date().toISOString()
+        });
         const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
         const url = URL.createObjectURL(blob);
         const printWindow = window.open(url, '_blank');
         if (printWindow) {
             printWindow.onload = () => {
-                setTimeout(() => { printWindow.print(); setTimeout(() => URL.revokeObjectURL(url), 500); }, 300);
+                setTimeout(() => {
+                    printWindow.print();
+                    setTimeout(() => URL.revokeObjectURL(url), 500);
+                }, 300);
             };
         } else {
             Notification.error('يرجى السماح للنوافذ المنبثقة لعرض التقرير');
@@ -2824,229 +2945,13 @@ const PeriodicInspections = {
     },
 
     printInspection() {
-        const form = document.getElementById('periodic-inspection-form');
-        if (!form) {
+        const data = this.collectInspectionFormData();
+        if (!data) {
             Notification.warning('لا يمكن طباعة النموذج قبل ملء البيانات');
             return;
         }
 
-        // جمع بيانات النموذج
-        const templateId = document.getElementById('inspection-template')?.value || '';
-        const template = templateId ? this.INSPECTION_TEMPLATES[templateId] : null;
-        const category = document.getElementById('inspection-category')?.value || '';
-        const inspectionDate = document.getElementById('inspection-date')?.value || '';
-        const location = document.getElementById('inspection-location')?.value || '';
-        const inspector = document.getElementById('inspection-inspector')?.value || '';
-        const result = document.getElementById('inspection-result')?.value || '';
-        const assetCode = document.getElementById('inspection-asset-code')?.value || '';
-        const factoryId = document.getElementById('inspection-factory')?.value || '';
-        const subLocationId = document.getElementById('inspection-sub-location')?.value || '';
-        const sites = this.getSiteOptions();
-        const selectedSite = sites.find(s => s.id === factoryId);
-        const places = this.getPlaceOptions(factoryId);
-        const selectedPlace = places.find(p => p.id === subLocationId);
-        const factoryName = selectedSite ? selectedSite.name : '';
-        const subLocationName = selectedPlace ? selectedPlace.name : '';
-        const notes = document.getElementById('inspection-notes')?.value || '';
-        const correctiveActions = document.getElementById('inspection-corrective-actions')?.value || '';
-
-        // جمع بيانات القائمة
-        const checklistItems = [];
-        if (template && template.checklist) {
-            template.checklist.forEach((item, index) => {
-                const checkbox = document.getElementById(`checklist-${item.id}`);
-                const statusSelect = document.getElementById(`checklist-status-${item.id}`);
-                const noteTextarea = document.getElementById(`checklist-note-${item.id}`);
-                checklistItems.push({
-                    number: index + 1,
-                    label: item.label,
-                    checked: checkbox ? checkbox.checked : false,
-                    status: statusSelect ? statusSelect.value : '',
-                    note: noteTextarea ? noteTextarea.value.trim() : '',
-                    required: item.required
-                });
-            });
-        }
-
-        // إنشاء محتوى HTML للطباعة
-        const checklistRows = checklistItems.map(item => `
-            <tr>
-                <td style="text-align: center; padding: 8px; border: 1px solid #ddd;">${item.number}</td>
-                <td style="padding: 8px; border: 1px solid #ddd;">${Utils.escapeHTML(item.label)} ${item.required ? '<span style="color: red;">*</span>' : ''}</td>
-                <td style="text-align: center; padding: 8px; border: 1px solid #ddd;">${item.checked ? '✓' : '✗'}</td>
-                <td style="text-align: center; padding: 8px; border: 1px solid #ddd; ${item.status === 'مطابق' ? 'color: green; font-weight: bold;' : item.status === 'غير مطابق' ? 'color: red; font-weight: bold;' : item.status === 'أخرى' ? 'color: orange; font-weight: bold;' : ''}">${Utils.escapeHTML(item.status) || '-'}</td>
-                <td style="padding: 8px; border: 1px solid #ddd;">${Utils.escapeHTML(item.note) || '-'}</td>
-            </tr>
-        `).join('');
-
-        // إنشاء محتوى النموذج (بدون header)
-        const content = `
-            <style>
-                .info-grid {
-                    display: grid;
-                    grid-template-columns: repeat(2, 1fr);
-                    gap: 15px;
-                    margin-bottom: 20px;
-                }
-                .info-item {
-                    padding: 10px;
-                    background: #f8fafc;
-                    border-right: 3px solid #3b82f6;
-                    border-radius: 5px;
-                }
-                .info-label {
-                    font-weight: bold;
-                    color: #64748b;
-                    font-size: 12px;
-                    margin-bottom: 5px;
-                }
-                .info-value {
-                    color: #1e293b;
-                    font-size: 14px;
-                }
-                table {
-                    width: 100%;
-                    border-collapse: collapse;
-                    margin-top: 20px;
-                }
-                th {
-                    background: #3b82f6;
-                    color: white;
-                    padding: 12px;
-                    text-align: right;
-                    font-weight: bold;
-                }
-                td {
-                    padding: 10px;
-                    border: 1px solid #ddd;
-                }
-                .notes-section {
-                    margin-top: 20px;
-                    padding: 15px;
-                    background: #f8fafc;
-                    border-radius: 5px;
-                }
-                .notes-title {
-                    font-weight: bold;
-                    color: #1e40af;
-                    margin-bottom: 10px;
-                }
-            </style>
-            
-            <div class="info-grid">
-                <div class="info-item">
-                    <div class="info-label">نوع الفحص</div>
-                    <div class="info-value">${Utils.escapeHTML(category)}</div>
-                </div>
-                <div class="info-item">
-                    <div class="info-label">تاريخ الفحص</div>
-                    <div class="info-value">${inspectionDate || '-'}</div>
-                </div>
-                <div class="info-item">
-                    <div class="info-label">الموقع/المعدة</div>
-                    <div class="info-value">${Utils.escapeHTML(location)}</div>
-                </div>
-                <div class="info-item">
-                    <div class="info-label">المفتش</div>
-                    <div class="info-value">${Utils.escapeHTML(inspector)}</div>
-                </div>
-                <div class="info-item">
-                    <div class="info-label">النتيجة</div>
-                    <div class="info-value">${Utils.escapeHTML(result)}</div>
-                </div>
-                ${factoryName ? `
-                <div class="info-item">
-                    <div class="info-label">المصنع</div>
-                    <div class="info-value">${Utils.escapeHTML(factoryName)}</div>
-                </div>
-                ` : ''}
-                ${subLocationName ? `
-                <div class="info-item">
-                    <div class="info-label">الموقع الفرعي</div>
-                    <div class="info-value">${Utils.escapeHTML(subLocationName)}</div>
-                </div>
-                ` : ''}
-                ${assetCode ? `
-                <div class="info-item">
-                    <div class="info-label">رقم المعدة/الكود</div>
-                    <div class="info-value">${Utils.escapeHTML(assetCode)}</div>
-                </div>
-                ` : ''}
-            </div>
-
-            ${checklistRows ? `
-            <table>
-                <thead>
-                    <tr>
-                        <th style="width: 50px;">#</th>
-                        <th>عنصر الفحص</th>
-                        <th style="width: 80px;">تم الفحص</th>
-                        <th style="width: 120px;">حالة المطابقة</th>
-                        <th>ملاحظات</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    ${checklistRows}
-                </tbody>
-            </table>
-            ` : ''}
-
-            ${notes || correctiveActions ? `
-            <div class="notes-section">
-                ${notes ? `
-                <div class="notes-title">ملاحظات عامة:</div>
-                <p style="margin: 0 0 15px 0; line-height: 1.6;">${Utils.escapeHTML(notes)}</p>
-                ` : ''}
-                ${correctiveActions ? `
-                <div class="notes-title">الإجراءات التصحيحية المطلوبة:</div>
-                <p style="margin: 0; line-height: 1.6;">${Utils.escapeHTML(correctiveActions)}</p>
-                ` : ''}
-            </div>
-            ` : ''}
-        `;
-
-        // إنشاء formCode و formTitle
-        const formCode = `PINSP-${inspectionDate || new Date().toISOString().slice(0, 10).replace(/-/g, '')}-${Date.now().toString().slice(-6)}`;
-        const formTitle = `تقرير فحص دوري - ${Utils.escapeHTML(category)}`;
-
-        // استخدام FormHeader.generatePDFHTML إذا كان متاحاً
-        const htmlContent = typeof FormHeader !== 'undefined' && FormHeader.generatePDFHTML
-            ? FormHeader.generatePDFHTML(
-                formCode,
-                formTitle,
-                content,
-                false,
-                true,
-                { version: '1.0' },
-                new Date().toISOString(),
-                new Date().toISOString()
-            )
-            : `
-            <!DOCTYPE html>
-            <html dir="rtl" lang="ar">
-            <head>
-                <meta charset="UTF-8">
-                <title>${formTitle}</title>
-                <style>
-                    @media print {
-                        @page { margin: 1cm; }
-                        body { margin: 0; padding: 0; }
-                    }
-                    body {
-                        font-family: 'Arial', 'Tahoma', sans-serif;
-                        direction: rtl;
-                        padding: 20px;
-                        color: #333;
-                    }
-                </style>
-            </head>
-            <body>
-                <h1 style="text-align: center; color: #1e40af; margin-bottom: 20px;">${formTitle}</h1>
-                ${content}
-            </body>
-            </html>
-        `;
-
+        const htmlContent = this.buildPeriodicInspectionPdfHtml(data);
         const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
         const url = URL.createObjectURL(blob);
         const printWindow = window.open(url, '_blank');
@@ -3055,9 +2960,7 @@ const PeriodicInspections = {
             printWindow.onload = () => {
                 setTimeout(() => {
                     printWindow.print();
-                    setTimeout(() => {
-                        URL.revokeObjectURL(url);
-                    }, 500);
+                    setTimeout(() => URL.revokeObjectURL(url), 500);
                 }, 300);
             };
         } else {
@@ -3065,125 +2968,14 @@ const PeriodicInspections = {
         }
     },
 
-    exportInspection() {
-        const form = document.getElementById('periodic-inspection-form');
-        if (!form) {
+    async exportInspection() {
+        const data = this.collectInspectionFormData();
+        if (!data) {
             Notification.warning('لا يمكن تصدير النموذج قبل ملء البيانات');
             return;
         }
-
-        // جمع بيانات النموذج
-        const templateId = document.getElementById('inspection-template')?.value || '';
-        const template = templateId ? this.INSPECTION_TEMPLATES[templateId] : null;
-        const category = document.getElementById('inspection-category')?.value || '';
-        const inspectionDate = document.getElementById('inspection-date')?.value || '';
-        const location = document.getElementById('inspection-location')?.value || '';
-        const inspector = document.getElementById('inspection-inspector')?.value || '';
-        const result = document.getElementById('inspection-result')?.value || '';
-        const assetCode = document.getElementById('inspection-asset-code')?.value || '';
-        const factoryId = document.getElementById('inspection-factory')?.value || '';
-        const subLocationId = document.getElementById('inspection-sub-location')?.value || '';
-        const sites = this.getSiteOptions();
-        const selectedSite = sites.find(s => s.id === factoryId);
-        const places = this.getPlaceOptions(factoryId);
-        const selectedPlace = places.find(p => p.id === subLocationId);
-        const factoryName = selectedSite ? selectedSite.name : '';
-        const subLocationName = selectedPlace ? selectedPlace.name : '';
-        const notes = document.getElementById('inspection-notes')?.value || '';
-        const correctiveActions = document.getElementById('inspection-corrective-actions')?.value || '';
-
-        // جمع بيانات القائمة
-        const checklistItems = [];
-        if (template && template.checklist) {
-            template.checklist.forEach((item, index) => {
-                const checkbox = document.getElementById(`checklist-${item.id}`);
-                const statusSelect = document.getElementById(`checklist-status-${item.id}`);
-                const noteTextarea = document.getElementById(`checklist-note-${item.id}`);
-                checklistItems.push({
-                    number: index + 1,
-                    label: item.label,
-                    checked: checkbox ? checkbox.checked : false,
-                    status: statusSelect ? statusSelect.value : '',
-                    note: noteTextarea ? noteTextarea.value.trim() : '',
-                    required: item.required
-                });
-            });
-        }
-
-        // إنشاء محتوى Excel
-        const excelContent = `
-            <html xmlns:o="urn:schemas-microsoft-com:office:office"
-                  xmlns:x="urn:schemas-microsoft-com:office:excel"
-                  xmlns="http://www.w3.org/TR/REC-html40">
-            <head>
-                <meta charset="UTF-8">
-                <!--[if gte mso 9]><xml>
-                <x:ExcelWorkbook>
-                    <x:ExcelWorksheets>
-                        <x:ExcelWorksheet>
-                            <x:Name>فحص دوري</x:Name>
-                            <x:WorksheetOptions><x:DisplayGridlines/></x:WorksheetOptions>
-                        </x:ExcelWorksheet>
-                    </x:ExcelWorksheets>
-                </x:ExcelWorkbook>
-                </xml><![endif]-->
-                <style>
-                    body { direction: rtl; font-family: Arial, Tahoma; }
-                    table { border-collapse: collapse; width: 100%; }
-                    th { background: #3b82f6; color: white; padding: 10px; font-weight: bold; }
-                    td { border: 1px solid #ddd; padding: 8px; }
-                </style>
-            </head>
-            <body>
-                <h2>تقرير فحص دوري</h2>
-                <table>
-                    <tr><th>نوع الفحص</th><td>${Utils.escapeHTML(category)}</td></tr>
-                    <tr><th>تاريخ الفحص</th><td>${inspectionDate || '-'}</td></tr>
-                    <tr><th>الموقع/المعدة</th><td>${Utils.escapeHTML(location)}</td></tr>
-                    <tr><th>المفتش</th><td>${Utils.escapeHTML(inspector)}</td></tr>
-                    <tr><th>النتيجة</th><td>${Utils.escapeHTML(result)}</td></tr>
-                    ${factoryName ? `<tr><th>المصنع</th><td>${Utils.escapeHTML(factoryName)}</td></tr>` : ''}
-                    ${subLocationName ? `<tr><th>الموقع الفرعي</th><td>${Utils.escapeHTML(subLocationName)}</td></tr>` : ''}
-                    ${assetCode ? `<tr><th>رقم المعدة/الكود</th><td>${Utils.escapeHTML(assetCode)}</td></tr>` : ''}
-                </table>
-                ${checklistItems.length > 0 ? `
-                <h3 style="margin-top: 20px;">قائمة الفحص</h3>
-                <table border="1">
-                    <tr>
-                        <th>#</th>
-                        <th>عنصر الفحص</th>
-                        <th>تم الفحص</th>
-                        <th>حالة المطابقة</th>
-                        <th>ملاحظات</th>
-                    </tr>
-                    ${checklistItems.map(item => `
-                        <tr>
-                            <td>${item.number}</td>
-                            <td>${Utils.escapeHTML(item.label)} ${item.required ? '*' : ''}</td>
-                            <td>${item.checked ? '✓' : '✗'}</td>
-                            <td>${Utils.escapeHTML(item.status) || '-'}</td>
-                            <td>${Utils.escapeHTML(item.note) || '-'}</td>
-                        </tr>
-                    `).join('')}
-                </table>
-                ` : ''}
-                ${notes ? `<h3 style="margin-top: 20px;">ملاحظات عامة</h3><p>${Utils.escapeHTML(notes)}</p>` : ''}
-                ${correctiveActions ? `<h3 style="margin-top: 20px;">الإجراءات التصحيحية</h3><p>${Utils.escapeHTML(correctiveActions)}</p>` : ''}
-            </body>
-            </html>
-        `;
-
-        const blob = new Blob(['\ufeff', excelContent], { type: 'application/vnd.ms-excel;charset=utf-8' });
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        const filename = `فحص_دوري_${category}_${inspectionDate || new Date().toISOString().slice(0, 10)}.xls`;
-        link.download = filename;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(url);
-        Notification.success('تم تصدير الفحص بنجاح');
+        const ok = await this.downloadPeriodicInspectionPdf(data);
+        if (ok) Notification.success('تم تحميل تقرير الفحص PDF بنجاح');
     },
 
     // ========== Daily Safety Check List (قائمة المرور اليومي للسلامة) ==========
@@ -5794,6 +5586,9 @@ const PeriodicInspections = {
                                                 <div class="flex items-center gap-2">
                                                     <button onclick="PeriodicInspections.viewInspection('${inspection.id}')" class="btn-icon btn-icon-info" title="عرض التفاصيل">
                                                         <i class="fas fa-eye"></i>
+                                                    </button>
+                                                    <button onclick="PeriodicInspections.exportInspectionById('${inspection.id}')" class="btn-icon btn-icon-success" title="تحميل PDF">
+                                                        <i class="fas fa-file-pdf"></i>
                                                     </button>
                                                     <button onclick="PeriodicInspections.editInspection('${inspection.id}')" class="btn-icon btn-icon-primary" title="تعديل">
                                                         <i class="fas fa-edit"></i>
