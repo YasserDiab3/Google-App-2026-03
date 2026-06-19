@@ -1542,7 +1542,16 @@ function _cabViolationBelongs_(v, idSet, nameSets) {
 
 function _cabEvalBelongs_(e, idSet, nameSets) {
     if (!e) return false;
-    return _cabRecordMatchesContractor_(e, idSet, nameSets);
+    var recordIds = _cabCollectRecordIds_(e);
+    var i;
+    for (i = 0; i < recordIds.length; i++) {
+        if (idSet[recordIds[i]] === true) return true;
+    }
+    var entityNames = _cabCollectContractorEntityNames_(e);
+    for (i = 0; i < entityNames.length; i++) {
+        if (_cabNameInSets_(entityNames[i], nameSets)) return true;
+    }
+    return false;
 }
 
 function _cabSafeReadSheet_(sheetName, spreadsheetId) {

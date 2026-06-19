@@ -2710,6 +2710,9 @@ const Dashboard = {
      * توليد تقرير شامل للمقاول (البحث بكود المقاول أو اسم الشركة)
      */
     async generateContractorReport(contractorCode) {
+        if (!AppState.appData) AppState.appData = {};
+        // ضمان تحميل بيانات الموديولات (التقييمات، المخالفات، ...) قبل الفلترة — مثل تقرير الموظف
+        await this.ensureContractorReportData();
         let data = AppState.appData;
         const approved = data.approvedContractors || [];
         const searchTerm = String(contractorCode).trim();

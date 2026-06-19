@@ -11027,7 +11027,7 @@ const Contractors = {
 
         const collectRecordIds = (record) => {
             if (!record || typeof record !== 'object') return [];
-            return [record.contractorId, record.id, record.code, record.isoCode, record.contractorCode, record.entityCode]
+            return [record.contractorId, record.code, record.isoCode, record.contractorCode, record.entityCode, record.licenseNumber, record.contractNumber, record.approvedEntityId]
                 .filter((value) => value !== undefined && value !== null && String(value).trim() !== '')
                 .map((value) => normalizeValue(value))
                 .filter(Boolean);
@@ -11113,12 +11113,9 @@ const Contractors = {
             evaluationBelongsToContractor(record) {
                 if (!record || typeof record !== 'object') return false;
                 const recordIds = collectRecordIds(record);
-                const hasRecordIds = recordIds.length > 0;
-                const idsMatch = recordIds.some((id) => idsSet.has(id));
-                if (hasRecordIds) return idsMatch;
+                if (recordIds.some((id) => idsSet.has(id))) return true;
                 const entityNames = collectEntityNames(record);
-                const hasEntityNames = entityNames.length > 0;
-                if (hasEntityNames) return entityNames.some(matchesNameValue);
+                if (entityNames.some(matchesNameValue)) return true;
                 return matchesContractor(record);
             }
         };

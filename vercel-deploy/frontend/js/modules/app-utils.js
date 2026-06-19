@@ -2873,7 +2873,7 @@ const DEFAULT_COMPANY_NAME = '';
 
 const AppState = {
     /** إصدار التطبيق — تسلسلي: 1.0.0 → 1.0.1 → 1.0.2 … عند كل نشر زِد الرقم هنا وفي version.json */
-    appVersion: '1.0.220',
+    appVersion: '1.0.221',
     /** نص اختياري لرسالة التحديث (ملخص التغييرات). إن تُركت فارغة يُستخدم النص الافتراضي. */
     updateMessage: '',
     debugMode: false,
@@ -4063,12 +4063,9 @@ const Utils = {
             evaluationBelongsToContractor(record) {
                 if (!record || typeof record !== 'object') return false;
                 const recordIds = collectRecordIds(record);
-                const hasRecordIds = recordIds.length > 0;
-                const idsMatch = recordIds.some(id => idsSet.has(id));
-                if (hasRecordIds) return idsMatch;
+                if (recordIds.some(id => idsSet.has(id))) return true;
                 const entityNames = collectContractorEntityNames(record);
-                const hasEntityNames = entityNames.length > 0;
-                if (hasEntityNames) return entityNames.some(matchesNameValue);
+                if (entityNames.some(matchesNameValue)) return true;
                 return matchesContractor(record);
             }
         };
