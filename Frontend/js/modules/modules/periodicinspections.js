@@ -2836,13 +2836,50 @@ const PeriodicInspections = {
 
         return `
             <style>
+                .pi-print-report { direction: rtl; unicode-bidi: embed; }
                 .pi-print-report .info-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-bottom: 16px; }
                 .pi-print-report .info-item { padding: 10px; background: #fffbeb; border-right: 3px solid #d97706; border-radius: 5px; }
                 .pi-print-report .info-label { font-weight: bold; color: #92400e; font-size: 12px; margin-bottom: 4px; }
                 .pi-print-report .info-value { color: #1e293b; font-size: 14px; }
-                .pi-print-report table { width: 100%; border-collapse: collapse; margin-top: 16px; }
-                .pi-print-report th { background: linear-gradient(135deg, #1e3a5f, #0f172a); color: #fef3c7; padding: 10px; text-align: right; font-weight: bold; font-size: 12px; }
-                .pi-print-report td { padding: 8px; border: 1px solid #ddd; font-size: 12px; }
+                .pi-print-report table { width: 100%; border-collapse: collapse; margin-top: 16px; table-layout: auto; }
+                .pi-print-report th {
+                    background: linear-gradient(135deg, #1e3a5f, #0f172a);
+                    color: #fef3c7;
+                    padding: 10px 8px;
+                    text-align: center;
+                    font-weight: bold;
+                    font-size: 12px;
+                    white-space: nowrap;
+                    word-break: normal;
+                    overflow-wrap: normal;
+                    hyphens: none;
+                    letter-spacing: 0;
+                    direction: rtl;
+                    unicode-bidi: plaintext;
+                }
+                .pi-print-report td {
+                    padding: 8px;
+                    border: 1px solid #ddd;
+                    font-size: 12px;
+                    word-break: normal;
+                    overflow-wrap: normal;
+                    hyphens: none;
+                    direction: rtl;
+                    unicode-bidi: plaintext;
+                    vertical-align: top;
+                }
+                .pi-print-report .info-label,
+                .pi-print-report .info-value,
+                .pi-print-report .notes-title,
+                .pi-print-report h3,
+                .pi-print-report p {
+                    word-break: normal;
+                    overflow-wrap: normal;
+                    hyphens: none;
+                    letter-spacing: 0;
+                    direction: rtl;
+                    unicode-bidi: plaintext;
+                }
                 .pi-print-report .notes-section { margin-top: 16px; padding: 12px; background: #fafaf9; border-radius: 8px; border: 1px solid #e7e5e4; }
                 .pi-print-report .notes-title { font-weight: bold; color: #1e3a5f; margin-bottom: 8px; }
             </style>
@@ -2859,7 +2896,7 @@ const PeriodicInspections = {
                 </div>
                 ${checklistItems.length ? `
                 <h3 style="margin: 14px 0 8px; color: #1e3a5f; font-size: 14px; font-weight: bold;">قائمة الفحص (${checklistItems.length} بند)</h3>
-                <table><thead><tr><th style="width: 50px;">#</th><th>عنصر الفحص</th><th style="width: 80px;">تم الفحص</th><th style="width: 120px;">حالة المطابقة</th><th>ملاحظات</th></tr></thead><tbody>${checklistRows}</tbody></table>
+                <table><thead><tr><th style="width: 40px;">#</th><th style="min-width: 140px;">عنصر الفحص</th><th style="min-width: 88px;">تم الفحص</th><th style="min-width: 108px;">حالة المطابقة</th><th style="min-width: 90px;">ملاحظات</th></tr></thead><tbody>${checklistRows}</tbody></table>
                 ` : ''}
                 ${data.notes || data.correctiveActions ? `<div class="notes-section">${data.notes ? `<div class="notes-title">ملاحظات عامة:</div><p style="margin: 0 0 12px 0; line-height: 1.6;">${Utils.escapeHTML(data.notes)}</p>` : ''}${data.correctiveActions ? `<div class="notes-title">الإجراءات التصحيحية المطلوبة:</div><p style="margin: 0; line-height: 1.6;">${Utils.escapeHTML(data.correctiveActions)}</p>` : ''}</div>` : ''}
             </div>
@@ -2973,6 +3010,23 @@ const PeriodicInspections = {
                 .pi-print-report tr {
                     page-break-inside: avoid !important;
                     break-inside: avoid !important;
+                }
+                .pi-print-report th,
+                .pi-print-report td,
+                .pi-print-report .info-label,
+                .pi-print-report .info-value,
+                .pi-print-report .notes-title,
+                .pi-print-report h3,
+                .pi-print-report p {
+                    word-break: normal !important;
+                    overflow-wrap: normal !important;
+                    hyphens: none !important;
+                    direction: rtl !important;
+                    unicode-bidi: plaintext !important;
+                    letter-spacing: 0 !important;
+                }
+                .pi-print-report th {
+                    white-space: nowrap !important;
                 }
             </style>
         `;
