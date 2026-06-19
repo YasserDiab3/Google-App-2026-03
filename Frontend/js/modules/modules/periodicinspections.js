@@ -2702,6 +2702,56 @@ const PeriodicInspections = {
         };
     },
 
+    _normalizeChecklistComplianceStatus(value) {
+        const raw = String(value || '').trim().replace(/\s+/g, ' ');
+        if (!raw) return '';
+        if (raw === 'مطابق' || (raw.includes('مطابق') && !raw.includes('غير') && !raw.includes('جزئ'))) return 'مطابق';
+        if (raw === 'غير مطابق' || raw.includes('غير مطابق')) return 'غير مطابق';
+        if (raw === 'أخرى') return 'أخرى';
+        if (/^compliant$/i.test(raw) || /^pass$/i.test(raw)) return 'مطابق';
+        if (/^non[- ]?compliant$/i.test(raw) || /^fail$/i.test(raw)) return 'غير مطابق';
+        return raw;
+    },
+
+    _resolveChecklistResultMatch(checklistResults, templateItem, index) {
+        if (!Array.isArray(checklistResults) || checklistResults.length === 0) return {};
+        const templateId = templateItem?.id != null ? String(templateItem.id) : '';
+        if (templateId) {
+            const byId = checklistResults.find((r) => {
+                const resultId = r?.id ?? r?.itemId ?? r?.checklistId;
+                return resultId != null && String(resultId) === templateId;
+            });
+            if (byId) return byId;
+        }
+        const byIndex = checklistResults[index];
+        if (byIndex) {
+            if (!templateItem?.label || !byIndex.label || String(byIndex.label).trim() === String(templateItem.label).trim()) {
+                return byIndex;
+            }
+        }
+        if (templateItem?.label) {
+            const byLabel = checklistResults.find((r) => String(r?.label || '').trim() === String(templateItem.label).trim());
+            if (byLabel) return byLabel;
+        }
+        return byIndex || {};
+    },
+
+    _mapChecklistItemForExport(templateItem, result, index) {
+        const status = this._normalizeChecklistComplianceStatus(
+            result?.status || result?.complianceStatus || result?.compliance || ''
+        );
+        const hasCheckedValue = result && Object.prototype.hasOwnProperty.call(result, 'checked');
+        const checked = hasCheckedValue ? !!result.checked : status === 'مطابق';
+        return {
+            number: index + 1,
+            label: templateItem?.label || result?.label || '',
+            checked,
+            status,
+            note: String(result?.note || result?.notes || '').trim(),
+            required: !!(templateItem?.required ?? result?.required)
+        };
+    },
+
     resolveInspectionChecklistItems(inspection) {
         if (!inspection || typeof inspection !== 'object') return [];
         let checklistResults = inspection.checklistResults;
@@ -2714,26 +2764,12 @@ const PeriodicInspections = {
         const template = templateId ? this.INSPECTION_TEMPLATES[templateId] : null;
         if (template && Array.isArray(template.checklist) && template.checklist.length) {
             return template.checklist.map((item, index) => {
-                const result = checklistResults.find(r => String(r?.id) === String(item.id)) || {};
-                return {
-                    number: index + 1,
-                    label: item.label || result.label || '',
-                    checked: !!result.checked,
-                    status: result.status || '',
-                    note: result.note || '',
-                    required: !!item.required
-                };
+                const result = this._resolveChecklistResultMatch(checklistResults, item, index);
+                return this._mapChecklistItemForExport(item, result, index);
             });
         }
 
-        return checklistResults.map((r, index) => ({
-            number: index + 1,
-            label: r.label || '',
-            checked: !!r.checked,
-            status: r.status || '',
-            note: r.note || '',
-            required: !!r.required
-        }));
+        return checklistResults.map((r, index) => this._mapChecklistItemForExport(null, r, index));
     },
 
     collectChecklistItemsFromForm(template) {
@@ -2749,7 +2785,7 @@ const PeriodicInspections = {
                     number: index + 1,
                     label: item.label,
                     checked: checkbox ? checkbox.checked : false,
-                    status: statusSelect ? statusSelect.value : '',
+                    status: this._normalizeChecklistComplianceStatus(statusSelect ? statusSelect.value : ''),
                     note: noteTextarea ? noteTextarea.value.trim() : '',
                     required: item.required
                 };
@@ -2774,7 +2810,7 @@ const PeriodicInspections = {
                 number: index + 1,
                 label,
                 checked: checkbox ? checkbox.checked : false,
-                status: statusSelect ? statusSelect.value : '',
+                status: this._normalizeChecklistComplianceStatus(statusSelect ? statusSelect.value : ''),
                 note: noteTextarea ? noteTextarea.value.trim() : '',
                 required: labelEl ? /مطلوب/.test(labelEl.textContent || '') : false
             });
@@ -2823,14 +2859,20 @@ const PeriodicInspections = {
     },
 
     _formatChecklistInspectedMark(item) {
-        const status = String(item?.status || '').trim();
+        const status = this._normalizeChecklistComplianceStatus(item?.status);
         if (status === 'مطابق') {
-            return '<span style="color: #16a34a; font-weight: bold; font-size: 15px;">✓</span>';
+            return '<span style="color: #16a34a; font-weight: bold; font-size: 16px; font-family: Arial, Tahoma, sans-serif;">✓</span>';
         }
         if (status === 'غير مطابق') {
-            return '<span style="color: #dc2626; font-weight: bold; font-size: 15px;">✗</span>';
+            return '<span style="color: #dc2626; font-weight: bold; font-size: 16px; font-family: Arial, Tahoma, sans-serif;">✗</span>';
         }
-        return '-';
+        if (item?.checked === true) {
+            return '<span style="color: #16a34a; font-weight: bold; font-size: 16px; font-family: Arial, Tahoma, sans-serif;">✓</span>';
+        }
+        if (item?.checked === false) {
+            return '<span style="color: #dc2626; font-weight: bold; font-size: 16px; font-family: Arial, Tahoma, sans-serif;">✗</span>';
+        }
+        return '<span style="color: #64748b;">-</span>';
     },
 
     buildPeriodicInspectionPrintContent(data) {
