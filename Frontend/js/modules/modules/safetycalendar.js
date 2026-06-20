@@ -51,41 +51,44 @@ const SafetyCalendar = {
         const self = this;
         const isCompact = compactNav === true;
         const overrideCustom = (overrides && overrides.customButtons) || {};
-        const options = Object.assign({
-            locale: 'ar',
-            direction: 'rtl',
-            customButtons: {
-                scPrev: {
-                    text: 'السابق',
-                    hint: 'الفترة السابقة',
-                    click() {
-                        if (calRef.api && typeof calRef.api.prev === 'function') {
-                            calRef.api.prev();
-                        }
-                    }
-                },
-                scNext: {
-                    text: 'التالي',
-                    hint: 'الفترة التالية',
-                    click() {
-                        if (calRef.api && typeof calRef.api.next === 'function') {
-                            calRef.api.next();
-                        }
-                    }
-                },
-                scToday: {
-                    text: 'اليوم',
-                    hint: 'العودة إلى اليوم',
-                    click() {
-                        if (calRef.api && typeof calRef.api.today === 'function') {
-                            calRef.api.today();
-                        }
+        // أزرار التنقّل الأساسية — تبقى موحّدة في التقويم الكامل والمصغّر
+        const baseCustomButtons = {
+            scPrev: {
+                text: 'السابق',
+                hint: 'الفترة السابقة',
+                click() {
+                    if (calRef.api && typeof calRef.api.prev === 'function') {
+                        calRef.api.prev();
                     }
                 }
             },
+            scNext: {
+                text: 'التالي',
+                hint: 'الفترة التالية',
+                click() {
+                    if (calRef.api && typeof calRef.api.next === 'function') {
+                        calRef.api.next();
+                    }
+                }
+            },
+            scToday: {
+                text: 'اليوم',
+                hint: 'العودة إلى اليوم',
+                click() {
+                    if (calRef.api && typeof calRef.api.today === 'function') {
+                        calRef.api.today();
+                    }
+                }
+            }
+        };
+        const options = Object.assign({
+            locale: 'ar',
+            direction: 'rtl',
             buttonText: self._fcButtonText()
         }, overrides || {});
-        options.customButtons = Object.assign({}, options.customButtons, overrideCustom);
+        // دمج الأزرار الأساسية مع المخصّصة (لا استبدال) حتى لا تُفقد scPrev/scNext/scToday
+        // عندما يمرّر المستدعي customButtons خاصة به (مثل addTask/manageEvents)
+        options.customButtons = Object.assign({}, baseCustomButtons, overrideCustom);
         options._scCompactNav = isCompact;
 
         return {
