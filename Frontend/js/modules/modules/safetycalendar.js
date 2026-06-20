@@ -8,6 +8,7 @@ const SafetyCalendar = {
     _activeCategories: null,
     _assigneeMode: null,
     _modalEl: null,
+    _PREFS_KEY: 'sc_calendar_prefs_v1',
 
     t(key, fallback) {
         const i18n = (window.AppI18n && window.AppI18n.t) ? window.AppI18n
@@ -176,6 +177,148 @@ const SafetyCalendar = {
         return 'all';
     },
 
+    _getPrefs() {
+        try {
+            const raw = localStorage.getItem(this._PREFS_KEY);
+            return raw ? JSON.parse(raw) : {};
+        } catch (_e) {
+            return {};
+        }
+    },
+
+    _savePrefs(prefs) {
+        try {
+            localStorage.setItem(this._PREFS_KEY, JSON.stringify(prefs || {}));
+        } catch (_e) { /* ignore */ }
+    },
+
+    getShowEgyptHolidays() {
+        return this._getPrefs().showEgyptHolidays !== false;
+    },
+
+    getShowIntlDays() {
+        return this._getPrefs().showIntlDays !== false;
+    },
+
+    getShowCustomEvents() {
+        return this._getPrefs().showCustomEvents !== false;
+    },
+
+    setReferencePref(key, value) {
+        const prefs = this._getPrefs();
+        prefs[key] = value === true;
+        this._savePrefs(prefs);
+        this.refreshCalendarEvents();
+    },
+
+    canManageCustomEvents() {
+        if (this.isEffectiveAdmin()) return true;
+        return typeof Permissions !== 'undefined' && Permissions.hasAccess
+            && Permissions.hasAccess('safety-calendar');
+    },
+
+    async ensureCustomEventsLoaded(force) {
+        if (!AppState || !AppState.appData) return;
+        const existing = AppState.appData.safetyCalendarCustomEvents;
+        if (!force && Array.isArray(existing) && existing.length) return;
+        if (typeof GoogleIntegration === 'undefined' || !GoogleIntegration.sendToAppsScript) {
+            if (!Array.isArray(existing)) AppState.appData.safetyCalendarCustomEvents = [];
+            return;
+        }
+        try {
+            const res = await GoogleIntegration.sendToAppsScript('getAllSafetyCalendarCustomEvents', {});
+            if (res && res.success && Array.isArray(res.data)) {
+                AppState.appData.safetyCalendarCustomEvents = res.data;
+            } else if (!Array.isArray(AppState.appData.safetyCalendarCustomEvents)) {
+                AppState.appData.safetyCalendarCustomEvents = [];
+            }
+        } catch (_e) {
+            if (!Array.isArray(AppState.appData.safetyCalendarCustomEvents)) {
+                AppState.appData.safetyCalendarCustomEvents = [];
+            }
+        }
+    },
+
+    _upsertLocalCustomEvent(record) {
+        if (!record || !AppState?.appData) return;
+        if (!Array.isArray(AppState.appData.safetyCalendarCustomEvents)) {
+            AppState.appData.safetyCalendarCustomEvents = [];
+        }
+        const list = AppState.appData.safetyCalendarCustomEvents;
+        const idx = list.findIndex((r) => String(r.id) === String(record.id));
+        if (idx >= 0) list[idx] = record;
+        else list.push(record);
+    },
+
+    _removeLocalCustomEvent(eventId) {
+        if (!eventId || !Array.isArray(AppState?.appData?.safetyCalendarCustomEvents)) return;
+        AppState.appData.safetyCalendarCustomEvents = AppState.appData.safetyCalendarCustomEvents
+            .filter((r) => String(r.id) !== String(eventId));
+    },
+
+    async saveCustomEvent(payload, existingId) {
+        if (!this.canManageCustomEvents()) {
+            Notification?.warning?.('ليس لديك صلاحية إدارة الأحداث');
+            return { success: false };
+        }
+        if (typeof GoogleIntegration === 'undefined') {
+            Notification?.error?.('الاتصال بالخادم غير متاح');
+            return { success: false };
+        }
+        const user = AppState?.currentUser || {};
+        const body = Object.assign({}, payload);
+        if (!existingId) {
+            body.createdBy = user.email || user.name || user.id || '';
+        }
+        const action = existingId ? 'updateSafetyCalendarCustomEvent' : 'addSafetyCalendarCustomEvent';
+        const req = existingId
+            ? { eventId: existingId, updateData: body }
+            : body;
+        try {
+            Loading?.show?.();
+            const res = await GoogleIntegration.sendToAppsScript(action, req);
+            Loading?.hide?.();
+            if (!res || !res.success) {
+                Notification?.error?.(res?.message || 'فشل حفظ الحدث');
+                return res || { success: false };
+            }
+            const saved = res.data || Object.assign({ id: existingId || body.id }, body);
+            if (!saved.id && res.id) saved.id = res.id;
+            this._upsertLocalCustomEvent(saved);
+            Notification?.success?.(existingId ? 'تم تحديث الحدث' : 'تمت إضافة الحدث');
+            this.refreshCalendarEvents();
+            this.refreshDashboardWidgetIfVisible();
+            return res;
+        } catch (err) {
+            Loading?.hide?.();
+            Notification?.error?.('خطأ: ' + (err.message || err));
+            return { success: false };
+        }
+    },
+
+    async deleteCustomEvent(eventId) {
+        if (!eventId || !this.canManageCustomEvents()) return { success: false };
+        if (typeof GoogleIntegration === 'undefined') return { success: false };
+        try {
+            Loading?.show?.();
+            const res = await GoogleIntegration.sendToAppsScript('deleteSafetyCalendarCustomEvent', { eventId });
+            Loading?.hide?.();
+            if (!res || !res.success) {
+                Notification?.error?.(res?.message || 'فشل حذف الحدث');
+                return res || { success: false };
+            }
+            this._removeLocalCustomEvent(eventId);
+            Notification?.success?.('تم حذف الحدث');
+            this.refreshCalendarEvents();
+            this.refreshDashboardWidgetIfVisible();
+            return res;
+        } catch (err) {
+            Loading?.hide?.();
+            Notification?.error?.('خطأ: ' + (err.message || err));
+            return { success: false };
+        }
+    },
+
     canAddTasksFromCalendar() {
         return typeof Permissions !== 'undefined' && Permissions.hasAccess
             && Permissions.hasAccess('user-tasks');
@@ -219,6 +362,207 @@ const SafetyCalendar = {
         });
     },
 
+    showDateClickMenu(dueDate) {
+        const html = `
+        <div class="modal-overlay sc-modal-overlay" id="sc-date-click-menu">
+            <div class="modal-content sc-modal-content sc-date-menu" role="dialog" aria-modal="true">
+                <div class="sc-modal-header">
+                    <h3 class="sc-modal-title">إضافة في ${this.esc(dueDate || 'التاريخ')}</h3>
+                    <button type="button" class="sc-modal-close" id="sc-date-menu-close" aria-label="إغلاق">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="sc-modal-body sc-date-menu-actions">
+                    ${this.canAddTasksFromCalendar() ? `<button type="button" class="btn-primary btn-sm sc-date-action" data-action="task">
+                        <i class="fas fa-tasks ml-1"></i>مهمة مستخدم
+                    </button>` : ''}
+                    ${this.canManageCustomEvents() ? `<button type="button" class="btn-secondary btn-sm sc-date-action" data-action="event">
+                        <i class="fas fa-calendar-plus ml-1"></i>حدث مخصص
+                    </button>` : ''}
+                </div>
+            </div>
+        </div>`;
+        const wrap = document.createElement('div');
+        wrap.innerHTML = html;
+        const modal = wrap.firstElementChild;
+        document.body.appendChild(modal);
+        const close = () => { try { modal.remove(); } catch (_e) { /* ignore */ } };
+        modal.querySelector('#sc-date-menu-close')?.addEventListener('click', close);
+        modal.addEventListener('click', (e) => { if (e.target === modal) close(); });
+        modal.querySelectorAll('.sc-date-action').forEach((btn) => {
+            btn.addEventListener('click', () => {
+                const action = btn.getAttribute('data-action');
+                close();
+                if (action === 'task') this.openAddTaskForm(dueDate);
+                else if (action === 'event') this.openCustomEventForm(null, { startDate: dueDate });
+            });
+        });
+    },
+
+    openCustomEventForm(record, defaults) {
+        if (!this.canManageCustomEvents()) {
+            Notification?.warning?.('ليس لديك صلاحية إدارة الأحداث');
+            return;
+        }
+        const rec = record || {};
+        const def = defaults || {};
+        const title = rec.title || '';
+        const description = rec.description || '';
+        const startDate = rec.startDate || rec.date || def.startDate || '';
+        const endDate = rec.endDate || '';
+        const recurring = rec.recurring || 'once';
+        const color = rec.color || '#7c3aed';
+        const enabled = rec.enabled !== false && rec.enabled !== 'false' && rec.enabled !== 0;
+        const isEdit = !!rec.id;
+        const html = `
+        <div class="modal-overlay sc-modal-overlay" id="sc-custom-event-form">
+            <div class="modal-content sc-modal-content sc-form-modal" role="dialog" aria-modal="true">
+                <div class="sc-modal-header">
+                    <h3 class="sc-modal-title">${isEdit ? 'تعديل حدث' : 'إضافة حدث'}</h3>
+                    <button type="button" class="sc-modal-close" id="sc-custom-form-close" aria-label="إغلاق">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <form class="sc-custom-form" id="sc-custom-event-form-el">
+                    <label class="sc-form-field"><span>العنوان *</span>
+                        <input type="text" name="title" required value="${this.esc(title)}" class="form-input"></label>
+                    <label class="sc-form-field"><span>الوصف</span>
+                        <textarea name="description" rows="2" class="form-input">${this.esc(description)}</textarea></label>
+                    <div class="sc-form-row">
+                        <label class="sc-form-field"><span>تاريخ البداية *</span>
+                            <input type="date" name="startDate" required value="${this.esc(startDate)}" class="form-input"></label>
+                        <label class="sc-form-field"><span>تاريخ النهاية</span>
+                            <input type="date" name="endDate" value="${this.esc(endDate)}" class="form-input"></label>
+                    </div>
+                    <div class="sc-form-row">
+                        <label class="sc-form-field"><span>التكرار</span>
+                            <select name="recurring" class="form-input">
+                                <option value="once" ${recurring === 'once' ? 'selected' : ''}>مرة واحدة</option>
+                                <option value="yearly" ${recurring === 'yearly' || recurring === 'سنوي' ? 'selected' : ''}>سنوي</option>
+                            </select></label>
+                        <label class="sc-form-field"><span>اللون</span>
+                            <input type="color" name="color" value="${this.esc(color)}" class="sc-color-input"></label>
+                    </div>
+                    <label class="sc-form-check"><input type="checkbox" name="enabled" ${enabled ? 'checked' : ''}>
+                        <span>مفعّل</span></label>
+                    <div class="sc-modal-footer sc-form-footer">
+                        ${isEdit ? `<button type="button" class="btn-danger btn-sm" id="sc-custom-delete">
+                            <i class="fas fa-trash ml-1"></i>حذف</button>` : ''}
+                        <button type="button" class="btn-secondary btn-sm" id="sc-custom-cancel">إلغاء</button>
+                        <button type="submit" class="btn-primary btn-sm">حفظ</button>
+                    </div>
+                </form>
+            </div>
+        </div>`;
+        const wrap = document.createElement('div');
+        wrap.innerHTML = html;
+        const modal = wrap.firstElementChild;
+        document.body.appendChild(modal);
+        const close = () => { try { modal.remove(); } catch (_e) { /* ignore */ } };
+        modal.querySelector('#sc-custom-form-close')?.addEventListener('click', close);
+        modal.querySelector('#sc-custom-cancel')?.addEventListener('click', close);
+        modal.addEventListener('click', (e) => { if (e.target === modal) close(); });
+        modal.querySelector('#sc-custom-delete')?.addEventListener('click', async () => {
+            if (!confirm('حذف هذا الحدث؟')) return;
+            await this.deleteCustomEvent(rec.id);
+            close();
+            if (this._managerModalRefresh) this._managerModalRefresh();
+        });
+        modal.querySelector('#sc-custom-event-form-el')?.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const fd = new FormData(e.target);
+            const payload = {
+                title: String(fd.get('title') || '').trim(),
+                description: String(fd.get('description') || '').trim(),
+                startDate: fd.get('startDate'),
+                endDate: fd.get('endDate') || '',
+                recurring: fd.get('recurring') || 'once',
+                color: fd.get('color') || '#7c3aed',
+                enabled: fd.get('enabled') === 'on'
+            };
+            if (!payload.title || !payload.startDate) {
+                Notification?.warning?.('العنوان وتاريخ البداية مطلوبان');
+                return;
+            }
+            const res = await this.saveCustomEvent(payload, isEdit ? rec.id : null);
+            if (res && res.success) {
+                close();
+                if (this._managerModalRefresh) this._managerModalRefresh();
+            }
+        });
+    },
+
+    showCustomEventManager() {
+        if (!this.canManageCustomEvents()) return;
+        const list = Array.isArray(AppState?.appData?.safetyCalendarCustomEvents)
+            ? AppState.appData.safetyCalendarCustomEvents.slice()
+            : [];
+        list.sort((a, b) => String(a.startDate || a.date || '').localeCompare(String(b.startDate || b.date || '')));
+        const rows = list.length
+            ? list.map((ev) => {
+                const off = ev.enabled === false || ev.enabled === 'false';
+                return `<tr class="${off ? 'sc-ev-disabled' : ''}">
+                    <td>${this.esc(ev.title || '')}</td>
+                    <td>${this.esc(ev.startDate || ev.date || '')}</td>
+                    <td>${this.esc(ev.endDate || '—')}</td>
+                    <td>${ev.recurring === 'yearly' ? 'سنوي' : 'مرة'}</td>
+                    <td class="sc-ev-actions">
+                        <button type="button" class="btn-secondary btn-sm sc-ev-edit" data-id="${this.esc(ev.id)}">تعديل</button>
+                    </td>
+                </tr>`;
+            }).join('')
+            : '<tr><td colspan="5" class="text-gray-500">لا توجد أحداث مخصصة بعد.</td></tr>';
+        const html = `
+        <div class="modal-overlay sc-modal-overlay" id="sc-event-manager">
+            <div class="modal-content sc-modal-content sc-manager-modal" role="dialog" aria-modal="true">
+                <div class="sc-modal-header">
+                    <div>
+                        <h3 class="sc-modal-title">إدارة أحداث التقويم</h3>
+                        <p class="sc-manager-sub">أحداث مخصصة — أعياد مصر والأيام العالمية من المرجع الثابت</p>
+                    </div>
+                    <button type="button" class="sc-modal-close" id="sc-manager-close" aria-label="إغلاق">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="sc-manager-toolbar">
+                    <button type="button" class="btn-primary btn-sm" id="sc-manager-add">
+                        <i class="fas fa-plus ml-1"></i>إضافة حدث
+                    </button>
+                </div>
+                <div class="sc-modal-body sc-manager-body">
+                    <table class="sc-manager-table">
+                        <thead><tr><th>العنوان</th><th>البداية</th><th>النهاية</th><th>التكرار</th><th></th></tr></thead>
+                        <tbody>${rows}</tbody>
+                    </table>
+                </div>
+            </div>
+        </div>`;
+        const wrap = document.createElement('div');
+        wrap.innerHTML = html;
+        const modal = wrap.firstElementChild;
+        document.body.appendChild(modal);
+        const close = () => {
+            this._managerModalRefresh = null;
+            try { modal.remove(); } catch (_e) { /* ignore */ }
+        };
+        this._managerModalRefresh = () => {
+            close();
+            this.showCustomEventManager();
+        };
+        modal.querySelector('#sc-manager-close')?.addEventListener('click', close);
+        modal.addEventListener('click', (e) => { if (e.target === modal) close(); });
+        modal.querySelector('#sc-manager-add')?.addEventListener('click', () => {
+            this.openCustomEventForm(null, {});
+        });
+        modal.querySelectorAll('.sc-ev-edit').forEach((btn) => {
+            btn.addEventListener('click', () => {
+                const id = btn.getAttribute('data-id');
+                const rec = list.find((r) => String(r.id) === String(id));
+                if (rec) this.openCustomEventForm(rec, {});
+            });
+        });
+    },
+
     async refreshDashboardWidgetIfVisible() {
         const wrap = document.getElementById('dash-safety-calendar-wrap');
         if (wrap && wrap.querySelector('.sc-dash-body')) {
@@ -230,8 +574,29 @@ const SafetyCalendar = {
         if (!window.SafetyCalendarEvents) return { events: [], truncated: false };
         return SafetyCalendarEvents.buildSafetyCalendarEvents({
             categories: this.getEnabledCategories(),
-            assigneeMode: this.getAssigneeMode()
+            assigneeMode: this.getAssigneeMode(),
+            showEgyptHolidays: this.getShowEgyptHolidays(),
+            showIntlDays: this.getShowIntlDays(),
+            showCustomEvents: this.getShowCustomEvents()
         });
+    },
+
+    renderReferenceToggles() {
+        const egChecked = this.getShowEgyptHolidays() ? 'checked' : '';
+        const intlChecked = this.getShowIntlDays() ? 'checked' : '';
+        const customChecked = this.getShowCustomEvents() ? 'checked' : '';
+        return `<div class="sc-ref-toggles" role="group" aria-label="طبقات التقويم">
+            <span class="sc-ref-label"><i class="fas fa-layer-group ml-1"></i>طبقات:</span>
+            <label class="sc-ref-toggle"><input type="checkbox" class="sc-ref-pref" data-pref="showEgyptHolidays" ${egChecked}>
+                <span>أعياد مصر</span></label>
+            <label class="sc-ref-toggle"><input type="checkbox" class="sc-ref-pref" data-pref="showIntlDays" ${intlChecked}>
+                <span>أيام عالمية</span></label>
+            <label class="sc-ref-toggle"><input type="checkbox" class="sc-ref-pref" data-pref="showCustomEvents" ${customChecked}>
+                <span>أحداث مخصصة</span></label>
+            ${this.canManageCustomEvents() ? `<button type="button" class="btn-secondary btn-sm sc-manage-events-btn" id="sc-manage-events-btn">
+                <i class="fas fa-calendar-plus ml-1"></i>إدارة الأحداث
+            </button>` : ''}
+        </div>`;
     },
 
     renderAssigneeFilter() {
@@ -266,6 +631,7 @@ const SafetyCalendar = {
         }).join('');
         return `<div class="sc-filter-bar">
             ${this.renderAssigneeFilter()}
+            ${this.renderReferenceToggles()}
             <span class="sc-filter-label"><i class="fas fa-filter ml-1"></i>فلترة الأنواع:</span>
             <div class="sc-filter-chips">${items}</div>
             <button type="button" class="btn-secondary btn-sm sc-refresh-btn" id="sc-refresh-btn">
@@ -315,6 +681,8 @@ const SafetyCalendar = {
             </tr>`).join('');
 
         const canEdit = category === 'user-tasks' && record && this.canEditUserTask(record);
+        const canEditCustom = category === 'custom-event' && record && this.canManageCustomEvents();
+        const isReference = props.isReference === true;
         const assigneeHint = props.assigneeHint ? `
             <p class="sc-modal-assignee"><i class="fas fa-user ml-1"></i>المكلف: ${this.esc(props.assigneeHint)}</p>` : '';
 
@@ -335,16 +703,21 @@ const SafetyCalendar = {
                 </div>
                 <div class="sc-modal-body">
                     ${rows ? `<table class="sc-detail-table"><tbody>${rows}</tbody></table>`
-                        : '<p class="text-gray-500">لا تتوفر تفاصيل إضافية لهذا الحدث.</p>'}
+                        : (isReference
+                            ? '<p class="text-gray-500">حدث مرجعي (عطلة أو يوم عالمي) — للعرض فقط.</p>'
+                            : '<p class="text-gray-500">لا تتوفر تفاصيل إضافية لهذا الحدث.</p>')}
                 </div>
                 <div class="sc-modal-footer">
                     <button type="button" class="btn-secondary btn-sm" id="sc-copy-id" data-id="${this.esc(sourceId)}">
                         <i class="fas fa-copy ml-1"></i>نسخ المعرف
                     </button>
+                    ${canEditCustom ? `<button type="button" class="btn-secondary btn-sm" id="sc-edit-custom">
+                        <i class="fas fa-pen ml-1"></i>تعديل الحدث
+                    </button>` : ''}
                     ${canEdit ? `<button type="button" class="btn-secondary btn-sm" id="sc-edit-task">
                         <i class="fas fa-pen ml-1"></i>تعديل المهمة
                     </button>` : ''}
-                    ${moduleKey ? `<button type="button" class="btn-primary btn-sm" id="sc-open-module" data-module="${this.esc(moduleKey)}">
+                    ${moduleKey && !isReference ? `<button type="button" class="btn-primary btn-sm" id="sc-open-module" data-module="${this.esc(moduleKey)}">
                         <i class="fas fa-external-link-alt ml-1"></i>فتح في الموديول
                     </button>` : ''}
                 </div>
@@ -402,6 +775,10 @@ const SafetyCalendar = {
                     }
                 });
             }
+        });
+        this._modalEl.querySelector('#sc-edit-custom')?.addEventListener('click', () => {
+            close();
+            if (record) this.openCustomEventForm(record, {});
         });
     },
 
@@ -475,6 +852,16 @@ const SafetyCalendar = {
             section.querySelectorAll('.sc-cat-filter').forEach((x) => { x.checked = true; });
             this.refreshCalendarEvents();
         });
+        section.querySelectorAll('.sc-ref-pref').forEach((cb) => {
+            cb.addEventListener('change', () => {
+                const key = cb.getAttribute('data-pref');
+                if (!key) return;
+                this.setReferencePref(key, cb.checked);
+            });
+        });
+        section.querySelector('#sc-manage-events-btn')?.addEventListener('click', () => {
+            this.showCustomEventManager();
+        });
     },
 
     async initFullCalendar(section) {
@@ -497,15 +884,19 @@ const SafetyCalendar = {
         this.destroyCalendar();
         const result = this.buildEvents();
         const self = this;
+        const headerLeft = [];
+        if (this.canAddTasksFromCalendar()) headerLeft.push('addTask');
+        if (this.canManageCustomEvents()) {
+            headerLeft.push('addCustomEvent', 'manageEvents');
+        }
+        headerLeft.push('dayGridMonth', 'timeGridWeek', 'timeGridDay', 'listWeek');
         const fcOverrides = {
             initialView: 'dayGridMonth',
             height: 'auto',
             headerToolbar: {
                 right: 'prev,next today',
                 center: 'title',
-                left: this.canAddTasksFromCalendar()
-                    ? 'addTask dayGridMonth,timeGridWeek,timeGridDay,listWeek'
-                    : 'dayGridMonth,timeGridWeek,timeGridDay,listWeek'
+                left: headerLeft.join(',')
             },
             events: result.events,
             eventClick: (info) => {
@@ -513,11 +904,16 @@ const SafetyCalendar = {
                 self.showEventModal(info.event);
             },
             dateClick: (info) => {
-                if (!self.canAddTasksFromCalendar()) return;
                 const dueDate = info.dateStr || (info.date
                     ? info.date.toISOString().slice(0, 10)
                     : '');
-                self.openAddTaskForm(dueDate);
+                if (self.canManageCustomEvents() && self.canAddTasksFromCalendar()) {
+                    self.showDateClickMenu(dueDate);
+                } else if (self.canManageCustomEvents()) {
+                    self.openCustomEventForm(null, { startDate: dueDate });
+                } else if (self.canAddTasksFromCalendar()) {
+                    self.openAddTaskForm(dueDate);
+                }
             },
             eventDidMount: (info) => {
                 const cat = info.event.extendedProps.category;
@@ -529,16 +925,33 @@ const SafetyCalendar = {
             },
             ...this._getCalendarAppearanceHooks()
         };
-        if (this.canAddTasksFromCalendar()) {
-            fcOverrides.customButtons = {
-                addTask: {
+        if (this.canAddTasksFromCalendar() || this.canManageCustomEvents()) {
+            fcOverrides.customButtons = Object.assign({}, fcOverrides.customButtons, {
+                addTask: this.canAddTasksFromCalendar() ? {
                     text: 'إضافة مهمة',
                     hint: 'إضافة مهمة في التقويم',
                     click() {
                         self.openAddTaskForm('');
                     }
-                }
-            };
+                } : undefined,
+                addCustomEvent: this.canManageCustomEvents() ? {
+                    text: 'إضافة حدث',
+                    hint: 'إضافة حدث مخصص',
+                    click() {
+                        self.openCustomEventForm(null, {});
+                    }
+                } : undefined,
+                manageEvents: this.canManageCustomEvents() ? {
+                    text: 'إدارة',
+                    hint: 'إدارة الأحداث المخصصة',
+                    click() {
+                        self.showCustomEventManager();
+                    }
+                } : undefined
+            });
+            Object.keys(fcOverrides.customButtons).forEach((k) => {
+                if (fcOverrides.customButtons[k] === undefined) delete fcOverrides.customButtons[k];
+            });
         }
 
         const builder = this._buildCalendarOptions(fcOverrides);
@@ -564,6 +977,7 @@ const SafetyCalendar = {
 
         section.innerHTML = this.renderShell();
         this.bindFilterEvents(section);
+        await this.ensureCustomEventsLoaded(false);
         await this.initFullCalendar(section);
     },
 
@@ -665,6 +1079,7 @@ const SafetyCalendar = {
         }
 
         try {
+            await this.ensureCustomEventsLoaded(false);
             const result = this.buildEvents();
             const summary = SafetyCalendarEvents.summarizeEvents(result.events);
             wrap.innerHTML = this.renderDashboardWidgetHtml(result, summary);

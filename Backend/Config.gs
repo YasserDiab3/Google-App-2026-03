@@ -88,6 +88,7 @@ function getRequiredSheets() {
         'SafetyTeamPerformanceReports', 'SafetyTeamAttendance', 'SafetyTeamLeaves', 'SafetyHealthManagementSettings',
         'SafetyTeamTasks', 'ActionTrackingSettings',         'Form_Settings_DB', 'Violation_Types_DB',
         'ModuleManagement', 'UserTasks', 'UserInstructions', 'Notifications', 'IncidentNotifications',
+        'SafetyCalendarCustomEvents',
         'Blacklist_Register',
         // جداول إعدادات النماذج الجديدة (بصيغة عادية - كل صف = سجل واحد)
         'Form_Sites', 'Form_Places', 'Form_Departments', 'Form_SafetyTeam',

@@ -2804,7 +2804,8 @@ const GoogleIntegration = {
                 'SafetyBudgetPurchaseOrders': AppState.appData.safetyBudgetPurchaseOrders || [],
                 'SafetyPerformanceKPIs': AppState.appData.safetyPerformanceKPIs || [],
                 'ActionTrackingRegister': AppState.appData.actionTrackingRegister || [],
-                'UserActivityLog': AppState.appData.user_activity_log || []
+                'UserActivityLog': AppState.appData.user_activity_log || [],
+                'SafetyCalendarCustomEvents': AppState.appData.safetyCalendarCustomEvents || []
             };
 
             let successCount = 0;
@@ -3168,7 +3169,8 @@ const GoogleIntegration = {
                 'SafetyBudgetPurchaseOrders',
                 'SafetyPerformanceKPIs',
                 'ActionTrackingRegister',
-                'UserActivityLog'
+                'UserActivityLog',
+                'SafetyCalendarCustomEvents'
             ];
 
             let sheets = baseSheets.slice();
@@ -3253,7 +3255,8 @@ const GoogleIntegration = {
                 'SafetyBudgetPurchaseOrders': 'safetyBudgetPurchaseOrders',
                 'SafetyPerformanceKPIs': 'safetyPerformanceKPIs',
                 'ActionTrackingRegister': 'actionTrackingRegister',
-                'UserActivityLog': 'user_activity_log'
+                'UserActivityLog': 'user_activity_log',
+                'SafetyCalendarCustomEvents': 'safetyCalendarCustomEvents'
             };
 
             const moduleSheetsMap = {
@@ -3282,7 +3285,8 @@ const GoogleIntegration = {
                 'safety-budget': ['SafetyBudgets', 'SafetyBudgetTransactions', 'SafetyBudgetPurchaseOrders'],
                 'safety-performance-kpis': ['SafetyPerformanceKPIs', 'SafetyTeamKPIs'],
                 'safety-health-management': ['SafetyTeamMembers', 'SafetyOrganizationalStructure', 'SafetyJobDescriptions', 'SafetyTeamKPIs', 'SafetyTeamAttendance', 'SafetyTeamLeaves', 'SafetyTeamTasks'],
-                'action-tracking': ['ActionTrackingRegister', 'HSECorrectiveActions', 'HSENonConformities', 'HSEObjectives']
+                'action-tracking': ['ActionTrackingRegister', 'HSECorrectiveActions', 'HSENonConformities', 'HSEObjectives'],
+                'safety-calendar': ['SafetyCalendarCustomEvents']
             };
 
             const isEffectiveAdmin = !!(AppState.currentUser && typeof Permissions !== 'undefined'

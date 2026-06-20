@@ -389,7 +389,8 @@
                             'SafetyBudgets': 'safetyBudgets', 'SafetyBudgetTransactions': 'safetyBudgetTransactions',
                             'SafetyPerformanceKPIs': 'safetyPerformanceKPIs',
                             'ActionTrackingRegister': 'actionTrackingRegister',
-                            'UserActivityLog': 'user_activity_log'
+                            'UserActivityLog': 'user_activity_log',
+                            'SafetyCalendarCustomEvents': 'safetyCalendarCustomEvents'
                         };
                         
                         // تطبيق صلاحيات المستخدم (منطق مبسط)

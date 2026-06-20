@@ -4678,6 +4678,7 @@ function getModulePrefix(moduleName) {
         'ActionTrackingRegister': 'ATR',
         'usertasks': 'UTK',
         'UserTasks': 'UTK',
+        'SafetyCalendarCustomEvents': 'SCE',
         'userinstructions': 'UIN',
         'UserInstructions': 'UIN',
         

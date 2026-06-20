@@ -29,11 +29,15 @@
         emergency: { label: 'تنبيه طوارئ', color: '#be123c', moduleKey: 'emergency' },
         'action-tracking': { label: 'متابعة إجراء', color: '#059669', moduleKey: 'action-tracking' },
         violations: { label: 'مخالفة', color: '#991b1b', moduleKey: 'violations' },
-        behavior: { label: 'مراقبة سلوك', color: '#ca8a04', moduleKey: 'behavior-monitoring' }
+        behavior: { label: 'مراقبة سلوك', color: '#ca8a04', moduleKey: 'behavior-monitoring' },
+        'egypt-holiday': { label: 'عطلة رسمية (مصر)', color: '#b91c1c', moduleKey: 'safety-calendar' },
+        'intl-hse-env': { label: 'يوم عالمي (سلامة/بيئة)', color: '#047857', moduleKey: 'safety-calendar' },
+        'custom-event': { label: 'حدث مخصص', color: '#7c3aed', moduleKey: 'safety-calendar' }
     };
 
     const FIELD_LABELS = {
         id: 'المعرف', title: 'العنوان', name: 'الاسم', description: 'الوصف', location: 'الموقع',
+        type: 'النوع', recurring: 'التكرار', enabled: 'مفعّل', color: 'اللون',
         status: 'الحالة', date: 'التاريخ', startDate: 'تاريخ البداية', endDate: 'تاريخ النهاية',
         dueDate: 'تاريخ الاستحقاق', scheduledDate: 'التاريخ المجدول', nextDueDate: 'الموعد القادم',
         inspectionDate: 'تاريخ الفحص', violationDate: 'تاريخ المخالفة', issueDate: 'تاريخ الإصدار',
@@ -264,8 +268,27 @@
             case 'action-tracking': return findById(getAppArray('actionTrackingRegister'));
             case 'violations': return findById(getAppArray('violations'));
             case 'behavior': return findById(getAppArray('behaviorMonitoring'));
+            case 'custom-event': return findById(getAppArray('safetyCalendarCustomEvents'));
+            case 'egypt-holiday':
+            case 'intl-hse-env':
+                return getReferenceRecord(category, sourceId);
             default: return null;
         }
+    }
+
+    function getReferenceRecord(category, sourceId) {
+        if (!window.SafetyCalendarReferenceEvents || !sourceId) return null;
+        const refs = SafetyCalendarReferenceEvents.getReferenceEvents({});
+        const hit = refs.find((r) => r.category === category && String(r.sourceId) === String(sourceId));
+        if (!hit) return null;
+        return {
+            id: hit.sourceId,
+            title: hit.title,
+            startDate: hit.start,
+            endDate: hit.end || '',
+            type: category === 'egypt-holiday' ? 'عطلة رسمية — مصر' : 'يوم عالمي — سلامة/بيئة',
+            recurring: hit.recurring || 'yearly'
+        };
     }
 
     function pushEvent(events, meta) {
@@ -277,23 +300,118 @@
         const sourceId = meta.sourceId != null ? String(meta.sourceId) : '';
         const titleBase = meta.title || cat.label;
         const suffix = meta.dateKind ? ` (${meta.dateKind})` : '';
-        events.push({
-            id: `${meta.category}:${sourceId}:${meta.dateKind || 'main'}:${start}`,
-            title: `${cat.label} — ${titleBase}${suffix}`,
+        const displayTitle = meta.skipCategoryPrefix
+            ? `${titleBase}${suffix}`
+            : `${cat.label} — ${titleBase}${suffix}`;
+        const ev = {
+            id: meta.eventId || `${meta.category}:${sourceId}:${meta.dateKind || 'main'}:${start}`,
+            title: displayTitle,
             start,
-            allDay: true,
-            backgroundColor: cat.color,
-            borderColor: cat.color,
+            allDay: meta.allDay !== false,
+            backgroundColor: meta.color || cat.color,
+            borderColor: meta.color || cat.color,
             extendedProps: {
                 category: meta.category,
                 categoryLabel: cat.label,
                 moduleKey: cat.moduleKey,
                 sourceId,
                 dateKind: meta.dateKind || 'main',
-                assigneeHint: meta.assigneeHint || ''
+                assigneeHint: meta.assigneeHint || '',
+                isReference: meta.isReference === true,
+                isCustom: meta.isCustom === true
             }
-        });
+        };
+        if (meta.end) ev.end = meta.end;
+        events.push(ev);
         return true;
+    }
+
+    function addReferenceEvents(events, options) {
+        if (!window.SafetyCalendarReferenceEvents) return;
+        if (options && options.showEgyptHolidays === false && options.showIntlDays === false) return;
+        const refs = SafetyCalendarReferenceEvents.getReferenceEvents({
+            years: options && options.years
+        });
+        refs.forEach((ref) => {
+            if (events.length >= MAX_EVENTS) return;
+            if (ref.category === 'egypt-holiday' && options && options.showEgyptHolidays === false) return;
+            if (ref.category === 'intl-hse-env' && options && options.showIntlDays === false) return;
+            if (!hasAccess('safety-calendar')) return;
+            pushEvent(events, {
+                category: ref.category,
+                sourceId: ref.sourceId,
+                start: ref.start,
+                end: ref.end || null,
+                title: ref.title,
+                eventId: ref.id,
+                skipCategoryPrefix: true,
+                isReference: true
+            });
+        });
+    }
+
+    function addExclusiveEnd(endInclusive) {
+        if (!endInclusive) return null;
+        const d = new Date(endInclusive + 'T12:00:00');
+        if (isNaN(d.getTime())) return null;
+        d.setDate(d.getDate() + 1);
+        return parseDateSafe(d);
+    }
+
+    function expandCustomStart(rec, years) {
+        const recurring = String(rec.recurring || 'once').toLowerCase();
+        if (recurring === 'yearly' || recurring === 'سنوي') {
+            const base = parseDateSafe(rec.startDate || rec.date);
+            if (!base) return [];
+            const mmdd = base.slice(5);
+            return (years || []).map((y) => `${y}-${mmdd}`);
+        }
+        const start = parseDateSafe(rec.startDate || rec.date);
+        return start ? [start] : [];
+    }
+
+    function resolveCustomEnd(rec, startIso, recurring) {
+        const endRaw = parseDateSafe(rec.endDate);
+        if (!endRaw) return null;
+        const isYearly = recurring === 'yearly' || recurring === 'سنوي';
+        if (isYearly) {
+            const endInclusive = `${startIso.slice(0, 4)}-${endRaw.slice(5)}`;
+            if (endInclusive < startIso) return null;
+            return addExclusiveEnd(endInclusive);
+        }
+        if (endRaw < startIso) return null;
+        return addExclusiveEnd(endRaw);
+    }
+
+    function addCustomCalendarEvents(events, options) {
+        if (options && options.showCustomEvents === false) return;
+        if (!hasAccess('safety-calendar')) return;
+        const years = (window.SafetyCalendarReferenceEvents && SafetyCalendarReferenceEvents.getDefaultYears)
+            ? SafetyCalendarReferenceEvents.getDefaultYears()
+            : [new Date().getFullYear()];
+        getAppArray('safetyCalendarCustomEvents').forEach((rec) => {
+            if (!rec || events.length >= MAX_EVENTS) return;
+            if (rec.enabled === false || rec.enabled === 'false' || rec.enabled === 0 || rec.enabled === '0') {
+                return;
+            }
+            const recurring = String(rec.recurring || 'once').toLowerCase();
+            const starts = expandCustomStart(rec, years);
+            const color = rec.color && String(rec.color).trim() ? String(rec.color).trim() : null;
+            const title = pickTitle(rec, ['title', 'name', 'description']);
+            starts.forEach((start) => {
+                if (events.length >= MAX_EVENTS) return;
+                pushEvent(events, {
+                    category: 'custom-event',
+                    sourceId: rec.id,
+                    start,
+                    end: resolveCustomEnd(rec, start, recurring),
+                    title,
+                    color,
+                    skipCategoryPrefix: true,
+                    isCustom: true
+                });
+            });
+        });
     }
 
     function addFromList(events, category, records, dateFields, titleFields, dateKinds, assigneeContext) {
@@ -470,6 +588,21 @@
                 Utils.safeWarn('SafetyCalendarEvents build error:', err);
             }
         }
+
+        addReferenceEvents(events, {
+            showEgyptHolidays: options && options.showEgyptHolidays === false
+                ? false
+                : allow('egypt-holiday'),
+            showIntlDays: options && options.showIntlDays === false
+                ? false
+                : allow('intl-hse-env'),
+            years: options && options.years
+        });
+        addCustomCalendarEvents(events, Object.assign({}, options, {
+            showCustomEvents: options && options.showCustomEvents === false
+                ? false
+                : allow('custom-event')
+        }));
 
         return {
             events,

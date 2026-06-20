@@ -2874,7 +2874,7 @@ const DEFAULT_COMPANY_NAME = '';
 
 const AppState = {
     /** إصدار التطبيق — تسلسلي: 1.0.0 → 1.0.1 → 1.0.2 … عند كل نشر زِد الرقم هنا وفي version.json */
-    appVersion: '1.0.237',
+    appVersion: '1.0.238',
     /** نص اختياري لرسالة التحديث (ملخص التغييرات). إن تُركت فارغة يُستخدم النص الافتراضي. */
     updateMessage: '',
     debugMode: false,
@@ -2967,6 +2967,7 @@ const AppState = {
         employeePPEMatrix: {}, // مصوة مهمات الوقاية لكل موظف حسب الوظيفة
         employeePPEMatrixByCode: {}, // مصفوفة مهمات الوقاية لكل موظف مرتبطة بالكود الوظيي
         actionTrackingRegister: [], // سجل متابعة الإجراءات
+        safetyCalendarCustomEvents: [], // أحداث مخصصة لتقويم السلامة
         safetyBudgets: [], // تعريفات الميزانية المعتمدة
         safetyBudgetTransactions: [], // عمليات الصرف ومتابعة الإنفاق
         workflows: [], // سير العمل والموافقات
@@ -4602,6 +4603,7 @@ const Utils = {
             'ActionTrackingRegister': 'ATR',
             'usertasks': 'UTK',
             'UserTasks': 'UTK',
+            'SafetyCalendarCustomEvents': 'SCE',
             'userinstructions': 'UIN',
             'UserInstructions': 'UIN',
 

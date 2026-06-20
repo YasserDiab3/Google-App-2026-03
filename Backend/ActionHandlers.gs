@@ -5322,6 +5322,46 @@ var ActionHandlers = {
         })();
         return result;
     },
+    'addSafetyCalendarCustomEvent': function(payload, postData, action, actorUserData, spreadsheetId) {
+        var result = { success: false, message: '' };
+        (function() {
+
+                    result = addSafetyCalendarCustomEvent(payload);
+                    return;
+
+        })();
+        return result;
+    },
+    'updateSafetyCalendarCustomEvent': function(payload, postData, action, actorUserData, spreadsheetId) {
+        var result = { success: false, message: '' };
+        (function() {
+
+                    result = updateSafetyCalendarCustomEvent(payload.eventId || payload.id, payload.updateData || payload);
+                    return;
+
+        })();
+        return result;
+    },
+    'deleteSafetyCalendarCustomEvent': function(payload, postData, action, actorUserData, spreadsheetId) {
+        var result = { success: false, message: '' };
+        (function() {
+
+                    result = deleteSafetyCalendarCustomEvent(payload.eventId || payload.id);
+                    return;
+
+        })();
+        return result;
+    },
+    'getAllSafetyCalendarCustomEvents': function(payload, postData, action, actorUserData, spreadsheetId) {
+        var result = { success: false, message: '' };
+        (function() {
+
+                    result = getAllSafetyCalendarCustomEvents();
+                    return;
+
+        })();
+        return result;
+    },
     'getUserTasksByUserId': function(payload, postData, action, actorUserData, spreadsheetId) {
         var result = { success: false, message: '' };
         (function() {

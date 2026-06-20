@@ -264,6 +264,7 @@ function getDefaultHeaders(sheetName) {
         'Form_SafetyTeam': ['id', 'name', 'position', 'phone', 'email', 'isActive', 'sortOrder', 'createdAt', 'updatedAt', 'createdBy', 'updatedBy'],
         // مهام المستخدمين والتعليمات
         'UserTasks': ['id', 'title', 'taskTitle', 'description', 'taskDescription', 'assignedTo', 'assignedDepartments', 'status', 'priority', 'dueDate', 'completionRate', 'userProgress', 'completedDate', 'createdBy', 'createdAt', 'updatedAt'],
+        'SafetyCalendarCustomEvents': ['id', 'title', 'description', 'startDate', 'endDate', 'recurring', 'color', 'enabled', 'createdBy', 'createdAt', 'updatedAt'],
         'UserInstructions': ['id', 'type', 'title', 'description', 'content', 'assignedTo', 'assignedDepartments', 'isRead', 'readAt', 'createdBy', 'createdAt', 'updatedAt'],
         // إدارة الموديولات
         'ModuleManagement': ['id', 'moduleId', 'enabled', 'version', 'lastUpdated', 'updatedBy', 'updatedByName', 'notes', 'createdAt'],

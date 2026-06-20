@@ -1721,7 +1721,8 @@ window.Auth = {
                 'legal-documents': ['LegalDocuments'],
                 'safety-health-management': ['SafetyTeamMembers', 'SafetyOrganizationalStructure', 'SafetyJobDescriptions', 'SafetyTeamKPIs', 'SafetyTeamAttendance', 'SafetyTeamLeaves', 'SafetyTeamTasks'],
                 'sop-jha': ['SOPJHA'],
-                'periodic-inspections': ['PeriodicInspectionCategories', 'PeriodicInspectionRecords', 'PeriodicInspectionSchedules', 'PeriodicInspectionChecklists']
+                'periodic-inspections': ['PeriodicInspectionCategories', 'PeriodicInspectionRecords', 'PeriodicInspectionSchedules', 'PeriodicInspectionChecklists'],
+                'safety-calendar': ['SafetyCalendarCustomEvents']
             };
 
             // خريطة مفاتيح المزامنة في localStorage لكل موديول (لمنع إعادة التحميل عند فتح الموديول)
@@ -1796,7 +1797,8 @@ window.Auth = {
                 'PeriodicInspectionCategories': 'periodicInspectionCategories',
                 'PeriodicInspectionRecords': 'periodicInspectionRecords',
                 'PeriodicInspectionSchedules': 'periodicInspectionSchedules',
-                'PeriodicInspectionChecklists': 'periodicInspectionChecklists'
+                'PeriodicInspectionChecklists': 'periodicInspectionChecklists',
+                'SafetyCalendarCustomEvents': 'safetyCalendarCustomEvents'
             };
 
             const PRELOAD_CACHE_TTL_MS = 10 * 60 * 1000;
