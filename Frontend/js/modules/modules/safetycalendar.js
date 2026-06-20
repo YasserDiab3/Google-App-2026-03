@@ -39,6 +39,32 @@ const SafetyCalendar = {
         });
     },
 
+    /** أزرار تنقل مخصصة — السابق / التالي */
+    _fcNavButtons() {
+        return {
+            scPrev: {
+                text: 'السابق',
+                hint: 'الفترة السابقة',
+                click: function () { this.prev(); }
+            },
+            scNext: {
+                text: 'التالي',
+                hint: 'الفترة التالية',
+                click: function () { this.next(); }
+            }
+        };
+    },
+
+    _fcButtonText() {
+        return {
+            today: 'اليوم',
+            month: 'شهر',
+            week: 'أسبوع',
+            day: 'يوم',
+            list: 'قائمة'
+        };
+    },
+
     async ensureFullCalendarLoaded() {
         if (typeof FullCalendar !== 'undefined') return true;
         if (this._fcLoadPromise) {
@@ -278,18 +304,13 @@ const SafetyCalendar = {
             locale: 'ar',
             direction: 'rtl',
             height: 'auto',
+            customButtons: this._fcNavButtons(),
             headerToolbar: {
-                right: 'prev,next today',
+                right: 'scPrev,scNext today',
                 center: 'title',
                 left: 'dayGridMonth,timeGridWeek,timeGridDay,listWeek'
             },
-            buttonText: {
-                today: 'اليوم',
-                month: 'شهر',
-                week: 'أسبوع',
-                day: 'يوم',
-                list: 'قائمة'
-            },
+            buttonText: this._fcButtonText(),
             events: result.events,
             eventClick: (info) => {
                 info.jsEvent.preventDefault();
@@ -399,7 +420,9 @@ const SafetyCalendar = {
             locale: 'ar',
             direction: 'rtl',
             height: 320,
-            headerToolbar: { left: 'prev,next', center: 'title', right: '' },
+            customButtons: this._fcNavButtons(),
+            headerToolbar: { right: 'scPrev,scNext', center: 'title', left: '' },
+            buttonText: this._fcButtonText(),
             events: result.events,
             eventClick: (info) => {
                 info.jsEvent.preventDefault();
