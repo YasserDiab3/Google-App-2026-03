@@ -764,6 +764,313 @@ const PTW = {
     registryData: [],
     currentTab: 'permits', // 'permits' أو 'registry'
 
+    _isManualPtwEntry(entry) {
+        return !!(entry && (entry.isManualEntry === true || entry.isManualEntry === 'true'));
+    },
+
+    _normalizePtwPersonKey(name) {
+        return String(name || '').trim().replace(/\s+/g, ' ').toLowerCase();
+    },
+
+    _getManualPermitEntryTimestamp(entry) {
+        if (!entry) return 0;
+        const candidates = [entry.updatedAt, entry.createdAt, entry.openDate, entry.timeFrom, entry.date, entry.closureDate];
+        for (const c of candidates) {
+            if (!c) continue;
+            const t = new Date(c).getTime();
+            if (!Number.isNaN(t)) return t;
+        }
+        return 0;
+    },
+
+    _collectManualPermitEntriesForLookup(excludeEntryId = null) {
+        const seen = new Set();
+        const out = [];
+        const exclude = String(excludeEntryId || '').trim();
+        const add = (entry) => {
+            if (!this._isManualPtwEntry(entry)) return;
+            const id = String(entry.id || entry.permitId || '').trim();
+            if (exclude && id && id === exclude) return;
+            const dedupeKey = id || `seq:${entry.sequentialNumber || ''}:${entry.paperPermitNo || entry.permitNumber || ''}`;
+            if (dedupeKey && seen.has(dedupeKey)) return;
+            if (dedupeKey) seen.add(dedupeKey);
+            out.push(entry);
+        };
+        (Array.isArray(this.registryData) ? this.registryData : []).forEach(add);
+        (Array.isArray(AppState?.appData?.ptw) ? AppState.appData.ptw : []).forEach(add);
+        return out;
+    },
+
+    _parseTeamMembersFromEntry(entry) {
+        let members = entry?.teamMembers;
+        if ((!members || !members.length) && entry?.teamMembersText) {
+            const text = String(entry.teamMembersText).trim();
+            members = text.split(/[،,]/).map((s) => {
+                s = s.trim();
+                const m = s.match(/^(.+?)\s*\(([^)]*)\)\s*$/);
+                if (m) return { name: m[1].trim(), signature: m[2].trim() };
+                return { name: s, signature: '' };
+            }).filter((x) => x.name || x.signature);
+        }
+        return Array.isArray(members) ? members : [];
+    },
+
+    _resolveManualLookupRoleKey(roleLabel) {
+        const r = String(roleLabel || '').trim();
+        if (r === 'مسئول الجهة الطالبة' || r === 'مسؤول الجهة الطالبة') return 'requestingParty';
+        if (r === 'مدير منطقة الأعمال') return 'areaManager';
+        if (r === 'مدير / مهندس الصيانة') return 'maintenanceEngineer';
+        return null;
+    },
+
+    buildKnownTeamMembersIndex(excludeEntryId = null) {
+        const map = new Map();
+        this._collectManualPermitEntriesForLookup(excludeEntryId).forEach((entry) => {
+            const ts = this._getManualPermitEntryTimestamp(entry);
+            this._parseTeamMembersFromEntry(entry).forEach((m) => {
+                const name = String(m.name || '').trim();
+                if (!name) return;
+                const key = this._normalizePtwPersonKey(name);
+                const existing = map.get(key);
+                if (!existing || ts >= existing.updatedAt) {
+                    map.set(key, {
+                        name,
+                        signature: String(m.signature || m.id || '').trim(),
+                        updatedAt: ts
+                    });
+                }
+            });
+        });
+        return map;
+    },
+
+    buildKnownManualApprovalsIndex(excludeEntryId = null) {
+        const roleMaps = new Map();
+        const upsert = (roleKey, data, ts) => {
+            if (!roleKey || !data?.name) return;
+            if (!roleMaps.has(roleKey)) roleMaps.set(roleKey, new Map());
+            const map = roleMaps.get(roleKey);
+            const key = this._normalizePtwPersonKey(data.name);
+            const existing = map.get(key);
+            if (!existing || ts >= existing.updatedAt) {
+                map.set(key, { ...data, updatedAt: ts });
+            }
+        };
+        const ingestList = (entry, rawList, textValue) => {
+            const ts = this._getManualPermitEntryTimestamp(entry);
+            let list = Array.isArray(rawList) && rawList.length ? rawList : this.resolveManualApprovalsList(rawList, textValue);
+            list.forEach((a) => {
+                const roleKey = this._resolveManualLookupRoleKey(a.role);
+                if (!roleKey) return;
+                const name = String(a.name || a.approver || '').trim();
+                if (!name) return;
+                upsert(roleKey, {
+                    name,
+                    signature: String(a.signature || '').trim(),
+                    approverId: String(a.approverId || '').trim(),
+                    personType: String(a.personType || '').trim()
+                }, ts);
+            });
+        };
+        this._collectManualPermitEntriesForLookup(excludeEntryId).forEach((entry) => {
+            ingestList(entry, entry.manualApprovals, entry.manualApprovalsText);
+            ingestList(entry, entry.manualClosureApprovals, entry.manualClosureApprovalsText);
+        });
+        return roleMaps;
+    },
+
+    lookupKnownTeamMember(name, index) {
+        const key = this._normalizePtwPersonKey(name);
+        if (!key || !index) return null;
+        return index.get(key) || null;
+    },
+
+    lookupKnownManualApprover(roleLabel, name, index) {
+        const roleKey = this._resolveManualLookupRoleKey(roleLabel);
+        if (!roleKey || !index || !name) return null;
+        const roleMap = index.get(roleKey);
+        if (!roleMap) return null;
+        return roleMap.get(this._normalizePtwPersonKey(name)) || null;
+    },
+
+    getKnownTeamMemberNames(index) {
+        if (!index) return [];
+        return Array.from(index.values()).map((v) => v.name).filter(Boolean);
+    },
+
+    getKnownApproverNamesForRole(index, roleLabel) {
+        const roleKey = this._resolveManualLookupRoleKey(roleLabel);
+        if (!roleKey || !index?.has(roleKey)) return [];
+        return Array.from(index.get(roleKey).values()).map((v) => v.name).filter(Boolean);
+    },
+
+    buildManualPermitDatalistHtml(names) {
+        const esc = Utils.escapeHTML;
+        const unique = [];
+        const seen = new Set();
+        (names || []).forEach((n) => {
+            const s = String(n || '').trim();
+            if (!s) return;
+            const k = this._normalizePtwPersonKey(s);
+            if (seen.has(k)) return;
+            seen.add(k);
+            unique.push(s);
+        });
+        unique.sort((a, b) => a.localeCompare(b, 'ar'));
+        return unique.map((n) => `<option value="${esc(n)}"></option>`).join('');
+    },
+
+    _attachManualPermitNameSignatureLookup(nameInput, signatureInput, onKnownMatch) {
+        if (!nameInput || !signatureInput) return;
+        const tryApplyKnown = () => {
+            if (typeof onKnownMatch !== 'function') return false;
+            const name = String(nameInput.value || '').trim();
+            if (!name) return false;
+            const known = onKnownMatch(name);
+            if (!known) {
+                delete nameInput.dataset.knownLoaded;
+                return false;
+            }
+            const sig = String(known.signature || '').trim() || name;
+            signatureInput.value = sig;
+            nameInput.dataset.autoCopiedValue = sig;
+            nameInput.dataset.knownLoaded = '1';
+            return true;
+        };
+        const syncFromName = () => {
+            const name = String(nameInput.value || '').trim();
+            const sig = String(signatureInput.value || '').trim();
+            const prev = nameInput.dataset.autoCopiedValue || '';
+            if (!sig || sig === prev) {
+                signatureInput.value = name;
+                nameInput.dataset.autoCopiedValue = name;
+            }
+        };
+        nameInput.addEventListener('input', () => {
+            delete nameInput.dataset.knownLoaded;
+            syncFromName();
+        });
+        nameInput.addEventListener('change', () => {
+            if (!tryApplyKnown()) syncFromName();
+        });
+        nameInput.addEventListener('blur', () => {
+            tryApplyKnown();
+        });
+        syncFromName();
+    },
+
+    _applyKnownManualApproverToPicker(picker, roleLabel, known, listRoot) {
+        if (!picker || !known || !listRoot) return;
+        const isClosure = listRoot.id === 'manual-closure-approvals-list';
+        const sigSelector = isClosure ? '.manual-closure-approval-sig' : '.manual-approval-sig';
+        const sigEl = listRoot.querySelector(`${sigSelector}[data-role="${roleLabel}"]`);
+        const select = picker.querySelector('.ia-approval-select');
+        const manualInput = picker.querySelector('.ia-approval-manual');
+        const plainInput = picker.querySelector('[data-ia-manual-only="true"]');
+
+        if (known.approverId && select) {
+            const hasOption = Array.from(select.options).some((o) => o.value === known.approverId);
+            if (hasOption) {
+                select.value = known.approverId;
+                select.dispatchEvent(new Event('change', { bubbles: true }));
+            } else if (manualInput) {
+                select.value = '__manual__';
+                manualInput.classList.remove('hidden');
+                manualInput.value = known.name;
+                select.dispatchEvent(new Event('change', { bubbles: true }));
+            }
+        } else if (manualInput) {
+            if (select) {
+                select.value = '__manual__';
+                manualInput.classList.remove('hidden');
+                select.dispatchEvent(new Event('change', { bubbles: true }));
+            }
+            manualInput.value = known.name;
+        } else if (plainInput) {
+            plainInput.value = known.name;
+        }
+
+        if (sigEl) {
+            const sig = String(known.signature || '').trim();
+            sigEl.value = sig || known.name;
+        }
+    },
+
+    setupManualPermitKnownLookups(modal, knownTeamIndex, knownApprovalsIndex) {
+        if (!modal) return;
+
+        const manualLookupRoles = {
+            '#manual-approvals-list': ['مسئول الجهة الطالبة', 'مدير منطقة الأعمال', 'مدير / مهندس الصيانة'],
+            '#manual-closure-approvals-list': ['مسؤول الجهة الطالبة', 'مدير منطقة الأعمال']
+        };
+        const datalistByRoleKey = {
+            requestingParty: 'manual-approval-datalist-requestingParty',
+            areaManager: 'manual-approval-datalist-areaManager',
+            maintenanceEngineer: 'manual-approval-datalist-maintenanceEngineer'
+        };
+
+        const attachTeamRow = (row) => {
+            const nameInput = row?.querySelector('.manual-team-member-name');
+            const sigInput = row?.querySelector('.manual-team-member-signature');
+            if (nameInput) {
+                nameInput.setAttribute('list', 'manual-team-member-names-datalist');
+                nameInput.setAttribute('autocomplete', 'off');
+            }
+            this._attachManualPermitNameSignatureLookup(nameInput, sigInput, (name) =>
+                this.lookupKnownTeamMember(name, knownTeamIndex)
+            );
+        };
+
+        modal.querySelectorAll('#manual-team-members-list tr.manual-team-member-row').forEach(attachTeamRow);
+        modal._attachManualTeamRowLookup = attachTeamRow;
+
+        Object.entries(manualLookupRoles).forEach(([listSelector, roles]) => {
+            const listRoot = modal.querySelector(listSelector);
+            if (!listRoot) return;
+            roles.forEach((roleLabel) => {
+                const roleKey = this._resolveManualLookupRoleKey(roleLabel);
+                const datalistId = roleKey ? datalistByRoleKey[roleKey] : null;
+                const nameInput = listRoot.querySelector(`.manual-approval-name[data-role="${roleLabel}"], .manual-closure-approval-name[data-role="${roleLabel}"]`);
+                const sigInput = listRoot.querySelector(`.manual-approval-sig[data-role="${roleLabel}"], .manual-closure-approval-sig[data-role="${roleLabel}"]`);
+                if (nameInput && nameInput.tagName === 'INPUT' && !nameInput.classList.contains('ia-approval-manual')) {
+                    if (datalistId) {
+                        nameInput.setAttribute('list', datalistId);
+                        nameInput.setAttribute('autocomplete', 'off');
+                    }
+                    this._attachManualPermitNameSignatureLookup(nameInput, sigInput, (name) =>
+                        this.lookupKnownManualApprover(roleLabel, name, knownApprovalsIndex)
+                    );
+                }
+
+                const picker = listRoot.querySelector(`.ia-role-picker[data-role="${roleLabel}"]`);
+                if (picker && roleKey && ['areaManager', 'maintenanceEngineer'].includes(roleKey)) {
+                    const manualInput = picker.querySelector('.ia-approval-manual');
+                    const plainInput = picker.querySelector('[data-ia-manual-only="true"]');
+                    const inputEl = manualInput || plainInput;
+                    if (inputEl && datalistId) {
+                        inputEl.setAttribute('list', datalistId);
+                        inputEl.setAttribute('autocomplete', 'off');
+                    }
+                    if (inputEl && sigInput) {
+                        this._attachManualPermitNameSignatureLookup(inputEl, sigInput, (name) =>
+                            this.lookupKnownManualApprover(roleLabel, name, knownApprovalsIndex)
+                        );
+                    }
+                    const tryPickerKnown = () => {
+                        const name = String(inputEl?.value || '').trim();
+                        if (!name) return;
+                        const known = this.lookupKnownManualApprover(roleLabel, name, knownApprovalsIndex);
+                        if (known) this._applyKnownManualApproverToPicker(picker, roleLabel, known, listRoot);
+                    };
+                    if (inputEl) {
+                        inputEl.addEventListener('change', tryPickerKnown);
+                        inputEl.addEventListener('blur', tryPickerKnown);
+                    }
+                }
+            });
+        });
+    },
+
     /**
      * تهيئة وتحميل بيانات السجل
      * @param {boolean} skipBackendLoad - تجاهل تحميل البيانات من Backend (مفيد عند التحميل الأولي)
@@ -8474,6 +8781,20 @@ const PTW = {
             inputClass: 'form-input text-sm w-full manual-closure-approval-name'
         });
 
+        const excludeLookupId = existingEntry?.id || existingEntry?.permitId || null;
+        const knownTeamIndex = this.buildKnownTeamMembersIndex(excludeLookupId);
+        const knownApprovalsIndex = this.buildKnownManualApprovalsIndex(excludeLookupId);
+        const manualTeamDatalistHtml = this.buildManualPermitDatalistHtml(this.getKnownTeamMemberNames(knownTeamIndex));
+        const manualRequestingPartyDatalistHtml = this.buildManualPermitDatalistHtml(
+            this.getKnownApproverNamesForRole(knownApprovalsIndex, 'مسئول الجهة الطالبة')
+        );
+        const manualAreaManagerDatalistHtml = this.buildManualPermitDatalistHtml(
+            this.getKnownApproverNamesForRole(knownApprovalsIndex, 'مدير منطقة الأعمال')
+        );
+        const manualMaintDatalistHtml = this.buildManualPermitDatalistHtml(
+            this.getKnownApproverNamesForRole(knownApprovalsIndex, 'مدير / مهندس الصيانة')
+        );
+
         const modal = document.createElement('div');
         modal.className = 'modal-overlay';
         modal.style.cssText = 'display: flex; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.5); z-index: 10000; align-items: center; justify-content: center;';
@@ -9077,6 +9398,10 @@ const PTW = {
                 <div class="ptw-manual-permit-sticky-start">
                 <div class="modal-body" id="manual-permit-modal-body" style="padding: 24px; padding-top: 0; max-height: calc(95vh - 280px); overflow-y: scroll; background: #f8fafc; direction: ltr;">
                     <form id="manual-permit-form" style="direction: rtl;">
+                        <datalist id="manual-team-member-names-datalist">${manualTeamDatalistHtml}</datalist>
+                        <datalist id="manual-approval-datalist-requestingParty">${manualRequestingPartyDatalistHtml}</datalist>
+                        <datalist id="manual-approval-datalist-areaManager">${manualAreaManagerDatalistHtml}</datalist>
+                        <datalist id="manual-approval-datalist-maintenanceEngineer">${manualMaintDatalistHtml}</datalist>
                         
                         <!-- القسم الأول: بيانات التصريح الأساسية -->
                         <div class="ptw-manual-form-section manual-section-1" style="margin-top: 0; border-top-left-radius: 0; border-top-right-radius: 0;">
@@ -9422,7 +9747,7 @@ const PTW = {
                                     <tbody id="manual-approvals-list">
                                         <tr class="manual-approval-row" style="border: 1px solid #000;">
                                             <td class="p-1 border border-gray-800 text-center bg-gray-50 font-medium text-sm">الاسم</td>
-                                            <td class="p-1 border border-gray-800"><input type="text" class="form-input text-sm w-full manual-approval-name" data-role="مسئول الجهة الطالبة" placeholder="الاسم" value="${Utils.escapeHTML((existingEntry?.manualApprovals || []).find(a => a.role === 'مسئول الجهة الطالبة')?.name || '')}"></td>
+                                            <td class="p-1 border border-gray-800"><input type="text" class="form-input text-sm w-full manual-approval-name" data-role="مسئول الجهة الطالبة" list="manual-approval-datalist-requestingParty" autocomplete="off" placeholder="الاسم" value="${Utils.escapeHTML((existingEntry?.manualApprovals || []).find(a => a.role === 'مسئول الجهة الطالبة')?.name || '')}"></td>
                                             <td class="p-1 border border-gray-800">${areaManagerPickerHtml}</td>
                                             <td class="p-1 border border-gray-800">${maintPickerHtml}</td>
                                             <td class="p-1 border border-gray-800">
@@ -9500,7 +9825,7 @@ const PTW = {
                                     <tbody id="manual-closure-approvals-list">
                                         <tr class="manual-closure-approval-row" style="border: 1px solid #000;">
                                             <td class="p-1 border border-gray-800 text-center bg-gray-50 font-medium text-sm">الاسم</td>
-                                            <td class="p-1 border border-gray-800"><input type="text" class="form-input text-sm w-full manual-closure-approval-name" data-role="مسؤول الجهة الطالبة" placeholder="الاسم" value="${Utils.escapeHTML((existingEntry?.manualClosureApprovals || []).find(a => a.role === 'مسؤول الجهة الطالبة')?.name || '')}"></td>
+                                            <td class="p-1 border border-gray-800"><input type="text" class="form-input text-sm w-full manual-closure-approval-name" data-role="مسؤول الجهة الطالبة" list="manual-approval-datalist-requestingParty" autocomplete="off" placeholder="الاسم" value="${Utils.escapeHTML((existingEntry?.manualClosureApprovals || []).find(a => a.role === 'مسؤول الجهة الطالبة')?.name || '')}"></td>
                                             <td class="p-1 border border-gray-800">${closureAreaPickerHtml}</td>
                                             <td class="p-1 border border-gray-800">
                                                 <select class="form-input text-sm w-full manual-closure-approval-name border-0 focus:ring-0" data-role="مسؤول السلامة والصحة المهنية" style="background: transparent; padding: 4px 6px;">
@@ -9842,13 +10167,14 @@ const PTW = {
             equipmentInput.addEventListener('input', syncToolsFromEquipment);
         }
 
-        // نسخ الاسم للتوقيع (القسم الثاني - أعضاء الفريق)
+        // نسخ الاسم للتوقيع + استرجاع من تصاريح يدوية سابقة (أقسام 2، 7، 9)
         const attachAutoCopySignature = (nameInput, signatureInput) => {
             if (!nameInput || !signatureInput) return;
             const syncSignature = () => {
                 const currentName = String(nameInput.value || '').trim();
                 const currentSignature = String(signatureInput.value || '').trim();
                 const previousAutoValue = nameInput.dataset.autoCopiedValue || '';
+                if (nameInput.dataset.knownLoaded === '1') return;
                 if (!currentSignature || currentSignature === previousAutoValue) {
                     signatureInput.value = currentName;
                     nameInput.dataset.autoCopiedValue = currentName;
@@ -9858,16 +10184,15 @@ const PTW = {
             nameInput.addEventListener('input', syncSignature);
         };
 
-        const attachAutoCopyToTeamRow = (row) => {
-            attachAutoCopySignature(
-                row?.querySelector('.manual-team-member-name'),
-                row?.querySelector('.manual-team-member-signature')
-            );
-        };
-
         const attachAutoCopyToApprovals = (listSelector, nameSelector, sigSelector) => {
             const list = modal.querySelector(listSelector);
             if (!list) return;
+            const skipKnownLookupRoles = new Set([
+                'مسئول الجهة الطالبة',
+                'مدير منطقة الأعمال',
+                'مدير / مهندس الصيانة',
+                'مسؤول الجهة الطالبة'
+            ]);
 
             const syncRow = (nameInput) => {
                 const role = nameInput?.dataset.role;
@@ -9876,11 +10201,20 @@ const PTW = {
                 attachAutoCopySignature(nameInput, signatureInput);
             };
 
-            list.querySelectorAll(nameSelector).forEach(syncRow);
-            list.addEventListener('input', (event) => {
-                if (event.target.matches(nameSelector)) {
-                    syncRow(event.target);
+            list.querySelectorAll(nameSelector).forEach((el) => {
+                if (el.matches('.ia-approval-select') || el.tagName === 'SELECT') {
+                    syncRow(el);
+                    return;
                 }
+                if (skipKnownLookupRoles.has(el.dataset?.role)) return;
+                syncRow(el);
+            });
+            list.addEventListener('input', (event) => {
+                const role = event.target?.dataset?.role;
+                if (!event.target.matches(nameSelector)) return;
+                if (event.target.matches('.ia-approval-select')) return;
+                if (skipKnownLookupRoles.has(role)) return;
+                syncRow(event.target);
             });
             list.addEventListener('change', (event) => {
                 if (event.target.matches(nameSelector) || event.target.matches('.ia-approval-select')) {
@@ -9889,10 +10223,10 @@ const PTW = {
             });
         };
 
-        modal.querySelectorAll('#manual-team-members-list tr.manual-team-member-row').forEach(attachAutoCopyToTeamRow);
+        this._setupIaRolePickerListeners(modal);
+        this.setupManualPermitKnownLookups(modal, knownTeamIndex, knownApprovalsIndex);
         attachAutoCopyToApprovals('#manual-approvals-list', '.manual-approval-name, .ia-approval-select', '.manual-approval-sig');
         attachAutoCopyToApprovals('#manual-closure-approvals-list', '.manual-closure-approval-name, .ia-approval-select', '.manual-closure-approval-sig');
-        this._setupIaRolePickerListeners(modal);
 
         // تم إلغاء مزامنة مسئول السلامة والصحة المهنية بين القسم السابع والتاسع تلبيةً لطلب المستخدم
         // لأن الشخص الذي يفتح التصريح قد يختلف عن الشخص الذي يغلق التصريح من فريق السلامة
@@ -10007,11 +10341,13 @@ const PTW = {
             const tr = document.createElement('tr');
             tr.className = 'manual-team-member-row';
             tr.innerHTML = `
-                <td class="p-2 border border-gray-800"><input type="text" class="form-input text-sm w-full manual-team-member-name border-0 focus:ring-0" placeholder="الاسم" value=""></td>
+                <td class="p-2 border border-gray-800"><input type="text" class="form-input text-sm w-full manual-team-member-name border-0 focus:ring-0" list="manual-team-member-names-datalist" autocomplete="off" placeholder="الاسم" value=""></td>
                 <td class="p-2 border border-gray-800" style="border-right: 4px solid #1e3a8a;"><input type="text" class="form-input text-sm w-full manual-team-member-signature border-0 focus:ring-0" placeholder="التوقيع" value=""></td>
             `;
             tbody.appendChild(tr);
-            attachAutoCopyToTeamRow(tr);
+            if (typeof modal._attachManualTeamRowLookup === 'function') {
+                modal._attachManualTeamRowLookup(tr);
+            }
         });
 
         // معالجة الضغط على مصفوفة المخاطر (التصنيف اللوني العالمي)
