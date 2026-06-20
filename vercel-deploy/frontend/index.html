@@ -9099,6 +9099,7 @@
 
         <!-- UI/UX Professional Enhancements -->
         <link rel="stylesheet" href="css/ui-ux-enhancements.css" />
+        <link rel="stylesheet" href="css/safety-calendar.css?v=20260620-1" />
         <link rel="stylesheet" href="css/browser-compatibility.css" />
 
         <!-- Contractors Tabs CSS -->
@@ -10445,6 +10446,16 @@
                         <span data-i18n="nav.observations"
                             >الملاحظات اليومية</span
                         >
+                    </a>
+                    <a
+                        href="#safety-calendar"
+                        class="nav-item"
+                        data-section="safety-calendar"
+                        role="menuitem"
+                        title="تقويم السلامة"
+                    >
+                        <i class="fas fa-calendar-days" aria-hidden="true"></i>
+                        <span data-i18n="nav.safetyCalendar">تقويم السلامة</span>
                     </a>
                     <a
                         href="#iso"
@@ -12143,6 +12154,12 @@
                         </div>
                         <!-- End of Reports & Statistics Section -->
 
+                        <div
+                            class="content-card safety-calendar-dashboard-widget"
+                            data-dash-scope="safety-calendar"
+                            id="dash-safety-calendar-wrap"
+                        ></div>
+
                         <!-- Additional Reports & Analytics Section -->
                         <div class="content-card additional-reports-section">
                             <div class="card-body" style="padding: 0">
@@ -12412,6 +12429,13 @@
                         class="section"
                         role="region"
                         aria-label="قسم الملاحظات اليومية"
+                    ></section>
+                    <section
+                        id="safety-calendar-section"
+                        class="section"
+                        role="region"
+                        aria-label="قسم تقويم السلامة"
+                        style="display: none"
                     ></section>
                     <section
                         id="iso-section"
@@ -12852,6 +12876,7 @@
             defer
         ></script>
         <script src="js/modules/services/issue-tracking.js" defer></script>
+        <script src="js/modules/services/safety-calendar-events.js?v=20260620-1" defer></script>
         <!-- Main services loader (ensures all services are available and adds helper functions) -->
         <script src="js/modules/app-services.js" defer></script>
 
@@ -12866,7 +12891,7 @@
         <!-- تم تقسيم الملف لتحسين الأداء -->
         <!-- تحميل Auth و Dashboard من ملفات منفصلة أولاً -->
         <script src="js/modules/auth.js?v=3" defer></script>
-        <script src="js/modules/dashboard.js?v=20260510-dashperm-2" defer></script>
+        <script src="js/modules/dashboard.js?v=20260620-safety-cal" defer></script>
         
         <!-- تحميل جميع الموديولات مباشرة (بدلاً من modules-loader.js) -->
         <script src="js/modules/modules/users.js" defer></script>
@@ -12887,6 +12912,7 @@
         <script src="js/modules/modules/behaviormonitoring.js" defer></script>
         <script src="js/modules/modules/chemicalsafety.js" defer></script>
         <script src="js/modules/modules/dailyobservations.js?v=20260402-1" defer></script>
+        <script src="js/modules/modules/safetycalendar.js?v=20260620-1" defer></script>
         <script src="js/modules/modules/iso.js" defer></script>
         <script src="js/modules/modules/emergency.js?v=20260501-2" defer></script>
         <script src="js/modules/modules/safetybudget.js" defer></script>
@@ -12998,7 +13024,7 @@
                     }
 
                     // مطابقة CACHE_VERSION في service-worker.js — تسريع جلب سكربت SW بعد النشر (تجاوز كاش الشبكة/الوسيط)
-                    const __SW_REGISTER_QUERY = "v=hse-app-v1.0.229-20260620";
+                    const __SW_REGISTER_QUERY = "v=hse-app-v1.0.230-20260620";
                     const swUrl =
                         swPath +
                         (swPath.includes("?") ? "&" : "?") +

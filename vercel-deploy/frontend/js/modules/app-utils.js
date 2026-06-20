@@ -252,6 +252,7 @@ const MODULE_PERMISSIONS_CONFIG = [
     { key: 'behavior-monitoring', label: 'مراقبة السلوكيات', icon: 'fa-user-check' },
     { key: 'chemical-safety', label: 'السلامة الكيميائية', icon: 'fa-flask' },
     { key: 'daily-observations', label: 'الملاحظات اليومية', icon: 'fa-eye', hasDetailedPermissions: true },
+    { key: 'safety-calendar', label: 'تقويم السلامة', icon: 'fa-calendar-days' },
     { key: 'iso', label: 'نظام ISO', icon: 'fa-certificate' },
     { key: 'emergency', label: 'تنبيهات الطوارئ', icon: 'fa-bell' },
     { key: 'risk-assessment', label: 'تقييم المخاطر', icon: 'fa-balance-scale' },
@@ -2873,7 +2874,7 @@ const DEFAULT_COMPANY_NAME = '';
 
 const AppState = {
     /** إصدار التطبيق — تسلسلي: 1.0.0 → 1.0.1 → 1.0.2 … عند كل نشر زِد الرقم هنا وفي version.json */
-    appVersion: '1.0.229',
+    appVersion: '1.0.230',
     /** نص اختياري لرسالة التحديث (ملخص التغييرات). إن تُركت فارغة يُستخدم النص الافتراضي. */
     updateMessage: '',
     debugMode: false,

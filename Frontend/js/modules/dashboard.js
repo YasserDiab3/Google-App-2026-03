@@ -170,6 +170,19 @@ const Dashboard = {
             if (typeof Utils !== 'undefined' && Utils.safeWarn) Utils.safeWarn('⚠️ تعذر تحميل رسوم لوحة التحكم:', chartErr);
         }
         this.applyDashboardLayoutPermissions();
+        const loadScWidget = () => {
+            try {
+                if (typeof SafetyCalendar !== 'undefined' && typeof SafetyCalendar.loadDashboardWidget === 'function') {
+                    const p = SafetyCalendar.loadDashboardWidget();
+                    if (p && typeof p.catch === 'function') p.catch(() => {});
+                }
+            } catch (_scErr) { /* لا يؤثر على لوحة التحكم */ }
+        };
+        if (typeof requestIdleCallback === 'function') {
+            requestIdleCallback(loadScWidget, { timeout: 2000 });
+        } else {
+            setTimeout(loadScWidget, 800);
+        }
         // بيانات المياه/الكهرباء/الغاز تُقرأ من أوراق منفصلة؛ بدء التحميل مبكراً يحدّ من بطء كروت الاستهلاك في لوحة التحكم
         if (this.dashboardCan('sustainability') && typeof Sustainability !== 'undefined' && typeof Sustainability.loadResourceConsumptionFromSheets === 'function') {
             void Sustainability.loadResourceConsumptionFromSheets().catch(() => {});

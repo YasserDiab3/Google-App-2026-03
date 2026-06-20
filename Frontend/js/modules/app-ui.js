@@ -6755,6 +6755,22 @@ window.UI = {
                         }
                     }
                     break;
+                case 'safety-calendar':
+                    if (typeof SafetyCalendar !== 'undefined' && SafetyCalendar.load) {
+                        try {
+                            const loadResult = SafetyCalendar.load();
+                            if (loadResult && typeof loadResult.then === 'function') {
+                                loadResult.catch((error) => {
+                                    Utils.safeError('خطأ في تحميل تقويم السلامة:', error);
+                                });
+                            }
+                        } catch (error) {
+                            Utils.safeError('خطأ في استدعاء SafetyCalendar.load:', error);
+                        }
+                    } else if (!silent) {
+                        Utils.safeError('❌ موديول SafetyCalendar غير متوفر');
+                    }
+                    break;
                 case 'iso':
                     if (typeof ISO !== 'undefined' && ISO.load) {
                         ISO.load();
