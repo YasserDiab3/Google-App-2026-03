@@ -9616,6 +9616,59 @@ const PTW = {
                     }
                 }
 
+                /* القسم الأول — تخطيط عمودي بعرض كامل */
+                .ptw-s1-layout {
+                    display: flex;
+                    flex-direction: column;
+                    gap: 1rem;
+                    width: 100%;
+                }
+                .ptw-s1-row {
+                    width: 100%;
+                }
+                .ptw-s1-meta-grid {
+                    display: grid;
+                    grid-template-columns: repeat(4, minmax(0, 1fr));
+                    gap: 1rem;
+                }
+                .ptw-s1-parties-grid {
+                    display: grid;
+                    grid-template-columns: repeat(2, minmax(0, 1fr));
+                    gap: 1rem;
+                    padding-top: 0.25rem;
+                    border-top: 1px solid rgba(148, 163, 184, 0.35);
+                }
+                .ptw-s1-block {
+                    width: 100%;
+                    padding: 0.65rem 0.75rem;
+                    background: rgba(255, 255, 255, 0.72);
+                    border: 1px solid rgba(148, 163, 184, 0.35);
+                    border-radius: 8px;
+                    box-sizing: border-box;
+                }
+                .ptw-s1-block > label:first-child {
+                    margin-bottom: 0.4rem;
+                }
+                .ptw-s1-equipment {
+                    padding-bottom: 0.5rem;
+                }
+                .ptw-s1-tools textarea,
+                .ptw-s1-work-desc textarea {
+                    min-height: 2.5rem;
+                    resize: vertical;
+                }
+                @media (max-width: 1100px) {
+                    .ptw-s1-meta-grid {
+                        grid-template-columns: repeat(2, minmax(0, 1fr));
+                    }
+                }
+                @media (max-width: 640px) {
+                    .ptw-s1-meta-grid,
+                    .ptw-s1-parties-grid {
+                        grid-template-columns: 1fr;
+                    }
+                }
+
                 /* القسم الأول — شبكة المعدات/الماكينة (chips أفقية مضغوطة) */
                 .ptw-manual-permit-modal .manual-section-1 .ptw-manual-equipment-body,
                 .ptw-form-equipment-body {
@@ -9859,7 +9912,8 @@ const PTW = {
                         <!-- القسم الأول: بيانات التصريح الأساسية -->
                         <div class="ptw-manual-form-section manual-section-1" style="margin-top: 0; border-top-left-radius: 0; border-top-right-radius: 0;">
                             <h3><i class="fas fa-info-circle"></i><span>القسم الأول : بيانات التصريح الأساسية</span></h3>
-                            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            <div class="ptw-s1-layout">
+                                <div class="ptw-s1-row ptw-s1-meta-grid">
                                 <div>
                                     <label class="block text-sm font-bold text-gray-700 mb-2">الموقع / القسم <span class="text-red-500">*</span></label>
                                     <select id="manual-permit-location" class="form-input transition-all focus:ring-2 focus:ring-blue-200" required>
@@ -9892,6 +9946,8 @@ const PTW = {
                                     <input type="datetime-local" id="manual-permit-time-to" class="form-input transition-all focus:ring-2 focus:ring-blue-200" required
                                         value="${existingEntry?.timeTo && existingEntry.timeTo !== 'غير محدد' ? Utils.toDateTimeLocalString(existingEntry.timeTo) : ''}">
                                 </div>
+                                </div>
+                                <div class="ptw-s1-row ptw-s1-parties-grid">
                                 <div>
                                     <label class="block text-sm font-bold text-gray-700 mb-2">الجهة المصرح لها بالعمل</label>
                                     <div class="relative">
@@ -9918,7 +9974,8 @@ const PTW = {
                                         </datalist>` : ''}
                                     </div>
                                 </div>
-                                <div class="md:col-span-3 manual-equipment-field-wrap">
+                                </div>
+                                <div class="ptw-s1-block ptw-s1-equipment manual-equipment-field-wrap">
                                     <label class="block text-sm font-bold text-gray-700 mb-2">المعدة / الماكينة / العملية</label>
                                     <div id="manual-equipment-matrix" class="ptw-manual-equipment-body">
                                         ${manualEquipmentMatrixHtml}
@@ -9928,13 +9985,13 @@ const PTW = {
                                         <textarea id="manual-equipment-notes" class="form-input bg-white w-full" rows="1" placeholder="معدات غير موجودة في القائمة...">${Utils.escapeHTML(manualEquipmentSelection.manualNotes || '')}</textarea>
                                     </div>
                                 </div>
-                                <div class="md:col-span-3">
+                                <div class="ptw-s1-block ptw-s1-tools">
                                     <label class="block text-sm font-bold text-gray-700 mb-2">الأدوات أو العدد (بعد فحصها وقبولها)</label>
                                     <textarea id="manual-permit-tools" class="form-input transition-all focus:ring-2 focus:ring-blue-200" rows="2" placeholder="أدخل قائمة الأدوات أو العدد">${Utils.escapeHTML(existingEntry?.tools || existingEntry?.toolsList || '')}</textarea>
                                 </div>
-                                <div class="md:col-span-3">
+                                <div class="ptw-s1-block ptw-s1-work-desc">
                                     <label class="block text-sm font-bold text-gray-700 mb-2">وصف العمل <span class="text-red-500">*</span></label>
-                                    <textarea id="manual-permit-work-description" class="form-input transition-all focus:ring-2 focus:ring-blue-200" rows="4" required placeholder="وصف تفصيلي للعمل">${Utils.escapeHTML(existingEntry?.workDescription || '')}</textarea>
+                                    <textarea id="manual-permit-work-description" class="form-input transition-all focus:ring-2 focus:ring-blue-200" rows="3" required placeholder="وصف تفصيلي للعمل">${Utils.escapeHTML(existingEntry?.workDescription || '')}</textarea>
                                 </div>
                             </div>
                             <input type="hidden" id="manual-permit-sequential" value="${sequentialNumber}">
@@ -13371,6 +13428,46 @@ const PTW = {
                 .ptw-section-1 { background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%); border-color: #2196F3; }
                 .ptw-section-1 h3 { color: #1565C0; border-color: #2196F3; }
                 .ptw-section-1 h3 i { color: #1976D2; background: rgba(33, 150, 243, 0.1); }
+                .ptw-s1-layout {
+                    display: flex;
+                    flex-direction: column;
+                    gap: 1rem;
+                    width: 100%;
+                }
+                .ptw-s1-row { width: 100%; }
+                .ptw-s1-meta-grid {
+                    display: grid;
+                    grid-template-columns: repeat(4, minmax(0, 1fr));
+                    gap: 1rem;
+                }
+                .ptw-s1-parties-grid {
+                    display: grid;
+                    grid-template-columns: repeat(2, minmax(0, 1fr));
+                    gap: 1rem;
+                    padding-top: 0.25rem;
+                    border-top: 1px solid rgba(148, 163, 184, 0.35);
+                }
+                .ptw-s1-block {
+                    width: 100%;
+                    padding: 0.65rem 0.75rem;
+                    background: rgba(255, 255, 255, 0.72);
+                    border: 1px solid rgba(148, 163, 184, 0.35);
+                    border-radius: 8px;
+                    box-sizing: border-box;
+                }
+                .ptw-s1-block > label:first-child { margin-bottom: 0.4rem; }
+                .ptw-s1-tools textarea,
+                .ptw-s1-work-desc textarea {
+                    min-height: 2.5rem;
+                    resize: vertical;
+                }
+                @media (max-width: 1100px) {
+                    .ptw-s1-meta-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+                }
+                @media (max-width: 640px) {
+                    .ptw-s1-meta-grid,
+                    .ptw-s1-parties-grid { grid-template-columns: 1fr; }
+                }
                 .ptw-form-equipment-body {
                     background: rgba(255, 255, 255, 0.92);
                     border: 1px solid #cbd5e1;
@@ -13757,7 +13854,8 @@ const PTW = {
                                 <i class="fas fa-info-circle"></i>
                                 <span>القسم الأول : بيانات التصريح الأساسية</span>
                              </h3>
-                            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            <div class="ptw-s1-layout">
+                                <div class="ptw-s1-row ptw-s1-meta-grid">
                                 <div>
                                     <label class="block text-sm font-bold text-gray-700 mb-2">الموقع / القسم <span class="text-red-500">*</span></label>
                                     <select id="ptw-location" name="location" required class="form-input transition-all focus:ring-2 focus:ring-blue-200">
@@ -13790,6 +13888,8 @@ const PTW = {
                                     <input type="datetime-local" id="ptw-endDate" name="endDate" required class="form-input transition-all focus:ring-2 focus:ring-blue-200"
                                         value="${ptwData?.endDate ? Utils.toDateTimeLocalString(ptwData.endDate) : ''}">
                                 </div>
+                                </div>
+                                <div class="ptw-s1-row ptw-s1-parties-grid">
                                 <div>
                                     <label class="block text-sm font-bold text-gray-700 mb-2">الجهة المصرح لها بالعمل</label>
                                     ${hasApprovedEntities ? `
@@ -13828,7 +13928,8 @@ const PTW = {
                                             value="${escapeHTML(requestingPartyValueForm)}" placeholder="الجهة الطالبة للتصريح">
                                     `}
                                 </div>
-                                <div class="md:col-span-3 ptw-equipment-field-wrap">
+                                </div>
+                                <div class="ptw-s1-block ptw-s1-equipment ptw-equipment-field-wrap">
                                     <label class="block text-sm font-bold text-gray-700 mb-2">المعدة / الماكينة / العملية</label>
                                     <div id="ptw-equipment-matrix" class="ptw-form-equipment-body">
                                         ${ptwEquipmentMatrixHtml}
@@ -13838,13 +13939,13 @@ const PTW = {
                                         <textarea id="ptw-equipment-notes" class="form-input bg-white w-full" rows="1" placeholder="معدات غير موجودة في القائمة...">${escapeHTML(ptwEquipmentSelection.manualNotes || '')}</textarea>
                                     </div>
                                 </div>
-                                <div class="md:col-span-3">
+                                <div class="ptw-s1-block ptw-s1-tools">
                                     <label class="block text-sm font-bold text-gray-700 mb-2">الأدوات أو العدد (بعد فحصها وقبولها)</label>
                                     <textarea id="ptw-tools" class="form-input transition-all focus:ring-2 focus:ring-blue-200" rows="2" placeholder="أدخل قائمة الأدوات أو العدد">${escapeHTML(ptwData?.tools || ptwData?.toolsList)}</textarea>
                                 </div>
-                                <div class="md:col-span-3">
+                                <div class="ptw-s1-block ptw-s1-work-desc">
                                     <label class="block text-sm font-bold text-gray-700 mb-2">وصف العمل <span class="text-red-500">*</span></label>
-                                    <textarea id="ptw-workDescription" name="workDescription" required class="form-input transition-all focus:ring-2 focus:ring-blue-200" rows="4"
+                                    <textarea id="ptw-workDescription" name="workDescription" required class="form-input transition-all focus:ring-2 focus:ring-blue-200" rows="3"
                                             placeholder="وصف تفصيلي للعمل">${escapeHTML(ptwData?.workDescription)}</textarea>
                                 </div>
                             </div>
