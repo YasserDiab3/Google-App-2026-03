@@ -8834,21 +8834,22 @@ const PTW = {
         const esc = Utils.escapeHTML;
         const isSel = (label) => this._equipmentSelectionIsChecked(label, selectedItems);
         const fixedRows = this.getManualFixedEquipmentRowLabels();
-        const fixedFlat = fixedRows.flat();
         const history = (Array.isArray(historyLabels) ? historyLabels : []).filter(Boolean);
 
         let html = '<div class="ptw-manual-equipment-fixed-wrap">';
-        html += '<div class="ptw-manual-equipment-chips-row ptw-manual-equipment-fixed-chips">';
-        fixedFlat.forEach((label) => {
-            const checked = isSel(label) ? ' checked' : '';
-            html += `<label class="ptw-manual-equipment-cell"><input type="checkbox" class="equipment-fixed-cb" value="${esc(label)}"${checked}><span>${esc(label)}</span></label>`;
+        fixedRows.forEach((row) => {
+            html += '<div class="ptw-manual-equipment-chips-row ptw-manual-equipment-grid-row">';
+            row.forEach((label) => {
+                const checked = isSel(label) ? ' checked' : '';
+                html += `<label class="ptw-manual-equipment-cell"><input type="checkbox" class="equipment-fixed-cb" value="${esc(label)}"${checked}><span class="ptw-manual-equipment-label">${esc(label)}</span></label>`;
+            });
+            html += '</div>';
         });
-        html += '</div>';
         if (history.length) {
             html += '<div class="ptw-manual-equipment-chips-row ptw-manual-equipment-history-row">';
             history.forEach((label) => {
                 const checked = isSel(label) ? ' checked' : '';
-                html += `<label class="ptw-manual-equipment-cell ptw-manual-equipment-history-cell"><input type="checkbox" class="equipment-history-cb" value="${esc(label)}"${checked}><span>${esc(label)}</span></label>`;
+                html += `<label class="ptw-manual-equipment-cell ptw-manual-equipment-history-cell"><input type="checkbox" class="equipment-history-cb" value="${esc(label)}"${checked}><span class="ptw-manual-equipment-label">${esc(label)}</span></label>`;
             });
             html += '</div>';
         }
@@ -9675,7 +9676,7 @@ const PTW = {
                     background: rgba(255, 255, 255, 0.92) !important;
                     border: 1px solid #cbd5e1 !important;
                     border-radius: 8px !important;
-                    padding: 7px 9px !important;
+                    padding: 8px 10px !important;
                     box-shadow: none;
                     width: 100%;
                     box-sizing: border-box;
@@ -9718,44 +9719,60 @@ const PTW = {
                 .ptw-form-equipment-body .ptw-manual-equipment-fixed-wrap {
                     display: flex;
                     flex-direction: column;
-                    gap: 4px;
+                    gap: 5px;
                     width: 100%;
                 }
                 .ptw-manual-permit-modal .manual-section-1 .ptw-manual-equipment-chips-row,
                 .ptw-form-equipment-body .ptw-manual-equipment-chips-row {
-                    display: flex;
-                    flex-wrap: wrap;
-                    align-items: center;
-                    align-content: flex-start;
-                    gap: 5px 6px;
                     direction: rtl;
                     margin: 0;
+                    width: 100%;
+                }
+                .ptw-manual-permit-modal .manual-section-1 .ptw-manual-equipment-grid-row,
+                .ptw-form-equipment-body .ptw-manual-equipment-grid-row {
+                    display: grid;
+                    grid-template-columns: repeat(9, minmax(0, 1fr));
+                    gap: 4px 5px;
+                    align-items: stretch;
                 }
                 .ptw-manual-permit-modal .manual-section-1 .ptw-manual-equipment-history-row,
                 .ptw-form-equipment-body .ptw-manual-equipment-history-row {
-                    padding-top: 5px;
-                    margin-top: 1px;
+                    display: flex;
+                    flex-wrap: wrap;
+                    align-items: center;
+                    gap: 4px 5px;
+                    padding-top: 6px;
+                    margin-top: 2px;
                     border-top: 1px dashed #e2e8f0;
                 }
                 .ptw-manual-permit-modal .manual-section-1 .ptw-manual-equipment-cell,
                 .ptw-form-equipment-body .ptw-manual-equipment-cell {
-                    display: inline-flex;
+                    display: flex;
                     align-items: center;
-                    gap: 4px;
-                    font-size: 0.72rem;
+                    justify-content: center;
+                    font-size: 0.7rem;
                     font-weight: 500;
                     color: #475569 !important;
                     cursor: pointer;
                     direction: rtl;
-                    line-height: 1.2;
-                    white-space: nowrap;
-                    padding: 3px 9px;
+                    line-height: 1.25;
+                    text-align: center;
+                    padding: 5px 4px;
                     border: 1px solid #cbd5e1;
-                    border-radius: 999px;
+                    border-radius: 6px;
                     background: #f8fafc;
-                    min-height: 0;
+                    min-height: 28px;
                     min-width: 0;
-                    transition: border-color 0.15s ease, background 0.15s ease, color 0.15s ease;
+                    transition: border-color 0.15s ease, background 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
+                    user-select: none;
+                }
+                .ptw-manual-permit-modal .manual-section-1 .ptw-manual-equipment-label,
+                .ptw-form-equipment-body .ptw-manual-equipment-label {
+                    display: block;
+                    width: 100%;
+                    min-width: 0;
+                    word-break: break-word;
+                    line-height: 1.25;
                 }
                 .ptw-manual-permit-modal .manual-section-1 .ptw-manual-equipment-cell:hover,
                 .ptw-form-equipment-body .ptw-manual-equipment-cell:hover {
@@ -9768,32 +9785,49 @@ const PTW = {
                     background: #eff6ff;
                     color: #1d4ed8 !important;
                     font-weight: 600;
+                    box-shadow: inset 0 0 0 1px rgba(59, 130, 246, 0.25);
                 }
                 .ptw-manual-permit-modal .manual-section-1 .ptw-manual-equipment-history-cell,
                 .ptw-form-equipment-body .ptw-manual-equipment-history-cell {
+                    display: inline-flex;
                     border-style: dashed;
                     background: #fafafa;
+                    padding: 4px 8px;
+                    min-height: 26px;
+                    white-space: nowrap;
                 }
                 .ptw-manual-permit-modal .manual-section-1 .ptw-manual-equipment-cell input[type="checkbox"],
                 .ptw-form-equipment-body .ptw-manual-equipment-cell input[type="checkbox"] {
-                    flex-shrink: 0;
-                    width: 11px;
-                    height: 11px;
-                    margin: 0;
-                    accent-color: #2563eb;
-                    cursor: pointer;
+                    position: absolute !important;
+                    opacity: 0 !important;
+                    width: 0 !important;
+                    height: 0 !important;
+                    min-width: 0 !important;
+                    min-height: 0 !important;
+                    margin: 0 !important;
+                    padding: 0 !important;
+                    pointer-events: none;
                 }
                 .ptw-manual-permit-modal .manual-section-1 .manual-equipment-field-wrap > label,
                 .ptw-section-1 .ptw-equipment-field-wrap > label {
                     margin-bottom: 0.35rem;
                 }
+                @media (max-width: 1200px) {
+                    .ptw-manual-permit-modal .manual-section-1 .ptw-manual-equipment-grid-row,
+                    .ptw-form-equipment-body .ptw-manual-equipment-grid-row {
+                        grid-template-columns: repeat(6, minmax(0, 1fr));
+                    }
+                }
+                @media (max-width: 900px) {
+                    .ptw-manual-permit-modal .manual-section-1 .ptw-manual-equipment-grid-row,
+                    .ptw-form-equipment-body .ptw-manual-equipment-grid-row {
+                        grid-template-columns: repeat(3, minmax(0, 1fr));
+                    }
+                }
                 @media (max-width: 640px) {
-                    .ptw-manual-permit-modal .manual-section-1 .ptw-manual-equipment-cell,
-                    .ptw-form-equipment-body .ptw-manual-equipment-cell {
-                        font-size: 0.68rem;
-                        padding: 2px 7px;
-                        white-space: normal;
-                        max-width: 100%;
+                    .ptw-manual-permit-modal .manual-section-1 .ptw-manual-equipment-grid-row,
+                    .ptw-form-equipment-body .ptw-manual-equipment-grid-row {
+                        grid-template-columns: repeat(2, minmax(0, 1fr));
                     }
                     .ptw-manual-permit-modal .manual-section-1 .ptw-manual-equipment-notes-frame,
                     .ptw-form-equipment-notes-frame {
@@ -13472,7 +13506,7 @@ const PTW = {
                     background: rgba(255, 255, 255, 0.92);
                     border: 1px solid #cbd5e1;
                     border-radius: 8px;
-                    padding: 7px 9px;
+                    padding: 8px 10px;
                     width: 100%;
                     box-sizing: border-box;
                 }
@@ -13505,35 +13539,49 @@ const PTW = {
                 .ptw-form-equipment-body .ptw-manual-equipment-fixed-wrap {
                     display: flex;
                     flex-direction: column;
-                    gap: 4px;
+                    gap: 5px;
                 }
                 .ptw-form-equipment-body .ptw-manual-equipment-chips-row {
-                    display: flex;
-                    flex-wrap: wrap;
-                    align-items: center;
-                    gap: 5px 6px;
                     direction: rtl;
+                    width: 100%;
+                }
+                .ptw-form-equipment-body .ptw-manual-equipment-grid-row {
+                    display: grid;
+                    grid-template-columns: repeat(9, minmax(0, 1fr));
+                    gap: 4px 5px;
                 }
                 .ptw-form-equipment-body .ptw-manual-equipment-history-row {
-                    padding-top: 5px;
-                    margin-top: 1px;
+                    display: flex;
+                    flex-wrap: wrap;
+                    gap: 4px 5px;
+                    padding-top: 6px;
+                    margin-top: 2px;
                     border-top: 1px dashed #e2e8f0;
                 }
                 .ptw-form-equipment-body .ptw-manual-equipment-cell {
-                    display: inline-flex;
+                    display: flex;
                     align-items: center;
-                    gap: 4px;
-                    font-size: 0.72rem;
+                    justify-content: center;
+                    font-size: 0.7rem;
                     font-weight: 500;
                     color: #475569;
                     cursor: pointer;
-                    line-height: 1.2;
-                    white-space: nowrap;
-                    padding: 3px 9px;
+                    line-height: 1.25;
+                    text-align: center;
+                    padding: 5px 4px;
                     border: 1px solid #cbd5e1;
-                    border-radius: 999px;
+                    border-radius: 6px;
                     background: #f8fafc;
-                    transition: border-color 0.15s ease, background 0.15s ease;
+                    min-height: 28px;
+                    min-width: 0;
+                    transition: border-color 0.15s ease, background 0.15s ease, color 0.15s ease;
+                    user-select: none;
+                }
+                .ptw-form-equipment-body .ptw-manual-equipment-label {
+                    display: block;
+                    width: 100%;
+                    word-break: break-word;
+                    line-height: 1.25;
                 }
                 .ptw-form-equipment-body .ptw-manual-equipment-cell:hover {
                     border-color: #94a3b8;
@@ -13544,18 +13592,43 @@ const PTW = {
                     background: #eff6ff;
                     color: #1d4ed8;
                     font-weight: 600;
+                    box-shadow: inset 0 0 0 1px rgba(59, 130, 246, 0.25);
                 }
                 .ptw-form-equipment-body .ptw-manual-equipment-history-cell {
+                    display: inline-flex;
                     border-style: dashed;
                     background: #fafafa;
+                    padding: 4px 8px;
+                    min-height: 26px;
+                    white-space: nowrap;
                 }
                 .ptw-form-equipment-body .ptw-manual-equipment-cell input[type="checkbox"] {
-                    width: 11px;
-                    height: 11px;
-                    margin: 0;
-                    accent-color: #2563eb;
+                    position: absolute !important;
+                    opacity: 0 !important;
+                    width: 0 !important;
+                    height: 0 !important;
+                    min-width: 0 !important;
+                    min-height: 0 !important;
+                    margin: 0 !important;
+                    padding: 0 !important;
+                    pointer-events: none;
                 }
                 .ptw-section-1 .ptw-equipment-field-wrap > label { margin-bottom: 0.35rem; }
+                @media (max-width: 1200px) {
+                    .ptw-form-equipment-body .ptw-manual-equipment-grid-row {
+                        grid-template-columns: repeat(6, minmax(0, 1fr));
+                    }
+                }
+                @media (max-width: 900px) {
+                    .ptw-form-equipment-body .ptw-manual-equipment-grid-row {
+                        grid-template-columns: repeat(3, minmax(0, 1fr));
+                    }
+                }
+                @media (max-width: 640px) {
+                    .ptw-form-equipment-body .ptw-manual-equipment-grid-row {
+                        grid-template-columns: repeat(2, minmax(0, 1fr));
+                    }
+                }
                 
                 .ptw-section-2 { background: linear-gradient(135deg, #e0f2f1 0%, #b2dfdb 100%); border-color: #009688; }
                 .ptw-section-2 h3 { color: #00695C; border-color: #009688; }
