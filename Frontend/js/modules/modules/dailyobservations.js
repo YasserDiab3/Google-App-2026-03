@@ -3660,7 +3660,7 @@ const DailyObservations = {
         .obs-exec-badge{display:inline-block;padding:2px 9px;border-radius:99px;font-size:11px;font-weight:700;}
         .obs-exec-heat-grid{display:grid;gap:4px;overflow-x:auto;}
         .obs-exec-heat-cell{padding:9px 4px;text-align:center;border-radius:6px;font-size:11px;font-weight:700;}
-        .obs-exec-heat-head{font-size:11px;font-weight:700;color:var(--text-secondary);text-align:center;padding:6px 4px;}
+        .obs-exec-heat-head{font-size:11px;font-weight:700;color:var(--text-secondary);text-align:center;padding:6px 2px;white-space:nowrap;}
         .obs-exec-heat-row-label{font-size:12px;color:var(--text-primary);font-weight:600;display:flex;align-items:center;padding-inline-end:8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
         [data-theme="dark"] .obs-exec-insight--good{color:#34d399;}
         [data-theme="dark"] .obs-exec-insight--warn{color:#fbbf24;}
@@ -3682,13 +3682,16 @@ const DailyObservations = {
                 </div>
             </div>`;
         return `
-        <div class="obs-exec-wrap">
+        <div class="obs-exec-wrap" id="obs-exec-root">
             <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:16px;">
                 <div>
                     <h2 style="font-size:18px;font-weight:800;color:var(--text-primary);margin:0;"><i class="fas fa-gauge-high ml-2" style="color:var(--primary-color);"></i>لوحة الذكاء الوقائي التنفيذية</h2>
                     <p style="font-size:13px;color:var(--text-secondary);margin:4px 0 0;">مؤشرات أداء أمنية رائدة — تبليغ الحوادث الوشيكة وأداء إغلاق الإجراءات التصحيحية</p>
                 </div>
-                <button type="button" id="obs-exec-refresh-btn" class="btn-secondary"><i class="fas fa-sync-alt ml-2"></i>تحديث المؤشرات</button>
+                <div id="obs-exec-actions" style="display:flex;gap:8px;flex-wrap:wrap;">
+                    <button type="button" id="obs-exec-export-btn" class="btn-success"><i class="fas fa-file-pdf ml-2"></i>تصدير التقرير PDF</button>
+                    <button type="button" id="obs-exec-refresh-btn" class="btn-secondary"><i class="fas fa-sync-alt ml-2"></i>تحديث المؤشرات</button>
+                </div>
             </div>
             <div id="obs-exec-insights" class="obs-exec-insights"></div>
             <div id="obs-exec-kpi-strip" class="obs-exec-kpi-grid"></div>
@@ -3730,6 +3733,11 @@ const DailyObservations = {
             if (btn && !btn._execBound) {
                 btn._execBound = true;
                 btn.addEventListener('click', () => { try { this.loadExecutiveDashboard(); } catch (e) {} });
+            }
+            const exBtn = document.getElementById('obs-exec-export-btn');
+            if (exBtn && !exBtn._execBound) {
+                exBtn._execBound = true;
+                exBtn.addEventListener('click', () => { try { this._exportExecutivePDF(); } catch (e) {} });
             }
         } catch (e) {
             Utils?.safeWarn?.('⚠️ loadExecutiveDashboard:', e?.message || e);
@@ -3816,7 +3824,7 @@ const DailyObservations = {
         const months = [];
         for (let i = 5; i >= 0; i--) {
             const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-            months.push({ y: d.getFullYear(), m: d.getMonth(), label: arabicMonths[d.getMonth()].slice(0, 4) });
+            months.push({ y: d.getFullYear(), m: d.getMonth(), label: `${arabicMonths[d.getMonth()]} ${String(d.getFullYear()).slice(2)}` });
         }
         const deptCount = {};
         overdue.forEach(o => { const d = o.responsibleDepartment || 'غير محدد'; deptCount[d] = (deptCount[d] || 0) + 1; });
@@ -3828,7 +3836,7 @@ const DailyObservations = {
         }).length;
         let max = 1;
         depts.forEach(dp => months.forEach(mo => { max = Math.max(max, cell(dp, mo)); }));
-        const cols = `160px repeat(${months.length}, minmax(48px,1fr))`;
+        const cols = `minmax(120px,160px) repeat(${months.length}, minmax(64px,1fr))`;
         let html = `<div class="obs-exec-heat-grid" style="grid-template-columns:${cols};">`;
         html += `<div class="obs-exec-heat-head"></div>` + months.map(mo => `<div class="obs-exec-heat-head">${mo.label}</div>`).join('');
         depts.forEach(dp => {
@@ -3843,6 +3851,93 @@ const DailyObservations = {
         });
         html += `</div>`;
         host.innerHTML = html;
+    },
+
+    // ── تصدير تقرير PDF بهيدر وفوتر بنفس تصميم اللوحة (تحميل مباشر) ──
+    async _exportExecutivePDF() {
+        const root = document.getElementById('obs-exec-root');
+        if (!root) return;
+        const btn = document.getElementById('obs-exec-export-btn');
+        const origHtml = btn ? btn.innerHTML : '';
+        if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>'; }
+        const actions = document.getElementById('obs-exec-actions');
+        if (actions) actions.style.visibility = 'hidden';
+        try {
+            await this._loadAnalyticsLib('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js', () => typeof html2canvas !== 'undefined');
+            await this._loadAnalyticsLib('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js', () => typeof window.jspdf !== 'undefined');
+
+            const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+            const canvas = await html2canvas(root, {
+                scale: 1.8, useCORS: true,
+                backgroundColor: isDark ? '#1a1a1a' : '#f8fafc',
+                scrollX: 0, scrollY: -window.scrollY, logging: false
+            });
+
+            const { jsPDF } = window.jspdf;
+            const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+            const pdfW = pdf.internal.pageSize.getWidth();
+            const pdfH = pdf.internal.pageSize.getHeight();
+            const margin = 10;
+            const headerH = 16;
+            const footerH = 12;
+            const contentW = pdfW - margin * 2;
+            const ratio = contentW / canvas.width;
+            const totalContentH = canvas.height * ratio;
+            const dateStr = new Date().toLocaleDateString('en-GB');
+
+            const addHeader = (pageNum, totalPages) => {
+                pdf.setFillColor(30, 58, 138);
+                pdf.rect(0, 0, pdfW, headerH, 'F');
+                pdf.setTextColor(255, 255, 255);
+                pdf.setFontSize(11); pdf.setFont('helvetica', 'bold');
+                pdf.text('QHSSE-GLOBAL', margin, 7);
+                pdf.setFontSize(8.5); pdf.setFont('helvetica', 'normal');
+                pdf.text('Executive Safety Intelligence Report', margin, 12.5);
+                pdf.text(`${dateStr}   |   ${pageNum}/${totalPages}`, pdfW - margin, 9, { align: 'right' });
+                pdf.setTextColor(0, 0, 0);
+            };
+            const addFooter = (pageNum, totalPages) => {
+                pdf.setDrawColor(226, 232, 240);
+                pdf.line(margin, pdfH - footerH, pdfW - margin, pdfH - footerH);
+                pdf.setTextColor(120, 120, 120);
+                pdf.setFontSize(8); pdf.setFont('helvetica', 'normal');
+                pdf.text('Daily Observations Module - Confidential', margin, pdfH - 5);
+                pdf.text(`Page ${pageNum} / ${totalPages}`, pdfW - margin, pdfH - 5, { align: 'right' });
+                pdf.setTextColor(0, 0, 0);
+            };
+
+            const pageContentH = pdfH - headerH - footerH - 2;
+            const totalPages = Math.max(1, Math.ceil(totalContentH / pageContentH));
+            const pageHeightPx = pageContentH / ratio;
+
+            for (let p = 0; p < totalPages; p++) {
+                if (p > 0) pdf.addPage();
+                addHeader(p + 1, totalPages);
+                const sliceCanvas = document.createElement('canvas');
+                const sliceH = Math.min(pageHeightPx, canvas.height - p * pageHeightPx);
+                sliceCanvas.width = canvas.width;
+                sliceCanvas.height = sliceH;
+                const ctx = sliceCanvas.getContext('2d');
+                ctx.drawImage(canvas, 0, p * pageHeightPx, canvas.width, sliceH, 0, 0, canvas.width, sliceH);
+                const sliceData = sliceCanvas.toDataURL('image/jpeg', 0.92);
+                pdf.addImage(sliceData, 'JPEG', margin, headerH + 1, contentW, sliceH * ratio);
+                addFooter(p + 1, totalPages);
+            }
+
+            const dateFile = new Date().toISOString().slice(0, 10);
+            pdf.save(`تقرير-المؤشرات-التنفيذية-${dateFile}.pdf`);
+            if (typeof Notification !== 'undefined' && Notification.success) {
+                Notification.success('تم تصدير التقرير PDF بنجاح');
+            }
+        } catch (err) {
+            console.error('Exec PDF export error:', err);
+            if (typeof Notification !== 'undefined' && Notification.error) {
+                Notification.error('تعذّر تصدير التقرير — تأكد من الاتصال بالإنترنت وأعد المحاولة');
+            }
+        } finally {
+            if (actions) actions.style.visibility = '';
+            if (btn) { btn.disabled = false; btn.innerHTML = origHtml; }
+        }
     },
 
     // ── أداة عامة لإظهار/إخفاء حالة الفراغ ──
