@@ -157,11 +157,135 @@
 }
 
 .sc-calendar-root {
-    background: #fff;
+    background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
     border: 1px solid #e2e8f0;
-    border-radius: 14px;
-    padding: 0.75rem;
+    border-radius: 16px;
+    padding: 1rem;
     min-height: 520px;
+    box-shadow: 0 4px 24px rgba(15, 23, 42, 0.06);
+}
+
+/* ── شبكة التقويم ── */
+.sc-calendar-root .fc-theme-standard td,
+.sc-calendar-root .fc-theme-standard th,
+.sc-dash-calendar-root .fc-theme-standard td,
+.sc-dash-calendar-root .fc-theme-standard th {
+    border-color: #e8edf5 !important;
+}
+
+.sc-calendar-root .fc-col-header-cell,
+.sc-dash-calendar-root .fc-col-header-cell {
+    background: linear-gradient(180deg, #f8fafc 0%, #eef2f7 100%);
+    padding: 0.5rem 0 !important;
+}
+
+.sc-calendar-root .fc-col-header-cell-cushion,
+.sc-dash-calendar-root .fc-col-header-cell-cushion {
+    font-size: 0.82rem;
+    font-weight: 800;
+    color: #475569;
+    padding: 0.35rem 0.25rem;
+}
+
+.sc-calendar-root .fc-daygrid-day-frame {
+    min-height: 4.5rem;
+    transition: background 0.15s ease;
+}
+
+.sc-dash-calendar-root .fc-daygrid-day-frame {
+    min-height: 2.75rem;
+    transition: background 0.15s ease;
+}
+
+.sc-calendar-root .fc-daygrid-day-top,
+.sc-dash-calendar-root .fc-daygrid-day-top {
+    flex-direction: row;
+    justify-content: flex-start;
+    padding: 0.2rem 0.35rem;
+}
+
+.sc-calendar-root .fc-daygrid-day-number,
+.sc-dash-calendar-root .fc-daygrid-day-number {
+    font-size: 0.82rem;
+    font-weight: 800;
+    color: #334155;
+    padding: 0.25rem 0.45rem;
+    border-radius: 8px;
+    line-height: 1.2;
+}
+
+.sc-calendar-root .fc-day-other .fc-daygrid-day-number,
+.sc-dash-calendar-root .fc-day-other .fc-daygrid-day-number {
+    color: #94a3b8;
+    opacity: 0.75;
+}
+
+.sc-calendar-root .fc-day-today .fc-daygrid-day-frame,
+.sc-dash-calendar-root .fc-day-today .fc-daygrid-day-frame {
+    background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%) !important;
+    box-shadow: inset 0 0 0 2px #93c5fd;
+}
+
+.sc-calendar-root .fc-day-today .fc-daygrid-day-number,
+.sc-dash-calendar-root .fc-day-today .fc-daygrid-day-number {
+    background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+    color: #fff !important;
+    box-shadow: 0 2px 6px rgba(37, 99, 235, 0.35);
+}
+
+.sc-calendar-root .fc-daygrid-day:hover .fc-daygrid-day-frame,
+.sc-dash-calendar-root .fc-daygrid-day:hover .fc-daygrid-day-frame {
+    background: #f1f5f9;
+}
+
+/* ── تمييز الجمعة والسبت (عطلة نهاية الأسبوع) ── */
+.sc-calendar-root .fc-daygrid-day.sc-weekend-fri .fc-daygrid-day-frame,
+.sc-dash-calendar-root .fc-daygrid-day.sc-weekend-fri .fc-daygrid-day-frame {
+    background: linear-gradient(180deg, #fffbeb 0%, #fef3c7 55%, #fde68a 100%) !important;
+}
+
+.sc-calendar-root .fc-daygrid-day.sc-weekend-sat .fc-daygrid-day-frame,
+.sc-dash-calendar-root .fc-daygrid-day.sc-weekend-sat .fc-daygrid-day-frame {
+    background: linear-gradient(180deg, #fff1f2 0%, #ffe4e6 55%, #fecdd3 100%) !important;
+}
+
+.sc-calendar-root .fc-col-header-cell.sc-weekend-fri,
+.sc-dash-calendar-root .fc-col-header-cell.sc-weekend-fri {
+    background: linear-gradient(180deg, #fef3c7 0%, #fde68a 100%) !important;
+    box-shadow: inset 0 -3px 0 #f59e0b;
+}
+
+.sc-calendar-root .fc-col-header-cell.sc-weekend-sat,
+.sc-dash-calendar-root .fc-col-header-cell.sc-weekend-sat {
+    background: linear-gradient(180deg, #ffe4e6 0%, #fecdd3 100%) !important;
+    box-shadow: inset 0 -3px 0 #f43f5e;
+}
+
+.sc-calendar-root .fc-col-header-cell.sc-weekend-fri .fc-col-header-cell-cushion,
+.sc-dash-calendar-root .fc-col-header-cell.sc-weekend-fri .fc-col-header-cell-cushion {
+    color: #b45309;
+}
+
+.sc-calendar-root .fc-col-header-cell.sc-weekend-sat .fc-col-header-cell-cushion,
+.sc-dash-calendar-root .fc-col-header-cell.sc-weekend-sat .fc-col-header-cell-cushion {
+    color: #be123c;
+}
+
+.sc-calendar-root .fc-daygrid-day.sc-weekend-fri .fc-daygrid-day-number,
+.sc-dash-calendar-root .fc-daygrid-day.sc-weekend-fri .fc-daygrid-day-number {
+    color: #b45309;
+}
+
+.sc-calendar-root .fc-daygrid-day.sc-weekend-sat .fc-daygrid-day-number,
+.sc-dash-calendar-root .fc-daygrid-day.sc-weekend-sat .fc-daygrid-day-number {
+    color: #be123c;
+}
+
+.sc-calendar-root .fc-day-today.sc-weekend-fri .fc-daygrid-day-frame,
+.sc-calendar-root .fc-day-today.sc-weekend-sat .fc-daygrid-day-frame,
+.sc-dash-calendar-root .fc-day-today.sc-weekend-fri .fc-daygrid-day-frame,
+.sc-dash-calendar-root .fc-day-today.sc-weekend-sat .fc-daygrid-day-frame {
+    box-shadow: inset 0 0 0 2px #6366f1, 0 0 0 1px rgba(99, 102, 241, 0.2);
 }
 
 .sc-truncated-warn {
@@ -355,10 +479,11 @@
 
 .sc-dash-mini-wrap {
     border: 1px solid #e2e8f0;
-    border-radius: 12px;
-    padding: 0.5rem;
-    background: #fff;
+    border-radius: 14px;
+    padding: 0.65rem;
+    background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
     min-height: 280px;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8);
 }
 
 .sc-dash-list-title {
@@ -513,44 +638,54 @@
     cursor: not-allowed;
 }
 
-/* ── مجموعة السابق / التالي ── */
+/* ── مجموعة السابق / التالي — تصميم مميز ── */
 .sc-calendar-root .fc .fc-button-group:has(.fc-prev-button),
 .sc-dash-calendar-root .fc .fc-button-group:has(.fc-prev-button) {
     display: inline-flex;
     align-items: center;
-    gap: 2px;
-    padding: 4px;
+    gap: 6px;
+    padding: 5px 6px !important;
     border-radius: 999px !important;
     overflow: visible;
-    background: linear-gradient(145deg, #f8fafc 0%, #eef2ff 55%, #e0e7ff 100%) !important;
-    border: 1px solid #c7d2fe !important;
+    background: linear-gradient(135deg, #1e1b4b 0%, #312e81 40%, #4338ca 100%) !important;
+    border: none !important;
     box-shadow:
-        0 2px 10px rgba(79, 70, 229, 0.12),
-        inset 0 1px 0 rgba(255, 255, 255, 0.85);
+        0 4px 16px rgba(49, 46, 129, 0.4),
+        0 1px 3px rgba(15, 23, 42, 0.12),
+        inset 0 1px 0 rgba(255, 255, 255, 0.12);
+    position: relative;
+}
+
+.sc-calendar-root .fc .fc-button-group:has(.fc-prev-button)::after,
+.sc-dash-calendar-root .fc .fc-button-group:has(.fc-prev-button)::after {
+    content: '';
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    width: 1px;
+    height: 22px;
+    background: rgba(255, 255, 255, 0.25);
+    pointer-events: none;
 }
 
 .sc-calendar-root .fc .fc-button-group > .fc-button,
 .sc-dash-calendar-root .fc .fc-button-group > .fc-button {
-    border-radius: 0 !important;
+    border-radius: 50% !important;
     margin: 0 !important;
-    border: none !important;
-    min-height: 38px;
-    box-shadow: none !important;
+    border: 2px solid rgba(255, 255, 255, 0.35) !important;
+    min-height: unset;
+    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.15) !important;
 }
 
 .sc-calendar-root .fc .fc-button-group > .fc-button:first-child,
-.sc-dash-calendar-root .fc .fc-button-group > .fc-button:first-child {
-    border-start-start-radius: 999px !important;
-    border-end-start-radius: 999px !important;
-}
-
+.sc-dash-calendar-root .fc .fc-button-group > .fc-button:first-child,
 .sc-calendar-root .fc .fc-button-group > .fc-button:last-child,
 .sc-dash-calendar-root .fc .fc-button-group > .fc-button:last-child {
-    border-start-end-radius: 999px !important;
-    border-end-end-radius: 999px !important;
+    border-radius: 50% !important;
 }
 
-/* أزرار السابق والتالي — chevron CSS */
+/* أزرار السابق والتالي — دوائر بيضاء + سهم */
 .sc-calendar-root .fc-prev-button,
 .sc-calendar-root .fc-next-button,
 .sc-dash-calendar-root .fc-prev-button,
@@ -558,20 +693,22 @@
     display: inline-flex !important;
     align-items: center;
     justify-content: center;
-    gap: 0.4rem;
-    padding: 0.5rem 0.85rem !important;
-    min-width: 2.85rem;
+    gap: 0;
+    padding: 0 !important;
+    min-width: 40px !important;
+    width: 40px !important;
+    height: 40px !important;
     position: relative;
-    background: transparent !important;
+    background: rgba(255, 255, 255, 0.96) !important;
     color: #4338ca !important;
-    transition: background 0.18s ease, color 0.18s ease, transform 0.12s ease, box-shadow 0.18s ease;
+    transition: transform 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
 }
 
 .sc-calendar-root .fc-prev-button .fc-button-text,
-.sc-calendar-root .fc-next-button .fc-button-text {
-    font-size: 0.78rem;
-    font-weight: 700;
-    letter-spacing: 0.01em;
+.sc-calendar-root .fc-next-button .fc-button-text,
+.sc-dash-calendar-root .fc-prev-button .fc-button-text,
+.sc-dash-calendar-root .fc-next-button .fc-button-text {
+    display: none !important;
 }
 
 .sc-calendar-root .fc-prev-button::before,
@@ -580,45 +717,50 @@
 .sc-dash-calendar-root .fc-next-button::before {
     content: '';
     display: block;
-    width: 7px;
-    height: 7px;
-    border-right: 2.5px solid currentColor;
-    border-bottom: 2.5px solid currentColor;
+    width: 9px;
+    height: 9px;
+    border-right: 3px solid #4338ca;
+    border-bottom: 3px solid #4338ca;
     flex-shrink: 0;
-    opacity: 0.92;
-    transition: border-color 0.18s ease;
+    transition: border-color 0.18s ease, transform 0.18s ease;
 }
 
 /* RTL: السابق → يمين ، التالي → يسار */
 .sc-calendar-root .fc-prev-button::before,
 .sc-dash-calendar-root .fc-prev-button::before {
     transform: rotate(-135deg);
-    margin-inline-start: 2px;
 }
 
 .sc-calendar-root .fc-next-button::before,
 .sc-dash-calendar-root .fc-next-button::before {
     transform: rotate(45deg);
-    margin-inline-end: 2px;
 }
 
 .sc-calendar-root .fc-prev-button:hover:not(:disabled),
 .sc-calendar-root .fc-next-button:hover:not(:disabled),
 .sc-dash-calendar-root .fc-prev-button:hover:not(:disabled),
 .sc-dash-calendar-root .fc-next-button:hover:not(:disabled) {
-    background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%) !important;
-    color: #fff !important;
-    box-shadow: 0 3px 10px rgba(79, 70, 229, 0.35) !important;
+    background: #fff !important;
+    transform: scale(1.1);
+    box-shadow: 0 4px 14px rgba(99, 102, 241, 0.45) !important;
+    border-color: #fff !important;
+}
+
+.sc-calendar-root .fc-prev-button:hover:not(:disabled)::before,
+.sc-calendar-root .fc-next-button:hover:not(:disabled)::before,
+.sc-dash-calendar-root .fc-prev-button:hover:not(:disabled)::before,
+.sc-dash-calendar-root .fc-next-button:hover:not(:disabled)::before {
+    border-color: #312e81;
 }
 
 .sc-calendar-root .fc-prev-button:active:not(:disabled),
 .sc-calendar-root .fc-next-button:active:not(:disabled),
 .sc-dash-calendar-root .fc-prev-button:active:not(:disabled),
 .sc-dash-calendar-root .fc-next-button:active:not(:disabled) {
-    transform: scale(0.94);
+    transform: scale(0.95);
 }
 
-/* ── لوحة التحكم: pill مدمج — أيقونة فقط ── */
+/* ── لوحة التحكم: نفس مجموعة التنقل ── */
 .sc-dash-calendar-root.sc-fc-compact-nav .fc-header-toolbar,
 .sc-dash-calendar-root .sc-fc-compact-nav .fc-header-toolbar {
     margin-bottom: 0.65rem !important;
@@ -626,11 +768,8 @@
 
 .sc-dash-calendar-root.sc-fc-compact-nav .fc .fc-button-group:has(.fc-prev-button),
 .sc-dash-calendar-root .sc-fc-compact-nav .fc .fc-button-group:has(.fc-prev-button) {
-    padding: 3px;
-    gap: 1px;
-    box-shadow:
-        0 2px 8px rgba(79, 70, 229, 0.14),
-        inset 0 1px 0 rgba(255, 255, 255, 0.9);
+    padding: 4px 5px !important;
+    gap: 5px;
 }
 
 .sc-dash-calendar-root.sc-fc-compact-nav .fc-prev-button,
@@ -640,62 +779,21 @@
     min-width: 36px !important;
     width: 36px !important;
     height: 36px !important;
-    padding: 0 !important;
-    border-radius: 50% !important;
-}
-
-.sc-dash-calendar-root.sc-fc-compact-nav .fc .fc-button-group > .fc-button:first-child,
-.sc-dash-calendar-root.sc-fc-compact-nav .fc .fc-button-group > .fc-button:last-child,
-.sc-dash-calendar-root .sc-fc-compact-nav .fc .fc-button-group > .fc-button:first-child,
-.sc-dash-calendar-root .sc-fc-compact-nav .fc .fc-button-group > .fc-button:last-child {
-    border-radius: 50% !important;
-}
-
-.sc-dash-calendar-root.sc-fc-compact-nav .fc-prev-button .fc-button-text,
-.sc-dash-calendar-root.sc-fc-compact-nav .fc-next-button .fc-button-text,
-.sc-dash-calendar-root .sc-fc-compact-nav .fc-prev-button .fc-button-text,
-.sc-dash-calendar-root .sc-fc-compact-nav .fc-next-button .fc-button-text {
-    display: none !important;
 }
 
 .sc-dash-calendar-root.sc-fc-compact-nav .fc-prev-button::before,
 .sc-dash-calendar-root.sc-fc-compact-nav .fc-next-button::before,
 .sc-dash-calendar-root .sc-fc-compact-nav .fc-prev-button::before,
 .sc-dash-calendar-root .sc-fc-compact-nav .fc-next-button::before {
-    content: '' !important;
-    display: block !important;
     width: 8px;
     height: 8px;
-    margin: 0 !important;
     border-width: 2.5px;
-}
-
-.sc-dash-calendar-root.sc-fc-compact-nav .fc-prev-button::before,
-.sc-dash-calendar-root .sc-fc-compact-nav .fc-prev-button::before {
-    transform: rotate(-135deg) translate(-1px, 1px);
-}
-
-.sc-dash-calendar-root.sc-fc-compact-nav .fc-next-button::before,
-.sc-dash-calendar-root .sc-fc-compact-nav .fc-next-button::before {
-    transform: rotate(45deg) translate(1px, -1px);
-}
-
-.sc-dash-calendar-root.sc-fc-compact-nav .fc-prev-button:hover:not(:disabled),
-.sc-dash-calendar-root.sc-fc-compact-nav .fc-next-button:hover:not(:disabled),
-.sc-dash-calendar-root .sc-fc-compact-nav .fc-prev-button:hover:not(:disabled),
-.sc-dash-calendar-root .sc-fc-compact-nav .fc-next-button:hover:not(:disabled) {
-    background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%) !important;
-    color: #fff !important;
 }
 
 .sc-dash-calendar-root.sc-fc-compact-nav .fc-toolbar-chunk,
 .sc-dash-calendar-root .sc-fc-compact-nav .fc-toolbar-chunk {
     display: flex;
     align-items: center;
-}
-
-.sc-dash-calendar-root .fc-daygrid-day-frame {
-    min-height: 2.4rem;
 }
 
 .sc-dash-calendar-root .fc-daygrid-event {

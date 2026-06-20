@@ -4,7 +4,11 @@
 (function () {
     'use strict';
 
-    const MAX_EVENTS = 2500;
+    const ASSIGNEE_FILTER_CATEGORIES = new Set(['user-tasks', 'action-tracking', 'safety-team-task']);
+
+    function isAssigneeFilteredCategory(category) {
+        return ASSIGNEE_FILTER_CATEGORIES.has(category);
+    }
 
     const SAFETY_CALENDAR_CATEGORIES = {
         'periodic-schedule': { label: 'جدولة فحوصات', color: '#2563eb', moduleKey: 'periodic-inspections' },
@@ -302,7 +306,9 @@
 
         (records || []).forEach((rec) => {
             if (!rec || events.length >= MAX_EVENTS) return;
-            if (assigneeMode === 'mine' && !isRecordAssignedToUser(rec, category, userIds, userDept)) {
+            if (assigneeMode === 'mine'
+                && isAssigneeFilteredCategory(category)
+                && !isRecordAssignedToUser(rec, category, userIds, userDept)) {
                 return;
             }
             const sourceId = rec.id;
@@ -511,6 +517,7 @@
         resolveDefaultAssigneeMode,
         getCurrentUserIds,
         getCurrentUserDepartment,
-        isRecordAssignedToUser
+        isRecordAssignedToUser,
+        isAssigneeFilteredCategory
     };
 })();

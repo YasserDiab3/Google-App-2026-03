@@ -110,6 +110,25 @@ const SafetyCalendar = {
         };
     },
 
+    /** تمييز الجمعة والسبت + تحسين مظهر الخلايا */
+    _getCalendarAppearanceHooks() {
+        const markWeekend = (date, el) => {
+            if (!date || !el) return;
+            const dow = date.getDay();
+            if (dow === 5) el.classList.add('sc-weekend-fri');
+            if (dow === 6) el.classList.add('sc-weekend-sat');
+            if (dow === 5 || dow === 6) el.classList.add('sc-weekend-day');
+        };
+        return {
+            dayCellDidMount(info) {
+                markWeekend(info.date, info.el);
+            },
+            dayHeaderDidMount(info) {
+                markWeekend(info.date, info.el);
+            }
+        };
+    },
+
     async ensureFullCalendarLoaded() {
         if (typeof FullCalendar !== 'undefined') return true;
         if (this._fcLoadPromise) {
@@ -227,7 +246,7 @@ const SafetyCalendar = {
             </div>`;
         }
         return `<div class="sc-assignee-filter sc-assignee-filter-readonly">
-            <span class="sc-assignee-badge"><i class="fas fa-user ml-1"></i>عرض مهامك</span>
+            <span class="sc-assignee-badge"><i class="fas fa-user ml-1"></i>مهامك + أحداث السلامة</span>
         </div>`;
     },
 
@@ -405,8 +424,26 @@ const SafetyCalendar = {
             }
         }
         if (this._calendar) {
+            try {
+                this._calendar.getEventSources().forEach((src) => {
+                    try { src.remove(); } catch (_e) { /* ignore */ }
+                });
+            } catch (_e) { /* ignore */ }
             this._calendar.removeAllEvents();
-            this._calendar.addEventSource(result.events);
+            if (Array.isArray(result.events) && result.events.length) {
+                this._calendar.addEventSource(result.events);
+            }
+        }
+        if (this._dashCalendar) {
+            try {
+                this._dashCalendar.getEventSources().forEach((src) => {
+                    try { src.remove(); } catch (_e) { /* ignore */ }
+                });
+            } catch (_e) { /* ignore */ }
+            this._dashCalendar.removeAllEvents();
+            if (Array.isArray(result.events) && result.events.length) {
+                this._dashCalendar.addEventSource(result.events);
+            }
         }
         return result;
     },
@@ -489,7 +526,8 @@ const SafetyCalendar = {
                     info.el.style.backgroundColor = colors.color;
                     info.el.style.borderColor = colors.color;
                 }
-            }
+            },
+            ...this._getCalendarAppearanceHooks()
         };
         if (this.canAddTasksFromCalendar()) {
             fcOverrides.customButtons = {
@@ -607,7 +645,8 @@ const SafetyCalendar = {
             eventClick: (info) => {
                 info.jsEvent.preventDefault();
                 this.showEventModal(info.event);
-            }
+            },
+            ...this._getCalendarAppearanceHooks()
         }, true);
         this._dashCalendar = builder.render(miniRoot);
     },
