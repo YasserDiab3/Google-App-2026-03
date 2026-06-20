@@ -1109,6 +1109,167 @@ const PeriodicInspections = {
         return iconMap[result] || 'fas fa-question-circle';
     },
 
+    getComplianceRateColor(rate) {
+        const value = Number(rate) || 0;
+        if (value >= 90) return '#15803d';
+        if (value >= 75) return '#1d4ed8';
+        if (value >= 60) return '#b45309';
+        return '#b91c1c';
+    },
+
+    getComplianceRateLabel(rate) {
+        const value = Number(rate) || 0;
+        if (value >= 90) return 'ممتاز';
+        if (value >= 75) return 'جيد';
+        if (value >= 60) return 'مقبول';
+        return 'ضعيف';
+    },
+
+    buildEmptyChecklistEvaluation(totalItems = 0) {
+        return {
+            total: totalItems,
+            compliant: 0,
+            nonCompliant: 0,
+            other: 0,
+            pending: totalItems,
+            rated: 0,
+            complianceRate: 0,
+            result: 'قيد المراجعة',
+            ratingLabel: '—'
+        };
+    },
+
+    deriveInspectionResultFromEvaluation(stats) {
+        const rated = Number(stats?.rated) || 0;
+        const rate = Number(stats?.complianceRate) || 0;
+        const nonCompliant = Number(stats?.nonCompliant) || 0;
+        if (!rated) return 'قيد المراجعة';
+        if (nonCompliant > 0 && rate < 60) return 'غير مطابق';
+        if (rate >= 90) return 'مطابق';
+        if (rate >= 60) return 'مطابق جزئياً';
+        return 'غير مطابق';
+    },
+
+    calculateChecklistEvaluationFromStatuses(statuses) {
+        const list = Array.isArray(statuses) ? statuses : [];
+        const stats = {
+            total: list.length,
+            compliant: 0,
+            nonCompliant: 0,
+            other: 0,
+            pending: 0,
+            rated: 0
+        };
+        list.forEach((rawStatus) => {
+            const status = this._normalizeChecklistComplianceStatus(rawStatus);
+            if (!status) {
+                stats.pending += 1;
+                return;
+            }
+            stats.rated += 1;
+            if (status === 'مطابق') stats.compliant += 1;
+            else if (status === 'غير مطابق') stats.nonCompliant += 1;
+            else stats.other += 1;
+        });
+        const complianceRate = stats.rated > 0
+            ? Math.round((stats.compliant / stats.rated) * 100)
+            : 0;
+        const result = this.deriveInspectionResultFromEvaluation({ ...stats, complianceRate });
+        return {
+            ...stats,
+            complianceRate,
+            result,
+            ratingLabel: stats.rated > 0 ? this.getComplianceRateLabel(complianceRate) : '—'
+        };
+    },
+
+    calculateChecklistEvaluationFromItems(items) {
+        const list = Array.isArray(items) ? items : [];
+        return this.calculateChecklistEvaluationFromStatuses(
+            list.map((item) => item?.status || '')
+        );
+    },
+
+    collectChecklistStatusesFromForm() {
+        const statuses = [];
+        document.querySelectorAll('[id^="checklist-status-"]').forEach((select) => {
+            statuses.push(select.value || '');
+        });
+        return statuses;
+    },
+
+    renderInspectionResultPanelHTML(evaluation) {
+        const evalData = evaluation || this.buildEmptyChecklistEvaluation();
+        const rate = evalData.complianceRate || 0;
+        const color = this.getComplianceRateColor(rate);
+        const badgeClass = this.getResultBadgeClass(evalData.result);
+        const icon = this.getResultIcon(evalData.result);
+        const ringOffset = Math.max(0, 283 - (283 * rate / 100));
+        return `
+            <div class="rounded-xl border-2 overflow-hidden shadow-sm" style="border-color: ${color}40; background: linear-gradient(135deg, #ffffff 0%, ${color}0d 100%);">
+                <div class="p-4 sm:p-5">
+                    <div class="flex flex-col sm:flex-row items-center gap-4 sm:gap-6">
+                        <div class="relative flex-shrink-0" style="width: 108px; height: 108px;">
+                            <svg viewBox="0 0 100 100" class="w-full h-full -rotate-90">
+                                <circle cx="50" cy="50" r="45" fill="none" stroke="#e5e7eb" stroke-width="8"></circle>
+                                <circle cx="50" cy="50" r="45" fill="none" stroke="${color}" stroke-width="8"
+                                    stroke-linecap="round" stroke-dasharray="283" stroke-dashoffset="${ringOffset}"
+                                    style="transition: stroke-dashoffset 0.35s ease;"></circle>
+                            </svg>
+                            <div class="absolute inset-0 flex flex-col items-center justify-center text-center">
+                                <span class="text-2xl font-extrabold leading-none" style="color: ${color};">${rate}%</span>
+                                <span class="text-[11px] font-semibold mt-1" style="color: ${color};">${Utils.escapeHTML(evalData.ratingLabel || '—')}</span>
+                            </div>
+                        </div>
+                        <div class="flex-1 w-full text-center sm:text-right">
+                            <p class="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-2">نتيجة الفحص (محسوبة تلقائياً)</p>
+                            <div class="mb-3">
+                                <span class="badge ${badgeClass} inline-flex items-center gap-2 px-4 py-2 text-base font-bold">
+                                    <i class="${icon}"></i>
+                                    <span>${Utils.escapeHTML(evalData.result || 'قيد المراجعة')}</span>
+                                </span>
+                            </div>
+                            <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
+                                <div class="rounded-lg px-2 py-2 bg-green-50 border border-green-200">
+                                    <div class="font-bold text-green-700">${evalData.compliant || 0}</div>
+                                    <div class="text-green-600">مطابق</div>
+                                </div>
+                                <div class="rounded-lg px-2 py-2 bg-red-50 border border-red-200">
+                                    <div class="font-bold text-red-700">${evalData.nonCompliant || 0}</div>
+                                    <div class="text-red-600">غير مطابق</div>
+                                </div>
+                                <div class="rounded-lg px-2 py-2 bg-orange-50 border border-orange-200">
+                                    <div class="font-bold text-orange-700">${evalData.other || 0}</div>
+                                    <div class="text-orange-600">أخرى</div>
+                                </div>
+                                <div class="rounded-lg px-2 py-2 bg-slate-50 border border-slate-200">
+                                    <div class="font-bold text-slate-700">${evalData.pending || 0}</div>
+                                    <div class="text-slate-600">لم يُقيَّم</div>
+                                </div>
+                            </div>
+                            <p class="text-[11px] text-gray-500 mt-3 leading-relaxed">
+                                تُحدَّث النتيجة ونسبة المطابقة فور اختيار حالة كل بند. ≥90% مطابق، 60–89% مطابق جزئياً، أقل من 60% غير مطابق.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    },
+
+    updateInspectionResultFromChecklist() {
+        const evaluation = this.calculateChecklistEvaluationFromStatuses(this.collectChecklistStatusesFromForm());
+        const resultInput = document.getElementById('inspection-result');
+        const scoreInput = document.getElementById('inspection-compliance-score');
+        if (resultInput) resultInput.value = evaluation.result || 'قيد المراجعة';
+        if (scoreInput) scoreInput.value = String(evaluation.complianceRate || 0);
+
+        const panel = document.getElementById('inspection-result-panel');
+        if (panel) panel.innerHTML = this.renderInspectionResultPanelHTML(evaluation);
+
+        this.updateChecklistProgress(evaluation);
+    },
+
     isCurrentUserAdmin() {
         if (typeof Permissions !== 'undefined' && typeof Permissions.isCurrentUserAdmin === 'function') {
             return Permissions.isCurrentUserAdmin();
@@ -1149,30 +1310,21 @@ const PeriodicInspections = {
         return filtered;
     },
 
-    updateChecklistProgress() {
+    updateChecklistProgress(evaluation) {
         const progressBar = document.getElementById('checklist-progress');
         const progressText = document.getElementById('checklist-progress-text');
         if (!progressBar) return;
 
-        const checkboxes = document.querySelectorAll('[id^="checklist-"]:not([id*="note"])');
-        const checked = Array.from(checkboxes).filter(cb => cb.checked).length;
-        const total = checkboxes.length;
-        const percentage = total > 0 ? Math.round((checked / total) * 100) : 0;
-        
+        const evalData = evaluation || this.calculateChecklistEvaluationFromStatuses(this.collectChecklistStatusesFromForm());
+        const percentage = evalData.complianceRate || 0;
+        const color = this.getComplianceRateColor(percentage);
+
         progressBar.style.width = percentage + '%';
-        
-        // تحديث النص المئوي
+        progressBar.style.background = `linear-gradient(90deg, ${color}, ${color}dd)`;
+
         if (progressText) {
             progressText.textContent = percentage + '%';
-        }
-        
-        // تحديث اللون حسب النسبة
-        if (percentage === 100) {
-            progressBar.style.background = 'linear-gradient(90deg, #10b981, #059669)';
-        } else if (percentage >= 50) {
-            progressBar.style.background = 'linear-gradient(90deg, #f59e0b, #d97706)';
-        } else {
-            progressBar.style.background = 'linear-gradient(90deg, #3b82f6, #8b5cf6)';
+            progressText.style.color = color;
         }
     },
 
@@ -1357,18 +1509,9 @@ const PeriodicInspections = {
                 });
             }
 
-            // تحديث معاينة النتيجة عند التحميل
-            const resultSelect = document.getElementById('inspection-result');
-            if (resultSelect) {
-                this.updateResultBadge(resultSelect.value);
-                resultSelect.addEventListener('change', (e) => {
-                    this.updateResultBadge(e.target.value);
-                });
-            }
-
-            // تحديث شريط التقدم عند تحميل النموذج
+            // تحديث التقييم التلقائي عند تحميل النموذج
             setTimeout(() => {
-                this.updateChecklistProgress();
+                this.updateInspectionResultFromChecklist();
             }, 200);
         }, 100);
     },
@@ -1421,6 +1564,11 @@ const PeriodicInspections = {
             const places = this.getPlaceOptions(factoryId);
             const selectedPlace = places.find(p => p.id === subLocationId);
 
+            this.updateInspectionResultFromChecklist();
+            const computedEvaluation = this.calculateChecklistEvaluationFromStatuses(
+                checklistResults.map((item) => item.status || '')
+            );
+
             // جمع بيانات النموذج
             const inspectionData = {
                 id: this.state.currentEditId || Utils.generateId('PINSP'),
@@ -1429,7 +1577,8 @@ const PeriodicInspections = {
                 inspectionDate: document.getElementById('inspection-date')?.value || '',
                 location: document.getElementById('inspection-location')?.value || '',
                 inspector: document.getElementById('inspection-inspector')?.value || '',
-                result: document.getElementById('inspection-result')?.value || '',
+                result: document.getElementById('inspection-result')?.value || computedEvaluation.result || 'قيد المراجعة',
+                complianceScore: Number(document.getElementById('inspection-compliance-score')?.value || computedEvaluation.complianceRate || 0),
                 assetCode: document.getElementById('inspection-asset-code')?.value || '',
                 factory: factoryId,
                 factoryId: factoryId,
@@ -1458,14 +1607,22 @@ const PeriodicInspections = {
             // التحقق من القائمة المطلوبة
             if (template && template.checklist) {
                 const requiredItems = template.checklist.filter(item => item.required);
-                const uncheckedRequired = requiredItems.filter(item => {
+                const missingStatusRequired = requiredItems.filter(item => {
                     const result = checklistResults.find(r => r.id === item.id);
-                    return !result || !result.checked;
+                    return !result || !this._normalizeChecklistComplianceStatus(result.status);
                 });
-                
-                if (uncheckedRequired.length > 0) {
-                    Notification.warning(`يرجى التأكد من إكمال جميع العناصر المطلوبة في قائمة الفحص (${uncheckedRequired.length} عنصر)`);
-                    // استعادة الزر عند فشل التحقق
+
+                if (missingStatusRequired.length > 0) {
+                    Notification.warning(`يرجى تحديد حالة المطابقة لجميع البنود المطلوبة (${missingStatusRequired.length} بند)`);
+                    if (submitBtn) {
+                        submitBtn.disabled = false;
+                        submitBtn.innerHTML = originalText;
+                    }
+                    return;
+                }
+
+                if (computedEvaluation.rated === 0) {
+                    Notification.warning('يرجى تقييم بنود قائمة الفحص قبل الحفظ');
                     if (submitBtn) {
                         submitBtn.disabled = false;
                         submitBtn.innerHTML = originalText;
@@ -1698,6 +1855,15 @@ const PeriodicInspections = {
         // تحديد القالب المختار
         const selectedTemplateId = this.state.selectedTemplate || inspection?.templateId || '';
         const selectedTemplate = selectedTemplateId ? this.INSPECTION_TEMPLATES[selectedTemplateId] : null;
+        const initialEvaluation = selectedTemplate
+            ? (inspection
+                ? this.calculateChecklistEvaluationFromItems(this.resolveInspectionChecklistItems(inspection))
+                : this.buildEmptyChecklistEvaluation(selectedTemplate.checklist.length))
+            : this.buildEmptyChecklistEvaluation(0);
+        const initialResult = inspection?.result || initialEvaluation.result || 'قيد المراجعة';
+        const initialScore = inspection?.complianceScore != null
+            ? Number(inspection.complianceScore)
+            : initialEvaluation.complianceRate;
 
         // إنشاء خيارات القوالب
         const templateOptions = Object.values(this.INSPECTION_TEMPLATES).map(template => 
@@ -1740,12 +1906,12 @@ const PeriodicInspections = {
                             </div>
                             <div class="flex items-center gap-3">
                                 <div class="text-right">
-                                    <p class="text-xs font-medium text-gray-600 mb-2">حالة الإكمال</p>
+                                    <p class="text-xs font-medium text-gray-600 mb-2">نسبة المطابقة</p>
                                     <div class="flex items-center gap-2">
                                         <div class="progress-bar-container" style="width: 120px; height: 10px; background: #e5e7eb; border-radius: 5px; overflow: hidden;">
-                                            <div class="progress-bar-fill" style="width: 0%; height: 100%; background: linear-gradient(90deg, #3b82f6, #8b5cf6); border-radius: 5px; transition: width 0.3s ease;" id="checklist-progress"></div>
+                                            <div class="progress-bar-fill" style="width: ${initialEvaluation.complianceRate || 0}%; height: 100%; background: linear-gradient(90deg, ${this.getComplianceRateColor(initialEvaluation.complianceRate || 0)}, ${this.getComplianceRateColor(initialEvaluation.complianceRate || 0)}dd); border-radius: 5px; transition: width 0.3s ease;" id="checklist-progress"></div>
                                         </div>
-                                        <span class="text-xs font-bold text-gray-700" id="checklist-progress-text">0%</span>
+                                        <span class="text-xs font-bold text-gray-700" id="checklist-progress-text" style="color: ${this.getComplianceRateColor(initialEvaluation.complianceRate || 0)};">${initialEvaluation.complianceRate || 0}%</span>
                                     </div>
                                 </div>
                             </div>
@@ -1762,7 +1928,7 @@ const PeriodicInspections = {
                                            name="checklist-${item.id}"
                                            class="w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-2 focus:ring-blue-500 cursor-pointer transition-all"
                                            ${isChecked ? 'checked' : ''}
-                                           onchange="PeriodicInspections.updateChecklistProgress()">
+                                           onchange="PeriodicInspections.updateInspectionResultFromChecklist()">
                                 </div>
                                 <div class="flex-1 min-w-0">
                                     <div class="flex items-start justify-between gap-3 mb-2">
@@ -1779,7 +1945,7 @@ const PeriodicInspections = {
                                                 id="checklist-status-${item.id}"
                                                 name="checklist-status-${item.id}"
                                                 class="form-input text-sm w-full border-gray-200 focus:border-blue-400 focus:ring-2 focus:ring-blue-200 transition-all"
-                                                onchange="PeriodicInspections.toggleNoteField('${item.id}')">
+                                                onchange="PeriodicInspections.toggleNoteField('${item.id}'); PeriodicInspections.updateInspectionResultFromChecklist();">
                                                 <option value="">-- اختر الحالة --</option>
                                                 <option value="مطابق" ${inspection?.checklistResults?.find(r => r.id === item.id)?.status === 'مطابق' ? 'selected' : ''}>مطابق</option>
                                                 <option value="غير مطابق" ${inspection?.checklistResults?.find(r => r.id === item.id)?.status === 'غير مطابق' ? 'selected' : ''}>غير مطابق</option>
@@ -1868,21 +2034,6 @@ const PeriodicInspections = {
                             </div>
                             <div class="space-y-1">
                                 <label class="block text-sm font-bold text-gray-700 mb-2 flex items-center gap-2">
-                                    <i class="fas fa-flag-checkered text-blue-500"></i>
-                                    النتيجة <span class="text-red-500">*</span>
-                                </label>
-                                <select id="inspection-result" required class="form-input border-2 focus:border-blue-500 focus:ring-2 focus:ring-blue-200" 
-                                        onchange="PeriodicInspections.updateResultBadge(this.value)">
-                                    <option value="">-- اختر النتيجة --</option>
-                                    <option value="مطابق" ${inspection?.result === 'مطابق' ? 'selected' : ''}>مطابق</option>
-                                    <option value="غير مطابق" ${inspection?.result === 'غير مطابق' ? 'selected' : ''}>غير مطابق</option>
-                                    <option value="مطابق جزئياً" ${inspection?.result === 'مطابق جزئياً' ? 'selected' : ''}>مطابق جزئياً</option>
-                                    <option value="قيد المراجعة" ${inspection?.result === 'قيد المراجعة' ? 'selected' : ''}>قيد المراجعة</option>
-                                </select>
-                                <div id="result-badge-preview" class="mt-2"></div>
-                            </div>
-                            <div class="space-y-1">
-                                <label class="block text-sm font-bold text-gray-700 mb-2 flex items-center gap-2">
                                     <i class="fas fa-industry text-blue-500"></i>
                                     المصنع
                                 </label>
@@ -1921,8 +2072,24 @@ const PeriodicInspections = {
                                     placeholder="رقم أو كود المعدة (اختياري)">
                             </div>
                         </div>
-                        
+
                         ${checklistHtml}
+
+                        ${selectedTemplate ? `
+                        <div class="mt-4">
+                            <input type="hidden" id="inspection-result" value="${Utils.escapeHTML(initialResult)}">
+                            <input type="hidden" id="inspection-compliance-score" value="${initialScore || 0}">
+                            <div id="inspection-result-panel">${this.renderInspectionResultPanelHTML({ ...initialEvaluation, result: initialResult, complianceRate: initialScore || initialEvaluation.complianceRate })}</div>
+                        </div>
+                        ` : `
+                        <div class="mt-4 rounded-xl border border-dashed border-gray-300 bg-gray-50 p-4 text-sm text-gray-600">
+                            <i class="fas fa-info-circle ml-1 text-blue-500"></i>
+                            اختر نموذج فحص لاحتساب النتيجة ونسبة المطابقة تلقائياً من البنود.
+                            <input type="hidden" id="inspection-result" value="${Utils.escapeHTML(initialResult || 'قيد المراجعة')}">
+                            <input type="hidden" id="inspection-compliance-score" value="0">
+                            <div id="inspection-result-panel" class="hidden"></div>
+                        </div>
+                        `}
                         
                         <div>
                             <label class="block text-sm font-semibold text-gray-700 mb-2">ملاحظات عامة</label>
@@ -2071,13 +2238,9 @@ const PeriodicInspections = {
         }
 
         // تحديث معاينة النتيجة
-        const resultSelect = modal.querySelector('#inspection-result');
-        if (resultSelect) {
-            this.updateResultBadge(resultSelect.value);
-            resultSelect.addEventListener('change', (e) => {
-                this.updateResultBadge(e.target.value);
-            });
-        }
+        setTimeout(() => {
+            this.updateInspectionResultFromChecklist();
+        }, 200);
 
         // ربط أحداث قوائم المطابقة
         const statusSelects = modal.querySelectorAll('[id^="checklist-status-"]');
@@ -2088,6 +2251,7 @@ const PeriodicInspections = {
             select.parentNode.replaceChild(newSelect, select);
             newSelect.addEventListener('change', () => {
                 this.toggleNoteField(itemId);
+                this.updateInspectionResultFromChecklist();
             });
             // التأكد من إظهار/إخفاء حقل الملاحظات عند التحميل
             if (newSelect.value === 'غير مطابق') {
@@ -2100,8 +2264,8 @@ const PeriodicInspections = {
 
         // تحديث شريط التقدم
         setTimeout(() => {
-            this.updateChecklistProgress();
-        }, 200);
+            this.updateInspectionResultFromChecklist();
+        }, 250);
 
         // تحديث زر الإلغاء
         const cancelBtn = modal.querySelector('button[onclick*="cancelForm"]');
@@ -2522,6 +2686,10 @@ const PeriodicInspections = {
 
         const resultBadgeClass = this.getResultBadgeClass(inspection.result);
         const resultIcon = this.getResultIcon(inspection.result);
+        const viewEvaluation = inspection.complianceScore != null && inspection.complianceScore !== ''
+            ? { complianceRate: Number(inspection.complianceScore), ratingLabel: this.getComplianceRateLabel(Number(inspection.complianceScore)) }
+            : this.calculateChecklistEvaluationFromItems(this.resolveInspectionChecklistItems(inspection));
+        const viewScoreColor = this.getComplianceRateColor(viewEvaluation.complianceRate || 0);
 
         const modal = document.createElement('div');
         modal.className = 'modal-overlay';
@@ -2567,6 +2735,18 @@ const PeriodicInspections = {
                                             ${Utils.escapeHTML(inspection.result || '-')}
                                         </span>
                                     </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="rounded-xl p-4 border" style="background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%); border-color: #86efac;">
+                            <div class="flex items-center gap-3 mb-2">
+                                <div class="rounded-lg p-2" style="background: linear-gradient(135deg, #15803d 0%, #166534 100%);">
+                                    <i class="fas fa-chart-pie text-white"></i>
+                                </div>
+                                <div>
+                                    <label class="text-xs font-semibold uppercase" style="color: #166534;">نسبة المطابقة</label>
+                                    <p class="text-2xl font-extrabold mt-1" style="color: ${viewScoreColor};">${viewEvaluation.complianceRate || 0}%</p>
+                                    <p class="text-xs font-semibold mt-1" style="color: ${viewScoreColor};">${Utils.escapeHTML(viewEvaluation.ratingLabel || '—')}</p>
                                 </div>
                             </div>
                         </div>
@@ -2693,6 +2873,7 @@ const PeriodicInspections = {
             location: inspection.location || inspection.equipment || '',
             inspector: inspection.inspector || '',
             result: inspection.result || '',
+            complianceScore: inspection.complianceScore != null ? Number(inspection.complianceScore) : null,
             assetCode: inspection.assetCode || '',
             factoryName: inspection.factoryName || '',
             subLocationName: inspection.subLocationName || '',
@@ -2829,6 +3010,7 @@ const PeriodicInspections = {
         const location = document.getElementById('inspection-location')?.value || '';
         const inspector = document.getElementById('inspection-inspector')?.value || '';
         const result = document.getElementById('inspection-result')?.value || '';
+        const complianceScore = Number(document.getElementById('inspection-compliance-score')?.value || 0);
         const assetCode = document.getElementById('inspection-asset-code')?.value || '';
         const factoryId = document.getElementById('inspection-factory')?.value || '';
         const subLocationId = document.getElementById('inspection-sub-location')?.value || '';
@@ -2848,6 +3030,7 @@ const PeriodicInspections = {
             location,
             inspector,
             result,
+            complianceScore,
             assetCode,
             factoryName,
             subLocationName,
@@ -2877,6 +3060,10 @@ const PeriodicInspections = {
 
     buildPeriodicInspectionPrintContent(data) {
         const checklistItems = Array.isArray(data?.checklistItems) ? data.checklistItems : [];
+        const printEvaluation = data?.complianceScore != null && data.complianceScore !== ''
+            ? { complianceRate: Number(data.complianceScore), ratingLabel: this.getComplianceRateLabel(Number(data.complianceScore)) }
+            : this.calculateChecklistEvaluationFromItems(checklistItems);
+        const scoreColor = this.getComplianceRateColor(printEvaluation.complianceRate || 0);
         const checklistRows = checklistItems.map(item => `
             <tr>
                 <td style="text-align: center; padding: 8px; border: 1px solid #ddd;">${item.number}</td>
@@ -2943,6 +3130,7 @@ const PeriodicInspections = {
                     <div class="info-item"><div class="info-label">الموقع/المعدة</div><div class="info-value">${Utils.escapeHTML(data.location || '')}</div></div>
                     <div class="info-item"><div class="info-label">المفتش</div><div class="info-value">${Utils.escapeHTML(data.inspector || '')}</div></div>
                     <div class="info-item"><div class="info-label">النتيجة</div><div class="info-value">${Utils.escapeHTML(data.result || '')}</div></div>
+                    <div class="info-item"><div class="info-label">نسبة المطابقة</div><div class="info-value" style="color: ${scoreColor}; font-weight: bold;">${printEvaluation.complianceRate || 0}% — ${Utils.escapeHTML(printEvaluation.ratingLabel || '—')}</div></div>
                     ${data.factoryName ? `<div class="info-item"><div class="info-label">المصنع</div><div class="info-value">${Utils.escapeHTML(data.factoryName)}</div></div>` : ''}
                     ${data.subLocationName ? `<div class="info-item"><div class="info-label">الموقع الفرعي</div><div class="info-value">${Utils.escapeHTML(data.subLocationName)}</div></div>` : ''}
                     ${data.assetCode ? `<div class="info-item"><div class="info-label">رقم المعدة/الكود</div><div class="info-value">${Utils.escapeHTML(data.assetCode)}</div></div>` : ''}
