@@ -43,15 +43,16 @@ const SafetyCalendar = {
      * إنشاء خيارات التقويم مع أزرار prev/next/today تعمل عبر مرجع calendar صريح
      * (this داخل customButtons لا يشير دائماً إلى Calendar في FC v6)
      */
-    _buildCalendarOptions(overrides) {
+    _buildCalendarOptions(overrides, compactNav) {
         const calRef = { api: null };
         const self = this;
+        const isCompact = compactNav === true;
         const options = Object.assign({
             locale: 'ar',
             direction: 'rtl',
             customButtons: {
                 prev: {
-                    text: 'السابق',
+                    text: isCompact ? '›' : 'السابق',
                     hint: 'الفترة السابقة',
                     click() {
                         if (calRef.api && typeof calRef.api.prev === 'function') {
@@ -60,7 +61,7 @@ const SafetyCalendar = {
                     }
                 },
                 next: {
-                    text: 'التالي',
+                    text: isCompact ? '‹' : 'التالي',
                     hint: 'الفترة التالية',
                     click() {
                         if (calRef.api && typeof calRef.api.next === 'function') {
@@ -80,12 +81,16 @@ const SafetyCalendar = {
             },
             buttonText: self._fcButtonText()
         }, overrides || {});
+        options._scCompactNav = isCompact;
 
         return {
             options,
             render(root) {
                 calRef.api = new FullCalendar.Calendar(root, options);
                 calRef.api.render();
+                if (isCompact) {
+                    root.classList.add('sc-fc-compact-nav');
+                }
                 return calRef.api;
             }
         };
@@ -449,14 +454,19 @@ const SafetyCalendar = {
         }
         const builder = this._buildCalendarOptions({
             initialView: 'dayGridMonth',
-            height: 320,
+            height: 'auto',
+            contentHeight: 360,
+            dayMaxEvents: 2,
+            moreLinkText(n) {
+                return '+' + n;
+            },
             headerToolbar: { right: 'prev,next', center: 'title', left: '' },
             events: result.events,
             eventClick: (info) => {
                 info.jsEvent.preventDefault();
                 this.showEventModal(info.event);
             }
-        });
+        }, true);
         this._dashCalendar = builder.render(miniRoot);
     },
 

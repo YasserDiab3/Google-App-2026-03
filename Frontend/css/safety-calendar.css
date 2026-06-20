@@ -369,6 +369,15 @@
 .sc-calendar-root .fc,
 .sc-dash-calendar-root .fc {
     font-family: inherit;
+    --fc-button-bg-color: #ffffff;
+    --fc-button-border-color: #e2e8f0;
+    --fc-button-text-color: #475569;
+    --fc-button-hover-bg-color: #eef2ff;
+    --fc-button-hover-border-color: #a5b4fc;
+    --fc-button-hover-text-color: #4338ca;
+    --fc-button-active-bg-color: #6366f1;
+    --fc-button-active-border-color: #4f46e5;
+    --fc-button-active-text-color: #ffffff;
 }
 
 /* ── شريط أدوات التقويم ── */
@@ -483,25 +492,98 @@
 }
 
 .sc-calendar-root .fc-prev-button::before,
-.sc-calendar-root .fc-next-button::before,
-.sc-dash-calendar-root .fc-prev-button::before,
-.sc-dash-calendar-root .fc-next-button::before {
-    font-family: 'Font Awesome 6 Free';
-    font-weight: 900;
-    font-size: 0.72rem;
+.sc-calendar-root .fc-next-button::before {
+    font-family: inherit;
+    font-weight: 800;
+    font-size: 0.95rem;
     line-height: 1;
-    opacity: 0.85;
+    opacity: 0.9;
 }
 
-/* RTL: السابق = سهم لليمين، التالي = سهم لليسار */
-.sc-calendar-root .fc-prev-button::before,
-.sc-dash-calendar-root .fc-prev-button::before {
-    content: '\f054';
+/* RTL: السابق = › ، التالي = ‹ (Unicode — لا Font Awesome) */
+.sc-calendar-root .fc-prev-button::before {
+    content: '›';
 }
 
-.sc-calendar-root .fc-next-button::before,
-.sc-dash-calendar-root .fc-next-button::before {
-    content: '\f053';
+.sc-calendar-root .fc-next-button::before {
+    content: '‹';
+}
+
+/* ── لوحة التحكم: أزرار تنقل مدمجة (caret فقط) ── */
+.sc-dash-calendar-root.sc-fc-compact-nav .fc-header-toolbar,
+.sc-dash-calendar-root .sc-fc-compact-nav .fc-header-toolbar {
+    margin-bottom: 0.65rem !important;
+}
+
+.sc-dash-calendar-root.sc-fc-compact-nav .fc-prev-button,
+.sc-dash-calendar-root.sc-fc-compact-nav .fc-next-button,
+.sc-dash-calendar-root .sc-fc-compact-nav .fc-prev-button,
+.sc-dash-calendar-root .sc-fc-compact-nav .fc-next-button {
+    min-width: 34px !important;
+    width: 34px !important;
+    height: 34px !important;
+    padding: 0 !important;
+    display: inline-flex !important;
+    align-items: center;
+    justify-content: center;
+    border-radius: 0 !important;
+    background: #fff !important;
+    color: #4338ca !important;
+    font-size: 1.25rem !important;
+    line-height: 1 !important;
+}
+
+.sc-dash-calendar-root.sc-fc-compact-nav .fc-prev-button::before,
+.sc-dash-calendar-root.sc-fc-compact-nav .fc-next-button::before,
+.sc-dash-calendar-root .sc-fc-compact-nav .fc-prev-button::before,
+.sc-dash-calendar-root .sc-fc-compact-nav .fc-next-button::before {
+    content: none !important;
+    display: none !important;
+}
+
+.sc-dash-calendar-root.sc-fc-compact-nav .fc-prev-button .fc-button-text,
+.sc-dash-calendar-root.sc-fc-compact-nav .fc-next-button .fc-button-text,
+.sc-dash-calendar-root .sc-fc-compact-nav .fc-prev-button .fc-button-text,
+.sc-dash-calendar-root .sc-fc-compact-nav .fc-next-button .fc-button-text {
+    display: block !important;
+    font-size: 1.35rem !important;
+    font-weight: 800 !important;
+    line-height: 1 !important;
+    padding: 0;
+    margin: 0;
+}
+
+.sc-dash-calendar-root.sc-fc-compact-nav .fc .fc-button-group,
+.sc-dash-calendar-root .sc-fc-compact-nav .fc .fc-button-group {
+    border-radius: 10px !important;
+    overflow: hidden;
+    border: 1.5px solid #c7d2fe !important;
+    box-shadow: 0 1px 4px rgba(79, 70, 229, 0.12);
+    background: #fff !important;
+}
+
+.sc-dash-calendar-root.sc-fc-compact-nav .fc-prev-button:hover:not(:disabled),
+.sc-dash-calendar-root.sc-fc-compact-nav .fc-next-button:hover:not(:disabled),
+.sc-dash-calendar-root .sc-fc-compact-nav .fc-prev-button:hover:not(:disabled),
+.sc-dash-calendar-root .sc-fc-compact-nav .fc-next-button:hover:not(:disabled) {
+    background: #eef2ff !important;
+    color: #312e81 !important;
+}
+
+.sc-dash-calendar-root.sc-fc-compact-nav .fc-toolbar-chunk,
+.sc-dash-calendar-root .sc-fc-compact-nav .fc-toolbar-chunk {
+    display: flex;
+    align-items: center;
+}
+
+.sc-dash-calendar-root .fc-daygrid-day-frame {
+    min-height: 2.4rem;
+}
+
+.sc-dash-calendar-root .fc-daygrid-event {
+    font-size: 0.65rem;
+    border-radius: 4px;
+    padding: 1px 3px;
 }
 
 /* زر اليوم */
@@ -561,24 +643,18 @@
 
 @media (max-width: 640px) {
     .sc-calendar-root .fc-prev-button .fc-button-text,
-    .sc-calendar-root .fc-next-button .fc-button-text,
-    .sc-dash-calendar-root .fc-prev-button .fc-button-text,
-    .sc-dash-calendar-root .fc-next-button .fc-button-text {
+    .sc-calendar-root .fc-next-button .fc-button-text {
         display: none;
     }
 
     .sc-calendar-root .fc-prev-button,
-    .sc-calendar-root .fc-next-button,
-    .sc-dash-calendar-root .fc-prev-button,
-    .sc-dash-calendar-root .fc-next-button {
+    .sc-calendar-root .fc-next-button {
         min-width: 38px;
         padding: 0.48rem !important;
     }
 
     .sc-calendar-root .fc-prev-button::before,
-    .sc-calendar-root .fc-next-button::before,
-    .sc-dash-calendar-root .fc-prev-button::before,
-    .sc-dash-calendar-root .fc-next-button::before {
+    .sc-calendar-root .fc-next-button::before {
         font-size: 0.85rem;
     }
 }
