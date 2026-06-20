@@ -3236,9 +3236,22 @@ const PeriodicInspections = {
                     gap: 1px !important;
                     line-height: 1.35 !important;
                 }
-                .pdf-compact-footer .footer-bottom-text span,
-                .pdf-compact-footer .company-brand .company-name,
-                .pdf-compact-footer .company-brand .company-name-secondary {
+                .pdf-compact-footer .report-header {
+                    grid-template-columns: minmax(240px, 1.45fr) minmax(300px, 1.85fr) minmax(88px, 112px) !important;
+                    gap: 14px !important;
+                }
+                .pdf-compact-footer .report-header .company-brand .company-name,
+                .pdf-compact-footer .report-header .company-brand .company-name-secondary {
+                    white-space: nowrap !important;
+                    word-break: keep-all !important;
+                    overflow-wrap: normal !important;
+                    hyphens: none !important;
+                    direction: rtl !important;
+                    unicode-bidi: plaintext !important;
+                    line-height: 1.35 !important;
+                    letter-spacing: 0 !important;
+                }
+                .pdf-compact-footer .footer-bottom-text span {
                     word-break: normal !important;
                     overflow-wrap: normal !important;
                     hyphens: none !important;

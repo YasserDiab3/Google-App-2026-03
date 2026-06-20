@@ -2873,7 +2873,7 @@ const DEFAULT_COMPANY_NAME = '';
 
 const AppState = {
     /** إصدار التطبيق — تسلسلي: 1.0.0 → 1.0.1 → 1.0.2 … عند كل نشر زِد الرقم هنا وفي version.json */
-    appVersion: '1.0.228',
+    appVersion: '1.0.229',
     /** نص اختياري لرسالة التحديث (ملخص التغييرات). إن تُركت فارغة يُستخدم النص الافتراضي. */
     updateMessage: '',
     debugMode: false,
@@ -6419,6 +6419,9 @@ const PDFTemplates = {
             hyphens: none;
             unicode-bidi: plaintext;
         }
+        .report-header .company-brand .company-name {
+            white-space: nowrap;
+        }
         .company-brand .company-name-group {
             display: flex;
             flex-direction: column;
@@ -6754,9 +6757,22 @@ const PDFTemplates = {
             font-size: 10px;
             gap: 2px;
         }
-        .pdf-compact-footer .footer-bottom-text span,
-        .pdf-compact-footer .company-brand .company-name,
-        .pdf-compact-footer .company-brand .company-name-secondary {
+        .pdf-compact-footer .report-header {
+            grid-template-columns: minmax(240px, 1.45fr) minmax(300px, 1.85fr) minmax(88px, 112px);
+            gap: 14px;
+        }
+        .pdf-compact-footer .report-header .company-brand .company-name,
+        .pdf-compact-footer .report-header .company-brand .company-name-secondary {
+            white-space: nowrap;
+            word-break: keep-all;
+            overflow-wrap: normal;
+            hyphens: none;
+            direction: rtl;
+            unicode-bidi: plaintext;
+            line-height: 1.35;
+            letter-spacing: 0;
+        }
+        .pdf-compact-footer .footer-bottom-text span {
             word-break: normal;
             overflow-wrap: normal;
             hyphens: none;
