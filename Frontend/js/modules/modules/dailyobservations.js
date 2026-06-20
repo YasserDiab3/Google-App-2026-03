@@ -3470,6 +3470,42 @@ const DailyObservations = {
         return raw.map(r => { try { return this.normalizeRecord(r); } catch (e) { return r; } });
     },
 
+    // ── قراءة قيم الفلاتر ──
+    _execGetFilters() {
+        const val = id => { const el = document.getElementById(id); return el ? el.value : ''; };
+        const txt = id => { const el = document.getElementById(id); return (el && el.selectedIndex >= 0) ? el.options[el.selectedIndex].text : ''; };
+        return {
+            site: val('obs-exec-filter-site'), siteLabel: txt('obs-exec-filter-site'),
+            period: val('obs-exec-filter-period'), periodLabel: txt('obs-exec-filter-period'),
+            dept: val('obs-exec-filter-dept'), deptLabel: txt('obs-exec-filter-dept'),
+            category: val('obs-exec-filter-category'), categoryLabel: txt('obs-exec-filter-category'),
+            risk: val('obs-exec-filter-risk'), riskLabel: txt('obs-exec-filter-risk'),
+            status: val('obs-exec-filter-status'), statusLabel: txt('obs-exec-filter-status')
+        };
+    },
+
+    // ── تطبيق الفلاتر على الملاحظات ──
+    _execApplyFilters(obs) {
+        const f = this._execGetFilters();
+        let out = obs || [];
+        if (f.site) out = out.filter(o => String(o.siteName || '') === f.site);
+        if (f.dept) out = out.filter(o => String(o.responsibleDepartment || '') === f.dept);
+        if (f.category) out = out.filter(o => this._execCategoryOf(o) === f.category);
+        if (f.risk) out = out.filter(o => String(o.riskLevel || '') === f.risk);
+        if (f.status === 'open') out = out.filter(o => !this._execIsClosed(o));
+        else if (f.status === 'overdue') out = out.filter(o => this._execIsOverdue(o));
+        else if (f.status === 'closed') out = out.filter(o => this._execIsClosed(o));
+        if (f.period) {
+            const months = parseInt(f.period, 10);
+            if (months > 0) {
+                const cutoff = new Date();
+                cutoff.setMonth(cutoff.getMonth() - months);
+                out = out.filter(o => { const d = new Date(o.date); return !isNaN(d.getTime()) && d >= cutoff; });
+            }
+        }
+        return out;
+    },
+
     // ── مُصنّفات الحالة/الخطورة ──
     _execIsClosed(o) { return String(o.status || '').includes('مغلق'); },
     _execIsOverdue(o) {
@@ -3631,6 +3667,10 @@ const DailyObservations = {
         style.id = 'obs-exec-dashboard-styles';
         style.textContent = `
         .obs-exec-wrap{direction:rtl;}
+        .obs-exec-filters{display:flex;flex-wrap:wrap;gap:10px;align-items:end;background:var(--card-bg);border:1px solid var(--border-color);border-radius:14px;padding:14px 16px;margin-bottom:16px;box-shadow:var(--shadow-sm);}
+        .obs-exec-filter{display:flex;flex-direction:column;gap:4px;min-width:150px;flex:1 1 150px;}
+        .obs-exec-filter label{font-size:11px;font-weight:600;color:var(--text-secondary);}
+        .obs-exec-filter select{padding:8px 10px;border:1px solid var(--border-color);border-radius:8px;background:var(--bg-primary);color:var(--text-primary);font-size:13px;cursor:pointer;}
         .obs-exec-kpi-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:14px;margin-bottom:18px;}
         .obs-exec-kpi{position:relative;background:var(--card-bg);border:1px solid var(--border-color);border-radius:14px;padding:16px;box-shadow:var(--shadow-sm);overflow:hidden;transition:var(--transition);}
         .obs-exec-kpi:hover{box-shadow:var(--shadow-md);transform:translateY(-2px);}
@@ -3673,6 +3713,42 @@ const DailyObservations = {
     // ── هيكل التبويب (يُبنى تزامنياً، بلا حساب) ──
     renderExecutiveDashboard() {
         this._injectExecStyles();
+        // خيارات الفلاتر (تُبنى تزامنياً من البيانات الحالية)
+        let siteOpts = '';
+        try { siteOpts = (this.getAllSites() || []).map(s => `<option value="${Utils?.escapeHTML ? Utils.escapeHTML(s.name) : s.name}">${Utils?.escapeHTML ? Utils.escapeHTML(s.name) : s.name}</option>`).join(''); } catch (e) {}
+        let deptOpts = '';
+        try { deptOpts = (this.getDepartmentOptions() || []).map(d => `<option value="${Utils?.escapeHTML ? Utils.escapeHTML(d) : d}">${Utils?.escapeHTML ? Utils.escapeHTML(d) : d}</option>`).join(''); } catch (e) {}
+        let riskOpts = '';
+        try { riskOpts = (this.getRiskLevels() || []).map(r => `<option value="${r}">${r}</option>`).join(''); } catch (e) {}
+        const categoryList = ['حوادث وشيكة', 'تصرف غير آمن', 'وضع غير آمن', 'ملاحظة إيجابية', 'ملاحظة بيئية', 'ملاحظة جودة'];
+        const catOpts = categoryList.map(c => `<option value="${c}">${c}</option>`).join('');
+        const filtersHtml = `
+            <div class="obs-exec-filters">
+                <div class="obs-exec-filter">
+                    <label><i class="fas fa-industry ml-1"></i>المصنع / الموقع</label>
+                    <select id="obs-exec-filter-site"><option value="">كل المواقع</option>${siteOpts}</select>
+                </div>
+                <div class="obs-exec-filter">
+                    <label><i class="fas fa-calendar ml-1"></i>الفترة</label>
+                    <select id="obs-exec-filter-period"><option value="">كل الفترات</option><option value="3">آخر 3 أشهر</option><option value="6">آخر 6 أشهر</option><option value="12">آخر 12 شهر</option></select>
+                </div>
+                <div class="obs-exec-filter">
+                    <label><i class="fas fa-building ml-1"></i>الإدارة المسؤولة</label>
+                    <select id="obs-exec-filter-dept"><option value="">كل الإدارات</option>${deptOpts}</select>
+                </div>
+                <div class="obs-exec-filter">
+                    <label><i class="fas fa-shapes ml-1"></i>التصنيف</label>
+                    <select id="obs-exec-filter-category"><option value="">كل التصنيفات</option>${catOpts}</select>
+                </div>
+                <div class="obs-exec-filter">
+                    <label><i class="fas fa-gauge ml-1"></i>مستوى الخطورة</label>
+                    <select id="obs-exec-filter-risk"><option value="">كل المستويات</option>${riskOpts}</select>
+                </div>
+                <div class="obs-exec-filter">
+                    <label><i class="fas fa-flag ml-1"></i>الحالة</label>
+                    <select id="obs-exec-filter-status"><option value="">كل الحالات</option><option value="open">مفتوحة</option><option value="overdue">متأخرة</option><option value="closed">مغلقة</option></select>
+                </div>
+            </div>`;
         const chartBox = (id, title, icon, wide) => `
             <div class="obs-exec-card ${wide ? 'obs-exec-card--wide' : ''}">
                 <div class="obs-exec-card__title"><i class="fas ${icon}" style="color:var(--primary-color);"></i>${title}</div>
@@ -3693,6 +3769,7 @@ const DailyObservations = {
                     <button type="button" id="obs-exec-refresh-btn" class="btn-secondary"><i class="fas fa-sync-alt ml-2"></i>تحديث المؤشرات</button>
                 </div>
             </div>
+            ${filtersHtml}
             <div id="obs-exec-insights" class="obs-exec-insights"></div>
             <div id="obs-exec-kpi-strip" class="obs-exec-kpi-grid"></div>
             <div class="obs-exec-charts">
@@ -3720,7 +3797,7 @@ const DailyObservations = {
         this._execLoading = true;
         try {
             try { await this.ensureChartJSLoaded(); } catch (e) { /* الرسوم اختيارية */ }
-            const obs = this._execGetObservations();
+            const obs = this._execApplyFilters(this._execGetObservations());
             const k = this._computeExecKpis(obs);
             this._renderExecInsights(this._runInsightsEngine(k));
             this._renderExecKpiCards(k);
@@ -3739,6 +3816,13 @@ const DailyObservations = {
                 exBtn._execBound = true;
                 exBtn.addEventListener('click', () => { try { this._exportExecutivePDF(); } catch (e) {} });
             }
+            ['obs-exec-filter-site', 'obs-exec-filter-period', 'obs-exec-filter-dept', 'obs-exec-filter-category', 'obs-exec-filter-risk', 'obs-exec-filter-status'].forEach(fid => {
+                const sel = document.getElementById(fid);
+                if (sel && !sel._execBound) {
+                    sel._execBound = true;
+                    sel.addEventListener('change', () => { try { this.loadExecutiveDashboard(); } catch (e) {} });
+                }
+            });
         } catch (e) {
             Utils?.safeWarn?.('⚠️ loadExecutiveDashboard:', e?.message || e);
         } finally {
@@ -3853,66 +3937,169 @@ const DailyObservations = {
         host.innerHTML = html;
     },
 
-    // ── تصدير تقرير PDF بهيدر وفوتر بنفس تصميم اللوحة (تحميل مباشر) ──
+    // ── صورة الرسم من Chart.js (للتقرير) ──
+    _execChartImg(canvasId) {
+        const c = this.analysisCharts && this.analysisCharts[canvasId];
+        if (!c) return '';
+        try { return c.toBase64Image('image/png', 1); } catch (e) { return ''; }
+    },
+
+    // ── بناء عقدة تقرير منسّقة بنمط النظام (هيدر شعار/شركة + فوتر تواصل) ──
+    _buildExecReportNode(obs, k, filters) {
+        const esc = (v) => (Utils?.escapeHTML ? Utils.escapeHTML(String(v == null ? '' : v)) : String(v == null ? '' : v));
+        const cs = (typeof AppState !== 'undefined' && AppState.companySettings) ? AppState.companySettings : {};
+        const companyName = cs.name || (typeof DEFAULT_COMPANY_NAME !== 'undefined' ? DEFAULT_COMPANY_NAME : 'QHSSE-GLOBAL');
+        const secondaryName = cs.secondaryName || '';
+        const logo = (typeof AppState !== 'undefined' && AppState.companyLogo) ? AppState.companyLogo : (cs.logo || '');
+        const contactLine = [cs.address, cs.phone, cs.email].filter(Boolean).join('  |  ');
+        const now = new Date();
+        const dateStr = now.toLocaleString('ar-EG', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+        const formCode = 'OBS-EXEC-' + now.getFullYear() + String(now.getMonth() + 1).padStart(2, '0');
+        const initials = String(companyName).trim().slice(0, 2) || 'HS';
+
+        const logoHtml = logo
+            ? `<img src="${esc(logo)}" style="width:58px;height:58px;object-fit:contain;border-radius:8px;background:#fff;border:1px solid #e2e8f0;"/>`
+            : `<div style="width:58px;height:58px;border-radius:8px;background:#1e3a8a;color:#fff;display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:800;">${esc(initials)}</div>`;
+
+        const header = `
+            <div style="display:flex;align-items:center;gap:14px;border-bottom:3px solid #1e3a8a;padding-bottom:12px;margin-bottom:14px;">
+                ${logoHtml}
+                <div style="flex:1;">
+                    <div style="font-size:20px;font-weight:800;color:#0f172a;">${esc(companyName)}</div>
+                    ${secondaryName ? `<div style="font-size:13px;color:#6b7280;margin-top:2px;">${esc(secondaryName)}</div>` : ''}
+                </div>
+                <div style="text-align:left;font-size:11px;color:#374151;line-height:1.9;">
+                    <div><b>كود التقرير:</b> ${esc(formCode)}</div>
+                    <div><b>تاريخ الإصدار:</b> ${esc(dateStr)}</div>
+                </div>
+            </div>
+            <div style="text-align:center;background:#1e3a8a;color:#fff;padding:9px;border-radius:8px;font-size:16px;font-weight:700;margin-bottom:12px;">تقرير المؤشرات التنفيذية للملاحظات اليومية</div>`;
+
+        const metaPills = [
+            ['الموقع', filters.siteLabel || 'الكل'],
+            ['الفترة', filters.periodLabel || 'الكل'],
+            ['الإدارة', filters.deptLabel || 'الكل'],
+            ['التصنيف', filters.categoryLabel || 'الكل'],
+            ['الخطورة', filters.riskLabel || 'الكل'],
+            ['الحالة', filters.statusLabel || 'الكل']
+        ].map(([l, v]) => `<span style="background:#eef2ff;border:1px solid #c7d2fe;border-radius:99px;padding:3px 10px;"><b>${esc(l)}:</b> ${esc(v)}</span>`).join('');
+        const metaHtml = `<div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px;font-size:11px;color:#334155;">${metaPills}</div>`;
+
+        const colorMap = { good: ['#ecfdf5', '#10b981', '#047857'], warn: ['#fffbeb', '#f59e0b', '#b45309'], danger: ['#fef2f2', '#ef4444', '#b91c1c'], info: ['#eff6ff', '#3b82f6', '#1d4ed8'] };
+        const insightsHtml = `<div style="display:flex;flex-direction:column;gap:7px;margin-bottom:14px;">` +
+            this._runInsightsEngine(k).map(i => { const c = colorMap[i.type] || colorMap.info; return `<div style="background:${c[0]};border:1px solid ${c[1]}55;border-right:4px solid ${c[1]};border-radius:8px;padding:9px 12px;font-size:12px;font-weight:600;color:${c[2]};">${esc(i.text)}</div>`; }).join('') +
+            `</div>`;
+
+        const kcards = [
+            ['إجمالي الملاحظات', k.total, '#3b82f6'],
+            ['بلاغات الحوادث الوشيكة', k.nearMiss, '#f59e0b'],
+            ['معدل التبليغ عن الوشيكة', k.nearMissRate.toFixed(1) + '%', '#8b5cf6'],
+            ['إجراءات مفتوحة', k.openActions, '#06b6d4'],
+            ['إجراءات متأخرة', k.overdue, '#ef4444'],
+            ['معدل إغلاق الإجراءات', k.closureRate.toFixed(1) + '%', '#10b981'],
+            ['متوسط أيام الإغلاق', Math.round(k.avgDaysToClose), '#6366f1'],
+            ['معدل التكرار', k.repeatRate.toFixed(1) + '%', k.repeatRate > 20 ? '#ef4444' : '#10b981'],
+            ['عالية الخطورة مفتوحة', k.highRiskOpen, '#f59e0b'],
+            ['إجراءات حرجة متأخرة', k.criticalOverdue, '#b91c1c']
+        ];
+        const kpiHtml = `<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:14px;">` +
+            kcards.map(c => `<div style="border:1px solid #e2e8f0;border-top:3px solid ${c[2]};border-radius:9px;padding:9px;background:#f8fafc;"><div style="font-size:10px;color:#64748b;font-weight:600;margin-bottom:6px;min-height:26px;">${esc(c[0])}</div><div style="font-size:19px;font-weight:800;color:#0f172a;">${esc(c[1])}</div></div>`).join('') +
+            `</div>`;
+
+        const chartList = [
+            ['obs-exec-chart-nearmiss', 'اتجاه الحوادث الوشيكة الشهري'],
+            ['obs-exec-chart-closure', 'اتجاه معدل إغلاق الإجراءات'],
+            ['obs-exec-chart-category', 'توزيع تصنيف الملاحظات'],
+            ['obs-exec-chart-risk', 'توزيع مستوى الخطورة'],
+            ['obs-exec-chart-dept', 'مقارنة أداء الإدارات (معدل الإغلاق %)'],
+            ['obs-exec-chart-repeat', 'أبرز المشكلات المتكررة']
+        ];
+        const chartsHtml = `<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;">` +
+            chartList.map(([id, t]) => { const img = this._execChartImg(id); if (!img) return ''; return `<div style="border:1px solid #e2e8f0;border-radius:9px;padding:9px;background:#fff;"><div style="font-size:12px;font-weight:700;color:#0f172a;margin-bottom:6px;">${esc(t)}</div><img src="${img}" style="width:100%;height:auto;display:block;"/></div>`; }).filter(Boolean).join('') +
+            `</div>`;
+
+        // خريطة الإجراءات المتأخرة (جدول للطباعة)
+        let heatHtml = '';
+        const overdue = (obs || []).filter(o => this._execIsOverdue(o));
+        if (overdue.length) {
+            const arabicMonths = ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
+            const months = [];
+            for (let i = 5; i >= 0; i--) { const d = new Date(now.getFullYear(), now.getMonth() - i, 1); months.push({ y: d.getFullYear(), m: d.getMonth(), label: `${arabicMonths[d.getMonth()]} ${String(d.getFullYear()).slice(2)}` }); }
+            const deptCount = {};
+            overdue.forEach(o => { const d = o.responsibleDepartment || 'غير محدد'; deptCount[d] = (deptCount[d] || 0) + 1; });
+            const depts = Object.entries(deptCount).sort((a, b) => b[1] - a[1]).slice(0, 7).map(e => e[0]);
+            const cell = (dept, mo) => overdue.filter(o => { if ((o.responsibleDepartment || 'غير محدد') !== dept) return false; const d = new Date(o.expectedCompletionDate || o.date); return !isNaN(d.getTime()) && d.getFullYear() === mo.y && d.getMonth() === mo.m; }).length;
+            let max = 1; depts.forEach(dp => months.forEach(mo => { max = Math.max(max, cell(dp, mo)); }));
+            heatHtml = `<div style="font-size:13px;font-weight:700;color:#0f172a;margin:6px 0 8px;">خريطة الإجراءات المتأخرة (الإدارة × الشهر)</div>
+                <table style="width:100%;border-collapse:collapse;font-size:11px;margin-bottom:14px;"><thead><tr><th style="border:1px solid #e2e8f0;padding:6px;background:#f1f5f9;text-align:right;">الإدارة</th>${months.map(mo => `<th style="border:1px solid #e2e8f0;padding:6px;background:#f1f5f9;">${esc(mo.label)}</th>`).join('')}</tr></thead><tbody>` +
+                depts.map(dp => `<tr><td style="border:1px solid #e2e8f0;padding:6px;text-align:right;font-weight:600;">${esc(dp)}</td>${months.map(mo => { const v = cell(dp, mo); const alpha = v === 0 ? 0 : (0.15 + 0.75 * (v / max)); const bg = v === 0 ? '#f8fafc' : `rgba(239,68,68,${alpha.toFixed(2)})`; const col = v === 0 ? '#94a3b8' : (alpha > 0.5 ? '#fff' : '#7f1d1d'); return `<td style="border:1px solid #e2e8f0;padding:6px;text-align:center;font-weight:700;background:${bg};color:${col};">${v || ''}</td>`; }).join('')}</tr>`).join('') +
+                `</tbody></table>`;
+        }
+
+        // جدول المشكلات المتكررة
+        let repeatHtml = '';
+        const issues = (k.repeatIssues || []).slice(0, 15);
+        if (issues.length) {
+            const trendTxt = (t) => t === 'up' ? 'متصاعد' : (t === 'down' ? 'متناقص' : 'ثابت');
+            repeatHtml = `<div style="font-size:13px;font-weight:700;color:#0f172a;margin:6px 0 8px;">تفاصيل المشكلات المتكررة</div>
+                <table style="width:100%;border-collapse:collapse;font-size:11px;"><thead><tr>
+                <th style="border:1px solid #e2e8f0;padding:6px;background:#f1f5f9;text-align:right;">المشكلة</th>
+                <th style="border:1px solid #e2e8f0;padding:6px;background:#f1f5f9;text-align:right;">الموقع / المكان / النوع</th>
+                <th style="border:1px solid #e2e8f0;padding:6px;background:#f1f5f9;">التكرار</th>
+                <th style="border:1px solid #e2e8f0;padding:6px;background:#f1f5f9;">آخر حدوث</th>
+                <th style="border:1px solid #e2e8f0;padding:6px;background:#f1f5f9;">الاتجاه</th>
+                </tr></thead><tbody>` +
+                issues.map(i => `<tr><td style="border:1px solid #e2e8f0;padding:6px;text-align:right;">${esc(i.sample)}</td><td style="border:1px solid #e2e8f0;padding:6px;text-align:right;color:#475569;">${esc(i.key)}</td><td style="border:1px solid #e2e8f0;padding:6px;text-align:center;font-weight:700;">${i.count}</td><td style="border:1px solid #e2e8f0;padding:6px;text-align:center;">${i.last ? esc(new Date(i.last).toLocaleDateString('ar-EG')) : '—'}</td><td style="border:1px solid #e2e8f0;padding:6px;text-align:center;">${esc(trendTxt(i.trend))}</td></tr>`).join('') +
+                `</tbody></table>`;
+        }
+
+        const footer = `<div style="margin-top:18px;border-top:1px solid #e2e8f0;padding-top:8px;font-size:10px;color:#64748b;display:flex;justify-content:space-between;gap:10px;">
+                <span>${esc(contactLine)}</span>
+                <span>${esc(companyName)} — نظام إدارة QHSSE</span>
+            </div>`;
+
+        const wrap = document.createElement('div');
+        wrap.style.cssText = 'position:fixed;left:-99999px;top:0;width:794px;background:#ffffff;color:#0f172a;font-family:Tahoma,Arial,sans-serif;padding:24px;box-sizing:border-box;direction:rtl;z-index:-1;';
+        wrap.innerHTML = header + metaHtml + insightsHtml + kpiHtml + chartsHtml + heatHtml + repeatHtml + footer;
+        return wrap;
+    },
+
+    // ── تصدير تقرير PDF بنمط النظام (هيدر/فوتر) — تحميل مباشر ──
     async _exportExecutivePDF() {
-        const root = document.getElementById('obs-exec-root');
-        if (!root) return;
         const btn = document.getElementById('obs-exec-export-btn');
         const origHtml = btn ? btn.innerHTML : '';
-        if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>'; }
-        const actions = document.getElementById('obs-exec-actions');
-        if (actions) actions.style.visibility = 'hidden';
+        if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جارٍ التجهيز...'; }
+        let node = null;
         try {
             await this._loadAnalyticsLib('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js', () => typeof html2canvas !== 'undefined');
             await this._loadAnalyticsLib('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js', () => typeof window.jspdf !== 'undefined');
 
-            const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-            const canvas = await html2canvas(root, {
-                scale: 1.8, useCORS: true,
-                backgroundColor: isDark ? '#1a1a1a' : '#f8fafc',
-                scrollX: 0, scrollY: -window.scrollY, logging: false
-            });
+            const obs = this._execApplyFilters(this._execGetObservations());
+            const k = this._computeExecKpis(obs);
+            const filters = this._execGetFilters();
+
+            node = this._buildExecReportNode(obs, k, filters);
+            document.body.appendChild(node);
+            // مهلة بسيطة لضمان تحميل صور الرسوم
+            await new Promise(r => setTimeout(r, 120));
+
+            const canvas = await html2canvas(node, { scale: 2, useCORS: true, backgroundColor: '#ffffff', logging: false });
 
             const { jsPDF } = window.jspdf;
             const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
             const pdfW = pdf.internal.pageSize.getWidth();
             const pdfH = pdf.internal.pageSize.getHeight();
-            const margin = 10;
-            const headerH = 16;
-            const footerH = 12;
+            const margin = 8;
+            const footerH = 8;
             const contentW = pdfW - margin * 2;
             const ratio = contentW / canvas.width;
             const totalContentH = canvas.height * ratio;
-            const dateStr = new Date().toLocaleDateString('en-GB');
-
-            const addHeader = (pageNum, totalPages) => {
-                pdf.setFillColor(30, 58, 138);
-                pdf.rect(0, 0, pdfW, headerH, 'F');
-                pdf.setTextColor(255, 255, 255);
-                pdf.setFontSize(11); pdf.setFont('helvetica', 'bold');
-                pdf.text('QHSSE-GLOBAL', margin, 7);
-                pdf.setFontSize(8.5); pdf.setFont('helvetica', 'normal');
-                pdf.text('Executive Safety Intelligence Report', margin, 12.5);
-                pdf.text(`${dateStr}   |   ${pageNum}/${totalPages}`, pdfW - margin, 9, { align: 'right' });
-                pdf.setTextColor(0, 0, 0);
-            };
-            const addFooter = (pageNum, totalPages) => {
-                pdf.setDrawColor(226, 232, 240);
-                pdf.line(margin, pdfH - footerH, pdfW - margin, pdfH - footerH);
-                pdf.setTextColor(120, 120, 120);
-                pdf.setFontSize(8); pdf.setFont('helvetica', 'normal');
-                pdf.text('Daily Observations Module - Confidential', margin, pdfH - 5);
-                pdf.text(`Page ${pageNum} / ${totalPages}`, pdfW - margin, pdfH - 5, { align: 'right' });
-                pdf.setTextColor(0, 0, 0);
-            };
-
-            const pageContentH = pdfH - headerH - footerH - 2;
+            const pageContentH = pdfH - margin - footerH;
             const totalPages = Math.max(1, Math.ceil(totalContentH / pageContentH));
             const pageHeightPx = pageContentH / ratio;
 
             for (let p = 0; p < totalPages; p++) {
                 if (p > 0) pdf.addPage();
-                addHeader(p + 1, totalPages);
                 const sliceCanvas = document.createElement('canvas');
                 const sliceH = Math.min(pageHeightPx, canvas.height - p * pageHeightPx);
                 sliceCanvas.width = canvas.width;
@@ -3920,8 +4107,14 @@ const DailyObservations = {
                 const ctx = sliceCanvas.getContext('2d');
                 ctx.drawImage(canvas, 0, p * pageHeightPx, canvas.width, sliceH, 0, 0, canvas.width, sliceH);
                 const sliceData = sliceCanvas.toDataURL('image/jpeg', 0.92);
-                pdf.addImage(sliceData, 'JPEG', margin, headerH + 1, contentW, sliceH * ratio);
-                addFooter(p + 1, totalPages);
+                pdf.addImage(sliceData, 'JPEG', margin, margin, contentW, sliceH * ratio);
+                // فوتر ترقيم الصفحات
+                pdf.setDrawColor(226, 232, 240);
+                pdf.line(margin, pdfH - footerH, pdfW - margin, pdfH - footerH);
+                pdf.setTextColor(120, 120, 120);
+                pdf.setFontSize(8); pdf.setFont('helvetica', 'normal');
+                pdf.text('Daily Observations - Confidential', margin, pdfH - 3);
+                pdf.text(`Page ${p + 1} / ${totalPages}`, pdfW - margin, pdfH - 3, { align: 'right' });
             }
 
             const dateFile = new Date().toISOString().slice(0, 10);
@@ -3935,7 +4128,7 @@ const DailyObservations = {
                 Notification.error('تعذّر تصدير التقرير — تأكد من الاتصال بالإنترنت وأعد المحاولة');
             }
         } finally {
-            if (actions) actions.style.visibility = '';
+            if (node && node.parentNode) node.parentNode.removeChild(node);
             if (btn) { btn.disabled = false; btn.innerHTML = origHtml; }
         }
     },
