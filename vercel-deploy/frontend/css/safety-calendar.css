@@ -638,54 +638,32 @@
     cursor: not-allowed;
 }
 
-/* ── مجموعة السابق / التالي — تصميم مميز ── */
+/* ── أزرار السابق / التالي — أزرار مستقلة بدون مربع خارجي ── */
 .sc-calendar-root .fc .fc-button-group:has(.fc-prev-button),
 .sc-dash-calendar-root .fc .fc-button-group:has(.fc-prev-button) {
     display: inline-flex;
     align-items: center;
-    gap: 6px;
-    padding: 5px 6px !important;
-    border-radius: 999px !important;
-    overflow: visible;
-    background: linear-gradient(135deg, #1e1b4b 0%, #312e81 40%, #4338ca 100%) !important;
+    gap: 0.5rem;
+    background: transparent !important;
     border: none !important;
-    box-shadow:
-        0 4px 16px rgba(49, 46, 129, 0.4),
-        0 1px 3px rgba(15, 23, 42, 0.12),
-        inset 0 1px 0 rgba(255, 255, 255, 0.12);
-    position: relative;
+    box-shadow: none !important;
+    padding: 0 !important;
+    overflow: visible;
 }
 
 .sc-calendar-root .fc .fc-button-group:has(.fc-prev-button)::after,
 .sc-dash-calendar-root .fc .fc-button-group:has(.fc-prev-button)::after {
-    content: '';
-    position: absolute;
-    left: 50%;
-    top: 50%;
-    transform: translate(-50%, -50%);
-    width: 1px;
-    height: 22px;
-    background: rgba(255, 255, 255, 0.25);
-    pointer-events: none;
+    display: none !important;
+    content: none !important;
 }
 
 .sc-calendar-root .fc .fc-button-group > .fc-button,
 .sc-dash-calendar-root .fc .fc-button-group > .fc-button {
-    border-radius: 50% !important;
+    border-radius: 10px !important;
     margin: 0 !important;
-    border: 2px solid rgba(255, 255, 255, 0.35) !important;
     min-height: unset;
-    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.15) !important;
 }
 
-.sc-calendar-root .fc .fc-button-group > .fc-button:first-child,
-.sc-dash-calendar-root .fc .fc-button-group > .fc-button:first-child,
-.sc-calendar-root .fc .fc-button-group > .fc-button:last-child,
-.sc-dash-calendar-root .fc .fc-button-group > .fc-button:last-child {
-    border-radius: 50% !important;
-}
-
-/* أزرار السابق والتالي — دوائر بيضاء + سهم */
 .sc-calendar-root .fc-prev-button,
 .sc-calendar-root .fc-next-button,
 .sc-dash-calendar-root .fc-prev-button,
@@ -693,101 +671,70 @@
     display: inline-flex !important;
     align-items: center;
     justify-content: center;
-    gap: 0;
-    padding: 0 !important;
-    min-width: 40px !important;
-    width: 40px !important;
-    height: 40px !important;
-    position: relative;
-    background: rgba(255, 255, 255, 0.96) !important;
+    gap: 0.3rem;
+    min-width: unset !important;
+    width: auto !important;
+    height: auto !important;
+    padding: 0.48rem 0.9rem !important;
+    border-radius: 10px !important;
+    border: 1.5px solid #a5b4fc !important;
+    background: linear-gradient(180deg, #ffffff 0%, #f5f3ff 100%) !important;
     color: #4338ca !important;
-    transition: transform 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
+    font-size: 0.78rem !important;
+    font-weight: 700 !important;
+    line-height: 1.2 !important;
+    box-shadow: 0 1px 4px rgba(79, 70, 229, 0.14) !important;
+    transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease, transform 0.12s ease;
 }
 
 .sc-calendar-root .fc-prev-button .fc-button-text,
 .sc-calendar-root .fc-next-button .fc-button-text,
 .sc-dash-calendar-root .fc-prev-button .fc-button-text,
 .sc-dash-calendar-root .fc-next-button .fc-button-text {
-    display: none !important;
+    display: inline !important;
+    font-size: 0.78rem !important;
+    font-weight: 700 !important;
+    padding: 0;
+    margin: 0;
 }
 
 .sc-calendar-root .fc-prev-button::before,
 .sc-calendar-root .fc-next-button::before,
 .sc-dash-calendar-root .fc-prev-button::before,
 .sc-dash-calendar-root .fc-next-button::before {
-    content: '';
-    display: block;
-    width: 9px;
-    height: 9px;
-    border-right: 3px solid #4338ca;
-    border-bottom: 3px solid #4338ca;
-    flex-shrink: 0;
-    transition: border-color 0.18s ease, transform 0.18s ease;
-}
-
-/* RTL: السابق → يمين ، التالي → يسار */
-.sc-calendar-root .fc-prev-button::before,
-.sc-dash-calendar-root .fc-prev-button::before {
-    transform: rotate(-135deg);
-}
-
-.sc-calendar-root .fc-next-button::before,
-.sc-dash-calendar-root .fc-next-button::before {
-    transform: rotate(45deg);
+    display: none !important;
+    content: none !important;
 }
 
 .sc-calendar-root .fc-prev-button:hover:not(:disabled),
 .sc-calendar-root .fc-next-button:hover:not(:disabled),
 .sc-dash-calendar-root .fc-prev-button:hover:not(:disabled),
 .sc-dash-calendar-root .fc-next-button:hover:not(:disabled) {
-    background: #fff !important;
-    transform: scale(1.1);
-    box-shadow: 0 4px 14px rgba(99, 102, 241, 0.45) !important;
-    border-color: #fff !important;
-}
-
-.sc-calendar-root .fc-prev-button:hover:not(:disabled)::before,
-.sc-calendar-root .fc-next-button:hover:not(:disabled)::before,
-.sc-dash-calendar-root .fc-prev-button:hover:not(:disabled)::before,
-.sc-dash-calendar-root .fc-next-button:hover:not(:disabled)::before {
-    border-color: #312e81;
+    background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%) !important;
+    border-color: #4f46e5 !important;
+    color: #fff !important;
+    box-shadow: 0 3px 10px rgba(79, 70, 229, 0.32) !important;
+    transform: translateY(-1px);
 }
 
 .sc-calendar-root .fc-prev-button:active:not(:disabled),
 .sc-calendar-root .fc-next-button:active:not(:disabled),
 .sc-dash-calendar-root .fc-prev-button:active:not(:disabled),
 .sc-dash-calendar-root .fc-next-button:active:not(:disabled) {
-    transform: scale(0.95);
-}
-
-/* ── لوحة التحكم: نفس مجموعة التنقل ── */
-.sc-dash-calendar-root.sc-fc-compact-nav .fc-header-toolbar,
-.sc-dash-calendar-root .sc-fc-compact-nav .fc-header-toolbar {
-    margin-bottom: 0.65rem !important;
-}
-
-.sc-dash-calendar-root.sc-fc-compact-nav .fc .fc-button-group:has(.fc-prev-button),
-.sc-dash-calendar-root .sc-fc-compact-nav .fc .fc-button-group:has(.fc-prev-button) {
-    padding: 4px 5px !important;
-    gap: 5px;
+    transform: translateY(0) scale(0.98);
 }
 
 .sc-dash-calendar-root.sc-fc-compact-nav .fc-prev-button,
 .sc-dash-calendar-root.sc-fc-compact-nav .fc-next-button,
 .sc-dash-calendar-root .sc-fc-compact-nav .fc-prev-button,
 .sc-dash-calendar-root .sc-fc-compact-nav .fc-next-button {
-    min-width: 36px !important;
-    width: 36px !important;
-    height: 36px !important;
+    padding: 0.38rem 0.65rem !important;
+    font-size: 0.72rem !important;
 }
 
-.sc-dash-calendar-root.sc-fc-compact-nav .fc-prev-button::before,
-.sc-dash-calendar-root.sc-fc-compact-nav .fc-next-button::before,
-.sc-dash-calendar-root .sc-fc-compact-nav .fc-prev-button::before,
-.sc-dash-calendar-root .sc-fc-compact-nav .fc-next-button::before {
-    width: 8px;
-    height: 8px;
-    border-width: 2.5px;
+.sc-dash-calendar-root.sc-fc-compact-nav .fc-header-toolbar,
+.sc-dash-calendar-root .sc-fc-compact-nav .fc-header-toolbar {
+    margin-bottom: 0.65rem !important;
 }
 
 .sc-dash-calendar-root.sc-fc-compact-nav .fc-toolbar-chunk,
@@ -858,21 +805,11 @@
 }
 
 @media (max-width: 640px) {
-    .sc-calendar-root .fc-prev-button .fc-button-text,
-    .sc-calendar-root .fc-next-button .fc-button-text {
-        display: none;
-    }
-
     .sc-calendar-root .fc-prev-button,
-    .sc-calendar-root .fc-next-button {
-        min-width: 40px;
-        width: 40px;
-        padding: 0 !important;
-        border-radius: 50% !important;
-    }
-
-    .sc-calendar-root .fc .fc-button-group > .fc-button:first-child,
-    .sc-calendar-root .fc .fc-button-group > .fc-button:last-child {
-        border-radius: 50% !important;
+    .sc-calendar-root .fc-next-button,
+    .sc-dash-calendar-root .fc-prev-button,
+    .sc-dash-calendar-root .fc-next-button {
+        padding: 0.4rem 0.65rem !important;
+        font-size: 0.72rem !important;
     }
 }

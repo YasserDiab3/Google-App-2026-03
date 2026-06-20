@@ -4,6 +4,8 @@
 (function () {
     'use strict';
 
+    const MAX_EVENTS = 2500;
+
     const ASSIGNEE_FILTER_CATEGORIES = new Set(['user-tasks', 'action-tracking', 'safety-team-task']);
 
     function isAssigneeFilteredCategory(category) {
@@ -172,7 +174,7 @@
         if (options && (options.assigneeMode === 'all' || options.assigneeMode === 'mine')) {
             return options.assigneeMode;
         }
-        return isEffectiveAdmin() ? 'all' : 'mine';
+        return 'all';
     }
 
     function parseDateSafe(raw) {

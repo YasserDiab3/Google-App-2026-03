@@ -55,7 +55,7 @@ const SafetyCalendar = {
             direction: 'rtl',
             customButtons: {
                 prev: {
-                    text: isCompact ? '\u00a0' : 'السابق',
+                    text: '◂ السابق',
                     hint: 'الفترة السابقة',
                     click() {
                         if (calRef.api && typeof calRef.api.prev === 'function') {
@@ -64,7 +64,7 @@ const SafetyCalendar = {
                     }
                 },
                 next: {
-                    text: isCompact ? '\u00a0' : 'التالي',
+                    text: 'التالي ▸',
                     hint: 'الفترة التالية',
                     click() {
                         if (calRef.api && typeof calRef.api.next === 'function') {
@@ -173,7 +173,7 @@ const SafetyCalendar = {
         if (window.SafetyCalendarEvents && SafetyCalendarEvents.resolveDefaultAssigneeMode) {
             return SafetyCalendarEvents.resolveDefaultAssigneeMode({});
         }
-        return this.isEffectiveAdmin() ? 'all' : 'mine';
+        return 'all';
     },
 
     canAddTasksFromCalendar() {
@@ -688,7 +688,14 @@ const SafetyCalendar = {
             if (typeof Utils !== 'undefined' && Utils.safeWarn) {
                 Utils.safeWarn('Safety calendar dashboard widget:', err);
             }
-            wrap.innerHTML = '';
+            wrap.innerHTML = `
+                <div class="card-header sc-dash-header">
+                    <h2 class="card-title"><i class="fas fa-calendar-days ml-2"></i>تقويم السلامة</h2>
+                </div>
+                <div class="card-body sc-dash-body">
+                    <p class="sc-dash-empty">تعذر تحميل التقويم. <button type="button" class="btn-secondary btn-sm" id="sc-dash-retry">إعادة المحاولة</button></p>
+                </div>`;
+            wrap.querySelector('#sc-dash-retry')?.addEventListener('click', () => this.loadDashboardWidget());
         }
     }
 };
