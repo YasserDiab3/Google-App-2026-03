@@ -2234,6 +2234,19 @@ const Dashboard = {
         letter-spacing: 0 !important;
         word-break: normal !important;
     }
+    .report-header .company-brand .company-name,
+    .export-header .company-name,
+    .att-report-brand-name,
+    .ptw-paper-header-company,
+    .card-header .company-name {
+        white-space: nowrap !important;
+        word-break: keep-all !important;
+        overflow-wrap: normal !important;
+    }
+    .report-header {
+        grid-template-columns: minmax(240px, 1.45fr) minmax(280px, 1.75fr) minmax(88px, 120px) !important;
+        gap: 14px !important;
+    }
     table, thead, tbody, tr, th, td { direction: rtl !important; }
 </style>`;
         const cleaned = this._stripScriptsFromHtml_(htmlContent);

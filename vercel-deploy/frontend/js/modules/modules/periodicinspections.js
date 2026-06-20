@@ -5110,6 +5110,16 @@ const PeriodicInspections = {
                     page-break-inside: avoid !important;
                     break-inside: avoid !important;
                 }
+                .report-header {
+                    grid-template-columns: minmax(240px, 1.45fr) minmax(280px, 1.75fr) minmax(88px, 120px) !important;
+                    gap: 14px !important;
+                }
+                .report-header .company-brand .company-name,
+                .report-header .company-brand .company-name-secondary {
+                    white-space: nowrap !important;
+                    word-break: keep-all !important;
+                    overflow-wrap: normal !important;
+                }
             </style>
         `;
 

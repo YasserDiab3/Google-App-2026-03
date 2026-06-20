@@ -2874,7 +2874,7 @@ const DEFAULT_COMPANY_NAME = '';
 
 const AppState = {
     /** إصدار التطبيق — تسلسلي: 1.0.0 → 1.0.1 → 1.0.2 … عند كل نشر زِد الرقم هنا وفي version.json */
-    appVersion: '1.0.246',
+    appVersion: '1.0.247',
     /** نص اختياري لرسالة التحديث (ملخص التغييرات). إن تُركت فارغة يُستخدم النص الافتراضي. */
     updateMessage: '',
     debugMode: false,
@@ -6358,9 +6358,9 @@ const PDFTemplates = {
         }
         .report-header {
             display: grid;
-            grid-template-columns: minmax(220px, 1.2fr) minmax(320px, 2fr) minmax(96px, 140px);
+            grid-template-columns: minmax(240px, 1.45fr) minmax(280px, 1.75fr) minmax(88px, 120px);
             align-items: center;
-            gap: 18px;
+            gap: 14px;
             width: 100%;
             box-sizing: border-box;
             border-bottom: 3px solid #003865;
@@ -6424,6 +6424,8 @@ const PDFTemplates = {
         }
         .report-header .company-brand .company-name {
             white-space: nowrap;
+            word-break: keep-all;
+            overflow-wrap: normal;
         }
         .company-brand .company-name-group {
             display: flex;
@@ -7183,6 +7185,15 @@ const PDFTemplates = {
                 justify-content: center;
                 text-align: center;
             }
+        }
+        .export-header .company-name,
+        .att-report-brand-name,
+        .card-header .company-name,
+        .ptw-paper-header-company,
+        .hse-report-company-name {
+            white-space: nowrap;
+            word-break: keep-all;
+            overflow-wrap: normal;
         }
     </style>
 </head>

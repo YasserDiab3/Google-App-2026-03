@@ -15214,6 +15214,15 @@ const Clinic = {
         letter-spacing: 0 !important;
         word-break: normal !important;
     }
+    .att-report-brand-name,
+    .report-header .company-brand .company-name,
+    .export-header .company-name,
+    .ptw-paper-header-company,
+    .card-header .company-name {
+        white-space: nowrap !important;
+        word-break: keep-all !important;
+        overflow-wrap: normal !important;
+    }
     table, thead, tbody, tr { direction: rtl !important; }
 </style>`;
         const cleaned = String(htmlContent || '').replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '');
@@ -15288,7 +15297,7 @@ const Clinic = {
     .att-report-doc { width: 794px; box-sizing: border-box; padding: 22px 26px 28px; background: #fff; }
     .att-report-top { display: flex; align-items: center; justify-content: space-between; gap: 16px; border-bottom: 3px solid #134e4a; padding-bottom: 12px; margin-bottom: 14px; }
     .att-report-brand { display: flex; align-items: center; gap: 12px; min-width: 0; }
-    .att-report-brand-name { font-size: 13px; font-weight: 700; color: #334155; line-height: 1.4; }
+    .att-report-brand-name { font-size: 13px; font-weight: 700; color: #334155; line-height: 1.4; white-space: nowrap; word-break: keep-all; overflow-wrap: normal; }
     .att-report-code { font-size: 10px; color: #64748b; text-align: left; white-space: nowrap; }
     .att-report-footer { margin-top: 18px; padding-top: 10px; border-top: 1px dashed #cbd5e1; text-align: center; font-size: 9px; color: #94a3b8; line-height: 1.5; }
 </style>

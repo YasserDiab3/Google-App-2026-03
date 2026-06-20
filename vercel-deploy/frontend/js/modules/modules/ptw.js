@@ -6170,6 +6170,7 @@ const PTW = {
                         version: '1.0',
                         releaseDate: formData.createdAt || new Date().toISOString(),
                         revisionDate: formData.updatedAt || new Date().toISOString(),
+                        compactPdfFooter: true,
                         'رقم التصريح': permitId.substring(0, 8)
                     },
                     formData.createdAt || new Date().toISOString(),
@@ -7240,10 +7241,15 @@ const PTW = {
                 letter-spacing: 0 !important; word-spacing: normal !important;
                 font-family: 'Cairo', Tahoma, Arial, sans-serif !important;
             }
-            .ptw-ph-right { width: 33%; text-align: right; }
-            .ptw-ph-center { width: 34%; text-align: center; }
-            .ptw-ph-left { width: 33%; text-align: left; }
-            .ptw-paper-header-company, .ptw-paper-header-dept, .ptw-paper-header-form-title {
+            .ptw-ph-right { width: 38%; text-align: right; }
+            .ptw-ph-center { width: 32%; text-align: center; }
+            .ptw-ph-left { width: 30%; text-align: left; }
+            .ptw-paper-header-company {
+                letter-spacing: 0 !important; word-spacing: normal !important;
+                word-break: keep-all; white-space: nowrap; unicode-bidi: embed; direction: rtl;
+                line-height: 1.35 !important; transform: none !important;
+            }
+            .ptw-paper-header-dept, .ptw-paper-header-form-title {
                 letter-spacing: 0 !important; word-spacing: normal !important;
                 word-break: normal; white-space: normal; unicode-bidi: embed; direction: rtl;
                 line-height: 1.35 !important; transform: none !important;
@@ -7288,10 +7294,15 @@ const PTW = {
             .ptw-paper-header-pdf { display: block; padding: 0; background: transparent; border: none; min-height: 0; margin-bottom: 8px; }
             .ptw-paper-header-table { width: 100%; border-collapse: collapse; table-layout: fixed; background: #1e3a5f; border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.18); }
             .ptw-ph-cell { padding: 10px 12px; vertical-align: middle; color: #fff; letter-spacing: 0 !important; word-spacing: normal; }
-            .ptw-ph-right { width: 33%; text-align: right; }
-            .ptw-ph-center { width: 34%; text-align: center; }
-            .ptw-ph-left { width: 33%; text-align: left; }
-            .ptw-paper-header-company, .ptw-paper-header-dept, .ptw-paper-header-form-title { letter-spacing: 0 !important; word-break: normal; white-space: normal; unicode-bidi: embed; }
+            .ptw-ph-right { width: 38%; text-align: right; }
+            .ptw-ph-center { width: 32%; text-align: center; }
+            .ptw-ph-left { width: 30%; text-align: left; }
+            .ptw-paper-header-company {
+                letter-spacing: 0 !important; word-break: keep-all; white-space: nowrap; unicode-bidi: embed;
+            }
+            .ptw-paper-header-dept, .ptw-paper-header-form-title {
+                letter-spacing: 0 !important; word-break: normal; white-space: normal; unicode-bidi: embed;
+            }
             .ptw-paper-header-form-subtitle { font-size: 11px; letter-spacing: 0.4px !important; }
             .ptw-paper-header-form-title { font-size: 16px; }
             .ptw-paper-header-company { font-size: 14px; }
@@ -7342,14 +7353,17 @@ const PTW = {
             body { margin: 0; padding: 12px; font-family: 'Cairo', 'Segoe UI', Tahoma, Arial, sans-serif; font-size: 12px; color: #1f2937; background: #fff; direction: rtl; }
             .ptw-manual-print { max-width: 1100px; margin: 0 auto; }
             .ptw-paper-header {
-                display: grid; grid-template-columns: 1fr 1.45fr 1fr; gap: 14px; align-items: center;
+                display: grid; grid-template-columns: 1.45fr 1.15fr 0.85fr; gap: 14px; align-items: center;
                 background: linear-gradient(135deg, #1e3a5f 0%, #1d4ed8 100%); color: #fff;
                 padding: 16px 20px; border-radius: 10px; margin-bottom: 14px;
                 border: 1px solid rgba(255, 255, 255, 0.18);
                 min-height: 78px;
             }
             .ptw-paper-header-right { text-align: right; min-width: 0; }
-            .ptw-paper-header-company { font-size: 16px; font-weight: 700; line-height: 1.35; letter-spacing: 0.2px; }
+            .ptw-paper-header-company {
+                font-size: 16px; font-weight: 700; line-height: 1.35; letter-spacing: 0.2px;
+                white-space: nowrap; word-break: keep-all;
+            }
             .ptw-paper-header-dept { font-size: 12px; font-weight: 500; opacity: 0.9; margin-top: 5px; line-height: 1.4; }
             .ptw-paper-header-center {
                 text-align: center; min-width: 0;
@@ -7567,6 +7581,17 @@ const PTW = {
             }
             body > * { max-width: ${w}px !important; box-sizing: border-box; }
             #ptw-permit-print-root { width: ${w}px !important; max-width: ${w}px !important; margin: 0 !important; }
+            .report-header {
+                grid-template-columns: minmax(240px, 1.45fr) minmax(280px, 1.75fr) minmax(88px, 112px) !important;
+                gap: 12px !important;
+            }
+            .report-header .company-brand .company-name,
+            .pdf-compact-footer .report-header .company-brand .company-name,
+            .pdf-compact-footer .report-header .company-brand .company-name-secondary {
+                white-space: nowrap !important;
+                word-break: keep-all !important;
+                overflow-wrap: normal !important;
+            }
         `;
     },
 
@@ -8289,7 +8314,7 @@ const PTW = {
                 const cloneRoot = clonedDoc.getElementById('ptw-permit-print-root') || element;
                 this._sanitizePermitNodeForCanvasCapture_(cloneRoot);
                 clonedDoc.querySelectorAll(
-                    '.ptw-ph-cell, .ptw-paper-header-company, .ptw-paper-header-dept, .ptw-paper-header-form-title, .ptw-paper-header-form-subtitle'
+                    '.ptw-ph-cell, .ptw-paper-header-dept, .ptw-paper-header-form-title, .ptw-paper-header-form-subtitle'
                 ).forEach((el) => {
                     if (!el?.style) return;
                     el.style.letterSpacing = '0';
@@ -8297,6 +8322,16 @@ const PTW = {
                     el.style.fontFamily = "'Cairo', Tahoma, Arial, sans-serif";
                     el.style.transform = 'none';
                     el.style.unicodeBidi = 'embed';
+                });
+                clonedDoc.querySelectorAll('.ptw-paper-header-company').forEach((el) => {
+                    if (!el?.style) return;
+                    el.style.letterSpacing = '0';
+                    el.style.wordSpacing = 'normal';
+                    el.style.fontFamily = "'Cairo', Tahoma, Arial, sans-serif";
+                    el.style.transform = 'none';
+                    el.style.unicodeBidi = 'embed';
+                    el.style.whiteSpace = 'nowrap';
+                    el.style.wordBreak = 'keep-all';
                 });
                 if (clonedDoc.body) {
                     clonedDoc.body.style.width = `${scrollW}px`;
@@ -8799,19 +8834,18 @@ const PTW = {
         const esc = Utils.escapeHTML;
         const isSel = (label) => this._equipmentSelectionIsChecked(label, selectedItems);
         const fixedRows = this.getManualFixedEquipmentRowLabels();
+        const fixedFlat = fixedRows.flat();
         const history = (Array.isArray(historyLabels) ? historyLabels : []).filter(Boolean);
 
         let html = '<div class="ptw-manual-equipment-fixed-wrap">';
-        fixedRows.forEach((row) => {
-            html += '<div class="ptw-manual-equipment-fixed-row">';
-            row.forEach((label) => {
-                const checked = isSel(label) ? ' checked' : '';
-                html += `<label class="ptw-manual-equipment-cell"><input type="checkbox" class="equipment-fixed-cb" value="${esc(label)}"${checked}><span>${esc(label)}</span></label>`;
-            });
-            html += '</div>';
+        html += '<div class="ptw-manual-equipment-chips-row ptw-manual-equipment-fixed-chips">';
+        fixedFlat.forEach((label) => {
+            const checked = isSel(label) ? ' checked' : '';
+            html += `<label class="ptw-manual-equipment-cell"><input type="checkbox" class="equipment-fixed-cb" value="${esc(label)}"${checked}><span>${esc(label)}</span></label>`;
         });
+        html += '</div>';
         if (history.length) {
-            html += '<div class="ptw-manual-equipment-fixed-row ptw-manual-equipment-history-row">';
+            html += '<div class="ptw-manual-equipment-chips-row ptw-manual-equipment-history-row">';
             history.forEach((label) => {
                 const checked = isSel(label) ? ' checked' : '';
                 html += `<label class="ptw-manual-equipment-cell ptw-manual-equipment-history-cell"><input type="checkbox" class="equipment-history-cb" value="${esc(label)}"${checked}><span>${esc(label)}</span></label>`;
@@ -9300,7 +9334,7 @@ const PTW = {
                 /* رأس الورق + الشعار: يُحقن عبر renderPermitSystemHeader() ولا يمر بنمط نموذج PTW العادي */
                 .ptw-manual-permit-modal .ptw-paper-header {
                     display: grid;
-                    grid-template-columns: 1fr 1.45fr 1fr;
+                    grid-template-columns: 1.45fr 1.15fr 0.85fr;
                     align-items: center;
                     gap: 10px 14px;
                     padding: 12px 20px;
@@ -9321,8 +9355,8 @@ const PTW = {
                     color: #fff;
                     letter-spacing: 0.2px;
                     line-height: 1.35;
-                    overflow: hidden;
-                    text-overflow: ellipsis;
+                    white-space: nowrap;
+                    word-break: keep-all;
                 }
                 .ptw-manual-permit-modal .ptw-paper-header-dept {
                     font-size: 11px;
@@ -9390,7 +9424,6 @@ const PTW = {
                     .ptw-manual-permit-modal .ptw-paper-header-right,
                     .ptw-manual-permit-modal .ptw-paper-header-center { text-align: center; }
                     .ptw-manual-permit-modal .ptw-paper-header-left { justify-content: center; }
-                    .ptw-manual-permit-modal .ptw-paper-header-company,
                     .ptw-manual-permit-modal .ptw-paper-header-dept { white-space: normal; }
                 }
                 /* جداول النموذج اليدوي — خلفية فاتحة ووضوح دون فرض ثيم أسود */
@@ -9583,85 +9616,135 @@ const PTW = {
                     }
                 }
 
-                /* القسم الأول — شبكة المعدات/الماكينة */
+                /* القسم الأول — شبكة المعدات/الماكينة (chips أفقية مضغوطة) */
                 .ptw-manual-permit-modal .manual-section-1 .ptw-manual-equipment-body,
                 .ptw-form-equipment-body {
-                    background: #ffffff !important;
-                    border: 1.2px solid #94a3b8 !important;
-                    border-radius: 10px !important;
-                    padding: 14px 12px !important;
-                    box-shadow: 0 1px 4px rgba(15, 23, 42, 0.07);
+                    background: rgba(255, 255, 255, 0.92) !important;
+                    border: 1px solid #cbd5e1 !important;
+                    border-radius: 8px !important;
+                    padding: 7px 9px !important;
+                    box-shadow: none;
                     width: 100%;
                     box-sizing: border-box;
                 }
                 .ptw-manual-permit-modal .manual-section-1 .ptw-manual-equipment-notes-frame,
                 .ptw-form-equipment-notes-frame {
-                    margin-top: 0.5rem;
-                    background: #ffffff;
-                    border: 1px solid #cbd5e1;
-                    border-radius: 8px;
-                    padding: 6px 8px;
+                    display: flex;
+                    align-items: center;
+                    gap: 8px;
+                    margin-top: 6px;
+                    padding: 0;
+                    background: transparent;
+                    border: none;
+                    border-radius: 0;
                 }
                 .ptw-manual-permit-modal .manual-section-1 .ptw-manual-equipment-notes-frame label,
                 .ptw-form-equipment-notes-frame label {
-                    color: #334155;
+                    flex-shrink: 0;
+                    color: #64748b;
                     font-weight: 600;
-                    font-size: 0.72rem;
-                    margin-bottom: 4px;
+                    font-size: 0.68rem;
+                    margin-bottom: 0;
+                    white-space: nowrap;
+                }
+                .ptw-manual-permit-modal .manual-section-1 .ptw-manual-equipment-notes-frame textarea,
+                .ptw-form-equipment-notes-frame textarea {
+                    flex: 1;
+                    min-height: 28px;
+                    max-height: 28px;
+                    height: 28px;
+                    padding: 4px 8px;
+                    font-size: 0.75rem;
+                    line-height: 1.3;
+                    resize: none;
+                    border-radius: 6px;
+                    border: 1px solid #e2e8f0;
+                    background: #fff;
                 }
                 .ptw-manual-permit-modal .manual-section-1 .ptw-manual-equipment-fixed-wrap,
                 .ptw-form-equipment-body .ptw-manual-equipment-fixed-wrap {
+                    display: flex;
+                    flex-direction: column;
+                    gap: 4px;
                     width: 100%;
                 }
-                .ptw-manual-permit-modal .manual-section-1 .ptw-manual-equipment-fixed-row,
-                .ptw-form-equipment-body .ptw-manual-equipment-fixed-row {
-                    display: grid;
-                    grid-template-columns: repeat(9, minmax(0, 1fr));
-                    gap: 8px 6px;
-                    margin-bottom: 8px;
+                .ptw-manual-permit-modal .manual-section-1 .ptw-manual-equipment-chips-row,
+                .ptw-form-equipment-body .ptw-manual-equipment-chips-row {
+                    display: flex;
+                    flex-wrap: wrap;
+                    align-items: center;
+                    align-content: flex-start;
+                    gap: 5px 6px;
                     direction: rtl;
+                    margin: 0;
                 }
                 .ptw-manual-permit-modal .manual-section-1 .ptw-manual-equipment-history-row,
                 .ptw-form-equipment-body .ptw-manual-equipment-history-row {
-                    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+                    padding-top: 5px;
+                    margin-top: 1px;
+                    border-top: 1px dashed #e2e8f0;
                 }
                 .ptw-manual-permit-modal .manual-section-1 .ptw-manual-equipment-cell,
                 .ptw-form-equipment-body .ptw-manual-equipment-cell {
-                    display: flex;
-                    align-items: flex-start;
-                    gap: 6px;
-                    font-size: 0.8rem;
-                    font-weight: 600;
-                    color: #0f172a !important;
+                    display: inline-flex;
+                    align-items: center;
+                    gap: 4px;
+                    font-size: 0.72rem;
+                    font-weight: 500;
+                    color: #475569 !important;
                     cursor: pointer;
                     direction: rtl;
+                    line-height: 1.2;
+                    white-space: nowrap;
+                    padding: 3px 9px;
+                    border: 1px solid #cbd5e1;
+                    border-radius: 999px;
+                    background: #f8fafc;
+                    min-height: 0;
                     min-width: 0;
-                    line-height: 1.38;
-                    word-break: break-word;
-                    padding: 7px 6px;
-                    border: 1.2px solid #94a3b8;
-                    border-radius: 5px;
+                    transition: border-color 0.15s ease, background 0.15s ease, color 0.15s ease;
+                }
+                .ptw-manual-permit-modal .manual-section-1 .ptw-manual-equipment-cell:hover,
+                .ptw-form-equipment-body .ptw-manual-equipment-cell:hover {
+                    border-color: #94a3b8;
                     background: #fff;
-                    min-height: 34px;
                 }
                 .ptw-manual-permit-modal .manual-section-1 .ptw-manual-equipment-cell:has(input:checked),
                 .ptw-form-equipment-body .ptw-manual-equipment-cell:has(input:checked) {
-                    border-color: #1d4ed8;
-                    background: #f8fafc;
+                    border-color: #3b82f6;
+                    background: #eff6ff;
+                    color: #1d4ed8 !important;
+                    font-weight: 600;
+                }
+                .ptw-manual-permit-modal .manual-section-1 .ptw-manual-equipment-history-cell,
+                .ptw-form-equipment-body .ptw-manual-equipment-history-cell {
+                    border-style: dashed;
+                    background: #fafafa;
                 }
                 .ptw-manual-permit-modal .manual-section-1 .ptw-manual-equipment-cell input[type="checkbox"],
                 .ptw-form-equipment-body .ptw-manual-equipment-cell input[type="checkbox"] {
                     flex-shrink: 0;
-                    width: 14px;
-                    height: 14px;
-                    margin-top: 2px;
-                    accent-color: #1e40af;
+                    width: 11px;
+                    height: 11px;
+                    margin: 0;
+                    accent-color: #2563eb;
                     cursor: pointer;
                 }
-                @media (max-width: 900px) {
-                    .ptw-manual-permit-modal .manual-section-1 .ptw-manual-equipment-fixed-row,
-                    .ptw-form-equipment-body .ptw-manual-equipment-fixed-row {
-                        grid-template-columns: repeat(3, minmax(0, 1fr));
+                .ptw-manual-permit-modal .manual-section-1 .manual-equipment-field-wrap > label,
+                .ptw-section-1 .ptw-equipment-field-wrap > label {
+                    margin-bottom: 0.35rem;
+                }
+                @media (max-width: 640px) {
+                    .ptw-manual-permit-modal .manual-section-1 .ptw-manual-equipment-cell,
+                    .ptw-form-equipment-body .ptw-manual-equipment-cell {
+                        font-size: 0.68rem;
+                        padding: 2px 7px;
+                        white-space: normal;
+                        max-width: 100%;
+                    }
+                    .ptw-manual-permit-modal .manual-section-1 .ptw-manual-equipment-notes-frame,
+                    .ptw-form-equipment-notes-frame {
+                        flex-wrap: wrap;
                     }
                 }
 
@@ -9841,8 +9924,8 @@ const PTW = {
                                         ${manualEquipmentMatrixHtml}
                                     </div>
                                     <div class="ptw-manual-equipment-notes-frame">
-                                        <label class="block">إضافي يدوي</label>
-                                        <textarea id="manual-equipment-notes" class="form-input bg-white w-full" rows="1" placeholder="معدات أو عملية غير موجودة في القائمة...">${Utils.escapeHTML(manualEquipmentSelection.manualNotes || '')}</textarea>
+                                        <label>إضافي</label>
+                                        <textarea id="manual-equipment-notes" class="form-input bg-white w-full" rows="1" placeholder="معدات غير موجودة في القائمة...">${Utils.escapeHTML(manualEquipmentSelection.manualNotes || '')}</textarea>
                                     </div>
                                 </div>
                                 <div class="md:col-span-3">
@@ -13201,7 +13284,7 @@ const PTW = {
                 }
                 .ptw-paper-header {
                     display: grid;
-                    grid-template-columns: 1fr 1.45fr 1fr;
+                    grid-template-columns: 1.45fr 1.15fr 0.85fr;
                     align-items: center;
                     gap: 12px;
                     background: linear-gradient(135deg, #1e3a5f 0%, #1d4ed8 100%);
@@ -13211,7 +13294,10 @@ const PTW = {
                     color: #fff;
                 }
                 .ptw-paper-header-right { text-align: right; min-width: 0; }
-                .ptw-paper-header-company { font-size: 16px; font-weight: 700; color: #fff; letter-spacing: 0.2px; line-height: 1.35; }
+                .ptw-paper-header-company {
+                    font-size: 16px; font-weight: 700; color: #fff; letter-spacing: 0.2px; line-height: 1.35;
+                    white-space: nowrap; word-break: keep-all;
+                }
                 .ptw-paper-header-dept { font-size: 12px; font-weight: 500; color: rgba(255, 255, 255, 0.9); margin-top: 4px; line-height: 1.35; }
                 .ptw-paper-header-center {
                     text-align: center; min-width: 0;
@@ -13286,68 +13372,93 @@ const PTW = {
                 .ptw-section-1 h3 { color: #1565C0; border-color: #2196F3; }
                 .ptw-section-1 h3 i { color: #1976D2; background: rgba(33, 150, 243, 0.1); }
                 .ptw-form-equipment-body {
-                    background: #ffffff;
-                    border: 1.2px solid #94a3b8;
-                    border-radius: 10px;
-                    padding: 14px 12px;
-                    box-shadow: 0 1px 4px rgba(15, 23, 42, 0.07);
+                    background: rgba(255, 255, 255, 0.92);
+                    border: 1px solid #cbd5e1;
+                    border-radius: 8px;
+                    padding: 7px 9px;
                     width: 100%;
                     box-sizing: border-box;
                 }
                 .ptw-form-equipment-notes-frame {
-                    margin-top: 0.5rem;
-                    background: #ffffff;
-                    border: 1px solid #cbd5e1;
-                    border-radius: 8px;
-                    padding: 6px 8px;
+                    display: flex;
+                    align-items: center;
+                    gap: 8px;
+                    margin-top: 6px;
                 }
                 .ptw-form-equipment-notes-frame label {
-                    color: #334155;
+                    flex-shrink: 0;
+                    color: #64748b;
                     font-weight: 600;
-                    font-size: 0.72rem;
-                    margin-bottom: 4px;
+                    font-size: 0.68rem;
+                    margin-bottom: 0;
+                    white-space: nowrap;
                 }
-                .ptw-form-equipment-body .ptw-manual-equipment-fixed-wrap { width: 100%; }
-                .ptw-form-equipment-body .ptw-manual-equipment-fixed-row {
-                    display: grid;
-                    grid-template-columns: repeat(9, minmax(0, 1fr));
-                    gap: 8px 6px;
-                    margin-bottom: 8px;
+                .ptw-form-equipment-notes-frame textarea {
+                    flex: 1;
+                    min-height: 28px;
+                    max-height: 28px;
+                    height: 28px;
+                    padding: 4px 8px;
+                    font-size: 0.75rem;
+                    line-height: 1.3;
+                    resize: none;
+                    border-radius: 6px;
+                    border: 1px solid #e2e8f0;
+                }
+                .ptw-form-equipment-body .ptw-manual-equipment-fixed-wrap {
+                    display: flex;
+                    flex-direction: column;
+                    gap: 4px;
+                }
+                .ptw-form-equipment-body .ptw-manual-equipment-chips-row {
+                    display: flex;
+                    flex-wrap: wrap;
+                    align-items: center;
+                    gap: 5px 6px;
                     direction: rtl;
                 }
                 .ptw-form-equipment-body .ptw-manual-equipment-history-row {
-                    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+                    padding-top: 5px;
+                    margin-top: 1px;
+                    border-top: 1px dashed #e2e8f0;
                 }
                 .ptw-form-equipment-body .ptw-manual-equipment-cell {
-                    display: flex;
-                    align-items: flex-start;
-                    gap: 6px;
-                    font-size: 0.8rem;
-                    font-weight: 600;
-                    color: #0f172a;
+                    display: inline-flex;
+                    align-items: center;
+                    gap: 4px;
+                    font-size: 0.72rem;
+                    font-weight: 500;
+                    color: #475569;
                     cursor: pointer;
-                    direction: rtl;
-                    min-width: 0;
-                    line-height: 1.38;
-                    word-break: break-word;
-                    padding: 7px 6px;
-                    border: 1.2px solid #94a3b8;
-                    border-radius: 5px;
+                    line-height: 1.2;
+                    white-space: nowrap;
+                    padding: 3px 9px;
+                    border: 1px solid #cbd5e1;
+                    border-radius: 999px;
+                    background: #f8fafc;
+                    transition: border-color 0.15s ease, background 0.15s ease;
+                }
+                .ptw-form-equipment-body .ptw-manual-equipment-cell:hover {
+                    border-color: #94a3b8;
                     background: #fff;
-                    min-height: 34px;
                 }
                 .ptw-form-equipment-body .ptw-manual-equipment-cell:has(input:checked) {
-                    border-color: #1d4ed8;
-                    background: #f8fafc;
+                    border-color: #3b82f6;
+                    background: #eff6ff;
+                    color: #1d4ed8;
+                    font-weight: 600;
+                }
+                .ptw-form-equipment-body .ptw-manual-equipment-history-cell {
+                    border-style: dashed;
+                    background: #fafafa;
                 }
                 .ptw-form-equipment-body .ptw-manual-equipment-cell input[type="checkbox"] {
-                    flex-shrink: 0;
-                    width: 14px;
-                    height: 14px;
-                    margin-top: 2px;
-                    accent-color: #1e40af;
-                    cursor: pointer;
+                    width: 11px;
+                    height: 11px;
+                    margin: 0;
+                    accent-color: #2563eb;
                 }
+                .ptw-section-1 .ptw-equipment-field-wrap > label { margin-bottom: 0.35rem; }
                 
                 .ptw-section-2 { background: linear-gradient(135deg, #e0f2f1 0%, #b2dfdb 100%); border-color: #009688; }
                 .ptw-section-2 h3 { color: #00695C; border-color: #009688; }
@@ -13717,14 +13828,14 @@ const PTW = {
                                             value="${escapeHTML(requestingPartyValueForm)}" placeholder="الجهة الطالبة للتصريح">
                                     `}
                                 </div>
-                                <div class="md:col-span-3">
+                                <div class="md:col-span-3 ptw-equipment-field-wrap">
                                     <label class="block text-sm font-bold text-gray-700 mb-2">المعدة / الماكينة / العملية</label>
                                     <div id="ptw-equipment-matrix" class="ptw-form-equipment-body">
                                         ${ptwEquipmentMatrixHtml}
                                     </div>
                                     <div class="ptw-form-equipment-notes-frame">
-                                        <label class="block">إضافي يدوي</label>
-                                        <textarea id="ptw-equipment-notes" class="form-input bg-white w-full" rows="1" placeholder="معدات أو عملية غير موجودة في القائمة...">${escapeHTML(ptwEquipmentSelection.manualNotes || '')}</textarea>
+                                        <label>إضافي</label>
+                                        <textarea id="ptw-equipment-notes" class="form-input bg-white w-full" rows="1" placeholder="معدات غير موجودة في القائمة...">${escapeHTML(ptwEquipmentSelection.manualNotes || '')}</textarea>
                                     </div>
                                 </div>
                                 <div class="md:col-span-3">

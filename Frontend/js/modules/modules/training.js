@@ -15787,7 +15787,7 @@ const Training = {
                 <div dir="rtl" style="font-family: 'Segoe UI', Tahoma, sans-serif; padding: 30px; background: #fff; direction: rtl;">
                     <div style="display: flex; align-items: center; justify-content: space-between; border-bottom: 3px solid #1e40af; padding-bottom: 16px; margin-bottom: 20px;">
                         <div style="text-align: right;">
-                            ${companyName ? `<div style="font-size: 18px; font-weight: 700; color: #1e40af; margin-bottom: 4px;">${companyName}</div>` : ''}
+                            ${companyName ? `<div style="font-size: 18px; font-weight: 700; color: #1e40af; margin-bottom: 4px; white-space: nowrap; word-break: keep-all;">${companyName}</div>` : ''}
                             <h1 style="font-size: 20px; color: #1e293b; margin: 0 0 2px;">تقرير التدريبات القانونية</h1>
                             <p style="font-size: 12px; color: #64748b; margin: 0;">الامتثال للقوانين المصرية — Egyptian Law Compliance</p>
                         </div>

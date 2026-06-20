@@ -1933,7 +1933,7 @@ const Incidents = {
                 <div style="font-size:0.8rem;color:#6b7280;margin-top:5px;"><i class="fas fa-calendar-day" style="margin-left:4px;"></i>${dateStr}</div>
             </div>
             <div style="flex:0 0 auto;min-width:90px;text-align:left;">
-                <div style="font-size:1.05rem;font-weight:700;color:#1f2937;line-height:1.3;">${Utils.escapeHTML(companyName || '')}</div>
+                <div style="font-size:1.05rem;font-weight:700;color:#1f2937;line-height:1.3;white-space:nowrap;word-break:keep-all;">${Utils.escapeHTML(companyName || '')}</div>
                 ${companySecondaryName ? `<div style="font-size:0.85rem;font-weight:500;color:#6b7280;margin-top:2px;">${Utils.escapeHTML(companySecondaryName)}</div>` : ''}
             </div>
         `;
@@ -2488,7 +2488,7 @@ const Incidents = {
                         </div>
                         <div style="flex: 1; text-align: left;">
                             <div style="font-size: 14px; font-weight: 700; color: #1f2937; line-height: 1.3;">
-                                ${Utils.escapeHTML(companyName || '')}
+                                <div style="white-space: nowrap; word-break: keep-all;">${Utils.escapeHTML(companyName || '')}</div>
                                 ${companySecondaryName ? `<div style="font-size: 12px; font-weight: 500; color: #6b7280; margin-top: 2px;">${Utils.escapeHTML(companySecondaryName)}</div>` : ''}
                             </div>
                         </div>
@@ -2757,7 +2757,7 @@ const Incidents = {
                             </div>
                             <div style="flex: 1; text-align: left;">
                                 <div style="font-size: 14px; font-weight: 700; color: #1f2937; line-height: 1.3;">
-                                    ${Utils.escapeHTML(companyName || '')}
+                                    <div style="white-space: nowrap; word-break: keep-all;">${Utils.escapeHTML(companyName || '')}</div>
                                     ${companySecondaryName ? `<div style="font-size: 12px; font-weight: 500; color: #6b7280; margin-top: 2px;">${Utils.escapeHTML(companySecondaryName)}</div>` : ''}
                                 </div>
                             </div>
@@ -7869,7 +7869,7 @@ const Incidents = {
                     </div>
                     <div style="flex: 0 0 auto; text-align: left; padding-right: 20px;">
                         <div style="font-size: 14px; font-weight: 700; color: #1f2937; line-height: 1.3;">
-                            ${Utils.escapeHTML(companyName || '')}
+                            <div style="white-space: nowrap; word-break: keep-all;">${Utils.escapeHTML(companyName || '')}</div>
                             ${companySecondaryName ? `<div style="font-size: 12px; font-weight: 500; color: #6b7280; margin-top: 2px;">${Utils.escapeHTML(companySecondaryName)}</div>` : ''}
                         </div>
                     </div>
@@ -9452,6 +9452,19 @@ const Incidents = {
         letter-spacing: 0 !important;
         word-break: normal !important;
         font-family: 'Cairo', 'Tahoma', 'Segoe UI', sans-serif !important;
+    }
+    .report-header .company-brand .company-name,
+    .export-header .company-name,
+    .att-report-brand-name,
+    .ptw-paper-header-company,
+    .card-header .company-name {
+        white-space: nowrap !important;
+        word-break: keep-all !important;
+        overflow-wrap: normal !important;
+    }
+    .report-header {
+        grid-template-columns: minmax(240px, 1.45fr) minmax(280px, 1.75fr) minmax(88px, 120px) !important;
+        gap: 14px !important;
     }
     table, thead, tbody, tr, th, td { direction: rtl !important; }
     .header-info h1 { letter-spacing: 0 !important; }
@@ -11980,7 +11993,7 @@ const Incidents = {
                             كود التقرير: SAFETY-ALERT
                         </div>
                         <div style="font-size: 14px; font-weight: 700; color: #1f2937; margin-top: 8px; line-height: 1.3;">
-                            ${Utils.escapeHTML(companyName || '')}
+                            <div style="white-space: nowrap; word-break: keep-all;">${Utils.escapeHTML(companyName || '')}</div>
                             ${companySecondaryName ? `<div style="font-size: 12px; font-weight: 500; color: #6b7280; margin-top: 2px;">${Utils.escapeHTML(companySecondaryName)}</div>` : ''}
                         </div>
                     </div>

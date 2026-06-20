@@ -3892,6 +3892,9 @@ const Employees = {
                         font-weight: 700;
                         color: #2563eb;
                         margin-bottom: 5px;
+                        white-space: nowrap;
+                        word-break: keep-all;
+                        overflow-wrap: normal;
                     }
                     .card-title {
                         font-size: 22px;

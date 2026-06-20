@@ -1733,7 +1733,7 @@ const ChangeManagement = {
 @page { margin: 1.5cm; }
 body { font-family: 'Cairo', Tahoma, sans-serif; margin: 0; padding: 15px; }
 .export-header { text-align: center; border-bottom: 3px solid #2563eb; padding-bottom: 12px; margin-bottom: 15px; }
-.export-header .company-name { font-size: 18px; font-weight: bold; color: #1e40af; margin-bottom: 4px; }
+.export-header .company-name { font-size: 18px; font-weight: bold; color: #1e40af; margin-bottom: 4px; white-space: nowrap; word-break: keep-all; overflow-wrap: normal; }
 .export-header .report-title { font-size: 16px; color: #2563eb; }
 .export-header .export-meta { font-size: 11px; color: #666; margin-top: 6px; }
 .export-footer { text-align: center; border-top: 1px solid #ddd; padding-top: 10px; margin-top: 15px; font-size: 10px; color: #666; }

@@ -3201,6 +3201,19 @@ const Violations = {
         word-break: normal !important;
         font-family: 'Cairo', 'Tahoma', 'Segoe UI', sans-serif !important;
     }
+    .report-header .company-brand .company-name,
+    .export-header .company-name,
+    .att-report-brand-name,
+    .ptw-paper-header-company,
+    .card-header .company-name {
+        white-space: nowrap !important;
+        word-break: keep-all !important;
+        overflow-wrap: normal !important;
+    }
+    .report-header {
+        grid-template-columns: minmax(240px, 1.45fr) minmax(280px, 1.75fr) minmax(88px, 120px) !important;
+        gap: 14px !important;
+    }
     table, thead, tbody, tr, th, td { direction: rtl !important; }
     .header-info h1 { letter-spacing: 0 !important; }
 </style>`;
@@ -5392,7 +5405,7 @@ const Violations = {
             : '';
         return `<!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="utf-8"><title>${Utils.escapeHTML(documentTitle)}</title>
 <style>
-body{font-family:'Segoe UI',Tahoma,sans-serif;padding:24px;color:#111;} h1{font-size:1.25rem;margin:0 0 8px;} .co{color:#475569;font-size:0.9rem;margin-bottom:20px;}
+body{font-family:'Segoe UI',Tahoma,sans-serif;padding:24px;color:#111;} h1{font-size:1.25rem;margin:0 0 8px;} .co{color:#475569;font-size:0.9rem;margin-bottom:20px;white-space:nowrap;word-break:keep-all;overflow-wrap:normal;}
 table{border-collapse:collapse;width:100%;} th,td{border:1px solid #e2e8f0;padding:10px 12px;text-align:right;font-size:0.95rem;} th{background:#f1f5f9;width:30%;color:#334155;}
 </style></head><body>
 <h1>${Utils.escapeHTML(documentTitle)}</h1>

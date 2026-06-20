@@ -3234,7 +3234,7 @@ const ChemicalSafety = {
                         <div style="font-size:11px;color:#6b7280;margin-top:4px;">Chemical Safety Data Sheet — ${formCode}</div>
                     </div>
                     <div style="flex:0 0 auto;min-width:80px;text-align:left;font-size:11px;color:#374151;">
-                        <div style="font-weight:700;">${Utils.escapeHTML(companyName)}</div>
+                        <div style="font-weight:700;white-space:nowrap;word-break:keep-all;">${Utils.escapeHTML(companyName)}</div>
                         <div style="margin-top:3px;color:#6b7280;">${dateStr}</div>
                     </div>
                 </div>

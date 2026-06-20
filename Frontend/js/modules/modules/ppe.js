@@ -6280,7 +6280,7 @@ const PPE = {
             header.style.cssText = 'background:linear-gradient(135deg,#0F766E 0%,#0E7490 50%,#1E3A8A 100%);color:#fff;padding:18px 24px;border-radius:14px;margin-bottom:16px;display:flex;justify-content:space-between;align-items:center;font-family:Arial,sans-serif;';
             header.innerHTML = `
                 <div>
-                    <div style="font-size:18px;font-weight:800;margin-bottom:4px;">${Utils.escapeHTML(companyName)}</div>
+                    <div style="font-size:18px;font-weight:800;margin-bottom:4px;white-space:nowrap;word-break:keep-all;">${Utils.escapeHTML(companyName)}</div>
                     <div style="font-size:13px;opacity:0.95;">${Utils.escapeHTML(secondaryName)}</div>
                 </div>
                 <div style="text-align:end;">

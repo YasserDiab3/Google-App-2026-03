@@ -3965,7 +3965,7 @@ const DailyObservations = {
             <div style="display:flex;align-items:center;gap:14px;border-bottom:3px solid #1e3a8a;padding-bottom:12px;margin-bottom:14px;">
                 ${logoHtml}
                 <div style="flex:1;">
-                    <div style="font-size:20px;font-weight:800;color:#0f172a;">${esc(companyName)}</div>
+                    <div style="font-size:20px;font-weight:800;color:#0f172a;white-space:nowrap;word-break:keep-all;">${esc(companyName)}</div>
                     ${secondaryName ? `<div style="font-size:13px;color:#6b7280;margin-top:2px;">${esc(secondaryName)}</div>` : ''}
                 </div>
                 <div style="text-align:left;font-size:11px;color:#374151;line-height:1.9;">
