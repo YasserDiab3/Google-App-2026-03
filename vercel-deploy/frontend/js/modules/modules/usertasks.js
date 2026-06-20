@@ -1759,9 +1759,39 @@ const UserTasks = {
     /**
      * عرض نموذج إضافة/تعديل مهمة
      */
-    showTaskForm(task = null) {
+    showTaskForm(task = null, options = {}) {
+        const formOptions = options || {};
         const users = this.cache.members || AppState.appData.users || [];
-        const defaultUserId = task ? (task.userId || task.assignedTo) : (AppState.currentUser?.id || AppState.currentUser?.email || '');
+        const currentUserId = AppState.currentUser?.id || AppState.currentUser?.email || '';
+        const lockUserId = formOptions.lockUserId === true;
+        const defaultUserId = lockUserId
+            ? currentUserId
+            : (task ? (task.userId || task.assignedTo) : currentUserId);
+        const dueDateValue = task && task.dueDate
+            ? Utils.formatDateForInput(task.dueDate)
+            : (formOptions.dueDate
+                ? (typeof Utils.formatDateForInput === 'function'
+                    ? Utils.formatDateForInput(formOptions.dueDate)
+                    : String(formOptions.dueDate).slice(0, 10))
+                : '');
+
+        const userFieldHtml = lockUserId
+            ? `<input type="hidden" id="task-user-id" value="${Utils.escapeHTML(defaultUserId)}">
+               <p class="text-sm text-gray-600 sc-task-locked-user">
+                   <i class="fas fa-user ml-1"></i>
+                   المستخدم: ${Utils.escapeHTML(AppState.currentUser?.name || AppState.currentUser?.fullName || AppState.currentUser?.email || 'أنت')}
+               </p>`
+            : `<div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">المستخدم *</label>
+                            <select id="task-user-id" class="form-input" required>
+                                <option value="">اختر المستخدم</option>
+                                ${users.map(user => `
+                                    <option value="${user.id || user.email}" ${(user.id || user.email) === defaultUserId ? 'selected' : ''}>
+                                        ${Utils.escapeHTML(user.name || user.fullName || user.email || 'مستخدم')}
+                                    </option>
+                                `).join('')}
+                            </select>
+                        </div>`;
 
         const modal = document.createElement('div');
         modal.className = 'modal-overlay';
@@ -1778,17 +1808,7 @@ const UserTasks = {
                 </div>
                 <form id="task-form">
                     <div class="modal-body space-y-4">
-                        <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">المستخدم *</label>
-                            <select id="task-user-id" class="form-input" required>
-                                <option value="">اختر المستخدم</option>
-                                ${users.map(user => `
-                                    <option value="${user.id || user.email}" ${(user.id || user.email) === defaultUserId ? 'selected' : ''}>
-                                        ${Utils.escapeHTML(user.name || user.fullName || user.email || 'مستخدم')}
-                                    </option>
-                                `).join('')}
-                            </select>
-                        </div>
+                        ${userFieldHtml}
                         <div>
                             <label for="task-title" class="block text-sm font-semibold text-gray-700 mb-2">عنوان المهمة *</label>
                             <input type="text" id="task-title" class="form-input" required 
@@ -1822,7 +1842,7 @@ const UserTasks = {
                             <div>
                                 <label class="block text-sm font-semibold text-gray-700 mb-2">تاريخ الاستحقاق</label>
                                 <input type="date" id="task-due-date" class="form-input" 
-                                    value="${task && task.dueDate ? Utils.formatDateForInput(task.dueDate) : ''}">
+                                    value="${dueDateValue}">
                             </div>
                             <div>
                                 <label class="block text-sm font-semibold text-gray-700 mb-2">الحالة</label>
@@ -1862,14 +1882,14 @@ const UserTasks = {
         // معالج الحفظ
         modal.querySelector('#task-form')?.addEventListener('submit', async (e) => {
             e.preventDefault();
-            await this.saveTask(task, modal);
+            await this.saveTask(task, modal, formOptions);
         });
     },
 
     /**
      * حفظ المهمة
      */
-    async saveTask(existingTask, modal) {
+    async saveTask(existingTask, modal, formOptions = {}) {
         try {
             const taskData = {
                 userId: document.getElementById('task-user-id').value,
@@ -1948,9 +1968,18 @@ const UserTasks = {
             Notification.success(existingTask ? 'تم تحديث المهمة بنجاح' : 'تم إضافة المهمة بنجاح');
             modal.remove();
 
-            // تحديث القائمة والإحصائيات
-            await this.loadTasks();
-            this.updateStats();
+            const savedTask = existingTask
+                ? AppState.appData.userTasks.find((t) => t.id === savedTaskId)
+                : { id: savedTaskId, ...taskData };
+
+            if (typeof formOptions.onSaved === 'function') {
+                formOptions.onSaved(savedTask);
+            }
+
+            if (!formOptions.skipModuleReload) {
+                await this.loadTasks();
+                this.updateStats();
+            }
 
         } catch (error) {
             Utils.safeError('خطأ في حفظ المهمة:', error);

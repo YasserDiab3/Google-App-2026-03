@@ -3,8 +3,10 @@
  */
 const SafetyCalendar = {
     _calendar: null,
+    _dashCalendar: null,
     _fcLoadPromise: null,
     _activeCategories: null,
+    _assigneeMode: null,
     _modalEl: null,
 
     t(key, fallback) {
@@ -47,6 +49,7 @@ const SafetyCalendar = {
         const calRef = { api: null };
         const self = this;
         const isCompact = compactNav === true;
+        const overrideCustom = (overrides && overrides.customButtons) || {};
         const options = Object.assign({
             locale: 'ar',
             direction: 'rtl',
@@ -81,6 +84,7 @@ const SafetyCalendar = {
             },
             buttonText: self._fcButtonText()
         }, overrides || {});
+        options.customButtons = Object.assign({}, options.customButtons, overrideCustom);
         options._scCompactNav = isCompact;
 
         return {
@@ -136,11 +140,95 @@ const SafetyCalendar = {
         return this.getAllCategoryKeys();
     },
 
+    isEffectiveAdmin() {
+        if (window.SafetyCalendarEvents && SafetyCalendarEvents.isEffectiveAdmin) {
+            return SafetyCalendarEvents.isEffectiveAdmin();
+        }
+        return false;
+    },
+
+    getAssigneeMode() {
+        if (this._assigneeMode === 'all' || this._assigneeMode === 'mine') {
+            return this._assigneeMode;
+        }
+        if (window.SafetyCalendarEvents && SafetyCalendarEvents.resolveDefaultAssigneeMode) {
+            return SafetyCalendarEvents.resolveDefaultAssigneeMode({});
+        }
+        return this.isEffectiveAdmin() ? 'all' : 'mine';
+    },
+
+    canAddTasksFromCalendar() {
+        return typeof Permissions !== 'undefined' && Permissions.hasAccess
+            && Permissions.hasAccess('user-tasks');
+    },
+
+    canAssignTasksToOthers() {
+        if (this.isEffectiveAdmin()) return true;
+        const u = AppState?.currentUser;
+        return u && (u.role === 'admin' || u.role === 'safety_officer');
+    },
+
+    canEditUserTask(record) {
+        if (!record) return false;
+        if (this.isEffectiveAdmin()) return true;
+        if (!window.SafetyCalendarEvents || !SafetyCalendarEvents.isRecordAssignedToUser) return false;
+        return SafetyCalendarEvents.isRecordAssignedToUser(record, 'user-tasks');
+    },
+
+    openAddTaskForm(dueDate) {
+        if (!this.canAddTasksFromCalendar()) {
+            if (typeof Notification !== 'undefined' && Notification.warning) {
+                Notification.warning('ليس لديك صلاحية إضافة مهام');
+            }
+            return;
+        }
+        if (typeof UserTasks === 'undefined' || typeof UserTasks.showTaskForm !== 'function') {
+            if (typeof Notification !== 'undefined' && Notification.error) {
+                Notification.error('موديول المهام غير متاح');
+            }
+            return;
+        }
+        const lockUserId = !this.canAssignTasksToOthers();
+        UserTasks.showTaskForm(null, {
+            dueDate: dueDate || '',
+            lockUserId,
+            skipModuleReload: true,
+            onSaved: () => {
+                this.refreshCalendarEvents();
+                this.refreshDashboardWidgetIfVisible();
+            }
+        });
+    },
+
+    async refreshDashboardWidgetIfVisible() {
+        const wrap = document.getElementById('dash-safety-calendar-wrap');
+        if (wrap && wrap.querySelector('.sc-dash-body')) {
+            await this.loadDashboardWidget();
+        }
+    },
+
     buildEvents() {
         if (!window.SafetyCalendarEvents) return { events: [], truncated: false };
         return SafetyCalendarEvents.buildSafetyCalendarEvents({
-            categories: this.getEnabledCategories()
+            categories: this.getEnabledCategories(),
+            assigneeMode: this.getAssigneeMode()
         });
+    },
+
+    renderAssigneeFilter() {
+        const mode = this.getAssigneeMode();
+        if (this.isEffectiveAdmin()) {
+            const allActive = mode === 'all' ? 'is-active' : '';
+            const mineActive = mode === 'mine' ? 'is-active' : '';
+            return `<div class="sc-assignee-filter" role="group" aria-label="فلتر المكلف">
+                <span class="sc-assignee-label"><i class="fas fa-user-check ml-1"></i>العرض:</span>
+                <button type="button" class="sc-assignee-btn ${allActive}" data-assignee-mode="all">عرض الكل</button>
+                <button type="button" class="sc-assignee-btn ${mineActive}" data-assignee-mode="mine">مهامي فقط</button>
+            </div>`;
+        }
+        return `<div class="sc-assignee-filter sc-assignee-filter-readonly">
+            <span class="sc-assignee-badge"><i class="fas fa-user ml-1"></i>عرض مهامك</span>
+        </div>`;
     },
 
     renderFilterBar() {
@@ -158,6 +246,7 @@ const SafetyCalendar = {
             </label>`;
         }).join('');
         return `<div class="sc-filter-bar">
+            ${this.renderAssigneeFilter()}
             <span class="sc-filter-label"><i class="fas fa-filter ml-1"></i>فلترة الأنواع:</span>
             <div class="sc-filter-chips">${items}</div>
             <button type="button" class="btn-secondary btn-sm sc-refresh-btn" id="sc-refresh-btn">
@@ -206,6 +295,10 @@ const SafetyCalendar = {
                 <td>${this.esc(f.value)}</td>
             </tr>`).join('');
 
+        const canEdit = category === 'user-tasks' && record && this.canEditUserTask(record);
+        const assigneeHint = props.assigneeHint ? `
+            <p class="sc-modal-assignee"><i class="fas fa-user ml-1"></i>المكلف: ${this.esc(props.assigneeHint)}</p>` : '';
+
         const html = `
         <div class="modal-overlay sc-modal-overlay" id="sc-event-modal">
             <div class="modal-content sc-modal-content" role="dialog" aria-modal="true">
@@ -215,6 +308,7 @@ const SafetyCalendar = {
                             ${this.esc(props.categoryLabel || catInfo.label || '')}
                         </span>
                         <h3 class="sc-modal-title">${this.esc(eventLike.title || '')}</h3>
+                        ${assigneeHint}
                     </div>
                     <button type="button" class="sc-modal-close" id="sc-modal-close" aria-label="إغلاق">
                         <i class="fas fa-times"></i>
@@ -228,6 +322,9 @@ const SafetyCalendar = {
                     <button type="button" class="btn-secondary btn-sm" id="sc-copy-id" data-id="${this.esc(sourceId)}">
                         <i class="fas fa-copy ml-1"></i>نسخ المعرف
                     </button>
+                    ${canEdit ? `<button type="button" class="btn-secondary btn-sm" id="sc-edit-task">
+                        <i class="fas fa-pen ml-1"></i>تعديل المهمة
+                    </button>` : ''}
                     ${moduleKey ? `<button type="button" class="btn-primary btn-sm" id="sc-open-module" data-module="${this.esc(moduleKey)}">
                         <i class="fas fa-external-link-alt ml-1"></i>فتح في الموديول
                     </button>` : ''}
@@ -275,6 +372,18 @@ const SafetyCalendar = {
                 UI.showSection(moduleKey);
             }
         });
+        this._modalEl.querySelector('#sc-edit-task')?.addEventListener('click', () => {
+            close();
+            if (typeof UserTasks !== 'undefined' && UserTasks.showTaskForm && record) {
+                UserTasks.showTaskForm(record, {
+                    skipModuleReload: true,
+                    onSaved: () => {
+                        this.refreshCalendarEvents();
+                        this.refreshDashboardWidgetIfVisible();
+                    }
+                });
+            }
+        });
     },
 
     destroyCalendar() {
@@ -303,6 +412,17 @@ const SafetyCalendar = {
     },
 
     bindFilterEvents(section) {
+        section.querySelectorAll('[data-assignee-mode]').forEach((btn) => {
+            btn.addEventListener('click', () => {
+                const mode = btn.getAttribute('data-assignee-mode');
+                if (mode !== 'all' && mode !== 'mine') return;
+                this._assigneeMode = mode;
+                section.querySelectorAll('[data-assignee-mode]').forEach((b) => {
+                    b.classList.toggle('is-active', b.getAttribute('data-assignee-mode') === mode);
+                });
+                this.refreshCalendarEvents();
+            });
+        });
         section.querySelectorAll('.sc-cat-filter').forEach((cb) => {
             cb.addEventListener('change', () => {
                 const selected = [];
@@ -339,19 +459,28 @@ const SafetyCalendar = {
 
         this.destroyCalendar();
         const result = this.buildEvents();
-
-        const builder = this._buildCalendarOptions({
+        const self = this;
+        const fcOverrides = {
             initialView: 'dayGridMonth',
             height: 'auto',
             headerToolbar: {
                 right: 'prev,next today',
                 center: 'title',
-                left: 'dayGridMonth,timeGridWeek,timeGridDay,listWeek'
+                left: this.canAddTasksFromCalendar()
+                    ? 'addTask dayGridMonth,timeGridWeek,timeGridDay,listWeek'
+                    : 'dayGridMonth,timeGridWeek,timeGridDay,listWeek'
             },
             events: result.events,
             eventClick: (info) => {
                 info.jsEvent.preventDefault();
-                this.showEventModal(info.event);
+                self.showEventModal(info.event);
+            },
+            dateClick: (info) => {
+                if (!self.canAddTasksFromCalendar()) return;
+                const dueDate = info.dateStr || (info.date
+                    ? info.date.toISOString().slice(0, 10)
+                    : '');
+                self.openAddTaskForm(dueDate);
             },
             eventDidMount: (info) => {
                 const cat = info.event.extendedProps.category;
@@ -361,7 +490,20 @@ const SafetyCalendar = {
                     info.el.style.borderColor = colors.color;
                 }
             }
-        });
+        };
+        if (this.canAddTasksFromCalendar()) {
+            fcOverrides.customButtons = {
+                addTask: {
+                    text: 'إضافة مهمة',
+                    hint: 'إضافة مهمة في التقويم',
+                    click() {
+                        self.openAddTaskForm('');
+                    }
+                }
+            };
+        }
+
+        const builder = this._buildCalendarOptions(fcOverrides);
 
         this._calendar = builder.render(root);
 

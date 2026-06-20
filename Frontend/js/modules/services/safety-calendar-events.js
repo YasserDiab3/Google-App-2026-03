@@ -53,11 +53,122 @@
         if (typeof Permissions === 'undefined' || typeof Permissions.hasAccess !== 'function') {
             return false;
         }
-        if (typeof Permissions.isCurrentUserEffectiveAdmin === 'function'
-            && Permissions.isCurrentUserEffectiveAdmin()) {
+        if (isEffectiveAdmin()) {
             return true;
         }
         return Permissions.hasAccess(moduleKey);
+    }
+
+    function isEffectiveAdmin() {
+        if (typeof Permissions !== 'undefined' && typeof Permissions.isCurrentUserEffectiveAdmin === 'function') {
+            return Permissions.isCurrentUserEffectiveAdmin();
+        }
+        const u = (typeof AppState !== 'undefined' && AppState.currentUser) ? AppState.currentUser : null;
+        if (!u) return false;
+        return u.role === 'admin' || u.role === 'safety_officer';
+    }
+
+    function getCurrentUserIds() {
+        const u = (typeof AppState !== 'undefined' && AppState.currentUser) ? AppState.currentUser : {};
+        const ids = new Set();
+        ['id', 'email', 'name', 'fullName', 'username'].forEach((k) => {
+            const v = u[k];
+            if (v != null && String(v).trim()) {
+                ids.add(String(v).trim().toLowerCase());
+            }
+        });
+        return ids;
+    }
+
+    function getCurrentUserDepartment() {
+        const u = (typeof AppState !== 'undefined' && AppState.currentUser) ? AppState.currentUser : {};
+        return u.department ? String(u.department).trim() : '';
+    }
+
+    function normalizeAssigneeId(val) {
+        if (val == null) return '';
+        return String(val).trim().toLowerCase();
+    }
+
+    function valueMatchesUserIds(val, userIds) {
+        if (val == null || val === '') return false;
+        if (typeof val === 'string') {
+            const s = val.trim();
+            if (s === 'all' || s === 'جميع المستخدمين') return true;
+            try {
+                const parsed = JSON.parse(s);
+                if (Array.isArray(parsed)) {
+                    return parsed.some((x) => userIds.has(normalizeAssigneeId(x)));
+                }
+            } catch (_e) { /* not json */ }
+            return userIds.has(normalizeAssigneeId(s));
+        }
+        if (Array.isArray(val)) {
+            return val.some((x) => userIds.has(normalizeAssigneeId(x)));
+        }
+        return userIds.has(normalizeAssigneeId(val));
+    }
+
+    function matchesDepartmentTask(record, userDept) {
+        if (!userDept || !record) return false;
+        let departments = record.assignedDepartments;
+        if (!departments) return false;
+        if (typeof departments === 'string') {
+            try {
+                departments = JSON.parse(departments);
+            } catch (_e) {
+                departments = [departments];
+            }
+        }
+        if (!Array.isArray(departments)) departments = [departments];
+        return departments.some((d) => String(d).trim() === userDept);
+    }
+
+    function isRecordAssignedToUser(record, category, userIds, userDept) {
+        if (!record) return false;
+        const ids = userIds || getCurrentUserIds();
+        const dept = userDept != null ? userDept : getCurrentUserDepartment();
+        switch (category) {
+            case 'user-tasks':
+                if (valueMatchesUserIds(record.userId, ids)) return true;
+                if (valueMatchesUserIds(record.assignedTo, ids)) return true;
+                if (matchesDepartmentTask(record, dept)) return true;
+                return false;
+            case 'action-tracking':
+                return valueMatchesUserIds(record.responsible, ids)
+                    || valueMatchesUserIds(record.assignedTo, ids);
+            case 'safety-team-task':
+                return valueMatchesUserIds(record.memberId, ids)
+                    || valueMatchesUserIds(record.userId, ids)
+                    || valueMatchesUserIds(record.assignedTo, ids)
+                    || valueMatchesUserIds(record.responsible, ids);
+            default:
+                return false;
+        }
+    }
+
+    function getAssigneeHint(record, category) {
+        if (!record) return '';
+        const fieldsByCat = {
+            'user-tasks': ['userId', 'assignedTo'],
+            'action-tracking': ['responsible', 'assignedTo'],
+            'safety-team-task': ['memberId', 'assignedTo', 'userId', 'responsible']
+        };
+        const fields = fieldsByCat[category] || ['assignedTo', 'responsible', 'userId'];
+        for (let i = 0; i < fields.length; i++) {
+            const v = record[fields[i]];
+            if (v != null && String(v).trim() && String(v).trim() !== 'all') {
+                return String(v).trim();
+            }
+        }
+        return '';
+    }
+
+    function resolveDefaultAssigneeMode(options) {
+        if (options && (options.assigneeMode === 'all' || options.assigneeMode === 'mine')) {
+            return options.assigneeMode;
+        }
+        return isEffectiveAdmin() ? 'all' : 'mine';
     }
 
     function parseDateSafe(raw) {
@@ -172,18 +283,30 @@
                 categoryLabel: cat.label,
                 moduleKey: cat.moduleKey,
                 sourceId,
-                dateKind: meta.dateKind || 'main'
+                dateKind: meta.dateKind || 'main',
+                assigneeHint: meta.assigneeHint || ''
             }
         });
         return true;
     }
 
-    function addFromList(events, category, records, dateFields, titleFields, dateKinds) {
+    function addFromList(events, category, records, dateFields, titleFields, dateKinds, assigneeContext) {
         const cat = SAFETY_CALENDAR_CATEGORIES[category];
         if (!cat || !hasAccess(cat.moduleKey)) return;
+        const assigneeMode = assigneeContext && assigneeContext.mode === 'mine' ? 'mine' : 'all';
+        const userIds = (assigneeContext && assigneeContext.userIds) || getCurrentUserIds();
+        const userDept = (assigneeContext && assigneeContext.userDept != null)
+            ? assigneeContext.userDept
+            : getCurrentUserDepartment();
+        const assigneeHint = getAssigneeHint.bind(null);
+
         (records || []).forEach((rec) => {
             if (!rec || events.length >= MAX_EVENTS) return;
+            if (assigneeMode === 'mine' && !isRecordAssignedToUser(rec, category, userIds, userDept)) {
+                return;
+            }
             const sourceId = rec.id;
+            const hint = assigneeHint(rec, category);
             if (dateKinds && dateKinds.length) {
                 dateKinds.forEach((dk) => {
                     if (events.length >= MAX_EVENTS) return;
@@ -194,7 +317,8 @@
                         sourceId,
                         start,
                         title: pickTitle(rec, titleFields),
-                        dateKind: dk.label
+                        dateKind: dk.label,
+                        assigneeHint: hint
                     });
                 });
             } else {
@@ -203,7 +327,8 @@
                     category,
                     sourceId,
                     start,
-                    title: pickTitle(rec, titleFields)
+                    title: pickTitle(rec, titleFields),
+                    assigneeHint: hint
                 });
             }
         });
@@ -214,29 +339,36 @@
         const enabledCategories = options && options.categories
             ? new Set(options.categories)
             : null;
+        const assigneeMode = resolveDefaultAssigneeMode(options || {});
+        const assigneeContext = {
+            mode: assigneeMode,
+            userIds: getCurrentUserIds(),
+            userDept: getCurrentUserDepartment()
+        };
 
         const allow = (cat) => !enabledCategories || enabledCategories.has(cat);
+        const ctx = assigneeContext;
 
         try {
             if (allow('periodic-schedule')) {
                 addFromList(events, 'periodic-schedule', getAppArray('periodicInspectionSchedules'),
                     ['nextDueDate', 'scheduledDate', 'startDate'],
-                    ['categoryName', 'title', 'location', 'id']);
+                    ['categoryName', 'title', 'location', 'id'], null, ctx);
             }
             if (allow('periodic-record')) {
                 addFromList(events, 'periodic-record', getAppArray('periodicInspectionRecords'),
                     ['inspectionDate', 'date'],
-                    ['categoryName', 'location', 'inspector', 'id']);
+                    ['categoryName', 'location', 'inspector', 'id'], null, ctx);
             }
             if (allow('daily-safety-check')) {
                 addFromList(events, 'daily-safety-check', getAppArray('dailySafetyCheckList'),
                     ['date'],
-                    ['siteName', 'inspectorName', 'reportNumber', 'id']);
+                    ['siteName', 'inspectorName', 'reportNumber', 'id'], null, ctx);
             }
             if (allow('training')) {
                 addFromList(events, 'training', getAppArray('training'),
                     ['date', 'startDate'],
-                    ['name', 'trainer', 'id']);
+                    ['name', 'trainer', 'id'], null, ctx);
             }
             if (allow('legal-training')) {
                 addFromList(events, 'legal-training', getAppArray('legalTrainings'),
@@ -247,7 +379,7 @@
                         { field: 'nextDueDate', label: 'استحقاق' },
                         { field: 'expiryDate', label: 'انتهاء' },
                         { field: 'actualDate', label: 'فعلي' }
-                    ]);
+                    ], ctx);
             }
             if (allow('ptw')) {
                 addFromList(events, 'ptw', getAppArray('ptw'),
@@ -256,17 +388,17 @@
                     [
                         { field: 'startDate', label: 'بداية' },
                         { field: 'endDate', label: 'نهاية' }
-                    ]);
+                    ], ctx);
             }
             if (allow('incidents')) {
                 addFromList(events, 'incidents', getAppArray('incidents'),
                     ['date', 'incidentDate', 'createdAt'],
-                    ['title', 'description', 'location', 'id']);
+                    ['title', 'description', 'location', 'id'], null, ctx);
             }
             if (allow('nearmiss')) {
                 addFromList(events, 'nearmiss', getAppArray('nearmiss'),
                     ['date'],
-                    ['description', 'location', 'observerName', 'id']);
+                    ['description', 'location', 'observerName', 'id'], null, ctx);
             }
             if (allow('observations')) {
                 addFromList(events, 'observations', getAppArray('dailyObservations'),
@@ -275,27 +407,27 @@
                     [
                         { field: 'date', label: 'الملاحظة' },
                         { field: 'expectedCompletionDate', label: 'إنجاز متوقع' }
-                    ]);
+                    ], ctx);
             }
             if (allow('user-tasks')) {
                 addFromList(events, 'user-tasks', getAppArray('userTasks'),
                     ['dueDate'],
-                    ['title', 'taskTitle', 'description', 'id']);
+                    ['title', 'taskTitle', 'description', 'id'], null, ctx);
             }
             if (allow('safety-team-task')) {
                 addFromList(events, 'safety-team-task', getAppArray('safetyTeamTasks'),
                     ['dueDate'],
-                    ['taskTitle', 'taskDescription', 'id']);
+                    ['taskTitle', 'taskDescription', 'id'], null, ctx);
             }
             if (allow('hse-audit')) {
                 addFromList(events, 'hse-audit', getAppArray('hseAudits'),
                     ['date'],
-                    ['type', 'auditor', 'description', 'id']);
+                    ['type', 'auditor', 'description', 'id'], null, ctx);
             }
             if (allow('fire-inspection')) {
                 addFromList(events, 'fire-inspection', getAppArray('fireEquipmentInspections'),
                     ['inspectionDate'],
-                    ['assetNumber', 'inspector', 'result', 'id']);
+                    ['assetNumber', 'inspector', 'result', 'id'], null, ctx);
             }
             if (allow('emergency')) {
                 addFromList(events, 'emergency', getAppArray('emergencyAlerts'),
@@ -304,7 +436,7 @@
                     [
                         { field: 'scheduledDate', label: 'مجدول' },
                         { field: 'sentDate', label: 'إرسال' }
-                    ]);
+                    ], ctx);
             }
             if (allow('action-tracking')) {
                 addFromList(events, 'action-tracking', getAppArray('actionTrackingRegister'),
@@ -313,17 +445,17 @@
                     [
                         { field: 'originalTargetDate', label: 'مستهدف' },
                         { field: 'issueDate', label: 'إصدار' }
-                    ]);
+                    ], ctx);
             }
             if (allow('violations')) {
                 addFromList(events, 'violations', getAppArray('violations'),
                     ['violationDate'],
-                    ['violationType', 'employeeName', 'contractorName', 'id']);
+                    ['violationType', 'employeeName', 'contractorName', 'id'], null, ctx);
             }
             if (allow('behavior')) {
                 addFromList(events, 'behavior', getAppArray('behaviorMonitoring'),
                     ['date'],
-                    ['employeeName', 'behaviorType', 'description', 'id']);
+                    ['employeeName', 'behaviorType', 'description', 'id'], null, ctx);
             }
         } catch (err) {
             if (typeof Utils !== 'undefined' && Utils.safeWarn) {
@@ -334,7 +466,8 @@
         return {
             events,
             truncated: events.length >= MAX_EVENTS,
-            maxEvents: MAX_EVENTS
+            maxEvents: MAX_EVENTS,
+            assigneeMode
         };
     }
 
@@ -373,6 +506,11 @@
         buildDetailFields,
         summarizeEvents,
         esc,
-        hasAccess
+        hasAccess,
+        isEffectiveAdmin,
+        resolveDefaultAssigneeMode,
+        getCurrentUserIds,
+        getCurrentUserDepartment,
+        isRecordAssignedToUser
     };
 })();
