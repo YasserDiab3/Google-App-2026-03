@@ -1761,6 +1761,12 @@ const DailyObservations = {
         }
 
         const isAdmin = this.isCurrentUserAdmin();
+        // ✅ تبويب المؤشرات التنفيذية (Executive Dashboard) — admin فقط، قراءة فقط، معزول
+        const canExec = isAdmin && this.hasTabAccess('executive-dashboard');
+        let execContent = '';
+        if (canExec) {
+            try { execContent = this.renderExecutiveDashboard(); } catch (e) { execContent = ''; }
+        }
 
         try {
             const hasObsData = Array.isArray(AppState.appData.dailyObservations) && AppState.appData.dailyObservations.length > 0;
@@ -1896,6 +1902,12 @@ const DailyObservations = {
                             تحليل البيانات
                         </button>
                         ` : ''}
+                        ${canExec ? `
+                        <button class="tab-btn ${this.state.activeTab === 'executive-dashboard' ? 'active' : ''}" data-tab="executive-dashboard" style="padding: 12px 24px; border: none; background: transparent; border-bottom: 3px solid ${this.state.activeTab === 'executive-dashboard' ? 'var(--primary-color)' : 'transparent'}; color: ${this.state.activeTab === 'executive-dashboard' ? 'var(--primary-color)' : 'var(--text-secondary)'}; font-weight: 600; cursor: pointer; transition: all 0.3s;">
+                            <i class="fas fa-gauge-high ml-2"></i>
+                            المؤشرات التنفيذية
+                        </button>
+                        ` : ''}
                         <button type="button" id="daily-observations-refresh-btn" class="tab-btn" style="padding: 12px 24px; border: none; background: transparent; border-bottom: 3px solid transparent; color: var(--text-secondary); font-weight: 600; cursor: pointer; transition: all 0.3s;" title="تحديث المديول">
                             <i class="fas fa-sync-alt ml-2"></i>
                             تحديث
@@ -1918,6 +1930,11 @@ const DailyObservations = {
                     ${canAnalysis ? `
                     <div id="tab-data-analysis" class="tab-content ${this.state.activeTab === 'data-analysis' ? 'active' : ''}" style="${this.state.activeTab === 'data-analysis' ? '' : 'display: none;'}">
                         ${analysisContent}
+                    </div>
+                    ` : ''}
+                    ${canExec ? `
+                    <div id="tab-executive-dashboard" class="tab-content ${this.state.activeTab === 'executive-dashboard' ? 'active' : ''}" style="${this.state.activeTab === 'executive-dashboard' ? '' : 'display: none;'}">
+                        ${execContent}
                     </div>
                     ` : ''}
                 </div>
@@ -3016,6 +3033,15 @@ const DailyObservations = {
                         if (tabName === 'top-10-observations') {
                             this.loadTop10Observations();
                         }
+
+                        // ✅ تحميل لوحة المؤشرات التنفيذية عند فتح التبويب (معزول بـ try/catch)
+                        if (tabName === 'executive-dashboard') {
+                            try {
+                                this.loadExecutiveDashboard();
+                            } catch (e) {
+                                Utils?.safeWarn?.('⚠️ لوحة المؤشرات التنفيذية:', e?.message || e);
+                            }
+                        }
                     }
                 });
             });
@@ -3423,6 +3449,518 @@ const DailyObservations = {
     _chartColors(n) {
         const palette = ['rgba(59,130,246,0.8)','rgba(16,185,129,0.8)','rgba(245,158,11,0.8)','rgba(239,68,68,0.8)','rgba(139,92,246,0.8)','rgba(236,72,153,0.8)','rgba(20,184,166,0.8)','rgba(251,146,60,0.8)','rgba(99,102,241,0.8)','rgba(168,85,247,0.8)'];
         return Array.from({length:n}, (_,i) => palette[i % palette.length]);
+    },
+
+    /* ═══════════════════════════════════════════════════════════════════
+     * لوحة المؤشرات التنفيذية (Executive Safety Intelligence Dashboard)
+     * قراءة فقط — تُحسب من البيانات الحالية، بلا طلبات شبكة، معزولة بالكامل.
+     * ═══════════════════════════════════════════════════════════════════ */
+
+    OBS_EXEC_HIGH_RISK_THRESHOLD: 5,
+
+    // مصدر البيانات (مطبّعة)
+    _execGetObservations() {
+        let raw = [];
+        try {
+            raw = (typeof this.getDailyObservationsVisibleToCurrentUser === 'function')
+                ? this.getDailyObservationsVisibleToCurrentUser()
+                : (AppState?.appData?.dailyObservations || []);
+        } catch (e) { raw = AppState?.appData?.dailyObservations || []; }
+        if (!Array.isArray(raw)) raw = [];
+        return raw.map(r => { try { return this.normalizeRecord(r); } catch (e) { return r; } });
+    },
+
+    // ── مُصنّفات الحالة/الخطورة ──
+    _execIsClosed(o) { return String(o.status || '').includes('مغلق'); },
+    _execIsOverdue(o) {
+        if (this._execIsClosed(o)) return false;
+        if (!o.expectedCompletionDate) return false;
+        const d = new Date(o.expectedCompletionDate);
+        return !isNaN(d.getTime()) && d.getTime() < Date.now();
+    },
+    _execIsHighRisk(o) {
+        const r = String(o.riskLevel || '');
+        return r.includes('عالي') || r.includes('عالية') || r.includes('مرتفع') || r.includes('شديد') || r.includes('حرج');
+    },
+    _execIsCritical(o) {
+        const r = String(o.riskLevel || '').toLowerCase();
+        return r.includes('شديد') || r.includes('حرج') || r.includes('critical');
+    },
+    _execIsNearMiss(o) {
+        const hay = (String(o.observationType || '') + ' ' + String(o.details || '')).toLowerCase();
+        return hay.includes('وشيك') || hay.includes('كاد') || hay.includes('تجنب') || hay.includes('near miss') || hay.includes('nearmiss');
+    },
+    // تصنيف الملاحظة إلى إحدى الفئات الست (اشتقاق من النوع/الوصف)
+    _execCategoryOf(o) {
+        if (this._execIsNearMiss(o)) return 'حوادث وشيكة';
+        const hay = (String(o.observationType || '') + ' ' + String(o.details || '')).toLowerCase();
+        if (hay.includes('بيئة') || hay.includes('بيئي') || hay.includes('تلوث') || hay.includes('نفايات')) return 'ملاحظة بيئية';
+        if (hay.includes('جودة') || hay.includes('مطابقة')) return 'ملاحظة جودة';
+        if (hay.includes('إيجابي') || hay.includes('ايجابي') || hay.includes('مقترح') || hay.includes('شكر')) return 'ملاحظة إيجابية';
+        if (hay.includes('تصرف') || hay.includes('سلوك') || hay.includes('فعل')) return 'تصرف غير آمن';
+        if (hay.includes('وضع') || hay.includes('شرط') || hay.includes('حالة') || hay.includes('معدة') || hay.includes('معدات') || hay.includes('أداة')) return 'وضع غير آمن';
+        return 'وضع غير آمن';
+    },
+
+    // ── تطبيع نص الوصف إلى رموز للمقارنة ──
+    _execDescTokens(text) {
+        const t = String(text || '').toLowerCase().replace(/[^\u0621-\u064aa-z0-9\s]/g, ' ');
+        return new Set(t.split(/\s+/).filter(w => w.length >= 3));
+    },
+    _execJaccard(a, b) {
+        if (!a.size && !b.size) return 1;
+        if (!a.size || !b.size) return 0;
+        let inter = 0;
+        a.forEach(x => { if (b.has(x)) inter++; });
+        return inter / (a.size + b.size - inter);
+    },
+
+    // ── كشف الملاحظات المتكررة (موقع + مكان + نوع + تشابه وصف) ──
+    _detectRepeatObservations(obs) {
+        const groups = {};
+        (obs || []).forEach(o => {
+            const key = [o.siteName || '-', o.locationName || '-', o.observationType || '-'].join(' | ');
+            (groups[key] = groups[key] || []).push(o);
+        });
+        const issues = [];
+        Object.entries(groups).forEach(([key, items]) => {
+            const clusters = [];
+            items.forEach(o => {
+                const sig = this._execDescTokens(o.details);
+                let placed = false;
+                for (const c of clusters) {
+                    if (this._execJaccard(sig, c.sig) >= 0.5) { c.items.push(o); placed = true; break; }
+                }
+                if (!placed) clusters.push({ sig, items: [o] });
+            });
+            clusters.forEach(c => {
+                if (c.items.length >= 2) {
+                    const dates = c.items.map(i => new Date(i.date)).filter(d => !isNaN(d.getTime())).sort((a, b) => a - b);
+                    const last = dates.length ? dates[dates.length - 1] : null;
+                    const now = Date.now();
+                    const d30 = 30 * 24 * 60 * 60 * 1000;
+                    const recent = dates.filter(d => (now - d.getTime()) <= d30).length;
+                    const prev = dates.filter(d => (now - d.getTime()) > d30 && (now - d.getTime()) <= 2 * d30).length;
+                    const trend = recent > prev ? 'up' : (recent < prev ? 'down' : 'flat');
+                    const sample = c.items[0].details || c.items[0].observationType || '—';
+                    issues.push({ key, sample: String(sample).slice(0, 80), count: c.items.length, last, trend });
+                }
+            });
+        });
+        issues.sort((a, b) => b.count - a.count);
+        return issues;
+    },
+
+    // ── حساب المؤشرات العشرة ──
+    _computeExecKpis(obs) {
+        const total = obs.length;
+        const closed = obs.filter(o => this._execIsClosed(o));
+        const openActions = obs.filter(o => !this._execIsClosed(o));
+        const overdue = obs.filter(o => this._execIsOverdue(o));
+        const nearMiss = obs.filter(o => this._execIsNearMiss(o));
+        const highRiskOpen = obs.filter(o => this._execIsHighRisk(o) && !this._execIsClosed(o));
+        const criticalOverdue = obs.filter(o => this._execIsCritical(o) && this._execIsOverdue(o));
+
+        const due = obs.filter(o => {
+            if (!o.expectedCompletionDate) return false;
+            const d = new Date(o.expectedCompletionDate);
+            return !isNaN(d.getTime()) && d.getTime() <= Date.now();
+        });
+        const closedDue = due.filter(o => this._execIsClosed(o));
+        const closureRate = due.length ? (closedDue.length / due.length * 100) : (total ? closed.length / total * 100 : 0);
+
+        const closedDays = closed.map(o => Number(o.overdays) || 0).filter(n => n > 0);
+        const avgDaysToClose = closedDays.length ? (closedDays.reduce((a, b) => a + b, 0) / closedDays.length) : 0;
+
+        const repeatIssues = this._detectRepeatObservations(obs);
+        const repeatedCount = repeatIssues.reduce((s, i) => s + i.count, 0);
+        const repeatRate = total ? (repeatedCount / total * 100) : 0;
+
+        const now = new Date();
+        const inMonth = (list, y, m) => list.filter(o => {
+            const d = new Date(o.date);
+            return !isNaN(d.getTime()) && d.getFullYear() === y && d.getMonth() === m;
+        }).length;
+        const thisMonthNM = inMonth(nearMiss, now.getFullYear(), now.getMonth());
+        const lm = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+        const lastMonthNM = inMonth(nearMiss, lm.getFullYear(), lm.getMonth());
+        const nearMissTrend = thisMonthNM - lastMonthNM;
+        const nearMissRate = total ? (nearMiss.length / total * 100) : 0;
+
+        return {
+            total,
+            nearMiss: nearMiss.length,
+            nearMissRate,
+            nearMissTrend,
+            openActions: openActions.length,
+            overdue: overdue.length,
+            closureRate,
+            avgDaysToClose,
+            repeatRate,
+            repeatIssues,
+            highRiskOpen: highRiskOpen.length,
+            criticalOverdue: criticalOverdue.length
+        };
+    },
+
+    // ── محرك الرؤى التنفيذية ──
+    _runInsightsEngine(k) {
+        const out = [];
+        if (k.nearMissTrend > 0 && k.closureRate > 90) {
+            out.push({ type: 'good', icon: 'fa-circle-check', text: 'ثقافة تبليغ أمان إيجابية مع إدارة فعّالة للإجراءات التصحيحية.' });
+        }
+        if (k.nearMissTrend > 0 && k.closureRate < 75) {
+            out.push({ type: 'warn', icon: 'fa-triangle-exclamation', text: 'تحذير: الملاحظات تُبلَّغ لكن الإجراءات التصحيحية لا تُغلق بفعالية.' });
+        }
+        if (k.repeatRate > 20) {
+            out.push({ type: 'danger', icon: 'fa-rotate', text: 'مشكلات أمان متكررة. يُوصى بإجراء تحليل السبب الجذري (RCA).' });
+        }
+        if (k.highRiskOpen > this.OBS_EXEC_HIGH_RISK_THRESHOLD) {
+            out.push({ type: 'danger', icon: 'fa-bolt', text: `ملاحظات عالية الخطورة مفتوحة (${k.highRiskOpen}) — يتطلب انتباه الإدارة الفوري.` });
+        }
+        if (!out.length) {
+            out.push({ type: 'info', icon: 'fa-circle-info', text: 'الأداء ضمن النطاق الطبيعي. واصل التبليغ ومتابعة إغلاق الإجراءات.' });
+        }
+        return out;
+    },
+
+    // ── حقن الأنماط (مرة واحدة، معزولة) ──
+    _injectExecStyles() {
+        if (document.getElementById('obs-exec-dashboard-styles')) return;
+        const style = document.createElement('style');
+        style.id = 'obs-exec-dashboard-styles';
+        style.textContent = `
+        .obs-exec-wrap{direction:rtl;}
+        .obs-exec-kpi-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:14px;margin-bottom:18px;}
+        .obs-exec-kpi{position:relative;background:var(--card-bg);border:1px solid var(--border-color);border-radius:14px;padding:16px;box-shadow:var(--shadow-sm);overflow:hidden;transition:var(--transition);}
+        .obs-exec-kpi:hover{box-shadow:var(--shadow-md);transform:translateY(-2px);}
+        .obs-exec-kpi__accent{position:absolute;inset-inline-start:0;top:0;bottom:0;width:5px;}
+        .obs-exec-kpi__icon{position:absolute;top:14px;inset-inline-end:14px;font-size:20px;opacity:.85;}
+        .obs-exec-kpi__label{font-size:12px;color:var(--text-secondary);font-weight:600;margin-bottom:6px;padding-inline-end:26px;}
+        .obs-exec-kpi__value{font-size:26px;font-weight:800;color:var(--text-primary);line-height:1;}
+        .obs-exec-kpi__sub{font-size:11px;color:var(--text-tertiary);margin-top:6px;}
+        .obs-exec-progress{height:6px;background:var(--bg-tertiary);border-radius:99px;margin-top:10px;overflow:hidden;}
+        .obs-exec-progress__bar{height:100%;border-radius:99px;transition:width .6s ease;}
+        .obs-exec-insights{display:flex;flex-direction:column;gap:10px;margin-bottom:18px;}
+        .obs-exec-insight{display:flex;gap:12px;align-items:flex-start;padding:14px 16px;border-radius:12px;border:1px solid;font-weight:600;font-size:13px;}
+        .obs-exec-insight i{font-size:18px;margin-top:1px;}
+        .obs-exec-insight--good{background:rgba(16,185,129,.08);border-color:rgba(16,185,129,.35);color:#047857;}
+        .obs-exec-insight--warn{background:rgba(245,158,11,.10);border-color:rgba(245,158,11,.40);color:#b45309;}
+        .obs-exec-insight--danger{background:rgba(239,68,68,.10);border-color:rgba(239,68,68,.40);color:#b91c1c;}
+        .obs-exec-insight--info{background:rgba(59,130,246,.08);border-color:rgba(59,130,246,.35);color:#1d4ed8;}
+        .obs-exec-charts{display:grid;grid-template-columns:repeat(auto-fit,minmax(330px,1fr));gap:16px;margin-top:6px;}
+        .obs-exec-card{background:var(--card-bg);border:1px solid var(--border-color);border-radius:14px;padding:16px;box-shadow:var(--shadow-sm);}
+        .obs-exec-card--wide{grid-column:1/-1;}
+        .obs-exec-card__title{font-size:14px;font-weight:700;color:var(--text-primary);margin-bottom:12px;display:flex;align-items:center;gap:8px;}
+        .obs-exec-chart-box{position:relative;height:260px;}
+        .obs-exec-empty{position:absolute;inset:0;display:none;align-items:center;justify-content:center;color:var(--text-tertiary);font-size:13px;}
+        .obs-exec-table{width:100%;border-collapse:collapse;font-size:13px;}
+        .obs-exec-table th,.obs-exec-table td{padding:10px 12px;text-align:right;border-bottom:1px solid var(--border-color);color:var(--text-primary);}
+        .obs-exec-table th{color:var(--text-secondary);font-weight:700;background:var(--bg-secondary);}
+        .obs-exec-badge{display:inline-block;padding:2px 9px;border-radius:99px;font-size:11px;font-weight:700;}
+        .obs-exec-heat-grid{display:grid;gap:4px;overflow-x:auto;}
+        .obs-exec-heat-cell{padding:9px 4px;text-align:center;border-radius:6px;font-size:11px;font-weight:700;}
+        .obs-exec-heat-head{font-size:11px;font-weight:700;color:var(--text-secondary);text-align:center;padding:6px 4px;}
+        .obs-exec-heat-row-label{font-size:12px;color:var(--text-primary);font-weight:600;display:flex;align-items:center;padding-inline-end:8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+        [data-theme="dark"] .obs-exec-insight--good{color:#34d399;}
+        [data-theme="dark"] .obs-exec-insight--warn{color:#fbbf24;}
+        [data-theme="dark"] .obs-exec-insight--danger{color:#f87171;}
+        [data-theme="dark"] .obs-exec-insight--info{color:#60a5fa;}
+        `;
+        document.head.appendChild(style);
+    },
+
+    // ── هيكل التبويب (يُبنى تزامنياً، بلا حساب) ──
+    renderExecutiveDashboard() {
+        this._injectExecStyles();
+        const chartBox = (id, title, icon, wide) => `
+            <div class="obs-exec-card ${wide ? 'obs-exec-card--wide' : ''}">
+                <div class="obs-exec-card__title"><i class="fas ${icon}" style="color:var(--primary-color);"></i>${title}</div>
+                <div class="obs-exec-chart-box">
+                    <canvas id="${id}"></canvas>
+                    <div id="${id}-empty" class="obs-exec-empty"><i class="fas fa-inbox ml-2"></i>لا توجد بيانات كافية</div>
+                </div>
+            </div>`;
+        return `
+        <div class="obs-exec-wrap">
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:16px;">
+                <div>
+                    <h2 style="font-size:18px;font-weight:800;color:var(--text-primary);margin:0;"><i class="fas fa-gauge-high ml-2" style="color:var(--primary-color);"></i>لوحة الذكاء الوقائي التنفيذية</h2>
+                    <p style="font-size:13px;color:var(--text-secondary);margin:4px 0 0;">مؤشرات أداء أمنية رائدة — تبليغ الحوادث الوشيكة وأداء إغلاق الإجراءات التصحيحية</p>
+                </div>
+                <button type="button" id="obs-exec-refresh-btn" class="btn-secondary"><i class="fas fa-sync-alt ml-2"></i>تحديث المؤشرات</button>
+            </div>
+            <div id="obs-exec-insights" class="obs-exec-insights"></div>
+            <div id="obs-exec-kpi-strip" class="obs-exec-kpi-grid"></div>
+            <div class="obs-exec-charts">
+                ${chartBox('obs-exec-chart-nearmiss', 'اتجاه الحوادث الوشيكة الشهري', 'fa-chart-line')}
+                ${chartBox('obs-exec-chart-closure', 'اتجاه معدل إغلاق الإجراءات', 'fa-chart-area')}
+                ${chartBox('obs-exec-chart-category', 'توزيع تصنيف الملاحظات', 'fa-shapes')}
+                ${chartBox('obs-exec-chart-risk', 'توزيع مستوى الخطورة', 'fa-gauge')}
+                ${chartBox('obs-exec-chart-dept', 'مقارنة أداء الإدارات (معدل الإغلاق %)', 'fa-building')}
+                ${chartBox('obs-exec-chart-repeat', 'أبرز المشكلات المتكررة', 'fa-rotate')}
+                <div class="obs-exec-card obs-exec-card--wide">
+                    <div class="obs-exec-card__title"><i class="fas fa-fire" style="color:var(--danger-color);"></i>خريطة الإجراءات المتأخرة (الإدارة × الشهر)</div>
+                    <div id="obs-exec-heatmap"></div>
+                </div>
+                <div class="obs-exec-card obs-exec-card--wide">
+                    <div class="obs-exec-card__title"><i class="fas fa-list-ol" style="color:var(--primary-color);"></i>تفاصيل المشكلات المتكررة</div>
+                    <div style="overflow-x:auto;"><table class="obs-exec-table"><thead><tr><th>المشكلة</th><th>الموقع / المكان / النوع</th><th>عدد التكرار</th><th>آخر حدوث</th><th>الاتجاه</th></tr></thead><tbody id="obs-exec-repeat-table"></tbody></table></div>
+                </div>
+            </div>
+        </div>`;
+    },
+
+    // ── التحميل والحساب عند فتح التبويب ──
+    async loadExecutiveDashboard() {
+        if (this._execLoading) return;
+        this._execLoading = true;
+        try {
+            try { await this.ensureChartJSLoaded(); } catch (e) { /* الرسوم اختيارية */ }
+            const obs = this._execGetObservations();
+            const k = this._computeExecKpis(obs);
+            this._renderExecInsights(this._runInsightsEngine(k));
+            this._renderExecKpiCards(k);
+            this._renderRepeatTable(k.repeatIssues);
+            this._renderOverdueHeatmap(obs);
+            if (typeof Chart !== 'undefined') {
+                this._drawExecCharts(obs, k);
+            }
+            const btn = document.getElementById('obs-exec-refresh-btn');
+            if (btn && !btn._execBound) {
+                btn._execBound = true;
+                btn.addEventListener('click', () => { try { this.loadExecutiveDashboard(); } catch (e) {} });
+            }
+        } catch (e) {
+            Utils?.safeWarn?.('⚠️ loadExecutiveDashboard:', e?.message || e);
+        } finally {
+            this._execLoading = false;
+        }
+    },
+
+    _renderExecInsights(insights) {
+        const el = document.getElementById('obs-exec-insights');
+        if (!el) return;
+        el.innerHTML = (insights || []).map(i =>
+            `<div class="obs-exec-insight obs-exec-insight--${i.type}"><i class="fas ${i.icon}"></i><span>${i.text}</span></div>`
+        ).join('');
+    },
+
+    _renderExecKpiCards(k) {
+        const el = document.getElementById('obs-exec-kpi-strip');
+        if (!el) return;
+        const trendBadge = (n) => {
+            if (n > 0) return `<span style="color:#dc2626;"><i class="fas fa-arrow-trend-up"></i> +${n}</span>`;
+            if (n < 0) return `<span style="color:#059669;"><i class="fas fa-arrow-trend-down"></i> ${n}</span>`;
+            return `<span style="color:var(--text-tertiary);"><i class="fas fa-minus"></i> ثابت</span>`;
+        };
+        const pct = (v) => Math.max(0, Math.min(100, Math.round(v)));
+        const cards = [
+            { label: 'إجمالي الملاحظات', value: k.total, icon: 'fa-clipboard-list', color: '#3b82f6', sub: 'كل السجلات المرئية' },
+            { label: 'بلاغات الحوادث الوشيكة', value: k.nearMiss, icon: 'fa-bolt', color: '#f59e0b', sub: `الاتجاه الشهري: ${trendBadge(k.nearMissTrend)}` },
+            { label: 'معدل التبليغ عن الوشيكة', value: k.nearMissRate.toFixed(1) + '%', icon: 'fa-bullhorn', color: '#8b5cf6', progress: pct(k.nearMissRate), pcolor: '#8b5cf6' },
+            { label: 'إجراءات مفتوحة', value: k.openActions, icon: 'fa-folder-open', color: '#06b6d4', sub: 'لم تُغلق بعد' },
+            { label: 'إجراءات متأخرة', value: k.overdue, icon: 'fa-clock', color: '#ef4444', sub: 'تجاوزت تاريخ الإغلاق' },
+            { label: 'معدل إغلاق الإجراءات', value: k.closureRate.toFixed(1) + '%', icon: 'fa-circle-check', color: k.closureRate >= 90 ? '#10b981' : (k.closureRate >= 75 ? '#f59e0b' : '#ef4444'), progress: pct(k.closureRate), pcolor: k.closureRate >= 90 ? '#10b981' : (k.closureRate >= 75 ? '#f59e0b' : '#ef4444') },
+            { label: 'متوسط أيام الإغلاق', value: Math.round(k.avgDaysToClose), icon: 'fa-hourglass-half', color: '#6366f1', sub: 'يوم للإجراءات المغلقة' },
+            { label: 'معدل التكرار', value: k.repeatRate.toFixed(1) + '%', icon: 'fa-rotate', color: k.repeatRate > 20 ? '#ef4444' : '#10b981', progress: pct(k.repeatRate), pcolor: k.repeatRate > 20 ? '#ef4444' : '#10b981' },
+            { label: 'عالية الخطورة مفتوحة', value: k.highRiskOpen, icon: 'fa-triangle-exclamation', color: k.highRiskOpen > this.OBS_EXEC_HIGH_RISK_THRESHOLD ? '#ef4444' : '#f59e0b', sub: 'تحتاج متابعة' },
+            { label: 'إجراءات حرجة متأخرة', value: k.criticalOverdue, icon: 'fa-fire', color: '#b91c1c', sub: 'أولوية قصوى' }
+        ];
+        el.innerHTML = cards.map(c => `
+            <div class="obs-exec-kpi">
+                <div class="obs-exec-kpi__accent" style="background:${c.color};"></div>
+                <i class="fas ${c.icon} obs-exec-kpi__icon" style="color:${c.color};"></i>
+                <div class="obs-exec-kpi__label">${c.label}</div>
+                <div class="obs-exec-kpi__value">${c.value}</div>
+                ${c.progress != null
+                    ? `<div class="obs-exec-progress"><div class="obs-exec-progress__bar" style="width:${c.progress}%;background:${c.pcolor};"></div></div>`
+                    : `<div class="obs-exec-kpi__sub">${c.sub || ''}</div>`}
+            </div>`).join('');
+    },
+
+    _renderRepeatTable(issues) {
+        const tbody = document.getElementById('obs-exec-repeat-table');
+        if (!tbody) return;
+        if (!issues || !issues.length) {
+            tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;color:var(--text-tertiary);padding:18px;"><i class="fas fa-check-circle ml-2" style="color:#10b981;"></i>لا توجد مشكلات متكررة</td></tr>`;
+            return;
+        }
+        const trendIcon = (t) => t === 'up'
+            ? '<span style="color:#dc2626;"><i class="fas fa-arrow-trend-up"></i> متصاعد</span>'
+            : (t === 'down' ? '<span style="color:#059669;"><i class="fas fa-arrow-trend-down"></i> متناقص</span>'
+            : '<span style="color:var(--text-tertiary);"><i class="fas fa-minus"></i> ثابت</span>');
+        tbody.innerHTML = issues.slice(0, 15).map(i => {
+            const lastStr = i.last ? new Date(i.last).toLocaleDateString('ar-EG') : '—';
+            const badgeColor = i.count >= 5 ? '#b91c1c' : (i.count >= 3 ? '#f59e0b' : '#3b82f6');
+            return `<tr>
+                <td>${Utils?.escapeHTML ? Utils.escapeHTML(i.sample) : i.sample}</td>
+                <td style="color:var(--text-secondary);">${Utils?.escapeHTML ? Utils.escapeHTML(i.key) : i.key}</td>
+                <td><span class="obs-exec-badge" style="background:${badgeColor}1a;color:${badgeColor};">${i.count}</span></td>
+                <td>${lastStr}</td>
+                <td>${trendIcon(i.trend)}</td>
+            </tr>`;
+        }).join('');
+    },
+
+    _renderOverdueHeatmap(obs) {
+        const host = document.getElementById('obs-exec-heatmap');
+        if (!host) return;
+        const overdue = (obs || []).filter(o => this._execIsOverdue(o));
+        if (!overdue.length) {
+            host.innerHTML = `<div style="text-align:center;color:var(--text-tertiary);padding:18px;"><i class="fas fa-check-circle ml-2" style="color:#10b981;"></i>لا توجد إجراءات متأخرة</div>`;
+            return;
+        }
+        const now = new Date();
+        const arabicMonths = ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
+        const months = [];
+        for (let i = 5; i >= 0; i--) {
+            const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+            months.push({ y: d.getFullYear(), m: d.getMonth(), label: arabicMonths[d.getMonth()].slice(0, 4) });
+        }
+        const deptCount = {};
+        overdue.forEach(o => { const d = o.responsibleDepartment || 'غير محدد'; deptCount[d] = (deptCount[d] || 0) + 1; });
+        const depts = Object.entries(deptCount).sort((a, b) => b[1] - a[1]).slice(0, 7).map(e => e[0]);
+        const cell = (dept, mo) => overdue.filter(o => {
+            if ((o.responsibleDepartment || 'غير محدد') !== dept) return false;
+            const d = new Date(o.expectedCompletionDate || o.date);
+            return !isNaN(d.getTime()) && d.getFullYear() === mo.y && d.getMonth() === mo.m;
+        }).length;
+        let max = 1;
+        depts.forEach(dp => months.forEach(mo => { max = Math.max(max, cell(dp, mo)); }));
+        const cols = `160px repeat(${months.length}, minmax(48px,1fr))`;
+        let html = `<div class="obs-exec-heat-grid" style="grid-template-columns:${cols};">`;
+        html += `<div class="obs-exec-heat-head"></div>` + months.map(mo => `<div class="obs-exec-heat-head">${mo.label}</div>`).join('');
+        depts.forEach(dp => {
+            html += `<div class="obs-exec-heat-row-label" title="${dp}">${dp}</div>`;
+            months.forEach(mo => {
+                const v = cell(dp, mo);
+                const alpha = v === 0 ? 0 : (0.15 + 0.75 * (v / max));
+                const bg = v === 0 ? 'var(--bg-tertiary)' : `rgba(239,68,68,${alpha.toFixed(2)})`;
+                const col = v === 0 ? 'var(--text-tertiary)' : (alpha > 0.5 ? '#fff' : '#7f1d1d');
+                html += `<div class="obs-exec-heat-cell" style="background:${bg};color:${col};">${v || ''}</div>`;
+            });
+        });
+        html += `</div>`;
+        host.innerHTML = html;
+    },
+
+    // ── أداة عامة لإظهار/إخفاء حالة الفراغ ──
+    _execToggleEmpty(canvasId, isEmpty) {
+        const canvas = document.getElementById(canvasId);
+        const emptyEl = document.getElementById(canvasId + '-empty');
+        if (canvas) canvas.style.display = isEmpty ? 'none' : 'block';
+        if (emptyEl) emptyEl.style.display = isEmpty ? 'flex' : 'none';
+        return !isEmpty;
+    },
+
+    _execDestroyChart(canvasId) {
+        if (this.analysisCharts && this.analysisCharts[canvasId]) {
+            try { this.analysisCharts[canvasId].destroy(); } catch (e) {}
+        }
+    },
+
+    // ── رسوم لوحة التنفيذي ──
+    _drawExecCharts(obs, k) {
+        try { this._drawExecMonthlySeries('obs-exec-chart-nearmiss', obs, o => this._execIsNearMiss(o), 'بلاغات وشيكة', 'rgba(245,158,11,0.75)'); } catch (e) {}
+        try { this._drawExecClosureTrend('obs-exec-chart-closure', obs); } catch (e) {}
+        try {
+            const catMap = {};
+            obs.forEach(o => { const c = this._execCategoryOf(o); catMap[c] = (catMap[c] || 0) + 1; });
+            const cats = Object.entries(catMap).sort((a, b) => b[1] - a[1]);
+            this._drawDoughnut('obs-exec-chart-category', cats.map(e => e[0]), cats.map(e => e[1]));
+        } catch (e) {}
+        try {
+            const rg = this._groupBy(obs, 'riskLevel');
+            this._drawDoughnut('obs-exec-chart-risk', rg.labels, rg.data, ['rgba(16,185,129,0.8)','rgba(245,158,11,0.8)','rgba(239,68,68,0.8)','rgba(127,29,29,0.85)','rgba(148,163,184,0.7)']);
+        } catch (e) {}
+        try { this._drawExecDeptPerformance('obs-exec-chart-dept', obs); } catch (e) {}
+        try {
+            const issues = (k.repeatIssues || []).slice(0, 8);
+            this._drawHBar('obs-exec-chart-repeat', issues.map(i => i.sample.slice(0, 24) || i.key), issues.map(i => i.count), 'rgba(239,68,68,0.7)');
+        } catch (e) {}
+    },
+
+    _drawExecMonthlySeries(canvasId, obs, predicate, label, color) {
+        const canvas = document.getElementById(canvasId);
+        if (!canvas) return;
+        const now = new Date();
+        const arabicMonths = ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
+        const months = [];
+        for (let i = 11; i >= 0; i--) {
+            const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+            months.push({ y: d.getFullYear(), m: d.getMonth(), label: `${arabicMonths[d.getMonth()]} ${d.getFullYear()}` });
+        }
+        const filtered = obs.filter(predicate);
+        const counts = months.map(mo => filtered.filter(o => {
+            const d = new Date(o.date);
+            return !isNaN(d.getTime()) && d.getFullYear() === mo.y && d.getMonth() === mo.m;
+        }).length);
+        if (!this._execToggleEmpty(canvasId, counts.reduce((a, b) => a + b, 0) === 0)) return;
+        this._execDestroyChart(canvasId);
+        const chart = new Chart(canvas, {
+            type: 'bar',
+            data: {
+                labels: months.map(mo => mo.label),
+                datasets: [
+                    { label, data: counts, backgroundColor: color, borderRadius: 6, borderSkipped: false, order: 1 },
+                    { label: 'الاتجاه', data: counts, type: 'line', borderColor: 'rgba(139,92,246,0.9)', backgroundColor: 'rgba(139,92,246,0.08)', borderWidth: 2.5, pointRadius: 3, tension: 0.4, fill: true, order: 0 }
+                ]
+            },
+            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'top', labels: { usePointStyle: true, font: { size: 11 } } }, tooltip: { mode: 'index', intersect: false } }, scales: { x: { grid: { display: false }, ticks: { font: { size: 10 }, maxRotation: 45 } }, y: { beginAtZero: true, ticks: { precision: 0, font: { size: 11 } } } } }
+        });
+        if (!this.analysisCharts) this.analysisCharts = {};
+        this.analysisCharts[canvasId] = chart;
+    },
+
+    _drawExecClosureTrend(canvasId, obs) {
+        const canvas = document.getElementById(canvasId);
+        if (!canvas) return;
+        const now = new Date();
+        const arabicMonths = ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
+        const months = [];
+        for (let i = 11; i >= 0; i--) {
+            const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+            months.push({ y: d.getFullYear(), m: d.getMonth(), label: `${arabicMonths[d.getMonth()]} ${d.getFullYear()}` });
+        }
+        const rates = months.map(mo => {
+            const due = obs.filter(o => {
+                const d = new Date(o.expectedCompletionDate);
+                return !isNaN(d.getTime()) && d.getFullYear() === mo.y && d.getMonth() === mo.m;
+            });
+            if (!due.length) return null;
+            const closed = due.filter(o => this._execIsClosed(o)).length;
+            return Math.round(closed / due.length * 100);
+        });
+        if (!this._execToggleEmpty(canvasId, rates.every(r => r === null))) return;
+        this._execDestroyChart(canvasId);
+        const chart = new Chart(canvas, {
+            type: 'line',
+            data: { labels: months.map(mo => mo.label), datasets: [{ label: 'معدل الإغلاق %', data: rates, borderColor: 'rgba(16,185,129,0.9)', backgroundColor: 'rgba(16,185,129,0.12)', borderWidth: 2.5, pointRadius: 3, tension: 0.4, fill: true, spanGaps: true }] },
+            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'top', labels: { usePointStyle: true, font: { size: 11 } } }, tooltip: { callbacks: { label: ctx => ` ${ctx.parsed.y}%` } } }, scales: { x: { grid: { display: false }, ticks: { font: { size: 10 }, maxRotation: 45 } }, y: { beginAtZero: true, max: 100, ticks: { callback: v => v + '%', font: { size: 11 } } } } }
+        });
+        if (!this.analysisCharts) this.analysisCharts = {};
+        this.analysisCharts[canvasId] = chart;
+    },
+
+    _drawExecDeptPerformance(canvasId, obs) {
+        const canvas = document.getElementById(canvasId);
+        if (!canvas) return;
+        const map = {};
+        obs.forEach(o => { const d = o.responsibleDepartment || 'غير محدد'; (map[d] = map[d] || { c: 0, t: 0 }); map[d].t++; if (this._execIsClosed(o)) map[d].c++; });
+        const entries = Object.entries(map).map(e => [e[0], Math.round(e[1].c / e[1].t * 100), e[1].t]).sort((a, b) => b[1] - a[1]).slice(0, 8);
+        if (!this._execToggleEmpty(canvasId, entries.length === 0)) return;
+        this._execDestroyChart(canvasId);
+        const labels = entries.map(e => e[0]);
+        const data = entries.map(e => e[1]);
+        const colors = data.map(v => v >= 90 ? 'rgba(16,185,129,0.8)' : (v >= 75 ? 'rgba(245,158,11,0.8)' : 'rgba(239,68,68,0.8)'));
+        const chart = new Chart(canvas, {
+            type: 'bar',
+            data: { labels, datasets: [{ data, backgroundColor: colors, borderRadius: 5, borderSkipped: false }] },
+            options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => ` معدل الإغلاق: ${ctx.parsed.x}%` } } }, scales: { x: { beginAtZero: true, max: 100, ticks: { callback: v => v + '%', font: { size: 11 } }, grid: { color: '#f1f5f9' } }, y: { ticks: { font: { size: 11 }, callback: v => String(labels[v]).length > 18 ? String(labels[v]).slice(0, 17) + '…' : labels[v] } } } }
+        });
+        if (!this.analysisCharts) this.analysisCharts = {};
+        this.analysisCharts[canvasId] = chart;
     },
 
     // ── تطبيق الفلاتر التفاعلية ──
