@@ -154,7 +154,8 @@ const SafetyCalendar = {
     },
 
     getEnabledCategories() {
-        if (Array.isArray(this._activeCategories) && this._activeCategories.length) {
+        // null = الوضع الافتراضي (كل الأنواع)؛ مصفوفة (حتى فارغة) = اختيار صريح
+        if (Array.isArray(this._activeCategories)) {
             return this._activeCategories;
         }
         return this.getAllCategoryKeys();
@@ -633,6 +634,14 @@ const SafetyCalendar = {
             ${this.renderAssigneeFilter()}
             ${this.renderReferenceToggles()}
             <span class="sc-filter-label"><i class="fas fa-filter ml-1"></i>فلترة الأنواع:</span>
+            <div class="sc-cat-bulk" role="group" aria-label="تحديد الأنواع">
+                <button type="button" class="sc-cat-bulk-btn" id="sc-select-all">
+                    <i class="fas fa-check-double ml-1"></i>تحديد الكل
+                </button>
+                <button type="button" class="sc-cat-bulk-btn" id="sc-clear-all">
+                    <i class="fas fa-eraser ml-1"></i>إلغاء الكل
+                </button>
+            </div>
             <div class="sc-filter-chips">${items}</div>
             <button type="button" class="btn-secondary btn-sm sc-refresh-btn" id="sc-refresh-btn">
                 <i class="fas fa-sync-alt ml-1"></i>تحديث
@@ -837,15 +846,24 @@ const SafetyCalendar = {
                 this.refreshCalendarEvents();
             });
         });
-        section.querySelectorAll('.sc-cat-filter').forEach((cb) => {
-            cb.addEventListener('change', () => {
-                const selected = [];
-                section.querySelectorAll('.sc-cat-filter:checked').forEach((x) => {
-                    selected.push(x.getAttribute('data-cat'));
-                });
-                this._activeCategories = selected.length ? selected : null;
-                this.refreshCalendarEvents();
+        const applyCategorySelection = () => {
+            const selected = [];
+            section.querySelectorAll('.sc-cat-filter:checked').forEach((x) => {
+                selected.push(x.getAttribute('data-cat'));
             });
+            this._activeCategories = selected;
+            this.refreshCalendarEvents();
+        };
+        section.querySelectorAll('.sc-cat-filter').forEach((cb) => {
+            cb.addEventListener('change', applyCategorySelection);
+        });
+        section.querySelector('#sc-select-all')?.addEventListener('click', () => {
+            section.querySelectorAll('.sc-cat-filter').forEach((x) => { x.checked = true; });
+            applyCategorySelection();
+        });
+        section.querySelector('#sc-clear-all')?.addEventListener('click', () => {
+            section.querySelectorAll('.sc-cat-filter').forEach((x) => { x.checked = false; });
+            applyCategorySelection();
         });
         section.querySelector('#sc-refresh-btn')?.addEventListener('click', () => {
             this._activeCategories = null;
