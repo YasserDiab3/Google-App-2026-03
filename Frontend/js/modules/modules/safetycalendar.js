@@ -55,8 +55,8 @@ const SafetyCalendar = {
             locale: 'ar',
             direction: 'rtl',
             customButtons: {
-                prev: {
-                    text: '◂ السابق',
+                scPrev: {
+                    text: 'السابق',
                     hint: 'الفترة السابقة',
                     click() {
                         if (calRef.api && typeof calRef.api.prev === 'function') {
@@ -64,8 +64,8 @@ const SafetyCalendar = {
                         }
                     }
                 },
-                next: {
-                    text: 'التالي ▸',
+                scNext: {
+                    text: 'التالي',
                     hint: 'الفترة التالية',
                     click() {
                         if (calRef.api && typeof calRef.api.next === 'function') {
@@ -73,7 +73,7 @@ const SafetyCalendar = {
                         }
                     }
                 },
-                today: {
+                scToday: {
                     text: 'اليوم',
                     hint: 'العودة إلى اليوم',
                     click() {
@@ -894,7 +894,7 @@ const SafetyCalendar = {
             initialView: 'dayGridMonth',
             height: 'auto',
             headerToolbar: {
-                right: 'prev,next today',
+                right: 'scPrev,scNext scToday',
                 center: 'title',
                 left: headerLeft.join(',')
             },
@@ -1054,7 +1054,7 @@ const SafetyCalendar = {
             moreLinkText(n) {
                 return '+' + n;
             },
-            headerToolbar: { right: 'prev,next', center: 'title', left: '' },
+            headerToolbar: { right: 'scPrev,scNext', center: 'title', left: '' },
             events: result.events,
             eventClick: (info) => {
                 info.jsEvent.preventDefault();
