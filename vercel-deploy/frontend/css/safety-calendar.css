@@ -462,10 +462,10 @@
 }
 
 /* أزرار السابق والتالي — أيقونة + نص مختصر */
-.sc-calendar-root .fc-scPrev-button,
-.sc-calendar-root .fc-scNext-button,
-.sc-dash-calendar-root .fc-scPrev-button,
-.sc-dash-calendar-root .fc-scNext-button {
+.sc-calendar-root .fc-prev-button,
+.sc-calendar-root .fc-next-button,
+.sc-dash-calendar-root .fc-prev-button,
+.sc-dash-calendar-root .fc-next-button {
     display: inline-flex !important;
     align-items: center;
     justify-content: center;
@@ -474,18 +474,18 @@
     min-width: 2.75rem;
 }
 
-.sc-calendar-root .fc-scPrev-button .fc-button-text,
-.sc-calendar-root .fc-scNext-button .fc-button-text,
-.sc-dash-calendar-root .fc-scPrev-button .fc-button-text,
-.sc-dash-calendar-root .fc-scNext-button .fc-button-text {
+.sc-calendar-root .fc-prev-button .fc-button-text,
+.sc-calendar-root .fc-next-button .fc-button-text,
+.sc-dash-calendar-root .fc-prev-button .fc-button-text,
+.sc-dash-calendar-root .fc-next-button .fc-button-text {
     font-size: 0.78rem;
     font-weight: 700;
 }
 
-.sc-calendar-root .fc-scPrev-button::before,
-.sc-calendar-root .fc-scNext-button::before,
-.sc-dash-calendar-root .fc-scPrev-button::before,
-.sc-dash-calendar-root .fc-scNext-button::before {
+.sc-calendar-root .fc-prev-button::before,
+.sc-calendar-root .fc-next-button::before,
+.sc-dash-calendar-root .fc-prev-button::before,
+.sc-dash-calendar-root .fc-next-button::before {
     font-family: 'Font Awesome 6 Free';
     font-weight: 900;
     font-size: 0.72rem;
@@ -494,13 +494,13 @@
 }
 
 /* RTL: السابق = سهم لليمين، التالي = سهم لليسار */
-.sc-calendar-root .fc-scPrev-button::before,
-.sc-dash-calendar-root .fc-scPrev-button::before {
+.sc-calendar-root .fc-prev-button::before,
+.sc-dash-calendar-root .fc-prev-button::before {
     content: '\f054';
 }
 
-.sc-calendar-root .fc-scNext-button::before,
-.sc-dash-calendar-root .fc-scNext-button::before {
+.sc-calendar-root .fc-next-button::before,
+.sc-dash-calendar-root .fc-next-button::before {
     content: '\f053';
 }
 
@@ -560,25 +560,25 @@
 }
 
 @media (max-width: 640px) {
-    .sc-calendar-root .fc-scPrev-button .fc-button-text,
-    .sc-calendar-root .fc-scNext-button .fc-button-text,
-    .sc-dash-calendar-root .fc-scPrev-button .fc-button-text,
-    .sc-dash-calendar-root .fc-scNext-button .fc-button-text {
+    .sc-calendar-root .fc-prev-button .fc-button-text,
+    .sc-calendar-root .fc-next-button .fc-button-text,
+    .sc-dash-calendar-root .fc-prev-button .fc-button-text,
+    .sc-dash-calendar-root .fc-next-button .fc-button-text {
         display: none;
     }
 
-    .sc-calendar-root .fc-scPrev-button,
-    .sc-calendar-root .fc-scNext-button,
-    .sc-dash-calendar-root .fc-scPrev-button,
-    .sc-dash-calendar-root .fc-scNext-button {
+    .sc-calendar-root .fc-prev-button,
+    .sc-calendar-root .fc-next-button,
+    .sc-dash-calendar-root .fc-prev-button,
+    .sc-dash-calendar-root .fc-next-button {
         min-width: 38px;
         padding: 0.48rem !important;
     }
 
-    .sc-calendar-root .fc-scPrev-button::before,
-    .sc-calendar-root .fc-scNext-button::before,
-    .sc-dash-calendar-root .fc-scPrev-button::before,
-    .sc-dash-calendar-root .fc-scNext-button::before {
+    .sc-calendar-root .fc-prev-button::before,
+    .sc-calendar-root .fc-next-button::before,
+    .sc-dash-calendar-root .fc-prev-button::before,
+    .sc-dash-calendar-root .fc-next-button::before {
         font-size: 0.85rem;
     }
 }

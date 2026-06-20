@@ -39,18 +39,54 @@ const SafetyCalendar = {
         });
     },
 
-    /** أزرار تنقل مخصصة — السابق / التالي */
-    _fcNavButtons() {
-        return {
-            scPrev: {
-                text: 'السابق',
-                hint: 'الفترة السابقة',
-                click: function () { this.prev(); }
+    /**
+     * إنشاء خيارات التقويم مع أزرار prev/next/today تعمل عبر مرجع calendar صريح
+     * (this داخل customButtons لا يشير دائماً إلى Calendar في FC v6)
+     */
+    _buildCalendarOptions(overrides) {
+        const calRef = { api: null };
+        const self = this;
+        const options = Object.assign({
+            locale: 'ar',
+            direction: 'rtl',
+            customButtons: {
+                prev: {
+                    text: 'السابق',
+                    hint: 'الفترة السابقة',
+                    click() {
+                        if (calRef.api && typeof calRef.api.prev === 'function') {
+                            calRef.api.prev();
+                        }
+                    }
+                },
+                next: {
+                    text: 'التالي',
+                    hint: 'الفترة التالية',
+                    click() {
+                        if (calRef.api && typeof calRef.api.next === 'function') {
+                            calRef.api.next();
+                        }
+                    }
+                },
+                today: {
+                    text: 'اليوم',
+                    hint: 'العودة إلى اليوم',
+                    click() {
+                        if (calRef.api && typeof calRef.api.today === 'function') {
+                            calRef.api.today();
+                        }
+                    }
+                }
             },
-            scNext: {
-                text: 'التالي',
-                hint: 'الفترة التالية',
-                click: function () { this.next(); }
+            buttonText: self._fcButtonText()
+        }, overrides || {});
+
+        return {
+            options,
+            render(root) {
+                calRef.api = new FullCalendar.Calendar(root, options);
+                calRef.api.render();
+                return calRef.api;
             }
         };
     },
@@ -299,18 +335,14 @@ const SafetyCalendar = {
         this.destroyCalendar();
         const result = this.buildEvents();
 
-        this._calendar = new FullCalendar.Calendar(root, {
+        const builder = this._buildCalendarOptions({
             initialView: 'dayGridMonth',
-            locale: 'ar',
-            direction: 'rtl',
             height: 'auto',
-            customButtons: this._fcNavButtons(),
             headerToolbar: {
-                right: 'scPrev,scNext today',
+                right: 'prev,next today',
                 center: 'title',
                 left: 'dayGridMonth,timeGridWeek,timeGridDay,listWeek'
             },
-            buttonText: this._fcButtonText(),
             events: result.events,
             eventClick: (info) => {
                 info.jsEvent.preventDefault();
@@ -326,7 +358,7 @@ const SafetyCalendar = {
             }
         });
 
-        this._calendar.render();
+        this._calendar = builder.render(root);
 
         const warn = section.querySelector('#sc-truncated-warn');
         if (warn && result.truncated) {
@@ -415,21 +447,17 @@ const SafetyCalendar = {
         if (this._dashCalendar) {
             try { this._dashCalendar.destroy(); } catch (_e) { /* ignore */ }
         }
-        this._dashCalendar = new FullCalendar.Calendar(miniRoot, {
+        const builder = this._buildCalendarOptions({
             initialView: 'dayGridMonth',
-            locale: 'ar',
-            direction: 'rtl',
             height: 320,
-            customButtons: this._fcNavButtons(),
-            headerToolbar: { right: 'scPrev,scNext', center: 'title', left: '' },
-            buttonText: this._fcButtonText(),
+            headerToolbar: { right: 'prev,next', center: 'title', left: '' },
             events: result.events,
             eventClick: (info) => {
                 info.jsEvent.preventDefault();
                 this.showEventModal(info.event);
             }
         });
-        this._dashCalendar.render();
+        this._dashCalendar = builder.render(miniRoot);
     },
 
     async loadDashboardWidget() {
