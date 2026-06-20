@@ -1206,52 +1206,54 @@ const PeriodicInspections = {
         const icon = this.getResultIcon(evalData.result);
         const ringOffset = Math.max(0, 283 - (283 * rate / 100));
         return `
-            <div class="rounded-xl border-2 overflow-hidden shadow-sm" style="border-color: ${color}40; background: linear-gradient(135deg, #ffffff 0%, ${color}0d 100%);">
-                <div class="p-4 sm:p-5">
-                    <div class="flex flex-col sm:flex-row items-center gap-4 sm:gap-6">
-                        <div class="relative flex-shrink-0" style="width: 108px; height: 108px;">
-                            <svg viewBox="0 0 100 100" class="w-full h-full -rotate-90">
+            <div style="border: 2px solid ${color}40; border-radius: 14px; overflow: hidden; background: linear-gradient(135deg, #ffffff 0%, ${color}0d 100%); box-shadow: 0 2px 8px rgba(15,23,42,0.06);">
+                <div style="padding: 18px 20px;">
+                    <p style="margin: 0 0 14px 0; font-size: 12px; font-weight: 700; color: #64748b; text-align: center; line-height: 1.5;">
+                        نتيجة الفحص — محسوبة تلقائياً من بنود قائمة الفحص
+                    </p>
+                    <div style="display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 20px; margin-bottom: 16px;">
+                        <div style="position: relative; width: 112px; height: 112px; flex-shrink: 0;">
+                            <svg viewBox="0 0 100 100" style="width: 112px; height: 112px; transform: rotate(-90deg); display: block;">
                                 <circle cx="50" cy="50" r="45" fill="none" stroke="#e5e7eb" stroke-width="8"></circle>
                                 <circle cx="50" cy="50" r="45" fill="none" stroke="${color}" stroke-width="8"
-                                    stroke-linecap="round" stroke-dasharray="283" stroke-dashoffset="${ringOffset}"
-                                    style="transition: stroke-dashoffset 0.35s ease;"></circle>
+                                    stroke-linecap="round" stroke-dasharray="283" stroke-dashoffset="${ringOffset}"></circle>
                             </svg>
-                            <div class="absolute inset-0 flex flex-col items-center justify-center text-center">
-                                <span class="text-2xl font-extrabold leading-none" style="color: ${color};">${rate}%</span>
-                                <span class="text-[11px] font-semibold mt-1" style="color: ${color};">${Utils.escapeHTML(evalData.ratingLabel || '—')}</span>
+                            <div style="position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; pointer-events: none;">
+                                <span style="font-size: 26px; font-weight: 800; line-height: 1; color: ${color};">${rate}%</span>
+                                <span style="font-size: 11px; font-weight: 700; margin-top: 4px; color: ${color}; line-height: 1.3;">${Utils.escapeHTML(evalData.ratingLabel || '—')}</span>
                             </div>
                         </div>
-                        <div class="flex-1 w-full text-center sm:text-right">
-                            <p class="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-2">نتيجة الفحص (محسوبة تلقائياً)</p>
-                            <div class="mb-3">
-                                <span class="badge ${badgeClass} inline-flex items-center gap-2 px-4 py-2 text-base font-bold">
-                                    <i class="${icon}"></i>
-                                    <span>${Utils.escapeHTML(evalData.result || 'قيد المراجعة')}</span>
-                                </span>
-                            </div>
-                            <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
-                                <div class="rounded-lg px-2 py-2 bg-green-50 border border-green-200">
-                                    <div class="font-bold text-green-700">${evalData.compliant || 0}</div>
-                                    <div class="text-green-600">مطابق</div>
-                                </div>
-                                <div class="rounded-lg px-2 py-2 bg-red-50 border border-red-200">
-                                    <div class="font-bold text-red-700">${evalData.nonCompliant || 0}</div>
-                                    <div class="text-red-600">غير مطابق</div>
-                                </div>
-                                <div class="rounded-lg px-2 py-2 bg-orange-50 border border-orange-200">
-                                    <div class="font-bold text-orange-700">${evalData.other || 0}</div>
-                                    <div class="text-orange-600">أخرى</div>
-                                </div>
-                                <div class="rounded-lg px-2 py-2 bg-slate-50 border border-slate-200">
-                                    <div class="font-bold text-slate-700">${evalData.pending || 0}</div>
-                                    <div class="text-slate-600">لم يُقيَّم</div>
-                                </div>
-                            </div>
-                            <p class="text-[11px] text-gray-500 mt-3 leading-relaxed">
-                                تُحدَّث النتيجة ونسبة المطابقة فور اختيار حالة كل بند. ≥90% مطابق، 60–89% مطابق جزئياً، أقل من 60% غير مطابق.
-                            </p>
+                        <div style="flex: 1 1 200px; min-width: 180px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; text-align: center;">
+                            <span class="badge ${badgeClass}" style="display: inline-flex; align-items: center; gap: 8px; padding: 10px 18px; font-size: 15px; font-weight: 700; line-height: 1.4; white-space: normal; max-width: 100%;">
+                                <i class="${icon}" style="flex-shrink: 0;"></i>
+                                <span>${Utils.escapeHTML(evalData.result || 'قيد المراجعة')}</span>
+                            </span>
+                            <span style="font-size: 12px; font-weight: 600; color: #475569; line-height: 1.5;">
+                                نسبة المطابقة: <strong style="color: ${color};">${rate}%</strong>
+                            </span>
                         </div>
                     </div>
+                    <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin-bottom: 12px;">
+                        <div style="border-radius: 10px; padding: 10px 8px; text-align: center; background: #f0fdf4; border: 1px solid #bbf7d0;">
+                            <div style="font-size: 18px; font-weight: 800; color: #15803d; line-height: 1.2;">${evalData.compliant || 0}</div>
+                            <div style="font-size: 11px; font-weight: 600; color: #16a34a; margin-top: 4px; line-height: 1.3;">مطابق</div>
+                        </div>
+                        <div style="border-radius: 10px; padding: 10px 8px; text-align: center; background: #fef2f2; border: 1px solid #fecaca;">
+                            <div style="font-size: 18px; font-weight: 800; color: #b91c1c; line-height: 1.2;">${evalData.nonCompliant || 0}</div>
+                            <div style="font-size: 11px; font-weight: 600; color: #dc2626; margin-top: 4px; line-height: 1.3;">غير مطابق</div>
+                        </div>
+                        <div style="border-radius: 10px; padding: 10px 8px; text-align: center; background: #fff7ed; border: 1px solid #fed7aa;">
+                            <div style="font-size: 18px; font-weight: 800; color: #c2410c; line-height: 1.2;">${evalData.other || 0}</div>
+                            <div style="font-size: 11px; font-weight: 600; color: #ea580c; margin-top: 4px; line-height: 1.3;">أخرى</div>
+                        </div>
+                        <div style="border-radius: 10px; padding: 10px 8px; text-align: center; background: #f8fafc; border: 1px solid #e2e8f0;">
+                            <div style="font-size: 18px; font-weight: 800; color: #475569; line-height: 1.2;">${evalData.pending || 0}</div>
+                            <div style="font-size: 11px; font-weight: 600; color: #64748b; margin-top: 4px; line-height: 1.3;">لم يُقيَّم</div>
+                        </div>
+                    </div>
+                    <p style="margin: 0; font-size: 11px; color: #64748b; line-height: 1.6; text-align: center;">
+                        تُحدَّث النتيجة ونسبة المطابقة فور اختيار حالة كل بند. ≥90% مطابق، 60–89% مطابق جزئياً، أقل من 60% غير مطابق.
+                    </p>
                 </div>
             </div>
         `;
