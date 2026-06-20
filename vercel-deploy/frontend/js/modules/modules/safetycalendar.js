@@ -52,7 +52,7 @@ const SafetyCalendar = {
             direction: 'rtl',
             customButtons: {
                 prev: {
-                    text: isCompact ? '›' : 'السابق',
+                    text: isCompact ? '\u00a0' : 'السابق',
                     hint: 'الفترة السابقة',
                     click() {
                         if (calRef.api && typeof calRef.api.prev === 'function') {
@@ -61,7 +61,7 @@ const SafetyCalendar = {
                     }
                 },
                 next: {
-                    text: isCompact ? '‹' : 'التالي',
+                    text: isCompact ? '\u00a0' : 'التالي',
                     hint: 'الفترة التالية',
                     click() {
                         if (calRef.api && typeof calRef.api.next === 'function') {
