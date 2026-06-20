@@ -6294,7 +6294,7 @@ const PTW = {
                 }
                 return '';
             })(),
-            equipment: document.getElementById('ptw-equipment')?.value || '',
+            equipment: this.collectEquipmentFieldValue(document, { matrixId: '#ptw-equipment-matrix', notesId: '#ptw-equipment-notes' }),
             tools: document.getElementById('ptw-tools')?.value || '',
             teamMembers: Array.from(document.querySelectorAll('#team-members-list .ptw-team-member-name'))
                 .map(input => ({ name: input.value.trim() }))
@@ -7128,6 +7128,14 @@ const PTW = {
         const fixedNorm = new Set(fixedPpeLabels.map(normPpe));
         e._ppeExtraNotes = e._ppeSelected.filter((item) => !fixedNorm.has(normPpe(item)));
 
+        const equipmentItems = [];
+        if (e.equipment) {
+            equipmentItems.push(...this._splitEquipmentTokens(e.equipment));
+        }
+        e._equipmentSelected = [...new Set(equipmentItems.map((s) => String(s).trim()).filter(Boolean))];
+        const fixedEquipNorm = new Set(this.getManualFixedEquipmentLabels().map((l) => this._normEquipmentItemKey(l)));
+        e._equipmentExtraNotes = e._equipmentSelected.filter((item) => !fixedEquipNorm.has(this._normEquipmentItemKey(item)));
+
         return e;
     },
 
@@ -7232,10 +7240,15 @@ const PTW = {
                 letter-spacing: 0 !important; word-spacing: normal !important;
                 font-family: 'Cairo', Tahoma, Arial, sans-serif !important;
             }
-            .ptw-ph-right { width: 33%; text-align: right; }
-            .ptw-ph-center { width: 34%; text-align: center; }
-            .ptw-ph-left { width: 33%; text-align: left; }
-            .ptw-paper-header-company, .ptw-paper-header-dept, .ptw-paper-header-form-title {
+            .ptw-ph-right { width: 38%; text-align: right; }
+            .ptw-ph-center { width: 32%; text-align: center; }
+            .ptw-ph-left { width: 30%; text-align: left; }
+            .ptw-paper-header-company {
+                letter-spacing: 0 !important; word-spacing: normal !important;
+                word-break: keep-all; white-space: nowrap; unicode-bidi: embed; direction: rtl;
+                line-height: 1.35 !important; transform: none !important;
+            }
+            .ptw-paper-header-dept, .ptw-paper-header-form-title {
                 letter-spacing: 0 !important; word-spacing: normal !important;
                 word-break: normal; white-space: normal; unicode-bidi: embed; direction: rtl;
                 line-height: 1.35 !important; transform: none !important;
@@ -7280,10 +7293,15 @@ const PTW = {
             .ptw-paper-header-pdf { display: block; padding: 0; background: transparent; border: none; min-height: 0; margin-bottom: 8px; }
             .ptw-paper-header-table { width: 100%; border-collapse: collapse; table-layout: fixed; background: #1e3a5f; border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.18); }
             .ptw-ph-cell { padding: 10px 12px; vertical-align: middle; color: #fff; letter-spacing: 0 !important; word-spacing: normal; }
-            .ptw-ph-right { width: 33%; text-align: right; }
-            .ptw-ph-center { width: 34%; text-align: center; }
-            .ptw-ph-left { width: 33%; text-align: left; }
-            .ptw-paper-header-company, .ptw-paper-header-dept, .ptw-paper-header-form-title { letter-spacing: 0 !important; word-break: normal; white-space: normal; unicode-bidi: embed; }
+            .ptw-ph-right { width: 38%; text-align: right; }
+            .ptw-ph-center { width: 32%; text-align: center; }
+            .ptw-ph-left { width: 30%; text-align: left; }
+            .ptw-paper-header-company {
+                letter-spacing: 0 !important; word-break: keep-all; white-space: nowrap; unicode-bidi: embed;
+            }
+            .ptw-paper-header-dept, .ptw-paper-header-form-title {
+                letter-spacing: 0 !important; word-break: normal; white-space: normal; unicode-bidi: embed;
+            }
             .ptw-paper-header-form-subtitle { font-size: 11px; letter-spacing: 0.4px !important; }
             .ptw-paper-header-form-title { font-size: 16px; }
             .ptw-paper-header-company { font-size: 14px; }
@@ -7334,14 +7352,17 @@ const PTW = {
             body { margin: 0; padding: 12px; font-family: 'Cairo', 'Segoe UI', Tahoma, Arial, sans-serif; font-size: 12px; color: #1f2937; background: #fff; direction: rtl; }
             .ptw-manual-print { max-width: 1100px; margin: 0 auto; }
             .ptw-paper-header {
-                display: grid; grid-template-columns: 1fr 1.45fr 1fr; gap: 14px; align-items: center;
+                display: grid; grid-template-columns: 1.45fr 1.15fr 0.85fr; gap: 14px; align-items: center;
                 background: linear-gradient(135deg, #1e3a5f 0%, #1d4ed8 100%); color: #fff;
                 padding: 16px 20px; border-radius: 10px; margin-bottom: 14px;
                 border: 1px solid rgba(255, 255, 255, 0.18);
                 min-height: 78px;
             }
             .ptw-paper-header-right { text-align: right; min-width: 0; }
-            .ptw-paper-header-company { font-size: 16px; font-weight: 700; line-height: 1.35; letter-spacing: 0.2px; }
+            .ptw-paper-header-company {
+                font-size: 16px; font-weight: 700; line-height: 1.35; letter-spacing: 0.2px;
+                white-space: nowrap; word-break: keep-all;
+            }
             .ptw-paper-header-dept { font-size: 12px; font-weight: 500; opacity: 0.9; margin-top: 5px; line-height: 1.4; }
             .ptw-paper-header-center {
                 text-align: center; min-width: 0;
@@ -7445,6 +7466,50 @@ const PTW = {
                 color: #334155; font-weight: 600; font-size: 10px; margin-bottom: 4px;
             }
             .ptw-manual-ppe-notes-print .val { font-size: 11px; color: #1f2937; white-space: pre-wrap; }
+            .ptw-manual-equipment-print-matrix {
+                background: #fff; border: 1.5px solid #64748b; border-radius: 8px;
+                padding: 12px 10px; box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06);
+            }
+            .ptw-manual-equipment-fixed-wrap { width: 100%; }
+            .ptw-manual-equipment-fixed-row {
+                display: grid; grid-template-columns: repeat(9, minmax(0, 1fr));
+                gap: 8px 6px; margin-bottom: 8px; direction: rtl;
+            }
+            .ptw-manual-equipment-fixed-row.equipment-row-last { margin-bottom: 0; }
+            .ptw-manual-equipment-history-row {
+                grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+            }
+            .ptw-manual-equipment-cell {
+                display: flex; align-items: flex-start; gap: 6px;
+                font-size: 10.5px; font-weight: 600; color: #0f172a; direction: rtl;
+                min-width: 0; line-height: 1.4; word-break: break-word;
+                padding: 7px 6px; border: 1.2px solid #94a3b8; border-radius: 5px;
+                background: #fff; min-height: 34px;
+            }
+            .ptw-manual-equipment-cell.equipment-selected {
+                border-color: #1d4ed8; background: #f8fafc;
+            }
+            .equipment-checkbox {
+                width: 14px; height: 14px; border: 2px solid #334155; border-radius: 2px;
+                flex-shrink: 0; margin-top: 1px; background: #fff; position: relative;
+            }
+            .equipment-checkbox.checked {
+                background: #1e40af; border-color: #1e3a8a;
+            }
+            .equipment-checkbox.checked::after {
+                content: ''; position: absolute; left: 3px; top: 1px;
+                width: 4px; height: 8px; border: solid #fff;
+                border-width: 0 2px 2px 0; transform: rotate(45deg);
+            }
+            .equipment-label { flex: 1; min-width: 0; }
+            .ptw-manual-equipment-notes-print {
+                margin-top: 8px; background: #fff; border: 1px solid #cbd5e1;
+                border-radius: 8px; padding: 8px 10px;
+            }
+            .ptw-manual-equipment-notes-print .lbl {
+                color: #334155; font-weight: 600; font-size: 10px; margin-bottom: 4px;
+            }
+            .ptw-manual-equipment-notes-print .val { font-size: 11px; color: #1f2937; white-space: pre-wrap; }
             .manual-risk-matrix { width: 100%; border-collapse: collapse; text-align: center; font-size: 10px; background: #fff; }
             .manual-risk-matrix th, .manual-risk-matrix td { border: 1px solid #6b7280; padding: 4px; }
             .manual-risk-matrix .risk-cell { font-weight: 700; padding: 8px 4px; }
@@ -7672,7 +7737,20 @@ const PTW = {
                     ${field('تاريخ الانتهاء', this._formatManualPermitDateTime(e.timeTo))}
                     ${field('الجهة المصرح لها بالعمل', e.authorizedParty)}
                     ${field('الجهة الطالبة للتصريح', e.requestingParty)}
-                    ${field('المعدة / الماكينة / العملية', e.equipment, true)}
+                    <div class="manual-print-field full">
+                        <div class="lbl">المعدة / الماكينة / العملية</div>
+                        <div class="val">
+                            ${(() => {
+                                const hist = this.buildKnownEquipmentHistoryLabels(e.id || e.permitId || null);
+                                const parsed = this.parseEquipmentToSelection(e.equipment, hist);
+                                return `${this.buildManualFixedEquipmentPrintHtml(parsed.matrixSelected || [])}${parsed.manualNotes ? `
+                            <div class="ptw-manual-equipment-notes-print">
+                                <div class="lbl">إضافي يدوي</div>
+                                <div class="val">${esc(parsed.manualNotes)}</div>
+                            </div>` : ''}`;
+                            })()}
+                        </div>
+                    </div>
                     ${field('الأدوات أو العدد (بعد فحصها وقبولها)', e.tools || e.toolsList, true)}
                     ${field('وصف العمل', e.workDescription, true)}
                 </div>
@@ -8617,6 +8695,221 @@ const PTW = {
     },
 
     /**
+     * شبكة المعدات/الماكينة — قائمة ثابتة + تاريخ + إدخال يدوي (نمط القسم الخامس)
+     */
+    _normEquipmentItemKey(value) {
+        return String(value || '')
+            .trim()
+            .replace(/\s+/g, ' ')
+            .replace(/[أإآٱ]/g, 'ا')
+            .replace(/ة/g, 'ه')
+            .replace(/ى/g, 'ي')
+            .toLowerCase();
+    },
+
+    getManualFixedEquipmentRowLabels() {
+        return [
+            ['رافعة', 'سلم متحرك', 'سقالة', 'منصة رفع', 'ونش', 'مضخة', 'خزان', 'خط أنابيب', 'لوحة كهربائية'],
+            ['مولد كهرباء', 'ضاغط هواء', 'ماكينة لحام', 'جلاخة', 'منشار', 'مثقاب كهربائي', 'محرك كهربائي', 'رافعة شوكية', 'أخرى']
+        ];
+    },
+
+    getManualFixedEquipmentLabels() {
+        return this.getManualFixedEquipmentRowLabels().flat();
+    },
+
+    _isFixedEquipmentLabel(label) {
+        const nk = this._normEquipmentItemKey(label);
+        return this.getManualFixedEquipmentLabels().some((item) => this._normEquipmentItemKey(item) === nk);
+    },
+
+    _splitEquipmentTokens(text) {
+        return String(text || '')
+            .split(/[،,]/)
+            .map((s) => s.trim())
+            .filter(Boolean);
+    },
+
+    _collectEquipmentEntriesForLookup(excludeEntryId = null) {
+        const seen = new Set();
+        const out = [];
+        const exclude = String(excludeEntryId || '').trim();
+        const add = (entry) => {
+            if (!entry) return;
+            const id = String(entry.id || entry.permitId || '').trim();
+            if (exclude && id && id === exclude) return;
+            const dedupeKey = id || `seq:${entry.sequentialNumber || ''}:${entry.paperPermitNo || entry.permitNumber || ''}`;
+            if (dedupeKey && seen.has(dedupeKey)) return;
+            if (dedupeKey) seen.add(dedupeKey);
+            out.push(entry);
+        };
+        (Array.isArray(this.registryData) ? this.registryData : []).forEach(add);
+        (Array.isArray(AppState?.appData?.ptw) ? AppState.appData.ptw : []).forEach(add);
+        return out.sort((a, b) => this._getManualPermitEntryTimestamp(b) - this._getManualPermitEntryTimestamp(a));
+    },
+
+    buildKnownEquipmentHistoryLabels(excludeEntryId = null, limit = 20) {
+        const fixedNorm = new Set(this.getManualFixedEquipmentLabels().map((l) => this._normEquipmentItemKey(l)));
+        const seen = new Set();
+        const labels = [];
+        this._collectEquipmentEntriesForLookup(excludeEntryId).forEach((entry) => {
+            this._splitEquipmentTokens(entry.equipment).forEach((token) => {
+                const nk = this._normEquipmentItemKey(token);
+                if (!nk || fixedNorm.has(nk) || seen.has(nk)) return;
+                seen.add(nk);
+                labels.push(token);
+            });
+        });
+        labels.sort((a, b) => a.localeCompare(b, 'ar'));
+        return labels.slice(0, limit);
+    },
+
+    parseEquipmentToSelection(equipmentText, historyLabels = []) {
+        const fixedRows = this.getManualFixedEquipmentRowLabels();
+        const fixedFlat = fixedRows.flat();
+        const history = Array.isArray(historyLabels) ? historyLabels : [];
+        const knownMap = new Map();
+        [...fixedFlat, ...history].forEach((label) => {
+            const nk = this._normEquipmentItemKey(label);
+            if (nk && !knownMap.has(nk)) knownMap.set(nk, label);
+        });
+
+        const matrixSelected = [];
+        const manualExtra = [];
+        const selectedNorm = new Set();
+
+        this._splitEquipmentTokens(equipmentText).forEach((token) => {
+            const nk = this._normEquipmentItemKey(token);
+            if (knownMap.has(nk)) {
+                const canonical = knownMap.get(nk);
+                if (!selectedNorm.has(nk)) {
+                    selectedNorm.add(nk);
+                    matrixSelected.push(canonical);
+                }
+            } else {
+                manualExtra.push(token);
+            }
+        });
+
+        return {
+            matrixSelected,
+            manualNotes: manualExtra.join('، ')
+        };
+    },
+
+    _equipmentSelectionIsChecked(label, selectedItems) {
+        const raw = new Set((selectedItems || []).map((s) => String(s || '').trim()).filter(Boolean));
+        const t = String(label || '').trim();
+        if (raw.has(t)) return true;
+        const nk = this._normEquipmentItemKey(t);
+        for (const s of raw) {
+            if (this._normEquipmentItemKey(s) === nk) return true;
+        }
+        return false;
+    },
+
+    buildManualFixedEquipmentCheckboxesHtml(selectedItems = [], historyLabels = []) {
+        const esc = Utils.escapeHTML;
+        const isSel = (label) => this._equipmentSelectionIsChecked(label, selectedItems);
+        const fixedRows = this.getManualFixedEquipmentRowLabels();
+        const history = (Array.isArray(historyLabels) ? historyLabels : []).filter(Boolean);
+
+        let html = '<div class="ptw-manual-equipment-fixed-wrap">';
+        fixedRows.forEach((row) => {
+            html += '<div class="ptw-manual-equipment-fixed-row">';
+            row.forEach((label) => {
+                const checked = isSel(label) ? ' checked' : '';
+                html += `<label class="ptw-manual-equipment-cell"><input type="checkbox" class="equipment-fixed-cb" value="${esc(label)}"${checked}><span>${esc(label)}</span></label>`;
+            });
+            html += '</div>';
+        });
+        if (history.length) {
+            html += '<div class="ptw-manual-equipment-fixed-row ptw-manual-equipment-history-row">';
+            history.forEach((label) => {
+                const checked = isSel(label) ? ' checked' : '';
+                html += `<label class="ptw-manual-equipment-cell ptw-manual-equipment-history-cell"><input type="checkbox" class="equipment-history-cb" value="${esc(label)}"${checked}><span>${esc(label)}</span></label>`;
+            });
+            html += '</div>';
+        }
+        html += '</div>';
+        return html;
+    },
+
+    buildManualFixedEquipmentPrintHtml(selectedItems = []) {
+        const esc = (v) => Utils.escapeHTML(v);
+        const isSel = (label) => this._equipmentSelectionIsChecked(label, selectedItems);
+        const fixedRows = this.getManualFixedEquipmentRowLabels();
+        const historySelected = (selectedItems || []).filter((item) => {
+            const s = String(item || '').trim();
+            return s && !this._isFixedEquipmentLabel(s);
+        });
+
+        let html = '<div class="ptw-manual-equipment-print-matrix"><div class="ptw-manual-equipment-fixed-wrap">';
+        fixedRows.forEach((row, rowIdx) => {
+            const rowClass = rowIdx === fixedRows.length - 1 ? 'ptw-manual-equipment-fixed-row equipment-row-last' : 'ptw-manual-equipment-fixed-row';
+            html += `<div class="${rowClass}">`;
+            row.forEach((label) => {
+                const checked = isSel(label);
+                html += `<span class="ptw-manual-equipment-cell${checked ? ' equipment-selected' : ''}"><span class="equipment-checkbox${checked ? ' checked' : ''}" aria-hidden="true"></span><span class="equipment-label">${esc(label)}</span></span>`;
+            });
+            html += '</div>';
+        });
+        if (historySelected.length) {
+            html += '<div class="ptw-manual-equipment-fixed-row ptw-manual-equipment-history-row equipment-row-last">';
+            historySelected.forEach((label) => {
+                html += `<span class="ptw-manual-equipment-cell equipment-selected ptw-manual-equipment-history-cell"><span class="equipment-checkbox checked" aria-hidden="true"></span><span class="equipment-label">${esc(label)}</span></span>`;
+            });
+            html += '</div>';
+        }
+        html += '</div></div>';
+        return html;
+    },
+
+    collectEquipmentFieldValue(root, options = {}) {
+        const container = root?.querySelector ? root : document;
+        const matrixId = options.matrixId || '#manual-equipment-matrix';
+        const notesId = options.notesId || '#manual-equipment-notes';
+        const matrixEl = container.querySelector(matrixId);
+        const notesEl = container.querySelector(notesId);
+
+        const fromFixed = Array.from(matrixEl?.querySelectorAll('.equipment-fixed-cb:checked') || [])
+            .map((el) => String(el.value || '').trim())
+            .filter(Boolean);
+        const fromHistory = Array.from(matrixEl?.querySelectorAll('.equipment-history-cb:checked') || [])
+            .map((el) => String(el.value || '').trim())
+            .filter(Boolean);
+        const notesRaw = String(notesEl?.value || '').trim();
+        const fromNotes = notesRaw ? this._splitEquipmentTokens(notesRaw) : [];
+
+        return [...new Set([...fromFixed, ...fromHistory, ...fromNotes])].join('، ');
+    },
+
+    setupManualEquipmentToolsSync(modal) {
+        if (!modal) return;
+        const toolsInput = modal.querySelector('#manual-permit-tools');
+        const matrixEl = modal.querySelector('#manual-equipment-matrix');
+        const notesEl = modal.querySelector('#manual-equipment-notes');
+        if (!toolsInput || !matrixEl) return;
+
+        const syncToolsFromEquipment = () => {
+            const equipmentValue = this.collectEquipmentFieldValue(modal, {
+                matrixId: '#manual-equipment-matrix',
+                notesId: '#manual-equipment-notes'
+            });
+            const currentTools = String(toolsInput.value || '').trim();
+            const previousAuto = String(matrixEl.dataset.autoToolsValue || '').trim();
+            if (!currentTools || currentTools === previousAuto) {
+                toolsInput.value = equipmentValue;
+                matrixEl.dataset.autoToolsValue = equipmentValue;
+            }
+        };
+
+        syncToolsFromEquipment();
+        matrixEl.addEventListener('change', syncToolsFromEquipment);
+        notesEl?.addEventListener('input', syncToolsFromEquipment);
+    },
+
+    /**
      * شبكة مهمات الوقاية الثابتة للتصريح اليدوي (مطابقة النموذج الورقي: 9 أعمدة × صفّان + صف خامس بخمس عناصر)
      */
     buildManualFixedPPECheckboxesHtml(selectedItems = []) {
@@ -8718,6 +9011,14 @@ const PTW = {
             }
             return [];
         })();
+
+        const excludeEquipmentLookupId = existingEntry?.id || existingEntry?.permitId || null;
+        const knownEquipmentHistory = this.buildKnownEquipmentHistoryLabels(excludeEquipmentLookupId);
+        const manualEquipmentSelection = this.parseEquipmentToSelection(existingEntry?.equipment, knownEquipmentHistory);
+        const manualEquipmentMatrixHtml = this.buildManualFixedEquipmentCheckboxesHtml(
+            manualEquipmentSelection.matrixSelected,
+            knownEquipmentHistory
+        );
 
         const safetyTeamForManual = (typeof Training !== 'undefined' && typeof Training.getSafetyTeamMembers === 'function')
             ? Training.getSafetyTeamMembers({ excludeSystemUsers: true })
@@ -9295,6 +9596,88 @@ const PTW = {
                     }
                 }
 
+                /* القسم الأول — شبكة المعدات/الماكينة */
+                .ptw-manual-permit-modal .manual-section-1 .ptw-manual-equipment-body,
+                .ptw-form-equipment-body {
+                    background: #ffffff !important;
+                    border: 1.2px solid #94a3b8 !important;
+                    border-radius: 10px !important;
+                    padding: 14px 12px !important;
+                    box-shadow: 0 1px 4px rgba(15, 23, 42, 0.07);
+                    width: 100%;
+                    box-sizing: border-box;
+                }
+                .ptw-manual-permit-modal .manual-section-1 .ptw-manual-equipment-notes-frame,
+                .ptw-form-equipment-notes-frame {
+                    margin-top: 0.5rem;
+                    background: #ffffff;
+                    border: 1px solid #cbd5e1;
+                    border-radius: 8px;
+                    padding: 6px 8px;
+                }
+                .ptw-manual-permit-modal .manual-section-1 .ptw-manual-equipment-notes-frame label,
+                .ptw-form-equipment-notes-frame label {
+                    color: #334155;
+                    font-weight: 600;
+                    font-size: 0.72rem;
+                    margin-bottom: 4px;
+                }
+                .ptw-manual-permit-modal .manual-section-1 .ptw-manual-equipment-fixed-wrap,
+                .ptw-form-equipment-body .ptw-manual-equipment-fixed-wrap {
+                    width: 100%;
+                }
+                .ptw-manual-permit-modal .manual-section-1 .ptw-manual-equipment-fixed-row,
+                .ptw-form-equipment-body .ptw-manual-equipment-fixed-row {
+                    display: grid;
+                    grid-template-columns: repeat(9, minmax(0, 1fr));
+                    gap: 8px 6px;
+                    margin-bottom: 8px;
+                    direction: rtl;
+                }
+                .ptw-manual-permit-modal .manual-section-1 .ptw-manual-equipment-history-row,
+                .ptw-form-equipment-body .ptw-manual-equipment-history-row {
+                    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+                }
+                .ptw-manual-permit-modal .manual-section-1 .ptw-manual-equipment-cell,
+                .ptw-form-equipment-body .ptw-manual-equipment-cell {
+                    display: flex;
+                    align-items: flex-start;
+                    gap: 6px;
+                    font-size: 0.8rem;
+                    font-weight: 600;
+                    color: #0f172a !important;
+                    cursor: pointer;
+                    direction: rtl;
+                    min-width: 0;
+                    line-height: 1.38;
+                    word-break: break-word;
+                    padding: 7px 6px;
+                    border: 1.2px solid #94a3b8;
+                    border-radius: 5px;
+                    background: #fff;
+                    min-height: 34px;
+                }
+                .ptw-manual-permit-modal .manual-section-1 .ptw-manual-equipment-cell:has(input:checked),
+                .ptw-form-equipment-body .ptw-manual-equipment-cell:has(input:checked) {
+                    border-color: #1d4ed8;
+                    background: #f8fafc;
+                }
+                .ptw-manual-permit-modal .manual-section-1 .ptw-manual-equipment-cell input[type="checkbox"],
+                .ptw-form-equipment-body .ptw-manual-equipment-cell input[type="checkbox"] {
+                    flex-shrink: 0;
+                    width: 14px;
+                    height: 14px;
+                    margin-top: 2px;
+                    accent-color: #1e40af;
+                    cursor: pointer;
+                }
+                @media (max-width: 900px) {
+                    .ptw-manual-permit-modal .manual-section-1 .ptw-manual-equipment-fixed-row,
+                    .ptw-form-equipment-body .ptw-manual-equipment-fixed-row {
+                        grid-template-columns: repeat(3, minmax(0, 1fr));
+                    }
+                }
+
                 /* أنماط أزرار حالة إغلاق التصريح اليدوي */
                 .manual-status-btn {
                     display: flex;
@@ -9465,9 +9848,15 @@ const PTW = {
                                         </datalist>` : ''}
                                     </div>
                                 </div>
-                                <div class="md:col-span-3">
+                                <div class="md:col-span-3 manual-equipment-field-wrap">
                                     <label class="block text-sm font-bold text-gray-700 mb-2">المعدة / الماكينة / العملية</label>
-                                    <textarea id="manual-permit-equipment" class="form-input transition-all focus:ring-2 focus:ring-blue-200" rows="2" placeholder="أدخل تفاصيل المعدات أو العملية المستخدمة">${Utils.escapeHTML(existingEntry?.equipment || '')}</textarea>
+                                    <div id="manual-equipment-matrix" class="ptw-manual-equipment-body">
+                                        ${manualEquipmentMatrixHtml}
+                                    </div>
+                                    <div class="ptw-manual-equipment-notes-frame">
+                                        <label class="block">إضافي يدوي</label>
+                                        <textarea id="manual-equipment-notes" class="form-input bg-white w-full" rows="1" placeholder="معدات أو عملية غير موجودة في القائمة...">${Utils.escapeHTML(manualEquipmentSelection.manualNotes || '')}</textarea>
+                                    </div>
                                 </div>
                                 <div class="md:col-span-3">
                                     <label class="block text-sm font-bold text-gray-700 mb-2">الأدوات أو العدد (بعد فحصها وقبولها)</label>
@@ -10151,21 +10540,7 @@ const PTW = {
         parseExistingSelectedSublocations();
 
         // مزامنة حقل المعدة/الماكينة/العملية مع حقل الأدوات أو العدد تلقائياً
-        const equipmentInput = modal.querySelector('#manual-permit-equipment');
-        const toolsInput = modal.querySelector('#manual-permit-tools');
-        if (equipmentInput && toolsInput) {
-            const syncToolsFromEquipment = () => {
-                const equipmentValue = String(equipmentInput.value || '').trim();
-                const currentTools = String(toolsInput.value || '').trim();
-                const previousAuto = String(equipmentInput.dataset.autoToolsValue || '').trim();
-                if (!currentTools || currentTools === previousAuto) {
-                    toolsInput.value = equipmentValue;
-                    equipmentInput.dataset.autoToolsValue = equipmentValue;
-                }
-            };
-            syncToolsFromEquipment();
-            equipmentInput.addEventListener('input', syncToolsFromEquipment);
-        }
+        this.setupManualEquipmentToolsSync(modal);
 
         // نسخ الاسم للتوقيع + استرجاع من تصاريح يدوية سابقة (أقسام 2، 7، 9)
         const attachAutoCopySignature = (nameInput, signatureInput) => {
@@ -10571,7 +10946,7 @@ const PTW = {
             timeTo: timeToValue ? (Utils.dateTimeLocalToISO(timeToValue) || timeToValue) : (existingEntry?.timeTo || ''),
             authorizedParty: modal.querySelector('#manual-permit-authorized-party')?.value?.trim() || '',
             requestingParty: modal.querySelector('#manual-permit-requesting-party')?.value?.trim() || '',
-            equipment: modal.querySelector('#manual-permit-equipment')?.value?.trim() || '',
+            equipment: this.collectEquipmentFieldValue(modal, { matrixId: '#manual-equipment-matrix', notesId: '#manual-equipment-notes' }),
             tools: modal.querySelector('#manual-permit-tools')?.value?.trim() || '',
             workDescription: modal.querySelector('#manual-permit-work-description')?.value?.trim() || '',
             teamMembers: teamMembers.length ? teamMembers : [{ name: '', signature: '' }],
@@ -10874,7 +11249,7 @@ const PTW = {
                 // رقم التصريح الورقي
                 paperPermitNumber: modal.querySelector('#manual-paper-permit-number')?.value?.trim() || '',
                 // الحقول الجديدة
-                equipment: modal.querySelector('#manual-permit-equipment')?.value.trim() || '',
+                equipment: this.collectEquipmentFieldValue(modal, { matrixId: '#manual-equipment-matrix', notesId: '#manual-equipment-notes' }),
                 tools: modal.querySelector('#manual-permit-tools')?.value.trim() || '',
                 teamMembers: teamMembers,
                 // طبيعة الأعمال
@@ -12752,6 +13127,14 @@ const PTW = {
         const confinedSpaceOther = ptwData?.confinedSpaceOther || '';
         const heightWorkOther = ptwData?.heightWorkOther || '';
 
+        const excludeEquipmentLookupId = ptwData?.id || ptwData?.permitId || null;
+        const knownEquipmentHistory = this.buildKnownEquipmentHistoryLabels(excludeEquipmentLookupId);
+        const ptwEquipmentSelection = this.parseEquipmentToSelection(ptwData?.equipment, knownEquipmentHistory);
+        const ptwEquipmentMatrixHtml = this.buildManualFixedEquipmentCheckboxesHtml(
+            ptwEquipmentSelection.matrixSelected,
+            knownEquipmentHistory
+        );
+
         const closureStatus = ptwData?.closureStatus || '';
         const closureTimeValue = ptwData?.closureTime ? Utils.toDateTimeLocalString(ptwData.closureTime) : '';
         const closureReason = ptwData?.closureReason || '';
@@ -12915,6 +13298,69 @@ const PTW = {
                 .ptw-section-1 { background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%); border-color: #2196F3; }
                 .ptw-section-1 h3 { color: #1565C0; border-color: #2196F3; }
                 .ptw-section-1 h3 i { color: #1976D2; background: rgba(33, 150, 243, 0.1); }
+                .ptw-form-equipment-body {
+                    background: #ffffff;
+                    border: 1.2px solid #94a3b8;
+                    border-radius: 10px;
+                    padding: 14px 12px;
+                    box-shadow: 0 1px 4px rgba(15, 23, 42, 0.07);
+                    width: 100%;
+                    box-sizing: border-box;
+                }
+                .ptw-form-equipment-notes-frame {
+                    margin-top: 0.5rem;
+                    background: #ffffff;
+                    border: 1px solid #cbd5e1;
+                    border-radius: 8px;
+                    padding: 6px 8px;
+                }
+                .ptw-form-equipment-notes-frame label {
+                    color: #334155;
+                    font-weight: 600;
+                    font-size: 0.72rem;
+                    margin-bottom: 4px;
+                }
+                .ptw-form-equipment-body .ptw-manual-equipment-fixed-wrap { width: 100%; }
+                .ptw-form-equipment-body .ptw-manual-equipment-fixed-row {
+                    display: grid;
+                    grid-template-columns: repeat(9, minmax(0, 1fr));
+                    gap: 8px 6px;
+                    margin-bottom: 8px;
+                    direction: rtl;
+                }
+                .ptw-form-equipment-body .ptw-manual-equipment-history-row {
+                    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+                }
+                .ptw-form-equipment-body .ptw-manual-equipment-cell {
+                    display: flex;
+                    align-items: flex-start;
+                    gap: 6px;
+                    font-size: 0.8rem;
+                    font-weight: 600;
+                    color: #0f172a;
+                    cursor: pointer;
+                    direction: rtl;
+                    min-width: 0;
+                    line-height: 1.38;
+                    word-break: break-word;
+                    padding: 7px 6px;
+                    border: 1.2px solid #94a3b8;
+                    border-radius: 5px;
+                    background: #fff;
+                    min-height: 34px;
+                }
+                .ptw-form-equipment-body .ptw-manual-equipment-cell:has(input:checked) {
+                    border-color: #1d4ed8;
+                    background: #f8fafc;
+                }
+                .ptw-form-equipment-body .ptw-manual-equipment-cell input[type="checkbox"] {
+                    flex-shrink: 0;
+                    width: 14px;
+                    height: 14px;
+                    margin-top: 2px;
+                    accent-color: #1e40af;
+                    cursor: pointer;
+                }
                 
                 .ptw-section-2 { background: linear-gradient(135deg, #e0f2f1 0%, #b2dfdb 100%); border-color: #009688; }
                 .ptw-section-2 h3 { color: #00695C; border-color: #009688; }
@@ -13286,7 +13732,13 @@ const PTW = {
                                 </div>
                                 <div class="md:col-span-3">
                                     <label class="block text-sm font-bold text-gray-700 mb-2">المعدة / الماكينة / العملية</label>
-                                    <textarea id="ptw-equipment" class="form-input transition-all focus:ring-2 focus:ring-blue-200" rows="2" placeholder="أدخل تفاصيل المعدات أو العملية المستخدمة">${escapeHTML(ptwData?.equipment)}</textarea>
+                                    <div id="ptw-equipment-matrix" class="ptw-form-equipment-body">
+                                        ${ptwEquipmentMatrixHtml}
+                                    </div>
+                                    <div class="ptw-form-equipment-notes-frame">
+                                        <label class="block">إضافي يدوي</label>
+                                        <textarea id="ptw-equipment-notes" class="form-input bg-white w-full" rows="1" placeholder="معدات أو عملية غير موجودة في القائمة...">${escapeHTML(ptwEquipmentSelection.manualNotes || '')}</textarea>
+                                    </div>
                                 </div>
                                 <div class="md:col-span-3">
                                     <label class="block text-sm font-bold text-gray-700 mb-2">الأدوات أو العدد (بعد فحصها وقبولها)</label>
@@ -14405,7 +14857,7 @@ const PTW = {
                 }
                 return '';
             })(),
-            equipment: document.getElementById('ptw-equipment')?.value.trim() || '',
+            equipment: this.collectEquipmentFieldValue(document, { matrixId: '#ptw-equipment-matrix', notesId: '#ptw-equipment-notes' }),
             tools: document.getElementById('ptw-tools')?.value.trim() || '',
             toolsList: document.getElementById('ptw-tools')?.value.trim() || '',
             teamMembers: collectTeamMembers(),
