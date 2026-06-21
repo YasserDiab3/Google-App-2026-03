@@ -3696,7 +3696,7 @@ const Contractors = {
                             <th>المقاول</th>
                             <th>تاريخ التقييم</th>
                             <th>المقيّم</th>
-                            <th>الموقع / المشروع</th>
+                            <th>المصنع</th>
                             <th>عدد البنود المطابقة</th>
                             <th>إجمالي البنود</th>
                             <th>النسبة</th>
@@ -3710,7 +3710,7 @@ const Contractors = {
                                 <td>${Utils.escapeHTML(record.contractorName || '')}</td>
                                 <td>${record.evaluationDate ? Utils.formatDate(record.evaluationDate) : '-'}</td>
                                 <td>${Utils.escapeHTML(record.evaluatorName || '')}</td>
-                                <td>${Utils.escapeHTML(record.projectName || record.location || '')}</td>
+                                <td>${Utils.escapeHTML(this.formatEvaluationLocationDisplay(record))}</td>
                                 <td>${record.compliantCount ?? 0}</td>
                                 <td>${record.totalItems ?? (Array.isArray(record.items) ? record.items.length : (record.items ? Object.keys(record.items).length : 0))}</td>
                                 <td>${typeof record.finalScore === 'number' ? record.finalScore.toFixed(0) + '%' : '-'}</td>
@@ -4322,6 +4322,162 @@ const Contractors = {
         })).filter(item => item.label);
     },
 
+    getSiteOptions() {
+        try {
+            if (typeof Permissions !== 'undefined' && Permissions.formSettingsState && Array.isArray(Permissions.formSettingsState.sites)) {
+                return Permissions.formSettingsState.sites.map(site => ({
+                    id: site.id,
+                    name: site.name
+                }));
+            }
+            if (Array.isArray(AppState.appData?.observationSites) && AppState.appData.observationSites.length > 0) {
+                return AppState.appData.observationSites.map(site => ({
+                    id: site.id || site.siteId || Utils.generateId('SITE'),
+                    name: site.name || site.title || site.label || 'موقع غير محدد'
+                }));
+            }
+            if (typeof DailyObservations !== 'undefined' && Array.isArray(DailyObservations.DEFAULT_SITES)) {
+                return DailyObservations.DEFAULT_SITES.map((site, index) => ({
+                    id: site.id || site.siteId || Utils.generateId('SITE'),
+                    name: site.name || site.title || site.label || `موقع ${index + 1}`
+                }));
+            }
+            return [];
+        } catch (error) {
+            Utils.safeWarn('⚠️ خطأ في الحصول على قائمة المصانع:', error);
+            return [];
+        }
+    },
+
+    getPlaceOptions(siteId) {
+        try {
+            if (!siteId) return [];
+            const siteKey = String(siteId);
+            if (typeof Permissions !== 'undefined' && Permissions.formSettingsState && Array.isArray(Permissions.formSettingsState.sites)) {
+                const site = Permissions.formSettingsState.sites.find(s => String(s.id) === siteKey);
+                if (site && Array.isArray(site.places)) {
+                    return site.places.map(place => ({ id: place.id, name: place.name }));
+                }
+            }
+            if (Array.isArray(AppState.appData?.observationSites)) {
+                const site = AppState.appData.observationSites.find(s => String(s.id || s.siteId) === siteKey);
+                if (site) {
+                    const placesSource = Array.isArray(site.places) ? site.places
+                        : Array.isArray(site.locations) ? site.locations
+                            : Array.isArray(site.children) ? site.children
+                                : Array.isArray(site.areas) ? site.areas : [];
+                    return placesSource.map((place, idx) => ({
+                        id: place.id || place.placeId || place.value || Utils.generateId('PLACE'),
+                        name: place.name || place.placeName || place.title || place.label || place.locationName || `مكان ${idx + 1}`
+                    }));
+                }
+            }
+            if (typeof DailyObservations !== 'undefined' && Array.isArray(DailyObservations.DEFAULT_SITES)) {
+                const site = DailyObservations.DEFAULT_SITES.find(s => String(s.id || s.siteId) === siteKey);
+                if (site) {
+                    const placesSource = Array.isArray(site.places) ? site.places
+                        : Array.isArray(site.locations) ? site.locations
+                            : Array.isArray(site.children) ? site.children
+                                : Array.isArray(site.areas) ? site.areas : [];
+                    return placesSource.map((place, idx) => ({
+                        id: place.id || place.placeId || place.value || Utils.generateId('PLACE'),
+                        name: place.name || place.placeName || place.title || place.label || place.locationName || `مكان ${idx + 1}`
+                    }));
+                }
+            }
+            return [];
+        } catch (error) {
+            Utils.safeWarn('⚠️ خطأ في الحصول على قائمة المواقع الفرعية:', error);
+            return [];
+        }
+    },
+
+    resolveEvaluationFactoryId(evaluationData) {
+        if (!evaluationData) return '';
+        const explicit = evaluationData.factoryId || evaluationData.locationId;
+        if (explicit) return String(explicit);
+        const name = String(evaluationData.projectName || '').trim();
+        if (!name) return '';
+        const site = this.getSiteOptions().find(s => s.name === name || String(s.id) === name);
+        return site ? String(site.id) : '';
+    },
+
+    resolveEvaluationSubLocationId(evaluationData, factoryId) {
+        if (!evaluationData) return '';
+        const explicit = evaluationData.subLocationId;
+        if (explicit) return String(explicit);
+        const name = String(evaluationData.location || '').trim();
+        if (!name || !factoryId) return '';
+        const place = this.getPlaceOptions(factoryId).find(p => p.name === name || String(p.id) === name);
+        return place ? String(place.id) : '';
+    },
+
+    formatEvaluationLocationDisplay(evaluation) {
+        if (!evaluation) return '';
+        const factory = evaluation.projectName || '';
+        const sub = evaluation.location || '';
+        if (factory && sub) return `${factory} — ${sub}`;
+        return factory || sub || '';
+    },
+
+    collectEvaluationLocationFromForm(form) {
+        const factorySelect = form?.querySelector('#contractor-evaluation-factory');
+        const subSelect = form?.querySelector('#contractor-evaluation-sub-location');
+        const factoryId = factorySelect?.value || '';
+        const subLocationId = subSelect?.value || '';
+        const factoryOpt = factorySelect?.options[factorySelect.selectedIndex];
+        const subOpt = subSelect?.options[subSelect.selectedIndex];
+        return {
+            factoryId,
+            locationId: factoryId,
+            projectName: factoryOpt?.text?.trim() || '',
+            subLocationId,
+            location: subOpt?.text?.trim() || ''
+        };
+    },
+
+    bindEvaluationLocationSelects(modal) {
+        if (!modal) return;
+        const factorySelect = modal.querySelector('#contractor-evaluation-factory');
+        const subSelect = modal.querySelector('#contractor-evaluation-sub-location');
+        if (!factorySelect || !subSelect) return;
+
+        const refreshSubLocations = (preserveValue) => {
+            const factoryId = factorySelect.value || '';
+            const current = preserveValue ? subSelect.value : '';
+            subSelect.innerHTML = '<option value="">اختر الموقع الفرعي</option>';
+            this.getPlaceOptions(factoryId).forEach((place) => {
+                const opt = document.createElement('option');
+                opt.value = String(place.id);
+                opt.textContent = place.name;
+                subSelect.appendChild(opt);
+            });
+            if (current && Array.from(subSelect.options).some(o => o.value === current)) {
+                subSelect.value = current;
+            }
+        };
+
+        factorySelect.addEventListener('change', () => refreshSubLocations(false));
+        if (factorySelect.value && subSelect.options.length <= 1) {
+            refreshSubLocations(true);
+        }
+    },
+
+    prepareApprovalRequestPayloadForBackend(source) {
+        const payload = JSON.parse(JSON.stringify(source || {}));
+        delete payload._isPendingSync;
+        delete payload._syncError;
+        delete payload._syncErrorMessage;
+        delete payload.attachmentFiles;
+        if (payload.requestType === 'evaluation' && payload.evaluationData && typeof payload.evaluationData === 'object') {
+            const evalData = payload.evaluationData;
+            if (Array.isArray(evalData.items)) {
+                evalData.totalItems = evalData.totalItems ?? evalData.items.length;
+            }
+        }
+        return payload;
+    },
+
     collectEvaluationItems(container) {
         if (!container || !document.contains(container)) return [];
         
@@ -4690,9 +4846,11 @@ const Contractors = {
             ? new Date(evaluationData.evaluationDate).toISOString().slice(0, 10)
             : new Date().toISOString().slice(0, 10);
         const evaluatorName = evaluationData?.evaluatorName || AppState.currentUser?.name || '';
-        const projectName = evaluationData?.projectName || '';
-        const location = evaluationData?.location || '';
         const generalNotes = evaluationData?.generalNotes || evaluationData?.notes || '';
+        const selectedFactoryId = this.resolveEvaluationFactoryId(evaluationData);
+        const selectedSubLocationId = this.resolveEvaluationSubLocationId(evaluationData, selectedFactoryId);
+        const siteOptions = this.getSiteOptions();
+        const placeOptions = selectedFactoryId ? this.getPlaceOptions(selectedFactoryId) : [];
         // ✅ إصلاح: استخدام contractorNameOverride إذا كان متوفراً، وإلا استخدام القيم الافتراضية مع أولوية evaluationData.contractorName
         const contractorName = contractorNameOverride || evaluationData?.contractorName || contractor?.name || contractor?.company || contractor?.contractorName || '';
 
@@ -4730,12 +4888,22 @@ const Contractors = {
                                     <input type="text" id="contractor-evaluation-evaluator" class="form-input" required value="${Utils.escapeHTML(evaluatorName)}" placeholder="اسم الشخص الذي قام بالتقييم" style="border: 1px solid #cbd5e1; transition: all 0.3s ease;">
                                 </div>
                                 <div>
-                                    <label class="block text-sm font-semibold text-gray-800 mb-2" style="color: #334155; font-weight: 600;">الموقع / المشروع</label>
-                                    <input type="text" id="contractor-evaluation-project" class="form-input" value="${Utils.escapeHTML(projectName)}" placeholder="اسم المشروع أو الموقع" style="border: 1px solid #cbd5e1; transition: all 0.3s ease;">
+                                    <label class="block text-sm font-semibold text-gray-800 mb-2" style="color: #334155; font-weight: 600;">المصنع</label>
+                                    <select id="contractor-evaluation-factory" class="form-input" style="border: 1px solid #cbd5e1; transition: all 0.3s ease;">
+                                        <option value="">اختر المصنع</option>
+                                        ${siteOptions.map(site => `
+                                            <option value="${Utils.escapeHTML(String(site.id))}" ${String(site.id) === String(selectedFactoryId) ? 'selected' : ''}>${Utils.escapeHTML(site.name)}</option>
+                                        `).join('')}
+                                    </select>
                                 </div>
                                 <div>
-                                    <label class="block text-sm font-semibold text-gray-800 mb-2" style="color: #334155; font-weight: 600;">الموقع التفصيلي</label>
-                                    <input type="text" id="contractor-evaluation-location" class="form-input" value="${Utils.escapeHTML(location)}" placeholder="المنطقة أو القسم" style="border: 1px solid #cbd5e1; transition: all 0.3s ease;">
+                                    <label class="block text-sm font-semibold text-gray-800 mb-2" style="color: #334155; font-weight: 600;">الموقع الفرعي</label>
+                                    <select id="contractor-evaluation-sub-location" class="form-input" style="border: 1px solid #cbd5e1; transition: all 0.3s ease;">
+                                        <option value="">اختر الموقع الفرعي</option>
+                                        ${placeOptions.map(place => `
+                                            <option value="${Utils.escapeHTML(String(place.id))}" ${String(place.id) === String(selectedSubLocationId) ? 'selected' : ''}>${Utils.escapeHTML(place.name)}</option>
+                                        `).join('')}
+                                    </select>
                                 </div>
                                 <div>
                                     <label class="block text-sm font-semibold text-gray-800 mb-2" style="color: #334155; font-weight: 600;">ملاحظات عامة</label>
@@ -4826,20 +4994,28 @@ const Contractors = {
 
         document.body.appendChild(modal);
 
+        this.bindEvaluationLocationSelects(modal);
+
         let isClosingEvaluationModal = false;
         const closeEvaluationModal = () => {
             if (isClosingEvaluationModal) return;
             isClosingEvaluationModal = true;
-            if (modal && document.contains(modal)) {
+            if (modal && modal.parentNode) {
                 try {
                     modal.remove();
                 } catch (removeError) {
                     Utils.safeWarn('⚠️ خطأ في إزالة نموذج التقييم:', removeError);
-                    const modalParent = modal.parentNode;
-                    if (modalParent) {
-                        try { modalParent.removeChild(modal); } catch (_e) {}
+                    if (modal.parentNode) {
+                        try { modal.parentNode.removeChild(modal); } catch (_e) {}
                     }
                 }
+            }
+        };
+
+        const finalizeEvaluationSave = (afterClose) => {
+            closeEvaluationModal();
+            if (typeof afterClose === 'function') {
+                setTimeout(afterClose, 0);
             }
         };
 
@@ -4860,6 +5036,7 @@ const Contractors = {
 
                 const items = this.collectEvaluationItems(form);
                 const summary = this.calculateEvaluationSummary(items);
+                const locationData = this.collectEvaluationLocationFromForm(form);
 
                 const record = {
                     id: evaluationData?.id || Utils.generateId('CTREVAL'),
@@ -4867,8 +5044,11 @@ const Contractors = {
                     contractorName,
                     evaluationDate: new Date(evaluationDate).toISOString(),
                     evaluatorName: evaluator,
-                    projectName: form.querySelector('#contractor-evaluation-project')?.value.trim() || '',
-                    location: form.querySelector('#contractor-evaluation-location')?.value.trim() || '',
+                    factoryId: locationData.factoryId,
+                    locationId: locationData.locationId,
+                    projectName: locationData.projectName,
+                    subLocationId: locationData.subLocationId,
+                    location: locationData.location,
                     generalNotes: form.querySelector('#contractor-evaluation-general-notes')?.value.trim() || '',
                     items,
                     compliantCount: summary.compliantCount ?? 0,
@@ -4897,9 +5077,10 @@ const Contractors = {
                         Notification.error('ليس لديك صلاحية لتعديل التقييمات. يرجى التواصل مع مدير النظام.');
                         return;
                     }
-                    this.persistEvaluation(record, evaluationData);
-                    closeEvaluationModal();
-                    Notification.success('تم تحديث تقييم المقاول بنجاح');
+                    finalizeEvaluationSave(() => {
+                        Notification.success('تم تحديث تقييم المقاول بنجاح');
+                        this.persistEvaluation(record, evaluationData);
+                    });
                 } else {
                     const approvalRequest = {
                         requestType: 'evaluation',
@@ -4920,21 +5101,20 @@ const Contractors = {
                     approvalRequest._isPendingSync = true;
                     AppState.appData.contractorApprovalRequests.push(approvalRequest);
 
-                    closeEvaluationModal();
+                    finalizeEvaluationSave(() => {
+                        Notification.success('تم إرسال طلب اعتماد التقييم بنجاح. جاري المزامنة مع الخادم...');
 
-                    if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
-                        window.DataManager.save();
-                    } else {
-                        Utils.safeWarn('⚠️ DataManager غير متاح - لم يتم حفظ البيانات');
-                    }
+                        if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
+                            window.DataManager.save();
+                        } else {
+                            Utils.safeWarn('⚠️ DataManager غير متاح - لم يتم حفظ البيانات');
+                        }
 
-                    Notification.success('تم إرسال طلب اعتماد التقييم بنجاح. جاري المزامنة مع الخادم...');
-
-                    setTimeout(() => {
                         this.refreshApprovalRequestsSection();
                         if (typeof AppUI !== 'undefined' && AppUI.updateNotificationsBadge) {
                             AppUI.updateNotificationsBadge();
                         }
+
                         this.syncApprovalRequestToBackend(approvalRequest, [], tempId).then(() => {
                             this.refreshApprovalRequestsSection();
                             if (typeof AppUI !== 'undefined' && AppUI.updateNotificationsBadge) {
@@ -4944,7 +5124,7 @@ const Contractors = {
                             Utils.safeError('❌ خطأ في مزامنة طلب اعتماد التقييم:', error);
                             Notification.warning('تم حفظ التقييم محلياً. سيتم المزامنة تلقائياً لاحقاً.');
                         });
-                    }, 0);
+                    });
                 }
             } catch (error) {
                 const submitBtn = form.querySelector('button[type="submit"]');
@@ -4976,6 +5156,9 @@ const Contractors = {
             evaluatorName: record.evaluatorName,
             projectName: record.projectName || '',
             location: record.location || '',
+            factoryId: record.factoryId || record.locationId || '',
+            locationId: record.locationId || record.factoryId || '',
+            subLocationId: record.subLocationId || '',
             generalNotes: record.generalNotes || '',
             compliantCount: record.compliantCount ?? 0,
             totalItems: record.totalItems ?? 0,
@@ -5253,8 +5436,12 @@ const Contractors = {
                         <p class="text-gray-800">${Utils.escapeHTML(evaluation.evaluatorName || '')}</p>
                     </div>
                     <div>
-                        <label class="text-sm font-semibold text-gray-600">الموقع / المشروع</label>
-                        <p class="text-gray-800">${Utils.escapeHTML(evaluation.projectName || evaluation.location || '')}</p>
+                        <label class="text-sm font-semibold text-gray-600">المصنع</label>
+                        <p class="text-gray-800">${Utils.escapeHTML(evaluation.projectName || '—')}</p>
+                    </div>
+                    <div>
+                        <label class="text-sm font-semibold text-gray-600">الموقع الفرعي</label>
+                        <p class="text-gray-800">${Utils.escapeHTML(evaluation.location || '—')}</p>
                     </div>
                     <div>
                         <label class="text-sm font-semibold text-gray-600">عدد البنود المطابقة</label>
@@ -5425,7 +5612,8 @@ const Contractors = {
                     <tr><th>المقاول</th><td>${Utils.escapeHTML(evaluation.contractorName || '')}</td></tr>
                     <tr><th>تاريخ التقييم</th><td>${evaluation.evaluationDate ? Utils.formatDate(evaluation.evaluationDate) : '-'}</td></tr>
                     <tr><th>اسم المقيم</th><td>${Utils.escapeHTML(evaluation.evaluatorName || '')}</td></tr>
-                    <tr><th>الموقع / المشروع</th><td>${Utils.escapeHTML(evaluation.projectName || evaluation.location || '')}</td></tr>
+                    <tr><th>المصنع</th><td>${Utils.escapeHTML(evaluation.projectName || '-')}</td></tr>
+                    <tr><th>الموقع الفرعي</th><td>${Utils.escapeHTML(evaluation.location || '-')}</td></tr>
                     <tr><th>عدد البنود المطابقة</th><td>${evaluation.compliantCount ?? 0}</td></tr>
                     <tr><th>إجمالي البنود الفعلية</th><td>${evaluation.totalItems ?? (Array.isArray(evaluation.items) ? evaluation.items.length : (evaluation.items ? Object.keys(evaluation.items).length : 0))}</td></tr>
                     <tr><th>نسبة التقييم</th><td>${typeof evaluation.finalScore === 'number' ? evaluation.finalScore.toFixed(0) + '%' : '-'}</td></tr>
@@ -8658,8 +8846,11 @@ const Contractors = {
      * ✅ جديد: مزامنة طلب الاعتماد مع Backend في الخلفية
      */
     async syncApprovalRequestToBackend(requestData, attachments = [], tempId) {
+        const sourceRequest = requestData;
+        requestData = this.prepareApprovalRequestPayloadForBackend(sourceRequest);
+
         // ✅ إضافة حماية من المزامنة المتكررة لنفس الطلب
-        const syncKey = `sync_${tempId || requestData.id || Date.now()}`;
+        const syncKey = `sync_${tempId || sourceRequest?.id || Date.now()}`;
         if (this._activeSyncs && this._activeSyncs[syncKey]) {
             Utils.safeLog('⚠️ syncApprovalRequestToBackend: مزامنة قيد المعالجة لنفس الطلب - تم تجاهل الاستدعاء المكرر');
             return;
@@ -8726,27 +8917,9 @@ const Contractors = {
             requestData.attachments = attachmentUrls;
             delete requestData.attachmentFiles; // ✅ حذف الملفات الأصلية بعد الرفع
             
-            // ✅ إصلاح مهم: إزالة tempId قبل إرسال الطلب إلى Backend
-            // ✅ Backend يجب أن يولد ID جديد (CAR_1, CAR_2, ...) وليس استخدام tempId
-            const tempIdToReplace = requestData.id; // حفظ tempId للاستبدال لاحقاً (يجب أن يكون tempId الذي تم إنشاؤه في submitApprovalRequest)
-            
-            // ✅ تحديد actualTempId للاستخدام في جميع أنحاء الدالة
-            // ✅ التحقق من أن tempIdToReplace يطابق tempId الذي تم تمريره
-            let actualTempId;
-            if (tempIdToReplace && tempIdToReplace === tempId) {
-                actualTempId = tempId;
-            } else if (tempIdToReplace) {
-                Utils.safeWarn('⚠️ تحذير: tempIdToReplace (' + tempIdToReplace + ') لا يطابق tempId (' + tempId + ') - سيتم استخدام tempIdToReplace');
-                actualTempId = tempIdToReplace;
-            } else {
-                Utils.safeWarn('⚠️ تحذير: tempIdToReplace غير موجود - سيتم استخدام tempId الممرر');
-                actualTempId = tempId;
-            }
-            
-            // ✅ حذف tempId قبل الإرسال لضمان توليد ID جديد من Backend
-            delete requestData.id; // ✅ حذف tempId قبل الإرسال لضمان توليد ID جديد من Backend
-            delete requestData._isPendingSync; // ✅ حذف flag مؤقت أيضاً
-            
+            const actualTempId = tempId || sourceRequest?.id || requestData.id;
+            delete requestData.id;
+
             Utils.safeLog('🔄 إرسال الطلب إلى Backend بدون ID (tempId=' + actualTempId + ' سيتم استبداله بـ CAR_... من Backend)');
             
             // ✅ إرسال الطلب إلى Backend
@@ -8800,13 +8973,13 @@ const Contractors = {
                 }
                 
                 if (tempIndex !== -1) {
-                    // ✅ تحديث الطلب بالبيانات الفعلية من Backend (مع ID الجديد)
-                    // ✅ استبدال كامل للطلب المؤقت بالطلب الفعلي
                     const oldId = AppState.appData.contractorApprovalRequests[tempIndex].id;
+                    const preservedEvaluationData = AppState.appData.contractorApprovalRequests[tempIndex].evaluationData;
                     AppState.appData.contractorApprovalRequests[tempIndex] = {
                         ...AppState.appData.contractorApprovalRequests[tempIndex],
                         ...savedRequest,
-                        id: savedRequest.id, // ✅ التأكد من استخدام ID الجديد (CAR_...)
+                        id: savedRequest.id,
+                        evaluationData: savedRequest.evaluationData || preservedEvaluationData,
                         _isPendingSync: false,
                         _syncError: false
                     };
@@ -8881,7 +9054,11 @@ const Contractors = {
                 }
                 
                 // ✅ إظهار إشعار النجاح النهائي
-                Notification.success('تم إرسال طلب الاعتماد بنجاح. سيتم مراجعته من قبل مدير النظام.');
+                if (requestData.requestType === 'evaluation') {
+                    Notification.success('تم حفظ طلب التقييم في قاعدة البيانات بنجاح.');
+                } else {
+                    Notification.success('تم إرسال طلب الاعتماد بنجاح. سيتم مراجعته من قبل مدير النظام.');
+                }
             } else {
                 // ✅ في حالة فشل المزامنة، الحفاظ على الطلب المحلي
                 Utils.safeWarn('⚠️ فشل مزامنة طلب الاعتماد مع Backend، تم الحفظ محلياً فقط');
@@ -9210,9 +9387,12 @@ const Contractors = {
                                     <p id="view-evaluatorName" class="text-gray-800 view-field" style="display: block;">${Utils.escapeHTML(evaluationData.evaluatorName || '') || '—'}</p>
                                 </div>
                                 <div>
-                                    <label class="text-sm font-semibold text-gray-600">الموقع / المشروع</label>
-                                    <input type="text" id="edit-projectName" class="form-input edit-field" disabled value="${Utils.escapeHTML(evaluationData.projectName || evaluationData.location || '')}" style="display: none;" />
-                                    <p id="view-projectName" class="text-gray-800 view-field" style="display: block;">${Utils.escapeHTML(evaluationData.projectName || evaluationData.location || '') || '—'}</p>
+                                    <label class="text-sm font-semibold text-gray-600">المصنع</label>
+                                    <p class="text-gray-800 view-field">${Utils.escapeHTML(evaluationData.projectName || '') || '—'}</p>
+                                </div>
+                                <div>
+                                    <label class="text-sm font-semibold text-gray-600">الموقع الفرعي</label>
+                                    <p class="text-gray-800 view-field">${Utils.escapeHTML(evaluationData.location || '') || '—'}</p>
                                 </div>
                                 <div>
                                     <label class="text-sm font-semibold text-gray-600">عدد البنود المطابقة</label>
@@ -9502,7 +9682,6 @@ const Contractors = {
                 const contractorName = document.getElementById('edit-companyName')?.value?.trim() ?? '';
                 const evaluationDate = document.getElementById('edit-evaluationDate')?.value?.trim() || null;
                 const evaluatorName = document.getElementById('edit-evaluatorName')?.value?.trim() ?? '';
-                const projectName = document.getElementById('edit-projectName')?.value?.trim() ?? '';
                 const generalNotes = document.getElementById('edit-generalNotes')?.value?.trim() ?? '';
                 
                 let evaluationData = request.evaluationData;
@@ -9513,8 +9692,6 @@ const Contractors = {
                 
                 evaluationData.evaluationDate = evaluationDate ? new Date(evaluationDate).toISOString() : (evaluationData.evaluationDate || null);
                 evaluationData.evaluatorName = evaluatorName;
-                evaluationData.projectName = projectName;
-                evaluationData.location = projectName;
                 evaluationData.generalNotes = generalNotes;
                 
                 request.contractorName = contractorName;
