@@ -4789,6 +4789,7 @@ const Contractors = {
                         requestType: 'evaluation',
                         contractorId: record.contractorId,
                         contractorName: record.contractorName,
+                        companyName: record.contractorName,
                         evaluationData: record,
                         status: 'pending',
                         createdAt: new Date().toISOString(),
@@ -4797,7 +4798,13 @@ const Contractors = {
                     };
 
                     this.ensureApprovalRequestsSetup();
+
+                    const tempId = 'TEMP_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+                    approvalRequest.id = tempId;
+                    approvalRequest._isPendingSync = true;
                     AppState.appData.contractorApprovalRequests.push(approvalRequest);
+
+                    closeEvaluationModal();
 
                     if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
                         window.DataManager.save();
@@ -4805,26 +4812,21 @@ const Contractors = {
                         Utils.safeWarn('⚠️ DataManager غير متاح - لم يتم حفظ البيانات');
                     }
 
-                    closeEvaluationModal();
-                    Notification.success('تم إرسال طلب اعتماد التقييم بنجاح. سيتم مراجعته من قبل مدير النظام.');
-                    this.refreshApprovalRequestsSection();
-
-                    if (typeof AppUI !== 'undefined' && AppUI.updateNotificationsBadge) {
-                        AppUI.updateNotificationsBadge();
-                    }
+                    Notification.success('تم إرسال طلب اعتماد التقييم بنجاح. جاري المزامنة مع الخادم...');
 
                     setTimeout(() => {
-                        GoogleIntegration.sendRequest({
-                            action: 'addContractorApprovalRequest',
-                            data: approvalRequest
-                        }).then((backendResult) => {
-                            if (backendResult && backendResult.success) {
-                                Utils.safeLog('✅ تم حفظ طلب اعتماد التقييم في Google Sheets بنجاح');
-                            } else {
-                                Utils.safeWarn('⚠️ فشل حفظ طلب اعتماد التقييم في Google Sheets، تم الحفظ محلياً فقط');
+                        this.refreshApprovalRequestsSection();
+                        if (typeof AppUI !== 'undefined' && AppUI.updateNotificationsBadge) {
+                            AppUI.updateNotificationsBadge();
+                        }
+                        this.syncApprovalRequestToBackend(approvalRequest, [], tempId).then(() => {
+                            this.refreshApprovalRequestsSection();
+                            if (typeof AppUI !== 'undefined' && AppUI.updateNotificationsBadge) {
+                                AppUI.updateNotificationsBadge();
                             }
                         }).catch((error) => {
-                            Utils.safeWarn('⚠️ خطأ في حفظ طلب اعتماد التقييم في Google Sheets:', error);
+                            Utils.safeError('❌ خطأ في مزامنة طلب اعتماد التقييم:', error);
+                            Notification.warning('تم حفظ التقييم محلياً. سيتم المزامنة تلقائياً لاحقاً.');
                         });
                     }, 0);
                 }
@@ -8702,13 +8704,19 @@ const Contractors = {
                     tempIndex = AppState.appData.contractorApprovalRequests.findIndex(r => r.id === tempId);
                 }
                 
-                // ✅ إذا لم يوجد بعد، البحث بـ companyName و status pending
+                // ✅ إذا لم يوجد بعد، البحث بـ companyName/contractorName و status pending
                 if (tempIndex === -1) {
-                    tempIndex = AppState.appData.contractorApprovalRequests.findIndex(r => 
-                        r.companyName === requestData.companyName && 
-                        r.status === 'pending' && 
-                        (r.id?.startsWith('TEMP_') || r._isPendingSync)
-                    );
+                    tempIndex = AppState.appData.contractorApprovalRequests.findIndex(r => {
+                        if (r.status !== 'pending') return false;
+                        if (!(r.id?.startsWith('TEMP_') || r._isPendingSync)) return false;
+                        if (requestData.requestType === 'evaluation') {
+                            return r.requestType === 'evaluation' && (
+                                r.contractorId === requestData.contractorId ||
+                                r.contractorName === requestData.contractorName
+                            );
+                        }
+                        return r.companyName === requestData.companyName;
+                    });
                 }
                 
                 if (tempIndex !== -1) {
