@@ -4710,10 +4710,30 @@ const Contractors = {
         document.body.appendChild(modal);
         this.applyModuleI18n(modal);
 
+        let isClosingEvaluationModal = false;
+        const closeEvaluationModal = () => {
+            if (isClosingEvaluationModal) return;
+            isClosingEvaluationModal = true;
+            if (modal && document.contains(modal)) {
+                try {
+                    modal.remove();
+                } catch (removeError) {
+                    Utils.safeWarn('⚠️ خطأ في إزالة نموذج التقييم:', removeError);
+                    const modalParent = modal.parentNode;
+                    if (modalParent) {
+                        try { modalParent.removeChild(modal); } catch (_e) {}
+                    }
+                }
+            }
+        };
+
         const form = modal.querySelector('#contractor-evaluation-form');
-        form?.addEventListener('submit', async (event) => {
+        form?.addEventListener('submit', (event) => {
             event.preventDefault();
             try {
+                const submitBtn = form.querySelector('button[type="submit"]');
+                if (submitBtn?.disabled) return;
+
                 const evaluationDate = form.querySelector('#contractor-evaluation-date')?.value;
                 const evaluator = form.querySelector('#contractor-evaluation-evaluator')?.value.trim();
 
@@ -4751,23 +4771,21 @@ const Contractors = {
                     return;
                 }
 
-                // التحقق من الصلاحيات - فقط المدير يمكنه اعتماد التقييمات مباشرة
+                if (submitBtn) submitBtn.disabled = true;
+
                 const isAdmin = Permissions.isAdmin();
 
                 if (evaluationData) {
-                    // التعديل - فقط المدير
                     if (!isAdmin) {
+                        if (submitBtn) submitBtn.disabled = false;
                         Notification.error('ليس لديك صلاحية لتعديل التقييمات. يرجى التواصل مع مدير النظام.');
                         return;
                     }
                     this.persistEvaluation(record, evaluationData);
+                    closeEvaluationModal();
                     Notification.success('تم تحديث تقييم المقاول بنجاح');
-                    modal.remove();
                 } else {
-                    // إضافة تقييم جديد - إرسال طلب اعتماد
-                    // ✅ إزالة توليد ID من Frontend - Backend سيتولى توليده بشكل تسلسلي (CAR_1, CAR_2, ...)
                     const approvalRequest = {
-                        // id سيتم توليده في Backend باستخدام generateSequentialId('CAR', ...)
                         requestType: 'evaluation',
                         contractorId: record.contractorId,
                         contractorName: record.contractorName,
@@ -4779,64 +4797,40 @@ const Contractors = {
                     };
 
                     this.ensureApprovalRequestsSetup();
-                    
-                    // ✅ إصلاح: استخدام addContractorApprovalRequest مباشرة بدلاً من autoSave
-                    // ✅ هذا يضمن عدم حذف الطلبات الموجودة في Google Sheets
-                    try {
-                        const backendResult = await GoogleIntegration.sendRequest({
-                            action: 'addContractorApprovalRequest',
-                            data: approvalRequest
-                        });
+                    AppState.appData.contractorApprovalRequests.push(approvalRequest);
 
-                        if (backendResult && backendResult.success) {
-                            // ✅ بعد نجاح الحفظ في Backend، إضافة الطلب إلى AppState محلياً
-                            AppState.appData.contractorApprovalRequests.push(approvalRequest);
-                            
-                            // حفظ البيانات محلياً
-                            if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
-                                window.DataManager.save();
-                            } else {
-                                Utils.safeWarn('⚠️ DataManager غير متاح - لم يتم حفظ البيانات');
-                            }
-                            
-                            Utils.safeLog('✅ تم حفظ طلب اعتماد التقييم في Google Sheets بنجاح');
-                        } else {
-                            // إذا فشل الحفظ في Backend، نضيف محلياً فقط
-                            AppState.appData.contractorApprovalRequests.push(approvalRequest);
-                            
-                            // حفظ البيانات محلياً
-                            if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
-                                window.DataManager.save();
-                            } else {
-                                Utils.safeWarn('⚠️ DataManager غير متاح - لم يتم حفظ البيانات');
-                            }
-                            
-                            Utils.safeWarn('⚠️ فشل حفظ طلب اعتماد التقييم في Google Sheets، تم الحفظ محلياً فقط');
-                        }
-                    } catch (error) {
-                        // في حالة الخطأ، نضيف محلياً فقط
-                        AppState.appData.contractorApprovalRequests.push(approvalRequest);
-                        
-                        // حفظ البيانات محلياً
-                        if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
-                            window.DataManager.save();
-                        } else {
-                            Utils.safeWarn('⚠️ DataManager غير متاح - لم يتم حفظ البيانات');
-                        }
-                        
-                        Utils.safeWarn('⚠️ خطأ في حفظ طلب اعتماد التقييم في Google Sheets:', error);
+                    if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
+                        window.DataManager.save();
+                    } else {
+                        Utils.safeWarn('⚠️ DataManager غير متاح - لم يتم حفظ البيانات');
                     }
 
+                    closeEvaluationModal();
                     Notification.success('تم إرسال طلب اعتماد التقييم بنجاح. سيتم مراجعته من قبل مدير النظام.');
-                    modal.remove();
                     this.refreshApprovalRequestsSection();
 
-                    // تحديث الإشعارات
                     if (typeof AppUI !== 'undefined' && AppUI.updateNotificationsBadge) {
                         AppUI.updateNotificationsBadge();
                     }
+
+                    setTimeout(() => {
+                        GoogleIntegration.sendRequest({
+                            action: 'addContractorApprovalRequest',
+                            data: approvalRequest
+                        }).then((backendResult) => {
+                            if (backendResult && backendResult.success) {
+                                Utils.safeLog('✅ تم حفظ طلب اعتماد التقييم في Google Sheets بنجاح');
+                            } else {
+                                Utils.safeWarn('⚠️ فشل حفظ طلب اعتماد التقييم في Google Sheets، تم الحفظ محلياً فقط');
+                            }
+                        }).catch((error) => {
+                            Utils.safeWarn('⚠️ خطأ في حفظ طلب اعتماد التقييم في Google Sheets:', error);
+                        });
+                    }, 0);
                 }
             } catch (error) {
+                const submitBtn = form.querySelector('button[type="submit"]');
+                if (submitBtn) submitBtn.disabled = false;
                 Utils.safeError('خطأ في حفظ تقييم المقاولين:', error);
                 Notification.error('تعذر حفظ تقييم المقاول: ' + error.message);
             }
