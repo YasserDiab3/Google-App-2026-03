@@ -847,6 +847,38 @@ function generateContractorCode(spreadsheetId, options) {
 }
 
 /**
+ * تحليل بيانات التقييم المخزنة كنص JSON أو كائن
+ */
+function parseContractorEvaluationData(raw) {
+    var evalData = raw;
+    var attempts = 0;
+    while (evalData && typeof evalData === 'string' && attempts < 3) {
+        try {
+            evalData = JSON.parse(evalData);
+            attempts++;
+        } catch (e) {
+            Logger.log('Warning: Could not parse evaluationData string: ' + e.toString());
+            break;
+        }
+    }
+    if (!evalData || typeof evalData !== 'object') {
+        return null;
+    }
+    if (evalData.items && typeof evalData.items === 'string') {
+        try {
+            evalData.items = JSON.parse(evalData.items);
+        } catch (e) {
+            Logger.log('Warning: Could not parse evaluationData.items: ' + e.toString());
+            evalData.items = [];
+        }
+    }
+    if (!Array.isArray(evalData.items)) {
+        evalData.items = evalData.items ? Object.values(evalData.items) : [];
+    }
+    return evalData;
+}
+
+/**
  * اعتماد طلب اعتماد مقاول
  */
 
@@ -958,14 +990,24 @@ function approveContractorApprovalRequest(requestId, userData) {
         
         // إذا كان الطلب لتقييم، إضافة التقييم إلى القائمة
         if (request.requestType === 'evaluation' && request.evaluationData) {
-            const evaluationData = request.evaluationData;
+            const evaluationData = parseContractorEvaluationData(request.evaluationData);
+            if (!evaluationData) {
+                return { success: false, message: 'بيانات التقييم غير صالحة أو تالفة' };
+            }
+            if (!evaluationData.contractorId && request.contractorId) {
+                evaluationData.contractorId = request.contractorId;
+            }
+            if (!evaluationData.contractorName && request.contractorName) {
+                evaluationData.contractorName = request.contractorName;
+            }
             evaluationData.status = 'approved';
             evaluationData.approvedAt = new Date();
             evaluationData.approvedBy = userData.id || '';
             
             const addEvaluationResult = addContractorEvaluationToSheet(evaluationData);
             if (!addEvaluationResult.success) {
-                Logger.log('Warning: Failed to add evaluation: ' + addEvaluationResult.message);
+                Logger.log('Error: Failed to add evaluation: ' + addEvaluationResult.message);
+                return { success: false, message: 'فشل حفظ التقييم في قاعدة البيانات: ' + (addEvaluationResult.message || '') };
             }
         }
         

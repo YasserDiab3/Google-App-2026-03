@@ -3615,7 +3615,7 @@ const Contractors = {
             if (!evalId) return;
             
             // تصفية حسب contractorId إذا كان محدداً
-            if (contractorId && record.contractorId !== contractorId) return;
+            if (contractorId && !this.evaluationMatchesContractorFilter(record, contractorId)) return;
             
             if (!evaluationsMap.has(evalId)) {
                 // ✅ إصلاح: تحويل finalScore إلى رقم إذا كان نصاً
@@ -3639,6 +3639,15 @@ const Contractors = {
                 }
                 
                 // إنشاء سجل التقييم الأساسي
+                const nestedItems = Array.isArray(record.items)
+                    ? record.items.map(item => ({
+                        criteriaId: item.criteriaId || item.id || '',
+                        title: item.title || item.label || '',
+                        status: item.status || '',
+                        notes: item.notes || ''
+                    }))
+                    : [];
+
                 evaluationsMap.set(evalId, {
                     id: evalId,
                     contractorId: record.contractorId,
@@ -3657,7 +3666,7 @@ const Contractors = {
                     updatedAt: record.updatedAt,
                     createdBy: record.createdBy,
                     updatedBy: record.updatedBy,
-                    items: []
+                    items: nestedItems
                 });
             }
             
@@ -4412,6 +4421,31 @@ const Contractors = {
         return place ? String(place.id) : '';
     },
 
+    evaluationMatchesContractorFilter(record, contractorId) {
+        if (!contractorId) return true;
+        if (!record) return false;
+        if (record.contractorId === contractorId) return true;
+
+        const approvedList = AppState.appData.approvedContractors || [];
+        const approved = approvedList.find(ac => ac.id === contractorId || ac.contractorId === contractorId);
+        if (approved) {
+            if (record.contractorId === approved.id || record.contractorId === approved.contractorId) return true;
+            const recordName = String(record.contractorName || '').trim().toLowerCase();
+            const approvedName = String(approved.companyName || '').trim().toLowerCase();
+            if (recordName && approvedName && recordName === approvedName) return true;
+        }
+
+        const contractor = (AppState.appData.contractors || []).find(c => c.id === contractorId);
+        if (contractor) {
+            const recordName = String(record.contractorName || '').trim().toLowerCase();
+            const contractorName = String(contractor.name || contractor.company || contractor.contractorName || '').trim().toLowerCase();
+            if (record.contractorId === contractor.id) return true;
+            if (recordName && contractorName && recordName === contractorName) return true;
+        }
+
+        return false;
+    },
+
     formatEvaluationLocationDisplay(evaluation) {
         if (!evaluation) return '';
         const factory = evaluation.projectName || '';
@@ -4476,6 +4510,55 @@ const Contractors = {
             }
         }
         return payload;
+    },
+
+    parseEvaluationDataFromRequest(request) {
+        if (!request) return null;
+
+        let evaluationData = request.evaluationData;
+        let parseAttempts = 0;
+        while (evaluationData && typeof evaluationData === 'string' && parseAttempts < 3) {
+            try {
+                evaluationData = JSON.parse(evaluationData);
+                parseAttempts++;
+            } catch (_e) {
+                break;
+            }
+        }
+
+        if (!evaluationData || typeof evaluationData !== 'object') {
+            evaluationData = {};
+        }
+
+        let itemsParseAttempts = 0;
+        while (evaluationData.items && typeof evaluationData.items === 'string' && itemsParseAttempts < 3) {
+            try {
+                evaluationData.items = JSON.parse(evaluationData.items);
+                itemsParseAttempts++;
+            } catch (_e) {
+                evaluationData.items = [];
+                break;
+            }
+        }
+
+        if (!Array.isArray(evaluationData.items)) {
+            evaluationData.items = evaluationData.items ? Object.values(evaluationData.items) : [];
+        }
+
+        evaluationData.id = evaluationData.id || request.entityId || request.evaluationId || Utils.generateId('CTREVAL');
+        evaluationData.contractorId = evaluationData.contractorId || request.contractorId || '';
+        evaluationData.contractorName = evaluationData.contractorName || request.contractorName || request.companyName || '';
+        evaluationData.evaluationDate = evaluationData.evaluationDate || request.evaluationDate || new Date().toISOString();
+        evaluationData.evaluatorName = evaluationData.evaluatorName || request.evaluatorName || request.createdByName || '';
+        evaluationData.projectName = evaluationData.projectName || request.projectName || '';
+        evaluationData.location = evaluationData.location || request.location || '';
+        evaluationData.compliantCount = evaluationData.compliantCount ?? request.compliantCount ?? 0;
+        evaluationData.totalItems = evaluationData.totalItems ?? request.totalItems ?? evaluationData.items.length;
+        evaluationData.finalScore = evaluationData.finalScore ?? request.finalScore ?? null;
+        evaluationData.finalRating = evaluationData.finalRating || request.finalRating || '';
+        evaluationData.generalNotes = evaluationData.generalNotes || request.generalNotes || request.notes || '';
+
+        return evaluationData;
     },
 
     collectEvaluationItems(container) {
@@ -5141,7 +5224,8 @@ const Contractors = {
         this.bindEvaluationFormInteractions(modal);
     },
 
-    persistEvaluation(record, existing = null) {
+    persistEvaluation(record, existing = null, options = {}) {
+        const skipAutoSave = options.skipAutoSave === true;
         if (!Array.isArray(AppState.appData.contractorEvaluations)) {
             AppState.appData.contractorEvaluations = [];
         }
@@ -5171,10 +5255,10 @@ const Contractors = {
             updatedBy: record.updatedBy || AppState.currentUser?.id || ''
         };
 
-        // ✅ حذف البنود القديمة للتقييم إذا كان تعديل
-        if (existing) {
+        // ✅ حذف البنود القديمة للتقييم إذا كان تعديل أو استبدال
+        if (existing || options.replaceExisting) {
             AppState.appData.contractorEvaluations = AppState.appData.contractorEvaluations.filter(
-                item => item.evaluationId !== evaluationId
+                item => item.id !== evaluationId && item.evaluationId !== evaluationId
             );
         }
 
@@ -5210,7 +5294,9 @@ const Contractors = {
             Utils.safeWarn('⚠️ DataManager غير متاح - لم يتم حفظ البيانات');
         }
         try {
-            GoogleIntegration.autoSave?.('ContractorEvaluations', AppState.appData.contractorEvaluations);
+            if (!skipAutoSave) {
+                GoogleIntegration.autoSave?.('ContractorEvaluations', AppState.appData.contractorEvaluations);
+            }
         } catch (error) {
             Utils.safeWarn('فشل الحفظ التلقائي لتقييمات المقاولين:', error);
         }
@@ -9880,54 +9966,45 @@ const Contractors = {
             return;
         }
 
-        if (!confirm('هل أنت متأكد من اعتماد هذا الطلب؟ سيتم إضافة المقاول/المورد إلى قائمة المعتمدين.')) {
+        request = (AppState.appData.contractorApprovalRequests || []).find(r => r.id === requestId);
+
+        if (!request && requestId.startsWith('TEMP_')) {
+            Notification.warning('الطلب لا يزال قيد المزامنة. يرجى الانتظار قليلاً ثم إعادة المحاولة.');
+            Utils.safeWarn('⚠️ محاولة اعتماد طلب بمُعرف مؤقت (tempId=' + requestId + ') - يجب الانتظار حتى اكتمال المزامنة');
+            return;
+        }
+
+        if (!request) {
+            Notification.error('طلب الاعتماد غير موجود');
+            Utils.safeError('❌ خطأ: لم يتم العثور على الطلب. requestId=' + requestId);
+            return;
+        }
+
+        if (request.id && String(request.id).startsWith('TEMP_')) {
+            if (request._isPendingSync) {
+                Notification.warning('الطلب لا يزال قيد المزامنة مع الخادم. يرجى الانتظار قليلاً ثم إعادة المحاولة.');
+            } else if (request._syncError) {
+                Notification.error('فشلت مزامنة الطلب مع الخادم. يرجى إعادة إرسال الطلب أولاً.');
+            } else {
+                Notification.warning('الطلب لم يتم مزامنته مع الخادم بعد. يرجى إعادة إرسال الطلب أولاً.');
+            }
+            Utils.safeWarn('⚠️ محاولة اعتماد طلب بمُعرف مؤقت (tempId=' + request.id + ')');
+            return;
+        }
+
+        const isEvaluationApproval = request.requestType === 'evaluation';
+        const confirmMsg = isEvaluationApproval
+            ? 'هل أنت متأكد من اعتماد طلب التقييم؟ سيُضاف إلى قائمة تقييم وتأهيل المقاولين.'
+            : 'هل أنت متأكد من اعتماد هذا الطلب؟ سيتم إضافة المقاول/المورد إلى قائمة المعتمدين.';
+        if (!confirm(confirmMsg)) {
             return;
         }
 
         try {
             Loading.show();
-            let request = (AppState.appData.contractorApprovalRequests || []).find(r => r.id === requestId);
-            
-            // ✅ إصلاح مهم: إذا كان requestId يبدأ بـ "TEMP_"، الطلب لم يتم مزامنته بعد
-            if (!request && requestId.startsWith('TEMP_')) {
-                Loading.hide();
-                Notification.warning('الطلب لا يزال قيد المزامنة. يرجى الانتظار قليلاً ثم إعادة المحاولة.');
-                Utils.safeWarn('⚠️ محاولة اعتماد طلب بمُعرف مؤقت (tempId=' + requestId + ') - يجب الانتظار حتى اكتمال المزامنة');
-                return;
-            }
-            
-            // ✅ إذا كان request موجود لكن ID يبدأ بـ "TEMP_"، الطلب لم يتم مزامنته بعد
-            if (request && request.id && request.id.startsWith('TEMP_')) {
-                Loading.hide();
-                if (request._isPendingSync) {
-                    Notification.warning('الطلب لا يزال قيد المزامنة مع الخادم. يرجى الانتظار قليلاً ثم إعادة المحاولة.');
-                } else if (request._syncError) {
-                    Notification.error('فشلت مزامنة الطلب مع الخادم. يرجى إعادة إرسال الطلب أولاً.');
-                } else {
-                    Notification.warning('الطلب لم يتم مزامنته مع الخادم بعد. يرجى إعادة إرسال الطلب أولاً.');
-                }
-                Utils.safeWarn('⚠️ محاولة اعتماد طلب بمُعرف مؤقت (tempId=' + request.id + ') - يجب الانتظار حتى اكتمال المزامنة أو إعادة الإرسال');
-                return;
-            }
-            
-            // ✅ التحقق من وجود الطلب (نقبل أي معرف محفوظ: CAR_ أو UUID)
-            if (!request) {
-                Loading.hide();
-                Notification.error('طلب الاعتماد غير موجود');
-                Utils.safeError('❌ خطأ: لم يتم العثور على الطلب. requestId=' + requestId);
-                return;
-            }
-            // نرفض فقط المُعرف المؤقت TEMP_ (طلب لم يُزامَن بعد)
-            if (request.id && String(request.id).startsWith('TEMP_')) {
-                Loading.hide();
-                Notification.error('الطلب لا يزال قيد المزامنة. يرجى المحاولة لاحقاً.');
-                return;
-            }
             const actualRequestId = request.id || requestId;
-            Utils.safeLog('✅ محاولة اعتماد الطلب. requestId=' + actualRequestId + ', companyName=' + (request.companyName || 'N/A'));
+            Utils.safeLog('✅ محاولة اعتماد الطلب. requestId=' + actualRequestId + ', type=' + (request.requestType || 'N/A'));
 
-            // استدعاء Backend لاعتماد الطلب أولاً
-            // هذا يضمن تطابق البيانات بين Frontend و Backend
             const backendResult = await GoogleIntegration.callBackend('approveContractorApprovalRequest', {
                 requestId: actualRequestId, // ✅ استخدام ID الصحيح (CAR_...)
                 userData: AppState.currentUser
@@ -10001,21 +10078,17 @@ const Contractors = {
                 Utils.safeLog(`✅ تم تحديث بيانات المقاول: ${backendResult.contractor.name}`);
             }
 
-            // إذا كان الطلب لتقييم، إضافة التقييم إلى القائمة
-            if (request.requestType === 'evaluation' && request.evaluationData) {
-                if (!Array.isArray(AppState.appData.contractorEvaluations)) {
-                    AppState.appData.contractorEvaluations = [];
+            // إذا كان الطلب لتقييم، إضافة التقييم إلى القائمة المحلية بصيغة الصفوف المنفصلة
+            if (request.requestType === 'evaluation') {
+                const evaluationRecord = this.parseEvaluationDataFromRequest(request);
+                if (evaluationRecord) {
+                    evaluationRecord.status = 'approved';
+                    evaluationRecord.approvedAt = new Date().toISOString();
+                    evaluationRecord.approvedBy = AppState.currentUser?.id || '';
+                    this.persistEvaluation(evaluationRecord, null, { skipAutoSave: true, replaceExisting: true });
+                } else {
+                    Utils.safeWarn('⚠️ تعذر استخراج بيانات التقييم من الطلب المعتمد');
                 }
-                // تحديث حالة التقييم ليكون معتمداً
-                request.evaluationData.status = 'approved';
-                request.evaluationData.approvedAt = new Date().toISOString();
-                request.evaluationData.approvedBy = AppState.currentUser?.id || '';
-                AppState.appData.contractorEvaluations.push(request.evaluationData);
-
-                // حفظ تلقائي بدون await
-                GoogleIntegration.autoSave?.('ContractorEvaluations', AppState.appData.contractorEvaluations).catch(error => {
-                    Utils.safeWarn('فشل الحفظ التلقائي للتقييمات:', error);
-                });
             }
 
             // حفظ البيانات محلياً
@@ -10031,25 +10104,33 @@ const Contractors = {
             // ✅ تحسين: مزامنة فقط الأوراق المتعلقة بالمقاولين لتجنب إظهار شاشة Database loaded الكاملة
             try {
                 Utils.safeLog('🔄 بدء مزامنة بيانات المقاولين من Backend...');
+                const syncSheets = request.requestType === 'evaluation'
+                    ? ['ContractorApprovalRequests', 'ContractorEvaluations']
+                    : ['ContractorApprovalRequests', 'ApprovedContractors', 'Contractors'];
                 await GoogleIntegration.syncData({
-                    silent: true,         // ✅ تغيير: صامتة لتجنب إظهار شاشة Database loaded
-                    showLoader: false,    // ✅ تغيير: عدم إظهار loader الكامل
+                    silent: true,
+                    showLoader: false,
                     notifyOnSuccess: false,
-                    notifyOnError: true,  // ✅ إظهار الأخطاء فقط
-                    sheets: ['ContractorApprovalRequests', 'ApprovedContractors', 'Contractors'] // ✅ مزامنة فقط أوراق المقاولين
+                    notifyOnError: true,
+                    sheets: syncSheets
                 });
                 Utils.safeLog('✅ تمت مزامنة بيانات المقاولين من Backend بنجاح');
 
-                // التحقق من وجود المقاول المعتمد بعد المزامنة
-                const verifyApproved = AppState.appData.approvedContractors?.find(ac =>
-                    ac.companyName === request.companyName &&
-                    ac.entityType === (request.requestType === 'contractor' ? 'contractor' : 'supplier')
-                );
+                if (request.requestType === 'evaluation') {
+                    this.refreshEvaluationsList(this.currentEvaluationFilter || '');
+                }
 
-                if (verifyApproved) {
-                    Utils.safeLog(`✅ تم التحقق: المقاول "${verifyApproved.companyName}" موجود في قائمة المعتمدين (ID: ${verifyApproved.id}, Code: ${verifyApproved.code || verifyApproved.isoCode})`);
-                } else {
-                    Utils.safeWarn(`⚠️ تحذير: لم يتم العثور على المقاول "${request.companyName}" في قائمة المعتمدين بعد المزامنة`);
+                if (request.requestType === 'contractor' || request.requestType === 'supplier') {
+                    const verifyApproved = AppState.appData.approvedContractors?.find(ac =>
+                        ac.companyName === request.companyName &&
+                        ac.entityType === (request.requestType === 'contractor' ? 'contractor' : 'supplier')
+                    );
+
+                    if (verifyApproved) {
+                        Utils.safeLog(`✅ تم التحقق: المقاول "${verifyApproved.companyName}" موجود في قائمة المعتمدين (ID: ${verifyApproved.id}, Code: ${verifyApproved.code || verifyApproved.isoCode})`);
+                    } else {
+                        Utils.safeWarn(`⚠️ تحذير: لم يتم العثور على المقاول "${request.companyName}" في قائمة المعتمدين بعد المزامنة`);
+                    }
                 }
             } catch (syncError) {
                 Utils.safeError('❌ خطأ: فشلت مزامنة البيانات من Backend:', syncError);
@@ -10085,10 +10166,18 @@ const Contractors = {
                 }
             }
 
-            Notification.success('تم اعتماد الطلب بنجاح. تم إضافة المقاول/المورد إلى قائمة المعتمدين والمقاولين.');
+            if (request.requestType === 'evaluation') {
+                Notification.success('تم اعتماد طلب التقييم بنجاح. يظهر الآن في تقييم وتأهيل المقاولين.');
+            } else {
+                Notification.success('تم اعتماد الطلب بنجاح. تم إضافة المقاول/المورد إلى قائمة المعتمدين والمقاولين.');
+            }
 
             // تحديث جميع الأقسام ذات الصلة
             this.refreshApprovalRequestsSection();
+
+            if (request.requestType === 'evaluation') {
+                this.refreshEvaluationsList(this.currentEvaluationFilter || '');
+            }
 
             // تحديث قائمة المعتمدين إذا كان التبويب مفتوحاً
             if (this.currentTab === 'approved') {
