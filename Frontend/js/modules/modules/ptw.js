@@ -6019,6 +6019,9 @@ const PTW = {
 
         const isAdmin = AppState.currentUser?.role === 'admin';
         const permitTypeDisplay = this.getPermitTypeDisplay(entry);
+        const t = (key, fallback) => this._t(key, fallback);
+        const seqNo = entry.sequentialNumber ? String(entry.sequentialNumber).padStart(4, '0') : '—';
+        const paperNo = String(entry.paperPermitNumber || '').trim() || '—';
 
         const modal = document.createElement('div');
         modal.className = 'modal-overlay';
@@ -6028,7 +6031,7 @@ const PTW = {
                     <div style="flex: 1;">
                         <h2 class="modal-title flex items-center gap-2" style="color: #000000; font-size: 1.5rem; font-weight: 700; margin: 0;">
                             <i class="fas fa-file-alt" style="color: #2563eb;"></i>
-                            تفاصيل التصريح اليدوي #${this.getPermitDisplayNumber(entry)}
+                            ${t('module.ptw.manual.detailsTitle', 'تفاصيل التصريح اليدوي')} — ${t('module.ptw.manual.sequentialNumber', 'مسلسل')} #${Utils.escapeHTML(seqNo)} | ${t('module.ptw.manual.paperPermitNumber', 'ورقي')} #${Utils.escapeHTML(paperNo)}
                         </h2>
                         <p class="text-sm mt-2" style="color: #6b7280;">
                             <i class="fas fa-calendar-alt ml-1"></i>
@@ -6044,6 +6047,17 @@ const PTW = {
                 </div>
                 
                 <div class="modal-body p-6">
+                    <!-- أرقام التصريح -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                        <div class="bg-blue-50 p-3 rounded border border-blue-200">
+                            <label class="text-xs text-gray-700 block" style="color: #374151;">${t('module.ptw.manual.sequentialNumber', 'رقم المسلسل')}</label>
+                            <p class="font-bold text-blue-700" style="font-family: 'Courier New', monospace; font-size: 1.1rem;">${Utils.escapeHTML(seqNo)}</p>
+                        </div>
+                        <div class="bg-blue-50 p-3 rounded border border-blue-200">
+                            <label class="text-xs text-gray-700 block" style="color: #374151;">${t('module.ptw.manual.paperPermitNumber', 'رقم التصريح الورقي')}</label>
+                            <p class="font-bold text-blue-700" style="font-family: 'Courier New', monospace; font-size: 1.1rem;">${Utils.escapeHTML(paperNo)}</p>
+                        </div>
+                    </div>
                     <!-- تفاصيل التصريح -->
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div class="space-y-3">
