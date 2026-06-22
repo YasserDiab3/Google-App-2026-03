@@ -931,7 +931,7 @@ const Settings = {
                                     <i class="fas fa-info-circle ml-2"></i>
                                     تقرير PDF بنمط موحّد — إحصائيات الشهر + HSE — تحميل مباشر (عربي / إنجليزي)
                                 </p>
-                                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                                     <div>
                                         <label for="monthly-safety-year" class="block text-sm font-semibold text-gray-700 mb-2">السنة</label>
                                         <select id="monthly-safety-year" class="form-input w-full">
@@ -942,6 +942,14 @@ const Settings = {
                                         <label for="monthly-safety-month" class="block text-sm font-semibold text-gray-700 mb-2">الشهر</label>
                                         <select id="monthly-safety-month" class="form-input w-full">
                                             ${this.renderMonthlySafetyMonthOptions()}
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label for="monthly-safety-site" class="block text-sm font-semibold text-gray-700 mb-2">المصنع / الموقع</label>
+                                        <select id="monthly-safety-site" class="form-input w-full">
+                                            ${typeof Reports !== 'undefined' && Reports.renderMonthlySafetySiteOptions
+                                                ? Reports.renderMonthlySafetySiteOptions('ar')
+                                                : '<option value="factory-1">مصنع 1</option><option value="factory-2">مصنع 2</option><option value="warehouse-1">المخازن</option>'}
                                         </select>
                                     </div>
                                     <div>
@@ -4191,9 +4199,11 @@ const Settings = {
 
         const yearEl = document.getElementById('monthly-safety-year');
         const monthEl = document.getElementById('monthly-safety-month');
+        const siteEl = document.getElementById('monthly-safety-site');
         const langEl = document.getElementById('monthly-safety-lang');
         const year = yearEl ? parseInt(yearEl.value, 10) : NaN;
         const month = monthEl ? parseInt(monthEl.value, 10) : NaN;
+        const siteId = siteEl ? String(siteEl.value || '').trim() : '';
         const lang = langOverride || (langEl ? langEl.value : 'ar') || 'ar';
         const period = typeof Reports.buildMonthlyPeriod === 'function'
             ? Reports.buildMonthlyPeriod(year, month)
@@ -4207,7 +4217,7 @@ const Settings = {
 
         Loading.show(lang === 'en' ? 'Preparing monthly safety report...' : 'جاري تحضير تقرير السلامة الشهري...');
         try {
-            const ok = await Reports.downloadMonthlySafetyReport(period, lang);
+            const ok = await Reports.downloadMonthlySafetyReport(period, lang, siteId || null);
             Loading.hide();
             if (ok) {
                 Notification.success(lang === 'en' ? 'Monthly safety report downloaded' : 'تم تحميل تقرير السلامة الشهري بنجاح');

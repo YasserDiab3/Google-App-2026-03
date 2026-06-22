@@ -582,7 +582,8 @@ const Reports = {
             authorization: isAr ? 'الاعتماد' : 'Authorization',
             preparedBySign: isAr ? 'أُعد بواسطة' : 'Prepared by',
             reviewedBy: isAr ? 'راجعه' : 'Reviewed by',
-            footerNote: isAr ? 'تقرير نظام إدارة السلامة والصحة المهنية' : 'HSE Management System Report',
+            siteFacility: isAr ? 'المصنع / الموقع' : 'Factory / Site',
+            allSites: isAr ? 'جميع المواقع' : 'All Sites',
             dash: '—',
             open: isAr ? 'مفتوح' : 'Open'
         };
@@ -612,7 +613,140 @@ const Reports = {
         return this._filterArrayByDateRange([item], dateFields, start, end).length > 0;
     },
 
-    collectMonthlySafetyReportModel(data, period) {
+    getMonthlySafetySites() {
+        const defaults = [
+            { id: 'factory-1', nameAr: 'مصنع 1', nameEn: 'Factory 1' },
+            { id: 'factory-2', nameAr: 'مصنع 2', nameEn: 'Factory 2' },
+            { id: 'warehouse-1', nameAr: 'المخازن', nameEn: 'Warehouses' }
+        ];
+        if (typeof DailyObservations !== 'undefined' && typeof DailyObservations.getAllSites === 'function') {
+            const sites = DailyObservations.getAllSites();
+            return defaults.map((def) => {
+                const found = sites.find((s) => String(s.id || '').trim() === def.id);
+                const name = String(found?.name || def.nameAr || '').trim();
+                return {
+                    id: def.id,
+                    nameAr: def.id === 'warehouse-1' ? 'المخازن' : (name || def.nameAr),
+                    nameEn: def.nameEn
+                };
+            });
+        }
+        return defaults;
+    },
+
+    getMonthlySafetySiteById(siteId) {
+        const id = String(siteId || '').trim();
+        if (!id) return null;
+        return this.getMonthlySafetySites().find((s) => s.id === id) || null;
+    },
+
+    getMonthlySafetySiteLabel(site, lang) {
+        if (!site) return '';
+        return lang === 'en' ? (site.nameEn || site.nameAr) : (site.nameAr || site.nameEn);
+    },
+
+    _msrSiteMatchTokens(site) {
+        const tokens = new Set();
+        if (!site) return tokens;
+        const push = (v) => {
+            const x = String(v || '').trim().toLowerCase();
+            if (x) tokens.add(x);
+        };
+        push(site.id);
+        push(site.nameAr);
+        push(site.nameEn);
+        if (site.id === 'factory-1') {
+            push('مصنع 1');
+            push('factory 1');
+            push('factory-1');
+        }
+        if (site.id === 'factory-2') {
+            push('مصنع 2');
+            push('factory 2');
+            push('factory-2');
+        }
+        if (site.id === 'warehouse-1' || String(site.id).includes('warehouse') || String(site.nameAr).includes('مخزن')) {
+            push('warehouse-1');
+            push('warehouse');
+            push('warehouses');
+            push('مخزن 1');
+            push('المخازن');
+            push('مخازن');
+        }
+        return tokens;
+    },
+
+    _msrRecordMatchesSite(record, site) {
+        if (!site || !record) return false;
+        const tokens = this._msrSiteMatchTokens(site);
+        const fields = [
+            record.siteId,
+            record.factoryId,
+            record.factory,
+            record.site,
+            record.plant,
+            record.locationId,
+            record.plantId
+        ];
+        for (let i = 0; i < fields.length; i += 1) {
+            const val = String(fields[i] || '').trim().toLowerCase();
+            if (val && tokens.has(val)) return true;
+        }
+        const textFields = [
+            record.siteName,
+            record.factoryName,
+            record.location,
+            record.plantName,
+            record.branch,
+            record.department,
+            record.area
+        ];
+        for (let j = 0; j < textFields.length; j += 1) {
+            const text = String(textFields[j] || '').trim().toLowerCase();
+            if (!text) continue;
+            for (const token of tokens) {
+                if (text === token || text.includes(token)) return true;
+            }
+        }
+        return false;
+    },
+
+    filterAppDataForMonthlySafetySite(data, siteId) {
+        const site = this.getMonthlySafetySiteById(siteId);
+        if (!site || !data) return data;
+        const pick = (key) => {
+            const arr = data[key];
+            return Array.isArray(arr) ? arr.filter((row) => this._msrRecordMatchesSite(row, site)) : arr;
+        };
+        return {
+            ...data,
+            incidents: pick('incidents'),
+            nearmiss: pick('nearmiss'),
+            ptw: pick('ptw'),
+            dailyObservations: pick('dailyObservations'),
+            training: pick('training'),
+            contractorTrainings: pick('contractorTrainings'),
+            trainingAttendance: pick('trainingAttendance'),
+            violations: pick('violations'),
+            clinicVisits: pick('clinicVisits'),
+            safetyMeetings: pick('safetyMeetings'),
+            inspectionTours: pick('inspectionTours'),
+            periodicInspections: pick('periodicInspections'),
+            incidentRegistry: pick('incidentRegistry'),
+            dailySafetyCheckList: pick('dailySafetyCheckList')
+        };
+    },
+
+    renderMonthlySafetySiteOptions(lang = 'ar') {
+        return this.getMonthlySafetySites().map((site) => {
+            const label = this.getMonthlySafetySiteLabel(site, lang);
+            return `<option value="${Utils.escapeHTML(site.id)}">${Utils.escapeHTML(label)}</option>`;
+        }).join('');
+    },
+
+    collectMonthlySafetyReportModel(data, period, siteId = null) {
+        const scopedData = siteId ? this.filterAppDataForMonthlySafetySite(data, siteId) : data;
+        const site = siteId ? this.getMonthlySafetySiteById(siteId) : null;
         const year = period.year;
         const monthIdx = period.month - 1;
         const start = new Date(period.startDate);
@@ -624,11 +758,11 @@ const Reports = {
             : { TRIR: 200000, AFR: 1000000, FR: 1000000, SR: 1000000 };
 
         const monthTotals = (typeof HseMetrics !== 'undefined' && HseMetrics.aggregatePeriod)
-            ? HseMetrics.aggregatePeriod(start, end, data)
+            ? HseMetrics.aggregatePeriod(start, end, scopedData)
             : { recordables: 0, injuries: 0, fatalities: 0, lti: 0, daysLost: 0, manHours: 0, totalIncidents: 0 };
 
         const cumTotals = (typeof HseMetrics !== 'undefined' && HseMetrics.aggregatePeriod)
-            ? HseMetrics.aggregatePeriod(yearStart, end, data)
+            ? HseMetrics.aggregatePeriod(yearStart, end, scopedData)
             : { ...monthTotals };
 
         const monthRates = (typeof HseMetrics !== 'undefined' && HseMetrics.computeRates)
@@ -636,7 +770,7 @@ const Reports = {
             : {};
 
         const monthlyBase = (typeof HseMetrics !== 'undefined' && HseMetrics.buildMonthlyBase)
-            ? HseMetrics.buildMonthlyBase(year, data)
+            ? HseMetrics.buildMonthlyBase(year, scopedData)
             : null;
 
         const firstAidMonth = monthlyBase ? (monthlyBase.firstAid[monthIdx] || 0) : 0;
@@ -646,12 +780,12 @@ const Reports = {
         const nltiCum = monthlyBase && HseMetrics.sumSlice
             ? HseMetrics.sumSlice(monthlyBase.nlti, monthIdx) : nltiMonth;
 
-        const nearmissAll = Array.isArray(data.nearmiss) ? data.nearmiss : [];
+        const nearmissAll = Array.isArray(scopedData.nearmiss) ? scopedData.nearmiss : [];
         const nearmissMonth = this._filterArrayByDateRange(nearmissAll, ['date', 'createdAt'], start, end).length;
         const nearmissCum = this._filterArrayByDateRange(nearmissAll, ['date', 'createdAt'], yearStart, end).length;
 
-        const training = this._filterArrayByDateRange(data.training || [], ['startDate', 'date', 'createdAt'], start, end);
-        const contractorTrainings = this._filterArrayByDateRange(data.contractorTrainings || [], ['date', 'trainingDate', 'startDate', 'createdAt'], start, end);
+        const training = this._filterArrayByDateRange(scopedData.training || [], ['startDate', 'date', 'createdAt'], start, end);
+        const contractorTrainings = this._filterArrayByDateRange(scopedData.contractorTrainings || [], ['date', 'trainingDate', 'startDate', 'createdAt'], start, end);
         const allTraining = training.concat(contractorTrainings);
         const participantsTrained = allTraining.reduce((sum, t) => {
             const n = typeof Training !== 'undefined' && Training.getParticipantsCount
@@ -661,16 +795,16 @@ const Reports = {
         }, 0);
 
         const inspections = this._filterArrayByDateRange(
-            (data.periodicInspections || []).concat(data.inspectionTours || []),
+            (scopedData.periodicInspections || []).concat(scopedData.inspectionTours || []),
             ['date', 'inspectionDate', 'createdAt', 'startDate'],
             start,
             end
         ).length;
 
-        const ptwCount = this._filterArrayByDateRange(data.ptw || [], ['startDate', 'date', 'createdAt'], start, end).length;
-        const obsCount = this._filterArrayByDateRange(data.dailyObservations || [], ['date', 'createdAt'], start, end).length;
+        const ptwCount = this._filterArrayByDateRange(scopedData.ptw || [], ['startDate', 'date', 'createdAt'], start, end).length;
+        const obsCount = this._filterArrayByDateRange(scopedData.dailyObservations || [], ['date', 'createdAt'], start, end).length;
 
-        const meetings = this._filterArrayByDateRange(data.safetyMeetings || [], ['date', 'meetingDate', 'createdAt'], start, end);
+        const meetings = this._filterArrayByDateRange(scopedData.safetyMeetings || [], ['date', 'meetingDate', 'createdAt'], start, end);
         const toolboxCount = meetings.filter((m) => {
             const text = `${m.type || ''} ${m.title || ''} ${m.name || ''}`.toLowerCase();
             return text.includes('toolbox') || text.includes('السلامة القصير') || text.includes('توولبوكس');
@@ -700,7 +834,7 @@ const Reports = {
                 : (t.participantsCount || (t.participants || []).length || t.traineesCount || '—')
         }));
 
-        const walkRows = this._filterArrayByDateRange(data.inspectionTours || [], ['date', 'createdAt', 'startDate'], start, end)
+        const walkRows = this._filterArrayByDateRange(scopedData.inspectionTours || [], ['date', 'createdAt', 'startDate'], start, end)
             .slice(0, 6)
             .map((w) => ({
                 date: w.date || w.startDate || w.createdAt,
@@ -722,6 +856,8 @@ const Reports = {
 
         return {
             generatedAt: new Date(),
+            siteId: siteId || null,
+            site,
             projectSite: company.name || company.secondaryName || '—',
             client: company.secondaryName || company.name || '—',
             location: company.address || '—',
@@ -778,13 +914,39 @@ const Reports = {
         };
     },
 
-    buildMonthlySafetyReportHtml(data, period, lang = 'ar') {
+    _getMonthlySafetyReportStyles(lang) {
+        const alignStart = lang === 'ar' ? 'right' : 'left';
+        return `<style>
+.msr-body{font-family:Arial,'Segoe UI',Tahoma,sans-serif;color:#111827;line-height:1.45}
+.msr-meta{display:grid;grid-template-columns:1fr 1fr;gap:8px 20px;padding:0 0 14px;font-size:12px;border-bottom:1px solid #e5e7eb;margin-bottom:14px}
+.msr-meta div strong{color:#374151;display:inline-block;min-width:110px}
+.msr-kpi-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px}
+.msr-kpi{border:1px solid #d1d5db;border-radius:10px;padding:12px 10px;text-align:center;background:#fff}
+.msr-kpi-label{font-size:9px;color:#6b7280;font-weight:700;letter-spacing:.04em;text-transform:uppercase}
+.msr-kpi-value{font-size:24px;font-weight:800;margin-top:6px;color:#111827}
+.msr-kpi-value.green{color:#059669}
+.msr-section{margin:0 0 14px;border:1px solid #e5e7eb;border-radius:10px;overflow:hidden;page-break-inside:avoid}
+.msr-section-title{padding:10px 12px;font-weight:700;font-size:13px;border-bottom:1px solid #e5e7eb;background:#fafafa}
+.msr-table{width:100%;border-collapse:collapse;font-size:11px}
+.msr-table th{background:#f1f5f9;padding:8px 10px;text-align:${alignStart};font-weight:700;border-bottom:1px solid #e5e7eb}
+.msr-table td{padding:8px 10px;border-bottom:1px solid #f3f4f6;text-align:${alignStart};vertical-align:top}
+.msr-table td.num{text-align:center;direction:ltr}
+.msr-sub{font-size:11px;padding-${lang === 'ar' ? 'right' : 'left'}:14px}
+.msr-grid-2{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px}
+.msr-card{border:1px solid #e5e7eb;border-radius:10px;padding:12px;font-size:11px;min-height:90px}
+.msr-card h4{font-size:12px;margin-bottom:8px;font-weight:700}
+.msr-auth{display:grid;grid-template-columns:1fr 1fr;gap:20px;padding:8px 4px}
+.msr-dash{color:#9ca3af}
+</style>`;
+    },
+
+    buildMonthlySafetyReportHtml(data, period, lang = 'ar', siteId = null) {
         const s = this.getMonthlySafetyStrings(lang);
-        const m = this.collectMonthlySafetyReportModel(data, period);
+        const m = this.collectMonthlySafetyReportModel(data, period, siteId);
         const esc = (v) => Utils.escapeHTML(v == null ? '' : String(v));
         const monthLabel = `${s.monthNames[period.month - 1] || ''} ${period.year}`;
-        const genTs = m.generatedAt.toLocaleString(lang === 'ar' ? 'ar-SA' : 'en-GB');
-        const logo = AppState?.companyLogo || '';
+        const site = m.site || this.getMonthlySafetySiteById(siteId);
+        const siteLabel = site ? this.getMonthlySafetySiteLabel(site, lang) : s.allSites;
         const alignStart = lang === 'ar' ? 'right' : 'left';
 
         const kpiCard = (label, value, green) => `
@@ -794,57 +956,16 @@ const Reports = {
             </div>`;
 
         const tableRow = (cells) => `<tr>${cells.map((c) => `<td>${c}</td>`).join('')}</tr>`;
-
         const emptyRow = (cols) => tableRow(new Array(cols).fill(`<span class="msr-dash">${s.dash}</span>`));
 
-        return `<!DOCTYPE html>
-<html lang="${s.lang}" dir="${s.dir}">
-<head>
-<meta charset="UTF-8">
-<title>${esc(s.title)}</title>
-<style>
-*{box-sizing:border-box;margin:0;padding:0}
-body{font-family:Arial,'Segoe UI',Tahoma,sans-serif;background:#fff;color:#111827;line-height:1.45}
-.msr-wrap{max-width:920px;margin:0 auto;padding:0 0 20px}
-.msr-header{background:#111827;color:#fff;padding:14px 18px;display:flex;justify-content:space-between;align-items:center;gap:12px}
-.msr-header h1{font-size:18px;font-weight:800}
-.msr-header .msr-gen{font-size:11px;opacity:.9;white-space:nowrap}
-.msr-brand{display:flex;align-items:center;gap:12px;padding:14px 18px;border-bottom:1px solid #e5e7eb}
-.msr-brand img{max-height:48px;max-width:96px;object-fit:contain}
-.msr-brand-name{font-size:14px;font-weight:700;color:#0f172a}
-.msr-meta{display:grid;grid-template-columns:1fr 1fr;gap:8px 20px;padding:14px 18px;font-size:12px;border-bottom:1px solid #e5e7eb}
-.msr-meta div strong{color:#374151;display:inline-block;min-width:110px}
-.msr-kpi-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;padding:14px 18px}
-.msr-kpi{border:1px solid #d1d5db;border-radius:10px;padding:12px 10px;text-align:center;background:#fff}
-.msr-kpi-label{font-size:9px;color:#6b7280;font-weight:700;letter-spacing:.04em;text-transform:uppercase}
-.msr-kpi-value{font-size:24px;font-weight:800;margin-top:6px;color:#111827}
-.msr-kpi-value.green{color:#059669}
-.msr-section{margin:14px 18px;border:1px solid #e5e7eb;border-radius:10px;overflow:hidden;page-break-inside:avoid}
-.msr-section-title{padding:10px 12px;font-weight:700;font-size:13px;border-bottom:1px solid #e5e7eb;background:#fafafa}
-.msr-table{width:100%;border-collapse:collapse;font-size:11px}
-.msr-table th{background:#f1f5f9;padding:8px 10px;text-align:${alignStart};font-weight:700;border-bottom:1px solid #e5e7eb}
-.msr-table td{padding:8px 10px;border-bottom:1px solid #f3f4f6;text-align:${alignStart};vertical-align:top}
-.msr-table td.num{text-align:center;direction:ltr}
-.msr-sub{font-size:11px;padding-left:14px}
-.msr-grid-2{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:14px 18px}
-.msr-card{border:1px solid #e5e7eb;border-radius:10px;padding:12px;font-size:11px;min-height:90px}
-.msr-card h4{font-size:12px;margin-bottom:8px;font-weight:700}
-.msr-auth{display:grid;grid-template-columns:1fr 1fr;gap:20px;padding:8px 4px}
-.msr-footer{margin:16px 18px 0;padding-top:10px;border-top:1px solid #e5e7eb;font-size:10px;color:#64748b;text-align:center}
-.msr-dash{color:#9ca3af}
-</style>
-</head>
-<body>
-<div class="msr-wrap" id="monthly-safety-report-root">
-  <div class="msr-header">
-    <h1>${esc(s.title)}</h1>
-    <div class="msr-gen">${esc(s.generatedOn)}: <span dir="ltr">${esc(genTs)}</span></div>
-  </div>
-  ${logo ? `<div class="msr-brand"><img src="${esc(logo)}" alt="logo"><div class="msr-brand-name">${esc(m.projectSite)}</div></div>` : ''}
+        const content = `
+${this._getMonthlySafetyReportStyles(lang)}
+<div class="msr-body" id="monthly-safety-report-root">
   <div class="msr-meta">
     <div><strong>${esc(s.projectSite)}:</strong> ${esc(m.projectSite)}</div>
     <div><strong>${esc(s.client)}:</strong> ${esc(m.client)}</div>
     <div><strong>${esc(s.reportingMonth)}:</strong> ${esc(monthLabel)}</div>
+    <div><strong>${esc(s.siteFacility)}:</strong> ${esc(siteLabel)}</div>
     <div><strong>${esc(s.location)}:</strong> ${esc(m.location)}</div>
     <div><strong>${esc(s.preparedBy)}:</strong> ${esc(m.preparedBy)}</div>
   </div>
@@ -933,10 +1054,36 @@ body{font-family:Arial,'Segoe UI',Tahoma,sans-serif;background:#fff;color:#11182
       <div><strong>${esc(s.reviewedBy)}</strong><div class="msr-dash" style="margin-top:24px;border-top:1px solid #cbd5e1">${s.dash}</div></div>
     </div>
   </div>
-  <div class="msr-footer">${esc(m.projectSite)} — ${esc(s.footerNote)} — ${esc(s.generatedOn)}: <span dir="ltr">${esc(genTs)}</span></div>
-</div>
-</body>
-</html>`;
+</div>`;
+
+        const formCode = `MSR-${period.label}-${siteId || 'ALL'}`;
+        const title = site ? `${s.title} — ${siteLabel}` : s.title;
+        const pdfMeta = {
+            source: 'MonthlySafetyReport',
+            titleEn: 'Monthly Safety Report',
+            titleAr: 'تقرير السلامة الشهري',
+            includeQRCode: false,
+            compactPdfFooter: true,
+            ReportingMonth: monthLabel,
+            Site: siteLabel,
+            'شهر التقرير': monthLabel,
+            'الموقع': siteLabel
+        };
+
+        if (typeof FormHeader !== 'undefined' && FormHeader.generatePDFHTML) {
+            return FormHeader.generatePDFHTML(
+                formCode,
+                title,
+                content,
+                false,
+                false,
+                pdfMeta,
+                new Date().toISOString(),
+                new Date().toISOString()
+            );
+        }
+
+        return `<!DOCTYPE html><html lang="${s.lang}" dir="${s.dir}"><head><meta charset="UTF-8"><title>${esc(title)}</title></head><body>${content}</body></html>`;
     },
 
     async ensureMonthlySafetyPdfLibs() {
@@ -959,7 +1106,7 @@ body{font-family:Arial,'Segoe UI',Tahoma,sans-serif;background:#fff;color:#11182
         return typeof html2canvas !== 'undefined' && !!Utils?.PdfExport?.getJsPdfConstructor?.();
     },
 
-    async downloadMonthlySafetyReport(period, lang = 'ar') {
+    async downloadMonthlySafetyReport(period, lang = 'ar', siteId = null) {
         const { t } = this.getTranslations();
         if (!period) {
             Notification.error(t('msg.invalidMonthYear'));
@@ -971,8 +1118,9 @@ body{font-family:Arial,'Segoe UI',Tahoma,sans-serif;background:#fff;color:#11182
         }
 
         await this.ensureTrainingDataForReport();
-        const html = this.buildMonthlySafetyReportHtml(AppState.appData, period, lang);
-        const fileName = `Monthly_Safety_Report_${period.label}_${lang}.pdf`;
+        const html = this.buildMonthlySafetyReportHtml(AppState.appData, period, lang, siteId);
+        const siteSuffix = siteId ? `_${siteId}` : '';
+        const fileName = `Monthly_Safety_Report_${period.label}${siteSuffix}_${lang}.pdf`;
 
         const iframe = document.createElement('iframe');
         iframe.setAttribute('aria-hidden', 'true');
@@ -1003,7 +1151,7 @@ body{font-family:Arial,'Segoe UI',Tahoma,sans-serif;background:#fff;color:#11182
                 setTimeout(resolve, 3000);
             })));
 
-            const root = iDoc.getElementById('monthly-safety-report-root') || iDoc.body;
+            const root = iDoc.querySelector('.report-wrapper') || iDoc.getElementById('monthly-safety-report-root') || iDoc.body;
             const scale = Utils.PdfExport.getOptimalCaptureScale(root.scrollWidth, root.scrollHeight, 1.4);
             const canvas = await html2canvas(root, {
                 scale,
