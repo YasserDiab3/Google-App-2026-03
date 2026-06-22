@@ -113,7 +113,8 @@ const Reports = {
                 'report.hse.sr': 'SR',
                 'report.hse.ir': 'IR',
                 'msg.adminOnlyReport': 'تصدير تقرير السلامة الشهري متاح لمدير النظام فقط',
-                'msg.invalidMonthYear': 'يرجى اختيار شهر وسنة صالحين'
+                'msg.invalidMonthYear': 'يرجى اختيار شهر وسنة صالحين',
+                'msg.invalidDateRange': 'يرجى تحديد فترة صالحة (من تاريخ — إلى تاريخ)'
             },
             en: {
                 'title': 'Reports',
@@ -205,7 +206,8 @@ const Reports = {
                 'report.hse.sr': 'SR',
                 'report.hse.ir': 'IR',
                 'msg.adminOnlyReport': 'Monthly safety report export is available to system administrators only',
-                'msg.invalidMonthYear': 'Please select a valid month and year'
+                'msg.invalidMonthYear': 'Please select a valid month and year',
+                'msg.invalidDateRange': 'Please select a valid date range (from — to)'
             }
         };
         return {
@@ -499,14 +501,90 @@ const Reports = {
         }
         const startDate = new Date(y, m - 1, 1);
         const endDate = new Date(y, m, 0, 23, 59, 59, 999);
+        const monthNamesAr = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
+        const monthNamesEn = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
         return {
             type: 'monthly',
             year: y,
             month: m,
             startDate,
             endDate,
-            label: `${y}-${String(m).padStart(2, '0')}`
+            label: `${y}-${String(m).padStart(2, '0')}`,
+            displayLabelAr: `${monthNamesAr[m - 1]} ${y}`,
+            displayLabelEn: `${monthNamesEn[m - 1]} ${y}`
         };
+    },
+
+    _msrParseDateInput(value, endOfDay = false) {
+        const raw = String(value || '').trim();
+        if (!raw) return null;
+        const parts = raw.split('-').map((p) => parseInt(p, 10));
+        if (parts.length < 3) return null;
+        const [y, m, d] = parts;
+        if (!Number.isFinite(y) || !Number.isFinite(m) || !Number.isFinite(d)) return null;
+        if (m < 1 || m > 12 || d < 1 || d > 31) return null;
+        const date = endOfDay
+            ? new Date(y, m - 1, d, 23, 59, 59, 999)
+            : new Date(y, m - 1, d, 0, 0, 0, 0);
+        return Number.isNaN(date.getTime()) ? null : date;
+    },
+
+    buildSafetyReportPeriod(fromValue, toValue) {
+        const startDate = this._msrParseDateInput(fromValue, false);
+        const endDate = this._msrParseDateInput(toValue, true);
+        if (!startDate || !endDate || startDate > endDate) return null;
+        const pad = (n) => String(n).padStart(2, '0');
+        const fmtKey = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+        const fmtDisp = (d, loc) => d.toLocaleDateString(loc);
+        return {
+            type: 'range',
+            year: endDate.getFullYear(),
+            month: endDate.getMonth() + 1,
+            startDate,
+            endDate,
+            label: `${fmtKey(startDate)}_${fmtKey(endDate)}`,
+            displayLabelAr: `${fmtDisp(startDate, 'ar-SA')} — ${fmtDisp(endDate, 'ar-SA')}`,
+            displayLabelEn: `${fmtDisp(startDate, 'en-GB')} — ${fmtDisp(endDate, 'en-GB')}`
+        };
+    },
+
+    _msrGetPeriodDisplayLabel(period, lang) {
+        if (!period) return '—';
+        if (lang === 'en' && period.displayLabelEn) return period.displayLabelEn;
+        if (period.displayLabelAr) return period.displayLabelAr;
+        const s = this.getMonthlySafetyStrings(lang);
+        if (period.type === 'monthly' && period.month) {
+            return `${s.monthNames[period.month - 1] || ''} ${period.year || ''}`.trim();
+        }
+        const loc = lang === 'en' ? 'en-GB' : 'ar-SA';
+        const fmt = (d) => new Date(d).toLocaleDateString(loc);
+        return `${fmt(period.startDate)} — ${fmt(period.endDate)}`;
+    },
+
+    _msrMonthsInPeriod(period) {
+        const start = new Date(period.startDate);
+        const end = new Date(period.endDate);
+        const months = [];
+        let y = start.getFullYear();
+        let m = start.getMonth();
+        const endY = end.getFullYear();
+        const endM = end.getMonth();
+        while (y < endY || (y === endY && m <= endM)) {
+            months.push({ year: y, monthIdx: m });
+            m += 1;
+            if (m > 11) {
+                m = 0;
+                y += 1;
+            }
+        }
+        return months;
+    },
+
+    _msrGetMonthlyBaseForYear(year, data, cache = {}) {
+        if (!cache[year] && typeof HseMetrics !== 'undefined' && HseMetrics.buildMonthlyBase) {
+            cache[year] = HseMetrics.buildMonthlyBase(year, data);
+        }
+        return cache[year] || null;
     },
 
     _formatHseRate(value, decimals) {
@@ -530,6 +608,7 @@ const Reports = {
             generatedOn: isAr ? 'تاريخ الإنشاء' : 'Generated On',
             projectSite: isAr ? 'المشروع / الموقع' : 'Project / Site',
             reportingMonth: isAr ? 'شهر التقرير' : 'Reporting Month',
+            reportingPeriod: isAr ? 'فترة التقرير' : 'Reporting Period',
             preparedBy: isAr ? 'أُعد بواسطة' : 'Prepared By',
             client: isAr ? 'العميل' : 'Client',
             location: isAr ? 'الموقع' : 'Location',
@@ -551,6 +630,7 @@ const Reports = {
             manpowerStatus: isAr ? 'الوضع الشهري للقوى العاملة' : 'Monthly Status of Manpower',
             metric: isAr ? 'المؤشر' : 'Metric',
             thisMonth: isAr ? 'هذا الشهر' : 'This Month',
+            thisPeriod: isAr ? 'الفترة' : 'Period',
             cumulative: isAr ? 'تراكمي' : 'Cumulative',
             manpowerAvg: isAr ? 'متوسط القوى العاملة' : 'Manpower (Avg.)',
             totalManDays: isAr ? 'إجمالي أيام العمل' : 'Total Man-days',
@@ -753,11 +833,13 @@ const Reports = {
     collectMonthlySafetyReportModel(data, period, siteId = null) {
         const scopedData = siteId ? this.filterAppDataForMonthlySafetySite(data, siteId) : data;
         const site = siteId ? this.getMonthlySafetySiteById(siteId) : null;
-        const year = period.year;
-        const monthIdx = period.month - 1;
         const start = new Date(period.startDate);
         const end = new Date(period.endDate);
-        const yearStart = new Date(year, 0, 1);
+        const year = period.year || end.getFullYear();
+        const monthIdx = (period.month || end.getMonth() + 1) - 1;
+        const yearStart = new Date(end.getFullYear(), 0, 1);
+        const rangeMonths = this._msrMonthsInPeriod(period);
+        const baseCache = {};
 
         const mult = (typeof HseMetrics !== 'undefined' && HseMetrics.loadMultipliers)
             ? HseMetrics.loadMultipliers()
@@ -775,16 +857,22 @@ const Reports = {
             ? HseMetrics.computeRates(monthTotals, mult)
             : {};
 
-        const monthlyBase = (typeof HseMetrics !== 'undefined' && HseMetrics.buildMonthlyBase)
-            ? HseMetrics.buildMonthlyBase(year, scopedData)
-            : null;
+        let firstAidMonth = 0;
+        let nltiMonth = 0;
+        rangeMonths.forEach(({ year: y, monthIdx: mi }) => {
+            const base = this._msrGetMonthlyBaseForYear(y, scopedData, baseCache);
+            if (!base) return;
+            firstAidMonth += base.firstAid[mi] || 0;
+            nltiMonth += base.nlti[mi] || 0;
+        });
 
-        const firstAidMonth = monthlyBase ? (monthlyBase.firstAid[monthIdx] || 0) : 0;
-        const nltiMonth = monthlyBase ? (monthlyBase.nlti[monthIdx] || 0) : 0;
-        const firstAidCum = monthlyBase && HseMetrics.sumSlice
-            ? HseMetrics.sumSlice(monthlyBase.firstAid, monthIdx) : firstAidMonth;
-        const nltiCum = monthlyBase && HseMetrics.sumSlice
-            ? HseMetrics.sumSlice(monthlyBase.nlti, monthIdx) : nltiMonth;
+        const cumYear = end.getFullYear();
+        const cumBase = this._msrGetMonthlyBaseForYear(cumYear, scopedData, baseCache);
+        const cumEndIdx = end.getMonth();
+        const firstAidCum = cumBase && HseMetrics.sumSlice
+            ? HseMetrics.sumSlice(cumBase.firstAid, cumEndIdx) : firstAidMonth;
+        const nltiCum = cumBase && HseMetrics.sumSlice
+            ? HseMetrics.sumSlice(cumBase.nlti, cumEndIdx) : nltiMonth;
 
         const nearmissAll = Array.isArray(scopedData.nearmiss) ? scopedData.nearmiss : [];
         const nearmissMonth = this._filterArrayByDateRange(nearmissAll, ['date', 'createdAt'], start, end).length;
@@ -819,16 +907,26 @@ const Reports = {
         const workCfg = (typeof HseMetrics !== 'undefined' && HseMetrics.getWorkConfig)
             ? HseMetrics.getWorkConfig()
             : { workDaysPerMonth: 22, hoursPerDay: 8 };
-        const manpowerAvg = monthlyBase ? (monthlyBase.employeeCounts[monthIdx] || 0) : 0;
-        const manDaysMonth = Math.round(manpowerAvg * (workCfg.workDaysPerMonth || 22));
+        let manpowerAvg = 0;
+        let manDaysMonth = 0;
         let manDaysCum = 0;
         let manpowerCumAvg = 0;
-        if (monthlyBase) {
-            for (let i = 0; i <= monthIdx; i += 1) {
-                manDaysCum += Math.round((monthlyBase.employeeCounts[i] || 0) * (workCfg.workDaysPerMonth || 22));
+        if (rangeMonths.length) {
+            let headSum = 0;
+            rangeMonths.forEach(({ year: y, monthIdx: mi }) => {
+                const base = this._msrGetMonthlyBaseForYear(y, scopedData, baseCache);
+                const count = base ? (base.employeeCounts[mi] || 0) : 0;
+                headSum += count;
+                manDaysMonth += Math.round(count * (workCfg.workDaysPerMonth || 22));
+            });
+            manpowerAvg = Math.round(headSum / rangeMonths.length);
+        }
+        if (cumBase) {
+            for (let i = 0; i <= cumEndIdx; i += 1) {
+                manDaysCum += Math.round((cumBase.employeeCounts[i] || 0) * (workCfg.workDaysPerMonth || 22));
             }
-            manpowerCumAvg = monthIdx >= 0
-                ? Math.round(HseMetrics.sumSlice(monthlyBase.employeeCounts, monthIdx) / (monthIdx + 1))
+            manpowerCumAvg = cumEndIdx >= 0
+                ? Math.round(HseMetrics.sumSlice(cumBase.employeeCounts, cumEndIdx) / (cumEndIdx + 1))
                 : 0;
         }
 
@@ -1013,8 +1111,7 @@ const Reports = {
     },
 
     _msrBuildPdfMeta(period, lang, siteLabel, preparedBy, siteId, options = {}) {
-        const s = this.getMonthlySafetyStrings(lang);
-        const monthLabel = `${s.monthNames[period.month - 1] || ''} ${period.year}`;
+        const periodLabel = this._msrGetPeriodDisplayLabel(period, lang);
         const isAll = siteId === '__all__' || options.allSites;
         const site = !isAll && siteId ? this.getMonthlySafetySiteById(siteId) : null;
         const meta = {
@@ -1029,11 +1126,11 @@ const Reports = {
             compactPdfFooter: true
         };
         if (lang === 'ar') {
-            meta['شهر التقرير'] = monthLabel;
+            meta['فترة التقرير'] = periodLabel;
             meta['الموقع'] = siteLabel;
             meta['أُعد بواسطة'] = preparedBy;
         } else {
-            meta['Reporting Month'] = monthLabel;
+            meta['Reporting Period'] = periodLabel;
             meta.Site = siteLabel;
             meta['Prepared By'] = preparedBy;
         }
@@ -1046,7 +1143,8 @@ const Reports = {
         const m = this.collectMonthlySafetyReportModel(data, period, siteId);
         const esc = (v) => Utils.escapeHTML(v == null ? '' : String(v));
         const ar = (v) => `<span class="ar-text" dir="${s.dir}">${esc(v)}</span>`;
-        const monthLabel = `${s.monthNames[period.month - 1] || ''} ${period.year}`;
+        const periodLabel = this._msrGetPeriodDisplayLabel(period, lang);
+        const periodCol = period.type === 'range' ? s.thisPeriod : s.thisMonth;
         const site = m.site || (siteId ? this.getMonthlySafetySiteById(siteId) : null);
         const siteLabel = site ? this.getMonthlySafetySiteLabel(site, lang) : s.allSites;
         const num = (v) => `<span class="msr-num">${esc(this._msrFmtNum(v))}</span>`;
@@ -1054,7 +1152,7 @@ const Reports = {
         const introBlock = skipIntro ? '' : `
   <div class="msr-intro permit-intro">
     <div class="msr-intro-grid">
-      <div class="msr-intro-item"><span class="msr-intro-label">${ar(s.reportingMonth)}</span><span class="msr-intro-value ar-text" dir="${s.dir}">${esc(monthLabel)}</span></div>
+      <div class="msr-intro-item"><span class="msr-intro-label">${ar(s.reportingPeriod)}</span><span class="msr-intro-value ar-text" dir="${s.dir}">${esc(periodLabel)}</span></div>
       <div class="msr-intro-item"><span class="msr-intro-label">${ar(s.siteFacility)}</span><span class="msr-intro-value ar-text" dir="${s.dir}">${esc(siteLabel)}</span></div>
       <div class="msr-intro-item"><span class="msr-intro-label">${ar(s.preparedBy)}</span><span class="msr-intro-value ar-text" dir="${s.dir}">${esc(m.preparedBy)}</span></div>
       <div class="msr-intro-item"><span class="msr-intro-label">${ar(s.projectSite)}</span><span class="msr-intro-value ar-text" dir="${s.dir}">${esc(m.projectSite)}</span></div>
@@ -1088,7 +1186,7 @@ const Reports = {
 
   <h3 class="section-title ar-text" dir="${s.dir}">${esc(s.manpowerStatus)}</h3>
   <table class="report-table">
-    <thead><tr><th class="ar-text" dir="${s.dir}">${esc(s.metric)}</th><th style="text-align:center" class="ar-text" dir="${s.dir}">${esc(s.thisMonth)}</th><th style="text-align:center" class="ar-text" dir="${s.dir}">${esc(s.cumulative)}</th></tr></thead>
+    <thead><tr><th class="ar-text" dir="${s.dir}">${esc(s.metric)}</th><th style="text-align:center" class="ar-text" dir="${s.dir}">${esc(periodCol)}</th><th style="text-align:center" class="ar-text" dir="${s.dir}">${esc(s.cumulative)}</th></tr></thead>
     <tbody>
       ${this._msrTableRow([ar(s.manpowerAvg), num(m.manpower.avgMonth), num(m.manpower.avgCum)])}
       ${this._msrTableRow([ar(s.totalManDays), num(m.manpower.manDaysMonth), num(m.manpower.manDaysCum)])}
@@ -1098,7 +1196,7 @@ const Reports = {
 
   <h3 class="section-title ar-text" dir="${s.dir}">${esc(s.accidentReport)}</h3>
   <table class="report-table">
-    <thead><tr><th class="ar-text" dir="${s.dir}">${esc(s.description)}</th><th style="text-align:center" class="ar-text" dir="${s.dir}">${esc(s.thisMonth)}</th><th style="text-align:center" class="ar-text" dir="${s.dir}">${esc(s.cumulative)}</th></tr></thead>
+    <thead><tr><th class="ar-text" dir="${s.dir}">${esc(s.description)}</th><th style="text-align:center" class="ar-text" dir="${s.dir}">${esc(periodCol)}</th><th style="text-align:center" class="ar-text" dir="${s.dir}">${esc(s.cumulative)}</th></tr></thead>
     <tbody>
       ${this._msrTableRow([`<strong class="ar-text" dir="${s.dir}">${esc(s.totalAccidents)}</strong>`, num(m.accidents.totalMonth), num(m.accidents.totalCum)], 'msr-row-total')}
       ${this._msrTableRow([ar(s.reportableAccidents), num(m.accidents.reportableMonth), num(m.accidents.reportableCum)], 'msr-row-danger')}
@@ -1327,7 +1425,7 @@ html,body,.report-wrapper,.report-wrapper *,.msr-report,.msr-report *{font-famil
     async downloadMonthlySafetyReport(period, lang = 'ar', siteId = null) {
         const { t } = this.getTranslations();
         if (!period) {
-            Notification.error(t('msg.invalidMonthYear'));
+            Notification.error(t('msg.invalidDateRange'));
             return false;
         }
         if (typeof AppState === 'undefined' || !AppState.appData) {

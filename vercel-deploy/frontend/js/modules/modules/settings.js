@@ -929,20 +929,16 @@ const Settings = {
                             <div class="card-body space-y-4">
                                 <p class="text-sm text-gray-600 mb-2">
                                     <i class="fas fa-info-circle ml-2"></i>
-                                    تقرير PDF بنمط موحّد — إحصائيات الشهر + HSE — موقع واحد أو جميع المواقع في ملف واحد
+                                    تقرير PDF بنمط موحّد — حدّد الفترة من / إلى — موقع واحد أو جميع المواقع
                                 </p>
-                                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                                     <div>
-                                        <label for="monthly-safety-year" class="block text-sm font-semibold text-gray-700 mb-2">السنة</label>
-                                        <select id="monthly-safety-year" class="form-input w-full">
-                                            ${this.renderMonthlySafetyYearOptions()}
-                                        </select>
+                                        <label for="monthly-safety-from" class="block text-sm font-semibold text-gray-700 mb-2">من تاريخ</label>
+                                        <input type="date" id="monthly-safety-from" class="form-input w-full" value="${this.getMonthlySafetyDefaultFromDate()}">
                                     </div>
                                     <div>
-                                        <label for="monthly-safety-month" class="block text-sm font-semibold text-gray-700 mb-2">الشهر</label>
-                                        <select id="monthly-safety-month" class="form-input w-full">
-                                            ${this.renderMonthlySafetyMonthOptions()}
-                                        </select>
+                                        <label for="monthly-safety-to" class="block text-sm font-semibold text-gray-700 mb-2">إلى تاريخ</label>
+                                        <input type="date" id="monthly-safety-to" class="form-input w-full" value="${this.getMonthlySafetyDefaultToDate()}">
                                     </div>
                                     <div>
                                         <label for="monthly-safety-site" class="block text-sm font-semibold text-gray-700 mb-2">المصنع / الموقع</label>
@@ -4163,6 +4159,22 @@ const Settings = {
         }
     },
 
+    getMonthlySafetyDefaultFromDate() {
+        const now = new Date();
+        const y = now.getFullYear();
+        const m = String(now.getMonth() + 1).padStart(2, '0');
+        return `${y}-${m}-01`;
+    },
+
+    getMonthlySafetyDefaultToDate() {
+        const now = new Date();
+        const last = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+        const y = last.getFullYear();
+        const m = String(last.getMonth() + 1).padStart(2, '0');
+        const d = String(last.getDate()).padStart(2, '0');
+        return `${y}-${m}-${d}`;
+    },
+
     renderMonthlySafetyYearOptions() {
         const nowYear = new Date().getFullYear();
         let html = '';
@@ -4197,21 +4209,21 @@ const Settings = {
             return;
         }
 
-        const yearEl = document.getElementById('monthly-safety-year');
-        const monthEl = document.getElementById('monthly-safety-month');
+        const fromEl = document.getElementById('monthly-safety-from');
+        const toEl = document.getElementById('monthly-safety-to');
         const siteEl = document.getElementById('monthly-safety-site');
         const langEl = document.getElementById('monthly-safety-lang');
-        const year = yearEl ? parseInt(yearEl.value, 10) : NaN;
-        const month = monthEl ? parseInt(monthEl.value, 10) : NaN;
+        const fromDate = fromEl ? fromEl.value : '';
+        const toDate = toEl ? toEl.value : '';
         const siteId = siteEl ? String(siteEl.value || '').trim() : '';
         const lang = langOverride || (langEl ? langEl.value : 'ar') || 'ar';
-        const period = typeof Reports.buildMonthlyPeriod === 'function'
-            ? Reports.buildMonthlyPeriod(year, month)
+        const period = typeof Reports.buildSafetyReportPeriod === 'function'
+            ? Reports.buildSafetyReportPeriod(fromDate, toDate)
             : null;
 
         const { t } = Reports.getTranslations ? Reports.getTranslations() : { t: (k) => k };
         if (!period) {
-            Notification.error(t('msg.invalidMonthYear'));
+            Notification.error(t('msg.invalidDateRange'));
             return;
         }
 
