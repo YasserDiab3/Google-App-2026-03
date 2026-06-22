@@ -192,18 +192,19 @@
     }
 
     function getUnifiedIncidents(appData) {
-        const incidents = Array.isArray(appData?.incidents) ? appData.incidents : [];
-        const registry = Array.isArray(appData?.incidentsRegistry) ? appData.incidentsRegistry : [];
+        const incidents = Array.isArray(appData?.incidents) ? appData.incidents.filter(Boolean) : [];
+        const registry = Array.isArray(appData?.incidentsRegistry) ? appData.incidentsRegistry.filter(Boolean) : [];
         if (incidents.length === 0) return registry;
-        const ids = new Set(
+        const incidentIds = new Set(
             incidents
                 .map((r) => String(r?.id || r?.incidentId || '').trim())
                 .filter(Boolean)
         );
         const extra = registry.filter((r) => {
-            if (!r) return false;
-            const id = String(r.id || r.incidentId || r.registryId || '').trim();
-            return id && !ids.has(id);
+            const linkedId = String(r.incidentId || '').trim();
+            if (linkedId && incidentIds.has(linkedId)) return false;
+            const selfKey = String(r.id || r.registryId || linkedId || '').trim();
+            return selfKey && !incidentIds.has(selfKey);
         });
         return extra.length ? incidents.concat(extra) : incidents;
     }

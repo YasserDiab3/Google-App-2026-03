@@ -821,10 +821,8 @@ const Dashboard = {
         return new Promise((resolve) => {
             // استخدام requestIdleCallback أو setTimeout للتحميل غير المتزحم
             const calculate = () => {
-                const registryData = (data.incidentsRegistry || []);
-                const incidentsCount = (registryData && registryData.length > 0)
-                    ? registryData.length
-                    : (data.incidents || []).length;
+                const incidentsRecords = this._getDashboardIncidentsRecords(data);
+                const incidentsCount = incidentsRecords.length;
 
                 resolve({
                     incidents: incidentsCount,
@@ -3273,6 +3271,32 @@ const Dashboard = {
     },
 
     /**
+     * سجلات الحوادث الفعلية للوحة — مصدر قائمة الحوادث (incidents) عند توفرها؛
+     * لا يُفضَّل عدّ السجل (incidentsRegistry) وحده لتجنّب تضخيم العدد بسجلات يتيمة/مكررة.
+     */
+    _getDashboardIncidentsRecords(appData) {
+        const data = appData && typeof appData === 'object' ? appData : {};
+        const incidents = Array.isArray(data.incidents) ? data.incidents.filter(Boolean) : [];
+        if (incidents.length > 0) {
+            const seen = new Set();
+            return incidents.filter((i) => {
+                const id = String(i.id || i.incidentId || '').trim();
+                if (!id || seen.has(id)) return false;
+                seen.add(id);
+                return true;
+            });
+        }
+        const registry = Array.isArray(data.incidentsRegistry) ? data.incidentsRegistry.filter(Boolean) : [];
+        const seenReg = new Set();
+        return registry.filter((r) => {
+            const key = String(r.incidentId || r.id || r.registryId || '').trim();
+            if (!key || seenReg.has(key)) return false;
+            seenReg.add(key);
+            return true;
+        });
+    },
+
+    /**
      * تصنيف سجل حادث لعرض التفصيل في كارت إجمالي الحوادث: حالية / سابقة / بدون سنة صالحة (مثل 0000).
      */
     _classifyIncidentYearForDashboard(record, currentYear) {
@@ -3342,11 +3366,9 @@ const Dashboard = {
      */
     _getDaysSinceLastIncidentForDashboard(appData) {
         const data = appData && typeof appData === 'object' ? appData : {};
-        const registryData = Array.isArray(data.incidentsRegistry) ? data.incidentsRegistry : [];
-        const incidents = Array.isArray(data.incidents) ? data.incidents : [];
-        const allRecords = registryData.length > 0
-            ? registryData.filter((r) => r && r.incidentDate)
-            : incidents.filter((i) => i && (i.incidentDate || i.date || i.createdAt));
+        const allRecords = this._getDashboardIncidentsRecords(data).filter(
+            (r) => r && (r.incidentDate || r.date || r.createdAt)
+        );
         if (allRecords.length === 0) return null;
         const sortedRecords = allRecords.slice().sort((a, b) => {
             const dateA = new Date(a.incidentDate || a.date || a.createdAt);
@@ -3581,13 +3603,10 @@ const Dashboard = {
             const ptwDataset = this.getUnifiedPTWDataset(data);
             const nearmiss = Array.isArray(data.nearmiss) ? data.nearmiss : [];
             const employees = Array.isArray(data.employees) ? data.employees : [];
-            const registryData = Array.isArray(data.incidentsRegistry) ? data.incidentsRegistry : [];
 
-            // حساب كل القيم دون المساس بـ DOM
-            const totalIncidentsCount = (registryData && registryData.length > 0)
-                ? registryData.length
-                : incidents.length;
-            const allIncidentRecords = (registryData && registryData.length > 0) ? registryData : incidents;
+            // حساب كل القيم دون المساس بـ DOM — مصدر موحّد مع قائمة الحوادث في النظام
+            const allIncidentRecords = this._getDashboardIncidentsRecords(data);
+            const totalIncidentsCount = allIncidentRecords.length;
             const currentYear = new Date().getFullYear();
             let incidentsCurrentYearCount = 0;
             let incidentsPriorYearsCount = 0;
@@ -4278,16 +4297,18 @@ const Dashboard = {
             const now = new Date();
             const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
 
-            const incidents = Array.isArray(data.incidents) ? data.incidents : [];
             const ptwDataset = this.getUnifiedPTWDataset(data);
             const training = Array.isArray(data.training) ? data.training : [];
+            const dashboardIncidents = this._getDashboardIncidentsRecords(data);
 
             // حساب الإحصائيات الأسبوعية مع معالجة الأخطاء
             const weekIncidents = this.dashboardCan('incidents')
-                ? incidents.filter(i => {
-                    if (!i || !i.createdAt) return false;
+                ? dashboardIncidents.filter(i => {
+                    if (!i) return false;
+                    const rawDate = i.incidentDate || i.date || i.createdAt;
+                    if (!rawDate) return false;
                     try {
-                        const incidentDate = new Date(i.createdAt);
+                        const incidentDate = new Date(rawDate);
                         return !isNaN(incidentDate.getTime()) && incidentDate > weekAgo;
                     } catch (e) {
                         return false;
@@ -4329,10 +4350,8 @@ const Dashboard = {
 
             // تحديث أيام بدون حوادث
             if (this.dashboardCan('incidents') && daysWithoutIncidentEl) {
-                const incidentsLocal = Array.isArray(data.incidents) ? data.incidents : [];
-                const registryData = Array.isArray(data.incidentsRegistry) ? data.incidentsRegistry : [];
-                const allIncidents = registryData.length > 0 ? registryData : incidentsLocal;
-                
+                const allIncidents = this._getDashboardIncidentsRecords(data);
+
                 if (allIncidents.length > 0) {
                     const sortedIncidents = allIncidents
                         .filter(i => i && (i.incidentDate || i.date || i.createdAt))
@@ -4367,7 +4386,7 @@ const Dashboard = {
         const data = AppState.appData;
         if (!data) return null;
         try {
-            const incidents = Array.isArray(data.incidents) ? data.incidents : [];
+            const incidents = this._getDashboardIncidentsRecords(data);
             const nearmiss = Array.isArray(data.nearmiss) ? data.nearmiss : [];
             const inspections = Array.isArray(data.inspections) ? data.inspections : [];
             const training = Array.isArray(data.training) ? data.training : [];

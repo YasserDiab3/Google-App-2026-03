@@ -110,4 +110,21 @@ assertClose(mergedMonthly.lti[4], 1, 'registry-only LTI counted in May');
 assertClose(mergedMonthly.recordables[4], 1, 'registry LTI is recordable');
 assertClose(mergedMonthly.totalIncidents[4], 2, 'registry + incidents counted in May');
 
+// لا يُعدّ سجل مرتبط بنفس incidentId مرتين
+const linkedFixtures = {
+    employees: fixtures.employees,
+    incidents: [
+        { id: 'INC-1', date: '2026-06-01', title: 'حادث 1' },
+        { id: 'INC-2', date: '2026-06-02', title: 'حادث 2' }
+    ],
+    incidentsRegistry: [
+        { id: 'INCR-1', incidentId: 'INC-1', incidentDate: '2026-06-01' },
+        { id: 'INCR-2', incidentId: 'INC-2', incidentDate: '2026-06-02' },
+        { id: 'INCR-3', incidentId: 'INC-DELETED', incidentDate: '2026-06-03', title: 'يتيم' }
+    ]
+};
+assertEq(HseMetrics.getUnifiedIncidents(linkedFixtures).length, 3, 'linked registry rows not double-counted; orphan kept');
+const linkedMonthly = HseMetrics.buildMonthlyBase(2026, linkedFixtures);
+assertClose(linkedMonthly.totalIncidents[5], 3, 'June incidents: 2 linked + 1 orphan registry');
+
 console.log('hse-metrics-selftest: OK');
