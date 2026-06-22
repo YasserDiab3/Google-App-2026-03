@@ -3781,7 +3781,7 @@ const Dashboard = {
                 : (typeof AppState !== 'undefined' && AppState.appData ? AppState.appData : {});
 
             const snap = HseMetrics.getDashboardSnapshot(dataBundle);
-            const f = snap.formatted || {};
+            const rates = snap.rates || {};
 
             const updateOneSafetyValue = (elementId, formattedValue) => {
                 const el = document.getElementById(elementId);
@@ -3791,11 +3791,11 @@ const Dashboard = {
                 }
             };
 
-            updateOneSafetyValue('trir-value', this.formatNumber(parseFloat(f.trir || 0)));
-            updateOneSafetyValue('afr-value', this.formatNumber(parseFloat(f.afr || 0)));
-            updateOneSafetyValue('far-value', this.formatNumber(parseFloat(f.far || 0)));
-            updateOneSafetyValue('fr-value', this.formatNumber(parseFloat(f.fr || 0)));
-            updateOneSafetyValue('lti-value', this.formatNumber(parseInt(snap.rates?.ltiCount || 0, 10)));
+            updateOneSafetyValue('trir-value', this.formatMetricRate(rates.trir, 2));
+            updateOneSafetyValue('afr-value', this.formatMetricRate(rates.afr, 2));
+            updateOneSafetyValue('far-value', this.formatMetricRate(rates.far, 4));
+            updateOneSafetyValue('fr-value', this.formatMetricRate(rates.fr, 2));
+            updateOneSafetyValue('lti-value', this.formatNumber(rates.ltiCount || 0));
 
             if (typeof Utils !== 'undefined' && Utils.safeLog) {
                 Utils.safeLog('📊 مؤشرات السلامة (HseMetrics YTD):', {
@@ -4581,6 +4581,22 @@ const Dashboard = {
         } catch (error) {
             Utils.safeWarn(`⚠️ خطأ في تحديث ${elementId}:`, error);
         }
+    },
+
+    /**
+     * تنسيق معدلات السلامة (كسور عشرية) — LTI يبقى عدداً صحيحاً عبر formatNumber.
+     */
+    formatMetricRate(number, decimals = 2) {
+        if (typeof HseMetrics !== 'undefined' && HseMetrics.formatRateDisplay) {
+            return HseMetrics.formatRateDisplay(number, decimals);
+        }
+        const numValue = Number(number);
+        if (!Number.isFinite(numValue)) return '0';
+        return numValue.toLocaleString('en-US', {
+            minimumFractionDigits: decimals,
+            maximumFractionDigits: decimals,
+            useGrouping: true
+        });
     },
 
     /**

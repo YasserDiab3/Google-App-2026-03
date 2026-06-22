@@ -191,8 +191,18 @@
     function getUnifiedIncidents(appData) {
         const incidents = Array.isArray(appData?.incidents) ? appData.incidents : [];
         const registry = Array.isArray(appData?.incidentsRegistry) ? appData.incidentsRegistry : [];
-        if (incidents.length > 0) return incidents;
-        return registry;
+        if (incidents.length === 0) return registry;
+        const ids = new Set(
+            incidents
+                .map((r) => String(r?.id || r?.incidentId || '').trim())
+                .filter(Boolean)
+        );
+        const extra = registry.filter((r) => {
+            if (!r) return false;
+            const id = String(r.id || r.incidentId || r.registryId || '').trim();
+            return id && !ids.has(id);
+        });
+        return extra.length ? incidents.concat(extra) : incidents;
     }
 
     function isLostTimeIncident(record, registryEntry) {
@@ -257,7 +267,23 @@
 
     function formatRate(value, decimals) {
         const d = Number.isFinite(decimals) ? decimals : 2;
-        return (parseFloat(value) || 0).toFixed(d);
+        const n = parseFloat(value);
+        if (!Number.isFinite(n)) return (0).toFixed(d);
+        return n.toFixed(d);
+    }
+
+    /** تنسيق عرض المعدلات في الواجهة (فواصل + منازل عشرية) */
+    function formatRateDisplay(value, decimals) {
+        const d = Number.isFinite(decimals) ? decimals : 2;
+        const n = parseFloat(value);
+        if (!Number.isFinite(n)) {
+            return (0).toLocaleString('en-US', { minimumFractionDigits: d, maximumFractionDigits: d });
+        }
+        return n.toLocaleString('en-US', {
+            minimumFractionDigits: d,
+            maximumFractionDigits: d,
+            useGrouping: true
+        });
     }
 
     function computeRates(totals, multipliers) {
@@ -349,6 +375,20 @@
         return year === now.getFullYear() ? now.getMonth() : 11;
     }
 
+    function resolveYtdManHours(monthlyBase, ytdLimit) {
+        const summed = sumSlice(monthlyBase.manHours, ytdLimit);
+        const ls = typeof localStorage !== 'undefined' ? localStorage : null;
+        if (!ls) return summed;
+        const raw = ls.getItem('hse_total_work_hours');
+        if (raw == null || String(raw).trim() === '') return summed;
+        const annual = parseNum(String(raw).replace(/,/g, ''));
+        if (!Number.isFinite(annual) || annual <= 0) return summed;
+        const monthsElapsed = Math.min(ytdLimit + 1, 12);
+        const mo = parseNum(ls.getItem('hse_work_months_per_year'));
+        const monthsPerYear = Number.isFinite(mo) && mo > 0 ? mo : 12;
+        return annual * (monthsElapsed / monthsPerYear);
+    }
+
     function aggregateYtd(monthlyBase, ytdLimit) {
         return {
             recordables: sumSlice(monthlyBase.recordables, ytdLimit),
@@ -356,7 +396,7 @@
             fatalities: sumSlice(monthlyBase.fatalities, ytdLimit),
             lti: sumSlice(monthlyBase.lti, ytdLimit),
             daysLost: sumSlice(monthlyBase.daysLost, ytdLimit),
-            manHours: sumSlice(monthlyBase.manHours, ytdLimit)
+            manHours: resolveYtdManHours(monthlyBase, ytdLimit)
         };
     }
 
@@ -469,6 +509,8 @@
         computeRate,
         computeRates,
         formatRate,
+        formatRateDisplay,
+        resolveYtdManHours,
         buildMonthlyBase,
         buildMonthlyRateSeries,
         aggregatePeriod,
