@@ -3022,7 +3022,7 @@ const PTW = {
                             <label class="block text-sm font-semibold text-gray-700 mb-2">
                                 <i class="fas fa-search ml-2"></i>${t('module.ptw.registry.search', 'بحث')}
                             </label>
-                            <input type="text" id="registry-search" class="form-input" placeholder="${t('module.ptw.registry.searchPlaceholder', 'ابحث برقم التصريح أو الوصف...')}">
+                            <input type="text" id="registry-search" class="form-input" placeholder="${t('module.ptw.registry.searchPlaceholder', 'ابحث برقم التصريح الورقي أو المسلسل أو الوصف...')}">
                         </div>
                         <div>
                             <label class="block text-sm font-semibold text-gray-700 mb-2">
@@ -8653,11 +8653,90 @@ const PTW = {
         this.applyRegistryFilters();
     },
 
+    _normalizeRegistrySearchText(value) {
+        return String(value ?? '')
+            .trim()
+            .replace(/\s+/g, ' ')
+            .replace(/[أإآٱ]/g, 'ا')
+            .replace(/ة/g, 'ه')
+            .replace(/ى/g, 'ي')
+            .toLowerCase();
+    },
+
+    _getLinkedPermitForRegistryEntry(entry) {
+        if (!entry || entry.isManualEntry) return null;
+        const pid = String(entry.permitId || '').trim();
+        if (!pid) return null;
+        const list = Array.isArray(AppState?.appData?.ptw) ? AppState.appData.ptw : [];
+        return list.find(p => p && (String(p.id) === pid || String(p.permitId || '') === pid)) || null;
+    },
+
+    _getRegistryEntrySearchHaystack(entry) {
+        if (!entry) return [];
+        const linked = this._getLinkedPermitForRegistryEntry(entry);
+        const permitTypeText = (() => {
+            try { return this.getPermitTypeDisplay(entry); } catch (_e) { return ''; }
+        })();
+        const statusText = (() => {
+            try { return this.statusLabel(entry.status); } catch (_e) { return String(entry.status || ''); }
+        })();
+        const displayNo = (() => {
+            try { return this.getPermitDisplayNumber(entry); } catch (_e) { return ''; }
+        })();
+        const values = [
+            entry.paperPermitNumber,
+            entry.paperPermitNo,
+            entry.permitNumber,
+            entry.sequentialNumber,
+            entry.permitId,
+            entry.id,
+            displayNo,
+            entry.workDescription,
+            entry.requestingParty,
+            entry.authorizedParty,
+            entry.location,
+            entry.sublocation,
+            entry.supervisor1,
+            entry.supervisor2,
+            permitTypeText,
+            statusText,
+            linked?.paperPermitNumber,
+            linked?.paperPermitNo,
+            linked?.permitNumber,
+            linked?.id,
+            linked?.workDescription
+        ];
+        return values
+            .map(v => String(v ?? '').trim())
+            .filter(v => v && v !== '—' && v !== 'غير محدد' && v !== '-');
+    },
+
+    _registryEntryMatchesSearch(entry, rawSearchTerm) {
+        const term = this._normalizeRegistrySearchText(rawSearchTerm);
+        if (!term) return true;
+
+        const haystack = this._getRegistryEntrySearchHaystack(entry);
+        if (haystack.some(v => this._normalizeRegistrySearchText(v).includes(term))) {
+            return true;
+        }
+
+        const termDigits = String(rawSearchTerm || '').replace(/\D/g, '');
+        if (termDigits && /^\d+$/.test(String(rawSearchTerm || '').trim())) {
+            return haystack.some(v => {
+                const digits = String(v).replace(/\D/g, '');
+                return digits && (digits === termDigits || digits.includes(termDigits));
+            });
+        }
+
+        return false;
+    },
+
     /**
      * تطبيق الفلاتر على السجل
      */
     applyRegistryFilters() {
-        const searchTerm = document.getElementById('registry-search')?.value.toLowerCase() || '';
+        const searchRaw = document.getElementById('registry-search')?.value.trim() || '';
+        const searchTerm = searchRaw.toLowerCase();
         const statusFilter = document.getElementById('registry-filter-status')?.value || '';
         const dateFromFilter = document.getElementById('registry-filter-date-from')?.value || '';
         const dateToFilter = document.getElementById('registry-filter-date-to')?.value || '';
@@ -8676,7 +8755,11 @@ const PTW = {
 
             if (!entry) { row.style.display = 'none'; return; }
 
-            if (searchTerm && !rowText.includes(searchTerm)) show = false;
+            if (searchRaw) {
+                const matchesSearch = this._registryEntryMatchesSearch(entry, searchRaw)
+                    || (searchTerm && rowText.includes(searchTerm));
+                if (!matchesSearch) show = false;
+            }
             if (statusFilter && entry.status !== statusFilter) show = false;
             const filterDateSource = entry.timeFrom || entry.openDate;
             if (dateFromFilter) {
