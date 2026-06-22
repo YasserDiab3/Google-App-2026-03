@@ -921,6 +921,37 @@ const Settings = {
                                 </div>
                             </div>
                         </div>
+                        ${isAdmin ? `
+                        <div class="content-card mt-4">
+                            <div class="card-header">
+                                <h2 class="card-title"><i class="fas fa-calendar-check ml-2"></i>تقرير السلامة الشهري</h2>
+                            </div>
+                            <div class="card-body space-y-4">
+                                <p class="text-sm text-gray-600 mb-2">
+                                    <i class="fas fa-info-circle ml-2"></i>
+                                    تقرير PDF ثابت يشمل إحصائيات الشهر ومؤشرات HSE — هيدر وفوتر النظام
+                                </p>
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div>
+                                        <label for="monthly-safety-year" class="block text-sm font-semibold text-gray-700 mb-2">السنة</label>
+                                        <select id="monthly-safety-year" class="form-input w-full">
+                                            ${this.renderMonthlySafetyYearOptions()}
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label for="monthly-safety-month" class="block text-sm font-semibold text-gray-700 mb-2">الشهر</label>
+                                        <select id="monthly-safety-month" class="form-input w-full">
+                                            ${this.renderMonthlySafetyMonthOptions()}
+                                        </select>
+                                    </div>
+                                </div>
+                                <button id="generate-monthly-safety-report-btn" class="btn-primary w-full md:w-auto">
+                                    <i class="fas fa-file-pdf ml-2"></i>
+                                    تقرير السلامة الشهري (PDF)
+                                </button>
+                            </div>
+                        </div>
+                        ` : ''}
                     </div>
                 </div>
             </div>
@@ -1464,6 +1495,10 @@ const Settings = {
             const generateFullBtn = document.getElementById('generate-full-report-btn');
             if (generateFullBtn) {
                 generateFullBtn.addEventListener('click', () => Settings.generateReport('full'));
+            }
+            const generateMonthlySafetyBtn = document.getElementById('generate-monthly-safety-report-btn');
+            if (generateMonthlySafetyBtn) {
+                generateMonthlySafetyBtn.addEventListener('click', () => Settings.generateMonthlySafetyReport());
             }
 
             const checkUpdateBtn = document.getElementById('settings-check-app-update-btn');
@@ -4100,6 +4135,65 @@ const Settings = {
             Loading.hide();
             Utils.safeError('فشل إنشاء الأوراق:', error);
             Notification.error('فشل إنشاء الأوراق: ' + error.message);
+        }
+    },
+
+    renderMonthlySafetyYearOptions() {
+        const nowYear = new Date().getFullYear();
+        let html = '';
+        for (let y = nowYear + 1; y >= nowYear - 3; y -= 1) {
+            html += `<option value="${y}"${y === nowYear ? ' selected' : ''}>${y}</option>`;
+        }
+        return html;
+    },
+
+    renderMonthlySafetyMonthOptions() {
+        const labels = [
+            'يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو',
+            'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'
+        ];
+        const currentMonth = new Date().getMonth() + 1;
+        return labels.map((label, index) => {
+            const value = index + 1;
+            return `<option value="${value}"${value === currentMonth ? ' selected' : ''}>${label}</option>`;
+        }).join('');
+    },
+
+    async generateMonthlySafetyReport() {
+        if (!this.isCurrentUserAdmin()) {
+            const msg = (typeof Reports !== 'undefined' && Reports.getTranslations)
+                ? Reports.getTranslations().t('msg.adminOnlyReport')
+                : 'تصدير تقرير السلامة الشهري متاح لمدير النظام فقط';
+            Notification.error(msg);
+            return;
+        }
+        if (typeof Reports === 'undefined' || typeof Reports.generateAndExport !== 'function') {
+            Notification.error('نظام التقارير غير متاح حالياً');
+            return;
+        }
+
+        const yearEl = document.getElementById('monthly-safety-year');
+        const monthEl = document.getElementById('monthly-safety-month');
+        const year = yearEl ? parseInt(yearEl.value, 10) : NaN;
+        const month = monthEl ? parseInt(monthEl.value, 10) : NaN;
+        const period = typeof Reports.buildMonthlyPeriod === 'function'
+            ? Reports.buildMonthlyPeriod(year, month)
+            : null;
+
+        const { t } = Reports.getTranslations ? Reports.getTranslations() : { t: (k) => k };
+        if (!period) {
+            Notification.error(t('msg.invalidMonthYear'));
+            return;
+        }
+
+        Loading.show();
+        try {
+            await Reports.generateAndExport('monthly-safety', { period });
+            Loading.hide();
+            Notification.success('تم إنشاء تقرير السلامة الشهري بنجاح');
+        } catch (error) {
+            Loading.hide();
+            Notification.error('فشل إنشاء التقرير: ' + (error && error.message ? error.message : String(error)));
         }
     },
 

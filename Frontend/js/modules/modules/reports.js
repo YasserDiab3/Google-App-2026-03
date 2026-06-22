@@ -96,7 +96,24 @@ const Reports = {
                 'report.employeeTrainingPrograms': 'عدد برامج التدريب للموظفين',
                 'report.employeeTrainingTopics': 'عدد الموضوعات التدريبية للموظفين',
                 'report.contractorTrainingPrograms': 'عدد برامج تدريب المقاولين',
-                'report.contractorTrainingTopics': 'عدد الموضوعات التدريبية للمقاولين'
+                'report.contractorTrainingTopics': 'عدد الموضوعات التدريبية للمقاولين',
+                'report.monthlySafety': 'تقرير السلامة الشهري',
+                'report.monthlySafetyTitle': 'تقرير السلامة الشهري',
+                'report.hseSection': 'مؤشرات السلامة والصحة المهنية (HSE)',
+                'report.hse.lti': 'حوادث توقف العمل (LTI)',
+                'report.hse.recordables': 'الحوادث القابلة للتسجيل (Recordables)',
+                'report.hse.injuries': 'إجمالي الإصابات',
+                'report.hse.fatalities': 'الوفيات',
+                'report.hse.daysLost': 'أيام العمل الضائعة',
+                'report.hse.manHours': 'ساعات العمل',
+                'report.hse.trir': 'TRIR',
+                'report.hse.afr': 'AFR',
+                'report.hse.far': 'FAR',
+                'report.hse.fr': 'FR (LTIR)',
+                'report.hse.sr': 'SR',
+                'report.hse.ir': 'IR',
+                'msg.adminOnlyReport': 'تصدير تقرير السلامة الشهري متاح لمدير النظام فقط',
+                'msg.invalidMonthYear': 'يرجى اختيار شهر وسنة صالحين'
             },
             en: {
                 'title': 'Reports',
@@ -171,7 +188,24 @@ const Reports = {
                 'report.employeeTrainingPrograms': 'Employee Training Programs',
                 'report.employeeTrainingTopics': 'Employee Training Topics',
                 'report.contractorTrainingPrograms': 'Contractor Training Programs',
-                'report.contractorTrainingTopics': 'Contractor Training Topics'
+                'report.contractorTrainingTopics': 'Contractor Training Topics',
+                'report.monthlySafety': 'Monthly Safety Report',
+                'report.monthlySafetyTitle': 'Monthly Safety Report',
+                'report.hseSection': 'Health & Safety (HSE) Indicators',
+                'report.hse.lti': 'Lost Time Incidents (LTI)',
+                'report.hse.recordables': 'Recordable Incidents',
+                'report.hse.injuries': 'Total Injuries',
+                'report.hse.fatalities': 'Fatalities',
+                'report.hse.daysLost': 'Days Lost',
+                'report.hse.manHours': 'Man-Hours Worked',
+                'report.hse.trir': 'TRIR',
+                'report.hse.afr': 'AFR',
+                'report.hse.far': 'FAR',
+                'report.hse.fr': 'FR (LTIR)',
+                'report.hse.sr': 'SR',
+                'report.hse.ir': 'IR',
+                'msg.adminOnlyReport': 'Monthly safety report export is available to system administrators only',
+                'msg.invalidMonthYear': 'Please select a valid month and year'
             }
         };
         return {
@@ -457,7 +491,90 @@ const Reports = {
         }
     },
 
-    async generateAndExport(type) {
+    buildMonthlyPeriod(year, month) {
+        const y = parseInt(year, 10);
+        const m = parseInt(month, 10);
+        if (!Number.isFinite(y) || !Number.isFinite(m) || m < 1 || m > 12) {
+            return null;
+        }
+        const startDate = new Date(y, m - 1, 1);
+        const endDate = new Date(y, m, 0, 23, 59, 59, 999);
+        return {
+            type: 'monthly',
+            year: y,
+            month: m,
+            startDate,
+            endDate,
+            label: `${y}-${String(m).padStart(2, '0')}`
+        };
+    },
+
+    _formatHseRate(value, decimals) {
+        if (typeof HseMetrics !== 'undefined' && typeof HseMetrics.formatRateDisplay === 'function') {
+            return HseMetrics.formatRateDisplay(value, decimals);
+        }
+        const n = parseFloat(value);
+        if (!Number.isFinite(n)) return '0';
+        return n.toFixed(decimals);
+    },
+
+    generateMonthlySafetyHseSection(data, period) {
+        const { t } = this.getTranslations();
+        if (typeof HseMetrics === 'undefined' || typeof HseMetrics.aggregatePeriod !== 'function') {
+            return `<p style="color:#666;">${Utils.escapeHTML(t('report.hseSection'))}: —</p>`;
+        }
+        const startDate = period?.startDate ? new Date(period.startDate) : null;
+        const endDate = period?.endDate ? new Date(period.endDate) : null;
+        if (!startDate || !endDate || isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+            return '';
+        }
+        const totals = HseMetrics.aggregatePeriod(startDate, endDate, data);
+        const multipliers = typeof HseMetrics.loadMultipliers === 'function'
+            ? HseMetrics.loadMultipliers()
+            : HseMetrics.DEFAULT_MULTIPLIERS || {};
+        const rates = typeof HseMetrics.computeRates === 'function'
+            ? HseMetrics.computeRates(totals, multipliers)
+            : {};
+
+        const fmtInt = (v) => {
+            const n = parseInt(v, 10) || 0;
+            return n.toLocaleString('en-US');
+        };
+
+        return `
+            <h3 style="margin-top: 30px; margin-bottom: 15px; font-weight: bold; color: #333;">${t('report.hseSection')}</h3>
+            <table style="margin-bottom: 30px;">
+                <thead>
+                    <tr>
+                        <th>${t('report.indicator')}</th>
+                        <th>${t('report.value')}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr><td>${t('report.hse.lti')}</td><td dir="ltr">${fmtInt(totals.lti)}</td></tr>
+                    <tr><td>${t('report.hse.recordables')}</td><td dir="ltr">${fmtInt(totals.recordables)}</td></tr>
+                    <tr><td>${t('report.hse.injuries')}</td><td dir="ltr">${fmtInt(totals.injuries)}</td></tr>
+                    <tr><td>${t('report.hse.fatalities')}</td><td dir="ltr">${fmtInt(totals.fatalities)}</td></tr>
+                    <tr><td>${t('report.hse.daysLost')}</td><td dir="ltr">${fmtInt(totals.daysLost)}</td></tr>
+                    <tr><td>${t('report.hse.manHours')}</td><td dir="ltr">${fmtInt(totals.manHours)}</td></tr>
+                    <tr><td>${t('report.hse.trir')}</td><td dir="ltr">${this._formatHseRate(rates.trir, 2)}</td></tr>
+                    <tr><td>${t('report.hse.afr')}</td><td dir="ltr">${this._formatHseRate(rates.afr, 2)}</td></tr>
+                    <tr><td>${t('report.hse.far')}</td><td dir="ltr">${this._formatHseRate(rates.far, 4)}</td></tr>
+                    <tr><td>${t('report.hse.fr')}</td><td dir="ltr">${this._formatHseRate(rates.fr, 2)}</td></tr>
+                    <tr><td>${t('report.hse.sr')}</td><td dir="ltr">${this._formatHseRate(rates.sr, 2)}</td></tr>
+                    <tr><td>${t('report.hse.ir')}</td><td dir="ltr">${this._formatHseRate(rates.ir, 2)}</td></tr>
+                </tbody>
+            </table>
+        `;
+    },
+
+    generateMonthlySafetyReport(data, period) {
+        const periodSummary = this.generatePeriodSummaryReport(data, period);
+        const hseSection = this.generateMonthlySafetyHseSection(data, period);
+        return `${periodSummary}${hseSection}`;
+    },
+
+    async generateAndExport(type, options = {}) {
         let printWindow = null;
         try {
             const { t } = this.getTranslations();
@@ -476,15 +593,15 @@ const Reports = {
             printWindow.document.write('<html dir="rtl"><body style="font-family: Arial; padding: 20px; text-align: center;"><p>جاري تحضير التقرير...</p></body></html>');
             printWindow.document.close();
 
-            if (type === 'full') {
-                await this.ensureTrainingDataForReport();
-            } else if (type === 'period') {
+            if (type === 'full' || type === 'period' || type === 'monthly-safety') {
                 await this.ensureTrainingDataForReport();
             }
 
             const data = AppState.appData;
             let title = '';
             let content = '';
+            let formCode = `REPORT-${String(type).toUpperCase()}-${new Date().toISOString().slice(0, 10)}`;
+            let pdfMeta = { version: AppState?.companySettings?.formVersion || '1.0' };
 
             switch (type) {
                 case 'incidents':
@@ -507,8 +624,8 @@ const Reports = {
                     }
                     content = this.generateTrainingReport(trainingData);
                     break;
-                case 'period':
-                    const period = await this._askForPeriod();
+                case 'period': {
+                    const period = options.period || await this._askForPeriod();
                     if (!period) {
                         if (printWindow) printWindow.close();
                         return;
@@ -516,6 +633,26 @@ const Reports = {
                     title = `${t('report.periodSummary')} - ${period.label}`;
                     content = this.generatePeriodSummaryReport(data, period);
                     break;
+                }
+                case 'monthly-safety': {
+                    const monthlyPeriod = options.period || null;
+                    if (!monthlyPeriod) {
+                        if (printWindow) printWindow.close();
+                        Notification.error(t('msg.invalidMonthYear'));
+                        return;
+                    }
+                    title = `${t('report.monthlySafetyTitle')} — ${monthlyPeriod.label}`;
+                    content = this.generateMonthlySafetyReport(data, monthlyPeriod);
+                    formCode = `MSR-${monthlyPeriod.label}`;
+                    pdfMeta = {
+                        source: 'MonthlySafetyReport',
+                        titleEn: 'Monthly Safety Report',
+                        titleAr: t('report.monthlySafetyTitle'),
+                        version: AppState?.companySettings?.formVersion || '1.0',
+                        compactPdfFooter: true
+                    };
+                    break;
+                }
                 case 'full':
                     title = t('report.full');
                     content = this.generateFullReport(data);
@@ -525,9 +662,8 @@ const Reports = {
                     throw new Error(t('msg.unknownReport'));
             }
 
-            const formCode = `REPORT-${type.toUpperCase()}-${new Date().toISOString().slice(0, 10)}`;
             const htmlContent = typeof FormHeader !== 'undefined' && FormHeader.generatePDFHTML
-                ? FormHeader.generatePDFHTML(formCode, title, content, false, true, { version: '1.0' }, new Date().toISOString(), new Date().toISOString())
+                ? FormHeader.generatePDFHTML(formCode, title, content, false, true, pdfMeta, new Date().toISOString(), new Date().toISOString())
                 : `<html><body>${content}</body></html>`;
 
             printWindow.document.open();
