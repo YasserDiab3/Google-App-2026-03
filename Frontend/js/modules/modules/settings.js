@@ -929,9 +929,9 @@ const Settings = {
                             <div class="card-body space-y-4">
                                 <p class="text-sm text-gray-600 mb-2">
                                     <i class="fas fa-info-circle ml-2"></i>
-                                    تقرير PDF ثابت يشمل إحصائيات الشهر ومؤشرات HSE — هيدر وفوتر النظام
+                                    تقرير PDF بنمط موحّد — إحصائيات الشهر + HSE — تحميل مباشر (عربي / إنجليزي)
                                 </p>
-                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                                     <div>
                                         <label for="monthly-safety-year" class="block text-sm font-semibold text-gray-700 mb-2">السنة</label>
                                         <select id="monthly-safety-year" class="form-input w-full">
@@ -944,11 +944,24 @@ const Settings = {
                                             ${this.renderMonthlySafetyMonthOptions()}
                                         </select>
                                     </div>
+                                    <div>
+                                        <label for="monthly-safety-lang" class="block text-sm font-semibold text-gray-700 mb-2">لغة التقرير</label>
+                                        <select id="monthly-safety-lang" class="form-input w-full">
+                                            <option value="ar">العربية</option>
+                                            <option value="en">English</option>
+                                        </select>
+                                    </div>
                                 </div>
-                                <button id="generate-monthly-safety-report-btn" class="btn-primary w-full md:w-auto">
-                                    <i class="fas fa-file-pdf ml-2"></i>
-                                    تقرير السلامة الشهري (PDF)
-                                </button>
+                                <div class="flex flex-wrap gap-3">
+                                    <button type="button" id="generate-monthly-safety-report-ar-btn" class="btn-primary" data-msr-lang="ar">
+                                        <i class="fas fa-download ml-2"></i>
+                                        تحميل PDF (عربي)
+                                    </button>
+                                    <button type="button" id="generate-monthly-safety-report-en-btn" class="btn-secondary" data-msr-lang="en">
+                                        <i class="fas fa-download ml-2"></i>
+                                        Download PDF (English)
+                                    </button>
+                                </div>
                             </div>
                         </div>
                         ` : ''}
@@ -1496,9 +1509,13 @@ const Settings = {
             if (generateFullBtn) {
                 generateFullBtn.addEventListener('click', () => Settings.generateReport('full'));
             }
-            const generateMonthlySafetyBtn = document.getElementById('generate-monthly-safety-report-btn');
-            if (generateMonthlySafetyBtn) {
-                generateMonthlySafetyBtn.addEventListener('click', () => Settings.generateMonthlySafetyReport());
+            const generateMonthlySafetyArBtn = document.getElementById('generate-monthly-safety-report-ar-btn');
+            const generateMonthlySafetyEnBtn = document.getElementById('generate-monthly-safety-report-en-btn');
+            if (generateMonthlySafetyArBtn) {
+                generateMonthlySafetyArBtn.addEventListener('click', () => Settings.generateMonthlySafetyReport('ar'));
+            }
+            if (generateMonthlySafetyEnBtn) {
+                generateMonthlySafetyEnBtn.addEventListener('click', () => Settings.generateMonthlySafetyReport('en'));
             }
 
             const checkUpdateBtn = document.getElementById('settings-check-app-update-btn');
@@ -4159,7 +4176,7 @@ const Settings = {
         }).join('');
     },
 
-    async generateMonthlySafetyReport() {
+    async generateMonthlySafetyReport(langOverride) {
         if (!this.isCurrentUserAdmin()) {
             const msg = (typeof Reports !== 'undefined' && Reports.getTranslations)
                 ? Reports.getTranslations().t('msg.adminOnlyReport')
@@ -4167,15 +4184,17 @@ const Settings = {
             Notification.error(msg);
             return;
         }
-        if (typeof Reports === 'undefined' || typeof Reports.generateAndExport !== 'function') {
+        if (typeof Reports === 'undefined' || typeof Reports.downloadMonthlySafetyReport !== 'function') {
             Notification.error('نظام التقارير غير متاح حالياً');
             return;
         }
 
         const yearEl = document.getElementById('monthly-safety-year');
         const monthEl = document.getElementById('monthly-safety-month');
+        const langEl = document.getElementById('monthly-safety-lang');
         const year = yearEl ? parseInt(yearEl.value, 10) : NaN;
         const month = monthEl ? parseInt(monthEl.value, 10) : NaN;
+        const lang = langOverride || (langEl ? langEl.value : 'ar') || 'ar';
         const period = typeof Reports.buildMonthlyPeriod === 'function'
             ? Reports.buildMonthlyPeriod(year, month)
             : null;
@@ -4186,14 +4205,16 @@ const Settings = {
             return;
         }
 
-        Loading.show();
+        Loading.show(lang === 'en' ? 'Preparing monthly safety report...' : 'جاري تحضير تقرير السلامة الشهري...');
         try {
-            await Reports.generateAndExport('monthly-safety', { period });
+            const ok = await Reports.downloadMonthlySafetyReport(period, lang);
             Loading.hide();
-            Notification.success('تم إنشاء تقرير السلامة الشهري بنجاح');
+            if (ok) {
+                Notification.success(lang === 'en' ? 'Monthly safety report downloaded' : 'تم تحميل تقرير السلامة الشهري بنجاح');
+            }
         } catch (error) {
             Loading.hide();
-            Notification.error('فشل إنشاء التقرير: ' + (error && error.message ? error.message : String(error)));
+            Notification.error('فشل تحميل التقرير: ' + (error && error.message ? error.message : String(error)));
         }
     },
 

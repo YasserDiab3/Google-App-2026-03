@@ -518,60 +518,515 @@ const Reports = {
         return n.toFixed(decimals);
     },
 
-    generateMonthlySafetyHseSection(data, period) {
-        const { t } = this.getTranslations();
-        if (typeof HseMetrics === 'undefined' || typeof HseMetrics.aggregatePeriod !== 'function') {
-            return `<p style="color:#666;">${Utils.escapeHTML(t('report.hseSection'))}: —</p>`;
-        }
-        const startDate = period?.startDate ? new Date(period.startDate) : null;
-        const endDate = period?.endDate ? new Date(period.endDate) : null;
-        if (!startDate || !endDate || isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
-            return '';
-        }
-        const totals = HseMetrics.aggregatePeriod(startDate, endDate, data);
-        const multipliers = typeof HseMetrics.loadMultipliers === 'function'
-            ? HseMetrics.loadMultipliers()
-            : HseMetrics.DEFAULT_MULTIPLIERS || {};
-        const rates = typeof HseMetrics.computeRates === 'function'
-            ? HseMetrics.computeRates(totals, multipliers)
-            : {};
-
-        const fmtInt = (v) => {
-            const n = parseInt(v, 10) || 0;
-            return n.toLocaleString('en-US');
+    getMonthlySafetyStrings(lang) {
+        const isAr = lang !== 'en';
+        const monthNamesEn = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+        const monthNamesAr = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
+        return {
+            dir: isAr ? 'rtl' : 'ltr',
+            lang: isAr ? 'ar' : 'en',
+            monthNames: isAr ? monthNamesAr : monthNamesEn,
+            title: isAr ? 'تقرير السلامة الشهري' : 'Monthly Safety Report',
+            generatedOn: isAr ? 'تاريخ الإنشاء' : 'Generated On',
+            projectSite: isAr ? 'المشروع / الموقع' : 'Project / Site',
+            reportingMonth: isAr ? 'شهر التقرير' : 'Reporting Month',
+            preparedBy: isAr ? 'أُعد بواسطة' : 'Prepared By',
+            client: isAr ? 'العميل' : 'Client',
+            location: isAr ? 'الموقع' : 'Location',
+            manHoursMonth: isAr ? 'ساعات العمل (الشهر)' : 'MAN-HOURS (MONTH)',
+            recordables: isAr ? 'الحوادث القابلة للتسجيل (TRC)' : 'RECORDABLES (TRC)',
+            trir: isAr ? 'TRIR (لكل 200 ألف)' : 'TRIR (PER 200K)',
+            afr: isAr ? 'AFR (لكل مليون)' : 'AFR (PER 1M)',
+            fr: isAr ? 'FR (LTI لكل مليون)' : 'FR (LTI PER 1M)',
+            sr: isAr ? 'SR (الشدة لكل مليون)' : 'SR (SEVERITY PER 1M)',
+            hseActivities: isAr ? 'أنشطة HSE (الأعداد)' : 'HSE Activities (Counts)',
+            activity: isAr ? 'النشاط' : 'Activity',
+            count: isAr ? 'العدد' : 'Count',
+            trainingsConducted: isAr ? 'التدريبات المنفذة' : 'Trainings Conducted',
+            participantsTrained: isAr ? 'المتدربون' : 'Participants Trained',
+            auditsInspections: isAr ? 'التدقيق / الفحوصات' : 'Audits / Inspections',
+            ptwsIssued: isAr ? 'تصاريح العمل الصادرة' : 'PTWs Issued',
+            observations: isAr ? 'الملاحظات / بطاقات التوقف' : 'Observations / STOP Cards',
+            toolboxTalks: isAr ? 'اجتماعات السلامة القصيرة' : 'Toolbox Talks (Count)',
+            manpowerStatus: isAr ? 'الوضع الشهري للقوى العاملة' : 'Monthly Status of Manpower',
+            metric: isAr ? 'المؤشر' : 'Metric',
+            thisMonth: isAr ? 'هذا الشهر' : 'This Month',
+            cumulative: isAr ? 'تراكمي' : 'Cumulative',
+            manpowerAvg: isAr ? 'متوسط القوى العاملة' : 'Manpower (Avg.)',
+            totalManDays: isAr ? 'إجمالي أيام العمل' : 'Total Man-days',
+            totalManHours: isAr ? 'إجمالي ساعات العمل' : 'Total Man-hours',
+            accidentReport: isAr ? 'تقرير الحوادث الشهري' : 'Monthly Accident Report',
+            description: isAr ? 'الوصف' : 'Description',
+            totalAccidents: isAr ? 'إجمالي عدد الحوادث' : 'Total Number of Accidents',
+            reportableAccidents: isAr ? 'أ) حوادث قابلة للتبليغ' : 'a) Reportable Accidents',
+            minorAccidents: isAr ? 'ب) حوادث بسيطة' : 'b) Minor Accidents',
+            firstAidCases: isAr ? 'ج) إسعافات أولية' : 'c) First-aid cases',
+            nearMiss: isAr ? 'د) حوادث وشيكة' : 'd) Near Miss Incidents',
+            manDaysLost: isAr ? 'أيام العمل الضائعة بسبب الحوادث' : 'Man-days lost due to accidents',
+            hseEvents: isAr ? 'أحداث وسجلات HSE' : 'HSE Events & Logs',
+            hseCommittee: isAr ? 'اجتماع لجنة السلامة' : 'HSE Committee Meeting',
+            hseWalks: isAr ? 'جولات السلامة' : 'HSE Walks',
+            hseInduction: isAr ? 'تدريب تعريفي HSE' : 'HSE Induction Training',
+            toolboxTraining: isAr ? 'تدريب اجتماع السلامة القصير' : 'Toolbox Talk Training',
+            hseTraining: isAr ? 'تدريب HSE' : 'HSE Training',
+            date: isAr ? 'التاريخ' : 'Date',
+            withWhom: isAr ? 'مع (من)' : 'With (Whom)',
+            persons: isAr ? 'عدد الأشخاص' : 'No. of Persons',
+            topic: isAr ? 'الموضوع' : 'Topic',
+            participants: isAr ? 'المشاركون' : 'Participants',
+            hseMom: isAr ? 'محضر اجتماع السلامة (MOM)' : 'HSE Meeting (MOM)',
+            discussionPoints: isAr ? 'نقاط النقاش' : 'Discussion Points',
+            status: isAr ? 'الحالة' : 'Status',
+            highlights: isAr ? 'أبرز الإنجازات / المبادرات' : 'Key Highlights / Initiatives',
+            concerns: isAr ? 'المخاوف / الإجراءات' : 'Concerns / Actions',
+            authorization: isAr ? 'الاعتماد' : 'Authorization',
+            preparedBySign: isAr ? 'أُعد بواسطة' : 'Prepared by',
+            reviewedBy: isAr ? 'راجعه' : 'Reviewed by',
+            footerNote: isAr ? 'تقرير نظام إدارة السلامة والصحة المهنية' : 'HSE Management System Report',
+            dash: '—',
+            open: isAr ? 'مفتوح' : 'Open'
         };
-
-        return `
-            <h3 style="margin-top: 30px; margin-bottom: 15px; font-weight: bold; color: #333;">${t('report.hseSection')}</h3>
-            <table style="margin-bottom: 30px;">
-                <thead>
-                    <tr>
-                        <th>${t('report.indicator')}</th>
-                        <th>${t('report.value')}</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr><td>${t('report.hse.lti')}</td><td dir="ltr">${fmtInt(totals.lti)}</td></tr>
-                    <tr><td>${t('report.hse.recordables')}</td><td dir="ltr">${fmtInt(totals.recordables)}</td></tr>
-                    <tr><td>${t('report.hse.injuries')}</td><td dir="ltr">${fmtInt(totals.injuries)}</td></tr>
-                    <tr><td>${t('report.hse.fatalities')}</td><td dir="ltr">${fmtInt(totals.fatalities)}</td></tr>
-                    <tr><td>${t('report.hse.daysLost')}</td><td dir="ltr">${fmtInt(totals.daysLost)}</td></tr>
-                    <tr><td>${t('report.hse.manHours')}</td><td dir="ltr">${fmtInt(totals.manHours)}</td></tr>
-                    <tr><td>${t('report.hse.trir')}</td><td dir="ltr">${this._formatHseRate(rates.trir, 2)}</td></tr>
-                    <tr><td>${t('report.hse.afr')}</td><td dir="ltr">${this._formatHseRate(rates.afr, 2)}</td></tr>
-                    <tr><td>${t('report.hse.far')}</td><td dir="ltr">${this._formatHseRate(rates.far, 4)}</td></tr>
-                    <tr><td>${t('report.hse.fr')}</td><td dir="ltr">${this._formatHseRate(rates.fr, 2)}</td></tr>
-                    <tr><td>${t('report.hse.sr')}</td><td dir="ltr">${this._formatHseRate(rates.sr, 2)}</td></tr>
-                    <tr><td>${t('report.hse.ir')}</td><td dir="ltr">${this._formatHseRate(rates.ir, 2)}</td></tr>
-                </tbody>
-            </table>
-        `;
     },
 
-    generateMonthlySafetyReport(data, period) {
-        const periodSummary = this.generatePeriodSummaryReport(data, period);
-        const hseSection = this.generateMonthlySafetyHseSection(data, period);
-        return `${periodSummary}${hseSection}`;
+    _msrFmtNum(v) {
+        const n = Number(v);
+        if (!Number.isFinite(n)) return '0';
+        return n.toLocaleString('en-US');
+    },
+
+    _msrFmtRate(v, d) {
+        if (typeof HseMetrics !== 'undefined' && HseMetrics.formatRateDisplay) {
+            return HseMetrics.formatRateDisplay(v, d);
+        }
+        return this._formatHseRate(v, d);
+    },
+
+    _msrFmtDate(value, lang) {
+        if (!value) return '—';
+        const d = value instanceof Date ? value : new Date(value);
+        if (Number.isNaN(d.getTime())) return '—';
+        return d.toLocaleDateString(lang === 'ar' ? 'ar-SA' : 'en-GB');
+    },
+
+    _msrInRange(item, dateFields, start, end) {
+        return this._filterArrayByDateRange([item], dateFields, start, end).length > 0;
+    },
+
+    collectMonthlySafetyReportModel(data, period) {
+        const year = period.year;
+        const monthIdx = period.month - 1;
+        const start = new Date(period.startDate);
+        const end = new Date(period.endDate);
+        const yearStart = new Date(year, 0, 1);
+
+        const mult = (typeof HseMetrics !== 'undefined' && HseMetrics.loadMultipliers)
+            ? HseMetrics.loadMultipliers()
+            : { TRIR: 200000, AFR: 1000000, FR: 1000000, SR: 1000000 };
+
+        const monthTotals = (typeof HseMetrics !== 'undefined' && HseMetrics.aggregatePeriod)
+            ? HseMetrics.aggregatePeriod(start, end, data)
+            : { recordables: 0, injuries: 0, fatalities: 0, lti: 0, daysLost: 0, manHours: 0, totalIncidents: 0 };
+
+        const cumTotals = (typeof HseMetrics !== 'undefined' && HseMetrics.aggregatePeriod)
+            ? HseMetrics.aggregatePeriod(yearStart, end, data)
+            : { ...monthTotals };
+
+        const monthRates = (typeof HseMetrics !== 'undefined' && HseMetrics.computeRates)
+            ? HseMetrics.computeRates(monthTotals, mult)
+            : {};
+
+        const monthlyBase = (typeof HseMetrics !== 'undefined' && HseMetrics.buildMonthlyBase)
+            ? HseMetrics.buildMonthlyBase(year, data)
+            : null;
+
+        const firstAidMonth = monthlyBase ? (monthlyBase.firstAid[monthIdx] || 0) : 0;
+        const nltiMonth = monthlyBase ? (monthlyBase.nlti[monthIdx] || 0) : 0;
+        const firstAidCum = monthlyBase && HseMetrics.sumSlice
+            ? HseMetrics.sumSlice(monthlyBase.firstAid, monthIdx) : firstAidMonth;
+        const nltiCum = monthlyBase && HseMetrics.sumSlice
+            ? HseMetrics.sumSlice(monthlyBase.nlti, monthIdx) : nltiMonth;
+
+        const nearmissAll = Array.isArray(data.nearmiss) ? data.nearmiss : [];
+        const nearmissMonth = this._filterArrayByDateRange(nearmissAll, ['date', 'createdAt'], start, end).length;
+        const nearmissCum = this._filterArrayByDateRange(nearmissAll, ['date', 'createdAt'], yearStart, end).length;
+
+        const training = this._filterArrayByDateRange(data.training || [], ['startDate', 'date', 'createdAt'], start, end);
+        const contractorTrainings = this._filterArrayByDateRange(data.contractorTrainings || [], ['date', 'trainingDate', 'startDate', 'createdAt'], start, end);
+        const allTraining = training.concat(contractorTrainings);
+        const participantsTrained = allTraining.reduce((sum, t) => {
+            const n = typeof Training !== 'undefined' && Training.getParticipantsCount
+                ? Training.getParticipantsCount(t)
+                : (Number(t.participantsCount) || (t.participants || []).length || Number(t.traineesCount) || 0);
+            return sum + (Number.isFinite(n) ? n : 0);
+        }, 0);
+
+        const inspections = this._filterArrayByDateRange(
+            (data.periodicInspections || []).concat(data.inspectionTours || []),
+            ['date', 'inspectionDate', 'createdAt', 'startDate'],
+            start,
+            end
+        ).length;
+
+        const ptwCount = this._filterArrayByDateRange(data.ptw || [], ['startDate', 'date', 'createdAt'], start, end).length;
+        const obsCount = this._filterArrayByDateRange(data.dailyObservations || [], ['date', 'createdAt'], start, end).length;
+
+        const meetings = this._filterArrayByDateRange(data.safetyMeetings || [], ['date', 'meetingDate', 'createdAt'], start, end);
+        const toolboxCount = meetings.filter((m) => {
+            const text = `${m.type || ''} ${m.title || ''} ${m.name || ''}`.toLowerCase();
+            return text.includes('toolbox') || text.includes('السلامة القصير') || text.includes('توولبوكس');
+        }).length || allTraining.filter((t) => String(t.name || t.programName || '').toLowerCase().includes('toolbox')).length;
+
+        const workCfg = (typeof HseMetrics !== 'undefined' && HseMetrics.getWorkConfig)
+            ? HseMetrics.getWorkConfig()
+            : { workDaysPerMonth: 22, hoursPerDay: 8 };
+        const manpowerAvg = monthlyBase ? (monthlyBase.employeeCounts[monthIdx] || 0) : 0;
+        const manDaysMonth = Math.round(manpowerAvg * (workCfg.workDaysPerMonth || 22));
+        let manDaysCum = 0;
+        let manpowerCumAvg = 0;
+        if (monthlyBase) {
+            for (let i = 0; i <= monthIdx; i += 1) {
+                manDaysCum += Math.round((monthlyBase.employeeCounts[i] || 0) * (workCfg.workDaysPerMonth || 22));
+            }
+            manpowerCumAvg = monthIdx >= 0
+                ? Math.round(HseMetrics.sumSlice(monthlyBase.employeeCounts, monthIdx) / (monthIdx + 1))
+                : 0;
+        }
+
+        const trainingRows = allTraining.slice(0, 12).map((t) => ({
+            date: t.startDate || t.date || t.createdAt,
+            topic: t.name || t.programName || t.topic || '—',
+            participants: typeof Training !== 'undefined' && Training.getParticipantsCount
+                ? Training.getParticipantsCount(t)
+                : (t.participantsCount || (t.participants || []).length || t.traineesCount || '—')
+        }));
+
+        const walkRows = this._filterArrayByDateRange(data.inspectionTours || [], ['date', 'createdAt', 'startDate'], start, end)
+            .slice(0, 6)
+            .map((w) => ({
+                date: w.date || w.startDate || w.createdAt,
+                withWhom: w.inspectorName || w.conductedBy || w.leader || '—'
+            }));
+
+        const committeeMeetings = meetings.filter((m) => {
+            const text = `${m.type || ''} ${m.title || ''}`.toLowerCase();
+            return text.includes('committee') || text.includes('لجنة');
+        });
+        const momRows = (committeeMeetings.length ? committeeMeetings : meetings).slice(0, 5).map((m) => ({
+            date: m.date || m.meetingDate || m.createdAt,
+            points: m.notes || m.discussion || m.agenda || m.summary || '—',
+            status: m.status || 'Open'
+        }));
+
+        const company = AppState?.companySettings || {};
+        const userName = AppState?.currentUser?.name || AppState?.currentUser?.displayName || '';
+
+        return {
+            generatedAt: new Date(),
+            projectSite: company.name || company.secondaryName || '—',
+            client: company.secondaryName || company.name || '—',
+            location: company.address || '—',
+            preparedBy: userName || '—',
+            monthTotals,
+            cumTotals,
+            monthRates,
+            kpi: {
+                manHours: monthTotals.manHours,
+                recordables: monthTotals.recordables,
+                trir: monthRates.trir,
+                afr: monthRates.afr,
+                fr: monthRates.fr,
+                sr: monthRates.sr
+            },
+            activities: {
+                trainings: allTraining.length,
+                participants: participantsTrained,
+                inspections,
+                ptw: ptwCount,
+                observations: obsCount,
+                toolbox: toolboxCount
+            },
+            manpower: {
+                avgMonth: manpowerAvg,
+                avgCum: manpowerCumAvg,
+                manDaysMonth,
+                manDaysCum,
+                manHoursMonth: monthTotals.manHours,
+                manHoursCum: cumTotals.manHours
+            },
+            accidents: {
+                reportableMonth: monthTotals.recordables,
+                reportableCum: cumTotals.recordables,
+                minorMonth: nltiMonth,
+                minorCum: nltiCum,
+                firstAidMonth,
+                firstAidCum,
+                nearMissMonth: nearmissMonth,
+                nearMissCum: nearmissCum,
+                daysLostMonth: monthTotals.daysLost,
+                daysLostCum: cumTotals.daysLost,
+                totalMonth: monthTotals.totalIncidents + nearmissMonth,
+                totalCum: cumTotals.totalIncidents + nearmissCum
+            },
+            committeeDate: committeeMeetings[0]?.date || committeeMeetings[0]?.meetingDate || null,
+            walkRows,
+            inductionRows: trainingRows.slice(0, 4).map((r) => ({ date: r.date, persons: r.participants })),
+            toolboxRows: trainingRows.filter((r) => String(r.topic).toLowerCase().includes('toolbox')).slice(0, 4),
+            trainingRows,
+            momRows,
+            highlights: (company.monthlySafetyHighlights || '').trim() || '—',
+            concerns: (company.monthlySafetyConcerns || '').trim() || '—'
+        };
+    },
+
+    buildMonthlySafetyReportHtml(data, period, lang = 'ar') {
+        const s = this.getMonthlySafetyStrings(lang);
+        const m = this.collectMonthlySafetyReportModel(data, period);
+        const esc = (v) => Utils.escapeHTML(v == null ? '' : String(v));
+        const monthLabel = `${s.monthNames[period.month - 1] || ''} ${period.year}`;
+        const genTs = m.generatedAt.toLocaleString(lang === 'ar' ? 'ar-SA' : 'en-GB');
+        const logo = AppState?.companyLogo || '';
+        const alignStart = lang === 'ar' ? 'right' : 'left';
+
+        const kpiCard = (label, value, green) => `
+            <div class="msr-kpi">
+                <div class="msr-kpi-label">${esc(label)}</div>
+                <div class="msr-kpi-value${green ? ' green' : ''}" dir="ltr">${esc(value)}</div>
+            </div>`;
+
+        const tableRow = (cells) => `<tr>${cells.map((c) => `<td>${c}</td>`).join('')}</tr>`;
+
+        const emptyRow = (cols) => tableRow(new Array(cols).fill(`<span class="msr-dash">${s.dash}</span>`));
+
+        return `<!DOCTYPE html>
+<html lang="${s.lang}" dir="${s.dir}">
+<head>
+<meta charset="UTF-8">
+<title>${esc(s.title)}</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:Arial,'Segoe UI',Tahoma,sans-serif;background:#fff;color:#111827;line-height:1.45}
+.msr-wrap{max-width:920px;margin:0 auto;padding:0 0 20px}
+.msr-header{background:#111827;color:#fff;padding:14px 18px;display:flex;justify-content:space-between;align-items:center;gap:12px}
+.msr-header h1{font-size:18px;font-weight:800}
+.msr-header .msr-gen{font-size:11px;opacity:.9;white-space:nowrap}
+.msr-brand{display:flex;align-items:center;gap:12px;padding:14px 18px;border-bottom:1px solid #e5e7eb}
+.msr-brand img{max-height:48px;max-width:96px;object-fit:contain}
+.msr-brand-name{font-size:14px;font-weight:700;color:#0f172a}
+.msr-meta{display:grid;grid-template-columns:1fr 1fr;gap:8px 20px;padding:14px 18px;font-size:12px;border-bottom:1px solid #e5e7eb}
+.msr-meta div strong{color:#374151;display:inline-block;min-width:110px}
+.msr-kpi-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;padding:14px 18px}
+.msr-kpi{border:1px solid #d1d5db;border-radius:10px;padding:12px 10px;text-align:center;background:#fff}
+.msr-kpi-label{font-size:9px;color:#6b7280;font-weight:700;letter-spacing:.04em;text-transform:uppercase}
+.msr-kpi-value{font-size:24px;font-weight:800;margin-top:6px;color:#111827}
+.msr-kpi-value.green{color:#059669}
+.msr-section{margin:14px 18px;border:1px solid #e5e7eb;border-radius:10px;overflow:hidden;page-break-inside:avoid}
+.msr-section-title{padding:10px 12px;font-weight:700;font-size:13px;border-bottom:1px solid #e5e7eb;background:#fafafa}
+.msr-table{width:100%;border-collapse:collapse;font-size:11px}
+.msr-table th{background:#f1f5f9;padding:8px 10px;text-align:${alignStart};font-weight:700;border-bottom:1px solid #e5e7eb}
+.msr-table td{padding:8px 10px;border-bottom:1px solid #f3f4f6;text-align:${alignStart};vertical-align:top}
+.msr-table td.num{text-align:center;direction:ltr}
+.msr-sub{font-size:11px;padding-left:14px}
+.msr-grid-2{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:14px 18px}
+.msr-card{border:1px solid #e5e7eb;border-radius:10px;padding:12px;font-size:11px;min-height:90px}
+.msr-card h4{font-size:12px;margin-bottom:8px;font-weight:700}
+.msr-auth{display:grid;grid-template-columns:1fr 1fr;gap:20px;padding:8px 4px}
+.msr-footer{margin:16px 18px 0;padding-top:10px;border-top:1px solid #e5e7eb;font-size:10px;color:#64748b;text-align:center}
+.msr-dash{color:#9ca3af}
+</style>
+</head>
+<body>
+<div class="msr-wrap" id="monthly-safety-report-root">
+  <div class="msr-header">
+    <h1>${esc(s.title)}</h1>
+    <div class="msr-gen">${esc(s.generatedOn)}: <span dir="ltr">${esc(genTs)}</span></div>
+  </div>
+  ${logo ? `<div class="msr-brand"><img src="${esc(logo)}" alt="logo"><div class="msr-brand-name">${esc(m.projectSite)}</div></div>` : ''}
+  <div class="msr-meta">
+    <div><strong>${esc(s.projectSite)}:</strong> ${esc(m.projectSite)}</div>
+    <div><strong>${esc(s.client)}:</strong> ${esc(m.client)}</div>
+    <div><strong>${esc(s.reportingMonth)}:</strong> ${esc(monthLabel)}</div>
+    <div><strong>${esc(s.location)}:</strong> ${esc(m.location)}</div>
+    <div><strong>${esc(s.preparedBy)}:</strong> ${esc(m.preparedBy)}</div>
+  </div>
+  <div class="msr-kpi-grid">
+    ${kpiCard(s.manHoursMonth, this._msrFmtNum(m.kpi.manHours), false)}
+    ${kpiCard(s.recordables, this._msrFmtNum(m.kpi.recordables), false)}
+    ${kpiCard(s.trir, this._msrFmtRate(m.kpi.trir, 2), true)}
+    ${kpiCard(s.afr, this._msrFmtRate(m.kpi.afr, 2), true)}
+    ${kpiCard(s.fr, this._msrFmtRate(m.kpi.fr, 2), true)}
+    ${kpiCard(s.sr, this._msrFmtRate(m.kpi.sr, 2), true)}
+  </div>
+  <div class="msr-section">
+    <div class="msr-section-title">${esc(s.hseActivities)}</div>
+    <table class="msr-table">
+      <thead><tr><th>${esc(s.activity)}</th><th class="num">${esc(s.count)}</th></tr></thead>
+      <tbody>
+        ${tableRow([esc(s.trainingsConducted), `<span class="num">${this._msrFmtNum(m.activities.trainings)}</span>`])}
+        ${tableRow([esc(s.participantsTrained), `<span class="num">${this._msrFmtNum(m.activities.participants)}</span>`])}
+        ${tableRow([esc(s.auditsInspections), `<span class="num">${this._msrFmtNum(m.activities.inspections)}</span>`])}
+        ${tableRow([esc(s.ptwsIssued), `<span class="num">${this._msrFmtNum(m.activities.ptw)}</span>`])}
+        ${tableRow([esc(s.observations), `<span class="num">${this._msrFmtNum(m.activities.observations)}</span>`])}
+        ${tableRow([esc(s.toolboxTalks), `<span class="num">${this._msrFmtNum(m.activities.toolbox)}</span>`])}
+      </tbody>
+    </table>
+  </div>
+  <div class="msr-section">
+    <div class="msr-section-title">${esc(s.manpowerStatus)}</div>
+    <table class="msr-table">
+      <thead><tr><th>${esc(s.metric)}</th><th class="num">${esc(s.thisMonth)}</th><th class="num">${esc(s.cumulative)}</th></tr></thead>
+      <tbody>
+        ${tableRow([esc(s.manpowerAvg), `<span class="num">${this._msrFmtNum(m.manpower.avgMonth)}</span>`, `<span class="num">${this._msrFmtNum(m.manpower.avgCum)}</span>`])}
+        ${tableRow([esc(s.totalManDays), `<span class="num">${this._msrFmtNum(m.manpower.manDaysMonth)}</span>`, `<span class="num">${this._msrFmtNum(m.manpower.manDaysCum)}</span>`])}
+        ${tableRow([esc(s.totalManHours), `<span class="num">${this._msrFmtNum(m.manpower.manHoursMonth)}</span>`, `<span class="num">${this._msrFmtNum(m.manpower.manHoursCum)}</span>`])}
+      </tbody>
+    </table>
+  </div>
+  <div class="msr-section">
+    <div class="msr-section-title">${esc(s.accidentReport)}</div>
+    <table class="msr-table">
+      <thead><tr><th>${esc(s.description)}</th><th class="num">${esc(s.thisMonth)}</th><th class="num">${esc(s.cumulative)}</th></tr></thead>
+      <tbody>
+        ${tableRow([`<strong>${esc(s.totalAccidents)}</strong>`, `<span class="num">${this._msrFmtNum(m.accidents.totalMonth)}</span>`, `<span class="num">${this._msrFmtNum(m.accidents.totalCum)}</span>`])}
+        ${tableRow([`<span class="msr-sub">${esc(s.reportableAccidents)}</span>`, `<span class="num">${this._msrFmtNum(m.accidents.reportableMonth)}</span>`, `<span class="num">${this._msrFmtNum(m.accidents.reportableCum)}</span>`])}
+        ${tableRow([`<span class="msr-sub">${esc(s.minorAccidents)}</span>`, `<span class="num">${this._msrFmtNum(m.accidents.minorMonth)}</span>`, `<span class="num">${this._msrFmtNum(m.accidents.minorCum)}</span>`])}
+        ${tableRow([`<span class="msr-sub">${esc(s.firstAidCases)}</span>`, `<span class="num">${this._msrFmtNum(m.accidents.firstAidMonth)}</span>`, `<span class="num">${this._msrFmtNum(m.accidents.firstAidCum)}</span>`])}
+        ${tableRow([`<span class="msr-sub">${esc(s.nearMiss)}</span>`, `<span class="num">${this._msrFmtNum(m.accidents.nearMissMonth)}</span>`, `<span class="num">${this._msrFmtNum(m.accidents.nearMissCum)}</span>`])}
+        ${tableRow([esc(s.manDaysLost), `<span class="num">${this._msrFmtNum(m.accidents.daysLostMonth)}</span>`, `<span class="num">${this._msrFmtNum(m.accidents.daysLostCum)}</span>`])}
+      </tbody>
+    </table>
+  </div>
+  <div class="msr-section">
+    <div class="msr-section-title">${esc(s.hseEvents)}</div>
+    <div style="padding:10px 12px;font-size:11px"><strong>${esc(s.hseCommittee)}:</strong> ${esc(s.date)}: ${esc(this._msrFmtDate(m.committeeDate, lang))}</div>
+    <table class="msr-table">
+      <thead><tr><th>${esc(s.hseWalks)} — ${esc(s.date)}</th><th>${esc(s.withWhom)}</th></tr></thead>
+      <tbody>${m.walkRows.length ? m.walkRows.map((r) => tableRow([esc(this._msrFmtDate(r.date, lang)), esc(r.withWhom)])).join('') : emptyRow(2)}</tbody>
+    </table>
+    <table class="msr-table" style="margin-top:8px">
+      <thead><tr><th>${esc(s.hseInduction)} — ${esc(s.date)}</th><th class="num">${esc(s.persons)}</th></tr></thead>
+      <tbody>${m.inductionRows.length ? m.inductionRows.map((r) => tableRow([esc(this._msrFmtDate(r.date, lang)), `<span class="num">${esc(r.persons)}</span>`])).join('') : emptyRow(2)}</tbody>
+    </table>
+    <table class="msr-table" style="margin-top:8px">
+      <thead><tr><th>${esc(s.toolboxTraining)} — ${esc(s.date)}</th><th>${esc(s.topic)}</th><th class="num">${esc(s.participants)}</th></tr></thead>
+      <tbody>${m.toolboxRows.length ? m.toolboxRows.map((r) => tableRow([esc(this._msrFmtDate(r.date, lang)), esc(r.topic), `<span class="num">${esc(r.participants)}</span>`])).join('') : emptyRow(3)}</tbody>
+    </table>
+    <table class="msr-table" style="margin-top:8px">
+      <thead><tr><th>${esc(s.hseTraining)} — ${esc(s.date)}</th><th>${esc(s.topic)}</th><th class="num">${esc(s.participants)}</th></tr></thead>
+      <tbody>${m.trainingRows.length ? m.trainingRows.map((r) => tableRow([esc(this._msrFmtDate(r.date, lang)), esc(r.topic), `<span class="num">${esc(r.participants)}</span>`])).join('') : emptyRow(3)}</tbody>
+    </table>
+  </div>
+  <div class="msr-section">
+    <div class="msr-section-title">${esc(s.hseMom)}</div>
+    <table class="msr-table">
+      <thead><tr><th>${esc(s.date)}</th><th>${esc(s.discussionPoints)}</th><th>${esc(s.status)}</th></tr></thead>
+      <tbody>${m.momRows.length ? m.momRows.map((r) => tableRow([esc(this._msrFmtDate(r.date, lang)), esc(r.points), esc(r.status || s.open)])).join('') : emptyRow(3)}</tbody>
+    </table>
+  </div>
+  <div class="msr-grid-2">
+    <div class="msr-card"><h4>${esc(s.highlights)}</h4><div>${esc(m.highlights)}</div></div>
+    <div class="msr-card"><h4>${esc(s.concerns)}</h4><div>${esc(m.concerns)}</div></div>
+  </div>
+  <div class="msr-section">
+    <div class="msr-section-title">${esc(s.authorization)}</div>
+    <div class="msr-auth" style="padding:12px">
+      <div><strong>${esc(s.preparedBySign)}</strong><div class="msr-dash" style="margin-top:24px;border-top:1px solid #cbd5e1">${s.dash}</div></div>
+      <div><strong>${esc(s.reviewedBy)}</strong><div class="msr-dash" style="margin-top:24px;border-top:1px solid #cbd5e1">${s.dash}</div></div>
+    </div>
+  </div>
+  <div class="msr-footer">${esc(m.projectSite)} — ${esc(s.footerNote)} — ${esc(s.generatedOn)}: <span dir="ltr">${esc(genTs)}</span></div>
+</div>
+</body>
+</html>`;
+    },
+
+    async ensureMonthlySafetyPdfLibs() {
+        if (typeof html2canvas !== 'undefined' && Utils?.PdfExport?.getJsPdfConstructor?.()) {
+            return true;
+        }
+        const loadScript = (src) => new Promise((resolve, reject) => {
+            const s = document.createElement('script');
+            s.src = src;
+            s.onload = resolve;
+            s.onerror = reject;
+            document.head.appendChild(s);
+        });
+        if (typeof html2canvas === 'undefined') {
+            await loadScript('https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js');
+        }
+        if (!Utils?.PdfExport?.getJsPdfConstructor?.()) {
+            await loadScript('https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js');
+        }
+        return typeof html2canvas !== 'undefined' && !!Utils?.PdfExport?.getJsPdfConstructor?.();
+    },
+
+    async downloadMonthlySafetyReport(period, lang = 'ar') {
+        const { t } = this.getTranslations();
+        if (!period) {
+            Notification.error(t('msg.invalidMonthYear'));
+            return false;
+        }
+        if (typeof AppState === 'undefined' || !AppState.appData) {
+            Notification.error(t('msg.noData'));
+            return false;
+        }
+
+        await this.ensureTrainingDataForReport();
+        const html = this.buildMonthlySafetyReportHtml(AppState.appData, period, lang);
+        const fileName = `Monthly_Safety_Report_${period.label}_${lang}.pdf`;
+
+        const iframe = document.createElement('iframe');
+        iframe.setAttribute('aria-hidden', 'true');
+        iframe.style.cssText = 'position:fixed;left:-100000px;top:0;width:920px;height:1400px;border:0;visibility:hidden;';
+        document.body.appendChild(iframe);
+
+        try {
+            const okLibs = await this.ensureMonthlySafetyPdfLibs();
+            if (!okLibs) {
+                Notification.error(t('msg.allowPopups'));
+                return false;
+            }
+
+            iframe.srcdoc = html;
+            await new Promise((resolve) => {
+                iframe.onload = resolve;
+                iframe.onerror = resolve;
+                setTimeout(resolve, 5000);
+            });
+
+            const iDoc = iframe.contentDocument || iframe.contentWindow?.document;
+            if (!iDoc) return false;
+
+            await Promise.all(Array.from(iDoc.images || []).map((img) => new Promise((resolve) => {
+                if (img.complete) return resolve();
+                img.onload = resolve;
+                img.onerror = resolve;
+                setTimeout(resolve, 3000);
+            })));
+
+            const root = iDoc.getElementById('monthly-safety-report-root') || iDoc.body;
+            const scale = Utils.PdfExport.getOptimalCaptureScale(root.scrollWidth, root.scrollHeight, 1.4);
+            const canvas = await html2canvas(root, {
+                scale,
+                useCORS: true,
+                backgroundColor: '#ffffff',
+                scrollX: 0,
+                scrollY: 0,
+                windowWidth: root.scrollWidth,
+                windowHeight: root.scrollHeight
+            });
+
+            const pdf = Utils.PdfExport.createPdf({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+            if (!pdf) return false;
+            Utils.PdfExport.appendCanvasAsPdfPages(pdf, canvas, { marginMm: 8 });
+            Utils.PdfExport.savePdf(pdf, fileName);
+            return true;
+        } catch (err) {
+            if (typeof Utils !== 'undefined' && Utils.safeError) Utils.safeError('downloadMonthlySafetyReport:', err);
+            Notification.error((err && err.message) || 'فشل تحميل التقرير');
+            return false;
+        } finally {
+            iframe.remove();
+        }
     },
 
     async generateAndExport(type, options = {}) {
@@ -593,7 +1048,7 @@ const Reports = {
             printWindow.document.write('<html dir="rtl"><body style="font-family: Arial; padding: 20px; text-align: center;"><p>جاري تحضير التقرير...</p></body></html>');
             printWindow.document.close();
 
-            if (type === 'full' || type === 'period' || type === 'monthly-safety') {
+            if (type === 'full' || type === 'period') {
                 await this.ensureTrainingDataForReport();
             }
 
@@ -632,25 +1087,6 @@ const Reports = {
                     }
                     title = `${t('report.periodSummary')} - ${period.label}`;
                     content = this.generatePeriodSummaryReport(data, period);
-                    break;
-                }
-                case 'monthly-safety': {
-                    const monthlyPeriod = options.period || null;
-                    if (!monthlyPeriod) {
-                        if (printWindow) printWindow.close();
-                        Notification.error(t('msg.invalidMonthYear'));
-                        return;
-                    }
-                    title = `${t('report.monthlySafetyTitle')} — ${monthlyPeriod.label}`;
-                    content = this.generateMonthlySafetyReport(data, monthlyPeriod);
-                    formCode = `MSR-${monthlyPeriod.label}`;
-                    pdfMeta = {
-                        source: 'MonthlySafetyReport',
-                        titleEn: 'Monthly Safety Report',
-                        titleAr: t('report.monthlySafetyTitle'),
-                        version: AppState?.companySettings?.formVersion || '1.0',
-                        compactPdfFooter: true
-                    };
                     break;
                 }
                 case 'full':
