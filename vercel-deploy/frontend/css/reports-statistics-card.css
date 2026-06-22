@@ -269,8 +269,9 @@
    منع display:none و visibility toggle؛ الكروت تظهر مرة واحدة وتبقى ثابتة في جميع المتصفحات. */
 
 /* ===== ثبات عرض قيم مؤشرات السلامة: FA ثم TIR ثم LTI ثم TRIR (بدون animation/transition) ===== */
-.safety-metrics-section #fa-value,
-.safety-metrics-section #tir-value,
+.safety-metrics-section #afr-value,
+.safety-metrics-section #far-value,
+.safety-metrics-section #fr-value,
 .safety-metrics-section #lti-value,
 .safety-metrics-section #trir-value {
     direction: ltr !important;

@@ -666,7 +666,7 @@ const Settings = {
                             </div>
                             <div class="card-body space-y-4">
                                 <p class="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
-                                    يُستخدم لكارت <strong>عدد ساعات العمل</strong> و<strong>ساعات العمل الآمنة</strong> ومؤشّري <strong>FA</strong> و<strong>TRIR</strong>، وحقل <strong>TIR</strong> (لكل 100 عامل/workforce).
+                                    يُستخدم لكارت <strong>عدد ساعات العمل</strong> ومؤشّري <strong>TRIR</strong> و<strong>AFR</strong> و<strong>FAR</strong> و<strong>FR</strong> و<strong>LTI</strong> (عبر محرك HseMetrics الموحّد مع السكوركارد).
                                     إن لم يُملأ «إجمالي الساعات اليدوي» يُقدَّر الإجمالي من: موظفون نشطون × (ساعات/يوم × أيام/شهر × أشهر/سنة) مع إضافة عمالة المقاولين إن فُعّل الخيار ووُجدت أعداد في سجل المقاول المعتمد.
                                 </p>
                                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -692,8 +692,22 @@ const Settings = {
                                         <label for="wh-include-contractors" class="mr-2 text-sm font-medium text-gray-800">إضافة عمالة المقاولين المعتمدين (من حقول رقمية في السجل إن وُجدت)</label>
                                     </div>
                                 </div>
+                                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-2">
+                                    <div>
+                                        <label class="block text-sm font-semibold text-gray-700 mb-2" for="wh-multiplier-trir">مضاعف TRIR</label>
+                                        <input type="number" id="wh-multiplier-trir" class="form-input" min="1" step="1000" placeholder="200000" />
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-semibold text-gray-700 mb-2" for="wh-multiplier-afr">مضاعف AFR</label>
+                                        <input type="number" id="wh-multiplier-afr" class="form-input" min="1" step="1000" placeholder="1000000" />
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-semibold text-gray-700 mb-2" for="wh-multiplier-far">مضاعف FAR</label>
+                                        <input type="number" id="wh-multiplier-far" class="form-input" min="1" step="1000000" placeholder="100000000" />
+                                    </div>
+                                </div>
                                 <p class="text-xs text-gray-500">
-                                    المفاتيح: <code>hse_hours_per_day</code>، <code>hse_work_days_per_month</code>، <code>hse_work_months_per_year</code>، <code>hse_work_hours_include_contractors</code>.
+                                    المفاتيح: <code>hse_hours_per_day</code>، <code>hse_work_days_per_month</code>، <code>hse_multiplier_trir/afr/far</code>.
                                 </p>
                                 <button type="button" id="save-work-hours-settings-btn" class="btn-primary">
                                     <i class="fas fa-save ml-2"></i>حفظ إعدادات ساعات العمل
@@ -1699,6 +1713,9 @@ const Settings = {
             const whDpmEl = document.getElementById('wh-days-per-month');
             const whMoEl = document.getElementById('wh-months-per-year');
             const whIncEl = document.getElementById('wh-include-contractors');
+            const whMultTrirEl = document.getElementById('wh-multiplier-trir');
+            const whMultAfrEl = document.getElementById('wh-multiplier-afr');
+            const whMultFarEl = document.getElementById('wh-multiplier-far');
             const saveWorkHoursBtn = document.getElementById('save-work-hours-settings-btn');
 
             const fillWorkHoursSettingsInputs = () => {
@@ -1707,6 +1724,9 @@ const Settings = {
                     if (whDayEl) whDayEl.value = localStorage.getItem('hse_hours_per_day') || '';
                     if (whDpmEl) whDpmEl.value = localStorage.getItem('hse_work_days_per_month') || '';
                     if (whMoEl) whMoEl.value = localStorage.getItem('hse_work_months_per_year') || '';
+                    if (whMultTrirEl) whMultTrirEl.value = localStorage.getItem('hse_multiplier_trir') || '';
+                    if (whMultAfrEl) whMultAfrEl.value = localStorage.getItem('hse_multiplier_afr') || '';
+                    if (whMultFarEl) whMultFarEl.value = localStorage.getItem('hse_multiplier_far') || '';
                     if (whIncEl) {
                         const v = localStorage.getItem('hse_work_hours_include_contractors');
                         if (v === null || String(v).trim() === '') {
@@ -1754,11 +1774,20 @@ const Settings = {
                         savePositiveOpt('hse_hours_per_day', whDayEl);
                         savePositiveOpt('hse_work_days_per_month', whDpmEl);
                         savePositiveOpt('hse_work_months_per_year', whMoEl);
+                        savePositiveOpt('hse_multiplier_trir', whMultTrirEl);
+                        savePositiveOpt('hse_multiplier_afr', whMultAfrEl);
+                        savePositiveOpt('hse_multiplier_far', whMultFarEl);
 
                         localStorage.setItem('hse_work_hours_include_contractors', whIncEl && whIncEl.checked ? '1' : '0');
 
                         if (typeof Dashboard !== 'undefined' && typeof Dashboard.updateKPIs === 'function') {
                             Dashboard.updateKPIs();
+                        }
+                        if (typeof SafetyPerformanceKPIs !== 'undefined' && typeof SafetyPerformanceKPIs.updateAllKPIs === 'function') {
+                            SafetyPerformanceKPIs.updateAllKPIs();
+                        }
+                        if (typeof SafetyPerformanceKPIs !== 'undefined' && typeof SafetyPerformanceKPIs.queueScorecardRefresh === 'function') {
+                            SafetyPerformanceKPIs.queueScorecardRefresh(true);
                         }
                         Notification.success('تم حفظ إعدادات ساعات العمل وتحديث لوحة التحكم');
                     } catch (err) {

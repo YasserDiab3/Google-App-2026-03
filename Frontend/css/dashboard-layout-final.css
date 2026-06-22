@@ -70,7 +70,11 @@
     clear: both;
 }
 
-/* Safety Metrics Grid - Responsive 4 Cards */
+/* Safety Metrics Grid - Responsive 5 Cards */
+.safety-metrics-section .metrics-grid-container--safety-five {
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+}
+
 .safety-metrics-section .metrics-grid-container {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));

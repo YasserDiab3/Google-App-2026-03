@@ -11292,7 +11292,7 @@
                                 </h2>
                             </div>
                             <div class="card-body">
-                                <div class="metrics-grid-container">
+                                <div class="metrics-grid-container metrics-grid-container--safety-five">
                                     <!-- TRIR - Total Recordable Injury Rate -->
                                     <div class="metric-card-frame kpi-purple">
                                         <div>
@@ -11332,7 +11332,7 @@
                                         </div>
                                     </div>
 
-                                    <!-- FA - Frequency Rate -->
+                                    <!-- AFR - Accident Frequency Rate -->
                                     <div class="metric-card-frame kpi-info">
                                         <div>
                                             <div
@@ -11347,31 +11347,31 @@
                                                 </div>
                                                 <span
                                                     class="metric-short-code text-blue-700 bg-blue-200 rounded"
-                                                    >FA</span>
+                                                    >AFR</span>
                                             </div>
                                             <h3
                                                 class="text-sm font-semibold text-gray-700 mb-1"
-                                                data-i18n="dash.faTitle"
+                                                data-i18n="dash.afrTitle"
                                             >
-                                                معدل التكرار
+                                                معدل تكرار الحوادث
                                             </h3>
                                             <p
                                                 class="text-2xl font-bold text-blue-600"
-                                                id="fa-value"
+                                                id="afr-value"
                                                 dir="ltr"
                                             >
                                                 0
                                             </p>
                                             <p
                                                 class="text-xs text-gray-600 mt-1"
-                                                data-i18n="dash.frequencyRateSubtitle"
+                                                data-i18n="dash.afrSubtitle"
                                             >
                                                 لكل مليون ساعة عمل
                                             </p>
                                         </div>
                                     </div>
 
-                                    <!-- TIR - Total Injury Rate -->
+                                    <!-- FAR - Fatality Accident Rate -->
                                     <div class="metric-card-frame kpi-warning">
                                         <div>
                                             <div
@@ -11381,31 +11381,70 @@
                                                     class="text-orange-600 text-2xl"
                                                 >
                                                     <i
-                                                        class="fas fa-chart-bar"
+                                                        class="fas fa-skull-crossbones"
                                                     ></i>
                                                 </div>
                                                 <span
                                                     class="metric-short-code text-orange-700 bg-orange-200 rounded"
-                                                    >TIR</span>
+                                                    >FAR</span>
                                             </div>
                                             <h3
                                                 class="text-sm font-semibold text-gray-700 mb-1"
-                                                data-i18n="dash.tirTitle"
+                                                data-i18n="dash.farTitle"
                                             >
-                                                نسبة الإصابات الإجمالية
+                                                معدل وفيات الحوادث
                                             </h3>
                                             <p
                                                 class="text-2xl font-bold text-orange-600"
-                                                id="tir-value"
+                                                id="far-value"
                                                 dir="ltr"
                                             >
                                                 0
                                             </p>
                                             <p
                                                 class="text-xs text-gray-600 mt-1"
-                                                data-i18n="dash.totalInjuryRateSubtitle"
+                                                data-i18n="dash.farSubtitle"
                                             >
-                                                لكل 100 عامل
+                                                لكل 100 مليون ساعة عمل
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    <!-- FR - LTI Frequency Rate -->
+                                    <div class="metric-card-frame kpi-purple">
+                                        <div>
+                                            <div
+                                                class="flex items-center justify-between mb-2 w-full"
+                                            >
+                                                <div
+                                                    class="text-purple-600 text-2xl"
+                                                >
+                                                    <i
+                                                        class="fas fa-chart-line"
+                                                    ></i>
+                                                </div>
+                                                <span
+                                                    class="metric-short-code text-purple-700 bg-purple-200 rounded"
+                                                    >FR</span>
+                                            </div>
+                                            <h3
+                                                class="text-sm font-semibold text-gray-700 mb-1"
+                                                data-i18n="dash.frTitle"
+                                            >
+                                                معدل تكرار LTI
+                                            </h3>
+                                            <p
+                                                class="text-2xl font-bold text-purple-600"
+                                                id="fr-value"
+                                                dir="ltr"
+                                            >
+                                                0
+                                            </p>
+                                            <p
+                                                class="text-xs text-gray-600 mt-1"
+                                                data-i18n="dash.frSubtitle"
+                                            >
+                                                لكل مليون ساعة عمل
                                             </p>
                                         </div>
                                     </div>
@@ -12891,6 +12930,7 @@
         ></script>
         <script src="js/modules/services/workflow.js" defer></script>
         <script src="js/modules/services/google-integration.js?v=20260506-createdby-fix2" defer></script>
+        <script src="js/modules/services/hse-metrics.js?v=20260622-1" defer></script>
         <script src="js/modules/services/data-integrity.js?v=20260611-integrity" defer></script>
         <script src="js/modules/services/data-repository.js" defer></script>
         <script src="js/modules/services/smart-cache.js" defer></script>
@@ -13052,7 +13092,7 @@
                     }
 
                     // مطابقة CACHE_VERSION في service-worker.js — تسريع جلب سكربت SW بعد النشر (تجاوز كاش الشبكة/الوسيط)
-                    const __SW_REGISTER_QUERY = "v=hse-app-v1.0.256-20260622";
+                    const __SW_REGISTER_QUERY = "v=hse-app-v1.0.257-20260622";
                     const swUrl =
                         swPath +
                         (swPath.includes("?") ? "&" : "?") +

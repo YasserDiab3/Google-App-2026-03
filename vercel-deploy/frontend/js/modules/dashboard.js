@@ -3771,54 +3771,17 @@ const Dashboard = {
     calculateSafetyMetrics(incidents, employees, registryData = null, appData = null) {
         try {
             if (!this.dashboardCan('incidents')) return;
-            // التحقق من صحة المدخلات
-            if (!Array.isArray(incidents)) incidents = [];
-            if (!Array.isArray(employees)) employees = [];
-            if (!Array.isArray(registryData)) registryData = [];
+            if (typeof HseMetrics === 'undefined' || !HseMetrics.getDashboardSnapshot) {
+                Utils.safeWarn('⚠️ HseMetrics غير محمّل — تخطي مؤشرات السلامة');
+                return;
+            }
 
             const dataBundle = appData && typeof appData === 'object'
                 ? appData
                 : (typeof AppState !== 'undefined' && AppState.appData ? AppState.appData : {});
-            const approvedContractors = Array.isArray(dataBundle.approvedContractors) ? dataBundle.approvedContractors : [];
 
-            const totalEmployees = employees.filter((e) => e && !this._isEmployeeInactive(e)).length;
-            const contractorWorkforce = this.workHoursIncludeContractors() ? this._sumContractorWorkforceHeadcount(approvedContractors, dataBundle) : 0;
-            const workforceForTir = totalEmployees + contractorWorkforce;
-            const actualTotalHours = this.getDashboardTotalWorkHours(dataBundle);
-
-            if (!Number.isFinite(actualTotalHours) || actualTotalHours < 0) {
-                Utils.safeWarn('⚠️ إجمالي ساعات العمل غير صحيح:', actualTotalHours);
-                return;
-            }
-
-            // حساب LTI (Lost Time Injury) - الحوادث التي تسببت في فقدان وقت العمل
-            let ltiIncidents = 0;
-            if (registryData && registryData.length > 0) {
-                ltiIncidents = registryData.filter(entry =>
-                    entry && entry.totalLeaveDays && parseFloat(entry.totalLeaveDays) > 0
-                ).length;
-            } else {
-                ltiIncidents = incidents.filter(i => i && (
-                    i.severity === 'عالية' || i.severity === 'حرجة' ||
-                    i.severity === 'high' || i.severity === 'critical' ||
-                    i.lostTime === true || i.lostTimeDays > 0
-                )).length;
-            }
-
-            // حساب TIR, FA, TRIR
-            const totalIncidentsCount = (registryData && registryData.length > 0)
-                ? registryData.length
-                : incidents.length;
-            const tir = workforceForTir > 0 ? ((totalIncidentsCount / workforceForTir) * 100).toFixed(2) : '0.00';
-            const hoursForRates = actualTotalHours > 0 ? actualTotalHours : 0;
-            const fa = hoursForRates > 0 ? ((totalIncidentsCount * 1000000) / hoursForRates).toFixed(2) : '0.00';
-            const trir = hoursForRates > 0 ? ((totalIncidentsCount * 200000) / hoursForRates).toFixed(2) : '0.00';
-
-            // تحديث القيم بنفس الطريقة لكل الكروت: تحديث النص فقط عند التغيّر، دون تغيير البنية (مطابقة FA و TRIR لـ TIR و LTI لمنع الوميض)
-            const faFormatted = this.formatNumber(parseFloat(fa));
-            const trirFormatted = this.formatNumber(parseFloat(trir));
-            const tirFormatted = this.formatNumber(parseFloat(tir));
-            const ltiFormatted = this.formatNumber(ltiIncidents);
+            const snap = HseMetrics.getDashboardSnapshot(dataBundle);
+            const f = snap.formatted || {};
 
             const updateOneSafetyValue = (elementId, formattedValue) => {
                 const el = document.getElementById(elementId);
@@ -3827,24 +3790,19 @@ const Dashboard = {
                     this.applyEnglishNumberFormat(el);
                 }
             };
-            // ترتيب التحديث مطابق لترتيب الكروت في DOM: TRIR → FA → TIR → LTI (الكارتان الأوليان لا تومضان)
-            updateOneSafetyValue('trir-value', trirFormatted);
-            updateOneSafetyValue('fa-value', faFormatted);
-            updateOneSafetyValue('tir-value', tirFormatted);
-            updateOneSafetyValue('lti-value', ltiFormatted);
+
+            updateOneSafetyValue('trir-value', this.formatNumber(parseFloat(f.trir || 0)));
+            updateOneSafetyValue('afr-value', this.formatNumber(parseFloat(f.afr || 0)));
+            updateOneSafetyValue('far-value', this.formatNumber(parseFloat(f.far || 0)));
+            updateOneSafetyValue('fr-value', this.formatNumber(parseFloat(f.fr || 0)));
+            updateOneSafetyValue('lti-value', this.formatNumber(parseInt(snap.rates?.ltiCount || 0, 10)));
 
             if (typeof Utils !== 'undefined' && Utils.safeLog) {
-                Utils.safeLog('📊 مؤشرات السلامة:', {
-                    LTI: ltiIncidents,
-                    TIR: tir,
-                    FA: fa,
-                    TRIR: trir,
-                    totalWorkHours: actualTotalHours,
-                    totalEmployees,
-                    contractorWorkforceForHours: contractorWorkforce,
-                    workforceForTir,
-                    totalIncidents: totalIncidentsCount,
-                    usingRegistry: (registryData && registryData.length > 0)
+                Utils.safeLog('📊 مؤشرات السلامة (HseMetrics YTD):', {
+                    year: snap.year,
+                    ytdLimit: snap.ytdLimit,
+                    totals: snap.totals,
+                    rates: snap.rates
                 });
             }
         } catch (error) {
@@ -4657,7 +4615,7 @@ const Dashboard = {
         if (!element) return;
         if (element.dataset.numberFormatted === 'true') return;
         const id = element.id || '';
-        const isSafetyMetricValue = (id === 'trir-value' || id === 'fa-value' || id === 'tir-value' || id === 'lti-value');
+        const isSafetyMetricValue = (id === 'trir-value' || id === 'afr-value' || id === 'far-value' || id === 'fr-value' || id === 'lti-value');
         try {
             if (isSafetyMetricValue) {
                 element.dataset.numberFormatted = 'true';

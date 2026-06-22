@@ -19,8 +19,11 @@ const Training = {
     trainingAnalysisCharts: null,
     /** يمنع طلبات متوازية متعددة لنفس تحميل بيانات التدريب */
     _trainingDataLoadPromise: null,
-    /** true بعد أول محاولة جلب كاملة من الخادم (أو وضع بدون خادم) حتى لا يبقى تبويب المقاولين/الحضور بانتظار بيانات جزئية فقط */
+    /** true بعد أول محاولة جلب كاملة من الخادم (أو وضع بدون خادم) حتى لا يبقى تبويب الحضور بانتظار بيانات جزئية فقط */
     _trainingBackendFetchOk: false,
+    /** true بعد جلب تدريبات المقاولين من الخادم (أو وضع بدون خادم) */
+    _contractorTrainingsFetchOk: false,
+    _contractorTrainingsLoadPromise: null,
     /** التبويب النشط حالياً (programs | contractors | attendance | analysis) */
     _currentActiveTab: 'programs',
     /** كاش HTML لكل تبويب لتجنب إعادة الرسم عند التبديل */
@@ -539,11 +542,94 @@ const Training = {
         if (typeof Notification !== 'undefined' && Notification.info) {
             Notification.info('جاري تحديث البيانات...');
         }
+
+        this._trainingBackendFetchOk = false;
+        this._contractorTrainingsFetchOk = false;
         
         await this.load();
         
         if (typeof Notification !== 'undefined' && Notification.success) {
             Notification.success('تم تحديث البيانات بنجاح');
+        }
+    },
+
+    /** عرض فوري من التخزين المحلي لتبويب المقاولين (إن وُجدت بيانات) */
+    _showContractorLocalDataIfAny() {
+        const records = AppState.appData?.contractorTrainings;
+        if (!Array.isArray(records) || records.length === 0) return;
+        if (!document.getElementById('contractor-training-container')) return;
+        void this.refreshContractorTrainingList().catch(() => {});
+        this.updateContractorStatsWithFilter(document.getElementById('contractor-month-filter')?.value || '');
+    },
+
+    /** بعد وصول/تحديث تدريبات المقاولين: حفظ محلي + تحديث الواجهة إن كان التبويب نشطاً */
+    _onContractorTrainingsUpdated() {
+        if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
+            try { window.DataManager.save(); } catch (_e) { /* ignore */ }
+        }
+        if (this._currentActiveTab === 'contractors') {
+            void this.refreshContractorTrainingList().catch(() => {});
+            this.updateContractorStatsWithFilter(document.getElementById('contractor-month-filter')?.value || '');
+        } else {
+            this._tabDirty.contractors = true;
+            this._tabCache.contractors = null;
+        }
+    },
+
+    /**
+     * جلب تدريبات المقاولين بأولوية عالية — مستقل عن تحميل البرامج/الحضور.
+     * يُستدعى عند فتح تبويب المقاولين أو بالتوازي مع جلب بقية بيانات التدريب.
+     */
+    async loadContractorTrainingsPriority() {
+        if (this._contractorTrainingsFetchOk) return;
+        if (this._contractorTrainingsLoadPromise) {
+            return this._contractorTrainingsLoadPromise;
+        }
+        this._contractorTrainingsLoadPromise = this._runLoadContractorTrainingsOnly().finally(() => {
+            this._contractorTrainingsLoadPromise = null;
+        });
+        return this._contractorTrainingsLoadPromise;
+    },
+
+    async _runLoadContractorTrainingsOnly() {
+        this.ensureData();
+        if (this._currentActiveTab === 'contractors') {
+            this._showContractorLocalDataIfAny();
+        }
+
+        if (!AppState.googleConfig?.appsScript?.enabled || !AppState.googleConfig?.appsScript?.scriptUrl) {
+            this._contractorTrainingsFetchOk = true;
+            return;
+        }
+        if (typeof GoogleIntegration === 'undefined' || typeof GoogleIntegration.sendRequest !== 'function') {
+            this._contractorTrainingsFetchOk = true;
+            return;
+        }
+
+        const fallbackTimeoutMs = 12000;
+        const timeoutMessage = 'انتهت مهلة الاتصال بالخادم\n\nتحقق من الاتصال وإعدادات Google Apps Script.';
+        const contractorGuardOk = () => (Date.now() - (this._contractorTrainingsLocalSaveTime || 0)) > 60000;
+
+        try {
+            const result = await Utils.promiseWithTimeout(
+                GoogleIntegration.sendRequest({
+                    action: 'getAllContractorTrainings',
+                    data: { filters: {}, __timeoutMs: fallbackTimeoutMs }
+                }),
+                fallbackTimeoutMs,
+                timeoutMessage
+            ).catch((error) => {
+                Utils.safeWarn('⚠️ تعذر تحميل تدريبات المقاولين (أولوية):', error);
+                return { success: false, data: [] };
+            });
+
+            const data = (result && result.success && Array.isArray(result.data)) ? result.data : null;
+            if (data && contractorGuardOk()) {
+                AppState.appData.contractorTrainings = data;
+                this._onContractorTrainingsUpdated();
+            }
+        } finally {
+            this._contractorTrainingsFetchOk = true;
         }
     },
 
@@ -562,11 +648,15 @@ const Training = {
         const hasLocalData = AppState.appData?.training?.length > 0 || 
                             AppState.appData?.trainingSessions?.length > 0 ||
                             AppState.appData?.trainingCertificates?.length > 0;
+        const hasLocalContractorData = Array.isArray(AppState.appData?.contractorTrainings) &&
+            AppState.appData.contractorTrainings.length > 0;
         
-        // تحديث القائمة فوراً بالبيانات المحلية إذا كانت موجودة وكان تبويب البرامج نشطاً.
-        // التبويبات الأخرى ستُحدّث عبر persistAndRefreshUi بعد اكتمال الجلب فقط لتفادي تكرار الرسم.
+        // تحديث القائمة فوراً بالبيانات المحلية إذا كانت موجودة وكان التبويب النشط مطابقاً.
         if (hasLocalData && this._currentActiveTab === 'programs') {
             this.loadTrainingList();
+        }
+        if (hasLocalContractorData && this._currentActiveTab === 'contractors') {
+            this._showContractorLocalDataIfAny();
         }
 
         // التحقق من تفعيل Google Integration قبل إجراء الطلبات
@@ -575,6 +665,7 @@ const Training = {
                 Utils.safeLog('⚠️ Google Apps Script غير مفعل - استخدام البيانات المحلية فقط');
             }
             this._trainingBackendFetchOk = true;
+            this._contractorTrainingsFetchOk = true;
             return;
         }
 
@@ -582,6 +673,7 @@ const Training = {
         if (typeof GoogleIntegration === 'undefined' || typeof GoogleIntegration.sendRequest !== 'function') {
             Utils.safeWarn('⚠️ GoogleIntegration غير متاح - استخدام البيانات المحلية');
             this._trainingBackendFetchOk = true;
+            this._contractorTrainingsFetchOk = true;
             return;
         }
 
@@ -681,6 +773,7 @@ const Training = {
                 if (Array.isArray(bundle.legalTrainingAttendees) && (Date.now() - (this._legalAttendeesLocalSaveTime || 0)) > 60000) {
                     AppState.appData.legalTrainingAttendees = bundle.legalTrainingAttendees;
                 }
+                this._contractorTrainingsFetchOk = true;
                 persistAndRefreshUi();
                 return;
             }
@@ -707,16 +800,20 @@ const Training = {
             // ✅ helpers: حراس الحفظ المحلي (60 ثانية) لمنع استبدال السجلات الجديدة بنتيجة جلب قديمة
             const trainingGuardOk = () => (Date.now() - (this._trainingLocalSaveTime || 0)) > 60000;
             const attendanceGuardOk = () => (Date.now() - (this._trainingAttendanceLocalSaveTime || 0)) > 60000;
-            const contractorGuardOk = () => (Date.now() - (this._contractorTrainingsLocalSaveTime || 0)) > 60000;
             const legalGuardOk = () => (Date.now() - (this._legalTrainingsLocalSaveTime || 0)) > 60000;
             const legalAttendeesGuardOk = () => (Date.now() - (this._legalAttendeesLocalSaveTime || 0)) > 60000;
             const legalRegisterGuardOk = () => (Date.now() - (this._legalRegisterLocalSaveTime || 0)) > 60000;
 
+            const startContractorFetchParallel = () => {
+                if (this._contractorTrainingsFetchOk) return null;
+                return this.loadContractorTrainingsPriority().catch(() => {});
+            };
+
+            // جلب المقاولين بالتوازي مع بقية البيانات (ما لم يكن التبويب النشط مقاولين — يُنتظر هناك)
+            const contractorParallel = active !== 'contractors' ? startContractorFetchParallel() : null;
+
             if (active === 'contractors') {
-                const contractorData = await runAction('getAllContractorTrainings', 'تدريبات المقاولين');
-                if (contractorData && contractorGuardOk()) {
-                    AppState.appData.contractorTrainings = contractorData;
-                }
+                await this.loadContractorTrainingsPriority();
                 persistAndRefreshUi();
                 runAction('getAllTrainings', 'برامج التدريب').then((data) => { if (data && trainingGuardOk()) { AppState.appData.training = data; this._markAllTabsDirty(); } });
                 runAction('getAllTrainingAttendance', 'سجل الحضور').then((data) => { if (data && attendanceGuardOk()) { AppState.appData.trainingAttendance = data; this._markAllTabsDirty(); } });
@@ -733,11 +830,6 @@ const Training = {
                 const trainingData = await runAction('getAllTrainings', 'برامج التدريب');
                 if (trainingData && trainingGuardOk()) AppState.appData.training = trainingData;
                 persistAndRefreshUi();
-                runAction('getAllContractorTrainings', 'تدريبات المقاولين').then((data) => {
-                    if (data && contractorGuardOk()) {
-                        AppState.appData.contractorTrainings = data; this._markAllTabsDirty();
-                    }
-                });
                 runAction('getAllTrainingSessions', 'جلسات التدريب').then((data) => { if (data) { AppState.appData.trainingSessions = data; this._markAllTabsDirty(); } });
                 runAction('getAllTrainingCertificates', 'الشهادات').then((data) => { if (data) { AppState.appData.trainingCertificates = data; this._markAllTabsDirty(); } });
                 runAction('getAllLegalTrainings', 'التدريبات القانونية').then((data) => { if (data && legalGuardOk()) { AppState.appData.legalTrainings = data; this._markAllTabsDirty(); } });
@@ -746,27 +838,28 @@ const Training = {
                 return;
             }
 
-            // باقي الحالات (programs/analysis): ابدأ ببرامج التدريب ثم أكمل بقية البيانات.
+            // باقي الحالات (programs/analysis): برامج التدريب أولاً — المقاولون يُجلبون بالتوازي عبر contractorParallel
             const trainingData = await runAction('getAllTrainings', 'برامج التدريب');
             if (trainingData && trainingGuardOk()) {
                 AppState.appData.training = trainingData;
                 Utils.safeLog(`✅ تم تحميل ${trainingData.length} برنامج تدريبي`);
             }
             persistAndRefreshUi();
+            if (contractorParallel) {
+                contractorParallel.catch(() => {
+                    if (!this._contractorTrainingsFetchOk) this._contractorTrainingsFetchOk = true;
+                });
+            }
             runAction('getAllTrainingSessions', 'جلسات التدريب').then((data) => { if (data) { AppState.appData.trainingSessions = data; this._markAllTabsDirty(); } });
             runAction('getAllTrainingCertificates', 'الشهادات').then((data) => { if (data) { AppState.appData.trainingCertificates = data; this._markAllTabsDirty(); } });
             runAction('getAllTrainingAttendance', 'سجل الحضور').then((data) => { if (data && attendanceGuardOk()) { AppState.appData.trainingAttendance = data; this._markAllTabsDirty(); } });
-            runAction('getAllContractorTrainings', 'تدريبات المقاولين').then((data) => {
-                if (data && contractorGuardOk()) {
-                    AppState.appData.contractorTrainings = data; this._markAllTabsDirty();
-                }
-            });
             runAction('getAllLegalTrainings', 'التدريبات القانونية').then((data) => { if (data && legalGuardOk()) { AppState.appData.legalTrainings = data; this._markAllTabsDirty(); } });
             runAction('getAllLegalTrainingAttendees', 'حضور التدريبات القانونية').then((data) => { if (data && legalAttendeesGuardOk()) { AppState.appData.legalTrainingAttendees = data; this._markAllTabsDirty(); } });
             runAction('getAllLegalRegisters', 'سجل التشريعات').then((data) => { if (data && legalRegisterGuardOk()) { AppState.appData.legalRegister = data; this._markAllTabsDirty(); } });
         } catch (error) {
             Utils.safeError('❌ خطأ في تحميل بيانات التدريب:', error);
             this._trainingBackendFetchOk = true;
+            this._contractorTrainingsFetchOk = true;
         }
     },
 
@@ -2783,8 +2876,11 @@ const Training = {
         this._hydrateTab(tabName);
 
         // البيانات من الخادم في الخلفية: لا توقف الواجهة
-        if (this._trainingBackendFetchOk !== true && (tabName === 'contractors' || tabName === 'attendance')) {
-            this.loadTrainingDataAsync().catch(() => {});
+        if (tabName === 'contractors') {
+            this._showContractorLocalDataIfAny();
+            void this.loadContractorTrainingsPriority().catch(() => {});
+        } else if (this._trainingBackendFetchOk !== true && tabName === 'attendance') {
+            void this.loadTrainingDataAsync().catch(() => {});
         }
 
         this.setupEventListeners();
