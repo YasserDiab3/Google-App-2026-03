@@ -666,7 +666,7 @@ const Settings = {
                             </div>
                             <div class="card-body space-y-4">
                                 <p class="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
-                                    يُستخدم لكارت <strong>عدد ساعات العمل</strong> ومؤشّري <strong>FA</strong> و<strong>TRIR</strong>، وحقل <strong>TIR</strong> (لكل 100 عامل/workforce).
+                                    يُستخدم لكارت <strong>عدد ساعات العمل</strong> و<strong>ساعات العمل الآمنة</strong> ومؤشّري <strong>FA</strong> و<strong>TRIR</strong>، وحقل <strong>TIR</strong> (لكل 100 عامل/workforce).
                                     إن لم يُملأ «إجمالي الساعات اليدوي» يُقدَّر الإجمالي من: موظفون نشطون × (ساعات/يوم × أيام/شهر × أشهر/سنة) مع إضافة عمالة المقاولين إن فُعّل الخيار ووُجدت أعداد في سجل المقاول المعتمد.
                                 </p>
                                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">

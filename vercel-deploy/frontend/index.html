@@ -11226,6 +11226,33 @@
                                 </div>
                             </div>
 
+                            <div class="kpi-card kpi-success" role="article" data-dash-scope="employees">
+                                <div class="kpi-icon" aria-hidden="true">
+                                    <i class="fas fa-shield-alt"></i>
+                                </div>
+                                <div class="kpi-content">
+                                    <h3
+                                        class="kpi-label"
+                                        data-i18n="dash.safeWorkHours"
+                                    >
+                                        ساعات العمل الآمنة
+                                    </h3>
+                                    <p
+                                        class="kpi-value"
+                                        id="safe-working-hours"
+                                        aria-live="polite"
+                                    >
+                                        0
+                                    </p>
+                                    <p
+                                        class="kpi-description"
+                                        data-i18n="dash.safeWorkHoursDesc"
+                                    >
+                                        SAFE WORKING HOURS (COUNT.)
+                                    </p>
+                                </div>
+                            </div>
+
                             <div class="kpi-card kpi-success" role="article" data-dash-scope="incidents">
                                 <div class="kpi-icon" aria-hidden="true">
                                     <i class="fas fa-calendar-times"></i>
@@ -13025,7 +13052,7 @@
                     }
 
                     // مطابقة CACHE_VERSION في service-worker.js — تسريع جلب سكربت SW بعد النشر (تجاوز كاش الشبكة/الوسيط)
-                    const __SW_REGISTER_QUERY = "v=hse-app-v1.0.253-20260621";
+                    const __SW_REGISTER_QUERY = "v=hse-app-v1.0.254-20260622";
                     const swUrl =
                         swPath +
                         (swPath.includes("?") ? "&" : "?") +

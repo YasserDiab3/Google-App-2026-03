@@ -3324,6 +3324,68 @@ const Dashboard = {
         return this._computeEstimatedAnnualWorkHoursTotal(employees, contractors);
     },
 
+    /** إجمالي القوى العاملة (موظفون نشطون + عمالة مقاولين عند التفعيل) لحساب ساعات العمل اليومية */
+    _getDashboardWorkforceCount(appData) {
+        const data = appData && typeof appData === 'object' ? appData : {};
+        const employees = Array.isArray(data.employees) ? data.employees : [];
+        const approvedContractors = Array.isArray(data.approvedContractors) ? data.approvedContractors : [];
+        const empCount = employees.filter((e) => e && !this._isEmployeeInactive(e)).length;
+        const contractorCount = this.workHoursIncludeContractors()
+            ? this._sumContractorWorkforceHeadcount(approvedContractors, data)
+            : 0;
+        return empCount + contractorCount;
+    },
+
+    /**
+     * أيام منذ آخر حادث مسجل (من السجل أو الحوادث).
+     * @returns {number|null} null = لا حوادث مسجلة
+     */
+    _getDaysSinceLastIncidentForDashboard(appData) {
+        const data = appData && typeof appData === 'object' ? appData : {};
+        const registryData = Array.isArray(data.incidentsRegistry) ? data.incidentsRegistry : [];
+        const incidents = Array.isArray(data.incidents) ? data.incidents : [];
+        const allRecords = registryData.length > 0
+            ? registryData.filter((r) => r && r.incidentDate)
+            : incidents.filter((i) => i && (i.incidentDate || i.date || i.createdAt));
+        if (allRecords.length === 0) return null;
+        const sortedRecords = allRecords.slice().sort((a, b) => {
+            const dateA = new Date(a.incidentDate || a.date || a.createdAt);
+            const dateB = new Date(b.incidentDate || b.date || b.createdAt);
+            return dateB - dateA;
+        });
+        const lastIncidentDate = new Date(
+            sortedRecords[0].incidentDate || sortedRecords[0].date || sortedRecords[0].createdAt
+        );
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        lastIncidentDate.setHours(0, 0, 0, 0);
+        return Math.floor((today - lastIncidentDate) / (1000 * 60 * 60 * 24));
+    },
+
+    /**
+     * ساعات العمل الآمنة (SAFE WORKING HOURS COUNT):
+     * أولوية لـ localStorage `hse_safe_working_hours`؛ وإلا:
+     * - بلا حوادث: إجمالي ساعات العمل (كل الساعات «آمنة»)
+     * - مع حوادث: أيام منذ آخر حادث × القوى العاملة × ساعات/يوم (نفس إعدادات كارت إجمالي الساعات)
+     */
+    getDashboardSafeWorkingHours(appData) {
+        const rawSaved = typeof localStorage !== 'undefined' ? localStorage.getItem('hse_safe_working_hours') : null;
+        if (rawSaved != null && String(rawSaved).trim() !== '') {
+            const parsed = parseFloat(String(rawSaved).replace(/,/g, ''));
+            if (Number.isFinite(parsed) && parsed >= 0) return Math.round(parsed);
+        }
+        const data = appData && typeof appData === 'object' ? appData : {};
+        const daysSinceLast = this._getDaysSinceLastIncidentForDashboard(data);
+        if (daysSinceLast === null) {
+            return this.getDashboardTotalWorkHours(data);
+        }
+        const workforce = this._getDashboardWorkforceCount(data);
+        const hpd = this._parseNumWorkHours(typeof localStorage !== 'undefined' ? localStorage.getItem('hse_hours_per_day') : null);
+        const hoursPerDay = !isNaN(hpd) && hpd > 0 ? hpd : 8;
+        const dailyManHours = Math.max(0, workforce) * hoursPerDay;
+        return Math.round(Math.max(0, daysSinceLast) * dailyManHours);
+    },
+
     _parseNumWorkHours(v) {
         if (v === undefined || v === null || v === '') return NaN;
         const x = parseFloat(String(v).replace(/,/g, ''));
@@ -3551,23 +3613,12 @@ const Dashboard = {
             const complianceClass = complianceRate >= 90 ? 'kpi-value text-green-600' : complianceRate >= 70 ? 'kpi-value text-yellow-600' : 'kpi-value text-red-600';
 
             const actualTotalHours = this.getDashboardTotalWorkHours(data);
+            const safeWorkingHours = this.getDashboardSafeWorkingHours(data);
 
             let daysWithoutInjuryText = 'N/A';
             if (canIncDash) {
-                let allRecords = registryData && registryData.length > 0
-                    ? registryData.filter(r => r && r.incidentDate)
-                    : incidents.filter(i => i && (i.incidentDate || i.date || i.createdAt));
-                if (allRecords.length > 0) {
-                    const sortedRecords = allRecords.slice().sort((a, b) => {
-                        const dateA = new Date(a.incidentDate || a.date || a.createdAt);
-                        const dateB = new Date(b.incidentDate || b.date || b.createdAt);
-                        return dateB - dateA;
-                    });
-                    const lastIncidentDate = new Date(sortedRecords[0].incidentDate || sortedRecords[0].date || sortedRecords[0].createdAt);
-                    const today = new Date();
-                    today.setHours(0, 0, 0, 0);
-                    lastIncidentDate.setHours(0, 0, 0, 0);
-                    const daysDiff = Math.floor((today - lastIncidentDate) / (1000 * 60 * 60 * 24));
+                const daysDiff = this._getDaysSinceLastIncidentForDashboard(data);
+                if (daysDiff !== null) {
                     daysWithoutInjuryText = daysDiff >= 0 ? this.formatNumber(daysDiff) : '0';
                 }
             }
@@ -3632,6 +3683,11 @@ const Dashboard = {
                         if (totalWorkHoursEl) {
                             totalWorkHoursEl.textContent = self.formatNumber(actualTotalHours);
                             self.applyEnglishNumberFormat(totalWorkHoursEl);
+                        }
+                        const safeWorkingHoursEl = document.getElementById('safe-working-hours');
+                        if (safeWorkingHoursEl) {
+                            safeWorkingHoursEl.textContent = self.formatNumber(safeWorkingHours);
+                            self.applyEnglishNumberFormat(safeWorkingHoursEl);
                         }
                         const empCountDashEl = document.getElementById('dash-kpi-employees-active-count');
                         if (empCountDashEl) {
