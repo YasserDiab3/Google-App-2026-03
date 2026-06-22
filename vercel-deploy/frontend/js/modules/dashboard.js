@@ -3796,6 +3796,8 @@ const Dashboard = {
             updateOneSafetyValue('far-value', this.formatMetricRate(rates.far, 4));
             updateOneSafetyValue('fr-value', this.formatMetricRate(rates.fr, 2));
             updateOneSafetyValue('lti-value', this.formatNumber(rates.ltiCount || 0));
+            updateOneSafetyValue('sr-value', this.formatMetricRate(rates.sr, 2));
+            updateOneSafetyValue('ir-value', this.formatMetricRate(rates.ir, 2));
 
             if (typeof Utils !== 'undefined' && Utils.safeLog) {
                 Utils.safeLog('📊 مؤشرات السلامة (HseMetrics YTD):', {
@@ -4631,7 +4633,7 @@ const Dashboard = {
         if (!element) return;
         if (element.dataset.numberFormatted === 'true') return;
         const id = element.id || '';
-        const isSafetyMetricValue = (id === 'trir-value' || id === 'afr-value' || id === 'far-value' || id === 'fr-value' || id === 'lti-value');
+        const isSafetyMetricValue = (id === 'trir-value' || id === 'afr-value' || id === 'far-value' || id === 'fr-value' || id === 'lti-value' || id === 'sr-value' || id === 'ir-value');
         try {
             if (isSafetyMetricValue) {
                 element.dataset.numberFormatted = 'true';

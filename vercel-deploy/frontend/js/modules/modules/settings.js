@@ -706,8 +706,18 @@ const Settings = {
                                         <input type="number" id="wh-multiplier-far" class="form-input" min="1" step="1000000" placeholder="100000000" />
                                     </div>
                                 </div>
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
+                                    <div>
+                                        <label class="block text-sm font-semibold text-gray-700 mb-2" for="wh-multiplier-sr">مضاعف SR</label>
+                                        <input type="number" id="wh-multiplier-sr" class="form-input" min="1" step="1000" placeholder="1000000" />
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-semibold text-gray-700 mb-2" for="wh-multiplier-ir">مضاعف IR</label>
+                                        <input type="number" id="wh-multiplier-ir" class="form-input" min="1" step="1000" placeholder="1000000" />
+                                    </div>
+                                </div>
                                 <p class="text-xs text-gray-500">
-                                    المفاتيح: <code>hse_hours_per_day</code>، <code>hse_work_days_per_month</code>، <code>hse_multiplier_trir/afr/far</code>.
+                                    المفاتيح: <code>hse_hours_per_day</code>، <code>hse_work_days_per_month</code>، <code>hse_multiplier_trir/afr/far/sr/ir</code>.
                                 </p>
                                 <button type="button" id="save-work-hours-settings-btn" class="btn-primary">
                                     <i class="fas fa-save ml-2"></i>حفظ إعدادات ساعات العمل
@@ -1716,6 +1726,8 @@ const Settings = {
             const whMultTrirEl = document.getElementById('wh-multiplier-trir');
             const whMultAfrEl = document.getElementById('wh-multiplier-afr');
             const whMultFarEl = document.getElementById('wh-multiplier-far');
+            const whMultSrEl = document.getElementById('wh-multiplier-sr');
+            const whMultIrEl = document.getElementById('wh-multiplier-ir');
             const saveWorkHoursBtn = document.getElementById('save-work-hours-settings-btn');
 
             const fillWorkHoursSettingsInputs = () => {
@@ -1727,6 +1739,8 @@ const Settings = {
                     if (whMultTrirEl) whMultTrirEl.value = localStorage.getItem('hse_multiplier_trir') || '';
                     if (whMultAfrEl) whMultAfrEl.value = localStorage.getItem('hse_multiplier_afr') || '';
                     if (whMultFarEl) whMultFarEl.value = localStorage.getItem('hse_multiplier_far') || '';
+                    if (whMultSrEl) whMultSrEl.value = localStorage.getItem('hse_multiplier_sr') || '';
+                    if (whMultIrEl) whMultIrEl.value = localStorage.getItem('hse_multiplier_ir') || '';
                     if (whIncEl) {
                         const v = localStorage.getItem('hse_work_hours_include_contractors');
                         if (v === null || String(v).trim() === '') {
@@ -1777,6 +1791,8 @@ const Settings = {
                         savePositiveOpt('hse_multiplier_trir', whMultTrirEl);
                         savePositiveOpt('hse_multiplier_afr', whMultAfrEl);
                         savePositiveOpt('hse_multiplier_far', whMultFarEl);
+                        savePositiveOpt('hse_multiplier_sr', whMultSrEl);
+                        savePositiveOpt('hse_multiplier_ir', whMultIrEl);
 
                         localStorage.setItem('hse_work_hours_include_contractors', whIncEl && whIncEl.checked ? '1' : '0');
 

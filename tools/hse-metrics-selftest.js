@@ -37,9 +37,14 @@ assertClose(
     'FAR formula (1 fatality, 1M hours)'
 );
 assertClose(
-    HseMetrics.computeRate(2, 1000000, 1000000),
-    2,
-    'FR formula (2 LTI, 1M hours)'
+    HseMetrics.computeRate(5, 1000000, 1000000),
+    5,
+    'SR formula (5 lost days, 1M hours)'
+);
+assertClose(
+    HseMetrics.computeRate(10, 500000, 1000000),
+    20,
+    'IR formula (10 incidents, 500k hours)'
 );
 
 // ─── تنسيق عرض ───
@@ -67,21 +72,29 @@ const ytdTrir = HseMetrics.getYtdRate(monthly.recordables, monthly.manHours, 3, 
 const ytdAfr = HseMetrics.getYtdRate(monthly.injuries, monthly.manHours, 3, HseMetrics.DEFAULT_MULTIPLIERS.AFR);
 const ytdFar = HseMetrics.getYtdRate(monthly.fatalities, monthly.manHours, 3, HseMetrics.DEFAULT_MULTIPLIERS.FAR);
 const ytdFr = HseMetrics.getYtdRate(monthly.lti, monthly.manHours, 3, HseMetrics.DEFAULT_MULTIPLIERS.FR);
+const ytdSr = HseMetrics.getYtdRate(monthly.daysLost, monthly.manHours, 3, HseMetrics.DEFAULT_MULTIPLIERS.SR);
+const ytdIr = HseMetrics.getYtdRate(monthly.totalIncidents, monthly.manHours, 3, HseMetrics.DEFAULT_MULTIPLIERS.IR);
 
 assertClose(snap.rates.trir, ytdTrir, 'Dashboard TRIR = Scorecard YTD TRIR');
 assertClose(snap.rates.afr, ytdAfr, 'Dashboard AFR = Scorecard YTD AFR');
 assertClose(snap.rates.far, ytdFar, 'Dashboard FAR = Scorecard YTD FAR');
 assertClose(snap.rates.fr, ytdFr, 'Dashboard FR = Scorecard YTD FR');
+assertClose(snap.rates.sr, ytdSr, 'Dashboard SR = Scorecard YTD SR');
+assertClose(snap.rates.ir, ytdIr, 'Dashboard IR = Scorecard YTD IR');
 
 const ytdHours = HseMetrics.sumSlice(monthly.manHours, 3);
 assertEq(ytdHours, 704, 'YTD hours 4 months × 176');
 assertClose(snap.rates.trir, (3 * 200000) / ytdHours, 'TRIR matches manual formula');
 assertClose(snap.rates.afr, (4 * 1000000) / ytdHours, 'AFR matches manual formula');
+assertClose(snap.rates.sr, (5 * 1000000) / ytdHours, 'SR matches manual formula');
+assertClose(snap.rates.ir, (4 * 1000000) / ytdHours, 'IR matches manual formula');
 
 assertClose(snap.totals.recordables, 3, 'recordables YTD');
 assertClose(snap.totals.injuries, 4, 'injuries YTD');
 assertClose(snap.totals.fatalities, 1, 'fatalities YTD');
 assertClose(snap.totals.lti, 1, 'LTI count YTD (Jan only)');
+assertClose(snap.totals.totalIncidents, 4, 'total incidents YTD');
+assertClose(snap.totals.daysLost, 5, 'days lost YTD');
 assertEq(snap.rates.ltiCount, 1, 'LTI card integer');
 
 // دمج سجل الحوادث مع incidents
@@ -95,5 +108,6 @@ const mergedFixtures = {
 const mergedMonthly = HseMetrics.buildMonthlyBase(2026, mergedFixtures);
 assertClose(mergedMonthly.lti[4], 1, 'registry-only LTI counted in May');
 assertClose(mergedMonthly.recordables[4], 1, 'registry LTI is recordable');
+assertClose(mergedMonthly.totalIncidents[4], 2, 'registry + incidents counted in May');
 
 console.log('hse-metrics-selftest: OK');

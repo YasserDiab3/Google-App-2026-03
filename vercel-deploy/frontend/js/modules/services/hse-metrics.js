@@ -5,6 +5,7 @@
  * FAR  = Fatalities × 100,000,000 / Man-Hours
  * FR   = LTI × 1,000,000 / Man-Hours
  * SR   = Days Lost × 1,000,000 / Man-Hours
+ * IR   = Total Incidents × 1,000,000 / Man-Hours
  */
 (function (global) {
     'use strict';
@@ -16,7 +17,8 @@
         AFR: 1000000,
         FAR: 100000000,
         FR: 1000000,
-        SR: 1000000
+        SR: 1000000,
+        IR: 1000000
     };
 
     function parseNum(v) {
@@ -48,7 +50,8 @@
             AFR: read('hse_multiplier_afr', DEFAULT_MULTIPLIERS.AFR),
             FAR: read('hse_multiplier_far', DEFAULT_MULTIPLIERS.FAR),
             FR: read('hse_multiplier_fr', DEFAULT_MULTIPLIERS.FR),
-            SR: read('hse_multiplier_sr', DEFAULT_MULTIPLIERS.SR)
+            SR: read('hse_multiplier_sr', DEFAULT_MULTIPLIERS.SR),
+            IR: read('hse_multiplier_ir', DEFAULT_MULTIPLIERS.IR)
         };
     }
 
@@ -295,11 +298,13 @@
             far: computeRate(totals.fatalities, hours, mult.FAR),
             fr: computeRate(totals.lti, hours, mult.FR),
             sr: computeRate(totals.daysLost, hours, mult.SR),
+            ir: computeRate(totals.totalIncidents, hours, mult.IR),
             ltiCount: totals.lti || 0,
             recordables: totals.recordables || 0,
             injuries: totals.injuries || 0,
             fatalities: totals.fatalities || 0,
             daysLost: totals.daysLost || 0,
+            totalIncidents: totals.totalIncidents || 0,
             manHours: hours
         };
     }
@@ -328,6 +333,7 @@
             nlti: createMonthlyArray(0),
             firstAid: createMonthlyArray(0),
             daysLost: createMonthlyArray(0),
+            totalIncidents: createMonthlyArray(0),
             manHours: createMonthlyArray(0),
             employeeCounts: createMonthlyArray(0)
         };
@@ -359,6 +365,7 @@
             if (c.isInjury) base.injuries[monthIndex] += 1;
             if (c.isFatality) base.fatalities[monthIndex] += 1;
             if (c.daysLost > 0) base.daysLost[monthIndex] += c.daysLost;
+            base.totalIncidents[monthIndex] += 1;
         });
 
         return base;
@@ -396,6 +403,7 @@
             fatalities: sumSlice(monthlyBase.fatalities, ytdLimit),
             lti: sumSlice(monthlyBase.lti, ytdLimit),
             daysLost: sumSlice(monthlyBase.daysLost, ytdLimit),
+            totalIncidents: sumSlice(monthlyBase.totalIncidents, ytdLimit),
             manHours: resolveYtdManHours(monthlyBase, ytdLimit)
         };
     }
@@ -409,6 +417,7 @@
             fatalities: 0,
             lti: 0,
             daysLost: 0,
+            totalIncidents: 0,
             manHours: 0
         };
 
@@ -425,6 +434,7 @@
                 totals.fatalities += monthly.fatalities[m] || 0;
                 totals.lti += monthly.lti[m] || 0;
                 totals.daysLost += monthly.daysLost[m] || 0;
+                totals.totalIncidents += monthly.totalIncidents[m] || 0;
                 totals.manHours += monthly.manHours[m] || 0;
             }
         }
@@ -453,6 +463,7 @@
                 far: formatRate(rates.far, 4),
                 fr: formatRate(rates.fr, 2),
                 sr: formatRate(rates.sr, 2),
+                ir: formatRate(rates.ir, 2),
                 lti: String(rates.ltiCount)
             }
         };
@@ -467,7 +478,8 @@
             far: buildMonthlyRateSeries(monthlyBase.fatalities, hours, mult.FAR),
             fr: buildMonthlyRateSeries(monthlyBase.lti, hours, mult.FR),
             ltir: buildMonthlyRateSeries(monthlyBase.lti, hours, mult.FR),
-            sr: buildMonthlyRateSeries(monthlyBase.daysLost, hours, mult.SR)
+            sr: buildMonthlyRateSeries(monthlyBase.daysLost, hours, mult.SR),
+            ir: buildMonthlyRateSeries(monthlyBase.totalIncidents, hours, mult.IR)
         };
     }
 

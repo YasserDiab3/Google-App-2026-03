@@ -273,6 +273,8 @@
 .safety-metrics-section #far-value,
 .safety-metrics-section #fr-value,
 .safety-metrics-section #lti-value,
+.safety-metrics-section #sr-value,
+.safety-metrics-section #ir-value,
 .safety-metrics-section #trir-value {
     direction: ltr !important;
     text-align: left !important;

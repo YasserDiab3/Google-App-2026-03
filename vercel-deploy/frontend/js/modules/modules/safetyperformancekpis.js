@@ -831,7 +831,8 @@ const SafetyPerformanceKPIs = {
             ${this.renderKPICard('total-injuries', t('module.kpi.lagging.totalInjuries','عدد الإصابات المسجلة'), 'injuries', 'fa-user-injured', '#dc2626', '#fee2e2', t('module.kpi.unit.injury','إصابة'))}
             ${this.renderKPICard('lti-count', t('module.kpi.lagging.ltiCount','عدد الإصابات المؤدية لتوقف عن العمل'), 'lti', 'fa-bed', '#b91c1c', '#fee2e2', t('module.kpi.unit.injury','إصابة'))}
             ${this.renderKPICard('ltifr', t('module.kpi.lagging.ltifr','معدل تكرار الإصابات (LTIFR)'), 'ltifr', 'fa-sync-alt', '#ea580c', '#ffedd5', '')}
-            ${this.renderKPICard('severity-rate', t('module.kpi.lagging.severityRate','معدل شدة الإصابات'), 'severity', 'fa-exclamation-circle', '#e11d48', '#ffe4e6', '%')}
+            ${this.renderKPICard('severity-rate', t('module.kpi.lagging.severityRate','معدل شدة الإصابات (SR)'), 'severity', 'fa-exclamation-circle', '#e11d48', '#ffe4e6', '')}
+            ${this.renderKPICard('incident-rate', t('module.kpi.lagging.incidentRate','معدل الحوادث (IR)'), 'incident-rate', 'fa-list-ol', '#0891b2', '#cffafe', '')}
             ${this.renderKPICard('near-miss-count', t('module.kpi.lagging.nearMissCount','عدد الحوادث الوشيكة المسجلة'), 'nearmiss-count', 'fa-eye', '#ca8a04', '#fef9c3', t('module.kpi.unit.incident','حادث'))}
             ${this.renderKPICard('fire-incidents', t('module.kpi.lagging.fireIncidents','عدد الحرائق أو الحوادث في معدات الإطفاء'), 'fire-incidents', 'fa-fire', '#c2410c', '#ffedd5', t('module.kpi.unit.incident','حادث'))}
             ${this.renderKPICard('lost-days', t('module.kpi.lagging.lostDays','عدد الأيام المهدورة بسبب الإصابات'), 'lost-days', 'fa-calendar-times', '#9f1239', '#ffe4e6', t('module.kpi.unit.day','يوم'))}
@@ -841,7 +842,7 @@ const SafetyPerformanceKPIs = {
 
     renderKPICard(id, label, type, icon, accentColor, bgColor, defaultUnit = '') {
         const t = (k, f) => this._t(k, f);
-        const isLagging = ['injuries','lti','ltifr','severity','nearmiss-count','fire-incidents','lost-days','accident-cost'].includes(type);
+        const isLagging = ['injuries','lti','ltifr','severity','incident-rate','nearmiss-count','fire-incidents','lost-days','accident-cost'].includes(type);
         const borderColor = isLagging ? '#fca5a5' : '#bbf7d0';
         const headerBg = isLagging ? 'rgba(254,226,226,.5)' : 'rgba(220,252,231,.5)';
         return `
@@ -1787,6 +1788,7 @@ const SafetyPerformanceKPIs = {
             injuries: this.createMonthlyArray(0),
             fatalities: this.createMonthlyArray(0),
             daysLost: this.createMonthlyArray(0),
+            totalIncidents: this.createMonthlyArray(0),
             hazards: this.createMonthlyArray(0),
             occLti: this.createMonthlyArray(0),
             occNlti: this.createMonthlyArray(0),
@@ -1822,6 +1824,7 @@ const SafetyPerformanceKPIs = {
             base.injuries = hm.injuries;
             base.fatalities = hm.fatalities;
             base.daysLost = hm.daysLost;
+            base.totalIncidents = hm.totalIncidents;
             base.hoursWorked = hm.manHours;
         } else {
             (data.incidents || []).forEach(record => {
@@ -1831,6 +1834,7 @@ const SafetyPerformanceKPIs = {
                 else if (this.isNonLostTimeIncident(record)) base.nlti[monthIndex] += 1;
                 if (this.isFirstAidIncident(record)) base.firstAid[monthIndex] += 1;
                 if (this.isRecordableIncident(record)) base.recordable[monthIndex] += 1;
+                base.totalIncidents[monthIndex] += 1;
             });
         }
 
@@ -1945,13 +1949,14 @@ const SafetyPerformanceKPIs = {
         const occRecordable = base.occLti.map((value, index) => value + base.occNlti[index]);
         const mult = (typeof HseMetrics !== 'undefined' && HseMetrics.loadMultipliers)
             ? HseMetrics.loadMultipliers()
-            : { TRIR: 200000, AFR: 1000000, FAR: 100000000, FR: 1000000, SR: 1000000 };
+            : { TRIR: 200000, AFR: 1000000, FAR: 100000000, FR: 1000000, SR: 1000000, IR: 1000000 };
 
         let ltir;
         let trir;
         let afr;
         let far;
         let sr;
+        let ir;
         let rollingLtir;
         let rollingTrir;
         let occLtir;
@@ -1966,6 +1971,7 @@ const SafetyPerformanceKPIs = {
                 fatalities: base.fatalities,
                 lti: base.lti,
                 daysLost: base.daysLost,
+                totalIncidents: base.totalIncidents,
                 manHours: base.hoursWorked
             }, mult);
             ltir = hmRates.ltir;
@@ -1973,6 +1979,7 @@ const SafetyPerformanceKPIs = {
             afr = hmRates.afr;
             far = hmRates.far;
             sr = hmRates.sr;
+            ir = hmRates.ir;
             rollingLtir = HseMetrics.calculateRollingSeries(base.lti, prevBase.lti, base.hoursWorked, prevBase.hoursWorked, mult.FR);
             rollingTrir = HseMetrics.calculateRollingSeries(base.recordable, prevBase.recordable, base.hoursWorked, prevBase.hoursWorked, mult.TRIR);
             occLtir = HseMetrics.buildMonthlyRateSeries(base.occLti, base.hoursWorked, mult.FR);
@@ -1991,6 +1998,7 @@ const SafetyPerformanceKPIs = {
             afr = this.calculateRateSeries(base.injuries, base.hoursWorked);
             far = this.calculateRateSeries(base.fatalities, base.hoursWorked);
             sr = this.calculateRateSeries(base.daysLost, base.hoursWorked);
+            ir = this.calculateRateSeries(base.totalIncidents, base.hoursWorked);
             occLtir = this.calculateRateSeries(base.occLti, base.hoursWorked);
             occTrir = this.calculateRateSeries(occRecordable, base.hoursWorked);
             rollingLtir = this.calculateRollingSeries(base.lti, prevBase.lti, base.hoursWorked, prevBase.hoursWorked);
@@ -2043,11 +2051,13 @@ const SafetyPerformanceKPIs = {
                 injuries: base.injuries,
                 fatalities: base.fatalities,
                 daysLost: base.daysLost,
+                totalIncidents: base.totalIncidents,
                 ltir,
                 trir,
                 afr,
                 far,
                 sr,
+                ir,
                 rollingLtir,
                 rollingTrir,
                 hazards: base.hazards,
@@ -2215,6 +2225,7 @@ const SafetyPerformanceKPIs = {
                     ${renderMetricRow(t('module.kpi.scorecard.row.afr','AFR - Accident Frequency Rate'), rows.afr, 'yellow', this.getYtdValue(rows.injuries, 'rate', ytdLimit, rows.hoursWorked, mult.AFR), 'yellow', 2)}
                     ${renderMetricRow(t('module.kpi.scorecard.row.far','FAR - Fatality Accident Rate'), rows.far, 'yellow', this.getYtdValue(rows.fatalities, 'rate', ytdLimit, rows.hoursWorked, mult.FAR), 'yellow', 4)}
                     ${renderMetricRow(t('module.kpi.scorecard.row.sr','SR - Severity Rate'), rows.sr, 'yellow', this.getYtdValue(rows.daysLost, 'rate', ytdLimit, rows.hoursWorked, mult.SR), 'yellow', 2)}
+                    ${renderMetricRow(t('module.kpi.scorecard.row.ir','IR - Incident Rate'), rows.ir, 'yellow', this.getYtdValue(rows.totalIncidents, 'rate', ytdLimit, rows.hoursWorked, mult.IR), 'yellow', 2)}
                     <tr class="spk-row-subsection"><td colspan="13">${t('module.kpi.scorecard.section.rolling12','ROLLING 12 MONTH VALUES')}</td><td class="spk-subsection-ytd">${t('module.kpi.scorecard.table.ytd12avg','YTD 12 Mth Ave')}</td></tr>
                     ${renderMetricRow(t('module.kpi.scorecard.row.ltir','LTIR - Lost Time Incident Rate'), rows.rollingLtir, 'yellow', this.getYtdValue(rows.rollingLtir, 'avg', ytdLimit), 'yellow', 2)}
                     ${renderMetricRow(t('module.kpi.scorecard.row.trir','TRIR - Total Recordable Incident Rate'), rows.rollingTrir, 'yellow', this.getYtdValue(rows.rollingTrir, 'avg', ytdLimit), 'yellow', 2)}
@@ -2396,6 +2407,9 @@ const SafetyPerformanceKPIs = {
         const severityRate = this.calculateSeverityRate(data);
         this.updateKPI('severity-rate', severityRate, '', 'severity');
 
+        const incidentRate = this.calculateIR(data);
+        this.updateKPI('incident-rate', incidentRate, '', 'incident-rate');
+
         const nearMissCount = this.calculateNearMissCount(data);
         this.updateKPI('near-miss-count', nearMissCount, 'حادث', 'nearmiss-count');
 
@@ -2531,6 +2545,15 @@ const SafetyPerformanceKPIs = {
         const totalWorkHours = this.calculateCombinedWorkforceHours();
         if (totalWorkHours <= 0) return '0.00';
         return ((totalLostDays * 1000000) / totalWorkHours).toFixed(2);
+    },
+
+    calculateIR(data) {
+        const rates = this._getFilteredHseRates(data);
+        if (rates) return HseMetrics.formatRate(rates.ir, 2);
+        const totalIncidents = (data.incidents || []).length;
+        const totalWorkHours = this.calculateCombinedWorkforceHours();
+        if (totalWorkHours <= 0) return '0.00';
+        return ((totalIncidents * 1000000) / totalWorkHours).toFixed(2);
     },
 
     calculateTrainingCompletion(data) {
@@ -3266,7 +3289,8 @@ const SafetyPerformanceKPIs = {
             { key: 'injuries', label: t('module.kpi.lagging.totalInjuries','عدد الإصابات المسجلة'), unit: t('module.kpi.unit.injury','إصابة') },
             { key: 'lti', label: t('module.kpi.lagging.ltiCount','عدد الإصابات المؤدية لتوقف عن العمل (LTI)'), unit: t('module.kpi.unit.injury','إصابة') },
             { key: 'ltifr', label: t('module.kpi.lagging.ltifr','معدل تكرار الإصابات (LTIFR)'), unit: '' },
-            { key: 'severity', label: t('module.kpi.lagging.severityRate','معدل شدة الإصابات'), unit: '%' },
+            { key: 'severity', label: t('module.kpi.lagging.severityRate','معدل شدة الإصابات (SR)'), unit: '' },
+            { key: 'incident-rate', label: t('module.kpi.lagging.incidentRate','معدل الحوادث (IR)'), unit: '' },
             { key: 'nearmiss-count', label: t('module.kpi.lagging.nearMissCount','عدد الحوادث الوشيكة المسجلة'), unit: t('module.kpi.unit.incident','حادث') },
             { key: 'fire-incidents', label: t('module.kpi.lagging.fireIncidents','عدد الحرائق أو الحوادث في معدات الإطفاء'), unit: t('module.kpi.unit.incident','حادث') },
             { key: 'lost-days', label: t('module.kpi.lagging.lostDays','عدد الأيام المهدورة بسبب الإصابات'), unit: t('module.kpi.unit.day','يوم') },
@@ -3332,7 +3356,7 @@ const SafetyPerformanceKPIs = {
 
     saveTargetsFromModal(modal) {
         const leadingTargets = ['inspection-tours', 'observations', 'actions-closure', 'training-courses', 'training-attendance', 'ptw-approved', 'ppe-compliance', 'inspections-on-time', 'safety-meetings'];
-        const laggingTargets = ['injuries', 'lti', 'ltifr', 'severity', 'nearmiss-count', 'fire-incidents', 'lost-days', 'accident-cost'];
+        const laggingTargets = ['injuries', 'lti', 'ltifr', 'severity', 'incident-rate', 'nearmiss-count', 'fire-incidents', 'lost-days', 'accident-cost'];
         const allTargets = [...leadingTargets, ...laggingTargets];
 
         allTargets.forEach(key => {
