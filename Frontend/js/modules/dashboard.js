@@ -3765,7 +3765,7 @@ const Dashboard = {
                         }
                     }
                     if (self.dashboardCan('incidents')) {
-                        self.calculateSafetyMetrics(incidents, employees, registryData, data);
+                        self.calculateSafetyMetrics(data);
                     }
                     if (reportsUpdates && reportsUpdates.length) {
                         self.applyReportsStatisticsUpdates(reportsUpdates);
@@ -3787,7 +3787,7 @@ const Dashboard = {
      * LTI, TIR, FA, TRIR
      * يستخدم سجل الحوادث للحصول على دقة أعلى في الحسابات
      */
-    calculateSafetyMetrics(incidents, employees, registryData = null, appData = null) {
+    calculateSafetyMetrics(appData = null) {
         try {
             if (!this.dashboardCan('incidents')) return;
             if (typeof HseMetrics === 'undefined' || !HseMetrics.getDashboardSnapshot) {

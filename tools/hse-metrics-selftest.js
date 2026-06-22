@@ -106,9 +106,20 @@ const mergedFixtures = {
     ]
 };
 const mergedMonthly = HseMetrics.buildMonthlyBase(2026, mergedFixtures);
-assertClose(mergedMonthly.lti[4], 1, 'registry-only LTI counted in May');
-assertClose(mergedMonthly.recordables[4], 1, 'registry LTI is recordable');
-assertClose(mergedMonthly.totalIncidents[4], 2, 'registry + incidents counted in May');
+assertClose(mergedMonthly.lti[4], 0, 'registry-only excluded when incidents list exists');
+assertClose(mergedMonthly.recordables[4], 0, 'no recordable from excluded registry-only row');
+assertClose(mergedMonthly.totalIncidents[4], 1, 'incidents list only in May when present');
+
+const registryOnlyFixtures = {
+    employees: fixtures.employees,
+    incidents: [],
+    incidentsRegistry: [
+        { id: 'r99', incidentDate: '2026-05-20', totalLeaveDays: 3, title: 'من السجل فقط' }
+    ]
+};
+const registryOnlyMonthly = HseMetrics.buildMonthlyBase(2026, registryOnlyFixtures);
+assertClose(registryOnlyMonthly.lti[4], 1, 'registry-only LTI when no incidents list');
+assertClose(registryOnlyMonthly.totalIncidents[4], 1, 'registry fallback when incidents empty');
 
 // لا يُعدّ سجل مرتبط بنفس incidentId مرتين
 const linkedFixtures = {
@@ -125,6 +136,15 @@ const linkedFixtures = {
 };
 assertEq(HseMetrics.getUnifiedIncidents(linkedFixtures).length, 3, 'linked registry rows not double-counted; orphan kept');
 const linkedMonthly = HseMetrics.buildMonthlyBase(2026, linkedFixtures);
-assertClose(linkedMonthly.totalIncidents[5], 3, 'June incidents: 2 linked + 1 orphan registry');
+assertClose(linkedMonthly.totalIncidents[5], 2, 'June incidents: incidents list only when present (orphan registry excluded)');
+
+// buildRegistryMap يربط السجل بـ incidentId
+const regMapFixtures = {
+    incidents: [{ id: 'INC-1', date: '2026-07-01', investigation: { incidentTypes: ['injury-lost'] }, lostDays: 0 }],
+    incidentsRegistry: [{ id: 'INCR-1', incidentId: 'INC-1', incidentDate: '2026-07-01', totalLeaveDays: 7 }]
+};
+const regMapMonthly = HseMetrics.buildMonthlyBase(2026, regMapFixtures);
+assertClose(regMapMonthly.daysLost[6], 7, 'registry totalLeaveDays applied via incidentId map');
+assertClose(regMapMonthly.lti[6], 1, 'LTI from incident with registry enrichment');
 
 console.log('hse-metrics-selftest: OK');

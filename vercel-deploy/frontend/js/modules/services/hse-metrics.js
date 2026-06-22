@@ -185,10 +185,32 @@
         const map = new Map();
         (appData?.incidentsRegistry || []).forEach((entry) => {
             if (!entry) return;
-            const id = entry.id || entry.incidentId || entry.registryId;
-            if (id) map.set(String(id), entry);
+            [entry.id, entry.incidentId, entry.registryId]
+                .map((k) => (k != null ? String(k).trim() : ''))
+                .filter(Boolean)
+                .forEach((key) => {
+                    if (!map.has(key)) map.set(key, entry);
+                });
         });
         return map;
+    }
+
+    /**
+     * حوادث لحساب المؤشرات — مصدر قائمة incidents عند توفرها (مطابق لكارت اللوحة)؛
+     * السجل يُستخدم للإثراء (أيام ضياع، تصنيف) عبر buildRegistryMap وليس للتضخيم.
+     */
+    function getIncidentsForMetrics(appData) {
+        const incidents = Array.isArray(appData?.incidents) ? appData.incidents.filter(Boolean) : [];
+        if (incidents.length > 0) {
+            const seen = new Set();
+            return incidents.filter((i) => {
+                const id = String(i.id || i.incidentId || '').trim();
+                if (!id || seen.has(id)) return false;
+                seen.add(id);
+                return true;
+            });
+        }
+        return getUnifiedIncidents(appData);
     }
 
     function getUnifiedIncidents(appData) {
@@ -348,7 +370,7 @@
             base.manHours[monthIndex] = getManHoursForMonth(year, monthIndex, data);
         }
 
-        getUnifiedIncidents(data).forEach((record) => {
+        getIncidentsForMetrics(data).forEach((record) => {
             const monthIndex = getMonthIndexForYear(
                 record?.date || record?.incidentDate || record?.createdAt,
                 year
@@ -547,6 +569,7 @@
         currentYtdLimit,
         getManHoursForMonth,
         getUnifiedIncidents,
+        getIncidentsForMetrics,
         sumSlice
     };
 
