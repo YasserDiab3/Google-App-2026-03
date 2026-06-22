@@ -11292,7 +11292,7 @@
                                 </h2>
                             </div>
                             <div class="card-body">
-                                <div class="metrics-grid-container metrics-grid-container--safety-seven">
+                                <div class="metrics-grid-container metrics-grid-container--safety-eight">
                                     <!-- TRIR - Total Recordable Injury Rate -->
                                     <div class="metric-card-frame kpi-purple">
                                         <div>
@@ -11562,6 +11562,45 @@
                                                 data-i18n="dash.irSubtitle"
                                             >
                                                 إجمالي الحوادث لكل مليون ساعة عمل
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    <!-- Total Man-days -->
+                                    <div class="metric-card-frame kpi-success">
+                                        <div>
+                                            <div
+                                                class="flex items-center justify-between mb-2 w-full"
+                                            >
+                                                <div
+                                                    class="text-green-600 text-2xl"
+                                                >
+                                                    <i
+                                                        class="fas fa-calendar-day"
+                                                    ></i>
+                                                </div>
+                                                <span
+                                                    class="metric-short-code text-green-700 bg-green-200 rounded"
+                                                    >MD</span>
+                                            </div>
+                                            <h3
+                                                class="text-sm font-semibold text-gray-700 mb-1"
+                                                data-i18n="dash.manDaysTitle"
+                                            >
+                                                إجمالي أيام العمل
+                                            </h3>
+                                            <p
+                                                class="text-2xl font-bold text-green-600"
+                                                id="man-days-value"
+                                                dir="ltr"
+                                            >
+                                                0
+                                            </p>
+                                            <p
+                                                class="text-xs text-gray-600 mt-1"
+                                                data-i18n="dash.manDaysSubtitle"
+                                            >
+                                                تراكمي من بداية العام (YTD)
                                             </p>
                                         </div>
                                     </div>
@@ -13170,7 +13209,7 @@
                     }
 
                     // مطابقة CACHE_VERSION في service-worker.js — تسريع جلب سكربت SW بعد النشر (تجاوز كاش الشبكة/الوسيط)
-                    const __SW_REGISTER_QUERY = "v=hse-app-v1.0.264-20260622";
+                    const __SW_REGISTER_QUERY = "v=hse-app-v1.0.265-20260622";
                     const swUrl =
                         swPath +
                         (swPath.includes("?") ? "&" : "?") +

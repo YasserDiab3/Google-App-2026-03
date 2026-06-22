@@ -890,6 +890,10 @@
     border-top: 3px solid #dc2626;
 }
 
+#dashboard-section .safety-metrics-section .metric-card-frame.kpi-success {
+    border-top: 3px solid #16a34a;
+}
+
 #dashboard-section .safety-metrics-section .metric-card-frame > div {
     gap: 0.5rem;
 }
@@ -942,6 +946,11 @@
 #dashboard-section .safety-metrics-section .metric-card-frame.kpi-danger .flex.items-center > div.text-2xl {
     background: rgba(220, 38, 38, 0.12);
     color: #b91c1c !important;
+}
+
+#dashboard-section .safety-metrics-section .metric-card-frame.kpi-success .flex.items-center > div.text-2xl {
+    background: rgba(22, 163, 74, 0.12);
+    color: #15803d !important;
 }
 
 #dashboard-section .safety-metrics-section .metric-card-frame h3 {

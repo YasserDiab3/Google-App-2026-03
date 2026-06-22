@@ -396,6 +396,16 @@
         return annual * (monthsElapsed / monthsPerYear);
     }
 
+    function resolveYtdManDays(monthlyBase, ytdLimit) {
+        const cfg = getWorkConfig();
+        let total = 0;
+        const limit = Math.min(Math.max(ytdLimit, 0), 11);
+        for (let i = 0; i <= limit; i += 1) {
+            total += Math.round((monthlyBase.employeeCounts[i] || 0) * cfg.workDaysPerMonth);
+        }
+        return total;
+    }
+
     function aggregateYtd(monthlyBase, ytdLimit) {
         return {
             recordables: sumSlice(monthlyBase.recordables, ytdLimit),
@@ -404,7 +414,8 @@
             lti: sumSlice(monthlyBase.lti, ytdLimit),
             daysLost: sumSlice(monthlyBase.daysLost, ytdLimit),
             totalIncidents: sumSlice(monthlyBase.totalIncidents, ytdLimit),
-            manHours: resolveYtdManHours(monthlyBase, ytdLimit)
+            manHours: resolveYtdManHours(monthlyBase, ytdLimit),
+            manDays: resolveYtdManDays(monthlyBase, ytdLimit)
         };
     }
 
@@ -523,6 +534,7 @@
         formatRate,
         formatRateDisplay,
         resolveYtdManHours,
+        resolveYtdManDays,
         buildMonthlyBase,
         buildMonthlyRateSeries,
         aggregatePeriod,

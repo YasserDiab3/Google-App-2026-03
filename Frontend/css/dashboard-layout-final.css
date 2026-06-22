@@ -70,7 +70,8 @@
     clear: both;
 }
 
-/* Safety Metrics Grid - Responsive 7 Cards */
+/* Safety Metrics Grid - Responsive 8 Cards */
+.safety-metrics-section .metrics-grid-container--safety-eight,
 .safety-metrics-section .metrics-grid-container--safety-seven {
     grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
 }
