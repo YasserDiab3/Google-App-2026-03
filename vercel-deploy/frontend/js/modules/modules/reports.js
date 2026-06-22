@@ -584,6 +584,9 @@ const Reports = {
             reviewedBy: isAr ? 'راجعه' : 'Reviewed by',
             siteFacility: isAr ? 'المصنع / الموقع' : 'Factory / Site',
             allSites: isAr ? 'جميع المواقع' : 'All Sites',
+            allSitesCombined: isAr ? 'ملخص جميع المواقع' : 'All Sites Summary',
+            sitesBreakdown: isAr ? 'تفصيل حسب الموقع' : 'Breakdown by Site',
+            hseDepartment: isAr ? 'إدارة السلامة والصحة المهنية والبيئة' : 'HSE Department',
             dash: '—',
             open: isAr ? 'مفتوح' : 'Open'
         };
@@ -738,10 +741,13 @@ const Reports = {
     },
 
     renderMonthlySafetySiteOptions(lang = 'ar') {
-        return this.getMonthlySafetySites().map((site) => {
+        const esc = (v) => Utils.escapeHTML(v == null ? '' : String(v));
+        const allLabel = lang === 'en' ? 'All Sites — One Report' : 'جميع المواقع — تقرير موحّد';
+        const sitesHtml = this.getMonthlySafetySites().map((site) => {
             const label = this.getMonthlySafetySiteLabel(site, lang);
-            return `<option value="${Utils.escapeHTML(site.id)}">${Utils.escapeHTML(label)}</option>`;
+            return `<option value="${esc(site.id)}">${esc(label)}</option>`;
         }).join('');
+        return `<option value="__all__">${esc(allLabel)}</option>${sitesHtml}`;
     },
 
     collectMonthlySafetyReportModel(data, period, siteId = null) {
@@ -918,7 +924,14 @@ const Reports = {
         const isAr = lang !== 'en';
         const edgePad = isAr ? 'padding-right:16px;border-right:4px solid #003865' : 'padding-left:16px;border-left:4px solid #003865';
         return `<style>
-.msr-report{color:#1f2937;line-height:1.55}
+.msr-report{color:#1f2937;line-height:1.55;unicode-bidi:embed}
+.msr-report,.msr-report *{letter-spacing:0!important;word-spacing:normal!important;text-rendering:optimizeLegibility}
+.msr-report .ar-text,.msr-report th,.msr-report td,.msr-report h3,.msr-report h4,.msr-report .summary-label,.msr-report .msr-intro-value{word-break:normal!important;overflow-wrap:break-word!important;hyphens:none!important}
+.msr-report[dir="rtl"] .ar-text,.msr-report[dir="rtl"] th,.msr-report[dir="rtl"] td{direction:rtl;unicode-bidi:embed}
+.msr-report .msr-site-banner{margin:0 0 16px;padding:12px 16px;border-radius:12px;font-size:15px;font-weight:800;color:#fff;background:linear-gradient(135deg,#003865,#1e40af);text-align:center;direction:rtl;unicode-bidi:embed}
+.msr-report .msr-site-banner.overview{background:linear-gradient(135deg,#1e40af,#2563eb)}
+.msr-report .msr-site-block+.msr-site-block{margin-top:28px;padding-top:8px;border-top:2px dashed #cbd5e1}
+.msr-report .msr-all-sites-title{margin:0 0 18px}
 .msr-report[dir="ltr"] .section-title{${edgePad};border-right:none}
 .msr-report .section-title{margin:22px 0 12px;font-size:16px;font-weight:700;color:#003865;${edgePad}}
 .msr-report .msr-intro{margin-bottom:22px;padding:16px 20px;font-size:13px;line-height:1.8}
@@ -999,29 +1012,58 @@ const Reports = {
         return this._msrTableRow(new Array(cols).fill(`<span class="msr-dash">${dash}</span>`), 'msr-empty');
     },
 
-    buildMonthlySafetyReportHtml(data, period, lang = 'ar', siteId = null) {
+    _msrBuildPdfMeta(period, lang, siteLabel, preparedBy, siteId, options = {}) {
+        const s = this.getMonthlySafetyStrings(lang);
+        const monthLabel = `${s.monthNames[period.month - 1] || ''} ${period.year}`;
+        const isAll = siteId === '__all__' || options.allSites;
+        const site = !isAll && siteId ? this.getMonthlySafetySiteById(siteId) : null;
+        const meta = {
+            source: 'MonthlySafetyReport',
+            documentLang: lang === 'en' ? 'en' : 'ar',
+            documentDir: lang === 'en' ? 'ltr' : 'rtl',
+            titleEn: isAll ? 'Monthly Safety Report — All Sites' : (site ? `Monthly Safety Report — ${site.nameEn || siteLabel}` : 'Monthly Safety Report'),
+            titleAr: isAll ? 'تقرير السلامة الشهري — جميع المواقع' : (site ? `تقرير السلامة الشهري — ${site.nameAr || siteLabel}` : 'تقرير السلامة الشهري'),
+            hseDeptAr: 'إدارة السلامة والصحة المهنية والبيئة',
+            hseDeptEn: 'HSE Department',
+            includeQRCode: false,
+            compactPdfFooter: true
+        };
+        if (lang === 'ar') {
+            meta['شهر التقرير'] = monthLabel;
+            meta['الموقع'] = siteLabel;
+            meta['أُعد بواسطة'] = preparedBy;
+        } else {
+            meta['Reporting Month'] = monthLabel;
+            meta.Site = siteLabel;
+            meta['Prepared By'] = preparedBy;
+        }
+        return meta;
+    },
+
+    buildMonthlySafetyReportBody(data, period, lang, siteId, options = {}) {
+        const { skipIntro = false } = options;
         const s = this.getMonthlySafetyStrings(lang);
         const m = this.collectMonthlySafetyReportModel(data, period, siteId);
         const esc = (v) => Utils.escapeHTML(v == null ? '' : String(v));
+        const ar = (v) => `<span class="ar-text" dir="${s.dir}">${esc(v)}</span>`;
         const monthLabel = `${s.monthNames[period.month - 1] || ''} ${period.year}`;
-        const site = m.site || this.getMonthlySafetySiteById(siteId);
+        const site = m.site || (siteId ? this.getMonthlySafetySiteById(siteId) : null);
         const siteLabel = site ? this.getMonthlySafetySiteLabel(site, lang) : s.allSites;
         const num = (v) => `<span class="msr-num">${esc(this._msrFmtNum(v))}</span>`;
 
-        const content = `
-${this._getMonthlySafetyReportStyles(lang)}
-<div class="msr-report" id="monthly-safety-report-root" dir="${s.dir}">
+        const introBlock = skipIntro ? '' : `
   <div class="msr-intro permit-intro">
     <div class="msr-intro-grid">
-      <div class="msr-intro-item"><span class="msr-intro-label">${esc(s.reportingMonth)}</span><span class="msr-intro-value">${esc(monthLabel)}</span></div>
-      <div class="msr-intro-item"><span class="msr-intro-label">${esc(s.siteFacility)}</span><span class="msr-intro-value">${esc(siteLabel)}</span></div>
-      <div class="msr-intro-item"><span class="msr-intro-label">${esc(s.preparedBy)}</span><span class="msr-intro-value">${esc(m.preparedBy)}</span></div>
-      <div class="msr-intro-item"><span class="msr-intro-label">${esc(s.projectSite)}</span><span class="msr-intro-value">${esc(m.projectSite)}</span></div>
-      <div class="msr-intro-item"><span class="msr-intro-label">${esc(s.client)}</span><span class="msr-intro-value">${esc(m.client)}</span></div>
-      <div class="msr-intro-item"><span class="msr-intro-label">${esc(s.location)}</span><span class="msr-intro-value">${esc(m.location)}</span></div>
+      <div class="msr-intro-item"><span class="msr-intro-label">${ar(s.reportingMonth)}</span><span class="msr-intro-value ar-text" dir="${s.dir}">${esc(monthLabel)}</span></div>
+      <div class="msr-intro-item"><span class="msr-intro-label">${ar(s.siteFacility)}</span><span class="msr-intro-value ar-text" dir="${s.dir}">${esc(siteLabel)}</span></div>
+      <div class="msr-intro-item"><span class="msr-intro-label">${ar(s.preparedBy)}</span><span class="msr-intro-value ar-text" dir="${s.dir}">${esc(m.preparedBy)}</span></div>
+      <div class="msr-intro-item"><span class="msr-intro-label">${ar(s.projectSite)}</span><span class="msr-intro-value ar-text" dir="${s.dir}">${esc(m.projectSite)}</span></div>
+      <div class="msr-intro-item"><span class="msr-intro-label">${ar(s.client)}</span><span class="msr-intro-value ar-text" dir="${s.dir}">${esc(m.client)}</span></div>
+      <div class="msr-intro-item"><span class="msr-intro-label">${ar(s.location)}</span><span class="msr-intro-value ar-text" dir="${s.dir}">${esc(m.location)}</span></div>
     </div>
-  </div>
+  </div>`;
 
+        return `${introBlock}
   <div class="summary-grid">
     ${this._msrKpiCard(s.manHoursMonth, this._msrFmtNum(m.kpi.manHours), 'blue')}
     ${this._msrKpiCard(s.recordables, this._msrFmtNum(m.kpi.recordables), 'warn')}
@@ -1031,101 +1073,151 @@ ${this._getMonthlySafetyReportStyles(lang)}
     ${this._msrKpiCard(s.sr, this._msrFmtRate(m.kpi.sr, 2), 'green')}
   </div>
 
-  <h3 class="section-title">${esc(s.hseActivities)}</h3>
+  <h3 class="section-title ar-text" dir="${s.dir}">${esc(s.hseActivities)}</h3>
   <table class="report-table">
-    <thead><tr><th>${esc(s.activity)}</th><th style="text-align:center">${esc(s.count)}</th></tr></thead>
+    <thead><tr><th class="ar-text" dir="${s.dir}">${esc(s.activity)}</th><th style="text-align:center" class="ar-text" dir="${s.dir}">${esc(s.count)}</th></tr></thead>
     <tbody>
-      ${this._msrTableRow([esc(s.trainingsConducted), num(m.activities.trainings)])}
-      ${this._msrTableRow([esc(s.participantsTrained), num(m.activities.participants)])}
-      ${this._msrTableRow([esc(s.auditsInspections), num(m.activities.inspections)])}
-      ${this._msrTableRow([esc(s.ptwsIssued), num(m.activities.ptw)])}
-      ${this._msrTableRow([esc(s.observations), num(m.activities.observations)])}
-      ${this._msrTableRow([esc(s.toolboxTalks), num(m.activities.toolbox)])}
+      ${this._msrTableRow([ar(s.trainingsConducted), num(m.activities.trainings)])}
+      ${this._msrTableRow([ar(s.participantsTrained), num(m.activities.participants)])}
+      ${this._msrTableRow([ar(s.auditsInspections), num(m.activities.inspections)])}
+      ${this._msrTableRow([ar(s.ptwsIssued), num(m.activities.ptw)])}
+      ${this._msrTableRow([ar(s.observations), num(m.activities.observations)])}
+      ${this._msrTableRow([ar(s.toolboxTalks), num(m.activities.toolbox)])}
     </tbody>
   </table>
 
-  <h3 class="section-title">${esc(s.manpowerStatus)}</h3>
+  <h3 class="section-title ar-text" dir="${s.dir}">${esc(s.manpowerStatus)}</h3>
   <table class="report-table">
-    <thead><tr><th>${esc(s.metric)}</th><th style="text-align:center">${esc(s.thisMonth)}</th><th style="text-align:center">${esc(s.cumulative)}</th></tr></thead>
+    <thead><tr><th class="ar-text" dir="${s.dir}">${esc(s.metric)}</th><th style="text-align:center" class="ar-text" dir="${s.dir}">${esc(s.thisMonth)}</th><th style="text-align:center" class="ar-text" dir="${s.dir}">${esc(s.cumulative)}</th></tr></thead>
     <tbody>
-      ${this._msrTableRow([esc(s.manpowerAvg), num(m.manpower.avgMonth), num(m.manpower.avgCum)])}
-      ${this._msrTableRow([esc(s.totalManDays), num(m.manpower.manDaysMonth), num(m.manpower.manDaysCum)])}
-      ${this._msrTableRow([`<strong>${esc(s.totalManHours)}</strong>`, num(m.manpower.manHoursMonth), num(m.manpower.manHoursCum)], 'msr-row-total')}
+      ${this._msrTableRow([ar(s.manpowerAvg), num(m.manpower.avgMonth), num(m.manpower.avgCum)])}
+      ${this._msrTableRow([ar(s.totalManDays), num(m.manpower.manDaysMonth), num(m.manpower.manDaysCum)])}
+      ${this._msrTableRow([`<strong class="ar-text" dir="${s.dir}">${esc(s.totalManHours)}</strong>`, num(m.manpower.manHoursMonth), num(m.manpower.manHoursCum)], 'msr-row-total')}
     </tbody>
   </table>
 
-  <h3 class="section-title">${esc(s.accidentReport)}</h3>
+  <h3 class="section-title ar-text" dir="${s.dir}">${esc(s.accidentReport)}</h3>
   <table class="report-table">
-    <thead><tr><th>${esc(s.description)}</th><th style="text-align:center">${esc(s.thisMonth)}</th><th style="text-align:center">${esc(s.cumulative)}</th></tr></thead>
+    <thead><tr><th class="ar-text" dir="${s.dir}">${esc(s.description)}</th><th style="text-align:center" class="ar-text" dir="${s.dir}">${esc(s.thisMonth)}</th><th style="text-align:center" class="ar-text" dir="${s.dir}">${esc(s.cumulative)}</th></tr></thead>
     <tbody>
-      ${this._msrTableRow([`<strong>${esc(s.totalAccidents)}</strong>`, num(m.accidents.totalMonth), num(m.accidents.totalCum)], 'msr-row-total')}
-      ${this._msrTableRow([`<span>${esc(s.reportableAccidents)}</span>`, num(m.accidents.reportableMonth), num(m.accidents.reportableCum)], 'msr-row-danger')}
-      ${this._msrTableRow([`<span>${esc(s.minorAccidents)}</span>`, num(m.accidents.minorMonth), num(m.accidents.minorCum)], 'msr-row-warn')}
-      ${this._msrTableRow([`<span>${esc(s.firstAidCases)}</span>`, num(m.accidents.firstAidMonth), num(m.accidents.firstAidCum)], 'msr-row-warn')}
-      ${this._msrTableRow([`<span>${esc(s.nearMiss)}</span>`, num(m.accidents.nearMissMonth), num(m.accidents.nearMissCum)], 'msr-row-info')}
-      ${this._msrTableRow([esc(s.manDaysLost), num(m.accidents.daysLostMonth), num(m.accidents.daysLostCum)])}
+      ${this._msrTableRow([`<strong class="ar-text" dir="${s.dir}">${esc(s.totalAccidents)}</strong>`, num(m.accidents.totalMonth), num(m.accidents.totalCum)], 'msr-row-total')}
+      ${this._msrTableRow([ar(s.reportableAccidents), num(m.accidents.reportableMonth), num(m.accidents.reportableCum)], 'msr-row-danger')}
+      ${this._msrTableRow([ar(s.minorAccidents), num(m.accidents.minorMonth), num(m.accidents.minorCum)], 'msr-row-warn')}
+      ${this._msrTableRow([ar(s.firstAidCases), num(m.accidents.firstAidMonth), num(m.accidents.firstAidCum)], 'msr-row-warn')}
+      ${this._msrTableRow([ar(s.nearMiss), num(m.accidents.nearMissMonth), num(m.accidents.nearMissCum)], 'msr-row-info')}
+      ${this._msrTableRow([ar(s.manDaysLost), num(m.accidents.daysLostMonth), num(m.accidents.daysLostCum)])}
     </tbody>
   </table>
 
-  <h3 class="section-title">${esc(s.hseEvents)}</h3>
-  <div class="msr-subsection">${esc(s.hseCommittee)} — ${esc(s.date)}: ${esc(this._msrFmtDate(m.committeeDate, lang))}</div>
+  <h3 class="section-title ar-text" dir="${s.dir}">${esc(s.hseEvents)}</h3>
+  <div class="msr-subsection ar-text" dir="${s.dir}">${esc(s.hseCommittee)} — ${esc(s.date)}: ${esc(this._msrFmtDate(m.committeeDate, lang))}</div>
   <table class="report-table">
-    <thead><tr><th>${esc(s.hseWalks)} — ${esc(s.date)}</th><th>${esc(s.withWhom)}</th></tr></thead>
-    <tbody>${m.walkRows.length ? m.walkRows.map((r) => this._msrTableRow([esc(this._msrFmtDate(r.date, lang)), esc(r.withWhom)])).join('') : this._msrEmptyRow(2, s.dash)}</tbody>
+    <thead><tr><th class="ar-text" dir="${s.dir}">${esc(s.hseWalks)} — ${esc(s.date)}</th><th class="ar-text" dir="${s.dir}">${esc(s.withWhom)}</th></tr></thead>
+    <tbody>${m.walkRows.length ? m.walkRows.map((r) => this._msrTableRow([esc(this._msrFmtDate(r.date, lang)), `<span class="ar-text" dir="${s.dir}">${esc(r.withWhom)}</span>`])).join('') : this._msrEmptyRow(2, s.dash)}</tbody>
   </table>
-  <div class="msr-subsection">${esc(s.hseInduction)}</div>
+  <div class="msr-subsection ar-text" dir="${s.dir}">${esc(s.hseInduction)}</div>
   <table class="report-table">
-    <thead><tr><th>${esc(s.date)}</th><th style="text-align:center">${esc(s.persons)}</th></tr></thead>
+    <thead><tr><th class="ar-text" dir="${s.dir}">${esc(s.date)}</th><th style="text-align:center" class="ar-text" dir="${s.dir}">${esc(s.persons)}</th></tr></thead>
     <tbody>${m.inductionRows.length ? m.inductionRows.map((r) => this._msrTableRow([esc(this._msrFmtDate(r.date, lang)), `<span class="msr-num">${esc(r.persons)}</span>`])).join('') : this._msrEmptyRow(2, s.dash)}</tbody>
   </table>
-  <div class="msr-subsection">${esc(s.toolboxTraining)}</div>
+  <div class="msr-subsection ar-text" dir="${s.dir}">${esc(s.toolboxTraining)}</div>
   <table class="report-table">
-    <thead><tr><th>${esc(s.date)}</th><th>${esc(s.topic)}</th><th style="text-align:center">${esc(s.participants)}</th></tr></thead>
-    <tbody>${m.toolboxRows.length ? m.toolboxRows.map((r) => this._msrTableRow([esc(this._msrFmtDate(r.date, lang)), esc(r.topic), `<span class="msr-num">${esc(r.participants)}</span>`])).join('') : this._msrEmptyRow(3, s.dash)}</tbody>
+    <thead><tr><th class="ar-text" dir="${s.dir}">${esc(s.date)}</th><th class="ar-text" dir="${s.dir}">${esc(s.topic)}</th><th style="text-align:center" class="ar-text" dir="${s.dir}">${esc(s.participants)}</th></tr></thead>
+    <tbody>${m.toolboxRows.length ? m.toolboxRows.map((r) => this._msrTableRow([esc(this._msrFmtDate(r.date, lang)), `<span class="ar-text" dir="${s.dir}">${esc(r.topic)}</span>`, `<span class="msr-num">${esc(r.participants)}</span>`])).join('') : this._msrEmptyRow(3, s.dash)}</tbody>
   </table>
-  <div class="msr-subsection">${esc(s.hseTraining)}</div>
+  <div class="msr-subsection ar-text" dir="${s.dir}">${esc(s.hseTraining)}</div>
   <table class="report-table">
-    <thead><tr><th>${esc(s.date)}</th><th>${esc(s.topic)}</th><th style="text-align:center">${esc(s.participants)}</th></tr></thead>
-    <tbody>${m.trainingRows.length ? m.trainingRows.map((r) => this._msrTableRow([esc(this._msrFmtDate(r.date, lang)), esc(r.topic), `<span class="msr-num">${esc(r.participants)}</span>`])).join('') : this._msrEmptyRow(3, s.dash)}</tbody>
+    <thead><tr><th class="ar-text" dir="${s.dir}">${esc(s.date)}</th><th class="ar-text" dir="${s.dir}">${esc(s.topic)}</th><th style="text-align:center" class="ar-text" dir="${s.dir}">${esc(s.participants)}</th></tr></thead>
+    <tbody>${m.trainingRows.length ? m.trainingRows.map((r) => this._msrTableRow([esc(this._msrFmtDate(r.date, lang)), `<span class="ar-text" dir="${s.dir}">${esc(r.topic)}</span>`, `<span class="msr-num">${esc(r.participants)}</span>`])).join('') : this._msrEmptyRow(3, s.dash)}</tbody>
   </table>
 
-  <h3 class="section-title">${esc(s.hseMom)}</h3>
+  <h3 class="section-title ar-text" dir="${s.dir}">${esc(s.hseMom)}</h3>
   <table class="report-table">
-    <thead><tr><th>${esc(s.date)}</th><th>${esc(s.discussionPoints)}</th><th style="text-align:center">${esc(s.status)}</th></tr></thead>
+    <thead><tr><th class="ar-text" dir="${s.dir}">${esc(s.date)}</th><th class="ar-text" dir="${s.dir}">${esc(s.discussionPoints)}</th><th style="text-align:center" class="ar-text" dir="${s.dir}">${esc(s.status)}</th></tr></thead>
     <tbody>${m.momRows.length ? m.momRows.map((r) => this._msrTableRow([
         esc(this._msrFmtDate(r.date, lang)),
-        esc(r.points),
+        `<span class="ar-text" dir="${s.dir}">${esc(r.points)}</span>`,
         this._msrStatusBadge(r.status || s.open, lang)
     ])).join('') : this._msrEmptyRow(3, s.dash)}</tbody>
   </table>
 
   <div class="msr-grid-2">
-    <div class="msr-note-card msr-note-high"><h4>${esc(s.highlights)}</h4><div>${esc(m.highlights)}</div></div>
-    <div class="msr-note-card msr-note-concern"><h4>${esc(s.concerns)}</h4><div>${esc(m.concerns)}</div></div>
+    <div class="msr-note-card msr-note-high"><h4 class="ar-text" dir="${s.dir}">${esc(s.highlights)}</h4><div class="ar-text" dir="${s.dir}">${esc(m.highlights)}</div></div>
+    <div class="msr-note-card msr-note-concern"><h4 class="ar-text" dir="${s.dir}">${esc(s.concerns)}</h4><div class="ar-text" dir="${s.dir}">${esc(m.concerns)}</div></div>
   </div>
 
-  <h3 class="section-title">${esc(s.authorization)}</h3>
+  <h3 class="section-title ar-text" dir="${s.dir}">${esc(s.authorization)}</h3>
   <div class="msr-auth-grid">
-    <div class="msr-auth-box"><strong>${esc(s.preparedBySign)}</strong><div class="msr-auth-line">${s.dash}</div></div>
-    <div class="msr-auth-box"><strong>${esc(s.reviewedBy)}</strong><div class="msr-auth-line">${s.dash}</div></div>
-  </div>
+    <div class="msr-auth-box"><strong class="ar-text" dir="${s.dir}">${esc(s.preparedBySign)}</strong><div class="msr-auth-line">${s.dash}</div></div>
+    <div class="msr-auth-box"><strong class="ar-text" dir="${s.dir}">${esc(s.reviewedBy)}</strong><div class="msr-auth-line">${s.dash}</div></div>
+  </div>`;
+    },
+
+    buildMonthlySafetyReportHtml(data, period, lang = 'ar', siteId = null) {
+        const s = this.getMonthlySafetyStrings(lang);
+        const m = this.collectMonthlySafetyReportModel(data, period, siteId);
+        const esc = (v) => Utils.escapeHTML(v == null ? '' : String(v));
+        const site = m.site || (siteId ? this.getMonthlySafetySiteById(siteId) : null);
+        const siteLabel = site ? this.getMonthlySafetySiteLabel(site, lang) : s.allSites;
+
+        const content = `
+${this._getMonthlySafetyReportStyles(lang)}
+<div class="msr-report" id="monthly-safety-report-root" dir="${s.dir}">
+${this.buildMonthlySafetyReportBody(data, period, lang, siteId)}
 </div>`;
 
         const formCode = `MSR-${period.label}-${siteId || 'ALL'}`;
         const title = site ? `${s.title} — ${siteLabel}` : s.title;
-        const pdfMeta = {
-            source: 'MonthlySafetyReport',
-            titleEn: site ? `Monthly Safety Report — ${site.nameEn || siteLabel}` : 'Monthly Safety Report',
-            titleAr: site ? `تقرير السلامة الشهري — ${site.nameAr || siteLabel}` : 'تقرير السلامة الشهري',
-            includeQRCode: false,
-            compactPdfFooter: true,
-            headerLayoutLtr: lang === 'en',
-            ReportingMonth: monthLabel,
-            Site: siteLabel,
-            'شهر التقرير': monthLabel,
-            'الموقع': siteLabel,
-            'أُعد بواسطة': m.preparedBy
-        };
+        const pdfMeta = this._msrBuildPdfMeta(period, lang, siteLabel, m.preparedBy, siteId);
+
+        if (typeof FormHeader !== 'undefined' && FormHeader.generatePDFHTML) {
+            return FormHeader.generatePDFHTML(
+                formCode,
+                title,
+                content,
+                false,
+                false,
+                pdfMeta,
+                new Date().toISOString(),
+                new Date().toISOString()
+            );
+        }
+
+        return `<!DOCTYPE html><html lang="${s.lang}" dir="${s.dir}"><head><meta charset="UTF-8"><title>${esc(title)}</title></head><body>${content}</body></html>`;
+    },
+
+    buildMonthlySafetyReportAllSitesHtml(data, period, lang = 'ar') {
+        const s = this.getMonthlySafetyStrings(lang);
+        const esc = (v) => Utils.escapeHTML(v == null ? '' : String(v));
+        const m = this.collectMonthlySafetyReportModel(data, period, null);
+        const sites = this.getMonthlySafetySites();
+
+        const overviewBlock = `
+  <div class="msr-site-block">
+    <div class="msr-site-banner overview ar-text" dir="${s.dir}">${esc(s.allSitesCombined)}</div>
+    ${this.buildMonthlySafetyReportBody(data, period, lang, null, { skipIntro: false })}
+  </div>`;
+
+        const siteBlocks = sites.map((site) => {
+            const label = this.getMonthlySafetySiteLabel(site, lang);
+            return `
+  <div class="msr-site-block" style="page-break-before:always">
+    <div class="msr-site-banner ar-text" dir="${s.dir}">${esc(label)}</div>
+    ${this.buildMonthlySafetyReportBody(data, period, lang, site.id, { skipIntro: true })}
+  </div>`;
+        }).join('');
+
+        const content = `
+${this._getMonthlySafetyReportStyles(lang)}
+<div class="msr-report msr-all-sites" id="monthly-safety-report-root" dir="${s.dir}">
+  <h2 class="section-title msr-all-sites-title ar-text" dir="${s.dir}">${esc(s.sitesBreakdown)}</h2>
+  ${overviewBlock}
+  ${siteBlocks}
+</div>`;
+
+        const formCode = `MSR-${period.label}-ALL-SITES`;
+        const title = `${s.title} — ${s.allSites}`;
+        const pdfMeta = this._msrBuildPdfMeta(period, lang, s.allSites, m.preparedBy, '__all__', { allSites: true });
 
         if (typeof FormHeader !== 'undefined' && FormHeader.generatePDFHTML) {
             return FormHeader.generatePDFHTML(
@@ -1165,16 +1257,22 @@ ${this._getMonthlySafetyReportStyles(lang)}
 
     async _msrPreparePdfHtml(html, lang) {
         let prepared = String(html || '');
+        const isAr = lang !== 'en';
         const colorFix = `<style id="msr-pdf-color-fix">*{ -webkit-print-color-adjust:exact!important; print-color-adjust:exact!important; }</style>`;
-        if (prepared.includes('</head>')) {
-            prepared = prepared.replace('</head>', `${colorFix}</head>`);
-        }
-        if (lang === 'ar' && prepared.includes('</head>')) {
-            const fontFix = `
+        const fontFix = `
 <link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
-<style id="msr-arabic-font-fix">html,body,.report-wrapper,.report-wrapper *{font-family:'Cairo','Tahoma','Segoe UI',sans-serif!important}</style>`;
-            prepared = prepared.replace('</head>', `${fontFix}</head>`);
+<style id="msr-arabic-pdf-fix">
+html,body{font-family:'Cairo','Tahoma','Segoe UI','Arial',sans-serif!important;letter-spacing:0!important;word-spacing:normal!important;text-rendering:optimizeLegibility;-webkit-font-smoothing:antialiased}
+body,.report-wrapper,.report-wrapper *,.msr-report,.msr-report *{font-family:'Cairo','Tahoma','Segoe UI','Arial',sans-serif!important;letter-spacing:0!important;word-spacing:normal!important}
+.report-header .company-brand .company-name,.report-header .company-brand .company-name-secondary,.header-title-ar,.meta-label,.meta-value,.ar-text{direction:${isAr ? 'rtl' : 'inherit'}!important;unicode-bidi:embed!important;word-break:normal!important;overflow-wrap:normal!important;hyphens:none!important}
+.report-header .company-brand .company-name,.report-header .company-brand .company-name-secondary{white-space:nowrap!important}
+h1,h2,h3,th,td,.section-title,.summary-label,.msr-intro-value{word-break:normal!important;overflow-wrap:break-word!important}
+table,.report-table,thead,tbody,tr,th,td{direction:${isAr ? 'rtl' : 'inherit'}!important}
+</style>`;
+        if (prepared.includes('</head>')) {
+            prepared = prepared.replace('</head>', `${colorFix}${fontFix}</head>`);
         }
         return prepared;
     },
@@ -1183,8 +1281,10 @@ ${this._getMonthlySafetyReportStyles(lang)}
         if (!doc?.fonts?.load) return;
         try {
             await Promise.all([
-                doc.fonts.load("400 12px Cairo"),
-                doc.fonts.load("700 16px Cairo")
+                doc.fonts.load('400 12px Cairo'),
+                doc.fonts.load('600 14px Cairo'),
+                doc.fonts.load('700 16px Cairo'),
+                doc.fonts.load('800 20px Cairo')
             ]);
             await doc.fonts.ready;
         } catch (_e) { /* ignore */ }
@@ -1200,7 +1300,8 @@ ${this._getMonthlySafetyReportStyles(lang)}
             windowHeight: Math.max(root.scrollHeight, 1),
             onclone: (clonedDoc) => {
                 const style = clonedDoc.createElement('style');
-                style.textContent = '*{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;}';
+                style.textContent = `*{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;}
+html,body,.report-wrapper,.report-wrapper *,.msr-report,.msr-report *{font-family:'Cairo','Tahoma','Segoe UI',sans-serif!important;letter-spacing:0!important;word-spacing:normal!important}`;
                 clonedDoc.head.appendChild(style);
             }
         };
@@ -1235,11 +1336,12 @@ ${this._getMonthlySafetyReportStyles(lang)}
         }
 
         await this.ensureTrainingDataForReport();
-        const html = await this._msrPreparePdfHtml(
-            this.buildMonthlySafetyReportHtml(AppState.appData, period, lang, siteId),
-            lang
-        );
-        const siteSuffix = siteId ? `_${siteId}` : '';
+        const isAllSites = siteId === '__all__';
+        const rawHtml = isAllSites
+            ? this.buildMonthlySafetyReportAllSitesHtml(AppState.appData, period, lang)
+            : this.buildMonthlySafetyReportHtml(AppState.appData, period, lang, siteId);
+        const html = await this._msrPreparePdfHtml(rawHtml, lang);
+        const siteSuffix = isAllSites ? '_ALL_SITES' : (siteId ? `_${siteId}` : '');
         const fileName = `Monthly_Safety_Report_${period.label}${siteSuffix}_${lang}.pdf`;
 
         const iframe = document.createElement('iframe');

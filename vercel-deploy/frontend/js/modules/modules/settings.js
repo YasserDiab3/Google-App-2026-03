@@ -929,7 +929,7 @@ const Settings = {
                             <div class="card-body space-y-4">
                                 <p class="text-sm text-gray-600 mb-2">
                                     <i class="fas fa-info-circle ml-2"></i>
-                                    تقرير PDF بنمط موحّد — إحصائيات الشهر + HSE — تحميل مباشر (عربي / إنجليزي)
+                                    تقرير PDF بنمط موحّد — إحصائيات الشهر + HSE — موقع واحد أو جميع المواقع في ملف واحد
                                 </p>
                                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                                     <div>

@@ -2874,7 +2874,7 @@ const DEFAULT_COMPANY_NAME = '';
 
 const AppState = {
     /** إصدار التطبيق — تسلسلي: 1.0.0 → 1.0.1 → 1.0.2 … عند كل نشر زِد الرقم هنا وفي version.json */
-    appVersion: '1.0.263',
+    appVersion: '1.0.264',
     /** نص اختياري لرسالة التحديث (ملخص التغييرات). إن تُركت فارغة يُستخدم النص الافتراضي. */
     updateMessage: '',
     debugMode: false,
@@ -6279,7 +6279,10 @@ const PDFTemplates = {
             .replace(/<ul(?![^>]*class=)/g, '<ul class="report-list"');
 
         const isDailySafetyTemplate = String(meta?.source || '').trim() === 'DailySafetyCheckList';
-        const excludedMetaKeys = ['version', 'releaseDate', 'revisionDate', 'issueDate', 'includeQRCode', 'qrData', 'modifiedAt', 'titleEn', 'titleAr', 'footerLegendHtml', 'compactPdfFooter', 'headerLayoutLtr'];
+        const isMonthlySafetyTemplate = String(meta?.source || '').trim() === 'MonthlySafetyReport';
+        const documentLang = meta?.documentLang || 'ar';
+        const documentDir = meta?.documentDir || (documentLang === 'en' ? 'ltr' : 'rtl');
+        const excludedMetaKeys = ['version', 'releaseDate', 'revisionDate', 'issueDate', 'includeQRCode', 'qrData', 'modifiedAt', 'titleEn', 'titleAr', 'footerLegendHtml', 'compactPdfFooter', 'headerLayoutLtr', 'documentLang', 'documentDir', 'hseDeptAr', 'hseDeptEn', 'source'];
         const metaRows = Object.entries(meta || {})
             .filter(([key, value]) => {
                 if (value === undefined || value === null || value === '') return false;
@@ -6317,10 +6320,13 @@ const PDFTemplates = {
         const qrText = typeof qrPayloadRaw === 'string' ? qrPayloadRaw : JSON.stringify(qrPayloadRaw);
         const qrTextForScript = JSON.stringify(qrText);
         const formCodeDisplay = escape(formCode || '-');
+        const msrHseDept = documentLang === 'en'
+            ? escape(meta?.hseDeptEn || 'HSE Department')
+            : escape(meta?.hseDeptAr || 'إدارة السلامة والصحة المهنية والبيئة');
         // تسمية كود التقرير - يمكن تخصيصها من إعدادات الشركة
         const formCodeLabel = formCode ? 'كود التقرير' : '';
         return `<!DOCTYPE html>
-<html lang="ar" dir="rtl">
+<html lang="${escape(documentLang)}" dir="${escape(documentDir)}">
 <head>
     <meta charset="UTF-8">
     <title>${escape(title || '')}</title>
@@ -6585,6 +6591,94 @@ const PDFTemplates = {
         .report-wrapper.dsc-report .company-brand .company-name-secondary {
             font-size: clamp(9px, 0.78vw, 12px);
             font-weight: 600;
+        }
+        .report-wrapper.msr-report .report-header {
+            direction: ltr;
+            grid-template-columns: 100px minmax(0, 1fr) minmax(210px, 300px);
+            grid-template-areas: "logo title company";
+            align-items: center;
+            gap: 12px 18px;
+        }
+        .report-wrapper.msr-report .report-logo {
+            grid-area: logo;
+            justify-content: flex-start;
+            align-self: center;
+            min-width: 96px;
+        }
+        .report-wrapper.msr-report .report-logo img {
+            max-height: 68px;
+            max-width: 96px;
+        }
+        .report-wrapper.msr-report .header-info {
+            grid-area: title;
+            min-width: 0;
+            align-items: center;
+            text-align: center;
+        }
+        .report-wrapper.msr-report .header-title-dual .header-title-ar,
+        .report-wrapper.msr-report .header-title-dual .header-title-en {
+            white-space: nowrap;
+            letter-spacing: 0 !important;
+            font-family: 'Cairo', 'Tahoma', 'Segoe UI', sans-serif !important;
+            word-break: keep-all;
+            overflow-wrap: normal;
+        }
+        .report-wrapper.msr-report .meta-block {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 6px 18px;
+            max-width: 100%;
+            width: 100%;
+            margin-top: 6px;
+        }
+        .report-wrapper.msr-report .meta-item {
+            border-bottom: 1px dashed rgba(148, 163, 184, 0.45);
+            padding: 4px 0;
+            font-size: 12px;
+        }
+        .report-wrapper.msr-report .meta-label {
+            color: #1d4ed8;
+            font-weight: 700;
+            white-space: nowrap;
+        }
+        .report-wrapper.msr-report .meta-value {
+            color: #0f172a;
+            font-weight: 600;
+            word-break: normal;
+            overflow-wrap: normal;
+        }
+        .report-wrapper.msr-report .company-brand {
+            grid-area: company;
+            align-items: flex-end;
+            text-align: right;
+            direction: rtl;
+            justify-self: stretch;
+            min-width: 0;
+            gap: 4px;
+        }
+        .report-wrapper.msr-report .company-brand .company-name,
+        .report-wrapper.msr-report .company-brand .company-name-secondary {
+            display: block;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 100%;
+            line-height: 1.2;
+            letter-spacing: 0 !important;
+            font-family: 'Cairo', 'Tahoma', 'Segoe UI', sans-serif !important;
+            word-break: keep-all;
+            overflow-wrap: normal;
+        }
+        .report-wrapper.msr-report .msr-hse-dept {
+            font-size: clamp(10px, 0.85vw, 13px);
+            font-weight: 700;
+            color: #003865;
+            margin-top: 4px;
+            white-space: nowrap;
+            direction: rtl;
+            unicode-bidi: embed;
+            letter-spacing: 0 !important;
+            font-family: 'Cairo', 'Tahoma', 'Segoe UI', sans-serif !important;
         }
         .report-wrapper.dsc-report .footer-bottom-text span {
             display: block;
@@ -7198,7 +7292,26 @@ const PDFTemplates = {
     </style>
 </head>
 <body>
-    <div class="report-wrapper${isDailySafetyTemplate ? ' dsc-report' : ''}${compactPdfFooter ? ' pdf-compact-footer' : ''}">
+    <div class="report-wrapper${isDailySafetyTemplate ? ' dsc-report' : ''}${isMonthlySafetyTemplate ? ' msr-report' : ''}${compactPdfFooter ? ' pdf-compact-footer' : ''}">
+        ${isMonthlySafetyTemplate ? `
+        <div class="report-header msr-header-layout">
+            <div class="report-logo">
+                ${logo ? `<img src="${logo}" alt="شعار الشركة">` : `<div class="brand-placeholder">${companyInitials}</div>`}
+            </div>
+            <div class="header-info">
+                ${(meta && meta.titleEn != null && meta.titleAr != null)
+            ? `<div class="header-title-dual"><div class="header-title-ar">${escape(meta.titleAr)}</div><div class="header-title-en">${escape(meta.titleEn)}</div></div>`
+            : `<h1>${escape(title || '')}</h1>`}
+                ${metaRows ? `<div class="meta-block">${metaRows}</div>` : ''}
+            </div>
+            <div class="company-brand">
+                <div class="company-name-group">
+                    <div class="company-name">${companyName}</div>
+                    ${companySecondaryNameTrimmed ? `<div class="company-name company-name-secondary">${companySecondaryName}</div>` : ''}
+                    <div class="msr-hse-dept">${msrHseDept}</div>
+                </div>
+            </div>
+        </div>` : `
         <div class="report-header${headerLayoutLtr ? ' ltr-layout' : ''}">
             <div class="company-brand">
                 <div class="company-name-group">
@@ -7215,7 +7328,7 @@ const PDFTemplates = {
             <div class="report-logo">
                 ${logo ? `<img src="${logo}" alt="شعار الشركة">` : `<div class="brand-placeholder">${companyInitials}</div>`}
             </div>
-        </div>
+        </div>`}
         <div class="report-body">
             ${enhancedContent}
         </div>
