@@ -306,6 +306,20 @@ const GoogleIntegration = {
     },
 
     /**
+     * تطبيع رابط Web App (/dev → /exec) قبل الطلب
+     */
+    _resolveScriptUrl() {
+        let url = String(AppState?.googleConfig?.appsScript?.scriptUrl || '').trim();
+        if (typeof Utils !== 'undefined' && typeof Utils.getAppsScriptScriptUrl === 'function') {
+            const normalized = String(Utils.getAppsScriptScriptUrl() || '').trim();
+            if (normalized) url = normalized;
+        } else if (url && url.indexOf('script.google.com/macros/s/') !== -1) {
+            url = url.replace(/\/dev(\?|#|$)/, '/exec$1');
+        }
+        return url;
+    },
+
+    /**
      * التحقق من صحة رابط نشر Google Apps Script (Web App ينتهي بـ /exec)
      */
     isValidGoogleAppsScriptUrl(url) {
@@ -754,7 +768,7 @@ const GoogleIntegration = {
             return Promise.reject(new Error('الخادم الخلفي غير مُهيأ أو غير مفعّل'));
         }
 
-        const scriptUrl = AppState.googleConfig.appsScript.scriptUrl.trim();
+        const scriptUrl = this._resolveScriptUrl();
 
         if (!this.isValidGoogleAppsScriptUrl(scriptUrl)) {
             throw new Error('رابط Web App غير صالح. يجب أن يكون رابط Google Apps Script من النوع https://script.google.com/macros/s/.../exec');
@@ -1044,7 +1058,7 @@ const GoogleIntegration = {
                         `   - اضغط Deploy\n` +
                         `   - انسخ الرابط الجديد (يجب أن ينتهي بـ /exec)\n` +
                         `2. تأكد من أن الرابط ينتهي بـ /exec وليس /dev\n` +
-                        `3. إذا قمت بتحديث السكربت، يجب إنشاء deployment جديد\n` +
+                        `3. بعد clasp push نفّذ clasp deploy -i <deploymentId> لتحديث النشر الحالي\n` +
                         `4. تأكد من أن doOptions() موجودة في Code.gs`);
                 }
                 
