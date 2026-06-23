@@ -12021,10 +12021,16 @@ body {
     }
 }
 
-/* تحسينات للكروت مع rounded-full */
-.content-card .rounded-full {
+/* تحسينات للكروت مع rounded-full — صور/أيقونات مربعة فقط (لا أشرطة تقدم بعرض كامل) */
+.content-card .rounded-full:not(.dash-severity-bar__track):not(.dash-severity-bar__fill) {
     border-radius: 50% !important;
     aspect-ratio: 1;
+}
+
+.content-card .rounded-full.w-full,
+.content-card .rounded-full[class*="w-full"] {
+    aspect-ratio: auto;
+    border-radius: 9999px !important;
 }
 
 /* تحسينات للكروت في HSE Dashboard */

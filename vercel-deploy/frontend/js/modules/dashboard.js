@@ -4804,7 +4804,7 @@ const Dashboard = {
                     <div class="card-header">
                         <h2 class="card-title">
                             <i class="fas fa-chart-line ml-2"></i>
-                            ${this.t('dash.chartIncidents30d', 'Incidents - آخر 30 يوم')}
+                            ${this.t('dash.chartIncidents30d', 'الحوادث - آخر 30 يوم')}
                         </h2>
                     </div>
                     <div class="card-body">
@@ -4817,11 +4817,11 @@ const Dashboard = {
                     <div class="card-header">
                         <h2 class="card-title">
                             <i class="fas fa-chart-pie ml-2"></i>
-                            ${this.t('dash.chartIncidentsBySeverity', 'توزيع Incidents حسب الخطورة')}
+                            ${this.t('dash.chartIncidentsBySeverity', 'توزيع الحوادث حسب الخطورة')}
                         </h2>
                     </div>
                     <div class="card-body">
-                        <div class="chart-container" style="min-height: 250px; position: relative;">
+                        <div class="chart-container dash-chart-container--severity">
                             ${this.renderSeverityChart(incidentsLast30)}
                         </div>
                     </div>
@@ -4900,31 +4900,31 @@ const Dashboard = {
         }
 
         const pct = (n) => total > 0 ? (n / total) * 100 : 0;
-        const row = (labelAr, value, percent, barClass, textClass) => `
-                <div class="space-y-1.5">
+        const row = (labelAr, value, percent, fillMod, textClass) => `
+                <div class="dash-severity-bar">
                     <div class="flex items-center justify-between">
                         <span class="text-sm font-semibold">${labelAr}</span>
                         <span class="text-sm font-bold ${textClass}" dir="ltr">${value} <span class="text-xs text-gray-400">(${percent.toFixed(1)}%)</span></span>
                     </div>
-                    <div class="w-full bg-gray-200 rounded-full h-3">
-                        <div class="${barClass} h-3 rounded-full transition-all duration-500" style="width: ${percent}%"></div>
+                    <div class="dash-severity-bar__track" role="presentation">
+                        <div class="dash-severity-bar__fill dash-severity-bar__fill--${fillMod}" style="width: ${percent}%"></div>
                     </div>
                 </div>`;
 
         // ✅ يُعرض bucket "غير محدد" فقط لو فيه قيم — لا يظهر كصف فارغ
         const unknownRow = counts.unknown > 0
-            ? row('غير محدد', counts.unknown, pct(counts.unknown), 'bg-gray-400', 'text-gray-600')
+            ? row('غير محدد', counts.unknown, pct(counts.unknown), 'unknown', 'text-gray-600')
             : '';
 
         return `
-            <div class="flex flex-col gap-3">
+            <div class="dash-severity-chart">
                 <div class="flex items-center justify-between text-[11px] font-bold uppercase tracking-[0.18em] text-gray-400">
                     <span>إجمالي الحوادث (آخر 30 يوم)</span>
                     <span class="text-gray-700" dir="ltr">${total}</span>
                 </div>
-                ${row('عالي / حرج', counts.high, pct(counts.high), 'bg-red-600', 'text-red-600')}
-                ${row('متوسط', counts.medium, pct(counts.medium), 'bg-yellow-600', 'text-yellow-600')}
-                ${row('منخفض', counts.low, pct(counts.low), 'bg-green-600', 'text-green-600')}
+                ${row('عالي / حرج', counts.high, pct(counts.high), 'high', 'text-red-600')}
+                ${row('متوسط', counts.medium, pct(counts.medium), 'medium', 'text-yellow-600')}
+                ${row('منخفض', counts.low, pct(counts.low), 'low', 'text-green-600')}
                 ${unknownRow}
             </div>
         `;
