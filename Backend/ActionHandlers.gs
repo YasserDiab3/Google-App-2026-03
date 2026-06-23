@@ -1863,6 +1863,13 @@ var ActionHandlers = {
         })();
         return result;
     },
+    'updateClinicStaffAttendance': function(payload, postData, action, actorUserData, spreadsheetId) {
+        var result = { success: false, message: '' };
+        (function() {
+            result = updateClinicStaffAttendance(payload, actorUserData);
+        })();
+        return result;
+    },
     'updateContractor': function(payload, postData, action, actorUserData, spreadsheetId) {
         var result = { success: false, message: '' };
         (function() {

@@ -14841,6 +14841,229 @@ const Clinic = {
         return 'badge-secondary';
     },
 
+    _toDatetimeLocalValue(val, dateKey) {
+        try {
+            if (val) {
+                const d = new Date(val);
+                if (!Number.isNaN(d.getTime())) {
+                    const y = d.getFullYear();
+                    const m = String(d.getMonth() + 1).padStart(2, '0');
+                    const day = String(d.getDate()).padStart(2, '0');
+                    const h = String(d.getHours()).padStart(2, '0');
+                    const min = String(d.getMinutes()).padStart(2, '0');
+                    return `${y}-${m}-${day}T${h}:${min}`;
+                }
+            }
+            if (dateKey) {
+                const defaultTime = String(val || '').includes('checkout') || String(val || '') === 'checkOut' ? '17:00' : '08:00';
+                return `${dateKey}T${defaultTime}`;
+            }
+            return '';
+        } catch (_e) {
+            return dateKey ? `${dateKey}T08:00` : '';
+        }
+    },
+
+    _renderAttendancePunchActions(record) {
+        if (!record || !this.canAccessAttendanceTab()) return '<span class="text-xs text-gray-400">—</span>';
+        const parts = [];
+        const rid = Utils.escapeAttr(String(record.id || ''));
+        if (!record.checkIn) {
+            parts.push(`<button type="button" class="btn-secondary btn-sm" title="إضافة بصمة دخول مفقودة" onclick="Clinic.showAttendancePunchModal('${rid}', 'checkIn')"><i class="fas fa-sign-in-alt ml-1"></i>دخول</button>`);
+        }
+        if (!record.checkOut) {
+            parts.push(`<button type="button" class="btn-secondary btn-sm" title="إضافة بصمة خروج مفقودة" onclick="Clinic.showAttendancePunchModal('${rid}', 'checkOut')"><i class="fas fa-sign-out-alt ml-1"></i>خروج</button>`);
+        }
+        if (!parts.length) return '<span class="text-xs text-gray-400">مكتمل</span>';
+        return `<div class="flex items-center gap-1 flex-wrap">${parts.join('')}</div>`;
+    },
+
+    _findAttendanceRecordById(recordId) {
+        const id = String(recordId || '').trim();
+        if (!id) return null;
+        return (this.getClinicStaffAttendanceList() || []).find(r => String(r.id) === id) || null;
+    },
+
+    showAttendancePunchModal(recordId, punchType) {
+        if (!this.canAccessAttendanceTab()) {
+            Notification?.error?.('غير مصرح');
+            return;
+        }
+        const record = this._findAttendanceRecordById(recordId);
+        if (!record) {
+            Notification?.error?.('السجل غير موجود');
+            return;
+        }
+        const type = String(punchType || '').trim();
+        const isCheckIn = type === 'checkIn';
+        const isCheckOut = type === 'checkOut';
+        if (isCheckIn && record.checkIn) {
+            Notification?.warning?.('وقت الدخول مسجّل مسبقاً');
+            return;
+        }
+        if (isCheckOut && record.checkOut) {
+            Notification?.warning?.('وقت الخروج مسجّل مسبقاً');
+            return;
+        }
+        if (!isCheckIn && !isCheckOut) return;
+
+        const dayKey = this._attendanceDayKey(record.date);
+        const adjustedDefault = isCheckOut
+            ? `${dayKey}T17:00`
+            : `${dayKey}T08:00`;
+        const title = isCheckIn ? 'إضافة بصمة دخول مفقودة' : 'إضافة بصمة خروج مفقودة';
+        const icon = isCheckIn ? 'fa-sign-in-alt' : 'fa-sign-out-alt';
+
+        const html = `
+            <div class="modal-overlay active" id="clinic-attendance-punch-modal">
+                <div class="modal-content" style="max-width:480px;">
+                    <div class="modal-header">
+                        <h3><i class="fas ${icon} ml-2"></i>${title}</h3>
+                        <button type="button" class="modal-close" onclick="document.getElementById('clinic-attendance-punch-modal')?.remove()"><i class="fas fa-times"></i></button>
+                    </div>
+                    <div class="modal-body space-y-4">
+                        <div class="text-sm text-gray-600">
+                            <div><strong>المسئول:</strong> ${Utils.escapeHTML(record.userName || record.userEmail || '—')}</div>
+                            <div><strong>التاريخ:</strong> ${Utils.escapeHTML(dayKey || '—')}</div>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">${isCheckIn ? 'وقت الدخول' : 'وقت الخروج'} *</label>
+                            <input type="datetime-local" id="clinic-attendance-punch-time" class="form-input" value="${Utils.escapeAttr(adjustedDefault)}" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">ملاحظة (اختياري)</label>
+                            <textarea id="clinic-attendance-punch-notes" class="form-textarea" rows="2" placeholder="سبب إضافة البصمة يدوياً..."></textarea>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn-secondary" onclick="document.getElementById('clinic-attendance-punch-modal')?.remove()">إلغاء</button>
+                        <button type="button" class="btn-primary" id="clinic-attendance-punch-save"><i class="fas fa-save ml-2"></i>حفظ</button>
+                    </div>
+                </div>
+            </div>`;
+        document.getElementById('clinic-attendance-punch-modal')?.remove();
+        document.body.insertAdjacentHTML('beforeend', html);
+        document.getElementById('clinic-attendance-punch-save')?.addEventListener('click', async () => {
+            const timeVal = document.getElementById('clinic-attendance-punch-time')?.value || '';
+            const notes = document.getElementById('clinic-attendance-punch-notes')?.value?.trim() || '';
+            if (!timeVal) {
+                Notification?.warning?.('يرجى تحديد الوقت');
+                return;
+            }
+            try {
+                Loading?.show?.();
+                const resp = await GoogleIntegration.sendRequest({
+                    action: 'updateClinicStaffAttendance',
+                    data: {
+                        recordId: record.id,
+                        punchType: type,
+                        [isCheckIn ? 'checkIn' : 'checkOut']: timeVal,
+                        notes
+                    }
+                });
+                if (resp?.success) {
+                    Notification?.success?.(resp.message || 'تم حفظ البصمة');
+                    document.getElementById('clinic-attendance-punch-modal')?.remove();
+                    await this.loadClinicAttendanceData(true);
+                    this.renderAttendanceTab({ force: true });
+                } else {
+                    Notification?.error?.(resp?.message || 'فشل الحفظ');
+                }
+            } catch (err) {
+                Notification?.error?.(err?.message || 'فشل الحفظ');
+            } finally {
+                Loading?.hide?.();
+            }
+        });
+    },
+
+    showAddMissingAttendanceModal() {
+        if (!this.isCurrentUserAdmin()) {
+            Notification?.error?.('هذا الإجراء متاح لمدير النظام فقط');
+            return;
+        }
+        const staffOptions = (this.getClinicStaffList() || [])
+            .filter(s => String(s.isActive || 'true').toLowerCase() !== 'false')
+            .map(s => `<option value="${Utils.escapeAttr(s.id)}">${Utils.escapeHTML(s.userName || s.userEmail || s.id)}</option>`)
+            .join('');
+        const today = this._getTodayLocalKey();
+        const html = `
+            <div class="modal-overlay active" id="clinic-attendance-add-modal">
+                <div class="modal-content" style="max-width:520px;">
+                    <div class="modal-header">
+                        <h3><i class="fas fa-fingerprint ml-2"></i>إضافة سجل حضور / بصمة مفقودة</h3>
+                        <button type="button" class="modal-close" onclick="document.getElementById('clinic-attendance-add-modal')?.remove()"><i class="fas fa-times"></i></button>
+                    </div>
+                    <div class="modal-body space-y-4">
+                        <div class="form-group">
+                            <label class="form-label">المسئول *</label>
+                            <select id="clinic-attendance-add-staff" class="form-input"><option value="">— اختر —</option>${staffOptions}</select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">التاريخ *</label>
+                            <input type="date" id="clinic-attendance-add-date" class="form-input" value="${Utils.escapeAttr(today)}" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">وقت الدخول</label>
+                            <input type="datetime-local" id="clinic-attendance-add-checkin" class="form-input" value="${Utils.escapeAttr(today + 'T08:00')}">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">وقت الخروج</label>
+                            <input type="datetime-local" id="clinic-attendance-add-checkout" class="form-input" value="${Utils.escapeAttr(today + 'T17:00')}">
+                        </div>
+                        <p class="text-xs text-gray-500">يمكن ترك أحد الحقلين فارغاً لإضافة بصمة دخول أو خروج فقط.</p>
+                        <div class="form-group">
+                            <label class="form-label">ملاحظة</label>
+                            <textarea id="clinic-attendance-add-notes" class="form-textarea" rows="2" placeholder="سبب الإضافة اليدوية..."></textarea>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn-secondary" onclick="document.getElementById('clinic-attendance-add-modal')?.remove()">إلغاء</button>
+                        <button type="button" class="btn-primary" id="clinic-attendance-add-save"><i class="fas fa-save ml-2"></i>حفظ</button>
+                    </div>
+                </div>
+            </div>`;
+        document.getElementById('clinic-attendance-add-modal')?.remove();
+        document.body.insertAdjacentHTML('beforeend', html);
+        document.getElementById('clinic-attendance-add-save')?.addEventListener('click', async () => {
+            const staffId = document.getElementById('clinic-attendance-add-staff')?.value || '';
+            const date = document.getElementById('clinic-attendance-add-date')?.value || '';
+            const checkIn = document.getElementById('clinic-attendance-add-checkin')?.value || '';
+            const checkOut = document.getElementById('clinic-attendance-add-checkout')?.value || '';
+            const notes = document.getElementById('clinic-attendance-add-notes')?.value?.trim() || '';
+            if (!staffId || !date) {
+                Notification?.warning?.('يرجى اختيار المسئول والتاريخ');
+                return;
+            }
+            if (!checkIn && !checkOut) {
+                Notification?.warning?.('أدخل وقت دخول أو خروج على الأقل');
+                return;
+            }
+            try {
+                Loading?.show?.();
+                const data = { staffId, date, notes };
+                if (checkIn) data.checkIn = checkIn;
+                if (checkOut) data.checkOut = checkOut;
+                const resp = await GoogleIntegration.sendRequest({
+                    action: 'updateClinicStaffAttendance',
+                    data
+                });
+                if (resp?.success) {
+                    Notification?.success?.(resp.message || 'تم حفظ السجل');
+                    document.getElementById('clinic-attendance-add-modal')?.remove();
+                    await this.loadClinicAttendanceData(true);
+                    this.renderAttendanceTab({ force: true });
+                } else {
+                    Notification?.error?.(resp?.message || 'فشل الحفظ');
+                }
+            } catch (err) {
+                Notification?.error?.(err?.message || 'فشل الحفظ');
+            } finally {
+                Loading?.hide?.();
+            }
+        });
+    },
+
     _attendanceDayKey(dateVal) {
         if (!dateVal) return '';
         try {
@@ -15997,8 +16220,9 @@ const Clinic = {
                 <td>${r.checkOut ? (Utils.formatDateTime ? Utils.formatDateTime(r.checkOut) : Utils.escapeHTML(String(r.checkOut))) : '—'}</td>
                 <td>${Utils.escapeHTML(String(r.workDuration || '—'))}</td>
                 <td><span class="badge ${this.getAttendanceStatusBadgeClass(r.status)}">${Utils.escapeHTML(this.getAttendanceStatusLabel(r.status))}</span></td>
+                <td>${this._renderAttendancePunchActions(r)}</td>
             </tr>
-        `).join('') : `<tr><td colspan="5" class="text-center text-gray-500 py-8">لا توجد سجلات حضور</td></tr>`);
+        `).join('') : `<tr><td colspan="6" class="text-center text-gray-500 py-8">لا توجد سجلات حضور</td></tr>`);
 
         const selfNavSections = [
             { id: 'clinic-attendance-section-timeoff', label: 'طلب جديد', icon: 'fa-paper-plane' },
@@ -16105,7 +16329,7 @@ const Clinic = {
                     <div class="card-header"><h4 class="card-title"><i class="fas fa-clipboard-user ml-2"></i>سجل حضوري (${rows.length})</h4></div>
                     <div class="card-body" style="padding:0;">
                         ${this._clinicAttendanceScrollTable(`<table class="data-table table-header-green">
-                            <thead><tr><th>التاريخ</th><th>دخول</th><th>خروج</th><th>مدة (س)</th><th>الحالة</th></tr></thead>
+                            <thead><tr><th>التاريخ</th><th>دخول</th><th>خروج</th><th>مدة (س)</th><th>الحالة</th><th>إجراءات</th></tr></thead>
                             <tbody>${tableRows}</tbody>
                         </table>`)}
                     </div>
@@ -16277,7 +16501,7 @@ const Clinic = {
         ).join('');
 
         const tableRows = dataLoading && rows.length === 0
-            ? this._renderAttendanceTableLoadingRow(9)
+            ? this._renderAttendanceTableLoadingRow(10)
             : (rows.length ? rows.map(r => `
             <tr>
                 <td>${Utils.escapeHTML(r.userName || '—')}</td>
@@ -16289,8 +16513,9 @@ const Clinic = {
                 <td>${Utils.escapeHTML(String(r.workDuration || '—'))}</td>
                 <td><span class="badge ${this.getAttendanceStatusBadgeClass(r.status)}">${Utils.escapeHTML(this.getAttendanceStatusLabel(r.status))}</span></td>
                 <td class="text-xs text-gray-500">${Utils.escapeHTML(String(r.sessionId || '—').slice(0, 18))}</td>
+                <td>${this._renderAttendancePunchActions(r)}</td>
             </tr>
-        `).join('') : `<tr><td colspan="9" class="text-center text-gray-500 py-8"><i class="fas fa-calendar-times ml-2 opacity-60"></i>لا توجد سجلات مطابقة للفلاتر</td></tr>`);
+        `).join('') : `<tr><td colspan="10" class="text-center text-gray-500 py-8"><i class="fas fa-calendar-times ml-2 opacity-60"></i>لا توجد سجلات مطابقة للفلاتر</td></tr>`);
 
         const staffAdminRows = isAdmin ? (staffList.length ? staffList.map(s => {
             const active = String(s.isActive || 'true').toLowerCase() !== 'false';
@@ -16367,6 +16592,7 @@ const Clinic = {
                         <button type="button" id="clinic-attendance-report-btn" style="padding:6px 12px;border-radius:8px;border:none;cursor:pointer;background:rgba(255,255,255,0.92);color:#134e4a;font-size:0.76rem;font-weight:700;display:flex;align-items:center;gap:5px;" title="تصدير تقرير"><i class="fas fa-file-export"></i><span>تقرير</span></button>
                         <button type="button" id="clinic-attendance-pdf-btn" style="padding:6px 12px;border-radius:8px;border:none;cursor:pointer;background:rgba(0,0,0,0.22);color:#fff;font-size:0.76rem;font-weight:600;display:flex;align-items:center;gap:5px;" title="PDF للفلتر الحالي"><i class="fas fa-file-pdf"></i><span>PDF</span></button>
                         <button type="button" id="clinic-attendance-export-btn" style="padding:6px 12px;border-radius:8px;border:none;cursor:pointer;background:rgba(0,0,0,0.22);color:#fff;font-size:0.76rem;font-weight:600;display:flex;align-items:center;gap:5px;" title="Excel للفلتر الحالي"><i class="fas fa-file-excel"></i><span>Excel</span></button>
+                        ${isAdmin ? `<button type="button" id="clinic-attendance-add-punch-btn" style="padding:6px 12px;border-radius:8px;border:none;cursor:pointer;background:rgba(255,255,255,0.92);color:#134e4a;font-size:0.76rem;font-weight:700;display:flex;align-items:center;gap:5px;" title="إضافة سجل حضور أو بصمة مفقودة"><i class="fas fa-fingerprint"></i><span>بصمة مفقودة</span></button>` : ''}
                         ${isAdmin ? `<button type="button" id="clinic-attendance-add-staff-btn" style="padding:6px 12px;border-radius:8px;border:none;cursor:pointer;background:#fff;color:#134e4a;font-size:0.76rem;font-weight:700;display:flex;align-items:center;gap:5px;"><i class="fas fa-user-plus"></i><span>إضافة مسئول</span></button>` : ''}
                     </div>
                 </div>
@@ -16441,7 +16667,7 @@ const Clinic = {
 
                 <p style="font-size:0.78rem;color:#64748b;margin:0 0 10px;display:flex;align-items:center;gap:6px;">
                     <i class="fas fa-info-circle" style="color:#0d9488;"></i>
-                    يُسجَّل الحضور تلقائياً عند تسجيل الدخول/الخروج للمسئولين المضافين في القائمة.
+                    يُسجَّل الحضور تلقائياً عند تسجيل الدخول/الخروج. يمكن إضافة بصمة دخول أو خروج مفقودة من عمود الإجراءات.
                 </p>
 
                 <div class="content-card" id="clinic-attendance-section-records" style="margin:0;">
@@ -16449,7 +16675,7 @@ const Clinic = {
                         ${this._clinicAttendanceScrollTable(`<table class="data-table table-header-green">
                             <thead><tr>
                                 <th>الاسم</th><th>البريد</th><th>الدور</th><th>التاريخ</th>
-                                <th>وقت الدخول</th><th>وقت الخروج</th><th>مدة (س)</th><th>الحالة</th><th>الجلسة</th>
+                                <th>وقت الدخول</th><th>وقت الخروج</th><th>مدة (س)</th><th>الحالة</th><th>الجلسة</th><th>إجراءات</th>
                             </tr></thead>
                             <tbody>${tableRows}</tbody>
                         </table>`, '48vh')}
@@ -16595,6 +16821,7 @@ const Clinic = {
         panel.querySelector('#clinic-attendance-pdf-btn')?.addEventListener('click', () => this.exportAttendanceToPDF());
         panel.querySelector('#clinic-attendance-report-btn')?.addEventListener('click', () => this.showAttendanceReportModal());
         panel.querySelector('#clinic-attendance-add-staff-btn')?.addEventListener('click', () => this.showAddClinicStaffModal());
+        panel.querySelector('#clinic-attendance-add-punch-btn')?.addEventListener('click', () => this.showAddMissingAttendanceModal());
         panel.querySelector('#clinic-attendance-refresh-btn')?.addEventListener('click', async () => {
             Notification?.info?.('جاري تحديث سجل الحضور...');
             this._attendanceDataFetchedInSession = false;

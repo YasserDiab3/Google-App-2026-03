@@ -3698,6 +3698,233 @@ function recordClinicStaffLogout(payload) {
     return upsertClinicStaffAttendanceOnLogout_(payload || {});
 }
 
+function _clinicStaffNormalizePunchTime_(dayKey, timeInput) {
+    try {
+        var day = _clinicStaffDayKey_(dayKey);
+        if (!timeInput) return '';
+        var s = String(timeInput).trim();
+        if (!s) return '';
+        if (s.indexOf('T') !== -1 || s.indexOf(' ') !== -1 || s.length > 12) {
+            var d = new Date(s);
+            if (!isNaN(d.getTime())) return d.toISOString();
+        }
+        if (/^\d{1,2}:\d{2}/.test(s) && day) {
+            var parts = s.split(':');
+            var hh = parseInt(parts[0], 10);
+            var mm = parseInt(parts[1], 10);
+            if (!isNaN(hh) && !isNaN(mm)) {
+                var base = new Date(day + 'T00:00:00');
+                if (!isNaN(base.getTime())) {
+                    base.setHours(hh, mm, 0, 0);
+                    return base.toISOString();
+                }
+            }
+        }
+        return '';
+    } catch (_e) {
+        return '';
+    }
+}
+
+function _clinicStaffReplaceUserDayAttendance_(all, record, staff) {
+    all = all || [];
+    if (!record) return all;
+    var dayKey = _clinicStaffDayKey_(record.date);
+    staff = staff || {
+        id: record.staffId,
+        userId: record.userId,
+        userEmail: record.userEmail
+    };
+    var filtered = all.filter(function(r) {
+        if (!r) return false;
+        return !(_clinicStaffDayKey_(r.date) === dayKey
+            && _clinicStaffAttendanceMatchesUser_(r, staff, record.userId, record.userEmail));
+    });
+    filtered.push(record);
+    return filtered;
+}
+
+function _clinicStaffFindStaffById_(staffId) {
+    if (!staffId) return null;
+    var staff = readFromSheet('ClinicStaff', getSpreadsheetId()) || [];
+    for (var i = 0; i < staff.length; i++) {
+        if (staff[i] && String(staff[i].id) === String(staffId)) return staff[i];
+    }
+    return null;
+}
+
+function updateClinicStaffAttendance(payload, actorUserData) {
+    try {
+        payload = payload || {};
+        var isAdmin = _clinicStaffIsAdminActor_(actorUserData);
+        var sheetName = 'ClinicStaffAttendance';
+        var all = readFromSheet(sheetName, getSpreadsheetId()) || [];
+        var now = new Date().toISOString();
+        var actorName = (actorUserData && (actorUserData.name || actorUserData.email)) || 'مستخدم';
+        var punchType = String(payload.punchType || '').trim().toLowerCase().replace(/_/g, '');
+        var allowOverwrite = isAdmin && payload.allowOverwrite === true;
+        var record = null;
+        var staff = null;
+        var dayKey = '';
+        var recordId = payload.recordId || payload.id || '';
+        if (recordId) {
+            var mergedList = _clinicStaffMergeAllAttendanceRecords_(all);
+            for (var mi = 0; mi < mergedList.length; mi++) {
+                if (mergedList[mi] && String(mergedList[mi].id) === String(recordId)) {
+                    record = mergedList[mi];
+                    break;
+                }
+            }
+            if (!record) {
+                for (var ri = 0; ri < all.length; ri++) {
+                    if (all[ri] && String(all[ri].id) === String(recordId)) {
+                        record = all[ri];
+                        break;
+                    }
+                }
+            }
+            if (record) {
+                dayKey = _clinicStaffDayKey_(record.date);
+                staff = _clinicStaffFindStaffById_(record.staffId);
+            }
+        }
+
+        if (!record) {
+            var staffId = payload.staffId || '';
+            if (!staffId && !isAdmin) {
+                staff = isActiveClinicStaffUser_(_clinicStaffActorKeys_(actorUserData).userId)
+                    || isActiveClinicStaffUser_(_clinicStaffActorKeys_(actorUserData).email);
+                if (staff) staffId = staff.id;
+            }
+            if (!staffId) {
+                return { success: false, message: 'معرف المسئول مطلوب' };
+            }
+            staff = staff || _clinicStaffFindStaffById_(staffId);
+            if (!staff) {
+                return { success: false, message: 'مسئول العيادة غير موجود' };
+            }
+            if (!payload.date) {
+                return { success: false, message: 'التاريخ مطلوب' };
+            }
+            dayKey = _clinicStaffDayKey_(payload.date);
+            var consolidated = _clinicStaffConsolidateAttendanceForUserDay_(
+                all, staff, staff.userId, staff.userEmail, dayKey
+            );
+            all = consolidated.all;
+            if (consolidated.merged) {
+                record = consolidated.merged;
+            }
+        }
+
+        if (!isAdmin) {
+            var targetRow = record || {
+                userId: staff ? staff.userId : '',
+                userEmail: staff ? staff.userEmail : ''
+            };
+            if (!_clinicStaffRowMatchesActor_(targetRow, actorUserData)) {
+                return { success: false, message: 'غير مصرح بتعديل هذا السجل' };
+            }
+        }
+
+        if (!record) {
+            record = {
+                id: generateSequentialId('CSA', sheetName),
+                staffId: staff.id,
+                userId: staff.userId || '',
+                userName: staff.userName || '',
+                userEmail: staff.userEmail || '',
+                staffRole: staff.staffRole || '',
+                date: dayKey,
+                checkIn: '',
+                checkOut: '',
+                workDuration: '',
+                status: 'absent',
+                sessionId: '',
+                source: 'manual',
+                notes: '',
+                createdAt: now,
+                updatedAt: now
+            };
+        } else if (!staff) {
+            staff = {
+                id: record.staffId,
+                userId: record.userId,
+                userEmail: record.userEmail,
+                userName: record.userName,
+                staffRole: record.staffRole
+            };
+            dayKey = _clinicStaffDayKey_(record.date);
+        }
+
+        var dayForPunch = dayKey || _clinicStaffDayKey_(record.date);
+        var newCheckIn = payload.checkIn !== undefined && payload.checkIn !== null && String(payload.checkIn).trim() !== ''
+            ? _clinicStaffNormalizePunchTime_(dayForPunch, payload.checkIn) : '';
+        var newCheckOut = payload.checkOut !== undefined && payload.checkOut !== null && String(payload.checkOut).trim() !== ''
+            ? _clinicStaffNormalizePunchTime_(dayForPunch, payload.checkOut) : '';
+
+        if (punchType === 'checkin' || (!punchType && newCheckIn)) {
+            if (record.checkIn && !allowOverwrite) {
+                return { success: false, message: 'وقت الدخول مسجّل مسبقاً — لا يمكن إضافة بصمة دخول مفقودة' };
+            }
+            if (!newCheckIn) {
+                return { success: false, message: 'وقت الدخول مطلوب' };
+            }
+            record.checkIn = newCheckIn;
+        }
+        if (punchType === 'checkout' || (!punchType && newCheckOut)) {
+            if (record.checkOut && !allowOverwrite) {
+                return { success: false, message: 'وقت الخروج مسجّل مسبقاً — لا يمكن إضافة بصمة خروج مفقودة' };
+            }
+            if (!newCheckOut) {
+                return { success: false, message: 'وقت الخروج مطلوب' };
+            }
+            record.checkOut = newCheckOut;
+        }
+
+        if (!newCheckIn && !newCheckOut && punchType) {
+            return { success: false, message: 'الوقت مطلوب' };
+        }
+
+        if (record.checkIn && record.checkOut) {
+            var ci = new Date(record.checkIn).getTime();
+            var co = new Date(record.checkOut).getTime();
+            if (!isNaN(ci) && !isNaN(co) && co <= ci) {
+                return { success: false, message: 'وقت الخروج يجب أن يكون بعد وقت الدخول' };
+            }
+        }
+
+        record.workDuration = _clinicStaffCalcDurationHours_(record.checkIn, record.checkOut);
+        if (record.checkIn && record.checkOut) {
+            record.status = record.workDuration ? 'present' : 'partial';
+        } else if (record.checkIn) {
+            record.status = 'partial';
+        } else if (record.checkOut) {
+            record.status = 'partial';
+        } else {
+            record.status = 'absent';
+        }
+
+        var noteText = String(payload.notes || '').trim();
+        var manualNote = '[بصمة يدوية ' + now.slice(0, 16).replace('T', ' ') + ' — ' + actorName + ']';
+        if (noteText) manualNote += ' ' + noteText;
+        record.notes = record.notes ? (String(record.notes) + ' | ' + manualNote) : manualNote;
+        if (record.source === 'login') record.source = 'login+manual';
+        else if (!record.source) record.source = 'manual';
+        record.updatedAt = now;
+        if (!record.createdAt) record.createdAt = now;
+
+        var updatedAll = _clinicStaffReplaceUserDayAttendance_(all, record, staff);
+        var saveResult = saveToSheet(sheetName, updatedAll, getSpreadsheetId());
+        if (saveResult && saveResult.success) {
+            return { success: true, data: record, message: 'تم حفظ البصمة اليدوية' };
+        }
+        return saveResult || { success: false, message: 'فشل حفظ سجل الحضور' };
+    } catch (error) {
+        Logger.log('Error in updateClinicStaffAttendance: ' + error.toString());
+        return { success: false, message: 'خطأ في تحديث الحضور: ' + error.toString() };
+    }
+}
+
 // ============================================
 // طلبات إجازة / إذن / إضافي — مسئولو العيادة
 // ============================================
