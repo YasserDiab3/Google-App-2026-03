@@ -3945,6 +3945,10 @@ const Incidents = {
                     </div>
                 </div>
                 <div class="modal-footer">
+                    <button class="btn-primary" onclick="Incidents.exportRegistryEntryPDF('${entry.id}')">
+                        <i class="fas fa-file-pdf ml-2"></i>
+                        تصدير PDF
+                    </button>
                     <button class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">إغلاق</button>
                 </div>
             </div>
@@ -8547,7 +8551,7 @@ const Incidents = {
                 <div class="modal-footer">
                     <button class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">إغلاق</button>
                     <button class="btn-secondary" onclick="Incidents.exportPDF('${incident.id}');">
-                        <i class="fas fa-file-pdf ml-2"></i>تصدير PDF
+                        <i class="fas fa-file-pdf ml-2"></i>تصدير تقرير الحادث
                     </button>
                     ${incident.requiresApproval && this.hasInvestigationData(incident) && this.canApproveIncident() ? `
                     <button class="btn-danger" onclick="Incidents.rejectIncident('${incident.id}'); this.closest('.modal-overlay').remove();">
@@ -9526,147 +9530,424 @@ const Incidents = {
         }
     },
 
-    buildIncidentReportPrintContent(incident) {
-        const investigation = this._parseIncidentInvestigationSummary(incident);
+    _findRegistryEntryForIncident(incidentId) {
+        if (!incidentId) return null;
+        return (this.registryData || []).find(r => r.incidentId === incidentId) || null;
+    },
+
+    _formatIncidentPrintDateOnly(dateStr) {
+        if (!dateStr) return '—';
+        try {
+            const date = new Date(dateStr);
+            if (isNaN(date.getTime())) return String(dateStr);
+            return date.toLocaleDateString('ar-SA', { year: 'numeric', month: 'long', day: 'numeric' });
+        } catch {
+            return String(dateStr);
+        }
+    },
+
+    _buildIncidentPrintBadge(text, bg, color) {
+        if (!text) return '—';
+        return `<span style="display:inline-block;padding:4px 14px;border-radius:999px;background:${bg};color:${color};font-weight:700;font-size:13px;">${Utils.escapeHTML(String(text))}</span>`;
+    },
+
+    _hasInvestigationExportData(investigationData) {
+        if (!investigationData) return false;
+        return !!(
+            investigationData.investigationNumber ||
+            investigationData.description ||
+            investigationData.rca?.method ||
+            investigationData.rootCauseSummary ||
+            (Array.isArray(investigationData.actionPlan) && investigationData.actionPlan.length) ||
+            investigationData.riskResult ||
+            investigationData.riskLevel
+        );
+    },
+
+    _buildIncidentReportRegistrySection(registryEntry, sectionNum = '5') {
+        if (!registryEntry) return '';
+        const esc = (v) => Utils.escapeHTML(String(v ?? '—'));
+        return this._buildInvestigationFormPrintSection('inv-s7', sectionNum, 'بيانات سجل الحوادث', `
+            <div class="inv-field-grid">
+                ${this._buildInvestigationFormPrintField('المسلسل', esc(registryEntry.sequentialNumber), '#FFC107', true)}
+                ${this._buildInvestigationFormPrintField('المصنع', esc(registryEntry.factory), '#FFC107')}
+                ${this._buildInvestigationFormPrintField('مكان الحادث', esc(registryEntry.incidentLocation), '#FFC107')}
+                ${this._buildInvestigationFormPrintField('تاريخ الحادث', this._formatIncidentPrintDateOnly(registryEntry.incidentDate), '#FFC107')}
+                ${this._buildInvestigationFormPrintField('يوم الحادث', esc(registryEntry.incidentDay), '#FFC107')}
+                ${this._buildInvestigationFormPrintField('وقت الحادث', esc(registryEntry.incidentTime), '#FFC107')}
+                ${this._buildInvestigationFormPrintField('الوردية', esc(registryEntry.shift), '#FFC107')}
+                ${this._buildInvestigationFormPrintField('كود الموظف', esc(registryEntry.employeeCode), '#FFC107')}
+                ${this._buildInvestigationFormPrintField('اسم الموظف', esc(registryEntry.employeeName), '#FFC107')}
+                ${this._buildInvestigationFormPrintField('الوظيفة', esc(registryEntry.employeeJob), '#FFC107')}
+                ${this._buildInvestigationFormPrintField('الإدارة / القسم', esc(registryEntry.employeeDepartment), '#FFC107')}
+                ${this._buildInvestigationFormPrintField('الجزء المصاب', esc(registryEntry.injuredPart), '#FFC107')}
+                ${this._buildInvestigationFormPrintField('المعدة المتسببة', esc(registryEntry.equipmentCause), '#FFC107')}
+                ${this._buildInvestigationFormPrintField('بداية الإجازة', this._formatIncidentPrintDateOnly(registryEntry.leaveStartDate), '#FFC107')}
+                ${this._buildInvestigationFormPrintField('العودة للعمل', this._formatIncidentPrintDateOnly(registryEntry.returnToWorkDate), '#FFC107')}
+                ${this._buildInvestigationFormPrintField('أيام الإجازة', registryEntry.totalLeaveDays != null ? `${registryEntry.totalLeaveDays} يوم` : '—', '#FFC107')}
+                ${this._buildInvestigationFormPrintField('حالة السجل', this._buildIncidentPrintBadge(registryEntry.status, '#e0e7ff', '#3730a3'), '#FFC107')}
+            </div>
+            ${registryEntry.incidentDetails ? `
+            <div style="margin-top:14px;">
+                <div class="inv-field-label">تفاصيل الحادث (السجل)</div>
+                <div class="inv-text-panel" style="border-color:#FFC107;">${esc(registryEntry.incidentDetails)}</div>
+            </div>` : ''}
+        `);
+    },
+
+    buildRegistryEntryReportPrintContent(entry) {
+        const esc = (v) => Utils.escapeHTML(String(v ?? ''));
+        const section1 = this._buildInvestigationFormPrintSection('inv-s1', '1', 'بيانات السجل الأساسية', `
+            <div class="inv-field-grid">
+                ${this._buildInvestigationFormPrintField('المسلسل', esc(entry.sequentialNumber), '#2196F3', true)}
+                ${this._buildInvestigationFormPrintField('نوع الحادث', esc(entry.incidentType), '#2196F3')}
+                ${this._buildInvestigationFormPrintField('تاريخ الحادث', this._formatIncidentPrintDateOnly(entry.incidentDate), '#2196F3')}
+                ${this._buildInvestigationFormPrintField('وقت الحادث', esc(entry.incidentTime), '#2196F3')}
+                ${this._buildInvestigationFormPrintField('الوردية', esc(entry.shift), '#2196F3')}
+                ${this._buildInvestigationFormPrintField('الحالة', this._buildIncidentPrintBadge(entry.status, '#e0e7ff', '#3730a3'), '#2196F3')}
+            </div>
+        `);
+        const section2 = this._buildInvestigationFormPrintSection('inv-s2', '2', 'الموقع والموظف', `
+            <div class="inv-field-grid">
+                ${this._buildInvestigationFormPrintField('المصنع', esc(entry.factory), '#9C27B0')}
+                ${this._buildInvestigationFormPrintField('مكان الحادث', esc(entry.incidentLocation), '#9C27B0')}
+                ${this._buildInvestigationFormPrintField('كود الموظف', esc(entry.employeeCode), '#9C27B0')}
+                ${this._buildInvestigationFormPrintField('اسم الموظف', esc(entry.employeeName), '#9C27B0')}
+                ${this._buildInvestigationFormPrintField('الوظيفة', esc(entry.employeeJob), '#9C27B0')}
+                ${this._buildInvestigationFormPrintField('الإدارة / القسم', esc(entry.employeeDepartment), '#9C27B0')}
+            </div>
+        `);
+        const section3 = this._buildInvestigationFormPrintSection('inv-s4', '3', 'الإصابة والإجازة', `
+            <div class="inv-field-grid" style="grid-template-columns: repeat(2, minmax(0, 1fr));">
+                ${this._buildInvestigationFormPrintField('الجزء المصاب', esc(entry.injuredPart), '#E91E63')}
+                ${this._buildInvestigationFormPrintField('المعدة المتسببة', esc(entry.equipmentCause), '#E91E63')}
+                ${this._buildInvestigationFormPrintField('بداية الإجازة', this._formatIncidentPrintDateOnly(entry.leaveStartDate), '#E91E63')}
+                ${this._buildInvestigationFormPrintField('العودة للعمل', this._formatIncidentPrintDateOnly(entry.returnToWorkDate), '#E91E63')}
+                ${this._buildInvestigationFormPrintField('إجمالي أيام الإجازة', entry.totalLeaveDays != null ? `${entry.totalLeaveDays} يوم` : '—', '#E91E63')}
+            </div>
+        `);
+        const section4 = this._buildInvestigationFormPrintSection('inv-s3', '4', 'تفاصيل الحادث', `
+            <div class="inv-text-panel" style="border-color:#FF9800;">${esc(entry.incidentDetails || '—')}</div>
+            ${entry.injuryDescription ? `
+            <div style="margin-top:14px;">
+                <div class="inv-field-label">وصف الإصابة</div>
+                <div class="inv-text-panel" style="border-color:#E91E63;">${esc(entry.injuryDescription)}</div>
+            </div>` : ''}
+            ${entry.actionsTaken ? `
+            <div style="margin-top:14px;">
+                <div class="inv-field-label">الإجراءات المتخذة</div>
+                <div class="inv-text-panel" style="border-color:#009688;">${esc(entry.actionsTaken)}</div>
+            </div>` : ''}
+        `);
+        return `
+            ${this._getInvestigationFormPrintStyles()}
+            <div class="inv-print-wrap">
+                ${section1}
+                ${section2}
+                ${section3}
+                ${section4}
+            </div>
+        `;
+    },
+
+    buildIncidentReportPrintContent(incident, opts = {}) {
+        const esc = (v) => Utils.escapeHTML(String(v ?? ''));
+        const registryEntry = this._findRegistryEntryForIncident(incident.id);
+        const injuredPart = this.resolveIncidentInjuredPart(incident);
         const locationLabel = [
-            incident.siteName || incident.factory,
-            incident.sublocationName || incident.sublocation,
+            incident.siteName || incident.factory || registryEntry?.factory,
+            incident.sublocationName || incident.sublocation || registryEntry?.incidentLocation,
             incident.location
         ].filter(v => v && String(v).trim()).join(' — ') || 'غير محدد';
 
-        const severityBadge = incident.severity
-            ? `<span style="display:inline-block;padding:4px 12px;border-radius:999px;background:#fee2e2;color:#991b1b;font-weight:700;">${Utils.escapeHTML(incident.severity)}</span>`
-            : 'غير محدد';
+        const severityBadge = this._buildIncidentPrintBadge(incident.severity, '#fee2e2', '#991b1b');
+        const statusBadge = this._buildIncidentPrintBadge(incident.status, '#e0e7ff', '#3730a3');
 
-        const statusBadge = incident.status
-            ? `<span style="display:inline-block;padding:4px 12px;border-radius:999px;background:#e0e7ff;color:#3730a3;font-weight:700;">${Utils.escapeHTML(incident.status)}</span>`
-            : 'غير محدد';
+        let sectionNum = 1;
+        const nextNum = () => String(sectionNum++);
 
-        const section1 = `
-            <div style="margin-bottom: 30px;">
-                ${this._buildPrintSectionHeading('1', 'بيانات الحادث الأساسية', '#1565C0', '#2196F3')}
-                ${this._buildPrintDataTable([
-                    { label: 'كود الحادث / ISO', value: incident.isoCode || incident.id || 'غير محدد' },
-                    { label: 'عنوان التقرير', value: incident.title || 'غير محدد' },
-                    { label: 'رقم الإخطار', value: incident.notificationNumber },
-                    { label: 'تاريخ ووقت الحادث', value: this._formatIncidentPrintDate(incident.date || incident.incidentDateTime) },
-                    { label: 'تاريخ الإنشاء', value: this._formatIncidentPrintDate(incident.createdAt) },
-                    { label: 'آخر تحديث', value: this._formatIncidentPrintDate(incident.updatedAt) },
-                    { label: 'نوع الحادث', value: incident.incidentType },
-                    { label: 'درجة الشدة', value: incident.severity, html: severityBadge },
-                    { label: 'حالة الحادث', value: incident.status, html: statusBadge }
-                ])}
+        const section1 = this._buildInvestigationFormPrintSection('inv-s1', nextNum(), 'بيانات الحادث الأساسية', `
+            <div class="inv-field-grid">
+                ${this._buildInvestigationFormPrintField('كود الحادث / ISO', esc(incident.isoCode || incident.id), '#2196F3', true)}
+                ${this._buildInvestigationFormPrintField('رقم الإخطار', esc(incident.notificationNumber), '#2196F3')}
+                ${this._buildInvestigationFormPrintField('عنوان التقرير', esc(incident.title), '#2196F3')}
+                ${this._buildInvestigationFormPrintField('تاريخ ووقت الحادث', this._formatIncidentPrintDate(incident.date || incident.incidentDateTime), '#2196F3')}
+                ${this._buildInvestigationFormPrintField('نوع الحادث', esc(incident.incidentType), '#2196F3')}
+                ${this._buildInvestigationFormPrintField('درجة الشدة', severityBadge, '#2196F3')}
+                ${this._buildInvestigationFormPrintField('حالة الحادث', statusBadge, '#2196F3')}
+                ${this._buildInvestigationFormPrintField('تاريخ الإنشاء', this._formatIncidentPrintDate(incident.createdAt), '#2196F3')}
+                ${this._buildInvestigationFormPrintField('آخر تحديث', this._formatIncidentPrintDate(incident.updatedAt), '#2196F3')}
             </div>
-        `;
+        `);
 
-        const section2 = `
-            <div style="margin-bottom: 30px;">
-                ${this._buildPrintSectionHeading('2', 'الموقع والجهة', '#6A1B9A', '#9C27B0')}
-                ${this._buildPrintDataTable([
-                    { label: 'المصنع / الموقع', value: incident.siteName || incident.factory },
-                    { label: 'المكان الفرعي', value: incident.sublocationName || incident.sublocation },
-                    { label: 'الموقع التفصيلي', value: locationLabel },
-                    { label: 'الإدارة / القسم', value: incident.department }
-                ], '#f3e5f5')}
+        const section2 = this._buildInvestigationFormPrintSection('inv-s2', nextNum(), 'الموقع والجهة', `
+            <div class="inv-field-grid" style="grid-template-columns: repeat(2, minmax(0, 1fr));">
+                ${this._buildInvestigationFormPrintField('المصنع / الموقع', esc(incident.siteName || incident.factory || registryEntry?.factory), '#9C27B0')}
+                ${this._buildInvestigationFormPrintField('المكان الفرعي', esc(incident.sublocationName || incident.sublocation), '#9C27B0')}
+                ${this._buildInvestigationFormPrintField('الموقع التفصيلي', esc(locationLabel), '#9C27B0')}
+                ${this._buildInvestigationFormPrintField('الإدارة / القسم', esc(incident.department || registryEntry?.employeeDepartment), '#9C27B0')}
             </div>
-        `;
+        `);
 
-        const section3 = `
-            <div style="margin-bottom: 30px;">
-                ${this._buildPrintSectionHeading('3', 'بيانات الإبلاغ والمتضرر', '#AD1457', '#E91E63')}
-                ${this._buildPrintDataTable([
-                    { label: 'المبلِّغ', value: incident.reportedBy },
-                    { label: 'الكود الوظيفي', value: incident.employeeCode || incident.employeeNumber },
-                    { label: 'الطرف المتضرر', value: incident.affectedName },
-                    { label: 'وظيفة المتضرر', value: incident.affectedJob || incident.affectedRole },
-                    { label: 'جهة المتضرر', value: incident.affectedDepartment }
-                ], '#fce4ec')}
+        const section3 = this._buildInvestigationFormPrintSection('inv-s4', nextNum(), 'بيانات الإبلاغ والمتضرر', `
+            <div class="inv-field-grid" style="grid-template-columns: repeat(2, minmax(0, 1fr));">
+                ${this._buildInvestigationFormPrintField('المبلِّغ', esc(incident.reportedBy), '#E91E63')}
+                ${this._buildInvestigationFormPrintField('الكود الوظيفي', esc(incident.employeeCode || incident.employeeNumber || registryEntry?.employeeCode), '#E91E63')}
+                ${this._buildInvestigationFormPrintField('الطرف المتضرر', esc(incident.affectedName || registryEntry?.employeeName), '#E91E63')}
+                ${this._buildInvestigationFormPrintField('وظيفة المتضرر', esc(incident.affectedJob || incident.affectedRole || registryEntry?.employeeJob), '#E91E63')}
+                ${this._buildInvestigationFormPrintField('جهة المتضرر', esc(incident.affectedDepartment || registryEntry?.employeeDepartment), '#E91E63')}
             </div>
-        `;
+        `);
 
-        const section4 = `
-            <div style="margin-bottom: 30px;">
-                ${this._buildPrintSectionHeading('4', 'وصف الحادث', '#E65100', '#FF9800')}
-                ${this._buildPrintTextPanel(incident.description, '#fff3e0', '#FF9800')}
-            </div>
-        `;
+        const injuryFields = [
+            injuredPart && injuredPart !== 'غير محدد' ? this._buildInvestigationFormPrintField('الجزء المتضرر', esc(injuredPart), '#E91E63') : '',
+            incident.injuryDescription ? this._buildInvestigationFormPrintField('وصف الإصابة', esc(incident.injuryDescription), '#E91E63') : '',
+            (incident.losses || registryEntry?.losses) ? this._buildInvestigationFormPrintField('الخسائر', esc(incident.losses || registryEntry?.losses), '#E91E63') : '',
+            (incident.actionsTaken || registryEntry?.actionsTaken) ? this._buildInvestigationFormPrintField('الإجراءات المتخذة', esc(incident.actionsTaken || registryEntry?.actionsTaken), '#E91E63') : ''
+        ].filter(Boolean).join('');
+
+        const sectionInjury = injuryFields ? this._buildInvestigationFormPrintSection('inv-s4', nextNum(), 'الإصابة والخسائر والإجراءات', `
+            <div class="inv-field-grid" style="grid-template-columns: 1fr; gap: 14px;">${injuryFields}</div>
+        `) : '';
+
+        const section4 = this._buildInvestigationFormPrintSection('inv-s3', nextNum(), 'وصف الحادث', `
+            <div class="inv-text-panel" style="border-color:#FF9800;">${esc(incident.description || registryEntry?.incidentDetails || 'غير محدد')}</div>
+        `);
 
         const analysisBlocks = [];
         if (incident.rootCause) {
             analysisBlocks.push(`
-                <div style="margin-top: 18px;">
-                    <div style="font-weight: 700; color: #00695C; margin-bottom: 8px;">الأسباب الجذرية</div>
-                    ${this._buildPrintTextPanel(incident.rootCause, '#e0f2f1', '#009688')}
+                <div style="margin-bottom:14px;">
+                    <div class="inv-field-label">الأسباب الجذرية</div>
+                    <div class="inv-text-panel" style="border-color:#14b8a6;background:#f0fdfa;">${esc(incident.rootCause)}</div>
                 </div>
             `);
         }
         if (incident.correctiveAction) {
             analysisBlocks.push(`
-                <div style="margin-top: 18px;">
-                    <div style="font-weight: 700; color: #00695C; margin-bottom: 8px;">الإجراءات التصحيحية الفورية</div>
-                    ${this._buildPrintTextPanel(incident.correctiveAction, '#e0f2f1', '#009688')}
+                <div style="margin-bottom:14px;">
+                    <div class="inv-field-label">الإجراءات التصحيحية الفورية</div>
+                    <div class="inv-text-panel" style="border-color:#14b8a6;background:#f0fdfa;">${esc(incident.correctiveAction)}</div>
                 </div>
             `);
         }
         if (incident.preventiveAction) {
             analysisBlocks.push(`
-                <div style="margin-top: 18px;">
-                    <div style="font-weight: 700; color: #00695C; margin-bottom: 8px;">الإجراءات الوقائية</div>
-                    ${this._buildPrintTextPanel(incident.preventiveAction, '#e0f2f1', '#009688')}
+                <div>
+                    <div class="inv-field-label">الإجراءات الوقائية</div>
+                    <div class="inv-text-panel" style="border-color:#14b8a6;background:#f0fdfa;">${esc(incident.preventiveAction)}</div>
                 </div>
             `);
         }
 
-        const section5 = analysisBlocks.length ? `
-            <div style="margin-bottom: 30px;">
-                ${this._buildPrintSectionHeading('5', 'التحليل والإجراءات', '#00695C', '#009688')}
-                ${analysisBlocks.join('')}
-            </div>
-        ` : '';
+        const section5 = analysisBlocks.length
+            ? this._buildInvestigationFormPrintSection('inv-s5', nextNum(), 'التحليل والإجراءات الأولية', analysisBlocks.join(''))
+            : '';
+
+        const registrySection = registryEntry
+            ? this._buildIncidentReportRegistrySection(registryEntry, nextNum())
+            : '';
 
         const hasActionPlan = Array.isArray(incident.actionPlan) && incident.actionPlan.length > 0;
-        let nextSection = analysisBlocks.length ? 6 : 5;
-        const actionPlanSection = hasActionPlan
-            ? this._buildIncidentReportActionPlanSection(incident.actionPlan, String(nextSection++))
-            : '';
+        let actionPlanSection = '';
+        if (hasActionPlan) {
+            const statusLabel = (status) => {
+                if (status === 'completed') return 'تم الإنجاز';
+                if (status === 'in_progress') return 'تحت التنفيذ';
+                return 'جارٍ';
+            };
+            const actionRows = incident.actionPlan.map(action => `
+                <tr>
+                    <td style="padding:10px;border:1px solid #c8e6c9;">${esc(action.actionType === 'corrective' ? 'إجراء تصحيحي' : action.actionType === 'preventive' ? 'إجراء وقائي' : (action.actionType || 'إجراء'))}</td>
+                    <td style="padding:10px;border:1px solid #c8e6c9;">${esc(action.description || action.correctiveAction || '')}</td>
+                    <td style="padding:10px;border:1px solid #c8e6c9;text-align:center;">${esc(action.owner || action.responsibleName || '')}</td>
+                    <td style="padding:10px;border:1px solid #c8e6c9;text-align:center;">${action.dueDate || action.plannedDate ? this._formatIncidentPrintDateOnly(action.dueDate || action.plannedDate) : '—'}</td>
+                    <td style="padding:10px;border:1px solid #c8e6c9;text-align:center;">${esc(statusLabel(action.status))}</td>
+                </tr>
+            `).join('');
+            actionPlanSection = this._buildInvestigationFormPrintSection('inv-s6', nextNum(), 'خطة الإجراءات التصحيحية والوقائية', `
+                <div class="inv-inner-white" style="border-color:#4CAF50;">
+                    <table style="width:100%;border-collapse:collapse;table-layout:fixed;">
+                        <thead>
+                            <tr style="background:linear-gradient(135deg,#388E3C 0%,#4CAF50 100%);color:white;">
+                                <th style="padding:12px;text-align:right;border:1px solid #2E7D32;">نوع الإجراء</th>
+                                <th style="padding:12px;text-align:right;border:1px solid #2E7D32;">الوصف</th>
+                                <th style="padding:12px;text-align:center;border:1px solid #2E7D32;">المسؤول</th>
+                                <th style="padding:12px;text-align:center;border:1px solid #2E7D32;">الاستحقاق</th>
+                                <th style="padding:12px;text-align:center;border:1px solid #2E7D32;">الحالة</th>
+                            </tr>
+                        </thead>
+                        <tbody style="background:#f9fff9;">${actionRows}</tbody>
+                    </table>
+                </div>
+            `);
+        }
 
         const exportImages = this._collectIncidentExportImages(incident);
-        const imagesSection = exportImages.length
-            ? this._buildIncidentReportImagesSection(exportImages, String(nextSection++))
-            : '';
-
-        let investigationSection = '';
-        if (investigation && (investigation.investigationNumber || investigation.description)) {
-            investigationSection = `
-                <div style="margin-bottom: 30px;">
-                    ${this._buildPrintSectionHeading(String(nextSection), 'ملخص التحقيق المرتبط', '#F57F17', '#FFC107')}
-                    ${this._buildPrintDataTable([
-                        { label: 'رقم التحقيق', value: investigation.investigationNumber },
-                        { label: 'تاريخ التحقيق', value: this._formatIncidentPrintDate(investigation.investigationDateTime) },
-                        { label: 'نتيجة تقييم الخطر', value: investigation.riskResult || investigation.riskLevel }
-                    ], '#fff9c4')}
-                    ${investigation.description ? `
-                        <div style="margin-top: 12px;">
-                            <div style="font-weight: 700; color: #92400e; margin-bottom: 8px;">ملخص التحقيق</div>
-                            ${this._buildPrintTextPanel(investigation.description, '#fffbeb', '#f59e0b')}
+        let imagesSection = '';
+        if (exportImages.length) {
+            const imageContainerStyle = 'display:inline-block;width:48%;max-width:360px;margin:1%;vertical-align:top;text-align:center;';
+            const imageFrameStyle = 'width:100%;height:280px;border:2px solid #1565C0;border-radius:12px;padding:8px;background:#f8fafc;display:flex;align-items:center;justify-content:center;overflow:hidden;';
+            const imageStyle = 'max-width:100%;max-height:100%;object-fit:contain;border-radius:8px;';
+            imagesSection = this._buildInvestigationFormPrintSection('inv-s1', nextNum(), 'الصور المرفقة', `
+                <div style="text-align:center;display:flex;flex-wrap:wrap;justify-content:center;gap:16px;">
+                    ${exportImages.map((img, idx) => `
+                        <div style="${imageContainerStyle}">
+                            <div style="${imageFrameStyle}">
+                                <img src="${this.convertGoogleDriveLinkToPrintable(img)}" alt="صورة ${idx + 1}" style="${imageStyle}" onerror="this.parentElement.innerHTML='<div style=\\'color:#94a3b8;font-size:14px;\\'>تعذر تحميل الصورة</div>';">
+                            </div>
+                            <div style="margin-top:8px;font-size:13px;color:#475569;font-weight:600;">صورة ${idx + 1}</div>
                         </div>
-                ` : ''}
+                    `).join('')}
                 </div>
-            `;
+            `);
+        }
+
+        let investigationAppendix = '';
+        if (opts.includeInvestigation !== false) {
+            const { investigationData } = this._resolveInvestigationDataForExport(incident.id);
+            if (this._hasInvestigationExportData(investigationData)) {
+                investigationAppendix = `
+                    <div style="page-break-before:always;margin-top:28px;padding-top:12px;border-top:4px solid #1565C0;">
+                        <h2 style="text-align:center;color:#1565C0;margin:0 0 20px;font-size:22px;font-weight:800;">ملحق: تقرير التحقيق في الحادث</h2>
+                    </div>
+                    ${this.buildInvestigationPrintContent(incident, investigationData, { includeStyles: false })}
+                `;
+            }
         }
 
         return `
-            <div style="direction: rtl; text-align: right; font-family: 'Tahoma', Arial, sans-serif;">
+            ${this._getInvestigationFormPrintStyles()}
+            <div class="inv-print-wrap">
                 ${section1}
                 ${section2}
                 ${section3}
+                ${sectionInjury}
                 ${section4}
                 ${section5}
+                ${registrySection}
                 ${actionPlanSection}
                 ${imagesSection}
-                ${investigationSection}
+                ${investigationAppendix}
             </div>
         `;
+    },
+
+    _buildIncidentReportHtml(incident) {
+        const content = this.buildIncidentReportPrintContent(incident);
+        const formCode = incident.isoCode || incident.notificationNumber || incident.id || `INC-${new Date().toISOString().slice(0, 10)}`;
+
+        if (typeof FormHeader !== 'undefined' && FormHeader.generatePDFHTML) {
+            return FormHeader.generatePDFHTML(
+                formCode,
+                'تقرير الحادث – Incident Report',
+                content,
+                false,
+                false,
+                {
+                    version: AppState?.companySettings?.formVersion || '1.0',
+                    titleAr: 'تقرير الحادث',
+                    titleEn: 'Incident Report',
+                    includeQRCode: false,
+                    'مرجع الحادث': incident.id || '—'
+                },
+                incident.createdAt || incident.date,
+                incident.updatedAt
+            );
+        }
+
+        return `<html dir="rtl" lang="ar"><head><meta charset="UTF-8"><style>body { font-family: 'Tahoma', Arial, sans-serif; direction: rtl; text-align: right; padding: 20px; } @media print { body { margin: 0; padding: 15px; } }</style></head><body>${content}</body></html>`;
+    },
+
+    _buildRegistryEntryReportHtml(entry) {
+        const content = this.buildRegistryEntryReportPrintContent(entry);
+        const formCode = `REG-${entry.sequentialNumber || entry.id}`;
+
+        if (typeof FormHeader !== 'undefined' && FormHeader.generatePDFHTML) {
+            return FormHeader.generatePDFHTML(
+                formCode,
+                'تقرير سجل الحادث – Incident Registry Report',
+                content,
+                false,
+                false,
+                {
+                    version: AppState?.companySettings?.formVersion || '1.0',
+                    titleAr: 'تقرير سجل الحادث',
+                    titleEn: 'Incident Registry Report',
+                    includeQRCode: false
+                },
+                entry.incidentDate,
+                entry.updatedAt
+            );
+        }
+
+        return `<html dir="rtl" lang="ar"><head><meta charset="UTF-8"><style>body { font-family: 'Tahoma', Arial, sans-serif; direction: rtl; text-align: right; padding: 20px; } @media print { body { margin: 0; padding: 15px; } }</style></head><body>${content}</body></html>`;
+    },
+
+    async _exportIncidentReportPdf(incidentId) {
+        const incident = AppState.appData.incidents.find(i => i.id === incidentId);
+        if (!incident) {
+            Notification.error('الحادث غير موجود');
+            return false;
+        }
+
+        try {
+            Loading.show('جاري تحضير تقرير الحادث...');
+            const htmlContent = this._buildIncidentReportHtml(incident);
+            const ref = incident.isoCode || incident.notificationNumber || incident.id;
+            const safeName = `تقرير-حادث-${String(ref).replace(/[^\w\u0600-\u06FF.-]/g, '_')}`;
+            const downloaded = await this._downloadHtmlReportAsPdf(htmlContent, safeName);
+            Loading.hide();
+
+            if (downloaded) {
+                Notification.success('تم تحميل تقرير الحادث بنجاح');
+                return true;
+            }
+
+            this._openIncidentPrintableHtml(htmlContent, 'تعذّر التحميل المباشر — تم فتح نافذة الطباعة');
+            return true;
+        } catch (error) {
+            Loading.hide();
+            Utils.safeError('خطأ في تصدير تقرير الحادث:', error);
+            Notification.error('فشل تصدير PDF: ' + error.message);
+            return false;
+        }
+    },
+
+    async exportRegistryEntryPDF(entryId) {
+        const entry = this.registryData.find(r => r.id === entryId);
+        if (!entry) {
+            Notification.error('السجل غير موجود');
+            return false;
+        }
+
+        const linkedIncident = entry.incidentId
+            ? AppState.appData.incidents.find(i => i.id === entry.incidentId)
+            : null;
+
+        try {
+            Loading.show('جاري تحضير تقرير السجل...');
+            const htmlContent = linkedIncident
+                ? this._buildIncidentReportHtml(linkedIncident)
+                : this._buildRegistryEntryReportHtml(entry);
+            const ref = entry.sequentialNumber || entry.id;
+            const safeName = `سجل-حادث-${String(ref).replace(/[^\w\u0600-\u06FF.-]/g, '_')}`;
+            const downloaded = await this._downloadHtmlReportAsPdf(htmlContent, safeName);
+            Loading.hide();
+
+            if (downloaded) {
+                Notification.success('تم تحميل تقرير السجل بنجاح');
+                return true;
+            }
+
+            this._openIncidentPrintableHtml(htmlContent, 'تعذّر التحميل المباشر — تم فتح نافذة الطباعة');
+            return true;
+        } catch (error) {
+            Loading.hide();
+            Utils.safeError('خطأ في تصدير تقرير السجل:', error);
+            Notification.error('فشل تصدير PDF: ' + error.message);
+            return false;
+        }
     },
 
     async _loadReportPdfLib_(src, checkFn) {
@@ -10077,7 +10358,7 @@ const Incidents = {
     },
 
     async exportPDF(id) {
-        await this._exportInvestigationReportPdf(id);
+        await this._exportIncidentReportPdf(id);
     },
 
     // تطبيق نظام الصلاحيات
@@ -11703,7 +11984,7 @@ const Incidents = {
     },
 
     // بناء محتوى HTML للطباعة — مطابق لنموذج التحقيق في الحادث
-    buildInvestigationPrintContent(incident, investigationData) {
+    buildInvestigationPrintContent(incident, investigationData, opts = {}) {
         const formatDate = (dateStr) => {
             if (!dateStr) return '';
             try {
@@ -11919,8 +12200,10 @@ const Incidents = {
                 </div>
         `);
 
+        const wrapStyles = opts.includeStyles !== false ? this._getInvestigationFormPrintStyles() : '';
+
         return `
-            ${this._getInvestigationFormPrintStyles()}
+            ${wrapStyles}
             <div class="inv-print-wrap">
                 ${section1}
                 ${section2}
