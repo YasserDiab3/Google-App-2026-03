@@ -8848,6 +8848,14 @@ const Incidents = {
             const affectedName = investigationData.affectedName || incident.affectedName || '';
             const affectedJob = investigationData.affectedJob || incident.affectedJobTitle || '';
             const affectedDepartment = investigationData.affectedDepartment || incident.affectedDepartment || '';
+            const affectedEmployeeCode = investigationData.affectedEmployeeCode
+                || incident.affectedCode
+                || incident.employeeCode
+                || '';
+            const affectedAffiliationInit = investigationData.affectedAffiliation || incident.affiliation || '';
+            const contractorSelectHtml = this.buildInvestigationAffectedContractorSelectOptions(
+                affectedAffiliationInit === 'contractor' ? affectedDepartment : ''
+            );
 
             // توليد صفوف خطة العمل قبل template literal لتجنب مشكلة this
             const actionPlanRows = this.renderInvestigationActionPlanRows(investigationData.actionPlan || []);
@@ -9051,41 +9059,71 @@ const Incidents = {
                                 <i class="fas fa-user-injured"></i>
                                 <span>4) بيانات المصاب</span>
                             </h3>
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
-                                <div>
-                                    <label class="block text-sm font-semibold text-gray-700 mb-2">تبعية المصاب</label>
-                                    <select id="investigation-affected-affiliation" class="form-input">
-                                        <option value="">اختر التبعية</option>
-                                        <option value="company" ${investigationData.affectedAffiliation === 'company' ? 'selected' : ''}>شركة</option>
-                                        <option value="daily-labor" ${investigationData.affectedAffiliation === 'daily-labor' ? 'selected' : ''}>عمالة يومية</option>
-                                        <option value="contractor" ${investigationData.affectedAffiliation === 'contractor' ? 'selected' : ''}>مقاول</option>
-                                        <option value="visitor" ${investigationData.affectedAffiliation === 'visitor' ? 'selected' : ''}>زائر</option>
-                                        <option value="none" ${investigationData.affectedAffiliation === 'none' ? 'selected' : ''}>لا يوجد</option>
-                                    </select>
-                                </div>
-                                <div>
-                                    <label class="block text-sm font-semibold text-gray-700 mb-2">الاسم</label>
-                                    <input type="text" id="investigation-affected-name" class="form-input" 
-                                        value="${Utils.escapeHTML(affectedName)}" 
-                                        placeholder="اسم المصاب">
-                                </div>
-                                <div>
-                                    <label class="block text-sm font-semibold text-gray-700 mb-2">الوظيفة</label>
-                                    <input type="text" id="investigation-affected-job" class="form-input" 
-                                        value="${Utils.escapeHTML(affectedJob)}" 
-                                        placeholder="الوظيفة">
-                                </div>
-                                <div>
-                                    <label class="block text-sm font-semibold text-gray-700 mb-2">السن</label>
-                                    <input type="number" id="investigation-affected-age" class="form-input" 
-                                        value="${investigationData.affectedAge || ''}" 
-                                        placeholder="السن" min="1" max="100">
-                                </div>
-                                <div class="col-span-2">
-                                    <label class="block text-sm font-semibold text-gray-700 mb-2">الجهة التابع لها</label>
-                                    <input type="text" id="investigation-affected-department" class="form-input" 
-                                        value="${Utils.escapeHTML(affectedDepartment)}" 
-                                        placeholder="الجهة التابع لها">
+                            <div id="investigation-affected-panel" class="space-y-4">
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                                    <div class="md:col-span-2">
+                                        <label class="block text-sm font-semibold text-gray-700 mb-2">تبعية المصاب</label>
+                                        <select id="investigation-affected-affiliation" class="form-input">
+                                            <option value="">اختر التبعية</option>
+                                            <option value="company" ${investigationData.affectedAffiliation === 'company' ? 'selected' : ''}>شركة</option>
+                                            <option value="daily-labor" ${investigationData.affectedAffiliation === 'daily-labor' ? 'selected' : ''}>عمالة يومية</option>
+                                            <option value="contractor" ${investigationData.affectedAffiliation === 'contractor' ? 'selected' : ''}>مقاول</option>
+                                            <option value="visitor" ${investigationData.affectedAffiliation === 'visitor' ? 'selected' : ''}>زائر</option>
+                                            <option value="none" ${investigationData.affectedAffiliation === 'none' ? 'selected' : ''}>لا يوجد</option>
+                                        </select>
+                                    </div>
+
+                                    <div id="investigation-affected-code-wrapper" class="md:col-span-2" style="display:none;">
+                                        <div class="p-4 rounded-lg border-2 border-pink-200 bg-white/80">
+                                            <label class="block text-sm font-semibold text-gray-700 mb-2">
+                                                <i class="fas fa-id-badge ml-1 text-pink-600"></i>
+                                                كود الموظف *
+                                            </label>
+                                            <input type="text" id="investigation-affected-employee-code" class="form-input"
+                                                value="${Utils.escapeHTML(affectedEmployeeCode)}"
+                                                placeholder="اكتب كود الموظف للبحث والتعبئة التلقائية" autocomplete="off">
+                                            <p class="text-xs text-gray-500 mt-2">عند إدخال الكود تُملأ الاسم والوظيفة والإدارة تلقائياً.</p>
+                                        </div>
+                                    </div>
+
+                                    <div id="investigation-affected-contractor-wrapper" class="md:col-span-2" style="display:none;">
+                                        <div class="p-4 rounded-lg border-2 border-pink-200 bg-white/80">
+                                            <label class="block text-sm font-semibold text-gray-700 mb-2">
+                                                <i class="fas fa-handshake ml-1 text-pink-600"></i>
+                                                المقاول (الجهة التابع لها) *
+                                            </label>
+                                            <select id="investigation-affected-contractor-select" class="form-input">
+                                                ${contractorSelectHtml}
+                                            </select>
+                                            <p class="text-xs text-gray-500 mt-2">اختر المقاول من القائمة المعتمدة، ثم أدخل بيانات العامل أدناه.</p>
+                                        </div>
+                                    </div>
+
+                                    <div id="investigation-affected-name-wrapper">
+                                        <label class="block text-sm font-semibold text-gray-700 mb-2">الاسم</label>
+                                        <input type="text" id="investigation-affected-name" class="form-input"
+                                            value="${Utils.escapeHTML(affectedName)}"
+                                            placeholder="اسم المصاب">
+                                    </div>
+                                    <div id="investigation-affected-job-wrapper">
+                                        <label class="block text-sm font-semibold text-gray-700 mb-2">الوظيفة</label>
+                                        <input type="text" id="investigation-affected-job" class="form-input"
+                                            value="${Utils.escapeHTML(affectedJob)}"
+                                            placeholder="الوظيفة">
+                                    </div>
+                                    <div id="investigation-affected-age-wrapper">
+                                        <label class="block text-sm font-semibold text-gray-700 mb-2">السن</label>
+                                        <input type="number" id="investigation-affected-age" class="form-input"
+                                            value="${investigationData.affectedAge || ''}"
+                                            placeholder="السن" min="1" max="100">
+                                    </div>
+
+                                    <div id="investigation-affected-department-wrapper" class="md:col-span-2">
+                                        <label id="investigation-affected-department-label" class="block text-sm font-semibold text-gray-700 mb-2">الجهة التابع لها</label>
+                                        <input type="text" id="investigation-affected-department" class="form-input"
+                                            value="${Utils.escapeHTML(affectedDepartment)}"
+                                            placeholder="الجهة التابع لها">
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -9633,13 +9671,104 @@ const Incidents = {
 
     _parseIncidentInvestigationSummary(incident) {
         if (!incident?.investigation) return null;
-        try {
-            return typeof incident.investigation === 'string'
-                ? JSON.parse(incident.investigation)
-                : incident.investigation;
-        } catch {
-            return null;
+
+        if (typeof incident.investigation === 'object') {
+            return incident.investigation;
         }
+
+        const raw = String(incident.investigation).trim();
+        if (!raw) return null;
+
+        if (raw.startsWith('{') || raw.startsWith('[')) {
+            try {
+                return JSON.parse(raw);
+            } catch (_e) { /* fall through */ }
+        }
+
+        return this._parseInvestigationSummaryText(raw);
+    },
+
+    _parseInvestigationSummaryText(text) {
+        const inv = { description: '' };
+        const labelMap = {
+            'رقم التحقيق': 'investigationNumber',
+            'تاريخ التحقيق': 'investigationDateTime',
+            'تاريخ الحادث': 'incidentDateTime',
+            'المصنع': 'factoryName',
+            'الموقع': 'locationName',
+            'التبعية': 'affectedAffiliation',
+            'اسم المصاب': 'affectedName',
+            'الوظيفة': 'affectedJob',
+            'الإدارة': 'affectedDepartment',
+            'مستوى الخطورة': 'riskLevel',
+            'نتيجة التقييم': 'riskResult',
+            'الوصف': 'description',
+            'منهجية التحقيق': '_rcaMethodLabel',
+            'منهجية RCA': '_rcaMethodLabel',
+            'السبب الجذري': '_rcaRootSummary'
+        };
+
+        String(text).split('\n').forEach((line) => {
+            const idx = line.indexOf(':');
+            if (idx < 0) return;
+            const label = line.slice(0, idx).trim();
+            const value = line.slice(idx + 1).trim();
+            if (!value) return;
+            const key = labelMap[label];
+            if (key === '_rcaMethodLabel') {
+                if (!inv.rca) inv.rca = {};
+                inv.rca.methodLabel = value;
+            } else if (key === '_rcaRootSummary') {
+                if (!inv.rca) inv.rca = {};
+                inv.rca.rootCauseSummary = value;
+            } else if (key) {
+                inv[key] = value;
+            }
+        });
+
+        if (inv.rca && typeof InvestigationRCA !== 'undefined') {
+            inv.rca = InvestigationRCA.normalizeRcaForExport(inv.rca);
+        }
+
+        return Object.keys(inv).length ? inv : null;
+    },
+
+    _buildInvestigationRcaPrintSection(investigationData, incident, esc, opts = {}) {
+        if (typeof InvestigationRCA === 'undefined') return '';
+
+        const normalized = InvestigationRCA.normalizeRcaForExport(investigationData?.rca);
+        if (normalized?.method) {
+            return InvestigationRCA.buildPrintSection(normalized, { includeStyles: opts.includeRcaStyles === true });
+        }
+
+        if (investigationData?.rootCauseSummary || incident?.rootCause) {
+            return `
+                <div class="inv-print-section rca-print-section inv-s-rca" style="background:linear-gradient(135deg,#f5f3ff 0%,#fff 100%);border:2px solid #7c3aed;border-radius:12px;padding:20px 24px;margin-bottom:20px;">
+                    <h3 style="color:#5b21b6;border-color:#7c3aed;font-size:18px;font-weight:700;margin:0 0 14px;padding-bottom:10px;border-bottom:3px solid #7c3aed;">5.5) تحليل السبب الجذري</h3>
+                    <div class="rca-root-box" style="padding:16px 18px;border-radius:10px;border:2px solid #10b981;background:linear-gradient(135deg,#ecfdf5,#d1fae5);">
+                        <div style="font-weight:800;color:#047857;margin-bottom:8px;">السبب الجذري</div>
+                        <div style="white-space:pre-wrap;line-height:1.75;">${esc(investigationData.rootCauseSummary || incident.rootCause)}</div>
+                    </div>
+                </div>`;
+        }
+
+        return '';
+    },
+
+    _getInvestigationMethodologyMeta(investigationData) {
+        if (typeof InvestigationRCA === 'undefined') {
+            return { label: '—', reference: '', hasMethod: false };
+        }
+        const normalized = InvestigationRCA.normalizeRcaForExport(investigationData?.rca);
+        if (!normalized?.method) {
+            return { label: '—', reference: '', hasMethod: false };
+        }
+        const methodDef = InvestigationRCA.METHODS[normalized.method];
+        return {
+            label: normalized.methodLabel || methodDef?.label || normalized.method,
+            reference: methodDef?.reference || '',
+            hasMethod: true
+        };
     },
 
     _findRegistryEntryForIncident(incidentId) {
@@ -10115,6 +10244,55 @@ const Incidents = {
         } catch (_e) { /* ignore */ }
     },
 
+    _getIncidentReportPdfA4Styles() {
+        return `
+<style id="incidents-pdf-a4-layout">
+    @page { size: A4 portrait; margin: 0; }
+    html, body {
+        width: 210mm;
+        max-width: 210mm;
+        margin: 0 auto !important;
+        padding: 0 !important;
+        background: #ffffff !important;
+        box-sizing: border-box;
+    }
+    .report-wrapper {
+        width: 210mm !important;
+        max-width: 210mm !important;
+        min-height: auto !important;
+        margin: 0 auto !important;
+        padding: 8mm 10mm !important;
+        box-shadow: none !important;
+        border-radius: 0 !important;
+        box-sizing: border-box !important;
+    }
+    .report-body, .inv-print-wrap {
+        width: 100% !important;
+        max-width: 100% !important;
+        box-sizing: border-box !important;
+    }
+    .inv-print-section, .rca-print-section {
+        width: 100% !important;
+        max-width: 100% !important;
+        box-sizing: border-box !important;
+        break-inside: avoid;
+        page-break-inside: avoid;
+    }
+    .inv-field-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    }
+    .inv-type-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    }
+    table { width: 100% !important; max-width: 100% !important; table-layout: fixed !important; }
+    .report-header {
+        break-inside: avoid;
+        page-break-inside: avoid;
+    }
+    img { max-width: 100% !important; height: auto !important; }
+</style>`;
+    },
+
     _prepareArabicPdfHtml_(htmlContent) {
         const arabicFix = `
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -10159,7 +10337,7 @@ const Incidents = {
     }
     table, thead, tbody, tr, th, td { direction: rtl !important; }
     .header-info h1 { letter-spacing: 0 !important; }
-</style>`;
+</style>${this._getIncidentReportPdfA4Styles()}`;
         const cleaned = this._stripScriptsFromHtml_(htmlContent);
         if (!cleaned) return arabicFix;
         if (cleaned.includes('</head>')) {
@@ -10182,11 +10360,13 @@ const Incidents = {
     },
 
     async _captureHtmlToCanvas_(root, opts = {}) {
+        const pdfWidth = opts.windowWidth || Math.max(root.scrollWidth || 0, 794);
         const baseOpts = {
             scale: 2.5,
             backgroundColor: '#ffffff',
             logging: false,
-            windowWidth: Math.max(root.scrollWidth, 900),
+            width: pdfWidth,
+            windowWidth: pdfWidth,
             windowHeight: Math.max(root.scrollHeight, 1),
             scrollX: 0,
             scrollY: 0
@@ -10225,7 +10405,7 @@ const Incidents = {
 
         const iframe = document.createElement('iframe');
         iframe.setAttribute('aria-hidden', 'true');
-        iframe.style.cssText = 'position:fixed;left:-100000px;top:0;width:900px;height:1200px;border:0;visibility:hidden;';
+        iframe.style.cssText = 'position:fixed;left:-100000px;top:0;width:794px;min-height:1123px;border:0;visibility:hidden;';
         document.body.appendChild(iframe);
 
         try {
@@ -10252,12 +10432,12 @@ const Incidents = {
             const root = iDoc.querySelector('.report-wrapper') || iDoc.body;
             if (!root) return false;
 
-            const canvas = await this._captureHtmlToCanvas_(root);
+            const canvas = await this._captureHtmlToCanvas_(root, { windowWidth: 794 });
             if (!canvas) return false;
 
             const pdf = Utils.PdfExport.createPdf({ orientation: 'portrait', unit: 'mm', format: 'a4' });
             if (!pdf) return false;
-            Utils.PdfExport.appendCanvasAsPdfPages(pdf, canvas, { marginMm: 8 });
+            Utils.PdfExport.appendCanvasAsPdfPages(pdf, canvas, { marginMm: 4 });
             Utils.PdfExport.savePdf(pdf, pdfFileName);
             return true;
         } catch (error) {
@@ -10362,6 +10542,11 @@ const Incidents = {
         }
         if (!data.riskExplanation && data.rca?.rootCauseSummary) {
             data.riskExplanation = data.rca.rootCauseSummary;
+        }
+
+        if (typeof InvestigationRCA !== 'undefined' && data.rca) {
+            const normalized = InvestigationRCA.normalizeRcaForExport(data.rca);
+            if (normalized) data.rca = normalized;
         }
 
         return data;
@@ -11114,6 +11299,192 @@ const Incidents = {
         }
     },
 
+    getApprovedContractorOptions() {
+        const names = new Map();
+        const pushName = (value) => {
+            const name = String(value || '').trim();
+            if (name) names.set(name, name);
+        };
+
+        (AppState?.appData?.approvedContractors || []).forEach((rec) => {
+            if (!rec) return;
+            const status = String(rec.status || 'approved').trim().toLowerCase();
+            if (status && !['approved', 'active', 'نشط', 'معتمد'].includes(status)) return;
+            pushName(rec.companyName || rec.name);
+        });
+
+        (AppState?.appData?.contractors || []).forEach((rec) => {
+            pushName(rec.companyName || rec.name || rec.company);
+        });
+
+        return Array.from(names.values()).sort((a, b) => a.localeCompare(b, 'ar'));
+    },
+
+    buildInvestigationAffectedContractorSelectOptions(selected = '') {
+        const esc = (v) => Utils.escapeHTML(String(v ?? ''));
+        const selectedNorm = String(selected || '').trim();
+        const options = this.getApprovedContractorOptions();
+        let html = '<option value="">اختر المقاول</option>';
+        let found = false;
+        options.forEach((name) => {
+            const isSelected = name === selectedNorm;
+            if (isSelected) found = true;
+            html += `<option value="${esc(name)}"${isSelected ? ' selected' : ''}>${esc(name)}</option>`;
+        });
+        if (selectedNorm && !found) {
+            html += `<option value="${esc(selectedNorm)}" selected>${esc(selectedNorm)} (محفوظ)</option>`;
+        }
+        return html;
+    },
+
+    _setInvestigationAffectedFieldLock(input, locked) {
+        if (!input) return;
+        input.readOnly = !!locked;
+        input.style.background = locked ? '#fff7ed' : '';
+        input.style.fontWeight = locked ? '600' : '';
+    },
+
+    fillInvestigationEmployeeFromCode(modal, options = {}) {
+        const codeInput = modal?.querySelector('#investigation-affected-employee-code');
+        const nameInput = modal?.querySelector('#investigation-affected-name');
+        const jobInput = modal?.querySelector('#investigation-affected-job');
+        const deptInput = modal?.querySelector('#investigation-affected-department');
+        const affiliationEl = modal?.querySelector('#investigation-affected-affiliation');
+
+        if (!codeInput || !nameInput) return;
+        if ((affiliationEl?.value || '') !== 'company') return;
+
+        const employeeCode = codeInput.value.trim();
+        if (!employeeCode) {
+            if (!options.keepExisting) {
+                nameInput.value = '';
+                if (jobInput) jobInput.value = '';
+                if (deptInput) deptInput.value = '';
+            }
+            return;
+        }
+
+        const employee = this.getEmployeeByCode(employeeCode);
+        if (employee) {
+            nameInput.value = employee.name || employee.fullName || '';
+            if (jobInput) {
+                jobInput.value = employee.job || employee.position || employee.jobTitle || employee.title || '';
+            }
+            if (deptInput) {
+                deptInput.value = employee.department || employee.section || employee.division || employee.dept || '';
+            }
+        } else if (!options.silent) {
+            nameInput.value = '';
+            if (jobInput) jobInput.value = '';
+            if (document.activeElement !== codeInput) {
+                Notification.warning('لم يتم العثور على موظف بهذا الكود');
+            }
+        }
+    },
+
+    _resolveInvestigationAffectedDepartment(modal) {
+        const affiliationEl = modal?.querySelector('#investigation-affected-affiliation');
+        const deptInput = modal?.querySelector('#investigation-affected-department');
+        const contractorSelect = modal?.querySelector('#investigation-affected-contractor-select');
+        const affiliation = affiliationEl?.value || '';
+
+        if (affiliation === 'contractor') {
+            return (contractorSelect?.value || deptInput?.value || '').trim();
+        }
+        return (deptInput?.value || '').trim();
+    },
+
+    updateInvestigationAffectedAffiliationUI(modal) {
+        if (!modal) return;
+
+        const affiliationEl = modal.querySelector('#investigation-affected-affiliation');
+        const codeWrapper = modal.querySelector('#investigation-affected-code-wrapper');
+        const contractorWrapper = modal.querySelector('#investigation-affected-contractor-wrapper');
+        const departmentWrapper = modal.querySelector('#investigation-affected-department-wrapper');
+        const departmentLabel = modal.querySelector('#investigation-affected-department-label');
+        const codeInput = modal.querySelector('#investigation-affected-employee-code');
+        const contractorSelect = modal.querySelector('#investigation-affected-contractor-select');
+        const nameInput = modal.querySelector('#investigation-affected-name');
+        const jobInput = modal.querySelector('#investigation-affected-job');
+        const deptInput = modal.querySelector('#investigation-affected-department');
+
+        const affiliation = affiliationEl?.value || '';
+        const isCompany = affiliation === 'company';
+        const isContractor = affiliation === 'contractor';
+
+        if (codeWrapper) codeWrapper.style.display = isCompany ? 'block' : 'none';
+        if (contractorWrapper) contractorWrapper.style.display = isContractor ? 'block' : 'none';
+        if (departmentWrapper) departmentWrapper.style.display = isContractor ? 'none' : 'block';
+
+        if (codeInput) {
+            codeInput.required = isCompany;
+            if (!isCompany) codeInput.value = '';
+        }
+
+        if (contractorSelect) {
+            contractorSelect.required = isContractor;
+            if (!isContractor) contractorSelect.value = '';
+        }
+
+        if (departmentLabel) {
+            departmentLabel.textContent = isCompany ? 'الإدارة / القسم' : 'الجهة التابع لها';
+        }
+
+        this._setInvestigationAffectedFieldLock(nameInput, isCompany);
+        this._setInvestigationAffectedFieldLock(jobInput, isCompany);
+        this._setInvestigationAffectedFieldLock(deptInput, false);
+
+        if (isCompany) {
+            this.fillInvestigationEmployeeFromCode(modal, { keepExisting: true, silent: true });
+        }
+    },
+
+    setupInvestigationAffectedPersonUI(modal) {
+        if (!modal) return;
+
+        const affiliationEl = modal.querySelector('#investigation-affected-affiliation');
+        const codeInput = modal.querySelector('#investigation-affected-employee-code');
+        const contractorSelect = modal.querySelector('#investigation-affected-contractor-select');
+
+        if (contractorSelect && !contractorSelect.dataset.bound) {
+            contractorSelect.dataset.bound = '1';
+            const current = contractorSelect.value;
+            contractorSelect.innerHTML = this.buildInvestigationAffectedContractorSelectOptions(current);
+        }
+
+        const refreshUI = () => this.updateInvestigationAffectedAffiliationUI(modal);
+
+        if (affiliationEl && !affiliationEl.dataset.bound) {
+            affiliationEl.dataset.bound = '1';
+            affiliationEl.addEventListener('change', refreshUI);
+        }
+
+        if (codeInput && !codeInput.dataset.bound) {
+            codeInput.dataset.bound = '1';
+            const tryFill = () => this.fillInvestigationEmployeeFromCode(modal);
+            codeInput.addEventListener('blur', tryFill);
+            codeInput.addEventListener('change', tryFill);
+            codeInput.addEventListener('input', () => {
+                if (codeInput.value.trim().length >= 3) tryFill();
+            });
+        }
+
+        if (typeof EmployeeHelper !== 'undefined') {
+            EmployeeHelper.setupEmployeeCodeSearch('investigation-affected-employee-code', 'investigation-affected-name', (employee) => {
+                if ((affiliationEl?.value || '') !== 'company' || !employee) return;
+                const nameInput = modal.querySelector('#investigation-affected-name');
+                const jobInput = modal.querySelector('#investigation-affected-job');
+                const deptInput = modal.querySelector('#investigation-affected-department');
+                if (codeInput) codeInput.value = employee.code || employee.employeeNumber || employee.sapId || employee.id || '';
+                if (nameInput) nameInput.value = employee.name || employee.fullName || '';
+                if (jobInput) jobInput.value = employee.job || employee.jobTitle || employee.position || '';
+                if (deptInput) deptInput.value = employee.department || employee.dept || employee.departmentName || '';
+            });
+        }
+
+        refreshUI();
+    },
+
     setupInvestigationFormListeners(modal, incidentId, canEdit = true) {
         const self = this;
 
@@ -11179,6 +11550,9 @@ const Incidents = {
 
         // Load factory and location options
         this.loadInvestigationFormOptions(modal);
+
+        // بيانات المصاب — شركة / مقاول
+        this.setupInvestigationAffectedPersonUI(modal);
 
         // معالج تحليل السبب الجذري
         this.initInvestigationRcaWizard(modal, canEdit);
@@ -11475,6 +11849,30 @@ const Incidents = {
                 });
                 InvestigationRCA.bindEvents(rcaContainer, { canEdit: canEditRca });
             }
+
+            const modalEl = document.querySelector('.modal-overlay');
+            if (modalEl) {
+                if (investigation) {
+                    const inv = investigation;
+                    const setVal = (sel, val) => {
+                        const el = modalEl.querySelector(sel);
+                        if (el && val != null && val !== '') el.value = val;
+                    };
+                    setVal('#investigation-affected-employee-code', inv.affectedEmployeeCode);
+                    setVal('#investigation-affected-name', inv.affectedName);
+                    setVal('#investigation-affected-job', inv.affectedJob);
+                    setVal('#investigation-affected-age', inv.affectedAge);
+                    if (inv.affectedAffiliation === 'contractor') {
+                        const contractorSelect = modalEl.querySelector('#investigation-affected-contractor-select');
+                        if (contractorSelect) {
+                            contractorSelect.innerHTML = this.buildInvestigationAffectedContractorSelectOptions(inv.affectedDepartment || '');
+                        }
+                    } else {
+                        setVal('#investigation-affected-department', inv.affectedDepartment);
+                    }
+                }
+                this.updateInvestigationAffectedAffiliationUI(modalEl);
+            }
         }, 300);
     },
 
@@ -11492,6 +11890,7 @@ const Incidents = {
         const descriptionEl = document.getElementById('investigation-description');
         const nearmissDescriptionEl = document.getElementById('investigation-nearmiss-description');
         const affectedAffiliationEl = document.getElementById('investigation-affected-affiliation');
+        const affectedEmployeeCodeEl = document.getElementById('investigation-affected-employee-code');
         const affectedNameEl = document.getElementById('investigation-affected-name');
         const affectedJobEl = document.getElementById('investigation-affected-job');
         const affectedAgeEl = document.getElementById('investigation-affected-age');
@@ -11540,10 +11939,11 @@ const Incidents = {
 
             // Affected person
             affectedAffiliation: affectedAffiliationEl.value,
+            affectedEmployeeCode: affectedEmployeeCodeEl?.value?.trim() || '',
             affectedName: affectedNameEl.value,
             affectedJob: affectedJobEl.value,
             affectedAge: affectedAgeEl.value,
-            affectedDepartment: affectedDepartmentEl.value,
+            affectedDepartment: this._resolveInvestigationAffectedDepartment(modal),
 
             // Investigator section
             unsafeBehavior: unsafeBehaviorEl.value,
@@ -11593,8 +11993,8 @@ const Incidents = {
         const rcaContainer = document.getElementById('investigation-rca-wizard');
         if (rcaContainer && typeof InvestigationRCA !== 'undefined') {
             const rcaData = InvestigationRCA.collect(rcaContainer);
-            if (rcaData && rcaData.method) {
-                investigationData.rca = rcaData;
+            if (rcaData && (rcaData.method || Object.keys(rcaData.stepsData || {}).length)) {
+                investigationData.rca = InvestigationRCA.normalizeRcaForExport(rcaData) || rcaData;
             }
         }
 
@@ -11602,6 +12002,14 @@ const Incidents = {
         if (!investigationData.investigationDateTime || !investigationData.incidentDateTime ||
             !investigationData.factoryId || !investigationData.locationId || !investigationData.description) {
             Notification.error('يرجى ملء جميع الحقول المطلوبة');
+            return;
+        }
+        if (investigationData.affectedAffiliation === 'company' && !investigationData.affectedEmployeeCode) {
+            Notification.error('يرجى إدخال كود الموظف عند اختيار تبعية «شركة»');
+            return;
+        }
+        if (investigationData.affectedAffiliation === 'contractor' && !investigationData.affectedDepartment) {
+            Notification.error('يرجى اختيار المقاول من القائمة');
             return;
         }
 
@@ -11855,6 +12263,7 @@ const Incidents = {
         const descriptionEl = document.getElementById('investigation-description');
         const nearmissDescriptionEl = document.getElementById('investigation-nearmiss-description');
         const affectedAffiliationEl = document.getElementById('investigation-affected-affiliation');
+        const affectedEmployeeCodeEl = document.getElementById('investigation-affected-employee-code');
         const affectedNameEl = document.getElementById('investigation-affected-name');
         const affectedJobEl = document.getElementById('investigation-affected-job');
         const affectedAgeEl = document.getElementById('investigation-affected-age');
@@ -11902,10 +12311,11 @@ const Incidents = {
             description: descriptionEl.value,
             nearmissDescription: nearmissDescriptionEl?.value || '',
             affectedAffiliation: affectedAffiliationEl.value,
+            affectedEmployeeCode: affectedEmployeeCodeEl?.value?.trim() || '',
             affectedName: affectedNameEl.value,
             affectedJob: affectedJobEl.value,
             affectedAge: affectedAgeEl.value,
-            affectedDepartment: affectedDepartmentEl.value,
+            affectedDepartment: this._resolveInvestigationAffectedDepartment(document.querySelector('.modal-overlay')),
             unsafeBehavior: unsafeBehaviorEl.value,
             unsafeCondition: unsafeConditionEl.value,
             riskProbability: parseInt(riskProbabilityEl.value) || 0,
@@ -11929,8 +12339,10 @@ const Incidents = {
         };
 
         const liveRca = this._collectInvestigationRcaData();
-        if (liveRca?.method) {
-            formData.rca = liveRca;
+        if (liveRca && (liveRca.method || Object.keys(liveRca.stepsData || {}).length)) {
+            formData.rca = typeof InvestigationRCA !== 'undefined'
+                ? (InvestigationRCA.normalizeRcaForExport(liveRca) || liveRca)
+                : liveRca;
         }
 
         return formData;
@@ -11967,13 +12379,16 @@ const Incidents = {
     _getInvestigationFormPrintStyles() {
         return `
             <style>
-                .inv-print-wrap { direction: rtl; text-align: right; font-family: 'Cairo', 'Tahoma', Arial, sans-serif; }
+                .inv-print-wrap { direction: rtl; text-align: right; font-family: 'Cairo', 'Tahoma', Arial, sans-serif; width: 100%; max-width: 100%; box-sizing: border-box; }
                 .inv-print-section {
                     border-radius: 12px;
                     padding: 20px 24px;
                     margin-bottom: 20px;
                     box-shadow: 0 2px 8px rgba(0,0,0,0.08);
                     border: 2px solid;
+                    width: 100%;
+                    max-width: 100%;
+                    box-sizing: border-box;
                 }
                 .inv-print-section h3 {
                     font-size: 18px;
@@ -12144,6 +12559,10 @@ const Incidents = {
         };
         const yesNoNames = { yes: 'نعم', no: 'لا' };
         const riskResultNames = { low: 'منخفض', medium: 'متوسط', high: 'عالي' };
+        const methodologyMeta = this._getInvestigationMethodologyMeta(investigationData);
+        const methodologyDisplay = methodologyMeta.hasMethod
+            ? `${methodologyMeta.label}${methodologyMeta.reference ? ` (${methodologyMeta.reference})` : ''}`
+            : '—';
 
         const section1 = this._buildInvestigationFormPrintSection('inv-s1', '1', 'بيانات الحادث الأساسية', `
             <div class="inv-field-grid">
@@ -12153,6 +12572,7 @@ const Incidents = {
                 ${this._buildInvestigationFormPrintField('موقع الحادث بالضبط', esc(investigationData.locationName || 'غير محدد'), '#2196F3')}
                 ${this._buildInvestigationFormPrintField('رقم التحقيق', esc(investigationData.investigationNumber || '—'), '#1976D2', true)}
                 ${incident.isoCode ? this._buildInvestigationFormPrintField('كود الحادث', esc(incident.isoCode), '#2196F3') : ''}
+                ${this._buildInvestigationFormPrintField('منهجية تحليل السبب الجذري', esc(methodologyDisplay), '#7c3aed', methodologyMeta.hasMethod)}
             </div>
         `);
 
@@ -12183,16 +12603,23 @@ const Incidents = {
             ` : ''}
         `);
 
+        const isCompanyAff = investigationData.affectedAffiliation === 'company';
+        const isContractorAff = investigationData.affectedAffiliation === 'contractor';
+        const deptPrintLabel = isCompanyAff ? 'الإدارة / القسم' : 'الجهة التابع لها';
         const section4 = this._buildInvestigationFormPrintSection('inv-s4', '4', 'بيانات المصاب', `
             <div class="inv-field-grid" style="grid-template-columns: repeat(2, minmax(0, 1fr));">
                 ${this._buildInvestigationFormPrintField('تبعية المصاب', affiliationNames[investigationData.affectedAffiliation] || investigationData.affectedAffiliation || '—', '#E91E63')}
+                ${isCompanyAff ? this._buildInvestigationFormPrintField('كود الموظف', esc(investigationData.affectedEmployeeCode || '—'), '#E91E63') : ''}
+                ${isContractorAff ? this._buildInvestigationFormPrintField('المقاول', esc(investigationData.affectedDepartment || '—'), '#E91E63') : ''}
                 ${this._buildInvestigationFormPrintField('الاسم', esc(investigationData.affectedName || '—'), '#E91E63')}
                 ${this._buildInvestigationFormPrintField('الوظيفة', esc(investigationData.affectedJob || '—'), '#E91E63')}
                 ${this._buildInvestigationFormPrintField('السن', esc(investigationData.affectedAge || '—'), '#E91E63')}
                 </div>
+            ${!isContractorAff ? `
             <div style="margin-top:14px;">
-                ${this._buildInvestigationFormPrintField('الجهة التابع لها', esc(investigationData.affectedDepartment || '—'), '#E91E63')}
+                ${this._buildInvestigationFormPrintField(deptPrintLabel, esc(investigationData.affectedDepartment || '—'), '#E91E63')}
                 </div>
+            ` : ''}
         `);
 
         const riskMatrixHtml = typeof RiskMatrix !== 'undefined'
@@ -12227,32 +12654,7 @@ const Incidents = {
                 </div>
         `);
 
-        const sectionRca = (() => {
-            if (typeof InvestigationRCA === 'undefined') return '';
-            const rca = investigationData.rca;
-            if (rca?.method) {
-                return InvestigationRCA.buildPrintSection(rca);
-            }
-            if (rca && (rca.rootCauseSummary || (rca.stepsData && Object.keys(rca.stepsData).length))) {
-                const normalized = {
-                    ...rca,
-                    method: rca.method || 'five-whys',
-                    methodLabel: rca.methodLabel || 'تحليل السبب الجذري'
-                };
-                return InvestigationRCA.buildPrintSection(normalized);
-            }
-            if (investigationData.rootCauseSummary || incident.rootCause) {
-                return `
-                    <div class="inv-print-section rca-print-section inv-s-rca" style="background:linear-gradient(135deg,#f5f3ff 0%,#fff 100%);border:2px solid #7c3aed;border-radius:12px;padding:20px 24px;margin-bottom:20px;">
-                        <h3 style="color:#5b21b6;border-color:#7c3aed;font-size:18px;font-weight:700;margin:0 0 14px;padding-bottom:10px;border-bottom:3px solid #7c3aed;">5.5) تحليل السبب الجذري</h3>
-                        <div class="rca-root-box" style="padding:16px 18px;border-radius:10px;border:2px solid #10b981;background:linear-gradient(135deg,#ecfdf5,#d1fae5);">
-                            <div style="font-weight:800;color:#047857;margin-bottom:8px;">السبب الجذري</div>
-                            <div style="white-space:pre-wrap;line-height:1.75;">${esc(investigationData.rootCauseSummary || incident.rootCause)}</div>
-                        </div>
-                    </div>`;
-            }
-            return '';
-        })();
+        const sectionRca = this._buildInvestigationRcaPrintSection(investigationData, incident, esc, { includeRcaStyles: false });
 
         const actionPlan = Array.isArray(investigationData.actionPlan) ? investigationData.actionPlan : [];
         const actionRowsCount = Math.max(3, actionPlan.length);

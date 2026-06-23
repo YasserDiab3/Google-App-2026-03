@@ -914,31 +914,94 @@ const InvestigationRCA = {
         `;
     },
 
-    buildPrintSection(rca) {
-        if (!rca || !rca.method) return '';
+    inferMethodIdFromStepsData(stepsData) {
+        if (!stepsData || typeof stepsData !== 'object') return '';
+        const keys = Object.keys(stepsData);
+        if (keys.some((k) => k === 'why1' || k === 'rootCause' || /^why\d/.test(k))) return 'five-whys';
+        if (keys.includes('timeline') || keys.includes('barriers') || keys.includes('contributing') || keys.includes('rootCauses')) return 'icam';
+        if (keys.includes('sixM') || ['man', 'machine', 'method', 'material', 'measurement', 'environment'].some((k) => keys.includes(k))) return 'fishbone';
+        if (keys.includes('immediate') || keys.includes('managementGap') || keys.includes('barrierAnalysis')) return 'iso-barrier';
+        return '';
+    },
+
+    inferMethodIdFromLabel(label) {
+        const t = String(label || '').toLowerCase();
+        if (t.includes('whys') || t.includes('5 why')) return 'five-whys';
+        if (t.includes('icam')) return 'icam';
+        if (t.includes('fishbone') || t.includes('ishikawa') || t.includes('6m')) return 'fishbone';
+        if (t.includes('iso') || t.includes('barrier') || t.includes('حاجز')) return 'iso-barrier';
+        return '';
+    },
+
+    normalizeRcaForExport(rca) {
+        if (!rca) return null;
+
+        if (typeof rca === 'string') {
+            const trimmed = rca.trim();
+            if (!trimmed) return null;
+            if (trimmed.startsWith('{')) {
+                try { rca = JSON.parse(trimmed); } catch { return null; }
+            } else {
+                const method = this.inferMethodIdFromLabel(trimmed) || 'five-whys';
+                return {
+                    method,
+                    methodLabel: trimmed,
+                    stepsData: {},
+                    rootCauseSummary: ''
+                };
+            }
+        }
+
+        if (typeof rca !== 'object') return null;
+
+        let stepsData = rca.stepsData || {};
+        if (typeof stepsData === 'string') {
+            try { stepsData = JSON.parse(stepsData); } catch { stepsData = {}; }
+        }
+
+        let method = rca.method || this.inferMethodIdFromStepsData(stepsData) || this.inferMethodIdFromLabel(rca.methodLabel);
+        if (!method && (rca.rootCauseSummary || Object.keys(stepsData).length)) {
+            method = 'five-whys';
+        }
+        if (!method) return null;
+
+        const methodDef = this.METHODS[method] || this.METHODS['five-whys'];
+        return {
+            ...rca,
+            method,
+            methodLabel: rca.methodLabel || methodDef.label,
+            stepsData,
+            rootCauseSummary: rca.rootCauseSummary || this.buildRootCauseSummary({ method, stepsData })
+        };
+    },
+
+    buildPrintSection(rca, opts = {}) {
+        const normalized = this.normalizeRcaForExport(rca);
+        if (!normalized || !normalized.method) return '';
 
         const esc = (v) => this._esc(v);
-        const method = this.METHODS[rca.method];
+        const method = this.METHODS[normalized.method];
         if (!method) return '';
 
-        const methodLabel = rca.methodLabel || method.label;
+        const methodLabel = normalized.methodLabel || method.label;
         const reference = method.reference || '';
-        const theme = this.PRINT_THEMES[rca.method] || this.PRINT_THEMES['five-whys'];
-        const sd = rca.stepsData || {};
+        const theme = this.PRINT_THEMES[normalized.method] || this.PRINT_THEMES['five-whys'];
+        const sd = normalized.stepsData || {};
 
         const builders = {
-            'five-whys': () => this._buildPrintFiveWhys(sd, rca, esc, theme),
-            icam: () => this._buildPrintIcam(sd, rca, esc, theme),
-            fishbone: () => this._buildPrintFishbone(sd, rca, esc, theme),
-            'iso-barrier': () => this._buildPrintIsoBarrier(sd, rca, esc, theme)
+            'five-whys': () => this._buildPrintFiveWhys(sd, normalized, esc, theme),
+            icam: () => this._buildPrintIcam(sd, normalized, esc, theme),
+            fishbone: () => this._buildPrintFishbone(sd, normalized, esc, theme),
+            'iso-barrier': () => this._buildPrintIsoBarrier(sd, normalized, esc, theme)
         };
 
-        const bodyHtml = (builders[rca.method] || builders['five-whys'])();
+        const bodyHtml = (builders[normalized.method] || builders['five-whys'])();
+        const wrapStyles = opts.includeStyles !== false ? `<style>${this.getPrintStyles()}</style>` : '';
 
         return `
-            <style>${this.getPrintStyles()}</style>
+            ${wrapStyles}
             <div class="inv-print-section rca-print-section inv-s-rca" style="background:linear-gradient(135deg,${theme.light} 0%,#fff 100%);border-color:${theme.accent};">
-                ${this._printSectionHeader(methodLabel, reference, rca, theme, esc)}
+                ${this._printSectionHeader(methodLabel, reference, normalized, theme, esc)}
                 ${bodyHtml}
             </div>
         `;

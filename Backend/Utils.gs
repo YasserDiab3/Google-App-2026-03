@@ -1262,6 +1262,11 @@ function formatInvestigationSummary_(inv) {
             lines.push('خطة العمل: ' + inv.actionPlan.length + ' بند');
         }
 
+        if (inv.rca && typeof inv.rca === 'object') {
+            pushLine('منهجية التحقيق', inv.rca.methodLabel || inv.rca.method || '');
+            pushLine('السبب الجذري', inv.rca.rootCauseSummary || '');
+        }
+
         return lines.join('\n');
     } catch (e) {
         return '';
@@ -1414,9 +1419,23 @@ function toSheetCellValue_(header, value, sheetName) {
         return formatAttachmentsText_(value);
     }
 
-    // Investigation: store as readable text (NO JSON)
+    // Investigation: JSON كامل للحفاظ على RCA وخطوات التحليل (مع ملخص نصي عند الفشل)
     if (h === 'investigation') {
-        return formatInvestigationSummary_(value);
+        if (value === null || value === undefined) return '';
+        if (typeof value === 'string') {
+            const s = value.trim();
+            if (!s) return '';
+            if ((s.startsWith('{') && s.endsWith('}')) || (s.startsWith('[') && s.endsWith(']'))) return s;
+            return s;
+        }
+        if (typeof value === 'object') {
+            try {
+                return JSON.stringify(value);
+            } catch (e) {
+                return formatInvestigationSummary_(value);
+            }
+        }
+        return String(value);
     }
 
     // ✅ إصلاح: Logo - حفظ الشعار كـ string مباشرة (base64 أو رابط)
