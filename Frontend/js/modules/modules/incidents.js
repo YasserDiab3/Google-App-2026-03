@@ -564,11 +564,216 @@ const Incidents = {
     },
 
     /**
-     * استخراج الجزء المصاب من الوصف
+     * قاموس الأجزاء المتضررة الشائعة (عربي/إنجليزي)
      */
-    extractInjuredPart(description) {
-        // يمكن تحسين هذا لاحقاً باستخدام AI أو قواعد محددة
+    BODY_PART_KEYWORDS: [
+        { label: 'الرأس / الوجه', keywords: ['رأس', 'راس', 'وجه', 'عين', 'أنف', 'فم', 'جمجمة', 'أذن', 'head', 'face', 'eye', 'skull'] },
+        { label: 'الرقبة', keywords: ['رقبة', 'neck'] },
+        { label: 'الصدر', keywords: ['صدر', 'قفص صدري', 'chest', 'thorax'] },
+        { label: 'الظهر', keywords: ['ظهر', 'عمود فقري', 'back', 'spine'] },
+        { label: 'البطن', keywords: ['بطن', 'abdomen', 'stomach'] },
+        { label: 'الذراع / اليد', keywords: ['ذراع', 'يد', 'إصبع', 'كوع', 'معصم', 'arm', 'hand', 'finger', 'wrist', 'elbow'] },
+        { label: 'الساق / القدم', keywords: ['ساق', 'قدم', 'ركبة', 'كاحل', 'فخذ', 'leg', 'foot', 'knee', 'ankle', 'thigh'] },
+        { label: 'الكتف', keywords: ['كتف', 'shoulder'] },
+        { label: 'إصابات متعددة', keywords: ['متعدد', 'عدة أجزاء', 'multiple', 'جسم كامل'] }
+    ],
+
+    /**
+     * استخراج الجزء المصاب من النص
+     */
+    extractInjuredPart(description, injuryDescription = '') {
+        const text = `${description || ''} ${injuryDescription || ''}`.trim().toLowerCase();
+        if (!text) return 'غير محدد';
+
+        for (const part of this.BODY_PART_KEYWORDS) {
+            if (part.keywords.some(kw => text.includes(kw.toLowerCase()))) {
+                return part.label;
+            }
+        }
+
+        const shortDirect = (injuryDescription || '').trim();
+        if (shortDirect && shortDirect.length <= 80 && shortDirect !== 'غير محدد') {
+            return shortDirect;
+        }
+
         return 'غير محدد';
+    },
+
+    /** حل الجزء المتضرر من مصادر الحادث المتعددة */
+    resolveIncidentInjuredPart(incident) {
+        if (!incident) return 'غير محدد';
+
+        const direct = String(incident.injuredPart || '').trim();
+        if (direct && direct !== 'غير محدد') return direct;
+
+        const injuryDesc = String(incident.injuryDescription || '').trim();
+        if (injuryDesc) {
+            const inferred = this.extractInjuredPart('', injuryDesc);
+            if (inferred !== 'غير محدد') return inferred;
+            if (injuryDesc.length <= 80) return injuryDesc;
+        }
+
+        const registryEntry = (this.registryData || []).find(r => r.incidentId === incident.id);
+        if (registryEntry) {
+            const regPart = String(registryEntry.injuredPart || '').trim();
+            if (regPart && regPart !== 'غير محدد') return regPart;
+            const regInjury = String(registryEntry.injuryDescription || '').trim();
+            if (regInjury) {
+                const inferred = this.extractInjuredPart('', regInjury);
+                if (inferred !== 'غير محدد') return inferred;
+            }
+        }
+
+        return this.extractInjuredPart(incident.description || '', injuryDesc);
+    },
+
+    /** تسمية موقع الحادث للتحليل (مصنع + مكان فرعي) */
+    _resolveHotspotLabel(incident) {
+        const factory = String(incident.siteName || incident.factory || '').trim();
+        const place = String(incident.sublocationName || incident.sublocation || incident.location || '').trim();
+        if (factory && place && place !== factory) return `${factory} — ${place}`;
+        return place || factory || 'غير محدد';
+    },
+
+    _resolveHotspotFactory(incident) {
+        return String(incident.siteName || incident.factory || incident.location || 'غير محدد').trim();
+    },
+
+    _getBodyPartIcon(label) {
+        const map = {
+            'الرأس / الوجه': 'fa-head-side-virus',
+            'الرقبة': 'fa-user',
+            'الصدر': 'fa-heart-pulse',
+            'الظهر': 'fa-person-walking',
+            'البطن': 'fa-circle-dot',
+            'الذراع / اليد': 'fa-hand',
+            'الساق / القدم': 'fa-shoe-prints',
+            'الكتف': 'fa-user-injured',
+            'إصابات متعددة': 'fa-users-rays',
+            'غير محدد': 'fa-question'
+        };
+        return map[label] || 'fa-band-aid';
+    },
+
+    _getHotspotRankStyle(rank) {
+        const styles = [
+            { bg: 'linear-gradient(135deg,#fef3c7 0%,#fde68a 100%)', border: '#f59e0b', badge: '#b45309', bar: '#f59e0b' },
+            { bg: 'linear-gradient(135deg,#f1f5f9 0%,#e2e8f0 100%)', border: '#94a3b8', badge: '#475569', bar: '#64748b' },
+            { bg: 'linear-gradient(135deg,#ffedd5 0%,#fed7aa 100%)', border: '#ea580c', badge: '#c2410c', bar: '#f97316' }
+        ];
+        return styles[rank] || { bg: '#fff', border: '#e5e7eb', badge: '#6366f1', bar: '#8b5cf6' };
+    },
+
+    _buildHotspotStats(incidents) {
+        const map = {};
+        incidents.forEach(inc => {
+            const key = this._resolveHotspotLabel(inc);
+            if (!map[key]) {
+                map[key] = { label: key, factory: this._resolveHotspotFactory(inc), count: 0, high: 0, open: 0 };
+            }
+            map[key].count += 1;
+            if (this.normalizeSeverity(inc?.severity) === 'high') map[key].high += 1;
+            if (this.normalizeStatus(inc?.status) === 'open') map[key].open += 1;
+        });
+        return Object.values(map).sort((a, b) => b.count - a.count);
+    },
+
+    _buildBodyPartStats(incidents) {
+        const injuryIncidents = incidents.filter(inc => {
+            const t = String(inc.incidentType || inc.type || '').toLowerCase();
+            const part = this.resolveIncidentInjuredPart(inc);
+            return part !== 'غير محدد' || t.includes('إصاب') || t.includes('injury') || inc.injuryDescription;
+        });
+
+        const source = injuryIncidents.length ? injuryIncidents : incidents;
+        const map = {};
+        source.forEach(inc => {
+            const part = this.resolveIncidentInjuredPart(inc);
+            const key = part || 'غير محدد';
+            map[key] = (map[key] || 0) + 1;
+        });
+
+        return Object.entries(map)
+            .sort((a, b) => b[1] - a[1])
+            .map(([label, count]) => ({ label, count }));
+    },
+
+    _renderIncidentHotspotGrid(stats, total) {
+        const el = document.getElementById('incident-hotspot-grid');
+        if (!el) return;
+
+        if (!stats.length) {
+            el.innerHTML = '<div style="text-align:center;padding:32px;color:#94a3b8;font-size:0.88rem;"><i class="fas fa-map-location-dot" style="font-size:2rem;display:block;margin-bottom:10px;opacity:0.5;"></i>لا توجد بيانات مواقع في الفترة المحددة</div>';
+            return;
+        }
+
+        const max = stats[0].count || 1;
+        el.innerHTML = stats.slice(0, 8).map((item, i) => {
+            const pct = total > 0 ? Math.round((item.count / total) * 100) : 0;
+            const barPct = Math.round((item.count / max) * 100);
+            const st = this._getHotspotRankStyle(i);
+            const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `#${i + 1}`;
+            return `
+                <div style="display:flex;align-items:center;gap:14px;padding:14px 16px;background:${st.bg};border:1.5px solid ${st.border};border-radius:14px;transition:transform .2s,box-shadow .2s;"
+                    onmouseover="this.style.transform='translateX(-4px)';this.style.boxShadow='0 8px 24px rgba(0,0,0,0.08)'"
+                    onmouseout="this.style.transform='';this.style.boxShadow=''">
+                    <div style="width:42px;height:42px;border-radius:12px;background:${st.badge};color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:${i < 3 ? '1.1rem' : '0.85rem'};flex-shrink:0;">${medal}</div>
+                    <div style="flex:1;min-width:0;">
+                        <div style="font-weight:800;font-size:0.9rem;color:#1e293b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${Utils.escapeHTML(item.label)}">${Utils.escapeHTML(item.label)}</div>
+                        <div style="font-size:0.72rem;color:#64748b;margin:3px 0 8px;display:flex;gap:10px;flex-wrap:wrap;">
+                            <span><i class="fas fa-industry" style="margin-left:4px;color:#0891b2;"></i>${Utils.escapeHTML(item.factory)}</span>
+                            ${item.high ? `<span style="color:#b91c1c;"><i class="fas fa-fire" style="margin-left:3px;"></i>${item.high} عالية</span>` : ''}
+                            ${item.open ? `<span style="color:#b45309;"><i class="fas fa-folder-open" style="margin-left:3px;"></i>${item.open} مفتوحة</span>` : ''}
+                        </div>
+                        <div style="height:8px;background:rgba(0,0,0,0.06);border-radius:99px;overflow:hidden;">
+                            <div style="height:100%;width:${barPct}%;background:linear-gradient(90deg,${st.bar},${st.badge});border-radius:99px;transition:width .6s ease;"></div>
+                        </div>
+                    </div>
+                    <div style="text-align:center;flex-shrink:0;min-width:56px;">
+                        <div style="font-size:1.35rem;font-weight:900;color:${st.badge};line-height:1;">${item.count}</div>
+                        <div style="font-size:0.65rem;color:#64748b;">حادث</div>
+                        <div style="margin-top:4px;font-size:0.72rem;font-weight:700;color:#fff;background:${st.badge};padding:2px 8px;border-radius:10px;">${pct}%</div>
+                    </div>
+                </div>`;
+        }).join('');
+    },
+
+    _renderIncidentBodyPartList(stats, total) {
+        const el = document.getElementById('incident-bodypart-list');
+        if (!el) return;
+
+        const meaningful = stats.filter(s => s.label !== 'غير محدد');
+        const list = meaningful.length ? meaningful : stats;
+
+        if (!list.length) {
+            el.innerHTML = '<div style="text-align:center;padding:24px;color:#94a3b8;font-size:0.85rem;">لا توجد بيانات أجزاء متضررة</div>';
+            return;
+        }
+
+        const max = list[0].count || 1;
+        const colors = ['#dc2626', '#ea580c', '#d97706', '#ca8a04', '#65a30d', '#0891b2', '#7c3aed', '#db2777'];
+
+        el.innerHTML = list.slice(0, 8).map((item, i) => {
+            const pct = total > 0 ? Math.round((item.count / total) * 100) : 0;
+            const barPct = Math.round((item.count / max) * 100);
+            const color = colors[i % colors.length];
+            const icon = this._getBodyPartIcon(item.label);
+            return `
+                <div style="display:flex;align-items:center;gap:12px;padding:11px 14px;background:#fff;border:1px solid #fecaca;border-radius:12px;margin-bottom:8px;">
+                    <div style="width:40px;height:40px;border-radius:10px;background:${color}18;color:${color};display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                        <i class="fas ${icon}" style="font-size:16px;"></i>
+                    </div>
+                    <div style="flex:1;min-width:0;">
+                        <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:6px;">
+                            <span style="font-weight:700;font-size:0.85rem;color:#374151;">${Utils.escapeHTML(item.label)}</span>
+                            <span style="font-weight:800;font-size:0.9rem;color:${color};">${item.count} <span style="font-size:0.65rem;font-weight:600;color:#94a3b8;">(${pct}%)</span></span>
+                        </div>
+                        <div style="height:6px;background:#fef2f2;border-radius:99px;overflow:hidden;">
+                            <div style="height:100%;width:${barPct}%;background:${color};border-radius:99px;"></div>
+                        </div>
+                    </div>
+                </div>`;
+        }).join('');
     },
 
     /**
@@ -634,7 +839,7 @@ const Incidents = {
             employeeJob: employeeJob,
             employeeDepartment: employeeDepartment,
             incidentDetails: incident.description || 'غير محدد',
-            injuredPart: this.extractInjuredPart(incident.description || ''),
+            injuredPart: this.resolveIncidentInjuredPart(incident),
             equipmentCause: this.extractEquipmentCause(incident.description || ''),
             leaveStartDate: leaveStartDate,
             returnToWorkDate: returnToWorkDate,
@@ -703,7 +908,7 @@ const Incidents = {
         entry.employeeJob = employeeJob;
         entry.employeeDepartment = employeeDepartment;
         entry.incidentDetails = incident.description || entry.incidentDetails;
-        entry.injuredPart = this.extractInjuredPart(incident.description || '');
+        entry.injuredPart = this.resolveIncidentInjuredPart(incident);
         entry.equipmentCause = this.extractEquipmentCause(incident.description || '');
 
         // تحديث تواريخ الإجازة إذا كانت متوفرة في الحادث، وإلا نستخدم القيم الموجودة أو القيم الافتراضية
@@ -1327,7 +1532,7 @@ const Incidents = {
                     </div>
                     <div>
                         <h2 style="margin:0;font-size:1.15rem;font-weight:700;">لوحة تحليل الحوادث</h2>
-                        <p style="margin:0;font-size:0.75rem;opacity:0.85;">تحليل شامل • الحالة • الشدة • النوع • الإدارة • الموقع • تصدير PDF</p>
+                        <p style="margin:0;font-size:0.75rem;opacity:0.85;">تحليل شامل • المواقع الأكثر تكراراً • الأجزاء المتضررة • الشدة • تصدير PDF</p>
                     </div>
                 </div>
                 <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
@@ -1461,7 +1666,55 @@ const Incidents = {
                 </div>
             </div>
 
-            <!-- ══ Row 4: الموقع (المكان الفرعي) ══ -->
+            <!-- ══ Row 4: نقاط الخطورة + الأجزاء المتضررة ══ -->
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(360px,1fr));gap:16px;margin-bottom:16px;">
+                <div class="content-card" style="padding:0;overflow:hidden;border:1.5px solid #e9d5ff;">
+                    <div style="padding:14px 18px;background:linear-gradient(135deg,#4c1d95 0%,#7c3aed 100%);color:#fff;display:flex;align-items:center;justify-content:space-between;gap:8px;">
+                        <div style="display:flex;align-items:center;gap:10px;">
+                            <div style="width:36px;height:36px;background:rgba(255,255,255,0.2);border-radius:10px;display:flex;align-items:center;justify-content:center;">
+                                <i class="fas fa-map-location-dot"></i>
+                            </div>
+                            <div>
+                                <div style="font-weight:800;font-size:0.92rem;">نقاط الخطورة — المواقع الأكثر تكراراً</div>
+                                <div style="font-size:0.7rem;opacity:0.85;">ترتيب حسب عدد الحوادث مع نسبة التكرار</div>
+                            </div>
+                        </div>
+                        <span id="incident-hotspot-total-badge" style="background:rgba(255,255,255,0.2);padding:4px 10px;border-radius:20px;font-size:0.72rem;font-weight:700;"></span>
+                    </div>
+                    <div id="incident-hotspot-grid" style="padding:14px 16px;display:flex;flex-direction:column;gap:10px;max-height:420px;overflow-y:auto;">
+                        <div style="text-align:center;padding:24px;color:#94a3b8;"><i class="fas fa-spinner fa-spin"></i></div>
+                    </div>
+                    <div style="padding:0 12px 14px;">
+                        <div style="position:relative;height:200px;">
+                            <canvas id="incident-chart-hotspot"></canvas>
+                            <div id="incident-chart-hotspot-empty" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;color:#94a3b8;font-size:0.85rem;">لا توجد بيانات</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="content-card" style="padding:0;overflow:hidden;border:1.5px solid #fecaca;">
+                    <div style="padding:14px 18px;background:linear-gradient(135deg,#991b1b 0%,#dc2626 100%);color:#fff;display:flex;align-items:center;justify-content:space-between;gap:8px;">
+                        <div style="display:flex;align-items:center;gap:10px;">
+                            <div style="width:36px;height:36px;background:rgba(255,255,255,0.2);border-radius:10px;display:flex;align-items:center;justify-content:center;">
+                                <i class="fas fa-user-injured"></i>
+                            </div>
+                            <div>
+                                <div style="font-weight:800;font-size:0.92rem;">الأجزاء المتضررة</div>
+                                <div style="font-size:0.7rem;opacity:0.85;">توزيع إصابات الجسم حسب الحوادث</div>
+                            </div>
+                        </div>
+                        <span id="incident-bodypart-total-badge" style="background:rgba(255,255,255,0.2);padding:4px 10px;border-radius:20px;font-size:0.72rem;font-weight:700;"></span>
+                    </div>
+                    <div style="padding:12px;position:relative;height:200px;border-bottom:1px solid #fee2e2;">
+                        <canvas id="incident-chart-bodypart"></canvas>
+                        <div id="incident-chart-bodypart-empty" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;color:#94a3b8;font-size:0.85rem;">لا توجد بيانات إصابات</div>
+                    </div>
+                    <div id="incident-bodypart-list" style="padding:12px 14px;max-height:280px;overflow-y:auto;">
+                        <div style="text-align:center;padding:16px;color:#94a3b8;"><i class="fas fa-spinner fa-spin"></i></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ══ Row 5: الموقع (المكان الفرعي) ══ -->
             <div class="content-card" style="padding:0;overflow:hidden;margin-bottom:16px;">
                 <div style="padding:13px 18px 10px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:8px;">
                     <i class="fas fa-map-marker-alt" style="color:#8b5cf6;"></i>
@@ -1662,6 +1915,34 @@ const Incidents = {
         // ✅ الموقع = المكان الفرعي (sublocation) مع fallback للموقع العام
         const locMap = this._iGroupBy(filtered, r => r.sublocationName || r.sublocation || r.location || 'غير محدد', 10);
         this._iHBar('incident-chart-loc', locMap.labels, locMap.data, 'rgba(139,92,246,0.75)');
+
+        // ── نقاط الخطورة والأجزاء المتضررة ──
+        const hotspotStats = this._buildHotspotStats(filtered);
+        const bodyPartStats = this._buildBodyPartStats(filtered);
+        this._renderIncidentHotspotGrid(hotspotStats, total);
+        this._renderIncidentBodyPartList(bodyPartStats, total);
+
+        const hotspotBadge = document.getElementById('incident-hotspot-total-badge');
+        if (hotspotBadge) hotspotBadge.textContent = `${hotspotStats.length} موقع`;
+        const bodyBadge = document.getElementById('incident-bodypart-total-badge');
+        if (bodyBadge) bodyBadge.textContent = `${bodyPartStats.filter(b => b.label !== 'غير محدد').length || bodyPartStats.length} جزء`;
+
+        const hotspotTop = hotspotStats.slice(0, 6);
+        this._iHBar('incident-chart-hotspot', hotspotTop.map(h => h.label), hotspotTop.map(h => h.count), 'rgba(124,58,237,0.8)');
+
+        const bodyTop = bodyPartStats.filter(b => b.label !== 'غير محدد').slice(0, 8);
+        const bodyChartData = bodyTop.length ? bodyTop : bodyPartStats.slice(0, 8);
+        const bodyColors = ['#dc2626', '#ea580c', '#d97706', '#ca8a04', '#65a30d', '#0891b2', '#7c3aed', '#db2777'];
+        if (bodyChartData.length) {
+            this._iDoughnut(
+                'incident-chart-bodypart',
+                bodyChartData.map(b => b.label),
+                bodyChartData.map(b => b.count),
+                bodyChartData.map((_, i) => bodyColors[i % bodyColors.length] + 'd9')
+            );
+        } else {
+            this._iDoughnut('incident-chart-bodypart', [], [], []);
+        }
 
         // المقارنة السنوية (3 سنوات)
         this._iYearly('incident-chart-yearly', allIncidents);
@@ -4277,7 +4558,11 @@ const Incidents = {
             incidentDetailsBrief: briefDescInput.value.trim(), // redundancy if needed or just use incidentDetails as main
 
             // Legacy/Optional mappings
-            injuredPart: injuryDescInput?.value.trim() || 'غير محدد',
+            injuredPart: (() => {
+                const inj = injuryDescInput?.value.trim() || '';
+                const inferred = this.extractInjuredPart(briefDescInput.value.trim(), inj);
+                return inferred !== 'غير محدد' ? inferred : (inj || 'غير محدد');
+            })(),
             equipmentCause: 'غير محدد', // Removed specific field in form, default to generic
 
             leaveStartDate: leaveStartDateInput?.value || '',
@@ -9629,7 +9914,64 @@ const Incidents = {
         if (!merged.incidentTypes?.length && incident.incidentType) {
             merged.incidentTypes = [incident.incidentType];
         }
+        if (!merged.rca?.method && existing.rca?.method) {
+            merged.rca = existing.rca;
+        } else if (!merged.rca?.method) {
+            const saved = this._parseIncidentInvestigationSummary(incident);
+            if (saved?.rca?.method) merged.rca = saved.rca;
+        }
         return merged;
+    },
+
+    /** جمع بيانات RCA من معالج التحقيق المفتوح */
+    _collectInvestigationRcaData() {
+        const rcaContainer = document.getElementById('investigation-rca-wizard');
+        if (!rcaContainer || typeof InvestigationRCA === 'undefined') return null;
+        try {
+            return InvestigationRCA.collect(rcaContainer);
+        } catch (e) {
+            Utils.safeWarn('تعذّر جمع بيانات RCA للتصدير:', e);
+            return null;
+        }
+    },
+
+    /** دمج بيانات RCA المحفوظة/الحية لتصدير التقرير */
+    _mergeInvestigationRcaForExport(investigationData, incident) {
+        const data = investigationData ? { ...investigationData } : {};
+        const savedInv = this._parseIncidentInvestigationSummary(incident) || {};
+
+        let savedRca = savedInv.rca;
+        if (typeof savedRca === 'string') {
+            try { savedRca = JSON.parse(savedRca); } catch (_e) { savedRca = null; }
+        }
+
+        let existingRca = data.rca;
+        if (typeof existingRca === 'string') {
+            try { existingRca = JSON.parse(existingRca); } catch (_e) { existingRca = null; }
+        }
+
+        const liveRca = this._collectInvestigationRcaData();
+
+        if (liveRca?.method) {
+            data.rca = liveRca;
+        } else if (existingRca?.method) {
+            data.rca = existingRca;
+        } else if (savedRca?.method) {
+            data.rca = savedRca;
+        } else if (liveRca && Object.keys(liveRca.stepsData || {}).length) {
+            data.rca = liveRca;
+        } else if (savedRca) {
+            data.rca = savedRca;
+        }
+
+        if (!data.rootCauseSummary && data.rca?.rootCauseSummary) {
+            data.rootCauseSummary = data.rca.rootCauseSummary;
+        }
+        if (!data.riskExplanation && data.rca?.rootCauseSummary) {
+            data.riskExplanation = data.rca.rootCauseSummary;
+        }
+
+        return data;
     },
 
     _resolveInvestigationDataForExport(incidentId) {
@@ -9644,6 +9986,8 @@ const Incidents = {
         if (!investigationData.investigationNumber && !investigationData.description) {
             investigationData = this._buildInvestigationDataFromIncident(incident, investigationData);
         }
+
+        investigationData = this._mergeInvestigationRcaForExport(investigationData, incident);
 
         return { incident, investigationData };
     },
@@ -11150,8 +11494,7 @@ const Incidents = {
         if (document.getElementById('incident-type-injury-lost')?.checked) incidentTypes.push('injury-lost');
         if (document.getElementById('incident-type-fatality')?.checked) incidentTypes.push('fatality');
 
-        // ✅ إصلاح: تحويل datetime-local إلى ISO بشكل صحيح
-        return {
+        const formData = {
             investigationNumber: investigationNumberEl.value,
             investigationDateTime: Utils.dateTimeLocalToISO(investigationDateTimeEl.value) || investigationDateTimeEl.value,
             incidentDateTime: Utils.dateTimeLocalToISO(incidentDateTimeEl.value) || incidentDateTimeEl.value,
@@ -11188,6 +11531,13 @@ const Incidents = {
                 date: signatureSafetyDirectorDateEl?.value || ''
             }
         };
+
+        const liveRca = this._collectInvestigationRcaData();
+        if (liveRca?.method) {
+            formData.rca = liveRca;
+        }
+
+        return formData;
     },
 
     // طباعة نموذج التحقيق
@@ -11481,9 +11831,32 @@ const Incidents = {
                 </div>
         `);
 
-        const sectionRca = (typeof InvestigationRCA !== 'undefined' && investigationData.rca?.method)
-            ? InvestigationRCA.buildPrintSection(investigationData.rca)
-            : '';
+        const sectionRca = (() => {
+            if (typeof InvestigationRCA === 'undefined') return '';
+            const rca = investigationData.rca;
+            if (rca?.method) {
+                return InvestigationRCA.buildPrintSection(rca);
+            }
+            if (rca && (rca.rootCauseSummary || (rca.stepsData && Object.keys(rca.stepsData).length))) {
+                const normalized = {
+                    ...rca,
+                    method: rca.method || 'five-whys',
+                    methodLabel: rca.methodLabel || 'تحليل السبب الجذري'
+                };
+                return InvestigationRCA.buildPrintSection(normalized);
+            }
+            if (investigationData.rootCauseSummary || incident.rootCause) {
+                return `
+                    <div class="inv-print-section rca-print-section inv-s-rca" style="background:linear-gradient(135deg,#f5f3ff 0%,#fff 100%);border:2px solid #7c3aed;border-radius:12px;padding:20px 24px;margin-bottom:20px;">
+                        <h3 style="color:#5b21b6;border-color:#7c3aed;font-size:18px;font-weight:700;margin:0 0 14px;padding-bottom:10px;border-bottom:3px solid #7c3aed;">5.5) تحليل السبب الجذري</h3>
+                        <div class="rca-root-box" style="padding:16px 18px;border-radius:10px;border:2px solid #10b981;background:linear-gradient(135deg,#ecfdf5,#d1fae5);">
+                            <div style="font-weight:800;color:#047857;margin-bottom:8px;">السبب الجذري</div>
+                            <div style="white-space:pre-wrap;line-height:1.75;">${esc(investigationData.rootCauseSummary || incident.rootCause)}</div>
+                        </div>
+                    </div>`;
+            }
+            return '';
+        })();
 
         const actionPlan = Array.isArray(investigationData.actionPlan) ? investigationData.actionPlan : [];
         const actionRowsCount = Math.max(3, actionPlan.length);

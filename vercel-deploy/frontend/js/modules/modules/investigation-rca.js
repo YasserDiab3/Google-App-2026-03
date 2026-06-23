@@ -936,6 +936,7 @@ const InvestigationRCA = {
         const bodyHtml = (builders[rca.method] || builders['five-whys'])();
 
         return `
+            <style>${this.getPrintStyles()}</style>
             <div class="inv-print-section rca-print-section inv-s-rca" style="background:linear-gradient(135deg,${theme.light} 0%,#fff 100%);border-color:${theme.accent};">
                 ${this._printSectionHeader(methodLabel, reference, rca, theme, esc)}
                 ${bodyHtml}
